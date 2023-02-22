@@ -10,56 +10,64 @@
 />
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink @type="add" @params={{array "roles.create"}}>
+    <ToolbarLink @type="add" @route="roles.create" data-test-pki-role-create-link>
       Create role
     </ToolbarLink>
   </ToolbarActions>
 </Toolbar>
 
-{{#if (gt this.model.roleModel.length 0)}}
-  {{#each this.model.roleModel as |pkiRole|}}
-    <LinkedBlock class="list-item-row" @params={{array "roles.role.details" pkiRole.id}} @linkPrefix={{this.mountPoint}}>
-      <div class="level is-mobile">
-        <div class="level-left">
-          <div>
-            <Icon @name="user" class="has-text-grey-light" />
-            <span class="has-text-weight-semibold is-underline">
-              {{pkiRole.id}}
-            </span>
+{{#if this.model.hasConfig}}
+  {{#if this.model.roles.length}}
+    {{#each this.model.roles as |pkiRole|}}
+      <LinkedBlock class="list-item-row" @params={{array "roles.role.details" pkiRole.id}} @linkPrefix={{this.mountPoint}}>
+        <div class="level is-mobile">
+          <div class="level-left">
+            <div>
+              <Icon @name="user" class="has-text-grey-light" />
+              <span class="has-text-weight-semibold is-underline">
+                {{pkiRole.id}}
+              </span>
+            </div>
+          </div>
+          <div class="level-right is-flex is-paddingless is-marginless">
+            <div class="level-item">
+              <PopupMenu>
+                <nav class="menu">
+                  <ul class="menu-list">
+                    <li>
+                      <LinkTo @route="roles.role.details" @model={{pkiRole.id}}>
+                        Details
+                      </LinkTo>
+                    </li>
+                    <li>
+                      <LinkTo @route="roles.role.edit" @model={{pkiRole.id}}>
+                        Edit
+                      </LinkTo>
+                    </li>
+                  </ul>
+                </nav>
+              </PopupMenu>
+            </div>
           </div>
         </div>
-        <div class="level-right is-flex is-paddingless is-marginless">
-          <div class="level-item">
-            <PopupMenu>
-              <nav class="menu">
-                <ul class="menu-list">
-                  <li>
-                    <LinkTo @route="roles.role.details" @model={{pkiRole.id}}>
-                      Details
-                    </LinkTo>
-                  </li>
-                  <li>
-                    <LinkTo @route="roles.role.edit" @model={{pkiRole.id}}>
-                      Edit
-                    </LinkTo>
-                  </li>
-                </ul>
-              </nav>
-            </PopupMenu>
-          </div>
+      </LinkedBlock>
+    {{/each}}
+  {{else}}
+    <EmptyState @title="No roles yet">
+      <div>
+        <p>When created, roles will be listed here. Create a role to start generating certificates.</p>
+        <div class="has-top-margin-m">
+          <LinkTo @route="roles.create">
+            Create role
+          </LinkTo>
         </div>
       </div>
-    </LinkedBlock>
-  {{/each}}
+    </EmptyState>
+  {{/if}}
 {{else}}
-  <EmptyState @title="No roles yet">
-    <div>
-      <p>When created, roles will be listed here. Create a role to start generating certificates.</p>
-      <div class="has-top-margin-m">
-        <LinkTo @route="roles.create">
-          Create role
-        </LinkTo>
-      </div>
-    </div>
+  <EmptyState @title="PKI not configured" @message="This PKI mount hasn't yet been configured with a certificate issuer.">
+    <LinkTo @route="configuration.create">
+      Configure PKI
+    </LinkTo>
   </EmptyState>
 {{/if}}

@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/version"
 )
 
 var (
@@ -15,25 +14,29 @@ var (
 
 	// rt is the runtime - variable for tests.
 	rt = runtime.Version()
-
-	// versionFunc is the func that returns the current version. This is a
-	// function to take into account the different build processes and distinguish
-	// between enterprise and oss builds.
-	versionFunc = func() string {
-		return version.GetVersion().VersionNumber()
-	}
 )
 
 // String returns the consistent user-agent string for Vault.
+// Deprecated: use PluginString instead.
 //
-// e.g. Vault/0.10.4 (+https://www.vaultproject.io/; go1.10.1)
+// Example output:
 //
-// Given comments will be appended to the semicolon-delimited comment section.
+//	Vault (+https://www.vaultproject.io/; go1.19.5)
 //
-// e.g. Vault/0.10.4 (+https://www.vaultproject.io/; go1.10.1; comment-0; comment-1)
+// Given comments will be appended to the semicolon-delimited comment section:
+//
+//	Vault (+https://www.vaultproject.io/; go1.19.5; comment-0; comment-1)
+//
+// At one point the user-agent string returned contained the Vault
+// version hardcoded into the vault/sdk/version/ package.  This worked for builtin
+// plugins that are compiled into the `vault` binary, in that it correctly described
+// the version of that Vault binary.  It did not work for external plugins: for them,
+// the version will be based on the version stored in the sdk based on the
+// contents of the external plugin's go.mod.  We've kept the String method around
+// to avoid breaking builds, but you should be using PluginString.
 func String(comments ...string) string {
 	c := append([]string{"+" + projectURL, rt}, comments...)
-	return fmt.Sprintf("Vault/%s (%s)", versionFunc(), strings.Join(c, "; "))
+	return fmt.Sprintf("Vault (%s)", strings.Join(c, "; "))
 }
 
 // PluginString is usable by plugins to return a user-agent string reflecting

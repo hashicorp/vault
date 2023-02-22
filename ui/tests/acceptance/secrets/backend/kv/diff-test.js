@@ -44,8 +44,8 @@ module('Acceptance | kv2 diff view', function (hooks) {
     // add another version
     await click('[data-test-secret-edit="true"]');
 
-    let secondKey = document.querySelectorAll('[data-test-secret-key]')[1];
-    let secondValue = document.querySelectorAll('.masked-value')[1];
+    const secondKey = document.querySelectorAll('[data-test-secret-key]')[1];
+    const secondValue = document.querySelectorAll('.masked-value')[1];
     await fillIn(secondKey, 'version2');
     await fillIn(secondValue, 'world!');
     await click('[data-test-secret-save]');
@@ -56,8 +56,8 @@ module('Acceptance | kv2 diff view', function (hooks) {
 
     await click('[data-test-view-diff]');
 
-    let diffBetweenVersion2and1 = document.querySelector('.jsondiffpatch-added').innerText;
-    assert.equal(diffBetweenVersion2and1, 'version2"world!"', 'shows the correct added part');
+    const diffBetweenVersion2and1 = document.querySelector('.jsondiffpatch-added').innerText;
+    assert.strictEqual(diffBetweenVersion2and1, 'version2"world!"', 'shows the correct added part');
 
     await click('[data-test-popup-menu-trigger="right-version"]');
 

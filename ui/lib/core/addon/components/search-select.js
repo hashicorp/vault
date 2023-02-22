@@ -1,179 +1,212 @@
-import Component from '@ember/component';
+import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
-import { computed } from '@ember/object';
-import { singularize } from 'ember-inflector';
+import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
 import { resolve } from 'rsvp';
 import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-utils';
-import layout from '../templates/components/search-select';
-import { isWildcardString } from 'vault/helpers/is-wildcard-string';
-
 /**
  * @module SearchSelect
  * The `SearchSelect` is an implementation of the [ember-power-select](https://github.com/cibernox/ember-power-select) used for form elements where options come dynamically from the API.
  * @example
- * <SearchSelect @id="group-policies" @models={{["policies/acl"]}} @onChange={{onChange}} @selectLimit={{2}} @inputValue={{get model valuePath}} @helpText="Policies associated with this group" @label="Policies" @fallbackComponent="string-list" />
- *
- * @param {string} id - The name of the form field
- * @param {Array} models - An array of model types to fetch from the API.
- * @param {object} [queryObject] - object passed as query options to this.store.query(). NOTE: will override this.backend
+ *  <SearchSelect
+ *    @id="policy"
+ *    @models={{array "policies/acl"}}
+ *    @onChange={{this.onChange}}
+ *    @inputValue={{get @model this.valuePath}}
+ *    @wildcardLabel="role"
+ *    @fallbackComponent="string-list"
+ *    @selectLimit={{1}}
+ *    @backend={{@model.backend}}
+ *    @disallowNewItems={{true}}
+ *    class={{if this.validationError "dropdown-has-error-border"}}
+ * />
+ * 
+ // * component functionality
  * @param {function} onChange - The onchange action for this form field. ** SEE UTIL ** search-select-has-many.js if selecting models from a hasMany relationship
- * @param {string | Array} inputValue -  A comma-separated string or an array of strings -- array of ids for models.
- * @param {string} label - Label for this form field
- * @param {string} fallbackComponent - name of component to be rendered if the API call 403s
- * @param {string} [backend] - name of the backend if the query for options needs additional information (eg. secret backend)
+ * @param {array} [inputValue] - Array of strings corresponding to the input's initial value, e.g. an array of model ids that on edit will appear as selected items below the input
  * @param {boolean} [disallowNewItems=false] - Controls whether or not the user can add a new item if none found
- * @param {boolean} [passObject=false] - When true, the onChange callback returns an array of objects with id (string) and isNew (boolean) (instead of an array of id strings)
- * @param {array} [objectKeys=null] - Array of values that correlate to model attrs. When passObject=true, objectKeys are added to the passed object. NOTE: make 'id' as the first element in objectKeys if you do not want to override the default of 'id'
- * @param {string} [helpText] - Text to be displayed in the info tooltip for this form field
- * @param {number} [selectLimit] - A number that sets the limit to how many select options they can choose
+ * @param {boolean} [shouldRenderName=false] - By default an item's id renders in the dropdown, `true` displays the name with its id in smaller text beside it *NOTE: the boolean flips automatically with 'identity' models or if this.idKey !== 'id'
+ * @param {array} [parentManageSelected] - Array of selected items if the parent is keeping track of selections, see mfa-login-enforcement-form.js
+ * @param {boolean} [passObject=false] - When true, the onChange callback returns an array of objects with id (string) and isNew (boolean) (and any params from objectKeys). By default - onChange returns an array of id strings. 
+ * @param {array} [objectKeys] - Array of values that correlate to model attrs. Used to render attr other than 'id' beside the name if shouldRenderName=true. If passObject=true, objectKeys are added to the passed, selected object.
+ * @param {number} [selectLimit] - Sets select limit
+ 
+// * query params for dropdown items
+ * @param {Array} models - An array of model types to fetch from the API.
+ * @param {string} [backend] - name of the backend if the query for options needs additional information (eg. secret backend)
+ * @param {object} [queryObject] - object passed as query options to this.store.query(). NOTE: will override @backend
+ 
+ // * template only/display args
+ * @param {string} id - The name of the form field
+ * @param {string} [label] - Label for this form field
+ * @param {string} [labelClass] - overwrite default label size (14px) from class="is-label"
  * @param {string} [subText] - Text to be displayed below the label
- * @param {string} [subLabel] - a smaller label below the main Label
- * @param {string} [wildcardLabel] - when you want the searchSelect component to return a count on the model for options returned when using a wildcard you must provide a label of the count e.g. role.  Should be singular.
+ * @param {string} fallbackComponent - name of component to be rendered if the API call 403s
+ * @param {string} [helpText] - Text to be displayed in the info tooltip for this form field
+ * @param {string} [wildcardLabel] - string (singular) for rendering label tag beside a wildcard selection (i.e. 'role*'), for the number of items it includes, e.g. @wildcardLabel="role" -> "includes 4 roles"
  * @param {string} [placeholder] - text you wish to replace the default "search" with
- * @param {boolean} [displayInherit] - if you need the search select component to display inherit instead of box.
- * @param {boolean} [renderInfoTooltip=false] - if you want search select to render a tooltip beside a selected item if no corresponding model was returned from .query
+ * @param {boolean} [displayInherit=false] - if you need the search select component to display inherit instead of box.
+ * @param {function} [renderInfoTooltip] - receives each inputValue string and list of dropdownOptions as args, so parent can determine when to render a tooltip beside a selectedOption and the tooltip text. see 'oidc/provider-form.js'
  *
- * @param {Array} options - *Advanced usage* - `options` can be passed directly from the outside to the
- * power-select component. If doing this, `models` should not also be passed as that will overwrite the
- * passed value. ex: [{ name: 'namespace45', id: 'displayedName' }];
- * @param {function} search - *Advanced usage* - Customizes how the power-select component searches for matches -
- * see the power-select docs for more information.
+ // * advanced customization
+ * @param {Array} options - array of objects passed directly to the power-select component. If doing this, `models` should not also be passed as that will overwrite the
+ * passed options. ex: [{ name: 'namespace45', id: 'displayedName' }]. It's recommended the parent should manage the array of selected items if manually passing in options.
+ * @param {function} search - Customizes how the power-select component searches for matches - see the power-select docs for more information.
  *
  */
-export default Component.extend({
-  layout,
-  'data-test-component': 'search-select',
-  attributeBindings: ['data-test-component'],
-  classNameBindings: ['displayInherit:display-inherit'],
-  classNames: ['field', 'search-select'],
-  store: service(),
-  onChange: () => {},
-  inputValue: computed(function () {
-    return [];
-  }),
-  allOptions: null, // list of options including matched
-  selectedOptions: null, // list of selected options
-  options: null, // all possible options
-  shouldUseFallback: false,
-  shouldRenderName: false,
-  disallowNewItems: false,
-  passObject: false,
-  objectKeys: null,
-  idKey: computed('objectKeys', function () {
-    // if objectKeys exists, then use the first element of the array as the identifier
-    return this.objectKeys ? this.objectKeys[0] : 'id';
-  }),
-  init() {
-    this._super(...arguments);
-    this.set('selectedOptions', this.inputValue || []);
-  },
-  didRender() {
-    this._super(...arguments);
-    let { oldOptions, options, selectedOptions } = this;
-    let hasFormattedInput = typeof selectedOptions.firstObject !== 'string';
-    if (options && !oldOptions && !hasFormattedInput) {
-      // this is the first time they've been set, so we need to format them
-      this.formatOptions(options);
-    }
-    this.set('oldOptions', options);
-  },
-  formatOptions: function (options) {
-    options = options.toArray().map((option) => {
-      option.searchText = `${option.name} ${option[this.idKey]}`;
+
+export default class SearchSelect extends Component {
+  @service store;
+  @tracked shouldUseFallback = false;
+  @tracked selectedOptions = []; // array of selected options (initially set by @inputValue)
+  @tracked dropdownOptions = []; // options that will render in dropdown, updates as selections are added/discarded
+  @tracked allOptions = []; // both selected and unselected options, used for wildcard filter
+
+  get hidePowerSelect() {
+    return this.selectedOptions.length >= this.args.selectLimit;
+  }
+
+  get idKey() {
+    // if objectKeys exists, use the first element of the array as the identifier
+    // make 'id' as the first element in objectKeys if you do not want to override the default of 'id'
+    return this.args.objectKeys ? this.args.objectKeys[0] : 'id';
+  }
+
+  get shouldRenderName() {
+    return this.args.models?.some((model) => model.includes('identity')) ||
+      this.idKey !== 'id' ||
+      this.args.shouldRenderName
+      ? true
+      : false;
+  }
+
+  addSearchText(optionsToFormat) {
+    // maps over array of objects or response from query
+    return optionsToFormat.toArray().map((option) => {
+      const id = option[this.idKey] ? option[this.idKey] : option.id;
+      option.searchText = `${option.name} ${id}`;
       return option;
     });
-    let allOptions = options.toArray().map((option) => {
-      return option.id;
-    });
-    this.set('allOptions', allOptions); // used by filter-wildcard helper
-    let formattedOptions = this.selectedOptions.map((option) => {
-      let matchingOption = options.findBy(this.idKey, option);
-      // an undefined matchingOption means a selectedOption, on edit, didn't match a model returned from the query
-      // this means it is a wildcard string or no longer exists
-      // permissions shouldn't inhibit viewing a record here, because the fallback component would render instead of search-select
-      let addTooltip = matchingOption || isWildcardString([option]) ? false : true; // add tooltip to let user know the selection may not exist
-      options.removeObject(matchingOption);
+  }
+
+  formatInputAndUpdateDropdown(inputValues) {
+    // inputValues are initially an array of strings from @inputValue
+    // map over so selectedOptions are objects
+    return inputValues.map((option) => {
+      const matchingOption = this.dropdownOptions.findBy(this.idKey, option);
+      // tooltip text comes from return of parent function
+      const addTooltip = this.args.renderInfoTooltip
+        ? this.args.renderInfoTooltip(option, this.dropdownOptions)
+        : false;
+
+      // remove any matches from dropdown list
+      this.dropdownOptions.removeObject(matchingOption);
       return {
         id: option,
         name: matchingOption ? matchingOption.name : option,
         searchText: matchingOption ? matchingOption.searchText : option,
         addTooltip,
-        // conditionally spread configured object if we're using the dynamic idKey
+        // add additional attrs if we're using a dynamic idKey
         ...(this.idKey !== 'id' && this.customizeObject(matchingOption)),
       };
     });
-    this.set('selectedOptions', formattedOptions);
-    if (this.options) {
-      options = this.options.concat(options).uniq();
+  }
+
+  @task
+  *fetchOptions() {
+    this.dropdownOptions = []; // reset dropdown anytime we re-fetch
+
+    if (this.args.parentManageSelected) {
+      // works in tandem with parent passing in @options directly
+      this.selectedOptions = this.args.parentManageSelected;
     }
-    this.set('options', options);
-  },
-  fetchOptions: task(function* () {
-    if (!this.models) {
-      if (this.options) {
-        this.formatOptions(this.options);
+
+    if (!this.args.models) {
+      if (this.args.options) {
+        const { options } = this.args;
+        // if options are nested, let parent handle formatting - see path-filter-config-list.js
+        this.dropdownOptions = options.some((e) => Object.keys(e).includes('groupName'))
+          ? options
+          : [...this.addSearchText(options)];
+
+        if (!this.args.parentManageSelected) {
+          //  set selectedOptions and remove matches from dropdown list
+          this.selectedOptions = this.args.inputValue
+            ? this.formatInputAndUpdateDropdown(this.args.inputValue)
+            : [];
+        }
       }
       return;
     }
-    if (this.idKey !== 'id') {
-      // if passing a dynamic idKey, then display it in the dropdown beside the name
-      this.set('shouldRenderName', true);
-    }
-    for (let modelType of this.models) {
-      if (modelType.includes('identity')) {
-        this.set('shouldRenderName', true);
-      }
+
+    for (const modelType of this.args.models) {
       try {
-        let queryOptions = {};
-        if (this.backend) {
-          queryOptions = { backend: this.backend };
+        let queryParams = {};
+        if (this.args.backend) {
+          queryParams = { backend: this.args.backend };
         }
-        if (this.queryObject) {
-          queryOptions = this.queryObject;
+        if (this.args.queryObject) {
+          queryParams = this.args.queryObject;
         }
-        let options = yield this.store.query(modelType, queryOptions);
-        this.formatOptions(options);
+        // fetch options from the store
+        const options = yield this.store.query(modelType, queryParams);
+
+        // store both select + unselected options in tracked property used by wildcard filter
+        this.allOptions = [...this.allOptions, ...options.mapBy('id')];
+
+        // add to dropdown options
+        this.dropdownOptions = [...this.dropdownOptions, ...this.addSearchText(options)];
       } catch (err) {
         if (err.httpStatus === 404) {
-          if (!this.options) {
-            // If the call failed but the resource has items
-            // from a different namespace, this allows the
-            // selected items to display
-            this.set('options', []);
-          }
-
-          return;
+          // continue to query other models even if one 404s
+          // and so selectedOptions will be set after for loop
+          continue;
         }
         if (err.httpStatus === 403) {
-          this.set('shouldUseFallback', true);
+          this.shouldUseFallback = true;
           return;
         }
         throw err;
       }
     }
-  }).on('didInsertElement'),
+
+    // after all models are queried, set selectedOptions and remove matches from dropdown list
+    this.selectedOptions = this.args.inputValue
+      ? this.formatInputAndUpdateDropdown(this.args.inputValue)
+      : [];
+  }
+
+  @action
   handleChange() {
     if (this.selectedOptions.length && typeof this.selectedOptions.firstObject === 'object') {
-      this.onChange(Array.from(this.selectedOptions, (option) => this.customizeObject(option)));
+      this.args.onChange(
+        Array.from(this.selectedOptions, (option) =>
+          this.args.passObject ? this.customizeObject(option) : option.id
+        )
+      );
     } else {
-      this.onChange(this.selectedOptions);
+      this.args.onChange(this.selectedOptions);
     }
-  },
-  shouldShowCreate(id, options) {
-    if (options && options.length && options.firstObject.groupName) {
-      return !options.some((group) => group.options.findBy('id', id));
+  }
+
+  shouldShowCreate(id, searchResults) {
+    if (searchResults && searchResults.length && searchResults.firstObject.groupName) {
+      return !searchResults.some((group) => group.options.findBy('id', id));
     }
-    let existingOption = this.options && (this.options.findBy('id', id) || this.options.findBy('name', id));
-    if (this.disallowNewItems && !existingOption) {
+    const existingOption =
+      this.dropdownOptions &&
+      (this.dropdownOptions.findBy('id', id) || this.dropdownOptions.findBy('name', id));
+    if (this.args.disallowNewItems && !existingOption) {
       return false;
     }
     return !existingOption;
-  },
-  //----- adapted from ember-power-select-with-create
+  }
+
+  // ----- adapted from ember-power-select-with-create
   addCreateOption(term, results) {
     if (this.shouldShowCreate(term, results)) {
-      const name = `Add new ${singularize(this.label || 'item')}: ${term}`;
+      const name = `Click to add new item: ${term}`;
       const suggestion = {
         __isSuggestion__: true,
         __value__: term,
@@ -182,76 +215,76 @@ export default Component.extend({
       };
       results.unshift(suggestion);
     }
-  },
+  }
+
   filter(options, searchText) {
     const matcher = (option, text) => defaultMatcher(option.searchText, text);
     return filterOptions(options || [], searchText, matcher);
-  },
+  }
   // -----
+
   customizeObject(option) {
     if (!option) return;
-    // if passObject=true return object, otherwise return string of option id
-    if (this.passObject) {
-      let additionalKeys;
-      if (this.objectKeys) {
-        // pull attrs corresponding to objectKeys from model record, add to the selected option (object) and send to the parent
-        additionalKeys = Object.fromEntries(this.objectKeys.map((key) => [key, option[key]]));
-        // filter any undefined attrs, which means the model did not have a value for that attr
-        // no value could mean the model was not hydrated, the record is new or the model doesn't have that attribute
-        Object.keys(additionalKeys).forEach((key) => {
-          if (additionalKeys[key] === undefined) {
-            delete additionalKeys[key];
-          }
-        });
-      }
-      return {
-        id: option.id,
-        isNew: !!option.new,
-        ...additionalKeys,
-      };
+
+    let additionalKeys;
+    if (this.args.objectKeys) {
+      // pull attrs corresponding to objectKeys from model record, add to the selection
+      additionalKeys = Object.fromEntries(this.args.objectKeys.map((key) => [key, option[key]]));
+      // filter any undefined attrs, which could mean the model was not hydrated,
+      // the record is new or the model doesn't have that attribute
+      Object.keys(additionalKeys).forEach((key) => {
+        if (additionalKeys[key] === undefined) {
+          delete additionalKeys[key];
+        }
+      });
     }
-    return option.id;
-  },
-  actions: {
-    onChange(val) {
-      this.onChange(val);
-    },
-    discardSelection(selected) {
-      this.selectedOptions.removeObject(selected);
-      // fire off getSelectedValue action higher up in get-credentials-card component
-      if (!selected.new) {
-        this.options.pushObject(selected);
-      }
-      this.handleChange();
-    },
-    // ----- adapted from ember-power-select-with-create
-    searchAndSuggest(term, select) {
-      if (term.length === 0) {
-        return this.options;
-      }
-      if (this.search) {
-        return resolve(this.search(term, select)).then((results) => {
-          if (results.toArray) {
-            results = results.toArray();
-          }
-          this.addCreateOption(term, results);
-          return results;
-        });
-      }
-      const newOptions = this.filter(this.options, term);
-      this.addCreateOption(term, newOptions);
-      return newOptions;
-    },
-    selectOrCreate(selection) {
-      if (selection && selection.__isSuggestion__) {
-        const name = selection.__value__;
-        this.selectedOptions.pushObject({ name, id: name, new: true });
-      } else {
-        this.selectedOptions.pushObject(selection);
-        this.options.removeObject(selection);
-      }
-      this.handleChange();
-    },
-    // -----
-  },
-});
+    return {
+      id: option.id,
+      isNew: !!option.new,
+      ...additionalKeys,
+    };
+  }
+
+  @action
+  discardSelection(selected) {
+    this.selectedOptions.removeObject(selected);
+    if (!selected.new) {
+      this.dropdownOptions.pushObject(selected);
+    }
+    this.handleChange();
+  }
+
+  // ----- adapted from ember-power-select-with-create
+  @action
+  searchAndSuggest(term, select) {
+    if (term.length === 0) {
+      return this.dropdownOptions;
+    }
+    if (this.args.search) {
+      return resolve(this.args.search(term, select)).then((results) => {
+        if (results.toArray) {
+          results = results.toArray();
+        }
+        this.addCreateOption(term, results);
+        return results;
+      });
+    }
+    const newOptions = this.filter(this.dropdownOptions, term);
+    this.addCreateOption(term, newOptions);
+    return newOptions;
+  }
+
+  @action
+  selectOrCreate(selection) {
+    if (selection && selection.__isSuggestion__) {
+      const name = selection.__value__;
+      this.selectedOptions.pushObject({ name, id: name, new: true });
+    } else {
+      this.selectedOptions.pushObject(selection);
+      this.dropdownOptions.removeObject(selection);
+    }
+    this.handleChange();
+  }
+
+  // -----
+}

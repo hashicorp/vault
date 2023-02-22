@@ -35,7 +35,7 @@ export default class DatabaseListItem extends Component {
   @action
   resetConnection(id) {
     const { backend } = this.args.item;
-    let adapter = this.store.adapterFor('database/connection');
+    const adapter = this.store.adapterFor('database/connection');
     adapter
       .resetConnection(backend, id)
       .then(() => {
@@ -48,7 +48,7 @@ export default class DatabaseListItem extends Component {
   @action
   rotateRootCred(id) {
     const { backend } = this.args.item;
-    let adapter = this.store.adapterFor('database/connection');
+    const adapter = this.store.adapterFor('database/connection');
     adapter
       .rotateRootCredentials(backend, id)
       .then(() => {
@@ -61,7 +61,7 @@ export default class DatabaseListItem extends Component {
   @action
   rotateRoleCred(id) {
     const { backend } = this.args.item;
-    let adapter = this.store.adapterFor('database/credential');
+    const adapter = this.store.adapterFor('database/credential');
     adapter
       .rotateRoleCredentials(backend, id)
       .then(() => {

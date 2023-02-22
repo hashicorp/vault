@@ -4,12 +4,61 @@ import (
 	"context"
 	"encoding/pem"
 	"fmt"
+	"net/http"
 	"strings"
+	"time"
+
+	"github.com/hashicorp/vault/helper/constants"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
+
+var pathFetchReadSchema = map[int][]framework.Response{
+	http.StatusOK: {{
+		Description: "OK",
+		Fields: map[string]*framework.FieldSchema{
+			"certificate": {
+				Type:        framework.TypeString,
+				Description: `Certificate`,
+				Required:    false,
+			},
+			"revocation_time": {
+				Type:        framework.TypeInt,
+				Description: `Revocation time`,
+				Required:    false,
+			},
+			"revocation_time_rfc3339": {
+				Type:        framework.TypeInt,
+				Description: `Revocation time RFC 3339 formatted`,
+				Required:    false,
+			},
+			"issuer_id": {
+				Type:        framework.TypeString,
+				Description: `ID of the issuer`,
+				Required:    false,
+			},
+			"ca_chain": {
+				Type:        framework.TypeStringSlice,
+				Description: `Issuing CA Chain`,
+				Required:    false,
+			},
+			"http_content_type": {
+				Type:     framework.TypeString,
+				Required: false,
+			},
+			"http_raw_body": {
+				Type:     framework.TypeString,
+				Required: false,
+			},
+			"http_status_code": {
+				Type:     framework.TypeString,
+				Required: false,
+			},
+		},
+	}},
+}
 
 // Returns the CA in raw format
 func pathFetchCA(b *backend) *framework.Path {
@@ -18,7 +67,8 @@ func pathFetchCA(b *backend) *framework.Path {
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
-				Callback: b.pathFetchRead,
+				Callback:  b.pathFetchRead,
+				Responses: pathFetchReadSchema,
 			},
 		},
 
@@ -34,7 +84,8 @@ func pathFetchCAChain(b *backend) *framework.Path {
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
-				Callback: b.pathFetchRead,
+				Callback:  b.pathFetchRead,
+				Responses: pathFetchReadSchema,
 			},
 		},
 
@@ -47,6 +98,23 @@ func pathFetchCAChain(b *backend) *framework.Path {
 func pathFetchCRL(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `crl(/pem|/delta(/pem)?)?`,
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback:  b.pathFetchRead,
+				Responses: pathFetchReadSchema,
+			},
+		},
+
+		HelpSynopsis:    pathFetchHelpSyn,
+		HelpDescription: pathFetchHelpDesc,
+	}
+}
+
+// Returns the CRL in raw format
+func pathFetchUnifiedCRL(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: `unified-crl(/pem|/delta(/pem)?)?`,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
@@ -73,7 +141,8 @@ hyphen-separated octal`,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
-				Callback: b.pathFetchRead,
+				Callback:  b.pathFetchRead,
+				Responses: pathFetchReadSchema,
 			},
 		},
 
@@ -97,7 +166,8 @@ hyphen-separated octal`,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
-				Callback: b.pathFetchRead,
+				Callback:  b.pathFetchRead,
+				Responses: pathFetchReadSchema,
 			},
 		},
 
@@ -108,12 +178,18 @@ hyphen-separated octal`,
 
 // This returns the CRL in a non-raw format
 func pathFetchCRLViaCertPath(b *backend) *framework.Path {
+	pattern := `cert/(crl|delta-crl)`
+	if constants.IsEnterprise {
+		pattern = `cert/(crl|delta-crl|unified-crl|unified-delta-crl)`
+	}
+
 	return &framework.Path{
-		Pattern: `cert/(crl|delta-crl)`,
+		Pattern: pattern,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
-				Callback: b.pathFetchRead,
+				Callback:  b.pathFetchRead,
+				Responses: pathFetchReadSchema,
 			},
 		},
 
@@ -130,6 +206,18 @@ func pathFetchListCerts(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathFetchCertList,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"keys": {
+								Type:        framework.TypeStringSlice,
+								Description: `A list of keys`,
+								Required:    true,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -156,6 +244,9 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 	var certificate []byte
 	var fullChain []byte
 	var revocationTime int64
+	var revocationIssuerId string
+	var revocationTimeRfc3339 string
+
 	response = &logical.Response{
 		Data: map[string]interface{}{},
 	}
@@ -193,11 +284,30 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		if req.Path == "ca_chain" {
 			contentType = "application/pkix-cert"
 		}
-	case req.Path == "crl" || req.Path == "crl/pem" || req.Path == "crl/delta" || req.Path == "crl/delta/pem" || req.Path == "cert/crl" || req.Path == "cert/crl/raw" || req.Path == "cert/crl/raw/pem" || req.Path == "cert/delta-crl":
-		modifiedCtx.reqType = ifModifiedCRL
-		if strings.Contains(req.Path, "delta") {
-			modifiedCtx.reqType = ifModifiedDeltaCRL
+	case req.Path == "crl" || req.Path == "crl/pem" || req.Path == "crl/delta" || req.Path == "crl/delta/pem" || req.Path == "cert/crl" || req.Path == "cert/crl/raw" || req.Path == "cert/crl/raw/pem" || req.Path == "cert/delta-crl" || req.Path == "cert/delta-crl/raw" || req.Path == "cert/delta-crl/raw/pem" || req.Path == "unified-crl" || req.Path == "unified-crl/pem" || req.Path == "unified-crl/delta" || req.Path == "unified-crl/delta/pem" || req.Path == "cert/unified-crl" || req.Path == "cert/unified-crl/raw" || req.Path == "cert/unified-crl/raw/pem" || req.Path == "cert/unified-delta-crl" || req.Path == "cert/unified-delta-crl/raw" || req.Path == "cert/unified-delta-crl/raw/pem":
+		config, err := b.crlBuilder.getConfigWithUpdate(sc)
+		if err != nil {
+			retErr = err
+			goto reply
 		}
+		var isDelta bool
+		var isUnified bool
+		if strings.Contains(req.Path, "delta") {
+			isDelta = true
+		}
+		if strings.Contains(req.Path, "unified") || shouldLocalPathsUseUnified(config) {
+			isUnified = true
+		}
+
+		modifiedCtx.reqType = ifModifiedCRL
+		if !isUnified && isDelta {
+			modifiedCtx.reqType = ifModifiedDeltaCRL
+		} else if isUnified && !isDelta {
+			modifiedCtx.reqType = ifModifiedUnifiedCRL
+		} else if isUnified && isDelta {
+			modifiedCtx.reqType = ifModifiedUnifiedDeltaCRL
+		}
+
 		ret, err := sendNotModifiedResponseIfNecessary(modifiedCtx, sc, response)
 		if err != nil || ret {
 			retErr = err
@@ -205,14 +315,19 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		}
 
 		serial = legacyCRLPath
-		if req.Path == "crl/delta" || req.Path == "crl/delta/pem" || req.Path == "cert/delta-crl" {
+		if !isUnified && isDelta {
 			serial = deltaCRLPath
+		} else if isUnified && !isDelta {
+			serial = unifiedCRLPath
+		} else if isUnified && isDelta {
+			serial = unifiedDeltaCRLPath
 		}
+
 		contentType = "application/pkix-crl"
-		if req.Path == "crl/pem" || req.Path == "crl/delta/pem" {
+		if strings.Contains(req.Path, "pem") {
 			pemType = "X509 CRL"
 			contentType = "application/x-pem-file"
-		} else if req.Path == "cert/crl" || req.Path == "cert/delta-crl" {
+		} else if req.Path == "cert/crl" || req.Path == "cert/delta-crl" || req.Path == "cert/unified-crl" || req.Path == "cert/unified-delta-crl" {
 			pemType = "X509 CRL"
 			contentType = ""
 		}
@@ -276,7 +391,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		goto reply
 	}
 
-	certEntry, funcErr = fetchCertBySerial(ctx, b, req, req.Path, serial)
+	certEntry, funcErr = fetchCertBySerial(sc, req.Path, serial)
 	if funcErr != nil {
 		switch funcErr.(type) {
 		case errutil.UserError:
@@ -304,7 +419,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		certificate = []byte(strings.TrimSpace(string(pem.EncodeToMemory(&block))))
 	}
 
-	revokedEntry, funcErr = fetchCertBySerial(ctx, b, req, "revoked/", serial)
+	revokedEntry, funcErr = fetchCertBySerial(sc, "revoked/", serial)
 	if funcErr != nil {
 		switch funcErr.(type) {
 		case errutil.UserError:
@@ -322,6 +437,11 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 			return logical.ErrorResponse(fmt.Sprintf("Error decoding revocation entry for serial %s: %s", serial, err)), nil
 		}
 		revocationTime = revInfo.RevocationTime
+		revocationIssuerId = revInfo.CertificateIssuer.String()
+
+		if !revInfo.RevocationTimeUTC.IsZero() {
+			revocationTimeRfc3339 = revInfo.RevocationTimeUTC.Format(time.RFC3339Nano)
+		}
 	}
 
 reply:
@@ -354,6 +474,12 @@ reply:
 	default:
 		response.Data["certificate"] = string(certificate)
 		response.Data["revocation_time"] = revocationTime
+		response.Data["revocation_time_rfc3339"] = revocationTimeRfc3339
+		// Only output this field if we have a value for it as it doesn't make sense for a
+		// bunch of code paths that go through here
+		if revocationIssuerId != "" {
+			response.Data["issuer_id"] = revocationIssuerId
+		}
 
 		if len(fullChain) > 0 {
 			response.Data["ca_chain"] = string(fullChain)

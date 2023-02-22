@@ -6,7 +6,7 @@ export default ApplicationAdapter.extend({
   },
 
   findRecord(store, type, id) {
-    let baseUrl = this.buildURL(type.modelName);
+    const baseUrl = this.buildURL(type.modelName);
     return this.ajax(`${baseUrl}/request`, 'POST', {
       data: {
         accessor: id,
@@ -18,7 +18,7 @@ export default ApplicationAdapter.extend({
   },
 
   urlForUpdateRecord(id, modelName) {
-    let base = this.buildURL(modelName);
+    const base = this.buildURL(modelName);
     return `${base}/authorize`;
   },
 });

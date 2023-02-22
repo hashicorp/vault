@@ -32,7 +32,7 @@ module('Integration | Component | auth-config-form options', function (hooks) {
 
   test('it submits data correctly', async function (assert) {
     assert.expect(1);
-    let model = EmberObject.create({
+    const model = EmberObject.create({
       tune() {
         return resolve();
       },
@@ -44,7 +44,7 @@ module('Integration | Component | auth-config-form options', function (hooks) {
     });
     sinon.spy(model.config, 'serialize');
     this.set('model', model);
-    await render(hbs`{{auth-config-form/options model=model}}`);
+    await render(hbs`{{auth-config-form/options model=this.model}}`);
     component.save();
     return settled().then(() => {
       assert.ok(model.config.serialize.calledOnce);

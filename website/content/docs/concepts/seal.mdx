@@ -42,22 +42,22 @@ the unseal key.
 The default Vault config uses a Shamir seal. Instead of distributing the unseal
 key as a single key to an operator, Vault uses an algorithm known as
 [Shamir's Secret Sharing](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing)
-to split the key into shards. A certain threshold of shards is required to
+to split the key into shares. A certain threshold of shares is required to
 reconstruct the unseal key, which is then used to decrypt the root key.
 
-This is the _unseal_ process: the shards are added one at a time (in any
-order) until enough shards are present to reconstruct the key and
+This is the _unseal_ process: the shares are added one at a time (in any
+order) until enough shares are present to reconstruct the key and
 decrypt the root key.
 
 ## Unsealing
 
 The unseal process is done by running `vault operator unseal` or via the API.
 This process is stateful: each key can be entered via multiple mechanisms from
-multiple client machines and it will work. This allows each shard of the root
+multiple client machines and it will work. This allows each shares of the root
 key to be on a distinct client machine for better security.
 
 Note that when using the Shamir seal with multiple nodes, each node must be
-unsealed with the required threshold of shards. Partial unsealing of each node
+unsealed with the required threshold of shares. Partial unsealing of each node
 is not distributed across the cluster.
 
 Once a Vault node is unsealed, it remains unsealed until one of these things happens:
@@ -81,14 +81,14 @@ only requires a single operator with root privileges.
 
 This way, if there is a detected intrusion, the Vault data can be locked
 quickly to try to minimize damages. It can't be accessed again without
-access to the root key shards.
+access to the root key shares.
 
 ## Auto Unseal
 
 -> **Note:** The Seal Wrap functionality is enabled by default. For this
 reason, the seal provider (HSM or cloud KMS) must be available throughout
 Vault's runtime and not just during the unseal process. Refer to the [Seal
-Wrap](/docs/enterprise/sealwrap) documentation for more information.
+Wrap](/vault/docs/enterprise/sealwrap) documentation for more information.
 
 Auto Unseal was developed to aid in reducing the operational complexity of
 keeping the unseal key secure. This feature delegates the responsibility of
@@ -107,17 +107,32 @@ keys_ instead.
 Just as the initialization process with a Shamir seal yields unseal keys,
 initializing with an Auto Unseal yields recovery keys.
 
--> **Note:** Recovery keys cannot decrypt the root key, and thus are not
-sufficient to unseal Vault if the Auto Unseal mechanism isn't working. They
-are purely an authorization mechanism.
-
 It is still possible to seal a Vault node using the API. In this case Vault
 will remain sealed until restarted, or the unseal API is used, which with Auto
 Unseal requires the recovery key fragments instead of the unseal key fragments
 that would be provided with Shamir. The process remains the same.
 
 For a list of examples and supported providers, please see the
-[seal documentation](/docs/configuration/seal).
+[seal documentation](/vault/docs/configuration/seal).
+
+-> **Warning:** Recovery keys cannot decrypt the root key, and thus are not
+sufficient to unseal Vault if the Auto Unseal mechanism isn't working. They
+are purely an authorization mechanism.  Using Auto Unseal 
+creates a strict Vault lifecycle dependency on the underlying seal mechanism. 
+This means that if the seal mechanism (such as the Cloud KMS key) becomes unavailable, 
+or deleted before the seal is migrated, then there is no ability to recover 
+access to the Vault cluster until the mechanism is available again. **If the seal 
+mechanism or its keys are permanently deleted, then the Vault cluster cannot be recovered, even
+from backups.**
+To mitigate this risk, we recommend careful controls around management of the seal
+mechanism, for example using 
+[AWS Service Control Policies](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps.html)
+or similar.  
+With Vault Enterprise secondary clusters (disaster or performance) can have a
+seal configured independently of the primary, and when properly configured guards 
+against *some* of this risk.  Unreplicated items such as local mounts could still 
+be lost.
+
 
 ## Recovery Key
 
@@ -133,7 +148,7 @@ keys for this purpose, rather than the barrier unseal keys, is automatic.
 ### Initialization
 
 When initializing, the split is performed according to the following CLI flags
-and their API equivalents in the [/sys/init](/api-docs/system/init) endpoint:
+and their API equivalents in the [/sys/init](/vault/api-docs/system/init) endpoint:
 
 - `recovery-shares`: The number of shares into which to split the recovery
   key. This value is equivalent to the `recovery_shares` value in the API
@@ -148,7 +163,7 @@ and their API equivalents in the [/sys/init](/api-docs/system/init) endpoint:
 
 Additionally, Vault will refuse to initialize if the option has not been set to
 generate a key, and no key is found. See
-[Configuration](/docs/configuration/seal/pkcs11) for more details.
+[Configuration](/vault/docs/configuration/seal/pkcs11) for more details.
 
 ### Rekeying
 
@@ -168,7 +183,7 @@ this is performed by using the `-target=recovery` flag to `vault operator rekey`
 
 Via the API, the rekey operation is performed with the same parameters as the
 [normal `/sys/rekey`
-endpoint](/api-docs/system/rekey); however, the
+endpoint](/vault/api-docs/system/rekey); however, the
 API prefix for this operation is at `/sys/rekey-recovery-key` rather than
 `/sys/rekey`.
 
@@ -201,7 +216,7 @@ These steps are common for seal migrations between any supported kinds and for
 any storage backend.
 
 1. Take a standby node down and update the [seal
-   configuration](/docs/configuration/seal).
+   configuration](/vault/docs/configuration/seal).
 
    - If the migration is from Shamir seal to Auto seal, add the desired new Auto
      seal block to the configuration.
@@ -224,7 +239,7 @@ any storage backend.
    specifically when Integrated Storage is in use for it helps to retain the
    quorum.
 
-1. [Step down](https://www.vaultproject.io/docs/commands/operator/step-down) the
+1. [Step down](/vault/docs/commands/operator/step-down) the
    active node. One of the standby nodes will become the new active node.
    When using Integrated Storage, ensure that quorum is reached and a leader is
    elected.
@@ -250,7 +265,7 @@ any storage backend.
 #### Migration From Shamir to Auto Unseal
 
 To migrate from Shamir keys to Auto Unseal, take your server cluster offline and
-update the [seal configuration](/docs/configuration/seal) with the appropriate
+update the [seal configuration](/vault/docs/configuration/seal) with the appropriate
 seal configuration. Bring your server back up and leave the rest of the nodes
 offline if using multi-server mode, then run the unseal process with the
 `-migrate` flag and bring the rest of the cluster online.
@@ -264,7 +279,7 @@ keys.
 #### Migration From Auto Unseal to Shamir
 
 To migrate from Auto Unseal to Shamir keys, take your server cluster offline
-and update the [seal configuration](/docs/configuration/seal) and add `disabled
+and update the [seal configuration](/vault/docs/configuration/seal) and add `disabled
 = "true"` to the seal block. This allows the migration to use this information
 to decrypt the key but will not unseal Vault. When you bring your server back
 up, run the unseal process with the `-migrate` flag and use the Recovery Keys
@@ -280,7 +295,7 @@ one type of Auto Unseal to a different type (ie Transit -> AWSKMS).
 
 To migrate from Auto Unseal to a different Auto Unseal configuration, take your
 server cluster offline and update the existing [seal
-configuration](/docs/configuration/seal) and add `disabled = "true"` to the seal
+configuration](/vault/docs/configuration/seal) and add `disabled = "true"` to the seal
 block. Then add another seal block to describe the new seal.
 
 When you bring your server back up, run the unseal process with the `-migrate`

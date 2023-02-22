@@ -18,7 +18,7 @@
   </p.levelLeft>
 </PageHeader>
 
-{{#if (not (contains this.model.type (supported-managed-auth-backends)))}}
+{{#if (not (includes this.model.type (supported-managed-auth-backends)))}}
   <div class="has-text-grey has-top-bottom-margin" data-test-doc-link>
     The Vault UI only supports configuration for this authentication method. For management, the
     <DocLink @path="/api/auth">API or CLI</DocLink>
@@ -31,7 +31,7 @@
 {{#if (eq this.section "configuration")}}
   <Toolbar>
     <ToolbarActions>
-      <ToolbarLink @params={{array "vault.cluster.settings.auth.configure" this.model.id}} data-test-configure-link="true">
+      <ToolbarLink @route="vault.cluster.settings.auth.configure" @model={{this.model.id}} data-test-configure-link="true">
         Configure
       </ToolbarLink>
     </ToolbarActions>

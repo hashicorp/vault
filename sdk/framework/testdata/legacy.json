@@ -38,6 +38,7 @@
         "summary": "Synopsis",
         "tags": ["secrets"],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {

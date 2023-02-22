@@ -17,7 +17,27 @@ func PrepareTestContainer(t *testing.T, version string) (func(), string) {
 		"POSTGRES_DB=database",
 	}
 
-	_, cleanup, url, _ := prepareTestContainer(t, "postgres", "postgres", version, "secret", true, false, false, env)
+	_, cleanup, url, _ := prepareTestContainer(t, "postgres", "docker.mirror.hashicorp.services/postgres", version, "secret", true, false, false, env)
+
+	return cleanup, url
+}
+
+// PrepareTestContainerWithVaultUser will setup a test container with a Vault
+// admin user configured so that we can safely call rotate-root without
+// rotating the root DB credentials
+func PrepareTestContainerWithVaultUser(t *testing.T, ctx context.Context, version string) (func(), string) {
+	env := []string{
+		"POSTGRES_PASSWORD=secret",
+		"POSTGRES_DB=database",
+	}
+
+	runner, cleanup, url, id := prepareTestContainer(t, "postgres", "docker.mirror.hashicorp.services/postgres", version, "secret", true, false, false, env)
+
+	cmd := []string{"psql", "-U", "postgres", "-c", "CREATE USER vaultadmin WITH LOGIN PASSWORD 'vaultpass' SUPERUSER"}
+	_, err := runner.RunCmdInBackground(ctx, id, cmd)
+	if err != nil {
+		t.Fatalf("Could not run command (%v) in container: %v", cmd, err)
+	}
 
 	return cleanup, url
 }
@@ -28,7 +48,7 @@ func PrepareTestContainerWithPassword(t *testing.T, version, password string) (f
 		"POSTGRES_DB=database",
 	}
 
-	_, cleanup, url, _ := prepareTestContainer(t, "postgres", "postgres", version, password, true, false, false, env)
+	_, cleanup, url, _ := prepareTestContainer(t, "postgres", "docker.mirror.hashicorp.services/postgres", version, password, true, false, false, env)
 
 	return cleanup, url
 }
@@ -40,7 +60,7 @@ func PrepareTestContainerRepmgr(t *testing.T, name, version string, envVars []st
 		"REPMGR_PASSWORD=repmgrpass",
 		"POSTGRESQL_PASSWORD=secret")
 
-	return prepareTestContainer(t, name, "bitnami/postgresql-repmgr", version, "secret", false, true, true, env)
+	return prepareTestContainer(t, name, "docker.mirror.hashicorp.services/bitnami/postgresql-repmgr", version, "secret", false, true, true, env)
 }
 
 func prepareTestContainer(t *testing.T, name, repo, version, password string,

@@ -109,11 +109,16 @@ label {
 .input.variable {
   font-family: $family-monospace;
 }
+
+.select select[disabled],
 .input[disabled],
 .textarea[disabled] {
   border-color: $grey-light;
-  background-color: $white-ter;
-  color: $grey-light;
+  background-color: $ui-gray-100;
+  color: $ui-gray-500;
+  &:hover {
+    border-color: $grey-light;
+  }
 }
 
 .control {
@@ -150,6 +155,11 @@ label {
     .select select {
       padding-right: 10em;
     }
+  }
+
+  &.is-align-end {
+    display: flex;
+    align-self: end;
   }
 }
 
@@ -334,7 +344,6 @@ select.has-error-border {
 .dropdown-has-error-border > div.ember-basic-dropdown-trigger {
   border: 1px solid $red-500;
 }
-
 
 .autocomplete-input {
   background: $white !important;

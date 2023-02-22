@@ -18,29 +18,29 @@ module('Integration | Component | kv-object-editor', function (hooks) {
 
   test('it renders with no initial value', async function (assert) {
     await render(hbs`{{kv-object-editor onChange=this.spy}}`);
-    assert.equal(component.rows.length, 1, 'renders a single row');
+    assert.strictEqual(component.rows.length, 1, 'renders a single row');
     await component.addRow();
-    assert.equal(component.rows.length, 1, 'will only render row with a blank key');
+    assert.strictEqual(component.rows.length, 1, 'will only render row with a blank key');
   });
 
   test('it calls onChange when the val changes', async function (assert) {
     await render(hbs`{{kv-object-editor onChange=this.spy}}`);
     await component.rows.objectAt(0).kvKey('foo').kvVal('bar');
-    assert.equal(this.spy.callCount, 2, 'calls onChange each time change is triggered');
+    assert.strictEqual(this.spy.callCount, 2, 'calls onChange each time change is triggered');
     assert.deepEqual(
       this.spy.lastCall.args[0],
       { foo: 'bar' },
       'calls onChange with the JSON respresentation of the data'
     );
     await component.addRow();
-    assert.equal(component.rows.length, 2, 'adds a row when there is no blank one');
+    assert.strictEqual(component.rows.length, 2, 'adds a row when there is no blank one');
   });
 
   test('it renders passed data', async function (assert) {
-    let metadata = { foo: 'bar', baz: 'bop' };
+    const metadata = { foo: 'bar', baz: 'bop' };
     this.set('value', metadata);
-    await render(hbs`{{kv-object-editor value=value}}`);
-    assert.equal(
+    await render(hbs`{{kv-object-editor value=this.value}}`);
+    assert.strictEqual(
       component.rows.length,
       Object.keys(metadata).length + 1,
       'renders both rows of the metadata, plus an empty one'
@@ -51,19 +51,19 @@ module('Integration | Component | kv-object-editor', function (hooks) {
     await render(hbs`{{kv-object-editor onChange=this.spy}}`);
     await component.rows.objectAt(0).kvKey('foo').kvVal('bar');
     await component.addRow();
-    assert.equal(component.rows.length, 2);
-    assert.equal(this.spy.callCount, 2, 'calls onChange for editing');
+    assert.strictEqual(component.rows.length, 2);
+    assert.strictEqual(this.spy.callCount, 2, 'calls onChange for editing');
     await component.rows.objectAt(0).deleteRow();
 
-    assert.equal(component.rows.length, 1, 'only the blank row left');
-    assert.equal(this.spy.callCount, 3, 'calls onChange deleting row');
+    assert.strictEqual(component.rows.length, 1, 'only the blank row left');
+    assert.strictEqual(this.spy.callCount, 3, 'calls onChange deleting row');
     assert.deepEqual(this.spy.lastCall.args[0], {}, 'last call to onChange is an empty object');
   });
 
   test('it shows a warning if there are duplicate keys', async function (assert) {
-    let metadata = { foo: 'bar', baz: 'bop' };
+    const metadata = { foo: 'bar', baz: 'bop' };
     this.set('value', metadata);
-    await render(hbs`{{kv-object-editor value=value onChange=this.spy}}`);
+    await render(hbs`{{kv-object-editor value=this.value onChange=this.spy}}`);
     await component.rows.objectAt(0).kvKey('foo');
 
     assert.ok(component.showsDuplicateError, 'duplicate keys are allowed but an error message is shown');

@@ -45,28 +45,32 @@
   {{else}}
     <div class="control is-expanded">
       <div class="file">
-        <label class="file-label is-fullwidth">
-          <input class="file-input" type="file" onchange={{action "pickedFile"}} data-test-pgp-file-input={{true}} />
+        <div class="file-label is-fullwidth">
+          <input
+            id="file-input"
+            class="file-input"
+            type="file"
+            onchange={{action "pickedFile"}}
+            data-test-pgp-file-input={{true}}
+          />
           <span class="file-cta is-fullwidth">
             <span class="file-icon has-text-grey-dark">
               <Icon @name="file" />
             </span>
-            <span class="file-label has-text-grey-dark" data-test-pgp-file-input-label={{true}}>
-              {{#if this.key.fileName}}
-                {{this.key.fileName}}
+            <label for="file-input" class="file-label has-text-grey-dark" data-test-pgp-file-input-label={{true}}>
+              {{#if this.key.filename}}
+                {{this.key.filename}}
               {{else}}
                 Choose a file&hellip;
               {{/if}}
-            </span>
-            {{#if this.key.fileName}}
-              {{! template-lint-configure no-nested-interactive "warn" }}
+            </label>
+            {{#if this.key.filename}}
               <button type="button" class="file-delete-button" {{action "clearKey"}} data-test-pgp-clear={{true}}>
                 <Icon @name="x" aria-label="Close" />
               </button>
-              {{! template-lint-configure no-nested-interactive "on" }}
             {{/if}}
           </span>
-        </label>
+        </div>
       </div>
     </div>
     <p class="help has-text-grey">

@@ -44,26 +44,26 @@ module('Integration | Component | transit key actions', function (hooks) {
   });
 
   test('it requires `key`', async function (assert) {
-    let promise = waitForError();
+    const promise = waitForError();
     render(hbs`
       {{transit-key-actions}}
       <div id="modal-wormhole"></div>
     `);
-    let err = await promise;
+    const err = await promise;
     assert.ok(err.message.includes('`key` is required for'), 'asserts without key');
   });
 
   test('it renders', async function (assert) {
     this.set('key', { backend: 'transit', supportedActions: ['encrypt'] });
     await render(hbs`
-      {{transit-key-actions selectedAction="encrypt" key=key}}
+      {{transit-key-actions selectedAction="encrypt" key=this.key}}
       <div id="modal-wormhole"></div>
     `);
     assert.dom('[data-test-transit-action="encrypt"]').exists({ count: 1 }, 'renders encrypt');
 
     this.set('key', { backend: 'transit', supportedActions: ['sign'] });
     await render(hbs`
-      {{transit-key-actions selectedAction="sign" key=key}}
+      {{transit-key-actions selectedAction="sign" key=this.key}}
       <div id="modal-wormhole"></div>`);
     assert.dom('[data-test-transit-action="sign"]').exists({ count: 1 }, 'renders sign');
   });
@@ -72,7 +72,7 @@ module('Integration | Component | transit key actions', function (hooks) {
     this.set('key', { backend: 'transit', supportsSigning: true, supportedActions: ['sign', 'verify'] });
     this.set('selectedAction', 'sign');
     await render(hbs`
-      {{transit-key-actions selectedAction=selectedAction key=key}}
+      {{transit-key-actions selectedAction=this.selectedAction key=this.key}}
       <div id="modal-wormhole"></div>
     `);
     assert
@@ -102,7 +102,7 @@ module('Integration | Component | transit key actions', function (hooks) {
   test('it renders: rotate', async function (assert) {
     this.set('key', { backend: 'transit', id: 'akey', supportedActions: ['rotate'] });
     await render(hbs`
-      {{transit-key-actions selectedAction="rotate" key=key}}
+      {{transit-key-actions selectedAction="rotate" key=this.key}}
       <div id="modal-wormhole"></div>
     `);
 
@@ -115,14 +115,14 @@ module('Integration | Component | transit key actions', function (hooks) {
   });
 
   async function doEncrypt(assert, actions = [], keyattrs = {}) {
-    let keyDefaults = { backend: 'transit', id: 'akey', supportedActions: ['encrypt'].concat(actions) };
+    const keyDefaults = { backend: 'transit', id: 'akey', supportedActions: ['encrypt'].concat(actions) };
 
     const key = assign({}, keyDefaults, keyattrs);
     this.set('key', key);
     this.set('selectedAction', 'encrypt');
     this.set('storeService.keyActionReturnVal', { ciphertext: 'secret' });
     await render(hbs`
-      {{transit-key-actions selectedAction=selectedAction key=key}}
+      {{transit-key-actions selectedAction=this.selectedAction key=this.key}}
       <div id="modal-wormhole"></div>
     `);
 
@@ -141,7 +141,7 @@ module('Integration | Component | transit key actions', function (hooks) {
       'passes expected args to the adapter'
     );
 
-    assert.equal(find('[data-test-encrypted-value="ciphertext"]').innerText, 'secret');
+    assert.strictEqual(find('[data-test-encrypted-value="ciphertext"]').innerText, 'secret');
 
     // exit modal
     await click('[data-test-modal-background]');
@@ -168,13 +168,13 @@ module('Integration | Component | transit key actions', function (hooks) {
   test('it encrypts', doEncrypt);
 
   test('it shows key version selection', async function (assert) {
-    let keyDefaults = { backend: 'transit', id: 'akey', supportedActions: ['encrypt'].concat([]) };
-    let keyattrs = { keysForEncryption: [3, 2, 1], latestVersion: 3 };
+    const keyDefaults = { backend: 'transit', id: 'akey', supportedActions: ['encrypt'].concat([]) };
+    const keyattrs = { keysForEncryption: [3, 2, 1], latestVersion: 3 };
     const key = assign({}, keyDefaults, keyattrs);
     this.set('key', key);
     this.set('storeService.keyActionReturnVal', { ciphertext: 'secret' });
     await render(hbs`
-      {{transit-key-actions selectedAction="encrypt" key=key}}
+      {{transit-key-actions selectedAction="encrypt" key=this.key}}
       <div id="modal-wormhole"></div>
     `);
 
@@ -199,13 +199,13 @@ module('Integration | Component | transit key actions', function (hooks) {
   });
 
   test('it hides key version selection', async function (assert) {
-    let keyDefaults = { backend: 'transit', id: 'akey', supportedActions: ['encrypt'].concat([]) };
-    let keyattrs = { keysForEncryption: [1] };
+    const keyDefaults = { backend: 'transit', id: 'akey', supportedActions: ['encrypt'].concat([]) };
+    const keyattrs = { keysForEncryption: [1] };
     const key = assign({}, keyDefaults, keyattrs);
     this.set('key', key);
     this.set('storeService.keyActionReturnVal', { ciphertext: 'secret' });
     await render(hbs`
-      {{transit-key-actions selectedAction="encrypt" key=key}}
+      {{transit-key-actions selectedAction="encrypt" key=this.key}}
       <div id="modal-wormhole"></div>
     `);
 
@@ -221,7 +221,7 @@ module('Integration | Component | transit key actions', function (hooks) {
 
     this.set('storeService.keyActionReturnVal', { plaintext });
     this.set('selectedAction', 'decrypt');
-    assert.equal(
+    assert.strictEqual(
       find('#ciphertext-control .CodeMirror').CodeMirror.getValue(),
       '',
       'does not prefill ciphertext value'
@@ -237,7 +237,7 @@ module('Integration | Component | transit key actions', function (hooks) {
       validKeyVersions: [1],
     });
     await render(hbs`
-      {{transit-key-actions key=key}}
+      {{transit-key-actions key=this.key}}
       <div id="modal-wormhole"></div>
     `);
   };
@@ -259,8 +259,12 @@ module('Integration | Component | transit key actions', function (hooks) {
       },
       'passes expected args to the adapter'
     );
-    assert.equal(this.storeService.callArgsOptions.wrapTTL, '30m', 'passes value for wrapTTL');
-    assert.equal(find('[data-test-encrypted-value="export"]').innerText, 'wrapped-token', 'wraps by default');
+    assert.strictEqual(this.storeService.callArgsOptions.wrapTTL, '30m', 'passes value for wrapTTL');
+    assert.strictEqual(
+      find('[data-test-encrypted-value="export"]').innerText,
+      'wrapped-token',
+      'wraps by default'
+    );
   });
 
   test('it can export a key:unwrapped behavior', async function (assert) {
@@ -313,7 +317,7 @@ module('Integration | Component | transit key actions', function (hooks) {
       validKeyVersions: [1],
     });
     await render(hbs`
-      {{transit-key-actions key=key}}
+      {{transit-key-actions key=this.key}}
       <div id="modal-wormhole"></div>
     `);
     await fillIn('#algorithm', 'sha2-384');

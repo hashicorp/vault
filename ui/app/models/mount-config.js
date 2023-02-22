@@ -1,41 +1,60 @@
-import { attr } from '@ember-data/model';
-import Fragment from 'ember-data-model-fragments/fragment';
+import Model, { attr } from '@ember-data/model';
 
-export default Fragment.extend({
-  defaultLeaseTtl: attr({
+export default class MountConfigModel extends Model {
+  @attr({
     label: 'Default Lease TTL',
     editType: 'ttl',
-  }),
-  maxLeaseTtl: attr({
+  })
+  defaultLeaseTtl;
+
+  @attr({
     label: 'Max Lease TTL',
     editType: 'ttl',
-  }),
-  auditNonHmacRequestKeys: attr({
+  })
+  maxLeaseTtl;
+
+  @attr({
     label: 'Request keys excluded from HMACing in audit',
     editType: 'stringArray',
     helpText: "Keys that will not be HMAC'd by audit devices in the request data object.",
-  }),
-  auditNonHmacResponseKeys: attr({
+  })
+  auditNonHmacRequestKeys;
+
+  @attr({
     label: 'Response keys excluded from HMACing in audit',
     editType: 'stringArray',
     helpText: "Keys that will not be HMAC'd by audit devices in the response data object.",
-  }),
-  listingVisibility: attr('string', {
+  })
+  auditNonHmacResponseKeys;
+
+  @attr('string', {
     editType: 'boolean',
     label: 'List method when unauthenticated',
     trueValue: 'unauth',
     falseValue: 'hidden',
-  }),
-  passthroughRequestHeaders: attr({
+  })
+  listingVisibility;
+
+  @attr({
     label: 'Allowed passthrough request headers',
     helpText: 'Headers to allow and pass from the request to the backend',
     editType: 'stringArray',
-  }),
-  tokenType: attr('string', {
+  })
+  passthroughRequestHeaders;
+
+  @attr({
+    label: 'Allowed response headers',
+    helpText: 'Headers to allow, allowing a plugin to include them in the response.',
+    editType: 'stringArray',
+  })
+  allowedResponseHeaders;
+
+  @attr('string', {
     label: 'Token Type',
     helpText:
       "The type of token that should be generated via this role. Can be `service`, `batch`, or `default` to use the mount's default (which unless changed will be `service` tokens).",
     possibleValues: ['default', 'batch', 'service'],
     defaultFormValue: 'default',
-  }),
-});
+  })
+  tokenType;
+}

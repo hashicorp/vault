@@ -22,7 +22,11 @@ module('Acceptance | secrets/pki/create', function (hooks) {
     await settled();
     await editPage.createRole('role', 'example.com');
     await settled();
-    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.show',
+      'redirects to the show page'
+    );
     assert.dom('[data-test-edit-link="true"]').exists('shows the edit button');
     assert.dom('[data-test-credentials-link="true"]').exists('shows the generate button');
     assert.dom('[data-test-sign-link="true"]').exists('shows the sign button');
@@ -31,7 +35,7 @@ module('Acceptance | secrets/pki/create', function (hooks) {
     await settled();
     await showPage.generateCert();
     await settled();
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.secrets.backend.credentials',
       'navs to the credentials page'
@@ -41,7 +45,7 @@ module('Acceptance | secrets/pki/create', function (hooks) {
     await settled();
     await visit(`/vault/secrets/${path}/credentials/role?action=sign`);
 
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.secrets.backend.credentials',
       'navs to the credentials page'
@@ -49,8 +53,8 @@ module('Acceptance | secrets/pki/create', function (hooks) {
 
     await listPage.visitRoot({ backend: path });
     await settled();
-    assert.equal(listPage.secrets.length, 1, 'shows role in the list');
-    let secret = listPage.secrets.objectAt(0);
+    assert.strictEqual(listPage.secrets.length, 1, 'shows role in the list');
+    const secret = listPage.secrets.objectAt(0);
     await secret.menuToggle();
     await settled();
     assert.ok(listPage.menuItems.length > 0, 'shows links in the menu');

@@ -53,13 +53,13 @@ module('Integration | Component | mfa-login-enforcement-header', function (hooks
       .includesText('An enforcement includes the authentication types', 'Description renders');
     for (const option of ['new', 'existing', 'skip']) {
       await click(`[data-test-mleh-radio="${option}"] input`);
-      assert.equal(this.value, option, 'Value is updated on radio select');
+      assert.strictEqual(this.value, option, 'Value is updated on radio select');
       if (option === 'existing') {
         await clickTrigger();
         await click('.ember-power-select-option');
       }
     }
 
-    assert.equal(this.enforcement.name, 'foo', 'Existing enforcement is selected');
+    assert.strictEqual(this.enforcement.name, 'foo', 'Existing enforcement is selected');
   });
 });

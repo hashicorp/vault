@@ -55,7 +55,8 @@
       color: $menu-item-hover-color;
     }
 
-    &.is-active {
+    &.active,
+    .is-active {
       background-color: $menu-item-active-background-color;
       color: $menu-item-active-color;
     }

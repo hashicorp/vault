@@ -51,13 +51,13 @@ module('Integration | Component | control group success', function (hooks) {
   };
   test('render with saved token', async function (assert) {
     assert.expect(3);
-    let response = {
+    const response = {
       uiParams: { url: '/foo' },
       token: 'token',
     };
     this.set('model', MODEL);
     this.set('response', response);
-    await render(hbs`{{control-group-success model=model controlGroupResponse=response }}`);
+    await render(hbs`{{control-group-success model=this.model controlGroupResponse=this.response }}`);
     assert.ok(component.showsNavigateMessage, 'shows unwrap message');
     await component.navigate();
     later(() => cancelTimers(), 50);
@@ -70,7 +70,7 @@ module('Integration | Component | control group success', function (hooks) {
   test('render without token', async function (assert) {
     assert.expect(2);
     this.set('model', MODEL);
-    await render(hbs`{{control-group-success model=model}}`);
+    await render(hbs`{{control-group-success model=this.model}}`);
     assert.ok(component.showsUnwrapForm, 'shows unwrap form');
     await component.token('token');
     component.unwrap();

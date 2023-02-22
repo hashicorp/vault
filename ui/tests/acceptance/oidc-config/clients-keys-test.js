@@ -60,7 +60,7 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
 
     // check reroutes from oidc index to clients index when client exists
     await visit(OIDC_BASE_URL);
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.oidc.clients.index',
       'redirects to clients index route when clients exist'
@@ -73,7 +73,7 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
     // navigate to keys
     await click('[data-test-tab="keys"]');
     assert.dom('[data-test-tab="keys"]').hasClass('active', 'keys tab is active');
-    assert.equal(currentRouteName(), 'vault.cluster.access.oidc.keys.index');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.access.oidc.keys.index');
     assert
       .dom('[data-test-oidc-key-linked-block="default"]')
       .hasText('default', 'index page lists default key');
@@ -83,13 +83,13 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
     await click('[data-test-oidc-key-menu-link="details"]');
     assert.dom(SELECTORS.keyDeleteButton).isDisabled('delete button is disabled for default key');
     await click(SELECTORS.keyEditButton);
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.oidc.keys.key.edit',
       'navigates to edit from key details'
     );
     await click(SELECTORS.keyCancelButton);
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.oidc.keys.key.details',
       'key edit form navigates back to details on cancel'
@@ -101,16 +101,20 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
 
     // create a new key
     await click('[data-test-breadcrumb-link="oidc-keys"]');
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.oidc.keys.index',
       'keys breadcrumb navigates back to list view'
     );
     await click('[data-test-oidc-key-create]');
-    assert.equal(currentRouteName(), 'vault.cluster.access.oidc.keys.create', 'navigates to key create form');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.access.oidc.keys.create',
+      'navigates to key create form'
+    );
     await fillIn('[data-test-input="name"]', 'test-key');
     await click(SELECTORS.keySaveButton);
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.oidc.keys.key.details',
       'navigates to key details after save'
@@ -130,25 +134,25 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
     await visit(OIDC_BASE_URL + '/keys');
     await click('[data-test-oidc-key-linked-block="test-key"] [data-test-popup-menu-trigger]');
     await click('[data-test-oidc-key-menu-link="edit"]');
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.oidc.keys.key.edit',
       'key linked block popup menu navigates to edit'
     );
-    await click('label[for=limited]');
+    await click('[data-test-oidc-radio="limited"]');
     await clickTrigger();
-    assert.equal(searchSelect.options.length, 1, 'dropdown has only application that uses this key');
+    assert.strictEqual(searchSelect.options.length, 1, 'dropdown has only application that uses this key');
     assert
       .dom('.ember-power-select-option')
       .hasTextContaining('client-with-test-key', 'dropdown renders correct application');
     await searchSelect.options.objectAt(0).click();
     await click(SELECTORS.keySaveButton);
-    assert.equal(
+    assert.strictEqual(
       flashMessage.latestMessage,
       'Successfully updated the key test-key.',
       'renders success flash upon key updating'
     );
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.oidc.keys.key.details',
       'navigates back to details on update'
@@ -157,12 +161,12 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
     assert
       .dom('[data-test-oidc-client-linked-block="client-with-test-key"]')
       .exists('lists client-with-test-key');
-    assert.equal(findAll('[data-test-oidc-client-linked-block]').length, 1, 'it lists only one client');
+    assert.strictEqual(findAll('[data-test-oidc-client-linked-block]').length, 1, 'it lists only one client');
 
     // edit back to allow all
     await click(SELECTORS.keyDetailsTab);
     await click(SELECTORS.keyEditButton);
-    await click('label[for=allow-all]');
+    await click('[data-test-oidc-radio="allow-all"]');
     await click(SELECTORS.keySaveButton);
     await click(SELECTORS.keyClientsTab);
     assert.notEqual(
@@ -183,7 +187,7 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
     this.server.get('/identity/oidc/client', () => overrideMirageResponse(null, CLIENT_LIST_RESPONSE));
     this.server.post('/identity/oidc/key/test-key/rotate', (schema, req) => {
       const json = JSON.parse(req.requestBody);
-      assert.equal(json.verification_ttl, 86400, 'request made with correct args to accurate endpoint');
+      assert.strictEqual(json.verification_ttl, 86400, 'request made with correct args to accurate endpoint');
     });
 
     //* clear out test state
@@ -195,10 +199,14 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
     // toggle ttls to false, testing it sets correct default duration
     await click('[data-test-input="rotationPeriod"]');
     await click('[data-test-input="verificationTtl"]');
-    assert.dom('input#limited').isDisabled('limiting access radio button is disabled on create');
-    assert.dom('label[for=limited]').hasClass('is-disabled', 'limited radio button label has disabled class');
+    assert
+      .dom('[data-test-oidc-radio="limited"] input')
+      .isDisabled('limiting access radio button is disabled on create');
+    assert
+      .dom('[data-test-oidc-radio="limited"]')
+      .hasClass('is-disabled', 'limited radio button label has disabled class');
     await click(SELECTORS.keySaveButton);
-    assert.equal(
+    assert.strictEqual(
       flashMessage.latestMessage,
       'Successfully created the key test-key.',
       'renders success flash upon key creation'
@@ -217,7 +225,7 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
     await click(SELECTORS.keyDetailsTab);
     await click(SELECTORS.keyRotateButton);
     await click(SELECTORS.confirmActionButton);
-    assert.equal(
+    assert.strictEqual(
       flashMessage.latestMessage,
       'Success: test-key connection was rotated.',
       'renders success flash upon key rotation'
@@ -225,12 +233,12 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
     // delete
     await click(SELECTORS.keyDeleteButton);
     await click(SELECTORS.confirmActionButton);
-    assert.equal(
+    assert.strictEqual(
       flashMessage.latestMessage,
       'Key deleted successfully',
       'success flash message renders after deleting key'
     );
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.oidc.keys.index',
       'navigates back to list view after delete'
@@ -249,10 +257,10 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
     assert.dom(SELECTORS.clientDetailsTab).hasClass('active', 'details tab is active');
     assert.dom(SELECTORS.clientDeleteButton).exists('toolbar renders delete option');
     assert.dom(SELECTORS.clientEditButton).exists('toolbar renders edit button');
-    assert.equal(findAll('[data-test-component="info-table-row"]').length, 9, 'renders all info rows');
+    assert.strictEqual(findAll('[data-test-component="info-table-row"]').length, 9, 'renders all info rows');
 
     await click(SELECTORS.clientProvidersTab);
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.oidc.clients.client.providers',
       'navigates to client providers route'
@@ -277,7 +285,7 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
     assert.dom(SELECTORS.clientDetailsTab).hasClass('active', 'details tab is active');
     assert.dom(SELECTORS.clientDeleteButton).doesNotExist('delete option is hidden');
     assert.dom(SELECTORS.clientEditButton).doesNotExist('edit button is hidden');
-    assert.equal(findAll('[data-test-component="info-table-row"]').length, 9, 'renders all info rows');
+    assert.strictEqual(findAll('[data-test-component="info-table-row"]').length, 9, 'renders all info rows');
   });
 
   test('it hides delete and edit key when no permission', async function (assert) {
@@ -300,6 +308,6 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
     assert.dom(SELECTORS.keyDetailsTab).hasClass('active', 'details tab is active');
     assert.dom(SELECTORS.keyDeleteButton).doesNotExist('delete option is hidden');
     assert.dom(SELECTORS.keyEditButton).doesNotExist('edit button is hidden');
-    assert.equal(findAll('[data-test-component="info-table-row"]').length, 4, 'renders all info rows');
+    assert.strictEqual(findAll('[data-test-component="info-table-row"]').length, 4, 'renders all info rows');
   });
 });

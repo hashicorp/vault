@@ -19,7 +19,7 @@ export default Helper.extend({
     const currentRoute = router.get('currentRouteName');
     let currentURL = router.get('currentURL');
     // if we have any query params we want to discard them
-    currentURL = currentURL.split('?')[0];
+    currentURL = currentURL?.split('?')[0];
     const comparator = isExact ? exact : startsWith;
     if (!currentRoute) {
       return false;

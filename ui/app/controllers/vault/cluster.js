@@ -10,6 +10,7 @@ export default Controller.extend({
   router: service(),
   permissions: service(),
   namespaceService: service('namespace'),
+  flashMessages: service(),
 
   vaultVersion: service('version'),
   console: service(),

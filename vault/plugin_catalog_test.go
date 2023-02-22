@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -39,11 +40,18 @@ func TestPluginCatalog_CRUD(t *testing.T) {
 		t.Fatalf("unexpected error %v", err)
 	}
 
+	// Get it again, explicitly specifying builtin version
+	builtinVersion := versions.GetBuiltinVersion(consts.PluginTypeDatabase, pluginName)
+	p2, err := core.pluginCatalog.Get(context.Background(), pluginName, consts.PluginTypeDatabase, builtinVersion)
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+
 	expectedBuiltin := &pluginutil.PluginRunner{
 		Name:    pluginName,
 		Type:    consts.PluginTypeDatabase,
 		Builtin: true,
-		Version: versions.GetBuiltinVersion(consts.PluginTypeDatabase, pluginName),
+		Version: builtinVersion,
 	}
 	expectedBuiltin.BuiltinFactory, _ = builtinplugins.Registry.Get(pluginName, consts.PluginTypeDatabase)
 
@@ -52,8 +60,12 @@ func TestPluginCatalog_CRUD(t *testing.T) {
 	}
 	expectedBuiltin.BuiltinFactory = nil
 	p.BuiltinFactory = nil
+	p2.BuiltinFactory = nil
 	if !reflect.DeepEqual(p, expectedBuiltin) {
 		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", p, expectedBuiltin)
+	}
+	if !reflect.DeepEqual(p2, expectedBuiltin) {
+		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", p2, expectedBuiltin)
 	}
 
 	// Set a plugin, test overwriting a builtin plugin
@@ -73,6 +85,16 @@ func TestPluginCatalog_CRUD(t *testing.T) {
 	p, err = core.pluginCatalog.Get(context.Background(), pluginName, consts.PluginTypeDatabase, "")
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
+	}
+
+	// Get it again, explicitly specifying builtin version.
+	// This time it should fail because it was overwritten.
+	p2, err = core.pluginCatalog.Get(context.Background(), pluginName, consts.PluginTypeDatabase, builtinVersion)
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+	if p2 != nil {
+		t.Fatalf("expected no result, got: %#v", p2)
 	}
 
 	expected := &pluginutil.PluginRunner{
@@ -382,7 +404,7 @@ func TestPluginCatalog_ListVersionedPlugins(t *testing.T) {
 			if !plugin.Builtin {
 				t.Fatalf("expected %v plugin to be builtin", plugin)
 			}
-			if plugin.SemanticVersion.Metadata() != "builtin" && plugin.SemanticVersion.Metadata() != "builtin.vault" {
+			if !versions.IsBuiltinVersion(plugin.Version) {
 				t.Fatalf("expected +builtin metadata but got %s", plugin.Version)
 			}
 		}
@@ -480,6 +502,23 @@ func TestPluginCatalog_NewPluginClient(t *testing.T) {
 	TestAddTestPlugin(t, core, "single-userpass-1", consts.PluginTypeUnknown, "", "TestPluginCatalog_PluginMain_Userpass", []string{}, "")
 	TestAddTestPlugin(t, core, "single-userpass-2", consts.PluginTypeUnknown, "", "TestPluginCatalog_PluginMain_Userpass", []string{}, "")
 
+	getKey := func(pluginName string, pluginType consts.PluginType) externalPluginsKey {
+		t.Helper()
+		ctx := context.Background()
+		plugin, err := core.pluginCatalog.Get(ctx, pluginName, pluginType, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if plugin == nil {
+			t.Fatal("did not find " + pluginName)
+		}
+		key, err := makeExternalPluginsKey(plugin)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return key
+	}
+
 	var pluginClients []*pluginClient
 	// run plugins
 	// run "mux-postgres" twice which will start a single plugin for 2
@@ -510,20 +549,20 @@ func TestPluginCatalog_NewPluginClient(t *testing.T) {
 	}
 
 	// check connections map
-	expectConnectionLen(t, 2, externalPlugins["mux-postgres"].connections)
-	expectConnectionLen(t, 1, externalPlugins["single-postgres-1"].connections)
-	expectConnectionLen(t, 1, externalPlugins["single-postgres-2"].connections)
-	expectConnectionLen(t, 2, externalPlugins["mux-userpass"].connections)
-	expectConnectionLen(t, 1, externalPlugins["single-userpass-1"].connections)
-	expectConnectionLen(t, 1, externalPlugins["single-userpass-2"].connections)
+	expectConnectionLen(t, 2, externalPlugins[getKey("mux-postgres", consts.PluginTypeDatabase)].connections)
+	expectConnectionLen(t, 1, externalPlugins[getKey("single-postgres-1", consts.PluginTypeDatabase)].connections)
+	expectConnectionLen(t, 1, externalPlugins[getKey("single-postgres-2", consts.PluginTypeDatabase)].connections)
+	expectConnectionLen(t, 2, externalPlugins[getKey("mux-userpass", consts.PluginTypeCredential)].connections)
+	expectConnectionLen(t, 1, externalPlugins[getKey("single-userpass-1", consts.PluginTypeCredential)].connections)
+	expectConnectionLen(t, 1, externalPlugins[getKey("single-userpass-2", consts.PluginTypeCredential)].connections)
 
 	// check multiplexing support
-	expectMultiplexingSupport(t, true, externalPlugins["mux-postgres"].multiplexingSupport)
-	expectMultiplexingSupport(t, false, externalPlugins["single-postgres-1"].multiplexingSupport)
-	expectMultiplexingSupport(t, false, externalPlugins["single-postgres-2"].multiplexingSupport)
-	expectMultiplexingSupport(t, true, externalPlugins["mux-userpass"].multiplexingSupport)
-	expectMultiplexingSupport(t, false, externalPlugins["single-userpass-1"].multiplexingSupport)
-	expectMultiplexingSupport(t, false, externalPlugins["single-userpass-2"].multiplexingSupport)
+	expectMultiplexingSupport(t, true, externalPlugins[getKey("mux-postgres", consts.PluginTypeDatabase)].multiplexingSupport)
+	expectMultiplexingSupport(t, false, externalPlugins[getKey("single-postgres-1", consts.PluginTypeDatabase)].multiplexingSupport)
+	expectMultiplexingSupport(t, false, externalPlugins[getKey("single-postgres-2", consts.PluginTypeDatabase)].multiplexingSupport)
+	expectMultiplexingSupport(t, true, externalPlugins[getKey("mux-userpass", consts.PluginTypeCredential)].multiplexingSupport)
+	expectMultiplexingSupport(t, false, externalPlugins[getKey("single-userpass-1", consts.PluginTypeCredential)].multiplexingSupport)
+	expectMultiplexingSupport(t, false, externalPlugins[getKey("single-userpass-2", consts.PluginTypeCredential)].multiplexingSupport)
 
 	// cleanup all of the external plugin processes
 	for _, client := range pluginClients {
@@ -533,6 +572,38 @@ func TestPluginCatalog_NewPluginClient(t *testing.T) {
 	// check that externalPlugins map is cleaned up
 	if len(externalPlugins) != 0 {
 		t.Fatalf("expected external plugin map to be of len 0 but got %d", len(externalPlugins))
+	}
+}
+
+func TestPluginCatalog_MakeExternalPluginsKey_Comparable(t *testing.T) {
+	var plugins []pluginutil.PluginRunner
+	hasher := sha256.New()
+	hasher.Write([]byte("Some random input"))
+
+	for i := 0; i < 2; i++ {
+		plugins = append(plugins, pluginutil.PluginRunner{
+			Name:    "Name",
+			Type:    consts.PluginTypeDatabase,
+			Version: "Version",
+			Command: "Command",
+			Args:    []string{"Some", "Args"},
+			Env:     []string{"Env=foo", "bar=", "baz=foo"},
+			Sha256:  hasher.Sum(nil),
+			Builtin: true,
+		})
+	}
+
+	var keys []externalPluginsKey
+	for _, plugin := range plugins {
+		key, err := makeExternalPluginsKey(&plugin)
+		if err != nil {
+			t.Fatal(err)
+		}
+		keys = append(keys, key)
+	}
+
+	if keys[0] != keys[1] {
+		t.Fatal("expected equality")
 	}
 }
 

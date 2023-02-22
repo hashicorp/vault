@@ -14,23 +14,27 @@ module('Acceptance | engine/disable', function (hooks) {
 
   test('disable engine', async function (assert) {
     // first mount an engine so we can disable it.
-    let enginePath = `alicloud-${new Date().getTime()}`;
+    const enginePath = `alicloud-${new Date().getTime()}`;
     await mountSecrets.enable('alicloud', enginePath);
     await settled();
     assert.ok(backendsPage.rows.filterBy('path', `${enginePath}/`)[0], 'shows the mounted engine');
 
     await backendsPage.visit();
     await settled();
-    let row = backendsPage.rows.filterBy('path', `${enginePath}/`)[0];
+    const row = backendsPage.rows.filterBy('path', `${enginePath}/`)[0];
     await row.menu();
     await settled();
     await backendsPage.disableButton();
     await settled();
     await backendsPage.confirmDisable();
     await settled();
-    assert.equal(currentRouteName(), 'vault.cluster.secrets.backends', 'redirects to the backends page');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backends',
+      'redirects to the backends page'
+    );
 
-    assert.equal(
+    assert.strictEqual(
       backendsPage.rows.filterBy('path', `${enginePath}/`).length,
       0,
       'does not show the disabled engine'

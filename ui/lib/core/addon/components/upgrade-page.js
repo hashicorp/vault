@@ -6,7 +6,7 @@ export default Component.extend({
   layout,
   title: 'Vault Enterprise',
   featureName: computed('title', function () {
-    let title = this.title;
+    const title = this.title;
     return title === 'Vault Enterprise' ? 'this feature' : title;
   }),
   minimumEdition: 'Vault Enterprise',

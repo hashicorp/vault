@@ -29,7 +29,7 @@ module('Integration | Component | masked input', function (hooks) {
 
   test('it renders obscure font when displayOnly', async function (assert) {
     this.set('value', 'value');
-    await render(hbs`{{masked-input displayOnly=true value=value}}`);
+    await render(hbs`{{masked-input displayOnly=true value=this.value}}`);
 
     assert.dom('.masked-value').hasClass('masked-font', 'loading class with correct font');
   });
@@ -54,7 +54,7 @@ module('Integration | Component | masked input', function (hooks) {
 
   test('it unmasks text when button is clicked', async function (assert) {
     this.set('value', 'value');
-    await render(hbs`{{masked-input value=value}}`);
+    await render(hbs`{{masked-input value=this.value}}`);
     await component.toggleMasked();
 
     assert.dom('.masked-value').doesNotHaveClass('masked-font');
@@ -62,7 +62,7 @@ module('Integration | Component | masked input', function (hooks) {
 
   test('it remasks text when button is clicked', async function (assert) {
     this.set('value', 'value');
-    await render(hbs`{{masked-input value=value}}`);
+    await render(hbs`{{masked-input value=this.value}}`);
 
     await component.toggleMasked();
     await component.toggleMasked();
@@ -72,18 +72,18 @@ module('Integration | Component | masked input', function (hooks) {
 
   test('it shortens all outputs when displayOnly and masked', async function (assert) {
     this.set('value', '123456789-123456789-123456789');
-    await render(hbs`{{masked-input value=value displayOnly=true}}`);
-    let maskedValue = document.querySelector('.masked-value').innerText;
-    assert.equal(maskedValue.length, 11);
+    await render(hbs`{{masked-input value=this.value displayOnly=true}}`);
+    const maskedValue = document.querySelector('.masked-value').innerText;
+    assert.strictEqual(maskedValue.length, 11);
 
     await component.toggleMasked();
-    let unMaskedValue = document.querySelector('.masked-value').innerText;
-    assert.equal(unMaskedValue.length, this.value.length);
+    const unMaskedValue = document.querySelector('.masked-value').innerText;
+    assert.strictEqual(unMaskedValue.length, this.value.length);
   });
 
   test('it does not unmask text on focus', async function (assert) {
     this.set('value', '123456789-123456789-123456789');
-    await render(hbs`{{masked-input value=value}}`);
+    await render(hbs`{{masked-input value=this.value}}`);
     assert.dom('.masked-value').hasClass('masked-font');
     await focus('.masked-value');
     assert.dom('.masked-value').hasClass('masked-font');
@@ -91,10 +91,10 @@ module('Integration | Component | masked input', function (hooks) {
 
   test('it does not remove value on tab', async function (assert) {
     this.set('value', 'hello');
-    await render(hbs`{{masked-input value=value}}`);
+    await render(hbs`{{masked-input value=this.value}}`);
     await triggerKeyEvent('[data-test-textarea]', 'keydown', 9);
     await component.toggleMasked();
-    let unMaskedValue = document.querySelector('.masked-value').value;
-    assert.equal(unMaskedValue, this.value);
+    const unMaskedValue = document.querySelector('.masked-value').value;
+    assert.strictEqual(unMaskedValue, this.value);
   });
 });

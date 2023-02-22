@@ -41,16 +41,16 @@ module('Integration | Component | client count config', function (hooks) {
         };
       },
     });
-    let model = generateModel();
+    const model = generateModel();
     this.model = model;
   });
 
   test('it shows the table with the correct rows by default', async function (assert) {
-    await render(hbs`<Clients::Config @model={{model}} />`);
+    await render(hbs`<Clients::Config @model={{this.model}} />`);
 
     assert.dom('[data-test-pricing-metrics-config-table]').exists('Pricing metrics config table exists');
     const rows = document.querySelectorAll('.info-table-row');
-    assert.equal(rows.length, 2, 'renders 2 infotable rows');
+    assert.strictEqual(rows.length, 2, 'renders 2 infotable rows');
     assert.ok(
       find('[data-test-row-value="Usage data collection"]').textContent.includes('On'),
       'Enabled value matches model'
@@ -64,12 +64,12 @@ module('Integration | Component | client count config', function (hooks) {
   test('TODO: it shows the config edit form when mode = edit', async function (assert) {
     await render(hbs`
       <div id="modal-wormhole"></div>
-      <Clients::Config @model={{model}} @mode="edit" />
+      <Clients::Config @model={{this.model}} @mode="edit" />
     `);
 
     assert.dom('[data-test-pricing-metrics-config-form]').exists('Pricing metrics config form exists');
     const fields = document.querySelectorAll('[data-test-field]');
-    assert.equal(fields.length, 2, 'renders 2 fields');
+    assert.strictEqual(fields.length, 2, 'renders 2 fields');
   });
 
   test('it shows a modal with correct messaging when disabling', async function (assert) {
@@ -81,7 +81,7 @@ module('Integration | Component | client count config', function (hooks) {
     this.set('model', simModel);
     await render(hbs`
       <div id="modal-wormhole"></div>
-      <Clients::Config @model={{model}} @mode="edit" />
+      <Clients::Config @model={{this.model}} @mode="edit" />
     `);
 
     await click('[data-test-edit-metrics-config-save]');
@@ -102,7 +102,7 @@ module('Integration | Component | client count config', function (hooks) {
     this.set('model', simModel);
     await render(hbs`
       <div id="modal-wormhole"></div>
-      <Clients::Config @model={{model}} @mode="edit" />
+      <Clients::Config @model={{this.model}} @mode="edit" />
     `);
 
     await click('[data-test-edit-metrics-config-save]');
@@ -123,7 +123,7 @@ module('Integration | Component | client count config', function (hooks) {
     this.set('model', simModel);
     await render(hbs`
       <div id="modal-wormhole"></div>
-      <Clients::Config @model={{model}} @mode="edit" />
+      <Clients::Config @model={{this.model}} @mode="edit" />
     `);
 
     await click('[data-test-edit-metrics-config-save]');

@@ -194,7 +194,20 @@
       {
         "title": "Duration String Format",
         "path": "concepts/duration-format"
-      }
+      },
+      {
+        "title": "User Lockout",
+        "path": "concepts/user-lockout"
+      },
+      {
+        "title": "Events",
+        "path": "concepts/events",
+        "badge": {
+          "text": "ALPHA",
+          "type": "outlined",
+          "color": "neutral"
+        }
+  }
     ]
   },
   {
@@ -214,6 +227,10 @@
           {
             "title": "TCP",
             "path": "configuration/listener/tcp"
+          },
+          {
+            "title": "Unix",
+            "path": "configuration/listener/unix"
           }
         ]
       },
@@ -394,6 +411,10 @@
         "path": "configuration/ui"
       },
       {
+        "title": "<code>user_lockout</code>",
+        "path": "configuration/user-lockout"
+      },
+      {
         "title": "<code>Log Completed Requests</code>",
         "path": "configuration/log-requests-level"
       },
@@ -540,6 +561,19 @@
         ]
       },
       {
+        "title": "<code>pki</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/pki"
+          },
+          {
+            "title": "<code>health-check</code>",
+            "path": "commands/pki/health-check"
+          }
+        ]
+      },
+      {
         "title": "<code>lease</code>",
         "routes": [
           {
@@ -655,6 +689,10 @@
         ]
       },
       {
+        "title": "<code>patch</code>",
+        "path": "commands/patch"
+      },
+      {
         "title": "<code>path-help</code>",
         "path": "commands/path-help"
       },
@@ -715,6 +753,10 @@
             "path": "commands/policy/write"
           }
         ]
+      },
+      {
+        "title": "<code>print</code>",
+        "path": "commands/print"
       },
       {
         "title": "<code>read</code>",
@@ -872,6 +914,10 @@
               {
                 "title": "Kubernetes",
                 "path": "agent/autoauth/methods/kubernetes"
+              },
+              {
+                "title": "Token File",
+                "path": "agent/autoauth/methods/token_file"
               }
             ]
           },
@@ -889,6 +935,10 @@
             ]
           }
         ]
+      },
+      {
+        "title": "API Proxy",
+        "path": "agent/apiproxy"
       },
       {
         "title": "Caching",
@@ -1111,6 +1161,11 @@
         "path": "secrets/kmip"
       },
       {
+        "title": "KMIP - Profile Support",
+        "path": "secrets/kmip-profiles",
+        "hidden": true
+      },
+      {
         "title": "Kubernetes",
         "path": "secrets/kubernetes"
       },
@@ -1123,8 +1178,8 @@
         "path": "secrets/nomad"
       },
       {
-        "title": "OpenLDAP",
-        "path": "secrets/openldap"
+        "title": "LDAP",
+        "path": "secrets/ldap"
       },
       {
         "title": "PKI (Certificates)",
@@ -1173,10 +1228,6 @@
           {
             "title": "SSH OTP",
             "path": "secrets/ssh/one-time-ssh-passwords"
-          },
-          {
-            "title": "Dynamic Key",
-            "path": "secrets/ssh/dynamic-ssh-keys"
           }
         ]
       },
@@ -1427,14 +1478,18 @@
         "path": "plugins/plugin-management"
       },
       {
-        "title": "Plugin Portal",
-        "path": "plugins/plugin-portal"
+        "title": "Integrations Library",
+        "href": "/vault/integrations"
       }
     ]
   },
   {
     "title": "Vault Integration Program",
     "path": "partnerships"
+  },
+  {
+    "title": "Vault Interoperability Matrix",
+    "path": "interoperability-matrix"
   },
   {
     "title": "Troubleshoot",
@@ -1689,6 +1744,15 @@
         "path": "upgrading/plugins"
       },
       {
+        "title": "Upgrade to 1.13.x",
+        "path": "upgrading/upgrade-to-1.13.x",
+        "hidden": true
+      },
+      {
+        "title": "Upgrade to 1.12.x",
+        "path": "upgrading/upgrade-to-1.12.x"
+      },
+      {
         "title": "Upgrade to 1.11.x",
         "path": "upgrading/upgrade-to-1.11.x"
       },
@@ -1925,6 +1989,10 @@
         "path": "release-notes"
       },
       {
+        "title": "1.12.0",
+        "path": "release-notes/1.12.0"
+      },
+      {
         "title": "1.11.0",
         "path": "release-notes/1.11.0"
       },
@@ -2056,6 +2124,23 @@
           {
             "title": "Security",
             "path": "enterprise/hsm/security"
+          }
+        ]
+      },
+      {
+        "title": "PKCS11 Provider",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "enterprise/pkcs11-provider"
+          },
+          {
+            "title": "AWS KMS XKS",
+            "path": "enterprise/pkcs11-provider/aws-xks"
+          },
+          {
+            "title": "Oracle TDE",
+            "path": "enterprise/pkcs11-provider/oracle-tde"
           }
         ]
       },

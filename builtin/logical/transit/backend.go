@@ -43,7 +43,6 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 		Paths: []*framework.Path{
 			// Rotate/Config needs to come before Keys
 			// as the handler is greedy
-			b.pathConfig(),
 			b.pathRotate(),
 			b.pathRewrap(),
 			b.pathWrappingKey(),
@@ -52,6 +51,7 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 			b.pathKeys(),
 			b.pathListKeys(),
 			b.pathExportKeys(),
+			b.pathKeysConfig(),
 			b.pathEncrypt(),
 			b.pathDecrypt(),
 			b.pathDatakey(),
@@ -64,6 +64,7 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 			b.pathRestore(),
 			b.pathTrim(),
 			b.pathCacheConfig(),
+			b.pathConfigKeys(),
 		},
 
 		Secrets:      []*framework.Secret{},
@@ -71,6 +72,8 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 		BackendType:  logical.TypeLogical,
 		PeriodicFunc: b.periodicFunc,
 	}
+
+	b.backendUUID = conf.BackendUUID
 
 	// determine cacheSize to use. Defaults to 0 which means unlimited
 	cacheSize := 0
@@ -105,6 +108,7 @@ type backend struct {
 	cacheSizeChanged     bool
 	checkAutoRotateAfter time.Time
 	autoRotateOnce       sync.Once
+	backendUUID          string
 }
 
 func GetCacheSizeFromStorage(ctx context.Context, s logical.Storage) (int, error) {

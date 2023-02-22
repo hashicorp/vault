@@ -8,20 +8,19 @@ description: >-
 
 # Storage
 
-As described on our [Architecture](/docs/internals/architecture) page, Vault's
+As described on our [Architecture](/vault/docs/internals/architecture) page, Vault's
 storage backend is untrusted storage used purely to keep encrypted information.
 
 ## Supported Storage Backends
 
-For enterprise customers, HashiCorp provides official support for Consul and
-Vault's Integrated Storage as storage backends.
+@include 'ent-supported-storage.mdx'
 
-Many other options for storage are available with community support - see our
-[Storage Configuration](/docs/configuration/storage) section for more
+Many other options for storage are available with community support for open-source Vault - see our
+[Storage Configuration](/vault/docs/configuration/storage) section for more
 information.
 
 -> **Choosing a storage backend:** Refer to the [integrated storage vs. external
-storage](/docs/configuration/storage#integrated-storage-vs-external-storage)
+storage](/vault/docs/configuration/storage#integrated-storage-vs-external-storage)
 section of the storage configuration page to help make a decision about which
 storage backend to use.
 
@@ -63,12 +62,12 @@ study](https://www.hashicorp.com/resources/oh-no-i-deleted-my-vault-secret).
 We do not recommend backups as protection against the failure of an individual
 machine. Vault servers can run in clusters, so to protect against server
 failure, we recommend running Vault in [HA
-mode](/docs/internals/high-availability). With open source features, a
+mode](/vault/docs/internals/high-availability). With open source features, a
 Vault cluster can extend across multiple availability zones within a region.
 
 Vault Enterprise supports replicated clusters and disaster recovery for data
 center failure. When using OSS Vault in [HA
-Mode](/docs/internals/high-availability), a backup can help guard against the
+Mode](/vault/docs/internals/high-availability), a backup can help guard against the
 failure of a data center.
 
 Ultimately, backups are not a replacement for running in HA, or for using
@@ -81,8 +80,8 @@ components of that plan.
 Backups and restores are ideally performed while Vault is offline. If offline
 backups are not feasible, we recommend using a storage backend that supports
 atomic snapshots (such as
-[Consul](https://www.consul.io/commands/snapshot) or [Integrated
-Storage](/docs/commands/operator/raft#snapshot)).
+[Consul](/consul/commands/snapshot) or [Integrated
+Storage](/vault/docs/commands/operator/raft#snapshot)).
 
 ~> If your storage backend does not support atomic snapshots, we recommend only
 taking offline backups.
@@ -92,13 +91,13 @@ HashiCorp-supported storage backend, see the instructions linked below. For
 other storage backends, follow the documentation of that backend for taking and
 restoring backups.
 
-- Integrated Storage [snapshots](/docs/commands/operator/raft#snapshot)
-- Consul [snapshots](https://www.consul.io/commands/snapshot)
+- Integrated Storage [snapshots](/vault/docs/commands/operator/raft#snapshot)
+- Consul [snapshots](/consul/commands/snapshot)
 
 #### Backing up Multiple Clusters
 
 If you are using Vault Enterprise [Performance
-Replication](/docs/enterprise/replication#performance-replication-and-disaster-recovery-dr-replication),
+Replication](/vault/docs/enterprise/replication#performance-replication-and-disaster-recovery-dr-replication),
 you should plan to take backups of the active node on each of your clusters.
 
 ### Configuration

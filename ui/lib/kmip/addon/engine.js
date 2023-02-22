@@ -11,13 +11,13 @@ const Eng = Engine.extend({
   dependencies: {
     services: [
       'auth',
+      'download',
       'flash-messages',
       'namespace',
       'path-help',
       'router',
       'store',
       'version',
-      'wizard',
       'secret-mount-path',
     ],
     externalRoutes: ['secrets'],

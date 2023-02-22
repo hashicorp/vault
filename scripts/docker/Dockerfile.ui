@@ -2,7 +2,7 @@
 # architecture binaries. This file only currently works for linux/amd64.
 FROM debian:buster AS builder
 
-ARG VERSION=1.19.1
+ARG VERSION
 ARG CGO_ENABLED=0
 ARG BUILD_TAGS
 ENV JOBS=2

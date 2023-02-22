@@ -21,6 +21,7 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/vault/helper/fairshare"
+	"github.com/hashicorp/vault/helper/locking"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -86,6 +87,7 @@ type pendingInfo struct {
 	cachedLeaseInfo  *leaseEntry
 	timer            *time.Timer
 	revokesAttempted uint8
+	loginRole        string
 }
 
 // ExpirationManager is used by the Core to manage leases. Secrets
@@ -109,7 +111,7 @@ type ExpirationManager struct {
 	pending     sync.Map
 	nonexpiring sync.Map
 	leaseCount  int
-	pendingLock sync.RWMutex
+	pendingLock locking.DeadlockRWMutex
 
 	// A sync.Lock for every active leaseID
 	lockPerLease sync.Map
@@ -137,7 +139,7 @@ type ExpirationManager struct {
 	quitCh             chan struct{}
 
 	// do not hold coreStateLock in any API handler code - it is already held
-	coreStateLock     *DeadlockRWMutex
+	coreStateLock     locking.RWMutex
 	quitContext       context.Context
 	leaseCheckCounter *uint32
 
@@ -149,7 +151,8 @@ type ExpirationManager struct {
 	// request. This value should only be set by tests.
 	testRegisterAuthFailure uberAtomic.Bool
 
-	jobManager *fairshare.JobManager
+	jobManager      *fairshare.JobManager
+	revokeRetryBase time.Duration
 }
 
 type ExpireLeaseStrategy func(context.Context, *ExpirationManager, string, *namespace.Namespace)
@@ -232,7 +235,6 @@ func (r *revocationJob) Execute() error {
 
 func (r *revocationJob) OnFailure(err error) {
 	r.m.core.metricSink.IncrCounterWithLabels([]string{"expire", "lease_expiration", "error"}, 1, []metrics.Label{metricsutil.NamespaceLabel(r.ns)})
-	r.m.logger.Error("failed to revoke lease", "lease_id", r.leaseID, "error", err)
 
 	r.m.pendingLock.Lock()
 	defer r.m.pendingLock.Unlock()
@@ -244,12 +246,15 @@ func (r *revocationJob) OnFailure(err error) {
 
 	pending := pendingRaw.(pendingInfo)
 	pending.revokesAttempted++
+	newTimer := r.revokeExponentialBackoff(pending.revokesAttempted)
+
 	if pending.revokesAttempted >= maxRevokeAttempts || errIsUnrecoverable(err) {
-		r.m.logger.Trace("marking lease as irrevocable", "lease_id", r.leaseID, "error", err)
+		reason := "unrecoverable error"
 		if pending.revokesAttempted >= maxRevokeAttempts {
-			r.m.logger.Trace("lease has consumed all retry attempts", "lease_id", r.leaseID)
+			reason = "lease has consumed all retry attempts"
 			err = fmt.Errorf("%v: %w", outOfRetriesMessage, err)
 		}
+		r.m.logger.Trace("failed to revoke lease, marking lease as irrevocable", "lease_id", r.leaseID, "error", err, "reason", reason)
 
 		le, loadErr := r.m.loadEntry(r.nsCtx, r.leaseID)
 		if loadErr != nil {
@@ -263,9 +268,12 @@ func (r *revocationJob) OnFailure(err error) {
 
 		r.m.markLeaseIrrevocable(r.nsCtx, le, err)
 		return
+	} else {
+		r.m.logger.Error("failed to revoke lease", "lease_id", r.leaseID, "error", err,
+			"attempts", pending.revokesAttempted, "next_attempt", newTimer)
 	}
 
-	pending.timer.Reset(revokeExponentialBackoff(pending.revokesAttempted))
+	pending.timer.Reset(newTimer)
 	r.m.pending.Store(r.leaseID, pending)
 }
 
@@ -283,8 +291,8 @@ func expireLeaseStrategyFairsharing(ctx context.Context, m *ExpirationManager, l
 	m.jobManager.AddJob(job, mountAccessor)
 }
 
-func revokeExponentialBackoff(attempt uint8) time.Duration {
-	exp := (1 << attempt) * revokeRetryBase
+func (r *revocationJob) revokeExponentialBackoff(attempt uint8) time.Duration {
+	exp := (1 << attempt) * r.m.revokeRetryBase
 	randomDelta := 0.5 * float64(exp)
 
 	// Allow backoff time to be a random value between exp +/- (0.5*exp)
@@ -342,14 +350,18 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 		restoreLocks: locksutil.CreateLocks(),
 		quitCh:       make(chan struct{}),
 
-		coreStateLock:     &c.stateLock,
+		coreStateLock:     c.stateLock,
 		quitContext:       c.activeContext,
 		leaseCheckCounter: new(uint32),
 
 		logLeaseExpirations: os.Getenv("VAULT_SKIP_LOGGING_LEASE_EXPIRATIONS") == "",
 		expireFunc:          e,
 
-		jobManager: jobManager,
+		jobManager:      jobManager,
+		revokeRetryBase: c.expirationRevokeRetryBase,
+	}
+	if exp.revokeRetryBase == 0 {
+		exp.revokeRetryBase = revokeRetryBase
 	}
 	*exp.restoreMode = 1
 
@@ -493,16 +505,14 @@ func (m *ExpirationManager) invalidate(key string) {
 				m.nonexpiring.Delete(leaseID)
 
 				if info, ok := m.irrevocable.Load(leaseID); ok {
-					irrevocable := info.(pendingInfo)
+					ile := info.(*leaseEntry)
 					m.irrevocable.Delete(leaseID)
 					m.irrevocableLeaseCount--
 
 					m.leaseCount--
-					// Avoid nil pointer dereference. Without cachedLeaseInfo we do not have enough information to
-					// accurately update quota lease information.
-					// Note that cachedLeaseInfo should never be nil under normal operation.
-					if irrevocable.cachedLeaseInfo != nil {
-						leaseInfo := &quotas.QuotaLeaseInformation{LeaseId: leaseID, Role: irrevocable.cachedLeaseInfo.LoginRole}
+					// Note that the leaseEntry should never be nil under normal operation.
+					if ile != nil {
+						leaseInfo := &quotas.QuotaLeaseInformation{LeaseId: leaseID, Role: ile.LoginRole}
 						if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []*quotas.QuotaLeaseInformation{leaseInfo}); err != nil {
 							m.logger.Error("failed to update quota on lease invalidation", "error", err)
 							return
@@ -1877,6 +1887,7 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 			leaseCreated = true
 		}
 
+		pending.loginRole = le.LoginRole
 		pending.cachedLeaseInfo = m.inMemoryLeaseInfo(le)
 		m.pending.Store(le.LeaseID, pending)
 	}

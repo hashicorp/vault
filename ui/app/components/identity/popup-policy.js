@@ -17,12 +17,12 @@ export default Base.extend({
   },
 
   errorMessage(e, model, policyName) {
-    let error = e.errors ? e.errors.join(' ') : e.message;
+    const error = e.errors ? e.errors.join(' ') : e.message;
     return `There was a problem removing '${policyName}' policy - ${error}`;
   },
 
   transaction(model, policyName) {
-    let policies = model.get('policies');
+    const policies = model.get('policies');
     model.set('policies', policies.without(policyName));
     return model.save();
   },

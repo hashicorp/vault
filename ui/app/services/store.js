@@ -161,7 +161,7 @@ export default Store.extend({
             'query'
           )
         );
-        let model = this.peekAll(modelName).toArray();
+        const model = this.peekAll(modelName).toArray();
         model.set('meta', response.meta);
         resolve(model);
       });
@@ -184,7 +184,7 @@ export default Store.extend({
   },
 
   clearDataset(modelName) {
-    let cacheList = this.lazyCaches;
+    const cacheList = this.lazyCaches;
     if (!cacheList.size) return;
     if (modelName && cacheList.has(modelName)) {
       cacheList.delete(modelName);

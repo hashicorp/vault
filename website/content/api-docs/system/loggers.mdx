@@ -8,6 +8,10 @@ description: The `/sys/loggers` endpoint is used modify the verbosity level of l
 
 The `/sys/loggers` endpoint is used modify the verbosity level of logging.
 
+!> **NOTE:** Changes made to the log level using this endpoint are not persisted and will be restored
+to either the default log level (info) or the level specified using `log_level` in vault.hcl or the `VAULT_LOG_LEVEL`
+environment variable once the Vault service is reloaded or restarted.
+
 ## Modify verbosity level of all loggers
 
 | Method  | Path           |
@@ -65,6 +69,52 @@ $ curl \
     --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/loggers/core
+```
+
+## Read verbosity level of all loggers
+
+| Method | Path           |
+| :----- | :------------- |
+| `GET`  | `/sys/loggers` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    https://127.0.0.1:8200/v1/sys/loggers
+```
+
+### Sample Response
+
+```json
+{
+    "audit": "trace",
+    "core": "info",
+    "policy": "debug"
+}
+```
+
+## Read verbosity level of a single logger
+
+| Method | Path                 |
+| :----- | :------------------- |
+| `GET`  | `/sys/loggers/:name` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    https://127.0.0.1:8200/v1/sys/loggers/core
+```
+
+### Sample Response
+
+```json
+{
+    "core": "info"
+}
 ```
 
 ## Revert verbosity of all loggers to configured level

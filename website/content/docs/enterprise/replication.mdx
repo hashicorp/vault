@@ -26,7 +26,7 @@ applications that need to interoperate.
 Vault replication addresses both of these needs in providing consistency,
 scalability, and highly-available disaster recovery.
 
-Note: Using replication requires a storage backend that supports transactional updates, such as [Integrated Storage](/docs/concepts/integrated-storage) or Consul.
+Note: Using replication requires a storage backend that supports transactional updates, such as [Integrated Storage](/vault/docs/concepts/integrated-storage) or Consul.
 
 ## Architecture
 
@@ -107,7 +107,7 @@ $ vault secrets enable -local -path=us_west_data kv-v2
 ```
 
 -> **Learn:** Refer to the [Performance Replication with Paths
-Filter](https://learn.hashicorp.com/tutorials/vault/paths-filter) tutorial for
+Filter](/vault/tutorials/enterprise/paths-filter) tutorial for
 step-by-step instructions.
 
 
@@ -125,7 +125,7 @@ They do not forward service read or write requests until they are elected and be
 -> **Note**: Unlike with Performance Replication, local secret engines, auth methods and audit devices are replicated to a DR secondary.
 
 
-For more information on the capabilities of performance and disaster recovery replication, see the Vault Replication [API Documentation](/api-docs/system/replication).
+For more information on the capabilities of performance and disaster recovery replication, see the Vault Replication [API Documentation](/vault/api-docs/system/replication).
 
 ## Primary and Secondary Cluster Compatibility
 
@@ -136,7 +136,7 @@ There is no requirement that both clusters use the same storage engine.
 ### Seals
 
 There is no requirement that both clusters use the same seal type, but see
-[sealwrap](/docs/enterprise/sealwrap#seal-wrap-and-replication) for the full
+[sealwrap](/vault/docs/enterprise/sealwrap#seal-wrap-and-replication) for the full
 details.
 
 Also note that enabling replication will modify the secondary seal.
@@ -158,7 +158,7 @@ Note: Clusters with Shamir seal config do not have separate recovery keys. Auto 
 ### Vault versions
 
 Vault changes are designed and tested to ensure that the
-[upgrade instructions](/docs/upgrading#replication-installations) are viable, i.e.
+[upgrade instructions](/vault/docs/upgrading#replication-installations) are viable, i.e.
 that a secondary can run a newer Vault version than its primary.
 
 That said, we do not recommend running replicated Vault clusters with different
@@ -167,7 +167,7 @@ versions any longer than necessary to perform the upgrade.
 ## Internals
 
 Details on the internal design of the replication feature can be found in the
-[replication internals](/docs/internals/replication) document.
+[replication internals](/vault/docs/internals/replication) document.
 
 ## Security Model
 
@@ -220,17 +220,24 @@ generation until it is used.
 Once a secondary is activated, its cluster information is stored safely behind
 its encrypted barrier.
 
+## Mutual TLS and Load Balancers
+
+Vault generates its own certificates for cluster members. All replication traffic 
+uses the cluster port using these Vault-generated certificates after initial 
+bootstrapping. Because of this, the cluster traffic can NOT be terminated at the 
+cluster port at a load balancer level.
+
 ## Tutorial
 
 Refer to the following tutorials replication setup and best practices:
 
-- [Setting up Performance Replication](https://learn.hashicorp.com/vault/operations/ops-replication)
-- [Disaster Recovery Replication Setup](https://learn.hashicorp.com/vault/operations/ops-disaster-recovery)
-- [Performance Replication with Paths Filters](https://learn.hashicorp.com/tutorials/vault/paths-filter)
-- [Monitoring Vault Replication](https://learn.hashicorp.com/vault/operations/monitor-replication)
+- [Setting up Performance Replication](/vault/tutorials/enterprise/performance-replication)
+- [Disaster Recovery Replication Setup](/vault/tutorials/enterprise/disaster-recovery)
+- [Performance Replication with Paths Filters](/vault/tutorials/enterprise/paths-filter)
+- [Monitoring Vault Replication](/vault/tutorials/monitoring/monitor-replication)
 
 ## API
 
 The Vault replication component has a full HTTP API. Please see the
-[Vault Replication API](/api-docs/system/replication) for more
+[Vault Replication API](/vault/api-docs/system/replication) for more
 details.

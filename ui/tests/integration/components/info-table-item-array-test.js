@@ -68,8 +68,8 @@ module('Integration | Component | InfoTableItemArray', function (hooks) {
       />`);
 
     assert.dom('[data-test-info-table-item-array]').exists();
-    let noLinkString = document.querySelector('code').textContent.trim();
-    assert.equal(
+    const noLinkString = document.querySelector('code').textContent.trim();
+    assert.strictEqual(
       noLinkString.length,
       DISPLAY_ARRAY.toString().length,
       'renders a string of the array if isLink is not provided'
@@ -86,7 +86,7 @@ module('Integration | Component | InfoTableItemArray', function (hooks) {
         @backend={{this.backend}}
       />
     `);
-    assert.equal(
+    assert.strictEqual(
       document.querySelectorAll('a > span').length,
       DISPLAY_ARRAY.length,
       'renders each item in array with link'
@@ -105,7 +105,7 @@ module('Integration | Component | InfoTableItemArray', function (hooks) {
       @queryParam={{this.queryParam}}
       @backend={{this.backend}}
     />`);
-    assert.equal(
+    assert.strictEqual(
       document.querySelectorAll('a > span').length,
       DISPLAY_ARRAY.length - 1,
       'renders each item in array with link'
@@ -141,7 +141,7 @@ module('Integration | Component | InfoTableItemArray', function (hooks) {
       @backend={{this.backend}}
     />`);
     const numberCutOffTruncatedArray = displayArrayWithWildcard.length - 5;
-    assert.equal(document.querySelectorAll('a > span').length, 5, 'renders truncated array of five');
+    assert.strictEqual(document.querySelectorAll('a > span').length, 5, 'renders truncated array of five');
     assert
       .dom(`[data-test-and="${numberCutOffTruncatedArray}"]`)
       .exists('correctly counts with wildcard filter and shows the count');
@@ -173,7 +173,7 @@ module('Integration | Component | InfoTableItemArray', function (hooks) {
       @queryParam={{this.queryParam}}
       @backend={{this.backend}}
     />`);
-    assert.equal(findAll('[data-test-item]').length, 4, 'lists 4 roles');
+    assert.strictEqual(findAll('[data-test-item]').length, 4, 'lists 4 roles');
     assert.dom('[data-test-readmore-content]').hasTextContaining('r*', 'renders wildcard');
     assert.dom('[data-test-count="0"]').doesNotExist('does not render badge');
     assert.dom('[data-test-view-all="roles"]').hasText('View all roles.', 'renders correct view all text');
@@ -206,7 +206,7 @@ module('Integration | Component | InfoTableItemArray', function (hooks) {
       @backend={{this.backend}}
     />`);
     assert.dom('[data-test-count="0"]').hasText('includes 0', 'renders badge');
-    assert.equal(findAll('[data-test-item]').length, 4, 'renders list of 4 roles');
+    assert.strictEqual(findAll('[data-test-item]').length, 4, 'renders list of 4 roles');
     assert.dom('[data-test-view-all="roles"]').hasText('View all roles.', 'renders view all text');
   });
 
@@ -224,7 +224,7 @@ module('Integration | Component | InfoTableItemArray', function (hooks) {
     />`);
     assert.dom('[data-test-item="6"]').hasText('six', `renders name of 'six' instead of id`);
     assert.dom('[data-test-item="8"]').hasText('eight', `renders 'eight' instead of id`);
-    assert.equal(findAll('[data-test-item]').length, 3, 'renders all entities');
+    assert.strictEqual(findAll('[data-test-item]').length, 3, 'renders all entities');
     assert
       .dom('[data-test-item="123-id"]')
       .hasText('123-id', 'renders id instead of name if no record for name');
@@ -244,7 +244,7 @@ module('Integration | Component | InfoTableItemArray', function (hooks) {
     />`);
     assert.dom('[data-test-item="1"]').hasText('one', `renders name of 'one' instead of id`);
     assert.dom('[data-test-item="3-id"]').hasText('3-id', 'renders id instead of name if no record for name');
-    assert.equal(findAll('[data-test-item]').length, 5, 'only lists 5 entities');
+    assert.strictEqual(findAll('[data-test-item]').length, 5, 'only lists 5 entities');
   });
 
   test('it truncates using read more component when overflows div', async function (assert) {

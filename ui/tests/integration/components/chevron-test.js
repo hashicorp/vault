@@ -20,9 +20,9 @@ module('Integration | Component | chevron', function (hooks) {
     await render(hbs`<Chevron @direction='left' @isButton={{true}} />`);
     assert.dom('.flight-icon').doesNotHaveClass('hs-icon-button-right', 'renders');
 
-    let promise = waitForError();
+    const promise = waitForError();
     render(hbs`<Chevron @direction='lol' />`);
-    let err = await promise;
+    const err = await promise;
     assert.ok(
       err.message.includes('The direction property of <vault@component:chevron:'),
       'asserts about unsupported direction'

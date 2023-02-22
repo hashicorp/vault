@@ -44,7 +44,7 @@
       <div class="toolbar-separator"></div>
     {{/if}}
     {{#if this.model.canEdit}}
-      <ToolbarLink data-test-oidc-scope-edit @params={{array "vault.cluster.access.oidc.scopes.scope.edit" this.model.name}}>
+      <ToolbarLink @route="vault.cluster.access.oidc.scopes.scope.edit" @model={{this.model.name}} data-test-oidc-scope-edit>
         Edit scope
       </ToolbarLink>
     {{/if}}

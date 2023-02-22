@@ -40,7 +40,7 @@ export default class KeyValueHeader extends Component {
   }
 
   get secretPath() {
-    let crumbs = [];
+    const crumbs = [];
     const root = this.args.root;
     const baseKey = this.args.baseKey?.display || this.args.baseKey?.id;
     const baseKeyModel = encodePath(this.args.baseKey?.id);

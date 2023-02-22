@@ -1,4 +1,4 @@
-import { currentRouteName, settled } from '@ember/test-helpers';
+import { currentRouteName, currentURL, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
@@ -8,6 +8,7 @@ import authPage from 'vault/tests/pages/auth';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import logout from 'vault/tests/pages/logout';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
+import { allEngines } from 'vault/helpers/mountable-secret-engines';
 
 const consoleComponent = create(consoleClass);
 
@@ -23,12 +24,12 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     const path = `kv-${new Date().getTime()}`;
     const defaultTTLHours = 100;
     const maxTTLHours = 300;
-    const defaultTTLSeconds = defaultTTLHours * 60 * 60;
-    const maxTTLSeconds = maxTTLHours * 60 * 60;
+    const defaultTTLSeconds = (defaultTTLHours * 60 * 60).toString();
+    const maxTTLSeconds = (maxTTLHours * 60 * 60).toString();
 
     await page.visit();
 
-    assert.equal(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
     await page.selectType('kv');
     await page
       .next()
@@ -42,19 +43,19 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       .maxTTLVal(maxTTLHours)
       .submit();
     await configPage.visit({ backend: path });
-    assert.equal(configPage.defaultTTL, defaultTTLSeconds, 'shows the proper TTL');
-    assert.equal(configPage.maxTTL, maxTTLSeconds, 'shows the proper max TTL');
+    assert.strictEqual(configPage.defaultTTL, defaultTTLSeconds, 'shows the proper TTL');
+    assert.strictEqual(configPage.maxTTL, maxTTLSeconds, 'shows the proper max TTL');
   });
 
   test('it sets the ttl when enabled then disabled', async function (assert) {
     // always force the new mount to the top of the list
     const path = `kv-${new Date().getTime()}`;
     const maxTTLHours = 300;
-    const maxTTLSeconds = maxTTLHours * 60 * 60;
+    const maxTTLSeconds = (maxTTLHours * 60 * 60).toString();
 
     await page.visit();
 
-    assert.equal(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
     await page.selectType('kv');
     await page
       .next()
@@ -67,8 +68,8 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       .maxTTLVal(maxTTLHours)
       .submit();
     await configPage.visit({ backend: path });
-    assert.equal(configPage.defaultTTL, 0, 'shows the proper TTL');
-    assert.equal(configPage.maxTTL, maxTTLSeconds, 'shows the proper max TTL');
+    assert.strictEqual(configPage.defaultTTL, '0', 'shows the proper TTL');
+    assert.strictEqual(configPage.maxTTL, maxTTLSeconds, 'shows the proper max TTL');
   });
 
   test('it throws error if setting duplicate path name', async function (assert) {
@@ -81,7 +82,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
 
     await page.visit();
 
-    assert.equal(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
     await page.selectType('kv');
     await page.next().path(path).submit();
     await page.secretList();
@@ -90,7 +91,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     await page.selectType('kv');
     await page.next().path(path).submit();
     assert.dom('[data-test-alert-banner="alert"]').containsText(`path is already in use at ${path}`);
-    assert.equal(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
 
     await page.secretList();
     await settled();
@@ -100,7 +101,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
   });
 
   test('version 2 with no update to config endpoint still allows mount of secret engine', async function (assert) {
-    let enginePath = `kv-noUpdate-${new Date().getTime()}`;
+    const enginePath = `kv-noUpdate-${new Date().getTime()}`;
     const V2_POLICY = `
       path "${enginePath}/*" {
         capabilities = ["list","create","read","sudo","delete"]
@@ -115,6 +116,10 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       {
         capabilities = ["read"]
       }
+      # Allow page to load after mount
+      path "sys/internal/ui/mounts/${enginePath}" {
+        capabilities = ["read"]
+      }
     `;
     await consoleComponent.runCommands([
       // delete any previous mount with same name
@@ -123,7 +128,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       'write -field=client_token auth/token/create policies=kv-v2-degrade',
     ]);
     await settled();
-    let userToken = consoleComponent.lastLogOutput;
+    const userToken = consoleComponent.lastLogOutput;
     await logout.visit();
     await authPage.login(userToken);
     // create the engine
@@ -136,8 +141,29 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       .containsText(
         `You do not have access to the config endpoint. The secret engine was mounted, but the configuration settings were not saved.`
       );
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${enginePath}/list`,
+      'After mounting, redirects to secrets list page'
+    );
     await configPage.visit({ backend: enginePath });
     await settled();
     assert.dom('[data-test-row-value="Maximum number of versions"]').hasText('Not set');
+  });
+
+  test('it should transition to engine route on success if defined in mount config', async function (assert) {
+    await consoleComponent.runCommands([
+      // delete any previous mount with same name
+      `delete sys/mounts/kubernetes`,
+    ]);
+    await mountSecrets.visit();
+    await mountSecrets.selectType('kubernetes');
+    await mountSecrets.next().path('kubernetes').submit();
+    const { engineRoute } = allEngines().findBy('type', 'kubernetes');
+    assert.strictEqual(
+      currentRouteName(),
+      `vault.cluster.secrets.backend.${engineRoute}`,
+      'Transitions to engine route on mount success'
+    );
   });
 });

@@ -43,7 +43,7 @@ export default ApplicationAdapter.extend({
   },
 
   optionsForQuery(id, action, wrapTTL) {
-    let data = {};
+    const data = {};
     if (action === 'query') {
       data.list = true;
     }

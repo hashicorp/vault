@@ -19,6 +19,7 @@
       data-test-input
     />
   {{else}}
+    {{! template-lint-disable no-down-event-binding }}
     <textarea
       class="input masked-value {{unless this.showValue 'masked-font'}}"
       rows={{1}}
@@ -30,6 +31,7 @@
       spellcheck="false"
       data-test-textarea
     ></textarea>
+    {{! template-lint-enable no-down-event-binding }}
   {{/if}}
   {{#if this.allowCopy}}
     <CopyButton
@@ -45,7 +47,7 @@
     onclick={{action "toggleMask"}}
     type="button"
     class="{{if (eq this.value '') 'has-text-grey'}} masked-input-toggle button"
-    data-test-button
+    data-test-button="toggle-masked"
   >
     <Icon @name={{if this.showValue "eye" "eye-off"}} />
   </button>

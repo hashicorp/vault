@@ -16,12 +16,12 @@ export default Base.extend({
     return `Successfully removed '${key}' from metadata`;
   },
   errorMessage(e, model, key) {
-    let error = e.errors ? e.errors.join(' ') : e.message;
+    const error = e.errors ? e.errors.join(' ') : e.message;
     return `There was a problem removing '${key}' from the metadata - ${error}`;
   },
 
   transaction(model, key) {
-    let metadata = model.metadata;
+    const metadata = model.metadata;
     delete metadata[key];
     model.set('metadata', { ...metadata });
     return model.save();

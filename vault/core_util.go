@@ -53,6 +53,7 @@ func coreInit(c *Core, conf *CoreConfig) error {
 	if !conf.DisableKeyEncodingChecks {
 		c.physical = physical.NewStorageEncoding(c.physical)
 	}
+
 	return nil
 }
 
@@ -69,6 +70,10 @@ func (c *Core) barrierViewForNamespace(namespaceId string) (*BarrierView, error)
 
 	return c.systemBarrierView, nil
 }
+
+func (c *Core) UndoLogsEnabled() bool            { return false }
+func (c *Core) UndoLogsPersisted() (bool, error) { return false, nil }
+func (c *Core) PersistUndoLogs() error           { return nil }
 
 func (c *Core) teardownReplicationResolverHandler() {}
 func createSecondaries(*Core, *CoreConfig)          {}

@@ -12,7 +12,7 @@ const HEALTH_RESPONSE = {
   replication_performance_mode: 'unknown',
   replication_dr_mode: 'unknown',
   server_time_utc: 1538066726,
-  version: '0.11.0+prem',
+  version: '1.13.0-dev1',
 };
 
 const CLOUD_SEAL_RESPONSE = {
@@ -62,12 +62,12 @@ const SEAL_STATUS_RESPONSE = {
 module('Acceptance | init', function (hooks) {
   setupApplicationTest(hooks);
 
-  let setInitResponse = (server, resp) => {
+  const setInitResponse = (server, resp) => {
     server.put('/v1/sys/init', () => {
       return [200, { 'Content-Type': 'application/json' }, JSON.stringify(resp)];
     });
   };
-  let setStatusResponse = (server, resp) => {
+  const setStatusResponse = (server, resp) => {
     server.get('/v1/sys/seal-status', () => {
       return [200, { 'Content-Type': 'application/json' }, JSON.stringify(resp)];
     });
@@ -89,15 +89,15 @@ module('Acceptance | init', function (hooks) {
     setInitResponse(this.server, CLOUD_SEAL_RESPONSE);
     setStatusResponse(this.server, CLOUD_SEAL_STATUS_RESPONSE);
     await initPage.init(5, 3);
-    assert.equal(
+    assert.strictEqual(
       initPage.keys.length,
       CLOUD_SEAL_RESPONSE.recovery_keys.length,
       'shows all of the recovery keys'
     );
-    assert.equal(initPage.buttonText, 'Continue to Authenticate', 'links to authenticate');
+    assert.strictEqual(initPage.buttonText, 'Continue to Authenticate', 'links to authenticate');
     let { requestBody } = this.server.handledRequests.findBy('url', '/v1/sys/init');
     requestBody = JSON.parse(requestBody);
-    for (let attr of ['recovery_shares', 'recovery_threshold']) {
+    for (const attr of ['recovery_shares', 'recovery_threshold']) {
       assert.ok(requestBody[attr], `requestBody includes cloud seal specific attribute: ${attr}`);
     }
   });
@@ -108,12 +108,12 @@ module('Acceptance | init', function (hooks) {
     setStatusResponse(this.server, SEAL_STATUS_RESPONSE);
 
     await initPage.init(3, 2);
-    assert.equal(initPage.keys.length, SEAL_RESPONSE.keys.length, 'shows all of the recovery keys');
-    assert.equal(initPage.buttonText, 'Continue to Unseal', 'links to unseal');
+    assert.strictEqual(initPage.keys.length, SEAL_RESPONSE.keys.length, 'shows all of the recovery keys');
+    assert.strictEqual(initPage.buttonText, 'Continue to Unseal', 'links to unseal');
 
     let { requestBody } = this.server.handledRequests.findBy('url', '/v1/sys/init');
     requestBody = JSON.parse(requestBody);
-    for (let attr of ['recovery_shares', 'recovery_threshold']) {
+    for (const attr of ['recovery_shares', 'recovery_threshold']) {
       assert.notOk(requestBody[attr], `requestBody does not include cloud seal specific attribute: ${attr}`);
     }
   });

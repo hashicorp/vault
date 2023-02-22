@@ -14,13 +14,13 @@ export default Component.extend({
   hasMenu: true,
 
   callMethod: task(function* (method, model, successMessage, failureMessage, successCallback = () => {}) {
-    let flash = this.flashMessages;
+    const flash = this.flashMessages;
     try {
       yield model[method]();
       flash.success(successMessage);
       successCallback();
     } catch (e) {
-      let errString = e.errors.join(' ');
+      const errString = e.errors.join(' ');
       flash.danger(failureMessage + ' ' + errString);
       model.rollbackAttributes();
     }

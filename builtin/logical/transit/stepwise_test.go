@@ -18,7 +18,7 @@ func TestAccBackend_basic_docker(t *testing.T) {
 	decryptData := make(map[string]interface{})
 	envOptions := stepwise.MountOptions{
 		RegistryName:    "updatedtransit",
-		PluginType:      stepwise.PluginTypeSecrets,
+		PluginType:      api.PluginTypeSecrets,
 		PluginName:      "transit",
 		MountPathPrefix: "transit_temp",
 	}

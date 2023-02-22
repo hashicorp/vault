@@ -3,20 +3,19 @@ package pki
 import (
 	"context"
 	"crypto"
-	"crypto/ecdsa"
-	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/sha256"
-	"crypto/sha512"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/asn1"
 	"encoding/pem"
 	"fmt"
-	"hash"
 	"io"
+	"math"
+	"math/big"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -25,7 +24,9 @@ import (
 )
 
 // Setup helpers
-func createBackendWithStorage(t testing.TB) (*backend, logical.Storage) {
+func CreateBackendWithStorage(t testing.TB) (*backend, logical.Storage) {
+	t.Helper()
+
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
@@ -41,6 +42,8 @@ func createBackendWithStorage(t testing.TB) (*backend, logical.Storage) {
 }
 
 func mountPKIEndpoint(t testing.TB, client *api.Client, path string) {
+	t.Helper()
+
 	err := client.Sys().Mount(path, &api.MountInput{
 		Type: "pki",
 		Config: api.MountConfigInput{
@@ -52,68 +55,18 @@ func mountPKIEndpoint(t testing.TB, client *api.Client, path string) {
 }
 
 // Signing helpers
-func requireSignedBy(t *testing.T, cert *x509.Certificate, key crypto.PublicKey) {
-	switch typedKey := key.(type) {
-	case *rsa.PublicKey:
-		requireRSASignedBy(t, cert, typedKey)
-	case *ecdsa.PublicKey:
-		requireECDSASignedBy(t, cert, typedKey)
-	case ed25519.PublicKey:
-		requireED25519SignedBy(t, cert, typedKey)
-	default:
-		require.Fail(t, "unknown public key type %#v", key)
+func requireSignedBy(t *testing.T, cert *x509.Certificate, signingCert *x509.Certificate) {
+	t.Helper()
+
+	if err := cert.CheckSignatureFrom(signingCert); err != nil {
+		t.Fatalf("signature verification failed: %v", err)
 	}
-}
-
-func requireRSASignedBy(t *testing.T, cert *x509.Certificate, key *rsa.PublicKey) {
-	require.Contains(t, []x509.SignatureAlgorithm{x509.SHA256WithRSA, x509.SHA512WithRSA},
-		cert.SignatureAlgorithm, "only sha256 signatures supported")
-
-	var hasher hash.Hash
-	var hashAlgo crypto.Hash
-
-	switch cert.SignatureAlgorithm {
-	case x509.SHA256WithRSA:
-		hasher = sha256.New()
-		hashAlgo = crypto.SHA256
-	case x509.SHA512WithRSA:
-		hasher = sha512.New()
-		hashAlgo = crypto.SHA512
-	}
-
-	hasher.Write(cert.RawTBSCertificate)
-	hashData := hasher.Sum(nil)
-
-	err := rsa.VerifyPKCS1v15(key, hashAlgo, hashData, cert.Signature)
-	require.NoError(t, err, "the certificate was not signed by the expected public rsa key.")
-}
-
-func requireECDSASignedBy(t *testing.T, cert *x509.Certificate, key *ecdsa.PublicKey) {
-	require.Contains(t, []x509.SignatureAlgorithm{x509.ECDSAWithSHA256, x509.ECDSAWithSHA512},
-		cert.SignatureAlgorithm, "only ecdsa signatures supported")
-
-	var hasher hash.Hash
-	switch cert.SignatureAlgorithm {
-	case x509.ECDSAWithSHA256:
-		hasher = sha256.New()
-	case x509.ECDSAWithSHA512:
-		hasher = sha512.New()
-	}
-
-	hasher.Write(cert.RawTBSCertificate)
-	hashData := hasher.Sum(nil)
-
-	verify := ecdsa.VerifyASN1(key, hashData, cert.Signature)
-	require.True(t, verify, "the certificate was not signed by the expected public ecdsa key.")
-}
-
-func requireED25519SignedBy(t *testing.T, cert *x509.Certificate, key ed25519.PublicKey) {
-	require.Equal(t, x509.PureEd25519, cert.SignatureAlgorithm)
-	ed25519.Verify(key, cert.RawTBSCertificate, cert.Signature)
 }
 
 // Certificate helper
 func parseCert(t *testing.T, pemCert string) *x509.Certificate {
+	t.Helper()
+
 	block, _ := pem.Decode([]byte(pemCert))
 	require.NotNil(t, block, "failed to decode PEM block")
 
@@ -123,6 +76,8 @@ func parseCert(t *testing.T, pemCert string) *x509.Certificate {
 }
 
 func requireMatchingPublicKeys(t *testing.T, cert *x509.Certificate, key crypto.PublicKey) {
+	t.Helper()
+
 	certPubKey := cert.PublicKey
 	areEqual, err := certutil.ComparePublicKeysAndType(certPubKey, key)
 	require.NoError(t, err, "failed comparing public keys: %#v", err)
@@ -148,17 +103,25 @@ func getSelfSigned(t *testing.T, subject, issuer *x509.Certificate, key *rsa.Pri
 
 // CRL related helpers
 func getCrlCertificateList(t *testing.T, client *api.Client, mountPoint string) pkix.TBSCertificateList {
+	t.Helper()
+
 	path := fmt.Sprintf("/v1/%s/crl", mountPoint)
 	return getParsedCrlAtPath(t, client, path).TBSCertList
 }
 
 func parseCrlPemBytes(t *testing.T, crlPem []byte) pkix.TBSCertificateList {
+	t.Helper()
+
 	certList, err := x509.ParseCRL(crlPem)
 	require.NoError(t, err)
 	return certList.TBSCertList
 }
 
 func requireSerialNumberInCRL(t *testing.T, revokeList pkix.TBSCertificateList, serialNum string) bool {
+	if t != nil {
+		t.Helper()
+	}
+
 	serialsInList := make([]string, 0, len(revokeList.RevokedCertificates))
 	for _, revokeEntry := range revokeList.RevokedCertificates {
 		formattedSerial := certutil.GetHexFormatted(revokeEntry.SerialNumber.Bytes(), ":")
@@ -176,11 +139,15 @@ func requireSerialNumberInCRL(t *testing.T, revokeList pkix.TBSCertificateList, 
 }
 
 func getParsedCrl(t *testing.T, client *api.Client, mountPoint string) *pkix.CertificateList {
+	t.Helper()
+
 	path := fmt.Sprintf("/v1/%s/crl", mountPoint)
 	return getParsedCrlAtPath(t, client, path)
 }
 
 func getParsedCrlAtPath(t *testing.T, client *api.Client, path string) *pkix.CertificateList {
+	t.Helper()
+
 	req := client.NewRequest("GET", path)
 	resp, err := client.RawRequest(req)
 	if err != nil {
@@ -204,6 +171,8 @@ func getParsedCrlAtPath(t *testing.T, client *api.Client, path string) *pkix.Cer
 }
 
 func getParsedCrlFromBackend(t *testing.T, b *backend, s logical.Storage, path string) *pkix.CertificateList {
+	t.Helper()
+
 	resp, err := CBRead(b, s, path)
 	if err != nil {
 		t.Fatal(err)
@@ -260,6 +229,8 @@ func CBDelete(b *backend, s logical.Storage, path string) (*logical.Response, er
 }
 
 func requireFieldsSetInResp(t *testing.T, resp *logical.Response, fields ...string) {
+	t.Helper()
+
 	var missingFields []string
 	for _, field := range fields {
 		value, ok := resp.Data[field]
@@ -272,13 +243,131 @@ func requireFieldsSetInResp(t *testing.T, resp *logical.Response, fields ...stri
 }
 
 func requireSuccessNonNilResponse(t *testing.T, resp *logical.Response, err error, msgAndArgs ...interface{}) {
+	t.Helper()
+
 	require.NoError(t, err, msgAndArgs...)
-	require.False(t, resp.IsError(), msgAndArgs...)
+	if resp.IsError() {
+		errContext := fmt.Sprintf("Expected successful response but got error: %v", resp.Error())
+		require.Falsef(t, resp.IsError(), errContext, msgAndArgs...)
+	}
 	require.NotNil(t, resp, msgAndArgs...)
 }
 
 func requireSuccessNilResponse(t *testing.T, resp *logical.Response, err error, msgAndArgs ...interface{}) {
+	t.Helper()
+
 	require.NoError(t, err, msgAndArgs...)
-	require.False(t, resp.IsError(), msgAndArgs...)
-	require.Nil(t, resp, msgAndArgs...)
+	if resp.IsError() {
+		errContext := fmt.Sprintf("Expected successful response but got error: %v", resp.Error())
+		require.Falsef(t, resp.IsError(), errContext, msgAndArgs...)
+	}
+	if resp != nil {
+		msg := fmt.Sprintf("expected nil response but got: %v", resp)
+		require.Nilf(t, resp, msg, msgAndArgs...)
+	}
+}
+
+func getCRLNumber(t *testing.T, crl pkix.TBSCertificateList) int {
+	t.Helper()
+
+	for _, extension := range crl.Extensions {
+		if extension.Id.Equal(certutil.CRLNumberOID) {
+			bigInt := new(big.Int)
+			leftOver, err := asn1.Unmarshal(extension.Value, &bigInt)
+			require.NoError(t, err, "Failed unmarshalling crl number extension")
+			require.Empty(t, leftOver, "leftover bytes from unmarshalling crl number extension")
+			require.True(t, bigInt.IsInt64(), "parsed crl number integer is not an int64")
+			require.False(t, math.MaxInt <= bigInt.Int64(), "parsed crl number integer can not fit in an int")
+			return int(bigInt.Int64())
+		}
+	}
+
+	t.Fatalf("failed to find crl number extension")
+	return 0
+}
+
+func getCrlReferenceFromDelta(t *testing.T, crl pkix.TBSCertificateList) int {
+	t.Helper()
+
+	for _, extension := range crl.Extensions {
+		if extension.Id.Equal(certutil.DeltaCRLIndicatorOID) {
+			bigInt := new(big.Int)
+			leftOver, err := asn1.Unmarshal(extension.Value, &bigInt)
+			require.NoError(t, err, "Failed unmarshalling delta crl indicator extension")
+			require.Empty(t, leftOver, "leftover bytes from unmarshalling delta crl indicator extension")
+			require.True(t, bigInt.IsInt64(), "parsed delta crl integer is not an int64")
+			require.False(t, math.MaxInt <= bigInt.Int64(), "parsed delta crl integer can not fit in an int")
+			return int(bigInt.Int64())
+		}
+	}
+
+	t.Fatalf("failed to find delta crl indicator extension")
+	return 0
+}
+
+// waitForUpdatedCrl will wait until the CRL at the provided path has been reloaded
+// up for a maxWait duration and gives up if the timeout has been reached. If a negative
+// value for lastSeenCRLNumber is provided, the method will load the current CRL and wait
+// for a newer CRL be generated.
+func waitForUpdatedCrl(t *testing.T, client *api.Client, crlPath string, lastSeenCRLNumber int, maxWait time.Duration) pkix.TBSCertificateList {
+	t.Helper()
+
+	newCrl, didTimeOut := waitForUpdatedCrlUntil(t, client, crlPath, lastSeenCRLNumber, maxWait)
+	if didTimeOut {
+		t.Fatalf("Timed out waiting for new CRL rebuild on path %s", crlPath)
+	}
+	return newCrl.TBSCertList
+}
+
+// waitForUpdatedCrlUntil is a helper method that will wait for a CRL to be updated up until maxWait duration
+// or give up and return the last CRL it loaded. It will not fail, if it does not see a new CRL within the
+// max duration unlike waitForUpdatedCrl. Returns the last loaded CRL at the provided path and a boolean
+// indicating if we hit maxWait duration or not.
+func waitForUpdatedCrlUntil(t *testing.T, client *api.Client, crlPath string, lastSeenCrlNumber int, maxWait time.Duration) (*pkix.CertificateList, bool) {
+	t.Helper()
+
+	crl := getParsedCrlAtPath(t, client, crlPath)
+	initialCrlRevision := getCRLNumber(t, crl.TBSCertList)
+	newCrlRevision := initialCrlRevision
+
+	// Short circuit the fetches if we have a version of the CRL we want
+	if lastSeenCrlNumber > 0 && getCRLNumber(t, crl.TBSCertList) > lastSeenCrlNumber {
+		return crl, false
+	}
+
+	start := time.Now()
+	iteration := 0
+	for {
+		iteration++
+
+		if time.Since(start) > maxWait {
+			t.Logf("Timed out waiting for new CRL on path %s after iteration %d, delay: %v",
+				crlPath, iteration, time.Now().Sub(start))
+			return crl, true
+		}
+
+		crl = getParsedCrlAtPath(t, client, crlPath)
+		newCrlRevision = getCRLNumber(t, crl.TBSCertList)
+		if newCrlRevision > initialCrlRevision {
+			t.Logf("Got new revision of CRL %s from %d to %d after iteration %d, delay %v",
+				crlPath, initialCrlRevision, newCrlRevision, iteration, time.Now().Sub(start))
+			return crl, false
+		}
+
+		time.Sleep(100 * time.Millisecond)
+	}
+}
+
+// A quick CRL to string to provide better test error messages
+func summarizeCrl(t *testing.T, crl pkix.TBSCertificateList) string {
+	version := getCRLNumber(t, crl)
+	serials := []string{}
+	for _, cert := range crl.RevokedCertificates {
+		serials = append(serials, normalizeSerialFromBigInt(cert.SerialNumber))
+	}
+	return fmt.Sprintf("CRL Version: %d\n"+
+		"This Update: %s\n"+
+		"Next Update: %s\n"+
+		"Revoked Serial Count: %d\n"+
+		"Revoked Serials: %v", version, crl.ThisUpdate, crl.NextUpdate, len(serials), serials)
 }

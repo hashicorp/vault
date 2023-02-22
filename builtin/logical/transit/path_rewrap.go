@@ -43,6 +43,14 @@ func (b *backend) pathRewrap() *framework.Path {
 Must be 0 (for latest) or a value greater than or equal
 to the min_encryption_version configured on the key.`,
 			},
+
+			"batch_input": {
+				Type: framework.TypeSlice,
+				Description: `
+Specifies a list of items to be re-encrypted in a single batch. When this parameter is set,
+if the parameters 'ciphertext', 'context' and 'nonce' are also set, they will be ignored.
+Any batch output will preserve the order of the batch input.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -182,6 +190,10 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 
 	resp := &logical.Response{}
 	if batchInputRaw != nil {
+		// Copy the references
+		for i := range batchInputItems {
+			batchResponseItems[i].Reference = batchInputItems[i].Reference
+		}
 		resp.Data = map[string]interface{}{
 			"batch_results": batchResponseItems,
 		}

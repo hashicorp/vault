@@ -2,16 +2,17 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { formatRFC3339 } from 'date-fns';
+import { endOfMonth, formatRFC3339 } from 'date-fns';
 import { click } from '@ember/test-helpers';
+import subMonths from 'date-fns/subMonths';
 
 module('Integration | Component | clients/attribution', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
+    this.set('startTimestamp', formatRFC3339(subMonths(new Date(), 6)));
     this.set('timestamp', formatRFC3339(new Date()));
     this.set('selectedNamespace', null);
-    this.set('isDateRange', true);
     this.set('chartLegend', [
       { label: 'entity clients', key: 'entity_clients' },
       { label: 'non-entity clients', key: 'non_entity_clients' },
@@ -31,7 +32,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
   test('it renders empty state with no data', async function (assert) {
     await render(hbs`
       <div id="modal-wormhole"></div>
-      <Clients::Attribution @chartLegend={{chartLegend}} />
+      <Clients::Attribution @chartLegend={{this.chartLegend}} />
     `);
 
     assert.dom('[data-test-component="empty-state"]').exists();
@@ -45,12 +46,14 @@ module('Integration | Component | clients/attribution', function (hooks) {
     await render(hbs`
       <div id="modal-wormhole"></div>
       <Clients::Attribution 
-        @chartLegend={{chartLegend}}
-        @totalClientAttribution={{totalClientAttribution}} 
-        @totalUsageCounts={{totalUsageCounts}} 
-        @timestamp={{timestamp}} 
-        @selectedNamespace={{selectedNamespace}}
-        @isDateRange={{isDateRange}}
+        @chartLegend={{this.chartLegend}}
+        @totalClientAttribution={{this.totalClientAttribution}} 
+        @totalUsageCounts={{this.totalUsageCounts}} 
+        @responseTimestamp={{this.timestamp}} 
+        @startTimestamp={{this.startTimestamp}} 
+        @endTimestamp={{this.timestamp}} 
+        @selectedNamespace={{this.selectedNamespace}}
+        @isHistoricalMonth={{false}}
         />
     `);
 
@@ -71,17 +74,20 @@ module('Integration | Component | clients/attribution', function (hooks) {
     assert.dom('[data-test-attribution-clients]').includesText('namespace').includesText('10');
   });
 
-  test('it renders correct text for a single month', async function (assert) {
-    this.set('isDateRange', false);
+  test('it renders two charts and correct text for single, historical month', async function (assert) {
+    this.start = formatRFC3339(subMonths(new Date(), 1));
+    this.end = formatRFC3339(subMonths(endOfMonth(new Date()), 1));
     await render(hbs`
       <div id="modal-wormhole"></div>
       <Clients::Attribution 
-        @chartLegend={{chartLegend}}
-        @totalClientAttribution={{totalClientAttribution}} 
-        @totalUsageCounts={{totalUsageCounts}} 
-        @timestamp={{timestamp}} 
-        @selectedNamespace={{selectedNamespace}}
-        @isDateRange={{isDateRange}}
+        @chartLegend={{this.chartLegend}}
+        @totalClientAttribution={{this.totalClientAttribution}} 
+        @totalUsageCounts={{this.totalUsageCounts}} 
+        @responseTimestamp={{this.timestamp}}
+        @startTimestamp={{this.start}}
+        @endTimestamp={{this.end}} 
+        @selectedNamespace={{this.selectedNamespace}}
+        @isHistoricalMonth={{true}}
         />
     `);
     assert
@@ -124,17 +130,64 @@ module('Integration | Component | clients/attribution', function (hooks) {
       );
   });
 
+  test('it renders single chart for current month', async function (assert) {
+    await render(hbs`
+      <div id="modal-wormhole"></div>
+      <Clients::Attribution 
+        @chartLegend={{this.chartLegend}}
+        @totalClientAttribution={{this.totalClientAttribution}} 
+        @totalUsageCounts={{this.totalUsageCounts}} 
+        @responseTimestamp={{this.timestamp}}
+        @startTimestamp={{this.timestamp}}
+        @endTimestamp={{this.timestamp}} 
+        @selectedNamespace={{this.selectedNamespace}}
+        @isHistoricalMonth={{false}}
+        />
+    `);
+    assert
+      .dom('[data-test-chart-container="single-chart"]')
+      .exists('renders single chart with total clients');
+    assert
+      .dom('[data-test-attribution-subtext]')
+      .hasTextContaining('this month', 'renders total monthly namespace text');
+  });
+
+  test('it renders single chart and correct text for for date range', async function (assert) {
+    await render(hbs`
+      <div id="modal-wormhole"></div>
+      <Clients::Attribution 
+        @chartLegend={{this.chartLegend}}
+        @totalClientAttribution={{this.totalClientAttribution}} 
+        @totalUsageCounts={{this.totalUsageCounts}} 
+        @responseTimestamp={{this.timestamp}}
+        @startTimestamp={{this.startTimestamp}}
+        @endTimestamp={{this.timestamp}} 
+        @selectedNamespace={{this.selectedNamespace}}
+        @isHistoricalMonth={{false}}
+        />
+    `);
+
+    assert
+      .dom('[data-test-chart-container="single-chart"]')
+      .exists('renders single chart with total clients');
+    assert
+      .dom('[data-test-attribution-subtext]')
+      .hasTextContaining('date range', 'renders total monthly namespace text');
+  });
+
   test('it renders with data for selected namespace auth methods for a date range', async function (assert) {
     this.set('selectedNamespace', 'second');
     await render(hbs`
       <div id="modal-wormhole"></div>
       <Clients::Attribution 
-        @chartLegend={{chartLegend}}
-        @totalClientAttribution={{namespaceMountsData}} 
-        @totalUsageCounts={{totalUsageCounts}} 
-        @timestamp={{timestamp}} 
-        @selectedNamespace={{selectedNamespace}}
-        @isDateRange={{isDateRange}}
+        @chartLegend={{this.chartLegend}}
+        @totalClientAttribution={{this.namespaceMountsData}} 
+        @totalUsageCounts={{this.totalUsageCounts}} 
+        @responseTimestamp={{this.timestamp}}
+        @startTimestamp={{this.startTimestamp}}
+        @endTimestamp={{this.timestamp}} 
+        @selectedNamespace={{this.selectedNamespace}}
+        @isHistoricalMonth={{this.isHistoricalMonth}}
         />
     `);
 
@@ -159,15 +212,15 @@ module('Integration | Component | clients/attribution', function (hooks) {
     await render(hbs`
       <div id="modal-wormhole"></div>
       <Clients::Attribution 
-        @chartLegend={{chartLegend}}
-        @totalClientAttribution={{namespaceMountsData}} 
-        @timestamp={{timestamp}} 
-        @startTimeDisplay={{"January 2022"}}
-        @endTimeDisplay={{"February 2022"}}
+        @chartLegend={{this.chartLegend}}
+        @totalClientAttribution={{this.namespaceMountsData}} 
+        @responseTimestamp={{this.timestamp}}
+        @startTimestamp="2022-06-01T23:00:11.050Z"
+        @endTimestamp="2022-12-01T23:00:11.050Z"
         />
     `);
     await click('[data-test-attribution-export-button]');
     assert.dom('.modal.is-active .title').hasText('Export attribution data', 'modal appears to export csv');
-    assert.dom('.modal.is-active').includesText('January 2022 - February 2022');
+    assert.dom('.modal.is-active').includesText('June 2022 - December 2022');
   });
 });

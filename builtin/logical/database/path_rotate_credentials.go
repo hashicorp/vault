@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/vault/helper/versions"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -73,6 +74,11 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 			return nil, fmt.Errorf("unable to rotate root credentials: no username in configuration")
 		}
 
+		rootPassword, ok := config.ConnectionDetails["password"].(string)
+		if !ok || rootPassword == "" {
+			return nil, fmt.Errorf("unable to rotate root credentials: no password in configuration")
+		}
+
 		dbi, err := b.GetConnection(ctx, req.Storage, name)
 		if err != nil {
 			return nil, err
@@ -137,6 +143,11 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 			config.ConnectionDetails = newConfigDetails
 		}
 
+		// 1.12.0 and 1.12.1 stored builtin plugins in storage, but 1.12.2 reverted
+		// that, so clean up any pre-existing stored builtin versions on write.
+		if versions.IsBuiltinVersion(config.PluginVersion) {
+			config.PluginVersion = ""
+		}
 		err = storeConfig(ctx, req.Storage, name, config)
 		if err != nil {
 			return nil, err

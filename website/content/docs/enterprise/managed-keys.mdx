@@ -17,11 +17,11 @@ To satisfy these requirements, Vault has a centralized abstraction called
 delegate these operations to a trusted external KMS.
 
 Minimally, a managed key consists of a named managed key entry managed by the
-[`sys/managed-key`](../../api-docs/system/managed-keys) API.  Besides a name,
+[`sys/managed-key`](/vault/api-docs/system/managed-keys) API.  Besides a name,
 there are backend specific configurations to access the key in question.
 
 For PKCS#11 (HSM) backed managed keys, the managed key configuration must
-reference a [kms library stanza](../configuration/kms-library) which points
+reference a [kms library stanza](/vault/docs/configuration/kms-library) which points
 to a PKCS#11 access library on the host machine.
 
 Note that a configured, named managed key corresponds to a single key within
@@ -42,7 +42,7 @@ Cloud KMS. Support for additional integrations may be added in the future.
 
 ## Secret and Auth Engine Support
 
-The [PKI Secrets Engine](/api-docs/secret/pki#managed-keys) has been integrated
+The [PKI Secrets Engine](/vault/api-docs/secret/pki#managed-keys) has been integrated
 with Managed Keys to offer certificate generation, both root and intermediary
 PKI paths, leveraging private keys from an external trusted KMS.
 
@@ -51,7 +51,7 @@ More engines may leverage managed keys in the future.
 ## API
 
 Managed Keys can be managed over the HTTP API. Please see
-[Managed Keys API](/api-docs/system/managed-keys) for more details.
+[Managed Keys API](/vault/api-docs/system/managed-keys) for more details.
 
 To configure PKI secrets engine with Managed Keys please see
-[PKI Secret API](/api-docs/secret/pki#managed-keys)
+[PKI Secret API](/vault/api-docs/secret/pki#managed-keys)

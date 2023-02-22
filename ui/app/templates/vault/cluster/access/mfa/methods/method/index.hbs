@@ -1,6 +1,6 @@
 <PageHeader as |p|>
   <p.top>
-    <nav class="breadcrumb">
+    <nav class="breadcrumb" aria-label="breadcrumbs">
       <ul>
         <li>
           <span class="sep">&#x0002f;</span>
@@ -20,7 +20,7 @@
 </PageHeader>
 
 <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
-  <nav class="tabs">
+  <nav class="tabs" aria-label="tabs">
     <ul>
       <LinkTo @route="vault.cluster.access.mfa.methods.method" @query={{hash tab="config"}} data-test-tab="config">
         Configuration
@@ -50,7 +50,8 @@
         Delete
       </ConfirmAction>
       <ToolbarLink
-        @params={{array "vault.cluster.access.mfa.methods.method.edit" this.model.method.id}}
+        @route="vault.cluster.access.mfa.methods.method.edit"
+        @model={{this.model.method.id}}
         data-test-mfa-method-edit
       >
         Edit

@@ -1,7 +1,10 @@
 import Controller from '@ember/controller';
 import { task } from 'ember-concurrency';
+import { inject as service } from '@ember/service';
 
 export default Controller.extend({
+  flashMessages: service(),
+
   queryParams: {
     page: 'page',
     pageFilter: 'pageFilter',

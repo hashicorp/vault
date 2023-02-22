@@ -75,7 +75,7 @@
         </button>
       </div>
     {{else if (and this.generateAction (not this.started))}}
-      <form {{action "startGenerate" (hash pgp_key=this.pgp_key) on="submit"}} id="shamir">
+      <form {{action "startGenerate" (hash pgp_key=this.pgp_key) on="submit"}} id="shamir" aria-label="shamir generate form">
         <MessageError @errors={{this.errors}} />
         {{#if (eq this.generateStep "chooseMethod")}}
           <div class="has-bottom-margin-m" data-test-shamir-modal-body>
@@ -129,7 +129,7 @@
             </p>
             <h4 class="field-title has-bottom-padding-m is-fullwidth">
               PGP Key
-              {{this.pgpKeyFile.fileName}}
+              {{this.pgpKeyFile.filename}}
             </h4>
             <div class="message is-list has-copy-button" tabindex="-1">
               <HoverCopyButton @copyValue={{this.pgp_key}} />
@@ -151,7 +151,7 @@
         {{/if}}
       </form>
     {{else}}
-      <form {{action "onSubmit" (hash key=this.key) on="submit"}} id="shamir">
+      <form {{action "onSubmit" (hash key=this.key) on="submit"}} id="shamir" aria-label="shamir form">
         <div class="has-bottom-margin-m">
           {{#if this.errors}}
             <div class="box is-shadowless is-marginless no-padding-top is-fullwidth">

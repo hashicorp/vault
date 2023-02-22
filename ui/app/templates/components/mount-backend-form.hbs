@@ -2,100 +2,65 @@
   <p.levelLeft>
     <h1 class="title is-3 title-with-icon" data-test-mount-form-header="true">
       {{#if this.showEnable}}
-        {{#let (find-by "type" this.mountModel.type this.mountTypes) as |typeInfo|}}
+        {{#let (find-by "type" @mountModel.type @mountTypes) as |typeInfo|}}
           <Icon @name={{or typeInfo.glyph typeInfo.type}} @size="24" class="has-text-grey-light" />
-          {{#if (eq this.mountType "auth")}}
-            {{concat "Enable " typeInfo.displayName " Authentication Method"}}
-          {{else}}
+          {{#if (eq @mountType "secret")}}
             {{concat "Enable " typeInfo.displayName " Secrets Engine"}}
+          {{else}}
+            {{concat "Enable " typeInfo.displayName " Authentication Method"}}
           {{/if}}
         {{/let}}
-      {{else if (eq this.mountType "auth")}}
-        Enable an Authentication Method
-      {{else}}
+      {{else if (eq @mountType "secret")}}
         Enable a Secrets Engine
+      {{else}}
+        Enable an Authentication Method
       {{/if}}
     </h1>
   </p.levelLeft>
 </PageHeader>
-<form {{on "submit" (perform this.mountBackend)}}>
-  <div class="box is-sideless is-fullwidth is-marginless">
-    <NamespaceReminder @mode="enable" @noun={{if (eq this.mountType "auth") "Auth Method" "Secret Engine"}} />
-    <MessageError @model={{this.model}} @errorMessage={{this.errorMessage}} @errors={{this.errors}} />
-    {{#if this.showEnable}}
+
+<div class="box is-sideless is-fullwidth is-marginless">
+  <NamespaceReminder @mode="enable" @noun={{if (eq @mountType "secret") "Secret Engine" "Auth Method"}} />
+  <MessageError @errorMessage={{this.errorMessage}} />
+  {{#if @mountModel.type}}
+    <form {{on "submit" (perform this.mountBackend)}}>
       <FormFieldGroups
-        @model={{this.mountModel}}
-        @onChange={{this.onTypeChange}}
+        @model={{@mountModel}}
         @renderGroup="default"
         @modelValidations={{this.modelValidations}}
         @onKeyUp={{this.onKeyUp}}
       />
-      <FormFieldGroups @model={{this.mountModel}} @onChange={{this.onTypeChange}} @renderGroup="Method Options" />
-    {{else}}
-      {{#each (array "generic" "cloud" "infra") as |category|}}
-        <h3 class="title box-radio-header">
-          {{capitalize category}}
-        </h3>
-        <div class="box-radio-container">
-          {{#each (filter-by "category" category this.mountTypes) as |type|}}
-            <BoxRadio
-              @displayName={{type.displayName}}
-              @type={{type.type}}
-              @glyph={{or type.glyph type.type}}
-              @groupValue={{this.mountModel.type}}
-              @groupName="mount-type"
-              @onRadioChange={{queue (fn (mut this.mountModel.type)) (fn this.onTypeChange "type")}}
-              @disabled={{if type.requiredFeature (not (has-feature type.requiredFeature)) false}}
-              @tooltipMessage={{if
-                (or (eq type.type "transform") (eq type.type "kmip") (eq type.type "keymgmt"))
-                (concat
-                  type.displayName
-                  " is part of the Advanced Data Protection module, which is not included in your enterprise license."
-                )
-                "This secret engine is not included in your license."
-              }}
-            />
-          {{/each}}
-        </div>
-      {{/each}}
-    {{/if}}
-  </div>
-  <div class="field is-grouped box is-fullwidth is-bottomless">
-    {{#if this.showEnable}}
-      <div class="control">
-        <button
-          type="submit"
-          data-test-mount-submit="true"
-          class="button is-primary {{if this.mountBackend.isRunning 'loading'}}"
-          disabled={{this.mountBackend.isRunning}}
-        >
-          {{#if (eq this.mountType "auth")}}
-            Enable Method
-          {{else}}
-            Enable Engine
-          {{/if}}
-        </button>
-      </div>
-      <div class="control">
-        <button data-test-mount-back type="button" class="button" {{on "click" (fn this.toggleShowEnable false)}}>
-          Back
-        </button>
-      </div>
-      {{#if this.invalidFormAlert}}
+      <FormFieldGroups @model={{@mountModel}} @renderGroup="Method Options" />
+
+      <div class="field is-grouped box is-fullwidth is-bottomless">
         <div class="control">
-          <AlertInline @type="danger" @paddingTop={{true}} @message={{this.invalidFormAlert}} @mimicRefresh={{true}} />
+          <button
+            type="submit"
+            data-test-mount-submit="true"
+            class="button is-primary {{if this.mountBackend.isRunning 'loading'}}"
+            disabled={{this.mountBackend.isRunning}}
+          >
+            {{#if (eq @mountType "secret")}}
+              Enable Engine
+            {{else}}
+              Enable Method
+            {{/if}}
+          </button>
         </div>
-      {{/if}}
-    {{else}}
-      <button
-        data-test-mount-next
-        type="button"
-        class="button is-primary"
-        {{on "click" (fn this.toggleShowEnable true)}}
-        disabled={{not this.mountModel.type}}
-      >
-        Next
-      </button>
-    {{/if}}
-  </div>
-</form>
+        <div class="control">
+          <button data-test-mount-back type="button" class="button" {{on "click" (fn this.setMountType "")}}>
+            Back
+          </button>
+        </div>
+        {{#if this.invalidFormAlert}}
+          <div class="control">
+            <AlertInline @type="danger" @paddingTop={{true}} @message={{this.invalidFormAlert}} @mimicRefresh={{true}} />
+          </div>
+        {{/if}}
+      </div>
+    </form>
+  {{else}}
+    {{!  Type not yet set, show type options }}
+    <MountBackend::TypeForm @setMountType={{this.setMountType}} @mountType={{@mountType}} />
+  {{/if}}
+</div>

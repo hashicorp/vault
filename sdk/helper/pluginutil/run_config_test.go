@@ -7,8 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/version"
-
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
@@ -76,7 +74,7 @@ func TestMakeConfig(t *testing.T) {
 					[]string{"foo", "bar"},
 					[]string{
 						"initial=true",
-						fmt.Sprintf("%s=%s", PluginVaultVersionEnv, version.GetVersion().Version),
+						fmt.Sprintf("%s=%s", PluginVaultVersionEnv, "dummyversion"),
 						fmt.Sprintf("%s=%t", PluginMetadataModeEnv, true),
 						fmt.Sprintf("%s=%t", PluginAutoMTLSEnv, false),
 					},
@@ -142,7 +140,7 @@ func TestMakeConfig(t *testing.T) {
 					[]string{
 						"initial=true",
 						fmt.Sprintf("%s=%t", PluginMlockEnabled, true),
-						fmt.Sprintf("%s=%s", PluginVaultVersionEnv, version.GetVersion().Version),
+						fmt.Sprintf("%s=%s", PluginVaultVersionEnv, "dummyversion"),
 						fmt.Sprintf("%s=%t", PluginMetadataModeEnv, false),
 						fmt.Sprintf("%s=%t", PluginAutoMTLSEnv, false),
 						fmt.Sprintf("%s=%s", PluginUnwrapTokenEnv, "testtoken"),
@@ -205,7 +203,7 @@ func TestMakeConfig(t *testing.T) {
 					[]string{"foo", "bar"},
 					[]string{
 						"initial=true",
-						fmt.Sprintf("%s=%s", PluginVaultVersionEnv, version.GetVersion().Version),
+						fmt.Sprintf("%s=%s", PluginVaultVersionEnv, "dummyversion"),
 						fmt.Sprintf("%s=%t", PluginMetadataModeEnv, true),
 						fmt.Sprintf("%s=%t", PluginAutoMTLSEnv, true),
 					},
@@ -267,7 +265,7 @@ func TestMakeConfig(t *testing.T) {
 					[]string{"foo", "bar"},
 					[]string{
 						"initial=true",
-						fmt.Sprintf("%s=%s", PluginVaultVersionEnv, version.GetVersion().Version),
+						fmt.Sprintf("%s=%s", PluginVaultVersionEnv, "dummyversion"),
 						fmt.Sprintf("%s=%t", PluginMetadataModeEnv, false),
 						fmt.Sprintf("%s=%t", PluginAutoMTLSEnv, true),
 					},
@@ -337,6 +335,10 @@ var _ RunnerUtil = &mockRunnerUtil{}
 
 type mockRunnerUtil struct {
 	mock.Mock
+}
+
+func (m *mockRunnerUtil) VaultVersion(ctx context.Context) (string, error) {
+	return "dummyversion", nil
 }
 
 func (m *mockRunnerUtil) NewPluginClient(ctx context.Context, config PluginClientConfig) (PluginClient, error) {

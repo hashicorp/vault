@@ -27,7 +27,9 @@ module('Integration | Component | replication-summary-card', function (hooks) {
   });
 
   test('it renders', async function (assert) {
-    await render(hbs`<ReplicationSummaryCard @replicationDetails={{replicationDetails}} @title={{title}} />`);
+    await render(
+      hbs`<ReplicationSummaryCard @replicationDetails={{this.replicationDetails}} @title={{this.title}} />`
+    );
     assert.dom('[data-test-replication-summary-card]').exists();
     assert
       .dom('[data-test-lastWAL]')
@@ -41,7 +43,7 @@ module('Integration | Component | replication-summary-card', function (hooks) {
 
   test('it shows the correct lastWAL and knownSecondaries when title is Performance', async function (assert) {
     await render(
-      hbs`<ReplicationSummaryCard @replicationDetails={{replicationDetails}} @title="Performance" />`
+      hbs`<ReplicationSummaryCard @replicationDetails={{this.replicationDetails}} @title="Performance" />`
     );
     assert
       .dom('[data-test-lastWAL]')

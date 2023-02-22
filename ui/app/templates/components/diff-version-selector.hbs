@@ -12,7 +12,7 @@
         <Chevron @direction="down" @isButton={{true}} />
       </D.Trigger>
       <D.Content @defaultClass="popup-menu-content">
-        <nav class="box menu">
+        <nav class="box menu" aria-label="version">
           <ul class="menu-list">
             {{#each (reverse @model.versions) as |leftSideSecretVersion|}}
               <li class="action" data-test-leftSide-version={{leftSideSecretVersion.version}}>
@@ -55,7 +55,7 @@
         <Chevron @direction="down" @isButton={{true}} />
       </D.Trigger>
       <D.Content @defaultClass="popup-menu-content">
-        <nav class="box menu">
+        <nav class="box menu" aria-label="versions to diff">
           <ul class="menu-list">
             {{#each (reverse @model.versions) as |rightSideSecretVersion|}}
               <li class="action">
@@ -98,6 +98,5 @@
 </Toolbar>
 
 <div class="form-section visual-diff">
-  {{! template-lint-configure no-triple-curlies "warn" }}
-  <pre>{{{this.visualDiff}}}</pre>
+  <pre>{{this.visualDiff}}</pre>
 </div>

@@ -22,6 +22,6 @@ jobs:
       - uses: hashicorp/action-setup-enos@v1
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
-      - name: "check formatting"
+      - name: check formatting
         working-directory: ./enos
         run: make check-fmt

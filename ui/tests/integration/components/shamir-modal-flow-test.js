@@ -24,8 +24,8 @@ module('Integration | Component | shamir-modal-flow', function (hooks) {
         @fetchOnInit=true
         @generateAction=true
         @buttonText="My CTA"
-        @onClose={{onClose}}
-        @isActive={{isActive}}
+        @onClose={{this.onClose}}
+        @isActive={{this.isActive}}
       >
         <p>Inner content goes here</p>
       </ShamirModalFlow>
@@ -47,8 +47,8 @@ module('Integration | Component | shamir-modal-flow', function (hooks) {
         @fetchOnInit=true
         @generateAction=true
         @buttonText="Crazy CTA"
-        @onClose={{onClose}}
-        @isActive={{isActive}}
+        @onClose={{this.onClose}}
+        @isActive={{this.isActive}}
       >
         <p>Inner content goes here</p>
       </ShamirModalFlow>
@@ -67,8 +67,8 @@ module('Integration | Component | shamir-modal-flow', function (hooks) {
         @fetchOnInit=true
         @generateAction=true
         @buttonText="Crazy CTA"
-        @onClose={{onClose}}
-        @isActive={{isActive}}
+        @onClose={{this.onClose}}
+        @isActive={{this.isActive}}
       >
         <p>Inner content goes here</p>
       </ShamirModalFlow>

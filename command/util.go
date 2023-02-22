@@ -104,7 +104,7 @@ func PrintRawField(ui cli.Ui, data interface{}, field string) int {
 	}
 
 	format := Format(ui)
-	if format == "" || format == "table" {
+	if format == "" || format == "table" || format == "raw" {
 		return PrintRaw(ui, fmt.Sprintf("%v", val))
 	}
 

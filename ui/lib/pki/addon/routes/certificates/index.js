@@ -1,19 +1,28 @@
-import Route from '@ember/routing/route';
+import PkiOverviewRoute from '../overview';
 import { inject as service } from '@ember/service';
+import { hash } from 'rsvp';
 
-export default class PkiCertificatesIndexRoute extends Route {
+export default class PkiCertificatesIndexRoute extends PkiOverviewRoute {
   @service store;
   @service secretMountPath;
 
+  async fetchCertificates() {
+    try {
+      return await this.store.query('pki/certificate/base', { backend: this.secretMountPath.currentPath });
+    } catch (e) {
+      if (e.httpStatus === 404) {
+        return { parentModel: this.modelFor('certificates') };
+      } else {
+        throw e;
+      }
+    }
+  }
+
   model() {
-    return this.store
-      .query('pki/pki-certificate-engine', { backend: this.secretMountPath.currentPath })
-      .catch((err) => {
-        if (err.httpStatus === 404) {
-          return [];
-        } else {
-          throw err;
-        }
-      });
+    return hash({
+      hasConfig: this.hasConfig(),
+      certificates: this.fetchCertificates(),
+      parentModel: this.modelFor('certificates'),
+    });
   }
 }

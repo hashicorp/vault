@@ -14,6 +14,7 @@
     "ember-cli-clipboard": "*",
     "ember-cli-htmlbars": "*",
     "ember-cli-string-helpers": "*",
+    "ember-cli-typescript": "*",
     "ember-composable-helpers": "*",
     "ember-concurrency": "*",
     "ember-maybe-in-element": "*",
@@ -25,6 +26,8 @@
     "ember-wormhole": "*",
     "escape-string-regexp": "*",
     "@hashicorp/ember-flight-icons": "*",
-    "@hashicorp/flight-icons": "*"
+    "@hashicorp/flight-icons": "*",
+    "codemirror": "*",
+    "ember-modifier": "*"
   }
 }

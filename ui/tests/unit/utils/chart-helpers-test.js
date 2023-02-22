@@ -16,17 +16,17 @@ module('Unit | Utility | chart-helpers', function () {
     const method = formatNumbers();
     assert.ok(method);
     SMALL_NUMBERS.forEach(function (num) {
-      assert.equal(formatNumbers(num), num, `Does not format small number ${num}`);
+      assert.strictEqual(formatNumbers(num), num, `Does not format small number ${num}`);
     });
     Object.keys(LARGE_NUMBERS).forEach(function (num) {
       const expected = LARGE_NUMBERS[num];
-      assert.equal(formatNumbers(num), expected, `Formats ${num} as ${expected}`);
+      assert.strictEqual(formatNumbers(num), expected, `Formats ${num} as ${expected}`);
     });
   });
 
   test('formatTooltipNumber renders number correctly', function (assert) {
     const formatted = formatTooltipNumber(120300200100);
-    assert.equal(formatted.length, 15, 'adds punctuation at proper place for large numbers');
+    assert.strictEqual(formatted.length, 15, 'adds punctuation at proper place for large numbers');
   });
 
   test('calculateAverage is accurate', function (assert) {
@@ -38,25 +38,24 @@ module('Unit | Utility | chart-helpers', function () {
       { label: 'foo', value: undefined },
       { label: 'bar', value: 22 },
     ];
+    const testArray3 = [{ label: 'foo' }, { label: 'bar' }];
     const getAverage = (array) => array.reduce((a, b) => a + b, 0) / array.length;
-    assert.equal(calculateAverage(null), null, 'returns null if dataset it null');
-    assert.equal(calculateAverage([]), null, 'returns null if dataset it empty array');
-    assert.equal(calculateAverage([0]), getAverage([0]), `returns ${getAverage([0])} if array is just 0 0`);
-    assert.equal(calculateAverage([1]), getAverage([1]), `returns ${getAverage([1])} if array is just 1`);
-    assert.equal(
-      calculateAverage([5, 1, 41, 5]),
-      getAverage([5, 1, 41, 5]),
-      `returns correct average for array of integers`
-    );
-    assert.equal(
+    assert.strictEqual(calculateAverage(null), null, 'returns null if dataset it null');
+    assert.strictEqual(calculateAverage([]), null, 'returns null if dataset it empty array');
+    assert.strictEqual(
       calculateAverage(testArray1, 'value'),
       getAverage([10, 22]),
       `returns correct average for array of objects`
     );
-    assert.equal(
+    assert.strictEqual(
       calculateAverage(testArray2, 'value'),
       getAverage([0, 22]),
       `returns correct average for array of objects containing undefined values`
+    );
+    assert.strictEqual(
+      calculateAverage(testArray3, 'value'),
+      null,
+      'returns null when object key does not exist at all'
     );
   });
 });

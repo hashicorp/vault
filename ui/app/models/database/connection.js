@@ -54,7 +54,7 @@ export default Model.extend({
     defaultSubText:
       'Unless a custom policy is specified, Vault will use a default: 20 characters with at least 1 uppercase, 1 lowercase, 1 number, and 1 dash character.',
     defaultShown: 'Default',
-    docLink: '/docs/concepts/password-policies',
+    docLink: '/vault/docs/concepts/password-policies',
   }),
 
   // common fields
@@ -106,7 +106,7 @@ export default Model.extend({
     subText: 'Enter the custom username template to use.',
     defaultSubText:
       'Template describing how dynamic usernames are generated. Vault will use the default for this plugin.',
-    docLink: '/docs/concepts/username-templating',
+    docLink: '/vault/docs/concepts/username-templating',
     defaultShown: 'Default',
   }),
   max_open_connections: attr('number', {
@@ -171,10 +171,10 @@ export default Model.extend({
     if (!this.plugin_name) {
       return null;
     }
-    let pluginFields = AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name).fields.filter(
+    const pluginFields = AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name).fields.filter(
       (f) => f.group === 'pluginConfig'
     );
-    let groups = fieldsToGroups(pluginFields, 'subgroup');
+    const groups = fieldsToGroups(pluginFields, 'subgroup');
     return fieldToAttrs(this, groups);
   }),
 
@@ -182,7 +182,7 @@ export default Model.extend({
     if (!this.plugin_name) {
       return expandAttributeMeta(this, ['root_rotation_statements']);
     }
-    let fields = AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name)
+    const fields = AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name)
       .fields.filter((f) => f.group === 'statements')
       .map((field) => field.attr);
     return expandAttributeMeta(this, fields);

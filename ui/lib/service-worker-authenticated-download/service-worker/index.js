@@ -23,7 +23,7 @@ function sendMessage(message) {
 
 function authenticateRequest(request) {
   // copy the reaquest headers so we can mutate them
-  let headers = new Headers(request.headers);
+  const headers = new Headers(request.headers);
 
   // get and set vault token so the request is authenticated
   return sendMessage({ action: 'getToken' }).then(function (token) {

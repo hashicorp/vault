@@ -1,5 +1,6 @@
 <div class="field" data-test-nav-input>
   <p class="control has-icons-left">
+    {{! template-lint-disable no-down-event-binding }}
     <input
       class="filter input"
       disabled={{this.disabled}}
@@ -13,6 +14,7 @@
       onfocus={{action "setFilterFocused" true}}
       onblur={{action "setFilterFocused" false}}
     />
+    {{! template-lint-enable no-down-event-binding }}
     <Icon @name="search" class="search-icon has-text-grey-light" />
   </p>
 </div>

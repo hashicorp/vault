@@ -224,8 +224,8 @@ func TestTransit_BatchRewrapCase3(t *testing.T) {
 	b, s := createBackendWithStorage(t)
 
 	batchEncryptionInput := []interface{}{
-		map[string]interface{}{"plaintext": "dmlzaGFsCg=="},
-		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
+		map[string]interface{}{"plaintext": "dmlzaGFsCg==", "reference": "ek"},
+		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==", "reference": "do"},
 	}
 	batchEncryptionData := map[string]interface{}{
 		"batch_input": batchEncryptionInput,
@@ -245,7 +245,7 @@ func TestTransit_BatchRewrapCase3(t *testing.T) {
 
 	batchRewrapInput := make([]interface{}, len(batchEncryptionResponseItems))
 	for i, item := range batchEncryptionResponseItems {
-		batchRewrapInput[i] = map[string]interface{}{"ciphertext": item.Ciphertext}
+		batchRewrapInput[i] = map[string]interface{}{"ciphertext": item.Ciphertext, "reference": item.Reference}
 	}
 
 	batchRewrapData := map[string]interface{}{
@@ -289,6 +289,11 @@ func TestTransit_BatchRewrapCase3(t *testing.T) {
 	for i, eItem := range batchEncryptionResponseItems {
 		rItem := batchRewrapResponseItems[i]
 
+		inputRef := batchEncryptionInput[i].(map[string]interface{})["reference"]
+		if eItem.Reference != inputRef {
+			t.Fatalf("bad: reference mismatch. Expected %s, Actual: %s", inputRef, eItem.Reference)
+		}
+
 		if eItem.Ciphertext == rItem.Ciphertext {
 			t.Fatalf("bad: rewrap input and output are the same")
 		}
@@ -315,5 +320,6 @@ func TestTransit_BatchRewrapCase3(t *testing.T) {
 		if resp.Data["plaintext"] != plaintext1 && resp.Data["plaintext"] != plaintext2 {
 			t.Fatalf("bad: plaintext. Expected: %q or %q, Actual: %q", plaintext1, plaintext2, resp.Data["plaintext"])
 		}
+
 	}
 }

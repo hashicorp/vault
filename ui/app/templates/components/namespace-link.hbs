@@ -1,16 +1,17 @@
-<a href={{this.namespaceLink}} class={{concat "is-block " this.class}} data-test-namespace-link={{this.normalizedNamespace}}>
+<ExternalLink
+  @href={{this.namespaceLink}}
+  @sameTab={{true}}
+  class={{concat "is-block " this.class}}
+  data-test-namespace-link={{this.normalizedNamespace}}
+>
   {{#if (has-block)}}
     {{yield}}
   {{else}}
     <div class="level is-mobile">
       <span class="level-left">{{this.namespaceDisplay}}</span>
       <span class="level-right">
-        {{! template-lint-configure no-nested-interactive "warn" }}
-        <button type="button" class="button is-ghost icon">
-          <Chevron @isButton={{true}} class="has-text-grey" />
-        </button>
-        {{! template-lint-configure no-nested-interactive "on" }}
+        <Chevron @isButton={{true}} class="button is-ghost icon has-text-grey" />
       </span>
     </div>
   {{/if}}
-</a>
+</ExternalLink>

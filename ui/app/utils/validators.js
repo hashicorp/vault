@@ -21,7 +21,7 @@ export const number = (value, { nullable = false } = {}) => {
 };
 
 export const containsWhiteSpace = (value) => {
-  let validation = new RegExp('\\s', 'g'); // search for whitespace
+  const validation = new RegExp('\\s', 'g'); // search for whitespace
   return !validation.test(value);
 };
 

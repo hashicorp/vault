@@ -46,7 +46,7 @@ export default Model.extend({
   signedKey: attr('string'),
 
   attrs: computed('signedKey', function () {
-    let keys = this.signedKey ? DISPLAY_FIELDS.slice(0) : CREATE_FIELDS.slice(0);
+    const keys = this.signedKey ? DISPLAY_FIELDS.slice(0) : CREATE_FIELDS.slice(0);
     return expandAttributeMeta(this, keys);
   }),
 });

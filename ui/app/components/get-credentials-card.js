@@ -7,14 +7,14 @@
  * ```js
  * <GetCredentialsCard @title="Get Credentials" @searchLabel="Role to use" @models={{array 'database/roles'}} @type="role" @backend={{model.backend}}/>
  * ```
- * @param title=null {String} - The title displays the card title
- * @param searchLabel=null {String} - The text above the searchSelect component
- * @param models=null {Array} - An array of model types to fetch from the API.  Passed through to SearchSelect component
- * @param type=null {String} - Determines where the transitionTo goes. If role to backend.credentials, if secret backend.show
- * @param shouldUseFallback=[false] {Boolean} - If true the input is used instead of search select.
- * @param subText=[null] {String} - Text below title
- * @param placeHolder=[null] {String} - Only works if shouldUseFallback is true. Displays the helper text inside the input.
- * @param backend=null {String} - Name of the backend to look up on search.
+ * @param {string} title - The title displays the card title
+ * @param {string} searchLabel - The text above the searchSelect component
+ * @param {array} models - An array of model types to fetch from the API. Passed through to SearchSelect component
+ * @param {string} type - 'role' or 'secret' - determines where the transitionTo goes
+ * @param {boolean} [renderInputSearch=false] - If true, renders InputSearch instead of SearchSelect
+ * @param {string} [subText] - Text below title
+ * @param {string} [placeholder] - Input placeholder text (default for SearchSelect is 'Search', none for InputSearch)
+ * @param {string} backend - Passed to SearchSelect query method to fetch dropdown options
  */
 
 import Component from '@glimmer/component';
@@ -26,6 +26,10 @@ export default class GetCredentialsCard extends Component {
   @service store;
   @tracked role = '';
   @tracked secret = '';
+
+  get buttonDisabled() {
+    return !this.role && !this.secret;
+  }
 
   @action
   transitionToCredential() {
@@ -39,11 +43,8 @@ export default class GetCredentialsCard extends Component {
     }
   }
 
-  get buttonDisabled() {
-    return !this.role && !this.secret;
-  }
   @action
-  handleRoleInput(value) {
+  handleInput(value) {
     if (this.args.type === 'role') {
       // if it comes in from the fallback component then the value is a string otherwise it's an array
       // which currently only happens if type is role.

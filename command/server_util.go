@@ -7,7 +7,7 @@ import (
 
 var (
 	adjustCoreConfigForEnt = adjustCoreConfigForEntNoop
-	checkStorageTypeForEnt = checkStorageTypeForEntNoop
+	storageSupportedForEnt = checkStorageTypeForEntNoop
 )
 
 func adjustCoreConfigForEntNoop(config *server.Config, coreConfig *vault.CoreConfig) {
@@ -19,6 +19,6 @@ func getFIPSInfoKeyNoop() string {
 	return ""
 }
 
-func checkStorageTypeForEntNoop(coreConfig *vault.CoreConfig) error {
-	return nil
+func checkStorageTypeForEntNoop(coreConfig *vault.CoreConfig) bool {
+	return true
 }

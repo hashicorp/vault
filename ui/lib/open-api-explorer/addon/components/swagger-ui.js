@@ -13,7 +13,7 @@ const SearchFilterPlugin = () => {
         return (
           taggedOps
             .map((tagObj) => {
-              let operations = tagObj.get('operations').filter((operationObj) => {
+              const operations = tagObj.get('operations').filter((operationObj) => {
                 return operationObj.get('path').includes(phrase);
               });
               return tagObj.set('operations', operations);
@@ -47,17 +47,17 @@ const CONFIG = (SwaggerUIBundle, componentInstance, initialFilter) => {
       // and namepace headers for things to work properly
       req.headers['X-Vault-Token'] = componentInstance.auth.currentToken;
 
-      let namespace = componentInstance.namespaceService.path;
+      const namespace = componentInstance.namespaceService.path;
       if (namespace && !APP.NAMESPACE_ROOT_URLS.some((str) => req.url.includes(str))) {
         req.headers['X-Vault-Namespace'] = namespace;
       }
       // we want to link to the right JSON in swagger UI so
       // it's already been pre-pended
       if (!req.loadSpec) {
-        let { protocol, host, pathname } = parseURL(req.url);
+        const { protocol, host, pathname, search } = parseURL(req.url);
         //paths in the spec don't have /v1 in them, so we need to add that here
         //           http(s):  vlt.io:4200  /sys/mounts
-        req.url = `${protocol}//${host}/v1${pathname}`;
+        req.url = `${protocol}//${host}/v1${pathname}${search}`;
       }
       return req;
     },
@@ -78,7 +78,7 @@ export default Component.extend({
     const { default: SwaggerUIBundle } = await import('swagger-ui-dist/swagger-ui-bundle.js');
     this._super(...arguments);
     // trim any initial slashes
-    let initialFilter = this.initialFilter.replace(/^(\/)+/, '');
+    const initialFilter = this.initialFilter.replace(/^(\/)+/, '');
     SwaggerUIBundle(CONFIG(SwaggerUIBundle, this, initialFilter));
   },
 
@@ -88,14 +88,14 @@ export default Component.extend({
       this.onFilterChange(e.target.value || '');
     },
     proxyEvent(e) {
-      let swaggerInput = this.element.querySelector('.operation-filter-input');
+      const swaggerInput = this.element.querySelector('.operation-filter-input');
       // if this breaks because of a react upgrade,
       // change this to
       //let originalSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
       //originalSetter.call(swaggerInput, e.target.value);
       // see post on triggering react events externally for an explanation of
       // why this works: https://stackoverflow.com/a/46012210
-      let evt = new Event('input', { bubbles: true });
+      const evt = new Event('input', { bubbles: true });
       evt.simulated = true;
       swaggerInput.value = e.target.value.replace(/^(\/)+/, '');
       swaggerInput.dispatchEvent(evt);

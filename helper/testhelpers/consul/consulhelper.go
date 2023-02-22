@@ -58,7 +58,7 @@ func PrepareTestContainer(t *testing.T, version string, isEnterprise bool, doBoo
 	if isEnterprise {
 		version += "-ent"
 		name = "consul-enterprise"
-		repo = "hashicorp/consul-enterprise"
+		repo = "docker.mirror.hashicorp.services/hashicorp/consul-enterprise"
 		license, hasLicense := os.LookupEnv("CONSUL_LICENSE")
 		envVars = append(envVars, "CONSUL_LICENSE="+license)
 

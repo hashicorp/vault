@@ -18,10 +18,10 @@ cd "$DIR"
 BUILD_TAGS="${BUILD_TAGS:-"vault"}"
 
 # Get the git commit
-GIT_COMMIT="$(git rev-parse HEAD)"
+GIT_COMMIT="$("$SOURCE_DIR"/ci-helper.sh revision)"
 GIT_DIRTY="$(test -n "`git status --porcelain`" && echo "+CHANGES" || true)"
 
-BUILD_DATE=$("$SOURCE_DIR"/build_date.sh)
+BUILD_DATE="$("$SOURCE_DIR"/ci-helper.sh date)"
 
 GOPATH=${GOPATH:-$(${GO_CMD} env GOPATH)}
 case $(uname) in
@@ -40,7 +40,7 @@ mkdir -p bin/
 echo "==> Building..."
 ${GO_CMD} build \
     -gcflags "${GCFLAGS}" \
-    -ldflags "${LD_FLAGS} -X github.com/hashicorp/vault/sdk/version.GitCommit='${GIT_COMMIT}${GIT_DIRTY}' -X github.com/hashicorp/vault/sdk/version.BuildDate=${BUILD_DATE}" \
+    -ldflags "${LD_FLAGS} -X github.com/hashicorp/vault/version.GitCommit='${GIT_COMMIT}${GIT_DIRTY}' -X github.com/hashicorp/vault/version.BuildDate=${BUILD_DATE}" \
     -o "bin/vault" \
     -tags "${BUILD_TAGS}" \
     .

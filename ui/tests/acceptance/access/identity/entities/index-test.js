@@ -13,11 +13,19 @@ module('Acceptance | /access/identity/entities', function (hooks) {
 
   test('it renders the entities page', async function (assert) {
     await page.visit({ item_type: 'entities' });
-    assert.equal(currentRouteName(), 'vault.cluster.access.identity.index', 'navigates to the correct route');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.access.identity.index',
+      'navigates to the correct route'
+    );
   });
 
   test('it renders the groups page', async function (assert) {
     await page.visit({ item_type: 'groups' });
-    assert.equal(currentRouteName(), 'vault.cluster.access.identity.index', 'navigates to the correct route');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.access.identity.index',
+      'navigates to the correct route'
+    );
   });
 });

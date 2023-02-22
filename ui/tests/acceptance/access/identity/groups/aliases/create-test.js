@@ -14,7 +14,7 @@ module('Acceptance | /access/identity/groups/aliases/add', function (hooks) {
   test('it allows create, list, delete of an entity alias', async function (assert) {
     // TODO figure out what is wrong with this test
     assert.expect(6);
-    let name = `alias-${Date.now()}`;
+    const name = `alias-${Date.now()}`;
     await testAliasCRUD(name, 'groups', assert);
     await settled();
   });
@@ -22,7 +22,7 @@ module('Acceptance | /access/identity/groups/aliases/add', function (hooks) {
   test('it allows delete from the edit form', async function (assert) {
     // TODO figure out what is wrong with this test
     assert.expect(4);
-    let name = `alias-${Date.now()}`;
+    const name = `alias-${Date.now()}`;
     await testAliasDeleteFromForm(name, 'groups', assert);
     await settled();
   });

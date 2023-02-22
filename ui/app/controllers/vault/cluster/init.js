@@ -1,5 +1,4 @@
 import { computed } from '@ember/object';
-import { inject as service } from '@ember/service';
 import Controller from '@ember/controller';
 
 const DEFAULTS = {
@@ -12,8 +11,6 @@ const DEFAULTS = {
 };
 
 export default Controller.extend(DEFAULTS, {
-  wizard: service(),
-
   reset() {
     this.setProperties(DEFAULTS);
   },
@@ -22,8 +19,6 @@ export default Controller.extend(DEFAULTS, {
     this.set('loading', false);
     this.set('keyData', resp);
     this.model.reload();
-    this.wizard.set('initEvent', 'SAVE');
-    this.wizard.transitionTutorialMachine(this.wizard.currentState, 'TOSAVE');
   },
 
   initError(e) {
@@ -41,9 +36,9 @@ export default Controller.extend(DEFAULTS, {
 
   actions: {
     initCluster(data) {
-      let isCloudSeal = !!this.model.sealType && this.model.sealType !== 'shamir';
+      const isCloudSeal = !!this.model.sealType && this.model.sealType !== 'shamir';
       if (data.secret_shares) {
-        let shares = parseInt(data.secret_shares, 10);
+        const shares = parseInt(data.secret_shares, 10);
         data.secret_shares = shares;
         if (isCloudSeal) {
           data.stored_shares = 1;
@@ -51,7 +46,7 @@ export default Controller.extend(DEFAULTS, {
         }
       }
       if (data.secret_threshold) {
-        let threshold = parseInt(data.secret_threshold, 10);
+        const threshold = parseInt(data.secret_threshold, 10);
         data.secret_threshold = threshold;
         if (isCloudSeal) {
           data.recovery_threshold = threshold;

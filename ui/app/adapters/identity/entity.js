@@ -2,11 +2,11 @@ import IdentityAdapter from './base';
 
 export default IdentityAdapter.extend({
   lookup(store, data) {
-    let url = `/${this.urlPrefix()}/identity/lookup/entity`;
+    const url = `/${this.urlPrefix()}/identity/lookup/entity`;
     return this.ajax(url, 'POST', { data }).then((response) => {
       // unsuccessful lookup is a 204
       if (!response) return;
-      let modelName = 'identity/entity';
+      const modelName = 'identity/entity';
       store.push(
         store
           .serializerFor(modelName)

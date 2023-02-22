@@ -47,7 +47,7 @@ export default Component.extend({
       this.toggleProperty('showValue');
     },
     updateValue(e) {
-      let value = e.target.value;
+      const value = e.target.value;
       this.set('value', value);
       this.onChange(value);
     },

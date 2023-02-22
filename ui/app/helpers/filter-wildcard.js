@@ -7,7 +7,7 @@ export function filterWildcard([string, array]) {
   if (!string.id && string) {
     string = { id: string };
   }
-  let stringId = string.id;
+  const stringId = string.id;
   const filterBy = (stringId) =>
     array.filter((item) => new RegExp('^' + stringId.replace(/\*/g, '.*') + '$').test(item));
   return filterBy(stringId).length;

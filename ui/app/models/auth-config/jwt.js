@@ -37,7 +37,7 @@ export default AuthConfig.extend({
     helpText: 'The value against which to match the iss claim in a JWT',
   }),
   fieldGroups: computed('constructor.modelName', 'newFields', function () {
-    let type = this.constructor.modelName.split('/')[1].toUpperCase();
+    const type = this.constructor.modelName.split('/')[1].toUpperCase();
     let groups = [
       {
         default: ['oidcDiscoveryUrl', 'defaultRole'],

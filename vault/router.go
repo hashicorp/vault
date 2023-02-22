@@ -94,6 +94,43 @@ func (r *Router) reset() {
 	r.mountAccessorCache = radix.New()
 }
 
+func (r *Router) GetRecords(tag string) ([]map[string]interface{}, error) {
+	r.l.RLock()
+	defer r.l.RUnlock()
+	var data []map[string]interface{}
+	var tree *radix.Tree
+	switch tag {
+	case "root":
+		tree = r.root
+	case "uuid":
+		tree = r.mountUUIDCache
+	case "accessor":
+		tree = r.mountAccessorCache
+	case "storage":
+		tree = r.storagePrefix
+	default:
+		return nil, logical.ErrUnsupportedPath
+	}
+	for _, v := range tree.ToMap() {
+		info := v.(Deserializable).Deserialize()
+		data = append(data, info)
+	}
+	return data, nil
+}
+
+func (entry *routeEntry) Deserialize() map[string]interface{} {
+	entry.l.RLock()
+	defer entry.l.RUnlock()
+	ret := map[string]interface{}{
+		"tainted":        entry.tainted,
+		"storage_prefix": entry.storagePrefix,
+	}
+	for k, v := range entry.mountEntry.Deserialize() {
+		ret[k] = v
+	}
+	return ret
+}
+
 // ValidateMountByAccessor returns the mount type and ID for a given mount
 // accessor
 func (r *Router) ValidateMountByAccessor(accessor string) *ValidateMountResponse {

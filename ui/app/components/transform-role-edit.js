@@ -1,6 +1,9 @@
 import TransformBase, { addToList, removeFromList } from './transform-edit-base';
+import { inject as service } from '@ember/service';
 
 export default TransformBase.extend({
+  flashMessages: service(),
+  store: service(),
   initialTransformations: null,
 
   init() {
@@ -37,10 +40,10 @@ export default TransformBase.extend({
     });
 
     Promise.all(promises).then((res) => {
-      let hasError = res.find((r) => !!r.errorStatus);
+      const hasError = res.find((r) => !!r.errorStatus);
       if (hasError) {
-        let errorAdding = res.find((r) => r.errorStatus === 403 && r.action === 'ADD');
-        let errorRemoving = res.find((r) => r.errorStatus === 403 && r.action === 'REMOVE');
+        const errorAdding = res.find((r) => r.errorStatus === 403 && r.action === 'ADD');
+        const errorRemoving = res.find((r) => r.errorStatus === 403 && r.action === 'REMOVE');
 
         let message =
           'The edits to this role were successful, but allowed_roles for its transformations was not edited due to a lack of permissions.';

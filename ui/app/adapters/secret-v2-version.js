@@ -1,12 +1,16 @@
 /* eslint-disable */
 import AdapterError from '@ember-data/adapter/error';
+
 import { isEmpty } from '@ember/utils';
 import { get } from '@ember/object';
 import ApplicationAdapter from './application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
+import { inject as service } from '@ember/service';
 
 export default ApplicationAdapter.extend({
+  store: service(),
   namespace: 'v1',
+
   _url(backend, id, infix = 'data') {
     let url = `${this.buildURL()}/${encodePath(backend)}/${infix}/`;
     if (!isEmpty(id)) {

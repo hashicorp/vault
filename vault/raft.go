@@ -20,14 +20,25 @@ import (
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/go-uuid"
+	goversion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/version"
 	"github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/net/http2"
+)
+
+const (
+	// undoLogMonitorInterval is how often the leader checks to see
+	// if all the cluster members it knows about are new enough to support
+	// undo logs.
+	undoLogMonitorInterval = time.Second
+
+	// undoLogSafeVersion is the minimum version Vault must be at in order
+	// for undo logs to be turned on.
+	undoLogSafeVersion = "1.12.0"
 )
 
 var (
@@ -171,6 +182,122 @@ func (c *Core) startRaftBackend(ctx context.Context) (retErr error) {
 	return nil
 }
 
+func (c *Core) monitorUndoLogs() error {
+	logger := c.logger.Named("undo-log-watcher")
+	logger.Debug("starting undo log watcher")
+	ctx := c.activeContext
+	raftBackend := c.getRaftBackend()
+
+	// First check storage and bail early if we already know undo logs are safe
+	persisted, err := c.UndoLogsPersisted()
+	if err != nil {
+		return fmt.Errorf("error checking for undo logs persistence: %w", err)
+	}
+
+	if persisted {
+		logger.Debug("undo logs are safe, no need to check any more")
+		return nil
+	}
+
+	// If undo logs have been explicitly enabled, likely via VAULT_REPLICATION_USE_UNDO_LOGS, then exit, as presumably
+	// we don't want to be checking for safety if we already know it's safe.
+	if c.UndoLogsEnabled() {
+		logger.Debug("undo logs have been explicitly enabled. exiting monitor.")
+		return nil
+	}
+
+	minimumVersion, err := goversion.NewSemver(undoLogSafeVersion)
+	if err != nil {
+		return fmt.Errorf("minimum undo log version (%q) won't parse: %w", undoLogSafeVersion, err)
+	}
+
+	go func() {
+		ticker := time.NewTicker(undoLogMonitorInterval)
+		defer ticker.Stop()
+
+		logger.Debug("undo logs have not been enabled yet, possibly due to a recent upgrade. starting a periodic check")
+
+		for {
+			select {
+			case <-ticker.C:
+			case <-ctx.Done():
+				return
+			}
+
+			// Check the raft configuration for expected servers
+			config, err := raftBackend.GetConfiguration(ctx)
+			if err != nil {
+				logger.Error("couldn't read raft config", "error", err)
+				continue
+			}
+
+			// This tracks which servers we expect to find in the cluster, from the raft config.
+			expectedServers := make(map[string]struct{})
+			for _, server := range config.Servers {
+				expectedServers[server.Address] = struct{}{}
+			}
+
+			// Retrieve all the nodes in our cluster
+			nodes, err := c.getHAMembers()
+			if err != nil {
+				logger.Error("error getting HA members", "error", err)
+				continue
+			}
+
+			// Check the versions of all of the cluster members. If they're all >= 1.12, undo logs are safe to enable.
+			// If any are < 1.12, undo logs should remain off, regardless of how it was initially configured.
+			enable := true
+			for _, node := range nodes {
+				nodeVersion, err := goversion.NewSemver(node.Version)
+				if err != nil {
+					logger.Error("error parsing node version", "node version", node.Version, "node", node.ClusterAddress, "error", err)
+					break
+				}
+
+				if nodeVersion.LessThan(minimumVersion) {
+					logger.Debug("node version is less than the minimum, disabling undo logs", "node", node.ClusterAddress, "version", node.Version)
+					enable = false
+					break
+				} else {
+					// Raft nodes have their address listed without a scheme, e.g. 127.0.0.1:8201. HA nodes that we get from
+					// getHAMembers() have their address listed with a scheme, e.g. https://127.0.0.1:8201. So we need to
+					// parse the HA node address and reconstruct it ourselves to get a matching hash key.
+					clusterAddr, err := url.Parse(node.ClusterAddress)
+					if err != nil {
+						logger.Error("error parsing node cluster address", "node", node.ClusterAddress, "error", err)
+						break
+					}
+
+					// Deleting from expectedServers means the node in question is running a Vault version greater than
+					// or equal to the minimum.
+					delete(expectedServers, clusterAddr.Host)
+				}
+			}
+
+			// If expectedServers still has nodes in it, that means either we broke from the above loop because some
+			// node's version was too low or because some member of the cluster hasn't sent an echo yet. Either way,
+			// it means we can't enable undo logs.
+			if len(expectedServers) != 0 {
+				enable = false
+			}
+
+			if enable {
+				logger.Debug("undo logs can be safely enabled now")
+				err := c.PersistUndoLogs()
+				if err != nil {
+					logger.Error("error persisting undo logs safety", "error", err)
+					continue
+				}
+
+				logger.Debug("undo logs have been enabled and this has been persisted to storage. shutting down the checker.")
+				return
+			}
+		}
+	}()
+
+	return nil
+}
+
 func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 	raftBackend := c.getRaftBackend()
 	if raftBackend == nil {
@@ -178,6 +305,7 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 	}
 
 	c.logger.Info("starting raft active node")
+	raftBackend.SetEffectiveSDKVersion(c.effectiveSDKVersion)
 
 	autopilotConfig, err := c.loadAutopilotConfiguration(ctx)
 	if err != nil {
@@ -194,6 +322,11 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 		return err
 	}
 
+	// We always want to start this watcher - if undo logs are safe to be enabled, it will exit quickly. If not, it
+	// will monitor for safety until they are enabled.
+	if err := c.monitorUndoLogs(); err != nil {
+		return err
+	}
 	return c.startPeriodicRaftTLSRotate(ctx)
 }
 
@@ -300,8 +433,9 @@ func (c *Core) raftTLSRotateDirect(ctx context.Context, logger hclog.Logger, sto
 				backoff = false
 			}
 
+			timer := time.NewTimer(time.Until(nextRotationTime))
 			select {
-			case <-time.After(time.Until(nextRotationTime)):
+			case <-timer.C:
 				// It's time to rotate the keys
 				next, err := rotateKeyring()
 				if err != nil {
@@ -313,6 +447,7 @@ func (c *Core) raftTLSRotateDirect(ctx context.Context, logger hclog.Logger, sto
 				nextRotationTime = next
 
 			case <-stopCh:
+				timer.Stop()
 				return
 			}
 		}
@@ -356,7 +491,6 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 				AppliedIndex:    0,
 				Term:            0,
 				DesiredSuffrage: "voter",
-				SDKVersion:      version.GetVersion().Version,
 			})
 		}
 	}
@@ -728,7 +862,7 @@ func (c *Core) InitiateRetryJoin(ctx context.Context) error {
 
 	c.logger.Info("raft retry join initiated")
 
-	if _, err = c.JoinRaftCluster(ctx, leaderInfos, false); err != nil {
+	if _, err = c.JoinRaftCluster(ctx, leaderInfos, raftBackend.NonVoter()); err != nil {
 		return err
 	}
 

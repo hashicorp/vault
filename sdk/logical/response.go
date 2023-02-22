@@ -1,9 +1,11 @@
 package logical
 
 import (
+	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"strconv"
 	"sync/atomic"
@@ -92,7 +94,8 @@ func (r *Response) AddWarning(warning string) {
 
 // IsError returns true if this response seems to indicate an error.
 func (r *Response) IsError() bool {
-	return r != nil && r.Data != nil && len(r.Data) == 1 && r.Data["error"] != nil
+	// If the response data contains only an 'error' element, or an 'error' and a 'data' element only
+	return r != nil && r.Data != nil && r.Data["error"] != nil && (len(r.Data) == 1 || (r.Data["data"] != nil && len(r.Data) == 2))
 }
 
 func (r *Response) Error() error {
@@ -239,6 +242,13 @@ func NewStatusHeaderResponseWriter(w http.ResponseWriter, h map[string][]*Custom
 		StatusCode:  200,
 		headers:     h,
 	}
+}
+
+func (w *StatusHeaderResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if h, ok := w.wrapped.(http.Hijacker); ok {
+		return h.Hijack()
+	}
+	return nil, nil, fmt.Errorf("could not hijack because wrapped connection is %T and it does not implement http.Hijacker", w.wrapped)
 }
 
 func (w *StatusHeaderResponseWriter) Wrapped() http.ResponseWriter {

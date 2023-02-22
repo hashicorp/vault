@@ -8,14 +8,14 @@ export default ApplicationAdapter.extend({
   createOrUpdate(store, type, snapshot, requestType) {
     const serializer = store.serializerFor(type.modelName);
     const data = serializer.serialize(snapshot, requestType);
-    let name = snapshot.attr('name');
+    const name = snapshot.attr('name');
     let url = this.urlForSecret(snapshot.record.get('backend'), name);
     if (requestType === 'update') {
       url = url + '/config';
     }
 
     return this.ajax(url, 'POST', { data }).then((resp) => {
-      let response = resp || {};
+      const response = resp || {};
       response.id = name;
       return response;
     });
@@ -59,7 +59,7 @@ export default ApplicationAdapter.extend({
   },
 
   urlForAction(action, backend, id, param) {
-    let urlBase = `${this.buildURL()}/${encodePath(backend)}/${action}`;
+    const urlBase = `${this.buildURL()}/${encodePath(backend)}/${action}`;
     // these aren't key-specific
     if (action === 'hash' || action === 'random') {
       return urlBase;
@@ -69,7 +69,7 @@ export default ApplicationAdapter.extend({
       return `${urlBase}/${param}/${encodePath(id)}`;
     }
     if (action === 'export' && param) {
-      let [type, version] = param;
+      const [type, version] = param;
       const exportBase = `${urlBase}/${type}-key/${encodePath(id)}`;
       return version ? `${exportBase}/${version}` : exportBase;
     }
@@ -77,7 +77,7 @@ export default ApplicationAdapter.extend({
   },
 
   optionsForQuery(id) {
-    let data = {};
+    const data = {};
     if (!id) {
       data['list'] = true;
     }

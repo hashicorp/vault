@@ -13,7 +13,9 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/go-hclog"
 	mongodbatlas "github.com/hashicorp/vault-plugin-database-mongodbatlas"
+	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/namespace"
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -36,6 +38,7 @@ func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 		LogicalBackends: map[string]logical.Factory{
 			"database": Factory,
 		},
+		BuiltinRegistry: builtinplugins.Registry,
 	}
 
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
@@ -1547,6 +1550,15 @@ func TestBackend_AsyncClose(t *testing.T) {
 	case <-timeout.C:
 		t.Error("Hanging plugin caused Close() to take longer than 750ms")
 	case <-done:
+	}
+}
+
+func TestNewDatabaseWrapper_IgnoresBuiltinVersion(t *testing.T) {
+	cluster, sys := getCluster(t)
+	t.Cleanup(cluster.Cleanup)
+	_, err := newDatabaseWrapper(context.Background(), "hana-database-plugin", "v1.0.0+builtin", sys, hclog.Default())
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 

@@ -44,7 +44,7 @@ file.
 ## Integrated Storage vs. External Storage
 
 HashiCorp recommends using Vault's [integrated
-storage](/docs/configuration/storage/raft) for most use cases rather than
+storage](/vault/docs/configuration/storage/raft) for most use cases rather than
 configuring another system to store Vault data externally. (Integrated Storage is
 an **embedded Vault data storage** available in Vault 1.4 or later.) Prior to Vault 1.4, Consul was the recommended Vault storage.
 
@@ -52,7 +52,7 @@ an **embedded Vault data storage** available in Vault 1.4 or later.) Prior to Va
 use Integrated Storage as their storage backend.
 
 The table below compares the characteristics of Integrated Storage and External
-Storage. Suppose you decide that the additional operational complexity of external storage is worth it for your use case. In that case, there are several external storage options to choose from (e.g., [Consul](/docs/configuration/storage/consul), [DynamoDB](/docs/configuration/storage/dynamodb), etc.).
+Storage. Suppose you decide that the additional operational complexity of external storage is worth it for your use case. In that case, there are several external storage options to choose from (e.g., [Consul](/vault/docs/configuration/storage/consul), [DynamoDB](/vault/docs/configuration/storage/dynamodb), etc.).
 
 |                                | Integrated Storage                                                                                                                                                                                                           | External Storage                                                                                                                                                                                                                      |
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -61,36 +61,36 @@ Storage. Suppose you decide that the additional operational complexity of extern
 | Networking                     | One less network hop.                                                                                                                                                                                                        | Extra network hop between Vault and the external storage system (e.g., Consul cluster).                                                                                                                                               |
 | Troubleshooting and monitoring | Integrated Storage is a part of Vault; therefore, Vault is the only system you need to monitor and troubleshoot.                                                                                                             | The source of failure could be the external storage; therefore, you need to check the health of both Vault and the external storage. This requires expertise in the chosen storage backend and additional monitoring of that storage. |
 | Data location                  | The encrypted Vault data is stored on the same host where the Vault server process runs.                                                                                                                                     | The encrypted Vault data is stored where the external storage is located. Therefore, the Vault server and the data storage are hosted on physically separate hosts.                                                                   |
-| System requirements            | Avoid "burstable" CPU and storage options. SSDs should be used for the hard drive. <p />See the [Reference Architecture](https://learn.hashicorp.com/tutorials/vault/raft-reference-architecture#system-requirements) guide. | Follow the system requirements given by your chosen storage backend.                                                                                                                                                                  |
+| System requirements            | Avoid "burstable" CPU and storage options. SSDs should be used for the hard drive. <p />See the [Reference Architecture](/vault/tutorials/day-one-raft/raft-reference-architecture#system-requirements) guide. | Follow the system requirements given by your chosen storage backend.                                                                                                                                                                  |
 
 ### Integrated Storage vs. Consul as Vault Storage
 
-[HashiCorp Consul](https://www.consul.io/docs/intro) is a comprehensive
+[HashiCorp Consul](/consul/docs/intro) is a comprehensive
 multi-cloud service networking solution including service mesh, service
 discovery, and network infrastructure automation. Vault can leverage
-Consul's [KV Store](https://www.consul.io/api-docs/kv) to persist Vault data.
+Consul's [KV Store](/consul/api-docs/kv) to persist Vault data.
 
 The table below highlights the differences between Integrated Storage and
 Consul.
 
 |                     | Integrated Storage                                                                                                 | Consul                                                                                                                                                                                                                                                                                                                                           |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Deployment          | Vault cluster is all you need.                                                                                     | Vault cluster & Consul cluster. <p />Use a dedicated Consul cluster for Vault storage, and it should not be used for other purposes (e.g., service discovery, service mesh). <p />See the [Vault with Consul Storage Reference Architecture](https://learn.hashicorp.com/tutorials/vault/reference-architecture#recommended-architecture) guide. |
+| Deployment          | Vault cluster is all you need.                                                                                     | Vault cluster & Consul cluster. <p />Use a dedicated Consul cluster for Vault storage, and it should not be used for other purposes (e.g., service discovery, service mesh). <p />See the [Vault with Consul Storage Reference Architecture](/vault/tutorials/day-one-consul/reference-architecture#recommended-architecture) guide. |
 | Data location       | Data is on disk.                                                                                                   | All data is in memory.                                                                                                                                                                                                                                                                                                                           |
-| System requirements | [System requirements](https://learn.hashicorp.com/tutorials/vault/raft-reference-architecture#system-requirements) | [System requirements](https://learn.hashicorp.com/tutorials/vault/reference-architecture#hardware-sizing-for-vault-servers)                                                                                                                                                                                                                      |
+| System requirements | [System requirements](/vault/tutorials/day-one-raft/raft-reference-architecture#system-requirements) | [System requirements](/vault/tutorials/day-one-consul/reference-architecture#hardware-sizing-for-vault-servers)                                                                                                                                                                                                                      |
 | Snapshots           | Normal data backup strategy of your organization.                                                                  | More frequent snapshots are necessary since data is in memory.                                                                                                                                                                                                                                                                                   |
-| Max message size    | 1 MiB (Configurable using the [`max_entry_size`](/docs/configuration/storage/raft#max_entry_size) parameter)       | 512 KiB (Configurable using the [`kv_max_value_size`](https://www.consul.io/docs/agent/config/config-files#kv_max_value_size) parameter)                                                                                                                                                                                                                     |
+| Max message size    | 1 MiB (Configurable using the [`max_entry_size`](/vault/docs/configuration/storage/raft#max_entry_size) parameter)       | 512 KiB (Configurable using the [`kv_max_value_size`](/consul/docs/agent/config/config-files#kv_max_value_size) parameter)                                                                                                                                                                                                                     |
 
 If you have a Vault cluster using Consul as its storage backend and wish to
 migrate to Integrated Storage, read the following tutorials:
 
 1. [Preflight Checklist - Migrating to Integrated
-   Storage](https://learn.hashicorp.com/tutorials/vault/storage-migration-checklist)
+   Storage](/vault/tutorials/raft/storage-migration-checklist)
 1. [Storage Migration tutorial - Consul to Integrated
-   Storage](https://learn.hashicorp.com/tutorials/vault/raft-migration)
+   Storage](/vault/tutorials/raft/raft-migration)
 
 ## Tutorial
 
 Refer to the [Integrated
-Storage](https://learn.hashicorp.com/collections/vault/raft) tutorials
+Storage](/vault/tutorials/raft) tutorials
 to learn more about Integrated Storage.

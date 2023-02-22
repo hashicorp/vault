@@ -34,7 +34,7 @@ const deleteEngine = async function (enginePath, assert) {
   await authPage.login();
   await consoleComponent.runCommands([`delete sys/mounts/${enginePath}`]);
   const response = consoleComponent.lastLogOutput;
-  assert.equal(
+  assert.strictEqual(
     response,
     `Success! Data deleted (if it existed) at: sys/mounts/${enginePath}`,
     'Engine successfully deleted'
@@ -71,7 +71,11 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     const secretPath = `kv-path-${new Date().getTime()}`;
     await listPage.visitRoot({ backend: 'secret' });
     await settled();
-    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list-root', 'navigates to the list page');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.list-root',
+      'navigates to the list page'
+    );
 
     await listPage.create();
     await settled();
@@ -81,7 +85,11 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await editPage.createSecret(secretPath, 'foo', 'bar');
     await settled();
 
-    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.show',
+      'redirects to the show page'
+    );
     assert.ok(showPage.editIsPresent, 'shows the edit button');
   });
 
@@ -92,14 +100,18 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await mountSecrets.enable('kv', enginePath);
     await consoleComponent.runCommands(`write ${enginePath}/config cas_required=true`);
     await writeSecret(enginePath, secretPath, 'foo', 'bar');
-    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.show',
+      'redirects to the show page'
+    );
     assert.ok(showPage.editIsPresent, 'shows the edit button');
   });
 
   test('it can create a secret with a non default max version and add metadata', async function (assert) {
     const enginePath = `kv-${new Date().getTime()}`;
     const secretPath = 'maxVersions';
-    let maxVersions = 101;
+    const maxVersions = 101;
     await mountSecrets.visit();
     await mountSecrets.enable('kv', enginePath);
     await settled();
@@ -113,10 +125,10 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await settled();
     await editPage.metadataTab();
     await settled();
-    let savedMaxVersions = Number(
+    const savedMaxVersions = Number(
       document.querySelector('[data-test-value-div="Maximum versions"]').innerText
     );
-    assert.equal(
+    assert.strictEqual(
       maxVersions,
       savedMaxVersions,
       'max_version displays the saved number set when creating the secret'
@@ -126,10 +138,10 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await fillIn('[data-test-kv-key]', 'key');
     await fillIn('[data-test-kv-value]', 'value');
     await click('[data-test-save-metadata]');
-    let key = document.querySelector('[data-test-row-label="key"]').innerText;
-    let value = document.querySelector('[data-test-row-value="key"]').innerText;
-    assert.equal(key, 'key', 'metadata key displays after adding it.');
-    assert.equal(value, 'value', 'metadata value displays after adding it.');
+    const key = document.querySelector('[data-test-row-label="key"]').innerText;
+    const value = document.querySelector('[data-test-row-value="key"]').innerText;
+    assert.strictEqual(key, 'key', 'metadata key displays after adding it.');
+    assert.strictEqual(value, 'value', 'metadata value displays after adding it.');
   });
 
   test('it can handle validation on custom metadata', async function (assert) {
@@ -161,7 +173,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
 
   test('it can mount a KV 2 secret engine with config metadata', async function (assert) {
     const enginePath = `kv-${new Date().getTime()}`;
-    let maxVersion = 101;
+    const maxVersion = '101';
     await mountSecrets.visit();
     await click('[data-test-mount-type="kv"]');
 
@@ -171,26 +183,27 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await fillIn('[data-test-input="maxVersions"]', maxVersion);
     await click('[data-test-input="casRequired"]');
     await click('[data-test-toggle-label="Automate secret deletion"]');
+    await fillIn('[data-test-select="ttl-unit"]', 's');
     await fillIn('[data-test-ttl-value="Automate secret deletion"]', '1');
     await click('[data-test-mount-submit="true"]');
 
     await click('[data-test-configuration-tab]');
 
-    let cas = document.querySelector('[data-test-value-div="Require Check and Set"]').innerText;
-    let deleteVersionAfter = document.querySelector(
+    const cas = document.querySelector('[data-test-value-div="Require Check and Set"]').innerText;
+    const deleteVersionAfter = document.querySelector(
       '[data-test-value-div="Automate secret deletion"]'
     ).innerText;
-    let savedMaxVersion = document.querySelector(
+    const savedMaxVersion = document.querySelector(
       '[data-test-value-div="Maximum number of versions"]'
     ).innerText;
 
-    assert.equal(
+    assert.strictEqual(
       maxVersion,
       savedMaxVersion,
       'displays the max version set when configuring the secret-engine'
     );
-    assert.equal(cas.trim(), 'Yes', 'displays the cas set when configuring the secret-engine');
-    assert.equal(
+    assert.strictEqual(cas.trim(), 'Yes', 'displays the cas set when configuring the secret-engine');
+    assert.strictEqual(
       deleteVersionAfter.trim(),
       '1s',
       'displays the delete version after set when configuring the secret-engine'
@@ -200,7 +213,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
   test('it can create a secret and metadata can be created and edited', async function (assert) {
     const enginePath = `kv-${new Date().getTime()}`;
     const secretPath = 'metadata';
-    let maxVersions = 101;
+    const maxVersions = 101;
     await mountSecrets.visit();
     await mountSecrets.enable('kv', enginePath);
     await settled();
@@ -214,8 +227,8 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await settled();
     await editPage.metadataTab();
     await settled();
-    let savedMaxVersions = Number(document.querySelectorAll('[data-test-value-div]')[0].innerText);
-    assert.equal(
+    const savedMaxVersions = Number(document.querySelectorAll('[data-test-value-div]')[0].innerText);
+    assert.strictEqual(
       maxVersions,
       savedMaxVersions,
       'max_version displays the saved number set when creating the secret'
@@ -249,14 +262,18 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await editPage.path(secretPath);
     await triggerKeyEvent('[data-test-secret-path="true"]', 'keyup', 65);
     await click('[data-test-secret-save]');
-    assert.equal(currentURL(), `/vault/secrets/${enginePath}/show/${secretPath}`, 'navigates to show secret');
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${enginePath}/show/${secretPath}`,
+      'navigates to show secret'
+    );
   });
 
   test('it navigates to version history and to a specific version', async function (assert) {
     const enginePath = `kv-${new Date().getTime()}`;
     const secretPath = `specific-version`;
-    let today = new Date();
-    let month = today.toString().split(' ')[1];
+    const today = new Date();
+    const month = today.toString().split(' ')[1];
     await mountSecrets.visit();
     await mountSecrets.enable('kv', enginePath);
     await settled();
@@ -279,7 +296,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await click('.linked-block');
     await click('button.button.masked-input-toggle');
     assert.dom('[data-test-masked-input]').hasText('bar', 'renders secret on the secret version show page');
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${enginePath}/show/${secretPath}?version=1`,
       'redirects to the show page with queryParam version=1'
@@ -295,7 +312,11 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await mountSecrets.next().path(enginePath).toggleOptions().version(1).submit();
     await listPage.create();
     await editPage.createSecret(secretPath, 'foo', 'bar');
-    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.show',
+      'redirects to the show page'
+    );
     assert.ok(showPage.editIsPresent, 'shows the edit button');
     // check for metadata tab should not exist on KV version 1
     assert.dom('[data-test-secret-metadata-tab]').doesNotExist('does not show metadata tab');
@@ -329,7 +350,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await listPage.visitRoot({ backend: enginePath });
     await listPage.secrets.filterBy('text', '1/')[0].click();
     await listPage.secrets.filterBy('text', '2/')[0].click();
-    let secretLink = listPage.secrets.filterBy('text', '3/')[0];
+    const secretLink = listPage.secrets.filterBy('text', '3/')[0];
     assert.ok(secretLink, 'link to the 3/ branch displays properly');
 
     await listPage.secrets.filterBy('text', '3/')[0].click();
@@ -338,15 +359,15 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await listPage.delete();
     await listPage.confirmDelete();
     await settled();
-    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list');
-    assert.equal(currentURL(), `/vault/secrets/${enginePath}/list/1/2/3/`, 'remains on the page');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.list');
+    assert.strictEqual(currentURL(), `/vault/secrets/${enginePath}/list/1/2/3/`, 'remains on the page');
 
     await listPage.secrets.objectAt(0).menuToggle();
     await listPage.delete();
     await listPage.confirmDelete();
     await settled();
-    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list');
-    assert.equal(
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.list');
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${enginePath}/list/1/`,
       'navigates to the ancestor created earlier'
@@ -363,7 +384,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await listPage.create();
     await editPage.createSecret(secretPath, 'foo', 'bar');
     await showPage.deleteSecretV1();
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.secrets.backend.list-root',
       'redirected to the list page on delete'
@@ -389,24 +410,28 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await settled();
     // use visit helper here because ids with / in them get encoded
     await visit('/vault/secrets/secret/list/foo/bar');
-    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.list');
     assert.ok(currentURL().endsWith('/'), 'redirects to the path ending in a slash');
   });
 
   test('it can edit via the JSON input', async function (assert) {
-    let content = JSON.stringify({ foo: 'fa', bar: 'boo' });
+    const content = JSON.stringify({ foo: 'fa', bar: 'boo' });
     const secretPath = `kv-path-${new Date().getTime()}`;
     await listPage.visitRoot({ backend: 'secret' });
     await listPage.create();
     await editPage.path(secretPath).toggleJSON();
-    let instance = document.querySelector('.CodeMirror').CodeMirror;
+    const instance = document.querySelector('.CodeMirror').CodeMirror;
     instance.setValue(content);
     await editPage.save();
 
-    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.show',
+      'redirects to the show page'
+    );
     assert.ok(showPage.editIsPresent, 'shows the edit button');
-    let savedInstance = document.querySelector('.CodeMirror').CodeMirror;
-    assert.equal(
+    const savedInstance = document.querySelector('.CodeMirror').CodeMirror;
+    assert.strictEqual(
       savedInstance.options.value,
       JSON.stringify({ bar: 'boo', foo: 'fa' }, null, 2),
       'saves the content'
@@ -414,8 +439,8 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
   });
 
   test('paths are properly encoded', async function (assert) {
-    let backend = 'kv';
-    let paths = [
+    const backend = 'kv';
+    const paths = [
       '(',
       ')',
       '"',
@@ -439,13 +464,13 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     ].map((char) => `${char}some`);
     assert.expect(paths.length * 2);
     const secretPath = '2';
-    let commands = paths.map((path) => `write '${backend}/${path}/${secretPath}' 3=4`);
+    const commands = paths.map((path) => `write '${backend}/${path}/${secretPath}' 3=4`);
     await consoleComponent.runCommands(['write sys/mounts/kv type=kv', ...commands]);
-    for (let path of paths) {
+    for (const path of paths) {
       await listPage.visit({ backend, id: path });
       assert.ok(listPage.secrets.filterBy('text', '2')[0], `${path}: secret is displayed properly`);
       await listPage.secrets.filterBy('text', '2')[0].click();
-      assert.equal(
+      assert.strictEqual(
         currentRouteName(),
         'vault.cluster.secrets.backend.show',
         `${path}: show page renders correctly`
@@ -480,23 +505,23 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await click('[data-test-version]');
 
     // perform encode function that should be done by the encodePath
-    let encodedSecretPath = secretPath.replace(/ /g, '%20');
-    assert.equal(currentURL(), `/vault/secrets/${enginePath}/show/${encodedSecretPath}?version=1`);
+    const encodedSecretPath = secretPath.replace(/ /g, '%20');
+    assert.strictEqual(currentURL(), `/vault/secrets/${enginePath}/show/${encodedSecretPath}?version=1`);
   });
 
   // the web cli does not handle a quote as part of a path, so we test it here via the UI
   test('creating a secret with a single or double quote works properly', async function (assert) {
     assert.expect(4);
     await consoleComponent.runCommands('write sys/mounts/kv type=kv');
-    let paths = ["'some", '"some'];
-    for (let path of paths) {
+    const paths = ["'some", '"some'];
+    for (const path of paths) {
       await listPage.visitRoot({ backend: 'kv' });
       await listPage.create();
       await editPage.createSecret(`${path}/2`, 'foo', 'bar');
       await listPage.visit({ backend: 'kv', id: path });
       assert.ok(listPage.secrets.filterBy('text', '2')[0], `${path}: secret is displayed properly`);
       await listPage.secrets.filterBy('text', '2')[0].click();
-      assert.equal(
+      assert.strictEqual(
         currentRouteName(),
         'vault.cluster.secrets.backend.show',
         `${path}: show page renders correctly`
@@ -513,13 +538,13 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       'vault write test/filter/foo2 keys=a keys=b',
     ]);
     await listPage.visit({ backend: 'test', id: 'filter' });
-    assert.equal(listPage.secrets.length, 3, 'renders three secrets');
+    assert.strictEqual(listPage.secrets.length, 3, 'renders three secrets');
     await listPage.filterInput('filter/foo1');
-    assert.equal(listPage.secrets.length, 1, 'renders only one secret');
+    assert.strictEqual(listPage.secrets.length, 1, 'renders only one secret');
     await listPage.secrets.objectAt(0).click();
     await showPage.breadcrumbs.filterBy('text', 'filter')[0].click();
-    assert.equal(listPage.secrets.length, 3, 'renders three secrets');
-    assert.equal(listPage.filterInputValue, 'filter/', 'pageFilter has been reset');
+    assert.strictEqual(listPage.secrets.length, 3, 'renders three secrets');
+    assert.strictEqual(listPage.filterInputValue, 'filter/', 'pageFilter has been reset');
   });
 
   // All policy tests below this line
@@ -539,7 +564,11 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await authPage.login(userToken);
 
     await writeSecret(enginePath, secretPath, 'foo', 'bar');
-    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.show',
+      'redirects to the show page'
+    );
     assert.ok(showPage.editIsPresent, 'shows the edit button');
     //check for metadata tab which should not show because you don't have read capabilities
     assert.dom('[data-test-secret-metadata-tab]').doesNotExist('does not show metadata tab');
@@ -614,7 +643,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await click('[data-test-secret-edit]');
 
     // create new version should not include version in the URL
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${enginePath}/edit/${secretPath}`,
       'edit route does not include version query param'
@@ -645,7 +674,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
 
     await click('[data-test-modal-delete]');
 
-    assert.equal(currentURL(), `/vault/secrets/${enginePath}/list`, 'brings you back to the list page');
+    assert.strictEqual(currentURL(), `/vault/secrets/${enginePath}/list`, 'brings you back to the list page');
     await visit(`/vault/secrets/${enginePath}/show/${secretPath}`);
 
     assert.dom('[data-test-secret-not-found]').exists('secret no longer found');
@@ -717,7 +746,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     assert.dom('[data-test-secret-v2-delete="true"]').exists('drop down delete shows');
     await showPage.deleteSecretV2();
     // unable to reload page in test scenario so going to list and back to secret to confirm deletion
-    let url = `/vault/secrets/${enginePath}/list`;
+    const url = `/vault/secrets/${enginePath}/list`;
     await visit(url);
 
     await click(`[data-test-secret-link="${secretPath}"]`);
@@ -874,7 +903,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       }
     `;
 
-    let version = backend === 'kv-v2' ? 2 : 1;
+    const version = backend === 'kv-v2' ? 2 : 1;
     let policy;
     if (backend === 'kv-v2' && canReadMeta) {
       policy = V2_WRITE_WITH_META_READ_POLICY;
@@ -887,8 +916,8 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     return await mountEngineGeneratePolicyToken(backend, 'nonexistent-secret', policy, version);
   };
   test('write without read: version 2', async function (assert) {
-    let backend = 'kv-v2';
-    let userToken = await setupNoRead(backend);
+    const backend = 'kv-v2';
+    const userToken = await setupNoRead(backend);
     await writeSecret(backend, 'secret', 'foo', 'bar');
     await logout.visit();
     await authPage.login(userToken);
@@ -901,12 +930,16 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     assert.notOk(editPage.hasMetadataFields, 'hides the metadata form');
 
     await editPage.editSecret('bar', 'baz');
-    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.show',
+      'redirects to the show page'
+    );
   });
 
   test('write without read: version 2 with metadata read', async function (assert) {
-    let backend = 'kv-v2';
-    let userToken = await setupNoRead(backend, true);
+    const backend = 'kv-v2';
+    const userToken = await setupNoRead(backend, true);
     await writeSecret(backend, 'secret', 'foo', 'bar');
     await logout.visit();
     await authPage.login(userToken);
@@ -921,12 +954,16 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       .exists('shows custom warning instead of default API warning about permissions');
 
     await editPage.editSecret('bar', 'baz');
-    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.show',
+      'redirects to the show page'
+    );
   });
 
   test('write without read: version 1', async function (assert) {
-    let backend = 'kv-v1';
-    let userToken = await setupNoRead(backend);
+    const backend = 'kv-v1';
+    const userToken = await setupNoRead(backend);
     await writeSecret(backend, 'secret', 'foo', 'bar');
     await logout.visit();
     await authPage.login(userToken);
@@ -937,6 +974,10 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
 
     await editPage.visitEdit({ backend, id: 'secret' });
     await editPage.editSecret('bar', 'baz');
-    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.show',
+      'redirects to the show page'
+    );
   });
 });

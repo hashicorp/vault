@@ -1,0 +1,5 @@
+```release-note:feature
+**PKI Cross-Cluster Revocations**: Revocation information can now be
+synchronized across primary and performance replica clusters offering
+a unified CRL/OCSP view of revocations across cluster boundaries.
+```

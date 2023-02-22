@@ -15,7 +15,6 @@ import (
 
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 
-	"github.com/docker/docker/pkg/ioutils"
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
@@ -28,17 +27,15 @@ import (
 	physconsul "github.com/hashicorp/vault/physical/consul"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/hashicorp/vault/sdk/version"
 	sr "github.com/hashicorp/vault/serviceregistration"
 	srconsul "github.com/hashicorp/vault/serviceregistration/consul"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/diagnose"
 	"github.com/hashicorp/vault/vault/hcp_link"
+	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
-
-const OperatorDiagnoseEnableEnv = "VAULT_DIAGNOSE"
 
 const CoreConfigUninitializedErr = "Diagnose cannot attempt this step because core config could not be set."
 
@@ -161,7 +158,7 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 
 	if c.diagnose == nil {
 		if c.flagFormat == "json" {
-			c.diagnose = diagnose.New(&ioutils.NopWriter{})
+			c.diagnose = diagnose.New(io.Discard)
 		} else {
 			c.UI.Output(version.GetVersion().FullVersionNumber(true))
 			c.diagnose = diagnose.New(os.Stdout)
@@ -447,26 +444,25 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		goto SEALFAIL
 	}
 
-	if seals != nil {
-		for _, seal := range seals {
-			// There is always one nil seal. We need to skip it so we don't start an empty Finalize-Seal-Shamir
-			// section.
-			if seal == nil {
-				continue
-			}
-			// Ensure that the seal finalizer is called, even if using verify-only
-			defer func(seal *vault.Seal) {
-				sealType := diagnose.CapitalizeFirstLetter((*seal).BarrierType().String())
-				finalizeSealContext, finalizeSealSpan := diagnose.StartSpan(ctx, "Finalize "+sealType+" Seal")
-				err = (*seal).Finalize(finalizeSealContext)
-				if err != nil {
-					diagnose.Fail(finalizeSealContext, "Error finalizing seal.")
-					diagnose.Advise(finalizeSealContext, "This likely means that the barrier is still in use; therefore, finalizing the seal timed out.")
-					finalizeSealSpan.End()
-				}
-				finalizeSealSpan.End()
-			}(&seal)
+	for _, seal := range seals {
+		// There is always one nil seal. We need to skip it so we don't start an empty Finalize-Seal-Shamir
+		// section.
+		if seal == nil {
+			continue
 		}
+		seal := seal // capture range variable
+		// Ensure that the seal finalizer is called, even if using verify-only
+		defer func(seal *vault.Seal) {
+			sealType := diagnose.CapitalizeFirstLetter((*seal).BarrierType().String())
+			finalizeSealContext, finalizeSealSpan := diagnose.StartSpan(ctx, "Finalize "+sealType+" Seal")
+			err = (*seal).Finalize(finalizeSealContext)
+			if err != nil {
+				diagnose.Fail(finalizeSealContext, "Error finalizing seal.")
+				diagnose.Advise(finalizeSealContext, "This likely means that the barrier is still in use; therefore, finalizing the seal timed out.")
+				finalizeSealSpan.End()
+			}
+			finalizeSealSpan.End()
+		}(&seal)
 	}
 
 	if barrierSeal == nil {

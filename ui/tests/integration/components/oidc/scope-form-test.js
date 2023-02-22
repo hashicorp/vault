@@ -40,7 +40,7 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
     // check validation errors
     await click(SELECTORS.scopeSaveButton);
 
-    let validationErrors = findAll(SELECTORS.inlineAlert);
+    const validationErrors = findAll(SELECTORS.inlineAlert);
     assert.dom(validationErrors[0]).hasText('Name is required.', 'Validation messages are shown for name');
     assert.dom(validationErrors[1]).hasText('There is an error with this form.', 'Renders form error count');
 
@@ -141,7 +141,11 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
 
     await fillIn('[data-test-input="description"]', 'changed description attribute');
     await click(SELECTORS.scopeCancelButton);
-    assert.equal(this.model.description, 'this is a test', 'Model attributes are rolled back on cancel');
+    assert.strictEqual(
+      this.model.description,
+      'this is a test',
+      'Model attributes are rolled back on cancel'
+    );
   });
 
   test('it should show example template modal', async function (assert) {

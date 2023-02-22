@@ -155,23 +155,15 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 		return logical.ErrorResponse("Error generating STS keys: %s", err), awsutil.CheckAWSError(err)
 	}
 
-	resp := b.Secret(secretAccessKeyType).Response(map[string]interface{}{
-		"access_key":     *tokenResp.Credentials.AccessKeyId,
-		"secret_key":     *tokenResp.Credentials.SecretAccessKey,
-		"security_token": *tokenResp.Credentials.SessionToken,
-	}, map[string]interface{}{
-		"username": username,
-		"policy":   policy,
-		"is_sts":   true,
-	})
-
-	// Set the secret TTL to appropriately match the expiration of the token
-	resp.Secret.TTL = tokenResp.Credentials.Expiration.Sub(time.Now())
-
-	// STS are purposefully short-lived and aren't renewable
-	resp.Secret.Renewable = false
-
-	return resp, nil
+	// STS credentials cannot be revoked so do not create a lease
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"access_key":     *tokenResp.Credentials.AccessKeyId,
+			"secret_key":     *tokenResp.Credentials.SecretAccessKey,
+			"security_token": *tokenResp.Credentials.SessionToken,
+			"ttl":            uint64(tokenResp.Credentials.Expiration.Sub(time.Now()).Seconds()),
+		},
+	}, nil
 }
 
 func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
@@ -238,24 +230,16 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 		return logical.ErrorResponse("Error assuming role: %s", err), awsutil.CheckAWSError(err)
 	}
 
-	resp := b.Secret(secretAccessKeyType).Response(map[string]interface{}{
-		"access_key":     *tokenResp.Credentials.AccessKeyId,
-		"secret_key":     *tokenResp.Credentials.SecretAccessKey,
-		"security_token": *tokenResp.Credentials.SessionToken,
-		"arn":            *tokenResp.AssumedRoleUser.Arn,
-	}, map[string]interface{}{
-		"username": roleSessionName,
-		"policy":   roleArn,
-		"is_sts":   true,
-	})
-
-	// Set the secret TTL to appropriately match the expiration of the token
-	resp.Secret.TTL = tokenResp.Credentials.Expiration.Sub(time.Now())
-
-	// STS are purposefully short-lived and aren't renewable
-	resp.Secret.Renewable = false
-
-	return resp, nil
+	// STS credentials cannot be revoked so do not create a lease
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"access_key":     *tokenResp.Credentials.AccessKeyId,
+			"secret_key":     *tokenResp.Credentials.SecretAccessKey,
+			"security_token": *tokenResp.Credentials.SessionToken,
+			"arn":            *tokenResp.AssumedRoleUser.Arn,
+			"ttl":            uint64(tokenResp.Credentials.Expiration.Sub(time.Now()).Seconds()),
+		},
+	}, nil
 }
 
 func readConfig(ctx context.Context, storage logical.Storage) (rootConfig, error) {

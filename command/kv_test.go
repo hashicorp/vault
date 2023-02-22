@@ -130,6 +130,12 @@ func TestKVPutCommand(t *testing.T) {
 			0,
 		},
 		{
+			"v1_mount_flag_syntax_key_same_as_mount",
+			[]string{"-mount", "secret", "secret", "foo=bar"},
+			[]string{"Success!"},
+			0,
+		},
+		{
 			"v2_single_value",
 			[]string{"kv/write/foo", "foo=bar"},
 			v2ExpectedFields,
@@ -150,6 +156,12 @@ func TestKVPutCommand(t *testing.T) {
 		{
 			"v2_mount_flag_syntax",
 			[]string{"-mount", "kv", "write/foo", "foo=bar"},
+			v2ExpectedFields,
+			0,
+		},
+		{
+			"v2_mount_flag_syntax_key_same_as_mount",
+			[]string{"-mount", "kv", "kv", "foo=bar"},
 			v2ExpectedFields,
 			0,
 		},
@@ -465,6 +477,18 @@ func TestKVGetCommand(t *testing.T) {
 			0,
 		},
 		{
+			"v1_mount_flag_syntax_key_same_as_mount",
+			[]string{"-mount", "kv", "kv"},
+			append(baseV2ExpectedFields, "foo"),
+			0,
+		},
+		{
+			"v2_mount_flag_syntax_key_same_as_mount",
+			[]string{"-mount", "kv", "kv"},
+			append(baseV2ExpectedFields, "foo"),
+			0,
+		},
+		{
 			"v2_not_found",
 			[]string{"kv/nope/not/once/never"},
 			[]string{"No value found at kv/data/nope/not/once/never"},
@@ -517,6 +541,21 @@ func TestKVGetCommand(t *testing.T) {
 				}
 
 				if _, err := client.Logical().Write("kv/data/read/foo", map[string]interface{}{
+					"data": map[string]interface{}{
+						"foo": "bar",
+					},
+				}); err != nil {
+					t.Fatal(err)
+				}
+
+				// create KV entries to test -mount flag where secret key is same as mount path
+				if _, err := client.Logical().Write("secret/secret", map[string]interface{}{
+					"foo": "bar",
+				}); err != nil {
+					t.Fatal(err)
+				}
+
+				if _, err := client.Logical().Write("kv/data/kv", map[string]interface{}{
 					"data": map[string]interface{}{
 						"foo": "bar",
 					},
@@ -613,6 +652,12 @@ func TestKVMetadataGetCommand(t *testing.T) {
 			expectedTopLevelFields,
 			0,
 		},
+		{
+			"mount_flag_syntax_key_same_as_mount",
+			[]string{"-mount", "kv", "kv"},
+			expectedTopLevelFields,
+			0,
+		},
 	}
 
 	t.Run("validations", func(t *testing.T) {
@@ -636,6 +681,15 @@ func TestKVMetadataGetCommand(t *testing.T) {
 				time.Sleep(time.Second)
 
 				if _, err := client.Logical().Write("kv/data/foo", map[string]interface{}{
+					"data": map[string]interface{}{
+						"foo": "bar",
+					},
+				}); err != nil {
+					t.Fatal(err)
+				}
+
+				// create KV entry to test -mount flag where secret key is same as mount path
+				if _, err := client.Logical().Write("kv/data/kv", map[string]interface{}{
 					"data": map[string]interface{}{
 						"foo": "bar",
 					},
@@ -716,6 +770,7 @@ func TestKVPatchCommand_ArgValidation(t *testing.T) {
 	}
 
 	for _, tc := range cases {
+		tc := tc // capture range variable
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -972,6 +1027,7 @@ func TestKVPatchCommand_RWMethodSucceeds(t *testing.T) {
 func TestKVPatchCommand_CAS(t *testing.T) {
 	cases := []struct {
 		name       string
+		key        string
 		args       []string
 		expected   string
 		outStrings []string
@@ -979,6 +1035,7 @@ func TestKVPatchCommand_CAS(t *testing.T) {
 	}{
 		{
 			"right version",
+			"foo",
 			[]string{"-cas", "1", "kv/foo", "bar=quux"},
 			"quux",
 			expectedPatchFields(),
@@ -986,6 +1043,7 @@ func TestKVPatchCommand_CAS(t *testing.T) {
 		},
 		{
 			"wrong version",
+			"foo",
 			[]string{"-cas", "2", "kv/foo", "bar=wibble"},
 			"baz",
 			[]string{"check-and-set parameter did not match the current version"},
@@ -993,7 +1051,16 @@ func TestKVPatchCommand_CAS(t *testing.T) {
 		},
 		{
 			"mount_flag_syntax",
+			"foo",
 			[]string{"-mount", "kv", "-cas", "1", "foo", "bar=quux"},
+			"quux",
+			expectedPatchFields(),
+			0,
+		},
+		{
+			"v2_mount_flag_syntax_key_same_as_mount",
+			"kv",
+			[]string{"-mount", "kv", "-cas", "1", "kv", "bar=quux"},
 			"quux",
 			expectedPatchFields(),
 			0,
@@ -1029,7 +1096,11 @@ func TestKVPatchCommand_CAS(t *testing.T) {
 
 			kvClient.SetToken(secretAuth.ClientToken)
 
-			_, err = kvClient.Logical().Write("kv/data/foo", map[string]interface{}{"data": map[string]interface{}{"bar": "baz"}})
+			data := map[string]interface{}{
+				"bar": "baz",
+			}
+
+			_, err = kvClient.Logical().Write("kv/data/"+tc.key, map[string]interface{}{"data": data})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -1046,7 +1117,7 @@ func TestKVPatchCommand_CAS(t *testing.T) {
 				}
 			}
 
-			secret, err := kvClient.Logical().ReadWithContext(context.Background(), "kv/data/foo")
+			secret, err := kvClient.Logical().ReadWithContext(context.Background(), "kv/data/"+tc.key)
 			if err != nil {
 				t.Fatal(err)
 			}

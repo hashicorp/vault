@@ -1,0 +1,3 @@
+```release-note:improvement
+database/snowflake: Allow parallel requests to Snowflake
+```

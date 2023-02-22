@@ -3,17 +3,13 @@
     <ToolbarActions>
       {{#if this.model.replicationAttrs.knownSecondaries.length}}
         {{#if this.model.canRevokeSecondary}}
-          <ToolbarLink @params={{array "mode.secondaries.revoke" this.replicationMode}}>
+          <ToolbarLink @route="mode.secondaries.revoke" @model={{this.replicationMode}}>
             Revoke secondary
           </ToolbarLink>
         {{/if}}
       {{/if}}
       {{#if this.model.canAddSecondary}}
-        <ToolbarLink
-          @type="add"
-          @params={{array "mode.secondaries.add" this.replicationMode}}
-          data-test-secondary-add={{true}}
-        >
+        <ToolbarLink @route="mode.secondaries.add" @model={{this.replicationMode}} @type="add" data-test-secondary-add>
           Add secondary
         </ToolbarLink>
       {{/if}}

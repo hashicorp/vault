@@ -29,36 +29,36 @@ module('Unit | Helpers | await', function (hooks) {
 
   test('it returns value when input is not a promise', async function (assert) {
     this.helper.compute(['foo']);
-    assert.equal(this.spy.returnValues[0], 'foo', 'Input value returned when not promise');
+    assert.strictEqual(this.spy.returnValues[0], 'foo', 'Input value returned when not promise');
   });
 
   test('it returns null default value and then resolved value', async function (assert) {
     const promise = new Promise((resolve) => resolve('foo'));
     this.helper.compute([promise]);
     await waitUntil(() => this.spy.returnValues[1]);
-    assert.equal(this.spy.returnValues[0], null, 'Default value returned while promise resolves');
-    assert.equal(this.spy.returnValues[1], 'foo', 'Resolved value is returned');
+    assert.strictEqual(this.spy.returnValues[0], null, 'Default value returned while promise resolves');
+    assert.strictEqual(this.spy.returnValues[1], 'foo', 'Resolved value is returned');
   });
 
   test('it returns rejected value', async function (assert) {
     const promise = new Promise((resolve, reject) => reject('bar'));
     this.helper.compute([promise]);
     await waitUntil(() => this.spy.returnValues[1]);
-    assert.equal(this.spy.returnValues[1], 'bar', 'Rejected value is returned');
+    assert.strictEqual(this.spy.returnValues[1], 'bar', 'Rejected value is returned');
   });
 
   test('it returns then value', async function (assert) {
     const promise = new Promise((resolve) => resolve('foo')).then(() => 'new resolve value');
     this.helper.compute([promise]);
     await waitUntil(() => this.spy.returnValues[1]);
-    assert.equal(this.spy.returnValues[1], 'new resolve value', 'Value from then is returned');
+    assert.strictEqual(this.spy.returnValues[1], 'new resolve value', 'Value from then is returned');
   });
 
   test('it returns catch value', async function (assert) {
     const promise = new Promise((resolve, reject) => reject('bar')).catch(() => 'new reject value');
     this.helper.compute([promise]);
     await waitUntil(() => this.spy.returnValues[1]);
-    assert.equal(this.spy.returnValues[1], 'new reject value', 'Value from catch is returned');
+    assert.strictEqual(this.spy.returnValues[1], 'new reject value', 'Value from catch is returned');
   });
 
   test('it always returns value from latest promise', async function (assert) {
@@ -68,6 +68,6 @@ module('Unit | Helpers | await', function (hooks) {
     this.helper.compute([promise2]);
     // allow first promise time to resolve
     await waitUntil(() => later(() => true, 500));
-    assert.equal(this.spy.returnValues[2], 'bar', 'Latest promise value is returned');
+    assert.strictEqual(this.spy.returnValues[2], 'bar', 'Latest promise value is returned');
   });
 });

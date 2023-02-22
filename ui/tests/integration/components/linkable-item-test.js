@@ -44,7 +44,7 @@ module('Integration | Component | linkable-item', function (hooks) {
     await render(hbs`
       <LinkableItem @link={{hash route="vault" model="modelId"}} as |Li|>
         <Li.content
-          @title={{title}}
+          @title="A title"
           @link={{hash route="vault" model="modelId"}}
         >
           stuff here

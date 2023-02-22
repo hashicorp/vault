@@ -15,6 +15,8 @@ key-value store. In addition to providing durable storage, inclusion of this
 backend will also register Vault as a service in Consul with a default health
 check.
 
+@include 'consul-dataplane-compat.mdx'
+
 - **High Availability** – the Consul storage backend supports high availability.
 
 - **HashiCorp Supported** – the Consul storage backend is officially supported
@@ -74,7 +76,7 @@ and [`cluster_addr`][cluster-addr] ([example][listener-example]).
 - `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent
   requests to Consul. Make sure that your Consul agents are configured to
   support this level of parallelism, see
-  [http_max_conns_per_client](https://www.consul.io/docs/agent/options.html#http_max_conns_per_client).
+  [http_max_conns_per_client](/consul/docs/agent/config/config-files#http_max_conns_per_client).
 
 - `path` `(string: "vault/")` – Specifies the path in Consul's key-value store
   where Vault data will be stored.
@@ -120,17 +122,17 @@ connection. You can read more about encrypting Consul connections on the
 - `tls_ca_file` `(string: "")` – Specifies the path to the CA certificate used
   for Consul communication. This defaults to system bundle if not specified.
   This should be set according to the
-  [`ca_file`](https://www.consul.io/docs/agent/options.html#ca_file) setting in
+  [`ca_file`](/consul/docs/agent/config/config-files#ca_file) setting in
   Consul.
 
 - `tls_cert_file` `(string: "")` (optional) – Specifies the path to the
   certificate for Consul communication. This should be set according to the
-  [`cert_file`](https://www.consul.io/docs/agent/options.html#cert_file) setting
+  [`cert_file`](/consul/docs/agent/config/config-files#cert_file) setting
   in Consul.
 
 - `tls_key_file` `(string: "")` – Specifies the path to the private key for
   Consul communication. This should be set according to the
-  [`key_file`](https://www.consul.io/docs/agent/options.html#key_file) setting
+  [`key_file`](/consul/docs/agent/config/config-files#key_file) setting
   in Consul.
 
 - `tls_min_version` `(string: "tls12")` – Specifies the minimum TLS version to
@@ -258,12 +260,12 @@ storage "consul" {
 ```
 
 [consul]: https://www.consul.io/ 'Consul by HashiCorp'
-[consul-acl]: https://www.consul.io/docs/guides/acl.html 'Consul ACLs'
-[consul-consistency]: https://www.consul.io/api-docs/features/consistency 'Consul Consistency Modes'
-[consul-encryption]: https://www.consul.io/docs/agent/encryption.html 'Consul Encryption'
-[consul-translate-wan-addrs]: https://www.consul.io/docs/agent/options.html#translate_wan_addrs 'Consul Configuration'
-[consul-token]: https://www.consul.io/docs/commands/acl/set-agent-token.html#token-lt-value-gt- 'Consul Token'
-[consul-session-ttl]: https://www.consul.io/docs/agent/options.html#session_ttl_min 'Consul Configuration'
-[api-addr]: /docs/configuration#api_addr
-[cluster-addr]: /docs/configuration#cluster_addr
-[listener-example]: /docs/configuration/listener/tcp#listening-on-multiple-interfaces
+[consul-acl]: /consul/docs/guides/acl 'Consul ACLs'
+[consul-consistency]: /consul/api-docs/features/consistency 'Consul Consistency Modes'
+[consul-encryption]: /consul/docs/agent/encryption 'Consul Encryption'
+[consul-translate-wan-addrs]: /consul/docs/agent/options#translate_wan_addrs 'Consul Configuration'
+[consul-token]: /consul/docs/commands/acl/set-agent-token#token-lt-value-gt- 'Consul Token'
+[consul-session-ttl]: /consul/docs/agent/options#session_ttl_min 'Consul Configuration'
+[api-addr]: /vault/docs/configuration#api_addr
+[cluster-addr]: /vault/docs/configuration#cluster_addr
+[listener-example]: /vault/docs/configuration/listener/tcp#listening-on-multiple-interfaces

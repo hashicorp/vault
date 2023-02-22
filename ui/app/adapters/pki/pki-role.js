@@ -6,10 +6,10 @@ export default ApplicationAdapter.extend({
   namespace: 'v1',
 
   createOrUpdate(store, type, snapshot, requestType) {
+    const { name, backend } = snapshot.record;
     const serializer = store.serializerFor(type.modelName);
     const data = serializer.serialize(snapshot, requestType);
-    const { id } = snapshot;
-    let url = this.urlForRole(snapshot.record.get('backend'), id);
+    const url = this.urlForRole(backend, name);
 
     return this.ajax(url, 'POST', { data });
   },
@@ -40,7 +40,7 @@ export default ApplicationAdapter.extend({
   },
 
   optionsForQuery(id) {
-    let data = {};
+    const data = {};
     if (!id) {
       data['list'] = true;
     }

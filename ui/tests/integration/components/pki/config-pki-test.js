@@ -31,14 +31,14 @@ module('Integration | Component | config pki', function (hooks) {
   const setupAndRender = async function (context, config, section = 'tidy') {
     context.set('config', config);
     context.set('section', section);
-    await context.render(hbs`<Pki::ConfigPki @section={{section}} @config={{config}} />`);
+    await context.render(hbs`<Pki::ConfigPki @section={{this.section}} @config={{this.config}} />`);
   };
 
   test('it renders tidy section', async function (assert) {
     await setupAndRender(this, this.config);
     assert.ok(component.text.startsWith('You can tidy up the backend'));
     assert.notOk(component.hasTitle, 'No title for tidy section');
-    assert.equal(component.fields.length, 3, 'renders all three tidy fields');
+    assert.strictEqual(component.fields.length, 3, 'renders all three tidy fields');
     assert.ok(component.fields.objectAt(0).labelText, 'Tidy the Certificate Store');
     assert.ok(component.fields.objectAt(1).labelText, 'Tidy the Revocation List (CRL)');
     assert.ok(component.fields.objectAt(1).labelText, 'Safety buffer');
@@ -48,35 +48,38 @@ module('Integration | Component | config pki', function (hooks) {
     await setupAndRender(this, this.config, 'crl');
     assert.false(this.config.disable, 'CRL config defaults disable=false');
     assert.ok(component.hasTitle, 'renders form title');
-    assert.equal(component.title, 'Certificate Revocation List (CRL) config');
+    assert.strictEqual(component.title, 'Certificate Revocation List (CRL) config');
     assert.ok(
       component.text.startsWith('Set the duration for which the generated CRL'),
       'renders form subtext'
     );
     assert
-      .dom('[data-test-toggle-label]')
-      .hasText('CRL building enabled The CRL will expire after', 'renders enabled field title and subtext');
+      .dom('[data-test-ttl-form-label="CRL building enabled"]')
+      .hasText('CRL building enabled', 'renders enabled field title');
+    assert
+      .dom('[data-test-ttl-form-subtext]')
+      .hasText('The CRL will expire after', 'renders enabled field subtext');
     assert.dom('[data-test-input="expiry"] input').isChecked('defaults to enabling CRL build');
     assert.dom('[data-test-ttl-value="CRL building enabled"]').hasValue('3', 'default value is 3 (72h)');
     assert.dom('[data-test-select="ttl-unit"]').hasValue('d', 'default unit value is days');
     await click('[data-test-input="expiry"] input');
     assert
-      .dom('[data-test-toggle-label]')
-      .hasText('CRL building disabled The CRL will not be built.', 'renders disabled text when toggled off');
+      .dom('[data-test-ttl-form-subtext]')
+      .hasText('The CRL will not be built.', 'renders disabled text when toggled off');
 
     // assert 'disable' attr on pki-config model updates with toggle
     assert.true(this.config.disable, 'when toggled off, sets CRL config to disable=true');
     await click('[data-test-input="expiry"] input');
     assert
-      .dom('[data-test-toggle-label]')
-      .hasText('CRL building enabled The CRL will expire after', 'toggles back to enabled text');
+      .dom('[data-test-ttl-form-subtext]')
+      .hasText('The CRL will expire after', 'toggles back to enabled text');
     assert.false(this.config.disable, 'CRL config toggles back to disable=false');
   });
 
   test('it renders urls section', async function (assert) {
     await setupAndRender(this, this.config, 'urls');
     assert.notOk(component.hasTitle, 'No title for urls section');
-    assert.equal(component.fields.length, 3);
+    assert.strictEqual(component.fields.length, 3);
     assert.ok(component.fields.objectAt(0).labelText, 'Issuing certificates');
     assert.ok(component.fields.objectAt(1).labelText, 'CRL Distribution Points');
     assert.ok(component.fields.objectAt(2).labelText, 'OCSP Servers');
@@ -91,7 +94,7 @@ module('Integration | Component | config pki', function (hooks) {
     this.set(
       'config',
       this.mockConfigSave((options) => {
-        assert.equal(options.adapterOptions.method, section, 'method passed to save');
+        assert.strictEqual(options.adapterOptions.method, section, 'method passed to save');
         assert.deepEqual(
           options.adapterOptions.fields,
           ['tidyCertStore', 'tidyRevocationList', 'safetyBuffer'],
@@ -101,7 +104,9 @@ module('Integration | Component | config pki', function (hooks) {
       })
     );
     this.set('section', section);
-    await render(hbs`<Pki::ConfigPki @section={{section}} @config={{config}} @onRefresh={{onRefresh}} />`);
+    await render(
+      hbs`<Pki::ConfigPki @section={{this.section}} @config={{this.config}} @onRefresh={{this.onRefresh}} />`
+    );
 
     component.submit();
   });
@@ -115,20 +120,22 @@ module('Integration | Component | config pki', function (hooks) {
     this.set(
       'config',
       this.mockConfigSave((options) => {
-        assert.equal(options.adapterOptions.method, section, 'method passed to save');
+        assert.strictEqual(options.adapterOptions.method, section, 'method passed to save');
         assert.deepEqual(options.adapterOptions.fields, ['expiry', 'disable'], 'CRL fields passed to save');
         return resolve();
       })
     );
     this.set('section', section);
-    await render(hbs`<Pki::ConfigPki @section={{section}} @config={{config}} @onRefresh={{onRefresh}} />`);
+    await render(
+      hbs`<Pki::ConfigPki @section={{this.section}} @config={{this.config}} @onRefresh={{this.onRefresh}} />`
+    );
     component.submit();
   });
 
   test('it correctly sets toggle when initial CRL config is disable=true', async function (assert) {
     assert.expect(3);
     // change default config attrs
-    let configDisabled = this.config;
+    const configDisabled = this.config;
     configDisabled.expiry = '1m';
     configDisabled.disable = true;
     await setupAndRender(this, configDisabled, 'crl');

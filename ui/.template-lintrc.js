@@ -29,22 +29,18 @@ try {
     prettier: false,
   };
 } catch (error) {
-  console.log(error);
+  console.log(error); // eslint-disable-line
 }
 
 module.exports = {
   plugins: ['ember-template-lint-plugin-prettier'],
   extends: ['recommended', 'ember-template-lint-plugin-prettier:recommended'],
   rules: {
-    'no-bare-strings': 'off',
     'no-action': 'off',
-    'no-duplicate-landmark-elements': 'warn',
     'no-implicit-this': {
       allow: ['supported-auth-backends'],
     },
     'require-input-label': 'off',
-    'no-down-event-binding': 'warn',
-    'self-closing-void-elements': 'off',
   },
   ignore: ['lib/story-md', 'tests/**'],
   // ember language server vscode extension does not currently respect the ignore field

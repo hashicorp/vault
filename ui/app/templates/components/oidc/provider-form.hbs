@@ -25,7 +25,7 @@
   </p.levelLeft>
 </PageHeader>
 
-<form {{on "submit" (perform this.save)}}>
+<form {{on "submit" (perform this.save)}} {{did-insert this.setIssuer @model}}>
   <div class="box is-sideless is-fullwidth is-bottomless">
     <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
     {{! name field }}
@@ -60,7 +60,6 @@
       @attr={{get @model.formFields "2"}}
       @model={{@model}}
       @modelValidations={{this.modelValidations}}
-      @labelClass="is-label"
     />
   </div>
   {{! RADIO CARD + SEARCH SELECT }}
@@ -68,6 +67,7 @@
     <h4 class="title is-4">Allowed applications</h4>
     <div class="is-flex-row">
       <RadioCard
+        data-test-oidc-radio="allow-all"
         @title="Allow every application to use"
         @description="All applications can use this provider for authentication requests."
         @icon="globe"
@@ -76,6 +76,7 @@
         @onChange={{this.handleClientSelection}}
       />
       <RadioCard
+        data-test-oidc-radio="limited"
         @title="Limit access to selected application"
         @description="Only selected applications can use this provider for authentication requests."
         @icon="globe-private"
@@ -87,7 +88,7 @@
     {{#if (eq this.radioCardGroupValue "limited")}}
       <SearchSelect
         @id="allowedClientIds"
-        @subLabel="Application name"
+        @label="Application name"
         @models={{array "oidc/client"}}
         @inputValue={{@model.allowedClientIds}}
         @onChange={{this.handleClientSelection}}
@@ -95,7 +96,7 @@
         @fallbackComponent="string-list"
         @passObject={{true}}
         @objectKeys={{array "clientId"}}
-        @renderInfoTooltip={{true}}
+        @renderInfoTooltip={{this.renderInfoTooltip}}
       />
     {{/if}}
   </div>

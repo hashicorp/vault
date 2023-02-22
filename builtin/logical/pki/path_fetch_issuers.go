@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -20,6 +21,23 @@ func pathListIssuers(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathListIssuersHandler,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"keys": {
+								Type:        framework.TypeStringSlice,
+								Description: `A list of keys`,
+								Required:    true,
+							},
+							"key_info": {
+								Type:        framework.TypeMap,
+								Description: `Key info with issuer name`,
+								Required:    false,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -134,6 +152,90 @@ for the CRL distribution points attribute. See also RFC 5280 Section 4.2.1.13.`,
 		Description: `Comma-separated list of URLs to be used
 for the OCSP servers attribute. See also RFC 5280 Section 4.2.2.1.`,
 	}
+	fields["enable_aia_url_templating"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `Whether or not to enabling templating of the
+above AIA fields. When templating is enabled the special values '{{issuer_id}}',
+'{{cluster_path}}', '{{cluster_aia_path}}' are available, but the addresses are
+not checked for URL validity until issuance time. Using '{{cluster_path}}'
+requires /config/cluster's 'path' member to be set on all PR Secondary clusters
+and using '{{cluster_aia_path}}' requires /config/cluster's 'aia_path' member
+to be set on all PR secondary clusters.`,
+		Default: false,
+	}
+
+	updateIssuerSchema := map[int][]framework.Response{
+		http.StatusOK: {{
+			Description: "OK",
+			Fields: map[string]*framework.FieldSchema{
+				"issuer_id": {
+					Type:        framework.TypeString,
+					Description: `Issuer Id`,
+					Required:    true,
+				},
+				"issuer_name": {
+					Type:        framework.TypeString,
+					Description: `Issuer Name`,
+					Required:    true,
+				},
+				"key_id": {
+					Type:        framework.TypeString,
+					Description: `Key Id`,
+					Required:    true,
+				},
+				"certificate": {
+					Type:        framework.TypeString,
+					Description: `Certificate`,
+					Required:    true,
+				},
+				"manual_chain": {
+					Type:        framework.TypeStringSlice,
+					Description: `Manual Chain`,
+					Required:    true,
+				},
+				"ca_chain": {
+					Type:        framework.TypeStringSlice,
+					Description: `CA Chain`,
+					Required:    true,
+				},
+				"leaf_not_after_behavior": {
+					Type:        framework.TypeString,
+					Description: `Leaf Not After Behavior`,
+					Required:    true,
+				},
+				"usage": {
+					Type:        framework.TypeStringSlice,
+					Description: `Usage`,
+					Required:    true,
+				},
+				"revocation_signature_algorithm": {
+					Type:        framework.TypeString,
+					Description: `Revocation Signature Alogrithm`,
+					Required:    true,
+				},
+				"revoked": {
+					Type:        framework.TypeBool,
+					Description: `Revoked`,
+					Required:    true,
+				},
+				"issuing_certificates": {
+					Type:        framework.TypeStringSlice,
+					Description: `Issuing Certificates`,
+					Required:    true,
+				},
+				"crl_distribution_points": {
+					Type:        framework.TypeStringSlice,
+					Description: `CRL Distribution Points`,
+					Required:    true,
+				},
+				"ocsp_servers": {
+					Type:        framework.TypeStringSlice,
+					Description: `OSCP Servers`,
+					Required:    true,
+				},
+			},
+		}},
+	}
 
 	return &framework.Path{
 		// Returns a JSON entry.
@@ -142,22 +244,31 @@ for the OCSP servers attribute. See also RFC 5280 Section 4.2.2.1.`,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
-				Callback: b.pathGetIssuer,
+				Callback:  b.pathGetIssuer,
+				Responses: updateIssuerSchema,
 			},
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback: b.pathUpdateIssuer,
+				Callback:  b.pathUpdateIssuer,
+				Responses: updateIssuerSchema,
+
 				// Read more about why these flags are set in backend.go.
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathDeleteIssuer,
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{
+						Description: "No Content",
+					}},
+				},
 				// Read more about why these flags are set in backend.go.
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
 			},
 			logical.PatchOperation: &framework.PathOperation{
-				Callback: b.pathPatchIssuer,
+				Callback:  b.pathPatchIssuer,
+				Responses: updateIssuerSchema,
 				// Read more about why these flags are set in backend.go.
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
@@ -207,9 +318,12 @@ func respondReadIssuer(issuer *issuerEntry) (*logical.Response, error) {
 		respManualChain = append(respManualChain, string(entity))
 	}
 
-	revSigAlgStr := issuer.RevocationSigAlg.String()
-	if issuer.RevocationSigAlg == x509.UnknownSignatureAlgorithm {
-		revSigAlgStr = ""
+	revSigAlgStr, present := certutil.InvSignatureAlgorithmNames[issuer.RevocationSigAlg]
+	if !present {
+		revSigAlgStr = issuer.RevocationSigAlg.String()
+		if issuer.RevocationSigAlg == x509.UnknownSignatureAlgorithm {
+			revSigAlgStr = ""
+		}
 	}
 
 	data := map[string]interface{}{
@@ -239,9 +353,15 @@ func respondReadIssuer(issuer *issuerEntry) (*logical.Response, error) {
 		data["ocsp_servers"] = issuer.AIAURIs.OCSPServers
 	}
 
-	return &logical.Response{
+	response := &logical.Response{
 		Data: data,
-	}, nil
+	}
+
+	if issuer.RevocationSigAlg == x509.SHA256WithRSAPSS || issuer.RevocationSigAlg == x509.SHA384WithRSAPSS || issuer.RevocationSigAlg == x509.SHA512WithRSAPSS {
+		response.AddWarning("Issuer uses a PSS Revocation Signature Algorithm. This algorithm will be downgraded to PKCS#1v1.5 signature scheme on OCSP responses, due to limitations in the OCSP library.")
+	}
+
+	return response, nil
 }
 
 func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -327,16 +447,17 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	}
 
 	// AIA access changes
+	enableTemplating := data.Get("enable_aia_url_templating").(bool)
 	issuerCertificates := data.Get("issuing_certificates").([]string)
-	if badURL := validateURLs(issuerCertificates); badURL != "" {
+	if badURL := validateURLs(issuerCertificates); !enableTemplating && badURL != "" {
 		return logical.ErrorResponse(fmt.Sprintf("invalid URL found in Authority Information Access (AIA) parameter issuing_certificates: %s", badURL)), nil
 	}
 	crlDistributionPoints := data.Get("crl_distribution_points").([]string)
-	if badURL := validateURLs(crlDistributionPoints); badURL != "" {
+	if badURL := validateURLs(crlDistributionPoints); !enableTemplating && badURL != "" {
 		return logical.ErrorResponse(fmt.Sprintf("invalid URL found in Authority Information Access (AIA) parameter crl_distribution_points: %s", badURL)), nil
 	}
 	ocspServers := data.Get("ocsp_servers").([]string)
-	if badURL := validateURLs(ocspServers); badURL != "" {
+	if badURL := validateURLs(ocspServers); !enableTemplating && badURL != "" {
 		return logical.ErrorResponse(fmt.Sprintf("invalid URL found in Authority Information Access (AIA) parameter ocsp_servers: %s", badURL)), nil
 	}
 
@@ -368,7 +489,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		// cert itself.
 		cert, err := issuer.GetCertificate()
 		if err != nil {
-			return nil, fmt.Errorf("unable to parse issuer's certificate: %v", err)
+			return nil, fmt.Errorf("unable to parse issuer's certificate: %w", err)
 		}
 		if (cert.KeyUsage&x509.KeyUsageCRLSign) == 0 && newUsage.HasUsage(CRLSigningUsage) {
 			return logical.ErrorResponse("This issuer's underlying certificate lacks the CRLSign KeyUsage value; unable to set CRLSigningUsage on this issuer as a result."), nil
@@ -384,7 +505,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	}
 
 	if issuer.AIAURIs == nil && (len(issuerCertificates) > 0 || len(crlDistributionPoints) > 0 || len(ocspServers) > 0) {
-		issuer.AIAURIs = &certutil.URLEntries{}
+		issuer.AIAURIs = &aiaConfigEntry{}
 	}
 	if issuer.AIAURIs != nil {
 		// Associative mapping from data source to destination on the
@@ -414,6 +535,10 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 				*pair.Dest = *pair.Source
 				modified = true
 			}
+		}
+		if enableTemplating != issuer.AIAURIs.EnableTemplating {
+			issuer.AIAURIs.EnableTemplating = enableTemplating
+			modified = true
 		}
 
 		// If no AIA URLs exist on the issuer, set the AIA URLs entry to nil
@@ -476,6 +601,12 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	if newName != oldName {
 		addWarningOnDereferencing(sc, oldName, response)
 	}
+	if issuer.AIAURIs != nil && issuer.AIAURIs.EnableTemplating {
+		_, aiaErr := issuer.AIAURIs.toURLEntries(sc, issuer.ID)
+		if aiaErr != nil {
+			response.AddWarning(fmt.Sprintf("issuance may fail: %v\n\nConsider setting the cluster-local address if it is not already set.", aiaErr))
+		}
+	}
 
 	return response, err
 }
@@ -519,7 +650,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 	var newName string
 	if ok {
 		newName, err = getIssuerName(sc, data)
-		if err != nil && err != errIssuerNameInUse {
+		if err != nil && err != errIssuerNameInUse && err != errIssuerNameIsEmpty {
 			// If the error is name already in use, and the new name is the
 			// old name for this issuer, we're not actually updating the
 			// issuer name (or causing a conflict) -- so don't err out. Other
@@ -581,7 +712,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 
 			cert, err := issuer.GetCertificate()
 			if err != nil {
-				return nil, fmt.Errorf("unable to parse issuer's certificate: %v", err)
+				return nil, fmt.Errorf("unable to parse issuer's certificate: %w", err)
 			}
 			if (cert.KeyUsage&x509.KeyUsageCRLSign) == 0 && newUsage.HasUsage(CRLSigningUsage) {
 				return logical.ErrorResponse("This issuer's underlying certificate lacks the CRLSign KeyUsage value; unable to set CRLSigningUsage on this issuer as a result."), nil
@@ -620,7 +751,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 
 	// AIA access changes.
 	if issuer.AIAURIs == nil {
-		issuer.AIAURIs = &certutil.URLEntries{}
+		issuer.AIAURIs = &aiaConfigEntry{}
 	}
 
 	// Associative mapping from data source to destination on the
@@ -646,12 +777,20 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 		},
 	}
 
+	if enableTemplatingRaw, ok := data.GetOk("enable_aia_url_templating"); ok {
+		enableTemplating := enableTemplatingRaw.(bool)
+		if enableTemplating != issuer.AIAURIs.EnableTemplating {
+			issuer.AIAURIs.EnableTemplating = true
+			modified = true
+		}
+	}
+
 	// For each pair, if it is different on the object, update it.
 	for _, pair := range pairs {
 		rawURLsValue, ok := data.GetOk(pair.Source)
 		if ok {
 			urlsValue := rawURLsValue.([]string)
-			if badURL := validateURLs(urlsValue); badURL != "" {
+			if badURL := validateURLs(urlsValue); !issuer.AIAURIs.EnableTemplating && badURL != "" {
 				return logical.ErrorResponse(fmt.Sprintf("invalid URL found in Authority Information Access (AIA) parameter %v: %s", pair.Source, badURL)), nil
 			}
 
@@ -722,6 +861,12 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 	response, err := respondReadIssuer(issuer)
 	if newName != oldName {
 		addWarningOnDereferencing(sc, oldName, response)
+	}
+	if issuer.AIAURIs != nil && issuer.AIAURIs.EnableTemplating {
+		_, aiaErr := issuer.AIAURIs.toURLEntries(sc, issuer.ID)
+		if aiaErr != nil {
+			response.AddWarning(fmt.Sprintf("issuance may fail: %v\n\nConsider setting the cluster-local address if it is not already set.", aiaErr))
+		}
 	}
 
 	return response, err
@@ -798,6 +943,8 @@ func (b *backend) pathGetRawIssuer(ctx context.Context, req *logical.Request, da
 			Data: map[string]interface{}{
 				"certificate": string(certificate),
 				"ca_chain":    issuer.CAChain,
+				"issuer_id":   issuer.ID,
+				"issuer_name": issuer.Name,
 			},
 		}, nil
 	}
@@ -898,6 +1045,11 @@ func pathGetIssuerCRL(b *backend) *framework.Path {
 	return buildPathGetIssuerCRL(b, pattern)
 }
 
+func pathGetIssuerUnifiedCRL(b *backend) *framework.Path {
+	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/unified-crl(/pem|/der|/delta(/pem|/der)?)?"
+	return buildPathGetIssuerCRL(b, pattern)
+}
+
 func buildPathGetIssuerCRL(b *backend, pattern string) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	fields = addIssuerRefNameFields(fields)
@@ -910,6 +1062,18 @@ func buildPathGetIssuerCRL(b *backend, pattern string) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathGetIssuerCRL,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"crl": {
+								Type:        framework.TypeString,
+								Description: ``,
+								Required:    false,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -928,19 +1092,28 @@ func (b *backend) pathGetIssuerCRL(ctx context.Context, req *logical.Request, da
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
 
-	if err := b.crlBuilder.rebuildIfForced(ctx, b, req); err != nil {
+	sc := b.makeStorageContext(ctx, req.Storage)
+	if err := b.crlBuilder.rebuildIfForced(sc); err != nil {
 		return nil, err
 	}
 
 	var certificate []byte
 	var contentType string
 
-	sc := b.makeStorageContext(ctx, req.Storage)
+	isUnified := strings.Contains(req.Path, "unified")
+	isDelta := strings.Contains(req.Path, "delta")
+
 	response := &logical.Response{}
 	var crlType ifModifiedReqType = ifModifiedCRL
-	if strings.Contains(req.Path, "delta") {
+
+	if !isUnified && isDelta {
 		crlType = ifModifiedDeltaCRL
+	} else if isUnified && !isDelta {
+		crlType = ifModifiedUnifiedCRL
+	} else if isUnified && isDelta {
+		crlType = ifModifiedUnifiedDeltaCRL
 	}
+
 	ret, err := sendNotModifiedResponseIfNecessary(&IfModifiedSinceHelper{req: req, reqType: crlType}, sc, response)
 	if err != nil {
 		return nil, err
@@ -948,7 +1121,8 @@ func (b *backend) pathGetIssuerCRL(ctx context.Context, req *logical.Request, da
 	if ret {
 		return response, nil
 	}
-	crlPath, err := sc.resolveIssuerCRLPath(issuerName)
+
+	crlPath, err := sc.resolveIssuerCRLPath(issuerName, isUnified)
 	if err != nil {
 		return nil, err
 	}

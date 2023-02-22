@@ -5,7 +5,7 @@ import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { apiPath } from 'vault/macros/lazy-capabilities';
 
 const M = Model.extend({
-  queriesAvailable: attr('boolean'),
+  queriesAvailable: attr('boolean'), // true only if historical data exists, will be false if there is only current month data
   retentionMonths: attr('number', {
     label: 'Retention period',
     subText: 'The number of months of activity logs to maintain for client tracking.',
@@ -20,7 +20,7 @@ const M = Model.extend({
   }),
 
   configAttrs: computed(function () {
-    let keys = ['enabled', 'retentionMonths'];
+    const keys = ['enabled', 'retentionMonths'];
     return expandAttributeMeta(this, keys);
   }),
 });

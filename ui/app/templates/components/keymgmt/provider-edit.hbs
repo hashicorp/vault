@@ -83,7 +83,7 @@
               @secret={{@model.id}}
               @mode="edit"
               @replace={{true}}
-              @queryParams={{query-params itemType="provider"}}
+              @queryParams={{hash itemType="provider"}}
               disabled={{(not @model.canEdit)}}
             >
               Update credentials
@@ -182,7 +182,7 @@
               @title="No keys for this provider"
               @message="Keys for this provider will be listed here. Add a key to get started."
             >
-              <SecretLink @mode="create" @secret="" @queryParams={{query-params itemType="key"}} class="link">
+              <SecretLink @mode="create" @secret="" @queryParams={{hash itemType="key"}} class="link">
                 Create key
               </SecretLink>
             </EmptyState>

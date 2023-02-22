@@ -23,7 +23,8 @@ module.exports = {
     browser: true,
   },
   rules: {
-    'no-console': 'warn',
+    'no-console': 'error',
+    'prefer-const': ['error', { destructuring: 'all' }],
     'ember/no-mixins': 'warn',
     'ember/no-new-mixins': 'off', // should be warn but then every line of the mixin is green
     // need to be fully glimmerized before these rules can be turned on
@@ -63,9 +64,13 @@ module.exports = {
       },
     },
     {
-      // Test files:
+      // test files
       files: ['tests/**/*-test.{js,ts}'],
       extends: ['plugin:qunit/recommended'],
+    },
+    {
+      files: ['**/*.ts'],
+      extends: ['plugin:@typescript-eslint/recommended'],
     },
   ],
 };

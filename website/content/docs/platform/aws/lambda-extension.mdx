@@ -34,7 +34,7 @@ Where region may be any of `af-south-1`, `ap-east-1`, `ap-northeast-1`,
 `eu-west-1`, `eu-west-2`, `eu-west-3`, `me-south-1`, `sa-east-1`, `us-east-1`,
 `us-east-2`, `us-west-1`, `us-west-2`.
 
-The extension authenticates with Vault using [AWS IAM auth](/docs/auth/aws),
+The extension authenticates with Vault using [AWS IAM auth](/vault/docs/auth/aws),
 and all configuration is supplied via environment variables. There are two methods
 to read secrets, which can both be used side-by-side:
 
@@ -164,7 +164,7 @@ to communicate with Vault if configured to do so as detailed below.
 ## Configuration
 
 The extension is configured via [Lambda environment variables](https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html).
-Most of the [Vault CLI client's environment variables](/docs/commands#environment-variables) are available,
+Most of the [Vault CLI client's environment variables](/vault/docs/commands#environment-variables) are available,
 as well as some additional variables to configure auth, which secret(s) to read and
 where to write secrets.
 
@@ -174,7 +174,7 @@ where to write secrets.
 | `VAULT_ADDR`                      | Vault address to connect to if `VLE_VAULT_ADDR` is not set. Required if `VLE_VAULT_ADDR` is not set                                                                                                                                                                                                                   | No       | `https://x.x.x.x:8200`      |
 | `VAULT_AUTH_PROVIDER`             | Name of the configured AWS IAM auth route on Vault                                                                                                                                                                                                                                                                    | Yes      | `aws`                       |
 | `VAULT_AUTH_ROLE`                 | Vault role to authenticate as                                                                                                                                                                                                                                                                                         | Yes      | `lambda-app`                |
-| `VAULT_IAM_SERVER_ID`             | Value to pass to the Vault server via the [`X-Vault-AWS-IAM-Server-ID` HTTP Header for AWS Authentication](/api-docs/auth/aws#iam_server_id_header_value)                                                                                                                                                             | No       | `vault.example.com`         |
+| `VAULT_IAM_SERVER_ID`             | Value to pass to the Vault server via the [`X-Vault-AWS-IAM-Server-ID` HTTP Header for AWS Authentication](/vault/api-docs/auth/aws#iam_server_id_header_value)                                                                                                                                                             | No       | `vault.example.com`         |
 | `VAULT_SECRET_PATH`               | Secret path to read, written to `/tmp/vault/secret.json` unless `VAULT_SECRET_FILE` is specified                                                                                                                                                                                                                      | No       | `database/creds/lambda-app` |
 | `VAULT_SECRET_FILE`               | Path to write the JSON response for `VAULT_SECRET_PATH`                                                                                                                                                                                                                                                               | No       | `/tmp/db.json`              |
 | `VAULT_SECRET_PATH_FOO`           | Additional secret path to read, where FOO can be any name, as long as a matching `VAULT_SECRET_FILE_FOO` is specified                                                                                                                                                                                                 | No       | `secret/lambda-app/token`   |
@@ -183,7 +183,7 @@ where to write secrets.
 | `VAULT_STS_ENDPOINT_REGION`       | The region of the STS regional endpoint to authenticate with. If the AWS IAM auth mount specified uses a regional STS endpoint, then this needs to match the region of that endpoint. Defaults to using the global endpoint, or the region the Lambda resides in if `AWS_STS_REGIONAL_ENDPOINTS` is set to `regional` | No       | `eu-west-1`                 |
 
 The remaining environment variables are not required, and function exactly as
-described in the [Vault Commands (CLI)](/docs/commands#environment-variables) documentation. However,
+described in the [Vault Commands (CLI)](/vault/docs/commands#environment-variables) documentation. However,
 note that `VAULT_CLIENT_TIMEOUT` cannot extend the timeout beyond the 10s
 initialization timeout imposed by the Extensions API when writing files to disk.
 
@@ -195,9 +195,9 @@ initialization timeout imposed by the Extensions API when writing files to disk.
 | `VAULT_CLIENT_KEY`            | Path to an unencrypted, PEM-encoded private key on disk which corresponds to the matching client certificate                                                                    | No       | `/tmp/client.key`   |
 | `VAULT_CLIENT_TIMEOUT`        | Timeout for Vault requests. Default value is 60s. Ignored by proxy server. **Any value over 10s will exceed the Extensions API timeout and therefore have no effect**           | No       | `5s`                |
 | `VAULT_MAX_RETRIES`           | Maximum number of retries on `5xx` error codes. Defaults to 2. Ignored by proxy server                                                                                          | No       | `2`                 |
-| `VAULT_SKIP_VERIFY`           | Do not verify Vault's presented certificate before communicating with it. Setting this variable is not recommended and voids Vault's [security model](/docs/internals/security) | No       | `true`              |
+| `VAULT_SKIP_VERIFY`           | Do not verify Vault's presented certificate before communicating with it. Setting this variable is not recommended and voids Vault's [security model](/vault/docs/internals/security) | No       | `true`              |
 | `VAULT_TLS_SERVER_NAME`       | Name to use as the SNI host when connecting via TLS                                                                                                                             | No       | `vault.example.com` |
-| `VAULT_RATE_LIMIT`            | Only applies to a single invocation of the extension. See [Vault Commands (CLI)](/docs/commands#environment-variables) documentation for details. Ignored by proxy server       | No       | `10`                |
+| `VAULT_RATE_LIMIT`            | Only applies to a single invocation of the extension. See [Vault Commands (CLI)](/vault/docs/commands#environment-variables) documentation for details. Ignored by proxy server       | No       | `10`                |
 | `VAULT_NAMESPACE`             | The namespace to use for pre-configured secrets. Ignored by proxy server                                                                                                        | No       | `education`         |
 | `VAULT_DEFAULT_CACHE_TTL`     | The time to live configuration (aka, TTL) of the cache used by proxy server. Must have a unit and be parsable as a time.Duration. Required for caching to be enabled.           | No       | `15m`               |
 | `VAULT_DEFAULT_CACHE_ENABLED` | Enable caching for all requests, without needing to set the X-Vault-Cache-Control header for each request. Must be set to a boolean value.                                      | No       | `true`              |
@@ -268,6 +268,10 @@ synchronously refresh its own token before proxying requests if the token is
 expired (including a grace window), and it will attempt to renew its token if the
 token is nearly expired but renewable.
 
+~> **Note**: The Vault Lambda Extension is currently incompatible with
+[AWS SnapStart](https://docs.aws.amazon.com/lambda/latest/dg/snapstart.html).
+This is because AWS SnapStart does not support the Lambda Extensions API.
+
 ## Performance impact
 
 AWS Lambda pricing is based on [number of invocations, time of execution and memory
@@ -311,4 +315,4 @@ $ aws lambda publish-layer-version \
 
 ## Tutorial
 
-For step-by-step instructions, refer to the [Vault AWS Lambda Extension](https://learn.hashicorp.com/tutorials/vault/aws-lambda) tutorial for details on how to create an AWS Lambda function and use the Vault Lambda Extension to authenticate with Vault.
+For step-by-step instructions, refer to the [Vault AWS Lambda Extension](/vault/tutorials/app-integration/aws-lambda) tutorial for details on how to create an AWS Lambda function and use the Vault Lambda Extension to authenticate with Vault.

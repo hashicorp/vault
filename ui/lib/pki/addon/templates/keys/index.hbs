@@ -1,60 +1,27 @@
-<Toolbar>
-  <ToolbarActions>
-    <ToolbarLink @params={{array "keys.import"}} @type="download">
-      Import
-    </ToolbarLink>
-    <ToolbarLink @params={{array "keys.generate"}} @type="add">
-      Generate
-    </ToolbarLink>
-  </ToolbarActions>
-</Toolbar>
-<p class="has-padding">Below is information about the private keys used by the issuers to sign certificates. While
-  certificates represent a public assertion of an identity, private keys represent the private part of that identity, a
-  secret used to prove who they are and who they trust.</p>
-{{#if (gt this.model.length 0)}}
-  {{#each this.model as |pkiKey|}}
-    <LinkedBlock class="list-item-row" @params={{array "roles.role.details" pkiKey.id}} @linkPrefix={{this.mountPoint}}>
-      <div class="level is-mobile">
-        <div class="level-left">
-          <div>
-            <Icon @name="certificate" class="has-text-grey-light" />
-            <span class="has-text-weight-semibold is-underline">
-              {{pkiKey.id}}
-            </span>
-            <div class="is-flex-row has-left-margin-l has-top-margin-xs">
-              {{#if pkiKey.keyName}}
-                <span class="tag has-text-grey-dark">{{pkiKey.keyName}}</span>
-              {{/if}}
-            </div>
-          </div>
-        </div>
-        <div class="level-right is-flex is-paddingless is-marginless">
-          <div class="level-item">
-            <PopupMenu>
-              <nav class="menu">
-                <ul class="menu-list">
-                  <li>
-                    <LinkTo @route="keys.key.details" @model={{pkiKey.id}}>
-                      Details
-                    </LinkTo>
-                  </li>
-                  <li>
-                    <LinkTo @route="keys.key.edit" @model={{pkiKey.id}}>
-                      Edit
-                    </LinkTo>
-                  </li>
-                </ul>
-              </nav>
-            </PopupMenu>
-          </div>
-        </div>
-      </div>
-    </LinkedBlock>
-  {{/each}}
+<SecretListHeader
+  @model={{this.model.parentModel}}
+  @backendCrumb={{hash
+    label=this.model.parentModel.id
+    text=this.model.parentModel.id
+    path="vault.cluster.secrets.backend.list-root"
+    model=this.model.parentModel.id
+  }}
+  @isEngine={{true}}
+/>
+{{#if (or this.model.hasConfig this.model.keyModels)}}
+  <Page::PkiKeyList
+    @keyModels={{this.model.keyModels}}
+    @mountPoint={{this.mountPoint}}
+    @canImportKey={{this.model.keyModels.firstObject.canImportKey}}
+    @canGenerateKey={{this.model.keyModels.firstObject.canGenerateKey}}
+    @canRead={{this.model.keyModels.firstObject.canRead}}
+    @canEdit={{this.model.keyModels.firstObject.canEdit}}
+  />
 {{else}}
-  <EmptyState @title="PKI not configured" @message="This PKI mount hasn’t yet been configured with a certificate issuer.">
-    <LinkTo @route="configuration.create.index" @model={{this.model}}>
-      ARG TODO waiting for language from design
+  <Toolbar />
+  <EmptyState @title="PKI not configured" @message="This PKI mount hasn't yet been configured with a certificate issuer.">
+    <LinkTo @route="configuration.create">
+      Configure PKI
     </LinkTo>
   </EmptyState>
 {{/if}}

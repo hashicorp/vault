@@ -24,11 +24,11 @@ by that backend.
 
 For the Consul storage backend, the default limit imposed by Consul is
 512 KiB. This may be configured via Consul’s
-[`kv_max_value_size`](https://www.consul.io/docs/agent/config/config-files#kv_max_value_size) parameter, introduced in version 1.5.3.
+[`kv_max_value_size`](/consul/docs/agent/config/config-files#kv_max_value_size) parameter, introduced in version 1.5.3.
 
 For the integrated storage backend, the default limit (introduced in
 Vault 1.5.0) is 1 MiB. This may be configured via `max_entry_size` in
-the [storage stanza](/docs/configuration/storage/raft#max_entry_size).
+the [storage stanza](/vault/docs/configuration/storage/raft#max_entry_size).
 
 Many of the other limits within Vault derive from the maximum size of
 a storage entry, as described in the next sections. It is possible to
@@ -58,8 +58,8 @@ Specifying distinct per-mount options, or using long mount point paths, can
 increase the space required per mount.
 
 The number of mount points can be monitored by reading the
-[`sys/auth`](/api-docs/system/auth) and
-[`sys/mounts`](/api-docs/system/mounts) endpoints from the root namespace and
+[`sys/auth`](/vault/api-docs/system/auth) and
+[`sys/mounts`](/vault/api-docs/system/mounts) endpoints from the root namespace and
 similar sub-paths for namespaces respectively, like: `namespace1/sys/auth`,
 `namespace1/sys/mounts`, etc.
 
@@ -81,7 +81,7 @@ path element. 160 nested paths = 160 namespaces ranging from 40 bytes to
 6400 bytes.
 
 The number of namespaces can be monitored by querying
-[`sys/namespaces`](/api-docs/system/namespaces).
+[`sys/namespaces`](/vault/api-docs/system/namespaces).
 
 To estimate the number of namespaces that can be created, divide the mount
 point limit by the larger of the number of auth mounts per namespace
@@ -132,7 +132,7 @@ group has a large number of members.
 | Maximum number of groups (100 entities per group)                                        | ~22,000                  | ~50,000                            |
 | Maximum number of members in a group                                                     | ~11,500                  | ~23,000                            |
 
-The number of entities can be monitored using Vault's [telemetry](/docs/internals/telemetry#token-identity-and-lease-metrics); see `vault.identity.num_entities` (total) or `vault.identity.entities.count` (by namespace).
+The number of entities can be monitored using Vault's [telemetry](/vault/docs/internals/telemetry#token-identity-and-lease-metrics); see `vault.identity.num_entities` (total) or `vault.identity.entities.count` (by namespace).
 
 The cost of entity and group updates grows as the number of objects in
 each shard increases. This cost can be monitored via the
@@ -141,7 +141,7 @@ the `vault.identity.upsert_group_txn` metrics.
 
 Very large internal groups should be avoided (more than 1000 members),
 because the membership list in a group must reside in a single storage entry.
-Instead, consider using [external groups](/docs/concepts/identity#external-vs-internal-groups) or split the group up into multiple sub-groups.
+Instead, consider using [external groups](/vault/docs/concepts/identity#external-vs-internal-groups) or split the group up into multiple sub-groups.
 
 ### Token limits
 
@@ -175,7 +175,7 @@ policies attached to that token, to the entity, to any groups that the
 entity belongs to, and recursively to any groups that contain those groups.
 Very large numbers of policies are possible, but can cause Vault’s
 response time to increase. You can monitor the
-[`vault.core.fetch_acl_and_token`](/docs/internals/telemetry#core-metrics)
+[`vault.core.fetch_acl_and_token`](/vault/docs/internals/telemetry#core-metrics)
 metric to determine if the time required to assemble an access control list
 is becoming excessive.
 
@@ -229,18 +229,18 @@ This limit depends on the key size.
 ### Request size
 
 The maximum size of an HTTP request sent to Vault is limited by
-the `max_request_size` option in the [listener stanza](/docs/configuration/listener/tcp). It defaults to 32 MiB. This value, minus the overhead of
+the `max_request_size` option in the [listener stanza](/vault/docs/configuration/listener/tcp). It defaults to 32 MiB. This value, minus the overhead of
 the HTTP request itself, places an upper bound on any Transit operation,
 and on the maximum size of any key-value secrets.
 
 ### Request duration
 
 The maximum duration of a Vault operation is
-[`max_request_duration`](/docs//configuration/listener/tcp), which defaults to
+[`max_request_duration`](/vault/docs//configuration/listener/tcp), which defaults to
 90 seconds. If a particular secret engine takes longer than this to perform an
 operation on a remote service, the Vault client will see a failure.
 
-The environment variable [`VAULT_CLIENT_TIMEOUT`](https://www.vaultproject.io/docs/commands#vault_client_timeout) sets a client-side maximum duration as well,
+The environment variable [`VAULT_CLIENT_TIMEOUT`](/vault/docs/commands#vault_client_timeout) sets a client-side maximum duration as well,
 which is 60 seconds by default.
 
 ### Cluster and replication limits
@@ -263,8 +263,8 @@ maximum number of replicas has been exceeded.
 
 ### Lease limits
 
-A systemwide [maximum TTL](/docs/configuration#max_lease_ttl), and a
-[maximum TTL per mount point](/api-docs/system/mounts#max_lease_ttl-1) can be
+A systemwide [maximum TTL](/vault/docs/configuration#max_lease_ttl), and a
+[maximum TTL per mount point](/vault/api-docs/system/mounts#max_lease_ttl-1) can be
 configured.
 
 Although no technical maximum exists, high lease counts can cause
@@ -278,17 +278,17 @@ unexpired leases, or a large number of simultaneous expirations.
 | Maximum duration of lease or token | 768 hours by default      |
 
 The current number of unexpired leases can be monitored via the
-[`vault.expire.num_leases`](/docs/internals/telemetry#token-identity-and-lease-metrics) metric.
+[`vault.expire.num_leases`](/vault/docs/internals/telemetry#token-identity-and-lease-metrics) metric.
 
 ### Transform limits
 
 The Transform secret engine obeys the [FF3-1 minimum and maximum sizes
-on the length of an input](/docs/secrets/transform#input-limits), which
+on the length of an input](/vault/docs/secrets/transform#input-limits), which
 are a function of the alphabet size.
 
 ### External plugin limits
 
-The [plugin system](/docs/plugins) launches a separate process
+The [plugin system](/vault/docs/plugins) launches a separate process
 initiated by Vault that communicates over RPC. For each secret engine and auth
 method that's enabled as an external plugin, Vault will spawn a process on the
 host system. For the Database Secrets Engines, external database plugins will

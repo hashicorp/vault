@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
+
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 
 	"github.com/hashicorp/vault/sdk/logical"
@@ -17,7 +19,7 @@ import (
 
 func TestPKI_PathManageKeys_GenerateInternalKeys(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	tests := []struct {
 		name           string
@@ -83,7 +85,7 @@ func TestPKI_PathManageKeys_GenerateInternalKeys(t *testing.T) {
 func TestPKI_PathManageKeys_GenerateExportedKeys(t *testing.T) {
 	t.Parallel()
 	// We tested a lot of the logic above within the internal test, so just make sure we honor the exported contract
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -95,6 +97,8 @@ func TestPKI_PathManageKeys_GenerateExportedKeys(t *testing.T) {
 		},
 		MountPoint: "pki/",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("keys/generate/exported"), logical.UpdateOperation), resp, true)
+
 	require.NoError(t, err, "Failed generating exported key")
 	require.NotNil(t, resp, "Got nil response generating exported key")
 	require.Equal(t, "ec", resp.Data["key_type"], "key_type field contained an invalid type")
@@ -115,7 +119,7 @@ func TestPKI_PathManageKeys_GenerateExportedKeys(t *testing.T) {
 
 func TestPKI_PathManageKeys_ImportKeyBundle(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	bundle1, err := certutil.CreateKeyBundle("ec", 224, rand.Reader)
 	require.NoError(t, err, "failed generating an ec key bundle")
@@ -136,6 +140,9 @@ func TestPKI_PathManageKeys_ImportKeyBundle(t *testing.T) {
 		},
 		MountPoint: "pki/",
 	})
+
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("keys/import"), logical.UpdateOperation), resp, true)
+
 	require.NoError(t, err, "Failed importing ec key")
 	require.NotNil(t, resp, "Got nil response importing ec key")
 	require.False(t, resp.IsError(), "received an error response: %v", resp.Error())
@@ -248,7 +255,7 @@ func TestPKI_PathManageKeys_ImportKeyBundle(t *testing.T) {
 
 func TestPKI_PathManageKeys_DeleteDefaultKeyWarns(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation:  logical.UpdateOperation,
@@ -276,7 +283,7 @@ func TestPKI_PathManageKeys_DeleteDefaultKeyWarns(t *testing.T) {
 
 func TestPKI_PathManageKeys_DeleteUsedKeyFails(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation:  logical.UpdateOperation,
@@ -303,7 +310,7 @@ func TestPKI_PathManageKeys_DeleteUsedKeyFails(t *testing.T) {
 
 func TestPKI_PathManageKeys_UpdateKeyDetails(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation:  logical.UpdateOperation,
@@ -324,6 +331,8 @@ func TestPKI_PathManageKeys_UpdateKeyDetails(t *testing.T) {
 		Data:       map[string]interface{}{"key_name": "new-name"},
 		MountPoint: "pki/",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("key/"+keyId.String()), logical.UpdateOperation), resp, true)
+
 	require.NoError(t, err, "failed updating key with new name")
 	require.NotNil(t, resp, "Got nil response updating key with new name")
 	require.False(t, resp.IsError(), "unexpected error updating key with new name: %#v", resp.Error())
@@ -334,6 +343,8 @@ func TestPKI_PathManageKeys_UpdateKeyDetails(t *testing.T) {
 		Storage:    s,
 		MountPoint: "pki/",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("key/"+keyId.String()), logical.ReadOperation), resp, true)
+
 	require.NoError(t, err, "failed reading key after name update")
 	require.NotNil(t, resp, "Got nil response reading key after name update")
 	require.False(t, resp.IsError(), "unexpected error reading key: %#v", resp.Error())
@@ -356,7 +367,7 @@ func TestPKI_PathManageKeys_UpdateKeyDetails(t *testing.T) {
 
 func TestPKI_PathManageKeys_ImportKeyBundleBadData(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -390,7 +401,7 @@ func TestPKI_PathManageKeys_ImportKeyBundleBadData(t *testing.T) {
 
 func TestPKI_PathManageKeys_ImportKeyRejectsMultipleKeys(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	bundle1, err := certutil.CreateKeyBundle("ec", 224, rand.Reader)
 	require.NoError(t, err, "failed generating an ec key bundle")

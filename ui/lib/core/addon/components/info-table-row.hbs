@@ -61,6 +61,8 @@
         {{/if}}
       {{else if @formatDate}}
         {{date-format @value @formatDate}}
+      {{else if @formatTtl}}
+        {{this.formattedTtl}}
       {{else}}
         {{#if (eq @type "array")}}
           <InfoTableItemArray
@@ -87,7 +89,7 @@
                   @clipboardText={{@tooltipText}}
                   @success={{action (set-flash-message "Data copied!")}}
                   @tagName="div"
-                  @disabled={{not @isTooltipCopyable}}
+                  disabled={{not @isTooltipCopyable}}
                   class={{if @isTooltipCopyable "has-pointer"}}
                   data-test-tooltip-copy
                 >

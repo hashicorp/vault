@@ -25,7 +25,7 @@ module('Integration | Helper | remove-from-array', function (hooks) {
     } catch (e) {
       result = e.message;
     }
-    assert.equal(result, 'Assertion Failed: Value provided is not an array');
+    assert.strictEqual(result, 'Assertion Failed: Value provided is not an array');
   });
 
   test('it works with non-string arrays', function (assert) {

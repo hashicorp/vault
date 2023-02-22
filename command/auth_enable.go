@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -152,7 +151,7 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 	f.StringVar(&StringVar{
 		Name:       "plugin-name",
 		Target:     &c.flagPluginName,
-		Completion: c.PredictVaultPlugins(consts.PluginTypeCredential),
+		Completion: c.PredictVaultPlugins(api.PluginTypeCredential),
 		Usage: "Name of the auth method plugin. This plugin name must already " +
 			"exist in the Vault server's plugin catalog.",
 	})
@@ -320,6 +319,9 @@ func (c *AuthEnableCommand) Run(args []string) int {
 	authThing := authType + " auth method"
 	if authType == "plugin" {
 		authThing = c.flagPluginName + " plugin"
+	}
+	if c.flagPluginVersion != "" {
+		authThing += " version " + c.flagPluginVersion
 	}
 	c.UI.Output(fmt.Sprintf("Success! Enabled %s at: %s", authThing, authPath))
 	return 0

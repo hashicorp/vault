@@ -3,6 +3,7 @@ package pki
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 
@@ -16,7 +17,24 @@ func pathListKeys(b *backend) *framework.Path {
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
-				Callback:                    b.pathListKeysHandler,
+				Callback: b.pathListKeysHandler,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"keys": {
+								Type:        framework.TypeStringSlice,
+								Description: `A list of keys`,
+								Required:    true,
+							},
+							"key_info": {
+								Type:        framework.TypeMap,
+								Description: `Key info with issuer name`,
+								Required:    false,
+							},
+						},
+					}},
+				},
 				ForwardPerformanceStandby:   false,
 				ForwardPerformanceSecondary: false,
 			},
@@ -91,17 +109,76 @@ func buildPathKey(b *backend, pattern string) *framework.Path {
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
-				Callback:                    b.pathGetKeyHandler,
+				Callback: b.pathGetKeyHandler,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"key_id": {
+								Type:        framework.TypeString,
+								Description: `Key Id`,
+								Required:    true,
+							},
+							"key_name": {
+								Type:        framework.TypeString,
+								Description: `Key Name`,
+								Required:    true,
+							},
+							"key_type": {
+								Type:        framework.TypeString,
+								Description: `Key Type`,
+								Required:    true,
+							},
+							"managed_key_id": {
+								Type:        framework.TypeString,
+								Description: `Managed Key Id`,
+								Required:    false,
+							},
+							"managed_key_name": {
+								Type:        framework.TypeString,
+								Description: `Managed Key Name`,
+								Required:    false,
+							},
+						},
+					}},
+				},
 				ForwardPerformanceStandby:   false,
 				ForwardPerformanceSecondary: false,
 			},
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.pathUpdateKeyHandler,
+				Callback: b.pathUpdateKeyHandler,
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"key_id": {
+								Type:        framework.TypeString,
+								Description: `Key Id`,
+								Required:    true,
+							},
+							"key_name": {
+								Type:        framework.TypeString,
+								Description: `Key Name`,
+								Required:    true,
+							},
+							"key_type": {
+								Type:        framework.TypeString,
+								Description: `Key Type`,
+								Required:    true,
+							},
+						},
+					}},
+				},
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
 			},
 			logical.DeleteOperation: &framework.PathOperation{
-				Callback:                    b.pathDeleteKeyHandler,
+				Callback: b.pathDeleteKeyHandler,
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{
+						Description: "No Content",
+					}},
+				},
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
 			},

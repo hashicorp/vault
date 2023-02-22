@@ -21,7 +21,7 @@ module('Integration | Component | hover copy button', function (hooks) {
     assert.ok(component.buttonIsVisible);
     await component.mouseEnter();
     await settled();
-    assert.equal(component.tooltipText, 'Copy', 'shows copy');
+    assert.strictEqual(component.tooltipText, 'Copy', 'shows copy');
   });
 
   test('it has the correct class when alwaysShow is true', async function (assert) {
@@ -31,7 +31,7 @@ module('Integration | Component | hover copy button', function (hooks) {
       @alwaysShow={{true}}
     />
   `);
-    await render(hbs`{{hover-copy-button alwaysShow=true copyValue=copyValue}}`);
+    await render(hbs`{{hover-copy-button alwaysShow=true copyValue=this.copyValue}}`);
     assert.ok(component.buttonIsVisible);
     assert.ok(component.wrapperClass.includes('hover-copy-button-static'));
   });

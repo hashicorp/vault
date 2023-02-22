@@ -11,7 +11,7 @@ export default Model.extend({
   }),
   name: attr('string', {
     label: 'Role name',
-    fieldValue: 'id',
+    fieldValue: 'name',
     readOnly: true,
   }),
   useOpenAPI: true,
@@ -78,7 +78,7 @@ export default Model.extend({
         Advanced: ['generateLease', 'noStore', 'basicConstraintsValidForNonCa', 'policyIdentifiers'],
       },
     ];
-    let excludedFields = ['extKeyUsage'];
+    const excludedFields = ['extKeyUsage'];
     if (this.newFields) {
       groups = combineFieldGroups(groups, this.newFields, excludedFields);
     }

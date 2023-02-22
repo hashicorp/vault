@@ -8,7 +8,7 @@ description: This is the API documentation for the Vault AppRole auth method.
 
 This is the API documentation for the Vault AppRole auth method. For
 general information about the usage and operation of the AppRole method, please
-see the [Vault AppRole method documentation](/docs/auth/approle).
+see the [Vault AppRole method documentation](/vault/docs/auth/approle).
 
 This documentation assumes the AppRole method is mounted at the `/auth/approle`
 path in Vault. Since it is possible to enable auth methods at any location,
@@ -60,7 +60,7 @@ enabled while creating or updating a role.
 
 ### Parameters
 
-- `role_name` `(string: <required>)` - Name of the AppRole.
+- `role_name` `(string: <required>)` - Name of the AppRole. Must be less than 4096 bytes.
 - `bind_secret_id` `(bool: true)` - Require `secret_id` to be presented when
   logging in using this AppRole.
 - `secret_id_bound_cidrs` `(array: [])` - Comma-separated string or list of CIDR
@@ -112,7 +112,7 @@ Reads the properties of an existing AppRole.
 
 ### Parameters
 
-- `role_name` `(string: <required>)` - Name of the AppRole.
+- `role_name` `(string: <required>)` - Name of the AppRole. Must be less than 4096 bytes.
 
 ### Sample Request
 
@@ -155,7 +155,7 @@ Deletes an existing AppRole from the method.
 
 ### Parameters
 
-- `role_name` `(string: <required>)` - Name of the AppRole.
+- `role_name` `(string: <required>)` - Name of the AppRole. Must be less than 4096 bytes.
 
 ### Sample Request
 
@@ -176,7 +176,7 @@ Reads the RoleID of an existing AppRole.
 
 ### Parameters
 
-- `role_name` `(string: <required>)` - Name of the AppRole.
+- `role_name` `(string: <required>)` - Name of the AppRole. Must be less than 4096 bytes.
 
 ### Sample Request
 
@@ -212,7 +212,7 @@ Updates the RoleID of an existing AppRole to a custom value.
 
 ### Parameters
 
-- `role_name` `(string: <required>)` - Name of the AppRole.
+- `role_name` `(string: <required>)` - Name of the AppRole. Must be less than 4096 bytes.
 - `role_id` `(string: <required>)` - Value to be set as RoleID.
 
 ### Sample Payload
@@ -262,7 +262,7 @@ itself, and also to delete the SecretID from the AppRole.
 
 ### Parameters
 
-- `role_name` `(string: <required>)` - Name of the AppRole.
+- `role_name` `(string: <required>)` - Name of the AppRole. Must be less than 4096 bytes.
 - `metadata` `(string: "")` - Metadata to be tied to the SecretID. This should be
   a JSON-formatted string containing the metadata in key-value pairs. This
   metadata will be set on tokens issued with this SecretID, and is logged in
@@ -333,7 +333,7 @@ This includes the accessors for "custom" SecretIDs as well.
 
 ### Parameters
 
-- `role_name` `(string: <required>)` - Name of the AppRole.
+- `role_name` `(string: <required>)` - Name of the AppRole. Must be less than 4096 bytes.
 
 ### Sample Request
 
@@ -376,7 +376,7 @@ Reads out the properties of a SecretID.
 
 ### Parameters
 
-- `role_name` `(string: <required>)` - Name of the AppRole.
+- `role_name` `(string: <required>)` - Name of the AppRole. Must be less than 4096 bytes.
 - `secret_id` `(string: <required>)` - Secret ID attached to the role.
 
 ### Sample Payload
@@ -407,7 +407,7 @@ Destroy an AppRole secret ID.
 
 ### Parameters
 
-- `role_name` `(string: <required>)` - Name of the AppRole.
+- `role_name` `(string: <required>)` - Name of the AppRole. Must be less than 4096 bytes.
 - `secret_id` `(string: <required>)` - Secret ID attached to the role.
 
 ### Sample Payload
@@ -438,7 +438,7 @@ Reads out the properties of a SecretID.
 
 ### Parameters
 
-- `role_name` `(string: <required>)` - Name of the AppRole.
+- `role_name` `(string: <required>)` - Name of the AppRole. Must be less than 4096 bytes.
 - `secret_id_accessor` `(string: <required>)` - Secret ID accessor attached to the role.
 
 ### Sample Payload
@@ -469,7 +469,7 @@ Destroy an AppRole secret ID by its accessor.
 
 ### Parameters
 
-- `role_name` `(string: <required>)` - Name of the AppRole.
+- `role_name` `(string: <required>)` - Name of the AppRole. Must be less than 4096 bytes.
 - `secret_id_accessor` `(string: <required>)` - Secret ID accessor attached to the role.
 
 ### Sample Payload
@@ -501,7 +501,7 @@ Assigns a "custom" SecretID against an existing AppRole. This is used in the
 
 ### Parameters
 
-- `role_name` `(string: <required>)` - Name of the AppRole.
+- `role_name` `(string: <required>)` - Name of the AppRole. Must be less than 4096 bytes.
 - `secret_id` `(string: <required>)` - SecretID to be attached to the Role.
 - `metadata` `(string: "")` - Metadata to be tied to the SecretID. This should be
   a JSON-formatted string containing the metadata in key-value pairs. This

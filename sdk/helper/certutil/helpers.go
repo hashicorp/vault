@@ -64,6 +64,25 @@ var SignatureAlgorithmNames = map[string]x509.SignatureAlgorithm{
 	"ed25519":          x509.PureEd25519, // Duplicated for clarity; most won't expect the "Pure" prefix.
 }
 
+// Mapping of constant values<->constant names for SignatureAlgorithm
+var InvSignatureAlgorithmNames = map[x509.SignatureAlgorithm]string{
+	x509.SHA256WithRSA:    "SHA256WithRSA",
+	x509.SHA384WithRSA:    "SHA384WithRSA",
+	x509.SHA512WithRSA:    "SHA512WithRSA",
+	x509.ECDSAWithSHA256:  "ECDSAWithSHA256",
+	x509.ECDSAWithSHA384:  "ECDSAWithSHA384",
+	x509.ECDSAWithSHA512:  "ECDSAWithSHA512",
+	x509.SHA256WithRSAPSS: "SHA256WithRSAPSS",
+	x509.SHA384WithRSAPSS: "SHA384WithRSAPSS",
+	x509.SHA512WithRSAPSS: "SHA512WithRSAPSS",
+	x509.PureEd25519:      "Ed25519",
+}
+
+// OID for RFC 5280 CRL Number extension.
+//
+// > id-ce-cRLNumber OBJECT IDENTIFIER ::= { id-ce 20 }
+var CRLNumberOID = asn1.ObjectIdentifier([]int{2, 5, 29, 20})
+
 // OID for RFC 5280 Delta CRL Indicator CRL extension.
 //
 // > id-ce-deltaCRLIndicator OBJECT IDENTIFIER ::= { id-ce 27 }
@@ -86,13 +105,13 @@ func GetHexFormatted(buf []byte, sep string) string {
 func ParseHexFormatted(in, sep string) []byte {
 	var ret bytes.Buffer
 	var err error
-	var inBits int64
+	var inBits uint64
 	inBytes := strings.Split(in, sep)
 	for _, inByte := range inBytes {
-		if inBits, err = strconv.ParseInt(inByte, 16, 8); err != nil {
+		if inBits, err = strconv.ParseUint(inByte, 16, 8); err != nil {
 			return nil
 		}
-		ret.WriteByte(byte(inBits))
+		ret.WriteByte(uint8(inBits))
 	}
 	return ret.Bytes()
 }
@@ -789,7 +808,7 @@ func CreateCertificateWithKeyGenerator(data *CreationBundle, randReader io.Reade
 	return createCertificate(data, randReader, keyGenerator)
 }
 
-// Set correct correct RSA sig algo
+// Set correct RSA sig algo
 func certTemplateSetSigAlgo(certTemplate *x509.Certificate, data *CreationBundle) {
 	if data.Params.UsePSS {
 		switch data.Params.SignatureBits {
@@ -809,6 +828,35 @@ func certTemplateSetSigAlgo(certTemplate *x509.Certificate, data *CreationBundle
 		case 512:
 			certTemplate.SignatureAlgorithm = x509.SHA512WithRSA
 		}
+	}
+}
+
+// selectSignatureAlgorithmForRSA returns the proper x509.SignatureAlgorithm based on various properties set in the
+// Creation Bundle parameter. This method will default to a SHA256 signature algorithm if the requested signature
+// bits is not set/unknown.
+func selectSignatureAlgorithmForRSA(data *CreationBundle) x509.SignatureAlgorithm {
+	if data.Params.UsePSS {
+		switch data.Params.SignatureBits {
+		case 256:
+			return x509.SHA256WithRSAPSS
+		case 384:
+			return x509.SHA384WithRSAPSS
+		case 512:
+			return x509.SHA512WithRSAPSS
+		default:
+			return x509.SHA256WithRSAPSS
+		}
+	}
+
+	switch data.Params.SignatureBits {
+	case 256:
+		return x509.SHA256WithRSA
+	case 384:
+		return x509.SHA384WithRSA
+	case 512:
+		return x509.SHA512WithRSA
+	default:
+		return x509.SHA256WithRSA
 	}
 }
 
@@ -878,7 +926,11 @@ func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGen
 
 	var certBytes []byte
 	if data.SigningBundle != nil {
-		switch data.SigningBundle.PrivateKeyType {
+		privateKeyType := data.SigningBundle.PrivateKeyType
+		if privateKeyType == ManagedPrivateKey {
+			privateKeyType = GetPrivateKeyTypeFromSigner(data.SigningBundle.PrivateKey)
+		}
+		switch privateKeyType {
 		case RSAPrivateKey:
 			certTemplateSetSigAlgo(certTemplate, data)
 		case Ed25519PrivateKey:
@@ -986,7 +1038,10 @@ func selectSignatureAlgorithmForECDSA(pub crypto.PublicKey, signatureBits int) x
 	}
 }
 
-var oidExtensionBasicConstraints = []int{2, 5, 29, 19}
+var (
+	oidExtensionBasicConstraints = []int{2, 5, 29, 19}
+	oidExtensionSubjectAltName   = []int{2, 5, 29, 17}
+)
 
 // CreateCSR creates a CSR with the default rand.Reader to
 // generate a cert/keypair. This is currently only meant
@@ -1049,9 +1104,10 @@ func createCSR(data *CreationBundle, addBasicConstraints bool, randReader io.Rea
 
 	switch data.Params.KeyType {
 	case "rsa":
-		csrTemplate.SignatureAlgorithm = x509.SHA256WithRSA
+		// use specified RSA algorithm defaulting to the appropriate SHA256 RSA signature type
+		csrTemplate.SignatureAlgorithm = selectSignatureAlgorithmForRSA(data)
 	case "ec":
-		csrTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
+		csrTemplate.SignatureAlgorithm = selectSignatureAlgorithmForECDSA(result.PrivateKey.Public(), data.Params.SignatureBits)
 	case "ed25519":
 		csrTemplate.SignatureAlgorithm = x509.PureEd25519
 	}
@@ -1065,6 +1121,10 @@ func createCSR(data *CreationBundle, addBasicConstraints bool, randReader io.Rea
 	result.CSR, err = x509.ParseCertificateRequest(csr)
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse created certificate: %v", err)}
+	}
+
+	if err = result.CSR.CheckSignature(); err != nil {
+		return nil, errors.New("failed signature validation for CSR")
 	}
 
 	return result, nil
@@ -1156,7 +1216,7 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		certTemplate.URIs = data.CSR.URIs
 
 		for _, name := range data.CSR.Extensions {
-			if !name.Id.Equal(oidExtensionBasicConstraints) {
+			if !name.Id.Equal(oidExtensionBasicConstraints) && !(len(data.Params.OtherSANs) > 0 && name.Id.Equal(oidExtensionSubjectAltName)) {
 				certTemplate.ExtraExtensions = append(certTemplate.ExtraExtensions, name)
 			}
 		}

@@ -11,7 +11,7 @@ export default Mixin.create({
   },
 
   setupController(controller, resolvedModel) {
-    let { pageFilter } = this.paramsFor(this.routeName);
+    const { pageFilter } = this.paramsFor(this.routeName);
     this._super(...arguments);
     controller.setProperties({
       filter: pageFilter || '',

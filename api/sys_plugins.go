@@ -7,20 +7,19 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/mitchellh/mapstructure"
 )
 
 // ListPluginsInput is used as input to the ListPlugins function.
 type ListPluginsInput struct {
 	// Type of the plugin. Required.
-	Type consts.PluginType `json:"type"`
+	Type PluginType `json:"type"`
 }
 
 // ListPluginsResponse is the response from the ListPlugins call.
 type ListPluginsResponse struct {
 	// PluginsByType is the list of plugins by type.
-	PluginsByType map[consts.PluginType][]string `json:"types"`
+	PluginsByType map[PluginType][]string `json:"types"`
 
 	Details []PluginDetails `json:"details,omitempty"`
 
@@ -68,11 +67,11 @@ func (c *Sys) ListPluginsWithContext(ctx context.Context, i *ListPluginsInput) (
 	}
 
 	result := &ListPluginsResponse{
-		PluginsByType: make(map[consts.PluginType][]string),
+		PluginsByType: make(map[PluginType][]string),
 	}
 	switch i.Type {
-	case consts.PluginTypeUnknown:
-		for _, pluginType := range consts.PluginTypes {
+	case PluginTypeUnknown:
+		for _, pluginType := range PluginTypes {
 			pluginsRaw, ok := secret.Data[pluginType.String()]
 			if !ok {
 				continue
@@ -113,7 +112,7 @@ func (c *Sys) ListPluginsWithContext(ctx context.Context, i *ListPluginsInput) (
 		}
 
 		switch i.Type {
-		case consts.PluginTypeUnknown:
+		case PluginTypeUnknown:
 			result.Details = details
 		default:
 			// Filter for just the queried type.
@@ -133,7 +132,8 @@ type GetPluginInput struct {
 	Name string `json:"-"`
 
 	// Type of the plugin. Required.
-	Type consts.PluginType `json:"type"`
+	Type    PluginType `json:"type"`
+	Version string     `json:"version"`
 }
 
 // GetPluginResponse is the response from the GetPlugin call.
@@ -144,6 +144,7 @@ type GetPluginResponse struct {
 	Name              string   `json:"name"`
 	SHA256            string   `json:"sha256"`
 	DeprecationStatus string   `json:"deprecation_status,omitempty"`
+	Version           string   `json:"version,omitempty"`
 }
 
 // GetPlugin wraps GetPluginWithContext using context.Background.
@@ -158,6 +159,9 @@ func (c *Sys) GetPluginWithContext(ctx context.Context, i *GetPluginInput) (*Get
 
 	path := catalogPathByType(i.Type, i.Name)
 	req := c.c.NewRequest(http.MethodGet, path)
+	if i.Version != "" {
+		req.Params.Set("version", i.Version)
+	}
 
 	resp, err := c.c.rawRequestWithContext(ctx, req)
 	if err != nil {
@@ -181,7 +185,7 @@ type RegisterPluginInput struct {
 	Name string `json:"-"`
 
 	// Type of the plugin. Required.
-	Type consts.PluginType `json:"type"`
+	Type PluginType `json:"type"`
 
 	// Args is the list of args to spawn the process with.
 	Args []string `json:"args,omitempty"`
@@ -226,7 +230,7 @@ type DeregisterPluginInput struct {
 	Name string `json:"-"`
 
 	// Type of the plugin. Required.
-	Type consts.PluginType `json:"type"`
+	Type PluginType `json:"type"`
 
 	// Version of the plugin. Optional.
 	Version string `json:"version,omitempty"`
@@ -363,11 +367,11 @@ func (c *Sys) ReloadPluginStatusWithContext(ctx context.Context, reloadStatusInp
 }
 
 // catalogPathByType is a helper to construct the proper API path by plugin type
-func catalogPathByType(pluginType consts.PluginType, name string) string {
+func catalogPathByType(pluginType PluginType, name string) string {
 	path := fmt.Sprintf("/v1/sys/plugins/catalog/%s/%s", pluginType, name)
 
 	// Backwards compat, if type is not provided then use old path
-	if pluginType == consts.PluginTypeUnknown {
+	if pluginType == PluginTypeUnknown {
 		path = fmt.Sprintf("/v1/sys/plugins/catalog/%s", name)
 	}
 

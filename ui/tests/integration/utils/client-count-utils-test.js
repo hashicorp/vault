@@ -617,13 +617,13 @@ module('Integration | Util | client count utils', function (hooks) {
       );
     };
     const assertClientCounts = (object, originalObject) => {
-      let newObjectKeys = ['clients', 'entity_clients', 'non_entity_clients'];
-      let originalKeys = Object.keys(originalObject.counts).includes('entity_clients')
+      const newObjectKeys = ['clients', 'entity_clients', 'non_entity_clients'];
+      const originalKeys = Object.keys(originalObject.counts).includes('entity_clients')
         ? newObjectKeys
         : ['clients', 'distinct_entities', 'non_entity_tokens'];
 
       newObjectKeys.forEach((key, i) => {
-        assert.equal(
+        assert.strictEqual(
           object[key],
           originalObject.counts[originalKeys[i]],
           `${object.month} ${key} equal original counts`
@@ -654,7 +654,7 @@ module('Integration | Util | client count utils', function (hooks) {
     });
 
     // method fails gracefully
-    let expected = [
+    const expected = [
       {
         counts: null,
         month: '6/21',
@@ -663,6 +663,7 @@ module('Integration | Util | client count utils', function (hooks) {
         new_clients: {
           month: '6/21',
           namespaces: [],
+          timestamp: '2021-06-01T00:00:00Z',
         },
         timestamp: '2021-06-01T00:00:00Z',
       },
@@ -674,11 +675,12 @@ module('Integration | Util | client count utils', function (hooks) {
         new_clients: {
           month: '7/21',
           namespaces: [],
+          timestamp: '2021-07-01T00:00:00Z',
         },
         timestamp: '2021-07-01T00:00:00Z',
       },
     ];
-    assert.equal(formatByMonths(SOME_OBJECT), SOME_OBJECT, 'it returns if arg is not an array');
+    assert.strictEqual(formatByMonths(SOME_OBJECT), SOME_OBJECT, 'it returns if arg is not an array');
     assert.propEqual(expected, formatByMonths(EMPTY_MONTHS), 'it does not error with null months');
     assert.ok(formatByMonths([...EMPTY_MONTHS, ...MONTHS]), 'it does not error with combined data');
   });
@@ -698,10 +700,10 @@ module('Integration | Util | client count utils', function (hooks) {
     };
     const keyValueAssertions = (object, pathName, originalObject) => {
       const keysToAssert = ['clients', 'entity_clients', 'non_entity_clients'];
-      assert.equal(object.label, originalObject[pathName], `${pathName} matches label`);
+      assert.strictEqual(object.label, originalObject[pathName], `${pathName} matches label`);
 
       keysToAssert.forEach((key) => {
-        assert.equal(object[key], originalObject.counts[key], `number of ${key} equal original`);
+        assert.strictEqual(object[key], originalObject.counts[key], `number of ${key} equal original`);
       });
     };
 
@@ -709,12 +711,12 @@ module('Integration | Util | client count utils', function (hooks) {
     assert.notEqual(formattedNamespaces, MONTHS, 'does not modify original array');
 
     formattedNamespaces.forEach((namespace) => {
-      let origNamespace = BY_NAMESPACE.find((ns) => ns.namespace_path === namespace.label);
+      const origNamespace = BY_NAMESPACE.find((ns) => ns.namespace_path === namespace.label);
       keyNameAssertions(namespace, 'formatted namespace');
       keyValueAssertions(namespace, 'namespace_path', origNamespace);
 
       namespace.mounts.forEach((mount) => {
-        let origMount = origNamespace.mounts.find((m) => m.mount_path === mount.label);
+        const origMount = origNamespace.mounts.find((m) => m.mount_path === mount.label);
         keyNameAssertions(mount, 'formatted mount');
         keyValueAssertions(mount, 'mount_path', origMount);
       });
@@ -733,12 +735,12 @@ module('Integration | Util | client count utils', function (hooks) {
       mounts: [],
     };
 
-    let formattedNsWithoutMounts = formatByNamespace([nsWithoutMounts])[0];
+    const formattedNsWithoutMounts = formatByNamespace([nsWithoutMounts])[0];
     keyNameAssertions(formattedNsWithoutMounts, 'namespace without mounts');
     keyValueAssertions(formattedNsWithoutMounts, 'namespace_path', nsWithoutMounts);
-    assert.equal(formattedNsWithoutMounts.mounts.length, 0, 'formatted namespace has no mounts');
+    assert.strictEqual(formattedNsWithoutMounts.mounts.length, 0, 'formatted namespace has no mounts');
 
-    assert.equal(formatByNamespace(SOME_OBJECT), SOME_OBJECT, 'it returns if arg is not an array');
+    assert.strictEqual(formatByNamespace(SOME_OBJECT), SOME_OBJECT, 'it returns if arg is not an array');
   });
 
   test('homogenizeClientNaming: homogenizes key names when both old and new keys exist, or just old key names', async function (assert) {
@@ -760,7 +762,7 @@ module('Integration | Util | client count utils', function (hooks) {
       );
     };
 
-    let transformedMonths = [...MONTHS];
+    const transformedMonths = [...MONTHS];
     transformedMonths.forEach((month) => {
       month.counts = homogenizeClientNaming(month.counts);
       keyNameAssertions(month.counts, 'month counts');
@@ -814,13 +816,13 @@ module('Integration | Util | client count utils', function (hooks) {
     keyNameAssertions(flattenedMonth, 'month object');
     keyNameAssertions(flattenedNewMonthClients, 'month new_clients object');
 
-    assert.equal(
+    assert.strictEqual(
       flattenDataset(SOME_OBJECT),
       SOME_OBJECT,
       "it returns original object if counts key doesn't exist"
     );
 
-    assert.equal(
+    assert.strictEqual(
       flattenDataset(objectNullCounts),
       objectNullCounts,
       'it returns original object if counts are null'
@@ -831,8 +833,8 @@ module('Integration | Util | client count utils', function (hooks) {
       flattenDataset(['some array']),
       'it fails gracefully if an array is passed in'
     );
-    assert.equal(flattenDataset(null), null, 'it fails gracefully if null is passed in');
-    assert.equal(
+    assert.strictEqual(flattenDataset(null), null, 'it fails gracefully if null is passed in');
+    assert.strictEqual(
       flattenDataset('some string'),
       'some string',
       'it fails gracefully if a string is passed in'
@@ -856,17 +858,17 @@ module('Integration | Util | client count utils', function (hooks) {
       'third timestamp date is later second'
     );
     assert.notEqual(sortedMonths[1], MONTHS[1], 'it does not modify original array');
-    assert.equal(sortedMonths[0], MONTHS[0], 'it does not modify original array');
+    assert.strictEqual(sortedMonths[0], MONTHS[0], 'it does not modify original array');
   });
 
   test('namespaceArrayToObject: transforms data without modifying original', async function (assert) {
     assert.expect(30);
 
     const assertClientCounts = (object, originalObject) => {
-      let valuesToCheck = ['clients', 'entity_clients', 'non_entity_clients'];
+      const valuesToCheck = ['clients', 'entity_clients', 'non_entity_clients'];
 
       valuesToCheck.forEach((key) => {
-        assert.equal(object[key], originalObject[key], `${key} equal original counts`);
+        assert.strictEqual(object[key], originalObject[key], `${key} equal original counts`);
       });
     };
     const totalClientsByNamespace = formatByNamespace(MONTHS[1].namespaces);
@@ -889,27 +891,27 @@ module('Integration | Util | client count utils', function (hooks) {
       'it does not modify original array'
     );
 
-    let namespaceKeys = Object.keys(byNamespaceKeyObject);
+    const namespaceKeys = Object.keys(byNamespaceKeyObject);
     namespaceKeys.forEach((nsKey) => {
       const newNsObject = byNamespaceKeyObject[nsKey];
-      let originalNsData = totalClientsByNamespace.find((ns) => ns.label === nsKey);
+      const originalNsData = totalClientsByNamespace.find((ns) => ns.label === nsKey);
       assertClientCounts(newNsObject, originalNsData);
-      let mountKeys = Object.keys(newNsObject.mounts_by_key);
+      const mountKeys = Object.keys(newNsObject.mounts_by_key);
       mountKeys.forEach((mKey) => {
-        let mountData = originalNsData.mounts.find((m) => m.label === mKey);
+        const mountData = originalNsData.mounts.find((m) => m.label === mKey);
         assertClientCounts(newNsObject.mounts_by_key[mKey], mountData);
       });
     });
 
     namespaceKeys.forEach((nsKey) => {
       const newNsObject = byNamespaceKeyObject[nsKey];
-      let originalNsData = newClientsByNamespace.find((ns) => ns.label === nsKey);
+      const originalNsData = newClientsByNamespace.find((ns) => ns.label === nsKey);
       if (!originalNsData) return;
       assertClientCounts(newNsObject.new_clients, originalNsData);
-      let mountKeys = Object.keys(newNsObject.mounts_by_key);
+      const mountKeys = Object.keys(newNsObject.mounts_by_key);
 
       mountKeys.forEach((mKey) => {
-        let mountData = originalNsData.mounts.find((m) => m.label === mKey);
+        const mountData = originalNsData.mounts.find((m) => m.label === mKey);
         assertClientCounts(newNsObject.mounts_by_key[mKey].new_clients, mountData);
       });
     });

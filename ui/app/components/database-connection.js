@@ -19,7 +19,6 @@ export default class DatabaseConnectionEdit extends Component {
   @service store;
   @service router;
   @service flashMessages;
-  @service wizard;
 
   @tracked
   showPasswordField = false; // used for edit mode
@@ -27,15 +26,8 @@ export default class DatabaseConnectionEdit extends Component {
   @tracked
   showSaveModal = false; // used for create mode
 
-  constructor() {
-    super(...arguments);
-    if (this.wizard.featureState === 'details' || this.wizard.featureState === 'connection') {
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', 'database');
-    }
-  }
-
   rotateCredentials(backend, name) {
-    let adapter = this.store.adapterFor('database/connection');
+    const adapter = this.store.adapterFor('database/connection');
     return adapter.rotateRootCredentials(backend, name);
   }
 
@@ -61,8 +53,8 @@ export default class DatabaseConnectionEdit extends Component {
   @action
   async handleCreateConnection(evt) {
     evt.preventDefault();
-    let secret = this.args.model;
-    let secretId = secret.name;
+    const secret = this.args.model;
+    const secretId = secret.name;
     secret.set('id', secretId);
     secret
       .save()
@@ -100,8 +92,8 @@ export default class DatabaseConnectionEdit extends Component {
   @action
   handleUpdateConnection(evt) {
     evt.preventDefault();
-    let secret = this.args.model;
-    let secretId = secret.name;
+    const secret = this.args.model;
+    const secretId = secret.name;
     secret
       .save()
       .then(() => {
@@ -126,7 +118,7 @@ export default class DatabaseConnectionEdit extends Component {
   @action
   reset() {
     const { name, backend } = this.args.model;
-    let adapter = this.store.adapterFor('database/connection');
+    const adapter = this.store.adapterFor('database/connection');
     adapter
       .resetConnection(backend, name)
       .then(() => {

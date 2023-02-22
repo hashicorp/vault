@@ -17,8 +17,12 @@ module('Acceptance | settings/auth/configure', function (hooks) {
     const type = 'approle';
     await enablePage.enable(type, path);
     await page.visit({ path });
-    assert.equal(currentRouteName(), 'vault.cluster.settings.auth.configure.section');
-    assert.equal(currentURL(), `/vault/settings/auth/configure/${path}/options`, 'loads the options route');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.settings.auth.configure.section');
+    assert.strictEqual(
+      currentURL(),
+      `/vault/settings/auth/configure/${path}/options`,
+      'loads the options route'
+    );
   });
 
   test('it redirects to the first section', async function (assert) {
@@ -26,8 +30,8 @@ module('Acceptance | settings/auth/configure', function (hooks) {
     const type = 'aws';
     await enablePage.enable(type, path);
     await page.visit({ path });
-    assert.equal(currentRouteName(), 'vault.cluster.settings.auth.configure.section');
-    assert.equal(
+    assert.strictEqual(currentRouteName(), 'vault.cluster.settings.auth.configure.section');
+    assert.strictEqual(
       currentURL(),
       `/vault/settings/auth/configure/${path}/client`,
       'loads the first section for the type of auth method'

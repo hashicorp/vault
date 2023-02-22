@@ -953,12 +953,101 @@ func Test_RSA_PSS(t *testing.T) {
 		// 2. For each hash algorithm...
 		for hashAlgorithm, hashType := range HashTypeMap {
 			t.Log(tabs[1], "Hash algorithm:", hashAlgorithm)
+			if hashAlgorithm == "none" {
+				continue
+			}
 
 			// 3. For each marshaling type...
 			for marshalingName, marshalingType := range MarshalingTypeMap {
 				t.Log(tabs[2], "Marshaling type:", marshalingName)
 				testName := fmt.Sprintf("%s-%s-%s", rsaKeyType, hashAlgorithm, marshalingName)
 				t.Run(testName, func(t *testing.T) { test_RSA_PSS(t, p, rsaKey, hashType, marshalingType) })
+			}
+		}
+	}
+}
+
+func Test_RSA_PKCS1(t *testing.T) {
+	t.Log("Testing RSA PKCS#1v1.5")
+
+	ctx := context.Background()
+	storage := &logical.InmemStorage{}
+	// https://crypto.stackexchange.com/a/1222
+	input := []byte("Sphinx of black quartz, judge my vow")
+	sigAlgorithm := "pkcs1v15"
+
+	tabs := make(map[int]string)
+	for i := 1; i <= 6; i++ {
+		tabs[i] = strings.Repeat("\t", i)
+	}
+
+	test_RSA_PKCS1 := func(t *testing.T, p *Policy, rsaKey *rsa.PrivateKey, hashType HashType,
+		marshalingType MarshalingType,
+	) {
+		unsaltedOptions := SigningOptions{
+			HashAlgorithm: hashType,
+			Marshaling:    marshalingType,
+			SigAlgorithm:  sigAlgorithm,
+		}
+		cryptoHash := CryptoHashMap[hashType]
+
+		// PKCS#1v1.5 NoOID uses a direct input and assumes it is pre-hashed.
+		if hashType != 0 {
+			hash := cryptoHash.New()
+			hash.Write(input)
+			input = hash.Sum(nil)
+		}
+
+		// 1. Make a signature with the given key size and hash algorithm.
+		t.Log(tabs[3], "Make an automatic signature")
+		sig, err := p.Sign(0, nil, input, hashType, sigAlgorithm, marshalingType)
+		if err != nil {
+			// A bit of a hack but FIPS go does not support some hash types
+			if isUnsupportedGoHashType(hashType, err) {
+				t.Skip(tabs[4], "skipping test as FIPS Go does not support hash type")
+				return
+			}
+			t.Fatal(tabs[4], "❌ Failed to automatically sign:", err)
+		}
+
+		// 1.1 Verify this signature using the *inferred* salt length.
+		autoVerify(4, t, p, input, sig, unsaltedOptions)
+	}
+
+	rsaKeyTypes := []KeyType{KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096}
+	testKeys, err := generateTestKeys()
+	if err != nil {
+		t.Fatalf("error generating test keys: %s", err)
+	}
+
+	// 1. For each standard RSA key size 2048, 3072, and 4096...
+	for _, rsaKeyType := range rsaKeyTypes {
+		t.Log("Key size: ", rsaKeyType)
+		p := &Policy{
+			Name: fmt.Sprint(rsaKeyType), // NOTE: crucial to create a new key per key size
+			Type: rsaKeyType,
+		}
+
+		rsaKeyBytes := testKeys[rsaKeyType]
+		err := p.Import(ctx, storage, rsaKeyBytes, rand.Reader)
+		if err != nil {
+			t.Fatal(tabs[1], "❌ Failed to import key:", err)
+		}
+		rsaKeyAny, err := x509.ParsePKCS8PrivateKey(rsaKeyBytes)
+		if err != nil {
+			t.Fatalf("error parsing test keys: %s", err)
+		}
+		rsaKey := rsaKeyAny.(*rsa.PrivateKey)
+
+		// 2. For each hash algorithm...
+		for hashAlgorithm, hashType := range HashTypeMap {
+			t.Log(tabs[1], "Hash algorithm:", hashAlgorithm)
+
+			// 3. For each marshaling type...
+			for marshalingName, marshalingType := range MarshalingTypeMap {
+				t.Log(tabs[2], "Marshaling type:", marshalingName)
+				testName := fmt.Sprintf("%s-%s-%s", rsaKeyType, hashAlgorithm, marshalingName)
+				t.Run(testName, func(t *testing.T) { test_RSA_PKCS1(t, p, rsaKey, hashType, marshalingType) })
 			}
 		}
 	}

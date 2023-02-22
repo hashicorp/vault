@@ -42,7 +42,7 @@ module('Acceptance | tools', function (hooks) {
     var tokenStore = createTokenStore();
     await visit('/vault/tools');
 
-    assert.equal(currentURL(), '/vault/tools/wrap', 'forwards to the first action');
+    assert.strictEqual(currentURL(), '/vault/tools/wrap', 'forwards to the first action');
     TOOLS_ACTIONS.forEach((action) => {
       assert.dom(`[data-test-tools-action-link="${action}"]`).exists(`${action} link renders`);
     });

@@ -70,7 +70,7 @@ export default Component.extend({
 
   willDestroy() {
     const ca = this.model;
-    if (ca) {
+    if (ca && !ca.isDestroyed && !ca.isDestroying) {
       ca.unloadRecord();
     }
     this._super(...arguments);

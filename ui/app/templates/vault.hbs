@@ -7,22 +7,22 @@
     HashiCorp
   </span>
   <span>
-    <a href={{changelog-url-for this.activeCluster.leaderNode.version}} class="link has-text-grey">
+    <ExternalLink @href={{changelog-url-for this.activeCluster.leaderNode.version}} class="link has-text-grey">
       Vault
       {{this.activeCluster.leaderNode.version}}
-    </a>
+    </ExternalLink>
   </span>
   {{#if (is-version "OSS")}}
     <span>
-      <a href="https://hashicorp.com/products/vault/trial?source=vaultui" class="link has-text-grey">
+      <ExternalLink @href="https://hashicorp.com/products/vault/trial?source=vaultui" class="link has-text-grey">
         Upgrade to Vault Enterprise
-      </a>
+      </ExternalLink>
     </span>
   {{/if}}
   <span>
-    <a class="has-text-grey" target="_blank" rel="noreferrer noopener" href="https://www.vaultproject.io/docs/index.html">
+    <DocLink @path="/docs/index.html" class="has-text-grey">
       Documentation
-    </a>
+    </DocLink>
   </span>
 </footer>
 {{#if (eq this.env "development")}}

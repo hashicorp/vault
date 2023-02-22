@@ -123,6 +123,29 @@ func TestKvMetadataPatchCommand_Flags(t *testing.T) {
 			},
 		},
 		{
+			"remove-custom_metadata",
+			[]string{"-custom-metadata=baz=ghi", "-remove-custom-metadata=foo"},
+			"Success!",
+			0,
+			map[string]interface{}{
+				"custom_metadata": map[string]interface{}{
+					"bar": "def",
+					"baz": "ghi",
+				},
+			},
+		},
+		{
+			"remove-custom_metadata-multiple",
+			[]string{"-custom-metadata=baz=ghi", "-remove-custom-metadata=foo", "-remove-custom-metadata=bar"},
+			"Success!",
+			0,
+			map[string]interface{}{
+				"custom_metadata": map[string]interface{}{
+					"baz": "ghi",
+				},
+			},
+		},
+		{
 			"delete_version_after_success",
 			[]string{"-delete-version-after=5s"},
 			"Success!",

@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
 
-# The Vault smoke test to verify the Vault version installed
-
+# Verify the Vault "version" includes the correct base version, build date,
+# revision SHA, and edition metadata.
 set -e
 
 binpath=${vault_install_dir}/vault
+edition=${vault_edition}
+version=${vault_version}
+sha=${vault_revision}
+build_date=${vault_build_date}
 
 fail() {
 	echo "$1" 1>&2
@@ -13,25 +17,30 @@ fail() {
 
 test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
-binary_version_full=$($binpath version)
-# Get the Vault build tag
-binary_version=$(cut -d ' ' -f2 <<< $binary_version_full)
-# Strip the leading v
-semantic=$${binary_version:1}
-# Get the build timestamp
-build_date=$(cut -d ' ' -f5 <<< $binary_version_full)
-
 export VAULT_ADDR='http://127.0.0.1:8200'
+export VAULT_TOKEN='${vault_token}'
 
-# Ensure that the cluster version and build time match the binary installed
-vault_status=$("$binpath" status -format json)
-result=$(jq -Mr \
-  --arg version "$semantic" \
-  --arg build_date "$build_date" \
-  'select(.version == $version) | .build_date == $build_date' \
-  <<< $vault_status
-)
+# Build date was added in 1.11
+if [[ "$(echo "$version" |awk -F'.' '{print $2}')" -ge 11 ]]; then
+  version_expected="Vault v$version ($sha), built $build_date"
+else
+  version_expected="Vault v$version ($sha)"
+fi
 
-if [[ "$result" != "true" ]]; then
-  fail "expected version $binary_version with build_date $build_date, got status $vault_status"
+case "$edition" in
+  *oss) ;;
+  *ent) ;;
+  *ent.hsm) version_expected="$version_expected (cgo)";;
+  *ent.fips1402) version_expected="$version_expected (cgo)" ;;
+  *ent.hsm.fips1402) version_expected="$version_expected (cgo)" ;;
+  *) fail "Unknown Vault edition: ($edition)" ;;
+esac
+
+version_expected_nosha=$(echo "$version_expected" | awk '!($3="")' | sed 's/  / /' | sed -e 's/[[:space:]]*$//')
+version_output=$("$binpath" version)
+
+if [[ "$version_output" == "$version_expected_nosha" ]] || [[ "$version_output" == "$version_expected" ]]; then
+  echo "Version verification succeeded!"
+else
+  fail "expected Version=$version_expected or $version_expected_nosha, got: $version_output"
 fi

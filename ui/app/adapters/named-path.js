@@ -18,8 +18,8 @@ export default class NamedPathAdapter extends ApplicationAdapter {
 
   // create does not return response similar to PUT request
   createRecord() {
-    let [store, { modelName }, snapshot] = arguments;
-    let name = snapshot.attr('name');
+    const [store, { modelName }, snapshot] = arguments;
+    const name = snapshot.attr('name');
     // throw error if user attempts to create a record with same name, otherwise POST request silently overrides (updates) the existing model
     if (store.hasRecordForId(modelName, name)) {
       throw new Error(`A record already exists with the name: ${name}`);
@@ -51,7 +51,7 @@ export default class NamedPathAdapter extends ApplicationAdapter {
     // * 'paramKey' is a string of the param name (model attr) we're filtering for, e.g. 'client_id'
     // * 'filterFor' is an array of values to filter for (value type must match the attr type), e.g. array of ID strings
     // * 'allowed_client_id' is a valid query param to the /provider endpoint
-    let queryParams = { list: true, ...(allowed_client_id && { allowed_client_id }) };
+    const queryParams = { list: true, ...(allowed_client_id && { allowed_client_id }) };
     const response = await this.ajax(url, 'GET', { data: queryParams });
 
     // filter LIST response only if key_info exists and query includes both 'paramKey' & 'filterFor'

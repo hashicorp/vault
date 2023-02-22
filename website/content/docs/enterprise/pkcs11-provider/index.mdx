@@ -1,0 +1,310 @@
+---
+layout: docs
+page_title: PKCS#11 Provider - Vault Enterprise
+description: |-
+  The Vault PKCS#11 Provider allows Vault KMIP Secrets Engine to be used via PKCS#11 calls.
+  The provider supports a subset of key generation, encryption, decryption and key storage operations.
+  This requires the Enterprise ADP-KM license.
+---
+
+# PKCS#11 Provider
+
+[PKCS#11](http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/os/pkcs11-base-v2.40-os.html)
+is an open standard C API that provides a means to access cryptographic capabilities on a device.
+For example, it is often used to access a Hardware Security Module (HSM) (like a [Yubikey](https://www.yubico.com/)) from a local program (such as [GPG](https://gnupg.org/)).
+
+Vault provides a PKCS#11 library (or provider) so that Vault can be used as an SSM (Software Security Module).
+This allows a user to treat Vault like any other PKCS#11 device to manage keys, objects, and perform encryption and decryption in Vault using PKCS#11 calls.
+The PKCS#11 library connects to Vault's [KMIP Secrets Engine](/vault/docs/secrets/kmip) to provide cryptographic operations and object storage.
+
+## Platform Support
+
+This library works with Vault Enterprise 1.11+ with the advanced data protection module in the license
+with the KMIP Secrets Engine.
+
+| Operating System | Architecture | Distribution      | glibc   |
+| ---------------- | -------------| ----------------- | ------- |
+| Linux            | x86-64       | RHEL 7 compatible | 2.17    |
+| Linux            | x86-64       | RHEL 8 compatible | 2.28    |
+| Linux            | x86-64       | RHEL 9 compatible | 2.34    |
+| macOS            | x86-64       | &mdash;           | &mdash; |
+
+The provider comes in the form of a shared C library, `libvault-pkcs11.so` (for Linux) or `libvault-pkcs11.dylib` (for macOS).
+It can be downloaded from [releases.hashicorp.com](https://releases.hashicorp.com/vault-pkcs11-provider).
+
+## Quick Start
+
+1. To use the provider, you will need access to a Vault Enterprise instance with the KMIP Secrets Engine.
+
+    For example, you can start one locally (if you have a license in the `VAULT_LICENSE` environment variable) with:
+
+    ```sh
+    docker pull hashicorp/vault-enterprise &&
+    docker run --name vault \
+      -p 5696:5696 \
+      -p 8200:8200 \
+      --cap-add=IPC_LOCK \
+      -e VAULT_LICENSE=$(printenv VAULT_LICENSE) \
+      -e VAULT_ADDR=http://127.0.0.1:8200 \
+      -e VAULT_TOKEN=root \
+      hashicorp/vault-enterprise \
+      server -dev -dev-root-token-id root -dev-listen-address 0.0.0.0:8200
+    ```
+
+1. Configure the [KMIP Secrets Engine](/vault/docs/secrets/kmip) and a KMIP *scope*. The scope is used to hold keys and objects.
+
+    ~> **Note**: These commands will output the credentials in plaintext.
+
+    ```sh
+    vault secrets enable kmip
+    vault write kmip/config listen_addrs=0.0.0.0:5696
+    vault write -f kmip/scope/my-service
+    vault write kmip/scope/my-service/role/admin operation_all=true
+    vault write -f -format=json kmip/scope/my-service/role/admin/credential/generate | tee kmip.json
+    ```
+
+    ~> **Important**: When configuring KMIP in production, you will probably need to set the
+    `server_hostnames` and `server_ips` [configuration parameters](/vault/api-docs/secret/kmip#parameters),
+    otherwise the TLS connection to the KMIP Secrets Engine will fail due to certification validation errors.
+
+    This last line will generate a JSON file with the certificate, key, and CA certificate chain to connect
+    to the KMIP server. You'll need to save these to files so that the PKCS#11 provider can use them.
+
+    ```sh
+    jq --raw-output --exit-status '.data.ca_chain[]' kmip.json > ca.pem
+    jq --raw-output --exit-status '.data.certificate' kmip.json > cert.pem
+    ```
+    The certificate file from the KMIP Secrets Engine also contains the key.
+
+1. Create a configuration file called `vault-pkcs11.hcl`:
+
+    ```hcl
+    slot {
+      server = "127.0.0.1:5696"
+      tls_cert_path = "cert.pem"
+      ca_path = "ca.pem"
+      scope = "my-service"
+    }
+    ```
+
+    See [below](#configuration) for all available parameters.
+
+1. Copy the certificates from the KMIP credentials into the files specified in the configuration file (e.g., `cert.pem`, and `ca.pem`).
+
+1. You should now be able to use the `libvault-pkcs11.so` (or `.dylib`) library to access the KMIP Secrets Engine in Vault using any PKCS#11-compatible tool, like OpenSC's `pkcs11-tool`, e.g.:
+
+    ```sh
+    $ VAULT_LOG_FILE=/dev/null pkcs11-tool --module ./libvault-pkcs11.so -L
+    Available slots:
+    Slot 0 (0x0): Vault slot 0
+    token label        : Token 0
+    token manufacturer : HashiCorp
+    token model        : Vault Enterprise
+    token flags        : token initialized, PIN initialized, other flags=0x60
+    hardware version   : 1.12
+    firmware version   : 1.12
+    serial num         : 1234
+    pin min/max        : 0/255
+
+    $ VAULT_LOG_FILE=/dev/null pkcs11-tool --module ./libvault-pkcs11.so --keygen -a abc123 --key-type AES:32 \
+    --extractable --allow-sw 2>/dev/null
+    Key generated:
+    Secret Key Object; AES length 32
+    VALUE:
+    label:      abc123
+    Usage:      encrypt, decrypt, wrap, unwrap
+    Access:     none
+    ```
+
+    The `VAULT_LOG_FILE=/dev/null` setting is to prevent the Vault PKCS#11 driver logs from appearing in stdout (the default if no file is specified).
+    In production, it's good to set `VAULT_LOG_FILE` to point to somewhere more permanent, like `/var/log/vault.log`.
+
+## Configuration
+
+The PKCS#11 Provider can be configured through an HCL file and through envionment variables.
+
+The HCL file contains directives to map PKCS#11 device
+[slots](http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/os/pkcs11-base-v2.40-os.html#_Toc416959678) (logical devices)
+to Vault instances and KMIP scopes and configures how the library will authenticate to KMIP (with a client TLS certificate).
+The PKCS#11 library will look for this file in `vault-pkcs11.hcl` and `/etc/vault-pkcs11.hcl` by default, or you can override this by setting the `VAULT_KMIP_CONFIG` environment variable.
+
+For example,
+
+```hcl
+slot {
+    server = "127.0.0.1:5696"
+    tls_cert_path = "cert.pem"
+    ca_path = "ca.pem"
+    scope = "my-service"
+}
+```
+
+The `slot` block configures the first PKCS#11 slot to point to Vault.
+Most programs will use only one slot.
+
+- `server` (required): the Vault server's IP or DNS name and port number (5696 is the default).
+- `tls_cert_path` (required): the location of the client TLS certificate used to authenticate to the KMIP engine.
+- `tls_key_path` (optional, defaults to the value of `tls_cert_path`): the location of the encrypted or unencrypted TLS key used to authenticate to the KMIP engine.
+- `ca_path` (required): the location of the CA bundle that will be used to verify the server's certificate.
+- `scope` (required): the [KMIP scope](/vault/docs/secrets/kmip#scopes-and-roles) to authenticate against and where the TDE master keys and associated metadata will be stored.
+- `cache` (optional, default `true`): if the provider uses a cache to improve the performance of `C_GetAttributeValue` (KMIP: `GetAttributes`) calls.
+- `emulate_hardware` (optional, default `false`): specifies if the provider should report that it is connected to a hardware device.
+
+The default location the PKCS#11 library will look for the configuration file is the current directory (`vault-pkcs11.hcl`) and `/etc/vault-pkcs11.hcl`, but you can override this by setting the `VAULT_KMIP_CONFIG` environment variable to any file.
+
+Environment variables can be also used to configure these parameters and more.
+
+- `VAULT_KMIP_CONFIG`: location of the HCL configuration file. By default, the provider will check `./vault-pkcs11.hcl` and `/etc/vault-pkcs11.hcl`.
+- `VAULT_KMIP_CERT_FILE`: location of the TLS certificate used for authentication to the KMIP engine.
+- `VAULT_KMIP_KEY_FILE`: location of the TLS key used for authentication to the KMIP engine.
+- `VAULT_KMIP_KEY_PASSWORD`: password for the TLS key file, if it is encrypted to the KMIP engine.
+- `VAULT_KMIP_CA_FILE`: location of the TLS CA bundle used to authenticate the connection to the KMIP engine.
+- `VAULT_KMIP_SERVER`: address and port of the KMIP engine to use for encryption and storage.
+- `VAULT_KMIP_SCOPE`: KMIP scope to use for encryption and storage
+- `VAULT_KMIP_CACHE`: whether or not to cache `C_GetAttributeValue` (KMIP: `GetAttributes`) calls.
+- `VAULT_LOG_LEVEL`: the log level that the provider will use. Defaults to `WARN`. Valid values include `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, and `OFF`.
+- `VAULT_LOG_FILE`: the location of the file the provider will use for logging. Defaults to standard out.
+- `VAULT_EMULATE_HARDWARE`: whether or not the provider will report that it is backed by a hardware device.
+
+## Encrypted TLS Key Support
+
+The TLS key returned by the KMIP engine is unencrypted by default.
+However, the PKCS#11 provider does support (limited) encryption options for the key using [RFC 1423](https://www.rfc-editor.org/rfc/rfc1423).
+We would only recommend using AES-256-CBC out of the available algorithms.
+
+The keys from KMIP should be ECDSA keys, and can be encrypted with a password with OpenSSL, e.g.,:
+
+```sh
+openssl ec -in cert.key -out encrypted.key -aes-256-cbc
+```
+
+The PKCS#11 provider will need access to the password to decrypt the TLS key.
+The password can be supplied to the provider in two ways:
+
+- The `VAULT_KMIP_KEY_PASSWORD` environment variable, or
+- the "PIN" parameter to the `C_Login` PKCS#11 function will be used to try to decrypt an encrypted TLS key.
+
+Note that only a single password can be supplied via the `VAULT_KMIP_KEY_PASSWORD`, so if multiple slots in the HCL file use encrypted TLS keys, they will need to be encrypted with the same password, or use the `C_Login` method to specify the password.
+
+## Error Handling
+
+If an error occurs, the first place to check will be the `VAULT_LOG_FILE` for any relevant error messages.
+
+If the PKCS#11 provider returns an error code of `0x30` (`CKR_DEVICE_ERROR`), then an additional device error code may
+be available from the `C_SessionInfo` call.
+Here are the known device error codes the provider will return:
+
+| Code | Meaning                                                          |
+| ---- | ---------------------------------------------------------------- |
+| 400  | Invalid input was provided in the configuration or PKCS#11 call. |
+| 401  | Invalid credentials were provided.                               |
+| 404  | The object, attribute, or key was not found.                     |
+| 600  | An unknown I/O error occurred.                                   |
+| 601  | A KMIP engine error occured.                                     |
+
+## Capabilities
+
+The Vault PKCS#11 provider implements the following PKCS#11 provider profiles:
+
+- [Baseline](http://docs.oasis-open.org/pkcs11/pkcs11-profiles/v2.40/os/pkcs11-profiles-v2.40-os.html#_Toc416960548)
+- [Extended](http://docs.oasis-open.org/pkcs11/pkcs11-profiles/v2.40/os/pkcs11-profiles-v2.40-os.html#_Toc416960554)
+
+The following mechanisms are currently supported, as of Vault 1.12:
+
+| Name               | Mechanism Number |
+| ------------------ | ---------------- |
+| AES key generation | `0x1080`         |
+| AES-CBC            | `0x1082`         |
+| AES-CBC Pad        | `0x1085`         |
+| AES-CTR            | `0x1086`         |
+| AES-GCM            | `0x1087`         |
+
+Here is the list of supported and unsupported PKCS#11 functions:
+
+- Encryption and decryption
+  - [x]  `C_EncryptInit`
+  - [x]  `C_Encrypt`
+  - [ ]  `C_EncryptUpdate`
+  - [ ]  `C_EncryptFinal`
+  - [x]  `C_DecryptInit`
+  - [x]  `C_Decrypt`
+  - [ ]  `C_DecryptUpdate`
+  - [ ]  `C_DecryptFinal`
+- Key management
+  - [x]  `C_GenerateKey`
+  - [ ]  `C_GenerateKeyPair`
+  - [ ]  `C_WrapKey`
+  - [ ]  `C_UnwrapKey`
+  - [ ]  `C_DeriveKey`
+- Objects
+  - [x]  `C_CreateObject`
+  - [x]  `C_DestroyObject`
+  - [x]  `C_GetAttributeValue`
+  - [x]  `C_FindObjectsInit`
+  - [x]  `C_FindObjects`
+  - [x]  `C_FindObjectsFinal`
+  - [ ]  `C_SetAttributeValue`
+  - [ ]  `C_CopyObject`
+  - [ ]  `C_GetObjectSize`
+- Management
+  - [x]  `C_Initialize`
+  - [x]  `C_Finalize`
+  - [x]  `C_Login` (PIN is used as a passphrase for the TLS encryption key, if provided)
+  - [x]  `C_Logout`
+  - [x]  `C_GetInfo`
+  - [x]  `C_GetSlotList`
+  - [x]  `C_GetSlotInfo`
+  - [x]  `C_GetTokenInfo`
+  - [x]  `C_GetMechanismList`
+  - [x]  `C_GetMechanismInfo`
+  - [x]  `C_OpenSession`
+  - [x]  `C_CloseSession`
+  - [x]  `C_CloseAllSessions`
+  - [x]  `C_GetSessionInfo`
+  - [ ]  `C_InitToken`
+  - [ ]  `C_InitPIN`
+  - [ ]  `C_SetPIN`
+  - [ ]  `C_GetOperationState`
+  - [ ]  `C_SetOperationState`
+  - [ ]  `C_GetFunctionStatus`
+  - [ ]  `C_CancelFunction`
+  - [ ]  `C_WaitForSlotEvent`
+- Signing
+  - [ ]  `C_SignInit`
+  - [ ]  `C_Sign`
+  - [ ]  `C_SignUpdate`
+  - [ ]  `C_SignFinal`
+  - [ ]  `C_SignRecoverInit`
+  - [ ]  `C_SignRecover`
+  - [ ]  `C_VerifyInit`
+  - [ ]  `C_Verify`
+  - [ ]  `C_VerifyUpdate`
+  - [ ]  `C_VerifyFinal`
+  - [ ]  `C_VerifyRecoverInit`
+  - [ ]  `C_VerifyRecover`
+- Digests
+  - [ ]  `C_DigestInit`
+  - [ ]  `C_Digest`
+  - [ ]  `C_DigestUpdate`
+  - [ ]  `C_DigestKey`
+  - [ ]  `C_DigestFinal`
+  - [ ]  `C_DigestEncryptUpdate`
+  - [ ]  `C_DecryptDigestUpdate`
+  - [ ]  `C_SignEncryptUpdate`
+  - [ ]  `C_DecryptVerifyUpdate`
+- Random Number Generation (see note below)
+  - [X]  `C_SeedRandom`
+  - [X]  `C_GenerateRandom`
+
+## Limitations and Notes
+
+Due to the nature of Vault, the KMIP Secrets Engine, and PKCS#11, there are some other limitations to be aware of:
+
+- The key and object IDs returned by `C_FindObjects`, etc., are randomized for each session, and cannot be shared between sessions; they have no meaning after a session is closed.
+  This is because KMIP objects, which are used to store the PKCS#11 objects, have long random strings as IDs, but the PKCS#11 object ID is limited to a 32-bit integer. Also, the PKCS#11 provider does not have any local storage.
+- The PKCS#11 provider's performance is heavily dependent on the latency to the Vault server and its performance.
+  This is because nearly all PKCS#11 API calls are translated 1-1 to KMIP calls, aside from some object attribute calls (which can be locally cached).
+  Multiple sessions can be safely used simultaneously though, and a single Vault server node has been tested as supporting thousands of ongoing sessions.
+- The object attribute cache is valid only for a single object per session, and will be cleared when another object's attributes are queried.
+- The random number generator function, `C_GenerateRandom`, is currently implemented in software in the library by calling out to Go's [`crypto/rand`](https://pkg.go.dev/crypto/rand) package,
+  and does **not** call Vault.

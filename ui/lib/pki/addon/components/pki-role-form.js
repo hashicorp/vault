@@ -1,5 +1,4 @@
 import Component from '@glimmer/component';
-import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
@@ -14,7 +13,7 @@ import { tracked } from '@glimmer/tracking';
  * ```
  * @callback onCancel
  * @callback onSave
- * @param {Object} model - Pki-role-engine model.
+ * @param {Object} model - pki/role model.
  * @param {onCancel} onCancel - Callback triggered when cancel button is clicked.
  * @param {onSave} onSave - Callback triggered on save success.
  */
@@ -22,10 +21,23 @@ import { tracked } from '@glimmer/tracking';
 export default class PkiRoleForm extends Component {
   @service store;
   @service flashMessages;
+  @service secretMountPath;
 
   @tracked errorBanner;
   @tracked invalidFormAlert;
   @tracked modelValidations;
+
+  get breadcrumbs() {
+    const crumbs = [
+      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: this.secretMountPath.currentPath, route: 'overview' },
+      { label: 'roles', route: 'roles.index' },
+    ];
+    if (!this.args.model.isNew) {
+      crumbs.push({ label: this.args.model.id, route: 'roles.role.details' }, { label: 'edit' });
+    }
+    return crumbs;
+  }
 
   @task
   *save(event) {
@@ -45,12 +57,5 @@ export default class PkiRoleForm extends Component {
       this.errorBanner = message;
       this.invalidFormAlert = 'There was an error submitting this form.';
     }
-  }
-
-  @action
-  cancel() {
-    const method = this.args.model.isNew ? 'unloadRecord' : 'rollbackAttributes';
-    this.args.model[method]();
-    this.args.onCancel();
   }
 }

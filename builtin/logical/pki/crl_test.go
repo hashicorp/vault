@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
+
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -19,7 +21,7 @@ import (
 
 func TestBackend_CRL_EnableDisableRoot(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
 		"ttl":         "40h",
@@ -35,7 +37,7 @@ func TestBackend_CRL_EnableDisableRoot(t *testing.T) {
 
 func TestBackend_CRLConfigUpdate(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	// Write a legacy config to storage.
 	type legacyConfig struct {
@@ -79,7 +81,7 @@ func TestBackend_CRLConfig(t *testing.T) {
 	for _, tc := range tests {
 		name := fmt.Sprintf("%s-%t-%t", tc.expiry, tc.disable, tc.ocspDisable)
 		t.Run(name, func(t *testing.T) {
-			b, s := createBackendWithStorage(t)
+			b, s := CreateBackendWithStorage(t)
 
 			resp, err := CBWrite(b, s, "config/crl", map[string]interface{}{
 				"expiry":                    tc.expiry,
@@ -89,9 +91,12 @@ func TestBackend_CRLConfig(t *testing.T) {
 				"auto_rebuild":              tc.autoRebuild,
 				"auto_rebuild_grace_period": tc.autoRebuildGracePeriod,
 			})
-			requireSuccessNilResponse(t, resp, err)
+			requireSuccessNonNilResponse(t, resp, err)
+			schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("config/crl"), logical.UpdateOperation), resp, true)
 
 			resp, err = CBRead(b, s, "config/crl")
+			schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("config/crl"), logical.ReadOperation), resp, true)
+
 			requireSuccessNonNilResponse(t, resp, err)
 			requireFieldsSetInResp(t, resp, "disable", "expiry", "ocsp_disable", "auto_rebuild", "auto_rebuild_grace_period")
 
@@ -123,7 +128,7 @@ func TestBackend_CRLConfig(t *testing.T) {
 	for _, tc := range badValueTests {
 		name := fmt.Sprintf("bad-%s-%s-%s", tc.expiry, tc.disable, tc.ocspDisable)
 		t.Run(name, func(t *testing.T) {
-			b, s := createBackendWithStorage(t)
+			b, s := CreateBackendWithStorage(t)
 
 			_, err := CBWrite(b, s, "config/crl", map[string]interface{}{
 				"expiry":                    tc.expiry,
@@ -144,43 +149,44 @@ func TestBackend_CRL_AllKeyTypeSigAlgos(t *testing.T) {
 	type testCase struct {
 		KeyType string
 		KeyBits int
+		SigBits int
+		UsePSS  bool
 		SigAlgo string
 	}
 
 	testCases := []testCase{
-		{"rsa", 2048, "SHA256WithRSA"},
-		{"rsa", 2048, "SHA384WithRSA"},
-		{"rsa", 2048, "SHA512WithRSA"},
-		{"rsa", 2048, "SHA256WithRSAPSS"},
-		{"rsa", 2048, "SHA384WithRSAPSS"},
-		{"rsa", 2048, "SHA512WithRSAPSS"},
-		{"ec", 256, "ECDSAWithSHA256"},
-		{"ec", 384, "ECDSAWithSHA384"},
-		{"ec", 521, "ECDSAWithSHA512"},
-		{"ed25519", 0, "PureEd25519"},
+		{"rsa", 2048, 256, false, "SHA256WithRSA"},
+		{"rsa", 2048, 384, false, "SHA384WithRSA"},
+		{"rsa", 2048, 512, false, "SHA512WithRSA"},
+		{"rsa", 2048, 256, true, "SHA256WithRSAPSS"},
+		{"rsa", 2048, 384, true, "SHA384WithRSAPSS"},
+		{"rsa", 2048, 512, true, "SHA512WithRSAPSS"},
+		{"ec", 256, 256, false, "ECDSAWithSHA256"},
+		{"ec", 384, 384, false, "ECDSAWithSHA384"},
+		{"ec", 521, 521, false, "ECDSAWithSHA512"},
+		{"ed25519", 0, 0, false, "Ed25519"},
 	}
 
 	for index, tc := range testCases {
 		t.Logf("tv %v", index)
-		b, s := createBackendWithStorage(t)
+		b, s := CreateBackendWithStorage(t)
 
 		resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
-			"ttl":         "40h",
-			"common_name": "myvault.com",
-			"key_type":    tc.KeyType,
-			"key_bits":    tc.KeyBits,
+			"ttl":            "40h",
+			"common_name":    "myvault.com",
+			"key_type":       tc.KeyType,
+			"key_bits":       tc.KeyBits,
+			"signature_bits": tc.SigBits,
+			"use_pss":        tc.UsePSS,
 		})
 		if err != nil {
 			t.Fatalf("tc %v: %v", index, err)
 		}
 		caSerial := resp.Data["serial_number"].(string)
 
-		_, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
-			"revocation_signature_algorithm": tc.SigAlgo,
-		})
-		if err != nil {
-			t.Fatalf("tc %v: %v", index, err)
-		}
+		resp, err = CBRead(b, s, "issuer/default")
+		requireSuccessNonNilResponse(t, resp, err, "fetching issuer should return data")
+		require.Equal(t, tc.SigAlgo, resp.Data["revocation_signature_algorithm"])
 
 		crlEnableDisableTestForBackend(t, b, s, []string{caSerial})
 
@@ -206,7 +212,7 @@ func TestBackend_CRL_EnableDisableIntermediateWithoutRoot(t *testing.T) {
 }
 
 func crlEnableDisableIntermediateTestForBackend(t *testing.T, withRoot bool) {
-	b_root, s_root := createBackendWithStorage(t)
+	b_root, s_root := CreateBackendWithStorage(t)
 
 	resp, err := CBWrite(b_root, s_root, "root/generate/internal", map[string]interface{}{
 		"ttl":         "40h",
@@ -217,7 +223,7 @@ func crlEnableDisableIntermediateTestForBackend(t *testing.T, withRoot bool) {
 	}
 	rootSerial := resp.Data["serial_number"].(string)
 
-	b_int, s_int := createBackendWithStorage(t)
+	b_int, s_int := CreateBackendWithStorage(t)
 
 	resp, err = CBWrite(b_int, s_int, "intermediate/generate/internal", map[string]interface{}{
 		"common_name": "intermediate myvault.com",
@@ -370,7 +376,7 @@ func crlEnableDisableTestForBackend(t *testing.T, b *backend, s logical.Storage,
 func TestBackend_Secondary_CRL_Rebuilding(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
 
 	// Write out the issuer/key to storage without going through the api call as replication would.
@@ -395,7 +401,7 @@ func TestBackend_Secondary_CRL_Rebuilding(t *testing.T) {
 func TestCrlRebuilder(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
 
 	// Write out the issuer/key to storage without going through the api call as replication would.
@@ -403,18 +409,17 @@ func TestCrlRebuilder(t *testing.T) {
 	_, _, err := sc.writeCaBundle(bundle, "", "")
 	require.NoError(t, err)
 
-	req := &logical.Request{Storage: s}
 	cb := newCRLBuilder(true /* can rebuild and write CRLs */)
 
 	// Force an initial build
-	err = cb.rebuild(ctx, b, req, true)
+	err = cb.rebuild(sc, true)
 	require.NoError(t, err, "Failed to rebuild CRL")
 
 	resp := requestCrlFromBackend(t, s, b)
 	crl1 := parseCrlPemBytes(t, resp.Data["http_raw_body"].([]byte))
 
 	// We shouldn't rebuild within this call.
-	err = cb.rebuildIfForced(ctx, b, req)
+	err = cb.rebuildIfForced(sc)
 	require.NoError(t, err, "Failed to rebuild if forced CRL")
 	resp = requestCrlFromBackend(t, s, b)
 	crl2 := parseCrlPemBytes(t, resp.Data["http_raw_body"].([]byte))
@@ -431,9 +436,11 @@ func TestCrlRebuilder(t *testing.T) {
 
 	// This should rebuild the CRL
 	cb.requestRebuildIfActiveNode(b)
-	err = cb.rebuildIfForced(ctx, b, req)
+	err = cb.rebuildIfForced(sc)
 	require.NoError(t, err, "Failed to rebuild if forced CRL")
 	resp = requestCrlFromBackend(t, s, b)
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("crl/pem"), logical.ReadOperation), resp, true)
+
 	crl3 := parseCrlPemBytes(t, resp.Data["http_raw_body"].([]byte))
 	require.True(t, crl1.ThisUpdate.Before(crl3.ThisUpdate),
 		"initial crl time: %#v not before next crl rebuild time: %#v", crl1.ThisUpdate, crl3.ThisUpdate)
@@ -442,7 +449,7 @@ func TestCrlRebuilder(t *testing.T) {
 func TestBYOC(t *testing.T) {
 	t.Parallel()
 
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	// Create a root CA.
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
@@ -561,7 +568,7 @@ func TestBYOC(t *testing.T) {
 func TestPoP(t *testing.T) {
 	t.Parallel()
 
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	// Create a root CA.
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
@@ -721,7 +728,15 @@ func TestPoP(t *testing.T) {
 func TestIssuerRevocation(t *testing.T) {
 	t.Parallel()
 
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
+
+	// Write a config with auto-rebuilding so that we can verify stuff doesn't
+	// appear on the delta CRL.
+	_, err := CBWrite(b, s, "config/crl", map[string]interface{}{
+		"auto_rebuild": true,
+		"enable_delta": true,
+	})
+	require.NoError(t, err)
 
 	// Create a root CA.
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
@@ -758,6 +773,8 @@ func TestIssuerRevocation(t *testing.T) {
 
 	// Revoke it.
 	resp, err = CBWrite(b, s, "issuer/root2/revoke", map[string]interface{}{})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("issuer/root2/revoke"), logical.UpdateOperation), resp, true)
+
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotZero(t, resp.Data["revocation_time"])
@@ -788,7 +805,7 @@ func TestIssuerRevocation(t *testing.T) {
 	require.NoError(t, err)
 
 	// Issue a leaf cert and ensure it fails (because the issuer is revoked).
-	_, err = CBWrite(b, s, "issuer/root2/issue/local-testing", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issuer/root2/issue/local-testing", map[string]interface{}{
 		"common_name": "testing",
 	})
 	require.Error(t, err)
@@ -814,6 +831,8 @@ func TestIssuerRevocation(t *testing.T) {
 	resp, err = CBWrite(b, s, "intermediate/set-signed", map[string]interface{}{
 		"certificate": intCert,
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("intermediate/set-signed"), logical.UpdateOperation), resp, true)
+
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotEmpty(t, resp.Data["imported_issuers"])
@@ -829,6 +848,8 @@ func TestIssuerRevocation(t *testing.T) {
 	resp, err = CBWrite(b, s, "issuer/int1/issue/local-testing", map[string]interface{}{
 		"common_name": "testing",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("issuer/int1/issue/local-testing"), logical.UpdateOperation), resp, true)
+
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotEmpty(t, resp.Data["certificate"])
@@ -846,6 +867,10 @@ func TestIssuerRevocation(t *testing.T) {
 	require.NoError(t, err)
 	crl = getParsedCrlFromBackend(t, b, s, "issuer/root/crl/der")
 	requireSerialNumberInCRL(t, crl.TBSCertList, intCertSerial)
+	crl = getParsedCrlFromBackend(t, b, s, "issuer/root/crl/delta/der")
+	if requireSerialNumberInCRL(nil, crl.TBSCertList, intCertSerial) {
+		t.Fatalf("expected intermediate serial NOT to appear on root's delta CRL, but did")
+	}
 
 	// Ensure we can still revoke the issued leaf.
 	resp, err = CBWrite(b, s, "revoke", map[string]interface{}{
@@ -892,11 +917,13 @@ func TestAutoRebuild(t *testing.T) {
 		},
 		// See notes below about usage of /sys/raw for reading cluster
 		// storage without barrier encryption.
-		EnableRaw: true,
+		EnableRaw:      true,
+		RollbackPeriod: newPeriod,
 	}
-	cluster := vault.CreateTestClusterWithRollbackPeriod(t, newPeriod, coreConfig, &vault.TestClusterOptions{
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
+	cluster.Start()
 	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
 
@@ -965,8 +992,9 @@ func TestAutoRebuild(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	crl := getCrlCertificateList(t, client, "pki")
-	lastCRLNumber := crl.Version
+	defaultCrlPath := "/v1/pki/crl"
+	crl := getParsedCrlAtPath(t, client, defaultCrlPath).TBSCertList
+	lastCRLNumber := getCRLNumber(t, crl)
 	lastCRLExpiry := crl.NextUpdate
 	requireSerialNumberInCRL(t, crl, leafSerial)
 
@@ -979,6 +1007,12 @@ func TestAutoRebuild(t *testing.T) {
 		"delta_rebuild_interval":    deltaPeriod,
 	})
 	require.NoError(t, err)
+
+	// Wait for the CRL to update based on the configuration change we just did
+	// so that it doesn't grab the revocation we are going to do afterwards.
+	crl = waitForUpdatedCrl(t, client, defaultCrlPath, lastCRLNumber, lastCRLExpiry.Sub(time.Now()))
+	lastCRLNumber = getCRLNumber(t, crl)
+	lastCRLExpiry = crl.NextUpdate
 
 	// Issue a cert and revoke it.
 	resp, err = client.Logical().Write("pki/issue/local-testing", map[string]interface{}{
@@ -1027,7 +1061,7 @@ func TestAutoRebuild(t *testing.T) {
 
 	// New serial should not appear on CRL.
 	crl = getCrlCertificateList(t, client, "pki")
-	thisCRLNumber := crl.Version
+	thisCRLNumber := getCRLNumber(t, crl)
 	requireSerialNumberInCRL(t, crl, leafSerial) // But the old one should.
 	now := time.Now()
 	graceInterval, _ := time.ParseDuration(gracePeriod)
@@ -1048,7 +1082,7 @@ func TestAutoRebuild(t *testing.T) {
 	}
 
 	// This serial should exist in the delta WAL section for the mount...
-	resp, err = client.Logical().List("sys/raw/logical/" + pkiMount + "/" + deltaWALPath)
+	resp, err = client.Logical().List("sys/raw/logical/" + pkiMount + "/" + localDeltaWALPath)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotEmpty(t, resp.Data)
@@ -1068,7 +1102,7 @@ func TestAutoRebuild(t *testing.T) {
 		default:
 			// Check and see if there's a storage entry for the last rebuild
 			// serial. If so, validate the delta CRL contains this entry.
-			resp, err = client.Logical().List("sys/raw/logical/" + pkiMount + "/" + deltaWALPath)
+			resp, err = client.Logical().List("sys/raw/logical/" + pkiMount + "/" + localDeltaWALPath)
 			require.NoError(t, err)
 			require.NotNil(t, resp)
 			require.NotEmpty(t, resp.Data)
@@ -1089,7 +1123,7 @@ func TestAutoRebuild(t *testing.T) {
 			}
 
 			// Read the marker and see if its correct.
-			resp, err = client.Logical().Read("sys/raw/logical/" + pkiMount + "/" + deltaWALLastBuildSerial)
+			resp, err = client.Logical().Read("sys/raw/logical/" + pkiMount + "/" + localDeltaWALLastBuildSerial)
 			require.NoError(t, err)
 			if resp == nil {
 				time.Sleep(1 * time.Second)
@@ -1112,8 +1146,13 @@ func TestAutoRebuild(t *testing.T) {
 			deltaCrl := getParsedCrlAtPath(t, client, "/v1/pki/crl/delta").TBSCertList
 			if !requireSerialNumberInCRL(nil, deltaCrl, newLeafSerial) {
 				// Check if it is on the main CRL because its already regenerated.
-				mainCRL := getParsedCrlAtPath(t, client, "/v1/pki/crl").TBSCertList
+				mainCRL := getParsedCrlAtPath(t, client, defaultCrlPath).TBSCertList
 				requireSerialNumberInCRL(t, mainCRL, newLeafSerial)
+			} else {
+				referenceCrlNum := getCrlReferenceFromDelta(t, deltaCrl)
+				if lastCRLNumber < referenceCrlNum {
+					lastCRLNumber = referenceCrlNum
+				}
 			}
 		}
 	}
@@ -1124,38 +1163,15 @@ func TestAutoRebuild(t *testing.T) {
 		time.Sleep(expectedUpdate.Sub(now))
 	}
 
-	// Otherwise, the absolute latest we're willing to wait is some delta
-	// after CRL expiry (to let stuff regenerate &c).
-	interruptChan = time.After(lastCRLExpiry.Sub(now) + delta)
-	for {
-		select {
-		case <-interruptChan:
-			t.Fatalf("expected CRL to regenerate prior to CRL expiry (plus %v grace period)", delta)
-		default:
-			crl = getCrlCertificateList(t, client, "pki")
-			if crl.NextUpdate.Equal(lastCRLExpiry) {
-				// Hack to ensure we got a net-new CRL. If we didn't, we can
-				// exit this default conditional and wait for the next
-				// go-round. When the timer fires, it'll populate the channel
-				// and we'll exit correctly.
-				time.Sleep(1 * time.Second)
-				break
-			}
-
-			now := time.Now()
-			require.True(t, crl.ThisUpdate.Before(now))
-			require.True(t, crl.NextUpdate.After(now))
-			requireSerialNumberInCRL(t, crl, leafSerial)
-			requireSerialNumberInCRL(t, crl, newLeafSerial)
-			return
-		}
-	}
+	crl = waitForUpdatedCrl(t, client, defaultCrlPath, lastCRLNumber, lastCRLExpiry.Sub(now)+delta)
+	requireSerialNumberInCRL(t, crl, leafSerial)
+	requireSerialNumberInCRL(t, crl, newLeafSerial)
 }
 
 func TestTidyIssuerAssociation(t *testing.T) {
 	t.Parallel()
 
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	// Create a root CA.
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{

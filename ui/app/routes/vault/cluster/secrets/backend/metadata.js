@@ -11,7 +11,7 @@ export default class MetadataShow extends Route {
   }
 
   model(params) {
-    let { secret } = params;
+    const { secret } = params;
     this.id = secret;
     return this.store
       .queryRecord('secret-v2', {

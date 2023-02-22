@@ -3,16 +3,16 @@
   "description": "HashiCorp Vault documentation website",
   "version": "1.0.0",
   "author": "HashiCorp",
-  "dependencies": {},
   "devDependencies": {
-    "@hashicorp/platform-cli": "^1.2.0",
+    "@hashicorp/platform-cli": "^2.5.1",
     "dart-linkcheck": "2.0.15",
-    "simple-git-hooks": "^2.6.1",
-    "prettier": "2.2.1"
+    "next": "^12.3.1",
+    "prettier": "2.2.1",
+    "simple-git-hooks": "^2.6.1"
   },
   "engines": {
     "npm": ">=7.0.0",
-    "node": ">=12.0.0"
+    "node": ">=12.0.0 <= 16.x"
   },
   "repository": {
     "type": "git",

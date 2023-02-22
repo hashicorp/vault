@@ -14,7 +14,7 @@ export default Adapter.extend({
     return url;
   },
   optionsForQuery(id) {
-    let data = {};
+    const data = {};
     if (!id) {
       data['list'] = true;
     }

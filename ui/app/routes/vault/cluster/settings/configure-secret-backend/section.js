@@ -1,12 +1,16 @@
 import AdapterError from '@ember-data/adapter/error';
 import { set } from '@ember/object';
 import Route from '@ember/routing/route';
+import { inject as service } from '@ember/service';
 
 // ARG TODO glimmerize
 const SECTIONS_FOR_TYPE = {
   pki: ['cert', 'urls', 'crl', 'tidy'],
 };
+
 export default Route.extend({
+  store: service(),
+
   fetchModel() {
     const { section_name: sectionName } = this.paramsFor(this.routeName);
     const backendModel = this.modelFor('vault.cluster.settings.configure-secret-backend');

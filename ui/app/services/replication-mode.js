@@ -4,7 +4,7 @@ export default Service.extend({
   mode: null,
 
   getMode() {
-    this.mode;
+    return this.mode;
   },
 
   setMode(mode) {

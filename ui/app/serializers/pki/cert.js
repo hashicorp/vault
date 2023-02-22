@@ -2,7 +2,7 @@ import RESTSerializer from '@ember-data/serializer/rest';
 import { isNone, isBlank } from '@ember/utils';
 import { assign } from '@ember/polyfills';
 import { decamelize } from '@ember/string';
-import { parsePkiCert } from '../../helpers/parse-pki-cert';
+import { parsePkiCert } from 'vault/utils/parse-pki-cert';
 
 export default RESTSerializer.extend({
   keyForAttribute: function (attr) {
@@ -22,8 +22,8 @@ export default RESTSerializer.extend({
 
   normalizeItems(payload) {
     if (payload.data && payload.data.keys && Array.isArray(payload.data.keys)) {
-      let ret = payload.data.keys.map((key) => {
-        let model = {
+      const ret = payload.data.keys.map((key) => {
+        const model = {
           id_for_nav: `cert/${key}`,
           id: key,
         };
@@ -45,7 +45,7 @@ export default RESTSerializer.extend({
     let transformedPayload, certMetadata;
     // hits cert/list endpoint first which returns an array of keys, only want to parse if response contains certificates
     if (!Array.isArray(responseJSON)) {
-      certMetadata = parsePkiCert([responseJSON]);
+      certMetadata = parsePkiCert(responseJSON);
       transformedPayload = { [modelName]: { ...certMetadata, ...responseJSON } };
     } else {
       transformedPayload = { [modelName]: responseJSON };

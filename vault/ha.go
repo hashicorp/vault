@@ -6,6 +6,8 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"os"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -86,6 +88,49 @@ func (c *Core) StandbyStates() (standby, perfStandby bool) {
 	perfStandby = c.perfStandby
 	c.stateLock.RUnlock()
 	return
+}
+
+// getHAMembers retrieves cluster membership that doesn't depend on raft. This should only ever be called by the
+// active node.
+func (c *Core) getHAMembers() ([]HAStatusNode, error) {
+	hostname, err := os.Hostname()
+	if err != nil {
+		return nil, err
+	}
+
+	leader := HAStatusNode{
+		Hostname:       hostname,
+		APIAddress:     c.redirectAddr,
+		ClusterAddress: c.ClusterAddr(),
+		ActiveNode:     true,
+		Version:        c.effectiveSDKVersion,
+	}
+
+	if rb := c.getRaftBackend(); rb != nil {
+		leader.UpgradeVersion = rb.EffectiveVersion()
+		leader.RedundancyZone = rb.RedundancyZone()
+	}
+
+	nodes := []HAStatusNode{leader}
+
+	for _, peerNode := range c.GetHAPeerNodesCached() {
+		lastEcho := peerNode.LastEcho
+		nodes = append(nodes, HAStatusNode{
+			Hostname:       peerNode.Hostname,
+			APIAddress:     peerNode.APIAddress,
+			ClusterAddress: peerNode.ClusterAddress,
+			LastEcho:       &lastEcho,
+			Version:        peerNode.Version,
+			UpgradeVersion: peerNode.UpgradeVersion,
+			RedundancyZone: peerNode.RedundancyZone,
+		})
+	}
+
+	sort.Slice(nodes, func(i, j int) bool {
+		return nodes[i].APIAddress < nodes[j].APIAddress
+	})
+
+	return nodes, nil
 }
 
 // Leader is used to get the current active leader
@@ -390,6 +435,17 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 		})
 	}
 	{
+		metricsStop := make(chan struct{})
+
+		g.Add(func() error {
+			c.metricsLoop(metricsStop)
+			return nil
+		}, func(error) {
+			close(metricsStop)
+			c.logger.Debug("shutting down periodic metrics")
+		})
+	}
+	{
 		// Wait for leadership
 		leaderStopCh := make(chan struct{})
 
@@ -607,10 +663,12 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 			// Spawn this in a go routine so we can cancel the context and
 			// unblock any inflight requests that are holding the statelock.
 			go func() {
+				timer := time.NewTimer(DefaultMaxRequestDuration)
 				select {
 				case <-activeCtx.Done():
-				// Attempt to drain any inflight requests
-				case <-time.After(DefaultMaxRequestDuration):
+					timer.Stop()
+					// Attempt to drain any inflight requests
+				case <-timer.C:
 					activeCtxCancel()
 				}
 			}()
@@ -740,8 +798,9 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 
 	clusterAddr := ""
 	for {
+		timer := time.NewTimer(leaderCheckInterval)
 		select {
-		case <-time.After(leaderCheckInterval):
+		case <-timer.C:
 			count := atomic.AddInt32(opCount, 1)
 			if count > 1 {
 				atomic.AddInt32(opCount, -1)
@@ -774,6 +833,7 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 				atomic.AddInt32(lopCount, -1)
 			}()
 		case <-stopCh:
+			timer.Stop()
 			return
 		}
 	}
@@ -786,8 +846,9 @@ func (c *Core) periodicCheckKeyUpgrades(ctx context.Context, stopCh chan struct{
 
 	opCount := new(int32)
 	for {
+		timer := time.NewTimer(keyRotateCheckInterval)
 		select {
-		case <-time.After(keyRotateCheckInterval):
+		case <-timer.C:
 			count := atomic.AddInt32(opCount, 1)
 			if count > 1 {
 				atomic.AddInt32(opCount, -1)
@@ -843,6 +904,7 @@ func (c *Core) periodicCheckKeyUpgrades(ctx context.Context, stopCh chan struct{
 				return
 			}()
 		case <-stopCh:
+			timer.Stop()
 			return
 		}
 	}
@@ -974,9 +1036,11 @@ func (c *Core) acquireLock(lock physical.Lock, stopCh <-chan struct{}) <-chan st
 
 		// Retry the acquisition
 		c.logger.Error("failed to acquire lock", "error", err)
+		timer := time.NewTimer(lockRetryInterval)
 		select {
-		case <-time.After(lockRetryInterval):
+		case <-timer.C:
 		case <-stopCh:
+			timer.Stop()
 			return nil
 		}
 	}
@@ -1043,13 +1107,15 @@ func (c *Core) cleanLeaderPrefix(ctx context.Context, uuid string, leaderLostCh 
 		return
 	}
 	for len(keys) > 0 {
+		timer := time.NewTimer(leaderPrefixCleanDelay)
 		select {
-		case <-time.After(leaderPrefixCleanDelay):
+		case <-timer.C:
 			if keys[0] != uuid {
 				c.barrier.Delete(ctx, coreLeaderPrefix+keys[0])
 			}
 			keys = keys[1:]
 		case <-leaderLostCh:
+			timer.Stop()
 			return
 		}
 	}

@@ -1,0 +1,33 @@
+# This workflow checks that there is either a 'pr/no-milestone' label applied to a PR
+# or there is a milestone associated with a PR
+
+name: Check Milestone
+
+on:
+  pull_request:
+    types: [opened, synchronize, labeled, unlabeled]
+    # Runs on PRs to main and release branches
+    branches:
+      - main
+      - release/**
+
+jobs:
+  # checks that a milestone entry is present for a PR
+  milestone-check:
+    # If there  a `pr/no-milestone` label we ignore this check
+    if: "!contains(github.event.pull_request.labels.*.name, 'pr/no-milestone')"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Actions
+        uses: actions/checkout@v2
+        with:
+          repository: "grafana/grafana-github-actions"
+          path: ./actions
+          ref: main
+      - name: Install Actions
+        run: npm install --production --prefix ./actions
+      - name: Run PR Checks
+        uses: ./actions/pr-checks
+        with:
+          token: ${{secrets.GITHUB_TOKEN}}
+          configPath: configs/milestone-check

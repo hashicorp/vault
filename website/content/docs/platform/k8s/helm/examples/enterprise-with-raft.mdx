@@ -15,12 +15,12 @@ Integrated Storage (raft) can be enabled using the `server.ha.raft.enabled` valu
 ```shell
 helm install vault hashicorp/vault \
   --set='server.image.repository=hashicorp/vault-enterprise' \
-  --set='server.image.tag=1.11.3-ent' \
+  --set='server.image.tag=1.12.1-ent' \
   --set='server.ha.enabled=true' \
   --set='server.ha.raft.enabled=true'
 ```
 
--> For license configuration refer to [Running Vault Enterprise](/docs/platform/k8s/helm/enterprise).
+-> For license configuration refer to [Running Vault Enterprise](/vault/docs/platform/k8s/helm/enterprise).
 
 Next, initialize and unseal `vault-0` pod:
 
@@ -52,7 +52,7 @@ kubectl exec -ti vault-0 -- vault login
 Next, list all the raft peers:
 
 ```shell
-kubectl exec -ti vault-0 -- vault operator raft list-peers
+$ kubectl exec -ti vault-0 -- vault operator raft list-peers
 
 Node                                    Address                        State       Voter
 ----                                    -------                        -----       -----

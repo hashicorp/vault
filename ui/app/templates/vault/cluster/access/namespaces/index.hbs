@@ -9,7 +9,7 @@
 
   <Toolbar>
     <ToolbarActions>
-      <ToolbarLink @type="add" @params={{array "vault.cluster.access.namespaces.create"}}>
+      <ToolbarLink @route="vault.cluster.access.namespaces.create" @type="add">
         Create namespace
       </ToolbarLink>
     </ToolbarActions>
@@ -22,9 +22,9 @@
           Create Namespace
         </LinkTo>
 
-        <LearnLink @path="/vault/security/namespaces">
+        <DocLink @path="/vault/tutorials/enterprise/namespaces">
           Learn more
-        </LearnLink>
+        </DocLink>
       </list.empty>
     {{else}}
       <ListItem as |Item|>
@@ -33,7 +33,7 @@
         </Item.content>
         <Item.menu as |m|>
           {{#let (concat this.currentNamespace (if this.currentNamespace "/") list.item.id) as |targetNamespace|}}
-            {{#if (contains targetNamespace this.accessibleNamespaces)}}
+            {{#if (includes targetNamespace this.accessibleNamespaces)}}
               <li class="action">
                 <NamespaceLink @targetNamespace={{targetNamespace}} @class="is-block">
                   Switch to Namespace

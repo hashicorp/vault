@@ -1546,10 +1546,19 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 			return nil, err
 		}
 		if storedQuery == nil {
-			return nil, nil
+			// If the storedQuery is nil, that means there's no historical data to process. But, it's possible there's
+			// still current month data to process, so rather than returning a 204, let's proceed along like we're
+			// just querying the current month.
+			storedQuery = &activity.PrecomputedQuery{
+				StartTime:  startTime,
+				EndTime:    endTime,
+				Namespaces: make([]*activity.NamespaceRecord, 0),
+				Months:     make([]*activity.MonthRecord, 0),
+			}
 		}
 		pq = storedQuery
 	}
+
 	// Calculate the namespace response breakdowns and totals for entities and tokens from the initial
 	// namespace data.
 	totalEntities, totalTokens, byNamespaceResponse, err := a.calculateByNamespaceResponseForQuery(ctx, pq.Namespaces)
@@ -1581,9 +1590,51 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 			return nil, err
 		}
 
-		// Add the current month's namespace data the precomputed query namespaces
-		byNamespaceResponse = append(byNamespaceResponse, byNamespaceResponseCurrent...)
+		// Create a mapping of namespace id to slice index, so that we can efficiently update our results without
+		// having to traverse the entire namespace response slice every time.
+		nsrMap := make(map[string]int)
+		for i, nr := range byNamespaceResponse {
+			nsrMap[nr.NamespaceID] = i
+		}
+
+		// Rather than blindly appending, which will create duplicates, check our existing counts against the current
+		// month counts, and append or update as necessary. We also want to account for mounts and their counts.
+		for _, nrc := range byNamespaceResponseCurrent {
+			if ndx, ok := nsrMap[nrc.NamespaceID]; ok {
+				existingRecord := byNamespaceResponse[ndx]
+
+				// Create a map of the existing mounts, so we don't duplicate them
+				mountMap := make(map[string]*ResponseCounts)
+				for _, erm := range existingRecord.Mounts {
+					mountMap[erm.MountPath] = erm.Counts
+				}
+
+				existingRecord.Counts.EntityClients += nrc.Counts.EntityClients
+				existingRecord.Counts.Clients += nrc.Counts.Clients
+				existingRecord.Counts.DistinctEntities += nrc.Counts.DistinctEntities
+				existingRecord.Counts.NonEntityClients += nrc.Counts.NonEntityClients
+				existingRecord.Counts.NonEntityTokens += nrc.Counts.NonEntityTokens
+
+				// Check the current month mounts against the existing mounts and if there are matches, update counts
+				// accordingly. If there is no match, append the new mount to the existing mounts, so it will be counted
+				// later.
+				for _, nrcMount := range nrc.Mounts {
+					if existingRecordMountCounts, ook := mountMap[nrcMount.MountPath]; ook {
+						existingRecordMountCounts.EntityClients += nrcMount.Counts.EntityClients
+						existingRecordMountCounts.Clients += nrcMount.Counts.Clients
+						existingRecordMountCounts.DistinctEntities += nrcMount.Counts.DistinctEntities
+						existingRecordMountCounts.NonEntityClients += nrcMount.Counts.NonEntityClients
+						existingRecordMountCounts.NonEntityTokens += nrcMount.Counts.NonEntityTokens
+					} else {
+						existingRecord.Mounts = append(existingRecord.Mounts, nrcMount)
+					}
+				}
+			} else {
+				byNamespaceResponse = append(byNamespaceResponse, nrc)
+			}
+		}
 	}
+
 	// Sort clients within each namespace
 	a.sortALResponseNamespaces(byNamespaceResponse)
 
@@ -1597,11 +1648,13 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 		if err != nil {
 			return nil, err
 		}
+
 		// Add the namespace attribution for the current month to the newly computed current month value. Note
 		// that transformMonthBreakdowns calculates a superstruct of the required namespace struct due to its
 		// primary use-case being for precomputedQueryWorker, but we will reuse this code for brevity and extract
 		// the namespaces from it.
 		currentMonthNamespaceAttribution := a.transformMonthBreakdowns(partialByMonth)
+
 		// Ensure that there is only one element in this list -- if not, warn.
 		if len(currentMonthNamespaceAttribution) > 1 {
 			a.logger.Warn("more than one month worth of namespace and mount attribution calculated for "+
@@ -1611,6 +1664,7 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 			a.logger.Warn("no month data found, returning query with no namespace attribution for current month")
 		} else {
 			currentMonth.Namespaces = currentMonthNamespaceAttribution[0].Namespaces
+			currentMonth.NewClients.Namespaces = currentMonthNamespaceAttribution[0].NewClients.Namespaces
 		}
 		pq.Months = append(pq.Months, currentMonth)
 		distinctEntitiesResponse += pq.Months[len(pq.Months)-1].NewClients.Counts.EntityClients
@@ -1619,7 +1673,18 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 	// Now populate the response based on breakdowns.
 	responseData := make(map[string]interface{})
 	responseData["start_time"] = pq.StartTime.Format(time.RFC3339)
-	responseData["end_time"] = pq.EndTime.Format(time.RFC3339)
+
+	// If we computed partial counts, we should return the actual end time we computed counts for, not the pre-computed
+	// query end time. If we don't do this, the end_time in the response doesn't match the actual data in the response,
+	// which is confusing. Note that regardless of what end time is given, if it falls within the current month, it will
+	// be set to the end of the current month. This is definitely suboptimal, and possibly confusing, but still an
+	// improvement over using the pre-computed query end time.
+	if computePartial {
+		responseData["end_time"] = endTime.Format(time.RFC3339)
+	} else {
+		responseData["end_time"] = pq.EndTime.Format(time.RFC3339)
+	}
+
 	responseData["by_namespace"] = byNamespaceResponse
 	responseData["total"] = &ResponseCounts{
 		DistinctEntities: distinctEntitiesResponse,
@@ -2101,13 +2166,8 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context) error {
 		for nsID, entry := range byNamespace {
 			mountRecord := make([]*activity.MountRecord, 0, len(entry.Mounts))
 			for mountAccessor, mountData := range entry.Mounts {
-				valResp := a.core.router.ValidateMountByAccessor(mountAccessor)
-				if valResp == nil {
-					// Only persist valid mounts
-					continue
-				}
 				mountRecord = append(mountRecord, &activity.MountRecord{
-					MountPath: valResp.MountPath,
+					MountPath: a.mountAccessorToMountPath(mountAccessor),
 					Counts: &activity.CountsRecord{
 						EntityClients:    len(mountData.Counts.Entities),
 						NonEntityClients: int(mountData.Counts.Tokens) + len(mountData.Counts.NonEntities),
@@ -2274,20 +2334,8 @@ func (a *ActivityLog) transformMonthBreakdowns(byMonth map[int64]*processMonth) 
 			// Process mount specific data within a namespace within a given month
 			mountRecord := make([]*activity.MountRecord, 0, len(nsMap[nsID].Mounts))
 			for mountAccessor, mountData := range nsMap[nsID].Mounts {
-				var displayPath string
-				if mountAccessor == "" {
-					displayPath = "no mount accessor (pre-1.10 upgrade?)"
-				} else {
-					valResp := a.core.router.ValidateMountByAccessor(mountAccessor)
-					if valResp == nil {
-						displayPath = fmt.Sprintf("deleted mount; accessor %q", mountAccessor)
-					} else {
-						displayPath = valResp.MountPath
-					}
-				}
-
 				mountRecord = append(mountRecord, &activity.MountRecord{
-					MountPath: displayPath,
+					MountPath: a.mountAccessorToMountPath(mountAccessor),
 					Counts: &activity.CountsRecord{
 						EntityClients:    len(mountData.Counts.Entities),
 						NonEntityClients: int(mountData.Counts.Tokens) + len(mountData.Counts.NonEntities),

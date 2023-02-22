@@ -1,3 +1,8 @@
-import Route from '@ember/routing/route';
+import PkiKeyRoute from '../key';
 
-export default class PkiKeysKeyDetailsRoute extends Route {}
+export default class PkiKeyDetailsRoute extends PkiKeyRoute {
+  setupController(controller, resolvedModel) {
+    super.setupController(controller, resolvedModel);
+    controller.breadcrumbs.push({ label: resolvedModel.id });
+  }
+}

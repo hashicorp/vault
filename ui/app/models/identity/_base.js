@@ -13,7 +13,7 @@ export default Model.extend({
   }),
 
   identityType: computed('constructor.modelName', function () {
-    let modelType = this.constructor.modelName.split('/')[1];
+    const modelType = this.constructor.modelName.split('/')[1];
     return modelType;
   }),
 });

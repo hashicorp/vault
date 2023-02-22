@@ -63,7 +63,7 @@
             {{/unless}}
             <h5 class="list-header">Namespaces</h5>
           </div>
-          {{#if (contains "" this.lastMenuLeaves)}}
+          {{#if (includes "" this.lastMenuLeaves)}}
             {{! leaf is '' which is the root namespace, and then we need to iterate the root leaves }}
             <div class="leaf-panel {{if (eq '' this.currentLeaf) 'leaf-panel-current' 'leaf-panel-left'}} ">
               {{~#each this.rootLeaves as |rootLeaf|}}

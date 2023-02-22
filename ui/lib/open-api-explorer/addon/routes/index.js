@@ -7,7 +7,7 @@ export default Route.extend({
   // query params, so here we're no-op'ing the model hook
   model() {},
   afterModel() {
-    let warning = `The "Try it out" functionality in this API explorer will make requests to this Vault server on your behalf.
+    const warning = `The "Try it out" functionality in this API explorer will make requests to this Vault server on your behalf.
 
 IF YOUR TOKEN HAS THE PROPER CAPABILITIES, THIS WILL CREATE AND DELETE ITEMS ON THE VAULT SERVER.
 

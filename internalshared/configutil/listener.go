@@ -44,6 +44,7 @@ type Listener struct {
 	Type       string
 	Purpose    []string    `hcl:"-"`
 	PurposeRaw interface{} `hcl:"purpose"`
+	Role       string      `hcl:"role"`
 
 	Address                 string        `hcl:"address"`
 	ClusterAddress          string        `hcl:"cluster_address"`
@@ -181,6 +182,13 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 				}
 
 				l.PurposeRaw = nil
+			}
+
+			switch l.Role {
+			case "default", "metrics_only", "":
+				result.found(l.Type, l.Type)
+			default:
+				return multierror.Prefix(fmt.Errorf("unsupported listener role %q", l.Role), fmt.Sprintf("listeners.%d:", i))
 			}
 		}
 

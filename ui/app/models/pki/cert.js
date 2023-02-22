@@ -96,7 +96,7 @@ export default Model.extend({
   }),
 
   attrs: computed('DISPLAY_FIELDS', 'certificate', 'csr', function () {
-    let keys = this.certificate || this.csr ? this.DISPLAY_FIELDS.slice(0) : [];
+    const keys = this.certificate || this.csr ? this.DISPLAY_FIELDS.slice(0) : [];
     return expandAttributeMeta(this, keys);
   }),
 

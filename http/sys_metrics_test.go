@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/internalshared/configutil"
@@ -14,7 +16,7 @@ func TestSysMetricsUnauthenticated(t *testing.T) {
 	inm := metrics.NewInmemSink(10*time.Second, time.Minute)
 	metrics.DefaultInmemSignal(inm)
 	conf := &vault.CoreConfig{
-		BuiltinRegistry: vault.NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		MetricsHelper:   metricsutil.NewMetricsHelper(inm, true),
 	}
 	core, _, token := vault.TestCoreUnsealedWithConfig(t, conf)

@@ -1,37 +1,31 @@
 import Route from '@ember/routing/route';
-import RSVP from 'rsvp';
+import { hash } from 'rsvp';
 import { action } from '@ember/object';
 import getStorage from 'vault/lib/token-storage';
-
+import { inject as service } from '@ember/service';
 const INPUTTED_START_DATE = 'vault:ui-inputted-start-date';
+
 export default class ClientsRoute extends Route {
+  @service store;
   async getVersionHistory() {
-    try {
-      let arrayOfModels = [];
-      let response = await this.store.findAll('clients/version-history'); // returns a class with nested models
-      response.forEach((model) => {
-        arrayOfModels.push({
-          id: model.id,
-          previousVersion: model.previousVersion,
-          timestampInstalled: model.timestampInstalled,
+    return this.store
+      .findAll('clients/version-history')
+      .then((response) => {
+        return response.map(({ version, previousVersion, timestampInstalled }) => {
+          return {
+            version,
+            previousVersion,
+            timestampInstalled,
+          };
         });
-      });
-      return arrayOfModels;
-    } catch (e) {
-      console.debug(e);
-      return [];
-    }
+      })
+      .catch(() => []);
   }
 
-  async model() {
-    let config = await this.store.queryRecord('clients/config', {}).catch((e) => {
-      console.debug(e);
-      // swallowing error so activity can show if no config permissions
-      return {};
-    });
-
-    return RSVP.hash({
-      config,
+  model() {
+    // swallow config error so activity can show if no config permissions
+    return hash({
+      config: this.store.queryRecord('clients/config', {}).catch(() => {}),
       versionHistory: this.getVersionHistory(),
     });
   }
@@ -39,7 +33,7 @@ export default class ClientsRoute extends Route {
   @action
   async loading(transition) {
     // eslint-disable-next-line ember/no-controller-access-in-routes
-    let controller = this.controllerFor(this.routeName);
+    const controller = this.controllerFor(this.routeName);
     controller.set('currentlyLoading', true);
     transition.promise.finally(function () {
       controller.set('currentlyLoading', false);

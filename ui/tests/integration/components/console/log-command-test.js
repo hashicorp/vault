@@ -10,7 +10,7 @@ module('Integration | Component | console/log command', function (hooks) {
     const commandText = 'list this/path';
     this.set('content', commandText);
 
-    await render(hbs`{{console/log-command content=content}}`);
+    await render(hbs`{{console/log-command content=this.content}}`);
 
     assert.dom('pre').includesText(commandText);
   });

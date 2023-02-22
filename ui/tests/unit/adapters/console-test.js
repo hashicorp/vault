@@ -5,10 +5,10 @@ module('Unit | Adapter | console', function (hooks) {
   setupTest(hooks);
 
   test('it builds the correct URL', function (assert) {
-    let adapter = this.owner.lookup('adapter:console');
-    let sysPath = 'sys/health';
-    let awsPath = 'aws/roles/my-other-role';
-    assert.equal(adapter.buildURL(sysPath), '/v1/sys/health');
-    assert.equal(adapter.buildURL(awsPath), '/v1/aws/roles/my-other-role');
+    const adapter = this.owner.lookup('adapter:console');
+    const sysPath = 'sys/health';
+    const awsPath = 'aws/roles/my-other-role';
+    assert.strictEqual(adapter.buildURL(sysPath), '/v1/sys/health');
+    assert.strictEqual(adapter.buildURL(awsPath), '/v1/aws/roles/my-other-role');
   });
 });

@@ -1,0 +1,8 @@
+[
+    {
+      "type": "check-milestone",
+      "title": "Milestone Check",
+      "success": "Milestone set",
+      "failure": "Milestone not set"
+    }
+  ]

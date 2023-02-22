@@ -22,7 +22,7 @@ export default RESTSerializer.extend({
       payload.type === 'chacha20-poly1305' ||
       payload.type === 'aes128-gcm96'
     ) {
-      for (let version in payload.keys) {
+      for (const version in payload.keys) {
         payload.keys[version] = payload.keys[version] * 1000;
       }
     }

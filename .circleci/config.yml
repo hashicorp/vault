@@ -73,14 +73,17 @@ jobs:
         path: ui/test-results
   build-go-dev:
     machine:
-      image: ubuntu-2004:202201-02
+      image: ubuntu-2004:2022.10.1
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
+    - checkout
     - run:
         command: |
+          GO_VERSION=$(cat .go-version)
           [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
           # Install Go
+          cd ~
           curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
           sudo rm -rf /usr/local/go
           sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
@@ -96,8 +99,6 @@ jobs:
           echo "$ go version"
           go version
         name: Setup Go
-        working_directory: ~/
-    - checkout
     - restore_cache:
         keys:
         - v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
@@ -119,13 +120,13 @@ jobs:
         root: .
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.20
     - GO_TAGS: ''
-    - GO_VERSION: 1.19.1
     - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.19.1
+    - image: docker.mirror.hashicorp.services/cimg/go:1.20
     resource_class: medium
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -144,7 +145,7 @@ jobs:
     - checkout
     - setup_remote_docker:
         docker_layer_caching: true
-        version: 18.09.3
+        version: 20.10.17
     - add_ssh_keys:
         fingerprints:
         - b8:e2:38:f8:5b:1b:82:f3:1f:23:fa:46:6e:95:e7:e9
@@ -219,6 +220,7 @@ jobs:
           # has its own remote docker VM.
 
           make prep
+
           mkdir -p test-results/go-test
 
           # We don't want VAULT_LICENSE set when running Go tests, because that's
@@ -260,10 +262,37 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network ${TEST_DOCKER_NETWORK_NAME} \
-              docker.mirror.hashicorp.services/cimg/go:1.19.1 \
+              $GO_IMAGE \
               tail -f /dev/null)"
             mkdir workspace
             echo ${CONTAINER_ID} > workspace/container_id
+
+            # Hack: Docker permissions appear to have changed; let's explicitly
+            # add a new user/group with the correct host uid to the docker
+            # container, fixing all of these permissions issues correctly. We
+            # then have to run with this user consistently in the future.
+            #
+            # Notably, in this shell pipeline we see:
+            # uid=1001(circleci) gid=1002(circleci) groups=1002(circleci)
+            #
+            # but inside the docker image below, we see:
+            # uid=3434(circleci) gid=3434(circleci) groups=3434(circleci)
+            #
+            # See also: https://github.com/CircleCI-Public/cimg-base/issues/122
+            export HOST_GID="$(id -g)"
+            export HOST_UID="$(id -u)"
+            export CONT_GID="$(docker exec ${CONTAINER_ID} sh -c 'id -g')"
+            export CONT_GNAME="$(docker exec ${CONTAINER_ID} sh -c 'id -g -n')"
+            export CONT_UID="$(docker exec ${CONTAINER_ID} sh -c 'id -u')"
+            if (( HOST_UID != CONT_UID )); then
+              # Only provision a group if necessary; otherwise reuse the
+              # existing one.
+              if (( HOST_GID != CONT_GID )); then
+                docker exec -e HOST_GID -e CONT_GNAME ${CONTAINER_ID} sh -c 'sudo groupmod -g $HOST_GID $CONT_GNAME'
+              fi
+
+              docker exec -e CONT_GNAME -e HOST_UID ${CONTAINER_ID} sh -c 'sudo usermod -a -G $CONT_GNAME -u $HOST_UID circleci'
+            fi
 
             # Run tests
             test -d /tmp/go-cache && docker cp /tmp/go-cache ${CONTAINER_ID}:/tmp/gocache
@@ -323,17 +352,23 @@ jobs:
         path: /tmp/testlogs
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.20
     - GO_TAGS: ''
+    - GOFUMPT_VERSION: 0.3.1
+    - GOTESTSUM_VERSION: 0.5.2
   fmt:
     machine:
-      image: ubuntu-2004:202201-02
+      image: ubuntu-2004:2022.10.1
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
+    - checkout
     - run:
         command: |
+          GO_VERSION=$(cat .go-version)
           [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
           # Install Go
+          cd ~
           curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
           sudo rm -rf /usr/local/go
           sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
@@ -349,8 +384,6 @@ jobs:
           echo "$ go version"
           go version
         name: Setup Go
-        working_directory: ~/
-    - checkout
     - run:
         command: |
           echo "Using gofumpt version ${GOFUMPT_VERSION}"
@@ -363,13 +396,13 @@ jobs:
         name: make fmt
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.20
     - GO_TAGS: ''
-    - GO_VERSION: 1.19.1
     - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.19.1
+    - image: docker.mirror.hashicorp.services/cimg/go:1.20
     resource_class: xlarge
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -459,6 +492,7 @@ jobs:
           # has its own remote docker VM.
 
           make prep
+
           mkdir -p test-results/go-test
 
           # We don't want VAULT_LICENSE set when running Go tests, because that's
@@ -500,10 +534,37 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network ${TEST_DOCKER_NETWORK_NAME} \
-              docker.mirror.hashicorp.services/cimg/go:1.19.1 \
+              $GO_IMAGE \
               tail -f /dev/null)"
             mkdir workspace
             echo ${CONTAINER_ID} > workspace/container_id
+
+            # Hack: Docker permissions appear to have changed; let's explicitly
+            # add a new user/group with the correct host uid to the docker
+            # container, fixing all of these permissions issues correctly. We
+            # then have to run with this user consistently in the future.
+            #
+            # Notably, in this shell pipeline we see:
+            # uid=1001(circleci) gid=1002(circleci) groups=1002(circleci)
+            #
+            # but inside the docker image below, we see:
+            # uid=3434(circleci) gid=3434(circleci) groups=3434(circleci)
+            #
+            # See also: https://github.com/CircleCI-Public/cimg-base/issues/122
+            export HOST_GID="$(id -g)"
+            export HOST_UID="$(id -u)"
+            export CONT_GID="$(docker exec ${CONTAINER_ID} sh -c 'id -g')"
+            export CONT_GNAME="$(docker exec ${CONTAINER_ID} sh -c 'id -g -n')"
+            export CONT_UID="$(docker exec ${CONTAINER_ID} sh -c 'id -u')"
+            if (( HOST_UID != CONT_UID )); then
+              # Only provision a group if necessary; otherwise reuse the
+              # existing one.
+              if (( HOST_GID != CONT_GID )); then
+                docker exec -e HOST_GID -e CONT_GNAME ${CONTAINER_ID} sh -c 'sudo groupmod -g $HOST_GID $CONT_GNAME'
+              fi
+
+              docker exec -e CONT_GNAME -e HOST_UID ${CONTAINER_ID} sh -c 'sudo usermod -a -G $CONT_GNAME -u $HOST_UID circleci'
+            fi
 
             # Run tests
             test -d /tmp/go-cache && docker cp /tmp/go-cache ${CONTAINER_ID}:/tmp/gocache
@@ -557,10 +618,13 @@ jobs:
         path: /tmp/testlogs
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.20
     - GO_TAGS: ''
+    - GOFUMPT_VERSION: 0.3.1
+    - GOTESTSUM_VERSION: 0.5.2
   test-go:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.19.1
+    - image: docker.mirror.hashicorp.services/cimg/go:1.20
     resource_class: large
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -650,6 +714,7 @@ jobs:
           # has its own remote docker VM.
 
           make prep
+
           mkdir -p test-results/go-test
 
           # We don't want VAULT_LICENSE set when running Go tests, because that's
@@ -691,10 +756,37 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network ${TEST_DOCKER_NETWORK_NAME} \
-              docker.mirror.hashicorp.services/cimg/go:1.19.1 \
+              $GO_IMAGE \
               tail -f /dev/null)"
             mkdir workspace
             echo ${CONTAINER_ID} > workspace/container_id
+
+            # Hack: Docker permissions appear to have changed; let's explicitly
+            # add a new user/group with the correct host uid to the docker
+            # container, fixing all of these permissions issues correctly. We
+            # then have to run with this user consistently in the future.
+            #
+            # Notably, in this shell pipeline we see:
+            # uid=1001(circleci) gid=1002(circleci) groups=1002(circleci)
+            #
+            # but inside the docker image below, we see:
+            # uid=3434(circleci) gid=3434(circleci) groups=3434(circleci)
+            #
+            # See also: https://github.com/CircleCI-Public/cimg-base/issues/122
+            export HOST_GID="$(id -g)"
+            export HOST_UID="$(id -u)"
+            export CONT_GID="$(docker exec ${CONTAINER_ID} sh -c 'id -g')"
+            export CONT_GNAME="$(docker exec ${CONTAINER_ID} sh -c 'id -g -n')"
+            export CONT_UID="$(docker exec ${CONTAINER_ID} sh -c 'id -u')"
+            if (( HOST_UID != CONT_UID )); then
+              # Only provision a group if necessary; otherwise reuse the
+              # existing one.
+              if (( HOST_GID != CONT_GID )); then
+                docker exec -e HOST_GID -e CONT_GNAME ${CONTAINER_ID} sh -c 'sudo groupmod -g $HOST_GID $CONT_GNAME'
+              fi
+
+              docker exec -e CONT_GNAME -e HOST_UID ${CONTAINER_ID} sh -c 'sudo usermod -a -G $CONT_GNAME -u $HOST_UID circleci'
+            fi
 
             # Run tests
             test -d /tmp/go-cache && docker cp /tmp/go-cache ${CONTAINER_ID}:/tmp/gocache
@@ -748,7 +840,10 @@ jobs:
         path: /tmp/testlogs
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.20
     - GO_TAGS: ''
+    - GOFUMPT_VERSION: 0.3.1
+    - GOTESTSUM_VERSION: 0.5.2
   semgrep:
     docker:
     - image: docker.mirror.hashicorp.services/returntocorp/semgrep:0.113.0
@@ -763,14 +858,17 @@ jobs:
         name: Run Semgrep Rules
   pre-flight-checks:
     machine:
-      image: ubuntu-2004:202201-02
+      image: ubuntu-2004:2022.10.1
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
+    - checkout
     - run:
         command: |
+          GO_VERSION=$(cat .go-version)
           [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
           # Install Go
+          cd ~
           curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
           sudo rm -rf /usr/local/go
           sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
@@ -786,8 +884,6 @@ jobs:
           echo "$ go version"
           go version
         name: Setup Go
-        working_directory: ~/
-    - checkout
     - run:
         command: |
           export CCI_PATH=/tmp/circleci-cli/$CIRCLECI_CLI_VERSION
@@ -851,13 +947,13 @@ jobs:
         - /home/circleci/go/pkg/mod
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.20
     - GO_TAGS: ''
-    - GO_VERSION: 1.19.1
     - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.19.1
+    - image: docker.mirror.hashicorp.services/cimg/go:1.20
     resource_class: medium
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -876,7 +972,7 @@ jobs:
     - checkout
     - setup_remote_docker:
         docker_layer_caching: true
-        version: 18.09.3
+        version: 20.10.17
     - add_ssh_keys:
         fingerprints:
         - b8:e2:38:f8:5b:1b:82:f3:1f:23:fa:46:6e:95:e7:e9
@@ -951,6 +1047,7 @@ jobs:
           # has its own remote docker VM.
 
           make prep
+
           mkdir -p test-results/go-test
 
           # We don't want VAULT_LICENSE set when running Go tests, because that's
@@ -992,10 +1089,37 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network ${TEST_DOCKER_NETWORK_NAME} \
-              docker.mirror.hashicorp.services/cimg/go:1.19.1 \
+              $GO_IMAGE \
               tail -f /dev/null)"
             mkdir workspace
             echo ${CONTAINER_ID} > workspace/container_id
+
+            # Hack: Docker permissions appear to have changed; let's explicitly
+            # add a new user/group with the correct host uid to the docker
+            # container, fixing all of these permissions issues correctly. We
+            # then have to run with this user consistently in the future.
+            #
+            # Notably, in this shell pipeline we see:
+            # uid=1001(circleci) gid=1002(circleci) groups=1002(circleci)
+            #
+            # but inside the docker image below, we see:
+            # uid=3434(circleci) gid=3434(circleci) groups=3434(circleci)
+            #
+            # See also: https://github.com/CircleCI-Public/cimg-base/issues/122
+            export HOST_GID="$(id -g)"
+            export HOST_UID="$(id -u)"
+            export CONT_GID="$(docker exec ${CONTAINER_ID} sh -c 'id -g')"
+            export CONT_GNAME="$(docker exec ${CONTAINER_ID} sh -c 'id -g -n')"
+            export CONT_UID="$(docker exec ${CONTAINER_ID} sh -c 'id -u')"
+            if (( HOST_UID != CONT_UID )); then
+              # Only provision a group if necessary; otherwise reuse the
+              # existing one.
+              if (( HOST_GID != CONT_GID )); then
+                docker exec -e HOST_GID -e CONT_GNAME ${CONTAINER_ID} sh -c 'sudo groupmod -g $HOST_GID $CONT_GNAME'
+              fi
+
+              docker exec -e CONT_GNAME -e HOST_UID ${CONTAINER_ID} sh -c 'sudo usermod -a -G $CONT_GNAME -u $HOST_UID circleci'
+            fi
 
             # Run tests
             test -d /tmp/go-cache && docker cp /tmp/go-cache ${CONTAINER_ID}:/tmp/gocache
@@ -1055,7 +1179,10 @@ jobs:
         path: /tmp/testlogs
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.20
     - GO_TAGS: ''
+    - GOFUMPT_VERSION: 0.3.1
+    - GOTESTSUM_VERSION: 0.5.2
 workflows:
   ci:
     jobs:

@@ -11,10 +11,10 @@ auto_auth {
 
 cache {
 	use_auto_auth_token = "true"
+	force_auto_auth_token = false
 }
 
 listener "tcp" {
     address = "127.0.0.1:8300"
     tls_disable = true
 }
-

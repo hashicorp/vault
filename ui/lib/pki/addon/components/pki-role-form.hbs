@@ -1,51 +1,101 @@
-<PageHeader as |p|>
-  <p.top>
-    <KeyValueHeader
-      @root={{hash label="role" text="role" path="vault.cluster.secrets.backend.pki.roles.index"}}
-      @isEngine={{true}}
-    >
-      <li>
-        <span class="sep">
-          /
-        </span>
-        <LinkTo @route="roles.index">
-          {{@model.backend}}
-        </LinkTo>
-      </li>
-    </KeyValueHeader>
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      {{#if @model.isNew}}
-        Create a PKI role
-      {{else}}
-        Edit a
-        {{@model.id}}
-      {{/if}}
-    </h1>
-  </p.levelLeft>
-</PageHeader>
-
 <form {{on "submit" (perform this.save)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
     {{! ARG TODO write a test for namespace reminder }}
     <NamespaceReminder @mode={{if @model.isNew "create" "update"}} @noun="PKI role" />
-    <FormFieldGroupsLoop
-      @model={{@model}}
-      @mode={{if @model.isNew "create" "update"}}
-      @modelValidations={{@modelValidations}}
-      @showHelpText={{false}}
-      as |attr|
-    >
-      <RadioSelectTtlOrString @model={{@model}} @attr={{attr}} />
-    </FormFieldGroupsLoop>
+    {{#each @model.formFieldGroups as |fieldGroup|}}
+      {{#each-in fieldGroup as |group fields|}}
+        {{! DEFAULT VIEW }}
+        {{#if (eq group "default")}}
+          {{#each fields as |attr|}}
+            <FormField
+              data-test-field={{attr}}
+              @attr={{attr}}
+              @model={{@model}}
+              @modelValidations={{this.modelValidations}}
+              @showHelpText={{false}}
+            >
+              <PkiNotValidAfterForm @attr={{attr}} @model={{@model}} />
+            </FormField>
+          {{/each}}
+        {{else}}
+          {{#let (camelize (concat "show" group)) as |prop|}}
+            <ToggleButton
+              @isOpen={{get @model prop}}
+              @openLabel={{concat "Hide " group}}
+              @closedLabel={{group}}
+              @onClick={{fn (mut (get @model prop))}}
+              class="is-block"
+              data-test-toggle-group={{group}}
+            />
+            {{#if (get @model prop)}}
+              <div class="box is-tall is-marginless" data-test-toggle-div={{group}}>
+                {{#let (get @model.fieldGroupsInfo group) as |toggleGroup|}}
+                  {{! HEADER }}
+                  {{#if toggleGroup.header}}
+                    <div class="has-bottom-margin-s">
+                      <FormFieldLabel
+                        for={{toggleGroup.header.name}}
+                        @label={{toggleGroup.header.label}}
+                        @subText={{toggleGroup.header.text}}
+                        @docLink={{toggleGroup.header.docLink}}
+                      />
+                    </div>
+                  {{/if}}
+                  {{! FIELDS }}
+                  {{#if (eq group "Key usage")}}
+                    <PkiKeyUsage @model={{@model}} />
+                  {{else if (eq group "Key parameters")}}
+                    <PkiKeyParameters @model={{@model}} @fields={{fields}} />
+                  {{else}}
+                    {{#each fields as |attr|}}
+                      <FormField
+                        data-test-field={{true}}
+                        @attr={{attr}}
+                        @model={{@model}}
+                        @modelValidations={{@modelValidations}}
+                        @showHelpText={{false}}
+                      >
+                        {{yield attr}}
+                      </FormField>
+                    {{/each}}
+                  {{/if}}
+                  {{! FOOTER }}
+                  {{#if toggleGroup.footer}}
+                    <p class="sub-text">
+                      <Icon @name="info" />
+                      {{toggleGroup.footer.text}}
+                      {{#if toggleGroup.footer.docLink}}
+                        <DocLink @path={{toggleGroup.footer.docLink}}>
+                          {{toggleGroup.footer.docText}}
+                        </DocLink>
+                      {{/if}}
+                    </p>
+                  {{/if}}
+                {{/let}}
+              </div>
+            {{/if}}
+          {{/let}}
+        {{/if}}
+      {{/each-in}}
+    {{/each}}
   </div>
   <div class="has-top-padding-s">
-    <button type="submit" class="button is-primary {{if this.save.isRunning 'is-loading'}}" disabled={{this.save.isRunning}}>
+    <button
+      type="submit"
+      class="button is-primary {{if this.save.isRunning 'is-loading'}}"
+      disabled={{this.save.isRunning}}
+      data-test-pki-role-save
+    >
       {{if @model.isNew "Create" "Update"}}
     </button>
-    <button type="button" class="button has-left-margin-s" disabled={{this.save.isRunning}} {{on "click" this.cancel}}>
+    <button
+      type="button"
+      class="button has-left-margin-s"
+      disabled={{this.save.isRunning}}
+      {{on "click" @onCancel}}
+      data-test-pki-role-cancel
+    >
       Cancel
     </button>
     {{#if this.modelValidations.targets.errors}}

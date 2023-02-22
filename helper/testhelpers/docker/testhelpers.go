@@ -1,11 +1,13 @@
 package docker
 
 import (
+	"archive/tar"
 	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -20,6 +22,7 @@ import (
 	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/archive"
+	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
 	"github.com/hashicorp/go-uuid"
 )
@@ -324,12 +327,18 @@ func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*ty
 }
 
 func (d *Runner) Stop(ctx context.Context, containerID string) error {
-	timeout := 5 * time.Second
-	if err := d.DockerAPI.ContainerStop(ctx, containerID, &timeout); err != nil {
-		return err
+	if d.RunOptions.NetworkID != "" {
+		if err := d.DockerAPI.NetworkDisconnect(ctx, d.RunOptions.NetworkID, containerID, true); err != nil {
+			return fmt.Errorf("error disconnecting network (%v): %v", d.RunOptions.NetworkID, err)
+		}
 	}
 
-	return d.DockerAPI.NetworkDisconnect(ctx, d.RunOptions.NetworkID, containerID, true)
+	timeout := 5 * time.Second
+	if err := d.DockerAPI.ContainerStop(ctx, containerID, &timeout); err != nil {
+		return fmt.Errorf("error stopping container: %v", err)
+	}
+
+	return nil
 }
 
 func (d *Runner) Restart(ctx context.Context, containerID string) error {
@@ -369,4 +378,338 @@ func copyToContainer(ctx context.Context, dapi *client.Client, containerID, from
 	}
 
 	return nil
+}
+
+type RunCmdOpt interface {
+	Apply(cfg *types.ExecConfig) error
+}
+
+type RunCmdUser string
+
+var _ RunCmdOpt = (*RunCmdUser)(nil)
+
+func (u RunCmdUser) Apply(cfg *types.ExecConfig) error {
+	cfg.User = string(u)
+	return nil
+}
+
+func (d *Runner) RunCmdWithOutput(ctx context.Context, container string, cmd []string, opts ...RunCmdOpt) ([]byte, []byte, int, error) {
+	runCfg := types.ExecConfig{
+		AttachStdout: true,
+		AttachStderr: true,
+		Cmd:          cmd,
+	}
+
+	for index, opt := range opts {
+		if err := opt.Apply(&runCfg); err != nil {
+			return nil, nil, -1, fmt.Errorf("error applying option (%d / %v): %w", index, opt, err)
+		}
+	}
+
+	ret, err := d.DockerAPI.ContainerExecCreate(ctx, container, runCfg)
+	if err != nil {
+		return nil, nil, -1, fmt.Errorf("error creating execution environment: %v\ncfg: %v\n", err, runCfg)
+	}
+
+	resp, err := d.DockerAPI.ContainerExecAttach(ctx, ret.ID, types.ExecStartCheck{})
+	if err != nil {
+		return nil, nil, -1, fmt.Errorf("error attaching to command execution: %v\ncfg: %v\nret: %v\n", err, runCfg, ret)
+	}
+	defer resp.Close()
+
+	var stdoutB bytes.Buffer
+	var stderrB bytes.Buffer
+	if _, err := stdcopy.StdCopy(&stdoutB, &stderrB, resp.Reader); err != nil {
+		return nil, nil, -1, fmt.Errorf("error reading command output: %v", err)
+	}
+
+	stdout := stdoutB.Bytes()
+	stderr := stderrB.Bytes()
+
+	// Fetch return code.
+	info, err := d.DockerAPI.ContainerExecInspect(ctx, ret.ID)
+	if err != nil {
+		return stdout, stderr, -1, fmt.Errorf("error reading command exit code: %v", err)
+	}
+
+	return stdout, stderr, info.ExitCode, nil
+}
+
+func (d *Runner) RunCmdInBackground(ctx context.Context, container string, cmd []string, opts ...RunCmdOpt) (string, error) {
+	runCfg := types.ExecConfig{
+		AttachStdout: true,
+		AttachStderr: true,
+		Cmd:          cmd,
+	}
+
+	for index, opt := range opts {
+		if err := opt.Apply(&runCfg); err != nil {
+			return "", fmt.Errorf("error applying option (%d / %v): %w", index, opt, err)
+		}
+	}
+
+	ret, err := d.DockerAPI.ContainerExecCreate(ctx, container, runCfg)
+	if err != nil {
+		return "", fmt.Errorf("error creating execution environment: %w\ncfg: %v\n", err, runCfg)
+	}
+
+	err = d.DockerAPI.ContainerExecStart(ctx, ret.ID, types.ExecStartCheck{})
+	if err != nil {
+		return "", fmt.Errorf("error starting command execution: %w\ncfg: %v\nret: %v\n", err, runCfg, ret)
+	}
+
+	return ret.ID, nil
+}
+
+// Mapping of path->contents
+type PathContents interface {
+	UpdateHeader(header *tar.Header) error
+	Get() ([]byte, error)
+}
+
+type FileContents struct {
+	Data []byte
+	Mode int64
+	UID  int
+	GID  int
+}
+
+func (b FileContents) UpdateHeader(header *tar.Header) error {
+	header.Mode = b.Mode
+	header.Uid = b.UID
+	header.Gid = b.GID
+	return nil
+}
+
+func (b FileContents) Get() ([]byte, error) {
+	return b.Data, nil
+}
+
+func PathContentsFromBytes(data []byte) PathContents {
+	return FileContents{
+		Data: data,
+		Mode: 0o644,
+	}
+}
+
+func PathContentsFromString(data string) PathContents {
+	return PathContentsFromBytes([]byte(data))
+}
+
+type BuildContext map[string]PathContents
+
+func NewBuildContext() BuildContext {
+	return BuildContext{}
+}
+
+func BuildContextFromTarball(reader io.Reader) (BuildContext, error) {
+	archive := tar.NewReader(reader)
+	bCtx := NewBuildContext()
+
+	for true {
+		header, err := archive.Next()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+
+			return nil, fmt.Errorf("failed to parse provided tarball: %v", err)
+		}
+
+		data := make([]byte, int(header.Size))
+		read, err := archive.Read(data)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse read from provided tarball: %v", err)
+		}
+
+		if read != int(header.Size) {
+			return nil, fmt.Errorf("unexpectedly short read on tarball: %v of %v", read, header.Size)
+		}
+
+		bCtx[header.Name] = FileContents{
+			Data: data,
+			Mode: header.Mode,
+			UID:  header.Uid,
+			GID:  header.Gid,
+		}
+	}
+
+	return bCtx, nil
+}
+
+func (bCtx *BuildContext) ToTarball() (io.Reader, error) {
+	var err error
+	buffer := new(bytes.Buffer)
+	tarBuilder := tar.NewWriter(buffer)
+	defer tarBuilder.Close()
+
+	for filepath, contents := range *bCtx {
+		fileHeader := &tar.Header{Name: filepath}
+		if contents == nil && !strings.HasSuffix(filepath, "/") {
+			return nil, fmt.Errorf("expected file path (%v) to have trailing / due to nil contents, indicating directory", filepath)
+		}
+
+		if err := contents.UpdateHeader(fileHeader); err != nil {
+			return nil, fmt.Errorf("failed to update tar header entry for %v: %w", filepath, err)
+		}
+
+		var rawContents []byte
+		if contents != nil {
+			rawContents, err = contents.Get()
+			if err != nil {
+				return nil, fmt.Errorf("failed to get file contents for %v: %w", filepath, err)
+			}
+
+			fileHeader.Size = int64(len(rawContents))
+		}
+
+		if err := tarBuilder.WriteHeader(fileHeader); err != nil {
+			return nil, fmt.Errorf("failed to write tar header entry for %v: %w", filepath, err)
+		}
+
+		if contents != nil {
+			if _, err := tarBuilder.Write(rawContents); err != nil {
+				return nil, fmt.Errorf("failed to write tar file entry for %v: %w", filepath, err)
+			}
+		}
+	}
+
+	return bytes.NewReader(buffer.Bytes()), nil
+}
+
+type BuildOpt interface {
+	Apply(cfg *types.ImageBuildOptions) error
+}
+
+type BuildRemove bool
+
+var _ BuildOpt = (*BuildRemove)(nil)
+
+func (u BuildRemove) Apply(cfg *types.ImageBuildOptions) error {
+	cfg.Remove = bool(u)
+	return nil
+}
+
+type BuildForceRemove bool
+
+var _ BuildOpt = (*BuildForceRemove)(nil)
+
+func (u BuildForceRemove) Apply(cfg *types.ImageBuildOptions) error {
+	cfg.ForceRemove = bool(u)
+	return nil
+}
+
+type BuildPullParent bool
+
+var _ BuildOpt = (*BuildPullParent)(nil)
+
+func (u BuildPullParent) Apply(cfg *types.ImageBuildOptions) error {
+	cfg.PullParent = bool(u)
+	return nil
+}
+
+type BuildArgs map[string]*string
+
+var _ BuildOpt = (*BuildArgs)(nil)
+
+func (u BuildArgs) Apply(cfg *types.ImageBuildOptions) error {
+	cfg.BuildArgs = u
+	return nil
+}
+
+type BuildTags []string
+
+var _ BuildOpt = (*BuildTags)(nil)
+
+func (u BuildTags) Apply(cfg *types.ImageBuildOptions) error {
+	cfg.Tags = u
+	return nil
+}
+
+const containerfilePath = "_containerfile"
+
+func (d *Runner) BuildImage(ctx context.Context, containerfile string, containerContext BuildContext, opts ...BuildOpt) ([]byte, error) {
+	var cfg types.ImageBuildOptions
+
+	// Build container context tarball, provisioning containerfile in.
+	containerContext[containerfilePath] = PathContentsFromBytes([]byte(containerfile))
+	tar, err := containerContext.ToTarball()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create build image context tarball: %w", err)
+	}
+	cfg.Dockerfile = "/" + containerfilePath
+
+	// Apply all given options
+	for index, opt := range opts {
+		if err := opt.Apply(&cfg); err != nil {
+			return nil, fmt.Errorf("failed to apply option (%d / %v): %w", index, opt, err)
+		}
+	}
+
+	resp, err := d.DockerAPI.ImageBuild(ctx, tar, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build image: %v", err)
+	}
+
+	output, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read image build output: %w", err)
+	}
+
+	return output, nil
+}
+
+func (d *Runner) CopyTo(container string, destination string, contents BuildContext) error {
+	// XXX: currently we use the default options but we might want to allow
+	// modifying cfg.CopyUIDGID in the future.
+	var cfg types.CopyToContainerOptions
+
+	// Convert our provided contents to a tarball to ship up.
+	tar, err := contents.ToTarball()
+	if err != nil {
+		return fmt.Errorf("failed to build contents into tarball: %v", err)
+	}
+
+	return d.DockerAPI.CopyToContainer(context.Background(), container, destination, tar, cfg)
+}
+
+func (d *Runner) CopyFrom(container string, source string) (BuildContext, *types.ContainerPathStat, error) {
+	reader, stat, err := d.DockerAPI.CopyFromContainer(context.Background(), container, source)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to read %v from container: %v", source, err)
+	}
+
+	result, err := BuildContextFromTarball(reader)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to build archive from result: %v", err)
+	}
+
+	return result, &stat, nil
+}
+
+func (d *Runner) GetNetworkAndAddresses(container string) (map[string]string, error) {
+	response, err := d.DockerAPI.ContainerInspect(context.Background(), container)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch container inspection data: %v", err)
+	}
+
+	if response.NetworkSettings == nil || len(response.NetworkSettings.Networks) == 0 {
+		return nil, fmt.Errorf("container (%v) had no associated network settings: %v", container, response)
+	}
+
+	ret := make(map[string]string)
+	ns := response.NetworkSettings.Networks
+	for network, data := range ns {
+		if data == nil {
+			continue
+		}
+
+		ret[network] = data.IPAddress
+	}
+
+	if len(ret) == 0 {
+		return nil, fmt.Errorf("no valid network data for container (%v): %v", container, response)
+	}
+
+	return ret, nil
 }

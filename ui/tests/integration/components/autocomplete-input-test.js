@@ -29,7 +29,7 @@ module('Integration | Component | autocomplete-input', function (hooks) {
     const changeValue = 'foo bar';
     this.value = 'test';
     this.placeholder = 'text goes here';
-    this.onChange = (value) => assert.equal(value, changeValue, 'Value sent in onChange callback');
+    this.onChange = (value) => assert.strictEqual(value, changeValue, 'Value sent in onChange callback');
 
     await render(
       hbs`
@@ -82,6 +82,6 @@ module('Integration | Component | autocomplete-input', function (hooks) {
     assert
       .dom('input')
       .hasValue('$foo-$bar', 'Value is updated correctly. Trigger character is prepended to option.');
-    assert.equal(this.value, '$foo-$bar', 'Value prop is updated correctly onChange');
+    assert.strictEqual(this.value, '$foo-$bar', 'Value prop is updated correctly onChange');
   });
 });
