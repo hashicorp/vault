@@ -24,6 +24,7 @@ export default class PkiRoleGenerate extends Component<Args> {
   @service declare readonly download: DownloadService;
 
   @tracked errorBanner = '';
+  @tracked invalidFormAlert = '';
 
   get verb() {
     return this.args.type === 'sign' ? 'sign' : 'generate';
@@ -39,6 +40,7 @@ export default class PkiRoleGenerate extends Component<Args> {
       onSuccess();
     } catch (err) {
       this.errorBanner = errorMessage(err, `Could not ${this.verb} certificate. See Vault logs for details.`);
+      this.invalidFormAlert = 'There was an error submitting this form.';
     }
   }
 
