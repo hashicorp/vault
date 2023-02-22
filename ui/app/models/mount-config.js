@@ -54,6 +54,7 @@ export default class MountConfigModel extends Model {
     helpText:
       'The type of token that should be generated via this role. For `default-service` and `default-batch` service and batch tokens will be issued respectively, unless the auth method explicitly requests a different type.',
     possibleValues: ['default-service', 'default-batch', 'batch', 'service'],
+    noDefault: true,
   })
   tokenType;
 }
