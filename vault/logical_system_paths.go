@@ -33,15 +33,44 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 					Callback:    b.handleCORSRead,
 					Summary:     "Return the current CORS settings.",
 					Description: "",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"enabled": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"allowed_origins": {
+									Type:     framework.TypeCommaStringSlice,
+									Required: false,
+								},
+								"allowed_headers": {
+									Type:     framework.TypeCommaStringSlice,
+									Required: false,
+								},
+							},
+						}},
+					},
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback:    b.handleCORSUpdate,
 					Summary:     "Configure the CORS settings.",
 					Description: "",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleCORSDelete,
 					Summary:  "Remove any CORS settings.",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 			},
 
@@ -56,6 +85,13 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 					Callback:    b.handleConfigStateSanitized,
 					Summary:     "Return a sanitized version of the Vault server configuration.",
 					Description: "The sanitized output strips configuration values in the storage, HA storage, and seals stanzas, which may contain sensitive values such as API tokens. It also removes any token or secret fields in other stanzas, such as the circonus_api_token from telemetry.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							// response has dynamic keys
+							Fields: map[string]*framework.FieldSchema{},
+						}},
+					},
 				},
 			},
 		},
@@ -73,6 +109,11 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 					Callback:    b.handleConfigReload,
 					Summary:     "Reload the given subsystem",
 					Description: "",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 			},
 		},
@@ -99,14 +140,42 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleConfigUIHeadersRead,
 					Summary:  "Return the given UI header's configuration",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"value": {
+									Type:        framework.TypeString,
+									Required:    false,
+									Description: "returns the first header value when `multivalue` request parameter is false",
+								},
+								"values": {
+									Type:        framework.TypeCommaStringSlice,
+									Required:    false,
+									Description: "returns all header values when `multivalue` request parameter is true",
+								},
+							},
+						}},
+					},
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleConfigUIHeadersUpdate,
 					Summary:  "Configure the values to be returned for the UI header.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							// returns 200 with null `data`
+							Description: "OK",
+						}},
+					},
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleConfigUIHeadersDelete,
 					Summary:  "Remove a UI header.",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 			},
 
@@ -121,6 +190,17 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				logical.ListOperation: &framework.PathOperation{
 					Callback: b.handleConfigUIHeadersList,
 					Summary:  "Return a list of configured UI headers.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:        framework.TypeCommaStringSlice,
+									Description: "Lists of configured UI headers. Omitted if list is empty",
+									Required:    false,
+								},
+							},
+						}},
+					},
 				},
 			},
 
@@ -139,13 +219,112 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Summary: "Read the configuration and progress of the current root generation attempt.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"nonce": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"started": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"progress": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"required": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"complete": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"encoded_token": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"encoded_root_token": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"pgp_fingerprint": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"otp": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"otp_length": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+							},
+						}},
+					},
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Summary:     "Initializes a new root generation attempt.",
 					Description: "Only a single root generation attempt can take place at a time. One (and only one) of otp or pgp_key are required.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"nonce": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"started": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"progress": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"required": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"complete": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"encoded_token": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"encoded_root_token": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"pgp_fingerprint": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"otp": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"otp_length": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+							},
+						}},
+					},
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Summary: "Cancels any in-progress root generation attempt.",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 			},
 
@@ -168,6 +347,53 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Summary:     "Enter a single unseal key share to progress the root generation attempt.",
 					Description: "If the threshold number of unseal key shares is reached, Vault will complete the root generation and issue the new token. Otherwise, this API must be called multiple times until that threshold is met. The attempt nonce must be provided with each call.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"nonce": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"started": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"progress": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"required": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"complete": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"encoded_token": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"encoded_root_token": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"pgp_fingerprint": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"otp": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"otp_length": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+							},
+						}},
+					},
 				},
 			},
 
@@ -1520,8 +1746,17 @@ func (b *SystemBackend) capabilitiesPaths() []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.handleCapabilitiesAccessor,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleCapabilitiesAccessor,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							// response keys are dynamic
+							Fields: nil,
+						}},
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["capabilities_accessor"][0]),
@@ -1547,8 +1782,17 @@ func (b *SystemBackend) capabilitiesPaths() []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.handleCapabilities,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleCapabilities,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							// response keys are dynamic
+							Fields: nil,
+						}},
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["capabilities"][0]),
@@ -1574,8 +1818,17 @@ func (b *SystemBackend) capabilitiesPaths() []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.handleCapabilities,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleCapabilities,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							// response keys are dynamic
+							Fields: nil,
+						}},
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["capabilities_self"][0]),
@@ -2075,8 +2328,17 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "auth$",
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation: b.handleAuthTable,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleAuthTable,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							// response keys are dynamic
+							Fields: nil,
+						}},
+					},
+				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["auth-table"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["auth-table"][1]),
@@ -2142,11 +2404,95 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 					Callback:    b.handleAuthTuneRead,
 					Summary:     "Reads the given auth path's configuration.",
 					Description: "This endpoint requires sudo capability on the final path, but the same functionality can be achieved without sudo via `sys/mounts/auth/[auth-path]/tune`.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"description": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"default_lease_ttl": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"max_lease_ttl": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"force_no_cache": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"external_entropy_access": {
+									Type:     framework.TypeBool,
+									Required: false,
+								},
+								"token_type": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+								"audit_non_hmac_request_keys": {
+									Type:     framework.TypeCommaStringSlice,
+									Required: false,
+								},
+								"audit_non_hmac_response_keys": {
+									Type:     framework.TypeCommaStringSlice,
+									Required: false,
+								},
+								"listing_visibility": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+								"passthrough_request_headers": {
+									Type:     framework.TypeCommaStringSlice,
+									Required: false,
+								},
+								"allowed_response_headers": {
+									Type:     framework.TypeCommaStringSlice,
+									Required: false,
+								},
+								"allowed_managed_keys": {
+									Type:     framework.TypeCommaStringSlice,
+									Required: false,
+								},
+								"user_lockout_counter_reset_duration": {
+									Type:     framework.TypeInt64,
+									Required: false,
+								},
+								"user_lockout_threshold": {
+									Type:     framework.TypeInt64, // uint64
+									Required: false,
+								},
+								"user_lockout_duration": {
+									Type:     framework.TypeInt64,
+									Required: false,
+								},
+								"user_lockout_disable": {
+									Type:     framework.TypeBool,
+									Required: false,
+								},
+								"options": {
+									Type:     framework.TypeMap,
+									Required: false,
+								},
+								"plugin_version": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+							},
+						}},
+					},
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback:    b.handleAuthTuneWrite,
 					Summary:     "Tune configuration parameters for a given auth path.",
 					Description: "This endpoint requires sudo capability on the final path, but the same functionality can be achieved without sudo via `sys/mounts/auth/[auth-path]/tune`.",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["auth_tune"][0]),
@@ -2203,6 +2549,65 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleReadAuth,
 					Summary:  "Read the configuration of the auth engine at the given path.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"type": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"description": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"accessor": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"local": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"seal_wrap": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"external_entropy_access": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"options": {
+									Type:     framework.TypeMap,
+									Required: true,
+								},
+								"uuid": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"plugin_version": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"running_plugin_version": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"running_sha256": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"deprecation_status": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+								"config": {
+									Type:     framework.TypeMap,
+									Required: true,
+								},
+							},
+						}},
+					},
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleEnableAuth,
@@ -2210,10 +2615,20 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 					Description: `After enabling, the auth method can be accessed and configured via the auth path specified as part of the URL. This auth path will be nested under the auth prefix.
 
 For example, enable the "foo" auth method will make it accessible at /auth/foo.`,
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleDisableAuth,
 					Summary:  "Disable the auth method at the given auth path",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["auth"][0]),

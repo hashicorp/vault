@@ -16,10 +16,16 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
-	"google.golang.org/protobuf/types/known/timestamppb"
+	"github.com/ryanuber/go-glob"
 )
 
-const defaultTimeout = 60 * time.Second
+const (
+	// eventTypeAll is purely internal to the event bus. We use it to send all
+	// events down one big firehose, and pipelines define their own filtering
+	// based on what each subscriber is interested in.
+	eventTypeAll   = "*"
+	defaultTimeout = 60 * time.Second
+)
 
 var (
 	ErrNotStarted              = errors.New("event broker has not been started")
@@ -45,16 +51,14 @@ type pluginEventBus struct {
 
 type asyncChanNode struct {
 	// TODO: add bounded deque buffer of *EventReceived
-	ctx       context.Context
-	ch        chan *logical.EventReceived
-	namespace *namespace.Namespace
-	logger    hclog.Logger
+	ctx    context.Context
+	ch     chan *eventlogger.Event
+	logger hclog.Logger
 
 	// used to close the connection
 	closeOnce  sync.Once
 	cancelFunc context.CancelFunc
 	pipelineID eventlogger.PipelineID
-	eventType  eventlogger.EventType
 	broker     *eventlogger.Broker
 }
 
@@ -90,14 +94,13 @@ func (bus *EventBus) SendInternal(ctx context.Context, ns *namespace.Namespace, 
 		Namespace:  ns.Path,
 		EventType:  string(eventType),
 		PluginInfo: pluginInfo,
-		Timestamp:  timestamppb.New(time.Now()),
 	}
 	bus.logger.Info("Sending event", "event", eventReceived)
 
 	// We can't easily know when the Send is complete, so we can't call the cancel function.
 	// But, it is called automatically after bus.timeout, so there won't be any leak as long as bus.timeout is not too long.
 	ctx, _ = context.WithTimeout(ctx, bus.timeout)
-	_, err := bus.broker.Send(ctx, eventlogger.EventType(eventType), eventReceived)
+	_, err := bus.broker.Send(ctx, eventTypeAll, eventReceived)
 	if err != nil {
 		// if no listeners for this event type are registered, that's okay, the event
 		// will just not be sent anywhere
@@ -164,32 +167,42 @@ func NewEventBus(logger hclog.Logger) (*EventBus, error) {
 	}, nil
 }
 
-func (bus *EventBus) Subscribe(ctx context.Context, ns *namespace.Namespace, eventType logical.EventType) (<-chan *logical.EventReceived, context.CancelFunc, error) {
+func (bus *EventBus) Subscribe(ctx context.Context, ns *namespace.Namespace, pattern string) (<-chan *eventlogger.Event, context.CancelFunc, error) {
 	// subscriptions are still stored even if the bus has not been started
 	pipelineID, err := uuid.GenerateUUID()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	nodeID, err := uuid.GenerateUUID()
+	filterNodeID, err := uuid.GenerateUUID()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	// TODO: should we have just one node per namespace, and handle all the routing ourselves?
+	filterNode := newFilterNode(ns, pattern)
+	err = bus.broker.RegisterNode(eventlogger.NodeID(filterNodeID), filterNode)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	sinkNodeID, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, nil, err
+	}
+
 	ctx, cancel := context.WithCancel(ctx)
-	asyncNode := newAsyncNode(ctx, ns, bus.logger)
-	err = bus.broker.RegisterNode(eventlogger.NodeID(nodeID), asyncNode)
+	asyncNode := newAsyncNode(ctx, bus.logger)
+	err = bus.broker.RegisterNode(eventlogger.NodeID(sinkNodeID), asyncNode)
 	if err != nil {
 		defer cancel()
 		return nil, nil, err
 	}
 
-	nodes := []eventlogger.NodeID{bus.formatterNodeID, eventlogger.NodeID(nodeID)}
+	nodes := []eventlogger.NodeID{eventlogger.NodeID(filterNodeID), bus.formatterNodeID, eventlogger.NodeID(sinkNodeID)}
 
 	pipeline := eventlogger.Pipeline{
 		PipelineID: eventlogger.PipelineID(pipelineID),
-		EventType:  eventlogger.EventType(eventType),
+		EventType:  eventTypeAll,
 		NodeIDs:    nodes,
 	}
 	err = bus.broker.RegisterPipeline(pipeline)
@@ -197,10 +210,10 @@ func (bus *EventBus) Subscribe(ctx context.Context, ns *namespace.Namespace, eve
 		defer cancel()
 		return nil, nil, err
 	}
+
 	addSubscriptions(1)
 	// add info needed to cancel the subscription
 	asyncNode.pipelineID = eventlogger.PipelineID(pipelineID)
-	asyncNode.eventType = eventlogger.EventType(eventType)
 	asyncNode.cancelFunc = cancel
 	return asyncNode.ch, asyncNode.Close, nil
 }
@@ -211,12 +224,32 @@ func (bus *EventBus) SetSendTimeout(timeout time.Duration) {
 	bus.timeout = timeout
 }
 
-func newAsyncNode(ctx context.Context, namespace *namespace.Namespace, logger hclog.Logger) *asyncChanNode {
+func newFilterNode(ns *namespace.Namespace, pattern string) *eventlogger.Filter {
+	return &eventlogger.Filter{
+		Predicate: func(e *eventlogger.Event) (bool, error) {
+			eventRecv := e.Payload.(*logical.EventReceived)
+
+			// Drop if event is not in our namespace.
+			// TODO: add wildcard/child namespace processing here in some cases?
+			if eventRecv.Namespace != ns.Path {
+				return false, nil
+			}
+
+			// Filter for correct event type, including wildcards.
+			if !glob.Glob(pattern, eventRecv.EventType) {
+				return false, nil
+			}
+
+			return true, nil
+		},
+	}
+}
+
+func newAsyncNode(ctx context.Context, logger hclog.Logger) *asyncChanNode {
 	return &asyncChanNode{
-		ctx:       ctx,
-		ch:        make(chan *logical.EventReceived),
-		namespace: namespace,
-		logger:    logger,
+		ctx:    ctx,
+		ch:     make(chan *eventlogger.Event),
+		logger: logger,
 	}
 }
 
@@ -225,7 +258,7 @@ func (node *asyncChanNode) Close() {
 	node.closeOnce.Do(func() {
 		defer node.cancelFunc()
 		if node.broker != nil {
-			err := node.broker.RemovePipeline(node.eventType, node.pipelineID)
+			err := node.broker.RemovePipeline(eventTypeAll, node.pipelineID)
 			if err != nil {
 				node.logger.Warn("Error removing pipeline for closing node", "error", err)
 			}
@@ -237,22 +270,16 @@ func (node *asyncChanNode) Close() {
 func (node *asyncChanNode) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
 	// sends to the channel async in another goroutine
 	go func() {
-		eventRecv := e.Payload.(*logical.EventReceived)
-		// drop if event is not in our namespace
-		// TODO: add wildcard processing here in some cases?
-		if eventRecv.Namespace != node.namespace.Path {
-			return
-		}
 		var timeout bool
 		select {
-		case node.ch <- eventRecv:
+		case node.ch <- e:
 		case <-ctx.Done():
 			timeout = errors.Is(ctx.Err(), context.DeadlineExceeded)
 		case <-node.ctx.Done():
 			timeout = errors.Is(node.ctx.Err(), context.DeadlineExceeded)
 		}
 		if timeout {
-			node.logger.Info("Subscriber took too long to process event, closing", "ID", eventRecv.Event.ID())
+			node.logger.Info("Subscriber took too long to process event, closing", "ID", e.Payload.(*logical.EventReceived).Event.Id)
 			node.Close()
 		}
 	}()

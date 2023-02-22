@@ -155,22 +155,18 @@ See the [caching](/vault/docs/agent/caching#api) page for details on the cache A
   file path of `/var/log/vault-agent-{timestamp}.log`. `log-file` can be combined with
   [`-log-rotate-bytes`](#_log_rotate_bytes) and [`-log-rotate-duration`](#_log_rotate_duration)
   for a fine-grained log rotation experience.
-  This can also be specified via the `VAULT_LOG_FILE` environment variable.
 
 - `-log-rotate-bytes` ((#\_log_rotate_bytes)) - to specify the number of
   bytes that should be written to a log before it needs to be rotated. Unless specified,
   there is no limit to the number of bytes that can be written to a log file.
-  This can also be specified via the `VAULT_LOG_ROTATE_BYTES` environment variable.
 
 - `-log-rotate-duration` ((#\_log_rotate_duration)) - to specify the maximum
   duration a log should be written to before it needs to be rotated. Must be a duration
   value such as 30s. Defaults to 24h.
-  This can also be specified via the `VAULT_LOG_ROTATE_DURATION` environment variable.
 
 - `-log-rotate-max-files` ((#\_log_rotate_max_files)) - to specify the maximum
   number of older log file archives to keep. Defaults to `0` (no files are ever deleted).
   Set to `-1` to discard old log files when a new one is created.
-  This can also be specified via the `VAULT_LOG_ROTATE_MAX_FILES` environment variable.
 
 ### Configuration File Options
 

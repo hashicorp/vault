@@ -67,7 +67,8 @@ const SECRET_BACKENDS = {
         modelPrefix: 'cert/',
         label: 'Certificates',
         searchPlaceholder: 'Filter certificates',
-        item: 'certificates',
+        item: 'certificate',
+        message: 'Issue a certificate from a role.',
         create: 'Create role',
         tab: 'cert',
         listItemPartial: 'secret-list/pki-cert-item',
@@ -141,7 +142,7 @@ const SECRET_BACKENDS = {
     displayName: 'Transformation',
     navigateTree: false,
     listItemPartial: 'secret-list/transform-list-item',
-    firstStep: 'create a transformation and a role',
+    firstStep: `To use transform, you'll need to create a transformation and a role.`,
     tabs: [
       {
         name: 'transformations',
@@ -191,7 +192,7 @@ const SECRET_BACKENDS = {
     navigateTree: false,
     editComponent: 'transit-edit',
     listItemPartial: 'secret-list/item',
-    firstStep: 'create an encryption key',
+    firstStep: `To use transit, you'll need to create an encryption key`,
   },
 };
 
