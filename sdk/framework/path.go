@@ -264,6 +264,7 @@ type PathOperation struct {
 	Deprecated                  bool
 	ForwardPerformanceSecondary bool
 	ForwardPerformanceStandby   bool
+	DisplayAttrs                *DisplayAttributes
 }
 
 func (p *PathOperation) Handler() OperationFunc {
@@ -280,6 +281,7 @@ func (p *PathOperation) Properties() OperationProperties {
 		Deprecated:                  p.Deprecated,
 		ForwardPerformanceSecondary: p.ForwardPerformanceSecondary,
 		ForwardPerformanceStandby:   p.ForwardPerformanceStandby,
+		DisplayAttrs:                p.DisplayAttrs,
 	}
 }
 
