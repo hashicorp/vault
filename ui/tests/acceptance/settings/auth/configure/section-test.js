@@ -1,6 +1,7 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
+import { fillIn } from '@ember/test-helpers';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
 import page from 'vault/tests/pages/settings/auth/configure/section';
 import indexPage from 'vault/tests/pages/settings/auth/configure/index';
@@ -29,6 +30,10 @@ module('Acceptance | settings/auth/configure/section', function (hooks) {
     await enablePage.enable(type, path);
     await page.visit({ path, section });
     await page.fillInTextarea('description', 'This is AppRole!');
+    assert
+      .dom('[data-test-input="config.tokenType"]')
+      .hasValue('default-service', 'token type default-service shows as selected by default.');
+    await fillIn('[data-test-input="config.tokenType"]', 'batch');
     await page.save();
     assert.strictEqual(
       page.flash.latestMessage,
@@ -40,8 +45,11 @@ module('Acceptance | settings/auth/configure/section', function (hooks) {
       `/v1/sys/mounts/auth/${path}/tune`
     )[0];
     const keys = Object.keys(JSON.parse(tuneRequest.requestBody));
+    const token_type = JSON.parse(tuneRequest.requestBody).token_type;
+    assert.strictEqual(token_type, 'batch', 'passes new token type');
     assert.ok(keys.includes('default_lease_ttl'), 'passes default_lease_ttl on tune');
     assert.ok(keys.includes('max_lease_ttl'), 'passes max_lease_ttl on tune');
+    assert.ok(keys.includes('description'), 'passes updated description tune');
   });
 
   for (const type of ['aws', 'azure', 'gcp', 'github', 'kubernetes']) {

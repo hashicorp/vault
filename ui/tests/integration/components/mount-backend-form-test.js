@@ -82,6 +82,18 @@ module('Integration | Component | mount backend form', function (hooks) {
       assert.strictEqual(component.pathValue, 'newpath', 'keeps custom path value');
     });
 
+    test('it does show token type for auth mount', async function (assert) {
+      await render(
+        hbs`<MountBackendForm @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
+      );
+      await component.selectType('github');
+      await component.next();
+      await component.toggleOptions();
+      assert
+        .dom('[data-test-input="config.tokenType"]')
+        .hasValue('', 'token type does not have a default value.');
+    });
+
     test('it calls mount success', async function (assert) {
       assert.expect(3);
 
