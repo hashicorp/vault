@@ -32,17 +32,24 @@ func StringList(source interface{}) ([]string, error) {
 	return nil, fmt.Errorf("unknown source type for []string coercion: %T", source)
 }
 
-func fetchMountTune(e *Executor, versionError func()) (*PathFetch, error) {
+func fetchMountTune(e *Executor, versionError func()) (bool, *PathFetch, map[string]interface{}, error) {
 	tuneRet, err := e.FetchIfNotFetched(logical.ReadOperation, "/sys/mounts/{{mount}}/tune")
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch mount tune information: %w", err)
+		return true, nil, nil, fmt.Errorf("failed to fetch mount tune information: %w", err)
 	}
 
 	if !tuneRet.IsSecretOK() {
 		if tuneRet.IsUnsupportedPathError() {
 			versionError()
 		}
+
+		return true, tuneRet, nil, nil
 	}
 
-	return tuneRet, nil
+	var data map[string]interface{} = nil
+	if len(tuneRet.Secret.Data) > 0 {
+		data = tuneRet.Secret.Data
+	}
+
+	return false, tuneRet, data, nil
 }

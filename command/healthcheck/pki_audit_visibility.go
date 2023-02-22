@@ -57,7 +57,8 @@ type AuditVisibility struct {
 	UnsupportedVersion bool
 
 	IgnoredParameters map[string]bool
-	TuneData          *PathFetch
+	TuneData          map[string]interface{}
+	Fetcher           *PathFetch
 }
 
 func NewAuditVisibilityCheck() Check {
@@ -100,14 +101,16 @@ func (h *AuditVisibility) LoadConfig(config map[string]interface{}) error {
 }
 
 func (h *AuditVisibility) FetchResources(e *Executor) error {
-	pathFetch, err := fetchMountTune(e, func() {
+	var exit bool
+	var err error
+
+	exit, h.Fetcher, h.TuneData, err = fetchMountTune(e, func() {
 		h.UnsupportedVersion = true
 	})
-	if err != nil {
+
+	if exit || err != nil {
 		return err
 	}
-
-	h.TuneData = pathFetch
 	return nil
 }
 
@@ -121,7 +124,7 @@ func (h *AuditVisibility) Evaluate(e *Executor) (results []*Result, err error) {
 		return []*Result{&ret}, nil
 	}
 
-	if h.TuneData.IsSecretPermissionsError() {
+	if h.Fetcher.IsSecretPermissionsError() {
 		ret := Result{
 			Status:   ResultInsufficientPermissions,
 			Endpoint: "/sys/mounts/{{mount}}/tune",
@@ -138,17 +141,12 @@ func (h *AuditVisibility) Evaluate(e *Executor) (results []*Result, err error) {
 		return
 	}
 
-	var tuneData map[string]interface{} = nil
-	if len(h.TuneData.Secret.Data) > 0 {
-		tuneData = h.TuneData.Secret.Data
-	}
-
 	sourceMap := map[string][]string{
 		"audit_non_hmac_request_keys":  VisibleReqParams,
 		"audit_non_hmac_response_keys": VisibleRespParams,
 	}
 	for source, visibleList := range sourceMap {
-		actual, err := StringList(tuneData[source])
+		actual, err := StringList(h.TuneData[source])
 		if err != nil {
 			return nil, fmt.Errorf("error parsing %v from server: %v", source, err)
 		}
@@ -178,7 +176,7 @@ func (h *AuditVisibility) Evaluate(e *Executor) (results []*Result, err error) {
 		"audit_non_hmac_response_keys": HiddenRespParams,
 	}
 	for source, hiddenList := range sourceMap {
-		actual, err := StringList(tuneData[source])
+		actual, err := StringList(h.TuneData[source])
 		if err != nil {
 			return nil, fmt.Errorf("error parsing %v from server: %v", source, err)
 		}

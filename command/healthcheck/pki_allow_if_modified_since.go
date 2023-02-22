@@ -11,7 +11,8 @@ type AllowIfModifiedSince struct {
 	Enabled            bool
 	UnsupportedVersion bool
 
-	TuneData *PathFetch
+	TuneData map[string]interface{}
+	Fetcher  *PathFetch
 }
 
 func NewAllowIfModifiedSinceCheck() Check {
@@ -42,14 +43,16 @@ func (h *AllowIfModifiedSince) LoadConfig(config map[string]interface{}) error {
 }
 
 func (h *AllowIfModifiedSince) FetchResources(e *Executor) error {
-	pathFetch, err := fetchMountTune(e, func() {
+	var exit bool
+	var err error
+
+	exit, h.Fetcher, h.TuneData, err = fetchMountTune(e, func() {
 		h.UnsupportedVersion = true
 	})
-	if err != nil {
+
+	if exit || err != nil {
 		return err
 	}
-
-	h.TuneData = pathFetch
 	return nil
 }
 
@@ -63,7 +66,7 @@ func (h *AllowIfModifiedSince) Evaluate(e *Executor) (results []*Result, err err
 		return []*Result{&ret}, nil
 	}
 
-	if h.TuneData.IsSecretPermissionsError() {
+	if h.Fetcher.IsSecretPermissionsError() {
 		ret := Result{
 			Status:   ResultInsufficientPermissions,
 			Endpoint: "/sys/mounts/{{mount}}/tune",
@@ -80,17 +83,12 @@ func (h *AllowIfModifiedSince) Evaluate(e *Executor) (results []*Result, err err
 		return
 	}
 
-	var tuneData map[string]interface{} = nil
-	if len(h.TuneData.Secret.Data) > 0 {
-		tuneData = h.TuneData.Secret.Data
-	}
-
-	req, err := StringList(tuneData["passthrough_request_headers"])
+	req, err := StringList(h.TuneData["passthrough_request_headers"])
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse value from server for passthrough_request_headers: %w", err)
 	}
 
-	resp, err := StringList(tuneData["allowed_response_headers"])
+	resp, err := StringList(h.TuneData["allowed_response_headers"])
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse value from server for allowed_response_headers: %w", err)
 	}
