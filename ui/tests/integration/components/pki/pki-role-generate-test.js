@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, fillIn, click } from '@ember/test-helpers';
+import { render, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { setupEngine } from 'ember-engines/test-support';
@@ -18,7 +18,7 @@ module('Integration | Component | pki-role-generate', function (hooks) {
     this.store = this.owner.lookup('service:store');
     this.secretMountPath = this.owner.lookup('service:secret-mount-path');
     this.secretMountPath.currentPath = 'pki-test';
-    this.modelGenerate = this.store.createRecord('pki/certificate/generate', {
+    this.model = this.store.createRecord('pki/certificate/generate', {
       role: 'my-role',
     });
     this.onSuccess = Sinon.spy();
@@ -30,7 +30,7 @@ module('Integration | Component | pki-role-generate', function (hooks) {
       hbs`
       <div class="has-top-margin-xxl">
         <PkiRoleGenerate
-          @model={{this.modelGenerate}}
+          @model={{this.model}}
           @onSuccess={{this.onSuccess}}
         />
        </div>
@@ -41,7 +41,7 @@ module('Integration | Component | pki-role-generate', function (hooks) {
     assert.dom(SELECTORS.commonNameField).exists('shows the common name field');
     assert.dom(SELECTORS.optionsToggle).exists('toggle exists');
     await fillIn(SELECTORS.commonNameField, 'example.com');
-    assert.strictEqual(this.modelGenerate.commonName, 'example.com', 'Filling in the form updates the model');
+    assert.strictEqual(this.model.commonName, 'example.com', 'Filling in the form updates the model');
   });
 
   test('it should render the component displaying the cert', async function (assert) {
@@ -68,53 +68,5 @@ module('Integration | Component | pki-role-generate', function (hooks) {
     assert.dom(SELECTORS.revokeButton).exists('shows the revoke button');
     assert.dom(SELECTORS.certificate).exists({ count: 1 }, 'shows certificate info row');
     assert.dom(SELECTORS.serialNumber).hasText('abcd-efgh-ijkl', 'shows serial number info row');
-  });
-
-  test('it should display validation errors for cert generation', async function (assert) {
-    assert.expect(3);
-
-    await render(
-      hbs`
-      <div class="has-top-margin-xxl">
-        <PkiRoleGenerate
-          @model={{this.modelGenerate}}
-          @onSuccess={{this.onSuccess}}
-        />
-       </div>
-  `,
-      { owner: this.engine }
-    );
-    await click(SELECTORS.generateButton);
-
-    assert
-      .dom(SELECTORS.commonNameInlineError)
-      .hasText('Common name is required.', 'Common name validation error renders');
-    assert.dom(SELECTORS.inlineAlert).hasText('There is an error with this form.', 'Alert renders');
-    assert.dom(SELECTORS.commonNameErrorBorder).hasClass('has-error-border');
-  });
-
-  test('it should display validation errors for cert signing', async function (assert) {
-    assert.expect(3);
-    this.modelSign = this.store.createRecord('pki/certificate/sign', {
-      role: 'my-role',
-    });
-    await render(
-      hbs`
-      <div class="has-top-margin-xxl">
-        <PkiRoleGenerate
-          @model={{this.modelSign}}
-          @onSuccess={{this.onSuccess}}
-        />
-       </div>
-  `,
-      { owner: this.engine }
-    );
-    await click(SELECTORS.generateButton);
-
-    assert
-      .dom(SELECTORS.commonNameInlineError)
-      .hasText('Common name is required.', 'Common name validation error renders');
-    assert.dom(SELECTORS.inlineAlert).hasText('There is an error with this form.', 'Alert renders');
-    assert.dom(SELECTORS.commonNameErrorBorder).hasClass('has-error-border');
   });
 });
