@@ -45,6 +45,11 @@ const appConfig = {
     precision: 4,
     includePaths: ['./node_modules/@hashicorp/design-system-tokens/dist/products/css'],
   },
+  minifyCSS: {
+    options: {
+      advanced: false,
+    },
+  },
   autoprefixer: {
     enabled: isTest || isProd,
     grid: true,
