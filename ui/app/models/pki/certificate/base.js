@@ -3,7 +3,6 @@ import { assert } from '@ember/debug';
 import { service } from '@ember/service';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
-import { withModelValidations } from 'vault/decorators/model-validations';
 
 /**
  * There are many ways to generate a cert, but we want to display them in a consistent way.
@@ -20,11 +19,7 @@ const certDisplayFields = [
   'notValidBefore',
   'notValidAfter',
 ];
-const validations = {
-  commonName: [{ type: 'presence', message: 'Common name is required.' }],
-};
 
-@withModelValidations(validations)
 @withFormFields(certDisplayFields)
 export default class PkiCertificateBaseModel extends Model {
   @service secretMountPath;

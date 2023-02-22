@@ -40,11 +40,6 @@
           Cancel
         </button>
       </div>
-      {{#if this.invalidFormAlert}}
-        <div class="control" data-test-alert>
-          <AlertInline @type="danger" @paddingTop={{true}} @message={{this.invalidFormAlert}} @mimicRefresh={{true}} />
-        </div>
-      {{/if}}
     </div>
   </form>
 {{/if}}

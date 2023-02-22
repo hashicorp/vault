@@ -24,8 +24,6 @@ export default class PkiRoleGenerate extends Component<Args> {
   @service declare readonly download: DownloadService;
 
   @tracked errorBanner = '';
-  @tracked invalidFormAlert = '';
-  @tracked modelValidations = null;
 
   get verb() {
     return this.args.type === 'sign' ? 'sign' : 'generate';
@@ -36,13 +34,6 @@ export default class PkiRoleGenerate extends Component<Args> {
     evt.preventDefault();
     this.errorBanner = '';
     const { model, onSuccess } = this.args;
-    const { isValid, state, invalidFormMessage } = model.validate();
-
-    this.modelValidations = isValid ? null : state;
-    this.invalidFormAlert = invalidFormMessage;
-
-    if (!isValid) return;
-
     try {
       yield model.save();
       onSuccess();
