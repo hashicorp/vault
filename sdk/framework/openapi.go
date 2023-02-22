@@ -315,7 +315,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 				continue
 			}
 
-			operationID := constructOperationID(path, opType, p.DisplayAttrs, props.DisplayAttrs)
+			operationID := constructOperationID(path, opType, p.DisplayAttrs, props.DisplayAttrs, requestResponsePrefix)
 
 			if opType == logical.CreateOperation {
 				pi.CreateSupported = true
@@ -534,12 +534,19 @@ func specialPathMatch(path string, specialPaths []string) bool {
 	return false
 }
 
-// In general, the name will be constructed as follows:
+// constructOperationID joins the given inputs into a title case operation id,
+// which is also used as a prefix for request and response names.
 //
-//	 operation id:  [prefix][verb][suffix]
-//	 request name:  [prefix][verb][suffix]Request
-//	response name:  [prefix][verb][suffix]Response
-func constructOperationID(path string, operation logical.Operation, attributesPath, attributesOperation *DisplayAttributes) string {
+// The OperationPrefix / OperationSuffix / Action found in display attributes
+// will be used, if provided. Otherwise, the function falls back to using the
+// path and the operation.
+//
+// Examples of generated operation identifiers:
+//   - KVv2Write
+//   - KVv2Read
+//   - GoogleCloudLogin
+//   - GoogleCloudWriteRole
+func constructOperationID(path string, operation logical.Operation, attributesPath, attributesOperation *DisplayAttributes, defaultPrefix string) string {
 	// default-initialize for convenience
 	var (
 		attrsPath      DisplayAttributes
@@ -611,16 +618,19 @@ func constructOperationID(path string, operation logical.Operation, attributesPa
 		}
 	}
 
-	// else, fall back to using the path to construct the operation id
+	// fall back to using the path to construct the operation id
 	if prefix == "" && suffix == "" {
+		// split, title case everything, and join the result into a string
 		parts := nonWordRe.Split(strings.ToLower(path), -1)
 
-		// title case everything & join the result into a string
 		for i, s := range parts {
 			parts[i] = title.String(s)
 		}
 
 		suffix = strings.Join(parts, "")
+
+		// TODO: remove this after adding display attributes to builtin plugins
+		prefix = title.String(defaultPrefix)
 	}
 
 	return fmt.Sprintf("%s%s%s", prefix, verb, suffix)
