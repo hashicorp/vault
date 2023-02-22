@@ -1849,7 +1849,7 @@ func (b *backend) pathRoleSecretIDDestroyUpdateDelete(ctx context.Context, req *
 		return nil, err
 	}
 	if entry == nil {
-		return nil, nil
+		return logical.ErrorResponse("invalid secret accessor id", logical.ErrPermissionDenied), nil
 	}
 
 	// Delete the accessor of the SecretID first
