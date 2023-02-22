@@ -225,17 +225,18 @@ func TestTidyCancellation(t *testing.T) {
 
 	// Kick off a tidy operation (which runs in the background), but with
 	// a slow-ish pause between certificates.
-	_, err = CBWrite(b, s, "tidy", map[string]interface{}{
+	resp, err := CBWrite(b, s, "tidy", map[string]interface{}{
 		"tidy_cert_store": true,
 		"safety_buffer":   "1s",
 		"pause_duration":  "1s",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("tidy"), logical.UpdateOperation), resp, true)
 
 	// If we wait six seconds, the operation should still be running. That's
 	// how we check that pause_duration works.
 	time.Sleep(3 * time.Second)
 
-	resp, err := CBRead(b, s, "tidy-status")
+	resp, err = CBRead(b, s, "tidy-status")
 
 	require.NoError(t, err)
 	require.NotNil(t, resp)
