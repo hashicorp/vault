@@ -7,7 +7,6 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -26,7 +25,6 @@ import (
 )
 
 const (
-	ocspReqParam            = "req"
 	ocspResponseContentType = "application/ocsp-response"
 	maximumRequestSize      = 2048 // A normal simple request is 87 bytes, so give us some buffer
 )
@@ -67,34 +65,6 @@ var (
 	ErrUnknownIssuer    = errors.New("unknown issuer")
 )
 
-func buildPathOcspGet(b *backend) *framework.Path {
-	return buildOcspGetWithPath(b, "ocsp/"+framework.MatchAllRegex(ocspReqParam))
-}
-
-func buildPathUnifiedOcspGet(b *backend) *framework.Path {
-	return buildOcspGetWithPath(b, "unified-ocsp/"+framework.MatchAllRegex(ocspReqParam))
-}
-
-func buildOcspGetWithPath(b *backend, pattern string) *framework.Path {
-	return &framework.Path{
-		Pattern: pattern,
-		Fields: map[string]*framework.FieldSchema{
-			ocspReqParam: {
-				Type:        framework.TypeString,
-				Description: "base-64 encoded ocsp request",
-			},
-		},
-		Operations: map[logical.Operation]framework.OperationHandler{
-			logical.ReadOperation: &framework.PathOperation{
-				Callback: b.ocspHandler,
-			},
-		},
-
-		HelpSynopsis:    pathOcspHelpSyn,
-		HelpDescription: pathOcspHelpDesc,
-	}
-}
-
 func buildPathOcspPost(b *backend) *framework.Path {
 	return buildOcspPostWithPath(b, "ocsp")
 }
@@ -117,14 +87,14 @@ func buildOcspPostWithPath(b *backend, pattern string) *framework.Path {
 	}
 }
 
-func (b *backend) ocspHandler(ctx context.Context, request *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) ocspHandler(ctx context.Context, request *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	sc := b.makeStorageContext(ctx, request.Storage)
 	cfg, err := b.crlBuilder.getConfigWithUpdate(sc)
 	if err != nil || cfg.OcspDisable || (isUnifiedOcspPath(request) && !cfg.UnifiedCRL) {
 		return OcspUnauthorizedResponse, nil
 	}
 
-	derReq, err := fetchDerEncodedRequest(request, data)
+	derReq, err := fetchDerEncodedRequest(request)
 	if err != nil {
 		return OcspMalformedResponse, nil
 	}
@@ -235,20 +205,8 @@ func generateUnknownResponse(cfg *crlConfig, sc *storageContext, ocspReq *ocsp.R
 	}
 }
 
-func fetchDerEncodedRequest(request *logical.Request, data *framework.FieldData) ([]byte, error) {
+func fetchDerEncodedRequest(request *logical.Request) ([]byte, error) {
 	switch request.Operation {
-	case logical.ReadOperation:
-		// The param within the GET request should have a base64 encoded version of a DER request.
-		base64Req := data.Get(ocspReqParam).(string)
-		if base64Req == "" {
-			return nil, errors.New("no base64 encoded ocsp request was found")
-		}
-
-		if len(base64Req) >= maximumRequestSize {
-			return nil, errors.New("request is too large")
-		}
-
-		return base64.StdEncoding.DecodeString(base64Req)
 	case logical.UpdateOperation:
 		// POST bodies should contain the binary form of the DER request.
 		// NOTE: Writing an empty update request to Vault causes a nil request.HTTPRequest, and that object
