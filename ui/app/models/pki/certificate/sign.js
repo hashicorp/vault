@@ -29,15 +29,6 @@ export default class PkiCertificateSignModel extends PkiCertificateBaseModel {
   })
   csr;
 
-  @attr({
-    label: 'Not valid after',
-    detailsLabel: 'Issued certificates expire after',
-    subText:
-      'The time after which this certificate will no longer be valid. This can be a TTL (a range of time from now) or a specific date.',
-    editType: 'yield',
-  })
-  customTtl;
-
   @attr('boolean', {
     subText: 'When checked, the CA chain will not include self-signed CA certificates',
   })
