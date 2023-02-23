@@ -18,7 +18,8 @@ require (
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/vault/sdk v0.4.1
 	github.com/mitchellh/mapstructure v1.4.2
-	golang.org/x/net v0.5.0
+	golang.org/x/crypto v0.6.0 // indirect
+	golang.org/x/net v0.7.0
 	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1
 	gopkg.in/square/go-jose.v2 v2.5.1
 )
