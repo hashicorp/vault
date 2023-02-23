@@ -194,6 +194,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathFetchListCerts(&b),
 
 			// OCSP APIs
+			buildPathOcspGet(&b),
 			buildPathOcspPost(&b),
 
 			// CRL Signing
@@ -218,6 +219,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathListCertsRevocationQueue(&b),
 			pathListUnifiedRevoked(&b),
 			pathFetchUnifiedCRL(&b),
+			buildPathUnifiedOcspGet(&b),
 			buildPathUnifiedOcspPost(&b),
 		}
 		b.Backend.Paths = append(b.Backend.Paths, entOnly...)

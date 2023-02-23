@@ -25,6 +25,7 @@ import (
 )
 
 const (
+	ocspReqParam            = "req"
 	ocspResponseContentType = "application/ocsp-response"
 	maximumRequestSize      = 2048 // A normal simple request is 87 bytes, so give us some buffer
 )
@@ -59,11 +60,46 @@ var (
 			logical.HTTPRawBody:     ocsp.InternalErrorErrorResponse,
 		},
 	}
+	OcspGetErrorResponse = &logical.Response{
+		Data: map[string]interface{}{
+			logical.HTTPContentType: ocspResponseContentType,
+			logical.HTTPStatusCode:  http.StatusMethodNotAllowed,
+			logical.HTTPRawBody:     ocsp.UnauthorizedErrorResponse,
+		},
+	}
 
 	ErrMissingOcspUsage = errors.New("issuer entry did not have the OCSPSigning usage")
 	ErrIssuerHasNoKey   = errors.New("issuer has no key")
 	ErrUnknownIssuer    = errors.New("unknown issuer")
 )
+
+func buildPathOcspGet(b *backend) *framework.Path {
+	return buildOcspGetWithPath(b, "ocsp/"+framework.MatchAllRegex(ocspReqParam))
+}
+
+func buildPathUnifiedOcspGet(b *backend) *framework.Path {
+	return buildOcspGetWithPath(b, "unified-ocsp/"+framework.MatchAllRegex(ocspReqParam))
+}
+
+func buildOcspGetWithPath(b *backend, pattern string) *framework.Path {
+	return &framework.Path{
+		Pattern: pattern,
+		Fields: map[string]*framework.FieldSchema{
+			ocspReqParam: {
+				Type:        framework.TypeString,
+				Description: "base-64 encoded ocsp request",
+			},
+		},
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.ocspHandler,
+			},
+		},
+
+		HelpSynopsis:    pathOcspHelpSyn,
+		HelpDescription: pathOcspHelpDesc,
+	}
+}
 
 func buildPathOcspPost(b *backend) *framework.Path {
 	return buildOcspPostWithPath(b, "ocsp")
@@ -88,6 +124,13 @@ func buildOcspPostWithPath(b *backend, pattern string) *framework.Path {
 }
 
 func (b *backend) ocspHandler(ctx context.Context, request *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	if request.Operation == logical.ReadOperation {
+		// We do not support GET requests at this time due to Go's HTTP mux
+		// returning 401 (permanent redirect) if a base64 encoded OCSP request
+		// contains sequential '/' characters, which corrupt the request.
+		return OcspGetErrorResponse, nil
+	}
+
 	sc := b.makeStorageContext(ctx, request.Storage)
 	cfg, err := b.crlBuilder.getConfigWithUpdate(sc)
 	if err != nil || cfg.OcspDisable || (isUnifiedOcspPath(request) && !cfg.UnifiedCRL) {

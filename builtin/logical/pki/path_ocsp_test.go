@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/x509"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net/http"
@@ -53,6 +54,26 @@ func TestOcsp_Disabled(t *testing.T) {
 			require.Equal(t, ocsp.UnauthorizedErrorResponse, respDer)
 		})
 	}
+}
+
+// TestOcsp_GetReturnsMethodNotAllowed: Verify if we receive a GET request for the OCSP handler that
+// we return a 405 error code (MethodNotAllowed) as we do not support them at this time due to
+// Go's HTTP server mux attempting to "clean" GET paths of consecutive '/' characters.
+func TestOcsp_GetReturnsMethodNotAllowed(t *testing.T) {
+	t.Parallel()
+	b, s, testEnv := setupOcspEnv(t, "rsa")
+	resp, err := CBWrite(b, s, "config/crl", map[string]interface{}{
+		"ocsp_disable": "false",
+	})
+	requireSuccessNonNilResponse(t, resp, err)
+	resp, err = SendOcspRequest(t, b, s, "get", testEnv.leafCertIssuer1, testEnv.issuer1, crypto.SHA1)
+	require.NoError(t, err)
+	requireFieldsSetInResp(t, resp, "http_content_type", "http_status_code", "http_raw_body")
+	require.Equal(t, 405, resp.Data["http_status_code"])
+	require.Equal(t, ocspResponseContentType, resp.Data["http_content_type"])
+	respDer := resp.Data["http_raw_body"].([]byte)
+
+	require.Equal(t, ocsp.UnauthorizedErrorResponse, respDer)
 }
 
 // If we can't find the issuer within the request and have no default issuer to sign an Unknown response
@@ -652,12 +673,19 @@ func SendOcspRequest(t *testing.T, b *backend, s logical.Storage, getOrPost stri
 	ocspRequest := generateRequest(t, requestHash, cert, issuer)
 
 	switch strings.ToLower(getOrPost) {
+	case "get":
+		return sendOcspGetRequest(b, s, ocspRequest)
 	case "post":
 		return sendOcspPostRequest(b, s, ocspRequest)
 	default:
 		t.Fatalf("unsupported value for SendOcspRequest getOrPost arg: %s", getOrPost)
 	}
 	return nil, nil
+}
+
+func sendOcspGetRequest(b *backend, s logical.Storage, ocspRequest []byte) (*logical.Response, error) {
+	urlEncoded := base64.StdEncoding.EncodeToString(ocspRequest)
+	return CBRead(b, s, "ocsp/"+urlEncoded)
 }
 
 func sendOcspPostRequest(b *backend, s logical.Storage, ocspRequest []byte) (*logical.Response, error) {
