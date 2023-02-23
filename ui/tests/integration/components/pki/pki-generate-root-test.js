@@ -133,7 +133,7 @@ module('Integration | Component | pki-generate-root', function (hooks) {
     assert.strictEqual(this.model.type, this.type);
     assert
       .dom(`[data-test-group="Key parameters"] ${SELECTORS.formField}`)
-      .exists({ count: 2 }, '2 form field under keyParams toggle');
+      .exists({ count: 1 }, '1 form field under keyParams toggle');
     assert.dom(SELECTORS.fieldByName('keyRef')).exists(`Key reference field shown when type=${this.type}`);
 
     this.set('type', 'kms');
