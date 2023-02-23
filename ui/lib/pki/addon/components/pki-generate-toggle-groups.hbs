@@ -43,7 +43,7 @@
         </p>
         {{#each fields as |fieldName|}}
           {{#let (find-by "name" fieldName @model.allFields) as |attr|}}
-            <FormField data-test-field @attr={{attr}} @mode="create" @model={{@model}} />
+            <FormField data-test-field @attr={{attr}} @model={{@model}} @showHelpText={{false}} />
           {{/let}}
         {{/each}}
       {{/if}}
