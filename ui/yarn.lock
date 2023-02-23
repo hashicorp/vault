@@ -7107,11 +7107,6 @@ builtins@^1.0.3:
   resolved "https://registry.yarnpkg.com/builtins/-/builtins-1.0.3.tgz#cb94faeb61c8696451db36534e1422f94f0aee88"
   integrity sha1-y5T662HIaWRR2zZTThQi+U8K7og=
 
-bulma-switch@^0.0.1:
-  version "0.0.1"
-  resolved "https://registry.yarnpkg.com/bulma-switch/-/bulma-switch-0.0.1.tgz#2de6eb7c602244de7c5efa880b3b19b8464012a9"
-  integrity sha512-vFFcvGNUuWm5AZI15Mbg1aYfPlmo6bC/Bt/UutZFUDmN4PQ0tvZ48AXhL5tsmDuRUiNg7b/kyOQ/rxBILNRQTA==
-
 bulma@^0.5.2:
   version "0.5.3"
   resolved "https://registry.yarnpkg.com/bulma/-/bulma-0.5.3.tgz#be93afb6246192505c30df3f9c1c29a97d319a13"

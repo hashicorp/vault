@@ -21,10 +21,10 @@ module.exports = {
       app = app.app;
     }
 
-    this.bulmaPath = path.dirname(require.resolve('bulma'));
+    // this.bulmaPath = path.dirname(require.resolve('bulma'));
     // this.bulmaVariables = path.dirname(require.resolve('bulma'));
     // console.log({ bulma: this.bulmaVariables });
-    this.bulmaSwitchPath = path.dirname(require.resolve('bulma-switch/switch.sass'));
+    // this.bulmaSwitchPath = path.dirname(require.resolve('bulma-switch/switch.sass'));
     // this.bulmaCheckPath = path.dirname(require.resolve('cool-checkboxes-for-bulma.io'));
     this.sassSVGURIPath = path.dirname(require.resolve('sass-svg-uri'));
     return app;
