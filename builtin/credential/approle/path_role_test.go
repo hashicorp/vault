@@ -2739,7 +2739,7 @@ func TestAppRole_RoleSecretIDAccessorCrossDelete(t *testing.T) {
 	})
 
 	// Attempt to destroy role2 secretID accessor using role1 path
-	_ = b.requestNoErr(t, &logical.Request{
+	_, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Storage:   storage,
 		Path:      "role/role1/secret-id-accessor/destroy",
@@ -2748,12 +2748,7 @@ func TestAppRole_RoleSecretIDAccessorCrossDelete(t *testing.T) {
 		},
 	})
 
-	// Check to see if role2 secretID accessor was deleted
-	accessorHashes, err := storage.List(context.Background(), "accessor/")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(accessorHashes) != 2 {
-		t.Fatalf("unexpected accessor deletion; expected 2 accessors, got %d", len(accessorHashes))
+	if err == nil {
+		t.Fatalf("expected error")
 	}
 }
