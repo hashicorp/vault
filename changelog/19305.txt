@@ -1,0 +1,5 @@
+```release-note:breaking-change
+secrets/pki: Removal of OCSP GET request handler from the PKI engine due to
+mishandling of base64 encoding of OCSP requests.
+```
+
