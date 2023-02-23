@@ -99,7 +99,7 @@ module('Integration | Component | pki-generate-root', function (hooks) {
     assert.strictEqual(this.model.type, this.type);
     assert
       .dom(`[data-test-group="Key parameters"] ${SELECTORS.formField}`)
-      .exists({ count: 3 }, '3 form fields under keyParams toggle');
+      .exists({ count: 4 }, '4 form fields under keyParams toggle');
     assert.dom(SELECTORS.fieldByName('keyName')).exists(`Key name field shown when type=${this.type}`);
     assert.dom(SELECTORS.fieldByName('keyType')).exists(`Key type field shown when type=${this.type}`);
     assert.dom(SELECTORS.fieldByName('keyBits')).exists(`Key bits field shown when type=${this.type}`);
