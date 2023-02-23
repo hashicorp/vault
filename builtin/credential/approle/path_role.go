@@ -1849,7 +1849,7 @@ func (b *backend) pathRoleSecretIDDestroyUpdateDelete(ctx context.Context, req *
 		return nil, err
 	}
 	if entry == nil {
-		return logical.ErrorResponse("invalid secret accessor id", logical.ErrPermissionDenied), nil
+		return nil, nil
 	}
 
 	// Delete the accessor of the SecretID first
@@ -1974,7 +1974,7 @@ func (b *backend) pathRoleSecretIDAccessorDestroyUpdateDelete(ctx context.Contex
 		return nil, err
 	}
 	if entry == nil {
-		return nil, nil
+		return logical.ErrorResponse("invalid secret id accessor"), logical.ErrPermissionDenied
 	}
 
 	entryIndex := fmt.Sprintf("%s%s/%s", role.SecretIDPrefix, roleNameHMAC, accessorEntry.SecretIDHMAC)
