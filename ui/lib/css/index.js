@@ -7,6 +7,7 @@ var Funnel = require('broccoli-funnel');
 var mergeTrees = require('broccoli-merge-trees');
 
 module.exports = {
+  // ARG ? I don't see this named export being consumed anywhere?
   name: 'bulma',
 
   isDevelopingAddon() {
