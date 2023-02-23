@@ -128,8 +128,13 @@ entities attempting to login.
 - `name` `(string: <required>)` - Name of the role.
 - `bound_service_account_names` `(array: <required>)` - List of service account
   names able to access this role. If set to "\*" all names are allowed.
-- `bound_service_account_namespaces` `(array: <required>)` - List of namespaces
+- `bound_service_account_namespaces` `(array: [])` - List of namespaces
   allowed to access this role. If set to "\*" all namespaces are allowed.
+- `bound_service_account_namespace_selector` `(string: "")` - A label selector for Kubernetes
+  namespaces allowed to acces this role. Accepts either a JSON or YAML object. The value
+  should be of type
+  [LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#labelselector-v1-meta).
+  If set with `bound_service_account_namespaces`, the conditions are `OR`ed.
 - `audience` `(string: "")` - Optional Audience claim to verify in the JWT.
 - `alias_name_source` `(string: "serviceaccount_uid")` - Configures how identity aliases are generated.
   Valid choices are: `serviceaccount_uid`, `serviceaccount_name`
@@ -143,12 +148,23 @@ entities attempting to login.
 
 @include 'tokenfields.mdx'
 
-### Sample Payload
+### Sample Payload 1
 
 ```json
 {
   "bound_service_account_names": "vault-auth",
   "bound_service_account_namespaces": "default",
+  "policies": ["dev", "prod"],
+  "max_ttl": 1800000
+}
+```
+
+### Sample Payload 2
+
+```json
+{
+  "bound_service_account_names": "vault-auth",
+  "bound_service_account_namespace_selector": "\"{\"matchLabels\":{\"stage\":\"dev\",\"vault-role\":\"dev-role\"}}",
   "policies": ["dev", "prod"],
   "max_ttl": 1800000
 }
