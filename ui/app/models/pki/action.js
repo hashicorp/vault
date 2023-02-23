@@ -36,17 +36,9 @@ export default class PkiActionModel extends Model {
   })
   type;
 
-  @attr('string') issuerName; // REQUIRED for generate-root actionType, cannot be "default"
-
-  @attr('string') keyName; // cannot be "default"
-
-  @attr('string', {
-    defaultValue: 'default',
-    label: 'Key reference',
-  })
-  keyRef; // type=existing only
-
   @attr('string') commonName; // REQUIRED
+
+  @attr('string') issuerName; // REQUIRED for generate-root actionType, cannot be "default"
 
   @attr('string', {
     label: 'Subject Alternative Names (SANs)',
@@ -95,6 +87,21 @@ export default class PkiActionModel extends Model {
     // options management happens in pki-key-parameters
   })
   keyBits;
+
+  @attr('string') keyName; // cannot be "default"
+
+  @attr('string', {
+    defaultValue: 'default',
+    label: 'Key reference',
+  })
+  keyRef; // type=existing only
+
+  @attr('number', {
+    subText: `Specifies the number of bits to use in the signature algorithm. Only applicable for key_type 'RSA'. Ignore for other key types.`,
+    defaultValue: '0',
+    possibleValues: ['0', '256', '384', '512'],
+  })
+  signatureBits;
 
   @attr('number', {
     defaultValue: -1,

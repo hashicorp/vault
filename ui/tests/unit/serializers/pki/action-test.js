@@ -55,6 +55,7 @@ module('Unit | Serializer | pki/action', function (hooks) {
         max_path_length: -1,
         not_before_duration: '30s',
         private_key_format: 'der',
+        signature_bits: 0,
       };
     });
 

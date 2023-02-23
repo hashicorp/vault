@@ -16,9 +16,11 @@ export default class PkiGenerateToggleGroupsComponent extends Component<Args> {
     const { type } = this.args.model;
     if (!type) return null;
     const fields = keyParamsByType(type);
-    return fields.map((fieldName) => {
+    const keyFields = fields.map((fieldName) => {
       return this.args.model.allFields.find((attr) => attr.name === fieldName);
     });
+    const signatureBits = this.args.model.allFields.find((attr) => attr.name === 'signatureBits');
+    return signatureBits ? keyFields.addObject(signatureBits) : keyFields;
   }
 
   get groups() {
