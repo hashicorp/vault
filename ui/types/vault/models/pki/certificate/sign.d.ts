@@ -1,3 +1,8 @@
 import PkiCertificateBaseModel from './base';
-
-export default class PkiCertificateGenerateModel extends PkiCertificateBaseModel {}
+import { FormField, FormFieldGroups, ModelValidations } from 'vault/app-types';
+export default class PkiCertificateSignModel extends PkiCertificateBaseModel {
+  name: string;
+  formFields: FormField[];
+  formFieldGroups: FormFieldGroups;
+  validate(): ModelValidations;
+}
