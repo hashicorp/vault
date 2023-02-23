@@ -7110,12 +7110,12 @@ builtins@^1.0.3:
 bulma-switch@^0.0.1:
   version "0.0.1"
   resolved "https://registry.yarnpkg.com/bulma-switch/-/bulma-switch-0.0.1.tgz#2de6eb7c602244de7c5efa880b3b19b8464012a9"
-  integrity sha1-LebrfGAiRN58XvqICzsZuEZAEqk=
+  integrity sha512-vFFcvGNUuWm5AZI15Mbg1aYfPlmo6bC/Bt/UutZFUDmN4PQ0tvZ48AXhL5tsmDuRUiNg7b/kyOQ/rxBILNRQTA==
 
 bulma@^0.5.2:
   version "0.5.3"
   resolved "https://registry.yarnpkg.com/bulma/-/bulma-0.5.3.tgz#be93afb6246192505c30df3f9c1c29a97d319a13"
-  integrity sha1-vpOvtiRhklBcMN8/nBwpqX0xmhM=
+  integrity sha512-Q0Qn2n+TcapAoOZf+KWmcQIxPbyBgZVmcgYGrhwFoEIfKrPGD1UQTTMcgNSmMAv63LoftLpDtQHKqo2YC/Tmpg==
 
 bytes@1:
   version "1.0.0"
@@ -7886,11 +7886,6 @@ cookie@~0.4.1:
   version "0.4.1"
   resolved "https://registry.yarnpkg.com/cookie/-/cookie-0.4.1.tgz#afd713fe26ebd21ba95ceb61f9a8116e50a537d1"
   integrity sha512-ZwrFkGJxUR3EIoXtO+yVE69Eb7KlixbaeAWfBQB9vVsNn/o+Yw69gBWSSDK825hQNdN+wF8zELf3dFNl/kxkUA==
-
-cool-checkboxes-for-bulma.io@^1.1.0:
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/cool-checkboxes-for-bulma.io/-/cool-checkboxes-for-bulma.io-1.1.0.tgz#4715f5144b952b9c9d19eab5315d738359fae833"
-  integrity sha512-RDEXOeS9COGTbQjlwRQzPRwOA8ycP4azc/GDVF5qYSOs4tYk6dc9SWNOj7Bb/NvhVUsb+H95pNtGgOBwCENBQg==
 
 copy-concurrently@^1.0.0:
   version "1.0.5"

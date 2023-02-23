@@ -4,8 +4,14 @@ label.box-label {
 
 .box-label {
   @extend .box;
-  @extend .is-centered;
-  @extend .is-gapless;
+  // @extend .is-centered;
+  justify-content: center;
+
+  // @extend .is-gapless;
+  margin-left: 0;
+  margin-right: 0;
+  margin-top: 0;
+
   border-color: $grey-light;
   border-radius: 3px;
   box-shadow: $box-link-shadow;
