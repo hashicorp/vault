@@ -1,10 +1,12 @@
 import Model from '@ember-data/model';
 import { FormField, FormFieldGroups, ModelValidations } from 'vault/app-types';
 export default class PkiIssuerModel extends Model {
-  useOpenAPI(): boolean;
+  secretMountPath: class;
+  get useOpenAPI(): boolean;
+  get backend(): string;
+  get issuerRef(): string;
   issuerId: string;
   issuerName: string;
-  issuerRef(): string;
   keyId: string;
   uriSans: string;
   leafNotAfterBehavior: string;
@@ -20,6 +22,7 @@ export default class PkiIssuerModel extends Model {
   crossSignPath: any;
   signIntermediate: any;
   -------------------- **/
+  pemBundle: string;
   importedIssuers: string[];
   importedKeys: string[];
   formFields: FormField[];

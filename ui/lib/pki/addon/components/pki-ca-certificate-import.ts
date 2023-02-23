@@ -6,7 +6,7 @@ import { task } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
 import { waitFor } from '@ember/test-waiters';
 import errorMessage from 'vault/utils/error-message';
-import PkiCertificateBaseModel from 'vault/models/pki/certificate/base';
+import PkiIssuerModel from 'vault/models/pki/issuer';
 import PkiActionModel from 'vault/models/pki/action';
 
 /**
@@ -27,7 +27,7 @@ import PkiActionModel from 'vault/models/pki/action';
 interface Args {
   onSave: CallableFunction;
   onCancel: CallableFunction;
-  model: PkiCertificateBaseModel | PkiActionModel;
+  model: PkiIssuerModel | PkiActionModel;
   adapterOptions: object | undefined;
 }
 
