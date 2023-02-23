@@ -22,13 +22,13 @@
     <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
       <nav class="tabs">
         <ul>
-          <li>
-            {{#each tabs as |tab|}}
+          {{#each tabs as |tab|}}
+            <li>
               <LinkTo @route={{get tab.routeParams 0}} @model={{get tab.routeParams 1}} data-test-auth-section-tab={{true}}>
                 {{tab.label}}
               </LinkTo>
-            {{/each}}
-          </li>
+            </li>
+          {{/each}}
         </ul>
       </nav>
     </div>
