@@ -39,6 +39,7 @@
           {{else if (eq group "Additional subject fields")}}
             These fields provide more information about the client to which the certificate belongs.
           {{/if}}
+          Add one item per row.
         </p>
         {{#each fields as |fieldName|}}
           {{#let (find-by "name" fieldName @model.allFields) as |attr|}}

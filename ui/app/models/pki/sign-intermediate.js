@@ -40,15 +40,6 @@ export default class PkiSignIntermediateModel extends PkiCertificateBaseModel {
   useCsrValues;
 
   @attr({
-    label: 'Not valid after',
-    detailsLabel: 'Issued certificates expire after',
-    subText:
-      'The time after which this certificate will no longer be valid. This can be a TTL (a range of time from now) or a specific date.',
-    editType: 'yield',
-  })
-  customTtl;
-
-  @attr({
     label: 'Backdate validity',
     detailsLabel: 'Issued certificate backdating',
     helperTextDisabled: 'Vault will use the default value, 30s',

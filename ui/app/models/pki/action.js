@@ -52,7 +52,7 @@ export default class PkiActionModel extends Model {
     label: 'Subject Alternative Names (SANs)',
     editType: 'stringArray',
   })
-  altNames; // comma sep strings
+  altNames;
 
   @attr('string', {
     label: 'IP Subject Alternative Names (IP SANs)',

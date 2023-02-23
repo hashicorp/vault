@@ -18,7 +18,7 @@ module('Integration | Component | pki-role-generate', function (hooks) {
     this.store = this.owner.lookup('service:store');
     this.secretMountPath = this.owner.lookup('service:secret-mount-path');
     this.secretMountPath.currentPath = 'pki-test';
-    this.modelGenerate = this.store.createRecord('pki/certificate/generate', {
+    this.model = this.store.createRecord('pki/certificate/generate', {
       role: 'my-role',
     });
     this.onSuccess = Sinon.spy();
@@ -30,7 +30,7 @@ module('Integration | Component | pki-role-generate', function (hooks) {
       hbs`
       <div class="has-top-margin-xxl">
         <PkiRoleGenerate
-          @model={{this.modelGenerate}}
+          @model={{this.model}}
           @onSuccess={{this.onSuccess}}
         />
        </div>
@@ -41,7 +41,7 @@ module('Integration | Component | pki-role-generate', function (hooks) {
     assert.dom(SELECTORS.commonNameField).exists('shows the common name field');
     assert.dom(SELECTORS.optionsToggle).exists('toggle exists');
     await fillIn(SELECTORS.commonNameField, 'example.com');
-    assert.strictEqual(this.modelGenerate.commonName, 'example.com', 'Filling in the form updates the model');
+    assert.strictEqual(this.model.commonName, 'example.com', 'Filling in the form updates the model');
   });
 
   test('it should render the component displaying the cert', async function (assert) {
@@ -56,7 +56,7 @@ module('Integration | Component | pki-role-generate', function (hooks) {
       hbs`
       <div class="has-top-margin-xxl">
         <PkiRoleGenerate
-          @model={{this.modelGenerate}}
+          @model={{this.model}}
           @onSuccess={{this.onSuccess}}
         />
        </div>
