@@ -26,7 +26,7 @@ export default AuthConfigComponent.extend({
       const data = this.model.config.serialize();
       data.description = this.model.description;
 
-      // token_type should not be tuneable for the token auth method, default is 'default-service'
+      // token_type should not be tuneable for the token auth method.
       if (this.model.type === 'token') {
         delete data.token_type;
       }
