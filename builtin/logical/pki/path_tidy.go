@@ -105,17 +105,17 @@ func pathTidy(b *backend) *framework.Path {
 				Responses: map[int][]framework.Response{
 					http.StatusAccepted: {{
 						Description: "Accepted",
-						Fields:      map[string]*framework.FieldSchema{
+						Fields: map[string]*framework.FieldSchema{
 							"http_content_type": {
-								Type: framework.TypeString,
+								Type:     framework.TypeString,
 								Required: true,
 							},
 							"http_raw_body": {
-								Type: framework.TypeString,
+								Type:     framework.TypeString,
 								Required: true,
 							},
 							"http_status_code": {
-								Type: framework.TypeString,
+								Type:     framework.TypeString,
 								Required: true,
 							},
 						},
