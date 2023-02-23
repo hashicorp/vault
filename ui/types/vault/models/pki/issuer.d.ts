@@ -20,6 +20,8 @@ export default class PkiIssuerModel extends Model {
   crossSignPath: any;
   signIntermediate: any;
   -------------------- **/
+  importedIssuers: string[];
+  importedKeys: string[];
   formFields: FormField[];
   formFieldGroups: FormFieldGroups;
   allFields: FormField[];

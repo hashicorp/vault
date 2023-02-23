@@ -4,13 +4,13 @@ import { waitFor } from '@ember/test-waiters';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
-import PkiCertificateSignModel from 'vault/models/pki/issuer';
+import PkiCertificateSignIntermediate from 'vault/models/pki/issuer';
 import FlashMessageService from 'vault/services/flash-messages';
 import errorMessage from 'vault/utils/error-message';
 
 interface Args {
   onCancel: CallableFunction;
-  model: PkiCertificateSignModel;
+  model: PkiCertificateSignIntermediate;
 }
 
 export default class PkiSignIntermediateFormComponent extends Component<Args> {
@@ -28,7 +28,6 @@ export default class PkiSignIntermediateFormComponent extends Component<Args> {
   *save(event: Event) {
     event.preventDefault();
     const { isValid, state, invalidFormMessage } = this.args.model.validate();
-    console.log(this.args.model);
     this.modelValidations = isValid ? null : state;
     this.inlineFormAlert = invalidFormMessage;
     if (!isValid) return;
