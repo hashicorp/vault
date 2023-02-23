@@ -36,8 +36,10 @@
         }
       ],
       "get": {
-        "operationId": "getFooId",
-        "tags": ["secrets"],
+        "operationId": "KvListFooId",
+        "tags": [
+          "secrets"
+        ],
         "summary": "List Summary",
         "description": "List Description",
         "responses": {
@@ -53,7 +55,9 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": ["true"]
+              "enum": [
+                "true"
+              ]
             }
           }
         ]
@@ -61,7 +65,6 @@
     }
   },
   "components": {
-    "schemas": {
-    }
+    "schemas": {}
   }
 }
