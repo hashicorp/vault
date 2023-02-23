@@ -5,10 +5,11 @@ import { withFormFields } from 'vault/decorators/model-form-fields';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 /**
- * There are many ways to generate a cert, but we want to display them in a consistent way.
- * This base certificate model will set the attributes we want to display, and other
- * models under pki/certificate will extend this model and have their own required
- * attributes and adapter methods.
+ * There are many actions that involve certificates in PKI world.
+ * The base certificate model contains the foundational attributes a certificate may be comprised of.
+ * Other models under pki/certificate will extend this model and include required attributes and adapter
+ * methods for performing various certificate generation and signing actions.
+ * This model is also used to display leaf certs along with their parsed attributes.
  */
 
 const certDisplayFields = [
@@ -91,7 +92,7 @@ export default class PkiCertificateBaseModel extends Model {
   @attr('number', { formatDate: true }) revocationTime;
   @attr('string') serialNumber;
 
-  // parsed from certificate contents in serializer (see parse-pki-cert.js)
+  // read only attrs parsed from certificate contents in serializer on GET requests (see parse-pki-cert.js)
   @attr('number', { formatDate: true }) notValidAfter; // set by ttl or notAfter (customTtL above)
   @attr('number', { formatDate: true }) notValidBefore; // date certificate was issued
   @attr('string') signatureBits;
