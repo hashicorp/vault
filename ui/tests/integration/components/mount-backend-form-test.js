@@ -92,6 +92,11 @@ module('Integration | Component | mount backend form', function (hooks) {
       assert
         .dom('[data-test-input="config.tokenType"]')
         .hasValue('', 'token type does not have a default value.');
+      const selectOptions = document.querySelector('[data-test-input="config.tokenType"]').options;
+      assert.strictEqual(selectOptions[1].text, 'default-service', 'first option is default-service');
+      assert.strictEqual(selectOptions[2].text, 'default-batch', 'second option is default-batch');
+      assert.strictEqual(selectOptions[3].text, 'batch', 'third option is batch');
+      assert.strictEqual(selectOptions[4].text, 'service', 'fourth option is service');
     });
 
     test('it calls mount success', async function (assert) {
