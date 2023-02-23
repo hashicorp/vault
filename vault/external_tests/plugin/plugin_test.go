@@ -422,7 +422,9 @@ func testPlugin_continueOnError(t *testing.T, btype logical.BackendType, mismatc
 			core := cluster.Cores[0]
 
 			// Get the registered plugin
-			req := logical.TestRequest(t, logical.ReadOperation, fmt.Sprintf("sys/plugins/catalog/%s/mock-plugin/v0.0.0+mock", pluginType))
+			req := logical.TestRequest(t, logical.ReadOperation, fmt.Sprintf("sys/plugins/catalog/%s/mock-plugin", pluginType))
+			// We are using the mock backend from vault/sdk/plugin/mock/backend.go which sets the plugin version.
+			req.Data["version"] = "v0.0.0+mock"
 			req.ClientToken = core.Client.Token()
 			resp, err := core.HandleRequest(namespace.RootContext(testCtx), req)
 			if err != nil || resp == nil || (resp != nil && resp.IsError()) {

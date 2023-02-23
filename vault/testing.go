@@ -539,6 +539,9 @@ func TestAddTestPlugin(t testing.T, c *Core, name string, pluginType consts.Plug
 		if err != nil {
 			t.Fatal(err)
 		}
+		// Ensure that the file is closed and written. This seems to be
+		// necessary on Linux systems.
+		out.Close()
 
 		dirPath = tempDir
 	}
