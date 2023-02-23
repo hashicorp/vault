@@ -45,7 +45,7 @@ module('Integration | Component | PkiGenerateToggleGroups', function (hooks) {
       await settled();
       assert
         .dom('[data-test-field]')
-        .exists({ count: fields[type].length + 1 }, `Correct number of fields render for ${type} type`);
+        .exists({ count: fields[type].length }, `Correct number of fields render for ${type} type`);
       fields[type].forEach((key) => {
         assert.dom(`[data-test-input="${key}"]`).exists(`${key} input renders for ${type} type`);
       });
