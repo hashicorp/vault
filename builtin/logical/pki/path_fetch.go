@@ -25,12 +25,12 @@ var pathFetchReadSchema = map[int][]framework.Response{
 				Required:    false,
 			},
 			"revocation_time": {
-				Type:        framework.TypeInt,
+				Type:        framework.TypeString,
 				Description: `Revocation time`,
 				Required:    false,
 			},
 			"revocation_time_rfc3339": {
-				Type:        framework.TypeInt,
+				Type:        framework.TypeString,
 				Description: `Revocation time RFC 3339 formatted`,
 				Required:    false,
 			},
