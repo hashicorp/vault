@@ -480,66 +480,6 @@ func TestOpenAPI_Paths(t *testing.T) {
 	})
 }
 
-func TestOpenAPI_OperationID(t *testing.T) {
-	path1 := &Path{
-		Pattern: "foo/" + GenericNameRegex("id"),
-		Fields: map[string]*FieldSchema{
-			"id": {Type: TypeString},
-		},
-		Operations: map[logical.Operation]OperationHandler{
-			logical.ReadOperation:   &PathOperation{},
-			logical.UpdateOperation: &PathOperation{},
-			logical.DeleteOperation: &PathOperation{},
-		},
-	}
-
-	path2 := &Path{
-		Pattern: "Foo/" + GenericNameRegex("id"),
-		Fields: map[string]*FieldSchema{
-			"id": {Type: TypeString},
-		},
-		Operations: map[logical.Operation]OperationHandler{
-			logical.ReadOperation: &PathOperation{},
-		},
-	}
-
-	for _, context := range []string{"", "bar"} {
-		doc := NewOASDocument("version")
-		err := documentPath(path1, nil, "kv", logical.TypeLogical, doc)
-		if err != nil {
-			t.Fatal(err)
-		}
-		err = documentPath(path2, nil, "kv", logical.TypeLogical, doc)
-		if err != nil {
-			t.Fatal(err)
-		}
-		doc.CreateOperationIDs(context)
-
-		tests := []struct {
-			path string
-			op   string
-			opID string
-		}{
-			{"/Foo/{id}", "get", "getFooId"},
-			{"/foo/{id}", "get", "getFooId_2"},
-			{"/foo/{id}", "post", "postFooId"},
-			{"/foo/{id}", "delete", "deleteFooId"},
-		}
-
-		for _, test := range tests {
-			actual := getPathOp(doc.Paths[test.path], test.op).OperationID
-			expected := test.opID
-			if context != "" {
-				expected += "_" + context
-			}
-
-			if actual != expected {
-				t.Fatalf("expected %v, got %v", expected, actual)
-			}
-		}
-	}
-}
-
 func TestOpenAPI_CustomDecoder(t *testing.T) {
 	p := &Path{
 		Pattern:      "foo",
@@ -625,6 +565,123 @@ func TestOpenAPI_CleanResponse(t *testing.T) {
 
 	if diff := deep.Equal(origJSON, cleanJSON); diff != nil {
 		t.Fatal(diff)
+	}
+}
+
+func TestOpenAPI_constructOperationID(t *testing.T) {
+	tests := map[string]struct {
+		path                string
+		pathAttributes      *DisplayAttributes
+		operation           logical.Operation
+		operationAttributes *DisplayAttributes
+		defaultPrefix       string
+		expected            string
+	}{
+		"empty": {
+			path:                "",
+			pathAttributes:      nil,
+			operation:           logical.Operation(""),
+			operationAttributes: nil,
+			defaultPrefix:       "",
+			expected:            "",
+		},
+		"simple-read": {
+			path:                "path/to/thing",
+			pathAttributes:      nil,
+			operation:           logical.ReadOperation,
+			operationAttributes: nil,
+			defaultPrefix:       "test",
+			expected:            "TestReadPathToThing",
+		},
+		"simple-write": {
+			path:                "path/to/thing",
+			pathAttributes:      nil,
+			operation:           logical.UpdateOperation,
+			operationAttributes: nil,
+			defaultPrefix:       "test",
+			expected:            "TestWritePathToThing",
+		},
+		"operation-prefix": {
+			path:                "path/to/thing",
+			pathAttributes:      &DisplayAttributes{OperationPrefix: "MyPrefix"},
+			operation:           logical.UpdateOperation,
+			operationAttributes: nil,
+			defaultPrefix:       "test",
+			expected:            "MyPrefixWritePathToThing",
+		},
+		"operation-prefix-override": {
+			path:                "path/to/thing",
+			pathAttributes:      &DisplayAttributes{OperationPrefix: "MyPrefix"},
+			operation:           logical.UpdateOperation,
+			operationAttributes: &DisplayAttributes{OperationPrefix: "BetterPrefix"},
+			defaultPrefix:       "test",
+			expected:            "BetterPrefixWritePathToThing",
+		},
+		"operation-prefix-and-suffix": {
+			path:                "path/to/thing",
+			pathAttributes:      &DisplayAttributes{OperationPrefix: "MyPrefix", OperationSuffix: "MySuffix"},
+			operation:           logical.UpdateOperation,
+			operationAttributes: nil,
+			defaultPrefix:       "test",
+			expected:            "MyPrefixWriteMySuffix",
+		},
+		"operation-prefix-and-suffix-override": {
+			path:                "path/to/thing",
+			pathAttributes:      &DisplayAttributes{OperationPrefix: "MyPrefix", OperationSuffix: "MySuffix"},
+			operation:           logical.UpdateOperation,
+			operationAttributes: &DisplayAttributes{OperationPrefix: "BetterPrefix", OperationSuffix: "BetterSuffix"},
+			defaultPrefix:       "test",
+			expected:            "BetterPrefixWriteBetterSuffix",
+		},
+		"operation-prefix-action-suffix": {
+			path:                "path/to/thing",
+			pathAttributes:      &DisplayAttributes{OperationPrefix: "MyPrefix", Action: "Create", OperationSuffix: "MySuffix"},
+			operation:           logical.UpdateOperation,
+			operationAttributes: &DisplayAttributes{OperationPrefix: "BetterPrefix", OperationSuffix: "BetterSuffix"},
+			defaultPrefix:       "test",
+			expected:            "BetterPrefixCreateBetterSuffix",
+		},
+		"operation-prefix-action-suffix-override": {
+			path:                "path/to/thing",
+			pathAttributes:      &DisplayAttributes{OperationPrefix: "MyPrefix", Action: "Create", OperationSuffix: "MySuffix"},
+			operation:           logical.UpdateOperation,
+			operationAttributes: &DisplayAttributes{OperationPrefix: "BetterPrefix", Action: "Login", OperationSuffix: "BetterSuffix"},
+			defaultPrefix:       "test",
+			expected:            "BetterPrefixLoginBetterSuffix",
+		},
+		"operation-prefix-action": {
+			path:                "path/to/thing",
+			pathAttributes:      nil,
+			operation:           logical.UpdateOperation,
+			operationAttributes: &DisplayAttributes{OperationPrefix: "BetterPrefix", Action: "Login"},
+			defaultPrefix:       "test",
+			expected:            "BetterPrefixLogin",
+		},
+		"operation-action-suffix": {
+			path:                "path/to/thing",
+			pathAttributes:      nil,
+			operation:           logical.UpdateOperation,
+			operationAttributes: &DisplayAttributes{Action: "Login", OperationSuffix: "BetterSuffix"},
+			defaultPrefix:       "test",
+			expected:            "LoginBetterSuffix",
+		},
+	}
+
+	for name, test := range tests {
+		name, test := name, test
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			actual := constructOperationID(
+				test.path,
+				test.pathAttributes,
+				test.operation,
+				test.operationAttributes,
+				test.defaultPrefix,
+			)
+			if actual != test.expected {
+				t.Fatalf("expected: %s; got: %s", test.expected, actual)
+			}
+		})
 	}
 }
 

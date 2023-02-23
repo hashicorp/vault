@@ -315,7 +315,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 				continue
 			}
 
-			operationID := constructOperationID(path, opType, p.DisplayAttrs, props.DisplayAttrs, requestResponsePrefix)
+			operationID := constructOperationID(path, p.DisplayAttrs, opType, props.DisplayAttrs, requestResponsePrefix)
 
 			if opType == logical.CreateOperation {
 				pi.CreateSupported = true
@@ -546,58 +546,38 @@ func specialPathMatch(path string, specialPaths []string) bool {
 //   - KVv2Read
 //   - GoogleCloudLogin
 //   - GoogleCloudWriteRole
-func constructOperationID(path string, operation logical.Operation, attributesPath, attributesOperation *DisplayAttributes, defaultPrefix string) string {
-	// default-initialize for convenience
-	var (
-		attrsPath      DisplayAttributes
-		attrsOperation DisplayAttributes
-	)
-	if attributesPath != nil {
-		attrsPath = *attributesPath
-	}
-	if attributesOperation != nil {
-		attrsOperation = *attributesOperation
-	}
-
-	title := cases.Title(language.English, cases.NoLower)
-
+func constructOperationID(
+	path string,
+	pathAttributes *DisplayAttributes,
+	operation logical.Operation,
+	operationAttributes *DisplayAttributes,
+	defaultPrefix string,
+) string {
 	var (
 		prefix string
-		verb   string
 		suffix string
+		verb   string
 	)
 
-	// prefix
-	switch {
-	case attrsOperation.OperationPrefix != "":
-		prefix = attrsOperation.OperationPrefix
-
-	case attrsPath.OperationPrefix != "":
-		prefix = attrsPath.OperationPrefix
+	if operationAttributes != nil {
+		prefix = operationAttributes.OperationPrefix
+		suffix = operationAttributes.OperationSuffix
+		verb = operationAttributes.Action
 	}
 
-	// verb
-	switch {
-	case attrsOperation.Action != "":
-		verb = attrsOperation.Action
-
-	case operation == logical.UpdateOperation:
-		verb = "Write"
-
-	default:
-		verb = title.String(string(operation))
+	if pathAttributes != nil {
+		if prefix == "" {
+			prefix = pathAttributes.OperationPrefix
+		}
+		if suffix == "" {
+			suffix = pathAttributes.OperationSuffix
+		}
+		if verb == "" {
+			verb = pathAttributes.Action
+		}
 	}
 
-	// suffix
-	switch {
-	case attrsOperation.OperationSuffix != "":
-		suffix = attrsOperation.OperationSuffix
-
-	case attrsPath.OperationSuffix != "":
-		suffix = attrsPath.OperationSuffix
-	}
-
-	// disambiguate parameterized paths
+	// disambiguate the suffix for the paths generated through `expandPattern`
 	if suffix != "" {
 		var (
 			parameters []string
@@ -618,9 +598,18 @@ func constructOperationID(path string, operation logical.Operation, attributesPa
 		}
 	}
 
-	// fall back to using the path to construct the operation id
-	if prefix == "" && suffix == "" {
-		// split, title case everything, and join the result into a string
+	title := cases.Title(language.English, cases.NoLower)
+
+	// fall back to using the path + operation to construct the operation id
+	needPrefix := prefix == "" && (suffix == "" || verb == "")
+	needSuffix := suffix == "" && (prefix == "" || verb == "")
+	needVerb := verb == ""
+
+	if needPrefix {
+		prefix = defaultPrefix
+	}
+
+	if needSuffix {
 		parts := nonWordRe.Split(strings.ToLower(path), -1)
 
 		for i, s := range parts {
@@ -628,12 +617,17 @@ func constructOperationID(path string, operation logical.Operation, attributesPa
 		}
 
 		suffix = strings.Join(parts, "")
-
-		// TODO: remove this after adding display attributes to builtin plugins
-		prefix = title.String(defaultPrefix)
 	}
 
-	return fmt.Sprintf("%s%s%s", prefix, verb, suffix)
+	if needVerb {
+		if operation == logical.UpdateOperation {
+			verb = "Write"
+		} else {
+			verb = string(operation)
+		}
+	}
+
+	return title.String(prefix) + title.String(verb) + title.String(suffix)
 }
 
 // expandPattern expands a regex pattern by generating permutations of any optional parameters
