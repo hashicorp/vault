@@ -97,13 +97,6 @@ export default class PkiActionModel extends Model {
   keyRef; // type=existing only
 
   @attr('number', {
-    subText: `Specifies the number of bits to use in the signature algorithm. Only applicable for key_type 'RSA'. Ignore for other key types.`,
-    defaultValue: '0',
-    possibleValues: ['0', '256', '384', '512'],
-  })
-  signatureBits;
-
-  @attr('number', {
     defaultValue: -1,
   })
   maxPathLength;
