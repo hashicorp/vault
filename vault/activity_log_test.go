@@ -4057,7 +4057,7 @@ func TestActivityLog_partialMonthClientCountWithMultipleMountPaths(t *testing.T)
 	}
 
 	a := core.activityLog
-	path := "auth/foo/bar"
+	path := "auth/foo/bar/"
 	accessor := "authfooaccessor"
 
 	// we mount a path using the accessor 'authfooaccessor' which has mount path "auth/foo/bar"
