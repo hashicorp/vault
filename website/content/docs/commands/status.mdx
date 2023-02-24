@@ -49,3 +49,23 @@ flags](/vault/docs/commands) included on all commands.
 - `-format` `(string: "table")` - Print the output in the given format. Valid
   formats are "table", "json", or "yaml". This can also be specified via the
   `VAULT_FORMAT` environment variable.
+
+By default, the output is displayed in "table" format.
+
+#### Output Fields
+
+1. The field for unseal nonce is displayed as `"n"` instead of `n` in yaml outputs. 
+2. The following fields in "table" format are displayed only when relevant:
+
+- "Unseal Progress" and "Unseal Nonce" are displayed when vault is sealed.
+- "HCP Link Status" and "HCP Link Resource ID" are displayed  when HCP link is configured.
+- "Seal Migration in Progress" is displayed when it is in progress.
+- "Cluster Name" and "Cluster ID" are displayed if they have a value 
+- "Raft Committed Index", "Raft Applied Index", "Last WAL" are diplayed if they are non-zero
+- "Warnings" are displayed if they exist
+
+- The following fields are displayed only when HA mode is enabled and is unsealed:
+  - "HA Cluster"
+  - "HA Mode"
+  - "Active Since" is displayed if node is active and has valid active time
+  - "Performance Standby" Node and "Performance Standby Last Remote WAL" are displayed for performance standby nodes 
