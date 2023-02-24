@@ -5,7 +5,6 @@ import ListRoute from 'vault/mixins/list-route';
 
 export default Route.extend(ListRoute, {
   store: service(),
-  wizard: service(),
   pathHelp: service('path-help'),
 
   getMethodAndModelInfo() {

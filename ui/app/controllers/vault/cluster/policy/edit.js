@@ -5,7 +5,6 @@ import { inject as service } from '@ember/service';
 export default class PolicyEditController extends Controller {
   @service router;
   @service flashMessages;
-  @service wizard;
 
   @action
   async deletePolicy() {
@@ -14,9 +13,6 @@ export default class PolicyEditController extends Controller {
       await this.model.destroyRecord();
       this.flashMessages.success(`${policyType.toUpperCase()} policy "${name}" was successfully deleted.`);
       this.router.transitionTo('vault.cluster.policies', policyType);
-      if (this.wizard.featureState === 'delete') {
-        this.wizard.transitionFeatureMachine('delete', 'CONTINUE', policyType);
-      }
     } catch (error) {
       this.model.rollbackAttributes();
       const errors = error.errors ? error.errors.join('. ') : error.message;

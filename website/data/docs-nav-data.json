@@ -198,7 +198,16 @@
       {
         "title": "User Lockout",
         "path": "concepts/user-lockout"
-      }
+      },
+      {
+        "title": "Events",
+        "path": "concepts/events",
+        "badge": {
+          "text": "ALPHA",
+          "type": "outlined",
+          "color": "neutral"
+        }
+  }
     ]
   },
   {
@@ -744,6 +753,10 @@
             "path": "commands/policy/write"
           }
         ]
+      },
+      {
+        "title": "<code>print</code>",
+        "path": "commands/print"
       },
       {
         "title": "<code>read</code>",

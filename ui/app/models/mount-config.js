@@ -42,12 +42,19 @@ export default class MountConfigModel extends Model {
   })
   passthroughRequestHeaders;
 
+  @attr({
+    label: 'Allowed response headers',
+    helpText: 'Headers to allow, allowing a plugin to include them in the response.',
+    editType: 'stringArray',
+  })
+  allowedResponseHeaders;
+
   @attr('string', {
     label: 'Token Type',
     helpText:
-      "The type of token that should be generated via this role. Can be `service`, `batch`, or `default` to use the mount's default (which unless changed will be `service` tokens).",
-    possibleValues: ['default', 'batch', 'service'],
-    defaultFormValue: 'default',
+      'The type of token that should be generated via this role. For `default-service` and `default-batch` service and batch tokens will be issued respectively, unless the auth method explicitly requests a different type.',
+    possibleValues: ['default-service', 'default-batch', 'batch', 'service'],
+    noDefault: true,
   })
   tokenType;
 }

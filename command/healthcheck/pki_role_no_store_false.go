@@ -159,7 +159,7 @@ func (h *RoleNoStoreFalse) Evaluate(e *Executor) (results []*Result, err error) 
 
 		ret := Result{
 			Status:   ResultWarning,
-			Endpoint: "/{{mount}}/role/" + role,
+			Endpoint: "/{{mount}}/roles/" + role,
 			Message:  "Role currently stores every issued certificate (no_store=false). Too many issued and/or revoked certificates can exceed Vault's storage limits and make operations slow. It is encouraged to enable auto-rebuild of CRLs to prevent every revocation from creating a new CRL, and to limit the number of certificates issued under roles with no_store=false: use shorter lifetimes and/or BYOC revocation instead.",
 		}
 

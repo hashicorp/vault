@@ -7,7 +7,6 @@ import { action } from '@ember/object';
 const SUPPORTED_BACKENDS = supportedSecretBackends();
 
 export default class MountSecretBackendController extends Controller {
-  @service wizard;
   @service router;
 
   @action
@@ -27,8 +26,6 @@ export default class MountSecretBackendController extends Controller {
     } else {
       transition = this.router.transitionTo('vault.cluster.secrets.backends');
     }
-    return transition.followRedirects().then(() => {
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', type);
-    });
+    return transition.followRedirects();
   }
 }
