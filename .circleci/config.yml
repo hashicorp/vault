@@ -128,13 +128,13 @@ jobs:
         root: .
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
-    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.4
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.6
     - GO_TAGS: ''
     - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.19.4
+    - image: docker.mirror.hashicorp.services/cimg/go:1.19.6
     resource_class: medium
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -360,7 +360,7 @@ jobs:
         path: /tmp/testlogs
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
-    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.4
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.6
     - GO_TAGS: ''
     - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
@@ -403,13 +403,13 @@ jobs:
         name: make fmt
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
-    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.4
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.6
     - GO_TAGS: ''
     - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.19.4
+    - image: docker.mirror.hashicorp.services/cimg/go:1.19.6
     resource_class: xlarge
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -625,13 +625,13 @@ jobs:
         path: /tmp/testlogs
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
-    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.4
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.6
     - GO_TAGS: ''
     - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.19.4
+    - image: docker.mirror.hashicorp.services/cimg/go:1.19.6
     resource_class: large
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -847,7 +847,7 @@ jobs:
         path: /tmp/testlogs
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
-    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.4
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.6
     - GO_TAGS: ''
     - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
@@ -964,13 +964,13 @@ jobs:
         - /home/circleci/go/pkg/mod
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
-    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.4
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.6
     - GO_TAGS: ''
     - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.19.4
+    - image: docker.mirror.hashicorp.services/cimg/go:1.19.6
     resource_class: medium
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -1196,7 +1196,7 @@ jobs:
         path: /tmp/testlogs
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
-    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.4
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.6
     - GO_TAGS: ''
     - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
