@@ -6,10 +6,11 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 /**
  * There are many actions that involve certificates in PKI world.
- * The base certificate model contains the foundational attributes a certificate may be comprised of.
- * Other models under pki/certificate will extend this model and include required attributes and adapter
- * methods for performing various certificate generation and signing actions.
- * This model is also used to display leaf certs along with their parsed attributes.
+ * The base certificate model contains shared attributes that make up a certificate's content.
+ * Other models under pki/certificate will extend this model and include additional attributes
+ * and associated adapter methods for performing various generation and signing actions.
+ * This model also displays leaf certs and their parsed attributes (parsed parameters only
+ * render if included in certDisplayFields below).
  */
 
 const certDisplayFields = [
