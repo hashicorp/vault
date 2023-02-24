@@ -76,12 +76,6 @@ export default class PkiIssuerModel extends Model {
   })
   leafNotAfterBehavior;
 
-  @attr('string', {
-    subText:
-      "An advanced field useful when automatic chain building isn't desired. The first element must be the present issuer's reference.",
-  })
-  manualChain;
-
   @attr({
     subText: 'Allowed usages for this issuer. It can always be read.',
     editType: 'yield',
@@ -92,6 +86,12 @@ export default class PkiIssuerModel extends Model {
     ],
   })
   usage;
+
+  @attr('string', {
+    subText:
+      "An advanced field useful when automatic chain building isn't desired. The first element must be the present issuer's reference.",
+  })
+  manualChain;
 
   @attr({
     subText:
