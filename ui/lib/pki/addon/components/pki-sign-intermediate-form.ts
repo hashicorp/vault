@@ -4,7 +4,7 @@ import { waitFor } from '@ember/test-waiters';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
-import PkiCertificateSignIntermediate from 'vault/models/pki/issuer';
+import PkiCertificateSignIntermediate from 'vault/models/pki/certificate/sign-intermediate';
 import FlashMessageService from 'vault/services/flash-messages';
 import errorMessage from 'vault/utils/error-message';
 
