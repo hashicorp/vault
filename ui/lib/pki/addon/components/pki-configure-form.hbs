@@ -19,8 +19,8 @@
               @value={{option.key}}
               @groupValue={{@config.actionType}}
               @onChange={{fn (mut @config.actionType) option.key}}
+              @checked={{eq this.selectedOption option.key}}
               data-test-pki-config-option={{option.key}}
-              checked={{eq this.selectedOption option.key}}
             />
             <label for={{option.key}}></label>
           </div>
