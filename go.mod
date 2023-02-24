@@ -107,7 +107,7 @@ require (
 	github.com/hashicorp/hcp-sdk-go v0.23.0
 	github.com/hashicorp/nomad/api v0.0.0-20220707195938-75f4c2237b28
 	github.com/hashicorp/raft v1.3.10
-	github.com/hashicorp/raft-autopilot v0.2.0
+	github.com/hashicorp/raft-autopilot v0.1.6
 	github.com/hashicorp/raft-boltdb/v2 v2.0.0-20210421194847-a7e34179d62c
 	github.com/hashicorp/raft-snapshot v1.0.4
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.14.0
