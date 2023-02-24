@@ -14,6 +14,7 @@ type TooManyCerts struct {
 	CountWarning  int
 
 	CertCounts int
+	FetchIssue *PathFetch
 }
 
 func NewTooManyCertsCheck() Check {
@@ -60,7 +61,9 @@ func (h *TooManyCerts) FetchResources(e *Executor) error {
 	exit, leavesRet, _, err := pkiFetchLeavesList(e, func() {
 		h.UnsupportedVersion = true
 	})
-	if exit {
+	h.FetchIssue = leavesRet
+
+	if exit || err != nil {
 		return err
 	}
 
@@ -78,6 +81,23 @@ func (h *TooManyCerts) Evaluate(e *Executor) (results []*Result, err error) {
 			Message:  "This health check requires Vault 1.11+ but an earlier version of Vault Server was contacted, preventing this health check from running.",
 		}
 		return []*Result{&ret}, nil
+	}
+
+	if h.FetchIssue != nil && h.FetchIssue.IsSecretPermissionsError() {
+		ret := Result{
+			Status:   ResultInsufficientPermissions,
+			Endpoint: h.FetchIssue.Path,
+			Message:  "Without this information, this health check is unable to function.",
+		}
+
+		if e.Client.Token() == "" {
+			ret.Message = "No token available so unable to list the endpoint for this mount. " + ret.Message
+		} else {
+			ret.Message = "This token lacks permission to list the endpoint for this mount. " + ret.Message
+		}
+
+		results = append(results, &ret)
+		return
 	}
 
 	ret := Result{
