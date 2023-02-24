@@ -12,6 +12,7 @@ import (
 )
 
 const (
+	operationPrefixAppRole      = "AppRole"
 	secretIDPrefix              = "secret_id/"
 	secretIDLocalPrefix         = "secret_id_local/"
 	secretIDAccessorPrefix      = "accessor/"

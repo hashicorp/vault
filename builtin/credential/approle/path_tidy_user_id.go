@@ -17,6 +17,12 @@ func pathTidySecretID(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "tidy/secret-id$",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAppRole,
+			OperationSuffix: "SecretID",
+			Action:          "Tidy",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathTidySecretIDUpdate,
