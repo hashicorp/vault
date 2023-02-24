@@ -1671,8 +1671,9 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Pattern: "internal/counters/requests",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback: b.pathInternalCountersRequests,
-					Summary:  "Backwards compatibility is not guaranteed for this API",
+					Callback:   b.pathInternalCountersRequests,
+					Deprecated: true,
+					Summary:    "Backwards compatibility is not guaranteed for this API",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-requests"][0]),
