@@ -14,15 +14,17 @@ type RoleNoStoreFalse struct {
 
 	AllowedRoles map[string]bool
 
-	RoleFetchIssue *PathFetch
-	RoleEntryMap   map[string]map[string]interface{}
-	CRLConfig      *PathFetch
+	RoleListFetchIssue *PathFetch
+	RoleFetchIssues    map[string]*PathFetch
+	RoleEntryMap       map[string]map[string]interface{}
+	CRLConfig          *PathFetch
 }
 
 func NewRoleNoStoreFalseCheck() Check {
 	return &RoleNoStoreFalse{
-		AllowedRoles: make(map[string]bool),
-		RoleEntryMap: make(map[string]map[string]interface{}),
+		RoleFetchIssues: make(map[string]*PathFetch),
+		AllowedRoles:    make(map[string]bool),
+		RoleEntryMap:    make(map[string]map[string]interface{}),
 	}
 }
 
@@ -63,7 +65,7 @@ func (h *RoleNoStoreFalse) FetchResources(e *Executor) error {
 	})
 	if exit || err != nil {
 		if f != nil && f.IsSecretPermissionsError() {
-			h.RoleFetchIssue = f
+			h.RoleListFetchIssue = f
 		}
 		return err
 	}
@@ -74,7 +76,7 @@ func (h *RoleNoStoreFalse) FetchResources(e *Executor) error {
 		})
 		if skip || err != nil || entry == nil {
 			if f != nil && f.IsSecretPermissionsError() {
-				h.RoleFetchIssue = f
+				h.RoleFetchIssues[role] = f
 			}
 			if err != nil {
 				return err
@@ -107,18 +109,37 @@ func (h *RoleNoStoreFalse) Evaluate(e *Executor) (results []*Result, err error) 
 		return []*Result{&ret}, nil
 	}
 
-	if h.RoleFetchIssue != nil && h.RoleFetchIssue.IsSecretPermissionsError() {
+	if h.RoleListFetchIssue != nil && h.RoleListFetchIssue.IsSecretPermissionsError() {
 		ret := Result{
 			Status:   ResultInsufficientPermissions,
-			Endpoint: h.RoleFetchIssue.Path,
-			Message:  "lacks permission either to list the roles or to read a specific role. This may restrict the ability to fully execute this health check",
+			Endpoint: h.RoleListFetchIssue.Path,
+			Message:  "lacks permission either to list the roles. This restricts the ability to fully execute this health check.",
 		}
 		if e.Client.Token() == "" {
 			ret.Message = "No token available and so this health check " + ret.Message
 		} else {
 			ret.Message = "This token " + ret.Message
 		}
-		results = append(results, &ret)
+		return []*Result{&ret}, nil
+	}
+
+	for role, fetchPath := range h.RoleFetchIssues {
+		if fetchPath != nil && fetchPath.IsSecretPermissionsError() {
+			delete(h.RoleEntryMap, role)
+			ret := Result{
+				Status:   ResultInsufficientPermissions,
+				Endpoint: fetchPath.Path,
+				Message:  "Without this information, this health check is unable to function.",
+			}
+
+			if e.Client.Token() == "" {
+				ret.Message = "No token available so unable for the endpoint for this mount. " + ret.Message
+			} else {
+				ret.Message = "This token lacks permission the endpoint for this mount. " + ret.Message
+			}
+
+			results = append(results, &ret)
+		}
 	}
 
 	crlAutoRebuild := false
