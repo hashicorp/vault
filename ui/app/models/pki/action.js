@@ -36,9 +36,17 @@ export default class PkiActionModel extends Model {
   })
   type;
 
-  @attr('string') commonName; // REQUIRED
-
   @attr('string') issuerName; // REQUIRED for generate-root actionType, cannot be "default"
+
+  @attr('string') keyName; // cannot be "default"
+
+  @attr('string', {
+    defaultValue: 'default',
+    label: 'Key reference',
+  })
+  keyRef; // type=existing only
+
+  @attr('string') commonName; // REQUIRED
 
   @attr('string', {
     label: 'Subject Alternative Names (SANs)',
@@ -87,14 +95,6 @@ export default class PkiActionModel extends Model {
     // options management happens in pki-key-parameters
   })
   keyBits;
-
-  @attr('string') keyName; // cannot be "default"
-
-  @attr('string', {
-    defaultValue: 'default',
-    label: 'Key reference',
-  })
-  keyRef; // type=existing only
 
   @attr('number', {
     defaultValue: -1,
