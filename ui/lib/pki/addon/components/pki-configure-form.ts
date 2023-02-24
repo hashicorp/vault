@@ -1,5 +1,7 @@
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
+import { tracked } from '@glimmer/tracking';
+
 // TYPES
 import Store from '@ember-data/store';
 import Router from '@ember/routing/router';
@@ -8,6 +10,7 @@ import PkiActionModel from 'vault/models/pki/action';
 
 interface Args {
   config: PkiActionModel;
+  preselectOption: string;
 }
 
 /**
@@ -21,6 +24,16 @@ export default class PkiConfigureForm extends Component<Args> {
   @service declare readonly store: Store;
   @service declare readonly router: Router;
   @service declare readonly flashMessages: FlashMessageService;
+
+  @tracked selectedOption: string | null = null;
+
+  constructor(owner: unknown, args: Args) {
+    super(owner, args);
+    if (this.args.preselectOption) {
+      this.selectedOption = this.args.preselectOption;
+      this.args.config.actionType = this.args.preselectOption;
+    }
+  }
 
   get configTypes() {
     return [

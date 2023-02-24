@@ -23,6 +23,7 @@ export default buildRoutes(function () {
     this.route('import');
     this.route('generate-root');
     this.route('generate-intermediate');
+    this.route('create');
     this.route('issuer', { path: '/:issuer_ref' }, function () {
       this.route('details');
       this.route('edit');

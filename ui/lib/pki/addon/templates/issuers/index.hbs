@@ -10,7 +10,7 @@
 />
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink @route="issuers.import" data-test-generate-issuer="import">
+    <ToolbarLink @route="issuers.create" @query={{hash formType="import"}} data-test-generate-issuer="import">
       Import
     </ToolbarLink>
     <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
@@ -26,13 +26,19 @@
         <nav class="box menu" aria-label="generate options">
           <ul class="menu-list">
             <li class="action">
-              <LinkTo @route="issuers.generate-root" {{on "click" (fn this.onLinkClick D)}} data-test-generate-issuer="root">
+              <LinkTo
+                @route="issuers.create"
+                @query={{hash formType="generate-root"}}
+                {{on "click" (fn this.onLinkClick D)}}
+                data-test-generate-issuer="root"
+              >
                 Root
               </LinkTo>
             </li>
             <li class="action">
               <LinkTo
-                @route="issuers.generate-intermediate"
+                @route="issuers.create"
+                @query={{hash formType="generate-csr"}}
                 {{on "click" (fn this.onLinkClick D)}}
                 data-test-generate-issuer="intermediate"
               >
