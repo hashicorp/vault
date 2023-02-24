@@ -15,6 +15,12 @@ const (
 func (b *backend) pathConfigTidyIdentityAccessList() *framework.Path {
 	return &framework.Path{
 		Pattern: fmt.Sprintf("%s$", "config/tidy/identity-accesslist"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWSConfig,
+			OperationSuffix: "IdentityAccessListTidySettings",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"safety_buffer": {
 				Type:    framework.TypeDurationSecond,
@@ -37,6 +43,9 @@ expiration, before it is removed from the backend storage.`,
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathConfigTidyIdentityAccessListCreateUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Action: "Update",
+				},
 			},
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathConfigTidyIdentityAccessListRead,

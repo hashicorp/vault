@@ -20,6 +20,12 @@ var currentRoleStorageVersion = 3
 func (b *backend) pathRole() *framework.Path {
 	p := &framework.Path{
 		Pattern: "role/" + framework.GenericNameRegex("role"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "AuthRole",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"role": {
 				Type:        framework.TypeString,
@@ -199,6 +205,11 @@ func (b *backend) pathListRole() *framework.Path {
 	return &framework.Path{
 		Pattern: "role/?",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "AuthRoles",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathRoleList,
@@ -213,6 +224,11 @@ func (b *backend) pathListRole() *framework.Path {
 func (b *backend) pathListRoles() *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/?",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "AuthRoles2",
+		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{

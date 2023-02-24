@@ -13,6 +13,12 @@ const identityAccessListStorage = "whitelist/identity/"
 func (b *backend) pathIdentityAccessList() *framework.Path {
 	return &framework.Path{
 		Pattern: "identity-accesslist/" + framework.GenericNameRegex("instance_id"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "IdentityAccessList",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"instance_id": {
 				Type: framework.TypeString,
@@ -38,6 +44,11 @@ gets cached in this accesslist, keyed off of instance ID.`,
 func (b *backend) pathListIdentityAccessList() *framework.Path {
 	return &framework.Path{
 		Pattern: "identity-accesslist/?",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "IdentityAccessList",
+		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{

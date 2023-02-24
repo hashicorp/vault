@@ -54,6 +54,12 @@ var (
 func (b *backend) pathConfigIdentity() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/identity$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWSConfig,
+			OperationSuffix: "Identity",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"iam_alias": {
 				Type:        framework.TypeString,

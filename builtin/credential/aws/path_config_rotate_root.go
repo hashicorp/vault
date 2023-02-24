@@ -21,6 +21,12 @@ func (b *backend) pathConfigRotateRoot() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/rotate-root",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWSConfig,
+			OperationSuffix: "Root",
+			Action:          "Rotate",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathConfigRotateRootUpdate,

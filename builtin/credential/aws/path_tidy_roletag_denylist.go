@@ -19,6 +19,12 @@ const (
 func (b *backend) pathTidyRoletagDenyList() *framework.Path {
 	return &framework.Path{
 		Pattern: "tidy/roletag-denylist$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "RoleTagDenyListTidySettings",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"safety_buffer": {
 				Type:    framework.TypeDurationSecond,

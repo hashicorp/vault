@@ -17,7 +17,11 @@ import (
 	cache "github.com/patrickmn/go-cache"
 )
 
-const amzHeaderPrefix = "X-Amz-"
+const (
+	amzHeaderPrefix          = "X-Amz-"
+	operationPrefixAWS       = "AWS"
+	operationPrefixAWSConfig = "AWSConfig"
+)
 
 var defaultAllowedSTSRequestHeaders = []string{
 	"X-Amz-Algorithm",

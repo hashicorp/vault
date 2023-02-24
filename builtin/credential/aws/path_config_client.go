@@ -16,6 +16,12 @@ import (
 func (b *backend) pathConfigClient() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/client$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWSConfig,
+			OperationSuffix: "Client",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"access_key": {
 				Type:        framework.TypeString,

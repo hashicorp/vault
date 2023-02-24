@@ -18,6 +18,11 @@ func (b *backend) pathListCertificates() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/certificates/?",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWSConfig,
+			OperationSuffix: "Certificates",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathCertificatesList,
@@ -32,6 +37,12 @@ func (b *backend) pathListCertificates() *framework.Path {
 func (b *backend) pathConfigCertificate() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/certificate/" + framework.GenericNameRegex("cert_name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWSConfig,
+			OperationSuffix: "Certificate",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"cert_name": {
 				Type:        framework.TypeString,
