@@ -17,6 +17,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/hashicorp/go-uuid"
 
 	"github.com/axiomhq/hyperloglog"
@@ -3985,6 +3987,53 @@ func TestActivityLog_partialMonthClientCountUsingHandleQuery(t *testing.T) {
 			t.Errorf("bad client count for namespace %s . expected %d, got %d", clientCount.NamespaceID, totalCount, clientCount.Counts.Clients)
 		}
 	}
+}
+
+// TestActivityLog_handleQuery_normalizedMountPaths ensures that the mount paths returned by the activity log always have a trailing slash and client accounting is done correctly when there's no trailing slash.
+// Two clients that have the same mount path, but one has a trailing slash, should be considered part of the same mount path
+func TestActivityLog_handleQuery_normalizedMountPaths(t *testing.T) {
+	timeutil.SkipAtEndOfMonth(t)
+
+	core, _, _ := TestCoreUnsealed(t)
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "auth/")
+	ctx := namespace.RootContext(nil)
+	now := time.Now().UTC()
+	a := core.activityLog
+	a.SetEnable(true)
+
+	uuid1, err := uuid.GenerateUUID()
+	require.NoError(t, err)
+	uuid2, err := uuid.GenerateUUID()
+	require.NoError(t, err)
+	accessor1 := "accessor1"
+	accessor2 := "accessor2"
+	pathWithSlash := "auth/foo/"
+	pathWithoutSlash := "auth/foo"
+
+	// create two mounts of the same name. One has a trailing slash, the other doesn't
+	err = core.router.Mount(&NoopBackend{}, "auth/foo", &MountEntry{UUID: uuid1, Accessor: accessor1, NamespaceID: namespace.RootNamespaceID, namespace: namespace.RootNamespace, Path: pathWithSlash}, view)
+	require.NoError(t, err)
+	err = core.router.Mount(&NoopBackend{}, "auth/bar", &MountEntry{UUID: uuid2, Accessor: accessor2, NamespaceID: namespace.RootNamespaceID, namespace: namespace.RootNamespace, Path: pathWithoutSlash}, view)
+	require.NoError(t, err)
+
+	// handle token usage for each of them mount paths
+	a.HandleTokenUsage(ctx, &logical.TokenEntry{Path: pathWithSlash, NamespaceID: namespace.RootNamespaceID}, "id1", false)
+	a.HandleTokenUsage(ctx, &logical.TokenEntry{Path: pathWithoutSlash, NamespaceID: namespace.RootNamespaceID}, "id2", false)
+
+	// query the data for the month
+	results, err := a.handleQuery(ctx, timeutil.StartOfMonth(now), timeutil.EndOfMonth(now), 0)
+	require.NoError(t, err)
+
+	byNamespace := results["by_namespace"].([]*ResponseNamespace)
+	require.Len(t, byNamespace, 1)
+	byMount := byNamespace[0].Mounts
+	require.Len(t, byMount, 1)
+	mountPath := byMount[0].MountPath
+
+	// verify that both clients are recorded for the mount path with the slash
+	require.Equal(t, mountPath, pathWithSlash)
+	require.Equal(t, byMount[0].Counts.Clients, 2)
 }
 
 // TestActivityLog_partialMonthClientCountWithMultipleMountPaths verifies that logic in refreshFromStoredLog includes all mount paths
