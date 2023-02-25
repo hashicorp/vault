@@ -14,6 +14,12 @@ const defaultUserNameTemplate = `{{ if (eq .Type "STS") }}{{ printf "vault-%s-%s
 func pathConfigRoot(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/root",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWSConfig,
+			OperationSuffix: "Root",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"access_key": {
 				Type:        framework.TypeString,

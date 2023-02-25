@@ -12,6 +12,12 @@ import (
 func pathConfigLease(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/lease",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWSConfig,
+			OperationSuffix: "Lease",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"lease": {
 				Type:        framework.TypeString,

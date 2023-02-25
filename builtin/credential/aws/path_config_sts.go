@@ -19,7 +19,7 @@ func (b *backend) pathListSts() *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixAWSConfig,
-			OperationSuffix: "SecurityTokenService",
+			OperationSuffix: "STSRoleRelationships",
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -39,7 +39,7 @@ func (b *backend) pathConfigSts() *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixAWSConfig,
-			OperationSuffix: "SecurityTokenServiceAccount",
+			OperationSuffix: "STSRoles",
 		},
 
 		Fields: map[string]*framework.FieldSchema{
