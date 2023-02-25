@@ -17,7 +17,7 @@ func pathConfigRoot(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixAWSConfig,
-			OperationSuffix: "Root",
+			OperationSuffix: "RootIAMCredentials",
 		},
 
 		Fields: map[string]*framework.FieldSchema{
