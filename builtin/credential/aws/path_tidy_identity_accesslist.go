@@ -18,7 +18,8 @@ func (b *backend) pathTidyIdentityAccessList() *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixAWS,
-			OperationSuffix: "IdentityAccessListTidySettings",
+			OperationSuffix: "IdentityAccessList",
+			Action:          "Tidy",
 		},
 
 		Fields: map[string]*framework.FieldSchema{

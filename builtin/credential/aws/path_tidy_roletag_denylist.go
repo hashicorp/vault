@@ -22,7 +22,8 @@ func (b *backend) pathTidyRoletagDenyList() *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixAWS,
-			OperationSuffix: "RoleTagDenyListTidySettings",
+			OperationSuffix: "RoleTagDenyList",
+			Action:          "Tidy",
 		},
 
 		Fields: map[string]*framework.FieldSchema{
