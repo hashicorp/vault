@@ -1,0 +1,3 @@
+```release-note:improvement
+openapi: Add display attributes for AWS
+```
