@@ -967,9 +967,8 @@ func cleanResponse(resp *logical.Response) *cleanedResponse {
 //
 // An optional user-provided suffix ("context") may also be appended.
 //
-// Deprecated: operationID's are now populated using constructOperationID();
-// This function is here for backwards compatibility with older plugins and
-// will soon be reomoved.
+// Deprecated: operationID's are now populated using `constructOperationID`.
+// This function is here for backwards compatibility with older plugins.
 func (d *OASDocument) CreateOperationIDs(context string) {
 	opIDCount := make(map[string]int)
 	var paths []string
