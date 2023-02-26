@@ -244,7 +244,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 		}
 	}
 
-	for _, path := range paths {
+	for pathIndex, path := range paths {
 		// Construct a top level PathItem which will be populated as the path is processed.
 		pi := OASPathItem{
 			Description: cleanString(p.HelpSynopsis),
@@ -315,8 +315,6 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 				continue
 			}
 
-			operationID := constructOperationID(path, p.DisplayAttrs, opType, props.DisplayAttrs, requestResponsePrefix)
-
 			if opType == logical.CreateOperation {
 				pi.CreateSupported = true
 
@@ -332,6 +330,15 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 			}
 
 			op := NewOASOperation()
+
+			operationID := constructOperationID(
+				path,
+				pathIndex,
+				p.DisplayAttrs,
+				opType,
+				props.DisplayAttrs,
+				requestResponsePrefix,
+			)
 
 			op.Summary = props.Summary
 			op.Description = props.Description
@@ -548,6 +555,7 @@ func specialPathMatch(path string, specialPaths []string) bool {
 //   - GoogleCloudWriteRole
 func constructOperationID(
 	path string,
+	pathIndex int,
 	pathAttributes *DisplayAttributes,
 	operation logical.Operation,
 	operationAttributes *DisplayAttributes,
@@ -577,24 +585,27 @@ func constructOperationID(
 		}
 	}
 
-	// disambiguate the suffix for the paths generated through `expandPattern`
-	if suffix != "" {
-		var (
-			parameters []string
-			parts      []string = strings.Split(path, "/")
-		)
-		for _, e := range parts {
-			if strings.HasPrefix(e, "{") && strings.HasSuffix(e, "}") {
-				parameters = append(parameters, e)
-			}
-		}
-		if len(parameters) != 0 && strings.HasSuffix(suffix, "s") {
-			last := parameters[len(parameters)-1]
-
-			// remove the last "s" character to make this not plural
-			if last == "{name}" || last == "{role}" || last == "{method_id}" || last == "{issuer_ref}" {
-				suffix = suffix[:len(suffix)-1]
-			}
+	// A single suffix string can contain multiple pipe-delimited strings. To
+	// determine the actual suffix, we attempt to match it by the index of the
+	// paths returned from `expandPattern(...)`. For example:
+	//
+	//  aws/
+	//      Pattern: `^(creds|sts)/(?P<name>\w(([\w-.@]+)?\w)?)$`
+	//      DisplayAttrs: {
+	//          OperationSuffix: "Credentials|STSCredentials"
+	//      }
+	//
+	//  Will expand into two paths and corresponding suffixes:
+	//
+	//      path 0: "creds/{name}"  suffix: Credentials
+	//      path 1: "sts/{name}"    suffix: STSCredentials
+	//
+	if suffixes := strings.Split(suffix, "|"); len(suffixes) > 1 || pathIndex > 0 {
+		// if the index is out of bounds, fall back to the old logic
+		if pathIndex >= len(suffixes) {
+			suffix = ""
+		} else {
+			suffix = suffixes[pathIndex]
 		}
 	}
 
@@ -602,7 +613,7 @@ func constructOperationID(
 
 	// fall back to using the path + operation to construct the operation id
 	needPrefix := prefix == "" && (suffix == "" || verb == "")
-	needSuffix := suffix == "" && (prefix == "" || verb == "")
+	needSuffix := suffix == "" && (prefix == "" || verb == "" || pathIndex > 0)
 	needVerb := verb == ""
 
 	if needPrefix {
