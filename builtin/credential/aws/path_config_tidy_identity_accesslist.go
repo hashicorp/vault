@@ -44,7 +44,7 @@ expiration, before it is removed from the backend storage.`,
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathConfigTidyIdentityAccessListCreateUpdate,
 				DisplayAttrs: &framework.DisplayAttributes{
-					Action: "update",
+					OperationVerb: "update",
 				},
 			},
 			logical.ReadOperation: &framework.PathOperation{

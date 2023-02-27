@@ -45,7 +45,7 @@ Defaults to 4320h (180 days).`,
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathConfigTidyRoletagDenyListCreateUpdate,
 				DisplayAttrs: &framework.DisplayAttributes{
-					Action: "update",
+					OperationVerb: "update",
 				},
 			},
 			logical.ReadOperation: &framework.PathOperation{

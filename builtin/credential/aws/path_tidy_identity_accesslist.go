@@ -19,7 +19,7 @@ func (b *backend) pathTidyIdentityAccessList() *framework.Path {
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixAWSAuth,
 			OperationSuffix: "identity-access-list",
-			Action:          "tidy",
+			OperationVerb:   "tidy",
 		},
 
 		Fields: map[string]*framework.FieldSchema{
