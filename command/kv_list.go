@@ -15,6 +15,7 @@ var (
 
 type KVListCommand struct {
 	*BaseCommand
+	flagMount string
 }
 
 func (c *KVListCommand) Synopsis() string {
@@ -40,7 +41,23 @@ Usage: vault kv list [options] PATH
 }
 
 func (c *KVListCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+
+	// Common Options
+	f := set.NewFlagSet("Common Options")
+
+	f.StringVar(&StringVar{
+		Name:    "mount",
+		Target:  &c.flagMount,
+		Default: "", // no default, because the handling of the next arg is determined by whether this flag has a value
+		Usage: `Specifies the path where the KV backend is mounted. If specified, 
+		the next argument will be interpreted as the secret path. If this flag is 
+		not specified, the next argument will be interpreted as the combined mount 
+		path and secret path, with /data/ automatically appended between KV 
+		v2 secrets.`,
+	})
+
+	return set
 }
 
 func (c *KVListCommand) AutocompleteArgs() complete.Predictor {
