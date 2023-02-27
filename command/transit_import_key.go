@@ -72,7 +72,7 @@ func importKey(c *BaseCommand, operation string, flags *FlagSets, args []string)
 	// Parse and validate the arguments.
 	if err := flags.Parse(args); err != nil {
 		c.UI.Error(err.Error())
-		return pkiRetUsage
+		return 1
 	}
 
 	args = flags.Args()
