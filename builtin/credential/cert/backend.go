@@ -18,7 +18,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-const operationPrefixCertificates = "Certificates"
+const operationPrefixCertificates = "certificates"
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()

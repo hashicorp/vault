@@ -39,7 +39,7 @@ func pathCerts(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixCertificates,
-			OperationSuffix: "Cert",
+			OperationSuffix: "cert",
 			ItemType:        "Certificate",
 		},
 

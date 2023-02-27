@@ -21,7 +21,7 @@ func pathListCRLs(b *backend) *framework.Path {
 		Pattern: "crls/?$",
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixCertificates,
-			OperationSuffix: "CRLs",
+			OperationSuffix: "crls",
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
@@ -48,7 +48,7 @@ func pathCRLs(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixCertificates,
-			OperationSuffix: "CRL",
+			OperationSuffix: "crl",
 		},
 
 		Fields: map[string]*framework.FieldSchema{
