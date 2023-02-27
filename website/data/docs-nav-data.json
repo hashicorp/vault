@@ -1356,6 +1356,10 @@
               {
                 "title": "SecureAuth",
                 "path": "auth/jwt/oidc-providers/secureauth"
+              },
+              {
+                "title": "IBM ISAM",
+                "path": "auth/jwt/oidc-providers/ibmisam"
               }
             ]
           }
