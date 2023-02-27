@@ -19,7 +19,7 @@ func pathConfig(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixGitHub,
-			OperationSuffix: "Config",
+			OperationSuffix: "config",
 		},
 
 		Fields: map[string]*framework.FieldSchema{

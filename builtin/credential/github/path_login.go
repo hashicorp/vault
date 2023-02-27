@@ -19,7 +19,7 @@ func pathLogin(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixGitHub,
-			Action:          "Login",
+			Action:          "login",
 		},
 
 		Fields: map[string]*framework.FieldSchema{
