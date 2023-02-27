@@ -22,7 +22,7 @@ func (b *backend) pathConfigRotateRoot() *framework.Path {
 		Pattern: "config/rotate-root",
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixAWSConfig,
+			OperationPrefix: operationPrefixAWSAuthConfig,
 			OperationSuffix: "Root",
 			Action:          "Rotate",
 		},

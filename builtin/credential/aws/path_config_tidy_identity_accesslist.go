@@ -17,7 +17,7 @@ func (b *backend) pathConfigTidyIdentityAccessList() *framework.Path {
 		Pattern: fmt.Sprintf("%s$", "config/tidy/identity-accesslist"),
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixAWSConfig,
+			OperationPrefix: operationPrefixAWSAuthConfig,
 			OperationSuffix: "IdentityAccessListTidySettings",
 		},
 

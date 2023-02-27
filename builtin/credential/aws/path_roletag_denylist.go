@@ -14,7 +14,7 @@ func (b *backend) pathRoletagDenyList() *framework.Path {
 		Pattern: "roletag-denylist/(?P<role_tag>.*)",
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixAWS,
+			OperationPrefix: operationPrefixAWSAuth,
 			OperationSuffix: "RoleTagDenyList",
 		},
 
@@ -49,7 +49,7 @@ func (b *backend) pathListRoletagDenyList() *framework.Path {
 		Pattern: "roletag-denylist/?",
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixAWS,
+			OperationPrefix: operationPrefixAWSAuth,
 			OperationSuffix: "RoleTagDenyList",
 		},
 

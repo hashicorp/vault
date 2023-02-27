@@ -56,7 +56,7 @@ func (b *backend) pathConfigIdentity() *framework.Path {
 		Pattern: "config/identity$",
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixAWSConfig,
+			OperationPrefix: operationPrefixAWSAuthConfig,
 			OperationSuffix: "Identity",
 		},
 

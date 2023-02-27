@@ -15,7 +15,7 @@ func (b *backend) pathIdentityAccessList() *framework.Path {
 		Pattern: "identity-accesslist/" + framework.GenericNameRegex("instance_id"),
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixAWS,
+			OperationPrefix: operationPrefixAWSAuth,
 			OperationSuffix: "IdentityAccessList",
 		},
 
@@ -46,7 +46,7 @@ func (b *backend) pathListIdentityAccessList() *framework.Path {
 		Pattern: "identity-accesslist/?",
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixAWS,
+			OperationPrefix: operationPrefixAWSAuth,
 			OperationSuffix: "IdentityAccessList",
 		},
 

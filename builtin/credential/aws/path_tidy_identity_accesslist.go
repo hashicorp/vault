@@ -17,7 +17,7 @@ func (b *backend) pathTidyIdentityAccessList() *framework.Path {
 		Pattern: "tidy/identity-accesslist$",
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixAWS,
+			OperationPrefix: operationPrefixAWSAuth,
 			OperationSuffix: "IdentityAccessList",
 			Action:          "Tidy",
 		},

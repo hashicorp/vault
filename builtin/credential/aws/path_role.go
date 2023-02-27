@@ -22,7 +22,7 @@ func (b *backend) pathRole() *framework.Path {
 		Pattern: "role/" + framework.GenericNameRegex("role"),
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixAWS,
+			OperationPrefix: operationPrefixAWSAuth,
 			OperationSuffix: "AuthRole",
 		},
 
@@ -206,7 +206,7 @@ func (b *backend) pathListRole() *framework.Path {
 		Pattern: "role/?",
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixAWS,
+			OperationPrefix: operationPrefixAWSAuth,
 			OperationSuffix: "AuthRoles",
 		},
 
@@ -226,7 +226,7 @@ func (b *backend) pathListRoles() *framework.Path {
 		Pattern: "roles/?",
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixAWS,
+			OperationPrefix: operationPrefixAWSAuth,
 			OperationSuffix: "AuthRoles2",
 		},
 
