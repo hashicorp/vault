@@ -20,6 +20,7 @@ func pathListCerts(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixCertificates,
+			OperationSuffix: "certs",
 			Navigation:      true,
 			ItemType:        "Certificate",
 		},
@@ -40,6 +41,7 @@ func pathCerts(b *backend) *framework.Path {
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixCertificates,
 			OperationSuffix: "cert",
+			Action:          "Create",
 			ItemType:        "Certificate",
 		},
 
