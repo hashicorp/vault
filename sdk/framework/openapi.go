@@ -562,25 +562,25 @@ func constructOperationID(
 ) string {
 	var (
 		prefix string
-		suffix string
 		verb   string
+		suffix string
 	)
 
 	if operationAttributes != nil {
 		prefix = operationAttributes.OperationPrefix
-		suffix = operationAttributes.OperationSuffix
 		verb = operationAttributes.OperationVerb
+		suffix = operationAttributes.OperationSuffix
 	}
 
 	if pathAttributes != nil {
 		if prefix == "" {
 			prefix = pathAttributes.OperationPrefix
 		}
-		if suffix == "" {
-			suffix = pathAttributes.OperationSuffix
-		}
 		if verb == "" {
 			verb = pathAttributes.OperationVerb
+		}
+		if suffix == "" {
+			suffix = pathAttributes.OperationSuffix
 		}
 	}
 
@@ -621,15 +621,11 @@ func constructOperationID(
 
 	// fall back to using the path + operation to construct the operation id
 	needPrefix := prefix == "" && (suffix == "" || verb == "")
-	needSuffix := suffix == "" && (prefix == "" || verb == "" || pathIndex > 0)
 	needVerb := verb == ""
+	needSuffix := suffix == "" && (prefix == "" || verb == "" || pathIndex > 0)
 
 	if needPrefix {
 		prefix = defaultPrefix
-	}
-
-	if needSuffix {
-		suffix = hyphenate(nonWordRe.Split(strings.ToLower(path), -1))
 	}
 
 	if needVerb {
@@ -638,6 +634,10 @@ func constructOperationID(
 		} else {
 			verb = string(operation)
 		}
+	}
+
+	if needSuffix {
+		suffix = hyphenate(nonWordRe.Split(strings.ToLower(path), -1))
 	}
 
 	return hyphenate([]string{prefix, verb, suffix})
