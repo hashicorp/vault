@@ -543,9 +543,9 @@ func specialPathMatch(path string, specialPaths []string) bool {
 // lower-case operation id, which is also used as a prefix for request and
 // response names.
 //
-// The OperationPrefix / OperationSuffix / Action found in display attributes
-// will be used, if provided. Otherwise, the function falls back to using the
-// path and the operation.
+// The OperationPrefix / -Verb / -Suffix found in display attributes will be
+// used, if provided. Otherwise, the function falls back to using the path and
+// the operation.
 //
 // Examples of generated operation identifiers:
 //   - kvv2-write
@@ -562,25 +562,25 @@ func constructOperationID(
 ) string {
 	var (
 		prefix string
-		suffix string
 		verb   string
+		suffix string
 	)
 
 	if operationAttributes != nil {
 		prefix = operationAttributes.OperationPrefix
+		verb = operationAttributes.OperationVerb
 		suffix = operationAttributes.OperationSuffix
-		verb = operationAttributes.Action
 	}
 
 	if pathAttributes != nil {
 		if prefix == "" {
 			prefix = pathAttributes.OperationPrefix
 		}
+		if verb == "" {
+			verb = pathAttributes.OperationVerb
+		}
 		if suffix == "" {
 			suffix = pathAttributes.OperationSuffix
-		}
-		if verb == "" {
-			verb = pathAttributes.Action
 		}
 	}
 
@@ -621,15 +621,11 @@ func constructOperationID(
 
 	// fall back to using the path + operation to construct the operation id
 	needPrefix := prefix == "" && (suffix == "" || verb == "")
-	needSuffix := suffix == "" && (prefix == "" || verb == "" || pathIndex > 0)
 	needVerb := verb == ""
+	needSuffix := suffix == "" && (prefix == "" || verb == "" || pathIndex > 0)
 
 	if needPrefix {
 		prefix = defaultPrefix
-	}
-
-	if needSuffix {
-		suffix = hyphenate(nonWordRe.Split(strings.ToLower(path), -1))
 	}
 
 	if needVerb {
@@ -638,6 +634,10 @@ func constructOperationID(
 		} else {
 			verb = string(operation)
 		}
+	}
+
+	if needSuffix {
+		suffix = hyphenate(nonWordRe.Split(strings.ToLower(path), -1))
 	}
 
 	return hyphenate([]string{prefix, verb, suffix})

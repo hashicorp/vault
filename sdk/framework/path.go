@@ -224,10 +224,18 @@ type DisplayAttributes struct {
 	// Action is the verb to use for the operation.
 	Action string `json:"action,omitempty"`
 
-	// OperationPrefix is used to construct OpenAPI OperationID, if specified
+	// OperationPrefix is a hyphenated lower-case string used to construct
+	// OpenAPI OperationID, if specified. It's usually the name of the plugin.
 	OperationPrefix string `json:"operationPrefix,omitempty"`
 
-	// OperationSuffix is used to construct OpenAPI OperationID, if specified
+	// OperationPrefix is a hyphenated lower-case string used to construct
+	// OpenAPI OperationID, if specified. It is typically an action to be
+	// performed (e.g. "write", "read", "login", etc.)
+	OperationVerb string `json:"operationVerb,omitempty"`
+
+	// OperationPrefix is a hyphenated lower-case string used to construct
+	// OpenAPI OperationID, if specified. It is typically the name of the
+	// resource on which the action is performed, e.g. "cert", "config".
 	OperationSuffix string `json:"operationSuffix,omitempty"`
 
 	// EditType is the optional type of form field needed for a property
