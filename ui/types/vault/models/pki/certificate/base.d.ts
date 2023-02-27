@@ -4,19 +4,21 @@ export default class PkiCertificateBaseModel extends Model {
   get useOpenAPI(): boolean;
   get backend(): string;
   getHelpUrl(): void;
+  altNames: string;
   commonName: string;
   caChain: string;
   certificate: string;
+  excludeCnFromSans: boolean;
   expiration: number;
+  ipSans: string;
   issuingCa: string;
-  privateKey: string;
-  privateKeyType: string;
-  serialNumber: string;
   notValidAfter: date;
   notValidBefore: date;
-  pemBundle: string;
-  importedIssuers: string[];
-  importedKeys: string[];
+  otherSans: string;
+  privateKey: string;
+  privateKeyType: string;
   revokePath: string;
+  revocationTime: number;
+  serialNumber: string;
   get canRevoke(): boolean;
 }

@@ -3630,6 +3630,7 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 
 func TestSystemBackend_InternalUIMounts(t *testing.T) {
 	_, b, rootToken := testCoreSystemBackend(t)
+	systemBackend := b.(*SystemBackend)
 
 	// Ensure no entries are in the endpoint as a starting point
 	req := logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts")
@@ -3637,6 +3638,12 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, systemBackend.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	exp := map[string]interface{}{
 		"secret": map[string]interface{}{},
@@ -3652,6 +3659,12 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, systemBackend.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	exp = map[string]interface{}{
 		"secret": map[string]interface{}{
@@ -3787,6 +3800,12 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, systemBackend.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	exp = map[string]interface{}{
 		"secret": map[string]interface{}{
@@ -3811,6 +3830,7 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 
 func TestSystemBackend_InternalUIMount(t *testing.T) {
 	core, b, rootToken := testCoreSystemBackend(t)
+	systemBackend := b.(*SystemBackend)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "policy/secret")
 	req.ClientToken = rootToken
@@ -3840,6 +3860,12 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("Bad %#v %#v", err, resp)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, systemBackend.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 	if resp.Data["type"] != "kv" {
 		t.Fatalf("Bad Response: %#v", resp)
 	}
@@ -3859,6 +3885,12 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("Bad %#v %#v", err, resp)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, systemBackend.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 	if resp.Data["type"] != "kv" {
 		t.Fatalf("Bad Response: %#v", resp)
 	}
@@ -3869,6 +3901,12 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("Bad %#v %#v", err, resp)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, systemBackend.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 	if resp.Data["type"] != "system" {
 		t.Fatalf("Bad Response: %#v", resp)
 	}

@@ -1,10 +1,12 @@
-import PkiCertificateBaseModel from './certificate/base';
+import Model from '@ember-data/model';
 import { FormField, FormFieldGroups, ModelValidations } from 'vault/app-types';
-export default class PkiIssuerModel extends PkiCertificateBaseModel {
-  useOpenAPI(): boolean;
+export default class PkiIssuerModel extends Model {
+  secretMountPath: class;
+  get useOpenAPI(): boolean;
+  get backend(): string;
+  get issuerRef(): string;
   issuerId: string;
   issuerName: string;
-  issuerRef(): string;
   keyId: string;
   uriSans: string;
   leafNotAfterBehavior: string;
@@ -20,9 +22,12 @@ export default class PkiIssuerModel extends PkiCertificateBaseModel {
   crossSignPath: any;
   signIntermediate: any;
   -------------------- **/
-  formFields: Array<FormField>;
+  pemBundle: string;
+  importedIssuers: string[];
+  importedKeys: string[];
+  formFields: FormField[];
   formFieldGroups: FormFieldGroups;
-  allFields: Array<FormField>;
+  allFields: FormField[];
   get canRotateIssuer(): boolean;
   get canCrossSign(): boolean;
   get canSignIntermediate(): boolean;
