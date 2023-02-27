@@ -1002,7 +1002,7 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixAppRole,
 				OperationSuffix: "secret-id",
-				Action:          "look-up",
+				OperationVerb:          "look-up",
 			},
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
@@ -1075,7 +1075,7 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixAppRole,
 				OperationSuffix: "secret-id",
-				Action:          "destroy",
+				OperationVerb:          "destroy",
 			},
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
@@ -1108,7 +1108,7 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixAppRole,
 				OperationSuffix: "secret-id-by-accessor",
-				Action:          "look-up",
+				OperationVerb:          "look-up",
 			},
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
@@ -1181,7 +1181,7 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixAppRole,
 				OperationSuffix: "secret-id-by-accessor",
-				Action:          "destroy",
+				OperationVerb:          "destroy",
 			},
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {

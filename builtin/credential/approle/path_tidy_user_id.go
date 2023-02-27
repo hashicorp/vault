@@ -20,7 +20,7 @@ func pathTidySecretID(b *backend) *framework.Path {
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixAppRole,
 			OperationSuffix: "secret-id",
-			Action:          "tidy",
+			OperationVerb:          "tidy",
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
