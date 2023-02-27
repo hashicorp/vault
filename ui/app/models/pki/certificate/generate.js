@@ -4,7 +4,7 @@ import PkiCertificateBaseModel from './base';
 
 const generateFromRole = [
   {
-    default: ['commonName', 'format', 'privateKeyFormat', 'customTtl'],
+    default: ['commonName', 'customTtl', 'format', 'privateKeyFormat'],
   },
   {
     'Subject Alternative Name (SAN) Options': [

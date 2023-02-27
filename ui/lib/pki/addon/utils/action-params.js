@@ -10,7 +10,7 @@ export function keyParamsByType(type) {
   } else if (type === 'kms') {
     fields = ['keyName', 'managedKeyName', 'managedKeyId'];
   } else if (type === 'exported') {
-    fields = ['keyName', 'keyType', 'keyBits', 'privateKeyFormat'];
+    fields = [...fields, 'privateKeyFormat'];
   }
   return fields;
 }
