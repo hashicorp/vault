@@ -37,7 +37,7 @@
         }
       ],
       "get": {
-        "operationId": "KvReadFooId",
+        "operationId": "kv-read-foo-id",
         "tags": [
           "secrets"
         ],
@@ -60,7 +60,7 @@
         ]
       },
       "post": {
-        "operationId": "KvWriteFooId",
+        "operationId": "kv-write-foo-id",
         "tags": [
           "secrets"
         ],
@@ -71,7 +71,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/KvWriteFooIdRequest"
+                "$ref": "#/components/schemas/kv-write-foo-id-request"
               }
             }
           }
@@ -86,7 +86,7 @@
   },
   "components": {
     "schemas": {
-      "KvWriteFooIdRequest": {
+      "kv-write-foo-id-request": {
         "type": "object",
         "required": [
           "age"

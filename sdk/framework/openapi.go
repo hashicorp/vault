@@ -14,8 +14,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 )
 
 // OpenAPI specification (OAS): https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md
@@ -391,7 +389,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 
 				// Set the final request body. Only JSON request data is supported.
 				if len(s.Properties) > 0 || s.Example != nil {
-					requestName := operationID + "Request"
+					requestName := operationID + "-request"
 					doc.Components.Schemas[requestName] = s
 					op.RequestBody = &OASRequestBody{
 						Required: true,
@@ -498,7 +496,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 					}
 
 					if len(resp.Fields) != 0 {
-						responseName := operationID + "Response"
+						responseName := operationID + "-response"
 						doc.Components.Schemas[responseName] = responseSchema
 						content = OASContent{
 							"application/json": &OASMediaTypeObject{
@@ -541,18 +539,19 @@ func specialPathMatch(path string, specialPaths []string) bool {
 	return false
 }
 
-// constructOperationID joins the given inputs into a title case operation id,
-// which is also used as a prefix for request and response names.
+// constructOperationID joins the given inputs into a hyphen-separated
+// lower-case operation id, which is also used as a prefix for request and
+// response names.
 //
 // The OperationPrefix / OperationSuffix / Action found in display attributes
 // will be used, if provided. Otherwise, the function falls back to using the
 // path and the operation.
 //
 // Examples of generated operation identifiers:
-//   - KVv2Write
-//   - KVv2Read
-//   - GoogleCloudLogin
-//   - GoogleCloudWriteRole
+//   - kvv2-write
+//   - kvv2-read
+//   - google-cloud-login
+//   - google-cloud-write-role
 func constructOperationID(
 	path string,
 	pathIndex int,
@@ -561,6 +560,7 @@ func constructOperationID(
 	operationAttributes *DisplayAttributes,
 	defaultPrefix string,
 ) string {
+
 	var (
 		prefix string
 		suffix string
@@ -592,13 +592,13 @@ func constructOperationID(
 	//  aws/
 	//      Pattern: `^(creds|sts)/(?P<name>\w(([\w-.@]+)?\w)?)$`
 	//      DisplayAttrs: {
-	//          OperationSuffix: "Credentials|STSCredentials"
+	//          OperationSuffix: "credentials|sts-credentials"
 	//      }
 	//
 	//  Will expand into two paths and corresponding suffixes:
 	//
-	//      path 0: "creds/{name}"  suffix: Credentials
-	//      path 1: "sts/{name}"    suffix: STSCredentials
+	//      path 0: "creds/{name}"  suffix: credentials
+	//      path 1: "sts/{name}"    suffix: sts-credentials
 	//
 	if suffixes := strings.Split(suffix, "|"); len(suffixes) > 1 || pathIndex > 0 {
 		// if the index is out of bounds, fall back to the old logic
@@ -609,7 +609,16 @@ func constructOperationID(
 		}
 	}
 
-	title := cases.Title(language.English, cases.NoLower)
+	// hyphenate is a helper that hyphenates the given slice except the empty elements
+	hyphenate := func(parts []string) string {
+		filtered := make([]string, 0, len(parts))
+		for _, e := range parts {
+			if e != "" {
+				filtered = append(filtered, e)
+			}
+		}
+		return strings.ToLower(strings.Join(filtered, "-"))
+	}
 
 	// fall back to using the path + operation to construct the operation id
 	needPrefix := prefix == "" && (suffix == "" || verb == "")
@@ -621,24 +630,18 @@ func constructOperationID(
 	}
 
 	if needSuffix {
-		parts := nonWordRe.Split(strings.ToLower(path), -1)
-
-		for i, s := range parts {
-			parts[i] = title.String(s)
-		}
-
-		suffix = strings.Join(parts, "")
+		suffix = hyphenate(nonWordRe.Split(strings.ToLower(path), -1))
 	}
 
 	if needVerb {
 		if operation == logical.UpdateOperation {
-			verb = "Write"
+			verb = "write"
 		} else {
 			verb = string(operation)
 		}
 	}
 
-	return title.String(prefix) + title.String(verb) + title.String(suffix)
+	return hyphenate([]string{prefix, verb, suffix})
 }
 
 // expandPattern expands a regex pattern by generating permutations of any optional parameters

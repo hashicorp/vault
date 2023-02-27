@@ -24,7 +24,7 @@
         }
       ],
       "get": {
-        "operationId": "KvReadLookupId",
+        "operationId": "kv-read-lookup-id",
         "summary": "Synopsis",
         "tags": [
           "secrets"
@@ -36,7 +36,7 @@
         }
       },
       "post": {
-        "operationId": "KvWriteLookupId",
+        "operationId": "kv-write-lookup-id",
         "summary": "Synopsis",
         "tags": [
           "secrets"
@@ -46,7 +46,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/KvWriteLookupIdRequest"
+                "$ref": "#/components/schemas/kv-write-lookup-id-request"
               }
             }
           }
@@ -61,7 +61,7 @@
   },
   "components": {
     "schemas": {
-      "KvWriteLookupIdRequest": {
+      "kv-write-lookup-id-request": {
         "type": "object",
         "properties": {
           "token": {
