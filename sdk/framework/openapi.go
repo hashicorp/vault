@@ -560,7 +560,6 @@ func constructOperationID(
 	operationAttributes *DisplayAttributes,
 	defaultPrefix string,
 ) string {
-
 	var (
 		prefix string
 		suffix string
