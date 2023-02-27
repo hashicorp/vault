@@ -127,9 +127,9 @@ func Backend(_ *logical.BackendConfig) (*backend, error) {
 
 		deprecatedTerms: strings.NewReplacer(
 			"accesslist", "whitelist",
-			"AccessList", "Whitelist",
+			"access-list", "whitelist",
 			"denylist", "blacklist",
-			"DenyList", "Blacklist",
+			"deny-list", "blacklist",
 		),
 	}
 
