@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Validate the `vault transit import` command works.
 func TestTransitImport(t *testing.T) {
 	t.Parallel()
 
