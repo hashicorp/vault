@@ -26,7 +26,7 @@ func pathListRoles(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixAWS,
-			OperationSuffix: "Roles",
+			OperationSuffix: "roles",
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -44,7 +44,7 @@ func pathRoles(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixAWS,
-			OperationSuffix: "Role",
+			OperationSuffix: "role",
 		},
 
 		Fields: map[string]*framework.FieldSchema{

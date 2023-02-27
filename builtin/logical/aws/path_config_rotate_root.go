@@ -16,8 +16,8 @@ func pathConfigRotateRoot(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixAWSConfig,
-			OperationSuffix: "RootIAMCredentials",
-			Action:          "Rotate",
+			OperationSuffix: "root-iam-credentials",
+			Action:          "rotate",
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{

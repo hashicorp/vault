@@ -15,8 +15,8 @@ import (
 const (
 	rootConfigPath           = "config/root"
 	minAwsUserRollbackAge    = 5 * time.Minute
-	operationPrefixAWS       = "AWS"
-	operationPrefixAWSConfig = "AWSConfig"
+	operationPrefixAWS       = "aws"
+	operationPrefixAWSConfig = "aws-config"
 )
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {

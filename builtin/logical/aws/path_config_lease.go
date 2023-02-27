@@ -15,7 +15,7 @@ func pathConfigLease(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixAWSConfig,
-			OperationSuffix: "Lease",
+			OperationSuffix: "lease",
 		},
 
 		Fields: map[string]*framework.FieldSchema{

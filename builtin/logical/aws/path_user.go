@@ -21,7 +21,7 @@ func pathUser(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixAWS,
-			OperationSuffix: "Credentials|STSCredentials",
+			OperationSuffix: "credentials|sts-credentials",
 		},
 
 		Fields: map[string]*framework.FieldSchema{
