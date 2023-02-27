@@ -829,6 +829,19 @@
         ]
       },
       {
+        "title": "<code>transit</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/transit"
+          },
+          {
+            "title": "<code>import</code> and <code>import-version</code>",
+            "path": "commands/transit/import"
+          }
+        ]
+      },
+      {
         "title": "<code>unwrap</code>",
         "path": "commands/unwrap"
       },
