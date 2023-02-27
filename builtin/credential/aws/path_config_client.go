@@ -19,7 +19,7 @@ func (b *backend) pathConfigClient() *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixAWSAuthConfig,
-			OperationSuffix: "Client",
+			OperationSuffix: "client",
 		},
 
 		Fields: map[string]*framework.FieldSchema{

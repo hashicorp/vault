@@ -17,7 +17,7 @@ func (b *backend) pathConfigTidyRoletagDenyList() *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixAWSAuthConfig,
-			OperationSuffix: "RoleTagDenyListTidySettings",
+			OperationSuffix: "role-tag-deny-list-tidy-settings",
 		},
 
 		Fields: map[string]*framework.FieldSchema{
@@ -45,7 +45,7 @@ Defaults to 4320h (180 days).`,
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathConfigTidyRoletagDenyListCreateUpdate,
 				DisplayAttrs: &framework.DisplayAttributes{
-					Action: "Update",
+					Action: "update",
 				},
 			},
 			logical.ReadOperation: &framework.PathOperation{

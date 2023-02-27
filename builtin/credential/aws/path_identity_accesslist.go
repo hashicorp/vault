@@ -16,7 +16,7 @@ func (b *backend) pathIdentityAccessList() *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixAWSAuth,
-			OperationSuffix: "IdentityAccessList",
+			OperationSuffix: "identity-access-list",
 		},
 
 		Fields: map[string]*framework.FieldSchema{
@@ -47,7 +47,7 @@ func (b *backend) pathListIdentityAccessList() *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixAWSAuth,
-			OperationSuffix: "IdentityAccessList",
+			OperationSuffix: "identity-access-list",
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{

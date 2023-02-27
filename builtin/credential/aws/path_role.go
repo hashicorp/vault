@@ -23,7 +23,7 @@ func (b *backend) pathRole() *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixAWSAuth,
-			OperationSuffix: "Role",
+			OperationSuffix: "role",
 		},
 
 		Fields: map[string]*framework.FieldSchema{
@@ -207,7 +207,7 @@ func (b *backend) pathListRole() *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixAWSAuth,
-			OperationSuffix: "Roles",
+			OperationSuffix: "roles",
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -227,7 +227,7 @@ func (b *backend) pathListRoles() *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixAWSAuth,
-			OperationSuffix: "Roles2",
+			OperationSuffix: "roles2",
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{

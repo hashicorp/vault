@@ -20,7 +20,7 @@ func (b *backend) pathListCertificates() *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixAWSAuthConfig,
-			OperationSuffix: "Certificates",
+			OperationSuffix: "certificates",
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -40,7 +40,7 @@ func (b *backend) pathConfigCertificate() *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixAWSAuthConfig,
-			OperationSuffix: "Certificate",
+			OperationSuffix: "certificate",
 		},
 
 		Fields: map[string]*framework.FieldSchema{

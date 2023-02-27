@@ -18,7 +18,7 @@ func (b *backend) pathConfigTidyIdentityAccessList() *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixAWSAuthConfig,
-			OperationSuffix: "IdentityAccessListTidySettings",
+			OperationSuffix: "identity-access-list-tidy-settings",
 		},
 
 		Fields: map[string]*framework.FieldSchema{
@@ -44,7 +44,7 @@ expiration, before it is removed from the backend storage.`,
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathConfigTidyIdentityAccessListCreateUpdate,
 				DisplayAttrs: &framework.DisplayAttributes{
-					Action: "Update",
+					Action: "update",
 				},
 			},
 			logical.ReadOperation: &framework.PathOperation{

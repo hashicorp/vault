@@ -57,7 +57,7 @@ func (b *backend) pathConfigIdentity() *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixAWSAuthConfig,
-			OperationSuffix: "Identity",
+			OperationSuffix: "identity",
 		},
 
 		Fields: map[string]*framework.FieldSchema{

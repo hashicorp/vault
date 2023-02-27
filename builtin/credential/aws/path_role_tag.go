@@ -26,7 +26,7 @@ func (b *backend) pathRoleTag() *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixAWSAuth,
-			OperationSuffix: "RoleTag",
+			OperationSuffix: "role-tag",
 		},
 
 		Fields: map[string]*framework.FieldSchema{
