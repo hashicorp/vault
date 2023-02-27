@@ -28,11 +28,11 @@ $family-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto'
 $family-monospace: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
 $family-primary: $family-sans;
 $body-size: 14px;
-$size-3: (24/14) + 0rem; // ~1.714rem ~27px
+$size-3: calc(24 / 14) + 0rem; // ~1.714rem ~27px
 $size-4: 1.5rem; // 24px
 $size-5: 1.25rem; // 20px
-$size-7: (13/14) + 0rem; // ~.929rem ~15px
-$size-8: (12/14) + 0rem; // ~.857rem  ~13.7px
+$size-7: calc(13 / 14) + 0rem; // ~.929rem ~15px
+$size-8: calc(12 / 14) + 0rem; // ~.857rem  ~13.7px
 $size-9: 0.75rem; // 12px
 $size-10: 0.5rem; // 8px
 $size-11: 0.25rem; // 4px

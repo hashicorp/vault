@@ -56,7 +56,7 @@
 @import './components/control-group';
 @import './components/diff-version-selector';
 @import './components/doc-link';
-@import './components/empty-state';
+@import './components/empty-state-component';
 @import './components/env-banner';
 @import './components/features-selection';
 @import './components/form-section';
@@ -76,7 +76,7 @@
 @import './components/loader';
 @import './components/login-form';
 @import './components/masked-input';
-@import './components/modal';
+@import './components/modal-component.scss';
 @import './components/namespace-picker';
 @import './components/namespace-reminder';
 @import './components/navigate-input';
@@ -105,7 +105,7 @@
 @import './components/splash-page';
 @import './components/stat-text';
 @import './components/status-menu';
-@import './components/tabs';
+@import './components/tabs-component';
 @import './components/text-file';
 @import './components/token-expire-warning';
 @import './components/toolbar';

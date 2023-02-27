@@ -20,7 +20,7 @@
       }
     }
     li {
-      > a &.active {
+      a &.active {
         border-color: $blue;
         color: $blue !important;
       }
