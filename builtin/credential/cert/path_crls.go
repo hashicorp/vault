@@ -19,6 +19,10 @@ import (
 func pathListCRLs(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "crls/?$",
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixCertificates,
+			OperationSuffix: "CRLs",
+		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathCRLsList,
@@ -41,6 +45,12 @@ func (b *backend) pathCRLsList(ctx context.Context, req *logical.Request, d *fra
 func pathCRLs(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "crls/" + framework.GenericNameRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixCertificates,
+			OperationSuffix: "CRL",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,

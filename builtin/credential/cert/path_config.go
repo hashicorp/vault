@@ -13,6 +13,12 @@ const maxCacheSize = 100000
 func pathConfig(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixCertificates,
+			OperationSuffix: "Config",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"disable_binding": {
 				Type:        framework.TypeBool,

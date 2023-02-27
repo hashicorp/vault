@@ -18,22 +18,31 @@ func pathListCerts(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "certs/?",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixCertificates,
+			Navigation:      true,
+			ItemType:        "Certificate",
+		},
+
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.pathCertList,
 		},
 
 		HelpSynopsis:    pathCertHelpSyn,
 		HelpDescription: pathCertHelpDesc,
-		DisplayAttrs: &framework.DisplayAttributes{
-			Navigation: true,
-			ItemType:   "Certificate",
-		},
 	}
 }
 
 func pathCerts(b *backend) *framework.Path {
 	p := &framework.Path{
 		Pattern: "certs/" + framework.GenericNameRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixCertificates,
+			OperationSuffix: "Cert",
+			ItemType:        "Certificate",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -199,10 +208,6 @@ certificate.`,
 
 		HelpSynopsis:    pathCertHelpSyn,
 		HelpDescription: pathCertHelpDesc,
-		DisplayAttrs: &framework.DisplayAttributes{
-			Action:   "Create",
-			ItemType: "Certificate",
-		},
 	}
 
 	tokenutil.AddTokenFields(p.Fields)

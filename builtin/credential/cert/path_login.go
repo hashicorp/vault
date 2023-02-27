@@ -32,6 +32,10 @@ type ParsedCert struct {
 func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login",
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixCertificates,
+			Action:          "Login",
+		},
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
