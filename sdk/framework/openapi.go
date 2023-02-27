@@ -543,9 +543,9 @@ func specialPathMatch(path string, specialPaths []string) bool {
 // lower-case operation id, which is also used as a prefix for request and
 // response names.
 //
-// The OperationPrefix / OperationSuffix / Action found in display attributes
-// will be used, if provided. Otherwise, the function falls back to using the
-// path and the operation.
+// The OperationPrefix / -Verb / -Suffix found in display attributes will be
+// used, if provided. Otherwise, the function falls back to using the path and
+// the operation.
 //
 // Examples of generated operation identifiers:
 //   - kvv2-write
@@ -569,7 +569,7 @@ func constructOperationID(
 	if operationAttributes != nil {
 		prefix = operationAttributes.OperationPrefix
 		suffix = operationAttributes.OperationSuffix
-		verb = operationAttributes.Action
+		verb = operationAttributes.OperationVerb
 	}
 
 	if pathAttributes != nil {
@@ -580,7 +580,7 @@ func constructOperationID(
 			suffix = pathAttributes.OperationSuffix
 		}
 		if verb == "" {
-			verb = pathAttributes.Action
+			verb = pathAttributes.OperationVerb
 		}
 	}
 
