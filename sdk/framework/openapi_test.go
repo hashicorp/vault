@@ -641,39 +641,39 @@ func TestOpenAPI_constructOperationID(t *testing.T) {
 			defaultPrefix:       "test",
 			expected:            "better-prefix-write-better-suffix",
 		},
-		"operation-prefix-action-suffix": {
+		"operation-prefix-verb-suffix": {
 			path:                "path/to/thing",
 			pathIndex:           0,
-			pathAttributes:      &DisplayAttributes{OperationPrefix: "my-prefix", OperationSuffix: "my-suffix", Action: "Create"},
+			pathAttributes:      &DisplayAttributes{OperationPrefix: "my-prefix", OperationSuffix: "my-suffix", OperationVerb: "Create"},
 			operation:           logical.UpdateOperation,
 			operationAttributes: &DisplayAttributes{OperationPrefix: "better-prefix", OperationSuffix: "better-suffix"},
 			defaultPrefix:       "test",
 			expected:            "better-prefix-create-better-suffix",
 		},
-		"operation-prefix-action-suffix-override": {
+		"operation-prefix-verb-suffix-override": {
 			path:                "path/to/thing",
 			pathIndex:           0,
-			pathAttributes:      &DisplayAttributes{OperationPrefix: "my-prefix", OperationSuffix: "my-suffix", Action: "Create"},
+			pathAttributes:      &DisplayAttributes{OperationPrefix: "my-prefix", OperationSuffix: "my-suffix", OperationVerb: "Create"},
 			operation:           logical.UpdateOperation,
-			operationAttributes: &DisplayAttributes{OperationPrefix: "better-prefix", OperationSuffix: "better-suffix", Action: "Login"},
+			operationAttributes: &DisplayAttributes{OperationPrefix: "better-prefix", OperationSuffix: "better-suffix", OperationVerb: "Login"},
 			defaultPrefix:       "test",
 			expected:            "better-prefix-login-better-suffix",
 		},
-		"operation-prefix-action": {
+		"operation-prefix-verb": {
 			path:                "path/to/thing",
 			pathIndex:           0,
 			pathAttributes:      nil,
 			operation:           logical.UpdateOperation,
-			operationAttributes: &DisplayAttributes{OperationPrefix: "better-prefix", Action: "Login"},
+			operationAttributes: &DisplayAttributes{OperationPrefix: "better-prefix", OperationVerb: "Login"},
 			defaultPrefix:       "test",
 			expected:            "better-prefix-login",
 		},
-		"operation-action-suffix": {
+		"operation-verb-suffix": {
 			path:                "path/to/thing",
 			pathIndex:           0,
 			pathAttributes:      nil,
 			operation:           logical.UpdateOperation,
-			operationAttributes: &DisplayAttributes{Action: "Login", OperationSuffix: "better-suffix"},
+			operationAttributes: &DisplayAttributes{OperationVerb: "Login", OperationSuffix: "better-suffix"},
 			defaultPrefix:       "test",
 			expected:            "login-better-suffix",
 		},
