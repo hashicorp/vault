@@ -20,9 +20,11 @@
       }
     }
     li {
-      a &.active {
-        border-color: $blue;
-        color: $blue !important;
+      > a {
+        &.active {
+          border-color: $blue;
+          color: $blue !important;
+        }
       }
     }
   }
