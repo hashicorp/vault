@@ -3551,7 +3551,7 @@ func (c *Core) ListAuths() ([]*MountEntry, error) {
 	if c.Sealed() {
 		return nil, fmt.Errorf("vault is sealed")
 	}
-	
+
 	c.mountsLock.RLock()
 	defer c.mountsLock.RUnlock()
 
