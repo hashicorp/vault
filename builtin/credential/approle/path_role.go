@@ -123,7 +123,7 @@ func rolePaths(b *backend) []*framework.Path {
 		Pattern: "role/" + framework.GenericNameRegex("role_name"),
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixAppRole,
-			OperationSuffix: "Role",
+			OperationSuffix: "role",
 		},
 		Fields: map[string]*framework.FieldSchema{
 			"role_name": {
@@ -303,7 +303,7 @@ can only be set during role creation and once set, it can't be reset later.`,
 			Pattern: "role/?",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixAppRole,
-				OperationSuffix: "Roles",
+				OperationSuffix: "roles",
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
@@ -328,7 +328,7 @@ can only be set during role creation and once set, it can't be reset later.`,
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/local-secret-ids$",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixAppRole,
-				OperationSuffix: "LocalSecretIDs",
+				OperationSuffix: "local-secret-ids",
 			},
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
@@ -360,7 +360,7 @@ can only be set during role creation and once set, it can't be reset later.`,
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/policies$",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixAppRole,
-				OperationSuffix: "Policies",
+				OperationSuffix: "policies",
 			},
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
@@ -415,7 +415,7 @@ can only be set during role creation and once set, it can't be reset later.`,
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/bound-cidr-list$",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixAppRole,
-				OperationSuffix: "BoundCIDRList",
+				OperationSuffix: "bound-cidr-list",
 			},
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
@@ -461,7 +461,7 @@ of CIDR blocks. If set, specifies the blocks of IP addresses which can perform t
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id-bound-cidrs$",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixAppRole,
-				OperationSuffix: "SecretIDBoundCIDRs",
+				OperationSuffix: "secret-id-bound-cidrs",
 			},
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
@@ -506,7 +506,7 @@ IP addresses which can perform the login operation.`,
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/token-bound-cidrs$",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixAppRole,
-				OperationSuffix: "TokenBoundCIDRs",
+				OperationSuffix: "token-bound-cidrs",
 			},
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
@@ -550,7 +550,7 @@ IP addresses which can perform the login operation.`,
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/bind-secret-id$",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixAppRole,
-				OperationSuffix: "BindSecretID",
+				OperationSuffix: "bind-secret-id",
 			},
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
@@ -595,7 +595,7 @@ IP addresses which can perform the login operation.`,
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id-num-uses$",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixAppRole,
-				OperationSuffix: "SecretIDNumUses",
+				OperationSuffix: "secret-id-num-uses",
 			},
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
@@ -639,7 +639,7 @@ IP addresses which can perform the login operation.`,
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id-ttl$",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixAppRole,
-				OperationSuffix: "SecretIDTTL",
+				OperationSuffix: "secret-id-ttl",
 			},
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
@@ -684,7 +684,7 @@ to 0, meaning no expiration.`,
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/period$",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixAppRole,
-				OperationSuffix: "Period",
+				OperationSuffix: "period",
 			},
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
@@ -739,7 +739,7 @@ to 0, meaning no expiration.`,
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/token-num-uses$",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixAppRole,
-				OperationSuffix: "TokenNumUses",
+				OperationSuffix: "token-num-uses",
 			},
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
@@ -783,7 +783,7 @@ to 0, meaning no expiration.`,
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/token-ttl$",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixAppRole,
-				OperationSuffix: "TokenTTL",
+				OperationSuffix: "token-ttl",
 			},
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
@@ -827,7 +827,7 @@ to 0, meaning no expiration.`,
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/token-max-ttl$",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixAppRole,
-				OperationSuffix: "TokenMaxTTL",
+				OperationSuffix: "token-max-ttl",
 			},
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
@@ -871,7 +871,7 @@ to 0, meaning no expiration.`,
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/role-id$",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixAppRole,
-				OperationSuffix: "RoleID",
+				OperationSuffix: "role-id",
 			},
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
@@ -911,7 +911,7 @@ to 0, meaning no expiration.`,
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id/?$",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixAppRole,
-				OperationSuffix: "SecretID",
+				OperationSuffix: "secret-id",
 			},
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
@@ -979,7 +979,7 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 				logical.ListOperation: &framework.PathOperation{
 					Callback: b.pathRoleSecretIDList,
 					DisplayAttrs: &framework.DisplayAttributes{
-						OperationSuffix: "SecretIDs",
+						OperationSuffix: "secret-ids",
 					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
@@ -1001,8 +1001,8 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id/lookup/?$",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixAppRole,
-				OperationSuffix: "SecretID",
-				Action:          "LookUp",
+				OperationSuffix: "secret-id",
+				Action:          "look-up",
 			},
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
@@ -1074,8 +1074,8 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id/destroy/?$",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixAppRole,
-				OperationSuffix: "SecretID",
-				Action:          "Destroy",
+				OperationSuffix: "secret-id",
+				Action:          "destroy",
 			},
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
@@ -1096,7 +1096,7 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 					Callback:  b.pathRoleSecretIDDestroyUpdateDelete,
 					Responses: responseNoContent,
 					DisplayAttrs: &framework.DisplayAttributes{
-						OperationSuffix: "SecretID2",
+						OperationSuffix: "secret-id2",
 					},
 				},
 			},
@@ -1107,8 +1107,8 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id-accessor/lookup/?$",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixAppRole,
-				OperationSuffix: "SecretIDByAccessor",
-				Action:          "LookUp",
+				OperationSuffix: "secret-id-by-accessor",
+				Action:          "look-up",
 			},
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
@@ -1180,8 +1180,8 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id-accessor/destroy/?$",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixAppRole,
-				OperationSuffix: "SecretIDByAccessor",
-				Action:          "Destroy",
+				OperationSuffix: "secret-id-by-accessor",
+				Action:          "destroy",
 			},
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
@@ -1202,7 +1202,7 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 					Callback:  b.pathRoleSecretIDAccessorDestroyUpdateDelete,
 					Responses: responseNoContent,
 					DisplayAttrs: &framework.DisplayAttributes{
-						OperationSuffix: "SecretIDByAccessor2",
+						OperationSuffix: "secret-id-by-accessor2",
 					},
 				},
 			},
@@ -1213,7 +1213,7 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/custom-secret-id$",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixAppRole,
-				OperationSuffix: "CustomSecretID",
+				OperationSuffix: "custom-secret-id",
 			},
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {

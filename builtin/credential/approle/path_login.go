@@ -18,7 +18,7 @@ func pathLogin(b *backend) *framework.Path {
 		Pattern: "login$",
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixAppRole,
-			Action:          "Login",
+			Action:          "login",
 		},
 		Fields: map[string]*framework.FieldSchema{
 			"role_id": {

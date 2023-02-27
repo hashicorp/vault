@@ -19,8 +19,8 @@ func pathTidySecretID(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixAppRole,
-			OperationSuffix: "SecretID",
-			Action:          "Tidy",
+			OperationSuffix: "secret-id",
+			Action:          "tidy",
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
