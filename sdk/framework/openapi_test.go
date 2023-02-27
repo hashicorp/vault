@@ -571,6 +571,7 @@ func TestOpenAPI_CleanResponse(t *testing.T) {
 func TestOpenAPI_constructOperationID(t *testing.T) {
 	tests := map[string]struct {
 		path                string
+		pathIndex           int
 		pathAttributes      *DisplayAttributes
 		operation           logical.Operation
 		operationAttributes *DisplayAttributes
@@ -579,6 +580,7 @@ func TestOpenAPI_constructOperationID(t *testing.T) {
 	}{
 		"empty": {
 			path:                "",
+			pathIndex:           0,
 			pathAttributes:      nil,
 			operation:           logical.Operation(""),
 			operationAttributes: nil,
@@ -587,6 +589,7 @@ func TestOpenAPI_constructOperationID(t *testing.T) {
 		},
 		"simple-read": {
 			path:                "path/to/thing",
+			pathIndex:           0,
 			pathAttributes:      nil,
 			operation:           logical.ReadOperation,
 			operationAttributes: nil,
@@ -595,6 +598,7 @@ func TestOpenAPI_constructOperationID(t *testing.T) {
 		},
 		"simple-write": {
 			path:                "path/to/thing",
+			pathIndex:           0,
 			pathAttributes:      nil,
 			operation:           logical.UpdateOperation,
 			operationAttributes: nil,
@@ -603,6 +607,7 @@ func TestOpenAPI_constructOperationID(t *testing.T) {
 		},
 		"operation-prefix": {
 			path:                "path/to/thing",
+			pathIndex:           0,
 			pathAttributes:      &DisplayAttributes{OperationPrefix: "MyPrefix"},
 			operation:           logical.UpdateOperation,
 			operationAttributes: nil,
@@ -611,6 +616,7 @@ func TestOpenAPI_constructOperationID(t *testing.T) {
 		},
 		"operation-prefix-override": {
 			path:                "path/to/thing",
+			pathIndex:           0,
 			pathAttributes:      &DisplayAttributes{OperationPrefix: "MyPrefix"},
 			operation:           logical.UpdateOperation,
 			operationAttributes: &DisplayAttributes{OperationPrefix: "BetterPrefix"},
@@ -619,6 +625,7 @@ func TestOpenAPI_constructOperationID(t *testing.T) {
 		},
 		"operation-prefix-and-suffix": {
 			path:                "path/to/thing",
+			pathIndex:           0,
 			pathAttributes:      &DisplayAttributes{OperationPrefix: "MyPrefix", OperationSuffix: "MySuffix"},
 			operation:           logical.UpdateOperation,
 			operationAttributes: nil,
@@ -627,6 +634,7 @@ func TestOpenAPI_constructOperationID(t *testing.T) {
 		},
 		"operation-prefix-and-suffix-override": {
 			path:                "path/to/thing",
+			pathIndex:           0,
 			pathAttributes:      &DisplayAttributes{OperationPrefix: "MyPrefix", OperationSuffix: "MySuffix"},
 			operation:           logical.UpdateOperation,
 			operationAttributes: &DisplayAttributes{OperationPrefix: "BetterPrefix", OperationSuffix: "BetterSuffix"},
@@ -635,7 +643,8 @@ func TestOpenAPI_constructOperationID(t *testing.T) {
 		},
 		"operation-prefix-action-suffix": {
 			path:                "path/to/thing",
-			pathAttributes:      &DisplayAttributes{OperationPrefix: "MyPrefix", Action: "Create", OperationSuffix: "MySuffix"},
+			pathIndex:           0,
+			pathAttributes:      &DisplayAttributes{OperationPrefix: "MyPrefix", OperationSuffix: "MySuffix", Action: "Create"},
 			operation:           logical.UpdateOperation,
 			operationAttributes: &DisplayAttributes{OperationPrefix: "BetterPrefix", OperationSuffix: "BetterSuffix"},
 			defaultPrefix:       "test",
@@ -643,14 +652,16 @@ func TestOpenAPI_constructOperationID(t *testing.T) {
 		},
 		"operation-prefix-action-suffix-override": {
 			path:                "path/to/thing",
-			pathAttributes:      &DisplayAttributes{OperationPrefix: "MyPrefix", Action: "Create", OperationSuffix: "MySuffix"},
+			pathIndex:           0,
+			pathAttributes:      &DisplayAttributes{OperationPrefix: "MyPrefix", OperationSuffix: "MySuffix", Action: "Create"},
 			operation:           logical.UpdateOperation,
-			operationAttributes: &DisplayAttributes{OperationPrefix: "BetterPrefix", Action: "Login", OperationSuffix: "BetterSuffix"},
+			operationAttributes: &DisplayAttributes{OperationPrefix: "BetterPrefix", OperationSuffix: "BetterSuffix", Action: "Login"},
 			defaultPrefix:       "test",
 			expected:            "BetterPrefixLoginBetterSuffix",
 		},
 		"operation-prefix-action": {
 			path:                "path/to/thing",
+			pathIndex:           0,
 			pathAttributes:      nil,
 			operation:           logical.UpdateOperation,
 			operationAttributes: &DisplayAttributes{OperationPrefix: "BetterPrefix", Action: "Login"},
@@ -659,11 +670,39 @@ func TestOpenAPI_constructOperationID(t *testing.T) {
 		},
 		"operation-action-suffix": {
 			path:                "path/to/thing",
+			pathIndex:           0,
 			pathAttributes:      nil,
 			operation:           logical.UpdateOperation,
 			operationAttributes: &DisplayAttributes{Action: "Login", OperationSuffix: "BetterSuffix"},
 			defaultPrefix:       "test",
 			expected:            "LoginBetterSuffix",
+		},
+		"pipe-delimited-suffix-0": {
+			path:                "path/to/thing",
+			pathIndex:           0,
+			pathAttributes:      nil,
+			operation:           logical.UpdateOperation,
+			operationAttributes: &DisplayAttributes{OperationPrefix: "BetterPrefix", OperationSuffix: "Suffix0|Suffix1"},
+			defaultPrefix:       "test",
+			expected:            "BetterPrefixWriteSuffix0",
+		},
+		"pipe-delimited-suffix-1": {
+			path:                "path/to/thing",
+			pathIndex:           1,
+			pathAttributes:      nil,
+			operation:           logical.UpdateOperation,
+			operationAttributes: &DisplayAttributes{OperationPrefix: "BetterPrefix", OperationSuffix: "Suffix0|Suffix1"},
+			defaultPrefix:       "test",
+			expected:            "BetterPrefixWriteSuffix1",
+		},
+		"pipe-delimited-suffix-2-fallback": {
+			path:                "path/to/thing",
+			pathIndex:           2,
+			pathAttributes:      nil,
+			operation:           logical.UpdateOperation,
+			operationAttributes: &DisplayAttributes{OperationPrefix: "BetterPrefix", OperationSuffix: "Suffix0|Suffix1"},
+			defaultPrefix:       "test",
+			expected:            "BetterPrefixWritePathToThing",
 		},
 	}
 
@@ -673,6 +712,7 @@ func TestOpenAPI_constructOperationID(t *testing.T) {
 			t.Parallel()
 			actual := constructOperationID(
 				test.path,
+				test.pathIndex,
 				test.pathAttributes,
 				test.operation,
 				test.operationAttributes,
