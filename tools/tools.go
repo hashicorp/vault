@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 //go:build tools
 
 // This file ensures tool dependencies are kept in sync.  This is the

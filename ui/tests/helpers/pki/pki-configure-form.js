@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { SELECTORS as GENERATE_ROOT } from './pki-generate-root';
 
 export const SELECTORS = {

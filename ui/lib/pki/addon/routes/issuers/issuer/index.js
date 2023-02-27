@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import PkiIssuersListRoute from '../index';
 
 // Single issuer index route extends issuers list route

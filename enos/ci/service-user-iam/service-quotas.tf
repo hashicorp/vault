@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 locals {
   // This is the code of the service quota to request a change for. Each adjustable limit has a
   // unique code. See, https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/servicequotas_service_quota#quota_code

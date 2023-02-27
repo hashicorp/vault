@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 // THIS COMPONENT IS ONLY FOR EXTENDING
 // You should use this component if you want to use outerHTML symantics
 // in your components - this is the default for upcoming Glimmer components

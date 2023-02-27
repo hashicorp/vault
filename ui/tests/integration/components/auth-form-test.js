@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { later, _cancelTimers as cancelTimers } from '@ember/runloop';
 import EmberObject from '@ember/object';
 import { resolve } from 'rsvp';

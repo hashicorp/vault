@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+/**
  * @module ToolbarFilters
  * `ToolbarFilters` components are containers for Toolbar filters and toggles.
  * It should only be used inside of `Toolbar`.
