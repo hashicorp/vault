@@ -16,6 +16,12 @@ import (
 func pathConfig(b *backend) *framework.Path {
 	p := &framework.Path{
 		Pattern: "config",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixGitHub,
+			OperationSuffix: "Config",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"organization": {
 				Type:        framework.TypeString,

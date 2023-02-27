@@ -16,6 +16,12 @@ import (
 func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixGitHub,
+			Action:          "Login",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"token": {
 				Type:        framework.TypeString,
