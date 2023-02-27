@@ -1998,6 +1998,10 @@
         "path": "release-notes"
       },
       {
+         "title": "1.13.0",
+         "path": "release-notes/1.13.0"
+      },
+      {
         "title": "1.12.0",
         "path": "release-notes/1.12.0"
       },
