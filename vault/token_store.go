@@ -135,9 +135,16 @@ var (
 )
 
 func (ts *TokenStore) paths() []*framework.Path {
+	const operationPrefixToken = "token"
+
 	p := []*framework.Path{
 		{
 			Pattern: "roles/?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationSuffix: "roles",
+			},
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: ts.tokenStoreRoleList,
@@ -150,6 +157,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 		{
 			Pattern: "accessors/$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationSuffix: "accessors",
+			},
+
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: ts.tokenStoreAccessorList,
 			},
@@ -160,6 +172,12 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 		{
 			Pattern: "create-orphan$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "create",
+				OperationSuffix: "orphan",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
@@ -236,6 +254,12 @@ func (ts *TokenStore) paths() []*framework.Path {
 		{
 			Pattern: "create/" + framework.GenericNameRegex("role_name"),
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "create",
+				OperationSuffix: "against-role",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
@@ -311,6 +335,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 		{
 			Pattern: "create$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "create",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"display_name": {
 					Type:        framework.TypeString,
@@ -382,6 +411,10 @@ func (ts *TokenStore) paths() []*framework.Path {
 		{
 			Pattern: "lookup",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
 					Type:        framework.TypeString,
@@ -389,9 +422,19 @@ func (ts *TokenStore) paths() []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation:   ts.handleLookup,
-				logical.UpdateOperation: ts.handleLookup,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: ts.handleLookup,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "lookup",
+					},
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: ts.handleLookup,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "lookup2",
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(tokenLookupHelp),
@@ -400,6 +443,12 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 		{
 			Pattern: "lookup-accessor",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "lookup",
+				OperationSuffix: "accessor",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"accessor": {
@@ -419,6 +468,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 		{
 			Pattern: "lookup-self$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "lookup",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
 					Type:        framework.TypeString,
@@ -426,9 +480,19 @@ func (ts *TokenStore) paths() []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: ts.handleLookupSelf,
-				logical.ReadOperation:   ts.handleLookupSelf,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: ts.handleLookupSelf,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationSuffix: "self2",
+					},
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: ts.handleLookupSelf,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationSuffix: "self",
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(tokenLookupHelp),
@@ -437,6 +501,12 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 		{
 			Pattern: "revoke-accessor",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "revoke",
+				OperationSuffix: "accessor",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"accessor": {
@@ -456,6 +526,12 @@ func (ts *TokenStore) paths() []*framework.Path {
 		{
 			Pattern: "revoke-self$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "revoke",
+				OperationSuffix: "self",
+			},
+
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: ts.handleRevokeSelf,
 			},
@@ -466,6 +542,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 		{
 			Pattern: "revoke",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "revoke",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
@@ -485,6 +566,12 @@ func (ts *TokenStore) paths() []*framework.Path {
 		{
 			Pattern: "revoke-orphan",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "revoke",
+				OperationSuffix: "orphan",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
 					Type:        framework.TypeString,
@@ -502,6 +589,12 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 		{
 			Pattern: "renew-accessor",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "renew",
+				OperationSuffix: "accessor",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"accessor": {
@@ -526,6 +619,12 @@ func (ts *TokenStore) paths() []*framework.Path {
 		{
 			Pattern: "renew-self$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "renew",
+				OperationSuffix: "self",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
 					Type:        framework.TypeString,
@@ -548,6 +647,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 		{
 			Pattern: "renew",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "renew",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
@@ -572,6 +676,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 		{
 			Pattern: "tidy$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "tidy",
+			},
+
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: ts.handleTidy,
 			},
@@ -583,6 +692,12 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 	rolesPath := &framework.Path{
 		Pattern: "roles/" + framework.GenericNameRegex("role_name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixToken,
+			OperationSuffix: "role",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"role_name": {
 				Type:        framework.TypeString,
