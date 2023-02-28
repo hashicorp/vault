@@ -24,6 +24,13 @@ const (
 func pathConfig(b *backend) *framework.Path {
 	p := &framework.Path{
 		Pattern: `config`,
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixOkta,
+			OperationSuffix: "config",
+			Action:          "Configure",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"organization": {
 				Type:        framework.TypeString,
@@ -89,9 +96,6 @@ func pathConfig(b *backend) *framework.Path {
 		ExistenceCheck: b.pathConfigExistenceCheck,
 
 		HelpSynopsis: pathConfigHelp,
-		DisplayAttrs: &framework.DisplayAttributes{
-			Action: "Configure",
-		},
 	}
 
 	tokenutil.AddTokenFields(p.Fields)

@@ -15,8 +15,9 @@ import (
 )
 
 const (
-	mfaPushMethod = "push"
-	mfaTOTPMethod = "token:software:totp"
+	operationPrefixOkta = "okta"
+	mfaPushMethod       = "push"
+	mfaTOTPMethod       = "token:software:totp"
 )
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
