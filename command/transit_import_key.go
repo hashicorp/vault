@@ -42,10 +42,11 @@ Usage: vault transit import PATH KEY [options...]
   the base64 encoded KEY (either directly on the CLI or via @path notation),
   into a new key whose API path is PATH.  To import a new version into an
   existing key, use import_version.  The remaining options after KEY (key=value
-  style) are passed on to the transit/transform create key endpoint.  If your
+  style) are passed on to the Transit or Transform create key endpoint.  If your
   system or device natively supports the RSA AES key wrap mechanism (such as
   the PKCS#11 mechanism CKM_RSA_AES_KEY_WRAP), you should use it directly
   rather than this command.
+
 ` + c.Flags().Help()
 
 	return strings.TrimSpace(helpText)
