@@ -14,11 +14,11 @@
       {{/let}}
       <FormFieldGroups
         @model={{@model}}
-        @mode="create"
         @renderGroup="Subject Alternative Name (SAN) Options"
         @groupName="formFieldGroups"
+        @showHelpText={{false}}
       />
-      <FormFieldGroups @model={{@model}} @mode="create" @renderGroup="More Options" @groupName="formFieldGroups" />
+      <FormFieldGroups @model={{@model}} @renderGroup="More Options" @groupName="formFieldGroups" />
     </div>
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">

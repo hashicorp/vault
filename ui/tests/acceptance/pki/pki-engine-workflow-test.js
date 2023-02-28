@@ -429,10 +429,10 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.dom(SELECTORS.issuerDetails.title).hasText('View issuer certificate');
       assert
         .dom(`${SELECTORS.issuerDetails.defaultGroup} ${SELECTORS.issuerDetails.row}`)
-        .exists({ count: 11 }, 'Renders 10 info table items under default group');
+        .exists({ count: 13 }, 'Renders 13 info table items under default group');
       assert
         .dom(`${SELECTORS.issuerDetails.urlsGroup} ${SELECTORS.issuerDetails.row}`)
-        .exists({ count: 3 }, 'Renders 4 info table items under URLs group');
+        .exists({ count: 3 }, 'Renders 3 info table items under URLs group');
       assert.dom(SELECTORS.issuerDetails.groupTitle).exists({ count: 1 }, 'only 1 group title rendered');
     });
   });
