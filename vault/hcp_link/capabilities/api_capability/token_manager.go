@@ -87,7 +87,7 @@ func (t *HCPLinkTokenManager) fetchPolicy() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error creating HTTP request: %w", err)
 	}
-	
+
 	retryableReq, err := retryablehttp.FromRequest(req)
 	if err != nil {
 		return "", fmt.Errorf("error adding HTTP request retry wrapping: %w", err)
