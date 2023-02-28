@@ -16,7 +16,14 @@ const userFilterWarning = "userfilter configured does not consider userattr and 
 func pathConfig(b *backend) *framework.Path {
 	p := &framework.Path{
 		Pattern: `config`,
-		Fields:  ldaputil.ConfigFields(),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixLDAPAuth,
+			OperationSuffix: "config",
+			Action:          "Configure",
+		},
+
+		Fields: ldaputil.ConfigFields(),
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:   b.pathConfigRead,
@@ -25,9 +32,6 @@ func pathConfig(b *backend) *framework.Path {
 
 		HelpSynopsis:    pathConfigHelpSyn,
 		HelpDescription: pathConfigHelpDesc,
-		DisplayAttrs: &framework.DisplayAttributes{
-			Action: "Configure",
-		},
 	}
 
 	tokenutil.AddTokenFields(p.Fields)

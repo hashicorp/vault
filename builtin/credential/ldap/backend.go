@@ -11,7 +11,10 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-const errUserBindFailed = `ldap operation failed: failed to bind as user`
+const (
+	operationPrefixLDAPAuth = "ldap-auth"
+	errUserBindFailed       = "ldap operation failed: failed to bind as user"
+)
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()

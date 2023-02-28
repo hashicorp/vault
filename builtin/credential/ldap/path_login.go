@@ -13,6 +13,12 @@ import (
 func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `login/(?P<username>.+)`,
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixLDAPAuth,
+			OperationSuffix: "login",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"username": {
 				Type:        framework.TypeString,
