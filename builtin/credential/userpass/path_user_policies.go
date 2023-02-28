@@ -13,6 +13,13 @@ import (
 func pathUserPolicies(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "users/" + framework.GenericNameRegex("username") + "/policies$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixUserpass,
+			OperationVerb:   "update",
+			OperationSuffix: "policies",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"username": {
 				Type:        framework.TypeString,
