@@ -12,6 +12,13 @@ import (
 func pathConfig(b *backend) *framework.Path {
 	p := &framework.Path{
 		Pattern: "config",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixRadius,
+			OperationSuffix: "config",
+			Action:          "Configure",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"host": {
 				Type:        framework.TypeString,
@@ -85,9 +92,6 @@ func pathConfig(b *backend) *framework.Path {
 
 		HelpSynopsis:    pathConfigHelpSyn,
 		HelpDescription: pathConfigHelpDesc,
-		DisplayAttrs: &framework.DisplayAttributes{
-			Action: "Configure",
-		},
 	}
 
 	tokenutil.AddTokenFields(p.Fields)
