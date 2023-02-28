@@ -12,11 +12,19 @@ export default class {
    * @public
    */
   fetch() {
-    let uuid = crypto.randomUUID();
-    // odds are incredibly low that we'll run into a duplicate using crypto.randomUUID()
-    // but just to be safe...
-    while (this.ids.has(uuid)) {
+    let uuid;
+    // check if we can use crypto
+    if (isSecureContext) {
       uuid = crypto.randomUUID();
+      // odds are incredibly low that we'll run into a duplicate using crypto.randomUUID()
+      // but just to be safe...
+      while (this.ids.has(uuid)) {
+        uuid = crypto.randomUUID();
+      }
+    } else {
+      // fallback to incrementing id based on set size
+      // initial size will be 0 so first id will be 1
+      uuid = this.ids.size + 1;
     }
     this.ids.add(uuid);
     return uuid;
