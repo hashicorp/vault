@@ -984,7 +984,16 @@
       },
       {
         "title": "Active Directory",
-        "path": "secrets/ad"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secrets/ad"
+          },
+          {
+            "title": "Migration Guide",
+            "path": "secrets/ad/migration-guide"
+          }
+        ]
       },
       {
         "title": "AliCloud",
