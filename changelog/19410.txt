@@ -1,0 +1,3 @@
+```release-note:bug
+ui: fixes reliance on secure context (https) by removing methods using the Crypto interface
+```
