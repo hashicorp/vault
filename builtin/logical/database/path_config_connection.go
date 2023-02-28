@@ -59,6 +59,13 @@ func (c *DatabaseConfig) SupportsCredentialType(credentialType v5.CredentialType
 func pathResetConnection(b *databaseBackend) *framework.Path {
 	return &framework.Path{
 		Pattern: fmt.Sprintf("reset/%s", framework.GenericNameRegex("name")),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixDatabase,
+			OperationVerb:   "reset",
+			OperationSuffix: "connection",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -103,6 +110,12 @@ func (b *databaseBackend) pathConnectionReset() framework.OperationFunc {
 func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 	return &framework.Path{
 		Pattern: fmt.Sprintf("config/%s", framework.GenericNameRegex("name")),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixDatabase,
+			OperationSuffix: "connection",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -180,6 +193,11 @@ func (b *databaseBackend) connectionExistenceCheck() framework.ExistenceFunc {
 func pathListPluginConnection(b *databaseBackend) *framework.Path {
 	return &framework.Path{
 		Pattern: fmt.Sprintf("config/?$"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixDatabase,
+			OperationSuffix: "connections",
+		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.connectionListHandler(),

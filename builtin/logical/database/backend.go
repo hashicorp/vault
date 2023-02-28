@@ -24,10 +24,11 @@ import (
 )
 
 const (
-	databaseConfigPath     = "config/"
-	databaseRolePath       = "role/"
-	databaseStaticRolePath = "static-role/"
-	minRootCredRollbackAge = 1 * time.Minute
+	operationPrefixDatabase = "database"
+	databaseConfigPath      = "config/"
+	databaseRolePath        = "role/"
+	databaseStaticRolePath  = "static-role/"
+	minRootCredRollbackAge  = 1 * time.Minute
 )
 
 type dbPluginInstance struct {

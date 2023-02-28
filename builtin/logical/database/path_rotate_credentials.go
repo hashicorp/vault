@@ -16,6 +16,13 @@ func pathRotateRootCredentials(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "rotate-root/" + framework.GenericNameRegex("name"),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixDatabase,
+				OperationVerb:   "rotate",
+				OperationSuffix: "root",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,

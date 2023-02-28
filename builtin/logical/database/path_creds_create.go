@@ -15,6 +15,12 @@ func pathCredsCreate(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "creds/" + framework.GenericNameRegex("name"),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixDatabase,
+				OperationSuffix: "credentials",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -31,6 +37,12 @@ func pathCredsCreate(b *databaseBackend) []*framework.Path {
 		},
 		{
 			Pattern: "static-creds/" + framework.GenericNameRegex("name"),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixDatabase,
+				OperationSuffix: "static-credentials",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
