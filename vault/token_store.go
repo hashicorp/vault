@@ -481,16 +481,16 @@ func (ts *TokenStore) paths() []*framework.Path {
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.UpdateOperation: &framework.PathOperation{
-					Callback: ts.handleLookupSelf,
-					DisplayAttrs: &framework.DisplayAttributes{
-						OperationSuffix: "self2",
-					},
-				},
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: ts.handleLookupSelf,
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationSuffix: "self",
+					},
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: ts.handleLookupSelf,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationSuffix: "self2",
 					},
 				},
 			},
