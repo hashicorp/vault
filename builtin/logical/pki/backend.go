@@ -25,6 +25,8 @@ import (
 )
 
 const (
+	operationPrefixPKI = "pki"
+
 	noRole       = 0
 	roleOptional = 1
 	roleRequired = 2

@@ -11,6 +11,12 @@ import (
 func pathConfigCA(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/ca",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "ca-config",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"pem_bundle": {
 				Type: framework.TypeString,
@@ -70,6 +76,12 @@ For security reasons, the secret key cannot be retrieved later.
 func pathConfigIssuers(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/issuers",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "issuers-config",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			defaultRef: {
 				Type:        framework.TypeString,
@@ -133,6 +145,13 @@ func pathConfigIssuers(b *backend) *framework.Path {
 func pathReplaceRoot(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "root/replace",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "replace",
+			OperationSuffix: "root",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"default": {
 				Type:        framework.TypeString,
@@ -270,6 +289,12 @@ value of the issuer with the name "next", if it exists.
 func pathConfigKeys(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/keys",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "keys-config",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			defaultRef: {
 				Type:        framework.TypeString,

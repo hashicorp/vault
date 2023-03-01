@@ -13,6 +13,12 @@ import (
 func pathConfigCluster(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/cluster",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "cluster-config",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"path": {
 				Type: framework.TypeString,

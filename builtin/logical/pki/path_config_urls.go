@@ -14,6 +14,12 @@ import (
 func pathConfigURLs(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/urls",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "url-config",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"issuing_certificates": {
 				Type: framework.TypeCommaStringSlice,

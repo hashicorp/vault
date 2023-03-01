@@ -49,6 +49,12 @@ var defaultCrlConfig = crlConfig{
 func pathConfigCRL(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/crl",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "crl-config",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"expiry": {
 				Type: framework.TypeString,
