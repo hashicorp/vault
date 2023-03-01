@@ -119,7 +119,7 @@ func pathIssuerGenerateIntermediate(b *backend) *framework.Path {
 	pattern := "issuers/generate/intermediate/" + framework.GenericNameRegex("exported")
 
 	displayAttrs := &framework.DisplayAttributes{
-		OperationPrefix: operationPrefixPKI,
+		OperationPrefix: operationPrefixPKIIssuers,
 		OperationVerb:   "generate",
 		OperationSuffix: "intermediate",
 	}
