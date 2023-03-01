@@ -1253,7 +1253,7 @@ func (c *AgentCommand) newLogger() (log.InterceptLogger, error) {
 	}
 
 	logCfg := &logging.LogConfig{
-		Name:              "vault-agent",
+		Name:              "agent",
 		LogLevel:          logLevel,
 		LogFormat:         logFormat,
 		LogFilePath:       c.config.LogFile,

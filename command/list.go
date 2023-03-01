@@ -78,13 +78,7 @@ func (c *ListCommand) Run(args []string) int {
 		return 2
 	}
 
-	// Append trailing slash
-	path := args[0]
-	if !strings.HasSuffix(path, "/") {
-		path += "/"
-	}
-
-	path = sanitizePath(path)
+	path := sanitizePath(args[0])
 	secret, err := client.Logical().List(path)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error listing %s: %s", path, err))

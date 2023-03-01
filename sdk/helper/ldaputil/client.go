@@ -119,10 +119,11 @@ func (c *Client) makeLdapSearchRequest(cfg *ConfigEntry, conn Connection, userna
 		c.Logger.Debug("discovering user", "userdn", cfg.UserDN, "filter", renderedFilter)
 	}
 	ldapRequest := &ldap.SearchRequest{
-		BaseDN:    cfg.UserDN,
-		Scope:     ldap.ScopeWholeSubtree,
-		Filter:    renderedFilter,
-		SizeLimit: 2, // Should be only 1 result. Any number larger (2 or more) means access denied.
+		BaseDN:       cfg.UserDN,
+		DerefAliases: ldapDerefAliasMap[cfg.DerefAliases],
+		Scope:        ldap.ScopeWholeSubtree,
+		Filter:       renderedFilter,
+		SizeLimit:    2, // Should be only 1 result. Any number larger (2 or more) means access denied.
 		Attributes: []string{
 			cfg.UserAttr, // Return only needed attributes
 		},
@@ -274,10 +275,11 @@ func (c *Client) GetUserDN(cfg *ConfigEntry, conn Connection, bindDN, username s
 			c.Logger.Debug("searching upn", "userdn", cfg.UserDN, "filter", filter)
 		}
 		result, err := conn.Search(&ldap.SearchRequest{
-			BaseDN:    cfg.UserDN,
-			Scope:     ldap.ScopeWholeSubtree,
-			Filter:    filter,
-			SizeLimit: math.MaxInt32,
+			BaseDN:       cfg.UserDN,
+			Scope:        ldap.ScopeWholeSubtree,
+			DerefAliases: ldapDerefAliasMap[cfg.DerefAliases],
+			Filter:       filter,
+			SizeLimit:    math.MaxInt32,
 		})
 		if err != nil {
 			return userDN, fmt.Errorf("LDAP search failed for detecting user: %w", err)
@@ -335,9 +337,10 @@ func (c *Client) performLdapFilterGroupsSearch(cfg *ConfigEntry, conn Connection
 	}
 
 	result, err := conn.Search(&ldap.SearchRequest{
-		BaseDN: cfg.GroupDN,
-		Scope:  ldap.ScopeWholeSubtree,
-		Filter: renderedQuery.String(),
+		BaseDN:       cfg.GroupDN,
+		Scope:        ldap.ScopeWholeSubtree,
+		DerefAliases: ldapDerefAliasMap[cfg.DerefAliases],
+		Filter:       renderedQuery.String(),
 		Attributes: []string{
 			cfg.GroupAttr,
 		},
@@ -393,9 +396,10 @@ func (c *Client) performLdapFilterGroupsSearchPaging(cfg *ConfigEntry, conn Pagi
 	}
 
 	result, err := conn.SearchWithPaging(&ldap.SearchRequest{
-		BaseDN: cfg.GroupDN,
-		Scope:  ldap.ScopeWholeSubtree,
-		Filter: renderedQuery.String(),
+		BaseDN:       cfg.GroupDN,
+		Scope:        ldap.ScopeWholeSubtree,
+		DerefAliases: ldapDerefAliasMap[cfg.DerefAliases],
+		Filter:       renderedQuery.String(),
 		Attributes: []string{
 			cfg.GroupAttr,
 		},
@@ -442,9 +446,10 @@ func sidBytesToString(b []byte) (string, error) {
 
 func (c *Client) performLdapTokenGroupsSearch(cfg *ConfigEntry, conn Connection, userDN string) ([]*ldap.Entry, error) {
 	result, err := conn.Search(&ldap.SearchRequest{
-		BaseDN: userDN,
-		Scope:  ldap.ScopeBaseObject,
-		Filter: "(objectClass=*)",
+		BaseDN:       userDN,
+		Scope:        ldap.ScopeBaseObject,
+		DerefAliases: ldapDerefAliasMap[cfg.DerefAliases],
+		Filter:       "(objectClass=*)",
 		Attributes: []string{
 			"tokenGroups",
 		},
@@ -470,9 +475,10 @@ func (c *Client) performLdapTokenGroupsSearch(cfg *ConfigEntry, conn Connection,
 		}
 
 		groupResult, err := conn.Search(&ldap.SearchRequest{
-			BaseDN: fmt.Sprintf("<SID=%s>", sidString),
-			Scope:  ldap.ScopeBaseObject,
-			Filter: "(objectClass=*)",
+			BaseDN:       fmt.Sprintf("<SID=%s>", sidString),
+			Scope:        ldap.ScopeBaseObject,
+			DerefAliases: ldapDerefAliasMap[cfg.DerefAliases],
+			Filter:       "(objectClass=*)",
 			Attributes: []string{
 				"1.1", // RFC no attributes
 			},
