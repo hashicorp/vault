@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/ldap: allow configuration of alias dereferencing in LDAP search
+```

@@ -2,10 +2,10 @@ package node_status
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/hcp-link/pkg/nodestatus"
 	"github.com/hashicorp/vault/helper/logging"
+	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/hcp_link/internal"
 	"github.com/hashicorp/vault/vault/hcp_link/proto/node_status"
 	"github.com/shirou/gopsutil/v3/host"
@@ -24,7 +24,7 @@ type NodeStatusReporter struct {
 func (c *NodeStatusReporter) GetNodeStatus(ctx context.Context) (retStatus nodestatus.NodeStatus, retErr error) {
 	defer func() {
 		if r := recover(); r != nil {
-			retErr = fmt.Errorf("internal server error")
+			retErr = vault.ErrInternalError
 		}
 	}()
 

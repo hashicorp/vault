@@ -1,14 +1,8 @@
-import Model from '@ember-data/model';
-import { FormField } from 'vault/app-types';
+import { FormField, FormFieldGroups } from 'vault/app-types';
+import PkiCertificateBaseModel from './base';
 
-export default class PkiCertificateGenerateModel extends Model {
-  name: string;
-  backend: string;
-  serialNumber: string;
-  certificate: string;
+export default class PkiCertificateGenerateModel extends PkiCertificateBaseModel {
+  role: string;
   formFields: FormField[];
-  formFieldsGroup: {
-    [k: string]: FormField[];
-  }[];
-  validate(): ModelValidations;
+  formFieldGroups: FormFieldGroups;
 }

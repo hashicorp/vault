@@ -8,15 +8,19 @@ export default class PkiIssuerSerializer extends ApplicationSerializer {
     super(...arguments);
     // remove following attrs from serialization
     const attrs = [
+      'altNames',
       'caChain',
       'certificate',
       'commonName',
+      'ipSans',
       'issuerId',
       'keyId',
+      'otherSans',
       'notValidAfter',
       'notValidBefore',
       'serialNumber',
       'signatureBits',
+      'uriSans',
     ];
     this.attrs = attrs.reduce((attrObj, attr) => {
       attrObj[attr] = { serialize: false };
