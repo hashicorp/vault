@@ -7,19 +7,34 @@ import (
 
 func pathIssuerSignIntermediate(b *backend) *framework.Path {
 	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/sign-intermediate"
-	return buildPathIssuerSignIntermediateRaw(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKIIssuer,
+		OperationVerb:   "sign",
+		OperationSuffix: "intermediate",
+	}
+
+	return buildPathIssuerSignIntermediateRaw(b, pattern, displayAttrs)
 }
 
 func pathSignIntermediate(b *backend) *framework.Path {
 	pattern := "root/sign-intermediate"
-	return buildPathIssuerSignIntermediateRaw(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKIRoot,
+		OperationVerb:   "sign",
+		OperationSuffix: "intermediate",
+	}
+
+	return buildPathIssuerSignIntermediateRaw(b, pattern, displayAttrs)
 }
 
-func buildPathIssuerSignIntermediateRaw(b *backend, pattern string) *framework.Path {
+func buildPathIssuerSignIntermediateRaw(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	fields := addIssuerRefField(map[string]*framework.FieldSchema{})
 	path := &framework.Path{
-		Pattern: pattern,
-		Fields:  fields,
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
+		Fields:       fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathIssuerSignIntermediate,
@@ -113,15 +128,29 @@ See the API documentation for more information about required parameters.
 
 func pathIssuerSignSelfIssued(b *backend) *framework.Path {
 	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/sign-self-issued"
-	return buildPathIssuerSignSelfIssued(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKIIssuer,
+		OperationVerb:   "sign",
+		OperationSuffix: "self-issued",
+	}
+
+	return buildPathIssuerSignSelfIssued(b, pattern, displayAttrs)
 }
 
 func pathSignSelfIssued(b *backend) *framework.Path {
 	pattern := "root/sign-self-issued"
-	return buildPathIssuerSignSelfIssued(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKIRoot,
+		OperationVerb:   "sign",
+		OperationSuffix: "self-issued",
+	}
+
+	return buildPathIssuerSignSelfIssued(b, pattern, displayAttrs)
 }
 
-func buildPathIssuerSignSelfIssued(b *backend, pattern string) *framework.Path {
+func buildPathIssuerSignSelfIssued(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	fields := map[string]*framework.FieldSchema{
 		"certificate": {
 			Type:        framework.TypeString,
@@ -135,8 +164,9 @@ func buildPathIssuerSignSelfIssued(b *backend, pattern string) *framework.Path {
 	}
 	fields = addIssuerRefField(fields)
 	path := &framework.Path{
-		Pattern: pattern,
-		Fields:  fields,
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
+		Fields:       fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathIssuerSignSelfIssued,

@@ -98,7 +98,13 @@ var defaultTidyConfig = tidyConfig{
 func pathTidy(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "tidy$",
-		Fields:  addTidyFields(map[string]*framework.FieldSchema{}),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "tidy",
+		},
+
+		Fields: addTidyFields(map[string]*framework.FieldSchema{}),
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback:                  b.pathTidyWrite,
@@ -113,6 +119,13 @@ func pathTidy(b *backend) *framework.Path {
 func pathTidyCancel(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "tidy-cancel$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "tidy",
+			OperationSuffix: "cancel",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback:                  b.pathTidyCancelWrite,
@@ -127,6 +140,13 @@ func pathTidyCancel(b *backend) *framework.Path {
 func pathTidyStatus(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "tidy-status$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "tidy",
+			OperationSuffix: "status",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback:                  b.pathTidyStatusRead,
@@ -141,6 +161,10 @@ func pathTidyStatus(b *backend) *framework.Path {
 func pathConfigAutoTidy(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/auto-tidy",
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "auto-tidy-config",
+		},
 		Fields: addTidyFields(map[string]*framework.FieldSchema{
 			"enabled": {
 				Type:        framework.TypeBool,

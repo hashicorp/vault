@@ -20,6 +20,11 @@ func pathListRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/?$",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "roles",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathRoleList,
@@ -34,6 +39,12 @@ func pathListRoles(b *backend) *framework.Path {
 func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/" + framework.GenericNameRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "role",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"backend": {
 				Type:        framework.TypeString,

@@ -28,6 +28,7 @@ const (
 	operationPrefixPKI        = "pki"
 	operationPrefixPKIIssuer  = "pki-issuer"
 	operationPrefixPKIIssuers = "pki-issuers"
+	operationPrefixPKIRoot    = "pki-root"
 
 	noRole       = 0
 	roleOptional = 1
