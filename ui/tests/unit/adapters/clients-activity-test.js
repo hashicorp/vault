@@ -9,10 +9,11 @@ module('Unit | Adapter | clients activity', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
+    const date = new Date('2023-01-20');
     this.store = this.owner.lookup('service:store');
     this.modelName = 'clients/activity';
-    this.startDate = subMonths(new Date(), 6);
-    this.endDate = new Date();
+    this.startDate = subMonths(date, 6);
+    this.endDate = date;
     this.readableUnix = (unix) => parseAPITimestamp(fromUnixTime(unix).toISOString(), 'MMMM dd yyyy');
   });
 
