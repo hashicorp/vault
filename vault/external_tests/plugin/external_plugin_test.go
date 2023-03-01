@@ -19,7 +19,7 @@ import (
 	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
-func getCluster(t *testing.T, typ consts.PluginType) *vault.TestCluster {
+func getCluster(t *testing.T, typ consts.PluginType, numCores int) *vault.TestCluster {
 	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
 	t.Cleanup(func() { cleanup(t) })
 	coreConfig := &vault.CoreConfig{
@@ -30,6 +30,7 @@ func getCluster(t *testing.T, typ consts.PluginType) *vault.TestCluster {
 	}
 
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		NumCores: numCores,
 		Plugins: &vault.TestPluginConfig{
 			Typ:      typ,
 			Versions: []string{""},
@@ -46,7 +47,126 @@ func getCluster(t *testing.T, typ consts.PluginType) *vault.TestCluster {
 // TestExternalPlugin_AuthMethod tests that we can build, register and use an
 // external auth method
 func TestExternalPlugin_AuthMethod(t *testing.T) {
-	cluster := getCluster(t, consts.PluginTypeCredential)
+	cluster := getCluster(t, consts.PluginTypeCredential, 5)
+	defer cluster.Cleanup()
+
+	plugin := cluster.Plugins[0]
+	client := cluster.Cores[0].Client
+	client.SetToken(cluster.RootToken)
+
+	// Register
+	if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
+		Name:    plugin.Name,
+		Type:    api.PluginType(plugin.Typ),
+		Command: plugin.Name,
+		SHA256:  plugin.Sha256,
+		Version: plugin.Version,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// define a group of parallel tests so we wait for their execution before
+	// continuing on to cleanup
+	// see: https://go.dev/blog/subtests
+	t.Run("parallel execution group", func(t *testing.T) {
+		// loop to mount 5 auth methods that will each share a single
+		// plugin process
+		for i := 0; i < 5; i++ {
+			i := i
+			pluginPath := fmt.Sprintf("%s-%d", plugin.Name, i)
+			client := cluster.Cores[i].Client
+			t.Run(pluginPath, func(t *testing.T) {
+				t.Parallel()
+				client.SetToken(cluster.RootToken)
+				// Enable
+				if err := client.Sys().EnableAuthWithOptions(pluginPath, &api.EnableAuthOptions{
+					Type: plugin.Name,
+				}); err != nil {
+					t.Fatal(err)
+				}
+
+				// Configure
+				_, err := client.Logical().Write("auth/"+pluginPath+"/role/role1", map[string]interface{}{
+					"bind_secret_id": "true",
+					"period":         "300",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				secret, err := client.Logical().Write("auth/"+pluginPath+"/role/role1/secret-id", nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				secretID := secret.Data["secret_id"].(string)
+
+				secret, err = client.Logical().Read("auth/" + pluginPath + "/role/role1/role-id")
+				if err != nil {
+					t.Fatal(err)
+				}
+				roleID := secret.Data["role_id"].(string)
+
+				// Login - expect SUCCESS
+				authMethod, err := approle.NewAppRoleAuth(
+					roleID,
+					&approle.SecretID{FromString: secretID},
+					approle.WithMountPath(pluginPath),
+				)
+				if err != nil {
+					t.Fatal(err)
+				}
+				_, err = client.Auth().Login(context.Background(), authMethod)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				// Renew
+				resp, err := client.Auth().Token().RenewSelf(30)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				// Login - expect SUCCESS
+				resp, err = client.Auth().Login(context.Background(), authMethod)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				revokeToken := resp.Auth.ClientToken
+				// Revoke
+				if err = client.Auth().Token().RevokeSelf(revokeToken); err != nil {
+					t.Fatal(err)
+				}
+
+				// Reset root token
+				client.SetToken(cluster.RootToken)
+
+				// Lookup - expect FAILURE
+				resp, err = client.Auth().Token().Lookup(revokeToken)
+				if err == nil {
+					t.Fatalf("expected error, got nil")
+				}
+
+				// Reset root token
+				client.SetToken(cluster.RootToken)
+			})
+		}
+	})
+
+	// Deregister
+	if err := client.Sys().DeregisterPlugin(&api.DeregisterPluginInput{
+		Name:    plugin.Name,
+		Type:    api.PluginType(plugin.Typ),
+		Version: plugin.Version,
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestExternalPlugin_AuthMethodReload tests that we can use an external auth
+// method after reload
+func TestExternalPlugin_AuthMethodReload(t *testing.T) {
+	cluster := getCluster(t, consts.PluginTypeCredential, 1)
 	defer cluster.Cleanup()
 
 	plugin := cluster.Plugins[0]
@@ -65,6 +185,7 @@ func TestExternalPlugin_AuthMethod(t *testing.T) {
 	}
 
 	pluginPath := fmt.Sprintf("%s-%d", plugin.Name, 0)
+
 	// Enable
 	if err := client.Sys().EnableAuthWithOptions(pluginPath, &api.EnableAuthOptions{
 		Type: plugin.Name,
@@ -117,37 +238,9 @@ func TestExternalPlugin_AuthMethod(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Login - expect SUCCESS
-	resp, err := client.Auth().Login(context.Background(), authMethod)
+	_, err = client.Auth().Login(context.Background(), authMethod)
 	if err != nil {
 		t.Fatal(err)
-	}
-
-	// Renew
-	resp, err = client.Auth().Token().RenewSelf(30)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Login - expect SUCCESS
-	resp, err = client.Auth().Login(context.Background(), authMethod)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	revokeToken := resp.Auth.ClientToken
-	// Revoke
-	if err = client.Auth().Token().RevokeSelf(revokeToken); err != nil {
-		t.Fatal(err)
-	}
-
-	// Reset root token
-	client.SetToken(cluster.RootToken)
-
-	// Lookup - expect FAILURE
-	resp, err = client.Auth().Token().Lookup(revokeToken)
-	if err == nil {
-		t.Fatalf("expected error, got nil")
 	}
 
 	// Reset root token
@@ -166,7 +259,7 @@ func TestExternalPlugin_AuthMethod(t *testing.T) {
 // TestExternalPlugin_SecretsEngine tests that we can build, register and use an
 // external secrets engine
 func TestExternalPlugin_SecretsEngine(t *testing.T) {
-	cluster := getCluster(t, consts.PluginTypeSecrets)
+	cluster := getCluster(t, consts.PluginTypeSecrets, 1)
 	defer cluster.Cleanup()
 
 	plugin := cluster.Plugins[0]
@@ -183,8 +276,90 @@ func TestExternalPlugin_SecretsEngine(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
+
+	// define a group of parallel tests so we wait for their execution before
+	// continuing on to cleanup
+	// see: https://go.dev/blog/subtests
+	t.Run("parallel execution group", func(t *testing.T) {
+		// loop to mount 5 secrets engines that will each share a single
+		// plugin process
+		for i := 0; i < 5; i++ {
+			pluginPath := fmt.Sprintf("%s-%d", plugin.Name, i)
+			t.Run(pluginPath, func(t *testing.T) {
+				t.Parallel()
+				// Enable
+				if err := client.Sys().Mount(pluginPath, &api.MountInput{
+					Type: plugin.Name,
+				}); err != nil {
+					t.Fatal(err)
+				}
+
+				// Configure
+				cleanupConsul, consulConfig := consul.PrepareTestContainer(t, "", false, true)
+				defer cleanupConsul()
+
+				_, err := client.Logical().Write(pluginPath+"/config/access", map[string]interface{}{
+					"address": consulConfig.Address(),
+					"token":   consulConfig.Token,
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				_, err = client.Logical().Write(pluginPath+"/roles/test", map[string]interface{}{
+					"consul_policies": []string{"test"},
+					"ttl":             "6h",
+					"local":           false,
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				resp, err := client.Logical().Read(pluginPath + "/creds/test")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if resp == nil {
+					t.Fatal("read creds response is nil")
+				}
+			})
+		}
+	})
+
+	// Deregister
+	if err := client.Sys().DeregisterPlugin(&api.DeregisterPluginInput{
+		Name:    plugin.Name,
+		Type:    api.PluginType(plugin.Typ),
+		Version: plugin.Version,
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestExternalPlugin_SecretsEngineReload tests that we can use an external
+// secrets engine after reload
+func TestExternalPlugin_SecretsEngineReload(t *testing.T) {
+	cluster := getCluster(t, consts.PluginTypeSecrets, 1)
+	defer cluster.Cleanup()
+
+	plugin := cluster.Plugins[0]
+	client := cluster.Cores[0].Client
+	client.SetToken(cluster.RootToken)
+
+	// Register
+	if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
+		Name:    plugin.Name,
+		Type:    api.PluginType(plugin.Typ),
+		Command: plugin.Name,
+		SHA256:  plugin.Sha256,
+		Version: plugin.Version,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	pluginPath := fmt.Sprintf("%s-%d", plugin.Name, 0)
 	// Enable
-	if err := client.Sys().Mount(plugin.Name, &api.MountInput{
+	if err := client.Sys().Mount(pluginPath, &api.MountInput{
 		Type: plugin.Name,
 	}); err != nil {
 		t.Fatal(err)
@@ -194,7 +369,7 @@ func TestExternalPlugin_SecretsEngine(t *testing.T) {
 	cleanupConsul, consulConfig := consul.PrepareTestContainer(t, "", false, true)
 	defer cleanupConsul()
 
-	_, err := client.Logical().Write(plugin.Name+"/config/access", map[string]interface{}{
+	_, err := client.Logical().Write(pluginPath+"/config/access", map[string]interface{}{
 		"address": consulConfig.Address(),
 		"token":   consulConfig.Token,
 	})
@@ -202,7 +377,7 @@ func TestExternalPlugin_SecretsEngine(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write(plugin.Name+"/roles/test", map[string]interface{}{
+	_, err = client.Logical().Write(pluginPath+"/roles/test", map[string]interface{}{
 		"consul_policies": []string{"test"},
 		"ttl":             "6h",
 		"local":           false,
@@ -211,7 +386,7 @@ func TestExternalPlugin_SecretsEngine(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err := client.Logical().Read(plugin.Name + "/creds/test")
+	resp, err := client.Logical().Read(pluginPath + "/creds/test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -226,7 +401,7 @@ func TestExternalPlugin_SecretsEngine(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err = client.Logical().Read(plugin.Name + "/creds/test")
+	resp, err = client.Logical().Read(pluginPath + "/creds/test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -247,7 +422,7 @@ func TestExternalPlugin_SecretsEngine(t *testing.T) {
 // TestExternalPlugin_Database tests that we can build, register and use an
 // external database secrets engine
 func TestExternalPlugin_Database(t *testing.T) {
-	cluster := getCluster(t, consts.PluginTypeDatabase)
+	cluster := getCluster(t, consts.PluginTypeDatabase, 1)
 	defer cluster.Cleanup()
 
 	plugin := cluster.Plugins[0]
@@ -383,7 +558,7 @@ func TestExternalPlugin_Database(t *testing.T) {
 // TestExternalPlugin_DatabaseReload tests that we can use an external database
 // secrets engine after reload
 func TestExternalPlugin_DatabaseReload(t *testing.T) {
-	cluster := getCluster(t, consts.PluginTypeDatabase)
+	cluster := getCluster(t, consts.PluginTypeDatabase, 1)
 	defer cluster.Cleanup()
 
 	plugin := cluster.Plugins[0]

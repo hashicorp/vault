@@ -1362,6 +1362,7 @@ START:
 		LastOutputPolicyError = &OutputPolicyError{
 			method: req.Method,
 			path:   strings.TrimPrefix(req.URL.Path, "/v1"),
+			params: req.URL.Query(),
 		}
 		return nil, LastOutputPolicyError
 	}
