@@ -319,8 +319,9 @@ type Core struct {
 	auditBackends map[string]audit.Factory
 
 	// stateLock protects mutable state
-	stateLock locking.RWMutex
-	sealed    *uint32
+	stateLock        locking.RWMutex
+	sealed           *uint32
+	postunsealfailed *uint32
 
 	standby              bool
 	perfStandby          bool
@@ -956,6 +957,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		stateLock:            stateLock,
 		router:               NewRouter(),
 		sealed:               new(uint32),
+		postunsealfailed:     new(uint32),
 		sealMigrationDone:    new(uint32),
 		standby:              true,
 		standbyStopCh:        new(atomic.Value),
@@ -1381,6 +1383,11 @@ func (c *Core) GetContext() (context.Context, context.CancelFunc) {
 // Sealed checks if the Vault is current sealed
 func (c *Core) Sealed() bool {
 	return atomic.LoadUint32(c.sealed) == 1
+}
+
+// PostUnsealFailed returns whether the last post-unseal operations failed
+func (c *Core) PostUnsealFailed() bool {
+	return atomic.LoadUint32(c.postunsealfailed) == 1
 }
 
 // SecretProgress returns the number of keys provided so far

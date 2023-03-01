@@ -251,7 +251,7 @@ func (d *autoSeal) SetBarrierConfig(ctx context.Context, conf *SealConfig) error
 
 	if err := d.core.physical.Put(ctx, pe); err != nil {
 		d.logger.Error("failed to write barrier seal configuration", "error", err)
-		return fmt.Errorf("failed to write barrier seal configuration: %w", err)
+		return fmt.Errorf("failed to write barrier seal configuration: %w", newBackendError(err))
 	}
 
 	d.SetCachedBarrierConfig(conf.Clone())

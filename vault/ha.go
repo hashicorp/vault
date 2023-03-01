@@ -573,10 +573,14 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 
 			if err := c.performKeyUpgrades(activeCtx); err != nil {
 				c.logger.Error("error performing key upgrades", "error", err)
+				atomic.StoreUint32(c.postunsealfailed, 1)
+
+				// We do not shutdown when an error related to the backend occurs
+				shouldShutDown := !errors.Is(err, backendError{}) && !strings.Contains(err.Error(), context.Canceled.Error())
 
 				// If we fail due to anything other than a context canceled
 				// error we should shutdown as we may have the incorrect Keys.
-				if !strings.Contains(err.Error(), context.Canceled.Error()) {
+				if shouldShutDown {
 					// We call this in a goroutine so that we can give up the
 					// statelock and have this shut us down; sealInternal has a
 					// workflow where it watches for the stopCh to close so we want
@@ -592,7 +596,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 
 				// If we are shutting down we should return from this function,
 				// otherwise continue
-				if !strings.Contains(err.Error(), context.Canceled.Error()) {
+				if !shouldShutDown {
 					continue
 				} else {
 					return
@@ -608,6 +612,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 			c.localClusterPrivateKey.Store((*ecdsa.PrivateKey)(nil))
 
 			if err := c.setupCluster(activeCtx); err != nil {
+				atomic.StoreUint32(c.postunsealfailed, 1)
 				c.heldHALock = nil
 				lock.Unlock()
 				close(continueCh)
@@ -620,6 +625,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		}
 		// Advertise as leader
 		if err := c.advertiseLeader(activeCtx, uuid, leaderLostCh); err != nil {
+			atomic.StoreUint32(c.postunsealfailed, 1)
 			c.heldHALock = nil
 			lock.Unlock()
 			close(continueCh)
@@ -632,6 +638,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		// Attempt the post-unseal process
 		err = c.postUnseal(activeCtx, activeCtxCancel, standardUnsealStrategy{})
 		if err == nil {
+			atomic.StoreUint32(c.postunsealfailed, 0)
 			c.standby = false
 			c.leaderUUID = uuid
 			c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 1, nil)
@@ -642,6 +649,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 
 		// Handle a failure to unseal
 		if err != nil {
+			atomic.StoreUint32(c.postunsealfailed, 1)
 			c.logger.Error("post-unseal setup failed", "error", err)
 			lock.Unlock()
 			metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)

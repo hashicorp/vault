@@ -246,7 +246,7 @@ func (d *defaultSeal) SetBarrierConfig(ctx context.Context, config *SealConfig) 
 
 	if err := d.core.physical.Put(ctx, pe); err != nil {
 		d.core.logger.Error("failed to write seal configuration", "error", err)
-		return fmt.Errorf("failed to write seal configuration: %w", err)
+		return fmt.Errorf("failed to write seal configuration: %w", newBackendError(err))
 	}
 
 	d.SetCachedBarrierConfig(config.Clone())

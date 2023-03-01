@@ -1,0 +1,7 @@
+```release-note:improvement
+core: Vault will no longer seal itself when an error occurs with the storage backend during the post-unseal operations.
+```
+
+```release-note:improvement
+core: sys/health will now return with status code 523 if an error happened during the post-unseal operations.
+```

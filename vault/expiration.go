@@ -395,6 +395,7 @@ func (c *Core) setupExpiration(e ExpireLeaseStrategy) error {
 	// Restore the existing state
 	c.logger.Info("restoring leases")
 	errorFunc := func() {
+		atomic.StoreUint32(c.postunsealfailed, 1)
 		c.logger.Error("shutting down")
 		if err := c.Shutdown(); err != nil {
 			c.logger.Error("error shutting down core", "error", err)

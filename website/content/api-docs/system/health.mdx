@@ -27,6 +27,7 @@ The default status codes are:
 - `473` if performance standby
 - `501` if not initialized
 - `503` if sealed
+- `523` if an error occured during the post-unseal operations
 
 ### Parameters
 
@@ -54,6 +55,11 @@ The default status codes are:
 
 - `sealedcode` `(int: 503)` – Specifies the status code that should be returned
   for a sealed node.
+
+- `failedtounsealedcode` `(int: 523)` – Specifies the status code that should be
+  returned for a node that failed to perform the post-unseal operations. When this
+  occurs Vault logs the error and will try to unseal itself automatically in case
+  the error was transient but may not be able to.
 
 - `uninitcode` `(int: 501)` – Specifies the status code that should be returned
   for a uninitialized node.
