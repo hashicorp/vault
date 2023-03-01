@@ -201,7 +201,7 @@ func pathIssuerSignVerbatim(b *backend) *framework.Path {
 	displayAttrs := &framework.DisplayAttributes{
 		OperationPrefix: operationPrefixPKIIssuer,
 		OperationVerb:   "sign",
-		OperationSuffix: "verbatim",
+		OperationSuffix: "verbatim|verbatim-for-role",
 	}
 
 	return buildPathIssuerSignVerbatim(b, pattern, displayAttrs)
@@ -213,7 +213,7 @@ func pathSignVerbatim(b *backend) *framework.Path {
 	displayAttrs := &framework.DisplayAttributes{
 		OperationPrefix: operationPrefixPKI,
 		OperationVerb:   "sign",
-		OperationSuffix: "verbatim",
+		OperationSuffix: "verbatim|verbatim-for-role",
 	}
 
 	return buildPathIssuerSignVerbatim(b, pattern, displayAttrs)
