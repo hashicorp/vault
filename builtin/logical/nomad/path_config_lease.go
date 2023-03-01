@@ -13,6 +13,12 @@ const leaseConfigKey = "config/lease"
 func pathConfigLease(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/lease",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixNomad,
+			OperationSuffix: "lease-config",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"ttl": {
 				Type:        framework.TypeDurationSecond,

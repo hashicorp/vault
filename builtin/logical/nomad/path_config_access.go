@@ -13,6 +13,12 @@ const configAccessKey = "config/access"
 func pathConfigAccess(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/access",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixNomad,
+			OperationSuffix: "access-config",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"address": {
 				Type:        framework.TypeString,
