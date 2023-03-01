@@ -19,6 +19,12 @@ func pathSetSignedIntermediate(b *backend) *framework.Path {
 	ret := &framework.Path{
 		Pattern: "intermediate/set-signed",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "set-signed",
+			OperationSuffix: "intermediate",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"certificate": {
 				Type: framework.TypeString,

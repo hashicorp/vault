@@ -16,16 +16,33 @@ import (
 )
 
 func pathIssuerGenerateRoot(b *backend) *framework.Path {
-	return buildPathGenerateRoot(b, "issuers/generate/root/"+framework.GenericNameRegex("exported"))
+	pattern := "issuers/generate/root/" + framework.GenericNameRegex("exported")
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKIIssuers,
+		OperationVerb:   "generate",
+		OperationSuffix: "root",
+	}
+
+	return buildPathGenerateRoot(b, pattern, displayAttrs)
 }
 
 func pathRotateRoot(b *backend) *framework.Path {
-	return buildPathGenerateRoot(b, "root/rotate/"+framework.GenericNameRegex("exported"))
+	pattern := "root/rotate/" + framework.GenericNameRegex("exported")
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKIIssuers,
+		OperationVerb:   "rotate",
+		OperationSuffix: "root",
+	}
+
+	return buildPathGenerateRoot(b, pattern, displayAttrs)
 }
 
-func buildPathGenerateRoot(b *backend, pattern string) *framework.Path {
+func buildPathGenerateRoot(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	ret := &framework.Path{
-		Pattern: pattern,
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
@@ -99,17 +116,33 @@ func buildPathGenerateRoot(b *backend, pattern string) *framework.Path {
 }
 
 func pathIssuerGenerateIntermediate(b *backend) *framework.Path {
-	return buildPathGenerateIntermediate(b,
-		"issuers/generate/intermediate/"+framework.GenericNameRegex("exported"))
+	pattern := "issuers/generate/intermediate/" + framework.GenericNameRegex("exported")
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationVerb:   "generate",
+		OperationSuffix: "intermediate",
+	}
+
+	return buildPathGenerateIntermediate(b, pattern, displayAttrs)
 }
 
 func pathCrossSignIntermediate(b *backend) *framework.Path {
-	return buildPathGenerateIntermediate(b, "intermediate/cross-sign")
+	pattern := "intermediate/cross-sign"
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationVerb:   "cross-sign",
+		OperationSuffix: "intermediate",
+	}
+
+	return buildPathGenerateIntermediate(b, pattern, displayAttrs)
 }
 
-func buildPathGenerateIntermediate(b *backend, pattern string) *framework.Path {
+func buildPathGenerateIntermediate(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	ret := &framework.Path{
-		Pattern: pattern,
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathGenerateIntermediate,
@@ -170,6 +203,13 @@ with Active Directory Certificate Services.`,
 func pathImportIssuer(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "issuers/import/(cert|bundle)",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "import",
+			OperationSuffix: "issuers-cert|issuers-bundle",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"pem_bundle": {
 				Type: framework.TypeString,
@@ -451,7 +491,14 @@ func pathRevokeIssuer(b *backend) *framework.Path {
 
 	return &framework.Path{
 		Pattern: "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/revoke",
-		Fields:  fields,
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "revoke",
+			OperationSuffix: "issuer",
+		},
+
+		Fields: fields,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{

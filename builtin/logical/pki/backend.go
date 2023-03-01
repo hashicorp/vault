@@ -25,8 +25,9 @@ import (
 )
 
 const (
-	operationPrefixPKI       = "pki"
-	operationPrefixPKIIssuer = "pki-issuer"
+	operationPrefixPKI        = "pki"
+	operationPrefixPKIIssuer  = "pki-issuer"
+	operationPrefixPKIIssuers = "pki-issuers"
 
 	noRole       = 0
 	roleOptional = 1
