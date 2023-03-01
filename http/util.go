@@ -201,3 +201,47 @@ func (m *multiReaderCloser) Close() error {
 	}
 	return err
 }
+
+// Workaround an incompatibility between Go's HTTP mux and a standard OCSP GET request that
+// encodes in standard base64 and places that in the URL. Go's mux will try to canonicalize
+// path components by changing repeated '/' into a single '/', which corrupts the base64
+// encoding of an OCSP request.
+func ocspGetWrappedHandler(handler http.Handler, core *vault.Core) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet &&
+			strings.Contains(r.URL.Path, "//") &&
+			strings.Contains(r.URL.Path, "ocsp/") {
+
+			ns, err := namespace.FromContext(r.Context())
+			if err != nil {
+				respondError(w, http.StatusInternalServerError, err)
+				return
+			}
+
+			// we ignore errors as the higher layers will deal with it
+			logicalPath, _, _ := buildLogicalPath(r)
+			if logicalPath != "" {
+				nsPath := ns.Path + logicalPath
+				mountType, mountPath, found := core.GetMountTypeByAPIPath(r.Context(), nsPath)
+
+				if found && mountType == "pki" {
+					fullMountPath := ns.Path + mountPath
+					base64Request := strings.TrimPrefix(nsPath, fullMountPath+"ocsp/")
+					base64Request = strings.TrimPrefix(base64Request, fullMountPath+"unified-ocsp/")
+
+					if base64Request != nsPath {
+						// So one of our special OCSP paths matched the logical path and we
+						// contain a character sequence that will cause us to redirect, stash the original
+						// request into a GET Query URL instead and rewrite the path so the standard
+						// mux does not redirect us.
+						r.URL.RawQuery = fmt.Sprintf("ocspReq=%s", base64Request)
+						r.URL.Path = strings.TrimSuffix(r.URL.Path, base64Request)
+					}
+				}
+			}
+		}
+
+		handler.ServeHTTP(w, r)
+		return
+	})
+}

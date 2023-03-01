@@ -279,16 +279,26 @@ func fetchDerEncodedRequest(request *logical.Request, data *framework.FieldData)
 	switch request.Operation {
 	case logical.ReadOperation:
 		// The param within the GET request should have a base64 encoded version of a DER request.
-		base64Req := data.Get(ocspReqParam).(string)
-		if base64Req == "" {
-			return nil, errors.New("no base64 encoded ocsp request was found")
+		base64Req, ok := data.GetOk(ocspReqParam)
+		if !ok || base64Req == "" {
+			// A special query argument that Vault's core handler injects if it sees a
+			// request that will be affected by Go's HTTP mux.
+			base64Req, ok = request.Data["ocspReq"]
+
+			if !ok || base64Req == "" {
+				return nil, errors.New("no base64 encoded ocsp request was found")
+			}
 		}
 
-		if len(base64Req) >= maximumRequestSize {
+		ocspReq, castOk := base64Req.(string)
+		if !castOk {
+			return nil, errors.New("request was not a string")
+		}
+		if len(ocspReq) >= maximumRequestSize {
 			return nil, errors.New("request is too large")
 		}
 
-		return base64.StdEncoding.DecodeString(base64Req)
+		return base64.StdEncoding.DecodeString(ocspReq)
 	case logical.UpdateOperation:
 		// POST bodies should contain the binary form of the DER request.
 		// NOTE: Writing an empty update request to Vault causes a nil request.HTTPRequest, and that object
