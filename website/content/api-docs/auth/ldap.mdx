@@ -91,6 +91,9 @@ This endpoint configures the LDAP auth method.
   returning _user_ objects, use: `memberOf`. The default is `cn`.
 - `username_as_alias` `(bool: false)` - If set to true, forces the auth method
   to use the username passed by the user as the alias name.
+- `dereference_aliases` `(string: never)` - When aliases should be dereferenced
+  on search operations. Accepted values are 'never', 'finding', 'searching',
+  'always'. Defaults to 'never'.
 
 @include 'tokenfields.mdx'
 
