@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 	"os"
 	"path/filepath"
@@ -465,9 +464,14 @@ func LoadConfig(path string) (*Config, error) {
 				return nil, errors.New("Error parsing the environment variable VAULT_ENABLE_FILE_PERMISSIONS_CHECK")
 			}
 		}
+		f, err := os.Open(path)
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
 
 		if enableFilePermissionsCheck {
-			err = osutil.OwnerPermissionsMatch(path, 0, 0)
+			err = osutil.OwnerPermissionsMatchFile(f, 0, 0)
 			if err != nil {
 				return nil, err
 			}
@@ -496,8 +500,14 @@ func CheckConfig(c *Config, e error) (*Config, error) {
 
 // LoadConfigFile loads the configuration from the given file.
 func LoadConfigFile(path string) (*Config, error) {
+	// Open the file
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
 	// Read the file
-	d, err := ioutil.ReadFile(path)
+	d, err := io.ReadAll(f)
 	if err != nil {
 		return nil, err
 	}
@@ -518,7 +528,7 @@ func LoadConfigFile(path string) (*Config, error) {
 
 	if enableFilePermissionsCheck {
 		// check permissions of the config file
-		err = osutil.OwnerPermissionsMatch(path, 0, 0)
+		err = osutil.OwnerPermissionsMatchFile(f, 0, 0)
 		if err != nil {
 			return nil, err
 		}
