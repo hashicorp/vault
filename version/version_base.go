@@ -12,6 +12,6 @@ var (
 	CgoEnabled bool
 
 	Version           = "1.13.0"
-	VersionPrerelease = "rc1"
+	VersionPrerelease = ""
 	VersionMetadata   = ""
 )
