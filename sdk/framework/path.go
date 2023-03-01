@@ -225,17 +225,19 @@ type DisplayAttributes struct {
 	Action string `json:"action,omitempty"`
 
 	// OperationPrefix is a hyphenated lower-case string used to construct
-	// OpenAPI OperationID, if specified. It's usually the name of the plugin.
+	// OpenAPI OperationID. It is typically the name of the plugin.
 	OperationPrefix string `json:"operationPrefix,omitempty"`
 
 	// OperationPrefix is a hyphenated lower-case string used to construct
-	// OpenAPI OperationID, if specified. It is typically an action to be
-	// performed (e.g. "write", "read", "login", etc.)
+	// OpenAPI OperationID. It is typically an action to be performed
+	// (e.g. "generate", "sign", "login", etc.)
 	OperationVerb string `json:"operationVerb,omitempty"`
 
 	// OperationPrefix is a hyphenated lower-case string used to construct
-	// OpenAPI OperationID, if specified. It is typically the name of the
-	// resource on which the action is performed, e.g. "cert", "config".
+	// OpenAPI OperationID. It is typically the name of the resource on which
+	// the action is performed, e.g. "cert", "config". A pipe (|) separator can
+	// be used to list different suffixes for various permutations of the
+	// `Path.Pattern` regular expression.
 	OperationSuffix string `json:"operationSuffix,omitempty"`
 
 	// EditType is the optional type of form field needed for a property
