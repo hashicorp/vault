@@ -65,6 +65,11 @@ func pathFetchCA(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `ca(/pem)?`,
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "ca|ca-pem",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback:  b.pathFetchRead,
@@ -81,6 +86,11 @@ func pathFetchCA(b *backend) *framework.Path {
 func pathFetchCAChain(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `(cert/)?ca_chain`,
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "ca-chain|cert-ca-chain",
+		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
@@ -99,6 +109,11 @@ func pathFetchCRL(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `crl(/pem|/delta(/pem)?)?`,
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "crl|crl-pem|crl-delta|crl-delta-pem",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback:  b.pathFetchRead,
@@ -116,6 +131,11 @@ func pathFetchUnifiedCRL(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `unified-crl(/pem|/delta(/pem)?)?`,
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "unified-crl|unified-crl-pem|unified-crl-delta|unified-crl-delta-pem",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathFetchRead,
@@ -131,6 +151,12 @@ func pathFetchUnifiedCRL(b *backend) *framework.Path {
 func pathFetchValidRaw(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `cert/(?P<serial>[0-9A-Fa-f-:]+)/raw(/pem)?`,
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "cert-raw|cert-raw-pem",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"serial": {
 				Type: framework.TypeString,
@@ -156,6 +182,12 @@ hyphen-separated octal`,
 func pathFetchValid(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `cert/(?P<serial>[0-9A-Fa-f-:]+)`,
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "cert",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"serial": {
 				Type: framework.TypeString,
@@ -186,6 +218,11 @@ func pathFetchCRLViaCertPath(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: pattern,
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "cert-crl|cert-delta-crl|cert-unified-crl|cert-unified-delta-crl",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback:  b.pathFetchRead,
@@ -202,6 +239,11 @@ func pathFetchCRLViaCertPath(b *backend) *framework.Path {
 func pathFetchListCerts(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "certs/?$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "certs",
+		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
