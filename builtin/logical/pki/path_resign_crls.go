@@ -39,6 +39,13 @@ var (
 func pathResignCrls(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/resign-crls",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKIIssuer,
+			OperationVerb:   "resign",
+			OperationSuffix: "crls",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			issuerRefParam: {
 				Type: framework.TypeString,
@@ -89,6 +96,13 @@ base64 encoded. Defaults to "pem".`,
 func pathSignRevocationList(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/sign-revocation-list",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKIIssuer,
+			OperationVerb:   "sign",
+			OperationSuffix: "revocation-list",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			issuerRefParam: {
 				Type: framework.TypeString,
