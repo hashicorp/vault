@@ -133,6 +133,10 @@ There are two alternate methods of resolving the user object used to authenticat
 
 @include 'ldap-auth-userfilter-warning.mdx'
 
+#### Alias Dereferencing
+
+- `dereference_aliases` (string, optional) - Control how aliases are dereferenced when performing the search. Possible values are: `never`, `finding`, `searching`, and `always`. `finding` will only dereference aliases during name resolution of the base. `searching` will dereference aliases after name resolution.
+
 #### Binding - User Principal Name (AD)
 
 - `upndomain` (string, optional) - userPrincipalDomain used to construct the UPN string for the authenticating user. The constructed UPN will appear as `[username]@UPNDomain`. Example: `example.com`, which will cause vault to bind as `username@example.com`.

@@ -21,7 +21,7 @@ then
 fi
 
 vault server -dev -dev-root-token-id=root &
-sleep 2
+sleep 5
 VAULT_PID=$!
 
 defer_stop_vault() {
@@ -71,7 +71,6 @@ vault secrets enable "kv"
 vault secrets enable "ldap"
 vault secrets enable "mongodbatlas"
 vault secrets enable "nomad"
-vault secrets enable "openldap"
 vault secrets enable "pki"
 vault secrets enable "rabbitmq"
 vault secrets enable "ssh"

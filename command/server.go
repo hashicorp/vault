@@ -1721,7 +1721,6 @@ func (c *ServerCommand) configureLogging(config *server.Config) (hclog.Intercept
 	}
 
 	logCfg := &loghelper.LogConfig{
-		Name:              "vault",
 		LogLevel:          logLevel,
 		LogFormat:         logFormat,
 		LogFilePath:       config.LogFile,
