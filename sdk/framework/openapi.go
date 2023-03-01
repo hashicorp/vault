@@ -620,9 +620,11 @@ func constructOperationID(
 	}
 
 	// fall back to using the path + operation to construct the operation id
-	needPrefix := prefix == "" && (suffix == "" || verb == "")
-	needVerb := verb == ""
-	needSuffix := suffix == "" && (prefix == "" || verb == "" || pathIndex > 0)
+	var (
+		needPrefix = prefix == "" && verb == ""
+		needVerb   = verb == ""
+		needSuffix = suffix == "" && (verb == "" || pathIndex > 0)
+	)
 
 	if needPrefix {
 		prefix = defaultPrefix
