@@ -1,7 +1,10 @@
-import PkiOverviewRoute from '../overview';
+import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
+import { withConfig } from 'pki/decorators/check-config';
 import { hash } from 'rsvp';
-export default class PkiKeysIndexRoute extends PkiOverviewRoute {
+
+@withConfig()
+export default class PkiKeysIndexRoute extends Route {
   @service store;
   @service secretMountPath;
   @service pathHelp;
@@ -13,7 +16,7 @@ export default class PkiKeysIndexRoute extends PkiOverviewRoute {
 
   model() {
     return hash({
-      hasConfig: this.hasConfig(),
+      hasConfig: this.shouldPromptConfig,
       parentModel: this.modelFor('keys'),
       keyModels: this.store.query('pki/key', { backend: this.secretMountPath.currentPath }).catch((err) => {
         if (err.httpStatus === 404) {

@@ -35,7 +35,7 @@ func StringList(source interface{}) ([]string, error) {
 func fetchMountTune(e *Executor, versionError func()) (bool, *PathFetch, map[string]interface{}, error) {
 	tuneRet, err := e.FetchIfNotFetched(logical.ReadOperation, "/sys/mounts/{{mount}}/tune")
 	if err != nil {
-		return true, nil, nil, err
+		return true, nil, nil, fmt.Errorf("failed to fetch mount tune information: %w", err)
 	}
 
 	if !tuneRet.IsSecretOK() {
@@ -43,7 +43,7 @@ func fetchMountTune(e *Executor, versionError func()) (bool, *PathFetch, map[str
 			versionError()
 		}
 
-		return true, nil, nil, nil
+		return true, tuneRet, nil, nil
 	}
 
 	var data map[string]interface{} = nil

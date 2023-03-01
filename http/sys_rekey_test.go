@@ -4,43 +4,51 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"reflect"
 	"testing"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/vault"
 )
 
 // Test to check if the API errors out when wrong number of PGP keys are
 // supplied for rekey
 func TestSysRekey_Init_pgpKeysEntriesForRekey(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := TestServer(t, core)
-	defer ln.Close()
-	TestServerAuth(t, addr, token)
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+		HandlerFunc:             Handler,
+		RequestResponseCallback: schema.ResponseValidatingCallback(t),
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	cl := cluster.Cores[0].Client
 
-	resp := testHttpPut(t, token, addr+"/v1/sys/rekey/init", map[string]interface{}{
+	_, err := cl.Logical().Write("sys/rekey/init", map[string]interface{}{
 		"secret_shares":    5,
 		"secret_threshold": 3,
 		"pgp_keys":         []string{"pgpkey1"},
 	})
-	testResponseStatus(t, resp, 400)
+	if err == nil {
+		t.Fatal("should have failed to write pgp key entry due to mismatched keys", err)
+	}
 }
 
 func TestSysRekey_Init_Status(t *testing.T) {
 	t.Run("status-barrier-default", func(t *testing.T) {
-		core, _, token := vault.TestCoreUnsealed(t)
-		ln, addr := TestServer(t, core)
-		defer ln.Close()
-		TestServerAuth(t, addr, token)
+		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+			HandlerFunc:             Handler,
+			RequestResponseCallback: schema.ResponseValidatingCallback(t),
+		})
+		cluster.Start()
+		defer cluster.Cleanup()
+		cl := cluster.Cores[0].Client
 
-		resp, err := http.Get(addr + "/v1/sys/rekey/init")
+		resp, err := cl.Logical().Read("sys/rekey/init")
 		if err != nil {
 			t.Fatalf("err: %s", err)
 		}
 
-		var actual map[string]interface{}
+		actual := resp.Data
 		expected := map[string]interface{}{
 			"started":               false,
 			"t":                     json.Number("0"),
@@ -52,8 +60,7 @@ func TestSysRekey_Init_Status(t *testing.T) {
 			"nonce":                 "",
 			"verification_required": false,
 		}
-		testResponseStatus(t, resp, 200)
-		testResponseBody(t, resp, &actual)
+
 		if !reflect.DeepEqual(actual, expected) {
 			t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
 		}
@@ -62,19 +69,24 @@ func TestSysRekey_Init_Status(t *testing.T) {
 
 func TestSysRekey_Init_Setup(t *testing.T) {
 	t.Run("init-barrier-barrier-key", func(t *testing.T) {
-		core, _, token := vault.TestCoreUnsealed(t)
-		ln, addr := TestServer(t, core)
-		defer ln.Close()
-		TestServerAuth(t, addr, token)
+		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+			HandlerFunc:             Handler,
+			RequestResponseCallback: schema.ResponseValidatingCallback(t),
+		})
+		cluster.Start()
+		defer cluster.Cleanup()
+		cl := cluster.Cores[0].Client
 
 		// Start rekey
-		resp := testHttpPut(t, token, addr+"/v1/sys/rekey/init", map[string]interface{}{
+		resp, err := cl.Logical().Write("sys/rekey/init", map[string]interface{}{
 			"secret_shares":    5,
 			"secret_threshold": 3,
 		})
-		testResponseStatus(t, resp, 200)
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
 
-		var actual map[string]interface{}
+		actual := resp.Data
 		expected := map[string]interface{}{
 			"started":               true,
 			"t":                     json.Number("3"),
@@ -85,8 +97,7 @@ func TestSysRekey_Init_Setup(t *testing.T) {
 			"backup":                false,
 			"verification_required": false,
 		}
-		testResponseStatus(t, resp, 200)
-		testResponseBody(t, resp, &actual)
+
 		if actual["nonce"].(string) == "" {
 			t.Fatalf("nonce was empty")
 		}
@@ -96,9 +107,12 @@ func TestSysRekey_Init_Setup(t *testing.T) {
 		}
 
 		// Get rekey status
-		resp = testHttpGet(t, token, addr+"/v1/sys/rekey/init")
+		resp, err = cl.Logical().Read("sys/rekey/init")
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
 
-		actual = map[string]interface{}{}
+		actual = resp.Data
 		expected = map[string]interface{}{
 			"started":               true,
 			"t":                     json.Number("3"),
@@ -109,8 +123,6 @@ func TestSysRekey_Init_Setup(t *testing.T) {
 			"backup":                false,
 			"verification_required": false,
 		}
-		testResponseStatus(t, resp, 200)
-		testResponseBody(t, resp, &actual)
 		if actual["nonce"].(string) == "" {
 			t.Fatalf("nonce was empty")
 		}
@@ -126,26 +138,33 @@ func TestSysRekey_Init_Setup(t *testing.T) {
 
 func TestSysRekey_Init_Cancel(t *testing.T) {
 	t.Run("cancel-barrier-barrier-key", func(t *testing.T) {
-		core, _, token := vault.TestCoreUnsealed(t)
-		ln, addr := TestServer(t, core)
-		defer ln.Close()
-		TestServerAuth(t, addr, token)
+		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+			HandlerFunc:             Handler,
+			RequestResponseCallback: schema.ResponseValidatingCallback(t),
+		})
+		cluster.Start()
+		defer cluster.Cleanup()
+		cl := cluster.Cores[0].Client
 
-		resp := testHttpPut(t, token, addr+"/v1/sys/rekey/init", map[string]interface{}{
+		_, err := cl.Logical().Write("sys/rekey/init", map[string]interface{}{
 			"secret_shares":    5,
 			"secret_threshold": 3,
 		})
-		testResponseStatus(t, resp, 200)
-
-		resp = testHttpDelete(t, token, addr+"/v1/sys/rekey/init")
-		testResponseStatus(t, resp, 204)
-
-		resp, err := http.Get(addr + "/v1/sys/rekey/init")
 		if err != nil {
 			t.Fatalf("err: %s", err)
 		}
 
-		var actual map[string]interface{}
+		_, err = cl.Logical().Delete("sys/rekey/init")
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
+
+		resp, err := cl.Logical().Read("sys/rekey/init")
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
+
+		actual := resp.Data
 		expected := map[string]interface{}{
 			"started":               false,
 			"t":                     json.Number("0"),
@@ -157,8 +176,6 @@ func TestSysRekey_Init_Cancel(t *testing.T) {
 			"nonce":                 "",
 			"verification_required": false,
 		}
-		testResponseStatus(t, resp, 200)
-		testResponseBody(t, resp, &actual)
 		if !reflect.DeepEqual(actual, expected) {
 			t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
 		}
