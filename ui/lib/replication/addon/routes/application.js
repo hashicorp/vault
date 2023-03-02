@@ -16,8 +16,7 @@ export default Route.extend(ClusterRoute, {
   },
 
   model() {
-    const activeClusterId = this.auth.activeCluster;
-    return this.store.peekRecord('cluster', activeClusterId);
+    return this.auth.activeCluster;
   },
 
   afterModel(model) {

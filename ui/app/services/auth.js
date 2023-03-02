@@ -21,20 +21,25 @@ export { TOKEN_SEPARATOR, TOKEN_PREFIX, ROOT_PREFIX };
 
 export default Service.extend({
   permissions: service(),
+  store: service(),
+  router: service(),
   namespaceService: service('namespace'),
+
   IDLE_TIMEOUT: 3 * 60e3,
   expirationCalcTS: null,
   isRenewing: false,
   mfaErrors: null,
+  activeClusterId: null,
 
-  init() {
-    this._super(...arguments);
-    this.checkForRootToken();
+  get tokenExpired() {
+    const expiration = this.tokenExpirationDate;
+    return expiration ? this.now() >= expiration : null;
   },
 
-  clusterAdapter() {
-    return getOwner(this).lookup('adapter:cluster');
+  get activeCluster() {
+    return this.activeClusterId ? this.store.peekRecord('cluster', this.activeClusterId) : null;
   },
+
   // eslint-disable-next-line
   tokens: computed({
     get() {
@@ -44,6 +49,84 @@ export default Service.extend({
       return (this._tokens = value);
     },
   }),
+
+  isActiveSession: computed(
+    'router.currentRouteName',
+    'currentToken',
+    'activeCluster.{dr.isSecondary,needsInit,sealed,name}',
+    function () {
+      if (this.activeCluster) {
+        if (this.activeCluster.dr?.isSecondary || this.activeCluster.needsInit || this.activeCluster.sealed) {
+          return false;
+        }
+        if (
+          this.activeCluster.name &&
+          this.currentToken &&
+          this.router.currentRouteName !== 'vault.cluster.auth'
+        ) {
+          return true;
+        }
+      }
+      return false;
+    }
+  ),
+
+  tokenExpirationDate: computed('currentTokenName', 'expirationCalcTS', function () {
+    const tokenName = this.currentTokenName;
+    if (!tokenName) {
+      return;
+    }
+    const { tokenExpirationEpoch } = this.getTokenData(tokenName);
+    const expirationDate = new Date(0);
+    return tokenExpirationEpoch ? expirationDate.setUTCMilliseconds(tokenExpirationEpoch) : null;
+  }),
+
+  renewAfterEpoch: computed('currentTokenName', 'expirationCalcTS', function () {
+    const tokenName = this.currentTokenName;
+    const { expirationCalcTS } = this;
+    const data = this.getTokenData(tokenName);
+    if (!tokenName || !data || !expirationCalcTS) {
+      return null;
+    }
+    const { ttl, renewable } = data;
+    // renew after last expirationCalc time + half of the ttl (in ms)
+    return renewable ? Math.floor((ttl * 1e3) / 2) + expirationCalcTS : null;
+  }),
+
+  // returns the key for the token to use
+  currentTokenName: computed('activeClusterId', 'tokens', 'tokens.[]', function () {
+    const regex = new RegExp(this.activeClusterId);
+    return this.tokens.find((key) => regex.test(key));
+  }),
+
+  currentToken: computed('currentTokenName', function () {
+    const name = this.currentTokenName;
+    const data = name && this.getTokenData(name);
+    // data.token is undefined so that's why it returns current token undefined
+    return name && data ? data.token : null;
+  }),
+
+  authData: computed('currentTokenName', function () {
+    const token = this.currentTokenName;
+    if (!token) {
+      return;
+    }
+    const backend = this.backendFromTokenName(token);
+    const stored = this.getTokenData(token);
+
+    return assign(stored, {
+      backend: BACKENDS.findBy('type', backend),
+    });
+  }),
+
+  init() {
+    this._super(...arguments);
+    this.checkForRootToken();
+  },
+
+  clusterAdapter() {
+    return getOwner(this).lookup('adapter:cluster');
+  },
 
   generateTokenName({ backend, clusterId }, policies) {
     return (policies || []).includes('root')
@@ -78,7 +161,7 @@ export default Service.extend({
   },
 
   setCluster(clusterId) {
-    this.set('activeCluster', clusterId);
+    this.set('activeClusterId', clusterId);
   },
 
   ajax(url, method, options) {
@@ -191,7 +274,7 @@ export default Service.extend({
     tokenName = this.generateTokenName(
       {
         backend,
-        clusterId: (options && options.clusterId) || this.activeCluster,
+        clusterId: (options && options.clusterId) || this.activeClusterId,
       },
       resp.policies
     );
@@ -225,33 +308,6 @@ export default Service.extend({
   removeTokenData(token) {
     return this.storage(token).removeItem(token);
   },
-
-  tokenExpirationDate: computed('currentTokenName', 'expirationCalcTS', function () {
-    const tokenName = this.currentTokenName;
-    if (!tokenName) {
-      return;
-    }
-    const { tokenExpirationEpoch } = this.getTokenData(tokenName);
-    const expirationDate = new Date(0);
-    return tokenExpirationEpoch ? expirationDate.setUTCMilliseconds(tokenExpirationEpoch) : null;
-  }),
-
-  get tokenExpired() {
-    const expiration = this.tokenExpirationDate;
-    return expiration ? this.now() >= expiration : null;
-  },
-
-  renewAfterEpoch: computed('currentTokenName', 'expirationCalcTS', function () {
-    const tokenName = this.currentTokenName;
-    const { expirationCalcTS } = this;
-    const data = this.getTokenData(tokenName);
-    if (!tokenName || !data || !expirationCalcTS) {
-      return null;
-    }
-    const { ttl, renewable } = data;
-    // renew after last expirationCalc time + half of the ttl (in ms)
-    return renewable ? Math.floor((ttl * 1e3) / 2) + expirationCalcTS : null;
-  }),
 
   renew() {
     const tokenName = this.currentTokenName;
@@ -416,32 +472,6 @@ export default Service.extend({
     this.removeTokenData(tokenName);
     this.set('tokens', tokenNames);
   },
-
-  // returns the key for the token to use
-  currentTokenName: computed('activeCluster', 'tokens', 'tokens.[]', function () {
-    const regex = new RegExp(this.activeCluster);
-    return this.tokens.find((key) => regex.test(key));
-  }),
-
-  currentToken: computed('currentTokenName', function () {
-    const name = this.currentTokenName;
-    const data = name && this.getTokenData(name);
-    // data.token is undefined so that's why it returns current token undefined
-    return name && data ? data.token : null;
-  }),
-
-  authData: computed('currentTokenName', function () {
-    const token = this.currentTokenName;
-    if (!token) {
-      return;
-    }
-    const backend = this.backendFromTokenName(token);
-    const stored = this.getTokenData(token);
-
-    return assign(stored, {
-      backend: BACKENDS.findBy('type', backend),
-    });
-  }),
 
   getOktaNumberChallengeAnswer(nonce, mount) {
     const url = `/v1/auth/${mount}/verify/${nonce}`;

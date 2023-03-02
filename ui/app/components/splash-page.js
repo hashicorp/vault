@@ -26,8 +26,4 @@ export default class SplashPage extends Component {
     // default is true unless showTruncatedNavBar is defined as false
     return this.args.showTruncatedNavBar === false ? false : true;
   }
-
-  get activeCluster() {
-    return this.store.peekRecord('cluster', this.auth.activeCluster);
-  }
 }
