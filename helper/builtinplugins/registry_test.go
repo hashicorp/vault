@@ -289,6 +289,11 @@ func Test_RegistryMatchesGenOpenapi(t *testing.T) {
 	ensureInScript := func(t *testing.T, scriptBackends []string, name string) {
 		t.Helper()
 
+		// "openldap" is an alias for "ldap" secrets engine
+		if name == "openldap" {
+			return
+		}
+
 		if !slices.Contains(scriptBackends, name) {
 			t.Fatalf("%q backend could not be found in gen_openapi.sh, please add it there", name)
 		}

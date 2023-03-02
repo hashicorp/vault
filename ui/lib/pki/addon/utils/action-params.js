@@ -9,6 +9,8 @@ export function keyParamsByType(type) {
     fields = ['keyRef'];
   } else if (type === 'kms') {
     fields = ['keyName', 'managedKeyName', 'managedKeyId'];
+  } else if (type === 'exported') {
+    fields = [...fields, 'privateKeyFormat'];
   }
   return fields;
 }
