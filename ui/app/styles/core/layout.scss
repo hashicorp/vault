@@ -3,10 +3,9 @@
   flex-direction: column;
 }
 .page-container {
-  min-height: calc(100vh - #{$header-height});
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  margin-top: $header-height;
   justify-content: flex-end;
 }
 

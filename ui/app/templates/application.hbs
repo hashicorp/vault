@@ -1,3 +1,5 @@
-<div class="page-container">
-  {{outlet}}
-</div>
+<Sidebar::Frame @isVisible={{this.auth.isActiveSession}}>
+  <div class="page-container">
+    {{outlet}}
+  </div>
+</Sidebar::Frame>
