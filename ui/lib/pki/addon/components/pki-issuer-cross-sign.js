@@ -196,7 +196,7 @@ export default class PkiIssuerCrossSign extends Component {
     //       as they'd like.
     const issuerId = await this.store
       .createRecord('pki/action', { pemBundle: signedCaChain })
-      .save({ adapterOptions: { actionType: 'import', mount: intMount } })
+      .save({ adapterOptions: { actionType: 'import', mount: intMount, useIssuer: true } })
       .then((importedIssuer) => {
         return Object.keys(importedIssuer.mapping).find(
           // matching key is the issuer_id
