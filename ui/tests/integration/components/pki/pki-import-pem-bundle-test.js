@@ -13,7 +13,7 @@ module('Integration | Component | PkiImportPemBundle', function (hooks) {
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
-    this.model = this.store.createRecord('pki/issuer');
+    this.model = this.store.createRecord('pki/action');
     this.backend = 'pki-test';
     this.secretMountPath = this.owner.lookup('service:secret-mount-path');
     this.secretMountPath.currentPath = this.backend;
