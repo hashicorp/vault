@@ -33,7 +33,7 @@ module('Integration | Component | PkiImportPemBundle', function (hooks) {
       { owner: this.engine }
     );
 
-    assert.dom('[data-test-pki-ca-cert-import-form]').exists('renders form');
+    assert.dom('[data-test-pki-import-pem-bundle-form]').exists('renders form');
     assert.dom('[data-test-component="text-file"]').exists('renders text file input');
     await click('[data-test-text-toggle]');
     await fillIn('[data-test-text-file-textarea]', this.pemBundle);
@@ -72,7 +72,7 @@ module('Integration | Component | PkiImportPemBundle', function (hooks) {
     await click('[data-test-text-toggle]');
     await fillIn('[data-test-text-file-textarea]', this.pemBundle);
     assert.strictEqual(this.model.pemBundle, this.pemBundle);
-    await click('[data-test-pki-ca-cert-import]');
+    await click('[data-test-pki-import-pem-bundle]');
   });
 
   test('it should unload record on cancel', async function (assert) {
