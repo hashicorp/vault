@@ -72,8 +72,8 @@ func buildPathOcspGet(b *backend) *framework.Path {
 
 	displayAttrs := &framework.DisplayAttributes{
 		OperationPrefix: operationPrefixPKI,
-		OperationVerb:   "query-with",
-		OperationSuffix: "ocsp|ocsp-req",
+		OperationVerb:   "query",
+		OperationSuffix: "ocsp-with-get-req",
 	}
 
 	return buildOcspGetWithPath(b, pattern, displayAttrs)
@@ -84,8 +84,8 @@ func buildPathUnifiedOcspGet(b *backend) *framework.Path {
 
 	displayAttrs := &framework.DisplayAttributes{
 		OperationPrefix: operationPrefixPKI,
-		OperationVerb:   "query-with",
-		OperationSuffix: "unified-ocsp|unified-ocsp-req",
+		OperationVerb:   "query",
+		OperationSuffix: "unified-ocsp-with-get-req",
 	}
 
 	return buildOcspGetWithPath(b, pattern, displayAttrs)
@@ -117,8 +117,8 @@ func buildPathOcspPost(b *backend) *framework.Path {
 
 	displayAttrs := &framework.DisplayAttributes{
 		OperationPrefix: operationPrefixPKI,
-		OperationVerb:   "post-with",
-		OperationSuffix: "unified-ocsp|unified-ocsp-req",
+		OperationVerb:   "query",
+		OperationSuffix: "ocsp",
 	}
 
 	return buildOcspPostWithPath(b, pattern, displayAttrs)
@@ -129,8 +129,8 @@ func buildPathUnifiedOcspPost(b *backend) *framework.Path {
 
 	displayAttrs := &framework.DisplayAttributes{
 		OperationPrefix: operationPrefixPKI,
-		OperationVerb:   "post-with",
-		OperationSuffix: "unified-ocsp|unified-ocsp-req",
+		OperationVerb:   "query",
+		OperationSuffix: "unified-ocsp",
 	}
 
 	return buildOcspPostWithPath(b, pattern, displayAttrs)
