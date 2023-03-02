@@ -590,6 +590,34 @@ func TestKVGetCommand(t *testing.T) {
 	})
 }
 
+func testKVListCommand(tb testing.TB) (*cli.MockUi, *KVListCommand) {
+	tb.Helper()
+	ui := cli.NewMockUi()
+	cmd := &KVListCommand{
+		BaseCommand: &BaseCommand{
+			UI: ui,
+		},
+	}
+
+	return ui, cmd
+}
+
+func TestKVListCommand(t *testing.T) {
+	client, closer := testVaultServer(t)
+	defer closer()
+	ctx := context.Background()
+	for i := 0; i < 5; i++ {
+		path := fmt.Sprintf("my-prefix/secret-%d", i)
+		_, err := client.KVv2("secrets").Put(ctx, path, map[string]interface{}{
+			"foo": "bar",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+}
+
 func testKVMetadataGetCommand(tb testing.TB) (*cli.MockUi, *KVMetadataGetCommand) {
 	tb.Helper()
 
