@@ -6,7 +6,7 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { issuerPemBundle } from 'vault/tests/helpers/pki/values';
 
-module('Integration | Component | pki issuer import', function (hooks) {
+module('Integration | Component | PkiImportPemBundle', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
   setupEngine(hooks, 'pki'); // https://github.com/ember-engines/ember-engines/pull/653
@@ -24,7 +24,7 @@ module('Integration | Component | pki issuer import', function (hooks) {
     assert.expect(3);
     await render(
       hbs`
-      <PkiCaCertificateImport
+      <PkiImportPemBundle
          @model={{this.model}}
          @onCancel={{this.onCancel}}
          @onSave={{this.onSave}}
@@ -59,7 +59,7 @@ module('Integration | Component | pki issuer import', function (hooks) {
 
     await render(
       hbs`
-      <PkiCaCertificateImport
+      <PkiImportPemBundle
          @model={{this.model}}
          @onCancel={{this.onCancel}}
          @onSave={{this.onSave}}
@@ -80,7 +80,7 @@ module('Integration | Component | pki issuer import', function (hooks) {
     this.onCancel = () => assert.ok(true, 'onCancel callback fires');
     await render(
       hbs`
-        <PkiCaCertificateImport
+        <PkiImportPemBundle
           @model={{this.model}}
           @onCancel={{this.onCancel}}
           @onSave={{this.onSave}}
