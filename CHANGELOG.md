@@ -208,7 +208,7 @@ This fix is implemented for any future releases, but will not be updated for his
 * storage/raft: Fix race with follower heartbeat tracker during teardown. [[GH-18704](https://github.com/hashicorp/vault/pull/18704)]
 * ui: Remove `default` and add `default-service` and `default-batch` to UI token_type for auth mount and tuning. [[GH-19290](https://github.com/hashicorp/vault/pull/19290)]
 * ui: Remove default value of 30 to TtlPicker2 if no value is passed in. [[GH-17376](https://github.com/hashicorp/vault/pull/17376)]
-* ui: fixes reliance on secure context (https) by removing methods using the Crypto interface [[GH-19410](https://github.com/hashicorp/vault/pull/19410)]
+* ui: fixes reliance on secure context (https) by removing methods using the Crypto interface [[GH-19403](https://github.com/hashicorp/vault/pull/19403)]
 * ui: allow selection of "default" for ssh algorithm_signer in web interface [[GH-17894](https://github.com/hashicorp/vault/pull/17894)]
                                                                        
 ## 1.12.4
