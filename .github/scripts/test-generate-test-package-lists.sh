@@ -1,6 +1,18 @@
 #!/bin/bash
 set -e${DEBUG+x}o pipefail
 
+#
+# This script is run to make sure that every package returned by 
+# go list -test ./... (when run from the repo root, api/, and sdk/ directory)
+# appear in the test_packages array defined in the sibling file
+# generate-test-package-lists.sh
+#
+# This script is executed as part of the ci workflow triggered by pull_requests
+# events. In the event that the job that runs this script fails, examine the
+# output of the 'test' step in that job to obtain the list of test packages that
+# are missing in the test_packages array or that should be removed from it.
+#
+
 dir=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 source generate-test-package-lists.sh
