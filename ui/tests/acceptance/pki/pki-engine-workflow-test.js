@@ -94,7 +94,7 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.dom(SELECTORS.configuration.emptyState).doesNotExist();
       await click('[data-test-text-toggle]');
       await fillIn('[data-test-text-file-textarea]', this.pemBundle);
-      await click('[data-test-pki-ca-cert-import]');
+      await click('[data-test-pki-import-pem-bundle]');
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.mountPath}/pki/issuers`,
