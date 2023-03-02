@@ -41,7 +41,7 @@ module('Integration | Component | PkiImportPemBundle', function (hooks) {
   });
 
   test('it sends correct payload to import endpoint', async function (assert) {
-    assert.expect(3);
+    assert.expect(4);
     this.server.post(`/${this.backend}/issuers/import/bundle`, (schema, req) => {
       assert.ok(true, 'Request made to the correct endpoint to import issuer');
       const request = JSON.parse(req.requestBody);
@@ -63,7 +63,42 @@ module('Integration | Component | PkiImportPemBundle', function (hooks) {
          @model={{this.model}}
          @onCancel={{this.onCancel}}
          @onSave={{this.onSave}}
-         @adapterOptions={{hash import=true}}
+         @adapterOptions={{hash actionType="import" useIssuer=true}}
+       />
+      `,
+      { owner: this.engine }
+    );
+
+    await click('[data-test-text-toggle]');
+    await fillIn('[data-test-text-file-textarea]', this.pemBundle);
+    assert.strictEqual(this.model.pemBundle, this.pemBundle);
+    await click('[data-test-pki-import-pem-bundle]');
+  });
+
+  test('it hits correct endpoint when userIssuer=false', async function (assert) {
+    assert.expect(4);
+    this.server.post(`${this.backend}/config/ca`, (schema, req) => {
+      assert.ok(true, 'Request made to the correct endpoint to import issuer');
+      const request = JSON.parse(req.requestBody);
+      assert.propEqual(
+        request,
+        {
+          pem_bundle: `${this.pemBundle}`,
+        },
+        'sends params in correct type'
+      );
+      return {};
+    });
+
+    this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
+
+    await render(
+      hbs`
+      <PkiImportPemBundle
+         @model={{this.model}}
+         @onCancel={{this.onCancel}}
+         @onSave={{this.onSave}}
+         @adapterOptions={{hash actionType="import" useIssuer=false}}
        />
       `,
       { owner: this.engine }
