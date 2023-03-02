@@ -205,9 +205,9 @@ func pathImportIssuer(b *backend) *framework.Path {
 		Pattern: "issuers/import/(cert|bundle)",
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixPKI,
+			OperationPrefix: operationPrefixPKIIssuers,
 			OperationVerb:   "import",
-			OperationSuffix: "issuers-cert|issuers-bundle",
+			OperationSuffix: "cert|bundle",
 		},
 
 		Fields: map[string]*framework.FieldSchema{

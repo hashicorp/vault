@@ -102,7 +102,7 @@ func pathGetIssuer(b *backend) *framework.Path {
 
 	displayAttrs := &framework.DisplayAttributes{
 		OperationPrefix: operationPrefixPKI,
-		OperationSuffix: "issuer-der|issuer-pem|issuer-json",
+		OperationSuffix: "issuer|issuer-der|issuer-pem|issuer-json",
 	}
 
 	return buildPathGetIssuer(b, pattern, displayAttrs)
@@ -1056,8 +1056,8 @@ func pathGetIssuerCRL(b *backend) *framework.Path {
 	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/crl(/pem|/der|/delta(/pem|/der)?)?"
 
 	displayAttrs := &framework.DisplayAttributes{
-		OperationPrefix: operationPrefixPKI,
-		OperationSuffix: "issuer-crl|issuer-crl-delta|issuer-crl-delta-per|issuer-crl-delta-pem|issuer-crl-per|issuer-crl-pem",
+		OperationPrefix: operationPrefixPKIIssuer,
+		OperationSuffix: "crl|crl-pem|crl-der|crl-delta|crl-delta-pem|crl-delta-der",
 	}
 
 	return buildPathGetIssuerCRL(b, pattern, displayAttrs)
@@ -1067,8 +1067,8 @@ func pathGetIssuerUnifiedCRL(b *backend) *framework.Path {
 	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/unified-crl(/pem|/der|/delta(/pem|/der)?)?"
 
 	displayAttrs := &framework.DisplayAttributes{
-		OperationPrefix: operationPrefixPKI,
-		OperationSuffix: "issuer-unified-crl|issuer-unified-crl-delta|issuer-unified-crl-delta-per|issuer-unified-crl-delta-pem|issuer-unified-crl-per|issuer-unified-crl-pem",
+		OperationPrefix: operationPrefixPKIIssuer,
+		OperationSuffix: "unified-crl|unified-crl-pem|unified-crl-der|unified-crl-delta|unified-crl-delta-pem|unified-crl-delta-der",
 	}
 
 	return buildPathGetIssuerCRL(b, pattern, displayAttrs)
