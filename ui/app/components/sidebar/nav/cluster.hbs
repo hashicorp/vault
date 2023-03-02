@@ -1,0 +1,71 @@
+<HcNav::Nav as |Nav|>
+  <Nav.Header>Vault</Nav.Header>
+
+  <Nav.Link
+    @route="vault.cluster.secrets"
+    @current-when="vault.cluster.secrets vault.cluster.settings.mount-secret-backend vault.cluster.settings.configure-secret-backend"
+    data-test-sidebar-nav-link="secrets"
+  >
+    Secrets engines
+  </Nav.Link>
+  {{#if (has-permission "access")}}
+    <Nav.Link
+      @route={{get (route-params-for "access") "route"}}
+      @models={{get (route-params-for "access") "models"}}
+      @current-when="vault.cluster.access vault.cluster.settings.auth"
+      class="is-grouped-split"
+      data-test-sidebar-nav-link="access"
+    >
+      Access
+      <Icon @name="chevron-right" />
+    </Nav.Link>
+  {{/if}}
+  {{#if (has-permission "tools")}}
+    <Nav.Link
+      @route="vault.cluster.tools.tool"
+      @models={{get (route-params-for "tools") "models"}}
+      class="is-grouped-split"
+      data-test-sidebar-nav-link="tools"
+    >
+      Tools
+      <Icon @name="chevron-right" />
+    </Nav.Link>
+  {{/if}}
+
+  {{#if this.version.isEnterprise}}
+    <Nav.Header>Replication</Nav.Header>
+
+  {{/if}}
+
+  <Nav.Header>Monitoring</Nav.Header>
+
+  {{#if (and this.version.isEnterprise (has-permission "status" routeParams="replication"))}}
+    <Nav.Link @route="vault.cluster.replication" data-test-sidebar-nav-link="replication">
+      Replication
+    </Nav.Link>
+  {{/if}}
+  {{#if (and this.currentCluster.usingRaft (has-permission "status" routeParams="raft"))}}
+    <Nav.Link @route="vault.cluster.storage" @model={{this.currentCluster.name}} data-test-sidebar-nav-link="raft">
+      Raft Storage
+    </Nav.Link>
+  {{/if}}
+  {{#if
+    (and (has-permission "clients" routeParams="activity") (not this.currentCluster.dr.isSecondary) this.auth.currentToken)
+  }}
+    <Nav.Link @route="vault.cluster.clients.dashboard" data-test-sidebar-nav-link="client count">
+      Client count
+    </Nav.Link>
+  {{/if}}
+  {{#if
+    (and this.version.features (has-permission "status" routeParams="license") (not @this.currentCluster.dr.isSecondary))
+  }}
+    <Nav.Link @route="vault.cluster.license" @model={{this.currentCluster.name}} data-test-sidebar-nav-link="license">
+      License
+    </Nav.Link>
+  {{/if}}
+  {{#if (and (has-permission "status" routeParams="seal") (not @this.currentCluster.dr.isSecondary))}}
+    <Nav.Link @route="vault.cluster.settings.seal" @model={{@cluster.name}} data-test-sidebar-nav-link="seal">
+      Seal Vault
+    </Nav.Link>
+  {{/if}}
+</HcNav::Nav>

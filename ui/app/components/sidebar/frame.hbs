@@ -1,0 +1,41 @@
+<HcNav::Frame @showNavbar={{@isVisible}} as |Frame|>
+  <Frame.Sidebar as |Sidebar|>
+    <Sidebar.Header>
+      {{! Logo }}
+      <div class="brand-icon">
+        <HomeLink @class="has-text-white">
+          <Icon @name="vault-logo" @size="24" />
+        </HomeLink>
+      </div>
+      {{#if Sidebar.shouldRenderExtras}}
+        <button
+          type="button"
+          class="button is-transparent has-text-white"
+          {{on "click" (fn (mut this.showConsole) (not this.showConsole))}}
+          data-test-console-toggle
+        >
+          <Icon @name="terminal-screen" @size="24" />
+        </button>
+      {{/if}}
+    </Sidebar.Header>
+    <Sidebar.Content>
+      {{! might not need this block }}
+    </Sidebar.Content>
+    <Sidebar.Footer>
+      {{#if (has-feature "Namespaces")}}
+        <NamespacePicker @class="navbar-item" @namespace={{@namespace}} />
+      {{/if}}
+    </Sidebar.Footer>
+  </Frame.Sidebar>
+  <Frame.Main>
+    {{! outlet for app content }}
+    <LinkStatus @status={{this.currentCluster.cluster.hcpLinkStatus}} />
+    <div class={{if this.showConsole "panel-open"}}>
+      <Console::UiPanel @isFullscreen={{this.consoleFullscreen}} />
+    </div>
+    {{yield}}
+  </Frame.Main>
+  <Frame.Footer>
+    {{! this block might not be needed }}
+  </Frame.Footer>
+</HcNav::Frame>

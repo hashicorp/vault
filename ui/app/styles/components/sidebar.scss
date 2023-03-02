@@ -102,3 +102,19 @@
     }
   }
 }
+// remove above once MenuSidebar component has been removed
+// new sidebar styling
+.brand-icon {
+  .hs-icon {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+.hc-app-frame {
+  font-family: inherit;
+}
+
+.hc-nav-subnav-item-link.hds-button {
+  font-family: inherit;
+}

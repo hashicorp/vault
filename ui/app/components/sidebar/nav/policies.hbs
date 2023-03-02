@@ -1,0 +1,44 @@
+<HcNav::Nav as |Nav|>
+  <Nav.Link
+    @route={{get (route-params-for "access") "route"}}
+    @models={{get (route-params-for "access") "models"}}
+    @current-when={{false}}
+    @icon="arrow-left"
+    data-test-sidebar-nav-link="back access"
+  >
+    Back to access
+  </Nav.Link>
+
+  <Nav.Header>Policies</Nav.Header>
+
+  {{#if (has-permission "policies" routeParams="acl")}}
+    <Nav.Link
+      @route="vault.cluster.policies"
+      @model="acl"
+      @current-when="vault.cluster.policies vault.cluster.policy"
+      data-test-sidebar-nav-link="acl"
+    >
+      ACL Policies
+    </Nav.Link>
+  {{/if}}
+  {{#if (and (has-feature "Sentinel") (has-permission "policies" routeParams="rgp"))}}
+    <Nav.Link
+      @route="vault.cluster.policies"
+      @model="rgp"
+      @current-when="vault.cluster.policies vault.cluster.policy"
+      data-test-sidebar-nav-link="role governing"
+    >
+      Role-Governing Policies
+    </Nav.Link>
+  {{/if}}
+  {{#if (and (has-feature "Sentinel") (has-permission "policies" routeParams="egp"))}}
+    <Nav.Link
+      @route="vault.cluster.policies"
+      @model="egp"
+      @current-when="vault.cluster.policies vault.cluster.policy"
+      data-test-sidebar-nav-link="endpoint governing"
+    >
+      Endpoint Governing Policies
+    </Nav.Link>
+  {{/if}}
+</HcNav::Nav>
