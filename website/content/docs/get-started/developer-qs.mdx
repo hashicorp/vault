@@ -430,7 +430,7 @@ curl \
 <Tab heading="OpenAPI Go (Beta)" group="openAPI-go">
 
 ```go
-_, err = client.Secrets.KVv2Write(ctx, "my-secret", schema.KVv2WriteRequest{
+_, err = client.Secrets.KVv2Write(context.Background(), "my-secret-password", schema.KVv2WriteRequest{
    Data: map[string]any{
       "password1": "abc123",
       "password2": "correct horse battery staple",
