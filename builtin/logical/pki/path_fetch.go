@@ -67,7 +67,7 @@ func pathFetchCA(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixPKI,
-			OperationSuffix: "ca|ca-pem",
+			OperationSuffix: "ca-der|ca-pem",
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -89,7 +89,7 @@ func pathFetchCAChain(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixPKI,
-			OperationSuffix: "ca-chain|cert-ca-chain",
+			OperationSuffix: "ca-chain-pem|cert-ca-chain",
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -111,7 +111,7 @@ func pathFetchCRL(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixPKI,
-			OperationSuffix: "crl|crl-pem|crl-delta|crl-delta-pem",
+			OperationSuffix: "crl-der|crl-pem|crl-delta|crl-delta-pem",
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -133,7 +133,7 @@ func pathFetchUnifiedCRL(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixPKI,
-			OperationSuffix: "unified-crl|unified-crl-pem|unified-crl-delta|unified-crl-delta-pem",
+			OperationSuffix: "unified-crl-der|unified-crl-pem|unified-crl-delta|unified-crl-delta-pem",
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -154,7 +154,7 @@ func pathFetchValidRaw(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixPKI,
-			OperationSuffix: "cert-raw|cert-raw-pem",
+			OperationSuffix: "cert-raw-der|cert-raw-pem",
 		},
 
 		Fields: map[string]*framework.FieldSchema{
