@@ -15,6 +15,8 @@ The complete code samples for the steps below are available here:
 - [C#](https://github.com/hashicorp/vault-examples/blob/main/examples/_quick-start/dotnet/Example.cs)
 - [Python](https://github.com/hashicorp/vault-examples/blob/main/examples/_quick-start/python/example.py)
 - [Java (Spring)](https://github.com/hashicorp/vault-examples/blob/main/examples/_quick-start/java/Example.java)
+- [OpenAPI-based Go](https://github.com/hashicorp/vault-client-go/#getting-started)
+- [OpenAPI-based .NET](https://github.com/hashicorp/vault-client-dotnet/#getting-started)
 
 For an out-of-the-box runnable demo application showcasing these concepts and more, see the hello-vault repositories ([Go](https://github.com/hashicorp/hello-vault-go), [C#](https://github.com/hashicorp/hello-vault-dotnet) and [Java/Spring Boot](https://github.com/hashicorp/hello-vault-spring)).
 
@@ -306,7 +308,7 @@ VaultTemplate vaultTemplate = new VaultTemplate(
 <Tab heading="Bash" group="bash">
 
 ```shell-session
-export VAULT_TOKEN="dev-only-token"
+$ export VAULT_TOKEN="dev-only-token"
 ```
 
 </Tab>
@@ -417,7 +419,7 @@ System.out.println("Secret written successfully.");
 <Tab heading="Bash" group="bash">
 
 ```shell-session
-curl \
+$ curl \
     --header "X-Vault-Token: $VAULT_TOKEN" \
     --header "Content-Type: application/json" \
     --request POST \
@@ -530,7 +532,7 @@ if (readResponse != null && readResponse.hasData()) {
 <Tab heading="Bash" group="bash">
 
 ```shell-session
-curl \
+$ curl \
     --header "X-Vault-Token: $VAULT_TOKEN" \
     http://127.0.0.1:8200/v1/secret/data/my-secret-password > secrets.json
 ```
@@ -617,7 +619,7 @@ System.out.println("Access granted!");
 <Tab heading="Bash" group="bash">
 
 ```shell-session
-    cat secrets.json | jq '.data.data'
+$ cat secrets.json | jq '.data.data'
 ```
 
 </Tab>
