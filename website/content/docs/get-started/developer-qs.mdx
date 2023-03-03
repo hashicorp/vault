@@ -540,9 +540,7 @@ curl \
 <Tab heading="OpenAPI Go (Beta)" group="openAPI-go">
 
 ```go
-ctx := context.Background()
-
-s, err := client.Secrets.KVv2Read(ctx, "my-secret")
+s, err := client.Secrets.KVv2Read(context.Background(), "my-secret-password")
 if err != nil {
    log.Fatal(err)
 }
