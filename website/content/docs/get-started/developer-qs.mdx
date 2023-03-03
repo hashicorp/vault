@@ -544,7 +544,8 @@ s, err := client.Secrets.KVv2Read(context.Background(), "my-secret-password")
 if err != nil {
    log.Fatal(err)
 }
-log.Println("secret retrieved:", s.Data)
+
+log.Println("Secret retrieved:", s.Data)
 ```
 
 </Tab>
