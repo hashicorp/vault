@@ -588,16 +588,18 @@ func constructOperationID(
 	// determine the actual suffix, we attempt to match it by the index of the
 	// paths returned from `expandPattern(...)`. For example:
 	//
-	//  aws/
-	//      Pattern: `^(creds|sts)/(?P<name>\w(([\w-.@]+)?\w)?)$`
+	//  pki/
+	//  	Pattern: "keys/generate/(internal|exported|kms)",
 	//      DisplayAttrs: {
-	//          OperationSuffix: "credentials|sts-credentials"
-	//      }
+	//          ...
+	//          OperationSuffix: "internal-key|exported-key|kms-key",
+	//      },
 	//
-	//  Will expand into two paths and corresponding suffixes:
+	//  will expand into three paths and corresponding suffixes:
 	//
-	//      path 0: "creds/{name}"  suffix: credentials
-	//      path 1: "sts/{name}"    suffix: sts-credentials
+	//      path 0: "keys/generate/internal"  suffix: internal-key
+	//      path 1: "keys/generate/exported"  suffix: exported-key
+	//      path 2: "keys/generate/kms"       suffix: kms-key
 	//
 	if suffixes := strings.Split(suffix, "|"); len(suffixes) > 1 || pathIndex > 0 {
 		// if the index is out of bounds, fall back to the old logic
