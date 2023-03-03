@@ -322,8 +322,7 @@ if err != nil {
    log.Fatal(err)
 }
 
-// authenticate with a root token (insecure)
-if err := client.SetToken("my-token"); err != nil {
+if err := client.SetToken("dev-only-token"); err != nil {
    log.Fatal(err)
 }
 ```
