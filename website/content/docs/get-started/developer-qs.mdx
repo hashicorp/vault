@@ -432,8 +432,7 @@ curl \
 ```go
 _, err = client.Secrets.KVv2Write(context.Background(), "my-secret-password", schema.KVv2WriteRequest{
    Data: map[string]any{
-      "password1": "abc123",
-      "password2": "correct horse battery staple",
+      "password": "Hashi123",
    },
 })
 if err != nil {
