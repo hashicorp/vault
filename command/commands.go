@@ -331,6 +331,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"cloud set-cluster": func() (cli.Command, error) {
+			return &CloudSetClusterCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"debug": func() (cli.Command, error) {
 			return &DebugCommand{
 				BaseCommand: getBaseCommand(),

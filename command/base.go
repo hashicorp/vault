@@ -116,6 +116,23 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 		}
 	}
 
+	// Check to see if we are connecting to an HCP Vault Cluster
+	if IsHCPVCluster() {
+		c, err := GetHCPVCluster()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to retrieve HCP Vault Cluster details")
+		}
+
+		config.Address = "https://" + c.DNSNames.Proxy
+
+		hcpRT, err := HCPProxyRoundTripper(c, config.HttpClient.Transport)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to retrieve HCP Vault proxy client")
+		}
+
+		config.HttpClient.Transport = hcpRT
+	}
+
 	// Build the client
 	client, err := api.NewClient(config)
 	if err != nil {

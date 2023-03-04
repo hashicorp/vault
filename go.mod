@@ -14,6 +14,9 @@ replace github.com/hashicorp/vault/sdk => ./sdk
 
 replace go.etcd.io/etcd/client/pkg/v3 v3.5.0 => go.etcd.io/etcd/client/pkg/v3 v3.0.0-20210928084031-3df272774672
 
+// Hack to add the Proxy address to the HCP Vault Cluster.DNS model
+replace github.com/hashicorp/hcp-sdk-go => ../hcp-sdk-go
+
 require (
 	cloud.google.com/go/monitoring v1.8.0
 	cloud.google.com/go/spanner v1.41.0
