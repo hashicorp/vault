@@ -316,7 +316,7 @@ $ export VAULT_TOKEN="dev-only-token"
 
 ```go
 client, err := vault.New(
-   vault.WithBaseAddress("http://127.0.0.1:8200"),
+   vault.WithAddress("http://127.0.0.1:8200"),
    vault.WithRequestTimeout(30*time.Second),
 )
 if err != nil {
