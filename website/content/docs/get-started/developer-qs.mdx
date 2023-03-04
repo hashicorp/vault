@@ -194,10 +194,10 @@ import (
 
 
 </Tab>
-<Tab heading="OpenAPI C# (Beta)" group="openAPI-cs">
+<Tab heading="OpenAPI .NET (Beta)" group="openAPI-dotnet">
 
 
-[OpenAPI C#](https://github.com/hashicorp/vault-client-dotnet) (Beta) client library:
+[OpenAPI .NET](https://github.com/hashicorp/vault-client-dotnet) (Beta) client library:
 
 Vault is a package available at [Hashicorp Nuget](https://www.nuget.org/profiles/hashicorp).
 
@@ -322,7 +322,7 @@ if err := client.SetToken("dev-only-token"); err != nil {
 ```
 
 </Tab>
-<Tab heading="OpenAPI C# (Beta)" group="openAPI-cs">
+<Tab heading="OpenAPI .NET (Beta)" group="openAPI-dotnet">
 
 ```cs
 string address = "http://127.0.0.1:8200";
@@ -437,7 +437,7 @@ log.Println("Secret written successfully.")
 ```
 
 </Tab>
-<Tab heading="OpenAPI C# (Beta)" group="openAPI-cs">
+<Tab heading="OpenAPI .NET (Beta)" group="openAPI-dotnet">
 
 ```cs
 var secretData = new Dictionary<string, string> { { "mypass", "pass" } };
@@ -543,7 +543,7 @@ log.Println("Secret retrieved:", s.Data)
 ```
 
 </Tab>
-<Tab heading="OpenAPI C# (Beta)" group="openAPI-cs">
+<Tab heading="OpenAPI .NET (Beta)" group="openAPI-dotnet">
 
 ```cs
 VaultResponse<Object> resp = vaultClient.Secrets.KVv2Read("mypath");
