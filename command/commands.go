@@ -321,6 +321,16 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"cloud": func() (cli.Command, error) {
+			return &CloudCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"cloud login": func() (cli.Command, error) {
+			return &CloudLoginCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"debug": func() (cli.Command, error) {
 			return &DebugCommand{
 				BaseCommand: getBaseCommand(),
