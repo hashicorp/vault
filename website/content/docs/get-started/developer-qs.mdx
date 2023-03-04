@@ -203,20 +203,13 @@ Vault is a package available at [Hashicorp Nuget](https://www.nuget.org/profiles
 
 
 ```shell-session
- nuget install HashiCorp.Vault -Version "0.1.0-beta"
-    -name HashicorpArtifactory \ 
-    -source https://artifactory.hashicorp.engineering/ui/repos/tree/General/vault-devex-nuget-local \
-    -username "myusername" \
-    -password "mypassword"
+$ nuget install HashiCorp.Vault -Version "0.1.0-beta"
 ```
 
 **Or:**
 
 ```shell-session
-dotnet add package Hashicorp.Vault -version "0.1.0-beta" 
-    --name HashicorpArtifactory \
-    --username "myusername" \
-    --password "mypassword"
+$ dotnet add package Hashicorp.Vault -version "0.1.0-beta" 
 ```
 
 Now, let's add the import statements for the client library to the top of the file.
