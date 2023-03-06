@@ -625,7 +625,7 @@ func TestKVListCommand(t *testing.T) {
 		{
 			"v2_not_found",
 			[]string{"kv/nope/not/once/never"},
-			[]string{"No value found at kv/data/nope/not/once/never"},
+			[]string{"No value found at kv/metadata/nope/not/once/never"},
 			2,
 		},
 	}
