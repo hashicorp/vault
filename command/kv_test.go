@@ -602,6 +602,7 @@ func testKVListCommand(tb testing.TB) (*cli.MockUi, *KVListCommand) {
 	return ui, cmd
 }
 
+// TestKVListCommand runs tests for `vault kv list`
 func TestKVListCommand(t *testing.T) {
 	testCases := []struct {
 		name       string
