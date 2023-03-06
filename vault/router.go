@@ -462,7 +462,12 @@ func (r *Router) MatchingBackend(ctx context.Context, path string) logical.Backe
 	if !ok {
 		return nil
 	}
+
+	// We need to perform the READ and then return as two separate statements
+	// so that the lock is still held while we are reading. This is to prevent
+	// a possible data race.
 	backend := raw.(*routeEntry).backend
+
 	return backend
 }
 
