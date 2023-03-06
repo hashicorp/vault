@@ -1,5 +1,6 @@
 import Component from '@ember/component';
 import { assert } from '@ember/debug';
+import { tracked } from '@glimmer/tracking';
 
 const DIRECTIONS = ['right', 'left', 'up', 'down'];
 
@@ -20,8 +21,9 @@ const DIRECTIONS = ['right', 'left', 'up', 'down'];
 
 export default class Chevron extends Component {
   tagName = '';
-  direction = 'right';
   isButton = false;
+
+  @tracked direction = 'right';
 
   get glyph() {
     const { direction } = this;
