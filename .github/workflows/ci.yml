@@ -1,0 +1,83 @@
+name: CI
+on:
+  push:
+
+jobs:
+  setup:
+    name: Setup
+    runs-on: ubuntu-latest
+    outputs:
+      runs-on: ${{ steps.setup-outputs.outputs.runs-on }}
+      enterprise: ${{ steps.setup-outputs.outputs.enterprise }}
+      go-tags: ${{ steps.setup-outputs.outputs.go-tags }}
+    steps:
+    - id: setup-outputs
+      name: Setup outputs
+      run: |
+        github_repository="${{ github.repository }}"
+
+        if [ "${github_repository##*/}" == "vault-enterprise" ] ; then
+          echo 'runs-on=["self-hosted","ondemand","linux","type=c5.2xlarge"]' >> $GITHUB_OUTPUT
+          echo 'enterprise=1' >> $GITHUB_OUTPUT
+          echo 'go-tags=ent enterprise' >> $GITHUB_OUTPUT
+        else
+          echo 'runs-on=ubuntu-latest' >> $GITHUB_OUTPUT
+          echo 'enterprise=' >> $GITHUB_OUTPUT
+          echo 'go-tags=' >> $GITHUB_OUTPUT
+        fi
+  semgrep:
+    name: Semgrep
+    needs:
+    - setup
+    runs-on: ${{ fromJSON(needs.setup.outputs.runs-on) }}
+    container:
+      image: returntocorp/semgrep@sha256:ffc6f3567654f9431456d49fd059dfe548f007c494a7eb6cd5a1a3e50d813fb3
+    steps:
+    - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
+    - name: Run Semgrep Rules
+      id: semgrep
+      run: semgrep ci --include '*.go' --config 'tools/semgrep/ci'
+  setup-go-cache:
+    name: Go Caches
+    needs:
+    - setup
+    uses: ./.github/workflows/setup-go-cache.yml
+    with:
+      runs-on: ${{ needs.setup.outputs.runs-on }}
+    secrets: inherit
+  fmt:
+    name: Check Format
+    needs:
+    - setup
+    runs-on: ${{ fromJSON(needs.setup.outputs.runs-on) }}
+    steps:
+    - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
+    - uses: actions/setup-go@d0a58c1c4d2b25278816e339b944508c875f3613
+      with:
+        go-version-file: ./.go-version
+        cache: true
+    - id: format
+      run: |
+        echo "Using gofumpt version $(go run mvdan.cc/gofumpt -version)"
+        make fmt
+        if ! git diff --exit-code; then
+          echo "Code has formatting errors. Run 'make fmt' to fix"
+          exit 1
+        fi
+  test-go:
+    name: Run Go tests
+    needs:
+    - setup
+    - setup-go-cache
+    # Don't run this job for branches starting with 'ui/', 'docs/', or 'backport/docs/'
+    if: ${{ ! (startsWith( github.ref_name, 'ui/' ) || startsWith( github.ref_name, 'docs/' ) || startsWith( github.ref_name, 'backport/docs/') ) }}
+    uses: ./.github/workflows/test-go.yml
+    with:
+      # The example inputs below are just here to get the workflow to run during the migration.
+      # In the future, they will be substituted - possibly with references to values coming from a testing matrix.
+      go-arch: amd64
+      go-tags: ${{ needs.setup.outputs.go-tags }}
+      extra-tags: deadlock
+      runs-on: ${{ needs.setup.outputs.runs-on }}
+      enterprise: ${{ needs.setup.outputs.enterprise }}
+    secrets: inherit
