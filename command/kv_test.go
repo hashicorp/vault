@@ -603,7 +603,6 @@ func testKVListCommand(tb testing.TB) (*cli.MockUi, *KVListCommand) {
 }
 
 func TestKVListCommand(t *testing.T) {
-
 	testCases := []struct {
 		name       string
 		args       []string
