@@ -14,7 +14,7 @@ import (
 // overlapping clients. The test calls computeCurrentMonthForBillingPeriodInternal with the current month map having
 // some overlap with the previous months. The test then verifies that the results have the correct number of entity and
 // non-entity clients. The test also calls computeCurrentMonthForBillingPeriodInternal with an empty current month map,
-// and verifies that the results are all 0
+// and verifies that the results are all 0.
 func Test_ActivityLog_ComputeCurrentMonthForBillingPeriodInternal(t *testing.T) {
 	// populate the first month with clients 1-10
 	monthOneHLL := hyperloglog.New()
