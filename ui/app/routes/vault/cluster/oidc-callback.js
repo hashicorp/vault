@@ -6,7 +6,15 @@ export default Route.extend({
     // left blank so we render the template immediately
   },
   afterModel() {
-    let { auth_path: path, code, state } = this.paramsFor(this.routeName);
+    const queryString = decodeURIComponent(window.location.search);
+    // Since state param can also contain namespace, fetch the values using native url api.
+    // For instance, state params value can be state=st_123456,ns=d4fq
+    // Ember paramsFor will strip out the value after the "=" sign.
+    const urlParams = new URLSearchParams(queryString);
+    let state = urlParams.get('state');
+    const code = urlParams.get('code');
+
+    let { auth_path: path } = this.paramsFor(this.routeName);
     let { namespaceQueryParam: namespace } = this.paramsFor('vault.cluster');
     // only replace namespace param from cluster if state has a namespace
     if (state?.includes(',ns=')) {
