@@ -603,19 +603,82 @@ func testKVListCommand(tb testing.TB) (*cli.MockUi, *KVListCommand) {
 }
 
 func TestKVListCommand(t *testing.T) {
-	client, closer := testVaultServer(t)
-	defer closer()
-	ctx := context.Background()
-	for i := 0; i < 5; i++ {
-		path := fmt.Sprintf("my-prefix/secret-%d", i)
-		_, err := client.KVv2("secrets").Put(ctx, path, map[string]interface{}{
-			"foo": "bar",
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
+
+	testCases := []struct {
+		name       string
+		args       []string
+		outStrings []string
+		code       int
+	}{
+		{
+			name:       "default",
+			args:       []string{"kv/my-prefix"},
+			outStrings: []string{"secret-0", "secret-1", "secret-2"},
+			code:       0,
+		},
+		{
+			name:       "default_with_mount",
+			args:       []string{"-mount", "kv", "my-prefix"},
+			outStrings: []string{"secret-0", "secret-1", "secret-2"},
+			code:       0,
+		},
+		{
+			"v2_not_found",
+			[]string{"kv/nope/not/once/never"},
+			[]string{"No value found at kv/data/nope/not/once/never"},
+			2,
+		},
 	}
 
+	t.Run("validations", func(t *testing.T) {
+		t.Parallel()
+
+		for _, testCase := range testCases {
+			testCase := testCase
+
+			t.Run(testCase.name, func(t *testing.T) {
+				t.Parallel()
+
+				// test setup
+				client, closer := testVaultServer(t)
+				defer closer()
+
+				// enable kv-v2 backend
+				if err := client.Sys().Mount("kv/", &api.MountInput{
+					Type: "kv-v2",
+				}); err != nil {
+					t.Fatal(err)
+				}
+				time.Sleep(time.Second)
+
+				ctx := context.Background()
+				for i := 0; i < 3; i++ {
+					path := fmt.Sprintf("my-prefix/secret-%d", i)
+					_, err := client.KVv2("kv/").Put(ctx, path, map[string]interface{}{
+						"foo": "bar",
+					})
+					if err != nil {
+						t.Fatal(err)
+					}
+				}
+
+				ui, cmd := testKVListCommand(t)
+				cmd.client = client
+
+				code := cmd.Run(testCase.args)
+				if code != testCase.code {
+					t.Errorf("expected %d to be %d", code, testCase.code)
+				}
+
+				combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+				for _, str := range testCase.outStrings {
+					if !strings.Contains(combined, str) {
+						t.Errorf("expected %q to contain %q", combined, str)
+					}
+				}
+			})
+		}
+	})
 }
 
 func testKVMetadataGetCommand(tb testing.TB) (*cli.MockUi, *KVMetadataGetCommand) {
