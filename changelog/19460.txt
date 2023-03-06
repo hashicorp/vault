@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Add back native API URLSearchParams for issue with namespace and OIDC login.
+```
