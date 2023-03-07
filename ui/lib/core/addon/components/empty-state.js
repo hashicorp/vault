@@ -1,5 +1,4 @@
-import Component from '@ember/component';
-import layout from '../templates/components/empty-state';
+import Component from '@glimmer/component';
 
 /**
  * @module EmptyState
@@ -18,11 +17,10 @@ import layout from '../templates/components/empty-state';
  * @param bottomBorder=false{Boolean} - A bottom border underneath the message.  Generally used when you have links under the message
  */
 
-export default Component.extend({
-  layout,
-  tagName: '',
-  title: null,
-  message: null,
-  icon: '',
-  bottomBorder: false,
-});
+export default class EmptyState extends Component {
+  tagName = '';
+  title = null;
+  message = null;
+  icon = '';
+  bottomBorder = false;
+}
