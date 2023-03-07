@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/api/auth/approle"
@@ -47,6 +48,44 @@ func getCluster(t *testing.T, typ consts.PluginType, numCores int) *vault.TestCl
 	vault.TestWaitActive(t, cluster.Cores[0].Core)
 
 	return cluster
+}
+
+// TestExternalPlugin_RollbackAndReload ensures that we can successfully
+// rollback and reload a plugin without triggering race conditions by the go
+// race detector
+func TestExternalPlugin_RollbackAndReload(t *testing.T) {
+	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
+	t.Cleanup(func() { cleanup(t) })
+	coreConfig := &vault.CoreConfig{
+		// set rollback period to a short interval to make conditions more "racy"
+		RollbackPeriod:  1 * time.Second,
+		PluginDirectory: pluginDir,
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		TempDir:  pluginDir,
+		NumCores: 1,
+		Plugins: &vault.TestPluginConfig{
+			Typ:      consts.PluginTypeSecrets,
+			Versions: []string{""},
+		},
+		HandlerFunc: vaulthttp.Handler,
+	})
+
+	cluster.Start()
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+
+	core := cluster.Cores[0]
+	plugin := cluster.Plugins[0]
+	client := core.Client
+	client.SetToken(cluster.RootToken)
+
+	testRegisterAndEnable(t, client, plugin)
+	if _, err := client.Sys().ReloadPlugin(&api.ReloadPluginInput{
+		Plugin: plugin.Name,
+	}); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestExternalPlugin__continueOnError(t *testing.T) {
