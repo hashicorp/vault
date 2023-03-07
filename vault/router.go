@@ -457,13 +457,17 @@ func (r *Router) MatchingBackend(ctx context.Context, path string) logical.Backe
 	path = ns.Path + path
 
 	r.l.RLock()
-	defer r.l.RUnlock()
 	_, raw, ok := r.root.LongestPrefix(path)
+	r.l.RUnlock()
 	if !ok {
 		return nil
 	}
 
-	return raw.(*routeEntry).backend
+	re := raw.(*routeEntry)
+	re.l.RLock()
+	defer re.l.RUnlock()
+
+	return re.backend
 }
 
 // MatchingSystemView returns the SystemView used for a path
