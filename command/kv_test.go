@@ -623,10 +623,16 @@ func TestKVListCommand(t *testing.T) {
 			code:       0,
 		},
 		{
-			"v2_not_found",
-			[]string{"kv/nope/not/once/never"},
-			[]string{"No value found at kv/metadata/nope/not/once/never"},
-			2,
+			name:       "v2_not_found",
+			args:       []string{"kv/nope/not/once/never"},
+			outStrings: []string{"No value found at kv/metadata/nope/not/once/never"},
+			code:       2,
+		},
+		{
+			name:       "mount_only",
+			args:       []string{"-mount", "kv/my-prefix"},
+			outStrings: []string{"secret-0", "secret-1", "secret-2"},
+			code:       0,
 		},
 	}
 
