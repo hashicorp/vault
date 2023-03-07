@@ -88,34 +88,6 @@ func TestExternalPlugin_RollbackAndReload(t *testing.T) {
 	}
 }
 
-func TestExternalPlugin__continueOnError(t *testing.T) {
-	t.Run("secret", func(t *testing.T) {
-		t.Parallel()
-		t.Run("sha256_mismatch", func(t *testing.T) {
-			t.Parallel()
-			testExternalPlugin__continueOnError(t, true, consts.PluginTypeSecrets)
-		})
-
-		t.Run("missing_plugin", func(t *testing.T) {
-			t.Parallel()
-			testExternalPlugin__continueOnError(t, false, consts.PluginTypeSecrets)
-		})
-	})
-
-	t.Run("auth", func(t *testing.T) {
-		t.Parallel()
-		t.Run("sha256_mismatch", func(t *testing.T) {
-			t.Parallel()
-			testExternalPlugin__continueOnError(t, true, consts.PluginTypeCredential)
-		})
-
-		t.Run("missing_plugin", func(t *testing.T) {
-			t.Parallel()
-			testExternalPlugin__continueOnError(t, false, consts.PluginTypeCredential)
-		})
-	})
-}
-
 func testRegisterAndEnable(t *testing.T, client *api.Client, plugin pluginhelpers.TestPlugin) {
 	t.Helper()
 	if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
@@ -144,7 +116,37 @@ func testRegisterAndEnable(t *testing.T, client *api.Client, plugin pluginhelper
 	}
 }
 
-func testExternalPlugin__continueOnError(t *testing.T, mismatch bool, pluginType consts.PluginType) {
+// TestExternalPlugin_ContinueOnError tests that vault can recover from a
+// sha256 mismatch or missing plugin binary scenario
+func TestExternalPlugin_ContinueOnError(t *testing.T) {
+	t.Run("secret", func(t *testing.T) {
+		t.Parallel()
+		t.Run("sha256_mismatch", func(t *testing.T) {
+			t.Parallel()
+			testExternalPlugin_ContinueOnError(t, true, consts.PluginTypeSecrets)
+		})
+
+		t.Run("missing_plugin", func(t *testing.T) {
+			t.Parallel()
+			testExternalPlugin_ContinueOnError(t, false, consts.PluginTypeSecrets)
+		})
+	})
+
+	t.Run("auth", func(t *testing.T) {
+		t.Parallel()
+		t.Run("sha256_mismatch", func(t *testing.T) {
+			t.Parallel()
+			testExternalPlugin_ContinueOnError(t, true, consts.PluginTypeCredential)
+		})
+
+		t.Run("missing_plugin", func(t *testing.T) {
+			t.Parallel()
+			testExternalPlugin_ContinueOnError(t, false, consts.PluginTypeCredential)
+		})
+	})
+}
+
+func testExternalPlugin_ContinueOnError(t *testing.T, mismatch bool, pluginType consts.PluginType) {
 	cluster := getCluster(t, pluginType, 1)
 	defer cluster.Cleanup()
 
