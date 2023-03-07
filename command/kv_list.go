@@ -80,8 +80,11 @@ func (c *KVListCommand) Run(args []string) int {
 	args = f.Args()
 	switch {
 	case len(args) < 1:
-		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1, got %d)", len(args)))
-		return 1
+		if c.flagMount == "" {
+			c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1, got %d)", len(args)))
+			return 1
+		}
+		args = []string{""}
 	case len(args) > 1:
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
 		return 1
@@ -127,7 +130,7 @@ func (c *KVListCommand) Run(args []string) int {
 		}
 	}
 
-	// Add /data to v2 paths only
+	// Add /metadata to v2 paths only
 	var fullPath string
 	if v2 {
 		fullPath = addPrefixToKVPath(partialPath, mountPath, "metadata")
