@@ -385,7 +385,7 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 		return nil
 	}
 
-	apServerState := d.autopilot.GetState().Servers
+	apServerStates := d.autopilot.GetState().Servers
 	servers := future.Configuration().Servers
 	serverIDs := make([]string, 0, len(servers))
 	for _, server := range servers {
@@ -430,8 +430,8 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 		}
 
 		// Use existing NodeType from autopilot state if present, or fallback to a more basic check.
-		if apState, found := apServerState[raft.ServerID(id)]; found && apState.Server.NodeType != "" {
-			server.NodeType = apState.Server.NodeType
+		if apServerState, found := apServerStates[raft.ServerID(id)]; found && apServerState.Server.NodeType != "" {
+			server.NodeType = apServerState.Server.NodeType
 		} else if state.DesiredSuffrage == "voter" {
 			server.NodeType = autopilot.NodeVoter
 		}
