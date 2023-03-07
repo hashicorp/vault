@@ -385,6 +385,7 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 		return nil
 	}
 
+	apServerState := d.autopilot.GetState().Servers
 	servers := future.Configuration().Servers
 	serverIDs := make([]string, 0, len(servers))
 	for _, server := range servers {
@@ -428,6 +429,13 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 			Ext:         d.autopilotServerExt(state),
 		}
 
+		// Use existing NodeType from autopilot state if present, or fallback to a more basic check.
+		if apState, found := apServerState[raft.ServerID(id)]; found && apState.Server.NodeType != "" {
+			server.NodeType = apState.Server.NodeType
+		} else if state.DesiredSuffrage == "voter" {
+			server.NodeType = autopilot.NodeVoter
+		}
+
 		switch state.IsDead.Load() {
 		case true:
 			d.logger.Debug("informing autopilot that the node left", "id", id)
@@ -445,6 +453,7 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 		Name:        d.localID,
 		RaftVersion: raft.ProtocolVersionMax,
 		NodeStatus:  autopilot.NodeAlive,
+		NodeType:    autopilot.NodeVoter, // The leader must be a voter
 		Meta: d.meta(&FollowerState{
 			UpgradeVersion: d.EffectiveVersion(),
 			RedundancyZone: d.RedundancyZone(),
