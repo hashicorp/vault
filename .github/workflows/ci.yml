@@ -5,7 +5,7 @@ on:
 jobs:
   setup:
     name: Setup
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON("ubuntu-latest") }}
     outputs:
       runs-on: ${{ steps.setup-outputs.outputs.runs-on }}
       enterprise: ${{ steps.setup-outputs.outputs.enterprise }}
