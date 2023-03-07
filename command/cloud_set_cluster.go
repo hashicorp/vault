@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/hcp-sdk-go/config"
 	"github.com/hashicorp/hcp-sdk-go/httpclient"
 	"github.com/mitchellh/cli"
+	"github.com/mitchellh/colorstring"
 	"github.com/pkg/errors"
 	"github.com/posener/complete"
 	"golang.org/x/oauth2"
@@ -124,6 +125,13 @@ func (c *CloudSetClusterCommand) Run(args []string) int {
 		return 1
 	}
 
+	c.UI.Info(colorstring.Color(fmt.Sprintf("[bold][green]Success! CLI is configured for HCP Vault Cluster %q.", c.flagClusterName)))
+	c.UI.Info("Use the vault CLI as normal and requests will be proxied to the HCP Vault cluster.")
+	c.UI.Info("")
+	c.UI.Info("As an example, run the following to see you are connected:")
+	c.UI.Info("")
+	c.UI.Info("$ vault login")
+	c.UI.Info("$ vault token lookup")
 	return 0
 }
 
