@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/hashicorp/vault/plugins/database/postgresql/scram"
 	"regexp"
 	"strings"
 
@@ -269,15 +270,32 @@ func (p *PostgreSQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (
 	}
 	defer tx.Rollback()
 
+	var pwEncryption string
+	err = tx.QueryRowContext(ctx, "SHOW password_encryption").Scan(&pwEncryption)
+	if err != nil {
+		return dbplugin.NewUserResponse{}, fmt.Errorf("unable to query password_encryption: %w", err)
+	}
+	fmt.Println("password_encryption", pwEncryption)
+	err = tx.QueryRowContext(ctx, "SELECT version()").Scan(&pwEncryption)
+	if err != nil {
+		return dbplugin.NewUserResponse{}, fmt.Errorf("unable to query password_encryption: %w", err)
+	}
+	fmt.Println("version", pwEncryption)
+	hashedPassword, err := scram.Encrypt(req.Password)
+	if err != nil {
+		return dbplugin.NewUserResponse{}, fmt.Errorf("unable to scram-sha256 password: %w", err)
+	}
+	m := map[string]string{
+		"name":            username,
+		"username":        username,
+		"password":        req.Password,
+		"hashed_password": hashedPassword,
+		"expiration":      expirationStr,
+	}
+
 	for _, stmt := range req.Statements.Commands {
 		if containsMultilineStatement(stmt) {
 			// Execute it as-is.
-			m := map[string]string{
-				"name":       username,
-				"username":   username,
-				"password":   req.Password,
-				"expiration": expirationStr,
-			}
 			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, stmt); err != nil {
 				return dbplugin.NewUserResponse{}, fmt.Errorf("failed to execute query: %w", err)
 			}
@@ -290,12 +308,6 @@ func (p *PostgreSQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (
 				continue
 			}
 
-			m := map[string]string{
-				"name":       username,
-				"username":   username,
-				"password":   req.Password,
-				"expiration": expirationStr,
-			}
 			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return dbplugin.NewUserResponse{}, fmt.Errorf("failed to execute query: %w", err)
 			}

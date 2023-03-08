@@ -276,6 +276,26 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 				assertCredsExist,
 			),
 		},
+		"use-hashed-password": {
+			req: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
+					DisplayName: "test",
+					RoleName:    "test",
+				},
+				Statements: dbplugin.Statements{
+					Commands: []string{
+						`CREATE ROLE "{{name}}" WITH LOGIN PASSWORD '{{hashed_password}}' VALID UNTIL '{{expiration}}';
+                         GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";`},
+				},
+				Password:   "somesecurepassword",
+				Expiration: time.Now().Add(1 * time.Minute),
+			},
+			expectErr: false,
+			credsAssertion: assertCreds(
+				assertUsernameRegex("^v-test-test-[a-zA-Z0-9]{20}-[0-9]{10}$"),
+				assertCredsExist,
+			),
+		},
 	}
 
 	// Shared test container for speed - there should not be any overlap between the tests
