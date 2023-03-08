@@ -1,0 +1,7 @@
+{{#if this.isFlightIcon}}
+  <FlightIcon @name={{this.name}} @size={{this.size}} @stretched={{@stretched}} ...attributes />
+{{else}}
+  <span class="hs-icon {{this.hsIconClass}}" ...attributes>
+    {{svg-jar @this.name}}
+  </span>
+{{/if}}
