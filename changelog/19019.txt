@@ -1,0 +1,3 @@
+```release-note: improvement
+ui: Add alert-banner about configuring an Oracle DB secret engine if using SSL.
+```
