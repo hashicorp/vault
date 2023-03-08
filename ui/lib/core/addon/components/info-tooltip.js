@@ -1,16 +1,9 @@
-import Component from '@ember/component';
-import layout from '../templates/components/info-tooltip';
+import Component from '@glimmer/component';
+import { action } from '@ember/object';
 
-export default Component.extend({
-  layout,
-  'data-test-component': 'info-tooltip',
-  attributeBindings: ['data-test-component'],
-  tagName: 'span',
-  classNames: ['is-inline-block'],
-
-  actions: {
-    preventSubmit(e) {
-      e.preventDefault();
-    },
-  },
-});
+export default class InfoTooltip extends Component {
+  @action
+  preventSubmit(e) {
+    e.preventDefault();
+  }
+}
