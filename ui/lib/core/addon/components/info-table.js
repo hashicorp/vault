@@ -1,5 +1,4 @@
-import Component from '@ember/component';
-import layout from '../templates/components/info-table';
+import Component from '@glimmer/component';
 
 /**
  * @module InfoTable
@@ -18,10 +17,8 @@ import layout from '../templates/components/info-table';
  * @param {Array} items=null - An array of strings which will be used as the InfoTableRow value.
  */
 
-export default Component.extend({
-  layout,
-  tagName: '',
-  title: 'Info Table',
-  header: null,
-  items: null,
-});
+export default class InfoTable extends Component {
+  get title() {
+    return this.args.title || 'Info Table';
+  }
+}
