@@ -19,19 +19,20 @@ import (
 )
 
 type jwtMethod struct {
-	logger                hclog.Logger
-	path                  string
-	mountPath             string
-	role                  string
-	removeJWTAfterReading bool
-	credsFound            chan struct{}
-	watchCh               chan string
-	stopCh                chan struct{}
-	doneCh                chan struct{}
-	credSuccessGate       chan struct{}
-	ticker                *time.Ticker
-	once                  *sync.Once
-	latestToken           *atomic.Value
+	logger                   hclog.Logger
+	path                     string
+	mountPath                string
+	role                     string
+	removeJWTAfterReading    bool
+	removeJWTFollowsSymlinks bool
+	credsFound               chan struct{}
+	watchCh                  chan string
+	stopCh                   chan struct{}
+	doneCh                   chan struct{}
+	credSuccessGate          chan struct{}
+	ticker                   *time.Ticker
+	once                     *sync.Once
+	latestToken              *atomic.Value
 }
 
 // NewJWTAuthMethod returns an implementation of Agent's auth.AuthMethod
@@ -82,6 +83,14 @@ func NewJWTAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 			return nil, fmt.Errorf("error parsing 'remove_jwt_after_reading' value: %w", err)
 		}
 		j.removeJWTAfterReading = removeJWTAfterReading
+	}
+
+	if removeJWTFollowsSymlinksRaw, ok := conf.Config["remove_jwt_follows_symlinks"]; ok {
+		removeJWTFollowsSymlinks, err := parseutil.ParseBool(removeJWTFollowsSymlinksRaw)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing 'remove_jwt_follows_symlinks' value: %w", err)
+		}
+		j.removeJWTFollowsSymlinks = removeJWTFollowsSymlinks
 	}
 
 	switch {
@@ -235,9 +244,13 @@ func (j *jwtMethod) ingressToken() {
 	}
 
 	if j.removeJWTAfterReading {
-		// We remove the evalSymlink'd path here so that we actually delete the jwt
-		// not just the symlink that links to the jwt
-		if err := os.Remove(evalSymlinkPath); err != nil {
+		pathToRemove := j.path
+		if j.removeJWTFollowsSymlinks {
+			// If removeJWTFollowsSymlinks is set, we follow the symlink and delete the jwt,
+			// not just the symlink that links to the jwt
+			pathToRemove = evalSymlinkPath
+		}
+		if err := os.Remove(pathToRemove); err != nil {
 			j.logger.Error("error removing jwt file", "error", err)
 		}
 	}

@@ -165,3 +165,95 @@ func TestDeleteAfterReading(t *testing.T) {
 		}
 	}
 }
+
+func TestDeleteAfterReadingSymlink(t *testing.T) {
+	for _, tc := range map[string]struct {
+		configValue              string
+		shouldDelete             bool
+		removeJWTFollowsSymlinks bool
+	}{
+		"default": {
+			"",
+			true,
+			false,
+		},
+		"explicit true": {
+			"true",
+			true,
+			false,
+		},
+		"false": {
+			"false",
+			false,
+			false,
+		},
+		"default + removeJWTFollowsSymlinks": {
+			"",
+			true,
+			true,
+		},
+		"explicit true + removeJWTFollowsSymlinks": {
+			"true",
+			true,
+			true,
+		},
+		"false + removeJWTFollowsSymlinks": {
+			"false",
+			false,
+			true,
+		},
+	} {
+		rootDir, err := os.MkdirTemp("", "vault-agent-jwt-auth-test")
+		if err != nil {
+			t.Fatalf("failed to create temp dir: %s", err)
+		}
+		defer os.RemoveAll(rootDir)
+		tokenPath := path.Join(rootDir, "token")
+		err = os.WriteFile(tokenPath, []byte("test"), 0o644)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		symlink, err := os.CreateTemp("", "auth.jwt.symlink.test.")
+		if err != nil {
+			t.Fatal(err)
+		}
+		symlinkName := symlink.Name()
+		symlink.Close()
+		os.Remove(symlinkName)
+		os.Symlink(tokenPath, symlinkName)
+
+		config := &auth.AuthConfig{
+			Config: map[string]interface{}{
+				"path": symlinkName,
+				"role": "unusedrole",
+			},
+			Logger: hclog.Default(),
+		}
+		if tc.configValue != "" {
+			config.Config["remove_jwt_after_reading"] = tc.configValue
+		}
+		config.Config["remove_jwt_follows_symlinks"] = tc.removeJWTFollowsSymlinks
+
+		jwtAuth, err := NewJWTAuthMethod(config)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		jwtAuth.(*jwtMethod).ingressToken()
+
+		pathToCheck := symlinkName
+		if tc.removeJWTFollowsSymlinks {
+			pathToCheck = tokenPath
+		}
+		if _, err := os.Lstat(pathToCheck); tc.shouldDelete {
+			if err == nil || !os.IsNotExist(err) {
+				t.Fatal(err)
+			}
+		} else {
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+}
