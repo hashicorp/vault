@@ -73,7 +73,7 @@ Usage: vault write [options] PATH [DATA K=V...]
 }
 
 func (c *WriteCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat | FlagSetClipboard)
 	f := set.NewFlagSet("Command Options")
 
 	f.BoolVar(&BoolVar{
@@ -115,6 +115,10 @@ func (c *WriteCommand) Run(args []string) int {
 		return 1
 	case len(args) == 1 && !c.flagForce:
 		c.UI.Error("Must supply data or use -force")
+		return 1
+	}
+
+	if !validateClipboardFlag(c.BaseCommand) {
 		return 1
 	}
 
@@ -175,7 +179,7 @@ func handleWriteSecretOutput(c *BaseCommand, path string, secret *api.Secret, er
 
 	// Handle single field output
 	if c.flagField != "" {
-		return PrintRawField(c.UI, secret, c.flagField)
+		return PrintRawField(c.UI, secret, c.flagField, c.flagClipboard, c.flagClipboardTTL)
 	}
 
 	return OutputSecret(c.UI, secret)

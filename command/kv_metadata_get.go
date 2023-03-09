@@ -47,7 +47,7 @@ Usage: vault kv metadata get [options] KEY
 }
 
 func (c *KVMetadataGetCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat | FlagSetClipboard)
 
 	// Common Options
 	f := set.NewFlagSet("Common Options")
@@ -89,6 +89,10 @@ func (c *KVMetadataGetCommand) Run(args []string) int {
 		return 1
 	case len(args) > 1:
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
+		return 1
+	}
+
+	if !validateClipboardFlag(c.BaseCommand) {
 		return 1
 	}
 
@@ -149,7 +153,7 @@ func (c *KVMetadataGetCommand) Run(args []string) int {
 	}
 
 	if c.flagField != "" {
-		return PrintRawField(c.UI, secret, c.flagField)
+		return PrintRawField(c.UI, secret, c.flagField, c.flagClipboard, c.flagClipboardTTL)
 	}
 
 	// If we have wrap info print the secret normally.

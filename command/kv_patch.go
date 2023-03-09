@@ -88,7 +88,7 @@ Usage: vault kv patch [options] KEY [DATA]
 }
 
 func (c *KVPatchCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat | FlagSetClipboard)
 
 	// Patch specific options
 	f := set.NewFlagSet("Common Options")
@@ -161,6 +161,10 @@ func (c *KVPatchCommand) Run(args []string) int {
 		return 1
 	case len(c.flagRemoveData) == 0 && len(args) == 1:
 		c.UI.Error("Must supply data")
+		return 1
+	}
+
+	if !validateClipboardFlag(c.BaseCommand) {
 		return 1
 	}
 
@@ -258,7 +262,7 @@ func (c *KVPatchCommand) Run(args []string) int {
 	}
 
 	if c.flagField != "" {
-		return PrintRawField(c.UI, secret, c.flagField)
+		return PrintRawField(c.UI, secret, c.flagField, c.flagClipboard, c.flagClipboardTTL)
 	}
 
 	if Format(c.UI) == "table" {
@@ -349,7 +353,7 @@ func (c *KVPatchCommand) readThenWrite(client *api.Client, path string, newData 
 	}
 
 	if c.flagField != "" {
-		return nil, PrintRawField(c.UI, secret, c.flagField)
+		return nil, PrintRawField(c.UI, secret, c.flagField, c.flagClipboard, c.flagClipboardTTL)
 	}
 
 	return secret, 0
@@ -394,7 +398,7 @@ func (c *KVPatchCommand) mergePatch(client *api.Client, path string, newData map
 	}
 
 	if c.flagField != "" {
-		return nil, PrintRawField(c.UI, secret, c.flagField)
+		return nil, PrintRawField(c.UI, secret, c.flagField, c.flagClipboard, c.flagClipboardTTL)
 	}
 
 	return secret, 0

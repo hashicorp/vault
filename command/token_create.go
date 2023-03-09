@@ -63,7 +63,7 @@ Usage: vault token create [options]
 }
 
 func (c *TokenCreateCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat | FlagSetClipboard)
 
 	f := set.NewFlagSet("Command Options")
 
@@ -214,6 +214,10 @@ func (c *TokenCreateCommand) Run(args []string) int {
 		return 1
 	}
 
+	if !validateClipboardFlag(c.BaseCommand) {
+		return 1
+	}
+
 	if c.flagType == "batch" {
 		c.flagRenewable = false
 	}
@@ -252,7 +256,7 @@ func (c *TokenCreateCommand) Run(args []string) int {
 	}
 
 	if c.flagField != "" {
-		return PrintRawField(c.UI, secret, c.flagField)
+		return PrintRawField(c.UI, secret, c.flagField, c.flagClipboard, c.flagClipboardTTL)
 	}
 
 	return OutputSecret(c.UI, secret)

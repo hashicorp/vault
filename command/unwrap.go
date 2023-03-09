@@ -48,7 +48,7 @@ Usage: vault unwrap [options] [TOKEN]
 }
 
 func (c *UnwrapCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	return c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat | FlagSetClipboard)
 }
 
 func (c *UnwrapCommand) AutocompleteArgs() complete.Predictor {
@@ -64,6 +64,10 @@ func (c *UnwrapCommand) Run(args []string) int {
 
 	if err := f.Parse(args); err != nil {
 		c.UI.Error(err.Error())
+		return 1
+	}
+
+	if !validateClipboardFlag(c.BaseCommand) {
 		return 1
 	}
 
@@ -99,7 +103,7 @@ func (c *UnwrapCommand) Run(args []string) int {
 
 	// Handle single field output
 	if c.flagField != "" {
-		return PrintRawField(c.UI, secret, c.flagField)
+		return PrintRawField(c.UI, secret, c.flagField, c.flagClipboard, c.flagClipboardTTL)
 	}
 
 	// Check if the original was a list response and format as a list

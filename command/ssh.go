@@ -83,7 +83,7 @@ Usage: vault ssh [options] username@ip [ssh options]
 }
 
 func (c *SSHCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat | FlagSetClipboard)
 
 	f := set.NewFlagSet("SSH Options")
 
@@ -377,6 +377,10 @@ func (c *SSHCommand) handleTypeCA(username, ip, port string, sshArgs []string) i
 		principals = c.flagValidPrincipals
 	}
 
+	if !validateClipboardFlag(c.BaseCommand) {
+		return 1
+	}
+
 	// Attempt to sign the public key
 	secret, err := sshClient.SignKey(c.flagRole, map[string]interface{}{
 		// WARNING: publicKey is []byte, which is b64 encoded on JSON upload. We
@@ -408,7 +412,7 @@ func (c *SSHCommand) handleTypeCA(username, ip, port string, sshArgs []string) i
 	// Handle no-exec
 	if c.flagNoExec {
 		if c.flagField != "" {
-			return PrintRawField(c.UI, secret, c.flagField)
+			return PrintRawField(c.UI, secret, c.flagField, c.flagClipboard, c.flagClipboardTTL)
 		}
 		return OutputSecret(c.UI, secret)
 	}
@@ -519,7 +523,7 @@ func (c *SSHCommand) handleTypeOTP(username, ip, port string, sshArgs []string) 
 	// Handle no-exec
 	if c.flagNoExec {
 		if c.flagField != "" {
-			return PrintRawField(c.UI, secret, c.flagField)
+			return PrintRawField(c.UI, secret, c.flagField, c.flagClipboard, c.flagClipboardTTL)
 		}
 		return OutputSecret(c.UI, secret)
 	}
@@ -615,7 +619,7 @@ func (c *SSHCommand) handleTypeDynamic(username, ip, port string, sshArgs []stri
 	// Handle no-exec
 	if c.flagNoExec {
 		if c.flagField != "" {
-			return PrintRawField(c.UI, secret, c.flagField)
+			return PrintRawField(c.UI, secret, c.flagField, c.flagClipboard, c.flagClipboardTTL)
 		}
 		return OutputSecret(c.UI, secret)
 	}

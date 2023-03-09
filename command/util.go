@@ -2,6 +2,7 @@ package command
 
 import (
 	"fmt"
+	"github.com/atotto/clipboard"
 	"io"
 	"os"
 	"time"
@@ -89,7 +90,7 @@ func RawField(secret *api.Secret, field string) interface{} {
 }
 
 // PrintRawField prints raw field from the secret.
-func PrintRawField(ui cli.Ui, data interface{}, field string) int {
+func PrintRawField(ui cli.Ui, data interface{}, field string, clipboard bool, clipboardTTL time.Duration) int {
 	var val interface{}
 	switch data := data.(type) {
 	case *api.Secret:
@@ -103,25 +104,47 @@ func PrintRawField(ui cli.Ui, data interface{}, field string) int {
 		return 1
 	}
 
+	str := ""
 	format := Format(ui)
 	if format == "" || format == "table" || format == "raw" {
-		return PrintRaw(ui, fmt.Sprintf("%v", val))
+		str = fmt.Sprintf("%v", val)
+	} else {
+		// Handle specific format flags as best as possible
+		formatter, ok := Formatters[format]
+		if !ok {
+			ui.Error(fmt.Sprintf("Invalid output format: %s", format))
+			return 1
+		}
+
+		b, err := formatter.Format(val)
+		if err != nil {
+			ui.Error(fmt.Sprintf("Error formatting output: %s", err))
+			return 1
+		}
+		str = string(b)
 	}
 
-	// Handle specific format flags as best as possible
-	formatter, ok := Formatters[format]
-	if !ok {
-		ui.Error(fmt.Sprintf("Invalid output format: %s", format))
+	if clipboard {
+		return writeClipboard(ui, str, clipboardTTL)
+	}
+
+	return PrintRaw(ui, str)
+}
+
+func writeClipboard(ui cli.Ui, str string, ttl time.Duration) int {
+	if err := clipboard.WriteAll(str); err != nil {
+		ui.Error(fmt.Sprintf("Error writing to clipboard: %s", err))
 		return 1
 	}
-
-	b, err := formatter.Format(val)
-	if err != nil {
-		ui.Error(fmt.Sprintf("Error formatting output: %s", err))
-		return 1
+	ui.Info("Copied to clipboard!")
+	if ttl.Seconds() > 0 {
+		// TODO: do a self destruct TTL
+		ui.Info(fmt.Sprintf("Clearing clipboard in %s..", ttl.String()))
+		time.Sleep(ttl)
+		_ = clipboard.WriteAll("")
 	}
 
-	return PrintRaw(ui, string(b))
+	return 0
 }
 
 // PrintRaw prints a raw value to the terminal. If the process is being "piped"

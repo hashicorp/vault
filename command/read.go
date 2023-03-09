@@ -46,7 +46,7 @@ Usage: vault read [options] PATH
 }
 
 func (c *ReadCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	return c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat | FlagSetClipboard)
 }
 
 func (c *ReadCommand) AutocompleteArgs() complete.Predictor {
@@ -69,6 +69,10 @@ func (c *ReadCommand) Run(args []string) int {
 	switch {
 	case len(args) < 1:
 		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1, got %d)", len(args)))
+		return 1
+	}
+
+	if !validateClipboardFlag(c.BaseCommand) {
 		return 1
 	}
 
@@ -108,7 +112,7 @@ func (c *ReadCommand) Run(args []string) int {
 		}
 
 		if c.flagField != "" {
-			return PrintRawField(c.UI, secret, c.flagField)
+			return PrintRawField(c.UI, secret, c.flagField, c.flagClipboard, c.flagClipboardTTL)
 		}
 
 		return OutputSecret(c.UI, secret)

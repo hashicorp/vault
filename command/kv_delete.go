@@ -58,7 +58,7 @@ Usage: vault kv delete [options] PATH
 }
 
 func (c *KVDeleteCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat | FlagSetClipboard)
 	// Common Options
 	f := set.NewFlagSet("Common Options")
 
@@ -106,6 +106,10 @@ func (c *KVDeleteCommand) Run(args []string) int {
 		return 1
 	case len(args) > 1:
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
+		return 1
+	}
+
+	if !validateClipboardFlag(c.BaseCommand) {
 		return 1
 	}
 
@@ -181,7 +185,7 @@ func (c *KVDeleteCommand) Run(args []string) int {
 	}
 
 	if c.flagField != "" {
-		return PrintRawField(c.UI, secret, c.flagField)
+		return PrintRawField(c.UI, secret, c.flagField, c.flagClipboard, c.flagClipboardTTL)
 	}
 
 	return OutputSecret(c.UI, secret)

@@ -49,7 +49,7 @@ Usage: vault namespace patch [options] PATH
 }
 
 func (c *NamespacePatchCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat | FlagSetClipboard)
 
 	f := set.NewFlagSet("Command Options")
 	f.StringMapVar(&StringMapVar{
@@ -96,6 +96,10 @@ func (c *NamespacePatchCommand) Run(args []string) int {
 		return 1
 	}
 
+	if !validateClipboardFlag(c.BaseCommand) {
+		return 1
+	}
+
 	namespacePath := strings.TrimSpace(args[0])
 
 	client, err := c.Client()
@@ -131,7 +135,7 @@ func (c *NamespacePatchCommand) Run(args []string) int {
 
 	// Handle single field output
 	if c.flagField != "" {
-		return PrintRawField(c.UI, secret, c.flagField)
+		return PrintRawField(c.UI, secret, c.flagField, c.flagClipboard, c.flagClipboardTTL)
 	}
 
 	return OutputSecret(c.UI, secret)

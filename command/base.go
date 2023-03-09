@@ -54,6 +54,8 @@ type BaseCommand struct {
 	flagWrapTTL          time.Duration
 	flagUnlockKey        string
 
+	flagClipboard        bool
+	flagClipboardTTL     time.Duration
 	flagFormat           string
 	flagField            string
 	flagDetailed         bool
@@ -295,6 +297,7 @@ const (
 	FlagSetOutputField
 	FlagSetOutputFormat
 	FlagSetOutputDetailed
+	FlagSetClipboard
 )
 
 // flagSet creates the flags for this command. The result is cached on the
@@ -496,7 +499,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 
 		}
 
-		if bit&(FlagSetOutputField|FlagSetOutputFormat|FlagSetOutputDetailed) != 0 {
+		if bit&(FlagSetOutputField|FlagSetOutputFormat|FlagSetOutputDetailed|FlagSetClipboard) != 0 {
 			outputSet := set.NewFlagSet("Output Options")
 
 			if bit&FlagSetOutputField != 0 {
@@ -532,6 +535,21 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 					Default: false,
 					EnvVar:  EnvVaultDetailed,
 					Usage:   "Enables additional metadata during some operations",
+				})
+			}
+
+			if bit&FlagSetClipboard != 0 {
+				outputSet.BoolVar(&BoolVar{
+					Name:   "clipboard",
+					Usage:  "Outputs the results to the clipboard when a field is provided. Can be used with '--clipboard-ttl'.",
+					Target: &c.flagClipboard,
+				})
+
+				outputSet.DurationVar(&DurationVar{
+					Name: "clipboard-ttl",
+					Usage: "Allows for automatically clearing the clipboard after a specified ttl. It is specified as a numeric string with suffix like \"30s\" " +
+						"or \"5m\".",
+					Target: &c.flagClipboardTTL,
 				})
 			}
 		}

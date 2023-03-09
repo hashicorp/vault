@@ -52,7 +52,7 @@ Usage: vault kv rollback [options] KEY
 }
 
 func (c *KVRollbackCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat | FlagSetClipboard)
 
 	// Common Options
 	f := set.NewFlagSet("Common Options")
@@ -111,6 +111,10 @@ func (c *KVRollbackCommand) Run(args []string) int {
 		return 1
 	case c.flagVersion <= 0:
 		c.UI.Error(fmt.Sprintf("Invalid value %d for the version flag", c.flagVersion))
+		return 1
+	}
+
+	if !validateClipboardFlag(c.BaseCommand) {
 		return 1
 	}
 
@@ -284,7 +288,7 @@ func (c *KVRollbackCommand) Run(args []string) int {
 	}
 
 	if c.flagField != "" {
-		return PrintRawField(c.UI, secret, c.flagField)
+		return PrintRawField(c.UI, secret, c.flagField, c.flagClipboard, c.flagClipboardTTL)
 	}
 
 	return OutputSecret(c.UI, secret)

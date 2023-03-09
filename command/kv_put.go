@@ -65,7 +65,7 @@ Usage: vault kv put [options] KEY [DATA]
 }
 
 func (c *KVPutCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat | FlagSetClipboard)
 
 	// Common Options
 	f := set.NewFlagSet("Common Options")
@@ -124,6 +124,10 @@ func (c *KVPutCommand) Run(args []string) int {
 		return 1
 	case len(args) == 1:
 		c.UI.Error("Must supply data")
+		return 1
+	}
+
+	if !validateClipboardFlag(c.BaseCommand) {
 		return 1
 	}
 
@@ -213,7 +217,7 @@ func (c *KVPutCommand) Run(args []string) int {
 	}
 
 	if c.flagField != "" {
-		return PrintRawField(c.UI, secret, c.flagField)
+		return PrintRawField(c.UI, secret, c.flagField, c.flagClipboard, c.flagClipboardTTL)
 	}
 
 	if Format(c.UI) == "table" {
@@ -224,4 +228,18 @@ func (c *KVPutCommand) Run(args []string) int {
 	}
 
 	return OutputSecret(c.UI, secret)
+}
+
+func validateClipboardFlag(c *BaseCommand) bool {
+	if c.flagField == "" && c.flagClipboard {
+		c.UI.Error("Field must be provided with the -clipboard flag")
+		return false
+	}
+
+	if !c.flagClipboard && c.flagClipboardTTL > 0 {
+		c.UI.Error("-clipboard flag must be set when using -clipboard-ttl")
+		return false
+	}
+
+	return true
 }

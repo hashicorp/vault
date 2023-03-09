@@ -53,7 +53,7 @@ Usage: vault kv get [options] KEY
 }
 
 func (c *KVGetCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat | FlagSetClipboard)
 
 	// Common Options
 	f := set.NewFlagSet("Common Options")
@@ -102,6 +102,14 @@ func (c *KVGetCommand) Run(args []string) int {
 		return 1
 	case len(args) > 1:
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
+		return 1
+	}
+
+	if !validateClipboardFlag(c.BaseCommand) {
+		return 1
+	}
+	if !c.flagClipboard && c.flagClipboardTTL > 0 {
+		c.UI.Error("-clipboard flag must be set to use -clipboard-ttl flag")
 		return 1
 	}
 
@@ -187,18 +195,18 @@ func (c *KVGetCommand) Run(args []string) int {
 				if c.flagField == "data" {
 					if dataMap, ok := data.(map[string]interface{}); ok {
 						if _, ok := dataMap["data"]; ok {
-							return PrintRawField(c.UI, dataMap, c.flagField)
+							return PrintRawField(c.UI, dataMap, c.flagField, c.flagClipboard, c.flagClipboardTTL)
 						}
 					}
-					return PrintRawField(c.UI, secret, c.flagField)
+					return PrintRawField(c.UI, secret, c.flagField, c.flagClipboard, c.flagClipboardTTL)
 				}
-				return PrintRawField(c.UI, data, c.flagField)
+				return PrintRawField(c.UI, data, c.flagField, c.flagClipboard, c.flagClipboardTTL)
 			} else {
 				c.UI.Error(fmt.Sprintf("No data found at %s", fullPath))
 				return 2
 			}
 		} else {
-			return PrintRawField(c.UI, secret, c.flagField)
+			return PrintRawField(c.UI, secret, c.flagField, c.flagClipboard, c.flagClipboardTTL)
 		}
 	}
 

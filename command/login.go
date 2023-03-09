@@ -79,7 +79,7 @@ Usage: vault login [options] [AUTH K=V...]
 }
 
 func (c *LoginCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat | FlagSetClipboard)
 
 	f := set.NewFlagSet("Command Options")
 
@@ -159,6 +159,10 @@ func (c *LoginCommand) Run(args []string) int {
 	if c.flagNoStore && c.flagNoPrint {
 		c.UI.Error(wrapAtLength(
 			"-no-store and -no-print cannot be used together"))
+		return 1
+	}
+
+	if !validateClipboardFlag(c.BaseCommand) {
 		return 1
 	}
 
@@ -271,7 +275,7 @@ func (c *LoginCommand) Run(args []string) int {
 	// Handle special cases if the token was wrapped
 	if isWrapped {
 		if c.flagTokenOnly {
-			return PrintRawField(c.UI, secret, "wrapping_token")
+			return PrintRawField(c.UI, secret, "wrapping_token", c.flagClipboard, c.flagClipboardTTL)
 		}
 		if c.flagNoStore {
 			return OutputSecret(c.UI, secret)
@@ -328,7 +332,7 @@ func (c *LoginCommand) Run(args []string) int {
 	// If the user requested a particular field, print that out now since we
 	// are likely piping to another process.
 	if c.flagField != "" {
-		return PrintRawField(c.UI, secret, c.flagField)
+		return PrintRawField(c.UI, secret, c.flagField, c.flagClipboard, c.flagClipboardTTL)
 	}
 
 	// Print some yay! text, but only in table mode.

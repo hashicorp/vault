@@ -53,7 +53,7 @@ Usage: vault delete [options] PATH
 }
 
 func (c *DeleteCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	return c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat | FlagSetClipboard)
 }
 
 func (c *DeleteCommand) AutocompleteArgs() complete.Predictor {
@@ -76,6 +76,10 @@ func (c *DeleteCommand) Run(args []string) int {
 	switch {
 	case len(args) < 1:
 		c.UI.Error(fmt.Sprintf("Not enough arguments (expected at least 1, got %d)", len(args)))
+		return 1
+	}
+
+	if !validateClipboardFlag(c.BaseCommand) {
 		return 1
 	}
 
@@ -118,7 +122,7 @@ func (c *DeleteCommand) Run(args []string) int {
 
 	// Handle single field output
 	if c.flagField != "" {
-		return PrintRawField(c.UI, secret, c.flagField)
+		return PrintRawField(c.UI, secret, c.flagField, c.flagClipboard, c.flagClipboardTTL)
 	}
 
 	return OutputSecret(c.UI, secret)

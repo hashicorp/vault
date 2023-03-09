@@ -42,7 +42,7 @@ Usage: vault plugin info [options] TYPE NAME
 }
 
 func (c *PluginInfoCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat | FlagSetClipboard)
 
 	f := set.NewFlagSet("Command Options")
 
@@ -91,6 +91,10 @@ func (c *PluginInfoCommand) Run(args []string) int {
 		pluginNameRaw = args[1]
 	}
 
+	if !validateClipboardFlag(c.BaseCommand) {
+		return 1
+	}
+
 	client, err := c.Client()
 	if err != nil {
 		c.UI.Error(err.Error())
@@ -130,7 +134,7 @@ func (c *PluginInfoCommand) Run(args []string) int {
 	}
 
 	if c.flagField != "" {
-		return PrintRawField(c.UI, data, c.flagField)
+		return PrintRawField(c.UI, data, c.flagField, c.flagClipboard, c.flagClipboardTTL)
 	}
 	return OutputData(c.UI, data)
 }
