@@ -546,7 +546,7 @@ log.Println("Secret retrieved:", s.Data)
 <Tab heading="OpenAPI .NET (Beta)" group="openAPI-dotnet">
 
 ```cs
-VaultResponse<Object> resp = vaultClient.Secrets.KVv2Read("mypath");
+VaultResponse<Object> resp = vaultClient.Secrets.KVv2Read("my-secret-password");
 Console.WriteLine(resp.Data);
 ```
 
