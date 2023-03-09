@@ -81,7 +81,7 @@ func (c *CloudListClustersCommand) Run(args []string) int {
 
 func (c *CloudListClustersCommand) Help() string {
 	helpText := `
-Usage: vault cloud list cluster  --organization-id [org-id] --project-id [project-id]
+Usage: vault cloud list-clusters --organization-id [org-id] --project-id [project-id]
 ` + c.Flags().Help()
 
 	return strings.TrimSpace(helpText)
