@@ -21,7 +21,7 @@ jobs:
           echo 'enterprise=1' >> $GITHUB_OUTPUT
           echo 'go-tags=ent enterprise' >> $GITHUB_OUTPUT
         else
-          echo 'runs-on=ubuntu-latest' >> $GITHUB_OUTPUT
+          echo 'runs-on="ubuntu-latest"' >> $GITHUB_OUTPUT
           echo 'enterprise=' >> $GITHUB_OUTPUT
           echo 'go-tags=' >> $GITHUB_OUTPUT
         fi
