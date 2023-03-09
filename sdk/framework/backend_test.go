@@ -2,6 +2,7 @@ package framework
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"reflect"
 	"strings"
@@ -809,5 +810,23 @@ func TestInitializeBackend(t *testing.T) {
 
 	if !inited {
 		t.Fatal("backend should be open")
+	}
+}
+
+func TestFieldTypeMethods(t *testing.T) {
+	unknownFormat := convertType(TypeInvalid).format
+
+	for i := TypeInvalid + 1; i < typeInvalidMax; i++ {
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			if i.String() == TypeInvalid.String() {
+				t.Errorf("unknown type string for %d", i)
+			}
+
+			if convertType(i).format == unknownFormat {
+				t.Errorf("unknown schema for %d", i)
+			}
+
+			_ = i.Zero()
+		})
 	}
 }
