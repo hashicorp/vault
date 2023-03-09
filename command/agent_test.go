@@ -2428,6 +2428,9 @@ func TestAgent_Config_ReloadTls(t *testing.T) {
 	wg.Wait()
 }
 
+// TestAgent_NonTLSListener_SIGHUP tests giving a SIGHUP signal to a listener
+// without a TLS configuration. Prior to fixing GitHub issue #19480, this
+// would cause a panic.
 func TestAgent_NonTLSListener_SIGHUP(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
