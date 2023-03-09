@@ -5,12 +5,13 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/mitchellh/cli"
+
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/version"
-	"github.com/mitchellh/cli"
 
 	/*
 		The builtinplugins package is initialized here because it, in turn,
@@ -30,6 +31,7 @@ import (
 	credOIDC "github.com/hashicorp/vault-plugin-auth-jwt"
 	credKerb "github.com/hashicorp/vault-plugin-auth-kerberos"
 	credOCI "github.com/hashicorp/vault-plugin-auth-oci"
+
 	credAws "github.com/hashicorp/vault/builtin/credential/aws"
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
 	credGitHub "github.com/hashicorp/vault/builtin/credential/github"
@@ -39,6 +41,7 @@ import (
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
+
 	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
 
 	physAerospike "github.com/hashicorp/vault/physical/aerospike"
@@ -333,6 +336,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 		},
 		"cloud set-cluster": func() (cli.Command, error) {
 			return &CloudSetClusterCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"cloud list clusters": func() (cli.Command, error) {
+			return &CloudListClustersCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
