@@ -1,0 +1,3 @@
+```release-note:bug
+agent: Fix panic when SIGHUP is issued to Agent while it has a non-TLS listener.
+```
