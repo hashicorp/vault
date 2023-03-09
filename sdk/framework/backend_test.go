@@ -813,6 +813,8 @@ func TestInitializeBackend(t *testing.T) {
 	}
 }
 
+// TestFieldTypeMethods tries to ensure our switch-case statements for the
+// FieldType "enum" are complete.
 func TestFieldTypeMethods(t *testing.T) {
 	unknownFormat := convertType(TypeInvalid).format
 
