@@ -445,7 +445,7 @@ var secretData = new Dictionary<string, string> { { "password", "Hashi123" } };
 // Write a secret
 var kvRequestData = new KVv2WriteRequest(secretData);
 
-vaultClient.Secrets.KVv2Write("mypath", kvRequestData);
+vaultClient.Secrets.KVv2Write("my-secret-password", kvRequestData);
 ```
 
 </Tab>
