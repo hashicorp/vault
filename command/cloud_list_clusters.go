@@ -89,8 +89,7 @@ Usage: vault cloud list cluster  --organization-id [org-id] --project-id [projec
 }
 
 func (c *CloudListClustersCommand) Synopsis() string {
-	//TODO implement me
-	panic("implement me")
+	return "List HCP Vault clusters"
 }
 
 func (c *CloudListClustersCommand) Flags() *FlagSets {
