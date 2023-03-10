@@ -32,7 +32,7 @@ func (c *CloudListClustersCommand) Run(args []string) int {
 	}
 
 	if c.flagOrganizationID == "" || c.flagProjectID == "" {
-		c.UI.Error("HCP Organization, Project ID and cluster name must be set")
+		c.UI.Error("HCP Organization, Project ID must be set")
 		return 1
 	}
 
