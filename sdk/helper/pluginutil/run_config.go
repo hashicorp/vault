@@ -4,7 +4,10 @@ import (
 	"context"
 	"crypto/sha256"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
+	"net"
+	"os"
 	"os/exec"
 
 	log "github.com/hashicorp/go-hclog"
@@ -37,7 +40,65 @@ type runConfig struct {
 	PluginClientConfig
 }
 
+// parse information on reattaching to unmanaged plugins out of a
+// JSON-encoded environment variable.
+func parseReattachPlugins(in string) (map[string]*plugin.ReattachConfig, error) {
+	unmanagedPlugins := map[string]*plugin.ReattachConfig{}
+	if in != "" {
+		type reattachConfig struct {
+			Protocol        string
+			ProtocolVersion int
+			Addr            struct {
+				Network string
+				String  string
+			}
+			Pid  int
+			Test bool
+		}
+		var m map[string]reattachConfig
+		err := json.Unmarshal([]byte(in), &m)
+		if err != nil {
+			return unmanagedPlugins, fmt.Errorf("Invalid format for VAULT_REATTACH_PLUGINS: %w", err)
+		}
+		for p, c := range m {
+			// TODO(JM): parse plugin name??
+			var addr net.Addr
+			switch c.Addr.Network {
+			case "unix":
+				addr, err = net.ResolveUnixAddr("unix", c.Addr.String)
+				if err != nil {
+					return unmanagedPlugins, fmt.Errorf("Invalid unix socket path %q for %q: %w", c.Addr.String, p, err)
+				}
+			case "tcp":
+				addr, err = net.ResolveTCPAddr("tcp", c.Addr.String)
+				if err != nil {
+					return unmanagedPlugins, fmt.Errorf("Invalid TCP address %q for %q: %w", c.Addr.String, p, err)
+				}
+			default:
+				return unmanagedPlugins, fmt.Errorf("Unknown address type %q for %q", c.Addr.Network, p)
+			}
+			unmanagedPlugins["backend"] = &plugin.ReattachConfig{
+				Protocol:        plugin.Protocol(c.Protocol),
+				ProtocolVersion: c.ProtocolVersion,
+				Pid:             c.Pid,
+				Test:            c.Test,
+				Addr:            addr,
+			}
+		}
+	}
+	return unmanagedPlugins, nil
+}
+
 func (rc runConfig) makeConfig(ctx context.Context) (*plugin.ClientConfig, error) {
+	// The user can declare that certain plugins are being managed on
+	// Vault's behalf using this environment variable. This is used
+	// primarily for plugin debugging purposes.
+	unmanagedPlugins, err := parseReattachPlugins(os.Getenv("VAULT_REATTACH_PLUGINS"))
+	if err != nil {
+		return nil, err
+	}
+	fmt.Printf("\n\n%#+v\n\n", unmanagedPlugins)
+
 	cmd := exec.Command(rc.command, rc.args...)
 	cmd.Env = append(cmd.Env, rc.env...)
 
@@ -89,19 +150,26 @@ func (rc runConfig) makeConfig(ctx context.Context) (*plugin.ClientConfig, error
 		Checksum: rc.sha256,
 		Hash:     sha256.New(),
 	}
+	_ = secureConfig
 
 	clientConfig := &plugin.ClientConfig{
 		HandshakeConfig:  rc.HandshakeConfig,
 		VersionedPlugins: rc.PluginSets,
-		Cmd:              cmd,
-		SecureConfig:     secureConfig,
-		TLSConfig:        clientTLSConfig,
-		Logger:           rc.Logger,
+		// Can't set these with Reattach
+		// Cmd:              cmd,
+		// SecureConfig: secureConfig,
+		TLSConfig: clientTLSConfig,
+		Logger:    rc.Logger,
 		AllowedProtocols: []plugin.Protocol{
 			plugin.ProtocolNetRPC,
 			plugin.ProtocolGRPC,
 		},
-		AutoMTLS: rc.AutoMTLS,
+		AutoMTLS:   rc.AutoMTLS,
+		Reattach:   unmanagedPlugins["backend"],
+		SyncStdout: rc.Logger.StandardWriter(&log.StandardLoggerOptions{}),
+		SyncStderr: rc.Logger.StandardWriter(&log.StandardLoggerOptions{}),
+		// SyncStdout: logging.PluginOutputMonitor(fmt.Sprintf("%s:stdout", "debug-plugin")),
+		// SyncStderr: logging.PluginOutputMonitor(fmt.Sprintf("%s:stderr", "debug-plugin")),
 	}
 	return clientConfig, nil
 }

@@ -16,12 +16,18 @@ func main() {
 	tlsConfig := apiClientMeta.GetTLSConfig()
 	tlsProviderFunc := api.VaultPluginTLSProvider(tlsConfig)
 
-	if err := plugin.ServeMultiplex(&plugin.ServeOpts{
+	serveOpts := &plugin.ServeOpts{
 		BackendFactoryFunc: userpass.Factory,
 		// set the TLSProviderFunc so that the plugin maintains backwards
 		// compatibility with Vault versions that don’t support plugin AutoMTLS
 		TLSProviderFunc: tlsProviderFunc,
-	}); err != nil {
+	}
+
+	if apiClientMeta.GetDebug() {
+		serveOpts.Debug = true
+	}
+
+	if err := plugin.ServeMultiplex(serveOpts); err != nil {
 		logger := hclog.New(&hclog.LoggerOptions{})
 
 		logger.Error("plugin shutting down", "error", err)

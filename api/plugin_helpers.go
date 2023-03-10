@@ -83,6 +83,7 @@ type PluginAPIClientMeta struct {
 	flagClientCert string
 	flagClientKey  string
 	flagInsecure   bool
+	flagDebug      bool
 }
 
 // FlagSet returns the flag set for configuring the TLS connection
@@ -94,8 +95,14 @@ func (f *PluginAPIClientMeta) FlagSet() *flag.FlagSet {
 	fs.StringVar(&f.flagClientCert, "client-cert", "", "")
 	fs.StringVar(&f.flagClientKey, "client-key", "", "")
 	fs.BoolVar(&f.flagInsecure, "tls-skip-verify", false, "")
+	fs.BoolVar(&f.flagDebug, "debug", false, "")
 
 	return fs
+}
+
+// GetDebug will return a debug boolean based off the value from the flag
+func (f *PluginAPIClientMeta) GetDebug() bool {
+	return f.flagDebug
 }
 
 // GetTLSConfig will return a TLSConfig based off the values from the flags
