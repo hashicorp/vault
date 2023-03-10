@@ -2,11 +2,11 @@ package command
 
 import (
 	"fmt"
-	"github.com/atotto/clipboard"
 	"io"
 	"os"
 	"time"
 
+	"github.com/atotto/clipboard"
 	"github.com/fatih/color"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/config"
