@@ -2142,7 +2142,7 @@ func (c *ServerCommand) addPlugin(path, token string, core *vault.Core) error {
 	req := &logical.Request{
 		Operation:   logical.UpdateOperation,
 		ClientToken: token,
-		Path:        fmt.Sprintf("sys/plugins/catalog/%s", name),
+		Path:        fmt.Sprintf("sys/plugins/catalog/auth/%s", name),
 		Data: map[string]interface{}{
 			"sha256":  sha256sum,
 			"command": name,

@@ -901,6 +901,7 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 		return nil, errors.New("cannot execute files outside of configured plugin directory")
 	}
 
+	commandFull = ""
 	// entryTmp should only be used for the below type and version checks, it uses the
 	// full command instead of the relative command.
 	entryTmp := &pluginutil.PluginRunner{

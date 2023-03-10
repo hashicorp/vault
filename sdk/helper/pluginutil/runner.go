@@ -55,6 +55,7 @@ type PluginRunner struct {
 	Env            []string                    `json:"env" structs:"env"`
 	Sha256         []byte                      `json:"sha256" structs:"sha256"`
 	Builtin        bool                        `json:"builtin" structs:"builtin"`
+	Reattach       string                      `json:"reattach" structs:"reattach"`
 	BuiltinFactory func() (interface{}, error) `json:"-" structs:"-"`
 }
 
