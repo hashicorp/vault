@@ -52,16 +52,18 @@ func (c *CloudSetClusterCommand) Flags() *FlagSets {
 	f := set.NewFlagSet("Command Options")
 
 	f.StringVar(&StringVar{
-		Name:    "organization-id",
-		Target:  &c.flagOrganizationID,
-		Default: "",
+		Name:   "organization-id",
+		Target: &c.flagOrganizationID,
+		// https://github.com/hashicorp/hcp-sdk-go#user-profile
+		Default: os.Getenv("HCP_ORGANIZATION_ID"),
 		Usage:   "HCP Organization ID that contains the target HCP Vault cluster",
 	})
 
 	f.StringVar(&StringVar{
-		Name:    "project-id",
-		Target:  &c.flagProjectID,
-		Default: "",
+		Name:   "project-id",
+		Target: &c.flagProjectID,
+		// https://github.com/hashicorp/hcp-sdk-go#user-profile
+		Default: os.Getenv("HCP_PROJECT_ID"),
 		Usage:   "HCP Project ID that contains the target HCP Vault cluster",
 	})
 	f.StringVar(&StringVar{
