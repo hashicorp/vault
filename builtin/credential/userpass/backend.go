@@ -34,8 +34,9 @@ func Backend() *backend {
 			pathLogin(&b),
 		},
 
-		AuthRenew:   b.pathLoginRenew,
-		BackendType: logical.TypeCredential,
+		InitializeFunc: b.initialize,
+		AuthRenew:      b.pathLoginRenew,
+		BackendType:    logical.TypeCredential,
 	}
 
 	return &b
@@ -43,6 +44,11 @@ func Backend() *backend {
 
 type backend struct {
 	*framework.Backend
+}
+
+func (b *backend) initialize(ctx context.Context, req *logical.InitializationRequest) error {
+	b.Logger().Debug("inside initialize")
+	return nil
 }
 
 const backendHelp = `

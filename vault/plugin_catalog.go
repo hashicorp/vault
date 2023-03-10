@@ -68,17 +68,23 @@ type PluginCatalog struct {
 // In particular, the PluginRunner struct has slices and a function which are not
 // comparable, so we need to transform it into a struct which is.
 type externalPluginsKey struct {
-	name    string
-	typ     consts.PluginType
-	version string
-	command string
-	args    string
-	env     string
-	sha256  string
-	builtin bool
+	name     string
+	typ      consts.PluginType
+	version  string
+	command  string
+	args     string
+	env      string
+	sha256   string
+	reattach string
+	builtin  bool
 }
 
 func makeExternalPluginsKey(p *pluginutil.PluginRunner) (externalPluginsKey, error) {
+	reattach, err := json.Marshal(p.Reattach)
+	if err != nil {
+		return externalPluginsKey{}, err
+	}
+
 	args, err := json.Marshal(p.Args)
 	if err != nil {
 		return externalPluginsKey{}, err
@@ -90,14 +96,15 @@ func makeExternalPluginsKey(p *pluginutil.PluginRunner) (externalPluginsKey, err
 	}
 
 	return externalPluginsKey{
-		name:    p.Name,
-		typ:     p.Type,
-		version: p.Version,
-		command: p.Command,
-		args:    string(args),
-		env:     string(env),
-		sha256:  hex.EncodeToString(p.Sha256),
-		builtin: p.Builtin,
+		name:     p.Name,
+		typ:      p.Type,
+		version:  p.Version,
+		reattach: string(reattach),
+		command:  p.Command,
+		args:     string(args),
+		env:      string(env),
+		sha256:   hex.EncodeToString(p.Sha256),
+		builtin:  p.Builtin,
 	}, nil
 }
 
@@ -770,7 +777,7 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 		plugin.Command = filepath.Join(c.directory, plugin.Command)
 
 		// Upgrade the storage. At this point we don't know what type of plugin this is so pass in the unknown type.
-		runner, err := c.setInternal(ctx, pluginName, consts.PluginTypeUnknown, plugin.Version, cmdOld, plugin.Args, plugin.Env, plugin.Sha256)
+		runner, err := c.setInternal(ctx, pluginName, consts.PluginTypeUnknown, plugin.Version, cmdOld, plugin.Args, plugin.Env, plugin.Sha256, plugin.Reattach)
 		if err != nil {
 			if errors.Is(err, ErrPluginBadType) {
 				retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: plugin of unknown type", pluginName))
@@ -865,7 +872,7 @@ func (c *PluginCatalog) get(ctx context.Context, name string, pluginType consts.
 
 // Set registers a new external plugin with the catalog, or updates an existing
 // external plugin. It takes the name, command and SHA256 of the plugin.
-func (c *PluginCatalog) Set(ctx context.Context, name string, pluginType consts.PluginType, version string, command string, args []string, env []string, sha256 []byte) error {
+func (c *PluginCatalog) Set(ctx context.Context, name string, pluginType consts.PluginType, version string, command string, args []string, env []string, sha256 []byte, reattach string) error {
 	if c.directory == "" {
 		return ErrDirectoryNotConfigured
 	}
@@ -880,11 +887,11 @@ func (c *PluginCatalog) Set(ctx context.Context, name string, pluginType consts.
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	_, err := c.setInternal(ctx, name, pluginType, version, command, args, env, sha256)
+	_, err := c.setInternal(ctx, name, pluginType, version, command, args, env, sha256, reattach)
 	return err
 }
 
-func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType consts.PluginType, version string, command string, args []string, env []string, sha256 []byte) (*pluginutil.PluginRunner, error) {
+func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType consts.PluginType, version string, command string, args []string, env []string, sha256 []byte, reattach string) (*pluginutil.PluginRunner, error) {
 	// Best effort check to make sure the command isn't breaking out of the
 	// configured plugin directory.
 	commandFull := filepath.Join(c.directory, command)
@@ -905,12 +912,13 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 	// entryTmp should only be used for the below type and version checks, it uses the
 	// full command instead of the relative command.
 	entryTmp := &pluginutil.PluginRunner{
-		Name:    name,
-		Command: commandFull,
-		Args:    args,
-		Env:     env,
-		Sha256:  sha256,
-		Builtin: false,
+		Name:     name,
+		Command:  commandFull,
+		Args:     args,
+		Env:      env,
+		Sha256:   sha256,
+		Reattach: reattach,
+		Builtin:  false,
 	}
 	// If the plugin type is unknown, we want to attempt to determine the type
 	if pluginType == consts.PluginTypeUnknown {

@@ -77,7 +77,7 @@ func parseReattachPlugins(in string) (map[string]*plugin.ReattachConfig, error) 
 			default:
 				return unmanagedPlugins, fmt.Errorf("Unknown address type %q for %q", c.Addr.Network, p)
 			}
-			unmanagedPlugins["backend"] = &plugin.ReattachConfig{
+			unmanagedPlugins["auth"] = &plugin.ReattachConfig{
 				Protocol:        plugin.Protocol(c.Protocol),
 				ProtocolVersion: c.ProtocolVersion,
 				Pid:             c.Pid,

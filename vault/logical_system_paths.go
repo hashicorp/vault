@@ -1299,9 +1299,9 @@ func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 				Type:        framework.TypeString,
 				Description: strings.TrimSpace(sysHelp["plugin-catalog_sha-256"][0]),
 			},
-			"sha_256": {
+			"reattach": {
 				Type:        framework.TypeString,
-				Description: strings.TrimSpace(sysHelp["plugin-catalog_sha-256"][0]),
+				Description: "reattach config to debug plugins",
 			},
 			"command": {
 				Type:        framework.TypeString,

@@ -238,7 +238,6 @@ func ServeMultiplex(opts *ServeOpts) error {
 
 	// Duplicate implementation is required because the go-plugin
 	// ReattachConfig.Addr implementation is not friendly for JSON encoding
-	// and to avoid importing terraform-exec.
 	type reattachConfigAddr struct {
 		Network string
 		String  string
@@ -253,7 +252,7 @@ func ServeMultiplex(opts *ServeOpts) error {
 	}
 
 	reattachBytes, err := json.Marshal(map[string]reattachConfig{
-		"backend": {
+		"auth": {
 			Protocol:        string(pluginReattachConfig.Protocol),
 			ProtocolVersion: pluginReattachConfig.ProtocolVersion,
 			Pid:             pluginReattachConfig.Pid,
