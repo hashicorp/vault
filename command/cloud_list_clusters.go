@@ -3,9 +3,11 @@ package command
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	hcpv "github.com/hashicorp/hcp-sdk-go/clients/cloud-vault-service/stable/2020-11-25/client/vault_service"
+	hcpvmodels "github.com/hashicorp/hcp-sdk-go/clients/cloud-vault-service/stable/2020-11-25/models"
 	"github.com/hashicorp/hcp-sdk-go/config"
 	"github.com/hashicorp/hcp-sdk-go/httpclient"
 	"github.com/mitchellh/cli"
@@ -63,11 +65,27 @@ func (c *CloudListClustersCommand) Run(args []string) int {
 	// TODO: usually commands use `OutputList`, but the table formatter works for vault specific responses
 	format := Format(c.UI)
 	if format == "table" {
-		rows := []string{
-			"ID" + hopeDelim + "Version",
+
+		isProxyEnabled := func(clusterDNS *hcpvmodels.HashicorpCloudVault20201125ClusterDNSNames) bool {
+			if clusterDNS == nil {
+				return false
+			}
+			return clusterDNS.Proxy != ""
 		}
+
+		header := strings.Join(
+			[]string{"ID", "Version", "State", "Proxy Enabled"},
+			hopeDelim,
+		)
+		rows := []string{header}
 		for _, cluster := range clusters {
-			rows = append(rows, cluster.ID+hopeDelim+cluster.CurrentVersion)
+			row := []string{
+				cluster.ID,
+				cluster.CurrentVersion,
+				string(*cluster.State),
+				strconv.FormatBool(isProxyEnabled(cluster.DNSNames)),
+			}
+			rows = append(rows, strings.Join(row, hopeDelim))
 		}
 		output := tableOutput(rows, &columnize.Config{
 			Delim: hopeDelim,
