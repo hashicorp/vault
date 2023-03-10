@@ -753,7 +753,7 @@ func (t FieldType) Zero() interface{} {
 	case TypeInt:
 		return 0
 	case TypeInt64:
-		return int64(0)	 
+		return int64(0)
 	case TypeBool:
 		return false
 	case TypeMap:
