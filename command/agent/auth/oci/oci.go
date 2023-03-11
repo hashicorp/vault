@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -32,7 +33,7 @@ const (
 		rather quickly. This is configurable, however.
 
 	*/
-	defaultCredCheckFreqSeconds = 60
+	defaultCredCheckFreqSeconds = 60 * time.Second
 
 	defaultConfigFileName    = "config"
 	defaultConfigDirName     = ".oci"
@@ -77,11 +78,11 @@ func NewOCIAuthMethod(conf *auth.AuthConfig, vaultAddress string) (auth.AuthMeth
 	// Check for an optional custom frequency at which we should poll for creds.
 	credCheckFreqSec := defaultCredCheckFreqSeconds
 	if checkFreqRaw, ok := conf.Config["credential_poll_interval"]; ok {
-		if credFreq, ok := checkFreqRaw.(int); ok {
-			credCheckFreqSec = credFreq
-		} else {
-			return nil, errors.New("could not convert 'credential_poll_interval' config value to int")
+		checkFreq, err := parseutil.ParseDurationSecond(checkFreqRaw)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse credential_poll_interval: %v", err)
 		}
+		credCheckFreqSec = checkFreq
 	}
 
 	switch {
@@ -192,8 +193,8 @@ func (a *ociMethod) Shutdown() {
 	close(a.stopCh)
 }
 
-func (a *ociMethod) pollForCreds(frequencySeconds int) {
-	ticker := time.NewTicker(time.Duration(frequencySeconds) * time.Second)
+func (a *ociMethod) pollForCreds(frequency time.Duration) {
+	ticker := time.NewTicker(frequency)
 	defer ticker.Stop()
 	for {
 		select {

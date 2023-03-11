@@ -40,4 +40,4 @@ but from experience, credentials are rotated every 10 to 15 minutes.
 
 - `role` `(string: required)` - The role to authenticate against on Vault.
 
-- `credential_poll_interval` `(integer: optional)` - In seconds, how frequently the Vault agent should check for new credentials.
+- `credential_poll_interval` `(duration: "60s", optional)` - In seconds, how frequently the Vault agent should check for new credentials.
