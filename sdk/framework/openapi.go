@@ -610,8 +610,8 @@ func constructOperationID(
 		}
 	}
 
-	// hyphenate is a helper that hyphenates the given slice except the empty elements
-	hyphenate := func(parts []string) string {
+	// a helper that hyphenates & lower-cases the slice except the empty elements
+	toLowerHyphenate := func(parts []string) string {
 		filtered := make([]string, 0, len(parts))
 		for _, e := range parts {
 			if e != "" {
@@ -641,10 +641,10 @@ func constructOperationID(
 	}
 
 	if needSuffix {
-		suffix = hyphenate(nonWordRe.Split(strings.ToLower(path), -1))
+		suffix = toLowerHyphenate(nonWordRe.Split(path, -1))
 	}
 
-	return hyphenate([]string{prefix, verb, suffix})
+	return toLowerHyphenate([]string{prefix, verb, suffix})
 }
 
 // expandPattern expands a regex pattern by generating permutations of any optional parameters
