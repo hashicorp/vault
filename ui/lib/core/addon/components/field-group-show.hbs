@@ -5,7 +5,7 @@
         {{#each fields as |attr|}}
           {{#if (not (includes attr.options.fieldValue (array "id" "mutableId")))}}
             <InfoTableRow
-              @alwaysRender={{this.showAllFields}}
+              @alwaysRender={{@showAllFields}}
               @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
             >
               {{#if attr.options.sensitive}}
@@ -17,13 +17,13 @@
           {{/if}}
         {{/each}}
       {{else}}
-        <div class="box {{unless this.showAllFields 'is-shadowless'}} is-fullwidth is-sideless is-marginless">
+        <div class="box {{unless @showAllFields 'is-shadowless'}} is-fullwidth is-sideless is-marginless">
           <h2 class="title is-5">
             {{group}}
           </h2>
           {{#each fields as |attr|}}
             <InfoTableRow
-              @alwaysRender={{this.showAllFields}}
+              @alwaysRender={{@showAllFields}}
               @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
             >
               {{#if attr.options.sensitive}}

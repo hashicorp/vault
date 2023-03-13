@@ -1,7 +1,7 @@
 <span class="is-inline-block" data-test-component="info-tooltip" data-test-tooltip>
   <ToolTip
-    @verticalPosition={{or this.verticalPosition "below"}}
-    @horizontalPosition={{or this.horizontalPosition "auto-right"}}
+    @verticalPosition={{or @verticalPosition "below"}}
+    @horizontalPosition={{or @horizontalPosition "auto-right"}}
     data-test-component="info-tooltip"
     data-test-tooltip
     as |d|
@@ -11,7 +11,7 @@
       @type="button"
       class="tool-tip-trigger button is-ghost is-compact"
       data-test-tool-tip-trigger={{true}}
-      onclick={{action "preventSubmit"}}
+      {{on "click" this.preventSubmit}}
     >
       <Icon @name="info" class="auto-width" aria-label="help" />
     </d.Trigger>
