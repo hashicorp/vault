@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Add support for dumping pprof files to the filesystem using SIGUSR2
+```
