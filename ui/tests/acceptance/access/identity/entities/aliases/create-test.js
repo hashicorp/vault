@@ -5,6 +5,7 @@ import { testAliasCRUD, testAliasDeleteFromForm } from '../../_shared-alias-test
 import authPage from 'vault/tests/pages/auth';
 
 module('Acceptance | /access/identity/entities/aliases/add', function (hooks) {
+  // TODO come back and figure out why this is failing.  Seems to be a race condition
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {

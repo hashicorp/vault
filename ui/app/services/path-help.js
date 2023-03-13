@@ -231,7 +231,6 @@ export default Service.extend({
     let { apiPath } = pathInfo;
     const getPath = paths.find((path) => path.operations.includes('get'));
 
-    // ARG TODO Return here
     // the action might be "Generate" or something like that so we'll grab the first post endpoint if there
     // isn't one with "Create"
     // TODO: look into a more sophisticated way to determine the create endpoint

@@ -101,7 +101,6 @@
           <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
         {{else if (not-eq attr.options.readOnly true)}}
           <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
-          {{! ARG TODO return }}
           {{! TODO: If database && !updateDB show warning }}
           {{#if (get this.warningMessages attr.name)}}
             <AlertBanner @type="warning" @message={{get this.warningMessages attr.name}} />
