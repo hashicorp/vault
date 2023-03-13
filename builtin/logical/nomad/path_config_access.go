@@ -16,7 +16,6 @@ func pathConfigAccess(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixNomad,
-			OperationSuffix: "access-config",
 		},
 
 		Fields: map[string]*framework.FieldSchema{
@@ -51,11 +50,33 @@ must be x509 PEM encoded and if this is set you need to also set client_cert.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathConfigAccessRead,
-			logical.CreateOperation: b.pathConfigAccessWrite,
-			logical.UpdateOperation: b.pathConfigAccessWrite,
-			logical.DeleteOperation: b.pathConfigAccessDelete,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathConfigAccessRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "access-config",
+				},
+			},
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.pathConfigAccessWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "access",
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathConfigAccessWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "access",
+				},
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathConfigAccessDelete,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "access-config",
+				},
+			},
 		},
 
 		ExistenceCheck: b.configExistenceCheck,
