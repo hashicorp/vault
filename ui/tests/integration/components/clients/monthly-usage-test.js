@@ -6,6 +6,7 @@ import { formatRFC3339 } from 'date-fns';
 import { findAll } from '@ember/test-helpers';
 import { calculateAverage } from 'vault/utils/chart-helpers';
 import { formatNumber } from 'core/helpers/format-number';
+import { staticNow } from 'vault/tests/helpers/stubs';
 
 module('Integration | Component | clients/monthly-usage', function (hooks) {
   setupRenderingTest(hooks);
@@ -1409,7 +1410,7 @@ module('Integration | Component | clients/monthly-usage', function (hooks) {
     },
   ];
   hooks.beforeEach(function () {
-    this.set('timestamp', formatRFC3339(new Date()));
+    this.set('timestamp', formatRFC3339(staticNow));
     this.set('isDateRange', true);
     this.set('chartLegend', [
       { label: 'entity clients', key: 'entity_clients' },
@@ -1443,9 +1444,9 @@ module('Integration | Component | clients/monthly-usage', function (hooks) {
     ]);
     await render(hbs`
     <div id="modal-wormhole"></div>
-    <Clients::MonthlyUsage 
+    <Clients::MonthlyUsage
     @chartLegend={{this.chartLegend}}
-    @verticalBarChartData={{this.byMonthActivityData}} 
+    @verticalBarChartData={{this.byMonthActivityData}}
     @responseTimestamp={{this.timestamp}}
     />
     `);

@@ -4,18 +4,19 @@ import { setupApplicationTest } from 'ember-qunit';
 import Pretender from 'pretender';
 import formatRFC3339 from 'date-fns/formatRFC3339';
 import { addDays, subDays } from 'date-fns';
+import { staticNow } from 'vault/tests/helpers/stubs';
 
 const generateHealthResponse = (state) => {
   let expiry;
   switch (state) {
     case 'expired':
-      expiry = subDays(new Date(), 2);
+      expiry = subDays(staticNow, 2);
       break;
     case 'expiring':
-      expiry = addDays(new Date(), 10);
+      expiry = addDays(staticNow, 10);
       break;
     default:
-      expiry = addDays(new Date(), 33);
+      expiry = addDays(staticNow, 33);
       break;
   }
   return {

@@ -6,6 +6,7 @@ import { formatRFC3339 } from 'date-fns';
 import { findAll } from '@ember/test-helpers';
 import { calculateAverage } from 'vault/utils/chart-helpers';
 import { formatNumber } from 'core/helpers/format-number';
+import { staticNow } from 'vault/tests/helpers/stubs';
 
 module('Integration | Component | clients/running-total', function (hooks) {
   setupRenderingTest(hooks);
@@ -1415,7 +1416,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
     non_entity_clients: 17850,
   };
   hooks.beforeEach(function () {
-    this.set('timestamp', formatRFC3339(new Date()));
+    this.set('timestamp', formatRFC3339(staticNow));
     this.set('chartLegend', [
       { label: 'entity clients', key: 'entity_clients' },
       { label: 'non-entity clients', key: 'non_entity_clients' },
@@ -1439,7 +1440,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
       @runningTotals={{this.totalUsageCounts}}
       @upgradeData={{this.upgradeDuringActivity}}
       @responseTimestamp={{this.timestamp}}
-      @isHistoricalMonth={{false}}           
+      @isHistoricalMonth={{false}}
     />
     `);
 
@@ -1509,7 +1510,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
       @byMonthActivityData={{this.byMonthActivityData}}
       @runningTotals={{this.totalUsageCounts}}
       @responseTimestamp={{this.timestamp}}
-      @isHistoricalMonth={{false}} 
+      @isHistoricalMonth={{false}}
     />
     `);
     assert.dom('[data-test-running-total]').exists('running total component renders');
