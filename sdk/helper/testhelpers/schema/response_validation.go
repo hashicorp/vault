@@ -50,24 +50,6 @@ func validateResponseDataImpl(schema *framework.Response, data map[string]interf
 		return nil
 	}
 
-	// these are special fields that will not show up in the final response and
-	// should be ignored
-	for _, field := range []string{
-		logical.HTTPContentType,
-		logical.HTTPRawBody,
-		logical.HTTPStatusCode,
-		logical.HTTPRawBodyAlreadyJSONDecoded,
-		logical.HTTPCacheControlHeader,
-		logical.HTTPPragmaHeader,
-		logical.HTTPWWWAuthenticateHeader,
-	} {
-		delete(data, field)
-
-		if _, ok := schema.Fields[field]; ok {
-			return fmt.Errorf("encountered a reserved field in response schema: %s", field)
-		}
-	}
-
 	// Marshal the data to JSON and back to convert the map's values into
 	// JSON strings expected by Validate() and ValidateStrict(). This is
 	// not efficient and is done for testing purposes only.
@@ -82,6 +64,24 @@ func validateResponseDataImpl(schema *framework.Response, data map[string]interf
 		&dataWithStringValues,
 	); err != nil {
 		return fmt.Errorf("failed to unmashal data: %w", err)
+	}
+
+	// these are special fields that will not show up in the final response and
+	// should be ignored
+	for _, field := range []string{
+		logical.HTTPContentType,
+		logical.HTTPRawBody,
+		logical.HTTPStatusCode,
+		logical.HTTPRawBodyAlreadyJSONDecoded,
+		logical.HTTPCacheControlHeader,
+		logical.HTTPPragmaHeader,
+		logical.HTTPWWWAuthenticateHeader,
+	} {
+		delete(dataWithStringValues, field)
+
+		if _, ok := schema.Fields[field]; ok {
+			return fmt.Errorf("encountered a reserved field in response schema: %s", field)
+		}
 	}
 
 	// Validate
