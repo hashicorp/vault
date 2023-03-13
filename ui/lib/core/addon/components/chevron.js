@@ -20,9 +20,6 @@ const DIRECTIONS = ['right', 'left', 'up', 'down'];
  */
 
 export default class Chevron extends Component {
-  tagName = '';
-  isButton = false;
-
   @tracked direction = 'right';
 
   get glyph() {

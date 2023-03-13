@@ -19,8 +19,6 @@ const flightIconNames = flightIconMap.assets.mapBy('iconName').uniq();
  */
 
 export default class Icon extends Component {
-  tagName = '';
-
   constructor(owner, args) {
     super(owner, args);
     assert('Icon component size argument must be either "16" or "24"', ['16', '24'].includes(this.size));
