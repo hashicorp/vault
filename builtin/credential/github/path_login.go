@@ -18,7 +18,7 @@ func pathLogin(b *backend) *framework.Path {
 		Pattern: "login",
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixGitHub,
+			OperationPrefix: operationPrefixGithub,
 			OperationVerb:   "login",
 		},
 

@@ -11,7 +11,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
-const operationPrefixGitHub = "git-hub"
+const operationPrefixGithub = "github"
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
@@ -33,11 +33,11 @@ func Backend() *backend {
 	teamMapPaths := b.TeamMap.Paths()
 
 	teamMapPaths[0].DisplayAttrs = &framework.DisplayAttributes{
-		OperationPrefix: operationPrefixGitHub,
+		OperationPrefix: operationPrefixGithub,
 		OperationSuffix: "teams",
 	}
 	teamMapPaths[1].DisplayAttrs = &framework.DisplayAttributes{
-		OperationPrefix: operationPrefixGitHub,
+		OperationPrefix: operationPrefixGithub,
 		OperationSuffix: "team-mapping",
 	}
 
@@ -51,11 +51,11 @@ func Backend() *backend {
 	userMapPaths := b.UserMap.Paths()
 
 	userMapPaths[0].DisplayAttrs = &framework.DisplayAttributes{
-		OperationPrefix: operationPrefixGitHub,
+		OperationPrefix: operationPrefixGithub,
 		OperationSuffix: "users",
 	}
 	userMapPaths[1].DisplayAttrs = &framework.DisplayAttributes{
-		OperationPrefix: operationPrefixGitHub,
+		OperationPrefix: operationPrefixGithub,
 		OperationSuffix: "user-mapping",
 	}
 

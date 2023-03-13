@@ -19,8 +19,7 @@ func pathConfig(b *backend) *framework.Path {
 		Pattern: "config",
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixGitHub,
-			OperationSuffix: "config",
+			OperationPrefix: operationPrefixGithub,
 		},
 
 		Fields: map[string]*framework.FieldSchema{
@@ -55,9 +54,20 @@ API-compatible authentication server.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathConfigWrite,
-			logical.ReadOperation:   b.pathConfigRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathConfigWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationPrefix: operationPrefixGithub,
+					OperationVerb:   "configure",
+				},
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathConfigRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "config",
+				},
+			},
 		},
 	}
 
