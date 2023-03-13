@@ -16,11 +16,12 @@ module('Acceptance | settings/configure/secrets/ssh', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
+    this.timestamp = new Date().getTime();
     return authPage.login();
   });
 
   test('it configures ssh ca', async function (assert) {
-    const path = `ssh-${new Date().getTime()}`;
+    const path = `ssh-${this.timestamp}`;
     await enablePage.enable('ssh', path);
     await settled();
     await page.visit({ backend: path });

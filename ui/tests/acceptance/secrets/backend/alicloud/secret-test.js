@@ -9,11 +9,12 @@ module('Acceptance | alicloud/enable', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
+    this.timestamp = new Date().getTime();
     return authPage.login();
   });
 
   test('enable alicloud', async function (assert) {
-    const enginePath = `alicloud-${new Date().getTime()}`;
+    const enginePath = `alicloud-${this.timestamp}`;
     await mountSecrets.visit();
     await settled();
     await mountSecrets.selectType('alicloud');

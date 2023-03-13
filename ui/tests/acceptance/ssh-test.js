@@ -8,6 +8,7 @@ module('Acceptance | ssh secret backend', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
+    this.timestamp = new Date().getTime();
     return authPage.login();
   });
 
@@ -76,8 +77,7 @@ module('Acceptance | ssh secret backend', function (hooks) {
   ];
   test('ssh backend', async function (assert) {
     assert.expect(26);
-    const now = new Date().getTime();
-    const sshPath = `ssh-${now}`;
+    const sshPath = `ssh-${this.timestamp}`;
 
     await enablePage.enable('ssh', sshPath);
     await settled();

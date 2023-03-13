@@ -8,13 +8,13 @@ module('Acceptance | policies (old)', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
+    this.timestamp = new Date().getTime();
     return authPage.login();
   });
 
   test('policies', async function (assert) {
-    const now = new Date().getTime();
     const policyString = 'path "*" { capabilities = ["update"]}';
-    const policyName = `Policy test ${now}`;
+    const policyName = `Policy test ${this.timestamp}`;
     const policyLower = policyName.toLowerCase();
 
     await page.visit({ type: 'acl' });
@@ -64,9 +64,8 @@ module('Acceptance | policies (old)', function (hooks) {
 
   // https://github.com/hashicorp/vault/issues/4395
   test('it properly fetches policies when the name ends in a ,', async function (assert) {
-    const now = new Date().getTime();
     const policyString = 'path "*" { capabilities = ["update"]}';
-    const policyName = `${now}-symbol,.`;
+    const policyName = `${this.timestamp}-symbol,.`;
 
     await page.visit({ type: 'acl' });
     // new policy creation

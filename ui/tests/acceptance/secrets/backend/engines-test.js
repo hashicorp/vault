@@ -9,12 +9,13 @@ module('Acceptance | engine/disable', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
+    this.timestamp = new Date().getTime();
     return authPage.login();
   });
 
   test('disable engine', async function (assert) {
     // first mount an engine so we can disable it.
-    const enginePath = `alicloud-${new Date().getTime()}`;
+    const enginePath = `alicloud-${this.timestamp}`;
     await mountSecrets.enable('alicloud', enginePath);
     await settled();
     assert.ok(backendsPage.rows.filterBy('path', `${enginePath}/`)[0], 'shows the mounted engine');

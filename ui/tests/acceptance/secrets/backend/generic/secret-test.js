@@ -17,6 +17,7 @@ module('Acceptance | secrets/generic/create', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
+    this.timestamp = new Date().getTime();
     this.server = apiStub({ usePassthrough: true });
     return authPage.login();
   });
@@ -26,8 +27,8 @@ module('Acceptance | secrets/generic/create', function (hooks) {
   });
 
   test('it creates and can view a secret with the generic backend', async function (assert) {
-    const path = `generic-${new Date().getTime()}`;
-    const kvPath = `generic-kv-${new Date().getTime()}`;
+    const path = `generic-${this.timestamp}`;
+    const kvPath = `generic-kv-${this.timestamp}`;
     await cli.runCommands([`write sys/mounts/${path} type=generic`, `write ${path}/foo bar=baz`]);
     await listPage.visitRoot({ backend: path });
     assert.strictEqual(
@@ -48,8 +49,8 @@ module('Acceptance | secrets/generic/create', function (hooks) {
   });
 
   test('upgrading generic to version 2 lists all existing secrets, and CRUD continues to work', async function (assert) {
-    const path = `generic-${new Date().getTime()}`;
-    const kvPath = `generic-kv-${new Date().getTime()}`;
+    const path = `generic-${this.timestamp}`;
+    const kvPath = `generic-kv-${this.timestamp}`;
     await cli.runCommands([
       `write sys/mounts/${path} type=generic`,
       `write ${path}/foo bar=baz`,

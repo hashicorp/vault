@@ -9,11 +9,12 @@ module('Acceptance | settings/auth/configure', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
+    this.timestamp = new Date().getTime();
     return authPage.login();
   });
 
   test('it redirects to section options when there are no other sections', async function (assert) {
-    const path = `approle-${new Date().getTime()}`;
+    const path = `approle-${this.timestamp}`;
     const type = 'approle';
     await enablePage.enable(type, path);
     await page.visit({ path });
@@ -26,7 +27,7 @@ module('Acceptance | settings/auth/configure', function (hooks) {
   });
 
   test('it redirects to the first section', async function (assert) {
-    const path = `aws-${new Date().getTime()}`;
+    const path = `aws-${this.timestamp}`;
     const type = 'aws';
     await enablePage.enable(type, path);
     await page.visit({ path });

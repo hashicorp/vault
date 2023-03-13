@@ -9,12 +9,13 @@ module('Acceptance | gcpkms/enable', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
+    this.timestamp = new Date().getTime();
     return authPage.login();
   });
 
   test('enable gcpkms', async function (assert) {
     // Error: Cannot call `visit` without having first called `setupApplicationContext`.
-    const enginePath = `gcpkms-${new Date().getTime()}`;
+    const enginePath = `gcpkms-${this.timestamp}`;
     await mountSecrets.visit();
     await settled();
     await mountSecrets.selectType('gcpkms');

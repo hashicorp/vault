@@ -10,6 +10,7 @@ module('Acceptance | settings', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
+    this.timestamp = new Date().getTime();
     return authPage.login();
   });
 
@@ -18,9 +19,8 @@ module('Acceptance | settings', function (hooks) {
   });
 
   test('settings', async function (assert) {
-    const now = new Date().getTime();
     const type = 'consul';
-    const path = `path-${now}`;
+    const path = `path-${this.timestamp}`;
 
     // mount unsupported backend
     await visit('/vault/settings/mount-secret-backend');

@@ -282,21 +282,20 @@ const testConvergentEncryption = async function (assert, keyName) {
 };
 module('Acceptance | transit', function (hooks) {
   setupApplicationTest(hooks);
-  let path;
-  let now;
 
   hooks.beforeEach(async function () {
+    const timestamp = new Date().getTime();
     await authPage.login();
     await settled();
-    now = new Date().getTime();
-    path = `transit-${now}`;
+    this.timestamp = timestamp;
+    this.path = `transit-${timestamp}`;
 
-    await enablePage.enable('transit', path);
+    await enablePage.enable('transit', `transit-${timestamp}`);
     await settled();
   });
 
   test(`transit backend: list menu`, async function (assert) {
-    await generateTransitKey(keyTypes[0], now);
+    await generateTransitKey(keyTypes[0], this.timestamp);
     await secretListPage.secrets.objectAt(0).menuToggle();
     await settled();
     assert.strictEqual(secretListPage.menuItems.length, 2, 'shows 2 items in the menu');
@@ -304,8 +303,8 @@ module('Acceptance | transit', function (hooks) {
   for (const key of keyTypes) {
     test(`transit backend: ${key.type}`, async function (assert) {
       assert.expect(key.convergent ? 43 : 7);
-      const name = await generateTransitKey(key, now);
-      await visit(`vault/secrets/${path}/show/${name}`);
+      const name = await generateTransitKey(key, this.timestamp);
+      await visit(`vault/secrets/${this.path}/show/${name}`);
 
       const expectedRotateValue = key.autoRotate ? '30 days' : 'Key will not be automatically rotated';
       assert
@@ -328,7 +327,7 @@ module('Acceptance | transit', function (hooks) {
       await click('[data-test-transit-key-actions-link]');
 
       assert.ok(
-        currentURL().startsWith(`/vault/secrets/${path}/show/${name}?tab=actions`),
+        currentURL().startsWith(`/vault/secrets/${this.path}/show/${name}?tab=actions`),
         `${name}: navigates to transit actions`
       );
 

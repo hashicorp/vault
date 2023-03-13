@@ -11,6 +11,7 @@ module('Acceptance | secrets/cubbyhole/create', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
+    this.timestamp = new Date().getTime();
     this.server = apiStub({ usePassthrough: true });
     return authPage.login();
   });
@@ -20,7 +21,7 @@ module('Acceptance | secrets/cubbyhole/create', function (hooks) {
   });
 
   test('it creates and can view a secret with the cubbyhole backend', async function (assert) {
-    const kvPath = `cubbyhole-kv-${new Date().getTime()}`;
+    const kvPath = `cubbyhole-kv-${this.timestamp}`;
     await listPage.visitRoot({ backend: 'cubbyhole' });
     await settled();
     assert.strictEqual(

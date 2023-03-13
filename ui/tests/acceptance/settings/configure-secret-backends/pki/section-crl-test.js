@@ -9,11 +9,12 @@ module('Acceptance | settings/configure/secrets/pki/crl', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
+    this.timestamp = new Date().getTime();
     return authPage.login();
   });
 
   test('it saves crl config', async function (assert) {
-    const path = `pki-${new Date().getTime()}`;
+    const path = `pki-${this.timestamp}`;
     await enablePage.enable('pki', path);
     await settled();
     await page.visit({ backend: path, section: 'crl' });

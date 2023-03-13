@@ -11,11 +11,12 @@ module('Acceptance | secrets/pki/create', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
+    this.timestamp = new Date().getTime();
     return authPage.login();
   });
 
   skip('it creates a role and redirects', async function (assert) {
-    const path = `pki-${new Date().getTime()}`;
+    const path = `pki-${this.timestamp}`;
     await enablePage.enable('pki', path);
     await settled();
     await editPage.visitRoot({ backend: path });
@@ -61,7 +62,7 @@ module('Acceptance | secrets/pki/create', function (hooks) {
   });
 
   test('it deletes a role', async function (assert) {
-    const path = `pki-${new Date().getTime()}`;
+    const path = `pki-${this.timestamp}`;
     await enablePage.enable('pki', path);
     await settled();
     await editPage.visitRoot({ backend: path });

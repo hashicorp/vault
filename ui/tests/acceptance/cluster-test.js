@@ -26,8 +26,8 @@ const authAccessor = async function (path) {
   await consoleComponent.runCommands([`write auth/${path}/users/end-user password="${PASSWORD}"`]);
 };
 
-const setupUser = async function () {
-  const authMethodPath = `userpass-${new Date().getTime()}`;
+const setupUser = async function (uid) {
+  const authMethodPath = `userpass-${uid}`;
   await authAccessor(authMethodPath);
 };
 
@@ -35,6 +35,7 @@ module('Acceptance | cluster', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
+    this.timestamp = new Date().getTime();
     await logout.visit();
     return authPage.login();
   });
@@ -55,7 +56,7 @@ module('Acceptance | cluster', function (hooks) {
   });
 
   test('it hides mfa setup if user has not entityId (ex: is a root user)', async function (assert) {
-    await setupUser();
+    await setupUser(this.timestamp);
 
     await logout.visit();
     await settled();

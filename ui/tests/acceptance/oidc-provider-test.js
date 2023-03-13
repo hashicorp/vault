@@ -104,11 +104,11 @@ const getAuthzUrl = (providerName, redirect, clientId, params) => {
   return `/vault/identity/oidc/provider/${providerName}/authorize${queryString}`;
 };
 
-const setupOidc = async function () {
+const setupOidc = async function (uid) {
   const callback = 'http://127.0.0.1:8251/callback';
   const entityId = await oidcEntity('oidc', OIDC_POLICY);
   const groupId = await oidcGroup(entityId);
-  const authMethodPath = `userpass-${new Date().getTime()}`;
+  const authMethodPath = `userpass-${uid}`;
   const accessor = await authAccessor(authMethodPath);
   await entityAlias(entityId, accessor, groupId);
   const clientId = await setupWebapp(callback);
@@ -125,13 +125,14 @@ module('Acceptance | oidc provider', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
+    this.timestamp = new Date().getTime();
     this.store = await this.owner.lookup('service:store');
     await logout.visit();
     return authPage.login();
   });
 
   test('OIDC Provider logs in and redirects correctly', async function (assert) {
-    const { providerName, callback, clientId, authMethodPath } = await setupOidc();
+    const { providerName, callback, clientId, authMethodPath } = await setupOidc(this.timestamp);
 
     await logout.visit();
     await settled();
@@ -167,7 +168,7 @@ module('Acceptance | oidc provider', function (hooks) {
   });
 
   test('OIDC Provider redirects to auth if current token and prompt = login', async function (assert) {
-    const { providerName, callback, clientId, authMethodPath } = await setupOidc();
+    const { providerName, callback, clientId, authMethodPath } = await setupOidc(this.timestamp);
     await settled();
     const url = getAuthzUrl(providerName, callback, clientId, { prompt: 'login' });
     await visit(url);
@@ -192,7 +193,7 @@ module('Acceptance | oidc provider', function (hooks) {
   });
 
   test('OIDC Provider shows consent form when prompt = consent', async function (assert) {
-    const { providerName, callback, clientId, authMethodPath } = await setupOidc();
+    const { providerName, callback, clientId, authMethodPath } = await setupOidc(this.timestamp);
     const url = getAuthzUrl(providerName, callback, clientId, { prompt: 'consent' });
     await logout.visit();
     await authFormComponent.selectMethod(authMethodPath);

@@ -16,12 +16,13 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
+    this.timestamp = new Date().getTime();
     return authPage.login();
   });
 
   test('it sets the ttl correctly when mounting', async function (assert) {
     // always force the new mount to the top of the list
-    const path = `kv-${new Date().getTime()}`;
+    const path = `kv-${this.timestamp}`;
     const defaultTTLHours = 100;
     const maxTTLHours = 300;
     const defaultTTLSeconds = (defaultTTLHours * 60 * 60).toString();
@@ -49,7 +50,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
 
   test('it sets the ttl when enabled then disabled', async function (assert) {
     // always force the new mount to the top of the list
-    const path = `kv-${new Date().getTime()}`;
+    const path = `kv-${this.timestamp}`;
     const maxTTLHours = 300;
     const maxTTLSeconds = (maxTTLHours * 60 * 60).toString();
 
@@ -101,7 +102,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
   });
 
   test('version 2 with no update to config endpoint still allows mount of secret engine', async function (assert) {
-    const enginePath = `kv-noUpdate-${new Date().getTime()}`;
+    const enginePath = `kv-noUpdate-${this.timestamp}`;
     const V2_POLICY = `
       path "${enginePath}/*" {
         capabilities = ["list","create","read","sudo","delete"]

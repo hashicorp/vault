@@ -9,12 +9,13 @@ module('Acceptance | settings/auth/enable', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
+    this.timestamp = new Date().getTime();
     return authPage.login();
   });
 
   test('it mounts and redirects', async function (assert) {
     // always force the new mount to the top of the list
-    const path = `approle-${new Date().getTime()}`;
+    const path = `approle-${this.timestamp}`;
     const type = 'approle';
     await page.visit();
     assert.strictEqual(currentRouteName(), 'vault.cluster.settings.auth.enable');

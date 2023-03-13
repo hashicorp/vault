@@ -9,18 +9,19 @@ module('Acceptance | secrets/pki/list', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
+    this.timestamp = new Date().getTime();
     return authPage.login();
   });
 
-  const mountAndNav = async () => {
-    const path = `pki-${new Date().getTime()}`;
+  const mountAndNav = async (uid) => {
+    const path = `pki-${uid}`;
     await enablePage.enable('pki', path);
     await page.visitRoot({ backend: path });
   };
 
   test('it renders an empty list', async function (assert) {
     assert.expect(5);
-    await mountAndNav(assert);
+    await mountAndNav(this.timestamp);
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.secrets.backend.list-root',
@@ -35,7 +36,7 @@ module('Acceptance | secrets/pki/list', function (hooks) {
 
   test('it navigates to the create page', async function (assert) {
     assert.expect(1);
-    await mountAndNav(assert);
+    await mountAndNav(this.timestamp);
     await page.create();
     assert.strictEqual(
       currentRouteName(),
@@ -46,7 +47,7 @@ module('Acceptance | secrets/pki/list', function (hooks) {
 
   test('it navigates to the configure page', async function (assert) {
     assert.expect(1);
-    await mountAndNav(assert);
+    await mountAndNav(this.timestamp);
     await click('[data-test-configuration-tab]');
     await page.configure();
     await settled();

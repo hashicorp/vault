@@ -9,6 +9,7 @@ module('Acceptance | aws secret backend', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
+    this.timestamp = new Date().getTime();
     return authPage.login();
   });
 
@@ -27,8 +28,7 @@ module('Acceptance | aws secret backend', function (hooks) {
     ],
   };
   test('aws backend', async function (assert) {
-    const now = new Date().getTime();
-    const path = `aws-${now}`;
+    const path = `aws-${this.timestamp}`;
     const roleName = 'awsrole';
 
     await enablePage.enable('aws', path);
