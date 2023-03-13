@@ -1,4 +1,5 @@
 import { module, test } from 'qunit';
+import sinon from 'sinon';
 import { visit } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import Pretender from 'pretender';
@@ -41,6 +42,9 @@ const generateHealthResponse = (state) => {
 module('Acceptance | Enterprise | License banner warnings', function (hooks) {
   setupApplicationTest(hooks);
 
+  hooks.before(function () {
+    sinon.stub(Date, 'now').returns(staticNow.getTime());
+  });
   hooks.afterEach(function () {
     this.server.shutdown();
   });

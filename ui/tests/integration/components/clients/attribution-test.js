@@ -12,7 +12,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.before(function () {
-    sinon.stub(Date, 'now').returns(staticNow);
+    sinon.stub(Date, 'now').returns(staticNow.getTime());
   });
   hooks.beforeEach(function () {
     this.set('startTimestamp', formatRFC3339(subMonths(staticNow, 6)));

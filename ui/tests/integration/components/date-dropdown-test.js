@@ -21,7 +21,7 @@ module('Integration | Component | date-dropdown', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.before(function () {
-    sinon.stub(Date, 'now').returns(staticNow);
+    sinon.stub(Date, 'now').returns(staticNow.getTime());
   });
 
   test('it renders dropdown', async function (assert) {

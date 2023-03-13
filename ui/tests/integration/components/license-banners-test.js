@@ -15,7 +15,7 @@ module('Integration | Component | license-banners', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.before(function () {
-    sinon.stub(Date, 'now').returns(staticNow);
+    sinon.stub(Date, 'now').returns(staticNow.getTime());
   });
   hooks.beforeEach(function () {
     this.version = this.owner.lookup('service:version');

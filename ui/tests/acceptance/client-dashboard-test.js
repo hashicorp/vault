@@ -26,7 +26,7 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
   setupMirage(hooks);
 
   hooks.before(function () {
-    sinon.stub(Date, 'now').returns(staticNow);
+    sinon.stub(Date, 'now').returns(staticNow.getTime());
     ENV['ember-cli-mirage'].handler = 'clients';
   });
 
