@@ -35,7 +35,7 @@ module('Integration | Component | PkiGenerateToggleGroups', function (hooks) {
         'Placeholder renders for key params when type is not selected'
       );
     const fields = {
-      exported: ['keyName', 'keyType', 'keyBits'],
+      exported: ['keyName', 'keyType', 'keyBits', 'privateKeyFormat'],
       internal: ['keyName', 'keyType', 'keyBits'],
       existing: ['keyRef'],
       kms: ['keyName', 'managedKeyName', 'managedKeyId'],
