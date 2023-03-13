@@ -3,7 +3,7 @@
     <label class="title has-padding-top is-5">
       Certificate parameters
     </label>
-    <form {{on "submit" (perform this.submitForm)}} data-test-pki-ca-cert-import-form>
+    <form {{on "submit" (perform this.submitForm)}} data-test-pki-import-pem-bundle-form>
       <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
       <div class="box is-sideless is-fullwidth is-marginless has-top-padding-l">
         <TextFile @onChange={{this.onFileUploaded}} @label="PEM Bundle" />
@@ -17,7 +17,7 @@
           type="submit"
           class="button is-primary {{if this.submitForm.isRunning 'is-loading'}}"
           disabled={{this.submitForm.isRunning}}
-          data-test-pki-ca-cert-import
+          data-test-pki-import-pem-bundle
         >
           Import issuer
         </button>
