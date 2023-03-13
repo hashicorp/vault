@@ -65,6 +65,7 @@ export default Component.extend(TRANSIT_PARAMS, {
   onRefresh() {},
   init() {
     this._super(...arguments);
+    // TODO figure out why get is needed here Ember Upgrade
     // eslint-disable-next-line ember/no-get
     if (this.selectedAction) {
       return;

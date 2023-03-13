@@ -4,7 +4,6 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 
 //TODO MOVE THESE TO THE ADDON
-// ARG TODO RETURN
 import utils from 'vault/lib/key-utils';
 import keys from 'vault/lib/keycodes';
 import { encodePath } from 'vault/utils/path-encoding-helpers';

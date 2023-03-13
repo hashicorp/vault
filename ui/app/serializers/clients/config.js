@@ -3,7 +3,6 @@ import ApplicationSerializer from '../application';
 export default ApplicationSerializer.extend({
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     if (!payload.data) {
-      // ARG TODO RETURN
       // CBS TODO: Remove this if block once API is published
       return this._super(store, primaryModelClass, payload, id, requestType);
     }

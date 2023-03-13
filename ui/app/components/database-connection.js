@@ -122,6 +122,7 @@ export default class DatabaseConnectionEdit extends Component {
     adapter
       .resetConnection(backend, name)
       .then(() => {
+        // TODO: Why isn't the confirmAction closing?
         this.flashMessages.success('Successfully reset connection');
       })
       .catch((e) => {
@@ -135,6 +136,7 @@ export default class DatabaseConnectionEdit extends Component {
     const { name, backend } = this.args.model;
     this.rotateCredentials(backend, name)
       .then(() => {
+        // TODO: Why isn't the confirmAction closing?
         this.flashMessages.success('Successfully rotated credentials');
       })
       .catch((e) => {

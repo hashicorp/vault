@@ -81,7 +81,6 @@ export default Service.extend({
         path = createPath.path;
         path = path.includes('{') ? path.slice(0, path.indexOf('{') - 1) + '/example' : path;
         if (!path) {
-          // ARG TODO RETURN maybe assertion and test
           // TODO: we don't know if path will ever be falsey
           // if it is never falsey we can remove this.
           return reject();
