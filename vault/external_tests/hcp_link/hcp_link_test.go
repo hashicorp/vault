@@ -8,7 +8,6 @@ import (
 )
 
 func TestHCPLinkConnected(t *testing.T) {
-	t.Parallel()
 	cluster := getTestCluster(t, 2)
 	defer cluster.Cleanup()
 

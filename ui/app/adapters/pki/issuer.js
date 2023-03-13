@@ -26,16 +26,6 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
     }
   }
 
-  createRecord(store, type, snapshot) {
-    let url = this.urlForQuery(this._getBackend(snapshot));
-    if (snapshot.adapterOptions.import) {
-      url = `${url}/import/bundle`;
-    }
-    return this.ajax(url, 'POST', { data: this.serialize(snapshot) }).then((resp) => {
-      return resp;
-    });
-  }
-
   updateRecord(store, type, snapshot) {
     const { issuerId } = snapshot.record;
     const backend = this._getBackend(snapshot);
