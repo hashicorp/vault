@@ -27,7 +27,6 @@ func pathConfig(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixOkta,
-			OperationSuffix: "config",
 			Action:          "Configure",
 		},
 
@@ -87,10 +86,25 @@ func pathConfig(b *backend) *framework.Path {
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathConfigRead,
-			logical.CreateOperation: b.pathConfigWrite,
-			logical.UpdateOperation: b.pathConfigWrite,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathConfigRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "config",
+				},
+			},
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.pathConfigWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "config",
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathConfigWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "configure",
+				},
+			},
 		},
 
 		ExistenceCheck: b.pathConfigExistenceCheck,
