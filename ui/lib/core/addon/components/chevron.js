@@ -1,6 +1,5 @@
 import Component from '@glimmer/component';
 import { assert } from '@ember/debug';
-import { tracked } from '@glimmer/tracking';
 
 const DIRECTIONS = ['right', 'left', 'up', 'down'];
 
@@ -20,12 +19,15 @@ const DIRECTIONS = ['right', 'left', 'up', 'down'];
  */
 
 export default class Chevron extends Component {
-  @tracked direction = 'right';
+  get direction() {
+    return this.args.direction || 'right';
+  }
 
   get glyph() {
     const { direction } = this;
+
     assert(
-      `The direction property of ${this.toString()} must be one of the following: ${DIRECTIONS.join(', ')}`,
+      `The direction property of Chevron must be one of the following: ${DIRECTIONS.join(', ')}`,
       DIRECTIONS.includes(direction)
     );
     return `chevron-${direction}`;
