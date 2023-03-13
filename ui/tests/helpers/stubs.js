@@ -52,3 +52,5 @@ export function allowAllCapabilitiesStub(capabilitiesList = ['root']) {
     };
   };
 }
+
+export const staticNow = new Date('2023-01-13T14:15:00');
