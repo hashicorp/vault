@@ -16,7 +16,6 @@ func pathConfigLease(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixNomad,
-			OperationSuffix: "lease-config",
 		},
 
 		Fields: map[string]*framework.FieldSchema{
@@ -30,10 +29,27 @@ func pathConfigLease(b *backend) *framework.Path {
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathLeaseRead,
-			logical.UpdateOperation: b.pathLeaseUpdate,
-			logical.DeleteOperation: b.pathLeaseDelete,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathLeaseRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "lease-config",
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathLeaseUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationPrefix: operationPrefixNomad,
+					OperationVerb:   "configure",
+					OperationSuffix: "lease",
+				},
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathLeaseDelete,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "lease-config",
+				},
+			},
 		},
 
 		HelpSynopsis:    pathConfigLeaseHelpSyn,
