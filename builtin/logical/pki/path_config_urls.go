@@ -93,7 +93,7 @@ set on all PR Secondary clusters.`,
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathReadURL,
 				DisplayAttrs: &framework.DisplayAttributes{
-					OperationSuffix: "url-config",
+					OperationSuffix: "urls-config",
 				},
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{

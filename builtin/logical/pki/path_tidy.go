@@ -163,7 +163,6 @@ func pathConfigAutoTidy(b *backend) *framework.Path {
 		Pattern: "config/auto-tidy",
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixPKI,
-			OperationSuffix: "auto-tidy-config",
 		},
 		Fields: addTidyFields(map[string]*framework.FieldSchema{
 			"enabled": {
@@ -179,9 +178,16 @@ func pathConfigAutoTidy(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathConfigAutoTidyRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "auto-tidy-config",
+				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathConfigAutoTidyWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "auto-tidy",
+				},
 				// Read more about why these flags are set in backend.go.
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
