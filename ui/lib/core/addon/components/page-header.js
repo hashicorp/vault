@@ -1,8 +1,5 @@
-import Component from '@ember/component';
-import layout from '../templates/components/page-header';
+import Component from '@glimmer/component';
 
-export default Component.extend({
-  layout,
-  tagName: '',
-  hasLevel: true,
-});
+export default class PageHeader extends Component {
+  hasLevel = true;
+}
