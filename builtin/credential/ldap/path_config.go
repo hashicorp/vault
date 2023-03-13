@@ -19,7 +19,6 @@ func pathConfig(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixLDAPAuth,
-			OperationSuffix: "config",
 			Action:          "Configure",
 		},
 
