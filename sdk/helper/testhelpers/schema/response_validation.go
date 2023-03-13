@@ -97,7 +97,7 @@ func validateResponseDataImpl(schema *framework.Response, data map[string]interf
 	return fd.Validate()
 }
 
-// FindResponseSchema is a test helper to extract the response schema from a given framework path / operation
+// FindResponseSchema is a test helper to extract response schema from the given framework path / operation
 func FindResponseSchema(t *testing.T, paths []*framework.Path, pathIdx int, operation logical.Operation) *framework.Response {
 	t.Helper()
 
