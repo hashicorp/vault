@@ -15,7 +15,6 @@ func pathConfig(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixRadius,
-			OperationSuffix: "config",
 			Action:          "Configure",
 		},
 
@@ -84,10 +83,25 @@ func pathConfig(b *backend) *framework.Path {
 
 		ExistenceCheck: b.configExistenceCheck,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathConfigRead,
-			logical.CreateOperation: b.pathConfigCreateUpdate,
-			logical.UpdateOperation: b.pathConfigCreateUpdate,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathConfigRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "config",
+				},
+			},
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.pathConfigCreateUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "configure",
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathConfigCreateUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "configure",
+				},
+			},
 		},
 
 		HelpSynopsis:    pathConfigHelpSyn,
