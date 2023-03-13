@@ -225,4 +225,26 @@ module('Unit | Adapter | pki/action', function (hooks) {
         .save(adapterOptions);
     });
   });
+
+  module('actionType sign-intermediate', function () {
+    test('it overrides backend when adapter options specify a mount', async function (assert) {
+      assert.expect(1);
+      const mount = 'foo';
+      const issuerRef = 'ref';
+      const adapterOptions = {
+        adapterOptions: { actionType: 'sign-intermediate', mount, issuerRef },
+      };
+
+      this.server.post(`${mount}/issuer/${issuerRef}/sign-intermediate`, () => {
+        assert.ok(true, 'request made to correct mount');
+        return {};
+      });
+
+      await this.store
+        .createRecord('pki/action', {
+          csr: '---BEGIN REQUEST---',
+        })
+        .save(adapterOptions);
+    });
+  });
 });
