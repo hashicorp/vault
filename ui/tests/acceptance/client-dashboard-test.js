@@ -1,8 +1,9 @@
 import { module, test } from 'qunit';
+import sinon from 'sinon';
 import { visit, currentURL, click, findAll, find, settled } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
-import { addMonths, format, formatRFC3339, startOfMonth, subMonths } from 'date-fns';
+import { addMonths, formatRFC3339, startOfMonth, subMonths } from 'date-fns';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
 import { SELECTORS, overrideResponse } from '../helpers/clients';
@@ -11,23 +12,21 @@ import ss from 'vault/tests/pages/components/search-select';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { ARRAY_OF_MONTHS } from 'core/utils/date-formatters';
 import { formatNumber } from 'core/helpers/format-number';
+import { staticNow } from 'vault/tests/helpers/stubs';
 
 const searchSelect = create(ss);
 
-const CURRENT_DATE = new Date();
-const LAST_MONTH = startOfMonth(subMonths(CURRENT_DATE, 1));
-const COUNTS_START = subMonths(CURRENT_DATE, 12); // pretend vault user started cluster 1 year ago
-
 // for testing, we're in the middle of a license/billing period
-const LICENSE_START = startOfMonth(subMonths(CURRENT_DATE, 6));
+const LICENSE_START = startOfMonth(subMonths(staticNow, 6)); // 2022-07-01
 // upgrade happened 1 month after license start
-const UPGRADE_DATE = addMonths(LICENSE_START, 1);
+const UPGRADE_DATE = addMonths(LICENSE_START, 1); // 2022-08-01
 
 module('Acceptance | client counts dashboard tab', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
   hooks.before(function () {
+    sinon.stub(Date, 'now').returns(staticNow);
     ENV['ember-cli-mirage'].handler = 'clients';
   });
 
@@ -90,13 +89,10 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
     assert.strictEqual(currentURL(), '/vault/clients/dashboard');
     assert
       .dom(SELECTORS.dateDisplay)
-      .hasText(format(LICENSE_START, 'MMMM yyyy'), 'billing start month is correctly parsed from license');
+      .hasText('July 2022', 'billing start month is correctly parsed from license');
     assert
       .dom(SELECTORS.rangeDropdown)
-      .hasText(
-        `${format(LICENSE_START, 'MMM yyyy')} - ${format(CURRENT_DATE, 'MMM yyyy')}`,
-        'Date range shows dates correctly parsed activity response'
-      );
+      .hasText(`Jul 2022 - Jan 2023`, 'Date range shows dates correctly parsed activity response');
     assert.dom(SELECTORS.attributionBlock).exists('Shows attribution area');
     assert.dom(SELECTORS.monthlyUsageBlock).exists('Shows monthly usage block');
     assert
@@ -104,7 +100,7 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
       .exists('Shows running totals with monthly breakdown charts');
     assert
       .dom(find('[data-test-line-chart="x-axis-labels"] g.tick text'))
-      .hasText(`${format(LICENSE_START, 'M/yy')}`, 'x-axis labels start with billing start date');
+      .hasText(`7/22`, 'x-axis labels start with billing start date');
     assert.strictEqual(
       findAll('[data-test-line-chart="plot-point"]').length,
       6,
@@ -113,7 +109,7 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
   });
 
   test('updates correctly when querying date ranges', async function (assert) {
-    assert.expect(26);
+    assert.expect(27);
     await visit('/vault/clients/dashboard');
     assert.strictEqual(currentURL(), '/vault/clients/dashboard');
     // query for single, historical month with no new counts
@@ -158,21 +154,18 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
       .exists('Shows running totals with monthly breakdown charts');
     assert
       .dom(find('[data-test-line-chart="x-axis-labels"] g.tick text'))
-      .hasText(`${format(UPGRADE_DATE, 'M/yy')}`, 'x-axis labels start with updated billing start month');
+      .hasText(`8/22`, 'x-axis labels start with updated billing start month');
     assert.strictEqual(
       findAll('[data-test-line-chart="plot-point"]').length,
       6,
       `line chart plots 6 points to match query`
     );
 
-    // query three months ago
-    const customEndDate = subMonths(CURRENT_DATE, 3);
+    // query three months ago (Oct 2022)
     await click(SELECTORS.rangeDropdown);
     await click('[data-test-show-calendar]');
-    if (parseInt(find('[data-test-display-year]').innerText) !== customEndDate.getFullYear()) {
-      await click('[data-test-previous-year]');
-    }
-    await click(find(`[data-test-calendar-month=${ARRAY_OF_MONTHS[customEndDate.getMonth()]}]`));
+    await click('[data-test-previous-year]');
+    await click(find(`[data-test-calendar-month="October"]`));
 
     assert.dom(SELECTORS.attributionBlock).exists('Shows attribution area');
     assert.dom(SELECTORS.monthlyUsageBlock).exists('Shows monthly usage block');
@@ -187,15 +180,13 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
     const xAxisLabels = findAll('[data-test-line-chart="x-axis-labels"] g.tick text');
     assert
       .dom(xAxisLabels[xAxisLabels.length - 1])
-      .hasText(`${format(subMonths(LAST_MONTH, 2), 'M/yy')}`, 'x-axis labels end with queried end month');
+      .hasText(`10/22`, 'x-axis labels end with queried end month');
 
     // query for single, historical month (upgrade month)
     await click(SELECTORS.rangeDropdown);
     await click('[data-test-show-calendar]');
-    if (parseInt(find('[data-test-display-year]').innerText) !== UPGRADE_DATE.getFullYear()) {
-      await click('[data-test-previous-year]');
-    }
-    await click(find(`[data-test-calendar-month=${ARRAY_OF_MONTHS[UPGRADE_DATE.getMonth()]}]`));
+    assert.dom('[data-test-display-year]').hasText('2022');
+    await click(find(`[data-test-calendar-month="August"]`));
 
     assert.dom(SELECTORS.runningTotalMonthStats).exists('running total single month stat boxes show');
     assert
@@ -219,7 +210,7 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
     assert
       .dom('[data-test-alert-banner="alert"]')
       .hasTextContaining(
-        `We only have data from ${format(COUNTS_START, 'MMMM yyyy')}`,
+        `We only have data from January 2022`,
         'warning banner displays that date queried was prior to count start date'
       );
   });
@@ -336,17 +327,14 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
     assert
       .dom('[data-test-alert-banner="alert"]')
       .hasTextContaining(
-        `Warning Vault was upgraded to 1.10.1 on ${format(
-          UPGRADE_DATE,
-          'MMM d, yyyy'
-        )}. We added monthly breakdowns and mount level attribution starting in 1.10, so keep that in mind when looking at the data. Learn more here.`
+        `Warning Vault was upgraded to 1.10.1 on Aug 1, 2022. We added monthly breakdowns and mount level attribution starting in 1.10, so keep that in mind when looking at the data. Learn more here.`
       );
   });
 
   test('Shows empty if license start date is current month', async function (assert) {
     // TODO cmb update to reflect new behavior
-    const licenseStart = CURRENT_DATE;
-    const licenseEnd = addMonths(CURRENT_DATE, 12);
+    const licenseStart = staticNow;
+    const licenseEnd = addMonths(staticNow, 12);
     this.server.get('sys/license/status', function () {
       return {
         request_id: 'my-license-request-id',
