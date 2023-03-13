@@ -18,7 +18,7 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
  * ```
  *
  * @param {String} filter=null  - The filtered string.
- * @param {String} [placeholder=""] - The message inside the input to indicate what the user should enter into the space.
+ * @param {String} [placeholder="Filter items"] - The message inside the input to indicate what the user should enter into the space.
  * @param {Object} [urls=null] - An object containing list=route url.
  * @param {Function} [filterFocusDidChange=null] - A function called when the focus changes.
  * @param {Function} [filterDidChange=null] - A function called when the filter string changes.
@@ -128,7 +128,7 @@ export default class NavigateInput extends Component {
   }
 
   onTab(event) {
-    var firstPartialMatch = this.args.firstPartialMatch.id;
+    const firstPartialMatch = this.args.firstPartialMatch.id;
     if (!firstPartialMatch) {
       return;
     }
@@ -196,7 +196,7 @@ export default class NavigateInput extends Component {
     if (this.args.filterDidChange) {
       this.args.filterDidChange(filter.target.value);
     }
-    debounce(this, 'filterUpdated', filter.target.value, 200);
+    debounce(this, this.filterUpdated, filter.target.value, 200);
   }
   @action
   setFilterFocused(isFocused) {
