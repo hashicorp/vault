@@ -96,7 +96,7 @@ func pathConfig(b *backend) *framework.Path {
 			logical.CreateOperation: &framework.PathOperation{
 				Callback: b.pathConfigWrite,
 				DisplayAttrs: &framework.DisplayAttributes{
-					OperationSuffix: "config",
+					OperationVerb: "configure",
 				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
