@@ -30,7 +30,7 @@
     </div>
   {{/unless}}
   {{#if (eq @config.actionType "import")}}
-    <PkiCaCertificateImport
+    <PkiImportPemBundle
       @model={{@config}}
       @onCancel={{transition-to "vault.cluster.secrets.backend.pki.overview"}}
       @onSave={{transition-to "vault.cluster.secrets.backend.pki.issuers"}}
