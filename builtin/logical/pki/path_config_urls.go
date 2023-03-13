@@ -17,7 +17,6 @@ func pathConfigURLs(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixPKI,
-			OperationSuffix: "url-config",
 		},
 
 		Fields: map[string]*framework.FieldSchema{
@@ -54,6 +53,10 @@ to be set on all PR secondary clusters.`,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "urls",
+				},
 				Callback: b.pathWriteURL,
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
@@ -89,6 +92,9 @@ set on all PR Secondary clusters.`,
 			},
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathReadURL,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "url-config",
+				},
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",

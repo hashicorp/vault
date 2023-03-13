@@ -52,7 +52,6 @@ func pathConfigCRL(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixPKI,
-			OperationSuffix: "crl-config",
 		},
 
 		Fields: map[string]*framework.FieldSchema{
@@ -116,6 +115,9 @@ existing CRL and OCSP paths will return the unified CRL instead of a response ba
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "crl-config",
+				},
 				Callback: b.pathCRLRead,
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
@@ -188,6 +190,10 @@ existing CRL and OCSP paths will return the unified CRL instead of a response ba
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathCRLWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "crl",
+				},
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",

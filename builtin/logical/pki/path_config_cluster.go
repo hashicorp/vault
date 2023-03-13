@@ -16,7 +16,6 @@ func pathConfigCluster(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixPKI,
-			OperationSuffix: "cluster-config",
 		},
 
 		Fields: map[string]*framework.FieldSchema{
@@ -47,6 +46,10 @@ For example: http://cdn.example.com/pr1/pki`,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "cluster",
+				},
 				Callback: b.pathWriteCluster,
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
@@ -81,6 +84,9 @@ For example: http://cdn.example.com/pr1/pki`,
 			},
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathReadCluster,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "cluster-config",
+				},
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",

@@ -14,7 +14,8 @@ func pathConfigCA(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixPKI,
-			OperationSuffix: "ca-config",
+			OperationVerb:   "configure",
+			OperationSuffix: "ca",
 		},
 
 		Fields: map[string]*framework.FieldSchema{
@@ -79,7 +80,6 @@ func pathConfigIssuers(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixPKI,
-			OperationSuffix: "issuers-config",
 		},
 
 		Fields: map[string]*framework.FieldSchema{
@@ -96,6 +96,9 @@ func pathConfigIssuers(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathCAIssuersRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "issuers-config",
+				},
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
@@ -116,6 +119,10 @@ func pathConfigIssuers(b *backend) *framework.Path {
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathCAIssuersWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "issuers",
+				},
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
@@ -292,7 +299,6 @@ func pathConfigKeys(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixPKI,
-			OperationSuffix: "keys-config",
 		},
 
 		Fields: map[string]*framework.FieldSchema{
@@ -305,6 +311,10 @@ func pathConfigKeys(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathKeyDefaultWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "keys",
+				},
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
@@ -322,6 +332,9 @@ func pathConfigKeys(b *backend) *framework.Path {
 			},
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathKeyDefaultRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "keys-config",
+				},
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
