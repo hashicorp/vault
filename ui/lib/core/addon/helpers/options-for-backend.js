@@ -26,12 +26,12 @@ const PKI_ENGINE_BACKEND = {
       link: 'issuers',
     },
     {
-      label: 'Certificates',
-      link: 'certificates',
-    },
-    {
       label: 'Keys',
       link: 'keys',
+    },
+    {
+      label: 'Certificates',
+      link: 'certificates',
     },
     {
       label: 'Configuration',

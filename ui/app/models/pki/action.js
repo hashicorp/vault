@@ -28,6 +28,10 @@ export default class PkiActionModel extends Model {
 
   /* actionType import */
   @attr('string') pemBundle;
+  // readonly attrs returned after importing
+  @attr importedIssuers;
+  @attr importedKeys;
+  @attr mapping;
 
   /* actionType generate-root */
   @attr('string', {

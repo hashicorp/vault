@@ -7,7 +7,7 @@ export default class PkiIssuersImportRoute extends PkiIssuersIndexRoute {
   @service store;
 
   model() {
-    return this.store.createRecord('pki/issuer');
+    return this.store.createRecord('pki/action');
   }
 
   setupController(controller, resolvedModel) {
