@@ -5,6 +5,7 @@ import page from 'vault/tests/pages/settings/configure-secret-backends/pki/secti
 import { SELECTORS } from 'vault/tests/helpers/pki';
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
+import { v4 as uuidv4 } from 'uuid';
 
 module('Acceptance | settings/configure/secrets/pki/cert', function (hooks) {
   setupApplicationTest(hooks);
@@ -62,7 +63,7 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
 -----END RSA PRIVATE KEY-----`;
 
   const mountAndNav = async (assert, prefix) => {
-    const path = `${prefix}pki-${new Date().getTime()}`;
+    const path = `${prefix}pki-${uuidv4()}`;
     await enablePage.enable('pki', path);
     await settled();
     await page.visit({ backend: path });
