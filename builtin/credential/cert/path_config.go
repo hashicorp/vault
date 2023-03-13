@@ -16,7 +16,6 @@ func pathConfig(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixCertificates,
-			OperationSuffix: "config",
 		},
 
 		Fields: map[string]*framework.FieldSchema{
@@ -37,9 +36,19 @@ func pathConfig(b *backend) *framework.Path {
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathConfigWrite,
-			logical.ReadOperation:   b.pathConfigRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathConfigWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "configure",
+				},
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathConfigRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "config",
+				},
+			},
 		},
 	}
 }
