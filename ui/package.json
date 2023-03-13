@@ -199,6 +199,7 @@
     "typescript": "^4.8.4",
     "walk-sync": "^2.0.2",
     "webpack": "5.73.0",
+    "ws": "^8.12.1",
     "xstate": "^3.3.3"
   },
   "optionalDependencies": {

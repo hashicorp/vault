@@ -5,6 +5,7 @@
 
 var readline = require('readline');
 const testHelper = require('./test-helper');
+const WebSocketServer = require('ws').Server;
 
 var output = '';
 var unseal, root, written, initError;
@@ -20,8 +21,12 @@ async function processLines(input, eachLine = () => {}) {
 }
 
 (async function () {
-  try {
-    const vault = testHelper.run(
+  let vault;
+  const startVault = () => {
+    if (vault && !vault.killed) {
+      vault.kill('SIGKILL');
+    }
+    vault = testHelper.run(
       'vault',
       [
         'server',
@@ -63,16 +68,27 @@ async function processLines(input, eachLine = () => {}) {
         process.exit(1);
       }
     });
-    try {
-      await testHelper.run('ember', ['test', ...process.argv.slice(2)]);
-    } catch (error) {
-      console.log(error);
-      process.exit(1);
-    } finally {
-      process.exit(0);
-    }
+  };
+
+  const openWebSocket = () => {
+    const wss = new WebSocketServer({ port: 9201 });
+    wss.on('connection', (ws) => {
+      ws.on('message', function (message) {
+        if (message === 'restart vault') {
+          startVault();
+        }
+      });
+    });
+  };
+
+  try {
+    startVault();
+    openWebSocket();
+    await testHelper.run('ember', ['test', ...process.argv.slice(2)]);
   } catch (error) {
     console.log(error);
     process.exit(1);
+  } finally {
+    process.exit(0);
   }
 })();

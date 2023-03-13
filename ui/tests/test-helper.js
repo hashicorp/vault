@@ -7,8 +7,10 @@ import { start } from 'ember-qunit';
 import './helpers/flash-message';
 import preloadAssets from 'ember-asset-loader/test-support/preload-assets';
 import manifest from 'vault/config/asset-manifest';
+import VaultServerTestHelper from './helpers/vault-server';
 
 preloadAssets(manifest).then(() => {
+  config.APP.vaultServerTestHelper = new VaultServerTestHelper();
   setApplication(Application.create(config.APP));
   // TODO CBS: Check what this is, upgrade added it
   setup(QUnit.assert);

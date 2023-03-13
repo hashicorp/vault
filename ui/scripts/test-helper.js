@@ -40,7 +40,7 @@ function run(command, args = [], shareStd = true) {
   // cleanup means that execa will handle stopping the subprocess
   // inherit all of the stdin/out/err so that testem still works as if you were running it directly
   if (shareStd) {
-    return execa(command, args, { cleanup: true, stdin: 'inherit', stdout: 'inherit', stderr: 'inherit' });
+    return execa(command, args, { cleanup: true, stdio: ['inherit', 'inherit', 'inherit', 'ipc'] });
   }
   const p = execa(command, args, { cleanup: true });
   p.stdout.pipe(process.stdout);
