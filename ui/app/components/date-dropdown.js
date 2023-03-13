@@ -18,7 +18,7 @@ import { ARRAY_OF_MONTHS } from 'core/utils/date-formatters';
  * @param {function} [validateDate] - parent function to validate date selection, receives date object and returns an error message that's passed to the inline alert
  */
 export default class DateDropdown extends Component {
-  currentDate = new Date();
+  currentDate = new Date(Date.now());
   currentYear = this.currentDate.getFullYear(); // integer of year
   currentMonthIdx = this.currentDate.getMonth(); // integer of month, 0 indexed
   dropdownMonths = ARRAY_OF_MONTHS.map((m, i) => ({ name: m, index: i }));

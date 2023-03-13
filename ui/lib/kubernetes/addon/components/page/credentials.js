@@ -28,7 +28,7 @@ export default class CredentialsPageComponent extends Component {
   @tracked credentials;
 
   get leaseExpiry() {
-    return add(new Date(), { seconds: this.credentials.lease_duration });
+    return add(new Date(Date.now()), { seconds: this.credentials.lease_duration });
   }
 
   @action

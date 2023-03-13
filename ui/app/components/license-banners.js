@@ -36,13 +36,13 @@ export default class LicenseBanners extends Component {
 
   get licenseExpired() {
     if (!this.args.expiry) return false;
-    return isAfter(new Date(), new Date(this.args.expiry));
+    return isAfter(new Date(Date.now()), new Date(this.args.expiry));
   }
 
   get licenseExpiringInDays() {
     // Anything more than 30 does not render a warning
     if (!this.args.expiry) return 99;
-    return differenceInDays(new Date(this.args.expiry), new Date());
+    return differenceInDays(new Date(this.args.expiry), new Date(Date.now()));
   }
 
   @action

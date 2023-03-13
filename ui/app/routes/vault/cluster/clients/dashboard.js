@@ -4,7 +4,7 @@ import { inject as service } from '@ember/service';
 
 export default class DashboardRoute extends Route {
   @service store;
-  currentDate = new Date().toISOString();
+  currentDate = new Date(Date.now()).toISOString();
 
   async getActivity(start_time) {
     // on init ONLY make network request if we have a start_time

@@ -15,7 +15,7 @@ export default class SecretV2VersionModel extends SecretModel {
 
   get deleted() {
     const deletionTime = new Date(this.deletionTime);
-    const now = new Date();
+    const now = new Date(Date.now());
     return deletionTime <= now;
   }
 }

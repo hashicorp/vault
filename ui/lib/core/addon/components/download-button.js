@@ -32,7 +32,7 @@ export default class DownloadButton extends Component {
   @service flashMessages;
 
   get filename() {
-    const timestamp = new Date().toISOString();
+    const timestamp = new Date(Date.now()).toISOString();
     return this.args.filename ? this.args.filename + '-' + timestamp : timestamp;
   }
 

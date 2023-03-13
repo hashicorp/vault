@@ -19,7 +19,7 @@ import { addYears, isSameYear, subYears } from 'date-fns';
  * ```
  */
 export default class CalendarWidget extends Component {
-  currentDate = new Date();
+  currentDate = new Date(Date.now());
   @tracked calendarDisplayDate = this.currentDate; // init to current date, updates when user clicks on calendar chevrons
   @tracked showCalendar = false;
   @tracked tooltipTarget = null;
