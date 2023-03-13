@@ -8,6 +8,28 @@ import utils from 'vault/lib/key-utils';
 import keys from 'vault/lib/keycodes';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
+/**
+ * @module NavigateInput
+ * `NavigateInput` components are used to filter list data.
+ *
+ * @example
+ * ```js
+ * <NavigateInput @filter={@roleFiltered} @placeholder="placeholder text" urls="{{hash list="vault.cluster.secrets.backend.kubernetes.roles"}}"/>
+ * ```
+ *
+ * @param {String} filter=null  - The filtered string.
+ * @param {String} [placeholder=""] - The message inside the input to indicate what the user should enter into the space.
+ * @param {Object} [urls=null] - An object containing list=route url.
+ * @param {Function} [filterFocusDidChange=null] - A function called when the focus changes.
+ * @param {Function} [filterDidChange=null] - A function called when the filter string changes.
+ * @param {Function} [filterMatchesKey=null] - A function used to match to a specific key, such as an Id.
+ * @param {Function} [filterPartialMatch=null] - A function used to filter through a partial match. Such as "oo" of "root".
+ * @param {String} [baseKey=""] - A string to transition by Id.
+ * @param {Boolean} [shouldNavigateTree=false] - If true, navigate a larger tree, such as when you're navigating leases under access.
+ * @param {String} [mode="secrets"] - Mode which plays into navigation type.
+ * @param {String} [extraNavParams=""] - A string used in route transition when necessary.
+ */
+
 const routeFor = function (type, mode, urls) {
   const MODES = {
     secrets: 'vault.cluster.secrets.backend',
@@ -69,20 +91,20 @@ export default class NavigateInput extends Component {
       return;
     }
     if (this.args.filterMatchesKey && !utils.keyIsFolder(val)) {
-      const params = [routeFor('show', mode, this.urls), extraParams, this.keyForNav(val)].compact();
+      const params = [routeFor('show', mode, this.args.urls), extraParams, this.keyForNav(val)].compact();
       this.transitionToRoute(...params);
     } else {
       if (mode === 'policies') {
         return;
       }
-      const route = routeFor('create', mode, this.urls);
+      const route = routeFor('create', mode, this.args.urls);
       if (baseKey) {
         this.transitionToRoute(route, this.keyForNav(baseKey), {
           queryParams: {
             initialKey: val,
           },
         });
-      } else if (this.urls) {
+      } else if (this.args.urls) {
         this.transitionToRoute(route, {
           queryParams: {
             initialKey: this.keyForNav(val),
@@ -117,14 +139,14 @@ export default class NavigateInput extends Component {
 
   // as you type, navigates through the k/v tree
   filterUpdated(val) {
-    var mode = this.mode;
+    const mode = this.mode;
     if (mode === 'policies' || !this.args.shouldNavigateTree) {
       this.filterUpdatedNoNav(val, mode);
       return;
     }
     // select the key to nav to, assumed to be a folder
-    var key = val ? val.trim() : '';
-    var isFolder = utils.keyIsFolder(key);
+    let key = val ? val.trim() : '';
+    const isFolder = utils.keyIsFolder(key);
 
     if (!isFolder) {
       // nav to the closest parentKey (or the root)
@@ -136,7 +158,7 @@ export default class NavigateInput extends Component {
   }
 
   navigate(key, mode, pageFilter) {
-    const route = routeFor(key ? 'list' : 'list-root', mode, this.urls);
+    const route = routeFor(key ? 'list' : 'list-root', mode, this.args.urls);
     const args = [route];
     if (key) {
       args.push(key);
@@ -160,8 +182,8 @@ export default class NavigateInput extends Component {
   }
 
   filterUpdatedNoNav(val, mode) {
-    var key = val ? val.trim() : null;
-    this.transitionToRoute(routeFor('list-root', mode, this.urls), {
+    const key = val ? val.trim() : null;
+    this.transitionToRoute(routeFor('list-root', mode, this.args.urls), {
       queryParams: {
         pageFilter: key,
         page: 1,
@@ -190,7 +212,7 @@ export default class NavigateInput extends Component {
   }
   @action
   handleKeyUp(event) {
-    var keyCode = event.keyCode;
+    const keyCode = event.keyCode;
     const val = event.target.value;
     if (keyCode === keys.ENTER) {
       this.onEnter(val);
