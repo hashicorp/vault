@@ -57,10 +57,6 @@ const routeFor = function (type, mode, urls) {
 export default class NavigateInput extends Component {
   @service router;
 
-  get focusFilter() {
-    return this.args.filter ? true : false;
-  }
-
   get mode() {
     return this.args.mode || 'secrets';
   }
