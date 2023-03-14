@@ -160,7 +160,18 @@
         {{/if}}
       </div>
     {{/unless}}
-
+    {{#if (eq @model.plugin_name "vault-plugin-database-oracle")}}
+      <AlertBanner
+        @type="info"
+        @title="Connecting using SSL or TNS Names"
+        @message="To create database connections using SSL or TNS names you may need to provide additional Oracle configuration files for your Vault cluster. If you have already provided these files, they may need to updated if you are creating connections to database hosts not covered by the existing configuration files."
+      >
+        <DocLink @path="/vault/docs/secrets/databases/oracle">
+          <Icon @name="learn-link" />
+          Oracle Database Secrets Engine
+        </DocLink>
+      </AlertBanner>
+    {{/if}}
     <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
       <div class="field is-grouped">
         <div class="control">

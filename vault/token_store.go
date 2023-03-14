@@ -1105,7 +1105,7 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 			entry.ID = fmt.Sprintf("%s.%s", entry.ID, tokenNS.ID)
 		}
 
-		if tokenNS.ID != namespace.RootNamespaceID || strings.HasPrefix(entry.ID, consts.ServiceTokenPrefix) {
+		if tokenNS.ID != namespace.RootNamespaceID || strings.HasPrefix(entry.ID, consts.ServiceTokenPrefix) || strings.HasPrefix(entry.ID, consts.LegacyServiceTokenPrefix) {
 			if entry.CubbyholeID == "" {
 				cubbyholeID, err := base62.Random(TokenLength)
 				if err != nil {
