@@ -119,6 +119,10 @@ func (e *Executor) Execute() (map[string][]*Result, error) {
 			return nil, fmt.Errorf("failed to evaluate %v: %w", checker.Name(), err)
 		}
 
+		if results == nil {
+			results = []*Result{}
+		}
+
 		for _, result := range results {
 			result.Endpoint = e.templatePath(result.Endpoint)
 			result.StatusDisplay = ResultStatusNameMap[result.Status]

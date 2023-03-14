@@ -147,6 +147,13 @@ func (c *Client) NewLifetimeWatcher(i *LifetimeWatcherInput) (*LifetimeWatcher, 
 
 	random := i.Rand
 	if random == nil {
+		// NOTE:
+		// Rather than a cryptographically secure random number generator (RNG),
+		// the default behavior uses the math/rand package. The random number is
+		// used to introduce a slight jitter when calculating the grace period
+		// for a monitored secret monitoring. This is intended to stagger renewal
+		// requests to the Vault server, but in a semi-predictable way, so there
+		// is no need to use a cryptographically secure RNG.
 		random = rand.New(rand.NewSource(int64(time.Now().Nanosecond())))
 	}
 

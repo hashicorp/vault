@@ -1,34 +1,36 @@
 <div class="box is-bottomless is-fullwidth is-marginless">
-  <div class="columns">
-    {{#each this.configTypes as |option|}}
-      <div class="column is-flex">
-        <label for={{option.key}} class="box-label is-column {{if (eq @config.actionType option.key) 'is-selected'}}">
-          <div>
-            <h3 class="box-label-header title is-6">
-              <Icon @size="24" @name={{option.icon}} />
-              {{option.label}}
-            </h3>
-            <p class="help has-text-grey-dark">
-              {{option.description}}
-            </p>
-          </div>
-          <div>
-            <RadioButton
-              id={{option.key}}
-              name="pki-config-type"
-              @value={{option.key}}
-              @groupValue={{@config.actionType}}
-              @onChange={{fn (mut @config.actionType) option.key}}
-              data-test-pki-config-option={{option.key}}
-            />
-            <label for={{option.key}}></label>
-          </div>
-        </label>
-      </div>
-    {{/each}}
-  </div>
+  {{#unless @config.id}}
+    <div class="columns">
+      {{#each this.configTypes as |option|}}
+        <div class="column is-flex">
+          <label for={{option.key}} class="box-label is-column {{if (eq @config.actionType option.key) 'is-selected'}}">
+            <div>
+              <h3 class="box-label-header title is-6">
+                <Icon @size="24" @name={{option.icon}} />
+                {{option.label}}
+              </h3>
+              <p class="help has-text-grey-dark">
+                {{option.description}}
+              </p>
+            </div>
+            <div>
+              <RadioButton
+                id={{option.key}}
+                name="pki-config-type"
+                @value={{option.key}}
+                @groupValue={{@config.actionType}}
+                @onChange={{fn (mut @config.actionType) option.key}}
+                data-test-pki-config-option={{option.key}}
+              />
+              <label for={{option.key}}></label>
+            </div>
+          </label>
+        </div>
+      {{/each}}
+    </div>
+  {{/unless}}
   {{#if (eq @config.actionType "import")}}
-    <PkiCaCertificateImport
+    <PkiImportPemBundle
       @model={{@config}}
       @onCancel={{transition-to "vault.cluster.secrets.backend.pki.overview"}}
       @onSave={{transition-to "vault.cluster.secrets.backend.pki.issuers"}}

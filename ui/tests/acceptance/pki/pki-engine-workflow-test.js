@@ -94,7 +94,7 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.dom(SELECTORS.configuration.emptyState).doesNotExist();
       await click('[data-test-text-toggle]');
       await fillIn('[data-test-text-file-textarea]', this.pemBundle);
-      await click('[data-test-pki-ca-cert-import]');
+      await click('[data-test-pki-import-pem-bundle]');
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.mountPath}/pki/issuers`,
@@ -429,10 +429,10 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.dom(SELECTORS.issuerDetails.title).hasText('View issuer certificate');
       assert
         .dom(`${SELECTORS.issuerDetails.defaultGroup} ${SELECTORS.issuerDetails.row}`)
-        .exists({ count: 11 }, 'Renders 10 info table items under default group');
+        .exists({ count: 13 }, 'Renders 13 info table items under default group');
       assert
         .dom(`${SELECTORS.issuerDetails.urlsGroup} ${SELECTORS.issuerDetails.row}`)
-        .exists({ count: 3 }, 'Renders 4 info table items under URLs group');
+        .exists({ count: 3 }, 'Renders 3 info table items under URLs group');
       assert.dom(SELECTORS.issuerDetails.groupTitle).exists({ count: 1 }, 'only 1 group title rendered');
     });
   });

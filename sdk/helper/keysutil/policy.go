@@ -1425,10 +1425,18 @@ func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte
 				var edErr error
 				parsedPrivateKey, edErr = ParsePKCS8Ed25519PrivateKey(key)
 				if edErr != nil {
-					return fmt.Errorf("error parsing asymmetric key:\n - assuming contents are an ed25519 private key: %s\n - original error: %v", edErr, err)
+					return fmt.Errorf("error parsing asymmetric key:\n - assuming contents are an ed25519 private key: %v\n - original error: %w", edErr, err)
 				}
 
 				// Parsing as Ed25519-in-PKCS8-ECPrivateKey succeeded!
+			} else if strings.Contains(err.Error(), oidSignatureRSAPSS.String()) {
+				var rsaErr error
+				parsedPrivateKey, rsaErr = ParsePKCS8RSAPSSPrivateKey(key)
+				if rsaErr != nil {
+					return fmt.Errorf("error parsing asymmetric key:\n - assuming contents are an RSA/PSS private key: %v\n - original error: %w", rsaErr, err)
+				}
+
+				// Parsing as RSA-PSS in PKCS8 succeeded!
 			} else {
 				return fmt.Errorf("error parsing asymmetric key: %s", err)
 			}

@@ -198,7 +198,16 @@
       {
         "title": "User Lockout",
         "path": "concepts/user-lockout"
-      }
+      },
+      {
+        "title": "Events",
+        "path": "concepts/events",
+        "badge": {
+          "text": "ALPHA",
+          "type": "outlined",
+          "color": "neutral"
+        }
+  }
     ]
   },
   {
@@ -746,6 +755,10 @@
         ]
       },
       {
+        "title": "<code>print</code>",
+        "path": "commands/print"
+      },
+      {
         "title": "<code>read</code>",
         "path": "commands/read"
       },
@@ -816,6 +829,19 @@
           {
             "title": "<code>revoke</code>",
             "path": "commands/token/revoke"
+          }
+        ]
+      },
+      {
+        "title": "<code>transit</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/transit"
+          },
+          {
+            "title": "<code>import</code> and <code>import-version</code>",
+            "path": "commands/transit/import"
           }
         ]
       },
@@ -971,7 +997,16 @@
       },
       {
         "title": "Active Directory",
-        "path": "secrets/ad"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secrets/ad"
+          },
+          {
+            "title": "Migration Guide",
+            "path": "secrets/ad/migration-guide"
+          }
+        ]
       },
       {
         "title": "AliCloud",
@@ -1732,8 +1767,7 @@
       },
       {
         "title": "Upgrade to 1.13.x",
-        "path": "upgrading/upgrade-to-1.13.x",
-        "hidden": true
+        "path": "upgrading/upgrade-to-1.13.x"
       },
       {
         "title": "Upgrade to 1.12.x",
@@ -1974,6 +2008,10 @@
       {
         "title": "Overview",
         "path": "release-notes"
+      },
+      {
+         "title": "1.13.0",
+         "path": "release-notes/1.13.0"
       },
       {
         "title": "1.12.0",

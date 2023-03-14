@@ -1253,7 +1253,7 @@ func (c *AgentCommand) newLogger() (log.InterceptLogger, error) {
 	}
 
 	logCfg := &logging.LogConfig{
-		Name:              "vault-agent",
+		Name:              "agent",
 		LogLevel:          logLevel,
 		LogFormat:         logFormat,
 		LogFilePath:       c.config.LogFile,
@@ -1359,9 +1359,12 @@ func (c *AgentCommand) reloadCerts() error {
 	defer c.tlsReloadFuncsLock.RUnlock()
 
 	for _, reloadFunc := range c.tlsReloadFuncs {
-		err := reloadFunc()
-		if err != nil {
-			errors = multierror.Append(errors, err)
+		// Non-TLS listeners will have a nil reload func.
+		if reloadFunc != nil {
+			err := reloadFunc()
+			if err != nil {
+				errors = multierror.Append(errors, err)
+			}
 		}
 	}
 

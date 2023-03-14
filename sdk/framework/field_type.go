@@ -63,6 +63,10 @@ const (
 	// formatted as a string or a number. The resulting time.Time
 	// is converted to UTC.
 	TypeTime
+
+	// DO NOT USE. Any new values must be inserted before this value.
+	// Used to write tests that ensure type methods handle all possible values.
+	typeInvalidMax
 )
 
 func (t FieldType) String() string {
@@ -75,6 +79,8 @@ func (t FieldType) String() string {
 		return "name string"
 	case TypeInt:
 		return "int"
+	case TypeInt64:
+		return "int64"
 	case TypeBool:
 		return "bool"
 	case TypeMap:
