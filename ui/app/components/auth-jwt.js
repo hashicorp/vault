@@ -104,7 +104,7 @@ export default Component.extend({
     // ensure that postMessage event is from expected source
     while (true) {
       const event = yield waitForEvent(thisWindow, 'message');
-      if (event.data.source === 'oidc-callback' && event.isTrusted && event.origin === thisWindow.origin) {
+      if (event.origin === thisWindow.origin && event.isTrusted && event.data.source === 'oidc-callback') {
         return this.exchangeOIDC.perform(event.data, oidcWindow);
       }
       // continue to wait for the correct message
