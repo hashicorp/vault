@@ -44,18 +44,6 @@ var pathFetchReadSchema = map[int][]framework.Response{
 				Description: `Issuing CA Chain`,
 				Required:    false,
 			},
-			"http_content_type": {
-				Type:     framework.TypeString,
-				Required: false,
-			},
-			"http_raw_body": {
-				Type:     framework.TypeString,
-				Required: false,
-			},
-			"http_status_code": {
-				Type:     framework.TypeString,
-				Required: false,
-			},
 		},
 	}},
 }

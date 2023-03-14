@@ -6,9 +6,6 @@ description: |-
   for Vault 1.13.x. Please read it carefully.
 ---
 
-~> Note: these are **draft** notes for a future version of Vault. They should not be considered
-official guidance until the release has been completed.
-
 # Overview
 
 This page contains the list of deprecations and important or breaking changes
@@ -17,6 +14,14 @@ for Vault 1.13.x compared to 1.12. Please read it carefully.
 ## Changes
 
 @include 'consul-dataplane-upgrade-note.mdx'
+
+### Active Directory Secrets Engine Deprecation
+
+The Active Directory (AD) secrets engine has been deprecated as of the Vault 1.13 release.
+We will continue to support the AD secrets engine in maintenance mode for six major Vault
+releases. Maintenance mode means that we will fix bugs and security issues but will not add
+new features. For additional information, see the [deprecation table](/vault/docs/deprecation)
+and [migration guide](/vault/docs/secrets/ad/migration-guide).
 
 ### AliCloud Auth Role Parameter
 

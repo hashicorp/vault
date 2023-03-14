@@ -1,6 +1,7 @@
 package keysutil
 
 import (
+	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"errors"
@@ -53,6 +54,9 @@ var (
 	// Other implementations may use the OID 1.3.101.110 from
 	// https://datatracker.ietf.org/doc/html/rfc8410.
 	oidRFC8410Ed25519 = asn1.ObjectIdentifier{1, 3, 101, 110}
+
+	// See crypto/x509/x509.go in the Go toolchain source distribution.
+	oidSignatureRSAPSS = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 10}
 )
 
 func isEd25519OID(oid asn1.ObjectIdentifier) bool {
@@ -112,4 +116,33 @@ func ParsePKCS8Ed25519PrivateKey(der []byte) (key interface{}, err error) {
 	}
 
 	return ed25519.NewKeyFromSeed(ed25519Key.PrivateKey), nil
+}
+
+// ParsePKCS8PrivateKey parses an unencrypted private key in PKCS #8, ASN.1 DER form.
+//
+// This helper only supports RSA/PSS keys (with OID 1.2.840.113549.1.1.10).
+//
+// It returns a *rsa.PrivateKey, a *ecdsa.PrivateKey, or a ed25519.PrivateKey.
+// More types might be supported in the future.
+//
+// This kind of key is commonly encoded in PEM blocks of type "PRIVATE KEY".
+func ParsePKCS8RSAPSSPrivateKey(der []byte) (key interface{}, err error) {
+	var privKey pkcs8
+	if _, err := asn1.Unmarshal(der, &privKey); err == nil {
+		switch {
+		case privKey.Algo.Algorithm.Equal(oidSignatureRSAPSS):
+			// Fall through; there's no parameters here unlike ECDSA
+			// containers, so we can go to parsing the inner rsaPrivateKey
+			// object.
+		default:
+			return nil, errors.New("keysutil: failed to parse key as RSA PSS private key")
+		}
+	}
+
+	key, err = x509.ParsePKCS1PrivateKey(privKey.PrivateKey)
+	if err != nil {
+		return nil, fmt.Errorf("keysutil: failed to parse inner RSA PSS private key: %w", err)
+	}
+
+	return key, nil
 }

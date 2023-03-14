@@ -66,6 +66,24 @@ func validateResponseDataImpl(schema *framework.Response, data map[string]interf
 		return fmt.Errorf("failed to unmashal data: %w", err)
 	}
 
+	// these are special fields that will not show up in the final response and
+	// should be ignored
+	for _, field := range []string{
+		logical.HTTPContentType,
+		logical.HTTPRawBody,
+		logical.HTTPStatusCode,
+		logical.HTTPRawBodyAlreadyJSONDecoded,
+		logical.HTTPCacheControlHeader,
+		logical.HTTPPragmaHeader,
+		logical.HTTPWWWAuthenticateHeader,
+	} {
+		delete(dataWithStringValues, field)
+
+		if _, ok := schema.Fields[field]; ok {
+			return fmt.Errorf("encountered a reserved field in response schema: %s", field)
+		}
+	}
+
 	// Validate
 	fd := framework.FieldData{
 		Raw:    dataWithStringValues,
@@ -79,7 +97,7 @@ func validateResponseDataImpl(schema *framework.Response, data map[string]interf
 	return fd.Validate()
 }
 
-// FindResponseSchema is a test helper to extract the response schema from a given framework path / operation
+// FindResponseSchema is a test helper to extract response schema from the given framework path / operation
 func FindResponseSchema(t *testing.T, paths []*framework.Path, pathIdx int, operation logical.Operation) *framework.Response {
 	t.Helper()
 

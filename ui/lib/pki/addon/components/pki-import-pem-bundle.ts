@@ -6,17 +6,16 @@ import { task } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
 import { waitFor } from '@ember/test-waiters';
 import errorMessage from 'vault/utils/error-message';
-import PkiBaseCertificateModel from 'vault/models/pki/certificate/base';
 import PkiActionModel from 'vault/models/pki/action';
 
 /**
- * @module PkiCaCertificateImport
- * PkiCaCertificateImport components are used to import PKI CA certificates and keys via pem_bundle.
+ * @module PkiImportPemBundle
+ * PkiImportPemBundle components are used to import PKI CA certificates and keys via pem_bundle.
  * https://github.com/hashicorp/vault/blob/main/website/content/api-docs/secret/pki.mdx#import-ca-certificates-and-keys
  *
  * @example
  * ```js
- * <PkiCaCertificateImport @model={{this.model}} />
+ * <PkiImportPemBundle @model={{this.model}} />
  * ```
  *
  * @param {Object} model - certificate model from route
@@ -24,14 +23,18 @@ import PkiActionModel from 'vault/models/pki/action';
  * @callback onSubmit - Callback triggered on submit success.
  */
 
+interface AdapterOptions {
+  actionType: string;
+  useIssuer: boolean | undefined;
+}
 interface Args {
   onSave: CallableFunction;
   onCancel: CallableFunction;
-  model: PkiBaseCertificateModel | PkiActionModel;
-  adapterOptions: object | undefined;
+  model: PkiActionModel;
+  adapterOptions: AdapterOptions;
 }
 
-export default class PkiCaCertificateImport extends Component<Args> {
+export default class PkiImportPemBundle extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
 
   @tracked errorBanner = '';
@@ -42,7 +45,7 @@ export default class PkiCaCertificateImport extends Component<Args> {
     event.preventDefault();
     try {
       yield this.args.model.save({ adapterOptions: this.args.adapterOptions });
-      this.flashMessages.success('Successfully imported certificate.');
+      this.flashMessages.success('Successfully imported data.');
       this.args.onSave();
     } catch (error) {
       this.errorBanner = errorMessage(error);

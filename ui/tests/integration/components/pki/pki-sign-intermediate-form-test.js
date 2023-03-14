@@ -42,7 +42,7 @@ module('Integration | Component | pki-sign-intermediate-form', function (hooks) 
 
     assert.dom(selectors.form).exists('Form is rendered');
     assert.dom(selectors.resultsContainer).doesNotExist('Results display not rendered');
-    assert.dom('[data-test-field]').exists({ count: 8 }, '8 default fields shown');
+    assert.dom('[data-test-field]').exists({ count: 9 }, '9 default fields shown');
     assert.dom(selectors.toggleSigningOptions).exists();
     assert.dom(selectors.toggleSANOptions).exists();
     assert.dom(selectors.toggleAdditionalFields).exists();
