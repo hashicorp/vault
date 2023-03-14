@@ -78,7 +78,7 @@ define GEN_CONFIG
 
 	@$(CIRCLECI) config pack $(SOURCE_DIR) > $(CONFIG_PACKED)
 	@echo "$$GENERATED_FILE_HEADER" > $@.tmp || { rm -f $@; exit 1; }
-	@$(CIRCLECI) config process $(CONFIG_PACKED) >> $@.tmp || { rm -f $@.tmp; exit 1; }
+	@$(CIRCLECI) config process $(CONFIG_PACKED) | sed '/^Processing config with following values/,+1d' >> $@.tmp || { rm -f $@.tmp; exit 1; }
 	@mv -f $@.tmp $@
 endef
 
