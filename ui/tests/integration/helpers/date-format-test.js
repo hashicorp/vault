@@ -1,32 +1,31 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
-import { format } from 'date-fns';
 import hbs from 'htmlbars-inline-precompile';
-import { staticNow } from 'vault/tests/helpers/stubs';
+import timestamp from 'core/utils/timestamp';
 
 module('Integration | Helper | date-format', function (hooks) {
   setupRenderingTest(hooks);
 
   test('it is able to format a date object', async function (assert) {
-    const today = staticNow;
+    const today = timestamp.now();
     this.set('today', today);
 
     await render(hbs`{{date-format this.today "yyyy"}}`);
-    assert.dom(this.element).includesText(today.getFullYear(), 'it renders the date in the year format');
+    assert.dom(this.element).includesText('2018', 'it renders the date in the year format');
   });
 
   test('it supports date timestamps', async function (assert) {
-    const today = staticNow.getTime();
+    const today = this.today.getTime();
     this.set('today', today);
 
     await render(hbs`{{date-format this.today 'hh:mm:ss'}}`);
     const formattedDate = this.element.innerText;
-    assert.ok(formattedDate.match(/^\d{2}:\d{2}:\d{2}$/));
+    assert.strictEqual(formattedDate, '2:15:30');
   });
 
   test('it supports date strings', async function (assert) {
-    const todayString = staticNow.getFullYear().toString();
+    const todayString = this.today.getFullYear().toString();
     this.set('todayString', todayString);
 
     await render(hbs`{{date-format this.todayString "yyyy"}}`);
@@ -42,16 +41,16 @@ module('Integration | Helper | date-format', function (hooks) {
   });
 
   test('it supports already formatted dates', async function (assert) {
-    const formattedDate = staticNow;
+    const formattedDate = this.today;
     this.set('formattedDate', formattedDate);
 
     await render(hbs`{{date-format this.formattedDate 'MMMM dd, yyyy hh:mm:ss a' isFormatted=true}}`);
-    assert.dom(this.element).includesText(format(formattedDate, 'MMMM dd, yyyy hh:mm:ss a'));
+    assert.dom(this.element).hasText('April 03, 2018 02:15:20 PM');
   });
 
   test('displays time zone if withTimeZone=true', async function (assert) {
     const timestampDate = '2022-12-06T11:29:15-08:00';
-    const zone = staticNow.toLocaleTimeString(undefined, { timeZoneName: 'short' }).split(' ')[2];
+    const zone = timestamp.now().toLocaleTimeString(undefined, { timeZoneName: 'short' }).split(' ')[2];
     this.set('timestampDate', timestampDate);
 
     await render(hbs`{{date-format this.timestampDate 'MMM d yyyy, h:mm:ss aaa' withTimeZone=true}}`);
@@ -59,8 +58,7 @@ module('Integration | Helper | date-format', function (hooks) {
   });
 
   test('it returns the date passed in if it cannot be parsed', async function (assert) {
-    const timestampDate = 'foobar';
-    this.set('timestampDate', timestampDate);
+    this.set('timestampDate', 'foobar');
 
     await render(hbs`{{date-format this.timestampDate 'MMM d yyyy, h:mm:ss aaa' withTimeZone=true}}`);
     assert.dom(this.element).hasText('foobar');

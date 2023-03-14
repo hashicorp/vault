@@ -6,7 +6,7 @@ import { formatRFC3339 } from 'date-fns';
 import { findAll } from '@ember/test-helpers';
 import { calculateAverage } from 'vault/utils/chart-helpers';
 import { formatNumber } from 'core/helpers/format-number';
-import { staticNow } from 'vault/tests/helpers/stubs';
+import timestamp from 'core/utils/timestamp';
 
 module('Integration | Component | clients/monthly-usage', function (hooks) {
   setupRenderingTest(hooks);
@@ -1410,7 +1410,7 @@ module('Integration | Component | clients/monthly-usage', function (hooks) {
     },
   ];
   hooks.beforeEach(function () {
-    this.set('timestamp', formatRFC3339(staticNow));
+    this.set('timestamp', formatRFC3339(timestamp.now()));
     this.set('isDateRange', true);
     this.set('chartLegend', [
       { label: 'entity clients', key: 'entity_clients' },

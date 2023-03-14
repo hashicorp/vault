@@ -1,12 +1,13 @@
 import ApplicationSerializer from '../application';
 import { formatISO } from 'date-fns';
 import { formatByMonths, formatByNamespace, homogenizeClientNaming } from 'core/utils/client-count-utils';
+import timestamp from 'core/utils/timestamp';
 export default class ActivitySerializer extends ApplicationSerializer {
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     if (payload.id === 'no-data') {
       return super.normalizeResponse(store, primaryModelClass, payload, id, requestType);
     }
-    const response_timestamp = formatISO(new Date(Date.now()));
+    const response_timestamp = formatISO(timestamp.now());
     const transformedPayload = {
       ...payload,
       response_timestamp,

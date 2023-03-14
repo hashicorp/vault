@@ -12,12 +12,13 @@ import ss from 'vault/tests/pages/components/search-select';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { ARRAY_OF_MONTHS } from 'core/utils/date-formatters';
 import { formatNumber } from 'core/helpers/format-number';
-import { staticNow } from 'vault/tests/helpers/stubs';
+import timestamp from 'core/utils/timestamp';
 
 const searchSelect = create(ss);
 
+const STATIC_NOW = new Date('2023-01-13T14:15:00');
 // for testing, we're in the middle of a license/billing period
-const LICENSE_START = startOfMonth(subMonths(staticNow, 6)); // 2022-07-01
+const LICENSE_START = startOfMonth(subMonths(STATIC_NOW, 6)); // 2022-07-01
 // upgrade happened 1 month after license start
 const UPGRADE_DATE = addMonths(LICENSE_START, 1); // 2022-08-01
 
@@ -26,7 +27,7 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
   setupMirage(hooks);
 
   hooks.before(function () {
-    sinon.stub(Date, 'now').returns(staticNow.getTime());
+    sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
     ENV['ember-cli-mirage'].handler = 'clients';
   });
 
@@ -35,6 +36,7 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
   });
 
   hooks.after(function () {
+    timestamp.now.restore();
     ENV['ember-cli-mirage'].handler = null;
   });
 
@@ -333,8 +335,8 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
 
   test('Shows empty if license start date is current month', async function (assert) {
     // TODO cmb update to reflect new behavior
-    const licenseStart = staticNow;
-    const licenseEnd = addMonths(staticNow, 12);
+    const licenseStart = STATIC_NOW;
+    const licenseEnd = addMonths(licenseStart, 12);
     this.server.get('sys/license/status', function () {
       return {
         request_id: 'my-license-request-id',

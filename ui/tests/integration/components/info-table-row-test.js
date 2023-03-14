@@ -4,7 +4,7 @@ import Service from '@ember/service';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, settled, triggerEvent } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import { staticNow } from 'vault/tests/helpers/stubs';
+import timestamp from 'core/utils/timestamp';
 
 const VALUE = 'test value';
 const LABEL = 'test label';
@@ -255,14 +255,14 @@ module('Integration | Component | InfoTableRow', function (hooks) {
   });
 
   test('Formats the value as date when formatDate present', async function (assert) {
-    this.set('value', staticNow);
+    this.set('value', timestamp.now());
     await render(hbs`<InfoTableRow
       @label={{this.label}}
       @value={{this.value}}
       @formatDate={{'yyyy'}}
     />`);
 
-    assert.dom('[data-test-value-div]').hasText('2023', 'Renders date with passed format');
+    assert.dom('[data-test-value-div]').hasText('2018', 'Renders date with passed format');
   });
 
   test('Formats the value as TTL when formatTtl present', async function (assert) {

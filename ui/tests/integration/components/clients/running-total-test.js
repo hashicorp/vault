@@ -6,7 +6,7 @@ import { formatRFC3339 } from 'date-fns';
 import { findAll } from '@ember/test-helpers';
 import { calculateAverage } from 'vault/utils/chart-helpers';
 import { formatNumber } from 'core/helpers/format-number';
-import { staticNow } from 'vault/tests/helpers/stubs';
+import timestamp from 'core/utils/timestamp';
 
 module('Integration | Component | clients/running-total', function (hooks) {
   setupRenderingTest(hooks);
@@ -1416,7 +1416,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
     non_entity_clients: 17850,
   };
   hooks.beforeEach(function () {
-    this.set('timestamp', formatRFC3339(staticNow));
+    this.set('timestamp', formatRFC3339(timestamp.now()));
     this.set('chartLegend', [
       { label: 'entity clients', key: 'entity_clients' },
       { label: 'non-entity clients', key: 'non_entity_clients' },

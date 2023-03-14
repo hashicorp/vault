@@ -3,12 +3,13 @@ import EmberObject from '@ember/object';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { staticNow } from 'vault/tests/helpers/stubs';
+import timestamp from 'core/utils/timestamp';
 
 module('Integration | Component | keymgmt/key-edit', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
+    const now = timestamp.now();
     const model = EmberObject.create({
       name: 'Unicorns',
       id: 'Unicorns',
@@ -16,11 +17,11 @@ module('Integration | Component | keymgmt/key-edit', function (hooks) {
       versions: [
         {
           id: 1,
-          creation_time: staticNow.toString(),
+          creation_time: now.toString(),
         },
         {
           id: 2,
-          creation_time: staticNow.toString(),
+          creation_time: now.toString(),
         },
       ],
       canDelete: true,

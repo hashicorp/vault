@@ -1,22 +1,20 @@
 import { module, test } from 'qunit';
-import sinon from 'sinon';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { endOfMonth, formatRFC3339 } from 'date-fns';
 import { click } from '@ember/test-helpers';
 import subMonths from 'date-fns/subMonths';
-import { staticNow } from 'vault/tests/helpers/stubs';
+import timestamp from 'core/utils/timestamp';
 
 module('Integration | Component | clients/attribution', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.before(function () {
-    sinon.stub(Date, 'now').returns(staticNow.getTime());
-  });
   hooks.beforeEach(function () {
-    this.set('startTimestamp', formatRFC3339(subMonths(staticNow, 6)));
-    this.set('timestamp', formatRFC3339(staticNow));
+    const mockNow = timestamp.now();
+    this.mockNow = mockNow;
+    this.set('startTimestamp', formatRFC3339(subMonths(mockNow, 6)));
+    this.set('timestamp', formatRFC3339(mockNow));
     this.set('selectedNamespace', null);
     this.set('chartLegend', [
       { label: 'entity clients', key: 'entity_clients' },
@@ -80,8 +78,8 @@ module('Integration | Component | clients/attribution', function (hooks) {
   });
 
   test('it renders two charts and correct text for single, historical month', async function (assert) {
-    this.start = formatRFC3339(subMonths(staticNow, 1));
-    this.end = formatRFC3339(subMonths(endOfMonth(staticNow), 1));
+    this.start = formatRFC3339(subMonths(this.mockNow, 1));
+    this.end = formatRFC3339(subMonths(endOfMonth(this.mockNow), 1));
     await render(hbs`
       <div id="modal-wormhole"></div>
       <Clients::Attribution

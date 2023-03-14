@@ -124,7 +124,7 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
     assert.dom('[data-test-value-div="Service account name"]').exists();
 
     assert.dom('[data-test-row-label="Lease expiry"]').hasText('Lease expiry');
-    assert.dom('[data-test-value-div="Lease expiry"]').exists();
+    assert.dom('[data-test-value-div="Lease expiry"]').hasText('April 3rd 2018, 3:15:30 PM');
     assert.dom('[data-test-row-label="lease_id"]').hasText('lease_id');
     assert
       .dom('[data-test-value-div="lease_id"] [data-test-row-value="lease_id"]')

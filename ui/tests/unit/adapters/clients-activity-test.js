@@ -1,20 +1,27 @@
 import { module, test } from 'qunit';
+import sinon from 'sinon';
 import { setupTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { subMonths, fromUnixTime, addMonths } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
-import { staticNow } from 'vault/tests/helpers/stubs';
+import timestamp from 'core/utils/timestamp';
 
 module('Unit | Adapter | clients activity', function (hooks) {
   setupTest(hooks);
   setupMirage(hooks);
 
+  hooks.before(function () {
+    sinon.stub(timestamp, 'now').callsFake(() => new Date('2023-01-13T09:30:15'));
+  });
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
     this.modelName = 'clients/activity';
-    this.startDate = subMonths(staticNow, 6);
-    this.endDate = staticNow; // Jan 13 2023
+    this.startDate = subMonths(timestamp.now(), 6);
+    this.endDate = timestamp.now();
     this.readableUnix = (unix) => parseAPITimestamp(fromUnixTime(unix).toISOString(), 'MMMM dd yyyy');
+  });
+  hooks.after(function () {
+    timestamp.now.restore();
   });
 
   test('it does not format if both params are timestamp strings', async function (assert) {

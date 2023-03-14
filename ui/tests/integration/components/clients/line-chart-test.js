@@ -4,7 +4,8 @@ import { find, render, findAll, triggerEvent } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { format, formatRFC3339, subMonths } from 'date-fns';
 import { formatChartDate } from 'core/utils/date-formatters';
-import { staticNow } from 'vault/tests/helpers/stubs';
+import timestamp from 'core/utils/timestamp';
+
 module('Integration | Component | clients/line-chart', function (hooks) {
   setupRenderingTest(hooks);
   hooks.beforeEach(function () {
@@ -51,21 +52,22 @@ module('Integration | Component | clients/line-chart', function (hooks) {
   });
 
   test('it renders upgrade data', async function (assert) {
+    const now = timestamp.now();
     this.set('dataset', [
       {
-        foo: format(subMonths(staticNow, 4), 'M/yy'),
+        foo: format(subMonths(now, 4), 'M/yy'),
         bar: 4,
       },
       {
-        foo: format(subMonths(staticNow, 3), 'M/yy'),
+        foo: format(subMonths(now, 3), 'M/yy'),
         bar: 8,
       },
       {
-        foo: format(subMonths(staticNow, 2), 'M/yy'),
+        foo: format(subMonths(now, 2), 'M/yy'),
         bar: 14,
       },
       {
-        foo: format(subMonths(staticNow, 1), 'M/yy'),
+        foo: format(subMonths(now, 1), 'M/yy'),
         bar: 10,
       },
     ]);
@@ -73,7 +75,7 @@ module('Integration | Component | clients/line-chart', function (hooks) {
       {
         id: '1.10.1',
         previousVersion: '1.9.2',
-        timestampInstalled: formatRFC3339(subMonths(staticNow, 2)),
+        timestampInstalled: formatRFC3339(subMonths(now, 2)),
       },
     ]);
     await render(hbs`
@@ -96,30 +98,31 @@ module('Integration | Component | clients/line-chart', function (hooks) {
   });
 
   test('it renders tooltip', async function (assert) {
+    const now = timestamp.now();
     const tooltipData = [
       {
-        month: format(subMonths(staticNow, 4), 'M/yy'),
+        month: format(subMonths(now, 4), 'M/yy'),
         clients: 4,
         new_clients: {
           clients: 0,
         },
       },
       {
-        month: format(subMonths(staticNow, 3), 'M/yy'),
+        month: format(subMonths(now, 3), 'M/yy'),
         clients: 8,
         new_clients: {
           clients: 4,
         },
       },
       {
-        month: format(subMonths(staticNow, 2), 'M/yy'),
+        month: format(subMonths(now, 2), 'M/yy'),
         clients: 14,
         new_clients: {
           clients: 6,
         },
       },
       {
-        month: format(subMonths(staticNow, 1), 'M/yy'),
+        month: format(subMonths(now, 1), 'M/yy'),
         clients: 20,
         new_clients: {
           clients: 4,
@@ -131,7 +134,7 @@ module('Integration | Component | clients/line-chart', function (hooks) {
       {
         id: '1.10.1',
         previousVersion: '1.9.2',
-        timestampInstalled: formatRFC3339(subMonths(staticNow, 2)),
+        timestampInstalled: formatRFC3339(subMonths(now, 2)),
       },
     ]);
     await render(hbs`

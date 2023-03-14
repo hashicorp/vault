@@ -1,4 +1,5 @@
 import { belongsTo, attr } from '@ember-data/model';
+import timestamp from 'core/utils/timestamp';
 import SecretModel from './secret';
 
 export default class SecretV2VersionModel extends SecretModel {
@@ -15,7 +16,7 @@ export default class SecretV2VersionModel extends SecretModel {
 
   get deleted() {
     const deletionTime = new Date(this.deletionTime);
-    const now = new Date(Date.now());
+    const now = timestamp.now();
     return deletionTime <= now;
   }
 }

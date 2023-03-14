@@ -3,6 +3,7 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { ARRAY_OF_MONTHS, parseAPITimestamp } from 'core/utils/date-formatters';
 import { addYears, isSameYear, subYears } from 'date-fns';
+import timestamp from 'core/utils/timestamp';
 /**
  * @module CalendarWidget
  * CalendarWidget component is used in the client counts dashboard to select a month/year to query the /activity endpoint.
@@ -19,7 +20,7 @@ import { addYears, isSameYear, subYears } from 'date-fns';
  * ```
  */
 export default class CalendarWidget extends Component {
-  currentDate = new Date(Date.now());
+  currentDate = timestamp.now();
   @tracked calendarDisplayDate = this.currentDate; // init to current date, updates when user clicks on calendar chevrons
   @tracked showCalendar = false;
   @tracked tooltipTarget = null;

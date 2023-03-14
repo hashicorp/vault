@@ -6,17 +6,13 @@ import hbs from 'htmlbars-inline-precompile';
 import calendarDropdown from 'vault/tests/pages/components/calendar-widget';
 import { ARRAY_OF_MONTHS } from 'core/utils/date-formatters';
 import { subMonths, subYears } from 'date-fns';
-
-const CURRENT_DATE = new Date('2020-03-15T14:15:00');
+import timestamp from 'core/utils/timestamp';
 
 module('Integration | Component | calendar-widget', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.before(function () {
-    sinon.stub(Date, 'now').returns(CURRENT_DATE);
-  });
-
   hooks.beforeEach(function () {
+    const CURRENT_DATE = timestamp.now();
     this.set('currentDate', CURRENT_DATE);
     this.set('calendarStartDate', subMonths(CURRENT_DATE, 12));
     this.set('calendarEndDate', CURRENT_DATE);
@@ -37,11 +33,11 @@ module('Integration | Component | calendar-widget', function (hooks) {
 
     assert
       .dom(calendarDropdown.dateRangeTrigger)
-      .hasText(`Mar 2019 - Mar 2020`, 'renders and formats start and end dates');
+      .hasText(`Apr 2017 - Apr 2018`, 'renders and formats start and end dates');
     await calendarDropdown.openCalendar();
     assert.ok(calendarDropdown.showsCalendar, 'renders the calendar component');
     // assert months in current year are disabled/enabled correctly
-    const enabledMonths = ['January', 'February', 'March'];
+    const enabledMonths = ['January', 'February', 'March', 'April'];
     ARRAY_OF_MONTHS.forEach(function (month) {
       if (enabledMonths.includes(month)) {
         assert
@@ -71,7 +67,7 @@ module('Integration | Component | calendar-widget', function (hooks) {
     assert.dom('[data-test-previous-year]').isDisabled('disables previous year');
 
     // assert months in previous year are disabled/enabled correctly
-    const disabledMonths = ['January', 'February'];
+    const disabledMonths = ['January', 'February', 'March'];
     ARRAY_OF_MONTHS.forEach(function (month) {
       if (disabledMonths.includes(month)) {
         assert.dom(`[data-test-calendar-month="${month}"]`).hasClass('is-readOnly', `${month} is read only`);
@@ -126,14 +122,14 @@ module('Integration | Component | calendar-widget', function (hooks) {
       />
     `);
     await calendarDropdown.openCalendar();
-    await click(`[data-test-calendar-month="March"`);
+    await click(`[data-test-calendar-month="April"`);
     assert.propEqual(
       this.handleClientActivityQuery.lastCall.lastArg,
       {
         dateType: 'endDate',
-        monthIdx: 2,
-        monthName: 'March',
-        year: 2020,
+        monthIdx: 3,
+        monthName: 'April',
+        year: 2018,
       },
       'it calls parent function with end date (current) month/year'
     );
@@ -147,14 +143,14 @@ module('Integration | Component | calendar-widget', function (hooks) {
         dateType: 'endDate',
         monthIdx: 2,
         monthName: 'March',
-        year: 2019,
+        year: 2017,
       },
-      'it calls parent function with start date month/year'
+      'it calls parent function with selected start date month/year'
     );
   });
 
   test('it disables correct months when start date 6 months ago', async function (assert) {
-    this.set('calendarStartDate', subMonths(this.currentDate, 6));
+    this.set('calendarStartDate', subMonths(this.currentDate, 6)); // Nov 3, 2017
     this.set('startTimestamp', subMonths(this.currentDate, 6).toISOString());
     await render(hbs`
       <CalendarWidget
@@ -170,9 +166,9 @@ module('Integration | Component | calendar-widget', function (hooks) {
     // Check start year disables correct months
     await calendarDropdown.clickPreviousYear();
     assert.dom('[data-test-previous-year]').isDisabled('previous year is disabled');
-    const enabled2019 = ['September', 'October', 'November', 'December'];
+    const prevYearEnabled = ['October', 'November', 'December'];
     ARRAY_OF_MONTHS.forEach(function (month) {
-      if (enabled2019.includes(month)) {
+      if (prevYearEnabled.includes(month)) {
         assert
           .dom(`[data-test-calendar-month="${month}"]`)
           .doesNotHaveClass('is-readOnly', `${month} is enabled`);
@@ -183,9 +179,9 @@ module('Integration | Component | calendar-widget', function (hooks) {
 
     // Check end year disables correct months
     await click('[data-test-next-year]');
-    const enabled2020 = ['January', 'February', 'March'];
+    const currYearEnabled = ['January', 'February', 'March', 'April'];
     ARRAY_OF_MONTHS.forEach(function (month) {
-      if (enabled2020.includes(month)) {
+      if (currYearEnabled.includes(month)) {
         assert
           .dom(`[data-test-calendar-month="${month}"]`)
           .doesNotHaveClass('is-readOnly', `${month} is enabled`);
@@ -196,7 +192,7 @@ module('Integration | Component | calendar-widget', function (hooks) {
   });
 
   test('it disables correct months when start date 36 months ago', async function (assert) {
-    this.set('calendarStartDate', subMonths(this.currentDate, 36));
+    this.set('calendarStartDate', subMonths(this.currentDate, 36)); // April 3 2015
     this.set('startTimestamp', subMonths(this.currentDate, 36).toISOString());
     await render(hbs`
       <CalendarWidget
@@ -209,21 +205,19 @@ module('Integration | Component | calendar-widget', function (hooks) {
     await calendarDropdown.openCalendar();
     assert.dom('[data-test-next-year]').isDisabled('Future year is disabled');
 
-    await calendarDropdown.clickPreviousYear();
-    assert.dom('[data-test-display-year]').hasText('2019');
-    await calendarDropdown.clickPreviousYear();
-    assert.dom('[data-test-display-year]').hasText('2018');
-    await calendarDropdown.clickPreviousYear();
-    assert.dom('[data-test-display-year]').hasText('2017');
+    for (const year of [2017, 2016, 2015]) {
+      await calendarDropdown.clickPreviousYear();
+      assert.dom('[data-test-display-year]').hasText(year.toString());
+    }
 
     assert.dom('[data-test-previous-year]').isDisabled('previous year is disabled');
     assert.dom('[data-test-next-year]').isEnabled('next year is enabled');
 
     assert.dom('.calendar-widget .is-readOnly').exists('Some months disabled');
 
-    const disabled2017 = ['January', 'February'];
+    const disabledMonths = ['January', 'February', 'March'];
     ARRAY_OF_MONTHS.forEach(function (month) {
-      if (disabled2017.includes(month)) {
+      if (disabledMonths.includes(month)) {
         assert.dom(`[data-test-calendar-month="${month}"]`).hasClass('is-readOnly', `${month} is read only`);
       } else {
         assert
@@ -233,15 +227,15 @@ module('Integration | Component | calendar-widget', function (hooks) {
     });
 
     await click('[data-test-next-year]');
-    assert.dom('.calendar-widget .is-readOnly').doesNotExist('All months enabled for 2018');
+    assert.dom('.calendar-widget .is-readOnly').doesNotExist('All months enabled for 2016');
     await click('[data-test-next-year]');
-    assert.dom('.calendar-widget .is-readOnly').doesNotExist('All months enabled for 2019');
+    assert.dom('.calendar-widget .is-readOnly').doesNotExist('All months enabled for 2017');
     await click('[data-test-next-year]');
-    assert.dom('.calendar-widget .is-readOnly').exists('Some months disabled for 2020');
+    assert.dom('.calendar-widget .is-readOnly').exists('Some months disabled for 2018');
 
-    const enabled2020 = ['January', 'February', 'March'];
+    const enabledMonths = ['January', 'February', 'March', 'April'];
     ARRAY_OF_MONTHS.forEach(function (month) {
-      if (enabled2020.includes(month)) {
+      if (enabledMonths.includes(month)) {
         assert
           .dom(`[data-test-calendar-month="${month}"]`)
           .doesNotHaveClass('is-readOnly', `${month} is enabled`);
