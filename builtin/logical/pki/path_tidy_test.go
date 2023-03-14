@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 
 	"github.com/armon/go-metrics"
 
@@ -224,17 +225,19 @@ func TestTidyCancellation(t *testing.T) {
 
 	// Kick off a tidy operation (which runs in the background), but with
 	// a slow-ish pause between certificates.
-	_, err = CBWrite(b, s, "tidy", map[string]interface{}{
+	resp, err := CBWrite(b, s, "tidy", map[string]interface{}{
 		"tidy_cert_store": true,
 		"safety_buffer":   "1s",
 		"pause_duration":  "1s",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("tidy"), logical.UpdateOperation), resp, true)
 
 	// If we wait six seconds, the operation should still be running. That's
 	// how we check that pause_duration works.
 	time.Sleep(3 * time.Second)
 
-	resp, err := CBRead(b, s, "tidy-status")
+	resp, err = CBRead(b, s, "tidy-status")
+
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotNil(t, resp.Data)
@@ -242,6 +245,7 @@ func TestTidyCancellation(t *testing.T) {
 
 	// If we now cancel the operation, the response should say Cancelling.
 	cancelResp, err := CBWrite(b, s, "tidy-cancel", map[string]interface{}{})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("tidy-cancel"), logical.UpdateOperation), resp, true)
 	require.NoError(t, err)
 	require.NotNil(t, cancelResp)
 	require.NotNil(t, cancelResp.Data)
@@ -261,6 +265,7 @@ func TestTidyCancellation(t *testing.T) {
 	time.Sleep(3 * time.Second)
 
 	statusResp, err := CBRead(b, s, "tidy-status")
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("tidy-status"), logical.ReadOperation), resp, true)
 	require.NoError(t, err)
 	require.NotNil(t, statusResp)
 	require.NotNil(t, statusResp.Data)
@@ -385,6 +390,7 @@ func TestTidyIssuerConfig(t *testing.T) {
 
 	// Ensure the default auto-tidy config matches expectations
 	resp, err := CBRead(b, s, "config/auto-tidy")
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("config/auto-tidy"), logical.ReadOperation), resp, true)
 	requireSuccessNonNilResponse(t, resp, err)
 
 	jsonBlob, err := json.Marshal(&defaultTidyConfig)
@@ -407,6 +413,8 @@ func TestTidyIssuerConfig(t *testing.T) {
 		"tidy_expired_issuers": true,
 		"issuer_safety_buffer": "5s",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("config/auto-tidy"), logical.UpdateOperation), resp, true)
+
 	requireSuccessNonNilResponse(t, resp, err)
 	require.Equal(t, true, resp.Data["tidy_expired_issuers"])
 	require.Equal(t, 5, resp.Data["issuer_safety_buffer"])
