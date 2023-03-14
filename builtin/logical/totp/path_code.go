@@ -14,6 +14,12 @@ import (
 func pathCode(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "code/" + framework.GenericNameWithAtRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTOTP,
+			OperationSuffix: "code",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -25,9 +31,19 @@ func pathCode(b *backend) *framework.Path {
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathReadCode,
-			logical.UpdateOperation: b.pathValidateCode,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathReadCode,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "generate",
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathValidateCode,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "validate",
+				},
+			},
 		},
 
 		HelpSynopsis:    pathCodeHelpSyn,
