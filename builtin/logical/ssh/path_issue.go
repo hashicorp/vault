@@ -19,6 +19,11 @@ func pathIssue(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "issue/" + framework.GenericNameWithAtRegex("role"),
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixSSH,
+			OperationVerb:   "issue",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathIssue,

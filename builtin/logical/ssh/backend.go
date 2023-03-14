@@ -10,6 +10,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+const operationPrefixSSH = "ssh"
+
 type backend struct {
 	*framework.Backend
 	view      logical.Storage

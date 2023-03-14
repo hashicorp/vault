@@ -11,6 +11,10 @@ import (
 func pathVerify(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "verify",
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixSSH,
+			OperationVerb:   "verify",
+		},
 		Fields: map[string]*framework.FieldSchema{
 			"otp": {
 				Type:        framework.TypeString,

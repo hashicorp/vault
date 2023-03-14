@@ -38,6 +38,11 @@ type keyStorageEntry struct {
 func pathConfigCA(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/ca",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixSSH,
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"private_key": {
 				Type:        framework.TypeString,
@@ -64,10 +69,26 @@ func pathConfigCA(b *backend) *framework.Path {
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathConfigCAUpdate,
-			logical.DeleteOperation: b.pathConfigCADelete,
-			logical.ReadOperation:   b.pathConfigCARead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathConfigCAUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "ca",
+				},
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathConfigCADelete,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "ca-config",
+				},
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathConfigCARead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "ca-config",
+				},
+			},
 		},
 
 		HelpSynopsis: `Set the SSH private key used for signing certificates.`,

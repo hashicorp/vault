@@ -11,6 +11,11 @@ func pathFetchPublicKey(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `public_key`,
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixSSH,
+			OperationSuffix: "public-key",
+		},
+
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation: b.pathFetchPublicKey,
 		},
