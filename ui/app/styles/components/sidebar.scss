@@ -118,3 +118,31 @@
 .hc-nav-subnav-item-link.hds-button {
   font-family: inherit;
 }
+
+.hc-nav-container {
+  .popup-menu-content {
+    width: 184px;
+
+    .box,
+    button.link,
+    a {
+      background-color: var(--token-color-palette-neutral-700);
+    }
+    button.link,
+    a {
+      color: $ui-gray-200;
+      font-weight: $font-weight-normal;
+      font-size: 14px;
+      &:hover {
+        background-color: var(--token-color-palette-neutral-600);
+        border-color: transparent;
+      }
+    }
+    .menu-label {
+      color: $ui-gray-500;
+      font-size: 14px;
+      font-weight: $font-weight-bold;
+      text-transform: unset;
+    }
+  }
+}
