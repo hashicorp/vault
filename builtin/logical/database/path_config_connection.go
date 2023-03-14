@@ -113,7 +113,6 @@ func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixDatabase,
-			OperationSuffix: "connection",
 		},
 
 		Fields: map[string]*framework.FieldSchema{
@@ -162,11 +161,34 @@ func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 		},
 
 		ExistenceCheck: b.connectionExistenceCheck(),
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.CreateOperation: b.connectionWriteHandler(),
-			logical.UpdateOperation: b.connectionWriteHandler(),
-			logical.ReadOperation:   b.connectionReadHandler(),
-			logical.DeleteOperation: b.connectionDeleteHandler(),
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.connectionWriteHandler(),
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "connection",
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.connectionWriteHandler(),
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "connection",
+				},
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.connectionReadHandler(),
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "connection-config",
+				},
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.connectionDeleteHandler(),
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "connection-config",
+				},
+			},
 		},
 
 		HelpSynopsis:    pathConfigConnectionHelpSyn,
