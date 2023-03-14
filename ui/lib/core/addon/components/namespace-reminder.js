@@ -1,21 +1,25 @@
+import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
-import { not } from '@ember/object/computed';
-import Component from '@ember/component';
-import { computed } from '@ember/object';
-import layout from '../templates/components/namespace-reminder';
 
-export default Component.extend({
-  layout,
-  namespace: service(),
-  showMessage: not('namespace.inRootNamespace'),
-  //public API
-  noun: null,
-  mode: 'edit',
-  modeVerb: computed('mode', function () {
-    const mode = this.mode;
-    if (!mode) {
+export default class NamespaceReminder extends Component {
+  @service namespace;
+
+  get showMessage() {
+    return !this.namespace.inRootNamespace;
+  }
+
+  get mode() {
+    return this.args.mode || 'edit';
+  }
+
+  get noun() {
+    return this.args.noun || null;
+  }
+
+  get modeVerb() {
+    if (!this.mode) {
       return '';
     }
-    return mode.endsWith('e') ? `${mode}d` : `${mode}ed`;
-  }),
-});
+    return this.mode.endsWith('e') ? `${this.mode}d` : `${this.mode}ed`;
+  }
+}
