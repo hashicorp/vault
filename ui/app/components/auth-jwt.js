@@ -32,7 +32,7 @@ export default Component.extend({
     this._super();
     const debounce = !this.oldSelectedAuthPath && !this.selectedAuthPath;
 
-    if (this.oldSelectedAuthPath !== this.selectedAuthPath || debounce) {
+    if (this.oldSelectedAuthPath !== this.selectedAuthPath || debounce || this.namespace) {
       this.fetchRole.perform(this.roleName, { debounce });
     }
 
