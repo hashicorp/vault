@@ -232,7 +232,8 @@ const connectionTests = [
       assert
         .dom('[data-test-alert-banner="alert"]')
         .hasTextContaining(
-          `Warning Please ensure that your Oracle plugin has the default name of vault-plugin-database-oracle. Custom naming is not supported in the UI at this time. If the plugin is already named vault-plugin-database-oracle, disregard this warning.`
+          `Warning Please ensure that your Oracle plugin has the default name of vault-plugin-database-oracle. Custom naming is not supported in the UI at this time. If the plugin is already named vault-plugin-database-oracle, disregard this warning.`,
+          'warning banner displays about connections with SSL.'
         );
     },
   },
