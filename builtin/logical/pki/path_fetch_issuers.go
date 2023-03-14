@@ -241,18 +241,6 @@ to be set on all PR secondary clusters.`,
 					Description: `OSCP Servers`,
 					Required:    false,
 				},
-				"http_content_type": {
-					Type:     framework.TypeString,
-					Required: false,
-				},
-				"http_raw_body": {
-					Type:     framework.TypeString,
-					Required: false,
-				},
-				"http_status_code": {
-					Type:     framework.TypeString,
-					Required: false,
-				},
 			},
 		}},
 	}
@@ -1087,18 +1075,6 @@ func buildPathGetIssuerCRL(b *backend, pattern string) *framework.Path {
 						Description: "OK",
 						Fields: map[string]*framework.FieldSchema{
 							"crl": {
-								Type:     framework.TypeString,
-								Required: false,
-							},
-							"http_content_type": {
-								Type:     framework.TypeString,
-								Required: false,
-							},
-							"http_raw_body": {
-								Type:     framework.TypeString,
-								Required: false,
-							},
-							"http_status_code": {
 								Type:     framework.TypeString,
 								Required: false,
 							},
