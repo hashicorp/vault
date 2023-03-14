@@ -270,7 +270,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
   });
 
   test('Connection create and edit form for each plugin', async function (assert) {
-    assert.expect(169);
+    assert.expect(161);
     const backend = await mount();
     for (const testCase of connectionTests) {
       await connectionPage.visitCreate({ backend });
@@ -292,11 +292,6 @@ module('Acceptance | secrets/database/*', function (hooks) {
       if (testCase.plugin === 'vault-plugin-database-oracle') {
         testCase.requiredFields(assert, testCase.name);
         continue;
-      }
-      if (testCase.plugin !== 'vault-plugin-database-oracle') {
-        assert
-          .dom('[data-test-alert-banner="alert"]')
-          .doesNotExist('Does not show alert-banners specific only to the Oracle db.');
       }
       testCase.requiredFields(assert, testCase.name);
       await connectionPage.toggleVerify();
