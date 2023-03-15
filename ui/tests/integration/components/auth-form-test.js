@@ -88,7 +88,7 @@ module('Integration | Component | auth form', function (hooks) {
     this.set('cluster', EmberObject.create({}));
     this.set('selectedAuth', 'token');
     await render(hbs`{{auth-form cluster=this.cluster selectedAuth=this.selectedAuth}}`);
-    // ARG TODO research and see if adapter errors changed, but null used to be Bad Request
+    // returns null because test does not return details of failed network request. On the app it will return the details of the error instead of null.
     return component.login().then(() => {
       assert.strictEqual(component.errorText, 'Error Authentication failed: null');
       server.shutdown();
