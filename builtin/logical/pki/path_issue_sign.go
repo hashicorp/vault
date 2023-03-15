@@ -24,7 +24,7 @@ func pathIssue(b *backend) *framework.Path {
 	displayAttrs := &framework.DisplayAttributes{
 		OperationPrefix: operationPrefixPKI,
 		OperationVerb:   "issue",
-		OperationSuffix: "for-role",
+		OperationSuffix: "with-role",
 	}
 
 	return buildPathIssue(b, pattern, displayAttrs)
@@ -36,7 +36,7 @@ func pathIssuerIssue(b *backend) *framework.Path {
 	displayAttrs := &framework.DisplayAttributes{
 		OperationPrefix: operationPrefixPKIIssuer,
 		OperationVerb:   "issue",
-		OperationSuffix: "for-role",
+		OperationSuffix: "with-role",
 	}
 
 	return buildPathIssue(b, pattern, displayAttrs)
@@ -109,7 +109,7 @@ func pathSign(b *backend) *framework.Path {
 	displayAttrs := &framework.DisplayAttributes{
 		OperationPrefix: operationPrefixPKI,
 		OperationVerb:   "sign",
-		OperationSuffix: "for-role",
+		OperationSuffix: "with-role",
 	}
 
 	return buildPathSign(b, pattern, displayAttrs)
@@ -121,7 +121,7 @@ func pathIssuerSign(b *backend) *framework.Path {
 	displayAttrs := &framework.DisplayAttributes{
 		OperationPrefix: operationPrefixPKIIssuer,
 		OperationVerb:   "sign",
-		OperationSuffix: "for-role",
+		OperationSuffix: "with-role",
 	}
 
 	return buildPathSign(b, pattern, displayAttrs)
@@ -201,7 +201,7 @@ func pathIssuerSignVerbatim(b *backend) *framework.Path {
 	displayAttrs := &framework.DisplayAttributes{
 		OperationPrefix: operationPrefixPKIIssuer,
 		OperationVerb:   "sign",
-		OperationSuffix: "verbatim|verbatim-for-role",
+		OperationSuffix: "verbatim|verbatim-with-role",
 	}
 
 	return buildPathIssuerSignVerbatim(b, pattern, displayAttrs)
@@ -213,7 +213,7 @@ func pathSignVerbatim(b *backend) *framework.Path {
 	displayAttrs := &framework.DisplayAttributes{
 		OperationPrefix: operationPrefixPKI,
 		OperationVerb:   "sign",
-		OperationSuffix: "verbatim|verbatim-for-role",
+		OperationSuffix: "verbatim|verbatim-with-role",
 	}
 
 	return buildPathIssuerSignVerbatim(b, pattern, displayAttrs)
