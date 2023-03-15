@@ -32,7 +32,7 @@ export default Component.extend({
     this._super();
     const debounce = !this.oldSelectedAuthPath && !this.selectedAuthPath;
 
-    if (this.oldSelectedAuthPath !== this.selectedAuthPath || debounce || this.namespace) {
+    if (this.oldSelectedAuthPath !== this.selectedAuthPath || debounce) {
       this.fetchRole.perform(this.roleName, { debounce });
     }
 
@@ -134,7 +134,7 @@ export default Component.extend({
 
     let { namespace, path, state, code } = oidcState;
 
-    // The namespace can be either be passed as a query paramter, or be embedded
+    // The namespace can be either be passed as a query parameter, or be embedded
     // in the state param in the format `<state_id>,ns=<namespace>`. So if
     // `namespace` is empty, check for namespace in state as well.
     if (namespace === '' || this.featureFlagService.managedNamespaceRoot) {
@@ -171,6 +171,14 @@ export default Component.extend({
       if (e && e.preventDefault) {
         e.preventDefault();
       }
+      try {
+        await this.fetchRole.perform(this.roleName, { debounce: false });
+      } catch (error) {
+        // this task could be cancelled if the instances in didReceiveAttrs resolve after this was started
+        if (error?.name !== 'TaskCancelation') {
+          throw error;
+        }
+      }
       if (!this.isOIDC || !this.role || !this.role.authUrl) {
         let message = this.errorMessage;
         if (!this.role) {
@@ -181,14 +189,6 @@ export default Component.extend({
         }
         this.onError(message);
         return;
-      }
-      try {
-        await this.fetchRole.perform(this.roleName, { debounce: false });
-      } catch (error) {
-        // this task could be cancelled if the instances in didReceiveAttrs resolve after this was started
-        if (error?.name !== 'TaskCancelation') {
-          throw error;
-        }
       }
       const win = this.getWindow();
 
