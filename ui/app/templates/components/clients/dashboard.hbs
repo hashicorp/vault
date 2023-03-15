@@ -18,7 +18,8 @@
       <DateDropdown @handleSubmit={{this.handleClientActivityQuery}} @dateType="startDate" @submitText="Save" />
     {{/if}}
   </div>
-  <p class="is-8 has-text-grey has-bottom-margin-xl">
+  {{! ARG confirm removed is-8 because was not a title. }}
+  <p class="has-text-grey has-bottom-margin-xl">
     {{this.versionText.description}}
   </p>
   {{#if this.noActivityData}}

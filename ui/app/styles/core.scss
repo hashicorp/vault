@@ -13,7 +13,8 @@
 // Bring in the rest of Bulma from lib/css
 // @import 'bulma/bulma';
 // @import 'bulma/switch';
-@import 'replace_bulma';
+@import './core/element-styling';
+@import './core/bulma-classes';
 
 // Override Bulma details where appropriate
 @import './core/alert-banner';

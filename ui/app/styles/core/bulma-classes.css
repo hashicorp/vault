@@ -1,0 +1,603 @@
+/* SIZING */
+
+.is-size-1 {
+  font-size: 3rem !important; }
+
+.is-size-2 {
+  font-size: 2.5rem !important; }
+
+.is-size-3 {
+  font-size: 1.71429rem !important; }
+
+.is-size-4 {
+  font-size: 1.5rem !important; }
+
+.is-size-5 {
+  font-size: 1.25rem !important; }
+
+.is-size-6 {
+  font-size: 1rem !important; }
+
+.is-size-7 {
+  font-size: 0.92857rem !important; }
+
+.is-size-8 {  
+  font-size: 0.85714rem !important; }
+
+.is-size-9 {
+  font-size: 0.75rem !important; }
+
+  /* TODOs remove verb? remove important */
+  /* HELPERS TEXT*/
+.has-text-right {
+  text-align: right !important; }
+
+.is-pulled-left {
+  float: left !important; }
+
+.is-pulled-right {
+  float: right !important; }
+
+.is-lowercase {
+  text-transform: lowercase !important; }
+
+.is-uppercase {
+  text-transform: uppercase !important; }
+
+.has-text-white {
+  color: white !important; }
+
+.has-text-black {
+  color: #0a0a0a !important; }
+
+.has-text-success {
+  color: #2eb039 !important; }
+
+.has-text-grey-dark {
+  color: #525761 !important; }
+
+.has-text-grey {
+  color: #6f7682 !important; }
+
+.has-text-grey-light {
+  color: #bac1cc !important; }
+
+.has-text-weight-bold {
+  font-weight: 700 !important; }
+
+.has-text-centered {
+  text-align: center !important; }
+
+.is-shadowless {
+  box-shadow: none !important; }
+
+/* ARG is-light only used with tags? */
+.tag:not(body).is-light {
+  background-color: whitesmoke;
+  color: rgba(0, 0, 0, 0.7);
+}
+
+/* used in one place */
+.tag:not(body).is-medium {
+  font-size: 1rem;
+}
+
+/* used in one place */
+.field.is-grouped.is-grouped-centered {
+  justify-content: center;
+}
+     
+/* Helper layout */
+.is-block {
+  display: block !important; }
+
+.is-inline {
+  display: inline !important; }
+
+.is-inline-block {
+  display: inline-block !important; }
+
+.is-hidden {
+  display: none !important; }
+
+@media screen and (min-width: 769px), print {
+  .is-hidden-tablet {
+    display: none !important; } }
+
+@media screen and (max-width: 768px) {
+  .is-hidden-mobile {
+    display: none !important; } }
+
+@media screen and (max-width: 1215px) {
+  .container.is-widescreen:not(.is-max-desktop) {
+    max-width: 1152px;
+  }
+}
+
+.is-centered {
+  justify-content: center;
+}
+/* pagination is-centered used in one place */
+.pagination.is-centered .pagination-previous {
+  order: 1;
+}
+.pagination.is-centered .pagination-list {
+  justify-content: center;
+  order: 2;
+}
+.pagination.is-centered .pagination-next {
+  order: 3;
+}
+  
+/* Helper flexbox */
+.is-flex {
+  display: flex !important; }
+
+/* used in three places */
+.columns.is-variable.is-1 {
+  --columnGap: 0.25rem;
+}
+
+/* not used very often column.is-1 */
+.column.is-1 {
+  flex: none;
+  width: 8.33333%;
+}
+
+/* Used in one place title.is-2 */
+@media screen and (min-width: 769px), print {
+  .tile.is-2 {
+    flex: none;
+    width: 16.66667%;
+  }
+}
+
+/* columns is-mobile and level is-mobile */
+/* replace with is flex */
+.level.is-mobile {
+  display: flex;
+}
+
+.columns.is-mobile > .column.is-1 {
+  flex: none;
+  width: 8.33333%;
+}
+
+.columns.is-mobile > .column.is-3 {
+  flex: none;
+  width: 25%;
+}
+
+.columns.is-mobile > .column.is-10 {
+  flex: none;
+  width: 83.33333%;
+}
+
+.columns.is-mobile > .column.is-12 {
+  flex: none;
+  width: 100%;
+}
+
+
+.title.is-2 {
+  font-size: 2.5rem;
+}
+
+/* title.is-3 used a ton */
+.title.is-3 {
+  font-size: 2rem;
+}
+
+/* used a couple of times */
+.column.is-3 {
+  flex: none;
+  width: 25%;
+}
+
+@media screen and (min-width: 769px), print {
+  .column.is-7, .column.is-7-tablet {
+    flex: none;
+    width: 58.33333%;
+  }
+  .column.is-10-mobile {
+    flex: none;
+    width: 83.33333%;
+  }
+}
+
+@media screen and (min-width: 769px), print {
+  .columns.is-variable.is-7-tablet {
+    --columnGap: 1.75rem;
+  }
+}
+
+/* title.is-4 and column.is-4 used several times */
+.title.is-4 {
+  font-size: 1.5rem;
+}
+
+@media screen and (min-width: 769px), print {
+  .tile.is-4 {
+    flex: none;
+    width: 33.33333%;
+  }
+}
+
+@media screen and (min-width: 1024px) {
+  .column.is-4-desktop {
+    flex: none;
+    width: 33.33333%;
+  }
+}
+
+@media screen and (min-width: 769px), print {
+  .column.is-6, .column.is-6-tablet {
+    flex: none;
+    width: 50%;
+  }
+}
+
+/* used in two places */
+.columns.is-multiline {
+  flex-wrap: wrap;
+}
+
+/* is-desktop two places */
+@media screen and (min-width: 769px), print {
+  .columns:not(.is-desktop) {
+    display: flex;
+  }
+}
+
+@media screen and (min-width: 1024px) {
+  .columns.is-desktop {
+    display: flex;
+  }
+}
+
+/* title is-5 and columns is-5 and column is-5 */
+.title.is-5 {
+  font-size: 1.25rem;
+}
+@media screen and (min-width: 769px), print {
+  .column.is-5 {
+    flex: none;
+    width: 41.66667%;
+  }
+}
+
+/* title.is-6 column is-6 */
+.title.is-6 {
+  font-size: 1rem;
+}
+@media screen and (min-width: 769px), print {
+  .column.is-6 {
+    flex: none;
+    width: 50%;
+  }
+}
+
+/* title is-7 */
+.title.is-7 {
+  font-size: 0.75rem;
+}
+
+/* column is-9 used in four places */
+@media screen and (min-width: 769px), print {
+  .column.is-9 {
+    flex: none;
+    width: 75%;
+  }
+}
+
+/* column is-10 used in a decent number of places */
+@media screen and (max-width: 768px) {
+  .column.is-10-mobile {
+    flex: none;
+    width: 83.33333%;
+  }
+}
+@media screen and (min-width: 769px), print {
+  .column.is-10 {
+    flex: none;
+    width: 83.33333%;
+  }
+}
+
+@media screen and (min-width: 769px), print {
+  .column.is-12 {
+    flex: none;
+    width: 100%;
+  } 
+}
+/* used twice */
+@media screen and (max-width: 768px) {
+  .is-hidden-mobile {
+    display: none !important;
+  }
+}
+
+
+/* Helper spacing */
+.is-paddingless {
+  padding: 0 !important; }
+
+
+
+/* OTHER */
+/* we only use is white in two old places in the app... replace */
+.button.is-white {
+  background-color: white;
+  border-color: transparent;
+  color: #0a0a0a;
+}
+
+.button.is-white:hover, .button.is-white.is-hovered {
+  background-color: #f9f9f9;
+  border-color: transparent;
+  color: #0a0a0a;
+}
+
+.button.is-white:focus, .button.is-white.is-focused {
+  border-color: transparent;
+  color: #0a0a0a;
+}
+
+.button.is-white:focus:not(:active), .button.is-white.is-focused:not(:active) {
+  box-shadow: 0 0 0 0.125em rgba(255, 255, 255, 0.25);
+}
+
+.button.is-white:active, .button.is-white.is-active {
+  background-color: #f2f2f2;
+  border-color: transparent;
+  color: #0a0a0a;
+}
+
+.button.is-white[disabled],
+fieldset[disabled] .button.is-white {
+  background-color: white;
+  border-color: white;
+  box-shadow: none;
+}
+/* button.is-expanded used in only a couple of places */
+
+.buttons.has-addons .button.is-expanded {
+  flex-grow: 1;
+  flex-shrink: 1;
+}
+
+/* used a lot */
+.control.is-expanded {
+  flex-grow: 1;
+  flex-shrink: 1;
+}
+
+.field.is-grouped > .control.is-expanded {
+  flex-grow: 1;
+  flex-shrink: 1;
+}
+
+/* field.is-grouped used a ton */
+.field.is-grouped {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.field.is-grouped > .control {
+  flex-shrink: 0;
+}
+
+.field.is-grouped > .control:not(:last-child) {
+  margin-bottom: 0;
+  margin-right: 0.75rem;
+}
+
+.field.is-grouped > .control.is-expanded {
+  flex-grow: 1;
+  flex-shrink: 1;
+}
+
+.field.is-grouped.is-grouped-centered {
+  justify-content: center;
+}
+
+
+
+
+/* Only used in one place 'is-info' */
+.progress.is-info::-webkit-progress-value {
+  background-color: #3e8ed0;
+}
+
+.progress.is-info::-moz-progress-bar {
+  background-color: #3e8ed0;
+}
+
+.progress.is-info::-ms-fill {
+  background-color: #3e8ed0;
+}
+
+.progress.is-info:indeterminate {
+  background-image: linear-gradient(to right, #3e8ed0 30%, #ededed 30%);
+}
+
+/* used in one place */
+.progress.is-medium {
+  height: 1.25rem;
+}
+
+/* only used in two places replaces is-static */
+.button.is-static {
+  background-color: whitesmoke;
+  border-color: #dbdbdb;
+  color: #7a7a7a;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+.checkbox, .radio {
+  cursor: pointer;
+  display: inline-block;
+  line-height: 1.25;
+  position: relative;
+}
+
+.checkbox input, .radio input {
+  cursor: pointer;
+}
+
+.checkbox:hover, .radio:hover {
+  color: #363636;
+}
+
+.checkbox[disabled], .radio[disabled],
+fieldset[disabled] .checkbox,
+fieldset[disabled] .radio,
+.checkbox input[disabled],
+.radio input[disabled] {
+  color: #7a7a7a;
+  cursor: not-allowed;
+}
+.radio + .radio {
+  margin-left: 0.5em;
+}
+
+.select {
+  display: inline-block;
+  max-width: 100%;
+  position: relative;
+  vertical-align: top;
+}
+
+.select:not(.is-multiple) {
+  height: 2.5em;
+}
+
+.select:not(.is-multiple):not(.is-loading)::after {
+  border-color: #485fc7;
+  right: 1.125em;
+  z-index: 4;
+}
+
+.select select {
+  cursor: pointer;
+  display: block;
+  font-size: 1em;
+  max-width: 100%;
+  outline: none;
+}
+
+.select select::-ms-expand {
+  display: none;
+}
+
+.select select[disabled]:hover,
+fieldset[disabled] .select select:hover {
+  border-color: whitesmoke;
+}
+
+.select select:not([multiple]) {
+  padding-right: 2.5em;
+}
+
+.select select[multiple] {
+  height: auto;
+  padding: 0;
+}
+
+.select select[multiple] option {
+  padding: 0.5em 1em;
+}
+
+/* used a lot */
+.select.is-fullwidth {
+  width: 100%;
+}
+
+.select.is-fullwidth select {
+  width: 100%;
+}
+
+/* file not used very often */
+.file {
+  align-items: stretch;
+  display: flex;
+  justify-content: flex-start;
+  position: relative;
+}
+
+.file.has-name .file-cta {
+  border-bottom-right-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.file.has-name .file-name {
+  border-bottom-left-radius: 0;
+  border-top-left-radius: 0;
+}
+
+.file.has-name.is-empty .file-cta {
+  border-radius: 4px;
+}
+
+.file.has-name.is-empty .file-name {
+  display: none;
+}
+
+.file.is-fullwidth .file-label {
+  width: 100%;
+}
+
+.file.is-fullwidth .file-name {
+  flex-grow: 1;
+  max-width: none;
+}
+
+.file-icon {
+  align-items: center;
+  display: flex;
+  height: 1em;
+  justify-content: center;
+  margin-right: 0.5em;
+  width: 1em;
+}
+
+/* used is-normal in one place, TODO remove */
+@media screen and (min-width: 769px), print {
+  .field-label {
+    flex-basis: 0;
+    flex-grow: 1;
+    flex-shrink: 0;
+    margin-right: 1.5rem;
+    text-align: right;
+  }
+  .field-label.is-normal {
+    padding-top: 0.375em;
+  }
+  .field-label.is-medium {
+    font-size: 1.25rem;
+    padding-top: 0.375em;
+  }
+  .field-label.is-large {
+    font-size: 1.5rem;
+    padding-top: 0.375em;
+  }
+}
+
+/* for loader class, probably remove */
+.button.is-loading::after, .loader, .select.is-loading::after, .control.is-loading::after {
+  animation: spinAround 500ms infinite linear;
+  border: 2px solid #dbdbdb;
+  border-radius: 9999px;
+  border-right-color: transparent;
+  border-top-color: transparent;
+  content: "";
+  display: block;
+  height: 1em;
+  position: relative;
+  width: 1em;
+}
+
+
+
+
