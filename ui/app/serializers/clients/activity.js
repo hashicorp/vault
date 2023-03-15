@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import ApplicationSerializer from '../application';
 import { formatISO } from 'date-fns';
 import { formatByMonths, formatByNamespace, homogenizeClientNaming } from 'core/utils/client-count-utils';

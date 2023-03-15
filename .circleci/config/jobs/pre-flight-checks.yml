@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 description: Ensure nothing obvious is broken, and pre-cache Go modules.
 executor: go-machine
 steps:

@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 executor: docker-env-go-test-race
 parallelism: 8
 steps:
