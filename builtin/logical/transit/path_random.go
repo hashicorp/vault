@@ -15,7 +15,7 @@ func (b *backend) pathRandom() *framework.Path {
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixTransit,
 			OperationVerb:   "generate",
-			OperationSuffix: "random|random-with-source|random-with-source-and-bytes",
+			OperationSuffix: "random|random-with-source|random-with-bytes|random-with-source-and-bytes",
 		},
 
 		Fields: map[string]*framework.FieldSchema{

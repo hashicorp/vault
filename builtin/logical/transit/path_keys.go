@@ -129,10 +129,25 @@ key.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathPolicyWrite,
-			logical.DeleteOperation: b.pathPolicyDelete,
-			logical.ReadOperation:   b.pathPolicyRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathPolicyWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "create",
+				},
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathPolicyDelete,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "delete",
+				},
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathPolicyRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "read",
+				},
+			},
 		},
 
 		HelpSynopsis:    pathPolicyHelpSyn,

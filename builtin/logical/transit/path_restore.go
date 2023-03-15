@@ -16,7 +16,7 @@ func (b *backend) pathRestore() *framework.Path {
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixTransit,
 			OperationVerb:   "restore",
-			OperationSuffix: "key",
+			OperationSuffix: "key|and-rename-key",
 		},
 
 		Fields: map[string]*framework.FieldSchema{
