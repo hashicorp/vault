@@ -11,6 +11,11 @@ import (
 func (b *backend) pathCacheConfig() *framework.Path {
 	return &framework.Path{
 		Pattern: "cache-config",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"size": {
 				Type:        framework.TypeInt,
@@ -24,16 +29,27 @@ func (b *backend) pathCacheConfig() *framework.Path {
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathCacheConfigRead,
 				Summary:  "Returns the size of the active cache",
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "cache-config",
+				},
 			},
 
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathCacheConfigWrite,
 				Summary:  "Configures a new cache of the specified size",
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "cache",
+				},
 			},
 
 			logical.CreateOperation: &framework.PathOperation{
 				Callback: b.pathCacheConfigWrite,
 				Summary:  "Configures a new cache of the specified size",
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "cache",
+				},
 			},
 		},
 

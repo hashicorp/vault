@@ -11,6 +11,13 @@ import (
 func (b *backend) pathRandom() *framework.Path {
 	return &framework.Path{
 		Pattern: "random(/" + framework.GenericNameRegex("source") + ")?" + framework.OptionalParamRegex("urlbytes"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "generate",
+			OperationSuffix: "random|random-with-source|random-with-source-and-bytes",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"urlbytes": {
 				Type:        framework.TypeString,

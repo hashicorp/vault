@@ -12,6 +12,13 @@ import (
 func (b *backend) pathRestore() *framework.Path {
 	return &framework.Path{
 		Pattern: "restore" + framework.OptionalParamRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "restore",
+			OperationSuffix: "key",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"backup": {
 				Type:        framework.TypeString,
