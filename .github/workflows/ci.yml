@@ -73,11 +73,27 @@ jobs:
     if: ${{ ! (startsWith( github.ref_name, 'ui/' ) || startsWith( github.ref_name, 'docs/' ) || startsWith( github.ref_name, 'backport/docs/') ) }}
     uses: ./.github/workflows/test-go.yml
     with:
-      # The example inputs below are just here to get the workflow to run during the migration.
-      # In the future, they will be substituted - possibly with references to values coming from a testing matrix.
       go-arch: amd64
       go-tags: ${{ needs.setup.outputs.go-tags }}
+      extra-flags: 
       extra-tags: deadlock
       runs-on: ${{ needs.setup.outputs.runs-on }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
+    secrets: inherit
+  test-go-race:
+    name: Run Go tests with -race enabled
+    needs:
+    - setup
+    - setup-go-cache
+    # Don't run this job for branches starting with 'ui/', 'docs/', or 'backport/docs/'
+    if: ${{ ! (startsWith( github.ref_name, 'ui/' ) || startsWith( github.ref_name, 'docs/' ) || startsWith( github.ref_name, 'backport/docs/') ) }}
+    uses: ./.github/workflows/test-go.yml
+    with:
+      go-arch: amd64
+      go-tags: ${{ needs.setup.outputs.go-tags }}
+      extra-flags: '-race'
+      extra-tags:
+      runs-on: ${{ needs.setup.outputs.runs-on }}
+      enterprise: ${{ needs.setup.outputs.enterprise }}
+      race-detection: true
     secrets: inherit
