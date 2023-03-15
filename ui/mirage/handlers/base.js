@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 // base handlers used in mirage config when a specific handler is not specified
 const EXPIRY_DATE = '2021-05-12T23:20:50.52Z';
 

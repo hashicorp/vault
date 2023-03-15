@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { click, fillIn, findAll, currentURL, find, settled, waitUntil } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -28,6 +33,7 @@ module('Acceptance | aws secret backend', function (hooks) {
     ],
   };
   test('aws backend', async function (assert) {
+    assert.expect(12);
     const path = `aws-${this.timestamp}`;
     const roleName = 'awsrole';
 
@@ -91,13 +97,10 @@ module('Acceptance | aws secret backend', function (hooks) {
     assert.ok(findAll(`[data-test-secret-link="${roleName}"]`).length, `aws: role shows in the list`);
 
     //and delete
-    // TODO the button does not populate quickly enough.
-    // await click(`[data-test-secret-link="${roleName}"] [data-test-popup-menu-trigger]`);
-    // await settled();
-    // await click(`[data-test-aws-role-delete="${roleName}"]`);
-
-    // await click(`[data-test-confirm-button]`);
-    // await settled();
-    // assert.dom(`[data-test-secret-link="${roleName}"]`).doesNotExist(`aws: role is no longer in the list`);
+    await click(`[data-test-secret-link="${roleName}"] [data-test-popup-menu-trigger]`);
+    await waitUntil(() => find(`[data-test-aws-role-delete="${roleName}"]`)); // flaky without
+    await click(`[data-test-aws-role-delete="${roleName}"]`);
+    await click(`[data-test-confirm-button]`);
+    assert.dom(`[data-test-secret-link="${roleName}"]`).doesNotExist(`aws: role is no longer in the list`);
   });
 });

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { belongsTo, attr } from '@ember-data/model';
 import timestamp from 'core/utils/timestamp';
 import SecretModel from './secret';

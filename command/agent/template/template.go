@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 // Package template is responsible for rendering user supplied templates to
 // disk. The Server type accepts configuration to communicate to a Vault server
 // and a Vault token for authentication. Internally, the Server creates a Consul

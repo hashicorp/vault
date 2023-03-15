@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Controller from '@ember/controller';
 import { task } from 'ember-concurrency';
 import { inject as service } from '@ember/service';

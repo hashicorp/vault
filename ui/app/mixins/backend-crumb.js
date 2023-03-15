@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { computed } from '@ember/object';
 import Mixin from '@ember/object/mixin';
 

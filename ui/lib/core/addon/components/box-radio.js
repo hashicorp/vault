@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+/**
  * @module BoxRadio
  * BoxRadio components are used to display options for a radio selection.
  *

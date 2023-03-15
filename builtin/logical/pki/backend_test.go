@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -2694,6 +2697,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		},
 		MountPoint: "pki/",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("root/sign-self-issued"), logical.UpdateOperation), resp, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -5246,7 +5250,8 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 		},
 	}
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
+		HandlerFunc:             vaulthttp.Handler,
+		RequestResponseCallback: schema.ResponseValidatingCallback(t),
 	})
 	cluster.Start()
 	defer cluster.Cleanup()
@@ -5966,6 +5971,7 @@ func TestPKI_ListRevokedCerts(t *testing.T) {
 
 	// Test empty cluster
 	resp, err := CBList(b, s, "certs/revoked")
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("certs/revoked"), logical.ListOperation), resp, true)
 	requireSuccessNonNilResponse(t, resp, err, "failed listing empty cluster")
 	require.Empty(t, resp.Data, "response map contained data that we did not expect")
 

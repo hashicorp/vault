@@ -8,7 +8,7 @@ project {
   # Supports doublestar glob patterns for more flexibility in defining which
   # files or folders should be ignored
   header_ignore = [
-    "builtin/credentials/aws/pkcs7/**",
+    "builtin/credential/aws/pkcs7/**",
     "ui/node_modules/**",
   ]
 }

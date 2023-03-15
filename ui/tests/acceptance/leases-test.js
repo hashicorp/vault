@@ -1,5 +1,10 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { click, currentRouteName, visit } from '@ember/test-helpers';
-// TESTS HERE ARE SKPPED
+// TESTS HERE ARE SKIPPED
 // running vault with -dev-leased-kv flag lets you run some of these tests
 // but generating leases programmatically is currently difficult
 //
