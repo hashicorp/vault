@@ -15,6 +15,7 @@ func pathSign(b *backend) *framework.Path {
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixSSH,
 			OperationVerb:   "sign",
+			OperationSuffix: "certificate",
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{

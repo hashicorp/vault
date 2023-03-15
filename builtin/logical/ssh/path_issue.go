@@ -22,6 +22,7 @@ func pathIssue(b *backend) *framework.Path {
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixSSH,
 			OperationVerb:   "issue",
+			OperationSuffix: "certificate",
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
