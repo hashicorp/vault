@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 # aws_region is the AWS region where we'll create infrastructure
 # for the smoke scenario
 # aws_region = "us-west-1"

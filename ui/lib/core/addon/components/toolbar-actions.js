@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+/**
  * @module ToolbarActions
  * `ToolbarActions` is a container for toolbar links such as "Add item".
  * It should only be used inside of `Toolbar`.

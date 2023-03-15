@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+/**
  * @module ClientsConfig
  * ClientsConfig components are used to show and edit the client count config information.
  *
