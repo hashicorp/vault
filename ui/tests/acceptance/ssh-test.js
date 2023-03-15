@@ -75,7 +75,7 @@ module('Acceptance | ssh secret backend', function (hooks) {
     },
   ];
   test('ssh backend', async function (assert) {
-    assert.expect(26);
+    assert.expect(28);
     const now = new Date().getTime();
     const sshPath = `ssh-${now}`;
 
@@ -157,17 +157,13 @@ module('Acceptance | ssh secret backend', function (hooks) {
       );
 
       //and delete
-      // TODO confirmed functionality works, but it can not find the data-test-ssh-role-delete in time.
-      // await click(`[data-test-secret-link="${role.name}"] [data-test-popup-menu-trigger]`);
-      // await settled();
-      // await click(`[data-test-ssh-role-delete]`);
-      // await settled();
-      // await click(`[data-test-confirm-button]`);
-
-      // await settled();
-      // assert
-      //   .dom(`[data-test-secret-link="${role.name}"]`)
-      //   .doesNotExist(`${role.type}: role is no longer in the list`);
+      await click(`[data-test-secret-link="${role.name}"] [data-test-popup-menu-trigger]`);
+      await waitUntil(() => find('[data-test-ssh-role-delete]')); // flaky without
+      await click(`[data-test-ssh-role-delete]`);
+      await click(`[data-test-confirm-button]`);
+      assert
+        .dom(`[data-test-secret-link="${role.name}"]`)
+        .doesNotExist(`${role.type}: role is no longer in the list`);
     }
   });
 });
