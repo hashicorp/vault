@@ -251,8 +251,8 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 			Description: cleanString(p.HelpSynopsis),
 		}
 
-		pi.Sudo = sudoPaths.HasPath(path)
-		pi.Unauthenticated = unauthPaths.HasPath(path)
+		pi.Sudo = sudoPaths.HasExactPath(path)
+		pi.Unauthenticated = unauthPaths.HasExactPath(path)
 		pi.DisplayAttrs = p.DisplayAttrs
 
 		// If the newer style Operations map isn't defined, create one from the legacy fields.
