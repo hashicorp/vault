@@ -617,8 +617,20 @@ func TestKVListCommand(t *testing.T) {
 			code:       0,
 		},
 		{
-			name:       "default_with_mount",
+			name:       "not_enough_args",
+			args:       []string{},
+			outStrings: []string{"Not enough arguments"},
+			code:       1,
+		},
+		{
+			name:       "v2_default_with_mount",
 			args:       []string{"-mount", "kv", "my-prefix"},
+			outStrings: []string{"secret-0", "secret-1", "secret-2"},
+			code:       0,
+		},
+		{
+			name:       "v1_default_with_mount",
+			args:       []string{"kv/my-prefix"},
 			outStrings: []string{"secret-0", "secret-1", "secret-2"},
 			code:       0,
 		},
@@ -629,7 +641,13 @@ func TestKVListCommand(t *testing.T) {
 			code:       2,
 		},
 		{
-			name:       "mount_only",
+			name:       "v1_mount_only",
+			args:       []string{"kv"},
+			outStrings: []string{"my-prefix"},
+			code:       0,
+		},
+		{
+			name:       "v2_mount_only",
 			args:       []string{"-mount", "kv"},
 			outStrings: []string{"my-prefix"},
 			code:       0,
