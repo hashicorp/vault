@@ -1,13 +1,22 @@
 <HcAppFrame::Nav as |Nav|>
-  <Nav.Link @route="vault.cluster" @current-when={{false}} @icon="arrow-left" data-test-sidebar-nav-link="back main">
+  <Nav.Link
+    @route="vault.cluster"
+    @current-when={{false}}
+    @icon="arrow-left"
+    data-test-sidebar-nav-link="Back to main navigation"
+  >
     Back to main navigation
   </Nav.Link>
 
-  <Nav.Header>Tools</Nav.Header>
+  <Nav.Header data-test-sidebar-nav-heading="Tools">Tools</Nav.Header>
 
   {{#each (tools-actions) as |supportedAction|}}
     {{#if (has-permission "tools" routeParams=supportedAction)}}
-      <Nav.Link @route="vault.cluster.tools.tool" @model={{supportedAction}} data-test-sidebar-nav-link={{supportedAction}}>
+      <Nav.Link
+        @route="vault.cluster.tools.tool"
+        @model={{supportedAction}}
+        data-test-sidebar-nav-link={{capitalize supportedAction}}
+      >
         {{capitalize supportedAction}}
       </Nav.Link>
     {{/if}}

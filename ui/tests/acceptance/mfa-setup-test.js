@@ -47,7 +47,7 @@ module('Acceptance | mfa-setup', function (hooks) {
     await logout.visit();
     await authPage.loginUsername(USER, PASSWORD);
     await click('.nav-user-button button');
-    await click('[data-test-status-link="mfa"]');
+    await click('[data-test-user-menu-item="mfa"]');
   });
 
   test('it should login through MFA and post to generate and be able to restart the setup', async function (assert) {
