@@ -10,5 +10,6 @@ project {
   header_ignore = [
     "builtin/credential/aws/pkcs7/**",
     "ui/node_modules/**",
+    "enos/modules/k8s_deploy_vault/raft-config.hcl",
   ]
 }
