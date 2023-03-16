@@ -2219,8 +2219,6 @@ func (c *Core) PopulateTokenEntry(ctx context.Context, req *logical.Request) err
 		}
 	}
 	req.ClientToken = token
-	// We ignore the token returned from CheckSSCToken here as Lookup also decodes the SSCT, and
-	// it may need the original SSCT to check state.
 	te, err := c.LookupToken(ctx, token)
 	if err != nil {
 		// If we have two dots but the second char is a dot it's a vault
