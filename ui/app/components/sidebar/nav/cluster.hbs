@@ -73,12 +73,12 @@
       Client count
     </Nav.Link>
   {{/if}}
-  {{#if (and this.version.features (has-permission "status" routeParams="license") (not @this.cluster.dr.isSecondary))}}
+  {{#if (and this.version.features (has-permission "status" routeParams="license") (not this.cluster.dr.isSecondary))}}
     <Nav.Link @route="vault.cluster.license" @model={{this.cluster.name}} data-test-sidebar-nav-link="License">
       License
     </Nav.Link>
   {{/if}}
-  {{#if (and (has-permission "status" routeParams="seal") (not @this.cluster.dr.isSecondary))}}
+  {{#if (and (has-permission "status" routeParams="seal") (not this.cluster.dr.isSecondary))}}
     <Nav.Link @route="vault.cluster.settings.seal" @model={{this.cluster.name}} data-test-sidebar-nav-link="Seal Vault">
       Seal Vault
     </Nav.Link>
