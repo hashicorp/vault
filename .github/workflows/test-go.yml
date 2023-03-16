@@ -55,7 +55,7 @@ jobs:
     permissions:
       id-token: write  # Note: this permission is explicitly required for Vault auth
       contents: read
-    name: ${{ inputs.packages }}
+    name: ${{ matrix.runner-index }} ${{ matrix.extra-flags }} ${{ matrix.extra-tags }}
     needs:
     - runner-indexes
     # Use GitHub runners on the OSS Vault repo and self-hosted runners otherwise.
