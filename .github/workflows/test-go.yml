@@ -5,10 +5,6 @@ on:
         description: The execution architecture (arm, amd64, etc.)
         required: true
         type: string
-      extra-flags:
-        description: A space-separated list of additional build flags for the go test command.
-        required: false
-        type: string
       extra-tags:
         description: A comma-separated list of additional build tags.
         required: false
@@ -26,10 +22,6 @@ on:
         description: The go tags to include on the go test command.
         required: false
         type: string
-      race-detection:
-        description: Should race detection be enabled?
-        type: boolean
-        default: false
 
 env:
   total-runners: 16
@@ -76,6 +68,12 @@ jobs:
         # generated above.
         #
         runner-index: ${{ fromJSON(needs.runner-indexes.outputs.runner-indexes) }}
+        extra-flags: ['', '-race' ]
+        include:
+            # Set value of matrix.extra-tags to "deadlock", unless we're running with the '-race' extra-flag
+          - extra-tags: deadlock
+          - extra-flags: '-race'
+            extra-tags: ''
     env:
       GOPRIVATE: github.com/hashicorp/*
       TIMEOUT_IN_MINUTES: 60
@@ -160,10 +158,10 @@ jobs:
               --junitfile test-results/go-test/results.xml \
               --jsonfile test-results/go-test/results.json \
               -- \
-              -tags "${{ inputs.go-tags }} ${{ inputs.extra-tags }}" \
+              -tags "${{ inputs.go-tags }} ${{ inputs.extra-tags }} ${{ matrix.extra-tags }}" \
               -timeout=${{ env.TIMEOUT_IN_MINUTES }}m \
               -parallel=20 \
-              ${{ inputs.extra-flags }} \
+              ${{ matrix.extra-flags }} \
                 \
               ${test_packages[${{ matrix.runner-index }}]}
       - name: Archive test results
