@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/sdk/helper/pathmanager"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
@@ -218,12 +219,12 @@ func documentPaths(backend *Backend, requestResponsePrefix string, doc *OASDocum
 
 // documentPath parses a framework.Path into one or more OpenAPI paths.
 func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix string, backendType logical.BackendType, doc *OASDocument) error {
-	var sudoPaths []string
-	var unauthPaths []string
+	sudoPaths := pathmanager.New()
+	unauthPaths := pathmanager.New()
 
 	if specialPaths != nil {
-		sudoPaths = specialPaths.Root
-		unauthPaths = specialPaths.Unauthenticated
+		sudoPaths.AddPaths(specialPaths.Root)
+		unauthPaths.AddPaths(specialPaths.Unauthenticated)
 	}
 
 	// Convert optional parameters into distinct patterns to be processed independently.
@@ -250,8 +251,8 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 			Description: cleanString(p.HelpSynopsis),
 		}
 
-		pi.Sudo = specialPathMatch(path, sudoPaths)
-		pi.Unauthenticated = specialPathMatch(path, unauthPaths)
+		pi.Sudo = sudoPaths.HasPath(path)
+		pi.Unauthenticated = unauthPaths.HasPath(path)
 		pi.DisplayAttrs = p.DisplayAttrs
 
 		// If the newer style Operations map isn't defined, create one from the legacy fields.
@@ -545,17 +546,6 @@ func constructRequestResponseName(path, prefix, suffix string) string {
 	b.WriteString(suffix)
 
 	return b.String()
-}
-
-func specialPathMatch(path string, specialPaths []string) bool {
-	// Test for exact or prefix match of special paths.
-	for _, sp := range specialPaths {
-		if sp == path ||
-			(strings.HasSuffix(sp, "*") && strings.HasPrefix(path, sp[0:len(sp)-1])) {
-			return true
-		}
-	}
-	return false
 }
 
 // expandPattern expands a regex pattern by generating permutations of any optional parameters
