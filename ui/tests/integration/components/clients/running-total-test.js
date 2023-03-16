@@ -4,6 +4,7 @@
  */
 
 import { module, test } from 'qunit';
+import sinon from 'sinon';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
@@ -1420,12 +1421,18 @@ module('Integration | Component | clients/running-total', function (hooks) {
     entity_clients: 20818,
     non_entity_clients: 17850,
   };
+  hooks.before(function () {
+    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
+  });
   hooks.beforeEach(function () {
     this.set('timestamp', formatRFC3339(timestamp.now()));
     this.set('chartLegend', [
       { label: 'entity clients', key: 'entity_clients' },
       { label: 'non-entity clients', key: 'non_entity_clients' },
     ]);
+  });
+  hooks.after(function () {
+    timestamp.now.restore();
   });
 
   test('it renders with full monthly activity data', async function (assert) {

@@ -4,6 +4,7 @@
  */
 
 import { module, test } from 'qunit';
+import sinon from 'sinon';
 import EmberObject from '@ember/object';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -13,6 +14,9 @@ import timestamp from 'core/utils/timestamp';
 module('Integration | Component | keymgmt/key-edit', function (hooks) {
   setupRenderingTest(hooks);
 
+  hooks.before(function () {
+    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
+  });
   hooks.beforeEach(function () {
     const now = timestamp.now();
     const model = EmberObject.create({
@@ -33,6 +37,9 @@ module('Integration | Component | keymgmt/key-edit', function (hooks) {
     });
     this.model = model;
     this.tab = '';
+  });
+  hooks.after(function () {
+    timestamp.now.restore();
   });
 
   // TODO: Add capabilities tests

@@ -9,7 +9,6 @@ import Service from '@ember/service';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, settled, triggerEvent } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import timestamp from 'core/utils/timestamp';
 
 const VALUE = 'test value';
 const LABEL = 'test label';
@@ -260,7 +259,7 @@ module('Integration | Component | InfoTableRow', function (hooks) {
   });
 
   test('Formats the value as date when formatDate present', async function (assert) {
-    this.set('value', timestamp.now());
+    this.set('value', new Date('2018-04-03T14:15:30'));
     await render(hbs`<InfoTableRow
       @label={{this.label}}
       @value={{this.value}}

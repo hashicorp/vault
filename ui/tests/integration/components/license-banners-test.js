@@ -4,6 +4,7 @@
  */
 
 import { module, test } from 'qunit';
+import sinon from 'sinon';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
@@ -15,13 +16,20 @@ import timestamp from 'core/utils/timestamp';
 module('Integration | Component | license-banners', function (hooks) {
   setupRenderingTest(hooks);
 
+  hooks.before(function () {
+    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
+  });
   hooks.beforeEach(function () {
     const mockNow = timestamp.now();
     this.now = mockNow;
     this.yesterday = subDays(mockNow, 1);
     this.nextMonth = addDays(mockNow, 30);
+    this.outside30 = addDays(mockNow, 32);
     this.version = this.owner.lookup('service:version');
     this.version.version = '1.13.1+ent';
+  });
+  hooks.after(function () {
+    timestamp.now.restore();
   });
 
   test('it does not render if no expiry', async function (assert) {
@@ -48,8 +56,7 @@ module('Integration | Component | license-banners', function (hooks) {
 
   test('it does not render a banner if expiry is outside 30 days', async function (assert) {
     assert.expect(1);
-    const outside30 = addDays(this.mockNow, 32);
-    this.set('expiry', formatRFC3339(outside30));
+    this.set('expiry', formatRFC3339(this.outside30));
     await render(hbs`<LicenseBanners @expiry={{this.expiry}} />`);
     assert.dom('[data-test-license-banner]').doesNotExist('License banner does not render');
   });

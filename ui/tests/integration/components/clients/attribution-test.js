@@ -4,6 +4,7 @@
  */
 
 import { module, test } from 'qunit';
+import sinon from 'sinon';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
@@ -15,6 +16,9 @@ import timestamp from 'core/utils/timestamp';
 module('Integration | Component | clients/attribution', function (hooks) {
   setupRenderingTest(hooks);
 
+  hooks.before(function () {
+    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
+  });
   hooks.beforeEach(function () {
     const mockNow = timestamp.now();
     this.mockNow = mockNow;
@@ -35,6 +39,9 @@ module('Integration | Component | clients/attribution', function (hooks) {
       { label: 'auth1/', clients: 3, entity_clients: 2, non_entity_clients: 1 },
       { label: 'auth2/', clients: 2, entity_clients: 1, non_entity_clients: 1 },
     ]);
+  });
+  hooks.after(function () {
+    timestamp.now.restore();
   });
 
   test('it renders empty state with no data', async function (assert) {

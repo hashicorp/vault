@@ -4,6 +4,7 @@
  */
 
 import { module, test } from 'qunit';
+import sinon from 'sinon';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
@@ -1414,6 +1415,9 @@ module('Integration | Component | clients/monthly-usage', function (hooks) {
       },
     },
   ];
+  hooks.before(function () {
+    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
+  });
   hooks.beforeEach(function () {
     this.set('timestamp', formatRFC3339(timestamp.now()));
     this.set('isDateRange', true);
@@ -1422,6 +1426,9 @@ module('Integration | Component | clients/monthly-usage', function (hooks) {
       { label: 'non-entity clients', key: 'non_entity_clients' },
     ]);
     this.set('byMonthActivityData', DATASET);
+  });
+  hooks.after(function () {
+    timestamp.now.restore();
   });
 
   test('it renders empty state with no data', async function (assert) {

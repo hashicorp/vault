@@ -4,6 +4,7 @@
  */
 
 import { module, test } from 'qunit';
+import sinon from 'sinon';
 import { setupRenderingTest } from 'ember-qunit';
 import { find, render, findAll, triggerEvent } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
@@ -13,6 +14,9 @@ import timestamp from 'core/utils/timestamp';
 
 module('Integration | Component | clients/line-chart', function (hooks) {
   setupRenderingTest(hooks);
+  hooks.before(function () {
+    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
+  });
   hooks.beforeEach(function () {
     this.set('xKey', 'foo');
     this.set('yKey', 'bar');
@@ -34,6 +38,9 @@ module('Integration | Component | clients/line-chart', function (hooks) {
         bar: 10,
       },
     ]);
+  });
+  hooks.after(function () {
+    timestamp.now.restore();
   });
 
   test('it renders', async function (assert) {
