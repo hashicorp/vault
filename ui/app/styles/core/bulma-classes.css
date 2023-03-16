@@ -1,3 +1,219 @@
+/* Bulma utilities */
+.button, .input, .textarea, .select select, .file-cta,
+.file-name, .pagination-previous,
+.pagination-next,
+.pagination-link,
+.pagination-ellipsis {
+  -moz-appearance: none;
+  -webkit-appearance: none;
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  box-shadow: none;
+  display: inline-flex;
+  font-size: 1rem;
+  height: 2.5em;
+  justify-content: flex-start;
+  line-height: 1.5;
+  padding-bottom: calc(0.5em - 1px);
+  padding-left: calc(0.75em - 1px);
+  padding-right: calc(0.75em - 1px);
+  padding-top: calc(0.5em - 1px);
+  position: relative;
+  vertical-align: top;
+}
+
+.button[disabled], .input[disabled], .textarea[disabled], .select select[disabled], .file-cta[disabled],
+.file-name[disabled], .pagination-previous[disabled],
+.pagination-next[disabled],
+.pagination-link[disabled],
+.pagination-ellipsis[disabled],
+fieldset[disabled] .button,
+fieldset[disabled] .input,
+fieldset[disabled] .textarea,
+fieldset[disabled] .select select,
+.select fieldset[disabled] select,
+fieldset[disabled] .file-cta,
+fieldset[disabled] .file-name,
+fieldset[disabled] .pagination-previous,
+fieldset[disabled] .pagination-next,
+fieldset[disabled] .pagination-link,
+fieldset[disabled] .pagination-ellipsis {
+  cursor: not-allowed;
+}
+
+.button, .file, .breadcrumb, .pagination-previous,
+.pagination-next,
+.pagination-link,
+.pagination-ellipsis, .tabs, .is-unselectable {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+}
+
+.select:not(.is-multiple):not(.is-loading)::after, .navbar-link:not(.is-arrowless)::after {
+  border: 3px solid transparent;
+  border-radius: 2px;
+  border-right: 0;
+  border-top: 0;
+  content: " ";
+  display: block;
+  height: 0.625em;
+  margin-top: -0.4375em;
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  transform: rotate(-45deg);
+  transform-origin: center;
+  width: 0.625em;
+}
+
+.delete, .modal-close {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+  -moz-appearance: none;
+  -webkit-appearance: none;
+  background-color: rgba(10, 10, 10, 0.2);
+  border: none;
+  border-radius: 9999px;
+  cursor: pointer;
+  pointer-events: auto;
+  display: inline-block;
+  flex-grow: 0;
+  flex-shrink: 0;
+  font-size: 0;
+  height: 20px;
+  max-height: 20px;
+  max-width: 20px;
+  min-height: 20px;
+  min-width: 20px;
+  outline: none;
+  position: relative;
+  vertical-align: top;
+  width: 20px;
+}
+
+.delete::before, .modal-close::before, .delete::after, .modal-close::after {
+  background-color: white;
+  content: "";
+  display: block;
+  left: 50%;
+  position: absolute;
+  top: 50%;
+  transform: translateX(-50%) translateY(-50%) rotate(45deg);
+  transform-origin: center center;
+}
+
+.delete::before, .modal-close::before {
+  height: 2px;
+  width: 50%;
+}
+
+.delete::after, .modal-close::after {
+  height: 50%;
+  width: 2px;
+}
+
+.delete:hover, .modal-close:hover, .delete:focus, .modal-close:focus {
+  background-color: rgba(10, 10, 10, 0.3);
+}
+
+.delete:active, .modal-close:active {
+  background-color: rgba(10, 10, 10, 0.4);
+}
+
+/* Bulma form */
+.input, .textarea, .select select {
+  background-color: white;
+  border-color: #dbdbdb;
+  border-radius: 4px;
+  color: #363636;
+}
+
+.input::-moz-placeholder, .textarea::-moz-placeholder, .select select::-moz-placeholder {
+  color: rgba(54, 54, 54, 0.3);
+}
+
+.input::-webkit-input-placeholder, .textarea::-webkit-input-placeholder, .select select::-webkit-input-placeholder {
+  color: rgba(54, 54, 54, 0.3);
+}
+
+.input:-moz-placeholder, .textarea:-moz-placeholder, .select select:-moz-placeholder {
+  color: rgba(54, 54, 54, 0.3);
+}
+
+.input:-ms-input-placeholder, .textarea:-ms-input-placeholder, .select select:-ms-input-placeholder {
+  color: rgba(54, 54, 54, 0.3);
+}
+
+.input:hover, .textarea:hover, .select select:hover, .is-hovered.input, .is-hovered.textarea, .select select.is-hovered {
+  border-color: #b5b5b5;
+}
+
+.input:focus, .textarea:focus, .select select:focus, .is-focused.input, .is-focused.textarea, .select select.is-focused, .input:active, .textarea:active, .select select:active, .is-active.input, .is-active.textarea, .select select.is-active {
+  border-color: #485fc7;
+  box-shadow: 0 0 0 0.125em rgba(72, 95, 199, 0.25);
+}
+
+.input[disabled], .textarea[disabled], .select select[disabled],
+fieldset[disabled] .input,
+fieldset[disabled] .textarea,
+fieldset[disabled] .select select,
+.select fieldset[disabled] select {
+  background-color: whitesmoke;
+  border-color: whitesmoke;
+  box-shadow: none;
+  color: #7a7a7a;
+}
+
+.input[disabled]::-moz-placeholder, .textarea[disabled]::-moz-placeholder, .select select[disabled]::-moz-placeholder,
+fieldset[disabled] .input::-moz-placeholder,
+fieldset[disabled] .textarea::-moz-placeholder,
+fieldset[disabled] .select select::-moz-placeholder,
+.select fieldset[disabled] select::-moz-placeholder {
+  color: rgba(122, 122, 122, 0.3);
+}
+
+.input[disabled]::-webkit-input-placeholder, .textarea[disabled]::-webkit-input-placeholder, .select select[disabled]::-webkit-input-placeholder,
+fieldset[disabled] .input::-webkit-input-placeholder,
+fieldset[disabled] .textarea::-webkit-input-placeholder,
+fieldset[disabled] .select select::-webkit-input-placeholder,
+.select fieldset[disabled] select::-webkit-input-placeholder {
+  color: rgba(122, 122, 122, 0.3);
+}
+
+.input[disabled]:-moz-placeholder, .textarea[disabled]:-moz-placeholder, .select select[disabled]:-moz-placeholder,
+fieldset[disabled] .input:-moz-placeholder,
+fieldset[disabled] .textarea:-moz-placeholder,
+fieldset[disabled] .select select:-moz-placeholder,
+.select fieldset[disabled] select:-moz-placeholder {
+  color: rgba(122, 122, 122, 0.3);
+}
+
+.input[disabled]:-ms-input-placeholder, .textarea[disabled]:-ms-input-placeholder, .select select[disabled]:-ms-input-placeholder,
+fieldset[disabled] .input:-ms-input-placeholder,
+fieldset[disabled] .textarea:-ms-input-placeholder,
+fieldset[disabled] .select select:-ms-input-placeholder,
+.select fieldset[disabled] select:-ms-input-placeholder {
+  color: rgba(122, 122, 122, 0.3);
+}
+
+.input, .textarea {
+  box-shadow: inset 0 0.0625em 0.125em rgba(10, 10, 10, 0.05);
+  max-width: 100%;
+  width: 100%;
+}
+
+/* Bulma footer */
+.footer {
+  background-color: #fafafa;
+  padding: 3rem 1.5rem 6rem;
+}
+
+
 /* SIZING */
 
 .is-size-1 {
@@ -128,6 +344,68 @@
 .pagination.is-centered .pagination-next {
   order: 3;
 }
+
+.pagination-previous, .pagination-next {
+  padding-left: 1em;
+  padding-right: 1em;
+  border-radius: 9999px;
+  font-size: 1em;
+  justify-content: center;
+  margin: 0.25rem;
+  padding-left: 0.5em;
+  padding-right: 0.5em;
+  text-align: center;
+  border-color: #dbdbdb;
+  color: #363636;
+  min-width: 2.5em;
+  padding-left: 0.75em;
+  padding-right: 0.75em;
+  white-space: nowrap;
+}
+
+.pagination-previous:hover,
+.pagination-next:hover {
+  border-color: #b5b5b5;
+  color: #363636;
+}
+
+.pagination-previous:focus,
+.pagination-next:focus {
+  border-color: #485fc7;
+}
+
+.pagination-previous:active,
+.pagination-next:active {
+  box-shadow: inset 0 1px 2px rgba(10, 10, 10, 0.2);
+}
+
+.pagination-previous[disabled], .pagination-previous.is-disabled,
+.pagination-next[disabled],
+.pagination-next.is-disabled {
+  background-color: #dbdbdb;
+  border-color: #dbdbdb;
+  box-shadow: none;
+  color: #7a7a7a;
+  opacity: 0.5;
+}
+
+.file-name {
+  border-color: #dbdbdb;
+  border-radius: 4px;
+  font-size: 1em;
+  padding-left: 1em;
+  padding-right: 1em;
+  white-space: nowrap;
+  border-style: solid;
+  border-width: 1px 1px 1px 0;
+  display: block;
+  max-width: 16em;
+  overflow: hidden;
+  text-align: inherit;
+  text-overflow: ellipsis;
+}
+
+
   
 /* Helper flexbox */
 .is-flex {
@@ -597,6 +875,356 @@ fieldset[disabled] .select select:hover {
   position: relative;
   width: 1em;
 }
+
+
+/* // CSS that's also defined elsewhere
+// extended */
+.is-marginless {
+  margin: 0 !important;
+}
+
+/* // BULMA ELEMENTS */
+
+/* // effects a lot  */
+.box {
+  background-color: white;
+  border-radius: 6px;
+  box-shadow: 0 0.5em 1em -0.125em rgba(10, 10, 10, 0.1), 0 0px 0 1px rgba(10, 10, 10, 0.02);
+  color: #4a4a4a;
+  display: block;
+  padding: 1.25rem;
+}
+
+a.box:hover, a.box:focus {
+  box-shadow: 0 0.5em 1em -0.125em rgba(10, 10, 10, 0.1), 0 0 0 1px #485fc7;
+}
+
+a.box:active {
+  box-shadow: inset 0 1px 2px rgba(10, 10, 10, 0.2), 0 0 0 1px #485fc7;
+}
+/* // link and is-primary is-secondary is-loading */
+.button {
+  background-color: white;
+  border-color: #dbdbdb;
+  border-width: 1px;
+  color: #363636;
+  cursor: pointer;
+  justify-content: center;
+  padding-bottom: calc(0.5em - 1px);
+  padding-left: 1em;
+  padding-right: 1em;
+  padding-top: calc(0.5em - 1px);
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* // doesn't seem to do anything */
+.button:hover{
+  border-color: #b5b5b5;
+  color: #363636;
+}
+
+.button.is-ghost {
+  background: none;
+  border-color: transparent;
+  color: #485fc7;
+  text-decoration: none;
+}
+
+.button.is-ghost:hover {
+  color: #485fc7;
+  text-decoration: underline;
+}
+
+/* // replace is-white, used in two places */
+.button.is-white {
+  background-color: white;
+  border-color: transparent;
+  color: #0a0a0a;
+}
+
+.button.is-white:hover {
+  background-color: #f9f9f9;
+  border-color: transparent;
+  color: #0a0a0a;
+}
+
+.button.is-white:focus {
+  border-color: transparent;
+  color: #0a0a0a;
+}
+
+.button.is-primary {
+  background-color: #00d1b2;
+  border-color: transparent;
+  color: #fff;
+}
+
+.button.is-primary:hover, .button.is-primary.is-hovered {
+  background-color: #00c4a7;
+  border-color: transparent;
+  color: #fff;
+}
+
+.button.is-primary:focus, .button.is-primary.is-focused {
+  border-color: transparent;
+  color: #fff;
+}
+
+.button.is-primary:focus:not(:active), .button.is-primary.is-focused:not(:active) {
+  box-shadow: 0 0 0 0.125em rgba(0, 209, 178, 0.25);
+}
+
+.button.is-primary:active, .button.is-primary.is-active {
+  background-color: #00b89c;
+  border-color: transparent;
+  color: #fff;
+}
+
+.button.is-primary[disabled],
+fieldset[disabled] .button.is-primary {
+  background-color: #00d1b2;
+  border-color: #00d1b2;
+  box-shadow: none;
+}
+
+.button.is-primary.is-loading::after {
+  border-color: transparent transparent #fff #fff !important;
+}
+
+/* // used in a couple of places can probably replace */
+.button.is-primary.is-outlined {
+  background-color: transparent;
+  border-color: #00d1b2;
+  color: #00d1b2;
+}
+
+.button.is-primary.is-outlined:hover, .button.is-primary.is-outlined.is-hovered, .button.is-primary.is-outlined:focus, .button.is-primary.is-outlined.is-focused {
+  background-color: #00d1b2;
+  border-color: #00d1b2;
+  color: #fff;
+}
+
+.button.is-primary.is-outlined[disabled],
+fieldset[disabled] .button.is-primary.is-outlined {
+  background-color: transparent;
+  border-color: #00d1b2;
+  box-shadow: none;
+  color: #00d1b2;
+}
+/* // button is.link used in one place on the dashboard and overriden in the button file */
+
+/* // button is-danger used in 3 places should override */
+.button.is-danger {
+  background-color: #f14668;
+  border-color: transparent;
+  color: #fff;
+}
+
+.button.is-danger:hover, .button.is-danger.is-hovered {
+  background-color: #f03a5f;
+  border-color: transparent;
+  color: #fff;
+}
+
+.button.is-danger:focus, .button.is-danger.is-focused {
+  border-color: transparent;
+  color: #fff;
+}
+
+.button.is-danger:focus:not(:active), .button.is-danger.is-focused:not(:active) {
+  box-shadow: 0 0 0 0.125em rgba(241, 70, 104, 0.25);
+}
+
+.button.is-danger:active, .button.is-danger.is-active {
+  background-color: #ef2e55;
+  border-color: transparent;
+  color: #fff;
+}
+
+.button.is-danger[disabled],
+fieldset[disabled] .button.is-danger {
+  background-color: #f14668;
+  border-color: #f14668;
+  box-shadow: none;
+}
+
+.button[disabled],
+fieldset[disabled] .button {
+  background-color: white;
+  border-color: #dbdbdb;
+  box-shadow: none;
+  opacity: 0.5;
+}
+
+.button.is-fullwidth {
+  display: flex;
+  width: 100%;
+}
+
+.button.is-loading {
+  color: transparent !important;
+  pointer-events: none;
+}
+
+.button.is-loading::after {
+  position: absolute;
+  left: calc(50% - (1em * 0.5));
+  top: calc(50% - (1em * 0.5));
+  position: absolute !important;
+}
+
+/* // button is static used in two places */
+.button.is-static {
+  background-color: whitesmoke;
+  border-color: #dbdbdb;
+  color: #7a7a7a;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+.container {
+  flex-grow: 1;
+  margin: 0 auto;
+  position: relative;
+  width: auto;
+}
+
+@media screen and (min-width: 1024px) {
+  .container {
+    max-width: 960px;
+  }
+}
+
+@media screen and (max-width: 1215px) {
+  .container.is-widescreen:not(.is-max-desktop) {
+    max-width: 1152px;
+  }
+}
+
+@media screen and (min-width: 1216px) {
+  .container:not(.is-max-desktop) {
+    max-width: 1152px;
+  }
+}
+
+@media screen and (min-width: 1408px) {
+  .container:not(.is-max-desktop):not(.is-max-widescreen) {
+    max-width: 1344px;
+  }
+}
+
+/* // content only surronds p, Should be able to remove as class unless defined elsewhere? */
+
+/* // Icon used once */
+.icon {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+  height: 1.5rem;
+  width: 1.5rem;
+}
+
+/* // notification used in one place */
+.notification {
+  background-color: whitesmoke;
+  border-radius: 4px;
+  position: relative;
+  padding: 1.25rem 2.5rem 1.25rem 1.5rem;
+}
+
+.progress {
+  -moz-appearance: none;
+  -webkit-appearance: none;
+  border: none;
+  border-radius: 9999px;
+  display: block;
+  height: 1rem;
+  overflow: hidden;
+  padding: 0;
+  width: 100%;
+}
+
+/* progress is-info one spot */
+.progress.is-info::-webkit-progress-value {
+  background-color: #3e8ed0;
+}
+
+.progress.is-info::-moz-progress-bar {
+  background-color: #3e8ed0;
+}
+
+.progress.is-info::-ms-fill {
+  background-color: #3e8ed0;
+}
+
+/* progress success one spot */
+.progress.is-success::-webkit-progress-value {
+  background-color: #48c78e;
+}
+
+.progress.is-success::-moz-progress-bar {
+  background-color: #48c78e;
+}
+
+.progress.is-success::-ms-fill {
+  background-color: #48c78e;
+}
+
+.progress.is-success:indeterminate {
+  background-image: linear-gradient(to right, #48c78e 30%, #ededed 30%);
+}
+
+.progress.is-small {
+  height: 0.75rem;
+}
+
+.progress.is-medium {
+  height: 1.25rem;
+}
+
+/* table one spot */
+.table {
+  background-color: white;
+  color: #363636;
+}
+
+/* lots of tag (not tags) */
+.tag:not(body) {
+  align-items: center;
+  background-color: whitesmoke;
+  border-radius: 4px;
+  color: #4a4a4a;
+  display: inline-flex;
+  font-size: 0.75rem;
+  height: 2em;
+  justify-content: center;
+  line-height: 1.5;
+  padding-left: 0.75em;
+  padding-right: 0.75em;
+  white-space: nowrap;
+}
+
+.tag:not(body).is-light {
+  background-color: whitesmoke;
+  color: rgba(0, 0, 0, 0.7);
+}
+
+/* not a lot of tag is-success */
+.tag:not(body).is-success {
+  background-color: #48c78e;
+  color: #fff;
+}
+
+.title {
+  word-break: break-word;
+  color: #363636;
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.125;
+}
+
+
 
 
 

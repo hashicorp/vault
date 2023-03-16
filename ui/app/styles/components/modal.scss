@@ -1,3 +1,26 @@
+/* Bulma modal */
+.modal,
+.modal-background,
+.is-overlay,
+.hero-video {
+  bottom: 0;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+.modal {
+  align-items: center;
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+  position: fixed;
+  z-index: 40;
+}
+// end of bulma
+
 .modal-background {
   background: rgba(235, 238, 242, 0.9);
 }
