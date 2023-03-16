@@ -226,42 +226,88 @@ func TestOpenAPI_SplitFields(t *testing.T) {
 }
 
 func TestOpenAPI_SpecialPaths(t *testing.T) {
-	tests := []struct {
-		pattern     string
-		rootPaths   []string
-		root        bool
-		unauthPaths []string
-		unauth      bool
+	tests := map[string]struct {
+		pattern                 string
+		rootPaths               []string
+		rootExpected            bool
+		unauthenticatedPaths    []string
+		unauthenticatedExpected bool
 	}{
-		{"foo", []string{}, false, []string{"foo"}, true},
-		{"foo", []string{"foo"}, true, []string{"bar"}, false},
-		{"foo/bar", []string{"foo"}, false, []string{"foo/*"}, true},
-		{"foo/bar", []string{"foo/*"}, true, []string{"foo"}, false},
-		{"foo/", []string{"foo/*"}, true, []string{"a", "b", "foo/"}, true},
-		{"foo", []string{"foo*"}, true, []string{"a", "fo*"}, true},
-		{"foo/bar", []string{"a", "b", "foo/*"}, true, []string{"foo/baz/*"}, false},
+		"empty": {
+			pattern:                 "foo",
+			rootPaths:               []string{},
+			rootExpected:            false,
+			unauthenticatedPaths:    []string{},
+			unauthenticatedExpected: false,
+		},
+		"exact-match-unauthenticated": {
+			pattern:                 "foo",
+			rootPaths:               []string{},
+			rootExpected:            false,
+			unauthenticatedPaths:    []string{"foo"},
+			unauthenticatedExpected: true,
+		},
+		"exact-match-root": {
+			pattern:                 "foo",
+			rootPaths:               []string{"foo"},
+			rootExpected:            true,
+			unauthenticatedPaths:    []string{"bar"},
+			unauthenticatedExpected: false,
+		},
+		"asterisk-match-unauthenticated": {
+			pattern:                 "foo/bar",
+			rootPaths:               []string{"foo"},
+			rootExpected:            false,
+			unauthenticatedPaths:    []string{"foo/*"},
+			unauthenticatedExpected: true,
+		},
+		"asterisk-match-root": {
+			pattern:                 "foo/bar",
+			rootPaths:               []string{"foo/*"},
+			rootExpected:            true,
+			unauthenticatedPaths:    []string{"foo"},
+			unauthenticatedExpected: false,
+		},
+		"ends-with-slash": {
+			pattern:                 "foo/",
+			rootPaths:               []string{"foo/*"},
+			rootExpected:            true,
+			unauthenticatedPaths:    []string{"a", "b", "foo/"},
+			unauthenticatedExpected: true,
+		},
+		"multiple-root-paths": {
+			pattern:                 "foo/bar",
+			rootPaths:               []string{"a", "b", "foo/*"},
+			rootExpected:            true,
+			unauthenticatedPaths:    []string{"foo/baz/*"},
+			unauthenticatedExpected: false,
+		},
 	}
-	for i, test := range tests {
-		doc := NewOASDocument("version")
-		path := Path{
-			Pattern: test.pattern,
-		}
-		sp := &logical.Paths{
-			Root:            test.rootPaths,
-			Unauthenticated: test.unauthPaths,
-		}
-		err := documentPath(&path, sp, "kv", logical.TypeLogical, doc)
-		if err != nil {
-			t.Fatal(err)
-		}
-		result := test.root
-		if doc.Paths["/"+test.pattern].Sudo != result {
-			t.Fatalf("Test (root) %d: Expected %v got %v", i, test.root, result)
-		}
-		result = test.unauth
-		if doc.Paths["/"+test.pattern].Unauthenticated != result {
-			t.Fatalf("Test (unauth) %d: Expected %v got %v", i, test.unauth, result)
-		}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			doc := NewOASDocument("version")
+			path := Path{
+				Pattern: test.pattern,
+			}
+			specialPaths := &logical.Paths{
+				Root:            test.rootPaths,
+				Unauthenticated: test.unauthenticatedPaths,
+			}
+
+			if err := documentPath(&path, specialPaths, "kv", logical.TypeLogical, doc); err != nil {
+				t.Fatal(err)
+			}
+
+			actual := doc.Paths["/"+test.pattern].Sudo
+			if actual != test.rootExpected {
+				t.Fatalf("Test (root): expected: %v; got: %v", test.rootExpected, actual)
+			}
+
+			actual = doc.Paths["/"+test.pattern].Unauthenticated
+			if actual != test.unauthenticatedExpected {
+				t.Fatalf("Test (unauth): expected: %v; got: %v", test.unauthenticatedExpected, actual)
+			}
+		})
 	}
 }
 
@@ -375,7 +421,7 @@ func TestOpenAPI_Paths(t *testing.T) {
 		}
 
 		sp := &logical.Paths{
-			Root: []string{"foo*"},
+			Root: []string{"foo/*"},
 		}
 		testPath(t, p, sp, expected("operations"))
 	})
@@ -434,7 +480,7 @@ func TestOpenAPI_Paths(t *testing.T) {
 		}
 
 		sp := &logical.Paths{
-			Root: []string{"foo*"},
+			Root: []string{"foo/*"},
 		}
 		testPath(t, p, sp, expected("operations_list"))
 	})
