@@ -17,10 +17,6 @@ export default class NamespaceReminder extends Component {
     return this.args.mode || 'edit';
   }
 
-  get noun() {
-    return this.args.noun || null;
-  }
-
   get modeVerb() {
     if (!this.mode) {
       return '';

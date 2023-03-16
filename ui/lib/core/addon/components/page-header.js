@@ -6,5 +6,7 @@
 import Component from '@glimmer/component';
 
 export default class PageHeader extends Component {
-  hasLevel = true;
+  get hasLevel() {
+    return this.args.hasLevel === undefined ? true : this.args.hasLevel;
+  }
 }
