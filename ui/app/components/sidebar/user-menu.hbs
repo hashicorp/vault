@@ -18,14 +18,12 @@
           <nav class="menu">
             <ul class="menu-list">
               {{#if this.auth.allowExpiration}}
-                <li class="action">
-                  <AlertBanner
-                    @type="warning"
-                    @message="We've stopped auto-renewing your token due to inactivity.
-                It will expire in {{date-from-now this.auth.tokenExpirationDate interval=1000 hideSuffix=true}}.
-                On {{date-format this.auth.tokenExpirationDate 'MMMM do yyyy, h:mm:ss a'}}"
-                    data-test-user-menu-item="token alert"
-                  />
+                <li class="token-alert is-flex" data-test-user-menu-item="token alert">
+                  <span><Icon @name="alert-triangle-fill" class="has-text-highlight" /></span>
+                  <span class="is-size-8 has-text-semibold">
+                    We've stopped auto-renewing your token due to inactivity. It will expire on
+                    {{date-format this.auth.tokenExpirationDate "MMMM do yyyy, h:mm:ss a"}}.
+                  </span>
                 </li>
               {{/if}}
               {{#if this.hasEntityId}}
