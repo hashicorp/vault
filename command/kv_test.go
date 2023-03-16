@@ -636,6 +636,9 @@ func TestKVListCommand(t *testing.T) {
 		},
 		{
 			// this is behavior that should be tested
+			// `kv` here is an explicit mount
+			// `my-prefix` is not
+			// the current kv code will ignore `my-prefix`
 			name:       "ignore_multi_part_mounts",
 			args:       []string{"-mount", "kv/my-prefix"},
 			outStrings: []string{"my-prefix"},
