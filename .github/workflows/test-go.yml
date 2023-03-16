@@ -122,7 +122,7 @@ jobs:
           ENTERPRISE=${{ inputs.enterprise }} source .github/scripts/generate-test-package-lists.sh
 
           # If data race detection is enabled, export a relevant environment variable for use in tests
-          if [ ${{ inputs.race-detection }} = true ]; then
+          if [ "${{ matrix.extra-flags }}" == "-race" ]; then
             export VAULT_CI_GO_TEST_RACE=1
           fi
 
@@ -169,6 +169,7 @@ jobs:
         with:
           name: test-results-${{ matrix.runner-index }}
           path: test-results/
+        if: always()
       - name: Create a summary of tests
         uses: test-summary/action@62bc5c68de2a6a0d02039763b8c754569df99e3f
         with:
