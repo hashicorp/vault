@@ -470,7 +470,7 @@ func TestLoginMFASinglePhase(t *testing.T) {
 	defer closer()
 
 	methodName := "foo"
-	waitPeriod := 10
+	waitPeriod := 15
 	userClient, entityID, methodID := testhelpers.SetupLoginMFATOTP(t, client, methodName, waitPeriod)
 	enginePath := testhelpers.RegisterEntityInTOTPEngine(t, client, entityID, methodID)
 
