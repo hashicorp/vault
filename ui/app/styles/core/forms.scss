@@ -76,12 +76,12 @@ label {
 .is-help {
   font-size: $size-small;
   margin-top: 0.25rem;
-  @each $name, $pair in $colors {
-    $color: nth($pair, 1);
-    &.is-#{$name} {
-      color: $color;
-    }
-  }
+  // @each $name, $pair in $colors {
+  //   $color: nth($pair, 1);
+  //   &.is-#{$name} {
+  //     color: $color;
+  //   }
+  // }
 }
 
 .sub-text {
@@ -172,33 +172,33 @@ label {
 .textarea {
   box-shadow: 0 4px 1px rgba($black, 0.06) inset;
 
-  @each $name, $pair in $colors {
-    $color: nth($pair, 1);
-    $color-invert: findColorInvert($color);
-    $color-bg: nth($pair, 2);
-    &.is-#{$name} {
-      border-color: $color;
-      background-color: $color-bg;
-      &.is-inverted {
-        border-color: rgba($color-invert, 0.3);
-        background-color: $color-bg;
-        &::placeholder {
-          color: rgba($color-invert, 0.3);
-        }
-        &:focus,
-        &.is-focused,
-        &:active,
-        &.is-active {
-          border-color: rgba($color-invert, 1);
-          background-color: $color-bg;
-          color: $color-invert;
-          &::placeholder {
-            color: rgba($color-invert, 0.7);
-          }
-        }
-      }
-    }
-  }
+  // @each $name, $pair in $colors {
+  //   $color: nth($pair, 1);
+  //   $color-invert: findColorInvert($color);
+  //   $color-bg: nth($pair, 2);
+  //   &.is-#{$name} {
+  //     border-color: $color;
+  //     background-color: $color-bg;
+  //     &.is-inverted {
+  //       border-color: rgba($color-invert, 0.3);
+  //       background-color: $color-bg;
+  //       &::placeholder {
+  //         color: rgba($color-invert, 0.3);
+  //       }
+  //       &:focus,
+  //       &.is-focused,
+  //       &:active,
+  //       &.is-active {
+  //         border-color: rgba($color-invert, 1);
+  //         background-color: $color-bg;
+  //         color: $color-invert;
+  //         &::placeholder {
+  //           color: rgba($color-invert, 0.7);
+  //         }
+  //       }
+  //     }
+  //   }
+  // }
   &:focus,
   &.is-focused,
   &:active,
@@ -293,14 +293,14 @@ label {
     width: 100%;
   }
   .checkbox {
-    @include input;
+    // @include input;
     background-color: $grey-lightest;
-    @each $name, $pair in $colors {
-      $color: nth($pair, 1);
-      &.is-#{$name} {
-        border-color: $color;
-      }
-    }
+    // @each $name, $pair in $colors {
+    //   $color: nth($pair, 1);
+    //   &.is-#{$name} {
+    //     border-color: $color;
+    //   }
+    // }
     input {
       margin-right: 0.5em;
     }

@@ -61,7 +61,8 @@
   justify-content: center;
 }
 .is-flex-v-centered-tablet {
-  @include tablet {
+  // TODO check if this is from or until
+  @include until($tablet) {
     display: flex;
     align-items: center;
     align-self: center;
@@ -208,11 +209,11 @@
   font-size: $size-8;
   padding: $size-8 0;
 }
-@each $name, $shade in $shades {
-  .has-background-#{$name} {
-    background: $shade !important;
-  }
-}
+// @each $name, $shade in $shades {
+//   .has-background-#{$name} {
+//     background: $shade !important;
+//   }
+// }
 .has-background-transparent {
   background: transparent !important;
 }

@@ -53,7 +53,7 @@
   .ember-power-select-option[aria-current='true'],
   a {
     background-color: $white;
-    color: $menu-item-color;
+    color: $text;
 
     &:hover {
       background-color: $menu-item-hover-background-color;
