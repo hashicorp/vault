@@ -111,6 +111,9 @@ jobs:
           # the Terraform wrapper will break Terraform execution in Enos because
           # it changes the output to text when we expect it to be JSON.
           terraform_wrapper: false
+          # Terraform 1.4.x introduced an issue that prevents some resources from
+          # planning. Pin to 1.3.x until it is resolved.
+          terraform_version: 1.3.9
       - uses: aws-actions/configure-aws-credentials@v1-node16
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI }}
