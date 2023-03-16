@@ -630,8 +630,15 @@ func TestKVListCommand(t *testing.T) {
 		},
 		{
 			name:       "mount_only",
+			args:       []string{"-mount", "kv"},
+			outStrings: []string{"my-prefix"},
+			code:       0,
+		},
+		{
+			// this is behavior that should be tested
+			name:       "ignore_multi_part_mounts",
 			args:       []string{"-mount", "kv/my-prefix"},
-			outStrings: []string{"secret-0", "secret-1", "secret-2"},
+			outStrings: []string{"my-prefix"},
 			code:       0,
 		},
 	}
