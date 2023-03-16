@@ -2,15 +2,13 @@
   background: linear-gradient(to right, #191a1c, #1b212d);
   height: 0;
   left: 0;
-  position: fixed;
   min-height: 0;
-  overflow: scroll;
+  overflow: auto;
   right: 0;
   top: $header-height;
   transition: min-height $speed ease-out, transform $speed ease-in;
   will-change: transform, min-height;
   -webkit-overflow-scrolling: touch;
-  width: 100vw;
   z-index: 199;
 
   .button {
@@ -122,6 +120,8 @@
   bottom: 0;
   top: 0;
   min-height: 100vh;
+  min-width: 100vh;
+  position: fixed;
 }
 
 .panel-open {

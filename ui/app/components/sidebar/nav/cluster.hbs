@@ -1,0 +1,86 @@
+<HcAppFrame::Nav as |Nav|>
+  <Nav.Header data-test-sidebar-nav-heading="Vault">Vault</Nav.Header>
+
+  <Nav.Link
+    @route="vault.cluster.secrets"
+    @current-when="vault.cluster.secrets vault.cluster.settings.mount-secret-backend vault.cluster.settings.configure-secret-backend"
+    data-test-sidebar-nav-link="Secrets engines"
+  >
+    Secrets engines
+  </Nav.Link>
+  {{#if (has-permission "access")}}
+    <Nav.Link
+      @route={{get (route-params-for "access") "route"}}
+      @models={{get (route-params-for "access") "models"}}
+      @current-when="vault.cluster.access vault.cluster.settings.auth"
+      class="is-grouped-split"
+      data-test-sidebar-nav-link="Access"
+    >
+      Access
+      <Icon @name="chevron-right" />
+    </Nav.Link>
+  {{/if}}
+  {{#if (has-permission "tools")}}
+    <Nav.Link
+      @route="vault.cluster.tools.tool"
+      @models={{get (route-params-for "tools") "models"}}
+      class="is-grouped-split"
+      data-test-sidebar-nav-link="Tools"
+    >
+      Tools
+      <Icon @name="chevron-right" />
+    </Nav.Link>
+  {{/if}}
+
+  {{#if
+    (and this.version.isEnterprise this.cluster.anyReplicationEnabled (has-permission "status" routeParams="replication"))
+  }}
+    <Nav.Header data-test-sidebar-nav-heading="Replication">Replication</Nav.Header>
+    {{#if this.cluster.dr.isSecondary}}
+      <Nav.Link @route="vault.cluster.replication-dr-promote.details" data-test-sidebar-nav-link="DR Primary">
+        DR Primary
+      </Nav.Link>
+    {{else}}
+      <Nav.Link @route="vault.cluster.replication.mode.index" @model="dr" data-test-sidebar-nav-link="DR Primary">
+        DR Primary
+      </Nav.Link>
+      {{#if (has-feature "Performance Replication")}}
+        <Nav.Link
+          @route="vault.cluster.replication.mode.index"
+          @model="performance"
+          data-test-sidebar-nav-link="Performance Secondary"
+        >
+          Performance Secondary
+        </Nav.Link>
+      {{/if}}
+    {{/if}}
+  {{/if}}
+
+  <Nav.Header data-test-sidebar-nav-heading="Monitoring">Monitoring</Nav.Header>
+
+  {{#if (and this.version.isEnterprise (has-permission "status" routeParams="replication"))}}
+    <Nav.Link @route="vault.cluster.replication.index" data-test-sidebar-nav-link="Replication">
+      Replication
+    </Nav.Link>
+  {{/if}}
+  {{#if (and this.cluster.usingRaft (has-permission "status" routeParams="raft"))}}
+    <Nav.Link @route="vault.cluster.storage" @model={{this.cluster.name}} data-test-sidebar-nav-link="Raft Storage">
+      Raft Storage
+    </Nav.Link>
+  {{/if}}
+  {{#if (and (has-permission "clients" routeParams="activity") (not this.cluster.dr.isSecondary))}}
+    <Nav.Link @route="vault.cluster.clients.dashboard" data-test-sidebar-nav-link="Client count">
+      Client count
+    </Nav.Link>
+  {{/if}}
+  {{#if (and this.version.features (has-permission "status" routeParams="license") (not this.cluster.dr.isSecondary))}}
+    <Nav.Link @route="vault.cluster.license" @model={{this.cluster.name}} data-test-sidebar-nav-link="License">
+      License
+    </Nav.Link>
+  {{/if}}
+  {{#if (and (has-permission "status" routeParams="seal") (not this.cluster.dr.isSecondary))}}
+    <Nav.Link @route="vault.cluster.settings.seal" @model={{this.cluster.name}} data-test-sidebar-nav-link="Seal Vault">
+      Seal Vault
+    </Nav.Link>
+  {{/if}}
+</HcAppFrame::Nav>

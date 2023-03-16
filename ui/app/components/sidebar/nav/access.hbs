@@ -1,0 +1,84 @@
+<HcAppFrame::Nav as |Nav|>
+  <Nav.Link
+    @route="vault.cluster"
+    @current-when={{false}}
+    @icon="arrow-left"
+    data-test-sidebar-nav-link="Back to main navigation"
+  >
+    Back to main navigation
+  </Nav.Link>
+
+  <Nav.Header data-test-sidebar-nav-heading="Authentication">Authentication</Nav.Header>
+  {{#if (has-permission "access" routeParams="methods")}}
+    <Nav.Link
+      @route="vault.cluster.access.methods"
+      @current-when="vault.cluster.access.methods vault.cluster.access.method"
+      data-test-sidebar-nav-link="Authentication methods"
+    >
+      Authentication methods
+    </Nav.Link>
+  {{/if}}
+  {{#if (has-permission "access" routeParams="mfa")}}
+    <Nav.Link
+      @route="vault.cluster.access.mfa.methods"
+      @current-when="vault.cluster.access.mfa.methods vault.cluster.access.mfa.enforcements vault.cluster.access.mfa.index"
+      data-test-sidebar-nav-link="Multi-factor authentication"
+    >
+      Multi-factor authentication
+    </Nav.Link>
+  {{/if}}
+  {{#if (has-permission "access" routeParams="oidc")}}
+    <Nav.Link @route="vault.cluster.access.oidc" data-test-sidebar-nav-link="OIDC">
+      OIDC
+    </Nav.Link>
+  {{/if}}
+
+  <Nav.Header data-test-sidebar-nav-heading="Access Control">Access Control</Nav.Header>
+
+  {{#if (and (has-feature "Control Groups") (has-permission "access" routeParams="control-groups"))}}
+    <Nav.Link
+      @route="vault.cluster.access.control-groups"
+      @current-when="vault.cluster.access.control-groups vault.cluster.access.control-group-accessor vault.cluster.access.control-groups-configure"
+      data-test-sidebar-nav-link="Control Groups"
+    >
+      Control Groups
+    </Nav.Link>
+  {{/if}}
+  {{#if (has-permission "policies")}}
+    <Nav.Link
+      @route="vault.cluster.policies"
+      @models={{get (route-params-for "policies") "models"}}
+      class="is-grouped-split"
+      data-test-sidebar-nav-link="Policies"
+    >
+      Policies
+      <Icon @name="chevron-right" />
+    </Nav.Link>
+  {{/if}}
+
+  <Nav.Header data-test-sidebar-nav-heading="Organization">Organization</Nav.Header>
+
+  {{#if (and (has-feature "Namespaces") (has-permission "access" routeParams="namespaces"))}}
+    <Nav.Link @route="vault.cluster.access.namespaces" data-test-sidebar-nav-link="Namespaces">
+      Namespaces
+    </Nav.Link>
+  {{/if}}
+  {{#if (has-permission "access" routeParams="groups")}}
+    <Nav.Link @route="vault.cluster.access.identity" @model="groups" data-test-sidebar-nav-link="Groups">
+      Groups
+    </Nav.Link>
+  {{/if}}
+  {{#if (has-permission "access" routeParams="entities")}}
+    <Nav.Link @route="vault.cluster.access.identity" @model="entities" data-test-sidebar-nav-link="Entities">
+      Entities
+    </Nav.Link>
+  {{/if}}
+
+  <Nav.Header data-test-sidebar-nav-heading="Administration">Administration</Nav.Header>
+
+  {{#if (has-permission "access" routeParams="leases")}}
+    <Nav.Link @route="vault.cluster.access.leases" data-test-sidebar-nav-link="Leases">
+      Leases
+    </Nav.Link>
+  {{/if}}
+</HcAppFrame::Nav>
