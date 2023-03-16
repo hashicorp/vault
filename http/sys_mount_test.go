@@ -419,6 +419,7 @@ func TestSysMount_put(t *testing.T) {
 	// for more info.
 }
 
+// TestSysRemountSpacesFrom ensure we succeed in a remount where the 'from' mount has spaces in the name
 func TestSysRemountSpacesFrom(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
@@ -438,6 +439,7 @@ func TestSysRemountSpacesFrom(t *testing.T) {
 	testResponseStatus(t, resp, 200)
 }
 
+// TestSysRemountSpacesTo ensure we succeed in a remount where the 'to' mount has spaces in the name
 func TestSysRemountSpacesTo(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
@@ -457,6 +459,7 @@ func TestSysRemountSpacesTo(t *testing.T) {
 	testResponseStatus(t, resp, 200)
 }
 
+// TestSysRemountTrailingSpaces ensures we fail on trailing spaces
 func TestSysRemountTrailingSpaces(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)

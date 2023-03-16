@@ -1137,6 +1137,8 @@ func TestSystemBackend_remount_nonPrintable(t *testing.T) {
 	}
 }
 
+// TestSystemBackend_remount_trailingSpacesInFromPath ensures we error when
+// there are trailing spaces in the 'from' path during a remount.
 func TestSystemBackend_remount_trailingSpacesInFromPath(t *testing.T) {
 	b := testSystemBackend(t)
 
@@ -1153,6 +1155,8 @@ func TestSystemBackend_remount_trailingSpacesInFromPath(t *testing.T) {
 	}
 }
 
+// TestSystemBackend_remount_trailingSpacesInToPath ensures we error when
+// there are trailing spaces in the 'to' path during a remount.
 func TestSystemBackend_remount_trailingSpacesInToPath(t *testing.T) {
 	b := testSystemBackend(t)
 
