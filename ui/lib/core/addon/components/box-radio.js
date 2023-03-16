@@ -24,6 +24,7 @@ import Component from '@glimmer/component';
  */
 
 export default class BoxRadio extends Component {
-  disabled = false;
-  tooltipMessage = 'This option is not available to you at this time.';
+  get tooltipMessage() {
+    return this.args.tooltipMessage || 'This option is not available to you at this time.';
+  }
 }
