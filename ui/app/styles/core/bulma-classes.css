@@ -563,6 +563,34 @@ fieldset[disabled] .select select:-ms-input-placeholder,
   }
 }
 
+.column.is-narrow {
+  flex: none;
+  width: unset;
+}
+
+/* is two thirds used once */
+.column.is-two-thirds {
+  flex: none;
+  width: 66.6666%;
+}
+
+/* is-half used once */
+.column.is-half {
+  flex: none;
+  width: 50%;
+}
+
+.column.is-one-third {
+  flex: none;
+  width: 33.3333%;
+}
+
+.column.is-one-quarter {
+  flex: none;
+  width: 25%;
+}
+
+
 
 /* Helper spacing */
 .is-paddingless {

@@ -16,6 +16,14 @@
     }
   }
 
+  ul,
+  ol {
+    align-items: flex-start;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
   li {
     & + li::before {
       display: none;
@@ -25,6 +33,9 @@
       .sep {
         margin-left: 0;
       }
+    }
+    .sep {
+      display: initial;
     }
   }
 

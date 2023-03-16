@@ -194,12 +194,6 @@
     text-align: left;
     width: 100%;
 
-    @include from($mobile) {
-      display: inline-flex;
-      height: $spacing-l;
-      width: auto;
-    }
-
     &.popup-open,
     &.ember-basic-dropdown-trigger--below {
       color: $white;

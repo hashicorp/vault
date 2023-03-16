@@ -4,10 +4,13 @@
 }
 .page-container {
   min-height: calc(100vh - #{$header-height});
-  display: flex;
   flex-direction: column;
   margin-top: $header-height;
   justify-content: flex-end;
+}
+
+body > .page-container > .section {
+  padding: 0 1.5rem;
 }
 
 .section {
