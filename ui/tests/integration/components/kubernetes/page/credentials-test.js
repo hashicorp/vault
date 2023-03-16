@@ -4,18 +4,23 @@
  */
 
 import { module, test } from 'qunit';
+import sinon from 'sinon';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, fillIn } from '@ember/test-helpers';
 import { Response } from 'miragejs';
 import hbs from 'htmlbars-inline-precompile';
+import timestamp from 'core/utils/timestamp';
 
 module('Integration | Component | kubernetes | Page::Credentials', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'kubernetes');
   setupMirage(hooks);
 
+  hooks.before(function () {
+    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
+  });
   hooks.beforeEach(function () {
     this.backend = 'kubernetes-test';
     this.roleName = 'role-0';
@@ -47,6 +52,9 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
         }
       );
     };
+  });
+  hooks.after(function () {
+    timestamp.now.restore();
   });
 
   test('it should display generate credentials form', async function (assert) {

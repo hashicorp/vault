@@ -4,10 +4,12 @@
  */
 
 import { module, test } from 'qunit';
+import sinon from 'sinon';
 import { setupRenderingTest } from 'ember-qunit';
 import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { ARRAY_OF_MONTHS } from 'core/utils/date-formatters';
+import timestamp from 'core/utils/timestamp';
 
 const SELECTORS = {
   monthDropdown: '[data-test-popup-menu-trigger="month"]',
@@ -22,6 +24,13 @@ const SELECTORS = {
 
 module('Integration | Component | date-dropdown', function (hooks) {
   setupRenderingTest(hooks);
+
+  hooks.before(function () {
+    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
+  });
+  hooks.after(function () {
+    timestamp.now.restore();
+  });
 
   test('it renders dropdown', async function (assert) {
     await render(hbs`
