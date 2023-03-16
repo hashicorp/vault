@@ -4,59 +4,48 @@
 .pagination-next,
 .pagination-link,
 .pagination-ellipsis {
-  -moz-appearance: none;
+  /* -moz-appearance: none;
   -webkit-appearance: none;
-  align-items: center;
-  border: 1px solid transparent;
+  align-items: center; */
   border-radius: 4px;
+  border: 1px solid transparent;
   box-shadow: none;
-  display: inline-flex;
+  /* display: inline-flex;
   font-size: 1rem;
-  height: 2.5em;
-  justify-content: flex-start;
-  line-height: 1.5;
-  padding-bottom: calc(0.5em - 1px);
+  height: 2.5em; */
+  /* justify-content: flex-start;
+  line-height: 1.5; */
+  /* padding-bottom: calc(0.5em - 1px);
   padding-left: calc(0.75em - 1px);
   padding-right: calc(0.75em - 1px);
   padding-top: calc(0.5em - 1px);
-  position: relative;
-  vertical-align: top;
+  position: relative; */
+  /* vertical-align: top; */
 }
 
 .button[disabled], .input[disabled], .textarea[disabled], .select select[disabled], .file-cta[disabled],
 .file-name[disabled], .pagination-previous[disabled],
 .pagination-next[disabled],
 .pagination-link[disabled],
-.pagination-ellipsis[disabled],
-fieldset[disabled] .button,
-fieldset[disabled] .input,
-fieldset[disabled] .textarea,
-fieldset[disabled] .select select,
-.select fieldset[disabled] select,
-fieldset[disabled] .file-cta,
-fieldset[disabled] .file-name,
-fieldset[disabled] .pagination-previous,
-fieldset[disabled] .pagination-next,
-fieldset[disabled] .pagination-link,
-fieldset[disabled] .pagination-ellipsis {
+.pagination-ellipsis[disabled] {
   cursor: not-allowed;
 }
 
-.button, .file, .breadcrumb, .pagination-previous,
+.button, .file, .pagination-previous,
 .pagination-next,
 .pagination-link,
-.pagination-ellipsis, .tabs, .is-unselectable {
+.pagination-ellipsis, .tabs {
+  -moz-user-select: none;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
-  -moz-user-select: none;
   user-select: none;
 }
 
-.select:not(.is-multiple):not(.is-loading)::after, .navbar-link:not(.is-arrowless)::after {
-  border: 3px solid transparent;
+.select:not(.is-multiple):not(.is-loading)::after {
   border-radius: 2px;
   border-right: 0;
   border-top: 0;
+  border: 3px solid transparent;
   content: " ";
   display: block;
   height: 0.625em;
@@ -64,75 +53,12 @@ fieldset[disabled] .pagination-ellipsis {
   pointer-events: none;
   position: absolute;
   top: 50%;
-  transform: rotate(-45deg);
   transform-origin: center;
+  transform: rotate(-45deg);
   width: 0.625em;
 }
 
-.delete, .modal-close {
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  user-select: none;
-  -moz-appearance: none;
-  -webkit-appearance: none;
-  background-color: rgba(10, 10, 10, 0.2);
-  border: none;
-  border-radius: 9999px;
-  cursor: pointer;
-  pointer-events: auto;
-  display: inline-block;
-  flex-grow: 0;
-  flex-shrink: 0;
-  font-size: 0;
-  height: 20px;
-  max-height: 20px;
-  max-width: 20px;
-  min-height: 20px;
-  min-width: 20px;
-  outline: none;
-  position: relative;
-  vertical-align: top;
-  width: 20px;
-}
-
-.delete::before, .modal-close::before, .delete::after, .modal-close::after {
-  background-color: white;
-  content: "";
-  display: block;
-  left: 50%;
-  position: absolute;
-  top: 50%;
-  transform: translateX(-50%) translateY(-50%) rotate(45deg);
-  transform-origin: center center;
-}
-
-.delete::before, .modal-close::before {
-  height: 2px;
-  width: 50%;
-}
-
-.delete::after, .modal-close::after {
-  height: 50%;
-  width: 2px;
-}
-
-.delete:hover, .modal-close:hover, .delete:focus, .modal-close:focus {
-  background-color: rgba(10, 10, 10, 0.3);
-}
-
-.delete:active, .modal-close:active {
-  background-color: rgba(10, 10, 10, 0.4);
-}
-
-/* Bulma form */
-.input, .textarea, .select select {
-  background-color: white;
-  border-color: #dbdbdb;
-  border-radius: 4px;
-  color: #363636;
-}
-
+/* Bulma form: input, textarea, select */
 .input::-moz-placeholder, .textarea::-moz-placeholder, .select select::-moz-placeholder {
   color: rgba(54, 54, 54, 0.3);
 }
@@ -207,85 +133,104 @@ fieldset[disabled] .select select:-ms-input-placeholder,
   width: 100%;
 }
 
-/* Bulma footer */
-.footer {
-  background-color: #fafafa;
-  padding: 3rem 1.5rem 6rem;
+/* SIZING */
+.is-size-1 {
+  font-size: 3rem !important;
 }
 
-
-/* SIZING */
-
-.is-size-1 {
-  font-size: 3rem !important; }
-
 .is-size-2 {
-  font-size: 2.5rem !important; }
+  font-size: 2.5rem !important;
+}
 
 .is-size-3 {
-  font-size: 1.71429rem !important; }
+  font-size: 1.71429rem !important;
+}
 
 .is-size-4 {
-  font-size: 1.5rem !important; }
+  font-size: 1.5rem !important;
+}
 
 .is-size-5 {
-  font-size: 1.25rem !important; }
+  font-size: 1.25rem !important;
+}
 
 .is-size-6 {
-  font-size: 1rem !important; }
+  font-size: 1rem !important;
+}
 
 .is-size-7 {
-  font-size: 0.92857rem !important; }
+  font-size: 0.92857rem !important;
+}
 
-.is-size-8 {  
-  font-size: 0.85714rem !important; }
+.is-size-8 {
+     font-size: 0.85714rem !important;
+   }
 
 .is-size-9 {
-  font-size: 0.75rem !important; }
+  font-size: 0.75rem !important;
+}
 
   /* TODOs remove verb? remove important */
   /* HELPERS TEXT*/
 .has-text-right {
-  text-align: right !important; }
+  text-align: right !important;
+}
 
 .is-pulled-left {
-  float: left !important; }
+  float: left !important;
+}
 
 .is-pulled-right {
-  float: right !important; }
+  float: right !important;
+}
 
 .is-lowercase {
-  text-transform: lowercase !important; }
+  text-transform: lowercase !important;
+}
 
 .is-uppercase {
-  text-transform: uppercase !important; }
+  text-transform: uppercase !important;
+}
 
 .has-text-white {
-  color: white !important; }
+  color: white !important;
+}
 
 .has-text-black {
-  color: #0a0a0a !important; }
+  color: #0a0a0a !important;
+}
 
 .has-text-success {
-  color: #2eb039 !important; }
+  color: #2eb039 !important;
+}
 
 .has-text-grey-dark {
-  color: #525761 !important; }
+  color: #525761 !important;
+}
 
 .has-text-grey {
-  color: #6f7682 !important; }
+  color: #6f7682 !important;
+}
 
 .has-text-grey-light {
-  color: #bac1cc !important; }
+  color: #bac1cc !important;
+}
+
+.has-text-weight-semibold {
+  font-weight: 600 !important;
+}
 
 .has-text-weight-bold {
-  font-weight: 700 !important; }
+  font-weight: 700 !important;
+}
 
 .has-text-centered {
-  text-align: center !important; }
+  text-align: center !important;
+}
 
 .is-shadowless {
-  box-shadow: none !important; }
+  box-shadow: none !important;
+}
 
 /* ARG is-light only used with tags? */
 .tag:not(body).is-light {
@@ -305,27 +250,37 @@ fieldset[disabled] .select select:-ms-input-placeholder,
      
 /* Helper layout */
 .is-block {
-  display: block !important; }
+  display: block !important;
+}
 
 .is-inline {
-  display: inline !important; }
+  display: inline !important;
+}
 
 .is-inline-block {
-  display: inline-block !important; }
+  display: inline-block !important;
+}
 
 .is-hidden {
-  display: none !important; }
+  display: none !important;
+}
 
 @media screen and (min-width: 769px), print {
+  
   .is-hidden-tablet {
-    display: none !important; } }
+    display: none !important;
+  }
+}
 
 @media screen and (max-width: 768px) {
+  
   .is-hidden-mobile {
-    display: none !important; } }
+    display: none !important;
+  }
+}
 
 @media screen and (max-width: 1215px) {
-  .container.is-widescreen:not(.is-max-desktop) {
+  is-widescreen:not(.is-max-desktop) {
     max-width: 1152px;
   }
 }
@@ -346,20 +301,20 @@ fieldset[disabled] .select select:-ms-input-placeholder,
 }
 
 .pagination-previous, .pagination-next {
-  padding-left: 1em;
-  padding-right: 1em;
+  border-color: #dbdbdb;
   border-radius: 9999px;
+  color: #363636;
   font-size: 1em;
   justify-content: center;
   margin: 0.25rem;
-  padding-left: 0.5em;
-  padding-right: 0.5em;
-  text-align: center;
-  border-color: #dbdbdb;
-  color: #363636;
   min-width: 2.5em;
+  padding-left: 0.5em;
   padding-left: 0.75em;
+  padding-left: 1em;
+  padding-right: 0.5em;
   padding-right: 0.75em;
+  padding-right: 1em;
+  text-align: center;
   white-space: nowrap;
 }
 
@@ -392,24 +347,22 @@ fieldset[disabled] .select select:-ms-input-placeholder,
 .file-name {
   border-color: #dbdbdb;
   border-radius: 4px;
-  font-size: 1em;
-  padding-left: 1em;
-  padding-right: 1em;
-  white-space: nowrap;
   border-style: solid;
   border-width: 1px 1px 1px 0;
   display: block;
+  font-size: 1em;
   max-width: 16em;
   overflow: hidden;
+  padding-left: 1em;
+  padding-right: 1em;
   text-align: inherit;
   text-overflow: ellipsis;
-}
-
-
-  
+  white-space: nowrap;
+}  
 /* Helper flexbox */
 .is-flex {
-  display: flex !important; }
+  display: flex !important;
+}
 
 /* used in three places */
 .columns.is-variable.is-1 {
@@ -424,6 +377,7 @@ fieldset[disabled] .select select:-ms-input-placeholder,
 
 /* Used in one place title.is-2 */
 @media screen and (min-width: 769px), print {
+  
   .tile.is-2 {
     flex: none;
     width: 16.66667%;
@@ -463,7 +417,8 @@ fieldset[disabled] .select select:-ms-input-placeholder,
 
 /* title.is-3 used a ton */
 .title.is-3 {
-  font-size: 2rem;
+  font-size: 1.71429rem; 
+  /* font-size: 2rem; */
 }
 
 /* used a couple of times */
@@ -473,6 +428,7 @@ fieldset[disabled] .select select:-ms-input-placeholder,
 }
 
 @media screen and (min-width: 769px), print {
+  
   .column.is-7, .column.is-7-tablet {
     flex: none;
     width: 58.33333%;
@@ -484,6 +440,7 @@ fieldset[disabled] .select select:-ms-input-placeholder,
 }
 
 @media screen and (min-width: 769px), print {
+  
   .columns.is-variable.is-7-tablet {
     --columnGap: 1.75rem;
   }
@@ -495,6 +452,7 @@ fieldset[disabled] .select select:-ms-input-placeholder,
 }
 
 @media screen and (min-width: 769px), print {
+  
   .tile.is-4 {
     flex: none;
     width: 33.33333%;
@@ -502,6 +460,7 @@ fieldset[disabled] .select select:-ms-input-placeholder,
 }
 
 @media screen and (min-width: 1024px) {
+  
   .column.is-4-desktop {
     flex: none;
     width: 33.33333%;
@@ -509,6 +468,7 @@ fieldset[disabled] .select select:-ms-input-placeholder,
 }
 
 @media screen and (min-width: 769px), print {
+  
   .column.is-6, .column.is-6-tablet {
     flex: none;
     width: 50%;
@@ -522,12 +482,13 @@ fieldset[disabled] .select select:-ms-input-placeholder,
 
 /* is-desktop two places */
 @media screen and (min-width: 769px), print {
-  .columns:not(.is-desktop) {
+  columns:not(.is-desktop) {
     display: flex;
   }
 }
 
 @media screen and (min-width: 1024px) {
+  
   .columns.is-desktop {
     display: flex;
   }
@@ -538,6 +499,7 @@ fieldset[disabled] .select select:-ms-input-placeholder,
   font-size: 1.25rem;
 }
 @media screen and (min-width: 769px), print {
+  
   .column.is-5 {
     flex: none;
     width: 41.66667%;
@@ -549,6 +511,7 @@ fieldset[disabled] .select select:-ms-input-placeholder,
   font-size: 1rem;
 }
 @media screen and (min-width: 769px), print {
+  
   .column.is-6 {
     flex: none;
     width: 50%;
@@ -562,6 +525,7 @@ fieldset[disabled] .select select:-ms-input-placeholder,
 
 /* column is-9 used in four places */
 @media screen and (min-width: 769px), print {
+  
   .column.is-9 {
     flex: none;
     width: 75%;
@@ -570,12 +534,14 @@ fieldset[disabled] .select select:-ms-input-placeholder,
 
 /* column is-10 used in a decent number of places */
 @media screen and (max-width: 768px) {
+  
   .column.is-10-mobile {
     flex: none;
     width: 83.33333%;
   }
 }
 @media screen and (min-width: 769px), print {
+  
   .column.is-10 {
     flex: none;
     width: 83.33333%;
@@ -583,13 +549,15 @@ fieldset[disabled] .select select:-ms-input-placeholder,
 }
 
 @media screen and (min-width: 769px), print {
+  
   .column.is-12 {
     flex: none;
     width: 100%;
-  } 
+  }
 }
 /* used twice */
 @media screen and (max-width: 768px) {
+  
   .is-hidden-mobile {
     display: none !important;
   }
@@ -598,9 +566,8 @@ fieldset[disabled] .select select:-ms-input-placeholder,
 
 /* Helper spacing */
 .is-paddingless {
-  padding: 0 !important; }
-
-
+  padding: 0 !important;
+}
 
 /* OTHER */
 /* we only use is white in two old places in the app... replace */
@@ -679,9 +646,6 @@ fieldset[disabled] .button.is-white {
   justify-content: center;
 }
 
-
-
-
 /* Only used in one place 'is-info' */
 .progress.is-info::-webkit-progress-value {
   background-color: #3e8ed0;
@@ -708,8 +672,8 @@ fieldset[disabled] .button.is-white {
 .button.is-static {
   background-color: whitesmoke;
   border-color: #dbdbdb;
-  color: #7a7a7a;
   box-shadow: none;
+  color: #7a7a7a;
   pointer-events: none;
 }
 
@@ -842,6 +806,7 @@ fieldset[disabled] .select select:hover {
 
 /* used is-normal in one place, TODO remove */
 @media screen and (min-width: 769px), print {
+  
   .field-label {
     flex-basis: 0;
     flex-grow: 1;
@@ -865,10 +830,10 @@ fieldset[disabled] .select select:hover {
 /* for loader class, probably remove */
 .button.is-loading::after, .loader, .select.is-loading::after, .control.is-loading::after {
   animation: spinAround 500ms infinite linear;
-  border: 2px solid #dbdbdb;
   border-radius: 9999px;
   border-right-color: transparent;
   border-top-color: transparent;
+  border: 2px solid #dbdbdb;
   content: "";
   display: block;
   height: 1em;
@@ -1068,18 +1033,18 @@ fieldset[disabled] .button {
 }
 
 .button.is-loading::after {
-  position: absolute;
   left: calc(50% - (1em * 0.5));
-  top: calc(50% - (1em * 0.5));
   position: absolute !important;
+  position: absolute;
+  top: calc(50% - (1em * 0.5));
 }
 
 /* // button is static used in two places */
 .button.is-static {
   background-color: whitesmoke;
   border-color: #dbdbdb;
-  color: #7a7a7a;
   box-shadow: none;
+  color: #7a7a7a;
   pointer-events: none;
 }
 
@@ -1100,12 +1065,14 @@ fieldset[disabled] .button {
   .container.is-widescreen:not(.is-max-desktop) {
     max-width: 1152px;
   }
+  
 }
 
 @media screen and (min-width: 1216px) {
   .container:not(.is-max-desktop) {
     max-width: 1152px;
   }
+  
 }
 
 @media screen and (min-width: 1408px) {
@@ -1120,8 +1087,8 @@ fieldset[disabled] .button {
 .icon {
   align-items: center;
   display: inline-flex;
-  justify-content: center;
   height: 1.5rem;
+  justify-content: center;
   width: 1.5rem;
 }
 
@@ -1129,15 +1096,15 @@ fieldset[disabled] .button {
 .notification {
   background-color: whitesmoke;
   border-radius: 4px;
-  position: relative;
   padding: 1.25rem 2.5rem 1.25rem 1.5rem;
+  position: relative;
 }
 
 .progress {
   -moz-appearance: none;
   -webkit-appearance: none;
-  border: none;
   border-radius: 9999px;
+  border: none;
   display: block;
   height: 1rem;
   overflow: hidden;
@@ -1217,15 +1184,89 @@ fieldset[disabled] .button {
 }
 
 .title {
-  word-break: break-word;
   color: #363636;
   font-size: 2rem;
   font-weight: 600;
   line-height: 1.125;
+  word-break: break-word;
 }
 
+/* Modal */
+/* delete class on the modal */
+.delete {
+  -moz-appearance: none;
+  -moz-user-select: none;
+  -webkit-appearance: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  background-color: rgba(10, 10, 10, 0.2);
+  border-radius: 9999px;
+  border: none;
+  cursor: pointer;
+  display: inline-block;
+  flex-grow: 0;
+  flex-shrink: 0;
+  font-size: 0;
+  height: 20px;
+  max-height: 20px;
+  max-width: 20px;
+  min-height: 20px;
+  min-width: 20px;
+  outline: none;
+  pointer-events: auto;
+  position: relative;
+  user-select: none;
+  vertical-align: top;
+  width: 20px;
+}
 
+.delete::before, .delete::after {
+  background-color: white;
+  content: "";
+  display: block;
+  left: 50%;
+  position: absolute;
+  top: 50%;
+  transform-origin: center center;
+  transform: translateX(-50%) translateY(-50%) rotate(45deg);
+}
 
+.delete::before {
+  height: 2px;
+  width: 50%;
+}
 
+.delete::after {
+  height: 50%;
+  width: 2px;
+}
 
+.delete:hover, .delete:focus {
+  background-color: rgba(10, 10, 10, 0.3);
+}
+
+.delete:active {
+  background-color: rgba(10, 10, 10, 0.4);
+}
+
+/* Navbar */
+.navbar-item,.navbar-link {
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  align-items:center;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex
+}
+
+.navbar-brand {
+  align-items: stretch;
+  display: flex;
+  flex-shrink: 0;
+  min-height: 3.25rem;
+}
+
+.navbar-brand a.navbar-item:focus, .navbar-brand a.navbar-item:hover {
+  background-color: transparent;
+}
 

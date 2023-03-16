@@ -17,6 +17,7 @@
   <PkiGenerateToggleGroups @model={{@model}} />
 
   {{#if @urls}}
+    {{! ARG only use case of fieldset with box }}
     <fieldset class="box is-shadowless is-marginless is-borderless is-fullwidth" data-test-urls-section>
       <h2
         class="title is-size-5 page-header {{if @urls.canCreate 'has-border-bottom-light' 'is-borderless'}}"
