@@ -1,22 +1,22 @@
-<HcNav::Nav as |Nav|>
+<HcAppFrame::Nav as |Nav|>
   <Nav.Link
     @route={{get (route-params-for "access") "route"}}
     @models={{get (route-params-for "access") "models"}}
     @current-when={{false}}
     @icon="arrow-left"
-    data-test-sidebar-nav-link="back access"
+    data-test-sidebar-nav-link="Back to access"
   >
     Back to access
   </Nav.Link>
 
-  <Nav.Header>Policies</Nav.Header>
+  <Nav.Header data-test-sidebar-nav-heading="Policies">Policies</Nav.Header>
 
   {{#if (has-permission "policies" routeParams="acl")}}
     <Nav.Link
       @route="vault.cluster.policies"
       @model="acl"
       @current-when="vault.cluster.policies vault.cluster.policy"
-      data-test-sidebar-nav-link="acl"
+      data-test-sidebar-nav-link="ACL Policies"
     >
       ACL Policies
     </Nav.Link>
@@ -26,7 +26,7 @@
       @route="vault.cluster.policies"
       @model="rgp"
       @current-when="vault.cluster.policies vault.cluster.policy"
-      data-test-sidebar-nav-link="role governing"
+      data-test-sidebar-nav-link="Role-Governing Policies"
     >
       Role-Governing Policies
     </Nav.Link>
@@ -36,9 +36,9 @@
       @route="vault.cluster.policies"
       @model="egp"
       @current-when="vault.cluster.policies vault.cluster.policy"
-      data-test-sidebar-nav-link="endpoint governing"
+      data-test-sidebar-nav-link="Endpoint Governing Policies"
     >
       Endpoint Governing Policies
     </Nav.Link>
   {{/if}}
-</HcNav::Nav>
+</HcAppFrame::Nav>

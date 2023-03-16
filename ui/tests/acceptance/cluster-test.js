@@ -61,13 +61,13 @@ module('Acceptance | cluster', function (hooks) {
     await settled();
     await authPage.loginUsername(USER, PASSWORD);
     await click('.nav-user-button button');
-    assert.dom('[data-test-status-link="mfa"]').exists();
+    assert.dom('[data-test-user-menu-item="mfa"]').exists();
     await logout.visit();
 
     await authPage.login('root');
     await settled();
     await click('.nav-user-button button');
-    assert.dom('[data-test-status-link="mfa"]').doesNotExist();
+    assert.dom('[data-test-user-menu-item="mfa"]').doesNotExist();
   });
 
   test('enterprise nav item links to first route that user has access to', async function (assert) {

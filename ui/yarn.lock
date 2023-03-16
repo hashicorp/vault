@@ -3458,7 +3458,7 @@
   resolved "https://registry.yarnpkg.com/@hashicorp/flight-icons/-/flight-icons-2.12.0.tgz#48bc21f21678668ffe9147b181a2991d8b151fc7"
   integrity sha512-PhjTTHCjoq4EJirifbxLxnxXnCRf1NUAYZ1WnFW8i0yOmmax6fgjsJRPlf0VIGsR8R7isFpjuy6gJ5c7mNhE0w==
 
-"@hashicorp/hc-nav@link:../../ember-shared-components/packages/hc-nav/package":
+"@hashicorp/hc-nav@link:../../ember-shared-components/packages/hc-app-frame/package":
   version "0.0.0"
   uid ""
 
@@ -10154,9 +10154,9 @@ ember-resolver@^8.0.3:
     resolve "^1.20.0"
 
 ember-resources@^5.0.1:
-  version "5.6.2"
-  resolved "https://registry.yarnpkg.com/ember-resources/-/ember-resources-5.6.2.tgz#dbe74c5e15eaf426b035bd5962e02dec6b205fc2"
-  integrity sha512-aJnEucw9q3S5kF/bVNQamf4yaER0j6H+RIRum+x635nD4+Spwr/J766GxJURBRPZn1tQw6cJrR3IdYCYEf4dUw==
+  version "5.6.3"
+  resolved "https://registry.yarnpkg.com/ember-resources/-/ember-resources-5.6.3.tgz#07f45e00820fe6c38950181eb3b64ad76211c9d6"
+  integrity sha512-j/ENZYbMhh26F8afF5MJHk2ntfyo/+XEOqkwzInB9EOT4k24ctuibc4mflNFcKcEwDKWb2Xf7MFTJ2Cu333dFg==
   dependencies:
     "@babel/runtime" "^7.17.8"
     "@embroider/addon-shim" "^1.2.0"

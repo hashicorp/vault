@@ -118,3 +118,16 @@
 .hc-nav-subnav-item-link.hds-button {
   font-family: inherit;
 }
+
+.hc-nav-container {
+  .popup-menu-content {
+    .menu-label {
+      font-size: 14px;
+      font-weight: $font-weight-bold;
+      text-transform: unset;
+    }
+    .token-alert {
+      padding: $spacing-xs;
+    }
+  }
+}
