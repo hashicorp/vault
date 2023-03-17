@@ -14,8 +14,9 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
-	"golang.org/x/crypto/pbkdf2"
 	"io"
+
+	"golang.org/x/crypto/pbkdf2"
 )
 
 const (

@@ -4,9 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/hashicorp/vault/plugins/database/postgresql/scram"
 	"regexp"
 	"strings"
+
+	"github.com/hashicorp/vault/plugins/database/postgresql/scram"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"

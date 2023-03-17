@@ -1,9 +1,10 @@
 package scram
 
 import (
-	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestScram(t *testing.T) {
@@ -20,7 +21,6 @@ func TestScram(t *testing.T) {
 			assert.NoError(t, err)
 			assert.True(t, strings.HasPrefix(got, "SCRAM-SHA-256$4096:"))
 			assert.Len(t, got, 133)
-
 		})
 	}
 }

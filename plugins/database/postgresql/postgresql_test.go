@@ -4,11 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	"github.com/hashicorp/vault/helper/testhelpers/postgresql"
@@ -136,7 +137,6 @@ func TestPostgreSQL_SCRAM_Passwords(t *testing.T) {
 	newUserResponse, err := db.NewUser(ctx, newUserRequest)
 
 	assertCredsExist(t, db.ConnectionURL, newUserResponse.Username, newUserRequest.Password)
-
 }
 
 func TestPostgreSQL_NewUser(t *testing.T) {
