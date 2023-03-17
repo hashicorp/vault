@@ -33,6 +33,26 @@ ALTER ROLE "{{username}}" WITH PASSWORD '{{password}}';
 	defaultUserNameTemplate = `{{ printf "v-%s-%s-%s-%s" (.DisplayName | truncate 8) (.RoleName | truncate 8) (random 20) (unix_time) | truncate 63 }}`
 )
 
+type PasswordEncryption string
+
+var (
+	PasswordEncryptionSCRAMSHA256 PasswordEncryption = "scram-sha-256"
+	PasswordEncryptionPlainText   PasswordEncryption = "plaintext"
+)
+
+var passwordEncryptions = map[PasswordEncryption]struct{}{
+	PasswordEncryptionSCRAMSHA256: {},
+	PasswordEncryptionPlainText:   {},
+}
+
+func parsePasswordEncryption(s string) (PasswordEncryption, error) {
+	if _, ok := passwordEncryptions[PasswordEncryption(s)]; !ok {
+		return "", fmt.Errorf("'%s' is not a valid password encryption type", s)
+	}
+
+	return PasswordEncryption(s), nil
+}
+
 var (
 	_ dbplugin.Database       = (*PostgreSQL)(nil)
 	_ logical.PluginVersioner = (*PostgreSQL)(nil)
@@ -67,6 +87,7 @@ func new() *PostgreSQL {
 
 	db := &PostgreSQL{
 		SQLConnectionProducer: connProducer,
+		PasswordEncryption:    PasswordEncryptionPlainText,
 	}
 
 	return db
@@ -75,7 +96,8 @@ func new() *PostgreSQL {
 type PostgreSQL struct {
 	*connutil.SQLConnectionProducer
 
-	usernameProducer template.StringTemplate
+	usernameProducer   template.StringTemplate
+	PasswordEncryption PasswordEncryption
 }
 
 func (p *PostgreSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
@@ -101,6 +123,20 @@ func (p *PostgreSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequ
 	_, err = p.usernameProducer.Generate(dbplugin.UsernameMetadata{})
 	if err != nil {
 		return dbplugin.InitializeResponse{}, fmt.Errorf("invalid username template: %w", err)
+	}
+
+	passwordEncryptionRaw, err := strutil.GetString(req.Config, "password_encryption")
+	if err != nil {
+		return dbplugin.InitializeResponse{}, err
+	}
+
+	if passwordEncryptionRaw != "" {
+		pwEncryption, err := parsePasswordEncryption(passwordEncryptionRaw)
+		if err != nil {
+			return dbplugin.InitializeResponse{}, err
+		}
+
+		p.PasswordEncryption = pwEncryption
 	}
 
 	resp := dbplugin.InitializeResponse{
@@ -186,6 +222,15 @@ func (p *PostgreSQL) changeUserPassword(ctx context.Context, username string, ch
 				"username": username,
 				"password": password,
 			}
+
+			if p.PasswordEncryption == PasswordEncryptionSCRAMSHA256 {
+				hashedPassword, err := scram.Encrypt(password)
+				if err != nil {
+					return fmt.Errorf("unable to scram-sha256 password: %w", err)
+				}
+				m["password"] = hashedPassword
+			}
+
 			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return fmt.Errorf("failed to execute query: %w", err)
 			}
@@ -270,27 +315,19 @@ func (p *PostgreSQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (
 	}
 	defer tx.Rollback()
 
-	var pwEncryption string
-	err = tx.QueryRowContext(ctx, "SHOW password_encryption").Scan(&pwEncryption)
-	if err != nil {
-		return dbplugin.NewUserResponse{}, fmt.Errorf("unable to query password_encryption: %w", err)
-	}
-	fmt.Println("password_encryption", pwEncryption)
-	err = tx.QueryRowContext(ctx, "SELECT version()").Scan(&pwEncryption)
-	if err != nil {
-		return dbplugin.NewUserResponse{}, fmt.Errorf("unable to query password_encryption: %w", err)
-	}
-	fmt.Println("version", pwEncryption)
-	hashedPassword, err := scram.Encrypt(req.Password)
-	if err != nil {
-		return dbplugin.NewUserResponse{}, fmt.Errorf("unable to scram-sha256 password: %w", err)
-	}
 	m := map[string]string{
-		"name":            username,
-		"username":        username,
-		"password":        req.Password,
-		"hashed_password": hashedPassword,
-		"expiration":      expirationStr,
+		"name":       username,
+		"username":   username,
+		"password":   req.Password,
+		"expiration": expirationStr,
+	}
+
+	if p.PasswordEncryption == PasswordEncryptionSCRAMSHA256 {
+		hashedPassword, err := scram.Encrypt(req.Password)
+		if err != nil {
+			return dbplugin.NewUserResponse{}, fmt.Errorf("unable to scram-sha256 password: %w", err)
+		}
+		m["password"] = hashedPassword
 	}
 
 	for _, stmt := range req.Statements.Commands {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"os"
 	"strings"
 	"testing"
@@ -88,6 +89,54 @@ func TestPostgreSQL_Initialize_ConnURLWithDSNFormat(t *testing.T) {
 	if !db.Initialized {
 		t.Fatal("Database should be initialized")
 	}
+}
+
+func TestPostgreSQL_SCRAM_Passwords(t *testing.T) {
+	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
+	defer cleanup()
+
+	dsnConnURL, err := dbutil.ParseURL(connURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	connectionDetails := map[string]interface{}{
+		"connection_url":      dsnConnURL,
+		"password_encryption": string(PasswordEncryptionSCRAMSHA256),
+	}
+
+	req := dbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
+	}
+
+	db := new()
+	resp := dbtesting.AssertInitialize(t, db, req)
+	assert.Equal(t, string(PasswordEncryptionSCRAMSHA256), resp.Config["password_encryption"])
+
+	if !db.Initialized {
+		t.Fatal("Database should be initialized")
+	}
+
+	ctx := context.Background()
+	newUserRequest := dbplugin.NewUserRequest{
+		Statements: dbplugin.Statements{
+			Commands: []string{
+				`
+						CREATE ROLE "{{name}}" WITH
+						  LOGIN
+						  PASSWORD '{{password}}'
+						  VALID UNTIL '{{expiration}}';
+						GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";`,
+			},
+		},
+		Password:   "somesecurepassword",
+		Expiration: time.Now().Add(1 * time.Minute),
+	}
+	newUserResponse, err := db.NewUser(ctx, newUserRequest)
+
+	assertCredsExist(t, db.ConnectionURL, newUserResponse.Username, newUserRequest.Password)
+
 }
 
 func TestPostgreSQL_NewUser(t *testing.T) {
@@ -266,26 +315,6 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 				},
 				Statements: dbplugin.Statements{
 					Commands: newUserLargeBlockStatements,
-				},
-				Password:   "somesecurepassword",
-				Expiration: time.Now().Add(1 * time.Minute),
-			},
-			expectErr: false,
-			credsAssertion: assertCreds(
-				assertUsernameRegex("^v-test-test-[a-zA-Z0-9]{20}-[0-9]{10}$"),
-				assertCredsExist,
-			),
-		},
-		"use-hashed-password": {
-			req: dbplugin.NewUserRequest{
-				UsernameConfig: dbplugin.UsernameMetadata{
-					DisplayName: "test",
-					RoleName:    "test",
-				},
-				Statements: dbplugin.Statements{
-					Commands: []string{
-						`CREATE ROLE "{{name}}" WITH LOGIN PASSWORD '{{hashed_password}}' VALID UNTIL '{{expiration}}';
-                         GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";`},
 				},
 				Password:   "somesecurepassword",
 				Expiration: time.Now().Add(1 * time.Minute),
