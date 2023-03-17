@@ -28,8 +28,9 @@ module('Integration | Component | chevron', function (hooks) {
     const promise = waitForError();
     render(hbs`<Chevron @direction='lol' />`);
     const err = await promise;
+
     assert.ok(
-      err.message.includes('The direction property of <vault@component:chevron:'),
+      err.message.includes('The direction property of Chevron'),
       'asserts about unsupported direction'
     );
   });
