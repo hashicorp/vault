@@ -363,16 +363,38 @@ fieldset[disabled] .select select:-ms-input-placeholder,
 .is-flex {
   display: flex !important;
 }
-
+/* Columns */
 /* used in three places */
 .columns.is-variable.is-1 {
   --columnGap: 0.25rem;
 }
 
+/* Columns */
 /* not used very often column.is-1 */
 .column.is-1 {
   flex: none;
   width: 8.33333%;
+}
+
+@media screen and (min-width: 769px), print {
+  .columns:not(.is-desktop) {
+    display: flex;
+  }
+}
+
+.columns {
+  margin-left: -0.75rem;
+  margin-right: -0.75rem;
+  margin-top: -0.75rem;
+}
+
+/* Bulma Grid */
+.column {
+  display: block;
+  flex-basis: 0;
+  flex-grow: 1;
+  flex-shrink: 1;
+  padding: 0.75rem;
 }
 
 /* Used in one place title.is-2 */

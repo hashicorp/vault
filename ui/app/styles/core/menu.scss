@@ -1,3 +1,23 @@
+// From bulma
+.menu-list {
+  line-height: 1.25;
+}
+
+.menu-list a {
+  border-radius: 2px;
+  color: #4a4a4a;
+  display: block;
+  padding: 0.5em 0.75em;
+}
+
+.menu-label {
+  color: #7a7a7a;
+  font-size: 0.75em;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+// end from bulma
+
 .column .menu-list a {
   border-radius: 0;
   border-right: 0 solid transparent;
