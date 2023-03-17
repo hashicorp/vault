@@ -92,6 +92,8 @@ func TestPostgreSQL_Initialize_ConnURLWithDSNFormat(t *testing.T) {
 	}
 }
 
+// TestPostgreSQL_SCRAM_Passwords tests that password_encryption works when set to scram-sha-256.
+// When sending an encrypted password, the raw password should still successfully authenticate the user.
 func TestPostgreSQL_SCRAM_Passwords(t *testing.T) {
 	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
 	defer cleanup()

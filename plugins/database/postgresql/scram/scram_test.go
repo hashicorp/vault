@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TestScram tests that the Encrypt method. The encrypted password string should have a SCRAM-SHA-256 prefix.
 func TestScram(t *testing.T) {
 	tcs := map[string]struct {
 		Password string
