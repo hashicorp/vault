@@ -21,7 +21,7 @@ module('Acceptance | secrets/ssh', function (hooks) {
     return authPage.login();
   });
 
-  const mountAndNav = async (assert, uid) => {
+  const mountAndNav = async (uid) => {
     const path = `ssh-${uid}`;
     await enablePage.enable('ssh', path);
     await settled();
@@ -32,7 +32,7 @@ module('Acceptance | secrets/ssh', function (hooks) {
 
   test('it creates a role and redirects', async function (assert) {
     assert.expect(5);
-    const path = await mountAndNav(assert, this.timestamp);
+    const path = await mountAndNav(this.timestamp);
     await editPage.createOTPRole('role');
     await settled();
     assert.strictEqual(
@@ -62,7 +62,7 @@ module('Acceptance | secrets/ssh', function (hooks) {
 
   test('it deletes a role', async function (assert) {
     assert.expect(2);
-    const path = await mountAndNav(assert, this.timestamp);
+    const path = await mountAndNav(this.timestamp);
     await editPage.createOTPRole('role');
     await settled();
     await showPage.visit({ backend: path, id: 'role' });
@@ -79,7 +79,7 @@ module('Acceptance | secrets/ssh', function (hooks) {
 
   test('it generates an OTP', async function (assert) {
     assert.expect(6);
-    const path = await mountAndNav(assert, this.timestamp);
+    const path = await mountAndNav(this.timestamp);
     await editPage.createOTPRole('role');
     await settled();
     assert.strictEqual(

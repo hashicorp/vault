@@ -11,7 +11,6 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { fakeWindow, buildMessage } from '../helpers/oidc-window-stub';
 import sinon from 'sinon';
 import { later, _cancelTimers as cancelTimers } from '@ember/runloop';
-import timestamp from 'core/utils/timestamp';
 
 module('Acceptance | oidc auth method', function (hooks) {
   setupApplicationTest(hooks);
@@ -19,8 +18,7 @@ module('Acceptance | oidc auth method', function (hooks) {
 
   hooks.beforeEach(function () {
     this.openStub = sinon.stub(window, 'open').callsFake(() => fakeWindow.create());
-    // OIDC test fails when using fake timestamps
-    this.dateStub = sinon.stub(timestamp, 'now').callsFake(() => new Date());
+    // OIDC test fails when using fake timestamps, we use the real timestamp.now here
     this.server.post('/auth/oidc/oidc/auth_url', () => ({
       data: { auth_url: 'http://example.com' },
     }));
@@ -33,7 +31,6 @@ module('Acceptance | oidc auth method', function (hooks) {
 
   hooks.afterEach(function () {
     this.openStub.restore();
-    this.dateStub.restore();
   });
 
   test('it should login with oidc when selected from auth methods dropdown', async function (assert) {
