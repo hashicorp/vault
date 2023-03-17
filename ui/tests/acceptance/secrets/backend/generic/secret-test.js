@@ -6,6 +6,8 @@
 import { currentRouteName } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { v4 as uuidv4 } from 'uuid';
+
 import editPage from 'vault/tests/pages/secrets/backend/kv/edit-secret';
 import showPage from 'vault/tests/pages/secrets/backend/kv/show';
 import listPage from 'vault/tests/pages/secrets/backend/list';
@@ -22,7 +24,7 @@ module('Acceptance | secrets/generic/create', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
-    this.timestamp = new Date().getTime();
+    this.uid = uuidv4();
     this.server = apiStub({ usePassthrough: true });
     return authPage.login();
   });
@@ -32,8 +34,8 @@ module('Acceptance | secrets/generic/create', function (hooks) {
   });
 
   test('it creates and can view a secret with the generic backend', async function (assert) {
-    const path = `generic-${this.timestamp}`;
-    const kvPath = `generic-kv-${this.timestamp}`;
+    const path = `generic-${this.uid}`;
+    const kvPath = `generic-kv-${this.uid}`;
     await cli.runCommands([`write sys/mounts/${path} type=generic`, `write ${path}/foo bar=baz`]);
     await listPage.visitRoot({ backend: path });
     assert.strictEqual(
@@ -54,8 +56,8 @@ module('Acceptance | secrets/generic/create', function (hooks) {
   });
 
   test('upgrading generic to version 2 lists all existing secrets, and CRUD continues to work', async function (assert) {
-    const path = `generic-${this.timestamp}`;
-    const kvPath = `generic-kv-${this.timestamp}`;
+    const path = `generic-${this.uid}`;
+    const kvPath = `generic-kv-${this.uid}`;
     await cli.runCommands([
       `write sys/mounts/${path} type=generic`,
       `write ${path}/foo bar=baz`,

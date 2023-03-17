@@ -6,6 +6,8 @@
 import { create } from 'ember-cli-page-object';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { v4 as uuidv4 } from 'uuid';
+
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import authForm from 'vault/tests/pages/components/auth-form';
@@ -33,7 +35,7 @@ const GROUP_TOKEN_TEMPLATE = `{
 }`;
 const oidcEntity = async function (name, policy) {
   await consoleComponent.runCommands([
-    `write sys/policies/acl/${name} policy=${btoa(policy)}`,
+    `write sys/policies/acl/${name} policy=${window.btoa(policy)}`,
     `write identity/entity name="${OIDC_USER}" policies="${name}" metadata="email=vault@hashicorp.com" metadata="phone_number=123-456-7890"`,
     `read -field=id identity/entity/name/${OIDC_USER}`,
   ]);
@@ -113,7 +115,7 @@ const setupOidc = async function (uid) {
   const callback = 'http://127.0.0.1:8251/callback';
   const entityId = await oidcEntity('oidc', OIDC_POLICY);
   const groupId = await oidcGroup(entityId);
-  const authMethodPath = `userpass-${uid}`;
+  const authMethodPath = `oidc-userpass-${uid}`;
   const accessor = await authAccessor(authMethodPath);
   await entityAlias(entityId, accessor, groupId);
   const clientId = await setupWebapp(callback);
@@ -130,14 +132,14 @@ module('Acceptance | oidc provider', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
-    this.timestamp = new Date().getTime();
+    this.uid = uuidv4();
     this.store = await this.owner.lookup('service:store');
     await logout.visit();
     return authPage.login();
   });
 
   test('OIDC Provider logs in and redirects correctly', async function (assert) {
-    const { providerName, callback, clientId, authMethodPath } = await setupOidc(this.timestamp);
+    const { providerName, callback, clientId, authMethodPath } = await setupOidc(this.uid);
 
     await logout.visit();
     await settled();
@@ -173,7 +175,7 @@ module('Acceptance | oidc provider', function (hooks) {
   });
 
   test('OIDC Provider redirects to auth if current token and prompt = login', async function (assert) {
-    const { providerName, callback, clientId, authMethodPath } = await setupOidc(this.timestamp);
+    const { providerName, callback, clientId, authMethodPath } = await setupOidc(this.uid);
     await settled();
     const url = getAuthzUrl(providerName, callback, clientId, { prompt: 'login' });
     await visit(url);
@@ -198,7 +200,7 @@ module('Acceptance | oidc provider', function (hooks) {
   });
 
   test('OIDC Provider shows consent form when prompt = consent', async function (assert) {
-    const { providerName, callback, clientId, authMethodPath } = await setupOidc(this.timestamp);
+    const { providerName, callback, clientId, authMethodPath } = await setupOidc(this.uid);
     const url = getAuthzUrl(providerName, callback, clientId, { prompt: 'consent' });
     await logout.visit();
     await authFormComponent.selectMethod(authMethodPath);

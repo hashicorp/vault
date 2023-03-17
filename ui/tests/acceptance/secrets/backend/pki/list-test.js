@@ -6,6 +6,8 @@
 import { click, currentRouteName, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { v4 as uuidv4 } from 'uuid';
+
 import page from 'vault/tests/pages/secrets/backend/list';
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
@@ -14,7 +16,7 @@ module('Acceptance | secrets/pki/list', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
-    this.timestamp = new Date().getTime();
+    this.uid = uuidv4();
     return authPage.login();
   });
 
@@ -26,7 +28,7 @@ module('Acceptance | secrets/pki/list', function (hooks) {
 
   test('it renders an empty list', async function (assert) {
     assert.expect(5);
-    await mountAndNav(this.timestamp);
+    await mountAndNav(this.uid);
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.secrets.backend.list-root',
@@ -41,7 +43,7 @@ module('Acceptance | secrets/pki/list', function (hooks) {
 
   test('it navigates to the create page', async function (assert) {
     assert.expect(1);
-    await mountAndNav(this.timestamp);
+    await mountAndNav(this.uid);
     await page.create();
     assert.strictEqual(
       currentRouteName(),
@@ -52,7 +54,7 @@ module('Acceptance | secrets/pki/list', function (hooks) {
 
   test('it navigates to the configure page', async function (assert) {
     assert.expect(1);
-    await mountAndNav(this.timestamp);
+    await mountAndNav(this.uid);
     await click('[data-test-configuration-tab]');
     await page.configure();
     await settled();

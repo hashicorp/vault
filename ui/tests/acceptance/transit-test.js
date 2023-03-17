@@ -6,6 +6,8 @@
 import { click, fillIn, find, currentURL, settled, visit, waitUntil, findAll } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { v4 as uuidv4 } from 'uuid';
+
 import { encodeString } from 'vault/utils/b64';
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
@@ -289,18 +291,18 @@ module('Acceptance | transit', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
-    const timestamp = new Date().getTime();
+    const uid = uuidv4();
     await authPage.login();
     await settled();
-    this.timestamp = timestamp;
-    this.path = `transit-${timestamp}`;
+    this.uid = uid;
+    this.path = `transit-${uid}`;
 
-    await enablePage.enable('transit', `transit-${timestamp}`);
+    await enablePage.enable('transit', `transit-${uid}`);
     await settled();
   });
 
   test(`transit backend: list menu`, async function (assert) {
-    await generateTransitKey(keyTypes[0], this.timestamp);
+    await generateTransitKey(keyTypes[0], this.uid);
     await secretListPage.secrets.objectAt(0).menuToggle();
     await settled();
     assert.strictEqual(secretListPage.menuItems.length, 2, 'shows 2 items in the menu');
@@ -308,7 +310,7 @@ module('Acceptance | transit', function (hooks) {
   for (const key of keyTypes) {
     test(`transit backend: ${key.type}`, async function (assert) {
       assert.expect(key.convergent ? 43 : 7);
-      const name = await generateTransitKey(key, this.timestamp);
+      const name = await generateTransitKey(key, this.uid);
       await visit(`vault/secrets/${this.path}/show/${name}`);
 
       const expectedRotateValue = key.autoRotate ? '30 days' : 'Key will not be automatically rotated';

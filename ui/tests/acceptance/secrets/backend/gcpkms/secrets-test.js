@@ -6,6 +6,8 @@
 import { currentRouteName, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { v4 as uuidv4 } from 'uuid';
+
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import backendsPage from 'vault/tests/pages/secrets/backends';
 import authPage from 'vault/tests/pages/auth';
@@ -14,13 +16,13 @@ module('Acceptance | gcpkms/enable', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
-    this.timestamp = new Date().getTime();
+    this.uid = uuidv4();
     return authPage.login();
   });
 
   test('enable gcpkms', async function (assert) {
     // Error: Cannot call `visit` without having first called `setupApplicationContext`.
-    const enginePath = `gcpkms-${this.timestamp}`;
+    const enginePath = `gcpkms-${this.uid}`;
     await mountSecrets.visit();
     await settled();
     await mountSecrets.selectType('gcpkms');

@@ -6,6 +6,8 @@
 import { currentRouteName, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { v4 as uuidv4 } from 'uuid';
+
 import editPage from 'vault/tests/pages/secrets/backend/ssh/edit-role';
 import showPage from 'vault/tests/pages/secrets/backend/ssh/show';
 import generatePage from 'vault/tests/pages/secrets/backend/ssh/generate-otp';
@@ -17,7 +19,7 @@ module('Acceptance | secrets/ssh', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
-    this.timestamp = new Date().getTime();
+    this.uid = uuidv4();
     return authPage.login();
   });
 
@@ -32,7 +34,7 @@ module('Acceptance | secrets/ssh', function (hooks) {
 
   test('it creates a role and redirects', async function (assert) {
     assert.expect(5);
-    const path = await mountAndNav(this.timestamp);
+    const path = await mountAndNav(this.uid);
     await editPage.createOTPRole('role');
     await settled();
     assert.strictEqual(
@@ -62,7 +64,7 @@ module('Acceptance | secrets/ssh', function (hooks) {
 
   test('it deletes a role', async function (assert) {
     assert.expect(2);
-    const path = await mountAndNav(this.timestamp);
+    const path = await mountAndNav(this.uid);
     await editPage.createOTPRole('role');
     await settled();
     await showPage.visit({ backend: path, id: 'role' });
@@ -79,7 +81,7 @@ module('Acceptance | secrets/ssh', function (hooks) {
 
   test('it generates an OTP', async function (assert) {
     assert.expect(6);
-    const path = await mountAndNav(this.timestamp);
+    const path = await mountAndNav(this.uid);
     await editPage.createOTPRole('role');
     await settled();
     assert.strictEqual(

@@ -6,6 +6,8 @@
 import { click, fillIn, find, currentURL, waitUntil } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { v4 as uuidv4 } from 'uuid';
+
 import page from 'vault/tests/pages/policies/index';
 import authPage from 'vault/tests/pages/auth';
 
@@ -13,13 +15,13 @@ module('Acceptance | policies (old)', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
-    this.timestamp = new Date().getTime();
+    this.uid = uuidv4();
     return authPage.login();
   });
 
   test('policies', async function (assert) {
     const policyString = 'path "*" { capabilities = ["update"]}';
-    const policyName = `Policy test ${this.timestamp}`;
+    const policyName = `Policy test ${this.uid}`;
     const policyLower = policyName.toLowerCase();
 
     await page.visit({ type: 'acl' });
@@ -70,7 +72,7 @@ module('Acceptance | policies (old)', function (hooks) {
   // https://github.com/hashicorp/vault/issues/4395
   test('it properly fetches policies when the name ends in a ,', async function (assert) {
     const policyString = 'path "*" { capabilities = ["update"]}';
-    const policyName = `${this.timestamp}-symbol,.`;
+    const policyName = `${this.uid}-policy-symbol,.`;
 
     await page.visit({ type: 'acl' });
     // new policy creation

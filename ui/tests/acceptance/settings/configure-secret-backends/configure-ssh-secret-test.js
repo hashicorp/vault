@@ -6,6 +6,8 @@
 import { click, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { v4 as uuidv4 } from 'uuid';
+
 import page from 'vault/tests/pages/settings/configure-secret-backends/pki/index';
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
@@ -21,12 +23,12 @@ module('Acceptance | settings/configure/secrets/ssh', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
-    this.timestamp = new Date().getTime();
+    this.uid = uuidv4();
     return authPage.login();
   });
 
   test('it configures ssh ca', async function (assert) {
-    const path = `ssh-${this.timestamp}`;
+    const path = `ssh-configure-${this.uid}`;
     await enablePage.enable('ssh', path);
     await settled();
     await page.visit({ backend: path });

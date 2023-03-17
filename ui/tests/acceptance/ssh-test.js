@@ -6,6 +6,8 @@
 import { click, fillIn, findAll, currentURL, find, settled, waitUntil } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { v4 as uuidv4 } from 'uuid';
+
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 
@@ -13,7 +15,7 @@ module('Acceptance | ssh secret backend', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
-    this.timestamp = new Date().getTime();
+    this.uid = uuidv4();
     return authPage.login();
   });
 
@@ -82,7 +84,7 @@ module('Acceptance | ssh secret backend', function (hooks) {
   ];
   test('ssh backend', async function (assert) {
     assert.expect(28);
-    const sshPath = `ssh-${this.timestamp}`;
+    const sshPath = `ssh-${this.uid}`;
 
     await enablePage.enable('ssh', sshPath);
     await settled();

@@ -24,7 +24,7 @@ module('Acceptance | leases', function (hooks) {
 
   hooks.beforeEach(async function () {
     await authPage.login();
-    this.enginePath = `kv-for-lease-${new Date().getTime()}`;
+    this.enginePath = `kv-for-lease-${uuidv4()}`;
     // need a version 1 mount for leased secrets here
     return mountSecrets.visit().path(this.enginePath).type('kv').version(1).submit();
   });
