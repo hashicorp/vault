@@ -7,7 +7,7 @@
   /* -moz-appearance: none;
   -webkit-appearance: none;
   align-items: center; */
-  border-radius: 4px;
+  border-radius: 2px;
   border: 1px solid transparent;
   box-shadow: none;
   /* display: inline-flex;
@@ -79,9 +79,9 @@
   border-color: #b5b5b5;
 }
 
-.input:focus, .textarea:focus, .select select:focus, .is-focused.input, .is-focused.textarea, .select select.is-focused, .input:active, .textarea:active, .select select:active, .is-active.input, .is-active.textarea, .select select.is-active {
-  border-color: #485fc7;
-  box-shadow: 0 0 0 0.125em rgba(72, 95, 199, 0.25);
+.input:focus, .textarea:focus, .select select:focus, .input:focus-visible, .textarea:focus-visible, .select select:focus-visible, .input:active, .textarea:active, .select select:active, .is-active.input, .is-active.textarea, .select select.is-active {
+  border-color: #1563ff !important;
+  box-shadow: 0 0 0 0.125em rgba(21, 99, 255, 0.25) !important;
 }
 
 .input[disabled], .textarea[disabled], .select select[disabled],
@@ -346,7 +346,7 @@ fieldset[disabled] .select select:-ms-input-placeholder,
 
 .file-name {
   border-color: #dbdbdb;
-  border-radius: 4px;
+  border-radius: 2px;
   border-style: solid;
   border-width: 1px 1px 1px 0;
   display: block;
@@ -829,7 +829,7 @@ fieldset[disabled] .select select:hover {
 }
 
 .file.has-name.is-empty .file-cta {
-  border-radius: 4px;
+  border-radius: 2px;
 }
 
 .file.has-name.is-empty .file-name {
@@ -1145,7 +1145,7 @@ fieldset[disabled] .button {
 /* // notification used in one place */
 .notification {
   background-color: whitesmoke;
-  border-radius: 4px;
+  border-radius: 2px;
   padding: 1.25rem 2.5rem 1.25rem 1.5rem;
   position: relative;
 }
@@ -1210,7 +1210,7 @@ fieldset[disabled] .button {
 .tag:not(body) {
   align-items: center;
   background-color: whitesmoke;
-  border-radius: 4px;
+  border-radius: 2px;
   color: #4a4a4a;
   display: inline-flex;
   font-size: 0.75rem;
