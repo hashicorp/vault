@@ -245,6 +245,7 @@ label {
 .select select {
   background-color: $ui-gray-050;
   box-shadow: 0 3px 1px rgba($black, 0.12);
+  text-rendering: auto;
 
   .has-background-grey-lighter & {
     background-color: $white;
