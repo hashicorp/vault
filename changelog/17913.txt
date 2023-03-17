@@ -1,0 +1,3 @@
+```release-note:bug
+cli: Fix vault read handling to return raw data as secret.Data when there is no top-level data object from api response.
+```
