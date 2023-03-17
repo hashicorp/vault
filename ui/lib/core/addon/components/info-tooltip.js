@@ -3,19 +3,25 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-import Component from '@ember/component';
-import layout from '../templates/components/info-tooltip';
+import Component from '@glimmer/component';
+import { action } from '@ember/object';
 
-export default Component.extend({
-  layout,
-  'data-test-component': 'info-tooltip',
-  attributeBindings: ['data-test-component'],
-  tagName: 'span',
-  classNames: ['is-inline-block'],
+/**
+ * @module JsonEditor
+ *
+ * @example
+ * ```js
+ * <JsonEditor @title="Policy" @value={{codemirror.string}} @valueUpdated={{ action "codemirrorUpdate"}} />
+ * ```
+ *
+ * @param {string} [verticalPosition] - vertical position specification (above, below)
+ * @param {string} [horizontalPosition] - horizontal position specification (center, auto-right)
 
-  actions: {
-    preventSubmit(e) {
-      e.preventDefault();
-    },
-  },
-});
+ */
+
+export default class InfoTooltip extends Component {
+  @action
+  preventSubmit(e) {
+    e.preventDefault();
+  }
+}
