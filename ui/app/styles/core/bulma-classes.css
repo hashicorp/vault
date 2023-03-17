@@ -903,7 +903,7 @@ fieldset[disabled] .select select:hover {
 /* // effects a lot  */
 .box {
   background-color: white;
-  border-radius: 6px;
+  /* border-radius: 6px; ARG TODO removed because of hover, but double check non-hover */
   box-shadow: 0 0.5em 1em -0.125em rgba(10, 10, 10, 0.1), 0 0px 0 1px rgba(10, 10, 10, 0.02);
   color: #4a4a4a;
   display: block;
@@ -970,14 +970,14 @@ a.box:active {
 }
 
 .button.is-primary {
-  background-color: #00d1b2;
-  border-color: transparent;
+  background-color: #1563ff;
+  border-color: #0b5cff;
   color: #fff;
 }
 
 .button.is-primary:hover, .button.is-primary.is-hovered {
-  background-color: #00c4a7;
-  border-color: transparent;
+  background-color: #0054fb;
+  border-color: #0054fb;
   color: #fff;
 }
 
@@ -998,8 +998,8 @@ a.box:active {
 
 .button.is-primary[disabled],
 fieldset[disabled] .button.is-primary {
-  background-color: #00d1b2;
-  border-color: #00d1b2;
+  background-color: #1563ff;
+  border-color: #0b5cff;
   box-shadow: none;
 }
 
@@ -1010,22 +1010,22 @@ fieldset[disabled] .button.is-primary {
 /* // used in a couple of places can probably replace */
 .button.is-primary.is-outlined {
   background-color: transparent;
-  border-color: #00d1b2;
-  color: #00d1b2;
+  border-color: #0b5cff;
+  color: #1563ff;
 }
 
 .button.is-primary.is-outlined:hover, .button.is-primary.is-outlined.is-hovered, .button.is-primary.is-outlined:focus, .button.is-primary.is-outlined.is-focused {
-  background-color: #00d1b2;
-  border-color: #00d1b2;
+  background-color: #1563ff;
+  border-color: #0b5cff;
   color: #fff;
 }
 
 .button.is-primary.is-outlined[disabled],
 fieldset[disabled] .button.is-primary.is-outlined {
   background-color: transparent;
-  border-color: #00d1b2;
+  border-color: #0b5cff;
   box-shadow: none;
-  color: #00d1b2;
+  color: #1563ff;
 }
 /* // button is.link used in one place on the dashboard and overriden in the button file */
 

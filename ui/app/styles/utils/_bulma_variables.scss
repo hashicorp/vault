@@ -53,7 +53,8 @@ $blue: hsl(229, 53%, 53%) !default;
 $purple: hsl(271, 100%, 71%) !default;
 $red: hsl(348, 86%, 61%) !default;
 // Derived colors
-$primary: red !default;
+// From _colors file, will need to replace with $blue-50 when merge together
+$primary: #1563ff !default;
 
 $info: $cyan !default;
 $success: $green !default;

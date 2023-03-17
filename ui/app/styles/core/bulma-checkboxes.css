@@ -88,8 +88,8 @@
 }
 
 .is-primary input[type="checkbox"]:checked + label::before {
-  background-color: #00d1b2;
-  border-color: #00d1b2;
+  background-color: #1563ff;
+  border-color: #0b5cff;
 }
 
 .is-primary input[type="checkbox"]:checked + label::after {

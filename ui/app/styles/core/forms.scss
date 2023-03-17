@@ -89,7 +89,7 @@ label {
 .select select {
   background-color: $white;
   border-color: $grey-light;
-  border-radius: 4px;
+  border-radius: 2px;
   color: $grey-dark;
   padding-left: $size-8;
   padding-right: $size-8;
@@ -106,6 +106,15 @@ label {
 .control.has-icons-left .icon,
 .control.has-icons-right .icon {
   height: 2.5rem;
+}
+
+// From Bulma
+.control {
+  box-sizing: border-box;
+  clear: both;
+  font-size: 1rem;
+  position: relative;
+  text-align: inherit;
 }
 
 .input.variable {
@@ -168,6 +177,15 @@ label {
 .input,
 .textarea {
   box-shadow: 0 4px 1px rgba($black, 0.06) inset;
+
+  // ARG TODO return this isn't working for the navigation input filter
+  .input.filter {
+    color: $text;
+    &::placeholder {
+      font-size: 1rem !important;
+      opacity: 0.5 !important;
+    }
+  }
 
   // @each $name, $pair in $colors {
   //   $color: nth($pair, 1);
