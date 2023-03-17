@@ -30,7 +30,11 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback:    b.handleCORSRead,
+					Callback: b.handleCORSRead,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "cors-configuration",
+					},
 					Summary:     "Return the current CORS settings.",
 					Description: "",
 					Responses: map[int][]framework.Response{
@@ -54,7 +58,11 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 					},
 				},
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback:    b.handleCORSUpdate,
+					Callback: b.handleCORSUpdate,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "configure",
+						OperationSuffix: "cors",
+					},
 					Summary:     "Configure the CORS settings.",
 					Description: "",
 					Responses: map[int][]framework.Response{
@@ -65,7 +73,11 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleCORSDelete,
-					Summary:  "Remove any CORS settings.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "delete",
+						OperationSuffix: "cors-configuration",
+					},
+					Summary: "Remove any CORS settings.",
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -82,7 +94,11 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			Pattern: "config/state/sanitized$",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback:    b.handleConfigStateSanitized,
+					Callback: b.handleConfigStateSanitized,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "sanitized-configuration-state",
+					},
 					Summary:     "Return a sanitized version of the Vault server configuration.",
 					Description: "The sanitized output strips configuration values in the storage, HA storage, and seals stanzas, which may contain sensitive values such as API tokens. It also removes any token or secret fields in other stanzas, such as the circonus_api_token from telemetry.",
 					Responses: map[int][]framework.Response{
@@ -106,7 +122,11 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback:    b.handleConfigReload,
+					Callback: b.handleConfigReload,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "reload",
+						OperationSuffix: "subsystem",
+					},
 					Summary:     "Reload the given subsystem",
 					Description: "",
 					Responses: map[int][]framework.Response{
@@ -139,7 +159,11 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleConfigUIHeadersRead,
-					Summary:  "Return the given UI header's configuration",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "ui-header-configuration",
+					},
+					Summary: "Return the given UI header's configuration",
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -160,7 +184,11 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleConfigUIHeadersUpdate,
-					Summary:  "Configure the values to be returned for the UI header.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "configure",
+						OperationSuffix: "ui-header",
+					},
+					Summary: "Configure the values to be returned for the UI header.",
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							// returns 200 with null `data`
@@ -170,7 +198,11 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleConfigUIHeadersDelete,
-					Summary:  "Remove a UI header.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "delete",
+						OperationSuffix: "ui-header-configuration",
+					},
+					Summary: "Remove a UI header.",
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -189,7 +221,11 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: b.handleConfigUIHeadersList,
-					Summary:  "Return a list of configured UI headers.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "list",
+						OperationSuffix: "configured-ui-headers",
+					},
+					Summary: "Return a list of configured UI headers.",
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Fields: map[string]*framework.FieldSchema{
@@ -218,6 +254,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "root-token-generation-progress2|root-token-generation-progress",
+					},
 					Summary: "Read the configuration and progress of the current root generation attempt.",
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
@@ -268,7 +308,11 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 					},
 				},
 				logical.UpdateOperation: &framework.PathOperation{
-					Summary:     "Initializes a new root generation attempt.",
+					Summary: "Initializes a new root generation attempt.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "start",
+						OperationSuffix: "root-token-generation2|root-token-generation",
+					},
 					Description: "Only a single root generation attempt can take place at a time. One (and only one) of otp or pgp_key are required.",
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
@@ -319,6 +363,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 					},
 				},
 				logical.DeleteOperation: &framework.PathOperation{
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "cancel",
+						OperationSuffix: "root-token-generation2|root-token-generation",
+					},
 					Summary: "Cancels any in-progress root generation attempt.",
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
@@ -345,6 +393,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "provide",
+						OperationSuffix: "root-token-generation",
+					},
 					Summary:     "Enter a single unseal key share to progress the root generation attempt.",
 					Description: "If the threshold number of unseal key shares is reached, Vault will complete the root generation and issue the new token. Otherwise, this API must be called multiple times until that threshold is met. The attempt nonce must be provided with each call.",
 					Responses: map[int][]framework.Response{
