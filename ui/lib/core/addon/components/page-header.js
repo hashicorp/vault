@@ -3,11 +3,10 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-import Component from '@ember/component';
-import layout from '../templates/components/page-header';
+import Component from '@glimmer/component';
 
-export default Component.extend({
-  layout,
-  tagName: '',
-  hasLevel: true,
-});
+export default class PageHeader extends Component {
+  get hasLevel() {
+    return this.args.hasLevel === undefined ? true : this.args.hasLevel;
+  }
+}
