@@ -122,6 +122,8 @@ original primary on the election of the DR secondary.
 DR is designed to be a mechanism to protect against catastrophic failure of entire clusters.
 They do not forward service read or write requests until they are elected and become a new primary.
 
+-> **Note**: Unlike with Performance Replication, local secret engines, auth methods and audit devices are replicated to a DR secondary.
+
 
 For more information on the capabilities of performance and disaster recovery replication, see the Vault Replication [API Documentation](/api-docs/system/replication).
 
@@ -217,6 +219,13 @@ generation until it is used.
 
 Once a secondary is activated, its cluster information is stored safely behind
 its encrypted barrier.
+
+## Mutual TLS and Load Balancers
+
+Vault generates its own certificates for cluster members. All replication traffic 
+uses the cluster port using these Vault-generated certificates after initial 
+bootstrapping. Because of this, the cluster traffic can NOT be terminated at the 
+cluster port at a load balancer level.
 
 ## Tutorial
 

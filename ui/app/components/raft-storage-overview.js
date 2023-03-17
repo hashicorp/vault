@@ -5,6 +5,8 @@ import { inject as service } from '@ember/service';
 
 export default Component.extend({
   flashMessages: service(),
+  auth: service(),
+
   useServiceWorker: null,
 
   async init() {
@@ -16,10 +18,30 @@ export default Component.extend({
     if ('serviceWorker' in navigator) {
       // this checks to see if there's an active service worker - if it failed to register
       // for any reason, then this would be null
-      let worker = await navigator.serviceWorker.getRegistration(config.serviceWorkerScope);
+      const worker = await navigator.serviceWorker.getRegistration(config.serviceWorkerScope);
       if (worker) {
+        navigator.serviceWorker.addEventListener('message', this.serviceWorkerGetToken.bind(this));
+
         this.set('useServiceWorker', true);
       }
+    }
+  },
+  willDestroy() {
+    if (this.useServiceWorker) {
+      navigator.serviceWorker.removeEventListener('message', this.serviceWorkerGetToken);
+    }
+    this._super(...arguments);
+  },
+
+  serviceWorkerGetToken(event) {
+    const { action } = event.data;
+    const [port] = event.ports;
+
+    if (action === 'getToken') {
+      port.postMessage({ token: this.auth.currentToken });
+    } else {
+      console.error('Unknown event', event); // eslint-disable-line
+      port.postMessage({ error: 'Unknown request' });
     }
   },
 

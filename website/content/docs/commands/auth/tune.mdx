@@ -68,7 +68,8 @@ flags](/docs/commands) included on all commands.
   This overrides the current stored value, if any.
 
 - `-listing-visibility` `(string: "")` - The flag to toggle whether to show the
-  mount in the UI-specific listing endpoint.
+  mount in the UI-specific listing endpoint. Valid values are `"unauth"` or `"hidden"`.
+  Passing empty string leaves the current setting unchanged.
 
 - `-max-lease-ttl` `(duration: "")` - The maximum lease TTL for this auth
   method. If unspecified, this defaults to the Vault server's globally
@@ -81,5 +82,4 @@ flags](/docs/commands) included on all commands.
   specified by providing this option multiple times, each time with 1 key.
 
 - `-token-type` `(string: "")` - Specifies the type of tokens that should be
-  returned by the auth method. Note that multiple keys may be
-  specified by providing this option multiple times, each time with 1 key.
+  returned by the auth method.

@@ -61,7 +61,7 @@ func (b *backend) pathEncrypt() *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
-				Description: "Name of the policy",
+				Description: "Name of the key",
 			},
 
 			"plaintext": {
@@ -112,6 +112,14 @@ will severely impact the ciphertext's security.`,
 				Description: `The version of the key to use for encryption.
 Must be 0 (for latest) or a value greater than or equal
 to the min_encryption_version configured on the key.`,
+			},
+
+			"batch_input": {
+				Type: framework.TypeSlice,
+				Description: `
+Specifies a list of items to be encrypted in a single batch. When this parameter
+is set, if the parameters 'plaintext', 'context' and 'nonce' are also set, they
+will be ignored. Any batch output will preserve the order of the batch input.`,
 			},
 		},
 

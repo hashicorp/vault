@@ -15,7 +15,7 @@ EXTERNAL_TOOLS=\
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 
 
-GO_VERSION_MIN=1.17.11
+GO_VERSION_MIN=$$(cat $(CURDIR)/.go-version)
 GO_CMD?=go
 CGO_ENABLED?=0
 ifneq ($(FDB_ENABLED), )
@@ -151,22 +151,10 @@ test-ember-enos: install-ui-dependencies
 	@echo "--> Running ember tests with a real backend"
 	@cd ui && yarn run test:enos
 
-ember-ci-test: # Deprecated, to be removed soon.
-	@echo "ember-ci-test is deprecated in favour of test-ui-browserstack"
-	@exit 1
-
 check-vault-in-path:
 	@VAULT_BIN=$$(command -v vault) || { echo "vault command not found"; exit 1; }; \
 		[ -x "$$VAULT_BIN" ] || { echo "$$VAULT_BIN not executable"; exit 1; }; \
 		printf "Using Vault at %s:\n\$$ vault version\n%s\n" "$$VAULT_BIN" "$$(vault version)"
-
-check-browserstack-creds:
-	@[ -n "$$BROWSERSTACK_ACCESS_KEY" ] || { echo "BROWSERSTACK_ACCESS_KEY not set"; exit 1; }
-	@[ -n "$$BROWSERSTACK_USERNAME" ] || { echo "BROWSERSTACK_USERNAME not set"; exit 1; }
-
-test-ui-browserstack: check-vault-in-path check-browserstack-creds install-ui-dependencies
-	@echo "--> Running ember tests in Browserstack"
-	@cd ui && yarn run test:browserstack
 
 ember-dist: install-ui-dependencies
 	@cd ui && npm rebuild node-sass
@@ -214,10 +202,10 @@ fmtcheck:
 fmt:
 	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gofumpt -w
 
-semgrep: 
+semgrep:
 	semgrep --include '*.go' --exclude 'vendor' -a -f tools/semgrep .
 
-semgrep-ci: 
+semgrep-ci:
 	semgrep --error --include '*.go' --exclude 'vendor' -f tools/semgrep/ci .
 
 assetcheck:
@@ -259,22 +247,76 @@ ci-config:
 ci-verify:
 	@$(MAKE) -C .circleci ci-verify
 
-.PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path check-browserstack-creds test-ui-browserstack packages build build-ci semgrep semgrep-ci
+.PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path packages build build-ci semgrep semgrep-ci
 
 .NOTPARALLEL: ember-dist ember-dist-dev
 
-.PHONY: build
-# This is used for release builds by .github/workflows/build.yml
-build:
-	@echo "--> Building Vault $(VAULT_VERSION)"
-	@go build -v -tags "$(GO_TAGS)" -ldflags " -X github.com/hashicorp/vault/sdk/version.Version=$(VAULT_VERSION) -X github.com/hashicorp/vault/sdk/version.GitCommit=$(VAULT_REVISION) -X github.com/hashicorp/vault/sdk/version.BuildDate=$(VAULT_BUILD_DATE)" -o dist/
+# These ci targets are used for used for building and testing in Github Actions
+# workflows and for Enos scenarios.
+.PHONY: ci-build
+ci-build:
+	@$(CURDIR)/scripts/ci-helper.sh build
 
-.PHONY: version
-# This is used for release builds by .github/workflows/build.yml
-version:
-	@$(CURDIR)/scripts/version.sh sdk/version/version_base.go
+.PHONY: ci-build-ui
+ci-build-ui:
+	@$(CURDIR)/scripts/ci-helper.sh build-ui
 
-.PHONY: build-date
-# This is used for release builds by .github/workflows/build.yml
-build-date:
-	@$(CURDIR)/scripts/build_date.sh
+.PHONY: ci-bundle
+ci-bundle:
+	@$(CURDIR)/scripts/ci-helper.sh bundle
+
+.PHONY: ci-filter-matrix
+ci-filter-matrix:
+	@$(CURDIR)/scripts/ci-helper.sh matrix-filter-file
+
+.PHONY: ci-get-artifact-basename
+ci-get-artifact-basename:
+	@$(CURDIR)/scripts/ci-helper.sh artifact-basename
+
+.PHONY: ci-get-date
+ci-get-date:
+	@$(CURDIR)/scripts/ci-helper.sh date
+
+.PHONY: ci-get-matrix-group-id
+ci-get-matrix-group-id:
+	@$(CURDIR)/scripts/ci-helper.sh matrix-group-id
+
+.PHONY: ci-get-revision
+ci-get-revision:
+	@$(CURDIR)/scripts/ci-helper.sh revision
+
+.PHONY: ci-get-version
+ci-get-version:
+	@$(CURDIR)/scripts/ci-helper.sh version
+
+.PHONY: ci-get-version-base
+ci-get-version-base:
+	@$(CURDIR)/scripts/ci-helper.sh version-base
+
+.PHONY: ci-get-version-major
+ci-get-version-major:
+	@$(CURDIR)/scripts/ci-helper.sh version-major
+
+.PHONY: ci-get-version-meta
+ci-get-version-meta:
+	@$(CURDIR)/scripts/ci-helper.sh version-meta
+
+.PHONY: ci-get-version-minor
+ci-get-version-minor:
+	@$(CURDIR)/scripts/ci-helper.sh version-minor
+
+.PHONY: ci-get-version-package
+ci-get-version-package:
+	@$(CURDIR)/scripts/ci-helper.sh version-package
+
+.PHONY: ci-get-version-patch
+ci-get-version-patch:
+	@$(CURDIR)/scripts/ci-helper.sh version-patch
+
+.PHONY: ci-get-version-pre
+ci-get-version-pre:
+	@$(CURDIR)/scripts/ci-helper.sh version-pre
+
+.PHONY: ci-prepare-legal
+ci-prepare-legal:
+	@$(CURDIR)/scripts/ci-helper.sh prepare-legal

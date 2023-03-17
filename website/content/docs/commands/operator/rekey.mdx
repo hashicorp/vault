@@ -21,7 +21,7 @@ An unseal key may be provided directly on the command line as an argument to the
 command. If key is specified as "-", the command will read from stdin. If a TTY
 is available, the command will prompt for text.
 
-Please see the [rotating and rekeying](/guides/operations/rekeying-and-rotating) for
+Please see the [rotating and rekeying](https://learn.hashicorp.com/tutorials/vault/rekeying-and-rotating) for
 step-by-step instructions.
 
 ## Examples
@@ -154,7 +154,7 @@ flags](/docs/commands) included on all commands.
 - `-backup` `(bool: false)` - Store a backup of the current PGP encrypted unseal
   keys in Vault's core. The encrypted values can be recovered in the event of
   failure or discarded after success. See the -backup-delete and
-  -backup-retrieve options for more information. This option only applies when
+  \-backup-retrieve options for more information. This option only applies when
   the existing unseal keys were PGP encrypted.
 
 - `-backup-delete` `(bool: false)` - Delete any stored backup unseal keys.

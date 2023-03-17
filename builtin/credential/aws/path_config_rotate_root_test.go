@@ -21,7 +21,6 @@ func TestPathConfigRotateRoot(t *testing.T) {
 					SecretAccessKey: aws.String("buzz2"),
 				},
 			},
-			DeleteAccessKeyOutput: &iam.DeleteAccessKeyOutput{},
 			GetUserOutput: &iam.GetUserOutput{
 				User: &iam.User{
 					UserName: aws.String("ellen"),

@@ -38,7 +38,7 @@ provided key.
 Deletes all versions and metadata of the key "creds":
 
 ```shell-session
-$ vault kv metadata delete secret/creds
+$ vault kv metadata delete -mount=secret creds
 Success! Data deleted (if it existed) at: secret/metadata/creds
 ```
 
@@ -52,7 +52,10 @@ the given key name. If no key exists with that name, an error is returned.
 Retrieves the metadata of the key name, "creds":
 
 ```shell-session
-$ vault kv metadata get secret/creds
+$ vault kv metadata get -mount=secret creds
+=== Metadata Path ===
+secret/metadata/creds
+
 ========== Metadata ==========
 Key                     Value
 ---                     -----
@@ -91,14 +94,14 @@ secrets engine or to update key configuration for a specified key.
 Create a key in the K/V v2 with no data at the key "creds":
 
 ```shell-session
-$ vault kv metadata put secret/creds
+$ vault kv metadata put -mount=secret creds
 Success! Data written to: secret/metadata/creds
 ```
 
 Set the maximum number of versions to keep for the key "creds":
 
 ```shell-session
-$ vault kv metadata put -max-versions=5 secret/creds
+$ vault kv metadata put -mount=secret -max-versions=5 creds
 Success! Data written to: secret/metadata/creds
 ```
 
@@ -109,7 +112,7 @@ permanently deleted.
 Require Check-and-Set for the key "creds":
 
 ```shell-session
-$ vault kv metadata put -cas-required secret/creds
+$ vault kv metadata put -mount=secret -cas-required creds
 ```
 
 **NOTE:** When check-and-set is required, the key will require the `cas`
@@ -119,7 +122,7 @@ configuration will be used.
 Set the length of time before a version is deleted for the key "creds":
 
 ```shell-session
-$ vault kv metadata put -delete-version-after="3h25m19s" secret/creds
+$ vault kv metadata put -mount=secret -delete-version-after="3h25m19s" creds
 ```
 
 **NOTE:** If not set, the backend's configured Delete-Version-After is used. If
@@ -153,5 +156,12 @@ be applied to new versions.
 - `custom-metadata` `(string: "")` - Specifies a key-value pair for the
   `custom_metadata` field. This can be specified multiple times to add multiple
   pieces of metadata.
+
+- `-mount` `(string: "")` - Specifies the path where the KV backend is mounted. 
+  If specified, the next argument will be interpreted as the secret path. If 
+  this flag is not specified, the next argument will be interpreted as the 
+  combined mount path and secret path, with /data/ automatically inserted for 
+  KV v2 secrets.
+
 
 [duration-godoc]: https://golang.org/pkg/time/#ParseDuration

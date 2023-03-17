@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"sync"
 	"testing"
@@ -101,7 +102,7 @@ func TestACL_Capabilities(t *testing.T) {
 	t.Run("root-ns", func(t *testing.T) {
 		t.Parallel()
 		policy := []*Policy{{Name: "root"}}
-		ctx := namespace.RootContext(nil)
+		ctx := namespace.RootContext(context.Background())
 		acl, err := NewACL(ctx, policy)
 		if err != nil {
 			t.Fatalf("err: %v", err)
@@ -159,7 +160,7 @@ func testACLRoot(t *testing.T, ns *namespace.Namespace) {
 	// Create the root policy ACL. Always create on root namespace regardless of
 	// which namespace to ACL check on.
 	policy := []*Policy{{Name: "root"}}
-	acl, err := NewACL(namespace.RootContext(nil), policy)
+	acl, err := NewACL(namespace.RootContext(context.Background()), policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -293,7 +294,7 @@ func TestACL_Layered(t *testing.T) {
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
-		acl, err := NewACL(namespace.RootContext(nil), []*Policy{policy1, policy2})
+		acl, err := NewACL(namespace.RootContext(context.Background()), []*Policy{policy1, policy2})
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -820,25 +821,33 @@ func TestACL_CreationRace(t *testing.T) {
 	}
 
 	var wg sync.WaitGroup
+	errs := make(chan error)
 	stopTime := time.Now().Add(20 * time.Second)
 
 	for i := 0; i < 50; i++ {
 		wg.Add(1)
-		go func() {
+		go func(i int) {
 			defer wg.Done()
 			for {
 				if time.Now().After(stopTime) {
 					return
 				}
-				_, err := NewACL(namespace.RootContext(nil), []*Policy{policy})
+				_, err := NewACL(namespace.RootContext(context.Background()), []*Policy{policy})
 				if err != nil {
-					t.Fatalf("err: %v", err)
+					errs <- fmt.Errorf("goroutine %d: %w", i, err)
 				}
 			}
-		}()
+		}(i)
 	}
 
-	wg.Wait()
+	go func() {
+		wg.Wait()
+		close(errs)
+	}()
+
+	for err := range errs {
+		t.Fatalf("err: %v", err)
+	}
 }
 
 func TestACLGrantingPolicies(t *testing.T) {
@@ -1179,7 +1188,6 @@ var permissionsPolicy = `
 name = "dev"
 path "dev/*" {
 	policy = "write"
-	
 	allowed_parameters = {
 		"zip" = []
 	}
@@ -1269,7 +1277,6 @@ var valuePermissionsPolicy = `
 name = "op"
 path "dev/*" {
 	policy = "write"
-	
 	allowed_parameters = {
 		"allow" = ["good"]
 	}

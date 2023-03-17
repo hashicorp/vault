@@ -7,4 +7,10 @@ export default Component.extend({
   attributeBindings: ['data-test-component'],
   tagName: 'span',
   classNames: ['is-inline-block'],
+
+  actions: {
+    preventSubmit(e) {
+      e.preventDefault();
+    },
+  },
 });

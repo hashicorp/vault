@@ -1,0 +1,39 @@
+---
+layout: docs
+page_title: Vault Enterprise Redundancy Zones
+description: |-
+  Vault Enterprise clusters can have hot standby nodes for scalability and resiliency.
+---
+
+# Redundancy Zones
+
+-> **Note**: This feature requires [Vault Enterprise](https://www.hashicorp.com/products/vault/)
+configured to use Integrated Storage.
+
+Vault Enterprise Redundancy Zones provide both read scaling and resiliency benefits by enabling
+the deployment of non-voting nodes alongside voting nodes on a per availability zone basis.
+
+When using redundancy zones, if an operator chooses to deploy Vault across three availability zones,
+they could have two (or more) nodes (one voting/one+ non-voting) in each zone. In the event that a
+voting node in an availability zone fails, the redundancy zone configuration automatically
+promotes the non-voting node to a voting node. In the event that an entire availability zone is
+lost, a non-voting node in one of the existing availability zones would be promoted to a voting
+node, keeping quorum. This capability functions as a "hot standby" for server nodes while also
+providing enhanced read scalability.
+
+## Configuration
+A new key can be added to Vault's `storage` configuration stanza: `autopilot_redundancy_zone`.
+The value for this key is a string of your choosing and represents the zone this particular node
+should be in.
+
+## Mechanics
+Vault's Autopilot subsystem will always attempt to maintain exactly one voting node per redundancy
+zone. Any additional nodes beyond the first one will be demoted to non-voting status. Non-voting
+nodes can serve reads but can not participate in cluster elections.
+
+If redundancy zones are used in conjunction with automated upgrades, Autopilot will always try to
+ensure that Vault is never moving from a more healthy state to a less healthy state. Autopilot will
+wait to begin leadership transfer until it can ensure that there will be as much redundancy on the
+new Vault version as there was on the old Vault version.
+
+The status of redundancy zones can be monitored by consulting the [Autopilot state API endpoint](/api-docs/system/storage/raftautopilot#get-cluster-state).

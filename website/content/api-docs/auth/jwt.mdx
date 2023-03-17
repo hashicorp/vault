@@ -43,7 +43,7 @@ set.
 - `bound_issuer` `(string: <optional>)` - The value against which to match the `iss` claim in a JWT.
 - `jwt_supported_algs` `(comma-separated string, or array of strings: <optional>)` - A list of supported signing algorithms. Defaults to [RS256] for OIDC roles. Defaults to all [available algorithms](https://github.com/hashicorp/cap/blob/main/jwt/algs.go) for JWT roles.
 - `default_role` `(string: <optional>)` - The default role to use if none is provided during login.
-- `provider_config` `(map: <optional>)` - Configuration options for provider-specific handling. Providers with specific handling include: Azure, Google. The options are described in each provider's section in [OIDC Provider Setup](/docs/auth/jwt_oidc_providers).
+- `provider_config` `(map: <optional>)` - Configuration options for provider-specific handling. Providers with specific handling include: Azure, Google. The options are described in each provider's section in [OIDC Provider Setup](/docs/auth/jwt/oidc-providers).
 - `namespace_in_state` `(bool: true)` - Pass namespace in the OIDC state parameter instead of as a separate query parameter. With this setting, the allowed redirect URL(s) in Vault and on the provider side should not contain a namespace query parameter. This means only one redirect URL entry needs to be maintained on the provider side for all vault namespaces that will be authenticating against it. Defaults to true for new configs.
 
 ### Sample Payload
@@ -303,9 +303,12 @@ Obtain an authorization URL from Vault to start an OIDC login flow.
 - `role` `(string: <optional>)` - Name of the role against which the login is being
   attempted. Defaults to configured `default_role` if not provided.
 - `redirect_uri` `(string: <required>)` - Path to the callback to complete the login. This will be
-  of the form, "https://.../oidc/callback" where the leading portion is dependent on your Vault
+  of the form, "https&#x3A;//.../oidc/callback" where the leading portion is dependent on your Vault
   server location, port, and the mount of the JWT plugin. This must be configured with Vault and the
   provider. See [Redirect URIs](/docs/auth/jwt#redirect-uris) for more information.
+- `client_nonce` `(string: <optional>)` - Optional client-provided nonce that
+  must match the `client_nonce` value provided during a subsequent request to the
+  [callback](/api-docs/auth/jwt#oidc-callback) API.
 
 ### Sample Payload
 
@@ -354,6 +357,9 @@ against any bound claims, and if valid a Vault token will be returned.
   be included in the the redirect following successful authentication on the provider.
 - `code` `(string: <required>)` - Provider-generated authorization code that Vault will exchange for
   an ID token.
+- `client_nonce` `(string: <optional>)` - Optional client-provided nonce that must
+  match the `client_nonce` value provided during the prior request to the
+  [auth_url](/api-docs/auth/jwt#oidc-authorization-url-request) API.
 
 ### Sample Request
 

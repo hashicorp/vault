@@ -12,9 +12,6 @@ parameters:
   save_cache:
     type: boolean
     default: false
-  go_image:
-    type: string
-    default: "docker.mirror.hashicorp.services/cimg/go:1.17.11"
   use_docker:
     type: boolean
     default: false
@@ -95,6 +92,7 @@ steps:
         # has its own remote docker VM.
 
         make prep
+
         mkdir -p test-results/go-test
 
         # We don't want VAULT_LICENSE set when running Go tests, because that's
@@ -107,7 +105,7 @@ steps:
         export VAULT_LICENSE_CI="$VAULT_LICENSE"
         VAULT_LICENSE=
 
-        # Create a docker network for our testcontainer
+        # Create a docker network for our test container
         if [ $USE_DOCKER == 1 ]; then
           # Despite the fact that we're using a circleci image (thus getting the
           # version they chose for the docker cli) and that we're specifying a
@@ -116,15 +114,17 @@ steps:
           # reasons unclear.
           export DOCKER_API_VERSION=1.39
 
-          export TEST_DOCKER_NETWORK_ID=$(docker network list -q -f 'name=vaulttest')
+          TEST_DOCKER_NETWORK_NAME="${CIRCLE_WORKFLOW_JOB_ID}-${CIRCLE_NODE_INDEX}"
+          export TEST_DOCKER_NETWORK_ID=$(docker network list --quiet --no-trunc --filter="name=${TEST_DOCKER_NETWORK_NAME}")
           if [ -z $TEST_DOCKER_NETWORK_ID ]; then
-            TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
+            docker network prune -f
+            TEST_DOCKER_NETWORK_ID=$(docker network create "${TEST_DOCKER_NETWORK_NAME}")
           fi
 
 
 
-          # Start a docker testcontainer to run the tests in
-          docker run -d \
+          # Start a docker test container to run the tests in
+          CONTAINER_ID="$(docker run -d \
             -e TEST_DOCKER_NETWORK_ID \
             -e GOPRIVATE \
             -e DOCKER_CERT_PATH \
@@ -133,19 +133,48 @@ steps:
             -e DOCKER_TLS_VERIFY \
             -e NO_PROXY \
             -e VAULT_TEST_LOG_DIR=<< parameters.log_dir >> \
-            --network vaulttest --name \
-            testcontainer << parameters.go_image >> \
-            tail -f /dev/null
+            --network ${TEST_DOCKER_NETWORK_NAME} \
+            $GO_IMAGE \
+            tail -f /dev/null)"
+          mkdir workspace
+          echo ${CONTAINER_ID} > workspace/container_id
+
+          # Hack: Docker permissions appear to have changed; let's explicitly
+          # add a new user/group with the correct host uid to the docker
+          # container, fixing all of these permissions issues correctly. We
+          # then have to run with this user consistently in the future.
+          #
+          # Notably, in this shell pipeline we see:
+          # uid=1001(circleci) gid=1002(circleci) groups=1002(circleci)
+          #
+          # but inside the docker image below, we see:
+          # uid=3434(circleci) gid=3434(circleci) groups=3434(circleci)
+          #
+          # See also: https://github.com/CircleCI-Public/cimg-base/issues/122
+          export HOST_GID="$(id -g)"
+          export HOST_UID="$(id -u)"
+          export CONT_GID="$(docker exec ${CONTAINER_ID} sh -c 'id -g')"
+          export CONT_GNAME="$(docker exec ${CONTAINER_ID} sh -c 'id -g -n')"
+          export CONT_UID="$(docker exec ${CONTAINER_ID} sh -c 'id -u')"
+          if (( HOST_UID != CONT_UID )); then
+            # Only provision a group if necessary; otherwise reuse the
+            # existing one.
+            if (( HOST_GID != CONT_GID )); then
+              docker exec -e HOST_GID -e CONT_GNAME ${CONTAINER_ID} sh -c 'sudo groupmod -g $HOST_GID $CONT_GNAME'
+            fi
+
+            docker exec -e CONT_GNAME -e HOST_UID ${CONTAINER_ID} sh -c 'sudo usermod -a -G $CONT_GNAME -u $HOST_UID circleci'
+          fi
 
           # Run tests
-          test -d << parameters.cache_dir >> && docker cp << parameters.cache_dir >> testcontainer:/tmp/gocache
-          docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
-          docker cp . testcontainer:/home/circleci/go/src/github.com/hashicorp/vault/
-          docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
+          test -d << parameters.cache_dir >> && docker cp << parameters.cache_dir >> ${CONTAINER_ID}:/tmp/gocache
+          docker exec ${CONTAINER_ID} sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
+          docker cp . ${CONTAINER_ID}:/home/circleci/go/src/github.com/hashicorp/vault/
+          docker cp $DOCKER_CERT_PATH/ ${CONTAINER_ID}:$DOCKER_CERT_PATH
 
           # Copy the downloaded modules inside the container.
-          docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/pkg'
-          docker cp "$(go env GOPATH)/pkg/mod" testcontainer:/home/circleci/go/pkg/mod
+          docker exec ${CONTAINER_ID} sh -c 'mkdir -p /home/circleci/go/pkg'
+          docker cp "$(go env GOPATH)/pkg/mod" ${CONTAINER_ID}:/home/circleci/go/pkg/mod
 
           docker exec -w /home/circleci/go/src/github.com/hashicorp/vault/ \
             -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
@@ -154,7 +183,7 @@ steps:
             -e GOPROXY="off" \
             -e VAULT_LICENSE_CI \
             -e GOARCH=<< parameters.arch >> \
-            testcontainer \
+            ${CONTAINER_ID} \
               gotestsum --format=short-verbose \
                 --junitfile test-results/go-test/results.xml \
                 --jsonfile test-results/go-test/results.json \
@@ -185,8 +214,8 @@ steps:
             name: Copy test results
             when: always
             command: |
-              docker cp testcontainer:/home/circleci/go/src/github.com/hashicorp/vault/test-results .
-              docker cp testcontainer:/tmp/gocache << parameters.cache_dir >>
+              docker cp $(cat workspace/container_id):/home/circleci/go/src/github.com/hashicorp/vault/test-results .
+              docker cp $(cat workspace/container_id):/tmp/gocache << parameters.cache_dir >>
   - when:
       condition: << parameters.save_cache >>
       steps:
@@ -194,4 +223,4 @@ steps:
             when: always
             key: go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
             paths:
-            - << parameters.cache_dir >>
+              - << parameters.cache_dir >>

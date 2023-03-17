@@ -806,3 +806,52 @@ func TestIdentityStore_NewEntityCounter(t *testing.T) {
 
 	expectSingleCount(t, sink, "identity.entity.creation")
 }
+
+func TestIdentityStore_UpdateAliasMetadataPerAccessor(t *testing.T) {
+	entity := &identity.Entity{
+		ID:       "testEntityID",
+		Name:     "testEntityName",
+		Policies: []string{"foo", "bar"},
+		Aliases: []*identity.Alias{
+			{
+				ID:            "testAliasID1",
+				CanonicalID:   "testEntityID",
+				MountType:     "testMountType",
+				MountAccessor: "testMountAccessor",
+				Name:          "sameAliasName",
+			},
+			{
+				ID:            "testAliasID2",
+				CanonicalID:   "testEntityID",
+				MountType:     "testMountType",
+				MountAccessor: "testMountAccessor2",
+				Name:          "sameAliasName",
+			},
+		},
+		NamespaceID: namespace.RootNamespaceID,
+	}
+
+	login := &logical.Alias{
+		MountType:     "testMountType",
+		MountAccessor: "testMountAccessor",
+		Name:          "sameAliasName",
+		ID:            "testAliasID",
+		Metadata:      map[string]string{"foo": "bar"},
+	}
+
+	if i := changedAliasIndex(entity, login); i != 0 {
+		t.Fatalf("wrong alias index changed. Expected 0, got %d", i)
+	}
+
+	login2 := &logical.Alias{
+		MountType:     "testMountType",
+		MountAccessor: "testMountAccessor2",
+		Name:          "sameAliasName",
+		ID:            "testAliasID2",
+		Metadata:      map[string]string{"bar": "foo"},
+	}
+
+	if i := changedAliasIndex(entity, login2); i != 1 {
+		t.Fatalf("wrong alias index changed. Expected 1, got %d", i)
+	}
+}

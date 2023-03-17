@@ -1,7 +1,6 @@
 import Ember from 'ember';
 import { inject as service } from '@ember/service';
 import Component from './outer-html';
-import { later } from '@ember/runloop';
 import { task, timeout, waitForEvent } from 'ember-concurrency';
 import { computed } from '@ember/object';
 import { waitFor } from '@ember/test-waiters';
@@ -17,6 +16,7 @@ export { ERROR_WINDOW_CLOSED, ERROR_MISSING_PARAMS, ERROR_JWT_LOGIN };
 export default Component.extend({
   store: service(),
   featureFlagService: service('featureFlag'),
+
   selectedAuthPath: null,
   selectedAuthType: null,
   roleName: null,
@@ -25,22 +25,18 @@ export default Component.extend({
   onRoleName() {},
   onLoading() {},
   onError() {},
-  onToken() {},
   onNamespace() {},
 
   didReceiveAttrs() {
     this._super();
-    let { oldSelectedAuthPath, selectedAuthPath } = this;
-    let shouldDebounce = !oldSelectedAuthPath && !selectedAuthPath;
-    if (oldSelectedAuthPath !== selectedAuthPath) {
-      this.set('role', null);
-      this.onRoleName(this.roleName);
-      this.fetchRole.perform(null, { debounce: false });
-    } else if (shouldDebounce) {
-      this.fetchRole.perform(this.roleName);
+    const debounce = !this.oldSelectedAuthPath && !this.selectedAuthPath;
+
+    if (this.oldSelectedAuthPath !== this.selectedAuthPath || debounce) {
+      this.fetchRole.perform(this.roleName, { debounce });
     }
+
     this.set('errorMessage', null);
-    this.set('oldSelectedAuthPath', selectedAuthPath);
+    this.set('oldSelectedAuthPath', this.selectedAuthPath);
   },
 
   // Assumes authentication using OIDC until it's known that the mount is
@@ -78,6 +74,17 @@ export default Component.extend({
     })
   ).restartable(),
 
+  cancelLogin(oidcWindow, errorMessage) {
+    this.closeWindow(oidcWindow);
+    this.handleOIDCError(errorMessage);
+  },
+
+  closeWindow(oidcWindow) {
+    this.watchPopup.cancelAll();
+    this.watchCurrent.cancelAll();
+    oidcWindow.close();
+  },
+
   handleOIDCError(err) {
     this.onLoading(false);
     this.prepareForOIDC.cancelAll();
@@ -96,10 +103,7 @@ export default Component.extend({
     // ensure that postMessage event is from expected source
     while (true) {
       const event = yield waitForEvent(thisWindow, 'message');
-      if (event.origin !== thisWindow.origin || !event.isTrusted) {
-        return this.handleOIDCError();
-      }
-      if (event.data.source === 'oidc-callback') {
+      if (event.data.source === 'oidc-callback' && event.isTrusted && event.origin === thisWindow.origin) {
         return this.exchangeOIDC.perform(event.data, oidcWindow);
       }
       // continue to wait for the correct message
@@ -121,12 +125,6 @@ export default Component.extend({
     oidcWindow.close();
   }),
 
-  closeWindow(oidcWindow) {
-    this.watchPopup.cancelAll();
-    this.watchCurrent.cancelAll();
-    oidcWindow.close();
-  },
-
   exchangeOIDC: task(function* (oidcState, oidcWindow) {
     if (oidcState === null || oidcState === undefined) {
       return;
@@ -147,12 +145,8 @@ export default Component.extend({
       }
     }
 
-    // defer closing of the window, but continue executing the task
-    later(() => {
-      this.closeWindow(oidcWindow);
-    }, WAIT_TIME);
     if (!path || !state || !code) {
-      return this.handleOIDCError(ERROR_MISSING_PARAMS);
+      return this.cancelLogin(oidcWindow, ERROR_MISSING_PARAMS);
     }
     let adapter = this.store.adapterFor('auth-method');
     this.onNamespace(namespace);
@@ -161,12 +155,13 @@ export default Component.extend({
     // and submit auth form
     try {
       resp = yield adapter.exchangeOIDC(path, state, code);
+      this.closeWindow(oidcWindow);
     } catch (e) {
-      return this.handleOIDCError(e);
+      // If there was an error on Vault's end, close the popup
+      // and show the error on the login screen
+      return this.cancelLogin(oidcWindow, e);
     }
-    let token = resp.auth.client_token;
-    this.onToken(token);
-    yield this.onSubmit();
+    yield this.onSubmit(null, null, resp.auth.client_token);
   }),
 
   actions: {
@@ -176,6 +171,14 @@ export default Component.extend({
         e.preventDefault();
       }
       if (!this.isOIDC || !this.role || !this.role.authUrl) {
+        let message = this.errorMessage;
+        if (!this.role) {
+          message = 'Invalid role. Please try again.';
+        } else if (!this.role.authUrl) {
+          message =
+            'Missing auth_url. Please check that allowed_redirect_uris for the role include this mount path.';
+        }
+        this.onError(message);
         return;
       }
       try {

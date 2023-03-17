@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	systemd "github.com/coreos/go-systemd/daemon"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
 	"github.com/hashicorp/vault/api"
@@ -368,13 +369,28 @@ func (c *AgentCommand) Run(args []string) int {
 			client.SetNamespace(config.AutoAuth.Method.Namespace)
 		}
 		templateNamespace = client.Headers().Get(consts.NamespaceHeaderName)
+
+		sinkClient, err := client.CloneWithHeaders()
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error cloning client for file sink: %v", err))
+			return 1
+		}
+
+		if config.DisableIdleConnsAutoAuth {
+			sinkClient.SetMaxIdleConnections(-1)
+		}
+
+		if config.DisableKeepAlivesAutoAuth {
+			sinkClient.SetDisableKeepAlives(true)
+		}
+
 		for _, sc := range config.AutoAuth.Sinks {
 			switch sc.Type {
 			case "file":
 				config := &sink.SinkConfig{
 					Logger:    c.logger.Named("sink.file"),
 					Config:    sc.Config,
-					Client:    client,
+					Client:    sinkClient,
 					WrapTTL:   sc.WrapTTL,
 					DHType:    sc.DHType,
 					DeriveKey: sc.DeriveKey,
@@ -490,9 +506,23 @@ func (c *AgentCommand) Run(args []string) int {
 	if config.Cache != nil {
 		cacheLogger := c.logger.Named("cache")
 
+		proxyClient, err := client.CloneWithHeaders()
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error cloning client for caching: %v", err))
+			return 1
+		}
+
+		if config.DisableIdleConnsCaching {
+			proxyClient.SetMaxIdleConnections(-1)
+		}
+
+		if config.DisableKeepAlivesCaching {
+			proxyClient.SetDisableKeepAlives(true)
+		}
+
 		// Create the API proxier
 		apiProxy, err := cache.NewAPIProxy(&cache.APIProxyConfig{
-			Client:                 client,
+			Client:                 proxyClient,
 			Logger:                 cacheLogger.Named("apiproxy"),
 			EnforceConsistency:     enforceConsistency,
 			WhenInconsistentAction: whenInconsistent,
@@ -505,7 +535,7 @@ func (c *AgentCommand) Run(args []string) int {
 		// Create the lease cache proxier and set its underlying proxier to
 		// the API proxier.
 		leaseCache, err = cache.NewLeaseCache(&cache.LeaseCacheConfig{
-			Client:      client,
+			Client:      proxyClient,
 			BaseContext: ctx,
 			Proxier:     apiProxy,
 			Logger:      cacheLogger.Named("leasecache"),
@@ -773,6 +803,8 @@ func (c *AgentCommand) Run(args []string) int {
 			select {
 			case <-c.ShutdownCh:
 				c.UI.Output("==> Vault agent shutdown triggered")
+				// Notify systemd that the server is shutting down
+				c.notifySystemd(systemd.SdNotifyStopping)
 				// Let the lease cache know this is a shutdown; no need to evict
 				// everything
 				if leaseCache != nil {
@@ -780,6 +812,7 @@ func (c *AgentCommand) Run(args []string) int {
 				}
 				return nil
 			case <-ctx.Done():
+				c.notifySystemd(systemd.SdNotifyStopping)
 				return nil
 			case <-winsvc.ShutdownChannel():
 				return nil
@@ -793,25 +826,35 @@ func (c *AgentCommand) Run(args []string) int {
 
 		// Auth Handler is going to set its own retry values, so we want to
 		// work on a copy of the client to not affect other subsystems.
-		clonedClient, err := c.client.CloneWithHeaders()
+		ahClient, err := c.client.CloneWithHeaders()
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error cloning client for auth handler: %v", err))
 			return 1
 		}
+
+		if config.DisableIdleConnsAutoAuth {
+			ahClient.SetMaxIdleConnections(-1)
+		}
+
+		if config.DisableKeepAlivesAutoAuth {
+			ahClient.SetDisableKeepAlives(true)
+		}
+
 		ah := auth.NewAuthHandler(&auth.AuthHandlerConfig{
 			Logger:                       c.logger.Named("auth.handler"),
-			Client:                       clonedClient,
+			Client:                       ahClient,
 			WrapTTL:                      config.AutoAuth.Method.WrapTTL,
 			MinBackoff:                   config.AutoAuth.Method.MinBackoff,
 			MaxBackoff:                   config.AutoAuth.Method.MaxBackoff,
 			EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
 			EnableTemplateTokenCh:        enableTokenCh,
 			Token:                        previousToken,
+			ExitOnError:                  config.AutoAuth.Method.ExitOnError,
 		})
 
 		ss := sink.NewSinkServer(&sink.SinkServerConfig{
 			Logger:        c.logger.Named("sink.server"),
-			Client:        client,
+			Client:        ahClient,
 			ExitAfterAuth: exitAfterAuth,
 		})
 
@@ -902,6 +945,9 @@ func (c *AgentCommand) Run(args []string) int {
 		return 1
 	}
 
+	// Notify systemd that the server is ready (if applicable)
+	c.notifySystemd(systemd.SdNotifyReady)
+
 	defer func() {
 		if err := c.removePidFile(config.PidFile); err != nil {
 			c.UI.Error(fmt.Sprintf("Error deleting the PID file: %s", err))
@@ -930,6 +976,19 @@ func verifyRequestHeader(handler http.Handler) http.Handler {
 
 		handler.ServeHTTP(w, r)
 	})
+}
+
+func (c *AgentCommand) notifySystemd(status string) {
+	sent, err := systemd.SdNotify(false, status)
+	if err != nil {
+		c.logger.Error("error notifying systemd", "error", err)
+	} else {
+		if sent {
+			c.logger.Debug("sent systemd notification", "notification", status)
+		} else {
+			c.logger.Debug("would have sent systemd notification (systemd not present)", "notification", status)
+		}
+	}
 }
 
 func (c *AgentCommand) setStringFlag(f *FlagSets, configVal string, fVar *StringVar) {

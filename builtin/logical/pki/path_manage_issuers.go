@@ -144,6 +144,21 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 		keysAllowed = false
 		pemBundle = certificate
 	}
+	if len(pemBundle) < 75 {
+		// It is almost nearly impossible to store a complete certificate in
+		// less than 75 bytes. It is definitely impossible to do so when PEM
+		// encoding has been applied. Detect this and give a better warning
+		// than "provided PEM block contained no data" in this case. This is
+		// because the PEM headers contain 5*4 + 6 + 4 + 2 + 2 = 34 characters
+		// minimum (five dashes, "BEGIN" + space + at least one character
+		// identifier, "END" + space + at least one character identifier, and
+		// a pair of new lines). That would leave 41 bytes for Base64 data,
+		// meaning at most a 30-byte DER certificate.
+		//
+		// However, < 75 bytes is probably a good length for a file path so
+		// suggest that is the case.
+		return logical.ErrorResponse("provided data for import was too short; perhaps a path was passed to the API rather than the contents of a PEM file"), nil
+	}
 
 	var createdKeys []string
 	var createdIssuers []string
@@ -176,6 +191,12 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 			issuers = append(issuers, pemBlockString)
 		case "CRL", "X509 CRL":
 			// Ignore any CRL entries.
+		case "EC PARAMS", "EC PARAMETERS":
+			// Ignore any EC parameter entries. This is an optional block
+			// that some implementations send, to ensure some semblance of
+			// compatibility with weird curves. Go doesn't support custom
+			// curves and 99% of software doesn't either, so discard them
+			// without parsing them.
 		default:
 			// Otherwise, treat them as keys.
 			keys = append(keys, pemBlockString)
@@ -222,6 +243,27 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 		err := b.crlBuilder.rebuild(ctx, b, req, true)
 		if err != nil {
 			return nil, err
+		}
+
+		var issuersWithKeys []string
+		for _, issuer := range createdIssuers {
+			if issuerKeyMap[issuer] != "" {
+				issuersWithKeys = append(issuersWithKeys, issuer)
+			}
+		}
+
+		// Check whether we need to update our default issuer configuration.
+		config, err := getIssuersConfig(ctx, req.Storage)
+		if err != nil {
+			response.AddWarning("Unable to fetch default issuers configuration to update default issuer if necessary: " + err.Error())
+		} else if config.DefaultFollowsLatestIssuer {
+			if len(issuersWithKeys) == 1 {
+				if err := updateDefaultIssuerId(ctx, req.Storage, issuerID(issuersWithKeys[0])); err != nil {
+					response.AddWarning("Unable to update this new root as the default issuer: " + err.Error())
+				}
+			} else if len(issuersWithKeys) > 1 {
+				response.AddWarning("Default issuer left unchanged: could not select new issuer automatically as multiple imported issuers had key material in Vault.")
+			}
 		}
 	}
 

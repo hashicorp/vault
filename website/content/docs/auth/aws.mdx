@@ -8,6 +8,8 @@ description: The aws auth method allows automated authentication of AWS entities
 
 @include 'x509-sha1-deprecation.mdx'
 
+@include 'aws-sha1-deprecation.mdx'
+
 The `aws` auth method provides an automated mechanism to retrieve a Vault token
 for IAM principals and AWS EC2 instances. Unlike most Vault auth methods, this
 method does not require manual first-deploying, or provisioning
@@ -628,9 +630,17 @@ $ vault write auth/aws/config/client iam_server_id_header_value=vault.example.co
 
 #### Perform the login operation
 
+For the ec2 auth method, first fetch the PKCS#7 signature on the AWS instance:
+
+```shell-session
+$ SIGNATURE=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/rsa2048 | tr -d '\n')
+```
+
+then set the signature on the login endpoint:
+
 ```shell-session
 $ vault write auth/aws/login role=dev-role \
-pkcs7=MIAGCSqGSIb3DQEHAqCAMIACAQExCzAJBgUrDgMCGgUAMIAGCSqGSIb3DQEHAaCAJIAEggGmewogICJkZXZwYXlQcm9kdWN0Q29kZXMiIDogbnVsbCwKICAicHJpdmF0ZUlwIiA6ICIxNzIuMzEuNjMuNjAiLAogICJhdmFpbGFiaWxpdHlab25lIiA6ICJ1cy1lYXN0LTFjIiwKICAidmVyc2lvbiIgOiAiMjAxMC0wOC0zMSIsCiAgImluc3RhbmNlSWQiIDogImktZGUwZjEzNDQiLAogICJiaWxsaW5nUHJvZHVjdHMiIDogbnVsbCwKICAiaW5zdGFuY2VUeXBlIiA6ICJ0Mi5taWNybyIsCiAgImFjY291bnRJZCIgOiAiMjQxNjU2NjE1ODU5IiwKICAiaW1hZ2VJZCIgOiAiYW1pLWZjZTNjNjk2IiwKICAicGVuZGluZ1RpbWUiIDogIjIwMTYtMDQtMDVUMTY6MjY6NTVaIiwKICAiYXJjaGl0ZWN0dXJlIiA6ICJ4ODZfNjQiLAogICJrZXJuZWxJZCIgOiBudWxsLAogICJyYW1kaXNrSWQiIDogbnVsbCwKICAicmVnaW9uIiA6ICJ1cy1lYXN0LTEiCn0AAAAAAAAxggEXMIIBEwIBATBpMFwxCzAJBgNVBAYTAlVTMRkwFwYDVQQIExBXYXNoaW5ndG9uIFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYDVQQKExdBbWF6b24gV2ViIFNlcnZpY2VzIExMQwIJAJa6SNnlXhpnMAkGBSsOAwIaBQCgXTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcNAQcBMBwGCSqGSIb3DQEJBTEPFw0xNjA0MDUxNjI3MDBaMCMGCSqGSIb3DQEJBDEWBBRtiynzMTNfTw1TV/d8NvfgVw+XfTAJBgcqhkjOOAQDBC4wLAIUVfpVcNYoOKzN1c+h1Vsm/c5U0tQCFAK/K72idWrONIqMOVJ8Uen0wYg4AAAAAAAA nonce=5defbf9e-a8f9-3063-bdfc-54b7a42a1f95
+  pkcs7=$SIGNATURE
 ```
 
 For the iam auth method, generating the signed request is a non-standard
@@ -703,7 +713,7 @@ curl -X POST -H "X-Vault-Token:123" "http://127.0.0.1:8200/v1/auth/aws/role/dev-
 #### Perform the login operation
 
 ```
-curl -X POST "http://127.0.0.1:8200/v1/auth/aws/login" -d '{"role":"dev-role","pkcs7":"'$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/pkcs7 | tr -d '\n')'","nonce":"5defbf9e-a8f9-3063-bdfc-54b7a42a1f95"}'
+curl -X POST "http://127.0.0.1:8200/v1/auth/aws/login" -d '{"role":"dev-role","pkcs7":"'$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/rsa2048 | tr -d '\n')'","nonce":"5defbf9e-a8f9-3063-bdfc-54b7a42a1f95"}'
 
 curl -X POST "http://127.0.0.1:8200/v1/auth/aws/login" -d '{"role":"dev", "iam_http_request_method": "POST", "iam_request_url": "aHR0cHM6Ly9zdHMuYW1hem9uYXdzLmNvbS8=", "iam_request_body": "QWN0aW9uPUdldENhbGxlcklkZW50aXR5JlZlcnNpb249MjAxMS0wNi0xNQ==", "iam_request_headers": "eyJDb250ZW50LUxlbmd0aCI6IFsiNDMiXSwgIlVzZXItQWdlbnQiOiBbImF3cy1zZGstZ28vMS40LjEyIChnbzEuNy4xOyBsaW51eDsgYW1kNjQpIl0sICJYLVZhdWx0LUFXU0lBTS1TZXJ2ZXItSWQiOiBbInZhdWx0LmV4YW1wbGUuY29tIl0sICJYLUFtei1EYXRlIjogWyIyMDE2MDkzMFQwNDMxMjFaIl0sICJDb250ZW50LVR5cGUiOiBbImFwcGxpY2F0aW9uL3gtd3d3LWZvcm0tdXJsZW5jb2RlZDsgY2hhcnNldD11dGYtOCJdLCAiQXV0aG9yaXphdGlvbiI6IFsiQVdTNC1ITUFDLVNIQTI1NiBDcmVkZW50aWFsPWZvby8yMDE2MDkzMC91cy1lYXN0LTEvc3RzL2F3czRfcmVxdWVzdCwgU2lnbmVkSGVhZGVycz1jb250ZW50LWxlbmd0aDtjb250ZW50LXR5cGU7aG9zdDt4LWFtei1kYXRlO3gtdmF1bHQtc2VydmVyLCBTaWduYXR1cmU9YTY5ZmQ3NTBhMzQ0NWM0ZTU1M2UxYjNlNzlkM2RhOTBlZWY1NDA0N2YxZWI0ZWZlOGZmYmM5YzQyOGMyNjU1YiJdfQ==" }'
 ```
@@ -763,7 +773,7 @@ import (
 	"fmt"
 
 	vault "github.com/hashicorp/vault/api"
-	auth "github.com/hashicorp/vault/api-docs/auth/aws"
+	auth "github.com/hashicorp/vault/api/auth/aws"
 )
 
 // Fetches a key-value secret (kv-v2) after authenticating to Vault via AWS IAM,
@@ -783,7 +793,7 @@ func getSecretWithAWSAuthIAM() (string, error) {
 		return "", fmt.Errorf("unable to initialize AWS auth method: %w", err)
 	}
 
-	authInfo, err := client.Auth().Login(context.TODO(), awsAuth)
+	authInfo, err := client.Auth().Login(context.Background(), awsAuth)
 	if err != nil {
 		return "", fmt.Errorf("unable to login to AWS auth method: %w", err)
 	}
@@ -791,23 +801,17 @@ func getSecretWithAWSAuthIAM() (string, error) {
 		return "", fmt.Errorf("no auth info was returned after login")
 	}
 
-	// get secret
-	secret, err := client.Logical().Read("kv-v2/data/creds")
+	// get secret from the default mount path for KV v2 in dev mode, "secret"
+	secret, err := client.KVv2("secret").Get(context.Background(), "creds")
 	if err != nil {
 		return "", fmt.Errorf("unable to read secret: %w", err)
 	}
 
-	data, ok := secret.Data["data"].(map[string]interface{})
-	if !ok {
-		return "", fmt.Errorf("data type assertion failed: %T %#v", secret.Data["data"], secret.Data["data"])
-	}
-
 	// data map can contain more than one key-value pair,
 	// in this case we're just grabbing one of them
-	key := "password"
-	value, ok := data[key].(string)
+	value, ok := secret.Data["password"].(string)
 	if !ok {
-		return "", fmt.Errorf("value type assertion failed: %T %#v", data[key], data[key])
+		return "", fmt.Errorf("value type assertion failed: %T %#v", secret.Data["password"], secret.Data["password"])
 	}
 
 	return value, nil

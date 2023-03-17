@@ -39,7 +39,6 @@ string slices. In cases where an MFA method is configured not to use passcodes, 
 
 ```shell-session
 $ curl \
-    --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/mfa/validate

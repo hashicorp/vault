@@ -16,6 +16,8 @@ a default health check. When Consul is configured as the storage backend, the st
 
 ~> **Version information:** The `service_registration` configuration option was introduced in Vault 1.4.0.
 
+@include 'consul-dataplane-compat.mdx'
+
 - **HashiCorp Supported** – Consul Service Registration is officially supported
   by HashiCorp.
 
@@ -101,7 +103,7 @@ connection. You can read more about encrypting Consul connections on the
 
 - `tls_key_file` `(string: "")` – Specifies the path to the private key for
   Consul communication. This should be set according to the
-  [`key_file`](https://www.consul.io/docs/agent/options.html#key_file) setting
+  [`key_file`](https://www.consul.io/docs/agent/config/config-files#key_file) setting
   in Consul.
 
 - `tls_min_version` `(string: "tls12")` – Specifies the minimum TLS version to

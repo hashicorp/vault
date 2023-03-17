@@ -245,7 +245,12 @@
             "path": "configuration/seal/ocikms"
           },
           {
-            "title": "HSM PKCS11 <sup>ENT</sup>",
+            "title": "HSM PKCS11",
+            "badge": {
+              "text": "ENT",
+              "type": "outlined",
+              "color": "neutral"
+            },
             "path": "configuration/seal/pkcs11"
           },
           {
@@ -389,11 +394,21 @@
         "path": "configuration/log-requests-level"
       },
       {
-        "title": "<code>Entropy Augmentation</code> <sup>ENT</sup>",
+        "title": "<code>Entropy Augmentation</code>",
+        "badge": {
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "path": "configuration/entropy-augmentation"
       },
       {
-        "title": "<code>kms_library</code> <sup>ENT</sup>",
+        "title": "<code>kms_library</code>",
+        "badge": {
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "path": "configuration/kms-library"
       }
     ]
@@ -1032,7 +1047,12 @@
         ]
       },
       {
-        "title": "Key Management <sup>ENTERPRISE</sup>",
+        "title": "Key Management",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "routes": [
           {
             "title": "Overview",
@@ -1070,8 +1090,18 @@
         ]
       },
       {
-        "title": "KMIP <sup>ENTERPRISE</sup>",
+        "title": "KMIP",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "path": "secrets/kmip"
+      },
+      {
+        "title": "KMIP - Profile Support",
+        "path": "secrets/kmip-profiles",
+        "hidden": true
       },
       {
         "title": "Kubernetes",
@@ -1152,7 +1182,12 @@
         "path": "secrets/totp"
       },
       {
-        "title": "Transform <sup>ENTERPRISE</sup>",
+        "title": "Transform",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "routes": [
           {
             "title": "Overview",
@@ -1163,7 +1198,12 @@
             "path": "secrets/transform/ff3-tweak-details"
           },
           {
-            "title": "Tokenization Transform <sup>ENTERPRISE</sup>",
+            "title": "Tokenization Transform",
+            "badge": {
+              "text": "ENTERPRISE",
+              "type": "outlined",
+              "color": "neutral"
+            },
             "path": "secrets/transform/tokenization"
           }
         ]
@@ -1222,7 +1262,44 @@
           },
           {
             "title": "OIDC Providers",
-            "path": "auth/jwt/oidc_providers"
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "auth/jwt/oidc-providers"
+              },
+              {
+                "title": "Auth0",
+                "path": "auth/jwt/oidc-providers/auth0"
+              },
+              {
+                "title": "Azure AD",
+                "path": "auth/jwt/oidc-providers/azuread"
+              },
+              {
+                "title": "Forgerock",
+                "path": "auth/jwt/oidc-providers/forgerock"
+              },
+              {
+                "title": "Gitlab",
+                "path": "auth/jwt/oidc-providers/gitlab"
+              },
+              {
+                "title": "Google",
+                "path": "auth/jwt/oidc-providers/google"
+              },
+              {
+                "title": "Keycloak",
+                "path": "auth/jwt/oidc-providers/keycloak"
+              },
+              {
+                "title": "Kubernetes",
+                "path": "auth/jwt/oidc-providers/kubernetes"
+              },
+              {
+                "title": "Okta",
+                "path": "auth/jwt/oidc-providers/okta"
+              }
+            ]
           }
         ]
       },
@@ -1279,7 +1356,12 @@
         "divider": true
       },
       {
-        "title": "App ID <sup>DEPRECATED</sup>",
+        "title": "App ID",
+        "badge": {
+          "text": "DEPRECATED",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "path": "auth/app-id"
       }
     ]
@@ -1335,6 +1417,10 @@
     "path": "partnerships"
   },
   {
+    "title": "Vault Interoperability Matrix",
+    "path": "interoperability-matrix"
+  },
+  {
     "title": "Troubleshoot",
     "href": "https://learn.hashicorp.com/tutorials/vault/troubleshooting-vault"
   },
@@ -1347,6 +1433,32 @@
       {
         "title": "Overview",
         "path": "platform"
+      },
+      {
+        "title": "AWS",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "platform/aws"
+          },
+          {
+            "title": "Vault Lambda Extension",
+            "path": "platform/aws/lambda-extension"
+          },
+          {
+            "title": "Running Vault",
+            "path": "platform/aws/run"
+          }
+        ]
+      },
+      {
+        "title": "GitHub",
+        "routes": [
+          {
+            "title": "GitHub Actions",
+            "path": "platform/github-actions"
+          }
+        ]
       },
       {
         "title": "Kubernetes",
@@ -1382,6 +1494,10 @@
               {
                 "title": "Configuration",
                 "path": "platform/k8s/helm/configuration"
+              },
+              {
+                "title": "Terraform",
+                "path": "platform/k8s/helm/terraform"
               },
               {
                 "title": "Examples",
@@ -1491,44 +1607,6 @@
         ]
       },
       {
-        "title": "AWS",
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "platform/aws"
-          },
-          {
-            "title": "Vault Lambda Extension",
-            "path": "platform/aws/lambda-extension"
-          },
-          {
-            "title": "Running Vault",
-            "path": "platform/aws/run"
-          }
-        ]
-      },
-      {
-        "title": "ServiceNow",
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "platform/servicenow"
-          },
-          {
-            "title": "Installation",
-            "path": "platform/servicenow/installation"
-          },
-          {
-            "title": "Configuration",
-            "path": "platform/servicenow/configuration"
-          },
-          {
-            "title": "Troubleshooting",
-            "path": "platform/servicenow/troubleshooting"
-          }
-        ]
-      },
-      {
         "title": "Microsoft SQL Server EKM provider",
         "routes": [
           {
@@ -1550,6 +1628,31 @@
           {
             "title": "Troubleshooting",
             "path": "platform/mssql/troubleshooting"
+          },
+          {
+            "title": "Release Notes",
+            "path": "platform/mssql/changelog"
+          }
+        ]
+      },
+      {
+        "title": "ServiceNow",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "platform/servicenow"
+          },
+          {
+            "title": "Installation",
+            "path": "platform/servicenow/installation"
+          },
+          {
+            "title": "Configuration",
+            "path": "platform/servicenow/configuration"
+          },
+          {
+            "title": "Troubleshooting",
+            "path": "platform/servicenow/troubleshooting"
           }
         ]
       }
@@ -1806,6 +1909,10 @@
         "path": "release-notes"
       },
       {
+        "title": "1.11.0",
+        "path": "release-notes/1.11.0"
+      },
+      {
         "title": "1.10.0",
         "path": "release-notes/1.10.0"
       },
@@ -1939,6 +2046,14 @@
       {
         "title": "Automated Integrated Storage Snapshots",
         "path": "enterprise/automated-integrated-storage-snapshots"
+      },
+      {
+        "title": "Automated Upgrades",
+        "path": "enterprise/automated-upgrades"
+      },
+      {
+        "title": "Redundancy Zones",
+        "path": "enterprise/redundancy-zones"
       },
       {
         "title": "Lease Count Quotas",

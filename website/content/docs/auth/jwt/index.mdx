@@ -115,7 +115,7 @@ not required to be set:
 The OIDC authentication flow has been successfully tested with a number of providers. A full
 guide to configuring OAuth/OIDC applications is beyond the scope of Vault documentation, but a
 collection of provider configuration steps has been collected to help get started:
-[OIDC Provider Setup](/docs/auth/jwt_oidc_providers)
+[OIDC Provider Setup](/docs/auth/jwt/oidc-providers)
 
 ### OIDC Configuration Troubleshooting
 
@@ -140,15 +140,20 @@ EOF
 ```
 
 - Monitor Vault's log output. Important information about OIDC validation failures will be emitted.
+
 - Ensure Redirect URIs are correct in Vault and on the provider. They need to match exactly. Check:
   http/https, 127.0.0.1/localhost, port numbers, whether trailing slashes are present.
+
 - Start simple. The only claim configuration a role requires is `user_claim`. After authentication is
   known to work, you can add additional claims bindings and metadata copying.
+
 - `bound_audiences` is optional for OIDC roles and typically not required. OIDC providers will use
   the client_id as the audience and OIDC validation expects this.
+
 - Check your provider for what scopes are required in order to receive all
   of the information you need. The scopes "profile" and "groups" often need to be
   requested, and can be added by setting `oidc_scopes="profile,groups"` on the role.
+
 - If you're seeing claim-related errors in logs, review the provider's docs very carefully to see
   how they're naming and structuring their claims. Depending on the provider, you may be able to
   construct a simple `curl` implicit grant request to obtain a JWT that you can inspect. An example
@@ -161,9 +166,10 @@ EOF
   be helpful when debugging provider setup and verifying that the received claims are what you expect.
   Since claims data is logged verbatim and may contain sensitive information, this option should not be
   used in production.
+
 - Azure requires some additional configuration when a user is a member of more
   than 200 groups, described in [Azure-specific handling
-  configuration](/docs/auth/jwt_oidc_providers#azure-specific-handling-configuration)
+  configuration](/docs/auth/jwt/oidc-providers/azuread#optional-azure-specific-configuration)
 
 ## JWT Authentication
 
@@ -231,46 +237,46 @@ Auth methods must be configured in advance before users or machines can
 authenticate. These steps are usually completed by an operator or configuration
 management tool.
 
-1.  Enable the JWT auth method. Either the "jwt" or "oidc" name may be used. The
-    backend will be mounted at the chosen name.
+1. Enable the JWT auth method. Either the "jwt" or "oidc" name may be used. The
+   backend will be mounted at the chosen name.
 
-    ```text
-    $ vault auth enable jwt
-      or
-    $ vault auth enable oidc
-    ```
+   ```text
+   $ vault auth enable jwt
+     or
+   $ vault auth enable oidc
+   ```
 
-1.  Use the `/config` endpoint to configure Vault. To support JWT roles, either local keys, a JWKS URL, or an OIDC
-    Discovery URL must be present. For OIDC roles, OIDC Discovery URL, OIDC Client ID and OIDC Client Secret are required. For the
-    list of available configuration options, please see the [API documentation](/api-docs/auth/jwt).
+1. Use the `/config` endpoint to configure Vault. To support JWT roles, either local keys, a JWKS URL, or an OIDC
+   Discovery URL must be present. For OIDC roles, OIDC Discovery URL, OIDC Client ID and OIDC Client Secret are required. For the
+   list of available configuration options, please see the [API documentation](/api-docs/auth/jwt).
 
-    ```text
-    $ vault write auth/jwt/config \
-        oidc_discovery_url="https://myco.auth0.com/" \
-        oidc_client_id="m5i8bj3iofytj" \
-        oidc_client_secret="f4ubv72nfiu23hnsj" \
-        default_role="demo"
-    ```
+   ```text
+   $ vault write auth/jwt/config \
+       oidc_discovery_url="https://myco.auth0.com/" \
+       oidc_client_id="m5i8bj3iofytj" \
+       oidc_client_secret="f4ubv72nfiu23hnsj" \
+       default_role="demo"
+   ```
 
-1.  Create a named role:
+1. Create a named role:
 
-    ```text
-    vault write auth/jwt/role/demo \
-        allowed_redirect_uris="http://localhost:8250/oidc/callback" \
-        bound_subject="r3qX9DljwFIWhsiqwFiu38209F10atW6@clients" \
-        bound_audiences="https://vault.plugin.auth.jwt.test" \
-        user_claim="https://vault/user" \
-        groups_claim="https://vault/groups" \
-        policies=webapps \
-        ttl=1h
-    ```
+   ```text
+   vault write auth/jwt/role/demo \
+       allowed_redirect_uris="http://localhost:8250/oidc/callback" \
+       bound_subject="r3qX9DljwFIWhsiqwFiu38209F10atW6@clients" \
+       bound_audiences="https://vault.plugin.auth.jwt.test" \
+       user_claim="https://vault/user" \
+       groups_claim="https://vault/groups" \
+       policies=webapps \
+       ttl=1h
+   ```
 
-    This role authorizes JWTs with the given subject and audience claims, gives
-    it the `webapps` policy, and uses the given user/groups claims to set up
-    Identity aliases.
+   This role authorizes JWTs with the given subject and audience claims, gives
+   it the `webapps` policy, and uses the given user/groups claims to set up
+   Identity aliases.
 
-    For the complete list of configuration options, please see the API
-    documentation.
+   For the complete list of configuration options, please see the API
+   documentation.
 
 ### Bound Claims
 

@@ -131,6 +131,14 @@ Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 				Default:     "asn1",
 				Description: `The method by which to marshal the signature. The default is 'asn1' which is used by openssl and X.509. It can also be set to 'jws' which is used for JWT signatures; setting it to this will also cause the encoding of the signature to be url-safe base64 instead of using standard base64 encoding. Currently only valid for ECDSA P-256 key types".`,
 			},
+
+			"batch_input": {
+				Type: framework.TypeSlice,
+				Description: `Specifies a list of items for processing. When this parameter is set,
+any supplied 'input' or 'context' parameters will be ignored. Responses are returned in the
+'batch_results' array component of the 'data' element of the response. Any batch output will
+preserve the order of the batch input`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -216,6 +224,14 @@ Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 				Type:        framework.TypeString,
 				Default:     "asn1",
 				Description: `The method by which to unmarshal the signature when verifying. The default is 'asn1' which is used by openssl and X.509; can also be set to 'jws' which is used for JWT signatures in which case the signature is also expected to be url-safe base64 encoding instead of standard base64 encoding. Currently only valid for ECDSA P-256 key types".`,
+			},
+
+			"batch_input": {
+				Type: framework.TypeSlice,
+				Description: `Specifies a list of items for processing. When this parameter is set,
+any supplied  'input', 'hmac' or 'signature' parameters will be ignored. Responses are returned in the
+'batch_results' array component of the 'data' element of the response. Any batch output will
+preserve the order of the batch input`,
 			},
 		},
 

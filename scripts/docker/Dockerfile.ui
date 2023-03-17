@@ -3,7 +3,7 @@
 # we're explicitly compiling for 'linux/amd64'
 FROM debian:buster AS builder
 
-ARG VERSION=1.17.11
+ARG VERSION
 ARG CGO_ENABLED=0
 ARG BUILD_TAGS
 ENV JOBS=2

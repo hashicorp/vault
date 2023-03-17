@@ -65,7 +65,6 @@
       <AuthJwt
         @onError={{action "handleError"}}
         @onLoading={{action (mut this.isLoading)}}
-        @onToken={{action (mut this.token)}}
         @namespace={{this.namespace}}
         @onNamespace={{action (mut this.namespace)}}
         @onSubmit={{action "doSubmit"}}

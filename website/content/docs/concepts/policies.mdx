@@ -8,7 +8,7 @@ description: >-
 
 # Policies
 
-Everything in Vault is path based, and policies are no exception. Policies
+Everything in Vault is path-based, and policies are no exception. Policies
 provide a declarative way to grant or forbid access to certain paths and
 operations in Vault. This section discusses policy workflows and syntaxes.
 
@@ -169,7 +169,7 @@ corresponding path and capability - even Vault's internal core configuration
 endpoints live under the `"sys/"` path. Policies define access to these paths and
 capabilities, which controls a token's access to credentials in Vault.
 
-~> The policy rules that Vault applies are determined by the most-specific match
+~> **Note:** The policy rules that Vault applies are determined by the most-specific match
 available, using the priority rules described below. This may be an exact match
 or the longest-prefix match of a glob. If the same pattern appears in multiple
 policies, we take the union of the capabilities. If different patterns appear in
@@ -181,17 +181,17 @@ also match `"secret/foobar"`. Specifically, when there are potentially multiple
 matching policy paths, `P1` and `P2`, the following matching criteria is applied:
 
 1. If the first wildcard (`+`) or glob (`*`) occurs earlier in `P1`, `P1` is lower priority
-2. If `P1` ends in `*` and `P2` doesn't, `P1` is lower priority
-3. If `P1` has more `+` (wildcard) segments, `P1` is lower priority
-4. If `P1` is shorter, it is lower priority
-5. If `P1` is smaller lexicographically, it is lower priority
+1. If `P1` ends in `*` and `P2` doesn't, `P1` is lower priority
+1. If `P1` has more `+` (wildcard) segments, `P1` is lower priority
+1. If `P1` is shorter, it is lower priority
+1. If `P1` is smaller lexicographically, it is lower priority
 
 For example, given the two paths, `"secret/*"` and `"secret/+/+/foo/*"`, the first
 wildcard appears in the same place, both end in `*` and the latter has two wildcard
 segments while the former has zero. So we end at rule (3), and give `"secret/+/+/foo/*"`
 _lower_ priority.
 
-!> The glob character referred to in this documentation is the asterisk (`*`).
+!> **Informational:**The glob character referred to in this documentation is the asterisk (`*`).
 It _is not a regular expression_ and is only supported **as the last character of the path**!
 
 When providing `list` capability, it is important to note that since listing
@@ -203,13 +203,12 @@ will sanitize request paths to be prefixes.
 Each path must define one or more capabilities which provide fine-grained
 control over permitted (or denied) operations. As shown in the examples above,
 capabilities are always specified as a list of strings, even if there is only
-one capability. The list of capabilities are:
+one capability.
 
-~> In the list below, the associated HTTP verbs are shown in parenthesis next to
-the capability. When authoring policy, it is usually helpful to look at the HTTP
-API documentation for the paths and HTTP verbs and map them back onto
-capabilities. While the mapping is not strictly 1:1, they are often very
-similarly matched.
+To determine the capabilities needed to perform a specific operation, the `-output-policy` flag can be added to the CLI subcommand. For an example, refer to the [Print Policy Requirements](/docs/commands#print-policy-requirements) document section.
+
+
+The list of capabilities include the following:
 
 - `create` (`POST/PUT`) - Allows creating data at the given path. Very few
   parts of Vault distinguish between `create` and `update`, so most operations
@@ -230,6 +229,12 @@ similarly matched.
   keys returned by a `list` operation are _not_ filtered by policies. Do not
   encode sensitive information in key names. Not all backends support listing.
 
+In the list above, the associated HTTP verbs are shown in parenthesis next to
+the capability. When authoring policy, it is usually helpful to look at the HTTP
+API documentation for the paths and HTTP verbs and map them back onto
+capabilities. While the mapping is not strictly 1:1, they are often very
+similarly matched.
+
 In addition to the standard set, there are some capabilities that do not map to
 HTTP verbs.
 
@@ -244,7 +249,7 @@ HTTP verbs.
 - `deny` - Disallows access. This always takes precedence regardless of any
   other defined capabilities, including `sudo`.
 
-~> Note that capabilities usually map to the HTTP verb, not the underlying
+~> **Note:** Capabilities usually map to the HTTP verb, and not the underlying
 action taken. This can be a common source of confusion. Generating database
 credentials _creates_ database credentials, but the HTTP request is a GET which
 corresponds to a `read` capability. Thus, to grant access to generate database
@@ -258,19 +263,19 @@ injected, and currently the `path` keys in policies allow injection.
 
 ### Parameters
 
-| Name                                                                             | Description                                                                            |
-| :------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------- |
-| `identity.entity.id`                                                             | The entity's ID                                                                        |
-| `identity.entity.name`                                                           | The entity's name                                                                      |
-| `identity.entity.metadata.<metadata key>`                                        | Metadata associated with the entity for the given key                                  |
-| `identity.entity.aliases.<mount accessor>.id`                                    | Entity alias ID for the given mount                                                    |
-| `identity.entity.aliases.<mount accessor>.name`                                  | Entity alias name for the given mount                                                  |
-| `identity.entity.aliases.<mount accessor>.metadata.<metadata key>`               | Metadata associated with the alias for the given mount and metadata key                |
-| `identity.entity.aliases.<mount accessor>.custom_metadata.<custom_metadata key>` | Custom metadata associated with the alias for the given mount and custom metadata key  |
-| `identity.groups.ids.<group id>.name`                                            | The group name for the given group ID                                                  |
-| `identity.groups.names.<group name>.id`                                          | The group ID for the given group name                                                  |
-| `identity.groups.ids.<group id>.metadata.<metadata key>`                         | Metadata associated with the group for the given key                                   |
-| `identity.groups.names.<group name>.metadata.<metadata key>`                     | Metadata associated with the group for the given key                                   |
+| Name                                                                             | Description                                                                           |
+| :------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------ |
+| `identity.entity.id`                                                             | The entity's ID                                                                       |
+| `identity.entity.name`                                                           | The entity's name                                                                     |
+| `identity.entity.metadata.<metadata key>`                                        | Metadata associated with the entity for the given key                                 |
+| `identity.entity.aliases.<mount accessor>.id`                                    | Entity alias ID for the given mount                                                   |
+| `identity.entity.aliases.<mount accessor>.name`                                  | Entity alias name for the given mount                                                 |
+| `identity.entity.aliases.<mount accessor>.metadata.<metadata key>`               | Metadata associated with the alias for the given mount and metadata key               |
+| `identity.entity.aliases.<mount accessor>.custom_metadata.<custom_metadata key>` | Custom metadata associated with the alias for the given mount and custom metadata key |
+| `identity.groups.ids.<group id>.name`                                            | The group name for the given group ID                                                 |
+| `identity.groups.names.<group name>.id`                                          | The group ID for the given group name                                                 |
+| `identity.groups.ids.<group id>.metadata.<metadata key>`                         | Metadata associated with the group for the given key                                  |
+| `identity.groups.names.<group name>.metadata.<metadata key>`                     | Metadata associated with the group for the given key                                  |
 
 ### Examples
 
@@ -300,7 +305,7 @@ path "secret/metadata/groups/{{identity.groups.ids.fb036ebc-2f62-4124-9503-42aa7
 }
 ```
 
-~> When developing templated policies, use IDs wherever possible. Each ID is
+~> **Note:** When developing templated policies, use IDs wherever possible. Each ID is
 unique to the user, whereas names can change over time and can be reused. This
 ensures that if a given user or group name is changed, the policy will be
 mapped to the intended entity or group.
@@ -336,26 +341,24 @@ path take precedence over permissions on parameters.
 
 ### Parameter Constraints
 
--> **Note:**: The `allowed_parameters`, `denied_parameters`, and `required_parameters` fields are not supported for policies used with the version 2 kv store.
+~> **Note:** The `allowed_parameters`, `denied_parameters`, and `required_parameters` fields are not supported for policies used with the [version 2 kv secrets engine](/docs/secrets/kv/kv-v2).
 
 See the [API Specification](/api-docs/secret/kv/kv-v2) for more information.
 
-In Vault, data is represented as `key=value` pairs. Vault policies can
-optionally further restrict paths based on the keys and data at those keys when
-evaluating the permissions for a path. The optional finer-grained control
-options are:
+Policies can take into account HTTP request parameters to further
+constrain requests, using the following options:
 
 - `required_parameters` - A list of parameters that must be specified.
 
   ```ruby
-  # This requires the user to create "secret/foo" with a parameter named
-  # "bar" and "baz".
-  path "secret/foo" {
+  # This requires the user to create "secret/profile" with a parameter/key named
+  # "name" and "id" where kv v1 is enabled at "secret/". 
+  path "secret/profile" {
     capabilities = ["create"]
-    required_parameters = ["bar", "baz"]
+    required_parameters = ["name", "id"]
   }
   ```
-
+  
 - `allowed_parameters` - A list of keys and values that are
   permitted on the given path.
 
@@ -363,28 +366,37 @@ options are:
     contain any value.
 
     ```ruby
-    # This allows the user to create "secret/foo" with a parameter named
-    # "bar". It cannot contain any other parameters, but "bar" can contain
-    # any value.
-    path "secret/foo" {
-      capabilities = ["create"]
+    # This allows the user to update the password parameter value set on any
+    # users configured for userpass auth method. The password value can be
+    # anything. However, the user cannot update other parameter values such as
+    # token_ttl. 
+    path "auth/userpass/users/*" {
+      capabilities = ["update"]
       allowed_parameters = {
-        "bar" = []
+        "password" = []
       }
     }
     ```
+
+    -> **Usage example:** The [ACL Policy Path
+     Templating](https://learn.hashicorp.com/tutorials/vault/policy-templating)
+     tutorial demonstrates the use of `allowed_parameters` to permit a user to
+     update the user's password when using the [userpass auth
+     method](/docs/auth/userpass) to log in with Vault. 
 
   - Setting a parameter with a value of a populated list allows the parameter
     to contain only those values.
 
     ```ruby
-    # This allows the user to create "secret/foo" with a parameter named
-    # "bar". It cannot contain any other parameters, and "bar" can only
-    # contain the values "zip" or "zap".
-    path "secret/foo" {
-      capabilities = ["create"]
+    # This allows the user to create or update an encryption key for transit
+    # secrets engine enabled at "transit/". When you do, you can set the
+    # "auto_rotate_period" parameter value so that the key gets rotated.
+    # However, the rotation period must be "8h", "24h", or "5d". Any other value
+    # will result in an error.
+    path "transit/keys/*" {
+      capabilities = ["create", "update"]
       allowed_parameters = {
-        "bar" = ["zip", "zap"]
+        "auto_rotate_period" = ["8h", "24h", "5d"]
       }
     }
     ```
@@ -395,9 +407,10 @@ options are:
     will still be restricted to those values.
 
     ```ruby
-    # This allows the user to create "secret/foo" with a parameter named
-    # "bar". The parameter "bar" can only contain the values "zip" or "zap",
-    # but any other parameters may be created with any value.
+    # When kv v1 secrets engine is enabled at "secret/", this allows the user to
+    # create "secret/foo" with a parameter named "bar". The parameter "bar" can
+    # only contain the values "zip" or "zap", but any other parameters may be
+    # created with any value.
     path "secret/foo" {
       capabilities = ["create"]
       allowed_parameters = {
@@ -409,6 +422,7 @@ options are:
 
   - It's important to note that the use of globbing may result in surprising
     or unexpected behavior.
+    
     ```ruby
     # This allows the user to create, update, or patch "secret/foo" with a parameter
     # named "bar". The values passed to parameter "bar" must start with "baz/"
@@ -435,12 +449,13 @@ options are:
     that parameter.
 
     ```ruby
-    # This allows the user to create "secret/foo" with any parameters not
-    # named "bar".
-    path "secret/foo" {
-      capabilities = ["create"]
+    # This allows the user to update the userpass auth method's user
+    # configurations (e.g., "password") but cannot update the "token_policies"
+    # parameter value.
+    path "auth/userpass/users/*" {
+      capabilities = ["update"]
       denied_parameters = {
-        "bar" = []
+        "token_policies" = []
       }
     }
     ```
@@ -449,13 +464,13 @@ options are:
     containing those values.
 
     ```ruby
-    # This allows the user to create "secret/foo" with a parameter named
-    # "bar". It can contain any other parameters, but "bar" cannot contain
-    # the values "zip" or "zap".
-    path "secret/foo" {
-      capabilities = ["create"]
+    # This allows the user to create or update token roles. However, the
+    # "allowed_policies" parameter value cannot be "admin", but the user can
+    # assign any other policies to the parameter.   
+    path "auth/token/roles/*" {
+      capabilities = ["create", "update"]
       denied_parameters = {
-        "bar" = ["zip", "zap"]
+        "allowed_policies" = ["admin"]
       }
     }
     ```
@@ -463,10 +478,12 @@ options are:
   - Setting to `"*"` will deny any parameter.
 
     ```ruby
-    # This allows the user to create "secret/foo", but it cannot have any
-    # parameters.
-    path "secret/foo" {
-      capabilities = ["create"]
+    # This allows the user to create or update an encryption key for transit
+    # secrets engine enabled at "transit/". However, the user cannot set any of
+    # the configuration parameters. As a result, the created key will have all
+    # parameters set to default values.
+    path "transit/keys/*" {
+      capabilities = ["create", "update"]
       denied_parameters = {
         "*" = []
       }
@@ -489,7 +506,7 @@ path "secret/foo" {
 }
 ```
 
-Note: the only value that can be used with the `*` parameter is `[]`.
+~> **Note:** the only value that can be used with the `*` parameter is `[]`.
 
 ### Required Response Wrapping TTLs
 
@@ -529,7 +546,7 @@ keeping token lifetimes as short as possible.
 ## Built-in Policies
 
 Vault has two built-in policies: `default` and `root`. This section describes
-the two builtin policies.
+the two built-in policies.
 
 ### Default Policy
 
@@ -570,7 +587,7 @@ $ curl \
 
 ### Root Policy
 
-The `root` policy is a built-in Vault policy that can not be modified or removed.
+The `root` policy is a built-in Vault policy that cannot be modified or removed.
 Any user associated with this policy becomes a root user. A root user can do
 _anything_ within Vault. As such, it is **highly recommended** that you revoke
 any root tokens before running Vault in production.
@@ -598,8 +615,8 @@ $ curl \
 
 For more information, please read:
 
-- [Production Hardening](/guides/operations/production)
-- [Generating a Root Token](/guides/operations/generate-root)
+- [Production Hardening](https://learn.hashicorp.com/tutorials/vault/production-hardening)
+- [Generating a Root Token](https://learn.hashicorp.com/tutorials/vault/generate-root)
 
 ## Managing Policies
 
@@ -623,7 +640,7 @@ $ curl \
   https://vault.hashicorp.rocks/v1/sys/policy
 ```
 
-~> You may also see the CLI command `vault policies`. This is a convenience
+~> **Note:** You may also see the CLI command `vault policies`. This is a convenience
 wrapper around reading the sys endpoint directly. It provides the same
 functionality but formats the output in a special manner.
 

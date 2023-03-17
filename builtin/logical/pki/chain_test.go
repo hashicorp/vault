@@ -14,37 +14,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func CBReq(b *backend, s logical.Storage, operation logical.Operation, path string, data map[string]interface{}) (*logical.Response, error) {
-	resp, err := b.HandleRequest(context.Background(), &logical.Request{
-		Operation:  operation,
-		Path:       path,
-		Data:       data,
-		Storage:    s,
-		MountPoint: "pki/",
-	})
-	if err != nil || resp == nil {
-		return resp, err
-	}
-
-	if msg, ok := resp.Data["error"]; ok && msg != nil && len(msg.(string)) > 0 {
-		return resp, fmt.Errorf("%s", msg)
-	}
-
-	return resp, nil
-}
-
-func CBRead(b *backend, s logical.Storage, path string) (*logical.Response, error) {
-	return CBReq(b, s, logical.ReadOperation, path, make(map[string]interface{}))
-}
-
-func CBWrite(b *backend, s logical.Storage, path string, data map[string]interface{}) (*logical.Response, error) {
-	return CBReq(b, s, logical.UpdateOperation, path, data)
-}
-
-func CBDelete(b *backend, s logical.Storage, path string) (*logical.Response, error) {
-	return CBReq(b, s, logical.DeleteOperation, path, make(map[string]interface{}))
-}
-
 // For speed, all keys are ECDSA.
 type CBGenerateKey struct {
 	Name string

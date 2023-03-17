@@ -1,0 +1,3 @@
+```release-note:bug
+storage/raft: Fix retry_join initialization failure
+```

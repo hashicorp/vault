@@ -13,7 +13,8 @@ DOCKER_RUN_FLAGS=-it \
 		--volume "$(PWD)/redirects.js:/app/redirects.js" \
 		--volume "next-dir:/app/website-preview/.next" \
 		--volume "$(PWD)/.env:/app/.env" \
-		-e "REPO=vault"
+		-e "REPO=vault" \
+		-e "PREVIEW_MODE=io"
 
 # Default: run this if working on the website locally to run in watch mode.
 .PHONY: website

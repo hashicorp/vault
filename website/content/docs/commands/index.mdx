@@ -85,6 +85,18 @@ $ vault write -output-curl-string  auth/userpass/users/bob password="long-passwo
 curl -X PUT -H "X-Vault-Request: true" -H "X-Vault-Token: $(vault print token)" -d '{"password":"long-password"}' http://127.0.0.1:8200/v1/auth/userpass/users/bob
 ```
 
+#### Print Policy Requirements
+
+To view the policy requirements to perform an operation, use the `-output-policy` flag after the subcommand.
+
+```
+$ vault kv put -output-policy kv/secret value=itsasecret
+
+path "kv/data/secret" {
+  capabilities = ["create", "update"]
+}
+```
+
 ## Command Help
 
 There are two primary ways to get help in Vault: [CLI help (`help`)](#cli-help)
@@ -206,6 +218,13 @@ Note that if an argument is supplied in a @key=value format, Vault will treat th
 kv pair with the key being `@key`, not a file called `key=value`. This also means that Vault
 does not support filenames with `=` in them.
 
+## Mount flag syntax (KV)
+
+All `kv` commands can alternatively refer to the path to the KV secrets engine using a flag-based syntax like `$ vault kv get -mount=secret password`
+instead of `$ vault kv get secret/password`. The mount flag syntax was created to mitigate confusion caused by the fact that for KV v2 secrets,
+their full path (used in policies and raw API calls) actually contains a nested `/data/` element (e.g. `secret/data/password`) which can be easily overlooked when using
+the above KV v1-like syntax `secret/password`. To avoid this confusion, all KV-specific docs pages will use the `-mount` flag.
+
 ## Exit Codes
 
 The Vault CLI aims to be consistent and well-behaved unless documented
@@ -253,7 +272,9 @@ this file at any time to "logout" of Vault.
 
 The CLI reads the following environment variables to set behavioral defaults.
 This can alleviate the need to repetitively type a flag. Flags always take
-precedence over the environment variables.
+precedence over the environment variables. Each of the following environment 
+variables must be set on the Vault process.  In Vault 1.13+, all environment 
+variables available to the Vault process will be logged during startup.
 
 ### `VAULT_TOKEN`
 

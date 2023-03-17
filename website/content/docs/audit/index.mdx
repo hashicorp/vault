@@ -32,9 +32,10 @@ unique identifier assigned to each request.
 
 Most strings contained within requests and responses are hashed with a salt using HMAC-SHA256. The purpose of the hash is so that secrets aren't in plaintext within your audit logs. However, you're still able to check the value of secrets by generating HMACs yourself; this can be done with the audit device's hash function and salt by using the `/sys/audit-hash` API endpoint (see the documentation for more details).
 
-Note that currently only strings coming from JSON or being returned in JSON are
+~> Currently, only strings that come from JSON or returned in JSON are
 HMAC'd. Other data types, like integers, booleans, and so on, are passed
-through in plaintext.
+through in plaintext. We recommend that all sensitive data be provided as string values
+inside all JSON sent to Vault (i.e., that integer values are provided in quotes).
 
 While most strings are hashed, Vault does make some exceptions, such as auth and secrets, and users can enable additional exceptions using the [secrets enable](/docs/commands/secrets/enable) command, and then tune it afterward.
 
@@ -67,7 +68,7 @@ cluster by default, and to performance/DR secondaries for Vault Enterprise clust
 Before enabling an audit device, ensure that all nodes within the cluster(s)
 will be able to successfully log to the audit device to avoid Vault being
 blocked from serving requests.
-An audit device can be limited to only within the node's cluster with the [`local`](/api/system/audit#local) parameter.
+An audit device can be limited to only within the node's cluster with the [`local`](/api-docs/system/audit#local) parameter.
 
 When an audit device is disabled, it will stop receiving logs immediately.
 The existing logs that it did store are untouched.

@@ -313,8 +313,11 @@ func getNumExpirationWorkers(c *Core, l log.Logger) int {
 // NewExpirationManager creates a new ExpirationManager that is backed
 // using a given view, and uses the provided router for revocation.
 func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, logger log.Logger) *ExpirationManager {
-	jobManager := fairshare.NewJobManager("expire", getNumExpirationWorkers(c, logger), logger.Named("job-manager"), c.metricSink)
+	managerLogger := logger.Named("job-manager")
+	jobManager := fairshare.NewJobManager("expire", getNumExpirationWorkers(c, logger), managerLogger, c.metricSink)
 	jobManager.Start()
+
+	c.AddLogger(managerLogger)
 
 	exp := &ExpirationManager{
 		core:        c,
@@ -1264,7 +1267,8 @@ func (m *ExpirationManager) Renew(ctx context.Context, leaseID string, increment
 // RenewToken is used to renew a token which does not need to
 // invoke a logical backend.
 func (m *ExpirationManager) RenewToken(ctx context.Context, req *logical.Request, te *logical.TokenEntry,
-	increment time.Duration) (*logical.Response, error) {
+	increment time.Duration,
+) (*logical.Response, error) {
 	defer metrics.MeasureSince([]string{"expire", "renew-token"}, time.Now())
 
 	tokenNS, err := NamespaceByID(ctx, te.NamespaceID, m.core)
@@ -1739,10 +1743,10 @@ func (m *ExpirationManager) uniquePoliciesGc() {
 // Acquiring a lock from a leaseEntry is a bad idea because it could change
 // between loading and acquiring the lock. So we only provide an ID-based map, and the
 // locking discipline should be:
-//    1. Lock lease
-//    2. Load, or attempt to load, leaseEntry
-//    3. Modify leaseEntry and pendingMap (atomic wrt operations on this lease)
-//    4. Unlock lease
+//  1. Lock lease
+//  2. Load, or attempt to load, leaseEntry
+//  3. Modify leaseEntry and pendingMap (atomic wrt operations on this lease)
+//  4. Unlock lease
 //
 // The lock must be removed from the map when the lease is deleted, or is
 // found to not exist in storage. loadEntry does this whenever it returns

@@ -118,7 +118,7 @@ export default class KeymgmtProviderModel extends Model {
       // try unless capabilities returns false
       try {
         this.keys = await this.store.lazyPaginatedQuery('keymgmt/key', {
-          backend: 'keymgmt',
+          backend: this.backend,
           provider: this.name,
           responsePath: 'data.keys',
           page,

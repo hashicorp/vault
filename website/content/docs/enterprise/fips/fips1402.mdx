@@ -40,6 +40,10 @@ A non-exhaustive list of potential compliance issues include:
  - Using FF3-1/FPE in Transform Secrets Engine, or
  - Using a Derived Key (using HKDF) for Agent auto-authing or the Transit
    Secrets Engine.
+ - Using **Entropy Augmentation**: because BoringCrypto uses its internal,
+   FIPS 140-2 approved RNG, it cannot mix entropy from other sources.
+   Attempting to use EA with FIPS 140-2 HSM enabled binaries will result
+   in failures such as `panic: boringcrypto: invalid code execution`.
 
 Hashicorp can only provide general guidance regarding using Vault Enterprise
 in a FIPS-compliant manner. We are not a NIST-certified testing laboratory
@@ -55,12 +59,66 @@ from the following sources:
    container repository.
  - From the [AWS ECR `hashicorp/vault-enterprise-fips`](https://gallery.ecr.aws/hashicorp/vault-enterprise-fips)
    container repository.
+ - From the [Red Hat Access `hashicorp/vault-enterprise-fips`](https://catalog.redhat.com/software/containers/hashicorp/vault-enterprise-fips/628d50e37ff70c66a88517ea)
+   container repository.
 
 ~> **Note**: When pulling the FIPS UBI-based images, note that they are
    ultimately designed for OpenShift certification; consider either adding
    the `--user root --cap-add IPC_LOCK` options, to allow Vault to enable
    mlock, or use the `--env SKIP_SETCAP=1` option, to disable mlock
    completely, as appropriate for your environment.
+
+### Usage Restrictions
+
+#### Migration Restrictions
+
+Hashicorp **does not** support in-place migrations from non-FIPS Inside
+versions of Vault to FIPS Inside versions of Vault, regardless of version.
+A fresh cluster installation is required to receive support. We generally
+recommend avoiding direct upgrades and replicated-migrations for several
+reasons:
+
+ - Old entries remain encrypted with the old barrier key until overwritten,
+   this barrier key was likely not created by a FIPS library and thus
+   is not compliant.
+ - Many secrets engines internally create keys; things like Transit create
+   and store keys, but don't store any data (inside of Vault) -- these would
+   still need to be accessible and rotated to a new, FIPS-compliant key.
+   Any PKI engines would have also created non-compliant keys, but rotation
+   of say, a Root CA involves a concerted, non-Vault effort to accomplish
+   and must be done thoughtfully.
+
+Combined, we suggest leaving the existing cluster in place, and carefully
+consider migration of specific workloads to the FIPS-backed cluster.
+
+#### Entropy Augmentation Restrictions
+
+Entropy Augmentation **does not** work with FIPS 140-2 Inside. The internal
+BoringCrypto RNG is FIPS 140-2 certified and does not accept entropy from
+other sources. On Vault 1.11.0 and later, attempting to use Entropy
+Augmentation will result in a warning ("Entropy Augmentation is not supported...")
+and Entropy Augmentation will be disabled.
+
+#### TLS Restrictions
+
+Vault Enterprise's FIPS modifications include restrictions to supported TLS
+cipher suites and key information. Only the following cipher suites are
+allowed:
+
+ - `TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256`,
+ - `TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384`,
+ - `TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256`,
+ - `TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384`,
+ - `TLS_RSA_WITH_AES_128_GCM_SHA256`, and
+ - `TLS_RSA_WITH_AES_256_GCM_SHA384`.
+
+Additionally, only the following key types are allowed in TLS chains of trust:
+
+ - RSA 2048, 3072, 4096, 7680, and 8192-bit;
+ - ECDSA P-256, P-384, and P-521.
+
+Finally, only TLSv1.2 or higher is supported in FIPS mode. These are in line
+with recent NIST guidance and recommendations.
 
 ## Technical Details
 

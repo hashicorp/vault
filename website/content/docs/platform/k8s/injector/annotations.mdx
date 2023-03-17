@@ -27,8 +27,8 @@ them, optional commands to run, etc.
   Agent configuration file and templates can be found.
 
 - `vault.hashicorp.com/agent-image` - name of the Vault docker image to use. This
-  value overrides the default image configured in the controller and is usually
-  not needed. Defaults to `hashicorp/vault:1.10.3`.
+  value overrides the default image configured in the injector and is usually
+  not needed. Defaults to `hashicorp/vault:1.11.3`.
 
 - `vault.hashicorp.com/agent-init-first` - configures the pod to run the Vault Agent
   init container first if `true` (last if `false`). This is useful when other init
@@ -119,6 +119,13 @@ them, optional commands to run, etc.
   Agent containers. Defaults to `128Mi`. Setting this to an empty string disables
   memory limits.
 
+- `vault.hashicorp.com/agent-limits-ephemeral` - configures the ephemeral
+  storage limit on the Vault Agent containers. Defaults to `128Mi`. Setting this
+  to an empty string disables ephemeral storage limits. Also available as a
+  command-line option (`-ephemeral-storage-limit`) or environment variable
+  (`AGENT_INJECT_EPHEMERAL_LIMIT`) to set the default for all injected Agent
+  containers.
+
 - `vault.hashicorp.com/agent-requests-cpu` - configures the CPU requests on the
   Vault Agent containers. Defaults to `250m`. Setting this to an empty string disables
   CPU requests.
@@ -126,6 +133,14 @@ them, optional commands to run, etc.
 - `vault.hashicorp.com/agent-requests-mem` - configures the memory requests on the
   Vault Agent containers. Defaults to `64Mi`. Setting this to an empty string disables
   memory requests.
+
+- `vault.hashicorp.com/agent-requests-ephemeral` - configures the ephemeral
+  storage requests on the Vault Agent Containers. Defaults to `64Mi`. Setting
+  this to an empty string disables ephemeral storage requests (and will default
+  to the ephemeral limit if set). Also available as a command-line option
+  (`-ephemeral-storage-request`) or environment variable
+  (`AGENT_INJECT_EPHEMERAL_REQUEST`) to set the default for all injected Agent
+  containers.
 
 - `vault.hashicorp.com/agent-revoke-on-shutdown` - configures whether the sidecar
   will revoke it's own token before shutting down. This setting will only be applied
@@ -249,7 +264,10 @@ etc.
   values are `standard` and `json`. Default is `standard`.
 
 - `vault.hashicorp.com/namespace` - configures the Vault Enterprise namespace to
-  be used when requesting secrets from Vault.
+  be used when requesting secrets from Vault. Also available as a command-line
+  option (`-vault-namespace`) or environment variable
+  (`AGENT_INJECT_VAULT_NAMESPACE`) to set the default namespace for all injected
+  Agents.
 
 - `vault.hashicorp.com/proxy-address` - configures the HTTP proxy to use when connecting
   to a Vault server.
@@ -257,9 +275,10 @@ etc.
 - `vault.hashicorp.com/role` - configures the Vault role used by the Vault Agent
   auto-auth method. Required when `vault.hashicorp.com/agent-configmap` is not set.
 
-- `vault.hashicorp.com/service` - name of the Vault service to use. This value
-  overrides the default service configured in the controller and is usually not
-  needed.
+- `vault.hashicorp.com/service` - configures the Vault address for the injected
+  Vault Agent to use. This value overrides the default Vault address configured
+  in the injector, and may either be the address of a Vault service within the
+  same Kubernetes cluster as the injector, or an external Vault URL.
 
 - `vault.hashicorp.com/tls-secret` - name of the Kubernetes secret containing TLS
   Client and CA certificates and keys. This is mounted to `/vault/tls`.
@@ -270,3 +289,17 @@ etc.
 - `vault.hashicorp.com/tls-skip-verify` - if true, configures the Vault Agent to
   skip verification of Vault's TLS certificate. It's not recommended to set this
   value to true in a production environment.
+
+- `vault.hashicorp.com/agent-disable-idle-connections` - Comma-separated [list
+  of Vault Agent features](/docs/agent#disable_idle_connections) where idle
+  connections should be disabled. Also available as a command-line option
+  (`-disable-idle-connections`) or environment variable
+  (`AGENT_INJECT_DISABLE_IDLE_CONNECTIONS`) to set the default for all injected
+  Agents.
+
+- `vault.hashicorp.com/agent-disable-keep-alives` - Comma-separated [list of
+  Vault Agent features](/docs/agent#disable_keep_alives) where keep-alives
+  should be disabled. Also available as a command-line option
+  (`-disable-keep-alives`) or environment variable
+  (`AGENT_INJECT_DISABLE_KEEP_ALIVES`) to set the default for all injected
+  Agents.

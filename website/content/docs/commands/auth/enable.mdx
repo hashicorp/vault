@@ -69,7 +69,9 @@ flags](/docs/commands) included on all commands.
   this auth method.
 
 - `-listing-visibility` `(string: "")` - The flag to toggle whether to show the
-  mount in the UI-specific listing endpoint.
+  mount in the UI-specific listing endpoint. Valid values are `"unauth"` or `"hidden"`,
+  with the default `""` being equivalent to `"hidden"`.
+
 
 - `-local` `(bool: false)` - Mark the auth method as local-only. Local auth
   methods are not replicated nor removed by replication.
@@ -83,3 +85,6 @@ flags](/docs/commands) included on all commands.
 
 - `-seal-wrap` `(bool: false)` - Enable seal wrapping for the mount, causing
   values stored by the mount to be wrapped by the seal's encryption capability.
+
+- `-token-type` `(string: "")` - Specifies the type of tokens that should be
+  returned by the auth method.

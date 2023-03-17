@@ -16,7 +16,7 @@ export default create({
     await this.logout();
     await settled();
     // clear session storage to ensure we have a clean state
-    window.sessionStorage.clear();
+    window.localStorage.clear();
     await this.visit({ with: 'token' });
     await settled();
     if (token) {
@@ -31,8 +31,8 @@ export default create({
     // make sure we're always logged out and logged back in
     await this.logout();
     await settled();
-    // clear session storage to ensure we have a clean state
-    window.sessionStorage.clear();
+    // clear local storage to ensure we have a clean state
+    window.localStorage.clear();
     await this.visit({ with: 'username' });
     await settled();
     await this.usernameInput(username);

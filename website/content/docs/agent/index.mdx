@@ -144,6 +144,14 @@ These are the currently-available general configuration option:
   with code `0` after a single successful auth, where success means that a
   token was retrieved and all sinks successfully wrote it
 
+- `disable_idle_connections` `(string array: [])` - A list of strings that disables idle connections for various features in Vault Agent.
+  Valid values include: `auto-auth`, `caching` and `templating`. Can also be configured by setting the `VAULT_AGENT_DISABLE_IDLE_CONNECTIONS` 
+  environment variable as a comma separated string. This environment variable will override any values found in a configuration file.
+
+- `disable_keep_alives` `(string array: [])` - A list of strings that disables keep alives for various features in Vault Agent.
+  Valid values include: `auto-auth`, `caching` and `templating`. Can also be configured by setting the `VAULT_AGENT_DISABLE_KEEP_ALIVES` 
+  environment variable as a comma separated string. This environment variable will override any values found in a configuration file.
+
 - `template` <code>([template][template]: <optional\>)</code> - Specifies options used for templating Vault secrets to files.
 
 - `template_config` <code>([template_config][template-config]: <optional\>)</code> - Specifies templating engine behavior.
@@ -157,9 +165,10 @@ These are the currently-available general configuration option:
 There can at most be one top level `vault` block and it has the following
 configuration entries:
 
-- `address` `(string: <optional>)` - The address of the Vault server. This should
-  be a complete URL such as `https://127.0.0.1:8200`. This value can be
-  overridden by setting the `VAULT_ADDR` environment variable.
+- `address` `(string: <optional>)` - The address of the Vault server to 
+  connect to. This should be a Fully Qualified Domain Name (FQDN) or IP 
+  such as `https://vault-fqdn:8200` or `https://172.16.9.8:8200`. 
+  This value can be overridden by setting the `VAULT_ADDR` environment variable.
 
 - `ca_cert` `(string: <optional>)` - Path on the local disk to a single PEM-encoded
   CA certificate to verify the Vault server's SSL certificate. This value can
@@ -197,7 +206,7 @@ templates, or are proxied requests coming from the proxy cache subsystem.
 Auto-auth, however, has its own notion of retrying and is not affected by this
 section.
 
-For requests from the templating engine, Agent will reset its retry counter and
+For requests from the templating engine, Vaul Agent will reset its retry counter and
 perform retries again once all retries are exhausted. This means that templating
 will retry on failures indefinitely unless `exit_on_retry_failure` from the
 [`template_config`][template-config] stanza is set to `true`.
@@ -217,7 +226,7 @@ stale read due to eventual consistency. Requests coming from the template
 subsystem are retried regardless of the failure.
 
 Second, templating retries may be performed by both the templating engine _and_
-the cache proxy if Agent [persistent
+the cache proxy if Vault Agent [persistent
 cache][persistent-cache] is enabled. This is due to the
 fact that templating requests go through the cache proxy when persistence is
 enabled.
@@ -228,8 +237,8 @@ to address in the future.
 
 ### listener Stanza
 
-Agent supports one or more [listener][listener_main] stanzas. In addition to
-the standard listener configuration, an Agent's listener configuration also
+Vault Agent supports one or more [listener][listener_main] stanzas. In addition
+to the standard listener configuration, an Agent's listener configuration also
 supports the following:
 
 - `require_request_header` `(bool: false)` - Require that all incoming HTTP
@@ -293,7 +302,7 @@ An example configuration, with very contrived values, follows:
 pid_file = "./pidfile"
 
 vault {
-  address = "https://127.0.0.1:8200"
+  address = "https://vault-fqdn:8200"
   retry {
     num_retries = 5
   }

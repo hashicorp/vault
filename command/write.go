@@ -153,15 +153,16 @@ func (c *WriteCommand) Run(args []string) int {
 		return 0
 	}
 
-	if secret != nil && secret.Auth != nil && secret.Auth.MFARequirement != nil {
-		if c.isInteractiveEnabled(len(secret.Auth.MFARequirement.MFAConstraints)) {
-			// Currently, if there is only one MFA method configured, the login
-			// request is validated interactively
-			methodInfo := c.getMFAMethodInfo(secret.Auth.MFARequirement.MFAConstraints)
-			if methodInfo.methodID != "" {
-				return c.validateMFA(secret.Auth.MFARequirement.MFARequestID, methodInfo)
-			}
+	// Currently, if there is only one MFA method configured, the login
+	// request is validated interactively
+	methodInfo := c.getInteractiveMFAMethodInfo(secret)
+	if methodInfo != nil {
+		secret, err = c.validateMFA(secret.Auth.MFARequirement.MFARequestID, *methodInfo)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 2
 		}
+	} else if c.getMFAValidationRequired(secret) {
 		c.UI.Warn(wrapAtLength("A login request was issued that is subject to "+
 			"MFA validation. Please make sure to validate the login by sending another "+
 			"request to sys/mfa/validate endpoint.") + "\n")

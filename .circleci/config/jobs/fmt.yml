@@ -1,10 +1,10 @@
 description: Ensure go formatting is correct.
 executor: go-machine
 steps:
+  - checkout
   # Setup Go enabling the proxy for downloading modules.
   - setup-go:
       GOPROXY: https://proxy.golang.org,direct
-  - checkout
   - run:
       name: make fmt
       command: |

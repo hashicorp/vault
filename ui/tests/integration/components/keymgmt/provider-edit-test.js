@@ -27,6 +27,7 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
           name: 'foo-bar',
           provider: 'azurekeyvault',
           keyCollection: 'keyvault-1',
+          backend: 'keymgmt',
         },
       },
     });
@@ -42,7 +43,7 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
   });
 
   test('it should render show view', async function (assert) {
-    assert.expect(12);
+    assert.expect(16);
 
     // override capability getters
     Object.defineProperties(this.model, {
@@ -50,6 +51,7 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
       canListKeys: { value: true },
     });
 
+    this.server.post('/sys/capabilities-self', () => ({}));
     this.server.get('/keymgmt/kms/foo-bar/key', () => {
       return {
         data: {

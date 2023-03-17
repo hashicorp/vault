@@ -113,6 +113,24 @@ set [`disable_mlock`](/docs/configuration#disable_mlock) to `true`, and to disab
   unhealthy and needs to be shown as such in the state API, a node has been marked
   as dead needing eviction from Raft configuration, etc.
 
+- `autopilot_update_interval` `(string: "2s")` - This is the interval after which
+  autopilot will poll Vault for any updates to the information it cares about. This
+  includes things like the autopilot configuration, current autopilot state, raft
+  configuration, known servers, latest raft index, and stats for all the known servers.
+  The information that autopilot receives will be used to calculate its next state.
+
+- `autopilot_upgrade_version` `(string: "")` - This is an optional string that, if
+  provided, will be used reported to autopilot as Vault's version. This is then used
+  by autopilot when it makes decisions regarding
+  [automated upgrades](/docs/enterprise/automated-upgrades). If omitted, the
+  version of Vault currently in use will be used. Note that this string must conform
+  to [Semantic Versioning](https://semver.org). Use of this feature requires Vault
+  Enterprise.
+
+- `autopilot_redundancy_zone` `(string: "")` - This is an optional string that specifies
+  Vault's [redundancy zone](/docs/enterprise/redundancy-zones). This is reported to autopilot
+  and is used to enhance scaling and resiliency. Use of this feature requires Vault Enterprise.
+
 ### `retry_join` stanza
 
 - `leader_api_addr` `(string: "")` - Address of a possible leader node.

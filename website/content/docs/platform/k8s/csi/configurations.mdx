@@ -7,6 +7,12 @@ description: This section documents the configurables for the Vault CSI Provider
 # Command line arguments
 
 The following command line arguments are supported by the Vault CSI provider.
+Most settings support being set by, in ascending order of precedence:
+
+- Environment variables
+- Command line arguments
+- Secret Provider Class parameters
+
 If installing via the helm chart, they can be set using e.g.
 `--set "csi.extraArgs={-debug=true}"`.
 
@@ -18,28 +24,52 @@ If installing via the helm chart, they can be set using e.g.
 - `-health-addr` `(string: ":8080")` - (v0.3.0+) The address of the HTTP listener
   for reporting health.
 
-- `-health_addr` `(string: "")` - Deprecated, please use -health-addr. Slated
-  for removal in 0.5.0.
-
 - `-vault-addr` `(string: "https://127.0.0.1:8200")` - (v0.3.0+) Default address
-  for connecting to Vault. Can be overridden per Secret Provider Class object.
+  for connecting to Vault. Can also be specified via the `VAULT_ADDR` environment
+  variable.
 
 - `-vault-mount` `(string: "kubernetes")` - (v0.3.0+) Default Vault mount path
   for Kubernetes authentication. Can be overridden per Secret Provider Class
   object.
 
-- `-version` `(bool: false)` - prints the version information
+- `-vault-namespace` `(string: "")` - (v1.1.0+) Default Vault namespace for Vault
+  requests. Can also be specified via the `VAULT_NAMESPACE` environment variable.
 
-- `-write-secrets` `(bool: true)` - (v0.3.0+) Write secrets directly to
-  filesystem (true), or send secrets to CSI driver in gRPC response (false).
-  Setting to false requires Secrets Store CSI Driver v0.0.21+. This flag will
-  default to false from v0.4.0, and setting it to false will be required when
-  using Secrets Store CSI Driver v0.0.24+.
+- `-vault-tls-ca-cert` `(string: "")` - (v1.1.0+) Path on disk to a single
+  PEM-encoded CA certificate to trust for Vault. Takes precendence over
+  `-vault-tls-ca-directory`. Can also be specified via the `VAULT_CACERT`
+  environment variable.
+
+- `-vault-tls-ca-directory` `(string: "")` - (v1.1.0+) Path on disk to a
+  directory of PEM-encoded CA certificates to trust for Vault. Can also be
+  specified via the `VAULT_CAPATH` environment variable.
+
+- `-vault-tls-server-name` `(string: "")` - (v1.1.0+) Name to use as the SNI
+  host when connecting to Vault via TLS. Can also be specified via the
+  `VAULT_TLS_SERVER_NAME` environment variable.
+
+- `-vault-tls-client-cert` `(string: "")` - (v1.1.0+) Path on disk to a
+  PEM-encoded client certificate for mTLS communication with Vault. If set,
+  also requires `-vault-tls-client-key`. Can also be specified via the
+  `VAULT_CLIENT_CERT` environment variable.
+
+- `-vault-tls-client-key` `(string: "")` - (v1.1.0+) Path on disk to a
+  PEM-encoded client key for mTLS communication with Vault. If set, also
+  requires `-vault-tls-client-cert`. Can also be specified via the
+  `VAULT_CLIENT_KEY` environment variable.
+
+- `-vault-tls-skip-verify` `(bool: false)` - (v1.1.0+) Disable verification of
+  TLS certificates. Can also be specified via the `VAULT_SKIP_VERIFY` environment
+  variable.
+
+- `-version` `(bool: false)` - print version information and exit.
 
 
-# Secret Provider Class Configurations
+# Secret Provider Class Parameters
 
-The following parameters are supported by the Vault provider:
+The following parameters are supported by the Vault provider. Each parameter is
+an entry under `spec.parameters` in a SecretProviderClass object. The full
+structure is illustrated in the [examples](/docs/platform/k8s/csi/examples).
 
 - `roleName` `(string: "")` - Name of the role to be used during login with Vault.
 
@@ -67,6 +97,14 @@ The following parameters are supported by the Vault provider:
 - `vaultKubernetesMountPath` `(string: "kubernetes")` - The name of the auth mount used for login.
   At this time only the Kubernetes auth method is supported.
 
+- `audience` `(string: "")` - Specifies a custom audience for the requesting pod's service account token,
+  generated using the
+  [TokenRequest API](https://kubernetes.io/docs/reference/kubernetes-api/authentication-resources/token-request-v1/#TokenRequestSpec).
+  The resulting token is used to authenticate to Vault, so if you specify an
+  [audience](https://www.vaultproject.io/api-docs/auth/kubernetes#audience) for your Kubernetes auth
+  role, it must match the audience specified here. If not set, the token audiences will default to
+  the Kubernetes cluster's default API audiences.
+
 - `objects` `(array)` - An array of secrets to retrieve from Vault.
 
   - `objectName` `(string: "")` - The alias of the object which can be referenced within the secret provider class and
@@ -86,6 +124,8 @@ The following parameters are supported by the Vault provider:
     ```
 
   - `secretKey` `(string: "")` - The key in the Vault secret to extract. If omitted, the whole response from Vault will be written as JSON.
+
+  - `filePermission` `(integer: 0o644)` - The file permissions to set for this secret's file.
 
   - `secretArgs` `(map: {})` - Additional arguments to be sent to Vault for a specific secret. Arguments can vary
     for different secret engines. For example:

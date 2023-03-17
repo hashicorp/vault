@@ -16,7 +16,8 @@ import (
 // testHTTPServer creates a test HTTP server that handles requests until
 // the listener returned is closed.
 func testHTTPServer(
-	t *testing.T, handler http.Handler) (*api.Config, net.Listener) {
+	t *testing.T, handler http.Handler,
+) (*api.Config, net.Listener) {
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("err: %s", err)

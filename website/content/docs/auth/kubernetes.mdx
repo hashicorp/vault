@@ -57,9 +57,9 @@ The response will contain a token at `auth.client_token`:
     "policies": ["default"],
     "metadata": {
       "role": "demo",
-      "service_account_name": "vault-auth",
+      "service_account_name": "myapp",
       "service_account_namespace": "default",
-      "service_account_secret_name": "vault-auth-token-pd21c",
+      "service_account_secret_name": "myapp-token-pd21c",
       "service_account_uid": "aa9aa8ff-98d0-11e7-9bb7-0800276d99bf"
     },
     "lease_duration": 2764800,
@@ -104,13 +104,13 @@ management tool.
 
   ```text
   vault write auth/kubernetes/role/demo \
-      bound_service_account_names=vault-auth \
+      bound_service_account_names=myapp \
       bound_service_account_namespaces=default \
       policies=default \
       ttl=1h
   ```
 
-  This role authorizes the "vault-auth" service account in the default
+  This role authorizes the "myapp" service account in the default
   namespace and it gives it the default policy.
 
   For the complete list of configuration options, please see the [API
@@ -166,7 +166,7 @@ injected service account tokens to a year to help smooth the transition to
 short-lived tokens. If you would like to disable this, set
 [--service-account-extend-token-expiration=false][k8s-extended-tokens] for
 `kube-apiserver` or specify your own `serviceAccountToken` volume mount. See
-[here](/docs/auth/jwt/oidc_providers#specifying-ttl-and-audience) for an example.
+[here](/docs/auth/jwt/oidc-providers/kubernetes#specifying-ttl-and-audience) for an example.
 
 [k8s-extended-tokens]: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/#options
 
@@ -239,7 +239,7 @@ JWT tokens Kubernetes generates can also be verified using Kubernetes as an OIDC
 provider. The JWT auth method documentation has [instructions][k8s-jwt-auth] for
 setting up JWT auth with Kubernetes as the OIDC provider.
 
-[k8s-jwt-auth]: /docs/auth/jwt/oidc_providers#kubernetes
+[k8s-jwt-auth]: /docs/auth/jwt/oidc-providers/kubernetes
 
 This solution allows you to use short-lived tokens for all clients and removes
 the need for a reviewer JWT. However, the client tokens cannot be revoked before
@@ -300,7 +300,7 @@ Account should be granted permissions to access this API. The following
 example ClusterRoleBinding could be used to grant these permissions:
 
 ```yaml
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: role-tokenreview-binding
@@ -339,7 +339,7 @@ import (
 	"os"
 
 	vault "github.com/hashicorp/vault/api"
-  auth "github.com/hashicorp/vault/api-docs/auth/kubernetes"
+  auth "github.com/hashicorp/vault/api/auth/kubernetes"
 )
 
 // Fetches a key-value secret (kv-v2) after authenticating to Vault with a Kubernetes service account.
@@ -376,23 +376,17 @@ func getSecretWithKubernetesAuth() (string, error) {
 		return "", fmt.Errorf("no auth info was returned after login")
 	}
 
-	// get secret from Vault
-	secret, err := client.Logical().Read("kv-v2/data/creds")
+	// get secret from Vault, from the default mount path for KV v2 in dev mode, "secret"
+	secret, err := client.KVv2("secret").Get(context.Background(), "creds")
 	if err != nil {
 		return "", fmt.Errorf("unable to read secret: %w", err)
 	}
 
-	data, ok := secret.Data["data"].(map[string]interface{})
-	if !ok {
-		return "", fmt.Errorf("data type assertion failed: %T %#v", secret.Data["data"], secret.Data["data"])
-	}
-
 	// data map can contain more than one key-value pair,
 	// in this case we're just grabbing one of them
-	key := "password"
-	value, ok := data[key].(string)
+	value, ok := secret.Data["password"].(string)
 	if !ok {
-		return "", fmt.Errorf("value type assertion failed: %T %#v", data[key], data[key])
+		return "", fmt.Errorf("value type assertion failed: %T %#v", secret.Data["password"], secret.Data["password"])
 	}
 
 	return value, nil

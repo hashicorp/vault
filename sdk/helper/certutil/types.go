@@ -148,16 +148,16 @@ type KeyBundle struct {
 }
 
 func GetPrivateKeyTypeFromSigner(signer crypto.Signer) PrivateKeyType {
-	switch signer.(type) {
-	case *rsa.PrivateKey:
+	// We look at the public key types to work-around limitations/typing of managed keys.
+	switch signer.Public().(type) {
+	case *rsa.PublicKey:
 		return RSAPrivateKey
-	case *ecdsa.PrivateKey:
+	case *ecdsa.PublicKey:
 		return ECPrivateKey
-	case ed25519.PrivateKey:
+	case ed25519.PublicKey:
 		return Ed25519PrivateKey
-	default:
-		return UnknownPrivateKey
 	}
+	return UnknownPrivateKey
 }
 
 // ToPEMBundle converts a string-based certificate bundle

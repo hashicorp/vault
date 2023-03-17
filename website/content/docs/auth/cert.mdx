@@ -27,7 +27,7 @@ configuration. This is because the certificates are sent through TLS communicati
 
 Since Vault 0.4, the method supports revocation checking.
 
-An authorised user can submit PEM-formatted CRLs identified by a given name;
+An authorized user can submit PEM-formatted CRLs identified by a given name;
 these can be updated or deleted at will. (Note: Vault **does not** fetch CRLs;
 the CRLs themselves and any updates must be pushed into Vault when desired,
 such as via a `cron` job that fetches them from the source and pushes them into

@@ -69,7 +69,7 @@ export default Model.extend({
       accessKey: this.accessKey,
       secretKey: this.secretKey,
       securityToken: this.securityToken,
-      leasId: this.leaseId,
+      leaseId: this.leaseId,
     };
     const propsWithVals = Object.keys(props).reduce((ret, prop) => {
       if (props[prop]) {

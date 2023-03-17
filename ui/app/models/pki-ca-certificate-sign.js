@@ -14,7 +14,7 @@ export default Certificate.extend({
   maxPathLength: attr('number', {
     defaultValue: -1,
   }),
-  permittedDnsNames: attr('string', {
+  permittedDnsDomains: attr('string', {
     label: 'Permitted DNS domains',
   }),
   ou: attr({
@@ -51,7 +51,7 @@ export default Certificate.extend({
           'ttl',
           'excludeCnFromSans',
           'maxPathLength',
-          'permittedDnsNames',
+          'permittedDnsDomains',
           'ou',
           'organization',
           'otherSans',

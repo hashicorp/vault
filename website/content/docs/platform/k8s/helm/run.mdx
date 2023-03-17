@@ -12,7 +12,7 @@ description: >-
 Vault works with Kubernetes in various modes: `dev`, `standalone`, `ha`,
 and `external`.
 
-~> **Important Note:** This chart is not compatible with Helm 2. Please use Helm 3.6+ with this chart.
+@include 'helm/version.mdx'
 
 ## Helm Chart
 
@@ -252,9 +252,16 @@ server:
     GOOGLE_PROJECT: <PROJECT NAME>
     GOOGLE_APPLICATION_CREDENTIALS: /vault/userconfig/kms-creds/credentials.json
 
-  extraVolumes:
-    - type: 'secret'
-      name: 'kms-creds'
+  volumes:
+    - name: userconfig-kms-creds
+      secret:
+        defaultMode: 420
+        secretName: kms-creds
+
+  volumeMounts:
+    - mountPath: /vault/userconfig/kms-creds
+      name: userconfig-kms-creds
+      readOnly: true
 
   ha:
     enabled: true
@@ -335,8 +342,8 @@ server:
       }
 
       storage "consul" {
-        path = "vault"
         address = "HOST_IP:8500"
+        path = "vault/"
       }
 ```
 
@@ -402,14 +409,14 @@ Next, list the Helm versions and choose the desired version to install.
 ```bash
 $ helm search repo hashicorp/vault
 NAME           	CHART VERSION	APP VERSION	DESCRIPTION
-hashicorp/vault	0.20.1       	1.10.3     	Official HashiCorp Vault Chart
+hashicorp/vault	0.22.0       	1.11.3     	Official HashiCorp Vault Chart
 ```
 
 Next, test the upgrade with `--dry-run` first to verify the changes sent to the
 Kubernetes cluster.
 
 ```shell-session
-$ helm upgrade vault hashicorp/vault --version=0.20.1 \
+$ helm upgrade vault hashicorp/vault --version=0.22.0 \
     --set='server.image.repository=vault' \
     --set='server.image.tag=123.456' \
     --dry-run
@@ -430,11 +437,20 @@ $ kubectl delete pod <name of Vault pod>
 ```
 
 If Vault is deployed using `ha` mode, the standby pods must be upgraded first.
-To identify which pod is currently the active primary, run the following command
-on each Vault pod:
+Vault has K8s service discovery built in (when enabled in the server configuration) and
+will automatically change the labels of the pod with its current leader status. These labels
+can be used to filter the pods.
+
+For example, select all pods that are Vault standbys:
 
 ```shell-session
-$ kubectl exec -ti <name of pod> -- vault status | grep "HA Mode"
+$ kubectl get pods -l vault-active=false
+```
+
+Select the active Vault pod:
+
+```shell-session
+$ kubectl get pods -l vault-active=true
 ```
 
 Next, delete every pod that is not the active primary:
@@ -502,8 +518,12 @@ to the Vault startup command:
 
 ```shell-session
 $ helm install vault hashicorp/vault \
-  --set='server.extraVolumes[0].type=secret' \
-  --set='server.extraVolumes[0].name=vault-storage-config' \
+  --set='server.volumes[0].name=userconfig-vault-storage-config' \
+  --set='server.volumes[0].secret.defaultMode=420' \
+  --set='server.volumes[0].secret.secretName=vault-storage-config' \
+  --set='server.volumeMounts[0].mountPath=/vault/userconfig/vault-storage-config' \
+  --set='server.volumeMounts[0].name=userconfig-vault-storage-config' \
+  --set='server.volumeMounts[0].readOnly=true' \
   --set='server.extraArgs=-config=/vault/userconfig/vault-storage-config/config.hcl'
 ```
 

@@ -15,6 +15,8 @@ key-value store. In addition to providing durable storage, inclusion of this
 backend will also register Vault as a service in Consul with a default health
 check.
 
+@include 'consul-dataplane-compat.mdx'
+
 - **High Availability** – the Consul storage backend supports high availability.
 
 - **HashiCorp Supported** – the Consul storage backend is officially supported
@@ -23,7 +25,7 @@ check.
 ```hcl
 storage "consul" {
   address = "127.0.0.1:8500"
-  path    = "vault"
+  path    = "vault/"
 }
 ```
 

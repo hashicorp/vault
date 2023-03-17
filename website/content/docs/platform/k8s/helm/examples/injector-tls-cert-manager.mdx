@@ -139,5 +139,5 @@ $ helm install vault hashicorp/vault \
   --set injector.replicas=2 \
   --set injector.leaderElector.enabled=false \
   --set injector.certs.secretName=injector-tls \
-  --set injector.webhookAnnotations="cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/injector-certificate"
+  --set injector.webhook.annotations="cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/injector-certificate"
 ```

@@ -2,7 +2,6 @@ import Ember from 'ember';
 import { next } from '@ember/runloop';
 import { inject as service } from '@ember/service';
 import { match, alias, or } from '@ember/object/computed';
-import { assign } from '@ember/polyfills';
 import { dasherize } from '@ember/string';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
@@ -246,32 +245,24 @@ export default Component.extend(DEFAULTS, {
   }),
 
   actions: {
-    doSubmit() {
-      let passedData, e;
-      if (arguments.length > 1) {
-        [passedData, e] = arguments;
-      } else {
-        [e] = arguments;
+    doSubmit(passedData, event, token) {
+      if (event) {
+        event.preventDefault();
       }
-      if (e) {
-        e.preventDefault();
+      if (token) {
+        this.set('token', token);
       }
-      let data = {};
-      this.setProperties({
-        error: null,
-      });
+      this.set('error', null);
       // if callback from oidc or jwt we have a token at this point
-      let backend = ['oidc', 'jwt'].includes(this.providerName)
-        ? this.getAuthBackend('token')
-        : this.selectedAuthBackend || {};
-      let backendMeta = BACKENDS.find(
+      const backend = token ? this.getAuthBackend('token') : this.selectedAuthBackend || {};
+      const backendMeta = BACKENDS.find(
         (b) => (b.type || '').toLowerCase() === (backend.type || '').toLowerCase()
       );
-      let attributes = (backendMeta || {}).formAttributes || [];
+      const attributes = (backendMeta || {}).formAttributes || [];
+      const data = this.getProperties(...attributes);
 
-      data = assign(data, this.getProperties(...attributes));
       if (passedData) {
-        data = assign(data, passedData);
+        Object.assign(data, passedData);
       }
       if (this.customPath || backend.id) {
         data.path = this.customPath || backend.id;

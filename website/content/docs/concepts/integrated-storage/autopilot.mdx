@@ -8,7 +8,9 @@ description: Learn about the autopilot subsystem of integrated raft storage in V
 
 Autopilot enables automated workflows for managing Raft clusters. The current
 feature set includes 3 main features: Server Stabilization, Dead Server Cleanup
-and State API. These three features are introduced in Vault 1.7.
+and State API. These three features were introduced in Vault 1.7. The Enterprise
+feature set includes 2 main features: Automated Upgrades and Redundancy Zones.
+These two features were introduced in Vault 1.11.
 
 ## Server Stabilization
 
@@ -65,18 +67,45 @@ behavior. Autopilot gets initialized with the following default values.
 
 - `server_stabilization_time` - `10s`
 
+~> **Note**: Autopilot in Vault does similar things to what autopilot does in
+[Consul](https://www.consul.io/). However, the configuration in these 2 systems
+differ in terms of default values and thresholds; some additional parameters
+might also show up in Vault in comparison to Consul as well. Autopilot in Vault
+and Consul use different technical underpinnings requiring these differences, to
+provide the autopilot functionality.
+
+## Automated Upgrades
+
+Automated Upgrades lets you automatically upgrade a cluster of Vault nodes to a new version as
+updated server nodes join the cluster. Once the number of nodes on the new version is
+equal to or greater than the number of nodes on the old version, Autopilot will promote
+the newer versioned nodes to voters, demote the older versioned nodes to non-voters,
+and initiate a leadership transfer from the older version leader to one of the newer
+versioned nodes. After the leadership transfer completes, the older versioned non-voting
+nodes can be removed from the cluster.
+
+## Redundancy Zones
+
+Redundancy Zones provide both scaling and resiliency benefits by deploying non-voting
+nodes alongside voting nodes on a per availability zone basis. When using redundancy zones,
+each zone will have exactly one voting node and as many additional non-voting nodes as desired.
+If the voting node in a zone fails, a non-voting node will be automatically promoted to
+voter. If an entire zone is lost, a non-voting node from another zone will be promoted to voter,
+maintaining quorum. These non-voting nodes function not only as hot standbys, but also
+increase read scalability.
+
 ## Replication
 
-Performance secondary clusters have their own Autopilot configuration, managed
+DR secondary and Performance secondary clusters have their own Autopilot configurations, managed
 independently of their primary.
 
-DR secondary clusters will also have their own Autopilot configuration (starting
-in Vault 1.8.0), managed independently of their primary. The [Autopilot
-API](/api-docs/system/storage/raftautopilot) uses DR operation tokens for
-authorization.
+The [Autopilot API](/api/system/storage/raftautopilot) uses DR operation tokens for
+authorization when executed against a DR secondary cluster.
 
 ## Tutorial
 
-Refer to [Integrated Storage
-Autopilot](https://learn.hashicorp.com/tutorials/vault/raft-autopilot) for a
-step-by-step tutorial.
+Refer to the following tutorials to learn more.
+
+- [Integrated Storage Autopilot](https://learn.hashicorp.com/tutorials/vault/raft-autopilot)
+- [Fault Tolerance with Redundancy Zones](https://learn.hashicorp.com/tutorials/vault/raft-redundancy-zones)
+- [Automate Upgrades with Vault Enterprise](https://learn.hashicorp.com/tutorials/vault/raft-upgrade-automation)

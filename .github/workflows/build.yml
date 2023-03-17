@@ -1,67 +1,61 @@
+---
 name: build
 
-on: [ workflow_dispatch, push ]
-
-env:
-  PKG_NAME: "vault"
-  GO_TAGS: "ui"
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - main
+      - release/**
 
 jobs:
-  get-product-version:
+  product-metadata:
     runs-on: ubuntu-latest
     outputs:
-      product-version: ${{ steps.get-product-version.outputs.product-version }}
-      product-base-version: ${{ steps.get-product-version.outputs.product-base-version }}
-    steps:
-      - uses: actions/checkout@v2
-      - name: get product version
-        id: get-product-version
-        run: |
-          make version
-          IFS="-" read BASE_VERSION _other <<< "$(make version)"
-          echo "::set-output name=product-version::$(make version)"
-          echo "::set-output name=product-base-version::${BASE_VERSION}"
-
-  get-build-date:
-    runs-on: ubuntu-latest
-    outputs:
-      build-date: ${{ steps.get-build-date.outputs.build-date }}
-    steps:
-      - uses: actions/checkout@v2
-      - name: get build date
-        id: get-build-date
-        run: |
-          make build-date
-          echo "::set-output name=build-date::$(make build-date)"
-
-  generate-metadata-file:
-    needs: get-product-version
-    runs-on: ubuntu-latest
-    outputs:
+      build-date: ${{ steps.get-metadata.outputs.build-date }}
       filepath: ${{ steps.generate-metadata-file.outputs.filepath }}
+      go-version: ${{ steps.get-metadata.outputs.go-version }}
+      matrix-test-group: ${{ steps.get-metadata.outputs.matrix-test-group }}
+      package-name: ${{ steps.get-metadata.outputs.package-name }}
+      vault-revision: ${{ steps.get-metadata.outputs.vault-revision }}
+      vault-version: ${{ steps.get-metadata.outputs.vault-version }}
+      vault-base-version: ${{ steps.get-metadata.outputs.vault-base-version }}
     steps:
-      - name: 'Checkout directory'
-        uses: actions/checkout@v2
-      - name: Generate metadata file
+      - uses: actions/checkout@v3
+      - name: Get metadata
+        id: get-metadata
+        env:
+          # MATRIX_MAX_TEST_GROUPS is required to determine the randomly selected
+          # test group. It should be set to the highest test_group used in the
+          # enos-run-matrices.
+          MATRIX_MAX_TEST_GROUPS: 5
+        run: |
+          echo "build-date=$(make ci-get-date)" >> $GITHUB_OUTPUT
+          echo "go-version=$(cat ./.go-version)" >> $GITHUB_OUTPUT
+          echo "matrix-test-group=$(make ci-get-matrix-group-id)" >> $GITHUB_OUTPUT
+          echo "package-name=vault" >> $GITHUB_OUTPUT
+          echo "vault-base-version=$(make ci-get-version-base)" >> $GITHUB_OUTPUT
+          echo "vault-revision=$(make ci-get-revision)" >> $GITHUB_OUTPUT
+          echo "vault-version=$(make ci-get-version)" >> $GITHUB_OUTPUT
+      - uses: hashicorp/actions-generate-metadata@v1
         id: generate-metadata-file
-        uses: hashicorp/actions-generate-metadata@v1
         with:
-          version: ${{ needs.get-product-version.outputs.product-version }}
-          product: ${{ env.PKG_NAME }}
-
-      - uses: actions/upload-artifact@v2
+          version: ${{ steps.get-metadata.outputs.vault-version }}
+          product: ${{ steps.get-metadata.outputs.package-name }}
+      - uses: actions/upload-artifact@v3
         with:
           name: metadata.json
           path: ${{ steps.generate-metadata-file.outputs.filepath }}
+          if-no-files-found: error
 
   build-other:
-    needs: [ get-product-version, get-build-date ]
-    runs-on: ubuntu-latest
+    name: Other
+    needs: product-metadata
     strategy:
       matrix:
-        goos: [ freebsd, windows, netbsd, openbsd, solaris ]
-        goarch: [ "386", "amd64", "arm" ]
-        go: [ "1.17.11" ]
+        goos: [freebsd, windows, netbsd, openbsd, solaris]
+        goarch: [386, amd64, arm]
         exclude:
           - goos: solaris
             goarch: 386
@@ -70,208 +64,153 @@ jobs:
           - goos: windows
             goarch: arm
       fail-fast: true
-
-    name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
-
-    steps:
-      - uses: actions/checkout@v2
-      - name: Setup go
-        uses: actions/setup-go@v2
-        with:
-          go-version: ${{ matrix.go }}
-      - name: Setup node and yarn
-        uses: actions/setup-node@v2
-        with:
-          node-version: '14'
-          cache: 'yarn'
-          cache-dependency-path: 'ui/yarn.lock'
-      - name: UI Build
-        run: |
-          cd ui
-          yarn install --ignore-optional
-          npm rebuild node-sass
-          yarn --verbose run build
-          cd ..
-      - name: Build
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-          CGO_ENABLED: 0
-        run: |
-          mkdir dist out
-          GO_TAGS="${{ env.GO_TAGS }}" VAULT_VERSION=${{ needs.get-product-version.outputs.product-base-version }} VAULT_REVISION="$(git rev-parse HEAD)" VAULT_BUILD_DATE="${{ needs.get-build-date.outputs.build-date }}" make build
-          zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
-      - uses: actions/upload-artifact@v2
-        with:
-          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
-          path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+    uses: ./.github/workflows/build-vault-oss.yml
+    with:
+      create-packages: false
+      goarch: ${{ matrix.goarch }}
+      goos: ${{ matrix.goos }}
+      go-tags: ui
+      go-version: ${{ needs.product-metadata.outputs.go-version }}
+      package-name: ${{ needs.product-metadata.outputs.package-name }}
+      vault-version: ${{ needs.product-metadata.outputs.vault-version }}
+    secrets: inherit
 
   build-linux:
-    needs: [ get-product-version, get-build-date ]
-    runs-on: ubuntu-latest
+    name: Linux
+    needs: product-metadata
     strategy:
       matrix:
         goos: [linux]
-        goarch: ["arm", "arm64", "386", "amd64"]
-        go: ["1.17.11"]
+        goarch: [arm, arm64, 386, amd64]
       fail-fast: true
-
-    name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Setup go
-        uses: actions/setup-go@v2
-        with:
-          go-version: ${{ matrix.go }}
-      - name: Setup node and yarn
-        uses: actions/setup-node@v2
-        with:
-          node-version: '14'
-          cache: 'yarn'
-          cache-dependency-path: 'ui/yarn.lock'
-      - name: UI Build
-        run: |
-          cd ui
-          yarn install --ignore-optional
-          npm rebuild node-sass
-          yarn --verbose run build
-          cd ..
-      - name: Build
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-          CGO_ENABLED: 0
-        run: |
-          mkdir dist out
-          GO_TAGS="${{ env.GO_TAGS }}" VAULT_VERSION=${{ needs.get-product-version.outputs.product-base-version }} VAULT_REVISION="$(git rev-parse HEAD)" VAULT_BUILD_DATE="${{ needs.get-build-date.outputs.build-date }}" make build
-          zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
-      - uses: actions/upload-artifact@v2
-        with:
-          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
-          path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
-
-      - name: Package
-        uses: hashicorp/actions-packaging-linux@v1
-        with:
-          name: ${{ github.event.repository.name }}
-          description: "Vault is a tool for secrets management, encryption as a service, and privileged access management."
-          arch: ${{ matrix.goarch }}
-          version: ${{ needs.get-product-version.outputs.product-version }}
-          maintainer: "HashiCorp"
-          homepage: "https://github.com/hashicorp/vault"
-          license: "MPL-2.0"
-          binary: "dist/${{ env.PKG_NAME }}"
-          deb_depends: "openssl"
-          rpm_depends: "openssl"
-          config_dir: ".release/linux/package/"
-          preinstall: ".release/linux/preinst"
-          postinstall: ".release/linux/postinst"
-          postremove: ".release/linux/postrm"
-      - name: Add Package names to env
-        run: |
-          echo "RPM_PACKAGE=$(basename out/*.rpm)" >> $GITHUB_ENV
-          echo "DEB_PACKAGE=$(basename out/*.deb)" >> $GITHUB_ENV
-      - uses: actions/upload-artifact@v2
-        with:
-          name: ${{ env.RPM_PACKAGE }}
-          path: out/${{ env.RPM_PACKAGE }}
-
-      - uses: actions/upload-artifact@v2
-        with:
-          name: ${{ env.DEB_PACKAGE }}
-          path: out/${{ env.DEB_PACKAGE }}
+    uses: ./.github/workflows/build-vault-oss.yml
+    with:
+      goarch: ${{ matrix.goarch }}
+      goos: ${{ matrix.goos }}
+      go-tags: ui
+      go-version: ${{ needs.product-metadata.outputs.go-version }}
+      package-name: ${{ needs.product-metadata.outputs.package-name }}
+      vault-version: ${{ needs.product-metadata.outputs.vault-version }}
+    secrets: inherit
 
   build-darwin:
-    needs: [ get-product-version, get-build-date ]
-    runs-on: macos-latest
+    name: Darwin
+    needs: product-metadata
     strategy:
       matrix:
-        goos: [ darwin ]
-        goarch: [ "amd64", "arm64" ]
-        go: [ "1.17.11" ]
+        goos: [darwin]
+        goarch: [amd64, arm64]
       fail-fast: true
-    name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Setup go
-        uses: actions/setup-go@v2
-        with:
-          go-version: ${{ matrix.go }}
-      - name: Setup node and yarn
-        uses: actions/setup-node@v2
-        with:
-          node-version: '14'
-          cache: 'yarn'
-          cache-dependency-path: 'ui/yarn.lock'
-      - name: UI Build
-        run: |
-          cd ui
-          yarn install --ignore-optional
-          npm rebuild node-sass
-          yarn --verbose run build
-          cd ..
-      - name: Build
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-          GO_TAGS: "${{ env.GO_TAGS }} netcgo"
-          CGO_ENABLED: 0
-        run: |
-          mkdir dist out
-          GO_TAGS="${{ env.GO_TAGS }}" VAULT_VERSION=${{ needs.get-product-version.outputs.product-base-version }} VAULT_REVISION="$(git rev-parse HEAD)" VAULT_BUILD_DATE="${{ needs.get-build-date.outputs.build-date }}" make build
-          zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
-      - uses: actions/upload-artifact@v2
-        with:
-          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
-          path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+    uses: ./.github/workflows/build-vault-oss.yml
+    with:
+      create-packages: false
+      goarch: ${{ matrix.goarch }}
+      goos: ${{ matrix.goos }}
+      go-tags: ui netcgo
+      go-version: ${{ needs.product-metadata.outputs.go-version }}
+      package-name: ${{ needs.product-metadata.outputs.package-name }}
+      vault-version: ${{ needs.product-metadata.outputs.vault-version }}
+    secrets: inherit
 
   build-docker:
-    name: Docker ${{ matrix.arch }} build
+    name: Docker image
     needs:
-      - get-product-version
+      - product-metadata
       - build-linux
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        arch: ["arm", "arm64", "386", "amd64"]
-    env:
-      repo: ${{github.event.repository.name}}
-      version: ${{needs.get-product-version.outputs.product-version}}
+        arch: [arm, arm64, 386, amd64]
     steps:
-      - uses: actions/checkout@v2
-      - name: Docker Build (Action)
-        uses: hashicorp/actions-docker-build@v1
+      - uses: actions/checkout@v3
+      - uses: hashicorp/actions-docker-build@v1
         with:
-          version: ${{env.version}}
+          version: ${{ needs.product-metadata.outputs.vault-version }}
           target: default
-          arch: ${{matrix.arch}}
-          zip_artifact_name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_linux_${{ matrix.arch }}.zip
+          arch: ${{ matrix.arch }}
+          zip_artifact_name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_${{ matrix.arch }}.zip
           tags: |
-            docker.io/hashicorp/${{env.repo}}:${{env.version}}
-            public.ecr.aws/hashicorp/${{env.repo}}:${{env.version}}
+            docker.io/hashicorp/${{ github.event.repository.name }}:${{ needs.product-metadata.outputs.vault-version }}
+            public.ecr.aws/hashicorp/${{ github.event.repository.name }}:${{ needs.product-metadata.outputs.vault-version }}
 
   build-ubi:
-    name: Red Hat UBI ${{ matrix.arch }} build
+    name: UBI image
     needs:
-      - get-product-version
+      - product-metadata
       - build-linux
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        arch: ["amd64"]
-    env:
-      repo: ${{github.event.repository.name}}
-      version: ${{needs.get-product-version.outputs.product-version}}
+        arch: [amd64]
     steps:
       - uses: actions/checkout@v2
-      - name: Docker Build (Action)
-        uses: hashicorp/actions-docker-build@v1
+      - uses: hashicorp/actions-docker-build@v1
         with:
-          version: ${{env.version}}
+          version: ${{ needs.product-metadata.outputs.vault-version }}
           target: ubi
-          arch: ${{matrix.arch}}
-          zip_artifact_name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_linux_${{ matrix.arch }}.zip
-          redhat_tag: scan.connect.redhat.com/ospid-f0a92725-d8c6-4023-9a87-ba785b94c3fd/${{env.repo}}:${{env.version}}-ubi
+          arch: ${{ matrix.arch }}
+          zip_artifact_name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_${{ matrix.arch }}.zip
+          redhat_tag: quay.io/redhat-isv-containers/5f89bb5e0b94cf64cfeb500a:${{ needs.product-metadata.outputs.vault-version }}-ubi
+
+  test:
+    name: Test ${{ matrix.build-artifact-name }}
+    # Only run the Enos workflow against branches that are created from the
+    # hashicorp/vault repository. This has the effect of limiting execution of
+    # Enos scenarios to branches that originate from authors that have write
+    # access to hashicorp/vault repository. This is required as Github Actions
+    # will not populate the required secrets for branches created by outside
+    # contributors in order to protect the secrets integrity.
+    if: "! github.event.pull_request.head.repo.fork"
+    needs:
+      - product-metadata
+      - build-linux
+    uses: ./.github/workflows/test-run-enos-scenario-matrix.yml
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - matrix-file-name: build-github-oss-linux-amd64-zip
+            build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_amd64.zip
+          - matrix-file-name: build-github-oss-linux-arm64-zip
+            build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_arm64.zip
+    with:
+      build-artifact-name: ${{ matrix.build-artifact-name }}
+      matrix-file-name: ${{ matrix.matrix-file-name }}
+      matrix-test-group: ${{ needs.product-metadata.outputs.matrix-test-group }}
+      vault-edition: oss
+      vault-revision: ${{ needs.product-metadata.outputs.vault-revision }}
+      ssh-key-name: ${{ github.event.repository.name }}-ci-ssh-key
+    secrets: inherit
+
+  test-docker-k8s:
+    name: Test Docker K8s
+    # Only run the Enos workflow against branches that are created from the
+    # hashicorp/vault repository. This has the effect of limiting execution of
+    # Enos scenarios to branches that originate from authors that have write
+    # access to hashicorp/vault repository. This is required as Github Actions
+    # will not populate the required secrets for branches created by outside
+    # contributors in order to protect the secrets integrity.
+    if: "! github.event.pull_request.head.repo.fork"
+    needs:
+      - product-metadata
+      - build-docker
+    uses: ./.github/workflows/enos-run-k8s.yml
+    with:
+      artifact-build-date: ${{ needs.product-metadata.outputs.build-date }}
+      artifact-name: ${{ github.event.repository.name }}_default_linux_amd64_${{ needs.product-metadata.outputs.vault-version }}_${{ needs.product-metadata.outputs.vault-revision }}.docker.tar
+      artifact-revision: ${{ needs.product-metadata.outputs.vault-revision }}
+      artifact-version: ${{ needs.product-metadata.outputs.vault-version }}
+    secrets: inherit
+
+  completed-successfully:
+    runs-on: ubuntu-latest
+    needs:
+      - build-other
+      - build-linux
+      - build-darwin
+      - build-docker
+      - build-ubi
+      - test
+      - test-docker-k8s
+    steps:
+      - run: echo "All required build and test workflows have succeeded!"

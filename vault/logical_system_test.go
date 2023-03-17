@@ -995,34 +995,38 @@ func TestSystemBackend_remount_nonPrintable(t *testing.T) {
 	}
 }
 
-func TestSystemBackend_remount_spacesInFromPath(t *testing.T) {
+// TestSystemBackend_remount_trailingSpacesInFromPath ensures we error when
+// there are trailing spaces in the 'from' path during a remount.
+func TestSystemBackend_remount_trailingSpacesInFromPath(t *testing.T) {
 	b := testSystemBackend(t)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
-	req.Data["from"] = " foo / "
+	req.Data["from"] = " foo/ "
 	req.Data["to"] = "bar"
 	req.Data["config"] = structs.Map(MountConfig{})
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != `'from' path cannot contain whitespace` {
+	if resp.Data["error"] != `'from' path cannot contain trailing whitespace` {
 		t.Fatalf("bad: %v", resp)
 	}
 }
 
-func TestSystemBackend_remount_spacesInToPath(t *testing.T) {
+// TestSystemBackend_remount_trailingSpacesInToPath ensures we error when
+// there are trailing spaces in the 'to' path during a remount.
+func TestSystemBackend_remount_trailingSpacesInToPath(t *testing.T) {
 	b := testSystemBackend(t)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
 	req.Data["from"] = "foo"
-	req.Data["to"] = " bar / "
+	req.Data["to"] = " bar/ "
 	req.Data["config"] = structs.Map(MountConfig{})
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != `'to' path cannot contain whitespace` {
+	if resp.Data["error"] != `'to' path cannot contain trailing whitespace` {
 		t.Fatalf("bad: %v", resp)
 	}
 }
@@ -4554,5 +4558,274 @@ func TestProcessLimit(t *testing.T) {
 				t.Errorf("error was: %v", err)
 			}
 		}
+	}
+}
+
+func validateLevel(level string, logger hclog.Logger) bool {
+	switch level {
+	case "trace":
+		return logger.IsTrace()
+	case "debug":
+		return logger.IsDebug()
+	case "notice", "info", "":
+		return logger.IsInfo()
+	case "warn", "warning":
+		return logger.IsWarn()
+	case "err", "error":
+		return logger.IsError()
+	}
+
+	return false
+}
+
+func TestSystemBackend_Loggers(t *testing.T) {
+	testCases := []struct {
+		level       string
+		expectError bool
+	}{
+		{
+			"trace",
+			false,
+		},
+		{
+			"debug",
+			false,
+		},
+		{
+			"notice",
+			false,
+		},
+		{
+			"info",
+			false,
+		},
+		{
+			"warn",
+			false,
+		},
+		{
+			"warning",
+			false,
+		},
+		{
+			"err",
+			false,
+		},
+		{
+			"error",
+			false,
+		},
+		{
+			"",
+			true,
+		},
+		{
+			"invalid",
+			true,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+
+		t.Run(fmt.Sprintf("all-loggers-%s", tc.level), func(t *testing.T) {
+			t.Parallel()
+
+			core, b, _ := testCoreSystemBackend(t)
+
+			req := &logical.Request{
+				Path:      "loggers",
+				Operation: logical.UpdateOperation,
+				Data: map[string]interface{}{
+					"level": tc.level,
+				},
+			}
+
+			resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+			respIsError := resp != nil && resp.IsError()
+
+			if err != nil || (!tc.expectError && respIsError) {
+				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+			}
+
+			if tc.expectError && !respIsError {
+				t.Fatalf("expected response error, resp: %#v", resp)
+			}
+
+			if !tc.expectError {
+				for _, logger := range core.allLoggers {
+					if !validateLevel(tc.level, logger) {
+						t.Fatalf("expected logger %q to be %q", logger.Name(), tc.level)
+					}
+				}
+			}
+
+			req = &logical.Request{
+				Path:      fmt.Sprintf("loggers"),
+				Operation: logical.DeleteOperation,
+			}
+
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+			}
+
+			for _, logger := range core.allLoggers {
+				if !validateLevel(core.logLevel, logger) {
+					t.Errorf("expected level of logger %q to match original config", logger.Name())
+				}
+			}
+		})
+	}
+}
+
+func TestSystemBackend_LoggersByName(t *testing.T) {
+	testCases := []struct {
+		logger            string
+		level             string
+		expectWriteError  bool
+		expectDeleteError bool
+	}{
+		{
+			"core",
+			"trace",
+			false,
+			false,
+		},
+		{
+			"token",
+			"debug",
+			false,
+			false,
+		},
+		{
+			"audit",
+			"notice",
+			false,
+			false,
+		},
+		{
+			"expiration",
+			"info",
+			false,
+			false,
+		},
+		{
+			"policy",
+			"warn",
+			false,
+			false,
+		},
+		{
+			"activity",
+			"warning",
+			false,
+			false,
+		},
+		{
+			"identity",
+			"err",
+			false,
+			false,
+		},
+		{
+			"rollback",
+			"error",
+			false,
+			false,
+		},
+		{
+			"system",
+			"",
+			true,
+			false,
+		},
+		{
+			"quotas",
+			"invalid",
+			true,
+			false,
+		},
+		{
+			"",
+			"info",
+			true,
+			true,
+		},
+		{
+			"does_not_exist",
+			"error",
+			true,
+			true,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+
+		t.Run(fmt.Sprintf("loggers-by-name-%s", tc.logger), func(t *testing.T) {
+			t.Parallel()
+
+			core, b, _ := testCoreSystemBackend(t)
+
+			req := &logical.Request{
+				Path:      fmt.Sprintf("loggers/%s", tc.logger),
+				Operation: logical.UpdateOperation,
+				Data: map[string]interface{}{
+					"name":  tc.logger,
+					"level": tc.level,
+				},
+			}
+
+			resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+			respIsError := resp != nil && resp.IsError()
+
+			if err != nil || (!tc.expectWriteError && respIsError) {
+				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+			}
+
+			if tc.expectWriteError && !respIsError {
+				t.Fatalf("expected response error, resp: %#v", resp)
+			}
+
+			if !tc.expectWriteError {
+				for _, logger := range core.allLoggers {
+					if logger.Name() != tc.logger && !validateLevel(core.logLevel, logger) {
+						t.Errorf("expected level of logger %q to be unchanged", logger.Name())
+					}
+
+					if !validateLevel(tc.level, logger) {
+						t.Fatalf("expected logger %q to be %q", logger.Name(), tc.level)
+					}
+				}
+			}
+
+			req = &logical.Request{
+				Path:      fmt.Sprintf("loggers/%s", tc.logger),
+				Operation: logical.DeleteOperation,
+				Data: map[string]interface{}{
+					"name": tc.logger,
+				},
+			}
+
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			respIsError = resp != nil && resp.IsError()
+
+			if err != nil || (!tc.expectDeleteError && respIsError) {
+				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+			}
+
+			if tc.expectDeleteError && !respIsError {
+				t.Fatalf("expected response error, resp: %#v", resp)
+			}
+
+			if !tc.expectDeleteError {
+				for _, logger := range core.allLoggers {
+					if !validateLevel(core.logLevel, logger) {
+						t.Errorf("expected level of logger %q to match original config", logger.Name())
+					}
+				}
+			}
+		})
 	}
 }

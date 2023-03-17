@@ -68,7 +68,12 @@
             <div class="toolbar-separator"></div>
           {{/if}}
           {{#if (or @model.canListKeys @model.canCreateKeys)}}
-            <button type="button" class="toolbar-link" {{on "click" (fn (mut this.isDistributing) true)}}>
+            <button
+              type="button"
+              class="toolbar-link"
+              {{on "click" (fn (mut this.isDistributing) true)}}
+              data-test-distribute-key
+            >
               Distribute key
               <Icon @name="chevron-right" />
             </button>

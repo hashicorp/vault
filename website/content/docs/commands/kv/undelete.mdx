@@ -21,7 +21,7 @@ returned on get requests.
 Undelete version 3 of the key "creds":
 
 ```shell-session
-$ vault kv undelete -versions=3 secret/creds
+$ vault kv undelete -mount=secret -versions=3 creds
 Success! Data written to: secret/undelete/creds
 ```
 
@@ -37,6 +37,12 @@ included on all commands.
   `VAULT_FORMAT` environment variable.
 
 ### Command Options
+
+- `-mount` `(string: "")` - Specifies the path where the KV backend is mounted. 
+  If specified, the next argument will be interpreted as the secret path. If 
+  this flag is not specified, the next argument will be interpreted as the 
+  combined mount path and secret path, with /data/ automatically inserted for 
+  KV v2 secrets.
 
 - `-versions` `([]int: <required>)` - Specifies the version number that should
   be made current again.

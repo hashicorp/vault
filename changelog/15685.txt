@@ -1,0 +1,3 @@
+```release-note:bug 
+ui: Updated `leasId` to `leaseId` in the "Copy Credentials" section of "Generate AWS Credentials"
+```

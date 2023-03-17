@@ -40,13 +40,19 @@ export default Controller.extend(ListController, BackendCrumbMixin, WithNavToNea
 
     delete(item, type) {
       const name = item.id;
-      item.destroyRecord().then(() => {
-        this.flashMessages.success(`${name} was successfully deleted.`);
-        this.send('reload');
-        if (type === 'secret') {
-          this.navToNearestAncestor.perform(name);
-        }
-      });
+      item
+        .destroyRecord()
+        .then(() => {
+          this.flashMessages.success(`${name} was successfully deleted.`);
+          this.send('reload');
+          if (type === 'secret') {
+            this.navToNearestAncestor.perform(name);
+          }
+        })
+        .catch((e) => {
+          const error = e.errors ? e.errors.join('. ') : e.message;
+          this.flashMessages.danger(error);
+        });
     },
   },
 });

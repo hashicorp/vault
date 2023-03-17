@@ -288,6 +288,50 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				},
 			},
 		},
+		{
+			Pattern: "loggers$",
+			Fields: map[string]*framework.FieldSchema{
+				"level": {
+					Type: framework.TypeString,
+					Description: "Log verbosity level. Supported values (in order of detail) are " +
+						"\"trace\", \"debug\", \"info\", \"warn\", and \"error\".",
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleLoggersWrite,
+					Summary:  "Modify the log level for all existing loggers.",
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: b.handleLoggersDelete,
+					Summary:  "Revert the all loggers to use log level provided in config.",
+				},
+			},
+		},
+		{
+			Pattern: "loggers/" + framework.MatchAllRegex("name"),
+			Fields: map[string]*framework.FieldSchema{
+				"name": {
+					Type:        framework.TypeString,
+					Description: "The name of the logger to be modified.",
+				},
+				"level": {
+					Type: framework.TypeString,
+					Description: "Log verbosity level. Supported values (in order of detail) are " +
+						"\"trace\", \"debug\", \"info\", \"warn\", and \"error\".",
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleLoggersByNameWrite,
+					Summary:  "Modify the log level of a single logger.",
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: b.handleLoggersByNameDelete,
+					Summary:  "Revert a single logger to use log level provided in config.",
+				},
+			},
+		},
 	}
 }
 
@@ -1745,6 +1789,8 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["wrap"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["wrap"][1]),
+
+			TakesArbitraryInput: true,
 		},
 
 		{
