@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -18,6 +19,7 @@ import (
 
 // Verify MSSQLBackend satisfies the correct interfaces
 var _ physical.Backend = (*MSSQLBackend)(nil)
+var identifierRegex = regexp.MustCompile(`^[\p{L}_][\p{L}\p{Nd}@#$_]*$`)
 
 type MSSQLBackend struct {
 	dbTable    string
@@ -25,6 +27,13 @@ type MSSQLBackend struct {
 	statements map[string]*sql.Stmt
 	logger     log.Logger
 	permitPool *physical.PermitPool
+}
+
+func isInvalidIdentifier(name string) bool {
+	if !identifierRegex.MatchString(name) {
+		return true
+	}
+	return false
 }
 
 func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
@@ -68,9 +77,17 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		database = "Vault"
 	}
 
+	if isInvalidIdentifier(database) {
+		return nil, fmt.Errorf("invalid database name")
+	}
+
 	table, ok := conf["table"]
 	if !ok {
 		table = "Vault"
+	}
+
+	if isInvalidIdentifier(table) {
+		return nil, fmt.Errorf("invalid table name")
 	}
 
 	appname, ok := conf["appname"]
@@ -93,6 +110,10 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		schema = "dbo"
 	}
 
+	if isInvalidIdentifier(schema) {
+		return nil, fmt.Errorf("invalid schema name")
+	}
+
 	connectionString := fmt.Sprintf("server=%s;app name=%s;connection timeout=%s;log=%s", server, appname, connectionTimeout, logLevel)
 	if username != "" {
 		connectionString += ";user id=" + username
@@ -113,18 +134,17 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 
 	db.SetMaxOpenConns(maxParInt)
 
-	if _, err := db.Exec("IF NOT EXISTS(SELECT * FROM sys.databases WHERE name = '" + database + "') CREATE DATABASE " + database); err != nil {
+	if _, err := db.Exec("IF NOT EXISTS(SELECT * FROM sys.databases WHERE name = ?) CREATE DATABASE "+database, database); err != nil {
 		return nil, fmt.Errorf("failed to create mssql database: %w", err)
 	}
 
 	dbTable := database + "." + schema + "." + table
-	createQuery := "IF NOT EXISTS(SELECT 1 FROM " + database + ".INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME='" + table + "' AND TABLE_SCHEMA='" + schema +
-		"') CREATE TABLE " + dbTable + " (Path VARCHAR(512) PRIMARY KEY, Value VARBINARY(MAX))"
+	createQuery := "IF NOT EXISTS(SELECT 1 FROM " + database + ".INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME=? AND TABLE_SCHEMA=?) CREATE TABLE " + dbTable + " (Path VARCHAR(512) PRIMARY KEY, Value VARBINARY(MAX))"
 
 	if schema != "dbo" {
 
 		var num int
-		err = db.QueryRow("SELECT 1 FROM " + database + ".sys.schemas WHERE name = '" + schema + "'").Scan(&num)
+		err = db.QueryRow("SELECT 1 FROM "+database+".sys.schemas WHERE name = ?", schema).Scan(&num)
 
 		switch {
 		case err == sql.ErrNoRows:
@@ -137,7 +157,7 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		}
 	}
 
-	if _, err := db.Exec(createQuery); err != nil {
+	if _, err := db.Exec(createQuery, table, schema); err != nil {
 		return nil, fmt.Errorf("failed to create mssql table: %w", err)
 	}
 
