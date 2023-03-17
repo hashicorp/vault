@@ -75,6 +75,22 @@ func main() {
 And that's basically it! You would just need to change `myPlugin` to your actual
 plugin.
 
+### Implementing the Version interface
+
+Plugins can optionally self-report their own semantic version. For plugins that
+do so, Vault will automatically populate the plugin's version in the catalog
+without requiring the user to provide it. If users do provide a version during
+registration, Vault will validate the version provided matches what the plugin
+reports. Plugins that report a non-empty version _must_ report a valid
+[Semantic Version](https://semver.org/) or registration will fail.
+
+To implement the version interface, plugins using the Vault SDK package should
+set the `RunningVersion` variable in the struct
+[`framework.Backend`](https://github.com/hashicorp/vault/blob/main/sdk/framework/backend.go).
+
+All other plugins should implement the `PluginVersion` service defined
+in [`version.proto`](https://github.com/hashicorp/vault/blob/main/sdk/logical/version.proto).
+
 ## Plugin Backwards Compatibility with Vault
 
 Let's take a closer look at a snippet from the above main package.
