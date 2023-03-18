@@ -765,12 +765,6 @@ fieldset[disabled] .radio,
   height: 2.5em;
 }
 
-.select:not(.is-multiple):not(.is-loading)::after {
-  border-color: #485fc7;
-  right: 1.125em;
-  z-index: 4;
-}
-
 .select select {
   cursor: pointer;
   display: block;

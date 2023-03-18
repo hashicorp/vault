@@ -112,12 +112,22 @@ label {
 .textarea {
   font-size: 1rem;
   height: 2.25em;
-  -webkit-box-pack: start;
   justify-content: flex-start;
   line-height: 1.5;
   padding-bottom: calc(0.375em - 1px);
   padding-top: calc(0.375em - 1px);
   position: relative;
+  vertical-align: top;
+}
+
+.file-cta,
+.file-name,
+.select select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  align-items: center;
   vertical-align: top;
 }
 
@@ -255,17 +265,13 @@ label {
 .select {
   height: 2.5rem;
 }
-
-.select::after {
-  content: svg-uri(
+// https://stackoverflow.com/questions/3532649/problem-with-select-and-after-with-css-in-webkit
+select.select {
+  background-image: svg-uri(
     '<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><path d="M12 5.83L15.17 9l1.41-1.41L12 3 7.41 7.59 8.83 9 12 5.83zm0 12.34L8.83 15l-1.41 1.41L12 21l4.59-4.59L15.17 15 12 18.17z" fill="currentColor"/></svg>'
   );
-  border: 0;
-  height: 24px;
-  margin: 0;
-  right: $spacing-xs;
-  transform: translateY(-50%);
-  width: 24px;
+  background-repeat: no-repeat;
+  background-position: right $spacing-xs center;
 }
 
 .field:not(:last-child) {

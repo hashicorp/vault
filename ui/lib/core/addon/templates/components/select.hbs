@@ -4,7 +4,8 @@
   </label>
 {{/if}}
 <div class="control {{if this.isInline 'select is-inline-block'}}">
-  <div class="select {{if this.isFullwidth 'is-fullwidth'}}">
+  {{! ARG TODO consider changing to select-wrapper for clarity }}
+  <div class="select{{if this.isFullwidth ' is-fullwidth'}}">
     <select
       class="select"
       id="select-{{this.elementId}}"
