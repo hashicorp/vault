@@ -156,7 +156,6 @@ func (cb *crlBuilder) reloadConfigIfRequired(sc *storageContext) error {
 		}
 
 		previousConfig := cb.config
-
 		// Set the default config if none was returned to us.
 		if config != nil {
 			cb.config = *config
@@ -354,7 +353,7 @@ func (cb *crlBuilder) _getPresentDeltaWALForClearing(sc *storageContext, path st
 	// Clearing of the delta WAL occurs after a new complete CRL has been built.
 	walSerials, err := sc.Storage.List(sc.Context, path)
 	if err != nil {
-		return nil, fmt.Errorf("error fetching list of delta WAL certificates to clear: %s", err)
+		return nil, fmt.Errorf("error fetching list of delta WAL certificates to clear: %w", err)
 	}
 
 	// We _should_ remove the special WAL entries here, but we don't really
@@ -380,7 +379,7 @@ func (cb *crlBuilder) _clearDeltaWAL(sc *storageContext, walSerials []string, pa
 		}
 
 		if err := sc.Storage.Delete(sc.Context, path+serial); err != nil {
-			return fmt.Errorf("error clearing delta WAL certificate: %s", err)
+			return fmt.Errorf("error clearing delta WAL certificate: %w", err)
 		}
 	}
 
@@ -658,7 +657,7 @@ func (cb *crlBuilder) processRevocationQueue(sc *storageContext) error {
 		(!sc.Backend.System().LocalMount() && sc.Backend.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary))
 
 	if err := cb.maybeGatherQueueForFirstProcess(sc, isNotPerfPrimary); err != nil {
-		return fmt.Errorf("failed to gather first queue: %v", err)
+		return fmt.Errorf("failed to gather first queue: %w", err)
 	}
 
 	revQueue := cb.revQueue.Iterate()
@@ -1085,7 +1084,7 @@ func writeSpecificRevocationDeltaWALs(sc *storageContext, hyphenSerial string, c
 	}
 
 	if err = sc.Storage.Put(sc.Context, walEntry); err != nil {
-		return fmt.Errorf("error saving delta CRL WAL entry")
+		return fmt.Errorf("error saving delta CRL WAL entry: %w", err)
 	}
 
 	// In order for periodic delta rebuild to be mildly efficient, we
@@ -1097,7 +1096,7 @@ func writeSpecificRevocationDeltaWALs(sc *storageContext, hyphenSerial string, c
 		return fmt.Errorf("unable to create last delta CRL WAL entry")
 	}
 	if err = sc.Storage.Put(sc.Context, lastWALEntry); err != nil {
-		return fmt.Errorf("error saving last delta CRL WAL entry")
+		return fmt.Errorf("error saving last delta CRL WAL entry: %w", err)
 	}
 
 	return nil
@@ -1844,12 +1843,12 @@ func getLocalRevokedCertEntries(sc *storageContext, issuerIDCertMap map[issuerID
 			// we should update the entry to make future CRL builds faster.
 			revokedEntry, err = logical.StorageEntryJSON(revokedPath+serial, revInfo)
 			if err != nil {
-				return nil, nil, fmt.Errorf("error creating revocation entry for existing cert: %v", serial)
+				return nil, nil, fmt.Errorf("error creating revocation entry for existing cert: %v: %w", serial, err)
 			}
 
 			err = sc.Storage.Put(sc.Context, revokedEntry)
 			if err != nil {
-				return nil, nil, fmt.Errorf("error updating revoked certificate at existing location: %v", serial)
+				return nil, nil, fmt.Errorf("error updating revoked certificate at existing location: %v: %w", serial, err)
 			}
 		}
 	}
