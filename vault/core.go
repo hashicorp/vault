@@ -592,6 +592,9 @@ type Core struct {
 
 	activityLogConfig ActivityLogCoreConfig
 
+	// censusAgent is the mechanism used for reporting Vault's billing data.
+	censusAgent *CensusAgent
+
 	// activeTime is set on active nodes indicating the time at which this node
 	// became active.
 	activeTime time.Time
@@ -721,6 +724,9 @@ type CoreConfig struct {
 	License         string
 	LicensePath     string
 	LicensingConfig *LicensingConfig
+
+	// Configured Census Agent
+	censusAgent *CensusAgent
 
 	DisablePerformanceStandby bool
 	DisableIndexing           bool
