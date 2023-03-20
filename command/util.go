@@ -138,7 +138,6 @@ func writeClipboard(ui cli.Ui, str string, ttl time.Duration) int {
 	}
 	ui.Info("Copied to clipboard!")
 	if ttl.Seconds() > 0 {
-		// TODO: do a self destruct TTL
 		ui.Info(fmt.Sprintf("Clearing clipboard in %s..", ttl.String()))
 		time.Sleep(ttl)
 		_ = clipboard.WriteAll("")
