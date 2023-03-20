@@ -83,7 +83,9 @@
   border: 0;
   color: $black;
   transition: background-color $speed;
-
+  &:hover {
+    text-decoration: none;
+  }
   &:hover:not(.disabled) {
     background-color: $ui-gray-100;
     border: 0;
