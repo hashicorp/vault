@@ -278,7 +278,8 @@ select.select {
   background-position: right $spacing-xs center;
 }
 
-.field:not(:last-child) {
+.field:not(:last-child),
+.content.field:not(:last-child) {
   margin-bottom: 1.5rem;
 }
 .field-body .field {
