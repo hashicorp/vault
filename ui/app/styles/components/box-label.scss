@@ -9,6 +9,8 @@ label.box-label {
 
 .box-label {
   @extend .box;
+  // @extend .is-centered;
+  // @extend .is-gapless;
   justify-content: center;
   margin-left: 0;
   margin-right: 0;

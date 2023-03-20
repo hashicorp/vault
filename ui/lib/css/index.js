@@ -12,8 +12,7 @@ var Funnel = require('broccoli-funnel');
 var mergeTrees = require('broccoli-merge-trees');
 
 module.exports = {
-  // ARG TODO: I don't see this named export being consumed anywhere?
-  name: 'bulma',
+  name: 'sassSvgUri',
 
   isDevelopingAddon() {
     return true;

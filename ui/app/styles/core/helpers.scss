@@ -209,11 +209,11 @@
   font-size: $size-8;
   padding: $size-8 0;
 }
-// @each $name, $shade in $shades {
-//   .has-background-#{$name} {
-//     background: $shade !important;
-//   }
-// }
+@each $name, $shade in $shades {
+  .has-background-#{$name} {
+    background: $shade !important;
+  }
+}
 .has-background-transparent {
   background: transparent !important;
 }
