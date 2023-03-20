@@ -279,7 +279,7 @@ fieldset[disabled] .select select:-ms-input-placeholder,
 .pagination-previous, .pagination-next {
   border-color: #dbdbdb;
   border-radius: 9999px;
-  color: #363636;
+  color: $grey-darker;
   font-size: 1em;
   justify-content: center;
   margin: 0.25rem;
@@ -297,7 +297,7 @@ fieldset[disabled] .select select:-ms-input-placeholder,
 .pagination-previous:hover,
 .pagination-next:hover {
   border-color: #b5b5b5;
-  color: #363636;
+  color: $grey-darker;
 }
 
 .pagination-previous:focus,
@@ -743,7 +743,7 @@ fieldset[disabled] .button.is-white {
 }
 
 .checkbox:hover, .radio:hover {
-  color: #363636;
+  color: $grey-darker;
 }
 
 .checkbox[disabled], .radio[disabled],
@@ -919,7 +919,7 @@ a.box:active {
   background-color: white;
   border-color: #dbdbdb;
   border-width: 1px;
-  color: #363636;
+  color: $grey-darker;
   cursor: pointer;
   justify-content: center;
   padding-bottom: calc(0.5em - 1px);
@@ -933,7 +933,7 @@ a.box:active {
 /* // doesn't seem to do anything */
 .button:hover{
   border-color: #b5b5b5;
-  color: #363636;
+  color: $grey-darker;
 }
 
 .button.is-ghost {
@@ -1200,7 +1200,7 @@ fieldset[disabled] .button {
 /* table one spot */
 .table {
   background-color: white;
-  color: #363636;
+  color: $grey-darker;
 }
 
 /* lots of tag (not tags) */
@@ -1231,7 +1231,7 @@ fieldset[disabled] .button {
 }
 
 .title {
-  color: #363636;
+  color: $grey-darker;
   font-size: 2rem;
   font-weight: 600;
   line-height: 1.125;
