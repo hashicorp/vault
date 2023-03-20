@@ -16,7 +16,7 @@ func pathCleanupKeys(b *backend) *framework.Path {
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixSSH,
 			OperationVerb:   "tidy",
-			OperationSuffix: "host-keys",
+			OperationSuffix: "dynamic-host-keys",
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.DeleteOperation: b.handleCleanupKeys,
