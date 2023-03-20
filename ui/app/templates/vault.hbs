@@ -7,9 +7,9 @@
     HashiCorp
   </span>
   <span>
-    <ExternalLink @href={{changelog-url-for this.activeCluster.leaderNode.version}} class="link has-text-grey">
+    <ExternalLink @href={{changelog-url-for this.auth.activeCluster.leaderNode.version}} class="link has-text-grey">
       Vault
-      {{this.activeCluster.leaderNode.version}}
+      {{this.auth.activeCluster.leaderNode.version}}
     </ExternalLink>
   </span>
   {{#if (is-version "OSS")}}

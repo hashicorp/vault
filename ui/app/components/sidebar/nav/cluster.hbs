@@ -69,7 +69,7 @@
     </Nav.Link>
   {{/if}}
   {{#if (and (has-permission "clients" routeParams="activity") (not this.cluster.dr.isSecondary))}}
-    <Nav.Link @route="vault.cluster.clients.dashboard" data-test-sidebar-nav-link="Client count">
+    <Nav.Link @route="vault.cluster.clients" data-test-sidebar-nav-link="Client count">
       Client count
     </Nav.Link>
   {{/if}}
