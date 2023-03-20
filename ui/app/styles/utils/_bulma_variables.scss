@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 @function findColorInvert($color) {
   @if (colorLuminance($color) > 0.55) {
     @return rgba(#000, 0.7);
