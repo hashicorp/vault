@@ -16,6 +16,14 @@
     }
   }
 
+  a {
+    align-items: center;
+    color: #485fc7;
+    display: flex;
+    justify-content: center;
+    padding: 0 0.75em;
+  }
+
   ul,
   ol {
     align-items: flex-start;
@@ -25,6 +33,9 @@
   }
 
   li {
+    align-items: center;
+    display: flex;
+
     & + li::before {
       display: none;
     }
