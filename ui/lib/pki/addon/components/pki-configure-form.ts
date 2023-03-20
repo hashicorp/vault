@@ -10,6 +10,7 @@ import Store from '@ember-data/store';
 import Router from '@ember/routing/router';
 import FlashMessageService from 'vault/services/flash-messages';
 import PkiActionModel from 'vault/models/pki/action';
+import { tracked } from '@glimmer/tracking';
 
 interface Args {
   config: PkiActionModel;
@@ -26,6 +27,8 @@ export default class PkiConfigureForm extends Component<Args> {
   @service declare readonly store: Store;
   @service declare readonly router: Router;
   @service declare readonly flashMessages: FlashMessageService;
+
+  @tracked title = 'Configure PKI';
 
   get configTypes() {
     return [

@@ -1,15 +1,5 @@
-<PageHeader as |p|>
-  <p.top>
-    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3" data-test-pki-configuration-page-title>
-      Configure PKI
-    </h1>
-  </p.levelLeft>
-</PageHeader>
-
 <PkiConfigureForm
+  @breadcrumbs={{this.breadcrumbs}}
   @config={{this.model.config}}
   @urls={{this.model.urls}}
   @onCancel={{transition-to "vault.cluster.secrets.backend.pki.overview"}}
