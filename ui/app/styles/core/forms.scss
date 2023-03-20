@@ -76,7 +76,6 @@ label {
 .is-help {
   font-size: $size-small;
   margin-top: 0.25rem;
-
   @each $name, $pair in $colors {
     $color: nth($pair, 1);
     &.is-#{$name} {
