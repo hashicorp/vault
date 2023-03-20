@@ -1080,7 +1080,7 @@ func writeSpecificRevocationDeltaWALs(sc *storageContext, hyphenSerial string, c
 	var walInfo deltaWALInfo
 	walEntry, err := logical.StorageEntryJSON(pathPrefix+hyphenSerial, walInfo)
 	if err != nil {
-		return fmt.Errorf("unable to create delta CRL WAL entry")
+		return fmt.Errorf("unable to create delta CRL WAL entry: %w", err)
 	}
 
 	if err = sc.Storage.Put(sc.Context, walEntry); err != nil {
@@ -1093,7 +1093,7 @@ func writeSpecificRevocationDeltaWALs(sc *storageContext, hyphenSerial string, c
 	lastRevSerial := lastWALInfo{Serial: colonSerial}
 	lastWALEntry, err := logical.StorageEntryJSON(pathPrefix+deltaWALLastRevokedSerialName, lastRevSerial)
 	if err != nil {
-		return fmt.Errorf("unable to create last delta CRL WAL entry")
+		return fmt.Errorf("unable to create last delta CRL WAL entry: %w", err)
 	}
 	if err = sc.Storage.Put(sc.Context, lastWALEntry); err != nil {
 		return fmt.Errorf("error saving last delta CRL WAL entry: %w", err)
