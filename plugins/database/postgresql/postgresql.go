@@ -207,7 +207,7 @@ func (p *PostgreSQL) changeUserPassword(ctx context.Context, username string, ch
 			}
 
 			if p.PasswordEncryption == passwordEncryptionSCRAMSHA256 {
-				hashedPassword, err := scram.Encrypt(password)
+				hashedPassword, err := scram.Hash(password)
 				if err != nil {
 					return fmt.Errorf("unable to scram-sha256 password: %w", err)
 				}
@@ -306,7 +306,7 @@ func (p *PostgreSQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (
 	}
 
 	if p.PasswordEncryption == passwordEncryptionSCRAMSHA256 {
-		hashedPassword, err := scram.Encrypt(req.Password)
+		hashedPassword, err := scram.Hash(req.Password)
 		if err != nil {
 			return dbplugin.NewUserResponse{}, fmt.Errorf("unable to scram-sha256 password: %w", err)
 		}

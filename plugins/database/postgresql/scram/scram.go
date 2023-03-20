@@ -61,7 +61,7 @@ func getSHA256Sum(key []byte) []byte {
 	return h.Sum(nil)
 }
 
-func encryptPassword(rawPassword, salt []byte, iter, keyLen int) string {
+func hashPassword(rawPassword, salt []byte, iter, keyLen int) string {
 	digestKey := pbkdf2.Key(rawPassword, salt, iter, keyLen, sha256.New)
 	clientKey := getHMACSum(digestKey, clientRawKey)
 	storedKey := getSHA256Sum(clientKey)
@@ -75,12 +75,12 @@ func encryptPassword(rawPassword, salt []byte, iter, keyLen int) string {
 	)
 }
 
-func Encrypt(password string) (string, error) {
+func Hash(password string) (string, error) {
 	salt, err := genSalt(saltSize)
 	if err != nil {
 		return "", err
 	}
 
-	hashedPassword := encryptPassword([]byte(password), salt, iterationCnt, digestLen)
+	hashedPassword := hashPassword([]byte(password), salt, iterationCnt, digestLen)
 	return hashedPassword, nil
 }
