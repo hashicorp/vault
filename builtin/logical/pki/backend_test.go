@@ -33,6 +33,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
+
 	"github.com/hashicorp/vault/helper/testhelpers"
 
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
@@ -6413,20 +6415,18 @@ func TestUserIDsInLeafCerts(t *testing.T) {
 // TestStandby_Operations test proper forwarding for PKI requests from a standby node to the
 // active node within a cluster.
 func TestStandby_Operations(t *testing.T) {
-	conf := &vault.CoreConfig{
+	conf, opts := teststorage.ClusterSetup(&vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"pki": Factory,
 		},
-	}
-	opts := vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
-	cluster := vault.NewTestCluster(t, conf, &opts)
+	}, nil, teststorage.InmemBackendSetup)
+	cluster := vault.NewTestCluster(t, conf, opts)
 	cluster.Start()
 	defer cluster.Cleanup()
 
+	testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
 	standbyCores := testhelpers.DeriveStandbyCores(t, cluster)
 	require.Greater(t, len(standbyCores), 0, "Need at least one standby core.")
-
-	testhelpers.WaitForStandbyNode(t, standbyCores[0])
 	client := standbyCores[0].Client
 
 	mountPKIEndpoint(t, client, "pki")
