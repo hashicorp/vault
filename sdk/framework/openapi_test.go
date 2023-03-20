@@ -268,11 +268,18 @@ func TestOpenAPI_SpecialPaths(t *testing.T) {
 			unauthenticatedPaths:    []string{"foo"},
 			unauthenticatedExpected: false,
 		},
-		"ends-with-slash": {
+		"path-ends-with-slash": {
 			pattern:                 "foo/",
 			rootPaths:               []string{"foo/*"},
 			rootExpected:            true,
-			unauthenticatedPaths:    []string{"a", "b", "foo/"},
+			unauthenticatedPaths:    []string{"a", "b", "foo*"},
+			unauthenticatedExpected: true,
+		},
+		"asterisk-match-no-slash": {
+			pattern:                 "foo",
+			rootPaths:               []string{"foo*"},
+			rootExpected:            true,
+			unauthenticatedPaths:    []string{"a", "fo*"},
 			unauthenticatedExpected: true,
 		},
 		"multiple-root-paths": {
@@ -280,6 +287,34 @@ func TestOpenAPI_SpecialPaths(t *testing.T) {
 			rootPaths:               []string{"a", "b", "foo/*"},
 			rootExpected:            true,
 			unauthenticatedPaths:    []string{"foo/baz/*"},
+			unauthenticatedExpected: false,
+		},
+		"plus-match-unauthenticated": {
+			pattern:                 "foo/bar/baz",
+			rootPaths:               []string{"foo/bar"},
+			rootExpected:            false,
+			unauthenticatedPaths:    []string{"foo/+/baz"},
+			unauthenticatedExpected: true,
+		},
+		"plus-match-root": {
+			pattern:                 "foo/bar/baz",
+			rootPaths:               []string{"foo/+/baz"},
+			rootExpected:            true,
+			unauthenticatedPaths:    []string{"foo/bar"},
+			unauthenticatedExpected: false,
+		},
+		"plus-and-asterisk": {
+			pattern:                 "foo/bar/baz/something",
+			rootPaths:               []string{"foo/+/baz/*"},
+			rootExpected:            true,
+			unauthenticatedPaths:    []string{"foo/+/baz*"},
+			unauthenticatedExpected: true,
+		},
+		"double-plus-good": {
+			pattern:                 "foo/bar/baz",
+			rootPaths:               []string{"foo/+/+"},
+			rootExpected:            true,
+			unauthenticatedPaths:    []string{"foo/bar"},
 			unauthenticatedExpected: false,
 		},
 	}
@@ -421,7 +456,7 @@ func TestOpenAPI_Paths(t *testing.T) {
 		}
 
 		sp := &logical.Paths{
-			Root: []string{"foo/*"},
+			Root: []string{"foo*"},
 		}
 		testPath(t, p, sp, expected("operations"))
 	})
@@ -480,7 +515,7 @@ func TestOpenAPI_Paths(t *testing.T) {
 		}
 
 		sp := &logical.Paths{
-			Root: []string{"foo/*"},
+			Root: []string{"foo*"},
 		}
 		testPath(t, p, sp, expected("operations_list"))
 	})

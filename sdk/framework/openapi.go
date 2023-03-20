@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/sdk/helper/pathmanager"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
@@ -219,12 +218,12 @@ func documentPaths(backend *Backend, requestResponsePrefix string, doc *OASDocum
 
 // documentPath parses a framework.Path into one or more OpenAPI paths.
 func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix string, backendType logical.BackendType, doc *OASDocument) error {
-	sudoPaths := pathmanager.New()
-	unauthPaths := pathmanager.New()
+	var sudoPaths []string
+	var unauthPaths []string
 
 	if specialPaths != nil {
-		sudoPaths.AddPaths(specialPaths.Root)
-		unauthPaths.AddPaths(specialPaths.Unauthenticated)
+		sudoPaths = specialPaths.Root
+		unauthPaths = specialPaths.Unauthenticated
 	}
 
 	// Convert optional parameters into distinct patterns to be processed independently.
@@ -251,8 +250,8 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 			Description: cleanString(p.HelpSynopsis),
 		}
 
-		pi.Sudo = sudoPaths.HasExactPath(path)
-		pi.Unauthenticated = unauthPaths.HasExactPath(path)
+		pi.Sudo = specialPathMatch(path, sudoPaths)
+		pi.Unauthenticated = specialPathMatch(path, unauthPaths)
 		pi.DisplayAttrs = p.DisplayAttrs
 
 		// If the newer style Operations map isn't defined, create one from the legacy fields.
@@ -546,6 +545,60 @@ func constructRequestResponseName(path, prefix, suffix string) string {
 	b.WriteString(suffix)
 
 	return b.String()
+}
+
+// specialPathMatch checks whether the given path matches one of the special
+// paths, taking into account * and + wildcards (e.g. foo/+/bar/*)
+func specialPathMatch(path string, specialPaths []string) bool {
+	// pathMatchesByParts determines if the path matches the special path's
+	// pattern, accounting for the '+' and '*' wildcards
+	pathMatchesByParts := func(pathParts []string, specialPathParts []string) bool {
+		if len(pathParts) < len(specialPathParts) {
+			return false
+		}
+		for i := 0; i < len(specialPathParts); i++ {
+			var (
+				part    = pathParts[i]
+				pattern = specialPathParts[i]
+			)
+			if pattern == "+" {
+				continue
+			}
+			if pattern == "*" {
+				return true
+			}
+			if strings.HasSuffix(pattern, "*") && strings.HasPrefix(part, pattern[0:len(pattern)-1]) {
+				return true
+			}
+			if pattern != part {
+				return false
+			}
+		}
+		return len(pathParts) == len(specialPathParts)
+	}
+
+	pathParts := strings.Split(path, "/")
+
+	for _, sp := range specialPaths {
+		// exact match
+		if sp == path {
+			return true
+		}
+
+		// match *
+		if strings.HasSuffix(sp, "*") && strings.HasPrefix(path, sp[0:len(sp)-1]) {
+			return true
+		}
+
+		// match +
+		if strings.Contains(sp, "+") {
+			if pathMatchesByParts(pathParts, strings.Split(sp, "/")) {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 // expandPattern expands a regex pattern by generating permutations of any optional parameters
