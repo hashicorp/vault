@@ -1,0 +1,23 @@
+name: "Check for deprecated functions "
+on:
+  push:
+  
+jobs:
+  lint-deprecated:
+    name: Deprecated check
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout code
+        uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f #v3.4.0
+      - name: set up Go
+        uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 #v4
+        with:
+          go-version-file: ./.go-version
+          cache: true
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@08e2f20817b15149a52b5b3ebe7de50aff2ba8c5 # v3.4.0
+        with:
+          version: latest
+          args: >-
+            --config=./.github/configs/.golangci-deprecated-check.yml 
+            --out-${NO_FUTURE}format colored-line-number
