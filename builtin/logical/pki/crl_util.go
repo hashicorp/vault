@@ -973,13 +973,13 @@ func revokeCert(sc *storageContext, config *crlConfig, cert *x509.Certificate) (
 
 	revEntry, err := logical.StorageEntryJSON(revokedPath+hyphenSerial, revInfo)
 	if err != nil {
-		return nil, fmt.Errorf("error creating revocation entry")
+		return nil, fmt.Errorf("error creating revocation entry: %w", err)
 	}
 
 	certsCounted := sc.Backend.certsCounted.Load()
 	err = sc.Storage.Put(sc.Context, revEntry)
 	if err != nil {
-		return nil, fmt.Errorf("error saving revoked certificate to new location")
+		return nil, fmt.Errorf("error saving revoked certificate to new location: %w", err)
 	}
 	sc.Backend.ifCountEnabledIncrementTotalRevokedCertificatesCount(certsCounted, revEntry.Key)
 
