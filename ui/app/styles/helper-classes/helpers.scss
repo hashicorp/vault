@@ -198,23 +198,7 @@
   font-size: $size-8;
   padding: $size-8 0;
 }
-@each $name, $shade in $shades {
-  .has-background-#{$name} {
-    background: $shade !important;
-  }
-}
-.has-background-transparent {
-  background: transparent !important;
-}
-.has-background-gray-200 {
-  background-color: $ui-gray-200;
-}
-// @each $name, $pair in $colors {
-//   $color: nth($pair, 1);
-//   .has-background-#{$name} {
-//     background: $color !important;
-//   }
-// }
+
 .is-optional {
   color: $grey;
   font-size: $size-8;
@@ -295,17 +279,6 @@
 .has-right-margin-l {
   margin-right: $spacing-l;
 }
-.has-border-top-light {
-  border-radius: 0;
-  border-top: 1px solid $grey-light;
-}
-.has-border-bottom-light {
-  border-radius: 0;
-  border-bottom: 1px solid $grey-light;
-}
-.has-border-danger {
-  border: 1px solid $danger;
-}
 
 ul.bullet {
   list-style: disc;
@@ -318,15 +291,7 @@ ul.bullet {
 .is-v-centered {
   vertical-align: middle;
 }
-.has-text-grey-400 {
-  color: $ui-gray-400;
-}
-.has-text-red {
-  color: $red;
-}
-.has-text-green {
-  color: $green;
-}
+
 .has-text-align-center {
   text-align: center;
 }

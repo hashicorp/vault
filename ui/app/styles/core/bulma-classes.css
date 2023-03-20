@@ -192,34 +192,6 @@ fieldset[disabled] .select select:-ms-input-placeholder,
   text-transform: uppercase !important;
 }
 
-.has-text-white {
-  color: white !important;
-}
-
-.has-text-black {
-  color: #0a0a0a !important;
-}
-
-.has-text-success {
-  color: #2eb039 !important;
-}
-
-.has-text-grey-dark {
-  color: #525761 !important;
-}
-
-.has-text-grey {
-  color: #6f7682 !important;
-}
-
-.has-text-grey-light {
-  color: #bac1cc !important;
-}
-
-.has-text-danger {
-  color: #c73445 !important
-}
-
 .has-text-weight-semibold {
   font-weight: 600 !important;
 }
@@ -617,7 +589,6 @@ fieldset[disabled] .select select:-ms-input-placeholder,
 }
 
 
-
 /* Helper spacing */
 .is-paddingless {
   padding: 0 !important;
@@ -902,7 +873,6 @@ fieldset[disabled] .select select:hover {
 .box {
   background-color: white;
   /* border-radius: 6px; ARG TODO removed because of hover, but double check non-hover */
-  box-shadow: 0 0.5em 1em -0.125em rgba(10, 10, 10, 0.1), 0 0px 0 1px rgba(10, 10, 10, 0.02);
   color: #4a4a4a;
   display: block;
   padding: 1.25rem;

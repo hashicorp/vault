@@ -1,24 +1,21 @@
-// Start with Structure & Bulma variables as a foundation
-@import './utils/colors';
-@import './utils/spacing';
-// @import 'bulma/sass/utilities/initial-variables';
-
-// Consolidate bulma variables and mixins
-@import './utils/bulma_variables';
-
 // Utils
+@import './utils/color_variables'; // ARG TOD
+@import './utils/spacing';
+@import './utils/bulma_variables'; // Consolidates bulma variables and mixins
 @import './utils/mixins';
 @import './utils/animations';
 
+// Helpers
+@import './helper-classes/helpers';
+@import './helper-classes/colors';
+
 // Bring in the rest of Bulma from lib/css
-// @import 'bulma/bulma';
-// @import 'bulma/switch';
 @import './core/element-styling';
 @import './core/bulma-classes';
 @import './core/bulma-switch';
 @import './core/bulma-checkboxes';
 
-// Override Bulma details where appropriate
+// Core component and element styling
 @import './core/alert-banner';
 @import './core/generic';
 @import './core/box';
@@ -28,7 +25,6 @@
 @import './core/footer';
 @import './core/forms';
 @import './core/charts';
-@import './core/helpers';
 @import './core/hero';
 @import './core/level';
 @import './core/menu';

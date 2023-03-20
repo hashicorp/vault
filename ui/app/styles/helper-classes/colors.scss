@@ -1,0 +1,72 @@
+// This file only contains helpers that define color. XXARG TO EXPAND
+
+.has-background-transparent {
+  background: transparent !important;
+}
+.has-background-gray-200 {
+  background-color: $ui-gray-200;
+}
+
+@each $name, $shade in $shades {
+  .has-background-#{$name} {
+    background: $shade !important;
+  }
+}
+// @each $name, $pair in $colors {
+//   $color: nth($pair, 1);
+//   .has-background-#{$name} {
+//     background: $color !important;
+//   }
+// }
+
+.has-border-top-light {
+  border-radius: 0;
+  border-top: 1px solid $grey-light;
+}
+.has-border-bottom-light {
+  border-radius: 0;
+  border-bottom: 1px solid $grey-light;
+}
+.has-border-danger {
+  border: 1px solid $danger;
+}
+
+.has-text-grey-400 {
+  color: $ui-gray-400;
+}
+
+.has-text-green {
+  color: $green;
+}
+
+.has-text-white {
+  color: white !important;
+}
+
+.has-text-black {
+  color: #0a0a0a !important;
+}
+
+.has-text-success {
+  color: #2eb039 !important;
+}
+
+.has-text-grey-dark {
+  color: #525761 !important;
+}
+
+.has-text-grey {
+  color: #6f7682 !important;
+}
+
+.has-text-grey-light {
+  color: #bac1cc !important;
+}
+
+// Duplicate
+.has-text-red {
+  color: $red;
+}
+.has-text-danger {
+  color: #c73445 !important;
+}
