@@ -1,3 +1,4 @@
+/* ARG TODO need to replace with variables ex:  hsl(0, 0%, 21%) !default with $grey-darker but can't because css file. Will */
 /* Bulma utilities */
 .button, .input, .textarea, .select select, .file-cta,
 .file-name, .pagination-previous,
@@ -279,7 +280,7 @@ fieldset[disabled] .select select:-ms-input-placeholder,
 .pagination-previous, .pagination-next {
   border-color: #dbdbdb;
   border-radius: 9999px;
-  color: $grey-darker;
+  color:  hsl(0, 0%, 21%);
   font-size: 1em;
   justify-content: center;
   margin: 0.25rem;
@@ -297,7 +298,7 @@ fieldset[disabled] .select select:-ms-input-placeholder,
 .pagination-previous:hover,
 .pagination-next:hover {
   border-color: #b5b5b5;
-  color: $grey-darker;
+  color:  hsl(0, 0%, 21%);
 }
 
 .pagination-previous:focus,
@@ -619,9 +620,6 @@ fieldset[disabled] .select select:-ms-input-placeholder,
 
 
 /* Helper spacing */
-.is-paddingless {
-  padding: 0 !important;
-}
 
 /* OTHER */
 /* we only use is white in two old places in the app... replace */
@@ -743,7 +741,7 @@ fieldset[disabled] .button.is-white {
 }
 
 .checkbox:hover, .radio:hover {
-  color: $grey-darker;
+  color:  hsl(0, 0%, 21%);
 }
 
 .checkbox[disabled], .radio[disabled],
@@ -919,7 +917,7 @@ a.box:active {
   background-color: white;
   border-color: #dbdbdb;
   border-width: 1px;
-  color: $grey-darker;
+  color:  hsl(0, 0%, 21%);
   cursor: pointer;
   justify-content: center;
   padding-bottom: calc(0.5em - 1px);
@@ -933,7 +931,7 @@ a.box:active {
 /* // doesn't seem to do anything */
 .button:hover{
   border-color: #b5b5b5;
-  color: $grey-darker;
+  color:  hsl(0, 0%, 21%);
 }
 
 .button.is-ghost {
@@ -1200,7 +1198,7 @@ fieldset[disabled] .button {
 /* table one spot */
 .table {
   background-color: white;
-  color: $grey-darker;
+  color:  hsl(0, 0%, 21%);
 }
 
 /* lots of tag (not tags) */
@@ -1231,7 +1229,7 @@ fieldset[disabled] .button {
 }
 
 .title {
-  color: $grey-darker;
+  color:  hsl(0, 0%, 21%);
   font-size: 2rem;
   font-weight: 600;
   line-height: 1.125;
