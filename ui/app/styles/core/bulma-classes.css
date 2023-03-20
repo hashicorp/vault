@@ -336,10 +336,6 @@ fieldset[disabled] .select select:-ms-input-placeholder,
   text-overflow: ellipsis;
   white-space: nowrap;
 }  
-/* Helper flexbox */
-.is-flex {
-  display: flex !important;
-}
 /* Columns */
 /* used in three places */
 .columns.is-variable.is-1 {
