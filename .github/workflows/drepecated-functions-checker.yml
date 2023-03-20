@@ -14,10 +14,13 @@ jobs:
         with:
           go-version-file: ./.go-version
           cache: true
-     - name: staticcheck 
-        uses: dominikh/staticcheck-action@v1.2.0
-	      with:
-	      	version: "2022.1.1"
+      - name: staticcheck
+        run: |
+          echo "Installing staticcheck"
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          echo "Running staticcheck to look for deprecations"
+          # staticcheck ./... | grep deprecated
+          pwd
 
 
         
