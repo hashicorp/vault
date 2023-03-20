@@ -245,6 +245,9 @@ func (s *Secret) TokenIsRenewable() (bool, error) {
 	if err != nil {
 		return false, errwrap.Wrapf("could not convert renewable value to a boolean: {{err}}", err)
 	}
+	if err != nil {
+		return false, errwrap.Wrapf("test: {{err}}", err)
+	}
 
 	return renewable, nil
 }
