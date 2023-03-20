@@ -16,6 +16,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/consts"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -589,6 +591,13 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	// Assumption: this check is cheap. Call this twice, in the cert-import
+	// case, to allow cert verification to get rejected on the standby node,
+	// but we still need it to protect the serial number case.
+	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
+		return nil, logical.ErrReadOnly
 	}
 
 	b.revokeStorageLock.Lock()
