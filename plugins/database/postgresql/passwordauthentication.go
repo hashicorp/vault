@@ -18,7 +18,7 @@ var passwordAuthentications = map[passwordAuthentication]struct{}{
 
 func parsePasswordAuthentication(s string) (passwordAuthentication, error) {
 	if _, ok := passwordAuthentications[passwordAuthentication(s)]; !ok {
-		return "", fmt.Errorf("'%s' is not a valid password encryption type", s)
+		return "", fmt.Errorf("'%s' is not a valid password authentication type", s)
 	}
 
 	return passwordAuthentication(s), nil
