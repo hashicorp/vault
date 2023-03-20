@@ -20,7 +20,7 @@
       {{/if}}
     </Sidebar.Header>
     <Sidebar.Content>
-      {{! might not need this block }}
+      {{! this block is where the HcAppFrame::Nav components render into }}
     </Sidebar.Content>
     <Sidebar.Footer>
       {{#if (has-feature "Namespaces")}}
@@ -36,7 +36,4 @@
     </div>
     {{yield}}
   </Frame.Main>
-  <Frame.Footer>
-    {{! this block might not be needed }}
-  </Frame.Footer>
 </HcAppFrame::Frame>
