@@ -19,8 +19,8 @@ func pathListCerts(b *backend) *framework.Path {
 		Pattern: "certs/?",
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixCertificates,
-			OperationSuffix: "certs",
+			OperationPrefix: operationPrefixCert,
+			OperationSuffix: "certificates",
 			Navigation:      true,
 			ItemType:        "Certificate",
 		},
@@ -39,8 +39,8 @@ func pathCerts(b *backend) *framework.Path {
 		Pattern: "certs/" + framework.GenericNameRegex("name"),
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixCertificates,
-			OperationSuffix: "cert",
+			OperationPrefix: operationPrefixCert,
+			OperationSuffix: "certificate",
 			Action:          "Create",
 			ItemType:        "Certificate",
 		},

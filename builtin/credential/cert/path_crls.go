@@ -20,7 +20,7 @@ func pathListCRLs(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "crls/?$",
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixCertificates,
+			OperationPrefix: operationPrefixCert,
 			OperationSuffix: "crls",
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -47,7 +47,7 @@ func pathCRLs(b *backend) *framework.Path {
 		Pattern: "crls/" + framework.GenericNameRegex("name"),
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixCertificates,
+			OperationPrefix: operationPrefixCert,
 			OperationSuffix: "crl",
 		},
 

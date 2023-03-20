@@ -15,7 +15,7 @@ func pathConfig(b *backend) *framework.Path {
 		Pattern: "config",
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixCertificates,
+			OperationPrefix: operationPrefixCert,
 		},
 
 		Fields: map[string]*framework.FieldSchema{
