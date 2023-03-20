@@ -3,7 +3,7 @@ on:
   push:
 
 jobs:
-  lint-deprecated:
+  staticcheck-deprecated:
     name: Deprecated check using staticcheck
     runs-on: ubuntu-latest
     steps:
