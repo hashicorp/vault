@@ -4,20 +4,36 @@
  */
 
 import { action } from '@ember/object';
+import RouterService from '@ember/routing/router-service';
 import { service } from '@ember/service';
 import { waitFor } from '@ember/test-waiters';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
+import PkiActionModel from 'vault/models/pki/action';
+import PkiUrlsModel from 'vault/models/pki/urls';
+import FlashMessageService from 'vault/services/flash-messages';
 import errorMessage from 'vault/utils/error-message';
+
+interface AdapterOptions {
+  actionType: string;
+  useIssuer: boolean | undefined;
+}
+interface Args {
+  model: PkiActionModel;
+  urls: PkiUrlsModel;
+  onCancel: CallableFunction;
+  onSuccess: CallableFunction | undefined;
+  adapterOptions: AdapterOptions;
+}
 
 /**
  * @module PkiGenerateRoot
  * PkiGenerateRoot shows only the fields valid for the generate root endpoint.
- * This form handles the model save and rollback actions, and will call the passed
- * onSave and onCancel args for transition (passed from parent).
- * NOTE: this component is not TS because decorator-added parameters (eg validator and
- * formFields) aren't recognized on the model.
+ * This component renders the form, handles the model save and rollback actions,
+ * and shows the resulting data on success. onCancel is required for the cancel
+ * transition, and if onSuccess is provided it will call that after save for any
+ * side effects in the parent.
  *
  * @example
  * ```js
@@ -26,12 +42,13 @@ import errorMessage from 'vault/utils/error-message';
  *
  * @param {Object} model - pki/action model.
  * @callback onCancel - Callback triggered when cancel button is clicked, after model is unloaded
+ * @callback onSuccess - Optional - Callback triggered after model is saved. Results are shown on the same component
  * @param {Object} adapterOptions - object passed as adapterOptions on the model.save method
  */
-export default class PkiGenerateRootComponent extends Component {
-  @service flashMessages;
-  @service router;
-  @tracked showGroup = null;
+export default class PkiGenerateRootComponent extends Component<Args> {
+  @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly router: RouterService;
+
   @tracked modelValidations = null;
   @tracked errorBanner = '';
   @tracked invalidFormAlert = '';
@@ -46,6 +63,19 @@ export default class PkiGenerateRootComponent extends Component {
       'format',
       'permittedDnsDomains',
       'maxPathLength',
+    ];
+  }
+
+  get returnedFields() {
+    return [
+      'certificate',
+      'expiration',
+      'issuerId',
+      'issuerName',
+      'issuingCa',
+      'keyId',
+      'keyName',
+      'serialNumber',
     ];
   }
 
@@ -68,19 +98,17 @@ export default class PkiGenerateRootComponent extends Component {
 
   @task
   @waitFor
-  *save(event) {
+  *save(event: Event) {
     event.preventDefault();
     const continueSave = this.checkFormValidity();
     if (!continueSave) return;
     try {
       yield this.setUrls();
-      const result = yield this.args.model.save({ adapterOptions: this.args.adapterOptions });
+      yield this.args.model.save({ adapterOptions: this.args.adapterOptions });
       this.flashMessages.success('Successfully generated root.');
-      this.router.transitionTo(
-        'vault.cluster.secrets.backend.pki.issuers.issuer.details',
-        result.backend,
-        result.issuerId
-      );
+      if (this.args.onSuccess) {
+        this.args.onSuccess();
+      }
     } catch (e) {
       this.errorBanner = errorMessage(e);
       this.invalidFormAlert = 'There was a problem generating the root.';
