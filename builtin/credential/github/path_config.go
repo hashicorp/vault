@@ -65,7 +65,7 @@ API-compatible authentication server.`,
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathConfigRead,
 				DisplayAttrs: &framework.DisplayAttributes{
-					OperationSuffix: "config",
+					OperationSuffix: "configuration",
 				},
 			},
 		},
