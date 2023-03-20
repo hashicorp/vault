@@ -6423,9 +6423,10 @@ func TestStandby_Operations(t *testing.T) {
 	cluster.Start()
 	defer cluster.Cleanup()
 
-	testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
 	standbyCores := testhelpers.DeriveStandbyCores(t, cluster)
 	require.Greater(t, len(standbyCores), 0, "Need at least one standby core.")
+
+	testhelpers.WaitForStandbyNode(t, standbyCores[0])
 	client := standbyCores[0].Client
 
 	mountPKIEndpoint(t, client, "pki")
