@@ -21,6 +21,8 @@ jobs:
           echo "Running staticcheck to look for deprecations"
           # staticcheck ./... | grep deprecated
           pwd
+          ls -al
+          
 
 
         
