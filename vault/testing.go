@@ -209,6 +209,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	conf.EnableResponseHeaderHostname = opts.EnableResponseHeaderHostname
 	conf.DisableSSCTokens = opts.DisableSSCTokens
 	conf.PluginDirectory = opts.PluginDirectory
+	conf.censusAgent = opts.censusAgent
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
