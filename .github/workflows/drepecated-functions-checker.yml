@@ -18,8 +18,7 @@ jobs:
         run: |
           echo "Installing staticcheck"
           go install honnef.co/go/tools/cmd/staticcheck@latest
-          output=$(staticcheck ../../... | grep deprecated)
-          echo $output
+          staticcheck ../../... | grep deprecated
 
 
         
