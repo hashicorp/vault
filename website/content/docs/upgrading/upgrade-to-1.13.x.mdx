@@ -81,3 +81,15 @@ are unaffected.
 @include 'tokenization-rotation-persistence.mdx'
 
 @include 'ocsp-redirect.mdx'
+
+### PKI Revocation Request Forwarding
+
+If a revocation request comes in to a standby or performance secondary node,
+for a certificate that is present locally, the request will not be correctly
+forwarded to the active node of this cluster.
+
+As a workaround, submit revocation requests to the active node only.
+
+#### Impacted Versions
+
+Affects Vault 1.13.0 only.
