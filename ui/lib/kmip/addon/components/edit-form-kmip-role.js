@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import EditForm from 'core/components/edit-form';
 import { computed } from '@ember/object';
 import layout from '../templates/components/edit-form-kmip-role';

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 export const SELECTORS = {
   // key index
   importKey: '[data-test-pki-key-import]',

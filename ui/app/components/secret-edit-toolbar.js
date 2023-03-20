@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+/**
  * @module SecretEditToolbar
  * SecretEditToolbar component is the toolbar component displaying the JSON toggle and the actions like delete in the show mode.
  *

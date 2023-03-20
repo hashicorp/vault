@@ -1,10 +1,14 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 @import './reset';
 @import 'ember-basic-dropdown';
 @import 'ember-power-select';
 @import '@hashicorp/design-system-components';
 @import '@hashicorp/hc-nav';
 @import './core';
-@import './engines';
 
 @mixin font-face($name) {
   @font-face {

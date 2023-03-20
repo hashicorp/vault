@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
@@ -28,6 +33,10 @@ export default class PkiActionModel extends Model {
 
   /* actionType import */
   @attr('string') pemBundle;
+  // readonly attrs returned after importing
+  @attr importedIssuers;
+  @attr importedKeys;
+  @attr mapping;
 
   /* actionType generate-root */
   @attr('string', {

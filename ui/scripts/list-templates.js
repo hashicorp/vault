@@ -1,4 +1,9 @@
 #!/usr/bin/env node
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 /* eslint-disable */
 
 // We need an array in this format for all of the files
@@ -7,7 +12,7 @@
 var walkSync = require('walk-sync');
 var templates = walkSync('app', { globs: ['**/*.hbs'] });
 
-templates = templates.map(path => {
+templates = templates.map((path) => {
   // we want the relative path w/o the extension:
   // 'app/templates/path/to/file/filename'
   return `app/${path.replace(/\.hbs$/, '')}`;

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { parseCertificate } from 'vault/utils/parse-pki-cert';
 import ApplicationSerializer from '../../application';
 

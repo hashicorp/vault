@@ -257,6 +257,7 @@
     "highlight.js": "^10.4.1",
     "js-yaml": "^3.13.1",
     "lodash": "^4.17.13",
-    "node-notifier": "^8.0.1"
+    "node-notifier": "^8.0.1",
+    "uuid": "^9.0.0"
   }
 }

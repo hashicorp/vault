@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { waitFor } from '@ember/test-waiters';
@@ -39,7 +44,6 @@ export default class PkiGenerateRootComponent extends Component {
       'customTtl',
       'notBeforeDuration',
       'format',
-      'privateKeyFormat',
       'permittedDnsDomains',
       'maxPathLength',
     ];

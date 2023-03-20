@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+/**
  * @module SplashPage
  * SplashPage component is used as a landing page with a box horizontally and center aligned on the page. It's used as the login landing page.
  *

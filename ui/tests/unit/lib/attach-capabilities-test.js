@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Model from '@ember-data/model';
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
