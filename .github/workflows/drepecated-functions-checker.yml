@@ -1,7 +1,7 @@
 name: "Check for deprecated functions "
 on:
   push:
-  
+
 jobs:
   lint-deprecated:
     name: Deprecated check
@@ -21,3 +21,4 @@ jobs:
           args: >-
             --config=./.github/configs/.golangci-deprecated-check.yml 
             --out-${NO_FUTURE}format colored-line-number
+            --timeout=3m
