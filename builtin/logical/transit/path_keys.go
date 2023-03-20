@@ -365,7 +365,7 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 						}
 						derived, err := p.GetKey(context, ver, 32)
 						if err != nil {
-							return nil, fmt.Errorf("failed to derive key to return public component")
+							return nil, fmt.Errorf("failed to derive key to return public component: %w", err)
 						}
 						pubKey := ed25519.PrivateKey(derived).Public().(ed25519.PublicKey)
 						key.PublicKey = base64.StdEncoding.EncodeToString(pubKey)

@@ -1,6 +1,3 @@
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 ui = true
 listener "tcp" {
   address = "[::]:8200"

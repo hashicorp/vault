@@ -1,42 +1,39 @@
 <div data-test-component="empty-state" class="empty-state" ...attributes>
   <div class="empty-state-content">
-    {{#if this.icon}}
+    {{#if @icon}}
       <div class="empty-state-icon">
-        <Icon @name={{this.icon}} @size="24" />
+        <Icon @name={{@icon}} @size="24" />
         <h3 class="empty-state-title" data-test-empty-state-title>
-          {{this.title}}
+          {{@title}}
         </h3>
       </div>
-      {{#if this.subTitle}}
+      {{#if @subTitle}}
         <p class="empty-state-subTitle" data-test-empty-state-subText>
-          {{this.subTitle}}
+          {{@subTitle}}
         </p>
       {{/if}}
     {{else}}
-      <h3 class={{concat "empty-state-title" (if this.subTitle " has-bottom-margin-m")}} data-test-empty-state-title>
-        {{this.title}}
+      <h3 class={{concat "empty-state-title" (if @subTitle " has-bottom-margin-m")}} data-test-empty-state-title>
+        {{@title}}
       </h3>
-      {{#if this.subTitle}}
+      {{#if @subTitle}}
         <p class="empty-state-subTitle" data-test-empty-state-subText>
-          {{this.subTitle}}
+          {{@subTitle}}
         </p>
       {{/if}}
     {{/if}}
-    {{#if this.message}}
-      <p
-        class={{concat "empty-state-message" (if this.bottomBorder " has-border-bottom-light")}}
-        data-test-empty-state-message
-      >
-        {{this.message}}
+    {{#if @message}}
+      <p class={{concat "empty-state-message" (if @bottomBorder " has-border-bottom-light")}} data-test-empty-state-message>
+        {{@message}}
       </p>
     {{/if}}
     {{#if (has-block)}}
       <div class="empty-state-actions" data-test-empty-state-actions>
         {{yield}}
       </div>
-    {{else if this.emptyActions}}
+    {{else if @emptyActions}}
       <div class="empty-state-actions" data-test-empty-state-actions>
-        {{component this.emptyActions}}
+        {{component @emptyActions}}
       </div>
     {{/if}}
   </div>

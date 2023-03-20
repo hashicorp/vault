@@ -1,3 +1,8 @@
+import Component from '@glimmer/component';
+import { assert } from '@ember/debug';
+
+const DIRECTIONS = ['right', 'left', 'up', 'down'];
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: MPL-2.0
@@ -17,25 +22,19 @@
  * @param [isButton=false] {String} - if true, adjusts the CSS classes to push the icon closer to the right of a button.
  *
  */
-import Component from '@ember/component';
-import { computed } from '@ember/object';
-import { assert } from '@ember/debug';
 
-import layout from '../templates/components/chevron';
+export default class Chevron extends Component {
+  get direction() {
+    return this.args.direction || 'right';
+  }
 
-const DIRECTIONS = ['right', 'left', 'up', 'down'];
-
-export default Component.extend({
-  tagName: '',
-  layout,
-  direction: 'right',
-  isButton: false,
-  glyph: computed('direction', function () {
+  get glyph() {
     const { direction } = this;
+
     assert(
-      `The direction property of ${this.toString()} must be one of the following: ${DIRECTIONS.join(', ')}`,
+      `The direction property of Chevron must be one of the following: ${DIRECTIONS.join(', ')}`,
       DIRECTIONS.includes(direction)
     );
     return `chevron-${direction}`;
-  }),
-});
+  }
+}
