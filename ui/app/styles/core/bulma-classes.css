@@ -342,7 +342,12 @@ fieldset[disabled] .select select:-ms-input-placeholder,
 /* Columns */
 /* used in three places */
 .columns.is-variable.is-1 {
-  --columnGap: 0.25rem;
+  --columnGap: $i * 0.25rem; }
+
+.columns.is-variable {
+  --columnGap: 0.75rem;
+  margin-left: calc(-1 * var(--columnGap));
+  margin-right: calc(-1 * var(--columnGap));
 }
 
 /* Columns */

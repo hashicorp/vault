@@ -16,4 +16,21 @@
       display: inline-flex;
     }
   }
+  // From bulma
+  .message.is-info .message-body {
+    border-color: #1563ff;
+    color: #0646c6;
+  }
+  .message.is-success .message-body {
+    border-color: #2eb039;
+    color: #17421b;
+  }
+  .message.is-warning .message-body {
+    border-color: #fac402;
+    color: #151102;
+  }
+  .message.is-danger .message-body {
+    border-color: #c73445;
+    color: #8e2c37;
+  }
 }
