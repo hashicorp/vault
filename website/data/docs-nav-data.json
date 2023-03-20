@@ -833,6 +833,19 @@
         ]
       },
       {
+        "title": "<code>transit</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/transit"
+          },
+          {
+            "title": "<code>import</code> and <code>import-version</code>",
+            "path": "commands/transit/import"
+          }
+        ]
+      },
+      {
         "title": "<code>unwrap</code>",
         "path": "commands/unwrap"
       },
@@ -1987,6 +2000,10 @@
       {
         "title": "Overview",
         "path": "release-notes"
+      },
+      {
+         "title": "1.13.0",
+         "path": "release-notes/1.13.0"
       },
       {
         "title": "1.12.0",
