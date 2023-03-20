@@ -591,10 +591,8 @@ func specialPathMatch(path string, specialPaths []string) bool {
 		}
 
 		// match +
-		if strings.Contains(sp, "+") {
-			if pathMatchesByParts(pathParts, strings.Split(sp, "/")) {
-				return true
-			}
+		if strings.Contains(sp, "+") && pathMatchesByParts(pathParts, strings.Split(sp, "/")) {
+			return true
 		}
 	}
 
