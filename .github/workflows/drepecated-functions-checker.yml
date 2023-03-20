@@ -23,5 +23,6 @@ jobs:
             --config=./.github/configs/.golangci-deprecated-check.yml 
             --out-${NO_FUTURE}format colored-line-number
             --timeout=10m
-            --new-from-rev=HEAD~1
+            --new-from-rev=HEAD
+
   
