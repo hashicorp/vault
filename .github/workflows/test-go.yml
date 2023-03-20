@@ -5,8 +5,12 @@ on:
         description: The execution architecture (arm, amd64, etc.)
         required: true
         type: string
+      extra-flags:
+        description: A space-separated list of additional build flags.
+        required: false
+        type: string
       extra-tags:
-        description: A comma-separated list of additional build tags.
+        description: A space-separated list of additional build tags.
         required: false
         type: string
       runs-on:
@@ -55,10 +59,9 @@ jobs:
     permissions:
       id-token: write  # Note: this permission is explicitly required for Vault auth
       contents: read
-    name: "${{ matrix.runner-index }} flags: ${{ matrix.extra-flags }}, tags: ${{ matrix.extra-tags }}"
+    name: "${{ matrix.runner-index }}${{ inputs.extra-flags }}"
     needs:
     - runner-indexes
-    # Use GitHub runners on the OSS Vault repo and self-hosted runners otherwise.
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     strategy:
       fail-fast: false
@@ -68,12 +71,6 @@ jobs:
         # generated above.
         #
         runner-index: ${{ fromJSON(needs.runner-indexes.outputs.runner-indexes) }}
-        extra-flags: ['', '-race' ]
-        include:
-            # Set value of matrix.extra-tags to "deadlock", unless we're running with the '-race' extra-flag
-          - extra-tags: deadlock
-          - extra-flags: '-race'
-            extra-tags: ''
     env:
       GOPRIVATE: github.com/hashicorp/*
       TIMEOUT_IN_MINUTES: 60
@@ -122,7 +119,7 @@ jobs:
           ENTERPRISE=${{ inputs.enterprise }} source .github/scripts/generate-test-package-lists.sh
 
           # If data race detection is enabled, export a relevant environment variable for use in tests
-          if [ "${{ matrix.extra-flags }}" == "-race" ]; then
+          if [ "${{ inputs.extra-flags }}" == "-race" ]; then
             export VAULT_CI_GO_TEST_RACE=1
           fi
 
@@ -158,10 +155,10 @@ jobs:
               --junitfile test-results/go-test/results.xml \
               --jsonfile test-results/go-test/results.json \
               -- \
-              -tags "${{ inputs.go-tags }} ${{ inputs.extra-tags }} ${{ matrix.extra-tags }}" \
+              -tags "${{ inputs.go-tags }} ${{ inputs.extra-tags }}" \
               -timeout=${{ env.TIMEOUT_IN_MINUTES }}m \
               -parallel=20 \
-              ${{ matrix.extra-flags }} \
+              ${{ inputs.extra-flags }} \
                 \
               ${test_packages[${{ matrix.runner-index }}]}
       - name: Archive test results

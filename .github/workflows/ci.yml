@@ -7,7 +7,8 @@ jobs:
     name: Setup
     runs-on: ubuntu-latest
     outputs:
-      runs-on: ${{ steps.setup-outputs.outputs.runs-on }}
+      runs-on-standard: ${{ steps.setup-outputs.outputs.runs-on-standard }}
+      runs-on-race: ${{ steps.setup-outputs.outputs.runs-on-race }}
       enterprise: ${{ steps.setup-outputs.outputs.enterprise }}
       go-tags: ${{ steps.setup-outputs.outputs.go-tags }}
     steps:
@@ -17,11 +18,13 @@ jobs:
         github_repository="${{ github.repository }}"
 
         if [ "${github_repository##*/}" == "vault-enterprise" ] ; then
-          echo 'runs-on=["self-hosted","ondemand","linux","type=c5.2xlarge"]' >> $GITHUB_OUTPUT
+          echo 'runs-on-standard=["self-hosted","ondemand","linux","type=c5.xlarge"]' >> $GITHUB_OUTPUT
+          echo 'runs-on-race=["self-hosted","ondemand","linux","type=c5.4xlarge"]' >> $GITHUB_OUTPUT
           echo 'enterprise=1' >> $GITHUB_OUTPUT
           echo 'go-tags=ent enterprise' >> $GITHUB_OUTPUT
         else
-          echo 'runs-on=["custom", "linux", "xl"]' >> $GITHUB_OUTPUT
+          echo 'runs-on-standard="ubuntu-latest"' >> $GITHUB_OUTPUT
+          echo 'runs-on-race=["custom", "linux", "xl"]' >> $GITHUB_OUTPUT
           echo 'enterprise=' >> $GITHUB_OUTPUT
           echo 'go-tags=' >> $GITHUB_OUTPUT
         fi
@@ -29,7 +32,7 @@ jobs:
     name: Semgrep
     needs:
     - setup
-    runs-on: ${{ fromJSON(needs.setup.outputs.runs-on) }}
+    runs-on: ${{ fromJSON(needs.setup.outputs.runs-on-standard) }}
     container:
       image: returntocorp/semgrep@sha256:ffc6f3567654f9431456d49fd059dfe548f007c494a7eb6cd5a1a3e50d813fb3
     steps:
@@ -43,13 +46,13 @@ jobs:
     - setup
     uses: ./.github/workflows/setup-go-cache.yml
     with:
-      runs-on: ${{ needs.setup.outputs.runs-on }}
+      runs-on: ${{ needs.setup.outputs.runs-on-standard }}
     secrets: inherit
   fmt:
     name: Check Format
     needs:
     - setup
-    runs-on: ${{ fromJSON(needs.setup.outputs.runs-on) }}
+    runs-on: ${{ fromJSON(needs.setup.outputs.runs-on-standard) }}
     steps:
     - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
     - uses: actions/setup-go@d0a58c1c4d2b25278816e339b944508c875f3613
@@ -73,8 +76,24 @@ jobs:
     if: ${{ ! (startsWith( github.ref_name, 'ui/' ) || startsWith( github.ref_name, 'docs/' ) || startsWith( github.ref_name, 'backport/docs/') ) }}
     uses: ./.github/workflows/test-go.yml
     with:
+      extra-tags: deadlock
       go-arch: amd64
       go-tags: ${{ needs.setup.outputs.go-tags }}
-      runs-on: ${{ needs.setup.outputs.runs-on }}
+      runs-on: ${{ needs.setup.outputs.runs-on-standard }}
+      enterprise: ${{ needs.setup.outputs.enterprise }}
+    secrets: inherit
+  test-go-race:
+    name: Run Go tests with data race detection
+    needs:
+    - setup
+    - setup-go-cache
+    # Don't run this job for branches starting with 'ui/', 'docs/', or 'backport/docs/'
+    if: ${{ ! (startsWith( github.ref_name, 'ui/' ) || startsWith( github.ref_name, 'docs/' ) || startsWith( github.ref_name, 'backport/docs/') ) }}
+    uses: ./.github/workflows/test-go.yml
+    with:
+      extra-flags: '-race'
+      go-arch: amd64
+      go-tags: ${{ needs.setup.outputs.go-tags }}
+      runs-on: ${{ needs.setup.outputs.runs-on-race }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
     secrets: inherit
