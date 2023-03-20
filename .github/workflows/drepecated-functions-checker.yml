@@ -21,4 +21,4 @@ jobs:
           args: >-
             --config=./.github/configs/.golangci-deprecated-check.yml 
             --out-${NO_FUTURE}format colored-line-number
-            --timeout=5m
+            --timeout=10m
