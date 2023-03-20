@@ -94,8 +94,8 @@ func TestPostgreSQL_Initialize_ConnURLWithDSNFormat(t *testing.T) {
 	}
 }
 
-// TestPostgreSQL_PasswordEncryption tests that the default "password_encryption" is "none", and that
-// an error is returned if an invalid "password_encryption" is provided.
+// TestPostgreSQL_PasswordEncryption tests that the default "password_authentication" is "none", and that
+// an error is returned if an invalid "password_authentication" is provided.
 func TestPostgreSQL_PasswordEncryption(t *testing.T) {
 	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
 	defer cleanup()
@@ -108,8 +108,8 @@ func TestPostgreSQL_PasswordEncryption(t *testing.T) {
 
 	t.Run("invalid-password-encryption", func(t *testing.T) {
 		connectionDetails := map[string]interface{}{
-			"connection_url":      dsnConnURL,
-			"password_encryption": "invalid-password-encryption",
+			"connection_url":          dsnConnURL,
+			"password_authentication": "invalid-password-encryption",
 		}
 
 		req := dbplugin.InitializeRequest{
@@ -132,11 +132,11 @@ func TestPostgreSQL_PasswordEncryption(t *testing.T) {
 		}
 
 		_ = dbtesting.AssertInitialize(t, db, req)
-		assert.Equal(t, passwordEncryptionNone, db.PasswordEncryption)
+		assert.Equal(t, passwordAuthenticationPassword, db.PasswordEncryption)
 	})
 }
 
-// TestPostgreSQL_PasswordEncryption_SCRAMSHA256 tests that password_encryption works when set to scram-sha-256.
+// TestPostgreSQL_PasswordEncryption_SCRAMSHA256 tests that password_authentication works when set to scram-sha-256.
 // When sending an encrypted password, the raw password should still successfully authenticate the user.
 func TestPostgreSQL_PasswordEncryption_SCRAMSHA256(t *testing.T) {
 	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
@@ -148,8 +148,8 @@ func TestPostgreSQL_PasswordEncryption_SCRAMSHA256(t *testing.T) {
 	}
 
 	connectionDetails := map[string]interface{}{
-		"connection_url":      dsnConnURL,
-		"password_encryption": string(passwordEncryptionSCRAMSHA256),
+		"connection_url":          dsnConnURL,
+		"password_authentication": string(passwordAuthenticationSCRAMSHA256),
 	}
 
 	req := dbplugin.InitializeRequest{
@@ -159,7 +159,7 @@ func TestPostgreSQL_PasswordEncryption_SCRAMSHA256(t *testing.T) {
 
 	db := new()
 	resp := dbtesting.AssertInitialize(t, db, req)
-	assert.Equal(t, string(passwordEncryptionSCRAMSHA256), resp.Config["password_encryption"])
+	assert.Equal(t, string(passwordAuthenticationSCRAMSHA256), resp.Config["password_authentication"])
 
 	if !db.Initialized {
 		t.Fatal("Database should be initialized")

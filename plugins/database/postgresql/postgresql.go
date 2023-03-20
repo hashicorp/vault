@@ -70,7 +70,7 @@ func new() *PostgreSQL {
 
 	db := &PostgreSQL{
 		SQLConnectionProducer: connProducer,
-		PasswordEncryption:    passwordEncryptionNone,
+		PasswordEncryption:    passwordAuthenticationPassword,
 	}
 
 	return db
@@ -80,7 +80,7 @@ type PostgreSQL struct {
 	*connutil.SQLConnectionProducer
 
 	usernameProducer   template.StringTemplate
-	PasswordEncryption passwordEncryption
+	PasswordEncryption passwordAuthentication
 }
 
 func (p *PostgreSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
@@ -108,13 +108,13 @@ func (p *PostgreSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequ
 		return dbplugin.InitializeResponse{}, fmt.Errorf("invalid username template: %w", err)
 	}
 
-	passwordEncryptionRaw, err := strutil.GetString(req.Config, "password_encryption")
+	passwordEncryptionRaw, err := strutil.GetString(req.Config, "password_authentication")
 	if err != nil {
-		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve password_encryption: %w", err)
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve password_authentication: %w", err)
 	}
 
 	if passwordEncryptionRaw != "" {
-		pwEncryption, err := parsePasswordEncryption(passwordEncryptionRaw)
+		pwEncryption, err := parsePasswordAuthentication(passwordEncryptionRaw)
 		if err != nil {
 			return dbplugin.InitializeResponse{}, err
 		}
@@ -206,7 +206,7 @@ func (p *PostgreSQL) changeUserPassword(ctx context.Context, username string, ch
 				"password": password,
 			}
 
-			if p.PasswordEncryption == passwordEncryptionSCRAMSHA256 {
+			if p.PasswordEncryption == passwordAuthenticationSCRAMSHA256 {
 				hashedPassword, err := scram.Hash(password)
 				if err != nil {
 					return fmt.Errorf("unable to scram-sha256 password: %w", err)
@@ -305,7 +305,7 @@ func (p *PostgreSQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (
 		"expiration": expirationStr,
 	}
 
-	if p.PasswordEncryption == passwordEncryptionSCRAMSHA256 {
+	if p.PasswordEncryption == passwordAuthenticationSCRAMSHA256 {
 		hashedPassword, err := scram.Hash(req.Password)
 		if err != nil {
 			return dbplugin.NewUserResponse{}, fmt.Errorf("unable to scram-sha256 password: %w", err)
