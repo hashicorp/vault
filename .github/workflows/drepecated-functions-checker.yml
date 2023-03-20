@@ -18,7 +18,8 @@ jobs:
         uses: golangci/golangci-lint-action@08e2f20817b15149a52b5b3ebe7de50aff2ba8c5 # v3.4.0
         with:
           version: latest
+          skip-pkg-cache: true
           args: >-
             --config=./.github/configs/.golangci-deprecated-check.yml 
             --out-${NO_FUTURE}format colored-line-number
-            --timeout=3m
+            --timeout=5m
