@@ -55,6 +55,16 @@
   align-self: center;
   justify-content: center;
 }
+
+@media screen and (min-width: 769px), print {
+  .is-flex-v-centered-tablet {
+    display: flex;
+    align-items: center;
+    align-self: center;
+    justify-content: center;
+  }
+}
+
 .is-flex-v-centered-tablet {
   // TODO check if this is from or until
   @include until($tablet) {

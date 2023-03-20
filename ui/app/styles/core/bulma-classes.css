@@ -369,6 +369,26 @@ fieldset[disabled] .select select:-ms-input-placeholder,
   margin-top: -0.75rem;
 }
 
+.columns.is-gapless {
+  margin-left: 0;
+  margin-right: 0;
+  margin-top: 0;
+}
+
+.columns.is-gapless > .column {
+  margin: 0;
+  padding: 0 !important;
+}
+
+.columns.is-gapless:not(:last-child) {
+  margin-bottom: 1.5rem;
+}
+
+.columns.is-gapless:last-child {
+  margin-bottom: 0;
+}
+
+
 /* Bulma Grid */
 .column {
   display: block;
@@ -462,19 +482,19 @@ fieldset[disabled] .select select:-ms-input-placeholder,
   }
 }
 
-@media screen and (min-width: 1024px) {
-  
-  .column.is-4-desktop {
-    flex: none;
-    width: 33.33333%;
-  }
-}
-
 @media screen and (min-width: 769px), print {
   
   .column.is-6, .column.is-6-tablet {
     flex: none;
     width: 50%;
+  }
+}
+/* larger screen size needs to be ordered after smaller */
+@media screen and (min-width: 1024px) {
+  
+  .column.is-4-desktop {
+    flex: none;
+    width: 33.33333%;
   }
 }
 

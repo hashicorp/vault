@@ -39,3 +39,7 @@
   border: 1px solid #bac1cc;
   padding: $spacing-l;
 }
+
+.box:not(:last-child) {
+  margin-bottom: 1.5rem;
+}

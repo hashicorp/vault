@@ -63,6 +63,10 @@ label {
 }
 
 .help {
+  display: block;
+  font-size: $size-8;
+  margin-top: 0.25rem;
+
   &.is-danger {
     font-weight: $weight-bold;
   }
@@ -346,6 +350,22 @@ select.select {
     input {
       margin-right: 0.5em;
     }
+  }
+}
+
+// from bulma
+@media screen and (min-width: 769px), print {
+  .field.is-horizontal {
+    display: flex;
+  }
+}
+
+@media screen and (min-width: 769px), print {
+  .field-body {
+    display: flex;
+    flex-basis: 0;
+    flex-grow: 5;
+    flex-shrink: 1;
   }
 }
 
