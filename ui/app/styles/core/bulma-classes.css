@@ -216,6 +216,10 @@ fieldset[disabled] .select select:-ms-input-placeholder,
   color: #bac1cc !important;
 }
 
+.has-text-danger {
+  color: #c73445 !important
+}
+
 .has-text-weight-semibold {
   font-weight: 600 !important;
 }
