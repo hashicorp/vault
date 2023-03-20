@@ -363,8 +363,8 @@ $size-medium: 1.25rem;
 $light: $grey-lightest;
 $primary: $grey-dark;
 $link: $blue;
-$text: $black;
 $info: $blue;
+$text: $grey-darkest;
 $success: $green;
 $warning: $yellow;
 $danger: $red;
@@ -431,6 +431,7 @@ $breadcrumb-item-active-color: $black;
 $navbar-background-color: transparent;
 
 $menu-item-hover-background-color: $blue;
+$menu-item-hover-color: $white;
 
 $progress-bar-background-color: $ui-gray-050;
 
