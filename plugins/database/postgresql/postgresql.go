@@ -10,10 +10,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hashicorp/vault/plugins/database/postgresql/scram"
-
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/plugins/database/postgresql/scram"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
@@ -36,26 +35,6 @@ ALTER ROLE "{{username}}" WITH PASSWORD '{{password}}';
 
 	defaultUserNameTemplate = `{{ printf "v-%s-%s-%s-%s" (.DisplayName | truncate 8) (.RoleName | truncate 8) (random 20) (unix_time) | truncate 63 }}`
 )
-
-type PasswordEncryption string
-
-var (
-	PasswordEncryptionSCRAMSHA256 PasswordEncryption = "scram-sha-256"
-	PasswordEncryptionPlainText   PasswordEncryption = "plaintext"
-)
-
-var passwordEncryptions = map[PasswordEncryption]struct{}{
-	PasswordEncryptionSCRAMSHA256: {},
-	PasswordEncryptionPlainText:   {},
-}
-
-func parsePasswordEncryption(s string) (PasswordEncryption, error) {
-	if _, ok := passwordEncryptions[PasswordEncryption(s)]; !ok {
-		return "", fmt.Errorf("'%s' is not a valid password encryption type", s)
-	}
-
-	return PasswordEncryption(s), nil
-}
 
 var (
 	_ dbplugin.Database       = (*PostgreSQL)(nil)
@@ -91,7 +70,7 @@ func new() *PostgreSQL {
 
 	db := &PostgreSQL{
 		SQLConnectionProducer: connProducer,
-		PasswordEncryption:    PasswordEncryptionPlainText,
+		PasswordEncryption:    passwordEncryptionNone,
 	}
 
 	return db
@@ -101,7 +80,7 @@ type PostgreSQL struct {
 	*connutil.SQLConnectionProducer
 
 	usernameProducer   template.StringTemplate
-	PasswordEncryption PasswordEncryption
+	PasswordEncryption passwordEncryption
 }
 
 func (p *PostgreSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
@@ -131,7 +110,7 @@ func (p *PostgreSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequ
 
 	passwordEncryptionRaw, err := strutil.GetString(req.Config, "password_encryption")
 	if err != nil {
-		return dbplugin.InitializeResponse{}, err
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve password_encryption: %w", err)
 	}
 
 	if passwordEncryptionRaw != "" {
@@ -227,7 +206,7 @@ func (p *PostgreSQL) changeUserPassword(ctx context.Context, username string, ch
 				"password": password,
 			}
 
-			if p.PasswordEncryption == PasswordEncryptionSCRAMSHA256 {
+			if p.PasswordEncryption == passwordEncryptionSCRAMSHA256 {
 				hashedPassword, err := scram.Encrypt(password)
 				if err != nil {
 					return fmt.Errorf("unable to scram-sha256 password: %w", err)
@@ -326,7 +305,7 @@ func (p *PostgreSQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (
 		"expiration": expirationStr,
 	}
 
-	if p.PasswordEncryption == PasswordEncryptionSCRAMSHA256 {
+	if p.PasswordEncryption == passwordEncryptionSCRAMSHA256 {
 		hashedPassword, err := scram.Encrypt(req.Password)
 		if err != nil {
 			return dbplugin.NewUserResponse{}, fmt.Errorf("unable to scram-sha256 password: %w", err)
