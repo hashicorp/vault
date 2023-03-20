@@ -1,6 +1,7 @@
 .switch[type='checkbox'] {
   &.is-small {
     + label {
+      display: inline-block;
       font-size: $size-8;
       font-weight: bold;
       padding-left: $size-8 * 2.5;

@@ -1,3 +1,4 @@
+/* ARG TODO we override some switch in the switch scss file, sort that out */
 .switch[type=checkbox] {
   outline: 0;
   -webkit-user-select: none;
@@ -26,16 +27,15 @@
 .switch[type=checkbox][disabled]+label:hover {
   cursor: not-allowed;
 }
+/* height and padding-top removed to match current styling */
 .switch[type=checkbox]+label {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
   font-size: 1rem;
-  height: 2.5em;
   line-height: 1.5;
   padding-left: 3.5rem;
-  padding-top: .2rem;
   cursor: pointer;
 }
 .switch[type=checkbox]+label::before, .switch[type=checkbox]+label:before {
@@ -126,10 +126,8 @@
   align-items: center;
   justify-content: flex-start;
   font-size: .75rem;
-  height: 2.5em;
   line-height: 1.5;
   padding-left: 2.75rem;
-  padding-top: .2rem;
   cursor: pointer;
 }
 .switch[type=checkbox].is-small+label::before, .switch[type=checkbox].is-small+label:before {
