@@ -1,6 +1,10 @@
 on:
   workflow_call:
     inputs:
+      name:
+        description: A suffix to be added to the matrix job names.
+        required: true
+        type: string
       go-arch:
         description: The execution architecture (arm, amd64, etc.)
         required: true
@@ -59,7 +63,7 @@ jobs:
     permissions:
       id-token: write  # Note: this permission is explicitly required for Vault auth
       contents: read
-    name: "${{ matrix.runner-index }}${{ inputs.extra-flags }}"
+    name: "${{ matrix.runner-index }} ${{ inputs.name }}"
     needs:
     - runner-indexes
     runs-on: ${{ fromJSON(inputs.runs-on) }}

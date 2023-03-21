@@ -1,6 +1,9 @@
 name: CI
 on:
+  pull_request:
   push:
+    branches:
+      - "main"
 
 jobs:
   setup:
@@ -76,6 +79,7 @@ jobs:
     if: ${{ ! (startsWith( github.ref_name, 'ui/' ) || startsWith( github.ref_name, 'docs/' ) || startsWith( github.ref_name, 'backport/docs/') ) }}
     uses: ./.github/workflows/test-go.yml
     with:
+      name: ''
       extra-tags: deadlock
       go-arch: amd64
       go-tags: ${{ needs.setup.outputs.go-tags }}
@@ -91,6 +95,7 @@ jobs:
     if: ${{ ! (startsWith( github.ref_name, 'ui/' ) || startsWith( github.ref_name, 'docs/' ) || startsWith( github.ref_name, 'backport/docs/') ) }}
     uses: ./.github/workflows/test-go.yml
     with:
+      name: race
       extra-flags: '-race'
       go-arch: amd64
       go-tags: ${{ needs.setup.outputs.go-tags }}
