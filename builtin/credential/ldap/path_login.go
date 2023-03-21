@@ -16,7 +16,7 @@ func pathLogin(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixLDAPAuth,
-			OperationSuffix: "login",
+			OperationVerb:   "log-in",
 		},
 
 		Fields: map[string]*framework.FieldSchema{
