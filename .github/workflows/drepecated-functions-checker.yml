@@ -18,8 +18,7 @@ jobs:
       - name: staticcheck
         run: |
           echo "Installing staticcheck"
-          # go install honnef.co/go/tools/cmd/staticcheck@2023.1.2 #v0.4.2
-          go install honnef.co/go/tools/cmd/staticcheck@latest
+          go install honnef.co/go/tools/cmd/staticcheck@2023.1.2 #v0.4.2
 
           echo "Running staticcheck to look for deprecations"
 
