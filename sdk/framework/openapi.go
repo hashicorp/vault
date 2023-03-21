@@ -515,14 +515,55 @@ func constructRequestName(requestResponsePrefix string, path string) string {
 	return b.String()
 }
 
+// specialPathMatch checks whether the given path matches one of the special
+// paths, taking into account * and + wildcards (e.g. foo/+/bar/*)
 func specialPathMatch(path string, specialPaths []string) bool {
-	// Test for exact or prefix match of special paths.
+	// pathMatchesByParts determines if the path matches the special path's
+	// pattern, accounting for the '+' and '*' wildcards
+	pathMatchesByParts := func(pathParts []string, specialPathParts []string) bool {
+		if len(pathParts) < len(specialPathParts) {
+			return false
+		}
+		for i := 0; i < len(specialPathParts); i++ {
+			var (
+				part    = pathParts[i]
+				pattern = specialPathParts[i]
+			)
+			if pattern == "+" {
+				continue
+			}
+			if pattern == "*" {
+				return true
+			}
+			if strings.HasSuffix(pattern, "*") && strings.HasPrefix(part, pattern[0:len(pattern)-1]) {
+				return true
+			}
+			if pattern != part {
+				return false
+			}
+		}
+		return len(pathParts) == len(specialPathParts)
+	}
+
+	pathParts := strings.Split(path, "/")
+
 	for _, sp := range specialPaths {
-		if sp == path ||
-			(strings.HasSuffix(sp, "*") && strings.HasPrefix(path, sp[0:len(sp)-1])) {
+		// exact match
+		if sp == path {
+			return true
+		}
+
+		// match *
+		if strings.HasSuffix(sp, "*") && strings.HasPrefix(path, sp[0:len(sp)-1]) {
+			return true
+		}
+
+		// match +
+		if strings.Contains(sp, "+") && pathMatchesByParts(pathParts, strings.Split(sp, "/")) {
 			return true
 		}
 	}
+
 	return false
 }
 
