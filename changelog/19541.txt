@@ -1,0 +1,3 @@
+```release-note:bug
+ui: fixes oidc tabs in auth form submitting with the root's default_role value after a namespace has been inputted
+```
