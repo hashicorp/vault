@@ -1,7 +1,0 @@
-linters-settings:
-  staticcheck:
-    checks:
-    - 'SA1019'
-issues:
-  new: true
-
