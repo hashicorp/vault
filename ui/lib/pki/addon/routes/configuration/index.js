@@ -4,5 +4,31 @@
  */
 
 import Route from '@ember/routing/route';
+import { inject as service } from '@ember/service';
+import { withConfig } from 'pki/decorators/check-config';
+import { hash } from 'rsvp';
 
-export default class ConfigurationIndexRoute extends Route {}
+@withConfig()
+export default class ConfigurationIndexRoute extends Route {
+  @service store;
+  @service secretMountPath;
+
+  model() {
+    const backend = this.secretMountPath.currentPath;
+    return hash({
+      hasConfig: this.shouldPromptConfig,
+      engine: this.modelFor('application'),
+      urls: this.store.findRecord('pki/urls', backend),
+      crl: this.store.findRecord('pki/crl', backend),
+      mountConfig: this.store
+        .query('secret-engine', {
+          path: backend,
+        })
+        .then((model) => {
+          if (model) {
+            return model.get('firstObject');
+          }
+        }),
+    });
+  }
+}
