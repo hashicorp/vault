@@ -1,12 +1,16 @@
 on:
   workflow_call:
     inputs:
+      name:
+        description: A suffix to be added to the matrix job names.
+        required: true
+        type: string
       go-arch:
         description: The execution architecture (arm, amd64, etc.)
         required: true
         type: string
-      extra-tags:
-        description: A comma-separated list of additional build tags.
+      extra-flags:
+        description: A space-separated list of additional build flags.
         required: false
         type: string
       runs-on:
@@ -18,8 +22,8 @@ on:
         description: A flag indicating if this workflow is executing for the enterprise repository.
         required: true
         type: string
-      go-tags:
-        description: The go tags to include on the go test command.
+      go-build-tags:
+        description: A comma-separated list of additional build tags to consider satisfied during the build.
         required: false
         type: string
 
@@ -55,10 +59,9 @@ jobs:
     permissions:
       id-token: write  # Note: this permission is explicitly required for Vault auth
       contents: read
-    name: ${{ inputs.packages }}
+    name: "${{ matrix.runner-index }} ${{ inputs.name }}"
     needs:
     - runner-indexes
-    # Use GitHub runners on the OSS Vault repo and self-hosted runners otherwise.
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     strategy:
       fail-fast: false
@@ -101,7 +104,6 @@ jobs:
             kv/data/github/${{ github.repository }}/hcp-link HCP_CLIENT_ID;
             kv/data/github/${{ github.repository }}/hcp-link HCP_CLIENT_SECRET;
             kv/data/github/${{ github.repository }}/hcp-link HCP_RESOURCE_ID;
-            kv/data/github/${{ github.repository }}/hcp-link HCP_SCADA_ADDRESS;
       - id: run-go-tests
         name: Run Go tests
         timeout-minutes: ${{ fromJSON(env.TIMEOUT_IN_MINUTES) }}
@@ -115,6 +117,11 @@ jobs:
           # matrix.runner-index value.
           #
           ENTERPRISE=${{ inputs.enterprise }} source .github/scripts/generate-test-package-lists.sh
+
+          # If data race detection is enabled, export a relevant environment variable for use in tests
+          if [[ "${{ inputs.extra-flags }}" =~ "-race" ]]; then
+            export VAULT_CI_GO_TEST_RACE=1
+          fi
 
           # Build the dynamically generated source files.
           make prep
@@ -138,7 +145,9 @@ jobs:
             export HCP_CLIENT_ID=${{ secrets.HCP_CLIENT_ID }}
             export HCP_CLIENT_SECRET=${{ secrets.HCP_CLIENT_SECRET }}
             export HCP_RESOURCE_ID=${{ secrets.HCP_RESOURCE_ID }}
-            export HCP_SCADA_ADDRESS=${{ secrets.HCP_SCADA_ADDRESS }}
+            # Temporarily removing this variable to cause HCP Link tests
+            # to be skipped.
+            #export HCP_SCADA_ADDRESS=${{ secrets.HCP_SCADA_ADDRESS }}
           fi
 
           GOARCH=${{ inputs.go-arch }} \
@@ -146,9 +155,10 @@ jobs:
               --junitfile test-results/go-test/results.xml \
               --jsonfile test-results/go-test/results.json \
               -- \
-              -tags "${{ inputs.go-tags }} ${{ inputs.extra-tags }}" \
+              -tags "${{ inputs.go-build-tags }}" \
               -timeout=${{ env.TIMEOUT_IN_MINUTES }}m \
               -parallel=20 \
+              ${{ inputs.extra-flags }} \
                 \
               ${test_packages[${{ matrix.runner-index }}]}
       - name: Archive test results
@@ -156,6 +166,7 @@ jobs:
         with:
           name: test-results-${{ matrix.runner-index }}
           path: test-results/
+        if: always()
       - name: Create a summary of tests
         uses: test-summary/action@62bc5c68de2a6a0d02039763b8c754569df99e3f
         with:

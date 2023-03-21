@@ -33,6 +33,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
+
+	"github.com/hashicorp/vault/helper/testhelpers"
+
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 
 	"github.com/stretchr/testify/require"
@@ -6406,6 +6410,55 @@ func TestUserIDsInLeafCerts(t *testing.T) {
 	})
 	requireSuccessNonNilResponse(t, resp, err, "failed issuing leaf cert")
 	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "humanoid")
+}
+
+// TestStandby_Operations test proper forwarding for PKI requests from a standby node to the
+// active node within a cluster.
+func TestStandby_Operations(t *testing.T) {
+	conf, opts := teststorage.ClusterSetup(&vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}, nil, teststorage.InmemBackendSetup)
+	cluster := vault.NewTestCluster(t, conf, opts)
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
+	standbyCores := testhelpers.DeriveStandbyCores(t, cluster)
+	require.Greater(t, len(standbyCores), 0, "Need at least one standby core.")
+	client := standbyCores[0].Client
+
+	mountPKIEndpoint(t, client, "pki")
+
+	_, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"key_type":    "ec",
+		"common_name": "root-ca.com",
+		"ttl":         "600h",
+	})
+	require.NoError(t, err, "error setting up pki role: %v", err)
+
+	_, err = client.Logical().Write("pki/roles/example", map[string]interface{}{
+		"allowed_domains":  "example.com",
+		"allow_subdomains": "true",
+		"no_store":         "false", // make sure we store this cert
+		"ttl":              "5h",
+		"key_type":         "ec",
+	})
+	require.NoError(t, err, "error setting up pki role: %v", err)
+
+	resp, err := client.Logical().Write("pki/issue/example", map[string]interface{}{
+		"common_name": "test.example.com",
+	})
+	require.NoError(t, err, "error issuing certificate: %v", err)
+	require.NotNil(t, resp, "got nil response from issuing request")
+	serialOfCert := resp.Data["serial_number"].(string)
+
+	resp, err = client.Logical().Write("pki/revoke", map[string]interface{}{
+		"serial_number": serialOfCert,
+	})
+	require.NoError(t, err, "error revoking certificate: %v", err)
+	require.NotNil(t, resp, "got nil response from revoke request")
 }
 
 var (
