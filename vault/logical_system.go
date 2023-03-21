@@ -3019,28 +3019,30 @@ func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logica
 			fmt.Sprintf("passwords must be between %d and %d characters", minPasswordLength, maxPasswordLength))
 	}
 
-	// Generate some passwords to ensure that we're confident that the policy isn't impossible
-	timeout := 1 * time.Second
-	genCtx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+	// Attempt to construct a test password from the rules to ensure that the policy isn't impossible
+	var testPassword []rune
+	for _, rule := range policy.Rules {
+		charsetRule, ok := rule.(random.CharsetRule)
+		if !ok {
+			return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("unexpected rule type %T", charsetRule))
+		}
 
-	attempts := 10
-	failed := 0
-	for i := 0; i < attempts; i++ {
-		_, err = policy.Generate(genCtx, nil)
-		if err != nil {
-			failed++
+		char := charsetRule.Chars()[0]
+		for i := 0; i < charsetRule.MinLength(); i++ {
+			testPassword = append(testPassword, char)
 		}
 	}
 
-	if failed == attempts {
-		return nil, logical.CodedError(http.StatusBadRequest,
-			fmt.Sprintf("unable to generate password from provided policy in %s: are the rules impossible?", timeout))
-	}
+	if len(testPassword) < policy.Length {
+		rule, ok := policy.Rules[0].(random.CharsetRule)
+		if !ok {
+			return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("unexpected rule type %T", rule))
+		}
 
-	if failed > 0 {
-		return nil, logical.CodedError(http.StatusBadRequest,
-			fmt.Sprintf("failed to generate passwords %d times out of %d attempts in %s - is the policy too restrictive?", failed, attempts, timeout))
+		char := rule.Chars()[0]
+		for i := len(testPassword); i < policy.Length; i++ {
+			testPassword[i] = char
+		}
 	}
 
 	cfg := passwordPolicyConfig{
