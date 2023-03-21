@@ -11,15 +11,29 @@
   <main class="box is-fullwidth is-sideless is-paddingless is-marginless">
     {{#each this.returnedFields as |field|}}
       {{#let (find-by "name" field @model.allFields) as |attr|}}
-        <InfoTableRow
-          @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
-          @value={{get @model attr.name}}
-        />
+        {{#if attr.options.detailLinkTo}}
+          <InfoTableRow
+            @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
+          >
+            <LinkTo @route={{attr.options.detailLinkTo}} @model={{get @model attr.name}}>{{get @model attr.name}}</LinkTo>
+          </InfoTableRow>
+        {{else if attr.options.masked}}
+          <InfoTableRow
+            @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
+          >
+            <MaskedInput @value={{get @model attr.name}} @displayOnly={{true}} @allowCopy={{true}} />
+          </InfoTableRow>
+        {{else}}
+          <InfoTableRow
+            @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
+            @value={{get @model attr.name}}
+          />
+        {{/if}}
       {{/let}}
     {{/each}}
     <InfoTableRow @label="Private key">
       {{#if @model.privateKey}}
-        <MaskedInput @value={{@model.privateKey}} @name="Private key" @displayOnly={{true}} @allowCopy={{true}} />
+        <MaskedInput @value={{@model.privateKey}} @displayOnly={{true}} @allowCopy={{true}} />
       {{else}}
         <span class="tag">internal</span>
       {{/if}}

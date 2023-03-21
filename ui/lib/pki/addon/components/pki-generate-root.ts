@@ -23,6 +23,7 @@ interface Args {
   model: PkiActionModel;
   urls: PkiUrlsModel;
   onCancel: CallableFunction;
+  onComplete: CallableFunction;
   onSuccess: CallableFunction | undefined;
   adapterOptions: AdapterOptions;
 }

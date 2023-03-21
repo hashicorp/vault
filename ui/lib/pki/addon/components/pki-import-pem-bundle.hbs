@@ -16,7 +16,7 @@
     {{#each-in this.importedResponse as |issuer key|}}
       <div class="box is-marginless no-top-shadow has-slim-padding">
         <div class="is-flex-start">
-          <div class="is-flex-1 basis-0 has-bottom-margin-xs">
+          <div class="is-flex-1 basis-0 has-bottom-margin-xs" data-test-imported-issuer>
             {{#if issuer}}
               <LinkTo @route="issuers.issuer.details" @model={{issuer}}>
                 {{issuer}}
@@ -25,7 +25,7 @@
               None
             {{/if}}
           </div>
-          <div class="is-flex-1 basis-0 has-bottom-margin-xs">
+          <div class="is-flex-1 basis-0 has-bottom-margin-xs" data-test-imported-key>
             {{#if key}}
               <LinkTo @route="keys.key.details" @model={{key}}>
                 {{key}}
