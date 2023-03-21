@@ -184,7 +184,7 @@ export default class PkiActionModel extends Model {
   @attr('string') ttl;
   @attr('date') notAfter;
 
-  @attr('string', { readOnly: true, detailLinkTo: 'issuers.issuer.details' }) issuerId; // returned from generate-root action
+  @attr('string', { label: 'Issuer ID', readOnly: true, detailLinkTo: 'issuers.issuer.details' }) issuerId; // returned from generate-root action
 
   // For generating and signing a CSR
   @attr('string', { label: 'CSR', masked: true }) csr;
