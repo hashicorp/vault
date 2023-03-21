@@ -1,7 +1,9 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package server
 
 import (
-	"os"
 	"testing"
 
 	"github.com/go-test/deep"
@@ -10,9 +12,9 @@ import (
 )
 
 func TestHCPLinkConfig(t *testing.T) {
-	os.Unsetenv("HCP_CLIENT_ID")
-	os.Unsetenv("HCP_CLIENT_SECRET")
-	os.Unsetenv("HCP_RESOURCE_ID")
+	t.Setenv("HCP_CLIENT_ID", "")
+	t.Setenv("HCP_CLIENT_SECRET", "")
+	t.Setenv("HCP_RESOURCE_ID", "")
 
 	config, err := LoadConfigFile("./test-fixtures/hcp_link_config.hcl")
 	if err != nil {

@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+/**
  * @module SecretListHeaderTab
  * SecretListHeaderTab component passes in properties that are used to check capabilities and either display or not display the component.
  * Use case was first for the Database Secret Engine, but should be used in future iterations as we don't generally want to show things the user does not

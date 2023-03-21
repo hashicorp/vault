@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { compareAsc } from 'date-fns';
 

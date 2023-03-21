@@ -101,7 +101,6 @@ jobs:
             kv/data/github/${{ github.repository }}/hcp-link HCP_CLIENT_ID;
             kv/data/github/${{ github.repository }}/hcp-link HCP_CLIENT_SECRET;
             kv/data/github/${{ github.repository }}/hcp-link HCP_RESOURCE_ID;
-            kv/data/github/${{ github.repository }}/hcp-link HCP_SCADA_ADDRESS;
       - id: run-go-tests
         name: Run Go tests
         timeout-minutes: ${{ fromJSON(env.TIMEOUT_IN_MINUTES) }}
@@ -138,7 +137,9 @@ jobs:
             export HCP_CLIENT_ID=${{ secrets.HCP_CLIENT_ID }}
             export HCP_CLIENT_SECRET=${{ secrets.HCP_CLIENT_SECRET }}
             export HCP_RESOURCE_ID=${{ secrets.HCP_RESOURCE_ID }}
-            export HCP_SCADA_ADDRESS=${{ secrets.HCP_SCADA_ADDRESS }}
+            # Temporarily removing this variable to cause HCP Link tests
+            # to be skipped.
+            #export HCP_SCADA_ADDRESS=${{ secrets.HCP_SCADA_ADDRESS }}
           fi
 
           GOARCH=${{ inputs.go-arch }} \

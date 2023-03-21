@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { set } from '@ember/object';
 import Service from '@ember/service';
 import { module, test } from 'qunit';

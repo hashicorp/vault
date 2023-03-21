@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { underscore } from '@ember/string';
 import { keyParamsByType } from 'pki/utils/action-params';
 import ApplicationSerializer from '../application';

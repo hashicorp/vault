@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { create, visitable, collection, clickable, text } from 'ember-cli-page-object';
 import uiPanel from 'vault/tests/pages/components/console/ui-panel';
 
