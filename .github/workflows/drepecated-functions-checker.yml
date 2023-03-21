@@ -1,4 +1,4 @@
-name: "Check for deprecated functions "
+name: "Check Deprecations"
 
 on:
   pull_request:
@@ -9,7 +9,6 @@ on:
 
 jobs:
   deprecated-check-setup:
-    name: Deprecated check
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -33,31 +32,22 @@ jobs:
           # run staticcheck
           staticcheck ./... | grep deprecated > staticcheckOutput.txt
 
-          # get changed files names from the PR
-
-          echo "Get filenames in the current PR"
+          # Get changed files names from the PR
           changedFiles=$(git --no-pager diff --name-only HEAD "$(git merge-base HEAD "origin/${{ github.event.pull_request.base.ref }}")")
-          
-          for val in ${changedFiles[@]}; do
-            echo "$val changed"
-          done
 
-          # include deprecations details of only changed files in the PR
+          # Include deprecations details of only changed files in the PR
           echo "Find deprecations related to files in the PR"
-
           for fileName in ${changedFiles[@]}; do
             if grep $fileName staticcheckOutput.txt; then
-              grep $val staticcheckOutput.txt >> tmpfile
+              grep $fileName staticcheckOutput.txt >> tmpfile
             fi
           done
 
-          # cleanup and update deprecations file
+          # Cleanup and update deprecations file
           mv tmpfile staticcheckOutput.txt
 
-          # output deprecations
-
+          # Output Results
           echo "Results:"
-
           if [ -s staticcheckOutput.txt ]
           then
               echo "Use of deprecated function, variable, constant or field found"
