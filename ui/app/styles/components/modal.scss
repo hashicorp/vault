@@ -19,6 +19,19 @@
   position: fixed;
   z-index: 40;
 }
+
+.modal.is-active {
+  display: flex;
+}
+
+@media screen and (min-width: 769px), print {
+  .modal-card,
+  .modal-content {
+    margin: 0 auto;
+    max-height: calc(100vh - 40px);
+    width: 640px;
+  }
+}
 // end of bulma
 
 .modal-background {
@@ -31,21 +44,31 @@
   max-height: calc(100vh - 70px);
   margin-top: 60px;
   min-width: calc(100vw * 0.3);
+  position: relative;
 
   &-head {
     border-radius: 0;
     background-color: $grey-lightest;
     border-bottom: 1px solid $grey-light;
+    display: flex;
+    justify-content: flex-start;
+    padding: 20px;
   }
 
   &-foot {
     border-radius: 0;
     border: 0;
     background-color: $white;
+    padding: 20px;
+
+    .button:not(:last-child) {
+      margin-right: 10px;
+    }
   }
 
   &-title.title {
     margin: 0;
+    flex-grow: 1;
   }
 
   .copy-text {
