@@ -34,7 +34,7 @@ func pathLogin(b *backend) *framework.Path {
 		Pattern: "login",
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixCert,
-			OperationVerb:   "login",
+			OperationVerb:   "log-in",
 		},
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
