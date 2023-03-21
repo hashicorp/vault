@@ -78,6 +78,7 @@
               <div class="field">
                 <div class="control">
                   <input
+                    data-test-auth-form-ns-input
                     value={{this.namespaceQueryParam}}
                     placeholder="/ (Root)"
                     oninput={{perform this.updateNamespace value="target.value"}}
