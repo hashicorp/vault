@@ -1,0 +1,13 @@
+
+name: Lint GitHub Actions Workflows
+on:
+  push:
+  pull_request:
+
+jobs:
+  actionlint:
+    runs-on: ['self-hosted', 'linux', 'small']
+    steps:
+      - uses: actions/checkout@v3
+      - name: "Check workflow files"
+        uses: docker://docker.mirror.hashicorp.services/rhysd/actionlint:latest
