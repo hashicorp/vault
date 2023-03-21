@@ -20,11 +20,7 @@ jobs:
       - name: get changed files
         id: changed-files
         run: |
-            if ${{ github.event_name == 'pull_request' }}; then
-                echo "changed_files=$(git diff --name-only -r HEAD^1 HEAD | xargs)" >> $GITHUB_OUTPUT
-            else
-                echo "changed_files=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }} | xargs)" >> $GITHUB_OUTPUT
-            fi
+            git diff --name-only origin/main >> $GITHUB_OUTPUT
       - name: staticcheck
         run: |
           echo "Installing staticcheck"
