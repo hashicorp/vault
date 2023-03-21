@@ -221,6 +221,8 @@ test_packages[9]+=" $base/vault/hcp_link/capabilities/api_capability"
 test_packages[9]+=" $base/vault/external_tests/plugin"
 
 # Total time: 925
+test_packages[10]+=" $base/builtin/credential/ldap"
+test_packages[10]+=" $base/builtin/logical/database"
 test_packages[10]+=" $base/physical/etcd"
 test_packages[10]+=" $base/physical/postgresql"
 
@@ -248,9 +250,6 @@ if [ "${ENTERPRISE:+x}" == "x" ] ; then
     test_packages[13]+=" $base/vault/external_tests/filteredpathsext"
 fi
 test_packages[13]+=" $base/vault/external_tests/policy"
-test_packages[13]+=" $base/builtin/credential/ldap"
-test_packages[13]+=" $base/builtin/logical/database"
-
 
 # Total time: 374
 test_packages[14]+=" $base/builtin/credential/radius"
