@@ -1,21 +1,4 @@
-name: "Check for deprecated functions "
-on:
-  push:
-
-jobs:
-  deprecated-check-setup:
-    name: Deprecated check
-    runs-on: ubuntu-latest
-    steps:
-      - name: checkout code
-        uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f #v3.4.0
-      - name: set up Go
-        uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 #v4
-        with:
-          go-version-file: ./.go-version
-          cache: true
-      - name: staticcheck
-        run: |
+# using this to test locally, will be deleting this 
 echo "Installing staticcheck"
 go install honnef.co/go/tools/cmd/staticcheck@latest
 
@@ -61,3 +44,9 @@ else
      echo "Use of deprecated function, variable, constant or field not found"
      rm -rf staticcheckOutput.txt  
 fi
+
+
+
+
+
+          
