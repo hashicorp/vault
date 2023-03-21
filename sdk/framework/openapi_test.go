@@ -350,7 +350,7 @@ func TestOpenAPI_SpecialPaths(t *testing.T) {
 				Unauthenticated: test.unauthenticatedPaths,
 			}
 
-			if err := documentPath(&path, specialPaths, "kv", logical.TypeLogical, doc); err != nil {
+			if err := documentPath(&path, specialPaths, logical.TypeLogical, doc); err != nil {
 				t.Fatal(err)
 			}
 
