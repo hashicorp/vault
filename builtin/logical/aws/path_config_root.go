@@ -16,8 +16,7 @@ func pathConfigRoot(b *backend) *framework.Path {
 		Pattern: "config/root",
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixAWSConfig,
-			OperationSuffix: "root-iam-credentials",
+			OperationPrefix: operationPrefixAWS,
 		},
 
 		Fields: map[string]*framework.FieldSchema{
@@ -54,9 +53,20 @@ func pathConfigRoot(b *backend) *framework.Path {
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathConfigRootRead,
-			logical.UpdateOperation: b.pathConfigRootWrite,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathConfigRootRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "root-credentials-configuration",
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathConfigRootWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "root-credentials",
+				},
+			},
 		},
 
 		HelpSynopsis:    pathConfigRootHelpSyn,

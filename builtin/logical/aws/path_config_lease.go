@@ -14,8 +14,7 @@ func pathConfigLease(b *backend) *framework.Path {
 		Pattern: "config/lease",
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixAWSConfig,
-			OperationSuffix: "lease",
+			OperationPrefix: operationPrefixAWS,
 		},
 
 		Fields: map[string]*framework.FieldSchema{
@@ -30,9 +29,20 @@ func pathConfigLease(b *backend) *framework.Path {
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathLeaseRead,
-			logical.UpdateOperation: b.pathLeaseWrite,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathLeaseRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "lease-configuration",
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathLeaseWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "lease",
+				},
+			},
 		},
 
 		HelpSynopsis:    pathConfigLeaseHelpSyn,
