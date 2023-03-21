@@ -394,7 +394,7 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					DisplayAttrs: &framework.DisplayAttributes{
-						OperationVerb:   "provide",
+						OperationVerb:   "update",
 						OperationSuffix: "root-token-generation",
 					},
 					Summary:     "Enter a single unseal key share to progress the root generation attempt.",
