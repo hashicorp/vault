@@ -1,6 +1,6 @@
 // Utils
 @import './utils/color_variables';
-@import './utils/spacing';
+@import './utils/size_variables';
 @import './utils/bulma_variables'; // Consolidates bulma variables and mixins
 @import './utils/mixins';
 @import './utils/animations';
@@ -39,6 +39,7 @@
 @import './helper-classes/colors';
 @import './helper-classes/flexbox-and-grid';
 @import './helper-classes/spacing';
+@import './helper-classes/typography';
 
 // bulma additions
 @import './core/layout';

@@ -134,48 +134,7 @@ fieldset[disabled] .select select:-ms-input-placeholder,
   width: 100%;
 }
 
-/* SIZING */
-.is-size-1 {
-  font-size: 3rem !important;
-}
-
-.is-size-2 {
-  font-size: 2.5rem !important;
-}
-
-.is-size-3 {
-  font-size: 1.71429rem !important;
-}
-
-.is-size-4 {
-  font-size: 1.5rem !important;
-}
-
-.is-size-5 {
-  font-size: 1.25rem !important;
-}
-
-.is-size-6 {
-  font-size: 1rem !important;
-}
-
-.is-size-7 {
-  font-size: 0.92857rem !important;
-}
-
-.is-size-8 {
-     font-size: 0.85714rem !important;
-   }
-
-.is-size-9 {
-  font-size: 0.75rem !important;
-}
-
-  /* TODOs remove verb? remove important */
-  /* HELPERS TEXT*/
-.has-text-right {
-  text-align: right !important;
-}
+/* TODOs remove verb? remove important */
 
 .is-pulled-left {
   float: left !important;
@@ -183,26 +142,6 @@ fieldset[disabled] .select select:-ms-input-placeholder,
 
 .is-pulled-right {
   float: right !important;
-}
-
-.is-lowercase {
-  text-transform: lowercase !important;
-}
-
-.is-uppercase {
-  text-transform: uppercase !important;
-}
-
-.has-text-weight-semibold {
-  font-weight: 600 !important;
-}
-
-.has-text-weight-bold {
-  font-weight: 700 !important;
-}
-
-.has-text-centered {
-  text-align: center !important;
 }
 
 .is-shadowless {
@@ -434,7 +373,7 @@ fieldset[disabled] .select select:-ms-input-placeholder,
   width: 100%;
 }
 
-
+/* Not really a helper? ARG TODO return */
 .title.is-2 {
   font-size: 2.5rem;
 }
@@ -614,8 +553,6 @@ fieldset[disabled] .select select:-ms-input-placeholder,
   width: 25%;
 }
 
-
-/* Helper spacing */
 
 /* OTHER */
 /* we only use is white in two old places in the app... replace */

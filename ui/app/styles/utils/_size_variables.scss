@@ -1,0 +1,120 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+/* Font sizing */
+$size-1: 3rem !default;
+$size-2: 2.5rem !default;
+$size-3: (24/14) + 0rem; // ~1.714rem ~27px
+$size-4: 1.5rem; // 24px
+$size-5: 1.25rem; // 20px
+$size-6: 1rem !default;
+$size-7: (13/14) + 0rem; // ~.929rem ~15px
+$size-8: (12/14) + 0rem; // ~.857rem  ~13.7px
+$size-9: 0.75rem; // 12px
+$size-10: 0.5rem; // 8px
+$size-11: 0.25rem; // 4px
+
+// ARG TODO find these in code and replace with the corresponding size.
+$size-small: $size-8;
+$size-normal: $size-6;
+$size-medium: $size-5;
+$size-large: $size-4;
+
+/* Font weight */
+$weight-light: 300 !default;
+$weight-normal: 400 !default;
+$weight-medium: 500 !default;
+$weight-semibold: 600 !default;
+$weight-bold: 700 !default;
+// ARG TODO find these in the code and replace with above sizing
+$font-weight-normal: 400;
+$font-weight-semibold: 600;
+$font-weight-bold: 700;
+
+/* Spacing */
+$block-spacing: 1.5rem !default;
+
+$spacing-xxs: 4px;
+$spacing-xs: 8px;
+$spacing-s: 12px;
+$spacing-m: 16px;
+$spacing-l: 24px;
+$spacing-xl: 36px;
+$spacing-xxl: 48px;
+
+/* Responsiveness */
+
+// The container horizontal gap, which acts as the offset for breakpoints
+$gap: 32px !default;
+// 960, 1152, and 1344 have been chosen because they are divisible by both 12 and 16
+$mobile: 769px;
+$tablet: 769px !default;
+// 960px container + 4rem
+$desktop: 960px + (2 * $gap) !default;
+// 1152px container + 4rem
+$widescreen: 1152px + (2 * $gap) !default;
+$widescreen-enabled: true !default;
+// 1344px container + 4rem
+$fullhd: 1344px + (2 * $gap) !default;
+$fullhd-enabled: true !default;
+$breakpoints: (
+  'mobile': (
+    'until': $tablet,
+  ),
+  'tablet': (
+    'from': $tablet,
+  ),
+  'tablet-only': (
+    'from': $tablet,
+    'until': $desktop,
+  ),
+  'touch': (
+    'from': $desktop,
+  ),
+  'desktop': (
+    'from': $desktop,
+  ),
+  'desktop-only': (
+    'from': $desktop,
+    'until': $widescreen,
+  ),
+  'until-widescreen': (
+    'until': $widescreen,
+  ),
+  'widescreen': (
+    'from': $widescreen,
+  ),
+  'widescreen-only': (
+    'from': $widescreen,
+    'until': $fullhd,
+  ),
+  'until-fullhd': (
+    'until': $fullhd,
+  ),
+  'fullhd': (
+    'from': $fullhd,
+  ),
+) !default;
+
+/* Miscellaneous sizing*/
+// ARG TODO clean up
+$radius-small: 2px !default;
+$radius: 4px !default;
+$radius-large: 6px !default;
+$radius-rounded: 9999px !default;
+$input-radius: $radius;
+$speed: 86ms !default;
+
+$header-height: 4rem;
+$body-size: 14px;
+
+$console-spacing: 1.5rem; // 24px
+
+// Wizard
+$wizard-progress-bar-height: 6px;
+$wizard-progress-check-size: 16px;
+
+// Div height
+$medium-height: 125px;
