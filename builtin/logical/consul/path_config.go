@@ -61,7 +61,7 @@ must be x509 PEM encoded and if this is set you need to also set client_cert.`,
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathConfigAccessRead,
 				DisplayAttrs: &framework.DisplayAttributes{
-					OperationSuffix: "access-config",
+					OperationSuffix: "access-configuration",
 				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
