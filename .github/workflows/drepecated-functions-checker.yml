@@ -6,14 +6,25 @@ jobs:
   deprecated-check-setup:
     name: Deprecated check
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: checkout code
-        uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f #v3.4.0
+        uses: actions/checkout@v3
+        with:
+            fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 0 }}
       - name: set up Go
         uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 #v4
         with:
           go-version-file: ./.go-version
           cache: true
+      - name: get changed files
+        id: changed-files
+        run: |
+            if ${{ github.event_name == 'pull_request' }}; then
+                echo "changed_files=$(git diff --name-only -r HEAD^1 HEAD | xargs)" >> $GITHUB_OUTPUT
+            else
+                echo "changed_files=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }} | xargs)" >> $GITHUB_OUTPUT
+            fi
       - name: staticcheck
         run: |
           echo "Installing staticcheck"
@@ -23,32 +34,25 @@ jobs:
           echo "Running staticcheck to look for deprecations"
 
           # use entire package name for packages
-          ignoreList=("github.com/golang/protobuf/proto"
-          "errwrap.Wrapf"
-          "io/ioutil"
-          "ptypes"
-          ".RawRequestWithContext"
-          ".RawRequest"
-          "cloud.google.com/go/monitoring/apiv3"
-          "crypto/dsa"
-          "x509.ParseCRL"
-          "ACL().Create"
-          "ACL().Destroy" 
-          "Statements.CreationStatements"
-          "Statements.RevocationStatements"
-          "Statements.RollbackStatements"
-          "strings.Title"
-          "connState.NegotiatedProtocolIsMutual")
+          ignoreList=("errwrap.Wrapf"
+          )
 
           # run staticcheck
-          staticcheck ./... | grep deprecated > staticcheckOutput.txt  
+          staticcheck ./... | grep deprecated > staticcheckOutput.txt
+
+          # include deprecations details of only changed files in the PR
+          for file in ${{ steps.changed-files.outputs.changed_files }}; do
+                echo "Checking use of deprecations in $file"
+                grep $file staticcheckOutput.txt >> tmpfile
+          done
+
+          # cleanup and update deprecations file
+          mv tmpfile staticcheckOutput.txt
 
           # delete ignored values from the output
           for val in ${ignoreList[@]}; do
             grep -v $val staticcheckOutput.txt > tmpfile && mv tmpfile staticcheckOutput.txt
-            rm -rf tmpfile
           done
-
 
           if [ -s staticcheckOutput.txt ]
           then

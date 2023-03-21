@@ -57,6 +57,32 @@ func TestBolt_SetGet(t *testing.T) {
 	assert.Equal(t, []byte("hello"), secrets[0])
 }
 
+func Test_Deprecations(t *testing.T) {
+	ctx := context.Background()
+
+	path, err := ioutil.TempDir("", "bolt-test")
+	require.NoError(t, err)
+	defer os.RemoveAll(path)
+
+	b, err := NewBoltStorage(&BoltStorageConfig{
+		Path:    path,
+		Logger:  hclog.Default(),
+		Wrapper: getTestKeyManager(t).Wrapper(),
+	})
+	require.NoError(t, err)
+
+	secrets, err := b.GetByType(ctx, LeaseType)
+	assert.NoError(t, err)
+	require.Len(t, secrets, 0)
+
+	err = b.Set(ctx, "test1", []byte("hello"), LeaseType)
+	assert.NoError(t, err)
+	secrets, err = b.GetByType(ctx, LeaseType)
+	assert.NoError(t, err)
+	require.Len(t, secrets, 1)
+	assert.Equal(t, []byte("hello"), secrets[0])
+}
+
 func TestBoltDelete(t *testing.T) {
 	ctx := context.Background()
 
