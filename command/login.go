@@ -115,7 +115,7 @@ func (c *LoginCommand) Flags() *FlagSets {
 		Name:    "print-token",
 		Target:  &c.flagPrintToken,
 		Default: false,
-		Usage: "For security purposes we do not print the token used in stdout by default." +
+		Usage: "For security purposes, we do not print the token to stdout by default." +
 			"The token will be still be stored to the configured token helper.",
 	})
 
