@@ -1,6 +1,11 @@
 name: "Check for deprecated functions "
+
 on:
-  push:
+  pull_request:
+    types: [opened, synchronize, labeled, unlabeled]
+    # Runs on PRs to main
+    branches:
+      - main
 
 jobs:
   deprecated-check-setup:
@@ -9,8 +14,9 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v2
         with:
+          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0 # by default the checkout action doesn't checkout all branches
       - name: set up Go
         uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 #v4
