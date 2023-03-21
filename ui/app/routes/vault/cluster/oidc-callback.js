@@ -12,7 +12,8 @@ export default Route.extend({
     if (state?.includes(',ns=')) {
       [state, namespace] = state.split(',ns=');
     }
-    // some SSO providers do not return a url-encoded string, check for namespace using URLSearchParams
+    // some SSO providers do not return a url-encoded state param
+    // check for namespace using URLSearchParams instead of paramsFor
     const queryString = decodeURIComponent(window.location.search);
     const urlParams = new URLSearchParams(queryString);
     const checkState = urlParams.get('state');
