@@ -22,9 +22,9 @@ func (b *backend) pathConfigRotateRoot() *framework.Path {
 		Pattern: "config/rotate-root",
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixAWSAuthConfig,
-			OperationSuffix: "root",
+			OperationPrefix: operationPrefixAWSAuth,
 			OperationVerb:   "rotate",
+			OperationSuffix: "root-credentials",
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{

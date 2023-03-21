@@ -18,8 +18,7 @@ func (b *backend) pathConfigClient() *framework.Path {
 		Pattern: "config/client$",
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixAWSAuthConfig,
-			OperationSuffix: "client",
+			OperationPrefix: operationPrefixAWSAuth,
 		},
 
 		Fields: map[string]*framework.FieldSchema{
@@ -83,15 +82,29 @@ func (b *backend) pathConfigClient() *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.CreateOperation: &framework.PathOperation{
 				Callback: b.pathConfigClientCreateUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "client",
+				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathConfigClientCreateUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "client",
+				},
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathConfigClientDelete,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "client-configuration",
+				},
 			},
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathConfigClientRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "client-configuration",
+				},
 			},
 		},
 

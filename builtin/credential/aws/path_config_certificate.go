@@ -19,8 +19,8 @@ func (b *backend) pathListCertificates() *framework.Path {
 		Pattern: "config/certificates/?",
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixAWSAuthConfig,
-			OperationSuffix: "certificates",
+			OperationPrefix: operationPrefixAWSAuth,
+			OperationSuffix: "certificate-configurations",
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -39,8 +39,7 @@ func (b *backend) pathConfigCertificate() *framework.Path {
 		Pattern: "config/certificate/" + framework.GenericNameRegex("cert_name"),
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixAWSAuthConfig,
-			OperationSuffix: "certificate",
+			OperationPrefix: operationPrefixAWSAuth,
 		},
 
 		Fields: map[string]*framework.FieldSchema{
@@ -69,15 +68,29 @@ vary. Defaults to "pkcs7".`,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.CreateOperation: &framework.PathOperation{
 				Callback: b.pathConfigCertificateCreateUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "certificate",
+				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathConfigCertificateCreateUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "certificate",
+				},
 			},
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathConfigCertificateRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "certificate-configuration",
+				},
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathConfigCertificateDelete,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "certificate-configuration",
+				},
 			},
 		},
 

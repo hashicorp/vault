@@ -18,9 +18,8 @@ import (
 )
 
 const (
-	amzHeaderPrefix              = "X-Amz-"
-	operationPrefixAWSAuth       = "aws-auth"
-	operationPrefixAWSAuthConfig = "aws-auth-config"
+	amzHeaderPrefix        = "X-Amz-"
+	operationPrefixAWSAuth = "aws-auth"
 )
 
 var defaultAllowedSTSRequestHeaders = []string{

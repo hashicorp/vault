@@ -16,8 +16,7 @@ func (b *backend) pathConfigTidyRoletagDenyList() *framework.Path {
 		Pattern: "config/tidy/roletag-denylist$",
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixAWSAuthConfig,
-			OperationSuffix: "role-tag-deny-list-tidy-settings",
+			OperationPrefix: operationPrefixAWSAuth,
 		},
 
 		Fields: map[string]*framework.FieldSchema{
@@ -41,18 +40,29 @@ Defaults to 4320h (180 days).`,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.CreateOperation: &framework.PathOperation{
 				Callback: b.pathConfigTidyRoletagDenyListCreateUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "role-tag-deny-list-tidy-operation",
+				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathConfigTidyRoletagDenyListCreateUpdate,
 				DisplayAttrs: &framework.DisplayAttributes{
-					OperationVerb: "update",
+					OperationVerb:   "configure",
+					OperationSuffix: "role-tag-deny-list-tidy-operation",
 				},
 			},
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathConfigTidyRoletagDenyListRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "role-tag-deny-list-tidy-settings",
+				},
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathConfigTidyRoletagDenyListDelete,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "role-tag-deny-list-tidy-settings",
+				},
 			},
 		},
 

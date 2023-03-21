@@ -18,7 +18,7 @@ func (b *backend) pathListSts() *framework.Path {
 		Pattern: "config/sts/?",
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixAWSAuthConfig,
+			OperationPrefix: operationPrefixAWSAuth,
 			OperationSuffix: "sts-role-relationships",
 		},
 
@@ -38,8 +38,8 @@ func (b *backend) pathConfigSts() *framework.Path {
 		Pattern: "config/sts/" + framework.GenericNameRegex("account_id"),
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixAWSAuthConfig,
-			OperationSuffix: "sts-roles",
+			OperationPrefix: operationPrefixAWSAuth,
+			OperationSuffix: "sts-role",
 		},
 
 		Fields: map[string]*framework.FieldSchema{

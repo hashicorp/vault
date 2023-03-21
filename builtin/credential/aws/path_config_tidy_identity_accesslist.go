@@ -17,8 +17,7 @@ func (b *backend) pathConfigTidyIdentityAccessList() *framework.Path {
 		Pattern: fmt.Sprintf("%s$", "config/tidy/identity-accesslist"),
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixAWSAuthConfig,
-			OperationSuffix: "identity-access-list-tidy-settings",
+			OperationPrefix: operationPrefixAWSAuth,
 		},
 
 		Fields: map[string]*framework.FieldSchema{
@@ -40,18 +39,29 @@ expiration, before it is removed from the backend storage.`,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.CreateOperation: &framework.PathOperation{
 				Callback: b.pathConfigTidyIdentityAccessListCreateUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "identity-access-list-tidy-operation",
+				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathConfigTidyIdentityAccessListCreateUpdate,
 				DisplayAttrs: &framework.DisplayAttributes{
-					OperationVerb: "update",
+					OperationVerb:   "configure",
+					OperationSuffix: "identity-access-list-tidy-operation",
 				},
 			},
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathConfigTidyIdentityAccessListRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "identity-access-list-tidy-settings",
+				},
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathConfigTidyIdentityAccessListDelete,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "identity-access-list-tidy-settings",
+				},
 			},
 		},
 
