@@ -1,27 +1,18 @@
 # using this to test locally, will be deleting this 
 echo "Installing staticcheck"
-go install honnef.co/go/tools/cmd/staticcheck@latest
+go install honnef.co/go/tools/cmd/staticcheck@2023.1.2 #v0.4.2
+
+echo "Get files changed in the PR"
+changed_files=$(git diff --name-only origin/main)
+for val in ${changed_files[@]}; do
+  echo "$val changed"
+done
 
 
 echo "Running staticcheck to look for deprecations"
 
 # use entire package name for packages
-ignoreList=("github.com/golang/protobuf/proto"
-"errwrap.Wrapf"
-"io/ioutil"
-"ptypes"
-".RawRequestWithContext"
-".RawRequest"
-"cloud.google.com/go/monitoring/apiv3"
-"crypto/dsa"
-"x509.ParseCRL"
-"ACL().Create"
-"ACL().Destroy" 
-"Statements.CreationStatements"
-"Statements.RevocationStatements"
-"Statements.RollbackStatements"
-"strings.Title"
-"connState.NegotiatedProtocolIsMutual")
+ignoreList=()
 
 filesChanged=("builtin/logical/pki/chain_test.go"
 "builtin/logical/database/path_roles.go"
@@ -31,7 +22,7 @@ filesChanged=("builtin/logical/pki/chain_test.go"
 staticcheck ./... | grep deprecated > staticcheckOutput.txt  
 
 # include details of only changed files in the PR
-for val in ${filesChanged[@]}; do
+for val in ${changed_files[@]}; do
   grep $val staticcheckOutput.txt >> tmpfile
 done
 
