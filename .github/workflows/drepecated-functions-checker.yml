@@ -22,13 +22,17 @@ jobs:
         with:
           go-version-file: ./.go-version
           cache: true
-      - name: Check deprecations in diff
-        run: |
+      - name: Check deprecations for files in diff
+        run: |  
+          # Staticcheck uses static analysis to finds bugs and performance issues, offers simplifications, 
+          # and enforces style rules.
+          # Here, it is used to check if a deprecated function, variable, constant or field is used.
+
           echo "Installing staticcheck"
           go install honnef.co/go/tools/cmd/staticcheck@2023.1.2 #v0.4.2
 
-          # run staticcheck
-          echo "Running staticcheck to look for deprecations"
+          # Run staticcheck 
+          echo "Performing Deprecations Check: Running Staticcheck"
           staticcheck ./... | grep deprecated > staticcheckOutput.txt
 
           # Get changed files names from the PR
@@ -56,8 +60,8 @@ jobs:
 
           if [ "$deprecationsCount" -ne "0" ]
           then
-              echo "Deprecations check failed"
+              echo "Deprecations check failed. This check examines the entire file included in the PR for any deprecated functions, variables, constants, or fields. Please review your changes to ensure that you have not included any deprecated elements."
               exit 1 
           else
-              echo "No use of deprecations found in the PR!"
+              echo "No deprecated functions, variables, constants, or fields were found in the PR!"
           fi
