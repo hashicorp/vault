@@ -65,6 +65,14 @@ $ echo "abcd1234" | vault kv patch -mount=secret foo bar=-
   will not have a trailing newline making it ideal for piping to other
   processes.
 
+- `-clipboard` `(bool: false)` - When combined with `-field`, the output will be
+  saved to the user's clipboard. For Linux users, this requires `xclip` or `xsel`
+  to be installed.
+
+- `-clipboard-ttl` `(duration: "", optional)` - When combined with `-clipboard`,
+  the output will be saved to the user's clipboard until the specified TTL. After the
+  TTL is up, the value is automatically removed from the clipboard.
+
 - `-format` `(string: "table")` - Print the output in the given format. Valid
   formats are "table", "json", or "yaml". This can also be specified via the
   `VAULT_FORMAT` environment variable.
@@ -84,8 +92,8 @@ $ echo "abcd1234" | vault kv patch -mount=secret foo bar=-
   Instead, its value will be derived from fetching the current version of the
   secret.
 
-- `-mount` `(string: "")` - Specifies the path where the KV backend is mounted. 
-  If specified, the next argument will be interpreted as the secret path. If 
-  this flag is not specified, the next argument will be interpreted as the 
-  combined mount path and secret path, with /data/ automatically inserted for 
+- `-mount` `(string: "")` - Specifies the path where the KV backend is mounted.
+  If specified, the next argument will be interpreted as the secret path. If
+  this flag is not specified, the next argument will be interpreted as the
+  combined mount path and secret path, with /data/ automatically inserted for
   KV v2 secrets.

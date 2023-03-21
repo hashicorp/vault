@@ -131,6 +131,14 @@ flags](/vault/docs/commands) included on all commands.
   this option will take precedence over other formatting directives. The result
   will not have a trailing newline making it ideal for piping to other processes.
 
+- `-clipboard` `(bool: false)` - When combined with `-field`, the output will be
+  saved to the user's clipboard. For Linux users, this requires `xclip` or `xsel`
+  to be installed.
+
+- `-clipboard-ttl` `(duration: "", optional)` - When combined with `-clipboard`,
+  the output will be saved to the user's clipboard until the specified TTL. After the
+  TTL is up, the value is automatically removed from the clipboard.
+
 - `-format` `(string: "table")` - Print the output in the given format. Valid
   formats are "table", "json", or "yaml". This can also be specified via the
   `VAULT_FORMAT` environment variable.
