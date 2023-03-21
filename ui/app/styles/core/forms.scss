@@ -293,7 +293,8 @@ label {
     width: 100%;
   }
   .checkbox {
-    @include input;
+    // ARG TODO return this
+    // @include input;
     background-color: $grey-lightest;
     @each $name, $pair in $colors {
       $color: nth($pair, 1);

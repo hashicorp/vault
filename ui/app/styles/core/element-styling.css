@@ -1,0 +1,141 @@
+/* These come from bulma */
+html,
+body,
+p,
+ol,
+ul,
+li,
+dl,
+dt,
+dd,
+blockquote,
+figure,
+fieldset,
+legend,
+textarea,
+pre,
+iframe,
+hr,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  padding: 0;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-size: 100%;
+  font-weight: normal;
+}
+
+ul {
+  list-style: none;
+}
+
+button,
+input,
+select,
+textarea {
+  margin: 0;
+}
+
+html {
+  box-sizing: border-box;
+}
+
+* {
+  box-sizing: inherit;
+}
+*:before,
+*:after {
+  box-sizing: inherit;
+}
+
+img,
+embed,
+object {
+  max-width: 100%;
+}
+
+html {
+  background-color: #fff;
+  font-size: 14px;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+  min-width: 300px;
+  overflow-x: hidden;
+  overflow-y: scroll;
+  text-rendering: optimizeLegibility;
+  text-size-adjust: 100%;
+}
+
+article,
+aside,
+figure,
+footer,
+header,
+hgroup,
+section {
+  display: block;
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: $family-primary;
+}
+
+code,
+pre {
+  -moz-osx-font-smoothing: auto;
+  -webkit-font-smoothing: auto;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+}
+
+body {
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+a {
+  color: #1563ff;
+  cursor: pointer;
+  text-decoration: none;
+}
+a strong {
+  color: currentColor;
+}
+a:hover {
+  color: #1f2124;
+}
+
+code {
+  background-color: transparent;
+  color: #525761;
+  font-size: 0.875em;
+  font-weight: normal;
+  padding: 0.25em 0.5em 0.25em;
+}
+
+hr {
+  background-color: #bac1cc;
+  border: none;
+  display: block;
+  height: 1px;
+  margin: 1rem 0;
+}
+
+img {
+  height: auto;
+  max-width: 100%;
+}

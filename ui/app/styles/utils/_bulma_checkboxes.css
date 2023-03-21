@@ -1,0 +1,164 @@
+/*!
+   cool-checkboxes-for-bulma.io v1.1.0: Cool Checkboxes for Bulma.io
+   (c) 2017 
+   MIT License
+   
+*/
+@charset "UTF-8";
+.b-checkbox {
+  position: relative;
+}
+
+.b-checkbox label {
+  padding-left: 5px;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.b-checkbox label::before {
+  content: "";
+  position: absolute;
+  width: 17px;
+  height: 17px;
+  left: 0;
+  top: 1px;
+  border: 1px solid #dbdbdb;
+  border-radius: 3px;
+  background-color: #fff;
+  transition: background .1s ease-in-out;
+}
+
+.b-checkbox label::after {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  left: 3px;
+  top: 3px;
+  font-size: 12px;
+  color: #363636;
+}
+
+.b-checkbox input[type="checkbox"],
+.b-checkbox input[type="radio"] {
+  opacity: 0;
+  z-index: 1;
+  cursor: pointer;
+}
+
+.b-checkbox input[type="checkbox"]:focus + label::before,
+.b-checkbox input[type="radio"]:focus + label::before {
+  outline: thin dotted;
+  outline: 5px auto -webkit-focus-ring-color;
+  outline-offset: -2px;
+}
+
+.b-checkbox input[type="checkbox"]:checked + label::after,
+.b-checkbox input[type="radio"]:checked + label::after {
+  content: "✔";
+}
+
+.b-checkbox input[type="checkbox"]:disabled,
+.b-checkbox input[type="radio"]:disabled {
+  cursor: not-allowed;
+}
+
+.b-checkbox input[type="checkbox"]:disabled + label,
+.b-checkbox input[type="radio"]:disabled + label {
+  opacity: 0.65;
+}
+
+.b-checkbox input[type="checkbox"]:disabled + label::before,
+.b-checkbox input[type="radio"]:disabled + label::before {
+  background-color: whitesmoke;
+  cursor: not-allowed;
+}
+
+.b-checkbox.is-circular label::before {
+  border-radius: 50%;
+}
+
+.b-checkbox.is-inline {
+  display: inline-block;
+  font-weight: normal;
+}
+
+.b-checkbox.is-inline + .is-inline {
+  margin-left: 10px;
+}
+
+.is-primary input[type="checkbox"]:checked + label::before {
+  background-color: #00d1b2;
+  border-color: #00d1b2;
+}
+
+.is-primary input[type="checkbox"]:checked + label::after {
+  color: #fff;
+}
+
+.is-danger input[type="checkbox"]:checked + label::before {
+  background-color: #ff3860;
+  border-color: #ff3860;
+}
+
+.is-danger input[type="checkbox"]:checked + label::after {
+  color: #fff;
+}
+
+.is-info input[type="checkbox"]:checked + label::before {
+  background-color: #3273dc;
+  border-color: #3273dc;
+}
+
+.is-info input[type="checkbox"]:checked + label::after {
+  color: #fff;
+}
+
+.is-warning input[type="checkbox"]:checked + label::before {
+  background-color: #ffdd57;
+  border-color: #ffdd57;
+}
+
+.is-warning input[type="checkbox"]:checked + label::after {
+  color: #fff;
+}
+
+.is-success input[type="checkbox"]:checked + label::before {
+  background-color: #23d160;
+  border-color: #23d160;
+}
+
+.is-success input[type="checkbox"]:checked + label::after {
+  color: #fff;
+}
+
+.is-dark input[type="checkbox"]:checked + label::before {
+  background-color: #363636;
+  border-color: #363636;
+}
+
+.is-dark input[type="checkbox"]:checked + label::after {
+  color: #fff;
+}
+
+.is-black input[type="checkbox"]:checked + label::before {
+  background-color: #0a0a0a;
+  border-color: #0a0a0a;
+}
+
+.is-black input[type="checkbox"]:checked + label::after {
+  color: #fff;
+}
+
+input[type="checkbox"].styled:checked + label:after {
+  font-family: "FontAwesome";
+  content: "";
+}
+
+input[type="checkbox"] .styled:checked + label::before {
+  color: #fff;
+}
+
+input[type="checkbox"] .styled:checked + label::after {
+  color: #fff;
+}

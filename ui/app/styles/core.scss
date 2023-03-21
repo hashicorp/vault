@@ -6,18 +6,17 @@
 // Start with Structure & Bulma variables as a foundation
 @import './utils/colors';
 @import './utils/spacing';
-@import 'bulma/sass/utilities/initial-variables';
 
-// Override variables where appropriate
+// Consolidate Bulma variables and mixins
 @import './utils/bulma_variables';
+
+@import './core/element-styling';
+@import './utils/bulma_switch';
+@import './utils/bulma_checkboxes';
 
 // Utils
 @import './utils/mixins';
 @import './utils/animations';
-
-// Bring in the rest of Bulma
-@import 'bulma/bulma';
-@import 'bulma/switch';
 
 // Override Bulma details where appropriate
 @import './core/alert-banner';
