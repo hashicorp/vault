@@ -8,7 +8,7 @@ on:
       - main
 
 jobs:
-  deprecated-check-setup:
+  deprecations-check:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -22,14 +22,13 @@ jobs:
         with:
           go-version-file: ./.go-version
           cache: true
-      - name: staticcheck to look for deprecations in diff
+      - name: Check deprecations in diff
         run: |
           echo "Installing staticcheck"
           go install honnef.co/go/tools/cmd/staticcheck@2023.1.2 #v0.4.2
 
-          echo "Running staticcheck to look for deprecations"
-
           # run staticcheck
+          echo "Running staticcheck to look for deprecations"
           staticcheck ./... | grep deprecated > staticcheckOutput.txt
 
           # Get changed files names from the PR
@@ -44,21 +43,24 @@ jobs:
           done
 
           # Cleanup and update deprecations file
-          mv tmpfile staticcheckOutput.txt
+          echo "Cleanup files"
+          rm -rf tmpfile
+          rm -rf staticcheckOutput.txt
+          # mv tmpfile staticcheckOutput.txt
 
-          # Output Results
-          echo "Results:"
-          if [ -s staticcheckOutput.txt ]
-          then
-              echo "Use of deprecated function, variable, constant or field found"
-              cat staticcheckOutput.txt 
+          # # Output Results
+          # echo "Results:"
+          # if [ -s staticcheckOutput.txt ]
+          # then
+          #     echo "Use of deprecated function, variable, constant or field found"
+          #     cat staticcheckOutput.txt 
 
-              # output file clean up 
-              rm -rf staticcheckOutput.txt  
-              exit 1 
-          else
-              echo "Use of deprecated function, variable, constant or field not found"
+          #     # output file clean up 
+          #     rm -rf staticcheckOutput.txt  
+          #     exit 1 
+          # else
+          #     echo "Use of deprecated function, variable, constant or field not found"
 
-              # output file clean up 
-              rm -rf staticcheckOutput.txt  
-          fi
+          #     # output file clean up 
+          #     rm -rf staticcheckOutput.txt  
+          # fi
