@@ -15,6 +15,8 @@ export const SELECTORS = {
   ...GENERATE_ROOT,
   // pki-ca-cert-import
   importForm: '[data-test-pki-import-pem-bundle-form]',
+  importSectionLabel: '[data-test-import-section-label]',
+  importMapping: '[data-test-imported-bundle-mapping]',
   // generate-intermediate
   csrDetails: '[data-test-generate-csr-result]',
 };
