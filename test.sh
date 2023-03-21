@@ -4,6 +4,7 @@ go install honnef.co/go/tools/cmd/staticcheck@2023.1.2 #v0.4.2
 
 echo "Get files changed in the PR"
 changed_files=$(git diff --name-only main)
+echo $changed_files
 for val in ${changed_files[@]}; do
   echo "$val changed"
 done

@@ -6,18 +6,18 @@ jobs:
   deprecated-check-setup:
     name: Deprecated check
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: checkout code
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0
+          fetch-depth: 0 # by default the checkout action doesn't checkout all branches
       - name: set up Go
         uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 #v4
         with:
           go-version-file: ./.go-version
           cache: true
-      - name: staticcheck
+      - name: staticcheck to look for deprecations in diff
         run: |
           echo "Installing staticcheck"
           go install honnef.co/go/tools/cmd/staticcheck@2023.1.2 #v0.4.2
@@ -28,10 +28,17 @@ jobs:
           staticcheck ./... | grep deprecated > staticcheckOutput.txt
 
           # get changed files names from the PR
-          changedFiles=$(git diff --name-only origin/main)
-          echo $changedFiles
+
+          echo "Get filenames in the current PR"
+          changedFiles=$(git --no-pager diff --name-only HEAD "$(git merge-base HEAD "origin/${{ github.event.pull_request.base.ref }}")")
+          
+          for val in ${changedFiles[@]}; do
+            echo "$val changed"
+          done
 
           # include deprecations details of only changed files in the PR
+          echo "Find deprecations related to files in the PR"
+
           for fileName in ${changedFiles[@]}; do
             grep $fileName staticcheckOutput.txt >> tmpfile
           done
@@ -40,6 +47,9 @@ jobs:
           mv tmpfile staticcheckOutput.txt
 
           # output deprecations
+
+          echo "Results:"
+
           if [ -s staticcheckOutput.txt ]
           then
               echo "Use of deprecated function, variable, constant or field found"
