@@ -113,8 +113,9 @@ $body-size: 14px;
 $console-spacing: 1.5rem; // 24px
 
 // Wizard
-$wizard-progress-bar-height: 6px;
-$wizard-progress-check-size: 16px;
+// Not being used: https://github.com/hashicorp/vault/pull/19220
+// $wizard-progress-bar-height: 6px;
+// $wizard-progress-check-size: 16px;
 
 // Div height
 $medium-height: 125px;
