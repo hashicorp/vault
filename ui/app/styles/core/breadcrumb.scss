@@ -1,4 +1,5 @@
 .breadcrumb {
+  display: flex;
   -ms-user-select: text;
   -webkit-user-select: text;
   user-select: text;
@@ -19,7 +20,7 @@
 
   a {
     align-items: center;
-    color: #485fc7;
+    color: $blue-500;
     display: flex;
     justify-content: center;
     padding: 0 0.75em;

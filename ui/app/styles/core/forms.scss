@@ -75,12 +75,12 @@ label {
 .is-help {
   font-size: $size-small;
   margin-top: 0.25rem;
-  // @each $name, $pair in $colors {
-  //   $color: nth($pair, 1);
-  //   &.is-#{$name} {
-  //     color: $color;
-  //   }
-  // }
+  @each $name, $pair in $colors {
+    $color: nth($pair, 1);
+    &.is-#{$name} {
+      color: $color;
+    }
+  }
 }
 
 .sub-text {
@@ -221,33 +221,33 @@ label {
     }
   }
 
-  // @each $name, $pair in $colors {
-  //   $color: nth($pair, 1);
-  //   $color-invert: findColorInvert($color);
-  //   $color-bg: nth($pair, 2);
-  //   &.is-#{$name} {
-  //     border-color: $color;
-  //     background-color: $color-bg;
-  //     &.is-inverted {
-  //       border-color: rgba($color-invert, 0.3);
-  //       background-color: $color-bg;
-  //       &::placeholder {
-  //         color: rgba($color-invert, 0.3);
-  //       }
-  //       &:focus,
-  //       &.is-focused,
-  //       &:active,
-  //       &.is-active {
-  //         border-color: rgba($color-invert, 1);
-  //         background-color: $color-bg;
-  //         color: $color-invert;
-  //         &::placeholder {
-  //           color: rgba($color-invert, 0.7);
-  //         }
-  //       }
-  //     }
-  //   }
-  // }
+  @each $name, $pair in $colors {
+    $color: nth($pair, 1);
+    $color-invert: findColorInvert($color);
+    $color-bg: nth($pair, 2);
+    &.is-#{$name} {
+      border-color: $color;
+      background-color: $color-bg;
+      &.is-inverted {
+        border-color: rgba($color-invert, 0.3);
+        background-color: $color-bg;
+        &::placeholder {
+          color: rgba($color-invert, 0.3);
+        }
+        &:focus,
+        &.is-focused,
+        &:active,
+        &.is-active {
+          border-color: rgba($color-invert, 1);
+          background-color: $color-bg;
+          color: $color-invert;
+          &::placeholder {
+            color: rgba($color-invert, 0.7);
+          }
+        }
+      }
+    }
+  }
   &:focus,
   &.is-focused,
   &:active,
@@ -342,12 +342,12 @@ select.select {
   .checkbox {
     // @include input;
     background-color: $grey-lightest;
-    // @each $name, $pair in $colors {
-    //   $color: nth($pair, 1);
-    //   &.is-#{$name} {
-    //     border-color: $color;
-    //   }
-    // }
+    @each $name, $pair in $colors {
+      $color: nth($pair, 1);
+      &.is-#{$name} {
+        border-color: $color;
+      }
+    }
     input {
       margin-right: 0.5em;
     }
@@ -371,10 +371,19 @@ select.select {
 }
 
 .file-label {
+  cursor: pointer;
+  display: flex;
+  justify-content: flex-start;
   overflow: visible;
 }
 
 .file-input {
+  height: 0.01em;
+  left: 0;
+  outline: 0;
+  position: absolute;
+  top: 0;
+  width: 0.01em;
   visibility: hidden;
 }
 

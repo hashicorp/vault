@@ -12,12 +12,12 @@
     background: $shade !important;
   }
 }
-// @each $name, $pair in $colors {
-//   $color: nth($pair, 1);
-//   .has-background-#{$name} {
-//     background: $color !important;
-//   }
-// }
+@each $name, $pair in $colors {
+  $color: nth($pair, 1);
+  .has-background-#{$name} {
+    background: $color !important;
+  }
+}
 
 .has-border-top-light {
   border-radius: 0;
