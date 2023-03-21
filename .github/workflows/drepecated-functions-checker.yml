@@ -40,14 +40,19 @@ jobs:
           # run staticcheck
           staticcheck ./... | grep deprecated > staticcheckOutput.txt
 
-          # include deprecations details of only changed files in the PR
+          # list changed files
           for file in ${{ steps.changed-files.outputs.changed_files }}; do
-                echo "Checking use of deprecations in $file"
-                grep $file staticcheckOutput.txt >> tmpfile
+                echo "$file changed"
           done
 
+          # # include deprecations details of only changed files in the PR
+          # for file in ${{ steps.changed-files.outputs.changed_files }}; do
+          #       echo "Checking use of deprecations in $file"
+          #       grep $file staticcheckOutput.txt >> tmpfile
+          # done
+
           # cleanup and update deprecations file
-          mv tmpfile staticcheckOutput.txt
+          # mv tmpfile staticcheckOutput.txt
 
           # delete ignored values from the output
           for val in ${ignoreList[@]}; do
