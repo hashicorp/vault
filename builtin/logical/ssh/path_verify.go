@@ -14,6 +14,7 @@ func pathVerify(b *backend) *framework.Path {
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixSSH,
 			OperationVerb:   "verify",
+			OperationSuffix: "otp",
 		},
 		Fields: map[string]*framework.FieldSchema{
 			"otp": {
