@@ -18,13 +18,13 @@ jobs:
         github_repository="${{ github.repository }}"
 
         if [ "${github_repository##*/}" == "vault-enterprise" ] ; then
-          echo 'compute-standard=["self-hosted","ondemand","linux","type=c5.xlarge"]' >> $GITHUB_OUTPUT
-          echo 'compute-larger=["self-hosted","ondemand","linux","type=c5.2xlarge"]' >> $GITHUB_OUTPUT
+          echo 'compute-standard=["self-hosted","ondemand","linux","type=m5.xlarge"]' >> $GITHUB_OUTPUT
+          echo 'compute-larger=["self-hosted","ondemand","linux","type=m5.2xlarge"]' >> $GITHUB_OUTPUT
           echo 'enterprise=1' >> $GITHUB_OUTPUT
           echo 'go-tags=ent enterprise' >> $GITHUB_OUTPUT
         else
           echo 'compute-standard=["custom", "linux", "small"]' >> $GITHUB_OUTPUT
-          echo 'compute-larger=["custom", "linux", "xl"]' >> $GITHUB_OUTPUT
+          echo 'compute-larger=["custom", "linux", "medium"]' >> $GITHUB_OUTPUT
           echo 'enterprise=' >> $GITHUB_OUTPUT
           echo 'go-tags=' >> $GITHUB_OUTPUT
         fi
