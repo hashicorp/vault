@@ -13,6 +13,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 		{
 			Pattern: "config/cors$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "cors",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"enable": {
 					Type:        framework.TypeBool,
@@ -32,8 +36,7 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleCORSRead,
 					DisplayAttrs: &framework.DisplayAttributes{
-						OperationVerb:   "read",
-						OperationSuffix: "cors-configuration",
+						OperationSuffix: "configuration",
 					},
 					Summary:     "Return the current CORS settings.",
 					Description: "",
@@ -60,8 +63,7 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleCORSUpdate,
 					DisplayAttrs: &framework.DisplayAttributes{
-						OperationVerb:   "configure",
-						OperationSuffix: "cors",
+						OperationVerb: "configure",
 					},
 					Summary:     "Configure the CORS settings.",
 					Description: "",
@@ -141,6 +143,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 		{
 			Pattern: "config/ui/headers/" + framework.GenericNameRegex("header"),
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "ui-headers",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"header": {
 					Type:        framework.TypeString,
@@ -161,7 +167,7 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 					Callback: b.handleConfigUIHeadersRead,
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb:   "read",
-						OperationSuffix: "ui-header-configuration",
+						OperationSuffix: "configuration",
 					},
 					Summary: "Return the given UI header's configuration",
 					Responses: map[int][]framework.Response{
@@ -185,8 +191,7 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleConfigUIHeadersUpdate,
 					DisplayAttrs: &framework.DisplayAttributes{
-						OperationVerb:   "configure",
-						OperationSuffix: "ui-header",
+						OperationVerb: "configure",
 					},
 					Summary: "Configure the values to be returned for the UI header.",
 					Responses: map[int][]framework.Response{
@@ -200,7 +205,7 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 					Callback: b.handleConfigUIHeadersDelete,
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb:   "delete",
-						OperationSuffix: "ui-header-configuration",
+						OperationSuffix: "configuration",
 					},
 					Summary: "Remove a UI header.",
 					Responses: map[int][]framework.Response{
@@ -222,8 +227,8 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				logical.ListOperation: &framework.PathOperation{
 					Callback: b.handleConfigUIHeadersList,
 					DisplayAttrs: &framework.DisplayAttributes{
+						OperationPrefix: "ui-headers",
 						OperationVerb:   "list",
-						OperationSuffix: "configured-ui-headers",
 					},
 					Summary: "Return a list of configured UI headers.",
 					Responses: map[int][]framework.Response{
@@ -246,17 +251,23 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 
 		{
 			Pattern: "generate-root(/attempt)?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "root-token-generation",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"pgp_key": {
 					Type:        framework.TypeString,
 					Description: "Specifies a base64-encoded PGP public key.",
 				},
 			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb:   "read",
-						OperationSuffix: "root-token-generation-progress2|root-token-generation-progress",
+						OperationSuffix: "progress2|progress",
 					},
 					Summary: "Read the configuration and progress of the current root generation attempt.",
 					Responses: map[int][]framework.Response{
@@ -310,8 +321,8 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Summary: "Initializes a new root generation attempt.",
 					DisplayAttrs: &framework.DisplayAttributes{
-						OperationVerb:   "start",
-						OperationSuffix: "root-token-generation2|root-token-generation",
+						OperationVerb:   "initialize",
+						OperationSuffix: "2|",
 					},
 					Description: "Only a single root generation attempt can take place at a time. One (and only one) of otp or pgp_key are required.",
 					Responses: map[int][]framework.Response{
@@ -365,7 +376,7 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				logical.DeleteOperation: &framework.PathOperation{
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb:   "cancel",
-						OperationSuffix: "root-token-generation2|root-token-generation",
+						OperationSuffix: "2|",
 					},
 					Summary: "Cancels any in-progress root generation attempt.",
 					Responses: map[int][]framework.Response{
@@ -394,8 +405,8 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					DisplayAttrs: &framework.DisplayAttributes{
+						OperationPrefix: "root-token-generation",
 						OperationVerb:   "update",
-						OperationSuffix: "root-token-generation",
 					},
 					Summary:     "Enter a single unseal key share to progress the root generation attempt.",
 					Description: "If the threshold number of unseal key shares is reached, Vault will complete the root generation and issue the new token. Otherwise, this API must be called multiple times until that threshold is met. The attempt nonce must be provided with each call.",
@@ -490,6 +501,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "health-status",
+					},
 					Summary: "Returns the health status of Vault.",
 					Responses: map[int][]framework.Response{
 						200: {{Description: "initialized, unsealed, and active"}},
@@ -543,9 +558,16 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "initialization-status",
+					},
 					Summary: "Returns the initialization status of Vault.",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "initialize",
+					},
 					Summary:     "Initialize a new Vault.",
 					Description: "The Vault must not have been previously initialized. The recovery options, as well as the stored shares option, are only available when using Vault HSM.",
 				},
@@ -559,6 +581,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "step-down",
+						OperationSuffix: "leader",
+					},
 					Summary:     "Cause the node to give up active status.",
 					Description: "This endpoint forces the node to give up active status. If the node does not have active status, this endpoint does nothing. Note that the node will sleep for ten seconds before attempting to grab the active lock again, but if no standby nodes grab the active lock in the interim, the same node may become the active node again.",
 					Responses: map[int][]framework.Response{
@@ -569,6 +595,9 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 		},
 		{
 			Pattern: "loggers$",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "loggers",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"level": {
 					Type: framework.TypeString,
@@ -579,6 +608,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleLoggersRead,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "verbosity-level",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -588,6 +621,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleLoggersWrite,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "update",
+						OperationSuffix: "verbosity-level",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -597,6 +634,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleLoggersDelete,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "revert",
+						OperationSuffix: "verbosity-level",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -608,6 +649,9 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 		},
 		{
 			Pattern: "loggers/" + framework.MatchAllRegex("name"),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "loggers",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -622,6 +666,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleLoggersByNameRead,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "verbosity-level-for",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -631,6 +679,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleLoggersByNameWrite,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "update",
+						OperationSuffix: "verbosity-level-for",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -640,6 +692,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleLoggersByNameDelete,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "revert",
+						OperationSuffix: "verbosity-level-for",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -698,6 +754,10 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 		{
 			Pattern: "rekey/init",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "rekey-attempt",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"secret_shares": {
 					Type:        framework.TypeInt,
@@ -723,6 +783,10 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "progress",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -732,6 +796,9 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 					Summary: "Reads the configuration and progress of the current rekey attempt.",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "initialize",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -742,6 +809,9 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 					Description: "Only a single rekey attempt can take place at a time, and changing the parameters of a rekey requires canceling and starting a new rekey, which will also provide a new nonce.",
 				},
 				logical.DeleteOperation: &framework.PathOperation{
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "cancel",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -755,11 +825,19 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 		{
 			Pattern: "rekey/backup$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "rekey",
+			},
+
 			Fields: map[string]*framework.FieldSchema{},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleRekeyRetrieveBarrier,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "backup-key",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -783,6 +861,10 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleRekeyDeleteBarrier,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "delete",
+						OperationSuffix: "backup-key",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -799,11 +881,19 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 		{
 			Pattern: "rekey/recovery-key-backup$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "rekey",
+			},
+
 			Fields: map[string]*framework.FieldSchema{},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleRekeyRetrieveRecovery,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "backup-recovery-key",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -826,6 +916,10 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleRekeyDeleteRecovery,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "delete",
+						OperationSuffix: "backup-recovery-key",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -853,6 +947,10 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationPrefix: "rekey-attempt",
+						OperationVerb:   "update",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -909,6 +1007,10 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 		{
 			Pattern: "rekey/verify",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "rekey-verification",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"key": {
 					Type:        framework.TypeString,
@@ -922,6 +1024,10 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "progress",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -952,6 +1058,9 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 					Summary: "Read the configuration and progress of the current rekey verification attempt.",
 				},
 				logical.DeleteOperation: &framework.PathOperation{
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "cancel",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -983,6 +1092,9 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 					Description: "This clears any progress made and resets the nonce. Unlike a `DELETE` against `sys/rekey/init`, this only resets the current verification operation, not the entire rekey atttempt.",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "update",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -1004,6 +1116,11 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 
 		{
 			Pattern: "seal$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb: "seal",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Summary: "Seal the Vault.",
@@ -1015,6 +1132,11 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 
 		{
 			Pattern: "unseal$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb: "unseal",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"key": {
 					Type:        framework.TypeString,
@@ -1043,6 +1165,11 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 		{
 			Pattern: "leader$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb:   "read",
+				OperationSuffix: "leader-status",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleLeaderStatus,
@@ -1054,6 +1181,12 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 		},
 		{
 			Pattern: "seal-status$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb:   "read",
+				OperationSuffix: "seal-status",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleSealStatus,
@@ -1067,6 +1200,11 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 		{
 			Pattern: "ha-status$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb:   "read",
+				OperationSuffix: "ha-status",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleHAStatus,
@@ -1079,6 +1217,12 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 		},
 		{
 			Pattern: "version-history/$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb:   "read",
+				OperationSuffix: "version-history",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: b.handleVersionHistoryList,
