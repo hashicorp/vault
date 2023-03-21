@@ -179,7 +179,7 @@ func pathConfigAutoTidy(b *backend) *framework.Path {
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathConfigAutoTidyRead,
 				DisplayAttrs: &framework.DisplayAttributes{
-					OperationSuffix: "auto-tidy-config",
+					OperationSuffix: "auto-tidy-configuration",
 				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
