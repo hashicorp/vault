@@ -14,7 +14,7 @@ jobs:
         uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 #v4
         with:
           cache: true
-          go-version: ${{ steps.get-metadata.outputs.go-version }}
+          go-version: ./.go-version
       - name: staticcheck
         run: |
           echo "Installing staticcheck"
