@@ -514,6 +514,255 @@ listener "tcp" {
 	}
 }
 
+// TestAgent_Template_UserAgent Validates that the User-Agent sent to Vault
+// as part of Templating requests is correct.
+func TestAgent_Template_UserAgent(t *testing.T) {
+	//----------------------------------------------------
+	// Start the server and agent
+	//----------------------------------------------------
+	logger := logging.NewVaultLogger(hclog.Trace)
+	var h userAgentHandler
+	cluster := vault.NewTestCluster(t,
+		&vault.CoreConfig{
+			Logger: logger,
+			CredentialBackends: map[string]logical.Factory{
+				"approle": credAppRole.Factory,
+			},
+			LogicalBackends: map[string]logical.Factory{
+				"kv": logicalKv.Factory,
+			},
+		},
+		&vault.TestClusterOptions{
+			NumCores: 1,
+			HandlerFunc: vaulthttp.HandlerFunc(
+				func(properties *vault.HandlerProperties) http.Handler {
+					h.props = properties
+					h.stringToCheckForInUserAgent = "Vault Agent Templating"
+					h.pathToCheck = "/v1/secret/data"
+					h.t = t
+					return &h
+				}),
+		})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	serverClient := cluster.Cores[0].Client
+
+	// Unset the environment variable so that agent picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Setenv(api.EnvVaultAddress, serverClient.Address())
+
+	// Enable the approle auth method
+	req := serverClient.NewRequest("POST", "/v1/sys/auth/approle")
+	req.BodyBytes = []byte(`{
+		"type": "approle"
+	}`)
+	request(t, serverClient, req, 204)
+
+	// give test-role permissions to read the kv secret
+	req = serverClient.NewRequest("PUT", "/v1/sys/policy/myapp-read")
+	req.BodyBytes = []byte(`{
+	  "policy": "path \"secret/*\" { capabilities = [\"read\", \"list\"] }"
+	}`)
+	request(t, serverClient, req, 204)
+
+	// Create a named role
+	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role")
+	req.BodyBytes = []byte(`{
+	  "token_ttl": "5m",
+		"token_policies":"default,myapp-read",
+		"policies":"default,myapp-read"
+	}`)
+	request(t, serverClient, req, 204)
+
+	// Fetch the RoleID of the named role
+	req = serverClient.NewRequest("GET", "/v1/auth/approle/role/test-role/role-id")
+	body := request(t, serverClient, req, 200)
+	data := body["data"].(map[string]interface{})
+	roleID := data["role_id"].(string)
+
+	// Get a SecretID issued against the named role
+	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role/secret-id")
+	body = request(t, serverClient, req, 200)
+	data = body["data"].(map[string]interface{})
+	secretID := data["secret_id"].(string)
+
+	// Write the RoleID and SecretID to temp files
+	roleIDPath := makeTempFile(t, "role_id.txt", roleID+"\n")
+	secretIDPath := makeTempFile(t, "secret_id.txt", secretID+"\n")
+	defer os.Remove(roleIDPath)
+	defer os.Remove(secretIDPath)
+
+	// setup the kv secrets
+	req = serverClient.NewRequest("POST", "/v1/sys/mounts/secret/tune")
+	req.BodyBytes = []byte(`{
+	"options": {"version": "2"}
+	}`)
+	request(t, serverClient, req, 200)
+
+	// populate a secret
+	req = serverClient.NewRequest("POST", "/v1/secret/data/myapp")
+	req.BodyBytes = []byte(`{
+	  "data": {
+      "username": "bar",
+      "password": "zap"
+    }
+	}`)
+	request(t, serverClient, req, 200)
+
+	// populate another secret
+	req = serverClient.NewRequest("POST", "/v1/secret/data/otherapp")
+	req.BodyBytes = []byte(`{
+	  "data": {
+      "username": "barstuff",
+      "password": "zap",
+			"cert": "something"
+    }
+	}`)
+	request(t, serverClient, req, 200)
+
+	// make a temp directory to hold renders. Each test will create a temp dir
+	// inside this one
+	tmpDirRoot, err := os.MkdirTemp("", "agent-test-renders")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDirRoot)
+	// create temp dir for this test run
+	tmpDir, err := os.MkdirTemp(tmpDirRoot, "TestAgent_Template_UserAgent")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// make some template files
+	var templatePaths []string
+	fileName := filepath.Join(tmpDir, "render_0.tmpl")
+	if err := os.WriteFile(fileName, []byte(templateContents(0)), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	templatePaths = append(templatePaths, fileName)
+
+	// build up the template config to be added to the Agent config.hcl file
+	var templateConfigStrings []string
+	for i, t := range templatePaths {
+		index := fmt.Sprintf("render_%d.json", i)
+		s := fmt.Sprintf(templateConfigString, t, tmpDir, index)
+		templateConfigStrings = append(templateConfigStrings, s)
+	}
+
+	// Create a config file
+	config := `
+vault {
+  address = "%s"
+	tls_skip_verify = true
+}
+
+auto_auth {
+    method "approle" {
+        mount_path = "auth/approle"
+        config = {
+            role_id_file_path = "%s"
+            secret_id_file_path = "%s"
+						remove_secret_id_file_after_reading = false
+        }
+    }
+}
+
+%s
+`
+
+	// flatten the template configs
+	templateConfig := strings.Join(templateConfigStrings, " ")
+
+	config = fmt.Sprintf(config, serverClient.Address(), roleIDPath, secretIDPath, templateConfig)
+	configPath := makeTempFile(t, "config.hcl", config)
+	defer os.Remove(configPath)
+
+	// Start the agent
+	ui, cmd := testAgentCommand(t, logger)
+	cmd.client = serverClient
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		code := cmd.Run([]string{"-config", configPath})
+		if code != 0 {
+			t.Errorf("non-zero return code when running agent: %d", code)
+			t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
+			t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
+		}
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+	}
+
+	// We need to shut down the Agent command
+	defer func() {
+		cmd.ShutdownCh <- struct{}{}
+		wg.Wait()
+	}()
+
+	verify := func(suffix string) {
+		t.Helper()
+		// We need to poll for a bit to give Agent time to render the
+		// templates. Without this, the test will attempt to read
+		// the temp dir before Agent has had time to render and will
+		// likely fail the test
+		tick := time.Tick(1 * time.Second)
+		timeout := time.After(10 * time.Second)
+		var err error
+		for {
+			select {
+			case <-timeout:
+				t.Fatalf("timed out waiting for templates to render, last error: %v", err)
+			case <-tick:
+			}
+			// Check for files rendered in the directory and break
+			// early for shutdown if we do have all the files
+			// rendered
+
+			//----------------------------------------------------
+			// Perform the tests
+			//----------------------------------------------------
+
+			if numFiles := testListFiles(t, tmpDir, ".json"); numFiles != len(templatePaths) {
+				err = fmt.Errorf("expected (%d) templates, got (%d)", len(templatePaths), numFiles)
+				continue
+			}
+
+			for i := range templatePaths {
+				fileName := filepath.Join(tmpDir, fmt.Sprintf("render_%d.json", i))
+				var c []byte
+				c, err = os.ReadFile(fileName)
+				if err != nil {
+					continue
+				}
+				if string(c) != templateRendered(i)+suffix {
+					err = fmt.Errorf("expected=%q, got=%q", templateRendered(i)+suffix, string(c))
+					continue
+				}
+			}
+			return
+		}
+	}
+
+	verify("")
+
+	fileName = filepath.Join(tmpDir, "render_0.tmpl")
+	if err := os.WriteFile(fileName, []byte(templateContents(0)+"{}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	verify("{}")
+}
+
 // TestAgent_Template tests rendering templates
 func TestAgent_Template_Basic(t *testing.T) {
 	//----------------------------------------------------
@@ -1149,6 +1398,26 @@ func (h *handler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		h.t.Logf("passing GET request on %s", req.URL.Path)
 	}
 	vaulthttp.Handler.Handler(h.props).ServeHTTP(resp, req)
+}
+
+// userAgentHandler makes it easy to test the User-Agent header received
+// by Vault
+type userAgentHandler struct {
+	props                       *vault.HandlerProperties
+	failCount                   int
+	stringToCheckForInUserAgent string
+	pathToCheck                 string
+	t                           *testing.T
+}
+
+func (h *userAgentHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	if req.Method == "GET" && strings.Contains(req.RequestURI, h.pathToCheck) {
+		userAgent := req.UserAgent()
+		if !strings.Contains(userAgent, h.stringToCheckForInUserAgent) {
+			h.t.Fatalf("String not found in user agent. Expected to find %s, got %s", h.stringToCheckForInUserAgent, userAgent)
+		}
+	}
+	vaulthttp.Handler.Handler(h.props).ServeHTTP(w, req)
 }
 
 // TestAgent_Template_Retry verifies that the template server retries requests
