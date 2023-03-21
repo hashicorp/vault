@@ -28,7 +28,7 @@ func pathConfig(b *backend) *framework.Path {
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathConfigRead,
 				DisplayAttrs: &framework.DisplayAttributes{
-					OperationSuffix: "config",
+					OperationSuffix: "configuration",
 				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
