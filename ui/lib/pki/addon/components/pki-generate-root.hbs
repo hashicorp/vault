@@ -2,11 +2,13 @@
 {{#if @model.id}}
   <Toolbar />
   {{#if @model.privateKey}}
-    <AlertBanner
-      @title="Next steps"
-      @type="warning"
-      @message="This private key material will only be available once. Copy or download it now."
-    />
+    <div class="has-top-margin-m">
+      <AlertBanner
+        @title="Next steps"
+        @type="warning"
+        @message="This private key material will only be available once. Copy or download it now."
+      />
+    </div>
   {{/if}}
   <main class="box is-fullwidth is-sideless is-paddingless is-marginless">
     {{#each this.returnedFields as |field|}}
