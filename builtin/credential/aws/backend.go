@@ -356,8 +356,20 @@ func (b *backend) genDeprecatedPath(path *framework.Path) *framework.Path {
 	if path.DisplayAttrs != nil {
 		deprecatedDisplayAttrs := *path.DisplayAttrs
 		deprecatedDisplayAttrs.OperationPrefix = b.deprecatedTerms.Replace(path.DisplayAttrs.OperationPrefix)
+		deprecatedDisplayAttrs.OperationVerb = b.deprecatedTerms.Replace(path.DisplayAttrs.OperationVerb)
 		deprecatedDisplayAttrs.OperationSuffix = b.deprecatedTerms.Replace(path.DisplayAttrs.OperationSuffix)
 		pathDeprecated.DisplayAttrs = &deprecatedDisplayAttrs
+	}
+
+	for i, op := range path.Operations {
+		if op.Properties().DisplayAttrs != nil {
+			deprecatedDisplayAttrs := *op.Properties().DisplayAttrs
+			deprecatedDisplayAttrs.OperationPrefix = b.deprecatedTerms.Replace(op.Properties().DisplayAttrs.OperationPrefix)
+			deprecatedDisplayAttrs.OperationVerb = b.deprecatedTerms.Replace(op.Properties().DisplayAttrs.OperationVerb)
+			deprecatedDisplayAttrs.OperationSuffix = b.deprecatedTerms.Replace(op.Properties().DisplayAttrs.OperationSuffix)
+			deprecatedProperties := pathDeprecated.Operations[i].(*framework.PathOperation)
+			deprecatedProperties.DisplayAttrs = &deprecatedDisplayAttrs
+		}
 	}
 
 	return &pathDeprecated
