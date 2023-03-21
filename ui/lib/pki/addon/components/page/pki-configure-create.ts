@@ -20,13 +20,13 @@ interface Args {
 }
 
 /**
- * @module PkiConfigureForm
- * PkiConfigureForm component is used to configure a PKI engine mount.
+ * @module PkiConfigureCreate
+ * Page::PkiConfigureCreate component is used to configure a PKI engine mount.
  * The component shows three options for configuration and which form
  * is shown. The sub-forms rendered handle rendering the form itself
  * and form submission and cancel actions.
  */
-export default class PkiConfigureForm extends Component<Args> {
+export default class PkiConfigureCreate extends Component<Args> {
   @service declare readonly store: Store;
   @service declare readonly router: Router;
   @service declare readonly flashMessages: FlashMessageService;

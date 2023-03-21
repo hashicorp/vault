@@ -6,7 +6,9 @@
 import { SELECTORS as GENERATE_ROOT } from './pki-generate-root';
 
 export const SELECTORS = {
-  // pki-configure-form
+  // page::pki-configure-create
+  breadcrumbContainer: '[data-test-breadcrumbs]',
+  title: '[data-test-pki-engine-page-title]',
   option: '[data-test-pki-config-option]',
   optionByKey: (key) => `[data-test-pki-config-option="${key}"]`,
   cancelButton: '[data-test-pki-config-cancel]',
