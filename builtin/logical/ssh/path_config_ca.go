@@ -80,13 +80,13 @@ func pathConfigCA(b *backend) *framework.Path {
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathConfigCADelete,
 				DisplayAttrs: &framework.DisplayAttributes{
-					OperationSuffix: "ca-config",
+					OperationSuffix: "ca-configuration",
 				},
 			},
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathConfigCARead,
 				DisplayAttrs: &framework.DisplayAttributes{
-					OperationSuffix: "ca-config",
+					OperationSuffix: "ca-configuration",
 				},
 			},
 		},

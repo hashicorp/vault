@@ -43,13 +43,13 @@ func pathConfigZeroAddress(b *backend) *framework.Path {
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathConfigZeroAddressRead,
 				DisplayAttrs: &framework.DisplayAttributes{
-					OperationSuffix: "zero-address-config",
+					OperationSuffix: "zero-address-configuration",
 				},
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathConfigZeroAddressDelete,
 				DisplayAttrs: &framework.DisplayAttributes{
-					OperationSuffix: "zero-address-config",
+					OperationSuffix: "zero-address-configuration",
 				},
 			},
 		},
