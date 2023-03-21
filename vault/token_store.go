@@ -426,13 +426,13 @@ func (ts *TokenStore) paths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: ts.handleLookup,
 					DisplayAttrs: &framework.DisplayAttributes{
-						OperationVerb: "lookup",
+						OperationVerb: "look-up",
 					},
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: ts.handleLookup,
 					DisplayAttrs: &framework.DisplayAttributes{
-						OperationVerb: "lookup2",
+						OperationVerb: "look-up2",
 					},
 				},
 			},
@@ -446,7 +446,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixToken,
-				OperationVerb:   "lookup",
+				OperationVerb:   "look-up",
 				OperationSuffix: "accessor",
 			},
 
@@ -470,7 +470,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixToken,
-				OperationVerb:   "lookup",
+				OperationVerb:   "look-up",
 			},
 
 			Fields: map[string]*framework.FieldSchema{
