@@ -1,5 +1,6 @@
 {{! Show results if model has an ID, which is only generated after save }}
 {{#if @model.id}}
+  <Toolbar />
   {{#if @model.privateKey}}
     <AlertBanner
       @title="Next steps"
@@ -7,8 +8,8 @@
       @message="This private key material will only be available once. Copy or download it now."
     />
   {{/if}}
-  <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-    {{#each this.defaultFields as |field|}}
+  <main class="box is-fullwidth is-sideless is-paddingless is-marginless">
+    {{#each this.returnedFields as |field|}}
       {{#let (find-by "name" field @model.allFields) as |attr|}}
         <InfoTableRow
           @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
@@ -16,13 +17,26 @@
         />
       {{/let}}
     {{/each}}
-    {{#if @model.privateKey}}
-      <InfoTableRow @label="Private key">
+    <InfoTableRow @label="Private key">
+      {{#if @model.privateKey}}
         <MaskedInput @value={{@model.privateKey}} @name="Private key" @displayOnly={{true}} @allowCopy={{true}} />
-      </InfoTableRow>
-      <InfoTableRow @label="Private key type" @value={{@model.privateKeyType}} />
-    {{/if}}
-  </div>
+      {{else}}
+        <span class="tag">internal</span>
+      {{/if}}
+    </InfoTableRow>
+    <InfoTableRow @label="Private key type" @value={{@model.privateKeyType}}>
+      <span class="{{unless @model.privateKeyType 'tag'}}">{{or @model.privateKeyType "internal"}}</span>
+    </InfoTableRow>
+  </main>
+  <footer>
+    <div class="field is-grouped is-fullwidth has-top-margin-l">
+      <div class="control">
+        <button type="button" class="button is-primary" {{on "click" @onComplete}} data-test-done>
+          Done
+        </button>
+      </div>
+    </div>
+  </footer>
 {{else}}
   <form {{on "submit" (perform this.save)}} data-test-pki-config-generate-root-form>
     <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
