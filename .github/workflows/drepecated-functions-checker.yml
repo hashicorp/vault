@@ -35,32 +35,29 @@ jobs:
           changedFiles=$(git --no-pager diff --name-only HEAD "$(git merge-base HEAD "origin/${{ github.event.pull_request.base.ref }}")")
 
           # Include deprecations details of only changed files in the PR
-          echo "Find deprecations related to files in the PR"
+          echo "Results:"
+
+          # deprecationsCount checks if any deprecations were found to fail later 
+          deprecationsCount=0
+
           for fileName in ${changedFiles[@]}; do
-            if grep $fileName staticcheckOutput.txt; then
+            if grep -q $fileName staticcheckOutput.txt; then
+
+              # output deprecations in the file 
               grep $fileName staticcheckOutput.txt
+
+              # deprecation found, increment count
+              deprecationsCount=$((deprecationsCount+1))
             fi
           done
 
-          # Cleanup and update deprecations file
-          echo "Cleanup files"
-          rm -rf staticcheckOutput.txt
-          
-          # mv tmpfile staticcheckOutput.txt
+          # Cleanup deprecations file
+           rm -rf staticcheckOutput.txt  
 
-          # # Output Results
-          # echo "Results:"
-          # if [ -s staticcheckOutput.txt ]
-          # then
-          #     echo "Use of deprecated function, variable, constant or field found"
-          #     cat staticcheckOutput.txt 
-
-          #     # output file clean up 
-          #     rm -rf staticcheckOutput.txt  
-          #     exit 1 
-          # else
-          #     echo "Use of deprecated function, variable, constant or field not found"
-
-          #     # output file clean up 
-          #     rm -rf staticcheckOutput.txt  
-          # fi
+          if [ "$deprecationsCount" -ne "0" ]
+          then
+              echo "Deprecations check failed"
+              exit 1 
+          else
+              echo "No use of deprecations found in the PR!"
+          fi
