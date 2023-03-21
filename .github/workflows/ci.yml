@@ -70,6 +70,38 @@ jobs:
           echo "Code has formatting errors. Run 'make fmt' to fix"
           exit 1
         fi
+  diff-oss-ci:
+    name: Diff OSS
+    needs:
+    - setup
+    if: ${{ needs.setup.outputs.enterprise != '' && github.base_ref != '' }}
+    runs-on: ['self-hosted','ondemand','small']
+    steps:
+    - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
+      with:
+        fetch-depth: 0
+    - id: determine-branch
+      run: |
+        branch="${{ github.base_ref }}"
+
+        if [[ $branch = release/* ]] ; then
+          branch=${branch%%+ent}
+
+          # Add OSS remote
+          git config --global user.email "github-team-secret-vault-core@hashicorp.com"
+          git config --global user.name "hc-github-team-secret-vault-core"
+          git remote add oss https://github.com/hashicorp/vault.git
+          git fetch oss "$branch"
+
+          branch="oss/$branch"
+        else
+          branch="origin/$branch"
+        fi
+
+        echo "BRANCH=$branch" >> "$GITHUB_OUTPUT"
+    - id: diff
+      run: |
+        ./.github/scripts/oss-diff.sh ${{ steps.determine-branch.outputs.BRANCH }} HEAD
   test-go:
     name: Run Go tests
     needs:
@@ -101,3 +133,96 @@ jobs:
       runs-on: ${{ needs.setup.outputs.compute-larger }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
     secrets: inherit
+  test-ui:
+    name: Test UI
+    # The test-ui Job is only run for pushes to main, ui/*, backport/ui/*, release/*, and merge*
+    if: github.ref_name == 'main' || startsWith(github.ref_name, 'ui/') || startsWith(github.ref_name, 'backport/ui/') || startsWith(github.ref_name, 'release/') || startsWith(github.ref_name, 'merge')
+    needs:
+    - setup
+    permissions:
+      id-token: write
+      contents: read
+    runs-on: ${{ fromJSON(needs.setup.outputs.runs-on) }}
+    steps:
+    - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
+    - uses: actions/setup-go@d0a58c1c4d2b25278816e339b944508c875f3613
+      with:
+        go-version-file: ./.go-version
+        cache: true
+    # Setup node.js without caching to allow running npm install -g yarn (next step)
+    - uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c
+      with:
+        node-version: 14
+    - id: install-yarn
+      run: |
+        npm install -g yarn
+    # Setup node.js with caching using the yarn.lock file
+    - uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c
+      with:
+        node-version: 14
+        cache: yarn
+        cache-dependency-path: ui/yarn.lock
+    - id: install-browser-libraries
+      run: sudo apt install -y libnss3-dev libgdk-pixbuf2.0-dev libgtk-3-dev libxss-dev libasound2
+    - id: install-browser
+      uses: browser-actions/setup-chrome@597130847c84cdac5acceccbd676d612e6f8beb8
+    - id: ui-dependencies
+      name: ui-dependencies
+      working-directory: ./ui
+      run: |
+        yarn install --frozen-lockfile
+        npm rebuild node-sass
+    - id: vault-auth
+      name: Authenticate to Vault
+      if: github.repository == 'hashicorp/vault-enterprise'
+      run: vault-auth
+    - id: secrets
+      name: Fetch secrets
+      if: github.repository == 'hashicorp/vault-enterprise'
+      uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e
+      with:
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          secrets: |
+            kv/data/github/hashicorp/vault-enterprise/github-token token | PRIVATE_REPO_GITHUB_TOKEN;
+            kv/data/github/hashicorp/vault-enterprise/license license_1 | VAULT_LICENSE;
+    - id: setup-git
+      name: Setup Git
+      if: github.repository == 'hashicorp/vault-enterprise'
+      env:
+        PRIVATE_REPO_GITHUB_TOKEN: ${{ steps.secrets.outputs.PRIVATE_REPO_GITHUB_TOKEN }}
+      run: |
+        git config --global url."https://hc-github-team-secure-vault-core:${PRIVATE_REPO_GITHUB_TOKEN}@github.com".insteadOf https://github.com
+    - id: build-go-dev
+      name: build-go-dev
+      run: |
+        rm -rf ./pkg
+        mkdir ./pkg
+
+        make ci-bootstrap dev
+    - id: test-ui
+      name: test-ui
+      env:
+        VAULT_LICENSE: ${{ steps.secrets.outputs.VAULT_LICENSE }}
+      run: |
+        export PATH="${PWD}/bin:${PATH}"
+
+        if [ "${{ github.repository }}" == 'hashicorp/vault' ] ; then
+          export VAULT_LICENSE="${{ secrets.VAULT_LICENSE }}"
+        fi
+
+        # Run Ember tests
+        cd ui
+        mkdir -p test-results/qunit
+        yarn test:oss
+    - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce
+      with:
+        name: test-results-ui
+        path: ui/test-results
+      if: always()
+    - uses: test-summary/action@62bc5c68de2a6a0d02039763b8c754569df99e3f
+      with:
+        paths: "ui/test-results/qunit/results.xml"
+        show: "fail"
+      if: always()
