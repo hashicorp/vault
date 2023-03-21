@@ -45,7 +45,7 @@ keys on the encrypt endpoint.`,
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathConfigKeysRead,
 				DisplayAttrs: &framework.DisplayAttributes{
-					OperationSuffix: "keys-config",
+					OperationSuffix: "keys-configuration",
 				},
 			},
 		},

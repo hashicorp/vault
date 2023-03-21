@@ -30,7 +30,7 @@ func (b *backend) pathCacheConfig() *framework.Path {
 				Callback: b.pathCacheConfigRead,
 				Summary:  "Returns the size of the active cache",
 				DisplayAttrs: &framework.DisplayAttributes{
-					OperationSuffix: "cache-config",
+					OperationSuffix: "cache-configuration",
 				},
 			},
 
