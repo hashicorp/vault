@@ -13,10 +13,6 @@ on:
         description: A space-separated list of additional build flags.
         required: false
         type: string
-      extra-tags:
-        description: A space-separated list of additional build tags.
-        required: false
-        type: string
       runs-on:
         description: An expression indicating which kind of runners to use.
         required: false
@@ -26,8 +22,8 @@ on:
         description: A flag indicating if this workflow is executing for the enterprise repository.
         required: true
         type: string
-      go-tags:
-        description: The go tags to include on the go test command.
+      go-build-tags:
+        description: A comma-separated list of additional build tags to consider satisfied during the build.
         required: false
         type: string
 
@@ -123,7 +119,7 @@ jobs:
           ENTERPRISE=${{ inputs.enterprise }} source .github/scripts/generate-test-package-lists.sh
 
           # If data race detection is enabled, export a relevant environment variable for use in tests
-          if [ "${{ inputs.extra-flags }}" == "-race" ]; then
+          if [[ "${{ inputs.extra-flags }}" =~ "-race" ]]; then
             export VAULT_CI_GO_TEST_RACE=1
           fi
 
@@ -159,7 +155,7 @@ jobs:
               --junitfile test-results/go-test/results.xml \
               --jsonfile test-results/go-test/results.json \
               -- \
-              -tags "${{ inputs.go-tags }} ${{ inputs.extra-tags }}" \
+              -tags "${{ inputs.go-build-tags }}" \
               -timeout=${{ env.TIMEOUT_IN_MINUTES }}m \
               -parallel=20 \
               ${{ inputs.extra-flags }} \

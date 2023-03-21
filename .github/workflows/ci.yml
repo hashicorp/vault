@@ -13,7 +13,7 @@ jobs:
       compute-standard: ${{ steps.setup-outputs.outputs.compute-standard }}
       compute-larger: ${{ steps.setup-outputs.outputs.compute-larger }}
       enterprise: ${{ steps.setup-outputs.outputs.enterprise }}
-      go-tags: ${{ steps.setup-outputs.outputs.go-tags }}
+      go-build-tags: ${{ steps.setup-outputs.outputs.go-build-tags }}
     steps:
     - id: setup-outputs
       name: Setup outputs
@@ -24,12 +24,12 @@ jobs:
           echo 'compute-standard=["self-hosted","ondemand","linux","type=m5.xlarge"]' >> $GITHUB_OUTPUT
           echo 'compute-larger=["self-hosted","ondemand","linux","type=m5.2xlarge"]' >> $GITHUB_OUTPUT
           echo 'enterprise=1' >> $GITHUB_OUTPUT
-          echo 'go-tags=ent enterprise' >> $GITHUB_OUTPUT
+          echo 'go-build-tags=ent,enterprise' >> $GITHUB_OUTPUT
         else
           echo 'compute-standard=["custom", "linux", "small"]' >> $GITHUB_OUTPUT
           echo 'compute-larger=["custom", "linux", "medium"]' >> $GITHUB_OUTPUT
           echo 'enterprise=' >> $GITHUB_OUTPUT
-          echo 'go-tags=' >> $GITHUB_OUTPUT
+          echo 'go-build-tags=' >> $GITHUB_OUTPUT
         fi
   semgrep:
     name: Semgrep
@@ -80,9 +80,8 @@ jobs:
     uses: ./.github/workflows/test-go.yml
     with:
       name: ''
-      extra-tags: deadlock
       go-arch: amd64
-      go-tags: ${{ needs.setup.outputs.go-tags }}
+      go-build-tags: '${{ needs.setup.outputs.go-build-tags },deadlock'
       runs-on: ${{ needs.setup.outputs.compute-standard }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
     secrets: inherit
@@ -98,7 +97,7 @@ jobs:
       name: race
       extra-flags: '-race'
       go-arch: amd64
-      go-tags: ${{ needs.setup.outputs.go-tags }}
+      go-build-tags: ${{ needs.setup.outputs.go-build-tags }}
       runs-on: ${{ needs.setup.outputs.compute-larger }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
     secrets: inherit
