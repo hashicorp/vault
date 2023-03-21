@@ -13,12 +13,13 @@ jobs:
       - name: set up Go
         uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 #v4
         with:
+          go-version-file: ./.go-version
           cache: true
-          go-version: ./.go-version
       - name: staticcheck
         run: |
           echo "Installing staticcheck"
-          go install honnef.co/go/tools/cmd/staticcheck@2023.1.2 #v0.4.2
+          # go install honnef.co/go/tools/cmd/staticcheck@2023.1.2 #v0.4.2
+          go install honnef.co/go/tools/cmd/staticcheck@latest
 
           echo "Running staticcheck to look for deprecations"
 
