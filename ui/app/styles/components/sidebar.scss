@@ -137,3 +137,29 @@
     }
   }
 }
+
+.link-status {
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: $size-7;
+  font-weight: $font-weight-semibold;
+
+  &.connected {
+    background-color: $ui-gray-800;
+    color: #c2c5cb;
+
+    a {
+      color: #c2c5cb;
+    }
+  }
+  &.warning {
+    background-color: #fcf6ea;
+    color: #975b06;
+
+    a {
+      color: #975b06;
+    }
+  }
+}

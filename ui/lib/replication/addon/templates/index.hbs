@@ -1,7 +1,6 @@
 <section class="section">
   <div class="container is-widescreen">
     {{#if this.model.replicationIsInitializing}}
-      <nav class="navbar"></nav>
       <LayoutLoading />
     {{else}}
       {{#if (eq this.model.mode "unsupported")}}

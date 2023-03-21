@@ -54,8 +54,9 @@ module('Acceptance | cluster', function (hooks) {
     const userToken = await tokenWithPolicy('hide-policies-nav', deny_policies_policy);
     await logout.visit();
     await authPage.login(userToken);
+    await visit('/vault/access');
 
-    assert.dom('[data-test-navbar-item="policies"]').doesNotExist();
+    assert.dom('[data-test-sidebar-nav-link="Policies"]').doesNotExist();
     await logout.visit();
   });
 
@@ -85,8 +86,10 @@ module('Acceptance | cluster', function (hooks) {
     const userToken = await tokenWithPolicy('show-policies-nav', read_rgp_policy);
     await logout.visit();
     await authPage.login(userToken);
+    await visit('/vault/access');
     await settled();
-    assert.dom('[data-test-navbar-item="policies"]').hasAttribute('href', '/ui/vault/policies/rgp');
+
+    assert.dom('[data-test-sidebar-nav-link="Policies"]').hasAttribute('href', '/ui/vault/policies/rgp');
     await logout.visit();
   });
 });
