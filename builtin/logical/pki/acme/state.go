@@ -3,10 +3,13 @@ package acme
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"fmt"
 	"io"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/framework"
 )
 
 // How long nonces are considered valid.
@@ -27,12 +30,12 @@ func generateNonce() (string, error) {
 }
 
 func (a *acmeState) GetNonce() (string, time.Time, error) {
+	now := time.Now()
 	nonce, err := generateNonce()
 	if err != nil {
-		return "", err
+		return "", now, err
 	}
 
-	now := time.Now()
 	then := now.Add(nonceExpiry)
 	a.nonces.Store(nonce, then)
 
@@ -87,4 +90,57 @@ func (a *acmeState) TidyNonces() {
 	})
 
 	a.nextExpiry.Store(nextRun.Unix())
+}
+
+func (a *acmeState) LoadKey(keyID string) (map[string]interface{}, error) {
+	// TODO
+	return nil, nil
+}
+
+func (a *acmeState) LoadJWK(keyID string) ([]byte, error) {
+	key, err := a.LoadKey(keyID)
+	if err != nil {
+		return nil, err
+	}
+
+	jwk, present := key["jwk"]
+	if !present {
+		return nil, fmt.Errorf("malformed key entry lacks JWK")
+	}
+
+	return jwk.([]byte), nil
+}
+
+func (a *acmeState) ParseRequestParams(data *framework.FieldData) (*JWSCtx, map[string]interface{}, error) {
+	var c JWSCtx
+	var m map[string]interface{}
+
+	// Parse the key out.
+	jwkBase64 := data.Get("protected").(string)
+	jwkBytes, err := base64.RawURLEncoding.DecodeString(jwkBase64)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to base64 parse 'protected': %w", err)
+	}
+	if err = c.UnmarshalJSON(a, jwkBytes); err != nil {
+		return nil, nil, fmt.Errorf("failed to json unmarshal 'protected': %w", err)
+	}
+
+	// Since we already parsed the header to verify the JWS context, we
+	// should read and redeem the nonce here too, to avoid doing any extra
+	// work if it is invalid.
+	if !a.RedeemNonce(c.Nonce) {
+		return nil, nil, fmt.Errorf("invalid or reused nonce")
+	}
+
+	payloadBase64 := data.Get("payload").(string)
+	signatureBase64 := data.Get("signature").(string)
+
+	// go-jose only seems to support compact signature encodings.
+	compactSig := fmt.Sprintf("%v.%v.%v", jwkBase64, payloadBase64, signatureBase64)
+	m, err = c.VerifyJWS(compactSig)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to verify signature: %w", err)
+	}
+
+	return &c, m, nil
 }
