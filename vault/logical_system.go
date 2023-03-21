@@ -3041,7 +3041,7 @@ func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logica
 
 		char := rule.Chars()[0]
 		for i := len(testPassword); i < policy.Length; i++ {
-			testPassword[i] = char
+			testPassword = append(testPassword, char)
 		}
 	}
 
