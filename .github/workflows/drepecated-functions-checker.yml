@@ -46,7 +46,9 @@ jobs:
           echo "Find deprecations related to files in the PR"
 
           for fileName in ${changedFiles[@]}; do
-            grep $fileName staticcheckOutput.txt >> tmpfile
+            if grep -q  $fileName staticcheckOutput.txt; then
+              grep $val staticcheckOutput.txt >> tmpfile
+            fi
           done
 
           # cleanup and update deprecations file

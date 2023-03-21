@@ -24,7 +24,9 @@ staticcheck ./... | grep deprecated > staticcheckOutput.txt
 
 # include details of only changed files in the PR
 for val in ${changed_files[@]}; do
-  grep $val staticcheckOutput.txt >> tmpfile
+    if grep -q  $val staticcheckOutput.txt; then
+        grep $val staticcheckOutput.txt >> tmpfile
+    fi
 done
 
 mv tmpfile staticcheckOutput.txt
