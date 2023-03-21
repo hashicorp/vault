@@ -22,7 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - id: get-metadata
-        run: echo "go-version=$(cat ./.go-version)" >> $GITHUB_OUTPUT
+        run: echo "go-version=$(cat ./.go-version)" >> "$GITHUB_OUTPUT"
       - name: Set Up Go
         uses: actions/setup-go@v3
         with:

@@ -21,15 +21,17 @@ jobs:
         github_repository="${{ github.repository }}"
 
         if [ "${github_repository##*/}" == "vault-enterprise" ] ; then
-          echo 'compute-standard=["self-hosted","ondemand","linux","type=m5.xlarge"]' >> $GITHUB_OUTPUT
-          echo 'compute-larger=["self-hosted","ondemand","linux","type=m5.2xlarge"]' >> $GITHUB_OUTPUT
-          echo 'enterprise=1' >> $GITHUB_OUTPUT
-          echo 'go-build-tags=ent,enterprise' >> $GITHUB_OUTPUT
+          # shellcheck disable=SC2129
+          echo 'compute-standard=["self-hosted","ondemand","linux","type=m5.xlarge"]' >> "$GITHUB_OUTPUT"
+          echo 'compute-larger=["self-hosted","ondemand","linux","type=m5.2xlarge"]' >> "$GITHUB_OUTPUT"
+          echo 'enterprise=1' >> "$GITHUB_OUTPUT"
+          echo 'go-build-tags=ent,enterprise' >> "$GITHUB_OUTPUT"
         else
-          echo 'compute-standard=["custom", "linux", "small"]' >> $GITHUB_OUTPUT
-          echo 'compute-larger=["custom", "linux", "medium"]' >> $GITHUB_OUTPUT
-          echo 'enterprise=' >> $GITHUB_OUTPUT
-          echo 'go-build-tags=' >> $GITHUB_OUTPUT
+          # shellcheck disable=SC2129
+          echo 'compute-standard=["custom", "linux", "small"]' >> "$GITHUB_OUTPUT"
+          echo 'compute-larger=["custom", "linux", "medium"]' >> "$GITHUB_OUTPUT"
+          echo 'enterprise=' >> "$GITHUB_OUTPUT"
+          echo 'go-build-tags=' >> "$GITHUB_OUTPUT"
         fi
   semgrep:
     name: Semgrep
@@ -142,7 +144,7 @@ jobs:
     permissions:
       id-token: write
       contents: read
-    runs-on: ${{ fromJSON(needs.setup.outputs.runs-on) }}
+    runs-on: ${{ fromJSON(needs.setup.outputs.compute-standard) }}
     steps:
     - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
     - uses: actions/setup-go@d0a58c1c4d2b25278816e339b944508c875f3613
