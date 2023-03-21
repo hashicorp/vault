@@ -45,8 +45,8 @@
   <PkiImportPemBundle
     @model={{@config}}
     @onCancel={{@onCancel}}
-    @onComplete={{transition-to "vault.cluster.secrets.backend.pki.overview"}}
     @onSave={{fn (mut this.title) "View imported items"}}
+    @onComplete={{transition-to "vault.cluster.secrets.backend.pki.overview"}}
     @adapterOptions={{hash actionType=@config.actionType useIssuer=@config.canImportBundle}}
   />
 {{else if (eq @config.actionType "generate-root")}}

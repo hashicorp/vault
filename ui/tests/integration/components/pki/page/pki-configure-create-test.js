@@ -16,13 +16,13 @@ module('Integration | Component | pki-configure-form', function (hooks) {
   setupEngine(hooks, 'pki');
   hooks.beforeEach(function () {
     this.cancelSpy = sinon.spy();
+    this.breadcrumbs = [{ label: 'configure' }];
   });
 
   test('it renders', async function (assert) {
     await render(hbs`<PkiConfigureForm @onCancel={{this.cancelSpy}} @config={{this.config}} />`, {
       owner: this.engine,
     });
-
     assert.dom(SELECTORS.option).exists({ count: 3 }, 'Three configuration options are shown');
     assert.dom(SELECTORS.cancelButton).exists('Cancel link is shown');
     assert.dom(SELECTORS.saveButton).isDisabled('Done button is disabled');
