@@ -588,16 +588,18 @@ func constructOperationID(
 	// determine the actual suffix, we attempt to match it by the index of the
 	// paths returned from `expandPattern(...)`. For example:
 	//
-	//  aws/
-	//      Pattern: `^(creds|sts)/(?P<name>\w(([\w-.@]+)?\w)?)$`
+	//  pki/
+	//  	Pattern: "keys/generate/(internal|exported|kms)",
 	//      DisplayAttrs: {
-	//          OperationSuffix: "credentials|sts-credentials"
-	//      }
+	//          ...
+	//          OperationSuffix: "internal-key|exported-key|kms-key",
+	//      },
 	//
-	//  Will expand into two paths and corresponding suffixes:
+	//  will expand into three paths and corresponding suffixes:
 	//
-	//      path 0: "creds/{name}"  suffix: credentials
-	//      path 1: "sts/{name}"    suffix: sts-credentials
+	//      path 0: "keys/generate/internal"  suffix: internal-key
+	//      path 1: "keys/generate/exported"  suffix: exported-key
+	//      path 2: "keys/generate/kms"       suffix: kms-key
 	//
 	if suffixes := strings.Split(suffix, "|"); len(suffixes) > 1 || pathIndex > 0 {
 		// if the index is out of bounds, fall back to the old logic
@@ -608,8 +610,8 @@ func constructOperationID(
 		}
 	}
 
-	// hyphenate is a helper that hyphenates the given slice except the empty elements
-	hyphenate := func(parts []string) string {
+	// a helper that hyphenates & lower-cases the slice except the empty elements
+	toLowerHyphenate := func(parts []string) string {
 		filtered := make([]string, 0, len(parts))
 		for _, e := range parts {
 			if e != "" {
@@ -620,9 +622,11 @@ func constructOperationID(
 	}
 
 	// fall back to using the path + operation to construct the operation id
-	needPrefix := prefix == "" && (suffix == "" || verb == "")
-	needVerb := verb == ""
-	needSuffix := suffix == "" && (prefix == "" || verb == "" || pathIndex > 0)
+	var (
+		needPrefix = prefix == "" && verb == ""
+		needVerb   = verb == ""
+		needSuffix = suffix == "" && (verb == "" || pathIndex > 0)
+	)
 
 	if needPrefix {
 		prefix = defaultPrefix
@@ -637,10 +641,10 @@ func constructOperationID(
 	}
 
 	if needSuffix {
-		suffix = hyphenate(nonWordRe.Split(strings.ToLower(path), -1))
+		suffix = toLowerHyphenate(nonWordRe.Split(path, -1))
 	}
 
-	return hyphenate([]string{prefix, verb, suffix})
+	return toLowerHyphenate([]string{prefix, verb, suffix})
 }
 
 // expandPattern expands a regex pattern by generating permutations of any optional parameters
