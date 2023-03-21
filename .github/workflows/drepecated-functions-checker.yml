@@ -28,7 +28,7 @@ jobs:
           staticcheck ./... | grep deprecated > staticcheckOutput.txt
 
           # get changed files names from the PR
-          changedFiles=$(git diff --name-only origin/${{ github.base_ref }}..${{ github.sha }})
+          changedFiles=$(git diff --name-only origin/main)
           echo $changedFiles
 
           # include deprecations details of only changed files in the PR
