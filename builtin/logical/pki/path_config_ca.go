@@ -97,7 +97,7 @@ func pathConfigIssuers(b *backend) *framework.Path {
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathCAIssuersRead,
 				DisplayAttrs: &framework.DisplayAttributes{
-					OperationSuffix: "issuers-config",
+					OperationSuffix: "issuers-configuration",
 				},
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
@@ -333,7 +333,7 @@ func pathConfigKeys(b *backend) *framework.Path {
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathKeyDefaultRead,
 				DisplayAttrs: &framework.DisplayAttributes{
-					OperationSuffix: "keys-config",
+					OperationSuffix: "keys-configuration",
 				},
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{

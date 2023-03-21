@@ -85,7 +85,7 @@ For example: http://cdn.example.com/pr1/pki`,
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathReadCluster,
 				DisplayAttrs: &framework.DisplayAttributes{
-					OperationSuffix: "cluster-config",
+					OperationSuffix: "cluster-configuration",
 				},
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{

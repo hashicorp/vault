@@ -116,7 +116,7 @@ existing CRL and OCSP paths will return the unified CRL instead of a response ba
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				DisplayAttrs: &framework.DisplayAttributes{
-					OperationSuffix: "crl-config",
+					OperationSuffix: "crl-configuration",
 				},
 				Callback: b.pathCRLRead,
 				Responses: map[int][]framework.Response{
