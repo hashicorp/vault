@@ -81,7 +81,7 @@ jobs:
     with:
       name: ''
       go-arch: amd64
-      go-build-tags: '${{ needs.setup.outputs.go-build-tags },deadlock'
+      go-build-tags: '${{ needs.setup.outputs.go-build-tags }},deadlock'
       runs-on: ${{ needs.setup.outputs.compute-standard }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
     secrets: inherit
