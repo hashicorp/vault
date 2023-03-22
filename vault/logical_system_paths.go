@@ -1241,6 +1241,11 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 		{
 			Pattern: "audit-hash/(?P<path>.+)",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb:   "calculate",
+				OperationSuffix: "audit-hash",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"path": {
 					Type:        framework.TypeString,
@@ -1251,6 +1256,7 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 					Type: framework.TypeString,
 				},
 			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleAuditHash,
@@ -1275,6 +1281,12 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 		{
 			Pattern: "audit$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "auditing",
+				OperationVerb:   "list",
+				OperationSuffix: "enabled-devices",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleAuditTable,
@@ -1295,6 +1307,10 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 
 		{
 			Pattern: "audit/(?P<path>.+)",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "auditing",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"path": {
@@ -1323,7 +1339,11 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleEnableAudit,
-					Summary:  "Enable a new audit device at the supplied path.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "enable",
+						OperationSuffix: "device",
+					},
+					Summary: "Enable a new audit device at the supplied path.",
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -1332,7 +1352,11 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleDisableAudit,
-					Summary:  "Disable the audit device at the given path.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "disable",
+						OperationSuffix: "device",
+					},
+					Summary: "Disable the audit device at the given path.",
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -1348,6 +1372,10 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 		{
 			Pattern: "config/auditing/request-headers/(?P<header>.+)",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "auditing",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"header": {
 					Type: framework.TypeString,
@@ -1360,7 +1388,11 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleAuditedHeaderUpdate,
-					Summary:  "Enable auditing of a header.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "enable",
+						OperationSuffix: "request-header",
+					},
+					Summary: "Enable auditing of a header.",
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -1369,7 +1401,11 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleAuditedHeaderDelete,
-					Summary:  "Disable auditing of the given request header.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "disable",
+						OperationSuffix: "request-header",
+					},
+					Summary: "Disable auditing of the given request header.",
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -1378,7 +1414,11 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 				},
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleAuditedHeaderRead,
-					Summary:  "List the information for the given request header.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "request-header-information",
+					},
+					Summary: "List the information for the given request header.",
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -1395,6 +1435,12 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 
 		{
 			Pattern: "config/auditing/request-headers$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "auditing",
+				OperationVerb:   "list",
+				OperationSuffix: "request-headers",
+			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
@@ -1425,6 +1471,12 @@ func (b *SystemBackend) sealPaths() []*framework.Path {
 		{
 			Pattern: "key-status$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "encryption-key",
+				OperationVerb:   "read",
+				OperationSuffix: "status",
+			},
+
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation: b.handleKeyStatus,
 			},
@@ -1435,6 +1487,11 @@ func (b *SystemBackend) sealPaths() []*framework.Path {
 
 		{
 			Pattern: "rotate/config$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "encryption-key",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"enabled": {
 					Type:        framework.TypeBool,
@@ -1453,9 +1510,17 @@ func (b *SystemBackend) sealPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleKeyRotationConfigRead,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "rotation-configuration",
+					},
 				},
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback:                    b.handleKeyRotationConfigUpdate,
+					Callback: b.handleKeyRotationConfigUpdate,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "configure",
+						OperationSuffix: "rotation",
+					},
 					ForwardPerformanceSecondary: true,
 					ForwardPerformanceStandby:   true,
 				},
@@ -1467,6 +1532,11 @@ func (b *SystemBackend) sealPaths() []*framework.Path {
 
 		{
 			Pattern: "rotate$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "encryption-key",
+				OperationVerb:   "rotate",
+			},
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: b.handleRotate,
