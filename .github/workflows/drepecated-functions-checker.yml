@@ -23,7 +23,8 @@ jobs:
           go-version-file: ./.go-version
           cache: true
       - name: Check deprecations for files in diff
-        working-directory: .github/scripts
         run: |
-          ./deprecations-checker.sh ${{ github.event.pull_request.base.ref }}
+          # Need to run this from base path and not from .github/scripts as staticcheck works 
+          # only on packages
+          ./.github/scripts/deprecations-checker.sh ${{ github.event.pull_request.base.ref }}
           
