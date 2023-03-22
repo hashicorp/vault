@@ -3,36 +3,17 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-.modal,
-.modal-background {
-  bottom: 0;
-  left: 0;
-  position: absolute;
-  right: 0;
-  top: 0;
-}
-
 .modal {
   align-items: center;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  top: 0;
   display: none;
-  flex-direction: column;
   justify-content: center;
   overflow: hidden;
   position: fixed;
-  z-index: 40;
-}
-
-.modal.is-active {
-  display: flex;
-}
-
-@media screen and (min-width: 769px), print {
-  .modal-card,
-  .modal-content {
-    margin: 0 auto;
-    max-height: calc(100vh - 40px);
-    width: 640px;
-  }
+  z-index: 20;
 }
 
 .modal-background {
