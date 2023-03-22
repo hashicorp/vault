@@ -36,8 +36,8 @@ ok        /pki/issuer/da41ffb1-cc6d-5a5c-f147-e4d7beeb1b73    Issuer's validity 
 To [verify](/vault/docs/commands/pki/verify-sign) the signature between two
 issuer certificates, use the `vault pki verify-sign <parent> <child>` command:
 
-```
-% vault pki verify-sign pki_root/issuer/root pki_int/issuer/FirstDepartment
+```shell-session
+$ vault pki verify-sign pki_root/issuer/root pki_int/issuer/FirstDepartment
 issuer:pki_root/issuer/root
 issued:pki_int/issuer/FirstDepartment
 
@@ -56,8 +56,8 @@ To [list intermediate](/vault/docs/commands/pki/list-intermediates) certificates
 potentially issued by a certificate inside vault, use the
 `vault pki list-intermediates <parent>` command:
 
-```
-% vault pki list-intermediates /pki_root/issuer/default
+```shell-session
+$ vault pki list-intermediates /pki_root/issuer/default
 intermediate                                             match?
 ------------                                             ------
 pki_int_2/issuer/d4404ccc-3ad4-83a9-f5df-398637654b3b    true
@@ -72,8 +72,8 @@ pki_int/issuer/b8cc0b41-e0e9-1a92-12c4-6849c9d6f837      true
 To [issue](/vault/docs/commands/pki/issue) a new issuer certificate, use the
 `vault pki issue <parent-certificate-path> <mount>` command:
 
-```
-% vault pki issue -issuer_name="FirstDepartment" /pki_root/issuer/default /pki_int/ common_name="first-department.example.com"
+```shell-session
+$ vault pki issue -issuer_name="FirstDepartment" /pki_root/issuer/default /pki_int/ common_name="first-department.example.com"
 Key                               Value
 ---                               -----
 ca_chain                          [-----BEGIN CERTIFICATE-----
@@ -86,8 +86,8 @@ To [reissue](/vault/docs/commands/pki/reissue) an issuer certificate, using the
 same fields as an existing issuer template, use the
 `vault pki reissue <parent-certificate-path> <template> <mount>` command:
 
-```
-% vault pki reissue -issuer_name="SecondDepartment" /pki_root/issuer/default /pki_int/issuer/FirstDepartment /pki_int_2/ common_name="second-department.example.com"
+```shell-session
+$ vault pki reissue -issuer_name="SecondDepartment" /pki_root/issuer/default /pki_int/issuer/FirstDepartment /pki_int_2/ common_name="second-department.example.com"
 Key                               Value
 ---                               -----
 ca_chain                          [-----BEGIN CERTIFICATE-----
