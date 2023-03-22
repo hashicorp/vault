@@ -62,7 +62,7 @@
   <PkiGenerateCsr
     @model={{@config}}
     @onCancel={{@onCancel}}
-    @onSuccess={{fn (mut this.title) "View generated CSR"}}
+    @onSave={{fn (mut this.title) "View generated CSR"}}
     @onComplete={{transition-to "vault.cluster.secrets.backend.pki.overview"}}
   />
 {{else}}

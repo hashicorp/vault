@@ -84,14 +84,14 @@ export default class PkiGenerateCsrComponent extends Component<Args> {
   *save(event: Event): Generator<Promise<boolean | PkiActionModel>> {
     event.preventDefault();
     try {
-      const { model } = this.args;
+      const { model, onSave } = this.args;
       const { isValid, state, invalidFormMessage } = model.validate();
       if (isValid) {
         const useIssuer = yield this.getCapability();
         yield model.save({ adapterOptions: { actionType: 'generate-csr', useIssuer } });
         this.flashMessages.success('Successfully generated CSR.');
-        if (this.args.onSave) {
-          this.args.onSave();
+        if (onSave) {
+          onSave();
         }
       } else {
         this.modelValidations = state;

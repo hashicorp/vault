@@ -233,7 +233,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       await click(S.emptyStateLink);
       assert.dom(S.configuration.title).hasText('Configure PKI');
       await click(S.configuration.optionByKey('generate-csr'));
-      await fillIn(S.configuration.typeField, 'exported');
+      await fillIn(S.configuration.typeField, 'internal');
       await fillIn(S.configuration.inputByName('commonName'), 'my-common-name');
       await click('[data-test-save]');
       assert.dom(S.configuration.title).hasText('View generated CSR');
