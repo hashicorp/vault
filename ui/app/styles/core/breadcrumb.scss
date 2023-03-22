@@ -23,19 +23,12 @@
     }
   }
 
-  a {
-    align-items: center;
-    color: $blue-500;
-    display: flex;
-    justify-content: center;
-    padding: 0 0.75em;
-  }
-
   ul,
   ol {
-    align-items: flex-start;
+    align-items: center;
     display: flex;
-    flex-wrap: wrap;
+    flex-grow: 1;
+    flex-shrink: 0;
     justify-content: flex-start;
   }
 
@@ -56,9 +49,6 @@
       color: $grey-darker;
       cursor: default;
       pointer-events: none;
-    }
-    .sep {
-      display: initial;
     }
   }
 
