@@ -30,3 +30,6 @@ Stanza](/vault/docs/agent#vault-stanza).
 
 - `client_key` `(string: optional)` - Path on the local disk to a single
   PEM-encoded private key matching the client certificate from client_cert.
+
+- `reload` `(bool: optional, default: false)` - If true, causes the local x509 key-pair to be reloaded from disk on each authentication attempt.
+  This is useful in situations where client certificates are short-lived and automatically renewed.

@@ -12,6 +12,7 @@ import { click, currentRouteName, visit } from '@ember/test-helpers';
 
 import { module, skip } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { v4 as uuidv4 } from 'uuid';
 import secretList from 'vault/tests/pages/secrets/backend/list';
 import secretEdit from 'vault/tests/pages/secrets/backend/kv/edit-secret';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
@@ -23,7 +24,7 @@ module('Acceptance | leases', function (hooks) {
 
   hooks.beforeEach(async function () {
     await authPage.login();
-    this.enginePath = `kv-for-lease-${new Date().getTime()}`;
+    this.enginePath = `kv-for-lease-${uuidv4()}`;
     // need a version 1 mount for leased secrets here
     return mountSecrets.visit().path(this.enginePath).type('kv').version(1).submit();
   });
@@ -33,7 +34,7 @@ module('Acceptance | leases', function (hooks) {
   });
 
   const createSecret = async (context, isRenewable) => {
-    context.name = `secret-${new Date().getTime()}`;
+    context.name = `secret-${uuidv4()}`;
     await secretList.visitRoot({ backend: context.enginePath });
     await secretList.create();
     if (isRenewable) {

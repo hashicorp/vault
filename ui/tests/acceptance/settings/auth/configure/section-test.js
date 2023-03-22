@@ -7,6 +7,8 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
 import { fillIn } from '@ember/test-helpers';
+import { v4 as uuidv4 } from 'uuid';
+
 import enablePage from 'vault/tests/pages/settings/auth/enable';
 import page from 'vault/tests/pages/settings/auth/configure/section';
 import indexPage from 'vault/tests/pages/settings/auth/configure/index';
@@ -20,6 +22,7 @@ module('Acceptance | settings/auth/configure/section', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
+    this.uid = uuidv4();
     this.server = apiStub({ usePassthrough: true });
     return authPage.login();
   });
@@ -29,7 +32,7 @@ module('Acceptance | settings/auth/configure/section', function (hooks) {
   });
 
   test('it can save options', async function (assert) {
-    const path = `approle-${new Date().getTime()}`;
+    const path = `approle-save-${this.uid}`;
     const type = 'approle';
     const section = 'options';
     await enablePage.enable(type, path);
@@ -59,7 +62,7 @@ module('Acceptance | settings/auth/configure/section', function (hooks) {
 
   for (const type of ['aws', 'azure', 'gcp', 'github', 'kubernetes']) {
     test(`it shows tabs for auth method: ${type}`, async function (assert) {
-      const path = `${type}-${Date.now()}`;
+      const path = `${type}-showtab-${this.uid}`;
       await cli.consoleInput(`write sys/auth/${path} type=${type}`);
       await cli.enter();
       await indexPage.visit({ path });

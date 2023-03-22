@@ -1,15 +1,19 @@
 name: CI
 on:
+  pull_request:
   push:
+    branches:
+      - "main"
 
 jobs:
   setup:
     name: Setup
     runs-on: ubuntu-latest
     outputs:
-      runs-on: ${{ steps.setup-outputs.outputs.runs-on }}
+      compute-standard: ${{ steps.setup-outputs.outputs.compute-standard }}
+      compute-larger: ${{ steps.setup-outputs.outputs.compute-larger }}
       enterprise: ${{ steps.setup-outputs.outputs.enterprise }}
-      go-tags: ${{ steps.setup-outputs.outputs.go-tags }}
+      go-build-tags: ${{ steps.setup-outputs.outputs.go-build-tags }}
     steps:
     - id: setup-outputs
       name: Setup outputs
@@ -17,19 +21,21 @@ jobs:
         github_repository="${{ github.repository }}"
 
         if [ "${github_repository##*/}" == "vault-enterprise" ] ; then
-          echo 'runs-on=["self-hosted","ondemand","linux","type=c5.2xlarge"]' >> $GITHUB_OUTPUT
+          echo 'compute-standard=["self-hosted","ondemand","linux","type=m5.xlarge"]' >> $GITHUB_OUTPUT
+          echo 'compute-larger=["self-hosted","ondemand","linux","type=m5.2xlarge"]' >> $GITHUB_OUTPUT
           echo 'enterprise=1' >> $GITHUB_OUTPUT
-          echo 'go-tags=ent enterprise' >> $GITHUB_OUTPUT
+          echo 'go-build-tags=ent,enterprise' >> $GITHUB_OUTPUT
         else
-          echo 'runs-on="ubuntu-latest"' >> $GITHUB_OUTPUT
+          echo 'compute-standard=["custom", "linux", "small"]' >> $GITHUB_OUTPUT
+          echo 'compute-larger=["custom", "linux", "medium"]' >> $GITHUB_OUTPUT
           echo 'enterprise=' >> $GITHUB_OUTPUT
-          echo 'go-tags=' >> $GITHUB_OUTPUT
+          echo 'go-build-tags=' >> $GITHUB_OUTPUT
         fi
   semgrep:
     name: Semgrep
     needs:
     - setup
-    runs-on: ${{ fromJSON(needs.setup.outputs.runs-on) }}
+    runs-on: ${{ fromJSON(needs.setup.outputs.compute-standard) }}
     container:
       image: returntocorp/semgrep@sha256:ffc6f3567654f9431456d49fd059dfe548f007c494a7eb6cd5a1a3e50d813fb3
     steps:
@@ -43,13 +49,13 @@ jobs:
     - setup
     uses: ./.github/workflows/setup-go-cache.yml
     with:
-      runs-on: ${{ needs.setup.outputs.runs-on }}
+      runs-on: ${{ needs.setup.outputs.compute-larger }}
     secrets: inherit
   fmt:
     name: Check Format
     needs:
     - setup
-    runs-on: ${{ fromJSON(needs.setup.outputs.runs-on) }}
+    runs-on: ${{ fromJSON(needs.setup.outputs.compute-standard) }}
     steps:
     - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
     - uses: actions/setup-go@d0a58c1c4d2b25278816e339b944508c875f3613
@@ -73,11 +79,25 @@ jobs:
     if: ${{ ! (startsWith( github.ref_name, 'ui/' ) || startsWith( github.ref_name, 'docs/' ) || startsWith( github.ref_name, 'backport/docs/') ) }}
     uses: ./.github/workflows/test-go.yml
     with:
-      # The example inputs below are just here to get the workflow to run during the migration.
-      # In the future, they will be substituted - possibly with references to values coming from a testing matrix.
+      name: ''
       go-arch: amd64
-      go-tags: ${{ needs.setup.outputs.go-tags }}
-      extra-tags: deadlock
-      runs-on: ${{ needs.setup.outputs.runs-on }}
+      go-build-tags: '${{ needs.setup.outputs.go-build-tags }},deadlock'
+      runs-on: ${{ needs.setup.outputs.compute-standard }}
+      enterprise: ${{ needs.setup.outputs.enterprise }}
+    secrets: inherit
+  test-go-race:
+    name: Run Go tests with data race detection
+    needs:
+    - setup
+    - setup-go-cache
+    # Don't run this job for branches starting with 'ui/', 'docs/', or 'backport/docs/'
+    if: ${{ ! (startsWith( github.ref_name, 'ui/' ) || startsWith( github.ref_name, 'docs/' ) || startsWith( github.ref_name, 'backport/docs/') ) }}
+    uses: ./.github/workflows/test-go.yml
+    with:
+      name: race
+      extra-flags: '-race'
+      go-arch: amd64
+      go-build-tags: ${{ needs.setup.outputs.go-build-tags }}
+      runs-on: ${{ needs.setup.outputs.compute-larger }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
     secrets: inherit
