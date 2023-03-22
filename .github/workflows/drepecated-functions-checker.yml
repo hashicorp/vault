@@ -25,5 +25,5 @@ jobs:
       - name: Check deprecations for files in diff
         working-directory: .github/scripts
         run: |
-        ./deprecations-checker.sh ${{ github.event.pull_request.base.ref }}
+          ./deprecations-checker.sh ${{ github.event.pull_request.base.ref }}
           
