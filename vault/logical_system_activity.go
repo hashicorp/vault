@@ -18,6 +18,13 @@ import (
 func (b *SystemBackend) activityQueryPath() *framework.Path {
 	return &framework.Path{
 		Pattern: "internal/counters/activity$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: "internal-client-activity",
+			OperationVerb:   "report",
+			OperationSuffix: "counts",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"start_time": {
 				Type:        framework.TypeTime,
@@ -48,7 +55,14 @@ func (b *SystemBackend) activityQueryPath() *framework.Path {
 // monthlyActivityCountPath is available in every namespace
 func (b *SystemBackend) monthlyActivityCountPath() *framework.Path {
 	return &framework.Path{
-		Pattern:         "internal/counters/activity/monthly$",
+		Pattern: "internal/counters/activity/monthly$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: "internal-client-activity",
+			OperationVerb:   "report",
+			OperationSuffix: "counts-this-month",
+		},
+
 		HelpSynopsis:    strings.TrimSpace(sysHelp["activity-monthly"][0]),
 		HelpDescription: strings.TrimSpace(sysHelp["activity-monthly"][1]),
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -74,6 +88,11 @@ func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 		b.monthlyActivityCountPath(),
 		{
 			Pattern: "internal/counters/config$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal-client-activity",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"default_report_months": {
 					Type:        framework.TypeInt,
@@ -96,16 +115,29 @@ func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleActivityConfigRead,
-					Summary:  "Read the client count tracking configuration.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "configuration",
+					},
+					Summary: "Read the client count tracking configuration.",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleActivityConfigUpdate,
-					Summary:  "Enable or disable collection of client count, set retention period, or set default reporting period.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "configure",
+					},
+					Summary: "Enable or disable collection of client count, set retention period, or set default reporting period.",
 				},
 			},
 		},
 		{
 			Pattern: "internal/counters/activity/export$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal-client-activity",
+				OperationVerb:   "export",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"start_time": {
 					Type:        framework.TypeTime,
@@ -121,6 +153,7 @@ func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 					Default:     "json",
 				},
 			},
+
 			HelpSynopsis:    strings.TrimSpace(sysHelp["activity-export"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["activity-export"][1]),
 
