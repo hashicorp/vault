@@ -601,10 +601,13 @@ func constructOperationID(
 	//      path 1: "keys/generate/exported"  suffix: exported-key
 	//      path 2: "keys/generate/kms"       suffix: kms-key
 	//
+	pathIndexOutOfRange := false
+
 	if suffixes := strings.Split(suffix, "|"); len(suffixes) > 1 || pathIndex > 0 {
 		// if the index is out of bounds, fall back to the old logic
 		if pathIndex >= len(suffixes) {
 			suffix = ""
+			pathIndexOutOfRange = true
 		} else {
 			suffix = suffixes[pathIndex]
 		}
@@ -625,7 +628,7 @@ func constructOperationID(
 	var (
 		needPrefix = prefix == "" && verb == ""
 		needVerb   = verb == ""
-		needSuffix = suffix == "" && (verb == "" || pathIndex > 0)
+		needSuffix = suffix == "" && (verb == "" || pathIndexOutOfRange)
 	)
 
 	if needPrefix {
