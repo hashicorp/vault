@@ -4,11 +4,13 @@
 # This script is sourced into the shell running in a Github workflow.
 
 # Usage:
-# To test for deprecations locally using the script, follow these steps:
-# Run the command ./deprecation-checker.sh <optional branch name to compare with>
+# To check deprecations locally using the script, follow these steps:
+# Run the command ./deprecations-checker.sh <optional branch name to compare with> 
+# on vault/vault-enterprise repository path or any package path
 # Optionally specify a branch name to compare with. This will only show deprecations present in files 
 #    that have changed when compared to the specified branch.
-#    For example: ./deprecation-checker.sh main
+#    For example: ./.github/scripts/deprecations-checker.sh main (or)
+#                 ./.github/scripts/deprecations-checker.sh (Running this from vault repo path)
 # If no branch name is specified, the command will show all the deprecations in the code.
 
 # GHA runs this against the PR's base ref branch. 
@@ -27,7 +29,7 @@ compareBranch="$1"
 echo "Performing Deprecations Check: Running Staticcheck"
 staticcheck ./... | grep deprecated > staticcheckOutput.txt
 
-# If no compare branch name specified, output all deprecations. 
+# If no compare branch name is specified, output all deprecations. 
 if [ -z $1 ]; then
     echo "Results:"
     if [ -s staticcheckOutput.txt ]
