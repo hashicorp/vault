@@ -1552,6 +1552,10 @@ func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 	return &framework.Path{
 		Pattern: "plugins/catalog(/(?P<type>auth|database|secret))?/(?P<name>.+)",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: "plugins-catalog",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -1590,6 +1594,10 @@ func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.handlePluginCatalogUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "register",
+					OperationSuffix: "plugin|plugin-with-type|plugin-with-type-and-name",
+				},
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
@@ -1599,6 +1607,10 @@ func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.handlePluginCatalogDelete,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "remove",
+					OperationSuffix: "plugin|plugin-with-type|plugin-with-type-and-name",
+				},
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
@@ -1609,6 +1621,10 @@ func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 			},
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.handlePluginCatalogRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "read",
+					OperationSuffix: "plugin-configuration|plugin-configuration-with-type|plugin-configuration-with-type-and-name",
+				},
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
@@ -1663,6 +1679,12 @@ func (b *SystemBackend) pluginsCatalogListPaths() []*framework.Path {
 		{
 			Pattern: "plugins/catalog/(?P<type>auth|database|secret)/?$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "plugins-catalog",
+				OperationVerb:   "list",
+				OperationSuffix: "plugins-with-type",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"type": {
 					Type:        framework.TypeString,
@@ -1695,6 +1717,12 @@ func (b *SystemBackend) pluginsCatalogListPaths() []*framework.Path {
 		{
 			Pattern: "plugins/catalog/?$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "plugins-catalog",
+				OperationVerb:   "list",
+				OperationSuffix: "plugins",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handlePluginCatalogUntypedList,
@@ -1721,6 +1749,12 @@ func (b *SystemBackend) pluginsCatalogListPaths() []*framework.Path {
 func (b *SystemBackend) pluginsReloadPath() *framework.Path {
 	return &framework.Path{
 		Pattern: "plugins/reload/backend$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: "plugins",
+			OperationVerb:   "reload",
+			OperationSuffix: "backends",
+		},
 
 		Fields: map[string]*framework.FieldSchema{
 			"plugin": {
@@ -1774,6 +1808,13 @@ func (b *SystemBackend) toolsPaths() []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "tools/hash" + framework.OptionalParamRegex("urlalgorithm"),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "tools",
+				OperationVerb:   "hash",
+				OperationSuffix: "|with-algorithm",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"input": {
 					Type:        framework.TypeString,
@@ -1815,6 +1856,13 @@ func (b *SystemBackend) toolsPaths() []*framework.Path {
 
 		{
 			Pattern: "tools/random(/" + framework.GenericNameRegex("source") + ")?" + framework.OptionalParamRegex("urlbytes"),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "tools",
+				OperationVerb:   "generate",
+				OperationSuffix: "random|random-with-source|random-with-source-and-bytes",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"urlbytes": {
 					Type:        framework.TypeString,
@@ -1854,6 +1902,12 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "internal/specs/openapi",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal",
+				OperationVerb:   "generate",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"context": {
 					Type:        framework.TypeString,
@@ -1866,14 +1920,33 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 					Default:     false,
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation:   b.pathInternalOpenAPI,
-				logical.UpdateOperation: b.pathInternalOpenAPI,
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathInternalOpenAPI,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationSuffix: "open-api-document",
+					},
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.pathInternalOpenAPI,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationSuffix: "open-api-document2",
+					},
+				},
 			},
+
 			HelpSynopsis: "Generate an OpenAPI 3 document of all mounted paths.",
 		},
 		{
 			Pattern: "internal/ui/feature-flags",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal-ui",
+				OperationVerb:   "list",
+				OperationSuffix: "enabled-feature-flags",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					// callback is absent because this is an unauthenticated method
@@ -1896,6 +1969,13 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 		},
 		{
 			Pattern: "internal/ui/mounts",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal-ui",
+				OperationVerb:   "list",
+				OperationSuffix: "enabled-visible-mounts",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathInternalUIMountsRead,
@@ -1924,12 +2004,20 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 		},
 		{
 			Pattern: "internal/ui/mounts/(?P<path>.+)",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal-ui",
+				OperationVerb:   "read",
+				OperationSuffix: "mount-information",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"path": {
 					Type:        framework.TypeString,
 					Description: "The path of the mount.",
 				},
 			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathInternalUIMountRead,
@@ -2000,6 +2088,11 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 		},
 		{
 			Pattern: "internal/ui/namespaces",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal-ui",
+				OperationVerb:   "list",
+				OperationSuffix: "namespaces",
+			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: pathInternalUINamespacesRead(b),
@@ -2022,6 +2115,11 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 		},
 		{
 			Pattern: "internal/ui/resultant-acl",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal-ui",
+				OperationVerb:   "read",
+				OperationSuffix: "resultant-acl",
+			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathInternalUIResultantACL,
@@ -2056,6 +2154,11 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 		},
 		{
 			Pattern: "internal/counters/requests",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal",
+				OperationVerb:   "count",
+				OperationSuffix: "requests",
+			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathInternalCountersRequests,
@@ -2069,6 +2172,11 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 		},
 		{
 			Pattern: "internal/counters/tokens",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal",
+				OperationVerb:   "count",
+				OperationSuffix: "tokens",
+			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathInternalCountersTokens,
@@ -2091,6 +2199,11 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 		},
 		{
 			Pattern: "internal/counters/entities",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal",
+				OperationVerb:   "count",
+				OperationSuffix: "entities",
+			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathInternalCountersEntities,
