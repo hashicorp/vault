@@ -146,7 +146,7 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
     assert.dom('[data-test-chart-container="total-clients"]').exists('total client attribution chart shows');
 
     // reset to billing period
-    await click('[data-test-popup-menu-trigger]');
+    await click(SELECTORS.rangeDropdown);
     await click('[data-test-current-billing-period]');
 
     // change billing start to month/year of first upgrade
@@ -212,7 +212,7 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
     assert.dom('[data-test-chart-container="total-clients"]').exists('total client attribution chart shows');
 
     // reset to billing period
-    await click('[data-test-popup-menu-trigger]');
+    await click(SELECTORS.rangeDropdown);
     await click('[data-test-current-billing-period]');
     // query month older than count start date
     await click('[data-test-start-date-editor] button');

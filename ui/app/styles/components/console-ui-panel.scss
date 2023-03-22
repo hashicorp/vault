@@ -129,29 +129,6 @@
   position: fixed;
 }
 
-.panel-open {
-  .navbar,
-  .navbar-sections {
-    transition: transform $speed ease-in;
-  }
-}
-
-.panel-open.panel-fullscreen {
-  .navbar,
-  .navbar-sections {
-    @include from($mobile) {
-      transform: translateY(-100px);
-    }
-  }
-}
-
-header .navbar,
-header .navbar-sections {
-  z-index: 200;
-  transform: translateY(0);
-  will-change: transform;
-}
-
 .console-spinner.control {
   height: 21px;
   width: 21px;

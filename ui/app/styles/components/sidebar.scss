@@ -3,112 +3,6 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-.is-sidebar {
-  border-right: $base-border;
-  display: flex;
-  flex: 1 1 auto;
-  margin: 0.75rem 0.75rem 0.75rem 0;
-  padding: 0 0 0 0.75rem;
-
-  @include until($tablet) {
-    background-color: $white;
-    bottom: 0;
-    left: -1.5rem;
-    margin: 0;
-    max-width: $drawer-width;
-    padding: $spacing-m 0 0;
-    position: absolute;
-    right: $size-2;
-    transform: translateX(-100%);
-    transition: transform $speed;
-    top: 0;
-    z-index: 5;
-  }
-
-  &.is-active {
-    @include until($tablet) {
-      transform: translateX(0);
-    }
-
-    .menu-toggle {
-      left: auto;
-      right: $size-10;
-    }
-  }
-
-  .menu-toggle {
-    color: $blue;
-    cursor: pointer;
-    display: none;
-    margin-left: $size-10;
-    left: 100%;
-    position: absolute;
-    top: 0;
-
-    @include until($tablet) {
-      display: block;
-    }
-
-    .button {
-      min-width: 0;
-    }
-  }
-
-  .menu {
-    flex: 1 1 auto;
-    padding-top: 5.25rem;
-    position: relative;
-
-    @include until($tablet) {
-      padding-top: $size-6;
-    }
-  }
-
-  .menu-label {
-    color: $grey-light;
-    font-weight: $font-weight-bold;
-    font-size: $size-small;
-    line-height: 1;
-    margin-bottom: $size-8;
-    padding-left: $size-5;
-  }
-
-  .menu-list {
-    border-top: $base-border;
-    padding: $size-9 0;
-
-    @include until($tablet) {
-      padding-top: $size-4;
-    }
-
-    li {
-      a {
-        &.active {
-          border-right: 4px solid $blue;
-          color: $blue;
-        }
-      }
-    }
-
-    a {
-      color: $grey-dark;
-      padding-left: $size-5;
-      transition: 250ms border-width;
-
-      &.active {
-        border-right: 4px solid $blue;
-      }
-    }
-
-    .tag {
-      @include from($fullhd) {
-        float: right;
-      }
-    }
-  }
-}
-// remove above once MenuSidebar component has been removed
-// new sidebar styling
 .brand-icon {
   .hs-icon {
     width: 44px;
@@ -134,6 +28,32 @@
     }
     .token-alert {
       padding: $spacing-xs;
+    }
+  }
+}
+
+.link-status {
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: $size-7;
+  font-weight: $font-weight-semibold;
+
+  &.connected {
+    background-color: $ui-gray-800;
+    color: #c2c5cb;
+
+    a {
+      color: #c2c5cb;
+    }
+  }
+  &.warning {
+    background-color: #fcf6ea;
+    color: #975b06;
+
+    a {
+      color: #975b06;
     }
   }
 }

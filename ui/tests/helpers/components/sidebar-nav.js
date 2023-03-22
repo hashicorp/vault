@@ -10,6 +10,9 @@ export const stubFeaturesAndPermissions = (owner, isEnterprise = false, setClust
   sinon.stub(version, 'features').value(allFeatures());
   sinon.stub(version, 'isEnterprise').value(isEnterprise);
 
+  const auth = owner.lookup('service:auth');
+  sinon.stub(auth, 'authData').value({});
+
   if (setCluster) {
     owner.lookup('service:currentCluster').setCluster({
       id: 'foo',

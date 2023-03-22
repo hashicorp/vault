@@ -51,7 +51,7 @@ module('Acceptance | mfa-setup', function (hooks) {
     await setupUser();
     await logout.visit();
     await authPage.loginUsername(USER, PASSWORD);
-    await click('.nav-user-button button');
+    await click('[data-test-user-menu-trigger]');
     await click('[data-test-user-menu-item="mfa"]');
   });
 

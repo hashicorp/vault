@@ -31,7 +31,7 @@ module('Integration | Component | sidebar-frame', function (hooks) {
       </Sidebar::Frame>
     `);
 
-    assert.dom('.navbar-status').exists('Link status component renders');
+    assert.dom('.link-status').exists('Link status component renders');
     assert.dom('[data-test-component="console/ui-panel"]').exists('Console UI panel renders');
     assert.dom('.page-container').exists('Block yields for app content');
   });

@@ -132,16 +132,6 @@
   }
 }
 
-.status-menu-content {
-  margin-top: 8px;
-
-  .box {
-    @include until($mobile) {
-      width: $drawer-width - ($spacing-xs * 2);
-    }
-  }
-}
-
 .ember-basic-dropdown-content {
   background-color: transparent;
 

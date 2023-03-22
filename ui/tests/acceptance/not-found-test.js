@@ -29,22 +29,16 @@ module('Acceptance | not-found', function (hooks) {
   test('top-level not-found', async function (assert) {
     await visit('/404');
     assert.ok(findAll('[data-test-not-found]').length, 'renders the not found component');
-    assert.ok(
-      findAll('[data-test-header-without-nav]').length,
-      'renders the not found component with a header'
-    );
   });
 
   test('vault route not-found', async function (assert) {
     await visit('/vault/404');
     assert.dom('[data-test-not-found]').exists('renders the not found component');
-    assert.ok(findAll('[data-test-header-with-nav]').length, 'renders header with nav');
   });
 
   test('cluster route not-found', async function (assert) {
     await visit('/vault/secrets/secret/404/show');
     assert.dom('[data-test-not-found]').exists('renders the not found component');
-    assert.ok(findAll('[data-test-header-with-nav]').length, 'renders header with nav');
   });
 
   test('secret not-found', async function (assert) {

@@ -15,12 +15,6 @@
     margin: 0;
   }
 
-  .is-sidebar + .column & {
-    @include until($tablet) {
-      margin-left: $size-2;
-    }
-  }
-
   li {
     & + li::before {
       display: none;

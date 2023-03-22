@@ -4,7 +4,7 @@
  */
 
 import { create } from 'ember-cli-page-object';
-import { settled, click } from '@ember/test-helpers';
+import { settled, click, visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
@@ -54,8 +54,9 @@ module('Acceptance | cluster', function (hooks) {
     const userToken = await tokenWithPolicy('hide-policies-nav', deny_policies_policy);
     await logout.visit();
     await authPage.login(userToken);
+    await visit('/vault/access');
 
-    assert.dom('[data-test-navbar-item="policies"]').doesNotExist();
+    assert.dom('[data-test-sidebar-nav-link="Policies"]').doesNotExist();
     await logout.visit();
   });
 
@@ -65,13 +66,13 @@ module('Acceptance | cluster', function (hooks) {
     await logout.visit();
     await settled();
     await authPage.loginUsername(USER, PASSWORD);
-    await click('.nav-user-button button');
+    await click('[data-test-user-menu-trigger]');
     assert.dom('[data-test-user-menu-item="mfa"]').exists();
     await logout.visit();
 
     await authPage.login('root');
     await settled();
-    await click('.nav-user-button button');
+    await click('[data-test-user-menu-trigger]');
     assert.dom('[data-test-user-menu-item="mfa"]').doesNotExist();
   });
 
@@ -85,8 +86,9 @@ module('Acceptance | cluster', function (hooks) {
     const userToken = await tokenWithPolicy('show-policies-nav', read_rgp_policy);
     await logout.visit();
     await authPage.login(userToken);
-    await settled();
-    assert.dom('[data-test-navbar-item="policies"]').hasAttribute('href', '/ui/vault/policies/rgp');
+    await visit('/vault/access');
+
+    assert.dom('[data-test-sidebar-nav-link="Policies"]').hasAttribute('href', '/ui/vault/policies/rgp');
     await logout.visit();
   });
 });
