@@ -86,6 +86,6 @@ module('Acceptance | Enterprise | oidc auth namespace test', function (hooks) {
     await this.disableOidc(this.rootOidc);
     await this.disableOidc(this.nsOidc);
     await shell.runCommands([`delete /sys/auth/${this.namespace}`]);
-    await authPage.logout();
+    await logout.visit();
   });
 });
