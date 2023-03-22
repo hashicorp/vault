@@ -20,7 +20,6 @@ const SELECTORS = {
 
 module('Acceptance | Enterprise | oidc auth namespace test', function (hooks) {
   setupApplicationTest(hooks);
-
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
