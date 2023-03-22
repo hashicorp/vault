@@ -1446,7 +1446,7 @@
         "path": "auth/token"
       },
       {
-        "title": "Username &amp; Password",
+        "title": "Username and Password",
         "path": "auth/userpass"
       },
       {
