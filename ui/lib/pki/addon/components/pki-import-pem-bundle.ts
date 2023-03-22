@@ -33,7 +33,7 @@ interface AdapterOptions {
   useIssuer: boolean | undefined;
 }
 interface Args {
-  onSave: CallableFunction | null;
+  onSave?: CallableFunction;
   onCancel: CallableFunction;
   onComplete: CallableFunction;
   model: PkiActionModel;
@@ -44,7 +44,6 @@ export default class PkiImportPemBundle extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
 
   @tracked errorBanner = '';
-  @tracked afterImport = false;
 
   get importedResponse() {
     // mapping only exists after success

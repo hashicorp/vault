@@ -22,6 +22,25 @@ interface Args {
   onSave?: CallableFunction;
 }
 
+/**
+ * @module PkiGenerateCsrComponent
+ * PkiGenerateCsr shows only the fields valid for the generate CSR endpoint.
+ * This component renders the form, handles the model save and rollback actions,
+ * and shows the resulting data on success. onCancel is required for the cancel
+ * transition, and if onSave is provided it will call that after save for any
+ * side effects in the parent.
+ *
+ * @example
+ * ```js
+ * <PkiGenerateRoot @model={{this.model}} @onCancel={{transition-to "vault.cluster"}} @onSave={{fn (mut this.title) "Successful"}} @adapterOptions={{hash actionType="import" useIssuer=false}} />
+ * ```
+ *
+ * @param {Object} model - pki/action model.
+ * @callback onCancel - Callback triggered when cancel button is clicked, after model is unloaded
+ * @callback onSave - Optional - Callback triggered after model is saved, as a side effect. Results are shown on the same component
+ * @callback onComplete - Callback triggered when "Done" button clicked, on results view
+ * @param {Object} adapterOptions - object passed as adapterOptions on the model.save method
+ */
 export default class PkiGenerateCsrComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
 

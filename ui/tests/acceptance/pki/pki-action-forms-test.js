@@ -7,6 +7,7 @@ import { module, skip, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, currentURL, fillIn, typeIn, visit } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { v4 as uuidv4 } from 'uuid';
 
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
@@ -21,7 +22,7 @@ module('Acceptance | pki action forms test', function (hooks) {
   hooks.beforeEach(async function () {
     await authPage.login();
     // Setup PKI engine
-    const mountPath = `pki-workflow-${new Date().getTime()}`;
+    const mountPath = `pki-workflow-${uuidv4()}`;
     await enablePage.enable('pki', mountPath);
     this.mountPath = mountPath;
     await logout.visit();
