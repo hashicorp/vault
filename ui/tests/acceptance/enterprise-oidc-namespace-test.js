@@ -68,6 +68,7 @@ module('Acceptance | Enterprise | oidc auth namespace test', function (hooks) {
     await authPage.login();
     await shell.runCommands([`delete /sys/auth/${this.namespace}`]);
     this.server.shutdown();
+    return await logout.visit();
   });
 
   test('oidc: request is made to auth_url when a namespace is inputted', async function (assert) {
