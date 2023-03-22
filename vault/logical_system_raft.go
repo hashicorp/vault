@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -361,9 +364,9 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 		var desiredSuffrage string
 		switch nonVoter {
 		case true:
-			desiredSuffrage = "voter"
-		default:
 			desiredSuffrage = "non-voter"
+		default:
+			desiredSuffrage = "voter"
 		}
 
 		if b.Core.raftFollowerStates != nil {

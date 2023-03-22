@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package versions
 
 import (
@@ -6,14 +9,19 @@ import (
 	"strings"
 	"sync"
 
+	semver "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/version"
+	"github.com/hashicorp/vault/version"
+)
+
+const (
+	BuiltinMetadata = "builtin"
 )
 
 var (
 	buildInfoOnce         sync.Once // once is used to ensure we only parse build info once.
 	buildInfo             *debug.BuildInfo
-	DefaultBuiltinVersion = "v" + version.GetVersion().Version + "+builtin.vault"
+	DefaultBuiltinVersion = fmt.Sprintf("v%s+%s.vault", version.GetVersion().Version, BuiltinMetadata)
 )
 
 func GetBuiltinVersion(pluginType consts.PluginType, pluginName string) string {
@@ -46,9 +54,28 @@ func GetBuiltinVersion(pluginType consts.PluginType, pluginName string) string {
 
 	for _, dep := range buildInfo.Deps {
 		if dep.Path == pluginModulePath {
-			return dep.Version + "+builtin"
+			return dep.Version + "+" + BuiltinMetadata
 		}
 	}
 
 	return DefaultBuiltinVersion
+}
+
+// IsBuiltinVersion checks for the "builtin" metadata identifier in a plugin's
+// semantic version. Vault rejects any plugin registration requests with this
+// identifier, so we can be certain it's a builtin plugin if it's present.
+func IsBuiltinVersion(v string) bool {
+	semanticVersion, err := semver.NewSemver(v)
+	if err != nil {
+		return false
+	}
+
+	metadataIdentifiers := strings.Split(semanticVersion.Metadata(), ".")
+	for _, identifier := range metadataIdentifiers {
+		if identifier == BuiltinMetadata {
+			return true
+		}
+	}
+
+	return false
 }

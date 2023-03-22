@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { helper as buildHelper } from '@ember/component/helper';
 
 const SUPPORTED_SECRET_BACKENDS = [
@@ -12,6 +17,7 @@ const SUPPORTED_SECRET_BACKENDS = [
   'kmip',
   'transform',
   'keymgmt',
+  'kubernetes',
 ];
 
 export function supportedSecretBackends() {

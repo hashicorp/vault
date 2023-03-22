@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package certutil
 
 import (
@@ -78,6 +81,11 @@ var InvSignatureAlgorithmNames = map[x509.SignatureAlgorithm]string{
 	x509.PureEd25519:      "Ed25519",
 }
 
+// OID for RFC 5280 CRL Number extension.
+//
+// > id-ce-cRLNumber OBJECT IDENTIFIER ::= { id-ce 20 }
+var CRLNumberOID = asn1.ObjectIdentifier([]int{2, 5, 29, 20})
+
 // OID for RFC 5280 Delta CRL Indicator CRL extension.
 //
 // > id-ce-deltaCRLIndicator OBJECT IDENTIFIER ::= { id-ce 27 }
@@ -100,13 +108,13 @@ func GetHexFormatted(buf []byte, sep string) string {
 func ParseHexFormatted(in, sep string) []byte {
 	var ret bytes.Buffer
 	var err error
-	var inBits int64
+	var inBits uint64
 	inBytes := strings.Split(in, sep)
 	for _, inByte := range inBytes {
-		if inBits, err = strconv.ParseInt(inByte, 16, 8); err != nil {
+		if inBits, err = strconv.ParseUint(inByte, 16, 8); err != nil {
 			return nil
 		}
-		ret.WriteByte(byte(inBits))
+		ret.WriteByte(uint8(inBits))
 	}
 	return ret.Bytes()
 }

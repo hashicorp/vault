@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -9,7 +12,7 @@ import (
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/hashicorp/vault/sdk/version"
+	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/cli"
 
 	/*
@@ -82,6 +85,17 @@ const (
 	EnvVaultLicensePath = "VAULT_LICENSE_PATH"
 	// EnvVaultDetailed is to output detailed information (e.g., ListResponseWithInfo).
 	EnvVaultDetailed = `VAULT_DETAILED`
+	// EnvVaultLogFormat is used to specify the log format. Supported values are "standard" and "json"
+	EnvVaultLogFormat = "VAULT_LOG_FORMAT"
+	// EnvVaultLogLevel is used to specify the log level applied to logging
+	// Supported log levels: Trace, Debug, Error, Warn, Info
+	EnvVaultLogLevel = "VAULT_LOG_LEVEL"
+	// EnvVaultExperiments defines the experiments to enable for a server as a
+	// comma separated list. See experiments.ValidExperiments() for the list of
+	// valid experiments. Not mutable or persisted in storage, only read and
+	// logged at startup _per node_. This was initially introduced for the events
+	// system being developed over multiple release cycles.
+	EnvVaultExperiments = "VAULT_EXPERIMENTS"
 
 	// DisableSSCTokens is an env var used to disable index bearing
 	// token functionality
@@ -136,6 +150,21 @@ const (
 	flagNameUserLockoutDisable = "user-lockout-disable"
 	// flagNameDisableRedirects is used to prevent the client from honoring a single redirect as a response to a request
 	flagNameDisableRedirects = "disable-redirects"
+	// flagNameCombineLogs is used to specify whether log output should be combined and sent to stdout
+	flagNameCombineLogs = "combine-logs"
+	// flagNameLogFile is used to specify the path to the log file that Vault should use for logging
+	flagNameLogFile = "log-file"
+	// flagNameLogRotateBytes is the flag used to specify the number of bytes a log file should be before it is rotated.
+	flagNameLogRotateBytes = "log-rotate-bytes"
+	// flagNameLogRotateDuration is the flag used to specify the duration after which a log file should be rotated.
+	flagNameLogRotateDuration = "log-rotate-duration"
+	// flagNameLogRotateMaxFiles is the flag used to specify the maximum number of older/archived log files to keep.
+	flagNameLogRotateMaxFiles = "log-rotate-max-files"
+	// flagNameLogFormat is the flag used to specify the log format. Supported values are "standard" and "json"
+	flagNameLogFormat = "log-format"
+	// flagNameLogLevel is used to specify the log level applied to logging
+	// Supported log levels: Trace, Debug, Error, Warn, Info
+	flagNameLogLevel = "log-level"
 )
 
 var (
@@ -193,13 +222,10 @@ var (
 		"kubernetes": ksr.NewServiceRegistration,
 	}
 
-	initCommandsEnt = func(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {}
+	initCommandsEnt = func(ui, serverCmdUi cli.Ui, runOpts *RunOptions, commands map[string]cli.CommandFactory) {}
 )
 
-// Commands is the mapping of all the available commands.
-var Commands map[string]cli.CommandFactory
-
-func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
+func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.CommandFactory {
 	loginHandlers := map[string]LoginHandler{
 		"alicloud": &credAliCloud.CLIHandler{},
 		"aws":      &credAws.CLIHandler{},
@@ -232,13 +258,14 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		}
 	}
 
-	Commands = map[string]cli.CommandFactory{
+	commands := map[string]cli.CommandFactory{
 		"agent": func() (cli.Command, error) {
 			return &AgentCommand{
 				BaseCommand: &BaseCommand{
 					UI: serverCmdUi,
 				},
 				ShutdownCh: MakeShutdownCh(),
+				SighupCh:   MakeSighupCh(),
 			}, nil
 		},
 		"audit": func() (cli.Command, error) {
@@ -305,6 +332,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"delete": func() (cli.Command, error) {
 			return &DeleteCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"events subscribe": func() (cli.Command, error) {
+			return &EventsSubscribeCommands{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -506,6 +538,36 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"pki": func() (cli.Command, error) {
+			return &PKICommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"pki health-check": func() (cli.Command, error) {
+			return &PKIHealthCheckCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"pki issue": func() (cli.Command, error) {
+			return &PKIIssueCACommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"pki list-intermediates": func() (cli.Command, error) {
+			return &PKIListIntermediateCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"pki reissue": func() (cli.Command, error) {
+			return &PKIReIssueCACommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"pki verify-sign": func() (cli.Command, error) {
+			return &PKIVerifySignCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"plugin": func() (cli.Command, error) {
 			return &PluginCommand{
 				BaseCommand: getBaseCommand(),
@@ -645,6 +707,21 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"transit": func() (cli.Command, error) {
+			return &TransitCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"transit import": func() (cli.Command, error) {
+			return &TransitImportCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"transit import-version": func() (cli.Command, error) {
+			return &TransitImportVersionCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"token": func() (cli.Command, error) {
 			return &TokenCommand{
 				BaseCommand: getBaseCommand(),
@@ -779,16 +856,8 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 	}
 
-	// Disabled by default until functional
-	if os.Getenv(OperatorDiagnoseEnableEnv) != "" {
-		Commands["operator diagnose"] = func() (cli.Command, error) {
-			return &OperatorDiagnoseCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		}
-	}
-
-	initCommandsEnt(ui, serverCmdUi, runOpts)
+	initCommandsEnt(ui, serverCmdUi, runOpts, commands)
+	return commands
 }
 
 // MakeShutdownCh returns a channel that can be used for shutdown

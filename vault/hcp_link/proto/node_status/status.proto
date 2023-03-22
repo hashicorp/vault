@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 syntax = "proto3";
 
 option go_package = "github.com/hashicorp/vault/vault/hcp_link/proto/node_status";
@@ -6,6 +9,19 @@ package hashicorp.vault.hcp_link.node_status;
 
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
+
+message RaftStatus {
+  bool IsVoter = 1;
+}
+
+enum LogLevel {
+  NO_LEVEL = 0;
+  TRACE = 1;
+  DEBUG = 2;
+  INFO = 3;
+  WARN = 4;
+  ERROR = 5;
+}
 
 message LinkedClusterNodeStatusResponse {
   string Type = 1;
@@ -23,4 +39,11 @@ message LinkedClusterNodeStatusResponse {
   bool RecoverySeal = 13;
   string StorageType = 14;
   repeated string ReplicationState = 15;
+  string Hostname = 16;
+  repeated string ListenerAddresses = 17;
+  string OperatingSystem = 18;
+  string OperatingSystemVersion = 19;
+  LogLevel LogLevel = 20;
+  google.protobuf.Timestamp ActiveTime = 21;
+  RaftStatus RaftStatus = 22;
 }

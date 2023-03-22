@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -309,6 +312,8 @@ func (c CBValidateChain) PrettyChain(t testing.TB, chain []string, knownCerts ma
 }
 
 func ToCertificate(t testing.TB, cert string) *x509.Certificate {
+	t.Helper()
+
 	block, _ := pem.Decode([]byte(cert))
 	if block == nil {
 		t.Fatalf("Unable to parse certificate: nil PEM block\n[%v]\n", cert)
@@ -323,6 +328,8 @@ func ToCertificate(t testing.TB, cert string) *x509.Certificate {
 }
 
 func ToCRL(t testing.TB, crl string, issuer *x509.Certificate) *pkix.CertificateList {
+	t.Helper()
+
 	block, _ := pem.Decode([]byte(crl))
 	if block == nil {
 		t.Fatalf("Unable to parse CRL: nil PEM block\n[%v]\n", crl)
@@ -1598,7 +1605,7 @@ var chainBuildingTestCases = []CBTestScenario{
 func Test_CAChainBuilding(t *testing.T) {
 	t.Parallel()
 	for testIndex, testCase := range chainBuildingTestCases {
-		b, s := createBackendWithStorage(t)
+		b, s := CreateBackendWithStorage(t)
 
 		knownKeys := make(map[string]string)
 		knownCerts := make(map[string]string)
@@ -1620,7 +1627,7 @@ func BenchmarkChainBuilding(benchies *testing.B) {
 			bench.StopTimer()
 			bench.ResetTimer()
 
-			b, s := createBackendWithStorage(bench)
+			b, s := CreateBackendWithStorage(bench)
 
 			knownKeys := make(map[string]string)
 			knownCerts := make(map[string]string)

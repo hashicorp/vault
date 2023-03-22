@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -40,11 +43,18 @@ func TestPluginCatalog_CRUD(t *testing.T) {
 		t.Fatalf("unexpected error %v", err)
 	}
 
+	// Get it again, explicitly specifying builtin version
+	builtinVersion := versions.GetBuiltinVersion(consts.PluginTypeDatabase, pluginName)
+	p2, err := core.pluginCatalog.Get(context.Background(), pluginName, consts.PluginTypeDatabase, builtinVersion)
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+
 	expectedBuiltin := &pluginutil.PluginRunner{
 		Name:    pluginName,
 		Type:    consts.PluginTypeDatabase,
 		Builtin: true,
-		Version: versions.GetBuiltinVersion(consts.PluginTypeDatabase, pluginName),
+		Version: builtinVersion,
 	}
 	expectedBuiltin.BuiltinFactory, _ = builtinplugins.Registry.Get(pluginName, consts.PluginTypeDatabase)
 
@@ -53,8 +63,12 @@ func TestPluginCatalog_CRUD(t *testing.T) {
 	}
 	expectedBuiltin.BuiltinFactory = nil
 	p.BuiltinFactory = nil
+	p2.BuiltinFactory = nil
 	if !reflect.DeepEqual(p, expectedBuiltin) {
 		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", p, expectedBuiltin)
+	}
+	if !reflect.DeepEqual(p2, expectedBuiltin) {
+		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", p2, expectedBuiltin)
 	}
 
 	// Set a plugin, test overwriting a builtin plugin
@@ -74,6 +88,16 @@ func TestPluginCatalog_CRUD(t *testing.T) {
 	p, err = core.pluginCatalog.Get(context.Background(), pluginName, consts.PluginTypeDatabase, "")
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
+	}
+
+	// Get it again, explicitly specifying builtin version.
+	// This time it should fail because it was overwritten.
+	p2, err = core.pluginCatalog.Get(context.Background(), pluginName, consts.PluginTypeDatabase, builtinVersion)
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+	if p2 != nil {
+		t.Fatalf("expected no result, got: %#v", p2)
 	}
 
 	expected := &pluginutil.PluginRunner{
@@ -383,7 +407,7 @@ func TestPluginCatalog_ListVersionedPlugins(t *testing.T) {
 			if !plugin.Builtin {
 				t.Fatalf("expected %v plugin to be builtin", plugin)
 			}
-			if plugin.SemanticVersion.Metadata() != "builtin" && plugin.SemanticVersion.Metadata() != "builtin.vault" {
+			if !versions.IsBuiltinVersion(plugin.Version) {
 				t.Fatalf("expected +builtin metadata but got %s", plugin.Version)
 			}
 		}

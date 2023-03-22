@@ -1,9 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package transit
 
 import (
 	"context"
 	"crypto/rsa"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -39,6 +43,10 @@ type batchResponseSignItem struct {
 	// For batch processing to successfully mimic previous handling for simple 'input',
 	// both output values are needed - though 'err' should never be serialized.
 	err error
+
+	// Reference is an arbitrary caller supplied string value that will be placed on the
+	// batch response to ease correlation between inputs and outputs
+	Reference string `json:"reference" mapstructure:"reference"`
 }
 
 // BatchRequestVerifyItem represents a request item for batch processing.
@@ -59,6 +67,10 @@ type batchResponseVerifyItem struct {
 	// For batch processing to successfully mimic previous handling for simple 'input',
 	// both output values are needed - though 'err' should never be serialized.
 	err error
+
+	// Reference is an arbitrary caller supplied string value that will be placed on the
+	// batch response to ease correlation between inputs and outputs
+	Reference string `json:"reference" mapstructure:"reference"`
 }
 
 const defaultHashAlgorithm = "sha2-256"
@@ -145,6 +157,14 @@ Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 				Default: "auto",
 				Description: `The salt length used to sign. Currently only applies to the RSA PSS signature scheme.
 Options are 'auto' (the default used by Golang, causing the salt to be as large as possible when signing), 'hash' (causes the salt length to equal the length of the hash used in the signature), or an integer between the minimum and the maximum permissible salt lengths for the given RSA key size. Defaults to 'auto'.`,
+			},
+
+			"batch_input": {
+				Type: framework.TypeSlice,
+				Description: `Specifies a list of items for processing. When this parameter is set,
+any supplied 'input' or 'context' parameters will be ignored. Responses are returned in the
+'batch_results' array component of the 'data' element of the response. Any batch output will
+preserve the order of the batch input`,
 			},
 		},
 
@@ -240,6 +260,14 @@ Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 				Default: "auto",
 				Description: `The salt length used to sign. Currently only applies to the RSA PSS signature scheme.
 Options are 'auto' (the default used by Golang, causing the salt to be as large as possible when signing), 'hash' (causes the salt length to equal the length of the hash used in the signature), or an integer between the minimum and the maximum permissible salt lengths for the given RSA key size. Defaults to 'auto'.`,
+			},
+
+			"batch_input": {
+				Type: framework.TypeSlice,
+				Description: `Specifies a list of items for processing. When this parameter is set,
+any supplied  'input', 'hmac' or 'signature' parameters will be ignored. Responses are returned in the
+'batch_results' array component of the 'data' element of the response. Any batch output will
+preserve the order of the batch input`,
 			},
 		},
 
@@ -392,11 +420,26 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 			}
 		}
 
+		var managedKeyParameters keysutil.ManagedKeyParameters
+		if p.Type == keysutil.KeyType_MANAGED_KEY {
+			managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
+			if !ok {
+				return nil, errors.New("unsupported system view")
+			}
+
+			managedKeyParameters = keysutil.ManagedKeyParameters{
+				ManagedKeySystemView: managedKeySystemView,
+				BackendUUID:          b.backendUUID,
+				Context:              ctx,
+			}
+		}
+
 		sig, err := p.SignWithOptions(ver, context, input, &keysutil.SigningOptions{
-			HashAlgorithm: hashAlgorithm,
-			Marshaling:    marshaling,
-			SaltLength:    saltLength,
-			SigAlgorithm:  sigAlgorithm,
+			HashAlgorithm:    hashAlgorithm,
+			Marshaling:       marshaling,
+			SaltLength:       saltLength,
+			SigAlgorithm:     sigAlgorithm,
+			ManagedKeyParams: managedKeyParameters,
 		})
 		if err != nil {
 			if batchInputRaw != nil {
@@ -420,6 +463,10 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 	// Generate the response
 	resp := &logical.Response{}
 	if batchInputRaw != nil {
+		// Copy the references
+		for i := range batchInputItems {
+			response[i].Reference = batchInputItems[i]["reference"]
+		}
 		resp.Data = map[string]interface{}{
 			"batch_results": response,
 		}
@@ -610,13 +657,29 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 				continue
 			}
 		}
+		var managedKeyParameters keysutil.ManagedKeyParameters
+		if p.Type == keysutil.KeyType_MANAGED_KEY {
+			managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
+			if !ok {
+				return nil, errors.New("unsupported system view")
+			}
 
-		valid, err := p.VerifySignatureWithOptions(context, input, sig, &keysutil.SigningOptions{
-			HashAlgorithm: hashAlgorithm,
-			Marshaling:    marshaling,
-			SaltLength:    saltLength,
-			SigAlgorithm:  sigAlgorithm,
-		})
+			managedKeyParameters = keysutil.ManagedKeyParameters{
+				ManagedKeySystemView: managedKeySystemView,
+				BackendUUID:          b.backendUUID,
+				Context:              ctx,
+			}
+		}
+
+		signingOptions := &keysutil.SigningOptions{
+			HashAlgorithm:    hashAlgorithm,
+			Marshaling:       marshaling,
+			SaltLength:       saltLength,
+			SigAlgorithm:     sigAlgorithm,
+			ManagedKeyParams: managedKeyParameters,
+		}
+
+		valid, err := p.VerifySignatureWithOptions(context, input, sig, signingOptions)
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:
@@ -636,6 +699,10 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 	// Generate the response
 	resp := &logical.Response{}
 	if batchInputRaw != nil {
+		// Copy the references
+		for i := range batchInputItems {
+			response[i].Reference = batchInputItems[i]["reference"]
+		}
 		resp.Data = map[string]interface{}{
 			"batch_results": response,
 		}

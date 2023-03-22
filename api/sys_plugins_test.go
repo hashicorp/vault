@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
@@ -7,8 +10,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 )
 
 func TestRegisterPlugin(t *testing.T) {
@@ -43,32 +45,32 @@ func TestListPlugins(t *testing.T) {
 
 	for name, tc := range map[string]struct {
 		input           ListPluginsInput
-		expectedPlugins map[consts.PluginType][]string
+		expectedPlugins map[PluginType][]string
 	}{
 		"no type specified": {
 			input: ListPluginsInput{},
-			expectedPlugins: map[consts.PluginType][]string{
-				consts.PluginTypeCredential: {"alicloud"},
-				consts.PluginTypeDatabase:   {"cassandra-database-plugin"},
-				consts.PluginTypeSecrets:    {"ad", "alicloud"},
+			expectedPlugins: map[PluginType][]string{
+				PluginTypeCredential: {"alicloud"},
+				PluginTypeDatabase:   {"cassandra-database-plugin"},
+				PluginTypeSecrets:    {"ad", "alicloud"},
 			},
 		},
 		"only auth plugins": {
-			input: ListPluginsInput{Type: consts.PluginTypeCredential},
-			expectedPlugins: map[consts.PluginType][]string{
-				consts.PluginTypeCredential: {"alicloud"},
+			input: ListPluginsInput{Type: PluginTypeCredential},
+			expectedPlugins: map[PluginType][]string{
+				PluginTypeCredential: {"alicloud"},
 			},
 		},
 		"only database plugins": {
-			input: ListPluginsInput{Type: consts.PluginTypeDatabase},
-			expectedPlugins: map[consts.PluginType][]string{
-				consts.PluginTypeDatabase: {"cassandra-database-plugin"},
+			input: ListPluginsInput{Type: PluginTypeDatabase},
+			expectedPlugins: map[PluginType][]string{
+				PluginTypeDatabase: {"cassandra-database-plugin"},
 			},
 		},
 		"only secret plugins": {
-			input: ListPluginsInput{Type: consts.PluginTypeSecrets},
-			expectedPlugins: map[consts.PluginType][]string{
-				consts.PluginTypeSecrets: {"ad", "alicloud"},
+			input: ListPluginsInput{Type: PluginTypeSecrets},
+			expectedPlugins: map[PluginType][]string{
+				PluginTypeSecrets: {"ad", "alicloud"},
 			},
 		},
 	} {
@@ -104,7 +106,7 @@ func TestListPlugins(t *testing.T) {
 			}
 
 			for _, actual := range resp.Details {
-				pluginType, err := consts.ParsePluginType(actual.Type)
+				pluginType, err := ParsePluginType(actual.Type)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -173,7 +175,7 @@ func TestGetPlugin(t *testing.T) {
 
 			input := GetPluginInput{
 				Name: "azure",
-				Type: consts.PluginTypeSecrets,
+				Type: PluginTypeSecrets,
 			}
 			if tc.version != "" {
 				input.Version = tc.version

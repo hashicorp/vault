@@ -1,10 +1,17 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package transit
 
 import (
 	"context"
+	"crypto"
 	cryptoRand "crypto/rand"
+	"crypto/x509"
 	"encoding/base64"
+	"encoding/pem"
 	"fmt"
+	"io"
 	"math/rand"
 	"os"
 	"path"
@@ -15,13 +22,20 @@ import (
 	"testing"
 	"time"
 
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/builtin/logical/pki"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault"
+
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/mitchellh/mapstructure"
+
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -1513,8 +1527,8 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 				// keys start at version 1 so we want [1, latestVersion] not [0, latestVersion)
 				setVersion := (rand.Int() % latestVersion) + 1
 				fd.Raw["min_decryption_version"] = setVersion
-				fd.Schema = be.pathConfig().Fields
-				resp, err = be.pathConfigWrite(context.Background(), req, fd)
+				fd.Schema = be.pathKeysConfig().Fields
+				resp, err = be.pathKeysConfigWrite(context.Background(), req, fd)
 				if err != nil {
 					t.Errorf("got an error setting min decryption version: %v", err)
 				}
@@ -1857,6 +1871,156 @@ func testTransit_AEAD(t *testing.T, keyType string) {
 	if err == nil || (resp != nil && !resp.IsError()) {
 		t.Fatalf("bad expected error: err: %v\nresp: %#v", err, resp)
 	}
+}
+
+// Hack: use Transit as a signer.
+type transitKey struct {
+	public any
+	mount  string
+	name   string
+	t      *testing.T
+	client *api.Client
+}
+
+func (k *transitKey) Public() crypto.PublicKey {
+	return k.public
+}
+
+func (k *transitKey) Sign(_ io.Reader, digest []byte, opts crypto.SignerOpts) (signature []byte, err error) {
+	hash := opts.(crypto.Hash)
+	if hash.String() != "SHA-256" {
+		return nil, fmt.Errorf("unknown hash algorithm: %v", opts)
+	}
+
+	resp, err := k.client.Logical().Write(k.mount+"/sign/"+k.name, map[string]interface{}{
+		"hash_algorithm":      "sha2-256",
+		"input":               base64.StdEncoding.EncodeToString(digest),
+		"prehashed":           true,
+		"signature_algorithm": "pkcs1v15",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to sign data: %w", err)
+	}
+	require.NotNil(k.t, resp)
+	require.NotNil(k.t, resp.Data)
+	require.NotNil(k.t, resp.Data["signature"])
+	rawSig := resp.Data["signature"].(string)
+	sigParts := strings.Split(rawSig, ":")
+
+	decoded, err := base64.StdEncoding.DecodeString(sigParts[2])
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode signature (%v): %w", rawSig, err)
+	}
+
+	return decoded, nil
+}
+
+func TestTransitPKICSR(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"transit": Factory,
+			"pki":     pki.Factory,
+		},
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	cores := cluster.Cores
+
+	vault.TestWaitActive(t, cores[0].Core)
+
+	client := cores[0].Client
+
+	// Mount transit, write a key.
+	err := client.Sys().Mount("transit", &api.MountInput{
+		Type: "transit",
+	})
+	require.NoError(t, err)
+
+	_, err = client.Logical().Write("transit/keys/leaf", map[string]interface{}{
+		"type": "rsa-2048",
+	})
+	require.NoError(t, err)
+
+	resp, err := client.Logical().Read("transit/keys/leaf")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	keys := resp.Data["keys"].(map[string]interface{})
+	require.NotNil(t, keys)
+	keyData := keys["1"].(map[string]interface{})
+	require.NotNil(t, keyData)
+	keyPublic := keyData["public_key"].(string)
+	require.NotEmpty(t, keyPublic)
+
+	pemBlock, _ := pem.Decode([]byte(keyPublic))
+	require.NotNil(t, pemBlock)
+	pubKey, err := x509.ParsePKIXPublicKey(pemBlock.Bytes)
+	require.NoError(t, err)
+	require.NotNil(t, pubKey)
+
+	// Setup a new CSR...
+	var reqTemplate x509.CertificateRequest
+	reqTemplate.PublicKey = pubKey
+	reqTemplate.PublicKeyAlgorithm = x509.RSA
+	reqTemplate.Subject.CommonName = "dadgarcorp.com"
+
+	var k transitKey
+	k.public = pubKey
+	k.mount = "transit"
+	k.name = "leaf"
+	k.t = t
+	k.client = client
+
+	req, err := x509.CreateCertificateRequest(cryptoRand.Reader, &reqTemplate, &k)
+	require.NoError(t, err)
+	require.NotNil(t, req)
+
+	reqPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE REQUEST",
+		Bytes: req,
+	})
+	t.Logf("csr: %v", string(reqPEM))
+
+	// Mount PKI, generate a root, sign this CSR.
+	err = client.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+	})
+	require.NoError(t, err)
+
+	resp, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"common_name": "PKI Root X1",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	rootCertPEM := resp.Data["certificate"].(string)
+
+	pemBlock, _ = pem.Decode([]byte(rootCertPEM))
+	require.NotNil(t, pemBlock)
+
+	rootCert, err := x509.ParseCertificate(pemBlock.Bytes)
+	require.NoError(t, err)
+
+	resp, err = client.Logical().Write("pki/issuer/default/sign-verbatim", map[string]interface{}{
+		"csr": string(reqPEM),
+		"ttl": "10m",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	leafCertPEM := resp.Data["certificate"].(string)
+	pemBlock, _ = pem.Decode([]byte(leafCertPEM))
+	require.NotNil(t, pemBlock)
+
+	leafCert, err := x509.ParseCertificate(pemBlock.Bytes)
+	require.NoError(t, err)
+	require.NoError(t, leafCert.CheckSignatureFrom(rootCert))
+	t.Logf("root: %v", rootCertPEM)
+	t.Logf("leaf: %v", leafCertPEM)
 }
 
 func TestTransit_ReadPublicKeyImported(t *testing.T) {

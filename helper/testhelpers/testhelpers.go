@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package testhelpers
 
 import (
@@ -9,6 +12,8 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net/url"
+	"os"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -31,7 +36,7 @@ const (
 	GenerateRecovery
 )
 
-// Generates a root token on the target cluster.
+// GenerateRoot generates a root token on the target cluster.
 func GenerateRoot(t testing.T, cluster *vault.TestCluster, kind GenerateRootKind) string {
 	t.Helper()
 	token, err := GenerateRootWithError(t, cluster, kind)
@@ -460,7 +465,7 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 	leaderInfos := []*raft.LeaderJoinInfo{
 		{
 			LeaderAPIAddr: leader.Client.Address(),
-			TLSConfig:     leader.TLSConfig,
+			TLSConfig:     leader.TLSConfig(),
 		},
 	}
 
@@ -594,18 +599,16 @@ func GenerateDebugLogs(t testing.T, client *api.Client) chan struct{} {
 	t.Helper()
 
 	stopCh := make(chan struct{})
-	ticker := time.NewTicker(time.Second)
-	var err error
 
 	go func() {
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
 		for {
 			select {
 			case <-stopCh:
-				ticker.Stop()
-				stopCh <- struct{}{}
 				return
 			case <-ticker.C:
-				err = client.Sys().Mount("foo", &api.MountInput{
+				err := client.Sys().Mount("foo", &api.MountInput{
 					Type: "kv",
 					Options: map[string]string{
 						"version": "1",
@@ -763,6 +766,21 @@ func SetNonRootToken(client *api.Client) error {
 
 	client.SetToken(secret.Auth.ClientToken)
 	return nil
+}
+
+// RetryUntilAtCadence runs f until it returns a nil result or the timeout is reached.
+// If a nil result hasn't been obtained by timeout, calls t.Fatal.
+func RetryUntilAtCadence(t testing.T, timeout, sleepTime time.Duration, f func() error) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	var err error
+	for time.Now().Before(deadline) {
+		if err = f(); err == nil {
+			return
+		}
+		time.Sleep(sleepTime)
+	}
+	t.Fatalf("did not complete before deadline, err: %v", err)
 }
 
 // RetryUntil runs f until it returns a nil result or the timeout is reached.
@@ -940,7 +958,7 @@ func GetTOTPCodeFromEngine(t testing.T, client *api.Client, enginePath string) s
 
 // SetupLoginMFATOTP setups up a TOTP MFA using some basic configuration and
 // returns all relevant information to the client.
-func SetupLoginMFATOTP(t testing.T, client *api.Client) (*api.Client, string, string) {
+func SetupLoginMFATOTP(t testing.T, client *api.Client, methodName string, waitPeriod int) (*api.Client, string, string) {
 	t.Helper()
 	// Mount the totp secrets engine
 	SetupTOTPMount(t, client)
@@ -954,13 +972,14 @@ func SetupLoginMFATOTP(t testing.T, client *api.Client) (*api.Client, string, st
 	// Configure a default TOTP method
 	totpConfig := map[string]interface{}{
 		"issuer":                  "yCorp",
-		"period":                  20,
+		"period":                  waitPeriod,
 		"algorithm":               "SHA256",
 		"digits":                  6,
 		"skew":                    1,
 		"key_size":                20,
 		"qr_size":                 200,
 		"max_validation_attempts": 5,
+		"method_name":             methodName,
 	}
 	methodID := SetupTOTPMethod(t, client, totpConfig)
 
@@ -973,4 +992,14 @@ func SetupLoginMFATOTP(t testing.T, client *api.Client) (*api.Client, string, st
 
 	SetupMFALoginEnforcement(t, client, enforcementConfig)
 	return entityClient, entityID, methodID
+}
+
+func SkipUnlessEnvVarsSet(t testing.T, envVars []string) {
+	t.Helper()
+
+	for _, i := range envVars {
+		if os.Getenv(i) == "" {
+			t.Skipf("%s must be set for this test to run", strings.Join(envVars, " "))
+		}
+	}
 }

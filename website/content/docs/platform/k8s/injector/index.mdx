@@ -10,7 +10,7 @@ description: >-
 
 The Vault Agent Injector alters pod specifications to include Vault Agent
 containers that render Vault secrets to a shared memory volume using
-[Vault Agent Templates](/docs/agent/template).
+[Vault Agent Templates](/vault/docs/agent/template).
 By rendering secrets to a shared volume, containers within the pod can consume
 Vault secrets without being Vault aware.
 
@@ -26,12 +26,12 @@ The following [Kubernetes minor releases][k8s-releases] are currently supported.
 The latest version of the injector is tested against each version. It may work
 with other versions of Kubernetes, but those are not supported.
 
+* 1.26
+* 1.25
 * 1.24
 * 1.23
 * 1.22
 * 1.21
-* 1.20
-* 1.19
 
 [k8s-releases]: https://kubernetes.io/releases/
 
@@ -187,7 +187,7 @@ username: v-kubernet-pg-app-q0Z7WPfVNqqTJuoDqCTY-1576529094
 ### Renewals and Updating Secrets
 
 For more information on when Vault Agent fetches and renews secrets, see the
-[Agent documentation](/docs/agent/template#renewals-and-updating-secrets).
+[Agent documentation](/vault/docs/agent/template#renewals-and-updating-secrets).
 
 ### Vault Agent Configuration Map
 
@@ -201,10 +201,10 @@ The configuration map must contain either one or both of the following files:
 - **config-init.hcl** used by the init container. This must have `exit_after_auth` set to `true`.
 - **config.hcl** used by the sidecar container. This must have `exit_after_auth` set to `false`.
 
-An example of mounting a Vault Agent configmap [can be found here](/docs/platform/k8s/injector/examples#configmap-example).
+An example of mounting a Vault Agent configmap [can be found here](/vault/docs/platform/k8s/injector/examples#configmap-example).
 
 ## Tutorial
 
 Refer to the [Injecting Secrets into Kubernetes Pods via Vault Helm
-Sidecar](https://learn.hashicorp.com/vault/getting-started-k8s/sidecar) guide
+Sidecar](/vault/tutorials/kubernetes/kubernetes-sidecar) guide
 for a step-by-step tutorial.

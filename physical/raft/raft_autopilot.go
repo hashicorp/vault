@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package raft
 
 import (
@@ -551,6 +554,13 @@ func (b *RaftBackend) startFollowerHeartbeatTracker() {
 	}
 	for range tickerCh {
 		b.l.RLock()
+		if b.raft == nil {
+			// We could be racing with teardown, which will stop the ticker
+			// but that doesn't guarantee that we won't reach this line with a nil
+			// b.raft.
+			b.l.RUnlock()
+			return
+		}
 		b.followerStates.l.RLock()
 		myAppliedIndex := b.raft.AppliedIndex()
 		for peerID, state := range b.followerStates.followers {

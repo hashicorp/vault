@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
@@ -25,10 +28,11 @@ func TestSudoPaths(t *testing.T) {
 	t.Parallel()
 
 	coreConfig := &vault.CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		EnableRaw:    true,
-		Logger:       log.NewNullLogger(),
+		DisableMlock:        true,
+		DisableCache:        true,
+		EnableRaw:           true,
+		EnableIntrospection: true,
+		Logger:              log.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
 			"userpass": credUserpass.Factory,
 		},

@@ -21,21 +21,21 @@ There are three main ways clients are assigned an identity:
 
 There can be many different types of clients that authenticate and communicate with Vault using one of the above identities, including:
 
-1. **[Human users](https://learn.hashicorp.com/tutorials/vault/pattern-centralized-secrets?in=vault/recommended-patterns#human-authentication):** GitHub ID, username/password, LDAP, Active Directory, Kerberos, JWT/ OIDC claims, OKTA
+1. **[Human users](/vault/tutorials/recommended-patterns/pattern-centralized-secrets#human-authentication):** GitHub ID, username/password, LDAP, Active Directory, Kerberos, JWT/ OIDC claims, OKTA
 2. **Applications or Microservices:** 2-Factor Authentication methods such as AppRole, or by LDAP, Active Directory, or based on the platform’s identity, such as credentials from AWS, Azure, GCP, AliCloud, OCI, Kubernetes, Cloud Foundry, etc.
-3. **[Servers and Platforms](https://learn.hashicorp.com/tutorials/vault/pattern-centralized-secrets?in=vault/recommended-patterns#machine-programmatic-authentication):** VMs, Containers, Pods (Identified by LDAP, Active Directory service accounts, AWS, Azure, GCP, AliCloud, OCI, Kubernetes, TLS Certs
+3. **[Servers and Platforms](/vault/tutorials/recommended-patterns/pattern-centralized-secrets#machine-programmatic-authentication):** VMs, Containers, Pods (Identified by LDAP, Active Directory service accounts, AWS, Azure, GCP, AliCloud, OCI, Kubernetes, TLS Certs
 4. **Orchestrators:** Nomad, Terraform, Ansible, or Continuous Integration Continuous Delivery (CI/CD) Pipelines where each pipeline usually identified by 2FA
-5. **[Vault Agents](/docs/agent/autoauth):** acting on behalf of a app/microservice, typically identified by App role, Cloud credentials, Kubernetes, TLS Certs
+5. **[Vault Agents](/vault/docs/agent/autoauth):** acting on behalf of a app/microservice, typically identified by App role, Cloud credentials, Kubernetes, TLS Certs
 6. **Tokens**: which are not tied to any identities at all. **_These should be used sparingly._**
    Hashicorp recommends always associating tokens to an entity alias and token role.
 
 ## How do Clients work in Vault?
 
-When anything authenticates to Vault, be it a user, application, machine, etc., it is associated with a unique **entity** within the [Vault identity system](/docs/secrets/identity). The name reported to the identity systems by the different types of authentication methods varies ([list below](#authentication-methods-and-how-they-re-counted-in-vault)), each entity is created or verified during authorization. There are scenarios where tokens can be created outside of the identity system, without an associated entity. In this scenario, these tokens are considered **clients** (for production usage, it should be rare to have any tokens created outside any identity systems).
+When anything authenticates to Vault, be it a user, application, machine, etc., it is associated with a unique **entity** within the [Vault identity system](/vault/docs/secrets/identity). The name reported to the identity systems by the different types of authentication methods varies ([list below](#authentication-methods-and-how-they-re-counted-in-vault)), each entity is created or verified during authorization. There are scenarios where tokens can be created outside of the identity system, without an associated entity. In this scenario, these tokens are considered **clients** (for production usage, it should be rare to have any tokens created outside any identity systems).
 
 ## But wait, there’s more...
 
-Want to take full advantage of the Vault identity system and how clients are counted? The Vault identity system also has [Entity Aliases](/api-docs/secret/identity/entity-alias) and [Identity Groups](/api-docs/secret/identity/group-alias).
+Want to take full advantage of the Vault identity system and how clients are counted? The Vault identity system also has [Entity Aliases](/vault/api-docs/secret/identity/entity-alias) and [Identity Groups](/vault/api-docs/secret/identity/group-alias).
 
 ![Vault Identity Entities and Aliases](https://www.datocms-assets.com/2885/1617325026-vault-clients-identity-entity-aliases.png)
 
@@ -47,7 +47,7 @@ Entity Aliases enable users or services to authenticate with more than one metho
 
 Identity Groups within Vault leverage entities, in that Vault enables teams to create and manage logical groupings of entities. **Identity Groups** that can be based on organizations or teams within companies and can be used to assign policies and metadata, making user management dramatically simpler, especially for automating workflows by using Identity Groups to quickly and easily grant access to secrets and functionality within Vault.
 
-For more on managing access with identity, entities, and more, check out [Identity-based Security and Low-trust Networks](https://www.hashicorp.com/identity-based-security-and-low-trust-networks) and the HashiCorp Learn tutorial [Identity: Entities and Groups | Vault](https://learn.hashicorp.com/tutorials/vault/identity)
+For more on managing access with identity, entities, and more, check out [Identity-based Security and Low-trust Networks](https://www.hashicorp.com/identity-based-security-and-low-trust-networks) and the HashiCorp Learn tutorial [Identity: Entities and Groups | Vault](/vault/tutorials/auth-methods/identity)
 
 ## How does Vault avoid counting the same entity twice?
 
@@ -55,18 +55,18 @@ Using the identity system allows for Vault to make sure that entities aren’t c
 
 ## Non-entity Tokens
 
-If you choose to use the [Token Auth Method](/docs/auth/token) without an identity, this will create a non-entity token. Starting with Vault 1.9, any number of non-entity tokens having the same namespace and set of policies assigned, count as one client. In earlier versions, every non-entity token counted as a separate client, which could rapidly drive up client count to unrealistic values. If you are using Vault 1.8 or earlier, and need to address this without upgrading, one option is to create a [Token Role](/api-docs/auth/token#create-update-token-role) first, with allowable entity aliases and create your token with the appropriate [role and entity alias name](/api-docs/auth/token#create-token). All tokens issued with the same entity alias name count as one client.
+If you choose to use the [Token Auth Method](/vault/docs/auth/token) without an identity, this will create a non-entity token. Starting with Vault 1.9, any number of non-entity tokens having the same namespace and set of policies assigned, count as one client. In earlier versions, every non-entity token counted as a separate client, which could rapidly drive up client count to unrealistic values. If you are using Vault 1.8 or earlier, and need to address this without upgrading, one option is to create a [Token Role](/vault/api-docs/auth/token#create-update-token-role) first, with allowable entity aliases and create your token with the appropriate [role and entity alias name](/vault/api-docs/auth/token#create-token). All tokens issued with the same entity alias name count as one client.
 
 ### Differences between a direct entity and a non-entity token
 
-While the definition of clients appears to be simple on the surface, there are many nuances involved in the computation of clients. As mentioned, clients are unique applications, services, and/or users that authenticate to a Vault cluster. When anything authenticates to Vault, it is associated with a unique identity entity within the [Vault Identity system](/docs/secrets/identity). The name reported to the identity systems by the different types of authentication methods varies, and each entity is created or verified during authorization.
+While the definition of clients appears to be simple on the surface, there are many nuances involved in the computation of clients. As mentioned, clients are unique applications, services, and/or users that authenticate to a Vault cluster. When anything authenticates to Vault, it is associated with a unique identity entity within the [Vault Identity system](/vault/docs/secrets/identity). The name reported to the identity systems by the different types of authentication methods varies, and each entity is created or verified during authorization.
 
 One thing to note is that Vault clients are a combination of active identities as well as non-entity tokens. Identity entities are unique users, and when identities authenticate to Vault, corresponding tokens are generated. However, there are some situations in which tokens are generated without corresponding identities (e.g., when using the token auth method to create a token for someone else whose identity is unknown). As such, these non-entity tokens also represent users, and are counted towards the overall client aggregates. Here are some situations in which non-entity tokens get created within Vault.
 
-- Tokens within Vault are the core method for authentication. You can use Tokens to authenticate directly, or use the [auth methods](/docs/concepts/auth) to dynamically generate tokens based on external identities.
+- Tokens within Vault are the core method for authentication. You can use Tokens to authenticate directly, or use the [auth methods](/vault/docs/concepts/auth) to dynamically generate tokens based on external identities.
 - There are scenarios where tokens are created outside of the identity system without an associated entity. For this reason, unique identity entities alone cannot always add up to the total unique authentications made to Vault over a stipulated time period.
 - In a scenario where tokens are created outside of the identity system, these tokens are considered clients. Note that it should be rare for production usage to have any tokens created outside any identity systems.
-- There are a few ways of creating tokens without entities: _Token Roles_, _Token Create APIs_, _Wrapping Tokens_, and _Control Groups_. For more information, refer to the [What is a Client?](/docs/concepts/client-count/#what-is-a-client) documentation.
+- There are a few ways of creating tokens without entities: _Token Roles_, _Token Create APIs_, _Wrapping Tokens_, and _Control Groups_. For more information, refer to the [What is a Client?](/vault/docs/concepts/client-count/#what-is-a-client) documentation.
 
 ## Considerations for Namespaces
 
@@ -77,7 +77,7 @@ Since namespaces represent logical isolations within a single Vault cluster for 
    1. Move the auth to the parent workspace and any auth to child namespaces would be considered as the same client
    2. Place that auth in the root namespace to be considered as 1 client in all namespaces.
 
-See also the guide [Secure Multi-Tenancy with Namespaces | Vault](https://learn.hashicorp.com/tutorials/vault/namespaces).
+See also the guide [Secure Multi-Tenancy with Namespaces | Vault](/vault/tutorials/enterprise/namespaces).
 
 ## Authentication Methods and how they’re counted in Vault
 
@@ -89,24 +89,24 @@ How does this relate to Vault clients? As outlined above, and as an example, if 
 
 | **Auth method**                                                                                  | **Name reported by auth method**                                                   |
 | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
-| **[AliCloud](https://www.vaultproject.io/docs/auth/alicloud)**                                   | Principal ID                                                                       |
-| **[AppRole](/api-docs/auth/approle#create-update-approle)**           | Role ID                                                                            |
-| **[AWS IAM](https://www.vaultproject.io/docs/auth/aws#iam-auth-method)**                         | Configurable via iam_alias to one of: Role ID (default), IAM unique ID, Full ARN   |
-| **[AWS EC2](https://www.vaultproject.io/docs/auth/aws#ec2-auth-method)**                         | Configurable via ec2_alias to one of: Role ID (default), EC2 instance ID, AMI ID   |
-| **[Azure](/api-docs/auth/azure#create-role)**                         | Subject (from JWT claim)                                                           |
-| **[Cloud Foundry](https://www.vaultproject.io/docs/auth/cf)**                                    | App ID                                                                             |
-| **[GitHub](https://www.vaultproject.io/docs/auth/github)**                                       | User login name associated with token                                              |
-| **[Google Cloud](/api-docs/auth/gcp#create-role)**                    | Configurable via iam_alias to one of: Role ID (default), Service account unique ID |
-| **[JWT/OIDC](/api-docs/auth/jwt#create-role)**                        | Configurable via user_claim to one of the presented claims (no default value)      |
-| **[Kerberos](https://www.vaultproject.io/docs/auth/kerberos)**                                   | Username                                                                           |
-| **[Kubernetes](/api-docs/auth/kubernetes#create-role)**               | Service account UID                                                                |
-| **[LDAP](https://www.vaultproject.io/docs/auth/ldap)**                                           | Username                                                                           |
-| **[OCI](/api-docs/auth/oci#create-role)**                             | Rolename                                                                           |
-| **[Okta](/api-docs/auth/okta#register-user)**                         | Username                                                                           |
-| **[RADIUS](https://www.vaultproject.io/docs/auth/radius)**                                       | Username                                                                           |
-| **[TLS Certificate](/api-docs/auth/cert#create-ca-certificate-role)** | Subject CommonName                                                                 |
-| **[Token](https://www.vaultproject.io/docs/auth/token)**                                         | entity_alias, if provided (Note: please ensure that entity_alias is always used)   |
-| **[Username/Password](/api-docs/auth/userpass#create-update-user)**   | Username                                                                           |
+| **[AliCloud](/vault/docs/auth/alicloud)**                                   | Principal ID                                                                       |
+| **[AppRole](/vault/api-docs/auth/approle#create-update-approle)**           | Role ID                                                                            |
+| **[AWS IAM](/vault/docs/auth/aws#iam-auth-method)**                         | Configurable via iam_alias to one of: Role ID (default), IAM unique ID, Full ARN   |
+| **[AWS EC2](/vault/docs/auth/aws#ec2-auth-method)**                         | Configurable via ec2_alias to one of: Role ID (default), EC2 instance ID, AMI ID   |
+| **[Azure](/vault/api-docs/auth/azure#create-role)**                         | Subject (from JWT claim)                                                           |
+| **[Cloud Foundry](/vault/docs/auth/cf)**                                    | App ID                                                                             |
+| **[GitHub](/vault/docs/auth/github)**                                       | User login name associated with token                                              |
+| **[Google Cloud](/vault/api-docs/auth/gcp#create-role)**                    | Configurable via iam_alias to one of: Role ID (default), Service account unique ID |
+| **[JWT/OIDC](/vault/api-docs/auth/jwt#create-role)**                        | Configurable via user_claim to one of the presented claims (no default value)      |
+| **[Kerberos](/vault/docs/auth/kerberos)**                                   | Username                                                                           |
+| **[Kubernetes](/vault/api-docs/auth/kubernetes#create-role)**               | Service account UID                                                                |
+| **[LDAP](/vault/docs/auth/ldap)**                                           | Username                                                                           |
+| **[OCI](/vault/api-docs/auth/oci#create-role)**                             | Rolename                                                                           |
+| **[Okta](/vault/api-docs/auth/okta#register-user)**                         | Username                                                                           |
+| **[RADIUS](/vault/docs/auth/radius)**                                       | Username                                                                           |
+| **[TLS Certificate](/vault/api-docs/auth/cert#create-ca-certificate-role)** | Subject CommonName                                                                 |
+| **[Token](/vault/docs/auth/token)**                                         | entity_alias, if provided (Note: please ensure that entity_alias is always used)   |
+| **[Username/Password](/vault/api-docs/auth/userpass#create-update-user)**   | Username                                                                           |
 
 ## Considerations with CI/CD
 
@@ -118,7 +118,7 @@ A CI/CD workflow can encompass many pipelines. Let us consider your options:
 2. **Pipeline Identity**: Or would every CI/CD pipeline be given an identity (e.g. app role, token with an entity alias), authenticate to Vault once and retrieve all the secrets for each application/ infrastructure to be deployed??
 3. **Pipeline and App/ Service/ Infra identity**: Or would every CI/CD pipeline be given an identity (e.g. app role, token with an entity alias), authenticate to Vault once and then give each application/ service/ infrastructure deployed, workflow its own identity, which upon bootstrap, in turn, authenticates to Vault on its own to retrieve a secret?
 
-From a threat model and security assessment perspective, **_option 3_** above, where the pipeline does not have access to any secret, but allows applications, services or infrastructure to get its own secrets upon bootstrapping, is the most secure approach. With **_options 1_** and **_2_**, there is a risk that if someone gets access to your CI/CD workflow **_(option 1)_**, or your pipelines **_(option 2)_**, they would gain access to every or some of the secrets used by your apps and services. Using the [principle of least privilege](https://learn.hashicorp.com/tutorials/vault/pattern-centralized-secrets?in=vault/recommended-patterns#the-principle-of-least-privilege-polp), where you only want to give access to secrets where necessary, there should be little or no gap between your secrets distribution and when it is accessed. Therefore one should avoid inadvertently giving your orchestrator and CI/CD tool god-like privileges where it potentially can access every secret for every app, service or infrastructure you deploy.
+From a threat model and security assessment perspective, **_option 3_** above, where the pipeline does not have access to any secret, but allows applications, services or infrastructure to get its own secrets upon bootstrapping, is the most secure approach. With **_options 1_** and **_2_**, there is a risk that if someone gets access to your CI/CD workflow **_(option 1)_**, or your pipelines **_(option 2)_**, they would gain access to every or some of the secrets used by your apps and services. Using the [principle of least privilege](/vault/tutorials/recommended-patterns/pattern-centralized-secrets#the-principle-of-least-privilege-polp), where you only want to give access to secrets where necessary, there should be little or no gap between your secrets distribution and when it is accessed. Therefore one should avoid inadvertently giving your orchestrator and CI/CD tool god-like privileges where it potentially can access every secret for every app, service or infrastructure you deploy.
 
 If someone goes wrong in **_option 1_** and you revoke access, all pipelines are affected. If something goes wrong in **_option 2_** and you revoke access to a pipeline, only that pipeline is affected, and you limit your security risk blast radius. If something goes wrong in **_option 3_** you can just revoke an app or service without affecting everything else. Please carefully consider your security options as you manage security in a dynamic world.
 
@@ -137,13 +137,13 @@ The number of active clients using a Vault cluster is the total of:
   that is not associated with an entity
 
 Prior to Vault 1.6, this metric could only be measured from the audit log, using the
-[`vault-auditor`](https://learn.hashicorp.com/tutorials/vault/usage-metrics#vault-auditor-tool) tool. Starting with Vault 1.6, the number of clients per month, or for
+[`vault-auditor`](/vault/tutorials/monitoring/usage-metrics#vault-auditor-tool) tool. Starting with Vault 1.6, the number of clients per month, or for
 a contiguous sequence of months, can be measured by Vault itself.
 
 As of Vault 1.9, the total client count should always be measured using Vault itself. The
 metrics shown by the Vault UI are the source of truth for this data.
 
-Please refer to [Vault Usage Metrics](https://learn.hashicorp.com/tutorials/vault/usage-metrics) for a
+Please refer to [Vault Usage Metrics](/vault/tutorials/monitoring/usage-metrics) for a
 step-by-step tutorial and description of how to use the UI.
 
 ## Measuring clients
@@ -216,8 +216,8 @@ entity_id           n/a
 ```
 
 To reduce the number of non-entity tokens in use, consider switching to an authentication method such as
-[AppRole](/docs/auth/approle) instead of handing out directly-created tokens. Ensure that entities and
-[entity aliases](/api-docs/secret/identity/entity-alias) exist for all login methods used to create batch tokens.
+[AppRole](/vault/docs/auth/approle) instead of handing out directly-created tokens. Ensure that entities and
+[entity aliases](/vault/api-docs/secret/identity/entity-alias) exist for all login methods used to create batch tokens.
 
 ### Tracking non-entity tokens
 
@@ -246,7 +246,7 @@ request; this can happen if the request is unauthenticated, or made with a root 
 
 ## API and Permissions
 
-Please see [Client Count API](/api-docs/system/internal-counters#client-count) for more details. Note that this API is marked as
+Please see [Client Count API](/vault/api-docs/system/internal-counters#client-count) for more details. Note that this API is marked as
 "internal" so its behavior or format may change without warning. The UI is the preferred means of interacting with the
 client count feature.
 
@@ -262,7 +262,7 @@ For the UI to be able to modify the configuration settings, it additionally need
 
 The billing period for the activity log API can be specified to include the current month 
 for the end date. For more information, please refer to the 
-[the internal counters API docs](/api-docs/system/internal-counters.mdx) documentation.
+[the internal counters API docs](/vault/api-docs/system/internal-counters) documentation.
 
 When the end date is the current month, the `new_clients` counts will be an approximation of the  
 number of new clients for the month, and not an exact value. Note that the `new_clients` counts for the rest 

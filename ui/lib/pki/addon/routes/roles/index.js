@@ -1,28 +1,35 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
+import { withConfig } from 'pki/decorators/check-config';
+import { hash } from 'rsvp';
 
+@withConfig()
 export default class PkiRolesIndexRoute extends Route {
   @service store;
   @service secretMountPath;
-  @service pathHelp;
 
-  beforeModel() {
-    // Must call this promise before the model hook otherwise it doesn't add OpenApi to record.
-    return this.pathHelp.getNewModel('pki/pki-role-engine', 'pki');
+  async fetchRoles() {
+    try {
+      return await this.store.query('pki/role', { backend: this.secretMountPath.currentPath });
+    } catch (e) {
+      if (e.httpStatus === 404) {
+        return { parentModel: this.modelFor('roles') };
+      } else {
+        throw e;
+      }
+    }
   }
 
   model() {
-    return this.store
-      .query('pki/pki-role-engine', { backend: this.secretMountPath.currentPath })
-      .then((roleModel) => {
-        return { roleModel, parentModel: this.modelFor('roles') };
-      })
-      .catch((err) => {
-        if (err.httpStatus === 404) {
-          return { parentModel: this.modelFor('roles') };
-        } else {
-          throw err;
-        }
-      });
+    return hash({
+      hasConfig: this.shouldPromptConfig,
+      roles: this.fetchRoles(),
+      parentModel: this.modelFor('roles'),
+    });
   }
 }

@@ -1,15 +1,19 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Ember from 'ember';
 import { inject as service } from '@ember/service';
 // ARG NOTE: Once you remove outer-html after glimmerizing you can remove the outer-html component
 import Component from './outer-html';
-import { later } from '@ember/runloop';
 import { task, timeout, waitForEvent } from 'ember-concurrency';
 import { computed } from '@ember/object';
 import { waitFor } from '@ember/test-waiters';
 
 const WAIT_TIME = 500;
 const ERROR_WINDOW_CLOSED =
-  'The provider window was closed before authentication was complete.  Please click Sign In to try again.';
+  'The provider window was closed before authentication was complete. Your web browser may have blocked or closed a pop-up window. Please check your settings and click Sign In to try again.';
 const ERROR_MISSING_PARAMS =
   'The callback from the provider did not supply all of the required parameters.  Please click Sign In to try again. If the problem persists, you may want to contact your administrator.';
 const ERROR_JWT_LOGIN = 'OIDC login is not configured for this mount';
@@ -76,6 +80,17 @@ export default Component.extend({
     })
   ).restartable(),
 
+  cancelLogin(oidcWindow, errorMessage) {
+    this.closeWindow(oidcWindow);
+    this.handleOIDCError(errorMessage);
+  },
+
+  closeWindow(oidcWindow) {
+    this.watchPopup.cancelAll();
+    this.watchCurrent.cancelAll();
+    oidcWindow.close();
+  },
+
   handleOIDCError(err) {
     this.onLoading(false);
     this.prepareForOIDC.cancelAll();
@@ -94,10 +109,7 @@ export default Component.extend({
     // ensure that postMessage event is from expected source
     while (true) {
       const event = yield waitForEvent(thisWindow, 'message');
-      if (event.origin !== thisWindow.origin || !event.isTrusted) {
-        return this.handleOIDCError();
-      }
-      if (event.data.source === 'oidc-callback') {
+      if (event.origin === thisWindow.origin && event.isTrusted && event.data.source === 'oidc-callback') {
         return this.exchangeOIDC.perform(event.data, oidcWindow);
       }
       // continue to wait for the correct message
@@ -119,12 +131,6 @@ export default Component.extend({
     oidcWindow.close();
   }),
 
-  closeWindow(oidcWindow) {
-    this.watchPopup.cancelAll();
-    this.watchCurrent.cancelAll();
-    oidcWindow.close();
-  },
-
   exchangeOIDC: task(function* (oidcState, oidcWindow) {
     if (oidcState === null || oidcState === undefined) {
       return;
@@ -133,7 +139,7 @@ export default Component.extend({
 
     let { namespace, path, state, code } = oidcState;
 
-    // The namespace can be either be passed as a query paramter, or be embedded
+    // The namespace can be either be passed as a query parameter, or be embedded
     // in the state param in the format `<state_id>,ns=<namespace>`. So if
     // `namespace` is empty, check for namespace in state as well.
     if (namespace === '' || this.featureFlagService.managedNamespaceRoot) {
@@ -145,12 +151,8 @@ export default Component.extend({
       }
     }
 
-    // defer closing of the window, but continue executing the task
-    later(() => {
-      this.closeWindow(oidcWindow);
-    }, WAIT_TIME);
     if (!path || !state || !code) {
-      return this.handleOIDCError(ERROR_MISSING_PARAMS);
+      return this.cancelLogin(oidcWindow, ERROR_MISSING_PARAMS);
     }
     const adapter = this.store.adapterFor('auth-method');
     this.onNamespace(namespace);
@@ -159,8 +161,11 @@ export default Component.extend({
     // and submit auth form
     try {
       resp = yield adapter.exchangeOIDC(path, state, code);
+      this.closeWindow(oidcWindow);
     } catch (e) {
-      return this.handleOIDCError(e);
+      // If there was an error on Vault's end, close the popup
+      // and show the error on the login screen
+      return this.cancelLogin(oidcWindow, e);
     }
     yield this.onSubmit(null, null, resp.auth.client_token);
   }),
@@ -170,6 +175,14 @@ export default Component.extend({
       this.onError(null);
       if (e && e.preventDefault) {
         e.preventDefault();
+      }
+      try {
+        await this.fetchRole.perform(this.roleName, { debounce: false });
+      } catch (error) {
+        // this task could be cancelled if the instances in didReceiveAttrs resolve after this was started
+        if (error?.name !== 'TaskCancelation') {
+          throw error;
+        }
       }
       if (!this.isOIDC || !this.role || !this.role.authUrl) {
         let message = this.errorMessage;
@@ -181,14 +194,6 @@ export default Component.extend({
         }
         this.onError(message);
         return;
-      }
-      try {
-        await this.fetchRole.perform(this.roleName, { debounce: false });
-      } catch (error) {
-        // this task could be cancelled if the instances in didReceiveAttrs resolve after this was started
-        if (error?.name !== 'TaskCancelation') {
-          throw error;
-        }
       }
       const win = this.getWindow();
 

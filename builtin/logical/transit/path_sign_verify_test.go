@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package transit
 
 import (
@@ -25,6 +28,7 @@ type signOutcome struct {
 	requestOk bool
 	valid     bool
 	keyValid  bool
+	reference string
 }
 
 func TestTransit_SignVerify_ECDSA(t *testing.T) {
@@ -483,6 +487,7 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 			}
 			for i, v := range sig {
 				batchRequestItems[i]["signature"] = v
+				batchRequestItems[i]["reference"] = outcome[i].reference
 			}
 		} else if attachSig {
 			req.Data["signature"] = sig[0]
@@ -534,6 +539,9 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 				}
 				if pubKeyRaw, ok := req.Data["public_key"]; ok {
 					validatePublicKey(t, batchRequestItems[i]["input"], sig[i], pubKeyRaw.([]byte), outcome[i].keyValid, postpath, b)
+				}
+				if v.Reference != outcome[i].reference {
+					t.Fatalf("verification failed, mismatched references %s vs %s", v.Reference, outcome[i].reference)
 				}
 			}
 			return
@@ -634,15 +642,18 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 
 	// Test Batch Signing
 	batchInput := []batchRequestSignItem{
-		{"context": "abcd", "input": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
-		{"context": "efgh", "input": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
+		{"context": "abcd", "input": "dGhlIHF1aWNrIGJyb3duIGZveA==", "reference": "uno"},
+		{"context": "efgh", "input": "dGhlIHF1aWNrIGJyb3duIGZveA==", "reference": "dos"},
 	}
 
 	req.Data = map[string]interface{}{
 		"batch_input": batchInput,
 	}
 
-	outcome = []signOutcome{{requestOk: true, valid: true, keyValid: true}, {requestOk: true, valid: true, keyValid: true}}
+	outcome = []signOutcome{
+		{requestOk: true, valid: true, keyValid: true, reference: "uno"},
+		{requestOk: true, valid: true, keyValid: true, reference: "dos"},
+	}
 
 	sig = signRequest(req, false, "foo")
 	verifyRequest(req, false, outcome, "foo", sig, true)

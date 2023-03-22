@@ -1,9 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package transit
 
 import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -42,6 +46,10 @@ type BatchRequestItem struct {
 
 	// Associated Data for AEAD ciphers
 	AssociatedData string `json:"associated_data" struct:"associated_data" mapstructure:"associated_data"`
+
+	// Reference is an arbitrary caller supplied string value that will be placed on the
+	// batch response to ease correlation between inputs and outputs
+	Reference string `json:"reference" structs:"reference" mapstructure:"reference"`
 }
 
 // EncryptBatchResponseItem represents a response item for batch processing
@@ -56,6 +64,10 @@ type EncryptBatchResponseItem struct {
 	// Error, if set represents a failure encountered while encrypting a
 	// corresponding batch request item
 	Error string `json:"error,omitempty" structs:"error" mapstructure:"error"`
+
+	// Reference is an arbitrary caller supplied string value that will be placed on the
+	// batch response to ease correlation between inputs and outputs
+	Reference string `json:"reference"`
 }
 
 type AssocDataFactory struct {
@@ -64,6 +76,14 @@ type AssocDataFactory struct {
 
 func (a AssocDataFactory) GetAssociatedData() ([]byte, error) {
 	return base64.StdEncoding.DecodeString(a.Encoded)
+}
+
+type ManagedKeyFactory struct {
+	managedKeyParams keysutil.ManagedKeyParameters
+}
+
+func (m ManagedKeyFactory) GetManagedKeyParameters() keysutil.ManagedKeyParameters {
+	return m.managedKeyParams
 }
 
 func (b *backend) pathEncrypt() *framework.Path {
@@ -143,6 +163,14 @@ must be passed on subsequent decryption requests but can be transited in
 plaintext. On successful decryption, both the ciphertext and the associated
 data are attested not to have been tampered with.
 				`,
+			},
+
+			"batch_input": {
+				Type: framework.TypeSlice,
+				Description: `
+Specifies a list of items to be encrypted in a single batch. When this parameter
+is set, if the parameters 'plaintext', 'context' and 'nonce' are also set, they
+will be ignored. Any batch output will preserve the order of the batch input.`,
 			},
 		},
 
@@ -261,6 +289,14 @@ func decodeBatchRequestItems(src interface{}, requirePlaintext bool, requireCiph
 				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].associated_data' expected type 'string', got unconvertible type '%T'", i, item["associated_data"]))
 			}
 		}
+		if v, has := item["reference"]; has {
+			if !reflect.ValueOf(v).IsValid() {
+			} else if casted, ok := v.(string); ok {
+				(*dst)[i].Reference = casted
+			} else {
+				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].reference' expected type 'string', got unconvertible type '%T'", i, item["reference"]))
+			}
+		}
 	}
 
 	if len(errs.Errors) > 0 {
@@ -373,8 +409,13 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 			return logical.ErrorResponse("convergent encryption requires derivation to be enabled, so context is required"), nil
 		}
 
+		cfg, err := b.readConfigKeys(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+
 		polReq = keysutil.PolicyRequest{
-			Upsert:     true,
+			Upsert:     !cfg.DisableUpsert,
 			Storage:    req.Storage,
 			Name:       name,
 			Derived:    contextSet,
@@ -391,6 +432,8 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 			polReq.KeyType = keysutil.KeyType_ChaCha20_Poly1305
 		case "ecdsa-p256", "ecdsa-p384", "ecdsa-p521":
 			return logical.ErrorResponse(fmt.Sprintf("key type %v not supported for this operation", keyType)), logical.ErrInvalidRequest
+		case "managed_key":
+			polReq.KeyType = keysutil.KeyType_MANAGED_KEY
 		default:
 			return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
 		}
@@ -436,7 +479,23 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 			factory = AssocDataFactory{item.AssociatedData}
 		}
 
-		ciphertext, err := p.EncryptWithFactory(item.KeyVersion, item.DecodedContext, item.DecodedNonce, item.Plaintext, factory)
+		var managedKeyFactory ManagedKeyFactory
+		if p.Type == keysutil.KeyType_MANAGED_KEY {
+			managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
+			if !ok {
+				batchResponseItems[i].Error = errors.New("unsupported system view").Error()
+			}
+
+			managedKeyFactory = ManagedKeyFactory{
+				managedKeyParams: keysutil.ManagedKeyParameters{
+					ManagedKeySystemView: managedKeySystemView,
+					BackendUUID:          b.backendUUID,
+					Context:              ctx,
+				},
+			}
+		}
+
+		ciphertext, err := p.EncryptWithFactory(item.KeyVersion, item.DecodedContext, item.DecodedNonce, item.Plaintext, factory, managedKeyFactory)
 		if err != nil {
 			switch err.(type) {
 			case errutil.InternalError:
@@ -466,6 +525,10 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 
 	resp := &logical.Response{}
 	if batchInputRaw != nil {
+		// Copy the references
+		for i := range batchInputItems {
+			batchResponseItems[i].Reference = batchInputItems[i].Reference
+		}
 		resp.Data = map[string]interface{}{
 			"batch_results": batchResponseItems,
 		}
@@ -504,21 +567,23 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 // that user errors are non-retryable without making changes to the request, and should be surfaced
 // to the user first.
 func batchRequestResponse(d *framework.FieldData, resp *logical.Response, req *logical.Request, successesInBatch, userErrorInBatch, internalErrorInBatch bool) (*logical.Response, error) {
-	switch {
-	case userErrorInBatch:
-		code := http.StatusBadRequest
-		if successesInBatch {
-			if codeRaw, ok := d.GetOk("partial_failure_response_code"); ok {
-				code = codeRaw.(int)
-				if code < 1 || code > 599 {
-					resp.AddWarning("invalid HTTP response code override from partial_failure_response_code, reverting to HTTP 400")
-					code = http.StatusBadRequest
-				}
+	if userErrorInBatch || internalErrorInBatch {
+		var code int
+		switch {
+		case userErrorInBatch:
+			code = http.StatusBadRequest
+		case internalErrorInBatch:
+			code = http.StatusInternalServerError
+		}
+		if codeRaw, ok := d.GetOk("partial_failure_response_code"); ok && successesInBatch {
+			newCode := codeRaw.(int)
+			if newCode < 1 || newCode > 599 {
+				resp.AddWarning(fmt.Sprintf("invalid HTTP response code override from partial_failure_response_code, reverting to %d", code))
+			} else {
+				code = newCode
 			}
 		}
 		return logical.RespondWithStatusCode(resp, req, code)
-	case internalErrorInBatch:
-		return logical.RespondWithStatusCode(resp, req, http.StatusInternalServerError)
 	}
 
 	return resp, nil

@@ -1,10 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
 	"context"
 	"net/http"
 	"os"
-	"runtime"
+	"runtime/debug"
 	"sync/atomic"
 	"time"
 
@@ -41,12 +44,8 @@ func (s *forwardedRequestRPCServer) ForwardRequest(ctx context.Context, freq *fo
 
 	runRequest := func() {
 		defer func() {
-			// Logic here comes mostly from the Go source code
 			if err := recover(); err != nil {
-				const size = 64 << 10
-				buf := make([]byte, size)
-				buf = buf[:runtime.Stack(buf, false)]
-				s.core.logger.Error("panic serving forwarded request", "path", req.URL.Path, "error", err, "stacktrace", string(buf))
+				s.core.logger.Error("panic serving forwarded request", "path", req.URL.Path, "error", err, "stacktrace", string(debug.Stack()))
 			}
 		}()
 		s.handler.ServeHTTP(w, req)

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, fillIn, click, findAll } from '@ember/test-helpers';
@@ -83,7 +88,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
       .hasText('Name is required. Name cannot contain whitespace.', 'Validation messages are shown for name');
     assert.dom(validationErrors[1]).hasText('There are 2 errors with this form.', 'Renders form error count');
 
-    await click('label[for=limited]');
+    await click('[data-test-oidc-radio="limited"]');
     assert
       .dom('[data-test-component="search-select"]#allowedClientIds')
       .exists('Limited radio button shows clients search select');
@@ -91,7 +96,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
     assert.dom('li.ember-power-select-option').hasTextContaining('test-app', 'dropdown renders client name');
     assert.dom('[data-test-smaller-id]').exists('renders smaller client id in dropdown');
 
-    await click('label[for=allow-all]');
+    await click('[data-test-oidc-radio="allow-all"]');
     assert
       .dom('[data-test-component="search-select"]#allowedClientIds')
       .doesNotExist('Allow all radio button hides search select');
@@ -138,7 +143,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
       .hasValue(parseURL(ISSUER_URL).origin, 'issuer value is just scheme://host:port portion of full URL');
 
     assert.dom('[data-test-selected-option]').hasText('test-scope', 'model scope is selected');
-    assert.dom('input#allow-all').isChecked('Allow all radio button is selected');
+    assert.dom('[data-test-oidc-radio="allow-all"] input').isChecked('Allow all radio button is selected');
     await click(SELECTORS.providerSaveButton);
   });
 
@@ -176,7 +181,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
       />
     `);
 
-    await click('label[for=limited]');
+    await click('[data-test-oidc-radio="limited"]');
     await click(SELECTORS.providerCancelButton);
     assert.strictEqual(this.model.allowed_client_ids, undefined, 'Model attributes rolled back on cancel');
   });
@@ -197,7 +202,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
     assert
       .dom('[data-test-component="search-select"]#scopesSupported [data-test-component="string-list"]')
       .exists('renders fall back for scopes search select');
-    await click('label[for=limited]');
+    await click('[data-test-oidc-radio="limited"]');
     assert
       .dom('[data-test-component="search-select"]#allowedClientIds [data-test-component="string-list"]')
       .exists('Radio toggle shows assignments string-list input');

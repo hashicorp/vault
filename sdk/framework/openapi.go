@@ -1,9 +1,11 @@
 package framework
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"regexp"
+	"regexp/syntax"
 	"sort"
 	"strconv"
 	"strings"
@@ -11,7 +13,6 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/version"
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -21,13 +22,13 @@ import (
 const OASVersion = "3.0.2"
 
 // NewOASDocument returns an empty OpenAPI document.
-func NewOASDocument() *OASDocument {
+func NewOASDocument(version string) *OASDocument {
 	return &OASDocument{
 		Version: OASVersion,
 		Info: OASInfo{
 			Title:       "HashiCorp Vault API",
 			Description: "HTTP API that gives you full access to Vault. All API routes are prefixed with `/v1/`.",
-			Version:     version.GetVersion().Version,
+			Version:     version,
 			License: OASLicense{
 				Name: "Mozilla Public License 2.0",
 				URL:  "https://www.mozilla.org/en-US/MPL/2.0",
@@ -148,6 +149,7 @@ type OASParameter struct {
 
 type OASRequestBody struct {
 	Description string     `json:"description,omitempty"`
+	Required    bool       `json:"required,omitempty"`
 	Content     OASContent `json:"content,omitempty"`
 }
 
@@ -194,24 +196,13 @@ var OASStdRespNoContent = &OASResponse{
 	Description: "empty body",
 }
 
-// Regex for handling optional and named parameters in paths, and string cleanup.
+// Regex for handling fields in paths, and string cleanup.
 // Predefined here to avoid substantial recompilation.
 
-// Capture optional path elements in ungreedy (?U) fashion
-// Both "(leases/)?renew" and "(/(?P<name>.+))?" formats are detected
-var optRe = regexp.MustCompile(`(?U)\([^(]*\)\?|\(/\(\?P<[^(]*\)\)\?`)
-
 var (
-	altFieldsGroupRe = regexp.MustCompile(`\(\?P<\w+>\w+(\|\w+)+\)`)              // Match named groups that limit options, e.g. "(?<foo>a|b|c)"
-	altFieldsRe      = regexp.MustCompile(`\w+(\|\w+)+`)                          // Match an options set, e.g. "a|b|c"
-	altRe            = regexp.MustCompile(`\((.*)\|(.*)\)`)                       // Capture alternation elements, e.g. "(raw/?$|raw/(?P<path>.+))"
-	altRootsRe       = regexp.MustCompile(`^\(([\w\-_]+(?:\|[\w\-_]+)+)\)(/.*)$`) // Pattern starting with alts, e.g. "(root1|root2)/(?P<name>regex)"
-	cleanCharsRe     = regexp.MustCompile("[()^$?]")                              // Set of regex characters that will be stripped during cleaning
-	cleanSuffixRe    = regexp.MustCompile(`/\?\$?$`)                              // Path suffix patterns that will be stripped during cleaning
-	nonWordRe        = regexp.MustCompile(`[^a-zA-Z0-9]+`)                        // Match a sequence of non-word characters
-	pathFieldsRe     = regexp.MustCompile(`{(\w+)}`)                              // Capture OpenAPI-style named parameters, e.g. "lookup/{urltoken}",
-	reqdRe           = regexp.MustCompile(`\(?\?P<(\w+)>[^)]*\)?`)                // Capture required parameters, e.g. "(?P<name>regex)"
-	wsRe             = regexp.MustCompile(`\s+`)                                  // Match whitespace, to be compressed during cleaning
+	nonWordRe    = regexp.MustCompile(`[^\w]+`)  // Match a sequence of non-word characters
+	pathFieldsRe = regexp.MustCompile(`{(\w+)}`) // Capture OpenAPI-style named parameters, e.g. "lookup/{urltoken}",
+	wsRe         = regexp.MustCompile(`\s+`)     // Match whitespace, to be compressed during cleaning
 )
 
 // documentPaths parses all paths in a framework.Backend into OpenAPI paths.
@@ -235,13 +226,23 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 		unauthPaths = specialPaths.Unauthenticated
 	}
 
-	defaultMountPath := requestResponsePrefix
-	if requestResponsePrefix == "kv" {
-		defaultMountPath = "secret"
-	}
-
 	// Convert optional parameters into distinct patterns to be processed independently.
-	paths := expandPattern(p.Pattern)
+	forceUnpublished := false
+	paths, err := expandPattern(p.Pattern)
+	if err != nil {
+		if errors.Is(err, errUnsupportableRegexpOperationForOpenAPI) {
+			// Pattern cannot be transformed into sensible OpenAPI paths. In this case, we override the later
+			// processing to use the regexp, as is, as the path, and behave as if Unpublished was set on every
+			// operation (meaning the operations will not be represented in the OpenAPI document).
+			//
+			// This allows a human reading the OpenAPI document to notice that, yes, a path handler does exist,
+			// even though it was not able to contribute actual OpenAPI operations.
+			forceUnpublished = true
+			paths = []string{p.Pattern}
+		} else {
+			return err
+		}
+	}
 
 	for _, path := range paths {
 		// Construct a top level PathItem which will be populated as the path is processed.
@@ -269,22 +270,6 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 		// Process path and header parameters, which are common to all operations.
 		// Body fields will be added to individual operations.
 		pathFields, bodyFields := splitFields(p.Fields, path)
-
-		// Add mount path as a parameter
-		if defaultMountPath != "system" && defaultMountPath != "identity" {
-			p := OASParameter{
-				Name:        "mount_path",
-				Description: "Path where the backend was mounted; the endpoint path will be offset by the mount path",
-				In:          "path",
-				Schema: &OASSchema{
-					Type:    "string",
-					Default: defaultMountPath,
-				},
-				Required: false,
-			}
-
-			pi.Parameters = append(pi.Parameters, p)
-		}
 
 		for name, field := range pathFields {
 			location := "path"
@@ -326,7 +311,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 		// with descriptions, properties and examples from the framework.Path data.
 		for opType, opHandler := range operations {
 			props := opHandler.Properties()
-			if props.Unpublished {
+			if props.Unpublished || forceUnpublished {
 				continue
 			}
 
@@ -349,7 +334,6 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 			op.Summary = props.Summary
 			op.Description = props.Description
 			op.Deprecated = props.Deprecated
-			op.OperationID = constructOperationID(string(opType), path, defaultMountPath)
 
 			// Add any fields not present in the path as body parameters for POST.
 			if opType == logical.CreateOperation || opType == logical.UpdateOperation {
@@ -397,9 +381,10 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 
 				// Set the final request body. Only JSON request data is supported.
 				if len(s.Properties) > 0 || s.Example != nil {
-					requestName := constructRequestName(requestResponsePrefix, path)
+					requestName := constructRequestResponseName(path, requestResponsePrefix, "Request")
 					doc.Components.Schemas[requestName] = s
 					op.RequestBody = &OASRequestBody{
+						Required: true,
 						Content: OASContent{
 							"application/json": &OASMediaTypeObject{
 								Schema: &OASSchema{Ref: fmt.Sprintf("#/components/schemas/%s", requestName)},
@@ -476,6 +461,41 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 							}
 						}
 					}
+
+					responseSchema := &OASSchema{
+						Type:       "object",
+						Properties: make(map[string]*OASSchema),
+					}
+
+					for name, field := range resp.Fields {
+						openapiField := convertType(field.Type)
+						p := OASSchema{
+							Type:         openapiField.baseType,
+							Description:  cleanString(field.Description),
+							Format:       openapiField.format,
+							Pattern:      openapiField.pattern,
+							Enum:         field.AllowedValues,
+							Default:      field.Default,
+							Deprecated:   field.Deprecated,
+							DisplayAttrs: field.DisplayAttrs,
+						}
+						if openapiField.baseType == "array" {
+							p.Items = &OASSchema{
+								Type: openapiField.items,
+							}
+						}
+						responseSchema.Properties[name] = &p
+					}
+
+					if len(resp.Fields) != 0 {
+						responseName := constructRequestResponseName(path, requestResponsePrefix, "Response")
+						doc.Components.Schemas[responseName] = responseSchema
+						content = OASContent{
+							"application/json": &OASMediaTypeObject{
+								Schema: &OASSchema{Ref: fmt.Sprintf("#/components/schemas/%s", responseName)},
+							},
+						}
+					}
 				}
 
 				op.Responses[code] = &OASResponse{
@@ -500,14 +520,17 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 	return nil
 }
 
-// constructRequestName joins the given prefix with the path elements into a
-// CamelCaseRequest string.
+// constructRequestResponseName joins the given path with prefix & suffix into
+// a CamelCase request or response name.
 //
-// For example, prefix="kv" & path=/config/lease/{name} => KvConfigLeaseRequest
-func constructRequestName(requestResponsePrefix string, path string) string {
+// For example, path=/config/lease/{name}, prefix="secret", suffix="request"
+// will result in "SecretConfigLeaseRequest"
+func constructRequestResponseName(path, prefix, suffix string) string {
 	var b strings.Builder
 
-	b.WriteString(strings.Title(requestResponsePrefix))
+	title := cases.Title(language.English)
+
+	b.WriteString(title.String(prefix))
 
 	// split the path by / _ - separators
 	for _, token := range strings.FieldsFunc(path, func(r rune) bool {
@@ -515,120 +538,261 @@ func constructRequestName(requestResponsePrefix string, path string) string {
 	}) {
 		// exclude request fields
 		if !strings.ContainsAny(token, "{}") {
-			b.WriteString(strings.Title(token))
+			b.WriteString(title.String(token))
 		}
 	}
 
-	b.WriteString("Request")
+	b.WriteString(suffix)
 
 	return b.String()
 }
 
-func constructOperationID(method, path, defaultMountPath string) string {
-	// title caser
-	title := cases.Title(language.English)
-
-	// Space-split on non-words, title case everything, recombine
-	id := nonWordRe.ReplaceAllLiteralString(strings.ToLower(path), " ")
-	id = fmt.Sprintf("%s %s", defaultMountPath, id)
-	id = title.String(id)
-	id = strings.ReplaceAll(id, " ", "")
-
-	return method + id
-}
-
+// specialPathMatch checks whether the given path matches one of the special
+// paths, taking into account * and + wildcards (e.g. foo/+/bar/*)
 func specialPathMatch(path string, specialPaths []string) bool {
-	// Test for exact or prefix match of special paths.
+	// pathMatchesByParts determines if the path matches the special path's
+	// pattern, accounting for the '+' and '*' wildcards
+	pathMatchesByParts := func(pathParts []string, specialPathParts []string) bool {
+		if len(pathParts) < len(specialPathParts) {
+			return false
+		}
+		for i := 0; i < len(specialPathParts); i++ {
+			var (
+				part    = pathParts[i]
+				pattern = specialPathParts[i]
+			)
+			if pattern == "+" {
+				continue
+			}
+			if pattern == "*" {
+				return true
+			}
+			if strings.HasSuffix(pattern, "*") && strings.HasPrefix(part, pattern[0:len(pattern)-1]) {
+				return true
+			}
+			if pattern != part {
+				return false
+			}
+		}
+		return len(pathParts) == len(specialPathParts)
+	}
+
+	pathParts := strings.Split(path, "/")
+
 	for _, sp := range specialPaths {
-		if sp == path ||
-			(strings.HasSuffix(sp, "*") && strings.HasPrefix(path, sp[0:len(sp)-1])) {
+		// exact match
+		if sp == path {
+			return true
+		}
+
+		// match *
+		if strings.HasSuffix(sp, "*") && strings.HasPrefix(path, sp[0:len(sp)-1]) {
+			return true
+		}
+
+		// match +
+		if strings.Contains(sp, "+") && pathMatchesByParts(pathParts, strings.Split(sp, "/")) {
 			return true
 		}
 	}
+
 	return false
 }
 
 // expandPattern expands a regex pattern by generating permutations of any optional parameters
 // and changing named parameters into their {openapi} equivalents.
-func expandPattern(pattern string) []string {
-	var paths []string
-
-	// Determine if the pattern starts with an alternation for multiple roots
-	// example (root1|root2)/(?P<name>regex) -> match['(root1|root2)/(?P<name>regex)','root1|root2','/(?P<name>regex)']
-	match := altRootsRe.FindStringSubmatch(pattern)
-	if len(match) == 3 {
-		var expandedRoots []string
-		for _, root := range strings.Split(match[1], "|") {
-			expandedRoots = append(expandedRoots, expandPattern(root+match[2])...)
-		}
-		return expandedRoots
+func expandPattern(pattern string) ([]string, error) {
+	// Happily, the Go regexp library exposes its underlying "parse to AST" functionality, so we can rely on that to do
+	// the hard work of interpreting the regexp syntax.
+	rx, err := syntax.Parse(pattern, syntax.Perl)
+	if err != nil {
+		// This should be impossible to reach, since regexps have previously been compiled with MustCompile in
+		// Backend.init.
+		panic(err)
 	}
 
-	// GenericNameRegex adds a regex that complicates our parsing. It is much easier to
-	// detect and remove it now than to compensate for in the other regexes.
+	paths, err := collectPathsFromRegexpAST(rx)
+	if err != nil {
+		return nil, err
+	}
+
+	return paths, nil
+}
+
+type pathCollector struct {
+	strings.Builder
+	conditionalSlashAppendedAtLength int
+}
+
+// collectPathsFromRegexpAST performs a depth-first recursive walk through a regexp AST, collecting an OpenAPI-style
+// path as it goes.
+//
+// Each time it encounters alternation (a|b) or an optional part (a?), it forks its processing to produce additional
+// results, to account for each possibility. Note: This does mean that an input pattern with lots of these regexp
+// features can produce a lot of different OpenAPI endpoints. At the time of writing, the most complex known example is
+//
+//	"issuer/" + framework.GenericNameRegex(issuerRefParam) + "/crl(/pem|/der|/delta(/pem|/der)?)?"
+//
+// in the PKI secrets engine which expands to 6 separate paths.
+//
+// Each named capture group - i.e. (?P<name>something here) - is replaced with an OpenAPI parameter - i.e. {name} - and
+// the subtree of regexp AST inside the parameter is completely skipped.
+func collectPathsFromRegexpAST(rx *syntax.Regexp) ([]string, error) {
+	pathCollectors, err := collectPathsFromRegexpASTInternal(rx, []*pathCollector{{}})
+	if err != nil {
+		return nil, err
+	}
+	paths := make([]string, 0, len(pathCollectors))
+	for _, collector := range pathCollectors {
+		if collector.conditionalSlashAppendedAtLength != collector.Len() {
+			paths = append(paths, collector.String())
+		}
+	}
+	return paths, nil
+}
+
+var errUnsupportableRegexpOperationForOpenAPI = errors.New("path regexp uses an operation that cannot be translated to an OpenAPI pattern")
+
+func collectPathsFromRegexpASTInternal(rx *syntax.Regexp, appendingTo []*pathCollector) ([]*pathCollector, error) {
+	var err error
+
+	// Depending on the type of this regexp AST node (its Op, i.e. operation), figure out whether it contributes any
+	// characters to the URL path, and whether we need to recurse through child AST nodes.
 	//
-	// example: (?P<foo>\\w(([\\w-.]+)?\\w)?) -> (?P<foo>)
-	base := GenericNameRegex("")
-	start := strings.Index(base, ">")
-	end := strings.LastIndex(base, ")")
-	regexToRemove := ""
-	if start != -1 && end != -1 && end > start {
-		regexToRemove = base[start+1 : end]
-	}
-	pattern = strings.ReplaceAll(pattern, regexToRemove, "")
+	// Each element of the appendingTo slice tracks a separate path, defined by the alternatives chosen when traversing
+	// the | and ? conditional regexp features, and new elements are added as each of these features are traversed.
+	//
+	// To share this slice across multiple recursive calls of this function, it is passed down as a parameter to each
+	// recursive call, potentially modified throughout this switch block, and passed back up as a return value at the
+	// end of this function - the parent call uses the return value to update its own local variable.
+	switch rx.Op {
 
-	// Simplify named fields that have limited options, e.g. (?P<foo>a|b|c) -> (<P<foo>.+)
-	pattern = altFieldsGroupRe.ReplaceAllStringFunc(pattern, func(s string) string {
-		return altFieldsRe.ReplaceAllString(s, ".+")
-	})
+	// These AST operations are leaf nodes (no children), that match zero characters, so require no processing at all
+	case syntax.OpEmptyMatch: // e.g. (?:)
+	case syntax.OpBeginLine: // i.e. ^ when (?m)
+	case syntax.OpEndLine: // i.e. $ when (?m)
+	case syntax.OpBeginText: // i.e. \A, or ^ when (?-m)
+	case syntax.OpEndText: // i.e. \z, or $ when (?-m)
+	case syntax.OpWordBoundary: // i.e. \b
+	case syntax.OpNoWordBoundary: // i.e. \B
 
-	// Initialize paths with the original pattern or the halves of an
-	// alternation, which is also present in some patterns.
-	matches := altRe.FindAllStringSubmatch(pattern, -1)
-	if len(matches) > 0 {
-		paths = []string{matches[0][1], matches[0][2]}
-	} else {
-		paths = []string{pattern}
-	}
-
-	// Expand all optional regex elements into two paths. This approach is really only useful up to 2 optional
-	// groups, but we probably don't want to deal with the exponential increase beyond that anyway.
-	for i := 0; i < len(paths); i++ {
-		p := paths[i]
-
-		// match is a 2-element slice that will have a start and end index
-		// for the left-most match of a regex of form: (lease/)?
-		match := optRe.FindStringIndex(p)
-
-		if match != nil {
-			// create a path that includes the optional element but without
-			// parenthesis or the '?' character.
-			paths[i] = p[:match[0]] + p[match[0]+1:match[1]-2] + p[match[1]:]
-
-			// create a path that excludes the optional element.
-			paths = append(paths, p[:match[0]]+p[match[1]:])
-			i--
-		}
-	}
-
-	// Replace named parameters (?P<foo>) with {foo}
-	var replacedPaths []string
-
-	for _, path := range paths {
-		result := reqdRe.FindAllStringSubmatch(path, -1)
-		if result != nil {
-			for _, p := range result {
-				par := p[1]
-				path = strings.Replace(path, p[0], fmt.Sprintf("{%s}", par), 1)
+	// OpConcat simply represents multiple parts of the pattern appearing one after the other, so just recurse through
+	// those pieces.
+	case syntax.OpConcat:
+		for _, child := range rx.Sub {
+			appendingTo, err = collectPathsFromRegexpASTInternal(child, appendingTo)
+			if err != nil {
+				return nil, err
 			}
 		}
-		// Final cleanup
-		path = cleanSuffixRe.ReplaceAllString(path, "")
-		path = cleanCharsRe.ReplaceAllString(path, "")
-		replacedPaths = append(replacedPaths, path)
+
+	// OpLiteral is a literal string in the pattern - append it to the paths we are building.
+	case syntax.OpLiteral:
+		for _, collector := range appendingTo {
+			collector.WriteString(string(rx.Rune))
+		}
+
+	// OpAlternate, i.e. a|b, means we clone all of the pathCollector instances we are currently accumulating paths
+	// into, and independently recurse through each alternate option.
+	case syntax.OpAlternate: // i.e |
+		var totalAppendingTo []*pathCollector
+		lastIndex := len(rx.Sub) - 1
+		for index, child := range rx.Sub {
+			var childAppendingTo []*pathCollector
+			if index == lastIndex {
+				// Optimization: last time through this loop, we can simply re-use the existing set of pathCollector
+				// instances, as we no longer need to preserve them unmodified to make further copies of.
+				childAppendingTo = appendingTo
+			} else {
+				for _, collector := range appendingTo {
+					newCollector := new(pathCollector)
+					newCollector.WriteString(collector.String())
+					newCollector.conditionalSlashAppendedAtLength = collector.conditionalSlashAppendedAtLength
+					childAppendingTo = append(childAppendingTo, newCollector)
+				}
+			}
+			childAppendingTo, err = collectPathsFromRegexpASTInternal(child, childAppendingTo)
+			if err != nil {
+				return nil, err
+			}
+			totalAppendingTo = append(totalAppendingTo, childAppendingTo...)
+		}
+		appendingTo = totalAppendingTo
+
+	// OpQuest, i.e. a?, is much like an alternation between exactly two options, one of which is the empty string.
+	case syntax.OpQuest:
+		child := rx.Sub[0]
+		var childAppendingTo []*pathCollector
+		for _, collector := range appendingTo {
+			newCollector := new(pathCollector)
+			newCollector.WriteString(collector.String())
+			newCollector.conditionalSlashAppendedAtLength = collector.conditionalSlashAppendedAtLength
+			childAppendingTo = append(childAppendingTo, newCollector)
+		}
+		childAppendingTo, err = collectPathsFromRegexpASTInternal(child, childAppendingTo)
+		if err != nil {
+			return nil, err
+		}
+		appendingTo = append(appendingTo, childAppendingTo...)
+
+		// Many Vault path patterns end with `/?` to accept paths that end with or without a slash. Our current
+		// convention for generating the OpenAPI is to strip away these slashes. To do that, this very special case
+		// detects when we just appended a single conditional slash, and records the length of the path at this point,
+		// so we can later discard this path variant, if nothing else is appended to it later.
+		if child.Op == syntax.OpLiteral && string(child.Rune) == "/" {
+			for _, collector := range childAppendingTo {
+				collector.conditionalSlashAppendedAtLength = collector.Len()
+			}
+		}
+
+	// OpCapture, i.e. ( ) or (?P<name> ), a capturing group
+	case syntax.OpCapture:
+		if rx.Name == "" {
+			// In Vault, an unnamed capturing group is not actually used for capturing.
+			// We treat it exactly the same as OpConcat.
+			for _, child := range rx.Sub {
+				appendingTo, err = collectPathsFromRegexpASTInternal(child, appendingTo)
+				if err != nil {
+					return nil, err
+				}
+			}
+		} else {
+			// A named capturing group is replaced with the OpenAPI parameter syntax, and the regexp inside the group
+			// is NOT added to the OpenAPI path.
+			for _, builder := range appendingTo {
+				builder.WriteRune('{')
+				builder.WriteString(rx.Name)
+				builder.WriteRune('}')
+			}
+		}
+
+	// Any other kind of operation is a problem, and will trigger an error, resulting in the pattern being left out of
+	// the OpenAPI entirely - that's better than generating a path which is incorrect.
+	//
+	// The Op types we expect to hit the default condition are:
+	//
+	//     OpCharClass    - i.e. [something]
+	//     OpAnyCharNotNL - i.e. .
+	//     OpAnyChar      - i.e. (?s:.)
+	//     OpStar         - i.e. *
+	//     OpPlus         - i.e. +
+	//     OpRepeat       - i.e. {N}, {N,M}, etc.
+	//
+	// In any of these conditions, there is no sensible translation of the path to OpenAPI syntax. (Note, this only
+	// applies to these appearing outside of a named capture group, otherwise they are handled in the previous case.)
+	//
+	// At the time of writing, the only pattern in the builtin Vault plugins that hits this codepath is the ".*"
+	// pattern in the KVv2 secrets engine, which is not a valid path, but rather, is a catch-all used to implement
+	// custom error handling behaviour to guide users who attempt to treat a KVv2 as a KVv1. It is already marked as
+	// Unpublished, so is withheld from the OpenAPI anyway.
+	//
+	// For completeness, one other Op type exists, OpNoMatch, which is never generated by syntax.Parse - only by
+	// subsequent Simplify in preparation to Compile, which is not used here.
+	default:
+		return nil, errUnsupportableRegexpOperationForOpenAPI
 	}
 
-	return replacedPaths
+	return appendingTo, nil
 }
 
 // schemaType is a subset of the JSON Schema elements used as a target
@@ -747,5 +911,66 @@ func cleanResponse(resp *logical.Response) *cleanedResponse {
 		Warnings: resp.Warnings,
 		WrapInfo: resp.WrapInfo,
 		Headers:  resp.Headers,
+	}
+}
+
+// CreateOperationIDs generates unique operationIds for all paths/methods.
+// The transform will convert path/method into camelcase. e.g.:
+//
+// /sys/tools/random/{urlbytes} -> postSysToolsRandomUrlbytes
+//
+// In the unlikely case of a duplicate ids, a numeric suffix is added:
+//
+//	postSysToolsRandomUrlbytes_2
+//
+// An optional user-provided suffix ("context") may also be appended.
+func (d *OASDocument) CreateOperationIDs(context string) {
+	opIDCount := make(map[string]int)
+	var paths []string
+
+	// traverse paths in a stable order to ensure stable output
+	for path := range d.Paths {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+
+	for _, path := range paths {
+		pi := d.Paths[path]
+		for _, method := range []string{"get", "post", "delete"} {
+			var oasOperation *OASOperation
+			switch method {
+			case "get":
+				oasOperation = pi.Get
+			case "post":
+				oasOperation = pi.Post
+			case "delete":
+				oasOperation = pi.Delete
+			}
+
+			if oasOperation == nil {
+				continue
+			}
+
+			// Discard "_mount_path" from any {thing_mount_path} parameters
+			path = strings.Replace(path, "_mount_path", "", 1)
+
+			// Space-split on non-words, title case everything, recombine
+			opID := nonWordRe.ReplaceAllString(strings.ToLower(path), " ")
+			opID = strings.Title(opID)
+			opID = method + strings.ReplaceAll(opID, " ", "")
+
+			// deduplicate operationIds. This is a safeguard, since generated IDs should
+			// already be unique given our current path naming conventions.
+			opIDCount[opID]++
+			if opIDCount[opID] > 1 {
+				opID = fmt.Sprintf("%s_%d", opID, opIDCount[opID])
+			}
+
+			if context != "" {
+				opID += "_" + context
+			}
+
+			oasOperation.OperationID = opID
+		}
 	}
 }

@@ -1,9 +1,12 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 scenario "agent" {
   matrix {
     arch            = ["amd64", "arm64"]
     artifact_source = ["local", "crt", "artifactory"]
     distro          = ["ubuntu", "rhel"]
-    edition         = ["oss", "ent"]
+    edition         = ["oss", "ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
   }
 
   terraform_cli = terraform_cli.default
@@ -16,8 +19,11 @@ scenario "agent" {
 
   locals {
     build_tags = {
-      "oss" = ["ui"]
-      "ent" = ["enterprise", "ent"]
+      "oss"              = ["ui"]
+      "ent"              = ["ui", "enterprise", "ent"]
+      "ent.fips1402"     = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.fips1402"]
+      "ent.hsm"          = ["ui", "enterprise", "cgo", "hsm", "venthsm"]
+      "ent.hsm.fips1402" = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.hsm.fips1402"]
     }
     bundle_path             = matrix.artifact_source != "artifactory" ? abspath(var.vault_bundle_path) : null
     dependencies_to_install = ["jq"]
@@ -36,6 +42,7 @@ scenario "agent" {
       arm64 = "t4g.small"
     }
     vault_instance_type = coalesce(var.vault_instance_type, local.vault_instance_types[matrix.arch])
+    vault_license_path  = abspath(var.vault_license_path != null ? var.vault_license_path : joinpath(path.root, "./support/vault.hclic"))
   }
 
   step "get_local_metadata" {
@@ -80,7 +87,7 @@ scenario "agent" {
     module = module.create_vpc
 
     variables {
-      ami_architectures  = [matrix.arch]
+      ami_architectures  = distinct([matrix.arch, "amd64"])
       availability_zones = step.find_azs.availability_zones
       common_tags        = local.tags
     }
@@ -91,7 +98,7 @@ scenario "agent" {
     module    = module.read_license
 
     variables {
-      file_name = abspath(joinpath(path.root, "./support/vault.hclic"))
+      file_name = local.vault_license_path
     }
   }
 
@@ -104,7 +111,7 @@ scenario "agent" {
     }
 
     variables {
-      ami_id        = step.create_vpc.ami_ids["ubuntu"][matrix.arch]
+      ami_id        = step.create_vpc.ami_ids["ubuntu"]["amd64"]
       common_tags   = local.tags
       instance_type = var.backend_instance_type
       kms_key_arn   = step.create_vpc.kms_key_arn
@@ -136,6 +143,9 @@ scenario "agent" {
       vault_artifactory_release = local.install_artifactory_artifact ? step.build_vault.vault_artifactory_release : null
       vault_license             = matrix.edition != "oss" ? step.read_license.license : null
       vpc_id                    = step.create_vpc.vpc_id
+      vault_environment = {
+        VAULT_LOG_LEVEL = var.vault_log_level
+      }
     }
   }
 

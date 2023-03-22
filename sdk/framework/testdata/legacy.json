@@ -21,23 +21,12 @@
             "type": "string"
           },
           "required": true
-        },
-        {
-          "name": "mount_path",
-          "description": "Path where the backend was mounted; the endpoint path will be offset by the mount path",
-          "in": "path",
-          "schema": {
-            "type": "string",
-            "default": "secret"
-          }
         }
       ],
       "get": {
+        "operationId": "getLookupId",
         "summary": "Synopsis",
-        "operationId": "readSecretLookupId",
-        "tags": [
-          "secrets"
-        ],
+        "tags": ["secrets"],
         "responses": {
           "200": {
             "description": "OK"
@@ -45,12 +34,11 @@
         }
       },
       "post": {
+        "operationId": "postLookupId",
         "summary": "Synopsis",
-        "operationId": "updateSecretLookupId",
-        "tags": [
-          "secrets"
-        ],
+        "tags": ["secrets"],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {

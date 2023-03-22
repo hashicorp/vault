@@ -194,7 +194,20 @@
       {
         "title": "Duration String Format",
         "path": "concepts/duration-format"
-      }
+      },
+      {
+        "title": "User Lockout",
+        "path": "concepts/user-lockout"
+      },
+      {
+        "title": "Events",
+        "path": "concepts/events",
+        "badge": {
+          "text": "ALPHA",
+          "type": "outlined",
+          "color": "neutral"
+        }
+  }
     ]
   },
   {
@@ -214,6 +227,10 @@
           {
             "title": "TCP",
             "path": "configuration/listener/tcp"
+          },
+          {
+            "title": "Unix",
+            "path": "configuration/listener/unix"
           }
         ]
       },
@@ -394,6 +411,10 @@
         "path": "configuration/ui"
       },
       {
+        "title": "<code>user_lockout</code>",
+        "path": "configuration/user-lockout"
+      },
+      {
         "title": "<code>Log Completed Requests</code>",
         "path": "configuration/log-requests-level"
       },
@@ -536,6 +557,19 @@
           {
             "title": "<code>undelete</code>",
             "path": "commands/kv/undelete"
+          }
+        ]
+      },
+      {
+        "title": "<code>pki</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/pki"
+          },
+          {
+            "title": "<code>health-check</code>",
+            "path": "commands/pki/health-check"
           }
         ]
       },
@@ -721,6 +755,10 @@
         ]
       },
       {
+        "title": "<code>print</code>",
+        "path": "commands/print"
+      },
+      {
         "title": "<code>read</code>",
         "path": "commands/read"
       },
@@ -791,6 +829,19 @@
           {
             "title": "<code>revoke</code>",
             "path": "commands/token/revoke"
+          }
+        ]
+      },
+      {
+        "title": "<code>transit</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/transit"
+          },
+          {
+            "title": "<code>import</code> and <code>import-version</code>",
+            "path": "commands/transit/import"
           }
         ]
       },
@@ -876,6 +927,14 @@
               {
                 "title": "Kubernetes",
                 "path": "agent/autoauth/methods/kubernetes"
+              },
+              {
+                "title": "Oracle Cloud Infrastructure",
+                "path": "agent/autoauth/methods/oci"
+              },
+              {
+                "title": "Token File",
+                "path": "agent/autoauth/methods/token_file"
               }
             ]
           },
@@ -893,6 +952,10 @@
             ]
           }
         ]
+      },
+      {
+        "title": "API Proxy",
+        "path": "agent/apiproxy"
       },
       {
         "title": "Caching",
@@ -938,7 +1001,16 @@
       },
       {
         "title": "Active Directory",
-        "path": "secrets/ad"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secrets/ad"
+          },
+          {
+            "title": "Migration Guide",
+            "path": "secrets/ad/migration-guide"
+          }
+        ]
       },
       {
         "title": "AliCloud",
@@ -1182,10 +1254,6 @@
           {
             "title": "SSH OTP",
             "path": "secrets/ssh/one-time-ssh-passwords"
-          },
-          {
-            "title": "Dynamic Key",
-            "path": "secrets/ssh/dynamic-ssh-keys"
           }
         ]
       },
@@ -1436,8 +1504,8 @@
         "path": "plugins/plugin-management"
       },
       {
-        "title": "Plugin Portal",
-        "path": "plugins/plugin-portal"
+        "title": "Integrations Library",
+        "href": "/vault/integrations"
       }
     ]
   },
@@ -1702,6 +1770,10 @@
         "path": "upgrading/plugins"
       },
       {
+        "title": "Upgrade to 1.13.x",
+        "path": "upgrading/upgrade-to-1.13.x"
+      },
+      {
         "title": "Upgrade to 1.12.x",
         "path": "upgrading/upgrade-to-1.12.x"
       },
@@ -1942,6 +2014,10 @@
         "path": "release-notes"
       },
       {
+         "title": "1.13.0",
+         "path": "release-notes/1.13.0"
+      },
+      {
         "title": "1.12.0",
         "path": "release-notes/1.12.0"
       },
@@ -2086,6 +2162,10 @@
           {
             "title": "Overview",
             "path": "enterprise/pkcs11-provider"
+          },
+          {
+            "title": "AWS KMS XKS",
+            "path": "enterprise/pkcs11-provider/aws-xks"
           },
           {
             "title": "Oracle TDE",

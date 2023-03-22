@@ -8,7 +8,7 @@ description: |-
 # Oracle TDE
 
 [Oracle Transparent Data Encryption](https://docs.oracle.com/database/121/ASOAG/introduction-to-transparent-data-encryption.htm#ASOAG10270) (TDE)
-is supported with the [Vault PKCS#11 provider](/docs/enterprise/pkcs11-provider).
+is supported with the [Vault PKCS#11 provider](/vault/docs/enterprise/pkcs11-provider).
 In this setup, Vault's KMIP engine generates and store the "TDE Master Encryption Key" that the Oracle Database uses to encrypt and decrypt the "TDE Table Keys".
 Oracle will not have access to the TDE Master Encryption Key itself.
 
@@ -23,7 +23,7 @@ To setup Oracle TDE backed by Vault, the following are required:
 
 ## Vault Setup
 
-On the Vault server, we need to [setup the KMIP Secrets Engine](/docs/secrets/kmip), e.g.:
+On the Vault server, we need to [setup the KMIP Secrets Engine](/vault/docs/secrets/kmip):
 
 1. Start the KMIP Secrets Engine and listener:
 
@@ -33,7 +33,7 @@ On the Vault server, we need to [setup the KMIP Secrets Engine](/docs/secrets/km
     ```
 
     ~> **Important**: When configuring KMIP for Oracle, you will probably need to set the
-    `server_hostnames` and `server_ips` [configuration parameters](/api-docs/secret/kmip#parameters),
+    `server_hostnames` and `server_ips` [configuration parameters](/vault/api-docs/secret/kmip#parameters),
     otherwise the TLS connection to the KMIP Secrets Engine will fail due to certification validation errors.
     When configuring Oracle TDE, this error can manifest as the `sqlplus` session silently hanging.
 
@@ -53,6 +53,8 @@ On the Vault server, we need to [setup the KMIP Secrets Engine](/docs/secrets/km
 
 1. Create TLS credentials (a certificate, key, and CA bundle) for the KMIP role:
 
+    ~> **Note**: This command will output the credentials in plaintext.
+
     ```sh
     vault write -f -format=json kmip/scope/my-service/role/admin/credential/generate | tee kmip.json
     ```
@@ -63,8 +65,8 @@ On the Vault server, we need to [setup the KMIP Secrets Engine](/docs/secrets/km
     Save these to, e.g., `cert.pem` and `ca.pem`:
 
     ```sh
-    jq -r '.data.ca_chain[]' kmip.json > ca.pem
-    jq -r '.data.certificate' kmip.json > cert.pem
+    jq --raw-output --exit-status '.data.ca_chain[]' kmip.json > ca.pem
+    jq --raw-output --exit-status '.data.certificate' kmip.json > cert.pem
     ```
 
 ## Oracle TDE Preparation

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -15,7 +18,7 @@ var ctx = context.Background()
 
 func Test_ConfigsRoundTrip(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
 
 	// Create an empty key, issuer for testing.
@@ -59,7 +62,7 @@ func Test_ConfigsRoundTrip(t *testing.T) {
 
 func Test_IssuerRoundTrip(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
 	issuer1, key1 := genIssuerAndKey(t, b, s)
 	issuer2, key2 := genIssuerAndKey(t, b, s)
@@ -105,7 +108,7 @@ func Test_IssuerRoundTrip(t *testing.T) {
 
 func Test_KeysIssuerImport(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
 
 	issuer1, key1 := genIssuerAndKey(t, b, s)
@@ -174,7 +177,7 @@ func Test_KeysIssuerImport(t *testing.T) {
 
 func Test_IssuerUpgrade(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
 
 	// Make sure that we add OCSP signing to v0 issuers if CRLSigning is enabled

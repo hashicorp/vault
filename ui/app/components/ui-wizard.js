@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { inject as service } from '@ember/service';
 import { alias, or } from '@ember/object/computed';
 import Component from '@ember/component';
@@ -7,6 +12,7 @@ export default Component.extend({
   classNames: ['ui-wizard-container'],
   wizard: service(),
   auth: service(),
+  router: service(),
 
   shouldRender: or('auth.currentToken', 'wizard.showWhenUnauthenticated'),
   currentState: alias('wizard.currentState'),
@@ -16,6 +22,7 @@ export default Component.extend({
   componentState: alias('wizard.componentState'),
   nextFeature: alias('wizard.nextFeature'),
   nextStep: alias('wizard.nextStep'),
+  currentRouteName: alias('router.currentRouteName'),
 
   actions: {
     dismissWizard() {

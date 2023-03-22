@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, fillIn, click, findAll } from '@ember/test-helpers';
@@ -60,7 +65,7 @@ module('Integration | Component | oidc/key-form', function (hooks) {
       .hasText('Name is required. Name cannot contain whitespace.', 'Validation messages are shown for name');
     assert.dom(validationErrors[1]).hasText('There are 2 errors with this form.', 'Renders form error count');
 
-    assert.dom('label[for=limited] input').isDisabled('limit radio button disabled on create');
+    assert.dom('[data-test-oidc-radio="limited"] input').isDisabled('limit radio button disabled on create');
     await fillIn('[data-test-input="name"]', 'test-key');
     await click(SELECTORS.keySaveButton);
   });
@@ -94,9 +99,9 @@ module('Integration | Component | oidc/key-form', function (hooks) {
     assert.dom(SELECTORS.keySaveButton).hasText('Update', 'Save button has correct text');
     assert.dom('[data-test-input="name"]').isDisabled('Name input is disabled when editing');
     assert.dom('[data-test-input="name"]').hasValue('test-key', 'Name input is populated with model value');
-    assert.dom('input#allow-all').isChecked('Allow all radio button is selected');
+    assert.dom('[data-test-oidc-radio="allow-all"] input').isChecked('Allow all radio button is selected');
 
-    await click('label[for=limited]');
+    await click('[data-test-oidc-radio="limited"]');
     assert
       .dom('[data-test-component="search-select"]#allowedClientIds')
       .exists('Limited radio button shows clients search select');
@@ -107,7 +112,7 @@ module('Integration | Component | oidc/key-form', function (hooks) {
       .hasTextContaining('app-1', 'dropdown contains client that references key');
     assert.dom('[data-test-smaller-id]').exists('renders smaller client id in dropdown');
 
-    await click('label[for=allow-all]');
+    await click('[data-test-oidc-radio="allow-all"]');
     assert
       .dom('[data-test-component="search-select"]#allowedClientIds')
       .doesNotExist('Allow all radio button hides search select');
@@ -147,7 +152,7 @@ module('Integration | Component | oidc/key-form', function (hooks) {
       />
     `);
 
-    await click('label[for=limited]');
+    await click('[data-test-oidc-radio="limited"]');
     await click(SELECTORS.keyCancelButton);
     assert.strictEqual(this.model.allowed_client_ids, undefined, 'Model attributes rolled back on cancel');
   });
@@ -177,7 +182,7 @@ module('Integration | Component | oidc/key-form', function (hooks) {
       />
     `);
 
-    await click('label[for=limited]');
+    await click('[data-test-oidc-radio="limited"]');
     assert
       .dom('[data-test-component="search-select"]#allowedClientIds [data-test-component="string-list"]')
       .exists('Radio toggle shows client string-list input');

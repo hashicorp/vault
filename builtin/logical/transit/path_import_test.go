@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package transit
 
 import (
@@ -48,7 +51,10 @@ var (
 	keys     = map[string]interface{}{}
 )
 
-const nssFormattedEd25519Key = "MGcCAQAwFAYHKoZIzj0CAQYJKwYBBAHaRw8BBEwwSgIBAQQgfJm5R+LK4FMwGzOpemTBXksimEVOVCE8QeC+XBBfNU+hIwMhADaif7IhYx46IHcRTy1z8LeyhABep+UB8Da6olMZGx0i"
+const (
+	nssFormattedEd25519Key = "MGcCAQAwFAYHKoZIzj0CAQYJKwYBBAHaRw8BBEwwSgIBAQQgfJm5R+LK4FMwGzOpemTBXksimEVOVCE8QeC+XBBfNU+hIwMhADaif7IhYx46IHcRTy1z8LeyhABep+UB8Da6olMZGx0i"
+	rsaPSSFormattedKey     = "MIIEvAIBADALBgkqhkiG9w0BAQoEggSoMIIEpAIBAAKCAQEAiFXSBaicB534+2qMZTVzQHMjuhb4NM9hi5H4EAFiYHEBuvm2BAk58NdBK3wiMq/p7Ewu5NQI0gJ7GlcV1MBU94U6MEmWNd0ztmlz37esEDuaCDhmLEBHKRzs8Om0bY9vczcNwcnRIYusP2KMxon3Gv2C86M2Jahig70AIq0E9C7esfrlYxFnoxUfO09XyYfiHlZY59+/dhyULp/RDIvaQ0/DqSSnYmXw8vRQ1gp6DqIzxx3j8ikUrpE7MK6348keFQj1eb83Z5w8qgIdceHHH4wbIAW7qWCPJ/vIJp8Pe1NEanlef61pDut2YcljvN79ccjX/QyqwqYv6xX2uzSlpQIDAQABAoIBACtpBCAoIVJtkv9e3EhHniR55PjWYn7SP5GEz3MtNalWokHqS/H6DBhrOcWCV5NDHx1N3qqe9xYDkzX+X6Wn/gX4RmBkte79uX8OEca8wY1DpRaT+riBWQc2vh0xlPFDuC177KX1QGFJi3V9SCzZdjSCXyV7pPyVopSm4/mmlMq5ANfN8bcHAtcArP7vPzEdckJqurjwHyzsUZJa9sk3OL3rBkKy5bmoPebE1ZQ7C+9eA4u9MKSy95WpTiqMe3rRhvr6zj4bzEvzS9M4r2EdwgAn4FyDwtGdOqtfbtSLTikb73f4MSINnWbt3YPBfRC4PGjWXIN2sMG5XYC3KH+RKbsCgYEAu0HOFInH8OtWiUY0aqRKZuo7lrBczNa5gnce3ZYnNkfrPlu1Xp0SjUkEWukznBLO0N9lvG9j3ksUDTQlPoKarJb9uf/1H0tYHhHm6mP8mH87yfVn2bLb3VPeIQYb+MXnDrwNVCAtxhuHlpnXJPldeuVKeRigHUNIEs76UMiiLqMCgYEAumJxm5NrKk0LXUQmeZolLh0lM/shg8zW7Vi3Ksz5Pe4Pcmg+hTbHjZuJwK6HesljEA0JDNkS0+5hkqiS5UDnj94XfDbi08/kKbPYA12GPVSRNTJxL8q70rFnEUZuMBeL0SKMPhEfR2z5TDDZUBoO6HBUUwgJAij1EsXrBAb0BxcCgYBKS3eKKohLi/PPjy0oynpCjtiJlvuawe7kVoLGg9aW8L3jBdvV6Bf+OmQh9bhmSggIUzo4IzHKdptECdZlEMhxhY6xh14nxmr1s0Cc6oLDtmdwX4+OjioxjB7rl1Ltxwc/j1jycbn3ieCn3e3AW7e9FNARb7XHJnSoEbq65n+CZQKBgQChLPozYAL/HIrkR0fCRmM6gmemkNeFo0CFFP+oWoJ6ZIAlHjJafmmIcmVoI0TzEG3C9pLJ8nmOnYjxCyekakEUryi9+LSkGBWlXmlBV8H7DUNYrlskyfssEs8fKDmnCuWUn3yJO8NBv+HBWkjCNRaJOIIjH0KzBHoRludJnz2tVwKBgQCsQF5lvcXefNfQojbhF+9NfyhvAc7EsMTXQhP9HEj0wVqTuuqyGyu8meXEkcQPRl6yD/yZKuMREDNNck4KV2fdGekBsh8zBgpxdHQ2DcbfxZfNgv3yoX3f0grb/ApQNJb3DVW9FVRigue8XPzFOFX/demJmkUnTg3zGFnXLXjgxg=="
+)
 
 func generateKeys(t *testing.T) {
 	t.Helper()
@@ -113,6 +119,39 @@ func TestTransit_ImportNSSEd25519Key(t *testing.T) {
 	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("failed to import NSS-formatted Ed25519 key: %v", err)
+	}
+}
+
+func TestTransit_ImportRSAPSS(t *testing.T) {
+	generateKeys(t)
+	b, s := createBackendWithStorage(t)
+
+	wrappingKey, err := b.getWrappingKey(context.Background(), s)
+	if err != nil || wrappingKey == nil {
+		t.Fatalf("failed to retrieve public wrapping key: %s", err)
+	}
+	privWrappingKey := wrappingKey.Keys[strconv.Itoa(wrappingKey.LatestVersion)].RSAKey
+	pubWrappingKey := &privWrappingKey.PublicKey
+
+	rawPKCS8, err := base64.StdEncoding.DecodeString(rsaPSSFormattedKey)
+	if err != nil {
+		t.Fatalf("failed to parse rsa-pss base64: %v", err)
+	}
+
+	blob := wrapTargetPKCS8ForImport(t, pubWrappingKey, rawPKCS8, "SHA256")
+	req := &logical.Request{
+		Storage:   s,
+		Operation: logical.UpdateOperation,
+		Path:      "keys/rsa-pss/import",
+		Data: map[string]interface{}{
+			"ciphertext": blob,
+			"type":       "rsa-2048",
+		},
+	}
+
+	_, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("failed to import RSA-PSS private key: %v", err)
 	}
 }
 

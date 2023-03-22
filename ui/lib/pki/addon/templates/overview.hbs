@@ -1,23 +1,29 @@
 <SecretListHeader
-  @model={{this.model}}
+  @model={{this.model.engine}}
   @backendCrumb={{hash
-    label=this.model.id
-    text=this.model.id
+    label=this.model.engine.id
+    text=this.model.engine.id
     path="vault.cluster.secrets.backend.list-root"
-    model=this.model.id
+    model=this.model.engine.id
   }}
   @isEngine={{true}}
 />
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink @route="configuration.create.index">
-      Configure PKI
-    </ToolbarLink>
+    {{#unless this.model.hasConfig}}
+      <ToolbarLink @route="configuration.create">
+        Configure PKI
+      </ToolbarLink>
+    {{/unless}}
   </ToolbarActions>
 </Toolbar>
 
-<EmptyState @title="PKI not configured" @message="This PKI mount hasn’t yet been configured with a certificate issuer.">
-  <LinkTo @route="configuration.create.index" @model={{this.model}}>
-    Configure PKI
-  </LinkTo>
-</EmptyState>
+{{#if this.model.hasConfig}}
+  <Page::PkiOverview @issuers={{this.model.issuers}} @roles={{this.model.roles}} @engine={{this.model.engine}} />
+{{else}}
+  <EmptyState @title="PKI not configured" @message="This PKI mount hasn't yet been configured with a certificate issuer.">
+    <LinkTo @route="configuration.create" @model={{this.model.engine}}>
+      Configure PKI
+    </LinkTo>
+  </EmptyState>
+{{/if}}

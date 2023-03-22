@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package transit
 
 import (
@@ -248,18 +251,18 @@ func TestTransit_batchHMAC(t *testing.T) {
 
 	req.Path = "hmac/foo"
 	batchInput := []batchRequestHMACItem{
-		{"input": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
-		{"input": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
-		{"input": ""},
-		{"input": ":;.?"},
+		{"input": "dGhlIHF1aWNrIGJyb3duIGZveA==", "reference": "one"},
+		{"input": "dGhlIHF1aWNrIGJyb3duIGZveA==", "reference": "two"},
+		{"input": "", "reference": "three"},
+		{"input": ":;.?", "reference": "four"},
 		{},
 	}
 
 	expected := []batchResponseHMACItem{
-		{HMAC: "vault:v1:UcBvm5VskkukzZHlPgm3p5P/Yr/PV6xpuOGZISya3A4="},
-		{HMAC: "vault:v1:UcBvm5VskkukzZHlPgm3p5P/Yr/PV6xpuOGZISya3A4="},
-		{HMAC: "vault:v1:BCfVv6rlnRsIKpjCZCxWvh5iYwSSabRXpX9XJniuNgc="},
-		{Error: "unable to decode input as base64: illegal base64 data at input byte 0"},
+		{HMAC: "vault:v1:UcBvm5VskkukzZHlPgm3p5P/Yr/PV6xpuOGZISya3A4=", Reference: "one"},
+		{HMAC: "vault:v1:UcBvm5VskkukzZHlPgm3p5P/Yr/PV6xpuOGZISya3A4=", Reference: "two"},
+		{HMAC: "vault:v1:BCfVv6rlnRsIKpjCZCxWvh5iYwSSabRXpX9XJniuNgc=", Reference: "three"},
+		{Error: "unable to decode input as base64: illegal base64 data at input byte 0", Reference: "four"},
 		{Error: "missing input for HMAC"},
 	}
 
@@ -285,6 +288,9 @@ func TestTransit_batchHMAC(t *testing.T) {
 		}
 		if expected[i].Error != "" && expected[i].Error != m.Error {
 			t.Fatalf("Expected Error %q got %q in result %d", expected[i].Error, m.Error, i)
+		}
+		if expected[i].Reference != m.Reference {
+			t.Fatalf("Expected references to match, Got %s, Expected %s", m.Reference, expected[i].Reference)
 		}
 	}
 

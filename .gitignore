@@ -51,6 +51,7 @@ Vagrantfile
 
 # Configs
 *.hcl
+!.copywrite.hcl
 !.release/ci.hcl
 !.release/security-scan.hcl
 !.release/linux/package/etc/vault.d/vault.hcl
@@ -61,6 +62,11 @@ Vagrantfile
 # Enos
 enos/.enos
 enos/support
+# Enos local Terraform files
+enos/.terraform/*
+enos/.terraform.lock.hcl
+enos/*.tfstate
+enos/*.tfstate.*
 
 .DS_Store
 .idea
@@ -119,3 +125,6 @@ website/components/node_modules
 
 .buildcache/
 .releaser/
+*.log
+
+tools/godoctests/.bin

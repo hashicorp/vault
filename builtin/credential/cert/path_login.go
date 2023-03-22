@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package cert
 
 import (
@@ -11,6 +14,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/hashicorp/vault/sdk/helper/ocsp"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -37,15 +42,27 @@ func pathLogin(b *backend) *framework.Path {
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation:         b.pathLogin,
+			logical.UpdateOperation:         b.loginPathWrapper(b.pathLogin),
 			logical.AliasLookaheadOperation: b.pathLoginAliasLookahead,
-			logical.ResolveRoleOperation:    b.pathLoginResolveRole,
+			logical.ResolveRoleOperation:    b.loginPathWrapper(b.pathLoginResolveRole),
 		},
+	}
+}
+
+func (b *backend) loginPathWrapper(wrappedOp func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error)) framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		// Make sure that the CRLs have been loaded before processing a login request,
+		// they might have been nil'd by an invalidate func call.
+		if err := b.populateCrlsIfNil(ctx, req.Storage); err != nil {
+			return nil, err
+		}
+		return wrappedOp(ctx, req, data)
 	}
 }
 
 func (b *backend) pathLoginResolveRole(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var matched *ParsedCert
+
 	if verifyResp, resp, err := b.verifyCredentials(ctx, req, data); err != nil {
 		return nil, err
 	} else if resp != nil {
@@ -62,6 +79,9 @@ func (b *backend) pathLoginResolveRole(ctx context.Context, req *logical.Request
 }
 
 func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	if req.Connection == nil || req.Connection.ConnState == nil {
+		return nil, fmt.Errorf("tls connection not found")
+	}
 	clientCerts := req.Connection.ConnState.PeerCertificates
 	if len(clientCerts) == 0 {
 		return nil, fmt.Errorf("no client certificate found")
@@ -81,12 +101,8 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 	if err != nil {
 		return nil, err
 	}
-
-	if b.crls == nil {
-		// Probably invalidated due to replication, but we need these to proceed
-		if err := b.populateCRLs(ctx, req.Storage); err != nil {
-			return nil, err
-		}
+	if b.configUpdated.Load() {
+		b.updatedConfig(config)
 	}
 
 	var matched *ParsedCert
@@ -161,11 +177,8 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	if err != nil {
 		return nil, err
 	}
-
-	if b.crls == nil {
-		if err := b.populateCRLs(ctx, req.Storage); err != nil {
-			return nil, err
-		}
+	if b.configUpdated.Load() {
+		b.updatedConfig(config)
 	}
 
 	if !config.DisableBinding {
@@ -233,18 +246,23 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 	var certName string
 	if req.Auth != nil { // It's a renewal, use the saved certName
 		certName = req.Auth.Metadata["cert_name"]
-	} else {
+	} else if d != nil { // d is nil if handleAuthRenew call the authRenew
 		certName = d.Get("name").(string)
 	}
 
-	// Load the trusted certificates
-	roots, trusted, trustedNonCAs := b.loadTrustedCerts(ctx, req.Storage, certName)
+	// Load the trusted certificates and other details
+	roots, trusted, trustedNonCAs, verifyConf := b.loadTrustedCerts(ctx, req.Storage, certName)
 
 	// Get the list of full chains matching the connection and validates the
 	// certificate itself
 	trustedChains, err := validateConnState(roots, connState)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	var extraCas []*x509.Certificate
+	for _, t := range trusted {
+		extraCas = append(extraCas, t.Certificates...)
 	}
 
 	// If trustedNonCAs is not empty it means that client had registered a non-CA cert
@@ -254,9 +272,14 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 			tCert := trustedNonCA.Certificates[0]
 			// Check for client cert being explicitly listed in the config (and matching other constraints)
 			if tCert.SerialNumber.Cmp(clientCert.SerialNumber) == 0 &&
-				bytes.Equal(tCert.AuthorityKeyId, clientCert.AuthorityKeyId) &&
-				b.matchesConstraints(clientCert, trustedNonCA.Certificates, trustedNonCA) {
-				return trustedNonCA, nil, nil
+				bytes.Equal(tCert.AuthorityKeyId, clientCert.AuthorityKeyId) {
+				matches, err := b.matchesConstraints(ctx, clientCert, trustedNonCA.Certificates, trustedNonCA, verifyConf)
+				if err != nil {
+					return nil, nil, err
+				}
+				if matches {
+					return trustedNonCA, nil, nil
+				}
 			}
 		}
 	}
@@ -273,10 +296,15 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 		for _, tCert := range trust.Certificates { // For each certificate in the entry
 			for _, chain := range trustedChains { // For each root chain that we matched
 				for _, cCert := range chain { // For each cert in the matched chain
-					if tCert.Equal(cCert) && // ParsedCert intersects with matched chain
-						b.matchesConstraints(clientCert, chain, trust) { // validate client cert + matched chain against the config
-						// Add the match to the list
-						matches = append(matches, trust)
+					if tCert.Equal(cCert) { // ParsedCert intersects with matched chain
+						match, err := b.matchesConstraints(ctx, clientCert, chain, trust, verifyConf) // validate client cert + matched chain against the config
+						if err != nil {
+							return nil, nil, err
+						}
+						if match {
+							// Add the match to the list
+							matches = append(matches, trust)
+						}
 					}
 				}
 			}
@@ -292,8 +320,10 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 	return matches[0], nil, nil
 }
 
-func (b *backend) matchesConstraints(clientCert *x509.Certificate, trustedChain []*x509.Certificate, config *ParsedCert) bool {
-	return !b.checkForChainInCRLs(trustedChain) &&
+func (b *backend) matchesConstraints(ctx context.Context, clientCert *x509.Certificate, trustedChain []*x509.Certificate,
+	config *ParsedCert, conf *ocsp.VerifyConfig,
+) (bool, error) {
+	soFar := !b.checkForChainInCRLs(trustedChain) &&
 		b.matchesNames(clientCert, config) &&
 		b.matchesCommonName(clientCert, config) &&
 		b.matchesDNSSANs(clientCert, config) &&
@@ -301,6 +331,14 @@ func (b *backend) matchesConstraints(clientCert *x509.Certificate, trustedChain 
 		b.matchesURISANs(clientCert, config) &&
 		b.matchesOrganizationalUnits(clientCert, config) &&
 		b.matchesCertificateExtensions(clientCert, config)
+	if config.Entry.OcspEnabled {
+		ocspGood, err := b.checkForCertInOCSP(ctx, clientCert, trustedChain, conf)
+		if err != nil {
+			return false, err
+		}
+		soFar = soFar && ocspGood
+	}
+	return soFar, nil
 }
 
 // matchesNames verifies that the certificate matches at least one configured
@@ -447,7 +485,7 @@ func (b *backend) matchesCertificateExtensions(clientCert *x509.Certificate, con
 		asn1.Unmarshal(ext.Value, &parsedValue)
 		clientExtMap[ext.Id.String()] = parsedValue
 	}
-	// If any of the required extensions don't match the constraint fails
+	// If any of the required extensions don'log match the constraint fails
 	for _, requiredExt := range config.Entry.RequiredExtensions {
 		reqExt := strings.SplitN(requiredExt, ":", 2)
 		clientExtValue, clientExtValueOk := clientExtMap[reqExt[0]]
@@ -491,7 +529,7 @@ func (b *backend) certificateExtensionsMetadata(clientCert *x509.Certificate, co
 }
 
 // loadTrustedCerts is used to load all the trusted certificates from the backend
-func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage, certName string) (pool *x509.CertPool, trusted []*ParsedCert, trustedNonCAs []*ParsedCert) {
+func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage, certName string) (pool *x509.CertPool, trusted []*ParsedCert, trustedNonCAs []*ParsedCert, conf *ocsp.VerifyConfig) {
 	pool = x509.NewCertPool()
 	trusted = make([]*ParsedCert, 0)
 	trustedNonCAs = make([]*ParsedCert, 0)
@@ -508,6 +546,7 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 		}
 	}
 
+	conf = &ocsp.VerifyConfig{}
 	for _, name := range names {
 		entry, err := b.Cert(ctx, storage, strings.TrimPrefix(name, "cert/"))
 		if err != nil {
@@ -515,7 +554,7 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 			continue
 		}
 		if entry == nil {
-			// This could happen when the certName was provided and the cert doesn't exist,
+			// This could happen when the certName was provided and the cert doesn'log exist,
 			// or just if between the LIST and the GET the cert was deleted.
 			continue
 		}
@@ -525,6 +564,8 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 			b.Logger().Error("failed to parse certificate", "name", name)
 			continue
 		}
+		parsed = append(parsed, parsePEM([]byte(entry.OcspCaCertificates))...)
+
 		if !parsed[0].IsCA {
 			trustedNonCAs = append(trustedNonCAs, &ParsedCert{
 				Entry:        entry,
@@ -541,8 +582,31 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 				Certificates: parsed,
 			})
 		}
+		if entry.OcspEnabled {
+			conf.OcspEnabled = true
+			conf.OcspServersOverride = append(conf.OcspServersOverride, entry.OcspServersOverride...)
+			if entry.OcspFailOpen {
+				conf.OcspFailureMode = ocsp.FailOpenTrue
+			} else {
+				conf.OcspFailureMode = ocsp.FailOpenFalse
+			}
+			conf.QueryAllServers = conf.QueryAllServers || entry.OcspQueryAllServers
+		}
 	}
 	return
+}
+
+func (b *backend) checkForCertInOCSP(ctx context.Context, clientCert *x509.Certificate, chain []*x509.Certificate, conf *ocsp.VerifyConfig) (bool, error) {
+	if !conf.OcspEnabled || len(chain) < 2 {
+		return true, nil
+	}
+	b.ocspClientMutex.RLock()
+	defer b.ocspClientMutex.RUnlock()
+	err := b.ocspClient.VerifyLeafCertificate(ctx, clientCert, chain[1], conf)
+	if err != nil {
+		return false, nil
+	}
+	return true, nil
 }
 
 func (b *backend) checkForChainInCRLs(chain []*x509.Certificate) bool {

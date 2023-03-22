@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package ldaputil
 
 import (
@@ -168,6 +171,7 @@ var jsonConfigDefault = []byte(`
   "use_pre111_group_cn_behavior": null,
   "username_as_alias": false,
   "request_timeout": 90,
+  "dereference_aliases": "never",
   "CaseSensitiveNames": false,
   "ClientTLSCert": "",
   "ClientTLSKey": ""

@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+import { action } from '@ember/object';
+import { inject as service } from '@ember/service';
+import { tracked } from '@glimmer/tracking';
+import localStorage from 'vault/lib/local-storage';
 import Component from '@glimmer/component';
 
 /**
@@ -23,7 +32,36 @@ import Component from '@glimmer/component';
  */
 
 export default class SecretListHeader extends Component {
+  @service router;
+  @tracked hidePkiBetaModal = false;
+
   get isKV() {
     return ['kv', 'generic'].includes(this.args.model.engineType);
+  }
+
+  get isPki() {
+    return this.args.model.engineType === 'pki';
+  }
+
+  get shouldHidePkiBetaModal() {
+    return localStorage.getItem('hidePkiBetaModal');
+  }
+
+  get windowOrigin() {
+    return window.location.origin;
+  }
+
+  @action
+  transitionToNewPki() {
+    this.router.transitionTo('vault.cluster.secrets.backend.pki.overview', this.args.model.id);
+  }
+
+  @action
+  toggleHidePkiBetaModal() {
+    this.hidePkiBetaModal = !this.hidePkiBetaModal;
+
+    this.hidePkiBetaModal
+      ? localStorage.setItem('hidePkiBetaModal', true)
+      : localStorage.removeItem('hidePkiBetaModal');
   }
 }

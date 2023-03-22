@@ -1,7 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { typeOf } from '@ember/utils';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
+import { convertFromSeconds, largestUnitFromSeconds } from 'core/utils/duration-utils';
 
 /**
  * @module InfoTableRow
@@ -55,6 +61,14 @@ export default class InfoTableRowComponent extends Component {
       default:
         return false;
     }
+  }
+  get formattedTtl() {
+    const { value } = this.args;
+    if (Number.isInteger(value)) {
+      const unit = largestUnitFromSeconds(value);
+      return `${convertFromSeconds(value, unit)}${unit}`;
+    }
+    return value;
   }
 
   @action

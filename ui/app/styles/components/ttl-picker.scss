@@ -1,0 +1,28 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+.ttl-show-picker {
+  padding: 0.5rem 0 1.6rem 2.4rem;
+}
+
+.ttl-picker-label {
+  font-weight: bold;
+}
+
+input.has-error,
+input.has-error:focus,
+input.has-error:hover {
+  border-color: $red-dark;
+}
+
+.ttl-value-error {
+  margin-top: 0.3em;
+}
+
+.description {
+  display: flex;
+  justify-content: flex-start;
+  align-content: center;
+}

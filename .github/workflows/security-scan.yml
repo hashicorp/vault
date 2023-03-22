@@ -1,0 +1,83 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches:
+      - 'main'
+      - '!oss-merge-main*'
+
+jobs:
+  scan:
+    runs-on:
+      labels: ['linux', 'large']
+    if: ${{ github.actor != 'dependabot[bot]' || github.actor != 'hc-github-team-secure-vault-core' }}
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.18
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.x
+
+    - name: Clone Security Scanner repo
+      uses: actions/checkout@v3
+      with:
+        repository: hashicorp/security-scanner
+        token: ${{ secrets.HASHIBOT_PRODSEC_GITHUB_TOKEN }}
+        path: security-scanner
+        ref: 2526c196a28bb367b1ac6c997ff48e9ebf06834f
+
+    - name: Install dependencies
+      shell: bash
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        mkdir $HOME/.bin
+        cd $GITHUB_WORKSPACE/security-scanner/pkg/sdk/examples/scan-plugin-semgrep
+        go build -o scan-plugin-semgrep .
+        mv scan-plugin-semgrep $HOME/.bin
+        
+        cd $GITHUB_WORKSPACE/security-scanner/pkg/sdk/examples/scan-plugin-codeql
+        go build -o scan-plugin-codeql .
+        mv scan-plugin-codeql $HOME/.bin
+        
+        # Semgrep
+        python3 -m pip install semgrep
+        
+        # CodeQL
+        LATEST=$(gh release list --repo https://github.com/github/codeql-action | cut -f 3 | sort --version-sort | tail -n1)
+        gh release download --repo https://github.com/github/codeql-action --pattern codeql-bundle-linux64.tar.gz "$LATEST"
+        tar xf codeql-bundle-linux64.tar.gz -C $HOME/.bin
+        
+        # Add to PATH
+        echo "$HOME/.bin" >> $GITHUB_PATH
+        echo "$HOME/.bin/codeql" >> $GITHUB_PATH
+
+    - name: Scan
+      id: scan
+      uses: ./security-scanner
+      # env:
+        # Note: this _should_ work, but causes some issues with Semgrep.
+        # Instead, rely on filtering in the SARIF Output step.
+        #SEMGREP_BASELINE_REF: ${{ github.base_ref }}
+      with:
+        repository: "$PWD"
+
+    - name: SARIF Output
+      shell: bash
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        cat results.sarif
+
+    - name: Upload SARIF file
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: results.sarif

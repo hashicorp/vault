@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -6,21 +9,27 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
-	"github.com/hashicorp/vault/sdk/version"
+	"github.com/hashicorp/vault/version"
+	"github.com/sasha-s/go-deadlock"
 )
 
 // invalidKey is used to test Unseal
@@ -357,6 +366,131 @@ func TestCore_SealUnseal(t *testing.T) {
 		if i+1 == len(keys) && !unseal {
 			t.Fatalf("err: should be unsealed")
 		}
+	}
+}
+
+// TestCore_RunLockedUserUpdatesForStaleEntry tests that stale locked user entries
+// get deleted upon unseal
+func TestCore_RunLockedUserUpdatesForStaleEntry(t *testing.T) {
+	core, keys, root := TestCoreUnsealed(t)
+	storageUserLockoutPath := fmt.Sprintf(coreLockedUsersPath + "ns1/mountAccessor1/aliasName1")
+
+	// cleanup
+	defer core.barrier.Delete(context.Background(), storageUserLockoutPath)
+
+	// create invalid entry in storage to test stale entries get deleted on unseal
+	// last failed login time for this path is 1970-01-01 00:00:00 +0000 UTC
+	// since user lockout configurations are not configured, lockout duration will
+	// be set to default (15m) internally
+	compressedBytes, err := jsonutil.EncodeJSONAndCompress(int(time.Unix(0, 0).Unix()), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create an entry
+	entry := &logical.StorageEntry{
+		Key:   storageUserLockoutPath,
+		Value: compressedBytes,
+	}
+
+	// Write to the physical backend
+	err = core.barrier.Put(context.Background(), entry)
+	if err != nil {
+		t.Fatalf("failed to write invalid locked user entry, err: %v", err)
+	}
+
+	// seal and unseal vault
+	if err := core.Seal(root); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	for i, key := range keys {
+		unseal, err := TestCoreUnseal(core, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if i+1 == len(keys) && !unseal {
+			t.Fatalf("err: should be unsealed")
+		}
+	}
+
+	// locked user entry must be deleted upon unseal as it is stale
+	lastFailedLoginRaw, err := core.barrier.Get(context.Background(), storageUserLockoutPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if lastFailedLoginRaw != nil {
+		t.Fatal("err: stale locked user entry exists")
+	}
+}
+
+// TestCore_RunLockedUserUpdatesForValidEntry tests that valid locked user entries
+// do not get removed on unseal
+// Also tests that the userFailedLoginInfo map gets updated with correct information
+func TestCore_RunLockedUserUpdatesForValidEntry(t *testing.T) {
+	core, keys, root := TestCoreUnsealed(t)
+	storageUserLockoutPath := fmt.Sprintf(coreLockedUsersPath + "ns1/mountAccessor1/aliasName1")
+
+	// cleanup
+	defer core.barrier.Delete(context.Background(), storageUserLockoutPath)
+
+	// create valid storage entry for locked user
+	lastFailedLoginTime := int(time.Now().Unix())
+
+	compressedBytes, err := jsonutil.EncodeJSONAndCompress(lastFailedLoginTime, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create an entry
+	entry := &logical.StorageEntry{
+		Key:   storageUserLockoutPath,
+		Value: compressedBytes,
+	}
+
+	// Write to the physical backend
+	err = core.barrier.Put(context.Background(), entry)
+	if err != nil {
+		t.Fatalf("failed to write invalid locked user entry, err: %v", err)
+	}
+
+	// seal and unseal vault
+	if err := core.Seal(root); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	for i, key := range keys {
+		unseal, err := TestCoreUnseal(core, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if i+1 == len(keys) && !unseal {
+			t.Fatalf("err: should be unsealed")
+		}
+	}
+
+	// locked user entry must exist as it is still valid
+	existingEntry, err := core.barrier.Get(context.Background(), storageUserLockoutPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if existingEntry == nil {
+		t.Fatalf("err: entry must exist for locked user in storage")
+	}
+
+	// userFailedLoginInfo map should have the correct information for locked user
+	loginUserInfoKey := FailedLoginUser{
+		aliasName:     "aliasName1",
+		mountAccessor: "mountAccessor1",
+	}
+
+	failedLoginInfoFromMap := core.GetUserFailedLoginInfo(context.Background(), loginUserInfoKey)
+	if failedLoginInfoFromMap == nil {
+		t.Fatalf("err: entry must exist for locked user in userFailedLoginInfo map")
+	}
+	if failedLoginInfoFromMap.lastFailedLoginTime != lastFailedLoginTime {
+		t.Fatalf("err: incorrect failed login time information for locked user updated in userFailedLoginInfo map")
+	}
+	if int(failedLoginInfoFromMap.count) != configutil.UserLockoutThresholdDefault {
+		t.Fatalf("err: incorrect failed login count information for locked user updated in userFailedLoginInfo map")
 	}
 }
 
@@ -1001,10 +1135,10 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 
 func TestCore_HandleRequest_AuditTrail(t *testing.T) {
 	// Create a noop audit backend
-	noop := &NoopAudit{}
+	noop := &corehelpers.NoopAudit{}
 	c, _, root := TestCoreUnsealed(t)
 	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
-		noop = &NoopAudit{
+		noop = &corehelpers.NoopAudit{
 			Config: config,
 		}
 		return noop, nil
@@ -1065,10 +1199,10 @@ func TestCore_HandleRequest_AuditTrail(t *testing.T) {
 
 func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
 	// Create a noop audit backend
-	var noop *NoopAudit
+	var noop *corehelpers.NoopAudit
 	c, _, root := TestCoreUnsealed(t)
 	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
-		noop = &NoopAudit{
+		noop = &corehelpers.NoopAudit{
 			Config: config,
 		}
 		return noop, nil
@@ -1159,17 +1293,17 @@ func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
 	if _, err := c.HandleRequest(namespace.RootContext(nil), req); err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if len(noop.RespNonHMACKeys) != 1 || noop.RespNonHMACKeys[0] != "baz" {
+	if len(noop.RespNonHMACKeys) != 1 || !strutil.EquivalentSlices(noop.RespNonHMACKeys[0], []string{"baz"}) {
 		t.Fatalf("Bad: %#v", noop.RespNonHMACKeys)
 	}
-	if len(noop.RespReqNonHMACKeys) != 1 || noop.RespReqNonHMACKeys[0] != "foo" {
+	if len(noop.RespReqNonHMACKeys) != 1 || !strutil.EquivalentSlices(noop.RespReqNonHMACKeys[0], []string{"foo"}) {
 		t.Fatalf("Bad: %#v", noop.RespReqNonHMACKeys)
 	}
 }
 
 func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 	// Create a badass credential backend that always logs in as armon
-	noop := &NoopAudit{}
+	noop := &corehelpers.NoopAudit{}
 	noopBack := &NoopBackend{
 		Login: []string{"login"},
 		Response: &logical.Response{
@@ -1190,7 +1324,7 @@ func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 		return noopBack, nil
 	}
 	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
-		noop = &NoopAudit{
+		noop = &corehelpers.NoopAudit{
 			Config: config,
 		}
 		return noop, nil
@@ -1893,7 +2027,7 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 		HAPhysical:      inmha,
 		RedirectAddr:    redirectOriginal,
 		DisableMlock:    true,
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 	})
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -2834,5 +2968,53 @@ func TestCore_ServiceRegistration(t *testing.T) {
 		notifyInitCount:   1,
 	}); diff != nil {
 		t.Fatal(diff)
+	}
+}
+
+func TestDetectedDeadlock(t *testing.T) {
+	testCore, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{DetectDeadlocks: "statelock"})
+	InduceDeadlock(t, testCore, 1)
+}
+
+func TestDefaultDeadlock(t *testing.T) {
+	testCore, _, _ := TestCoreUnsealed(t)
+	InduceDeadlock(t, testCore, 0)
+}
+
+func RestoreDeadlockOpts() func() {
+	opts := deadlock.Opts
+	return func() {
+		deadlock.Opts = opts
+	}
+}
+
+func InduceDeadlock(t *testing.T, vaultcore *Core, expected uint32) {
+	defer RestoreDeadlockOpts()()
+	var deadlocks uint32
+	deadlock.Opts.OnPotentialDeadlock = func() {
+		atomic.AddUint32(&deadlocks, 1)
+	}
+	var mtx deadlock.Mutex
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		vaultcore.expiration.coreStateLock.Lock()
+		mtx.Lock()
+		mtx.Unlock()
+		vaultcore.expiration.coreStateLock.Unlock()
+	}()
+	wg.Wait()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		mtx.Lock()
+		vaultcore.expiration.coreStateLock.RLock()
+		vaultcore.expiration.coreStateLock.RUnlock()
+		mtx.Unlock()
+	}()
+	wg.Wait()
+	if atomic.LoadUint32(&deadlocks) != expected {
+		t.Fatalf("expected 1 deadlock, detected %d", deadlocks)
 	}
 }

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { currentRouteName, currentURL, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -8,6 +13,8 @@ import configPage from 'vault/tests/pages/settings/configure-secret-backends/pki
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import authPage from 'vault/tests/pages/auth';
 import { SELECTORS } from 'vault/tests/helpers/pki';
+import { csr } from 'vault/tests/helpers/pki/values';
+import { v4 as uuidv4 } from 'uuid';
 
 module('Acceptance | secrets/pki/list?tab=cert', function (hooks) {
   setupApplicationTest(hooks);
@@ -17,26 +24,11 @@ module('Acceptance | secrets/pki/list?tab=cert', function (hooks) {
   });
   // important for this comment to stay here otherwise the formatting mangles the CSR
   // prettier-ignore
-  const CSR = `-----BEGIN CERTIFICATE REQUEST-----
-MIICdDCCAVwCAQAwDjEMMAoGA1UEAxMDbG9sMIIBIjANBgkqhkiG9w0BAQEFAAOC
-AQ8AMIIBCgKCAQEA4Dz2b/nAP/M6bqyk5mctqqYAAcoME//xPBy0wREHuZ776Pu4
-l45kDL3dPXiY8U2P9pn8WIr2KpLK6oWUfSsiG2P082bpWDL20UymkWqDhhrA4unf
-ZRq68UIDbcetlLw15YKnlNdvNZ7Qr8Se8KV0YGR/wFqI7QfS6VE3lhxZWEBUayI0
-egqOuDbXAcZTON1AZ92/F+WFSbc43iYdDk16XfAPFKhtvLr6zQQuzebAb7HG04Hc
-GhRskixxyJ8XY6XUplfsa1HcpUXE4f1GeUvq3g6ltVCSJ0p7qI9FFjV4t+DCLVVV
-LnwHUi9Vzz6i2wjMt7P6+gHR+RrOWBgRMn38fwIDAQABoCEwHwYJKoZIhvcNAQkO
-MRIwEDAOBgNVHREEBzAFggNsb2wwDQYJKoZIhvcNAQELBQADggEBAAm3AHQ1ctdV
-8HCrMOXGVLgI2cB1sFd6VYVxPBxIk812Y4wyO8Q6POE5VZNTIgMcSeIaFu5lgHNL
-Peeb54F+zEa+OJYkcWgCAX5mY/0HoML4p2bxFTSjllSpcX7ktjq4IEIY/LRpqSgc
-jgZHHRwanFfkeIOhN4Q5qJWgBPNhDAcNPE7T0M/4mxqYDqMSJvMYmC67hq1UOOug
-/QVDUDJRC1C0aDw9if+DbG/bt1V6HpMQhDIEUjzfu4zG8pcag3cJpOA8JhW1hnG0
-XA2ZOCA7s34/szr2FczXtIoKiYmv3UzPyO9/4mc0Q2+/nR4CG8NU9WW/XJCne9ID
-elRplAzrMF4=
------END CERTIFICATE REQUEST-----`;
+  const CSR = csr;
 
   // mount, generate CA, nav to create role page
   const setup = async (assert, action = 'issue') => {
-    const path = `pki-${new Date().getTime()}`;
+    const path = `pki-${uuidv4()}`;
     const roleName = 'role';
     await enablePage.enable('pki', path);
     await settled();

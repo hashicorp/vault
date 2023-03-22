@@ -1,3 +1,22 @@
+<PageHeader as |p|>
+  <p.top>
+    <nav class="breadcrumb" aria-label="breadcrumbs">
+      <ul>
+        <li>
+          <span class="sep">&#x0002f;</span>
+          <LinkTo @route={{"vault.cluster.access.oidc.assignments.assignment.details"}} @model={{this.model.name}}>
+            Details
+          </LinkTo>
+        </li>
+      </ul>
+    </nav>
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-oidc-assignment-title>
+      Edit assignment
+    </h1>
+  </p.levelLeft>
+</PageHeader>
 <Oidc::AssignmentForm
   @model={{this.model}}
   @onCancel={{transition-to "vault.cluster.access.oidc.assignments.assignment.details" this.model.name}}

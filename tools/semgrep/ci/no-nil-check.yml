@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 rules:
   - id: nil-check-logical-storage
     patterns:
@@ -62,7 +65,7 @@ rules:
     severity: ERROR
 
 # NamespaceByID 
-  - id: nil-check-physical-storage
+  - id: nil-check-physical-storage-by-nsid
     patterns:
       - pattern-either:
           - pattern: |

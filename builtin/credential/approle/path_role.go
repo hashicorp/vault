@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package approle
 
 import (
@@ -108,6 +111,17 @@ type roleIDStorageEntry struct {
 func rolePaths(b *backend) []*framework.Path {
 	defTokenFields := tokenutil.TokenFields()
 
+	responseOK := map[int][]framework.Response{
+		http.StatusOK: {{
+			Description: "OK",
+		}},
+	}
+	responseNoContent := map[int][]framework.Response{
+		http.StatusNoContent: {{
+			Description: "No Content",
+		}},
+	}
+
 	p := &framework.Path{
 		Pattern: "role/" + framework.GenericNameRegex("role_name"),
 		Fields: map[string]*framework.FieldSchema{
@@ -169,11 +183,112 @@ can only be set during role creation and once set, it can't be reset later.`,
 			},
 		},
 		ExistenceCheck: b.pathRoleExistenceCheck,
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.CreateOperation: b.pathRoleCreateUpdate,
-			logical.UpdateOperation: b.pathRoleCreateUpdate,
-			logical.ReadOperation:   b.pathRoleRead,
-			logical.DeleteOperation: b.pathRoleDelete,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.CreateOperation: &framework.PathOperation{
+				Callback:  b.pathRoleCreateUpdate,
+				Responses: responseOK,
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback:  b.pathRoleCreateUpdate,
+				Responses: responseOK,
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathRoleRead,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"bind_secret_id": {
+								Type:        framework.TypeBool,
+								Required:    true,
+								Description: "Impose secret ID to be presented when logging in using this role.",
+							},
+							"secret_id_bound_cidrs": {
+								Type:        framework.TypeCommaStringSlice,
+								Required:    true,
+								Description: "Comma separated string or list of CIDR blocks. If set, specifies the blocks of IP addresses which can perform the login operation.",
+							},
+							"secret_id_num_uses": {
+								Type:        framework.TypeInt,
+								Required:    true,
+								Description: "Number of times a secret ID can access the role, after which the secret ID will expire.",
+							},
+							"secret_id_ttl": {
+								Type:        framework.TypeDurationSecond,
+								Required:    true,
+								Description: "Duration in seconds after which the issued secret ID expires.",
+							},
+							"local_secret_ids": {
+								Type:        framework.TypeBool,
+								Required:    true,
+								Description: "If true, the secret identifiers generated using this role will be cluster local. This can only be set during role creation and once set, it can't be reset later",
+							},
+							"token_bound_cidrs": {
+								Type:        framework.TypeCommaStringSlice,
+								Required:    true,
+								Description: `Comma separated string or JSON list of CIDR blocks. If set, specifies the blocks of IP addresses which are allowed to use the generated token.`,
+							},
+							"token_explicit_max_ttl": {
+								Type:        framework.TypeDurationSecond,
+								Required:    true,
+								Description: "If set, tokens created via this role carry an explicit maximum TTL. During renewal, the current maximum TTL values of the role and the mount are not checked for changes, and any updates to these values will have no effect on the token being renewed.",
+							},
+							"token_max_ttl": {
+								Type:        framework.TypeDurationSecond,
+								Required:    true,
+								Description: "The maximum lifetime of the generated token",
+							},
+							"token_no_default_policy": {
+								Type:        framework.TypeBool,
+								Required:    true,
+								Description: "If true, the 'default' policy will not automatically be added to generated tokens",
+							},
+							"token_period": {
+								Type:        framework.TypeDurationSecond,
+								Required:    true,
+								Description: "If set, tokens created via this role will have no max lifetime; instead, their renewal period will be fixed to this value.",
+							},
+							"token_policies": {
+								Type:        framework.TypeCommaStringSlice,
+								Required:    true,
+								Description: "Comma-separated list of policies",
+							},
+							"token_type": {
+								Type:        framework.TypeString,
+								Required:    true,
+								Default:     "default-service",
+								Description: "The type of token to generate, service or batch",
+							},
+							"token_ttl": {
+								Type:        framework.TypeDurationSecond,
+								Required:    true,
+								Description: "The initial ttl of the token to generate",
+							},
+							"token_num_uses": {
+								Type:        framework.TypeInt,
+								Required:    true,
+								Description: "The maximum number of times a token may be used, a value of zero means unlimited",
+							},
+							"period": {
+								Type:        framework.TypeDurationSecond,
+								Required:    false,
+								Description: tokenutil.DeprecationText("token_period"),
+								Deprecated:  true,
+							},
+							"policies": {
+								Type:        framework.TypeCommaStringSlice,
+								Required:    false,
+								Description: tokenutil.DeprecationText("token_policies"),
+								Deprecated:  true,
+							},
+						},
+					}},
+				},
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback:  b.pathRoleDelete,
+				Responses: responseNoContent,
+			},
 		},
 		HelpSynopsis:    strings.TrimSpace(roleHelp["role"][0]),
 		HelpDescription: strings.TrimSpace(roleHelp["role"][1]),
@@ -185,8 +300,21 @@ can only be set during role creation and once set, it can't be reset later.`,
 		p,
 		{
 			Pattern: "role/?",
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: b.pathRoleList,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: b.pathRoleList,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:     framework.TypeStringSlice,
+									Required: true,
+								},
+							},
+						}},
+					},
+				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-list"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-list"][1]),
@@ -199,8 +327,22 @@ can only be set during role creation and once set, it can't be reset later.`,
 					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation: b.pathRoleLocalSecretIDsRead,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathRoleLocalSecretIDsRead,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"local_secret_ids": {
+									Type:        framework.TypeBool,
+									Required:    true,
+									Description: "If true, the secret identifiers generated using this role will be cluster local. This can only be set during role creation and once set, it can't be reset later",
+								},
+							},
+						}},
+					},
+				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-local-secret-ids"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-local-secret-ids"][1]),
@@ -222,10 +364,36 @@ can only be set during role creation and once set, it can't be reset later.`,
 					Description: defTokenFields["token_policies"].Description,
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathRolePoliciesUpdate,
-				logical.ReadOperation:   b.pathRolePoliciesRead,
-				logical.DeleteOperation: b.pathRolePoliciesDelete,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:  b.pathRolePoliciesUpdate,
+					Responses: responseNoContent,
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathRolePoliciesRead,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"policies": {
+									Type:        framework.TypeCommaStringSlice,
+									Required:    false,
+									Description: tokenutil.DeprecationText("token_policies"),
+									Deprecated:  true,
+								},
+								"token_policies": {
+									Type:        framework.TypeCommaStringSlice,
+									Required:    true,
+									Description: defTokenFields["token_policies"].Description,
+								},
+							},
+						}},
+					},
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback:  b.pathRolePoliciesDelete,
+					Responses: responseNoContent,
+				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-policies"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-policies"][1]),
@@ -243,10 +411,31 @@ can only be set during role creation and once set, it can't be reset later.`,
 of CIDR blocks. If set, specifies the blocks of IP addresses which can perform the login operation.`,
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathRoleBoundCIDRUpdate,
-				logical.ReadOperation:   b.pathRoleBoundCIDRListRead,
-				logical.DeleteOperation: b.pathRoleBoundCIDRListDelete,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:  b.pathRoleBoundCIDRUpdate,
+					Responses: responseNoContent,
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathRoleBoundCIDRListRead,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"bound_cidr_list": {
+									Type:        framework.TypeCommaStringSlice,
+									Required:    true,
+									Description: `Deprecated: Please use "secret_id_bound_cidrs" instead. Comma separated string or list of CIDR blocks. If set, specifies the blocks of IP addresses which can perform the login operation.`,
+									Deprecated:  true,
+								},
+							},
+						}},
+					},
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback:  b.pathRoleBoundCIDRListDelete,
+					Responses: responseNoContent,
+				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-bound-cidr-list"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-bound-cidr-list"][1]),
@@ -264,10 +453,30 @@ of CIDR blocks. If set, specifies the blocks of IP addresses which can perform t
 IP addresses which can perform the login operation.`,
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathRoleSecretIDBoundCIDRUpdate,
-				logical.ReadOperation:   b.pathRoleSecretIDBoundCIDRRead,
-				logical.DeleteOperation: b.pathRoleSecretIDBoundCIDRDelete,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:  b.pathRoleSecretIDBoundCIDRUpdate,
+					Responses: responseNoContent,
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathRoleSecretIDBoundCIDRRead,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"secret_id_bound_cidrs": {
+									Type:        framework.TypeCommaStringSlice,
+									Required:    true,
+									Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of IP addresses which can perform the login operation.`,
+								},
+							},
+						}},
+					},
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback:  b.pathRoleSecretIDBoundCIDRDelete,
+					Responses: responseNoContent,
+				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["secret-id-bound-cidrs"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["secret-id-bound-cidrs"][1]),
@@ -284,10 +493,30 @@ IP addresses which can perform the login operation.`,
 					Description: defTokenFields["token_bound_cidrs"].Description,
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathRoleTokenBoundCIDRUpdate,
-				logical.ReadOperation:   b.pathRoleTokenBoundCIDRRead,
-				logical.DeleteOperation: b.pathRoleTokenBoundCIDRDelete,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:  b.pathRoleTokenBoundCIDRUpdate,
+					Responses: responseNoContent,
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathRoleTokenBoundCIDRRead,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"token_bound_cidrs": {
+									Type:        framework.TypeCommaStringSlice,
+									Required:    true,
+									Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of IP addresses which can use the returned token. Should be a subset of the token CIDR blocks listed on the role, if any.`,
+								},
+							},
+						}},
+					},
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback:  b.pathRoleTokenBoundCIDRDelete,
+					Responses: responseNoContent,
+				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["token-bound-cidrs"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["token-bound-cidrs"][1]),
@@ -305,10 +534,30 @@ IP addresses which can perform the login operation.`,
 					Description: "Impose secret_id to be presented when logging in using this role.",
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathRoleBindSecretIDUpdate,
-				logical.ReadOperation:   b.pathRoleBindSecretIDRead,
-				logical.DeleteOperation: b.pathRoleBindSecretIDDelete,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:  b.pathRoleBindSecretIDUpdate,
+					Responses: responseNoContent,
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathRoleBindSecretIDRead,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"bind_secret_id": {
+									Type:        framework.TypeBool,
+									Required:    true,
+									Description: "Impose secret_id to be presented when logging in using this role. Defaults to 'true'.",
+								},
+							},
+						}},
+					},
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback:  b.pathRoleBindSecretIDDelete,
+					Responses: responseNoContent,
+				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-bind-secret-id"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-bind-secret-id"][1]),
@@ -325,10 +574,30 @@ IP addresses which can perform the login operation.`,
 					Description: "Number of times a SecretID can access the role, after which the SecretID will expire.",
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathRoleSecretIDNumUsesUpdate,
-				logical.ReadOperation:   b.pathRoleSecretIDNumUsesRead,
-				logical.DeleteOperation: b.pathRoleSecretIDNumUsesDelete,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:  b.pathRoleSecretIDNumUsesUpdate,
+					Responses: responseNoContent,
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathRoleSecretIDNumUsesRead,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"secret_id_num_uses": {
+									Type:        framework.TypeInt,
+									Required:    true,
+									Description: "Number of times a secret ID can access the role, after which the SecretID will expire. Defaults to 0 meaning that the secret ID is of unlimited use.",
+								},
+							},
+						}},
+					},
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback:  b.pathRoleSecretIDNumUsesDelete,
+					Responses: responseNoContent,
+				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id-num-uses"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-secret-id-num-uses"][1]),
@@ -346,10 +615,30 @@ IP addresses which can perform the login operation.`,
 to 0, meaning no expiration.`,
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathRoleSecretIDTTLUpdate,
-				logical.ReadOperation:   b.pathRoleSecretIDTTLRead,
-				logical.DeleteOperation: b.pathRoleSecretIDTTLDelete,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:  b.pathRoleSecretIDTTLUpdate,
+					Responses: responseNoContent,
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathRoleSecretIDTTLRead,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"secret_id_ttl": {
+									Type:        framework.TypeDurationSecond,
+									Required:    true,
+									Description: "Duration in seconds after which the issued secret ID should expire. Defaults to 0, meaning no expiration.",
+								},
+							},
+						}},
+					},
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback:  b.pathRoleSecretIDTTLDelete,
+					Responses: responseNoContent,
+				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id-ttl"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-secret-id-ttl"][1]),
@@ -371,10 +660,36 @@ to 0, meaning no expiration.`,
 					Description: defTokenFields["token_period"].Description,
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathRolePeriodUpdate,
-				logical.ReadOperation:   b.pathRolePeriodRead,
-				logical.DeleteOperation: b.pathRolePeriodDelete,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:  b.pathRolePeriodUpdate,
+					Responses: responseNoContent,
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathRolePeriodRead,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"period": {
+									Type:        framework.TypeDurationSecond,
+									Required:    false,
+									Description: tokenutil.DeprecationText("token_period"),
+									Deprecated:  true,
+								},
+								"token_period": {
+									Type:        framework.TypeDurationSecond,
+									Required:    true,
+									Description: defTokenFields["token_period"].Description,
+								},
+							},
+						}},
+					},
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback:  b.pathRolePeriodDelete,
+					Responses: responseNoContent,
+				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-period"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-period"][1]),
@@ -391,10 +706,30 @@ to 0, meaning no expiration.`,
 					Description: defTokenFields["token_num_uses"].Description,
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathRoleTokenNumUsesUpdate,
-				logical.ReadOperation:   b.pathRoleTokenNumUsesRead,
-				logical.DeleteOperation: b.pathRoleTokenNumUsesDelete,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:  b.pathRoleTokenNumUsesUpdate,
+					Responses: responseNoContent,
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathRoleTokenNumUsesRead,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"token_num_uses": {
+									Type:        framework.TypeInt,
+									Required:    true,
+									Description: defTokenFields["token_num_uses"].Description,
+								},
+							},
+						}},
+					},
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback:  b.pathRoleTokenNumUsesDelete,
+					Responses: responseNoContent,
+				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-token-num-uses"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-token-num-uses"][1]),
@@ -411,10 +746,30 @@ to 0, meaning no expiration.`,
 					Description: defTokenFields["token_ttl"].Description,
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathRoleTokenTTLUpdate,
-				logical.ReadOperation:   b.pathRoleTokenTTLRead,
-				logical.DeleteOperation: b.pathRoleTokenTTLDelete,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:  b.pathRoleTokenTTLUpdate,
+					Responses: responseNoContent,
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathRoleTokenTTLRead,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"token_ttl": {
+									Type:        framework.TypeDurationSecond,
+									Required:    true,
+									Description: defTokenFields["token_ttl"].Description,
+								},
+							},
+						}},
+					},
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback:  b.pathRoleTokenTTLDelete,
+					Responses: responseNoContent,
+				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-token-ttl"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-token-ttl"][1]),
@@ -431,10 +786,30 @@ to 0, meaning no expiration.`,
 					Description: defTokenFields["token_max_ttl"].Description,
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathRoleTokenMaxTTLUpdate,
-				logical.ReadOperation:   b.pathRoleTokenMaxTTLRead,
-				logical.DeleteOperation: b.pathRoleTokenMaxTTLDelete,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:  b.pathRoleTokenMaxTTLUpdate,
+					Responses: responseNoContent,
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathRoleTokenMaxTTLRead,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"token_max_ttl": {
+									Type:        framework.TypeDurationSecond,
+									Required:    true,
+									Description: defTokenFields["token_max_ttl"].Description,
+								},
+							},
+						}},
+					},
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback:  b.pathRoleTokenMaxTTLDelete,
+					Responses: responseNoContent,
+				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-token-max-ttl"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-token-max-ttl"][1]),
@@ -451,9 +826,26 @@ to 0, meaning no expiration.`,
 					Description: "Identifier of the role. Defaults to a UUID.",
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation:   b.pathRoleRoleIDRead,
-				logical.UpdateOperation: b.pathRoleRoleIDUpdate,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathRoleRoleIDRead,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"role_id": {
+									Type:        framework.TypeString,
+									Required:    false,
+									Description: "Identifier of the role. Defaults to a UUID.",
+								},
+							},
+						}},
+					},
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:  b.pathRoleRoleIDUpdate,
+					Responses: responseNoContent,
+				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-id"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-id"][1]),
@@ -492,9 +884,51 @@ Overrides secret_id_num_uses role option when supplied. May not be higher than r
 Overrides secret_id_ttl role option when supplied. May not be longer than role's secret_id_ttl.`,
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathRoleSecretIDUpdate,
-				logical.ListOperation:   b.pathRoleSecretIDList,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.pathRoleSecretIDUpdate,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"secret_id": {
+									Type:        framework.TypeString,
+									Required:    true,
+									Description: "Secret ID attached to the role.",
+								},
+								"secret_id_accessor": {
+									Type:        framework.TypeString,
+									Required:    true,
+									Description: "Accessor of the secret ID",
+								},
+								"secret_id_ttl": {
+									Type:        framework.TypeDurationSecond,
+									Required:    true,
+									Description: "Duration in seconds after which the issued secret ID expires.",
+								},
+								"secret_id_num_uses": {
+									Type:        framework.TypeInt,
+									Required:    true,
+									Description: "Number of times a secret ID can access the role, after which the secret ID will expire.",
+								},
+							},
+						}},
+					},
+				},
+				logical.ListOperation: &framework.PathOperation{
+					Callback: b.pathRoleSecretIDList,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Required: true,
+									Type:     framework.TypeStringSlice,
+								},
+							},
+						}},
+					},
+				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-secret-id"][1]),
@@ -511,8 +945,58 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 					Description: "SecretID attached to the role.",
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathRoleSecretIDLookupUpdate,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.pathRoleSecretIDLookupUpdate,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"secret_id_accessor": {
+									Type:        framework.TypeString,
+									Required:    true,
+									Description: "Accessor of the secret ID",
+								},
+								"secret_id_ttl": {
+									Type:        framework.TypeDurationSecond,
+									Required:    true,
+									Description: "Duration in seconds after which the issued secret ID expires.",
+								},
+								"secret_id_num_uses": {
+									Type:        framework.TypeInt,
+									Required:    true,
+									Description: "Number of times a secret ID can access the role, after which the secret ID will expire.",
+								},
+								"creation_time": {
+									Type:     framework.TypeTime,
+									Required: true,
+								},
+								"expiration_time": {
+									Type:     framework.TypeTime,
+									Required: true,
+								},
+								"last_updated_time": {
+									Type:     framework.TypeTime,
+									Required: true,
+								},
+								"metadata": {
+									Type:     framework.TypeKVPairs,
+									Required: true,
+								},
+								"cidr_list": {
+									Type:        framework.TypeCommaStringSlice,
+									Required:    true,
+									Description: "List of CIDR blocks enforcing secret IDs to be used from specific set of IP addresses. If 'bound_cidr_list' is set on the role, then the list of CIDR blocks listed here should be a subset of the CIDR blocks listed on the role.",
+								},
+								"token_bound_cidrs": {
+									Type:        framework.TypeCommaStringSlice,
+									Required:    true,
+									Description: "List of CIDR blocks. If set, specifies the blocks of IP addresses which can use the returned token. Should be a subset of the token CIDR blocks listed on the role, if any.",
+								},
+							},
+						}},
+					},
+				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id-lookup"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-secret-id-lookup"][1]),
@@ -529,9 +1013,15 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 					Description: "SecretID attached to the role.",
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathRoleSecretIDDestroyUpdateDelete,
-				logical.DeleteOperation: b.pathRoleSecretIDDestroyUpdateDelete,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:  b.pathRoleSecretIDDestroyUpdateDelete,
+					Responses: responseNoContent,
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback:  b.pathRoleSecretIDDestroyUpdateDelete,
+					Responses: responseNoContent,
+				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id-destroy"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-secret-id-destroy"][1]),
@@ -548,8 +1038,58 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 					Description: "Accessor of the SecretID",
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathRoleSecretIDAccessorLookupUpdate,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.pathRoleSecretIDAccessorLookupUpdate,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"secret_id_accessor": {
+									Type:        framework.TypeString,
+									Required:    true,
+									Description: "Accessor of the secret ID",
+								},
+								"secret_id_ttl": {
+									Type:        framework.TypeDurationSecond,
+									Required:    true,
+									Description: "Duration in seconds after which the issued secret ID expires.",
+								},
+								"secret_id_num_uses": {
+									Type:        framework.TypeInt,
+									Required:    true,
+									Description: "Number of times a secret ID can access the role, after which the secret ID will expire.",
+								},
+								"creation_time": {
+									Type:     framework.TypeTime,
+									Required: true,
+								},
+								"expiration_time": {
+									Type:     framework.TypeTime,
+									Required: true,
+								},
+								"last_updated_time": {
+									Type:     framework.TypeTime,
+									Required: true,
+								},
+								"metadata": {
+									Type:     framework.TypeKVPairs,
+									Required: true,
+								},
+								"cidr_list": {
+									Type:        framework.TypeCommaStringSlice,
+									Required:    true,
+									Description: "List of CIDR blocks enforcing secret IDs to be used from specific set of IP addresses. If 'bound_cidr_list' is set on the role, then the list of CIDR blocks listed here should be a subset of the CIDR blocks listed on the role.",
+								},
+								"token_bound_cidrs": {
+									Type:        framework.TypeCommaStringSlice,
+									Required:    true,
+									Description: "List of CIDR blocks. If set, specifies the blocks of IP addresses which can use the returned token. Should be a subset of the token CIDR blocks listed on the role, if any.",
+								},
+							},
+						}},
+					},
+				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id-accessor"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-secret-id-accessor"][1]),
@@ -566,9 +1106,15 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 					Description: "Accessor of the SecretID",
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathRoleSecretIDAccessorDestroyUpdateDelete,
-				logical.DeleteOperation: b.pathRoleSecretIDAccessorDestroyUpdateDelete,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:  b.pathRoleSecretIDAccessorDestroyUpdateDelete,
+					Responses: responseNoContent,
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback:  b.pathRoleSecretIDAccessorDestroyUpdateDelete,
+					Responses: responseNoContent,
+				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id-accessor"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-secret-id-accessor"][1]),
@@ -612,8 +1158,37 @@ Overrides secret_id_num_uses role option when supplied. May not be higher than r
 Overrides secret_id_ttl role option when supplied. May not be longer than role's secret_id_ttl.`,
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathRoleCustomSecretIDUpdate,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.pathRoleCustomSecretIDUpdate,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"secret_id": {
+									Type:        framework.TypeString,
+									Required:    true,
+									Description: "Secret ID attached to the role.",
+								},
+								"secret_id_accessor": {
+									Type:        framework.TypeString,
+									Required:    true,
+									Description: "Accessor of the secret ID",
+								},
+								"secret_id_ttl": {
+									Type:        framework.TypeDurationSecond,
+									Required:    true,
+									Description: "Duration in seconds after which the issued secret ID expires.",
+								},
+								"secret_id_num_uses": {
+									Type:        framework.TypeInt,
+									Required:    true,
+									Description: "Number of times a secret ID can access the role, after which the secret ID will expire.",
+								},
+							},
+						}},
+					},
+				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-custom-secret-id"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-custom-secret-id"][1]),
@@ -1392,11 +1967,20 @@ func (b *backend) pathRoleSecretIDAccessorDestroyUpdateDelete(ctx context.Contex
 		return nil, fmt.Errorf("failed to create HMAC of role_name: %w", err)
 	}
 
-	entryIndex := fmt.Sprintf("%s%s/%s", role.SecretIDPrefix, roleNameHMAC, accessorEntry.SecretIDHMAC)
-
 	lock := b.secretIDLock(accessorEntry.SecretIDHMAC)
 	lock.Lock()
 	defer lock.Unlock()
+
+	// Verify we have a valid SecretID Storage Entry
+	entry, err := b.nonLockedSecretIDStorageEntry(ctx, req.Storage, role.SecretIDPrefix, roleNameHMAC, accessorEntry.SecretIDHMAC)
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return logical.ErrorResponse("invalid secret id accessor"), logical.ErrPermissionDenied
+	}
+
+	entryIndex := fmt.Sprintf("%s%s/%s", role.SecretIDPrefix, roleNameHMAC, accessorEntry.SecretIDHMAC)
 
 	// Delete the accessor of the SecretID first
 	if err := b.deleteSecretIDAccessorEntry(ctx, req.Storage, secretIDAccessor, role.SecretIDPrefix); err != nil {

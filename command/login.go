@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -236,7 +239,7 @@ func (c *LoginCommand) Run(args []string) int {
 	// this scenario, no external validation is needed.
 	interactiveMethodInfo := c.getInteractiveMFAMethodInfo(secret)
 	if interactiveMethodInfo != nil {
-		c.UI.Warn("Initiating Iteractive MFA Validation...")
+		c.UI.Warn("Initiating Interactive MFA Validation...")
 		secret, err = c.validateMFA(secret.Auth.MFARequirement.MFARequestID, *interactiveMethodInfo)
 		if err != nil {
 			c.UI.Error(err.Error())

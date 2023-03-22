@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package spanner
 
 import (
@@ -9,17 +12,16 @@ import (
 	"strings"
 	"time"
 
+	"cloud.google.com/go/spanner"
 	metrics "github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	"github.com/hashicorp/vault/sdk/helper/useragent"
+	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/pkg/errors"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc/codes"
-
-	"cloud.google.com/go/spanner"
-	"github.com/pkg/errors"
 )
 
 // Verify Backend satisfies the correct interfaces

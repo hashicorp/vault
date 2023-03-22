@@ -18,7 +18,7 @@ system.
 ## Policy-Authorization Workflow
 
 Before a human or machine can gain access, an administrator must configure Vault
-with an [auth method](/docs/concepts/auth). Authentication is
+with an [auth method](/vault/docs/concepts/auth). Authentication is
 the process by which human or machine-supplied information is verified against
 an internal or external system.
 
@@ -84,7 +84,7 @@ user or machine is allowed to access.
 
 [hcl]: https://github.com/hashicorp/hcl
 
-Here is a very simple policy which grants read capabilities to the [KVv1](/api-docs/secret/kv/kv-v1) path
+Here is a very simple policy which grants read capabilities to the [KVv1](/vault/api-docs/secret/kv/kv-v1) path
 `"secret/foo"`:
 
 ```ruby
@@ -205,7 +205,7 @@ control over permitted (or denied) operations. As shown in the examples above,
 capabilities are always specified as a list of strings, even if there is only
 one capability.
 
-To determine the capabilities needed to perform a specific operation, the `-output-policy` flag can be added to the CLI subcommand. For an example, refer to the [Print Policy Requirements](/docs/commands#print-policy-requirements) document section.
+To determine the capabilities needed to perform a specific operation, the `-output-policy` flag can be added to the CLI subcommand. For an example, refer to the [Print Policy Requirements](/vault/docs/commands#print-policy-requirements) document section.
 
 
 The list of capabilities include the following:
@@ -341,9 +341,11 @@ path take precedence over permissions on parameters.
 
 ### Parameter Constraints
 
-~> **Note:** The `allowed_parameters`, `denied_parameters`, and `required_parameters` fields are not supported for policies used with the [version 2 kv secrets engine](/docs/secrets/kv/kv-v2).
+!> **Note:** The use of [globs](/vault/docs/concepts/policies#policy-syntax) (`*`) may result in [surprising or unexpected behavior](#parameter-constraints-limitations).
 
-See the [API Specification](/api-docs/secret/kv/kv-v2) for more information.
+~> **Note:** The `allowed_parameters`, `denied_parameters`, and `required_parameters` fields are not supported for policies used with the [version 2 kv secrets engine](/vault/docs/secrets/kv/kv-v2).
+
+See the [API Specification](/vault/api-docs/secret/kv/kv-v2) for more information.
 
 Policies can take into account HTTP request parameters to further
 constrain requests, using the following options:
@@ -379,10 +381,10 @@ constrain requests, using the following options:
     ```
 
     -> **Usage example:** The [ACL Policy Path
-     Templating](https://learn.hashicorp.com/tutorials/vault/policy-templating)
+     Templating](/vault/tutorials/policies/policy-templating)
      tutorial demonstrates the use of `allowed_parameters` to permit a user to
      update the user's password when using the [userpass auth
-     method](/docs/auth/userpass) to log in with Vault. 
+     method](/vault/docs/auth/userpass) to log in with Vault. 
 
   - Setting a parameter with a value of a populated list allows the parameter
     to contain only those values.
@@ -420,30 +422,8 @@ constrain requests, using the following options:
     }
     ```
 
-  - It's important to note that the use of globbing may result in surprising
-    or unexpected behavior.
-    
-    ```ruby
-    # This allows the user to create, update, or patch "secret/foo" with a parameter
-    # named "bar". The values passed to parameter "bar" must start with "baz/"
-    # so values like "baz/quux" are fine. However, values like
-    # "baz/quux,wibble,wobble,wubble" would also be accepted. The API that
-    # underlies "secret/foo" might allow comma delimited values for the "bar"
-    # parameter, and if it did, specifying a value like
-    # "baz/quux,wibble,wobble,wubble" would result in 4 different values getting
-    # passed along. Seeing values like "wibble" or "wobble" getting passed to
-    # "secret/foo" might surprise someone that expected the allowed_parameters
-    # constraint to only allow values starting with "baz/".
-    path "secret/foo" {
-      capabilities = ["create", "update", "patch"]
-      allowed_parameters = {
-        "bar" = ["baz/*"]
-      }
-    }
-    ```
-
-- `denied_parameters` - Blacklists a list of parameter and values. Any values
-  specified here take precedence over `allowed_parameters`.
+- `denied_parameters` - A list of keys and values that are not permitted on the given 
+  path. Any values specified here take precedence over `allowed_parameters`.
 
   - Setting a parameter with a value of the empty list denies any changes to
     that parameter.
@@ -451,11 +431,12 @@ constrain requests, using the following options:
     ```ruby
     # This allows the user to update the userpass auth method's user
     # configurations (e.g., "password") but cannot update the "token_policies"
-    # parameter value.
+    # and "policies" parameter values.
     path "auth/userpass/users/*" {
       capabilities = ["update"]
       denied_parameters = {
         "token_policies" = []
+        "policies" = []
       }
     }
     ```
@@ -508,12 +489,90 @@ path "secret/foo" {
 
 ~> **Note:** the only value that can be used with the `*` parameter is `[]`.
 
+#### Parameter Constraints Limitations
+
+##### Default Values
+Evaluation of policies with `allowed_parameters`, `denied_parameters`, and `required_parameters` happens
+without consideration of parameters' default values.
+
+Given the following policy:
+
+```ruby
+# The "no_store" parameter cannot be false
+path "secret/foo" {
+  capabilities = ["create"]
+  denied_parameters = {
+    "no_store" = [false, "false"]
+  }
+}
+```
+
+The following operation will error, because "no_store" is set to false:
+
+```shell-session
+$ vault write secret/foo no_store=false value=bar
+```
+
+Whereas the following operation will succeed, even if the "no_store"
+parameter must be a boolean, and it defaults to false:
+
+```shell-session
+# Succeeds because "no_store=false" isn't present in the parameters
+$ vault write secret/foo value=bar
+```
+
+This is because the policy evaluator does not know what the default value is for
+the "no_store" parameter. All it sees is that the denied parameter isn't present
+in the command.
+
+This can be resolved by requiring the "no_store" parameter in your policy:
+
+```ruby
+path "secret/foo" {
+  capabilities = ["create"]
+  required_parameters = ["no_store"]
+  denied_parameters = {
+    "no_store" = [false, "false"]
+  }
+}
+```
+
+The following command, which previously succeeded, will now fail under the new policy
+because there is no "no_store" parameter:
+
+```shell-session
+$ vault write secret/foo value=bar
+```
+
+##### Globbing
+
+It's also important to note that the use of globbing may result in surprising
+or unexpected behavior:
+
+```ruby
+# This allows the user to create, update, or patch "secret/foo" with a parameter
+# named "bar". The values passed to parameter "bar" must start with "baz/"
+# so values like "baz/quux" are fine. However, values like
+# "baz/quux,wibble,wobble,wubble" would also be accepted. The API that
+# underlies "secret/foo" might allow comma delimited values for the "bar"
+# parameter, and if it did, specifying a value like
+# "baz/quux,wibble,wobble,wubble" would result in 4 different values getting
+# passed along. Seeing values like "wibble" or "wobble" getting passed to
+# "secret/foo" might surprise someone that expected the allowed_parameters
+# constraint to only allow values starting with "baz/".
+path "secret/foo" {
+  capabilities = ["create", "update", "patch"]
+  allowed_parameters = {
+    "bar" = ["baz/*"]
+  }
+}
+```
 ### Required Response Wrapping TTLs
 
 These parameters can be used to set minimums/maximums on TTLs set by clients
 when requesting that a response be
-[wrapped](/docs/concepts/response-wrapping), with a granularity of a
-second. These use [duration format strings](/docs/concepts/duration-format).
+[wrapped](/vault/docs/concepts/response-wrapping), with a granularity of a
+second. These use [duration format strings](/vault/docs/concepts/duration-format).
 
 In practice, setting a minimum TTL of one second effectively makes response
 wrapping mandatory for a particular path.
@@ -614,8 +673,8 @@ $ curl \
 
 For more information, please read:
 
-- [Production Hardening](https://learn.hashicorp.com/tutorials/vault/production-hardening)
-- [Generating a Root Token](https://learn.hashicorp.com/tutorials/vault/generate-root)
+- [Production Hardening](/vault/tutorials/operations/production-hardening)
+- [Generating a Root Token](/vault/tutorials/operations/generate-root)
 
 ## Managing Policies
 
@@ -768,5 +827,5 @@ next time a token, with that policy attached, is used to make a call to Vault.
 
 Refer to the following tutorials for further learning:
 
-- [Vault Policies](https://learn.hashicorp.com/vault/identity-access-management/iam-policies)
-- [ACL Policy Path Templating](https://learn.hashicorp.com/vault/identity-access-management/policy-templating)
+- [Vault Policies](/vault/tutorials/policies/policies)
+- [ACL Policy Path Templating](/vault/tutorials/policies/policy-templating)

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import AdapterError from '@ember-data/adapter/error';
 import { inject as service } from '@ember/service';
 import { assign } from '@ember/polyfills';
@@ -133,7 +138,17 @@ export default ApplicationAdapter.extend({
       data: {
         mfa_request_id,
         mfa_payload: mfa_constraints.reduce((obj, { selectedMethod, passcode }) => {
-          obj[selectedMethod.id] = passcode ? [passcode] : [];
+          let payload = [];
+          if (passcode) {
+            // duo requires passcode= prepended to the actual passcode
+            // this isn't a great UX so we add it behind the scenes to fulfill the requirement
+            // check if user added passcode= to avoid duplication
+            payload =
+              selectedMethod.type === 'duo' && !passcode.includes('passcode=')
+                ? [`passcode=${passcode}`]
+                : [passcode];
+          }
+          obj[selectedMethod.id] = payload;
           return obj;
         }, {}),
       },

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, fillIn, find, waitUntil } from '@ember/test-helpers';
@@ -13,6 +18,7 @@ module('Acceptance | oidc auth method', function (hooks) {
 
   hooks.beforeEach(function () {
     this.openStub = sinon.stub(window, 'open').callsFake(() => fakeWindow.create());
+    // OIDC test fails when using fake timestamps, we use the real timestamp.now here
     this.server.post('/auth/oidc/oidc/auth_url', () => ({
       data: { auth_url: 'http://example.com' },
     }));
@@ -91,6 +97,7 @@ module('Acceptance | oidc auth method', function (hooks) {
       cancelTimers();
     }, 50);
     await click('[data-test-auth-submit]');
+    await waitUntil(() => find('.nav-user-button button'), { timeout: 2000 });
     await click('.nav-user-button button');
     await click('#logout');
     assert

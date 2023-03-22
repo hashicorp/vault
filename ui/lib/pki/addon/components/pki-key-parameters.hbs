@@ -1,67 +1,54 @@
-{{#let (camelize (concat "show" @group)) as |prop|}}
-  <ToggleButton
-    @isOpen={{get @model prop}}
-    @openLabel={{concat "Hide " @group}}
-    @closedLabel={{@group}}
-    @onClick={{fn (mut (get @model prop))}}
-    class="is-block"
-    data-test-toggle-group={{@group}}
-  />
-  {{#if (get @model prop)}}
-    <div class="box is-tall is-marginless">
+{{yield}}
+{{#each @fields as |attr|}}
+  {{#if (eq attr.name "keyBits")}}
+    <div class="field" data-test-field="keyBits">
       <FormFieldLabel
-        for="keyParametersLabel"
-        @subText="These are the parameters for generating or validating the certificate's key material."
+        for={{attr.name}}
+        @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+        @subText={{attr.options.subText}}
       />
-      {{#each @model.fieldGroups as |fieldGroup|}}
-        {{#each-in fieldGroup as |group fields|}}
-          {{#if (eq group "Key parameters")}}
-            {{#each fields as |attr|}}
-              {{#if (eq attr.name "keyBits")}}
-                <div class="field">
-                  <FormFieldLabel for={{attr.name}} @label={{attr.options.label}} />
-                  <div class="control is-expanded">
-                    <div class="select is-fullwidth">
-                      <select
-                        name={{attr.name}}
-                        id={{attr.name}}
-                        onchange={{this.onKeyBitsChange}}
-                        data-test-input={{attr.name}}
-                      >
-                        {{#each this.keyBitOptions as |val|}}
-                          <option selected={{eq (get @model this.valuePath) (or val.value val)}} value={{val}}>
-                            {{val}}
-                          </option>
-                        {{/each}}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              {{else}}
-                <div class="field">
-                  <FormFieldLabel for={{attr.name}} @label={{attr.options.label}} />
-                  <div class="control is-expanded">
-                    <div class="select is-fullwidth">
-                      <select
-                        name={{attr.name}}
-                        id={{attr.name}}
-                        onchange={{fn this.onSignatureBitsOrKeyTypeChange attr.name}}
-                        data-test-input={{attr.name}}
-                      >
-                        {{#each (path-or-array attr.options.possibleValues @model) as |val|}}
-                          <option selected={{eq (get @model this.valuePath) (or val.value val)}} value={{val.value}}>
-                            {{or val.displayName val}}
-                          </option>
-                        {{/each}}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              {{/if}}
-            {{/each}}
-          {{/if}}
-        {{/each-in}}
-      {{/each}}
+      <div class="control is-expanded">
+        <ToolTip @verticalPosition="above" @horizontalPosition="center" as |T|>
+          <T.Trigger tabindex="-1">
+            <div class="select is-fullwidth">
+              <select
+                id={{attr.name}}
+                name={{attr.name}}
+                data-test-input={{attr.name}}
+                disabled={{unless @model.keyType true}}
+                {{on "change" this.onKeyBitsChange}}
+              >
+                {{#if (and attr.options.noDefault (not @model.keyType))}}
+                  <option value="">
+                    Select one
+                  </option>
+                {{/if}}
+                {{#each this.keyBitOptions as |val|}}
+                  <option selected={{eq (get @model "keyBits") val}} value={{val}}>
+                    {{val}}
+                  </option>
+                {{/each}}
+              </select>
+            </div>
+          </T.Trigger>
+          {{#unless @model.keyType}}
+            <T.Content @defaultClass="tool-tip smaller-font">
+              <div class="box">
+                Choose a key type before specifying bit length.
+              </div>
+            </T.Content>
+          {{/unless}}
+        </ToolTip>
+      </div>
     </div>
+  {{else}}
+    <FormField
+      data-test-field={{attr}}
+      @attr={{attr}}
+      @model={{@model}}
+      @modelValidations={{@modelValidations}}
+      @showHelpText={{false}}
+      @onChange={{this.handleSelection}}
+    />
   {{/if}}
-{{/let}}
+{{/each}}

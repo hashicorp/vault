@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { inject as service } from '@ember/service';
 import { or } from '@ember/object/computed';
 import { isBlank } from '@ember/utils';
@@ -13,7 +18,6 @@ const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
 export default Component.extend(FocusOnInsertMixin, {
   router: service(),
-  wizard: service(),
   mode: null,
   onDataChange() {},
   onRefresh() {},
@@ -56,13 +60,6 @@ export default Component.extend(FocusOnInsertMixin, {
     const key = this.key;
     return key[method]().then(() => {
       if (!key.isError) {
-        if (this.wizard.featureState === 'secret') {
-          this.wizard.transitionFeatureMachine('secret', 'CONTINUE');
-        } else {
-          if (this.wizard.featureState === 'encryption') {
-            this.wizard.transitionFeatureMachine('encryption', 'CONTINUE', 'transit');
-          }
-        }
         successCallback(key);
       }
     });

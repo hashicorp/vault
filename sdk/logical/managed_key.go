@@ -1,10 +1,14 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package logical
 
 import (
 	"context"
 	"crypto"
-	"crypto/cipher"
 	"io"
+
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 )
 
 type KeyUsage int
@@ -16,6 +20,7 @@ const (
 	KeyUsageVerify
 	KeyUsageWrap
 	KeyUsageUnwrap
+	KeyUsageGenerateRandom
 )
 
 type ManagedKey interface {
@@ -34,9 +39,11 @@ type ManagedKey interface {
 }
 
 type (
-	ManagedKeyConsumer           func(context.Context, ManagedKey) error
-	ManagedSigningKeyConsumer    func(context.Context, ManagedSigningKey) error
-	ManagedEncryptingKeyConsumer func(context.Context, ManagedEncryptingKey) error
+	ManagedKeyConsumer             func(context.Context, ManagedKey) error
+	ManagedSigningKeyConsumer      func(context.Context, ManagedSigningKey) error
+	ManagedEncryptingKeyConsumer   func(context.Context, ManagedEncryptingKey) error
+	ManagedMACKeyConsumer          func(context.Context, ManagedMACKey) error
+	ManagedKeyRandomSourceConsumer func(context.Context, ManagedKeyRandomSource) error
 )
 
 type ManagedKeySystemView interface {
@@ -59,6 +66,12 @@ type ManagedKeySystemView interface {
 	// WithManagedSigningKeyByUUID retrieves an instantiated managed signing key for consumption by the given function,
 	// with the same semantics as WithManagedKeyByUUID
 	WithManagedEncryptingKeyByUUID(ctx context.Context, keyUuid, backendUUID string, f ManagedEncryptingKeyConsumer) error
+	// WithManagedMACKeyByName retrieves an instantiated managed MAC key by name for consumption by the given function,
+	// with the same semantics as WithManagedKeyByName.
+	WithManagedMACKeyByName(ctx context.Context, keyName, backendUUID string, f ManagedMACKeyConsumer) error
+	// WithManagedMACKeyByUUID retrieves an instantiated managed MAC key by UUID for consumption by the given function,
+	// with the same semantics as WithManagedKeyByUUID.
+	WithManagedMACKeyByUUID(ctx context.Context, keyUUID, backendUUID string, f ManagedMACKeyConsumer) error
 }
 
 type ManagedAsymmetricKey interface {
@@ -93,5 +106,20 @@ type ManagedSigningKey interface {
 
 type ManagedEncryptingKey interface {
 	ManagedKey
-	GetAEAD(iv []byte) (cipher.AEAD, error)
+	Encrypt(ctx context.Context, plaintext []byte, options ...wrapping.Option) ([]byte, error)
+	Decrypt(ctx context.Context, ciphertext []byte, options ...wrapping.Option) ([]byte, error)
+}
+
+type ManagedMACKey interface {
+	ManagedKey
+
+	// MAC generates a MAC tag using the provided algorithm for the provided value.
+	MAC(ctx context.Context, algorithm string, data []byte) ([]byte, error)
+}
+
+type ManagedKeyRandomSource interface {
+	ManagedKey
+
+	// GetRandomBytes returns a number (specified by the count parameter) of random bytes sourced from the target managed key.
+	GetRandomBytes(count int) ([]byte, error)
 }

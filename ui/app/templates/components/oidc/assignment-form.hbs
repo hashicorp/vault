@@ -1,32 +1,3 @@
-{{#unless @isInline}}
-  <PageHeader as |p|>
-    <p.top>
-      <nav class="breadcrumb" aria-label="breadcrumbs">
-        <ul>
-          <li>
-            <span class="sep">&#x0002f;</span>
-            {{#if @model.isNew}}
-              <LinkTo @route={{"vault.cluster.access.oidc.assignments"}}>
-                Assignments
-              </LinkTo>
-            {{else}}
-              {{! You're editing in this view }}
-              <LinkTo @route={{"vault.cluster.access.oidc.assignments.assignment.details"}} @model={{@model.name}}>
-                Details
-              </LinkTo>
-            {{/if}}
-          </li>
-        </ul>
-      </nav>
-    </p.top>
-    <p.levelLeft>
-      <h1 class="title is-3" data-test-oidc-assignment-title>
-        {{if @model.isNew "Create" "Edit"}}
-        assignment
-      </h1>
-    </p.levelLeft>
-  </PageHeader>
-{{/unless}}
 <form {{on "submit" (perform this.save)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />

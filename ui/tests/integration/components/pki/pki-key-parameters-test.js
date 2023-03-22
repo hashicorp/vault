@@ -1,18 +1,23 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, fillIn } from '@ember/test-helpers';
+import { render, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
-import { SELECTORS } from 'vault/tests/helpers/pki-engine';
+import { SELECTORS } from 'vault/tests/helpers/pki/pki-role-form';
 
-module('Integration | Component | pki-key-parameters', function (hooks) {
+module('Integration | Component | pki key parameters', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'pki');
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
-    this.model = this.store.createRecord('pki/pki-role-engine');
-    this.model.backend = 'pki';
+    this.model = this.store.createRecord('pki/role', { backend: 'pki' });
+    [this.fields] = Object.values(this.model.formFieldGroups.find((g) => g['Key parameters']));
   });
 
   test('it should render the component and display the correct defaults', async function (assert) {
@@ -22,13 +27,12 @@ module('Integration | Component | pki-key-parameters', function (hooks) {
       <div class="has-top-margin-xxl">
         <PkiKeyParameters
           @model={{this.model}}
-          @group="Key parameters"
+          @fields={{this.fields}}
         />
        </div>
   `,
       { owner: this.engine }
     );
-    await click(SELECTORS.keyParams);
     assert.dom(SELECTORS.keyType).hasValue('rsa');
     assert.dom(SELECTORS.keyBits).hasValue('2048');
     assert.dom(SELECTORS.signatureBits).hasValue('0');
@@ -41,25 +45,24 @@ module('Integration | Component | pki-key-parameters', function (hooks) {
       <div class="has-top-margin-xxl">
         <PkiKeyParameters
           @model={{this.model}}
-          @group="Key parameters"
+          @fields={{this.fields}}
         />
        </div>
   `,
       { owner: this.engine }
     );
     assert.strictEqual(this.model.keyType, 'rsa', 'sets the default value for key_type on the model.');
-    assert.strictEqual(this.model.keyBits, 2048, 'sets the default value for key_bits on the model.');
+    assert.strictEqual(this.model.keyBits, '2048', 'sets the default value for key_bits on the model.');
     assert.strictEqual(
       this.model.signatureBits,
-      0,
+      '0',
       'sets the default value for signature_bits on the model.'
     );
-    await click(SELECTORS.keyParams);
     await fillIn(SELECTORS.keyType, 'ec');
     assert.strictEqual(this.model.keyType, 'ec', 'sets the new selected value for key_type on the model.');
     assert.strictEqual(
       this.model.keyBits,
-      256,
+      '256',
       'sets the new selected value for key_bits on the model based on the selection of key_type.'
     );
 
@@ -71,30 +74,30 @@ module('Integration | Component | pki-key-parameters', function (hooks) {
     );
     assert.strictEqual(
       this.model.keyBits,
-      0,
+      '0',
       'sets the new selected value for key_bits on the model based on the selection of key_type.'
     );
 
     await fillIn(SELECTORS.keyType, 'ec');
-    await fillIn(SELECTORS.keyBits, 384);
+    await fillIn(SELECTORS.keyBits, '384');
     assert.strictEqual(this.model.keyType, 'ec', 'sets the new selected value for key_type on the model.');
     assert.strictEqual(
       this.model.keyBits,
-      384,
+      '384',
       'sets the new selected value for key_bits on the model based on the selection of key_type.'
     );
 
     await fillIn(SELECTORS.signatureBits, '384');
     assert.strictEqual(
       this.model.signatureBits,
-      384,
+      '384',
       'sets the new selected value for signature_bits on the model.'
     );
 
     await fillIn(SELECTORS.signatureBits, '0');
     assert.strictEqual(
       this.model.signatureBits,
-      0,
+      '0',
       'sets the default value for signature_bits on the model.'
     );
   });

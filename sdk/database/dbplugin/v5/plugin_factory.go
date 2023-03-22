@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package dbplugin
 
 import (
@@ -55,6 +58,7 @@ func PluginFactoryVersion(ctx context.Context, pluginName string, pluginVersion 
 			Logger:          namedLogger,
 			IsMetadataMode:  false,
 			AutoMTLS:        true,
+			Wrapper:         sys,
 		}
 		// create a DatabasePluginClient instance
 		db, err = NewPluginClient(ctx, sys, config)

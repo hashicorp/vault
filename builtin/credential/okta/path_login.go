@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package okta
 
 import (
@@ -143,7 +146,11 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	username := req.Auth.Metadata["username"]
 	password := req.Auth.InternalData["password"].(string)
-	nonce := d.Get("nonce").(string)
+
+	var nonce string
+	if d != nil {
+		nonce = d.Get("nonce").(string)
+	}
 
 	cfg, err := b.getConfig(ctx, req)
 	if err != nil {

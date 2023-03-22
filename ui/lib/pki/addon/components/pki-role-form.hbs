@@ -1,57 +1,24 @@
-<PageHeader as |p|>
-  <p.top>
-    <KeyValueHeader
-      @root={{hash label="role" text="role" path="vault.cluster.secrets.backend.pki.roles.index"}}
-      @isEngine={{true}}
-    >
-      <li>
-        <span class="sep">
-          /
-        </span>
-        <LinkTo @route="roles.index">
-          {{@model.backend}}
-        </LinkTo>
-      </li>
-    </KeyValueHeader>
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      {{#if @model.isNew}}
-        Create a PKI role
-      {{else}}
-        Edit a
-        {{@model.id}}
-      {{/if}}
-    </h1>
-  </p.levelLeft>
-</PageHeader>
-
 <form {{on "submit" (perform this.save)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
     {{! ARG TODO write a test for namespace reminder }}
     <NamespaceReminder @mode={{if @model.isNew "create" "update"}} @noun="PKI role" />
-    {{#each @model.fieldGroups as |fieldGroup|}}
+    {{#each @model.formFieldGroups as |fieldGroup|}}
       {{#each-in fieldGroup as |group fields|}}
         {{! DEFAULT VIEW }}
         {{#if (eq group "default")}}
           {{#each fields as |attr|}}
             <FormField
-              data-test-field={{true}}
+              data-test-field={{attr}}
               @attr={{attr}}
               @model={{@model}}
               @modelValidations={{this.modelValidations}}
               @showHelpText={{false}}
             >
-              <RadioSelectTtlOrString @attr={{attr}} @model={{@model}} />
+              <PkiNotValidAfterForm @attr={{attr}} @model={{@model}} />
             </FormField>
           {{/each}}
-        {{else if (eq group "Key usage")}}
-          <PkiKeyUsage @model={{@model}} @group={{group}} />
-        {{else if (eq group "Key parameters")}}
-          <PkiKeyParameters @model={{@model}} @group={{group}} />
         {{else}}
-          {{! Groups hidden behind Toggles }}
           {{#let (camelize (concat "show" group)) as |prop|}}
             <ToggleButton
               @isOpen={{get @model prop}}
@@ -62,39 +29,45 @@
               data-test-toggle-group={{group}}
             />
             {{#if (get @model prop)}}
-              <div class="box is-marginless">
-                {{#let (get @model.fieldGroupsInfo group) as |groupInfo|}}
-                  {{! Header }}
-                  {{#if groupInfo.header}}
+              <div class="box is-tall is-marginless" data-test-toggle-div={{group}}>
+                {{#let (get @model.fieldGroupsInfo group) as |toggleGroup|}}
+                  {{! HEADER }}
+                  {{#if toggleGroup.header}}
                     <div class="has-bottom-margin-s">
                       <FormFieldLabel
-                        for={{groupInfo.header.name}}
-                        @label={{groupInfo.header.label}}
-                        @subText={{groupInfo.header.text}}
-                        @docLink={{groupInfo.header.docLink}}
+                        for={{toggleGroup.header.name}}
+                        @label={{toggleGroup.header.label}}
+                        @subText={{toggleGroup.header.text}}
+                        @docLink={{toggleGroup.header.docLink}}
                       />
                     </div>
                   {{/if}}
-                  {{! Fields }}
-                  {{#each fields as |attr|}}
-                    <FormField
-                      data-test-field={{true}}
-                      @attr={{attr}}
-                      @model={{@model}}
-                      @modelValidations={{@modelValidations}}
-                      @showHelpText={{false}}
-                    >
-                      {{yield attr}}
-                    </FormField>
-                  {{/each}}
-                  {{! Footer }}
-                  {{#if groupInfo.footer}}
+                  {{! FIELDS }}
+                  {{#if (eq group "Key usage")}}
+                    <PkiKeyUsage @model={{@model}} />
+                  {{else if (eq group "Key parameters")}}
+                    <PkiKeyParameters @model={{@model}} @fields={{fields}} />
+                  {{else}}
+                    {{#each fields as |attr|}}
+                      <FormField
+                        data-test-field={{true}}
+                        @attr={{attr}}
+                        @model={{@model}}
+                        @modelValidations={{@modelValidations}}
+                        @showHelpText={{false}}
+                      >
+                        {{yield attr}}
+                      </FormField>
+                    {{/each}}
+                  {{/if}}
+                  {{! FOOTER }}
+                  {{#if toggleGroup.footer}}
                     <p class="sub-text">
                       <Icon @name="info" />
-                      {{groupInfo.footer.text}}
-                      {{#if groupInfo.footer.docLink}}
-                        <DocLink @path={{groupInfo.footer.docLink}}>
-                          {{groupInfo.footer.docText}}
+                      {{toggleGroup.footer.text}}
+                      {{#if toggleGroup.footer.docLink}}
+                        <DocLink @path={{toggleGroup.footer.docLink}}>
+                          {{toggleGroup.footer.docText}}
                         </DocLink>
                       {{/if}}
                     </p>
@@ -120,7 +93,7 @@
       type="button"
       class="button has-left-margin-s"
       disabled={{this.save.isRunning}}
-      {{on "click" this.cancel}}
+      {{on "click" @onCancel}}
       data-test-pki-role-cancel
     >
       Cancel

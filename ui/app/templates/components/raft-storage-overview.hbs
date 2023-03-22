@@ -21,12 +21,13 @@
           <ul class="menu-list">
             <li class="action">
               {{#if this.useServiceWorker}}
-                <a
-                  href="/v1/sys/storage/raft/snapshot"
+                <ExternalLink
+                  @href="/v1/sys/storage/raft/snapshot"
+                  @sameTab={{true}}
                   onclick={{queue (action "downloadViaServiceWorker") (action D.actions.close)}}
                 >
                   Download
-                </a>
+                </ExternalLink>
               {{else}}
                 <button
                   type="button"

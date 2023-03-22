@@ -1,4 +1,8 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 pid_file = "./pidfile"
+log_file = "/var/log/vault/vault-agent.log"
 
 auto_auth {
 	method "aws" {

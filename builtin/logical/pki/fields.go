@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -150,6 +153,16 @@ The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
 		Default: false,
 		Description: `Whether or not to remove self-signed CA certificates in the output
 of the ca_chain field.`,
+	}
+
+	fields["user_ids"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `The requested user_ids value to place in the subject,
+if any, in a comma-delimited list. Restricted by allowed_user_ids.
+Any values are added with OID 0.9.2342.19200300.100.1.1.`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Name: "User ID(s)",
+		},
 	}
 
 	fields = addIssuerRefField(fields)
@@ -461,6 +474,23 @@ past the issuer_safety_buffer. No keys will be removed as part of this
 operation.`,
 	}
 
+	fields["tidy_move_legacy_ca_bundle"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `Set to true to move the legacy ca_bundle from
+/config/ca_bundle to /config/ca_bundle.bak. This prevents downgrades
+to pre-Vault 1.11 versions (as older PKI engines do not know about
+the new multi-issuer storage layout), but improves the performance
+on seal wrapped PKI mounts. This will only occur if at least
+issuer_safety_buffer time has occurred after the initial storage
+migration.
+
+This backup is saved in case of an issue in future migrations.
+Operators may consider removing it via sys/raw if they desire.
+The backup will be removed via a DELETE /root call, but note that
+this removes ALL issuers within the mount (and is thus not desirable
+in most operational scenarios).`,
+	}
+
 	fields["safety_buffer"] = &framework.FieldSchema{
 		Type: framework.TypeDurationSecond,
 		Description: `The amount of extra time that must have passed
@@ -489,6 +519,48 @@ stored in memory during the entire tidy operation, but resources to
 read/process/update existing entries will be spread out over a
 greater period of time. By default this is zero seconds.`,
 		Default: "0s",
+	}
+
+	fields["maintain_stored_certificate_counts"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `This configures whether stored certificates 
+are counted upon initialization of the backend, and whether during 
+normal operation, a running count of certificates stored is maintained.`,
+		Default: false,
+	}
+
+	fields["publish_stored_certificate_count_metrics"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `This configures whether the stored certificate 
+count is published to the metrics consumer.  It does not affect if the
+stored certificate count is maintained, and if maintained, it will be
+available on the tidy-status endpoint.`,
+		Default: false,
+	}
+
+	fields["tidy_revocation_queue"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `Set to true to remove stale revocation queue entries
+that haven't been confirmed by any active cluster. Only runs on the
+active primary node`,
+		Default: defaultTidyConfig.RevocationQueue,
+	}
+
+	fields["revocation_queue_safety_buffer"] = &framework.FieldSchema{
+		Type: framework.TypeDurationSecond,
+		Description: `The amount of time that must pass from the
+cross-cluster revocation request being initiated to when it will be
+slated for removal. Setting this too low may remove valid revocation
+requests before the owning cluster has a chance to process them,
+especially if the cluster is offline.`,
+		Default: int(defaultTidyConfig.QueueSafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
+	}
+
+	fields["tidy_cross_cluster_revoked_certs"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `Set to true to enable tidying up
+the cross-cluster revoked certificate store. Only runs on the active
+primary node.`,
 	}
 
 	return fields

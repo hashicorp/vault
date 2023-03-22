@@ -1,8 +1,10 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package configutil
 
 import (
 	"fmt"
-	"io/ioutil"
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
@@ -39,31 +41,18 @@ type SharedConfig struct {
 	// LogFormat specifies the log format. Valid values are "standard" and
 	// "json". The values are case-insenstive. If no log format is specified,
 	// then standard format will be used.
-	LogFormat string `hcl:"log_format"`
-	LogLevel  string `hcl:"log_level"`
+	LogFormat            string      `hcl:"log_format"`
+	LogLevel             string      `hcl:"log_level"`
+	LogFile              string      `hcl:"log_file"`
+	LogRotateDuration    string      `hcl:"log_rotate_duration"`
+	LogRotateBytes       int         `hcl:"log_rotate_bytes"`
+	LogRotateBytesRaw    interface{} `hcl:"log_rotate_bytes"`
+	LogRotateMaxFiles    int         `hcl:"log_rotate_max_files"`
+	LogRotateMaxFilesRaw interface{} `hcl:"log_rotate_max_files"`
 
 	PidFile string `hcl:"pid_file"`
 
 	ClusterName string `hcl:"cluster_name"`
-}
-
-// LoadConfigFile loads the configuration from the given file.
-func LoadConfigFile(path string) (*SharedConfig, error) {
-	// Read the file
-	d, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	return ParseConfig(string(d))
-}
-
-func LoadConfigKMSes(path string) ([]*KMS, error) {
-	// Read the file
-	d, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	return ParseKMSes(string(d))
 }
 
 func ParseConfig(d string) (*SharedConfig, error) {

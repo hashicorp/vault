@@ -1,3 +1,0 @@
-```release-note:improvement
-openapi: Add {mount_path} parameter to secret & auth paths in the generated openapi.json spec.
-```

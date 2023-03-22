@@ -53,7 +53,7 @@
       <AlertBanner
         @title="Syncing in progress"
         @type="info"
-        @secondIconType="loading"
+        @showLoading={{true}}
         @message="The cluster is syncing. This happens when the secondary is too far behind the primary to use the normal stream-wals state for catching up."
         data-test-isSyncing
       />
@@ -61,6 +61,13 @@
   {{/if}}
   {{#unless this.isSummaryDashboard}}
     <ReplicationTableRows @replicationDetails={{this.replicationDetails}} @clusterMode={{this.clusterMode}} />
-    <ReplicationDocLink data-test-replication-doc-link />
+    <div class="replication helper-text float-right" data-test-replication-doc-link>
+      <p class="has-text-grey">
+        We have additional time series telemetry that can be found
+        <DocLink @path="/vault/tutorials/monitoring/monitor-replication#key-monitoring-metrics">
+          in our documentation.
+        </DocLink>
+      </p>
+    </div>
   {{/unless}}
 </div>

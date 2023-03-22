@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package http
 
 import (
@@ -45,7 +48,7 @@ func BenchmarkHTTP_Forwarding_Stress(b *testing.B) {
 	host := fmt.Sprintf("https://127.0.0.1:%d/v1/transit/", cores[0].Listeners[0].Address.Port)
 
 	transport := &http.Transport{
-		TLSClientConfig: cores[0].TLSConfig,
+		TLSClientConfig: cores[0].TLSConfig(),
 	}
 	if err := http2.ConfigureTransport(transport); err != nil {
 		b.Fatal(err)

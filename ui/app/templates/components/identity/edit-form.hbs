@@ -24,7 +24,34 @@
       />
     {{/if}}
     {{#each this.model.fields as |attr|}}
-      <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
+      <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}}>
+        <div class="form-section">
+          {{#if this.model.canCreatePolicies}}
+            <SearchSelectWithModal
+              @id="policies"
+              @label="Policies"
+              @labelClass="title is-4"
+              @models={{array "policy/acl" "policy/rgp"}}
+              @inputValue={{@model.policies}}
+              @onChange={{action (mut this.model.policies)}}
+              @fallbackComponent="string-list"
+              @modalFormTemplate="modal-form/policy-template"
+              @excludeOptions={{array "root"}}
+            />
+          {{else}}
+            <SearchSelect
+              @id="policies"
+              @label="Policies"
+              @labelClass="title is-4"
+              @models={{array "policy/acl" "policy/rgp"}}
+              @inputValue={{@model.policies}}
+              @onChange={{action (mut this.model.policies)}}
+              @fallbackComponent="string-list"
+              @disallowNewItems={{true}}
+            />
+          {{/if}}
+        </div>
+      </FormField>
     {{/each}}
   </div>
 

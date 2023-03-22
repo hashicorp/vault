@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 // Package template is responsible for rendering user supplied templates to
 // disk. The Server type accepts configuration to communicate to a Vault server
 // and a Vault token for authentication. Internally, the Server creates a Consul
@@ -264,9 +267,9 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 		ServerName: pointerutil.StringPtr(""),
 	}
 
-	// We need to assign something to Vault.Retry or it will use its default of 12 retries.
+	// If Vault.Retry isn't specified, use the default of 12 retries.
 	// This retry value will be respected regardless of if we use the cache.
-	var attempts int
+	attempts := ctconfig.DefaultRetryAttempts
 	if sc.AgentConfig.Vault != nil && sc.AgentConfig.Vault.Retry != nil {
 		attempts = sc.AgentConfig.Vault.Retry.NumRetries
 	}

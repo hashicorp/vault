@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
@@ -93,13 +98,15 @@ export default class VerticalBarChart extends Component {
     const tooltipTether = chartSvg
       .append('g')
       .attr('transform', `translate(${BAR_WIDTH / 2})`)
-      .attr('data-test-vertical-chart', 'tool-tip-tethers')
+      .attr('data-test-vertical-chart', 'tooltip-tethers')
       .selectAll('circle')
       .data(filteredData)
       .enter()
       .append('circle')
+      .style('opacity', '0')
       .attr('cy', (d) => `${100 - yScale(d[this.yKey])}%`)
-      .attr('cx', (d) => xScale(d[this.xKey]));
+      .attr('cx', (d) => xScale(d[this.xKey]))
+      .attr('r', 1);
 
     // MAKE AXES //
     const yAxisScale = scaleLinear()

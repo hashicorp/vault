@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import {
   click,
   visit,
@@ -11,6 +16,8 @@ import {
 import { create } from 'ember-cli-page-object';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { v4 as uuidv4 } from 'uuid';
+
 import editPage from 'vault/tests/pages/secrets/backend/kv/edit-secret';
 import showPage from 'vault/tests/pages/secrets/backend/kv/show';
 import listPage from 'vault/tests/pages/secrets/backend/list';
@@ -59,6 +66,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
+    this.uid = uuidv4();
     this.server = apiStub({ usePassthrough: true });
     return authPage.login();
   });
@@ -68,7 +76,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
   });
 
   test('it creates a secret and redirects', async function (assert) {
-    const secretPath = `kv-path-${new Date().getTime()}`;
+    const secretPath = `kv-path-${this.uid}`;
     await listPage.visitRoot({ backend: 'secret' });
     await settled();
     assert.strictEqual(
@@ -94,7 +102,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
   });
 
   test('it can create a secret when check-and-set is required', async function (assert) {
-    const enginePath = `kv-${new Date().getTime()}`;
+    const enginePath = `kv-secret-${this.uid}`;
     const secretPath = 'foo/bar';
     await mountSecrets.visit();
     await mountSecrets.enable('kv', enginePath);
@@ -109,7 +117,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
   });
 
   test('it can create a secret with a non default max version and add metadata', async function (assert) {
-    const enginePath = `kv-${new Date().getTime()}`;
+    const enginePath = `kv-secret-${this.uid}`;
     const secretPath = 'maxVersions';
     const maxVersions = 101;
     await mountSecrets.visit();
@@ -145,7 +153,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
   });
 
   test('it can handle validation on custom metadata', async function (assert) {
-    const enginePath = `kv-${new Date().getTime()}`;
+    const enginePath = `kv-secret-${this.uid}`;
     const secretPath = 'customMetadataValidations';
 
     await mountSecrets.visit();
@@ -172,7 +180,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
   });
 
   test('it can mount a KV 2 secret engine with config metadata', async function (assert) {
-    const enginePath = `kv-${new Date().getTime()}`;
+    const enginePath = `kv-secret-${this.uid}`;
     const maxVersion = '101';
     await mountSecrets.visit();
     await click('[data-test-mount-type="kv"]');
@@ -183,6 +191,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await fillIn('[data-test-input="maxVersions"]', maxVersion);
     await click('[data-test-input="casRequired"]');
     await click('[data-test-toggle-label="Automate secret deletion"]');
+    await fillIn('[data-test-select="ttl-unit"]', 's');
     await fillIn('[data-test-ttl-value="Automate secret deletion"]', '1');
     await click('[data-test-mount-submit="true"]');
 
@@ -210,7 +219,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
   });
 
   test('it can create a secret and metadata can be created and edited', async function (assert) {
-    const enginePath = `kv-${new Date().getTime()}`;
+    const enginePath = `kv-secret-${this.uid}`;
     const secretPath = 'metadata';
     const maxVersions = 101;
     await mountSecrets.visit();
@@ -235,7 +244,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
   });
 
   test('it disables save when validation errors occur', async function (assert) {
-    const enginePath = `kv-${new Date().getTime()}`;
+    const enginePath = `kv-secret-${this.uid}`;
     const secretPath = 'not-duplicate';
     await mountSecrets.visit();
     await mountSecrets.enable('kv', enginePath);
@@ -269,10 +278,8 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
   });
 
   test('it navigates to version history and to a specific version', async function (assert) {
-    const enginePath = `kv-${new Date().getTime()}`;
+    const enginePath = `kv-secret-${this.uid}`;
     const secretPath = `specific-version`;
-    const today = new Date();
-    const month = today.toString().split(' ')[1];
     await mountSecrets.visit();
     await mountSecrets.enable('kv', enginePath);
     await settled();
@@ -283,7 +290,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await editPage.createSecret(secretPath, 'foo', 'bar');
     await click('[data-test-popup-menu-trigger="version"]');
 
-    assert.dom('[ data-test-created-time]').includesText(month, 'created time shows todays month');
+    assert.dom('[ data-test-created-time]').includesText('Version created ', 'shows version created time');
 
     await click('[data-test-version-history]');
 
@@ -303,7 +310,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
   });
 
   test('version 1 performs the correct capabilities lookup and does not show metadata tab', async function (assert) {
-    const enginePath = `kv-${new Date().getTime()}`;
+    const enginePath = `kv-secret-${this.uid}`;
     const secretPath = 'foo/bar';
     // mount version 1 engine
     await mountSecrets.visit();
@@ -323,7 +330,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
 
   // https://github.com/hashicorp/vault/issues/5960
   test('version 1: nested paths creation maintains ability to navigate the tree', async function (assert) {
-    const enginePath = `kv-${new Date().getTime()}`;
+    const enginePath = `kv-secret-${this.uid}`;
     const secretPath = '1/2/3/4';
     // mount version 1 engine
     await mountSecrets.visit();
@@ -374,7 +381,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
   });
 
   test('first level secrets redirect properly upon deletion', async function (assert) {
-    const enginePath = `kv-${new Date().getTime()}`;
+    const enginePath = `kv-secret-${this.uid}`;
     const secretPath = 'test';
     // mount version 1 engine
     await mountSecrets.visit();
@@ -402,7 +409,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
   });
 
   test('it redirects to the path ending in / for list pages', async function (assert) {
-    const secretPath = `foo/bar/kv-path-${new Date().getTime()}`;
+    const secretPath = `foo/bar/kv-path-${this.uid}`;
     await listPage.visitRoot({ backend: 'secret' });
     await listPage.create();
     await editPage.createSecret(secretPath, 'foo', 'bar');
@@ -415,7 +422,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
 
   test('it can edit via the JSON input', async function (assert) {
     const content = JSON.stringify({ foo: 'fa', bar: 'boo' });
-    const secretPath = `kv-path-${new Date().getTime()}`;
+    const secretPath = `kv-path-${this.uid}`;
     await listPage.visitRoot({ backend: 'secret' });
     await listPage.create();
     await editPage.path(secretPath).toggleJSON();
@@ -478,7 +485,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
   });
 
   test('create secret with space shows version data and shows space warning', async function (assert) {
-    const enginePath = `kv-${new Date().getTime()}`;
+    const enginePath = `kv-engine-${this.uid}`;
     const secretPath = 'space space';
     // mount version 2
     await mountSecrets.visit();

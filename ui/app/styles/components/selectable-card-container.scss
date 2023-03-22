@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 .selectable-card-container {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -28,4 +33,13 @@
     grid-template-rows: 1fr 2fr 0.5fr;
     padding: $spacing-l 0 14px $spacing-l; // modify bottom spacing to better align with other cards
   }
+}
+
+.selectable-card-container.has-grid.has-two-col-grid {
+  grid-template-columns: 2fr 2fr;
+  grid-template-rows: none;
+}
+.selectable-card-container.has-grid.has-three-col-grid {
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: none;
 }

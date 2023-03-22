@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault_test
 
 import (
@@ -8,12 +11,13 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
-	"github.com/hashicorp/vault/sdk/version"
 	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/version"
 )
 
 func TestSystemBackend_InternalUIResultantACL(t *testing.T) {
@@ -169,7 +173,7 @@ func TestSystemBackend_HAStatus(t *testing.T) {
 	cluster.Start()
 	defer cluster.Cleanup()
 
-	vault.RetryUntil(t, 15*time.Second, func() error {
+	corehelpers.RetryUntil(t, 15*time.Second, func() error {
 		// Use standby deliberately to make sure it forwards
 		client := cluster.Cores[1].Client
 		resp, err := client.Sys().HAStatus()

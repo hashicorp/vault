@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kv
 
 import (
@@ -249,6 +252,7 @@ func TestKV_Patch_RootToken(t *testing.T) {
 		data := map[string]interface{}{
 			"data": map[string]interface{}{
 				"bar": "baz",
+				"foo": "qux",
 			},
 		}
 
@@ -263,6 +267,7 @@ func TestKV_Patch_RootToken(t *testing.T) {
 		data := map[string]interface{}{
 			"data": map[string]interface{}{
 				"bar": "quux",
+				"foo": nil,
 			},
 		}
 		return client.Logical().JSONMergePatch(context.Background(), "kv/data/foo", data)
@@ -287,5 +292,9 @@ func TestKV_Patch_RootToken(t *testing.T) {
 	bar := secret.Data["data"].(map[string]interface{})["bar"]
 	if bar != "quux" {
 		t.Fatalf("expected bar to be quux but it was %q", bar)
+	}
+
+	if _, ok := secret.Data["data"].(map[string]interface{})["foo"]; ok {
+		t.Fatalf("expected data not to include foo")
 	}
 }

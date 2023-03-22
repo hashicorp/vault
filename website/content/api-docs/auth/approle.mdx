@@ -8,7 +8,7 @@ description: This is the API documentation for the Vault AppRole auth method.
 
 This is the API documentation for the Vault AppRole auth method. For
 general information about the usage and operation of the AppRole method, please
-see the [Vault AppRole method documentation](/docs/auth/approle).
+see the [Vault AppRole method documentation](/vault/docs/auth/approle).
 
 This documentation assumes the AppRole method is mounted at the `/auth/approle`
 path in Vault. Since it is possible to enable auth methods at any location,
@@ -60,7 +60,8 @@ enabled while creating or updating a role.
 
 ### Parameters
 
-- `role_name` `(string: <required>)` - Name of the AppRole. Must be less than 4096 bytes.
+- `role_name` `(string: <required>)` - Name of the AppRole. Must be less than 4096 bytes, accepted characters 
+include a-Z, 0-9, space, hyphen, underscore and periods.
 - `bind_secret_id` `(bool: true)` - Require `secret_id` to be presented when
   logging in using this AppRole.
 - `secret_id_bound_cidrs` `(array: [])` - Comma-separated string or list of CIDR

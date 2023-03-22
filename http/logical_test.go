@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package http
 
 import (
@@ -18,6 +21,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -474,13 +478,10 @@ func TestLogical_RespondWithStatusCode(t *testing.T) {
 
 func TestLogical_Audit_invalidWrappingToken(t *testing.T) {
 	// Create a noop audit backend
-	var noop *vault.NoopAudit
+	noop := corehelpers.TestNoopAudit(t, nil)
 	c, _, root := vault.TestCoreUnsealedWithConfig(t, &vault.CoreConfig{
 		AuditBackends: map[string]audit.Factory{
 			"noop": func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
-				noop = &vault.NoopAudit{
-					Config: config,
-				}
 				return noop, nil
 			},
 		},
@@ -636,7 +637,7 @@ func TestLogical_AuditPort(t *testing.T) {
 
 	// workaround kv-v2 initialization upgrade errors
 	numFailures := 0
-	vault.RetryUntil(t, 10*time.Second, func() error {
+	corehelpers.RetryUntil(t, 10*time.Second, func() error {
 		resp, err := c.Logical().Write("kv/data/foo", writeData)
 		if err != nil {
 			if strings.Contains(err.Error(), "Upgrading from non-versioned to versioned data") {

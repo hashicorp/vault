@@ -1,5 +1,8 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 pid_file = "./pidfile"
-disable_idle_connections = ["auto-auth","caching","templating"]
+disable_idle_connections = ["auto-auth","caching","templating","proxying"]
 
 auto_auth {
   method {

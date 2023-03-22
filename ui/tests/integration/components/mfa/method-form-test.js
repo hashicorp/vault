@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, fillIn, click } from '@ember/test-helpers';
@@ -63,7 +68,7 @@ module('Integration | Component | mfa-method-form', function (hooks) {
     assert.expect(3);
 
     this.model.issuer = 'Vault';
-    this.model.period = '30';
+    this.model.period = '30s';
     this.model.algorithm = 'SHA512';
 
     await render(hbs`

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package audit
 
 import (
@@ -192,7 +195,24 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 		connState = in.Request.Connection.ConnState
 	}
 
-	if !config.Raw {
+	elideListResponseData := config.ElideListResponses && req.Operation == logical.ListOperation
+
+	var respData map[string]interface{}
+	if config.Raw {
+		// In the non-raw case, elision of list response data occurs inside HashResponse, to avoid redundant deep
+		// copies and hashing of data only to elide it later. In the raw case, we need to do it here.
+		if elideListResponseData && resp.Data != nil {
+			// Copy the data map before making changes, but we only need to go one level deep in this case
+			respData = make(map[string]interface{}, len(resp.Data))
+			for k, v := range resp.Data {
+				respData[k] = v
+			}
+
+			doElideListResponseData(respData)
+		} else {
+			respData = resp.Data
+		}
+	} else {
 		auth, err = HashAuth(salt, auth, config.HMACAccessor)
 		if err != nil {
 			return err
@@ -203,10 +223,12 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			return err
 		}
 
-		resp, err = HashResponse(salt, resp, config.HMACAccessor, in.NonHMACRespDataKeys)
+		resp, err = HashResponse(salt, resp, config.HMACAccessor, in.NonHMACRespDataKeys, elideListResponseData)
 		if err != nil {
 			return err
 		}
+
+		respData = resp.Data
 	}
 
 	var errString string
@@ -315,7 +337,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			MountAccessor: req.MountAccessor,
 			Auth:          respAuth,
 			Secret:        respSecret,
-			Data:          resp.Data,
+			Data:          respData,
 			Warnings:      resp.Warnings,
 			Redirect:      resp.Redirect,
 			WrapInfo:      respWrapInfo,
@@ -495,7 +517,7 @@ func parseVaultTokenFromJWT(token string) *string {
 	return &claims.ID
 }
 
-// Create a formatter not backed by a persistent salt.
+// NewTemporaryFormatter creates a formatter not backed by a persistent salt
 func NewTemporaryFormatter(format, prefix string) *AuditFormatter {
 	temporarySalt := func(ctx context.Context) (*salt.Salt, error) {
 		return salt.NewNonpersistentSalt(), nil
@@ -515,4 +537,23 @@ func NewTemporaryFormatter(format, prefix string) *AuditFormatter {
 		}
 	}
 	return ret
+}
+
+// doElideListResponseData performs the actual elision of list operation response data, once surrounding code has
+// determined it should apply to a particular request. The data map that is passed in must be a copy that is safe to
+// modify in place, but need not be a full recursive deep copy, as only top-level keys are changed.
+//
+// See the documentation of the controlling option in FormatterConfig for more information on the purpose.
+func doElideListResponseData(data map[string]interface{}) {
+	for k, v := range data {
+		if k == "keys" {
+			if vSlice, ok := v.([]string); ok {
+				data[k] = len(vSlice)
+			}
+		} else if k == "key_info" {
+			if vMap, ok := v.(map[string]interface{}); ok {
+				data[k] = len(vMap)
+			}
+		}
+	}
 }

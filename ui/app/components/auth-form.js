@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Ember from 'ember';
 import { next } from '@ember/runloop';
 import { inject as service } from '@ember/service';
@@ -8,6 +13,7 @@ import { computed } from '@ember/object';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import { task, timeout } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
+import { v4 as uuidv4 } from 'uuid';
 
 const BACKENDS = supportedAuthBackends();
 
@@ -307,7 +313,7 @@ export default Component.extend(DEFAULTS, {
       }
       // add nonce field for okta backend
       if (backend.type === 'okta') {
-        data.nonce = crypto.randomUUID();
+        data.nonce = uuidv4();
         // add a default path of okta if it doesn't exist to be used for Okta Number Challenge
         if (!data.path) {
           data.path = 'okta';

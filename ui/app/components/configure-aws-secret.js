@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 
@@ -6,9 +11,9 @@ import { action } from '@ember/object';
  *
  * @example
  * ```js
- * <ConfigureAwsSecret 
-    @model={{model}} 
-    @tab={{tab}} 
+ * <ConfigureAwsSecret
+    @model={{model}}
+    @tab={{tab}}
     @accessKey={{accessKey}}
     @secretKey={{secretKey}}
     @region={{region}}
@@ -27,7 +32,7 @@ import { action } from '@ember/object';
  * @param {string} stsEndpoint - Sts endpoint
  * @param {Function} saveAWSRoot - parent action which saves AWS root credentials
  * @param {Function} saveAWSLease - parent action which updates AWS lease information
- * 
+ *
  */
 export default class ConfigureAwsSecretComponent extends Component {
   @action
@@ -40,5 +45,12 @@ export default class ConfigureAwsSecretComponent extends Component {
   saveLease(data, event) {
     event.preventDefault();
     this.args.saveAWSLease(data);
+  }
+
+  @action
+  handleTtlChange(name, ttlObj) {
+    // lease values cannot be undefined, set to 0 to use default
+    const valueToSet = ttlObj.enabled ? ttlObj.goSafeTimeString : 0;
+    this.args.model.set(name, valueToSet);
   }
 }

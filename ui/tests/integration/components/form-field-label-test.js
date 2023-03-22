@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -39,6 +44,8 @@ module('Integration | Component | form-field-label', function (hooks) {
     assert.dom('a').doesNotExist('docLink hidden when not provided');
     this.set('docLink', '/doc/path');
     assert.dom('.sub-text').includesText('See our documentation for help', 'Doc link text renders');
-    assert.dom('a').hasAttribute('href', 'https://www.vaultproject.io' + this.docLink, 'Doc link renders');
+    assert
+      .dom('a')
+      .hasAttribute('href', 'https://developer.hashicorp.com' + this.docLink, 'Doc link renders');
   });
 });

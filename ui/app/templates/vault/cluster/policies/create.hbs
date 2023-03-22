@@ -17,70 +17,8 @@
   </p.levelLeft>
 </PageHeader>
 
-<form {{action "savePolicy" this.model on="submit"}}>
-  <div class="box is-bottomless is-fullwidth is-marginless">
-    <MessageError @model={{this.model}} @errors={{this.model.errors}} />
-    <NamespaceReminder @mode="create" @noun="policy" />
-    <div class="field">
-      <label for="policy-name" class="is-label">Name</label>
-      <div class="control">
-        <input
-          type="text"
-          id="policy-name"
-          class="input"
-          value={{this.model.name}}
-          oninput={{action "setModelName" this.model}}
-          data-test-policy-input="name"
-        />
-      </div>
-    </div>
-    <div class="field">
-      <Toolbar>
-        <label class="is-label">Policy</label>
-        <ToolbarActions>
-          <div class="toolbar-separator"></div>
-          <div class="control is-flex">
-            <Input
-              id="fileUploadToggle"
-              @type="checkbox"
-              name="fileUploadToggle"
-              class="switch is-rounded is-success is-small"
-              @checked={{this.showFileUpload}}
-              {{on "change" (toggle-action "showFileUpload" this)}}
-              data-test-policy-edit-toggle={{true}}
-            />
-            <label for="fileUploadToggle">Upload file</label>
-          </div>
-        </ToolbarActions>
-      </Toolbar>
-      {{#if this.showFileUpload}}
-        <TextFile @inputOnly={{true}} @file={{this.file}} @onChange={{action "setPolicyFromFile"}} />
-      {{else}}
-        <JsonEditor
-          @title="Policy"
-          @helpText="You can use Alt+Tab (Option+Tab on MacOS) in the code editor to skip to the next field"
-          @showToolbar={{false}}
-          @value={{this.model.policy}}
-          @valueUpdated={{action (mut this.model.policy)}}
-          @mode="ruby"
-          @extraKeys={{hash Shift-Enter=(action "savePolicy" this.model)}}
-        />
-      {{/if}}
-    </div>
-    {{#each this.model.additionalAttrs as |attr|}}
-      <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
-    {{/each}}
-  </div>
-  <div class="field is-grouped box is-fullwidth is-bottomless">
-    <div class="control">
-      <button type="submit" disabled={{this.buttonDisabled}} class="button is-primary" data-test-policy-save={{true}}>
-        Create policy
-      </button>
-    </div>
-    <div class="control">
-      <LinkTo @route="vault.cluster.policies" @replace={{true}} class="button">
-        Cancel
-      </LinkTo>
-    </div>
-  </div>
-</form>
+<PolicyForm
+  @model={{this.model}}
+  @onSave={{transition-to "vault.cluster.policy.show" this.model.policyType this.model.name}}
+  @onCancel={{transition-to "vault.cluster.policies.index"}}
+/>

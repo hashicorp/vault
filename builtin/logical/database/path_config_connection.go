@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package database
 
 import (
@@ -11,6 +14,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/go-version"
 
+	"github.com/hashicorp/vault/helper/versions"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -228,6 +232,12 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 			}
 		}
 
+		if versions.IsBuiltinVersion(config.PluginVersion) {
+			// This gets treated as though it's empty when mounting, and will get
+			// overwritten to be empty when the config is next written. See #18051.
+			config.PluginVersion = ""
+		}
+
 		delete(config.ConnectionDetails, "password")
 		delete(config.ConnectionDetails, "private_key")
 
@@ -295,7 +305,10 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			config.PluginVersion = pluginVersionRaw.(string)
 		}
 
-		unversionedPlugin, err := b.System().LookupPlugin(ctx, config.PluginName, consts.PluginTypeDatabase)
+		var builtinShadowed bool
+		if unversionedPlugin, err := b.System().LookupPlugin(ctx, config.PluginName, consts.PluginTypeDatabase); err == nil && !unversionedPlugin.Builtin {
+			builtinShadowed = true
+		}
 		switch {
 		case config.PluginVersion != "":
 			semanticVersion, err := version.NewVersion(config.PluginVersion)
@@ -305,7 +318,16 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 
 			// Canonicalize the version.
 			config.PluginVersion = "v" + semanticVersion.String()
-		case err == nil && !unversionedPlugin.Builtin:
+
+			if config.PluginVersion == versions.GetBuiltinVersion(consts.PluginTypeDatabase, config.PluginName) {
+				if builtinShadowed {
+					return logical.ErrorResponse("database plugin %q, version %s not found, as it is"+
+						" overridden by an unversioned plugin of the same name. Omit `plugin_version` to use the unversioned plugin", config.PluginName, config.PluginVersion), nil
+				}
+
+				config.PluginVersion = ""
+			}
+		case builtinShadowed:
 			// We'll select the unversioned plugin that's been registered.
 		case req.Operation == logical.CreateOperation:
 			// No version provided and no unversioned plugin of that name available.
@@ -407,6 +429,11 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			oldConn.Close()
 		}
 
+		// 1.12.0 and 1.12.1 stored builtin plugins in storage, but 1.12.2 reverted
+		// that, so clean up any pre-existing stored builtin versions on write.
+		if versions.IsBuiltinVersion(config.PluginVersion) {
+			config.PluginVersion = ""
+		}
 		err = storeConfig(ctx, req.Storage, name, config)
 		if err != nil {
 			return nil, err

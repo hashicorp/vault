@@ -9,7 +9,7 @@ description: >-
 
 You can use this Helm chart to deploy Vault Enterprise by following a few extra steps around licensing.
 
-~> **Note:** As of Vault Enterprise 1.8, the license must be specified via HCL configuration or environment variables on startup, unless the Vault cluster was created with an older Vault version and the license was stored. More information is available in the [Vault Enterprise License docs](/docs/enterprise/license).
+~> **Note:** As of Vault Enterprise 1.8, the license must be specified via HCL configuration or environment variables on startup, unless the Vault cluster was created with an older Vault version and the license was stored. More information is available in the [Vault Enterprise License docs](/vault/docs/enterprise/license).
 
 @include 'helm/version.mdx'
 
@@ -26,14 +26,14 @@ kubectl create secret generic vault-ent-license --from-literal="license=${secret
 
 -> **Note:** If you cannot find your `.hclic` file, please contact your sales team or Technical Account Manager.
 
-In your chart overrides, set the values of [`server.image`](/docs/platform/k8s/helm/configuration#image-2) to one of the enterprise [release tags](https://hub.docker.com/r/hashicorp/vault-enterprise/tags). Also set the name of the secret you just created in [`server.enterpriseLicense`](/docs/platform/k8s/helm/configuration#enterpriselicense).
+In your chart overrides, set the values of [`server.image`](/vault/docs/platform/k8s/helm/configuration#image-2) to one of the enterprise [release tags](https://hub.docker.com/r/hashicorp/vault-enterprise/tags). Also set the name of the secret you just created in [`server.enterpriseLicense`](/vault/docs/platform/k8s/helm/configuration#enterpriselicense).
 
 ```yaml
 # config.yaml
 server:
   image:
     repository: hashicorp/vault-enterprise
-    tag: 1.12.0-ent
+    tag: 1.12.1-ent
   enterpriseLicense:
     secretName: vault-ent-license
 ```
@@ -44,7 +44,7 @@ Now run `helm install`:
 $ helm install hashicorp hashicorp/vault -f config.yaml
 ```
 
-Once the cluster is [initialized and unsealed](/docs/platform/k8s/helm/run), you may check the license status using the `vault license get` command:
+Once the cluster is [initialized and unsealed](/vault/docs/platform/k8s/helm/run), you may check the license status using the `vault license get` command:
 
 ```shell
 kubectl exec -ti vault-0 -- vault license get
@@ -67,7 +67,7 @@ EOF
 kubectl patch secret vault-ent-license --patch "$(cat patch-license.yaml)"
 ```
 
-- Wait until [`vault license inspect`](/docs/commands/license/inspect) shows the updated license
+- Wait until [`vault license inspect`](/vault/docs/commands/license/inspect) shows the updated license
 
   Since the `inspect` command is reading the license file from the mounted secret, this tells you when the updated secret has been propagated to the mount on the Vault pod.
 
@@ -77,7 +77,7 @@ kubectl exec vault-0 -- vault license inspect
 
 - Reload Vault's license config
 
-  You may use the [`sys/config/reload/license` API endpoint](/api-docs/system/config-reload#reload-license-file):
+  You may use the [`sys/config/reload/license` API endpoint](/vault/api-docs/system/config-reload#reload-license-file):
 
 ```shell
 kubectl exec vault-0 -- vault write -f sys/config/reload/license
@@ -89,7 +89,7 @@ Or you may issue an HUP signal directly to Vault:
 kubectl exec vault-0 -- pkill -HUP vault
 ```
 
-- Verify that [`vault license get`](/docs/commands/license/get) shows the updated license
+- Verify that [`vault license get`](/vault/docs/commands/license/get) shows the updated license
 
 ```shell
 kubectl exec vault-0 -- vault license get
@@ -97,7 +97,7 @@ kubectl exec vault-0 -- vault license get
 
 ## Vault Enterprise prior to 1.8
 
-In your chart overrides, set the values of `server.image` to one of the enterprise [release tags](https://hub.docker.com/r/hashicorp/vault-enterprise/tags). Install the chart, and initialize and unseal vault as described in [Running Vault](/docs/platform/k8s/helm/run).
+In your chart overrides, set the values of `server.image` to one of the enterprise [release tags](https://hub.docker.com/r/hashicorp/vault-enterprise/tags). Install the chart, and initialize and unseal vault as described in [Running Vault](/vault/docs/platform/k8s/helm/run).
 
 After Vault has been initialized and unsealed, setup a port-forward tunnel to the Vault Enterprise cluster:
 

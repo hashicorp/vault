@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { later } from '@ember/runloop';
@@ -17,7 +22,6 @@ import { tracked } from '@glimmer/tracking';
  */
 export default class AuthInfoComponent extends Component {
   @service auth;
-  @service wizard;
   @service router;
 
   @tracked fakeRenew = false;
@@ -34,11 +38,6 @@ export default class AuthInfoComponent extends Component {
 
   transitionToRoute() {
     this.router.transitionTo(...arguments);
-  }
-
-  @action
-  restartGuide() {
-    this.wizard.restartGuide();
   }
 
   @action

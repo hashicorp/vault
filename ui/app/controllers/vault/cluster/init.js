@@ -1,5 +1,9 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { computed } from '@ember/object';
-import { inject as service } from '@ember/service';
 import Controller from '@ember/controller';
 
 const DEFAULTS = {
@@ -12,8 +16,6 @@ const DEFAULTS = {
 };
 
 export default Controller.extend(DEFAULTS, {
-  wizard: service(),
-
   reset() {
     this.setProperties(DEFAULTS);
   },
@@ -22,8 +24,6 @@ export default Controller.extend(DEFAULTS, {
     this.set('loading', false);
     this.set('keyData', resp);
     this.model.reload();
-    this.wizard.set('initEvent', 'SAVE');
-    this.wizard.transitionTutorialMachine(this.wizard.currentState, 'TOSAVE');
   },
 
   initError(e) {

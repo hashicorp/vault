@@ -1,16 +1,23 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestInspectRouter(t *testing.T) {
 	// Verify that all the expected tables exist when we inspect the router
-	c, _, root := TestCoreUnsealed(t)
+	coreConfig := &CoreConfig{
+		EnableIntrospection: true,
+	}
+	c, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
 
 	rootCtx := namespace.RootContext(nil)
 	subTrees := map[string][]string{
@@ -50,7 +57,10 @@ func TestInspectRouter(t *testing.T) {
 
 func TestInvalidInspectRouterPath(t *testing.T) {
 	// Verify that attempting to inspect an invalid tree in the router fails
-	core, _, rootToken := testCoreSystemBackend(t)
+	coreConfig := &CoreConfig{
+		EnableIntrospection: true,
+	}
+	core, _, rootToken := TestCoreUnsealedWithConfig(t, coreConfig)
 	rootCtx := namespace.RootContext(nil)
 	_, err := core.HandleRequest(rootCtx, &logical.Request{
 		ClientToken: rootToken,
@@ -59,6 +69,23 @@ func TestInvalidInspectRouterPath(t *testing.T) {
 	})
 	if !strings.Contains(err.Error(), logical.ErrUnsupportedPath.Error()) {
 		t.Fatal("expected unsupported path error")
+	}
+}
+
+func TestInspectAPIDisabled(t *testing.T) {
+	// Verify that the Inspect API is turned off by default
+	core, _, rootToken := testCoreSystemBackend(t)
+	rootCtx := namespace.RootContext(nil)
+	resp, err := core.HandleRequest(rootCtx, &logical.Request{
+		ClientToken: rootToken,
+		Operation:   logical.ReadOperation,
+		Path:        "sys/internal/inspect/router/root",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !resp.IsError() || !strings.Contains(resp.Error().Error(), ErrIntrospectionNotEnabled.Error()) {
+		t.Fatal("expected invalid configuration error")
 	}
 }
 
@@ -74,5 +101,43 @@ func TestInspectAPISudoProtect(t *testing.T) {
 	})
 	if !strings.Contains(err.Error(), logical.ErrPermissionDenied.Error()) {
 		t.Fatal("expected permission denied error")
+	}
+}
+
+func TestInspectAPIReload(t *testing.T) {
+	// Verify that the Inspect API is turned off by default
+	core, _, rootToken := testCoreSystemBackend(t)
+	rootCtx := namespace.RootContext(nil)
+	resp, err := core.HandleRequest(rootCtx, &logical.Request{
+		ClientToken: rootToken,
+		Operation:   logical.ReadOperation,
+		Path:        "sys/internal/inspect/router/root",
+	})
+	if err != nil {
+		t.Fatal("Unexpected error")
+	}
+	if !resp.IsError() {
+		t.Fatal("expected invalid configuration error")
+	}
+	if !strings.Contains(resp.Error().Error(), ErrIntrospectionNotEnabled.Error()) {
+		t.Fatalf("expected invalid configuration error but recieved: %s", resp.Error())
+	}
+
+	originalConfig := core.rawConfig.Load().(*server.Config)
+	newConfig := originalConfig
+	newConfig.EnableIntrospectionEndpointRaw = true
+	newConfig.EnableIntrospectionEndpoint = true
+
+	// Reload Endpoint
+	core.SetConfig(newConfig)
+	core.ReloadIntrospectionEndpointEnabled()
+
+	resp, err = core.HandleRequest(rootCtx, &logical.Request{
+		ClientToken: rootToken,
+		Operation:   logical.ReadOperation,
+		Path:        "sys/internal/inspect/router/root",
+	})
+	if err != nil || resp.IsError() {
+		t.Fatal("Unexpected error after reload")
 	}
 }

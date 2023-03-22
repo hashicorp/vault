@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { alias } from '@ember/object/computed';
 import { computed } from '@ember/object';
@@ -37,6 +42,7 @@ const CA_FIELDS = [
   'allowUserKeyIds',
   'keyIdFormat',
   'notBeforeDuration',
+  'algorithmSigner',
 ];
 
 export default Model.extend({
@@ -52,7 +58,7 @@ export default Model.extend({
   }),
   name: attr('string', {
     label: 'Role Name',
-    fieldValue: 'id',
+    fieldValue: 'name',
     readOnly: true,
   }),
   keyType: attr('string', {
@@ -116,6 +122,10 @@ export default Model.extend({
   }),
   keyIdFormat: attr('string', {
     helpText: 'When supplied, this value specifies a custom format for the key id of a signed certificate',
+  }),
+  algorithmSigner: attr('string', {
+    helpText: 'When supplied, this value specifies a signing algorithm for the key',
+    possibleValues: ['default', 'ssh-rsa', 'rsa-sha2-256', 'rsa-sha2-512'],
   }),
 
   showFields: computed('keyType', function () {

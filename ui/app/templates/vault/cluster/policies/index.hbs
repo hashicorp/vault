@@ -16,7 +16,7 @@
     {{#if this.model.meta.total}}
       <ToolbarFilters>
         <NavigateInput
-          filterFocusDidChange={{action "setFilterFocus"}}
+          @filterFocusDidChange={{action "setFilterFocus"}}
           @filterDidChange={{action "setFilter"}}
           @filter={{this.filter}}
           @filterMatchesKey={{this.filterMatchesKey}}
@@ -166,10 +166,10 @@
         policy
         <Chevron />
       </LinkTo>
-      <LearnLink @path="/vault/getting-started/policies">
+      <DocLink @path="/vault/tutorials/getting-started/getting-started-policies">
         Learn more
         <Chevron />
-      </LearnLink>
+      </DocLink>
     </EmptyState>
   {{/if}}
 {{else}}

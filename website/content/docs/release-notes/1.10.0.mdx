@@ -28,13 +28,13 @@ This section describes the new features introduced as part of Vault
 
 ### Multi-Factor Authentication (MFA) for Vault OSS
 
-Vault has had support for the [Step-up Enterprise MFA](/docs/enterprise/mfa) as part of its Enterprise edition. The Step-up Enterprise MFA allows having an MFA on login, or for step-up access to sensitive resources in Vault.
+Vault has had support for the [Step-up Enterprise MFA](/vault/docs/enterprise/mfa) as part of its Enterprise edition. The Step-up Enterprise MFA allows having an MFA on login, or for step-up access to sensitive resources in Vault.
 
-With Vault 1.10.0, MFA as part of [login](/docs/auth/login-mfa) is now supported for Vault OSS. This demonstrates HashiCorp’s thought leadership in security and its continued endeavor to enable all Vault users to employ strong security policies with Vault.
+With Vault 1.10.0, MFA as part of [login](/vault/docs/auth/login-mfa) is now supported for Vault OSS. This demonstrates HashiCorp’s thought leadership in security and its continued endeavor to enable all Vault users to employ strong security policies with Vault.
 
-~> **Note:** The Legacy MFA in Vault OSS is a [deprecated](/docs/deprecation) feature and will be removed in Vault 1.11.
+~> **Note:** The Legacy MFA in Vault OSS is a [deprecated](/vault/docs/deprecation) feature and will be removed in Vault 1.11.
 
-Refer to the [Login MFA FAQ](/docs/auth/login-mfa/faq) to understand the various MFA workflows that are supported in Vault 1.10.0.
+Refer to the [Login MFA FAQ](/vault/docs/auth/login-mfa/faq) to understand the various MFA workflows that are supported in Vault 1.10.0.
 
 ### Vault OIDC provider with PKCE support
 
@@ -50,11 +50,11 @@ We have introduced three new resources to enable configuration of the [KMIP secr
 
 ### KV Secrets Engine v2 patch operations
 
-We now support an additional method for managing [KV v2 secrets](/api-docs/secret/kv/kv-v2) to maintain least privilege security in certain types of automated environments. This feature creates a new PATCH capability that enables partial updates to KV v2 secrets without requiring the READ privilege to the entire endpoint for an entity.
+We now support an additional method for managing [KV v2 secrets](/vault/api-docs/secret/kv/kv-v2) to maintain least privilege security in certain types of automated environments. This feature creates a new PATCH capability that enables partial updates to KV v2 secrets without requiring the READ privilege to the entire endpoint for an entity.
 
 ### DB2 Dynamic Secrets support
 
-Vault operators can leverage the openldap secrets engine to manage credentials for IBM DB2 and the LDAP security plugin for Db2. This allows Db2 to offload authentication and authorization to the LDAP security plugin and allows Vault to manage static credentials or even generate dynamic users. For more details, refer to the For more details, refer to the [IBM Db2 Credentials Management](https://learn.hashicorp.com/tutorials/vault/ibm-db2-openldap) tutorial.
+Vault operators can leverage the openldap secrets engine to manage credentials for IBM DB2 and the LDAP security plugin for Db2. This allows Db2 to offload authentication and authorization to the LDAP security plugin and allows Vault to manage static credentials or even generate dynamic users. For more details, refer to the For more details, refer to the [IBM Db2 Credentials Management](/vault/tutorials/secrets-management/ibm-db2-openldap) tutorial.
 
 ### Temporal Transit Key rotation
 
@@ -70,23 +70,23 @@ The work done above to support HSM-backed PKI operations inspired us to consider
 
 ### Server Side Consistent Tokens
 
-Vault’s [eventual consistency](/docs/enterprise/consistency) model precludes read-after-write guarantees when clients interact with performance standbys or performance replication clusters. The [Client Controlled Consistency](/docs/enterprise/consistency#vault-1-7-mitigations) mitigations supported with Vault 1.7 provide ways to achieve consistency through client modifications or by using the agent for proxied requests, which is not possible in all cases. The Server Side Consistent Tokens feature provides an implicit way to achieve consistency by embedding the minimum Write-Ahead-Log state information in the Service tokens returned from logins or token-create requests. This feature introduces changes in the token format and the new tokesn will be the default tokens starting in Vault 1.10.0. Vault 1.10.0 is backwards compatible with old tokens.
+Vault’s [eventual consistency](/vault/docs/enterprise/consistency) model precludes read-after-write guarantees when clients interact with performance standbys or performance replication clusters. The [Client Controlled Consistency](/vault/docs/enterprise/consistency#vault-1-7-mitigations) mitigations supported with Vault 1.7 provide ways to achieve consistency through client modifications or by using the agent for proxied requests, which is not possible in all cases. The Server Side Consistent Tokens feature provides an implicit way to achieve consistency by embedding the minimum Write-Ahead-Log state information in the Service tokens returned from logins or token-create requests. This feature introduces changes in the token format and the new tokesn will be the default tokens starting in Vault 1.10.0. Vault 1.10.0 is backwards compatible with old tokens.
 
-See [Replication](/docs/configuration/replication), [Vault Eventual Consistency](/docs/enterprise/consistency), [Upgrade to 1.10.0](/docs/upgrading/upgrade-to-1.10.x) and [Server Side Consistent Token FAQ](/docs/faq/ssct) to understand the various consistency options available with Vault 1.10.0 and the considerations to be aware of prior to selecting an option for your use case.
+See [Replication](/vault/docs/configuration/replication), [Vault Eventual Consistency](/vault/docs/enterprise/consistency), [Upgrade to 1.10.0](/vault/docs/upgrading/upgrade-to-1.10.x) and [Server Side Consistent Token FAQ](/vault/docs/faq/ssct) to understand the various consistency options available with Vault 1.10.0 and the considerations to be aware of prior to selecting an option for your use case.
 
 ## Vault Agent Features
 
 ### Support for Telemetry
 
-Starting with Vault 1.10.0, the Vault Agent supports a new metrics endpoint and [Telemetry](/docs/agent#telemetry-stanza) metrics around run time, authentication success, authentication failures, cache hits, cache misses, proxy succes, and proxy client errors. This Vault Agent Telemetry should greatly help with the retrieval of key operational insights for Vault Agent deployments.
+Starting with Vault 1.10.0, the Vault Agent supports a new metrics endpoint and [Telemetry](/vault/docs/agent#telemetry-stanza) metrics around run time, authentication success, authentication failures, cache hits, cache misses, proxy succes, and proxy client errors. This Vault Agent Telemetry should greatly help with the retrieval of key operational insights for Vault Agent deployments.
 
 ### User-assigned managed identities for auto auth in Azure
 
-With this [enhancement](/docs/agent/autoauth/methods/azure), users can specify user-assigned managed identities via the `object_id` and `client_id` when configuring Vault agent auto-auth for Azure. This enables users that have more than one user-assigned managed identity associated with their VM to specify which one they'd like to use when authenticating via the Vault's Azure auth method. Note that providing these parameters is an "exclusive or" operation.
+With this [enhancement](/vault/docs/agent/autoauth/methods/azure), users can specify user-assigned managed identities via the `object_id` and `client_id` when configuring Vault agent auto-auth for Azure. This enables users that have more than one user-assigned managed identity associated with their VM to specify which one they'd like to use when authenticating via the Vault's Azure auth method. Note that providing these parameters is an "exclusive or" operation.
 
 ### Quit API endpoint with config
 
-Previously, for instances where the Agent is a sidecar in a Kubernetes job and the job hangs, you must either use `shareProcessNamespace: true` for the container so that the process kill signals can be sent, or avoid the sidecar container entirely and solely rely on an init container. With this [enhancement](/docs/agent#quit), we have added support for a Quit API endpoint to automatically shut down the Vault Agent, therefore eliminating the need to perform the workarounds.
+Previously, for instances where the Agent is a sidecar in a Kubernetes job and the job hangs, you must either use `shareProcessNamespace: true` for the container so that the process kill signals can be sent, or avoid the sidecar container entirely and solely rely on an init container. With this [enhancement](/vault/docs/agent#quit), we have added support for a Quit API endpoint to automatically shut down the Vault Agent, therefore eliminating the need to perform the workarounds.
 
 ## Other Features and Enhancements
 
@@ -96,21 +96,21 @@ This section describes other features and enhancements introduced as part of the
 
 We have introduced auth mount-based attribution of clients to help better understand where clients are being used within a cluster. This is available via UI and API. This is an enhancement on top of the namespace attribution capability we introduced in Vault 1.9.
 
-We have also introduced the ability to view changes to clients month over month via the client count API, and made other UI enhancements. Refer to [What is a Client?](/docs/concepts/client-count) and [Client Count FAQ](/docs/concepts/client-count/faq) for more details.
+We have also introduced the ability to view changes to clients month over month via the client count API, and made other UI enhancements. Refer to [What is a Client?](/vault/docs/concepts/client-count) and [Client Count FAQ](/vault/docs/concepts/client-count/faq) for more details.
 
 ### Mount Migration
 
-We have made improvements to the `sys/remount` API endpoint to simplify the complexities of moving data, such as secret engine and authentication method configuration from one mount to another, within a namespace or across namespaces. This can help with restructuring namespaces and mounts for various reasons, including migrating mounts from root to other namespaces when transitioning to using namespaces for the first time. For step-by-step instructions, refer to the [Mount Move](https://learn.hashicorp.com/tutorials/vault/mount-move) tutorial.
+We have made improvements to the `sys/remount` API endpoint to simplify the complexities of moving data, such as secret engine and authentication method configuration from one mount to another, within a namespace or across namespaces. This can help with restructuring namespaces and mounts for various reasons, including migrating mounts from root to other namespaces when transitioning to using namespaces for the first time. For step-by-step instructions, refer to the [Mount Move](/vault/tutorials/enterprise/mount-move) tutorial.
 
 ### Scaling External Database plugins
 
-Database plugins can now implement [plugin multiplexing](/docs/plugins/plugin-architecture#plugin-multiplexing) which allows a single plugin process to be used for multiple database connections. Database plugin multiplexing will be enabled on the Oracle Database plugin starting in v0.6.0. We will extend this functionality to additional database plugins in subsequent releases.
+Database plugins can now implement [plugin multiplexing](/vault/docs/plugins/plugin-architecture#plugin-multiplexing) which allows a single plugin process to be used for multiple database connections. Database plugin multiplexing will be enabled on the Oracle Database plugin starting in v0.6.0. We will extend this functionality to additional database plugins in subsequent releases.
 
 Any external database plugins that want to adopt multiplexing support will have to update their main.go call from [dbplugin.Serve()](https://github.com/hashicorp/vault/blob/sdk/v0.4.1/sdk/database/dbplugin/v5/plugin_server.go#L13) to [dbplugin.ServeMultiplex()](https://github.com/hashicorp/vault/blob/sdk/v0.4.1/sdk/database/dbplugin/v5/plugin_server.go#L42). Multiplexable database plugins are compatible with older versions of Vault down to Vault 1.6. Refer to this [Oracle Database PR](https://github.com/hashicorp/vault-plugin-database-oracle/pull/74) as an example of the upgrade process.
 
 ### Consul Secrets Engine enhancements
 
-Consul has supported [namespace](https://developer.hashicorp.com/consul/docs/enterprise/namespaces), [admin partitions](https://developer.hashicorp.com/consul/docs/enterprise/admin-partitions) and [ACL roles](https://developer.hashicorp.com/consul/commands/acl/role) for some time now. In this release we have added enhancements to the Consul Secrets engine to support [namespace](<>) awareness and add admin partition and role support for Consul ACL tokens. This significantly simplifies the integrations for customers who want to achieve a zero trust security posture with both Vault and Consul.
+Consul has supported [namespace](/consul/docs/enterprise/namespaces), [admin partitions](/consul/docs/enterprise/admin-partitions) and [ACL roles](/consul/commands/acl/role) for some time now. In this release we have added enhancements to the Consul Secrets engine to support namespace awareness and add admin partition and role support for Consul ACL tokens. This significantly simplifies the integrations for customers who want to achieve a zero trust security posture with both Vault and Consul.
 
 ### Using sessionStorage instead of localStorage for the Vault UI
 
@@ -118,7 +118,7 @@ Prior to Vault 1.10.0, the Vault UI used localStorage to store authentication in
 
 ### Advanced I/O Handling for Transform FPE
 
-The Transform Secrets Engine allows users to securely encrypt data while providing control over the output format. In Vault 1.9, we introduced [additional format fields](/docs/release-notes/1.9.0#advanced-i-o-handling-for-tranform-fpe-adp-transform) on the templates used for this workflow. In Vault 1.10.0, we have now added those two new fields, `encode_format` and `decode_format`, to the Create Template page on the UI under Advanced Templating.
+The Transform Secrets Engine allows users to securely encrypt data while providing control over the output format. In Vault 1.9, we introduced [additional format fields](/vault/docs/release-notes/1.9.0#advanced-i-o-handling-for-tranform-fpe-adp-transform) on the templates used for this workflow. In Vault 1.10.0, we have now added those two new fields, `encode_format` and `decode_format`, to the Create Template page on the UI under Advanced Templating.
 
 ## Breaking changes
 
@@ -126,7 +126,7 @@ The following section details breaking changes introduced in Vault 1.10.0.
 
 ### LDAP auth method entity alias mapping
 
-In Vault 1.9, we added support to provide custom user filters through the [userfilter](/api-docs/auth/ldap#userfilter) parameter. This support changed the way that entity alias was mapped to an entity. Prior to Vault 1.9, alias names were always based on the [login username](/api-docs/auth/ldap#username-3) (which in turn is based on the value of the [userattr](/api-docs/auth/ldap#userattr)). In Vault 1.9, alias names no longer mapped to the login username. Instead, the mapping depends on other config values as well, such as [updomain](/api-docs/auth/ldap#upndomain), [binddn](/api-docs/auth/ldap#binddn), [discoverydn](/api-docs/auth/ldap#discoverdn), and [userattr](/api-docs/auth/ldap#userattr).
+In Vault 1.9, we added support to provide custom user filters through the [userfilter](/vault/api-docs/auth/ldap#userfilter) parameter. This support changed the way that entity alias was mapped to an entity. Prior to Vault 1.9, alias names were always based on the [login username](/vault/api-docs/auth/ldap#username-3) (which in turn is based on the value of the [userattr](/vault/api-docs/auth/ldap#userattr)). In Vault 1.9, alias names no longer mapped to the login username. Instead, the mapping depends on other config values as well, such as [updomain](/vault/api-docs/auth/ldap#upndomain), [binddn](/vault/api-docs/auth/ldap#binddn), [discoverydn](/vault/api-docs/auth/ldap#discoverdn), and [userattr](/vault/api-docs/auth/ldap#userattr).
 
 With Vault 1.10.0, we re-introduced the option to force the alias name to map to the login username with the optional parameter username_as_alias. Users that have the LDAP auth method enabled prior to Vault 1.9 may want to consider setting this to true to revert back to the old behavior. Otherwise, depending on the other aforementioned config values, logins may generate a new and different entity for an existing user with a previous entity associated in Vault. This in turn affects client counts since there may be more than one entity tied to this user. The username_as_alias flag was also made available in subsequent Vault 1.8.x and Vault 1.9.x releases to allow for this to be set prior to a Vault 1.10.0 upgrade.
 
@@ -134,9 +134,9 @@ With Vault 1.10.0, we re-introduced the option to force the alias name to map to
 
 ### Single Vault follower restart causes election even with established quorum
 
-We now support Server Side Consistent Tokens (See [Replication](/docs/configuration/replication), [Vault Eventual Consistency](/docs/enterprise/consistency), and [Upgrade to 1.10.0](/docs/upgrading/upgrade-to-1.10.x).), which introduces a new token format that can only be used on nodes of 1.10 or higher version. This new format is enabled by default upon upgrading to the new version. Old format tokens can be read by Vault 1.10.0, but the new format Vault 1.10 tokens cannot be read by older Vault versions.
+We now support Server Side Consistent Tokens (See [Replication](/vault/docs/configuration/replication), [Vault Eventual Consistency](/vault/docs/enterprise/consistency), and [Upgrade to 1.10.0](/vault/docs/upgrading/upgrade-to-1.10.x).), which introduces a new token format that can only be used on nodes of 1.10 or higher version. This new format is enabled by default upon upgrading to the new version. Old format tokens can be read by Vault 1.10.0, but the new format Vault 1.10 tokens cannot be read by older Vault versions.
 
-For more details, see the [Server Side Consistent Tokens FAQ](/docs/faq/ssct).
+For more details, see the [Server Side Consistent Tokens FAQ](/vault/docs/faq/ssct).
 
 Since service tokens are always created on the leader, as long as the leader is not upgraded before performance standbys, service tokens will be of the old format and still be usable during the upgrade process. However, the usual upgrade process we recommend can't be relied upon to always upgrade the leader last. Due to this known [issue](https://github.com/hashicorp/vault/issues/14153), a Vault cluster using Integrated Storage may result in a leader not being upgraded last, and this can trigger a re-election. This re-election can cause the upgraded node to become the leader, resulting in the newly created tokens on the leader to be unusable on nodes that have not yet been upgraded. Note that this issue does not impact Vault OSS users.
 
@@ -154,7 +154,7 @@ When adding or modifying a Duo MFA method for step-up Enterprise MFA using the `
 
 Signing in to the Vault UI using an OIDC auth mount listed in the "tabs" of the form will result
 in the following error: "Authentication failed: role with oidc role_type is not allowed".
-The auth mounts listed in the "tabs" of the form are those that have [listing_visibility](/api-docs/system/auth#listing_visibility-1)
+The auth mounts listed in the "tabs" of the form are those that have [listing_visibility](/vault/api-docs/system/auth#listing_visibility-1)
 set to `unauth`.
 
 There is a workaround for this error that will allow you to sign in to Vault using the OIDC
@@ -167,4 +167,4 @@ When trying to start Vault server 1.10.0 on Windows, and there is less than 100G
 
 ## Feature Deprecations and EOL
 
-Please refer to the [Deprecation Plans and Notice](/docs/deprecation) page for up-to-date information on feature deprecations and plans. An [Feature Deprecation FAQ](/docs/deprecation/faq) page is also available to address questions concerning decisions made about Vault feature deprecations.
+Please refer to the [Deprecation Plans and Notice](/vault/docs/deprecation) page for up-to-date information on feature deprecations and plans. An [Feature Deprecation FAQ](/vault/docs/deprecation/faq) page is also available to address questions concerning decisions made about Vault feature deprecations.

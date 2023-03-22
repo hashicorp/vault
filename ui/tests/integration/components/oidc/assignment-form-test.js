@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, fillIn, click, findAll } from '@ember/test-helpers';
@@ -24,7 +29,7 @@ module('Integration | Component | oidc/assignment-form', function (hooks) {
   });
 
   test('it should save new assignment', async function (assert) {
-    assert.expect(6);
+    assert.expect(5);
     this.model = this.store.createRecord('oidc/assignment');
     this.server.post('/identity/oidc/assignment/test', (schema, req) => {
       assert.ok(true, 'Request made to save assignment');
@@ -40,7 +45,6 @@ module('Integration | Component | oidc/assignment-form', function (hooks) {
       />
     `);
 
-    assert.dom('[data-test-oidc-assignment-title]').hasText('Create assignment', 'Form title renders');
     assert.dom('[data-test-oidc-assignment-save]').hasText('Create', 'Save button has correct label');
     await click('[data-test-oidc-assignment-save]');
     assert
@@ -58,7 +62,7 @@ module('Integration | Component | oidc/assignment-form', function (hooks) {
   });
 
   test('it should populate fields with model data on edit view and update an assignment', async function (assert) {
-    assert.expect(6);
+    assert.expect(5);
 
     this.store.pushPayload('oidc/assignment', {
       modelName: 'oidc/assignment',
@@ -76,15 +80,14 @@ module('Integration | Component | oidc/assignment-form', function (hooks) {
       />
     `);
 
-    assert.dom('[data-test-oidc-assignment-title]').hasText('Edit assignment', 'Form title renders');
     assert.dom('[data-test-oidc-assignment-save]').hasText('Update', 'Save button has correct label');
     assert.dom('[data-test-input="name"]').isDisabled('Name input is disabled when editing');
     assert.dom('[data-test-input="name"]').hasValue('test', 'Name input is populated with model value');
     assert
-      .dom('[data-test-search-select="entities"] [data-test-smaller-id="true"]')
+      .dom('[data-test-search-select="entities"] [data-test-smaller-id]')
       .hasText('1234-12345', 'entity id renders in selected option');
     assert
-      .dom('[data-test-search-select="groups"] [data-test-smaller-id="true"]')
+      .dom('[data-test-search-select="groups"] [data-test-smaller-id]')
       .hasText('abcdef-123', 'group id renders in selected option');
   });
 

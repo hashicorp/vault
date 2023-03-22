@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import EmberObject from '@ember/object';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
@@ -105,7 +110,7 @@ module('Integration | Component | form field', function (hooks) {
     await click('[data-test-text-toggle]');
     await fillIn('[data-test-text-file-textarea]', 'hello world');
     assert.dom('[data-test-text-file-textarea]').hasClass('masked-font');
-    await click('[data-test-button]');
+    await click('[data-test-button="toggle-masked"]');
     assert.dom('[data-test-text-file-textarea]').doesNotHaveClass('masked-font');
   });
 

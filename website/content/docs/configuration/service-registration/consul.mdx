@@ -16,6 +16,8 @@ a default health check. When Consul is configured as the storage backend, the st
 
 ~> **Version information:** The `service_registration` configuration option was introduced in Vault 1.4.0.
 
+@include 'consul-dataplane-compat.mdx'
+
 - **HashiCorp Supported** – Consul Service Registration is officially supported
   by HashiCorp.
 
@@ -91,17 +93,17 @@ connection. You can read more about encrypting Consul connections on the
 - `tls_ca_file` `(string: "")` – Specifies the path to the CA certificate used
   for Consul communication. This defaults to system bundle if not specified.
   This should be set according to the
-  [`ca_file`](https://developer.hashicorp.com/consul/docs/agent/config/config-files#ca_file) setting in
+  [`ca_file`](/consul/docs/agent/config/config-files#ca_file) setting in
   Consul.
 
 - `tls_cert_file` `(string: "")` (optional) – Specifies the path to the
   certificate for Consul communication. This should be set according to the
-  [`cert_file`](https://developer.hashicorp.com/consul/docs/agent/config/config-files#cert_file) setting
+  [`cert_file`](/consul/docs/agent/config/config-files#cert_file) setting
   in Consul.
 
 - `tls_key_file` `(string: "")` – Specifies the path to the private key for
   Consul communication. This should be set according to the
-  [`key_file`](https://developer.hashicorp.com/consul/docs/agent/config/config-files#key_file) setting
+  [`key_file`](/consul/docs/agent/config/config-files#key_file) setting
   in Consul.
 
 - `tls_min_version` `(string: "tls12")` – Specifies the minimum TLS version to
@@ -174,6 +176,6 @@ service_registration "consul" {
 ```
 
 [consul]: https://www.consul.io/ 'Consul by HashiCorp'
-[consul-acl]: https://www.consul.io/docs/guides/acl.html 'Consul ACLs'
-[consul-encryption]: https://www.consul.io/docs/agent/encryption.html 'Consul Encryption'
-[consul-translate-wan-addrs]: https://www.consul.io/docs/agent/options.html#translate_wan_addrs 'Consul Configuration'
+[consul-acl]: /consul/docs/guides/acl 'Consul ACLs'
+[consul-encryption]: /consul/docs/agent/encryption 'Consul Encryption'
+[consul-translate-wan-addrs]: /consul/docs/agent/options#translate_wan_addrs 'Consul Configuration'

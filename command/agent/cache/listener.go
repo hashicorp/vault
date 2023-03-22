@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package cache
 
 import (
@@ -6,12 +9,19 @@ import (
 	"net"
 	"strings"
 
+	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 )
 
-func StartListener(lnConfig *configutil.Listener) (net.Listener, *tls.Config, error) {
+type ListenerBundle struct {
+	Listener      net.Listener
+	TLSConfig     *tls.Config
+	TLSReloadFunc reloadutil.ReloadFunc
+}
+
+func StartListener(lnConfig *configutil.Listener) (*ListenerBundle, error) {
 	addr := lnConfig.Address
 
 	var ln net.Listener
@@ -31,7 +41,7 @@ func StartListener(lnConfig *configutil.Listener) (net.Listener, *tls.Config, er
 
 		ln, err = net.Listen(bindProto, addr)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		ln = &server.TCPKeepAliveListener{ln.(*net.TCPListener)}
 
@@ -48,21 +58,27 @@ func StartListener(lnConfig *configutil.Listener) (net.Listener, *tls.Config, er
 		}
 		ln, err = listenerutil.UnixSocketListener(addr, uConfig)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 	default:
-		return nil, nil, fmt.Errorf("invalid listener type: %q", lnConfig.Type)
+		return nil, fmt.Errorf("invalid listener type: %q", lnConfig.Type)
 	}
 
 	props := map[string]string{"addr": ln.Addr().String()}
-	tlsConf, _, err := listenerutil.TLSConfig(lnConfig, props, nil)
+	tlsConf, reloadFunc, err := listenerutil.TLSConfig(lnConfig, props, nil)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if tlsConf != nil {
 		ln = tls.NewListener(ln, tlsConf)
 	}
 
-	return ln, tlsConf, nil
+	cfg := &ListenerBundle{
+		Listener:      ln,
+		TLSConfig:     tlsConf,
+		TLSReloadFunc: reloadFunc,
+	}
+
+	return cfg, nil
 }

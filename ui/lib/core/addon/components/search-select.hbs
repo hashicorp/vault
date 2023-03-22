@@ -2,7 +2,7 @@
   {{did-insert (perform this.fetchOptions)}}
   {{did-update (perform this.fetchOptions) (or @options @models)}}
   id={{@id}}
-  class={{concat "field search-select" (if (eq @displayInherit true) " display-inherit")}}
+  class="field search-select {{if @displayInherit 'display-inherit'}}"
   data-test-component="search-select"
   ...attributes
 >
@@ -19,7 +19,7 @@
     }}
   {{else}}
     {{#if @label}}
-      <label for={{@id}} class={{if @labelClass @labelClass "is-label"}} data-test-field-label>
+      <label for={{@id}} class={{or @labelClass "is-label"}} data-test-field-label>
         {{@label}}
         {{#if @helpText}}
           <InfoTooltip>{{@helpText}}</InfoTooltip>
@@ -56,7 +56,7 @@
         <li class="search-select-list-item" data-test-selected-option={{index}}>
           {{#if this.shouldRenderName}}
             {{selected.name}}
-            <small class="search-select-list-key" data-test-smaller-id="true">
+            <small class="search-select-list-key" data-test-smaller-id={{index}}>
               {{get selected this.idKey}}
             </small>
           {{else}}

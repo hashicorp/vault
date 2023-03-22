@@ -7,7 +7,6 @@
       <div class="box">
         {{#if (eq this.onStep 1)}}
           <Mfa::MfaSetupStepOne
-            @entityId={{this.entityId}}
             @isUUIDVerified={{this.isUUIDVerified}}
             @restartFlow={{this.restartFlow}}
             @saveUUIDandQrCode={{this.saveUUIDandQrCode}}

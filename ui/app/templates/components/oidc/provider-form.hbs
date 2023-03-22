@@ -67,6 +67,7 @@
     <h4 class="title is-4">Allowed applications</h4>
     <div class="is-flex-row">
       <RadioCard
+        data-test-oidc-radio="allow-all"
         @title="Allow every application to use"
         @description="All applications can use this provider for authentication requests."
         @icon="globe"
@@ -75,6 +76,7 @@
         @onChange={{this.handleClientSelection}}
       />
       <RadioCard
+        data-test-oidc-radio="limited"
         @title="Limit access to selected application"
         @description="Only selected applications can use this provider for authentication requests."
         @icon="globe-private"

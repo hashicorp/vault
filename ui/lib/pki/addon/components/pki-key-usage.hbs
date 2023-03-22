@@ -1,78 +1,31 @@
-{{#let (camelize (concat "show" @group)) as |prop|}}
-  <ToggleButton
-    @isOpen={{get @model prop}}
-    @openLabel={{concat "Hide " @group}}
-    @closedLabel={{@group}}
-    @onClick={{fn (mut (get @model prop))}}
-    class="is-block"
-    data-test-toggle-group={{@group}}
+<CheckboxGrid
+  @name="keyUsage"
+  @label="Key usage"
+  @subText="Specifies the default key usage constraint on the issued certificate. To specify no default key_usage constraints, uncheck every item in this list."
+  @fields={{this.keyUsageFields}}
+  @value={{@model.keyUsage}}
+  @onChange={{this.checkboxChange}}
+  data-test-key-usage-key-usage-checkboxes
+/>
+<CheckboxGrid
+  @name="extKeyUsage"
+  @label="Extended key usage"
+  @subText="Specifies the default key usage constraint on the issued certificate. To specify no default ext_key_usage constraints, uncheck every item in this list."
+  @fields={{this.extKeyUsageFields}}
+  @value={{@model.extKeyUsage}}
+  @onChange={{this.checkboxChange}}
+  class="has-top-margin-s"
+  data-test-key-usage-ext-key-usage-checkboxes
+/>
+<div class="has-top-margin-xxl">
+  <StringList
+    class="is-box-shadowless"
+    data-test-input="extKeyUsageOids"
+    @label="Extended key usage oids"
+    @inputValue={{get @model "extKeyUsageOids"}}
+    @onChange={{this.onStringListChange}}
+    @attrName="extKeyUsageOids"
+    @subText="A list of extended key usage oids. Add one item per row."
+    @showHelpText={{false}}
   />
-  {{#if (get @model prop)}}
-    <div class="box is-tall is-marginless" data-test-surrounding-div={{@group}}>
-      <FormFieldLabel
-        for="keyUsageLabel"
-        @label="Key usage"
-        @subText="Specifies the default key usage constraint on the issued certificate. To specify no default key_usage constraints, uncheck every item in this list."
-      />
-      <div class="is-grid is-grid-3-columns is-medium-height">
-        {{! KEY USAGE SECTION }}
-        {{#each-in this.keyUsageFields as |name attr|}}
-          <div class="field">
-            <div class="b-checkbox">
-              <input
-                type="checkbox"
-                id={{name}}
-                class="styled"
-                checked={{attr.value}}
-                onchange={{fn this.checkboxChange "keyUsage"}}
-                data-test-input={{name}}
-              />
-              <label for={{name}} class="is-label">
-                {{attr.label}}
-              </label>
-            </div>
-          </div>
-        {{/each-in}}
-      </div>
-      <div class="has-top-margin-s">
-        <FormFieldLabel
-          for="ExtKeyUsageLabel"
-          @label="Extended key usage"
-          @subText="Specifies the default key usage constraint on the issued certificate. To specify no default ext_key_usage constraints, uncheck every item in this list."
-        />
-      </div>
-      {{! EXT KEY USAGE SECTION }}
-      <div class="is-grid is-grid-3-columns is-medium-height">
-        {{#each-in this.extKeyUsageFields as |name attr|}}
-          <div class="field">
-            <div class="b-checkbox">
-              <input
-                type="checkbox"
-                id={{name}}
-                class="styled"
-                checked={{attr.value}}
-                onchange={{fn this.checkboxChange "extKeyUsage"}}
-                data-test-input={{name}}
-              />
-              <label for={{name}} class="is-label">
-                {{attr.label}}
-              </label>
-            </div>
-          </div>
-        {{/each-in}}
-      </div>
-      <div class="has-top-margin-xxl">
-        <StringList
-          data-test-input="extKeyUsageOids"
-          @label="Extended key usage oids"
-          @inputValue={{get @model "extKeyUsageOids"}}
-          @onChange={{this.onStringListChange}}
-          @attrName="extKeyUsageOids"
-          @subText="A list of extended key usage oids. Add one item per row."
-          @showHelpText={{false}}
-          @hideFormSection={{true}}
-        />
-      </div>
-    </div>
-  {{/if}}
-{{/let}}
+</div>

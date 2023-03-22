@@ -30,14 +30,14 @@ This FAQ section is for license changes and updates introduced for Vault Enterpr
 
 ### Q: What is the product behavior change introduced by the licensing changes?
 
-Per the [feature deprecation plans](/docs/deprecation), Vault will no longer support licenses in storage. An [auto-loaded license](/docs/enterprise/license/autoloading) must be used instead. If you are using stored licenses, you must migrate to auto-loaded licenses prior to upgrading to Vault 1.11
+Per the [feature deprecation plans](/vault/docs/deprecation), Vault will no longer support licenses in storage. An [auto-loaded license](/vault/docs/enterprise/license/autoloading) must be used instead. If you are using stored licenses, you must migrate to auto-loaded licenses prior to upgrading to Vault 1.11
 
-Vault 1.12 will also introduce different termination behavior for evaluation licenses versus non-evaluation licenses. An [evaluation](https://www.hashicorp.com/products/vault/trial) license will include a 30-day trial period after which a running Vault server will terminate. Vault servers using a non-evaluation license will not terminate.
+Vault 1.12 will also introduce different termination behavior for evaluation licenses versus non-evaluation licenses. An evaluation license will include a 30-day trial period after which a running Vault server will terminate. Vault servers using a non-evaluation license will not terminate.
 
 ### Q: How do the license termination changes affect upgrades?
 Vault 1.12 will introduce changes to the license termination behavior. Upgrades when using expired licenses will now be limited.
-Vault will not startup if the build date of the binary is _after_ the expiration date of a license. License expiration date and binary build date compatibility can be verified using the [Check for Autoloaded License](/docs/commands/operator/diagnose#check-for-autoloaded-license) check performed by the `vault operator diagnose` command.
-The build date of a binary can also be found using the [vault version](/docs/commands/version#version) command.
+Vault will not startup if the build date of the binary is _after_ the expiration date of a license. License expiration date and binary build date compatibility can be verified using the [Check for Autoloaded License](/vault/docs/commands/operator/diagnose#check-for-autoloaded-license) check performed by the `vault operator diagnose` command.
+The build date of a binary can also be found using the [vault version](/vault/docs/commands/version#version) command.
 
 A user can expect the following to occur based on the following scenarios:
 
@@ -51,7 +51,7 @@ Vault will start normally
 Vault will not start
 
 **Evaluation license is terminated:**
-Vault will not start independent of the binary’s build date
+Vault will not start independent of the binary's build date
 
 **Non-evaluation license is terminated, binary build date _before_ license expiry date:**
 Vault will start normally
@@ -74,28 +74,28 @@ No, these changes will not impact HCP Vault.
 
 ### Q: What is the product behavior change introduced by the licensing changes?
 
-With Vault 1.11, the use of an [auto-loaded license](/docs/enterprise/license/autoloading) is required for Vault to start successfully.
+With Vault 1.11, the use of an [auto-loaded license](/vault/docs/enterprise/license/autoloading) is required for Vault to start successfully.
 
 ### Q: How will Vault behave at startup when a license expires or terminates?
 
 When a license expires, Vault continues to function until the license terminates. This behavior exists today and remains unchanged in Vault 1.11. The grace period, defined as the time between license expiration and license termination, is one day for evaluation licenses (as of 1.8), and ten years for non-evaluation licenses.
-Customers must provide a valid license before the grace period expires. This license is required to be [auto-loaded](/docs/enterprise/license/autoloading). When license terminates (upon grace period expiry), Vault will seal itself and customers will need a valid license in order to successfully bring-up Vault. If a valid license was not installed after license expiry, customers will need to provide one, and this license will need to be auto-loaded.
+Customers must provide a valid license before the grace period expires. This license is required to be [auto-loaded](/vault/docs/enterprise/license/autoloading). When license terminates (upon grace period expiry), Vault will seal itself and customers will need a valid license in order to successfully bring-up Vault. If a valid license was not installed after license expiry, customers will need to provide one, and this license will need to be auto-loaded.
 
 Vault 1.12 changes the license expiration and termination behavior. Evaluation licenses include a 30-day trial period after which a running Vault server will terminate. Non-evaluation licenses, however, will no longer terminate. When a non-evaluation license expires, Vault will continue to function but upgrades will be limited. The build date of the upgrade binary must be before the expiration date of the license.
-Vault will not start when attempting to use an expired license and binary with a build date _after_ the license expiration date. Attempting to [reload](/api-docs/system/config-reload#reload-license-file) an expired license will result in an error if the build date of the running Vault server is _after_ the license expiration date.
+Vault will not start when attempting to use an expired license and binary with a build date _after_ the license expiration date. Attempting to [reload](/vault/api-docs/system/config-reload#reload-license-file) an expired license will result in an error if the build date of the running Vault server is _after_ the license expiration date.
 
-License expiration date and binary build date compatibility can be verified using the [Check for Autoloaded License](/docs/commands/operator/diagnose#check-for-autoloaded-license) check performed by the `vault operator diagnose` command. The build date of a binary can also be found using the [vault version](/docs/commands/version#version) command.
+License expiration date and binary build date compatibility can be verified using the [Check for Autoloaded License](/vault/docs/commands/operator/diagnose#check-for-autoloaded-license) check performed by the `vault operator diagnose` command. The build date of a binary can also be found using the [vault version](/vault/docs/commands/version#version) command.
 
 ### Q: What is the impact on evaluation licenses due to this change?
 
-As of Vault 1.8, any Vault cluster deployed must have a valid [auto-loaded](/docs/enterprise/license/autoloading) license.
+As of Vault 1.8, any Vault cluster deployed must have a valid [auto-loaded](/vault/docs/enterprise/license/autoloading) license.
 
 Vault 1.12 introduces [expiration and termination behavior changes](#q-how-will-vault-behave-at-startup-when-a-license-expires-or-terminates) for non-evaluation licenses. Evaluation licenses will continue to have a 1-day grace period upon license expiry after which they will terminate. Vault will seal itself and shutdown once an evaluation license terminates.
 
 ### Q: Are there any changes to existing methods for manual license loading (API or CLI)?
 
-The [`/sys/license`](/api-docs/v1.10.x/system/license#install-license) and [`/sys/license/signed`](/api-docs/v1.10.x/system/license#read-signed-license) endpoints have been removed as of Vault 1.11. With that said, it is no longer possible to provide a license via the `/sys/license` endpoint. License [auto-loading](/docs/enterprise/license/autoloading) must be used instead.
-The [`/sys/config/reload/license`](/api-docs/system/config-reload#reload-license-file) endpoint can be used to reload an auto-loaded license provided as a path via an environment variable or configuration.
+The [`/sys/license`](/vault/api-docs/v1.10.x/system/license#install-license) and [`/sys/license/signed`](/vault/api-docs/v1.10.x/system/license#read-signed-license) endpoints have been removed as of Vault 1.11. With that said, it is no longer possible to provide a license via the `/sys/license` endpoint. License [auto-loading](/vault/docs/enterprise/license/autoloading) must be used instead.
+The [`/sys/config/reload/license`](/vault/api-docs/system/config-reload#reload-license-file) endpoint can be used to reload an auto-loaded license provided as a path via an environment variable or configuration.
 
 ### Q: Is there a grace period when evaluation licenses expire?
 
@@ -110,40 +110,40 @@ The changes to licenses apply to all nodes in a cluster. The license files are n
 Yes, starting with Vault 1.8, ENT binaries will be subjected to a EULA check. The release of Vault 1.8 introduces the EULA check for evaluation licenses (non-evaluation licenses are evaluated with a EULA check during contractual agreement) .
 Although the agreement to a EULA occurs only once (when the user receives their license), Vault will check for the presence of a valid license every time a node is restarted.
 
-Starting Vault 1.11, when customers deploy new Vault clusters, or upgrade existing Vault clusters, a valid [auto-loaded](/docs/enterprise/license/autoloading) license must exist for the upgrade to be successful.
+Starting Vault 1.11, when customers deploy new Vault clusters, or upgrade existing Vault clusters, a valid [auto-loaded](/vault/docs/enterprise/license/autoloading) license must exist for the upgrade to be successful.
 
 ### Q: What scenarios should a customer plan for due to these license changes?
 
-- **New Cluster Deployment**: When a customer deploys new clusters to Vault 1.11 or later, a valid license must exist to successfully deploy. This valid license must be on-disk ([auto-loaded](/docs/enterprise/license/autoloading)).
+- **New Cluster Deployment**: When a customer deploys new clusters to Vault 1.11 or later, a valid license must exist to successfully deploy. This valid license must be on-disk ([auto-loaded](/vault/docs/enterprise/license/autoloading)).
 
 - **Eventual Migration**: Vault 1.11 removes support for in-storage licenses. Migrating to an auto-loaded license is required for Vault to start successfully using version 1.11 or greater. Pre-existing license storage entries will be automatically removed from storage upon startup.
 
 ### Q: What is the migration path for customers who want to migrate from their existing license-as-applied-via-the-CLI flow to the license on disk flow?
 
-If a Vault cluster using a stored license is planned to be upgraded to Vault 1.11 or greater, the operator must migrate to using an auto-loaded license. The [`vault license get -signed`](/docs/v1.10.x/commands/license/get) command (or underlying [`/sys/license/signed`](/api-docs/v1.10.x/system/license#read-signed-license) endpoint) can be used to retrieve the license from storage in a running cluster.
-It is not necessary to remove the stored license entry. That will occur automatically upon startup in Vault 1.11 or greater. Prior to completing the [recommended upgrade steps](/docs/upgrading), perform the following to ensure your license is properly configured:
+If a Vault cluster using a stored license is planned to be upgraded to Vault 1.11 or greater, the operator must migrate to using an auto-loaded license. The [`vault license get -signed`](/vault/docs/v1.10.x/commands/license/get) command (or underlying [`/sys/license/signed`](/vault/api-docs/v1.10.x/system/license#read-signed-license) endpoint) can be used to retrieve the license from storage in a running cluster.
+It is not necessary to remove the stored license entry. That will occur automatically upon startup in Vault 1.11 or greater. Prior to completing the [recommended upgrade steps](/vault/docs/upgrading), perform the following to ensure your license is properly configured:
 
 1. Use the command `vault license get -signed` to retrieve the license from storage of your running cluster.
 2. Put the license on disk
-3. Configure license auto-loading by specifying the [`license_path`](/docs/configuration#license_path) config option or setting the [`VAULT_LICENSE`](/docs/commands#vault_license) or [`VAULT_LICENSE_PATH`](/docs/commands#vault_license_path) environment variable.
+3. Configure license auto-loading by specifying the [`license_path`](/vault/docs/configuration#license_path) config option or setting the [`VAULT_LICENSE`](/vault/docs/commands#vault_license) or [`VAULT_LICENSE_PATH`](/vault/docs/commands#vault_license_path) environment variable.
 
 ### Q: What is the path for customers who want to downgrade/rollback from Vault 1.11 or later (auto-loaded license mandatory) to a pre-Vault 1.11 (auto-loading not mandatory, stored license supported)?
 
-The downgrade procedure remains the same for Vault customers who are currently on Vault 1.11 or later, have a license installed via auto-loading, and would like to downgrade their cluster to a pre-1.11 version. Please refer to the [upgrade procedures](https://learn.hashicorp.com/tutorials/vault/sop-upgrade?in=vault/standard-procedures) that remind the customers that they must take a snapshot before the upgrade. Customers will need to restore their version from the snapshot, apply the pre-1.11 enterprise binary version they wish to roll back, and bring up the clusters.
+The downgrade procedure remains the same for Vault customers who are currently on Vault 1.11 or later, have a license installed via auto-loading, and would like to downgrade their cluster to a pre-1.11 version. Please refer to the [upgrade procedures](/vault/tutorials/standard-procedures/sop-upgrade) that remind the customers that they must take a snapshot before the upgrade. Customers will need to restore their version from the snapshot, apply the pre-1.11 enterprise binary version they wish to roll back, and bring up the clusters.
 
 ### Q: Is there a limited time for support of licenses that are in storage?
 
-The support of licenses installed by alternative means often leads to difficulties providing the appropriate support. To provide the support expected by our customers, as we have announced in [Vault feature deprecations and plans](/docs/deprecation) we are removing support for licenses in storage with Vault 1.11. This implies licensing endpoints that deal with licenses in storage will be removed, and Vault will no longer check for valid licenses in storage. This change requires that all customers have [auto-loaded](/docs/enterprise/license/autoloading) licenses to upgrade to 1.11(+) successfully.
+The support of licenses installed by alternative means often leads to difficulties providing the appropriate support. To provide the support expected by our customers, as we have announced in [Vault feature deprecations and plans](/vault/docs/deprecation) we are removing support for licenses in storage with Vault 1.11. This implies licensing endpoints that deal with licenses in storage will be removed, and Vault will no longer check for valid licenses in storage. This change requires that all customers have [auto-loaded](/vault/docs/enterprise/license/autoloading) licenses to upgrade to 1.11(+) successfully.
 
 ### Q: What are the steps to upgrade from one autoloaded license to another autoloaded license?
 
 Follow these steps to migrate from one autoloaded license to another autoloaded license.
 
-1. Use the [`vault license inspect`](/docs/commands/license/inspect) command to compare the new license against the output of the [`vault license get`](/docs/commands/license/get) command. This is to ensure that you have the correct license.
+1. Use the [`vault license inspect`](/vault/docs/commands/license/inspect) command to compare the new license against the output of the [`vault license get`](/vault/docs/commands/license/get) command. This is to ensure that you have the correct license.
 1. Backup the old license file in a safe location.
 1. Replace the old license file on each Vault server with the new one.
-1. Invoke the [reload command](/api-docs/system/config-reload#reload-license-file) on each individual Vault server, starting with the standbys and doing the leader last. Invoking in this manner reduces possible disruptions if something was performed incorrectly with the above steps. You can either use the [reload command](/api-docs/system/config-reload#reload-license-file) or send a SIGHUP.
-1. On each node, ensure that the new license is in use by using the [`vault license get`](/docs/commands/license/get) command and/or checking the logs.
+1. Invoke the [reload command](/vault/api-docs/system/config-reload#reload-license-file) on each individual Vault server, starting with the standbys and doing the leader last. Invoking in this manner reduces possible disruptions if something was performed incorrectly with the above steps. You can either use the [reload command](/vault/api-docs/system/config-reload#reload-license-file) or send a SIGHUP.
+1. On each node, ensure that the new license is in use by using the [`vault license get`](/vault/docs/commands/license/get) command and/or checking the logs.
 
 # ADP Licensing
 
@@ -155,13 +155,13 @@ As of Vault Enterprise 1.8, the functionality formerly sold as the Vault ADP mod
 
 **ADP-KM** includes:
 
-- [Key Management Secrets Engine (KMSE)](/docs/secrets/key-management)
-- [Key Management Interoperability (KMIP)](/docs/secrets/kmip)
+- [Key Management Secrets Engine (KMSE)](/vault/docs/secrets/key-management)
+- [Key Management Interoperability (KMIP)](/vault/docs/secrets/kmip)
 - [MSSQL Transparent Data Encryption (TDE)](https://www.hashicorp.com/blog/enabling-transparent-data-encryption-for-microsoft-sql-with-vault)
 
 **ADP-Transform** includes:
 
-- [Transform Secrets Engine (TSE)](/docs/secrets/transform)
+- [Transform Secrets Engine (TSE)](/vault/docs/secrets/transform)
 
 ### Q: How can the new ADP modules be purchased and what features are customer entitled to as part of that purchase?
 

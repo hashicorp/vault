@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package rafttests
 
 import (
@@ -16,15 +19,15 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	"github.com/hashicorp/vault/physical/raft"
-	"github.com/hashicorp/vault/sdk/version"
 	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/version"
 	"github.com/kr/pretty"
 	testingintf "github.com/mitchellh/go-testing-interface"
 	"github.com/stretchr/testify/require"
 )
 
 func TestRaft_Autopilot_Disable(t *testing.T) {
-	cluster := raftCluster(t, &RaftClusterOpts{
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		DisableFollowerJoins: true,
 		InmemCluster:         true,
 		// Not setting EnableAutopilot here.
@@ -38,7 +41,7 @@ func TestRaft_Autopilot_Disable(t *testing.T) {
 }
 
 func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
-	cluster := raftCluster(t, &RaftClusterOpts{
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		DisableFollowerJoins: true,
 		InmemCluster:         true,
 		EnableAutopilot:      true,
@@ -109,7 +112,7 @@ func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
 }
 
 func TestRaft_Autopilot_Configuration(t *testing.T) {
-	cluster := raftCluster(t, &RaftClusterOpts{
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		DisableFollowerJoins: true,
 		InmemCluster:         true,
 		EnableAutopilot:      true,
@@ -301,7 +304,7 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 }
 
 func TestRaft_AutoPilot_Peersets_Equivalent(t *testing.T) {
-	cluster := raftCluster(t, &RaftClusterOpts{
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		InmemCluster:         true,
 		EnableAutopilot:      true,
 		DisableFollowerJoins: true,
@@ -405,7 +408,7 @@ func join(t *testing.T, core *vault.TestClusterCore, client *api.Client, cluster
 	_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), []*raft.LeaderJoinInfo{
 		{
 			LeaderAPIAddr: client.Address(),
-			TLSConfig:     cluster.Cores[0].TLSConfig,
+			TLSConfig:     cluster.Cores[0].TLSConfig(),
 			Retry:         true,
 		},
 	}, false)
@@ -417,7 +420,7 @@ func join(t *testing.T, core *vault.TestClusterCore, client *api.Client, cluster
 // TestRaft_VotersStayVoters ensures that autopilot doesn't demote a node just
 // because it hasn't been heard from in some time.
 func TestRaft_VotersStayVoters(t *testing.T) {
-	cluster := raftCluster(t, &RaftClusterOpts{
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		DisableFollowerJoins: true,
 		InmemCluster:         true,
 		EnableAutopilot:      true,

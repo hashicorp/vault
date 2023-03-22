@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 terraform {
   required_providers {
     enos = {
@@ -17,6 +20,6 @@ data "enos_artifactory_item" "vault" {
   properties = tomap({
     "commit"          = var.revision
     "product-name"    = var.edition == "oss" ? "vault" : "vault-enterprise"
-    "product-version" = var.vault_product_version
+    "product-version" = local.artifact_version
   })
 }

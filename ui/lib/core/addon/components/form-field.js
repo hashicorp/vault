@@ -1,9 +1,15 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { capitalize } from 'vault/helpers/capitalize';
 import { humanize } from 'vault/helpers/humanize';
 import { dasherize } from 'vault/helpers/dasherize';
+import { assert } from '@ember/debug';
 /**
  * @module FormField
  * `FormField` components are field elements associated with a particular model.
@@ -42,16 +48,40 @@ import { dasherize } from 'vault/helpers/dasherize';
  */
 
 export default class FormFieldComponent extends Component {
-  @tracked showInput = false;
-  @tracked file = { value: '' }; // used by the pgp-file component when an attr is editType of 'file'
   emptyData = '{\n}';
+  shouldHideLabel = [
+    'boolean',
+    'file',
+    'json',
+    'kv',
+    'mountAccessor',
+    'optionalText',
+    'regex',
+    'searchSelect',
+    'stringArray',
+    'ttl',
+  ];
+  @tracked showInput = false;
 
   constructor() {
     super(...arguments);
     const { attr, model } = this.args;
     const valuePath = attr.options?.fieldValue || attr.name;
+    assert(
+      'Form is attempting to modify an ID. Ember-data does not allow this.',
+      valuePath.toLowerCase() !== 'id'
+    );
     const modelValue = model[valuePath];
     this.showInput = !!modelValue;
+  }
+
+  get hideLabel() {
+    const { type, options } = this.args.attr;
+    if (type === 'boolean' || type === 'object' || options?.isSectionHeader) {
+      return true;
+    }
+    // falsey values render a <FormFieldLabel>
+    return this.shouldHideLabel.includes(options?.editType);
   }
 
   get disabled() {
@@ -95,12 +125,11 @@ export default class FormFieldComponent extends Component {
   }
 
   @action
-  setFile(_, keyFile) {
+  setFile(keyFile) {
     const path = this.valuePath;
     const { value } = keyFile;
     this.args.model.set(path, value);
     this.onChange(path, value);
-    this.file = keyFile;
   }
   @action
   setAndBroadcast(value) {

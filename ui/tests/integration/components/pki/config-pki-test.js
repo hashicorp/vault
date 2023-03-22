@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { resolve } from 'rsvp';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
@@ -54,22 +59,25 @@ module('Integration | Component | config pki', function (hooks) {
       'renders form subtext'
     );
     assert
-      .dom('[data-test-toggle-label]')
-      .hasText('CRL building enabled The CRL will expire after', 'renders enabled field title and subtext');
+      .dom('[data-test-ttl-form-label="CRL building enabled"]')
+      .hasText('CRL building enabled', 'renders enabled field title');
+    assert
+      .dom('[data-test-ttl-form-subtext]')
+      .hasText('The CRL will expire after', 'renders enabled field subtext');
     assert.dom('[data-test-input="expiry"] input').isChecked('defaults to enabling CRL build');
     assert.dom('[data-test-ttl-value="CRL building enabled"]').hasValue('3', 'default value is 3 (72h)');
     assert.dom('[data-test-select="ttl-unit"]').hasValue('d', 'default unit value is days');
     await click('[data-test-input="expiry"] input');
     assert
-      .dom('[data-test-toggle-label]')
-      .hasText('CRL building disabled The CRL will not be built.', 'renders disabled text when toggled off');
+      .dom('[data-test-ttl-form-subtext]')
+      .hasText('The CRL will not be built.', 'renders disabled text when toggled off');
 
     // assert 'disable' attr on pki-config model updates with toggle
     assert.true(this.config.disable, 'when toggled off, sets CRL config to disable=true');
     await click('[data-test-input="expiry"] input');
     assert
-      .dom('[data-test-toggle-label]')
-      .hasText('CRL building enabled The CRL will expire after', 'toggles back to enabled text');
+      .dom('[data-test-ttl-form-subtext]')
+      .hasText('The CRL will expire after', 'toggles back to enabled text');
     assert.false(this.config.disable, 'CRL config toggles back to disable=false');
   });
 

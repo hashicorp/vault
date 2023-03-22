@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package raft
 
 import (
@@ -15,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -55,7 +58,7 @@ func addPeer(t *testing.T, leader, follower *RaftBackend) {
 }
 
 func TestRaft_Snapshot_Loading(t *testing.T) {
-	raft, dir := getRaft(t, true, false)
+	raft, dir := GetRaft(t, true, false)
 	defer os.RemoveAll(dir)
 
 	// Write some data
@@ -139,7 +142,7 @@ func TestRaft_Snapshot_Loading(t *testing.T) {
 }
 
 func TestRaft_Snapshot_Index(t *testing.T) {
-	raft, dir := getRaft(t, true, false)
+	raft, dir := GetRaft(t, true, false)
 	defer os.RemoveAll(dir)
 
 	err := raft.Put(context.Background(), &physical.Entry{
@@ -226,9 +229,9 @@ func TestRaft_Snapshot_Index(t *testing.T) {
 }
 
 func TestRaft_Snapshot_Peers(t *testing.T) {
-	raft1, dir := getRaft(t, true, false)
-	raft2, dir2 := getRaft(t, false, false)
-	raft3, dir3 := getRaft(t, false, false)
+	raft1, dir := GetRaft(t, true, false)
+	raft2, dir2 := GetRaft(t, false, false)
+	raft3, dir3 := GetRaft(t, false, false)
 	defer os.RemoveAll(dir)
 	defer os.RemoveAll(dir2)
 	defer os.RemoveAll(dir3)
@@ -309,9 +312,9 @@ func ensureCommitApplied(t *testing.T, leaderCommitIdx uint64, backend *RaftBack
 }
 
 func TestRaft_Snapshot_Restart(t *testing.T) {
-	raft1, dir := getRaft(t, true, false)
+	raft1, dir := GetRaft(t, true, false)
 	defer os.RemoveAll(dir)
-	raft2, dir2 := getRaft(t, false, false)
+	raft2, dir2 := GetRaft(t, false, false)
 	defer os.RemoveAll(dir2)
 
 	// Write some data
@@ -373,9 +376,9 @@ func TestRaft_Snapshot_Restart(t *testing.T) {
 
 /*
 func TestRaft_Snapshot_ErrorRecovery(t *testing.T) {
-	raft1, dir := getRaft(t, true, false)
-	raft2, dir2 := getRaft(t, false, false)
-	raft3, dir3 := getRaft(t, false, false)
+	raft1, dir := GetRaft(t, true, false)
+	raft2, dir2 := GetRaft(t, false, false)
+	raft3, dir3 := GetRaft(t, false, false)
 	defer os.RemoveAll(dir)
 	defer os.RemoveAll(dir2)
 	defer os.RemoveAll(dir3)
@@ -455,9 +458,9 @@ func TestRaft_Snapshot_ErrorRecovery(t *testing.T) {
 }*/
 
 func TestRaft_Snapshot_Take_Restore(t *testing.T) {
-	raft1, dir := getRaft(t, true, false)
+	raft1, dir := GetRaft(t, true, false)
 	defer os.RemoveAll(dir)
-	raft2, dir2 := getRaft(t, false, false)
+	raft2, dir2 := GetRaft(t, false, false)
 	defer os.RemoveAll(dir2)
 
 	addPeer(t, raft1, raft2)

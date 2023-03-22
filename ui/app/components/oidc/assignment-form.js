@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
@@ -15,11 +20,10 @@ import { tracked } from '@glimmer/tracking';
  * @onSave={transition-to "vault.cluster.access.oidc.assignments.assignment.details" this.model.name}
  * />
  * ```
- * @callback onCancel
- * @callback onSave
+
  * @param {object} model - The parent's model
- * @param {string} onCancel - callback triggered when cancel button is clicked
- * @param {string} onSave - callback triggered when save button is clicked
+ * @callback onCancel - callback triggered when cancel button is clicked
+ * @callback onSave - callback triggered when save button is clicked*
  */
 
 export default class OidcAssignmentFormComponent extends Component {

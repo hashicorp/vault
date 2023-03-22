@@ -1,4 +1,4 @@
-{{#each @model.fieldGroups as |fieldGroup|}}
+{{#each (get @model this.fieldGroups) as |fieldGroup|}}
   {{#each-in fieldGroup as |group fields|}}
     {{#if (or (not @renderGroup) (and @renderGroup (eq group @renderGroup)))}}
       {{#if (eq group "default")}}
@@ -13,6 +13,7 @@
               @onChange={{@onChange}}
               @onKeyUp={{@onKeyUp}}
               @modelValidations={{@modelValidations}}
+              @showHelpText={{@showHelpText}}
             />
           {{else}}
             {{! OTHERWISE WE'RE EDITING }}
@@ -27,6 +28,7 @@
                 @onChange={{@onChange}}
                 @onKeyUp={{@onKeyUp}}
                 @modelValidations={{@modelValidations}}
+                @showHelpText={{@showHelpText}}
               />
             {{/if}}
           {{/if}}
@@ -53,6 +55,7 @@
                   @onChange={{@onChange}}
                   @onKeyUp={{@onKeyUp}}
                   @modelValidations={{@modelValidations}}
+                  @showHelpText={{@showHelpText}}
                 />
               {{else}}
                 {{! OTHERWISE WE'RE EDITING }}
@@ -67,6 +70,7 @@
                     @onChange={{@onChange}}
                     @onKeyUp={{@onKeyUp}}
                     @modelValidations={{@modelValidations}}
+                    @showHelpText={{@showHelpText}}
                   />
                 {{/if}}
               {{/if}}

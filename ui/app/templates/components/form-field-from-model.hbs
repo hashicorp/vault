@@ -35,7 +35,7 @@
       </div>
     </div>
   {{else if (eq @attr.options.editType "ttl")}}
-    <TtlPicker2
+    <TtlPicker
       @initialValue={{or (get @model @attr.name) @attr.options.defaultValue}}
       @initialEnabled={{or (get @model @attr.name) false}}
       @label={{or @attr.options.label (humanize (dasherize @attr.name))}}

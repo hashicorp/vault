@@ -1,0 +1,58 @@
+<div class="column is-narrow is-flex-align-baseline has-text-grey has-right-margin-s has-padding-xs">
+  <RadioButton
+    id="ttlType"
+    class="radio"
+    name="notValidAfterOption"
+    @value="ttl"
+    @onChange={{this.onRadioButtonChange}}
+    @groupValue={{this.groupValue}}
+    data-test-radio-button="ttl"
+  />
+  <div class="has-left-margin-xs">
+    <label class="has-left-margin-xs" for="ttlType" data-test-radio-label="ttl">
+      <span class="ttl-picker-label is-large">TTL</span>
+    </label>
+    {{#if (eq this.groupValue "ttl")}}
+      <TtlPicker
+        data-test-input="ttl"
+        @onChange={{this.setAndBroadcastTtl}}
+        @label="TTL"
+        @helperTextEnabled={{@attr.options.helperTextEnabled}}
+        @description={{@attr.helpText}}
+        @initialValue={{@model.ttl}}
+        @hideToggle={{true}}
+      >
+        <label class="sr-only" for="ttl">Set relative certificate expiry with TTL</label>
+      </TtlPicker>
+    {{/if}}
+  </div>
+</div>
+<div
+  class="column is-narrow is-flex-align-baseline has-text-grey has-right-margin-s has-top-margin-negative-s has-padding-xs"
+>
+  <RadioButton
+    id="dateType"
+    class="radio"
+    name="notValidAfterOption"
+    @value="specificDate"
+    @onChange={{this.onRadioButtonChange}}
+    @groupValue={{this.groupValue}}
+    data-test-radio-button="not_after"
+  />
+  <div class="has-left-margin-xs">
+    <label class="ttl-picker-label is-large" for="dateType" data-test-radio-label="specificDate">Specific date</label>
+    {{#if (eq this.groupValue "specificDate")}}
+      <label class="sr-only" for="not_after">Set certificate expiry with specified date value</label>
+      <Input
+        id="not_after"
+        @type="date"
+        autocomplete="off"
+        spellcheck="false"
+        @value={{this.formDate}}
+        {{on "input" this.setAndBroadcastInput}}
+        class="input"
+        data-test-input="not_after"
+      />
+    {{/if}}
+  </div>
+</div>

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { alias, or } from '@ember/object/computed';
@@ -54,7 +59,7 @@ export default Model.extend({
     defaultSubText:
       'Unless a custom policy is specified, Vault will use a default: 20 characters with at least 1 uppercase, 1 lowercase, 1 number, and 1 dash character.',
     defaultShown: 'Default',
-    docLink: '/docs/concepts/password-policies',
+    docLink: '/vault/docs/concepts/password-policies',
   }),
 
   // common fields
@@ -106,7 +111,7 @@ export default Model.extend({
     subText: 'Enter the custom username template to use.',
     defaultSubText:
       'Template describing how dynamic usernames are generated. Vault will use the default for this plugin.',
-    docLink: '/docs/concepts/username-templating',
+    docLink: '/vault/docs/concepts/username-templating',
     defaultShown: 'Default',
   }),
   max_open_connections: attr('number', {

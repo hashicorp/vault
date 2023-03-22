@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package plugin
 
 import (
@@ -6,13 +9,20 @@ import (
 	"testing"
 	"time"
 
-	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 )
+
+func TestSystem_GRPC_ReturnsErrIfSystemViewNil(t *testing.T) {
+	_, err := new(gRPCSystemViewServer).ReplicationState(context.Background(), nil)
+	if err == nil {
+		t.Error("Expected error when using server with no impl")
+	}
+}
 
 func TestSystem_GRPC_GRPC_impl(t *testing.T) {
 	var _ logical.SystemView = new(gRPCSystemViewClient)

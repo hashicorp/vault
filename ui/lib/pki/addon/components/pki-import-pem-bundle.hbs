@@ -1,0 +1,36 @@
+<div class="field">
+  <div class="form-section">
+    <label class="title has-padding-top is-5">
+      Certificate parameters
+    </label>
+    <form {{on "submit" (perform this.submitForm)}} data-test-pki-import-pem-bundle-form>
+      <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
+      <div class="box is-sideless is-fullwidth is-marginless has-top-padding-l">
+        <TextFile @onChange={{this.onFileUploaded}} @label="PEM Bundle" />
+        <p class="has-top-margin-m has-bottom-margin-l">
+          Issuer URLs (Issuing certificates, CRL distribution points, OCSP servers, and delta CRL URLs) can be specified by
+          editing the individual issuer once it is uploaded to Vault.
+        </p>
+      </div>
+      <div class="has-top-padding-s">
+        <button
+          type="submit"
+          class="button is-primary {{if this.submitForm.isRunning 'is-loading'}}"
+          disabled={{this.submitForm.isRunning}}
+          data-test-pki-import-pem-bundle
+        >
+          Import issuer
+        </button>
+        <button
+          type="button"
+          class="button has-left-margin-s"
+          disabled={{this.submitForm.isRunning}}
+          {{on "click" this.cancel}}
+          data-test-pki-ca-cert-cancel
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

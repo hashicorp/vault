@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -20,12 +23,13 @@ var (
 type KVMetadataPatchCommand struct {
 	*BaseCommand
 
-	flagMaxVersions        int
-	flagCASRequired        BoolPtr
-	flagDeleteVersionAfter time.Duration
-	flagCustomMetadata     map[string]string
-	flagMount              string
-	testStdin              io.Reader // for tests
+	flagMaxVersions          int
+	flagCASRequired          BoolPtr
+	flagDeleteVersionAfter   time.Duration
+	flagCustomMetadata       map[string]string
+	flagRemoveCustomMetadata []string
+	flagMount                string
+	testStdin                io.Reader // for tests
 }
 
 func (c *KVMetadataPatchCommand) Synopsis() string {
@@ -64,6 +68,10 @@ Usage: vault kv metadata patch [options] KEY
   Set custom metadata on the key:
 
       $ vault kv metadata patch -mount=secret -custom-metadata=foo=abc -custom-metadata=bar=123 foo
+
+  To remove custom meta data from the corresponding path in the key-value store, kv metadata patch can be used.
+
+      $ vault kv metadata patch -mount=secret -remove-custom-metadata=bar foo
 
   Additional flags and more advanced use cases are detailed below.
 
@@ -109,6 +117,13 @@ func (c *KVMetadataPatchCommand) Flags() *FlagSets {
 		Default: map[string]string{},
 		Usage: `Specifies arbitrary version-agnostic key=value metadata meant to describe a secret.
 		This can be specified multiple times to add multiple pieces of metadata.`,
+	})
+
+	f.StringSliceVar(&StringSliceVar{
+		Name:    "remove-custom-metadata",
+		Target:  &c.flagRemoveCustomMetadata,
+		Default: []string{},
+		Usage:   "Key to remove from custom metadata. To specify multiple values, specify this flag multiple times.",
 	})
 
 	f.StringVar(&StringVar{
@@ -198,7 +213,7 @@ func (c *KVMetadataPatchCommand) Run(args []string) int {
 
 	fullPath := addPrefixToKVPath(partialPath, mountPath, "metadata")
 
-	data := map[string]interface{}{}
+	data := make(map[string]interface{}, 0)
 
 	if c.flagMaxVersions >= 0 {
 		data["max_versions"] = c.flagMaxVersions
@@ -212,9 +227,18 @@ func (c *KVMetadataPatchCommand) Run(args []string) int {
 		data["delete_version_after"] = c.flagDeleteVersionAfter.String()
 	}
 
-	if len(c.flagCustomMetadata) > 0 {
-		data["custom_metadata"] = c.flagCustomMetadata
+	customMetadata := make(map[string]interface{})
+
+	for key, value := range c.flagCustomMetadata {
+		customMetadata[key] = value
 	}
+
+	for _, key := range c.flagRemoveCustomMetadata {
+		// A null in a JSON merge patch payload will remove the associated key
+		customMetadata[key] = nil
+	}
+
+	data["custom_metadata"] = customMetadata
 
 	secret, err := client.Logical().JSONMergePatch(context.Background(), fullPath, data)
 	if err != nil {

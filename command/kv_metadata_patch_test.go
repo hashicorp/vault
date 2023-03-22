@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -118,6 +121,29 @@ func TestKvMetadataPatchCommand_Flags(t *testing.T) {
 				"custom_metadata": map[string]interface{}{
 					"foo": "abc",
 					"bar": "def",
+					"baz": "ghi",
+				},
+			},
+		},
+		{
+			"remove-custom_metadata",
+			[]string{"-custom-metadata=baz=ghi", "-remove-custom-metadata=foo"},
+			"Success!",
+			0,
+			map[string]interface{}{
+				"custom_metadata": map[string]interface{}{
+					"bar": "def",
+					"baz": "ghi",
+				},
+			},
+		},
+		{
+			"remove-custom_metadata-multiple",
+			[]string{"-custom-metadata=baz=ghi", "-remove-custom-metadata=foo", "-remove-custom-metadata=bar"},
+			"Success!",
+			0,
+			map[string]interface{}{
+				"custom_metadata": map[string]interface{}{
 					"baz": "ghi",
 				},
 			},

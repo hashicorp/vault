@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package server
 
 import (
@@ -26,6 +29,9 @@ func testListenerImpl(t *testing.T, ln net.Listener, connFn testListenerConnFn, 
 			tlsConn.Handshake()
 		}
 		serverCh <- server
+		if expectedAddr == "" {
+			return
+		}
 		addr, _, err := net.SplitHostPort(server.RemoteAddr().String())
 		if err != nil {
 			t.Error(err)

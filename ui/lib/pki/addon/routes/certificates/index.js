@@ -1,28 +1,35 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
+import { withConfig } from 'pki/decorators/check-config';
+import { hash } from 'rsvp';
 
+@withConfig()
 export default class PkiCertificatesIndexRoute extends Route {
   @service store;
   @service secretMountPath;
-  @service pathHelp;
 
-  beforeModel() {
-    // Must call this promise before the model hook otherwise it doesn't add OpenApi to record.
-    return this.pathHelp.getNewModel('pki/pki-certificate-engine', 'pki');
+  async fetchCertificates() {
+    try {
+      return await this.store.query('pki/certificate/base', { backend: this.secretMountPath.currentPath });
+    } catch (e) {
+      if (e.httpStatus === 404) {
+        return { parentModel: this.modelFor('certificates') };
+      } else {
+        throw e;
+      }
+    }
   }
 
   model() {
-    return this.store
-      .query('pki/pki-certificate-engine', { backend: this.secretMountPath.currentPath })
-      .then((certificateModel) => {
-        return { certificateModel, parentModel: this.modelFor('certificates') };
-      })
-      .catch((err) => {
-        if (err.httpStatus === 404) {
-          return { parentModel: this.modelFor('certificates') };
-        } else {
-          throw err;
-        }
-      });
+    return hash({
+      hasConfig: this.shouldPromptConfig,
+      certificates: this.fetchCertificates(),
+      parentModel: this.modelFor('certificates'),
+    });
   }
 }

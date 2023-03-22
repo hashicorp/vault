@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package raft
 
 import (
@@ -12,6 +15,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -31,9 +35,9 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/hashicorp/vault/sdk/version"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
+	"github.com/hashicorp/vault/version"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -43,6 +47,10 @@ const (
 
 	// EnvVaultRaftPath is used to fetch the path where Raft data is stored from the environment.
 	EnvVaultRaftPath = "VAULT_RAFT_PATH"
+
+	// EnvVaultRaftNonVoter is used to override the non_voter config option, telling Vault to join as a non-voter (i.e. read replica).
+	EnvVaultRaftNonVoter  = "VAULT_RAFT_RETRY_JOIN_AS_NON_VOTER"
+	raftNonVoterConfigKey = "retry_join_as_non_voter"
 )
 
 var getMmapFlags = func(string) int { return 0 }
@@ -60,12 +68,12 @@ var (
 	// This is used to reduce disk I/O for the recently committed entries.
 	raftLogCacheSize = 512
 
-	raftState     = "raft/"
-	peersFileName = "peers.json"
-
+	raftState              = "raft/"
+	peersFileName          = "peers.json"
 	restoreOpDelayDuration = 5 * time.Second
+	defaultMaxEntrySize    = uint64(2 * raftchunking.ChunkSize)
 
-	defaultMaxEntrySize = uint64(2 * raftchunking.ChunkSize)
+	GetInTxnDisabledError = errors.New("get operations inside transactions are disabled in raft backend")
 )
 
 // RaftBackend implements the backend interfaces and uses the raft protocol to
@@ -172,7 +180,12 @@ type RaftBackend struct {
 	// redundancyZone specifies a redundancy zone for autopilot.
 	redundancyZone string
 
+	// nonVoter specifies whether the node should join the cluster as a non-voter. Non-voters get
+	// replicated to and can serve reads, but do not take part in leader elections.
+	nonVoter bool
+
 	effectiveSDKVersion string
+	failGetInTxn        *uint32
 }
 
 // LeaderJoinInfo contains information required by a node to join itself as a
@@ -473,6 +486,22 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		}
 	}
 
+	var nonVoter bool
+	if v := os.Getenv(EnvVaultRaftNonVoter); v != "" {
+		// Consistent with handling of other raft boolean env vars
+		// VAULT_RAFT_AUTOPILOT_DISABLE and VAULT_RAFT_FREELIST_SYNC
+		nonVoter = true
+	} else if v, ok := conf[raftNonVoterConfigKey]; ok {
+		nonVoter, err = strconv.ParseBool(v)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse %s config value %q as a boolean: %w", raftNonVoterConfigKey, v, err)
+		}
+	}
+
+	if nonVoter && conf["retry_join"] == "" {
+		return nil, fmt.Errorf("setting %s to true is only valid if at least one retry_join stanza is specified", raftNonVoterConfigKey)
+	}
+
 	return &RaftBackend{
 		logger:                     logger,
 		fsm:                        fsm,
@@ -489,7 +518,9 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		autopilotReconcileInterval: reconcileInterval,
 		autopilotUpdateInterval:    updateInterval,
 		redundancyZone:             conf["autopilot_redundancy_zone"],
+		nonVoter:                   nonVoter,
 		upgradeVersion:             upgradeVersion,
+		failGetInTxn:               new(uint32),
 	}, nil
 }
 
@@ -530,7 +561,7 @@ func (b *RaftBackend) Close() error {
 	b.l.Lock()
 	defer b.l.Unlock()
 
-	if err := b.fsm.db.Close(); err != nil {
+	if err := b.fsm.Close(); err != nil {
 		return err
 	}
 
@@ -539,6 +570,14 @@ func (b *RaftBackend) Close() error {
 	}
 
 	return nil
+}
+
+func (b *RaftBackend) FailGetInTxn(fail bool) {
+	var val uint32
+	if fail {
+		val = 1
+	}
+	atomic.StoreUint32(b.failGetInTxn, val)
 }
 
 func (b *RaftBackend) SetEffectiveSDKVersion(sdkVersion string) {
@@ -552,6 +591,13 @@ func (b *RaftBackend) RedundancyZone() string {
 	defer b.l.RUnlock()
 
 	return b.redundancyZone
+}
+
+func (b *RaftBackend) NonVoter() bool {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	return b.nonVoter
 }
 
 func (b *RaftBackend) EffectiveVersion() string {
@@ -580,7 +626,7 @@ func (b *RaftBackend) DisableUpgradeMigration() (bool, bool) {
 func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
 	b.l.RLock()
 	logstoreStats := b.stableStore.(*raftboltdb.BoltStore).Stats()
-	fsmStats := b.fsm.db.Stats()
+	fsmStats := b.fsm.Stats()
 	stats := b.raft.Stats()
 	b.l.RUnlock()
 	b.collectMetricsWithStats(logstoreStats, sink, "logstore")
@@ -1529,6 +1575,13 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 
 	if err := ctx.Err(); err != nil {
 		return err
+	}
+
+	failGetInTxn := atomic.LoadUint32(b.failGetInTxn)
+	for _, t := range txns {
+		if t.Operation == physical.GetOperation && failGetInTxn != 0 {
+			return GetInTxnDisabledError
+		}
 	}
 
 	txnMap := make(map[string]*physical.TxnEntry)

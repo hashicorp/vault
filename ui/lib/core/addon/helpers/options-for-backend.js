@@ -1,6 +1,10 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { helper as buildHelper } from '@ember/component/helper';
 import { capitalize } from '@ember/string';
-import { assign } from '@ember/polyfills';
 
 const DEFAULT_DISPLAY = {
   searchPlaceholder: 'Filter secrets',
@@ -10,37 +14,35 @@ const DEFAULT_DISPLAY = {
   editComponent: 'secret-edit',
   listItemPartial: 'secret-list/item',
 };
-const ENGINE_SECRET_BACKENDS = {
-  pki: {
-    displayName: 'PKI',
-    navigateTree: false,
-    tabs: [
-      {
-        label: 'Overview',
-        link: 'overview',
-      },
-      {
-        label: 'Roles',
-        link: 'roles',
-      },
-      {
-        label: 'Issuers',
-        link: 'issuers',
-      },
-      {
-        label: 'Certificates',
-        link: 'certificates',
-      },
-      {
-        label: 'Keys',
-        link: 'keys',
-      },
-      {
-        label: 'Configuration',
-        link: 'configuration',
-      },
-    ],
-  },
+const PKI_ENGINE_BACKEND = {
+  displayName: 'PKI',
+  navigateTree: false,
+  tabs: [
+    {
+      label: 'Overview',
+      link: 'overview',
+    },
+    {
+      label: 'Roles',
+      link: 'roles',
+    },
+    {
+      label: 'Issuers',
+      link: 'issuers',
+    },
+    {
+      label: 'Keys',
+      link: 'keys',
+    },
+    {
+      label: 'Certificates',
+      link: 'certificates',
+    },
+    {
+      label: 'Configuration',
+      link: 'configuration',
+    },
+  ],
 };
 const SECRET_BACKENDS = {
   aws: {
@@ -70,7 +72,8 @@ const SECRET_BACKENDS = {
         modelPrefix: 'cert/',
         label: 'Certificates',
         searchPlaceholder: 'Filter certificates',
-        item: 'certificates',
+        item: 'certificate',
+        message: 'Issue a certificate from a role.',
         create: 'Create role',
         tab: 'cert',
         listItemPartial: 'secret-list/pki-cert-item',
@@ -144,7 +147,7 @@ const SECRET_BACKENDS = {
     displayName: 'Transformation',
     navigateTree: false,
     listItemPartial: 'secret-list/transform-list-item',
-    firstStep: 'create a transformation and a role',
+    firstStep: `To use transform, you'll need to create a transformation and a role.`,
     tabs: [
       {
         name: 'transformations',
@@ -194,26 +197,29 @@ const SECRET_BACKENDS = {
     navigateTree: false,
     editComponent: 'transit-edit',
     listItemPartial: 'secret-list/item',
-    firstStep: 'create an encryption key',
+    firstStep: `To use transit, you'll need to create an encryption key`,
   },
 };
 
-export function optionsForBackend([backend, tab, isEngine]) {
-  const selected = isEngine ? ENGINE_SECRET_BACKENDS[backend] : SECRET_BACKENDS[backend];
-  let backendOptions;
+export function optionsForBackend(backend, tab, isEngine) {
+  let selected = SECRET_BACKENDS[backend];
+  if (backend === 'pki' && isEngine) {
+    selected = PKI_ENGINE_BACKEND;
+  }
 
+  let backendOptions;
   if (selected && selected.tabs) {
     const tabData =
       selected.tabs.findBy('name', tab) || selected.tabs.findBy('modelPrefix', tab) || selected.tabs[0];
-    backendOptions = assign({}, selected, tabData);
+    backendOptions = { ...selected, ...tabData };
   } else if (selected) {
     backendOptions = selected;
   } else {
-    backendOptions = assign({}, DEFAULT_DISPLAY, {
-      displayName: backend === 'kv' ? 'KV' : capitalize(backend),
-    });
+    backendOptions = { ...DEFAULT_DISPLAY, displayName: backend === 'kv' ? 'KV' : capitalize(backend) };
   }
   return backendOptions;
 }
 
-export default buildHelper(optionsForBackend);
+export default buildHelper(function ([backend, tab, isEngine]) {
+  return optionsForBackend(backend, tab, isEngine);
+});

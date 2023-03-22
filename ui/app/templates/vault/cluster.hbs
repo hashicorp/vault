@@ -78,11 +78,7 @@
       )}}
         <div class="navbar-sections">
           <div class={{if (is-active-route "vault.cluster.clients") "is-active"}}>
-            <LinkTo
-              @route="vault.cluster.clients.history"
-              @current-when="vault.cluster.clients.history"
-              data-test-navbar-item="metrics"
-            >
+            <LinkTo @route="vault.cluster.clients.dashboard" data-test-navbar-item="metrics">
               Client count
             </LinkTo>
           </div>
@@ -136,15 +132,13 @@
   <LogoSplash />
 {{else}}
   {{#if this.showNav}}
-    <UiWizard>
-      <section class="section">
-        <div class="container is-widescreen">
-          <TokenExpireWarning @expirationDate={{this.auth.tokenExpirationDate}}>
-            {{outlet}}
-          </TokenExpireWarning>
-        </div>
-      </section>
-    </UiWizard>
+    <section class="section">
+      <div class="container is-widescreen">
+        <TokenExpireWarning @expirationDate={{this.auth.tokenExpirationDate}}>
+          {{outlet}}
+        </TokenExpireWarning>
+      </div>
+    </section>
   {{else}}
     {{outlet}}
   {{/if}}

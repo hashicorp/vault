@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -13,7 +16,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/version"
+	"github.com/hashicorp/vault/version"
 )
 
 type ctxKeyForwardedRequestMountAccessor struct{}
@@ -381,6 +384,10 @@ func (d dynamicSystemView) PluginEnv(_ context.Context) (*logical.PluginEnvironm
 	}, nil
 }
 
+func (d dynamicSystemView) VaultVersion(_ context.Context) (string, error) {
+	return version.GetVersion().Version, nil
+}
+
 func (d dynamicSystemView) GeneratePasswordFromPolicy(ctx context.Context, policyName string) (password string, err error) {
 	if policyName == "" {
 		return "", fmt.Errorf("missing password policy name")
@@ -410,4 +417,13 @@ func (d dynamicSystemView) GeneratePasswordFromPolicy(ctx context.Context, polic
 	}
 
 	return passPolicy.Generate(ctx, nil)
+}
+
+func (d dynamicSystemView) ClusterID(ctx context.Context) (string, error) {
+	clusterInfo, err := d.core.Cluster(ctx)
+	if err != nil || clusterInfo.ID == "" {
+		return "", fmt.Errorf("unable to retrieve cluster info or empty ID: %w", err)
+	}
+
+	return clusterInfo.ID, nil
 }

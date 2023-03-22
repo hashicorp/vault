@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@glimmer/component';
 import { calculateAverage } from 'vault/utils/chart-helpers';
 
@@ -9,7 +14,7 @@ import { calculateAverage } from 'vault/utils/chart-helpers';
  * ```js
   <Clients::MonthlyUsage 
     @chartLegend={{this.chartLegend}} 
-    @timestamp={{this.responseTimestamp}}
+    @responseTimestamp={{this.responseTimestamp}}
     @verticalBarChartData={{this.byMonthActivityData}} 
   />
  * ```
