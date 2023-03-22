@@ -3021,27 +3021,28 @@ func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logica
 
 	// Attempt to construct a test password from the rules to ensure that the policy isn't impossible
 	var testPassword []rune
-	for _, rule := range policy.Rules {
+	for i, rule := range policy.Rules {
 		charsetRule, ok := rule.(random.CharsetRule)
 		if !ok {
 			return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("unexpected rule type %T", charsetRule))
 		}
 
 		char := charsetRule.Chars()[0]
-		for i := 0; i < charsetRule.MinLength(); i++ {
+		for j := 0; j < charsetRule.MinLength(); j++ {
 			testPassword = append(testPassword, char)
+		}
+
+		// fill in any remaining characters with the last rule
+		if i == len(policy.Rules)-1 && len(testPassword) < policy.Length {
+			for j := len(testPassword); j < policy.Length; j++ {
+				testPassword = append(testPassword, char)
+			}
 		}
 	}
 
-	if len(testPassword) < policy.Length {
-		rule, ok := policy.Rules[0].(random.CharsetRule)
-		if !ok {
-			return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("unexpected rule type %T", rule))
-		}
-
-		char := rule.Chars()[0]
-		for i := len(testPassword); i < policy.Length; i++ {
-			testPassword = append(testPassword, char)
+	for _, rule := range policy.Rules {
+		if !rule.Pass(testPassword) {
+			return nil, logical.CodedError(http.StatusBadRequest, "failed to construct test password; password failed to pass all rules")
 		}
 	}
 
