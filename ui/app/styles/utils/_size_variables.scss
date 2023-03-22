@@ -5,7 +5,8 @@
 
 /*
  ARG TODO:
- - clean up misc. sizing.
+ - Good amount of cleanup work, especially towards the bottom of this file. Copy/pasted what was already there. Didn't modify things.
+ - Need to discuss the creation of additional variables like $size-small: $size-8;. This is a pattern we use heavily in the app and it would take some work (not hard, but a good chunk of changes) to revert.
  */
 
 /* Font sizing */
@@ -20,8 +21,6 @@ $size-8: (12/14) + 0rem; // ~.857rem  ~13.7px
 $size-9: 0.75rem; // 12px
 $size-10: 0.5rem; // 8px
 $size-11: 0.25rem; // 4px
-
-// ARG TODO find these in code and replace with the corresponding size.
 $size-small: $size-8;
 $size-normal: $size-6;
 $size-medium: $size-5;
@@ -33,7 +32,6 @@ $weight-normal: 400 !default;
 $weight-medium: 500 !default;
 $weight-semibold: 600 !default;
 $weight-bold: 700 !default;
-// ARG TODO find these in the code and replace with above sizing
 $font-weight-normal: 400;
 $font-weight-semibold: 600;
 $font-weight-bold: 700;

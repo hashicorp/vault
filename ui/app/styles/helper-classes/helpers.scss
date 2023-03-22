@@ -6,6 +6,7 @@
 /* ARG TODO WIP: 
 - remove duplicate and overriding classes
 - address hard coded colors and sizing
+- continue to trim down. Goal is to have no helper file, but each of these helper in their respective helper-classes/file.scss
 */
 
 .is-invisible {
@@ -117,6 +118,7 @@ ul.bullet {
   text-align: center;
 }
 // Screen Readers only
+// ARG TODO: we have this class in the app/styes/app.scss file. See if we can consolidate.
 .sr-only {
   border: 0 !important;
   clip: rect(1px, 1px, 1px, 1px) !important;

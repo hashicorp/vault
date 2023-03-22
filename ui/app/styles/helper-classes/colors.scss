@@ -5,6 +5,11 @@
 
 /* This helper includes styles referencing background color, border color, and text color. */
 
+/* ARG TODO WIP:
+- organize a little more.
+- comb through and make sure these are used and not replaced.
+*/
+
 .has-background-transparent {
   background: transparent !important;
 }
@@ -68,7 +73,7 @@
   color: #bac1cc !important;
 }
 
-// Duplicate
+// ARG TODO: Duplicate, has-text-danger is bulma has-text-red is ours.
 .has-text-red {
   color: $red;
 }
