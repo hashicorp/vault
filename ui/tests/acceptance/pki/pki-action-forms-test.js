@@ -77,6 +77,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       );
     });
     skip('with many imports', async function (assert) {
+      // TODO VAULT-14791
       this.server.post(`${this.mountPath}/config/ca`, () => {
         return {
           request_id: 'some-config-id',
@@ -115,6 +116,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       );
     });
     skip('shows imported items when keys is empty', async function (assert) {
+      // TODO VAULT-14791
       this.server.post(`${this.mountPath}/config/ca`, () => {
         return {
           request_id: 'some-config-id',
@@ -224,10 +226,6 @@ module('Acceptance | pki action forms test', function (hooks) {
       await click(S.configuration.saved.issuerLink);
       assert.dom(S.issuerDetails.valueByName('Common name')).hasText(commonName);
     });
-    skip('form renders correctly on configure/create page', async function () {});
-    skip('Stays on the same page after success, transitions on done', async function () {});
-    skip('shows internal tag after success for non-exported type', async function () {});
-    skip('shows private key and private key type after success for exported type', async function () {});
   });
 
   module('generate CSR', function () {
@@ -235,10 +233,12 @@ module('Acceptance | pki action forms test', function (hooks) {
       await authPage.login();
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await click(S.emptyStateLink);
+      assert.dom(S.configuration.title).hasText('Configure PKI');
       await click(S.configuration.optionByKey('generate-csr'));
       await fillIn(S.configuration.typeField, 'exported');
       await fillIn(S.configuration.inputByName('commonName'), 'my-common-name');
       await click('[data-test-save]');
+      assert.dom(S.configuration.title).hasText('View generated CSR');
       await assert.dom(S.configuration.csrDetails).exists('renders CSR details after save');
       await click('[data-test-done]');
       assert.strictEqual(
@@ -247,9 +247,30 @@ module('Acceptance | pki action forms test', function (hooks) {
         'Transitions to overview after viewing csr details'
       );
     });
-    skip('form renders correctly on configure/create page', async function () {});
-    skip('Stays on the same page after success, transitions on done', async function () {});
-    skip('shows internal tag after success for non-exported type', async function () {});
-    skip('shows private key and private key type after success for exported type', async function () {});
+    test('type = exported', async function (assert) {
+      await authPage.login();
+      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      await click(S.emptyStateLink);
+      await click(S.configuration.optionByKey('generate-csr'));
+      await fillIn(S.configuration.typeField, 'exported');
+      await fillIn(S.configuration.inputByName('commonName'), 'my-common-name');
+      await click('[data-test-save]');
+      await assert.dom(S.configuration.csrDetails).exists('renders CSR details after save');
+      assert.dom(S.configuration.title).hasText('View generated CSR');
+      assert
+        .dom('[data-test-alert-banner="alert"]')
+        .hasText(
+          'Next steps This private key material will only be available once. Copy or download it now.'
+        );
+      assert
+        .dom(S.configuration.saved.privateKey)
+        .hasClass('allow-copy', 'copyable masked private key exists');
+      await click('[data-test-done]');
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.mountPath}/pki/overview`,
+        'Transitions to overview after viewing csr details'
+      );
+    });
   });
 });
