@@ -9,8 +9,8 @@ description: |-
 # pki issue
 
 This command creates a intermediate certificate authority certificate signed by
-the <parent> in the <child_mount>, using the options to determine the fields on
-that certificate.
+the `<parent>` in the `<child_mount>`, using the options to determine the fields
+on that certificate.
 
 ## Usage
 
@@ -18,10 +18,10 @@ Usage: `vault pki issue [flags] <parent> <child_mount> [options]`
 
 - [flags] are optional arguments described below
 
-- <parent> is the fully qualified path of the Certificate Authority in vault
+- `<parent>` is the fully qualified path of the Certificate Authority in vault
   which will issue the new intermediate certificate.
 
-- <child_mount> is the path of the mount in vault where the new issuer is saved.
+- `<child_mount>` is the path of the mount in vault where the new issuer is saved.
 
 - [options] are the superset of the options passed to generate/intermediate and
   sign-intermediate commands.  At least one option must be set.

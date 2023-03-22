@@ -17,10 +17,10 @@ Usage: `vault pki reissue [flags] <parent> <template> <child_mount> [options]`
 
 - [flags] are optional arguments described below.
 
-- <parent> is the fully qualified path of the Certificate Authority in vault
+- `<parent>` is the fully qualified path of the Certificate Authority in vault
   which will issue the new intermediate certificate.
 
-- <template> is the fully qualified path of an intermediate certificate in vault
+- `<template>` is the fully qualified path of an intermediate certificate in vault
   which will be used to populate certificate fields not overridden by [options].
 
 ~> **Note**: not all possible certificate fields are supported by Vault, and
@@ -28,7 +28,7 @@ Usage: `vault pki reissue [flags] <parent> <template> <child_mount> [options]`
   unknown fields are set there may not be a warning that those are missing from
   the new issuer.
 
-- <child_mount> is the path of the mount in vault where the new issuer is saved.
+- `<child_mount>` is the path of the mount in vault where the new issuer is saved.
 
 - [options] are the superset of the options passed to generate/intermediate and
   sign-intermediate commands.  While every option is optional, at least one
