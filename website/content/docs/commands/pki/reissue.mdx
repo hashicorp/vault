@@ -79,8 +79,8 @@ following API endpoints, each representing a step in the process:
 
 ## Examples
 
-```
-% vault pki reissue -issuer_name="SecondDepartment" /pki_root/issuer/default /pki_int/issuer/FirstDepartment /pki_int_2/ common_name="second-department.example.com"
+```shell-session
+$ vault pki reissue -issuer_name="SecondDepartment" /pki_root/issuer/default /pki_int/issuer/FirstDepartment /pki_int_2/ common_name="second-department.example.com"
 Key                               Value
 ---                               -----
 ca_chain                          [-----BEGIN CERTIFICATE-----
