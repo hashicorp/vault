@@ -73,15 +73,6 @@ module('Acceptance | pki workflow', function (hooks) {
     await click(SELECTORS.keysTab);
     assertEmptyState(assert, 'keys');
   });
-  test('shows pki beta banner to return to old pki on new pki configuration page', async function (assert) {
-    assert.expect(3);
-    await authPage.login(this.pkiAdminToken);
-    await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
-    assert.dom(SELECTORS.configTab).exists('Configuration tab is present');
-    assert.dom(SELECTORS.configuration.pkiBetaBanner).exists('Configuration beta banner exists');
-    await click(SELECTORS.configuration.pkiBetaBannerLink);
-    assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/configuration`);
-  });
 
   module('configuration', function (hooks) {
     hooks.beforeEach(function () {

@@ -21,40 +21,7 @@
     </ToolbarActions>
   </Toolbar>
 
-  <h2 class="title has-bottom-margin-xs has-top-margin-m is-4 has-border-bottom-light has-bottom-padding-s">
-    Global URLs
-  </h2>
-  <InfoTableRow
-    @label="Issuing certificates"
-    @value={{if this.model.urls.issuingCertificates this.model.urls.issuingCertificates "None"}}
-  />
-  <InfoTableRow
-    @label="CRL distribution points"
-    @value={{if this.model.urls.crlDistributionPoints this.model.urls.crlDistributionPoints "None"}}
-  />
-
-  <h2 class="title has-bottom-margin-xs has-top-margin-xl is-4 has-border-bottom-light has-bottom-padding-s">
-    Certificate Revocation List (CRL)
-  </h2>
-  <InfoTableRow @label="Expiry" @value={{this.model.crl.expiry}} />
-  <InfoTableRow @label="Auto-rebuild" @value={{if this.model.crl.autoRebuild "On" "Off"}} />
-
-  <h2 class="title has-bottom-margin-xs has-top-margin-xl is-4 has-border-bottom-light has-bottom-padding-s">
-    Online Certificate Status Protocol (OCSP)
-  </h2>
-  <InfoTableRow @label="Responder APIs" @value={{if this.model.crl.ocspDisable "Disabled" "Enabled"}} />
-  <InfoTableRow @label="Interval" @value={{this.model.crl.ocspExpiry}} />
-
-  <h2 class="title has-bottom-margin-xs has-top-margin-xl is-4 has-border-bottom-light has-bottom-padding-s">Mount
-    Configuration</h2>
-  <InfoTableRow @label="Secret engine type" @value={{this.model.mountConfig.engineType}} />
-  <InfoTableRow @label="Path" @value={{this.model.mountConfig.path}} />
-  <InfoTableRow @label="Accessor" @value={{this.model.mountConfig.accessor}} />
-  <InfoTableRow @label="Local" @value={{this.model.mountConfig.local}} />
-  <InfoTableRow @label="Seal wrap" @value={{this.model.mountConfig.sealWrap}} />
-  <InfoTableRow @label="Default Lease TTL" @value={{this.model.mountConfig.config.defaultLeaseTtl}} />
-  <InfoTableRow @label="Max Lease TTL" @value={{this.model.mountConfig.config.maxLeaseTtl}} />
-  {{! TODO: Add External Keys Attribute }}
+  <Page::PkiConfigurationDetails @urls={{this.model.urls}} @crl={{this.model.crl}} @mountConfig={{this.model.mountConfig}} />
 {{else}}
   <Toolbar />
 

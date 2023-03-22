@@ -20,15 +20,15 @@ export default class ConfigurationIndexRoute extends Route {
       engine: this.modelFor('application'),
       urls: this.store.findRecord('pki/urls', backend),
       crl: this.store.findRecord('pki/crl', backend),
-      mountConfig: this.store
-        .query('secret-engine', {
-          path: backend,
-        })
-        .then((model) => {
-          if (model) {
-            return model.get('firstObject');
-          }
-        }),
+      mountConfig: this.fetchMountConfig(backend),
     });
+  }
+
+  async fetchMountConfig(path) {
+    const mountConfig = await this.store.query('secret-engine', { path });
+
+    if (mountConfig) {
+      return mountConfig.get('firstObject');
+    }
   }
 }
