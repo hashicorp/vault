@@ -19,6 +19,7 @@ interface Args {
   useIssuer: boolean;
   onComplete: CallableFunction;
   onCancel: CallableFunction;
+  onSave?: CallableFunction;
 }
 
 export default class PkiGenerateCsrComponent extends Component<Args> {
@@ -70,6 +71,9 @@ export default class PkiGenerateCsrComponent extends Component<Args> {
         const useIssuer = yield this.getCapability();
         yield model.save({ adapterOptions: { actionType: 'generate-csr', useIssuer } });
         this.flashMessages.success('Successfully generated CSR.');
+        if (this.args.onSave) {
+          this.args.onSave();
+        }
       } else {
         this.modelValidations = state;
         this.alert = invalidFormMessage;

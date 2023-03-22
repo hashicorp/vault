@@ -55,7 +55,7 @@
     @urls={{@urls}}
     @onCancel={{@onCancel}}
     @adapterOptions={{hash actionType=@config.actionType useIssuer=@config.canGenerateIssuerRoot}}
-    @onSuccess={{fn (mut this.title) "View root certificate"}}
+    @onSave={{fn (mut this.title) "View root certificate"}}
     @onComplete={{transition-to "vault.cluster.secrets.backend.pki.overview"}}
   />
 {{else if (eq @config.actionType "generate-csr")}}

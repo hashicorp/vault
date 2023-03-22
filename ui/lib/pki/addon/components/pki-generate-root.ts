@@ -24,7 +24,7 @@ interface Args {
   urls: PkiUrlsModel;
   onCancel: CallableFunction;
   onComplete: CallableFunction;
-  onSuccess: CallableFunction | undefined;
+  onSave?: CallableFunction;
   adapterOptions: AdapterOptions;
 }
 
@@ -43,7 +43,7 @@ interface Args {
  *
  * @param {Object} model - pki/action model.
  * @callback onCancel - Callback triggered when cancel button is clicked, after model is unloaded
- * @callback onSuccess - Optional - Callback triggered after model is saved. Results are shown on the same component
+ * @callback onSave - Optional - Callback triggered after model is saved. Results are shown on the same component
  * @param {Object} adapterOptions - object passed as adapterOptions on the model.save method
  */
 export default class PkiGenerateRootComponent extends Component<Args> {
@@ -107,8 +107,8 @@ export default class PkiGenerateRootComponent extends Component<Args> {
       yield this.setUrls();
       yield this.args.model.save({ adapterOptions: this.args.adapterOptions });
       this.flashMessages.success('Successfully generated root.');
-      if (this.args.onSuccess) {
-        this.args.onSuccess();
+      if (this.args.onSave) {
+        this.args.onSave();
       }
     } catch (e) {
       this.errorBanner = errorMessage(e);
