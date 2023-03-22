@@ -3,66 +3,28 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-// ARG TODO: consolidate between bulma and pre-exisitng css.
-/* From Bulma */
+.page-header + .tabs-container {
+  box-shadow: none;
+}
+
 .tabs {
   -webkit-overflow-scrolling: touch;
   align-items: stretch;
+  box-shadow: inset 0 -1px 0 $grey-light;
   display: flex;
   font-size: 1rem;
   justify-content: space-between;
   overflow: hidden;
   overflow-x: auto;
   white-space: nowrap;
-}
-
-.tabs a {
-  align-items: center;
-  border-bottom-style: solid;
-  border-bottom-width: 1px;
-  color: #4a4a4a;
-  display: flex;
-  justify-content: center;
-  margin-bottom: -1px;
-  padding: 0.5em 1em;
-  vertical-align: top;
-}
-
-.tabs a:hover {
-  border-bottom-color: $grey-darker;
-  color: $grey-darker;
-}
-
-.tabs li {
-  display: block;
-}
-
-.tabs li.is-active a {
-  border-bottom-color: #485fc7;
-  color: #485fc7;
-}
-
-.tabs ul {
-  align-items: center;
-  border-bottom-color: #dbdbdb;
-  border-bottom-style: solid;
-  border-bottom-width: 1px;
-  display: flex;
-  flex-grow: 1;
-  flex-shrink: 0;
-  justify-content: flex-start;
-}
-/* End of bulma classes */
-
-.page-header + .tabs-container {
-  box-shadow: none;
-}
-
-.tabs {
-  box-shadow: inset 0 -1px 0 $grey-light;
 
   ul {
+    align-items: center;
     border-color: transparent;
+    display: flex;
+    flex-grow: 1;
+    flex-shrink: 0;
+    justify-content: flex-start;
     min-height: 3rem;
 
     > a {
@@ -84,6 +46,8 @@
   }
 
   li {
+    display: block;
+
     &:focus {
       box-shadow: none;
     }
@@ -96,12 +60,17 @@
 
   a,
   .tab {
-    color: $grey;
-    font-weight: $font-weight-semibold;
-    text-decoration: none;
-    padding: $size-6 $size-8 $size-8;
+    align-items: center;
     border-bottom: 2px solid transparent;
+    color: $grey;
+    display: flex;
+    font-weight: $font-weight-semibold;
+    justify-content: center;
+    margin-bottom: -1px;
+    padding: $size-6 $size-8 $size-8;
+    text-decoration: none;
     transition: background-color $speed, border-color $speed;
+    vertical-align: top;
 
     &:hover,
     &:active {
@@ -109,6 +78,7 @@
     }
 
     &:hover {
+      color: $grey-darker;
       background-color: $ui-gray-050;
     }
   }
