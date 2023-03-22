@@ -2388,7 +2388,7 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "leases",
-				OperationVerb:   "list",
+				OperationVerb:   "look-up",
 				OperationSuffix: "|with-prefix",
 			},
 
@@ -2530,7 +2530,7 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "leases",
 				OperationVerb:   "revoke",
-				OperationSuffix: "lease2|lease",
+				OperationSuffix: "lease2|lease|lease-with-id2|lease-with-id",
 			},
 
 			Fields: map[string]*framework.FieldSchema{
@@ -2568,6 +2568,12 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 		{
 			Pattern: "(leases/)?revoke-force/(?P<prefix>.+)",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "leases",
+				OperationVerb:   "force-revoke",
+				OperationSuffix: "lease-with-prefix2|lease-with-prefix",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"prefix": {
 					Type:        framework.TypeString,
@@ -2594,6 +2600,12 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 
 		{
 			Pattern: "(leases/)?revoke-prefix/(?P<prefix>.+)",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "leases",
+				OperationVerb:   "revoke",
+				OperationSuffix: "lease-with-prefix2|lease-with-prefix",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"prefix": {
@@ -2626,6 +2638,11 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 		{
 			Pattern: "leases/tidy$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "leases",
+				OperationVerb:   "tidy",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleTidyLeases,
@@ -2644,6 +2661,12 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 
 		{
 			Pattern: "leases/count$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "leases",
+				OperationVerb:   "count",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"type": {
 					Type:        framework.TypeString,
@@ -2687,6 +2710,12 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 
 		{
 			Pattern: "leases$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "leases",
+				OperationVerb:   "list",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"type": {
 					Type:        framework.TypeString,
