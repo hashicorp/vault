@@ -123,7 +123,7 @@
 @import './components/transit-card';
 @import './components/ttl-picker';
 @import './components/unseal-warning';
-@import './components/ui-wizard';
+// @import './components/ui-wizard'; // remove, see PR https://github.com/hashicorp/vault/pull/19220
 @import './components/vault-loading';
 @import './components/vlt-radio';
 @import './components/vlt-table';
