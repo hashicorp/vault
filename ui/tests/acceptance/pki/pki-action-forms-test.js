@@ -205,9 +205,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       assert.dom(S.configuration.title).hasText('View root certificate');
       assert
         .dom('[data-test-alert-banner="alert"]')
-        .hasText(
-          'Next steps This private key material will only be available once. Copy or download it now.'
-        );
+        .hasText('Next steps The private_key is only available once. Make sure you copy and save it now.');
       assert.dom(S.configuration.title).hasText('View root certificate', 'Updates title on page');
       assert
         .dom(S.configuration.saved.certificate)
@@ -259,9 +257,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       assert.dom(S.configuration.title).hasText('View generated CSR');
       assert
         .dom('[data-test-alert-banner="alert"]')
-        .hasText(
-          'Next steps This private key material will only be available once. Copy or download it now.'
-        );
+        .hasText('Next steps The private_key is only available once. Make sure you copy and save it now.');
       assert
         .dom(S.configuration.saved.privateKey)
         .hasClass('allow-copy', 'copyable masked private key exists');
