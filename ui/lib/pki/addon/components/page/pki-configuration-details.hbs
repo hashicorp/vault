@@ -1,7 +1,7 @@
 <h2 class="title has-bottom-margin-xs has-top-margin-m is-4 has-border-bottom-light has-bottom-padding-s">
   Global URLs
 </h2>
-<InfoTableRow @label="Issuing certificates" @value={{if @urls.issuingCertificates @urls.issuingCertificates "None"}} />
+<InfoTableRow @label="Issuing certificates" @value={{or @urls.issuingCertificates "None"}} />
 <InfoTableRow
   @label="CRL distribution points"
   @value={{if @urls.crlDistributionPoints @urls.crlDistributionPoints "None"}}
@@ -29,8 +29,5 @@
 <InfoTableRow @label="Seal wrap" @value={{@mountConfig.sealWrap}} />
 <InfoTableRow @label="Default lease TTL" @value={{@mountConfig.config.defaultLeaseTtl}} />
 <InfoTableRow @label="Max lease TTL" @value={{@mountConfig.config.maxLeaseTtl}} />
-<InfoTableRow
-  @label="Allowed managed keys"
-  @value={{if @mountConfig.config.allowedManagedKeys @mountConfig.config.allowedManagedKeys "None"}}
-/>
+<InfoTableRow @label="Allowed managed keys" @value={{or @mountConfig.config.allowedManagedKeys "None"}} />
 <div class="has-top-margin-l"></div>

@@ -13,8 +13,8 @@ export default class PkiCrlAdapter extends ApplicationAdapter {
     return `${this.buildURL()}/${encodePath(backend)}/config/crl`;
   }
 
-  findRecord(store, type, id) {
-    return this.ajax(this._url(id), 'GET').then((resp) => {
+  findRecord(store, type, backend) {
+    return this.ajax(this._url(backend), 'GET').then((resp) => {
       return resp.data;
     });
   }
