@@ -42,16 +42,16 @@ jobs:
         env:
           IS_ENT: ${{ startsWith(github.event.repository.name, 'vault-enterprise' ) }}
         run: |
-          echo "go-version=$(cat ./.go-version)" >> $GITHUB_OUTPUT
-          echo "node-version=$(cat ./ui/.nvmrc)" >> $GITHUB_OUTPUT
-          if ${IS_ENT} == true; then
+          echo "go-version=$(cat ./.go-version)" >> "$GITHUB_OUTPUT"
+          echo "node-version=$(cat ./ui/.nvmrc)" >> "$GITHUB_OUTPUT"
+          if [ "$IS_ENT" == true ]; then
             echo "detected vault_edition=ent"
-            echo "runs-on=['self-hosted', 'ondemand', 'os=linux', 'type=m5d.4xlarge']" >> $GITHUB_OUTPUT
-            echo "vault_edition=ent" >> $GITHUB_OUTPUT
+            echo "runs-on=['self-hosted', 'ondemand', 'os=linux', 'type=m5d.4xlarge']" >> "$GITHUB_OUTPUT"
+            echo "vault_edition=ent" >> "$GITHUB_OUTPUT"
           else
             echo "detected vault_edition=oss"
-            echo "runs-on=\"custom-linux-xl-vault-latest\"" >> $GITHUB_OUTPUT
-            echo "vault_edition=oss" >> $GITHUB_OUTPUT
+            echo "runs-on=\"custom-linux-xl-vault-latest\"" >> "$GITHUB_OUTPUT"
+            echo "vault_edition=oss" >> "$GITHUB_OUTPUT"
           fi
 
   run-ui-tests:
@@ -103,7 +103,7 @@ jobs:
         run: echo "${{ secrets.VAULT_LICENSE }}" > ./enos/support/vault.hclic || true
       - name: Check Chrome Installed
         id: chrome-check
-        run: echo "chrome-version=$(chrome --version 2> /dev/null || google-chrome --version 2> /dev/null || google-chrome-stable --version 2> /dev/null || echo 'not-installed')" >> $GITHUB_OUTPUT
+        run: echo "chrome-version=$(chrome --version 2> /dev/null || google-chrome --version 2> /dev/null || google-chrome-stable --version 2> /dev/null || echo 'not-installed')" >> "$GITHUB_OUTPUT"
       - name: Install Chrome Dependencies
         if: steps.chrome-check.outputs.chrome-version == 'not-installed'
         run: |

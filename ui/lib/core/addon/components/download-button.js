@@ -7,6 +7,7 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
+import timestamp from 'vault/utils/timestamp';
 /**
  * @module DownloadButton
  * DownloadButton components are an action button used to download data. Both the action text and icon are yielded.
@@ -37,8 +38,8 @@ export default class DownloadButton extends Component {
   @service flashMessages;
 
   get filename() {
-    const timestamp = new Date().toISOString();
-    return this.args.filename ? this.args.filename + '-' + timestamp : timestamp;
+    const ts = timestamp.now().toISOString();
+    return this.args.filename ? this.args.filename + '-' + ts : ts;
   }
 
   get content() {

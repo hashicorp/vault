@@ -16,6 +16,8 @@ import {
 } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { v4 as uuidv4 } from 'uuid';
+
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
@@ -107,14 +109,14 @@ module('Acceptance | auth backend list', function (hooks) {
 
   test('auth methods are linkable and link to correct view', async function (assert) {
     assert.expect(16);
-    const timestamp = new Date().getTime();
+    const uid = uuidv4();
     await visit('/vault/access');
 
     const supportManaged = supportedManagedAuthBackends();
     const backends = supportedAuthBackends();
     for (const backend of backends) {
       const { type } = backend;
-      const path = `${type}-${timestamp}`;
+      const path = `auth-list-${type}-${uid}`;
       if (type !== 'token') {
         await enablePage.enable(type, path);
       }
