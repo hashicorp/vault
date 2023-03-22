@@ -2769,6 +2769,10 @@ func (b *SystemBackend) remountPaths() []*framework.Path {
 		{
 			Pattern: "remount",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb: "remount",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"from": {
 					Type:        framework.TypeString,
@@ -2802,6 +2806,12 @@ func (b *SystemBackend) remountPaths() []*framework.Path {
 		},
 		{
 			Pattern: "remount/status/(?P<migration_id>.+?)$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "remount",
+				OperationVerb:   "read",
+				OperationSuffix: "status",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"migration_id": {
@@ -2840,6 +2850,11 @@ func (b *SystemBackend) remountPaths() []*framework.Path {
 func (b *SystemBackend) metricsPath() *framework.Path {
 	return &framework.Path{
 		Pattern: "metrics",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationVerb: "metrics",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"format": {
 				Type:        framework.TypeString,
@@ -2865,6 +2880,11 @@ func (b *SystemBackend) metricsPath() *framework.Path {
 func (b *SystemBackend) monitorPath() *framework.Path {
 	return &framework.Path{
 		Pattern: "monitor",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationVerb: "monitor",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"log_level": {
 				Type:        framework.TypeString,
@@ -2896,6 +2916,12 @@ func (b *SystemBackend) monitorPath() *framework.Path {
 func (b *SystemBackend) inFlightRequestPath() *framework.Path {
 	return &framework.Path{
 		Pattern: "in-flight-req",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationVerb:   "collect",
+			OperationSuffix: "in-flight-request-information",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback:    b.handleInFlightRequestData,
@@ -2909,6 +2935,12 @@ func (b *SystemBackend) inFlightRequestPath() *framework.Path {
 func (b *SystemBackend) hostInfoPath() *framework.Path {
 	return &framework.Path{
 		Pattern: "host-info/?",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationVerb:   "collect",
+			OperationSuffix: "host-information",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback:    b.handleHostInfo,
@@ -2925,6 +2957,13 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "auth$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "auth",
+				OperationVerb:   "list",
+				OperationSuffix: "enabled-methods",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleAuthTable,
@@ -2942,6 +2981,11 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 		},
 		{
 			Pattern: "auth/(?P<path>.+?)/tune$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "auth",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"path": {
 					Type:        framework.TypeString,
@@ -2998,7 +3042,11 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback:    b.handleAuthTuneRead,
+					Callback: b.handleAuthTuneRead,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "tuning-information",
+					},
 					Summary:     "Reads the given auth path's configuration.",
 					Description: "This endpoint requires sudo capability on the final path, but the same functionality can be achieved without sudo via `sys/mounts/auth/[auth-path]/tune`.",
 					Responses: map[int][]framework.Response{
@@ -3082,7 +3130,11 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 					},
 				},
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback:    b.handleAuthTuneWrite,
+					Callback: b.handleAuthTuneWrite,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "tune",
+						OperationSuffix: "configuration-parameters",
+					},
 					Summary:     "Tune configuration parameters for a given auth path.",
 					Description: "This endpoint requires sudo capability on the final path, but the same functionality can be achieved without sudo via `sys/mounts/auth/[auth-path]/tune`.",
 					Responses: map[int][]framework.Response{
@@ -3097,6 +3149,11 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 		},
 		{
 			Pattern: "auth/(?P<path>.+)",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "auth",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"path": {
 					Type:        framework.TypeString,
@@ -3145,7 +3202,11 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleReadAuth,
-					Summary:  "Read the configuration of the auth engine at the given path.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "configuration",
+					},
+					Summary: "Read the configuration of the auth engine at the given path.",
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -3208,7 +3269,10 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleEnableAuth,
-					Summary:  "Enables a new auth method.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "enable",
+					},
+					Summary: "Enables a new auth method.",
 					Description: `After enabling, the auth method can be accessed and configured via the auth path specified as part of the URL. This auth path will be nested under the auth prefix.
 
 For example, enable the "foo" auth method will make it accessible at /auth/foo.`,
@@ -3220,7 +3284,10 @@ For example, enable the "foo" auth method will make it accessible at /auth/foo.`
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleDisableAuth,
-					Summary:  "Disable the auth method at the given auth path",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "disable",
+					},
+					Summary: "Disable the auth method at the given auth path",
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -3238,6 +3305,11 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "policy/?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "policies",
+				OperationVerb:   "list",
+			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
@@ -3282,6 +3354,11 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 
 		{
 			Pattern: "policy/(?P<name>.+)",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "policies",
+				OperationSuffix: "acl-policy2", // this endpoint duplicates /sys/policies/acl
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
@@ -3352,6 +3429,11 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 		{
 			Pattern: "policies/acl/?$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "policies",
+				OperationSuffix: "acl-policies",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: b.handlePoliciesList(PolicyTypeACL),
@@ -3378,6 +3460,11 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 
 		{
 			Pattern: "policies/acl/(?P<name>.+)",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "policies",
+				OperationSuffix: "acl-policy",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
@@ -3443,6 +3530,11 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 		{
 			Pattern: "policies/password/?$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "policies",
+				OperationSuffix: "password-policies",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: b.handlePoliciesPasswordList,
@@ -3464,6 +3556,12 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 
 		{
 			Pattern: "policies/password/(?P<name>.+)/generate$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "policies",
+				OperationVerb:   "generate",
+				OperationSuffix: "password-from-password-policy",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
@@ -3496,6 +3594,11 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 
 		{
 			Pattern: "policies/password/(?P<name>.+)$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "policies",
+				OperationSuffix: "password-policy",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
@@ -3558,6 +3661,10 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 		{
 			Pattern: "wrapping/wrap$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb: "wrap",
+			},
+
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: b.handleWrappingWrap,
 			},
@@ -3570,6 +3677,10 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 
 		{
 			Pattern: "wrapping/unwrap$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb: "unwrap",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
@@ -3597,11 +3708,19 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleWrappingLookup,
-					Summary:  "Look up wrapping properties for the given token.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "wrapping-properties",
+					},
+					Summary: "Look up wrapping properties for the given token.",
 				},
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleWrappingLookup,
-					Summary:  "Look up wrapping properties for the requester's token.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "wrapping-properties2",
+					},
+					Summary: "Look up wrapping properties for the requester's token.",
 				},
 			},
 
@@ -3611,6 +3730,10 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 
 		{
 			Pattern: "wrapping/rewrap$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb: "rewrap",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
@@ -3632,6 +3755,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "mounts/(?P<path>.+?)/tune$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "mounts",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"path": {
@@ -3695,6 +3822,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleMountTuneRead,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "tuning-information",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -3785,6 +3916,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleMountTuneWrite,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "tune",
+						OperationSuffix: "configuration-parameters",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -3799,6 +3934,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 
 		{
 			Pattern: "mounts/(?P<path>.+?)",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "mounts",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"path": {
@@ -3849,6 +3988,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleReadMount,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "configuration",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -3921,6 +4064,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleMount,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "enable",
+						OperationSuffix: "secrets-engine",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -3930,6 +4077,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleUnmount,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "disable",
+						OperationSuffix: "secrets-engine",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -3944,6 +4095,12 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 
 		{
 			Pattern: "mounts$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "mounts",
+				OperationVerb:   "list",
+				OperationSuffix: "secrets-engines",
+			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
@@ -3967,12 +4124,19 @@ func (b *SystemBackend) experimentPaths() []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "experiments$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb:   "list",
+				OperationSuffix: "experimental-features",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleReadExperiments,
 					Summary:  "Returns the available and enabled experiments",
 				},
 			},
+
 			HelpSynopsis:    strings.TrimSpace(sysHelp["experiments"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["experiments"][1]),
 		},
@@ -3983,6 +4147,12 @@ func (b *SystemBackend) lockedUserPaths() []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "locked-users/(?P<mount_accessor>.+?)/unlock/(?P<alias_identifier>.+)",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "locked-users",
+				OperationVerb:   "unlock",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"mount_accessor": {
 					Type:        framework.TypeString,
@@ -4004,6 +4174,12 @@ func (b *SystemBackend) lockedUserPaths() []*framework.Path {
 		},
 		{
 			Pattern: "locked-users",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "locked-users",
+				OperationVerb:   "list",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"mount_accessor": {
 					Type:        framework.TypeString,
