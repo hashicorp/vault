@@ -623,6 +623,9 @@ type Core struct {
 	// only the active node will actually write the new version timestamp, a perf
 	// standby shouldn't rely on the stored version timestamps being present.
 	versionHistory map[string]VaultVersion
+
+	// if populated, override the default gRPC min connect timeout (currently 20s in grpc 1.51)
+	grpcMinConnectTimeout time.Duration
 }
 
 func (c *Core) HAState() consts.HAState {
@@ -1133,6 +1136,16 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if c.versionHistory == nil {
 		c.logger.Info("Initializing version history cache for core")
 		c.versionHistory = make(map[string]VaultVersion)
+	}
+
+	minConnectTimeoutRaw := os.Getenv("VAULT_GRPC_MIN_CONNECT_TIMEOUT")
+	if minConnectTimeoutRaw != "" {
+		dur, err := time.ParseDuration(minConnectTimeoutRaw)
+		if err != nil {
+			c.logger.Warn("VAULT_GRPC_MIN_CONNECT_TIMEOUT contains non-duration value, ignoring")
+		} else if dur != 0 {
+			c.grpcMinConnectTimeout = dur
+		}
 	}
 
 	return c, nil
