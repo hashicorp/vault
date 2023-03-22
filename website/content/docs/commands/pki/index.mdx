@@ -15,7 +15,7 @@ The `pki` command groups subcommands for interacting with Vault's
 
 Option flags for a given subcommand are provided after the subcommand, but before the arguments.
 
-## Examples
+## Example Health Check
 
 To [health check](/vault/docs/commands/pki/health-check) a mount, use the
 `vault pki health-check <mount>` command:
@@ -29,4 +29,38 @@ status    endpoint                                            message
 ok        /pki/issuer/da41ffb1-cc6d-5a5c-f147-e4d7beeb1b73    Issuer's validity (2032-12-17) is OK
 
 ... more output elided ...
+```
+
+## Example Verify Sign
+
+To [verify](/vault/docs/commands/pki/verify-sign) the signature between two
+issuer certificates, use the `vault pki verify-sign <parent> <child>` command:
+
+```
+```
+
+## Example List Child Issuers
+
+To [list intermediate](/vault/docs/commands/pki/list-intermediates) certificates
+potentially issued by a certificate inside vault, use the
+`vault pki list-intermediates <parent>` command:
+
+```
+```
+
+## Example Issue
+
+To [issue](/vault/docs/commands/pki/issue) a new issuer certificate, use the
+`vault pki issue <parent-certificate-path> <mount>` command:
+
+```
+```
+
+## Example Reissue
+
+To [issue](/vault/docs/commands/pki/reissue) a new issuer certificate, using the
+same fields as an existing issuer template, use the
+`vault pki reissue <parent-certificate-path> <mount>` command:
+
+```
 ```

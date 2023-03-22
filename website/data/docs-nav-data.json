@@ -570,7 +570,23 @@
           {
             "title": "<code>health-check</code>",
             "path": "commands/pki/health-check"
-          }
+          },
+	  {
+	    "title": "<code>verify-sign</code>",
+	    "path": "commands/pki/verify-sign"
+	  },
+	  {
+	    "title": "<code>list-intermeidates</code>",
+	    "path": "commands/pki/list-intermediates"
+	  },
+	  {
+	    "title": "<code>issue</code>",
+	    "path": "commands/pki/issue"
+	  },
+	  {
+	    "title": "<code>reissue</code>",
+	    "path": "commands/pki/reissue"
+	  }
         ]
       },
       {
