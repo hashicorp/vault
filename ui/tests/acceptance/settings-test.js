@@ -6,6 +6,8 @@
 import { currentURL, find, visit, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { v4 as uuidv4 } from 'uuid';
+
 import backendListPage from 'vault/tests/pages/secrets/backends';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import authPage from 'vault/tests/pages/auth';
@@ -15,6 +17,7 @@ module('Acceptance | settings', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
+    this.uid = uuidv4();
     return authPage.login();
   });
 
@@ -23,9 +26,8 @@ module('Acceptance | settings', function (hooks) {
   });
 
   test('settings', async function (assert) {
-    const now = new Date().getTime();
     const type = 'consul';
-    const path = `path-${now}`;
+    const path = `settings-path-${this.uid}`;
 
     // mount unsupported backend
     await visit('/vault/settings/mount-secret-backend');

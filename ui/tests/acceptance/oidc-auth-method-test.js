@@ -18,6 +18,7 @@ module('Acceptance | oidc auth method', function (hooks) {
 
   hooks.beforeEach(function () {
     this.openStub = sinon.stub(window, 'open').callsFake(() => fakeWindow.create());
+    // OIDC test fails when using fake timestamps, we use the real timestamp.now here
     this.server.post('/auth/oidc/oidc/auth_url', () => ({
       data: { auth_url: 'http://example.com' },
     }));
