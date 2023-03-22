@@ -1,0 +1,114 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+/* Helpers that define anything with the CSS flexbox or CSS grid. */
+
+/* ARG TODO WIP: 
+- if !important it comes from bulma. need to address
+- just pasted in order as they were, a bit of a hot mess. clean up.
+*/
+
+/* Flexbox helpers */
+.is-flex {
+  display: flex !important;
+}
+
+.is-flex-column {
+  display: flex;
+  flex-direction: column;
+}
+.is-flex-row {
+  display: flex;
+  flex-direction: row;
+}
+.is-flex-v-centered {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  justify-content: center;
+}
+
+@media screen and (min-width: 769px), print {
+  .is-flex-v-centered-tablet {
+    display: flex;
+    align-items: center;
+    align-self: center;
+    justify-content: center;
+  }
+}
+
+.is-flex-v-centered-tablet {
+  // TODO check if this is from or until
+  @include until($tablet) {
+    display: flex;
+    align-items: center;
+    align-self: center;
+    justify-content: center;
+  }
+}
+.is-flex-center {
+  display: flex;
+  align-items: center;
+}
+.is-flex-align-baseline {
+  display: flex;
+  align-items: baseline;
+}
+.is-flex-1 {
+  flex-grow: 1;
+  &.basis-0 {
+    flex-basis: 0;
+  }
+}
+.is-flex-wrap {
+  flex-flow: row wrap;
+}
+.is-flex-end {
+  display: flex !important;
+  justify-content: flex-end;
+}
+.is-flex-start {
+  display: flex !important;
+  justify-content: flex-start;
+
+  &.has-gap {
+    gap: $spacing-m;
+  }
+}
+.is-flex-full {
+  flex-basis: 100%;
+}
+.is-no-flex-grow {
+  flex-grow: 0 !important;
+}
+.is-flex-half {
+  flex: 50%;
+}
+.is-auto-width {
+  width: auto;
+}
+.is-min-width-0 {
+  min-width: 0;
+}
+
+.is-flex-between,
+.is-grouped-split {
+  display: flex;
+  justify-content: space-between !important;
+}
+
+/* CSS GRID */
+.is-grid {
+  display: grid;
+}
+.is-grid-3-columns {
+  grid-template-columns: repeat(3, 1fr);
+}
+.is-medium-height {
+  height: $medium-height;
+}
+.is-grid-column-span-3 {
+  grid-column-end: span 3;
+}

@@ -4,13 +4,14 @@
  */
 
 // Start with Structure & Bulma variables as a foundation
-@import './utils/colors';
-@import './utils/spacing';
+@import './utils/color_variables';
+@import './utils/size_variables';
 
 // Consolidate Bulma variables and mixins
 @import './utils/bulma_variables';
 
 @import './core/element-styling';
+@import './core/bulma-classes';
 @import './utils/bulma_switch';
 @import './utils/bulma_checkboxes';
 
@@ -28,7 +29,6 @@
 @import './core/footer';
 @import './core/forms';
 @import './core/charts';
-@import './core/helpers';
 @import './core/hero';
 @import './core/level';
 @import './core/menu';
@@ -42,6 +42,12 @@
 @import './core/tags';
 @import './core/title';
 @import './core/toggle';
+
+// Helpers
+@import './helper-classes/helpers';
+@import './helper-classes/flexbox-and-grid';
+@import './helper-classes/spacing';
+@import './helper-classes/typography';
 
 // bulma additions
 @import './core/layout';
