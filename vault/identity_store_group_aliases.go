@@ -143,6 +143,7 @@ func (i *IdentityStore) handleGroupAliasUpdateCommon(ctx context.Context, req *l
 			return logical.ErrorResponse("existing alias not in the same namespace as request"), logical.ErrPermissionDenied
 		}
 		groupAlias.LastUpdateTime = ptypes.TimestampNow()
+		fmt.Println(ptypes.TimestampNow())
 		if groupAlias.CreationTime == nil {
 			groupAlias.CreationTime = groupAlias.LastUpdateTime
 		}
