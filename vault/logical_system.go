@@ -3042,7 +3042,7 @@ func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logica
 
 	for _, rule := range policy.Rules {
 		if !rule.Pass(testPassword) {
-			return nil, logical.CodedError(http.StatusBadRequest, "failed to construct test password; password failed to pass all rules")
+			return nil, logical.CodedError(http.StatusBadRequest, "unable to construct test password from provided policy: are the rules impossible?")
 		}
 	}
 
