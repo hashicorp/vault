@@ -18,9 +18,12 @@
 # Staticcheck uses static analysis to finds bugs and performance issues, offers simplifications, 
 # and enforces style rules.
 # Here, it is used to check if a deprecated function, variable, constant or field is used.
-
 echo "Installing staticcheck"
 go install honnef.co/go/tools/cmd/staticcheck@2023.1.2 #v0.4.2
+
+# revgrep is a CLI tool used to filter static analysis tools to only lines changed based on a commit reference
+echo "Installing revgrep"
+go install github.com/golangci/revgrep/cmd/revgrep
 
 # Run staticcheck 
 echo "Performing Deprecations Check: Running Staticcheck"
