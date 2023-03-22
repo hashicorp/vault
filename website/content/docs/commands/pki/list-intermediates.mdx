@@ -8,8 +8,8 @@ description: |-
 
 # pki list-intermediates
 
-This command determines which of a list of certificates, were issued by a given
-parent certificate
+This command determines which of a list of certificates were issued by a given
+parent certificate.
 
 ## Usage
 
@@ -27,7 +27,7 @@ Lists the set of intermediate CAs issued by this parent issuer.
   or pki mounts to look for certificates on. If [child] is omitted entirely, the
   list will be constructed from all accessible pki mounts.
 
-This returns a list of issuing certificates, and whether they are a match.
+This returns a list of issuing certificates and whether they are a match.
 By default, the type of match required is whether the `<parent>` has the
 expected subject, key_id, and could have (directly) signed this issuer.
 The match criteria can be updated by changed the corresponding flag.
