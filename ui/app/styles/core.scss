@@ -44,6 +44,12 @@
 @import './core/title';
 @import './core/toggle';
 
+// Helpers
+@import './helper-classes/helpers';
+@import './helper-classes/flexbox-and-grid';
+@import './helper-classes/spacing';
+@import './helper-classes/typography';
+
 // bulma additions
 @import './core/layout';
 @import './core/lists';
