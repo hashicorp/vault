@@ -2231,6 +2231,11 @@ func (b *SystemBackend) introspectionPaths() []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "internal/inspect/router/" + framework.GenericNameRegex("tag"),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal",
+				OperationVerb:   "inspect",
+				OperationSuffix: "router",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"tag": {
 					Type:        framework.TypeString,
@@ -2253,6 +2258,11 @@ func (b *SystemBackend) capabilitiesPaths() []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "capabilities-accessor$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb:   "query",
+				OperationSuffix: "token-accessor-capabilities",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"accessor": {
@@ -2290,6 +2300,11 @@ func (b *SystemBackend) capabilitiesPaths() []*framework.Path {
 		{
 			Pattern: "capabilities$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb:   "query",
+				OperationSuffix: "token-capabilities",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
 					Type:        framework.TypeString,
@@ -2325,6 +2340,11 @@ func (b *SystemBackend) capabilitiesPaths() []*framework.Path {
 
 		{
 			Pattern: "capabilities-self$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb:   "query",
+				OperationSuffix: "self-capabilities",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
@@ -2366,6 +2386,12 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 		{
 			Pattern: "leases/lookup/(?P<prefix>.+?)?",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "leases",
+				OperationVerb:   "list",
+				OperationSuffix: "|with-prefix",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"prefix": {
 					Type:        framework.TypeString,
@@ -2397,6 +2423,12 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 
 		{
 			Pattern: "leases/lookup",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "leases",
+				OperationVerb:   "read",
+				OperationSuffix: "lease",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"lease_id": {
@@ -2455,6 +2487,12 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 		{
 			Pattern: "(leases/)?renew" + framework.OptionalParamRegex("url_lease_id"),
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "leases",
+				OperationVerb:   "renew",
+				OperationSuffix: "lease2|lease|lease-with-id2|lease-with-id",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"url_lease_id": {
 					Type:        framework.TypeString,
@@ -2488,6 +2526,12 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 
 		{
 			Pattern: "(leases/)?revoke" + framework.OptionalParamRegex("url_lease_id"),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "leases",
+				OperationVerb:   "revoke",
+				OperationSuffix: "lease2|lease",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"url_lease_id": {
