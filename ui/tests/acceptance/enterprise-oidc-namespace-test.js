@@ -6,7 +6,6 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import parseURL from 'core/utils/parse-url';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
 
 const shell = create(consoleClass);
 
@@ -15,7 +14,6 @@ const createNS = async (name) => {
 };
 const SELECTORS = {
   authTab: (path) => `[data-test-auth-method="${path}"] a`,
-  authSubmit: '[data-test-auth-submit]',
 };
 
 module('Acceptance | Enterprise | oidc auth namespace test', function (hooks) {
@@ -27,9 +25,10 @@ module('Acceptance | Enterprise | oidc auth namespace test', function (hooks) {
     this.rootOidc = 'root-oidc';
     this.nsOidc = 'ns-oidc';
 
-    this.enableOidc = async (path, role = '') => {
-      this.server.post(`/auth/${path}/config`, () => {});
-      await shell.runCommands([
+    this.server.post(`/auth/:path/config`, () => {});
+
+    this.enableOidc = (path, role = '') => {
+      return shell.runCommands([
         `write sys/auth/${path} type=oidc`,
         `write auth/${path}/config default_role="${role}" oidc_discovery_url="https://example.com"`,
         // show method as tab
@@ -37,32 +36,11 @@ module('Acceptance | Enterprise | oidc auth namespace test', function (hooks) {
       ]);
     };
 
-    this.disableOidc = async (path) => {
-      await shell.runCommands([`delete /sys/auth/${path}`]);
-    };
-  });
-
-  hooks.afterEach(async function () {
-    this.server.shutdown();
+    this.disableOidc = (path) => shell.runCommands([`delete /sys/auth/${path}`]);
   });
 
   test('oidc: request is made to auth_url when a namespace is inputted', async function (assert) {
     assert.expect(5);
-    await authPage.login();
-    // enable oidc in root namespace, without default role
-    await this.enableOidc(this.rootOidc);
-    // create child namespace to enable oidc
-    await createNS(this.namespace);
-    await logout.visit();
-
-    // enable oidc in child namespace with default role
-    await authPage.loginNs(this.namespace);
-    await this.enableOidc(this.nsOidc, `${this.nsOidc}-role`);
-    await authPage.logout();
-
-    // end by logging in/out of root so query params are cleared out and don't include namespace
-    await authPage.login();
-    await authPage.logout();
 
     this.server.post(`/auth/${this.rootOidc}/oidc/auth_url`, (schema, req) => {
       const { redirect_uri } = JSON.parse(req.requestBody);
@@ -82,7 +60,18 @@ module('Acceptance | Enterprise | oidc auth namespace test', function (hooks) {
         'request made to correct auth_url when namespace is filled in'
       );
     });
-    await visit('/vault/auth?with=oidc%2F');
+
+    await authPage.login();
+    // enable oidc in root namespace, without default role
+    await this.enableOidc(this.rootOidc);
+    // create child namespace to enable oidc
+    await createNS(this.namespace);
+    // enable oidc in child namespace with default role
+    await authPage.loginNs(this.namespace);
+    await this.enableOidc(this.nsOidc, `${this.nsOidc}-role`);
+    await authPage.logout();
+
+    await visit('/vault/auth');
     assert.dom(SELECTORS.authTab(this.rootOidc)).exists('renders oidc method tab for root');
     await authPage.namespaceInput(this.namespace);
     assert.strictEqual(
@@ -92,14 +81,10 @@ module('Acceptance | Enterprise | oidc auth namespace test', function (hooks) {
     );
     assert.dom(SELECTORS.authTab(this.nsOidc)).exists('renders oidc method tab for child namespace');
 
-    await authPage.loginNs(this.namespace);
-    await visit(`/vault/access?namespace=${this.namespace}`);
     // disable methods to cleanup test state for re-running
+    await authPage.login();
     await this.disableOidc(this.rootOidc);
     await this.disableOidc(this.nsOidc);
-    await authPage.logout();
-
-    await authPage.login();
     await shell.runCommands([`delete /sys/auth/${this.namespace}`]);
     await authPage.logout();
   });

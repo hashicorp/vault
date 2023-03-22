@@ -55,7 +55,9 @@ module('Integration | Helper | date-format', function (hooks) {
 
   test('displays time zone if withTimeZone=true', async function (assert) {
     const timestampDate = '2022-12-06T11:29:15-08:00';
-    const zone = new Date().toLocaleTimeString(undefined, { timeZoneName: 'short' }).split(' ')[2];
+    const zone = new Date(timestampDate)
+      .toLocaleTimeString(undefined, { timeZoneName: 'short' })
+      .split(' ')[2];
     this.set('timestampDate', timestampDate);
 
     await render(hbs`{{date-format this.timestampDate 'MMM d yyyy, h:mm:ss aaa' withTimeZone=true}}`);
