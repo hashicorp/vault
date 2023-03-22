@@ -21,4 +21,22 @@
       display: inline-flex;
     }
   }
+  /* From Bulma */
+  // ARG TODO the colors that are not variables do not have a corresponding existing color variable.
+  .message.is-info .message-body {
+    border-color: $blue-500;
+    color: #0646c6;
+  }
+  .message.is-success .message-body {
+    border-color: $green-500;
+    color: #17421b;
+  }
+  .message.is-warning .message-body {
+    border-color: $yellow-500;
+    color: #151102;
+  }
+  .message.is-danger .message-body {
+    border-color: $red-500;
+    color: #8e2c37;
+  }
 }
