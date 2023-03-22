@@ -19,7 +19,7 @@
 @import './utils/mixins';
 @import './utils/animations';
 
-// Override Bulma details where appropriate
+// Core element styling
 @import './core/alert-banner';
 @import './core/generic';
 @import './core/box';
@@ -53,6 +53,7 @@
 @import './core/layout';
 @import './core/lists';
 
+// Component specific styling
 @import './components/auth-buttons';
 @import './components/auth-form';
 @import './components/b64-toggle';
