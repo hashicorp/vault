@@ -26,6 +26,7 @@ type LoginCommand struct {
 	flagPath       string
 	flagNoStore    bool
 	flagPrintToken bool
+	flagNoPrint    bool
 	flagTokenOnly  bool
 
 	testStdin io.Reader // for tests
@@ -112,6 +113,14 @@ func (c *LoginCommand) Flags() *FlagSets {
 	})
 
 	f.BoolVar(&BoolVar{
+		Name:    "no-print",
+		Target:  &c.flagNoPrint,
+		Default: false,
+		Usage: "Do not display the token. The token will be still be stored to the " +
+			"configured token helper.",
+	})
+
+	f.BoolVar(&BoolVar{
 		Name:    "print-token",
 		Target:  &c.flagPrintToken,
 		Default: false,
@@ -158,7 +167,7 @@ func (c *LoginCommand) Run(args []string) int {
 
 	if c.flagNoStore && !c.flagPrintToken {
 		c.UI.Error(wrapAtLength(
-			"-no-store and the absence of -print-token cannot be used together"))
+			"-no-store cannot be used without -print-token"))
 		return 1
 	}
 
@@ -319,6 +328,10 @@ func (c *LoginCommand) Run(args []string) int {
 			"The token was not stored in token helper. Set the VAULT_TOKEN "+
 				"environment variable or pass the token below with each request to "+
 				"Vault.") + "\n")
+	}
+
+	if c.flagNoPrint {
+		return 0
 	}
 
 	if !c.flagPrintToken {
