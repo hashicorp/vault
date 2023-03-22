@@ -18,62 +18,23 @@
 # Staticcheck uses static analysis to finds bugs and performance issues, offers simplifications, 
 # and enforces style rules.
 # Here, it is used to check if a deprecated function, variable, constant or field is used.
-
 echo "Installing staticcheck"
 go install honnef.co/go/tools/cmd/staticcheck@2023.1.2 #v0.4.2
 
-# Check if the compare branch parameter is present in commandline
-compareBranch="$1"
+# revgrep is a CLI tool used to filter static analysis tools to only lines changed based on a commit reference
+echo "Installing revgrep"
+go install github.com/golangci/revgrep/cmd/revgrep
 
 # Run staticcheck 
 echo "Performing Deprecations Check: Running Staticcheck"
-staticcheck ./... | grep deprecated > staticcheckOutput.txt
 
-# If no compare branch name is specified, output all deprecations. 
-if [ -z $1 ]; then
-    echo "Results:"
-    if [ -s staticcheckOutput.txt ]
+# If no compare branch name is specified, output all deprecations
+# Else only output the deprecations from the changes added
+if [ -z $1 ]
     then
-     echo "Use of deprecated function, variable, constant or field found"
-     cat staticcheckOutput.txt 
-     # output file clean up 
-     rm staticcheckOutput.txt  
-     exit 1 
+        staticcheck ./... | grep deprecated
     else
-     echo "No deprecated function, variable, constant or field found!!"
-     # output file clean up 
-     rm staticcheckOutput.txt  
-     exit 0
-    fi
-fi
-
-# Get changed files names from the PR
-changedFiles=$(git --no-pager diff --name-only HEAD "$(git merge-base HEAD "origin/$compareBranch")")
-
-# Include deprecations details of only changed files in the PR
-echo "Results:"
-
-# deprecationsCount checks if any deprecations were found to fail later 
-deprecationsCount=0
-
-for fileName in ${changedFiles[@]}; do
-if grep -q $fileName staticcheckOutput.txt; then
-
-    # output deprecations in the file 
-    grep $fileName staticcheckOutput.txt
-
-    # deprecation found, increment count
-    deprecationsCount=$((deprecationsCount+1))
-fi
-done
-
-# Cleanup deprecations file
-rm staticcheckOutput.txt  
-
-if [ "$deprecationsCount" -ne "0" ]
-then
-    echo "Deprecations check failed. This check examines the entire file included in the PR for any deprecated functions, variables, constants, or fields. Please review your changes to ensure that you have not included any deprecated elements."
-    exit 1 
-else
-    echo "No deprecated functions, variables, constants, or fields were found in the PR!"
+        # GHA will run this to find only changes wrt PR's base ref branch
+        # revgrep CLI tool will return an exit status of 1 if any issues match, else it will return 0
+        staticcheck ./... | grep deprecated 2>&1 | revgrep "$(git merge-base HEAD "origin/$1")"
 fi
