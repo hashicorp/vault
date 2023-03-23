@@ -3,6 +3,10 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
+.menu a {
+  text-decoration: none;
+}
+
 .column .menu-list a {
   border-radius: 0;
   border-right: 0 solid transparent;

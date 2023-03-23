@@ -108,9 +108,15 @@ body {
 }
 
 a {
-  color: #1563ff;
+  color: $blue-500;
   cursor: pointer;
   text-decoration: none;
+
+  &:hover,
+  &:active,
+  &:focus {
+    position: relative;
+  }
 }
 a strong {
   color: currentColor;
@@ -121,10 +127,10 @@ a:hover {
 
 code {
   background-color: transparent;
-  color: #525761;
-  font-size: 0.875em;
+  color: $ui-gray-700;
+  font-size: 1em;
   font-weight: normal;
-  padding: 0.25em 0.5em 0.25em;
+  padding: 0;
 }
 
 hr {
