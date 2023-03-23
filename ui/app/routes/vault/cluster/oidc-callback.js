@@ -10,7 +10,6 @@ export function getParamsForCallback(qp, searchString) {
   let { path, code, state, namespace } = qp;
   // namespace from state takes precedence over the cluster's ns
   if (state?.includes(',ns=')) {
-    // TODO: does it ever get here, since Ember params strips out `=` and after?
     [state, namespace] = state.split(',ns=');
   }
   // some SSO providers do not return a url-encoded state param
