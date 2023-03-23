@@ -12,7 +12,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout code
-        uses: actions/checkout@@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
+        uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0 # by default the checkout action doesn't checkout all branches
