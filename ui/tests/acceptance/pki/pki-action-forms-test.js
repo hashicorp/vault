@@ -257,7 +257,9 @@ module('Acceptance | pki action forms test', function (hooks) {
       assert.dom(S.configuration.title).hasText('View generated CSR');
       assert
         .dom('[data-test-alert-banner="alert"]')
-        .hasText('Next steps The private_key is only available once. Make sure you copy and save it now.');
+        .hasText(
+          'Next steps Copy the CSR below for a parent issuer to sign and then import the signed certificate back into this mount. The private_key is only available once. Make sure you copy and save it now.'
+        );
       assert
         .dom(S.configuration.saved.privateKey)
         .hasClass('allow-copy', 'copyable masked private key exists');
