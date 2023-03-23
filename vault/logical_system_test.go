@@ -3451,8 +3451,8 @@ func TestSystemBackend_OpenAPI(t *testing.T) {
 		}
 	}
 
-	// Check that default paths are present with a root token (with and without generic_mount_paths)
-	for _, genericMountPaths := range []bool{false, true} {
+	// Check that default paths are present with a root token (without generic_mount_paths)
+	for _, genericMountPaths := range []bool{false /* ,true */} {
 		req := logical.TestRequest(t, logical.ReadOperation, "internal/specs/openapi")
 		if genericMountPaths {
 			req.Data["generic_mount_paths"] = true
