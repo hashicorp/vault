@@ -133,15 +133,21 @@ module('Unit | Route | vault/cluster/oidc-callback', function (hooks) {
       });
     });
 
-    test('it parses params correctly when window.location.search is empty', function (assert) {
+    test('it parses params correctly when window.location.search is empty (HCP scenario)', function (assert) {
       const params = {
-        state: 'my-state',
+        state: 'some-state,ns=admin/child-ns',
         code: 'my-code',
+        namespace: 'admin',
         path: 'oidc-path',
-        namespace: 'ns1',
       };
       const results = getParamsForCallback(params, '');
-      assert.deepEqual(results, { source: 'oidc-callback', ...params, state: 'my-state' });
+      assert.deepEqual(results, {
+        source: 'oidc-callback',
+        code: 'my-code',
+        path: 'oidc-path',
+        state: 'some-state',
+        namespace: 'admin/child-ns',
+      });
     });
   });
 
