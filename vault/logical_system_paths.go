@@ -80,7 +80,7 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 					Callback: b.handleCORSDelete,
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb:   "delete",
-						OperationSuffix: "cors-configuration",
+						OperationSuffix: "configuration",
 					},
 					Summary: "Remove any CORS settings.",
 					Responses: map[int][]framework.Response{
