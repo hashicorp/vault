@@ -1560,10 +1560,6 @@ func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tai
 		return ts.lookupBatchToken(ctx, id)
 	}
 
-	// Before we check to see if this is an SSCT, keep the old value in case
-	// we need to check the full SSCT flow later.
-	originalToken := id
-
 	// lookupInternal is called internally with tokens that oftentimes come from request
 	// parameters that we cannot really guess. Most notably, these calls come from either
 	// validateWrappedToken and/or lookupTokenTainted, used in the wrapping token logic.
@@ -1707,17 +1703,6 @@ func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tai
 	// It's any kind of expiring token with no lease, immediately delete it
 	case le == nil:
 		if ts.core.perfStandby {
-			// If we're a perf standby with a token but without the lease entry, then
-			// we have the WALs for the token but not the lease entry. We should check
-			// the SSCToken again to validate our state. We will receive a 412 if we
-			// don't have the requisite state.
-			// We set unauth to 'false' here as we want to validate the full SSCT flow
-			// and if we're at this point in the method, we have reason to need the token.
-			_, err = ts.core.CheckSSCToken(ctx, originalToken, false, ts.core.perfStandby)
-			if err != nil {
-				return nil, err
-			}
-			// If we don't have a state error, and we're still here, return a 500.
 			return nil, fmt.Errorf("no lease entry found for token that ought to have one, possible eventual consistency issue")
 		}
 
