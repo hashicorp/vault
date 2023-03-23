@@ -71,7 +71,7 @@ module('Unit | Route | vault/cluster/oidc-callback', function (hooks) {
       assert.deepEqual(results, { source: 'oidc-callback', ...params });
     });
 
-    test('it parses params correctly regular inputs and namespace in state', function (assert) {
+    test('it parses params correctly regular inputs and unencoded namespace in state', function (assert) {
       const queryString = '?code=my-code&state=my-state,ns=blah';
       const params = {
         state: 'my-state,ns', // mock what Ember does with the state QP
