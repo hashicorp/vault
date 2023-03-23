@@ -5,27 +5,33 @@
 
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
+import { tracked } from '@glimmer/tracking';
 // TYPES
 import Store from '@ember-data/store';
 import Router from '@ember/routing/router';
 import FlashMessageService from 'vault/services/flash-messages';
 import PkiActionModel from 'vault/models/pki/action';
+import { Breadcrumb } from 'vault/vault/app-types';
 
 interface Args {
   config: PkiActionModel;
+  onCancel: CallableFunction;
+  breadcrumbs: Breadcrumb;
 }
 
 /**
- * @module PkiConfigureForm
- * PkiConfigureForm component is used to configure a PKI engine mount.
+ * @module PkiConfigureCreate
+ * Page::PkiConfigureCreate component is used to configure a PKI engine mount.
  * The component shows three options for configuration and which form
  * is shown. The sub-forms rendered handle rendering the form itself
  * and form submission and cancel actions.
  */
-export default class PkiConfigureForm extends Component<Args> {
+export default class PkiConfigureCreate extends Component<Args> {
   @service declare readonly store: Store;
   @service declare readonly router: Router;
   @service declare readonly flashMessages: FlashMessageService;
+
+  @tracked title = 'Configure PKI';
 
   get configTypes() {
     return [

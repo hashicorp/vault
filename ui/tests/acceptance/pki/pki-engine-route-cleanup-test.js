@@ -12,7 +12,7 @@ import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { click, currentURL, fillIn, visit } from '@ember/test-helpers';
 import { runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
-import { SELECTORS } from '../helpers/pki/workflow';
+import { SELECTORS } from 'vault/tests/helpers/pki/workflow';
 
 /**
  * This test module should test that dirty route models are cleaned up when the user leaves the page
@@ -295,14 +295,12 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
       await fillIn(SELECTORS.configuration.typeField, 'internal');
       await fillIn(SELECTORS.configuration.inputByName('commonName'), 'my-root-cert');
       await click(SELECTORS.configuration.generateRootSave);
+      // Go to list view so we fetch all the issuers
+      await visit(`/vault/secrets/${this.mountPath}/pki/issuers`);
       issuers = this.store.peekAll('pki/issuer');
       const issuerId = issuers.objectAt(0).id;
       assert.strictEqual(issuers.length, 1, 'Issuer exists on model');
-      assert.strictEqual(
-        currentURL(),
-        `/vault/secrets/${this.mountPath}/pki/issuers/${issuerId}/details`,
-        'url is correct'
-      );
+      await visit(`/vault/secrets/${this.mountPath}/pki/issuers/${issuerId}/details`);
       await click(SELECTORS.issuerDetails.configure);
       issuer = this.store.peekRecord('pki/issuer', issuerId);
       assert.false(issuer.hasDirtyAttributes, 'Model not dirty');
