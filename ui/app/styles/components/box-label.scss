@@ -9,12 +9,8 @@ label.box-label {
 
 .box-label {
   @extend .box;
-  // @extend .is-centered;
-  // @extend .is-gapless;
-  justify-content: center;
-  margin-left: 0;
-  margin-right: 0;
-  margin-top: 0;
+  @extend .is-centered;
+  @extend .is-gapless;
 
   border-color: $grey-light;
   border-radius: 3px;
