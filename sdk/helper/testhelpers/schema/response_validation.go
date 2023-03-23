@@ -14,11 +14,11 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-// ValidateResponseData is a test helper that validates whether the given
-// response data map conforms to the response schema (schema.Fields). It cycles
-// through the data map and validates conversions in the schema. In "strict"
-// mode, this function will also ensure that the data map has all schema's
-// requred fields and does not have any fields outside of the schema.
+// ValidateResponse is a test helper that validates whether the given response
+// object conforms to the response schema (schema.Fields). It cycles through
+// the data map and validates conversions in the schema. In "strict" mode, this
+// function will also ensure that the data map has all schema-required fields
+// and does not have any fields outside of the schema.
 func ValidateResponse(t *testing.T, schema *framework.Response, response *logical.Response, strict bool) {
 	t.Helper()
 
@@ -29,11 +29,11 @@ func ValidateResponse(t *testing.T, schema *framework.Response, response *logica
 	}
 }
 
-// ValidateResponse is a test helper that validates whether the given response
-// object conforms to the response schema (schema.Fields). It cycles through
-// the data map and validates conversions in the schema. In "strict" mode, this
-// function will also ensure that the data map has all schema-required fields
-// and does not have any fields outside of the schema.
+// ValidateResponseData is a test helper that validates whether the given
+// response data map conforms to the response schema (schema.Fields). It cycles
+// through the data map and validates conversions in the schema. In "strict"
+// mode, this function will also ensure that the data map has all schema's
+// requred fields and does not have any fields outside of the schema.
 func ValidateResponseData(t *testing.T, schema *framework.Response, data map[string]interface{}, strict bool) {
 	t.Helper()
 
