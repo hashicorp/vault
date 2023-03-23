@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 export const SELECTORS = {
   form: '[data-test-pki-generate-cert-form]',
   commonNameField: '[data-test-input="commonName"]',

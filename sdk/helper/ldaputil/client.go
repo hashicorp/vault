@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package ldaputil
 
 import (
@@ -210,6 +213,10 @@ func (c *Client) RenderUserSearchFilter(cfg *ConfigEntry, username string) (stri
 		context.Username = fmt.Sprintf("%s@%s", EscapeLDAPValue(username), cfg.UPNDomain)
 	}
 
+	// Execute the template. Note that the template context contains escaped input and does
+	// not provide behavior via functions. Additionally, no function map has been provided
+	// during template initialization. The only template functions available during execution
+	// are the predefined global functions: https://pkg.go.dev/text/template#hdr-Functions
 	var renderedFilter bytes.Buffer
 	if err := t.Execute(&renderedFilter, context); err != nil {
 		return "", fmt.Errorf("LDAP search failed due to template parsing error: %w", err)
@@ -386,6 +393,10 @@ func (c *Client) performLdapFilterGroupsSearchPaging(cfg *ConfigEntry, conn Pagi
 		ldap.EscapeFilter(username),
 	}
 
+	// Execute the template. Note that the template context contains escaped input and does
+	// not provide behavior via functions. Additionally, no function map has been provided
+	// during template initialization. The only template functions available during execution
+	// are the predefined global functions: https://pkg.go.dev/text/template#hdr-Functions
 	var renderedQuery bytes.Buffer
 	if err := t.Execute(&renderedQuery, context); err != nil {
 		return nil, fmt.Errorf("LDAP search failed due to template parsing error: %w", err)

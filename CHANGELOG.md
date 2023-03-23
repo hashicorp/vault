@@ -42,6 +42,7 @@ a unified CRL/OCSP view of revocations across cluster boundaries. [[GH-19196](ht
 brute force attacks for userpass, approle and ldap auth methods. [[GH-19230](https://github.com/hashicorp/vault/pull/19230)]
 * **VMSS Flex Authentication**: Adds support for Virtual Machine Scale Set Flex Authentication [[GH-19077](https://github.com/hashicorp/vault/pull/19077)]
 * **Namespaces (enterprise)**: Added the ability to allow access to secrets and more to be shared across namespaces that do not share a namespace hierarchy. Using the new `sys/config/group-policy-application` API, policies can be configured to apply outside of namespace hierarchy, allowing this kind of cross-namespace sharing.
+* **OpenAPI-based Go & .NET Client Libraries (Beta)**: We have now made available two new [[OpenAPI-based Go](https://github.com/hashicorp/vault-client-go/)] & [[OpenAPI-based .NET](https://github.com/hashicorp/vault-client-dotnet/)] Client libraries (beta). You can use them to perform various secret management operations easily from your applications.
 
 IMPROVEMENTS:
 
@@ -366,7 +367,7 @@ BUG FIXES:
 * core: fix bug where context cancellations weren't forwarded to active node from performance standbys.
 * core: prevent panic in login mfa enforcement delete after enforcement's namespace is deleted [[GH-18923](https://github.com/hashicorp/vault/pull/18923)]
 * database/mongodb: Fix writeConcern set to be applied to any query made on the database [[GH-18546](https://github.com/hashicorp/vault/pull/18546)]
-* expiration: Prevent panics on perf standbys when an irrevocable release gets deleted. [[GH-18401](https://github.com/hashicorp/vault/pull/18401)]
+* expiration: Prevent panics on perf standbys when an irrevocable lease gets deleted. [[GH-18401](https://github.com/hashicorp/vault/pull/18401)]
 * kmip (enterprise): Fix Destroy operation response that omitted Unique Identifier on some batched responses.
 * kmip (enterprise): Fix Locate operation response incompatibility with clients using KMIP versions prior to 1.3.
 * kmip (enterprise): Fix Query operation response that omitted streaming capability and supported profiles.

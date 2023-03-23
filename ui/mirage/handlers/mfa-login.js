@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { Response } from 'miragejs';
 import Ember from 'ember';
 import fetch from 'fetch';
