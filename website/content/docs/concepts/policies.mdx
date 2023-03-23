@@ -491,7 +491,62 @@ path "secret/foo" {
 
 #### Parameter Constraints Limitations
 
-It's important to note that the use of globbing may result in surprising
+##### Default Values
+Evaluation of policies with `allowed_parameters`, `denied_parameters`, and `required_parameters` happens
+without consideration of parameters' default values.
+
+Given the following policy:
+
+```ruby
+# The "no_store" parameter cannot be false
+path "secret/foo" {
+  capabilities = ["create"]
+  denied_parameters = {
+    "no_store" = [false, "false"]
+  }
+}
+```
+
+The following operation will error, because "no_store" is set to false:
+
+```shell-session
+$ vault write secret/foo no_store=false value=bar
+```
+
+Whereas the following operation will succeed, even if the "no_store"
+parameter must be a boolean, and it defaults to false:
+
+```shell-session
+# Succeeds because "no_store=false" isn't present in the parameters
+$ vault write secret/foo value=bar
+```
+
+This is because the policy evaluator does not know what the default value is for
+the "no_store" parameter. All it sees is that the denied parameter isn't present
+in the command.
+
+This can be resolved by requiring the "no_store" parameter in your policy:
+
+```ruby
+path "secret/foo" {
+  capabilities = ["create"]
+  required_parameters = ["no_store"]
+  denied_parameters = {
+    "no_store" = [false, "false"]
+  }
+}
+```
+
+The following command, which previously succeeded, will now fail under the new policy
+because there is no "no_store" parameter:
+
+```shell-session
+$ vault write secret/foo value=bar
+```
+
+##### Globbing
+
+It's also important to note that the use of globbing may result in surprising
 or unexpected behavior:
 
 ```ruby

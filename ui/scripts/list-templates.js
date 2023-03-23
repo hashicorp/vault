@@ -1,4 +1,9 @@
 #!/usr/bin/env node
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 /* eslint-disable */
 
 // We need an array in this format for all of the files

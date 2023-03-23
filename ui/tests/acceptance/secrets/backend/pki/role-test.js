@@ -1,6 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { currentRouteName, settled, visit, waitUntil } from '@ember/test-helpers';
 import { module, test, skip } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { v4 as uuidv4 } from 'uuid';
+
 import editPage from 'vault/tests/pages/secrets/backend/pki/edit-role';
 import showPage from 'vault/tests/pages/secrets/backend/pki/show';
 import listPage from 'vault/tests/pages/secrets/backend/list';
@@ -11,11 +18,12 @@ module('Acceptance | secrets/pki/create', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
+    this.uid = uuidv4();
     return authPage.login();
   });
 
   skip('it creates a role and redirects', async function (assert) {
-    const path = `pki-${new Date().getTime()}`;
+    const path = `pki-create-${this.uid}`;
     await enablePage.enable('pki', path);
     await settled();
     await editPage.visitRoot({ backend: path });
@@ -61,7 +69,7 @@ module('Acceptance | secrets/pki/create', function (hooks) {
   });
 
   test('it deletes a role', async function (assert) {
-    const path = `pki-${new Date().getTime()}`;
+    const path = `pki-delete-${this.uid}`;
     await enablePage.enable('pki', path);
     await settled();
     await editPage.visitRoot({ backend: path });
