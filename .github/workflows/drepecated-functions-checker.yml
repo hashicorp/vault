@@ -26,7 +26,7 @@ jobs:
           go generate -tags tools tools/tools.go 
       - name: Check deprecations for files in diff
         run: |
-          # Need to run this from base path and not from .github/scripts as staticcheck works 
+          # Need to run this from base path and not from scripts dir as staticcheck works 
           # only on packages
           ./scripts/deprecations-checker.sh ${{ github.event.pull_request.base.ref }} ${{ github.event.repository.name }}
           

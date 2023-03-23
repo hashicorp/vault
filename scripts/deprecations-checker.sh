@@ -17,15 +17,9 @@
 #
 # GitHub Actions runs this against the PR's base ref branch. 
 
-# # Staticcheck uses static analysis to finds bugs and performance issues, offers simplifications, 
-# # and enforces style rules.
-# # Here, it is used to check if a deprecated function, variable, constant or field is used.
-# echo "Installing staticcheck"
-# go install honnef.co/go/tools/cmd/staticcheck@2023.1.2 #v0.4.2
-
-# # revgrep is a CLI tool used to filter static analysis tools to only lines changed based on a commit reference
-# echo "Installing revgrep"
-# go install github.com/golangci/revgrep/cmd/revgrep
+# Staticcheck uses static analysis to finds bugs and performance issues, offers simplifications, 
+# and enforces style rules.
+# Here, it is used to check if a deprecated function, variable, constant or field is used.
 
 # Run staticcheck 
 echo "Performing deprecations check: running staticcheck"
@@ -35,8 +29,7 @@ if [ -z $2 ]; then
     # local repository name
     repositoryName=$(basename `git rev-parse --show-toplevel`)
 else
-    # github repository name 
-    # used for GHA
+    # github repository name from deprecated-functions-checker.yml
     repositoryName=$2
 fi
 
@@ -53,7 +46,7 @@ if [ -z $1 ]
     then
         $staticcheckCommand | grep deprecated
     else
-        # GHA will use this to find only changes wrt PR's base ref branch
+        # GitHub Actions will use this to find only changes wrt PR's base ref branch
         # revgrep CLI tool will return an exit status of 1 if any issues match, else it will return 0
         $staticcheckCommand | grep deprecated 2>&1 | revgrep "$(git merge-base HEAD "origin/$1")"
 fi
