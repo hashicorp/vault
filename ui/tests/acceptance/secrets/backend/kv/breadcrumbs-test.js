@@ -24,5 +24,6 @@ module('Acceptance | kv | breadcrumbs', function (hooks) {
       '/vault/secrets/kv/list/foo/',
       'Routes back to list view on breadcrumb click'
     );
+    await consolePanel.runCommands(['delete sys/mounts/kv']);
   });
 });
