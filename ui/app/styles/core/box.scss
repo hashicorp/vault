@@ -4,7 +4,11 @@
  */
 
 .box {
+  background-color: $white;
   box-shadow: 0 0 0 1px rgba($grey-dark, 0.3);
+  color: $ui-gray-900;
+  display: block;
+  padding: 1.25rem;
 
   .title {
     &.has-padding-top {
@@ -16,7 +20,11 @@
       padding-bottom: $spacing-s;
     }
   }
+  &:not(:last-child) {
+    margin-bottom: 1.5rem;
+  }
 }
+
 .box.is-fullwidth {
   padding-left: 0;
   padding-right: 0;

@@ -14,10 +14,20 @@
   overflow: hidden;
   position: fixed;
   z-index: 20;
+
+  &.is-active {
+    display: flex;
+  }
 }
 
 .modal-background {
-  background: rgba(235, 238, 242, 0.9);
+  background: $ui-gray-100;
+  bottom: 0;
+  left: 0;
+  opacity: 0.9;
+  position: absolute;
+  right: 0;
+  top: 0;
 }
 
 .modal-card {
@@ -73,6 +83,10 @@
 .modal-card-title.title {
   display: flex;
   align-items: center;
+}
+
+.modal-card-body {
+  padding: 20px;
 }
 
 pre {
@@ -134,5 +148,15 @@ pre {
   &.has-padding-btm-left {
     padding-bottom: $spacing-m;
     padding-left: $spacing-m;
+  }
+}
+
+// responsive css
+@media screen and (min-width: 769px), print {
+  .modal-card,
+  .modal-content {
+    margin: 0 auto;
+    max-height: calc(100vh - 40px);
+    width: 640px;
   }
 }
