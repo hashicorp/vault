@@ -21,6 +21,7 @@ package tools
 //go:generate go install github.com/favadi/protoc-go-inject-tag
 //go:generate go install github.com/golangci/revgrep/cmd/revgrep
 //go:generate go install gotest.tools/gotestsum
+//go:generate go install honnef.co/go/tools/staticcheck
 import (
 	_ "golang.org/x/tools/cmd/goimports"
 
@@ -37,4 +38,6 @@ import (
 	_ "github.com/golangci/revgrep/cmd/revgrep"
 
 	_ "gotest.tools/gotestsum"
+
+	_ "honnef.co/go/tools/staticcheck"
 )
