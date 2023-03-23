@@ -49,108 +49,6 @@ module('Unit | Route | vault/cluster/oidc-callback', function (hooks) {
     this.callbackUrlQueryParams('');
   });
 
-  module('getParamsForCallback helper fn', function () {
-    test('it parses params correctly with regular inputs no namespace', function (assert) {
-      const params = {
-        state: 'my-state',
-        code: 'my-code',
-        path: 'oidc-path',
-      };
-      const results = getParamsForCallback(params, '?code=my-code&state=my-state');
-      assert.deepEqual(results, { source: 'oidc-callback', ...params });
-    });
-
-    test('it parses params correctly regular inputs and namespace param', function (assert) {
-      const params = {
-        state: 'my-state',
-        code: 'my-code',
-        path: 'oidc-path',
-        namespace: 'my-namespace/nested',
-      };
-      const results = getParamsForCallback(params, '?code=my-code&state=my-state');
-      assert.deepEqual(results, { source: 'oidc-callback', ...params });
-    });
-
-    test('it parses params correctly regular inputs and unencoded namespace in state', function (assert) {
-      const queryString = '?code=my-code&state=my-state,ns=blah';
-      const params = {
-        state: 'my-state,ns', // mock what Ember does with the state QP
-        code: 'my-code',
-        path: 'oidc-path',
-      };
-      const results = getParamsForCallback(params, queryString);
-      assert.deepEqual(results, { source: 'oidc-callback', ...params, state: 'my-state', namespace: 'blah' });
-    });
-
-    test('namespace in state takes precedence over namespace in route', function (assert) {
-      const queryString = '?code=my-code&state=my-state,ns=some-ns/foo';
-      const params = {
-        state: 'my-state,ns', // mock what Ember does with the state QP
-        code: 'my-code',
-        path: 'oidc-path',
-        namespace: 'some-ns',
-      };
-      const results = getParamsForCallback(params, queryString);
-      assert.deepEqual(results, {
-        source: 'oidc-callback',
-        ...params,
-        state: 'my-state',
-        namespace: 'some-ns/foo',
-      });
-    });
-
-    test('correctly decodes path and state', function (assert) {
-      const searchString = '?code=my-code&state=spaces%20state,ns=some.ns%2Fchild';
-      const params = {
-        state: 'spaces state,ns',
-        code: 'my-code',
-        path: 'oidc-path',
-      };
-      const results = getParamsForCallback(params, searchString);
-      assert.deepEqual(results, {
-        source: 'oidc-callback',
-        state: 'spaces state',
-        code: 'my-code',
-        path: 'oidc-path',
-        namespace: 'some.ns/child',
-      });
-    });
-
-    test('correctly decodes namespace in state', function (assert) {
-      const queryString = '?code=my-code&state=spaces%20state,ns=spaces%20ns';
-      const params = {
-        state: 'spaces state,ns', // mock what Ember does with the state QP
-        code: 'my-code',
-        path: 'oidc-path',
-      };
-      const results = getParamsForCallback(params, queryString);
-      assert.deepEqual(results, {
-        source: 'oidc-callback',
-        state: 'spaces state',
-        code: 'my-code',
-        path: 'oidc-path',
-        namespace: 'spaces ns',
-      });
-    });
-
-    test('it parses params correctly when window.location.search is empty (HCP scenario)', function (assert) {
-      const params = {
-        state: 'some-state,ns=admin/child-ns',
-        code: 'my-code',
-        namespace: 'admin',
-        path: 'oidc-path',
-      };
-      const results = getParamsForCallback(params, '');
-      assert.deepEqual(results, {
-        source: 'oidc-callback',
-        code: 'my-code',
-        path: 'oidc-path',
-        state: 'some-state',
-        namespace: 'admin/child-ns',
-      });
-    });
-  });
-
   test('it calls route', function (assert) {
     assert.ok(this.route);
   });
@@ -309,5 +207,109 @@ module('Unit | Route | vault/cluster/oidc-callback', function (hooks) {
       },
       'namespace is parsed correctly'
     );
+  });
+
+  module('getParamsForCallback helper fn', function () {
+    test('it parses params correctly with regular inputs and no namespace', function (assert) {
+      const qp = {
+        state: 'my-state',
+        code: 'my-code',
+        path: 'oidc-path',
+      };
+      const searchString = `?code=my-code&state=my-state`;
+      const results = getParamsForCallback(qp, searchString);
+      assert.deepEqual(results, { source: 'oidc-callback', ...qp });
+    });
+
+    test('it parses params correctly regular inputs and namespace param', function (assert) {
+      const params = {
+        state: 'my-state',
+        code: 'my-code',
+        path: 'oidc-path',
+        namespace: 'my-namespace',
+      };
+      const results = getParamsForCallback(params, '?code=my-code&state=my-state&namespace=my-namespace');
+      assert.deepEqual(results, { source: 'oidc-callback', ...params });
+    });
+
+    test('it parses params correctly with regular inputs and namespace in state (unencoded)', function (assert) {
+      const searchString = '?code=my-code&state=my-state,ns=foo/bar';
+      const params = {
+        state: 'my-state,ns', // Ember parses the QP incorrectly if unencoded
+        code: 'my-code',
+        path: 'oidc-path',
+      };
+      const results = getParamsForCallback(params, searchString);
+      assert.deepEqual(results, {
+        source: 'oidc-callback',
+        ...params,
+        state: 'my-state',
+        namespace: 'foo/bar',
+      });
+    });
+
+    test('it parses params correctly with regular inputs and namespace in state (encoded)', function (assert) {
+      const qp = {
+        state: 'my-state,ns=foo/bar', // Ember parses the QP correctly when encoded
+        code: 'my-code',
+        path: 'oidc-path',
+      };
+      const searchString = `?code=my-code&state=${encodeURIComponent(qp.state)}`;
+      const results = getParamsForCallback(qp, searchString);
+      assert.deepEqual(results, { source: 'oidc-callback', ...qp, state: 'my-state', namespace: 'foo/bar' });
+    });
+
+    test('namespace in state takes precedence over namespace in route (encoded)', function (assert) {
+      const qp = {
+        state: 'my-state,ns=foo/bar',
+        code: 'my-code',
+        path: 'oidc-path',
+        namespace: 'other/ns',
+      };
+      const searchString = `?code=my-code&state=${encodeURIComponent(
+        qp.state
+      )}&namespace=${encodeURIComponent(qp.namespace)}`;
+      const results = getParamsForCallback(qp, searchString);
+      assert.deepEqual(results, {
+        source: 'oidc-callback',
+        ...qp,
+        state: 'my-state',
+        namespace: 'foo/bar',
+      });
+    });
+
+    test('namespace in state takes precedence over namespace in route (unencoded)', function (assert) {
+      const qp = {
+        state: 'my-state,ns',
+        code: 'my-code',
+        path: 'oidc-path',
+        namespace: 'other/ns',
+      };
+      const searchString = `?code=${qp.code}&state=my-state,ns=foo/bar&namespace=${qp.namespace}`;
+      const results = getParamsForCallback(qp, searchString);
+      assert.deepEqual(results, {
+        source: 'oidc-callback',
+        ...qp,
+        state: 'my-state',
+        namespace: 'foo/bar',
+      });
+    });
+
+    test('it parses params correctly when window.location.search is empty (HCP scenario)', function (assert) {
+      const params = {
+        state: 'some-state,ns=admin/child-ns',
+        code: 'my-code',
+        namespace: 'admin',
+        path: 'oidc-path',
+      };
+      const results = getParamsForCallback(params, '');
+      assert.deepEqual(results, {
+        source: 'oidc-callback',
+        code: 'my-code',
+        path: 'oidc-path',
+        state: 'some-state',
+        namespace: 'admin/child-ns',
+      });
+    });
   });
 });
