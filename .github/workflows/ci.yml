@@ -138,7 +138,7 @@ jobs:
   test-ui:
     name: Test UI
     # The test-ui Job is only run for pushes to main, ui/*, backport/ui/*, release/*, and merge*
-    if: github.ref_name == 'main' || startsWith(github.ref_name, 'ui/') || startsWith(github.ref_name, 'backport/ui/') || startsWith(github.ref_name, 'release/') || startsWith(github.ref_name, 'merge')
+    #if: github.ref_name == 'main' || startsWith(github.ref_name, 'ui/') || startsWith(github.ref_name, 'backport/ui/') || startsWith(github.ref_name, 'release/') || startsWith(github.ref_name, 'merge')
     needs:
     - setup
     permissions:
