@@ -14,9 +14,6 @@
   margin: 0;
   padding: 0;
   font-weight: $font-weight-semibold;
-  -webkit-user-select: text; /* Chrome all / Safari all */
-  -moz-user-select: text; /* Firefox all */
-  -ms-user-select: text; /* IE 10+ */
   user-select: text;
 
   &[disabled] {
