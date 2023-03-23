@@ -250,7 +250,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 
 		pi.Sudo = specialPathMatch(path, sudoPaths)
 		pi.Unauthenticated = specialPathMatch(path, unauthPaths)
-		pi.DisplayAttrs = p.DisplayAttrs
+		pi.DisplayAttrs = withoutOperationHints(p.DisplayAttrs)
 
 		// If the newer style Operations map isn't defined, create one from the legacy fields.
 		operations := p.Operations
@@ -292,7 +292,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 					Pattern:      t.pattern,
 					Enum:         field.AllowedValues,
 					Default:      field.Default,
-					DisplayAttrs: field.DisplayAttrs,
+					DisplayAttrs: withoutOperationHints(field.DisplayAttrs),
 				},
 				Required:   required,
 				Deprecated: field.Deprecated,
@@ -371,7 +371,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 						Enum:         field.AllowedValues,
 						Default:      field.Default,
 						Deprecated:   field.Deprecated,
-						DisplayAttrs: field.DisplayAttrs,
+						DisplayAttrs: withoutOperationHints(field.DisplayAttrs),
 					}
 					if openapiField.baseType == "array" {
 						p.Items = &OASSchema{
@@ -485,7 +485,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 							Enum:         field.AllowedValues,
 							Default:      field.Default,
 							Deprecated:   field.Deprecated,
-							DisplayAttrs: field.DisplayAttrs,
+							DisplayAttrs: withoutOperationHints(field.DisplayAttrs),
 						}
 						if openapiField.baseType == "array" {
 							p.Items = &OASSchema{
@@ -980,6 +980,19 @@ func splitFields(allFields map[string]*FieldSchema, pattern string) (pathFields,
 	}
 
 	return pathFields, bodyFields
+}
+
+// withoutOperationHints returns a copy of the given DisplayAttributes without
+// OperationPrefix / OperationVerb / OperationSuffix since we don't need these
+// fields in the final output.
+func withoutOperationHints(in *DisplayAttributes) *DisplayAttributes {
+	copy := *in
+
+	copy.OperationPrefix = ""
+	copy.OperationVerb = ""
+	copy.OperationSuffix = ""
+
+	return &copy
 }
 
 // cleanedResponse is identical to logical.Response but with nulls
