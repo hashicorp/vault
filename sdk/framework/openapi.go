@@ -986,6 +986,10 @@ func splitFields(allFields map[string]*FieldSchema, pattern string) (pathFields,
 // OperationPrefix / OperationVerb / OperationSuffix since we don't need these
 // fields in the final output.
 func withoutOperationHints(in *DisplayAttributes) *DisplayAttributes {
+	if in == nil {
+		return nil
+	}
+
 	copy := *in
 
 	copy.OperationPrefix = ""
