@@ -4,7 +4,11 @@
  */
 
 .box {
+  background-color: $white;
   box-shadow: 0 0 0 1px rgba($grey-dark, 0.3);
+  color: #4a4a4a;
+  display: block;
+  padding: 1.25rem;
 
   .title {
     &.has-padding-top {
