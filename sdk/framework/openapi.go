@@ -996,6 +996,11 @@ func withoutOperationHints(in *DisplayAttributes) *DisplayAttributes {
 	copy.OperationVerb = ""
 	copy.OperationSuffix = ""
 
+	// return nil if all fields are empty to avoid empty JSON objects
+	if copy == (DisplayAttributes{}) {
+		return nil
+	}
+
 	return &copy
 }
 
