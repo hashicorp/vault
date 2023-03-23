@@ -728,15 +728,6 @@ fieldset[disabled] .select select:hover {
   max-width: none;
 }
 
-.file-icon {
-  align-items: center;
-  display: flex;
-  height: 1em;
-  justify-content: center;
-  margin-right: 0.5em;
-  width: 1em;
-}
-
 /* ARG TODO: used is-normal in one place */
 @media screen and (min-width: 769px), print {
   .field-label {
@@ -979,14 +970,6 @@ fieldset[disabled] .button {
   .container:not(.is-max-desktop):not(.is-max-widescreen) {
     max-width: 1344px;
   }
-}
-
-.icon {
-  align-items: center;
-  display: inline-flex;
-  height: 1.5rem;
-  justify-content: center;
-  width: 1.5rem;
 }
 
 .notification {

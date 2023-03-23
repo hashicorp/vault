@@ -3,6 +3,35 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
+.icon {
+  align-items: center;
+  display: inline-flex;
+  height: 1.5rem;
+  justify-content: center;
+  width: 1.5rem;
+}
+
+.icon-blue {
+  color: $blue;
+}
+
+.file-icon {
+  align-items: center;
+  display: flex;
+  height: 1em;
+  justify-content: center;
+  margin-right: 0.5em;
+  width: 1em;
+}
+
+.flight-icon {
+  &.flight-icon-display-inline {
+    vertical-align: middle;
+    margin-left: 4px;
+    margin-right: 4px;
+  }
+}
+
 .hs-icon {
   flex: 0 0 auto;
   display: inline-flex;
@@ -47,16 +76,4 @@
 .hs-icon-xxl {
   width: 32px;
   height: 32px;
-}
-
-.flight-icon {
-  &.flight-icon-display-inline {
-    vertical-align: middle;
-    margin-left: 4px;
-    margin-right: 4px;
-  }
-}
-
-.icon-blue {
-  color: $blue;
 }
