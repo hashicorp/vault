@@ -12,17 +12,21 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0 # by default the checkout action doesn't checkout all branches
-      - name: Set up Go
+      - name: Setup Go
         uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 #v4
         with:
           go-version-file: ./.go-version
           cache: true
+      - name: Install required tools
+        run: |
+          go generate -tags tools tools/tools.go 
       - name: Check deprecations for files in diff
         run: |
-          # Need to run this from base path and not from .github/scripts as staticcheck works 
+          # Need to run this from repository root and not from scripts/ as staticcheck works 
           # only on packages
-          ./.github/scripts/deprecations-checker.sh ${{ github.event.pull_request.base.ref }}
+          ./scripts/deprecations-checker.sh ${{ github.event.pull_request.base.ref }} ${{ github.event.repository.name }}
+          
