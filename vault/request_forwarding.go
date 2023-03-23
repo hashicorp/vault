@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/vault/vault/replication"
 	"golang.org/x/net/http2"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/backoff"
 	"google.golang.org/grpc/keepalive"
 )
 
@@ -288,7 +289,10 @@ func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAd
 		),
 	}
 	if c.grpcMinConnectTimeout != 0 {
-		opts = append(opts, grpc.WithConnectParams(grpc.ConnectParams{MinConnectTimeout: c.grpcMinConnectTimeout}))
+		opts = append(opts, grpc.WithConnectParams(grpc.ConnectParams{
+			MinConnectTimeout: c.grpcMinConnectTimeout,
+			Backoff:           backoff.DefaultConfig,
+		}))
 	}
 	c.rpcClientConn, err = grpc.DialContext(dctx, clusterURL.Host, opts...)
 	if err != nil {
