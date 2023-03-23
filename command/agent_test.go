@@ -19,6 +19,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/useragent"
+
 	"github.com/hashicorp/go-hclog"
 	vaultjwt "github.com/hashicorp/vault-plugin-auth-jwt"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
@@ -537,7 +539,7 @@ func TestAgent_Template_UserAgent(t *testing.T) {
 			HandlerFunc: vaulthttp.HandlerFunc(
 				func(properties *vault.HandlerProperties) http.Handler {
 					h.props = properties
-					h.stringToCheckForInUserAgent = "Vault Agent Templating"
+					h.userAgentToCheckFor = useragent.AgentTemplatingString()
 					h.pathToCheck = "/v1/secret/data"
 					h.t = t
 					return &h
@@ -1403,18 +1405,18 @@ func (h *handler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 // userAgentHandler makes it easy to test the User-Agent header received
 // by Vault
 type userAgentHandler struct {
-	props                       *vault.HandlerProperties
-	failCount                   int
-	stringToCheckForInUserAgent string
-	pathToCheck                 string
-	t                           *testing.T
+	props               *vault.HandlerProperties
+	failCount           int
+	userAgentToCheckFor string
+	pathToCheck         string
+	t                   *testing.T
 }
 
 func (h *userAgentHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if req.Method == "GET" && strings.Contains(req.RequestURI, h.pathToCheck) {
 		userAgent := req.UserAgent()
-		if !strings.Contains(userAgent, h.stringToCheckForInUserAgent) {
-			h.t.Fatalf("String not found in user agent. Expected to find %s, got %s", h.stringToCheckForInUserAgent, userAgent)
+		if !(userAgent == h.userAgentToCheckFor) {
+			h.t.Fatalf("User-Agent string not as expected. Expected to find %s, got %s", h.userAgentToCheckFor, userAgent)
 		}
 	}
 	vaulthttp.Handler.Handler(h.props).ServeHTTP(w, req)
@@ -1708,6 +1710,300 @@ auto_auth {
 		_ = os.Remove(secretIDFile)
 	}
 	return config, cleanup
+}
+
+// TestAgent_AutoAuth_UserAgent tests that the User-Agent sent
+// to Vault by Vault Agent is correct when performing Auto-Auth.
+func TestAgent_AutoAuth_UserAgent(t *testing.T) {
+	logger := logging.NewVaultLogger(hclog.Trace)
+	var h userAgentHandler
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		Logger: logger,
+		CredentialBackends: map[string]logical.Factory{
+			"approle": credAppRole.Factory,
+		},
+	}, &vault.TestClusterOptions{
+		NumCores: 1,
+		HandlerFunc: vaulthttp.HandlerFunc(
+			func(properties *vault.HandlerProperties) http.Handler {
+				h.props = properties
+				h.userAgentToCheckFor = useragent.AgentAutoAuthString()
+				h.pathToCheck = "/v1/auth/approle/login" // TODO this isn't a GET, it's a POST
+				h.t = t
+				return &h
+			}),
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	serverClient := cluster.Cores[0].Client
+
+	// Enable the approle auth method
+	req := serverClient.NewRequest("POST", "/v1/sys/auth/approle")
+	req.BodyBytes = []byte(`{
+		"type": "approle"
+	}`)
+	request(t, serverClient, req, 204)
+
+	// Create a named role
+	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role")
+	req.BodyBytes = []byte(`{
+	  "secret_id_num_uses": "10",
+	  "secret_id_ttl": "1m",
+	  "token_max_ttl": "1m",
+	  "token_num_uses": "10",
+	  "token_ttl": "1m"
+	}`)
+	request(t, serverClient, req, 204)
+
+	// Fetch the RoleID of the named role
+	req = serverClient.NewRequest("GET", "/v1/auth/approle/role/test-role/role-id")
+	body := request(t, serverClient, req, 200)
+	data := body["data"].(map[string]interface{})
+	roleID := data["role_id"].(string)
+
+	// Get a SecretID issued against the named role
+	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role/secret-id")
+	body = request(t, serverClient, req, 200)
+	data = body["data"].(map[string]interface{})
+	secretID := data["secret_id"].(string)
+
+	// Write the RoleID and SecretID to temp files
+	roleIDPath := makeTempFile(t, "role_id.txt", roleID+"\n")
+	secretIDPath := makeTempFile(t, "secret_id.txt", secretID+"\n")
+	defer os.Remove(roleIDPath)
+	defer os.Remove(secretIDPath)
+
+	// Create a config file
+	autoAuthConfig := `
+auto_auth {
+    method "approle" {
+        mount_path = "auth/approle"
+        config = {
+            role_id_file_path = "%s"
+            secret_id_file_path = "%s"
+        }
+    }
+}`
+
+	// Unset the environment variable so that agent picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Unsetenv(api.EnvVaultAddress)
+
+	listenAddr := generateListenerAddress(t)
+	listenConfig := fmt.Sprintf(`
+listener "tcp" {
+  address = "%s"
+  tls_disable = true
+}
+`, listenAddr)
+
+	config := fmt.Sprintf(`
+vault {
+  address = "%s"
+  tls_skip_verify = true
+}
+%s
+%s
+`, serverClient.Address(), listenConfig, autoAuthConfig)
+	configPath := makeTempFile(t, "config.hcl", config)
+	defer os.Remove(configPath)
+
+	// Start the agent
+	_, cmd := testAgentCommand(t, logger)
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		cmd.Run([]string{"-config", configPath})
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+	}
+
+	// TODO: If we get no errors here, I think we're good?
+
+	close(cmd.ShutdownCh)
+	wg.Wait()
+}
+
+// TestAgent_APIProxyWithoutCache_UserAgent tests that the User-Agent sent
+// to Vault by Vault Agent is correct using the API proxy without
+// the cache configured.
+func TestAgent_APIProxyWithoutCache_UserAgent(t *testing.T) {
+	logger := logging.NewVaultLogger(hclog.Trace)
+	userAgentForProxiedClient := "proxied-client"
+	var h userAgentHandler
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+		NumCores: 1,
+		HandlerFunc: vaulthttp.HandlerFunc(
+			func(properties *vault.HandlerProperties) http.Handler {
+				h.props = properties
+				h.userAgentToCheckFor = useragent.AgentProxyStringWithProxiedUserAgent(userAgentForProxiedClient)
+				h.pathToCheck = "/v1/auth/token/lookup-self"
+				h.t = t
+				return &h
+			}),
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	serverClient := cluster.Cores[0].Client
+
+	// Unset the environment variable so that agent picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Unsetenv(api.EnvVaultAddress)
+
+	listenAddr := generateListenerAddress(t)
+	listenConfig := fmt.Sprintf(`
+listener "tcp" {
+  address = "%s"
+  tls_disable = true
+}
+`, listenAddr)
+
+	config := fmt.Sprintf(`
+vault {
+  address = "%s"
+  tls_skip_verify = true
+}
+%s
+`, serverClient.Address(), listenConfig)
+	configPath := makeTempFile(t, "config.hcl", config)
+	defer os.Remove(configPath)
+
+	// Start the agent
+	_, cmd := testAgentCommand(t, logger)
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		cmd.Run([]string{"-config", configPath})
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+	}
+
+	agentClient, err := api.NewClient(api.DefaultConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+	agentClient.AddHeader("User-Agent", userAgentForProxiedClient)
+	agentClient.SetToken(serverClient.Token())
+	agentClient.SetMaxRetries(0)
+	err = agentClient.SetAddress("http://" + listenAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = agentClient.Auth().Token().LookupSelf()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	close(cmd.ShutdownCh)
+	wg.Wait()
+}
+
+// TestAgent_APIProxyWithCache_UserAgent tests that the User-Agent sent
+// to Vault by Vault Agent is correct using the API proxy with
+// the cache configured.
+func TestAgent_APIProxyWithCache_UserAgent(t *testing.T) {
+	logger := logging.NewVaultLogger(hclog.Trace)
+	userAgentForProxiedClient := "proxied-client"
+	var h userAgentHandler
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+		NumCores: 1,
+		HandlerFunc: vaulthttp.HandlerFunc(
+			func(properties *vault.HandlerProperties) http.Handler {
+				h.props = properties
+				h.userAgentToCheckFor = useragent.AgentProxyStringWithProxiedUserAgent(userAgentForProxiedClient)
+				h.pathToCheck = "/v1/auth/token/lookup-self"
+				h.t = t
+				return &h
+			}),
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	serverClient := cluster.Cores[0].Client
+
+	// Unset the environment variable so that agent picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Unsetenv(api.EnvVaultAddress)
+
+	listenAddr := generateListenerAddress(t)
+	listenConfig := fmt.Sprintf(`
+listener "tcp" {
+  address = "%s"
+  tls_disable = true
+}
+`, listenAddr)
+
+	cacheConfig := `
+cache {
+}`
+
+	config := fmt.Sprintf(`
+vault {
+  address = "%s"
+  tls_skip_verify = true
+}
+%s
+%s
+`, serverClient.Address(), listenConfig, cacheConfig)
+	configPath := makeTempFile(t, "config.hcl", config)
+	defer os.Remove(configPath)
+
+	// Start the agent
+	_, cmd := testAgentCommand(t, logger)
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		cmd.Run([]string{"-config", configPath})
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+	}
+
+	agentClient, err := api.NewClient(api.DefaultConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+	agentClient.AddHeader("User-Agent", userAgentForProxiedClient)
+	agentClient.SetToken(serverClient.Token())
+	agentClient.SetMaxRetries(0)
+	err = agentClient.SetAddress("http://" + listenAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = agentClient.Auth().Token().LookupSelf()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	close(cmd.ShutdownCh)
+	wg.Wait()
 }
 
 func TestAgent_Cache_DynamicSecret(t *testing.T) {

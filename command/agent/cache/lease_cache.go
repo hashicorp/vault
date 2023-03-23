@@ -19,6 +19,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/vault/helper/useragent"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/base62"
@@ -477,7 +479,19 @@ func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index,
 		return
 	}
 	client.SetToken(req.Token)
+	if req.Request.Header == nil {
+		req.Request.Header = make(map[string][]string)
+	}
+
+	// We do not preserve the initial User-Agent here (i.e. use
+	// AgentProxyStringWithProxiedUserAgent) since these requests are from
+	// the proxy subsystem, but are made by Agent's lifetime watcher,
+	// not triggered by a specific request.
+	req.Request.Header.Set("User-Agent", useragent.AgentProxyString())
 	client.SetHeaders(req.Request.Header)
+	if client.Headers() == nil {
+		client.SetHeaders(make(map[string][]string))
+	}
 
 	watcher, err := client.NewLifetimeWatcher(&api.LifetimeWatcherInput{
 		Secret: secret,

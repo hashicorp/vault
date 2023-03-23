@@ -11,6 +11,7 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/http"
 )
 
@@ -76,6 +77,20 @@ func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, 
 	// the client doesn't manually set the header. Removing any Accept-Encoding header allows the
 	// transparent compression to occur.
 	req.Request.Header.Del("Accept-Encoding")
+
+	if req.Request.Header == nil {
+		req.Request.Header = make(map[string][]string)
+	}
+
+	// Set our User-Agent to be one indicating we are Vault Agent's API proxy.
+	// If the sending client had one, preserve it.
+	if req.Request.Header.Get("User-Agent") != "" {
+		initialUserAgent := req.Request.Header.Get("User-Agent")
+		req.Request.Header.Set("User-Agent", useragent.AgentProxyStringWithProxiedUserAgent(initialUserAgent))
+	} else {
+		req.Request.Header.Set("User-Agent", useragent.AgentProxyString())
+	}
+
 	client.SetHeaders(req.Request.Header)
 
 	fwReq := client.NewRequest(req.Request.Method, req.Request.URL.Path)
@@ -116,6 +131,9 @@ func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, 
 
 	// Make the request to Vault and get the response
 	ap.logger.Info("forwarding request to Vault", "method", req.Request.Method, "path", req.Request.URL.Path)
+
+	// TODO
+	ap.logger.Info("Violet:", "req headers", req.Request.Header, "client headers", client.Headers())
 
 	resp, err := client.RawRequestWithContext(ctx, fwReq)
 	if resp == nil && err != nil {
