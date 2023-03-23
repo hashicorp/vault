@@ -18,6 +18,11 @@ func (b *SystemBackend) quotasPaths() []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "quotas/config$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "rate-limit-quotas",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"rate_limit_exempt_paths": {
 					Type:        framework.TypeStringSlice,
@@ -35,6 +40,9 @@ func (b *SystemBackend) quotasPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleQuotasConfigUpdate(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "configure",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -43,6 +51,9 @@ func (b *SystemBackend) quotasPaths() []*framework.Path {
 				},
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleQuotasConfigRead(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationSuffix: "configuration",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -69,6 +80,12 @@ func (b *SystemBackend) quotasPaths() []*framework.Path {
 		},
 		{
 			Pattern: "quotas/rate-limit/?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "rate-limit-quotas",
+				OperationVerb:   "list",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: b.handleRateLimitQuotasList(),
@@ -90,6 +107,11 @@ func (b *SystemBackend) quotasPaths() []*framework.Path {
 		},
 		{
 			Pattern: "quotas/rate-limit/" + framework.GenericNameRegex("name"),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "rate-limit-quotas",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"type": {
 					Type:        framework.TypeString,
@@ -128,6 +150,9 @@ from any further requests until after the 'block_interval' has elapsed.`,
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleRateLimitQuotasUpdate(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "write",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: http.StatusText(http.StatusNoContent),
@@ -136,6 +161,9 @@ from any further requests until after the 'block_interval' has elapsed.`,
 				},
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleRateLimitQuotasRead(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "read",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -174,6 +202,9 @@ from any further requests until after the 'block_interval' has elapsed.`,
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleRateLimitQuotasDelete(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "delete",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",

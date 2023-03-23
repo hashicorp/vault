@@ -1166,8 +1166,8 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 			Pattern: "leader$",
 
 			DisplayAttrs: &framework.DisplayAttributes{
-				OperationVerb:   "read",
-				OperationSuffix: "leader-status",
+				OperationPrefix: "leader",
+				OperationVerb:   "status",
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -1183,8 +1183,8 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 			Pattern: "seal-status$",
 
 			DisplayAttrs: &framework.DisplayAttributes{
-				OperationVerb:   "read",
-				OperationSuffix: "seal-status",
+				OperationPrefix: "seal",
+				OperationVerb:   "status",
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -1201,8 +1201,8 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 			Pattern: "ha-status$",
 
 			DisplayAttrs: &framework.DisplayAttributes{
-				OperationVerb:   "read",
-				OperationSuffix: "ha-status",
+				OperationPrefix: "ha",
+				OperationVerb:   "status",
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -1219,8 +1219,7 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 			Pattern: "version-history/$",
 
 			DisplayAttrs: &framework.DisplayAttributes{
-				OperationVerb:   "read",
-				OperationSuffix: "version-history",
+				OperationVerb: "version-history",
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -1242,8 +1241,9 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 			Pattern: "audit-hash/(?P<path>.+)",
 
 			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "auditing",
 				OperationVerb:   "calculate",
-				OperationSuffix: "audit-hash",
+				OperationSuffix: "hash",
 			},
 
 			Fields: map[string]*framework.FieldSchema{
@@ -1473,8 +1473,7 @@ func (b *SystemBackend) sealPaths() []*framework.Path {
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "encryption-key",
-				OperationVerb:   "read",
-				OperationSuffix: "status",
+				OperationVerb:   "status",
 			},
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -2341,7 +2340,7 @@ func (b *SystemBackend) capabilitiesPaths() []*framework.Path {
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationVerb:   "query",
-				OperationSuffix: "self-capabilities",
+				OperationSuffix: "token-self-capabilities",
 			},
 
 			Fields: map[string]*framework.FieldSchema{
@@ -2807,8 +2806,7 @@ func (b *SystemBackend) remountPaths() []*framework.Path {
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "remount",
-				OperationVerb:   "read",
-				OperationSuffix: "status",
+				OperationVerb:   "status",
 			},
 
 			Fields: map[string]*framework.FieldSchema{
@@ -3268,7 +3266,8 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleEnableAuth,
 					DisplayAttrs: &framework.DisplayAttributes{
-						OperationVerb: "enable",
+						OperationVerb:   "enable",
+						OperationSuffix: "method",
 					},
 					Summary: "Enables a new auth method.",
 					Description: `After enabling, the auth method can be accessed and configured via the auth path specified as part of the URL. This auth path will be nested under the auth prefix.
@@ -3283,7 +3282,8 @@ For example, enable the "foo" auth method will make it accessible at /auth/foo.`
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleDisableAuth,
 					DisplayAttrs: &framework.DisplayAttributes{
-						OperationVerb: "disable",
+						OperationVerb:   "disable",
+						OperationSuffix: "method",
 					},
 					Summary: "Disable the auth method at the given auth path",
 					Responses: map[int][]framework.Response{
