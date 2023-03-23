@@ -42,7 +42,25 @@
   font-size: $size-9 !important;
 }
 
+// Font family
+.is-font-mono {
+  font-family: $family-monospace;
+}
+
+// Text decoration
+.is-underline {
+  text-decoration: underline;
+}
+.is-no-underline {
+  text-decoration: none;
+}
+
 // Text weight
+// ARG TODO: duplicate, need to agree on naming syntax
+.has-text-semibold {
+  font-weight: $font-weight-semibold;
+}
+
 .has-text-weight-semibold {
   font-weight: 600 !important;
 }
@@ -63,6 +81,11 @@
 // Text alignment
 .has-text-right {
   text-align: right !important;
+}
+
+// ARG TODO duplicate, need to confirm naming style.
+.has-text-align-center {
+  text-align: center;
 }
 
 .has-text-centered {
