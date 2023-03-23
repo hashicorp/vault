@@ -311,5 +311,18 @@ module('Unit | Route | vault/cluster/oidc-callback', function (hooks) {
         namespace: 'admin/child-ns',
       });
     });
+
+    test('it defaults to reasonable values if query params are missing', function (assert) {
+      const params = {
+        path: 'oidc-path',
+      };
+      const results = getParamsForCallback(params, '');
+      assert.deepEqual(results, {
+        source: 'oidc-callback',
+        code: '',
+        path: 'oidc-path',
+        state: '',
+      });
+    });
   });
 });
