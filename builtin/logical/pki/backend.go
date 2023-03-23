@@ -142,6 +142,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			// Issuer APIs
 			pathListIssuers(&b),
 			pathGetIssuer(&b),
+			pathGetUnauthedIssuer(&b),
 			pathGetIssuerCRL(&b),
 			pathImportIssuer(&b),
 			pathIssuerIssue(&b),

@@ -75,11 +75,16 @@ their identifier and their name (if set).
 )
 
 func pathGetIssuer(b *backend) *framework.Path {
-	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "(/der|/pem|/json)?"
+	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "$"
+	return buildPathIssuer(b, pattern)
+}
+
+func pathGetUnauthedIssuer(b *backend) *framework.Path {
+	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/(json|der|pem)$"
 	return buildPathGetIssuer(b, pattern)
 }
 
-func buildPathGetIssuer(b *backend, pattern string) *framework.Path {
+func buildPathIssuer(b *backend, pattern string) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	fields = addIssuerRefNameFields(fields)
 
@@ -161,6 +166,26 @@ for the OCSP servers attribute. See also RFC 5280 Section 4.2.2.1.`,
 				// Read more about why these flags are set in backend.go.
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
+			},
+		},
+
+		HelpSynopsis:    pathGetIssuerHelpSyn,
+		HelpDescription: pathGetIssuerHelpDesc,
+	}
+}
+
+func buildPathGetIssuer(b *backend, pattern string) *framework.Path {
+	fields := map[string]*framework.FieldSchema{}
+	fields = addIssuerRefField(fields)
+
+	return &framework.Path{
+		// Returns a JSON entry.
+		Pattern: pattern,
+		Fields:  fields,
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathGetIssuer,
 			},
 		},
 
