@@ -4,7 +4,7 @@
  */
 
 .console-ui-panel {
-  background: linear-gradient(to right, #191a1c, #1b212d);
+  background: $black;
   height: 0;
   left: 0;
   min-height: 0;
@@ -19,7 +19,7 @@
   .button {
     background: transparent;
     border: none;
-    color: $grey;
+    color: $white;
     min-width: 0;
     padding: 0 $size-8;
 
@@ -76,14 +76,14 @@
 
   input {
     background-color: rgba($black, 0.5);
-    border: 0;
+    border: 1px solid var(--token-color-palette-neutral-500);
+    border-radius: 2px;
     caret-color: $white;
     color: $white;
     flex: 1 1 auto;
     font-family: $family-monospace;
     font-size: 16px;
     font-weight: $font-weight-bold;
-    margin-left: -$size-10;
     outline: none;
     padding: $size-10;
     transition: background-color $speed;
@@ -146,11 +146,7 @@
 
 .console-close-button {
   position: absolute;
-  top: -3.25rem;
+  top: $spacing-xs;
   right: $spacing-xs;
   z-index: 210;
-
-  @include from($mobile) {
-    display: none;
-  }
 }

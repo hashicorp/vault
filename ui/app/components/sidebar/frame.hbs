@@ -11,7 +11,7 @@
         <button
           type="button"
           class="button is-transparent has-text-white"
-          {{on "click" (fn (mut this.showConsole) (not this.showConsole))}}
+          {{on "click" (fn (mut this.console.isOpen) (not this.console.isOpen))}}
           data-test-console-toggle
         >
           <Icon @name="terminal-screen" @size="24" />
@@ -31,7 +31,7 @@
   <Frame.Main>
     {{! outlet for app content }}
     <LinkStatus @status={{this.currentCluster.cluster.hcpLinkStatus}} />
-    <div class={{if this.showConsole "panel-open"}}>
+    <div class={{if this.console.isOpen "panel-open"}}>
       <Console::UiPanel @isFullscreen={{this.consoleFullscreen}} />
     </div>
     {{yield}}
