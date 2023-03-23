@@ -1,0 +1,3 @@
+```release-note:improvement
+agent: provide systemd unit for Vault agent on linux install
+```
