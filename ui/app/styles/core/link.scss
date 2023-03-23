@@ -3,38 +3,6 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-// seriously ? yes. seriously.
-a {
-  text-decoration: underline;
-  &:hover,
-  &:active,
-  &:focus {
-    position: relative;
-  }
-}
-.menu a {
-  text-decoration: none;
-}
-code {
-  padding: 0;
-  font-size: 1em;
-}
-.icon {
-  min-width: 1.5rem;
-  vertical-align: middle;
-}
-code,
-pre {
-  font-smooth: inherit;
-  -webkit-font-smoothing: inherit;
-}
-
-input::-webkit-outer-spin-button,
-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
 .link {
   background: transparent;
   border: 0;
