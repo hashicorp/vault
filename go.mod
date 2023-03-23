@@ -201,7 +201,7 @@ require (
 	golang.org/x/sync v0.1.0
 	golang.org/x/sys v0.5.0
 	golang.org/x/term v0.5.0
-	golang.org/x/tools v0.2.0
+	golang.org/x/tools v0.4.1-0.20221208213631-3f74d914ae6d
 	google.golang.org/api v0.109.0
 	google.golang.org/grpc v1.51.0
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0
@@ -209,7 +209,7 @@ require (
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	gopkg.in/square/go-jose.v2 v2.6.0
 	gotest.tools/gotestsum v1.9.0
-	honnef.co/go/tools v0.0.1-2020.1.4
+	honnef.co/go/tools v0.4.3
 	k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed
 	layeh.com/radius v0.0.0-20190322222518-890bc1058917
 	mvdan.cc/gofumpt v0.3.1
@@ -242,7 +242,7 @@ require (
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
 	github.com/Azure/go-ntlmssp v0.0.0-20200615164410-66371956d46c // indirect
 	github.com/AzureAD/microsoft-authentication-library-for-go v0.8.1 // indirect
-	github.com/BurntSushi/toml v1.2.0 // indirect
+	github.com/BurntSushi/toml v1.2.1 // indirect
 	github.com/DataDog/datadog-go v3.2.0+incompatible // indirect
 	github.com/Jeffail/gabs v1.1.1 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
@@ -448,7 +448,8 @@ require (
 	go.opencensus.io v0.24.0 // indirect
 	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.19.1 // indirect
-	golang.org/x/mod v0.6.0 // indirect
+	golang.org/x/exp/typeparams v0.0.0-20221208152030-732eee02a75a // indirect
+	golang.org/x/mod v0.7.0 // indirect
 	golang.org/x/text v0.7.0 // indirect
 	golang.org/x/time v0.0.0-20220411224347-583f2d630306 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
