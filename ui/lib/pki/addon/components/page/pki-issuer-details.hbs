@@ -1,10 +1,10 @@
 <Toolbar>
   <ToolbarActions>
-    {{!-- {{#if @canRotate}}
-      <ToolbarLink @route="issuers.generate-root" @type="rotate-cw" @issuer={{@issuer.id}} data-test-pki-issuer-rotate-root>
-        Rotate this root
+    {{#if @canRotate}}
+      <ToolbarLink @route="issuers.rotate-root" @type="rotate-cw" @issuer={{@issuer.id}} data-test-pki-issuer-rotate-root>
+        Rotate root
       </ToolbarLink>
-    {{/if}} --}}
+    {{/if}}
     {{#if @canCrossSign}}
       <ToolbarLink
         @route="issuers.issuer.cross-sign"
