@@ -6,6 +6,7 @@
 import { module, skip, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import sinon from 'sinon';
+import { getParamsForCallback } from 'vault/routes/vault/cluster/oidc-callback';
 
 module('Unit | Route | vault/cluster/oidc-callback', function (hooks) {
   setupTest(hooks);
@@ -46,6 +47,102 @@ module('Unit | Route | vault/cluster/oidc-callback', function (hooks) {
     this.windowStub.restore();
     window.opener = this.originalOpener;
     this.callbackUrlQueryParams('');
+  });
+
+  module('getParamsForCallback helper fn', function () {
+    test('it parses params correctly with regular inputs no namespace', function (assert) {
+      const params = {
+        state: 'my-state',
+        code: 'my-code',
+        path: 'oidc-path',
+      };
+      const results = getParamsForCallback(params, '?code=my-code&state=my-state');
+      assert.deepEqual(results, { source: 'oidc-callback', ...params });
+    });
+
+    test('it parses params correctly regular inputs and namespace param', function (assert) {
+      const params = {
+        state: 'my-state',
+        code: 'my-code',
+        path: 'oidc-path',
+        namespace: 'my-namespace/nested',
+      };
+      const results = getParamsForCallback(params, '?code=my-code&state=my-state');
+      assert.deepEqual(results, { source: 'oidc-callback', ...params });
+    });
+
+    test('it parses params correctly regular inputs and namespace in state', function (assert) {
+      const queryString = '?code=my-code&state=my-state,ns=blah';
+      const params = {
+        state: 'my-state,ns', // mock what Ember does with the state QP
+        code: 'my-code',
+        path: 'oidc-path',
+      };
+      const results = getParamsForCallback(params, queryString);
+      assert.deepEqual(results, { source: 'oidc-callback', ...params, state: 'my-state', namespace: 'blah' });
+    });
+
+    test('namespace in state takes precedence over namespace in route', function (assert) {
+      const queryString = '?code=my-code&state=my-state,ns=some-ns/foo';
+      const params = {
+        state: 'my-state,ns', // mock what Ember does with the state QP
+        code: 'my-code',
+        path: 'oidc-path',
+        namespace: 'some-ns',
+      };
+      const results = getParamsForCallback(params, queryString);
+      assert.deepEqual(results, {
+        source: 'oidc-callback',
+        ...params,
+        state: 'my-state',
+        namespace: 'some-ns/foo',
+      });
+    });
+
+    test('correctly decodes path and state', function (assert) {
+      const searchString = '?code=my-code&state=spaces%20state,ns=some.ns%2Fchild';
+      const params = {
+        state: 'spaces state,ns',
+        code: 'my-code',
+        path: 'oidc-path',
+      };
+      const results = getParamsForCallback(params, searchString);
+      assert.deepEqual(results, {
+        source: 'oidc-callback',
+        state: 'spaces state',
+        code: 'my-code',
+        path: 'oidc-path',
+        namespace: 'some.ns/child',
+      });
+    });
+
+    test('correctly decodes namespace in state', function (assert) {
+      const queryString = '?code=my-code&state=spaces%20state,ns=spaces%20ns';
+      const params = {
+        state: 'spaces state,ns', // mock what Ember does with the state QP
+        code: 'my-code',
+        path: 'oidc-path',
+      };
+      const results = getParamsForCallback(params, queryString);
+      assert.deepEqual(results, {
+        source: 'oidc-callback',
+        state: 'spaces state',
+        code: 'my-code',
+        path: 'oidc-path',
+        namespace: 'spaces ns',
+      });
+    });
+
+    test('it parses params correctly when window.location.search is empty', function (assert) {
+      const params = {
+        state: 'my-state',
+        code: 'my-code',
+        path: 'oidc-path',
+        namespace: 'ns1',
+      };
+      const results = getParamsForCallback(params, '');
+      assert.deepEqual(results, { source: 'oidc-callback', ...params, state: 'my-state' });
+    });
   });
 
   test('it calls route', function (assert) {
@@ -182,11 +279,11 @@ module('Unit | Route | vault/cluster/oidc-callback', function (hooks) {
   /*
   If authenticating to a namespace, most SSO providers return a callback url
   with a 'state' query param that includes a URI encoded namespace, example:
-  '?code=BZBDVPMz0By2JTqulEMWX5-6rflW3A20UAusJYHEeFygJ&state=sst_yOarDguU848w5YZuotLs%2Cns%3Dadmin'    
+  '?code=BZBDVPMz0By2JTqulEMWX5-6rflW3A20UAusJYHEeFygJ&state=sst_yOarDguU848w5YZuotLs%2Cns%3Dadmin'
 
   Active Directory Federation Service (AD FS), instead, decodes the namespace portion:
   '?code=BZBDVPMz0By2JTqulEMWX5-6rflW3A20UAusJYHEeFygJ&state=st_yOarDguU848w5YZuotLs,ns=admin'
-  
+
   'ns' isn't recognized as a separate param because there is no ampersand, so using this.paramsFor() returns
   a namespace-less state and authentication fails
   { state: 'st_yOarDguU848w5YZuotLs,ns' }
