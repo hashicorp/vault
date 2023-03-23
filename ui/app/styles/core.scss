@@ -19,7 +19,7 @@
 @import './utils/mixins';
 @import './utils/animations';
 
-// Override Bulma details where appropriate
+// Core element styling
 @import './core/alert-banner';
 @import './core/generic';
 @import './core/box';
@@ -53,6 +53,7 @@
 @import './core/layout';
 @import './core/lists';
 
+// Component specific styling
 @import './components/auth-buttons';
 @import './components/auth-form';
 @import './components/b64-toggle';
@@ -98,7 +99,6 @@
 @import './components/read-more';
 @import './components/regex-validator';
 @import './components/replication-dashboard';
-@import './components/replication-header';
 @import './components/replication-mode-summary';
 @import './components/replication-page';
 @import './components/replication-primary-card';
@@ -124,7 +124,7 @@
 @import './components/transit-card';
 @import './components/ttl-picker';
 @import './components/unseal-warning';
-@import './components/ui-wizard';
+// @import './components/ui-wizard'; // remove, see PR https://github.com/hashicorp/vault/pull/19220
 @import './components/vault-loading';
 @import './components/vlt-radio';
 @import './components/vlt-table';

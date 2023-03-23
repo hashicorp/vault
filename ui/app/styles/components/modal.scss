@@ -3,6 +3,19 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
+.modal {
+  align-items: center;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  top: 0;
+  display: none;
+  justify-content: center;
+  overflow: hidden;
+  position: fixed;
+  z-index: 20;
+}
+
 .modal-background {
   background: rgba(235, 238, 242, 0.9);
 }
@@ -13,21 +26,31 @@
   max-height: calc(100vh - 70px);
   margin-top: 60px;
   min-width: calc(100vw * 0.3);
+  position: relative;
 
   &-head {
     border-radius: 0;
     background-color: $grey-lightest;
     border-bottom: 1px solid $grey-light;
+    display: flex;
+    justify-content: flex-start;
+    padding: 20px;
   }
 
   &-foot {
     border-radius: 0;
     border: 0;
     background-color: $white;
+    padding: 20px;
+
+    .button:not(:last-child) {
+      margin-right: 10px;
+    }
   }
 
   &-title.title {
     margin: 0;
+    flex-grow: 1;
   }
 
   .copy-text {
