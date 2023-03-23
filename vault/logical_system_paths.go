@@ -16,6 +16,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 		{
 			Pattern: "config/cors$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "cors",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"enable": {
 					Type:        framework.TypeBool,
@@ -33,7 +37,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback:    b.handleCORSRead,
+					Callback: b.handleCORSRead,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationSuffix: "configuration",
+					},
 					Summary:     "Return the current CORS settings.",
 					Description: "",
 					Responses: map[int][]framework.Response{
@@ -57,7 +64,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 					},
 				},
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback:    b.handleCORSUpdate,
+					Callback: b.handleCORSUpdate,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "configure",
+					},
 					Summary:     "Configure the CORS settings.",
 					Description: "",
 					Responses: map[int][]framework.Response{
@@ -68,7 +78,11 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleCORSDelete,
-					Summary:  "Remove any CORS settings.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "delete",
+						OperationSuffix: "cors-configuration",
+					},
+					Summary: "Remove any CORS settings.",
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -85,7 +99,11 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			Pattern: "config/state/sanitized$",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback:    b.handleConfigStateSanitized,
+					Callback: b.handleConfigStateSanitized,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "sanitized-configuration-state",
+					},
 					Summary:     "Return a sanitized version of the Vault server configuration.",
 					Description: "The sanitized output strips configuration values in the storage, HA storage, and seals stanzas, which may contain sensitive values such as API tokens. It also removes any token or secret fields in other stanzas, such as the circonus_api_token from telemetry.",
 					Responses: map[int][]framework.Response{
@@ -109,7 +127,11 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback:    b.handleConfigReload,
+					Callback: b.handleConfigReload,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "reload",
+						OperationSuffix: "subsystem",
+					},
 					Summary:     "Reload the given subsystem",
 					Description: "",
 					Responses: map[int][]framework.Response{
@@ -123,6 +145,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 
 		{
 			Pattern: "config/ui/headers/" + framework.GenericNameRegex("header"),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "ui-headers",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"header": {
@@ -142,7 +168,11 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleConfigUIHeadersRead,
-					Summary:  "Return the given UI header's configuration",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "configuration",
+					},
+					Summary: "Return the given UI header's configuration",
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -163,7 +193,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleConfigUIHeadersUpdate,
-					Summary:  "Configure the values to be returned for the UI header.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "configure",
+					},
+					Summary: "Configure the values to be returned for the UI header.",
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							// returns 200 with null `data`
@@ -173,7 +206,11 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleConfigUIHeadersDelete,
-					Summary:  "Remove a UI header.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "delete",
+						OperationSuffix: "configuration",
+					},
+					Summary: "Remove a UI header.",
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -192,7 +229,11 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: b.handleConfigUIHeadersList,
-					Summary:  "Return a list of configured UI headers.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationPrefix: "ui-headers",
+						OperationVerb:   "list",
+					},
+					Summary: "Return a list of configured UI headers.",
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Fields: map[string]*framework.FieldSchema{
@@ -213,14 +254,24 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 
 		{
 			Pattern: "generate-root(/attempt)?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "root-token-generation",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"pgp_key": {
 					Type:        framework.TypeString,
 					Description: "Specifies a base64-encoded PGP public key.",
 				},
 			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "progress2|progress",
+					},
 					Summary: "Read the configuration and progress of the current root generation attempt.",
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
@@ -271,7 +322,11 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 					},
 				},
 				logical.UpdateOperation: &framework.PathOperation{
-					Summary:     "Initializes a new root generation attempt.",
+					Summary: "Initializes a new root generation attempt.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "initialize",
+						OperationSuffix: "2|",
+					},
 					Description: "Only a single root generation attempt can take place at a time. One (and only one) of otp or pgp_key are required.",
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
@@ -322,6 +377,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 					},
 				},
 				logical.DeleteOperation: &framework.PathOperation{
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "cancel",
+						OperationSuffix: "2|",
+					},
 					Summary: "Cancels any in-progress root generation attempt.",
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
@@ -348,6 +407,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationPrefix: "root-token-generation",
+						OperationVerb:   "update",
+					},
 					Summary:     "Enter a single unseal key share to progress the root generation attempt.",
 					Description: "If the threshold number of unseal key shares is reached, Vault will complete the root generation and issue the new token. Otherwise, this API must be called multiple times until that threshold is met. The attempt nonce must be provided with each call.",
 					Responses: map[int][]framework.Response{
@@ -441,6 +504,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "health-status",
+					},
 					Summary: "Returns the health status of Vault.",
 					Responses: map[int][]framework.Response{
 						200: {{Description: "initialized, unsealed, and active"}},
@@ -494,9 +561,16 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "initialization-status",
+					},
 					Summary: "Returns the initialization status of Vault.",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "initialize",
+					},
 					Summary:     "Initialize a new Vault.",
 					Description: "The Vault must not have been previously initialized. The recovery options, as well as the stored shares option, are only available when using Vault HSM.",
 				},
@@ -510,6 +584,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "step-down",
+						OperationSuffix: "leader",
+					},
 					Summary:     "Cause the node to give up active status.",
 					Description: "This endpoint forces the node to give up active status. If the node does not have active status, this endpoint does nothing. Note that the node will sleep for ten seconds before attempting to grab the active lock again, but if no standby nodes grab the active lock in the interim, the same node may become the active node again.",
 					Responses: map[int][]framework.Response{
@@ -520,6 +598,9 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 		},
 		{
 			Pattern: "loggers$",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "loggers",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"level": {
 					Type: framework.TypeString,
@@ -530,6 +611,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleLoggersRead,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "verbosity-level",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -539,6 +624,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleLoggersWrite,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "update",
+						OperationSuffix: "verbosity-level",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -548,6 +637,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleLoggersDelete,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "revert",
+						OperationSuffix: "verbosity-level",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -559,6 +652,9 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 		},
 		{
 			Pattern: "loggers/" + framework.MatchAllRegex("name"),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "loggers",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -573,6 +669,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleLoggersByNameRead,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "verbosity-level-for",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -582,6 +682,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleLoggersByNameWrite,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "update",
+						OperationSuffix: "verbosity-level-for",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -591,6 +695,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleLoggersByNameDelete,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "revert",
+						OperationSuffix: "verbosity-level-for",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -649,6 +757,10 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 		{
 			Pattern: "rekey/init",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "rekey-attempt",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"secret_shares": {
 					Type:        framework.TypeInt,
@@ -674,6 +786,10 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "progress",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -683,6 +799,9 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 					Summary: "Reads the configuration and progress of the current rekey attempt.",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "initialize",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -693,6 +812,9 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 					Description: "Only a single rekey attempt can take place at a time, and changing the parameters of a rekey requires canceling and starting a new rekey, which will also provide a new nonce.",
 				},
 				logical.DeleteOperation: &framework.PathOperation{
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "cancel",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -706,11 +828,19 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 		{
 			Pattern: "rekey/backup$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "rekey",
+			},
+
 			Fields: map[string]*framework.FieldSchema{},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleRekeyRetrieveBarrier,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "backup-key",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -734,6 +864,10 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleRekeyDeleteBarrier,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "delete",
+						OperationSuffix: "backup-key",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -750,11 +884,19 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 		{
 			Pattern: "rekey/recovery-key-backup$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "rekey",
+			},
+
 			Fields: map[string]*framework.FieldSchema{},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleRekeyRetrieveRecovery,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "backup-recovery-key",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -777,6 +919,10 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleRekeyDeleteRecovery,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "delete",
+						OperationSuffix: "backup-recovery-key",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -804,6 +950,10 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationPrefix: "rekey-attempt",
+						OperationVerb:   "update",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -860,6 +1010,10 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 		{
 			Pattern: "rekey/verify",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "rekey-verification",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"key": {
 					Type:        framework.TypeString,
@@ -873,6 +1027,10 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "progress",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -903,6 +1061,9 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 					Summary: "Read the configuration and progress of the current rekey verification attempt.",
 				},
 				logical.DeleteOperation: &framework.PathOperation{
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "cancel",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -934,6 +1095,9 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 					Description: "This clears any progress made and resets the nonce. Unlike a `DELETE` against `sys/rekey/init`, this only resets the current verification operation, not the entire rekey atttempt.",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "update",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -955,6 +1119,11 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 
 		{
 			Pattern: "seal$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb: "seal",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Summary: "Seal the Vault.",
@@ -966,6 +1135,11 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 
 		{
 			Pattern: "unseal$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb: "unseal",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"key": {
 					Type:        framework.TypeString,
@@ -994,6 +1168,11 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 		{
 			Pattern: "leader$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "leader",
+				OperationVerb:   "status",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleLeaderStatus,
@@ -1005,6 +1184,12 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 		},
 		{
 			Pattern: "seal-status$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "seal",
+				OperationVerb:   "status",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleSealStatus,
@@ -1018,6 +1203,11 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 		{
 			Pattern: "ha-status$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "ha",
+				OperationVerb:   "status",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleHAStatus,
@@ -1030,6 +1220,11 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 		},
 		{
 			Pattern: "version-history/$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb: "version-history",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: b.handleVersionHistoryList,
@@ -1048,6 +1243,12 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 		{
 			Pattern: "audit-hash/(?P<path>.+)",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "auditing",
+				OperationVerb:   "calculate",
+				OperationSuffix: "hash",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"path": {
 					Type:        framework.TypeString,
@@ -1058,6 +1259,7 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 					Type: framework.TypeString,
 				},
 			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleAuditHash,
@@ -1082,6 +1284,12 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 		{
 			Pattern: "audit$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "auditing",
+				OperationVerb:   "list",
+				OperationSuffix: "enabled-devices",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleAuditTable,
@@ -1102,6 +1310,10 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 
 		{
 			Pattern: "audit/(?P<path>.+)",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "auditing",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"path": {
@@ -1130,7 +1342,11 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleEnableAudit,
-					Summary:  "Enable a new audit device at the supplied path.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "enable",
+						OperationSuffix: "device",
+					},
+					Summary: "Enable a new audit device at the supplied path.",
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -1139,7 +1355,11 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleDisableAudit,
-					Summary:  "Disable the audit device at the given path.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "disable",
+						OperationSuffix: "device",
+					},
+					Summary: "Disable the audit device at the given path.",
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -1155,6 +1375,10 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 		{
 			Pattern: "config/auditing/request-headers/(?P<header>.+)",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "auditing",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"header": {
 					Type: framework.TypeString,
@@ -1167,7 +1391,11 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleAuditedHeaderUpdate,
-					Summary:  "Enable auditing of a header.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "enable",
+						OperationSuffix: "request-header",
+					},
+					Summary: "Enable auditing of a header.",
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -1176,7 +1404,11 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleAuditedHeaderDelete,
-					Summary:  "Disable auditing of the given request header.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "disable",
+						OperationSuffix: "request-header",
+					},
+					Summary: "Disable auditing of the given request header.",
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -1185,7 +1417,11 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 				},
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleAuditedHeaderRead,
-					Summary:  "List the information for the given request header.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "request-header-information",
+					},
+					Summary: "List the information for the given request header.",
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -1202,6 +1438,12 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 
 		{
 			Pattern: "config/auditing/request-headers$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "auditing",
+				OperationVerb:   "list",
+				OperationSuffix: "request-headers",
+			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
@@ -1232,6 +1474,11 @@ func (b *SystemBackend) sealPaths() []*framework.Path {
 		{
 			Pattern: "key-status$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "encryption-key",
+				OperationVerb:   "status",
+			},
+
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation: b.handleKeyStatus,
 			},
@@ -1242,6 +1489,11 @@ func (b *SystemBackend) sealPaths() []*framework.Path {
 
 		{
 			Pattern: "rotate/config$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "encryption-key",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"enabled": {
 					Type:        framework.TypeBool,
@@ -1260,9 +1512,17 @@ func (b *SystemBackend) sealPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleKeyRotationConfigRead,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "rotation-configuration",
+					},
 				},
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback:                    b.handleKeyRotationConfigUpdate,
+					Callback: b.handleKeyRotationConfigUpdate,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "configure",
+						OperationSuffix: "rotation",
+					},
 					ForwardPerformanceSecondary: true,
 					ForwardPerformanceStandby:   true,
 				},
@@ -1274,6 +1534,11 @@ func (b *SystemBackend) sealPaths() []*framework.Path {
 
 		{
 			Pattern: "rotate$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "encryption-key",
+				OperationVerb:   "rotate",
+			},
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: b.handleRotate,
@@ -1288,6 +1553,10 @@ func (b *SystemBackend) sealPaths() []*framework.Path {
 func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 	return &framework.Path{
 		Pattern: "plugins/catalog(/(?P<type>auth|database|secret))?/(?P<name>.+)",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: "plugins-catalog",
+		},
 
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
@@ -1327,6 +1596,10 @@ func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.handlePluginCatalogUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "register",
+					OperationSuffix: "plugin|plugin-with-type|plugin-with-type-and-name",
+				},
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
@@ -1336,6 +1609,10 @@ func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.handlePluginCatalogDelete,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "remove",
+					OperationSuffix: "plugin|plugin-with-type|plugin-with-type-and-name",
+				},
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
@@ -1346,6 +1623,10 @@ func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 			},
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.handlePluginCatalogRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "read",
+					OperationSuffix: "plugin-configuration|plugin-configuration-with-type|plugin-configuration-with-type-and-name",
+				},
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
@@ -1400,6 +1681,12 @@ func (b *SystemBackend) pluginsCatalogListPaths() []*framework.Path {
 		{
 			Pattern: "plugins/catalog/(?P<type>auth|database|secret)/?$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "plugins-catalog",
+				OperationVerb:   "list",
+				OperationSuffix: "plugins-with-type",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"type": {
 					Type:        framework.TypeString,
@@ -1432,6 +1719,12 @@ func (b *SystemBackend) pluginsCatalogListPaths() []*framework.Path {
 		{
 			Pattern: "plugins/catalog/?$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "plugins-catalog",
+				OperationVerb:   "list",
+				OperationSuffix: "plugins",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handlePluginCatalogUntypedList,
@@ -1458,6 +1751,12 @@ func (b *SystemBackend) pluginsCatalogListPaths() []*framework.Path {
 func (b *SystemBackend) pluginsReloadPath() *framework.Path {
 	return &framework.Path{
 		Pattern: "plugins/reload/backend$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: "plugins",
+			OperationVerb:   "reload",
+			OperationSuffix: "backends",
+		},
 
 		Fields: map[string]*framework.FieldSchema{
 			"plugin": {
@@ -1511,6 +1810,12 @@ func (b *SystemBackend) toolsPaths() []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "tools/hash" + framework.OptionalParamRegex("urlalgorithm"),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb:   "hash",
+				OperationSuffix: "|with-algorithm",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"input": {
 					Type:        framework.TypeString,
@@ -1552,6 +1857,12 @@ func (b *SystemBackend) toolsPaths() []*framework.Path {
 
 		{
 			Pattern: "tools/random(/" + framework.GenericNameRegex("source") + ")?" + framework.OptionalParamRegex("urlbytes"),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb:   "generate",
+				OperationSuffix: "random|random-with-source|random-with-bytes|random-with-source-and-bytes",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"urlbytes": {
 					Type:        framework.TypeString,
@@ -1591,6 +1902,12 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "internal/specs/openapi",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal",
+				OperationVerb:   "generate",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"context": {
 					Type:        framework.TypeString,
@@ -1603,14 +1920,33 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 					Default:     false,
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation:   b.pathInternalOpenAPI,
-				logical.UpdateOperation: b.pathInternalOpenAPI,
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathInternalOpenAPI,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationSuffix: "open-api-document",
+					},
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.pathInternalOpenAPI,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationSuffix: "open-api-document2",
+					},
+				},
 			},
+
 			HelpSynopsis: "Generate an OpenAPI 3 document of all mounted paths.",
 		},
 		{
 			Pattern: "internal/ui/feature-flags",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal-ui",
+				OperationVerb:   "list",
+				OperationSuffix: "enabled-feature-flags",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					// callback is absent because this is an unauthenticated method
@@ -1633,6 +1969,13 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 		},
 		{
 			Pattern: "internal/ui/mounts",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal-ui",
+				OperationVerb:   "list",
+				OperationSuffix: "enabled-visible-mounts",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathInternalUIMountsRead,
@@ -1661,12 +2004,20 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 		},
 		{
 			Pattern: "internal/ui/mounts/(?P<path>.+)",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal-ui",
+				OperationVerb:   "read",
+				OperationSuffix: "mount-information",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"path": {
 					Type:        framework.TypeString,
 					Description: "The path of the mount.",
 				},
 			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathInternalUIMountRead,
@@ -1737,6 +2088,11 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 		},
 		{
 			Pattern: "internal/ui/namespaces",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal-ui",
+				OperationVerb:   "list",
+				OperationSuffix: "namespaces",
+			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: pathInternalUINamespacesRead(b),
@@ -1759,6 +2115,11 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 		},
 		{
 			Pattern: "internal/ui/resultant-acl",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal-ui",
+				OperationVerb:   "read",
+				OperationSuffix: "resultant-acl",
+			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathInternalUIResultantACL,
@@ -1793,6 +2154,11 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 		},
 		{
 			Pattern: "internal/counters/requests",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal",
+				OperationVerb:   "count",
+				OperationSuffix: "requests",
+			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathInternalCountersRequests,
@@ -1806,6 +2172,11 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 		},
 		{
 			Pattern: "internal/counters/tokens",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal",
+				OperationVerb:   "count",
+				OperationSuffix: "tokens",
+			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathInternalCountersTokens,
@@ -1828,6 +2199,11 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 		},
 		{
 			Pattern: "internal/counters/entities",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal",
+				OperationVerb:   "count",
+				OperationSuffix: "entities",
+			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathInternalCountersEntities,
@@ -1855,6 +2231,11 @@ func (b *SystemBackend) introspectionPaths() []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "internal/inspect/router/" + framework.GenericNameRegex("tag"),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal",
+				OperationVerb:   "inspect",
+				OperationSuffix: "router",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"tag": {
 					Type:        framework.TypeString,
@@ -1877,6 +2258,11 @@ func (b *SystemBackend) capabilitiesPaths() []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "capabilities-accessor$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb:   "query",
+				OperationSuffix: "token-accessor-capabilities",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"accessor": {
@@ -1914,6 +2300,11 @@ func (b *SystemBackend) capabilitiesPaths() []*framework.Path {
 		{
 			Pattern: "capabilities$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb:   "query",
+				OperationSuffix: "token-capabilities",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
 					Type:        framework.TypeString,
@@ -1949,6 +2340,11 @@ func (b *SystemBackend) capabilitiesPaths() []*framework.Path {
 
 		{
 			Pattern: "capabilities-self$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb:   "query",
+				OperationSuffix: "token-self-capabilities",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
@@ -1990,6 +2386,12 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 		{
 			Pattern: "leases/lookup/(?P<prefix>.+?)?",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "leases",
+				OperationVerb:   "look-up",
+				OperationSuffix: "|with-prefix",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"prefix": {
 					Type:        framework.TypeString,
@@ -2021,6 +2423,12 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 
 		{
 			Pattern: "leases/lookup",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "leases",
+				OperationVerb:   "read",
+				OperationSuffix: "lease",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"lease_id": {
@@ -2079,6 +2487,12 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 		{
 			Pattern: "(leases/)?renew" + framework.OptionalParamRegex("url_lease_id"),
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "leases",
+				OperationVerb:   "renew",
+				OperationSuffix: "lease2|lease|lease-with-id2|lease-with-id",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"url_lease_id": {
 					Type:        framework.TypeString,
@@ -2112,6 +2526,12 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 
 		{
 			Pattern: "(leases/)?revoke" + framework.OptionalParamRegex("url_lease_id"),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "leases",
+				OperationVerb:   "revoke",
+				OperationSuffix: "lease2|lease|lease-with-id2|lease-with-id",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"url_lease_id": {
@@ -2148,6 +2568,12 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 		{
 			Pattern: "(leases/)?revoke-force/(?P<prefix>.+)",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "leases",
+				OperationVerb:   "force-revoke",
+				OperationSuffix: "lease-with-prefix2|lease-with-prefix",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"prefix": {
 					Type:        framework.TypeString,
@@ -2174,6 +2600,12 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 
 		{
 			Pattern: "(leases/)?revoke-prefix/(?P<prefix>.+)",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "leases",
+				OperationVerb:   "revoke",
+				OperationSuffix: "lease-with-prefix2|lease-with-prefix",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"prefix": {
@@ -2206,6 +2638,11 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 		{
 			Pattern: "leases/tidy$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "leases",
+				OperationVerb:   "tidy",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleTidyLeases,
@@ -2224,6 +2661,12 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 
 		{
 			Pattern: "leases/count$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "leases",
+				OperationVerb:   "count",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"type": {
 					Type:        framework.TypeString,
@@ -2267,6 +2710,12 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 
 		{
 			Pattern: "leases$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "leases",
+				OperationVerb:   "list",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"type": {
 					Type:        framework.TypeString,
@@ -2320,6 +2769,10 @@ func (b *SystemBackend) remountPaths() []*framework.Path {
 		{
 			Pattern: "remount",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb: "remount",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"from": {
 					Type:        framework.TypeString,
@@ -2353,6 +2806,11 @@ func (b *SystemBackend) remountPaths() []*framework.Path {
 		},
 		{
 			Pattern: "remount/status/(?P<migration_id>.+?)$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "remount",
+				OperationVerb:   "status",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"migration_id": {
@@ -2391,6 +2849,11 @@ func (b *SystemBackend) remountPaths() []*framework.Path {
 func (b *SystemBackend) metricsPath() *framework.Path {
 	return &framework.Path{
 		Pattern: "metrics",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationVerb: "metrics",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"format": {
 				Type:        framework.TypeString,
@@ -2416,6 +2879,11 @@ func (b *SystemBackend) metricsPath() *framework.Path {
 func (b *SystemBackend) monitorPath() *framework.Path {
 	return &framework.Path{
 		Pattern: "monitor",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationVerb: "monitor",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"log_level": {
 				Type:        framework.TypeString,
@@ -2447,6 +2915,12 @@ func (b *SystemBackend) monitorPath() *framework.Path {
 func (b *SystemBackend) inFlightRequestPath() *framework.Path {
 	return &framework.Path{
 		Pattern: "in-flight-req",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationVerb:   "collect",
+			OperationSuffix: "in-flight-request-information",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback:    b.handleInFlightRequestData,
@@ -2460,6 +2934,12 @@ func (b *SystemBackend) inFlightRequestPath() *framework.Path {
 func (b *SystemBackend) hostInfoPath() *framework.Path {
 	return &framework.Path{
 		Pattern: "host-info/?",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationVerb:   "collect",
+			OperationSuffix: "host-information",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback:    b.handleHostInfo,
@@ -2476,6 +2956,13 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "auth$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "auth",
+				OperationVerb:   "list",
+				OperationSuffix: "enabled-methods",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleAuthTable,
@@ -2493,6 +2980,11 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 		},
 		{
 			Pattern: "auth/(?P<path>.+?)/tune$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "auth",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"path": {
 					Type:        framework.TypeString,
@@ -2549,7 +3041,11 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback:    b.handleAuthTuneRead,
+					Callback: b.handleAuthTuneRead,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "tuning-information",
+					},
 					Summary:     "Reads the given auth path's configuration.",
 					Description: "This endpoint requires sudo capability on the final path, but the same functionality can be achieved without sudo via `sys/mounts/auth/[auth-path]/tune`.",
 					Responses: map[int][]framework.Response{
@@ -2633,7 +3129,11 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 					},
 				},
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback:    b.handleAuthTuneWrite,
+					Callback: b.handleAuthTuneWrite,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "tune",
+						OperationSuffix: "configuration-parameters",
+					},
 					Summary:     "Tune configuration parameters for a given auth path.",
 					Description: "This endpoint requires sudo capability on the final path, but the same functionality can be achieved without sudo via `sys/mounts/auth/[auth-path]/tune`.",
 					Responses: map[int][]framework.Response{
@@ -2648,6 +3148,11 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 		},
 		{
 			Pattern: "auth/(?P<path>.+)",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "auth",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"path": {
 					Type:        framework.TypeString,
@@ -2696,7 +3201,11 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleReadAuth,
-					Summary:  "Read the configuration of the auth engine at the given path.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "configuration",
+					},
+					Summary: "Read the configuration of the auth engine at the given path.",
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -2759,7 +3268,11 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleEnableAuth,
-					Summary:  "Enables a new auth method.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "enable",
+						OperationSuffix: "method",
+					},
+					Summary: "Enables a new auth method.",
 					Description: `After enabling, the auth method can be accessed and configured via the auth path specified as part of the URL. This auth path will be nested under the auth prefix.
 
 For example, enable the "foo" auth method will make it accessible at /auth/foo.`,
@@ -2771,7 +3284,11 @@ For example, enable the "foo" auth method will make it accessible at /auth/foo.`
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleDisableAuth,
-					Summary:  "Disable the auth method at the given auth path",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "disable",
+						OperationSuffix: "method",
+					},
+					Summary: "Disable the auth method at the given auth path",
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -2789,6 +3306,11 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "policy/?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "policies",
+				OperationVerb:   "list",
+			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
@@ -2833,6 +3355,11 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 
 		{
 			Pattern: "policy/(?P<name>.+)",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "policies",
+				OperationSuffix: "acl-policy2", // this endpoint duplicates /sys/policies/acl
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
@@ -2903,6 +3430,11 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 		{
 			Pattern: "policies/acl/?$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "policies",
+				OperationSuffix: "acl-policies",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: b.handlePoliciesList(PolicyTypeACL),
@@ -2929,6 +3461,11 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 
 		{
 			Pattern: "policies/acl/(?P<name>.+)",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "policies",
+				OperationSuffix: "acl-policy",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
@@ -2994,6 +3531,11 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 		{
 			Pattern: "policies/password/?$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "policies",
+				OperationSuffix: "password-policies",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: b.handlePoliciesPasswordList,
@@ -3015,6 +3557,12 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 
 		{
 			Pattern: "policies/password/(?P<name>.+)/generate$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "policies",
+				OperationVerb:   "generate",
+				OperationSuffix: "password-from-password-policy",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
@@ -3047,6 +3595,11 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 
 		{
 			Pattern: "policies/password/(?P<name>.+)$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "policies",
+				OperationSuffix: "password-policy",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
@@ -3109,6 +3662,10 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 		{
 			Pattern: "wrapping/wrap$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb: "wrap",
+			},
+
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: b.handleWrappingWrap,
 			},
@@ -3121,6 +3678,10 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 
 		{
 			Pattern: "wrapping/unwrap$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb: "unwrap",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
@@ -3148,11 +3709,19 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleWrappingLookup,
-					Summary:  "Look up wrapping properties for the given token.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "wrapping-properties",
+					},
+					Summary: "Look up wrapping properties for the given token.",
 				},
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleWrappingLookup,
-					Summary:  "Look up wrapping properties for the requester's token.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "wrapping-properties2",
+					},
+					Summary: "Look up wrapping properties for the requester's token.",
 				},
 			},
 
@@ -3162,6 +3731,10 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 
 		{
 			Pattern: "wrapping/rewrap$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb: "rewrap",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
@@ -3183,6 +3756,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "mounts/(?P<path>.+?)/tune$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "mounts",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"path": {
@@ -3246,6 +3823,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleMountTuneRead,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "tuning-information",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -3336,6 +3917,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleMountTuneWrite,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "tune",
+						OperationSuffix: "configuration-parameters",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -3350,6 +3935,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 
 		{
 			Pattern: "mounts/(?P<path>.+?)",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "mounts",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"path": {
@@ -3400,6 +3989,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleReadMount,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "configuration",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -3472,6 +4065,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleMount,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "enable",
+						OperationSuffix: "secrets-engine",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -3481,6 +4078,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleUnmount,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "disable",
+						OperationSuffix: "secrets-engine",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -3495,6 +4096,12 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 
 		{
 			Pattern: "mounts$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "mounts",
+				OperationVerb:   "list",
+				OperationSuffix: "secrets-engines",
+			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
@@ -3518,12 +4125,19 @@ func (b *SystemBackend) experimentPaths() []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "experiments$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb:   "list",
+				OperationSuffix: "experimental-features",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleReadExperiments,
 					Summary:  "Returns the available and enabled experiments",
 				},
 			},
+
 			HelpSynopsis:    strings.TrimSpace(sysHelp["experiments"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["experiments"][1]),
 		},
@@ -3534,6 +4148,12 @@ func (b *SystemBackend) lockedUserPaths() []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "locked-users/(?P<mount_accessor>.+?)/unlock/(?P<alias_identifier>.+)",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "locked-users",
+				OperationVerb:   "unlock",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"mount_accessor": {
 					Type:        framework.TypeString,
@@ -3555,6 +4175,12 @@ func (b *SystemBackend) lockedUserPaths() []*framework.Path {
 		},
 		{
 			Pattern: "locked-users",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "locked-users",
+				OperationVerb:   "list",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"mount_accessor": {
 					Type:        framework.TypeString,
