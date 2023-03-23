@@ -1812,8 +1812,8 @@ func (b *SystemBackend) toolsPaths() []*framework.Path {
 			Pattern: "tools/hash" + framework.OptionalParamRegex("urlalgorithm"),
 
 			DisplayAttrs: &framework.DisplayAttributes{
-				OperationVerb:   "hash",
-				OperationSuffix: "|with-algorithm",
+				OperationVerb:   "generate",
+				OperationSuffix: "hash|hash-with-algorithm",
 			},
 
 			Fields: map[string]*framework.FieldSchema{
