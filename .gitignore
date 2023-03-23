@@ -55,6 +55,7 @@ Vagrantfile
 !.release/ci.hcl
 !.release/security-scan.hcl
 !.release/linux/package/etc/vault.d/vault.hcl
+!.release/linux/package/etc/vault.d/agent.hcl
 !command/agent/config/test-fixtures/*.hcl
 !command/server/test-fixtures/**/*.hcl
 !enos/**/*.hcl
