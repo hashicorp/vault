@@ -1810,7 +1810,6 @@ func (b *SystemBackend) toolsPaths() []*framework.Path {
 			Pattern: "tools/hash" + framework.OptionalParamRegex("urlalgorithm"),
 
 			DisplayAttrs: &framework.DisplayAttributes{
-				OperationPrefix: "tools",
 				OperationVerb:   "hash",
 				OperationSuffix: "|with-algorithm",
 			},
@@ -1858,9 +1857,8 @@ func (b *SystemBackend) toolsPaths() []*framework.Path {
 			Pattern: "tools/random(/" + framework.GenericNameRegex("source") + ")?" + framework.OptionalParamRegex("urlbytes"),
 
 			DisplayAttrs: &framework.DisplayAttributes{
-				OperationPrefix: "tools",
 				OperationVerb:   "generate",
-				OperationSuffix: "random|random-with-source|random-with-source-and-bytes",
+				OperationSuffix: "random|random-with-source|random-with-bytes|random-with-source-and-bytes",
 			},
 
 			Fields: map[string]*framework.FieldSchema{
