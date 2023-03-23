@@ -106,9 +106,9 @@
 @import './components/role-item';
 @import './components/search-select';
 @import './components/selectable-card';
-@import './components/selectable-card-container.scss';
+@import './components/selectable-card-container';
 // action-block extends selectable-card
-@import './components/action-block.scss';
+@import './components/action-block';
 @import './components/shamir-modal-flow';
 @import './components/shamir-progress';
 @import './components/sidebar';
@@ -120,7 +120,7 @@
 @import './components/token-expire-warning';
 @import './components/toolbar';
 @import './components/tool-tip';
-@import './components/transform-edit.scss';
+@import './components/transform-edit';
 @import './components/transit-card';
 @import './components/ttl-picker';
 @import './components/unseal-warning';
