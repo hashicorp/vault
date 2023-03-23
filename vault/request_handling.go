@@ -2199,9 +2199,8 @@ func (c *Core) PopulateTokenEntry(ctx context.Context, req *logical.Request) err
 	token := req.ClientToken
 	var err error
 	req.InboundSSCToken = token
-	decodedToken := token
 	if IsSSCToken(token) {
-		decodedToken, err = c.CheckSSCToken(ctx, token, c.isLoginRequest(ctx, req), c.perfStandby)
+		token, err = c.CheckSSCToken(ctx, token, c.isLoginRequest(ctx, req), c.perfStandby)
 		// If we receive an error from CheckSSCToken, we can assume the token is bad somehow, and the client
 		// should receive a 403 bad token error like they do for all other invalid tokens, unless the error
 		// specifies that we should forward the request or retry the request.
@@ -2212,18 +2211,12 @@ func (c *Core) PopulateTokenEntry(ctx context.Context, req *logical.Request) err
 			return logical.ErrPermissionDenied
 		}
 	}
-	req.ClientToken = decodedToken
-	// We ignore the token returned from CheckSSCToken here as Lookup also decodes the SSCT, and
-	// it may need the original SSCT to check state.
+	req.ClientToken = token
 	te, err := c.LookupToken(ctx, token)
 	if err != nil {
-		// If we're missing required state, return that error as-is to the client
-		if errors.Is(err, logical.ErrPerfStandbyPleaseForward) || errors.Is(err, logical.ErrMissingRequiredState) {
-			return err
-		}
 		// If we have two dots but the second char is a dot it's a vault
 		// token of the form s.SOMETHING.nsid, not a JWT
-		if !IsJWT(decodedToken) {
+		if !IsJWT(token) {
 			return fmt.Errorf("error performing token check: %w", err)
 		}
 	}
