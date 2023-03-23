@@ -29,6 +29,9 @@ with the KMIP Secrets Engine.
 | Linux            | x86-64       | RHEL 9 compatible | 2.34    |
 | macOS            | x86-64       | &mdash;           | &mdash; |
 
+_Note:_ `vault-pkcs11-provider` runs on _any_ glibc-based Linux distribution. The versions above are given in RHEL-compatible GLIBC versions; for your
+distro's glibc version, choose the `vault-pkcs11-provider` built against the same or older version as what your distro provides.
+
 The provider comes in the form of a shared C library, `libvault-pkcs11.so` (for Linux) or `libvault-pkcs11.dylib` (for macOS).
 It can be downloaded from [releases.hashicorp.com](https://releases.hashicorp.com/vault-pkcs11-provider).
 

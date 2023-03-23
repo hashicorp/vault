@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 export const SELECTORS = {
   mainSectionTitle: '[data-test-generate-root-title="Root parameters"]',
   urlSectionTitle: '[data-test-generate-root-title="Issuer URLs"]',

@@ -367,7 +367,7 @@ BUG FIXES:
 * core: fix bug where context cancellations weren't forwarded to active node from performance standbys.
 * core: prevent panic in login mfa enforcement delete after enforcement's namespace is deleted [[GH-18923](https://github.com/hashicorp/vault/pull/18923)]
 * database/mongodb: Fix writeConcern set to be applied to any query made on the database [[GH-18546](https://github.com/hashicorp/vault/pull/18546)]
-* expiration: Prevent panics on perf standbys when an irrevocable release gets deleted. [[GH-18401](https://github.com/hashicorp/vault/pull/18401)]
+* expiration: Prevent panics on perf standbys when an irrevocable lease gets deleted. [[GH-18401](https://github.com/hashicorp/vault/pull/18401)]
 * kmip (enterprise): Fix Destroy operation response that omitted Unique Identifier on some batched responses.
 * kmip (enterprise): Fix Locate operation response incompatibility with clients using KMIP versions prior to 1.3.
 * kmip (enterprise): Fix Query operation response that omitted streaming capability and supported profiles.
