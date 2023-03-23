@@ -380,7 +380,7 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 			HelpDescription: "List all configured OIDC providers in the identity backend.",
 		},
 		{
-			Pattern: "oidc/provider/" + framework.GenericNameRegex("name") + "/.well-known/openid-configuration",
+			Pattern: "oidc/provider/" + framework.GenericNameRegex("name") + "/\\.well-known/openid-configuration",
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -396,7 +396,7 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 			HelpDescription: "Query this path to retrieve the configured OIDC Issuer and Keys endpoints, response types, subject types, and signing algorithms used by the OIDC backend.",
 		},
 		{
-			Pattern: "oidc/provider/" + framework.GenericNameRegex("name") + "/.well-known/keys",
+			Pattern: "oidc/provider/" + framework.GenericNameRegex("name") + "/\\.well-known/keys",
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
