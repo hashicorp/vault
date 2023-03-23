@@ -2254,7 +2254,7 @@ func (c *Core) PopulateTokenEntry(ctx context.Context, req *logical.Request) err
 		}
 		// If we have two dots but the second char is a dot it's a vault
 		// token of the form s.SOMETHING.nsid, not a JWT
-		if !IsJWT(decodedToken) {
+		if !IsJWT(token) {
 			return fmt.Errorf("error performing token check: %w", err)
 		}
 	}
