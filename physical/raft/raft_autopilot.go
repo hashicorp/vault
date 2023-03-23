@@ -429,10 +429,14 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 			Ext:         d.autopilotServerExt(state),
 		}
 
-		// Use existing NodeType from autopilot state if present, or fallback to a more basic check.
+		// As KnownServers is a delegate called by autopilot let's check if we already had this data in the correct format and use it.
+		// If we don't (which sounds a bit sad, unless this ISN'T a voter) then as a fail-safe, let's try what we've done elsewhere
+		// in code to check the desired suffrage and manually set NodeType based on whether that's a voter or not.
+		// If we don't  do either of these things, NodeType isn't set which means technically it's not a voter.
+		// It shouldn't be a voter and end up in this state.
 		if apServerState, found := apServerStates[raft.ServerID(id)]; found && apServerState.Server.NodeType != "" {
 			server.NodeType = apServerState.Server.NodeType
-		} else if state.DesiredSuffrage == "voter" {
+		} else if state.DesiredSuffrage != "non-voter" {
 			server.NodeType = autopilot.NodeVoter
 		}
 
