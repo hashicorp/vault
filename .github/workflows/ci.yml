@@ -144,7 +144,7 @@ jobs:
     permissions:
       id-token: write
       contents: read
-    runs-on: ${{ fromJSON(needs.setup.outputs.compute-standard) }}
+    runs-on: ${{ fromJSON(needs.setup.outputs.compute-larger) }}
     steps:
     - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
     - uses: actions/setup-go@d0a58c1c4d2b25278816e339b944508c875f3613
