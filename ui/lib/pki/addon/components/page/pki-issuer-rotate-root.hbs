@@ -10,9 +10,10 @@
 </PageHeader>
 
 {{#unless this.newRootModel.id}}
-  <div class="box is-bottomless is-fullwidth is-marginless is-flex-row">
+  <div class="box is-bottomless is-marginless is-flex-start">
     {{#each this.rotationOptions as |option|}}
       <RadioCard
+        class="has-fixed-width"
         @title={{option.label}}
         @description={{option.description}}
         @icon="list"
@@ -24,16 +25,34 @@
     {{/each}}
   </div>
 {{/unless}}
-<div class="box is-bottomless is-fullwidth is-marginless">
-  {{#if (eq this.rotateForm "use-old-settings")}}
-    cn inputs
-  {{else}}
-    <PkiGenerateRoot
-      @model={{this.newRootModel}}
-      @onCancel={{transition-to "vault.cluster.secrets.backend.pki.issuers.issuer.details"}}
-      @onComplete={{transition-to "vault.cluster.secrets.backend.pki.issuers.index"}}
-      @onSave={{fn (mut this.title) "View rotated root"}}
-      @adapterOptions={{hash actionType="rotate-root"}}
+
+{{#if (eq this.rotateForm "use-old-settings")}}
+  <h2 class="title is-size-5 has-border-bottom-light">
+    Root parameters
+  </h2>
+  {{#let (find-by "name" "commonName" this.newRootModel.allFields) as |attr|}}
+    <FormField data-test-field={{attr}} @attr={{attr}} @model={{this.newRootModel}} @showHelpText={{false}} />
+  {{/let}}
+  {{#let (find-by "name" "issuerName" this.newRootModel.allFields) as |attr|}}
+    <FormField data-test-field={{attr}} @attr={{attr}} @model={{this.newRootModel}} @showHelpText={{false}} />
+  {{/let}}
+  <div class="box has-slim-padding is-shadowless">
+    <ToggleButton
+      @closedLabel="Old root settings"
+      @openLabel="Hide old root settings"
+      @isOpen={{this.showOldSettings}}
+      @onClick={{fn (mut this.showOldSettings)}}
     />
-  {{/if}}
-</div>
+    {{#if this.showOldSettings}}
+      <PkiIssuerInfoRows @issuer={{@oldRoot}} />
+    {{/if}}
+  </div>
+{{else}}
+  <PkiGenerateRoot
+    @model={{this.newRootModel}}
+    @onCancel={{transition-to "vault.cluster.secrets.backend.pki.issuers.issuer.details"}}
+    @onComplete={{transition-to "vault.cluster.secrets.backend.pki.issuers.index"}}
+    @onSave={{fn (mut this.title) "View rotated root"}}
+    @adapterOptions={{hash actionType="rotate-root"}}
+  />
+{{/if}}

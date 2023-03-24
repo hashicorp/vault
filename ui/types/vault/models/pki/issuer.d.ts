@@ -10,6 +10,7 @@ export default class PkiIssuerModel extends Model {
   get useOpenAPI(): boolean;
   get backend(): string;
   get issuerRef(): string;
+  certificate: string;
   issuerId: string;
   issuerName: string;
   keyId: string;

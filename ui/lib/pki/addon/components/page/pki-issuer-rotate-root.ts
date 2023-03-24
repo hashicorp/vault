@@ -5,12 +5,13 @@ import { tracked } from '@glimmer/tracking';
 import Store from '@ember-data/store';
 import Router from '@ember/routing/router';
 import FlashMessageService from 'vault/services/flash-messages';
-import PkiActionModel from 'vault/models/pki/action';
+import PkiIssuerModel from 'vault/models/pki/issuer';
 import { Breadcrumb } from 'vault/vault/app-types';
+import { parseCertificate } from 'vault/utils/parse-pki-cert';
+import camelizeKeys from 'vault/utils/camelize-object-keys';
 
 interface Args {
-  config: PkiActionModel;
-  onCancel: CallableFunction;
+  oldRoot: PkiIssuerModel;
   breadcrumbs: Breadcrumb;
 }
 
@@ -20,14 +21,20 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
 
   @tracked title = 'Generate new root';
-  @tracked newRootModel;
   @tracked rotateForm = 'use-old-settings';
+  @tracked showOldSettings = false;
+  @tracked newRootModel;
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
+    const certData = camelizeKeys(parseCertificate(this.args.oldRoot.certificate));
+    // TODO should we have catch/notify user if not all params are parsable?
     this.newRootModel = this.store.createRecord('pki/action', {
       actionType: 'rotate-root',
       type: 'internal',
+      ...certData, // copy old root settings over to new one
+      commonName: '', // clear common name
+      // TODO also, clear altNames?
     });
   }
 
@@ -37,7 +44,7 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
         key: 'use-old-settings',
         icon: 'vector',
         label: 'Use old root settings',
-        description: 'Provide only a new common name and issuer name, using the old root’s settings. ',
+        description: `Provide only a new common name and issuer name, using the old root’s settings. Selecting this option generates an internal root type.`,
       },
       {
         key: 'customize',
