@@ -1,6 +1,6 @@
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink {{on "click" (fn (mut this.showDeleteAllIssuers) true)}}>
+    <ToolbarLink {{on "click" (fn (mut this.showDeleteAllIssuers) true)}} data-test-delete-all-issuers-link>
       Delete all issuers
     </ToolbarLink>
     <ToolbarLink @route="configuration.tidy">
@@ -61,7 +61,7 @@
         <h4 class="title is-6 has-bottom-margin-xs">Confirm</h4>
         <span class="is-hint">Type <b>delete-all</b> to confirm deleting the role.</span>
         <div class="has-top-margin-xs">
-          <Input class="input" @type="text" @value={{this.confirmDeleteAllIssuersVal}} />
+          <Input class="input" @type="text" @value={{this.confirmDeleteAllIssuersVal}} data-test-delete-all-issuers-input />
         </div>
       </div>
     </section>
@@ -72,6 +72,7 @@
         class="button has-text-red"
         disabled={{(not (eq this.confirmDeleteAllIssuersVal "delete-all"))}}
         {{on "click" this.deleteAllIssuers}}
+        data-test-delete-all-issuers-button
       >Delete</button>
       <button type="button" class="button" {{on "click" (fn (mut this.showDeleteAllIssuers) false)}}>Cancel</button>
     </footer>
