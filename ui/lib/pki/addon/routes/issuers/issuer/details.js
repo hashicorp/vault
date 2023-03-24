@@ -4,7 +4,7 @@
  */
 
 import PkiIssuerIndexRoute from './index';
-
+import { verifyCertificates } from 'vault/utils/parse-pki-cert';
 export default class PkiIssuerDetailsRoute extends PkiIssuerIndexRoute {
   // Details route gets issuer data from PkiIssuerIndexRoute
   async setupController(controller, resolvedModel) {
@@ -12,8 +12,10 @@ export default class PkiIssuerDetailsRoute extends PkiIssuerIndexRoute {
     controller.breadcrumbs.push({ label: resolvedModel.id });
     const pem = await this.fetchCertByFormat(resolvedModel.id, 'pem');
     const der = await this.fetchCertByFormat(resolvedModel.id, 'der');
+    const isRoot = await this.isRoot(resolvedModel);
     controller.pem = pem;
     controller.der = der;
+    controller.isRoot = isRoot;
   }
 
   /**
@@ -32,5 +34,11 @@ export default class PkiIssuerDetailsRoute extends PkiIssuerIndexRoute {
     } catch (e) {
       return null;
     }
+  }
+
+  async isRoot(model) {
+    const isSelfSigned = await verifyCertificates(model.certificate, model.certificate);
+    const hasKeyData = model.keyId ? true : false;
+    return isSelfSigned && hasKeyData;
   }
 }
