@@ -2,7 +2,7 @@
   <ToolbarActions>
     {{#if @canRotate}}
       <button type="button" class="toolbar-link" {{on "click" (fn (mut this.showRotationModal) true)}}>
-        Rotate root
+        Rotate this root
         <Icon @name="rotate-cw" />
       </button>
     {{/if}}
@@ -130,7 +130,7 @@
 {{! ROOT ROTATION MODAL }}
 <Modal
   @type="rotation"
-  @title="Rotate root"
+  @title="Rotate this root"
   @onClose={{fn (mut this.showRotationModal) false}}
   @isActive={{this.showRotationModal}}
   @showCloseButton={{true}}
@@ -160,7 +160,7 @@
     <button
       type="button"
       class="button is-primary"
-      {{on "click" (transition-to "vault.cluster.secrets.backend.pki.issuers.rotate-root")}}
+      {{on "click" (transition-to "vault.cluster.secrets.backend.pki.issuers.issuer.rotate-root")}}
     >
       Generate new root
     </button>

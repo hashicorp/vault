@@ -9,28 +9,28 @@
   </p.levelLeft>
 </PageHeader>
 
-{{#unless @model.id}}
+{{#unless this.newRootModel.id}}
   <div class="box is-bottomless is-fullwidth is-marginless is-flex-row">
-    {{#each this.generateOptions as |option|}}
+    {{#each this.rotationOptions as |option|}}
       <RadioCard
         @title={{option.label}}
         @description={{option.description}}
         @icon="list"
         @value={{option.key}}
-        @groupValue={{@model.actionType}}
-        @onChange={{fn (mut @model.actionType) option.key}}
+        @groupValue={{this.rotateForm}}
+        @onChange={{fn (mut this.rotateForm) option.key}}
         data-test-radio={{option.key}}
       />
     {{/each}}
   </div>
 {{/unless}}
 <div class="box is-bottomless is-fullwidth is-marginless">
-  {{#if (eq @model.actionType "rotate-root")}}
+  {{#if (eq this.rotateForm "use-old-settings")}}
     cn inputs
   {{else}}
     <PkiGenerateRoot
-      @model={{@model}}
-      @onCancel={{transition-to "vault.cluster.secrets.backend.pki.issuers.index"}}
+      @model={{this.newRootModel}}
+      @onCancel={{transition-to "vault.cluster.secrets.backend.pki.issuers.issuer.details"}}
       @onComplete={{transition-to "vault.cluster.secrets.backend.pki.issuers.index"}}
       @onSave={{fn (mut this.title) "View rotated root"}}
       @adapterOptions={{hash actionType="rotate-root"}}

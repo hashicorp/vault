@@ -3,18 +3,14 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-import Route from '@ember/routing/route';
+import PkiIssuerIndexRoute from './index';
 import { inject as service } from '@ember/service';
 import { withConfirmLeave } from 'core/decorators/confirm-leave';
 
 @withConfirmLeave()
-export default class PkiIssuersRotateRootRoute extends Route {
+export default class PkiIssuerRotateRootRoute extends PkiIssuerIndexRoute {
   @service secretMountPath;
   @service store;
-
-  model() {
-    return this.store.createRecord('pki/action', { actionType: 'rotate-root' });
-  }
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
@@ -22,6 +18,7 @@ export default class PkiIssuersRotateRootRoute extends Route {
       { label: 'secrets', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview' },
       { label: 'issuers', route: 'issuers.index' },
+      { label: resolvedModel.id, route: 'issuers.issuer.details' },
       { label: 'rotate root' },
     ];
   }

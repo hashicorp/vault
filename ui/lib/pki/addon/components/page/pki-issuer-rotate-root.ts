@@ -20,19 +20,29 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
 
   @tracked title = 'Generate new root';
+  @tracked newRootModel;
+  @tracked rotateForm = 'use-old-settings';
 
-  get generateOptions() {
+  constructor(owner: unknown, args: Args) {
+    super(owner, args);
+    this.newRootModel = this.store.createRecord('pki/action', {
+      actionType: 'rotate-root',
+      type: 'internal',
+    });
+  }
+
+  get rotationOptions() {
     return [
       {
-        key: 'rotate-root',
+        key: 'use-old-settings',
         icon: 'vector',
         label: 'Use old root settings',
         description: 'Provide only a new common name and issuer name, using the old root’s settings. ',
       },
       {
-        key: 'generate-root',
+        key: 'customize',
         icon: 'vector',
-        label: 'Generate root',
+        label: 'Customize new root certificate',
         description:
           'Generates a new self-signed CA certificate and private key. This generated root will sign its own CRL.',
       },
