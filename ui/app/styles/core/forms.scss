@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
+// Input, text-area, select
+// ARG TODO return to file-name, used in two place and lots of css
 .input,
 .file-name,
 .textarea {
@@ -17,79 +19,6 @@
   width: 100%;
 }
 
-.masked-font {
-  font-family: obscure, text-security-square;
-  letter-spacing: 2px;
-}
-
-.label {
-  color: $grey-darker;
-  text-transform: uppercase;
-  font-size: $size-small;
-}
-
-.is-label,
-.b-checkbox .is-label {
-  color: $grey-darker;
-  display: inline-block;
-  font-size: $body-size;
-  font-weight: $font-weight-bold;
-
-  &:not(:last-child) {
-    margin-bottom: 0.25rem;
-  }
-  // Sizes
-  &.is-small {
-    font-size: $size-small;
-  }
-  &.is-medium {
-    font-size: $size-medium;
-  }
-  &.is-large {
-    font-size: $size-large;
-  }
-
-  &::before,
-  &::after {
-    transform: translateY(0.2em);
-  }
-
-  &::before {
-    border-color: $grey-light;
-  }
-}
-
-.b-checkbox .is-label {
-  display: inline;
-  margin-left: $size-10;
-}
-
-.b-checkbox > .sub-text {
-  padding-left: 2rem;
-}
-
-.help {
-  &.is-danger {
-    font-weight: $weight-bold;
-  }
-}
-
-.is-help {
-  font-size: $size-small;
-  margin-top: 0.25rem;
-  @each $name, $pair in $colors {
-    $color: nth($pair, 1);
-    &.is-#{$name} {
-      color: $color;
-    }
-  }
-}
-
-.sub-text {
-  color: $grey;
-  margin-bottom: 0.25rem;
-  font-size: $size-8;
-}
 .input,
 .textarea,
 .select select {
@@ -254,6 +183,79 @@
   width: 24px;
 }
 
+.masked-font {
+  font-family: obscure, text-security-square;
+  letter-spacing: 2px;
+}
+
+.label {
+  color: $grey-darker;
+  text-transform: uppercase;
+  font-size: $size-small;
+}
+
+.is-label,
+.b-checkbox .is-label {
+  color: $grey-darker;
+  display: inline-block;
+  font-size: $body-size;
+  font-weight: $font-weight-bold;
+
+  &:not(:last-child) {
+    margin-bottom: 0.25rem;
+  }
+  // Sizes
+  &.is-small {
+    font-size: $size-small;
+  }
+  &.is-medium {
+    font-size: $size-medium;
+  }
+  &.is-large {
+    font-size: $size-large;
+  }
+
+  &::before,
+  &::after {
+    transform: translateY(0.2em);
+  }
+
+  &::before {
+    border-color: $grey-light;
+  }
+}
+
+.b-checkbox .is-label {
+  display: inline;
+  margin-left: $size-10;
+}
+
+.b-checkbox > .sub-text {
+  padding-left: 2rem;
+}
+
+.help {
+  &.is-danger {
+    font-weight: $weight-bold;
+  }
+}
+
+.is-help {
+  font-size: $size-small;
+  margin-top: 0.25rem;
+  @each $name, $pair in $colors {
+    $color: nth($pair, 1);
+    &.is-#{$name} {
+      color: $color;
+    }
+  }
+}
+
+.sub-text {
+  color: $grey;
+  margin-bottom: 0.25rem;
+  font-size: $size-8;
+}
 .field:not(:last-child) {
   margin-bottom: 1.5rem;
 }

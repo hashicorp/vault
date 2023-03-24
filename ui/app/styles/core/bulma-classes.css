@@ -4,16 +4,6 @@
 - address helpers and variables
 */
 /* Bulma utilities */
-.button, .input, .textarea, .select select, .file-cta,
-.file-name, .pagination-previous,
-.pagination-next,
-.pagination-link,
-.pagination-ellipsis {
-  border-radius: 2px;
-  border: 1px solid transparent;
-  box-shadow: none;
-}
-
 .button[disabled], .input[disabled], .textarea[disabled], .select select[disabled], .file-cta[disabled],
 .file-name[disabled], .pagination-previous[disabled],
 .pagination-next[disabled],
@@ -26,27 +16,7 @@
 .pagination-next,
 .pagination-link,
 .pagination-ellipsis, .tabs {
-  -moz-user-select: none;
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
   user-select: none;
-}
-
-.select:not(.is-multiple):not(.is-loading)::after {
-  border-radius: 2px;
-  border-right: 0;
-  border-top: 0;
-  border: 3px solid transparent;
-  content: " ";
-  display: block;
-  height: 0.625em;
-  margin-top: -0.4375em;
-  pointer-events: none;
-  position: absolute;
-  top: 50%;
-  transform-origin: center;
-  transform: rotate(-45deg);
-  width: 0.625em;
 }
 
 /* Bulma form: input, textarea, select */
@@ -118,11 +88,7 @@ fieldset[disabled] .select select:-ms-input-placeholder,
   color: rgba(122, 122, 122, 0.3);
 }
 
-.input, .textarea {
-  box-shadow: inset 0 0.0625em 0.125em rgba(10, 10, 10, 0.05);
-  max-width: 100%;
-  width: 100%;
-}
+
 
 .is-pulled-left {
   float: left !important;
@@ -512,40 +478,6 @@ fieldset[disabled] .select select:-ms-input-placeholder,
 }
 
 /* ARG TODO: I detected that some of these are overriden. Keeping separate so I can address later */
-.button.is-white {
-  background-color: white;
-  border-color: transparent;
-  color: #0a0a0a;
-}
-
-.button.is-white:hover, .button.is-white.is-hovered {
-  background-color: #f9f9f9;
-  border-color: transparent;
-  color: #0a0a0a;
-}
-
-.button.is-white:focus, .button.is-white.is-focused {
-  border-color: transparent;
-  color: #0a0a0a;
-}
-
-.button.is-white:focus:not(:active), .button.is-white.is-focused:not(:active) {
-  box-shadow: 0 0 0 0.125em rgba(255, 255, 255, 0.25);
-}
-
-.button.is-white:active, .button.is-white.is-active {
-  background-color: #f2f2f2;
-  border-color: transparent;
-  color: #0a0a0a;
-}
-
-.button.is-white[disabled],
-fieldset[disabled] .button.is-white {
-  background-color: white;
-  border-color: white;
-  box-shadow: none;
-}
-
 .buttons.has-addons .button.is-expanded {
   flex-grow: 1;
   flex-shrink: 1;
@@ -791,23 +723,6 @@ fieldset[disabled] .select select:hover {
 .button.is-ghost:hover {
   color: #485fc7;
   text-decoration: underline;
-}
-
-.button.is-white {
-  background-color: white;
-  border-color: transparent;
-  color: #0a0a0a;
-}
-
-.button.is-white:hover {
-  background-color: #f9f9f9;
-  border-color: transparent;
-  color: #0a0a0a;
-}
-
-.button.is-white:focus {
-  border-color: transparent;
-  color: #0a0a0a;
 }
 
 .button.is-primary {
