@@ -230,6 +230,7 @@ jobs:
       if: always()
   tests-completed:
     needs:
+    - setup
     - test-go
     runs-on: ${{ fromJSON(needs.setup.outputs.compute-standard) }}
     steps:
