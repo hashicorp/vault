@@ -228,3 +228,9 @@ jobs:
         paths: "ui/test-results/qunit/results.xml"
         show: "fail"
       if: always()
+  tests-completed:
+    needs:
+    - test-go
+    runs-on: ${{ fromJSON(needs.setup.outputs.compute-standard) }}
+    steps:
+    - run: echo "All Go test successfully passed"
