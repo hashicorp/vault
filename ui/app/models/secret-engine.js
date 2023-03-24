@@ -95,7 +95,7 @@ export default SecretEngineModel.extend({
       fields.push('version');
     }
     // version comes in as number not string
-    if (type === 'kv' && this.version === 2) {
+    if (type === 'kv' && parseInt(this.version, 10) === 2) {
       fields.push('casRequired', 'deleteVersionAfter', 'maxVersions');
     }
     return fields;
