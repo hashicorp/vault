@@ -450,9 +450,7 @@ func TestDelegate_KnownServers_NodeType(t *testing.T) {
 
 			// Actual code related to testing the return values of the KnownServers func
 			backend := leader.GetRaftBackend()
-			d := &raft.Delegate{
-				RaftBackend: backend,
-			}
+			d := raft.NewDelegate(backend)
 			servers := d.KnownServers()
 			voters = 0
 			for id, srv := range servers {
