@@ -31,7 +31,7 @@
   <Frame.Main>
     {{! outlet for app content }}
     <LinkStatus @status={{this.currentCluster.cluster.hcpLinkStatus}} />
-    <div class={{if this.console.isOpen "panel-open"}}>
+    <div data-test-console-panel class={{if this.console.isOpen "panel-open"}}>
       <Console::UiPanel @isFullscreen={{this.consoleFullscreen}} />
     </div>
     {{yield}}
