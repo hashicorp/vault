@@ -2344,7 +2344,7 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 	}
 
 	// Disregard SSCT on perf-standbys for non-raft storage
-	if c.perfStandby && c.getRaftBackend() == nil {
+	if c.perfStandby && c.GetRaftBackend() == nil {
 		return plainToken.Random, nil
 	}
 

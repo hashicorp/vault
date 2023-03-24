@@ -109,7 +109,7 @@ func (c *Core) getHAMembers() ([]HAStatusNode, error) {
 		Version:        c.effectiveSDKVersion,
 	}
 
-	if rb := c.getRaftBackend(); rb != nil {
+	if rb := c.GetRaftBackend(); rb != nil {
 		leader.UpgradeVersion = rb.EffectiveVersion()
 		leader.RedundancyZone = rb.RedundancyZone()
 	}
@@ -844,7 +844,7 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 
 // periodicCheckKeyUpgrade is used to watch for key rotation events as a standby
 func (c *Core) periodicCheckKeyUpgrades(ctx context.Context, stopCh chan struct{}) {
-	raftBackend := c.getRaftBackend()
+	raftBackend := c.GetRaftBackend()
 	isRaft := raftBackend != nil
 
 	opCount := new(int32)

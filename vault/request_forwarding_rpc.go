@@ -108,7 +108,7 @@ func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (
 		ReplicationState: uint32(s.core.ReplicationState()),
 	}
 
-	if raftBackend := s.core.getRaftBackend(); raftBackend != nil {
+	if raftBackend := s.core.GetRaftBackend(); raftBackend != nil {
 		reply.RaftAppliedIndex = raftBackend.AppliedIndex()
 		reply.RaftNodeID = raftBackend.NodeID()
 	}
@@ -145,7 +145,7 @@ func (c *forwardingClient) startHeartbeat() {
 				SdkVersion:  c.core.effectiveSDKVersion,
 			}
 
-			if raftBackend := c.core.getRaftBackend(); raftBackend != nil {
+			if raftBackend := c.core.GetRaftBackend(); raftBackend != nil {
 				req.RaftAppliedIndex = raftBackend.AppliedIndex()
 				req.RaftNodeID = raftBackend.NodeID()
 				req.RaftTerm = raftBackend.Term()
