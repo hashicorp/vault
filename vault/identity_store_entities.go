@@ -148,7 +148,7 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "entity",
-				OperationSuffix: "batch-delete",
+				OperationVerb:   "batch-delete",
 			},
 
 			Fields: map[string]*framework.FieldSchema{
