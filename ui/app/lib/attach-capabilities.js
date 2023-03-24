@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { belongsTo } from '@ember-data/model';
 import { assert, debug } from '@ember/debug';
 import { typeOf } from '@ember/utils';

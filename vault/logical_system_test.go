@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -1134,34 +1137,38 @@ func TestSystemBackend_remount_nonPrintable(t *testing.T) {
 	}
 }
 
-func TestSystemBackend_remount_spacesInFromPath(t *testing.T) {
+// TestSystemBackend_remount_trailingSpacesInFromPath ensures we error when
+// there are trailing spaces in the 'from' path during a remount.
+func TestSystemBackend_remount_trailingSpacesInFromPath(t *testing.T) {
 	b := testSystemBackend(t)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
-	req.Data["from"] = " foo / "
+	req.Data["from"] = " foo/ "
 	req.Data["to"] = "bar"
 	req.Data["config"] = structs.Map(MountConfig{})
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != `'from' path cannot contain whitespace` {
+	if resp.Data["error"] != `'from' path cannot contain trailing whitespace` {
 		t.Fatalf("bad: %v", resp)
 	}
 }
 
-func TestSystemBackend_remount_spacesInToPath(t *testing.T) {
+// TestSystemBackend_remount_trailingSpacesInToPath ensures we error when
+// there are trailing spaces in the 'to' path during a remount.
+func TestSystemBackend_remount_trailingSpacesInToPath(t *testing.T) {
 	b := testSystemBackend(t)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
 	req.Data["from"] = "foo"
-	req.Data["to"] = " bar / "
+	req.Data["to"] = " bar/ "
 	req.Data["config"] = structs.Map(MountConfig{})
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != `'to' path cannot contain whitespace` {
+	if resp.Data["error"] != `'to' path cannot contain trailing whitespace` {
 		t.Fatalf("bad: %v", resp)
 	}
 }
@@ -3630,6 +3637,7 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 
 func TestSystemBackend_InternalUIMounts(t *testing.T) {
 	_, b, rootToken := testCoreSystemBackend(t)
+	systemBackend := b.(*SystemBackend)
 
 	// Ensure no entries are in the endpoint as a starting point
 	req := logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts")
@@ -3637,6 +3645,12 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, systemBackend.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	exp := map[string]interface{}{
 		"secret": map[string]interface{}{},
@@ -3652,6 +3666,12 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, systemBackend.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	exp = map[string]interface{}{
 		"secret": map[string]interface{}{
@@ -3787,6 +3807,12 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, systemBackend.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	exp = map[string]interface{}{
 		"secret": map[string]interface{}{
@@ -3811,6 +3837,7 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 
 func TestSystemBackend_InternalUIMount(t *testing.T) {
 	core, b, rootToken := testCoreSystemBackend(t)
+	systemBackend := b.(*SystemBackend)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "policy/secret")
 	req.ClientToken = rootToken
@@ -3840,6 +3867,12 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("Bad %#v %#v", err, resp)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, systemBackend.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 	if resp.Data["type"] != "kv" {
 		t.Fatalf("Bad Response: %#v", resp)
 	}
@@ -3859,6 +3892,12 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("Bad %#v %#v", err, resp)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, systemBackend.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 	if resp.Data["type"] != "kv" {
 		t.Fatalf("Bad Response: %#v", resp)
 	}
@@ -3869,6 +3908,12 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("Bad %#v %#v", err, resp)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, systemBackend.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 	if resp.Data["type"] != "system" {
 		t.Fatalf("Bad Response: %#v", resp)
 	}

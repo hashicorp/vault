@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Ember from 'ember';
 import { inject as service } from '@ember/service';
 // ARG NOTE: Once you remove outer-html after glimmerizing you can remove the outer-html component
@@ -104,7 +109,7 @@ export default Component.extend({
     // ensure that postMessage event is from expected source
     while (true) {
       const event = yield waitForEvent(thisWindow, 'message');
-      if (event.data.source === 'oidc-callback' && event.isTrusted && event.origin === thisWindow.origin) {
+      if (event.origin === thisWindow.origin && event.isTrusted && event.data.source === 'oidc-callback') {
         return this.exchangeOIDC.perform(event.data, oidcWindow);
       }
       // continue to wait for the correct message
@@ -134,7 +139,7 @@ export default Component.extend({
 
     let { namespace, path, state, code } = oidcState;
 
-    // The namespace can be either be passed as a query paramter, or be embedded
+    // The namespace can be either be passed as a query parameter, or be embedded
     // in the state param in the format `<state_id>,ns=<namespace>`. So if
     // `namespace` is empty, check for namespace in state as well.
     if (namespace === '' || this.featureFlagService.managedNamespaceRoot) {
@@ -171,6 +176,14 @@ export default Component.extend({
       if (e && e.preventDefault) {
         e.preventDefault();
       }
+      try {
+        await this.fetchRole.perform(this.roleName, { debounce: false });
+      } catch (error) {
+        // this task could be cancelled if the instances in didReceiveAttrs resolve after this was started
+        if (error?.name !== 'TaskCancelation') {
+          throw error;
+        }
+      }
       if (!this.isOIDC || !this.role || !this.role.authUrl) {
         let message = this.errorMessage;
         if (!this.role) {
@@ -181,14 +194,6 @@ export default Component.extend({
         }
         this.onError(message);
         return;
-      }
-      try {
-        await this.fetchRole.perform(this.roleName, { debounce: false });
-      } catch (error) {
-        // this task could be cancelled if the instances in didReceiveAttrs resolve after this was started
-        if (error?.name !== 'TaskCancelation') {
-          throw error;
-        }
       }
       const win = this.getWindow();
 

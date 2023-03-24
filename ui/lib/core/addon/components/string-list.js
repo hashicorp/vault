@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import ArrayProxy from '@ember/array/proxy';
 import Component from '@glimmer/component';
 import autosize from 'autosize';

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, render, settled } from '@ember/test-helpers';
@@ -35,7 +40,7 @@ module('Integration | Component | PkiGenerateToggleGroups', function (hooks) {
         'Placeholder renders for key params when type is not selected'
       );
     const fields = {
-      exported: ['keyName', 'keyType', 'keyBits'],
+      exported: ['keyName', 'keyType', 'keyBits', 'privateKeyFormat'],
       internal: ['keyName', 'keyType', 'keyBits'],
       existing: ['keyRef'],
       kms: ['keyName', 'managedKeyName', 'managedKeyId'],

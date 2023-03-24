@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 //go:build tools
 
 // This file ensures tool dependencies are kept in sync.  This is the
@@ -17,6 +20,7 @@ package tools
 //go:generate go install google.golang.org/grpc/cmd/protoc-gen-go-grpc
 //go:generate go install github.com/favadi/protoc-go-inject-tag
 //go:generate go install github.com/golangci/revgrep/cmd/revgrep
+//go:generate go install gotest.tools/gotestsum
 import (
 	_ "golang.org/x/tools/cmd/goimports"
 
@@ -31,4 +35,6 @@ import (
 	_ "github.com/favadi/protoc-go-inject-tag"
 
 	_ "github.com/golangci/revgrep/cmd/revgrep"
+
+	_ "gotest.tools/gotestsum"
 )
