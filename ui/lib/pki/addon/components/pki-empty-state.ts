@@ -5,7 +5,12 @@
 
 import Component from '@glimmer/component';
 
-export default class PkiEmptyState extends Component {
+interface Args {
+  roles: Array<string> | null;
+  certificates: Array<string> | null;
+}
+
+export default class PkiEmptyState extends Component<Args> {
   get message() {
     const defaultMessage = "This PKI mount hasn't yet been configured with a certificate issuer.";
     let cliMessage = '';
