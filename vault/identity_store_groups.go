@@ -115,7 +115,6 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "group",
-				OperationVerb:   "list",
 				OperationSuffix: "by-id",
 			},
 
@@ -165,7 +164,6 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "group",
-				OperationVerb:   "list",
 				OperationSuffix: "by-name",
 			},
 
