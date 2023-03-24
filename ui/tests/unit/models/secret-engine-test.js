@@ -64,7 +64,12 @@ module('Unit | Model | secret-engine', function (hooks) {
         'accessor',
         'local',
         'sealWrap',
-        'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders}',
+        'config.defaultLeaseTtl',
+        'config.maxLeaseTtl',
+        'config.auditNonHmacRequestKeys',
+        'config.auditNonHmacResponseKeys',
+        'config.passthroughRequestHeaders',
+        'config.allowedResponseHeaders',
       ]);
     });
 
@@ -81,7 +86,12 @@ module('Unit | Model | secret-engine', function (hooks) {
         'accessor',
         'local',
         'sealWrap',
-        'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders}',
+        'config.defaultLeaseTtl',
+        'config.maxLeaseTtl',
+        'config.auditNonHmacRequestKeys',
+        'config.auditNonHmacResponseKeys',
+        'config.passthroughRequestHeaders',
+        'config.allowedResponseHeaders',
         'version',
       ]);
     });
@@ -100,7 +110,12 @@ module('Unit | Model | secret-engine', function (hooks) {
         'accessor',
         'local',
         'sealWrap',
-        'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders}',
+        'config.defaultLeaseTtl',
+        'config.maxLeaseTtl',
+        'config.auditNonHmacRequestKeys',
+        'config.auditNonHmacResponseKeys',
+        'config.passthroughRequestHeaders',
+        'config.allowedResponseHeaders',
         'version',
         'casRequired',
         'deleteVersionAfter',
@@ -121,7 +136,10 @@ module('Unit | Model | secret-engine', function (hooks) {
         'accessor',
         'local',
         'sealWrap',
-        'config.{auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders}',
+        'config.auditNonHmacRequestKeys',
+        'config.auditNonHmacResponseKeys',
+        'config.passthroughRequestHeaders',
+        'config.allowedResponseHeaders',
       ]);
     });
   });
@@ -141,7 +159,12 @@ module('Unit | Model | secret-engine', function (hooks) {
             'config.listingVisibility',
             'local',
             'sealWrap',
-            'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders}',
+            'config.defaultLeaseTtl',
+            'config.maxLeaseTtl',
+            'config.auditNonHmacRequestKeys',
+            'config.auditNonHmacResponseKeys',
+            'config.passthroughRequestHeaders',
+            'config.allowedResponseHeaders',
           ],
         },
       ]);
@@ -161,7 +184,12 @@ module('Unit | Model | secret-engine', function (hooks) {
             'config.listingVisibility',
             'local',
             'sealWrap',
-            'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders}',
+            'config.defaultLeaseTtl',
+            'config.maxLeaseTtl',
+            'config.auditNonHmacRequestKeys',
+            'config.auditNonHmacResponseKeys',
+            'config.passthroughRequestHeaders',
+            'config.allowedResponseHeaders',
           ],
         },
       ]);
@@ -182,7 +210,12 @@ module('Unit | Model | secret-engine', function (hooks) {
             'config.listingVisibility',
             'local',
             'sealWrap',
-            'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders}',
+            'config.defaultLeaseTtl',
+            'config.maxLeaseTtl',
+            'config.auditNonHmacRequestKeys',
+            'config.auditNonHmacResponseKeys',
+            'config.passthroughRequestHeaders',
+            'config.allowedResponseHeaders',
           ],
         },
       ]);
@@ -195,14 +228,17 @@ module('Unit | Model | secret-engine', function (hooks) {
       });
 
       assert.deepEqual(model.get('formFieldGroups'), [
-        { default: ['path', 'config.{defaultLeaseTtl}', 'config.{maxLeaseTtl}'] },
+        { default: ['path', 'config.defaultLeaseTtl', 'config.maxLeaseTtl'] },
         {
           'Method Options': [
             'description',
             'config.listingVisibility',
             'local',
             'sealWrap',
-            'config.{auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders}',
+            'config.auditNonHmacRequestKeys',
+            'config.auditNonHmacResponseKeys',
+            'config.passthroughRequestHeaders',
+            'config.allowedResponseHeaders',
           ],
         },
       ]);
@@ -222,7 +258,10 @@ module('Unit | Model | secret-engine', function (hooks) {
             'config.listingVisibility',
             'local',
             'sealWrap',
-            'config.{auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders}',
+            'config.auditNonHmacRequestKeys',
+            'config.auditNonHmacResponseKeys',
+            'config.passthroughRequestHeaders',
+            'config.allowedResponseHeaders',
           ],
         },
       ]);

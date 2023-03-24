@@ -144,7 +144,7 @@ export default class SecretEngineModel extends Model {
     return this.local ? 'local' : 'replicated';
   }
 
-  get fieldsList() {
+  get formFields() {
     const type = this.engineType;
     const fields = ['type', 'path', 'description', 'accessor', 'local', 'sealWrap'];
     // no ttl options for keymgmt
