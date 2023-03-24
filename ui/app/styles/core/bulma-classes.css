@@ -88,8 +88,6 @@ fieldset[disabled] .select select:-ms-input-placeholder,
   color: rgba(122, 122, 122, 0.3);
 }
 
-
-
 .is-pulled-left {
   float: left !important;
 }
@@ -478,11 +476,6 @@ fieldset[disabled] .select select:-ms-input-placeholder,
 }
 
 /* ARG TODO: I detected that some of these are overriden. Keeping separate so I can address later */
-.buttons.has-addons .button.is-expanded {
-  flex-grow: 1;
-  flex-shrink: 1;
-}
-
 .control.is-expanded {
   flex-grow: 1;
   flex-shrink: 1;
@@ -536,14 +529,6 @@ fieldset[disabled] .select select:-ms-input-placeholder,
 /* ARG TODO: used in one place */
 .progress.is-medium {
   height: 1.25rem;
-}
-
-.button.is-static {
-  background-color: whitesmoke;
-  border-color: #dbdbdb;
-  box-shadow: none;
-  color: #7a7a7a;
-  pointer-events: none;
 }
 
 .checkbox, .radio {
