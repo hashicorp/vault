@@ -624,14 +624,20 @@ func joinAndStabilize(t *testing.T, core *vault.TestClusterCore, client *api.Cli
 	}
 }
 
+// joinAsVoterAndUnseal joins the specified core to the specified cluster as a voter and unseals it.
+// It will wait (up to a timeout) for the core to be fully unsealed before returning
 func joinAsVoterAndUnseal(t *testing.T, core *vault.TestClusterCore, cluster *vault.TestCluster) {
 	joinAndUnseal(t, core, cluster, false, true)
 }
 
+// joinAsNonVoterAndUnseal joins the specified core to the specified cluster as a non-voter and unseals it.
+// It will wait (up to a timeout) for the core to be fully unsealed before returning
 func joinAsNonVoterAndUnseal(t *testing.T, core *vault.TestClusterCore, cluster *vault.TestCluster) {
 	joinAndUnseal(t, core, cluster, true, true)
 }
 
+// joinAndUnseal joins the specified core to the specified cluster and unseals it.
+// You can specify if the core should be joined as a voter/non-voter, and whether to wait (up to a timeout) for the core to be unsealed before returning.
 func joinAndUnseal(t *testing.T, core *vault.TestClusterCore, cluster *vault.TestCluster, nonVoter bool, waitForUnseal bool) {
 	leader, leaderAddr := clusterLeader(t, cluster)
 	_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), []*raft.LeaderJoinInfo{
