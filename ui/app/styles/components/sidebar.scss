@@ -41,19 +41,19 @@
   font-weight: $font-weight-semibold;
 
   &.connected {
-    background-color: $ui-gray-800;
-    color: #c2c5cb;
+    background-color: var(--token-color-surface-action);
+    color: var(--token-color-foreground-action-active);
 
     a {
-      color: #c2c5cb;
+      color: var(--token-color-foreground-action-active);
     }
   }
   &.warning {
-    background-color: #fcf6ea;
-    color: #975b06;
+    background-color: var(--token-color-surface-warning);
+    color: var(--token-color-palette-amber-300);
 
     a {
-      color: #975b06;
+      color: var(--token-color-palette-amber-300);
     }
   }
 }
