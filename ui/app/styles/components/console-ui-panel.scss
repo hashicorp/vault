@@ -86,6 +86,7 @@
     font-weight: $font-weight-bold;
     outline: none;
     padding: $size-10;
+    margin-right: $spacing-xs;
     transition: background-color $speed;
   }
 }
