@@ -113,7 +113,6 @@ jobs:
     if: ${{ ! (startsWith( github.ref_name, 'ui/' ) || startsWith( github.ref_name, 'docs/' ) || startsWith( github.ref_name, 'backport/docs/') ) }}
     uses: ./.github/workflows/test-go.yml
     with:
-      name: ''
       total-runners: 16
       go-arch: amd64
       go-build-tags: '${{ needs.setup.outputs.go-build-tags }},deadlock'
@@ -129,7 +128,6 @@ jobs:
     if: ${{ ! (startsWith( github.ref_name, 'ui/' ) || startsWith( github.ref_name, 'docs/' ) || startsWith( github.ref_name, 'backport/docs/') ) }}
     uses: ./.github/workflows/test-go.yml
     with:
-      name: race
       total-runners: 16
       env-vars: |
         {
@@ -152,7 +150,6 @@ jobs:
     - setup-go-cache
     uses: ./.github/workflows/test-go.yml
     with:
-      name: fips
       total-runners: 16
       env-vars: |
         {
