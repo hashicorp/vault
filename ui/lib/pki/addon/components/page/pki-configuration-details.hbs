@@ -1,3 +1,17 @@
+<Toolbar>
+  <ToolbarActions>
+    <ToolbarLink {{on "click" (fn (mut this.showDeleteAllIssuers) true)}}>
+      Delete all issuers
+    </ToolbarLink>
+    <ToolbarLink @route="configuration.tidy">
+      Tidy
+    </ToolbarLink>
+    <ToolbarLink @route="configuration.edit">
+      Edit configuration
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar>
+
 <h2 class="title has-bottom-margin-xs has-top-margin-m is-4 has-border-bottom-light has-bottom-padding-s">
   Global URLs
 </h2>
@@ -31,3 +45,35 @@
 <InfoTableRow @label="Max lease TTL" @value={{@mountConfig.config.maxLeaseTtl}} />
 <InfoTableRow @label="Allowed managed keys" @value={{or @mountConfig.config.allowedManagedKeys "None"}} />
 <div class="has-top-margin-l"></div>
+
+{{#if this.showDeleteAllIssuers}}
+  <Modal
+    @title="Delete All Issuers?"
+    @type="warning"
+    @onClose={{fn (mut this.showDeleteAllIssuers) false}}
+    @isActive={{this.showDeleteAllIssuers}}
+    @showCloseButton={{true}}
+  >
+    <section class="modal-card-custom has-padding-m">
+      This endpoint deletes all issuers and keys within the mount. It is highly recommended to use the individual delete
+      operations instead. This mount will be unusable until new issuers and keys are provisioned.
+      <div class="has-top-margin-m">
+        <h4 class="title is-6 has-bottom-margin-xs">Confirm</h4>
+        <span class="is-hint">Type <b>delete-all</b> to confirm deleting the role.</span>
+        <div class="has-top-margin-xs">
+          <Input class="input" @type="text" @value={{this.confirmDeleteAllIssuersVal}} />
+        </div>
+      </div>
+    </section>
+
+    <footer class="has-background-gray-100 has-padding-m">
+      <button
+        type="button"
+        class="button has-text-red"
+        disabled={{(not (eq this.confirmDeleteAllIssuersVal "delete-all"))}}
+        {{on "click" this.deleteAllIssuers}}
+      >Delete</button>
+      <button type="button" class="button" {{on "click" (fn (mut this.showDeleteAllIssuers) false)}}>Cancel</button>
+    </footer>
+  </Modal>
+{{/if}}

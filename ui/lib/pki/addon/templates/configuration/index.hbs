@@ -10,18 +10,12 @@
 />
 
 {{#if this.model.hasConfig}}
-  <Toolbar>
-    <ToolbarActions>
-      <ToolbarLink @route="configuration.tidy">
-        Tidy
-      </ToolbarLink>
-      <ToolbarLink @route="configuration.edit">
-        Edit configuration
-      </ToolbarLink>
-    </ToolbarActions>
-  </Toolbar>
-
-  <Page::PkiConfigurationDetails @urls={{this.model.urls}} @crl={{this.model.crl}} @mountConfig={{this.model.mountConfig}} />
+  <Page::PkiConfigurationDetails
+    @urls={{this.model.urls}}
+    @crl={{this.model.crl}}
+    @mountConfig={{this.model.mountConfig}}
+    @currentPath={{this.model.engine.id}}
+  />
 {{else}}
   <Toolbar />
 
