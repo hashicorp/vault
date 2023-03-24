@@ -4,7 +4,7 @@
  */
 
 .console-ui-panel {
-  background: $black;
+  background: var(--token-color-palette-neutral-700);
   height: 0;
   left: 0;
   min-height: 0;
