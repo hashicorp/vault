@@ -1,0 +1,39 @@
+{{#each @issuer.formFieldGroups as |fieldGroup|}}
+  {{#each-in fieldGroup as |group fields|}}
+    <div class="box is-sideless is-fullwidth is-shadowless" data-test-details-group={{group}}>
+      {{#if (not-eq group "default")}}
+        <h2 class="title is-5 has-margin-top" data-test-group-title>
+          {{group}}
+        </h2>
+      {{/if}}
+      {{#each fields as |attr|}}
+        {{#if attr.options.masked}}
+          <InfoTableRow @label={{or attr.options.label (humanize (dasherize attr.name))}} @value={{get @issuer attr.name}}>
+            <MaskedInput
+              @name={{or attr.options.label (humanize (dasherize attr.name))}}
+              @value={{get @issuer attr.name}}
+              @displayOnly={{true}}
+              @allowCopy={{true}}
+            />
+          </InfoTableRow>
+        {{else if (eq attr.name "keyId")}}
+          <InfoTableRow @label={{or attr.options.label (humanize (dasherize attr.name))}} @value={{get @issuer attr.name}}>
+            {{#if @issuer.keyId}}
+              <LinkTo @route="keys.key.details" @model={{@issuer.keyId}}>{{@issuer.keyId}}</LinkTo>
+            {{else}}
+              <Icon @name="minus" />
+            {{/if}}
+          </InfoTableRow>
+        {{else}}
+          <InfoTableRow
+            @label={{or attr.options.label (humanize (dasherize attr.name))}}
+            @value={{get @issuer attr.name}}
+            @formatDate={{if attr.options.formatDate "MMM d yyyy HH:mm:ss a zzzz"}}
+            @alwaysRender={{true}}
+            @addCopyButton={{(eq attr.name "issuerId")}}
+          />
+        {{/if}}
+      {{/each}}
+    </div>
+  {{/each-in}}
+{{/each}}
