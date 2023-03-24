@@ -6,6 +6,8 @@
 // Button specific vars
 $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
 
+// ARG TODO is-focused is-hover are those classes added by a third party? I don't see them.
+
 .button {
   background-color: $grey-lightest;
   border: 1px solid $grey-light;
@@ -34,8 +36,33 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
     color: darken($grey-dark, 10%);
   }
 
+  &:disabled {
+    background-color: $white;
+    border-color: #dbdbdb;
+    box-shadow: none;
+    opacity: 0.5;
+  }
+
   &.is-icon {
     padding: 0.25rem $size-3;
+  }
+
+  &.is-flat {
+    min-width: auto;
+    border: none;
+    box-shadow: none;
+  }
+
+  &.is-loading {
+    color: transparent !important;
+    pointer-events: none;
+  }
+
+  &.is-loading::after {
+    left: calc(50% - (1em * 0.5));
+    position: absolute !important;
+    position: absolute;
+    top: calc(50% - (1em * 0.5));
   }
 
   &.is-inverted.is-outlined {
@@ -50,12 +77,8 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
     min-width: auto;
     padding: 0;
   }
-  &.is-flat {
-    min-width: auto;
-    border: none;
-    box-shadow: none;
-  }
-  // button names used: is-primary, and is-danger. See $colors in utils to see what's available.
+
+  // button names used: is-primary, and is-danger. See $colors in utils to see what is available.
   // ARG TODO check is-danger (replication)
   @each $name, $pair in $colors {
     $color: nth($pair, 1);

@@ -55,7 +55,9 @@ $green: hsl(153, 53%, 53%) !default;
 $cyan: hsl(207, 61%, 53%) !default;
 $blue: hsl(229, 53%, 53%) !default;
 $red: hsl(348, 86%, 61%) !default;
+$danger: #c73445; // override to get us to expected ARG TODO clean up
 // Derived colors
+$primary: red !default;
 
 $info: $cyan !default;
 $success: $green !default;
@@ -63,11 +65,11 @@ $warning: $yellow !default;
 $danger: $red !default;
 
 $light: $white-ter !default;
+$dark: $grey-darker !default;
 
 // Invert colors
 
 $green-invert: findColorInvert($green) !default;
-$turquoise-invert: findColorInvert($turquoise) !default;
 $blue-invert: findColorInvert($blue) !default;
 $red-invert: findColorInvert($red) !default;
 
@@ -126,7 +128,6 @@ $link: $blue !default;
 $link-invert: findColorInvert($link) !default;
 $link-light: findLightColor($link) !default;
 $link-dark: findDarkColor($link) !default;
-$link-visited: $purple !default;
 
 $link-hover: $grey-darker !default;
 $link-hover-border: $grey-light !default;
@@ -163,7 +164,8 @@ $blue: hsl(229, 53%, 53%) !default;
 $purple: hsl(271, 100%, 71%) !default;
 $red: hsl(348, 86%, 61%) !default;
 
-// DERIVED
+// Derived colors
+
 $info: $blue !default;
 $success: $green !default;
 $warning: $yellow !default;
@@ -174,12 +176,9 @@ $dark: $grey-darker !default;
 
 // Invert colors
 
-$orange-invert: findColorInvert($orange) !default;
 $yellow-invert: findColorInvert($yellow) !default;
 $green-invert: findColorInvert($green) !default;
-$turquoise-invert: findColorInvert($turquoise) !default;
 $blue-invert: findColorInvert($blue) !default;
-$purple-invert: findColorInvert($purple) !default;
 $red-invert: findColorInvert($red) !default;
 
 $primary-invert: $turquoise-invert !default;
