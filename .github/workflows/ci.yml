@@ -260,6 +260,7 @@ jobs:
     needs:
     - setup
     - test-go
+    - test-ui
     runs-on: ${{ fromJSON(needs.setup.outputs.compute-standard) }}
     steps:
     - run: echo "All Go test successfully passed"
