@@ -14,6 +14,14 @@ export default class PkiOverviewRoute extends Route {
   @service auth;
   @service store;
 
+  async fetchAllCertificates() {
+    try {
+      return await this.store.query('pki/certificate/base', { backend: this.secretMountPath.currentPath });
+    } catch (e) {
+      return e.httpStatus;
+    }
+  }
+
   async fetchAllRoles() {
     try {
       return await this.store.query('pki/role', { backend: this.secretMountPath.currentPath });
@@ -36,10 +44,7 @@ export default class PkiOverviewRoute extends Route {
       engine: this.modelFor('application'),
       roles: this.fetchAllRoles(),
       issuers: this.fetchAllIssuers(),
+      certificates: this.fetchAllCertificates(),
     });
-  }
-
-  setupController(controller, resolvedModel) {
-    super.setupController(controller, resolvedModel);
   }
 }

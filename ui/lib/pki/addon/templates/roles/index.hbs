@@ -65,9 +65,5 @@
     </EmptyState>
   {{/if}}
 {{else}}
-  <EmptyState @title="PKI not configured" @message="This PKI mount hasn't yet been configured with a certificate issuer.">
-    <LinkTo @route="configuration.create">
-      Configure PKI
-    </LinkTo>
-  </EmptyState>
+  <PkiEmptyState @engine={{this.model.engine}} @roles={{this.model.roles}} />
 {{/if}}
