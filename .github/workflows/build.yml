@@ -121,7 +121,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        arch: [arm, arm64, 386, amd64]
+        arch: [arm, arm64, 386, amd64, s390x]
     steps:
       - uses: actions/checkout@v3
       - uses: hashicorp/actions-docker-build@v1
