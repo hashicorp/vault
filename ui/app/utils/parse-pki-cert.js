@@ -29,13 +29,17 @@ import {
  This means we cannot cross-sign in the UI and prompt the user to do so manually using the CLI.
  */
 
+export function jsonToCert(jsonString) {
+  const cert_base64 = jsonString.replace(/(-----(BEGIN|END) CERTIFICATE-----|\n)/g, '');
+  const cert_der = fromBase64(cert_base64);
+  const cert_asn1 = asn1js.fromBER(stringToArrayBuffer(cert_der));
+  return new Certificate({ schema: cert_asn1.result });
+}
+
 export function parseCertificate(certificateContent) {
   let cert;
   try {
-    const cert_base64 = certificateContent.replace(/(-----(BEGIN|END) CERTIFICATE-----|\n)/g, '');
-    const cert_der = fromBase64(cert_base64);
-    const cert_asn1 = asn1js.fromBER(stringToArrayBuffer(cert_der));
-    cert = new Certificate({ schema: cert_asn1.result });
+    cert = jsonToCert(certificateContent);
   } catch (error) {
     console.debug('DEBUG: Converting Certificate', error); // eslint-disable-line
     return { can_parse: false };
