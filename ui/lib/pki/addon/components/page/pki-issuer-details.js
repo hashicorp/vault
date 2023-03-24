@@ -7,5 +7,5 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 
 export default class PkiIssuerDetailsComponent extends Component {
-  @tracked showRotationModal = true;
+  @tracked showRotationModal = false;
 }
