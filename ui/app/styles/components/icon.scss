@@ -60,3 +60,18 @@
 .icon-blue {
   color: $blue;
 }
+
+.brand-icon {
+  .hs-icon {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+.brand-icon-large {
+  .hs-icon,
+  svg {
+    width: 61px;
+    height: 61px;
+  }
+}
