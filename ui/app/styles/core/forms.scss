@@ -3,17 +3,18 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-form {
-  margin: 0;
+.input,
+.file-name,
+.textarea {
+  box-shadow: 0 4px 1px rgba(10, 10, 10, 0.06) inset;
+  border: 1px solid #6f7682;
 }
-label {
-  cursor: pointer;
-  &.is-select-list {
-    padding: 10px 0px;
-    &:hover {
-      color: $blue;
-    }
-  }
+
+.input,
+.textarea {
+  box-shadow: inset 0 0.0625em 0.125em rgba(10, 10, 10, 0.05);
+  max-width: 100%;
+  width: 100%;
 }
 
 .masked-font {
@@ -93,6 +94,7 @@ label {
 .textarea,
 .select select {
   border-color: $grey-light;
+  border-radius: 2px;
   color: $grey-dark;
   padding-left: $size-8;
   padding-right: $size-8;
@@ -127,7 +129,10 @@ label {
 }
 
 .control {
+  font-size: 1rem;
   max-width: 100%;
+  position: relative;
+  text-align: left;
 
   // Modifiers
   &.has-icons-left,
@@ -214,6 +219,23 @@ label {
   .has-background-grey-lighter & {
     background-color: $white;
   }
+}
+// ARG TODO check all these required or not
+.select:not(.is-multiple):not(.is-loading)::after {
+  border-radius: 2px;
+  border-right: 0;
+  border-top: 0;
+  border: 3px solid transparent;
+  content: ' ';
+  display: block;
+  height: 0.625em;
+  margin-top: -0.4375em;
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  transform-origin: center;
+  transform: rotate(-45deg);
+  width: 0.625em;
 }
 
 .select:not(.is-multiple) {
@@ -317,6 +339,7 @@ label {
 }
 
 .file-cta {
+  border-radius: 2px;
   min-width: auto;
 
   .icon:first-child:last-child {
@@ -328,6 +351,7 @@ label {
 
 .file-name {
   @extend .input;
+  border-radius: 2px;
 }
 
 .file-delete-button {
