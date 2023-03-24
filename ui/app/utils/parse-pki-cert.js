@@ -29,7 +29,7 @@ import {
  This means we cannot cross-sign in the UI and prompt the user to do so manually using the CLI.
  */
 
-export function jsonToCert(jsonString) {
+export function jsonToCertObject(jsonString) {
   const cert_base64 = jsonString.replace(/(-----(BEGIN|END) CERTIFICATE-----|\n)/g, '');
   const cert_der = fromBase64(cert_base64);
   const cert_asn1 = asn1js.fromBER(stringToArrayBuffer(cert_der));
@@ -39,7 +39,7 @@ export function jsonToCert(jsonString) {
 export function parseCertificate(certificateContent) {
   let cert;
   try {
-    cert = jsonToCert(certificateContent);
+    cert = jsonToCertObject(certificateContent);
   } catch (error) {
     console.debug('DEBUG: Converting Certificate', error); // eslint-disable-line
     return { can_parse: false };
@@ -103,6 +103,20 @@ export function formatValues(subject, extension) {
     parsing_errors,
     exclude_cn_from_sans,
   };
+}
+
+export async function verifyCertificates(certA, certB, leaf) {
+  const parsedCertA = jsonToCertObject(certA);
+  const parsedCertB = jsonToCertObject(certB);
+  if (leaf) {
+    const parsedLeaf = jsonToCertObject(leaf);
+    const chainA = await parsedLeaf.verify(parsedCertA);
+    const chainB = await parsedLeaf.verify(parsedCertB);
+    const isEqualA = parsedLeaf.issuer.isEqual(parsedCertA.subject);
+    const isEqualB = parsedLeaf.issuer.isEqual(parsedCertB.subject);
+    return chainA && chainB && isEqualA && isEqualB;
+  }
+  return await parsedCertA.verify(parsedCertB);
 }
 
 //* PARSING HELPERS
