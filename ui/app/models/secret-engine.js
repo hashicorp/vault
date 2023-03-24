@@ -6,8 +6,8 @@
 import Model, { attr, belongsTo } from '@ember-data/model';
 import { computed } from '@ember/object'; // eslint-disable-line
 import { equal } from '@ember/object/computed'; // eslint-disable-line
-import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { withModelValidations } from 'vault/decorators/model-validations';
+import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
 
 // identity will be managed separately and the inclusion
 // of the system backend is an implementation detail
@@ -22,6 +22,7 @@ const validations = {
 };
 
 @withModelValidations(validations)
+@withExpandedAttributes()
 export default class SecretEngineModel extends Model {
   @attr('string') path;
   @attr('string') type;
@@ -106,22 +107,19 @@ export default class SecretEngineModel extends Model {
     return this.modelTypeForKV === 'secret-v2';
   }
 
-  // expandAttributeMeta doesn't play nice with Octane, do this so the values stick
-  _attrs = null;
   get attrs() {
-    if (!this._attrs) {
-      this._attrs = expandAttributeMeta(this, this.formFields);
-    }
-    return this._attrs;
+    return this.formFields.map((fieldName) => {
+      return this.allByKey[fieldName];
+    });
   }
 
-  // fieldToAttrs doesn't play nice with Octane, do this so the values stick
-  _fieldGroups = null;
   get fieldGroups() {
-    if (!this._fieldGroups) {
-      this._fieldGroups = fieldToAttrs(this, this.formFieldGroups);
-    }
-    return this._fieldGroups;
+    return this.formFieldGroups.map((group) => {
+      // Each group object has 1 key (name of group) with array value
+      const groupName = Object.keys(group)[0];
+      const expanded = group[groupName]?.map((fieldName) => this.allByKey[fieldName]);
+      return { [groupName]: expanded };
+    });
   }
 
   get icon() {
@@ -150,9 +148,14 @@ export default class SecretEngineModel extends Model {
     const type = this.engineType;
     const fields = ['type', 'path', 'description', 'accessor', 'local', 'sealWrap'];
     // no ttl options for keymgmt
-    const ttl = type !== 'keymgmt' ? 'defaultLeaseTtl,maxLeaseTtl,' : '';
+    if (type !== 'keymgmt') {
+      fields.push('config.defaultLeaseTtl', 'config.maxLeaseTtl');
+    }
     fields.push(
-      `config.{${ttl}auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders}`
+      'config.auditNonHmacRequestKeys',
+      'config.auditNonHmacResponseKeys',
+      'config.passthroughRequestHeaders',
+      'config.allowedResponseHeaders'
     );
     if (type === 'kv' || type === 'generic') {
       fields.push('version');
@@ -168,6 +171,12 @@ export default class SecretEngineModel extends Model {
     let defaultFields = ['path'];
     let optionFields;
     const CORE_OPTIONS = ['description', 'config.listingVisibility', 'local', 'sealWrap'];
+    const STANDARD_CONFIG = [
+      'config.auditNonHmacRequestKeys',
+      'config.auditNonHmacResponseKeys',
+      'config.passthroughRequestHeaders',
+      'config.allowedResponseHeaders',
+    ];
 
     switch (this.engineType) {
       case 'kv':
@@ -175,37 +184,32 @@ export default class SecretEngineModel extends Model {
         optionFields = [
           'version',
           ...CORE_OPTIONS,
-          `config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders}`,
+          'config.defaultLeaseTtl',
+          'config.maxLeaseTtl',
+          ...STANDARD_CONFIG,
         ];
         break;
       case 'generic':
         optionFields = [
           'version',
           ...CORE_OPTIONS,
-          `config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders}`,
+          'config.defaultLeaseTtl',
+          'config.maxLeaseTtl',
+          ...STANDARD_CONFIG,
         ];
         break;
       case 'database':
         // Highlight TTLs in default
-        defaultFields = ['path', 'config.{defaultLeaseTtl}', 'config.{maxLeaseTtl}'];
-        optionFields = [
-          ...CORE_OPTIONS,
-          'config.{auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders}',
-        ];
+        defaultFields = ['path', 'config.defaultLeaseTtl', 'config.maxLeaseTtl'];
+        optionFields = [...CORE_OPTIONS, ...STANDARD_CONFIG];
         break;
       case 'keymgmt':
         // no ttl options for keymgmt
-        optionFields = [
-          ...CORE_OPTIONS,
-          'config.{auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders}',
-        ];
+        optionFields = [...CORE_OPTIONS, ...STANDARD_CONFIG];
         break;
       default:
         defaultFields = ['path'];
-        optionFields = [
-          ...CORE_OPTIONS,
-          `config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders}`,
-        ];
+        optionFields = [...CORE_OPTIONS, 'config.defaultLeaseTtl', 'config.maxLeaseTtl', ...STANDARD_CONFIG];
         break;
     }
 
