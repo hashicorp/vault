@@ -333,10 +333,6 @@ fieldset[disabled] .select select:-ms-input-placeholder,
   }
 }
 
-.level.is-mobile {
-  display: flex;
-}
-
 .columns.is-mobile > .column.is-1 {
   flex: none;
   width: 8.33333%;

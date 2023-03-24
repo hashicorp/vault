@@ -21,7 +21,6 @@
 
 // Core element styling
 @import './core/alert-banner';
-@import './core/generic';
 @import './core/box';
 @import './core/breadcrumb';
 @import './core/bulma-radio-checkboxes';
@@ -29,8 +28,8 @@
 @import './core/footer';
 @import './core/forms';
 @import './core/charts';
-@import './core/hero';
 @import './core/level';
+@import './core/link';
 @import './core/menu';
 @import './core/message';
 @import './core/navbar';
@@ -44,7 +43,7 @@
 @import './core/toggle';
 
 // Helpers
-@import './helper-classes/helpers';
+@import './helper-classes/other';
 @import './helper-classes/flexbox-and-grid';
 @import './helper-classes/spacing';
 @import './helper-classes/typography';

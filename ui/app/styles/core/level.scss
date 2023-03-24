@@ -3,8 +3,43 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
+.level {
+  align-items: center;
+  justify-content: space-between;
+}
+
 .level:not(:last-child) {
   @include vault-block;
+}
+
+.level-left,
+.level-right {
+  flex-basis: auto;
+  flex-grow: 0;
+  flex-shrink: 0;
+}
+
+.level-right {
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.level-left {
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.level.is-mobile {
+  display: flex;
+}
+
+.level.is-mobile .level-left + .level-right {
+  margin-top: 0;
+}
+
+.level.is-mobile .level-item:not(:last-child) {
+  margin-bottom: 0;
+  margin-right: $size-9;
 }
 
 .level.has-padded-items {
@@ -12,9 +47,46 @@
     flex: 0 1 auto;
   }
   .level-item {
-    padding-right: 1.5rem;
+    padding-right: $size-4;
   }
   .level-item.is-fixed-25 {
     flex-basis: 25%;
+  }
+}
+
+.level-item {
+  align-items: center;
+  display: flex;
+  flex-basis: auto;
+  flex-grow: 0;
+  flex-shrink: 0;
+  justify-content: center;
+}
+
+// responsive css
+@media screen and (min-width: 769px), print {
+  .level {
+    display: flex;
+  }
+  .level > .level-item:not(.is-narrow) {
+    flex-grow: 1;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .level-item:not(:last-child) {
+    margin-bottom: $size-9;
+  }
+}
+
+@media screen and (min-width: 769px), print {
+  .level-left {
+    display: flex;
+  }
+}
+
+@media screen and (min-width: 769px), print {
+  .level-right {
+    display: flex;
   }
 }

@@ -2,6 +2,24 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: MPL-2.0
  */
+.menu {
+  font-size: $size-6;
+}
+
+.menu a {
+  display: block;
+  padding: 0.5em 0.75em;
+  text-decoration: none;
+}
+
+.menu-label {
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.menu-list {
+  line-height: 1.25;
+}
 
 .column .menu-list a {
   border-radius: 0;

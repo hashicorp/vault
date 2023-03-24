@@ -9,7 +9,7 @@
  - Need to discuss the creation of additional variables like $size-small: $size-8;. This is a pattern we use heavily in the app and it would take some work (not hard, but a good chunk of changes) to revert.
  */
 
-/* Font sizing */
+/* General sizing: used in fonts and in padding, margin, etc. */
 $size-1: 3rem !default;
 $size-2: 2.5rem !default;
 $size-3: (24/14) + 0rem; // ~1.714rem ~27px

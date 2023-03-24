@@ -12,12 +12,6 @@
 .is-invisible {
   visibility: hidden;
 }
-.is-underline {
-  text-decoration: underline;
-}
-.is-no-underline {
-  text-decoration: none;
-}
 .is-sideless {
   box-shadow: 0 2px 0 -1px $grey-light, 0 -2px 0 -1px $grey-light;
 }
@@ -86,9 +80,6 @@
   text-overflow: ellipsis;
   overflow: hidden;
 }
-.is-font-mono {
-  font-family: $family-monospace;
-}
 
 .is-hint {
   color: $grey;
@@ -107,16 +98,10 @@ ul.bullet {
   padding-left: $spacing-m;
 }
 
-.has-text-semibold {
-  font-weight: $font-weight-semibold;
-}
 .is-v-centered {
   vertical-align: middle;
 }
 
-.has-text-align-center {
-  text-align: center;
-}
 // Screen Readers only
 // ARG TODO: we have this class in the app/styes/app.scss file. See if we can consolidate.
 .sr-only {
