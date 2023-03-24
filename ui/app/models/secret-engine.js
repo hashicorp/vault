@@ -106,12 +106,22 @@ export default class SecretEngineModel extends Model {
     return this.modelTypeForKV === 'secret-v2';
   }
 
+  // expandAttributeMeta doesn't play nice with Octane, do this so the values stick
+  _attrs = null;
   get attrs() {
-    return expandAttributeMeta(this, this.formFields);
+    if (!this._attrs) {
+      this._attrs = expandAttributeMeta(this, this.formFields);
+    }
+    return this._attrs;
   }
 
+  // fieldToAttrs doesn't play nice with Octane, do this so the values stick
+  _fieldGroups = null;
   get fieldGroups() {
-    return fieldToAttrs(this, this.formFieldGroups);
+    if (!this._fieldGroups) {
+      this._fieldGroups = fieldToAttrs(this, this.formFieldGroups);
+    }
+    return this._fieldGroups;
   }
 
   get icon() {
@@ -136,7 +146,7 @@ export default class SecretEngineModel extends Model {
     return this.local ? 'local' : 'replicated';
   }
 
-  get formFields() {
+  get fieldsList() {
     const type = this.engineType;
     const fields = ['type', 'path', 'description', 'accessor', 'local', 'sealWrap'];
     // no ttl options for keymgmt
