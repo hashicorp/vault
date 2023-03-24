@@ -2,6 +2,8 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: MPL-2.0
  */
+
+// ARG TODO clean up unused vars
 @function findColorInvert($color) {
   @if (colorLuminance($color) > 0.55) {
     @return rgba(#000, 0.7);
@@ -31,7 +33,7 @@
   // We totally shimmed this
   @return 0.55;
 }
-$column-gap: 0.75rem !default;
+
 // Initial colors
 $black: hsl(0, 0%, 4%) !default;
 $black-bis: hsl(0, 0%, 7%) !default;
@@ -48,16 +50,12 @@ $white-ter: hsl(0, 0%, 96%) !default;
 $white-bis: hsl(0, 0%, 98%) !default;
 $white: hsl(0, 0%, 100%) !default;
 
-$orange: hsl(14, 100%, 53%) !default;
 $yellow: hsl(44, 100%, 77%) !default;
 $green: hsl(153, 53%, 53%) !default;
-$turquoise: hsl(171, 100%, 41%) !default;
 $cyan: hsl(207, 61%, 53%) !default;
 $blue: hsl(229, 53%, 53%) !default;
-$purple: hsl(271, 100%, 71%) !default;
 $red: hsl(348, 86%, 61%) !default;
 // Derived colors
-$primary: red !default;
 
 $info: $cyan !default;
 $success: $green !default;
@@ -65,17 +63,12 @@ $warning: $yellow !default;
 $danger: $red !default;
 
 $light: $white-ter !default;
-$dark: $grey-darker !default;
 
 // Invert colors
 
-$orange-invert: findColorInvert($orange) !default;
-$yellow-invert: findColorInvert($yellow) !default;
 $green-invert: findColorInvert($green) !default;
 $turquoise-invert: findColorInvert($turquoise) !default;
-$cyan-invert: findColorInvert($cyan) !default;
 $blue-invert: findColorInvert($blue) !default;
-$purple-invert: findColorInvert($purple) !default;
 $red-invert: findColorInvert($red) !default;
 
 $primary-invert: findColorInvert($primary) !default;
@@ -205,21 +198,9 @@ $border: $grey-lighter !default;
 $border-hover: $grey-light !default;
 
 $colors: (
-  'white': (
-    $white,
-    $black,
-  ),
-  'black': (
-    $black,
-    $white,
-  ),
   'light': (
     $light,
     $light-invert,
-  ),
-  'dark': (
-    $dark,
-    $dark-invert,
   ),
   'primary': (
     $primary,

@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
+// Button specific vars
 $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
 
 .button {
@@ -10,6 +11,7 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
   border: 1px solid $grey-light;
   border-radius: 2px;
   box-shadow: $box-shadow-low;
+  cursor: pointer;
   color: $ui-gray-800;
   display: inline-block;
   font-size: $size-small;
@@ -18,13 +20,10 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
   line-height: 1.6;
   min-width: 6rem;
   padding: $size-10 $size-8;
+  text-align: center;
   text-decoration: none;
   transition: background-color $speed, border-color $speed, box-shadow $speed, color $speed;
   vertical-align: middle;
-
-  &.is-icon {
-    padding: 0.25rem $size-3;
-  }
 
   &:active,
   &.is-active,
@@ -33,6 +32,10 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
     border-color: darken($grey-light, 10%);
     box-shadow: $button-box-shadow-standard;
     color: darken($grey-dark, 10%);
+  }
+
+  &.is-icon {
+    padding: 0.25rem $size-3;
   }
 
   &.is-inverted.is-outlined {
@@ -52,7 +55,8 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
     border: none;
     box-shadow: none;
   }
-
+  // button names used: is-primary, and is-danger. See $colors in utils to see what's available.
+  // ARG TODO check is-danger (replication)
   @each $name, $pair in $colors {
     $color: nth($pair, 1);
     @if $name == 'primary' {
@@ -61,8 +65,8 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
     $color-invert: nth($pair, 2);
 
     &.is-#{$name} {
-      border-color: darken($color, 2%);
       background-color: $color;
+      border-color: darken($color, 2%);
       color: $color-invert;
 
       &:hover:not([disabled]),
@@ -86,9 +90,9 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
       }
 
       &.is-outlined {
+        background-color: transparent;
         border-color: $color;
         color: $color;
-        background-color: transparent;
 
         &.is-important {
           border-color: $color;
@@ -148,6 +152,17 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
   &.is-primary {
     font-weight: $font-weight-bold;
     text-shadow: 0 1px 1px rgba($black, 0.25);
+
+    &.is-loading::after {
+      border-color: transparent transparent #fff #fff !important;
+    }
+    // ARG TODO check this specific situation
+    &.is-outlined[disabled] {
+      background-color: transparent;
+      border-color: $blue-500;
+      box-shadow: none;
+      color: $blue-500;
+    }
   }
 
   &.is-link {
@@ -163,23 +178,15 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
     border-color: transparent;
     box-shadow: none;
     color: $blue;
+    text-decoration: none;
 
     &:hover {
+      color: $blue-500;
       background-color: $grey-lightest;
+      text-decoration: underline;
     }
   }
 
-  &.is-orange {
-    background-color: $orange;
-    border-color: $orange;
-    color: $white;
-
-    &:hover,
-    &.is-hovered {
-      background-color: darken($orange, 5%);
-      border-color: darken($orange, 5%);
-    }
-  }
   &.is-compact {
     height: 2rem;
     padding: $size-11 $size-8;
