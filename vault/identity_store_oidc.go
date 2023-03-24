@@ -276,6 +276,11 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/token/" + framework.GenericNameRegex("name"),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationVerb:   "generate",
+				OperationSuffix: "token",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
