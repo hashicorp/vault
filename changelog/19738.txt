@@ -1,3 +1,0 @@
-```release-note:improvement
-website/docs: Add warning about Vault Lambda Extension TTL
-```

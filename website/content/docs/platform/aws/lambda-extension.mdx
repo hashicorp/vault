@@ -249,8 +249,8 @@ the header to `nocache` on a request will opt-out of caching entirely in this
 configuration. Setting the header to `recache` will skip the cache lookup and
 return and cache the response from Vault as described previously.
 
-~> **Warning!** The cached data lives in-memory of the Vault Lambda Extension
-and will be removed when the Lambda execution environment shuts down.
+~> **Warning!** The Vault Lambda Extension's cache is only in-memory
+and will not be persisted when the Lambda execution environment shuts down.
 In order words, the cache TTL is capped to the duration of the Lambda execution environment.
 
 ## Limitations
