@@ -259,8 +259,8 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 		}
 	}
 
-	joinAsVoterAndUnseal(t, cluster.Cores[1], cluster)
-	joinAsVoterAndUnseal(t, cluster.Cores[2], cluster)
+	joinAndUnseal(t, cluster.Cores[1], cluster, false, false)
+	joinAndUnseal(t, cluster.Cores[2], cluster, false, false)
 
 	core2shouldBeHealthyAt := time.Now().Add(timeToHealthyCore2)
 
@@ -597,7 +597,7 @@ func joinAndStabilizeAndPromote(t *testing.T, core *vault.TestClusterCore, clien
 
 func joinAndStabilize(t *testing.T, core *vault.TestClusterCore, client *api.Client, cluster *vault.TestCluster, config *api.AutopilotConfig, nodeID string, numServers int) {
 	t.Helper()
-	joinAsVoterAndUnseal(t, core, cluster)
+	joinAndUnseal(t, core, cluster, false, false)
 	time.Sleep(2 * time.Second)
 
 	state, err := client.Sys().RaftAutopilotState()
@@ -625,14 +625,14 @@ func joinAndStabilize(t *testing.T, core *vault.TestClusterCore, client *api.Cli
 }
 
 func joinAsVoterAndUnseal(t *testing.T, core *vault.TestClusterCore, cluster *vault.TestCluster) {
-	joinAndUnseal(t, core, cluster, false)
+	joinAndUnseal(t, core, cluster, false, true)
 }
 
 func joinAsNonVoterAndUnseal(t *testing.T, core *vault.TestClusterCore, cluster *vault.TestCluster) {
-	joinAndUnseal(t, core, cluster, true)
+	joinAndUnseal(t, core, cluster, true, true)
 }
 
-func joinAndUnseal(t *testing.T, core *vault.TestClusterCore, cluster *vault.TestCluster, nonVoter bool) {
+func joinAndUnseal(t *testing.T, core *vault.TestClusterCore, cluster *vault.TestCluster, nonVoter bool, waitForUnseal bool) {
 	leader, leaderAddr := clusterLeader(t, cluster)
 	_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), []*raft.LeaderJoinInfo{
 		{
@@ -645,7 +645,9 @@ func joinAndUnseal(t *testing.T, core *vault.TestClusterCore, cluster *vault.Tes
 
 	time.Sleep(1 * time.Second)
 	cluster.UnsealCore(t, core)
-	waitForCoreUnseal(t, core)
+	if waitForUnseal {
+		waitForCoreUnseal(t, core)
+	}
 }
 
 // clusterLeader gets the leader node and its address from the specified cluster
