@@ -132,7 +132,7 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "alias",
-				OperationSuffix: "create",
+				OperationVerb:   "create",
 			},
 
 			Fields: map[string]*framework.FieldSchema{
