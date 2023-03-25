@@ -4,7 +4,7 @@
 - address helpers and variables
 */
 /* Bulma utilities */
-.button[disabled], .input[disabled], .textarea[disabled], .select select[disabled], .file-cta[disabled],
+.button[disabled], .input[disabled], .textarea[disabled], .file-cta[disabled],
 .file-name[disabled], .pagination-previous[disabled],
 .pagination-next[disabled],
 .pagination-link[disabled],
@@ -20,72 +20,14 @@
 }
 
 /* Bulma form: input, textarea, select */
-.input::-moz-placeholder, .textarea::-moz-placeholder, .select select::-moz-placeholder {
-  color:  rgb(117, 117, 117)
-}
 
-.input::-webkit-input-placeholder, .textarea::-webkit-input-placeholder, .select select::-webkit-input-placeholder {
-  color:  rgb(117, 117, 117);
-}
-
-.input:-moz-placeholder, .textarea:-moz-placeholder, .select select:-moz-placeholder {
-  color:  rgb(117, 117, 117);
-}
-
-.input:-ms-input-placeholder, .textarea:-ms-input-placeholder, .select select:-ms-input-placeholder {
-  color:  rgb(117, 117, 117);
-}
-
-.input:hover, .textarea:hover, .select select:hover, .is-hovered.input, .is-hovered.textarea, .select select.is-hovered {
+.input:hover, .textarea:hover, .is-hovered.input, .is-hovered.textarea {
   border-color: #b5b5b5;
 }
 
-.input:focus, .textarea:focus, .select select:focus, .input:focus-visible, .textarea:focus-visible, .select select:focus-visible, .input:active, .textarea:active, .select select:active, .is-active.input, .is-active.textarea, .select select.is-active {
+.input:focus, .textarea:focus, .input:focus-visible, .textarea:focus-visible, input:active, .textarea:active, .is-active.input, .is-active.textarea {
   border-color: #1563ff !important;
   box-shadow: 0 0 0 0.125em rgba(21, 99, 255, 0.25) !important;
-}
-
-.input[disabled], .textarea[disabled], .select select[disabled],
-fieldset[disabled] .input,
-fieldset[disabled] .textarea,
-fieldset[disabled] .select select,
-.select fieldset[disabled] select {
-  background-color: whitesmoke;
-  border-color: whitesmoke;
-  box-shadow: none;
-  color: #7a7a7a;
-}
-
-.input[disabled]::-moz-placeholder, .textarea[disabled]::-moz-placeholder, .select select[disabled]::-moz-placeholder,
-fieldset[disabled] .input::-moz-placeholder,
-fieldset[disabled] .textarea::-moz-placeholder,
-fieldset[disabled] .select select::-moz-placeholder,
-.select fieldset[disabled] select::-moz-placeholder {
-  color: rgba(122, 122, 122, 0.3);
-}
-
-.input[disabled]::-webkit-input-placeholder, .textarea[disabled]::-webkit-input-placeholder, .select select[disabled]::-webkit-input-placeholder,
-fieldset[disabled] .input::-webkit-input-placeholder,
-fieldset[disabled] .textarea::-webkit-input-placeholder,
-fieldset[disabled] .select select::-webkit-input-placeholder,
-.select fieldset[disabled] select::-webkit-input-placeholder {
-  color: rgba(122, 122, 122, 0.3);
-}
-
-.input[disabled]:-moz-placeholder, .textarea[disabled]:-moz-placeholder, .select select[disabled]:-moz-placeholder,
-fieldset[disabled] .input:-moz-placeholder,
-fieldset[disabled] .textarea:-moz-placeholder,
-fieldset[disabled] .select select:-moz-placeholder,
-.select fieldset[disabled] select:-moz-placeholder {
-  color: rgba(122, 122, 122, 0.3);
-}
-
-.input[disabled]:-ms-input-placeholder, .textarea[disabled]:-ms-input-placeholder, .select select[disabled]:-ms-input-placeholder,
-fieldset[disabled] .input:-ms-input-placeholder,
-fieldset[disabled] .textarea:-ms-input-placeholder,
-fieldset[disabled] .select select:-ms-input-placeholder,
-.select fieldset[disabled] select:-ms-input-placeholder {
-  color: rgba(122, 122, 122, 0.3);
 }
 
 .is-pulled-left {
@@ -556,55 +498,6 @@ fieldset[disabled] .radio,
 }
 .radio + .radio {
   margin-left: 0.5em;
-}
-
-.select {
-  display: inline-block;
-  max-width: 100%;
-  position: relative;
-  vertical-align: top;
-}
-
-.select:not(.is-multiple) {
-  height: 2.5em;
-}
-
-.select select {
-  cursor: pointer;
-  display: block;
-  font-size: 1em;
-  max-width: 100%;
-  outline: none;
-}
-
-.select select::-ms-expand {
-  display: none;
-}
-
-.select select[disabled]:hover,
-fieldset[disabled] .select select:hover {
-  border-color: whitesmoke;
-}
-
-.select select:not([multiple]) {
-  padding-right: 2.5em;
-}
-
-.select select[multiple] {
-  height: auto;
-  padding: 0;
-}
-
-.select select[multiple] option {
-  padding: 0.5em 1em;
-}
-
-.select.is-fullwidth {
-  width: 100%;
-}
-
-.select.is-fullwidth select {
-  width: 100%;
 }
 
 .file {

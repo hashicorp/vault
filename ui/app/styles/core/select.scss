@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 select {
+  width: 100%;
   appearance: none;
 }
 
@@ -12,7 +13,12 @@ select {
   border-color: $grey-light;
   border-radius: 2px;
   color: $grey-dark;
+  cursor: pointer;
+  display: block;
+  font-size: 1em;
   height: 2.5rem;
+  max-width: 100%;
+  outline: none;
   padding-bottom: calc(0.375em - 1px);
   padding-left: $size-8;
   padding-right: $size-8;
@@ -22,8 +28,17 @@ select {
   @include until($desktop) {
     font-size: 16px;
   }
+
   &::placeholder {
     opacity: 0.5;
+  }
+
+  &:active,
+  &:focus,
+  &:focus-visible,
+  &.is-active {
+    border-color: $blue-500;
+    box-shadow: 0 0 0 0.125em rgba(21, 99, 255, 0.25);
   }
 
   .has-background-grey-lighter & {
@@ -31,17 +46,44 @@ select {
   }
 }
 
+// .select select:not([multiple]) {
+//   padding-right: 2.5em;
+// }
+
+// .select select[multiple] {
+//   height: auto;
+//   padding: 0;
+// }
+
+// .select select[multiple] option {
+//   padding: 0.5em 1em;
+// }
+
+// .select.is-fullwidth {
+//   width: 100%;
+// }
+
+// .select.is-fullwidth select {
+//   width: 100%;
+// }
+
 .select select[disabled] {
   border-color: $grey-light;
   background-color: $ui-gray-100;
   color: $ui-gray-500;
+  cursor: not-allowed;
+  user-select: none;
   &:hover {
     border-color: $grey-light;
   }
 }
 
 .select {
+  display: inline-block;
   height: 2.5rem;
+  max-width: 100%;
+  position: relative;
+  vertical-align: top;
 }
 
 .select::after {
