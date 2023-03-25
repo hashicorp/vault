@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-// Input, text-area, select
+// .input, .filename, & .textarea
 // ARG TODO return to file-name, used in two place and lots of css
 .input,
 .file-name,
@@ -110,6 +110,7 @@
     &.is-#{$name} {
       border-color: $color;
       background-color: $color-bg;
+      // ARG TODO return: there is not is-inverted class name used in the app. Clean up when you clean the colors files.
       &.is-inverted {
         border-color: rgba($color-invert, 0.3);
         background-color: $color-bg;
