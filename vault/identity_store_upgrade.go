@@ -14,6 +14,12 @@ func upgradePaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "persona$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "persona",
+				OperationVerb:   "create",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"id": {
 					Type:        framework.TypeString,
@@ -49,6 +55,12 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 		},
 		{
 			Pattern: "persona/id/" + framework.GenericNameRegex("id"),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "persona",
+				OperationSuffix: "by-id",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"id": {
 					Type:        framework.TypeString,
@@ -75,10 +87,26 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 `,
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.handleEntityUpdateCommon(),
-				logical.ReadOperation:   i.pathAliasIDRead(),
-				logical.DeleteOperation: i.pathAliasIDDelete(),
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.handleEntityUpdateCommon(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "update",
+					},
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: i.pathAliasIDRead(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "read",
+					},
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: i.pathAliasIDDelete(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "delete",
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(aliasHelp["alias-id"][0]),
@@ -86,6 +114,12 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 		},
 		{
 			Pattern: "persona/id/?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "persona",
+				OperationSuffix: "by-id",
+			},
+
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: i.pathAliasIDList(),
 			},
@@ -127,6 +161,12 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 
 		{
 			Pattern: "alias/id/" + framework.GenericNameRegex("id"),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "alias",
+				OperationSuffix: "by-id",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"id": {
 					Type:        framework.TypeString,
@@ -149,10 +189,26 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 					Description: "Name of the alias",
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.handleAliasCreateUpdate(),
-				logical.ReadOperation:   i.pathAliasIDRead(),
-				logical.DeleteOperation: i.pathAliasIDDelete(),
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.handleAliasCreateUpdate(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "update",
+					},
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: i.pathAliasIDRead(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "read",
+					},
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: i.pathAliasIDDelete(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "delete",
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(aliasHelp["alias-id"][0]),
@@ -160,6 +216,12 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 		},
 		{
 			Pattern: "alias/id/?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "alias",
+				OperationSuffix: "by-id",
+			},
+
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: i.pathAliasIDList(),
 			},
