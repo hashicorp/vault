@@ -55,6 +55,9 @@ type KMS struct {
 
 	Disabled bool
 	Config   map[string]string
+
+	Priority int
+	Name     string
 }
 
 func (k *KMS) GoString() string {
@@ -102,6 +105,24 @@ func parseKMS(result *[]*KMS, list *ast.ObjectList, blockName string, maxKMS int
 			delete(m, "disabled")
 		}
 
+		var priority int
+		if v, ok := m["priority"]; ok {
+			priority, err = parseutil.SafeParseInt(v)
+			if err != nil {
+				return multierror.Prefix(fmt.Errorf("unable to parse 'priority' in kms type %q: %w", key, err), fmt.Sprintf("%s.%s", blockName, key))
+			}
+			delete(m, "priority")
+		}
+
+		name := strings.ToLower(key)
+		if v, ok := m["name"]; ok {
+			name, ok = v.(string)
+			if !ok {
+				return multierror.Prefix(fmt.Errorf("unable to parse 'name' in kms type %q: unexpected type %T", key, v), fmt.Sprintf("%s.%s", blockName, key))
+			}
+			delete(m, "name")
+		}
+
 		strMap := make(map[string]string, len(m))
 		for k, v := range m {
 			s, err := parseutil.ParseString(v)
@@ -115,6 +136,8 @@ func parseKMS(result *[]*KMS, list *ast.ObjectList, blockName string, maxKMS int
 			Type:     strings.ToLower(key),
 			Purpose:  purpose,
 			Disabled: disabled,
+			Priority: priority,
+			Name:     name,
 		}
 		if len(strMap) > 0 {
 			seal.Config = strMap
