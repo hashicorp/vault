@@ -20,8 +20,7 @@
 }
 
 .input,
-.textarea,
-.select select {
+.textarea {
   border-color: $grey-light;
   border-radius: 2px;
   color: $grey-dark;
@@ -36,7 +35,6 @@
 }
 
 .input,
-.select select,
 .control.has-icons-left .icon,
 .control.has-icons-right .icon {
   height: 2.5rem;
@@ -46,7 +44,6 @@
   font-family: $family-monospace;
 }
 
-.select select[disabled],
 .input[disabled],
 .textarea[disabled] {
   border-color: $grey-light;
@@ -139,48 +136,6 @@
   &.is-active {
     background-color: $input-focus-background-color;
   }
-}
-
-.select select {
-  background-color: $ui-gray-050;
-  box-shadow: 0 3px 1px rgba($black, 0.12);
-
-  .has-background-grey-lighter & {
-    background-color: $white;
-  }
-}
-// ARG TODO check all these required or not
-.select:not(.is-multiple):not(.is-loading)::after {
-  border-radius: 2px;
-  border-right: 0;
-  border-top: 0;
-  border: 3px solid transparent;
-  content: ' ';
-  display: block;
-  height: 0.625em;
-  margin-top: -0.4375em;
-  pointer-events: none;
-  position: absolute;
-  top: 50%;
-  transform-origin: center;
-  transform: rotate(-45deg);
-  width: 0.625em;
-}
-
-.select:not(.is-multiple) {
-  height: 2.5rem;
-}
-
-.select:not(.is-multiple)::after {
-  content: svg-uri(
-    '<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><path d="M12 5.83L15.17 9l1.41-1.41L12 3 7.41 7.59 8.83 9 12 5.83zm0 12.34L8.83 15l-1.41 1.41L12 21l4.59-4.59L15.17 15 12 18.17z" fill="currentColor"/></svg>'
-  );
-  border: 0;
-  height: 24px;
-  margin: 0;
-  right: $spacing-xs;
-  transform: translateY(-50%);
-  width: 24px;
 }
 
 .masked-font {

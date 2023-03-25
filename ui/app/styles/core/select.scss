@@ -2,7 +2,61 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: MPL-2.0
  */
+select {
+  appearance: none;
+}
 
 .select select {
+  background-color: $ui-gray-050;
+  box-shadow: 0 3px 1px rgba($black, 0.12);
+  border-color: $grey-light;
+  border-radius: 2px;
+  color: $grey-dark;
+  height: 2.5rem;
+  padding-bottom: calc(0.375em - 1px);
+  padding-left: $size-8;
+  padding-right: $size-8;
+  padding-top: calc(0.375em - 1px);
   text-rendering: auto !important;
+
+  @include until($desktop) {
+    font-size: 16px;
+  }
+  &::placeholder {
+    opacity: 0.5;
+  }
+
+  .has-background-grey-lighter & {
+    background-color: $white;
+  }
+}
+
+.select select[disabled] {
+  border-color: $grey-light;
+  background-color: $ui-gray-100;
+  color: $ui-gray-500;
+  &:hover {
+    border-color: $grey-light;
+  }
+}
+
+.select {
+  height: 2.5rem;
+}
+
+.select::after {
+  content: svg-uri(
+    '<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><path d="M12 5.83L15.17 9l1.41-1.41L12 3 7.41 7.59 8.83 9 12 5.83zm0 12.34L8.83 15l-1.41 1.41L12 21l4.59-4.59L15.17 15 12 18.17z" fill="currentColor"/></svg>'
+  );
+  border: 0;
+  display: block;
+  height: 24px;
+  margin: 0;
+  pointer-events: none;
+  position: absolute;
+  right: $spacing-xs;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  z-index: 4;
 }
