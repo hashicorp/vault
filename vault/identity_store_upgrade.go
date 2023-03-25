@@ -129,6 +129,12 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 		},
 		{
 			Pattern: "alias$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "alias",
+				OperationSuffix: "create",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"id": {
 					Type:        framework.TypeString,
