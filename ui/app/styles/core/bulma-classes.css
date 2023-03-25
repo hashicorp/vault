@@ -663,19 +663,6 @@ fieldset[disabled] .select select:hover {
   }
 }
 
-.button.is-loading::after, .loader, .select.is-loading::after, .control.is-loading::after {
-  animation: spinAround 500ms infinite linear;
-  border-radius: 9999px;
-  border-right-color: transparent;
-  border-top-color: transparent;
-  border: 2px solid #dbdbdb;
-  content: "";
-  display: block;
-  height: 1em;
-  position: relative;
-  width: 1em;
-}
-
 /* CSS that's also defined elsewhere */
 /* extended */
 .is-marginless {

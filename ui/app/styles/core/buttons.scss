@@ -22,6 +22,7 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
   line-height: 1.6;
   min-width: 6rem;
   padding: $size-10 $size-8;
+  position: relative;
   text-align: center;
   text-decoration: none;
   transition: background-color $speed, border-color $speed, box-shadow $speed, color $speed;
@@ -58,15 +59,30 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
     pointer-events: none;
   }
 
-  &.is-loading::after {
-    left: calc(50% - (1em * 0.5));
-    position: absolute !important;
-    position: absolute;
-    top: calc(50% - (1em * 0.5));
+  @keyframes spinAround {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(359deg);
+    }
   }
 
-  &.is-inverted.is-outlined {
-    box-shadow: none;
+  &.is-loading {
+    &::after {
+      animation: spinAround 500ms infinite linear;
+      border: 2px solid #bac1cc;
+      border-radius: 290486px;
+      border-right-color: transparent;
+      border-top-color: transparent;
+      content: '';
+      display: block;
+      height: 1em;
+      width: 1em;
+      left: calc(50% - (1em / 2));
+      top: calc(50% - (1em / 2));
+      position: absolute !important;
+    }
   }
 
   &.is-transparent {
@@ -116,10 +132,6 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
         border-color: $color;
         color: $color;
 
-        &.is-important {
-          border-color: $color;
-        }
-
         &:hover,
         &.is-hovered,
         &:focus,
@@ -146,28 +158,6 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
           color: darken($color, 10%);
         }
       }
-
-      &.is-inverted.is-outlined {
-        border-color: rgba($color-invert, 0.5);
-        color: rgba($color-invert, 0.9);
-
-        &:hover,
-        &.is-hovered,
-        &:focus,
-        &.is-focused {
-          background-color: transparent;
-          border-color: $color-invert;
-          color: $color-invert;
-        }
-
-        &:active,
-        &.is-active {
-          background-color: rgba($color-invert, 0.2);
-          border-color: $color-invert;
-          color: $color-invert;
-          box-shadow: none;
-        }
-      }
     }
   }
 
@@ -178,12 +168,16 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
     &.is-loading::after {
       border-color: transparent transparent #fff #fff !important;
     }
-    // ARG TODO check this specific situation
+
+    &.is-outlined {
+      border-color: $blue-500;
+    }
+
     &.is-outlined[disabled] {
       background-color: transparent;
-      border-color: $blue-500;
+      border-color: $ui-gray-700;
       box-shadow: none;
-      color: $blue-500;
+      color: $ui-gray-700;
     }
   }
 
@@ -213,11 +207,7 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
     height: 2rem;
     padding: $size-11 $size-8;
   }
-  // ARG TODO fix and add to helper, you can see this in the database icon color modal.
-  .has-text-info & {
-    font-weight: $font-weight-semibold;
-  }
-
+  // ARG TODO fix and add to helper, you can see this in the database icon color modal. These should be called "button-has-text-danger"
   &.has-text-danger {
     border: 1px solid $red-500;
   }
