@@ -46,27 +46,6 @@ select {
   }
 }
 
-// .select select:not([multiple]) {
-//   padding-right: 2.5em;
-// }
-
-// .select select[multiple] {
-//   height: auto;
-//   padding: 0;
-// }
-
-// .select select[multiple] option {
-//   padding: 0.5em 1em;
-// }
-
-// .select.is-fullwidth {
-//   width: 100%;
-// }
-
-// .select.is-fullwidth select {
-//   width: 100%;
-// }
-
 .select select[disabled] {
   border-color: $grey-light;
   background-color: $ui-gray-100;
