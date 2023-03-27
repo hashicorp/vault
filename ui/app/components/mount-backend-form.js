@@ -56,6 +56,18 @@ export default class MountBackendForm extends Component {
     }
   }
 
+  typeChangeSideEffect(type) {
+    if (!this.args.mountType === 'secret') return;
+
+    if (type === 'pki') {
+      // If type PKI, set max lease to ~10years
+      this.args.mountModel.config.maxLeaseTtl = '3650d';
+    } else {
+      // otherwise reset
+      this.args.mountModel.config.maxLeaseTtl = 0;
+    }
+  }
+
   checkModelValidity(model) {
     const { isValid, state, invalidFormMessage } = model.validate();
     this.modelValidations = state;
@@ -146,6 +158,7 @@ export default class MountBackendForm extends Component {
   @action
   setMountType(value) {
     this.args.mountModel.type = value;
+    this.typeChangeSideEffect(value);
     this.checkPathChange(value);
   }
 }
