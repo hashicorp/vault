@@ -1,8 +1,16 @@
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink {{on "click" (fn (mut this.showDeleteAllIssuers) true)}} data-test-delete-all-issuers-link>
+    <button
+      type="button"
+      class="toolbar-link"
+      {{on "click" (fn (mut this.showDeleteAllIssuers) true)}}
+      data-test-delete-all-issuers-link
+    >
       Delete all issuers
-    </ToolbarLink>
+      <Icon @name="chevron-right" />
+
+    </button>
+    <div class="toolbar-separator"></div>
     <ToolbarLink @route="configuration.tidy">
       Tidy
     </ToolbarLink>
