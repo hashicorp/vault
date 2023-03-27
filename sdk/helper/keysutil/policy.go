@@ -2209,6 +2209,7 @@ func (ke *KeyEntry) parseFromKey(PolKeyType KeyType, parsedKey any) error {
 				return fmt.Errorf("invalid key size: expected %d bytes, got %d bytes", keyBytes, rsaKey.Size())
 			}
 			ke.RSAKey = rsaKey
+			ke.RSAPublicKey = nil
 		} else {
 			rsaKey := parsedKey.(*rsa.PublicKey)
 			if rsaKey.Size() != keyBytes {
