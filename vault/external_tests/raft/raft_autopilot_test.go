@@ -494,20 +494,9 @@ func TestRaft_Autopilot_DeadServerCleanup(t *testing.T) {
 	core3, cluster.Cores = cluster.Cores[len(cluster.Cores)-1], cluster.Cores[:len(cluster.Cores)-1]
 	testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
 
-	// Wait for servers to sort themselves out...
-	timeoutGrace := 2 * time.Second
 	config, err := leader.Client.Sys().RaftAutopilotConfiguration()
-	deadline := time.Now().Add(config.ServerStabilizationTime).Add(timeoutGrace)
-	healthy := false
-	for time.Now().Before(deadline) {
-		state, err := leader.Client.Sys().RaftAutopilotState()
-		require.NoError(t, err)
-		if state.Healthy {
-			healthy = true
-		}
-		time.Sleep(1 * time.Second)
-	}
-	require.True(t, healthy)
+	require.NoError(t, err)
+	require.True(t, isStableByDeadline(t, leader, config.ServerStabilizationTime))
 
 	// Ensure Autopilot has the aggressive settings
 	config.CleanupDeadServers = true
@@ -526,7 +515,8 @@ func TestRaft_Autopilot_DeadServerCleanup(t *testing.T) {
 
 	// Kill a node (core-2)
 	cluster.StopCore(t, 2)
-	time.Sleep(config.DeadServerLastContactThreshold + timeoutGrace)
+	// Wait for just over the dead server threshold to ensure the core is classed as 'dead'
+	time.Sleep(config.DeadServerLastContactThreshold + 2*time.Second)
 
 	// Observe for an unhealthy state (but we still have 3 voters according to Raft)
 	state, err = leader.Client.Sys().RaftAutopilotState()
@@ -539,22 +529,7 @@ func TestRaft_Autopilot_DeadServerCleanup(t *testing.T) {
 	joinAsVoterAndUnseal(t, core3, cluster)
 
 	// Stabilization time
-	deadline = time.Now().Add(config.ServerStabilizationTime).Add(timeoutGrace)
-	healthy = false
-	var tempState *api.AutopilotState
-	for time.Now().Before(deadline) {
-		state, err := leader.Client.Sys().RaftAutopilotState()
-		tempState = state
-		require.NoError(t, err)
-		if state.Healthy {
-			healthy = true
-		}
-		time.Sleep(1 * time.Second)
-	}
-	require.NotNil(t, tempState)
-	fmt.Printf("core2: %#v\n", tempState.Servers["core-2"])
-	fmt.Printf("core3: %#v\n", tempState.Servers["core-3"])
-	require.True(t, healthy)
+	require.True(t, isStableByDeadline(t, leader, config.ServerStabilizationTime))
 
 	// Observe for healthy and contains 3 correct voters
 	state, err = leader.Client.Sys().RaftAutopilotState()
@@ -698,4 +673,21 @@ func waitForCoreUnseal(t *testing.T, core *vault.TestClusterCore) {
 		time.Sleep(time.Second)
 	}
 	t.Fatalf("expected core %v to unseal before deadline but it has not", core.NodeID)
+}
+
+// isStableByDeadline will use the supplied leader core to query the health of Raft Autopilot up until just after the supplied deadline.
+// It will return when the Raft Autopilot state is reported as healthy, or just after the specified stabilization time.
+func isStableByDeadline(t *testing.T, leaderCore *vault.TestClusterCore, stabilizationTime time.Duration) bool {
+	timeoutGrace := 2 * time.Second
+	deadline := time.Now().Add(stabilizationTime).Add(timeoutGrace)
+	for time.Now().Before(deadline) {
+		state, err := leaderCore.Client.Sys().RaftAutopilotState()
+		require.NoError(t, err)
+		if state.Healthy {
+			return true
+		}
+		time.Sleep(1 * time.Second)
+	}
+
+	return false
 }
