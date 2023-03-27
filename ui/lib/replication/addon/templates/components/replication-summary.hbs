@@ -315,7 +315,7 @@
         {{#if this.submit.isRunning}}
           <LayoutLoading />
         {{else}}
-          <LinkTo @route="mode.index" @model="dr" class="link-plain">
+          <LinkTo @route="mode.index" @model="dr" class="text-decoration-none">
             <ReplicationModeSummary @mode="dr" @cluster={{this.cluster}} @tagName="span" />
           </LinkTo>
         {{/if}}
@@ -329,7 +329,7 @@
           <Icon @size="24" @name="replication-perf" />
           Performance
         </h3>
-        <LinkTo @route="mode.index" @model="performance" class="link-plain">
+        <LinkTo @route="mode.index" @model="performance" class="text-decoration-none">
           <ReplicationModeSummary @mode="performance" @cluster={{this.cluster}} @tagName="span" />
         </LinkTo>
       </div>

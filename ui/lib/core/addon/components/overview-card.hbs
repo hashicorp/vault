@@ -3,7 +3,7 @@
     <h3 class="title is-5">{{@cardTitle}}</h3>
     {{#if @actionText}}
       <LinkTo
-        class="has-icon-right is-ghost is-no-underline has-text-semibold"
+        class="has-icon-right is-ghost text-decoration-none has-text-semibold"
         @route={{@actionTo}}
         @query={{hash @actionQuery}}
         data-test-action-text={{@actionText}}

@@ -18,7 +18,7 @@
         <li class="action">
           <button
             data-test-current-month
-            class="link link-plain has-text-weight-semibold is-ghost"
+            class="link text-decoration-none has-text-weight-semibold is-ghost"
             type="button"
             name="currentMonth"
             {{on "click" (fn this.handleDateShortcut D.actions)}}
@@ -29,7 +29,7 @@
         <li class="action">
           <button
             data-test-current-billing-period
-            class="link link-plain has-text-weight-semibold is-ghost"
+            class="link text-decoration-none has-text-weight-semibold is-ghost"
             type="button"
             name="reset"
             {{on "click" (fn this.handleDateShortcut D.actions)}}
@@ -40,7 +40,10 @@
         <li class="action">
           <button
             data-test-show-calendar
-            class={{concat "link link-plain has-text-weight-semibold is-ghost" (if this.showCalendar " is-active")}}
+            class={{concat
+              "link text-decoration-none has-text-weight-semibold is-ghost"
+              (if this.showCalendar " is-active")
+            }}
             type="button"
             {{on "click" this.toggleShowCalendar}}
           >
