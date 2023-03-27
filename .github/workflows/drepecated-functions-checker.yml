@@ -22,7 +22,7 @@ jobs:
           cache: true
       - name: Install required tools
         run: |
-          go generate -tags tools tools/tools.go 
+          make bootstrap
       - name: Check deprecations for files in diff
         run: |
           # Need to run this from repository root and not from scripts/ as staticcheck works 
