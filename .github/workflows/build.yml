@@ -82,7 +82,7 @@ jobs:
     strategy:
       matrix:
         goos: [linux]
-        goarch: [arm, arm64, 386, amd64]
+        goarch: [arm, arm64, 386, amd64, s390x]
       fail-fast: true
     uses: ./.github/workflows/build-vault-oss.yml
     with:
