@@ -87,7 +87,7 @@ const MOUNTABLE_SECRET_ENGINES = [
   {
     displayName: 'PKI Certificates',
     type: 'pki',
-    engineRoute: 'pki.overview',
+    // engineRoute: 'pki.overview', // TODO VAULT-13822
     category: 'generic',
   },
   {
