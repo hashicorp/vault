@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"hash"
+	"math/rand"
 	"net/http"
 	"path"
 	"path/filepath"
@@ -3021,24 +3022,37 @@ func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logica
 
 	// Attempt to construct a test password from the rules to ensure that the policy isn't impossible
 	var testPassword []rune
-	for i, rule := range policy.Rules {
+
+	for _, rule := range policy.Rules {
 		charsetRule, ok := rule.(random.CharsetRule)
 		if !ok {
 			return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("unexpected rule type %T", charsetRule))
 		}
 
-		char := charsetRule.Chars()[0]
 		for j := 0; j < charsetRule.MinLength(); j++ {
-			testPassword = append(testPassword, char)
-		}
-
-		// fill in any remaining characters with the last rule
-		if i == len(policy.Rules)-1 && len(testPassword) < policy.Length {
-			for j := len(testPassword); j < policy.Length; j++ {
-				testPassword = append(testPassword, char)
-			}
+			charIndex := rand.Intn(len(charsetRule.Chars()))
+			testPassword = append(testPassword, charsetRule.Chars()[charIndex])
 		}
 	}
+
+	for i := len(testPassword); i < policy.Length; i++ {
+		for _, rule := range policy.Rules {
+			if i >= policy.Length {
+				break
+			}
+			charsetRule, ok := rule.(random.CharsetRule)
+			if !ok {
+				return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("unexpected rule type %T", charsetRule))
+			}
+
+			charIndex := rand.Intn(len(charsetRule.Chars()))
+			testPassword = append(testPassword, charsetRule.Chars()[charIndex])
+		}
+	}
+
+	rand.Shuffle(policy.Length, func(i, j int) {
+		testPassword[i], testPassword[j] = testPassword[j], testPassword[i]
+	})
 
 	for _, rule := range policy.Rules {
 		if !rule.Pass(testPassword) {
