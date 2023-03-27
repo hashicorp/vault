@@ -10,5 +10,6 @@ import ModelRegistry from 'ember-data/types/registries/model';
  * Catch-all for ember-data.
  */
 export default interface AdapterRegistry {
+  'pki/issuer': PkiIssuerAdapter;
   [key: keyof ModelRegistry]: Adapter;
 }

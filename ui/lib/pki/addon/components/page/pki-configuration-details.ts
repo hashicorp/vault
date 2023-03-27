@@ -29,7 +29,7 @@ export default class PkiConfigurationDetails extends Component<Args> {
   @action
   async deleteAllIssuers() {
     try {
-      const issuerAdapter: PkiIssuerAdapter | any = this.store.adapterFor('pki/issuer');
+      const issuerAdapter: PkiIssuerAdapter = this.store.adapterFor('pki/issuer');
       issuerAdapter.deleteAllIssuers(this.args.currentPath);
       this.flashMessages.success('Issuers and keys deleted successfully.');
       this.showDeleteAllIssuers = false;
