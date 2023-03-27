@@ -3,16 +3,139 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-form {
-  margin: 0;
+// .input, .file-name, & .textarea
+// ARG TODO return to file-name, used in two place and lots of css
+.input,
+.file-name,
+.textarea {
+  box-shadow: 0 4px 1px rgba(10, 10, 10, 0.06) inset;
+  border: 1px solid #6f7682;
 }
-label {
-  cursor: pointer;
-  &.is-select-list {
-    padding: 10px 0px;
-    &:hover {
-      color: $blue;
+
+.input,
+.textarea {
+  box-shadow: inset 0 0.0625em 0.125em rgba(10, 10, 10, 0.05);
+  max-width: 100%;
+  width: 100%;
+}
+
+.input,
+.textarea {
+  border-color: $grey-light;
+  border-radius: 2px;
+  color: $grey-dark;
+  padding-left: $size-8;
+  padding-right: $size-8;
+  @include until($desktop) {
+    font-size: 16px;
+  }
+  &::placeholder {
+    opacity: 0.5;
+  }
+}
+
+.input,
+.control.has-icons-left .icon,
+.control.has-icons-right .icon {
+  height: 2.5rem;
+}
+
+.input.variable {
+  font-family: $family-monospace;
+}
+
+.input[disabled],
+.textarea[disabled] {
+  border-color: $grey-light;
+  background-color: $ui-gray-100;
+  color: $ui-gray-500;
+  &:hover {
+    border-color: $grey-light;
+  }
+}
+
+.control {
+  font-size: 1rem;
+  max-width: 100%;
+  position: relative;
+  text-align: left;
+
+  // Modifiers
+  &.has-icons-left,
+  &.has-icons-right {
+    .input,
+    .select select {
+      padding-left: 2rem;
+
+      &:focus,
+      &.is-focused,
+      &:active,
+      &.is-active {
+        & ~ .icon {
+          color: currentColor;
+        }
+      }
     }
+  }
+  &.has-checkbox-right {
+    label.checkbox {
+      display: inline-flex;
+      height: 2.5em;
+      position: absolute;
+      top: 0;
+      right: 0;
+      justify-content: flex-end;
+      margin-left: auto;
+    }
+    .input,
+    .select select {
+      padding-right: 10em;
+    }
+  }
+
+  &.is-align-end {
+    display: flex;
+    align-self: end;
+  }
+}
+
+.input,
+.textarea {
+  box-shadow: 0 4px 1px rgba($black, 0.06) inset;
+
+  @each $name, $pair in $colors {
+    $color: nth($pair, 1);
+    $color-invert: findColorInvert($color);
+    $color-bg: nth($pair, 2);
+    &.is-#{$name} {
+      border-color: $color;
+      background-color: $color-bg;
+      // ARG TODO return: there is not is-inverted class name used in the app. Clean up when you clean the colors files.
+      &.is-inverted {
+        border-color: rgba($color-invert, 0.3);
+        background-color: $color-bg;
+        &::placeholder {
+          color: rgba($color-invert, 0.3);
+        }
+        &:focus,
+        &.is-focused,
+        &:active,
+        &.is-active {
+          border-color: rgba($color-invert, 1);
+          background-color: $color-bg;
+          color: $color-invert;
+          &::placeholder {
+            color: rgba($color-invert, 0.7);
+          }
+        }
+      }
+    }
+  }
+  &:focus,
+  &.is-focused,
+  &:active,
+  &.is-active {
+    background-color: $input-focus-background-color;
   }
 }
 
@@ -67,12 +190,6 @@ label {
   padding-left: 2rem;
 }
 
-.help {
-  &.is-danger {
-    font-weight: $weight-bold;
-  }
-}
-
 .is-help {
   font-size: $size-small;
   margin-top: 0.25rem;
@@ -89,149 +206,6 @@ label {
   margin-bottom: 0.25rem;
   font-size: $size-8;
 }
-.input,
-.textarea,
-.select select {
-  border-color: $grey-light;
-  color: $grey-dark;
-  padding-left: $size-8;
-  padding-right: $size-8;
-  @include until($desktop) {
-    font-size: 16px;
-  }
-  &::placeholder {
-    opacity: 0.5;
-  }
-}
-
-.input,
-.select select,
-.control.has-icons-left .icon,
-.control.has-icons-right .icon {
-  height: 2.5rem;
-}
-
-.input.variable {
-  font-family: $family-monospace;
-}
-
-.select select[disabled],
-.input[disabled],
-.textarea[disabled] {
-  border-color: $grey-light;
-  background-color: $ui-gray-100;
-  color: $ui-gray-500;
-  &:hover {
-    border-color: $grey-light;
-  }
-}
-
-.control {
-  max-width: 100%;
-
-  // Modifiers
-  &.has-icons-left,
-  &.has-icons-right {
-    .input,
-    .select select {
-      padding-left: 2rem;
-
-      &:focus,
-      &.is-focused,
-      &:active,
-      &.is-active {
-        & ~ .icon {
-          color: currentColor;
-        }
-      }
-    }
-  }
-  &.has-checkbox-right {
-    label.checkbox {
-      display: inline-flex;
-      height: 2.5em;
-      position: absolute;
-      top: 0;
-      right: 0;
-      justify-content: flex-end;
-      margin-left: auto;
-    }
-    .input,
-    .select select {
-      padding-right: 10em;
-    }
-  }
-
-  &.is-align-end {
-    display: flex;
-    align-self: end;
-  }
-}
-
-.input,
-.textarea {
-  box-shadow: 0 4px 1px rgba($black, 0.06) inset;
-
-  @each $name, $pair in $colors {
-    $color: nth($pair, 1);
-    $color-invert: findColorInvert($color);
-    $color-bg: nth($pair, 2);
-    &.is-#{$name} {
-      border-color: $color;
-      background-color: $color-bg;
-      &.is-inverted {
-        border-color: rgba($color-invert, 0.3);
-        background-color: $color-bg;
-        &::placeholder {
-          color: rgba($color-invert, 0.3);
-        }
-        &:focus,
-        &.is-focused,
-        &:active,
-        &.is-active {
-          border-color: rgba($color-invert, 1);
-          background-color: $color-bg;
-          color: $color-invert;
-          &::placeholder {
-            color: rgba($color-invert, 0.7);
-          }
-        }
-      }
-    }
-  }
-  &:focus,
-  &.is-focused,
-  &:active,
-  &.is-active {
-    background-color: $input-focus-background-color;
-  }
-}
-
-.select select {
-  background-color: $ui-gray-050;
-  box-shadow: 0 3px 1px rgba($black, 0.12);
-
-  .has-background-grey-lighter & {
-    background-color: $white;
-  }
-}
-
-.select:not(.is-multiple) {
-  height: 2.5rem;
-}
-
-.select:not(.is-multiple)::after {
-  content: svg-uri(
-    '<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><path d="M12 5.83L15.17 9l1.41-1.41L12 3 7.41 7.59 8.83 9 12 5.83zm0 12.34L8.83 15l-1.41 1.41L12 21l4.59-4.59L15.17 15 12 18.17z" fill="currentColor"/></svg>'
-  );
-  border: 0;
-  height: 24px;
-  margin: 0;
-  right: $spacing-xs;
-  transform: translateY(-50%);
-  width: 24px;
-}
-
 .field:not(:last-child) {
   margin-bottom: 1.5rem;
 }
@@ -317,6 +291,7 @@ label {
 }
 
 .file-cta {
+  border-radius: 2px;
   min-width: auto;
 
   .icon:first-child:last-child {
@@ -328,6 +303,7 @@ label {
 
 .file-name {
   @extend .input;
+  border-radius: 2px;
 }
 
 .file-delete-button {

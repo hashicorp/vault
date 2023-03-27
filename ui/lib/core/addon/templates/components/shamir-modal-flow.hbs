@@ -81,14 +81,14 @@
           <div class="has-bottom-margin-m" data-test-shamir-modal-body>
             {{yield}}
           </div>
-          <div class="field is-grouped">
+          <div class="field is-grouped is-flex-center">
             <div class="control is-flex-row">
               <button type="button" class="link" {{action (mut this.generateWithPGP) true}}>
                 Provide PGP Key
               </button>
             </div>
             <div class="control">
-              <span class="button auto-width is-white is-static">
+              <span class="has-side-padding-s">
                 or
               </span>
             </div>

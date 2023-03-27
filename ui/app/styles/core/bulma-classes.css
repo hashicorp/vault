@@ -4,17 +4,7 @@
 - address helpers and variables
 */
 /* Bulma utilities */
-.button, .input, .textarea, .select select, .file-cta,
-.file-name, .pagination-previous,
-.pagination-next,
-.pagination-link,
-.pagination-ellipsis {
-  border-radius: 2px;
-  border: 1px solid transparent;
-  box-shadow: none;
-}
-
-.button[disabled], .input[disabled], .textarea[disabled], .select select[disabled], .file-cta[disabled],
+.button[disabled], .input[disabled], .textarea[disabled], .file-cta[disabled],
 .file-name[disabled], .pagination-previous[disabled],
 .pagination-next[disabled],
 .pagination-link[disabled],
@@ -26,102 +16,18 @@
 .pagination-next,
 .pagination-link,
 .pagination-ellipsis, .tabs {
-  -moz-user-select: none;
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
   user-select: none;
 }
 
-.select:not(.is-multiple):not(.is-loading)::after {
-  border-radius: 2px;
-  border-right: 0;
-  border-top: 0;
-  border: 3px solid transparent;
-  content: " ";
-  display: block;
-  height: 0.625em;
-  margin-top: -0.4375em;
-  pointer-events: none;
-  position: absolute;
-  top: 50%;
-  transform-origin: center;
-  transform: rotate(-45deg);
-  width: 0.625em;
-}
-
 /* Bulma form: input, textarea, select */
-.input::-moz-placeholder, .textarea::-moz-placeholder, .select select::-moz-placeholder {
-  color:  rgb(117, 117, 117)
-}
 
-.input::-webkit-input-placeholder, .textarea::-webkit-input-placeholder, .select select::-webkit-input-placeholder {
-  color:  rgb(117, 117, 117);
-}
-
-.input:-moz-placeholder, .textarea:-moz-placeholder, .select select:-moz-placeholder {
-  color:  rgb(117, 117, 117);
-}
-
-.input:-ms-input-placeholder, .textarea:-ms-input-placeholder, .select select:-ms-input-placeholder {
-  color:  rgb(117, 117, 117);
-}
-
-.input:hover, .textarea:hover, .select select:hover, .is-hovered.input, .is-hovered.textarea, .select select.is-hovered {
+.input:hover, .textarea:hover, .is-hovered.input, .is-hovered.textarea {
   border-color: #b5b5b5;
 }
 
-.input:focus, .textarea:focus, .select select:focus, .input:focus-visible, .textarea:focus-visible, .select select:focus-visible, .input:active, .textarea:active, .select select:active, .is-active.input, .is-active.textarea, .select select.is-active {
+.input:focus, .textarea:focus, .input:focus-visible, .textarea:focus-visible, input:active, .textarea:active, .is-active.input, .is-active.textarea {
   border-color: #1563ff !important;
   box-shadow: 0 0 0 0.125em rgba(21, 99, 255, 0.25) !important;
-}
-
-.input[disabled], .textarea[disabled], .select select[disabled],
-fieldset[disabled] .input,
-fieldset[disabled] .textarea,
-fieldset[disabled] .select select,
-.select fieldset[disabled] select {
-  background-color: whitesmoke;
-  border-color: whitesmoke;
-  box-shadow: none;
-  color: #7a7a7a;
-}
-
-.input[disabled]::-moz-placeholder, .textarea[disabled]::-moz-placeholder, .select select[disabled]::-moz-placeholder,
-fieldset[disabled] .input::-moz-placeholder,
-fieldset[disabled] .textarea::-moz-placeholder,
-fieldset[disabled] .select select::-moz-placeholder,
-.select fieldset[disabled] select::-moz-placeholder {
-  color: rgba(122, 122, 122, 0.3);
-}
-
-.input[disabled]::-webkit-input-placeholder, .textarea[disabled]::-webkit-input-placeholder, .select select[disabled]::-webkit-input-placeholder,
-fieldset[disabled] .input::-webkit-input-placeholder,
-fieldset[disabled] .textarea::-webkit-input-placeholder,
-fieldset[disabled] .select select::-webkit-input-placeholder,
-.select fieldset[disabled] select::-webkit-input-placeholder {
-  color: rgba(122, 122, 122, 0.3);
-}
-
-.input[disabled]:-moz-placeholder, .textarea[disabled]:-moz-placeholder, .select select[disabled]:-moz-placeholder,
-fieldset[disabled] .input:-moz-placeholder,
-fieldset[disabled] .textarea:-moz-placeholder,
-fieldset[disabled] .select select:-moz-placeholder,
-.select fieldset[disabled] select:-moz-placeholder {
-  color: rgba(122, 122, 122, 0.3);
-}
-
-.input[disabled]:-ms-input-placeholder, .textarea[disabled]:-ms-input-placeholder, .select select[disabled]:-ms-input-placeholder,
-fieldset[disabled] .input:-ms-input-placeholder,
-fieldset[disabled] .textarea:-ms-input-placeholder,
-fieldset[disabled] .select select:-ms-input-placeholder,
-.select fieldset[disabled] select:-ms-input-placeholder {
-  color: rgba(122, 122, 122, 0.3);
-}
-
-.input, .textarea {
-  box-shadow: inset 0 0.0625em 0.125em rgba(10, 10, 10, 0.05);
-  max-width: 100%;
-  width: 100%;
 }
 
 .is-pulled-left {
@@ -512,45 +418,6 @@ fieldset[disabled] .select select:-ms-input-placeholder,
 }
 
 /* ARG TODO: I detected that some of these are overriden. Keeping separate so I can address later */
-.button.is-white {
-  background-color: white;
-  border-color: transparent;
-  color: #0a0a0a;
-}
-
-.button.is-white:hover, .button.is-white.is-hovered {
-  background-color: #f9f9f9;
-  border-color: transparent;
-  color: #0a0a0a;
-}
-
-.button.is-white:focus, .button.is-white.is-focused {
-  border-color: transparent;
-  color: #0a0a0a;
-}
-
-.button.is-white:focus:not(:active), .button.is-white.is-focused:not(:active) {
-  box-shadow: 0 0 0 0.125em rgba(255, 255, 255, 0.25);
-}
-
-.button.is-white:active, .button.is-white.is-active {
-  background-color: #f2f2f2;
-  border-color: transparent;
-  color: #0a0a0a;
-}
-
-.button.is-white[disabled],
-fieldset[disabled] .button.is-white {
-  background-color: white;
-  border-color: white;
-  box-shadow: none;
-}
-
-.buttons.has-addons .button.is-expanded {
-  flex-grow: 1;
-  flex-shrink: 1;
-}
-
 .control.is-expanded {
   flex-grow: 1;
   flex-shrink: 1;
@@ -606,14 +473,6 @@ fieldset[disabled] .button.is-white {
   height: 1.25rem;
 }
 
-.button.is-static {
-  background-color: whitesmoke;
-  border-color: #dbdbdb;
-  box-shadow: none;
-  color: #7a7a7a;
-  pointer-events: none;
-}
-
 .checkbox, .radio {
   cursor: pointer;
   display: inline-block;
@@ -639,55 +498,6 @@ fieldset[disabled] .radio,
 }
 .radio + .radio {
   margin-left: 0.5em;
-}
-
-.select {
-  display: inline-block;
-  max-width: 100%;
-  position: relative;
-  vertical-align: top;
-}
-
-.select:not(.is-multiple) {
-  height: 2.5em;
-}
-
-.select select {
-  cursor: pointer;
-  display: block;
-  font-size: 1em;
-  max-width: 100%;
-  outline: none;
-}
-
-.select select::-ms-expand {
-  display: none;
-}
-
-.select select[disabled]:hover,
-fieldset[disabled] .select select:hover {
-  border-color: whitesmoke;
-}
-
-.select select:not([multiple]) {
-  padding-right: 2.5em;
-}
-
-.select select[multiple] {
-  height: auto;
-  padding: 0;
-}
-
-.select select[multiple] option {
-  padding: 0.5em 1em;
-}
-
-.select.is-fullwidth {
-  width: 100%;
-}
-
-.select.is-fullwidth select {
-  width: 100%;
 }
 
 .file {
@@ -746,19 +556,6 @@ fieldset[disabled] .select select:hover {
   }
 }
 
-.button.is-loading::after, .loader, .select.is-loading::after, .control.is-loading::after {
-  animation: spinAround 500ms infinite linear;
-  border-radius: 9999px;
-  border-right-color: transparent;
-  border-top-color: transparent;
-  border: 2px solid #dbdbdb;
-  content: "";
-  display: block;
-  height: 1em;
-  position: relative;
-  width: 1em;
-}
-
 /* CSS that's also defined elsewhere */
 /* extended */
 .is-marginless {
@@ -766,174 +563,6 @@ fieldset[disabled] .select select:hover {
 }
 
 /* BULMA ELEMENTS */
-.button {
-  background-color: white;
-  border-color: #dbdbdb;
-  border-width: 1px;
-  color:  hsl(0, 0%, 21%);
-  cursor: pointer;
-  justify-content: center;
-  padding-bottom: calc(0.5em - 1px);
-  padding-left: 1em;
-  padding-right: 1em;
-  padding-top: calc(0.5em - 1px);
-  text-align: center;
-  white-space: nowrap;
-}
-
-.button.is-ghost {
-  background: none;
-  border-color: transparent;
-  color: #485fc7;
-  text-decoration: none;
-}
-
-.button.is-ghost:hover {
-  color: #485fc7;
-  text-decoration: underline;
-}
-
-.button.is-white {
-  background-color: white;
-  border-color: transparent;
-  color: #0a0a0a;
-}
-
-.button.is-white:hover {
-  background-color: #f9f9f9;
-  border-color: transparent;
-  color: #0a0a0a;
-}
-
-.button.is-white:focus {
-  border-color: transparent;
-  color: #0a0a0a;
-}
-
-.button.is-primary {
-  background-color: #1563ff;
-  border-color: #0b5cff;
-  color: #fff;
-}
-
-.button.is-primary:hover, .button.is-primary.is-hovered {
-  background-color: #0054fb;
-  border-color: #0054fb;
-  color: #fff;
-}
-
-.button.is-primary:focus, .button.is-primary.is-focused {
-  border-color: transparent;
-  color: #fff;
-}
-
-.button.is-primary:focus:not(:active), .button.is-primary.is-focused:not(:active) {
-  box-shadow: 0 0 0 0.125em rgba(82, 87, 97, 0.25);
-}
-
-.button.is-primary:active, .button.is-primary.is-active {
-  background-color: #00b89c;
-  border-color: transparent;
-  color: #fff;
-}
-
-.button.is-primary[disabled],
-fieldset[disabled] .button.is-primary {
-  background-color: #1563ff;
-  border-color: #0b5cff;
-  box-shadow: none;
-}
-
-.button.is-primary.is-loading::after {
-  border-color: transparent transparent #fff #fff !important;
-}
-
-.button.is-primary.is-outlined {
-  background-color: transparent;
-  border-color: #0b5cff;
-  color: #1563ff;
-}
-
-.button.is-primary.is-outlined:hover, .button.is-primary.is-outlined.is-hovered, .button.is-primary.is-outlined:focus, .button.is-primary.is-outlined.is-focused {
-  background-color: #1563ff;
-  border-color: #0b5cff;
-  color: #fff;
-}
-
-.button.is-primary.is-outlined[disabled],
-fieldset[disabled] .button.is-primary.is-outlined {
-  background-color: transparent;
-  border-color: #0b5cff;
-  box-shadow: none;
-  color: #1563ff;
-}
-
-.button.is-danger {
-  background-color: #f14668;
-  border-color: transparent;
-  color: #fff;
-}
-
-.button.is-danger:hover, .button.is-danger.is-hovered {
-  background-color: #f03a5f;
-  border-color: transparent;
-  color: #fff;
-}
-
-.button.is-danger:focus, .button.is-danger.is-focused {
-  border-color: transparent;
-  color: #fff;
-}
-
-.button.is-danger:focus:not(:active), .button.is-danger.is-focused:not(:active) {
-  box-shadow: 0 0 0 0.125em rgba(241, 70, 104, 0.25);
-}
-
-.button.is-danger:active, .button.is-danger.is-active {
-  background-color: #ef2e55;
-  border-color: transparent;
-  color: #fff;
-}
-
-.button.is-danger[disabled],
-fieldset[disabled] .button.is-danger {
-  background-color: #f14668;
-  border-color: #f14668;
-  box-shadow: none;
-}
-
-.button[disabled],
-fieldset[disabled] .button {
-  background-color: white;
-  border-color: #dbdbdb;
-  box-shadow: none;
-  opacity: 0.5;
-}
-
-.button.is-fullwidth {
-  display: flex;
-  width: 100%;
-}
-
-.button.is-loading {
-  color: transparent !important;
-  pointer-events: none;
-}
-
-.button.is-loading::after {
-  left: calc(50% - (1em * 0.5));
-  position: absolute !important;
-  position: absolute;
-  top: calc(50% - (1em * 0.5));
-}
-
-.button.is-static {
-  background-color: whitesmoke;
-  border-color: #dbdbdb;
-  box-shadow: none;
-  color: #7a7a7a;
-  pointer-events: none;
-}
 
 .container {
   flex-grow: 1;
