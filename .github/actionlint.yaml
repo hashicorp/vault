@@ -1,0 +1,9 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
+self-hosted-runner:
+  # Labels of self-hosted runner in array of string
+  labels:
+    - small
+    - large
+    - ondemand
