@@ -20,7 +20,7 @@ func pathRotateRootCredentials(b *databaseBackend) []*framework.Path {
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixDatabase,
 				OperationVerb:   "rotate",
-				OperationSuffix: "root",
+				OperationSuffix: "root-credentials",
 			},
 
 			Fields: map[string]*framework.FieldSchema{
@@ -43,6 +43,13 @@ func pathRotateRootCredentials(b *databaseBackend) []*framework.Path {
 		},
 		{
 			Pattern: "rotate-role/" + framework.GenericNameRegex("name"),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixDatabase,
+				OperationVerb:   "rotate",
+				OperationSuffix: "static-role-credentials",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,

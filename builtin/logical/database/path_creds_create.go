@@ -18,6 +18,7 @@ func pathCredsCreate(b *databaseBackend) []*framework.Path {
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixDatabase,
+				OperationVerb:   "generate",
 				OperationSuffix: "credentials",
 			},
 
@@ -40,7 +41,7 @@ func pathCredsCreate(b *databaseBackend) []*framework.Path {
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixDatabase,
-				OperationSuffix: "static-credentials",
+				OperationSuffix: "static-role-credentials",
 			},
 
 			Fields: map[string]*framework.FieldSchema{
