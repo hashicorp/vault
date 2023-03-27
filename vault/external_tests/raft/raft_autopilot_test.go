@@ -536,9 +536,6 @@ func TestRaft_Autopilot_DeadServerCleanup(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, state.Healthy)
 	require.Len(t, state.Voters, 3)
-	for _, id := range state.Voters {
-		fmt.Printf("voter node ID: %s\n", id)
-	}
 	require.Contains(t, state.Voters, "core-0")
 	require.Contains(t, state.Voters, "core-1")
 	require.NotContains(t, state.Voters, "core-2")
