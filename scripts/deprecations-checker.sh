@@ -1,7 +1,7 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: MPL-2.0
 
-# This script is sourced into the shell running in a Github workflow.
+# This script is sourced into the shell running in a Github Actions workflow.
 
 # Usage:
 # To check deprecations locally using the script, follow these steps:
