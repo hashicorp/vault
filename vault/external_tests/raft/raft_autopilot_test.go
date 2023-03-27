@@ -430,7 +430,9 @@ func TestRaft_Autopilot_DeadServerCleanup(t *testing.T) {
 	core3.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
 	joinAsVoterAndUnseal(t, core1, cluster)
 	joinAsVoterAndUnseal(t, core2, cluster)
-	core3, cluster.Cores = cluster.Cores[len(cluster.Cores)-1], cluster.Cores[:len(cluster.Cores)-1]
+
+	// Pop core3 from the cores slice, so we can wait for active and standbys without error
+	_, cluster.Cores = cluster.Cores[len(cluster.Cores)-1], cluster.Cores[:len(cluster.Cores)-1]
 	testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
 
 	config, err := leader.Client.Sys().RaftAutopilotConfiguration()
