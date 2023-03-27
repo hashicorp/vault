@@ -102,7 +102,7 @@ $ curl --silent https://releases.hashicorp.com/vault-lambda-extension/0.5.0/vaul
   --output vault-lambda-extension.zip
 ```
 
-Unzip the donwloaded binary.
+Unzip the downloaded binary.
 
 ```shell-session
 $ unzip vault-lambda-extension.zip
@@ -248,6 +248,10 @@ cached as though the header `X-Vault-Cache-Control: cache` was present. Setting
 the header to `nocache` on a request will opt-out of caching entirely in this
 configuration. Setting the header to `recache` will skip the cache lookup and
 return and cache the response from Vault as described previously.
+
+~> **Warning!** The Vault Lambda Extension's cache is only in-memory
+and will not be persisted when the Lambda execution environment shuts down.
+In order words, the cache TTL is capped to the duration of the Lambda execution environment.
 
 ## Limitations
 
