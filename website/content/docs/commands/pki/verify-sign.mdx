@@ -15,16 +15,16 @@ This command returns five fields of information:
 
 - `signature_match`: was the key of the issuer used to sign the issued.
 
-- path_match: the possible issuer appears in the valid certificate chain
+- `path_match`: the possible issuer appears in the valid certificate chain
 	of the issued.
 
-- key_id_match: does the key-id of the issuer match the key_id of the
+- `key_id_match`: does the key-id of the issuer match the key_id of the
 	subject.
 
-- subject_match: does the subject name of the issuer match the issuer
+- `subject_match`: does the subject name of the issuer match the issuer
 	subject of the issued.
 
-- trust_match: if someone trusted the parent issuer, is the chain
+- `trust_match`: if someone trusted the parent issuer, is the chain
   provided sufficient to trust the child issued.
 
 ## Usage
