@@ -17,6 +17,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/useragent"
+
 	"github.com/go-test/deep"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
@@ -842,16 +844,21 @@ func TestLeaseCache_PersistAndRestore(t *testing.T) {
 	var deleteIDs []string
 	for i, ct := range cacheTests {
 		// Send once to cache
+		req := httptest.NewRequest(ct.method, ct.urlPath, strings.NewReader(ct.body))
+		req.Header.Set("User-Agent", useragent.AgentProxyString())
+
 		sendReq := &SendRequest{
 			Token:   ct.token,
-			Request: httptest.NewRequest(ct.method, ct.urlPath, strings.NewReader(ct.body)),
+			Request: req,
 		}
 		if ct.deleteFromPersistentStore {
 			deleteID, err := computeIndexID(sendReq)
 			require.NoError(t, err)
 			deleteIDs = append(deleteIDs, deleteID)
 			// Now reset the body after calculating the index
-			sendReq.Request = httptest.NewRequest(ct.method, ct.urlPath, strings.NewReader(ct.body))
+			req = httptest.NewRequest(ct.method, ct.urlPath, strings.NewReader(ct.body))
+			req.Header.Set("User-Agent", useragent.AgentProxyString())
+			sendReq.Request = req
 		}
 		resp, err := lc.Send(context.Background(), sendReq)
 		require.NoError(t, err)
@@ -860,9 +867,11 @@ func TestLeaseCache_PersistAndRestore(t *testing.T) {
 
 		// Send again to test cache. If this isn't cached, the response returned
 		// will be the next in the list and the status code will not match.
+		req = httptest.NewRequest(ct.method, ct.urlPath, strings.NewReader(ct.body))
+		req.Header.Set("User-Agent", useragent.AgentProxyString())
 		sendCacheReq := &SendRequest{
 			Token:   ct.token,
-			Request: httptest.NewRequest(ct.method, ct.urlPath, strings.NewReader(ct.body)),
+			Request: req,
 		}
 		respCached, err := lc.Send(context.Background(), sendCacheReq)
 		require.NoError(t, err, "failed to send request %+v", ct)
@@ -894,9 +903,11 @@ func TestLeaseCache_PersistAndRestore(t *testing.T) {
 	// And finally send the cache requests once to make sure they're all being
 	// served from the restoredCache unless they were intended to be missing after restore.
 	for i, ct := range cacheTests {
+		req := httptest.NewRequest(ct.method, ct.urlPath, strings.NewReader(ct.body))
+		req.Header.Set("User-Agent", useragent.AgentProxyString())
 		sendCacheReq := &SendRequest{
 			Token:   ct.token,
-			Request: httptest.NewRequest(ct.method, ct.urlPath, strings.NewReader(ct.body)),
+			Request: req,
 		}
 		respCached, err := restoredCache.Send(context.Background(), sendCacheReq)
 		require.NoError(t, err, "failed to send request %+v", ct)
