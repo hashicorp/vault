@@ -169,67 +169,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }  
-/* Columns */
-/* ARG TODO: used in three places */
-.columns.is-variable.is-1 {
-  --columnGap: $i * 0.25rem; }
-
-.columns.is-variable {
-  --columnGap: 0.75rem;
-  margin-left: calc(-1 * var(--columnGap));
-  margin-right: calc(-1 * var(--columnGap));
-}
-
-/* Columns */
-/* ARG TODO: not used very often column.is-1 */
-.column.is-1 {
-  flex: none;
-  width: 8.33333%;
-}
-
-@media screen and (min-width: 769px), print {
-  .columns:not(.is-desktop) {
-    display: flex;
-  }
-}
-
-.columns {
-  margin-left: -0.75rem;
-  margin-right: -0.75rem;
-  margin-top: -0.75rem;
-}
-
-.columns:last-child {
-  margin-bottom: -0.75rem;
-}
-
-.columns.is-gapless {
-  margin-left: 0;
-  margin-right: 0;
-  margin-top: 0;
-}
-
-.columns.is-gapless > .column {
-  margin: 0;
-  padding: 0 !important;
-}
-
-.columns.is-gapless:not(:last-child) {
-  margin-bottom: 1.5rem;
-}
-
-.columns.is-gapless:last-child {
-  margin-bottom: 0;
-}
-
-/* Bulma Grid */
-.column {
-  display: block;
-  flex-basis: 0;
-  flex-grow: 1;
-  flex-shrink: 1;
-  padding: 0.75rem;
-}
 
 /* ARG TODO: Used in one place title.is-2 */
 @media screen and (min-width: 769px), print {  
