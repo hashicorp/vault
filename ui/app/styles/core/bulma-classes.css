@@ -178,54 +178,12 @@
   }
 }
 
-.columns.is-mobile > .column.is-1 {
-  flex: none;
-  width: 8.33333%;
-}
-
-.columns.is-mobile > .column.is-3 {
-  flex: none;
-  width: 25%;
-}
-
-.columns.is-mobile > .column.is-10 {
-  flex: none;
-  width: 83.33333%;
-}
-
-.columns.is-mobile > .column.is-12 {
-  flex: none;
-  width: 100%;
-}
-
 .title.is-2 {
   font-size: 2.5rem;
 }
 
 .title.is-3 {
   font-size: 1.71429rem;
-}
-
-.column.is-3 {
-  flex: none;
-  width: 25%;
-}
-
-@media screen and (min-width: 769px), print {  
-  .column.is-7, .column.is-7-tablet {
-    flex: none;
-    width: 58.33333%;
-  }
-  .column.is-10-mobile {
-    flex: none;
-    width: 83.33333%;
-  }
-}
-
-@media screen and (min-width: 769px), print {
-  .columns.is-variable.is-7-tablet {
-    --columnGap: 1.75rem;
-  }
 }
 
 .title.is-4 {
@@ -239,123 +197,25 @@
   }
 }
 
-@media screen and (min-width: 769px), print {
-  .column.is-6, .column.is-6-tablet {
-    flex: none;
-    width: 50%;
-  }
-}
-/* ARG TODO: larger screen size needs to be ordered after smaller */
-@media screen and (min-width: 1024px) {
-  .column.is-4-desktop {
-    flex: none;
-    width: 33.33333%;
-  }
-}
-
-/* ARG TODO: used in two places */
-.columns.is-multiline {
-  flex-wrap: wrap;
-}
-
-/* ARG TODO: is-desktop two places */
-@media screen and (min-width: 769px), print {
-  columns:not(.is-desktop) {
-    display: flex;
-  }
-}
-
-@media screen and (min-width: 1024px) {
-  .columns.is-desktop {
-    display: flex;
-  }
-}
-
 .title.is-5 {
   font-size: 1.25rem;
-}
-
-@media screen and (min-width: 769px), print {  
-  .column.is-5 {
-    flex: none;
-    width: 41.66667%;
-  }
 }
 
 .title.is-6 {
   font-size: 1rem;
 }
 
-@media screen and (min-width: 769px), print {  
-  .column.is-6 {
-    flex: none;
-    width: 50%;
-  }
-}
 
 .title.is-7 {
   font-size: 0.75rem;
 }
 
-@media screen and (min-width: 769px), print {
-  .column.is-9 {
-    flex: none;
-    width: 75%;
-  }
-}
-
-@media screen and (max-width: 768px) {  
-  .column.is-10-mobile {
-    flex: none;
-    width: 83.33333%;
-  }
-}
-
-@media screen and (min-width: 769px), print {
-  .column.is-10 {
-    flex: none;
-    width: 83.33333%;
-  }
-}
-
-@media screen and (min-width: 769px), print {  
-  .column.is-12 {
-    flex: none;
-    width: 100%;
-  }
-}
 
 @media screen and (max-width: 768px) {  
   .is-hidden-mobile {
     display: none !important;
   }
 }
-
-.column.is-narrow {
-  flex: none;
-  width: unset;
-}
-
-.column.is-two-thirds {
-  flex: none;
-  width: 66.6666%;
-}
-
-.column.is-half {
-  flex: none;
-  width: 50%;
-}
-
-.column.is-one-third {
-  flex: none;
-  width: 33.3333%;
-}
-
-.column.is-one-quarter {
-  flex: none;
-  width: 25%;
-}
-
 /* ARG TODO: I detected that some of these are overriden. Keeping separate so I can address later */
 .control.is-expanded {
   flex-grow: 1;
