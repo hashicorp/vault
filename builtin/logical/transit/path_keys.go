@@ -385,7 +385,7 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 
 				var publicKey crypto.PublicKey
 				publicKey = v.RSAPublicKey
-				if !v.IsPublicKeyImported() {
+				if !v.IsPrivateKeyMissing() {
 					publicKey = v.RSAKey.Public()
 				}
 

@@ -243,7 +243,7 @@ type KeyEntry struct {
 	ManagedKeyUUID string `json:"managed_key_id,omitempty"`
 }
 
-func (ke *KeyEntry) IsPublicKeyImported() bool {
+func (ke *KeyEntry) IsPrivateKeyMissing() bool {
 	var publicKeyImported bool
 	if ke.RSAKey == nil && ke.RSAPublicKey != nil {
 		publicKeyImported = true
@@ -1100,7 +1100,7 @@ func (p *Policy) SignWithOptions(ver int, context, input []byte, options *Signin
 	}
 
 	// Before signing, check if key has its private part, if not return error
-	if keyParams.IsPublicKeyImported() {
+	if keyParams.IsPrivateKeyMissing() {
 		return nil, errutil.UserError{Err: "requested version for signing does not contain a private part"}
 	}
 
@@ -1397,7 +1397,7 @@ func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, o
 
 		switch sigAlgorithm {
 		case "pss":
-			if keyEntry.IsPublicKeyImported() {
+			if keyEntry.IsPrivateKeyMissing() {
 				return false, errutil.UserError{Err: "selected key does not a private part"}
 			}
 			key := keyEntry.RSAKey
@@ -1408,7 +1408,7 @@ func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, o
 		case "pkcs1v15":
 			var publicKey *rsa.PublicKey
 			publicKey = keyEntry.RSAPublicKey
-			if !keyEntry.IsPublicKeyImported() {
+			if !keyEntry.IsPrivateKeyMissing() {
 				publicKey = &keyEntry.RSAKey.PublicKey
 			}
 			err = rsa.VerifyPKCS1v15(publicKey, algo, input, sigBytes)
@@ -1495,7 +1495,7 @@ func (p *Policy) ImportPublicOrPrivate(ctx context.Context, storage logical.Stor
 			}
 		}
 
-		err = entry.parseFromKey(p.Type, parsedKey, isPrivateKey)
+		err = entry.parseFromKey(p.Type, parsedKey)
 		if err != nil {
 			return err
 		}
@@ -2064,24 +2064,32 @@ func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value
 	return encoded, nil
 }
 
-func (p *Policy) UpdateKeyVersion(ctx context.Context, storage logical.Storage, key []byte, isPrivateKey bool, keyVersion int) error {
+func (p *Policy) KeyVersionCanBeUpdated(keyVersion int, isPrivateKey bool) error {
 	keyEntry, err := p.safeGetKeyEntry(keyVersion)
 	if err != nil {
 		return err
 	}
 
-	// Validations
 	if !p.Type.ImportPublicKeySupported() {
 		return errors.New("provided type does not support importing key versions")
 	}
 
-	publicKeyImported := keyEntry.IsPublicKeyImported()
-	if publicKeyImported && !isPrivateKey {
+	isPrivateKeyMissing := keyEntry.IsPrivateKeyMissing()
+	if isPrivateKeyMissing && !isPrivateKey {
 		return errors.New("cannot add a public key to a key version that already has a public key set")
 	}
 
-	if !publicKeyImported {
+	if !isPrivateKeyMissing {
 		return errors.New("private key imported, key version cannot be updated")
+	}
+
+	return nil
+}
+
+func (p *Policy) ImportPrivateKeyForVersion(ctx context.Context, storage logical.Storage, keyVersion int, key []byte) error {
+	keyEntry, err := p.safeGetKeyEntry(keyVersion)
+	if err != nil {
+		return err
 	}
 
 	// Parse key
@@ -2108,7 +2116,7 @@ func (p *Policy) UpdateKeyVersion(ctx context.Context, storage logical.Storage, 
 		}
 	}
 
-	err = keyEntry.parseFromKey(p.Type, parsedPrivateKey, isPrivateKey)
+	err = keyEntry.parseFromKey(p.Type, parsedPrivateKey)
 	if err != nil {
 		return err
 	}
@@ -2118,7 +2126,7 @@ func (p *Policy) UpdateKeyVersion(ctx context.Context, storage logical.Storage, 
 	return p.Persist(ctx, storage)
 }
 
-func (ke *KeyEntry) parseFromKey(PolKeyType KeyType, parsedKey any, isPrivateKey bool) error {
+func (ke *KeyEntry) parseFromKey(PolKeyType KeyType, parsedKey any) error {
 	switch parsedKey.(type) {
 	case *ecdsa.PrivateKey, *ecdsa.PublicKey:
 		if PolKeyType != KeyType_ECDSA_P256 && PolKeyType != KeyType_ECDSA_P384 && PolKeyType != KeyType_ECDSA_P521 {
@@ -2134,8 +2142,8 @@ func (ke *KeyEntry) parseFromKey(PolKeyType KeyType, parsedKey any, isPrivateKey
 
 		var derBytes []byte
 		var err error
-		if isPrivateKey {
-			ecdsaKey := parsedKey.(*ecdsa.PrivateKey)
+		ecdsaKey, ok := parsedKey.(*ecdsa.PrivateKey)
+		if ok {
 
 			if ecdsaKey.Curve != curve {
 				return fmt.Errorf("invalid curve: expected %s, got %s", curve.Params().Name, ecdsaKey.Curve.Params().Name)
@@ -2194,8 +2202,9 @@ func (ke *KeyEntry) parseFromKey(PolKeyType KeyType, parsedKey any, isPrivateKey
 		} else if PolKeyType == KeyType_RSA4096 {
 			keyBytes = 512
 		}
-		if isPrivateKey {
-			rsaKey := parsedKey.(*rsa.PrivateKey)
+
+		rsaKey, ok := parsedKey.(*rsa.PrivateKey)
+		if ok {
 			if rsaKey.Size() != keyBytes {
 				return fmt.Errorf("invalid key size: expected %d bytes, got %d bytes", keyBytes, rsaKey.Size())
 			}

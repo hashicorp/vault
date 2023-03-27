@@ -102,7 +102,7 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 	case "":
 		for k, v := range p.Keys {
 			// If key version only consists of a public key, continue?
-			if v.IsPublicKeyImported() {
+			if v.IsPrivateKeyMissing() {
 				continue
 			}
 
@@ -134,7 +134,7 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 		}
 
 		// If key version only consists of a public key, continue?
-		if key.IsPublicKeyImported() {
+		if key.IsPrivateKeyMissing() {
 			return nil, err
 		}
 
@@ -221,7 +221,7 @@ func keyEntryToECPrivateKey(k *keysutil.KeyEntry, curve elliptic.Curve) (string,
 		return "", errors.New("nil KeyEntry provided")
 	}
 
-	if k.IsPublicKeyImported() {
+	if k.IsPrivateKeyMissing() {
 		return "", nil
 	}
 
