@@ -51,8 +51,8 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       .maxTTLVal(maxTTLHours)
       .submit();
     await configPage.visit({ backend: path });
-    assert.strictEqual(configPage.defaultTTL, defaultTTLSeconds, 'shows the proper TTL');
-    assert.strictEqual(configPage.maxTTL, maxTTLSeconds, 'shows the proper max TTL');
+    assert.strictEqual(configPage.defaultTTL, `${defaultTTLSeconds}s`, 'shows the proper TTL');
+    assert.strictEqual(configPage.maxTTL, `${maxTTLSeconds}s`, 'shows the proper max TTL');
   });
 
   test('it sets the ttl when enabled then disabled', async function (assert) {
@@ -77,7 +77,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       .submit();
     await configPage.visit({ backend: path });
     assert.strictEqual(configPage.defaultTTL, '0', 'shows the proper TTL');
-    assert.strictEqual(configPage.maxTTL, maxTTLSeconds, 'shows the proper max TTL');
+    assert.strictEqual(configPage.maxTTL, `${maxTTLSeconds}s`, 'shows the proper max TTL');
   });
 
   test('it throws error if setting duplicate path name', async function (assert) {
