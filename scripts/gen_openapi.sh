@@ -61,7 +61,6 @@ vault auth enable "radius"
 vault auth enable "userpass"
 
 # Enable secrets plugins
-vault secrets enable "ad"
 vault secrets enable "alicloud"
 vault secrets enable "aws"
 vault secrets enable "azure"
