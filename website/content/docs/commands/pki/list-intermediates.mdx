@@ -29,7 +29,7 @@ Lists the set of intermediate CAs issued by this parent issuer.
 
 This returns a list of issuing certificates and whether they are a match.
 By default, the type of match required is whether the `<parent>` has the
-expected subject, key_id, and could have (directly) signed this issuer.
+expected subject, [authority/subject key id match](https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.1), and could have (directly) signed this issuer.
 The match criteria can be updated by changed the corresponding flag.
 
 ### Flags
