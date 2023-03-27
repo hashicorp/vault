@@ -20,6 +20,7 @@ func pathCredsCreate(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixNomad,
+			OperationVerb:   "generate",
 			OperationSuffix: "credentials",
 		},
 
