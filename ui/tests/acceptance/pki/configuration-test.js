@@ -12,7 +12,7 @@ import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
-import { SELECTORS as S } from 'vault/tests/helpers/pki/workflow';
+import { SELECTORS } from 'vault/tests/helpers/pki/workflow';
 import { issuerPemBundle } from 'vault/tests/helpers/pki/values';
 
 module('Acceptance | pki configuration', function (hooks) {
@@ -39,9 +39,9 @@ module('Acceptance | pki configuration', function (hooks) {
   test('it shows the delete all issuers modal', async function (assert) {
     await authPage.login(this.pkiAdminToken);
     await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
-    await click(S.emptyStateLink);
+    await click(SELECTORS.emptyStateLink);
     assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/create`);
-    await click(S.configuration.optionByKey('import'));
+    await click(SELECTORS.configuration.optionByKey('import'));
     await click('[data-test-text-toggle]');
     await fillIn('[data-test-text-file-textarea]', this.pemBundle);
     await click('[data-test-pki-import-pem-bundle]');
@@ -52,10 +52,10 @@ module('Acceptance | pki configuration', function (hooks) {
     await click('[data-test-delete-all-issuers-button]');
 
     assert
-      .dom(S.emptyStateTitle)
+      .dom(SELECTORS.emptyStateTitle)
       .hasText('PKI not configured', `renders correct empty state title after issuers and keys are deleted`);
     assert
-      .dom(S.emptyStateMessage)
+      .dom(SELECTORS.emptyStateMessage)
       .hasText(
         "This PKI mount hasn't yet been configured with a certificate issuer.",
         `renders correct empty state message after issuers and keys are deleted`
@@ -65,9 +65,9 @@ module('Acceptance | pki configuration', function (hooks) {
   test('it shows the correct empty state message if roles still exists but no issuers + keys exist', async function (assert) {
     await authPage.login(this.pkiAdminToken);
     await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
-    await click(S.emptyStateLink);
+    await click(SELECTORS.emptyStateLink);
     assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/create`);
-    await click(S.configuration.optionByKey('import'));
+    await click(SELECTORS.configuration.optionByKey('import'));
     await click('[data-test-text-toggle]');
     await fillIn('[data-test-text-file-textarea]', this.pemBundle);
     await click('[data-test-pki-import-pem-bundle]');
@@ -85,43 +85,43 @@ module('Acceptance | pki configuration', function (hooks) {
     await click('[data-test-delete-all-issuers-button]');
 
     assert
-      .dom(S.emptyStateMessage)
+      .dom(SELECTORS.emptyStateMessage)
       .hasText("This PKI mount hasn't yet been configured with a certificate issuer.");
 
     await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
     assert
-      .dom(S.emptyStateMessage)
+      .dom(SELECTORS.emptyStateMessage)
       .hasText(
         "This PKI mount hasn't yet been configured with a certificate issuer. There are existing roles. Use the CLI to perform any operations with them until an issuer is configured.",
         'renders correct empty state message when roles still exist, but no issuers or keys exist on overview page'
       );
     await visit(`/vault/secrets/${this.mountPath}/pki/roles`);
     assert
-      .dom(S.emptyStateMessage)
+      .dom(SELECTORS.emptyStateMessage)
       .hasText(
         "This PKI mount hasn't yet been configured with a certificate issuer. There are existing roles. Use the CLI to perform any operations with them until an issuer is configured.",
         'renders correct empty state message when roles still exist, but no issuers or keys exist on roles page'
       );
     await visit(`/vault/secrets/${this.mountPath}/pki/issuers`);
     assert
-      .dom(S.emptyStateMessage)
+      .dom(SELECTORS.emptyStateMessage)
       .hasText("This PKI mount hasn't yet been configured with a certificate issuer.");
     await visit(`/vault/secrets/${this.mountPath}/pki/keys`);
     assert
-      .dom(S.emptyStateMessage)
+      .dom(SELECTORS.emptyStateMessage)
       .hasText("This PKI mount hasn't yet been configured with a certificate issuer.");
     await visit(`/vault/secrets/${this.mountPath}/pki/certificates`);
     assert
-      .dom(S.emptyStateMessage)
+      .dom(SELECTORS.emptyStateMessage)
       .hasText("This PKI mount hasn't yet been configured with a certificate issuer.");
   });
 
   test('it shows the correct empty state message if roles and certificates still exists but no issuers + keys exist', async function (assert) {
     await authPage.login(this.pkiAdminToken);
     await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
-    await click(S.emptyStateLink);
+    await click(SELECTORS.emptyStateLink);
     assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/create`);
-    await click(S.configuration.optionByKey('import'));
+    await click(SELECTORS.configuration.optionByKey('import'));
     await click('[data-test-text-toggle]');
     await fillIn('[data-test-text-file-textarea]', this.pemBundle);
     await click('[data-test-pki-import-pem-bundle]');
@@ -140,34 +140,34 @@ module('Acceptance | pki configuration', function (hooks) {
     await click('[data-test-delete-all-issuers-button]');
 
     assert
-      .dom(S.emptyStateMessage)
+      .dom(SELECTORS.emptyStateMessage)
       .hasText("This PKI mount hasn't yet been configured with a certificate issuer.");
 
     await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
     assert
-      .dom(S.emptyStateMessage)
+      .dom(SELECTORS.emptyStateMessage)
       .hasText(
         "This PKI mount hasn't yet been configured with a certificate issuer. There are existing roles and certificates. Use the CLI to perform any operations with them until an issuer is configured.",
         'renders correct empty state message when roles and certificates still exist, but no issuers or keys exist on overview page'
       );
     await visit(`/vault/secrets/${this.mountPath}/pki/roles`);
     assert
-      .dom(S.emptyStateMessage)
+      .dom(SELECTORS.emptyStateMessage)
       .hasText(
         "This PKI mount hasn't yet been configured with a certificate issuer. There are existing roles. Use the CLI to perform any operations with them until an issuer is configured.",
         'renders correct empty state message when roles and certificates still exist, but no issuers or keys exist on roles page'
       );
     await visit(`/vault/secrets/${this.mountPath}/pki/issuers`);
     assert
-      .dom(S.emptyStateMessage)
+      .dom(SELECTORS.emptyStateMessage)
       .hasText("This PKI mount hasn't yet been configured with a certificate issuer.");
     await visit(`/vault/secrets/${this.mountPath}/pki/keys`);
     assert
-      .dom(S.emptyStateMessage)
+      .dom(SELECTORS.emptyStateMessage)
       .hasText("This PKI mount hasn't yet been configured with a certificate issuer.");
     await visit(`/vault/secrets/${this.mountPath}/pki/certificates`);
     assert
-      .dom(S.emptyStateMessage)
+      .dom(SELECTORS.emptyStateMessage)
       .hasText(
         "This PKI mount hasn't yet been configured with a certificate issuer. There are existing certificates. Use the CLI to perform any operations with them until an issuer is configured.",
         'renders correct empty state message when roles and certificates still exist, but no issuers or keys exist on roles page'
@@ -176,9 +176,9 @@ module('Acceptance | pki configuration', function (hooks) {
   test('it shows the correct empty state message if certificates still exists but no issuers + keys exist', async function (assert) {
     await authPage.login(this.pkiAdminToken);
     await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
-    await click(S.emptyStateLink);
+    await click(SELECTORS.emptyStateLink);
     assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/create`);
-    await click(S.configuration.optionByKey('import'));
+    await click(SELECTORS.configuration.optionByKey('import'));
     await click('[data-test-text-toggle]');
     await fillIn('[data-test-text-file-textarea]', this.pemBundle);
     await click('[data-test-pki-import-pem-bundle]');
@@ -190,34 +190,34 @@ module('Acceptance | pki configuration', function (hooks) {
     await click('[data-test-delete-all-issuers-button]');
 
     assert
-      .dom(S.emptyStateMessage)
+      .dom(SELECTORS.emptyStateMessage)
       .hasText("This PKI mount hasn't yet been configured with a certificate issuer.");
 
     await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
     assert
-      .dom(S.emptyStateMessage)
+      .dom(SELECTORS.emptyStateMessage)
       .hasText(
         "This PKI mount hasn't yet been configured with a certificate issuer. There are existing certificates. Use the CLI to perform any operations with them until an issuer is configured.",
         'renders correct empty state message when roles and certificates still exist, but no issuers or keys exist on overview page'
       );
     await visit(`/vault/secrets/${this.mountPath}/pki/roles`);
     assert
-      .dom(S.emptyStateMessage)
+      .dom(SELECTORS.emptyStateMessage)
       .hasText(
         "This PKI mount hasn't yet been configured with a certificate issuer.",
         'renders correct empty state message when roles and certificates still exist, but no issuers or keys exist on roles page'
       );
     await visit(`/vault/secrets/${this.mountPath}/pki/issuers`);
     assert
-      .dom(S.emptyStateMessage)
+      .dom(SELECTORS.emptyStateMessage)
       .hasText("This PKI mount hasn't yet been configured with a certificate issuer.");
     await visit(`/vault/secrets/${this.mountPath}/pki/keys`);
     assert
-      .dom(S.emptyStateMessage)
+      .dom(SELECTORS.emptyStateMessage)
       .hasText("This PKI mount hasn't yet been configured with a certificate issuer.");
     await visit(`/vault/secrets/${this.mountPath}/pki/certificates`);
     assert
-      .dom(S.emptyStateMessage)
+      .dom(SELECTORS.emptyStateMessage)
       .hasText(
         "This PKI mount hasn't yet been configured with a certificate issuer. There are existing certificates. Use the CLI to perform any operations with them until an issuer is configured.",
         'renders correct empty state message when roles and certificates still exist, but no issuers or keys exist on roles page'

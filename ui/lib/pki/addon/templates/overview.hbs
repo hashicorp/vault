@@ -21,5 +21,9 @@
 {{#if this.model.hasConfig}}
   <Page::PkiOverview @issuers={{this.model.issuers}} @roles={{this.model.roles}} @engine={{this.model.engine}} />
 {{else}}
-  <PkiEmptyState @roles={{this.model.roles}} @certificates={{this.model.certificates}} />
+  <EmptyState @title="PKI not configured" @message={{this.message}}>
+    <LinkTo @route="configuration.create">
+      Configure PKI
+    </LinkTo>
+  </EmptyState>
 {{/if}}
