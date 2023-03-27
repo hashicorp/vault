@@ -114,12 +114,7 @@ export default class SecretEngineModel extends Model {
   }
 
   get fieldGroups() {
-    return this.formFieldGroups.map((group) => {
-      // Each group object has 1 key (name of group) with array value
-      const groupName = Object.keys(group)[0];
-      const expanded = group[groupName]?.map((fieldName) => this.allByKey[fieldName]);
-      return { [groupName]: expanded };
-    });
+    return this._expandGroups(this.formFieldGroups);
   }
 
   get icon() {
