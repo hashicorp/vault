@@ -13,7 +13,6 @@ import { tracked } from '@glimmer/tracking';
 import RouterService from '@ember/routing/router-service';
 import FlashMessageService from 'vault/services/flash-messages';
 import Store from '@ember-data/store';
-import PkiIssuerAdapter from 'vault/adapters/pki/issuer';
 
 interface Args {
   currentPath: string;
@@ -29,7 +28,7 @@ export default class PkiConfigurationDetails extends Component<Args> {
   @action
   async deleteAllIssuers() {
     try {
-      const issuerAdapter: PkiIssuerAdapter = this.store.adapterFor('pki/issuer');
+      const issuerAdapter = this.store.adapterFor('pki/issuer');
       issuerAdapter.deleteAllIssuers(this.args.currentPath);
       this.flashMessages.success('Issuers and keys deleted successfully.');
       this.showDeleteAllIssuers = false;

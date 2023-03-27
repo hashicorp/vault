@@ -5,6 +5,7 @@
 
 import Adapter from 'ember-data/adapter';
 import ModelRegistry from 'ember-data/types/registries/model';
+import PkiIssuerAdapter from 'vault/adapters/pki/issuer';
 
 /**
  * Catch-all for ember-data.
