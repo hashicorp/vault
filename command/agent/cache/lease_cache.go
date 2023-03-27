@@ -478,16 +478,18 @@ func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index,
 		return
 	}
 	client.SetToken(req.Token)
-	if req.Request.Header == nil {
-		req.Request.Header = make(map[string][]string)
+
+	headers := client.Headers()
+	if headers == nil {
+		headers = make(map[string][]string)
 	}
 
 	// We do not preserve the initial User-Agent here (i.e. use
 	// AgentProxyStringWithProxiedUserAgent) since these requests are from
 	// the proxy subsystem, but are made by Agent's lifetime watcher,
 	// not triggered by a specific request.
-	req.Request.Header.Set("User-Agent", useragent.AgentProxyString())
-	client.SetHeaders(req.Request.Header)
+	headers.Set("User-Agent", useragent.AgentProxyString())
+	client.SetHeaders(headers)
 
 	watcher, err := client.NewLifetimeWatcher(&api.LifetimeWatcherInput{
 		Secret: secret,
