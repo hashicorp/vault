@@ -200,7 +200,7 @@ fmtcheck:
 #@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
 
 fmt:
-	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gofumpt -w
+	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs go run mvdan.cc/gofumpt -w
 
 semgrep:
 	semgrep --include '*.go' --exclude 'vendor' -a -f tools/semgrep .
@@ -239,13 +239,6 @@ hana-database-plugin:
 
 mongodb-database-plugin:
 	@CGO_ENABLED=0 $(GO_CMD) build -o bin/mongodb-database-plugin ./plugins/database/mongodb/mongodb-database-plugin
-
-.PHONY: ci-config
-ci-config:
-	@$(MAKE) -C .circleci ci-config
-.PHONY: ci-verify
-ci-verify:
-	@$(MAKE) -C .circleci ci-verify
 
 .PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path packages build build-ci semgrep semgrep-ci
 
