@@ -541,6 +541,7 @@ func TestAgent_Template_UserAgent(t *testing.T) {
 					h.props = properties
 					h.userAgentToCheckFor = useragent.AgentTemplatingString()
 					h.pathToCheck = "/v1/secret/data"
+					h.requestMethodToCheck = "GET"
 					h.t = t
 					return &h
 				}),
@@ -1405,15 +1406,16 @@ func (h *handler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 // userAgentHandler makes it easy to test the User-Agent header received
 // by Vault
 type userAgentHandler struct {
-	props               *vault.HandlerProperties
-	failCount           int
-	userAgentToCheckFor string
-	pathToCheck         string
-	t                   *testing.T
+	props                *vault.HandlerProperties
+	failCount            int
+	userAgentToCheckFor  string
+	pathToCheck          string
+	requestMethodToCheck string
+	t                    *testing.T
 }
 
 func (h *userAgentHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	if req.Method == "GET" && strings.Contains(req.RequestURI, h.pathToCheck) {
+	if req.Method == h.requestMethodToCheck && strings.Contains(req.RequestURI, h.pathToCheck) {
 		userAgent := req.UserAgent()
 		if !(userAgent == h.userAgentToCheckFor) {
 			h.t.Fatalf("User-Agent string not as expected. Expected to find %s, got %s", h.userAgentToCheckFor, userAgent)
@@ -1728,7 +1730,8 @@ func TestAgent_AutoAuth_UserAgent(t *testing.T) {
 			func(properties *vault.HandlerProperties) http.Handler {
 				h.props = properties
 				h.userAgentToCheckFor = useragent.AgentAutoAuthString()
-				h.pathToCheck = "/v1/auth/approle/login" // TODO this isn't a GET, it's a POST
+				h.requestMethodToCheck = "PUT"
+				h.pathToCheck = "auth/approle/login"
 				h.t = t
 				return &h
 			}),
@@ -1752,7 +1755,8 @@ func TestAgent_AutoAuth_UserAgent(t *testing.T) {
 	  "secret_id_ttl": "1m",
 	  "token_max_ttl": "1m",
 	  "token_num_uses": "10",
-	  "token_ttl": "1m"
+	  "token_ttl": "1m",
+	  "policies": "default"
 	}`)
 	request(t, serverClient, req, 204)
 
@@ -1774,8 +1778,15 @@ func TestAgent_AutoAuth_UserAgent(t *testing.T) {
 	defer os.Remove(roleIDPath)
 	defer os.Remove(secretIDPath)
 
-	// Create a config file
-	autoAuthConfig := `
+	sinkf, err := os.CreateTemp("", "sink.test.")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sink := sinkf.Name()
+	sinkf.Close()
+	os.Remove(sink)
+
+	autoAuthConfig := fmt.Sprintf(`
 auto_auth {
     method "approle" {
         mount_path = "auth/approle"
@@ -1784,12 +1795,13 @@ auto_auth {
             secret_id_file_path = "%s"
         }
     }
-}`
 
-	// Unset the environment variable so that agent picks up the right test
-	// cluster address
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	os.Unsetenv(api.EnvVaultAddress)
+	sink "file" {
+		config = {
+			path = "%s"
+		}
+	}
+}`, roleIDPath, secretIDPath, sink)
 
 	listenAddr := generateListenerAddress(t)
 	listenConfig := fmt.Sprintf(`
@@ -1804,11 +1816,19 @@ vault {
   address = "%s"
   tls_skip_verify = true
 }
+api_proxy {
+  use_auto_auth_token = true
+}
 %s
 %s
 `, serverClient.Address(), listenConfig, autoAuthConfig)
 	configPath := makeTempFile(t, "config.hcl", config)
 	defer os.Remove(configPath)
+
+	// Unset the environment variable so that agent picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Unsetenv(api.EnvVaultAddress)
 
 	// Start the agent
 	_, cmd := testAgentCommand(t, logger)
@@ -1827,7 +1847,26 @@ vault {
 		t.Errorf("timeout")
 	}
 
-	// TODO: If we get no errors here, I think we're good?
+	// Validate that the auto-auth token has been correctly attained
+	// and works for LookupSelf
+	conf := api.DefaultConfig()
+	conf.Address = "http://" + listenAddr
+	agentClient, err := api.NewClient(conf)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	agentClient.SetToken("")
+	err = agentClient.SetAddress("http://" + listenAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Wait for the token to be sent to syncs and be available to be used
+	time.Sleep(5 * time.Second)
+
+	req = agentClient.NewRequest("GET", "/v1/auth/token/lookup-self")
+	body = request(t, agentClient, req, 200)
 
 	close(cmd.ShutdownCh)
 	wg.Wait()
@@ -1847,6 +1886,7 @@ func TestAgent_APIProxyWithoutCache_UserAgent(t *testing.T) {
 				h.props = properties
 				h.userAgentToCheckFor = useragent.AgentProxyStringWithProxiedUserAgent(userAgentForProxiedClient)
 				h.pathToCheck = "/v1/auth/token/lookup-self"
+				h.requestMethodToCheck = "GET"
 				h.t = t
 				return &h
 			}),
@@ -1931,6 +1971,7 @@ func TestAgent_APIProxyWithCache_UserAgent(t *testing.T) {
 				h.props = properties
 				h.userAgentToCheckFor = useragent.AgentProxyStringWithProxiedUserAgent(userAgentForProxiedClient)
 				h.pathToCheck = "/v1/auth/token/lookup-self"
+				h.requestMethodToCheck = "GET"
 				h.t = t
 				return &h
 			}),

@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/hashicorp/vault/helper/useragent"
+
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
@@ -154,6 +156,15 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 	}
 	if credCh == nil {
 		credCh = make(chan struct{})
+	}
+
+	if ah.client != nil {
+		headers := ah.client.Headers()
+		if headers == nil {
+			headers = make(map[string][]string)
+		}
+		headers.Set("User-Agent", useragent.AgentAutoAuthString())
+		ah.client.SetHeaders(headers)
 	}
 
 	var watcher *api.LifetimeWatcher

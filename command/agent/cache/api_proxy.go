@@ -132,9 +132,6 @@ func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, 
 	// Make the request to Vault and get the response
 	ap.logger.Info("forwarding request to Vault", "method", req.Request.Method, "path", req.Request.URL.Path)
 
-	// TODO
-	ap.logger.Info("Violet:", "req headers", req.Request.Header, "client headers", client.Headers())
-
 	resp, err := client.RawRequestWithContext(ctx, fwReq)
 	if resp == nil && err != nil {
 		// We don't want to cache nil responses, so we simply return the error
