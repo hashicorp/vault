@@ -25,8 +25,8 @@ Usage: `vault pki reissue [flags] <parent> <template> <child_mount> [options]`
 
 ~> **Note**: not all possible certificate fields are supported by Vault, and
   this template reader covers only those vault generates as a best effort.  If
-  unknown fields are set there may not be a warning that those are missing from
-  the new issuer.
+  unknown fields are set, such as when an external CA was imported into Vault,
+  there may not be a warning that those are missing from the new issuer.
 
 - `<child_mount>` is the path of the mount in vault where the new issuer is saved.
 
