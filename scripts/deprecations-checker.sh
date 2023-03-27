@@ -10,8 +10,8 @@
 # a specific branch, pass the other branch name as an argument to the script.
 #
 # For example: 
-# ./scripts/deprecations-checker.sh
-# ./scripts/deprecations-checker.sh main
+# ./scripts/deprecations-checker.sh (or) make deprecations
+# ./scripts/deprecations-checker.sh main (or) make ci-deprecations
 #
 # If no branch name is specified, the command will show all usage of deprecations in the code.
 #
