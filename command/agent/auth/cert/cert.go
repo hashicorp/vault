@@ -23,6 +23,7 @@ type certMethod struct {
 	caCert     string
 	clientCert string
 	clientKey  string
+	reload     bool
 
 	// Client is the cached client to use if cert info was provided.
 	client *api.Client
@@ -76,6 +77,14 @@ func NewCertAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 				return nil, errors.New("could not convert 'cert_key' config value to string")
 			}
 		}
+
+		reload, ok := conf.Config["reload"]
+		if ok {
+			c.reload, ok = reload.(bool)
+			if !ok {
+				return nil, errors.New("could not convert 'reload' config value to bool")
+			}
+		}
 	}
 
 	return c, nil
@@ -111,7 +120,7 @@ func (c *certMethod) AuthClient(client *api.Client) (*api.Client, error) {
 
 	if c.caCert != "" || (c.clientKey != "" && c.clientCert != "") {
 		// Return cached client if present
-		if c.client != nil {
+		if c.client != nil && !c.reload {
 			return c.client, nil
 		}
 
