@@ -400,7 +400,8 @@ func TestRaft_VotersStayVoters(t *testing.T) {
 	testhelpers.EnsureCoreSealed(t, cluster.Cores[0])
 	time.Sleep(30 * time.Second)
 	client = cluster.Cores[1].Client
-	errIfNonVotersExist()
+	err = errIfNonVotersExist()
+	require.NoError(t, err)
 }
 
 // TestRaft_Autopilot_DeadServerCleanup tests that dead servers are correctly removed by Vault and autopilot when a node stops and a replacement node joins.
@@ -430,10 +431,8 @@ func TestRaft_Autopilot_DeadServerCleanup(t *testing.T) {
 	core3.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
 	joinAsVoterAndUnseal(t, core1, cluster)
 	joinAsVoterAndUnseal(t, core2, cluster)
-
-	// Pop core3 from the cores slice, so we can wait for active and standbys without error
-	_, cluster.Cores = cluster.Cores[len(cluster.Cores)-1], cluster.Cores[:len(cluster.Cores)-1]
-	testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
+	// Do not join node 3
+	testhelpers.WaitForActiveNodeAndSelectedStandbys(t, cluster, 3)
 
 	config, err := leader.Client.Sys().RaftAutopilotConfiguration()
 	require.NoError(t, err)
@@ -473,8 +472,7 @@ func TestRaft_Autopilot_DeadServerCleanup(t *testing.T) {
 	require.False(t, state.Healthy)
 	require.Len(t, state.Voters, 3)
 
-	// Push the spare core back and join the node
-	cluster.Cores = append(cluster.Cores, core3)
+	// Join node 3 now
 	joinAsVoterAndUnseal(t, core3, cluster)
 
 	// Stabilization time
