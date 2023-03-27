@@ -11,11 +11,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/hashicorp/vault/helper/useragent"
-
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
 

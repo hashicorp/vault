@@ -20,6 +20,8 @@ func TestUserAgent(t *testing.T) {
 	}
 }
 
+// TestUserAgentVaultAgent tests the AgentString() function works
+// as expected
 func TestUserAgentVaultAgent(t *testing.T) {
 	projectURL = "https://vault-test.com"
 	rt = "go5.0"
@@ -33,6 +35,8 @@ func TestUserAgentVaultAgent(t *testing.T) {
 	}
 }
 
+// TestUserAgentVaultAgentTemplating tests the AgentTemplatingString() function works
+// as expected
 func TestUserAgentVaultAgentTemplating(t *testing.T) {
 	projectURL = "https://vault-test.com"
 	rt = "go5.0"
@@ -46,6 +50,8 @@ func TestUserAgentVaultAgentTemplating(t *testing.T) {
 	}
 }
 
+// TestUserAgentVaultAgentProxy tests the AgentProxyString() function works
+// as expected
 func TestUserAgentVaultAgentProxy(t *testing.T) {
 	projectURL = "https://vault-test.com"
 	rt = "go5.0"
@@ -59,6 +65,8 @@ func TestUserAgentVaultAgentProxy(t *testing.T) {
 	}
 }
 
+// TestUserAgentVaultAgentProxyWithProxiedUserAgent tests the AgentProxyStringWithProxiedUserAgent()
+// function works as expected
 func TestUserAgentVaultAgentProxyWithProxiedUserAgent(t *testing.T) {
 	projectURL = "https://vault-test.com"
 	rt = "go5.0"
@@ -73,6 +81,8 @@ func TestUserAgentVaultAgentProxyWithProxiedUserAgent(t *testing.T) {
 	}
 }
 
+// TestUserAgentVaultAgentAutoAuth tests the AgentAutoAuthString() function works
+// as expected
 func TestUserAgentVaultAgentAutoAuth(t *testing.T) {
 	projectURL = "https://vault-test.com"
 	rt = "go5.0"

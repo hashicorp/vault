@@ -19,8 +19,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/vault/helper/useragent"
-
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/base62"
@@ -29,6 +27,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/cache/cachememdb"
 	"github.com/hashicorp/vault/helper/namespace"
 	nshelper "github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/useragent"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
@@ -489,9 +488,6 @@ func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index,
 	// not triggered by a specific request.
 	req.Request.Header.Set("User-Agent", useragent.AgentProxyString())
 	client.SetHeaders(req.Request.Header)
-	if client.Headers() == nil {
-		client.SetHeaders(make(map[string][]string))
-	}
 
 	watcher, err := client.NewLifetimeWatcher(&api.LifetimeWatcherInput{
 		Secret: secret,

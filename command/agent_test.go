@@ -19,8 +19,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/useragent"
-
 	"github.com/hashicorp/go-hclog"
 	vaultjwt "github.com/hashicorp/vault-plugin-auth-jwt"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
@@ -28,6 +26,7 @@ import (
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	"github.com/hashicorp/vault/command/agent"
 	agentConfig "github.com/hashicorp/vault/command/agent/config"
+	"github.com/hashicorp/vault/helper/useragent"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
