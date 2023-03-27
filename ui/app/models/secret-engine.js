@@ -202,7 +202,7 @@ export default class SecretEngineModel extends Model {
         break;
       case 'pki':
         defaultFields = ['path', 'config.defaultLeaseTtl', 'config.maxLeaseTtl', 'config.allowedManagedKeys'];
-        optionFields = [...CORE_OPTIONS, 'config.allowedManagedKeys', ...STANDARD_CONFIG];
+        optionFields = [...CORE_OPTIONS, ...STANDARD_CONFIG];
         break;
       case 'keymgmt':
         // no ttl options for keymgmt
