@@ -18,7 +18,7 @@ test_packages[1]+=" $base/command"
 test_packages[1]+=" $base/sdk/helper/keysutil"
 
 # Total time: 1160
-test_packages[2]+=" $base/sdk/helper/ocsp"
+test_packages[2]+=" $base/builtin/credential/app-id"
 if [ "${ENTERPRISE:+x}" == "x" ] ; then
     test_packages[2]+=" $base/vault/external_tests/replication-perf"
 fi
@@ -43,7 +43,6 @@ fi
 test_packages[4]+=" $base/http"
 test_packages[4]+=" $base/sdk/helper/pluginutil"
 test_packages[4]+=" $base/serviceregistration/kubernetes"
-test_packages[4]+=" $base/tools/godoctests/pkg/analyzer"
 if [ "${ENTERPRISE:+x}" == "x" ] ; then
     test_packages[4]+=" $base/vault/external_tests/apilock"
     test_packages[4]+=" $base/vault/external_tests/filteredpaths"
@@ -89,7 +88,6 @@ test_packages[6]+=" $base/command/agent/auth/cert"
 test_packages[6]+=" $base/command/agent/auth/jwt"
 test_packages[6]+=" $base/command/agent/auth/kerberos"
 test_packages[6]+=" $base/command/agent/auth/kubernetes"
-test_packages[6]+=" $base/command/agent/auth/token-file"
 test_packages[6]+=" $base/command/agent/cache"
 test_packages[6]+=" $base/command/agent/cache/cacheboltdb"
 test_packages[6]+=" $base/command/agent/cache/cachememdb"
@@ -108,7 +106,6 @@ test_packages[6]+=" $base/helper/fairshare"
 test_packages[6]+=" $base/helper/flag-kv"
 test_packages[6]+=" $base/helper/flag-slice"
 test_packages[6]+=" $base/helper/forwarding"
-test_packages[6]+=" $base/helper/logging"
 test_packages[6]+=" $base/helper/metricsutil"
 test_packages[6]+=" $base/helper/namespace"
 test_packages[6]+=" $base/helper/osutil"
@@ -116,7 +113,6 @@ test_packages[6]+=" $base/helper/parseip"
 test_packages[6]+=" $base/helper/policies"
 test_packages[6]+=" $base/helper/testhelpers/logical"
 test_packages[6]+=" $base/helper/timeutil"
-test_packages[6]+=" $base/helper/useragent"
 test_packages[6]+=" $base/helper/versions"
 test_packages[6]+=" $base/internalshared/configutil"
 test_packages[6]+=" $base/internalshared/listenerutil"
@@ -141,20 +137,17 @@ test_packages[6]+=" $base/sdk/helper/kdf"
 test_packages[6]+=" $base/sdk/helper/locksutil"
 test_packages[6]+=" $base/sdk/helper/pathmanager"
 test_packages[6]+=" $base/sdk/helper/roottoken"
-test_packages[6]+=" $base/sdk/helper/testhelpers/schema"
 test_packages[6]+=" $base/sdk/helper/xor"
 test_packages[6]+=" $base/sdk/physical/file"
 test_packages[6]+=" $base/sdk/plugin/pb"
 test_packages[6]+=" $base/serviceregistration/kubernetes/client"
 test_packages[6]+=" $base/shamir"
 test_packages[6]+=" $base/vault/cluster"
-test_packages[6]+=" $base/vault/eventbus"
 test_packages[6]+=" $base/vault/external_tests/api"
 if [ "${ENTERPRISE:+x}" == "x" ] ; then
     test_packages[6]+=" $base/vault/external_tests/consistencyheaders"
 fi
 test_packages[6]+=" $base/vault/external_tests/expiration"
-test_packages[6]+=" $base/vault/external_tests/hcp_link"
 test_packages[6]+=" $base/vault/external_tests/kv"
 if [ "${ENTERPRISE:+x}" == "x" ] ; then
     test_packages[6]+=" $base/vault/external_tests/plugins"
@@ -217,8 +210,8 @@ if [ "${ENTERPRISE:+x}" == "x" ] ; then
 fi
 
 # Total time: 310
-test_packages[9]+=" $base/vault/hcp_link/capabilities/api_capability"
 test_packages[9]+=" $base/vault/external_tests/plugin"
+test_packages[9]+=" $base/builtin/logical/cassandra"
 
 # Total time: 925
 test_packages[10]+=" $base/builtin/credential/ldap"
@@ -241,7 +234,6 @@ test_packages[12]+=" $base/plugins/database/mssql"
 test_packages[12]+=" $base/plugins/database/mysql"
 
 # Total time: 704
-test_packages[13]+=" $base/builtin/logical/pkiext"
 test_packages[13]+=" $base/command/server"
 test_packages[13]+=" $base/physical/aerospike"
 test_packages[13]+=" $base/physical/cockroachdb"
@@ -254,6 +246,10 @@ test_packages[13]+=" $base/vault/external_tests/policy"
 # Total time: 374
 test_packages[14]+=" $base/builtin/credential/radius"
 test_packages[14]+=" $base/builtin/logical/ssh"
+test_packages[14]+=" $base/builtin/logical/mongodb"
+test_packages[14]+=" $base/builtin/logical/mssql"
+test_packages[14]+=" $base/builtin/logical/mysql"
+test_packages[14]+=" $base/builtin/logical/postgresql"
 if [ "${ENTERPRISE:+x}" == "x" ] ; then
     test_packages[14]+=" $base/enthelpers/wal"
 fi
