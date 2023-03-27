@@ -1,15 +1,14 @@
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
+import { parseCertificate } from 'vault/utils/parse-pki-cert';
+import camelizeKeys from 'vault/utils/camelize-object-keys';
 // TYPES
 import Store from '@ember-data/store';
 import Router from '@ember/routing/router';
 import FlashMessageService from 'vault/services/flash-messages';
 import PkiIssuerModel from 'vault/models/pki/issuer';
 import { Breadcrumb } from 'vault/vault/app-types';
-import { parseCertificate } from 'vault/utils/parse-pki-cert';
-import camelizeKeys from 'vault/utils/camelize-object-keys';
-
 interface Args {
   oldRoot: PkiIssuerModel;
   breadcrumbs: Breadcrumb;
@@ -24,17 +23,19 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
   @tracked rotateForm = 'use-old-settings';
   @tracked showOldSettings = false;
   @tracked newRootModel;
+  @tracked warningBanner = '';
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
-    const certData = camelizeKeys(parseCertificate(this.args.oldRoot.certificate));
-    // TODO should we have catch/notify user if not all params are parsable?
+    const certData = parseCertificate(this.args.oldRoot.certificate);
+    if (certData.parsing_errors && certData.parsing_errors.length > 0) {
+      const errorMessage = certData.parsing_errors.map((e: Error) => e.message).join(', ');
+      this.warningBanner = errorMessage;
+    }
     this.newRootModel = this.store.createRecord('pki/action', {
       actionType: 'rotate-root',
       type: 'internal',
-      ...certData, // copy old root settings over to new one
-      commonName: '', // clear common name
-      // TODO also, clear altNames?
+      ...camelizeKeys(certData), // copy old root settings over to new one
     });
   }
 
