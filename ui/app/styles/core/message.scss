@@ -10,19 +10,13 @@
   padding: $spacing-s $spacing-m $spacing-m $spacing-s;
   position: relative;
 
+  &::not(:last-child) {
+    margin-bottom: $size-4;
+  }
+
   .message-icon {
     color: $blue;
     margin-right: $spacing-xs;
-  }
-
-  .close-button {
-    background: transparent;
-    border: 0;
-    color: $grey;
-    cursor: pointer;
-    position: absolute;
-    right: $spacing-s;
-    top: $spacing-m;
   }
 
   .message-title {
@@ -34,6 +28,16 @@
     .progress {
       margin-left: $spacing-xs;
     }
+  }
+
+  .close-button {
+    background: transparent;
+    border: 0;
+    color: $grey;
+    cursor: pointer;
+    position: absolute;
+    right: $spacing-s;
+    top: $spacing-m;
   }
 
   .close-button + .message-title {
@@ -69,6 +73,20 @@
     }
   }
 
+  // message types, see message-types.js
+  &.is-danger {
+    background: $red-010;
+    border: 1px solid $red-050;
+
+    .message-icon {
+      color: $red-500;
+    }
+
+    .message-title {
+      color: $red-700;
+    }
+  }
+
   &.is-highlight {
     background: $yellow-010;
     border: 1px solid $yellow-100;
@@ -82,6 +100,24 @@
     }
   }
 
+  &.is-info {
+    background-color: #eff5fb;
+
+    .message-body {
+      border-color: #3e8ed0;
+      color: #296fa8;
+    }
+
+    .message-header {
+      background-color: #3e8ed0;
+      color: $white;
+    }
+
+    .message-title {
+      color: $blue-500;
+    }
+  }
+
   &.is-success {
     background: $green-010;
     border: 1px solid $green-100;
@@ -92,19 +128,6 @@
 
     .message-title {
       color: $green-700;
-    }
-  }
-
-  &.is-danger {
-    background: $red-010;
-    border: 1px solid $red-050;
-
-    .message-icon {
-      color: $red-500;
-    }
-
-    .message-title {
-      color: $red-700;
     }
   }
 }
@@ -141,10 +164,6 @@
   > p::first-letter {
     text-transform: capitalize;
   }
-}
-
-.has-text-highlight {
-  color: $yellow-500;
 }
 
 .message.message-marginless {

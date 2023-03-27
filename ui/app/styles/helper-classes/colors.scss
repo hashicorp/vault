@@ -73,6 +73,10 @@
   color: #bac1cc !important;
 }
 
+.has-text-highlight {
+  color: $yellow-500;
+}
+
 // ARG TODO: Duplicate, has-text-danger is bulma has-text-red is ours.
 .has-text-red {
   color: $red;
