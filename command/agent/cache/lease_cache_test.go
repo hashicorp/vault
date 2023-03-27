@@ -737,7 +737,7 @@ func compareBeforeAndAfter(t *testing.T, before, after *LeaseCache, beforeLen, a
 		assert.Equal(t, cachedItem.Lease, restoredItem.Lease)
 		assert.Equal(t, cachedItem.LeaseToken, restoredItem.LeaseToken)
 		assert.Equal(t, cachedItem.Namespace, restoredItem.Namespace)
-		assert.Equal(t, cachedItem.RequestHeader, restoredItem.RequestHeader)
+		assert.EqualValues(t, cachedItem.RequestHeader, restoredItem.RequestHeader)
 		assert.Equal(t, cachedItem.RequestMethod, restoredItem.RequestMethod)
 		assert.Equal(t, cachedItem.RequestPath, restoredItem.RequestPath)
 		assert.Equal(t, cachedItem.RequestToken, restoredItem.RequestToken)
