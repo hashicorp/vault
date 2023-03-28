@@ -53,8 +53,8 @@ export default class PkiIssuerModel extends Model {
 
   // READ ONLY
   @attr isDefault;
-  @attr('string', { label: 'Issuer ID' }) issuerId;
-  @attr('string', { label: 'Default key ID' }) keyId;
+  @attr('string', { label: 'Issuer ID', detailLinkTo: 'issuers.issuer.details' }) issuerId;
+  @attr('string', { label: 'Default key ID', detailLinkTo: 'keys.key.details' }) keyId;
   @attr({ label: 'CA Chain', masked: true }) caChain;
   @attr({ masked: true }) certificate;
 

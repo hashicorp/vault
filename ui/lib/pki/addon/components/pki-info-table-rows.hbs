@@ -1,6 +1,6 @@
 {{#each @displayFields as |field|}}
   {{#let (find-by "name" field @model.allFields) as |attr|}}
-    {{#let (get @issuer attr.name) as |value|}}
+    {{#let (get @model attr.name) as |value|}}
       {{! only render if there's a value, unless it's the common name }}
       {{#if (or (eq attr.name "commonName") value)}}
         <InfoTableRow
