@@ -1,6 +1,7 @@
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
+import { action } from '@ember/object';
 import { parseCertificate } from 'vault/utils/parse-pki-cert';
 import camelizeKeys from 'vault/utils/camelize-object-keys';
 import { waitFor } from '@ember/test-waiters';
@@ -10,6 +11,7 @@ import errorMessage from 'vault/utils/error-message';
 import Store from '@ember-data/store';
 import Router from '@ember/routing/router';
 import FlashMessageService from 'vault/services/flash-messages';
+import SecretMountPath from 'vault/services/secret-mount-path';
 import PkiIssuerModel from 'vault/models/pki/issuer';
 import { Breadcrumb } from 'vault/vault/app-types';
 import { parsedParameters } from 'vault/utils/parse-pki-cert-oids';
@@ -23,6 +25,7 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
   @service declare readonly store: Store;
   @service declare readonly router: Router;
   @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly secretMountPath: SecretMountPath;
 
   @tracked rotateForm = 'use-old-settings';
   @tracked showOldSettings = false;
@@ -89,6 +92,24 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
     } catch (e) {
       this.alertBanner = errorMessage(e);
       this.invalidFormAlert = 'There was a problem generating root.';
+    }
+  }
+
+  @action
+  async fetchDataForDownload(format: string) {
+    const endpoint = `/v1/${this.secretMountPath.currentPath}/issuer/${this.newRootModel.issuerId}/${format}`;
+    const adapter = this.store.adapterFor('application');
+    try {
+      return adapter
+        .rawRequest(endpoint, 'GET', { unauthenticated: true })
+        .then(function (response: Response) {
+          if (format === 'der') {
+            return response.blob();
+          }
+          return response.text();
+        });
+    } catch (e) {
+      return null;
     }
   }
 }

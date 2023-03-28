@@ -5,9 +5,7 @@
 
 import PkiIssuerIndexRoute from './index';
 import { inject as service } from '@ember/service';
-import { withConfirmLeave } from 'core/decorators/confirm-leave';
 
-@withConfirmLeave()
 export default class PkiIssuerRotateRootRoute extends PkiIssuerIndexRoute {
   @service secretMountPath;
   @service store;

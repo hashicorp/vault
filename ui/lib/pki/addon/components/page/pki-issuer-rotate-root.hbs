@@ -10,6 +10,71 @@
 </PageHeader>
 
 {{#if this.newRootModel.id}}
+  <Toolbar>
+    <ToolbarActions>
+      <ToolbarLink
+        @route="issuers.issuer.cross-sign"
+        @type="pen-tool"
+        @model={{this.newRootModel.id}}
+        data-test-pki-issuer-cross-sign
+      >
+        Cross-sign issuers
+      </ToolbarLink>
+      <ToolbarLink
+        @route="issuers.issuer.sign"
+        @type="pen-tool"
+        @issuer={{this.newRootModel.id}}
+        data-test-pki-issuer-sign-int
+      >
+        Sign Intermediate
+      </ToolbarLink>
+      <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
+        <D.Trigger
+          data-test-popup-menu-trigger
+          class={{concat "toolbar-link" (if D.isOpen " is-active")}}
+          @htmlTag="button"
+          data-test-issuer-download
+        >
+          Download
+          <Chevron @direction="down" @isButton={{true}} />
+        </D.Trigger>
+        <D.Content @defaultClass="popup-menu-content">
+          <nav class="box menu" aria-label="snapshots actions">
+            <ul class="menu-list">
+              <li class="action">
+                <DownloadButton
+                  class="link"
+                  @filename={{@issuer.id}}
+                  @extension="pem"
+                  @fetchData={{fn this.fetchDataForDownload "pem"}}
+                  data-test-issuer-download-type="pem"
+                >
+                  PEM format
+                </DownloadButton>
+              </li>
+              <li class="action">
+                <DownloadButton
+                  class="link"
+                  @filename={{@issuer.id}}
+                  @extension="der"
+                  @fetchData={{fn this.fetchDataForDownload "der"}}
+                  data-test-issuer-download-type="der"
+                >
+                  DER format
+                </DownloadButton>
+              </li>
+            </ul>
+          </nav>
+        </D.Content>
+      </BasicDropdown>
+      <ToolbarLink @route="issuers.issuer.edit" @issuer={{@issuer.id}} data-test-pki-issuer-configure>
+        Configure
+      </ToolbarLink>
+    </ToolbarActions>
+  </Toolbar>
+{{/if}}
+
+{{#if this.newRootModel.id}}
   <div class="has-top-margin-m">
     <AlertBanner @title="Next steps" @type="warning">
       Your new root has been generated.
@@ -47,8 +112,8 @@
   {{#if this.newRootModel.id}}
     <PkiInfoTableRows @model={{this.newRootModel}} @displayFields={{this.displayFields}} />
   {{else}}
-    {{!  OLD SETTINGS FORM INPUTS  }}
-    <h2 class="title is-size-5 has-border-bottom-light">
+    {{!  USE OLD SETTINGS FORM INPUTS  }}
+    <h2 class="title is-size-5 has-border-bottom-light page-header">
       Root parameters
     </h2>
     <form {{on "submit" (perform this.save)}} data-test-pki-rotate-old-settings-form>

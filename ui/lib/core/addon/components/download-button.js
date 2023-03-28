@@ -8,6 +8,8 @@ import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
 import timestamp from 'vault/utils/timestamp';
+import { tracked } from '@glimmer/tracking';
+import { assert } from '@ember/debug';
 /**
  * @module DownloadButton
  * DownloadButton components are an action button used to download data. Both the action text and icon are yielded.
@@ -29,6 +31,7 @@ import timestamp from 'vault/utils/timestamp';
  * ```
  * @param {string} [filename] - name of file that prefixes the ISO timestamp generated at download
  * @param {string} [data] - data to download
+ * @param {function} [fetchData] - function that fetches data and returns download content
  * @param {string} [extension='txt'] - file extension, the download service uses this to determine the mimetype
  * @param {boolean} [stringify=false] - argument to stringify the data before passing to the File constructor
  */
@@ -36,7 +39,15 @@ import timestamp from 'vault/utils/timestamp';
 export default class DownloadButton extends Component {
   @service download;
   @service flashMessages;
+  @tracked fetchedData;
 
+  constructor() {
+    super(...arguments);
+    assert(
+      'Only pass either @data or @fetchData, passing both means @data will be overwritten by the return value of @fetchData',
+      this.args.data && this.args.fetchData
+    );
+  }
   get filename() {
     const ts = timestamp.now().toISOString();
     return this.args.filename ? this.args.filename + '-' + ts : ts;
@@ -46,7 +57,7 @@ export default class DownloadButton extends Component {
     if (this.args.stringify) {
       return JSON.stringify(this.args.data, null, 2);
     }
-    return this.args.data;
+    return this.fetchedData || this.args.data;
   }
 
   get extension() {
@@ -54,7 +65,10 @@ export default class DownloadButton extends Component {
   }
 
   @action
-  handleDownload() {
+  async handleDownload() {
+    if (this.args.fetchData) {
+      this.fetchedData = await this.args.fetchData();
+    }
     try {
       this.download.miscExtension(this.filename, this.content, this.extension);
       this.flashMessages.info(`Downloading ${this.filename}`);
