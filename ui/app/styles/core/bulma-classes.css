@@ -250,28 +250,6 @@
   justify-content: center;
 }
 
-/* ARG TODO: Only used in one place 'is-info' */
-.progress.is-info::-webkit-progress-value {
-  background-color: #3e8ed0;
-}
-
-.progress.is-info::-moz-progress-bar {
-  background-color: #3e8ed0;
-}
-
-.progress.is-info::-ms-fill {
-  background-color: #3e8ed0;
-}
-
-.progress.is-info:indeterminate {
-  background-image: linear-gradient(to right, #3e8ed0 30%, #ededed 30%);
-}
-
-/* ARG TODO: used in one place */
-.progress.is-medium {
-  height: 1.25rem;
-}
-
 .checkbox, .radio {
   cursor: pointer;
   display: inline-block;
@@ -394,62 +372,6 @@ fieldset[disabled] .radio,
   .container:not(.is-max-desktop):not(.is-max-widescreen) {
     max-width: 1344px;
   }
-}
-
-.notification {
-  background-color: whitesmoke;
-  border-radius: 2px;
-  padding: 1.25rem 2.5rem 1.25rem 1.5rem;
-  position: relative;
-}
-
-.progress {
-  appearance: none;
-  border-radius: 9999px;
-  border: none;
-  display: block;
-  height: 1rem;
-  overflow: hidden;
-  padding: 0;
-  width: 100%;
-}
-
-/* ARG TODO: progress is-info one spot */
-.progress.is-info::-webkit-progress-value {
-  background-color: #3e8ed0;
-}
-
-.progress.is-info::-moz-progress-bar {
-  background-color: #3e8ed0;
-}
-
-.progress.is-info::-ms-fill {
-  background-color: #3e8ed0;
-}
-
-/* ARG TODO: progress success one spot */
-.progress.is-success::-webkit-progress-value {
-  background-color: #48c78e;
-}
-
-.progress.is-success::-moz-progress-bar {
-  background-color: #48c78e;
-}
-
-.progress.is-success::-ms-fill {
-  background-color: #48c78e;
-}
-
-.progress.is-success:indeterminate {
-  background-image: linear-gradient(to right, #48c78e 30%, #ededed 30%);
-}
-
-.progress.is-small {
-  height: 0.75rem;
-}
-
-.progress.is-medium {
-  height: 1.25rem;
 }
 
 /* ARG TODO: table one spot */
