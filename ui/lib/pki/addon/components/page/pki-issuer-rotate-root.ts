@@ -47,6 +47,16 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
     });
   }
 
+  get bannerType() {
+    if (this.alertBanner.includes('certificate contains')) {
+      return {
+        title: 'Not all of the certificate values could be parsed and transfered to new root',
+        type: 'warning',
+      };
+    }
+    return { type: 'danger' };
+  }
+
   get rotationOptions() {
     return [
       {

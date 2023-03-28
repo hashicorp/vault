@@ -117,6 +117,9 @@
       Root parameters
     </h2>
     <form {{on "submit" (perform this.save)}} data-test-pki-rotate-old-settings-form>
+      {{#if this.alertBanner}}
+        <AlertBanner @title={{this.bannerType.title}} @type={{this.bannerType.type}} @message={{this.alertBanner}} />
+      {{/if}}
       {{#let (find-by "name" "commonName" this.newRootModel.allFields) as |attr|}}
         <FormField data-test-field={{attr}} @attr={{attr}} @model={{this.newRootModel}} @showHelpText={{false}} />
       {{/let}}
