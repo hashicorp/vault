@@ -8,15 +8,36 @@
         {{! DEFAULT VIEW }}
         {{#if (eq group "default")}}
           {{#each fields as |attr|}}
-            <FormField
-              data-test-field={{attr}}
-              @attr={{attr}}
-              @model={{@model}}
-              @modelValidations={{this.modelValidations}}
-              @showHelpText={{false}}
-            >
-              <PkiNotValidAfterForm @attr={{attr}} @model={{@model}} />
-            </FormField>
+            {{#if (eq attr.name "issuerRef")}}
+              <Toggle
+                @name={{concat @attr.name "-validation-toggle"}}
+                @status="success"
+                @size="small"
+                @checked={{this.showDefaultIssuer}}
+                @onChange={{fn (mut this.showDefaultIssuer)}}
+              >
+                <span class="has-text-grey">Use default issuer</span>
+              </Toggle>
+              {{#unless this.showDefaultIssuer}}
+                <SearchSelect
+                  @models={{array "pki/issuer"}}
+                  @disallowNewItems={{true}}
+                  @backend={{@model.backend}}
+                  @onChange={{this.handleIssuerInput}}
+                  {{! @fallbackComponent="input-search" }}
+                />
+              {{/unless}}
+            {{else}}
+              <FormField
+                data-test-field={{attr}}
+                @attr={{attr}}
+                @model={{@model}}
+                @modelValidations={{this.modelValidations}}
+                @showHelpText={{false}}
+              >
+                <PkiNotValidAfterForm @attr={{attr}} @model={{@model}} />
+              </FormField>
+            {{/if}}
           {{/each}}
         {{else}}
           {{#let (camelize (concat "show" group)) as |prop|}}

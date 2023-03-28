@@ -7,6 +7,7 @@ import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
+import { action } from '@ember/object';
 
 /**
  * @module PkiRoleForm
@@ -31,6 +32,7 @@ export default class PkiRoleForm extends Component {
   @tracked errorBanner;
   @tracked invalidFormAlert;
   @tracked modelValidations;
+  @tracked showDefaultIssuer = true;
 
   get breadcrumbs() {
     const crumbs = [
@@ -61,6 +63,15 @@ export default class PkiRoleForm extends Component {
       const message = error.errors ? error.errors.join('. ') : error.message;
       this.errorBanner = message;
       this.invalidFormAlert = 'There was an error submitting this form.';
+    }
+  }
+
+  @action
+  handleIssuerInput(issuer) {
+    if (Array.isArray(issuer)) {
+      this.issuerValue = issuer[0];
+    } else {
+      this.issuerValue = issuer;
     }
   }
 }
