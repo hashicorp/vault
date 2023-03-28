@@ -43,9 +43,10 @@ export default class DownloadButton extends Component {
 
   constructor() {
     super(...arguments);
+    const hasConflictingArgs = this.args.data && this.args.fetchData;
     assert(
       'Only pass either @data or @fetchData, passing both means @data will be overwritten by the return value of @fetchData',
-      this.args.data && this.args.fetchData
+      !hasConflictingArgs
     );
   }
   get filename() {
