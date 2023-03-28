@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { set } from '@ember/object';
 import Service from '@ember/service';
 import { module, test } from 'qunit';
@@ -118,7 +123,7 @@ module('Unit | Service | control group', function (hooks) {
       accessor: '12345',
       token: 'token',
       creation_path: 'kv/',
-      creation_time: new Date().toISOString(),
+      creation_time: '2022-03-17T20:00:25.594Z',
       ttl: 400,
     };
     const expected = { ...error, uiParams: { url: '/vault/secrets/kv/show/foo' } };
@@ -138,7 +143,7 @@ module('Unit | Service | control group', function (hooks) {
       accessor: '12345',
       token: 'token',
       creation_path: 'kv/',
-      creation_time: new Date().toISOString(),
+      creation_time: '2022-03-17T20:00:25.594Z',
       ttl: 400,
     };
     const service = this.owner.factoryFor('service:control-group').create({
@@ -191,7 +196,7 @@ module('Unit | Service | control group', function (hooks) {
     const info = {
       accessor: '12345',
       creation_path: 'foo/',
-      creation_time: new Date().toISOString(),
+      creation_time: '2022-03-17T20:00:25.594Z',
       ttl: 300,
     };
     const key = `${CONTROL_GROUP_PREFIX}${info.accessor}${TOKEN_SEPARATOR}${info.creation_path}`;
