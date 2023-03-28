@@ -23,7 +23,7 @@
       <ToolbarLink
         @route="issuers.issuer.sign"
         @type="pen-tool"
-        @issuer={{this.newRootModel.id}}
+        @model={{this.newRootModel.id}}
         data-test-pki-issuer-sign-int
       >
         Sign Intermediate
@@ -44,7 +44,7 @@
               <li class="action">
                 <DownloadButton
                   class="link"
-                  @filename={{@issuer.id}}
+                  @filename={{this.newRootModel.id}}
                   @extension="pem"
                   @fetchData={{fn this.fetchDataForDownload "pem"}}
                   data-test-issuer-download-type="pem"
@@ -55,7 +55,7 @@
               <li class="action">
                 <DownloadButton
                   class="link"
-                  @filename={{@issuer.id}}
+                  @filename={{this.newRootModel.id}}
                   @extension="der"
                   @fetchData={{fn this.fetchDataForDownload "der"}}
                   data-test-issuer-download-type="der"
@@ -67,7 +67,7 @@
           </nav>
         </D.Content>
       </BasicDropdown>
-      <ToolbarLink @route="issuers.issuer.edit" @issuer={{@issuer.id}} data-test-pki-issuer-configure>
+      <ToolbarLink @route="issuers.issuer.edit" @model={{this.newRootModel.id}} data-test-pki-issuer-configure>
         Configure
       </ToolbarLink>
     </ToolbarActions>

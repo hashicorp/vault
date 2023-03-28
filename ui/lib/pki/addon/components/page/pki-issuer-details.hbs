@@ -63,7 +63,7 @@
     </BasicDropdown>
 
     {{#if @canConfigure}}
-      <ToolbarLink @route="issuers.issuer.edit" @issuer={{@issuer.id}} data-test-pki-issuer-configure>
+      <ToolbarLink @route="issuers.issuer.edit" @model={{@issuer.id}} data-test-pki-issuer-configure>
         Configure
       </ToolbarLink>
     {{/if}}
