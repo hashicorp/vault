@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package testhelpers
 
 import (
@@ -596,18 +599,16 @@ func GenerateDebugLogs(t testing.T, client *api.Client) chan struct{} {
 	t.Helper()
 
 	stopCh := make(chan struct{})
-	ticker := time.NewTicker(time.Second)
-	var err error
 
 	go func() {
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
 		for {
 			select {
 			case <-stopCh:
-				ticker.Stop()
-				stopCh <- struct{}{}
 				return
 			case <-ticker.C:
-				err = client.Sys().Mount("foo", &api.MountInput{
+				err := client.Sys().Mount("foo", &api.MountInput{
 					Type: "kv",
 					Options: map[string]string{
 						"version": "1",

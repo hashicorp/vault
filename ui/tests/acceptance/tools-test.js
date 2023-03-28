@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { click, fillIn, find, findAll, currentURL, visit, settled, waitUntil } from '@ember/test-helpers';
 import Pretender from 'pretender';
 import { module, test } from 'qunit';

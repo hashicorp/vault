@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, fillIn, render } from '@ember/test-helpers';
@@ -337,7 +342,7 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
     assert
       .dom('[data-test-alert-banner="alert"] .alert-banner-message-body')
       .hasText(
-        'certificate contains unsupported subject OIDs, certificate contains unsupported extension OIDs, subjectAltName contains unsupported types      '
+        'certificate contains unsupported subject OIDs: 1.2.840.113549.1.9.1, certificate contains unsupported extension OIDs: 2.5.29.37'
       );
 
     for (const field of FIELDS) {

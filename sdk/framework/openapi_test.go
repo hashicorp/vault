@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package framework
 
 import (
@@ -18,75 +21,6 @@ import (
 )
 
 func TestOpenAPI_Regex(t *testing.T) {
-	t.Run("Required", func(t *testing.T) {
-		tests := []struct {
-			input    string
-			captures []string
-		}{
-			{`/foo/bar/(?P<val>.*)`, []string{"val"}},
-			{`/foo/bar/` + GenericNameRegex("val"), []string{"val"}},
-			{`/foo/bar/` + GenericNameRegex("first") + "/b/" + GenericNameRegex("second"), []string{"first", "second"}},
-			{`/foo/bar`, []string{}},
-		}
-
-		for _, test := range tests {
-			result := reqdRe.FindAllStringSubmatch(test.input, -1)
-			if len(result) != len(test.captures) {
-				t.Fatalf("Capture error (%s): expected %d matches, actual: %d", test.input, len(test.captures), len(result))
-			}
-
-			for i := 0; i < len(result); i++ {
-				if result[i][1] != test.captures[i] {
-					t.Fatalf("Capture error (%s): expected %s, actual: %s", test.input, test.captures[i], result[i][1])
-				}
-			}
-		}
-	})
-	t.Run("Optional", func(t *testing.T) {
-		input := "foo/(maybe/)?bar"
-		expStart := len("foo/")
-		expEnd := len(input) - len("bar")
-
-		match := optRe.FindStringIndex(input)
-		if diff := deep.Equal(match, []int{expStart, expEnd}); diff != nil {
-			t.Fatal(diff)
-		}
-
-		input = "/foo/maybe/bar"
-		match = optRe.FindStringIndex(input)
-		if match != nil {
-			t.Fatalf("Expected nil match (%s), got %+v", input, match)
-		}
-	})
-	t.Run("Alternation", func(t *testing.T) {
-		input := `(raw/?$|raw/(?P<path>.+))`
-
-		matches := altRe.FindAllStringSubmatch(input, -1)
-		exp1 := "raw/?$"
-		exp2 := "raw/(?P<path>.+)"
-		if matches[0][1] != exp1 || matches[0][2] != exp2 {
-			t.Fatalf("Capture error. Expected %s and %s, got %v", exp1, exp2, matches[0][1:])
-		}
-
-		input = `/foo/bar/` + GenericNameRegex("val")
-
-		matches = altRe.FindAllStringSubmatch(input, -1)
-		if matches != nil {
-			t.Fatalf("Expected nil match (%s), got %+v", input, matches)
-		}
-	})
-	t.Run("Alternation Fields", func(t *testing.T) {
-		input := `/foo/bar/(?P<type>auth|database|secret)/(?P<blah>a|b)`
-
-		act := altFieldsGroupRe.ReplaceAllStringFunc(input, func(s string) string {
-			return altFieldsRe.ReplaceAllString(s, ".+")
-		})
-
-		exp := "/foo/bar/(?P<type>.+)/(?P<blah>.+)"
-		if act != exp {
-			t.Fatalf("Replace error. Expected %s, got %v", exp, act)
-		}
-	})
 	t.Run("Path fields", func(t *testing.T) {
 		input := `/foo/bar/{inner}/baz/{outer}`
 
@@ -111,21 +45,6 @@ func TestOpenAPI_Regex(t *testing.T) {
 			regex  *regexp.Regexp
 			output string
 		}{
-			{
-				input:  `ab?cde^fg(hi?j$k`,
-				regex:  cleanCharsRe,
-				output: "abcdefghijk",
-			},
-			{
-				input:  `abcde/?`,
-				regex:  cleanSuffixRe,
-				output: "abcde",
-			},
-			{
-				input:  `abcde/?$`,
-				regex:  cleanSuffixRe,
-				output: "abcde",
-			},
 			{
 				input:  `abcde`,
 				regex:  wsRe,
@@ -152,65 +71,126 @@ func TestOpenAPI_ExpandPattern(t *testing.T) {
 		inPattern   string
 		outPathlets []string
 	}{
+		// A simple string without regexp metacharacters passes through as is
 		{"rekey/backup", []string{"rekey/backup"}},
+		// A trailing regexp anchor metacharacter is removed
 		{"rekey/backup$", []string{"rekey/backup"}},
+		// As is a leading one
+		{"^rekey/backup", []string{"rekey/backup"}},
+		// Named capture groups become OpenAPI parameters
 		{"auth/(?P<path>.+?)/tune$", []string{"auth/{path}/tune"}},
 		{"auth/(?P<path>.+?)/tune/(?P<more>.*?)$", []string{"auth/{path}/tune/{more}"}},
+		// Even if the capture group contains very complex regexp structure inside it
+		{"something/(?P<something>(a|b(c|d))|e+|f{1,3}[ghi-k]?.*)", []string{"something/{something}"}},
+		// A question-mark results in a result without and with the optional path part
 		{"tools/hash(/(?P<urlalgorithm>.+))?", []string{
 			"tools/hash",
 			"tools/hash/{urlalgorithm}",
 		}},
+		// Multiple question-marks evaluate each possible combination
 		{"(leases/)?renew(/(?P<url_lease_id>.+))?", []string{
 			"leases/renew",
 			"leases/renew/{url_lease_id}",
 			"renew",
 			"renew/{url_lease_id}",
 		}},
+		// GenericNameRegex is one particular way of writing a named capture group, so behaves the same
 		{`config/ui/headers/` + GenericNameRegex("header"), []string{"config/ui/headers/{header}"}},
+		// The question-mark behaviour is still works when the question-mark is directly applied to a named capture group
 		{`leases/lookup/(?P<prefix>.+?)?`, []string{
 			"leases/lookup/",
 			"leases/lookup/{prefix}",
 		}},
+		// Optional trailing slashes at the end of the path get stripped - even if appearing deep inside an alternation
 		{`(raw/?$|raw/(?P<path>.+))`, []string{
 			"raw",
 			"raw/{path}",
 		}},
+		// OptionalParamRegex is also another way of writing a named capture group, that is optional
 		{"lookup" + OptionalParamRegex("urltoken"), []string{
 			"lookup",
 			"lookup/{urltoken}",
 		}},
+		// Optional trailign slashes at the end of the path get stripped in simpler cases too
 		{"roles/?$", []string{
 			"roles",
 		}},
 		{"roles/?", []string{
 			"roles",
 		}},
+		// Non-optional trailing slashes remain... although don't do this, it breaks HelpOperation!
+		// (Existing real examples of this pattern being fixed via https://github.com/hashicorp/vault/pull/18571)
 		{"accessors/$", []string{
 			"accessors/",
 		}},
+		// GenericNameRegex and OptionalParamRegex still work when concatenated
 		{"verify/" + GenericNameRegex("name") + OptionalParamRegex("urlalgorithm"), []string{
 			"verify/{name}",
 			"verify/{name}/{urlalgorithm}",
 		}},
+		// Named capture groups that specify enum-like parameters work as expected
 		{"^plugins/catalog/(?P<type>auth|database|secret)/(?P<name>.+)$", []string{
 			"plugins/catalog/{type}/{name}",
 		}},
 		{"^plugins/catalog/(?P<type>auth|database|secret)/?$", []string{
 			"plugins/catalog/{type}",
 		}},
+		// Alternations between various literal path segments work
 		{"(pathOne|pathTwo)/", []string{"pathOne/", "pathTwo/"}},
 		{"(pathOne|pathTwo)/" + GenericNameRegex("name"), []string{"pathOne/{name}", "pathTwo/{name}"}},
 		{
 			"(pathOne|path-2|Path_3)/" + GenericNameRegex("name"),
 			[]string{"Path_3/{name}", "path-2/{name}", "pathOne/{name}"},
 		},
+		// They still work when combined with GenericNameWithAtRegex
+		{"(creds|sts)/" + GenericNameWithAtRegex("name"), []string{
+			"creds/{name}",
+			"sts/{name}",
+		}},
+		// And when they're somewhere other than the start of the pattern
+		{"keys/generate/(internal|exported|kms)", []string{
+			"keys/generate/exported",
+			"keys/generate/internal",
+			"keys/generate/kms",
+		}},
+		// If a plugin author makes their list operation support both singular and plural forms, the OpenAPI notices
+		{"rolesets?/?", []string{"roleset", "rolesets"}},
+		// Complex nested alternation and question-marks are correctly interpreted
+		{"crl(/pem|/delta(/pem)?)?", []string{"crl", "crl/delta", "crl/delta/pem", "crl/pem"}},
 	}
 
 	for i, test := range tests {
-		out := expandPattern(test.inPattern)
+		out, err := expandPattern(test.inPattern)
+		if err != nil {
+			t.Fatal(err)
+		}
 		sort.Strings(out)
 		if !reflect.DeepEqual(out, test.outPathlets) {
 			t.Fatalf("Test %d: Expected %v got %v", i, test.outPathlets, out)
+		}
+	}
+}
+
+func TestOpenAPI_ExpandPattern_ReturnsError(t *testing.T) {
+	tests := []struct {
+		inPattern string
+		outError  error
+	}{
+		// None of these regexp constructs are allowed outside of named capture groups
+		{"[a-z]", errUnsupportableRegexpOperationForOpenAPI},
+		{".", errUnsupportableRegexpOperationForOpenAPI},
+		{"a+", errUnsupportableRegexpOperationForOpenAPI},
+		{"a*", errUnsupportableRegexpOperationForOpenAPI},
+		// So this pattern, which is a combination of two of the above isn't either - this pattern occurs in the KV
+		// secrets engine for its catch-all error handler, which provides a helpful hint to people treating a KV v2 as
+		// a KV v1.
+		{".*", errUnsupportableRegexpOperationForOpenAPI},
+	}
+
+	for i, test := range tests {
+		_, err := expandPattern(test.inPattern)
+		if err != test.outError {
+			t.Fatalf("Test %d: Expected %q got %q", i, test.outError, err)
 		}
 	}
 }
@@ -246,42 +226,123 @@ func TestOpenAPI_SplitFields(t *testing.T) {
 }
 
 func TestOpenAPI_SpecialPaths(t *testing.T) {
-	tests := []struct {
-		pattern     string
-		rootPaths   []string
-		root        bool
-		unauthPaths []string
-		unauth      bool
+	tests := map[string]struct {
+		pattern                 string
+		rootPaths               []string
+		rootExpected            bool
+		unauthenticatedPaths    []string
+		unauthenticatedExpected bool
 	}{
-		{"foo", []string{}, false, []string{"foo"}, true},
-		{"foo", []string{"foo"}, true, []string{"bar"}, false},
-		{"foo/bar", []string{"foo"}, false, []string{"foo/*"}, true},
-		{"foo/bar", []string{"foo/*"}, true, []string{"foo"}, false},
-		{"foo/", []string{"foo/*"}, true, []string{"a", "b", "foo/"}, true},
-		{"foo", []string{"foo*"}, true, []string{"a", "fo*"}, true},
-		{"foo/bar", []string{"a", "b", "foo/*"}, true, []string{"foo/baz/*"}, false},
+		"empty": {
+			pattern:                 "foo",
+			rootPaths:               []string{},
+			rootExpected:            false,
+			unauthenticatedPaths:    []string{},
+			unauthenticatedExpected: false,
+		},
+		"exact-match-unauthenticated": {
+			pattern:                 "foo",
+			rootPaths:               []string{},
+			rootExpected:            false,
+			unauthenticatedPaths:    []string{"foo"},
+			unauthenticatedExpected: true,
+		},
+		"exact-match-root": {
+			pattern:                 "foo",
+			rootPaths:               []string{"foo"},
+			rootExpected:            true,
+			unauthenticatedPaths:    []string{"bar"},
+			unauthenticatedExpected: false,
+		},
+		"asterisk-match-unauthenticated": {
+			pattern:                 "foo/bar",
+			rootPaths:               []string{"foo"},
+			rootExpected:            false,
+			unauthenticatedPaths:    []string{"foo/*"},
+			unauthenticatedExpected: true,
+		},
+		"asterisk-match-root": {
+			pattern:                 "foo/bar",
+			rootPaths:               []string{"foo/*"},
+			rootExpected:            true,
+			unauthenticatedPaths:    []string{"foo"},
+			unauthenticatedExpected: false,
+		},
+		"path-ends-with-slash": {
+			pattern:                 "foo/",
+			rootPaths:               []string{"foo/*"},
+			rootExpected:            true,
+			unauthenticatedPaths:    []string{"a", "b", "foo*"},
+			unauthenticatedExpected: true,
+		},
+		"asterisk-match-no-slash": {
+			pattern:                 "foo",
+			rootPaths:               []string{"foo*"},
+			rootExpected:            true,
+			unauthenticatedPaths:    []string{"a", "fo*"},
+			unauthenticatedExpected: true,
+		},
+		"multiple-root-paths": {
+			pattern:                 "foo/bar",
+			rootPaths:               []string{"a", "b", "foo/*"},
+			rootExpected:            true,
+			unauthenticatedPaths:    []string{"foo/baz/*"},
+			unauthenticatedExpected: false,
+		},
+		"plus-match-unauthenticated": {
+			pattern:                 "foo/bar/baz",
+			rootPaths:               []string{"foo/bar"},
+			rootExpected:            false,
+			unauthenticatedPaths:    []string{"foo/+/baz"},
+			unauthenticatedExpected: true,
+		},
+		"plus-match-root": {
+			pattern:                 "foo/bar/baz",
+			rootPaths:               []string{"foo/+/baz"},
+			rootExpected:            true,
+			unauthenticatedPaths:    []string{"foo/bar"},
+			unauthenticatedExpected: false,
+		},
+		"plus-and-asterisk": {
+			pattern:                 "foo/bar/baz/something",
+			rootPaths:               []string{"foo/+/baz/*"},
+			rootExpected:            true,
+			unauthenticatedPaths:    []string{"foo/+/baz*"},
+			unauthenticatedExpected: true,
+		},
+		"double-plus-good": {
+			pattern:                 "foo/bar/baz",
+			rootPaths:               []string{"foo/+/+"},
+			rootExpected:            true,
+			unauthenticatedPaths:    []string{"foo/bar"},
+			unauthenticatedExpected: false,
+		},
 	}
-	for i, test := range tests {
-		doc := NewOASDocument("version")
-		path := Path{
-			Pattern: test.pattern,
-		}
-		sp := &logical.Paths{
-			Root:            test.rootPaths,
-			Unauthenticated: test.unauthPaths,
-		}
-		err := documentPath(&path, sp, "kv", logical.TypeLogical, doc)
-		if err != nil {
-			t.Fatal(err)
-		}
-		result := test.root
-		if doc.Paths["/"+test.pattern].Sudo != result {
-			t.Fatalf("Test (root) %d: Expected %v got %v", i, test.root, result)
-		}
-		result = test.unauth
-		if doc.Paths["/"+test.pattern].Unauthenticated != result {
-			t.Fatalf("Test (unauth) %d: Expected %v got %v", i, test.unauth, result)
-		}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			doc := NewOASDocument("version")
+			path := Path{
+				Pattern: test.pattern,
+			}
+			specialPaths := &logical.Paths{
+				Root:            test.rootPaths,
+				Unauthenticated: test.unauthenticatedPaths,
+			}
+
+			if err := documentPath(&path, specialPaths, "kv", logical.TypeLogical, doc); err != nil {
+				t.Fatal(err)
+			}
+
+			actual := doc.Paths["/"+test.pattern].Sudo
+			if actual != test.rootExpected {
+				t.Fatalf("Test (root): expected: %v; got: %v", test.rootExpected, actual)
+			}
+
+			actual = doc.Paths["/"+test.pattern].Unauthenticated
+			if actual != test.unauthenticatedExpected {
+				t.Fatalf("Test (unauth): expected: %v; got: %v", test.unauthenticatedExpected, actual)
+			}
+		})
 	}
 }
 

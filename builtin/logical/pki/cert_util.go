@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -234,9 +237,9 @@ func fetchCertBySerial(sc *storageContext, prefix, serial string) (*logical.Stor
 		// If we fail here, we have an extra (copy) of a cert in storage, add to metrics:
 		switch {
 		case strings.HasPrefix(prefix, "revoked/"):
-			sc.Backend.incrementTotalRevokedCertificatesCount(certsCounted, path)
+			sc.Backend.ifCountEnabledIncrementTotalRevokedCertificatesCount(certsCounted, path)
 		default:
-			sc.Backend.incrementTotalCertificatesCount(certsCounted, path)
+			sc.Backend.ifCountEnabledIncrementTotalCertificatesCount(certsCounted, path)
 		}
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error deleting certificate with serial %s from old location", serial)}
 	}
@@ -1392,7 +1395,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 				fallthrough
 			default:
 				return nil, nil, errutil.UserError{Err: fmt.Sprintf(
-					"cannot satisfy request, as TTL would result in notAfter %s that is beyond the expiration of the CA certificate at %s", notAfter.Format(time.RFC3339Nano), caSign.Certificate.NotAfter.Format(time.RFC3339Nano))}
+					"cannot satisfy request, as TTL would result in notAfter of %s that is beyond the expiration of the CA certificate at %s", notAfter.UTC().Format(time.RFC3339Nano), caSign.Certificate.NotAfter.UTC().Format(time.RFC3339Nano))}
 			}
 		}
 	}

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package configutil
 
 import (
@@ -51,7 +54,6 @@ type KMS struct {
 	Purpose []string `hcl:"-"`
 
 	Disabled bool
-	Recover  bool
 	Config   map[string]string
 }
 
@@ -100,15 +102,6 @@ func parseKMS(result *[]*KMS, list *ast.ObjectList, blockName string, maxKMS int
 			delete(m, "disabled")
 		}
 
-		var recover bool
-		if v, ok := m["recovery_keys_fallback"]; ok {
-			recover, err = parseutil.ParseBool(v)
-			if err != nil {
-				return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
-			}
-			delete(m, "recovery_keys_fallback")
-		}
-
 		strMap := make(map[string]string, len(m))
 		for k, v := range m {
 			s, err := parseutil.ParseString(v)
@@ -122,7 +115,6 @@ func parseKMS(result *[]*KMS, list *ast.ObjectList, blockName string, maxKMS int
 			Type:     strings.ToLower(key),
 			Purpose:  purpose,
 			Disabled: disabled,
-			Recover:  recover,
 		}
 		if len(strMap) > 0 {
 			seal.Config = strMap

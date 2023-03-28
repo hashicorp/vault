@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package healthcheck
 
 import (
@@ -93,7 +96,7 @@ func (h *TidyLastRun) Evaluate(e *Executor) (results []*Result, err error) {
 		ret := Result{
 			Status:   ResultInsufficientPermissions,
 			Endpoint: "/{{mount}}/tidy-status",
-			Message:  "Without this information, this health check is unable tof unction.",
+			Message:  "Without this information, this health check is unable to function.",
 		}
 
 		if e.Client.Token() == "" {

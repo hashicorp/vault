@@ -1,33 +1,18 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
+import { withConfig } from 'pki/decorators/check-config';
 import { hash } from 'rsvp';
 
+@withConfig()
 export default class PkiOverviewRoute extends Route {
   @service secretMountPath;
   @service auth;
   @service store;
-
-  get win() {
-    return this.window || window;
-  }
-
-  hasConfig() {
-    // When the engine is configured, it creates a default issuer.
-    // If the issuers list is empty, we know it hasn't been configured
-    const endpoint = `${this.win.origin}/v1/${this.secretMountPath.currentPath}/issuers?list=true`;
-
-    return this.auth
-      .ajax(endpoint, 'GET', {})
-      .then(() => true)
-      .catch(() => false);
-  }
-
-  async fetchEngine() {
-    const model = await this.store.query('secret-engine', {
-      path: this.secretMountPath.currentPath,
-    });
-    return model.get('firstObject');
-  }
 
   async fetchAllRoles() {
     try {
@@ -47,8 +32,8 @@ export default class PkiOverviewRoute extends Route {
 
   async model() {
     return hash({
-      hasConfig: this.hasConfig(),
-      engine: this.fetchEngine(),
+      hasConfig: this.shouldPromptConfig,
+      engine: this.modelFor('application'),
       roles: this.fetchAllRoles(),
       issuers: this.fetchAllIssuers(),
     });

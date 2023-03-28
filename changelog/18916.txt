@@ -1,0 +1,3 @@
+```release-note:bug
+core/activity: report mount paths (rather than mount accessors) in current month activity log counts and include deleted mount paths in precomputed queries.
+```

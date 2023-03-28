@@ -1,5 +1,12 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+import { withConfirmLeave } from 'core/decorators/confirm-leave';
 import PkiIssuersIndexRoute from '.';
 
+@withConfirmLeave()
 export default class PkiIssuersGenerateIntermediateRoute extends PkiIssuersIndexRoute {
   model() {
     return this.store.createRecord('pki/action', { actionType: 'generate-csr' });

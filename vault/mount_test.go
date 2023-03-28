@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -7,6 +10,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 
 	"github.com/armon/go-metrics"
 	"github.com/go-test/deep"
@@ -118,7 +123,7 @@ func TestCore_DefaultMountTable(t *testing.T) {
 	conf := &CoreConfig{
 		Physical:        c.physical,
 		DisableMlock:    true,
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
 		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
 	}
@@ -163,7 +168,7 @@ func TestCore_Mount(t *testing.T) {
 	conf := &CoreConfig{
 		Physical:        c.physical,
 		DisableMlock:    true,
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
 		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
 	}
@@ -235,7 +240,7 @@ func TestCore_Mount_kv_generic(t *testing.T) {
 	conf := &CoreConfig{
 		Physical:        c.physical,
 		DisableMlock:    true,
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
 		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
 	}
@@ -449,7 +454,7 @@ func TestCore_Unmount(t *testing.T) {
 	conf := &CoreConfig{
 		Physical:        c.physical,
 		DisableMlock:    true,
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
 		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
 	}
@@ -720,7 +725,7 @@ func TestCore_MountTable_UpgradeToTyped(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 
 	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
-		return &NoopAudit{
+		return &corehelpers.NoopAudit{
 			Config: config,
 		}, nil
 	}

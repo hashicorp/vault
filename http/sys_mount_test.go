@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package http
 
 import (
@@ -9,6 +12,7 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/go-test/deep"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault"
@@ -415,6 +419,72 @@ func TestSysMount_put(t *testing.T) {
 	// for more info.
 }
 
+// TestSysRemountSpacesFrom ensure we succeed in a remount where the 'from' mount has spaces in the name
+func TestSysRemountSpacesFrom(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	resp := testHttpPost(t, token, addr+"/v1/sys/mounts/foo%20bar", map[string]interface{}{
+		"type":        "kv",
+		"description": "foo",
+	})
+	testResponseStatus(t, resp, 204)
+
+	resp = testHttpPost(t, token, addr+"/v1/sys/remount", map[string]interface{}{
+		"from": "foo bar",
+		"to":   "baz",
+	})
+	testResponseStatus(t, resp, 200)
+}
+
+// TestSysRemountSpacesTo ensure we succeed in a remount where the 'to' mount has spaces in the name
+func TestSysRemountSpacesTo(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	resp := testHttpPost(t, token, addr+"/v1/sys/mounts/foo%20bar", map[string]interface{}{
+		"type":        "kv",
+		"description": "foo",
+	})
+	testResponseStatus(t, resp, 204)
+
+	resp = testHttpPost(t, token, addr+"/v1/sys/remount", map[string]interface{}{
+		"from": "foo bar",
+		"to":   "bar baz",
+	})
+	testResponseStatus(t, resp, 200)
+}
+
+// TestSysRemountTrailingSpaces ensures we fail on trailing spaces
+func TestSysRemountTrailingSpaces(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	resp := testHttpPost(t, token, addr+"/v1/sys/mounts/foo%20bar", map[string]interface{}{
+		"type":        "kv",
+		"description": "foo",
+	})
+	testResponseStatus(t, resp, 204)
+
+	resp = testHttpPost(t, token, addr+"/v1/sys/remount", map[string]interface{}{
+		"from": "foo bar",
+		"to":   " baz ",
+	})
+	testResponseStatus(t, resp, 400)
+
+	resp = testHttpPost(t, token, addr+"/v1/sys/remount", map[string]interface{}{
+		"from": " foo bar ",
+		"to":   "baz",
+	})
+	testResponseStatus(t, resp, 400)
+}
+
 func TestSysRemount(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
@@ -436,7 +506,7 @@ func TestSysRemount(t *testing.T) {
 	// Poll until the remount succeeds
 	var remountResp map[string]interface{}
 	testResponseBody(t, resp, &remountResp)
-	vault.RetryUntil(t, 5*time.Second, func() error {
+	corehelpers.RetryUntil(t, 5*time.Second, func() error {
 		resp = testHttpGet(t, token, addr+"/v1/sys/remount/status/"+remountResp["migration_id"].(string))
 		testResponseStatus(t, resp, 200)
 

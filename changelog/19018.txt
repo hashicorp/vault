@@ -1,0 +1,7 @@
+```release-note:feature
+**GCP Secrets Impersonated Account Support**: Add support for GCP service account impersonation, allowing callers to generate a GCP access token without requiring Vault to store or retrieve a GCP service account key for each role.
+```
+
+```release-note:bug
+secrets/gcp: fix issue where IAM bindings were not preserved during policy update
+```

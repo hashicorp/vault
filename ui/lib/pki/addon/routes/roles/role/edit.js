@@ -1,8 +1,17 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+import Route from '@ember/routing/route';
+import { inject as service } from '@ember/service';
 import { withConfirmLeave } from 'core/decorators/confirm-leave';
-import PkiRolesIndexRoute from '../index';
 
 @withConfirmLeave()
-export default class PkiRoleEditRoute extends PkiRolesIndexRoute {
+export default class PkiRoleEditRoute extends Route {
+  @service store;
+  @service secretMountPath;
+
   model() {
     const { role } = this.paramsFor('roles/role');
     return this.store.queryRecord('pki/role', {
@@ -14,10 +23,9 @@ export default class PkiRoleEditRoute extends PkiRolesIndexRoute {
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
     const { id } = resolvedModel;
-    const backend = this.secretMountPath.currentPath || 'pki';
     controller.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: backend, route: 'overview' },
+      { label: this.secretMountPath.currentPath, route: 'overview' },
       { label: 'roles', route: 'roles.index' },
       { label: id, route: 'roles.role.details' },
       { label: 'edit' },

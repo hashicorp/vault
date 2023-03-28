@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import NamedPathAdapter from 'vault/adapters/named-path';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
@@ -32,7 +37,7 @@ export default class KubernetesRoleAdapter extends NamedPathAdapter {
   }
   generateCredentials(backend, data) {
     const generateCredentialsUrl = `${this.buildURL()}/${encodePath(backend)}/creds/${data.role}`;
-
+    delete data.role;
     return this.ajax(generateCredentialsUrl, 'POST', { data }).then((response) => {
       const { lease_id, lease_duration, data } = response;
 

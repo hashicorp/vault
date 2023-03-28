@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -153,7 +156,6 @@ func (cb *crlBuilder) reloadConfigIfRequired(sc *storageContext) error {
 		}
 
 		previousConfig := cb.config
-
 		// Set the default config if none was returned to us.
 		if config != nil {
 			cb.config = *config
@@ -351,7 +353,7 @@ func (cb *crlBuilder) _getPresentDeltaWALForClearing(sc *storageContext, path st
 	// Clearing of the delta WAL occurs after a new complete CRL has been built.
 	walSerials, err := sc.Storage.List(sc.Context, path)
 	if err != nil {
-		return nil, fmt.Errorf("error fetching list of delta WAL certificates to clear: %s", err)
+		return nil, fmt.Errorf("error fetching list of delta WAL certificates to clear: %w", err)
 	}
 
 	// We _should_ remove the special WAL entries here, but we don't really
@@ -377,7 +379,7 @@ func (cb *crlBuilder) _clearDeltaWAL(sc *storageContext, walSerials []string, pa
 		}
 
 		if err := sc.Storage.Delete(sc.Context, path+serial); err != nil {
-			return fmt.Errorf("error clearing delta WAL certificate: %s", err)
+			return fmt.Errorf("error clearing delta WAL certificate: %w", err)
 		}
 	}
 
@@ -655,7 +657,7 @@ func (cb *crlBuilder) processRevocationQueue(sc *storageContext) error {
 		(!sc.Backend.System().LocalMount() && sc.Backend.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary))
 
 	if err := cb.maybeGatherQueueForFirstProcess(sc, isNotPerfPrimary); err != nil {
-		return fmt.Errorf("failed to gather first queue: %v", err)
+		return fmt.Errorf("failed to gather first queue: %w", err)
 	}
 
 	revQueue := cb.revQueue.Iterate()
@@ -970,15 +972,15 @@ func revokeCert(sc *storageContext, config *crlConfig, cert *x509.Certificate) (
 
 	revEntry, err := logical.StorageEntryJSON(revokedPath+hyphenSerial, revInfo)
 	if err != nil {
-		return nil, fmt.Errorf("error creating revocation entry")
+		return nil, fmt.Errorf("error creating revocation entry: %w", err)
 	}
 
 	certsCounted := sc.Backend.certsCounted.Load()
 	err = sc.Storage.Put(sc.Context, revEntry)
 	if err != nil {
-		return nil, fmt.Errorf("error saving revoked certificate to new location")
+		return nil, fmt.Errorf("error saving revoked certificate to new location: %w", err)
 	}
-	sc.Backend.incrementTotalRevokedCertificatesCount(certsCounted, revEntry.Key)
+	sc.Backend.ifCountEnabledIncrementTotalRevokedCertificatesCount(certsCounted, revEntry.Key)
 
 	// If this flag is enabled after the fact, existing local entries will be published to
 	// the unified storage space through a periodic function.
@@ -1078,11 +1080,11 @@ func writeSpecificRevocationDeltaWALs(sc *storageContext, hyphenSerial string, c
 	var walInfo deltaWALInfo
 	walEntry, err := logical.StorageEntryJSON(pathPrefix+hyphenSerial, walInfo)
 	if err != nil {
-		return fmt.Errorf("unable to create delta CRL WAL entry")
+		return fmt.Errorf("unable to create delta CRL WAL entry: %w", err)
 	}
 
 	if err = sc.Storage.Put(sc.Context, walEntry); err != nil {
-		return fmt.Errorf("error saving delta CRL WAL entry")
+		return fmt.Errorf("error saving delta CRL WAL entry: %w", err)
 	}
 
 	// In order for periodic delta rebuild to be mildly efficient, we
@@ -1091,10 +1093,10 @@ func writeSpecificRevocationDeltaWALs(sc *storageContext, hyphenSerial string, c
 	lastRevSerial := lastWALInfo{Serial: colonSerial}
 	lastWALEntry, err := logical.StorageEntryJSON(pathPrefix+deltaWALLastRevokedSerialName, lastRevSerial)
 	if err != nil {
-		return fmt.Errorf("unable to create last delta CRL WAL entry")
+		return fmt.Errorf("unable to create last delta CRL WAL entry: %w", err)
 	}
 	if err = sc.Storage.Put(sc.Context, lastWALEntry); err != nil {
-		return fmt.Errorf("error saving last delta CRL WAL entry")
+		return fmt.Errorf("error saving last delta CRL WAL entry: %w", err)
 	}
 
 	return nil
@@ -1841,12 +1843,12 @@ func getLocalRevokedCertEntries(sc *storageContext, issuerIDCertMap map[issuerID
 			// we should update the entry to make future CRL builds faster.
 			revokedEntry, err = logical.StorageEntryJSON(revokedPath+serial, revInfo)
 			if err != nil {
-				return nil, nil, fmt.Errorf("error creating revocation entry for existing cert: %v", serial)
+				return nil, nil, fmt.Errorf("error creating revocation entry for existing cert: %v: %w", serial, err)
 			}
 
 			err = sc.Storage.Put(sc.Context, revokedEntry)
 			if err != nil {
-				return nil, nil, fmt.Errorf("error updating revoked certificate at existing location: %v", serial)
+				return nil, nil, fmt.Errorf("error updating revoked certificate at existing location: %v: %w", serial, err)
 			}
 		}
 	}
@@ -2074,4 +2076,10 @@ WRITE:
 	}
 
 	return &nextUpdate, nil
+}
+
+// shouldLocalPathsUseUnified assuming a legacy path for a CRL/OCSP request, does our
+// configuration say we should be returning the unified response or not
+func shouldLocalPathsUseUnified(cfg *crlConfig) bool {
+	return cfg.UnifiedCRL && cfg.UnifiedCRLOnExistingPaths
 }

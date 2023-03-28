@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -13,9 +16,11 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -1130,10 +1135,10 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 
 func TestCore_HandleRequest_AuditTrail(t *testing.T) {
 	// Create a noop audit backend
-	noop := &NoopAudit{}
+	noop := &corehelpers.NoopAudit{}
 	c, _, root := TestCoreUnsealed(t)
 	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
-		noop = &NoopAudit{
+		noop = &corehelpers.NoopAudit{
 			Config: config,
 		}
 		return noop, nil
@@ -1194,10 +1199,10 @@ func TestCore_HandleRequest_AuditTrail(t *testing.T) {
 
 func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
 	// Create a noop audit backend
-	var noop *NoopAudit
+	var noop *corehelpers.NoopAudit
 	c, _, root := TestCoreUnsealed(t)
 	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
-		noop = &NoopAudit{
+		noop = &corehelpers.NoopAudit{
 			Config: config,
 		}
 		return noop, nil
@@ -1288,17 +1293,17 @@ func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
 	if _, err := c.HandleRequest(namespace.RootContext(nil), req); err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if len(noop.RespNonHMACKeys) != 1 || noop.RespNonHMACKeys[0] != "baz" {
+	if len(noop.RespNonHMACKeys) != 1 || !strutil.EquivalentSlices(noop.RespNonHMACKeys[0], []string{"baz"}) {
 		t.Fatalf("Bad: %#v", noop.RespNonHMACKeys)
 	}
-	if len(noop.RespReqNonHMACKeys) != 1 || noop.RespReqNonHMACKeys[0] != "foo" {
+	if len(noop.RespReqNonHMACKeys) != 1 || !strutil.EquivalentSlices(noop.RespReqNonHMACKeys[0], []string{"foo"}) {
 		t.Fatalf("Bad: %#v", noop.RespReqNonHMACKeys)
 	}
 }
 
 func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 	// Create a badass credential backend that always logs in as armon
-	noop := &NoopAudit{}
+	noop := &corehelpers.NoopAudit{}
 	noopBack := &NoopBackend{
 		Login: []string{"login"},
 		Response: &logical.Response{
@@ -1319,7 +1324,7 @@ func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 		return noopBack, nil
 	}
 	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
-		noop = &NoopAudit{
+		noop = &corehelpers.NoopAudit{
 			Config: config,
 		}
 		return noop, nil
@@ -2022,7 +2027,7 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 		HAPhysical:      inmha,
 		RedirectAddr:    redirectOriginal,
 		DisableMlock:    true,
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 	})
 	if err != nil {
 		t.Fatalf("err: %v", err)

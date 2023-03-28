@@ -1,0 +1,4 @@
+```release-note:feature
+core (enterprise): Add background worker for automatic reporting of billing
+information.
+```

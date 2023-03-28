@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package server
 
 import (
@@ -5,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 	"os"
 	"path/filepath"
@@ -465,9 +467,14 @@ func LoadConfig(path string) (*Config, error) {
 				return nil, errors.New("Error parsing the environment variable VAULT_ENABLE_FILE_PERMISSIONS_CHECK")
 			}
 		}
+		f, err := os.Open(path)
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
 
 		if enableFilePermissionsCheck {
-			err = osutil.OwnerPermissionsMatch(path, 0, 0)
+			err = osutil.OwnerPermissionsMatchFile(f, 0, 0)
 			if err != nil {
 				return nil, err
 			}
@@ -482,16 +489,12 @@ func CheckConfig(c *Config, e error) (*Config, error) {
 		return c, e
 	}
 
-	switch len(c.Seals) {
-	case 2:
-		// Two seals indicates a seal migration, but one and only one must be disabled
+	if len(c.Seals) == 2 {
 		switch {
 		case c.Seals[0].Disabled && c.Seals[1].Disabled:
 			return nil, errors.New("seals: two seals provided but both are disabled")
 		case !c.Seals[0].Disabled && !c.Seals[1].Disabled:
 			return nil, errors.New("seals: two seals provided but neither is disabled")
-		case (!c.Seals[0].Disabled && c.Seals[0].Recover) || (!c.Seals[1].Disabled && c.Seals[1].Recover):
-			return nil, errors.New("seals: migration target seal cannot be in recovery mode")
 		}
 	}
 
@@ -500,8 +503,14 @@ func CheckConfig(c *Config, e error) (*Config, error) {
 
 // LoadConfigFile loads the configuration from the given file.
 func LoadConfigFile(path string) (*Config, error) {
+	// Open the file
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
 	// Read the file
-	d, err := ioutil.ReadFile(path)
+	d, err := io.ReadAll(f)
 	if err != nil {
 		return nil, err
 	}
@@ -522,7 +531,7 @@ func LoadConfigFile(path string) (*Config, error) {
 
 	if enableFilePermissionsCheck {
 		// check permissions of the config file
-		err = osutil.OwnerPermissionsMatch(path, 0, 0)
+		err = osutil.OwnerPermissionsMatchFile(f, 0, 0)
 		if err != nil {
 			return nil, err
 		}

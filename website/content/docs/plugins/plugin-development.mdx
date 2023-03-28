@@ -100,6 +100,19 @@ be omitted.
 
 [api_addr]: /vault/docs/configuration#api_addr
 
+## Leveraging plugin versioning
+
+@include 'plugin-versioning.mdx'
+
+Auth and secrets plugins based on `framework.Backend` from the SDK should set the
+[`RunningVersion`](https://github.com/hashicorp/vault/blob/sdk/v0.6.0/sdk/framework/backend.go#L95-L96)
+variable, and the framework will implement the version interface.
+
+Database plugins have a smaller API than `framework.Backend` exposes, and should
+instead implement the
+[`PluginVersioner`](https://github.com/hashicorp/vault/blob/sdk/v0.6.0/sdk/logical/logical.go#L150-L154)
+interface directly.
+
 ## Building a Plugin from Source
 
 To build a plugin from source, first navigate to the location holding the
@@ -111,7 +124,7 @@ plugin and enable it.
 ## Plugin Development - Resources
 
 For more information on how to register and enable your plugin, refer to the
-[Building Plugin Backends](https://learn.hashicorp.com/vault/developer/plugin-backends)
+[Building Plugin Backends](/vault/tutorials/app-integration/plugin-backends)
 tutorial.
 
 Other HashiCorp plugin development resources:
@@ -121,6 +134,6 @@ Other HashiCorp plugin development resources:
 
 ### Plugin Development - Resources - Community
 
-See the [Plugin Portal](/vault/docs/plugins/plugin-portal#community) to find
-Community plugin examples/guides developed by community members. HashiCorp does
-not validate these for correctness.
+See the [Vault Integrations](/vault/integrations) page to find Community
+plugin examples/guides developed by community members. HashiCorp does not
+validate these for correctness.

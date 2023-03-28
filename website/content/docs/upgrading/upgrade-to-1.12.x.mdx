@@ -21,6 +21,14 @@ Vault Enterprise will now perform a supported storage check at startup. There is
 
 @include 'consul-dataplane-upgrade-note.mdx'
 
+### External Plugin Loading
+
+Vault 1.12.0 introduced a change to how external plugins are loaded. Prior to
+Vault 1.12.0 plugins were lazy loaded on startup. This means that plugin
+processes were killed after a successful mount and then respawned when a
+request is routed to them. Vault 1.12.0 introduced auto mutual TLS for
+secrets/auth plugins so we do not lazy load them on startup anymore.
+
 ## Known Issues
 
 ### Pinning to builtin plugin versions may cause failure on upgrade
@@ -160,3 +168,19 @@ https://github.com/hashicorp/vault/commit/76165052e54f884ed0aa2caa496083dc84ad1c
 #### Impacted Versions
 
 Affects versions 1.12.0, 1.12.1, and 1.12.2. A fix will be released in 1.12.3.
+
+### PKI OCSP GET requests return malformed request responses
+
+If an OCSP GET request contains a '+' character, a malformed request response will be
+returned instead of properly processing the request due to a double decoding issue within the
+handler.
+
+As a workaround, OCSP POST requests can be used which are unaffected.
+
+#### Impacted Versions
+
+Affects version 1.12.3. A fix will be released in 1.12.4.
+
+@include 'tokenization-rotation-persistence.mdx'
+
+@include 'ocsp-redirect.mdx'

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { click, fillIn, render } from '@ember/test-helpers';
@@ -20,8 +25,8 @@ const selectors = {
   certUrl2: '[data-test-string-list-input="1"]',
   certUrlAdd: '[data-test-string-list-button="add"]',
   certUrlRemove: '[data-test-string-list-button="delete"]',
-  crlDist: '[data-test-input="crlDistributionPoints"]',
-  ocspServers: '[data-test-input="ocspServers"]',
+  crlDist: '[data-test-input="crlDistributionPoints"] [data-test-string-list-input="0"]',
+  ocspServers: '[data-test-input="ocspServers"]  [data-test-string-list-input="0"]',
   save: '[data-test-save]',
   cancel: '[data-test-cancel]',
   error: '[data-test-error] p',
@@ -84,10 +89,10 @@ module('Integration | Component | pki | Page::PkiIssuerEditPage::PkiIssuerEdit',
     const certUrls = this.model.issuingCertificates.split(',');
     assert.dom(selectors.certUrl1).hasValue(certUrls[0], 'Issuing certificate populates');
     assert.dom(selectors.certUrl2).hasValue(certUrls[1], 'Issuing certificate populates');
-    assert
-      .dom(selectors.crlDist)
-      .hasValue(this.model.crlDistributionPoints, 'Crl distribution points populate');
-    assert.dom(selectors.ocspServers).hasValue(this.model.ocspServers, 'Ocsp servers populate');
+    const crlDistributionPoints = this.model.crlDistributionPoints.split(',');
+    assert.dom(selectors.crlDist).hasValue(crlDistributionPoints[0], 'Crl distribution points populate');
+    const ocspServers = this.model.ocspServers.split(',');
+    assert.dom(selectors.ocspServers).hasValue(ocspServers[0], 'Ocsp servers populate');
   });
 
   test('it should rollback model attributes on cancel', async function (assert) {

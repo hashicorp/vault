@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withModelValidations } from 'vault/decorators/model-validations';
@@ -128,7 +133,7 @@ export default class PkiRoleModel extends Model {
     subText:
       'Specifies if certificates issued/signed against this role will have Vault leases attached to them.',
     editType: 'boolean',
-    docLink: '/api-docs/secret/pki#create-update-role',
+    docLink: '/vault/api-docs/secret/pki#create-update-role',
   })
   generateLease;
 
@@ -138,7 +143,7 @@ export default class PkiRoleModel extends Model {
     subText:
       'This can improve performance when issuing large numbers of certificates. However, certificates issued in this way cannot be enumerated or revoked.',
     editType: 'boolean',
-    docLink: '/api-docs/secret/pki#create-update-role',
+    docLink: '/vault/api-docs/secret/pki#create-update-role',
   })
   noStore;
 
@@ -210,7 +215,7 @@ export default class PkiRoleModel extends Model {
     label: 'URI Subject Alternative Names (URI SANs)',
     subText: 'Defines allowed URI Subject Alternative Names. Add one item per row',
     editType: 'stringArray',
-    docLink: '/docs/concepts/policies',
+    docLink: '/vault/docs/concepts/policies',
   })
   allowedUriSans;
 
@@ -218,7 +223,7 @@ export default class PkiRoleModel extends Model {
     label: 'Allow URI SANs template',
     subText: 'If true, the URI SANs above may contain templates, as with ACL Path Templating.',
     editType: 'boolean',
-    docLink: '/docs/concepts/policies',
+    docLink: '/vault/docs/concepts/policies',
   })
   allowUriSansTemplate;
 
@@ -266,6 +271,7 @@ export default class PkiRoleModel extends Model {
     label: 'Organization Units (OU)',
     subText:
       'A list of allowed serial numbers to be requested during certificate issuance. Shell-style globbing is supported. If empty, custom-specified serial numbers will be forbidden.',
+    editType: 'stringArray',
   })
   ou;
 
@@ -287,12 +293,12 @@ export default class PkiRoleModel extends Model {
   })
   extKeyUsageOids;
 
-  @attr('string') organization;
-  @attr('string') country;
-  @attr('string') locality;
-  @attr('string') province;
-  @attr('string') streetAddress;
-  @attr('string') postalCode;
+  @attr({ editType: 'stringArray' }) organization;
+  @attr({ editType: 'stringArray' }) country;
+  @attr({ editType: 'stringArray' }) locality;
+  @attr({ editType: 'stringArray' }) province;
+  @attr({ editType: 'stringArray' }) streetAddress;
+  @attr({ editType: 'stringArray' }) postalCode;
   /* End of overriding Additional subject field options */
 
   /* CAPABILITIES
@@ -329,7 +335,7 @@ export default class PkiRoleModel extends Model {
         footer: {
           text: 'These options can interact intricately with one another. For more information,',
           docText: 'learn more here.',
-          docLink: '/api-docs/secret/pki#allowed_domains',
+          docLink: '/vault/api-docs/secret/pki#allowed_domains',
         },
       },
       'Key parameters': {

@@ -1,9 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 syntax = "proto3";
 package pb;
 
 option go_package = "github.com/hashicorp/vault/sdk/plugin/pb";
 
 import "google/protobuf/timestamp.proto";
+import "sdk/logical/event.proto";
 import "sdk/logical/identity.proto";
 import "sdk/logical/plugin.proto";
 
@@ -674,3 +678,11 @@ message CertificateChain {
 	repeated Certificate certificates = 1;
 }
 
+message SendEventRequest {
+	string event_type = 1;
+	logical.EventData event = 2;
+}
+
+service Events {
+	rpc SendEvent(SendEventRequest) returns (Empty);
+}

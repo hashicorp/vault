@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 module "autopilot_upgrade_storageconfig" {
   source = "./modules/autopilot_upgrade_storageconfig"
 }
@@ -196,4 +199,10 @@ module "vault_verify_write_data" {
 module "vault_raft_remove_peer" {
   source            = "./modules/vault_raft_remove_peer"
   vault_install_dir = var.vault_install_dir
+}
+
+module "vault_test_ui" {
+  source = "./modules/vault_test_ui"
+
+  ui_run_tests = var.ui_run_tests
 }

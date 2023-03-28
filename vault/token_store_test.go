@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -50,8 +53,22 @@ func TestTokenStore_CreateOrphanResponse(t *testing.T) {
 	}
 }
 
+// TestTokenStore_CubbyholeDeletion tests that a token's cubbyhole
+// can be used and that the cubbyhole is removed after the token is revoked.
 func TestTokenStore_CubbyholeDeletion(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
+	testTokenStore_CubbyholeDeletion(t, c, root)
+}
+
+// TestTokenStore_CubbyholeDeletionSSCTokensDisabled tests that a legacy token's
+// cubbyhole can be used, and that the cubbyhole is removed after the token is revoked.
+func TestTokenStore_CubbyholeDeletionSSCTokensDisabled(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+	c.disableSSCTokens = true
+	testTokenStore_CubbyholeDeletion(t, c, root)
+}
+
+func testTokenStore_CubbyholeDeletion(t *testing.T, c *Core, root string) {
 	ts := c.tokenStore
 
 	for i := 0; i < 10; i++ {

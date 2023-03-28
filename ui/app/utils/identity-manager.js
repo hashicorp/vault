@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+import { v4 as uuidv4 } from 'uuid';
+
 // manage a set of unique ids
 export default class {
   constructor() {
@@ -12,11 +19,10 @@ export default class {
    * @public
    */
   fetch() {
-    let uuid = crypto.randomUUID();
-    // odds are incredibly low that we'll run into a duplicate using crypto.randomUUID()
-    // but just to be safe...
+    let uuid = uuidv4();
+    // odds are incredibly low that we'll run into a duplicate but just to be safe...
     while (this.ids.has(uuid)) {
-      uuid = crypto.randomUUID();
+      uuid = uuidv4();
     }
     this.ids.add(uuid);
     return uuid;

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -433,8 +436,9 @@ func (c *Core) raftTLSRotateDirect(ctx context.Context, logger hclog.Logger, sto
 				backoff = false
 			}
 
+			timer := time.NewTimer(time.Until(nextRotationTime))
 			select {
-			case <-time.After(time.Until(nextRotationTime)):
+			case <-timer.C:
 				// It's time to rotate the keys
 				next, err := rotateKeyring()
 				if err != nil {
@@ -446,6 +450,7 @@ func (c *Core) raftTLSRotateDirect(ctx context.Context, logger hclog.Logger, sto
 				nextRotationTime = next
 
 			case <-stopCh:
+				timer.Stop()
 				return
 			}
 		}

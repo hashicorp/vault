@@ -1,17 +1,1 @@
-<PageHeader as |p|>
-  <p.top>
-    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3" data-test-pki-issuer-page-title>
-      Import a CA
-    </h1>
-  </p.levelLeft>
-</PageHeader>
-
-<PkiCaCertificateImport
-  @model={{this.model}}
-  @onCancel={{transition-to "vault.cluster.secrets.backend.pki.issuers.index"}}
-  @onSave={{transition-to "vault.cluster.secrets.backend.pki.issuers.index"}}
-  @adapterOptions={{hash import=true}}
-/>
+<Page::PkiIssuerImport @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />

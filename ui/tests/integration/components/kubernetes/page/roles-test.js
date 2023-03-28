@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
@@ -20,49 +25,50 @@ module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
         type: 'kubernetes',
       },
     });
-    this.store.pushPayload('kubernetes/config', {
-      modelName: 'kubernetes/config',
-      backend: 'kubernetes-test',
-      ...this.server.create('kubernetes-config'),
-    });
     this.store.pushPayload('kubernetes/role', {
       modelName: 'kubernetes/role',
       backend: 'kubernetes-test',
       ...this.server.create('kubernetes-role'),
     });
     this.backend = this.store.peekRecord('secret-engine', 'kubernetes-test');
-    this.config = this.store.peekRecord('kubernetes/config', 'kubernetes-test');
     this.roles = this.store.peekAll('kubernetes/role');
     this.filterValue = '';
     this.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
       { label: this.backend.id },
     ];
+    this.promptConfig = false;
 
     this.renderComponent = () => {
       return render(
-        hbs`<Page::Roles @config={{this.config}} @backend={{this.backend}} @roles={{this.roles}} @filterValue={{this.filterValue}} @breadcrumbs={{this.breadcrumbs}} />`,
+        hbs`<Page::Roles @promptConfig={{this.promptConfig}} @backend={{this.backend}} @roles={{this.roles}} @filterValue={{this.filterValue}} @breadcrumbs={{this.breadcrumbs}} />`,
         { owner: this.engine }
       );
     };
   });
 
   test('it should render tab page header and config cta', async function (assert) {
-    this.config = null;
+    this.promptConfig = true;
     await this.renderComponent();
     assert.dom('.title svg').hasClass('flight-icon-kubernetes', 'Kubernetes icon renders in title');
     assert.dom('.title').hasText('kubernetes-test', 'Mount path renders in title');
-    assert.dom('[data-test-toolbar-roles-action]').hasText('Create role', 'Toolbar action has correct text');
     assert
-      .dom('[data-test-toolbar-roles-action] svg')
-      .hasClass('flight-icon-plus', 'Toolbar action has correct icon');
-    assert.dom('[data-test-nav-input]').exists('Roles filter input renders');
+      .dom('[data-test-toolbar-roles-action]')
+      .doesNotExist('Create role', 'Toolbar action does not render when not configured');
+    assert
+      .dom('[data-test-nav-input]')
+      .doesNotExist('Roles filter input does not render when not configured');
     assert.dom('[data-test-config-cta]').exists('Config cta renders');
   });
 
   test('it should render create roles cta', async function (assert) {
     this.roles = null;
     await this.renderComponent();
+    assert.dom('[data-test-toolbar-roles-action]').hasText('Create role', 'Toolbar action has correct text');
+    assert
+      .dom('[data-test-toolbar-roles-action] svg')
+      .hasClass('flight-icon-plus', 'Toolbar action has correct icon');
+    assert.dom('[data-test-nav-input]').exists('Roles filter input renders');
     assert.dom('[data-test-empty-state-title]').hasText('No roles yet', 'Title renders');
     assert
       .dom('[data-test-empty-state-message]')

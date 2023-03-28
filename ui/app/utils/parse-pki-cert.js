@@ -1,13 +1,19 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import * as asn1js from 'asn1js';
 import { fromBase64, stringToArrayBuffer } from 'pvutils';
 import { Certificate } from 'pkijs';
 import { differenceInHours, getUnixTime } from 'date-fns';
 import {
   EXTENSION_OIDs,
-  SUBJECT_OIDs,
   IGNORED_OIDs,
+  KEY_USAGE_BITS,
   SAN_TYPES,
   SIGNATURE_ALGORITHM_OIDs,
+  SUBJECT_OIDs,
 } from './parse-pki-cert-oids';
 
 /* 
@@ -87,8 +93,6 @@ export function formatValues(subject, extension) {
     }
   }
 
-  // TODO remove this deletion when key_usage is parsed, update test
-  delete extValues.key_usage;
   return {
     ...subjValues,
     ...extValues,
@@ -114,9 +118,13 @@ export function parseSubject(subject) {
   if (!subject) return null;
   const values = {};
   const errors = [];
-  if (subject.any((rdn) => !Object.values(SUBJECT_OIDs).includes(rdn.type))) {
-    errors.push(new Error('certificate contains unsupported subject OIDs'));
+
+  const isUnexpectedSubjectOid = (rdn) => !Object.values(SUBJECT_OIDs).includes(rdn.type);
+  if (subject.any(isUnexpectedSubjectOid)) {
+    const unknown = subject.filter(isUnexpectedSubjectOid).map((rdn) => rdn.type);
+    errors.push(new Error('certificate contains unsupported subject OIDs: ' + unknown.join(', ')));
   }
+
   const returnValues = (OID) => {
     const values = subject.filter((rdn) => rdn?.type === OID).map((rdn) => rdn?.value?.valueBlock?.value);
     // Theoretically, there might be multiple (or no) CommonNames -- but Vault
@@ -134,8 +142,10 @@ export function parseExtensions(extensions) {
   const values = {};
   const errors = [];
   const allowedOids = Object.values({ ...EXTENSION_OIDs, ...IGNORED_OIDs });
-  if (extensions.any((ext) => !allowedOids.includes(ext.extnID))) {
-    errors.push(new Error('certificate contains unsupported extension OIDs'));
+  const isUnknownExtension = (ext) => !allowedOids.includes(ext.extnID);
+  if (extensions.any(isUnknownExtension)) {
+    const unknown = extensions.filter(isUnknownExtension).map((ext) => ext.extnID);
+    errors.push(new Error('certificate contains unsupported extension OIDs: ' + unknown.join(', ')));
   }
 
   // make each extension its own key/value pair
@@ -149,7 +159,7 @@ export function parseExtensions(extensions) {
     const supportedNames = Object.keys(SAN_TYPES);
     const sans = values.subject_alt_name?.altNames;
     if (!sans) {
-      errors.push(new Error('certificate contains unsupported subjectAltName values'));
+      errors.push(new Error('certificate contains an unsupported subjectAltName construction'));
     } else if (sans.any((san) => !supportedTypes.includes(san.type))) {
       // pass along error that unsupported values exist
       errors.push(new Error('subjectAltName contains unsupported types'));
@@ -202,11 +212,108 @@ export function parseExtensions(extensions) {
   }
 
   if (values.ip_sans) {
-    // TODO parse octet string for IP addresses
+    const parsed_ips = [];
+    for (const ip_san of values.ip_sans) {
+      const unused = ip_san.valueBlock.unusedBits;
+      if (unused !== undefined && unused !== null && unused !== 0) {
+        errors.push(new Error('unsupported ip_san value: non-zero unused bits in encoding'));
+        continue;
+      }
+
+      const ip = new Uint8Array(ip_san.valueBlock.valueHex);
+
+      // Length of the IP determines the type: 4 bytes for IPv4, 16 bytes for
+      // IPv6.
+      if (ip.length === 4) {
+        const ip_addr = ip.join('.');
+        parsed_ips.push(ip_addr);
+      } else if (ip.length === 16) {
+        const src = new Array(...ip);
+        const hex = src.map((value) => '0' + new Number(value).toString(16));
+        const trimmed = hex.map((value) => value.slice(value.length - 2, 3));
+        // add a colon after every other number (those with an odd index)
+        let ip_addr = trimmed.map((value, index) => (index % 2 === 0 ? value : value + ':')).join('');
+        // Remove trailing :, if any.
+        ip_addr = ip_addr.slice(-1) === ':' ? ip_addr.slice(0, -1) : ip_addr;
+        parsed_ips.push(ip_addr);
+      } else {
+        errors.push(
+          new Error(
+            'unsupported ip_san value: unknown IP address size (should be 4 or 16 bytes, was ' +
+              parseInt(ip.length / 2) +
+              ')'
+          )
+        );
+      }
+    }
+    values.ip_sans = parsed_ips;
   }
 
   if (values.key_usage) {
-    // TODO parse key_usage
+    // KeyUsage is a big-endian bit-packed enum. Unused right-most bits are
+    // truncated. So, a KeyUsage with CertSign+CRLSign would be "000001100",
+    // with the right two bits truncated, and packed into an 8-bit, one-byte
+    // string ("00000011"), introducing a leading zero. unused indicates that
+    // this bit can be discard, shifting our result over by one, to go back
+    // to its original form (minus trailing zeros).
+    //
+    // We can thus take our enumeration (KEY_USAGE_BITS), check whether the
+    // bits are asserted, and push in our pretty names as appropriate.
+    const unused = values.key_usage.valueBlock.unusedBits;
+    const keyUsage = new Uint8Array(values.key_usage.valueBlock.valueHex);
+
+    const computedKeyUsages = [];
+    for (const enumIndex in KEY_USAGE_BITS) {
+      // May span two bytes.
+      const byteIndex = parseInt(enumIndex / 8);
+      const bitIndex = parseInt(enumIndex % 8);
+      const enumName = KEY_USAGE_BITS[enumIndex];
+      const mask = 1 << (8 - bitIndex); // Big endian.
+      if (byteIndex >= keyUsage.length) {
+        // DecipherOnly is rare and would push into a second byte, but we
+        // don't have one so exit.
+        break;
+      }
+
+      let enumByte = keyUsage[byteIndex];
+      const needsAdjust = byteIndex + 1 === keyUsage.length && unused > 0;
+      if (needsAdjust) {
+        enumByte = parseInt(enumByte << unused);
+      }
+
+      const isSet = (mask & enumByte) === mask;
+      if (isSet) {
+        computedKeyUsages.push(enumName);
+      }
+    }
+
+    // Vault currently doesn't allow setting key_usage during issuer
+    // generation, but will allow it if it comes in via an externally
+    // generated CSR. Validate that key_usage matches expectations and
+    // prune accordingly.
+    const expectedUsages = ['CertSign', 'CRLSign'];
+    const isUnexpectedKeyUsage = (ext) => !expectedUsages.includes(ext);
+
+    if (computedKeyUsages.any(isUnexpectedKeyUsage)) {
+      const unknown = computedKeyUsages.filter(isUnexpectedKeyUsage);
+      errors.push(new Error('unsupported key usage value on issuer certificate: ' + unknown.join(', ')));
+    }
+
+    values.key_usage = computedKeyUsages;
+  }
+
+  if (values.other_sans) {
+    // We need to parse these into their server-side values.
+    const parsed_sans = [];
+    for (const san of values.other_sans) {
+      let [objectId, constructed] = san.valueBlock.value;
+      objectId = objectId.toJSON().valueBlock.value;
+      constructed = constructed.valueBlock.value[0].toJSON(); // can I just grab the first element here?
+      const { blockName } = constructed;
+      const value = constructed.valueBlock.value;
+      parsed_sans.push(`${objectId};${blockName.replace('String', '')}:${value}`);
+    }
+    values.other_sans = parsed_sans;
   }
 
   delete values.subject_alt_name;
@@ -220,8 +327,8 @@ export function parseExtensions(extensions) {
     "uri_sans": string[],
     "permitted_dns_domains": string[],
     "max_path_length": int,
-    "key_usage": BitString, <- to-be-parsed
-    "ip_sans": OctetString[], <- currently array of OctetStrings to-be-parsed
+    "key_usage": ['CertSign', 'CRLSign'],
+    "ip_sans": ['192.158.1.38', '1234:fd2:5621:1:89::4500'],
   }
   */
 }

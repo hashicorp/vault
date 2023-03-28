@@ -117,6 +117,7 @@
               @value={{get @issuer attr.name}}
               @formatDate={{if attr.options.formatDate "MMM d yyyy HH:mm:ss a zzzz"}}
               @alwaysRender={{true}}
+              @addCopyButton={{(eq attr.name "issuerId")}}
             />
           {{/if}}
         {{/each}}

@@ -111,7 +111,29 @@ $ curl \
     https://127.0.0.1:8200/v1/auth/azure/config
 ```
 
-## Create Role
+## Rotate Root
+
+This endpoint generates a new client secret for the root account defined in the config. The
+value generated will only be known by Vault.
+
+| Method | Path                 |
+| :----- | :------------------- |
+| `POST` | `/azure/rotate-root` |
+
+### Parameters
+
+There are no parameters to this operation.
+
+### Sample Request
+
+```shell-session
+$ curl \
+  --header "X-Vault-Token: ..." \
+  --request POST \
+  https://127.0.0.1:8200/v1/auth/azure/rotate-root
+```
+
+## Create/Update Role
 
 Registers a role in the method. Role types have specific entities
 that can perform login operations against this endpoint. Constraints specific

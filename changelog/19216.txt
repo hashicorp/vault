@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: adds allowed_response_headers as param for secret engine mount config
+```

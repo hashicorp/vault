@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupTest } from 'vault/tests/helpers';
 import { rootPem } from 'vault/tests/helpers/pki/values';
@@ -22,7 +27,7 @@ module('Unit | Serializer | pki/action', function (hooks) {
       const store = this.owner.lookup('service:store');
       const record = store.createRecord('pki/action', {
         pemBundle: this.pemBundle,
-        issuerName: 'do-not-send',
+        issuerRef: 'do-not-send',
         keyType: 'do-not-send',
       });
       const expectedResult = {

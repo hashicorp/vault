@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 terraform {
   required_providers {
     enos = {
@@ -44,17 +47,18 @@ variable "wrapping_token" {
 }
 
 locals {
-  primary_replication_status   = jsondecode(enos_remote_exec.verify_replication_on_primary.stdout)
-  secondary_replication_status = jsondecode(enos_remote_exec.verify_replication_on_secondary.stdout)
+  primary_replication_status   = jsondecode(enos_remote_exec.replication_status_on_primary.stdout)
+  secondary_replication_status = jsondecode(enos_remote_exec.replication_status_on_secondary.stdout)
 }
 
-resource "enos_remote_exec" "verify_replication_on_primary" {
+resource "enos_remote_exec" "replication_status_on_primary" {
   environment = {
     VAULT_ADDR        = "http://127.0.0.1:8200"
     VAULT_INSTALL_DIR = var.vault_install_dir
+    REPLICATION_MODE  = "primary"
   }
 
-  scripts = ["${path.module}/scripts/verify-performance-replication.sh"]
+  scripts = ["${path.module}/scripts/get-replication-status.sh"]
 
   transport = {
     ssh = {
@@ -72,13 +76,14 @@ output "primary_replication_status" {
   }
 }
 
-resource "enos_remote_exec" "verify_replication_on_secondary" {
+resource "enos_remote_exec" "replication_status_on_secondary" {
   environment = {
     VAULT_ADDR        = "http://127.0.0.1:8200"
     VAULT_INSTALL_DIR = var.vault_install_dir
+    REPLICATION_MODE  = "secondary"
   }
 
-  scripts = ["${path.module}/scripts/verify-performance-replication.sh"]
+  scripts = ["${path.module}/scripts/get-replication-status.sh"]
 
   transport = {
     ssh = {

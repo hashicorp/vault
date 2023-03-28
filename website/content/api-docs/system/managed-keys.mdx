@@ -94,6 +94,9 @@ $ curl \
   specific mount points will need their `allowed_managed_keys` parameter to be updated with the key name to
   grant usage.
 
+- `usages` `(comma-delimited string: "sign,verify")` - A comma-delimited list of the allowed usages of this key. Valid values
+  are encrypt, decrypt, sign, verify, wrap, unwrap, mac, and random.
+
 #### PKCS#11 backend Parameters
 
 ~> NOTE: The `pkcs11` backend is only available with Vault Enterprise Plus (HSMs) edition

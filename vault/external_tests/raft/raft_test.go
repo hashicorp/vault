@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package rafttests
 
 import (
@@ -23,6 +26,7 @@ import (
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
@@ -236,7 +240,7 @@ func TestRaft_Retry_Join(t *testing.T) {
 			}
 
 			// Handle potential racy behavior with unseals. Retry the unseal until it succeeds.
-			vault.RetryUntil(t, 10*time.Second, func() error {
+			corehelpers.RetryUntil(t, 10*time.Second, func() error {
 				return cluster.AttemptUnsealCore(core)
 			})
 		}(t, clusterCore)
@@ -248,7 +252,7 @@ func TestRaft_Retry_Join(t *testing.T) {
 
 	vault.TestWaitActive(t, leaderCore.Core)
 
-	vault.RetryUntil(t, 10*time.Second, func() error {
+	corehelpers.RetryUntil(t, 10*time.Second, func() error {
 		return testhelpers.VerifyRaftPeers(t, cluster.Cores[0].Client, map[string]bool{
 			"core-0": true,
 			"core-1": true,
