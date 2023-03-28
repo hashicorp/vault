@@ -3135,8 +3135,17 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 		{
 			Pattern: "wrapping/wrap$",
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.handleWrappingWrap,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleWrappingWrap,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							// dynamic fields
+							Fields: nil,
+						}},
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["wrap"][0]),
@@ -3154,8 +3163,20 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.handleWrappingUnwrap,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleWrappingUnwrap,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							// dynamic fields
+							Fields: nil,
+						}},
+						http.StatusNoContent: {{
+							Description: "No content",
+						}},
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["unwrap"][0]),
@@ -3175,10 +3196,48 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleWrappingLookup,
 					Summary:  "Look up wrapping properties for the given token.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"creation_ttl": {
+									Type:     framework.TypeDurationSecond,
+									Required: false,
+								},
+								"creation_time": {
+									Type:     framework.TypeTime,
+									Required: false,
+								},
+								"creation_path": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+							},
+						}},
+					},
 				},
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleWrappingLookup,
 					Summary:  "Look up wrapping properties for the requester's token.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"creation_ttl": {
+									Type:     framework.TypeDurationSecond,
+									Required: false,
+								},
+								"creation_time": {
+									Type:     framework.TypeTime,
+									Required: false,
+								},
+								"creation_path": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+							},
+						}},
+					},
 				},
 			},
 
@@ -3195,8 +3254,17 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.handleWrappingRewrap,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleWrappingRewrap,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							// dynamic fields
+							Fields: nil,
+						}},
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["rewrap"][0]),
