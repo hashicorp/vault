@@ -7,7 +7,9 @@ import (
 	"gopkg.in/square/go-jose.v2/json"
 )
 
-func TestAcmeDirectoryEnabled(t *testing.T) {
+// TestAcmeDirectory a basic test that will validate the various directory APIs
+// are available and produce the correct responses.
+func TestAcmeDirectory(t *testing.T) {
 	t.Parallel()
 	b, s := CreateBackendWithStorage(t)
 
