@@ -209,6 +209,78 @@ cluster address.  The result of the RemoteResolve call gets included in the
 list of target addresses the resolver gives to gRPC for regular RPCs to the
 primary.
 
+### Failover addresses used by PR Secondaries when primary fails over to its DR
+
+In addition to the above, there is a another set of addresses that is managed
+similarly: failover addresses.  Consider what must happen when a PR primary is
+replaced by its DR secondary.  The operators promote the DR secondary with
+the intention of replacing the PR primary; maybe the primary has failed, maybe
+they demote it.  Regardless, at this point the PR secondary can't talk to its
+former primary, and we want it to start talking to its new primary.  We could
+manually call update-primary on the PR secondary, but that shouldn't be necessary
+because of what follows.
+
+There is another replicated storage entry: `core/primary-failover-addrs/dr`.
+The contents of this storage entry should be the host:port cluster addresses of
+the perf primary's DR secondary cluster nodes.  It gets written by the perf
+primary when handling an echo request from the DR secondary active node, and the
+payload that the DR secondary provides in that echo request is itself derived
+from the contents of the echo requests that the active node has received from its
+standbys.
+
+When a perf secondary sees changes to this entry, it parses the addresses contained
+therein, and adds them to its gRPC resolver.  When trying to connect to its upstream
+perf primary, the resolver will include these addresses as candidate targets, in
+addition to the regular addresses we've discussed in previous sections.
+
+What about if there are multiple DR secondaries?  To answer that we need to go into a
+little more detail about how `core/primary-failover-addrs/dr` gets updated.
+
+Each DR secondary is doing the heartbeats we spoke of earlier, containing that
+the addresses of the nodes in the cluster, based on the internal cluster heartbeats
+that standbys send to the active node.
+
+On the PR primary, those addresses received via the DR heartbeats get stored in
+an in-memory cache with a 15s expiry time for its items.  After we update the cache,
+we compare its contents with the addresses in the `core/primary-failover-addrs/dr`
+storage entry, and if there's a discrepancy the storage entry gets rewritten.  Note
+that we only write to the storage entry when servicing a heartbeat, so even
+if all entries in the cache have expired (because we haven't received a heartbeat
+in the last 15s), that doesn't mean that the storage entry will be updated to
+contain zero addresses.
+
+#### When do I need to use update-primary as part of replacing a PR Primary?
+
+As described above, normally you should be able to replace a PR primary with
+its promoted DR secondary, and not have to call update-primary on the downstream
+PR secondaries.  They should be seeing the failover addresses in
+`core/primary-failover-addrs/dr`, and when the original PR primary stops servicing
+gRPC perf replication requests, the secondaries will start trying the other addresses
+they know, including the failover addresses.  Once they hit upon the failover address
+corresponding to the current active node of the newly promoted cluster
+(i.e. the former DR secondary cluster), they'll be able to start replicating from it.
+At that point the regular non-failover address management described
+in [Secondary RPC address resolution](#Secondary RPC address resolution) comes into play.
+
+Reasons why this might not work and you have to use update-primary to tell a PR
+secondary about the failover that replaced its PR primary:
+
+1. Suppose that the active node on the to-be-promoted DR secondary has only just
+become active.  As a result it hasn't yet received any heartbeat requests from its
+standbys, and so it doesn't know their addresses.  It sends its first heartbeat
+to its primary, providing only its own cluster address.  If it's been at least
+15s since the last active node sent a heartbeat, then this active node's address will
+be the address in the primary's failover address cache, and the only address from
+this cluster that gets written to `core/primary-failover-addrs/dr`.  Now the current
+PR primary dies and its former DR secondary is promoted.  Somewhere along the way
+there's a leadership change and a different node takes over on the promoted cluster.
+On top of that the former active node has a problem and gets sealed.  Now the only
+address that the downstream PR secondary knows for the new PR primary is a node
+that can't service gRPC requests.  Unless the former active node can be made healthy
+again, an update-primary will be required to tell the PR secondary about the other
+primary addresses.
+
+
 # Caveats
 
 ~> **Mismatched Cluster Versions**: It is not safe to replicate from a newer
