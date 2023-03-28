@@ -4,7 +4,7 @@
 - address helpers and variables
 */
 /* Bulma utilities */
-.button[disabled], .input[disabled], .textarea[disabled], .file-cta[disabled],
+.button[disabled], .file-cta[disabled],
 .file-name[disabled], .pagination-previous[disabled],
 .pagination-next[disabled],
 .pagination-link[disabled],
@@ -17,17 +17,6 @@
 .pagination-link,
 .pagination-ellipsis, .tabs {
   user-select: none;
-}
-
-/* Bulma form: input, textarea, select */
-
-.input:hover, .textarea:hover, .is-hovered.input, .is-hovered.textarea {
-  border-color: #b5b5b5;
-}
-
-.input:focus, .textarea:focus, .input:focus-visible, .textarea:focus-visible, input:active, .textarea:active, .is-active.input, .is-active.textarea {
-  border-color: #1563ff !important;
-  box-shadow: 0 0 0 0.125em rgba(21, 99, 255, 0.25) !important;
 }
 
 .is-pulled-left {

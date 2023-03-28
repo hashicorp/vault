@@ -47,6 +47,11 @@
   font-family: $family-monospace;
 }
 
+.masked-font {
+  font-family: obscure, text-security-square;
+  letter-spacing: 2px;
+}
+
 // Text decoration
 .is-underline {
   text-decoration: underline;
