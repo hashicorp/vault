@@ -1,13 +1,13 @@
 <div ...attributes>
   {{#if @disabled}}
-    <div class="list-item-row linkable-item link-plain">
+    <div class="list-item-row linkable-item is-no-underline">
       {{yield (hash content=(component "linkable-item/content"))}}
       {{yield (hash menu=(component "linkable-item/menu"))}}
     </div>
   {{else}}
     <LinkedBlock
       @params={{array @link.route @link.model}}
-      class="list-item-row linkable-item link-plain"
+      class="list-item-row linkable-item is-no-underline"
       data-test-auth-backend-link={{@link.model}}
     >
       {{yield (hash content=(component "linkable-item/content"))}}
