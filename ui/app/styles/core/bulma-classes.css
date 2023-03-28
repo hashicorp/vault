@@ -4,15 +4,15 @@
 - address helpers and variables
 */
 /* Bulma utilities */
-.button[disabled], .file-cta[disabled],
-.file-name[disabled], .pagination-previous[disabled],
+.button[disabled],
+.pagination-previous[disabled],
 .pagination-next[disabled],
 .pagination-link[disabled],
 .pagination-ellipsis[disabled] {
   cursor: not-allowed;
 }
 
-.button, .file, .pagination-previous,
+.button, .pagination-previous,
 .pagination-next,
 .pagination-link,
 .pagination-ellipsis, .tabs {
@@ -142,22 +142,6 @@
   color: #7a7a7a;
   opacity: 0.5;
 }
-
-.file-name {
-  border-color: #dbdbdb;
-  border-radius: 2px;
-  border-style: solid;
-  border-width: 1px 1px 1px 0;
-  display: block;
-  font-size: 1em;
-  max-width: 16em;
-  overflow: hidden;
-  padding-left: 1em;
-  padding-right: 1em;
-  text-align: inherit;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}  
 
 /* ARG TODO: Used in one place title.is-2 */
 @media screen and (min-width: 769px), print {  
