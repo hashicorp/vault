@@ -15,7 +15,7 @@ export default class PkiIssuerDetailsRoute extends PkiIssuerIndexRoute {
     const isRoot = await this.isRoot(resolvedModel);
     controller.pem = pem;
     controller.der = der;
-    controller.isRoot = isRoot;
+    controller.isRotatable = isRoot;
   }
 
   /**
@@ -36,9 +36,8 @@ export default class PkiIssuerDetailsRoute extends PkiIssuerIndexRoute {
     }
   }
 
-  async isRoot(model) {
-    const isSelfSigned = await verifyCertificates(model.certificate, model.certificate);
-    const hasKeyData = model.keyId ? true : false;
-    return isSelfSigned && hasKeyData;
+  async isRoot({ certificate, keyId }) {
+    const isSelfSigned = await verifyCertificates(certificate, certificate);
+    return isSelfSigned && !!keyId;
   }
 }

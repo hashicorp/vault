@@ -1,6 +1,6 @@
 <Toolbar>
   <ToolbarActions>
-    {{#if @canRotate}}
+    {{#if (and @isRotatable @canRotate)}}
       <button type="button" class="toolbar-link" {{on "click" (fn (mut this.showRotationModal) true)}}>
         Rotate this root
         <Icon @name="rotate-cw" />
