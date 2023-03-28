@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-// input classes: .input.field, .input-hash, .input-search, .input-hint
+// This file defines the classes for .input. We use the following input classes: .input, .input-hint, .autocomplete-input, .autocomplete-input-option
 
 .input {
   border-radius: 2px;
@@ -59,10 +59,17 @@
   margin-left: 0.5%;
   margin-top: -4px;
 }
+
 .autocomplete-input-option {
   padding: 12px;
   &:hover {
     background-color: $grey-lightest;
     cursor: pointer;
   }
+}
+
+.input-hint {
+  padding: 0 $size-9;
+  font-size: $size-8;
+  color: $grey;
 }
