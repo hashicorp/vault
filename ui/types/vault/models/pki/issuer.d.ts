@@ -32,7 +32,7 @@ export default class PkiIssuerModel extends Model {
   importedIssuers: string[];
   importedKeys: string[];
   formFields: FormField[];
-  formFieldGroups: FormFieldGroups;
+  formFieldGroups: FormFieldGroups[];
   allFields: FormField[];
   get canRotateIssuer(): boolean;
   get canCrossSign(): boolean;

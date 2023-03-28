@@ -4,7 +4,7 @@
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3" data-test-pki-page-title>
-      {{this.title}}
+      {{this.pageTitle}}
     </h1>
   </p.levelLeft>
 </PageHeader>
@@ -27,32 +27,60 @@
 {{/unless}}
 
 {{#if (eq this.rotateForm "use-old-settings")}}
-  <h2 class="title is-size-5 has-border-bottom-light">
-    Root parameters
-  </h2>
-  {{#let (find-by "name" "commonName" this.newRootModel.allFields) as |attr|}}
-    <FormField data-test-field={{attr}} @attr={{attr}} @model={{this.newRootModel}} @showHelpText={{false}} />
-  {{/let}}
-  {{#let (find-by "name" "issuerName" this.newRootModel.allFields) as |attr|}}
-    <FormField data-test-field={{attr}} @attr={{attr}} @model={{this.newRootModel}} @showHelpText={{false}} />
-  {{/let}}
-  <div class="box has-slim-padding is-shadowless">
-    <ToggleButton
-      @closedLabel="Old root settings"
-      @openLabel="Hide old root settings"
-      @isOpen={{this.showOldSettings}}
-      @onClick={{fn (mut this.showOldSettings)}}
-    />
-    {{#if this.showOldSettings}}
-      <PkiIssuerInfoRows @issuer={{@oldRoot}} />
-    {{/if}}
-  </div>
+  {{#if this.newRootModel.id}}
+    <PkiInfoTableRows @model={{this.newRootModel}} @displayFields={{this.displayFields}} />
+  {{else}}
+    {{!  OLD SETTINGS FORM INPUTS  }}
+    <h2 class="title is-size-5 has-border-bottom-light">
+      Root parameters
+    </h2>
+    <form {{on "submit" (perform this.save)}} data-test-pki-rotate-old-settings-form>
+      {{#let (find-by "name" "commonName" this.newRootModel.allFields) as |attr|}}
+        <FormField data-test-field={{attr}} @attr={{attr}} @model={{this.newRootModel}} @showHelpText={{false}} />
+      {{/let}}
+      {{#let (find-by "name" "issuerName" this.newRootModel.allFields) as |attr|}}
+        <FormField data-test-field={{attr}} @attr={{attr}} @model={{this.newRootModel}} @showHelpText={{false}} />
+      {{/let}}
+      <div class="box has-slim-padding is-shadowless">
+        <ToggleButton
+          @closedLabel="Old root settings"
+          @openLabel="Hide old root settings"
+          @isOpen={{this.showOldSettings}}
+          @onClick={{fn (mut this.showOldSettings)}}
+        />
+        {{#if this.showOldSettings}}
+          <PkiInfoTableRows @model={{@oldRoot}} @displayFields={{this.displayFields}} />
+        {{/if}}
+      </div>
+
+      <div class="field is-grouped box is-fullwidth is-bottomless">
+        <div class="control">
+          <button type="submit" class="button is-primary" data-test-pki-rotate-root-save>
+            Done
+          </button>
+          <button {{on "click" @onCancel}} type="button" class="button has-left-margin-s" data-test-pki-rotate-root-cancel>
+            Cancel
+          </button>
+        </div>
+        {{#if this.invalidFormAlert}}
+          <div class="control">
+            <AlertInline
+              @type="danger"
+              @paddingTop={{true}}
+              @message={{this.invalidFormAlert}}
+              @mimicRefresh={{true}}
+              data-test-pki-rotate-root-validation-error
+            />
+          </div>
+        {{/if}}
+      </div>
+    </form>
+  {{/if}}
 {{else}}
   <PkiGenerateRoot
     @model={{this.newRootModel}}
-    @onCancel={{transition-to "vault.cluster.secrets.backend.pki.issuers.issuer.details"}}
+    @onCancel={{@onCancel}}
     @onComplete={{transition-to "vault.cluster.secrets.backend.pki.issuers.index"}}
-    @onSave={{fn (mut this.title) "View rotated root"}}
     @adapterOptions={{hash actionType="rotate-root"}}
   />
 {{/if}}
