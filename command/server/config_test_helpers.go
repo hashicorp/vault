@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package server
 
 import (
@@ -500,8 +503,8 @@ func testUnknownFieldValidation(t *testing.T) {
 			Problem: "unknown or unsupported field bad_value found in configuration",
 			Position: token.Pos{
 				Filename: "./test-fixtures/config.hcl",
-				Offset:   583,
-				Line:     34,
+				Offset:   651,
+				Line:     37,
 				Column:   5,
 			},
 		},
@@ -738,6 +741,7 @@ func testConfig_Sanitized(t *testing.T) {
 		"disable_indexing":                    false,
 		"disable_mlock":                       true,
 		"disable_performance_standby":         false,
+		"experiments":                         []string(nil),
 		"plugin_file_uid":                     0,
 		"plugin_file_permissions":             0,
 		"disable_printable_check":             false,
@@ -745,6 +749,7 @@ func testConfig_Sanitized(t *testing.T) {
 		"raw_storage_endpoint":                true,
 		"introspection_endpoint":              false,
 		"disable_sentinel_trace":              true,
+		"detect_deadlocks":                    "",
 		"enable_ui":                           true,
 		"enable_response_header_hostname":     false,
 		"enable_response_header_raft_node_id": false,

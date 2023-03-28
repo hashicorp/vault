@@ -160,10 +160,10 @@ This endpoint enables a new secrets engine at the given path.
     in the UI-specific listing endpoint. Valid values are `"unauth"` or
     `"hidden"`. If not set, behaves like `"hidden"`.
 
-  - `passthrough_request_headers` `(array: [])` - List of headers to whitelist
+  - `passthrough_request_headers` `(array: [])` - List of headers to allow
     and pass from the request to the plugin.
 
-  - `allowed_response_headers` `(array: [])` - List of headers to whitelist,
+  - `allowed_response_headers` `(array: [])` - List of headers to allow,
     allowing a plugin to include them in the response.
 
   - `plugin_version` `(string: "")` – Specifies the semantic version of the plugin
@@ -242,7 +242,7 @@ simple as increasing the timeout (in the event of timeout errors).
 
 For recovery situations where the secret was manually removed from the
 secrets backing service, one can force a secrets engine disable in Vault by
-performing a [force revoke](/api-docs/system/leases)
+performing a [force revoke](/vault/api-docs/system/leases)
 on the mount prefix, followed by a secrets disable when that completes. 
 If the underlying secrets were not manually cleaned up, this method might result
 in dangling credentials. This is meant for extreme circumstances.
@@ -367,10 +367,10 @@ This endpoint tunes configuration parameters for a given mount point.
   the UI-specific listing endpoint. Valid values are `"unauth"` or `"hidden"`.
   If not set, behaves like `"hidden"`.
 
-- `passthrough_request_headers` `(array: [])` - List of headers to whitelist
+- `passthrough_request_headers` `(array: [])` - List of headers to allow
   and pass from the request to the plugin.
 
-- `allowed_response_headers` `(array: [])` - List of headers to whitelist,
+- `allowed_response_headers` `(array: [])` - List of headers to allow,
   allowing a plugin to include them in the response.
 
 - `allowed_managed_keys` `(array: [])` - List of managed key registry entry names

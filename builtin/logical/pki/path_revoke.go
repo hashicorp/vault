@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -9,11 +12,14 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"net/http"
 	"strings"
+	"time"
+
+	"github.com/hashicorp/vault/sdk/helper/consts"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -25,11 +31,38 @@ func pathListCertsRevoked(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathListRevokedCertsHandler,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"keys": {
+								Type:        framework.TypeStringSlice,
+								Description: `List of Keys`,
+								Required:    false,
+							},
+						},
+					}},
+				},
 			},
 		},
 
 		HelpSynopsis:    pathListRevokedHelpSyn,
 		HelpDescription: pathListRevokedHelpDesc,
+	}
+}
+
+func pathListCertsRevocationQueue(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "certs/revocation-queue/?$",
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathListRevocationQueueHandler,
+			},
+		},
+
+		HelpSynopsis:    pathListRevocationQueueHelpSyn,
+		HelpDescription: pathListRevocationQueueHelpDesc,
 	}
 }
 
@@ -56,6 +89,28 @@ signed by an issuer in this mount.`,
 				// If this needs to write, the entire request will be forwarded to the
 				// active node of the current performance cluster, but we don't want to
 				// forward invalid revoke requests there.
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"revocation_time": {
+								Type:        framework.TypeDurationSecond,
+								Description: `Revocation Time`,
+								Required:    false,
+							},
+							"revocation_time_rfc3339": {
+								Type:        framework.TypeTime,
+								Description: `Revocation Time`,
+								Required:    false,
+							},
+							"state": {
+								Type:        framework.TypeString,
+								Description: `Revocation State`,
+								Required:    false,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -92,6 +147,28 @@ be in PEM format.`,
 				// If this needs to write, the entire request will be forwarded to the
 				// active node of the current performance cluster, but we don't want to
 				// forward invalid revoke requests there.
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"revocation_time": {
+								Type:        framework.TypeDurationSecond,
+								Description: `Revocation Time`,
+								Required:    false,
+							},
+							"revocation_time_rfc3339": {
+								Type:        framework.TypeTime,
+								Description: `Revocation Time`,
+								Required:    false,
+							},
+							"state": {
+								Type:        framework.TypeString,
+								Description: `Revocation State`,
+								Required:    false,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -111,6 +188,18 @@ func pathRotateCRL(b *backend) *framework.Path {
 				// so this request should be forwarded when it is first seen, not
 				// when it is ready to write.
 				ForwardPerformanceStandby: true,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"success": {
+								Type:        framework.TypeBool,
+								Description: `Whether rotation was successful`,
+								Required:    true,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -130,6 +219,18 @@ func pathRotateDeltaCRL(b *backend) *framework.Path {
 				// so this request should be forwarded when it is first seen, not
 				// when it is ready to write.
 				ForwardPerformanceStandby: true,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"success": {
+								Type:        framework.TypeBool,
+								Description: `Whether rotation was successful`,
+								Required:    true,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -138,7 +239,39 @@ func pathRotateDeltaCRL(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathRevokeWriteHandleCertificate(ctx context.Context, req *logical.Request, certPem string) (string, bool, []byte, error) {
+func pathListUnifiedRevoked(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "certs/unified-revoked/?$",
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathListUnifiedRevokedCertsHandler,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"keys": {
+								Type:        framework.TypeStringSlice,
+								Description: `List of Keys`,
+								Required:    false,
+							},
+							"key_info": {
+								Type:        framework.TypeString,
+								Description: `Key information`,
+								Required:    false,
+							},
+						},
+					}},
+				},
+			},
+		},
+
+		HelpSynopsis:    pathListUnifiedRevokedHelpSyn,
+		HelpDescription: pathListUnifiedRevokedHelpDesc,
+	}
+}
+
+func (b *backend) pathRevokeWriteHandleCertificate(ctx context.Context, req *logical.Request, certPem string) (string, bool, *x509.Certificate, error) {
 	// This function handles just the verification of the certificate against
 	// the global issuer set, checking whether or not it is importable.
 	//
@@ -208,7 +341,7 @@ func (b *backend) pathRevokeWriteHandleCertificate(ctx context.Context, req *log
 			// imported this certificate, likely when we issued it. We don't
 			// need to re-verify the signature as we assume it was already
 			// verified when it was imported.
-			return serial, false, certEntry.Value, nil
+			return serial, false, certReferenceStored, nil
 		}
 	}
 
@@ -242,13 +375,13 @@ func (b *backend) pathRevokeWriteHandleCertificate(ctx context.Context, req *log
 	}
 
 	if foundMatchingIssuer {
-		return serial, true, certReference.Raw, nil
+		return serial, true, certReference, nil
 	}
 
 	return serial, false, nil, errutil.UserError{Err: "unable to verify signature on presented cert from any present issuer in this mount; certificates from previous CAs will need to have their issuing CA and key re-imported if revocation is necessary"}
 }
 
-func (b *backend) pathRevokeWriteHandleKey(ctx context.Context, req *logical.Request, cert []byte, keyPem string) error {
+func (b *backend) pathRevokeWriteHandleKey(req *logical.Request, certReference *x509.Certificate, keyPem string) error {
 	if keyPem == "" {
 		// The only way to get here should be via the /revoke endpoint;
 		// validate the path one more time and return an error if necessary.
@@ -259,12 +392,6 @@ func (b *backend) pathRevokeWriteHandleKey(ctx context.Context, req *logical.Req
 		// Otherwise, we don't need to validate the key and thus can return
 		// with success.
 		return nil
-	}
-
-	// Parse the certificate for reference.
-	certReference, err := x509.ParseCertificate(cert)
-	if err != nil {
-		return errutil.UserError{Err: fmt.Sprintf("certificate could not be parsed: %v", err)}
 	}
 
 	// Now parse the key's PEM block.
@@ -323,9 +450,47 @@ func (b *backend) pathRevokeWriteHandleKey(ctx context.Context, req *logical.Req
 	return nil
 }
 
+func (b *backend) maybeRevokeCrossCluster(sc *storageContext, config *crlConfig, serial string, havePrivateKey bool) (*logical.Response, error) {
+	if !config.UseGlobalQueue {
+		return logical.ErrorResponse(fmt.Sprintf("certificate with serial %s not found.", serial)), nil
+	}
+
+	if havePrivateKey {
+		return logical.ErrorResponse(fmt.Sprintf("certificate with serial %s not found, "+
+			"and cross-cluster revocation not supported with key revocation.", serial)), nil
+	}
+
+	// Here, we have to use the global revocation queue as the cert
+	// was not found on this current cluster.
+	currTime := time.Now()
+	nSerial := normalizeSerial(serial)
+	queueReq := revocationRequest{
+		RequestedAt: currTime,
+	}
+	path := crossRevocationPath + nSerial
+
+	reqEntry, err := logical.StorageEntryJSON(path, queueReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create storage entry for cross-cluster revocation request: %w", err)
+	}
+
+	if err := sc.Storage.Put(sc.Context, reqEntry); err != nil {
+		return nil, fmt.Errorf("error persisting cross-cluster revocation request: %w\nThis may occur when the active node of the primary performance replication cluster is unavailable.", err)
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"state": "pending",
+		},
+	}
+	resp.AddWarning("Revocation request was not found on this present node. This request will be in a pending state until the PR cluster which issued this certificate sees the request and revokes the certificate. If no online cluster has this certificate, the request will eventually be removed without revoking any certificates.")
+	return resp, nil
+}
+
 func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, data *framework.FieldData, _ *roleEntry) (*logical.Response, error) {
 	rawSerial, haveSerial := data.GetOk("serial_number")
 	rawCertificate, haveCert := data.GetOk("certificate")
+	sc := b.makeStorageContext(ctx, req.Storage)
 
 	if !haveSerial && !haveCert {
 		return logical.ErrorResponse("The serial number or certificate to revoke must be provided."), nil
@@ -347,16 +512,27 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 		}
 	}
 
+	writeCert := false
+	var cert *x509.Certificate
 	var serial string
-	if haveSerial {
+
+	config, err := sc.Backend.crlBuilder.getConfigWithUpdate(sc)
+	if err != nil {
+		return nil, fmt.Errorf("error revoking serial: %s: failed reading config: %w", serial, err)
+	}
+
+	if haveCert {
+		serial, writeCert, cert, err = b.pathRevokeWriteHandleCertificate(ctx, req, rawCertificate.(string))
+		if err != nil {
+			return nil, err
+		}
+	} else {
 		// Easy case: this cert should be in storage already.
 		serial = rawSerial.(string)
 		if len(serial) == 0 {
 			return logical.ErrorResponse("The serial number must be provided"), nil
 		}
 
-		// Here, fetch the certificate from disk to validate we can revoke it.
-		sc := b.makeStorageContext(ctx, req.Storage)
 		certEntry, err := fetchCertBySerial(sc, "certs/", serial)
 		if err != nil {
 			switch err.(type) {
@@ -366,49 +542,55 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 				return nil, err
 			}
 		}
-		if certEntry == nil {
-			return logical.ErrorResponse(fmt.Sprintf("certificate with serial %s not found or was already revoked", serial)), nil
-		}
 
-		// Now, if the user provided a key, we'll have to make sure the key
-		// and stored certificate match.
-		if err := b.pathRevokeWriteHandleKey(ctx, req, certEntry.Value, keyPem); err != nil {
-			return nil, err
+		if certEntry != nil {
+			cert, err = x509.ParseCertificate(certEntry.Value)
+			if err != nil {
+				return nil, fmt.Errorf("error parsing certificate: %w", err)
+			}
 		}
-	} else {
-		// Otherwise, we've gotta parse the certificate from the request and
-		// then import it into cluster-local storage. Before writing the
-		// certificate (and forwarding), we want to verify this certificate
-		// was actually signed by one of our present issuers.
-		var err error
-		var writeCert bool
-		var certBytes []byte
-		serial, writeCert, certBytes, err = b.pathRevokeWriteHandleCertificate(ctx, req, rawCertificate.(string))
-		if err != nil {
-			return nil, err
-		}
+	}
 
-		// Before we write the certificate, we've gotta verify the request in
-		// the event of a PoP-based revocation scheme; we don't want to litter
-		// storage with issued-but-not-revoked certificates.
-		if err := b.pathRevokeWriteHandleKey(ctx, req, certBytes, keyPem); err != nil {
-			return nil, err
-		}
-
-		// At this point, a forward operation will occur if we're on a standby
-		// node as we're now attempting to write the bytes of the cert out to
-		// disk.
-		if writeCert {
-			err = req.Storage.Put(ctx, &logical.StorageEntry{
-				Key:   "certs/" + serial,
-				Value: certBytes,
-			})
+	if cert == nil {
+		if config.UnifiedCRL {
+			// Saving grace if we aren't able to load the certificate locally/or were given it,
+			// if we have a unified revocation entry already return its revocation times,
+			// otherwise we fail with a certificate not found message.
+			unifiedRev, err := getUnifiedRevocationBySerial(sc, normalizeSerial(serial))
 			if err != nil {
 				return nil, err
 			}
+			if unifiedRev != nil {
+				return &logical.Response{
+					Data: map[string]interface{}{
+						"revocation_time":         unifiedRev.RevocationTimeUTC.Unix(),
+						"revocation_time_rfc3339": unifiedRev.RevocationTimeUTC.Format(time.RFC3339Nano),
+					},
+				}, nil
+			}
 		}
 
-		// Finally, we have a valid serial number to use for BYOC revocation!
+		return b.maybeRevokeCrossCluster(sc, config, serial, keyPem != "")
+	}
+
+	// Before we write the certificate, we've gotta verify the request in
+	// the event of a PoP-based revocation scheme; we don't want to litter
+	// storage with issued-but-not-revoked certificates.
+	if err := b.pathRevokeWriteHandleKey(req, cert, keyPem); err != nil {
+		return nil, err
+	}
+
+	// At this point, a forward operation will occur if we're on a standby
+	// node as we're now attempting to write the bytes of the cert out to
+	// disk.
+	if writeCert {
+		err := req.Storage.Put(ctx, &logical.StorageEntry{
+			Key:   "certs/" + normalizeSerial(serial),
+			Value: cert.Raw,
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Assumption: this check is cheap. Call this twice, in the cert-import
@@ -418,15 +600,10 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 		return nil, logical.ErrReadOnly
 	}
 
-	// We store and identify by lowercase colon-separated hex, but other
-	// utilities use dashes and/or uppercase, so normalize
-	serial = strings.ReplaceAll(strings.ToLower(serial), "-", ":")
-
 	b.revokeStorageLock.Lock()
 	defer b.revokeStorageLock.Unlock()
 
-	sc := b.makeStorageContext(ctx, req.Storage)
-	return revokeCert(sc, serial, false)
+	return revokeCert(sc, config, cert)
 }
 
 func (b *backend) pathRotateCRLRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
@@ -500,6 +677,96 @@ func (b *backend) pathListRevokedCertsHandler(ctx context.Context, request *logi
 	return logical.ListResponse(revokedCerts), nil
 }
 
+func (b *backend) pathListRevocationQueueHandler(ctx context.Context, request *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	var responseKeys []string
+	responseInfo := make(map[string]interface{})
+
+	sc := b.makeStorageContext(ctx, request.Storage)
+
+	clusters, err := sc.Storage.List(sc.Context, crossRevocationPrefix)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list cross-cluster revocation queue participating clusters: %w", err)
+	}
+
+	for cIndex, cluster := range clusters {
+		cluster = cluster[0 : len(cluster)-1]
+		cPath := crossRevocationPrefix + cluster + "/"
+		serials, err := sc.Storage.List(sc.Context, cPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list cross-cluster revocation queue entries for cluster %v (%v): %w", cluster, cIndex, err)
+		}
+
+		for _, serial := range serials {
+			// Always strip the slash out; it indicates the presence of
+			// a confirmed revocation, which we add to the main serial's
+			// entry.
+			hasSlash := serial[len(serial)-1] == '/'
+			if hasSlash {
+				serial = serial[0 : len(serial)-1]
+			}
+			serial = denormalizeSerial(serial)
+
+			var data map[string]interface{}
+			rawData, isPresent := responseInfo[serial]
+			if !isPresent {
+				data = map[string]interface{}{}
+				responseKeys = append(responseKeys, serial)
+			} else {
+				data = rawData.(map[string]interface{})
+			}
+
+			if hasSlash {
+				data["confirmed"] = true
+				data["confirmation_cluster"] = cluster
+			} else {
+				data["requesting_cluster"] = cluster
+			}
+
+			responseInfo[serial] = data
+		}
+	}
+
+	return logical.ListResponseWithInfo(responseKeys, responseInfo), nil
+}
+
+func (b *backend) pathListUnifiedRevokedCertsHandler(ctx context.Context, request *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	sc := b.makeStorageContext(ctx, request.Storage)
+	responseKeys := []string{}
+	responseInfo := make(map[string]interface{})
+
+	clusterPathsById, err := lookupUnifiedClusterPaths(sc)
+	if err != nil {
+		return nil, err
+	}
+
+	for clusterId := range clusterPathsById {
+		clusterSerials, err := listClusterSpecificUnifiedRevokedCerts(sc, clusterId)
+		if err != nil {
+			return nil, err
+		}
+		for _, serial := range clusterSerials {
+			if strings.HasSuffix(serial, "/") {
+				// Skip folders as they wouldn't be a proper revocation
+				continue
+			}
+			colonSerial := denormalizeSerial(serial)
+			var data map[string][]string
+			rawData, isPresent := responseInfo[colonSerial]
+			if !isPresent {
+				responseKeys = append(responseKeys, colonSerial)
+				data = map[string][]string{}
+			} else {
+				data = rawData.(map[string][]string)
+			}
+
+			data["revoking_clusters"] = append(data["revoking_clusters"], clusterId)
+			responseInfo[colonSerial] = data
+		}
+	}
+
+	return logical.ListResponseWithInfo(responseKeys, responseInfo), nil
+}
+
 const pathRevokeHelpSyn = `
 Revoke a certificate by serial number or with explicit certificate.
 
@@ -534,4 +801,21 @@ List all revoked serial numbers within the local cluster
 
 const pathListRevokedHelpDesc = `
 Returns a list of serial numbers for revoked certificates in the local cluster. 
+`
+
+const pathListUnifiedRevokedHelpSyn = `
+List all revoked serial numbers within this cluster's unified storage area.
+`
+
+const pathListUnifiedRevokedHelpDesc = `
+Returns a list of serial numbers for revoked certificates within this cluster's unified storage.
+`
+
+const pathListRevocationQueueHelpSyn = `
+List all pending, cross-cluster revocations known to the local cluster.
+`
+
+const pathListRevocationQueueHelpDesc = `
+Returns a detailed list containing serial number, requesting cluster, and
+optionally a confirming cluster.
 `

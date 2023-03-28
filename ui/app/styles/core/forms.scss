@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 form {
   margin: 0;
 }
@@ -155,6 +160,11 @@ label {
     .select select {
       padding-right: 10em;
     }
+  }
+
+  &.is-align-end {
+    display: flex;
+    align-self: end;
   }
 }
 

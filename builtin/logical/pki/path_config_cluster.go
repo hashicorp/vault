@@ -1,8 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/asaskevich/govalidator"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -26,14 +30,85 @@ including standby nodes, and need not always point to the active node.
 
 For example: https://pr1.vault.example.com:8200/v1/pki`,
 			},
+			"aia_path": {
+				Type: framework.TypeString,
+				Description: `Optional URI to this mount's AIA distribution
+point; may refer to an external non-Vault responder. This is for resolving AIA
+URLs and providing the {{cluster_aia_path}} template parameter and will not
+be used for other purposes. As such, unlike path above, this could safely
+be an insecure transit mechanism (like HTTP without TLS).
+
+For example: http://cdn.example.com/pr1/pki`,
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathWriteCluster,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"path": {
+								Type: framework.TypeString,
+								Description: `Canonical URI to this mount on this performance
+replication cluster's external address. This is for resolving AIA URLs and
+providing the {{cluster_path}} template parameter but might be used for other
+purposes in the future.
+
+This should only point back to this particular PR replica and should not ever
+point to another PR cluster. It may point to any node in the PR replica,
+including standby nodes, and need not always point to the active node.
+
+For example: https://pr1.vault.example.com:8200/v1/pki`,
+							},
+							"aia_path": {
+								Type: framework.TypeString,
+								Description: `Optional URI to this mount's AIA distribution
+point; may refer to an external non-Vault responder. This is for resolving AIA
+URLs and providing the {{cluster_aia_path}} template parameter and will not
+be used for other purposes. As such, unlike path above, this could safely
+be an insecure transit mechanism (like HTTP without TLS).
+
+For example: http://cdn.example.com/pr1/pki`,
+							},
+						},
+					}},
+				},
 			},
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathReadCluster,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"path": {
+								Type: framework.TypeString,
+								Description: `Canonical URI to this mount on this performance
+replication cluster's external address. This is for resolving AIA URLs and
+providing the {{cluster_path}} template parameter but might be used for other
+purposes in the future.
+
+This should only point back to this particular PR replica and should not ever
+point to another PR cluster. It may point to any node in the PR replica,
+including standby nodes, and need not always point to the active node.
+
+For example: https://pr1.vault.example.com:8200/v1/pki`,
+								Required: true,
+							},
+							"aia_path": {
+								Type: framework.TypeString,
+								Description: `Optional URI to this mount's AIA distribution
+point; may refer to an external non-Vault responder. This is for resolving AIA
+URLs and providing the {{cluster_aia_path}} template parameter and will not
+be used for other purposes. As such, unlike path above, this could safely
+be an insecure transit mechanism (like HTTP without TLS).
+
+For example: http://cdn.example.com/pr1/pki`,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -51,7 +126,8 @@ func (b *backend) pathReadCluster(ctx context.Context, req *logical.Request, _ *
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"path": cfg.Path,
+			"path":     cfg.Path,
+			"aia_path": cfg.AIAPath,
 		},
 	}
 
@@ -65,9 +141,18 @@ func (b *backend) pathWriteCluster(ctx context.Context, req *logical.Request, da
 		return nil, err
 	}
 
-	cfg.Path = data.Get("path").(string)
-	if !govalidator.IsURL(cfg.Path) {
-		return nil, fmt.Errorf("invalid, non-URL path given to cluster: %v", cfg.Path)
+	if value, ok := data.GetOk("path"); ok {
+		cfg.Path = value.(string)
+		if !govalidator.IsURL(cfg.Path) {
+			return nil, fmt.Errorf("invalid, non-URL path given to cluster: %v", cfg.Path)
+		}
+	}
+
+	if value, ok := data.GetOk("aia_path"); ok {
+		cfg.AIAPath = value.(string)
+		if !govalidator.IsURL(cfg.AIAPath) {
+			return nil, fmt.Errorf("invalid, non-URL aia_path given to cluster: %v", cfg.AIAPath)
+		}
 	}
 
 	if err := sc.writeClusterConfig(cfg); err != nil {
@@ -76,7 +161,8 @@ func (b *backend) pathWriteCluster(ctx context.Context, req *logical.Request, da
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"path": cfg.Path,
+			"path":     cfg.Path,
+			"aia_path": cfg.AIAPath,
 		},
 	}
 

@@ -20,7 +20,7 @@ helm install vault hashicorp/vault \
   --set='server.ha.raft.enabled=true'
 ```
 
--> For license configuration refer to [Running Vault Enterprise](/docs/platform/k8s/helm/enterprise).
+-> For license configuration refer to [Running Vault Enterprise](/vault/docs/platform/k8s/helm/enterprise).
 
 Next, initialize and unseal `vault-0` pod:
 
@@ -52,7 +52,7 @@ kubectl exec -ti vault-0 -- vault login
 Next, list all the raft peers:
 
 ```shell
-kubectl exec -ti vault-0 -- vault operator raft list-peers
+$ kubectl exec -ti vault-0 -- vault operator raft list-peers
 
 Node                                    Address                        State       Voter
 ----                                    -------                        -----       -----

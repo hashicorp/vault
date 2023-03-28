@@ -3,12 +3,12 @@ layout: docs
 page_title: Feature Deprecation FAQ
 sidebar_title: FAQ
 description: |-
-  An FAQ page to communicate frequently asked questions concering feature deprecations.
+  An FAQ page to communicate frequently asked questions concerning feature deprecations.
 ---
 
 # Feature Deprecation FAQ
 
-This page provides frequently asked questions concerning decisions made about Vault feature deprecations. If you are looking for information about Vault licensing, refer to the [Licensing FAQ](/docs/enterprise/license/faq) page. Pleaser refer to the [Feature Deprecation Notice and Plans](/docs/deprecation) document for up-to-date information on Vault feature deprecations and notice.
+This page provides frequently asked questions concerning decisions made about Vault feature deprecations. If you are looking for information about Vault licensing, refer to the [Licensing FAQ](/vault/docs/enterprise/license/faq) page. Pleaser refer to the [Feature Deprecation Notice and Plans](/vault/docs/deprecation) document for up-to-date information on Vault feature deprecations and notice.
 
 - [Q: What is the impact on anyone using the legacy MFA feature?](#q-what-is-the-impact-on-anyone-using-the-legacy-mfa-feature)
 - [Q: I'm currently using the Etcd storage backend feature. How does the deprecation impact me?](#q-i-m-currently-using-the-etcd-storage-backend-feature-how-does-the-deprecation-impact-me)
@@ -34,9 +34,9 @@ These features were deprecated in prior releases of Vault. We are targeting the 
 
 | Deprecated Feature    | Alternative Feature                                                                                                 |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Mount Filters         | [Path Filters](https://www.vaultproject.io/api-docs/system/replication/replication-performance#create-paths-filter) |
-| AppID                 | [AppRole auth method](/docs/auth/approle)                                                                           |
-| Standalone DB engines | [Combined DB engines](/docs/secrets/databases)                                                                      |
+| Mount Filters         | [Path Filters](/vault/api-docs/system/replication/replication-performance#create-paths-filter) |
+| AppID                 | [AppRole auth method](/vault/docs/auth/approle)                                                                           |
+| Standalone DB engines | [Combined DB engines](/vault/docs/secrets/databases)                                                                      |
 
 **Note:** After upgrading to 1.12, any attempt to unseal a core with one of the following features enabled will result in a core shutdown. This may temporarily be overridden using the `VAULT_ALLOW_PENDING_REMOVAL_MOUNTS` environment variable when launching the Vault server. These features will be officially removed from Vault in version 1.13 and this environment variable will not work. In order to upgrade to 1.13, you will have to completely disable all removed features.
 
@@ -63,31 +63,31 @@ Here are the use cases that may still use certificates with SHA-1:
 
 #### Auth Methods
 
-- [AWS Auth Method](/docs/auth/aws): [AWS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html) can use SHA-1-based PKCS7 signatures for DSA key pairs.
-- [Cloud Foundry (CF) Auth Method ](/docs/auth/cf)
-- [Kerberos Auth Method](/docs/auth/kerberos)
-- [Kubernetes Auth Method](/docs/auth/kubernetes)
-- [LDAP Auth Method](/docs/auth/ldap)
-- [JWT/OIDC Auth Method](/docs/auth/jwt/)
-- [TLS Certificates Auth Method](/docs/auth/cert)
+- [AWS Auth Method](/vault/docs/auth/aws): [AWS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html) can use SHA-1-based PKCS7 signatures for DSA key pairs.
+- [Cloud Foundry (CF) Auth Method ](/vault/docs/auth/cf)
+- [Kerberos Auth Method](/vault/docs/auth/kerberos)
+- [Kubernetes Auth Method](/vault/docs/auth/kubernetes)
+- [LDAP Auth Method](/vault/docs/auth/ldap)
+- [JWT/OIDC Auth Method](/vault/docs/auth/jwt/)
+- [TLS Certificates Auth Method](/vault/docs/auth/cert)
 
 #### Database Secrets Engines
 
-- [Cassandra Database Secrets Engine](/docs/secrets/databases/cassandra)
-- [Couchbase Database Secrets Engine](/docs/secrets/databases/couchbase)
-- [Elasticsearch Database Secrets Engine](/docs/secrets/databases/elasticdb)
-- [InfluxDB Database Secrets Engine](/docs/secrets/databases/influxdb)
-- [MongoDB Database Secrets Engine](/docs/secrets/databases/mongodb)
-- [MySQL/MariaDB Database Secrets Engine](/docs/secrets/databases/mysql-maria)
+- [Cassandra Database Secrets Engine](/vault/docs/secrets/databases/cassandra)
+- [Couchbase Database Secrets Engine](/vault/docs/secrets/databases/couchbase)
+- [Elasticsearch Database Secrets Engine](/vault/docs/secrets/databases/elasticdb)
+- [InfluxDB Database Secrets Engine](/vault/docs/secrets/databases/influxdb)
+- [MongoDB Database Secrets Engine](/vault/docs/secrets/databases/mongodb)
+- [MySQL/MariaDB Database Secrets Engine](/vault/docs/secrets/databases/mysql-maria)
 
 #### Secrets Engines
 
-- [Active Directory Secrets Engine](/docs/secrets/ad)
-- [Consul Secrets Engine](/docs/secrets/consul)
-- [Kubernetes Secrets Engine](/docs/secrets/kubernetes)
-- [Nomad Secrets Engine](/docs/secrets/nomad)
-- [LDAP Secrets Engine](/docs/secrets/ldap)
-- [PKI Secrets Engine](/docs/secrets/pki/)
+- [Active Directory Secrets Engine](/vault/docs/secrets/ad)
+- [Consul Secrets Engine](/vault/docs/secrets/consul)
+- [Kubernetes Secrets Engine](/vault/docs/secrets/kubernetes)
+- [Nomad Secrets Engine](/vault/docs/secrets/nomad)
+- [LDAP Secrets Engine](/vault/docs/secrets/ldap)
+- [PKI Secrets Engine](/vault/docs/secrets/pki/)
 
 ### Q: What are the phases of deprecation?
 
@@ -123,7 +123,7 @@ This status reflects a feature which has been officially deprecated in this rele
 
 ##### VAULT_ALLOW_PENDING_REMOVAL_MOUNTS
 
-The `Pending Removal` behavior may be overriden using a new environment variable: [`VAULT_ALLOW_PENDING_REMOVAL_MOUNTS`](/docs/commands/server#vault_allow_pending_removal_mounts). This environment variable effectively allows all `Pending Removal` features to be treated as `Deprecated`.
+The `Pending Removal` behavior may be overriden using a new environment variable: [`VAULT_ALLOW_PENDING_REMOVAL_MOUNTS`](/vault/docs/commands/server#vault_allow_pending_removal_mounts). This environment variable effectively allows all `Pending Removal` features to be treated as `Deprecated`.
 
 #### Removed
 

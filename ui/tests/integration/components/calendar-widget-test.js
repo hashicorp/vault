@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, click } from '@ember/test-helpers';
@@ -5,136 +10,249 @@ import sinon from 'sinon';
 import hbs from 'htmlbars-inline-precompile';
 import calendarDropdown from 'vault/tests/pages/components/calendar-widget';
 import { ARRAY_OF_MONTHS } from 'core/utils/date-formatters';
-import { subYears } from 'date-fns';
+import { subMonths, subYears } from 'date-fns';
+import timestamp from 'core/utils/timestamp';
 
 module('Integration | Component | calendar-widget', function (hooks) {
   setupRenderingTest(hooks);
 
+  hooks.before(function () {
+    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
+  });
   hooks.beforeEach(function () {
-    const CURRENT_YEAR = new Date().getFullYear();
-    const PREVIOUS_YEAR = subYears(new Date(), 1).getFullYear();
-    this.set('currentYear', CURRENT_YEAR);
-    this.set('previousYear', PREVIOUS_YEAR);
+    const CURRENT_DATE = timestamp.now();
+    this.set('currentDate', CURRENT_DATE);
+    this.set('calendarStartDate', subMonths(CURRENT_DATE, 12));
+    this.set('calendarEndDate', CURRENT_DATE);
+    this.set('startTimestamp', subMonths(CURRENT_DATE, 12).toISOString());
+    this.set('endTimestamp', CURRENT_DATE.toISOString());
     this.set('handleClientActivityQuery', sinon.spy());
-    this.set('handleCurrentBillingPeriod', sinon.spy());
-    this.set('arrayOfMonths', ARRAY_OF_MONTHS);
-    this.set('endTimeFromResponse', [CURRENT_YEAR, 0]);
+  });
+  hooks.after(function () {
+    timestamp.now.restore();
   });
 
-  test('it renders and can open the calendar view', async function (assert) {
+  test('it renders and disables correct months when start date is 12 months ago', async function (assert) {
+    assert.expect(14);
     await render(hbs`
       <CalendarWidget
-        @arrayOfMonths={{this.arrayOfMonths}}
-        @endTimeDisplay={{concat "January " this.currentYear}}
-        @endTimeFromResponse={{this.endTimeFromResponse}}
-        @handleClientActivityQuery={{this.handleClientActivityQuery}}
-        @handleCurrentBillingPeriod={{this.handleCurrentBillingPeriod}}
-        @startTimeDisplay={{concat "February " this.previousYear}}
+        @startTimestamp={{this.startTimestamp}}
+        @endTimestamp={{this.endTimestamp}}
+        @selectMonth={{this.handleClientActivityQuery}}
       />
     `);
 
+    assert
+      .dom(calendarDropdown.dateRangeTrigger)
+      .hasText(`Apr 2017 - Apr 2018`, 'renders and formats start and end dates');
     await calendarDropdown.openCalendar();
     assert.ok(calendarDropdown.showsCalendar, 'renders the calendar component');
+    // assert months in current year are disabled/enabled correctly
+    const enabledMonths = ['January', 'February', 'March', 'April'];
+    ARRAY_OF_MONTHS.forEach(function (month) {
+      if (enabledMonths.includes(month)) {
+        assert
+          .dom(`[data-test-calendar-month="${month}"]`)
+          .doesNotHaveClass('is-readOnly', `${month} is enabled`);
+      } else {
+        assert.dom(`[data-test-calendar-month="${month}"]`).hasClass('is-readOnly', `${month} is read only`);
+      }
+    });
   });
 
-  test('it does not allow a user to click to a future year but does allow a user to click to previous year', async function (assert) {
+  test('it renders and disables months before start timestamp', async function (assert) {
     await render(hbs`
       <CalendarWidget
-        @arrayOfMonths={{this.arrayOfMonths}}
-        @endTimeDisplay={{concat "March " this.currentYear}}
-        @endTimeFromResponse={{this.endTimeFromResponse}}
-        @handleClientActivityQuery={{this.handleClientActivityQuery}}
-        @handleCurrentBillingPeriod={{this.handleCurrentBillingPeriod}}
-        @startTimeDisplay={{concat "February " this.previousYear}}
+        @startTimestamp={{this.startTimestamp}}
+        @endTimestamp={{this.endTimestamp}}
+        @selectMonth={{this.handleClientActivityQuery}}
       />
     `);
 
     await calendarDropdown.openCalendar();
-    assert.dom('[data-test-future-year]').isDisabled('Future year is disabled');
-
+    assert.dom('[data-test-next-year]').isDisabled('Future year is disabled');
     await calendarDropdown.clickPreviousYear();
-    assert.dom('[data-test-display-year]').hasText(this.previousYear.toString(), 'shows the previous year');
     assert
-      .dom('[data-test-calendar-month="January"]')
-      .hasClass(
-        'is-readOnly',
-        `January ${this.previousYear} is disabled because it comes before startTimeDisplay`
-      );
+      .dom('[data-test-display-year]')
+      .hasText(`${subYears(this.currentDate, 1).getFullYear()}`, 'shows the previous year');
+    assert.dom('[data-test-previous-year]').isDisabled('disables previous year');
+
+    // assert months in previous year are disabled/enabled correctly
+    const disabledMonths = ['January', 'February', 'March'];
+    ARRAY_OF_MONTHS.forEach(function (month) {
+      if (disabledMonths.includes(month)) {
+        assert.dom(`[data-test-calendar-month="${month}"]`).hasClass('is-readOnly', `${month} is read only`);
+      } else {
+        assert
+          .dom(`[data-test-calendar-month="${month}"]`)
+          .doesNotHaveClass('is-readOnly', `${month} is enabled`);
+      }
+    });
   });
 
-  test('it disables the current month', async function (assert) {
+  test('it calls parent callback with correct arg when clicking "Current billing period"', async function (assert) {
     await render(hbs`
       <CalendarWidget
-        @arrayOfMonths={{this.arrayOfMonths}}
-        @endTimeDisplay={{concat "January " this.currentYear}}
-        @endTimeFromResponse={{this.endTimeFromResponse}}
-        @handleClientActivityQuery={{this.handleClientActivityQuery}}
-        @handleCurrentBillingPeriod={{this.handleCurrentBillingPeriod}}
-        @startTimeDisplay={{concat "February " this.previousYear}}
+        @startTimestamp={{this.startTimestamp}}
+        @endTimestamp={{this.endTimestamp}}
+        @selectMonth={{this.handleClientActivityQuery}}
       />
     `);
-    await calendarDropdown.openCalendar();
-    const month = this.arrayOfMonths[new Date().getMonth()];
-    assert
-      .dom(`[data-test-calendar-month="${month}"]`)
-      .hasClass('is-readOnly', `${month} ${this.currentYear} is disabled`);
-    // The component also disables all months after the current one, but this
-    // is tricky to test since it's based on browser time, so the behavior
-    // would be different in december than other months
-  });
-
-  test('it allows you to reset the billing period', async function (assert) {
-    await render(hbs`
-    <CalendarWidget
-      @arrayOfMonths={{this.arrayOfMonths}}
-      @endTimeDisplay={{concat "January " this.currentYear}}
-      @endTimeFromResponse={{this.endTimeFromResponse}}
-      @handleClientActivityQuery={{this.handleClientActivityQuery}}
-      @handleCurrentBillingPeriod={{this.handleCurrentBillingPeriod}}
-      @startTimeDisplay={{concat "February " this.previousYear}}
-    />
-  `);
     await calendarDropdown.menuToggle();
     await calendarDropdown.clickCurrentBillingPeriod();
-    assert.ok(this.handleCurrentBillingPeriod.calledOnce, 'it calls the parents handleCurrentBillingPeriod');
-  });
-
-  test('it passes the appropriate data to the handleCurrentBillingPeriod when a date is selected', async function (assert) {
-    await render(hbs`
-    <CalendarWidget
-      @arrayOfMonths={{this.arrayOfMonths}}
-      @endTimeDisplay={{concat "January " this.currentYear}}
-      @endTimeFromResponse={{this.endTimeFromResponse}}
-      @handleClientActivityQuery={{this.handleClientActivityQuery}}
-      @handleCurrentBillingPeriod={{this.handleCurrentBillingPeriod}}
-      @startTimeDisplay={{concat "February " this.previousYear}}
-    />
-  `);
-    await calendarDropdown.openCalendar();
-    await calendarDropdown.clickPreviousYear();
-    await click('[data-test-calendar-month="October"]'); // select endTime of October 2021
-    assert.ok(this.handleClientActivityQuery.calledOnce, 'it calls the parents handleClientActivityQuery');
-    assert.ok(
-      this.handleClientActivityQuery.calledWith(9, this.previousYear, 'endTime'),
-      'Passes the month as an index, year and date type to the parent'
+    assert.propEqual(
+      this.handleClientActivityQuery.args[0][0],
+      { dateType: 'reset' },
+      'it calls parent function with reset dateType'
     );
   });
 
-  test('it displays the year from endTimeDisplay when opened', async function (assert) {
-    this.set('endTimeFromResponse', [this.previousYear, 11]);
+  test('it calls parent callback with correct arg when clicking "Current month"', async function (assert) {
     await render(hbs`
-    <CalendarWidget
-      @arrayOfMonths={{this.arrayOfMonths}}
-      @endTimeDisplay={{concat "December " this.previousYear}}
-      @endTimeFromResponse={{this.endTimeFromResponse}}
-      @handleClientActivityQuery={{this.handleClientActivityQuery}}
-      @handleCurrentBillingPeriod={{this.handleCurrentBillingPeriod}}
-      @startTimeDisplay="March 2020"
-    />
-  `);
+      <CalendarWidget
+        @startTimestamp={{this.startTimestamp}}
+        @endTimestamp={{this.endTimestamp}}
+        @selectMonth={{this.handleClientActivityQuery}}
+      />
+    `);
+    await calendarDropdown.menuToggle();
+    await calendarDropdown.clickCurrentMonth();
+    assert.propEqual(
+      this.handleClientActivityQuery.args[0][0],
+      { dateType: 'currentMonth' },
+      'it calls parent function with currentMoth dateType'
+    );
+  });
+
+  test('it calls parent callback with correct arg when selecting a month', async function (assert) {
+    await render(hbs`
+      <CalendarWidget
+        @startTimestamp={{this.startTimestamp}}
+        @endTimestamp={{this.endTimestamp}}
+        @selectMonth={{this.handleClientActivityQuery}}
+      />
+    `);
     await calendarDropdown.openCalendar();
-    assert
-      .dom('[data-test-display-year]')
-      .hasText(this.previousYear.toString(), 'Shows year from the end response');
+    await click(`[data-test-calendar-month="April"`);
+    assert.propEqual(
+      this.handleClientActivityQuery.lastCall.lastArg,
+      {
+        dateType: 'endDate',
+        monthIdx: 3,
+        monthName: 'April',
+        year: 2018,
+      },
+      'it calls parent function with end date (current) month/year'
+    );
+
+    await calendarDropdown.openCalendar();
+    await calendarDropdown.clickPreviousYear();
+    await click(`[data-test-calendar-month="March"]`);
+    assert.propEqual(
+      this.handleClientActivityQuery.lastCall.lastArg,
+      {
+        dateType: 'endDate',
+        monthIdx: 2,
+        monthName: 'March',
+        year: 2017,
+      },
+      'it calls parent function with selected start date month/year'
+    );
+  });
+
+  test('it disables correct months when start date 6 months ago', async function (assert) {
+    this.set('calendarStartDate', subMonths(this.currentDate, 6)); // Nov 3, 2017
+    this.set('startTimestamp', subMonths(this.currentDate, 6).toISOString());
+    await render(hbs`
+      <CalendarWidget
+        @startTimestamp={{this.startTimestamp}}
+        @endTimestamp={{this.endTimestamp}}
+        @selectMonth={{this.handleClientActivityQuery}}
+      />
+    `);
+
+    await calendarDropdown.openCalendar();
+    assert.dom('[data-test-next-year]').isDisabled('Future year is disabled');
+
+    // Check start year disables correct months
+    await calendarDropdown.clickPreviousYear();
+    assert.dom('[data-test-previous-year]').isDisabled('previous year is disabled');
+    const prevYearEnabled = ['October', 'November', 'December'];
+    ARRAY_OF_MONTHS.forEach(function (month) {
+      if (prevYearEnabled.includes(month)) {
+        assert
+          .dom(`[data-test-calendar-month="${month}"]`)
+          .doesNotHaveClass('is-readOnly', `${month} is enabled`);
+      } else {
+        assert.dom(`[data-test-calendar-month="${month}"]`).hasClass('is-readOnly', `${month} is read only`);
+      }
+    });
+
+    // Check end year disables correct months
+    await click('[data-test-next-year]');
+    const currYearEnabled = ['January', 'February', 'March', 'April'];
+    ARRAY_OF_MONTHS.forEach(function (month) {
+      if (currYearEnabled.includes(month)) {
+        assert
+          .dom(`[data-test-calendar-month="${month}"]`)
+          .doesNotHaveClass('is-readOnly', `${month} is enabled`);
+      } else {
+        assert.dom(`[data-test-calendar-month="${month}"]`).hasClass('is-readOnly', `${month} is read only`);
+      }
+    });
+  });
+
+  test('it disables correct months when start date 36 months ago', async function (assert) {
+    this.set('calendarStartDate', subMonths(this.currentDate, 36)); // April 3 2015
+    this.set('startTimestamp', subMonths(this.currentDate, 36).toISOString());
+    await render(hbs`
+      <CalendarWidget
+        @startTimestamp={{this.startTimestamp}}
+        @endTimestamp={{this.endTimestamp}}
+        @selectMonth={{this.handleClientActivityQuery}}
+      />
+    `);
+
+    await calendarDropdown.openCalendar();
+    assert.dom('[data-test-next-year]').isDisabled('Future year is disabled');
+
+    for (const year of [2017, 2016, 2015]) {
+      await calendarDropdown.clickPreviousYear();
+      assert.dom('[data-test-display-year]').hasText(year.toString());
+    }
+
+    assert.dom('[data-test-previous-year]').isDisabled('previous year is disabled');
+    assert.dom('[data-test-next-year]').isEnabled('next year is enabled');
+
+    assert.dom('.calendar-widget .is-readOnly').exists('Some months disabled');
+
+    const disabledMonths = ['January', 'February', 'March'];
+    ARRAY_OF_MONTHS.forEach(function (month) {
+      if (disabledMonths.includes(month)) {
+        assert.dom(`[data-test-calendar-month="${month}"]`).hasClass('is-readOnly', `${month} is read only`);
+      } else {
+        assert
+          .dom(`[data-test-calendar-month="${month}"]`)
+          .doesNotHaveClass('is-readOnly', `${month} is enabled`);
+      }
+    });
+
+    await click('[data-test-next-year]');
+    assert.dom('.calendar-widget .is-readOnly').doesNotExist('All months enabled for 2016');
+    await click('[data-test-next-year]');
+    assert.dom('.calendar-widget .is-readOnly').doesNotExist('All months enabled for 2017');
+    await click('[data-test-next-year]');
+    assert.dom('.calendar-widget .is-readOnly').exists('Some months disabled for 2018');
+
+    const enabledMonths = ['January', 'February', 'March', 'April'];
+    ARRAY_OF_MONTHS.forEach(function (month) {
+      if (enabledMonths.includes(month)) {
+        assert
+          .dom(`[data-test-calendar-month="${month}"]`)
+          .doesNotHaveClass('is-readOnly', `${month} is enabled`);
+      } else {
+        assert.dom(`[data-test-calendar-month="${month}"]`).hasClass('is-readOnly', `${month} is read only`);
+      }
+    });
   });
 });

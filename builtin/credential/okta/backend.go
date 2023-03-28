@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package okta
 
 import (
@@ -267,10 +270,12 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username, pas
 					return nil, logical.ErrorResponse("okta auth backend unexpected failure"), nil, nil
 				}
 
+				timer := time.NewTimer(1 * time.Second)
 				select {
-				case <-time.After(1 * time.Second):
+				case <-timer.C:
 					// Continue
 				case <-ctx.Done():
+					timer.Stop()
 					return nil, logical.ErrorResponse("exiting pending mfa challenge"), nil, nil
 				}
 			case "REJECTED":

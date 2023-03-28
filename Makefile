@@ -8,15 +8,15 @@ EXTENDED_TEST_TIMEOUT=60m
 INTEG_TEST_TIMEOUT=120m
 VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
 EXTERNAL_TOOLS_CI=\
-	golang.org/x/tools/cmd/goimports
+	golang.org/x/tools/cmd/goimports \
+	github.com/golangci/revgrep/cmd/revgrep
 EXTERNAL_TOOLS=\
 	github.com/client9/misspell/cmd/misspell
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 SED?=$(shell command -v gsed || command -v sed)
 
-
 GO_VERSION_MIN=$$(cat $(CURDIR)/.go-version)
-PROTOC_VERSION_MIN=3.21.9
+PROTOC_VERSION_MIN=3.21.12
 GO_CMD?=go
 CGO_ENABLED?=0
 ifneq ($(FDB_ENABLED), )
@@ -101,6 +101,34 @@ vet:
 			echo "Vet found suspicious constructs. Please check the reported constructs"; \
 			echo "and fix them if necessary before submitting the code for reviewal."; \
 		fi
+
+# deprecations runs staticcheck tool to look for deprecations. Checks entire code to see if it 
+# has deprecated function, variable, constant or field
+deprecations:
+	make bootstrap
+	repositoryName=$(basename `git rev-parse --show-toplevel`)
+	./scripts/deprecations-checker.sh "" repositoryName
+
+# ci-deprecations runs staticcheck tool to look for deprecations. All output gets piped to revgrep
+# which will only return an error if changes that is not on main has deprecated function, variable, constant or field
+ci-deprecations:
+	make bootstrap
+	repositoryName=$(basename `git rev-parse --show-toplevel`)
+	./scripts/deprecations-checker.sh main repositoryName
+
+# tools/godoctests/.bin/godoctests builds the custom analyzer to check for godocs for tests
+tools/godoctests/.bin/godoctests:
+	@cd tools/godoctests && $(GO_CMD) build -o .bin/godoctests .
+
+# vet-godoctests runs godoctests on the test functions. All output gets piped to revgrep
+# which will only return an error if a new function is missing a godoc
+vet-godoctests: bootstrap tools/godoctests/.bin/godoctests
+	@$(GO_CMD) vet -vettool=./tools/godoctests/.bin/godoctests $(TEST) 2>&1 | revgrep
+
+# ci-vet-godoctests runs godoctests on the test functions. All output gets piped to revgrep
+# which will only return an error if a new function that is not on main is missing a godoc
+ci-vet-godoctests: ci-bootstrap tools/godoctests/.bin/godoctests
+	@$(GO_CMD) vet -vettool=./tools/godoctests/.bin/godoctests $(TEST) 2>&1 | revgrep origin/main
 
 # lint runs vet plus a number of other checkers, it is more comprehensive, but louder
 lint:
@@ -191,8 +219,8 @@ proto: bootstrap
 	# No additional sed expressions should be added to this list. Going forward
 	# we should just use the variable names choosen by protobuf. These are left
 	# here for backwards compatability, namely for SDK compilation.
-	$(SED) -i -e 's/Id/ID/' vault/request_forwarding_service.pb.go
-	$(SED) -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/IDentity/Identity/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/Totp/TOTP/' -e 's/Mfa/MFA/' -e 's/Pingid/PingID/' -e 's/namespaceId/namespaceID/' -e 's/Ttl/TTL/' -e 's/BoundCidrs/BoundCIDRs/' helper/identity/types.pb.go helper/identity/mfa/types.pb.go helper/storagepacker/types.pb.go sdk/plugin/pb/backend.pb.go sdk/logical/identity.pb.go vault/activity/activity_log.pb.go
+	$(SED) -i -e 's/Id/ID/' -e 's/SPDX-License-IDentifier/SPDX-License-Identifier/' vault/request_forwarding_service.pb.go
+	$(SED) -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/IDentity/Identity/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/Totp/TOTP/' -e 's/Mfa/MFA/' -e 's/Pingid/PingID/' -e 's/namespaceId/namespaceID/' -e 's/Ttl/TTL/' -e 's/BoundCidrs/BoundCIDRs/' -e 's/SPDX-License-IDentifier/SPDX-License-Identifier/' helper/identity/types.pb.go helper/identity/mfa/types.pb.go helper/storagepacker/types.pb.go sdk/plugin/pb/backend.pb.go sdk/logical/identity.pb.go vault/activity/activity_log.pb.go
 
 	# This will inject the sentinel struct tags as decorated in the proto files.
 	protoc-go-inject-tag -input=./helper/identity/types.pb.go
@@ -203,7 +231,7 @@ fmtcheck:
 #@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
 
 fmt:
-	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gofumpt -w
+	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs go run mvdan.cc/gofumpt -w
 
 semgrep:
 	semgrep --include '*.go' --exclude 'vendor' -a -f tools/semgrep .
@@ -243,14 +271,7 @@ hana-database-plugin:
 mongodb-database-plugin:
 	@CGO_ENABLED=0 $(GO_CMD) build -o bin/mongodb-database-plugin ./plugins/database/mongodb/mongodb-database-plugin
 
-.PHONY: ci-config
-ci-config:
-	@$(MAKE) -C .circleci ci-config
-.PHONY: ci-verify
-ci-verify:
-	@$(MAKE) -C .circleci ci-verify
-
-.PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path packages build build-ci semgrep semgrep-ci
+.PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path packages build build-ci semgrep semgrep-ci vet-godoctests ci-vet-godoctests
 
 .NOTPARALLEL: ember-dist ember-dist-dev
 

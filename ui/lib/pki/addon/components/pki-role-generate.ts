@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
@@ -9,10 +14,11 @@ import errorMessage from 'vault/utils/error-message';
 import FlashMessageService from 'vault/services/flash-messages';
 import DownloadService from 'vault/services/download';
 import PkiCertificateGenerateModel from 'vault/models/pki/certificate/generate';
+import PkiCertificateSignModel from 'vault/models/pki/certificate/sign';
 
 interface Args {
   onSuccess: CallableFunction;
-  model: PkiCertificateGenerateModel;
+  model: PkiCertificateGenerateModel | PkiCertificateSignModel;
   type: string;
 }
 
@@ -23,10 +29,7 @@ export default class PkiRoleGenerate extends Component<Args> {
   @service declare readonly download: DownloadService;
 
   @tracked errorBanner = '';
-
-  transitionToRole() {
-    this.router.transitionTo('vault.cluster.secrets.backend.pki.roles.role.details');
-  }
+  @tracked invalidFormAlert = '';
 
   get verb() {
     return this.args.type === 'sign' ? 'sign' : 'generate';
@@ -42,32 +45,12 @@ export default class PkiRoleGenerate extends Component<Args> {
       onSuccess();
     } catch (err) {
       this.errorBanner = errorMessage(err, `Could not ${this.verb} certificate. See Vault logs for details.`);
-    }
-  }
-
-  @task
-  *revoke() {
-    try {
-      yield this.args.model.destroyRecord();
-      this.flashMessages.success('The certificate has been revoked.');
-      this.transitionToRole();
-    } catch (err) {
-      this.errorBanner = errorMessage(err, 'Could not revoke certificate. See Vault logs for details.');
-    }
-  }
-
-  @action downloadCert() {
-    try {
-      const formattedSerial = this.args.model.serialNumber?.replace(/(\s|:)+/g, '-');
-      this.download.pem(formattedSerial, this.args.model.certificate);
-      this.flashMessages.info('Your download has started.');
-    } catch (err) {
-      this.flashMessages.danger(errorMessage(err, 'Unable to prepare certificate for download.'));
+      this.invalidFormAlert = 'There was an error submitting this form.';
     }
   }
 
   @action cancel() {
     this.args.model.unloadRecord();
-    this.transitionToRole();
+    this.router.transitionTo('vault.cluster.secrets.backend.pki.roles.role.details');
   }
 }

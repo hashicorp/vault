@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package hcp_link
 
 import (
@@ -13,7 +16,6 @@ import (
 	linkConfig "github.com/hashicorp/hcp-link/pkg/config"
 	scada "github.com/hashicorp/hcp-scada-provider"
 	"github.com/hashicorp/vault/internalshared/configutil"
-	vaultVersion "github.com/hashicorp/vault/sdk/version"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/hcp_link/capabilities"
 	"github.com/hashicorp/vault/vault/hcp_link/capabilities/api_capability"
@@ -21,6 +23,7 @@ import (
 	"github.com/hashicorp/vault/vault/hcp_link/capabilities/meta"
 	"github.com/hashicorp/vault/vault/hcp_link/capabilities/node_status"
 	"github.com/hashicorp/vault/vault/hcp_link/internal"
+	vaultVersion "github.com/hashicorp/vault/version"
 )
 
 const (
@@ -43,7 +46,7 @@ var (
 )
 
 type HCPLinkVault struct {
-	l            sync.Mutex
+	l            sync.RWMutex
 	LinkStatus   internal.WrappedCoreHCPLinkStatus
 	scadaConfig  *scada.Config
 	linkConfig   *linkConfig.Config
@@ -212,7 +215,7 @@ func (h *HCPLinkVault) start() error {
 
 	h.running = true
 
-	h.logger.Info("started HCP Link")
+	h.logger.Info("established connection to HCP")
 
 	return nil
 }
@@ -222,6 +225,10 @@ func (h *HCPLinkVault) start() error {
 // API. In addition, it checks replication status of Vault and sets that in
 // Scada provider metadata status
 func (h *HCPLinkVault) reportStatus() {
+	h.l.RLock()
+	stopCh := h.stopCh
+	h.l.RUnlock()
+
 	var currentNodeStatus string
 
 	ticker := time.NewTicker(SetLinkStatusCadence)
@@ -229,7 +236,7 @@ func (h *HCPLinkVault) reportStatus() {
 	for {
 		// Check for a shutdown
 		select {
-		case <-h.stopCh:
+		case <-stopCh:
 			h.logger.Trace("returning from reporting link/node status")
 			return
 		case <-ticker.C:
@@ -329,7 +336,7 @@ func (h *HCPLinkVault) Shutdown() error {
 		h.stopCh = nil
 	}
 
-	h.logger.Info("tearing down HCP Link")
+	h.logger.Info("tearing down connection to HCP")
 
 	var retErr *multierror.Error
 

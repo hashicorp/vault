@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -36,6 +39,7 @@ import (
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/constants"
+	"github.com/hashicorp/vault/helper/experiments"
 	loghelper "github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -116,6 +120,7 @@ type ServerCommand struct {
 
 	flagConfigs            []string
 	flagRecovery           bool
+	flagExperiments        []string
 	flagDev                bool
 	flagDevTLS             bool
 	flagDevTLSCertDir      string
@@ -202,6 +207,17 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Target: &c.flagRecovery,
 		Usage: "Enable recovery mode. In this mode, Vault is used to perform recovery actions." +
 			"Using a recovery operation token, \"sys/raw\" API can be used to manipulate the storage.",
+	})
+
+	f.StringSliceVar(&StringSliceVar{
+		Name:       "experiment",
+		Target:     &c.flagExperiments,
+		Completion: complete.PredictSet(experiments.ValidExperiments()...),
+		Usage: "Name of an experiment to enable. Experiments should NOT be used in production, and " +
+			"the associated APIs may have backwards incompatible changes between releases. This " +
+			"flag can be specified multiple times to specify multiple experiments. This can also be " +
+			fmt.Sprintf("specified via the %s environment variable as a comma-separated list. ", EnvVaultExperiments) +
+			"Valid experiments are: " + strings.Join(experiments.ValidExperiments(), ", "),
 	})
 
 	f = set.NewFlagSet("Dev Options")
@@ -433,7 +449,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}
 
 	// Update the 'log' related aspects of shared config based on config/env var/cli
-	c.Flags().updateLogConfig(config.SharedConfig)
+	c.Flags().applyLogConfigOverrides(config.SharedConfig)
 	l, err := c.configureLogging(config)
 	if err != nil {
 		c.UI.Error(err.Error())
@@ -1039,7 +1055,7 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	f.updateLogConfig(config.SharedConfig)
+	f.applyLogConfigOverrides(config.SharedConfig)
 
 	// Set 'trace' log level for the following 'dev' clusters
 	if c.flagDevThreeNode || c.flagDevFourCluster {
@@ -1103,6 +1119,11 @@ func (c *ServerCommand) Run(args []string) int {
 				"VAULT_DISABLE_SERVER_SIDE_CONSISTENT_TOKENS env var: " +
 				"setting to default value false"))
 		}
+	}
+
+	if err := server.ExperimentsFromEnvAndCLI(config, EnvVaultExperiments, c.flagExperiments); err != nil {
+		c.UI.Error(err.Error())
+		return 1
 	}
 
 	// If mlockall(2) isn't supported, show a warning. We disable this in dev
@@ -1172,6 +1193,12 @@ func (c *ServerCommand) Run(args []string) int {
 	key := "environment variables"
 	info[key] = strings.Join(envVarKeys, ", ")
 	infoKeys = append(infoKeys, key)
+
+	if len(config.Experiments) != 0 {
+		expKey := "experiments"
+		info[expKey] = strings.Join(config.Experiments, ", ")
+		infoKeys = append(infoKeys, expKey)
+	}
 
 	barrierSeal, barrierWrapper, unwrapSeal, seals, sealConfigError, err := setSeal(c, config, infoKeys, info)
 	// Check error here
@@ -1696,24 +1723,13 @@ func (c *ServerCommand) configureLogging(config *server.Config) (hclog.Intercept
 		return nil, err
 	}
 
-	logRotateBytes, err := parseutil.ParseInt(config.LogRotateBytes)
-	if err != nil {
-		return nil, err
-	}
-
-	logRotateMaxFiles, err := parseutil.ParseInt(config.LogRotateMaxFiles)
-	if err != nil {
-		return nil, err
-	}
-
 	logCfg := &loghelper.LogConfig{
-		Name:              "vault",
 		LogLevel:          logLevel,
 		LogFormat:         logFormat,
 		LogFilePath:       config.LogFile,
 		LogRotateDuration: logRotateDuration,
-		LogRotateBytes:    int(logRotateBytes),
-		LogRotateMaxFiles: int(logRotateMaxFiles),
+		LogRotateBytes:    config.LogRotateBytes,
+		LogRotateMaxFiles: config.LogRotateMaxFiles,
 	}
 
 	return loghelper.Setup(logCfg, c.logWriter)
@@ -2305,9 +2321,11 @@ func (c *ServerCommand) storageMigrationActive(backend physical.Backend) bool {
 		}
 		c.logger.Warn("storage migration check error", "error", err.Error())
 
+		timer := time.NewTimer(2 * time.Second)
 		select {
-		case <-time.After(2 * time.Second):
+		case <-timer.C:
 		case <-c.ShutdownCh:
+			timer.Stop()
 			return true
 		}
 	}
@@ -2595,10 +2613,12 @@ func runUnseal(c *ServerCommand, core *vault.Core, ctx context.Context) {
 		}
 		c.logger.Warn("failed to unseal core", "error", err)
 
+		timer := time.NewTimer(5 * time.Second)
 		select {
 		case <-c.ShutdownCh:
+			timer.Stop()
 			return
-		case <-time.After(5 * time.Second):
+		case <-timer.C:
 		}
 	}
 }
@@ -2619,6 +2639,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		CredentialBackends:             c.CredentialBackends,
 		LogicalBackends:                c.LogicalBackends,
 		Logger:                         c.logger,
+		DetectDeadlocks:                config.DetectDeadlocks,
 		DisableSentinelTrace:           config.DisableSentinelTrace,
 		DisableCache:                   config.DisableCache,
 		DisableMlock:                   config.DisableMlock,
@@ -2646,6 +2667,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		License:                        config.License,
 		LicensePath:                    config.LicensePath,
 		DisableSSCTokens:               config.DisableSSCTokens,
+		Experiments:                    config.Experiments,
 	}
 
 	if c.flagDev {

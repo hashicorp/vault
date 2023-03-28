@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package rafttests
 
 import (
@@ -405,7 +408,7 @@ func join(t *testing.T, core *vault.TestClusterCore, client *api.Client, cluster
 	_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), []*raft.LeaderJoinInfo{
 		{
 			LeaderAPIAddr: client.Address(),
-			TLSConfig:     cluster.Cores[0].TLSConfig,
+			TLSConfig:     cluster.Cores[0].TLSConfig(),
 			Retry:         true,
 		},
 	}, false)

@@ -1,42 +1,19 @@
-import { create } from 'ember-cli-page-object';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { v4 as uuidv4 } from 'uuid';
+
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
-import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import { click, currentURL, fillIn, find, isSettled, visit } from '@ember/test-helpers';
 import { SELECTORS } from 'vault/tests/helpers/pki/workflow';
 import { adminPolicy, readerPolicy, updatePolicy } from 'vault/tests/helpers/policy-generator/pki';
-
-const consoleComponent = create(consoleClass);
-
-const tokenWithPolicy = async function (name, policy) {
-  await consoleComponent.runCommands([
-    `write sys/policies/acl/${name} policy=${btoa(policy)}`,
-    `write -field=client_token auth/token/create policies=${name}`,
-  ]);
-  return consoleComponent.lastLogOutput;
-};
-
-const runCommands = async function (commands) {
-  try {
-    await consoleComponent.runCommands(commands);
-    const res = consoleComponent.lastLogOutput;
-    if (res.includes('Error')) {
-      throw new Error(res);
-    }
-    return res;
-  } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error(
-      `The following occurred when trying to run the command(s):\n ${commands.join('\n')} \n\n ${
-        consoleComponent.lastLogOutput
-      }`
-    );
-    throw error;
-  }
-};
+import { tokenWithPolicy, runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
 
 /**
  * This test module should test the PKI workflow, including:
@@ -49,7 +26,7 @@ module('Acceptance | pki workflow', function (hooks) {
   hooks.beforeEach(async function () {
     await authPage.login();
     // Setup PKI engine
-    const mountPath = `pki-workflow-${new Date().getTime()}`;
+    const mountPath = `pki-workflow-${uuidv4()}`;
     await enablePage.enable('pki', mountPath);
     this.mountPath = mountPath;
     await logout.visit();
@@ -64,7 +41,7 @@ module('Acceptance | pki workflow', function (hooks) {
   });
 
   test('empty state messages are correct when PKI not configured', async function (assert) {
-    assert.expect(10);
+    assert.expect(17);
     const assertEmptyState = (assert, resource) => {
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/${resource}`);
       assert
@@ -73,6 +50,7 @@ module('Acceptance | pki workflow', function (hooks) {
           'PKI not configured',
           `${resource} index renders correct empty state title when PKI not configured`
         );
+      assert.dom(SELECTORS.emptyStateLink).hasText('Configure PKI');
       assert
         .dom(SELECTORS.emptyStateMessage)
         .hasText(
@@ -84,9 +62,8 @@ module('Acceptance | pki workflow', function (hooks) {
     await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
     assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
 
-    // TODO comment in when roles index empty state updated & update assert.expect() number
-    // await click(SELECTORS.rolesTab);
-    // assertEmptyState(assert, 'roles');
+    await click(SELECTORS.rolesTab);
+    assertEmptyState(assert, 'roles');
 
     await click(SELECTORS.issuersTab);
     assertEmptyState(assert, 'issuers');
@@ -109,6 +86,7 @@ module('Acceptance | pki workflow', function (hooks) {
       allow_subdomains=true \
       max_ttl="720h"`,
       ]);
+      await runCommands([`write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test"`]);
       const pki_admin_policy = adminPolicy(this.mountPath, 'roles');
       const pki_reader_policy = readerPolicy(this.mountPath, 'roles');
       const pki_editor_policy = updatePolicy(this.mountPath, 'roles');
@@ -287,7 +265,6 @@ module('Acceptance | pki workflow', function (hooks) {
         `/vault/secrets/${this.mountPath}/pki/keys/${keyId}/details`,
         'navigates to details after save'
       );
-      await this.pauseTest;
       assert.dom(SELECTORS.keyPages.keyNameValue).hasText('test-key', 'updates key name');
 
       // key generate and delete navigation
@@ -380,10 +357,10 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.dom(SELECTORS.issuerDetails.title).hasText('View issuer certificate');
       assert
         .dom(`${SELECTORS.issuerDetails.defaultGroup} ${SELECTORS.issuerDetails.row}`)
-        .exists({ count: 9 }, 'Renders 9 info table items under default group');
+        .exists({ count: 13 }, 'Renders 13 info table items under default group');
       assert
         .dom(`${SELECTORS.issuerDetails.urlsGroup} ${SELECTORS.issuerDetails.row}`)
-        .exists({ count: 4 }, 'Renders 4 info table items under URLs group');
+        .exists({ count: 3 }, 'Renders 3 info table items under URLs group');
       assert.dom(SELECTORS.issuerDetails.groupTitle).exists({ count: 1 }, 'only 1 group title rendered');
     });
   });

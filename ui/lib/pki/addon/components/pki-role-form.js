@@ -1,5 +1,9 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@glimmer/component';
-import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
@@ -22,16 +26,16 @@ import { tracked } from '@glimmer/tracking';
 export default class PkiRoleForm extends Component {
   @service store;
   @service flashMessages;
+  @service secretMountPath;
 
   @tracked errorBanner;
   @tracked invalidFormAlert;
   @tracked modelValidations;
 
   get breadcrumbs() {
-    const backend = this.args.model.backend || 'pki';
     const crumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: backend, route: 'overview' },
+      { label: this.secretMountPath.currentPath, route: 'overview' },
       { label: 'roles', route: 'roles.index' },
     ];
     if (!this.args.model.isNew) {
@@ -58,12 +62,5 @@ export default class PkiRoleForm extends Component {
       this.errorBanner = message;
       this.invalidFormAlert = 'There was an error submitting this form.';
     }
-  }
-
-  @action
-  cancel() {
-    const method = this.args.model.isNew ? 'unloadRecord' : 'rollbackAttributes';
-    this.args.model[method]();
-    this.args.onCancel();
   }
 }

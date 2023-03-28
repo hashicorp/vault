@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 syntax = "proto3";
 
 option go_package = "github.com/hashicorp/vault/vault/hcp_link/proto/meta";
@@ -88,6 +91,7 @@ message GetClusterStatusResponse {
   HAStatus HAStatus = 2;
   RaftStatus RaftStatus = 3;
   string StorageType = 4;
+  string ClusterName = 5;
 }
 
 service HCPLinkMeta {

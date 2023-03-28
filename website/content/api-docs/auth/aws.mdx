@@ -12,7 +12,7 @@ description: This is the API documentation for the Vault AWS auth method.
 
 This is the API documentation for the Vault AWS auth method. For
 general information about the usage and operation of the AWS method, please
-see the [Vault AWS method documentation](/docs/auth/aws).
+see the [Vault AWS method documentation](/vault/docs/auth/aws).
 
 This documentation assumes the AWS method is mounted at the `/auth/aws`
 path in Vault. Since it is possible to enable auth methods at any location,
@@ -188,7 +188,7 @@ The new access key Vault uses is returned by this operation.
 ## Configure Identity Integration
 
 This configures the way that Vault interacts with the
-[Identity](/docs/secrets/identity) store. The default (as of Vault
+[Identity](/vault/docs/secrets/identity) store. The default (as of Vault
 1.0.3) is `role_id` for both values.
 
 | Method | Path                        |
@@ -687,7 +687,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/config/tidy/roletag-denylist
 ```
 
-## Create Role
+## Create/Update Role
 
 Registers a role in the method. Only those instances or principals which
 are using the role registered using this endpoint, will be able to perform

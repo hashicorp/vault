@@ -12,9 +12,9 @@ description: |-
 
 The following is an example of creating a performance cluster using Vault Helm.
 
-For more information on Disaster Recovery, [see the official documentation](/docs/enterprise/replication/).
+For more information on Disaster Recovery, [see the official documentation](/vault/docs/enterprise/replication/).
 
--> For license configuration refer to [Running Vault Enterprise](/docs/platform/k8s/helm/enterprise).
+-> For license configuration refer to [Running Vault Enterprise](/vault/docs/platform/k8s/helm/enterprise).
 
 ## Primary Cluster
 
@@ -58,7 +58,7 @@ kubectl exec -ti vault-primary-0 -- vault login
 Next, list all the raft peers:
 
 ```shell
-kubectl exec -ti vault-primary-0 -- vault operator raft list-peers
+$ kubectl exec -ti vault-primary-0 -- vault operator raft list-peers
 
 Node                                    Address                        State       Voter
 ----                                    -------                        -----       -----
@@ -109,7 +109,7 @@ kubectl exec -ti vault-secondary-0 -- vault login
 Next, list all the raft peers:
 
 ```shell
-kubectl exec -ti vault-secondary-0 -- vault operator raft list-peers
+$ kubectl exec -ti vault-secondary-0 -- vault operator raft list-peers
 
 Node                                    Address                        State       Voter
 ----                                    -------                        -----       -----

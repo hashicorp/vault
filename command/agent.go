@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -16,7 +19,10 @@ import (
 	"sync"
 	"time"
 
+	token_file "github.com/hashicorp/vault/command/agent/auth/token-file"
+
 	ctconfig "github.com/hashicorp/consul-template/config"
+	"github.com/hashicorp/go-multierror"
 
 	"github.com/hashicorp/vault/command/agent/sink/inmem"
 
@@ -24,6 +30,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/auth"
 	"github.com/hashicorp/vault/command/agent/auth/alicloud"
@@ -36,6 +43,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/auth/jwt"
 	"github.com/hashicorp/vault/command/agent/auth/kerberos"
 	"github.com/hashicorp/vault/command/agent/auth/kubernetes"
+	"github.com/hashicorp/vault/command/agent/auth/oci"
 	"github.com/hashicorp/vault/command/agent/cache"
 	"github.com/hashicorp/vault/command/agent/cache/cacheboltdb"
 	"github.com/hashicorp/vault/command/agent/cache/cachememdb"
@@ -75,8 +83,13 @@ type AgentCommand struct {
 	*BaseCommand
 	logFlags logFlags
 
+	config *agentConfig.Config
+
 	ShutdownCh chan struct{}
 	SighupCh   chan struct{}
+
+	tlsReloadFuncsLock sync.RWMutex
+	tlsReloadFuncs     []reloadutil.ReloadFunc
 
 	logWriter io.Writer
 	logGate   *gatedwriter.Writer
@@ -87,7 +100,8 @@ type AgentCommand struct {
 
 	cleanupGuard sync.Once
 
-	startedCh chan (struct{}) // for tests
+	startedCh  chan struct{} // for tests
+	reloadedCh chan struct{} // for tests
 
 	flagConfigs        []string
 	flagExitAfterAuth  bool
@@ -102,7 +116,7 @@ func (c *AgentCommand) Help() string {
 	helpText := `
 Usage: vault agent [options]
 
-  This command starts a Vault agent that can perform automatic authentication
+  This command starts a Vault Agent that can perform automatic authentication
   in certain environments.
 
   Start an agent with a configuration file:
@@ -193,76 +207,24 @@ func (c *AgentCommand) Run(args []string) int {
 		return 1
 	}
 
-	config := agentConfig.NewConfig()
-
-	for _, configPath := range c.flagConfigs {
-		configFromPath, err := agentConfig.LoadConfig(configPath)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error loading configuration from %s: %s", configPath, err))
-			return 1
-		}
-		config = config.Merge(configFromPath)
-	}
-
-	err := config.ValidateConfig()
+	config, err := c.loadConfig(c.flagConfigs)
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error loading configuration: %s", err))
+		c.outputErrors(err)
 		return 1
 	}
 
 	if config.AutoAuth == nil {
-		c.UI.Info("No auto_auth block found in config, not starting automatic authentication feature")
+		c.UI.Info("No auto_auth block found in config, the automatic authentication feature will not be started")
 	}
 
-	c.updateConfig(f, config)
+	c.applyConfigOverrides(f, config) // This only needs to happen on start-up to aggregate config from flags and env vars
+	c.config = config
 
-	// Parse all the log related config
-	logLevel, err := logging.ParseLogLevel(config.LogLevel)
+	l, err := c.newLogger()
 	if err != nil {
-		c.UI.Error(err.Error())
+		c.outputErrors(err)
 		return 1
 	}
-
-	logFormat, err := logging.ParseLogFormat(config.LogFormat)
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 1
-	}
-
-	logRotateDuration, err := parseutil.ParseDurationSecond(config.LogRotateDuration)
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 1
-	}
-
-	logRotateBytes, err := parseutil.ParseInt(config.LogRotateBytes)
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 1
-	}
-
-	logRotateMaxFiles, err := parseutil.ParseInt(config.LogRotateMaxFiles)
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 1
-	}
-
-	logCfg := &logging.LogConfig{
-		Name:              "vault-agent",
-		LogLevel:          logLevel,
-		LogFormat:         logFormat,
-		LogFilePath:       config.LogFile,
-		LogRotateDuration: logRotateDuration,
-		LogRotateBytes:    int(logRotateBytes),
-		LogRotateMaxFiles: int(logRotateMaxFiles),
-	}
-
-	l, err := logging.Setup(logCfg, c.logWriter)
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 1
-	}
-
 	c.logger = l
 
 	infoKeys := make([]string, 0, 10)
@@ -289,12 +251,12 @@ func (c *AgentCommand) Run(args []string) int {
 		if os.Getenv("VAULT_TEST_VERIFY_ONLY_DUMP_CONFIG") != "" {
 			c.UI.Output(fmt.Sprintf(
 				"\nConfiguration:\n%s\n",
-				pretty.Sprint(*config)))
+				pretty.Sprint(*c.config)))
 		}
 		return 0
 	}
 
-	// Ignore any setting of agent's address. This client is used by the agent
+	// Ignore any setting of Agent's address. This client is used by the Agent
 	// to reach out to Vault. This should never loop back to agent.
 	c.flagAgentAddress = ""
 	client, err := c.Client()
@@ -303,6 +265,17 @@ func (c *AgentCommand) Run(args []string) int {
 			"Error fetching client: %v",
 			err))
 		return 1
+	}
+
+	serverHealth, err := client.Sys().Health()
+	if err == nil {
+		// We don't exit on error here, as this is not worth stopping Agent over
+		serverVersion := serverHealth.Version
+		agentVersion := version.GetVersion().VersionNumber()
+		if serverVersion != agentVersion {
+			c.UI.Info("==> Note: Vault Agent version does not match Vault server version. " +
+				fmt.Sprintf("Vault Agent version: %s, Vault server version: %s", agentVersion, serverVersion))
+		}
 	}
 
 	// ctx and cancelFunc are passed to the AuthHandler, SinkServer, and
@@ -364,7 +337,7 @@ func (c *AgentCommand) Run(args []string) int {
 				}
 				s, err := file.NewFileSink(config)
 				if err != nil {
-					c.UI.Error(fmt.Errorf("Error creating file sink: %w", err).Error())
+					c.UI.Error(fmt.Errorf("error creating file sink: %w", err).Error())
 					return 1
 				}
 				config.Sink = s
@@ -401,6 +374,10 @@ func (c *AgentCommand) Run(args []string) int {
 			method, err = kubernetes.NewKubernetesAuthMethod(authConfig)
 		case "approle":
 			method, err = approle.NewApproleAuthMethod(authConfig)
+		case "oci":
+			method, err = oci.NewOCIAuthMethod(authConfig, config.Vault.Address)
+		case "token_file":
+			method, err = token_file.NewTokenFileAuthMethod(authConfig)
 		case "pcf": // Deprecated.
 			method, err = cf.NewCFAuthMethod(authConfig)
 		default:
@@ -504,7 +481,7 @@ func (c *AgentCommand) Run(args []string) int {
 
 	// Output the header that the agent has started
 	if !c.logFlags.flagCombineLogs {
-		c.UI.Output("==> Vault agent started! Log data will stream in below:\n")
+		c.UI.Output("==> Vault Agent started! Log data will stream in below:\n")
 	}
 
 	var leaseCache *cache.LeaseCache
@@ -708,9 +685,13 @@ func (c *AgentCommand) Run(args []string) int {
 	if len(config.Templates) > 0 {
 		config.Listeners = append(config.Listeners, &configutil.Listener{Type: listenerutil.BufConnType})
 	}
+
+	// Ensure we've added all the reload funcs for TLS before anyone triggers a reload.
+	c.tlsReloadFuncsLock.Lock()
+
 	for i, lnConfig := range config.Listeners {
 		var ln net.Listener
-		var tlsConf *tls.Config
+		var tlsCfg *tls.Config
 
 		if lnConfig.Type == listenerutil.BufConnType {
 			inProcListener := bufconn.Listen(1024 * 1024)
@@ -719,11 +700,17 @@ func (c *AgentCommand) Run(args []string) int {
 			}
 			ln = inProcListener
 		} else {
-			ln, tlsConf, err = cache.StartListener(lnConfig)
+			lnBundle, err := cache.StartListener(lnConfig)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Error starting listener: %v", err))
 				return 1
 			}
+
+			tlsCfg = lnBundle.TLSConfig
+			ln = lnBundle.Listener
+
+			// Track the reload func, so we can reload later if needed.
+			c.tlsReloadFuncs = append(c.tlsReloadFuncs, lnBundle.TLSReloadFunc)
 		}
 
 		listeners = append(listeners, ln)
@@ -748,7 +735,12 @@ func (c *AgentCommand) Run(args []string) int {
 			proxyVaultToken = !config.APIProxy.ForceAutoAuthToken
 		}
 
-		muxHandler := cache.ProxyHandler(ctx, apiProxyLogger, apiProxy, inmemSink, proxyVaultToken)
+		var muxHandler http.Handler
+		if leaseCache != nil {
+			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, leaseCache, inmemSink, proxyVaultToken)
+		} else {
+			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, apiProxy, inmemSink, proxyVaultToken)
+		}
 
 		// Parse 'require_request_header' listener config option, and wrap
 		// the request handler if necessary
@@ -768,7 +760,7 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 
 		scheme := "https://"
-		if tlsConf == nil {
+		if tlsCfg == nil {
 			scheme = "http://"
 		}
 		if ln.Addr().Network() == "unix" {
@@ -781,7 +773,7 @@ func (c *AgentCommand) Run(args []string) int {
 
 		server := &http.Server{
 			Addr:              ln.Addr().String(),
-			TLSConfig:         tlsConf,
+			TLSConfig:         tlsCfg,
 			Handler:           mux,
 			ReadHeaderTimeout: 10 * time.Second,
 			ReadTimeout:       30 * time.Second,
@@ -791,6 +783,8 @@ func (c *AgentCommand) Run(args []string) int {
 
 		go server.Serve(ln)
 	}
+
+	c.tlsReloadFuncsLock.Unlock()
 
 	// Ensure that listeners are closed at all the exits
 	listenerCloseFunc := func() {
@@ -805,28 +799,43 @@ func (c *AgentCommand) Run(args []string) int {
 		close(c.startedCh)
 	}
 
-	// Listen for signals
-	// TODO: implement support for SIGHUP reloading of configuration
-	// signal.Notify(c.signalCh)
-
 	var g run.Group
+
+	g.Add(func() error {
+		for {
+			select {
+			case <-c.SighupCh:
+				c.UI.Output("==> Vault Agent config reload triggered")
+				err := c.reloadConfig(c.flagConfigs)
+				if err != nil {
+					c.outputErrors(err)
+				}
+				// Send the 'reloaded' message on the relevant channel
+				select {
+				case c.reloadedCh <- struct{}{}:
+				default:
+				}
+			case <-ctx.Done():
+				return nil
+			}
+		}
+	}, func(error) {
+		cancelFunc()
+	})
 
 	// This run group watches for signal termination
 	g.Add(func() error {
 		for {
 			select {
 			case <-c.ShutdownCh:
-				c.UI.Output("==> Vault agent shutdown triggered")
+				c.UI.Output("==> Vault Agent shutdown triggered")
 				// Notify systemd that the server is shutting down
-				c.notifySystemd(systemd.SdNotifyStopping)
-				// Let the lease cache know this is a shutdown; no need to evict
-				// everything
+				// Let the lease cache know this is a shutdown; no need to evict everything
 				if leaseCache != nil {
 					leaseCache.SetShuttingDown(true)
 				}
 				return nil
 			case <-ctx.Done():
-				c.notifySystemd(systemd.SdNotifyStopping)
 				return nil
 			case <-winsvc.ShutdownChannel():
 				return nil
@@ -874,9 +883,9 @@ func (c *AgentCommand) Run(args []string) int {
 
 		ts := template.NewServer(&template.ServerConfig{
 			Logger:        c.logger.Named("template.server"),
-			LogLevel:      logLevel,
+			LogLevel:      c.logger.GetLevel(),
 			LogWriter:     c.logWriter,
-			AgentConfig:   config,
+			AgentConfig:   c.config,
 			Namespace:     templateNamespace,
 			ExitAfterAuth: config.ExitAfterAuth,
 		})
@@ -940,7 +949,7 @@ func (c *AgentCommand) Run(args []string) int {
 	// Server configuration output
 	padding := 24
 	sort.Strings(infoKeys)
-	c.UI.Output("==> Vault agent configuration:\n")
+	c.UI.Output("==> Vault Agent configuration:\n")
 	for _, k := range infoKeys {
 		c.UI.Output(fmt.Sprintf(
 			"%s%s: %s",
@@ -968,25 +977,26 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 	}()
 
+	var exitCode int
 	if err := g.Run(); err != nil {
 		c.logger.Error("runtime error encountered", "error", err)
 		c.UI.Error("Error encountered during run, refer to logs for more details.")
-		return 1
+		exitCode = 1
 	}
-
-	return 0
+	c.notifySystemd(systemd.SdNotifyStopping)
+	return exitCode
 }
 
-// updateConfig ensures that the config object accurately reflects the desired
+// applyConfigOverrides ensures that the config object accurately reflects the desired
 // settings as configured by the user. It applies the relevant config setting based
 // on the precedence (env var overrides file config, cli overrides env var).
 // It mutates the config object supplied.
-func (c *AgentCommand) updateConfig(f *FlagSets, config *agentConfig.Config) {
+func (c *AgentCommand) applyConfigOverrides(f *FlagSets, config *agentConfig.Config) {
 	if config.Vault == nil {
 		config.Vault = &agentConfig.Vault{}
 	}
 
-	f.updateLogConfig(config.SharedConfig)
+	f.applyLogConfigOverrides(config.SharedConfig)
 
 	f.Visit(func(fl *flag.Flag) {
 		if fl.Name == flagNameAgentExitAfterAuth {
@@ -1218,4 +1228,164 @@ func (c *AgentCommand) handleQuit(enabled bool) http.Handler {
 		c.logger.Debug("received quit request")
 		close(c.ShutdownCh)
 	})
+}
+
+// newLogger creates a logger based on parsed config field on the Agent Command struct.
+func (c *AgentCommand) newLogger() (log.InterceptLogger, error) {
+	if c.config == nil {
+		return nil, fmt.Errorf("cannot create logger, no config")
+	}
+
+	var errors error
+
+	// Parse all the log related config
+	logLevel, err := logging.ParseLogLevel(c.config.LogLevel)
+	if err != nil {
+		errors = multierror.Append(errors, err)
+	}
+
+	logFormat, err := logging.ParseLogFormat(c.config.LogFormat)
+	if err != nil {
+		errors = multierror.Append(errors, err)
+	}
+
+	logRotateDuration, err := parseutil.ParseDurationSecond(c.config.LogRotateDuration)
+	if err != nil {
+		errors = multierror.Append(errors, err)
+	}
+
+	if errors != nil {
+		return nil, errors
+	}
+
+	logCfg := &logging.LogConfig{
+		Name:              "agent",
+		LogLevel:          logLevel,
+		LogFormat:         logFormat,
+		LogFilePath:       c.config.LogFile,
+		LogRotateDuration: logRotateDuration,
+		LogRotateBytes:    c.config.LogRotateBytes,
+		LogRotateMaxFiles: c.config.LogRotateMaxFiles,
+	}
+
+	l, err := logging.Setup(logCfg, c.logWriter)
+	if err != nil {
+		return nil, err
+	}
+
+	return l, nil
+}
+
+// loadConfig attempts to generate an Agent config from the file(s) specified.
+func (c *AgentCommand) loadConfig(paths []string) (*agentConfig.Config, error) {
+	var errors error
+	cfg := agentConfig.NewConfig()
+
+	for _, configPath := range paths {
+		configFromPath, err := agentConfig.LoadConfig(configPath)
+		if err != nil {
+			errors = multierror.Append(errors, fmt.Errorf("error loading configuration from %s: %w", configPath, err))
+		} else {
+			cfg = cfg.Merge(configFromPath)
+		}
+	}
+
+	if errors != nil {
+		return nil, errors
+	}
+
+	if err := cfg.ValidateConfig(); err != nil {
+		return nil, fmt.Errorf("error validating configuration: %w", err)
+	}
+
+	return cfg, nil
+}
+
+// reloadConfig will attempt to reload the config from file(s) and adjust certain
+// config values without requiring a restart of the Vault Agent.
+// If config is retrieved without error it is stored in the config field of the AgentCommand.
+// This operation is not atomic and could result in updated config but partially applied config settings.
+// The error returned from this func may be a multierror.
+// This function will most likely be called due to Vault Agent receiving a SIGHUP signal.
+// Currently only reloading the following are supported:
+// * log level
+// * TLS certs for listeners
+func (c *AgentCommand) reloadConfig(paths []string) error {
+	// Notify systemd that the server is reloading
+	c.notifySystemd(systemd.SdNotifyReloading)
+	defer c.notifySystemd(systemd.SdNotifyReady)
+
+	var errors error
+
+	// Reload the config
+	cfg, err := c.loadConfig(paths)
+	if err != nil {
+		// Returning single error as we won't continue with bad config and won't 'commit' it.
+		return err
+	}
+	c.config = cfg
+
+	// Update the log level
+	err = c.reloadLogLevel()
+	if err != nil {
+		errors = multierror.Append(errors, err)
+	}
+
+	// Update certs
+	err = c.reloadCerts()
+	if err != nil {
+		errors = multierror.Append(errors, err)
+	}
+
+	return errors
+}
+
+// reloadLogLevel will attempt to update the log level for the logger attached
+// to the AgentComment struct using the value currently set in config.
+func (c *AgentCommand) reloadLogLevel() error {
+	logLevel, err := logging.ParseLogLevel(c.config.LogLevel)
+	if err != nil {
+		return err
+	}
+
+	c.logger.SetLevel(logLevel)
+
+	return nil
+}
+
+// reloadCerts will attempt to reload certificates using a reload func which
+// was provided when the listeners were configured, only funcs that were appended
+// to the AgentCommand slice will be invoked.
+// This function returns a multierror type so that every func can report an error
+// if it encounters one.
+func (c *AgentCommand) reloadCerts() error {
+	var errors error
+
+	c.tlsReloadFuncsLock.RLock()
+	defer c.tlsReloadFuncsLock.RUnlock()
+
+	for _, reloadFunc := range c.tlsReloadFuncs {
+		// Non-TLS listeners will have a nil reload func.
+		if reloadFunc != nil {
+			err := reloadFunc()
+			if err != nil {
+				errors = multierror.Append(errors, err)
+			}
+		}
+	}
+
+	return errors
+}
+
+// outputErrors will take an error or multierror and handle outputting each to the UI
+func (c *AgentCommand) outputErrors(err error) {
+	if err != nil {
+		if me, ok := err.(*multierror.Error); ok {
+			for _, err := range me.Errors {
+				c.UI.Error(err.Error())
+			}
+		} else {
+			c.UI.Error(err.Error())
+		}
+	}
 }

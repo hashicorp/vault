@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -19,6 +22,46 @@ import (
 
 var tidyCancelledError = errors.New("tidy operation cancelled")
 
+type tidyStatusState int
+
+const (
+	tidyStatusInactive   tidyStatusState = iota
+	tidyStatusStarted                    = iota
+	tidyStatusFinished                   = iota
+	tidyStatusError                      = iota
+	tidyStatusCancelling                 = iota
+	tidyStatusCancelled                  = iota
+)
+
+type tidyStatus struct {
+	// Parameters used to initiate the operation
+	safetyBuffer          int
+	issuerSafetyBuffer    int
+	tidyCertStore         bool
+	tidyRevokedCerts      bool
+	tidyRevokedAssocs     bool
+	tidyExpiredIssuers    bool
+	tidyBackupBundle      bool
+	tidyRevocationQueue   bool
+	tidyCrossRevokedCerts bool
+	pauseDuration         string
+
+	// Status
+	state        tidyStatusState
+	err          error
+	timeStarted  time.Time
+	timeFinished time.Time
+	message      string
+
+	// These counts use a custom incrementer that grab and release
+	// a lock prior to reading.
+	certStoreDeletedCount    uint
+	revokedCertDeletedCount  uint
+	missingIssuerCertCount   uint
+	revQueueDeletedCount     uint
+	crossRevokedDeletedCount uint
+}
+
 type tidyConfig struct {
 	Enabled            bool          `json:"enabled"`
 	Interval           time.Duration `json:"interval_duration"`
@@ -26,9 +69,15 @@ type tidyConfig struct {
 	RevokedCerts       bool          `json:"tidy_revoked_certs"`
 	IssuerAssocs       bool          `json:"tidy_revoked_cert_issuer_associations"`
 	ExpiredIssuers     bool          `json:"tidy_expired_issuers"`
+	BackupBundle       bool          `json:"tidy_move_legacy_ca_bundle"`
 	SafetyBuffer       time.Duration `json:"safety_buffer"`
 	IssuerSafetyBuffer time.Duration `json:"issuer_safety_buffer"`
 	PauseDuration      time.Duration `json:"pause_duration"`
+	MaintainCount      bool          `json:"maintain_stored_certificate_counts"`
+	PublishMetrics     bool          `json:"publish_stored_certificate_count_metrics"`
+	RevocationQueue    bool          `json:"tidy_revocation_queue"`
+	QueueSafetyBuffer  time.Duration `json:"revocation_queue_safety_buffer"`
+	CrossRevokedCerts  bool          `json:"tidy_cross_cluster_revoked_certs"`
 }
 
 var defaultTidyConfig = tidyConfig{
@@ -38,9 +87,15 @@ var defaultTidyConfig = tidyConfig{
 	RevokedCerts:       false,
 	IssuerAssocs:       false,
 	ExpiredIssuers:     false,
+	BackupBundle:       false,
 	SafetyBuffer:       72 * time.Hour,
 	IssuerSafetyBuffer: 365 * 24 * time.Hour,
 	PauseDuration:      0 * time.Second,
+	MaintainCount:      false,
+	PublishMetrics:     false,
+	RevocationQueue:    false,
+	QueueSafetyBuffer:  48 * time.Hour,
+	CrossRevokedCerts:  false,
 }
 
 func pathTidy(b *backend) *framework.Path {
@@ -49,7 +104,13 @@ func pathTidy(b *backend) *framework.Path {
 		Fields:  addTidyFields(map[string]*framework.FieldSchema{}),
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                  b.pathTidyWrite,
+				Callback: b.pathTidyWrite,
+				Responses: map[int][]framework.Response{
+					http.StatusAccepted: {{
+						Description: "Accepted",
+						Fields:      map[string]*framework.FieldSchema{},
+					}},
+				},
 				ForwardPerformanceStandby: true,
 			},
 		},
@@ -63,7 +124,122 @@ func pathTidyCancel(b *backend) *framework.Path {
 		Pattern: "tidy-cancel$",
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                  b.pathTidyCancelWrite,
+				Callback: b.pathTidyCancelWrite,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"safety_buffer": {
+								Type:        framework.TypeInt,
+								Description: `Safety buffer time duration`,
+								Required:    false,
+							},
+							"issuer_safety_buffer": {
+								Type:        framework.TypeInt,
+								Description: `Issuer safety buffer`,
+								Required:    false,
+							},
+							"tidy_cert_store": {
+								Type:        framework.TypeBool,
+								Description: `Tidy certificate store`,
+								Required:    false,
+							},
+							"tidy_revoked_certs": {
+								Type:        framework.TypeBool,
+								Description: `Tidy revoked certificates`,
+								Required:    false,
+							},
+							"tidy_revoked_cert_issuer_associations": {
+								Type:        framework.TypeBool,
+								Description: `Tidy revoked certificate issuer associations`,
+								Required:    false,
+							},
+							"tidy_expired_issuers": {
+								Type:        framework.TypeBool,
+								Description: `Tidy expired issuers`,
+								Required:    false,
+							},
+							"pause_duration": {
+								Type:        framework.TypeString,
+								Description: `Duration to pause between tidying certificates`,
+								Required:    false,
+							},
+							"state": {
+								Type:        framework.TypeString,
+								Description: `One of Inactive, Running, Finished, or Error`,
+								Required:    false,
+							},
+							"error": {
+								Type:        framework.TypeString,
+								Description: `The error message`,
+								Required:    false,
+							},
+							"time_started": {
+								Type:        framework.TypeString,
+								Description: `Time the operation started`,
+								Required:    false,
+							},
+							"time_finished": {
+								Type:        framework.TypeString,
+								Description: `Time the operation finished`,
+								Required:    false,
+							},
+							"message": {
+								Type:        framework.TypeString,
+								Description: `Message of the operation`,
+								Required:    false,
+							},
+							"cert_store_deleted_count": {
+								Type:        framework.TypeInt,
+								Description: `The number of certificate storage entries deleted`,
+								Required:    false,
+							},
+							"revoked_cert_deleted_count": {
+								Type:        framework.TypeInt,
+								Description: `The number of revoked certificate entries deleted`,
+								Required:    false,
+							},
+							"current_cert_store_count": {
+								Type:        framework.TypeInt,
+								Description: `The number of revoked certificate entries deleted`,
+								Required:    false,
+							},
+							"current_revoked_cert_count": {
+								Type:        framework.TypeInt,
+								Description: `The number of revoked certificate entries deleted`,
+								Required:    false,
+							},
+							"missing_issuer_cert_count": {
+								Type:     framework.TypeInt,
+								Required: false,
+							},
+							"tidy_move_legacy_ca_bundle": {
+								Type:     framework.TypeBool,
+								Required: false,
+							},
+							"tidy_cross_cluster_revoked_certs": {
+								Type:     framework.TypeBool,
+								Required: false,
+							},
+							"tidy_revocation_queue": {
+								Type:     framework.TypeBool,
+								Required: false,
+							},
+							"revocation_queue_deleted_count": {
+								Type:     framework.TypeInt,
+								Required: false,
+							},
+							"cross_revoked_cert_deleted_count": {
+								Type:     framework.TypeInt,
+								Required: false,
+							},
+							"internal_backend_uuid": {
+								Type:     framework.TypeString,
+								Required: false,
+							},
+						},
+					}},
+				},
 				ForwardPerformanceStandby: true,
 			},
 		},
@@ -77,7 +253,124 @@ func pathTidyStatus(b *backend) *framework.Path {
 		Pattern: "tidy-status$",
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
-				Callback:                  b.pathTidyStatusRead,
+				Callback: b.pathTidyStatusRead,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"safety_buffer": {
+								Type:        framework.TypeInt,
+								Description: `Safety buffer time duration`,
+								Required:    true,
+							},
+							"issuer_safety_buffer": {
+								Type:        framework.TypeInt,
+								Description: `Issuer safety buffer`,
+								Required:    true,
+							},
+							"tidy_cert_store": {
+								Type:        framework.TypeBool,
+								Description: `Tidy certificate store`,
+								Required:    true,
+							},
+							"tidy_revoked_certs": {
+								Type:        framework.TypeBool,
+								Description: `Tidy revoked certificates`,
+								Required:    true,
+							},
+							"tidy_revoked_cert_issuer_associations": {
+								Type:        framework.TypeBool,
+								Description: `Tidy revoked certificate issuer associations`,
+								Required:    true,
+							},
+							"tidy_expired_issuers": {
+								Type:        framework.TypeBool,
+								Description: `Tidy expired issuers`,
+								Required:    true,
+							},
+							"tidy_cross_cluster_revoked_certs": {
+								Type:        framework.TypeString,
+								Description: ``,
+								Required:    false,
+							},
+							"pause_duration": {
+								Type:        framework.TypeString,
+								Description: `Duration to pause between tidying certificates`,
+								Required:    true,
+							},
+							"state": {
+								Type:        framework.TypeString,
+								Description: `One of Inactive, Running, Finished, or Error`,
+								Required:    true,
+							},
+							"error": {
+								Type:        framework.TypeString,
+								Description: `The error message`,
+								Required:    true,
+							},
+							"time_started": {
+								Type:        framework.TypeString,
+								Description: `Time the operation started`,
+								Required:    true,
+							},
+							"time_finished": {
+								Type:        framework.TypeString,
+								Description: `Time the operation finished`,
+								Required:    true,
+							},
+							"message": {
+								Type:        framework.TypeString,
+								Description: `Message of the operation`,
+								Required:    true,
+							},
+							"cert_store_deleted_count": {
+								Type:        framework.TypeInt,
+								Description: `The number of certificate storage entries deleted`,
+								Required:    true,
+							},
+							"revoked_cert_deleted_count": {
+								Type:        framework.TypeInt,
+								Description: `The number of revoked certificate entries deleted`,
+								Required:    true,
+							},
+							"current_cert_store_count": {
+								Type:        framework.TypeInt,
+								Description: `The number of revoked certificate entries deleted`,
+								Required:    true,
+							},
+							"cross_revoked_cert_deleted_count": {
+								Type:        framework.TypeInt,
+								Description: ``,
+								Required:    true,
+							},
+							"current_revoked_cert_count": {
+								Type:        framework.TypeInt,
+								Description: `The number of revoked certificate entries deleted`,
+								Required:    true,
+							},
+							"revocation_queue_deleted_count": {
+								Type:     framework.TypeInt,
+								Required: true,
+							},
+							"tidy_move_legacy_ca_bundle": {
+								Type:     framework.TypeBool,
+								Required: true,
+							},
+							"tidy_revocation_queue": {
+								Type:     framework.TypeBool,
+								Required: true,
+							},
+							"missing_issuer_cert_count": {
+								Type:     framework.TypeInt,
+								Required: true,
+							},
+							"internal_backend_uuid": {
+								Type:     framework.TypeString,
+								Required: true,
+							},
+						},
+					}},
+				},
 				ForwardPerformanceStandby: true,
 			},
 		},
@@ -103,9 +396,153 @@ func pathConfigAutoTidy(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathConfigAutoTidyRead,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"enabled": {
+								Type:        framework.TypeBool,
+								Description: `Specifies whether automatic tidy is enabled or not`,
+								Required:    true,
+							},
+							"interval_duration": {
+								Type:        framework.TypeInt,
+								Description: `Specifies the duration between automatic tidy operation`,
+								Required:    true,
+							},
+							"tidy_cert_store": {
+								Type:        framework.TypeBool,
+								Description: `Specifies whether to tidy up the certificate store`,
+								Required:    true,
+							},
+							"tidy_revoked_certs": {
+								Type:        framework.TypeBool,
+								Description: `Specifies whether to remove all invalid and expired certificates from storage`,
+								Required:    true,
+							},
+							"tidy_revoked_cert_issuer_associations": {
+								Type:        framework.TypeBool,
+								Description: `Specifies whether to associate revoked certificates with their corresponding issuers`,
+								Required:    true,
+							},
+							"tidy_expired_issuers": {
+								Type:        framework.TypeBool,
+								Description: `Specifies whether tidy expired issuers`,
+								Required:    true,
+							},
+							"safety_buffer": {
+								Type:        framework.TypeInt,
+								Description: `Safety buffer time duration`,
+								Required:    true,
+							},
+							"issuer_safety_buffer": {
+								Type:        framework.TypeInt,
+								Description: `Issuer safety buffer`,
+								Required:    true,
+							},
+							"pause_duration": {
+								Type:        framework.TypeString,
+								Description: `Duration to pause between tidying certificates`,
+								Required:    true,
+							},
+							"tidy_move_legacy_ca_bundle": {
+								Type:     framework.TypeBool,
+								Required: true,
+							},
+							"tidy_cross_cluster_revoked_certs": {
+								Type:     framework.TypeBool,
+								Required: true,
+							},
+							"tidy_revocation_queue": {
+								Type:     framework.TypeBool,
+								Required: true,
+							},
+							"revocation_queue_safety_buffer": {
+								Type:     framework.TypeDurationSecond,
+								Required: true,
+							},
+							"publish_stored_certificate_count_metrics": {
+								Type:     framework.TypeBool,
+								Required: true,
+							},
+							"maintain_stored_certificate_counts": {
+								Type:     framework.TypeBool,
+								Required: true,
+							},
+						},
+					}},
+				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathConfigAutoTidyWrite,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"enabled": {
+								Type:        framework.TypeBool,
+								Description: `Specifies whether automatic tidy is enabled or not`,
+								Required:    true,
+							},
+							"interval_duration": {
+								Type:        framework.TypeInt,
+								Description: `Specifies the duration between automatic tidy operation`,
+								Required:    true,
+							},
+							"tidy_cert_store": {
+								Type:        framework.TypeBool,
+								Description: `Specifies whether to tidy up the certificate store`,
+								Required:    true,
+							},
+							"tidy_revoked_certs": {
+								Type:        framework.TypeBool,
+								Description: `Specifies whether to remove all invalid and expired certificates from storage`,
+								Required:    true,
+							},
+							"tidy_revoked_cert_issuer_associations": {
+								Type:        framework.TypeBool,
+								Description: `Specifies whether to associate revoked certificates with their corresponding issuers`,
+								Required:    true,
+							},
+							"tidy_expired_issuers": {
+								Type:        framework.TypeBool,
+								Description: `Specifies whether tidy expired issuers`,
+								Required:    true,
+							},
+							"safety_buffer": {
+								Type:        framework.TypeInt,
+								Description: `Safety buffer time duration`,
+								Required:    true,
+							},
+							"issuer_safety_buffer": {
+								Type:        framework.TypeInt,
+								Description: `Issuer safety buffer`,
+								Required:    true,
+							},
+							"pause_duration": {
+								Type:        framework.TypeString,
+								Description: `Duration to pause between tidying certificates`,
+								Required:    true,
+							},
+							"tidy_cross_cluster_revoked_certs": {
+								Type:     framework.TypeBool,
+								Required: true,
+							},
+							"tidy_revocation_queue": {
+								Type:     framework.TypeBool,
+								Required: true,
+							},
+							"tidy_move_legacy_ca_bundle": {
+								Type:     framework.TypeBool,
+								Required: true,
+							},
+							"revocation_queue_safety_buffer": {
+								Type:     framework.TypeDurationSecond,
+								Required: true,
+							},
+						},
+					}},
+				},
 				// Read more about why these flags are set in backend.go.
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
@@ -122,9 +559,13 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	tidyRevokedCerts := d.Get("tidy_revoked_certs").(bool) || d.Get("tidy_revocation_list").(bool)
 	tidyRevokedAssocs := d.Get("tidy_revoked_cert_issuer_associations").(bool)
 	tidyExpiredIssuers := d.Get("tidy_expired_issuers").(bool)
+	tidyBackupBundle := d.Get("tidy_move_legacy_ca_bundle").(bool)
 	issuerSafetyBuffer := d.Get("issuer_safety_buffer").(int)
 	pauseDurationStr := d.Get("pause_duration").(string)
 	pauseDuration := 0 * time.Second
+	tidyRevocationQueue := d.Get("tidy_revocation_queue").(bool)
+	queueSafetyBuffer := d.Get("revocation_queue_safety_buffer").(int)
+	tidyCrossRevokedCerts := d.Get("tidy_cross_cluster_revoked_certs").(bool)
 
 	if safetyBuffer < 1 {
 		return logical.ErrorResponse("safety_buffer must be greater than zero"), nil
@@ -132,6 +573,10 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 
 	if issuerSafetyBuffer < 1 {
 		return logical.ErrorResponse("issuer_safety_buffer must be greater than zero"), nil
+	}
+
+	if queueSafetyBuffer < 1 {
+		return logical.ErrorResponse("revocation_queue_safety_buffer must be greater than zero"), nil
 	}
 
 	if pauseDurationStr != "" {
@@ -148,6 +593,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 
 	bufferDuration := time.Duration(safetyBuffer) * time.Second
 	issuerBufferDuration := time.Duration(issuerSafetyBuffer) * time.Second
+	queueSafetyBufferDuration := time.Duration(queueSafetyBuffer) * time.Second
 
 	// Manual run with constructed configuration.
 	config := &tidyConfig{
@@ -157,9 +603,13 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 		RevokedCerts:       tidyRevokedCerts,
 		IssuerAssocs:       tidyRevokedAssocs,
 		ExpiredIssuers:     tidyExpiredIssuers,
+		BackupBundle:       tidyBackupBundle,
 		SafetyBuffer:       bufferDuration,
 		IssuerSafetyBuffer: issuerBufferDuration,
 		PauseDuration:      pauseDuration,
+		RevocationQueue:    tidyRevocationQueue,
+		QueueSafetyBuffer:  queueSafetyBufferDuration,
+		CrossRevokedCerts:  tidyCrossRevokedCerts,
 	}
 
 	if !atomic.CompareAndSwapUint32(b.tidyCASGuard, 0, 1) {
@@ -184,10 +634,18 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	b.startTidyOperation(req, config)
 
 	resp := &logical.Response{}
-	if !tidyCertStore && !tidyRevokedCerts && !tidyRevokedAssocs && !tidyExpiredIssuers {
-		resp.AddWarning("No targets to tidy; specify tidy_cert_store=true or tidy_revoked_certs=true or tidy_revoked_cert_issuer_associations=true or tidy_expired_issuers=true to start a tidy operation.")
+	if !tidyCertStore && !tidyRevokedCerts && !tidyRevokedAssocs && !tidyExpiredIssuers && !tidyBackupBundle && !tidyRevocationQueue && !tidyCrossRevokedCerts {
+		resp.AddWarning("No targets to tidy; specify tidy_cert_store=true or tidy_revoked_certs=true or tidy_revoked_cert_issuer_associations=true or tidy_expired_issuers=true or tidy_move_legacy_ca_bundle=true or tidy_revocation_queue=true or tidy_cross_cluster_revoked_certs=true to start a tidy operation.")
 	} else {
 		resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
+	}
+
+	if tidyRevocationQueue || tidyCrossRevokedCerts {
+		isNotPerfPrimary := b.System().ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
+			(!b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary))
+		if isNotPerfPrimary {
+			resp.AddWarning("tidy_revocation_queue=true and tidy_cross_cluster_revoked_certs=true can only be set on the active node of the primary cluster unless a local mount is used; this option has been ignored.")
+		}
 	}
 
 	return logical.RespondWithStatusCode(resp, req, http.StatusAccepted)
@@ -223,8 +681,46 @@ func (b *backend) startTidyOperation(req *logical.Request, config *tidyConfig) {
 				}
 			}
 
+			// Check for cancel before continuing.
+			if atomic.CompareAndSwapUint32(b.tidyCancelCAS, 1, 0) {
+				return tidyCancelledError
+			}
+
 			if config.ExpiredIssuers {
 				if err := b.doTidyExpiredIssuers(ctx, req, logger, config); err != nil {
+					return err
+				}
+			}
+
+			// Check for cancel before continuing.
+			if atomic.CompareAndSwapUint32(b.tidyCancelCAS, 1, 0) {
+				return tidyCancelledError
+			}
+
+			if config.BackupBundle {
+				if err := b.doTidyMoveCABundle(ctx, req, logger, config); err != nil {
+					return err
+				}
+			}
+
+			// Check for cancel before continuing.
+			if atomic.CompareAndSwapUint32(b.tidyCancelCAS, 1, 0) {
+				return tidyCancelledError
+			}
+
+			if config.RevocationQueue {
+				if err := b.doTidyRevocationQueue(ctx, req, logger, config); err != nil {
+					return err
+				}
+			}
+
+			// Check for cancel before continuing.
+			if atomic.CompareAndSwapUint32(b.tidyCancelCAS, 1, 0) {
+				return tidyCancelledError
+			}
+
+			if config.CrossRevokedCerts {
+				if err := b.doTidyCrossRevocationStore(ctx, req, logger, config); err != nil {
 					return err
 				}
 			}
@@ -298,7 +794,7 @@ func (b *backend) doTidyCertStore(ctx context.Context, req *logical.Request, log
 			return fmt.Errorf("unable to parse stored certificate with serial %q: %w", serial, err)
 		}
 
-		if time.Now().After(cert.NotAfter.Add(config.SafetyBuffer)) {
+		if time.Since(cert.NotAfter) > config.SafetyBuffer {
 			if err := req.Storage.Delete(ctx, "certs/"+serial); err != nil {
 				return fmt.Errorf("error deleting serial %q from storage: %w", serial, err)
 			}
@@ -406,7 +902,7 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 			// past its NotAfter value. This is because we use the
 			// information on revoked/ to build the CRL and the
 			// information on certs/ for lookup.
-			if time.Now().After(revokedCert.NotAfter.Add(config.SafetyBuffer)) {
+			if time.Since(revokedCert.NotAfter) > config.SafetyBuffer {
 				if err := req.Storage.Delete(ctx, "revoked/"+serial); err != nil {
 					return fmt.Errorf("error deleting serial %q from revoked list: %w", serial, err)
 				}
@@ -461,6 +957,9 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 }
 
 func (b *backend) doTidyExpiredIssuers(ctx context.Context, req *logical.Request, logger hclog.Logger, config *tidyConfig) error {
+	// We do not support cancelling within the expired issuers operation.
+	// Any cancellation will occur before or after this operation.
+
 	if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
 		(!b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
 		b.Logger().Debug("skipping expired issuer tidy as we're not on the primary or secondary with a local mount")
@@ -492,16 +991,11 @@ func (b *backend) doTidyExpiredIssuers(ctx context.Context, req *logical.Request
 	}
 
 	// We want certificates which have expired before this date by a given
-	// safety buffer. So we subtract the buffer from now, and anything which
-	// has expired before our after buffer can be tidied, and anything that
-	// expired after this buffer must be kept.
-	now := time.Now()
-	afterBuffer := now.Add(-1 * config.IssuerSafetyBuffer)
-
+	// safety buffer.
 	rebuildChainsAndCRL := false
 
 	for issuer, cert := range issuerIDCertMap {
-		if cert.NotAfter.After(afterBuffer) {
+		if time.Since(cert.NotAfter) <= config.IssuerSafetyBuffer {
 			continue
 		}
 
@@ -565,6 +1059,260 @@ func (b *backend) doTidyExpiredIssuers(ctx context.Context, req *logical.Request
 	return nil
 }
 
+func (b *backend) doTidyMoveCABundle(ctx context.Context, req *logical.Request, logger hclog.Logger, config *tidyConfig) error {
+	// We do not support cancelling within this operation; any cancel will
+	// occur before or after this operation.
+
+	if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
+		(!b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
+		b.Logger().Debug("skipping moving the legacy CA bundle as we're not on the primary or secondary with a local mount")
+		return nil
+	}
+
+	// Short-circuit to avoid moving the legacy bundle from under a legacy
+	// mount.
+	if b.useLegacyBundleCaStorage() {
+		return nil
+	}
+
+	// If we've already run, exit.
+	_, bundle, err := getLegacyCertBundle(ctx, req.Storage)
+	if err != nil {
+		return fmt.Errorf("failed to fetch the legacy CA bundle: %w", err)
+	}
+
+	if bundle == nil {
+		b.Logger().Debug("No legacy CA bundle available; nothing to do.")
+		return nil
+	}
+
+	log, err := getLegacyBundleMigrationLog(ctx, req.Storage)
+	if err != nil {
+		return fmt.Errorf("failed to fetch the legacy bundle migration log: %w", err)
+	}
+
+	if log == nil {
+		return fmt.Errorf("refusing to tidy with an empty legacy migration log but present CA bundle: %w", err)
+	}
+
+	if time.Since(log.Created) <= config.IssuerSafetyBuffer {
+		b.Logger().Debug("Migration was created too recently to remove the legacy bundle; refusing to move legacy CA bundle to backup location.")
+		return nil
+	}
+
+	// Do the write before the delete.
+	entry, err := logical.StorageEntryJSON(legacyCertBundleBackupPath, bundle)
+	if err != nil {
+		return fmt.Errorf("failed to create new backup storage entry: %w", err)
+	}
+
+	err = req.Storage.Put(ctx, entry)
+	if err != nil {
+		return fmt.Errorf("failed to write new backup legacy CA bundle: %w", err)
+	}
+
+	err = req.Storage.Delete(ctx, legacyCertBundlePath)
+	if err != nil {
+		return fmt.Errorf("failed to remove old legacy CA bundle path: %w", err)
+	}
+
+	b.Logger().Info("legacy CA bundle successfully moved to backup location")
+	return nil
+}
+
+func (b *backend) doTidyRevocationQueue(ctx context.Context, req *logical.Request, logger hclog.Logger, config *tidyConfig) error {
+	if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
+		(!b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
+		b.Logger().Debug("skipping cross-cluster revocation queue tidy as we're not on the primary or secondary with a local mount")
+		return nil
+	}
+
+	sc := b.makeStorageContext(ctx, req.Storage)
+	clusters, err := sc.Storage.List(sc.Context, crossRevocationPrefix)
+	if err != nil {
+		return fmt.Errorf("failed to list cross-cluster revocation queue participating clusters: %w", err)
+	}
+
+	// Grab locks as we're potentially modifying revocation-related storage.
+	b.revokeStorageLock.Lock()
+	defer b.revokeStorageLock.Unlock()
+
+	for cIndex, cluster := range clusters {
+		if cluster[len(cluster)-1] == '/' {
+			cluster = cluster[0 : len(cluster)-1]
+		}
+
+		cPath := crossRevocationPrefix + cluster + "/"
+		serials, err := sc.Storage.List(sc.Context, cPath)
+		if err != nil {
+			return fmt.Errorf("failed to list cross-cluster revocation queue entries for cluster %v (%v): %w", cluster, cIndex, err)
+		}
+
+		for _, serial := range serials {
+			// Check for cancellation.
+			if atomic.CompareAndSwapUint32(b.tidyCancelCAS, 1, 0) {
+				return tidyCancelledError
+			}
+
+			// Check for pause duration to reduce resource consumption.
+			if config.PauseDuration > (0 * time.Second) {
+				b.revokeStorageLock.Unlock()
+				time.Sleep(config.PauseDuration)
+				b.revokeStorageLock.Lock()
+			}
+
+			// Confirmation entries _should_ be handled by this cluster's
+			// processRevocationQueue(...) invocation; if not, when the plugin
+			// reloads, maybeGatherQueueForFirstProcess(...) will remove all
+			// stale confirmation requests. However, we don't want to force an
+			// operator to reload their in-use plugin, so allow tidy to also
+			// clean up confirmation values without reloading.
+			if serial[len(serial)-1] == '/' {
+				// Check if we have a confirmed entry.
+				confirmedPath := cPath + serial + "confirmed"
+				removalEntry, err := sc.Storage.Get(sc.Context, confirmedPath)
+				if err != nil {
+					return fmt.Errorf("error reading revocation confirmation (%v) during tidy: %w", confirmedPath, err)
+				}
+				if removalEntry == nil {
+					continue
+				}
+
+				// Remove potential revocation requests from all clusters.
+				for _, subCluster := range clusters {
+					if subCluster[len(subCluster)-1] == '/' {
+						subCluster = subCluster[0 : len(subCluster)-1]
+					}
+
+					reqPath := subCluster + "/" + serial[0:len(serial)-1]
+					if err := sc.Storage.Delete(sc.Context, reqPath); err != nil {
+						return fmt.Errorf("failed to remove confirmed revocation request on candidate cluster (%v): %w", reqPath, err)
+					}
+				}
+
+				// Then delete the confirmation.
+				if err := sc.Storage.Delete(sc.Context, confirmedPath); err != nil {
+					return fmt.Errorf("failed to remove confirmed revocation confirmation (%v): %w", confirmedPath, err)
+				}
+
+				// No need to handle a revocation request at this path: it can't
+				// still exist on this cluster after we deleted it above.
+				continue
+			}
+
+			ePath := cPath + serial
+			entry, err := sc.Storage.Get(sc.Context, ePath)
+			if err != nil {
+				return fmt.Errorf("error reading revocation request (%v) to tidy: %w", ePath, err)
+			}
+			if entry == nil || entry.Value == nil {
+				continue
+			}
+
+			var revRequest revocationRequest
+			if err := entry.DecodeJSON(&revRequest); err != nil {
+				return fmt.Errorf("error reading revocation request (%v) to tidy: %w", ePath, err)
+			}
+
+			if time.Since(revRequest.RequestedAt) <= config.QueueSafetyBuffer {
+				continue
+			}
+
+			// Safe to remove this entry.
+			if err := sc.Storage.Delete(sc.Context, ePath); err != nil {
+				return fmt.Errorf("error deleting revocation request (%v): %w", ePath, err)
+			}
+
+			// Assumption: there should never be a need to remove this from
+			// the processing queue on this node. We're on the active primary,
+			// so our writes don't cause invalidations. This means we'd have
+			// to have slated it for deletion very quickly after it'd been
+			// sent (i.e., inside of the 1-minute boundary that periodicFunc
+			// executes at). While this is possible, because we grab the
+			// revocationStorageLock above, we can't execute interleaved
+			// with that periodicFunc, so the periodicFunc would've had to
+			// finished before we actually did this deletion (or it wouldn't
+			// have ignored this serial because our deletion would've
+			// happened prior to it reading the storage entry). Thus we should
+			// be safe to ignore the revocation queue removal here.
+			b.tidyStatusIncRevQueueCount()
+		}
+	}
+
+	return nil
+}
+
+func (b *backend) doTidyCrossRevocationStore(ctx context.Context, req *logical.Request, logger hclog.Logger, config *tidyConfig) error {
+	if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
+		(!b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
+		b.Logger().Debug("skipping cross-cluster revoked certificate store tidy as we're not on the primary or secondary with a local mount")
+		return nil
+	}
+
+	sc := b.makeStorageContext(ctx, req.Storage)
+	clusters, err := sc.Storage.List(sc.Context, unifiedRevocationReadPathPrefix)
+	if err != nil {
+		return fmt.Errorf("failed to list cross-cluster revoked certificate store participating clusters: %w", err)
+	}
+
+	// Grab locks as we're potentially modifying revocation-related storage.
+	b.revokeStorageLock.Lock()
+	defer b.revokeStorageLock.Unlock()
+
+	for cIndex, cluster := range clusters {
+		if cluster[len(cluster)-1] == '/' {
+			cluster = cluster[0 : len(cluster)-1]
+		}
+
+		cPath := unifiedRevocationReadPathPrefix + cluster + "/"
+		serials, err := sc.Storage.List(sc.Context, cPath)
+		if err != nil {
+			return fmt.Errorf("failed to list cross-cluster revoked certificate store entries for cluster %v (%v): %w", cluster, cIndex, err)
+		}
+
+		for _, serial := range serials {
+			// Check for cancellation.
+			if atomic.CompareAndSwapUint32(b.tidyCancelCAS, 1, 0) {
+				return tidyCancelledError
+			}
+
+			// Check for pause duration to reduce resource consumption.
+			if config.PauseDuration > (0 * time.Second) {
+				b.revokeStorageLock.Unlock()
+				time.Sleep(config.PauseDuration)
+				b.revokeStorageLock.Lock()
+			}
+
+			ePath := cPath + serial
+			entry, err := sc.Storage.Get(sc.Context, ePath)
+			if err != nil {
+				return fmt.Errorf("error reading cross-cluster revocation entry (%v) to tidy: %w", ePath, err)
+			}
+			if entry == nil || entry.Value == nil {
+				continue
+			}
+
+			var details unifiedRevocationEntry
+			if err := entry.DecodeJSON(&details); err != nil {
+				return fmt.Errorf("error decoding cross-cluster revocation entry (%v) to tidy: %w", ePath, err)
+			}
+
+			if time.Since(details.CertExpiration) <= config.SafetyBuffer {
+				continue
+			}
+
+			// Safe to remove this entry.
+			if err := sc.Storage.Delete(sc.Context, ePath); err != nil {
+				return fmt.Errorf("error deleting revocation request (%v): %w", ePath, err)
+			}
+
+			b.tidyStatusIncCrossRevCertCount()
+		}
+	}
+
+	return nil
+}
+
 func (b *backend) pathTidyCancelWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	if atomic.LoadUint32(b.tidyCASGuard) == 0 {
 		resp := &logical.Response{}
@@ -600,6 +1348,9 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 			"tidy_revoked_certs":                    nil,
 			"tidy_revoked_cert_issuer_associations": nil,
 			"tidy_expired_issuers":                  nil,
+			"tidy_move_legacy_ca_bundle":            nil,
+			"tidy_revocation_queue":                 nil,
+			"tidy_cross_cluster_revoked_certs":      nil,
 			"pause_duration":                        nil,
 			"state":                                 "Inactive",
 			"error":                                 nil,
@@ -611,7 +1362,24 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 			"missing_issuer_cert_count":             nil,
 			"current_cert_store_count":              nil,
 			"current_revoked_cert_count":            nil,
+			"internal_backend_uuid":                 nil,
+			"revocation_queue_deleted_count":        nil,
+			"cross_revoked_cert_deleted_count":      nil,
 		},
+	}
+
+	resp.Data["internal_backend_uuid"] = b.backendUUID
+
+	if b.certCountEnabled.Load() {
+		resp.Data["current_cert_store_count"] = b.certCount.Load()
+		resp.Data["current_revoked_cert_count"] = b.revokedCertCount.Load()
+		if !b.certsCounted.Load() {
+			resp.AddWarning("Certificates in storage are still being counted, current counts provided may be " +
+				"inaccurate")
+		}
+		if b.certCountError != "" {
+			resp.Data["certificate_counting_error"] = b.certCountError
+		}
 	}
 
 	if b.tidyStatus.state == tidyStatusInactive {
@@ -624,12 +1392,17 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 	resp.Data["tidy_revoked_certs"] = b.tidyStatus.tidyRevokedCerts
 	resp.Data["tidy_revoked_cert_issuer_associations"] = b.tidyStatus.tidyRevokedAssocs
 	resp.Data["tidy_expired_issuers"] = b.tidyStatus.tidyExpiredIssuers
+	resp.Data["tidy_move_legacy_ca_bundle"] = b.tidyStatus.tidyBackupBundle
+	resp.Data["tidy_revocation_queue"] = b.tidyStatus.tidyRevocationQueue
+	resp.Data["tidy_cross_cluster_revoked_certs"] = b.tidyStatus.tidyCrossRevokedCerts
 	resp.Data["pause_duration"] = b.tidyStatus.pauseDuration
 	resp.Data["time_started"] = b.tidyStatus.timeStarted
 	resp.Data["message"] = b.tidyStatus.message
 	resp.Data["cert_store_deleted_count"] = b.tidyStatus.certStoreDeletedCount
 	resp.Data["revoked_cert_deleted_count"] = b.tidyStatus.revokedCertDeletedCount
 	resp.Data["missing_issuer_cert_count"] = b.tidyStatus.missingIssuerCertCount
+	resp.Data["revocation_queue_deleted_count"] = b.tidyStatus.revQueueDeletedCount
+	resp.Data["cross_revoked_cert_deleted_count"] = b.tidyStatus.crossRevokedDeletedCount
 
 	switch b.tidyStatus.state {
 	case tidyStatusStarted:
@@ -651,14 +1424,6 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 		resp.Data["time_finished"] = b.tidyStatus.timeFinished
 	}
 
-	resp.Data["current_cert_store_count"] = b.certCount
-	resp.Data["current_revoked_cert_count"] = b.revokedCertCount
-
-	if !b.certsCounted.Load() {
-		resp.AddWarning("Certificates in storage are still being counted, current counts provided may be " +
-			"inaccurate")
-	}
-
 	return resp, nil
 }
 
@@ -671,15 +1436,21 @@ func (b *backend) pathConfigAutoTidyRead(ctx context.Context, req *logical.Reque
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"enabled":                               config.Enabled,
-			"interval_duration":                     int(config.Interval / time.Second),
-			"tidy_cert_store":                       config.CertStore,
-			"tidy_revoked_certs":                    config.RevokedCerts,
-			"tidy_revoked_cert_issuer_associations": config.IssuerAssocs,
-			"tidy_expired_issuers":                  config.ExpiredIssuers,
-			"safety_buffer":                         int(config.SafetyBuffer / time.Second),
-			"issuer_safety_buffer":                  int(config.IssuerSafetyBuffer / time.Second),
-			"pause_duration":                        config.PauseDuration.String(),
+			"enabled":                                  config.Enabled,
+			"interval_duration":                        int(config.Interval / time.Second),
+			"tidy_cert_store":                          config.CertStore,
+			"tidy_revoked_certs":                       config.RevokedCerts,
+			"tidy_revoked_cert_issuer_associations":    config.IssuerAssocs,
+			"tidy_expired_issuers":                     config.ExpiredIssuers,
+			"safety_buffer":                            int(config.SafetyBuffer / time.Second),
+			"issuer_safety_buffer":                     int(config.IssuerSafetyBuffer / time.Second),
+			"pause_duration":                           config.PauseDuration.String(),
+			"publish_stored_certificate_count_metrics": config.PublishMetrics,
+			"maintain_stored_certificate_counts":       config.MaintainCount,
+			"tidy_move_legacy_ca_bundle":               config.BackupBundle,
+			"tidy_revocation_queue":                    config.RevocationQueue,
+			"revocation_queue_safety_buffer":           int(config.QueueSafetyBuffer / time.Second),
+			"tidy_cross_cluster_revoked_certs":         config.CrossRevokedCerts,
 		},
 	}, nil
 }
@@ -743,8 +1514,38 @@ func (b *backend) pathConfigAutoTidyWrite(ctx context.Context, req *logical.Requ
 		}
 	}
 
-	if config.Enabled && !(config.CertStore || config.RevokedCerts || config.IssuerAssocs || config.ExpiredIssuers) {
-		return logical.ErrorResponse("Auto-tidy enabled but no tidy operations were requested. Enable at least one tidy operation to be run (tidy_cert_store / tidy_revoked_certs / tidy_revoked_cert_issuer_associations)."), nil
+	if backupBundle, ok := d.GetOk("tidy_move_legacy_ca_bundle"); ok {
+		config.BackupBundle = backupBundle.(bool)
+	}
+
+	if revocationQueueRaw, ok := d.GetOk("tidy_revocation_queue"); ok {
+		config.RevocationQueue = revocationQueueRaw.(bool)
+	}
+
+	if queueSafetyBufferRaw, ok := d.GetOk("revocation_queue_safety_buffer"); ok {
+		config.QueueSafetyBuffer = time.Duration(queueSafetyBufferRaw.(int)) * time.Second
+		if config.QueueSafetyBuffer < 1*time.Second {
+			return logical.ErrorResponse(fmt.Sprintf("given revocation_queue_safety_buffer must be at least one second; got: %v", queueSafetyBufferRaw)), nil
+		}
+	}
+
+	if crossRevokedRaw, ok := d.GetOk("tidy_cross_cluster_revoked_certs"); ok {
+		config.CrossRevokedCerts = crossRevokedRaw.(bool)
+	}
+
+	if config.Enabled && !(config.CertStore || config.RevokedCerts || config.IssuerAssocs || config.ExpiredIssuers || config.BackupBundle || config.RevocationQueue || config.CrossRevokedCerts) {
+		return logical.ErrorResponse("Auto-tidy enabled but no tidy operations were requested. Enable at least one tidy operation to be run (tidy_cert_store / tidy_revoked_certs / tidy_revoked_cert_issuer_associations / tidy_expired_issuers / tidy_move_legacy_ca_bundle / tidy_revocation_queue / tidy_cross_cluster_revoked_certs)."), nil
+	}
+
+	if maintainCountEnabledRaw, ok := d.GetOk("maintain_stored_certificate_counts"); ok {
+		config.MaintainCount = maintainCountEnabledRaw.(bool)
+	}
+
+	if runningStorageMetricsEnabledRaw, ok := d.GetOk("publish_stored_certificate_count_metrics"); ok {
+		if config.MaintainCount == false {
+			return logical.ErrorResponse("Can not publish a running storage metrics count to metrics without first maintaining that count.  Enable `maintain_stored_certificate_counts` to enable `publish_stored_certificate_count_metrics."), nil
+		}
+		config.PublishMetrics = runningStorageMetricsEnabledRaw.(bool)
 	}
 
 	if err := sc.writeAutoTidyConfig(config); err != nil {
@@ -759,9 +1560,13 @@ func (b *backend) pathConfigAutoTidyWrite(ctx context.Context, req *logical.Requ
 			"tidy_revoked_certs":                    config.RevokedCerts,
 			"tidy_revoked_cert_issuer_associations": config.IssuerAssocs,
 			"tidy_expired_issuers":                  config.ExpiredIssuers,
+			"tidy_move_legacy_ca_bundle":            config.BackupBundle,
 			"safety_buffer":                         int(config.SafetyBuffer / time.Second),
 			"issuer_safety_buffer":                  int(config.IssuerSafetyBuffer / time.Second),
 			"pause_duration":                        config.PauseDuration.String(),
+			"tidy_revocation_queue":                 config.RevocationQueue,
+			"revocation_queue_safety_buffer":        int(config.QueueSafetyBuffer / time.Second),
+			"tidy_cross_cluster_revoked_certs":      config.CrossRevokedCerts,
 		},
 	}, nil
 }
@@ -771,13 +1576,16 @@ func (b *backend) tidyStatusStart(config *tidyConfig) {
 	defer b.tidyStatusLock.Unlock()
 
 	b.tidyStatus = &tidyStatus{
-		safetyBuffer:       int(config.SafetyBuffer / time.Second),
-		issuerSafetyBuffer: int(config.IssuerSafetyBuffer / time.Second),
-		tidyCertStore:      config.CertStore,
-		tidyRevokedCerts:   config.RevokedCerts,
-		tidyRevokedAssocs:  config.IssuerAssocs,
-		tidyExpiredIssuers: config.ExpiredIssuers,
-		pauseDuration:      config.PauseDuration.String(),
+		safetyBuffer:          int(config.SafetyBuffer / time.Second),
+		issuerSafetyBuffer:    int(config.IssuerSafetyBuffer / time.Second),
+		tidyCertStore:         config.CertStore,
+		tidyRevokedCerts:      config.RevokedCerts,
+		tidyRevokedAssocs:     config.IssuerAssocs,
+		tidyExpiredIssuers:    config.ExpiredIssuers,
+		tidyBackupBundle:      config.BackupBundle,
+		tidyRevocationQueue:   config.RevocationQueue,
+		tidyCrossRevokedCerts: config.CrossRevokedCerts,
+		pauseDuration:         config.PauseDuration.String(),
 
 		state:       tidyStatusStarted,
 		timeStarted: time.Now(),
@@ -825,7 +1633,7 @@ func (b *backend) tidyStatusIncCertStoreCount() {
 
 	b.tidyStatus.certStoreDeletedCount++
 
-	b.decrementTotalCertificatesCountReport()
+	b.ifCountEnabledDecrementTotalCertificatesCountReport()
 }
 
 func (b *backend) tidyStatusIncRevokedCertCount() {
@@ -834,7 +1642,7 @@ func (b *backend) tidyStatusIncRevokedCertCount() {
 
 	b.tidyStatus.revokedCertDeletedCount++
 
-	b.decrementTotalRevokedCertificatesCountReport()
+	b.ifCountEnabledDecrementTotalRevokedCertificatesCountReport()
 }
 
 func (b *backend) tidyStatusIncMissingIssuerCertCount() {
@@ -842,6 +1650,20 @@ func (b *backend) tidyStatusIncMissingIssuerCertCount() {
 	defer b.tidyStatusLock.Unlock()
 
 	b.tidyStatus.missingIssuerCertCount++
+}
+
+func (b *backend) tidyStatusIncRevQueueCount() {
+	b.tidyStatusLock.Lock()
+	defer b.tidyStatusLock.Unlock()
+
+	b.tidyStatus.revQueueDeletedCount++
+}
+
+func (b *backend) tidyStatusIncCrossRevCertCount() {
+	b.tidyStatusLock.Lock()
+	defer b.tidyStatusLock.Unlock()
+
+	b.tidyStatus.crossRevokedDeletedCount++
 }
 
 const pathTidyHelpSyn = `
@@ -905,6 +1727,13 @@ The result includes the following fields:
 * 'cert_store_deleted_count': The number of certificate storage entries deleted
 * 'revoked_cert_deleted_count': The number of revoked certificate entries deleted
 * 'missing_issuer_cert_count': The number of revoked certificates which were missing a valid issuer reference
+* 'tidy_expired_issuers': the value of this parameter when initiating the tidy operation
+* 'issuer_safety_buffer': the value of this parameter when initiating the tidy operation
+* 'tidy_move_legacy_ca_bundle': the value of this parameter when initiating the tidy operation
+* 'tidy_revocation_queue': the value of this parameter when initiating the tidy operation
+* 'revocation_queue_deleted_count': the number of revocation queue entries deleted
+* 'tidy_cross_cluster_revoked_certs': the value of this parameter when initiating the tidy operation
+* 'cross_revoked_cert_deleted_count': the number of cross-cluster revoked certificate entries deleted
 `
 
 const pathConfigAutoTidySyn = `

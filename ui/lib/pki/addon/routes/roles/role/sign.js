@@ -1,6 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
+import { withConfirmLeave } from 'core/decorators/confirm-leave';
 
+withConfirmLeave();
 export default class PkiRoleSignRoute extends Route {
   @service store;
   @service secretMountPath;
@@ -22,10 +29,9 @@ export default class PkiRoleSignRoute extends Route {
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
     const { role } = this.paramsFor('roles/role');
-    const backend = this.secretMountPath.currentPath || 'pki';
     controller.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: backend, route: 'overview' },
+      { label: this.secretMountPath.currentPath, route: 'overview' },
       { label: 'roles', route: 'roles.index' },
       { label: role, route: 'roles.role.details' },
       { label: 'sign certificate' },

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package version
 
 var (
@@ -11,7 +14,7 @@ var (
 	// Whether cgo is enabled or not; set at build time
 	CgoEnabled bool
 
-	Version           = "1.13.0"
-	VersionPrerelease = "dev1"
+	Version           = "1.14.0"
+	VersionPrerelease = "beta1"
 	VersionMetadata   = ""
 )

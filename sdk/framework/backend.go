@@ -1,9 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package framework
 
 import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -97,6 +101,7 @@ type Backend struct {
 
 	logger  log.Logger
 	system  logical.SystemView
+	events  logical.EventSender
 	once    sync.Once
 	pathsRe []*regexp.Regexp
 }
@@ -127,6 +132,10 @@ type InitializeFunc func(context.Context, *logical.InitializationRequest) error
 // PatchPreprocessorFunc is used by HandlePatchOperation in order to shape
 // the input as defined by request handler prior to JSON marshaling
 type PatchPreprocessorFunc func(map[string]interface{}) (map[string]interface{}, error)
+
+// ErrNoEvents is returned when attempting to send an event, but when the event
+// sender was not passed in during `backend.Setup()`.
+var ErrNoEvents = errors.New("no event sender configured")
 
 // Initialize is the logical.Backend implementation.
 func (b *Backend) Initialize(ctx context.Context, req *logical.InitializationRequest) error {
@@ -398,6 +407,7 @@ func (b *Backend) InvalidateKey(ctx context.Context, key string) {
 func (b *Backend) Setup(ctx context.Context, config *logical.BackendConfig) error {
 	b.logger = config.Logger
 	b.system = config.System
+	b.events = config.EventsSender
 	return nil
 }
 
@@ -682,6 +692,13 @@ func (b *Backend) handleWALRollback(ctx context.Context, req *logical.Request) (
 	return logical.ErrorResponse(merr.Error()), nil
 }
 
+func (b *Backend) SendEvent(ctx context.Context, eventType logical.EventType, event *logical.EventData) error {
+	if b.events == nil {
+		return ErrNoEvents
+	}
+	return b.events.Send(ctx, eventType, event)
+}
+
 // FieldSchema is a basic schema to describe the format of a path field.
 type FieldSchema struct {
 	Type        FieldType
@@ -738,6 +755,8 @@ func (t FieldType) Zero() interface{} {
 		return ""
 	case TypeInt:
 		return 0
+	case TypeInt64:
+		return int64(0)
 	case TypeBool:
 		return false
 	case TypeMap:

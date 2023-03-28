@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -38,7 +41,7 @@ const (
 
 	// undoLogSafeVersion is the minimum version Vault must be at in order
 	// for undo logs to be turned on.
-	undoLogSafeVersion = "1.12.0-rc1"
+	undoLogSafeVersion = "1.12.0"
 )
 
 var (
@@ -199,6 +202,13 @@ func (c *Core) monitorUndoLogs() error {
 		return nil
 	}
 
+	// If undo logs have been explicitly enabled, likely via VAULT_REPLICATION_USE_UNDO_LOGS, then exit, as presumably
+	// we don't want to be checking for safety if we already know it's safe.
+	if c.UndoLogsEnabled() {
+		logger.Debug("undo logs have been explicitly enabled. exiting monitor.")
+		return nil
+	}
+
 	minimumVersion, err := goversion.NewSemver(undoLogSafeVersion)
 	if err != nil {
 		return fmt.Errorf("minimum undo log version (%q) won't parse: %w", undoLogSafeVersion, err)
@@ -282,7 +292,7 @@ func (c *Core) monitorUndoLogs() error {
 					continue
 				}
 
-				logger.Debug("undo logs have been enabled and this has been persisted to storage. shutting down the checker loop.")
+				logger.Debug("undo logs have been enabled and this has been persisted to storage. shutting down the checker.")
 				return
 			}
 		}
@@ -315,10 +325,10 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 		return err
 	}
 
-	if c.UndoLogsEnabled() {
-		if err := c.monitorUndoLogs(); err != nil {
-			return err
-		}
+	// We always want to start this watcher - if undo logs are safe to be enabled, it will exit quickly. If not, it
+	// will monitor for safety until they are enabled.
+	if err := c.monitorUndoLogs(); err != nil {
+		return err
 	}
 	return c.startPeriodicRaftTLSRotate(ctx)
 }
@@ -426,8 +436,9 @@ func (c *Core) raftTLSRotateDirect(ctx context.Context, logger hclog.Logger, sto
 				backoff = false
 			}
 
+			timer := time.NewTimer(time.Until(nextRotationTime))
 			select {
-			case <-time.After(time.Until(nextRotationTime)):
+			case <-timer.C:
 				// It's time to rotate the keys
 				next, err := rotateKeyring()
 				if err != nil {
@@ -439,6 +450,7 @@ func (c *Core) raftTLSRotateDirect(ctx context.Context, logger hclog.Logger, sto
 				nextRotationTime = next
 
 			case <-stopCh:
+				timer.Stop()
 				return
 			}
 		}

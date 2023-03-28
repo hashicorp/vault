@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -260,7 +263,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	return acl, te, entity, identityPolicies, nil
 }
 
-func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool) (*logical.Auth, *logical.TokenEntry, error) {
+func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool) (*logical.Auth, *logical.TokenEntry, error) {
 	defer metrics.MeasureSince([]string{"core", "check_token"}, time.Now())
 
 	var acl *ACL
@@ -561,7 +564,7 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 			// be revoked after the call. So we have to do the validation here.
 			valid, err := c.validateWrappingToken(ctx, req)
 			if err != nil {
-				return nil, fmt.Errorf("error validating wrapping token: %w", err)
+				return logical.ErrorResponse(fmt.Sprintf("error validating wrapping token: %s", err.Error())), logical.ErrPermissionDenied
 			}
 			if !valid {
 				return nil, consts.ErrInvalidWrappingToken
@@ -632,7 +635,7 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 		case "sys/leases/lookup", "sys/leases/renew", "sys/leases/revoke", "sys/leases/revoke-force":
 			leaseID, ok := req.Data["lease_id"]
 			// If lease ID is not present, break out and let the backend handle the error
-			if !ok {
+			if !ok || leaseID == nil {
 				break
 			}
 			_, nsID := namespace.SplitIDFromString(leaseID.(string))
@@ -673,6 +676,10 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 		resp, auth, err = c.handleLoginRequest(ctx, req)
 	} else {
 		resp, auth, err = c.handleRequest(ctx, req)
+	}
+
+	if err == nil && c.requestResponseCallback != nil {
+		c.requestResponseCallback(c.router.MatchingBackend(ctx, req.Path), req, resp)
 	}
 
 	// If we saved the token in the request, we should return it in the response
@@ -796,7 +803,7 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 	}
 
 	if walState.LocalIndex != 0 || walState.ReplicatedIndex != 0 {
-		walState.ClusterID = c.clusterID.Load()
+		walState.ClusterID = c.ClusterID()
 		if walState.LocalIndex == 0 {
 			if c.perfStandby {
 				walState.LocalIndex = LastRemoteWAL(c)
@@ -857,7 +864,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	}
 
 	// Validate the token
-	auth, te, ctErr := c.checkToken(ctx, req, false)
+	auth, te, ctErr := c.CheckToken(ctx, req, false)
 	if ctErr == logical.ErrRelativePath {
 		return logical.ErrorResponse(ctErr.Error()), nil, ctErr
 	}
@@ -1201,26 +1208,28 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			switch resp.Auth.TokenType {
 			case logical.TokenTypeBatch:
 			case logical.TokenTypeService:
-				registeredTokenEntry := &logical.TokenEntry{
-					TTL:         auth.TTL,
-					Policies:    auth.TokenPolicies,
-					Path:        resp.Auth.CreationPath,
-					NamespaceID: ns.ID,
-				}
-				if err := c.expiration.RegisterAuth(ctx, registeredTokenEntry, resp.Auth, c.DetermineRoleFromLoginRequest(req.MountPoint, req.Data, ctx)); err != nil {
-					// Best-effort clean up on error, so we log the cleanup error as
-					// a warning but still return as internal error.
-					if err := c.tokenStore.revokeOrphan(ctx, resp.Auth.ClientToken); err != nil {
-						c.logger.Warn("failed to clean up token lease during auth/token/ request", "request_path", req.Path, "error", err)
+				if !c.perfStandby {
+					registeredTokenEntry := &logical.TokenEntry{
+						TTL:         auth.TTL,
+						Policies:    auth.TokenPolicies,
+						Path:        resp.Auth.CreationPath,
+						NamespaceID: ns.ID,
 					}
-					c.logger.Error("failed to register token lease during auth/token/ request", "request_path", req.Path, "error", err)
-					retErr = multierror.Append(retErr, ErrInternalError)
-					return nil, auth, retErr
+					if err := c.expiration.RegisterAuth(ctx, registeredTokenEntry, resp.Auth, c.DetermineRoleFromLoginRequest(req.MountPoint, req.Data, ctx)); err != nil {
+						// Best-effort clean up on error, so we log the cleanup error as
+						// a warning but still return as internal error.
+						if err := c.tokenStore.revokeOrphan(ctx, resp.Auth.ClientToken); err != nil {
+							c.logger.Warn("failed to clean up token lease during auth/token/ request", "request_path", req.Path, "error", err)
+						}
+						c.logger.Error("failed to register token lease during auth/token/ request", "request_path", req.Path, "error", err)
+						retErr = multierror.Append(retErr, ErrInternalError)
+						return nil, auth, retErr
+					}
+					if registeredTokenEntry.ExternalID != "" {
+						resp.Auth.ClientToken = registeredTokenEntry.ExternalID
+					}
+					leaseGenerated = true
 				}
-				if registeredTokenEntry.ExternalID != "" {
-					resp.Auth.ClientToken = registeredTokenEntry.ExternalID
-				}
-				leaseGenerated = true
 			}
 		}
 
@@ -1270,7 +1279,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	// Do an unauth check. This will cause EGP policies to be checked
 	var auth *logical.Auth
 	var ctErr error
-	auth, _, ctErr = c.checkToken(ctx, req, true)
+	auth, _, ctErr = c.CheckToken(ctx, req, true)
 	if ctErr == logical.ErrPerfStandbyPleaseForward {
 		return nil, nil, ctErr
 	}
@@ -2059,6 +2068,7 @@ func (c *Core) buildMfaEnforcementResponse(eConfig *mfa.MFAEnforcementConfig) (*
 			Type:         mConfig.Type,
 			ID:           methodID,
 			UsesPasscode: mConfig.Type == mfaMethodTypeTOTP || duoUsePasscode,
+			Name:         mConfig.Name,
 		}
 		mfaAny.Any = append(mfaAny.Any, mfaMethod)
 	}
@@ -2196,8 +2206,32 @@ func (c *Core) PopulateTokenEntry(ctx context.Context, req *logical.Request) err
 	token := req.ClientToken
 	var err error
 	req.InboundSSCToken = token
+	decodedToken := token
 	if IsSSCToken(token) {
-		token, err = c.CheckSSCToken(ctx, token, c.isLoginRequest(ctx, req), c.perfStandby)
+		// If ForwardToActive is set to ForwardSSCTokenToActive, we ignore
+		// whether the endpoint is a login request, as since we have the token
+		// forwarded to us, we should treat it as an unauthenticated endpoint
+		// and ensure the token is populated too regardless.
+		// Notably, this is important for some endpoints, such as endpoints
+		// such as sys/ui/mounts/internal, which is unauthenticated but a token
+		// may be provided to be used.
+		// Without the check to see if
+		// c.ForwardToActive() == ForwardSSCTokenToActive unauthenticated
+		// requests that do not use a token but were provided one anyway
+		// could fail with a 412.
+		// We only follow this behaviour if we're a perf standby, as
+		// this behaviour only makes sense in that case as only they
+		// could be missing the token population.
+		// Without ForwardToActive being set to ForwardSSCTokenToActive,
+		// behaviours that rely on this functionality also wouldn't make
+		// much sense, as they would fail with 412 required index not present
+		// as perf standbys aren't guaranteed to have the WAL state
+		// for new tokens.
+		unauth := c.isLoginRequest(ctx, req)
+		if c.ForwardToActive() == ForwardSSCTokenToActive && c.perfStandby {
+			unauth = false
+		}
+		decodedToken, err = c.CheckSSCToken(ctx, token, unauth, c.perfStandby)
 		// If we receive an error from CheckSSCToken, we can assume the token is bad somehow, and the client
 		// should receive a 403 bad token error like they do for all other invalid tokens, unless the error
 		// specifies that we should forward the request or retry the request.
@@ -2208,9 +2242,16 @@ func (c *Core) PopulateTokenEntry(ctx context.Context, req *logical.Request) err
 			return logical.ErrPermissionDenied
 		}
 	}
-	req.ClientToken = token
+	req.ClientToken = decodedToken
+	// We ignore the token returned from CheckSSCToken here as Lookup also
+	// decodes the SSCT, and it may need the original SSCT to check state.
 	te, err := c.LookupToken(ctx, token)
 	if err != nil {
+		// If we're missing required state, return that error
+		// as-is to the client
+		if errors.Is(err, logical.ErrPerfStandbyPleaseForward) || errors.Is(err, logical.ErrMissingRequiredState) {
+			return err
+		}
 		// If we have two dots but the second char is a dot it's a vault
 		// token of the form s.SOMETHING.nsid, not a JWT
 		if !IsJWT(token) {
@@ -2343,7 +2384,7 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 		return plainToken.Random, nil
 	}
 
-	requiredWalState := &logical.WALState{ClusterID: c.clusterID.Load(), LocalIndex: plainToken.LocalIndex, ReplicatedIndex: 0}
+	requiredWalState := &logical.WALState{ClusterID: c.ClusterID(), LocalIndex: plainToken.LocalIndex, ReplicatedIndex: 0}
 	if c.HasWALState(requiredWalState, isPerfStandby) {
 		return plainToken.Random, nil
 	}

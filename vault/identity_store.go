@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -170,6 +173,10 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 		{
 			Pattern: "mfa/method/totp" + genericOptionalUUIDRegex("method_id"),
 			Fields: map[string]*framework.FieldSchema{
+				"method_name": {
+					Type:        framework.TypeString,
+					Description: `The unique name identifier for this MFA method.`,
+				},
 				"method_id": {
 					Type:        framework.TypeString,
 					Description: `The unique identifier for this MFA method.`,
@@ -298,6 +305,10 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 		{
 			Pattern: "mfa/method/okta" + genericOptionalUUIDRegex("method_id"),
 			Fields: map[string]*framework.FieldSchema{
+				"method_name": {
+					Type:        framework.TypeString,
+					Description: `The unique name identifier for this MFA method.`,
+				},
 				"method_id": {
 					Type:        framework.TypeString,
 					Description: `The unique identifier for this MFA method.`,
@@ -354,6 +365,10 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 		{
 			Pattern: "mfa/method/duo" + genericOptionalUUIDRegex("method_id"),
 			Fields: map[string]*framework.FieldSchema{
+				"method_name": {
+					Type:        framework.TypeString,
+					Description: `The unique name identifier for this MFA method.`,
+				},
 				"method_id": {
 					Type:        framework.TypeString,
 					Description: `The unique identifier for this MFA method.`,
@@ -410,6 +425,10 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 		{
 			Pattern: "mfa/method/pingid" + genericOptionalUUIDRegex("method_id"),
 			Fields: map[string]*framework.FieldSchema{
+				"method_name": {
+					Type:        framework.TypeString,
+					Description: `The unique name identifier for this MFA method.`,
+				},
 				"method_id": {
 					Type:        framework.TypeString,
 					Description: `The unique identifier for this MFA method.`,

@@ -30,6 +30,7 @@
     "test:oss": "yarn run test -f='!enterprise'",
     "test:quick": "node scripts/start-vault.js",
     "test:quick-oss": "yarn test:quick -f='!enterprise'",
+    "types:declare": "declare () { yarn tsc $1 --declaration --allowJs --emitDeclarationOnly --experimentalDecorators --outDir $2; }; declare",
     "vault": "VAULT_REDIRECT_ADDR=http://127.0.0.1:8200 vault server -log-level=error -dev -dev-root-token-id=root -dev-ha -dev-transactional",
     "vault:cluster": "VAULT_REDIRECT_ADDR=http://127.0.0.1:8202 vault server -log-level=error -dev -dev-root-token-id=root -dev-listen-address=127.0.0.1:8202 -dev-ha -dev-transactional"
   },
@@ -146,7 +147,7 @@
     "ember-inflector": "4.0.2",
     "ember-load-initializers": "^2.1.2",
     "ember-maybe-in-element": "^2.0.3",
-    "ember-modal-dialog": "4.0.0",
+    "ember-modal-dialog": "^4.0.1",
     "ember-modifier": "^3.1.0",
     "ember-page-title": "^7.0.0",
     "ember-power-select": "6.0.1",
@@ -243,6 +244,7 @@
       "lib/css",
       "lib/keep-gitkeep",
       "lib/kmip",
+      "lib/kubernetes",
       "lib/open-api-explorer",
       "lib/pki",
       "lib/replication",
@@ -254,6 +256,7 @@
     "highlight.js": "^10.4.1",
     "js-yaml": "^3.13.1",
     "lodash": "^4.17.13",
-    "node-notifier": "^8.0.1"
+    "node-notifier": "^8.0.1",
+    "uuid": "^9.0.0"
   }
 }

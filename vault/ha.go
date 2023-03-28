@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -235,7 +238,7 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 	// to ourself, there's no point in paying any attention to it.  And by
 	// disregarding it, we can avoid a panic in raft tests using the Inmem network
 	// layer when we try to connect back to ourself.
-	if adv.ClusterAddr == c.ClusterAddr() && adv.RedirectAddr == c.redirectAddr {
+	if adv.ClusterAddr == c.ClusterAddr() && adv.RedirectAddr == c.redirectAddr && c.getRaftBackend() != nil {
 		return false, "", "", nil
 	}
 
@@ -663,10 +666,12 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 			// Spawn this in a go routine so we can cancel the context and
 			// unblock any inflight requests that are holding the statelock.
 			go func() {
+				timer := time.NewTimer(DefaultMaxRequestDuration)
 				select {
 				case <-activeCtx.Done():
-				// Attempt to drain any inflight requests
-				case <-time.After(DefaultMaxRequestDuration):
+					timer.Stop()
+					// Attempt to drain any inflight requests
+				case <-timer.C:
 					activeCtxCancel()
 				}
 			}()
@@ -796,8 +801,9 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 
 	clusterAddr := ""
 	for {
+		timer := time.NewTimer(leaderCheckInterval)
 		select {
-		case <-time.After(leaderCheckInterval):
+		case <-timer.C:
 			count := atomic.AddInt32(opCount, 1)
 			if count > 1 {
 				atomic.AddInt32(opCount, -1)
@@ -830,6 +836,7 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 				atomic.AddInt32(lopCount, -1)
 			}()
 		case <-stopCh:
+			timer.Stop()
 			return
 		}
 	}
@@ -842,8 +849,9 @@ func (c *Core) periodicCheckKeyUpgrades(ctx context.Context, stopCh chan struct{
 
 	opCount := new(int32)
 	for {
+		timer := time.NewTimer(keyRotateCheckInterval)
 		select {
-		case <-time.After(keyRotateCheckInterval):
+		case <-timer.C:
 			count := atomic.AddInt32(opCount, 1)
 			if count > 1 {
 				atomic.AddInt32(opCount, -1)
@@ -899,6 +907,7 @@ func (c *Core) periodicCheckKeyUpgrades(ctx context.Context, stopCh chan struct{
 				return
 			}()
 		case <-stopCh:
+			timer.Stop()
 			return
 		}
 	}
@@ -1030,9 +1039,11 @@ func (c *Core) acquireLock(lock physical.Lock, stopCh <-chan struct{}) <-chan st
 
 		// Retry the acquisition
 		c.logger.Error("failed to acquire lock", "error", err)
+		timer := time.NewTimer(lockRetryInterval)
 		select {
-		case <-time.After(lockRetryInterval):
+		case <-timer.C:
 		case <-stopCh:
+			timer.Stop()
 			return nil
 		}
 	}
@@ -1099,13 +1110,15 @@ func (c *Core) cleanLeaderPrefix(ctx context.Context, uuid string, leaderLostCh 
 		return
 	}
 	for len(keys) > 0 {
+		timer := time.NewTimer(leaderPrefixCleanDelay)
 		select {
-		case <-time.After(leaderPrefixCleanDelay):
+		case <-timer.C:
 			if keys[0] != uuid {
 				c.barrier.Delete(ctx, coreLeaderPrefix+keys[0])
 			}
 			keys = keys[1:]
 		case <-leaderLostCh:
+			timer.Stop()
 			return
 		}
 	}

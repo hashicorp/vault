@@ -26,9 +26,9 @@ advertise the correct address to other nodes.
 As of version 1.9, Vault supports defining custom HTTP response headers for the root path (`/`) and also on API endpoints (`/v1/*`).
 The headers are defined based on the returned status code. For example, a user can define a list of
 custom response headers for the `200` status code, and another list of custom response headers for
-the `307` status code. There is a `"/sys/config/ui"` [API endpoint](/api-docs/system/config-ui) which allows users
+the `307` status code. There is a `"/sys/config/ui"` [API endpoint](/vault/api-docs/system/config-ui) which allows users
 to set `UI` specific custom headers. If a header is configured in a configuration file, it is not allowed
-to be reconfigured through the `"/sys/config/ui"` [API endpoint](/api-docs/system/config-ui). In cases where a
+to be reconfigured through the `"/sys/config/ui"` [API endpoint](/vault/api-docs/system/config-ui). In cases where a
 custom header value needs to be modified or the custom header needs to be removed, the Vault's configuration file
 needs to be modified accordingly, and a `SIGHUP` signal needs to be sent to the Vault process.
 
@@ -40,11 +40,11 @@ upon start up indicating the header with `X-Vault-` prefix is not accepted.
 ### Order of precedence
 
 If the same header is configured in both the configuration file and
-in the `"/sys/config/ui"` [API endpoint](/api-docs/system/config-ui), the header in the configuration file takes precedence.
+in the `"/sys/config/ui"` [API endpoint](/vault/api-docs/system/config-ui), the header in the configuration file takes precedence.
 For example, the `"Content-Security-Policy"` header is defined by default in the
-`"/sys/config/ui"` [API endpoint](/api-docs/system/config-ui). If that header is also defined in the configuration file,
+`"/sys/config/ui"` [API endpoint](/vault/api-docs/system/config-ui). If that header is also defined in the configuration file,
 the value in the configuration file is set in the response headers instead of the
-default value in the `"/sys/config/ui"` [API endpoint](/api-docs/system/config-ui).
+default value in the `"/sys/config/ui"` [API endpoint](/vault/api-docs/system/config-ui).
 
 ## `tcp` Listener Parameters
 
@@ -133,6 +133,13 @@ default value in the `"/sys/config/ui"` [API endpoint](/api-docs/system/config-u
   `tls_min_version` and `tls_max_version` parameters) are widely considered
   insecure.
 
+- `tls_max_version` `(string: "tls13")` – Specifies the maximum supported
+  version of TLS. Accepted values are "tls10", "tls11", "tls12" or "tls13".
+
+~> **Warning**: TLS 1.1 and lower (`tls10` and `tls11` values for the
+  `tls_min_version` and `tls_max_version` parameters) are widely considered
+  insecure.
+
 - `tls_cipher_suites` `(string: "")` – Specifies the list of supported
   ciphersuites as a comma-separated-list. The list of all available ciphersuites
   is available in the [Golang TLS documentation][golang-tls].
@@ -167,7 +174,11 @@ default value in the `"/sys/config/ui"` [API endpoint](/api-docs/system/config-u
 - `x_forwarded_for_authorized_addrs` `(string: <required-to-enable>)` –
   Specifies the list of source IP CIDRs for which an X-Forwarded-For header
   will be trusted. Comma-separated list or JSON array. This turns on
-  X-Forwarded-For support.
+  X-Forwarded-For support.  If for example Vault receives connections from the 
+  load balancer's IP of `1.2.3.4`, adding `1.2.3.4` to `x_forwarded_for_authorized_addrs` 
+  will result in the `remote_address` field in the audit log being populated with the 
+  connecting client's IP, for example `3.4.5.6`. Note this requires the load balancer 
+  to send the connecting client's IP in the `X-Forwarded-For` header.
 
 - `x_forwarded_for_hop_skips` `(string: "0")` – The number of addresses that will be
   skipped from the _rear_ of the set of hops. For instance, for a header value
@@ -348,6 +359,6 @@ cluster_addr = "https://[2001:1c04:90d:1c00:a00:27ff:fefa:58ec]:8201"
 ```
 
 [golang-tls]: https://golang.org/src/crypto/tls/cipher_suites.go
-[api-addr]: /docs/configuration#api_addr
-[cluster-addr]: /docs/configuration#cluster_addr
+[api-addr]: /vault/docs/configuration#api_addr
+[cluster-addr]: /vault/docs/configuration#cluster_addr
 [go-tls-blog]: https://go.dev/blog/tls-cipher-suites

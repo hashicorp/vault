@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package certutil
 
 import (
@@ -77,6 +80,11 @@ var InvSignatureAlgorithmNames = map[x509.SignatureAlgorithm]string{
 	x509.SHA512WithRSAPSS: "SHA512WithRSAPSS",
 	x509.PureEd25519:      "Ed25519",
 }
+
+// OID for RFC 5280 CRL Number extension.
+//
+// > id-ce-cRLNumber OBJECT IDENTIFIER ::= { id-ce 20 }
+var CRLNumberOID = asn1.ObjectIdentifier([]int{2, 5, 29, 20})
 
 // OID for RFC 5280 Delta CRL Indicator CRL extension.
 //

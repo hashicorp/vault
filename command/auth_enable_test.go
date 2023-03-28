@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -47,18 +50,6 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 			"not_a_valid_auth",
 			[]string{"nope_definitely_not_a_valid_mount_like_ever"},
 			"",
-			2,
-		},
-		{
-			"deprecated builtin with standard mount",
-			[]string{"app-id"},
-			"mount entry associated with pending removal builtin",
-			2,
-		},
-		{
-			"deprecated builtin with different mount",
-			[]string{"-path=/tmp", "app-id"},
-			"mount entry associated with pending removal builtin",
 			2,
 		},
 	}

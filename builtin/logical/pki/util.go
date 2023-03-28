@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -8,6 +11,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -28,9 +32,10 @@ const (
 )
 
 var (
-	nameMatcher        = regexp.MustCompile("^" + framework.GenericNameRegex(issuerRefParam) + "$")
-	errIssuerNameInUse = errutil.UserError{Err: "issuer name already in use"}
-	errKeyNameInUse    = errutil.UserError{Err: "key name already in use"}
+	nameMatcher          = regexp.MustCompile("^" + framework.GenericNameRegex(issuerRefParam) + "$")
+	errIssuerNameInUse   = errutil.UserError{Err: "issuer name already in use"}
+	errIssuerNameIsEmpty = errutil.UserError{Err: "expected non-empty issuer name"}
+	errKeyNameInUse      = errutil.UserError{Err: "key name already in use"}
 )
 
 func serialFromCert(cert *x509.Certificate) string {
@@ -41,12 +46,22 @@ func serialFromBigInt(serial *big.Int) string {
 	return strings.TrimSpace(certutil.GetHexFormatted(serial.Bytes(), ":"))
 }
 
+func normalizeSerialFromBigInt(serial *big.Int) string {
+	return strings.TrimSpace(certutil.GetHexFormatted(serial.Bytes(), "-"))
+}
+
 func normalizeSerial(serial string) string {
 	return strings.ReplaceAll(strings.ToLower(serial), ":", "-")
 }
 
 func denormalizeSerial(serial string) string {
 	return strings.ReplaceAll(strings.ToLower(serial), "-", ":")
+}
+
+func serialToBigInt(serial string) (*big.Int, bool) {
+	norm := normalizeSerial(serial)
+	hex := strings.ReplaceAll(norm, "-", "")
+	return big.NewInt(0).SetString(hex, 16)
 }
 
 func kmsRequested(input *inputBundle) bool {
@@ -159,11 +174,12 @@ func getIssuerName(sc *storageContext, data *framework.FieldData) (string, error
 	issuerNameIface, ok := data.GetOk("issuer_name")
 	if ok {
 		issuerName = strings.TrimSpace(issuerNameIface.(string))
-
+		if len(issuerName) == 0 {
+			return issuerName, errIssuerNameIsEmpty
+		}
 		if strings.ToLower(issuerName) == defaultRef {
 			return issuerName, errutil.UserError{Err: "reserved keyword 'default' can not be used as issuer name"}
 		}
-
 		if !nameMatcher.MatchString(issuerName) {
 			return issuerName, errutil.UserError{Err: "issuer name contained invalid characters"}
 		}
@@ -259,10 +275,12 @@ func parseIfNotModifiedSince(req *logical.Request) (time.Time, error) {
 type ifModifiedReqType int
 
 const (
-	ifModifiedUnknown  ifModifiedReqType = iota
-	ifModifiedCA                         = iota
-	ifModifiedCRL                        = iota
-	ifModifiedDeltaCRL                   = iota
+	ifModifiedUnknown         ifModifiedReqType = iota
+	ifModifiedCA                                = iota
+	ifModifiedCRL                               = iota
+	ifModifiedDeltaCRL                          = iota
+	ifModifiedUnifiedCRL                        = iota
+	ifModifiedUnifiedDeltaCRL                   = iota
 )
 
 type IfModifiedSinceHelper struct {
@@ -327,6 +345,26 @@ func (sc *storageContext) isIfModifiedSinceBeforeLastModified(helper *IfModified
 		if helper.reqType == ifModifiedDeltaCRL {
 			lastModified = crlConfig.DeltaLastModified
 		}
+	case ifModifiedUnifiedCRL, ifModifiedUnifiedDeltaCRL:
+		if sc.Backend.crlBuilder.invalidate.Load() {
+			// When we see the CRL is invalidated, respond with false
+			// regardless of what the local CRL state says. We've likely
+			// renamed some issuers or are about to rebuild a new CRL....
+			//
+			// We do this earlier, ahead of config load, as it saves us a
+			// potential error condition.
+			return false, nil
+		}
+
+		crlConfig, err := sc.getUnifiedCRLConfig()
+		if err != nil {
+			return false, err
+		}
+
+		lastModified = crlConfig.LastModified
+		if helper.reqType == ifModifiedUnifiedDeltaCRL {
+			lastModified = crlConfig.DeltaLastModified
+		}
 	case ifModifiedCA:
 		issuerId, err := sc.resolveIssuerReference(string(helper.issuerRef))
 		if err != nil {
@@ -356,4 +394,110 @@ func addWarnings(resp *logical.Response, warnings []string) *logical.Response {
 		resp.AddWarning(warning)
 	}
 	return resp
+}
+
+// revocationQueue is a type for allowing invalidateFunc to continue operating
+// quickly, while letting periodicFunc slowly sort through all open
+// revocations to process. In particular, we do not wish to be holding this
+// lock while periodicFunc is running, so iteration returns a full copy of
+// the data in this queue. We use a map from serial->[]clusterId, allowing us
+// to quickly insert and remove items, without using a slice of tuples. One
+// serial might be present on two clusters, if two clusters both have the cert
+// stored locally (e.g., via BYOC), which would result in two confirmation
+// entries and thus dictating the need for []clusterId. This also lets us
+// avoid having duplicate entries.
+type revocationQueue struct {
+	_l    sync.Mutex
+	queue map[string][]string
+}
+
+func newRevocationQueue() *revocationQueue {
+	return &revocationQueue{
+		queue: make(map[string][]string),
+	}
+}
+
+func (q *revocationQueue) Add(items ...*revocationQueueEntry) {
+	q._l.Lock()
+	defer q._l.Unlock()
+
+	for _, item := range items {
+		var found bool
+		for _, cluster := range q.queue[item.Serial] {
+			if cluster == item.Cluster {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			q.queue[item.Serial] = append(q.queue[item.Serial], item.Cluster)
+		}
+	}
+}
+
+func (q *revocationQueue) Remove(item *revocationQueueEntry) {
+	q._l.Lock()
+	defer q._l.Unlock()
+
+	clusters, present := q.queue[item.Serial]
+	if !present {
+		return
+	}
+
+	if len(clusters) == 0 || (len(clusters) == 1 && clusters[0] == item.Cluster) {
+		delete(q.queue, item.Serial)
+		return
+	}
+
+	result := clusters
+	for index, cluster := range clusters {
+		if cluster == item.Cluster {
+			result = append(clusters[0:index], clusters[index+1:]...)
+			break
+		}
+	}
+
+	q.queue[item.Serial] = result
+}
+
+// As this doesn't depend on any internal state, it should not be called
+// unless it is OK to remove any items added since the last Iterate()
+// function call.
+func (q *revocationQueue) RemoveAll() {
+	q._l.Lock()
+	defer q._l.Unlock()
+
+	q.queue = make(map[string][]string)
+}
+
+func (q *revocationQueue) Iterate() []*revocationQueueEntry {
+	q._l.Lock()
+	defer q._l.Unlock()
+
+	// Heuristic: by storing by serial, occasionally we'll get double entires
+	// if it was already revoked, but otherwise we'll be off by fewer when
+	// building this list.
+	ret := make([]*revocationQueueEntry, 0, len(q.queue))
+
+	for serial, clusters := range q.queue {
+		for _, cluster := range clusters {
+			ret = append(ret, &revocationQueueEntry{
+				Serial:  serial,
+				Cluster: cluster,
+			})
+		}
+	}
+
+	return ret
+}
+
+// sliceToMapKey return a map that who's keys are entries in a map.
+func sliceToMapKey(s []string) map[string]struct{} {
+	var empty struct{}
+	myMap := make(map[string]struct{}, len(s))
+	for _, s := range s {
+		myMap[s] = empty
+	}
+	return myMap
 }

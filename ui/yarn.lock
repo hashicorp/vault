@@ -10006,10 +10006,10 @@ ember-maybe-in-element@^2.0.3:
     ember-cli-version-checker "^5.1.1"
     ember-in-element-polyfill "^1.0.1"
 
-ember-modal-dialog@4.0.0:
-  version "4.0.0"
-  resolved "https://registry.yarnpkg.com/ember-modal-dialog/-/ember-modal-dialog-4.0.0.tgz#ab599ad14055550706800bd9aac3a2cbb7799748"
-  integrity sha512-ofh+xG8v6Lg60R3JXaG9pW683OWCexDQT/JT7S0TOgywSHzdC9WYE4/kIbvxZ6T9Ka87CosP+cz2A2iJ/jvZNQ==
+ember-modal-dialog@^4.0.1:
+  version "4.0.1"
+  resolved "https://registry.yarnpkg.com/ember-modal-dialog/-/ember-modal-dialog-4.0.1.tgz#093e0b5a32e2824b573bec9f0c935b4f990dbaff"
+  integrity sha512-6RQjQClvufYB7Y/sOS90HF3tfmLe7LLDM3fgl8BsAEu9xSJTHZTz+xpBY467hxIkl2vAXH6rNLFCf7W/Rm9Jcw==
   dependencies:
     "@embroider/macros" "^1.0.0"
     "@embroider/util" "^1.0.0"
@@ -18578,6 +18578,11 @@ uuid@^8.3.0, uuid@^8.3.2:
   version "8.3.2"
   resolved "https://registry.yarnpkg.com/uuid/-/uuid-8.3.2.tgz#80d5b5ced271bb9af6c445f21a1a04c606cefbe2"
   integrity sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==
+
+uuid@^9.0.0:
+  version "9.0.0"
+  resolved "https://registry.yarnpkg.com/uuid/-/uuid-9.0.0.tgz#592f550650024a38ceb0c562f2f6aa435761efb5"
+  integrity sha512-MXcSTerfPa4uqyzStbRoTgt5XIe3x5+42+q1sDuy3R5MDk66URdLMOZe5aPX/SQd+kuYAh0FdP/pO28IkQyTeg==
 
 v8-compile-cache@^2.0.3, v8-compile-cache@^2.3.0:
   version "2.3.0"

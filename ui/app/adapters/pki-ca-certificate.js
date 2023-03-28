@@ -1,4 +1,9 @@
-import { parsePkiCert } from '../helpers/parse-pki-cert';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+import { parsePkiCert } from 'vault/utils/parse-pki-cert';
 import ApplicationAdapter from './application';
 
 export default ApplicationAdapter.extend({
@@ -49,7 +54,7 @@ export default ApplicationAdapter.extend({
       response.modelName = type.modelName;
       // only parse if certificate is attached to response
       if (response.data && response.data.certificate) {
-        const caCertMetadata = parsePkiCert([response.data]);
+        const caCertMetadata = parsePkiCert(response.data);
         const transformedResponse = { ...response, ...caCertMetadata };
         store.pushPayload(type.modelName, transformedResponse);
       } else {

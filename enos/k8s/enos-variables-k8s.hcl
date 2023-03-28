@@ -1,7 +1,16 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 variable "vault_image_repository" {
   description = "The repository for the docker image to load, i.e. hashicorp/vault"
   type        = string
   default     = null
+}
+
+variable "vault_log_level" {
+  description = "The server log level for Vault logs. Supported values (in order of detail) are trace, debug, info, warn, and err."
+  type        = string
+  default     = "info"
 }
 
 variable "vault_product_version" {

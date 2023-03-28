@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package logging
 
 import (
@@ -122,6 +125,7 @@ func Setup(config *LogConfig, w io.Writer) (log.InterceptLogger, error) {
 		if config.LogRotateDuration == 0 {
 			config.LogRotateDuration = defaultRotateDuration
 		}
+
 		logFile := &LogFile{
 			fileName:         fileName,
 			logPath:          dir,

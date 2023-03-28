@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package http
 
 import (
@@ -53,7 +56,7 @@ func TestHTTP_Fallback_Bad_Address(t *testing.T) {
 	for _, addr := range addrs {
 		config := api.DefaultConfig()
 		config.Address = addr
-		config.HttpClient.Transport.(*http.Transport).TLSClientConfig = cores[0].TLSConfig
+		config.HttpClient.Transport.(*http.Transport).TLSClientConfig = cores[0].TLSConfig()
 
 		client, err := api.NewClient(config)
 		if err != nil {
@@ -101,7 +104,7 @@ func TestHTTP_Fallback_Disabled(t *testing.T) {
 	for _, addr := range addrs {
 		config := api.DefaultConfig()
 		config.Address = addr
-		config.HttpClient.Transport.(*http.Transport).TLSClientConfig = cores[0].TLSConfig
+		config.HttpClient.Transport.(*http.Transport).TLSClientConfig = cores[0].TLSConfig()
 
 		client, err := api.NewClient(config)
 		if err != nil {
@@ -161,7 +164,7 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint32) 
 	}
 
 	transport := &http.Transport{
-		TLSClientConfig: cores[0].TLSConfig,
+		TLSClientConfig: cores[0].TLSConfig(),
 	}
 	if err := http2.ConfigureTransport(transport); err != nil {
 		t.Fatal(err)
@@ -459,7 +462,7 @@ func TestHTTP_Forwarding_ClientTLS(t *testing.T) {
 	vault.TestWaitActive(t, core)
 
 	transport := cleanhttp.DefaultTransport()
-	transport.TLSClientConfig = cores[0].TLSConfig
+	transport.TLSClientConfig = cores[0].TLSConfig()
 	if err := http2.ConfigureTransport(transport); err != nil {
 		t.Fatal(err)
 	}
@@ -511,7 +514,7 @@ func TestHTTP_Forwarding_ClientTLS(t *testing.T) {
 		// be to a different address
 		transport = cleanhttp.DefaultTransport()
 		// i starts at zero but cores in addrs start at 1
-		transport.TLSClientConfig = cores[i+1].TLSConfig
+		transport.TLSClientConfig = cores[i+1].TLSConfig()
 		if err := http2.ConfigureTransport(transport); err != nil {
 			t.Fatal(err)
 		}

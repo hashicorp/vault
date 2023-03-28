@@ -127,10 +127,10 @@ For example, enable the "foo" auth method will make it accessible at
     in the UI-specific listing endpoint. Valid values are `"unauth"` or `"hidden"`,
     with the default `""` being equivalent to `"hidden"`.
 
-  - `passthrough_request_headers` `(array: [])` - List of headers to whitelist
+  - `passthrough_request_headers` `(array: [])` - List of headers to allow
     and pass from the request to the plugin.
 
-  - `allowed_response_headers` `(array: [])` - List of headers to whitelist,
+  - `allowed_response_headers` `(array: [])` - List of headers to allow,
     allowing a plugin to include them in the response.
 
   - `plugin_version` `(string: "")` – Specifies the semantic version of the plugin
@@ -325,10 +325,10 @@ can be achieved without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
   in the UI-specific listing endpoint. Valid values are `"unauth"` or `"hidden"`,
   with the default `""` being equivalent to `"hidden"`.
 
-- `passthrough_request_headers` `(array: [])` - List of headers to whitelist
+- `passthrough_request_headers` `(array: [])` - List of headers to allow
   and pass from the request to the plugin.
 
-- `allowed_response_headers` `(array: [])` - List of headers to whitelist,
+- `allowed_response_headers` `(array: [])` - List of headers to allow,
   allowing a plugin to include them in the response.
 
 - `token_type` `(string: "")` – Specifies the type of tokens that should be
@@ -346,13 +346,33 @@ can be achieved without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
 - `plugin_version` `(string: "")` – Specifies the semantic version of the plugin
   to use, e.g. "v1.0.0". Changes will not take effect until the mount is reloaded.
 
+- `user_lockout_config` `(map<string|string>: nil)` – Specifies the user lockout configuration
+  for the mount. User lockout feature was added in Vault 1.13. These are the possible values:
+
+  - `lockout_threshold` `(string: "")` - Specifies the number of failed login attempts after 
+    which the user is locked out, specified as a string like "15".
+
+  - `lockout_duration` `(string: "")` - Specifies the duration for which an user will be locked out, 
+    specified as a string duration like "5s" or "30m".
+
+  - `lockout_counter_reset` `(string: "")` - Specifies the duration after which the lockout counter is 
+    reset with no failed login attempts, specified as a string duration like "5s" or "30m".
+
+  - `lockout_disable` `(bool: false)` - Disables the user lockout feature for this mount
+     if set to true.
+
 ### Sample Payload
 
 ```json
 {
   "default_lease_ttl": 1800,
   "max_lease_ttl": 86400,
-  "audit_non_hmac_request_keys": ["client_nonce"]
+  "audit_non_hmac_request_keys": ["client_nonce"],
+  "user_lockout_config":{
+    "lockout_threshold":"20",
+    "lockout_duration":"5m",
+    "lockout_counter_reset":"5m"
+  }
 }
 ```
 

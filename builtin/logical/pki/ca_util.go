@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -58,6 +61,7 @@ func getGenerationParams(sc *storageContext, data *framework.FieldData) (exporte
 		AllowedURISANs:            []string{"*"},
 		AllowedOtherSANs:          []string{"*"},
 		AllowedSerialNumbers:      []string{"*"},
+		AllowedUserIDs:            []string{"*"},
 		OU:                        data.Get("ou").([]string),
 		Organization:              data.Get("organization").([]string),
 		Country:                   data.Get("country").([]string),
@@ -185,7 +189,7 @@ func (sc *storageContext) getKeyTypeAndBitsForRole(data *framework.FieldData) (s
 	if kmsRequestedFromFieldData(data) {
 		keyId, err := getManagedKeyId(data)
 		if err != nil {
-			return "", 0, errors.New("unable to determine managed key id" + err.Error())
+			return "", 0, errors.New("unable to determine managed key id: " + err.Error())
 		}
 
 		pubKeyManagedKey, err := getManagedKeyPublicKey(sc.Context, sc.Backend, keyId)
