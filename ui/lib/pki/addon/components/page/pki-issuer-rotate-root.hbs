@@ -12,17 +12,18 @@
 {{#if this.newRootModel.id}}
   <div class="has-top-margin-m">
     <AlertBanner @title="Next steps" @type="warning">
-      Your new root has been generated. If you’re ready, you can begin cross-signing issuers now. If not, the option to
-      cross-sign is available when you use this certificate.
-      <LinkTo @route="issuers.issuer.cross-sign">
+      Your new root has been generated.
+      {{#if this.newRootModel.privateKey}}
+        Make sure to copy and save the
+        <strong>private_key</strong>
+        as it is only available once.
+      {{/if}}
+      If you’re ready, you can begin cross-signing issuers now. If not, the option to cross-sign is available when you use
+      this certificate.
+      <br />
+      <LinkTo class="is-marginless" @route="issuers.issuer.cross-sign">
         Cross-sign issuers
       </LinkTo>
-      {{#if this.newRootModel.privateKey}}
-        <p class="has-top-margin-xs">
-          <Icon @name="x-circle" class="has-text-danger" />
-          The private_key is only available once. Make sure you copy and save it now.
-        </p>
-      {{/if}}
     </AlertBanner>
   </div>
 {{else}}
