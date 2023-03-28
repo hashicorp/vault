@@ -43,13 +43,13 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
     return [
       {
         key: 'use-old-settings',
-        icon: 'vector',
+        icon: 'certificate',
         label: 'Use old root settings',
         description: `Provide only a new common name and issuer name, using the old root’s settings. Selecting this option generates an internal root type.`,
       },
       {
         key: 'customize',
-        icon: 'vector',
+        icon: 'award',
         label: 'Customize new root certificate',
         description:
           'Generates a new self-signed CA certificate and private key. This generated root will sign its own CRL.',

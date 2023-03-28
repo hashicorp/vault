@@ -16,7 +16,7 @@
         class="has-fixed-width"
         @title={{option.label}}
         @description={{option.description}}
-        @icon="list"
+        @icon={{option.icon}}
         @value={{option.key}}
         @groupValue={{this.rotateForm}}
         @onChange={{fn (mut this.rotateForm) option.key}}
