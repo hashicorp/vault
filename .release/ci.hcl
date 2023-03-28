@@ -194,106 +194,106 @@ event "enos-release-testing-oss" {
 ## These events are publish and post-publish events and should be added to the end of the file
 ## after the verify event stanza.
 
-event "trigger-staging" {
-// This event is dispatched by the bob trigger-promotion command
-// and is required - do not delete.
-}
-
-event "promote-staging" {
-  depends = ["trigger-staging"]
-  action "promote-staging" {
-    organization = "hashicorp"
-    repository = "crt-workflows-common"
-    workflow = "promote-staging"
-    config = "release-metadata.hcl"
-  }
-
-  notification {
-    on = "always"
-  }
-}
-
-event "promote-staging-docker" {
-  depends = ["promote-staging"]
-  action "promote-staging-docker" {
-    organization = "hashicorp"
-    repository = "crt-workflows-common"
-    workflow = "promote-staging-docker"
-  }
-
-  notification {
-    on = "always"
-  }
-}
-
-event "trigger-production" {
-// This event is dispatched by the bob trigger-promotion command
-// and is required - do not delete.
-}
-
-event "promote-production" {
-  depends = ["trigger-production"]
-  action "promote-production" {
-    organization = "hashicorp"
-    repository = "crt-workflows-common"
-    workflow = "promote-production"
-  }
-
-  notification {
-    on = "always"
-  }
-}
-
-event "promote-production-docker" {
-  depends = ["promote-production"]
-  action "promote-production-docker" {
-    organization = "hashicorp"
-    repository = "crt-workflows-common"
-    workflow = "promote-production-docker"
-  }
-
-  notification {
-    on = "always"
-  }
-}
-
-event "promote-production-packaging" {
-  depends = ["promote-production-docker"]
-  action "promote-production-packaging" {
-    organization = "hashicorp"
-    repository = "crt-workflows-common"
-    workflow = "promote-production-packaging"
-  }
-
-  notification {
-    on = "always"
-  }
-}
-
-# The post-publish-website event should not be merged into the enterprise repo.
-# It is for OSS use only.
-event "post-publish-website" {
-  depends = ["promote-production-packaging"]
-  action "post-publish-website" {
-    organization = "hashicorp"
-    repository = "crt-workflows-common"
-    workflow = "post-publish-website"
-  }
-
-  notification {
-    on = "always"
-  }
-}
-
-event "update-ironbank" {
-  depends = ["post-publish-website"]
-  action "update-ironbank" {
-    organization = "hashicorp"
-    repository = "crt-workflows-common"
-    workflow = "update-ironbank"
-  }
-
-  notification {
-    on = "fail"
-  }
-}
+#event "trigger-staging" {
+#// This event is dispatched by the bob trigger-promotion command
+#// and is required - do not delete.
+#}
+#
+#event "promote-staging" {
+#  depends = ["trigger-staging"]
+#  action "promote-staging" {
+#    organization = "hashicorp"
+#    repository = "crt-workflows-common"
+#    workflow = "promote-staging"
+#    config = "release-metadata.hcl"
+#  }
+#
+#  notification {
+#    on = "always"
+#  }
+#}
+#
+#event "promote-staging-docker" {
+#  depends = ["promote-staging"]
+#  action "promote-staging-docker" {
+#    organization = "hashicorp"
+#    repository = "crt-workflows-common"
+#    workflow = "promote-staging-docker"
+#  }
+#
+#  notification {
+#    on = "always"
+#  }
+#}
+#
+#event "trigger-production" {
+#// This event is dispatched by the bob trigger-promotion command
+#// and is required - do not delete.
+#}
+#
+#event "promote-production" {
+#  depends = ["trigger-production"]
+#  action "promote-production" {
+#    organization = "hashicorp"
+#    repository = "crt-workflows-common"
+#    workflow = "promote-production"
+#  }
+#
+#  notification {
+#    on = "always"
+#  }
+#}
+#
+#event "promote-production-docker" {
+#  depends = ["promote-production"]
+#  action "promote-production-docker" {
+#    organization = "hashicorp"
+#    repository = "crt-workflows-common"
+#    workflow = "promote-production-docker"
+#  }
+#
+#  notification {
+#    on = "always"
+#  }
+#}
+#
+#event "promote-production-packaging" {
+#  depends = ["promote-production-docker"]
+#  action "promote-production-packaging" {
+#    organization = "hashicorp"
+#    repository = "crt-workflows-common"
+#    workflow = "promote-production-packaging"
+#  }
+#
+#  notification {
+#    on = "always"
+#  }
+#}
+#
+## The post-publish-website event should not be merged into the enterprise repo.
+## It is for OSS use only.
+#event "post-publish-website" {
+#  depends = ["promote-production-packaging"]
+#  action "post-publish-website" {
+#    organization = "hashicorp"
+#    repository = "crt-workflows-common"
+#    workflow = "post-publish-website"
+#  }
+#
+#  notification {
+#    on = "always"
+#  }
+#}
+#
+#event "update-ironbank" {
+#  depends = ["post-publish-website"]
+#  action "update-ironbank" {
+#    organization = "hashicorp"
+#    repository = "crt-workflows-common"
+#    workflow = "update-ironbank"
+#  }
+#
+#  notification {
+#    on = "fail"
+#  }
+#}
