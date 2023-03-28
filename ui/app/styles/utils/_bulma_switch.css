@@ -1,3 +1,4 @@
+/* ARG TODO move over to switch.scss */
 .switch[type=checkbox] {
   outline: 0;
   -webkit-user-select: none;
@@ -32,10 +33,8 @@
   align-items: center;
   justify-content: flex-start;
   font-size: 1rem;
-  height: 2.5em;
   line-height: 1.5;
   padding-left: 3.5rem;
-  padding-top: .2rem;
   cursor: pointer;
 }
 .switch[type=checkbox]+label::before, .switch[type=checkbox]+label:before {
@@ -127,9 +126,7 @@
   justify-content: flex-start;
   font-size: .75rem;
   height: 2.5em;
-  line-height: 1.5;
   padding-left: 2.75rem;
-  padding-top: .2rem;
   cursor: pointer;
 }
 .switch[type=checkbox].is-small+label::before, .switch[type=checkbox].is-small+label:before {
