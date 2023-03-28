@@ -6,7 +6,7 @@
 .list-item-row {
   @extend .box;
   @extend .is-sideless;
-  @extend .is-marginless;
+  margin: 0;
   padding-left: 0;
   padding-right: 0;
 
