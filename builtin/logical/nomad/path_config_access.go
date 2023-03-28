@@ -57,6 +57,7 @@ must be x509 PEM encoded and if this is set you need to also set client_cert.`,
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathConfigAccessRead,
 				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "read",
 					OperationSuffix: "access-configuration",
 				},
 			},
@@ -77,6 +78,7 @@ must be x509 PEM encoded and if this is set you need to also set client_cert.`,
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathConfigAccessDelete,
 				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "delete",
 					OperationSuffix: "access-configuration",
 				},
 			},

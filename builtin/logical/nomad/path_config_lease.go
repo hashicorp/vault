@@ -36,13 +36,13 @@ func pathConfigLease(b *backend) *framework.Path {
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathLeaseRead,
 				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "read",
 					OperationSuffix: "lease-configuration",
 				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathLeaseUpdate,
 				DisplayAttrs: &framework.DisplayAttributes{
-					OperationPrefix: operationPrefixNomad,
 					OperationVerb:   "configure",
 					OperationSuffix: "lease",
 				},
@@ -50,6 +50,7 @@ func pathConfigLease(b *backend) *framework.Path {
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathLeaseDelete,
 				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "delete",
 					OperationSuffix: "lease-configuration",
 				},
 			},
