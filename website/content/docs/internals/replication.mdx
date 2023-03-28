@@ -236,7 +236,7 @@ addition to the regular addresses we've discussed in previous sections.
 What about if there are multiple DR secondaries?  To answer that we need to go into a
 little more detail about how `core/primary-failover-addrs/dr` gets updated.
 
-Each DR secondary is doing the heartbeats we spoke of earlier, containing that
+Each DR secondary is doing the heartbeats we spoke of earlier, containing
 the addresses of the nodes in the cluster, based on the internal cluster heartbeats
 that standbys send to the active node.
 
@@ -270,8 +270,8 @@ become active.  As a result it hasn't yet received any heartbeat requests from i
 standbys, and so it doesn't know their addresses.  It sends its first heartbeat
 to its primary, providing only its own cluster address.  If it's been at least
 15s since the last active node sent a heartbeat, then this active node's address will
-be the address in the primary's failover address cache, and the only address from
-this cluster that gets written to `core/primary-failover-addrs/dr`.  Now the current
+be the only address in the primary's failover address cache, and the only address
+that gets written to `core/primary-failover-addrs/dr`.  At this point the current
 PR primary dies and its former DR secondary is promoted.  Somewhere along the way
 there's a leadership change and a different node takes over on the promoted cluster.
 On top of that the former active node has a problem and gets sealed.  Now the only
