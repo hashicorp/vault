@@ -102,7 +102,7 @@ $ curl --silent https://releases.hashicorp.com/vault-lambda-extension/0.5.0/vaul
   --output vault-lambda-extension.zip
 ```
 
-Unzip the donwloaded binary.
+Unzip the downloaded binary.
 
 ```shell-session
 $ unzip vault-lambda-extension.zip
@@ -249,6 +249,10 @@ the header to `nocache` on a request will opt-out of caching entirely in this
 configuration. Setting the header to `recache` will skip the cache lookup and
 return and cache the response from Vault as described previously.
 
+~> **Warning!** The Vault Lambda Extension's cache is only in-memory
+and will not be persisted when the Lambda execution environment shuts down.
+In order words, the cache TTL is capped to the duration of the Lambda execution environment.
+
 ## Limitations
 
 Secrets written to disk or returned from the proxy server will not be automatically
@@ -267,10 +271,6 @@ own Vault auth token is the only thing that gets automatically refreshed. It wil
 synchronously refresh its own token before proxying requests if the token is
 expired (including a grace window), and it will attempt to renew its token if the
 token is nearly expired but renewable.
-
-~> **Note**: The Vault Lambda Extension is currently incompatible with
-[AWS SnapStart](https://docs.aws.amazon.com/lambda/latest/dg/snapstart.html).
-This is because AWS SnapStart does not support the Lambda Extensions API.
 
 ## Performance impact
 

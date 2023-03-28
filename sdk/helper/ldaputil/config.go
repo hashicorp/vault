@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package ldaputil
 
 import (
@@ -13,7 +16,16 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 
 	"github.com/hashicorp/errwrap"
+
+	"github.com/go-ldap/ldap/v3"
 )
+
+var ldapDerefAliasMap = map[string]int{
+	"never":     ldap.NeverDerefAliases,
+	"finding":   ldap.DerefFindingBaseObj,
+	"searching": ldap.DerefInSearching,
+	"always":    ldap.DerefAlways,
+}
 
 // ConfigFields returns all the config fields that can potentially be used by the LDAP client.
 // Not all fields will be used by every integration.
@@ -226,6 +238,13 @@ Default: ({{.UserAttr}}={{.Username}})`,
 			Description: "Timeout, in seconds, for the connection when making requests against the server before returning back an error.",
 			Default:     "90s",
 		},
+
+		"dereference_aliases": {
+			Type:          framework.TypeString,
+			Description:   "When aliases should be dereferenced on search operations. Accepted values are 'never', 'finding', 'searching', 'always'. Defaults to 'never'.",
+			Default:       "never",
+			AllowedValues: []interface{}{"never", "finding", "searching", "always"},
+		},
 	}
 }
 
@@ -392,6 +411,10 @@ func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry
 		cfg.RequestTimeout = d.Get("request_timeout").(int)
 	}
 
+	if _, ok := d.Raw["dereference_aliases"]; ok || !hadExisting {
+		cfg.DerefAliases = d.Get("dereference_aliases").(string)
+	}
+
 	return cfg, nil
 }
 
@@ -418,6 +441,7 @@ type ConfigEntry struct {
 	UseTokenGroups           bool   `json:"use_token_groups"`
 	UsePre111GroupCNBehavior *bool  `json:"use_pre111_group_cn_behavior"`
 	RequestTimeout           int    `json:"request_timeout"`
+	DerefAliases             string `json:"dereference_aliases"`
 
 	// These json tags deviate from snake case because there was a past issue
 	// where the tag was being ignored, causing it to be jsonified as "CaseSensitiveNames", etc.
@@ -456,6 +480,7 @@ func (c *ConfigEntry) PasswordlessMap() map[string]interface{} {
 		"anonymous_group_search": c.AnonymousGroupSearch,
 		"request_timeout":        c.RequestTimeout,
 		"username_as_alias":      c.UsernameAsAlias,
+		"dereference_aliases":    c.DerefAliases,
 	}
 	if c.CaseSensitiveNames != nil {
 		m["case_sensitive_names"] = *c.CaseSensitiveNames

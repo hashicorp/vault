@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -93,11 +96,16 @@ their identifier and their name (if set).
 )
 
 func pathGetIssuer(b *backend) *framework.Path {
-	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "(/der|/pem|/json)?"
+	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "$"
+	return buildPathIssuer(b, pattern)
+}
+
+func pathGetUnauthedIssuer(b *backend) *framework.Path {
+	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/(json|der|pem)$"
 	return buildPathGetIssuer(b, pattern)
 }
 
-func buildPathGetIssuer(b *backend, pattern string) *framework.Path {
+func buildPathIssuer(b *backend, pattern string) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	fields = addIssuerRefNameFields(fields)
 
@@ -171,67 +179,75 @@ to be set on all PR secondary clusters.`,
 				"issuer_id": {
 					Type:        framework.TypeString,
 					Description: `Issuer Id`,
-					Required:    true,
+					Required:    false,
 				},
 				"issuer_name": {
 					Type:        framework.TypeString,
 					Description: `Issuer Name`,
-					Required:    true,
+					Required:    false,
 				},
 				"key_id": {
 					Type:        framework.TypeString,
 					Description: `Key Id`,
-					Required:    true,
+					Required:    false,
 				},
 				"certificate": {
 					Type:        framework.TypeString,
 					Description: `Certificate`,
-					Required:    true,
+					Required:    false,
 				},
 				"manual_chain": {
 					Type:        framework.TypeStringSlice,
 					Description: `Manual Chain`,
-					Required:    true,
+					Required:    false,
 				},
 				"ca_chain": {
 					Type:        framework.TypeStringSlice,
 					Description: `CA Chain`,
-					Required:    true,
+					Required:    false,
 				},
 				"leaf_not_after_behavior": {
 					Type:        framework.TypeString,
 					Description: `Leaf Not After Behavior`,
-					Required:    true,
+					Required:    false,
 				},
 				"usage": {
 					Type:        framework.TypeStringSlice,
 					Description: `Usage`,
-					Required:    true,
+					Required:    false,
 				},
 				"revocation_signature_algorithm": {
 					Type:        framework.TypeString,
 					Description: `Revocation Signature Alogrithm`,
-					Required:    true,
+					Required:    false,
 				},
 				"revoked": {
 					Type:        framework.TypeBool,
 					Description: `Revoked`,
-					Required:    true,
+					Required:    false,
+				},
+				"revocation_time": {
+					Type:     framework.TypeInt,
+					Required: false,
+				},
+				"revocation_time_rfc3339": {
+					Type:     framework.TypeString,
+					Required: false,
 				},
 				"issuing_certificates": {
 					Type:        framework.TypeStringSlice,
 					Description: `Issuing Certificates`,
-					Required:    true,
+					Required:    false,
 				},
 				"crl_distribution_points": {
 					Type:        framework.TypeStringSlice,
 					Description: `CRL Distribution Points`,
-					Required:    true,
+					Required:    false,
 				},
 				"ocsp_servers": {
 					Type:        framework.TypeStringSlice,
 					Description: `OSCP Servers`,
-					Required:    true,
+					Required:    false,
 				},
 			},
 		}},
@@ -272,6 +288,58 @@ to be set on all PR secondary clusters.`,
 				// Read more about why these flags are set in backend.go.
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
+			},
+		},
+
+		HelpSynopsis:    pathGetIssuerHelpSyn,
+		HelpDescription: pathGetIssuerHelpDesc,
+	}
+}
+
+func buildPathGetIssuer(b *backend, pattern string) *framework.Path {
+	fields := map[string]*framework.FieldSchema{}
+	fields = addIssuerRefField(fields)
+
+	getIssuerSchema := map[int][]framework.Response{
+		http.StatusNotModified: {{
+			Description: "Not Modified",
+		}},
+		http.StatusOK: {{
+			Description: "OK",
+			Fields: map[string]*framework.FieldSchema{
+				"issuer_id": {
+					Type:        framework.TypeString,
+					Description: `Issuer Id`,
+					Required:    true,
+				},
+				"issuer_name": {
+					Type:        framework.TypeString,
+					Description: `Issuer Name`,
+					Required:    true,
+				},
+				"certificate": {
+					Type:        framework.TypeString,
+					Description: `Certificate`,
+					Required:    true,
+				},
+				"ca_chain": {
+					Type:        framework.TypeStringSlice,
+					Description: `CA Chain`,
+					Required:    true,
+				},
+			},
+		}},
+	}
+
+	return &framework.Path{
+		// Returns a JSON entry.
+		Pattern: pattern,
+		Fields:  fields,
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback:  b.pathGetIssuer,
+				Responses: getIssuerSchema,
 			},
 		},
 
@@ -1067,9 +1135,8 @@ func buildPathGetIssuerCRL(b *backend, pattern string) *framework.Path {
 						Description: "OK",
 						Fields: map[string]*framework.FieldSchema{
 							"crl": {
-								Type:        framework.TypeString,
-								Description: ``,
-								Required:    false,
+								Type:     framework.TypeString,
+								Required: false,
 							},
 						},
 					}},

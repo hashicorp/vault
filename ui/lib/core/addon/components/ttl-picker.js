@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+/**
  * @module TtlPicker
  * TtlPicker components are used to enable and select duration values such as TTL.
  * This component renders a toggle by default, and passes all relevant attributes

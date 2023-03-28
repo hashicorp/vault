@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 
 # The ci-helper is used to determine build metadata, build Vault binaries,
 # package those binaries into artifacts, and execute tests with those artifacts.

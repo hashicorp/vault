@@ -107,7 +107,7 @@ require (
 	github.com/hashicorp/hcp-sdk-go v0.23.0
 	github.com/hashicorp/nomad/api v0.0.0-20220707195938-75f4c2237b28
 	github.com/hashicorp/raft v1.3.10
-	github.com/hashicorp/raft-autopilot v0.2.0
+	github.com/hashicorp/raft-autopilot v0.1.6
 	github.com/hashicorp/raft-boltdb/v2 v2.0.0-20210421194847-a7e34179d62c
 	github.com/hashicorp/raft-snapshot v1.0.4
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.14.0
@@ -120,7 +120,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.15.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.13.1
 	github.com/hashicorp/vault-plugin-database-couchbase v0.9.0
-	github.com/hashicorp/vault-plugin-database-elasticsearch v0.13.0
+	github.com/hashicorp/vault-plugin-database-elasticsearch v0.13.1
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.9.0
 	github.com/hashicorp/vault-plugin-database-redis v0.2.0
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.2.0
@@ -134,7 +134,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.3.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.14.2
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.9.1
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.10.0
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.10.1
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.7.0
 	github.com/hashicorp/vault-testing-stepwise v0.1.3-0.20230203193428-3a789cb2c68f
 	github.com/hashicorp/vault/api v1.9.0
@@ -201,13 +201,15 @@ require (
 	golang.org/x/sync v0.1.0
 	golang.org/x/sys v0.5.0
 	golang.org/x/term v0.5.0
-	golang.org/x/tools v0.2.0
+	golang.org/x/tools v0.4.1-0.20221208213631-3f74d914ae6d
 	google.golang.org/api v0.109.0
 	google.golang.org/grpc v1.51.0
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0
 	google.golang.org/protobuf v1.28.1
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	gopkg.in/square/go-jose.v2 v2.6.0
+	gotest.tools/gotestsum v1.9.0
+	honnef.co/go/tools v0.4.3
 	k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed
 	layeh.com/radius v0.0.0-20190322222518-890bc1058917
 	mvdan.cc/gofumpt v0.3.1
@@ -240,7 +242,7 @@ require (
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
 	github.com/Azure/go-ntlmssp v0.0.0-20200615164410-66371956d46c // indirect
 	github.com/AzureAD/microsoft-authentication-library-for-go v0.8.1 // indirect
-	github.com/BurntSushi/toml v1.2.0 // indirect
+	github.com/BurntSushi/toml v1.2.1 // indirect
 	github.com/DataDog/datadog-go v3.2.0+incompatible // indirect
 	github.com/Jeffail/gabs v1.1.1 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
@@ -293,6 +295,7 @@ require (
 	github.com/dgryski/go-metro v0.0.0-20180109044635-280f6062b5bc // indirect
 	github.com/digitalocean/godo v1.7.5 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
+	github.com/dnephin/pflag v1.0.7 // indirect
 	github.com/docker/cli v20.10.18+incompatible // indirect
 	github.com/docker/distribution v2.8.1+incompatible // indirect
 	github.com/docker/go-units v0.5.0 // indirect
@@ -302,6 +305,7 @@ require (
 	github.com/envoyproxy/protoc-gen-validate v0.1.0 // indirect
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
+	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/gabriel-vasile/mimetype v1.3.1 // indirect
 	github.com/gammazero/deque v0.0.0-20190130191400-2afb3858e9c7 // indirect
 	github.com/gammazero/workerpool v0.0.0-20190406235159-88d534f22b56 // indirect
@@ -444,7 +448,8 @@ require (
 	go.opencensus.io v0.24.0 // indirect
 	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.19.1 // indirect
-	golang.org/x/mod v0.6.0 // indirect
+	golang.org/x/exp/typeparams v0.0.0-20221208152030-732eee02a75a // indirect
+	golang.org/x/mod v0.7.0 // indirect
 	golang.org/x/text v0.7.0 // indirect
 	golang.org/x/time v0.0.0-20220411224347-583f2d630306 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect

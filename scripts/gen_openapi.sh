@@ -1,4 +1,7 @@
 #!/bin/bash
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 
 set -e
 
@@ -21,7 +24,7 @@ then
 fi
 
 vault server -dev -dev-root-token-id=root &
-sleep 2
+sleep 5
 VAULT_PID=$!
 
 defer_stop_vault() {
@@ -58,7 +61,6 @@ vault auth enable "radius"
 vault auth enable "userpass"
 
 # Enable secrets plugins
-vault secrets enable "ad"
 vault secrets enable "alicloud"
 vault secrets enable "aws"
 vault secrets enable "azure"
@@ -71,7 +73,6 @@ vault secrets enable "kv"
 vault secrets enable "ldap"
 vault secrets enable "mongodbatlas"
 vault secrets enable "nomad"
-vault secrets enable "openldap"
 vault secrets enable "pki"
 vault secrets enable "rabbitmq"
 vault secrets enable "ssh"

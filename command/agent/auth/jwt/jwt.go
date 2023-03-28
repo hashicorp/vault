@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package jwt
 
 import (
@@ -7,6 +10,7 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -18,19 +22,20 @@ import (
 )
 
 type jwtMethod struct {
-	logger                hclog.Logger
-	path                  string
-	mountPath             string
-	role                  string
-	removeJWTAfterReading bool
-	credsFound            chan struct{}
-	watchCh               chan string
-	stopCh                chan struct{}
-	doneCh                chan struct{}
-	credSuccessGate       chan struct{}
-	ticker                *time.Ticker
-	once                  *sync.Once
-	latestToken           *atomic.Value
+	logger                   hclog.Logger
+	path                     string
+	mountPath                string
+	role                     string
+	removeJWTAfterReading    bool
+	removeJWTFollowsSymlinks bool
+	credsFound               chan struct{}
+	watchCh                  chan string
+	stopCh                   chan struct{}
+	doneCh                   chan struct{}
+	credSuccessGate          chan struct{}
+	ticker                   *time.Ticker
+	once                     *sync.Once
+	latestToken              *atomic.Value
 }
 
 // NewJWTAuthMethod returns an implementation of Agent's auth.AuthMethod
@@ -83,6 +88,14 @@ func NewJWTAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		j.removeJWTAfterReading = removeJWTAfterReading
 	}
 
+	if removeJWTFollowsSymlinksRaw, ok := conf.Config["remove_jwt_follows_symlinks"]; ok {
+		removeJWTFollowsSymlinks, err := parseutil.ParseBool(removeJWTFollowsSymlinksRaw)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing 'remove_jwt_follows_symlinks' value: %w", err)
+		}
+		j.removeJWTFollowsSymlinks = removeJWTFollowsSymlinks
+	}
+
 	switch {
 	case j.path == "":
 		return nil, errors.New("'path' value is empty")
@@ -90,13 +103,24 @@ func NewJWTAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		return nil, errors.New("'role' value is empty")
 	}
 
-	// If we don't delete the JWT after reading, use a slower reload period,
-	// otherwise we would re-read the whole file every 500ms, instead of just
-	// doing a stat on the file every 500ms.
+	// Default readPeriod
 	readPeriod := 1 * time.Minute
-	if j.removeJWTAfterReading {
-		readPeriod = 500 * time.Millisecond
+
+	if jwtReadPeriodRaw, ok := conf.Config["jwt_read_period"]; ok {
+		jwtReadPeriod, err := parseutil.ParseDurationSecond(jwtReadPeriodRaw)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing 'jwt_read_period' value: %w", err)
+		}
+		readPeriod = jwtReadPeriod
+	} else {
+		// If we don't delete the JWT after reading, use a slower reload period,
+		// otherwise we would re-read the whole file every 500ms, instead of just
+		// doing a stat on the file every 500ms.
+		if j.removeJWTAfterReading {
+			readPeriod = 500 * time.Millisecond
+		}
 	}
+
 	j.ticker = time.NewTicker(readPeriod)
 
 	go j.runWatcher()
@@ -147,8 +171,8 @@ func (j *jwtMethod) runWatcher() {
 
 	case <-j.credSuccessGate:
 		// We only start the next loop once we're initially successful,
-		// since at startup Authenticate will be called and we don't want
-		// to end up immediately reauthenticating by having found a new
+		// since at startup Authenticate will be called, and we don't want
+		// to end up immediately re-authenticating by having found a new
 		// value
 	}
 
@@ -182,11 +206,27 @@ func (j *jwtMethod) ingressToken() {
 	// Check that the path refers to a file.
 	// If it's a symlink, it could still be a symlink to a directory,
 	// but os.ReadFile below will return a descriptive error.
+	evalSymlinkPath := j.path
 	switch mode := fi.Mode(); {
 	case mode.IsRegular():
 		// regular file
 	case mode&fs.ModeSymlink != 0:
-		// symlink
+		// If our file path is a symlink, we should also return early (like above) without error
+		// if the file that is linked to is not present, otherwise we will error when trying
+		// to read that file by following the link in the os.ReadFile call.
+		evalSymlinkPath, err = filepath.EvalSymlinks(j.path)
+		if err != nil {
+			j.logger.Error("error encountered evaluating symlinks", "error", err)
+			return
+		}
+		_, err := os.Stat(evalSymlinkPath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return
+			}
+			j.logger.Error("error encountered stat'ing jwt file after evaluating symlinks", "error", err)
+			return
+		}
 	default:
 		j.logger.Error("jwt file is not a regular file or symlink")
 		return
@@ -207,7 +247,13 @@ func (j *jwtMethod) ingressToken() {
 	}
 
 	if j.removeJWTAfterReading {
-		if err := os.Remove(j.path); err != nil {
+		pathToRemove := j.path
+		if j.removeJWTFollowsSymlinks {
+			// If removeJWTFollowsSymlinks is set, we follow the symlink and delete the jwt,
+			// not just the symlink that links to the jwt
+			pathToRemove = evalSymlinkPath
+		}
+		if err := os.Remove(pathToRemove); err != nil {
 			j.logger.Error("error removing jwt file", "error", err)
 		}
 	}

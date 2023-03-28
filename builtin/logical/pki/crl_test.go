@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -600,10 +603,11 @@ func TestPoP(t *testing.T) {
 	require.NotNil(t, resp)
 	require.NotEmpty(t, resp.Data["certificate"])
 
-	_, err = CBWrite(b, s, "revoke-with-key", map[string]interface{}{
+	resp, err = CBWrite(b, s, "revoke-with-key", map[string]interface{}{
 		"certificate": resp.Data["certificate"],
 		"private_key": resp.Data["private_key"],
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("revoke-with-key"), logical.UpdateOperation), resp, true)
 	require.NoError(t, err)
 
 	// Issue a second leaf, but hold onto it for now.
@@ -780,7 +784,9 @@ func TestIssuerRevocation(t *testing.T) {
 	require.NotZero(t, resp.Data["revocation_time"])
 
 	// Regenerate the CRLs
-	_, err = CBRead(b, s, "crl/rotate")
+	resp, err = CBRead(b, s, "crl/rotate")
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("crl/rotate"), logical.ReadOperation), resp, true)
+
 	require.NoError(t, err)
 
 	// Ensure the old cert isn't on its own CRL.

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -8,6 +11,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 
@@ -38,17 +42,21 @@ func (c *TransitImportCommand) Help() string {
 Usage: vault transit import PATH KEY [options...]
 
   Using the Transit or Transform key wrapping system, imports key material from
-  the base64 encoded KEY, into a new key whose API path is PATH.  To import a new version
-  into an existing key, use import_version.  The remaining options after KEY (key=value style) are passed
-  on to the transit/transform create key endpoint.  If your system or device natively supports
-  the RSA AES key wrap mechanism, you should use it directly rather than this command. 
+  the base64 encoded KEY (either directly on the CLI or via @path notation),
+  into a new key whose API path is PATH.  To import a new version into an
+  existing key, use import_version.  The remaining options after KEY (key=value
+  style) are passed on to the Transit or Transform create key endpoint.  If your
+  system or device natively supports the RSA AES key wrap mechanism (such as
+  the PKCS#11 mechanism CKM_RSA_AES_KEY_WRAP), you should use it directly
+  rather than this command.
+
 ` + c.Flags().Help()
 
 	return strings.TrimSpace(helpText)
 }
 
 func (c *TransitImportCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	return c.flagSet(FlagSetHTTP)
 }
 
 func (c *TransitImportCommand) AutocompleteArgs() complete.Predictor {
@@ -60,13 +68,20 @@ func (c *TransitImportCommand) AutocompleteFlags() complete.Flags {
 }
 
 func (c *TransitImportCommand) Run(args []string) int {
-	return importKey(c.BaseCommand, "import", args)
+	return importKey(c.BaseCommand, "import", c.Flags(), args)
 }
 
 // error codes: 1: user error, 2: internal computation error, 3: remote api call error
-func importKey(c *BaseCommand, operation string, args []string) int {
-	if len(args) != 2 {
-		c.UI.Error(fmt.Sprintf("Incorrect argument count (expected 2, got %d)", len(args)))
+func importKey(c *BaseCommand, operation string, flags *FlagSets, args []string) int {
+	// Parse and validate the arguments.
+	if err := flags.Parse(args); err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
+	args = flags.Args()
+	if len(args) < 2 {
+		c.UI.Error(fmt.Sprintf("Incorrect argument count (expected 2+, got %d). Wanted PATH to import into and KEY material.", len(args)))
 		return 1
 	}
 
@@ -89,7 +104,18 @@ func importKey(c *BaseCommand, operation string, args []string) int {
 	path := parts[1]
 	keyName := parts[2]
 
-	key, err := base64.StdEncoding.DecodeString(args[1])
+	keyMaterial := args[1]
+	if keyMaterial[0] == '@' {
+		keyMaterialBytes, err := os.ReadFile(keyMaterial[1:])
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("error reading key material file: %v", err))
+			return 1
+		}
+
+		keyMaterial = string(keyMaterialBytes)
+	}
+
+	key, err := base64.StdEncoding.DecodeString(keyMaterial)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("error base64 decoding source key material: %v", err))
 		return 1
@@ -126,14 +152,18 @@ func importKey(c *BaseCommand, operation string, args []string) int {
 	}
 	combinedCiphertext := append(wrappedAESKey, wrappedTargetKey...)
 	importCiphertext := base64.StdEncoding.EncodeToString(combinedCiphertext)
+
 	// Parse all the key options
-	data := map[string]interface{}{
-		"ciphertext": importCiphertext,
+	data, err := parseArgsData(os.Stdin, args[2:])
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Failed to parse extra K=V data: %s", err))
+		return 1
 	}
-	for _, v := range args[2:] {
-		parts := strings.Split(v, "=")
-		data[parts[0]] = parts[1]
+	if data == nil {
+		data = make(map[string]interface{}, 1)
 	}
+
+	data["ciphertext"] = importCiphertext
 
 	c.UI.Output("Submitting wrapped key to Vault transit.")
 	// Finally, call import
