@@ -6,7 +6,7 @@
           data-test-tab-your-policy
           type="button"
           name="form"
-          class="link text-decoration-none tab has-text-weight-semibold {{unless this.showExamplePolicy ' is-active'}}"
+          class="link link-plain tab has-text-weight-semibold {{unless this.showExamplePolicy ' is-active'}}"
           {{on "click" (fn (mut this.showExamplePolicy) false)}}
         >
           Your Policy
@@ -17,7 +17,7 @@
           data-test-tab-example-policy
           type="button"
           name="form"
-          class="link text-decoration-none tab has-text-weight-semibold {{if this.showExamplePolicy ' is-active'}}"
+          class="link link-plain tab has-text-weight-semibold {{if this.showExamplePolicy ' is-active'}}"
           {{on "click" (fn (mut this.showExamplePolicy) true)}}
         >
           Example Policy
