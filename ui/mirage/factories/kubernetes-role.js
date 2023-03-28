@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { Factory, trait } from 'ember-cli-mirage';
 
 const generated_role_rules = `rules:

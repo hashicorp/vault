@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 // Expires Jan 10, 2033
 export const rootPem = `-----BEGIN CERTIFICATE-----
 MIIDezCCAmOgAwIBAgIUTBbQcZijQsmd0rjd6COikPsrGyowDQYJKoZIhvcNAQEL

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 export const SELECTORS = {
   caChain: '[data-test-value-div="CA chain"] [data-test-masked-input]',
   certificate: '[data-test-value-div="Certificate"] [data-test-masked-input]',

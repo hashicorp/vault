@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 .is-invisible {
   visibility: hidden;
 }
@@ -152,6 +157,9 @@
 }
 .has-padding-m {
   padding: $spacing-m;
+}
+.has-bottom-padding-s {
+  padding-bottom: $spacing-s;
 }
 .has-padding-xs {
   padding: $spacing-xs;

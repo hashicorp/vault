@@ -1,8 +1,12 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { click, settled, visit, fillIn, currentURL } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
-
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
