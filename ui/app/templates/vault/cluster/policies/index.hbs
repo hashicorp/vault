@@ -16,7 +16,7 @@
     {{#if this.model.meta.total}}
       <ToolbarFilters>
         <NavigateInput
-          filterFocusDidChange={{action "setFilterFocus"}}
+          @filterFocusDidChange={{action "setFilterFocus"}}
           @filterDidChange={{action "setFilter"}}
           @filter={{this.filter}}
           @filterMatchesKey={{this.filterMatchesKey}}

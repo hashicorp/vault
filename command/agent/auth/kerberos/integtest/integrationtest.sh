@@ -1,4 +1,7 @@
 #!/bin/bash
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 # Instructions
 # This integration test is for the Vault Kerberos agent.
 # Before running, execute:
