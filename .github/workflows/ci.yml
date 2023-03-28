@@ -262,5 +262,9 @@ jobs:
     - test-go
     - test-ui
     runs-on: ${{ fromJSON(needs.setup.outputs.compute-standard) }}
+    if: |
+      always() &&
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled')
     steps:
     - run: echo "All Go test successfully passed"
