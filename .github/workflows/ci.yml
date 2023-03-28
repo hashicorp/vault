@@ -20,7 +20,8 @@ jobs:
       run: |
         github_repository="${{ github.repository }}"
 
-        echo "${{ github.ref_name }}"
+        echo "HEAD REF:"
+        echo "${{ github.head_ref }}"
 
         if [ "${github_repository##*/}" == "vault-enterprise" ] ; then
           # shellcheck disable=SC2129
