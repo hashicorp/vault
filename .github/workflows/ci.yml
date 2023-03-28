@@ -115,8 +115,12 @@ jobs:
     needs:
     - setup
     - setup-go-cache
-    # Don't run this job for branches starting with 'ui/', 'docs/', or 'backport/docs/'
-    if: ${{ ! (startsWith( github.ref_name, 'ui/' ) || startsWith( github.ref_name, 'docs/' ) || startsWith( github.ref_name, 'backport/docs/') ) }}
+    # Don't run this job for PR branches starting with 'ui/', 'backport/docs/', 'docs/', or 'backport/docs/'
+    if: |
+      !startsWith(github.head_ref, 'ui/') &&
+      !startsWith(github.head_ref, 'backport/ui/') &&
+      !startsWith(github.head_ref, 'docs/') &&
+      !startsWith(github.head_ref, 'backport/docs/')
     uses: ./.github/workflows/test-go.yml
     with:
       total-runners: 16
@@ -130,8 +134,12 @@ jobs:
     needs:
     - setup
     - setup-go-cache
-    # Don't run this job for branches starting with 'ui/', 'docs/', or 'backport/docs/'
-    if: ${{ ! (startsWith( github.ref_name, 'ui/' ) || startsWith( github.ref_name, 'docs/' ) || startsWith( github.ref_name, 'backport/docs/') ) }}
+    # Don't run this job for PR branches starting with 'ui/', 'backport/docs/', 'docs/', or 'backport/docs/'
+    if: |
+      !startsWith(github.head_ref, 'ui/') &&
+      !startsWith(github.head_ref, 'backport/ui/') &&
+      !startsWith(github.head_ref, 'docs/') &&
+      !startsWith(github.head_ref, 'backport/docs/')
     uses: ./.github/workflows/test-go.yml
     with:
       total-runners: 16
@@ -147,10 +155,13 @@ jobs:
     secrets: inherit
   test-go-fips:
     name: Run Go tests with FIPS configuration
-    # Only run this job for the enterprise repo if the branch doesn't start with 'ui/', 'docs/', or 'backport/docs/'.
+    # Only run this job for the enterprise repo if the PR branch doesn't start with 'ui/', 'backport/docs/', 'docs/', or 'backport/docs/'
     if: |
       needs.setup.outputs.enterprise == 1 &&
-      ! (startsWith( github.ref_name, 'ui/' ) || startsWith( github.ref_name, 'docs/' ) || startsWith( github.ref_name, 'backport/docs/'))
+      !startsWith(github.head_ref, 'ui/') &&
+      !startsWith(github.head_ref, 'backport/ui/') &&
+      !startsWith(github.head_ref, 'docs/') &&
+      !startsWith(github.head_ref, 'backport/docs/')
     needs:
     - setup
     - setup-go-cache
@@ -168,8 +179,13 @@ jobs:
     secrets: inherit
   test-ui:
     name: Test UI
-    # The test-ui Job is only run for pushes to main, ui/*, backport/ui/*, release/*, and merge*
-    if: github.ref_name == 'main' || startsWith(github.ref_name, 'ui/') || startsWith(github.ref_name, 'backport/ui/') || startsWith(github.ref_name, 'release/') || startsWith(github.ref_name, 'merge')
+    # The test-ui Job is only run for pushes to main and pull requests, ui/*, backport/ui/*, release/*, and merge*
+    if: |
+      github.ref_name == 'main' ||
+      startsWith(github.head_ref, 'ui/') ||
+      startsWith(github.head_ref, 'backport/ui/') ||
+      startsWith(github.head_ref, 'release/') ||
+      startsWith(github.head_ref, 'merge')
     needs:
     - setup
     permissions:
