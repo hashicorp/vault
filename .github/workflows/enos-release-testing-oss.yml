@@ -6,6 +6,7 @@ on:
       - enos-release-testing-oss
       - enos-release-testing-oss::*
 
+
 jobs:
   product-metadata:
     if: ${{ startsWith(github.event.client_payload.payload.branch, 'release/') }}
