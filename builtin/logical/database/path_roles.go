@@ -26,6 +26,7 @@ func pathListRoles(b *databaseBackend) []*framework.Path {
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixDatabase,
+				OperationVerb:   "list",
 				OperationSuffix: "roles",
 			},
 
@@ -41,6 +42,7 @@ func pathListRoles(b *databaseBackend) []*framework.Path {
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixDatabase,
+				OperationVerb:   "list",
 				OperationSuffix: "static-roles",
 			},
 

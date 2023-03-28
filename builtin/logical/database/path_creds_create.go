@@ -44,6 +44,7 @@ func pathCredsCreate(b *databaseBackend) []*framework.Path {
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixDatabase,
+				OperationVerb:   "read",
 				OperationSuffix: "static-role-credentials",
 			},
 

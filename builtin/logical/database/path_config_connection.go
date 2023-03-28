@@ -183,12 +183,14 @@ func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.connectionReadHandler(),
 				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "read",
 					OperationSuffix: "connection-configuration",
 				},
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.connectionDeleteHandler(),
 				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "delete",
 					OperationSuffix: "connection-configuration",
 				},
 			},
