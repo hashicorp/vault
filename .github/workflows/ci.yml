@@ -20,6 +20,8 @@ jobs:
       run: |
         github_repository="${{ github.repository }}"
 
+        echo "${{ github.ref_name }}"
+
         if [ "${github_repository##*/}" == "vault-enterprise" ] ; then
           # shellcheck disable=SC2129
           echo 'compute-standard=["self-hosted","ondemand","linux","type=m5.xlarge"]' >> "$GITHUB_OUTPUT"
