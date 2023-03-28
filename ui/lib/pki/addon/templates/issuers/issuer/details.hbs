@@ -11,12 +11,12 @@
 </PageHeader>
 
 <Page::PkiIssuerDetails
-  @issuer={{this.model}}
-  @pem={{this.pem}}
-  @der={{this.der}}
-  @isRotatable={{this.isRotatable}}
-  @canRotate={{this.model.canRotateIssuer}}
-  @canCrossSign={{this.model.canCrossSign}}
-  @canSignIntermediate={{this.model.canSignIntermediate}}
-  @canConfigure={{this.model.canConfigure}}
+  @issuer={{this.model.issuer}}
+  @pem={{this.model.pem}}
+  @der={{this.model.der}}
+  @isRotatable={{this.model.isRotatable}}
+  @canRotate={{this.model.issuer.canRotateIssuer}}
+  @canCrossSign={{this.model.issuer.canCrossSign}}
+  @canSignIntermediate={{this.model.issuer.canSignIntermediate}}
+  @canConfigure={{this.model.issuer.canConfigure}}
 />

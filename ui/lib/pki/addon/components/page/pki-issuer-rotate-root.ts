@@ -2,8 +2,6 @@ import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-import { parseCertificate } from 'vault/utils/parse-pki-cert';
-import camelizeKeys from 'vault/utils/camelize-object-keys';
 import { waitFor } from '@ember/test-waiters';
 import { task } from 'ember-concurrency';
 import errorMessage from 'vault/utils/error-message';
@@ -13,12 +11,15 @@ import Router from '@ember/routing/router';
 import FlashMessageService from 'vault/services/flash-messages';
 import SecretMountPath from 'vault/services/secret-mount-path';
 import PkiIssuerModel from 'vault/models/pki/issuer';
+import PkiActionModel from 'vault/vault/models/pki/action';
 import { Breadcrumb } from 'vault/vault/app-types';
 import { parsedParameters } from 'vault/utils/parse-pki-cert-oids';
 
 interface Args {
   oldRoot: PkiIssuerModel;
+  newRootModel: PkiActionModel;
   breadcrumbs: Breadcrumb;
+  parsingErrors: string;
 }
 
 export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
@@ -29,26 +30,11 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
 
   @tracked rotateForm = 'use-old-settings';
   @tracked showOldSettings = false;
-  @tracked newRootModel;
   @tracked alertBanner = '';
   @tracked invalidFormAlert = '';
 
-  constructor(owner: unknown, args: Args) {
-    super(owner, args);
-    const certData = parseCertificate(this.args.oldRoot.certificate);
-    if (certData.parsing_errors && certData.parsing_errors.length > 0) {
-      const errorMessage = certData.parsing_errors.map((e: Error) => e.message).join(', ');
-      this.alertBanner = errorMessage;
-    }
-    this.newRootModel = this.store.createRecord('pki/action', {
-      actionType: 'rotate-root',
-      type: 'internal',
-      ...camelizeKeys(certData), // copy old root settings over to new one
-    });
-  }
-
   get bannerType() {
-    if (this.alertBanner.includes('certificate contains')) {
+    if (this.args.parsingErrors && !this.invalidFormAlert) {
       return {
         title: 'Not all of the certificate values could be parsed and transfered to new root',
         type: 'warning',
@@ -76,7 +62,7 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
   }
 
   get pageTitle() {
-    return this.newRootModel.id ? 'View issuer certificate' : 'Generate new root';
+    return this.args.newRootModel.id ? 'View issuer certificate' : 'Generate new root';
   }
 
   get displayFields() {
@@ -89,7 +75,7 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
       'serialNumber',
       'keyId',
     ];
-    return this.newRootModel.id ? [...defaultFields, ...addKeyFields] : defaultFields;
+    return this.args.newRootModel.id ? [...defaultFields, ...addKeyFields] : defaultFields;
   }
 
   @task
@@ -97,7 +83,7 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
   *save(event: Event) {
     event.preventDefault();
     try {
-      yield this.newRootModel.save({ adapterOptions: { actionType: 'rotate-root' } });
+      yield this.args.newRootModel.save({ adapterOptions: { actionType: 'rotate-root' } });
       this.flashMessages.success('Successfully generated root.');
     } catch (e) {
       this.alertBanner = errorMessage(e);
@@ -107,7 +93,7 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
 
   @action
   async fetchDataForDownload(format: string) {
-    const endpoint = `/v1/${this.secretMountPath.currentPath}/issuer/${this.newRootModel.issuerId}/${format}`;
+    const endpoint = `/v1/${this.secretMountPath.currentPath}/issuer/${this.args.newRootModel.issuerId}/${format}`;
     const adapter = this.store.adapterFor('application');
     try {
       return adapter

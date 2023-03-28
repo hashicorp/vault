@@ -9,23 +9,18 @@
   </p.levelLeft>
 </PageHeader>
 
-{{#if this.newRootModel.id}}
+{{#if @newRootModel.id}}
   <Toolbar>
     <ToolbarActions>
       <ToolbarLink
         @route="issuers.issuer.cross-sign"
         @type="pen-tool"
-        @model={{this.newRootModel.id}}
+        @model={{@newRootModel.id}}
         data-test-pki-issuer-cross-sign
       >
         Cross-sign issuers
       </ToolbarLink>
-      <ToolbarLink
-        @route="issuers.issuer.sign"
-        @type="pen-tool"
-        @model={{this.newRootModel.id}}
-        data-test-pki-issuer-sign-int
-      >
+      <ToolbarLink @route="issuers.issuer.sign" @type="pen-tool" @model={{@newRootModel.id}} data-test-pki-issuer-sign-int>
         Sign Intermediate
       </ToolbarLink>
       <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
@@ -44,7 +39,7 @@
               <li class="action">
                 <DownloadButton
                   class="link"
-                  @filename={{this.newRootModel.id}}
+                  @filename={{@newRootModel.id}}
                   @extension="pem"
                   @fetchData={{fn this.fetchDataForDownload "pem"}}
                   data-test-issuer-download-type="pem"
@@ -55,7 +50,7 @@
               <li class="action">
                 <DownloadButton
                   class="link"
-                  @filename={{this.newRootModel.id}}
+                  @filename={{@newRootModel.id}}
                   @extension="der"
                   @fetchData={{fn this.fetchDataForDownload "der"}}
                   data-test-issuer-download-type="der"
@@ -67,18 +62,18 @@
           </nav>
         </D.Content>
       </BasicDropdown>
-      <ToolbarLink @route="issuers.issuer.edit" @model={{this.newRootModel.id}} data-test-pki-issuer-configure>
+      <ToolbarLink @route="issuers.issuer.edit" @model={{@newRootModel.id}} data-test-pki-issuer-configure>
         Configure
       </ToolbarLink>
     </ToolbarActions>
   </Toolbar>
 {{/if}}
 
-{{#if this.newRootModel.id}}
+{{#if @newRootModel.id}}
   <div class="has-top-margin-m">
     <AlertBanner @title="Next steps" @type="warning">
       Your new root has been generated.
-      {{#if this.newRootModel.privateKey}}
+      {{#if @newRootModel.privateKey}}
         Make sure to copy and save the
         <strong>private_key</strong>
         as it is only available once.
@@ -109,8 +104,8 @@
 {{/if}}
 
 {{#if (eq this.rotateForm "use-old-settings")}}
-  {{#if this.newRootModel.id}}
-    <PkiInfoTableRows @model={{this.newRootModel}} @displayFields={{this.displayFields}} />
+  {{#if @newRootModel.id}}
+    <PkiInfoTableRows @model={{@newRootModel}} @displayFields={{this.displayFields}} />
   {{else}}
     {{!  USE OLD SETTINGS FORM INPUTS  }}
     <h2 class="title is-size-5 has-border-bottom-light page-header">
@@ -120,11 +115,11 @@
       {{#if this.alertBanner}}
         <AlertBanner @title={{this.bannerType.title}} @type={{this.bannerType.type}} @message={{this.alertBanner}} />
       {{/if}}
-      {{#let (find-by "name" "commonName" this.newRootModel.allFields) as |attr|}}
-        <FormField data-test-field={{attr}} @attr={{attr}} @model={{this.newRootModel}} @showHelpText={{false}} />
+      {{#let (find-by "name" "commonName" @newRootModel.allFields) as |attr|}}
+        <FormField data-test-field={{attr}} @attr={{attr}} @model={{@newRootModel}} @showHelpText={{false}} />
       {{/let}}
-      {{#let (find-by "name" "issuerName" this.newRootModel.allFields) as |attr|}}
-        <FormField data-test-field={{attr}} @attr={{attr}} @model={{this.newRootModel}} @showHelpText={{false}} />
+      {{#let (find-by "name" "issuerName" @newRootModel.allFields) as |attr|}}
+        <FormField data-test-field={{attr}} @attr={{attr}} @model={{@newRootModel}} @showHelpText={{false}} />
       {{/let}}
       <div class="box has-slim-padding is-shadowless">
         <ToggleButton
@@ -163,7 +158,7 @@
   {{/if}}
 {{else}}
   <PkiGenerateRoot
-    @model={{this.newRootModel}}
+    @model={{@newRootModel}}
     @onCancel={{@onCancel}}
     @onComplete={{transition-to "vault.cluster.secrets.backend.pki.issuers.index"}}
     @adapterOptions={{hash actionType="rotate-root"}}
