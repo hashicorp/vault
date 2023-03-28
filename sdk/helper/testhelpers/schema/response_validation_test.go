@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package schema
 
 import (
@@ -248,6 +251,60 @@ func TestValidateResponse(t *testing.T) {
 			},
 			strict:        false,
 			errorExpected: false,
+		},
+
+		"empty schema, response has http_raw_body, strict": {
+			schema: &framework.Response{
+				Fields: map[string]*framework.FieldSchema{},
+			},
+			response: map[string]interface{}{
+				"http_raw_body": "foo",
+			},
+			strict:        true,
+			errorExpected: false,
+		},
+
+		"empty schema, response has http_raw_body, not strict": {
+			schema: &framework.Response{
+				Fields: map[string]*framework.FieldSchema{},
+			},
+			response: map[string]interface{}{
+				"http_raw_body": "foo",
+			},
+			strict:        false,
+			errorExpected: false,
+		},
+
+		"schema has http_raw_body, strict": {
+			schema: &framework.Response{
+				Fields: map[string]*framework.FieldSchema{
+					"http_raw_body": {
+						Type:     framework.TypeString,
+						Required: false,
+					},
+				},
+			},
+			response: map[string]interface{}{
+				"http_raw_body": "foo",
+			},
+			strict:        true,
+			errorExpected: true,
+		},
+
+		"schema has http_raw_body, not strict": {
+			schema: &framework.Response{
+				Fields: map[string]*framework.FieldSchema{
+					"http_raw_body": {
+						Type:     framework.TypeString,
+						Required: false,
+					},
+				},
+			},
+			response: map[string]interface{}{
+				"http_raw_body": "foo",
+			},
+			strict:        false,
+			errorExpected: true,
 		},
 	}
 
