@@ -4,7 +4,6 @@
 - address helpers and variables
 */
 /* Bulma utilities */
-.button[disabled],
 .pagination-previous[disabled],
 .pagination-next[disabled],
 .pagination-link[disabled],
@@ -12,7 +11,7 @@
   cursor: not-allowed;
 }
 
-.button, .pagination-previous,
+.pagination-previous,
 .pagination-next,
 .pagination-link,
 .pagination-ellipsis, .tabs {
@@ -47,44 +46,6 @@
   justify-content: center;
 }
      
-/* Helper layout */
-.is-block {
-  display: block !important;
-}
-
-.is-inline {
-  display: inline !important;
-}
-
-.is-inline-block {
-  display: inline-block !important;
-}
-
-.is-hidden {
-  display: none !important;
-}
-
-@media screen and (min-width: 769px), print {
-  .is-hidden-tablet {
-    display: none !important;
-  }
-}
-
-@media screen and (max-width: 768px) {
-  .is-hidden-mobile {
-    display: none !important;
-  }
-}
-
-@media screen and (max-width: 1215px) {
-  is-widescreen:not(.is-max-desktop) {
-    max-width: 1152px;
-  }
-}
-
-.is-centered {
-  justify-content: center;
-}
 /* ARG TODO: pagination is-centered used in one place */
 .pagination.is-centered .pagination-previous {
   order: 1;
