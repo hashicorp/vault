@@ -398,7 +398,7 @@ func TestRaft_VotersStayVoters(t *testing.T) {
 	// new leader won't have seen any heartbeats initially - and create a "down"
 	// node that won't be sending heartbeats.
 	testhelpers.EnsureCoreSealed(t, cluster.Cores[0])
-	time.Sleep(30 * time.Second)
+	time.Sleep(config.ServerStabilizationTime + 2*time.Second)
 	client = cluster.Cores[1].Client
 	err = errIfNonVotersExist()
 	require.NoError(t, err)
@@ -432,7 +432,7 @@ func TestRaft_Autopilot_DeadServerCleanup(t *testing.T) {
 	joinAsVoterAndUnseal(t, core1, cluster)
 	joinAsVoterAndUnseal(t, core2, cluster)
 	// Do not join node 3
-	testhelpers.WaitForActiveNodeAndSelectedStandbys(t, cluster, 3)
+	testhelpers.WaitForNodesExcludingSelectedStandbys(t, cluster, 3)
 
 	config, err := leader.Client.Sys().RaftAutopilotConfiguration()
 	require.NoError(t, err)
