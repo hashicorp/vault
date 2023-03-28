@@ -147,6 +147,7 @@ export default class SecretEngineModel extends Model {
       fields.push('config.defaultLeaseTtl', 'config.maxLeaseTtl');
     }
     fields.push(
+      'config.allowedManagedKeys',
       'config.auditNonHmacRequestKeys',
       'config.auditNonHmacResponseKeys',
       'config.passthroughRequestHeaders',
