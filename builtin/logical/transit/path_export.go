@@ -7,7 +7,6 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
@@ -101,11 +100,6 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 	switch version {
 	case "":
 		for k, v := range p.Keys {
-			// If key version only consists of a public key, continue?
-			if v.IsPrivateKeyMissing() {
-				continue
-			}
-
 			exportKey, err := getExportKey(p, &v, exportType)
 			if err != nil {
 				return nil, err
@@ -131,11 +125,6 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 		key, ok := p.Keys[strconv.Itoa(versionValue)]
 		if !ok {
 			return logical.ErrorResponse("version does not exist or cannot be found"), logical.ErrInvalidRequest
-		}
-
-		// If key version only consists of a public key, continue?
-		if key.IsPrivateKeyMissing() {
-			return nil, err
 		}
 
 		exportKey, err := getExportKey(p, &key, exportType)
@@ -172,7 +161,7 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 			return strings.TrimSpace(base64.StdEncoding.EncodeToString(key.Key)), nil
 
 		case keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096:
-			return encodeRSAPrivateKey(key.RSAKey), nil
+			return encodeRSAPrivateKey(key), nil
 		}
 
 	case exportTypeSigningKey:
@@ -197,22 +186,32 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 			return strings.TrimSpace(base64.StdEncoding.EncodeToString(key.Key)), nil
 
 		case keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096:
-			return encodeRSAPrivateKey(key.RSAKey), nil
+			return encodeRSAPrivateKey(key), nil
 		}
 	}
 
 	return "", fmt.Errorf("unknown key type %v", policy.Type)
 }
 
-func encodeRSAPrivateKey(key *rsa.PrivateKey) string {
+func encodeRSAPrivateKey(key *keysutil.KeyEntry) string {
 	// When encoding PKCS1, the PEM header should be `RSA PRIVATE KEY`. When Go
 	// has PKCS8 encoding support, we may want to change this.
-	derBytes := x509.MarshalPKCS1PrivateKey(key)
-	pemBlock := &pem.Block{
-		Type:  "RSA PRIVATE KEY",
+	var blockType string
+	var derBytes []byte
+	if !key.IsPrivateKeyMissing() {
+		blockType = "RSA PRIVATE KEY"
+		derBytes = x509.MarshalPKCS1PrivateKey(key.RSAKey)
+	} else {
+		blockType = "RSA PUBLIC KEY"
+		derBytes = x509.MarshalPKCS1PublicKey(key.RSAPublicKey)
+	}
+
+	pemBlock := pem.Block{
+		Type:  blockType,
 		Bytes: derBytes,
 	}
-	pemBytes := pem.EncodeToMemory(pemBlock)
+
+	pemBytes := pem.EncodeToMemory(&pemBlock)
 	return string(pemBytes)
 }
 
@@ -221,31 +220,45 @@ func keyEntryToECPrivateKey(k *keysutil.KeyEntry, curve elliptic.Curve) (string,
 		return "", errors.New("nil KeyEntry provided")
 	}
 
-	if k.IsPrivateKeyMissing() {
-		return "", nil
+	pubKey := ecdsa.PublicKey{
+		Curve: curve,
+		X:     k.EC_X,
+		Y:     k.EC_Y,
 	}
 
-	privKey := &ecdsa.PrivateKey{
-		PublicKey: ecdsa.PublicKey{
-			Curve: curve,
-			X:     k.EC_X,
-			Y:     k.EC_Y,
-		},
-		D: k.EC_D,
-	}
-	ecder, err := x509.MarshalECPrivateKey(privKey)
-	if err != nil {
-		return "", err
-	}
-	if ecder == nil {
-		return "", errors.New("no data returned when marshalling to private key")
+	var blockType string
+	var derBytes []byte
+	if !k.IsPrivateKeyMissing() {
+		blockType = "EC PRIVATE KEY"
+		privKey := &ecdsa.PrivateKey{
+			PublicKey: pubKey,
+			D:         k.EC_D,
+		}
+		derBytes, err := x509.MarshalECPrivateKey(privKey)
+		if err != nil {
+			return "", err
+		}
+		if derBytes == nil {
+			return "", errors.New("no data returned when marshalling to private key")
+		}
+	} else {
+		blockType = "PUBLIC KEY"
+		derBytes, err := x509.MarshalPKIXPublicKey(&pubKey)
+		if err != nil {
+			return "", err
+		}
+
+		if derBytes == nil {
+			return "", errors.New("no data returned when marshalling to public key")
+		}
 	}
 
-	block := pem.Block{
-		Type:  "EC PRIVATE KEY",
-		Bytes: ecder,
+	pemBlock := pem.Block{
+		Type:  blockType,
+		Bytes: derBytes,
 	}
-	return strings.TrimSpace(string(pem.EncodeToMemory(&block))), nil
+
+	return strings.TrimSpace(string(pem.EncodeToMemory(&pemBlock))), nil
 }
 
 const pathExportHelpSyn = `Export named encryption or signing key`

@@ -2214,10 +2214,13 @@ func TestTransit_VerifyWithImportedPublicKey(t *testing.T) {
 		t.Fatalf("expected error, should have failed to verify signature")
 	}
 }
-
 func TestTransit_ExportPublicKeyImported(t *testing.T) {
+	testTransit_ExportPublicKeyImported(t, "rsa-2048")
+	testTransit_ExportPublicKeyImported(t, "ecdsa-p256")
+}
+
+func testTransit_ExportPublicKeyImported(t *testing.T, keyType string) {
 	generateKeys(t)
-	keyType := "rsa-2048"
 	b, s := createBackendWithStorage(t)
 	keyID, err := uuid.GenerateUUID()
 	if err != nil {
@@ -2250,7 +2253,7 @@ func TestTransit_ExportPublicKeyImported(t *testing.T) {
 	// Export key
 	exportReq := &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      fmt.Sprintf("export/encryption-key/%s/latest", keyID),
+		Path:      fmt.Sprintf("export/signing-key/%s/latest", keyID),
 		Storage:   s,
 	}
 
