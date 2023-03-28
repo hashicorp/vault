@@ -250,40 +250,6 @@ fieldset[disabled] .radio,
   margin-left: 0.5em;
 }
 
-.file {
-  align-items: stretch;
-  display: flex;
-  justify-content: flex-start;
-  position: relative;
-}
-
-.file.has-name .file-cta {
-  border-bottom-right-radius: 0;
-  border-top-right-radius: 0;
-}
-
-.file.has-name .file-name {
-  border-bottom-left-radius: 0;
-  border-top-left-radius: 0;
-}
-
-.file.has-name.is-empty .file-cta {
-  border-radius: 2px;
-}
-
-.file.has-name.is-empty .file-name {
-  display: none;
-}
-
-.file.is-fullwidth .file-label {
-  width: 100%;
-}
-
-.file.is-fullwidth .file-name {
-  flex-grow: 1;
-  max-width: none;
-}
-
 /* ARG TODO: used is-normal in one place */
 @media screen and (min-width: 769px), print {
   .field-label {
