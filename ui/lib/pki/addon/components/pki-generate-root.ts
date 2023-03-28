@@ -48,7 +48,6 @@ interface Args {
  * @callback onSave - Optional - Callback triggered after model is saved, as a side effect. Results are shown on the same component
  * @callback onComplete - Callback triggered when "Done" button clicked, on results view
  * @param {Object} adapterOptions - object passed as adapterOptions on the model.save method
- * @param {Boolean} hideAlertBanner - hide alert banner that shows warning about private key material (used when form is rendered inside a parent that displays an alert banner)
  */
 export default class PkiGenerateRootComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
