@@ -998,6 +998,55 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleLeaderStatus,
 					Summary:  "Returns the high availability status and current leader instance of Vault.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							// returns `vault.LeaderResponse` struct
+							Fields: map[string]*framework.FieldSchema{
+								"ha_enabled": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"is_self": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"active_time": {
+									Type: framework.TypeTime,
+									// active_time has 'omitempty' tag, but its not a pointer so never "empty"
+									Required: true,
+								},
+								"leader_address": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"leader_cluster_address": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"performance_standby": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"performance_standby_last_remote_wal": {
+									Type:     framework.TypeInt64,
+									Required: true,
+								},
+								"last_wal": {
+									Type:     framework.TypeInt64,
+									Required: false,
+								},
+								"raft_committed_index": {
+									Type:     framework.TypeInt64,
+									Required: false,
+								},
+								"raft_applied_index": {
+									Type:     framework.TypeInt64,
+									Required: false,
+								},
+							},
+						}},
+					},
 				},
 			},
 
@@ -1022,6 +1071,17 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleHAStatus,
 					Summary:  "Check the HA status of a Vault cluster",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"nodes": {
+									Type:     framework.TypeSlice,
+									Required: true,
+								},
+							},
+						}},
+					},
 				},
 			},
 
@@ -1034,6 +1094,21 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 				logical.ListOperation: &framework.PathOperation{
 					Callback: b.handleVersionHistoryList,
 					Summary:  "Returns map of historical version change entries",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:     framework.TypeCommaStringSlice,
+									Required: true,
+								},
+								"key_info": {
+									Type:     framework.TypeKVPairs,
+									Required: true,
+								},
+							},
+						}},
+					},
 				},
 			},
 
@@ -2477,6 +2552,12 @@ func (b *SystemBackend) inFlightRequestPath() *framework.Path {
 				Callback:    b.handleInFlightRequestData,
 				Summary:     strings.TrimSpace(sysHelp["in-flight-req"][0]),
 				Description: strings.TrimSpace(sysHelp["in-flight-req"][1]),
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields:      nil, // dynamic fields
+					}},
+				},
 			},
 		},
 	}
@@ -2490,6 +2571,37 @@ func (b *SystemBackend) hostInfoPath() *framework.Path {
 				Callback:    b.handleHostInfo,
 				Summary:     strings.TrimSpace(sysHelp["host-info"][0]),
 				Description: strings.TrimSpace(sysHelp["host-info"][1]),
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"timestamp": {
+								Type:     framework.TypeTime,
+								Required: true,
+							},
+							"cpu": {
+								Type:     framework.TypeSlice,
+								Required: false,
+							},
+							"cpu_times": {
+								Type:     framework.TypeSlice,
+								Required: false,
+							},
+							"disk": {
+								Type:     framework.TypeSlice,
+								Required: false,
+							},
+							"host": {
+								Type:     framework.TypeMap,
+								Required: false,
+							},
+							"memory": {
+								Type:     framework.TypeMap,
+								Required: false,
+							},
+						},
+					}},
+				},
 			},
 		},
 		HelpSynopsis:    strings.TrimSpace(sysHelp["host-info"][0]),
