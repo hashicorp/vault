@@ -19,9 +19,6 @@ jobs:
       - uses: hashicorp/setup-terraform@v2
         with:
           terraform_wrapper: false
-          # Terraform 1.4.x introduced an issue that prevents some resources from
-          # planning. Pin to 1.3.x until it is resolved.
-          terraform_version: 1.3.9
       - uses: hashicorp/action-setup-enos@v1
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}

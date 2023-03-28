@@ -5254,12 +5254,8 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 		},
 	}
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-		// XXX: Schema response validation does not take into account
-		// response codes, preventing non-200 responses from working
-		// properly.
-		//
-		// RequestResponseCallback: schema.ResponseValidatingCallback(t),
+		HandlerFunc:             vaulthttp.Handler,
+		RequestResponseCallback: schema.ResponseValidatingCallback(t),
 	})
 	cluster.Start()
 	defer cluster.Cleanup()
