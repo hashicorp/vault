@@ -17,7 +17,7 @@ type JWSCtx struct {
 	key   jose.JSONWebKey `json:"-"`
 }
 
-func (c *JWSCtx) UnmarshalJSON(a *acmeState, jws []byte) error {
+func (c *JWSCtx) UnmarshalJSON(a *ACMEState, jws []byte) error {
 	var err error
 	if err = json.Unmarshal(jws, c); err != nil {
 		return err

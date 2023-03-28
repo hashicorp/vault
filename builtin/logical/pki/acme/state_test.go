@@ -9,7 +9,8 @@ import (
 func TestAcmeNonces(t *testing.T) {
 	t.Parallel()
 
-	var a acmeState
+	a, err := NewACMEState()
+	require.NoError(t, err)
 
 	// Simple operation should succeed.
 	nonce, _, err := a.GetNonce()
