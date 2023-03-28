@@ -265,7 +265,13 @@ in [Secondary RPC address resolution](#Secondary RPC address resolution) comes i
 Reasons why this might not work and you have to use update-primary to tell a PR
 secondary about the failover that replaced its PR primary:
 
-1. Suppose that the active node on the to-be-promoted DR secondary has only just
+1. This all depends on replication working.  If the primary's DR secondary can't
+send echoes to the primary, or if the PR secondary is far enough behind on replication,
+or if the PR secondary's DR secondary is far enough behind on replication, then
+the `core/primary-failover-addrs/dr` storage entry on the latter may not contain
+the needed addresses, and thus a manual update-primary will be needed.
+
+2. Suppose that the active node on the to-be-promoted DR secondary has only just
 become active.  As a result it hasn't yet received any heartbeat requests from its
 standbys, and so it doesn't know their addresses.  It sends its first heartbeat
 to its primary, providing only its own cluster address.  If it's been at least
@@ -279,7 +285,6 @@ address that the downstream PR secondary knows for the new PR primary is a node
 that can't service gRPC requests.  Unless the former active node can be made healthy
 again, an update-primary will be required to tell the PR secondary about the other
 primary addresses.
-
 
 # Caveats
 
