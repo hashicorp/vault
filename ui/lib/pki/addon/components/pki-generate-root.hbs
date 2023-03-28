@@ -1,15 +1,17 @@
 {{! Show results if model has an ID, which is only generated after save }}
 {{#if @model.id}}
-  <Toolbar />
-  {{#if (and @model.privateKey (not @hideAlertBanner))}}
-    <div class="has-top-margin-m">
-      <AlertBanner
-        @title="Next steps"
-        @type="warning"
-        @message="The private_key is only available once. Make sure you copy and save it now."
-      />
-    </div>
-  {{/if}}
+  {{#unless @hideAlertBanner}}
+    <Toolbar />
+    {{#if @model.privateKey}}
+      <div class="has-top-margin-m">
+        <AlertBanner
+          @title="Next steps"
+          @type="warning"
+          @message="The private_key is only available once. Make sure you copy and save it now."
+        />
+      </div>
+    {{/if}}
+  {{/unless}}
   <main class="box is-fullwidth is-sideless is-paddingless is-marginless">
     {{#each this.returnedFields as |field|}}
       {{#let (find-by "name" field @model.allFields) as |attr|}}
