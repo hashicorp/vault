@@ -37,14 +37,13 @@ func pathConfigLease(b *backend) *framework.Path {
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathLeaseRead,
 				DisplayAttrs: &framework.DisplayAttributes{
-					OperationPrefix: operationPrefixRabbitMQ,
+					OperationVerb:   "read",
 					OperationSuffix: "lease-configuration",
 				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathLeaseUpdate,
 				DisplayAttrs: &framework.DisplayAttributes{
-					OperationPrefix: operationPrefixRabbitMQ,
 					OperationVerb:   "configure",
 					OperationSuffix: "lease",
 				},
