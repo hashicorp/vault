@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
@@ -37,7 +40,7 @@ const (
 // path matches that path or not (useful specifically for the paths that
 // contain templated fields.)
 var sudoPaths = map[string]*regexp.Regexp{
-	"/auth/token/accessors/":                        regexp.MustCompile(`^/auth/token/accessors/$`),
+	"/auth/token/accessors/":                        regexp.MustCompile(`^/auth/token/accessors/?$`),
 	"/pki/root":                                     regexp.MustCompile(`^/pki/root$`),
 	"/pki/root/sign-self-issued":                    regexp.MustCompile(`^/pki/root/sign-self-issued$`),
 	"/sys/audit":                                    regexp.MustCompile(`^/sys/audit$`),
@@ -47,10 +50,10 @@ var sudoPaths = map[string]*regexp.Regexp{
 	"/sys/config/auditing/request-headers":          regexp.MustCompile(`^/sys/config/auditing/request-headers$`),
 	"/sys/config/auditing/request-headers/{header}": regexp.MustCompile(`^/sys/config/auditing/request-headers/.+$`),
 	"/sys/config/cors":                              regexp.MustCompile(`^/sys/config/cors$`),
-	"/sys/config/ui/headers/":                       regexp.MustCompile(`^/sys/config/ui/headers/$`),
+	"/sys/config/ui/headers/":                       regexp.MustCompile(`^/sys/config/ui/headers/?$`),
 	"/sys/config/ui/headers/{header}":               regexp.MustCompile(`^/sys/config/ui/headers/.+$`),
 	"/sys/leases":                                   regexp.MustCompile(`^/sys/leases$`),
-	"/sys/leases/lookup/":                           regexp.MustCompile(`^/sys/leases/lookup/$`),
+	"/sys/leases/lookup/":                           regexp.MustCompile(`^/sys/leases/lookup/?$`),
 	"/sys/leases/lookup/{prefix}":                   regexp.MustCompile(`^/sys/leases/lookup/.+$`),
 	"/sys/leases/revoke-force/{prefix}":             regexp.MustCompile(`^/sys/leases/revoke-force/.+$`),
 	"/sys/leases/revoke-prefix/{prefix}":            regexp.MustCompile(`^/sys/leases/revoke-prefix/.+$`),
@@ -70,7 +73,7 @@ var sudoPaths = map[string]*regexp.Regexp{
 	"/sys/replication/performance/primary/secondary-token": regexp.MustCompile(`^/sys/replication/performance/primary/secondary-token$`),
 	"/sys/replication/primary/secondary-token":             regexp.MustCompile(`^/sys/replication/primary/secondary-token$`),
 	"/sys/replication/reindex":                             regexp.MustCompile(`^/sys/replication/reindex$`),
-	"/sys/storage/raft/snapshot-auto/config/":              regexp.MustCompile(`^/sys/storage/raft/snapshot-auto/config/$`),
+	"/sys/storage/raft/snapshot-auto/config/":              regexp.MustCompile(`^/sys/storage/raft/snapshot-auto/config/?$`),
 	"/sys/storage/raft/snapshot-auto/config/{name}":        regexp.MustCompile(`^/sys/storage/raft/snapshot-auto/config/[^/]+$`),
 }
 

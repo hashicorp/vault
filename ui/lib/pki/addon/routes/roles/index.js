@@ -1,8 +1,15 @@
-import PkiOverviewRoute from '../overview';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
+import { withConfig } from 'pki/decorators/check-config';
 import { hash } from 'rsvp';
 
-export default class PkiRolesIndexRoute extends PkiOverviewRoute {
+@withConfig()
+export default class PkiRolesIndexRoute extends Route {
   @service store;
   @service secretMountPath;
 
@@ -20,7 +27,7 @@ export default class PkiRolesIndexRoute extends PkiOverviewRoute {
 
   model() {
     return hash({
-      hasConfig: this.hasConfig(),
+      hasConfig: this.shouldPromptConfig,
       roles: this.fetchRoles(),
       parentModel: this.modelFor('roles'),
     });

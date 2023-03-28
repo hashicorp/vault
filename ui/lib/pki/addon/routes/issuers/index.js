@@ -1,7 +1,12 @@
-import PkiOverviewRoute from '../overview';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 
-export default class PkiIssuersListRoute extends PkiOverviewRoute {
+export default class PkiIssuersListRoute extends Route {
   @service store;
   @service secretMountPath;
   @service pathHelp;

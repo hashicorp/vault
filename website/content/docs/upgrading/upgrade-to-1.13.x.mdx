@@ -6,9 +6,6 @@ description: |-
   for Vault 1.13.x. Please read it carefully.
 ---
 
-~> Note: these are **draft** notes for a future version of Vault. They should not be considered
-official guidance until the release has been completed.
-
 # Overview
 
 This page contains the list of deprecations and important or breaking changes
@@ -18,9 +15,81 @@ for Vault 1.13.x compared to 1.12. Please read it carefully.
 
 @include 'consul-dataplane-upgrade-note.mdx'
 
+### Active Directory Secrets Engine Deprecation
+
+The Active Directory (AD) secrets engine has been deprecated as of the Vault 1.13 release.
+We will continue to support the AD secrets engine in maintenance mode for six major Vault
+releases. Maintenance mode means that we will fix bugs and security issues but will not add
+new features. For additional information, see the [deprecation table](/vault/docs/deprecation)
+and [migration guide](/vault/docs/secrets/ad/migration-guide).
+
 ### AliCloud Auth Role Parameter
 
 The AliCloud auth plugin will now require the `role` parameter on login. This
 has always been documented as a required field but the requirement will now be
 enforced.
 
+### Mounts associated with removed builtin plugins will result in core shutdown on upgrade
+
+As of 1.13.0 Standalone (logical) DB Engines and the AppId Auth Method have been
+marked with the `Removed` status. Any attempt to unseal Vault with
+mounts backed by one of these builtin plugins will result in an immediate
+shutdown of the Vault core.
+
+-> **NOTE** In the event that an external plugin with the same name and type as
+a deprecated builtin is deregistered, any subsequent unseal will continue to
+unseal with an unusable auth backend, and a corresponding ERROR log.
+
+```shell-session
+$ vault plugin register -sha256=c805cf3b69f704dfcd5176ef1c7599f88adbfd7374e9c76da7f24a32a97abfe1 auth app-id
+Success! Registered plugin: app-id
+$ vault auth enable -plugin-name=app-id plugin
+Success! Enabled app-id auth method at: app-id/
+$ vault auth list -detailed | grep "app-id"
+app-id/    app-id    auth_app-id_3a8f2e24    system         system     default-service    replicated     false        false                      map[]      n/a                        0018263c-0d64-7a70-fd5c-50e05c5f5dc3    n/a        n/a                      c805cf3b69f704dfcd5176ef1c7599f88adbfd7374e9c76da7f24a32a97abfe1    n/a
+$ vault plugin deregister auth app-id
+Success! Deregistered plugin (if it was registered): app-id
+$ vault plugin list -detailed | grep "app-id"
+app-id                               auth        v1.13.0+builtin.vault                                 removed
+$ curl --header "X-Vault-Token: $VAULT_TOKEN" --request POST http://127.0.0.2:8200/v1/sys/seal
+$ vault operator unseal <key1>
+...
+$ vault operator unseal <key2>
+...
+$ vault operator unseal <key3>
+...
+$ grep "app-id" /path/to/vault.log
+[ERROR] core: skipping deprecated auth entry: name=app-id path=app-id/ error="mount entry associated with removed builtin"
+[ERROR] core: skipping initialization for nil auth backend: path=app-id/ type=app-id version="v1.13.0+builtin.vault"
+```
+
+The remediation for affected mounts is to downgrade to the previously-used version of Vault
+environment variable and replace any `Removed` feature with the
+[preferred alternative
+feature](/vault/docs/deprecation/faq#q-what-should-i-do-if-i-use-mount-filters-appid-or-any-of-the-standalone-db-engines).
+
+For more information on the phases of deprecation, see the [Deprecation Notices
+FAQ](/vault/docs/deprecation/faq#q-what-are-the-phases-of-deprecation).
+
+#### Impacted Versions
+
+Affects upgrading from any version of Vault to 1.13.x. All other upgrade paths
+are unaffected.
+
+## Known Issues
+
+@include 'tokenization-rotation-persistence.mdx'
+
+@include 'ocsp-redirect.mdx'
+
+### PKI Revocation Request Forwarding
+
+If a revocation request comes in to a standby or performance secondary node,
+for a certificate that is present locally, the request will not be correctly
+forwarded to the active node of this cluster.
+
+As a workaround, submit revocation requests to the active node only.
+
+#### Impacted Versions
+
+Affects Vault 1.13.0 only.

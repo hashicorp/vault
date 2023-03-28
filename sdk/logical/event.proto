@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 syntax = "proto3";
 
 option go_package = "github.com/hashicorp/vault/sdk/logical";
@@ -5,7 +8,6 @@ option go_package = "github.com/hashicorp/vault/sdk/logical";
 package logical;
 
 import "google/protobuf/struct.proto";
-import "google/protobuf/timestamp.proto";
 
 // EventPluginInfo contains data related to the plugin that generated an event.
 message EventPluginInfo {
@@ -49,5 +51,4 @@ message EventReceived {
     string namespace = 2;
     string event_type = 3;
     EventPluginInfo plugin_info = 4;
-    google.protobuf.Timestamp timestamp = 5;
 }

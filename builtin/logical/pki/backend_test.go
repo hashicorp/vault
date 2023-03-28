@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -29,6 +32,10 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
+
+	"github.com/hashicorp/vault/helper/testhelpers"
 
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 
@@ -2694,6 +2701,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		},
 		MountPoint: "pki/",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("root/sign-self-issued"), logical.UpdateOperation), resp, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -5246,7 +5254,8 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 		},
 	}
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
+		HandlerFunc:             vaulthttp.Handler,
+		RequestResponseCallback: schema.ResponseValidatingCallback(t),
 	})
 	cluster.Start()
 	defer cluster.Cleanup()
@@ -5966,6 +5975,7 @@ func TestPKI_ListRevokedCerts(t *testing.T) {
 
 	// Test empty cluster
 	resp, err := CBList(b, s, "certs/revoked")
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("certs/revoked"), logical.ListOperation), resp, true)
 	requireSuccessNonNilResponse(t, resp, err, "failed listing empty cluster")
 	require.Empty(t, resp.Data, "response map contained data that we did not expect")
 
@@ -6400,6 +6410,482 @@ func TestUserIDsInLeafCerts(t *testing.T) {
 	})
 	requireSuccessNonNilResponse(t, resp, err, "failed issuing leaf cert")
 	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "humanoid")
+}
+
+// TestStandby_Operations test proper forwarding for PKI requests from a standby node to the
+// active node within a cluster.
+func TestStandby_Operations(t *testing.T) {
+	conf, opts := teststorage.ClusterSetup(&vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}, nil, teststorage.InmemBackendSetup)
+	cluster := vault.NewTestCluster(t, conf, opts)
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
+	standbyCores := testhelpers.DeriveStandbyCores(t, cluster)
+	require.Greater(t, len(standbyCores), 0, "Need at least one standby core.")
+	client := standbyCores[0].Client
+
+	mountPKIEndpoint(t, client, "pki")
+
+	_, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"key_type":    "ec",
+		"common_name": "root-ca.com",
+		"ttl":         "600h",
+	})
+	require.NoError(t, err, "error setting up pki role: %v", err)
+
+	_, err = client.Logical().Write("pki/roles/example", map[string]interface{}{
+		"allowed_domains":  "example.com",
+		"allow_subdomains": "true",
+		"no_store":         "false", // make sure we store this cert
+		"ttl":              "5h",
+		"key_type":         "ec",
+	})
+	require.NoError(t, err, "error setting up pki role: %v", err)
+
+	resp, err := client.Logical().Write("pki/issue/example", map[string]interface{}{
+		"common_name": "test.example.com",
+	})
+	require.NoError(t, err, "error issuing certificate: %v", err)
+	require.NotNil(t, resp, "got nil response from issuing request")
+	serialOfCert := resp.Data["serial_number"].(string)
+
+	resp, err = client.Logical().Write("pki/revoke", map[string]interface{}{
+		"serial_number": serialOfCert,
+	})
+	require.NoError(t, err, "error revoking certificate: %v", err)
+	require.NotNil(t, resp, "got nil response from revoke request")
+}
+
+type pathAuthCheckerFunc func(t *testing.T, client *api.Client, path string, token string)
+
+func isPermDenied(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "permission denied")
+}
+
+func isUnsupportedPathOperation(err error) bool {
+	return err != nil && (strings.Contains(err.Error(), "unsupported path") || strings.Contains(err.Error(), "unsupported operation"))
+}
+
+func isDeniedOp(err error) bool {
+	return isPermDenied(err) || isUnsupportedPathOperation(err)
+}
+
+func pathShouldBeAuthed(t *testing.T, client *api.Client, path string, token string) {
+	client.SetToken("")
+	resp, err := client.Logical().ReadWithContext(ctx, path)
+	if err == nil || !isPermDenied(err) {
+		t.Fatalf("expected failure to read %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().ListWithContext(ctx, path)
+	if err == nil || !isPermDenied(err) {
+		t.Fatalf("expected failure to list %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().WriteWithContext(ctx, path, map[string]interface{}{})
+	if err == nil || !isPermDenied(err) {
+		t.Fatalf("expected failure to write %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().DeleteWithContext(ctx, path)
+	if err == nil || !isPermDenied(err) {
+		t.Fatalf("expected failure to delete %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().JSONMergePatch(ctx, path, map[string]interface{}{})
+	if err == nil || !isPermDenied(err) {
+		t.Fatalf("expected failure to patch %v while unauthed: %v / %v", path, err, resp)
+	}
+}
+
+func pathShouldBeUnauthedReadList(t *testing.T, client *api.Client, path string, token string) {
+	// Should be able to read both with and without a token.
+	client.SetToken("")
+	resp, err := client.Logical().ReadWithContext(ctx, path)
+	if err != nil && isPermDenied(err) {
+		// Read will sometimes return permission denied, when the handler
+		// does not support the given operation. Retry with the token.
+		client.SetToken(token)
+		resp2, err2 := client.Logical().ReadWithContext(ctx, path)
+		if err2 != nil && !isUnsupportedPathOperation(err2) {
+			t.Fatalf("unexpected failure to read %v while unauthed: %v / %v\nWhile authed: %v / %v", path, err, resp, err2, resp2)
+		}
+		client.SetToken("")
+	}
+	resp, err = client.Logical().ListWithContext(ctx, path)
+	if err != nil && isPermDenied(err) {
+		// List will sometimes return permission denied, when the handler
+		// does not support the given operation. Retry with the token.
+		client.SetToken(token)
+		resp2, err2 := client.Logical().ListWithContext(ctx, path)
+		if err2 != nil && !isUnsupportedPathOperation(err2) {
+			t.Fatalf("unexpected failure to list %v while unauthed: %v / %v\nWhile authed: %v / %v", path, err, resp, err2, resp2)
+		}
+		client.SetToken("")
+	}
+
+	// These should all be denied.
+	resp, err = client.Logical().WriteWithContext(ctx, path, map[string]interface{}{})
+	if err == nil || !isDeniedOp(err) {
+		if !strings.Contains(path, "ocsp") || !strings.Contains(err.Error(), "Code: 40") {
+			t.Fatalf("unexpected failure during write on read-only path %v while unauthed: %v / %v", path, err, resp)
+		}
+	}
+	resp, err = client.Logical().DeleteWithContext(ctx, path)
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during delete on read-only path %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().JSONMergePatch(ctx, path, map[string]interface{}{})
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during patch on read-only path %v while unauthed: %v / %v", path, err, resp)
+	}
+
+	// Retrying with token should allow read/list, but not modification still.
+	client.SetToken(token)
+	resp, err = client.Logical().ReadWithContext(ctx, path)
+	if err != nil && isPermDenied(err) {
+		t.Fatalf("unexpected failure to read %v while authed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().ListWithContext(ctx, path)
+	if err != nil && isPermDenied(err) {
+		t.Fatalf("unexpected failure to list %v while authed: %v / %v", path, err, resp)
+	}
+
+	// Should all be denied.
+	resp, err = client.Logical().WriteWithContext(ctx, path, map[string]interface{}{})
+	if err == nil || !isDeniedOp(err) {
+		if !strings.Contains(path, "ocsp") || !strings.Contains(err.Error(), "Code: 40") {
+			t.Fatalf("unexpected failure during write on read-only path %v while authed: %v / %v", path, err, resp)
+		}
+	}
+	resp, err = client.Logical().DeleteWithContext(ctx, path)
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during delete on read-only path %v while authed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().JSONMergePatch(ctx, path, map[string]interface{}{})
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during patch on read-only path %v while authed: %v / %v", path, err, resp)
+	}
+}
+
+func pathShouldBeUnauthedWriteOnly(t *testing.T, client *api.Client, path string, token string) {
+	client.SetToken("")
+	resp, err := client.Logical().WriteWithContext(ctx, path, map[string]interface{}{})
+	if err != nil && isPermDenied(err) {
+		t.Fatalf("unexpected failure to write %v while unauthed: %v / %v", path, err, resp)
+	}
+
+	// These should all be denied. However, on OSS, we might end up with
+	// a regular 404, which looks like err == resp == nil; hence we only
+	// fail when there's a non-nil response and/or a non-nil err.
+	resp, err = client.Logical().ReadWithContext(ctx, path)
+	if (err == nil && resp != nil) || (err != nil && !isDeniedOp(err)) {
+		t.Fatalf("unexpected failure during read on write-only path %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().ListWithContext(ctx, path)
+	if (err == nil && resp != nil) || (err != nil && !isDeniedOp(err)) {
+		t.Fatalf("unexpected failure during list on write-only path %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().DeleteWithContext(ctx, path)
+	if (err == nil && resp != nil) || (err != nil && !isDeniedOp(err)) {
+		t.Fatalf("unexpected failure during delete on write-only path %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().JSONMergePatch(ctx, path, map[string]interface{}{})
+	if (err == nil && resp != nil) || (err != nil && !isDeniedOp(err)) {
+		t.Fatalf("unexpected failure during patch on write-only path %v while unauthed: %v / %v", path, err, resp)
+	}
+
+	// Retrying with token should allow writing, but nothing else.
+	client.SetToken(token)
+	resp, err = client.Logical().WriteWithContext(ctx, path, map[string]interface{}{})
+	if err != nil && isPermDenied(err) {
+		t.Fatalf("unexpected failure to write %v while unauthed: %v / %v", path, err, resp)
+	}
+
+	// These should all be denied.
+	resp, err = client.Logical().ReadWithContext(ctx, path)
+	if (err == nil && resp != nil) || (err != nil && !isDeniedOp(err)) {
+		t.Fatalf("unexpected failure during read on write-only path %v while authed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().ListWithContext(ctx, path)
+	if (err == nil && resp != nil) || (err != nil && !isDeniedOp(err)) {
+		if resp != nil || err != nil {
+			t.Fatalf("unexpected failure during list on write-only path %v while authed: %v / %v", path, err, resp)
+		}
+	}
+	resp, err = client.Logical().DeleteWithContext(ctx, path)
+	if (err == nil && resp != nil) || (err != nil && !isDeniedOp(err)) {
+		t.Fatalf("unexpected failure during delete on write-only path %v while authed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().JSONMergePatch(ctx, path, map[string]interface{}{})
+	if (err == nil && resp != nil) || (err != nil && !isDeniedOp(err)) {
+		t.Fatalf("unexpected failure during patch on write-only path %v while authed: %v / %v", path, err, resp)
+	}
+}
+
+type pathAuthChecker int
+
+const (
+	shouldBeAuthed pathAuthChecker = iota
+	shouldBeUnauthedReadList
+	shouldBeUnauthedWriteOnly
+)
+
+var pathAuthChckerMap = map[pathAuthChecker]pathAuthCheckerFunc{
+	shouldBeAuthed:            pathShouldBeAuthed,
+	shouldBeUnauthedReadList:  pathShouldBeUnauthedReadList,
+	shouldBeUnauthedWriteOnly: pathShouldBeUnauthedWriteOnly,
+}
+
+func TestProperAuthing(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+	token := client.Token()
+
+	// Mount PKI.
+	err := client.Sys().MountWithContext(ctx, "pki", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "60h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Setup basic configuration.
+	_, err = client.Logical().WriteWithContext(ctx, "pki/root/generate/internal", map[string]interface{}{
+		"ttl":         "40h",
+		"common_name": "myvault.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().WriteWithContext(ctx, "pki/roles/test", map[string]interface{}{
+		"allow_localhost": true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := client.Logical().WriteWithContext(ctx, "pki/issue/test", map[string]interface{}{
+		"common_name": "localhost",
+	})
+	if err != nil || resp == nil {
+		t.Fatal(err)
+	}
+	serial := resp.Data["serial_number"].(string)
+
+	paths := map[string]pathAuthChecker{
+		"ca_chain":                               shouldBeUnauthedReadList,
+		"cert/ca_chain":                          shouldBeUnauthedReadList,
+		"ca":                                     shouldBeUnauthedReadList,
+		"ca/pem":                                 shouldBeUnauthedReadList,
+		"cert/" + serial:                         shouldBeUnauthedReadList,
+		"cert/" + serial + "/raw":                shouldBeUnauthedReadList,
+		"cert/" + serial + "/raw/pem":            shouldBeUnauthedReadList,
+		"cert/crl":                               shouldBeUnauthedReadList,
+		"cert/crl/raw":                           shouldBeUnauthedReadList,
+		"cert/crl/raw/pem":                       shouldBeUnauthedReadList,
+		"cert/delta-crl":                         shouldBeUnauthedReadList,
+		"cert/delta-crl/raw":                     shouldBeUnauthedReadList,
+		"cert/delta-crl/raw/pem":                 shouldBeUnauthedReadList,
+		"cert/unified-crl":                       shouldBeUnauthedReadList,
+		"cert/unified-crl/raw":                   shouldBeUnauthedReadList,
+		"cert/unified-crl/raw/pem":               shouldBeUnauthedReadList,
+		"cert/unified-delta-crl":                 shouldBeUnauthedReadList,
+		"cert/unified-delta-crl/raw":             shouldBeUnauthedReadList,
+		"cert/unified-delta-crl/raw/pem":         shouldBeUnauthedReadList,
+		"certs":                                  shouldBeAuthed,
+		"certs/revoked":                          shouldBeAuthed,
+		"certs/revocation-queue":                 shouldBeAuthed,
+		"certs/unified-revoked":                  shouldBeAuthed,
+		"config/auto-tidy":                       shouldBeAuthed,
+		"config/ca":                              shouldBeAuthed,
+		"config/cluster":                         shouldBeAuthed,
+		"config/crl":                             shouldBeAuthed,
+		"config/issuers":                         shouldBeAuthed,
+		"config/keys":                            shouldBeAuthed,
+		"config/urls":                            shouldBeAuthed,
+		"crl":                                    shouldBeUnauthedReadList,
+		"crl/pem":                                shouldBeUnauthedReadList,
+		"crl/delta":                              shouldBeUnauthedReadList,
+		"crl/delta/pem":                          shouldBeUnauthedReadList,
+		"crl/rotate":                             shouldBeAuthed,
+		"crl/rotate-delta":                       shouldBeAuthed,
+		"intermediate/cross-sign":                shouldBeAuthed,
+		"intermediate/generate/exported":         shouldBeAuthed,
+		"intermediate/generate/internal":         shouldBeAuthed,
+		"intermediate/generate/existing":         shouldBeAuthed,
+		"intermediate/generate/kms":              shouldBeAuthed,
+		"intermediate/set-signed":                shouldBeAuthed,
+		"issue/test":                             shouldBeAuthed,
+		"issuer/default":                         shouldBeAuthed,
+		"issuer/default/der":                     shouldBeUnauthedReadList,
+		"issuer/default/json":                    shouldBeUnauthedReadList,
+		"issuer/default/pem":                     shouldBeUnauthedReadList,
+		"issuer/default/crl":                     shouldBeUnauthedReadList,
+		"issuer/default/crl/pem":                 shouldBeUnauthedReadList,
+		"issuer/default/crl/der":                 shouldBeUnauthedReadList,
+		"issuer/default/crl/delta":               shouldBeUnauthedReadList,
+		"issuer/default/crl/delta/der":           shouldBeUnauthedReadList,
+		"issuer/default/crl/delta/pem":           shouldBeUnauthedReadList,
+		"issuer/default/unified-crl":             shouldBeUnauthedReadList,
+		"issuer/default/unified-crl/pem":         shouldBeUnauthedReadList,
+		"issuer/default/unified-crl/der":         shouldBeUnauthedReadList,
+		"issuer/default/unified-crl/delta":       shouldBeUnauthedReadList,
+		"issuer/default/unified-crl/delta/der":   shouldBeUnauthedReadList,
+		"issuer/default/unified-crl/delta/pem":   shouldBeUnauthedReadList,
+		"issuer/default/issue/test":              shouldBeAuthed,
+		"issuer/default/resign-crls":             shouldBeAuthed,
+		"issuer/default/revoke":                  shouldBeAuthed,
+		"issuer/default/sign-intermediate":       shouldBeAuthed,
+		"issuer/default/sign-revocation-list":    shouldBeAuthed,
+		"issuer/default/sign-self-issued":        shouldBeAuthed,
+		"issuer/default/sign-verbatim":           shouldBeAuthed,
+		"issuer/default/sign-verbatim/test":      shouldBeAuthed,
+		"issuer/default/sign/test":               shouldBeAuthed,
+		"issuers":                                shouldBeUnauthedReadList,
+		"issuers/generate/intermediate/exported": shouldBeAuthed,
+		"issuers/generate/intermediate/internal": shouldBeAuthed,
+		"issuers/generate/intermediate/existing": shouldBeAuthed,
+		"issuers/generate/intermediate/kms":      shouldBeAuthed,
+		"issuers/generate/root/exported":         shouldBeAuthed,
+		"issuers/generate/root/internal":         shouldBeAuthed,
+		"issuers/generate/root/existing":         shouldBeAuthed,
+		"issuers/generate/root/kms":              shouldBeAuthed,
+		"issuers/import/cert":                    shouldBeAuthed,
+		"issuers/import/bundle":                  shouldBeAuthed,
+		"key/default":                            shouldBeAuthed,
+		"keys":                                   shouldBeAuthed,
+		"keys/generate/internal":                 shouldBeAuthed,
+		"keys/generate/exported":                 shouldBeAuthed,
+		"keys/generate/kms":                      shouldBeAuthed,
+		"keys/import":                            shouldBeAuthed,
+		"ocsp":                                   shouldBeUnauthedWriteOnly,
+		"ocsp/dGVzdAo=":                          shouldBeUnauthedReadList,
+		"revoke":                                 shouldBeAuthed,
+		"revoke-with-key":                        shouldBeAuthed,
+		"roles/test":                             shouldBeAuthed,
+		"roles":                                  shouldBeAuthed,
+		"root":                                   shouldBeAuthed,
+		"root/generate/exported":                 shouldBeAuthed,
+		"root/generate/internal":                 shouldBeAuthed,
+		"root/generate/existing":                 shouldBeAuthed,
+		"root/generate/kms":                      shouldBeAuthed,
+		"root/replace":                           shouldBeAuthed,
+		"root/rotate/internal":                   shouldBeAuthed,
+		"root/rotate/exported":                   shouldBeAuthed,
+		"root/rotate/existing":                   shouldBeAuthed,
+		"root/rotate/kms":                        shouldBeAuthed,
+		"root/sign-intermediate":                 shouldBeAuthed,
+		"root/sign-self-issued":                  shouldBeAuthed,
+		"sign-verbatim":                          shouldBeAuthed,
+		"sign-verbatim/test":                     shouldBeAuthed,
+		"sign/test":                              shouldBeAuthed,
+		"tidy":                                   shouldBeAuthed,
+		"tidy-cancel":                            shouldBeAuthed,
+		"tidy-status":                            shouldBeAuthed,
+		"unified-crl":                            shouldBeUnauthedReadList,
+		"unified-crl/pem":                        shouldBeUnauthedReadList,
+		"unified-crl/delta":                      shouldBeUnauthedReadList,
+		"unified-crl/delta/pem":                  shouldBeUnauthedReadList,
+		"unified-ocsp":                           shouldBeUnauthedWriteOnly,
+		"unified-ocsp/dGVzdAo=":                  shouldBeUnauthedReadList,
+	}
+	for path, checkerType := range paths {
+		checker := pathAuthChckerMap[checkerType]
+		checker(t, client, "pki/"+path, token)
+	}
+
+	client.SetToken(token)
+	openAPIResp, err := client.Logical().ReadWithContext(ctx, "sys/internal/specs/openapi")
+	if err != nil {
+		t.Fatalf("failed to get openapi data: %v", err)
+	}
+
+	validatedPath := false
+	for openapi_path, raw_data := range openAPIResp.Data["paths"].(map[string]interface{}) {
+		if !strings.HasPrefix(openapi_path, "/pki/") {
+			t.Logf("Skipping path: %v", openapi_path)
+			continue
+		}
+
+		t.Logf("Validating path: %v", openapi_path)
+		validatedPath = true
+		// Substitute values in from our testing map.
+		raw_path := openapi_path[5:]
+		if strings.Contains(raw_path, "roles/") && strings.Contains(raw_path, "{name}") {
+			raw_path = strings.ReplaceAll(raw_path, "{name}", "test")
+		}
+		if strings.Contains(raw_path, "{role}") {
+			raw_path = strings.ReplaceAll(raw_path, "{role}", "test")
+		}
+		if strings.Contains(raw_path, "ocsp/") && strings.Contains(raw_path, "{req}") {
+			raw_path = strings.ReplaceAll(raw_path, "{req}", "dGVzdAo=")
+		}
+		if strings.Contains(raw_path, "{issuer_ref}") {
+			raw_path = strings.ReplaceAll(raw_path, "{issuer_ref}", "default")
+		}
+		if strings.Contains(raw_path, "{key_ref}") {
+			raw_path = strings.ReplaceAll(raw_path, "{key_ref}", "default")
+		}
+		if strings.Contains(raw_path, "{exported}") {
+			raw_path = strings.ReplaceAll(raw_path, "{exported}", "internal")
+		}
+		if strings.Contains(raw_path, "{serial}") {
+			raw_path = strings.ReplaceAll(raw_path, "{serial}", serial)
+		}
+
+		handler, present := paths[raw_path]
+		if !present {
+			t.Fatalf("OpenAPI reports PKI mount contains %v->%v but was not tested to be authed or authed.", openapi_path, raw_path)
+		}
+
+		openapi_data := raw_data.(map[string]interface{})
+		hasList := false
+		rawGetData, hasGet := openapi_data["get"]
+		if hasGet {
+			getData := rawGetData.(map[string]interface{})
+			getParams, paramsPresent := getData["parameters"].(map[string]interface{})
+			if getParams != nil && paramsPresent {
+				if _, hasList = getParams["list"]; hasList {
+					// LIST is exclusive from GET on the same endpoint usually.
+					hasGet = false
+				}
+			}
+		}
+		_, hasPost := openapi_data["post"]
+		_, hasDelete := openapi_data["delete"]
+
+		if handler == shouldBeUnauthedReadList {
+			if hasPost || hasDelete {
+				t.Fatalf("Unauthed read-only endpoints should not have POST/DELETE capabilities: %v->%v", openapi_path, raw_path)
+			}
+		} else if handler == shouldBeUnauthedWriteOnly {
+			if hasGet || hasList {
+				t.Fatalf("Unauthed write-only endpoints should not have GET/LIST capabilities: %v->%v", openapi_path, raw_path)
+			}
+		}
+	}
+
+	if !validatedPath {
+		t.Fatalf("Expected to have validated at least one path.")
+	}
 }
 
 var (

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, fillIn, render } from '@ember/test-helpers';
@@ -48,7 +53,9 @@ module('Integration | Component | pki-generate-root', function (hooks) {
     await click(SELECTORS.additionalGroupToggle);
     assert
       .dom(SELECTORS.toggleGroupDescription)
-      .hasText('These fields provide more information about the client to which the certificate belongs.');
+      .hasText(
+        'These fields provide more information about the client to which the certificate belongs. Add one item per row.'
+      );
     assert
       .dom(`[data-test-group="Additional subject fields"] ${SELECTORS.formField}`)
       .exists({ count: 7 }, '7 form fields under Additional Fields toggle');
@@ -57,7 +64,7 @@ module('Integration | Component | pki-generate-root', function (hooks) {
     assert
       .dom(SELECTORS.toggleGroupDescription)
       .hasText(
-        'SAN fields are an extension that allow you specify additional host names (sites, IP addresses, common names, etc.) to be protected by a single certificate.'
+        'SAN fields are an extension that allow you specify additional host names (sites, IP addresses, common names, etc.) to be protected by a single certificate. Add one item per row.'
       );
     assert
       .dom(`[data-test-group="Subject Alternative Name (SAN) Options"] ${SELECTORS.formField}`)
@@ -99,7 +106,7 @@ module('Integration | Component | pki-generate-root', function (hooks) {
     assert.strictEqual(this.model.type, this.type);
     assert
       .dom(`[data-test-group="Key parameters"] ${SELECTORS.formField}`)
-      .exists({ count: 3 }, '3 form fields under keyParams toggle');
+      .exists({ count: 4 }, '4 form fields under keyParams toggle');
     assert.dom(SELECTORS.fieldByName('keyName')).exists(`Key name field shown when type=${this.type}`);
     assert.dom(SELECTORS.fieldByName('keyType')).exists(`Key type field shown when type=${this.type}`);
     assert.dom(SELECTORS.fieldByName('keyBits')).exists(`Key bits field shown when type=${this.type}`);

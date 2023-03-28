@@ -1,6 +1,11 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, fillIn, click } from '@ember/test-helpers';
+import { render, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { setupEngine } from 'ember-engines/test-support';
@@ -68,28 +73,5 @@ module('Integration | Component | pki-role-generate', function (hooks) {
     assert.dom(SELECTORS.revokeButton).exists('shows the revoke button');
     assert.dom(SELECTORS.certificate).exists({ count: 1 }, 'shows certificate info row');
     assert.dom(SELECTORS.serialNumber).hasText('abcd-efgh-ijkl', 'shows serial number info row');
-  });
-
-  test('it should display validation errors', async function (assert) {
-    assert.expect(3);
-
-    await render(
-      hbs`
-      <div class="has-top-margin-xxl">
-        <PkiRoleGenerate
-          @model={{this.model}}
-          @onSuccess={{this.onSuccess}}
-        />
-       </div>
-  `,
-      { owner: this.engine }
-    );
-    await click(SELECTORS.generateButton);
-
-    assert
-      .dom(SELECTORS.commonNameInlineError)
-      .hasText('Common name is required.', 'Common name validation error renders');
-    assert.dom(SELECTORS.inlineAlert).hasText('There is an error with this form.', 'Alert renders');
-    assert.dom(SELECTORS.commonNameErrorBorder).hasClass('has-error-border');
   });
 });

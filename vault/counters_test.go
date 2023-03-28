@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -6,6 +9,7 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -23,14 +27,22 @@ func testCountActiveTokens(t *testing.T, c *Core, root string) int {
 	t.Helper()
 
 	rootCtx := namespace.RootContext(nil)
-	resp, err := c.HandleRequest(rootCtx, &logical.Request{
+	req := &logical.Request{
 		ClientToken: root,
 		Operation:   logical.ReadOperation,
 		Path:        "sys/internal/counters/tokens",
-	})
+	}
+	resp, err := c.HandleRequest(rootCtx, req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\n err: %v", resp, err)
 	}
+	schema.ValidateResponse(
+		t,
+		// we remove the `sys/` prefix b/c Core removes it before routing to the 'sys' backend
+		schema.GetResponseSchema(t, c.systemBackend.Route("internal/counters/tokens"), req.Operation),
+		resp,
+		true,
+	)
 
 	activeTokens := resp.Data["counters"].(*ActiveTokens)
 	return activeTokens.ServiceTokens.Total

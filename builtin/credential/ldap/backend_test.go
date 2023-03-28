@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package ldap
 
 import (
@@ -1231,6 +1234,7 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 			UsePre111GroupCNBehavior: new(bool),
 			RequestTimeout:           cfg.RequestTimeout,
 			UsernameAsAlias:          false,
+			DerefAliases:             "never",
 		},
 	}
 

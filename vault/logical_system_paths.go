@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -1614,8 +1617,21 @@ func (b *SystemBackend) toolsPaths() []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathHashWrite,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.pathHashWrite,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"sum": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+							},
+						}},
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["hash"][0]),
@@ -1649,8 +1665,21 @@ func (b *SystemBackend) toolsPaths() []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathRandomWrite,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.pathRandomWrite,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"random_bytes": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+							},
+						}},
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["random"][0]),
@@ -1687,6 +1716,17 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					// callback is absent because this is an unauthenticated method
 					Summary: "Lists enabled feature flags.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"feature_flags": {
+									Type:     framework.TypeCommaStringSlice,
+									Required: true,
+								},
+							},
+						}},
+					},
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-feature-flags"][0]),
@@ -1698,6 +1738,23 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathInternalUIMountsRead,
 					Summary:  "Lists all enabled and visible auth and secrets mounts.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"secret": {
+									Description: "secret mounts",
+									Type:        framework.TypeMap,
+									Required:    true,
+								},
+								"auth": {
+									Description: "auth mounts",
+									Type:        framework.TypeMap,
+									Required:    true,
+								},
+							},
+						}},
+					},
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-mounts"][0]),
@@ -1715,6 +1772,65 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathInternalUIMountRead,
 					Summary:  "Return information about the given mount.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"type": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"description": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"accessor": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"local": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"seal_wrap": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"external_entropy_access": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"options": {
+									Type:     framework.TypeMap,
+									Required: true,
+								},
+								"uuid": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"plugin_version": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"running_plugin_version": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"running_sha256": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"path": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"config": {
+									Type:     framework.TypeMap,
+									Required: true,
+								},
+							},
+						}},
+					},
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-mounts"][0]),
@@ -1726,6 +1842,17 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: pathInternalUINamespacesRead(b),
 					Summary:  "Backwards compatibility is not guaranteed for this API",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:        framework.TypeCommaStringSlice,
+									Description: "field is only returned if there are one or more namespaces",
+								},
+							},
+						}},
+					},
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-namespaces"][0]),
@@ -1737,6 +1864,29 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathInternalUIResultantACL,
 					Summary:  "Backwards compatibility is not guaranteed for this API",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "empty response returned if no client token",
+							Fields:      nil,
+						}},
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"root": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"exact_paths": {
+									Type:     framework.TypeMap,
+									Required: false,
+								},
+								"glob_paths": {
+									Type:     framework.TypeMap,
+									Required: false,
+								},
+							},
+						}},
+					},
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][0]),
@@ -1748,6 +1898,8 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathInternalCountersRequests,
 					Summary:  "Backwards compatibility is not guaranteed for this API",
+					// callback only returns errors
+					Responses: nil,
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-requests"][0]),
@@ -1759,6 +1911,17 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathInternalCountersTokens,
 					Summary:  "Backwards compatibility is not guaranteed for this API",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"counters": {
+									Type:     framework.TypeMap,
+									Required: true,
+								},
+							},
+						}},
+					},
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-tokens"][0]),
@@ -1770,6 +1933,17 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathInternalCountersEntities,
 					Summary:  "Backwards compatibility is not guaranteed for this API",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"counters": {
+									Type:     framework.TypeMap,
+									Required: true,
+								},
+							},
+						}},
+					},
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-entities"][0]),
@@ -3073,8 +3247,17 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 		{
 			Pattern: "wrapping/wrap$",
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.handleWrappingWrap,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleWrappingWrap,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							// dynamic fields
+							Fields: nil,
+						}},
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["wrap"][0]),
@@ -3092,8 +3275,20 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.handleWrappingUnwrap,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleWrappingUnwrap,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							// dynamic fields
+							Fields: nil,
+						}},
+						http.StatusNoContent: {{
+							Description: "No content",
+						}},
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["unwrap"][0]),
@@ -3113,10 +3308,48 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleWrappingLookup,
 					Summary:  "Look up wrapping properties for the given token.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"creation_ttl": {
+									Type:     framework.TypeDurationSecond,
+									Required: false,
+								},
+								"creation_time": {
+									Type:     framework.TypeTime,
+									Required: false,
+								},
+								"creation_path": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+							},
+						}},
+					},
 				},
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleWrappingLookup,
 					Summary:  "Look up wrapping properties for the requester's token.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"creation_ttl": {
+									Type:     framework.TypeDurationSecond,
+									Required: false,
+								},
+								"creation_time": {
+									Type:     framework.TypeTime,
+									Required: false,
+								},
+								"creation_path": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+							},
+						}},
+					},
 				},
 			},
 
@@ -3133,8 +3366,17 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.handleWrappingRewrap,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleWrappingRewrap,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							// dynamic fields
+							Fields: nil,
+						}},
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["rewrap"][0]),

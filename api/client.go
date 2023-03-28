@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
@@ -1362,6 +1365,7 @@ START:
 		LastOutputPolicyError = &OutputPolicyError{
 			method: req.Method,
 			path:   strings.TrimPrefix(req.URL.Path, "/v1"),
+			params: req.URL.Query(),
 		}
 		return nil, LastOutputPolicyError
 	}

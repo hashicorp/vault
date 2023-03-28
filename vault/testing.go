@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -214,6 +217,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	conf.PluginDirectory = opts.PluginDirectory
 	conf.DetectDeadlocks = opts.DetectDeadlocks
 	conf.Experiments = []string{experiments.VaultExperimentEventsAlpha1}
+	conf.censusAgent = opts.censusAgent
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
@@ -526,6 +530,9 @@ func TestAddTestPlugin(t testing.T, c *Core, name string, pluginType consts.Plug
 
 		// Copy over the file to the temp dir
 		dst := filepath.Join(tempDir, fileName)
+
+		// delete the file first to avoid notary failures in macOS
+		_ = os.Remove(dst) // ignore error
 		out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, fi.Mode())
 		if err != nil {
 			t.Fatal(err)
@@ -539,6 +546,9 @@ func TestAddTestPlugin(t testing.T, c *Core, name string, pluginType consts.Plug
 		if err != nil {
 			t.Fatal(err)
 		}
+		// Ensure that the file is closed and written. This seems to be
+		// necessary on Linux systems.
+		out.Close()
 
 		dirPath = tempDir
 	}

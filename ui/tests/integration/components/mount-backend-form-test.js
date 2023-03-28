@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { later, _cancelTimers as cancelTimers } from '@ember/runloop';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
@@ -80,6 +85,23 @@ module('Integration | Component | mount backend form', function (hooks) {
       await component.next();
       assert.strictEqual(this.model.type, 'aws', 'Updates type on model');
       assert.strictEqual(component.pathValue, 'newpath', 'keeps custom path value');
+    });
+
+    test('it does not show a selected token type when first mounting an auth method', async function (assert) {
+      await render(
+        hbs`<MountBackendForm @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
+      );
+      await component.selectType('github');
+      await component.next();
+      await component.toggleOptions();
+      assert
+        .dom('[data-test-input="config.tokenType"]')
+        .hasValue('', 'token type does not have a default value.');
+      const selectOptions = document.querySelector('[data-test-input="config.tokenType"]').options;
+      assert.strictEqual(selectOptions[1].text, 'default-service', 'first option is default-service');
+      assert.strictEqual(selectOptions[2].text, 'default-batch', 'second option is default-batch');
+      assert.strictEqual(selectOptions[3].text, 'batch', 'third option is batch');
+      assert.strictEqual(selectOptions[4].text, 'service', 'fourth option is service');
     });
 
     test('it calls mount success', async function (assert) {

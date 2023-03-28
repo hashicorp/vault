@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -40,6 +43,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/auth/jwt"
 	"github.com/hashicorp/vault/command/agent/auth/kerberos"
 	"github.com/hashicorp/vault/command/agent/auth/kubernetes"
+	"github.com/hashicorp/vault/command/agent/auth/oci"
 	"github.com/hashicorp/vault/command/agent/cache"
 	"github.com/hashicorp/vault/command/agent/cache/cacheboltdb"
 	"github.com/hashicorp/vault/command/agent/cache/cachememdb"
@@ -370,6 +374,8 @@ func (c *AgentCommand) Run(args []string) int {
 			method, err = kubernetes.NewKubernetesAuthMethod(authConfig)
 		case "approle":
 			method, err = approle.NewApproleAuthMethod(authConfig)
+		case "oci":
+			method, err = oci.NewOCIAuthMethod(authConfig, config.Vault.Address)
 		case "token_file":
 			method, err = token_file.NewTokenFileAuthMethod(authConfig)
 		case "pcf": // Deprecated.
@@ -1253,7 +1259,7 @@ func (c *AgentCommand) newLogger() (log.InterceptLogger, error) {
 	}
 
 	logCfg := &logging.LogConfig{
-		Name:              "vault-agent",
+		Name:              "agent",
 		LogLevel:          logLevel,
 		LogFormat:         logFormat,
 		LogFilePath:       c.config.LogFile,
@@ -1359,9 +1365,12 @@ func (c *AgentCommand) reloadCerts() error {
 	defer c.tlsReloadFuncsLock.RUnlock()
 
 	for _, reloadFunc := range c.tlsReloadFuncs {
-		err := reloadFunc()
-		if err != nil {
-			errors = multierror.Append(errors, err)
+		// Non-TLS listeners will have a nil reload func.
+		if reloadFunc != nil {
+			err := reloadFunc()
+			if err != nil {
+				errors = multierror.Append(errors, err)
+			}
 		}
 	}
 

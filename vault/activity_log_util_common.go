@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -5,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/axiomhq/hyperloglog"
@@ -277,6 +281,9 @@ func (a *ActivityLog) mountAccessorToMountPath(mountAccessor string) string {
 			displayPath = fmt.Sprintf(deletedMountFmt, mountAccessor)
 		} else {
 			displayPath = valResp.MountPath
+			if !strings.HasSuffix(displayPath, "/") {
+				displayPath += "/"
+			}
 		}
 	}
 	return displayPath
