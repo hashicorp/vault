@@ -10,7 +10,6 @@ label.box-label {
 .box-label {
   @extend .box;
   @extend .is-centered;
-  @extend .is-gapless;
 
   border-color: $grey-light;
   border-radius: 3px;

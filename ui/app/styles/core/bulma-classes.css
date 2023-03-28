@@ -169,67 +169,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }  
-/* Columns */
-/* ARG TODO: used in three places */
-.columns.is-variable.is-1 {
-  --columnGap: $i * 0.25rem; }
-
-.columns.is-variable {
-  --columnGap: 0.75rem;
-  margin-left: calc(-1 * var(--columnGap));
-  margin-right: calc(-1 * var(--columnGap));
-}
-
-/* Columns */
-/* ARG TODO: not used very often column.is-1 */
-.column.is-1 {
-  flex: none;
-  width: 8.33333%;
-}
-
-@media screen and (min-width: 769px), print {
-  .columns:not(.is-desktop) {
-    display: flex;
-  }
-}
-
-.columns {
-  margin-left: -0.75rem;
-  margin-right: -0.75rem;
-  margin-top: -0.75rem;
-}
-
-.columns:last-child {
-  margin-bottom: -0.75rem;
-}
-
-.columns.is-gapless {
-  margin-left: 0;
-  margin-right: 0;
-  margin-top: 0;
-}
-
-.columns.is-gapless > .column {
-  margin: 0;
-  padding: 0 !important;
-}
-
-.columns.is-gapless:not(:last-child) {
-  margin-bottom: 1.5rem;
-}
-
-.columns.is-gapless:last-child {
-  margin-bottom: 0;
-}
-
-/* Bulma Grid */
-.column {
-  display: block;
-  flex-basis: 0;
-  flex-grow: 1;
-  flex-shrink: 1;
-  padding: 0.75rem;
-}
 
 /* ARG TODO: Used in one place title.is-2 */
 @media screen and (min-width: 769px), print {  
@@ -239,54 +178,12 @@
   }
 }
 
-.columns.is-mobile > .column.is-1 {
-  flex: none;
-  width: 8.33333%;
-}
-
-.columns.is-mobile > .column.is-3 {
-  flex: none;
-  width: 25%;
-}
-
-.columns.is-mobile > .column.is-10 {
-  flex: none;
-  width: 83.33333%;
-}
-
-.columns.is-mobile > .column.is-12 {
-  flex: none;
-  width: 100%;
-}
-
 .title.is-2 {
   font-size: 2.5rem;
 }
 
 .title.is-3 {
   font-size: 1.71429rem;
-}
-
-.column.is-3 {
-  flex: none;
-  width: 25%;
-}
-
-@media screen and (min-width: 769px), print {  
-  .column.is-7, .column.is-7-tablet {
-    flex: none;
-    width: 58.33333%;
-  }
-  .column.is-10-mobile {
-    flex: none;
-    width: 83.33333%;
-  }
-}
-
-@media screen and (min-width: 769px), print {
-  .columns.is-variable.is-7-tablet {
-    --columnGap: 1.75rem;
-  }
 }
 
 .title.is-4 {
@@ -300,123 +197,25 @@
   }
 }
 
-@media screen and (min-width: 769px), print {
-  .column.is-6, .column.is-6-tablet {
-    flex: none;
-    width: 50%;
-  }
-}
-/* ARG TODO: larger screen size needs to be ordered after smaller */
-@media screen and (min-width: 1024px) {
-  .column.is-4-desktop {
-    flex: none;
-    width: 33.33333%;
-  }
-}
-
-/* ARG TODO: used in two places */
-.columns.is-multiline {
-  flex-wrap: wrap;
-}
-
-/* ARG TODO: is-desktop two places */
-@media screen and (min-width: 769px), print {
-  columns:not(.is-desktop) {
-    display: flex;
-  }
-}
-
-@media screen and (min-width: 1024px) {
-  .columns.is-desktop {
-    display: flex;
-  }
-}
-
 .title.is-5 {
   font-size: 1.25rem;
-}
-
-@media screen and (min-width: 769px), print {  
-  .column.is-5 {
-    flex: none;
-    width: 41.66667%;
-  }
 }
 
 .title.is-6 {
   font-size: 1rem;
 }
 
-@media screen and (min-width: 769px), print {  
-  .column.is-6 {
-    flex: none;
-    width: 50%;
-  }
-}
 
 .title.is-7 {
   font-size: 0.75rem;
 }
 
-@media screen and (min-width: 769px), print {
-  .column.is-9 {
-    flex: none;
-    width: 75%;
-  }
-}
-
-@media screen and (max-width: 768px) {  
-  .column.is-10-mobile {
-    flex: none;
-    width: 83.33333%;
-  }
-}
-
-@media screen and (min-width: 769px), print {
-  .column.is-10 {
-    flex: none;
-    width: 83.33333%;
-  }
-}
-
-@media screen and (min-width: 769px), print {  
-  .column.is-12 {
-    flex: none;
-    width: 100%;
-  }
-}
 
 @media screen and (max-width: 768px) {  
   .is-hidden-mobile {
     display: none !important;
   }
 }
-
-.column.is-narrow {
-  flex: none;
-  width: unset;
-}
-
-.column.is-two-thirds {
-  flex: none;
-  width: 66.6666%;
-}
-
-.column.is-half {
-  flex: none;
-  width: 50%;
-}
-
-.column.is-one-third {
-  flex: none;
-  width: 33.3333%;
-}
-
-.column.is-one-quarter {
-  flex: none;
-  width: 25%;
-}
-
 /* ARG TODO: I detected that some of these are overriden. Keeping separate so I can address later */
 .control.is-expanded {
   flex-grow: 1;
@@ -449,28 +248,6 @@
 
 .field.is-grouped.is-grouped-centered {
   justify-content: center;
-}
-
-/* ARG TODO: Only used in one place 'is-info' */
-.progress.is-info::-webkit-progress-value {
-  background-color: #3e8ed0;
-}
-
-.progress.is-info::-moz-progress-bar {
-  background-color: #3e8ed0;
-}
-
-.progress.is-info::-ms-fill {
-  background-color: #3e8ed0;
-}
-
-.progress.is-info:indeterminate {
-  background-image: linear-gradient(to right, #3e8ed0 30%, #ededed 30%);
-}
-
-/* ARG TODO: used in one place */
-.progress.is-medium {
-  height: 1.25rem;
 }
 
 .checkbox, .radio {
@@ -595,62 +372,6 @@ fieldset[disabled] .radio,
   .container:not(.is-max-desktop):not(.is-max-widescreen) {
     max-width: 1344px;
   }
-}
-
-.notification {
-  background-color: whitesmoke;
-  border-radius: 2px;
-  padding: 1.25rem 2.5rem 1.25rem 1.5rem;
-  position: relative;
-}
-
-.progress {
-  appearance: none;
-  border-radius: 9999px;
-  border: none;
-  display: block;
-  height: 1rem;
-  overflow: hidden;
-  padding: 0;
-  width: 100%;
-}
-
-/* ARG TODO: progress is-info one spot */
-.progress.is-info::-webkit-progress-value {
-  background-color: #3e8ed0;
-}
-
-.progress.is-info::-moz-progress-bar {
-  background-color: #3e8ed0;
-}
-
-.progress.is-info::-ms-fill {
-  background-color: #3e8ed0;
-}
-
-/* ARG TODO: progress success one spot */
-.progress.is-success::-webkit-progress-value {
-  background-color: #48c78e;
-}
-
-.progress.is-success::-moz-progress-bar {
-  background-color: #48c78e;
-}
-
-.progress.is-success::-ms-fill {
-  background-color: #48c78e;
-}
-
-.progress.is-success:indeterminate {
-  background-image: linear-gradient(to right, #48c78e 30%, #ededed 30%);
-}
-
-.progress.is-small {
-  height: 0.75rem;
-}
-
-.progress.is-medium {
-  height: 1.25rem;
 }
 
 /* ARG TODO: table one spot */

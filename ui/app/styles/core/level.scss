@@ -8,6 +8,10 @@
   justify-content: space-between;
 }
 
+.level code {
+  border-radius: 2px;
+}
+
 .level:not(:last-child) {
   @include vault-block;
 }
@@ -29,7 +33,9 @@
   justify-content: flex-start;
 }
 
-.level.is-mobile {
+.level.is-mobile,
+.level.is-mobile .level-left,
+.level.is-mobile .level-right {
   display: flex;
 }
 
@@ -40,6 +46,10 @@
 .level.is-mobile .level-item:not(:last-child) {
   margin-bottom: 0;
   margin-right: $size-9;
+}
+
+.level.is-mobile .level-item:not(.is-narrow) {
+  flex-grow: 1;
 }
 
 .level.has-padded-items {
