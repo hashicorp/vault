@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-// ARG TODO clean up file and define classes used in this form
 // ARG TODO return to file-name, used in two place and lots of css
 .file-name {
   box-shadow: 0 4px 1px rgba(10, 10, 10, 0.06) inset;
@@ -187,12 +186,21 @@
 }
 
 .file-input {
+  height: 0.01em;
+  left: 0;
+  outline: 0;
+  position: absolute;
+  top: 0;
+  width: 0.01em;
   visibility: hidden;
 }
 
 .file-cta {
+  border: 1px solid $ui-gray-300;
   border-radius: 2px;
   min-width: auto;
+  position: relative;
+  white-space: nowrap;
 
   .icon:first-child:last-child {
     display: inline-block;
@@ -203,6 +211,7 @@
 
 .file-name {
   @extend .input;
+  border: 1px solid $ui-gray-300;
   border-radius: 2px;
 }
 
