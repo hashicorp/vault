@@ -7,6 +7,19 @@ import (
 	jose "gopkg.in/square/go-jose.v2"
 )
 
+var AllowedOuterJWSTypes = map[string]interface{}{
+	"RS256":  true,
+	"RS384":  true,
+	"RS512":  true,
+	"PS256":  true,
+	"PS384":  true,
+	"PS512":  true,
+	"ES256":  true,
+	"ES384":  true,
+	"ES512":  true,
+	"EdDSA2": true,
+}
+
 // This wraps a JWS message structure.
 type JWSCtx struct {
 	Algo  string          `json:"alg"`
@@ -32,11 +45,24 @@ func (c *JWSCtx) UnmarshalJSON(a *ACMEState, jws []byte) error {
 	}
 
 	if c.Kid == "" && len(c.jwk) == 0 {
-		// See RFC 8555 Section 6.2 Request Authorization:
+		// See RFC 8555 Section 6.2. Request Authentication:
 		//
 		// > Either "jwk" (JSON Web Key) or "kid" (Key ID) as specified
 		// > below
 		return fmt.Errorf("invalid header: got neither required fields of 'kid' nor 'jwk'")
+	}
+
+	if _, present := AllowedOuterJWSTypes[c.Algo]; !present {
+		// See RFC 8555 Section 6.2. Request Authentication:
+		//
+		// > The JWS Protected Header MUST include the following fields:
+		// >
+		// > - "alg" (Algorithm)
+		// >
+		// >   * This field MUST NOT contain "none" or a Message
+		// >     Authentication Code (MAC) algorithm (e.g. one in which the
+		// >     algorithm registry description mentions MAC/HMAC).
+		return fmt.Errorf("invalid header: unexpected value for 'algo'")
 	}
 
 	if c.Kid != "" {
@@ -63,6 +89,11 @@ func hasValues(h jose.Header) bool {
 }
 
 func (c *JWSCtx) VerifyJWS(signature string) (map[string]interface{}, error) {
+	// See RFC 8555 Section 6.2. Request Authentication:
+	//
+	// > The JWS Unencoded Payload Option [RFC7797] MUST NOT be used
+	//
+	// This is validated by go-jose.
 	sig, err := jose.ParseSigned(signature)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing signature: %w", err)
