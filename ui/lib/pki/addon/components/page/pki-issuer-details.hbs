@@ -7,13 +7,8 @@
       </button>
     {{/if}}
     {{#if @canCrossSign}}
-      <ToolbarLink
-        @route="issuers.issuer.cross-sign"
-        @type="pen-tool"
-        @issuer={{@issuer.id}}
-        data-test-pki-issuer-cross-sign
-      >
-        Cross-sign Issuer
+      <ToolbarLink @route="issuers.issuer.cross-sign" @type="pen-tool" @model={{@issuer.id}} data-test-pki-issuer-cross-sign>
+        Cross-sign issuers
       </ToolbarLink>
     {{/if}}
     {{#if @canSignIntermediate}}

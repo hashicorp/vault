@@ -9,7 +9,23 @@
   </p.levelLeft>
 </PageHeader>
 
-{{#unless this.newRootModel.id}}
+{{#if this.newRootModel.id}}
+  <div class="has-top-margin-m">
+    <AlertBanner @title="Next steps" @type="warning">
+      Your new root has been generated. If you’re ready, you can begin cross-signing issuers now. If not, the option to
+      cross-sign is available when you use this certificate.
+      <LinkTo @route="issuers.issuer.cross-sign">
+        Cross-sign issuers
+      </LinkTo>
+      {{#if this.newRootModel.privateKey}}
+        <p class="has-top-margin-xs">
+          <Icon @name="x-circle" class="has-text-danger" />
+          The private_key is only available once. Make sure you copy and save it now.
+        </p>
+      {{/if}}
+    </AlertBanner>
+  </div>
+{{else}}
   <div class="box is-bottomless is-marginless is-flex-start">
     {{#each this.rotationOptions as |option|}}
       <RadioCard
@@ -24,7 +40,7 @@
       />
     {{/each}}
   </div>
-{{/unless}}
+{{/if}}
 
 {{#if (eq this.rotateForm "use-old-settings")}}
   {{#if this.newRootModel.id}}
@@ -82,5 +98,6 @@
     @onCancel={{@onCancel}}
     @onComplete={{transition-to "vault.cluster.secrets.backend.pki.issuers.index"}}
     @adapterOptions={{hash actionType="rotate-root"}}
+    @hideAlertBanner={{true}}
   />
 {{/if}}
