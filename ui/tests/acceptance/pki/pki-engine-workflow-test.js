@@ -1,5 +1,12 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { v4 as uuidv4 } from 'uuid';
+
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
@@ -20,7 +27,7 @@ module('Acceptance | pki workflow', function (hooks) {
   hooks.beforeEach(async function () {
     await authPage.login();
     // Setup PKI engine
-    const mountPath = `pki-workflow-${new Date().getTime()}`;
+    const mountPath = `pki-workflow-${uuidv4()}`;
     await enablePage.enable('pki', mountPath);
     this.mountPath = mountPath;
     await logout.visit();
@@ -68,15 +75,6 @@ module('Acceptance | pki workflow', function (hooks) {
     await click(SELECTORS.keysTab);
     assertEmptyState(assert, 'keys');
   });
-  test('shows pki beta banner to return to old pki on new pki configuration page', async function (assert) {
-    assert.expect(3);
-    await authPage.login(this.pkiAdminToken);
-    await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
-    assert.dom(SELECTORS.configTab).exists('Configuration tab is present');
-    assert.dom(SELECTORS.configuration.pkiBetaBanner).exists('Configuration beta banner exists');
-    await click(SELECTORS.configuration.pkiBetaBannerLink);
-    assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/configuration`);
-  });
 
   module('configuration', function (hooks) {
     hooks.beforeEach(function () {
@@ -94,7 +92,7 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.dom(SELECTORS.configuration.emptyState).doesNotExist();
       await click('[data-test-text-toggle]');
       await fillIn('[data-test-text-file-textarea]', this.pemBundle);
-      await click('[data-test-pki-ca-cert-import]');
+      await click('[data-test-pki-import-pem-bundle]');
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.mountPath}/pki/issuers`,

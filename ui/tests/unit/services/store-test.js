@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { resolve } from 'rsvp';
 import { run } from '@ember/runloop';
 import { module, test } from 'qunit';

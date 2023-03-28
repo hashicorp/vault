@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { helper as buildHelper } from '@ember/component/helper';
 import { capitalize } from '@ember/string';
 
@@ -26,12 +31,12 @@ const PKI_ENGINE_BACKEND = {
       link: 'issuers',
     },
     {
-      label: 'Certificates',
-      link: 'certificates',
-    },
-    {
       label: 'Keys',
       link: 'keys',
+    },
+    {
+      label: 'Certificates',
+      link: 'certificates',
     },
     {
       label: 'Configuration',

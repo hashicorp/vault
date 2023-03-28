@@ -1,5 +1,12 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { v4 as uuidv4 } from 'uuid';
+
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
@@ -17,7 +24,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
     this.store = this.owner.lookup('service:store');
     await authPage.login();
     // Setup PKI engine
-    const mountPath = `pki-workflow-${new Date().getTime()}`;
+    const mountPath = `pki-workflow-${uuidv4()}`;
     await enablePage.enable('pki', mountPath);
     this.mountPath = mountPath;
     await logout.visit();
@@ -163,18 +170,18 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await click(SELECTORS.issuersTab);
       issuers = this.store.peekAll('pki/issuer');
-      assert.strictEqual(issuers.length, 0, 'No issuers exist yet');
+      assert.strictEqual(issuers.length, 0, 'No issuer models exist yet');
       await click(SELECTORS.importIssuerLink);
-      issuers = this.store.peekAll('pki/issuer');
-      assert.strictEqual(issuers.length, 1, 'Issuer model created');
+      issuers = this.store.peekAll('pki/action');
+      assert.strictEqual(issuers.length, 1, 'Action model created');
       const issuer = issuers.objectAt(0);
-      assert.true(issuer.hasDirtyAttributes, 'Issuer has dirty attrs');
-      assert.true(issuer.isNew, 'Issuer is new');
+      assert.true(issuer.hasDirtyAttributes, 'Action has dirty attrs');
+      assert.true(issuer.isNew, 'Action is new');
       // Exit
       await click('[data-test-pki-ca-cert-cancel]');
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/issuers`);
-      issuers = this.store.peekAll('pki/issuer');
-      assert.strictEqual(issuers.length, 0, 'Issuer is removed from store');
+      issuers = this.store.peekAll('pki/action');
+      assert.strictEqual(issuers.length, 0, 'Action is removed from store');
     });
     test('import issuer exit via breadcrumb', async function (assert) {
       let issuers;
@@ -184,15 +191,15 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
       issuers = this.store.peekAll('pki/issuer');
       assert.strictEqual(issuers.length, 0, 'No issuers exist yet');
       await click(SELECTORS.importIssuerLink);
-      issuers = this.store.peekAll('pki/issuer');
-      assert.strictEqual(issuers.length, 1, 'Issuer model created');
+      issuers = this.store.peekAll('pki/action');
+      assert.strictEqual(issuers.length, 1, 'Action model created');
       const issuer = issuers.objectAt(0);
-      assert.true(issuer.hasDirtyAttributes, 'Issuer has dirty attrs');
-      assert.true(issuer.isNew, 'Issuer is new');
+      assert.true(issuer.hasDirtyAttributes, 'Action model has dirty attrs');
+      assert.true(issuer.isNew, 'Action model is new');
       // Exit
       await click(SELECTORS.overviewBreadcrumb);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
-      issuers = this.store.peekAll('pki/issuer');
+      issuers = this.store.peekAll('pki/action');
       assert.strictEqual(issuers.length, 0, 'Issuer is removed from store');
     });
     test('generate root exit via cancel', async function (assert) {
