@@ -104,47 +104,6 @@
   opacity: 0.5;
 }
 
-/* ARG TODO: Used in one place title.is-2 */
-@media screen and (min-width: 769px), print {  
-  .tile.is-2 {
-    flex: none;
-    width: 16.66667%;
-  }
-}
-
-.title.is-2 {
-  font-size: 2.5rem;
-}
-
-.title.is-3 {
-  font-size: 1.71429rem;
-}
-
-.title.is-4 {
-  font-size: 1.5rem;
-}
-
-@media screen and (min-width: 769px), print {
-  .tile.is-4 {
-    flex: none;
-    width: 33.33333%;
-  }
-}
-
-.title.is-5 {
-  font-size: 1.25rem;
-}
-
-.title.is-6 {
-  font-size: 1rem;
-}
-
-
-.title.is-7 {
-  font-size: 0.75rem;
-}
-
-
 @media screen and (max-width: 768px) {  
   .is-hidden-mobile {
     display: none !important;
@@ -234,11 +193,6 @@ fieldset[disabled] .radio,
 }
 
 /* CSS that's also defined elsewhere */
-/* extended */
-.is-marginless {
-  margin: 0 !important;
-}
-
 /* BULMA ELEMENTS */
 
 .container {
@@ -303,14 +257,6 @@ fieldset[disabled] .radio,
 .tag:not(body).is-success {
   background-color: #48c78e;
   color: #fff;
-}
-
-.title {
-  color:  hsl(0, 0%, 21%);
-  font-size: 2rem;
-  font-weight: 600;
-  line-height: 1.125;
-  word-break: break-word;
 }
 
 /* Modal */

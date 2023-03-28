@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
+// This file styles the following classes: title, subtitle, form-section.title
+
 .title:not(:last-child),
 .subtitle:not(:last-child) {
   display: block;
@@ -14,7 +16,11 @@
 }
 
 .title {
+  color: hsl(0, 0%, 21%);
+  font-size: 2rem;
   font-weight: $font-weight-bold;
+  line-height: 1.125;
+  word-break: break-word;
 
   > a {
     color: $black;
@@ -33,4 +39,45 @@
   text-transform: uppercase;
   font-size: $size-7;
   color: $ui-gray-500;
+}
+
+// title sizes
+.title.is-2 {
+  font-size: 2.5rem;
+}
+
+.title.is-3 {
+  font-size: 1.71429rem;
+}
+
+.title.is-4 {
+  font-size: 1.5rem;
+}
+
+.title.is-5 {
+  font-size: 1.25rem;
+}
+
+.title.is-6 {
+  font-size: 1rem;
+}
+
+.title.is-7 {
+  font-size: 0.75rem;
+}
+
+// responsive css
+/* ARG TODO: Used in one place title.is-2 */
+@media screen and (min-width: 769px), print {
+  .tile.is-2 {
+    flex: none;
+    width: 16.66667%;
+  }
+}
+
+@media screen and (min-width: 769px), print {
+  .tile.is-4 {
+    flex: none;
+    width: 33.33333%;
+  }
 }
