@@ -46,10 +46,10 @@ module('Acceptance | pki configuration', function (hooks) {
     await fillIn('[data-test-text-file-textarea]', this.pemBundle);
     await click('[data-test-pki-import-pem-bundle]');
     await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
-    await click('[data-test-delete-all-issuers-link]');
-    assert.dom('[data-test-modal-background="Delete All Issuers?"]').exists();
-    await fillIn('[data-test-delete-all-issuers-input]', 'delete-all');
-    await click('[data-test-delete-all-issuers-button]');
+    await click(SELECTORS.configuration.issuerLink);
+    assert.dom(SELECTORS.configuration.deleteAllIssuerModal).exists();
+    await fillIn(SELECTORS.configuration.deleteAllIssuerInput, 'delete-all');
+    await click(SELECTORS.configuration.deleteAllIssuerButton);
 
     assert
       .dom(SELECTORS.emptyStateTitle)
@@ -79,10 +79,10 @@ module('Acceptance | pki configuration', function (hooks) {
       max_ttl="720h"`,
     ]);
     await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
-    await click('[data-test-delete-all-issuers-link]');
-    assert.dom('[data-test-modal-background="Delete All Issuers?"]').exists();
-    await fillIn('[data-test-delete-all-issuers-input]', 'delete-all');
-    await click('[data-test-delete-all-issuers-button]');
+    await click(SELECTORS.configuration.issuerLink);
+    assert.dom(SELECTORS.configuration.deleteAllIssuerModal).exists();
+    await fillIn(SELECTORS.configuration.deleteAllIssuerInput, 'delete-all');
+    await click(SELECTORS.configuration.deleteAllIssuerButton);
 
     assert
       .dom(SELECTORS.emptyStateMessage)
@@ -134,10 +134,10 @@ module('Acceptance | pki configuration', function (hooks) {
     ]);
     await runCommands([`write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test"`]);
     await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
-    await click('[data-test-delete-all-issuers-link]');
-    assert.dom('[data-test-modal-background="Delete All Issuers?"]').exists();
-    await fillIn('[data-test-delete-all-issuers-input]', 'delete-all');
-    await click('[data-test-delete-all-issuers-button]');
+    await click(SELECTORS.configuration.issuerLink);
+    assert.dom(SELECTORS.configuration.deleteAllIssuerModal).exists();
+    await fillIn(SELECTORS.configuration.deleteAllIssuerInput, 'delete-all');
+    await click(SELECTORS.configuration.deleteAllIssuerButton);
 
     assert
       .dom(SELECTORS.emptyStateMessage)
@@ -184,10 +184,10 @@ module('Acceptance | pki configuration', function (hooks) {
     await click('[data-test-pki-import-pem-bundle]');
     await runCommands([`write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test"`]);
     await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
-    await click('[data-test-delete-all-issuers-link]');
-    assert.dom('[data-test-modal-background="Delete All Issuers?"]').exists();
-    await fillIn('[data-test-delete-all-issuers-input]', 'delete-all');
-    await click('[data-test-delete-all-issuers-button]');
+    await click(SELECTORS.configuration.issuerLink);
+    assert.dom(SELECTORS.configuration.deleteAllIssuerModal).exists();
+    await fillIn(SELECTORS.configuration.deleteAllIssuerInput, 'delete-all');
+    await click(SELECTORS.configuration.deleteAllIssuerButton);
 
     assert
       .dom(SELECTORS.emptyStateMessage)

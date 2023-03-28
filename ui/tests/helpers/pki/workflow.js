@@ -9,6 +9,7 @@ import { SELECTORS as KEYFORM } from './pki-key-form';
 import { SELECTORS as KEYPAGES } from './page/pki-keys';
 import { SELECTORS as ISSUERDETAILS } from './pki-issuer-details';
 import { SELECTORS as CONFIGURATION } from './pki-configure-create';
+import { SELECTORS as DELETE } from './pki-delete-all-issuers';
 
 export const SELECTORS = {
   breadcrumbContainer: '[data-test-breadcrumbs]',
@@ -61,5 +62,6 @@ export const SELECTORS = {
     pkiBetaBanner: '[data-test-pki-configuration-banner]',
     pkiBetaBannerLink: '[data-test-pki-configuration-banner] a',
     ...CONFIGURATION,
+    ...DELETE,
   },
 };
