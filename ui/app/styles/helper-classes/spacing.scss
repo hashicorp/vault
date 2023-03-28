@@ -45,6 +45,9 @@
 .has-top-bottom-margin {
   margin: 1.25rem 0rem;
 }
+.has-top-bottom-margin-xxs {
+  margin: $spacing-xxs 0;
+}
 .has-top-bottom-margin-negative-m {
   margin-top: -$spacing-m;
   margin-bottom: -$spacing-m;

@@ -88,11 +88,6 @@
   text-align: right !important;
 }
 
-// Text color
-.has-text-info {
-  color: $blue-500 !important;
-}
-
 // ARG TODO duplicate, need to confirm naming style.
 .has-text-align-center {
   text-align: center;
@@ -100,4 +95,21 @@
 
 .has-text-centered {
   text-align: center !important;
+}
+
+// Text color or styling
+// ARG TODO naming is not consistent, pulling these in from various places
+.has-text-info {
+  color: $blue-500 !important;
+}
+
+.is-help {
+  font-size: $size-small;
+  margin-top: 0.25rem;
+}
+
+.sub-text {
+  color: $grey;
+  margin-bottom: 0.25rem;
+  font-size: $size-8;
 }

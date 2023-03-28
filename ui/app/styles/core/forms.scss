@@ -106,22 +106,6 @@
   padding-left: 2rem;
 }
 
-.is-help {
-  font-size: $size-small;
-  margin-top: 0.25rem;
-  @each $name, $pair in $colors {
-    $color: nth($pair, 1);
-    &.is-#{$name} {
-      color: $color;
-    }
-  }
-}
-
-.sub-text {
-  color: $grey;
-  margin-bottom: 0.25rem;
-  font-size: $size-8;
-}
 .field:not(:last-child) {
   margin-bottom: 1.5rem;
 }
