@@ -19,7 +19,7 @@ const validations = {
         if (model.actionType === 'generate-root' && model.issuerName === 'default') return false;
         return true;
       },
-      message: 'Issuer name must be unique across all issuers and not be the reserved value default.',
+      message: `Issuer name must be unique across all issuers and not be the reserved value 'default'.`,
     },
   ],
 };

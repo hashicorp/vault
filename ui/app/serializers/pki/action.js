@@ -63,6 +63,17 @@ export default class PkiActionSerializer extends ApplicationSerializer {
           'private_key_format',
           'ttl',
         ];
+      case 'rotate-root':
+        return [
+          ...commonProps,
+          'issuer_name',
+          'max_path_length',
+          'not_after',
+          'not_before_duration',
+          'permitted_dns_domains',
+          'private_key_format',
+          'ttl',
+        ];
       case 'generate-csr':
         return [...commonProps, 'add_basic_constraints'];
       case 'sign-intermediate':
