@@ -40,15 +40,17 @@ var globalFlags = []string{
 
 // setupEnv parses args and may replace them and sets some env vars to known
 // values based on format options
-func setupEnv(args []string) (retArgs []string, format string, detailed bool, outputCurlString bool, outputPolicy bool) {
+func setupEnv(args []string) (retArgs []string, gf parsedGlobalFlags) {
 	var err error
 	var nextArgFormat bool
 	var haveDetailed bool
 
 	for _, arg := range args {
+		retArgs = append(retArgs, arg)
 		if nextArgFormat {
 			nextArgFormat = false
-			format = arg
+			gf.format = arg
+			retArgs = retArgs[:len(retArgs)-1]
 			continue
 		}
 
@@ -62,61 +64,71 @@ func setupEnv(args []string) (retArgs []string, format string, detailed bool, ou
 		}
 
 		if isGlobalFlag(arg, globalFlagOutputCurlString) {
-			outputCurlString = true
+			gf.outputCurlString = true
+			retArgs = retArgs[:len(retArgs)-1]
 			continue
 		}
 
 		if isGlobalFlag(arg, globalFlagOutputPolicy) {
-			outputPolicy = true
+			gf.outputPolicy = true
+			retArgs = retArgs[:len(retArgs)-1]
 			continue
 		}
 
-		// Parse a given flag here, which overrides the env var
+		// Parse the 'format' flag, which overrides the env var
 		if isGlobalFlagWithValue(arg, globalFlagFormat) {
-			format = getGlobalFlagValue(arg)
+			gf.format = getGlobalFlagValue(arg)
+			retArgs = retArgs[:len(retArgs)-1]
+			continue
 		}
 		// For backwards compat, it could be specified without an equal sign
 		if isGlobalFlag(arg, globalFlagFormat) {
 			nextArgFormat = true
+			retArgs = retArgs[:len(retArgs)-1]
+			continue
 		}
 
-		// Parse a given flag here, which overrides the env var
+		// Parse the 'detailed' flag, which overrides the env var
 		if isGlobalFlagWithValue(arg, globalFlagDetailed) {
-			detailed, err = strconv.ParseBool(getGlobalFlagValue(globalFlagDetailed))
+			gf.detailed, err = strconv.ParseBool(getGlobalFlagValue(globalFlagDetailed))
 			if err != nil {
-				detailed = false
+				gf.detailed = false
 			}
 			haveDetailed = true
+			retArgs = retArgs[:len(retArgs)-1]
+			continue
 		}
 		// For backwards compat, it could be specified without an equal sign to enable
 		// detailed output.
 		if isGlobalFlag(arg, globalFlagDetailed) {
-			detailed = true
+			gf.detailed = true
 			haveDetailed = true
+			retArgs = retArgs[:len(retArgs)-1]
+			continue
 		}
 	}
 
 	envVaultFormat := os.Getenv(EnvVaultFormat)
 	// If we did not parse a value, fetch the env var
-	if format == "" && envVaultFormat != "" {
-		format = envVaultFormat
+	if gf.format == "" && envVaultFormat != "" {
+		gf.format = envVaultFormat
 	}
 	// Lowercase for consistency
-	format = strings.ToLower(format)
-	if format == "" {
-		format = "table"
+	gf.format = strings.ToLower(gf.format)
+	if gf.format == "" {
+		gf.format = "table"
 	}
 
 	envVaultDetailed := os.Getenv(EnvVaultDetailed)
 	// If we did not parse a value, fetch the env var
 	if !haveDetailed && envVaultDetailed != "" {
-		detailed, err = strconv.ParseBool(envVaultDetailed)
+		gf.detailed, err = strconv.ParseBool(envVaultDetailed)
 		if err != nil {
-			detailed = false
+			gf.detailed = false
 		}
 	}
 
-	return args, format, detailed, outputCurlString, outputPolicy
+	return retArgs, gf
 }
 
 func isGlobalFlag(arg string, flag string) bool {
@@ -152,11 +164,7 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 		runOpts = &RunOptions{}
 	}
 
-	var format string
-	var detailed bool
-	var outputCurlString bool
-	var outputPolicy bool
-	args, format, detailed, outputCurlString, outputPolicy = setupEnv(args)
+	args, gf := setupEnv(args)
 
 	// Don't use color if disabled
 	useColor := true
@@ -172,7 +180,7 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 	}
 
 	// Only use colored UI if stdout is a tty, and not disabled
-	if useColor && format == "table" {
+	if useColor && gf.format == "table" {
 		if f, ok := runOpts.Stdout.(*os.File); ok {
 			runOpts.Stdout = colorable.NewColorable(f)
 		}
@@ -185,7 +193,7 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 	}
 
 	uiErrWriter := runOpts.Stderr
-	if outputCurlString || outputPolicy {
+	if gf.outputCurlString || gf.outputPolicy {
 		uiErrWriter = &bytes.Buffer{}
 	}
 
@@ -199,8 +207,8 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 				ErrorWriter: uiErrWriter,
 			},
 		},
-		format:   format,
-		detailed: detailed,
+		format:   gf.format,
+		detailed: gf.detailed,
 	}
 
 	serverCmdUi := &VaultUI{
@@ -212,15 +220,15 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 				Writer: runOpts.Stdout,
 			},
 		},
-		format: format,
+		format: gf.format,
 	}
 
-	if _, ok := Formatters[format]; !ok {
-		ui.Error(fmt.Sprintf("Invalid output format: %s", format))
+	if _, ok := Formatters[gf.format]; !ok {
+		ui.Error(fmt.Sprintf("Invalid output format: %s", gf.format))
 		return 1
 	}
 
-	commands := initCommands(ui, serverCmdUi, runOpts)
+	commands := initCommands(ui, serverCmdUi, runOpts, gf)
 
 	hiddenCommands := []string{"version"}
 
@@ -239,9 +247,9 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 	}
 
 	exitCode, err := cli.Run()
-	if outputCurlString {
+	if gf.outputCurlString {
 		return generateCurlString(exitCode, runOpts, uiErrWriter.(*bytes.Buffer))
-	} else if outputPolicy {
+	} else if gf.outputPolicy {
 		return generatePolicy(exitCode, runOpts, uiErrWriter.(*bytes.Buffer))
 	} else if err != nil {
 		fmt.Fprintf(runOpts.Stderr, "Error executing CLI: %s\n", err.Error())

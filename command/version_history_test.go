@@ -60,9 +60,9 @@ func TestVersionHistoryCommand_JsonOutput(t *testing.T) {
 		Client: client,
 	}
 
-	args, format, _, _, _ := setupEnv([]string{"version-history", "-format", "json"})
-	if format != "json" {
-		t.Fatalf("expected format to be %q, actual %q", "json", format)
+	args, gf := setupEnv([]string{"version-history", "-format", "json"})
+	if gf.format != "json" {
+		t.Fatalf("expected format to be %q, actual %q", "json", gf.format)
 	}
 
 	code := RunCustom(args, runOpts)

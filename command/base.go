@@ -71,6 +71,15 @@ type BaseCommand struct {
 	tokenHelper token.TokenHelper
 
 	client *api.Client
+
+	parsedGlobalFlags parsedGlobalFlags
+}
+
+type parsedGlobalFlags struct {
+	outputCurlString bool
+	outputPolicy     bool
+	detailed         bool
+	format           string
 }
 
 // Client returns the HTTP API client. The client is cached on the command to
@@ -458,20 +467,22 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			})
 
 			f.BoolVar(&BoolVar{
-				Name:    "output-curl-string",
+				Name:    globalFlagOutputCurlString,
 				Target:  &c.flagOutputCurlString,
 				Default: false,
 				Usage: "Instead of executing the request, print an equivalent cURL " +
 					"command string and exit.",
 			})
+			c.flagOutputCurlString = c.parsedGlobalFlags.outputCurlString
 
 			f.BoolVar(&BoolVar{
-				Name:    "output-policy",
+				Name:    globalFlagOutputPolicy,
 				Target:  &c.flagOutputPolicy,
 				Default: false,
 				Usage: "Instead of executing the request, print an example HCL " +
 					"policy that would be required to run this command, and exit.",
 			})
+			c.flagOutputPolicy = c.parsedGlobalFlags.outputPolicy
 
 			f.StringVar(&StringVar{
 				Name:       "unlock-key",
@@ -517,7 +528,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 
 			if bit&FlagSetOutputFormat != 0 {
 				outputSet.StringVar(&StringVar{
-					Name:       "format",
+					Name:       globalFlagFormat,
 					Target:     &c.flagFormat,
 					Default:    "table",
 					EnvVar:     EnvVaultFormat,
@@ -526,16 +537,18 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 						are "table", "json", "yaml", or "pretty". "raw" is allowed
 						for 'vault read' operations only.`,
 				})
+				c.flagFormat = c.parsedGlobalFlags.format
 			}
 
 			if bit&FlagSetOutputDetailed != 0 {
 				outputSet.BoolVar(&BoolVar{
-					Name:    "detailed",
+					Name:    globalFlagDetailed,
 					Target:  &c.flagDetailed,
 					Default: false,
 					EnvVar:  EnvVaultDetailed,
 					Usage:   "Enables additional metadata during some operations",
 				})
+				c.flagDetailed = c.parsedGlobalFlags.detailed
 			}
 		}
 

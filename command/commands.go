@@ -225,7 +225,7 @@ var (
 	initCommandsEnt = func(ui, serverCmdUi cli.Ui, runOpts *RunOptions, commands map[string]cli.CommandFactory) {}
 )
 
-func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.CommandFactory {
+func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions, gf parsedGlobalFlags) map[string]cli.CommandFactory {
 	loginHandlers := map[string]LoginHandler{
 		"alicloud": &credAliCloud.CLIHandler{},
 		"aws":      &credAws.CLIHandler{},
@@ -255,6 +255,8 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 			tokenHelper: runOpts.TokenHelper,
 			flagAddress: runOpts.Address,
 			client:      runOpts.Client,
+
+			parsedGlobalFlags: gf,
 		}
 	}
 
