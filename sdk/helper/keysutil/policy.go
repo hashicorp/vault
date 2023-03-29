@@ -1066,13 +1066,13 @@ func (p *Policy) minRSAPSSSaltLength() int {
 	return rsa.PSSSaltLengthEqualsHash
 }
 
-func (p *Policy) maxRSAPSSSaltLength(priv *rsa.PrivateKey, hash crypto.Hash) int {
+func (p *Policy) maxRSAPSSSaltLength(keyBitLen int, hash crypto.Hash) int {
 	// https://cs.opensource.google/go/go/+/refs/tags/go1.19:src/crypto/rsa/pss.go;l=288
-	return (priv.N.BitLen()-1+7)/8 - 2 - hash.Size()
+	return (keyBitLen-1+7)/8 - 2 - hash.Size()
 }
 
-func (p *Policy) validRSAPSSSaltLength(priv *rsa.PrivateKey, hash crypto.Hash, saltLength int) bool {
-	return p.minRSAPSSSaltLength() <= saltLength && saltLength <= p.maxRSAPSSSaltLength(priv, hash)
+func (p *Policy) validRSAPSSSaltLength(keyBitLen int, hash crypto.Hash, saltLength int) bool {
+	return p.minRSAPSSSaltLength() <= saltLength && saltLength <= p.maxRSAPSSSaltLength(keyBitLen, hash)
 }
 
 func (p *Policy) SignWithOptions(ver int, context, input []byte, options *SigningOptions) (*SigningResult, error) {
@@ -1210,7 +1210,7 @@ func (p *Policy) SignWithOptions(ver int, context, input []byte, options *Signin
 
 		switch sigAlgorithm {
 		case "pss":
-			if !p.validRSAPSSSaltLength(key, algo, saltLength) {
+			if !p.validRSAPSSSaltLength(key.N.BitLen(), algo, saltLength) {
 				return nil, errutil.UserError{Err: fmt.Sprintf("requested salt length %d is invalid", saltLength)}
 			}
 			sig, err = rsa.SignPSS(rand.Reader, key, algo, input, &rsa.PSSOptions{SaltLength: saltLength})
@@ -1397,17 +1397,16 @@ func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, o
 
 		switch sigAlgorithm {
 		case "pss":
-			if keyEntry.IsPrivateKeyMissing() {
-				return false, errutil.UserError{Err: "selected key does not a private part"}
+			publicKey := keyEntry.RSAPublicKey
+			if !keyEntry.IsPrivateKeyMissing() {
+				publicKey = &keyEntry.RSAKey.PublicKey
 			}
-			key := keyEntry.RSAKey
-			if !p.validRSAPSSSaltLength(key, algo, saltLength) {
+			if !p.validRSAPSSSaltLength(publicKey.N.BitLen(), algo, saltLength) {
 				return false, errutil.UserError{Err: fmt.Sprintf("requested salt length %d is invalid", saltLength)}
 			}
-			err = rsa.VerifyPSS(&key.PublicKey, algo, input, sigBytes, &rsa.PSSOptions{SaltLength: saltLength})
+			err = rsa.VerifyPSS(publicKey, algo, input, sigBytes, &rsa.PSSOptions{SaltLength: saltLength})
 		case "pkcs1v15":
-			var publicKey *rsa.PublicKey
-			publicKey = keyEntry.RSAPublicKey
+			publicKey := keyEntry.RSAPublicKey
 			if !keyEntry.IsPrivateKeyMissing() {
 				publicKey = &keyEntry.RSAKey.PublicKey
 			}

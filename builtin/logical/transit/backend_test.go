@@ -2209,11 +2209,12 @@ func TestTransit_VerifyWithImportedPublicKey(t *testing.T) {
 		},
 	}
 
-	_, err = b.HandleRequest(context.Background(), verifyReq)
-	if err == nil {
-		t.Fatalf("expected error, should have failed to verify signature")
+	verifyResp, err := b.HandleRequest(context.Background(), verifyReq)
+	if err != nil || (importResp != nil && verifyResp.IsError()) {
+		t.Fatalf("failed to verify signed data. err: %s\nresp: %#v", err, importResp)
 	}
 }
+
 func TestTransit_ExportPublicKeyImported(t *testing.T) {
 	testTransit_ExportPublicKeyImported(t, "rsa-2048")
 	testTransit_ExportPublicKeyImported(t, "ecdsa-p256")
