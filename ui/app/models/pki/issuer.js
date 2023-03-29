@@ -168,4 +168,7 @@ export default class PkiIssuerModel extends Model {
   get canConfigure() {
     return this.issuerPath.get('canUpdate') !== false;
   }
+  get name() {
+    return this.issuerName;
+  }
 }

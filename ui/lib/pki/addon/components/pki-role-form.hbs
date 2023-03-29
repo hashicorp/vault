@@ -9,23 +9,46 @@
         {{#if (eq group "default")}}
           {{#each fields as |attr|}}
             {{#if (eq attr.name "issuerRef")}}
-              <Toggle
-                @name={{concat @attr.name "-validation-toggle"}}
-                @status="success"
-                @size="small"
-                @checked={{this.showDefaultIssuer}}
-                @onChange={{fn (mut this.showDefaultIssuer)}}
-              >
-                <span class="has-text-grey">Use default issuer</span>
-              </Toggle>
-              {{#unless this.showDefaultIssuer}}
-                <SearchSelect
-                  @models={{array "pki/issuer"}}
-                  @disallowNewItems={{true}}
-                  @backend={{@model.backend}}
-                  @onChange={{this.handleIssuerInput}}
-                  {{! @fallbackComponent="input-search" }}
+              <div class="has-top-margin-m {{unless this.showDefaultIssuer 'has-bottom-margin-xs' 'has-bottom-margin-m'}}">
+                <FormFieldLabel
+                  for={{attr.name}}
+                  @label="Issuer ref"
+                  @helpText={{(if this.showHelpText attr.options.helpText)}}
+                  @subText={{attr.options.subText}}
                 />
+                <Toggle
+                  @name={{concat attr.name "-toggle"}}
+                  @status="success"
+                  @size="small"
+                  @checked={{this.showDefaultIssuer}}
+                  @onChange={{fn (mut this.showDefaultIssuer)}}
+                >
+                  <span class="has-text-grey">Use default issuer</span>
+                </Toggle>
+              </div>
+              {{#unless this.showDefaultIssuer}}
+                <div class="has-top-margin-xs has-bottom-margin-l">
+                  <div class="select is-fullwidth">
+                    <select
+                      name={{attr.name}}
+                      id={{attr.name}}
+                      {{on "change" (pipe (pick "target.value") (fn (mut @model.issuerRef)))}}
+                      data-test-input={{attr.name}}
+                    >
+                      <option value="">
+                        Select one
+                      </option>
+                      {{#each this.issuers as |val|}}
+                        <option
+                          selected={{or (eq (get @model val.issuerName) @model.issuerRef) @model.issuerRef}}
+                          value={{val.issuerName}}
+                        >
+                          {{val.issuerName}}
+                        </option>
+                      {{/each}}
+                    </select>
+                  </div>
+                </div>
               {{/unless}}
             {{else}}
               <FormField

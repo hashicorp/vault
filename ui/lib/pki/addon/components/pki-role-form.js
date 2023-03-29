@@ -33,6 +33,17 @@ export default class PkiRoleForm extends Component {
   @tracked invalidFormAlert;
   @tracked modelValidations;
   @tracked showDefaultIssuer = true;
+  @tracked issuers = [];
+
+  constructor() {
+    super(...arguments);
+
+    this.showDefaultIssuer = this.args.model.issuerRef === 'default';
+
+    this.store
+      .query('pki/issuer', { backend: this.args.model.backend })
+      .then((issuers) => (this.issuers = issuers));
+  }
 
   get breadcrumbs() {
     const crumbs = [
