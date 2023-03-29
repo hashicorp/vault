@@ -165,8 +165,8 @@ jobs:
     secrets: inherit
   test-ui:
     name: Test UI
-    # The test-ui Job is only run for pushes to main, ui/*, backport/ui/*, release/*, and merge*
-    if: github.ref_name == 'main' || startsWith(github.ref_name, 'ui/') || startsWith(github.ref_name, 'backport/ui/') || startsWith(github.ref_name, 'release/') || startsWith(github.ref_name, 'merge')
+    # The test-ui Job is only run for pushes to main and pull requests, ui/*, backport/ui/*, release/*, and merge*
+    if: github.ref_name == 'main' || startsWith(github.ref_name, 'ui/') || startsWith(github.ref_name, 'backport/ui/') || startsWith(github.ref_name, 'release/') || startsWith(github.ref_name, 'merge') || github.head_ref == 'main' || startsWith(github.head_ref, 'ui/') || startsWith(github.head_ref, 'backport/ui/') || startsWith(github.head_ref, 'release/') || startsWith(github.head_ref, 'merge')
     needs:
     - setup
     permissions:

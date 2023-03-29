@@ -3146,6 +3146,13 @@ func TestSystemBackend_rotateConfig(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
 	exp := map[string]interface{}{
 		"max_operations": absoluteOperationMaximum,
 		"interval":       0,
@@ -3164,11 +3171,22 @@ func TestSystemBackend_rotateConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req2.Path), req2.Operation),
+		resp,
+		true,
+	)
 
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation), resp,
+		true,
+	)
 
 	exp = map[string]interface{}{
 		"max_operations": int64(3221225472),
