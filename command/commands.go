@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -332,6 +335,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"events subscribe": func() (cli.Command, error) {
+			return &EventsSubscribeCommands{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"lease": func() (cli.Command, error) {
 			return &LeaseCommand{
 				BaseCommand: getBaseCommand(),
@@ -550,6 +558,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"pki reissue": func() (cli.Command, error) {
+			return &PKIReIssueCACommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"pki verify-sign": func() (cli.Command, error) {
 			return &PKIVerifySignCommand{
 				BaseCommand: getBaseCommand(),
@@ -691,6 +704,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 		},
 		"status": func() (cli.Command, error) {
 			return &StatusCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"transit": func() (cli.Command, error) {
+			return &TransitCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -83,7 +86,12 @@ func (b *SystemBackend) loginMFAPaths() []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback:                  b.Core.loginMFABackend.handleMFALoginValidate,
+					Callback: b.Core.loginMFABackend.handleMFALoginValidate,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+						}},
+					},
 					Summary:                   "Validates the login for the given MFA methods. Upon successful validation, it returns an auth response containing the client token",
 					ForwardPerformanceStandby: true,
 				},

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 //go:build !race && !hsm && !fips_140_3
 
 // NOTE: we can't use this with HSM. We can't set testing mode on and it's not

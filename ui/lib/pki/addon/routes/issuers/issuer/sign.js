@@ -1,6 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
+import { withConfirmLeave } from 'core/decorators/confirm-leave';
 
+@withConfirmLeave()
 export default class PkiIssuerSignRoute extends Route {
   @service store;
   @service secretMountPath;

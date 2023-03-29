@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -19,10 +22,11 @@ func TestCanSendEventsFromBuiltinPlugin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ch, err := c.events.Subscribe(ctx, namespace.RootNamespace, logical.EventType(eventType))
+	ch, cancel, err := c.events.Subscribe(ctx, namespace.RootNamespace, eventType)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer cancel()
 
 	// generate the event in a plugin
 	event, err := logical.NewEvent()
@@ -36,7 +40,8 @@ func TestCanSendEventsFromBuiltinPlugin(t *testing.T) {
 
 	// check that the event is routed to the subscription
 	select {
-	case received := <-ch:
+	case receivedEvent := <-ch:
+		received := receivedEvent.Payload.(*logical.EventReceived)
 		if event.Id != received.Event.Id {
 			t.Errorf("Got wrong event: %+v, expected %+v", received, event)
 		}

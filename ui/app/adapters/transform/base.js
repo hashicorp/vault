@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import ApplicationAdapter from '../application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
@@ -9,12 +14,16 @@ export default ApplicationAdapter.extend({
   },
 
   createOrUpdate(store, type, snapshot) {
+    const { backend, name } = snapshot.record;
     const serializer = store.serializerFor(type.modelName);
     const data = serializer.serialize(snapshot);
-    const { id } = snapshot;
-    const url = this.url(snapshot.record.get('backend'), type.modelName, id);
-
-    return this.ajax(url, 'POST', { data });
+    const url = this.url(backend, type.modelName, name);
+    return this.ajax(url, 'POST', { data }).then((resp) => {
+      // Ember data doesn't like 204 responses except for DELETE method
+      const response = resp || { data: {} };
+      response.data.name = name;
+      return response;
+    });
   },
 
   createRecord() {
@@ -42,9 +51,12 @@ export default ApplicationAdapter.extend({
   fetchByQuery(query) {
     const { backend, modelName, id } = query;
     return this.ajax(this.url(backend, modelName, id), 'GET').then((resp) => {
+      // The API response doesn't explicitly include the name/id, so add it here
       return {
         ...resp,
         backend,
+        id,
+        name: id,
       };
     });
   },
@@ -55,9 +67,9 @@ export default ApplicationAdapter.extend({
 
   queryRecord(store, type, query) {
     return this.ajax(this.url(query.backend, type.modelName, query.id), 'GET').then((result) => {
-      // CBS TODO: Add name to response and unmap name <> id on models
       return {
         id: query.id,
+        name: query.id,
         ...result,
       };
     });

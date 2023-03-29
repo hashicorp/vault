@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Application from '@ember/application';
 import Resolver from 'ember-resolver';
 import loadInitializers from 'ember-load-initializers';
@@ -15,16 +20,7 @@ export default class App extends Application {
     },
     replication: {
       dependencies: {
-        services: [
-          'auth',
-          'flash-messages',
-          'namespace',
-          'replication-mode',
-          'router',
-          'store',
-          'version',
-          'wizard',
-        ],
+        services: ['auth', 'flash-messages', 'namespace', 'replication-mode', 'router', 'store', 'version'],
         externalRoutes: {
           replication: 'vault.cluster.replication.index',
         },
@@ -41,7 +37,6 @@ export default class App extends Application {
           'router',
           'store',
           'version',
-          'wizard',
           'secret-mount-path',
         ],
         externalRoutes: {
@@ -69,7 +64,6 @@ export default class App extends Application {
           'secret-mount-path',
           'store',
           'version',
-          'wizard',
         ],
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',

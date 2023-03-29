@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package healthcheck
 
 import (
@@ -47,7 +50,7 @@ func parsePEM(contents string) ([]byte, error) {
 	return pemBlock.Bytes, nil
 }
 
-func parsePEMCert(contents string) (*x509.Certificate, error) {
+func ParsePEMCert(contents string) (*x509.Certificate, error) {
 	parsed, err := parsePEM(contents)
 	if err != nil {
 		return nil, err
@@ -89,7 +92,7 @@ func pkiFetchIssuer(e *Executor, issuer string, versionError func()) (bool, *Pat
 	}
 
 	if len(issuerRet.ParsedCache) == 0 {
-		cert, err := parsePEMCert(issuerRet.Secret.Data["certificate"].(string))
+		cert, err := ParsePEMCert(issuerRet.Secret.Data["certificate"].(string))
 		if err != nil {
 			return true, issuerRet, nil, fmt.Errorf("unable to parse issuer %v's certificate: %w", issuer, err)
 		}
@@ -114,7 +117,7 @@ func pkiFetchIssuerEntry(e *Executor, issuer string, versionError func()) (bool,
 	}
 
 	if len(issuerRet.ParsedCache) == 0 {
-		cert, err := parsePEMCert(issuerRet.Secret.Data["certificate"].(string))
+		cert, err := ParsePEMCert(issuerRet.Secret.Data["certificate"].(string))
 		if err != nil {
 			return true, issuerRet, nil, fmt.Errorf("unable to parse issuer %v's certificate: %w", issuer, err)
 		}
@@ -222,7 +225,7 @@ func pkiFetchLeaf(e *Executor, serial string, versionError func()) (bool, *PathF
 	}
 
 	if len(leafRet.ParsedCache) == 0 {
-		cert, err := parsePEMCert(leafRet.Secret.Data["certificate"].(string))
+		cert, err := ParsePEMCert(leafRet.Secret.Data["certificate"].(string))
 		if err != nil {
 			return true, leafRet, nil, fmt.Errorf("unable to parse leaf %v's certificate: %w", serial, err)
 		}

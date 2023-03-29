@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -144,7 +147,6 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"unseal",
 				"leader",
 				"health",
-				"experiments",
 				"generate-root/attempt",
 				"generate-root/update",
 				"rekey/init",
@@ -1382,11 +1384,11 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 			logical.ErrInvalidRequest
 	}
 
-	if strings.Contains(fromPath, " ") {
-		return logical.ErrorResponse("'from' path cannot contain whitespace"), logical.ErrInvalidRequest
+	if strings.HasPrefix(fromPath, " ") || strings.HasSuffix(fromPath, " ") {
+		return logical.ErrorResponse("'from' path cannot contain trailing whitespace"), logical.ErrInvalidRequest
 	}
-	if strings.Contains(toPath, " ") {
-		return logical.ErrorResponse("'to' path cannot contain whitespace"), logical.ErrInvalidRequest
+	if strings.HasPrefix(toPath, " ") || strings.HasSuffix(toPath, " ") {
+		return logical.ErrorResponse("'to' path cannot contain trailing whitespace"), logical.ErrInvalidRequest
 	}
 
 	fromPathDetails := b.Core.splitNamespaceAndMountFromPath(ns.Path, fromPath)

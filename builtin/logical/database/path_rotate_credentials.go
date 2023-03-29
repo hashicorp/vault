@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package database
 
 import (
@@ -72,6 +75,11 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 		rootUsername, ok := config.ConnectionDetails["username"].(string)
 		if !ok || rootUsername == "" {
 			return nil, fmt.Errorf("unable to rotate root credentials: no username in configuration")
+		}
+
+		rootPassword, ok := config.ConnectionDetails["password"].(string)
+		if !ok || rootPassword == "" {
+			return nil, fmt.Errorf("unable to rotate root credentials: no password in configuration")
 		}
 
 		dbi, err := b.GetConnection(ctx, req.Storage, name)

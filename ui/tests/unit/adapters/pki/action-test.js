@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -221,6 +226,28 @@ module('Unit | Adapter | pki/action', function (hooks) {
       await this.store
         .createRecord('pki/action', {
           type: 'kms',
+        })
+        .save(adapterOptions);
+    });
+  });
+
+  module('actionType sign-intermediate', function () {
+    test('it overrides backend when adapter options specify a mount', async function (assert) {
+      assert.expect(1);
+      const mount = 'foo';
+      const issuerRef = 'ref';
+      const adapterOptions = {
+        adapterOptions: { actionType: 'sign-intermediate', mount, issuerRef },
+      };
+
+      this.server.post(`${mount}/issuer/${issuerRef}/sign-intermediate`, () => {
+        assert.ok(true, 'request made to correct mount');
+        return {};
+      });
+
+      await this.store
+        .createRecord('pki/action', {
+          csr: '---BEGIN REQUEST---',
         })
         .save(adapterOptions);
     });

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -234,9 +237,9 @@ func fetchCertBySerial(sc *storageContext, prefix, serial string) (*logical.Stor
 		// If we fail here, we have an extra (copy) of a cert in storage, add to metrics:
 		switch {
 		case strings.HasPrefix(prefix, "revoked/"):
-			sc.Backend.incrementTotalRevokedCertificatesCount(certsCounted, path)
+			sc.Backend.ifCountEnabledIncrementTotalRevokedCertificatesCount(certsCounted, path)
 		default:
-			sc.Backend.incrementTotalCertificatesCount(certsCounted, path)
+			sc.Backend.ifCountEnabledIncrementTotalCertificatesCount(certsCounted, path)
 		}
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error deleting certificate with serial %s from old location", serial)}
 	}

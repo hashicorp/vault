@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -5,6 +8,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"net/http"
 	"strings"
 
 	log "github.com/hashicorp/go-hclog"
@@ -315,23 +319,60 @@ func rawPaths(prefix string, r *RawBackend) []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: r.handleRawRead,
-					Summary:  "Read the value of the key at the given path.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"value": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+							},
+						}},
+					},
+					Summary: "Read the value of the key at the given path.",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: r.handleRawWrite,
-					Summary:  "Update the value of the key at the given path.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+						}},
+					},
+					Summary: "Update the value of the key at the given path.",
 				},
 				logical.CreateOperation: &framework.PathOperation{
 					Callback: r.handleRawWrite,
-					Summary:  "Create a key with value at the given path.",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
+					Summary: "Create a key with value at the given path.",
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: r.handleRawDelete,
-					Summary:  "Delete the key with given path.",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
+					Summary: "Delete the key with given path.",
 				},
 				logical.ListOperation: &framework.PathOperation{
 					Callback: r.handleRawList,
-					Summary:  "Return a list keys for a given path prefix.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:     framework.TypeStringSlice,
+									Required: true,
+								},
+							},
+						}},
+					},
+					Summary: "Return a list keys for a given path prefix.",
 				},
 			},
 

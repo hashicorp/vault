@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -1351,7 +1354,33 @@ func (sc *storageContext) writeAutoTidyConfig(config *tidyConfig) error {
 		return err
 	}
 
-	return sc.Storage.Put(sc.Context, entry)
+	err = sc.Storage.Put(sc.Context, entry)
+	if err != nil {
+		return err
+	}
+
+	sc.Backend.publishCertCountMetrics.Store(config.PublishMetrics)
+
+	// To Potentially Disable Certificate Counting
+	if config.MaintainCount == false {
+		certCountWasEnabled := sc.Backend.certCountEnabled.Swap(config.MaintainCount)
+		if certCountWasEnabled {
+			sc.Backend.certsCounted.Store(true)
+			sc.Backend.certCountError = "Cert Count is Disabled: enable via Tidy Config maintain_stored_certificate_counts"
+			sc.Backend.possibleDoubleCountedSerials = nil        // This won't stop a list operation, but will stop an expensive clean-up during initialize
+			sc.Backend.possibleDoubleCountedRevokedSerials = nil // This won't stop a list operation, but will stop an expensive clean-up during initialize
+			sc.Backend.certCount.Store(0)
+			sc.Backend.revokedCertCount.Store(0)
+		}
+	} else { // To Potentially Enable Certificate Counting
+		if sc.Backend.certCountEnabled.Load() == false {
+			// We haven't written "re-enable certificate counts" outside the initialize function
+			// Any call derived call to do so is likely to time out on ~2 million certs
+			sc.Backend.certCountError = "Certificate Counting Has Not Been Initialized, re-initialize this mount"
+		}
+	}
+
+	return nil
 }
 
 func (sc *storageContext) listRevokedCerts() ([]string, error) {
@@ -1399,7 +1428,7 @@ func (sc *storageContext) fetchRevocationInfo(serial string) (*revocationInfo, e
 	if revEntry != nil {
 		err = revEntry.DecodeJSON(&revInfo)
 		if err != nil {
-			return nil, fmt.Errorf("error decoding existing revocation info")
+			return nil, fmt.Errorf("error decoding existing revocation info: %w", err)
 		}
 	}
 

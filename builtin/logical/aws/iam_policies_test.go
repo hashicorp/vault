@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package aws
 
 import (
@@ -5,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -26,15 +30,15 @@ type mockGroupIAMClient struct {
 	GetGroupPolicyResp            iam.GetGroupPolicyOutput
 }
 
-func (m mockGroupIAMClient) ListAttachedGroupPolicies(in *iam.ListAttachedGroupPoliciesInput) (*iam.ListAttachedGroupPoliciesOutput, error) {
+func (m mockGroupIAMClient) ListAttachedGroupPoliciesWithContext(_ aws.Context, in *iam.ListAttachedGroupPoliciesInput, _ ...request.Option) (*iam.ListAttachedGroupPoliciesOutput, error) {
 	return &m.ListAttachedGroupPoliciesResp, nil
 }
 
-func (m mockGroupIAMClient) ListGroupPolicies(in *iam.ListGroupPoliciesInput) (*iam.ListGroupPoliciesOutput, error) {
+func (m mockGroupIAMClient) ListGroupPoliciesWithContext(_ aws.Context, in *iam.ListGroupPoliciesInput, _ ...request.Option) (*iam.ListGroupPoliciesOutput, error) {
 	return &m.ListGroupPoliciesResp, nil
 }
 
-func (m mockGroupIAMClient) GetGroupPolicy(in *iam.GetGroupPolicyInput) (*iam.GetGroupPolicyOutput, error) {
+func (m mockGroupIAMClient) GetGroupPolicyWithContext(_ aws.Context, in *iam.GetGroupPolicyInput, _ ...request.Option) (*iam.GetGroupPolicyOutput, error) {
 	return &m.GetGroupPolicyResp, nil
 }
 

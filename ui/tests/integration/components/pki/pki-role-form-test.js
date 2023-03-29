@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, click, fillIn, find } from '@ember/test-helpers';
@@ -5,6 +10,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { SELECTORS } from 'vault/tests/helpers/pki/pki-role-form';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import sinon from 'sinon';
 
 module('Integration | Component | pki-role-form', function (hooks) {
   setupRenderingTest(hooks);
@@ -15,6 +21,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
     this.store = this.owner.lookup('service:store');
     this.model = this.store.createRecord('pki/role');
     this.model.backend = 'pki';
+    this.onCancel = sinon.spy();
   });
 
   test('it should render default fields and toggle groups', async function (assert) {
@@ -111,8 +118,30 @@ module('Integration | Component | pki-role-form', function (hooks) {
     await click(SELECTORS.roleCreateButton);
   });
 
-  /* FUTURE TEST TODO:
-   * it should update role
-   * it should unload the record on cancel
-   */
+  test('it should update attributes on the model on update', async function (assert) {
+    assert.expect(1);
+    this.store.pushPayload('pki/role', {
+      modelName: 'pki/role',
+      name: 'test-role',
+      backend: 'pki-test',
+      id: 'role-id',
+    });
+
+    this.model = this.store.peekRecord('pki/role', 'role-id');
+
+    await render(
+      hbs`
+      <PkiRoleForm
+        @model={{this.model}}
+        @onCancel={{this.onCancel}}
+        @onSave={{this.onSave}}
+      />
+      `,
+      { owner: this.engine }
+    );
+
+    await fillIn(SELECTORS.issuerRef, 'not-default');
+    await click(SELECTORS.roleCreateButton);
+    assert.strictEqual(this.model.issuerRef, 'not-default', 'Issuer Ref correctly saved on create');
+  });
 });

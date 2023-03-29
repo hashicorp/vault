@@ -1,7 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -21,6 +25,28 @@ secret key and certificate.`,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathImportIssuers,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"mapping": {
+								Type:        framework.TypeMap,
+								Description: "A mapping of issuer_id to key_id for all issuers included in this request",
+								Required:    true,
+							},
+							"imported_keys": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "Net-new keys imported as a part of this request",
+								Required:    true,
+							},
+							"imported_issuers": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "Net-new issuers imported as a part of this request",
+								Required:    true,
+							},
+						},
+					}},
+				},
 				// Read more about why these flags are set in backend.go.
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
@@ -58,13 +84,44 @@ func pathConfigIssuers(b *backend) *framework.Path {
 				Default:     false,
 			},
 		},
-
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathCAIssuersRead,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"default": {
+								Type:        framework.TypeString,
+								Description: `Reference (name or identifier) to the default issuer.`,
+								Required:    true,
+							},
+							"default_follows_latest_issuer": {
+								Type:        framework.TypeBool,
+								Description: `Whether the default issuer should automatically follow the latest generated or imported issuer. Defaults to false.`,
+								Required:    true,
+							},
+						},
+					}},
+				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathCAIssuersWrite,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"default": {
+								Type:        framework.TypeString,
+								Description: `Reference (name or identifier) to the default issuer.`,
+							},
+							"default_follows_latest_issuer": {
+								Type:        framework.TypeBool,
+								Description: `Whether the default issuer should automatically follow the latest generated or imported issuer. Defaults to false.`,
+							},
+						},
+					}},
+				},
 				// Read more about why these flags are set in backend.go.
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
@@ -90,6 +147,23 @@ func pathReplaceRoot(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathCAIssuersWrite,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"default": {
+								Type:        framework.TypeString,
+								Description: `Reference (name or identifier) to the default issuer.`,
+								Required:    true,
+							},
+							"default_follows_latest_issuer": {
+								Type:        framework.TypeBool,
+								Description: `Whether the default issuer should automatically follow the latest generated or imported issuer. Defaults to false.`,
+								Required:    true,
+							},
+						},
+					}},
+				},
 				// Read more about why these flags are set in backend.go.
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
@@ -208,12 +282,35 @@ func pathConfigKeys(b *backend) *framework.Path {
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.pathKeyDefaultWrite,
+				Callback: b.pathKeyDefaultWrite,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"default": {
+								Type:        framework.TypeString,
+								Description: `Reference (name or identifier) to the default issuer.`,
+								Required:    true,
+							},
+						},
+					}},
+				},
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
 			},
 			logical.ReadOperation: &framework.PathOperation{
-				Callback:                    b.pathKeyDefaultRead,
+				Callback: b.pathKeyDefaultRead,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"default": {
+								Type:        framework.TypeString,
+								Description: `Reference (name or identifier) to the default issuer.`,
+							},
+						},
+					}},
+				},
 				ForwardPerformanceStandby:   false,
 				ForwardPerformanceSecondary: false,
 			},

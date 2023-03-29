@@ -1,32 +1,33 @@
 <SecretListHeader
-  @model={{this.model}}
+  @model={{this.model.engine}}
   @backendCrumb={{hash
-    label=this.model.id
-    text=this.model.id
+    label=this.model.engine.id
+    text=this.model.engine.id
     path="vault.cluster.secrets.backend.list-root"
-    model=this.model.id
+    model=this.model.engine.id
   }}
   @isEngine={{true}}
 />
-{{! <Toolbar>
-  <ToolbarActions>
-    <ToolbarLink @route="configuration.tidy">
-      Tidy
-    </ToolbarLink>
-    <ToolbarLink @route="configuration.edit">
-      Edit configuration
-    </ToolbarLink>
-  </ToolbarActions>
-</Toolbar> }}
 
-<AlertBanner
-  @type="info"
-  @title="PKI beta in use"
-  @message="To configure the engine, you'll have to return to the regular version."
-  class="has-top-margin-m"
-  data-test-pki-configuration-banner
->
-  <LinkToExternal @route="secretsListRootConfiguration" class="info">
-    Return to old PKI to configure
-  </LinkToExternal>
-</AlertBanner>
+{{#if this.model.hasConfig}}
+  <Toolbar>
+    <ToolbarActions>
+      <ToolbarLink @route="configuration.tidy">
+        Tidy
+      </ToolbarLink>
+      <ToolbarLink @route="configuration.edit">
+        Edit configuration
+      </ToolbarLink>
+    </ToolbarActions>
+  </Toolbar>
+
+  <Page::PkiConfigurationDetails @urls={{this.model.urls}} @crl={{this.model.crl}} @mountConfig={{this.model.mountConfig}} />
+{{else}}
+  <Toolbar />
+
+  <EmptyState @title="PKI not configured" @message="This PKI mount hasn't yet been configured with a certificate issuer.">
+    <LinkTo @route="configuration.create">
+      Configure PKI
+    </LinkTo>
+  </EmptyState>
+{{/if}}

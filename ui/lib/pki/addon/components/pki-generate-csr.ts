@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
@@ -12,11 +17,31 @@ import errorMessage from 'vault/utils/error-message';
 interface Args {
   model: PkiActionModel;
   useIssuer: boolean;
-  onSave: CallableFunction;
+  onComplete: CallableFunction;
   onCancel: CallableFunction;
+  onSave?: CallableFunction;
 }
 
-export default class PkiGenerateIntermediateComponent extends Component<Args> {
+/**
+ * @module PkiGenerateCsrComponent
+ * PkiGenerateCsr shows only the fields valid for the generate CSR endpoint.
+ * This component renders the form, handles the model save and rollback actions,
+ * and shows the resulting data on success. onCancel is required for the cancel
+ * transition, and if onSave is provided it will call that after save for any
+ * side effects in the parent.
+ *
+ * @example
+ * ```js
+ * <PkiGenerateRoot @model={{this.model}} @onCancel={{transition-to "vault.cluster"}} @onSave={{fn (mut this.title) "Successful"}} @adapterOptions={{hash actionType="import" useIssuer=false}} />
+ * ```
+ *
+ * @param {Object} model - pki/action model.
+ * @callback onCancel - Callback triggered when cancel button is clicked, after model is unloaded
+ * @callback onSave - Optional - Callback triggered after model is saved, as a side effect. Results are shown on the same component
+ * @callback onComplete - Callback triggered when "Done" button clicked, on results view
+ * @param {Object} adapterOptions - object passed as adapterOptions on the model.save method
+ */
+export default class PkiGenerateCsrComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
 
   @tracked modelValidations = null;
@@ -24,6 +49,8 @@ export default class PkiGenerateIntermediateComponent extends Component<Args> {
   @tracked alert: string | null = null;
 
   formFields;
+  // fields rendered after CSR generation
+  showFields = ['csr', 'keyId', 'privateKey', 'privateKeyType'];
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
@@ -63,7 +90,9 @@ export default class PkiGenerateIntermediateComponent extends Component<Args> {
         const useIssuer = yield this.getCapability();
         yield model.save({ adapterOptions: { actionType: 'generate-csr', useIssuer } });
         this.flashMessages.success('Successfully generated CSR.');
-        onSave();
+        if (onSave) {
+          onSave();
+        }
       } else {
         this.modelValidations = state;
         this.alert = invalidFormMessage;

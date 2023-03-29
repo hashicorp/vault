@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
@@ -21,7 +26,6 @@ import { methods } from 'vault/helpers/mountable-auth-methods';
 
 export default class MountBackendForm extends Component {
   @service store;
-  @service wizard;
   @service flashMessages;
 
   // validation related properties
@@ -127,7 +131,7 @@ export default class MountBackendForm extends Component {
     }
     this.flashMessages.success(
       `Successfully mounted the ${type} ${
-        this.mountType === 'secret' ? 'secrets engine' : 'auth method'
+        this.args.mountType === 'secret' ? 'secrets engine' : 'auth method'
       } at ${path}.`
     );
     yield this.args.onMountSuccess(type, path);
@@ -140,21 +144,8 @@ export default class MountBackendForm extends Component {
   }
 
   @action
-  onTypeChange(path, value) {
-    if (path === 'type') {
-      this.wizard.set('componentState', value);
-    }
-  }
-
-  @action
   setMountType(value) {
     this.args.mountModel.type = value;
     this.checkPathChange(value);
-    if (value) {
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', this.args.mountModel.type);
-    } else if (this.wizard.featureState === 'idle') {
-      // resets wizard
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'RESET', this.args.mountModel.type);
-    }
   }
 }

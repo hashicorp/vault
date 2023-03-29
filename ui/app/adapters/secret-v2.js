@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 /* eslint-disable */
 import { isEmpty } from '@ember/utils';
 import ApplicationAdapter from './application';

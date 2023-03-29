@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -260,7 +263,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	return acl, te, entity, identityPolicies, nil
 }
 
-func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool) (*logical.Auth, *logical.TokenEntry, error) {
+func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool) (*logical.Auth, *logical.TokenEntry, error) {
 	defer metrics.MeasureSince([]string{"core", "check_token"}, time.Now())
 
 	var acl *ACL
@@ -675,6 +678,10 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 		resp, auth, err = c.handleRequest(ctx, req)
 	}
 
+	if err == nil && c.requestResponseCallback != nil {
+		c.requestResponseCallback(c.router.MatchingBackend(ctx, req.Path), req, resp)
+	}
+
 	// If we saved the token in the request, we should return it in the response
 	// data.
 	if resp != nil && resp.Data != nil {
@@ -857,7 +864,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	}
 
 	// Validate the token
-	auth, te, ctErr := c.checkToken(ctx, req, false)
+	auth, te, ctErr := c.CheckToken(ctx, req, false)
 	if ctErr == logical.ErrRelativePath {
 		return logical.ErrorResponse(ctErr.Error()), nil, ctErr
 	}
@@ -1272,7 +1279,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	// Do an unauth check. This will cause EGP policies to be checked
 	var auth *logical.Auth
 	var ctErr error
-	auth, _, ctErr = c.checkToken(ctx, req, true)
+	auth, _, ctErr = c.CheckToken(ctx, req, true)
 	if ctErr == logical.ErrPerfStandbyPleaseForward {
 		return nil, nil, ctErr
 	}
@@ -2199,8 +2206,32 @@ func (c *Core) PopulateTokenEntry(ctx context.Context, req *logical.Request) err
 	token := req.ClientToken
 	var err error
 	req.InboundSSCToken = token
+	decodedToken := token
 	if IsSSCToken(token) {
-		token, err = c.CheckSSCToken(ctx, token, c.isLoginRequest(ctx, req), c.perfStandby)
+		// If ForwardToActive is set to ForwardSSCTokenToActive, we ignore
+		// whether the endpoint is a login request, as since we have the token
+		// forwarded to us, we should treat it as an unauthenticated endpoint
+		// and ensure the token is populated too regardless.
+		// Notably, this is important for some endpoints, such as endpoints
+		// such as sys/ui/mounts/internal, which is unauthenticated but a token
+		// may be provided to be used.
+		// Without the check to see if
+		// c.ForwardToActive() == ForwardSSCTokenToActive unauthenticated
+		// requests that do not use a token but were provided one anyway
+		// could fail with a 412.
+		// We only follow this behaviour if we're a perf standby, as
+		// this behaviour only makes sense in that case as only they
+		// could be missing the token population.
+		// Without ForwardToActive being set to ForwardSSCTokenToActive,
+		// behaviours that rely on this functionality also wouldn't make
+		// much sense, as they would fail with 412 required index not present
+		// as perf standbys aren't guaranteed to have the WAL state
+		// for new tokens.
+		unauth := c.isLoginRequest(ctx, req)
+		if c.ForwardToActive() == ForwardSSCTokenToActive && c.perfStandby {
+			unauth = false
+		}
+		decodedToken, err = c.CheckSSCToken(ctx, token, unauth, c.perfStandby)
 		// If we receive an error from CheckSSCToken, we can assume the token is bad somehow, and the client
 		// should receive a 403 bad token error like they do for all other invalid tokens, unless the error
 		// specifies that we should forward the request or retry the request.
@@ -2211,9 +2242,16 @@ func (c *Core) PopulateTokenEntry(ctx context.Context, req *logical.Request) err
 			return logical.ErrPermissionDenied
 		}
 	}
-	req.ClientToken = token
+	req.ClientToken = decodedToken
+	// We ignore the token returned from CheckSSCToken here as Lookup also
+	// decodes the SSCT, and it may need the original SSCT to check state.
 	te, err := c.LookupToken(ctx, token)
 	if err != nil {
+		// If we're missing required state, return that error
+		// as-is to the client
+		if errors.Is(err, logical.ErrPerfStandbyPleaseForward) || errors.Is(err, logical.ErrMissingRequiredState) {
+			return err
+		}
 		// If we have two dots but the second char is a dot it's a vault
 		// token of the form s.SOMETHING.nsid, not a JWT
 		if !IsJWT(token) {
