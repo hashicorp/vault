@@ -1,35 +1,44 @@
-<HcAppFrame::Frame @showNavbar={{@showSidebar}} as |Frame|>
-  <Frame.Sidebar as |Sidebar|>
-    <Sidebar.Header>
-      {{! Logo }}
-      <div class="brand-icon">
-        <HomeLink @class="has-text-white">
-          <Icon @name="vault-logo" @size="24" />
-        </HomeLink>
-      </div>
-      {{#if Sidebar.shouldRenderExtras}}
-        <button
-          type="button"
-          class="button is-transparent has-text-white"
-          {{on "click" (fn (mut this.console.isOpen) (not this.console.isOpen))}}
-          data-test-console-toggle
-        >
-          <Icon @name="terminal-screen" @size="24" />
-        </button>
-        <Sidebar::UserMenu />
-      {{/if}}
-    </Sidebar.Header>
-    <Sidebar.Content>
-      {{! this block is where the HcAppFrame::Nav components render into }}
-    </Sidebar.Content>
-    <Sidebar.Footer>
-      {{#if (has-feature "Namespaces")}}
-        <NamespacePicker @namespace={{@namespace}} />
-      {{/if}}
-    </Sidebar.Footer>
+<HcAppFrame::Frame @hasSidebar={{@showSidebar}} as |Frame|>
+  <Frame.Sidebar data-test-sidebar-nav>
+    <HcAppFrame::Sidenav @contentNodeID="sidebar-nav" as |Sidebar|>
+      <Sidebar.Header as |Header|>
+        {{#if this.currentCluster.cluster}}
+          <Header.Logo
+            @icon="vault"
+            @route="vault.cluster"
+            @model={{this.currentCluster.cluster.name}}
+            @ariaLabel="home link"
+            data-test-sidebar-logo
+          />
+        {{/if}}
+        {{#if Header.shouldRenderActions}}
+          <Header.Action>
+            <button
+              type="button"
+              class="button is-transparent has-text-white"
+              {{on "click" (fn (mut this.console.isOpen) (not this.console.isOpen))}}
+              data-test-console-toggle
+            >
+              <Icon @name="terminal-screen" @size="24" />
+            </button>
+          </Header.Action>
+          <Header.Action>
+            <Sidebar::UserMenu />
+          </Header.Action>
+        {{/if}}
+      </Sidebar.Header>
+      {{! this block is where the HcAppFrame::SidenavPanel components render into }}
+      <Sidebar.Content />
+      <Sidebar.Footer>
+        {{#if (has-feature "Namespaces")}}
+          <NamespacePicker @namespace={{@namespace}} />
+        {{/if}}
+      </Sidebar.Footer>
+    </HcAppFrame::Sidenav>
   </Frame.Sidebar>
   <Frame.Main>
     {{! outlet for app content }}
+    <div id="modal-wormhole"></div>
     <LinkStatus @status={{this.currentCluster.cluster.hcpLinkStatus}} />
     <div data-test-console-panel class={{if this.console.isOpen "panel-open"}}>
       <Console::UiPanel @isFullscreen={{this.consoleFullscreen}} />
