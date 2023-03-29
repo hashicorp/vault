@@ -8,6 +8,9 @@ import { inject as service } from '@ember/service';
 import { hash } from 'rsvp';
 import { parseCertificate } from 'vault/utils/parse-pki-cert';
 import camelizeKeys from 'vault/utils/camelize-object-keys';
+import { withConfirmLeave } from 'core/decorators/confirm-leave';
+
+@withConfirmLeave('model.newRootModel')
 export default class PkiIssuerRotateRootRoute extends PkiIssuerRoute {
   @service secretMountPath;
   @service store;
