@@ -99,13 +99,23 @@ func (a *ACMEState) TidyNonces() {
 	a.nextExpiry.Store(nextRun.Unix())
 }
 
-func (a *ACMEState) LoadKey(keyID string) (map[string]interface{}, error) {
+func (a *ACMEState) CreateAccount(c *JWSCtx, contact []string, termsOfServiceAgreed bool) (map[string]interface{}, error) {
 	// TODO
 	return nil, nil
 }
 
+func (a *ACMEState) LoadAccount(keyID string) (map[string]interface{}, error) {
+	// TODO
+	return nil, nil
+}
+
+func (a *ACMEState) DoesAccountExist(keyId string) bool {
+	account, err := a.LoadAccount(keyId)
+	return err == nil && len(account) > 0
+}
+
 func (a *ACMEState) LoadJWK(keyID string) ([]byte, error) {
-	key, err := a.LoadKey(keyID)
+	key, err := a.LoadAccount(keyID)
 	if err != nil {
 		return nil, err
 	}
