@@ -9,10 +9,6 @@
   display: flex;
   padding: $spacing-xxs $spacing-xs;
   width: 100%;
-
-  svg {
-    // color: var(--token-color-palette-neutral-300);
-  }
 }
 
 .namespace-picker.no-namespaces {
@@ -64,6 +60,11 @@
 
 .namespace-manage-link {
   border-top: 1px solid rgba($black, 0.1);
+
+  button {
+    font-weight: $font-weight-bold;
+    font-size: $body-size;
+  }
 }
 
 .namespace-list {
@@ -81,6 +82,11 @@
 .namespace-link.is-current {
   margin-top: $size-8;
   margin-right: -$size-10;
+
+  svg {
+    margin-top: 2px;
+    color: var(--token-color-border-strong);
+  }
 }
 
 .leaf-panel {

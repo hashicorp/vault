@@ -13,17 +13,6 @@
     </D.Trigger>
     <D.Content @defaultClass="namespace-picker-content">
       <div class="is-mobile level-left">
-        {{#unless this.isUserRootNamespace}}
-          <NamespaceLink
-            @targetNamespace={{or
-              (object-at (dec 2 this.menuLeaves.length) this.lastMenuLeaves)
-              this.auth.authData.userRootNamespace
-            }}
-            @class="namespace-link is-current button is-ghost icon"
-          >
-            <Chevron @direction="left" @class="has-text-grey" />
-          </NamespaceLink>
-        {{/unless}}
         <h5 class="list-header">Current namespace</h5>
       </div>
       <div class="namespace-header-bar level is-mobile">
@@ -32,9 +21,6 @@
             <div class="level is-mobile namespace-link">
               <span class="level-left" data-test-current-namespace>
                 {{if this.namespacePath (concat this.namespacePath "/") "root"}}
-              </span>
-              <span class="level-right">
-                <Icon @name="check-circle" class="has-text-success" />
               </span>
             </div>
           </header>
@@ -48,7 +34,7 @@
                 (object-at (dec 2 this.menuLeaves.length) this.lastMenuLeaves)
                 this.auth.authData.userRootNamespace
               }}
-              @class="namespace-link is-current button is-ghost icon"
+              @class="namespace-link is-current button icon is-transparent"
             >
               <Chevron @direction="left" @class="has-text-grey" />
             </NamespaceLink>
@@ -58,39 +44,37 @@
         {{#if (includes "" this.lastMenuLeaves)}}
           {{! leaf is '' which is the root namespace, and then we need to iterate the root leaves }}
           <div class="leaf-panel {{if (eq '' this.currentLeaf) 'leaf-panel-current' 'leaf-panel-left'}} ">
-            {{~#each this.rootLeaves as |rootLeaf|}}
+            {{#each this.rootLeaves as |rootLeaf|}}
               <NamespaceLink @targetNamespace={{rootLeaf}} @class="namespace-link" @showLastSegment={{true}} />
-            {{/each~}}
+            {{/each}}
           </div>
         {{/if}}
         {{#each this.lastMenuLeaves as |leaf|}}
-          <div
-            class="leaf-panel
-              {{if (eq leaf this.currentLeaf) 'leaf-panel-current' 'leaf-panel-left'}}
-              {{if (and this.isAdding (eq leaf this.changedLeaf)) 'leaf-panel-adding'}}
-              {{if (and (not this.isAdding) (eq leaf this.changedLeaf)) 'leaf-panel-exiting'}}
-              "
-          >
-            {{~#each-in (get this.namespaceTree leaf) as |leafName|}}
-              <NamespaceLink
-                @targetNamespace={{concat leaf "/" leafName}}
-                @class="namespace-link"
-                @showLastSegment={{true}}
-              />
-            {{/each-in~}}
-          </div>
+          {{#if leaf}}
+            <div
+              class="leaf-panel
+                {{if (eq leaf this.currentLeaf) 'leaf-panel-current' 'leaf-panel-left'}}
+                {{if (and this.isAdding (eq leaf this.changedLeaf)) 'leaf-panel-adding'}}
+                {{if (and (not this.isAdding) (eq leaf this.changedLeaf)) 'leaf-panel-exiting'}}
+                "
+            >
+              {{#each-in (get this.namespaceTree leaf) as |leafName|}}
+                <NamespaceLink
+                  @targetNamespace={{concat leaf "/" leafName}}
+                  @class="namespace-link"
+                  @showLastSegment={{true}}
+                />
+              {{/each-in}}
+            </div>
+          {{/if}}
         {{/each}}
         {{#if this.canList}}
           <div class="leaf-panel leaf-panel-current">
             <LinkTo @route="vault.cluster.access.namespaces" class="is-block namespace-link namespace-manage-link">
-              <div class="level is-mobile">
-                <span class="level-left">Manage namespaces</span>
-                <span class="level-right">
-                  <button type="button" class="button is-ghost icon" onclick={{action "refreshNamespaceList"}}>
-                    <Icon @name="reload" class="has-text-grey" />
-                  </button>
-                </span>
-              </div>
+              <button type="button" class="button is-transparent" onclick={{action "refreshNamespaceList"}}>
+                <Icon @name="menu" class="has-text-grey" />
+                Manage Namespaces
+              </button>
             </LinkTo>
           </div>
         {{/if}}
