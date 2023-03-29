@@ -416,6 +416,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "look-up",
 			},
 
 			Fields: map[string]*framework.FieldSchema{
@@ -429,14 +430,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: ts.handleLookup,
 					DisplayAttrs: &framework.DisplayAttributes{
-						OperationVerb: "look-up",
+						OperationSuffix: "self3", // avoid collision with lookup-self
 					},
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: ts.handleLookup,
-					DisplayAttrs: &framework.DisplayAttributes{
-						OperationVerb: "look-up2",
-					},
 				},
 			},
 
