@@ -267,4 +267,4 @@ jobs:
       !contains(needs.*.result, 'failure') &&
       !contains(needs.*.result, 'cancelled')
     steps:
-    - run: echo "All Go test successfully passed"
+    - run: echo "All Go tests successfully passed"
