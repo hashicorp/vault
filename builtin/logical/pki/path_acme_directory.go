@@ -13,26 +13,51 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+const (
+	pathAcmeDirectoryHelpSync = `Read the proper URLs for various ACME operations`
+	pathAcmeDirectoryHelpDesc = `Provide an ACME directory response that contains URLS for various ACME operations.`
+)
+
 func pathAcmeRootDirectory(b *backend) *framework.Path {
-	return patternAcmeDirectory(b, "acme/directory")
+	return patternAcmeDirectory(b, "acme/directory", false /* requireRole */, false /* requireIssuer */)
 }
 
 func pathAcmeRoleDirectory(b *backend) *framework.Path {
-	return patternAcmeDirectory(b, "roles/"+framework.GenericNameRegex("role")+"/acme/directory")
+	return patternAcmeDirectory(b, "roles/"+framework.GenericNameRegex("role")+"/acme/directory",
+		true /* requireRole */, false /* requireIssuer */)
 }
 
 func pathAcmeIssuerDirectory(b *backend) *framework.Path {
-	return patternAcmeDirectory(b, "issuer/"+framework.GenericNameRegex(issuerRefParam)+"/acme/directory")
+	return patternAcmeDirectory(b, "issuer/"+framework.GenericNameRegex(issuerRefParam)+"/acme/directory",
+		false /* requireRole */, true /* requireIssuer */)
 }
 
 func pathAcmeIssuerAndRoleDirectory(b *backend) *framework.Path {
-	return patternAcmeDirectory(b, "issuer/"+framework.GenericNameRegex(issuerRefParam)+"/roles/"+framework.GenericNameRegex("role")+"/acme/directory")
+	return patternAcmeDirectory(b,
+		"issuer/"+framework.GenericNameRegex(issuerRefParam)+"/roles/"+framework.GenericNameRegex(
+			"role")+"/acme/directory",
+		true /* requireRole */, true /* requireIssuer */)
 }
 
-func patternAcmeDirectory(b *backend, pattern string) *framework.Path {
+func patternAcmeDirectory(b *backend, pattern string, requireRole, requireIssuer bool) *framework.Path {
+	fields := map[string]*framework.FieldSchema{}
+	if requireRole {
+		fields["role"] = &framework.FieldSchema{
+			Type:        framework.TypeString,
+			Description: `The desired role for the acme request`,
+			Required:    true,
+		}
+	}
+	if requireIssuer {
+		fields[issuerRefParam] = &framework.FieldSchema{
+			Type:        framework.TypeString,
+			Description: `Reference to an existing issuer name or issuer id`,
+			Required:    true,
+		}
+	}
 	return &framework.Path{
 		Pattern: pattern,
-		Fields:  map[string]*framework.FieldSchema{},
+		Fields:  fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback:                    b.acmeWrapper(b.acmeDirectoryHandler),
@@ -41,8 +66,8 @@ func patternAcmeDirectory(b *backend, pattern string) *framework.Path {
 			},
 		},
 
-		HelpSynopsis:    pathOcspHelpSyn,
-		HelpDescription: pathOcspHelpDesc,
+		HelpSynopsis:    pathAcmeDirectoryHelpSync,
+		HelpDescription: pathAcmeDirectoryHelpDesc,
 	}
 }
 
@@ -118,9 +143,7 @@ func (b *backend) acmeDirectoryHandler(acmeCtx acmeContext, r *logical.Request, 
 		"newOrder":   acmeCtx.baseUrl.JoinPath("/acme/new-order").String(),
 		"revokeCert": acmeCtx.baseUrl.JoinPath("/acme/revoke-cert").String(),
 		"keyChange":  acmeCtx.baseUrl.JoinPath("/acme/key-change").String(),
-		// Missing newAuthz on purpose until we support EAB
 		"meta": map[string]interface{}{
-			// TODO: We should look at including termsOfService, website and caaIdentities fields...
 			"externalAccountRequired": false,
 		},
 	})

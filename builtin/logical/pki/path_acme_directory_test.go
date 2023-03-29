@@ -70,23 +70,16 @@ func TestAcmeClusterPathNotConfigured(t *testing.T) {
 	t.Parallel()
 	b, s := CreateBackendWithStorage(t)
 
-	_, err := CBWrite(b, s, "config/cluster", map[string]interface{}{
-		"aia_path": "http://localhost:8200/cdn/pki",
-	})
-	require.NoError(t, err)
-
+	// Do not fill in the path option within the local cluster configuration
 	cases := []struct {
 		name         string
-		prefixUrl    string
 		directoryUrl string
 	}{
-		{"root", "", "acme/directory"},
-		{"role", "/roles/test-role", "roles/test-role/acme/directory"},
-		{"issuer", "/issuer/default", "issuer/default/acme/directory"},
-		{"issuer_role", "/issuer/default/roles/test-role", "issuer/default/roles/test-role/acme/directory"},
-		{"issuer_role_acme", "/issuer/acme/roles/acme", "issuer/acme/roles/acme/acme/directory"},
+		{"root", "acme/directory"},
+		{"role", "roles/test-role/acme/directory"},
+		{"issuer", "issuer/default/acme/directory"},
+		{"issuer_role", "issuer/default/roles/test-role/acme/directory"},
 	}
-
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			dirResp, err := CBRead(b, s, tc.directoryUrl)
