@@ -80,4 +80,8 @@ export default class PkiRoleForm extends Component {
       this.issuerValue = issuer;
     }
   }
+  @action
+  changeSelect(e) {
+    this.args.role.issuerRef = e.target.value;
+  }
 }

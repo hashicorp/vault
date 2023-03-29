@@ -32,18 +32,16 @@
                     <select
                       name={{attr.name}}
                       id={{attr.name}}
-                      {{on "change" (pipe (pick "target.value") (fn (mut @role.issuerRef)))}}
+                      {{on "change" this.changeSelect}}
                       data-test-input={{attr.name}}
                     >
-                      <option value="">
-                        Select one
-                      </option>
                       {{#each @issuers as |issuer|}}
                         <option
-                          selected={{if @role.isNew (eq (get @role issuer.issuerName) @role.issuerRef) @role.issuerRef}}
-                          value={{issuer.issuerName}}
+                          selected={{(eq (or (issuer.issuerName issuer.issuerId)) @role.issuerRef)}}
+                          value={{or issuer.issuerName issuer.issuerId}}
+                          data-test-option={{or issuer.issuerName issuer.issuerId}}
                         >
-                          {{issuer.issuerName}}
+                          {{or issuer.issuerName issuer.issuerId}}
                         </option>
                       {{/each}}
                     </select>
