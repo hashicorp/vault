@@ -292,9 +292,13 @@ func Test_RegistryMatchesGenOpenapi(t *testing.T) {
 	ensureInScript := func(t *testing.T, scriptBackends []string, name string) {
 		t.Helper()
 
-		// "openldap" is an alias for "ldap" secrets engine
-		if name == "openldap" {
-			return
+		for _, excluded := range []string{
+			"openldap", // alias for "ldap"
+			"ad",       // consolidated into "ldap" and deprecated
+		} {
+			if name == excluded {
+				return
+			}
 		}
 
 		if !slices.Contains(scriptBackends, name) {

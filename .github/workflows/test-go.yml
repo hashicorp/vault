@@ -9,6 +9,19 @@ on:
         description: The execution architecture (arm, amd64, etc.)
         required: true
         type: string
+      enterprise:
+        description: A flag indicating if this workflow is executing for the enterprise repository.
+        required: true
+        type: string
+      total-runners:
+        description: Number of runners to use for executing the tests on.
+        required: true
+        type: string
+      env-vars:
+        description: A map of environment variables as JSON.
+        required: false
+        type: string
+        default: '{}'
       extra-flags:
         description: A space-separated list of additional build flags.
         required: false
@@ -18,17 +31,12 @@ on:
         required: false
         type: string
         default: ubuntu-latest
-      enterprise:
-        description: A flag indicating if this workflow is executing for the enterprise repository.
-        required: true
-        type: string
       go-build-tags:
         description: A comma-separated list of additional build tags to consider satisfied during the build.
         required: false
         type: string
 
-env:
-  total-runners: 16
+env: ${{ fromJSON(inputs.env-vars) }}
 
 jobs:
   test-generate-test-package-list:
@@ -52,7 +60,7 @@ jobs:
     steps:
     - id: generate-index-list
       run: |
-        INDEX_LIST="$(seq 1 ${{ env.total-runners }})"
+        INDEX_LIST="$(seq 1 ${{ inputs.total-runners }})"
         INDEX_JSON="$(jq --null-input --compact-output '. |= [inputs]' <<< "${INDEX_LIST}")"
         echo "indexes=${INDEX_JSON}" >> "${GITHUB_OUTPUT}"
   test-go:
@@ -117,11 +125,6 @@ jobs:
           # matrix.runner-index value.
           #
           ENTERPRISE=${{ inputs.enterprise }} source .github/scripts/generate-test-package-lists.sh
-
-          # If data race detection is enabled, export a relevant environment variable for use in tests
-          if [[ "${{ inputs.extra-flags }}" =~ "-race" ]]; then
-            export VAULT_CI_GO_TEST_RACE=1
-          fi
 
           # Build the dynamically generated source files.
           make prep

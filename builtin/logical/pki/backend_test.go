@@ -5254,12 +5254,8 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 		},
 	}
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-		// XXX: Schema response validation does not take into account
-		// response codes, preventing non-200 responses from working
-		// properly.
-		//
-		// RequestResponseCallback: schema.ResponseValidatingCallback(t),
+		HandlerFunc:             vaulthttp.Handler,
+		RequestResponseCallback: schema.ResponseValidatingCallback(t),
 	})
 	cluster.Start()
 	defer cluster.Cleanup()
@@ -6811,6 +6807,13 @@ func TestProperAuthing(t *testing.T) {
 		"unified-ocsp":                           shouldBeUnauthedWriteOnly,
 		"unified-ocsp/dGVzdAo=":                  shouldBeUnauthedReadList,
 	}
+
+	// Add ACME based paths to the test suite
+	for _, acmePrefix := range []string{"", "issuer/default/", "roles/test/", "issuer/default/roles/test/"} {
+		paths[acmePrefix+"acme/directory"] = shouldBeUnauthedReadList
+		paths[acmePrefix+"acme/new-nonce"] = shouldBeUnauthedReadList
+	}
+
 	for path, checkerType := range paths {
 		checker := pathAuthChckerMap[checkerType]
 		checker(t, client, "pki/"+path, token)

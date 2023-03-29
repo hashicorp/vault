@@ -114,6 +114,7 @@ jobs:
     uses: ./.github/workflows/test-go.yml
     with:
       name: ''
+      total-runners: 16
       go-arch: amd64
       go-build-tags: '${{ needs.setup.outputs.go-build-tags }},deadlock'
       runs-on: ${{ needs.setup.outputs.compute-standard }}
@@ -129,16 +130,43 @@ jobs:
     uses: ./.github/workflows/test-go.yml
     with:
       name: race
+      total-runners: 16
+      env-vars: |
+        {
+          "VAULT_CI_GO_TEST_RACE": 1
+        }
       extra-flags: '-race'
       go-arch: amd64
       go-build-tags: ${{ needs.setup.outputs.go-build-tags }}
       runs-on: ${{ needs.setup.outputs.compute-larger }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
     secrets: inherit
+  test-go-fips:
+    name: Run Go tests with FIPS configuration
+    # Only run this job for the enterprise repo if the branch doesn't start with 'ui/', 'docs/', or 'backport/docs/'.
+    if: |
+      needs.setup.outputs.enterprise == 1 &&
+      ! (startsWith( github.ref_name, 'ui/' ) || startsWith( github.ref_name, 'docs/' ) || startsWith( github.ref_name, 'backport/docs/'))
+    needs:
+    - setup
+    - setup-go-cache
+    uses: ./.github/workflows/test-go.yml
+    with:
+      name: fips
+      total-runners: 16
+      env-vars: |
+        {
+          "GOEXPERIMENT": "boringcrypto"
+        }
+      go-arch: amd64
+      go-build-tags: '${{ needs.setup.outputs.go-build-tags }},deadlock,cgo,fips,fips_140_2'
+      runs-on: ${{ needs.setup.outputs.compute-standard }}
+      enterprise: ${{ needs.setup.outputs.enterprise }}
+    secrets: inherit
   test-ui:
     name: Test UI
-    # The test-ui Job is only run for pushes to main, ui/*, backport/ui/*, release/*, and merge*
-    if: github.ref_name == 'main' || startsWith(github.ref_name, 'ui/') || startsWith(github.ref_name, 'backport/ui/') || startsWith(github.ref_name, 'release/') || startsWith(github.ref_name, 'merge')
+    # The test-ui Job is only run for pushes to main and pull requests, ui/*, backport/ui/*, release/*, and merge*
+    if: github.ref_name == 'main' || startsWith(github.ref_name, 'ui/') || startsWith(github.ref_name, 'backport/ui/') || startsWith(github.ref_name, 'release/') || startsWith(github.ref_name, 'merge') || github.head_ref == 'main' || startsWith(github.head_ref, 'ui/') || startsWith(github.head_ref, 'backport/ui/') || startsWith(github.head_ref, 'release/') || startsWith(github.head_ref, 'merge')
     needs:
     - setup
     permissions:
@@ -228,3 +256,11 @@ jobs:
         paths: "ui/test-results/qunit/results.xml"
         show: "fail"
       if: always()
+  tests-completed:
+    needs:
+    - setup
+    - test-go
+    - test-ui
+    runs-on: ${{ fromJSON(needs.setup.outputs.compute-standard) }}
+    steps:
+    - run: echo "All Go test successfully passed"
