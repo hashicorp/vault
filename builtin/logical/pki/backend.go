@@ -113,6 +113,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 				"unified-crl",
 				"unified-ocsp",   // Unified OCSP POST
 				"unified-ocsp/*", // Unified OCSP GET
+
+				// ACME paths are added below
 			},
 
 			LocalStorage: []string{
@@ -210,6 +212,12 @@ func Backend(conf *logical.BackendConfig) *backend {
 			// CRL Signing
 			pathResignCrls(&b),
 			pathSignRevocationList(&b),
+
+			// ACME APIs
+			pathAcmeRootDirectory(&b),
+			pathAcmeRoleDirectory(&b),
+			pathAcmeIssuerDirectory(&b),
+			pathAcmeIssuerAndRoleDirectory(&b),
 		},
 
 		Secrets: []*framework.Secret{
@@ -220,6 +228,15 @@ func Backend(conf *logical.BackendConfig) *backend {
 		InitializeFunc: b.initialize,
 		Invalidate:     b.invalidate,
 		PeriodicFunc:   b.periodicFunc,
+	}
+
+	// Add specific un-auth'd paths for ACME APIs
+	for _, acmePrefix := range []string{"", "issuer/+/", "roles/+/", "issuer/+/roles/+/"} {
+		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/directory")
+		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/new-nonce")
+		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/new-order")
+		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/revoke-cert")
+		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/key-change")
 	}
 
 	if constants.IsEnterprise {

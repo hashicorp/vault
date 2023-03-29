@@ -6807,6 +6807,12 @@ func TestProperAuthing(t *testing.T) {
 		"unified-ocsp":                           shouldBeUnauthedWriteOnly,
 		"unified-ocsp/dGVzdAo=":                  shouldBeUnauthedReadList,
 	}
+
+	// Add ACME based paths to the test suite
+	for _, acmePrefix := range []string{"", "issuer/default/", "roles/test/", "issuer/default/roles/test/"} {
+		paths[acmePrefix+"acme/directory"] = shouldBeUnauthedReadList
+	}
+
 	for path, checkerType := range paths {
 		checker := pathAuthChckerMap[checkerType]
 		checker(t, client, "pki/"+path, token)
