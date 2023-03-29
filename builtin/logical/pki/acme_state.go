@@ -1,4 +1,4 @@
-package acme
+package pki
 
 import (
 	"crypto/rand"
@@ -15,13 +15,13 @@ import (
 // How long nonces are considered valid.
 const nonceExpiry = 15 * time.Minute
 
-type ACMEState struct {
+type acmeState struct {
 	nextExpiry *atomic.Int64
 	nonces     *sync.Map // map[string]time.Time
 }
 
-func NewACMEState() *ACMEState {
-	return &ACMEState{
+func NewACMEState() *acmeState {
+	return &acmeState{
 		nextExpiry: new(atomic.Int64),
 		nonces:     new(sync.Map),
 	}
@@ -36,7 +36,7 @@ func generateNonce() (string, error) {
 	return base64.RawURLEncoding.EncodeToString(data), nil
 }
 
-func (a *ACMEState) GetNonce() (string, time.Time, error) {
+func (a *acmeState) GetNonce() (string, time.Time, error) {
 	now := time.Now()
 	nonce, err := generateNonce()
 	if err != nil {
@@ -55,7 +55,7 @@ func (a *ACMEState) GetNonce() (string, time.Time, error) {
 	return nonce, then, nil
 }
 
-func (a *ACMEState) RedeemNonce(nonce string) bool {
+func (a *acmeState) RedeemNonce(nonce string) bool {
 	rawTimeout, present := a.nonces.LoadAndDelete(nonce)
 	if !present {
 		return false
@@ -69,7 +69,7 @@ func (a *ACMEState) RedeemNonce(nonce string) bool {
 	return true
 }
 
-func (a *ACMEState) DoTidyNonces() {
+func (a *acmeState) DoTidyNonces() {
 	now := time.Now()
 	expiry := a.nextExpiry.Load()
 	then := time.Unix(expiry, 0)
@@ -79,7 +79,7 @@ func (a *ACMEState) DoTidyNonces() {
 	}
 }
 
-func (a *ACMEState) TidyNonces() {
+func (a *acmeState) TidyNonces() {
 	now := time.Now()
 	nextRun := now.Add(nonceExpiry)
 
@@ -99,22 +99,22 @@ func (a *ACMEState) TidyNonces() {
 	a.nextExpiry.Store(nextRun.Unix())
 }
 
-func (a *ACMEState) CreateAccount(c *JWSCtx, contact []string, termsOfServiceAgreed bool) (map[string]interface{}, error) {
+func (a *acmeState) CreateAccount(c *jwsCtx, contact []string, termsOfServiceAgreed bool) (map[string]interface{}, error) {
 	// TODO
 	return nil, nil
 }
 
-func (a *ACMEState) LoadAccount(keyID string) (map[string]interface{}, error) {
+func (a *acmeState) LoadAccount(keyID string) (map[string]interface{}, error) {
 	// TODO
 	return nil, nil
 }
 
-func (a *ACMEState) DoesAccountExist(keyId string) bool {
+func (a *acmeState) DoesAccountExist(keyId string) bool {
 	account, err := a.LoadAccount(keyId)
 	return err == nil && len(account) > 0
 }
 
-func (a *ACMEState) LoadJWK(keyID string) ([]byte, error) {
+func (a *acmeState) LoadJWK(keyID string) ([]byte, error) {
 	key, err := a.LoadAccount(keyID)
 	if err != nil {
 		return nil, err
@@ -128,8 +128,8 @@ func (a *ACMEState) LoadJWK(keyID string) ([]byte, error) {
 	return jwk.([]byte), nil
 }
 
-func (a *ACMEState) ParseRequestParams(data *framework.FieldData) (*JWSCtx, map[string]interface{}, error) {
-	var c JWSCtx
+func (a *acmeState) ParseRequestParams(data *framework.FieldData) (*jwsCtx, map[string]interface{}, error) {
+	var c jwsCtx
 	var m map[string]interface{}
 
 	// Parse the key out.

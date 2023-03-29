@@ -14,8 +14,6 @@ import (
 
 	atomic2 "go.uber.org/atomic"
 
-	"github.com/hashicorp/vault/builtin/logical/pki/acme"
-
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/constants"
@@ -290,7 +288,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 	b.unifiedTransferStatus = newUnifiedTransferStatus()
 
-	b.acmeState = acme.NewACMEState()
+	b.acmeState = NewACMEState()
 	return &b
 }
 
@@ -325,7 +323,7 @@ type backend struct {
 	issuersLock sync.RWMutex
 
 	// Context around ACME operations
-	acmeState *acme.ACMEState
+	acmeState *acmeState
 }
 
 type roleOperation func(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error)

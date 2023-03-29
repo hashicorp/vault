@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/vault/builtin/logical/pki/acme"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -89,7 +88,7 @@ func patternAcmeNewAccount(b *backend, pattern string) *framework.Path {
 	}
 }
 
-type acmeParsedOperation func(acmeCtx acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *acme.JWSCtx, data map[string]interface{}) (*logical.Response, error)
+type acmeParsedOperation func(acmeCtx acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}) (*logical.Response, error)
 
 func (b *backend) acmeParsedWrapper(op acmeParsedOperation) framework.OperationFunc {
 	return b.acmeWrapper(func(acmeCtx acmeContext, r *logical.Request, fields *framework.FieldData) (*logical.Response, error) {
@@ -102,7 +101,7 @@ func (b *backend) acmeParsedWrapper(op acmeParsedOperation) framework.OperationF
 	})
 }
 
-func (b *backend) acmeNewAccountHandler(acmeCtx acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *acme.JWSCtx, data map[string]interface{}) (*logical.Response, error) {
+func (b *backend) acmeNewAccountHandler(acmeCtx acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}) (*logical.Response, error) {
 	// Parameters
 	var ok bool
 	var onlyReturnExisting bool
@@ -113,7 +112,7 @@ func (b *backend) acmeNewAccountHandler(acmeCtx acmeContext, r *logical.Request,
 	if present {
 		contact, ok = rawContact.([]string)
 		if !ok {
-			return nil, fmt.Errorf("invalid type for field 'contact': %w", acme.ErrMalformed)
+			return nil, fmt.Errorf("invalid type for field 'contact': %w", ErrMalformed)
 		}
 	}
 
@@ -121,7 +120,7 @@ func (b *backend) acmeNewAccountHandler(acmeCtx acmeContext, r *logical.Request,
 	if present {
 		termsOfServiceAgreed, ok = rawTermsOfServiceAgreed.(bool)
 		if !ok {
-			return nil, fmt.Errorf("invalid type for field 'termsOfServiceAgreed': %w", acme.ErrMalformed)
+			return nil, fmt.Errorf("invalid type for field 'termsOfServiceAgreed': %w", ErrMalformed)
 		}
 	}
 
@@ -129,7 +128,7 @@ func (b *backend) acmeNewAccountHandler(acmeCtx acmeContext, r *logical.Request,
 	if present {
 		onlyReturnExisting, ok = rawOnlyReturnExisting.(bool)
 		if !ok {
-			return nil, fmt.Errorf("invalid type for field 'onlyReturnExisting': %w", acme.ErrMalformed)
+			return nil, fmt.Errorf("invalid type for field 'onlyReturnExisting': %w", ErrMalformed)
 		}
 	}
 
@@ -160,7 +159,7 @@ func formatAccountResponse(location string, status string, contact []string) *lo
 	return resp
 }
 
-func (b *backend) acmeNewAccountSearchHandler(acmeCtx acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *acme.JWSCtx, data map[string]interface{}) (*logical.Response, error) {
+func (b *backend) acmeNewAccountSearchHandler(acmeCtx acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}) (*logical.Response, error) {
 	if userCtx.Existing || b.acmeState.DoesAccountExist(userCtx.Kid) {
 		// This account exists; return its details. It would be slightly
 		// weird to specify a kid in the request (and not use an explicit
@@ -179,12 +178,12 @@ func (b *backend) acmeNewAccountSearchHandler(acmeCtx acmeContext, r *logical.Re
 	// > If a client sends such a request and an account does not exist,
 	// > then the server MUST return an error response with status code
 	// > 400 (Bad Request) and type "urn:ietf:params:acme:error:accountDoesNotExist".
-	return nil, fmt.Errorf("An account with this key does not exist: %w", acme.ErrAccountDoesNotExist)
+	return nil, fmt.Errorf("An account with this key does not exist: %w", ErrAccountDoesNotExist)
 }
 
-func (b *backend) acmeNewAccountCreateHandler(acmeCtx acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *acme.JWSCtx, data map[string]interface{}, contact []string, termsOfServiceAgreed bool) (*logical.Response, error) {
+func (b *backend) acmeNewAccountCreateHandler(acmeCtx acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}, contact []string, termsOfServiceAgreed bool) (*logical.Response, error) {
 	if userCtx.Existing {
-		return nil, fmt.Errorf("cannot submit to newAccount with 'kid': %w", acme.ErrMalformed)
+		return nil, fmt.Errorf("cannot submit to newAccount with 'kid': %w", ErrMalformed)
 	}
 
 	// If the account already exists, return the existing one.
@@ -194,7 +193,7 @@ func (b *backend) acmeNewAccountCreateHandler(acmeCtx acmeContext, r *logical.Re
 
 	// TODO: Limit this only when ToS are required by the operator.
 	if !termsOfServiceAgreed {
-		return nil, fmt.Errorf("terms of service not agreed to: %w", acme.ErrUserActionRequired)
+		return nil, fmt.Errorf("terms of service not agreed to: %w", ErrUserActionRequired)
 	}
 
 	account, err := b.acmeState.CreateAccount(userCtx, contact, termsOfServiceAgreed)

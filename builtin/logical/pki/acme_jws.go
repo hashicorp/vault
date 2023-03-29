@@ -1,4 +1,4 @@
-package acme
+package pki
 
 import (
 	"crypto"
@@ -23,7 +23,7 @@ var AllowedOuterJWSTypes = map[string]interface{}{
 }
 
 // This wraps a JWS message structure.
-type JWSCtx struct {
+type jwsCtx struct {
 	Algo     string          `json:"alg"`
 	Kid      string          `json:"kid"`
 	jwk      json.RawMessage `json:"jwk"`
@@ -33,7 +33,7 @@ type JWSCtx struct {
 	Existing bool            `json:"-"`
 }
 
-func (c *JWSCtx) UnmarshalJSON(a *ACMEState, jws []byte) error {
+func (c *jwsCtx) UnmarshalJSON(a *acmeState, jws []byte) error {
 	var err error
 	if err = json.Unmarshal(jws, c); err != nil {
 		return err
@@ -103,7 +103,7 @@ func hasValues(h jose.Header) bool {
 	return h.KeyID != "" || h.JSONWebKey != nil || h.Algorithm != "" || h.Nonce != "" || len(h.ExtraHeaders) > 0
 }
 
-func (c *JWSCtx) VerifyJWS(signature string) (map[string]interface{}, error) {
+func (c *jwsCtx) VerifyJWS(signature string) (map[string]interface{}, error) {
 	// See RFC 8555 Section 6.2. Request Authentication:
 	//
 	// > The JWS Unencoded Payload Option [RFC7797] MUST NOT be used
