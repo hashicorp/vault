@@ -28,10 +28,17 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly secretMountPath: SecretMountPath;
 
-  @tracked rotateForm = 'use-old-settings';
+  @tracked displayedForm = 'use-old-settings';
   @tracked showOldSettings = false;
+  // form alerts below are only for "use old settings" option
+  // validations/errors for "customize new root" are handled by <PkiGenerateRoot> component
   @tracked alertBanner = '';
   @tracked invalidFormAlert = '';
+  @tracked modelValidations = null;
+
+  get pageTitle() {
+    return this.args.newRootModel.id ? 'View issuer certificate' : 'Generate new root';
+  }
 
   get bannerType() {
     if (this.args.parsingErrors && !this.invalidFormAlert) {
@@ -43,7 +50,7 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
     return { type: 'danger' };
   }
 
-  get rotationOptions() {
+  get generateOptions() {
     return [
       {
         key: 'use-old-settings',
@@ -61,10 +68,7 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
     ];
   }
 
-  get pageTitle() {
-    return this.args.newRootModel.id ? 'View issuer certificate' : 'Generate new root';
-  }
-
+  // for displaying old root details, and generated root details
   get displayFields() {
     const addKeyFields = ['privateKey', 'privateKeyType'];
     const defaultFields = [
@@ -81,10 +85,23 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
     return this.args.newRootModel.id ? [...defaultFields, ...addKeyFields] : defaultFields;
   }
 
+  @action
+  checkFormValidity() {
+    if (this.args.newRootModel.validate) {
+      const { isValid, state, invalidFormMessage } = this.args.newRootModel.validate();
+      this.modelValidations = state;
+      this.invalidFormAlert = invalidFormMessage;
+      return isValid;
+    }
+    return true;
+  }
+
   @task
   @waitFor
   *save(event: Event) {
     event.preventDefault();
+    const continueSave = this.checkFormValidity();
+    if (!continueSave) return;
     try {
       yield this.args.newRootModel.save({ adapterOptions: { actionType: 'rotate-root' } });
       this.flashMessages.success('Successfully generated root.');

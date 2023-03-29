@@ -16,7 +16,11 @@ const validations = {
   issuerName: [
     {
       validator(model) {
-        if (model.actionType === 'generate-root' && model.issuerName === 'default') return false;
+        if (
+          (model.actionType === 'generate-root' || model.actionType === 'rotate-root') &&
+          model.issuerName === 'default'
+        )
+          return false;
         return true;
       },
       message: `Issuer name must be unique across all issuers and not be the reserved value 'default'.`,
