@@ -7,8 +7,13 @@ import sinon from 'sinon';
 module('Integration | Component | sidebar-user-menu', function (hooks) {
   setupRenderingTest(hooks);
 
+  hooks.beforeEach(function () {
+    this.auth = this.owner.lookup('service:auth');
+  });
+
   test('it should render trigger and open menu', async function (assert) {
     await render(hbs`<Sidebar::UserMenu />`);
+
     assert
       .dom('[data-test-user-menu-trigger] [data-test-icon="user"]')
       .exists('Correct icon renders for menu trigger');
@@ -17,8 +22,8 @@ module('Integration | Component | sidebar-user-menu', function (hooks) {
   });
 
   test('it should render default menu items', async function (assert) {
-    const auth = this.owner.lookup('service:auth');
-    sinon.stub(auth, 'currentToken').value('root');
+    sinon.stub(this.auth, 'currentToken').value('root');
+    sinon.stub(this.auth, 'authData').value({ displayName: 'token' });
 
     await render(hbs`<Sidebar::UserMenu />`);
     await click('[data-test-user-menu-trigger]');
@@ -32,13 +37,12 @@ module('Integration | Component | sidebar-user-menu', function (hooks) {
   test('it should render conditional menu items', async function (assert) {
     const router = this.owner.lookup('service:router');
     const transitionStub = sinon.stub(router, 'transitionTo');
-    const auth = this.owner.lookup('service:auth');
-    const renewStub = sinon.stub(auth, 'renew').resolves();
-    const revokeStub = sinon.stub(auth, 'revokeCurrentToken').resolves();
+    const renewStub = sinon.stub(this.auth, 'renew').resolves();
+    const revokeStub = sinon.stub(this.auth, 'revokeCurrentToken').resolves();
     const date = new Date();
-    sinon.stub(auth, 'tokenExpirationDate').value(date.setDate(date.getDate() + 1));
-    sinon.stub(auth, 'authData').value({ displayName: 'token', renewable: true, entity_id: 'foo' });
-    auth.set('allowExpiration', true);
+    sinon.stub(this.auth, 'tokenExpirationDate').value(date.setDate(date.getDate() + 1));
+    sinon.stub(this.auth, 'authData').value({ displayName: 'token', renewable: true, entity_id: 'foo' });
+    this.auth.set('allowExpiration', true);
 
     await render(hbs`<Sidebar::UserMenu />`);
     await click('[data-test-user-menu-trigger]');
