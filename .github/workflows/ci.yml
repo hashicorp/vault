@@ -249,7 +249,7 @@ jobs:
     - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce
       with:
         name: test-results-ui
-        path: ui/test-results/qunit/results.xml
+        path: ui/test-results
       if: always()
     - uses: test-summary/action@62bc5c68de2a6a0d02039763b8c754569df99e3f
       with:
