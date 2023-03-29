@@ -128,7 +128,7 @@ export async function verifyCertificates(certA, certB, leaf) {
     const parsedLeaf = jsonToCertObject(leaf);
     const chainA = await parsedLeaf.verify(parsedCertA);
     const chainB = await parsedLeaf.verify(parsedCertB);
-    // the leaf's issuer should be equal the subject data of the intermediate certs
+    // the leaf's issuer should be equal to the subject data of the intermediate certs
     const isEqualA = parsedLeaf.issuer.isEqual(parsedCertA.subject);
     const isEqualB = parsedLeaf.issuer.isEqual(parsedCertB.subject);
     return chainA && chainB && isEqualA && isEqualB;
