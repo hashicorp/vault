@@ -1,6 +1,8 @@
 package acme
 
 import (
+	"crypto"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 
@@ -22,12 +24,13 @@ var AllowedOuterJWSTypes = map[string]interface{}{
 
 // This wraps a JWS message structure.
 type JWSCtx struct {
-	Algo  string          `json:"alg"`
-	Kid   string          `json:"kid"`
-	jwk   json.RawMessage `json:"jwk"`
-	Nonce string          `json:"nonce"`
-	Url   string          `json:"url"`
-	key   jose.JSONWebKey `json:"-"`
+	Algo     string          `json:"alg"`
+	Kid      string          `json:"kid"`
+	jwk      json.RawMessage `json:"jwk"`
+	Nonce    string          `json:"nonce"`
+	Url      string          `json:"url"`
+	key      jose.JSONWebKey `json:"-"`
+	Existing bool            `json:"-"`
 }
 
 func (c *JWSCtx) UnmarshalJSON(a *ACMEState, jws []byte) error {
@@ -71,6 +74,7 @@ func (c *JWSCtx) UnmarshalJSON(a *ACMEState, jws []byte) error {
 		if err != nil {
 			return err
 		}
+		c.Existing = true
 	}
 
 	if err = c.key.UnmarshalJSON(c.jwk); err != nil {
@@ -79,6 +83,17 @@ func (c *JWSCtx) UnmarshalJSON(a *ACMEState, jws []byte) error {
 
 	if !c.key.Valid() {
 		return fmt.Errorf("received invalid jwk")
+	}
+
+	if c.Kid != "" {
+		// Create a key ID
+		kid, err := c.key.Thumbprint(crypto.SHA256)
+		if err != nil {
+			return fmt.Errorf("failed creating thumbprint: %w", err)
+		}
+
+		c.Kid = base64.URLEncoding.EncodeToString(kid)
+		c.Existing = false
 	}
 
 	return nil
