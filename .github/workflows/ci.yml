@@ -54,7 +54,7 @@ jobs:
     - setup
     uses: ./.github/workflows/setup-go-cache.yml
     with:
-      runs-on: ${{ needs.setup.outputs.compute-standard }}
+      runs-on: ${{ fromJSON(needs.setup.outputs.compute-standard) }}
     secrets: inherit
   fmt:
     name: Check Format
