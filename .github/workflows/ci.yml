@@ -26,13 +26,15 @@ jobs:
           echo 'compute-tiny=["self-hosted","ondemand","linux","type=m5.large"]' >> "$GITHUB_OUTPUT"
           echo 'compute-standard=["self-hosted","ondemand","linux","type=m5.xlarge"]' >> "$GITHUB_OUTPUT"
           echo 'compute-larger=["self-hosted","ondemand","linux","type=m5.2xlarge"]' >> "$GITHUB_OUTPUT"
+          echo 'compute-huge=["self-hosted","ondemand","linux","type=m5.4xlarge"]' >> "$GITHUB_OUTPUT"
           echo 'enterprise=1' >> "$GITHUB_OUTPUT"
           echo 'go-build-tags=ent,enterprise' >> "$GITHUB_OUTPUT"
-        else
+          else
           # shellcheck disable=SC2129
           echo 'compute-tiny="ubuntu-latest"' >> "$GITHUB_OUTPUT"
           echo 'compute-standard="custom-linux-xl-vault-latest"' >> "$GITHUB_OUTPUT"
           echo 'compute-larger="custom-linux-xl-vault-latest"' >> "$GITHUB_OUTPUT"
+          echo 'compute-huge="custom-linux-xl-vault-latest"' >> "$GITHUB_OUTPUT"
           echo 'enterprise=' >> "$GITHUB_OUTPUT"
           echo 'go-build-tags=' >> "$GITHUB_OUTPUT"
         fi
@@ -120,7 +122,7 @@ jobs:
       total-runners: 16
       go-arch: amd64
       go-build-tags: '${{ needs.setup.outputs.go-build-tags }},deadlock'
-      runs-on: ${{ needs.setup.outputs.compute-standard }}
+      runs-on: ${{ needs.setup.outputs.compute-larger }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
     secrets: inherit
   test-go-race:
@@ -141,7 +143,7 @@ jobs:
       extra-flags: '-race'
       go-arch: amd64
       go-build-tags: ${{ needs.setup.outputs.go-build-tags }}
-      runs-on: ${{ needs.setup.outputs.compute-larger }}
+      runs-on: ${{ needs.setup.outputs.compute-huge }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
     secrets: inherit
   test-go-fips:
@@ -163,7 +165,7 @@ jobs:
         }
       go-arch: amd64
       go-build-tags: '${{ needs.setup.outputs.go-build-tags }},deadlock,cgo,fips,fips_140_2'
-      runs-on: ${{ needs.setup.outputs.compute-standard }}
+      runs-on: ${{ needs.setup.outputs.compute-larger }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
     secrets: inherit
   test-ui:
@@ -175,7 +177,7 @@ jobs:
     permissions:
       id-token: write
       contents: read
-    runs-on: ${{ fromJSON(needs.setup.outputs.compute-standard) }}
+    runs-on: ${{ fromJSON(needs.setup.outputs.compute-larger) }}
     steps:
     - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
     - uses: actions/setup-go@d0a58c1c4d2b25278816e339b944508c875f3613
