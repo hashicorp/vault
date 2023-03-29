@@ -87,7 +87,12 @@ func TestAcmeNonce(t *testing.T) {
 				require.NoError(t, err, "failed %s op for new-nouce", httpOp)
 
 				// Proper Status Code
-				require.Equal(t, http.StatusOK, resp.Data["http_status_code"])
+				switch httpOp {
+				case "get":
+					require.Equal(t, http.StatusNoContent, resp.Data["http_status_code"])
+				case "header":
+					require.Equal(t, http.StatusOK, resp.Data["http_status_code"])
+				}
 
 				// Make sure we return the Cache-Control header
 				require.Contains(t, resp.Headers, "Cache-Control", "missing Cache-Control header")

@@ -66,10 +66,16 @@ func patternAcmeNonce(b *backend, pattern string, requireRole, requireIssuer boo
 	}
 }
 
-func (b *backend) acmeNonceHandler(ctx acmeContext, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+func (b *backend) acmeNonceHandler(ctx acmeContext, r *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	nonce, _, err := b.acmeState.GetNonce()
 	if err != nil {
 		return nil, err
+	}
+
+	// Header operations return 200, GET return 204.
+	httpStatus := http.StatusOK
+	if r.Operation == logical.ReadOperation {
+		httpStatus = http.StatusNoContent
 	}
 
 	return &logical.Response{
@@ -79,7 +85,7 @@ func (b *backend) acmeNonceHandler(ctx acmeContext, _ *logical.Request, _ *frame
 			"Link":          genAcmeLinkHeader(ctx),
 		},
 		Data: map[string]interface{}{
-			logical.HTTPStatusCode: http.StatusOK,
+			logical.HTTPStatusCode: httpStatus,
 		},
 	}, nil
 }
