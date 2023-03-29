@@ -850,6 +850,10 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	if entry != nil {
 		// Set here so the audit log has it even if authorization fails
 		req.MountType = entry.Type
+		req.SetMountRunningSha256(entry.RunningSha256)
+		req.SetMountRunningVersion(entry.RunningVersion)
+		req.SetMountIsExternalPlugin(entry.IsExternalPlugin)
+
 		// Get and set ignored HMAC'd value.
 		if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
 			nonHMACReqDataKeys = rawVals.([]string)
@@ -1270,6 +1274,10 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	if entry != nil {
 		// Set here so the audit log has it even if authorization fails
 		req.MountType = entry.Type
+		req.SetMountRunningSha256(entry.RunningSha256)
+		req.SetMountRunningVersion(entry.RunningVersion)
+		req.SetMountIsExternalPlugin(entry.IsExternalPlugin)
+
 		// Get and set ignored HMAC'd value.
 		if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
 			nonHMACReqDataKeys = rawVals.([]string)

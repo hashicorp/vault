@@ -14,6 +14,7 @@ import (
 	squarejwt "gopkg.in/square/go-jose.v2/jwt"
 
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -112,13 +113,17 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 		},
 
 		Request: &AuditRequest{
-			ID:                  req.ID,
-			ClientID:            req.ClientID,
-			ClientToken:         req.ClientToken,
-			ClientTokenAccessor: req.ClientTokenAccessor,
-			Operation:           req.Operation,
-			MountType:           req.MountType,
-			MountAccessor:       req.MountAccessor,
+			ID:                    req.ID,
+			ClientID:              req.ClientID,
+			ClientToken:           req.ClientToken,
+			ClientTokenAccessor:   req.ClientTokenAccessor,
+			Operation:             req.Operation,
+			MountType:             req.MountType,
+			MountAccessor:         req.MountAccessor,
+			MountRunningVersion:   req.MountRunningVersion(),
+			MountRunningSha256:    req.MountRunningSha256(),
+			MountIsExternalPlugin: req.MountIsExternalPlugin(),
+			MountPluginType:       getMountPluginType(req),
 			Namespace: &AuditNamespace{
 				ID:   ns.ID,
 				Path: ns.Path,
@@ -311,13 +316,17 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 		},
 
 		Request: &AuditRequest{
-			ID:                  req.ID,
-			ClientToken:         req.ClientToken,
-			ClientTokenAccessor: req.ClientTokenAccessor,
-			ClientID:            req.ClientID,
-			Operation:           req.Operation,
-			MountType:           req.MountType,
-			MountAccessor:       req.MountAccessor,
+			ID:                    req.ID,
+			ClientToken:           req.ClientToken,
+			ClientTokenAccessor:   req.ClientTokenAccessor,
+			ClientID:              req.ClientID,
+			Operation:             req.Operation,
+			MountType:             req.MountType,
+			MountAccessor:         req.MountAccessor,
+			MountRunningVersion:   req.MountRunningVersion(),
+			MountRunningSha256:    req.MountRunningSha256(),
+			MountIsExternalPlugin: req.MountIsExternalPlugin(),
+			MountPluginType:       getMountPluginType(req),
 			Namespace: &AuditNamespace{
 				ID:   ns.ID,
 				Path: ns.Path,
@@ -333,15 +342,19 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 		},
 
 		Response: &AuditResponse{
-			MountType:     req.MountType,
-			MountAccessor: req.MountAccessor,
-			Auth:          respAuth,
-			Secret:        respSecret,
-			Data:          respData,
-			Warnings:      resp.Warnings,
-			Redirect:      resp.Redirect,
-			WrapInfo:      respWrapInfo,
-			Headers:       resp.Headers,
+			MountType:             req.MountType,
+			MountAccessor:         req.MountAccessor,
+			MountRunningVersion:   req.MountRunningVersion(),
+			MountRunningSha256:    req.MountRunningSha256(),
+			MountIsExternalPlugin: req.MountIsExternalPlugin(),
+			MountPluginType:       getMountPluginType(req),
+			Auth:                  respAuth,
+			Secret:                respSecret,
+			Data:                  respData,
+			Warnings:              resp.Warnings,
+			Redirect:              resp.Redirect,
+			WrapInfo:              respWrapInfo,
+			Headers:               resp.Headers,
 		},
 	}
 
@@ -399,6 +412,10 @@ type AuditRequest struct {
 	Operation                     logical.Operation      `json:"operation,omitempty"`
 	MountType                     string                 `json:"mount_type,omitempty"`
 	MountAccessor                 string                 `json:"mount_accessor,omitempty"`
+	MountRunningVersion           string                 `json:"mount_running_plugin_version,omitempty"`
+	MountRunningSha256            string                 `json:"mount_running_sha256,omitempty"`
+	MountPluginType               string                 `json:"mount_plugin_type,omitempty"`
+	MountIsExternalPlugin         bool                   `json:"mount_is_external_plugin,omitempty"`
 	ClientToken                   string                 `json:"client_token,omitempty"`
 	ClientTokenAccessor           string                 `json:"client_token_accessor,omitempty"`
 	Namespace                     *AuditNamespace        `json:"namespace,omitempty"`
@@ -413,15 +430,19 @@ type AuditRequest struct {
 }
 
 type AuditResponse struct {
-	Auth          *AuditAuth             `json:"auth,omitempty"`
-	MountType     string                 `json:"mount_type,omitempty"`
-	MountAccessor string                 `json:"mount_accessor,omitempty"`
-	Secret        *AuditSecret           `json:"secret,omitempty"`
-	Data          map[string]interface{} `json:"data,omitempty"`
-	Warnings      []string               `json:"warnings,omitempty"`
-	Redirect      string                 `json:"redirect,omitempty"`
-	WrapInfo      *AuditResponseWrapInfo `json:"wrap_info,omitempty"`
-	Headers       map[string][]string    `json:"headers,omitempty"`
+	Auth                  *AuditAuth             `json:"auth,omitempty"`
+	MountType             string                 `json:"mount_type,omitempty"`
+	MountAccessor         string                 `json:"mount_accessor,omitempty"`
+	MountRunningVersion   string                 `json:"mount_running_plugin_version,omitempty"`
+	MountRunningSha256    string                 `json:"mount_running_sha256,omitempty"`
+	MountPluginType       string                 `json:"mount_plugin_type,omitempty"`
+	MountIsExternalPlugin bool                   `json:"mount_is_external_plugin,omitempty"`
+	Secret                *AuditSecret           `json:"secret,omitempty"`
+	Data                  map[string]interface{} `json:"data,omitempty"`
+	Warnings              []string               `json:"warnings,omitempty"`
+	Redirect              string                 `json:"redirect,omitempty"`
+	WrapInfo              *AuditResponseWrapInfo `json:"wrap_info,omitempty"`
+	Headers               map[string][]string    `json:"headers,omitempty"`
 }
 
 type AuditAuth struct {
@@ -556,4 +577,17 @@ func doElideListResponseData(data map[string]interface{}) {
 			}
 		}
 	}
+}
+
+// getMountPluginType returns the plugin type based the mount accessor of a logical.Request.
+func getMountPluginType(req *logical.Request) string {
+	if req.MountAccessor == "" {
+		return ""
+	}
+
+	if strings.HasPrefix(req.MountAccessor, fmt.Sprintf("%s_", consts.PluginTypeCredential.String())) {
+		return consts.PluginTypeCredential.String()
+	}
+
+	return consts.PluginTypeSecrets.String()
 }

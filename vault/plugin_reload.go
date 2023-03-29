@@ -195,14 +195,14 @@ func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAut
 
 	// update the entry running version with the configured version, which was verified during registration.
 	entry.RunningVersion = entry.Version
-	if entry.RunningVersion == "" {
-		// don't set the running version to a builtin if it is running as an external plugin
-		if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
-			if isAuth {
-				entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeCredential, entry.Type)
-			} else {
-				entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeSecrets, entry.Type)
-			}
+	if externaler, ok := backend.(logical.Externaler); ok && externaler.IsExternal() {
+		entry.IsExternalPlugin = true
+	} else if entry.RunningVersion == "" {
+		// set the running version to a builtin if it is not running as an external plugin
+		if isAuth {
+			entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeCredential, entry.Type)
+		} else {
+			entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeSecrets, entry.Type)
 		}
 	}
 
