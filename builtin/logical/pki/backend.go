@@ -12,20 +12,17 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/vault/builtin/logical/pki/acme"
-
 	atomic2 "go.uber.org/atomic"
 
-	"github.com/hashicorp/vault/helper/constants"
-
-	"github.com/hashicorp/go-multierror"
-
-	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/builtin/logical/pki/acme"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -220,11 +217,14 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathAcmeRoleDirectory(&b),
 			pathAcmeIssuerDirectory(&b),
 			pathAcmeIssuerAndRoleDirectory(&b),
-
 			pathAcmeRootNonce(&b),
 			pathAcmeRoleNonce(&b),
 			pathAcmeIssuerNonce(&b),
 			pathAcmeIssuerAndRoleNonce(&b),
+			pathAcmeRootNewAccount(&b),
+			pathAcmeRoleNewAccount(&b),
+			pathAcmeIssuerNewAccount(&b),
+			pathAcmeIssuerAndRoleNewAccount(&b),
 		},
 
 		Secrets: []*framework.Secret{
@@ -322,7 +322,9 @@ type backend struct {
 
 	// Write lock around issuers and keys.
 	issuersLock sync.RWMutex
-	acmeState   *acme.ACMEState
+
+	// Context around ACME operations
+	acmeState *acme.ACMEState
 }
 
 type roleOperation func(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error)
@@ -410,6 +412,7 @@ func (b *backend) initialize(ctx context.Context, _ *logical.InitializationReque
 		b.Logger().Error("Could not initialize stored certificate counts", err)
 		b.certCountError = err.Error()
 	}
+
 	return nil
 }
 
