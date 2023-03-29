@@ -27,9 +27,10 @@ jobs:
           # enos-run-matrices.
           MATRIX_MAX_TEST_GROUPS: 2
         run: |
-          echo "matrix-test-group=$(make ci-get-matrix-group-id)" >> $GITHUB_OUTPUT
-          echo "vault-revision=$(make ci-get-revision)" >> $GITHUB_OUTPUT
-          echo "vault-version=$(make ci-get-version)" >> $GITHUB_OUTPUT
+          # shellcheck disable=SC2129
+          echo "matrix-test-group=$(make ci-get-matrix-group-id)" >> "$GITHUB_OUTPUT"
+          echo "vault-revision=$(make ci-get-revision)" >> "$GITHUB_OUTPUT"
+          echo "vault-version=$(make ci-get-version)" >> "$GITHUB_OUTPUT"
 
   test:
     name: Test ${{ matrix.build-artifact-name }}

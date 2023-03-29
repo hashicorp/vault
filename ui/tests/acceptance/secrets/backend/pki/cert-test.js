@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { currentRouteName, currentURL, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -9,6 +14,7 @@ import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import authPage from 'vault/tests/pages/auth';
 import { SELECTORS } from 'vault/tests/helpers/pki';
 import { csr } from 'vault/tests/helpers/pki/values';
+import { v4 as uuidv4 } from 'uuid';
 
 module('Acceptance | secrets/pki/list?tab=cert', function (hooks) {
   setupApplicationTest(hooks);
@@ -22,7 +28,7 @@ module('Acceptance | secrets/pki/list?tab=cert', function (hooks) {
 
   // mount, generate CA, nav to create role page
   const setup = async (assert, action = 'issue') => {
-    const path = `pki-${new Date().getTime()}`;
+    const path = `pki-${uuidv4()}`;
     const roleName = 'role';
     await enablePage.enable('pki', path);
     await settled();

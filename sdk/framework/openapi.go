@@ -250,7 +250,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 
 		pi.Sudo = specialPathMatch(path, sudoPaths)
 		pi.Unauthenticated = specialPathMatch(path, unauthPaths)
-		pi.DisplayAttrs = p.DisplayAttrs
+		pi.DisplayAttrs = withoutOperationHints(p.DisplayAttrs)
 
 		// If the newer style Operations map isn't defined, create one from the legacy fields.
 		operations := p.Operations
@@ -292,7 +292,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 					Pattern:      t.pattern,
 					Enum:         field.AllowedValues,
 					Default:      field.Default,
-					DisplayAttrs: field.DisplayAttrs,
+					DisplayAttrs: withoutOperationHints(field.DisplayAttrs),
 				},
 				Required:   required,
 				Deprecated: field.Deprecated,
@@ -371,7 +371,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 						Enum:         field.AllowedValues,
 						Default:      field.Default,
 						Deprecated:   field.Deprecated,
-						DisplayAttrs: field.DisplayAttrs,
+						DisplayAttrs: withoutOperationHints(field.DisplayAttrs),
 					}
 					if openapiField.baseType == "array" {
 						p.Items = &OASSchema{
@@ -485,7 +485,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 							Enum:         field.AllowedValues,
 							Default:      field.Default,
 							Deprecated:   field.Deprecated,
-							DisplayAttrs: field.DisplayAttrs,
+							DisplayAttrs: withoutOperationHints(field.DisplayAttrs),
 						}
 						if openapiField.baseType == "array" {
 							p.Items = &OASSchema{
@@ -528,14 +528,55 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 	return nil
 }
 
+// specialPathMatch checks whether the given path matches one of the special
+// paths, taking into account * and + wildcards (e.g. foo/+/bar/*)
 func specialPathMatch(path string, specialPaths []string) bool {
-	// Test for exact or prefix match of special paths.
+	// pathMatchesByParts determines if the path matches the special path's
+	// pattern, accounting for the '+' and '*' wildcards
+	pathMatchesByParts := func(pathParts []string, specialPathParts []string) bool {
+		if len(pathParts) < len(specialPathParts) {
+			return false
+		}
+		for i := 0; i < len(specialPathParts); i++ {
+			var (
+				part    = pathParts[i]
+				pattern = specialPathParts[i]
+			)
+			if pattern == "+" {
+				continue
+			}
+			if pattern == "*" {
+				return true
+			}
+			if strings.HasSuffix(pattern, "*") && strings.HasPrefix(part, pattern[0:len(pattern)-1]) {
+				return true
+			}
+			if pattern != part {
+				return false
+			}
+		}
+		return len(pathParts) == len(specialPathParts)
+	}
+
+	pathParts := strings.Split(path, "/")
+
 	for _, sp := range specialPaths {
-		if sp == path ||
-			(strings.HasSuffix(sp, "*") && strings.HasPrefix(path, sp[0:len(sp)-1])) {
+		// exact match
+		if sp == path {
+			return true
+		}
+
+		// match *
+		if strings.HasSuffix(sp, "*") && strings.HasPrefix(path, sp[0:len(sp)-1]) {
+			return true
+		}
+
+		// match +
+		if strings.Contains(sp, "+") && pathMatchesByParts(pathParts, strings.Split(sp, "/")) {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -601,10 +642,13 @@ func constructOperationID(
 	//      path 1: "keys/generate/exported"  suffix: exported-key
 	//      path 2: "keys/generate/kms"       suffix: kms-key
 	//
+	pathIndexOutOfRange := false
+
 	if suffixes := strings.Split(suffix, "|"); len(suffixes) > 1 || pathIndex > 0 {
 		// if the index is out of bounds, fall back to the old logic
 		if pathIndex >= len(suffixes) {
 			suffix = ""
+			pathIndexOutOfRange = true
 		} else {
 			suffix = suffixes[pathIndex]
 		}
@@ -625,7 +669,7 @@ func constructOperationID(
 	var (
 		needPrefix = prefix == "" && verb == ""
 		needVerb   = verb == ""
-		needSuffix = suffix == "" && (verb == "" || pathIndex > 0)
+		needSuffix = suffix == "" && (verb == "" || pathIndexOutOfRange)
 	)
 
 	if needPrefix {
@@ -936,6 +980,28 @@ func splitFields(allFields map[string]*FieldSchema, pattern string) (pathFields,
 	}
 
 	return pathFields, bodyFields
+}
+
+// withoutOperationHints returns a copy of the given DisplayAttributes without
+// OperationPrefix / OperationVerb / OperationSuffix since we don't need these
+// fields in the final output.
+func withoutOperationHints(in *DisplayAttributes) *DisplayAttributes {
+	if in == nil {
+		return nil
+	}
+
+	copy := *in
+
+	copy.OperationPrefix = ""
+	copy.OperationVerb = ""
+	copy.OperationSuffix = ""
+
+	// return nil if all fields are empty to avoid empty JSON objects
+	if copy == (DisplayAttributes{}) {
+		return nil
+	}
+
+	return &copy
 }
 
 // cleanedResponse is identical to logical.Response but with nulls

@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: Fix PKI revocation request forwarding from standby nodes due to an error wrapping bug
+```
