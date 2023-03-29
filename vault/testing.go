@@ -999,6 +999,10 @@ func (c *TestClusterCore) stop() error {
 	return nil
 }
 
+func (c *TestClusterCore) StopAutomaticRollbacks() {
+	c.rollback.StopTicker()
+}
+
 func (c *TestClusterCore) GrabRollbackLock() {
 	// Ensure we don't hold this lock while there are in flight rollbacks.
 	c.rollback.inflightAll.Wait()
