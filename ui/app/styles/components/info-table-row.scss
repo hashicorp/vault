@@ -86,6 +86,9 @@
 
 .info-table-row-header {
   margin: 0;
+  font-size: $size-8;
+  color: $grey;
+  font-weight: $font-weight-semibold;
 
   @include until($tablet) {
     display: none;

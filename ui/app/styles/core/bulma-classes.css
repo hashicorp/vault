@@ -228,12 +228,6 @@ fieldset[disabled] .radio,
   }
 }
 
-/* ARG TODO: table one spot */
-.table {
-  background-color: white;
-  color:  hsl(0, 0%, 21%);
-}
-
 .tag:not(body) {
   align-items: center;
   background-color: whitesmoke;
