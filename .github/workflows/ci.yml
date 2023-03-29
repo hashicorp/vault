@@ -28,7 +28,7 @@ jobs:
           echo 'compute-larger=["self-hosted","ondemand","linux","type=m5.2xlarge"]' >> "$GITHUB_OUTPUT"
           echo 'enterprise=1' >> "$GITHUB_OUTPUT"
           echo 'go-build-tags=ent,enterprise' >> "$GITHUB_OUTPUT"
-          else
+        else
           # shellcheck disable=SC2129
           echo 'compute-tiny="ubuntu-latest"' >> "$GITHUB_OUTPUT"
           echo 'compute-standard="custom-linux-xl-vault-latest"' >> "$GITHUB_OUTPUT"
