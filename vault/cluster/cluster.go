@@ -22,7 +22,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"golang.org/x/net/http2"
 )
 
@@ -237,7 +236,6 @@ func (cl *Listener) TLSConfig(ctx context.Context) (*tls.Config, error) {
 			MinVersion:           tls.VersionTLS12,
 			RootCAs:              caPool,
 			ClientCAs:            caPool,
-			NextProtos:           clientHello.SupportedProtos,
 			CipherSuites:         cl.cipherSuites,
 		}
 
@@ -253,6 +251,11 @@ func (cl *Listener) TLSConfig(ctx context.Context) (*tls.Config, error) {
 				for _, ca := range caList {
 					caPool.AddCert(ca)
 				}
+
+				// We have selected CA information for one particular
+				// handler; make sure we prefer that algorithm as the
+				// server.
+				ret.NextProtos = []string{v}
 				return ret, nil
 			}
 		}
@@ -280,9 +283,6 @@ func (cl *Listener) Run(ctx context.Context) error {
 		cl.logger.Error("failed to get tls configuration when starting cluster listener", "error", err)
 		return err
 	}
-
-	// The server supports all of the possible protos
-	tlsConfig.NextProtos = []string{"h2", consts.RequestForwardingALPN, consts.PerfStandbyALPN, consts.PerformanceReplicationALPN, consts.DRReplicationALPN}
 
 	for _, ln := range cl.networkLayer.Listeners() {
 		// closeCh is used to shutdown the spawned goroutines once this
