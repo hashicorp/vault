@@ -235,7 +235,6 @@ jobs:
       name: test-ui
       env:
         VAULT_LICENSE: ${{ steps.secrets.outputs.VAULT_LICENSE }}
-        CI: true
       run: |
         export PATH="${PWD}/bin:${PATH}"
 
