@@ -2,6 +2,7 @@ package pki
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/vault/builtin/logical/pki/acme"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -9,27 +10,74 @@ import (
 )
 
 func pathAcmeRootNewAccount(b *backend) *framework.Path {
-	return patternAcmeNewAccount(b, "acme/directory")
+	return patternAcmeNewAccount(b, "acme/new-account")
 }
 
 func pathAcmeRoleNewAccount(b *backend) *framework.Path {
-	return patternAcmeNewAccount(b, "roles/"+framework.GenericNameRegex("role")+"/acme/directory")
+	return patternAcmeNewAccount(b, "roles/"+framework.GenericNameRegex("role")+"/acme/new-account")
 }
 
 func pathAcmeIssuerNewAccount(b *backend) *framework.Path {
-	return patternAcmeNewAccount(b, "issuer/"+framework.GenericNameRegex(issuerRefParam)+"/acme/directory")
+	return patternAcmeNewAccount(b, "issuer/"+framework.GenericNameRegex(issuerRefParam)+"/acme/new-account")
 }
 
 func pathAcmeIssuerAndRoleNewAccount(b *backend) *framework.Path {
-	return patternAcmeNewAccount(b, "issuer/"+framework.GenericNameRegex(issuerRefParam)+"/roles/"+framework.GenericNameRegex("role")+"/acme/directory")
+	return patternAcmeNewAccount(b,
+		"issuer/"+framework.GenericNameRegex(issuerRefParam)+
+			"/roles/"+framework.GenericNameRegex("role")+"/acme/new-account")
+}
+
+func addFieldsForACMEPath(fields map[string]*framework.FieldSchema, pattern string) map[string]*framework.FieldSchema {
+	if strings.Contains(pattern, framework.GenericNameRegex("role")) {
+		fields["role"] = &framework.FieldSchema{
+			Type:        framework.TypeString,
+			Description: `The desired role for the acme request`,
+			Required:    true,
+		}
+	}
+	if strings.Contains(pattern, framework.GenericNameRegex(issuerRefParam)) {
+		fields[issuerRefParam] = &framework.FieldSchema{
+			Type:        framework.TypeString,
+			Description: `Reference to an existing issuer name or issuer id`,
+			Required:    true,
+		}
+	}
+
+	return fields
+}
+
+func addFieldsForACMERequest(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields["protected"] = &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Description: "ACME request 'protected' value",
+		Required:    true,
+	}
+
+	fields["payload"] = &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Description: "ACME request 'payload' value",
+		Required:    true,
+	}
+
+	fields["signature"] = &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Description: "ACME request 'signature' value",
+		Required:    true,
+	}
+
+	return fields
 }
 
 func patternAcmeNewAccount(b *backend, pattern string) *framework.Path {
+	fields := map[string]*framework.FieldSchema{}
+	addFieldsForACMEPath(fields, pattern)
+	addFieldsForACMERequest(fields)
+
 	return &framework.Path{
 		Pattern: pattern,
-		Fields:  map[string]*framework.FieldSchema{},
+		Fields:  fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
-			logical.ReadOperation: &framework.PathOperation{
+			logical.UpdateOperation: &framework.PathOperation{
 				Callback:                    b.acmeParsedWrapper(b.acmeNewAccountHandler),
 				ForwardPerformanceSecondary: false,
 				ForwardPerformanceStandby:   true,
@@ -45,7 +93,7 @@ type acmeParsedOperation func(acmeCtx acmeContext, r *logical.Request, fields *f
 
 func (b *backend) acmeParsedWrapper(op acmeParsedOperation) framework.OperationFunc {
 	return b.acmeWrapper(func(acmeCtx acmeContext, r *logical.Request, fields *framework.FieldData) (*logical.Response, error) {
-		user, data, err := b.acme.ParseRequestParams(fields)
+		user, data, err := b.acmeState.ParseRequestParams(fields)
 		if err != nil {
 			return nil, err
 		}
@@ -113,11 +161,11 @@ func formatAccountResponse(location string, status string, contact []string) *lo
 }
 
 func (b *backend) acmeNewAccountSearchHandler(acmeCtx acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *acme.JWSCtx, data map[string]interface{}) (*logical.Response, error) {
-	if userCtx.Existing || b.acme.DoesAccountExist(userCtx.Kid) {
+	if userCtx.Existing || b.acmeState.DoesAccountExist(userCtx.Kid) {
 		// This account exists; return its details. It would be slightly
 		// weird to specify a kid in the request (and not use an explicit
 		// jwk here), but we might as well support it too.
-		account, err := b.acme.LoadAccount(userCtx.Kid)
+		account, err := b.acmeState.LoadAccount(userCtx.Kid)
 		if err != nil {
 			return nil, fmt.Errorf("error loading account: %w", err)
 		}
@@ -140,7 +188,7 @@ func (b *backend) acmeNewAccountCreateHandler(acmeCtx acmeContext, r *logical.Re
 	}
 
 	// If the account already exists, return the existing one.
-	if b.acme.DoesAccountExist(userCtx.Kid) {
+	if b.acmeState.DoesAccountExist(userCtx.Kid) {
 		return b.acmeNewAccountSearchHandler(acmeCtx, r, fields, userCtx, data)
 	}
 
@@ -149,7 +197,7 @@ func (b *backend) acmeNewAccountCreateHandler(acmeCtx acmeContext, r *logical.Re
 		return nil, fmt.Errorf("terms of service not agreed to: %w", acme.ErrUserActionRequired)
 	}
 
-	account, err := b.acme.CreateAccount(userCtx, contact, termsOfServiceAgreed)
+	account, err := b.acmeState.CreateAccount(userCtx, contact, termsOfServiceAgreed)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create account: %w", err)
 	}

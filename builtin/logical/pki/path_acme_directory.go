@@ -19,42 +19,27 @@ const (
 )
 
 func pathAcmeRootDirectory(b *backend) *framework.Path {
-	return patternAcmeDirectory(b, "acme/directory", false /* requireRole */, false /* requireIssuer */)
+	return patternAcmeDirectory(b, "acme/directory")
 }
 
 func pathAcmeRoleDirectory(b *backend) *framework.Path {
-	return patternAcmeDirectory(b, "roles/"+framework.GenericNameRegex("role")+"/acme/directory",
-		true /* requireRole */, false /* requireIssuer */)
+	return patternAcmeDirectory(b, "roles/"+framework.GenericNameRegex("role")+"/acme/directory")
 }
 
 func pathAcmeIssuerDirectory(b *backend) *framework.Path {
-	return patternAcmeDirectory(b, "issuer/"+framework.GenericNameRegex(issuerRefParam)+"/acme/directory",
-		false /* requireRole */, true /* requireIssuer */)
+	return patternAcmeDirectory(b, "issuer/"+framework.GenericNameRegex(issuerRefParam)+"/acme/directory")
 }
 
 func pathAcmeIssuerAndRoleDirectory(b *backend) *framework.Path {
 	return patternAcmeDirectory(b,
-		"issuer/"+framework.GenericNameRegex(issuerRefParam)+"/roles/"+framework.GenericNameRegex(
-			"role")+"/acme/directory",
-		true /* requireRole */, true /* requireIssuer */)
+		"issuer/"+framework.GenericNameRegex(issuerRefParam)+
+			"/roles/"+framework.GenericNameRegex("role")+"/acme/directory")
 }
 
-func patternAcmeDirectory(b *backend, pattern string, requireRole, requireIssuer bool) *framework.Path {
+func patternAcmeDirectory(b *backend, pattern string) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
-	if requireRole {
-		fields["role"] = &framework.FieldSchema{
-			Type:        framework.TypeString,
-			Description: `The desired role for the acme request`,
-			Required:    true,
-		}
-	}
-	if requireIssuer {
-		fields[issuerRefParam] = &framework.FieldSchema{
-			Type:        framework.TypeString,
-			Description: `Reference to an existing issuer name or issuer id`,
-			Required:    true,
-		}
-	}
+	addFieldsForACMEPath(fields, pattern)
+
 	return &framework.Path{
 		Pattern: pattern,
 		Fields:  fields,

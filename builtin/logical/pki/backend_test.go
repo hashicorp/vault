@@ -6812,6 +6812,7 @@ func TestProperAuthing(t *testing.T) {
 	for _, acmePrefix := range []string{"", "issuer/default/", "roles/test/", "issuer/default/roles/test/"} {
 		paths[acmePrefix+"acme/directory"] = shouldBeUnauthedReadList
 		paths[acmePrefix+"acme/new-nonce"] = shouldBeUnauthedReadList
+		paths[acmePrefix+"acme/new-account"] = shouldBeUnauthedWriteOnly
 	}
 
 	for path, checkerType := range paths {
