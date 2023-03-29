@@ -1,8 +1,11 @@
 package pki
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
+
+	"github.com/hashicorp/vault/sdk/logical"
 
 	"github.com/stretchr/testify/require"
 	"gopkg.in/square/go-jose.v2/json"
@@ -12,16 +15,7 @@ import (
 // are available and produce the correct responses.
 func TestAcmeDirectory(t *testing.T) {
 	t.Parallel()
-	b, s := CreateBackendWithStorage(t)
-
-	// Setting templated AIAs should succeed.
-	pathConfig := "https://localhost:8200/v1/pki"
-
-	_, err := CBWrite(b, s, "config/cluster", map[string]interface{}{
-		"path":     pathConfig,
-		"aia_path": "http://localhost:8200/cdn/pki",
-	})
-	require.NoError(t, err)
+	b, s, pathConfig := setupAcmeBackend(t)
 
 	cases := []struct {
 		name         string
@@ -65,6 +59,65 @@ func TestAcmeDirectory(t *testing.T) {
 	}
 }
 
+func TestAcmeNonce(t *testing.T) {
+	t.Parallel()
+	b, s, pathConfig := setupAcmeBackend(t)
+
+	cases := []struct {
+		name         string
+		prefixUrl    string
+		directoryUrl string
+	}{
+		{"root", "", "acme/new-nonce"},
+		{"role", "/roles/test-role", "roles/test-role/acme/new-nonce"},
+		{"issuer", "/issuer/default", "issuer/default/acme/new-nonce"},
+		{"issuer_role", "/issuer/default/roles/test-role", "issuer/default/roles/test-role/acme/new-nonce"},
+	}
+	for _, tc := range cases {
+		for _, httpOp := range []string{"get", "header"} {
+			t.Run(fmt.Sprintf("%s-%s", tc.name, httpOp), func(t *testing.T) {
+				var resp *logical.Response
+				var err error
+				switch httpOp {
+				case "get":
+					resp, err = CBRead(b, s, tc.directoryUrl)
+				case "header":
+					resp, err = CBHeader(b, s, tc.directoryUrl)
+				}
+				require.NoError(t, err, "failed %s op for new-nouce", httpOp)
+
+				// Proper Status Code
+				switch httpOp {
+				case "get":
+					require.Equal(t, http.StatusNoContent, resp.Data["http_status_code"])
+				case "header":
+					require.Equal(t, http.StatusOK, resp.Data["http_status_code"])
+				}
+
+				// Make sure we return the Cache-Control header
+				require.Contains(t, resp.Headers, "Cache-Control", "missing Cache-Control header")
+				require.Contains(t, resp.Headers["Cache-Control"], "no-store",
+					"missing Cache-Control header with no-store header value")
+				require.Len(t, resp.Headers["Cache-Control"], 1,
+					"Cache-Control header should have only a single header")
+
+				// Test for our nonce header value
+				require.Contains(t, resp.Headers, "Replay-Nonce", "missing Replay-Nonce header")
+				require.NotEmpty(t, resp.Headers["Replay-Nonce"], "missing Replay-Nonce header with an actual value")
+				require.Len(t, resp.Headers["Replay-Nonce"], 1,
+					"Replay-Nonce header should have only a single header")
+
+				// Test Link header value
+				require.Contains(t, resp.Headers, "Link", "missing Link header")
+				expectedLinkHeader := fmt.Sprintf("<%s>;rel=\"index\"", pathConfig+tc.prefixUrl+"/acme/directory")
+				require.Contains(t, resp.Headers["Link"], expectedLinkHeader,
+					"different value for link header than expected")
+				require.Len(t, resp.Headers["Link"], 1, "Link header should have only a single header")
+			})
+		}
+	}
+}
+
 // TestAcmeClusterPathNotConfigured basic testing of the ACME error handler.
 func TestAcmeClusterPathNotConfigured(t *testing.T) {
 	t.Parallel()
@@ -101,4 +154,18 @@ func TestAcmeClusterPathNotConfigured(t *testing.T) {
 			require.NotEmpty(t, respType["detail"])
 		})
 	}
+}
+
+func setupAcmeBackend(t *testing.T) (*backend, logical.Storage, string) {
+	b, s := CreateBackendWithStorage(t)
+
+	// Setting templated AIAs should succeed.
+	pathConfig := "https://localhost:8200/v1/pki"
+
+	_, err := CBWrite(b, s, "config/cluster", map[string]interface{}{
+		"path":     pathConfig,
+		"aia_path": "http://localhost:8200/cdn/pki",
+	})
+	require.NoError(t, err)
+	return b, s, pathConfig
 }

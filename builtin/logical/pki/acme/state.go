@@ -20,11 +20,11 @@ type ACMEState struct {
 	nonces     *sync.Map // map[string]time.Time
 }
 
-func NewACMEState() (*ACMEState, error) {
+func NewACMEState() *ACMEState {
 	return &ACMEState{
 		nextExpiry: new(atomic.Int64),
 		nonces:     new(sync.Map),
-	}, nil
+	}
 }
 
 func generateNonce() (string, error) {
