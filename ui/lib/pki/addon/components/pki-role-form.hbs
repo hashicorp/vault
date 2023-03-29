@@ -40,11 +40,7 @@
                       </option>
                       {{#each @issuers as |issuer|}}
                         <option
-                          selected={{if
-                            @shouldPreselectIssuer
-                            @role.issuerRef
-                            (eq (get @role issuer.issuerName) @role.issuerRef)
-                          }}
+                          selected={{if @role.isNew (eq (get @role issuer.issuerName) @role.issuerRef) @role.issuerRef}}
                           value={{issuer.issuerName}}
                         >
                           {{issuer.issuerName}}
@@ -59,7 +55,7 @@
                 data-test-field={{attr}}
                 @attr={{attr}}
                 @model={{@role}}
-                @roleValidations={{this.modelValidations}}
+                @modelValidations={{this.modelValidations}}
                 @showHelpText={{false}}
               >
                 <PkiNotValidAfterForm @attr={{attr}} @model={{@role}} />
@@ -92,16 +88,16 @@
                   {{/if}}
                   {{! FIELDS }}
                   {{#if (eq group "Key usage")}}
-                    <PkiKeyUsage @role={{@role}} />
+                    <PkiKeyUsage @model={{@role}} />
                   {{else if (eq group "Key parameters")}}
-                    <PkiKeyParameters @role={{@role}} @fields={{fields}} />
+                    <PkiKeyParameters @model={{@role}} @fields={{fields}} />
                   {{else}}
                     {{#each fields as |attr|}}
                       <FormField
                         data-test-field={{true}}
                         @attr={{attr}}
-                        @role={{@role}}
-                        @roleValidations={{@roleValidations}}
+                        @model={{@role}}
+                        @modelValidations={{@roleValidations}}
                         @showHelpText={{false}}
                       >
                         {{yield attr}}
