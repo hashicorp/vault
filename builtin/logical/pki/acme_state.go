@@ -140,7 +140,7 @@ func (a *acmeState) ParseRequestParams(data *framework.FieldData) (*jwsCtx, map[
 
 	jwkBytes, err := base64.RawURLEncoding.DecodeString(jwkBase64)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to base64 parse 'protected': %w", err)
+		return nil, nil, fmt.Errorf("failed to base64 parse 'protected': %s: %w", err, ErrMalformed)
 	}
 	if err = c.UnmarshalJSON(a, jwkBytes); err != nil {
 		return nil, nil, fmt.Errorf("failed to json unmarshal 'protected': %w", err)
@@ -150,7 +150,7 @@ func (a *acmeState) ParseRequestParams(data *framework.FieldData) (*jwsCtx, map[
 	// should read and redeem the nonce here too, to avoid doing any extra
 	// work if it is invalid.
 	if !a.RedeemNonce(c.Nonce) {
-		return nil, nil, fmt.Errorf("invalid or reused nonce")
+		return nil, nil, fmt.Errorf("invalid or reused nonce: %w", ErrBadNonce)
 	}
 
 	payloadBase64, ok := data.Get("payload").(string)

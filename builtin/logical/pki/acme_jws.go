@@ -44,7 +44,7 @@ func (c *jwsCtx) UnmarshalJSON(a *acmeState, jws []byte) error {
 		//
 		// > The "jwk" and "kid" fields are mutually exclusive.  Servers MUST
 		// > reject requests that contain both.
-		return fmt.Errorf("invalid header: got both account 'kid' and 'jwk' in the same message; expected only one")
+		return fmt.Errorf("invalid header: got both account 'kid' and 'jwk' in the same message; expected only one: %w", ErrMalformed)
 	}
 
 	if c.Kid == "" && len(c.jwk) == 0 {
@@ -52,7 +52,7 @@ func (c *jwsCtx) UnmarshalJSON(a *acmeState, jws []byte) error {
 		//
 		// > Either "jwk" (JSON Web Key) or "kid" (Key ID) as specified
 		// > below
-		return fmt.Errorf("invalid header: got neither required fields of 'kid' nor 'jwk'")
+		return fmt.Errorf("invalid header: got neither required fields of 'kid' nor 'jwk': %w", ErrMalformed)
 	}
 
 	if _, present := AllowedOuterJWSTypes[c.Algo]; !present {
@@ -65,7 +65,7 @@ func (c *jwsCtx) UnmarshalJSON(a *acmeState, jws []byte) error {
 		// >   * This field MUST NOT contain "none" or a Message
 		// >     Authentication Code (MAC) algorithm (e.g. one in which the
 		// >     algorithm registry description mentions MAC/HMAC).
-		return fmt.Errorf("invalid header: unexpected value for 'algo'")
+		return fmt.Errorf("invalid header: unexpected value for 'algo': %w", ErrMalformed)
 	}
 
 	if c.Kid != "" {
@@ -82,7 +82,7 @@ func (c *jwsCtx) UnmarshalJSON(a *acmeState, jws []byte) error {
 	}
 
 	if !c.key.Valid() {
-		return fmt.Errorf("received invalid jwk")
+		return fmt.Errorf("received invalid jwk: %w", ErrMalformed)
 	}
 
 	if c.Kid != "" {
@@ -111,21 +111,21 @@ func (c *jwsCtx) VerifyJWS(signature string) (map[string]interface{}, error) {
 	// This is validated by go-jose.
 	sig, err := jose.ParseSigned(signature)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing signature: %w", err)
+		return nil, fmt.Errorf("error parsing signature: %s: %w", err, ErrMalformed)
 	}
 
 	if len(sig.Signatures) > 1 {
 		// See RFC 8555 Section 6.2. Request Authentication:
 		//
 		// > The JWS MUST NOT have multiple signatures
-		return nil, fmt.Errorf("request had multiple signatures")
+		return nil, fmt.Errorf("request had multiple signatures: %w", ErrMalformed)
 	}
 
 	if hasValues(sig.Signatures[0].Unprotected) {
 		// See RFC 8555 Section 6.2. Request Authentication:
 		//
 		// > The JWS Unprotected Header [RFC7515] MUST NOT be used
-		return nil, fmt.Errorf("request had unprotected headers")
+		return nil, fmt.Errorf("request had unprotected headers: %w", ErrMalformed)
 	}
 
 	payload, err := sig.Verify(c.key)
@@ -135,7 +135,7 @@ func (c *jwsCtx) VerifyJWS(signature string) (map[string]interface{}, error) {
 
 	var m map[string]interface{}
 	if err := json.Unmarshal(payload, &m); err != nil {
-		return nil, fmt.Errorf("failed to json unmarshal 'payload': %w", err)
+		return nil, fmt.Errorf("failed to json unmarshal 'payload': %s: %w", err, ErrMalformed)
 	}
 
 	return m, nil
