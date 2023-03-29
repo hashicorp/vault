@@ -8,19 +8,23 @@
     </h1>
   </p.levelLeft>
 </PageHeader>
-
 {{#if @newRootModel.id}}
   <Toolbar>
     <ToolbarActions>
       <ToolbarLink
         @route="issuers.issuer.cross-sign"
         @type="pen-tool"
-        @model={{@newRootModel.id}}
+        @model={{@newRootModel.issuerId}}
         data-test-pki-issuer-cross-sign
       >
         Cross-sign issuers
       </ToolbarLink>
-      <ToolbarLink @route="issuers.issuer.sign" @type="pen-tool" @model={{@newRootModel.id}} data-test-pki-issuer-sign-int>
+      <ToolbarLink
+        @route="issuers.issuer.sign"
+        @type="pen-tool"
+        @model={{@newRootModel.issuerId}}
+        data-test-pki-issuer-sign-int
+      >
         Sign Intermediate
       </ToolbarLink>
       <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
@@ -39,7 +43,7 @@
               <li class="action">
                 <DownloadButton
                   class="link"
-                  @filename={{@newRootModel.id}}
+                  @filename={{@newRootModel.issuerId}}
                   @extension="pem"
                   @fetchData={{fn this.fetchDataForDownload "pem"}}
                   data-test-issuer-download-type="pem"
@@ -50,7 +54,7 @@
               <li class="action">
                 <DownloadButton
                   class="link"
-                  @filename={{@newRootModel.id}}
+                  @filename={{@newRootModel.issuerId}}
                   @extension="der"
                   @fetchData={{fn this.fetchDataForDownload "der"}}
                   data-test-issuer-download-type="der"
@@ -62,7 +66,7 @@
           </nav>
         </D.Content>
       </BasicDropdown>
-      <ToolbarLink @route="issuers.issuer.edit" @model={{@newRootModel.id}} data-test-pki-issuer-configure>
+      <ToolbarLink @route="issuers.issuer.edit" @model={{@newRootModel.issuerId}} data-test-pki-issuer-configure>
         Configure
       </ToolbarLink>
     </ToolbarActions>
