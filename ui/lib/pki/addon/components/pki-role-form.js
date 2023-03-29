@@ -33,16 +33,11 @@ export default class PkiRoleForm extends Component {
   @tracked invalidFormAlert;
   @tracked modelValidations;
   @tracked showDefaultIssuer = true;
-  @tracked issuers = [];
 
   constructor() {
     super(...arguments);
 
-    this.showDefaultIssuer = this.args.model.issuerRef === 'default';
-
-    this.store
-      .query('pki/issuer', { backend: this.args.model.backend })
-      .then((issuers) => (this.issuers = issuers));
+    this.showDefaultIssuer = this.args.role.issuerRef === 'default';
   }
 
   get breadcrumbs() {
@@ -51,8 +46,8 @@ export default class PkiRoleForm extends Component {
       { label: this.secretMountPath.currentPath, route: 'overview' },
       { label: 'roles', route: 'roles.index' },
     ];
-    if (!this.args.model.isNew) {
-      crumbs.push({ label: this.args.model.id, route: 'roles.role.details' }, { label: 'edit' });
+    if (!this.args.role.isNew) {
+      crumbs.push({ label: this.args.role.id, route: 'roles.role.details' }, { label: 'edit' });
     }
     return crumbs;
   }
@@ -61,12 +56,12 @@ export default class PkiRoleForm extends Component {
   *save(event) {
     event.preventDefault();
     try {
-      const { isValid, state, invalidFormMessage } = this.args.model.validate();
+      const { isValid, state, invalidFormMessage } = this.args.role.validate();
       this.modelValidations = isValid ? null : state;
       this.invalidFormAlert = invalidFormMessage;
       if (isValid) {
-        const { isNew, name } = this.args.model;
-        yield this.args.model.save();
+        const { isNew, name } = this.args.role;
+        yield this.args.role.save();
         this.flashMessages.success(`Successfully ${isNew ? 'created' : 'updated'} the role ${name}.`);
         this.args.onSave();
       }

@@ -2,8 +2,8 @@
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
     {{! ARG TODO write a test for namespace reminder }}
-    <NamespaceReminder @mode={{if @model.isNew "create" "update"}} @noun="PKI role" />
-    {{#each @model.formFieldGroups as |fieldGroup|}}
+    <NamespaceReminder @mode={{if @role.isNew "create" "update"}} @noun="PKI role" />
+    {{#each @role.formFieldGroups as |fieldGroup|}}
       {{#each-in fieldGroup as |group fields|}}
         {{! DEFAULT VIEW }}
         {{#if (eq group "default")}}
@@ -32,18 +32,22 @@
                     <select
                       name={{attr.name}}
                       id={{attr.name}}
-                      {{on "change" (pipe (pick "target.value") (fn (mut @model.issuerRef)))}}
+                      {{on "change" (pipe (pick "target.value") (fn (mut @role.issuerRef)))}}
                       data-test-input={{attr.name}}
                     >
                       <option value="">
                         Select one
                       </option>
-                      {{#each this.issuers as |val|}}
+                      {{#each @issuers as |issuer|}}
                         <option
-                          selected={{or (eq (get @model val.issuerName) @model.issuerRef) @model.issuerRef}}
-                          value={{val.issuerName}}
+                          selected={{if
+                            @shouldPreselectIssuer
+                            @role.issuerRef
+                            (eq (get @role issuer.issuerName) @role.issuerRef)
+                          }}
+                          value={{issuer.issuerName}}
                         >
-                          {{val.issuerName}}
+                          {{issuer.issuerName}}
                         </option>
                       {{/each}}
                     </select>
@@ -54,27 +58,27 @@
               <FormField
                 data-test-field={{attr}}
                 @attr={{attr}}
-                @model={{@model}}
-                @modelValidations={{this.modelValidations}}
+                @model={{@role}}
+                @roleValidations={{this.modelValidations}}
                 @showHelpText={{false}}
               >
-                <PkiNotValidAfterForm @attr={{attr}} @model={{@model}} />
+                <PkiNotValidAfterForm @attr={{attr}} @model={{@role}} />
               </FormField>
             {{/if}}
           {{/each}}
         {{else}}
           {{#let (camelize (concat "show" group)) as |prop|}}
             <ToggleButton
-              @isOpen={{get @model prop}}
+              @isOpen={{get @role prop}}
               @openLabel={{concat "Hide " group}}
               @closedLabel={{group}}
-              @onClick={{fn (mut (get @model prop))}}
+              @onClick={{fn (mut (get @role prop))}}
               class="is-block"
               data-test-toggle-group={{group}}
             />
-            {{#if (get @model prop)}}
+            {{#if (get @role prop)}}
               <div class="box is-tall is-marginless" data-test-toggle-div={{group}}>
-                {{#let (get @model.fieldGroupsInfo group) as |toggleGroup|}}
+                {{#let (get @role.fieldGroupsInfo group) as |toggleGroup|}}
                   {{! HEADER }}
                   {{#if toggleGroup.header}}
                     <div class="has-bottom-margin-s">
@@ -88,16 +92,16 @@
                   {{/if}}
                   {{! FIELDS }}
                   {{#if (eq group "Key usage")}}
-                    <PkiKeyUsage @model={{@model}} />
+                    <PkiKeyUsage @role={{@role}} />
                   {{else if (eq group "Key parameters")}}
-                    <PkiKeyParameters @model={{@model}} @fields={{fields}} />
+                    <PkiKeyParameters @role={{@role}} @fields={{fields}} />
                   {{else}}
                     {{#each fields as |attr|}}
                       <FormField
                         data-test-field={{true}}
                         @attr={{attr}}
-                        @model={{@model}}
-                        @modelValidations={{@modelValidations}}
+                        @role={{@role}}
+                        @roleValidations={{@roleValidations}}
                         @showHelpText={{false}}
                       >
                         {{yield attr}}
@@ -131,7 +135,7 @@
       disabled={{this.save.isRunning}}
       data-test-pki-role-save
     >
-      {{if @model.isNew "Create" "Update"}}
+      {{if @role.isNew "Create" "Update"}}
     </button>
     <button
       type="button"

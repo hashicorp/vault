@@ -9,7 +9,9 @@
   </p.levelLeft>
 </PageHeader>
 <PkiRoleForm
-  @model={{this.model}}
+  @role={{this.model.role}}
+  @issuers={{this.model.issuers}}
+  @shouldPreselectIssuer={{true}}
   @onCancel={{transition-to "vault.cluster.secrets.backend.pki.roles.role.details" this.model.id}}
   @onSave={{transition-to "vault.cluster.secrets.backend.pki.roles.role.details" this.model.id}}
 />
