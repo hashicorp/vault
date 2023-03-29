@@ -9,42 +9,27 @@ import (
 )
 
 func pathAcmeRootNonce(b *backend) *framework.Path {
-	return patternAcmeNonce(b, "acme/new-nonce", false /* requireRole */, false /* requireIssuer */)
+	return patternAcmeNonce(b, "acme/new-nonce")
 }
 
 func pathAcmeRoleNonce(b *backend) *framework.Path {
-	return patternAcmeNonce(b, "roles/"+framework.GenericNameRegex("role")+"/acme/new-nonce",
-		true /* requireRole */, false /* requireIssuer */)
+	return patternAcmeNonce(b, "roles/"+framework.GenericNameRegex("role")+"/acme/new-nonce")
 }
 
 func pathAcmeIssuerNonce(b *backend) *framework.Path {
-	return patternAcmeNonce(b, "issuer/"+framework.GenericNameRegex(issuerRefParam)+"/acme/new-nonce",
-		false /* requireRole */, true /* requireIssuer */)
+	return patternAcmeNonce(b, "issuer/"+framework.GenericNameRegex(issuerRefParam)+"/acme/new-nonce")
 }
 
 func pathAcmeIssuerAndRoleNonce(b *backend) *framework.Path {
 	return patternAcmeNonce(b,
-		"issuer/"+framework.GenericNameRegex(issuerRefParam)+"/roles/"+framework.GenericNameRegex(
-			"role")+"/acme/new-nonce",
-		true /* requireRole */, true /* requireIssuer */)
+		"issuer/"+framework.GenericNameRegex(issuerRefParam)+
+			"/roles/"+framework.GenericNameRegex("role")+"/acme/new-nonce")
 }
 
-func patternAcmeNonce(b *backend, pattern string, requireRole, requireIssuer bool) *framework.Path {
+func patternAcmeNonce(b *backend, pattern string) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
-	if requireRole {
-		fields["role"] = &framework.FieldSchema{
-			Type:        framework.TypeString,
-			Description: `The desired role for the acme request`,
-			Required:    true,
-		}
-	}
-	if requireIssuer {
-		fields[issuerRefParam] = &framework.FieldSchema{
-			Type:        framework.TypeString,
-			Description: `Reference to an existing issuer name or issuer id`,
-			Required:    true,
-		}
-	}
+	addFieldsForACMEPath(fields, pattern)
+
 	return &framework.Path{
 		Pattern: pattern,
 		Fields:  fields,
