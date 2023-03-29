@@ -1,7 +1,12 @@
 <Toolbar>
   <ToolbarActions>
     {{#if (and @isRotatable @canRotate)}}
-      <button type="button" class="toolbar-link" {{on "click" (fn (mut this.showRotationModal) true)}}>
+      <button
+        type="button"
+        class="toolbar-link"
+        {{on "click" (fn (mut this.showRotationModal) true)}}
+        data-test-pki-issuer-rotate-root
+      >
         Rotate this root
         <Icon @name="rotate-cw" />
       </button>

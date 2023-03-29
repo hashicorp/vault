@@ -39,6 +39,7 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
   });
 
   test('it renders toolbar actions depending on passed capabilities', async function (assert) {
+    this.set('isRotatable', true);
     this.set('canRotate', true);
     this.set('canCrossSign', true);
     this.set('canSignIntermediate', true);
@@ -48,6 +49,7 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
       hbs`
       <Page::PkiIssuerDetails
         @issuer={{this.issuer}}
+        @isRotatable={{this.isRotatable}}
         @canRotate={{this.canRotate}}
         @canCrossSign={{this.canCrossSign}}
         @canSignIntermediate={{this.canSignIntermediate}}
@@ -58,8 +60,7 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
       this.context
     );
 
-    // Add back when rotate root capability is added
-    // assert.dom(SELECTORS.rotateRoot).hasText('Rotate this root');
+    assert.dom(SELECTORS.rotateRoot).hasText('Rotate this root');
     assert.dom(SELECTORS.crossSign).hasText('Cross-sign issuers');
     assert.dom(SELECTORS.signIntermediate).hasText('Sign Intermediate');
     assert.dom(SELECTORS.download).hasText('Download');
