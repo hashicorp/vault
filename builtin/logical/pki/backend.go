@@ -12,6 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/acme"
+
 	atomic2 "go.uber.org/atomic"
 
 	"github.com/hashicorp/vault/helper/constants"
@@ -218,6 +220,11 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathAcmeRoleDirectory(&b),
 			pathAcmeIssuerDirectory(&b),
 			pathAcmeIssuerAndRoleDirectory(&b),
+
+			pathAcmeRootNonce(&b),
+			pathAcmeRoleNonce(&b),
+			pathAcmeIssuerNonce(&b),
+			pathAcmeIssuerAndRoleNonce(&b),
 		},
 
 		Secrets: []*framework.Secret{
@@ -282,6 +289,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 	b.unifiedTransferStatus = newUnifiedTransferStatus()
 
+	b.acmeState = acme.NewACMEState()
 	return &b
 }
 
@@ -314,6 +322,7 @@ type backend struct {
 
 	// Write lock around issuers and keys.
 	issuersLock sync.RWMutex
+	acmeState   *acme.ACMEState
 }
 
 type roleOperation func(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error)

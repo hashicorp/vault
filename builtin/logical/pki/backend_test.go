@@ -6811,6 +6811,7 @@ func TestProperAuthing(t *testing.T) {
 	// Add ACME based paths to the test suite
 	for _, acmePrefix := range []string{"", "issuer/default/", "roles/test/", "issuer/default/roles/test/"} {
 		paths[acmePrefix+"acme/directory"] = shouldBeUnauthedReadList
+		paths[acmePrefix+"acme/new-nonce"] = shouldBeUnauthedReadList
 	}
 
 	for path, checkerType := range paths {
