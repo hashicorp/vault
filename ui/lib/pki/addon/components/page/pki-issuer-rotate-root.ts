@@ -70,10 +70,13 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
     const defaultFields = [
       'certificate',
       'caChain',
-      ...parsedParameters,
       'issuerId',
-      'serialNumber',
+      'issuerName',
+      'issuingCa',
+      'keyName',
       'keyId',
+      'serialNumber',
+      ...parsedParameters,
     ];
     return this.args.newRootModel.id ? [...defaultFields, ...addKeyFields] : defaultFields;
   }

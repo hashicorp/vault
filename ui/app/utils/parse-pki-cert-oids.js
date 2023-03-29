@@ -8,7 +8,7 @@ import camelizeKeys from 'vault/utils/camelize-object-keys';
 
 export const SUBJECT_OIDs = {
   common_name: '2.5.4.3',
-  serial_number: '2.5.4.5',
+  subject_serial_number: '2.5.4.5',
   ou: '2.5.4.11',
   organization: '2.5.4.10',
   country: '2.5.4.6',

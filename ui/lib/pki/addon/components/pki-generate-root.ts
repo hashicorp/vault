@@ -73,14 +73,13 @@ export default class PkiGenerateRootComponent extends Component<Args> {
   get returnedFields() {
     return [
       'certificate',
-      ...parsedParameters,
-      'expiration',
       'issuerId',
       'issuerName',
       'issuingCa',
-      'keyId',
       'keyName',
+      'keyId',
       'serialNumber',
+      ...parsedParameters,
     ];
   }
 
