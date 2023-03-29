@@ -133,7 +133,11 @@ func (a *acmeState) ParseRequestParams(data *framework.FieldData) (*jwsCtx, map[
 	var m map[string]interface{}
 
 	// Parse the key out.
-	jwkBase64 := data.Get("protected").(string)
+	jwkBase64, ok := data.GetOk("protected").(string)
+	if !ok {
+		return nil, nil, fmt.Errorf("missing required field 'protected': %w", ErrMalformed)
+	}
+
 	jwkBytes, err := base64.RawURLEncoding.DecodeString(jwkBase64)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to base64 parse 'protected': %w", err)
@@ -149,8 +153,15 @@ func (a *acmeState) ParseRequestParams(data *framework.FieldData) (*jwsCtx, map[
 		return nil, nil, fmt.Errorf("invalid or reused nonce")
 	}
 
-	payloadBase64 := data.Get("payload").(string)
-	signatureBase64 := data.Get("signature").(string)
+	payloadBase64, ok := data.Get("payload").(string)
+	if !ok {
+		return nil, nil, fmt.Errorf("missing required field 'payload': %w", ErrMalformed)
+	}
+
+	signatureBase64, ok := data.Get("signature").(string)
+	if !ok {
+		return nil, nil, fmt.Errorf("missing required field 'signature': %w", ErrMalformed)
+	}
 
 	// go-jose only seems to support compact signature encodings.
 	compactSig := fmt.Sprintf("%v.%v.%v", jwkBase64, payloadBase64, signatureBase64)

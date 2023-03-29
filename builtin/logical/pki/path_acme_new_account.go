@@ -49,19 +49,19 @@ func addFieldsForACMERequest(fields map[string]*framework.FieldSchema) map[strin
 	fields["protected"] = &framework.FieldSchema{
 		Type:        framework.TypeString,
 		Description: "ACME request 'protected' value",
-		Required:    true,
+		Required:    false,
 	}
 
 	fields["payload"] = &framework.FieldSchema{
 		Type:        framework.TypeString,
 		Description: "ACME request 'payload' value",
-		Required:    true,
+		Required:    false,
 	}
 
 	fields["signature"] = &framework.FieldSchema{
 		Type:        framework.TypeString,
 		Description: "ACME request 'signature' value",
-		Required:    true,
+		Required:    false,
 	}
 
 	return fields
