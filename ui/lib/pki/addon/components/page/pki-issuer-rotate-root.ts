@@ -36,10 +36,6 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
   @tracked invalidFormAlert = '';
   @tracked modelValidations = null;
 
-  get pageTitle() {
-    return this.args.newRootModel.id ? 'View issuer certificate' : 'Generate new root';
-  }
-
   get bannerType() {
     if (this.args.parsingErrors && !this.invalidFormAlert) {
       return {
