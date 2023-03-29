@@ -68,5 +68,9 @@ jobs:
     steps:
       - name: Release Artifact Info
         run: |
-          ./.github/scripts/add_workflow_summary.sh ${{ github.event.client_payload.payload.product }} ${{ github.event.client_payload.payload.version }} ${{ github.event.client_payload.payload.sha }} >> "$GITHUB_STEP_SUMMARY"
+          # shellcheck disable=SC2129
+          echo "__Product:__ ${{ github.event.client_payload.payload.product }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "__Version:__ ${{ github.event.client_payload.payload.version }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "__Commit:__ ${{ github.event.client_payload.payload.sha }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "[Build Workflow](https://github.com/${{github.event.client_payload.payload.org}}/${{github.event.client_payload.payload.repo}}/actions/runs/${{github.event.client_payload.payload.buildworkflowid}})" >> "$GITHUB_STEP_SUMMARY"
