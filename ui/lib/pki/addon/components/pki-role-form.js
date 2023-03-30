@@ -19,7 +19,8 @@ import { action } from '@ember/object';
  * ```
  * @callback onCancel
  * @callback onSave
- * @param {Object} model - pki/role model.
+ * @param {Object} role - pki/role model.
+ * @param {Array} issuers - pki/issuer model.
  * @param {onCancel} onCancel - Callback triggered when cancel button is clicked.
  * @param {onSave} onSave - Callback triggered on save success.
  */
@@ -80,8 +81,18 @@ export default class PkiRoleForm extends Component {
       this.issuerValue = issuer;
     }
   }
+
   @action
-  changeSelect(e) {
-    this.args.role.issuerRef = e.target.value;
+  updateSelectedOption({ target }) {
+    this.args.role.issuerRef = target.value;
+  }
+
+  @action
+  toggleShowDefaultIssuer() {
+    this.showDefaultIssuer = !this.showDefaultIssuer;
+
+    if (this.showDefaultIssuer) {
+      this.args.role.issuerRef = 'default';
+    }
   }
 }

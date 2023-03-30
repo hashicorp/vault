@@ -21,7 +21,7 @@
                   @status="success"
                   @size="small"
                   @checked={{this.showDefaultIssuer}}
-                  @onChange={{fn (mut this.showDefaultIssuer)}}
+                  @onChange={{this.toggleShowDefaultIssuer}}
                 >
                   <span class="has-text-grey">Use default issuer</span>
                 </Toggle>
@@ -32,16 +32,16 @@
                     <select
                       name={{attr.name}}
                       id={{attr.name}}
-                      {{on "change" this.changeSelect}}
+                      {{on "change" this.updateSelectedOption}}
                       data-test-input={{attr.name}}
                     >
                       {{#each @issuers as |issuer|}}
                         <option
-                          selected={{(eq (or (issuer.issuerName issuer.issuerId)) @role.issuerRef)}}
-                          value={{or issuer.issuerName issuer.issuerId}}
-                          data-test-option={{or issuer.issuerName issuer.issuerId}}
+                          selected={{(eq issuer.issuerName @role.issuerRef)}}
+                          value={{issuer.issuerName}}
+                          data-test-option={{issuer.issuerName}}
                         >
-                          {{or issuer.issuerName issuer.issuerId}}
+                          {{issuer.issuerName}}
                         </option>
                       {{/each}}
                     </select>
