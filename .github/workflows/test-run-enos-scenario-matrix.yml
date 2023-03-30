@@ -150,7 +150,7 @@ jobs:
         if: steps.run.outcome == 'failure'
         run: enos scenario run --timeout 60m0s --chdir ./enos ${{ matrix.scenario }}
       - name: Upload Debug Data
-        if: steps.run.outcome == 'failure' || steps.run_retry.outcome == 'failure'
+        if: steps.run_retry.outcome == 'failure'
         uses: actions/upload-artifact@v3
         with:
           # The name of the artifact is the same as the matrix scenario name with the spaces removed.
