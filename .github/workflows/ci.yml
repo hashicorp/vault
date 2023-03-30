@@ -13,6 +13,7 @@ jobs:
       compute-tiny: ${{ steps.setup-outputs.outputs.compute-tiny }}
       compute-standard: ${{ steps.setup-outputs.outputs.compute-standard }}
       compute-larger: ${{ steps.setup-outputs.outputs.compute-larger }}
+      compute-huge: ${{ steps.setup-outputs.outputs.compute-huge }}
       enterprise: ${{ steps.setup-outputs.outputs.enterprise }}
       go-build-tags: ${{ steps.setup-outputs.outputs.go-build-tags }}
     steps:
