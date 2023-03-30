@@ -709,6 +709,10 @@ func TestBackend_StaticRole_Rotations_PostgreSQL(t *testing.T) {
 }
 
 func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
+	if v := os.Getenv("GOARCH"); v == "386" {
+		t.Skip("Skipping for 32bit architecture")
+	}
+
 	cleanup, connURL := mongodb.PrepareTestContainerWithDatabase(t, "5.0.10", "vaulttestdb")
 	defer cleanup()
 

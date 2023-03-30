@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"os"
 	"reflect"
 	"strings"
 	"sync"
@@ -29,6 +30,10 @@ import (
 const mongoAdminRole = `{ "db": "admin", "roles": [ { "role": "readWrite" } ] }`
 
 func TestMongoDB_Initialize(t *testing.T) {
+	if v := os.Getenv("GOARCH"); v == "386" {
+		t.Skip("Skipping for 32bit architecture")
+	}
+
 	cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
