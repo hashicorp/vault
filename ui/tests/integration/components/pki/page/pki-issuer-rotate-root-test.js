@@ -15,15 +15,21 @@ import { parseCertificate } from 'vault/utils/parse-pki-cert';
 import { SELECTORS as S } from 'vault/tests/helpers/pki/pki-generate-root';
 
 const SELECTORS = {
-  toggle: '[data-test-details-toggle]',
+  pageTitle: '[data-test-pki-page-title]',
+  alertBanner: '[data-test-alert-banner="alert"]',
+  toolbarCrossSign: '[data-test-pki-issuer-cross-sign]',
+  toolbarSignInt: '[data-test-pki-issuer-sign-int]',
+  toolbarDownload: '[data-test-issuer-download]',
   oldRadioSelect: 'input#use-old-root-settings',
   customRadioSelect: 'input#customize-new-root-certificate',
+  toggle: '[data-test-details-toggle]',
   input: (attr) => `[data-test-input="${attr}"]`,
   infoRowValue: (attr) => `[data-test-value-div="${attr}"]`,
   validationError: '[data-test-pki-rotate-root-validation-error]',
   rotateRootForm: '[data-test-pki-rotate-old-settings-form]',
   rotateRootSave: '[data-test-pki-rotate-root-save]',
   rotateRootCancel: '[data-test-pki-rotate-root-cancel]',
+  doneButton: '[data-test-done]',
   // root form
   generateRootForm: '[data-test-pki-config-generate-root-form]',
   ...S,
@@ -47,21 +53,29 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
       issuer_name: 'old-issuer',
     };
     this.parsedRootCert = camelizeKeys(parseCertificate(loadedCert));
-    this.store.pushPayload('pki/issuer', {
-      modelName: 'pki/issuer',
-      data: this.oldRootData,
-    });
-
+    this.store.pushPayload('pki/issuer', { modelName: 'pki/issuer', data: this.oldRootData });
     this.oldRoot = this.store.peekRecord('pki/issuer', 'old-issuer-id');
     this.newRootModel = this.store.createRecord('pki/action', {
       actionType: 'rotate-root',
       type: 'internal',
       ...this.parsedRootCert, // copy old root settings over to new one
     });
+
+    this.returnedData = {
+      id: 'response-id',
+      certificate: loadedCert,
+      expiration: 1682735724,
+      issuer_id: 'some-issuer-id',
+      issuer_name: 'my issuer',
+      issuing_ca: loadedCert,
+      key_id: 'my-key-id',
+      key_name: 'my-key',
+      serial_number: '3a:3c:17:..',
+    };
   });
 
   test('it renders', async function (assert) {
-    assert.expect(16);
+    assert.expect(17);
     await render(
       hbs`
       <Page::PkiIssuerRotateRoot
@@ -74,6 +88,7 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
     `,
       { owner: this.engine }
     );
+    assert.dom(SELECTORS.pageTitle).hasText('Generate new root');
     assert.dom(SELECTORS.oldRadioSelect).isChecked('defaults to use-old-settings');
     assert.dom(SELECTORS.rotateRootForm).exists('it renders old settings form');
     assert
@@ -89,6 +104,8 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
       .hasText(this.oldRoot.issuerName, 'renders correct issuer data');
     await click(SELECTORS.toggle);
     assert.strictEqual(findAll('[data-test-row-label]').length, 0, 'it hides again');
+
+    // customize form
     await click(SELECTORS.customRadioSelect);
     assert.dom(SELECTORS.generateRootForm).exists('it renders generate root form');
     assert
@@ -156,4 +173,85 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
   testEndpoint(test, 'exported');
   testEndpoint(test, 'existing');
   testEndpoint(test, 'kms');
+
+  test('it renders details after save for exported key type', async function (assert) {
+    assert.expect(10);
+    const keyData = {
+      private_key: `-----BEGIN RSA PRIVATE KEY-----\nMIIEogIBAAKCAQEAtc9yU`,
+      private_key_type: 'rsa',
+    };
+    this.store.pushPayload('pki/action', {
+      modelName: 'pki/action',
+      data: { ...this.returnedData, ...keyData },
+    });
+    this.newRootModel = this.store.peekRecord('pki/action', 'response-id');
+    await render(
+      hbs`
+        <Page::PkiIssuerRotateRoot
+          @oldRoot={{this.oldRoot}}
+          @newRootModel={{this.newRootModel}}
+          @breadcrumbs={{this.breadcrumbs}}
+          @onCancel={{this.onCancel}}
+          @onComplete={{this.onComplete}}
+        />
+      `,
+      { owner: this.engine }
+    );
+    assert.dom(SELECTORS.pageTitle).hasText('View issuer certificate');
+    assert
+      .dom(SELECTORS.alertBanner)
+      .hasText(
+        'Next steps Your new root has been generated. Make sure to copy and save the private_key as it is only available once. If you’re ready, you can begin cross-signing issuers now. If not, the option to cross-sign is available when you use this certificate. Cross-sign issuers'
+      );
+    assert.dom(SELECTORS.infoRowValue('Certificate')).exists();
+    assert.dom(SELECTORS.infoRowValue('Issuer name')).exists();
+    assert.dom(SELECTORS.infoRowValue('Issuing CA')).exists();
+    assert.dom(`${SELECTORS.infoRowValue('Private key')} .masked-input`).hasClass('allow-copy');
+    assert.dom(`${SELECTORS.infoRowValue('Private key type')} span`).hasText('rsa');
+    assert.dom(SELECTORS.infoRowValue('Serial number')).hasText(this.returnedData.serial_number);
+    assert.dom(SELECTORS.infoRowValue('Key ID')).hasText(this.returnedData.key_id);
+
+    await click(SELECTORS.doneButton);
+    assert.ok(this.onComplete.calledOnce, 'clicking done fires @onComplete from parent');
+  });
+
+  test('it renders details after save for internal key type', async function (assert) {
+    assert.expect(13);
+    this.store.pushPayload('pki/action', {
+      modelName: 'pki/action',
+      data: this.returnedData,
+    });
+    this.newRootModel = this.store.peekRecord('pki/action', 'response-id');
+    await render(
+      hbs`
+        <Page::PkiIssuerRotateRoot
+          @oldRoot={{this.oldRoot}}
+          @newRootModel={{this.newRootModel}}
+          @breadcrumbs={{this.breadcrumbs}}
+          @onCancel={{this.onCancel}}
+          @onComplete={{this.onComplete}}
+        />
+      `,
+      { owner: this.engine }
+    );
+    assert.dom(SELECTORS.pageTitle).hasText('View issuer certificate');
+    assert.dom(SELECTORS.toolbarCrossSign).exists();
+    assert.dom(SELECTORS.toolbarSignInt).exists();
+    assert.dom(SELECTORS.toolbarDownload).exists();
+    assert
+      .dom(SELECTORS.alertBanner)
+      .hasText(
+        'Next steps Your new root has been generated. If you’re ready, you can begin cross-signing issuers now. If not, the option to cross-sign is available when you use this certificate. Cross-sign issuers'
+      );
+    assert.dom(SELECTORS.infoRowValue('Certificate')).exists();
+    assert.dom(SELECTORS.infoRowValue('Issuer name')).exists();
+    assert.dom(SELECTORS.infoRowValue('Issuing CA')).exists();
+    assert.dom(`${SELECTORS.infoRowValue('Private key')} span`).hasText('internal');
+    assert.dom(`${SELECTORS.infoRowValue('Private key type')} span`).hasText('internal');
+    assert.dom(SELECTORS.infoRowValue('Serial number')).hasText(this.returnedData.serial_number);
+    assert.dom(SELECTORS.infoRowValue('Key ID')).hasText(this.returnedData.key_id);
+
+    await click(SELECTORS.doneButton);
+    assert.ok(this.onComplete.calledOnce, 'clicking done fires @onComplete from parent');
+  });
 });
