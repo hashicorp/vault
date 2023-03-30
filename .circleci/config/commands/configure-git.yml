@@ -1,6 +1,0 @@
-steps:
-  - add_ssh_keys:
-      fingerprints:
-        - "0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06"
-  - run: |
-      git config --global url."git@github.com:".insteadOf https://github.com/
