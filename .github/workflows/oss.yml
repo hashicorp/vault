@@ -58,15 +58,15 @@ jobs:
               - 'ui/**'
 
       - name: "Default to core board"
-        run: echo "PROJECT=170" >> $GITHUB_ENV
+        run: echo "PROJECT=170" >> "$GITHUB_ENV"
       - if: github.event.pull_request != null && steps.changes.outputs.cryptosec == 'true'
-        run: echo "PROJECT=172" >> $GITHUB_ENV
+        run: echo "PROJECT=172" >> "$GITHUB_ENV"
       - if: github.event.pull_request != null && steps.changes.outputs.ecosystem == 'true'
-        run: echo "PROJECT=169" >> $GITHUB_ENV
+        run: echo "PROJECT=169" >> "$GITHUB_ENV"
       - if: github.event.pull_request != null && steps.changes.outputs.devex == 'true'
-        run: echo "PROJECT=176" >> $GITHUB_ENV
+        run: echo "PROJECT=176" >> "$GITHUB_ENV"
       - if: github.event.pull_request != null && steps.changes.outputs.ui == 'true'
-        run: echo "PROJECT=171" >> $GITHUB_ENV
+        run: echo "PROJECT=171" >> "$GITHUB_ENV"
 
       - uses: actions/add-to-project@v0.3.0
         with:
