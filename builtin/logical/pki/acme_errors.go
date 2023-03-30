@@ -1,4 +1,4 @@
-package acme
+package pki
 
 import (
 	"encoding/json"
@@ -73,7 +73,7 @@ var errIdMappings = map[error]string{
 
 // Mapping of err->status codes; see table in RFC 8555 Section 6.7. Errors.
 var errCodeMappings = map[error]int{
-	ErrAccountDoesNotExist:     http.StatusNotFound,
+	ErrAccountDoesNotExist:     http.StatusBadRequest, // See RFC 8555 Section 7.3.1. Finding an Account URL Given a Key.
 	ErrAlreadyRevoked:          http.StatusBadRequest,
 	ErrBadCSR:                  http.StatusBadRequest,
 	ErrBadNonce:                http.StatusBadRequest,
