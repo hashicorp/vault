@@ -293,6 +293,7 @@ func Test_RegistryMatchesGenOpenapi(t *testing.T) {
 		t.Helper()
 
 		for _, excluded := range []string{
+			"oidc",     // alias for "jwt"
 			"openldap", // alias for "ldap"
 			"ad",       // consolidated into "ldap" and deprecated
 		} {
