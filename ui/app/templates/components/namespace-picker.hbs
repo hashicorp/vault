@@ -71,10 +71,17 @@
         {{#if this.canList}}
           <div class="leaf-panel leaf-panel-current">
             <LinkTo @route="vault.cluster.access.namespaces" class="is-block namespace-link namespace-manage-link">
-              <button type="button" class="button is-transparent" onclick={{action "refreshNamespaceList"}}>
-                <Icon @name="menu" class="has-text-grey" />
-                Manage Namespaces
-              </button>
+              <div class="level">
+                <span class="level-left">
+                  <Icon @name="menu" class="has-text-grey" />
+                  Manage Namespaces
+                </span>
+                <span class="level-right">
+                  <button type="button" class="button is-ghost icon" onclick={{action "refreshNamespaceList"}}>
+                    <Icon @name="reload" class="has-text-grey" />
+                  </button>
+                </span>
+              </div>
             </LinkTo>
           </div>
         {{/if}}
