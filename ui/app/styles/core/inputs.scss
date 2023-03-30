@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-// This file defines the classes for .input. We use the following input classes: .input, .input-hint, .autocomplete-input, .autocomplete-input-option
+// This file defines the classes for .input and .textarea We use the following input classes: .textarea, .input, .input-hint, .autocomplete-input, .autocomplete-input-option
 
-.input {
+.input,
+.textarea {
   border-radius: 2px;
   border: 1px solid $ui-gray-300;
   box-shadow: 0 4px 1px rgba($black, 0.06) inset;
@@ -37,7 +38,8 @@
   }
 }
 
-.input[disabled] {
+.input[disabled],
+.textarea[disabled] {
   border-color: $grey-light;
   background-color: $ui-gray-100;
   color: $ui-gray-500;
@@ -48,6 +50,7 @@
   }
 }
 
+// ARG TODO technically it's a component, maybe amend with input instead of component only styling.
 // custom input
 .autocomplete-input {
   background: $white !important;
