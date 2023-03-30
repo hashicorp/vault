@@ -104,6 +104,7 @@ jobs:
       ENOS_VAR_vault_revision: ${{ inputs.vault-revision }}
       ENOS_VAR_vault_bundle_path: ./support/downloads/${{ inputs.build-artifact-name }}
       ENOS_VAR_vault_license_path: ./support/vault.hclic
+      ENOS_DEBUG_DATA_ROOT_DIR: ./support/debug-data
     steps:
       - uses: actions/checkout@v3
       - uses: hashicorp/setup-terraform@v2
@@ -148,6 +149,14 @@ jobs:
         id: run_retry
         if: steps.run.outcome == 'failure'
         run: enos scenario run --timeout 60m0s --chdir ./enos ${{ matrix.scenario }}
+      - name: Upload Debug Data
+        if: steps.run.outcome == 'failure' || steps.run_retry.outcome == 'failure'
+        uses: actions/upload-artifact@v3
+        with:
+          # The name of the artifact is the same as the matrix scenario name with the spaces removed.
+          name: ${${{ matrix.scenario }}// /_}.zip
+          path: $ENOS_DEBUG_DATA_ROOT_DIR
+          retention-days: 30
       - name: Ensure scenario has been destroyed
         if: ${{ always() }}
         # With Enos version 0.0.11 the destroy step returns an error if the infrastructure
