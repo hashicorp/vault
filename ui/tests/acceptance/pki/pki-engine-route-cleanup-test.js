@@ -142,6 +142,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
 
       // Edit role
       await click(SELECTORS.editRoleLink);
+      await click(SELECTORS.roleForm.issuerRefToggle);
       await fillIn(SELECTORS.roleForm.issuerRef, 'foobar');
       role = this.store.peekRecord('pki/role', roleId);
       assert.true(role.hasDirtyAttributes, 'Role has dirty attrs');
@@ -153,6 +154,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
 
       // Edit again
       await click(SELECTORS.editRoleLink);
+      await click(SELECTORS.roleForm.issuerRefToggle);
       await fillIn(SELECTORS.roleForm.issuerRef, 'foobar2');
       role = this.store.peekRecord('pki/role', roleId);
       assert.true(role.hasDirtyAttributes, 'Role has dirty attrs');
