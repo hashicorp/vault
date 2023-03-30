@@ -638,6 +638,9 @@ type Core struct {
 
 	activityLogConfig ActivityLogCoreConfig
 
+	// censusAgent is the mechanism used for reporting Vault's billing data.
+	censusAgent *CensusAgent
+
 	// activeTime is set on active nodes indicating the time at which this node
 	// became active.
 	activeTime time.Time
@@ -688,6 +691,9 @@ type Core struct {
 	// contains absolute paths that we intend to forward (and template) when
 	// we're on a secondary cluster.
 	writeForwardedPaths *pathmanager.PathManager
+
+	// if populated, override the default gRPC min connect timeout (currently 20s in grpc 1.51)
+	grpcMinConnectTimeout time.Duration
 }
 
 // c.stateLock needs to be held in read mode before calling this function.
@@ -800,6 +806,9 @@ type CoreConfig struct {
 	License         string
 	LicensePath     string
 	LicensingConfig *LicensingConfig
+
+	// Configured Census Agent
+	censusAgent *CensusAgent
 
 	DisablePerformanceStandby bool
 	DisableIndexing           bool
@@ -1271,6 +1280,16 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.events = events
 	if c.IsExperimentEnabled(experiments.VaultExperimentEventsAlpha1) {
 		c.events.Start()
+	}
+
+	minConnectTimeoutRaw := os.Getenv("VAULT_GRPC_MIN_CONNECT_TIMEOUT")
+	if minConnectTimeoutRaw != "" {
+		dur, err := time.ParseDuration(minConnectTimeoutRaw)
+		if err != nil {
+			c.logger.Warn("VAULT_GRPC_MIN_CONNECT_TIMEOUT contains non-duration value, ignoring")
+		} else if dur != 0 {
+			c.grpcMinConnectTimeout = dur
+		}
 	}
 
 	return c, nil
