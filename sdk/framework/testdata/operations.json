@@ -60,7 +60,7 @@
         ]
       },
       "post": {
-        "operationId": "kv-write-foo-id",
+        "operationId": "kv-create-or-update-foo-id",
         "tags": [
           "secrets"
         ],
@@ -71,7 +71,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/kv-write-foo-id-request"
+                "$ref": "#/components/schemas/kv-create-or-update-foo-id-request"
               }
             }
           }
@@ -86,7 +86,7 @@
   },
   "components": {
     "schemas": {
-      "kv-write-foo-id-request": {
+      "kv-create-or-update-foo-id-request": {
         "type": "object",
         "required": [
           "age"

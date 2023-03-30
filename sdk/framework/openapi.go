@@ -305,6 +305,13 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 			return strings.ToLower(pi.Parameters[i].Name) < strings.ToLower(pi.Parameters[j].Name)
 		})
 
+		for opType := range operations {
+			if opType == logical.CreateOperation {
+				pi.CreateSupported = true
+				break
+			}
+		}
+
 		// Process each supported operation by building up an Operation object
 		// with descriptions, properties and examples from the framework.Path data.
 		for opType, opHandler := range operations {
@@ -314,8 +321,6 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 			}
 
 			if opType == logical.CreateOperation {
-				pi.CreateSupported = true
-
 				// If both Create and Update are defined, only process Update.
 				if operations[logical.UpdateOperation] != nil {
 					continue
@@ -335,6 +340,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 				p.DisplayAttrs,
 				opType,
 				props.DisplayAttrs,
+				pi.CreateSupported,
 				requestResponsePrefix,
 			)
 
@@ -599,6 +605,7 @@ func constructOperationID(
 	pathAttributes *DisplayAttributes,
 	operation logical.Operation,
 	operationAttributes *DisplayAttributes,
+	createSupported bool,
 	defaultPrefix string,
 ) string {
 	var (
@@ -677,9 +684,12 @@ func constructOperationID(
 	}
 
 	if needVerb {
-		if operation == logical.UpdateOperation {
-			verb = "write"
-		} else {
+		switch {
+		case operation == logical.UpdateOperation && createSupported == true:
+			verb = "create-or-update"
+		case operation == logical.UpdateOperation && createSupported == false:
+			verb = "update"
+		default:
 			verb = string(operation)
 		}
 	}
