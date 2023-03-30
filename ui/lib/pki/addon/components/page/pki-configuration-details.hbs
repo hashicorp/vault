@@ -23,7 +23,7 @@
 </Toolbar>
 
 {{#if (not (eq @urls 403))}}
-  <h2 class="title has-bottom-margin-xs has-top-margin-m is-4 has-border-bottom-light has-bottom-padding-s">
+  <h2 class="title is-4 has-bottom-margin-xs has-top-margin-m has-border-bottom-light has-bottom-padding-s">
     Global URLs
   </h2>
   <InfoTableRow @label="Issuing certificates" @value={{or @urls.issuingCertificates "None"}} />
@@ -34,13 +34,13 @@
 {{/if}}
 
 {{#if (not (eq @crl 403))}}
-  <h2 class="title has-bottom-margin-xs has-top-margin-xl is-4 has-border-bottom-light has-bottom-padding-s">
+  <h2 class="title is-4 has-bottom-margin-xs has-top-margin-xl has-border-bottom-light has-bottom-padding-s">
     Certificate Revocation List (CRL)
   </h2>
   <InfoTableRow @label="Expiry" @value={{@crl.expiry}} />
   <InfoTableRow @label="Auto-rebuild" @value={{if @crl.autoRebuild "On" "Off"}} />
 
-  <h2 class="title has-bottom-margin-xs has-top-margin-xl is-4 has-border-bottom-light has-bottom-padding-s">
+  <h2 class="title is-4 has-bottom-margin-xs has-top-margin-xl has-border-bottom-light has-bottom-padding-s">
     Online Certificate Status Protocol (OCSP)
   </h2>
   <InfoTableRow @label="Responder APIs" @value={{if @crl.ocspDisable "Disabled" "Enabled"}} />
@@ -48,7 +48,7 @@
 {{/if}}
 
 <h2
-  class="title has-bottom-margin-xs is-4 has-border-bottom-light has-bottom-padding-s
+  class="title is-4 has-bottom-margin-xs has-border-bottom-light has-bottom-padding-s
     {{if (and (eq @crl 403) (eq @urls 403)) 'has-top-margin-m' 'has-top-margin-xl'}}"
 >
   Mount Configuration
