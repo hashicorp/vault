@@ -41,6 +41,12 @@ export default class PkiRoleForm extends Component {
     this.showDefaultIssuer = this.args.role.issuerRef === 'default';
   }
 
+  get issuers() {
+    return this.args.issuers?.map((issuer) => {
+      return { issuerDisplayName: issuer.issuerName || issuer.issuerId };
+    });
+  }
+
   get breadcrumbs() {
     const crumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },

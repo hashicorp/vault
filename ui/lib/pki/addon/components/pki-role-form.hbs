@@ -35,13 +35,13 @@
                       {{on "change" this.updateSelectedOption}}
                       data-test-input={{attr.name}}
                     >
-                      {{#each @issuers as |issuer|}}
+                      {{#each this.issuers as |issuer|}}
                         <option
-                          selected={{(eq issuer.issuerName @role.issuerRef)}}
-                          value={{issuer.issuerName}}
-                          data-test-option={{issuer.issuerName}}
+                          selected={{(eq issuer.issuerDisplayName @role.issuerRef)}}
+                          value={{issuer.issuerDisplayName}}
+                          data-test-option={{issuer.issuerDisplayName}}
                         >
-                          {{issuer.issuerName}}
+                          {{issuer.issuerDisplayName}}
                         </option>
                       {{/each}}
                     </select>
