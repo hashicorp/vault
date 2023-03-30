@@ -267,6 +267,10 @@ jobs:
     - setup
     - test-go
     - test-ui
+    if: |
+      always() &&
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled')
     runs-on: ${{ fromJSON(needs.setup.outputs.compute-tiny) }}
     steps:
-    - run: echo "All Go test successfully passed"
+    - run: echo "All Go tests successfully passed"
