@@ -4,23 +4,25 @@
  */
 
 import { module, test } from 'qunit';
+import sinon from 'sinon';
 import { visit } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import Pretender from 'pretender';
 import formatRFC3339 from 'date-fns/formatRFC3339';
 import { addDays, subDays } from 'date-fns';
+import timestamp from 'core/utils/timestamp';
 
-const generateHealthResponse = (state) => {
+const generateHealthResponse = (now, state) => {
   let expiry;
   switch (state) {
     case 'expired':
-      expiry = subDays(new Date(), 2);
+      expiry = subDays(now, 2);
       break;
     case 'expiring':
-      expiry = addDays(new Date(), 10);
+      expiry = addDays(now, 10);
       break;
     default:
-      expiry = addDays(new Date(), 33);
+      expiry = addDays(now, 33);
       break;
   }
   return {
@@ -45,12 +47,21 @@ const generateHealthResponse = (state) => {
 module('Acceptance | Enterprise | License banner warnings', function (hooks) {
   setupApplicationTest(hooks);
 
+  hooks.before(function () {
+    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
+  });
+  hooks.beforeEach(function () {
+    this.now = timestamp.now();
+  });
   hooks.afterEach(function () {
     this.server.shutdown();
   });
+  hooks.after(function () {
+    timestamp.now.restore();
+  });
 
   test('it shows no license banner if license expires in > 30 days', async function (assert) {
-    const healthResp = generateHealthResponse();
+    const healthResp = generateHealthResponse(this.now);
     this.server = new Pretender(function () {
       this.get('/v1/sys/health', (response) => {
         return [response, { 'Content-Type': 'application/json' }, JSON.stringify(healthResp)];
@@ -65,7 +76,7 @@ module('Acceptance | Enterprise | License banner warnings', function (hooks) {
     this.server.shutdown();
   });
   test('it shows license banner warning if license expires within 30 days', async function (assert) {
-    const healthResp = generateHealthResponse('expiring');
+    const healthResp = generateHealthResponse(this.now, 'expiring');
     this.server = new Pretender(function () {
       this.get('/v1/sys/health', (response) => {
         return [response, { 'Content-Type': 'application/json' }, JSON.stringify(healthResp)];
@@ -81,7 +92,7 @@ module('Acceptance | Enterprise | License banner warnings', function (hooks) {
   });
 
   test('it shows license banner alert if license has already expired', async function (assert) {
-    const healthResp = generateHealthResponse('expired');
+    const healthResp = generateHealthResponse(this.now, 'expired');
     this.server = new Pretender(function () {
       this.get('/v1/sys/health', (response) => {
         return [response, { 'Content-Type': 'application/json' }, JSON.stringify(healthResp)];

@@ -1,12 +1,29 @@
 on:
   workflow_call:
     inputs:
+      name:
+        description: A suffix to be added to the matrix job names.
+        required: true
+        type: string
       go-arch:
         description: The execution architecture (arm, amd64, etc.)
         required: true
         type: string
-      extra-tags:
-        description: A comma-separated list of additional build tags.
+      enterprise:
+        description: A flag indicating if this workflow is executing for the enterprise repository.
+        required: true
+        type: string
+      total-runners:
+        description: Number of runners to use for executing the tests on.
+        required: true
+        type: string
+      env-vars:
+        description: A map of environment variables as JSON.
+        required: false
+        type: string
+        default: '{}'
+      extra-flags:
+        description: A space-separated list of additional build flags.
         required: false
         type: string
       runs-on:
@@ -14,17 +31,12 @@ on:
         required: false
         type: string
         default: ubuntu-latest
-      enterprise:
-        description: A flag indicating if this workflow is executing for the enterprise repository.
-        required: true
-        type: string
-      go-tags:
-        description: The go tags to include on the go test command.
+      go-build-tags:
+        description: A comma-separated list of additional build tags to consider satisfied during the build.
         required: false
         type: string
 
-env:
-  total-runners: 16
+env: ${{ fromJSON(inputs.env-vars) }}
 
 jobs:
   test-generate-test-package-list:
@@ -48,17 +60,16 @@ jobs:
     steps:
     - id: generate-index-list
       run: |
-        INDEX_LIST=$(seq 1 ${{ env.total-runners }})
-        INDEX_JSON=$(jq --null-input --compact-output '. |= [inputs]' <<< ${INDEX_LIST})
-        echo "indexes=${INDEX_JSON}" >> ${GITHUB_OUTPUT}
+        INDEX_LIST="$(seq 1 ${{ inputs.total-runners }})"
+        INDEX_JSON="$(jq --null-input --compact-output '. |= [inputs]' <<< "${INDEX_LIST}")"
+        echo "indexes=${INDEX_JSON}" >> "${GITHUB_OUTPUT}"
   test-go:
     permissions:
       id-token: write  # Note: this permission is explicitly required for Vault auth
       contents: read
-    name: ${{ inputs.packages }}
+    name: "${{ matrix.runner-index }} ${{ inputs.name }}"
     needs:
     - runner-indexes
-    # Use GitHub runners on the OSS Vault repo and self-hosted runners otherwise.
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     strategy:
       fail-fast: false
@@ -126,6 +137,7 @@ jobs:
           # CI commands, like the UI tests, shouldn't have to worry about licensing.
           # So we provide the tests which want an externally supplied license with licenses 
           # via the VAULT_LICENSE_CI and VAULT_LICENSE_2 environment variables, and here we unset it.
+          # shellcheck disable=SC2034
           VAULT_LICENSE=
 
           # Assign test licenses to relevant variables if they aren't already
@@ -142,14 +154,16 @@ jobs:
             #export HCP_SCADA_ADDRESS=${{ secrets.HCP_SCADA_ADDRESS }}
           fi
 
+          # shellcheck disable=SC2086 # can't quote package list
           GOARCH=${{ inputs.go-arch }} \
             go run gotest.tools/gotestsum --format=short-verbose \
               --junitfile test-results/go-test/results.xml \
               --jsonfile test-results/go-test/results.json \
               -- \
-              -tags "${{ inputs.go-tags }} ${{ inputs.extra-tags }}" \
+              -tags "${{ inputs.go-build-tags }}" \
               -timeout=${{ env.TIMEOUT_IN_MINUTES }}m \
               -parallel=20 \
+              ${{ inputs.extra-flags }} \
                 \
               ${test_packages[${{ matrix.runner-index }}]}
       - name: Archive test results
@@ -157,6 +171,7 @@ jobs:
         with:
           name: test-results-${{ matrix.runner-index }}
           path: test-results/
+        if: always()
       - name: Create a summary of tests
         uses: test-summary/action@62bc5c68de2a6a0d02039763b8c754569df99e3f
         with:

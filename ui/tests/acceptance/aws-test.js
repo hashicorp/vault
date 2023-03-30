@@ -6,6 +6,8 @@
 import { click, fillIn, findAll, currentURL, find, settled, waitUntil } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { v4 as uuidv4 } from 'uuid';
+
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
@@ -14,6 +16,7 @@ module('Acceptance | aws secret backend', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
+    this.uid = uuidv4();
     return authPage.login();
   });
 
@@ -33,8 +36,7 @@ module('Acceptance | aws secret backend', function (hooks) {
   };
   test('aws backend', async function (assert) {
     assert.expect(12);
-    const now = new Date().getTime();
-    const path = `aws-${now}`;
+    const path = `aws-${this.uid}`;
     const roleName = 'awsrole';
 
     await enablePage.enable('aws', path);

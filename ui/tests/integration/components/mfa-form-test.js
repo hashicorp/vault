@@ -198,12 +198,10 @@ module('Integration | Component | mfa-form', function (hooks) {
       await fillIn('[data-test-mfa-passcode]', code);
       later(() => cancelTimers(), 50);
       await click('[data-test-mfa-validate]');
+      const expectedTime = code === 'used' ? '45' : '15';
       assert
         .dom('[data-test-mfa-countdown]')
-        .hasText(
-          code === 'used' ? '45' : '15',
-          'countdown renders with correct initial value from error response'
-        );
+        .includesText(expectedTime, 'countdown renders with correct initial value from error response');
       assert.dom('[data-test-mfa-validate]').isDisabled('Button is disabled during countdown');
       assert.dom('[data-test-mfa-passcode]').isDisabled('Input is disabled during countdown');
       assert.dom('[data-test-inline-error-message]').exists('Alert message renders');

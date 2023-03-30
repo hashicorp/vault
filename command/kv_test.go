@@ -593,6 +593,131 @@ func TestKVGetCommand(t *testing.T) {
 	})
 }
 
+func testKVListCommand(tb testing.TB) (*cli.MockUi, *KVListCommand) {
+	tb.Helper()
+	ui := cli.NewMockUi()
+	cmd := &KVListCommand{
+		BaseCommand: &BaseCommand{
+			UI: ui,
+		},
+	}
+
+	return ui, cmd
+}
+
+// TestKVListCommand runs tests for `vault kv list`
+func TestKVListCommand(t *testing.T) {
+	testCases := []struct {
+		name       string
+		args       []string
+		outStrings []string
+		code       int
+	}{
+		{
+			name:       "default",
+			args:       []string{"kv/my-prefix"},
+			outStrings: []string{"secret-0", "secret-1", "secret-2"},
+			code:       0,
+		},
+		{
+			name:       "not_enough_args",
+			args:       []string{},
+			outStrings: []string{"Not enough arguments"},
+			code:       1,
+		},
+		{
+			name:       "v2_default_with_mount",
+			args:       []string{"-mount", "kv", "my-prefix"},
+			outStrings: []string{"secret-0", "secret-1", "secret-2"},
+			code:       0,
+		},
+		{
+			name:       "v1_default_with_mount",
+			args:       []string{"kv/my-prefix"},
+			outStrings: []string{"secret-0", "secret-1", "secret-2"},
+			code:       0,
+		},
+		{
+			name:       "v2_not_found",
+			args:       []string{"kv/nope/not/once/never"},
+			outStrings: []string{"No value found at kv/metadata/nope/not/once/never"},
+			code:       2,
+		},
+		{
+			name:       "v1_mount_only",
+			args:       []string{"kv"},
+			outStrings: []string{"my-prefix"},
+			code:       0,
+		},
+		{
+			name:       "v2_mount_only",
+			args:       []string{"-mount", "kv"},
+			outStrings: []string{"my-prefix"},
+			code:       0,
+		},
+		{
+			// this is behavior that should be tested
+			// `kv` here is an explicit mount
+			// `my-prefix` is not
+			// the current kv code will ignore `my-prefix`
+			name:       "ignore_multi_part_mounts",
+			args:       []string{"-mount", "kv/my-prefix"},
+			outStrings: []string{"my-prefix"},
+			code:       0,
+		},
+	}
+
+	t.Run("validations", func(t *testing.T) {
+		t.Parallel()
+
+		for _, testCase := range testCases {
+			testCase := testCase
+
+			t.Run(testCase.name, func(t *testing.T) {
+				t.Parallel()
+
+				// test setup
+				client, closer := testVaultServer(t)
+				defer closer()
+
+				// enable kv-v2 backend
+				if err := client.Sys().Mount("kv/", &api.MountInput{
+					Type: "kv-v2",
+				}); err != nil {
+					t.Fatal(err)
+				}
+				time.Sleep(time.Second)
+
+				ctx := context.Background()
+				for i := 0; i < 3; i++ {
+					path := fmt.Sprintf("my-prefix/secret-%d", i)
+					_, err := client.KVv2("kv/").Put(ctx, path, map[string]interface{}{
+						"foo": "bar",
+					})
+					if err != nil {
+						t.Fatal(err)
+					}
+				}
+
+				ui, cmd := testKVListCommand(t)
+				cmd.client = client
+
+				code := cmd.Run(testCase.args)
+				if code != testCase.code {
+					t.Errorf("expected %d to be %d", code, testCase.code)
+				}
+
+				combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+				for _, str := range testCase.outStrings {
+					if !strings.Contains(combined, str) {
+						t.Errorf("expected %q to contain %q", combined, str)
+					}
+				}
+			})
+		}
+	})
+}
+
 func testKVMetadataGetCommand(tb testing.TB) (*cli.MockUi, *KVMetadataGetCommand) {
 	tb.Helper()
 
