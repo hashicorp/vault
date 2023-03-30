@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/hashicorp/vault/builtin/logical/pki/acme"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -69,7 +68,7 @@ func (b *backend) acmeWrapper(op acmeOperation) framework.OperationFunc {
 
 		if false {
 			// TODO sclark: Check if ACME is enable here
-			return nil, fmt.Errorf("ACME is disabled in configuration: %w", acme.ErrServerInternal)
+			return nil, fmt.Errorf("ACME is disabled in configuration: %w", ErrServerInternal)
 		}
 
 		baseUrl, err := getAcmeBaseUrl(sc, r.Path)
@@ -93,12 +92,12 @@ func getAcmeBaseUrl(sc *storageContext, path string) (*url.URL, error) {
 	}
 
 	if cfg.Path == "" {
-		return nil, fmt.Errorf("ACME feature requires local cluster path configuration to be set: %w", acme.ErrServerInternal)
+		return nil, fmt.Errorf("ACME feature requires local cluster path configuration to be set: %w", ErrServerInternal)
 	}
 
 	baseUrl, err := url.Parse(cfg.Path)
 	if err != nil {
-		return nil, fmt.Errorf("ACME feature a proper URL configured in local cluster path: %w", acme.ErrServerInternal)
+		return nil, fmt.Errorf("ACME feature a proper URL configured in local cluster path: %w", ErrServerInternal)
 	}
 
 	directoryPrefix := ""
@@ -114,7 +113,7 @@ func acmeErrorWrapper(op framework.OperationFunc) framework.OperationFunc {
 	return func(ctx context.Context, r *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		resp, err := op(ctx, r, data)
 		if err != nil {
-			return acme.TranslateError(err)
+			return TranslateError(err)
 		}
 
 		return resp, nil

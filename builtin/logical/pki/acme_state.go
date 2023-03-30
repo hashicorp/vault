@@ -1,4 +1,4 @@
-package acme
+package pki
 
 import (
 	"crypto/rand"
@@ -15,13 +15,13 @@ import (
 // How long nonces are considered valid.
 const nonceExpiry = 15 * time.Minute
 
-type ACMEState struct {
+type acmeState struct {
 	nextExpiry *atomic.Int64
 	nonces     *sync.Map // map[string]time.Time
 }
 
-func NewACMEState() *ACMEState {
-	return &ACMEState{
+func NewACMEState() *acmeState {
+	return &acmeState{
 		nextExpiry: new(atomic.Int64),
 		nonces:     new(sync.Map),
 	}
@@ -36,7 +36,7 @@ func generateNonce() (string, error) {
 	return base64.RawURLEncoding.EncodeToString(data), nil
 }
 
-func (a *ACMEState) GetNonce() (string, time.Time, error) {
+func (a *acmeState) GetNonce() (string, time.Time, error) {
 	now := time.Now()
 	nonce, err := generateNonce()
 	if err != nil {
@@ -55,7 +55,7 @@ func (a *ACMEState) GetNonce() (string, time.Time, error) {
 	return nonce, then, nil
 }
 
-func (a *ACMEState) RedeemNonce(nonce string) bool {
+func (a *acmeState) RedeemNonce(nonce string) bool {
 	rawTimeout, present := a.nonces.LoadAndDelete(nonce)
 	if !present {
 		return false
@@ -69,7 +69,7 @@ func (a *ACMEState) RedeemNonce(nonce string) bool {
 	return true
 }
 
-func (a *ACMEState) DoTidyNonces() {
+func (a *acmeState) DoTidyNonces() {
 	now := time.Now()
 	expiry := a.nextExpiry.Load()
 	then := time.Unix(expiry, 0)
@@ -79,7 +79,7 @@ func (a *ACMEState) DoTidyNonces() {
 	}
 }
 
-func (a *ACMEState) TidyNonces() {
+func (a *acmeState) TidyNonces() {
 	now := time.Now()
 	nextRun := now.Add(nonceExpiry)
 
@@ -99,22 +99,22 @@ func (a *ACMEState) TidyNonces() {
 	a.nextExpiry.Store(nextRun.Unix())
 }
 
-func (a *ACMEState) CreateAccount(c *JWSCtx, contact []string, termsOfServiceAgreed bool) (map[string]interface{}, error) {
+func (a *acmeState) CreateAccount(c *jwsCtx, contact []string, termsOfServiceAgreed bool) (map[string]interface{}, error) {
 	// TODO
 	return nil, nil
 }
 
-func (a *ACMEState) LoadAccount(keyID string) (map[string]interface{}, error) {
+func (a *acmeState) LoadAccount(keyID string) (map[string]interface{}, error) {
 	// TODO
 	return nil, nil
 }
 
-func (a *ACMEState) DoesAccountExist(keyId string) bool {
+func (a *acmeState) DoesAccountExist(keyId string) bool {
 	account, err := a.LoadAccount(keyId)
 	return err == nil && len(account) > 0
 }
 
-func (a *ACMEState) LoadJWK(keyID string) ([]byte, error) {
+func (a *acmeState) LoadJWK(keyID string) ([]byte, error) {
 	key, err := a.LoadAccount(keyID)
 	if err != nil {
 		return nil, err
@@ -128,15 +128,20 @@ func (a *ACMEState) LoadJWK(keyID string) ([]byte, error) {
 	return jwk.([]byte), nil
 }
 
-func (a *ACMEState) ParseRequestParams(data *framework.FieldData) (*JWSCtx, map[string]interface{}, error) {
-	var c JWSCtx
+func (a *acmeState) ParseRequestParams(data *framework.FieldData) (*jwsCtx, map[string]interface{}, error) {
+	var c jwsCtx
 	var m map[string]interface{}
 
 	// Parse the key out.
-	jwkBase64 := data.Get("protected").(string)
+	rawJWKBase64, ok := data.GetOk("protected")
+	if !ok {
+		return nil, nil, fmt.Errorf("missing required field 'protected': %w", ErrMalformed)
+	}
+	jwkBase64 := rawJWKBase64.(string)
+
 	jwkBytes, err := base64.RawURLEncoding.DecodeString(jwkBase64)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to base64 parse 'protected': %w", err)
+		return nil, nil, fmt.Errorf("failed to base64 parse 'protected': %s: %w", err, ErrMalformed)
 	}
 	if err = c.UnmarshalJSON(a, jwkBytes); err != nil {
 		return nil, nil, fmt.Errorf("failed to json unmarshal 'protected': %w", err)
@@ -146,11 +151,20 @@ func (a *ACMEState) ParseRequestParams(data *framework.FieldData) (*JWSCtx, map[
 	// should read and redeem the nonce here too, to avoid doing any extra
 	// work if it is invalid.
 	if !a.RedeemNonce(c.Nonce) {
-		return nil, nil, fmt.Errorf("invalid or reused nonce")
+		return nil, nil, fmt.Errorf("invalid or reused nonce: %w", ErrBadNonce)
 	}
 
-	payloadBase64 := data.Get("payload").(string)
-	signatureBase64 := data.Get("signature").(string)
+	rawPayloadBase64, ok := data.GetOk("payload")
+	if !ok {
+		return nil, nil, fmt.Errorf("missing required field 'payload': %w", ErrMalformed)
+	}
+	payloadBase64 := rawPayloadBase64.(string)
+
+	rawSignatureBase64, ok := data.GetOk("signature")
+	if !ok {
+		return nil, nil, fmt.Errorf("missing required field 'signature': %w", ErrMalformed)
+	}
+	signatureBase64 := rawSignatureBase64.(string)
 
 	// go-jose only seems to support compact signature encodings.
 	compactSig := fmt.Sprintf("%v.%v.%v", jwkBase64, payloadBase64, signatureBase64)
