@@ -53,6 +53,8 @@ OLDIFS=$IFS
 IFS=: MAIN_GOPATH=($GOPATH)
 IFS=$OLDIFS
 
+# Ensure the go bin folder exists
+mkdir -p ${MAIN_GOPATH}/bin
 rm -f ${MAIN_GOPATH}/bin/vault
 cp bin/vault ${MAIN_GOPATH}/bin/
 
