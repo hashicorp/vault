@@ -109,10 +109,10 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
     assert.dom(SELECTORS.input('issuerName')).hasClass('has-error-border', 'issuer name has error border');
   });
 
-  test('it calls correct endpoint on save when using old root settings', async function (assert) {
+  test('it sends request to rotate/internal on save when using old root settings', async function (assert) {
     assert.expect(1);
     this.server.post(`/${this.backend}/root/rotate/internal`, () => {
-      assert.ok('request is made to rotate/internal on save');
+      assert.ok('request made to correct default endpoint type=internal');
     });
     await render(
       hbs`
@@ -128,4 +128,32 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
     );
     await click(SELECTORS.rotateRootSave);
   });
+
+  function testEndpoint(test, type) {
+    test(`it sends request to rotate/${type} endpoint on save with custom root settings`, async function (assert) {
+      assert.expect(1);
+      this.server.post(`/${this.backend}/root/rotate/${type}`, () => {
+        assert.ok('request is made to correct endpoint');
+      });
+      await render(
+        hbs`
+      <Page::PkiIssuerRotateRoot
+        @oldRoot={{this.oldRoot}}
+        @newRootModel={{this.newRootModel}}
+        @breadcrumbs={{this.breadcrumbs}}
+        @onCancel={{this.onCancel}}
+        @onComplete={{this.onComplete}}
+      />
+    `,
+        { owner: this.engine }
+      );
+      await click(SELECTORS.customRadioSelect);
+      await fillIn(SELECTORS.typeField, type);
+      await click(SELECTORS.generateRootSave);
+    });
+  }
+  testEndpoint(test, 'internal');
+  testEndpoint(test, 'exported');
+  testEndpoint(test, 'existing');
+  testEndpoint(test, 'kms');
 });
