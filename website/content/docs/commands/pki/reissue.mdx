@@ -32,9 +32,8 @@ Usage: `vault pki reissue [flags] <parent> <template> <child_mount> [options]`
 
 - `<child_mount>` is the path of the mount in vault where the new issuer is saved.
 
-- `[options]` are the superset of the options passed to generate/intermediate and
-  sign-intermediate commands.  While every option is optional, at least one
-  option must be set.
+- `[options]` are the superset of the k=v options passed to generate/intermediate
+  and sign-intermediate commands.  See [below](/vault/docs/commands/pki/reissue#options).
 
 The output of this command when it is successful is to read the resulting new
 issuer entry.
