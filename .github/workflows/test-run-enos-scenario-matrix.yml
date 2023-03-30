@@ -153,7 +153,7 @@ jobs:
         if: steps.run_retry.outcome == 'failure'
         uses: actions/upload-artifact@v3
         with:
-          # The name of the artifact is the same as the matrix scenario name with the spaces removed.
+          # The name of the artifact is the same as the matrix scenario name with the spaces replaced with underscores.
           name: ${${{ matrix.scenario }}// /_}.zip
           path: $ENOS_DEBUG_DATA_ROOT_DIR
           retention-days: 30
