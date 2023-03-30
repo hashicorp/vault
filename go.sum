@@ -598,7 +598,6 @@ github.com/go-stack/stack v1.8.0/go.mod h1:v0f6uXyyMGvRgIKkXu+yp6POWl0qKG85gN/me
 github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0/go.mod h1:fyg7847qk6SyHyPtNmDHnmrv/HOrqktSC+C9fM+CJOE=
 github.com/go-test/deep v1.0.2/go.mod h1:wGDj63lr65AM2AQyKZd/NYHGb0R+1RLqB8NKt3aSFNA=
 github.com/go-test/deep v1.0.4/go.mod h1:wGDj63lr65AM2AQyKZd/NYHGb0R+1RLqB8NKt3aSFNA=
-github.com/go-test/deep v1.0.7/go.mod h1:QV8Hv/iy04NyLBxAdO9njL0iVPN1S4d/A3NVv1V36o8=
 github.com/go-test/deep v1.0.8/go.mod h1:5C2ZWiW0ErCdrYzpqxLbTX7MG14M9iiw8DgHncVwcsE=
 github.com/go-test/deep v1.1.0 h1:WOcxcdHcvdgThNXjw0t76K42FXTU7HpNQWHpA2HHNlg=
 github.com/go-test/deep v1.1.0/go.mod h1:5C2ZWiW0ErCdrYzpqxLbTX7MG14M9iiw8DgHncVwcsE=
@@ -993,8 +992,8 @@ github.com/hashicorp/vault-plugin-secrets-kubernetes v0.3.0 h1:Joz9SBwjpEOGu+Ynv
 github.com/hashicorp/vault-plugin-secrets-kubernetes v0.3.0/go.mod h1:NJeYBRgLVqjvkrVyZEe42oaqP3+xvVNMYdJoMWVoByU=
 github.com/hashicorp/vault-plugin-secrets-kv v0.14.2 h1:13p50RIltQM/JH32uWZe9sAp16Uaj0zCLmVGPvS09qo=
 github.com/hashicorp/vault-plugin-secrets-kv v0.14.2/go.mod h1:cAxt2o3BjRT5CbNLtgXuxTReaejvrgN/qk+no+DnwJ8=
-github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.9.1 h1:WkW8fyHxEdz1wGSTxCnSCrzXvgLXqXr8Iqp7upa/s4E=
-github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.9.1/go.mod h1:p96IECNtVwpvTq8RAw3dLlAYRWpG1n06XOoo0TkJnuk=
+github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.0-beta1.0.20230330165455-d9f304ed6da2 h1:++CeNQrmRbHcO2WUcL4wJ18MWSNxggDPvLVZG84G5Ig=
+github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.0-beta1.0.20230330165455-d9f304ed6da2/go.mod h1:kfZeW5Tw3kMSBMO8P7ETrFsDFaSwD2BRifU1tWFPvFY=
 github.com/hashicorp/vault-plugin-secrets-openldap v0.10.1 h1:EN3/iEjPPmcpX9yihybQNHvewc+YoJw7aoKsio1WK5s=
 github.com/hashicorp/vault-plugin-secrets-openldap v0.10.1/go.mod h1:sYuxnuNY2O59fy+LACtvgrqUO/r0cnhAYTMqLajD9FE=
 github.com/hashicorp/vault-plugin-secrets-terraform v0.1.1-0.20230321230503-ee76cdb16f93 h1:mVuMTt00vQSUIO+3ucfBSJHOQ6dsHewauVuozUXl484=
@@ -1277,8 +1276,8 @@ github.com/modern-go/reflect2 v1.0.1/go.mod h1:bx2lNnkwVCuqBIxFjflWJWanXIb3Rllmb
 github.com/modern-go/reflect2 v1.0.2 h1:xBagoLtFs94CBntxluKeaWgTMpvLxC4ur3nMaC9Gz0M=
 github.com/modern-go/reflect2 v1.0.2/go.mod h1:yWuevngMOJpCy52FWWMvUC8ws7m/LJsjYzDa0/r8luk=
 github.com/modocache/gover v0.0.0-20171022184752-b58185e213c5/go.mod h1:caMODM3PzxT8aQXRPkAt8xlV/e7d7w8GM5g0fa5F0D8=
-github.com/mongodb-forks/digest v1.0.3 h1:ZUK1vyZnBiRMvET0O1SzmnBmv935CkcOTjhfR4zIQ2s=
-github.com/mongodb-forks/digest v1.0.3/go.mod h1:eHRfgovT+dvSFfltrOa27hy1oR/rcwyDdp5H1ZQxEMA=
+github.com/mongodb-forks/digest v1.0.4 h1:9FrGTc7MGAchgaQBcXBnEwUM/Oo8obW7OGWxnsSvZ64=
+github.com/mongodb-forks/digest v1.0.4/go.mod h1:eHRfgovT+dvSFfltrOa27hy1oR/rcwyDdp5H1ZQxEMA=
 github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe/go.mod h1:wL8QJuTMNUDYhXwkmfOly8iTdp5TEcJFWZD2D7SIkUc=
 github.com/morikuni/aec v1.0.0 h1:nP9CBfwrvYnBRgY6qfDQkygYDmYwOilePFkwzv4dU8A=
 github.com/mr-tron/base58 v1.2.0/go.mod h1:BinMc/sQntlIE1frQmRFPUoPA1Zkr8VRgBdjWI2mNwc=
@@ -1337,8 +1336,6 @@ github.com/opencontainers/runc v1.1.4/go.mod h1:1J5XiS+vdZ3wCyZybsuxXZWGrgSr8fFJ
 github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417/go.mod h1:jwyrGlmzljRJv/Fgzds9SsS/C5hL+LL3ko9hs6T5lQ0=
 github.com/opencontainers/selinux v1.8.2/go.mod h1:MUIHuUEvKB1wtJjQdOyYRgOnLD2xAPP8dBsCoU0KuF8=
 github.com/opencontainers/selinux v1.10.0/go.mod h1:2i0OySw99QjzBBQByd1Gr9gSjvuho1lHsJxIJ3gGbJI=
-github.com/openlyinc/pointy v1.1.2 h1:LywVV2BWC5Sp5v7FoP4bUD+2Yn5k0VNeRbU5vq9jUMY=
-github.com/openlyinc/pointy v1.1.2/go.mod h1:w2Sytx+0FVuMKn37xpXIAyBNhFNBIJGR/v2m7ik1WtM=
 github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b h1:FfH+VrHHk6Lxt9HdVS0PXzSXFyS2NbZKXv33FYPol0A=
 github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b/go.mod h1:AC62GU6hc0BrNm+9RK9VSiwa/EUe1bkIeFORAMcHvJU=
 github.com/oracle/oci-go-sdk v24.3.0+incompatible h1:x4mcfb4agelf1O4/1/auGlZ1lr97jXRSSN5MxTgG/zU=
@@ -1614,9 +1611,8 @@ go.etcd.io/etcd/client/v2 v2.305.0 h1:ftQ0nOOHMcbMS3KIaDQ0g5Qcd6bhaBrQT6b89DfwLT
 go.etcd.io/etcd/client/v2 v2.305.0/go.mod h1:h9puh54ZTgAKtEbut2oe9P4L/oqKCVB6xsXlzd7alYQ=
 go.etcd.io/etcd/client/v3 v3.5.0 h1:62Eh0XOro+rDwkrypAGDfgmNh5Joq+z+W9HZdlXMzek=
 go.etcd.io/etcd/client/v3 v3.5.0/go.mod h1:AIKXXVX/DQXtfTEqBryiLTUXwON+GuvO6Z7lLS/oTh0=
-go.mongodb.org/atlas v0.13.0/go.mod h1:wVCnHcm/7/IfTjEB6K8K35PLG70yGz8BdkRwX0oK9/M=
-go.mongodb.org/atlas v0.15.0 h1:YyOBdBIuI//krRITf4r7PSirJ3YDNNUfNmapxwSyDow=
-go.mongodb.org/atlas v0.15.0/go.mod h1:lQhRHIxc6jQHEK3/q9WLu/SdBkPj2fQYhjLGUF6Z3U8=
+go.mongodb.org/atlas v0.24.0 h1:n9ibqbxrtFOInLD6MhNupK9GKFmaH08rLwU5qnr4mpA=
+go.mongodb.org/atlas v0.24.0/go.mod h1:L4BKwVx/OeEhOVjCSdgo90KJm4469iv7ZLzQms/EPTg=
 go.mongodb.org/mongo-driver v1.0.3/go.mod h1:u7ryQJ+DOzQmeO7zB6MHyr8jkEQvC8vH7qLUO4lqsUM=
 go.mongodb.org/mongo-driver v1.1.1/go.mod h1:u7ryQJ+DOzQmeO7zB6MHyr8jkEQvC8vH7qLUO4lqsUM=
 go.mongodb.org/mongo-driver v1.3.0/go.mod h1:MSWZXKOynuguX+JSvwP8i+58jYCXxbia8HS3gZBapIE=
