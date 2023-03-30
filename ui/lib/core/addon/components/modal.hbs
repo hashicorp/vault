@@ -17,11 +17,13 @@
         {{#if this.showCloseButton}}
           <button
             type="button"
-            class="delete"
+            class="icon-button has-text-grey-500"
             aria-label="close"
             {{on "click" @onClose}}
             data-test-modal-close-button
-          ></button>
+          >
+            <Icon @name="x-circle" class="close-icon" />
+          </button>
         {{/if}}
       </header>
       {{yield}}
