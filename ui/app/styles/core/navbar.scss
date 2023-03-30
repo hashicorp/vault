@@ -48,15 +48,19 @@
 }
 
 .navbar-brand {
+  align-items: stretch;
   background: $vault-gray;
   border-radius: 0 $radius-large $radius-large 0;
+  display: flex;
   margin-right: $spacing-s;
   min-height: auto;
   position: relative;
   z-index: 203;
 
   .navbar-item {
+    align-items: center;
     background-color: transparent;
+    display: flex;
     padding: $spacing-xs $spacing-l;
 
     &:hover,

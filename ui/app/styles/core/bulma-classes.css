@@ -309,24 +309,3 @@ fieldset[disabled] .radio,
 .delete:active {
   background-color: rgba(10, 10, 10, 0.4);
 }
-
-/* Navbar */
-.navbar-item,.navbar-link {
-  -ms-flex-align: center;
-  -webkit-box-align: center;
-  align-items:center;
-  display: -ms-flexbox;
-  display: -webkit-box;
-  display: flex
-}
-
-.navbar-brand {
-  align-items: stretch;
-  display: flex;
-  flex-shrink: 0;
-  min-height: 3.25rem;
-}
-
-.navbar-brand a.navbar-item:focus, .navbar-brand a.navbar-item:hover {
-  background-color: transparent;
-}
