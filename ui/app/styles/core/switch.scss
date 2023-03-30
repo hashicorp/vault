@@ -6,9 +6,12 @@
 .switch[type='checkbox'] {
   &.is-small {
     + label {
+      cursor: pointer;
+      display: inline-block;
       font-size: $size-8;
       font-weight: bold;
       padding-left: $size-8 * 2.5;
+      position: relative;
       margin: 0 0.25rem;
       &::before {
         top: $size-8 / 5;

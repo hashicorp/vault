@@ -25,10 +25,11 @@
 @import './core/breadcrumb';
 @import './core/bulma-radio-checkboxes';
 @import './core/buttons';
+@import './core/charts';
 @import './core/columns';
 @import './core/footer';
 @import './core/forms';
-@import './core/charts';
+@import './core/input';
 @import './core/level';
 @import './core/link';
 @import './core/menu';
@@ -37,8 +38,8 @@
 @import './core/progress';
 @import './core/select';
 @import './core/switch';
-@import './core/tables';
 @import './core/tags';
+@import './core/textarea';
 @import './core/title';
 @import './core/toggle';
 
@@ -46,6 +47,7 @@
 @import './helper-classes/other';
 @import './helper-classes/colors';
 @import './helper-classes/flexbox-and-grid';
+@import './helper-classes/layout';
 @import './helper-classes/spacing';
 @import './helper-classes/typography';
 
@@ -77,7 +79,6 @@
 @import './components/init-illustration';
 @import './components/info-table';
 @import './components/info-table-row';
-@import './components/input-hint';
 @import './components/kmip-role-edit';
 @import './components/known-secondaries-card.scss';
 @import './components/license-banners';

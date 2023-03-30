@@ -93,7 +93,7 @@
 pre {
   background-color: inherit;
 }
-
+// ARG TODO return to this is-highlight, confusing over another helper with same name.
 .is-highlight {
   .modal-card-head {
     background: $yellow-010;
@@ -101,14 +101,6 @@ pre {
   }
   .modal-card-title {
     color: $yellow-dark;
-  }
-}
-
-.modal-confirm-section .is-help {
-  color: $grey;
-  margin: $spacing-xxs 0;
-  strong {
-    color: inherit;
   }
 }
 

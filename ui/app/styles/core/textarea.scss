@@ -1,0 +1,48 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+// This files defines the styling for the .textarea class.
+
+.textarea {
+  border-radius: 2px;
+  border: 1px solid $ui-gray-500;
+  box-shadow: 0 4px 1px rgba($black, 0.06) inset;
+  color: $grey-dark;
+  max-width: 100%;
+  padding-left: $size-8;
+  padding-right: $size-8;
+  width: 100%;
+
+  &:focus,
+  &:active,
+  &.is-active,
+  &:focus-visible {
+    background-color: $input-focus-background-color;
+    border-color: #1563ff !important;
+    box-shadow: 0 0 0 0.125em rgba(21, 99, 255, 0.25) !important;
+  }
+
+  &:hover {
+    border-color: #b5b5b5;
+  }
+
+  @include until($desktop) {
+    font-size: 16px;
+  }
+  &::placeholder {
+    opacity: 0.5;
+  }
+}
+
+.textarea[disabled] {
+  background-color: $ui-gray-100;
+  border-color: $grey-light;
+  color: $ui-gray-500;
+  cursor: not-allowed;
+
+  &:hover {
+    border-color: $grey-light;
+  }
+}

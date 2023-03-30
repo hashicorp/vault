@@ -3,55 +3,9 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-// .input, .file-name, & .textarea
-// ARG TODO return to file-name, used in two place and lots of css
-.input,
-.file-name,
-.textarea {
-  box-shadow: 0 4px 1px rgba(10, 10, 10, 0.06) inset;
-  border: 1px solid #6f7682;
-}
-
-.input,
-.textarea {
-  box-shadow: inset 0 0.0625em 0.125em rgba(10, 10, 10, 0.05);
-  max-width: 100%;
-  width: 100%;
-}
-
-.input,
-.textarea {
-  border-color: $grey-light;
-  border-radius: 2px;
-  color: $grey-dark;
-  padding-left: $size-8;
-  padding-right: $size-8;
-  @include until($desktop) {
-    font-size: 16px;
-  }
-  &::placeholder {
-    opacity: 0.5;
-  }
-}
-
-.input,
 .control.has-icons-left .icon,
 .control.has-icons-right .icon {
   height: 2.5rem;
-}
-
-.input.variable {
-  font-family: $family-monospace;
-}
-
-.input[disabled],
-.textarea[disabled] {
-  border-color: $grey-light;
-  background-color: $ui-gray-100;
-  color: $ui-gray-500;
-  &:hover {
-    border-color: $grey-light;
-  }
 }
 
 .control {
@@ -97,51 +51,6 @@
     display: flex;
     align-self: end;
   }
-}
-
-.input,
-.textarea {
-  box-shadow: 0 4px 1px rgba($black, 0.06) inset;
-
-  @each $name, $pair in $colors {
-    $color: nth($pair, 1);
-    $color-invert: findColorInvert($color);
-    $color-bg: nth($pair, 2);
-    &.is-#{$name} {
-      border-color: $color;
-      background-color: $color-bg;
-      // ARG TODO return: there is not is-inverted class name used in the app. Clean up when you clean the colors files.
-      &.is-inverted {
-        border-color: rgba($color-invert, 0.3);
-        background-color: $color-bg;
-        &::placeholder {
-          color: rgba($color-invert, 0.3);
-        }
-        &:focus,
-        &.is-focused,
-        &:active,
-        &.is-active {
-          border-color: rgba($color-invert, 1);
-          background-color: $color-bg;
-          color: $color-invert;
-          &::placeholder {
-            color: rgba($color-invert, 0.7);
-          }
-        }
-      }
-    }
-  }
-  &:focus,
-  &.is-focused,
-  &:active,
-  &.is-active {
-    background-color: $input-focus-background-color;
-  }
-}
-
-.masked-font {
-  font-family: obscure, text-security-square;
-  letter-spacing: 2px;
 }
 
 .label {
@@ -190,22 +99,6 @@
   padding-left: 2rem;
 }
 
-.is-help {
-  font-size: $size-small;
-  margin-top: 0.25rem;
-  @each $name, $pair in $colors {
-    $color: nth($pair, 1);
-    &.is-#{$name} {
-      color: $color;
-    }
-  }
-}
-
-.sub-text {
-  color: $grey;
-  margin-bottom: 0.25rem;
-  font-size: $size-8;
-}
 .field:not(:last-child) {
   margin-bottom: 1.5rem;
 }
@@ -282,17 +175,62 @@
   }
 }
 
+// File css
+.file {
+  user-select: none;
+}
+
+.file-name {
+  box-shadow: 0 4px 1px rgba(10, 10, 10, 0.06) inset;
+  border: 1px solid $ui-gray-300;
+  border-radius: 2px;
+  border-width: 1px 1px 1px 0 !important;
+  display: block;
+  font-size: 1em;
+  line-height: 1.5;
+  overflow: hidden;
+  padding-left: 1em;
+  padding-right: 1em;
+  padding-bottom: calc(0.375em - 1px);
+  padding-top: calc(0.375em - 1px);
+  position: relative;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+}
+
 .file-label {
+  align-items: stretch;
+  cursor: pointer;
+  display: flex;
+  justify-content: flex-start;
   overflow: visible;
 }
 
 .file-input {
+  height: 0.01em;
+  left: 0;
+  outline: 0;
+  position: absolute;
+  top: 0;
+  width: 0.01em;
   visibility: hidden;
 }
 
 .file-cta {
+  border: 1px solid $ui-gray-300;
   border-radius: 2px;
   min-width: auto;
+  position: relative;
+  white-space: nowrap;
+
+  &:disabled {
+    cursor: not-allowed;
+  }
 
   .icon:first-child:last-child {
     display: inline-block;
@@ -303,6 +241,7 @@
 
 .file-name {
   @extend .input;
+  border: 1px solid $ui-gray-300;
   border-radius: 2px;
 }
 
@@ -318,6 +257,7 @@ fieldset.form-fieldset {
   border: none;
 }
 
+// ARG TODO move to helper
 .has-error-border,
 select.has-error-border {
   border: 1px solid $red-500;
@@ -325,22 +265,4 @@ select.has-error-border {
 
 .dropdown-has-error-border > div.ember-basic-dropdown-trigger {
   border: 1px solid $red-500;
-}
-
-.autocomplete-input {
-  background: $white !important;
-  border: 1px solid $grey-light;
-  box-sizing: border-box;
-  border-radius: 3px;
-  width: 99%;
-  padding: 4px 0;
-  margin-left: 0.5%;
-  margin-top: -4px;
-}
-.autocomplete-input-option {
-  padding: 12px;
-  &:hover {
-    background-color: $grey-lightest;
-    cursor: pointer;
-  }
 }

@@ -1,0 +1,46 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+//  ARG TODO, more to come
+/* This helper includes styles relating to: display, max-width */
+
+.is-block {
+  display: block !important;
+}
+
+.is-centered {
+  justify-content: center;
+}
+
+.is-inline {
+  display: inline !important;
+}
+
+.is-inline-block {
+  display: inline-block !important;
+}
+
+.is-hidden {
+  display: none !important;
+}
+
+// responsive css
+@media screen and (min-width: 769px), print {
+  .is-hidden-tablet {
+    display: none !important;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .is-hidden-mobile {
+    display: none !important;
+  }
+}
+
+@media screen and (max-width: 1215px) {
+  is-widescreen:not(.is-max-desktop) {
+    max-width: 1152px;
+  }
+}
