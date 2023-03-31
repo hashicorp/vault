@@ -25,7 +25,9 @@ const ModelExport = AuthMethodModel.extend({
 
   config: belongsTo('mount-config', { async: false, inverse: null }), // one-to-none that replaces former fragment
   authConfigs: hasMany('auth-config', { polymorphic: true, inverse: 'backend', async: false }),
-  path: attr('string'),
+  path: attr('string', {
+    whitespaceWarning: true,
+  }),
   accessor: attr('string'),
   name: attr('string'),
   type: attr('string'),

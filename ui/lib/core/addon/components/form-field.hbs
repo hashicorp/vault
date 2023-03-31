@@ -318,6 +318,15 @@
         {{#if this.validationError}}
           <AlertInline @type="danger" @message={{this.validationError}} @paddingTop={{true}} />
         {{/if}}
+        {{#if (and @attr.options.whitespaceWarning (has-whitespace (get @model this.valuePath)))}}
+          <div class="has-top-margin-m">
+            <AlertBanner
+              @type="warning"
+              @message="Value contains whitespace. If this is desired, you'll need to encode it with %20 in API requests."
+              data-test-whitespace-warning
+            />
+          </div>
+        {{/if}}
       {{/if}}
     </div>
   {{else if (eq @attr.type "boolean")}}

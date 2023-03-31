@@ -210,4 +210,31 @@ module('Integration | Component | form field', function (hooks) {
     assert.dom('[data-test-toggle-input="Foo"]').isChecked('Toggle is initially checked when given value');
     assert.dom('[data-test-ttl-value="Foo"]').hasValue('1', 'Ttl input displays with correct value');
   });
+
+  test('it should show whitespace warning', async function (assert) {
+    this.setProperties({
+      model: EmberObject.create({ foo: null }),
+      attr: createAttr('foo', 'string', { whitespaceWarning: true }),
+      onChange: () => {},
+    });
+
+    await render(hbs`<FormField @attr={{this.attr}} @model={{this.model}} @onChange={{this.onChange}} />`);
+    assert
+      .dom('[data-test-whitespace-warning]')
+      .doesNotExist('Whitespace warning does not render for no value');
+    await fillIn('[data-test-input="foo"]', 'foo');
+    assert
+      .dom('[data-test-whitespace-warning]')
+      .doesNotExist('Whitespace warning does not render for value without whitespace');
+    await fillIn('[data-test-input="foo"]', ' foo');
+    assert.dom('[data-test-whitespace-warning]').exists('Whitespace warning renders with leading whitespace');
+    await fillIn('[data-test-input="foo"]', 'foo ');
+    assert
+      .dom('[data-test-whitespace-warning]')
+      .exists('Whitespace warning renders with trailing whitespace');
+    await fillIn('[data-test-input="foo"]', 'foo bar');
+    assert
+      .dom('[data-test-whitespace-warning]')
+      .exists('Whitespace warning renders with whitespace separating words');
+  });
 });

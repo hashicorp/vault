@@ -24,7 +24,10 @@ const validations = {
 @withModelValidations(validations)
 @withExpandedAttributes()
 export default class SecretEngineModel extends Model {
-  @attr('string') path;
+  @attr('string', {
+    whitespaceWarning: true,
+  })
+  path;
   @attr('string') type;
   @attr('string', {
     editType: 'textarea',
