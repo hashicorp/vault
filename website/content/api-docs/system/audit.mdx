@@ -64,10 +64,11 @@ single word name or a more complex, nested path.
 - `description` `(string: "")` – Specifies a human-friendly description of the
   audit device.
 
-- `options` `(map<string|string>: nil)` – Specifies configuration options to
-  pass to the audit device itself. This is dependent on the audit device type.
+- `options` `(map<string|string>: nil)` – Specifies configuration options to pass to the audit device itself.
+  For more details, please see the relevant page for an audit device `type`, under [Audit Devices docs](/vault/docs/audit).
 
 - `type` `(string: <required>)` – Specifies the type of the audit device.
+  Valid types are `file`, `socket` and `syslog`.
 
 Additionally, the following options are allowed in Vault open-source, but
 relevant functionality is only supported in Vault Enterprise:
