@@ -10,7 +10,7 @@ import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-import FlashMessageService from 'vault/services/flash-messages';
+import FlashMessageService from 'ember-cli-flash/services/flash-messages';
 import PkiActionModel from 'vault/models/pki/action';
 import errorMessage from 'vault/utils/error-message';
 
@@ -59,7 +59,7 @@ export default class PkiGenerateCsrComponent extends Component<Args> {
       'commonName',
       'excludeCnFromSans',
       'format',
-      'serialNumber',
+      'subjectSerialNumber',
       'addBasicConstraints',
     ]);
   }

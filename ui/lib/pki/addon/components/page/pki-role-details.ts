@@ -6,7 +6,7 @@
 import { action } from '@ember/object';
 import RouterService from '@ember/routing/router-service';
 import Component from '@glimmer/component';
-import FlashMessageService from 'vault/services/flash-messages';
+import FlashMessageService from 'ember-cli-flash/services/flash-messages';
 import SecretMountPath from 'vault/services/secret-mount-path';
 import { inject as service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
