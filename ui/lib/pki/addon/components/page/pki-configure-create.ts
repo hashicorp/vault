@@ -9,7 +9,7 @@ import { tracked } from '@glimmer/tracking';
 // TYPES
 import Store from '@ember-data/store';
 import Router from '@ember/routing/router';
-import FlashMessageService from 'vault/services/flash-messages';
+import FlashMessageService from 'ember-cli-flash/services/flash-messages';
 import PkiActionModel from 'vault/models/pki/action';
 import { Breadcrumb } from 'vault/vault/app-types';
 
