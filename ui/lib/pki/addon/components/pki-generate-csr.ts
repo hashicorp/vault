@@ -59,7 +59,7 @@ export default class PkiGenerateCsrComponent extends Component<Args> {
       'commonName',
       'excludeCnFromSans',
       'format',
-      'serialNumber',
+      'subjectSerialNumber',
       'addBasicConstraints',
     ]);
   }
