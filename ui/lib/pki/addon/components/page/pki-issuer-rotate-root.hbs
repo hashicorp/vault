@@ -86,7 +86,7 @@
       If you’re ready, you can begin cross-signing issuers now. If not, the option to cross-sign is available when you use
       this certificate.
       <br />
-      <LinkTo class="is-marginless" @route="issuers.issuer.cross-sign">
+      <LinkTo class="is-marginless" @route="issuers.issuer.cross-sign" @model={{@newRootModel.issuerId}}>
         Cross-sign issuers
       </LinkTo>
     </AlertBanner>

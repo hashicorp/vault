@@ -86,7 +86,6 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
     return this.args.newRootModel.id ? [...defaultFields, ...addKeyFields] : defaultFields;
   }
 
-  @action
   checkFormValidity() {
     if (this.args.newRootModel.validate) {
       const { isValid, state, invalidFormMessage } = this.args.newRootModel.validate();
