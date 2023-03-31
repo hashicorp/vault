@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-// This file defines the classes for .input. We use the following input classes: .input, .input-hint, .autocomplete-input, .autocomplete-input-option
+// This file defines the classes for .input and .textarea We use the following input classes: .textarea, .input, .input-hint, .autocomplete-input, .autocomplete-input-option
 
-.input {
+.input,
+.textarea {
   border-radius: 2px;
   border: 1px solid $ui-gray-300;
   box-shadow: 0 4px 1px rgba($black, 0.06) inset;
@@ -20,6 +21,7 @@
   &:active,
   &.is-active,
   &:focus-visible {
+    outline: none;
     background-color: $input-focus-background-color;
     border-color: #1563ff !important;
     box-shadow: 0 0 0 0.125em rgba(21, 99, 255, 0.25) !important;
@@ -37,7 +39,8 @@
   }
 }
 
-.input[disabled] {
+.input[disabled],
+.textarea[disabled] {
   border-color: $grey-light;
   background-color: $ui-gray-100;
   color: $ui-gray-500;
@@ -49,25 +52,6 @@
 }
 
 // custom input
-.autocomplete-input {
-  background: $white !important;
-  border: 1px solid $grey-light;
-  box-sizing: border-box;
-  border-radius: 3px;
-  width: 99%;
-  padding: 4px 0;
-  margin-left: 0.5%;
-  margin-top: -4px;
-}
-
-.autocomplete-input-option {
-  padding: 12px;
-  &:hover {
-    background-color: $grey-lightest;
-    cursor: pointer;
-  }
-}
-
 .input-hint {
   padding: 0 $size-9;
   font-size: $size-8;

@@ -59,8 +59,7 @@
   font-size: $size-small;
 }
 
-.is-label,
-.b-checkbox .is-label {
+.is-label {
   color: $grey-darker;
   display: inline-block;
   font-size: $body-size;
@@ -88,15 +87,6 @@
   &::before {
     border-color: $grey-light;
   }
-}
-
-.b-checkbox .is-label {
-  display: inline;
-  margin-left: $size-10;
-}
-
-.b-checkbox > .sub-text {
-  padding-left: 2rem;
 }
 
 .field:not(:last-child) {
@@ -175,92 +165,8 @@
   }
 }
 
-// File css
-.file {
-  user-select: none;
-}
-
-.file-name {
-  box-shadow: 0 4px 1px rgba(10, 10, 10, 0.06) inset;
-  border: 1px solid $ui-gray-300;
-  border-radius: 2px;
-  border-width: 1px 1px 1px 0 !important;
-  display: block;
-  font-size: 1em;
-  line-height: 1.5;
-  overflow: hidden;
-  padding-left: 1em;
-  padding-right: 1em;
-  padding-bottom: calc(0.375em - 1px);
-  padding-top: calc(0.375em - 1px);
-  position: relative;
-  text-align: left;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-
-  &:disabled {
-    cursor: not-allowed;
-  }
-}
-
-.file-label {
-  align-items: stretch;
-  cursor: pointer;
-  display: flex;
-  justify-content: flex-start;
-  overflow: visible;
-}
-
-.file-input {
-  height: 0.01em;
-  left: 0;
-  outline: 0;
-  position: absolute;
-  top: 0;
-  width: 0.01em;
-  visibility: hidden;
-}
-
-.file-cta {
-  border: 1px solid $ui-gray-300;
-  border-radius: 2px;
-  min-width: auto;
-  position: relative;
-  white-space: nowrap;
-
-  &:disabled {
-    cursor: not-allowed;
-  }
-
-  .icon:first-child:last-child {
-    display: inline-block;
-    margin-right: 0.1rem;
-    vertical-align: middle;
-  }
-}
-
-.file-name {
-  @extend .input;
-  border: 1px solid $ui-gray-300;
-  border-radius: 2px;
-}
-
-.file-delete-button {
-  @extend .button;
-  @extend .is-transparent;
-  color: $grey;
-  position: absolute;
-  right: 8px;
-}
-
 fieldset.form-fieldset {
   border: none;
-}
-
-// ARG TODO move to helper
-.has-error-border,
-select.has-error-border {
-  border: 1px solid $red-500;
 }
 
 .dropdown-has-error-border > div.ember-basic-dropdown-trigger {

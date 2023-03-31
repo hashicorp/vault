@@ -13,7 +13,6 @@
 @import './core/element-styling';
 @import './core/bulma-classes';
 @import './utils/bulma_switch';
-@import './utils/bulma_checkboxes';
 
 // Utils
 @import './utils/mixins';
@@ -23,13 +22,14 @@
 @import './core/alert-banner';
 @import './core/box';
 @import './core/breadcrumb';
-@import './core/bulma-radio-checkboxes';
 @import './core/buttons';
 @import './core/charts';
+@import './core/checkboxes';
 @import './core/columns';
+@import './core/file';
 @import './core/footer';
 @import './core/forms';
-@import './core/input';
+@import './core/inputs';
 @import './core/level';
 @import './core/link';
 @import './core/menu';
@@ -39,15 +39,14 @@
 @import './core/select';
 @import './core/switch';
 @import './core/tags';
-@import './core/textarea';
 @import './core/title';
 @import './core/toggle';
 
 // Helpers
-@import './helper-classes/other';
 @import './helper-classes/colors';
 @import './helper-classes/flexbox-and-grid';
 @import './helper-classes/layout';
+@import './helper-classes/other';
 @import './helper-classes/spacing';
 @import './helper-classes/typography';
 
@@ -58,8 +57,8 @@
 // Component specific styling
 @import './components/auth-buttons';
 @import './components/auth-form';
+@import './components/autocomplete-input';
 @import './components/b64-toggle';
-
 @import './components/box-label';
 @import './components/box-radio';
 @import './components/calendar-widget';
