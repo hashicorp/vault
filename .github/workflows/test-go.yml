@@ -166,6 +166,20 @@ jobs:
               ${{ inputs.extra-flags }} \
                 \
               ${test_packages[${{ matrix.runner-index }}]}
+      - name: Prepare datadog-ci
+      #THIS STEP SHOULD NOT FAIL THE PIPELINE ON ERROR
+        if: github.repository == 'hashicorp/vault'
+        run: |
+          curl -L --fail "https://github.com/DataDog/datadog-ci/releases/latest/download/datadog-ci_linux-x64" --output "/usr/local/bin/datadog-ci"
+          chmod +x /usr/local/bin/datadog-ci
+      - name: upload coverage
+        env:
+          DD_ENV: ci
+        run: |
+          if [[ ${{ github.repository }} == 'hashicorp/vault' ]]; then
+            export DATADOG_API_KEY=${{ secrets.DATADOG_API_KEY }}
+          fi
+          datadog-ci junit upload --service "$GITHUB_REPOSITORY" test-results/go-test/results.xml
       - name: Archive test results
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce
         with:
