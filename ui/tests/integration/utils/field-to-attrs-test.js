@@ -11,7 +11,7 @@ import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 module('Integration | Util | field to attrs', function (hooks) {
   setupTest(hooks);
 
-  const PATH_ATTR = { type: 'string', name: 'path', options: {} };
+  const PATH_ATTR = { type: 'string', name: 'path', options: { whitespaceWarning: true } };
   const DESCRIPTION_ATTR = { type: 'string', name: 'description', options: { editType: 'textarea' } };
   const DEFAULT_LEASE_ATTR = {
     type: undefined,
