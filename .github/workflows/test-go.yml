@@ -105,6 +105,7 @@ jobs:
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
+            kv/data/github/${{ github.repository }}/datadog-ci DATADOG_API_KEY;
             kv/data/github/${{ github.repository }}/license license_1 | VAULT_LICENSE_CI;
             kv/data/github/${{ github.repository }}/license license_2 | VAULT_LICENSE_2;
             kv/data/github/${{ github.repository }}/hcp-link HCP_API_ADDRESS;
