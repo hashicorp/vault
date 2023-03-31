@@ -7,6 +7,23 @@
 
 @import '../sass-svg-uri/svg-uri';
 
+.b-checkbox {
+  position: relative;
+}
+
+.b-checkbox label::before {
+  background-color: $white;
+  border-radius: 3px;
+  border: 1px solid #dbdbdb;
+  content: '';
+  height: 17px;
+  left: 0;
+  position: absolute;
+  top: 1px;
+  transition: background 0.1s ease-in-out;
+  width: 17px;
+}
+
 .b-checkbox input[type='checkbox']:checked + label::before {
   border-color: $blue;
 }
@@ -20,22 +37,53 @@
   );
 }
 
-.b-checkbox .is-label {
+.b-checkbox input[type='checkbox'],
+.b-checkbox input[type='radio'] {
+  cursor: pointer;
+  opacity: 0;
+  z-index: 1;
+}
+
+.b-checkbox label::after {
+  color: #363636;
+  font-size: 12px;
+  height: 16px;
+  left: 3px;
+  position: absolute;
+  top: 3px;
+  width: 16px;
+}
+
+.b-checkbox label {
   display: inline;
+  line-height: 1;
   margin-left: 0.5rem;
+  padding-left: 5px;
+}
+
+.b-checkbox input[type='checkbox']:focus + label::before,
+.b-checkbox input[type='radio']:focus + label::before {
+  outline: thin dotted;
+  outline: 5px auto -webkit-focus-ring-color;
+  outline-offset: -2px;
+}
+
+.b-checkbox input[type='checkbox']:disabled,
+.b-checkbox input[type='radio']:disabled {
+  cursor: not-allowed;
+}
+
+.b-checkbox input[type='checkbox']:disabled + label,
+.b-checkbox input[type='radio']:disabled + label {
+  opacity: 0.65;
 }
 
 .b-checkbox > .sub-text {
   padding-left: 2rem;
 }
 
-.b-checkbox.no-label input[type='checkbox'] + label {
-  position: absolute;
-  top: 0;
-}
-
 .checkbox-help-text {
-  font-size: $size-7;
   color: $ui-gray-700;
+  font-size: $size-7;
   padding-left: 28px;
 }
