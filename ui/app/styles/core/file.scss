@@ -3,24 +3,24 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-// This file defines the classes for .file, .file-xx .autocomplete-input-option
+// This file defines the classes for .file
 
 .file {
   user-select: none;
 }
 
 .file-name {
-  box-shadow: 0 4px 1px rgba(10, 10, 10, 0.06) inset;
-  border: 1px solid $ui-gray-300;
   border-radius: 2px;
   border-width: 1px 1px 1px 0 !important;
+  border: 1px solid $ui-gray-300;
+  box-shadow: 0 4px 1px rgba(10, 10, 10, 0.06) inset;
   display: block;
   font-size: 1em;
   line-height: 1.5;
   overflow: hidden;
+  padding-bottom: calc(0.375em - 1px);
   padding-left: 1em;
   padding-right: 1em;
-  padding-bottom: calc(0.375em - 1px);
   padding-top: calc(0.375em - 1px);
   position: relative;
   text-align: left;
