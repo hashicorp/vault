@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Adds whitespace warning banner to secrets engine and auth method path inputs
+```
