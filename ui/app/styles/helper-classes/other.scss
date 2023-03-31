@@ -26,10 +26,25 @@
   box-shadow: 0 2px 0 -1px $grey-light, 0 -2px 0 -1px $grey-light;
 }
 
+// border helpers
+.has-default-border {
+  border: 1px solid $grey !important;
+}
+
 .is-borderless {
   border: none !important;
 }
 
+// pointer helpers
+.has-no-pointer {
+  pointer-events: none;
+}
+
+.has-pointer {
+  cursor: pointer;
+}
+
+// other
 .has-background-transition {
   transition: background-color $easing $speed;
 }
@@ -39,23 +54,6 @@
   & svg {
     fill: currentColor;
   }
-}
-
-.has-default-border {
-  border: 1px solid $grey !important;
-}
-
-.has-no-pointer {
-  pointer-events: none;
-}
-
-.has-pointer {
-  cursor: pointer;
-}
-
-// ARG TODO move has-short-padding to helper after adjust this in hbs
-.is-sideless.has-short-padding {
-  padding: 0.25rem 1.25rem;
 }
 
 // large grouped css blocks
