@@ -21,3 +21,8 @@
   font-weight: $font-weight-semibold;
   text-transform: uppercase;
 }
+
+ul.bullet {
+  list-style: disc;
+  padding-left: $spacing-m;
+}

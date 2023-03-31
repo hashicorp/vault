@@ -18,18 +18,6 @@
   user-select: none;
 }
 
-.is-pulled-left {
-  float: left !important;
-}
-
-.is-pulled-right {
-  float: right !important;
-}
-
-.is-shadowless {
-  box-shadow: none !important;
-}
-
 /* ARG TODO: is-light only used with tags? */
 .tag:not(body).is-light {
   background-color: whitesmoke;
