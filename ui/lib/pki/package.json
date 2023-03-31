@@ -7,6 +7,7 @@
   "dependencies": {
     "ember-cli-babel": "*",
     "ember-cli-htmlbars": "*",
+    "ember-cli-flash": "*",
     "ember-cli-typescript": "*",
     "@types/ember": "latest",
     "@types/ember-data": "latest",
