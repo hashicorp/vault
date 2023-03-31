@@ -196,6 +196,9 @@ type ActivityLogCoreConfig struct {
 
 	// CensusReportInterval is the testing configuration for time
 	CensusReportInterval time.Duration
+
+	// MinimumRetentionMonths defines the minimum value for retention
+	MinimumRetentionMonths int
 }
 
 // NewActivityLog creates an activity log.
@@ -956,6 +959,10 @@ func (a *ActivityLog) SetConfigInit(config activityConfig) {
 	a.defaultReportMonths = config.DefaultReportMonths
 	a.retentionMonths = config.RetentionMonths
 
+	if a.retentionMonths < a.configOverrides.MinimumRetentionMonths {
+		a.retentionMonths = a.configOverrides.MinimumRetentionMonths
+	}
+
 	if a.configOverrides.CensusReportInterval > 0 {
 		a.CensusReportInterval = a.configOverrides.CensusReportInterval
 	}
@@ -1013,6 +1020,9 @@ func (a *ActivityLog) SetConfig(ctx context.Context, config activityConfig) {
 
 	a.defaultReportMonths = config.DefaultReportMonths
 	a.retentionMonths = config.RetentionMonths
+	if a.retentionMonths < a.configOverrides.MinimumRetentionMonths {
+		a.retentionMonths = a.configOverrides.MinimumRetentionMonths
+	}
 
 	// check for segments out of retention period, if it has changed
 	go a.retentionWorker(ctx, time.Now(), a.retentionMonths)
