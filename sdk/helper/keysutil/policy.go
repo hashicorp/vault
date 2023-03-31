@@ -1318,7 +1318,6 @@ func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, o
 	}
 
 	switch p.Type {
-	// NOTE: Also going to be fail here
 	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
 		var curve elliptic.Curve
 		switch p.Type {
