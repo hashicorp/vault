@@ -80,20 +80,6 @@ export default class PkiRoleForm extends Component {
   }
 
   @action
-  handleIssuerInput(issuer) {
-    if (Array.isArray(issuer)) {
-      this.issuerValue = issuer[0];
-    } else {
-      this.issuerValue = issuer;
-    }
-  }
-
-  @action
-  updateSelectedOption({ target }) {
-    this.args.role.issuerRef = target.value;
-  }
-
-  @action
   toggleShowDefaultIssuer() {
     this.showDefaultIssuer = !this.showDefaultIssuer;
 

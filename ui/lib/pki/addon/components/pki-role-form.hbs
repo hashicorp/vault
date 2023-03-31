@@ -29,22 +29,15 @@
               {{#unless this.showDefaultIssuer}}
                 <div class="has-top-margin-xs has-bottom-margin-l">
                   <div class="select is-fullwidth">
-                    <select
-                      name={{attr.name}}
-                      id={{attr.name}}
-                      {{on "change" this.updateSelectedOption}}
-                      data-test-input={{attr.name}}
-                    >
-                      {{#each this.issuers as |issuer|}}
-                        <option
-                          selected={{(eq issuer.issuerDisplayName @role.issuerRef)}}
-                          value={{issuer.issuerDisplayName}}
-                          data-test-option={{issuer.issuerDisplayName}}
-                        >
-                          {{issuer.issuerDisplayName}}
-                        </option>
-                      {{/each}}
-                    </select>
+                    <Select
+                      @name={{attr.name}}
+                      @options={{this.issuers}}
+                      @valueAttribute={{"issuerDisplayName"}}
+                      @labelAttribute={{"issuerDisplayName"}}
+                      @isFullwidth={{true}}
+                      @selectedValue={{@role.issuerRef}}
+                      @onChange={{action (mut @role.issuerRef)}}
+                    />
                   </div>
                 </div>
               {{/unless}}
