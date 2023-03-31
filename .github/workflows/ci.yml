@@ -217,7 +217,7 @@ jobs:
     - id: install-browser-libraries
       run: sudo apt install -y libnss3-dev libgdk-pixbuf2.0-dev libgtk-3-dev libxss-dev libasound2
     - id: install-browser
-      uses: browser-actions/setup-chrome@597130847c84cdac5acceccbd676d612e6f8beb8
+      uses: browser-actions/setup-chrome@29abc1a83d1d71557708563b4bc962d0f983a376
     - id: ui-dependencies
       name: ui-dependencies
       working-directory: ./ui
