@@ -160,7 +160,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 	if ah.client != nil {
 		headers := ah.client.Headers()
 		if headers == nil {
-			headers = make(map[string][]string)
+			headers = make(http.Header)
 		}
 		headers.Set("User-Agent", useragent.AgentAutoAuthString())
 		ah.client.SetHeaders(headers)

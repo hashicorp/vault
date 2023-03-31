@@ -6,6 +6,7 @@ package cache
 import (
 	"context"
 	"fmt"
+	gohttp "net/http"
 	"sync"
 
 	hclog "github.com/hashicorp/go-hclog"
@@ -79,7 +80,7 @@ func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, 
 	req.Request.Header.Del("Accept-Encoding")
 
 	if req.Request.Header == nil {
-		req.Request.Header = make(map[string][]string)
+		req.Request.Header = make(gohttp.Header)
 	}
 
 	// Set our User-Agent to be one indicating we are Vault Agent's API proxy.

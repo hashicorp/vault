@@ -516,7 +516,9 @@ listener "tcp" {
 }
 
 // TestAgent_Template_UserAgent Validates that the User-Agent sent to Vault
-// as part of Templating requests is correct.
+// as part of Templating requests is correct. Uses the custom handler
+// userAgentHandler (defined above) so that Vault validates the
+// User-Agent on requests sent by Agent.
 func TestAgent_Template_UserAgent(t *testing.T) {
 	//----------------------------------------------------
 	// Start the server and agent
@@ -1715,6 +1717,8 @@ auto_auth {
 
 // TestAgent_AutoAuth_UserAgent tests that the User-Agent sent
 // to Vault by Vault Agent is correct when performing Auto-Auth.
+// Uses the custom handler userAgentHandler (defined above) so
+// that Vault validates the User-Agent on requests sent by Agent.
 func TestAgent_AutoAuth_UserAgent(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	var h userAgentHandler
@@ -1873,7 +1877,9 @@ api_proxy {
 
 // TestAgent_APIProxyWithoutCache_UserAgent tests that the User-Agent sent
 // to Vault by Vault Agent is correct using the API proxy without
-// the cache configured.
+// the cache configured. Uses the custom handler
+// userAgentHandler (defined above) so that Vault validates the
+// User-Agent on requests sent by Agent.
 func TestAgent_APIProxyWithoutCache_UserAgent(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	userAgentForProxiedClient := "proxied-client"
@@ -1958,7 +1964,9 @@ vault {
 
 // TestAgent_APIProxyWithCache_UserAgent tests that the User-Agent sent
 // to Vault by Vault Agent is correct using the API proxy with
-// the cache configured.
+// the cache configured.  Uses the custom handler
+// userAgentHandler (defined above) so that Vault validates the
+// User-Agent on requests sent by Agent.
 func TestAgent_APIProxyWithCache_UserAgent(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	userAgentForProxiedClient := "proxied-client"

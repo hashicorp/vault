@@ -481,7 +481,7 @@ func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index,
 
 	headers := client.Headers()
 	if headers == nil {
-		headers = make(map[string][]string)
+		headers = make(http.Header)
 	}
 
 	// We do not preserve the initial User-Agent here (i.e. use
