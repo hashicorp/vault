@@ -228,13 +228,14 @@ func keyEntryToECPrivateKey(k *keysutil.KeyEntry, curve elliptic.Curve) (string,
 
 	var blockType string
 	var derBytes []byte
+	var err error
 	if !k.IsPrivateKeyMissing() {
 		blockType = "EC PRIVATE KEY"
 		privKey := &ecdsa.PrivateKey{
 			PublicKey: pubKey,
 			D:         k.EC_D,
 		}
-		derBytes, err := x509.MarshalECPrivateKey(privKey)
+		derBytes, err = x509.MarshalECPrivateKey(privKey)
 		if err != nil {
 			return "", err
 		}
@@ -243,7 +244,7 @@ func keyEntryToECPrivateKey(k *keysutil.KeyEntry, curve elliptic.Curve) (string,
 		}
 	} else {
 		blockType = "PUBLIC KEY"
-		derBytes, err := x509.MarshalPKIXPublicKey(&pubKey)
+		derBytes, err = x509.MarshalPKIXPublicKey(&pubKey)
 		if err != nil {
 			return "", err
 		}
