@@ -148,7 +148,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
       { owner: this.engine }
     );
     await click(SELECTORS.issuerRefToggle);
-    await fillIn(SELECTORS.issuerRef, 'issuer-1');
+    await fillIn(SELECTORS.issuerRefSelect, 'issuer-1');
     await click(SELECTORS.roleCreateButton);
     assert.strictEqual(this.role.issuerRef, 'issuer-1', 'Issuer Ref correctly saved on create');
   });
