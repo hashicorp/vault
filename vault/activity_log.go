@@ -2009,6 +2009,217 @@ func processClientRecord(e *activity.EntityRecord, byNamespace summaryByNamespac
 	byMonth.add(e, startTime)
 }
 
+// handleEntitySegment processes the record and adds it to the correct month/namespace breakdown maps, as well as to the hyperloglog
+func (a *ActivityLog) handleEntitySegment(l *activity.EntityActivityLog, segmentTime time.Time, hll *hyperloglog.Sketch, opts pqOptions) error {
+	for _, e := range l.Clients {
+
+		processClientRecord(e, opts.byNamespace, opts.byMonth, segmentTime)
+
+		// We maintain an hyperloglog for each month
+		// hyperloglog is a sketch (hyperloglog data-structure) containing client ID's in a given month
+		// hyperloglog is used in activity log to get the approximate number new clients in the current billing month
+		// by counting the number of distinct clients in all the months including current month
+		// (this can be done by merging the hyperloglog all months with current month hyperloglog)
+		// and subtracting the number of distinct clients in the current month
+		// NOTE: current month here is not the month of startTime but the time period from the start of the current month,
+		// up until the time that this request was made.
+		hll.Insert([]byte(e.ClientID))
+
+		// The byMonth map will be filled in the reverse order of time. For
+		// example, if the billing period is from Jan to June, the byMonth
+		// will be filled for June first, May next and so on till Jan. When
+		// processing a client for the current month, it has been added as a
+		// new client above. Now, we check if that client is also used in
+		// the subsequent months (on any given month, byMonth map has
+		// already been processed for all the subsequent months due to the
+		// reverse ordering). If yes, we remove those references. This way a
+		// client is considered new only in the earliest month of its use in
+		// the billing period.
+		for currMonth := timeutil.StartOfMonth(segmentTime).UTC(); currMonth != timeutil.StartOfMonth(opts.activePeriodEnd).UTC(); currMonth = timeutil.StartOfNextMonth(currMonth).UTC() {
+			// Invalidate the client from being a new client in the next month
+			next := timeutil.StartOfNextMonth(currMonth).UTC().Unix()
+			if _, present := opts.byMonth[next]; !present {
+				continue
+			}
+
+			newClients := opts.byMonth[next].NewClients
+
+			// Remove the client from the top level counts within the month.
+			if e.NonEntity {
+				delete(newClients.Counts.NonEntities, e.ClientID)
+			} else {
+				delete(newClients.Counts.Entities, e.ClientID)
+			}
+
+			if _, present := newClients.Namespaces[e.NamespaceID]; present {
+				// Remove the client from the namespace within the month.
+				if e.NonEntity {
+					delete(newClients.Namespaces[e.NamespaceID].Counts.NonEntities, e.ClientID)
+				} else {
+					delete(newClients.Namespaces[e.NamespaceID].Counts.Entities, e.ClientID)
+				}
+				if _, present := newClients.Namespaces[e.NamespaceID].Mounts[e.MountAccessor]; present {
+					// Remove the client from the mount within the namespace within the month.
+					if e.NonEntity {
+						delete(newClients.Namespaces[e.NamespaceID].Mounts[e.MountAccessor].Counts.NonEntities, e.ClientID)
+					} else {
+						delete(newClients.Namespaces[e.NamespaceID].Mounts[e.MountAccessor].Counts.Entities, e.ClientID)
+					}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// handleTokenSegment handles a TokenCount record, adding it to the namespace breakdown
+func (a *ActivityLog) handleTokenSegment(l *activity.TokenCount, byNamespace map[string]*processByNamespace) {
+	for nsID, v := range l.CountByNamespaceID {
+		if _, present := byNamespace[nsID]; !present {
+			byNamespace[nsID] = newByNamespace()
+		}
+		byNamespace[nsID].Counts.Tokens += v
+	}
+}
+
+func (a *ActivityLog) writePrecomputedQuery(ctx context.Context, segmentTime time.Time, opts pqOptions) error {
+	pq := &activity.PrecomputedQuery{
+		StartTime:  segmentTime,
+		EndTime:    opts.endTime,
+		Namespaces: make([]*activity.NamespaceRecord, 0, len(opts.byNamespace)),
+		Months:     make([]*activity.MonthRecord, 0, len(opts.byMonth)),
+	}
+	pq.Months = a.transformMonthBreakdowns(opts.byMonth)
+
+	for nsID, entry := range opts.byNamespace {
+		mountRecord := make([]*activity.MountRecord, 0, len(entry.Mounts))
+		for mountAccessor, mountData := range entry.Mounts {
+			mountRecord = append(mountRecord, &activity.MountRecord{
+				MountPath: a.mountAccessorToMountPath(mountAccessor),
+				Counts: &activity.CountsRecord{
+					EntityClients:    len(mountData.Counts.Entities),
+					NonEntityClients: int(mountData.Counts.Tokens) + len(mountData.Counts.NonEntities),
+				},
+			})
+		}
+
+		pq.Namespaces = append(pq.Namespaces, &activity.NamespaceRecord{
+			NamespaceID:     nsID,
+			Entities:        uint64(len(entry.Counts.Entities)),
+			NonEntityTokens: entry.Counts.Tokens + uint64(len(entry.Counts.NonEntities)),
+			Mounts:          mountRecord,
+		})
+	}
+	err := a.queryStore.Put(ctx, pq)
+	if err != nil {
+		a.logger.Warn("failed to store precomputed query", "error", err)
+	}
+	return nil
+}
+
+// pqOptions holds fields that will be used when creating precomputed queries
+// These fields will remain the same for every segment that a precomputed query worker is handling
+type pqOptions struct {
+	byNamespace map[string]*processByNamespace
+	byMonth     map[int64]*processMonth
+	// endTime sets the end time of the precomputed query.
+	// When invoked on schedule by the precomputedQueryWorker, this is the end of the month that just finished.
+	endTime time.Time
+	// activePeriodStart is the earliest date in our retention window
+	activePeriodStart time.Time
+	// activePeriodEnd is the latest date in our retention window.
+	// When invoked on schedule by the precomputedQueryWorker, this will be the timestamp of the most recent segment
+	// that's present in storage
+	activePeriodEnd time.Time
+}
+
+// segmentToPrecomputedQuery processes a single segment
+func (a *ActivityLog) segmentToPrecomputedQuery(ctx context.Context, segmentTime time.Time, reader SegmentReader, opts pqOptions) error {
+	hyperloglog, err := a.CreateOrFetchHyperlogLog(ctx, segmentTime)
+	if err != nil {
+		// We were unable to create or fetch the hll, but we should still
+		// continue with our precomputation
+		a.logger.Warn("unable to create or fetch hyperloglog", "start time", segmentTime, "error", err)
+	}
+
+	// Iterate through entities, adding them to the hyperloglog and the summary maps in opts
+	for {
+		entity, err := reader.ReadEntity(ctx)
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			a.logger.Warn("failed to read segment", "error", err)
+			return err
+		}
+		err = a.handleEntitySegment(entity, segmentTime, hyperloglog, opts)
+		if err != nil {
+			a.logger.Warn("failed to handle entity segment", "error", err)
+			return err
+		}
+	}
+
+	// Store the hyperloglog
+	err = a.StoreHyperlogLog(ctx, segmentTime, hyperloglog)
+	if err != nil {
+		a.logger.Warn("failed to store hyperloglog for month", "start time", segmentTime, "error", err)
+	}
+
+	// Iterate through any tokens and add them to per namespace map
+	for {
+		token, err := reader.ReadToken(ctx)
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			a.logger.Warn("failed to load token counts", "error", err)
+			return err
+		}
+		a.handleTokenSegment(token, opts.byNamespace)
+	}
+
+	// write metrics
+	for nsID, entry := range opts.byNamespace {
+		// If this is the most recent month, or the start of the reporting period, output
+		// a metric for each namespace.
+		if segmentTime == opts.activePeriodEnd {
+			a.metrics.SetGaugeWithLabels(
+				[]string{"identity", "entity", "active", "monthly"},
+				float32(len(entry.Counts.Entities)),
+				[]metricsutil.Label{
+					{Name: "namespace", Value: a.namespaceToLabel(ctx, nsID)},
+				},
+			)
+			a.metrics.SetGaugeWithLabels(
+				[]string{"identity", "nonentity", "active", "monthly"},
+				float32(len(entry.Counts.NonEntities))+float32(entry.Counts.Tokens),
+				[]metricsutil.Label{
+					{Name: "namespace", Value: a.namespaceToLabel(ctx, nsID)},
+				},
+			)
+		} else if segmentTime == opts.activePeriodStart {
+			a.metrics.SetGaugeWithLabels(
+				[]string{"identity", "entity", "active", "reporting_period"},
+				float32(len(entry.Counts.Entities)),
+				[]metricsutil.Label{
+					{Name: "namespace", Value: a.namespaceToLabel(ctx, nsID)},
+				},
+			)
+			a.metrics.SetGaugeWithLabels(
+				[]string{"identity", "nonentity", "active", "reporting_period"},
+				float32(len(entry.Counts.NonEntities))+float32(entry.Counts.Tokens),
+				[]metricsutil.Label{
+					{Name: "namespace", Value: a.namespaceToLabel(ctx, nsID)},
+				},
+			)
+		}
+	}
+
+	// convert the maps to the proper format and write them as precomputed queries
+	return a.writePrecomputedQuery(ctx, segmentTime, opts)
+}
+
 // goroutine to process the request in the intent log, creating precomputed queries.
 // We expect the return value won't be checked, so log errors as they occur
 // (but for unit testing having the error return should help.)
@@ -2085,83 +2296,8 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context) error {
 		return errors.New("previous month not found")
 	}
 
-	// "times" is already in reverse order, start building the per-namespace maps
-	// from the last month backward
-
 	byNamespace := make(map[string]*processByNamespace)
 	byMonth := make(map[int64]*processMonth)
-
-	walkEntities := func(l *activity.EntityActivityLog, startTime time.Time, hll *hyperloglog.Sketch) error {
-		for _, e := range l.Clients {
-
-			processClientRecord(e, byNamespace, byMonth, startTime)
-
-			// We maintain an hyperloglog for each month
-			// hyperloglog is a sketch (hyperloglog data-structure) containing client ID's in a given month
-			// hyperloglog is used in activity log to get the approximate number new clients in the current billing month
-			// by counting the number of distinct clients in all the months including current month
-			// (this can be done by merging the hyperloglog all months with current month hyperloglog)
-			// and subtracting the number of distinct clients in the current month
-			// NOTE: current month here is not the month of startTime but the time period from the start of the current month,
-			// up until the time that this request was made.
-			hll.Insert([]byte(e.ClientID))
-
-			// The byMonth map will be filled in the reverse order of time. For
-			// example, if the billing period is from Jan to June, the byMonth
-			// will be filled for June first, May next and so on till Jan. When
-			// processing a client for the current month, it has been added as a
-			// new client above. Now, we check if that client is also used in
-			// the subsequent months (on any given month, byMonth map has
-			// already been processed for all the subsequent months due to the
-			// reverse ordering). If yes, we remove those references. This way a
-			// client is considered new only in the earliest month of its use in
-			// the billing period.
-			for currMonth := timeutil.StartOfMonth(startTime).UTC(); currMonth != timeutil.StartOfMonth(times[0]).UTC(); currMonth = timeutil.StartOfNextMonth(currMonth).UTC() {
-				// Invalidate the client from being a new client in the next month
-				next := timeutil.StartOfNextMonth(currMonth).UTC().Unix()
-				if _, present := byMonth[next]; !present {
-					continue
-				}
-
-				newClients := byMonth[next].NewClients
-
-				// Remove the client from the top level counts within the month.
-				if e.NonEntity {
-					delete(newClients.Counts.NonEntities, e.ClientID)
-				} else {
-					delete(newClients.Counts.Entities, e.ClientID)
-				}
-
-				if _, present := newClients.Namespaces[e.NamespaceID]; present {
-					// Remove the client from the namespace within the month.
-					if e.NonEntity {
-						delete(newClients.Namespaces[e.NamespaceID].Counts.NonEntities, e.ClientID)
-					} else {
-						delete(newClients.Namespaces[e.NamespaceID].Counts.Entities, e.ClientID)
-					}
-					if _, present := newClients.Namespaces[e.NamespaceID].Mounts[e.MountAccessor]; present {
-						// Remove the client from the mount within the namespace within the month.
-						if e.NonEntity {
-							delete(newClients.Namespaces[e.NamespaceID].Mounts[e.MountAccessor].Counts.NonEntities, e.ClientID)
-						} else {
-							delete(newClients.Namespaces[e.NamespaceID].Mounts[e.MountAccessor].Counts.Entities, e.ClientID)
-						}
-					}
-				}
-			}
-		}
-
-		return nil
-	}
-
-	walkTokens := func(l *activity.TokenCount) {
-		for nsID, v := range l.CountByNamespaceID {
-			if _, present := byNamespace[nsID]; !present {
-				byNamespace[nsID] = newByNamespace()
-			}
-			byNamespace[nsID].Counts.Tokens += v
-		}
-	}
 
 	endTime := timeutil.EndOfMonth(time.Unix(lastMonth, 0).UTC())
 	activePeriodStart := timeutil.MonthsPreviousTo(a.defaultReportMonths, endTime)
@@ -2169,6 +2305,15 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context) error {
 	if activePeriodStart.Before(times[len(times)-1]) {
 		activePeriodStart = times[len(times)-1]
 	}
+	opts := pqOptions{
+		byNamespace:       byNamespace,
+		byMonth:           byMonth,
+		endTime:           endTime,
+		activePeriodStart: activePeriodStart,
+		activePeriodEnd:   times[0],
+	}
+	// "times" is already in reverse order, start building the per-namespace maps
+	// from the last month backward
 
 	for _, startTime := range times {
 		// Do not work back further than the current retention window,
@@ -2176,95 +2321,13 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context) error {
 		if startTime.Before(retentionWindow) {
 			break
 		}
-
-		hyperloglog, err := a.CreateOrFetchHyperlogLog(ctx, startTime)
+		reader, err := a.NewSegmentFileReader(ctx, startTime)
 		if err != nil {
-			// We were unable to create or fetch the hll, but we should still
-			// continue with our precomputation
-			a.logger.Warn("unable to create or fetch hyperloglog", "start time", startTime, "error", err)
-		}
-		err = a.WalkEntitySegments(ctx, startTime, hyperloglog, walkEntities)
-		if err != nil {
-			a.logger.Warn("failed to load previous segments", "error", err)
 			return err
 		}
-		// Store the hyperloglog
-		err = a.StoreHyperlogLog(ctx, startTime, hyperloglog)
+		err = a.segmentToPrecomputedQuery(ctx, startTime, reader, opts)
 		if err != nil {
-			a.logger.Warn("failed to store hyperloglog for month", "start time", startTime, "error", err)
-		}
-		err = a.WalkTokenSegments(ctx, startTime, walkTokens)
-		if err != nil {
-			a.logger.Warn("failed to load previous token counts", "error", err)
 			return err
-		}
-
-		// Save the work to date in a record
-		pq := &activity.PrecomputedQuery{
-			StartTime:  startTime,
-			EndTime:    endTime,
-			Namespaces: make([]*activity.NamespaceRecord, 0, len(byNamespace)),
-			Months:     make([]*activity.MonthRecord, 0, len(byMonth)),
-		}
-		pq.Months = a.transformMonthBreakdowns(byMonth)
-
-		for nsID, entry := range byNamespace {
-			mountRecord := make([]*activity.MountRecord, 0, len(entry.Mounts))
-			for mountAccessor, mountData := range entry.Mounts {
-				mountRecord = append(mountRecord, &activity.MountRecord{
-					MountPath: a.mountAccessorToMountPath(mountAccessor),
-					Counts: &activity.CountsRecord{
-						EntityClients:    len(mountData.Counts.Entities),
-						NonEntityClients: int(mountData.Counts.Tokens) + len(mountData.Counts.NonEntities),
-					},
-				})
-			}
-
-			pq.Namespaces = append(pq.Namespaces, &activity.NamespaceRecord{
-				NamespaceID:     nsID,
-				Entities:        uint64(len(entry.Counts.Entities)),
-				NonEntityTokens: entry.Counts.Tokens + uint64(len(entry.Counts.NonEntities)),
-				Mounts:          mountRecord,
-			})
-
-			// If this is the most recent month, or the start of the reporting period, output
-			// a metric for each namespace.
-			if startTime == times[0] {
-				a.metrics.SetGaugeWithLabels(
-					[]string{"identity", "entity", "active", "monthly"},
-					float32(len(entry.Counts.Entities)),
-					[]metricsutil.Label{
-						{Name: "namespace", Value: a.namespaceToLabel(ctx, nsID)},
-					},
-				)
-				a.metrics.SetGaugeWithLabels(
-					[]string{"identity", "nonentity", "active", "monthly"},
-					float32(len(entry.Counts.NonEntities))+float32(entry.Counts.Tokens),
-					[]metricsutil.Label{
-						{Name: "namespace", Value: a.namespaceToLabel(ctx, nsID)},
-					},
-				)
-			} else if startTime == activePeriodStart {
-				a.metrics.SetGaugeWithLabels(
-					[]string{"identity", "entity", "active", "reporting_period"},
-					float32(len(entry.Counts.Entities)),
-					[]metricsutil.Label{
-						{Name: "namespace", Value: a.namespaceToLabel(ctx, nsID)},
-					},
-				)
-				a.metrics.SetGaugeWithLabels(
-					[]string{"identity", "nonentity", "active", "reporting_period"},
-					float32(len(entry.Counts.NonEntities))+float32(entry.Counts.Tokens),
-					[]metricsutil.Label{
-						{Name: "namespace", Value: a.namespaceToLabel(ctx, nsID)},
-					},
-				)
-			}
-		}
-
-		err = a.queryStore.Put(ctx, pq)
-		if err != nil {
-			a.logger.Warn("failed to store precomputed query", "error", err)
 		}
 	}
 
