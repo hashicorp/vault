@@ -1,0 +1,23 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+.autocomplete-input {
+  background: $white !important;
+  border: 1px solid $grey-light;
+  box-sizing: border-box;
+  border-radius: 3px;
+  width: 99%;
+  padding: 4px 0;
+  margin-left: 0.5%;
+  margin-top: -4px;
+}
+
+.autocomplete-input-option {
+  padding: 12px;
+  &:hover {
+    background-color: $grey-lightest;
+    cursor: pointer;
+  }
+}
