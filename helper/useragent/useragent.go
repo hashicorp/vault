@@ -51,7 +51,7 @@ func AgentTemplatingString() string {
 
 // AgentProxyString returns the consistent user-agent string for Vault Agent API Proxying.
 //
-// e.g. Vault Agent Templating/0.10.4 (+https://www.vaultproject.io/; go1.10.1)
+// e.g. Vault Agent API Proxy/0.10.4 (+https://www.vaultproject.io/; go1.10.1)
 func AgentProxyString() string {
 	return fmt.Sprintf("Vault Agent API Proxy/%s (+%s; %s)",
 		versionFunc(), projectURL, rt)
@@ -61,7 +61,7 @@ func AgentProxyString() string {
 // string for Vault Agent API Proxying, keeping the User-Agent of the proxied
 // client as an extension to this UserAgent
 //
-// e.g. Vault Agent Templating/0.10.4 (+https://www.vaultproject.io/; go1.10.1); proxiedUserAgent
+// e.g. Vault Agent API Proxy/0.10.4 (+https://www.vaultproject.io/; go1.10.1); proxiedUserAgent
 func AgentProxyStringWithProxiedUserAgent(proxiedUserAgent string) string {
 	return fmt.Sprintf("Vault Agent API Proxy/%s (+%s; %s); %s",
 		versionFunc(), projectURL, rt, proxiedUserAgent)
@@ -69,7 +69,7 @@ func AgentProxyStringWithProxiedUserAgent(proxiedUserAgent string) string {
 
 // AgentAutoAuthString returns the consistent user-agent string for Vault Agent Auto-Auth.
 //
-// e.g. Vault Agent Templating/0.10.4 (+https://www.vaultproject.io/; go1.10.1)
+// e.g. Vault Agent Auto Auth/0.10.4 (+https://www.vaultproject.io/; go1.10.1)
 func AgentAutoAuthString() string {
 	return fmt.Sprintf("Vault Agent Auto-Auth/%s (+%s; %s)",
 		versionFunc(), projectURL, rt)
