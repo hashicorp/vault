@@ -810,7 +810,6 @@ func publicKeyToBytes(publicKey crypto.PublicKey) ([]byte, error) {
 		Type:  "PUBLIC KEY",
 		Bytes: publicKeyBytes,
 	}
-	publicKeyBytesPem = pem.EncodeToMemory(pemBlock)
 
-	return publicKeyBytesPem, nil
+	return pem.EncodeToMemory(pemBlock), nil
 }

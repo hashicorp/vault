@@ -2262,4 +2262,17 @@ func testTransit_ExportPublicKeyImported(t *testing.T, keyType string) {
 	if err != nil || (exportResp != nil && exportResp.IsError()) {
 		t.Fatalf("failed to export key. err: %v\nresp: %#v", err, exportResp)
 	}
+
+	responseKeys, exist := exportResp.Data["keys"]
+	if !exist {
+		t.Fatal("expected response data to hold a 'keys' field")
+	}
+
+	exportedKeyBytes := responseKeys.(map[string]string)["1"]
+	exportedKeyBlock, _ := pem.Decode([]byte(exportedKeyBytes))
+	publicKeyBlock, _ := pem.Decode(publicKeyBytes)
+
+	if !reflect.DeepEqual(publicKeyBlock.Bytes, exportedKeyBlock.Bytes) {
+		t.Fatal("exported key bytes should have matched with imported key")
+	}
 }
