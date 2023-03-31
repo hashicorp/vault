@@ -59,8 +59,7 @@
   font-size: $size-small;
 }
 
-.is-label,
-.b-checkbox .is-label {
+.is-label {
   color: $grey-darker;
   display: inline-block;
   font-size: $body-size;
@@ -88,15 +87,6 @@
   &::before {
     border-color: $grey-light;
   }
-}
-
-.b-checkbox .is-label {
-  display: inline;
-  margin-left: $size-10;
-}
-
-.b-checkbox > .sub-text {
-  padding-left: 2rem;
 }
 
 .field:not(:last-child) {
