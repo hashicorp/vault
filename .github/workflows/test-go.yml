@@ -167,12 +167,13 @@ jobs:
                 \
               ${test_packages[${{ matrix.runner-index }}]}
       - name: Prepare datadog-ci
-      #THIS STEP SHOULD NOT FAIL THE PIPELINE ON ERROR
         if: github.repository == 'hashicorp/vault'
+        continue-on-error: true
         run: |
           curl -L --fail "https://github.com/DataDog/datadog-ci/releases/latest/download/datadog-ci_linux-x64" --output "/usr/local/bin/datadog-ci"
           chmod +x /usr/local/bin/datadog-ci
-      - name: upload coverage
+      - name: Upload test results to DataDog
+        continue-on-error: true
         env:
           DD_ENV: ci
         run: |
