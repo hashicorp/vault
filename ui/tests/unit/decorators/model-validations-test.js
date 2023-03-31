@@ -115,4 +115,22 @@ module('Unit | Decorators | ModelValidations', function (hooks) {
     const v3 = fooClass.validate();
     assert.strictEqual(v3.invalidFormMessage, null, 'invalidFormMessage is null when form is valid');
   });
+
+  test('it should validate warnings', function (assert) {
+    const message = 'Value contains whitespace.';
+    const validations = {
+      foo: [
+        {
+          type: 'containsWhiteSpace',
+          message,
+          level: 'warn',
+        },
+      ],
+    };
+    const fooClass = createClass(validations);
+    fooClass.foo = 'foo bar';
+    const { state, isValid } = fooClass.validate();
+    assert.true(isValid, 'Model is considered valid when there are only warnings');
+    assert.strictEqual(state.foo.warnings.join(' '), message, 'Warnings are returned');
+  });
 });
