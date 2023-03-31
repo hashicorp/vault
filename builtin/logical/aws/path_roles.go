@@ -150,6 +150,12 @@ delimited key pairs.`,
 				},
 				Default: "/",
 			},
+
+			"no_lease": {
+				Type:        framework.TypeBool,
+				Description: "Skip lease creation for \"assumed_role\" and \"federation_token\" credential types",
+				Default:     false,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -315,6 +321,10 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 
 	if iamTags, ok := d.GetOk("iam_tags"); ok {
 		roleEntry.IAMTags = iamTags.(map[string]string)
+	}
+
+	if noLease, ok := d.GetOk("no_lease"); ok {
+		roleEntry.NoLease = noLease.(bool)
 	}
 
 	if legacyRole != "" {
@@ -510,6 +520,7 @@ type awsRoleEntry struct {
 	MaxSTSTTL                time.Duration     `json:"max_sts_ttl"`                           // Max allowed TTL for STS credentials
 	UserPath                 string            `json:"user_path"`                             // The path for the IAM user when using "iam_user" credential type
 	PermissionsBoundaryARN   string            `json:"permissions_boundary_arn"`              // ARN of an IAM policy to attach as a permissions boundary
+	NoLease                  bool              `json:"no_lease"`                              // Skip lease creation for "assumed_role" and "federation_token" credential types
 }
 
 func (r *awsRoleEntry) toResponseData() map[string]interface{} {
@@ -524,6 +535,7 @@ func (r *awsRoleEntry) toResponseData() map[string]interface{} {
 		"max_sts_ttl":              int64(r.MaxSTSTTL.Seconds()),
 		"user_path":                r.UserPath,
 		"permissions_boundary_arn": r.PermissionsBoundaryARN,
+		"no_lease":                 r.NoLease,
 	}
 
 	if r.InvalidData != "" {

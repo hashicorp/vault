@@ -95,7 +95,7 @@ func genUsername(displayName, policyName, userType, usernameTemplate string) (re
 
 func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 	displayName, policyName, policy string, policyARNs []string,
-	iamGroups []string, lifeTimeInSeconds int64) (*logical.Response, error,
+	iamGroups []string, lifeTimeInSeconds int64, noLease bool) (*logical.Response, error,
 ) {
 	groupPolicies, groupPolicyARNs, err := b.getGroupPolicies(ctx, s, iamGroups)
 	if err != nil {
@@ -158,20 +158,38 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 		return logical.ErrorResponse("Error generating STS keys: %s", err), awsutil.CheckAWSError(err)
 	}
 
-	// STS credentials cannot be revoked so do not create a lease
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"access_key":     *tokenResp.Credentials.AccessKeyId,
-			"secret_key":     *tokenResp.Credentials.SecretAccessKey,
-			"security_token": *tokenResp.Credentials.SessionToken,
-			"ttl":            uint64(tokenResp.Credentials.Expiration.Sub(time.Now()).Seconds()),
-		},
-	}, nil
+	respData := map[string]interface{}{
+		"access_key":     *tokenResp.Credentials.AccessKeyId,
+		"secret_key":     *tokenResp.Credentials.SecretAccessKey,
+		"security_token": *tokenResp.Credentials.SessionToken,
+	}
+
+	ttl := tokenResp.Credentials.Expiration.Sub(time.Now())
+	if noLease {
+		respData["ttl"] = uint64(ttl.Seconds())
+		return &logical.Response{
+			Data: respData,
+		}, nil
+	}
+
+	resp := b.Secret(secretAccessKeyType).Response(respData, map[string]interface{}{
+		"username": username,
+		"policy":   policy,
+		"is_sts":   true,
+	})
+
+	// Set the secret TTL to appropriately match the expiration of the token
+	resp.Secret.TTL = ttl
+
+	// STS are purposefully short-lived and aren't renewable
+	resp.Secret.Renewable = false
+
+	return resp, nil
 }
 
 func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	displayName, roleName, roleArn, policy string, policyARNs []string,
-	iamGroups []string, lifeTimeInSeconds int64, roleSessionName string) (*logical.Response, error,
+	iamGroups []string, lifeTimeInSeconds int64, roleSessionName string, noLease bool) (*logical.Response, error,
 ) {
 	// grab any IAM group policies associated with the vault role, both inline
 	// and managed
@@ -233,16 +251,34 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 		return logical.ErrorResponse("Error assuming role: %s", err), awsutil.CheckAWSError(err)
 	}
 
-	// STS credentials cannot be revoked so do not create a lease
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"access_key":     *tokenResp.Credentials.AccessKeyId,
-			"secret_key":     *tokenResp.Credentials.SecretAccessKey,
-			"security_token": *tokenResp.Credentials.SessionToken,
-			"arn":            *tokenResp.AssumedRoleUser.Arn,
-			"ttl":            uint64(tokenResp.Credentials.Expiration.Sub(time.Now()).Seconds()),
-		},
-	}, nil
+	respData := map[string]interface{}{
+		"access_key":     *tokenResp.Credentials.AccessKeyId,
+		"secret_key":     *tokenResp.Credentials.SecretAccessKey,
+		"security_token": *tokenResp.Credentials.SessionToken,
+		"arn":            *tokenResp.AssumedRoleUser.Arn,
+	}
+
+	ttl := tokenResp.Credentials.Expiration.Sub(time.Now())
+	if noLease {
+		respData["ttl"] = uint64(ttl.Seconds())
+		return &logical.Response{
+			Data: respData,
+		}, nil
+	}
+
+	resp := b.Secret(secretAccessKeyType).Response(respData, map[string]interface{}{
+		"username": roleSessionName,
+		"policy":   roleArn,
+		"is_sts":   true,
+	})
+
+	// Set the secret TTL to appropriately match the expiration of the token
+	resp.Secret.TTL = ttl
+
+	// STS are purposefully short-lived and aren't renewable
+	resp.Secret.Renewable = false
+
+	return resp, nil
 }
 
 func readConfig(ctx context.Context, storage logical.Storage) (rootConfig, error) {
