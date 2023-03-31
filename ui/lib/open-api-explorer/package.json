@@ -7,6 +7,7 @@
   "dependencies": {
     "ember-cli-htmlbars": "*",
     "ember-cli-babel": "*",
+    "ember-cli-flash": "*",
     "ember-auto-import": "*",
     "swagger-ui-dist": "*"
   },
