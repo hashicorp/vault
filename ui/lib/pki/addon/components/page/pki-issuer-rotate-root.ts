@@ -22,13 +22,18 @@ interface Args {
   parsingErrors: string;
 }
 
+const RADIO_BUTTON_KEY = {
+  oldSettings: 'use-old-settings',
+  customizeNew: 'customize',
+};
+
 export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
   @service declare readonly store: Store;
   @service declare readonly router: Router;
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly secretMountPath: SecretMountPath;
 
-  @tracked displayedForm = 'use-old-settings';
+  @tracked displayedForm = RADIO_BUTTON_KEY.oldSettings;
   @tracked showOldSettings = false;
   // form alerts below are only for "use old settings" option
   // validations/errors for "customize new root" are handled by <PkiGenerateRoot> component
@@ -49,13 +54,13 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
   get generateOptions() {
     return [
       {
-        key: 'use-old-settings',
+        key: RADIO_BUTTON_KEY.oldSettings,
         icon: 'certificate',
         label: 'Use old root settings',
         description: `Provide only a new common name and issuer name, using the old root’s settings. Selecting this option generates a root with Vault-internal key material.`,
       },
       {
-        key: 'customize',
+        key: RADIO_BUTTON_KEY.customizeNew,
         icon: 'award',
         label: 'Customize new root certificate',
         description:
