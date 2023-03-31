@@ -64,34 +64,20 @@
 <div class="has-top-margin-l"></div>
 
 {{#if this.showDeleteAllIssuers}}
-  <Modal
+  <ConfirmationModal
     @title="Delete All Issuers?"
-    @type="warning"
-    @onClose={{fn (mut this.showDeleteAllIssuers) false}}
+    @toConfirmMsg="deleting all issuers and keys."
+    @buttonText="Delete"
+    @confirmText="delete-all"
     @isActive={{this.showDeleteAllIssuers}}
-    @showCloseButton={{true}}
+    @onClose={{action (mut this.showDeleteAllIssuers) false}}
+    @onConfirm={{this.deleteAllIssuers}}
   >
-    <section class="modal-card-custom has-padding-m">
-      This endpoint deletes all issuers and keys within the mount. It is highly recommended to use the individual delete
-      operations instead. This mount will be unusable until new issuers and keys are provisioned.
-      <div class="has-top-margin-m">
-        <h4 class="title is-6 has-bottom-margin-xs">Confirm</h4>
-        <span class="is-hint">Type <b>delete-all</b> to confirm deleting the role.</span>
-        <div class="has-top-margin-xs">
-          <Input class="input" @type="text" @value={{this.confirmDeleteAllIssuersVal}} data-test-delete-all-issuers-input />
-        </div>
-      </div>
+    <section class="modal-card-custom">
+      This endpoint deletes
+      <strong>all</strong>
+      issuers and keys within the mount. It is highly recommended to use the individual delete operations instead. This mount
+      will be unusable until new issuers and keys are provisioned.
     </section>
-
-    <footer class="has-background-gray-100 has-padding-m">
-      <button
-        type="button"
-        class="button has-text-danger"
-        disabled={{(not (eq this.confirmDeleteAllIssuersVal "delete-all"))}}
-        {{on "click" this.deleteAllIssuers}}
-        data-test-delete-all-issuers-button
-      >Delete</button>
-      <button type="button" class="button" {{on "click" (fn (mut this.showDeleteAllIssuers) false)}}>Cancel</button>
-    </footer>
-  </Modal>
+  </ConfirmationModal>
 {{/if}}

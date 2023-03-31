@@ -30,7 +30,7 @@ export default class PkiConfigurationDetails extends Component<Args> {
     try {
       const issuerAdapter = this.store.adapterFor('pki/issuer');
       issuerAdapter.deleteAllIssuers(this.args.currentPath);
-      this.flashMessages.success('Issuers and keys deleted successfully.');
+      this.flashMessages.success('Successfully deleted all issuers and keys');
       this.showDeleteAllIssuers = false;
       this.router.transitionTo('vault.cluster.secrets.backend.pki.configuration');
     } catch (error) {
