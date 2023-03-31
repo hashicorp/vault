@@ -29,11 +29,12 @@ export default class PkiConfigurationDetails extends Component<Args> {
   async deleteAllIssuers() {
     try {
       const issuerAdapter = this.store.adapterFor('pki/issuer');
-      issuerAdapter.deleteAllIssuers(this.args.currentPath);
+      await issuerAdapter.deleteAllIssuers(this.args.currentPath);
       this.flashMessages.success('Successfully deleted all issuers and keys');
       this.showDeleteAllIssuers = false;
       this.router.transitionTo('vault.cluster.secrets.backend.pki.configuration');
     } catch (error) {
+      this.showDeleteAllIssuers = false;
       this.flashMessages.danger(errorMessage(error));
     }
   }
