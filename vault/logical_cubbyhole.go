@@ -64,17 +64,17 @@ func (b *CubbyholeBackend) paths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleRead,
-					Summary:  "Retrieve the secret at the specified location.",
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb: "read",
 					},
+					Summary: "Retrieve the secret at the specified location.",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleWrite,
-					Summary:  "Store a secret at the specified location.",
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb: "write",
 					},
+					Summary: "Store a secret at the specified location.",
 				},
 				logical.CreateOperation: &framework.PathOperation{
 					Callback: b.handleWrite,
