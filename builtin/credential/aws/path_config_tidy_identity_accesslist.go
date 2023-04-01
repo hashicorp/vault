@@ -20,7 +20,7 @@ func (b *backend) pathConfigTidyIdentityAccessList() *framework.Path {
 		Pattern: fmt.Sprintf("%s$", "config/tidy/identity-accesslist"),
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixAWSAuth,
+			OperationPrefix: operationPrefixAWS,
 		},
 
 		Fields: map[string]*framework.FieldSchema{

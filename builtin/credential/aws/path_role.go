@@ -25,8 +25,8 @@ func (b *backend) pathRole() *framework.Path {
 		Pattern: "role/" + framework.GenericNameRegex("role"),
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixAWSAuth,
-			OperationSuffix: "role",
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "auth-role",
 		},
 
 		Fields: map[string]*framework.FieldSchema{
@@ -209,8 +209,8 @@ func (b *backend) pathListRole() *framework.Path {
 		Pattern: "role/?",
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixAWSAuth,
-			OperationSuffix: "roles",
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "auth-roles",
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -229,7 +229,7 @@ func (b *backend) pathListRoles() *framework.Path {
 		Pattern: "roles/?",
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixAWSAuth,
+			OperationPrefix: operationPrefixAWS,
 			OperationSuffix: "roles2",
 		},
 

@@ -28,7 +28,7 @@ func (b *backend) pathRoleTag() *framework.Path {
 		Pattern: "role/" + framework.GenericNameRegex("role") + "/tag$",
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixAWSAuth,
+			OperationPrefix: operationPrefixAWS,
 			OperationSuffix: "role-tag",
 		},
 

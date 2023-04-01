@@ -21,7 +21,7 @@ func (b *backend) pathConfigClient() *framework.Path {
 		Pattern: "config/client$",
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixAWSAuth,
+			OperationPrefix: operationPrefixAWS,
 		},
 
 		Fields: map[string]*framework.FieldSchema{

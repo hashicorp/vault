@@ -22,7 +22,7 @@ func (b *backend) pathListCertificates() *framework.Path {
 		Pattern: "config/certificates/?",
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixAWSAuth,
+			OperationPrefix: operationPrefixAWS,
 			OperationSuffix: "certificate-configurations",
 		},
 
@@ -42,7 +42,7 @@ func (b *backend) pathConfigCertificate() *framework.Path {
 		Pattern: "config/certificate/" + framework.GenericNameRegex("cert_name"),
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixAWSAuth,
+			OperationPrefix: operationPrefixAWS,
 		},
 
 		Fields: map[string]*framework.FieldSchema{

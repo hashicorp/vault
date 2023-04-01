@@ -59,7 +59,7 @@ func (b *backend) pathConfigIdentity() *framework.Path {
 		Pattern: "config/identity$",
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixAWSAuth,
+			OperationPrefix: operationPrefixAWS,
 		},
 
 		Fields: map[string]*framework.FieldSchema{

@@ -19,7 +19,7 @@ func pathConfigRotateRoot(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixAWS,
-			OperationSuffix: "root-credentials",
+			OperationSuffix: "root-iam-credentials",
 			OperationVerb:   "rotate",
 		},
 

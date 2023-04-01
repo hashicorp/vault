@@ -60,14 +60,14 @@ func pathConfigRoot(b *backend) *framework.Path {
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathConfigRootRead,
 				DisplayAttrs: &framework.DisplayAttributes{
-					OperationSuffix: "root-credentials-configuration",
+					OperationSuffix: "root-iam-credentials-configuration",
 				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathConfigRootWrite,
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationVerb:   "configure",
-					OperationSuffix: "root-credentials",
+					OperationSuffix: "root-iam-credentials",
 				},
 			},
 		},

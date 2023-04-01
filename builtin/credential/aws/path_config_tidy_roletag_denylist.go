@@ -19,7 +19,7 @@ func (b *backend) pathConfigTidyRoletagDenyList() *framework.Path {
 		Pattern: "config/tidy/roletag-denylist$",
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixAWSAuth,
+			OperationPrefix: operationPrefixAWS,
 		},
 
 		Fields: map[string]*framework.FieldSchema{
