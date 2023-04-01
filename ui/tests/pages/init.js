@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { text, create, collection, visitable, fillable, clickable } from 'ember-cli-page-object';
 
 export default create({

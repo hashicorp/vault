@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package awsauth
 
 import (
@@ -314,7 +317,7 @@ func (b *backend) resolveArnToRealUniqueId(ctx context.Context, s logical.Storag
 
 	switch entity.Type {
 	case "user":
-		userInfo, err := iamClient.GetUser(&iam.GetUserInput{UserName: &entity.FriendlyName})
+		userInfo, err := iamClient.GetUserWithContext(ctx, &iam.GetUserInput{UserName: &entity.FriendlyName})
 		if err != nil {
 			return "", awsutil.AppendAWSError(err)
 		}
@@ -323,7 +326,7 @@ func (b *backend) resolveArnToRealUniqueId(ctx context.Context, s logical.Storag
 		}
 		return *userInfo.User.UserId, nil
 	case "role":
-		roleInfo, err := iamClient.GetRole(&iam.GetRoleInput{RoleName: &entity.FriendlyName})
+		roleInfo, err := iamClient.GetRoleWithContext(ctx, &iam.GetRoleInput{RoleName: &entity.FriendlyName})
 		if err != nil {
 			return "", awsutil.AppendAWSError(err)
 		}
@@ -332,7 +335,7 @@ func (b *backend) resolveArnToRealUniqueId(ctx context.Context, s logical.Storag
 		}
 		return *roleInfo.Role.RoleId, nil
 	case "instance-profile":
-		profileInfo, err := iamClient.GetInstanceProfile(&iam.GetInstanceProfileInput{InstanceProfileName: &entity.FriendlyName})
+		profileInfo, err := iamClient.GetInstanceProfileWithContext(ctx, &iam.GetInstanceProfileInput{InstanceProfileName: &entity.FriendlyName})
 		if err != nil {
 			return "", awsutil.AppendAWSError(err)
 		}

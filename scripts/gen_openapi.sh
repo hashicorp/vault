@@ -1,4 +1,7 @@
 #!/bin/bash
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 
 set -e
 
@@ -51,14 +54,12 @@ vault auth enable "kerberos"
 vault auth enable "kubernetes"
 vault auth enable "ldap"
 vault auth enable "oci"
-vault auth enable "oidc"
 vault auth enable "okta"
 vault auth enable "pcf"
 vault auth enable "radius"
 vault auth enable "userpass"
 
 # Enable secrets plugins
-vault secrets enable "ad"
 vault secrets enable "alicloud"
 vault secrets enable "aws"
 vault secrets enable "azure"

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 export const SELECTORS = {
   defaultGroup: '[data-test-details-group="default"]',
   urlsGroup: '[data-test-details-group="Issuer URLs"]',
