@@ -1,0 +1,42 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+// This file defines the classes for .label, .is-label
+
+.label {
+  color: $grey-darker;
+  text-transform: uppercase;
+  font-size: $size-small;
+}
+
+.is-label {
+  color: $grey-darker;
+  display: inline-block;
+  font-size: $body-size;
+  font-weight: $font-weight-bold;
+
+  &:not(:last-child) {
+    margin-bottom: 0.25rem;
+  }
+  // Sizes
+  &.is-small {
+    font-size: $size-small;
+  }
+  &.is-medium {
+    font-size: $size-medium;
+  }
+  &.is-large {
+    font-size: $size-large;
+  }
+
+  &::before,
+  &::after {
+    transform: translateY(0.2em);
+  }
+
+  &::before {
+    border-color: $grey-light;
+  }
+}
