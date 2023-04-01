@@ -5,16 +5,6 @@
 */
 /* Bulma utilities */
 
-/* ARG TODO: is-light only used with tags? */
-.tag:not(body).is-light {
-  background-color: whitesmoke;
-  color: rgba(0, 0, 0, 0.7);
-}
-
-/* ARG TODO: used in one place */
-.tag:not(body).is-medium {
-  font-size: 1rem;
-}
 
 /* ARG TODO: used in one place */
 .field.is-grouped.is-grouped-centered {
@@ -25,11 +15,6 @@
   .is-hidden-mobile {
     display: none !important;
   }
-}
-/* ARG TODO: I detected that some of these are overriden. Keeping separate so I can address later */
-.control.is-expanded {
-  flex-grow: 1;
-  flex-shrink: 1;
 }
 
 .field.is-grouped > .control.is-expanded {
@@ -119,27 +104,4 @@
   }
 }
 
-.tag:not(body) {
-  align-items: center;
-  background-color: whitesmoke;
-  border-radius: 2px;
-  color: #4a4a4a;
-  display: inline-flex;
-  font-size: 0.75rem;
-  height: 2em;
-  justify-content: center;
-  line-height: 1.5;
-  padding-left: 0.75em;
-  padding-right: 0.75em;
-  white-space: nowrap;
-}
 
-.tag:not(body).is-light {
-  background-color: whitesmoke;
-  color: rgba(0, 0, 0, 0.7);
-}
-
-.tag:not(body).is-success {
-  background-color: #48c78e;
-  color: #fff;
-}

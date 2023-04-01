@@ -3,56 +3,6 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-.control.has-icons-left .icon,
-.control.has-icons-right .icon {
-  height: 2.5rem;
-}
-
-.control {
-  font-size: 1rem;
-  max-width: 100%;
-  position: relative;
-  text-align: left;
-
-  // Modifiers
-  &.has-icons-left,
-  &.has-icons-right {
-    .input,
-    .select select {
-      padding-left: 2rem;
-
-      &:focus,
-      &.is-focused,
-      &:active,
-      &.is-active {
-        & ~ .icon {
-          color: currentColor;
-        }
-      }
-    }
-  }
-  &.has-checkbox-right {
-    label.checkbox {
-      display: inline-flex;
-      height: 2.5em;
-      position: absolute;
-      top: 0;
-      right: 0;
-      justify-content: flex-end;
-      margin-left: auto;
-    }
-    .input,
-    .select select {
-      padding-right: 10em;
-    }
-  }
-
-  &.is-align-end {
-    display: flex;
-    align-self: end;
-  }
-}
-
 .label {
   color: $grey-darker;
   text-transform: uppercase;
