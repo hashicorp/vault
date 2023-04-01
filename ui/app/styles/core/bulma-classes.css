@@ -60,32 +60,6 @@
   justify-content: center;
 }
 
-.checkbox, .radio {
-  cursor: pointer;
-  display: inline-block;
-  line-height: 1.25;
-  position: relative;
-}
-
-.checkbox input, .radio input {
-  cursor: pointer;
-}
-
-.checkbox:hover, .radio:hover {
-  color:  hsl(0, 0%, 21%);
-}
-
-.checkbox[disabled], .radio[disabled],
-fieldset[disabled] .checkbox,
-fieldset[disabled] .radio,
-.checkbox input[disabled],
-.radio input[disabled] {
-  color: #7a7a7a;
-  cursor: not-allowed;
-}
-.radio + .radio {
-  margin-left: 0.5em;
-}
 
 /* ARG TODO: used is-normal in one place */
 @media screen and (min-width: 769px), print {
