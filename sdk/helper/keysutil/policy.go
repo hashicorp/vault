@@ -244,14 +244,11 @@ type KeyEntry struct {
 }
 
 func (ke *KeyEntry) IsPrivateKeyMissing() bool {
-	var publicKeyImported bool
-	if ke.RSAKey == nil && ke.RSAPublicKey != nil {
-		publicKeyImported = true
-	} else if ke.EC_D == nil && ke.EC_Y != nil && ke.EC_X != nil {
-		publicKeyImported = true
+	if ke.RSAKey != nil || ke.EC_D != nil || len(ke.Key) != 0 {
+		return false
 	}
 
-	return publicKeyImported
+	return true
 }
 
 // deprecatedKeyEntryMap is used to allow JSON marshal/unmarshal
