@@ -3,6 +3,53 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
+// This is a little hard to follow. It's old Bulma CSS combined with our own CSS that overrode the Bulma CSS. In the future we should adopt the HDS pagination.
+
+.pagination-previous[disabled],
+.pagination-next[disabled],
+.pagination-link[disabled],
+.pagination-ellipsis[disabled] {
+  cursor: not-allowed;
+}
+
+.pagination-previous,
+.pagination-next,
+.pagination-link,
+.pagination-ellipsis,
+.tabs {
+  user-select: none;
+}
+
+.pagination-previous,
+.pagination-next,
+.pagination-link,
+.pagination-ellipsis {
+  align-items: center;
+  box-shadow: none;
+  display: inline-flex;
+  font-size: 1rem;
+  justify-content: flex-start;
+  line-height: 1.5;
+  margin: 0.25rem;
+  padding-bottom: calc(0.5em - 1px);
+  padding-left: calc(0.75em - 1px);
+  padding-right: calc(0.75em - 1px);
+  padding-top: calc(0.5em - 1px);
+  position: relative;
+  vertical-align: top;
+}
+
+.pagination-link.is-current {
+  color: $white;
+}
+
+.pagination-list {
+  flex-grow: 1;
+  flex-shrink: 1;
+  justify-content: flex-start;
+  order: 1;
+}
+
 .list-pagination {
   @extend .has-slim-padding;
   position: relative;
@@ -29,8 +76,21 @@
   .pagination {
     justify-content: center;
   }
+
   .pagination-list {
     flex-grow: 0;
+    flex-wrap: wrap;
+
+    li {
+      list-style: none;
+    }
+  }
+  .pagination,
+  .pagination-list {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    text-align: center;
   }
   .pagination-ellipsis {
     margin: 0;
@@ -38,6 +98,7 @@
     padding-right: 0;
   }
 }
+
 .list-pagination .pagination-previous,
 .list-pagination .pagination-next {
   @extend .button;
@@ -73,6 +134,49 @@
 
   .button .icon {
     margin: 0;
+  }
+}
+
+.pagination-previous {
+  order: 2;
+}
+.pagination-next {
+  order: 3;
+}
+.pagination.is-centered .pagination-previous {
+  order: 1;
+}
+.pagination.is-centered .pagination-list {
+  justify-content: center;
+  order: 2;
+}
+.pagination.is-centered .pagination-next {
+  order: 3;
+}
+.pagination.is-right .pagination-previous {
+  order: 1;
+}
+.pagination.is-right .pagination-next {
+  order: 2;
+}
+.pagination.is-right .pagination-list {
+  justify-content: flex-end;
+  order: 3;
+}
+
+// responsive css
+@media screen and (max-width: 768px) {
+  .pagination {
+    flex-wrap: wrap;
+  }
+  .pagination-previous,
+  .pagination-next {
+    flex-grow: 1;
+    flex-shrink: 1;
+  }
+  .pagination-list li {
+    flex-grow: 1;
+    flex-shrink: 1;
   }
 }
 
