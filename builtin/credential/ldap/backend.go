@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	operationPrefixLDAPAuth = "ldap-auth"
-	errUserBindFailed       = "ldap operation failed: failed to bind as user"
+	operationPrefixLDAP = "ldap"
+	errUserBindFailed   = "ldap operation failed: failed to bind as user"
 )
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {

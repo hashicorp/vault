@@ -21,7 +21,7 @@ func pathConfig(b *backend) *framework.Path {
 		Pattern: `config`,
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixLDAPAuth,
+			OperationPrefix: operationPrefixLDAP,
 			Action:          "Configure",
 		},
 
@@ -31,13 +31,13 @@ func pathConfig(b *backend) *framework.Path {
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathConfigRead,
 				DisplayAttrs: &framework.DisplayAttributes{
-					OperationSuffix: "configuration",
+					OperationSuffix: "auth-configuration",
 				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathConfigWrite,
 				DisplayAttrs: &framework.DisplayAttributes{
-					OperationVerb: "configure",
+					OperationVerb: "configure-auth",
 				},
 			},
 		},

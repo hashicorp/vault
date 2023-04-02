@@ -17,7 +17,7 @@ func pathGroupsList(b *backend) *framework.Path {
 		Pattern: "groups/?$",
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixLDAPAuth,
+			OperationPrefix: operationPrefixLDAP,
 			OperationSuffix: "groups",
 			Navigation:      true,
 			ItemType:        "Group",
@@ -37,7 +37,7 @@ func pathGroups(b *backend) *framework.Path {
 		Pattern: `groups/(?P<name>.+)`,
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixLDAPAuth,
+			OperationPrefix: operationPrefixLDAP,
 			OperationSuffix: "group",
 			Action:          "Create",
 			ItemType:        "Group",

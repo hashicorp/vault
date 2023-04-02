@@ -18,7 +18,7 @@ func pathLogin(b *backend) *framework.Path {
 		Pattern: `login/(?P<username>.+)`,
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixLDAPAuth,
+			OperationPrefix: operationPrefixLDAP,
 			OperationVerb:   "log-in",
 		},
 

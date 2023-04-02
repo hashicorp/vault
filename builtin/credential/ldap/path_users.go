@@ -18,7 +18,7 @@ func pathUsersList(b *backend) *framework.Path {
 		Pattern: "users/?$",
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixLDAPAuth,
+			OperationPrefix: operationPrefixLDAP,
 			OperationSuffix: "users",
 			Navigation:      true,
 			ItemType:        "User",
@@ -38,7 +38,7 @@ func pathUsers(b *backend) *framework.Path {
 		Pattern: `users/(?P<name>.+)`,
 
 		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixLDAPAuth,
+			OperationPrefix: operationPrefixLDAP,
 			OperationSuffix: "user",
 			Action:          "Create",
 			ItemType:        "User",
