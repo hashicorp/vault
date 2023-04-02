@@ -103,7 +103,17 @@ Some of these enhancements and changes in this release include the following:
 
 ## Known issues
 
-There are no known issues documented for this release.
+When Vault is configured without a TLS certificate on the TCP listener, the Vault UI may throw an error that blocks you from performing operational tasks. 
+
+The error message: `Q.randomUUID is not a function`
+
+<Note>
+
+Refer to this [Knowledge Base article](https://support.hashicorp.com/hc/en-us/articles/14512496697875) for more details and a workaround.
+
+</Note>
+
+The fix for this UI issue is coming in the Vault 1.13.1 release.
 
 ## Feature Deprecations and EOL
 

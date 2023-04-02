@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package builtinplugins
 
 import (
@@ -289,9 +292,14 @@ func Test_RegistryMatchesGenOpenapi(t *testing.T) {
 	ensureInScript := func(t *testing.T, scriptBackends []string, name string) {
 		t.Helper()
 
-		// "openldap" is an alias for "ldap" secrets engine
-		if name == "openldap" {
-			return
+		for _, excluded := range []string{
+			"oidc",     // alias for "jwt"
+			"openldap", // alias for "ldap"
+			"ad",       // consolidated into "ldap" and deprecated
+		} {
+			if name == excluded {
+				return
+			}
 		}
 
 		if !slices.Contains(scriptBackends, name) {

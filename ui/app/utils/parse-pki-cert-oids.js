@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 //* lookup OIDs: http://oid-info.com/basic-search.htm
 
 export const SUBJECT_OIDs = {
