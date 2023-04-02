@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
-	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-retryablehttp"
 )
 
 func init() {
@@ -555,6 +555,18 @@ func TestClientNonTransportRoundTripperUnixAddress(t *testing.T) {
 	}
 }
 
+type nullLogger struct{}
+
+func (l nullLogger) Debug(msg string, args ...interface{}) {}
+
+func (l nullLogger) Info(msg string, args ...interface{}) {}
+
+func (l nullLogger) Warn(msg string, args ...interface{}) {}
+
+func (l nullLogger) Error(msg string, args ...interface{}) {}
+
+var _ retryablehttp.LeveledLogger = nullLogger{}
+
 func TestClone(t *testing.T) {
 	type fields struct{}
 	tests := []struct {
@@ -613,7 +625,7 @@ func TestClone(t *testing.T) {
 			}
 			parent.SetCheckRetry(checkRetry)
 
-			parent.SetLogger(hclog.NewNullLogger())
+			parent.SetLogger(nullLogger{})
 
 			parent.SetLimiter(5.0, 10)
 			parent.SetMaxRetries(5)
