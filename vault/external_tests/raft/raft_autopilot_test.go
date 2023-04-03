@@ -404,10 +404,11 @@ func TestRaft_VotersStayVoters(t *testing.T) {
 	require.NoError(t, err)
 }
 
-// TestRaft_Autopilot_DeadServerCleanup tests that dead servers are correctly removed by Vault and autopilot when a node stops and a replacement node joins.
-// The expected behavior is that removing a node from a 3 node cluster wouldn't remove it from Raft until a replacement voter had joined and stabilized/been promoted.
+// TestRaft_Autopilot_DeadServerCleanup tests that dead servers are correctly
+// removed by Vault and autopilot when a node stops and a replacement node joins.
+// The expected behavior is that removing a node from a 3 node cluster wouldn't
+// remove it from Raft until a replacement voter had joined and stabilized/been promoted.
 func TestRaft_Autopilot_DeadServerCleanup(t *testing.T) {
-	// Some involved setup, so we can control the nodes being added to the cluster and have access to the leader backend.
 	conf, opts := teststorage.ClusterSetup(nil, nil, teststorage.RaftBackendSetup)
 	conf.DisableAutopilot = false
 	opts.NumCores = 4
@@ -550,7 +551,8 @@ func joinAsVoterAndUnseal(t *testing.T, core *vault.TestClusterCore, cluster *va
 }
 
 // joinAndUnseal joins the specified core to the specified cluster and unseals it.
-// You can specify if the core should be joined as a voter/non-voter, and whether to wait (up to a timeout) for the core to be unsealed before returning.
+// You can specify if the core should be joined as a voter/non-voter,
+// and whether to wait (up to a timeout) for the core to be unsealed before returning.
 func joinAndUnseal(t *testing.T, core *vault.TestClusterCore, cluster *vault.TestCluster, nonVoter bool, waitForUnseal bool) {
 	leader, leaderAddr := clusterLeader(t, cluster)
 	_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), []*raft.LeaderJoinInfo{
@@ -613,7 +615,8 @@ func waitForCoreUnseal(t *testing.T, core *vault.TestClusterCore) {
 	t.Fatalf("expected core %v to unseal before deadline but it has not", core.NodeID)
 }
 
-// isHealthyAfterStabilization will use the supplied leader core to query the health of Raft Autopilot just after the specified deadline.
+// isHealthyAfterStabilization will use the supplied leader core to query the
+// health of Raft Autopilot just after the specified deadline.
 func isHealthyAfterStabilization(t *testing.T, leaderCore *vault.TestClusterCore, stabilizationTime time.Duration) bool {
 	timeoutGrace := 2 * time.Second
 	time.Sleep(stabilizationTime + timeoutGrace)
