@@ -196,7 +196,6 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 			entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeCredential, entry.Type)
 		}
 	}
-
 	addPathCheckers(c, entry, backend, viewPath)
 
 	// If the mount is filtered or we are on a DR secondary we don't want to

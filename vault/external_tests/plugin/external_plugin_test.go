@@ -125,7 +125,6 @@ func TestExternalPlugin_RollbackAndReload(t *testing.T) {
 }
 
 func testRegisterAndEnable(t *testing.T, client *api.Client, plugin pluginhelpers.TestPlugin) {
-	fmt.Println("thy", plugin.Version)
 	t.Helper()
 	if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
 		Name:    plugin.Name,
