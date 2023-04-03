@@ -1129,8 +1129,8 @@ github.com/hashicorp/raft v1.1.2-0.20191002163536-9c6bd3e3eb17/go.mod h1:vPAJM8A
 github.com/hashicorp/raft v1.2.0/go.mod h1:vPAJM8Asw6u8LxC3eJCUZmRP/E4QmUGE1R7g7k8sG/8=
 github.com/hashicorp/raft v1.3.10 h1:LR5QZX1VQd0DFWZfeCwWawyeKfpS/Tm1yjnJIY5X4Tw=
 github.com/hashicorp/raft v1.3.10/go.mod h1:J8naEwc6XaaCfts7+28whSeRvCqTd6e20BlCU3LtEO4=
-github.com/hashicorp/raft-autopilot v0.1.6 h1:C1q3RNF2FfXNZfHWbvVAu0QixaQK8K5pX4O5lh+9z4I=
-github.com/hashicorp/raft-autopilot v0.1.6/go.mod h1:Af4jZBwaNOI+tXfIqIdbcAnh/UyyqIMj/pOISIfhArw=
+github.com/hashicorp/raft-autopilot v0.2.0 h1:2/R2RPgamgRKgNWGQioULZvjeKXQZmDuw5Ty+6c+H7Y=
+github.com/hashicorp/raft-autopilot v0.2.0/go.mod h1:q6tZ8UAZ5xio2gv2JvjgmtOlh80M6ic8xQYBe2Egkg8=
 github.com/hashicorp/raft-boltdb v0.0.0-20171010151810-6e5ba93211ea/go.mod h1:pNv7Wc3ycL6F5oOWn+tPGo2gWD4a5X+yp/ntwdKLjRk=
 github.com/hashicorp/raft-boltdb/v2 v2.0.0-20210421194847-a7e34179d62c h1:oiKun9QlrOz5yQxMZJ3tf1kWtFYuKSJzxzEDxDPevj4=
 github.com/hashicorp/raft-boltdb/v2 v2.0.0-20210421194847-a7e34179d62c/go.mod h1:kiPs9g148eLShc2TYagUAyKDnD+dH9U+CQKsXzlY9xo=

@@ -1236,6 +1236,11 @@ func (c *Core) raftLeaderInfo(leaderInfo *raft.LeaderJoinInfo, disco *discover.D
 	return ret, nil
 }
 
+// NewDelegateForCore creates a raft.Delegate for the specified core using its backend.
+func NewDelegateForCore(c *Core) *raft.Delegate {
+	return raft.NewDelegate(c.getRaftBackend())
+}
+
 // getRaftBackend returns the RaftBackend from the HA or physical backend,
 // in that order of preference, or nil if not of type RaftBackend.
 func (c *Core) getRaftBackend() *raft.RaftBackend {
