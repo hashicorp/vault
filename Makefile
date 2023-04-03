@@ -102,6 +102,20 @@ vet:
 			echo "and fix them if necessary before submitting the code for reviewal."; \
 		fi
 
+# deprecations runs staticcheck tool to look for deprecations. Checks entire code to see if it 
+# has deprecated function, variable, constant or field
+deprecations:
+	make bootstrap
+	repositoryName=$(basename `git rev-parse --show-toplevel`)
+	./scripts/deprecations-checker.sh "" repositoryName
+
+# ci-deprecations runs staticcheck tool to look for deprecations. All output gets piped to revgrep
+# which will only return an error if changes that is not on main has deprecated function, variable, constant or field
+ci-deprecations:
+	make bootstrap
+	repositoryName=$(basename `git rev-parse --show-toplevel`)
+	./scripts/deprecations-checker.sh main repositoryName
+
 # tools/godoctests/.bin/godoctests builds the custom analyzer to check for godocs for tests
 tools/godoctests/.bin/godoctests:
 	@cd tools/godoctests && $(GO_CMD) build -o .bin/godoctests .

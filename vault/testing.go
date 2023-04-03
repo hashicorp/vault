@@ -239,6 +239,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	}
 
 	conf.ActivityLogConfig = opts.ActivityLogConfig
+	testApplyEntBaseConfig(conf, opts)
 
 	c, err := NewCore(conf)
 	if err != nil {
@@ -1000,6 +1001,10 @@ func (c *TestClusterCore) stop() error {
 
 	c.Logger().Info("vault test core stopped")
 	return nil
+}
+
+func (c *TestClusterCore) StopAutomaticRollbacks() {
+	c.rollback.StopTicker()
 }
 
 func (c *TestClusterCore) GrabRollbackLock() {

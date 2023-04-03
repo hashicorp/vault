@@ -6,8 +6,8 @@
 import Model, { attr, belongsTo } from '@ember-data/model';
 import { computed } from '@ember/object'; // eslint-disable-line
 import { equal } from '@ember/object/computed'; // eslint-disable-line
-import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { withModelValidations } from 'vault/decorators/model-validations';
+import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
 
 // identity will be managed separately and the inclusion
 // of the system backend is an implementation detail
@@ -22,89 +22,156 @@ const validations = {
 };
 
 @withModelValidations(validations)
-class SecretEngineModel extends Model {}
-export default SecretEngineModel.extend({
-  path: attr('string'),
-  accessor: attr('string'),
-  name: attr('string'),
-  type: attr('string', {
-    label: 'Secret engine type',
-  }),
-  description: attr('string', {
+@withExpandedAttributes()
+export default class SecretEngineModel extends Model {
+  @attr('string') path;
+  @attr('string') type;
+  @attr('string', {
     editType: 'textarea',
-  }),
-  // will only have value for kv type
-  version: attr('number', {
+  })
+  description;
+  @belongsTo('mount-config', { async: false, inverse: null }) config;
+
+  // Enterprise options (still available on OSS)
+  @attr('boolean', {
+    helpText:
+      'When Replication is enabled, a local mount will not be replicated across clusters. This can only be specified at mount time.',
+  })
+  local;
+  @attr('boolean', {
+    helpText:
+      'When enabled - if a seal supporting seal wrapping is specified in the configuration, all critical security parameters (CSPs) in this backend will be seal wrapped. (For K/V mounts, all values will be seal wrapped.) This can only be specified at mount time.',
+  })
+  sealWrap;
+  @attr('boolean') externalEntropyAccess;
+
+  // options.version
+  @attr('number', {
     label: 'Version',
     helpText:
       'The KV Secrets Engine can operate in different modes. Version 1 is the original generic Secrets Engine the allows for storing of static key/value pairs. Version 2 added more features including data versioning, TTLs, and check and set.',
     possibleValues: [2, 1],
     // This shouldn't be defaultValue because if no version comes back from API we should assume it's v1
     defaultFormValue: 2, // Set the form to 2 by default
-  }),
-  config: belongsTo('mount-config', { async: false, inverse: null }),
-  local: attr('boolean', {
-    helpText:
-      'When Replication is enabled, a local mount will not be replicated across clusters. This can only be specified at mount time.',
-  }),
-  sealWrap: attr('boolean', {
-    helpText:
-      'When enabled - if a seal supporting seal wrapping is specified in the configuration, all critical security parameters (CSPs) in this backend will be seal wrapped. (For K/V mounts, all values will be seal wrapped.) This can only be specified at mount time.',
-  }),
+  })
+  version;
+
+  // SSH specific attributes
+  @attr('string') privateKey;
+  @attr('string') publicKey;
+  @attr('boolean', {
+    defaultValue: true,
+  })
+  generateSigningKey;
+
+  // AWS specific attributes
+  @attr('string') lease;
+  @attr('string') leaseMax;
+
+  // Returned from API response
+  @attr('string') accessor;
+
   // KV 2 additional config default options
-  maxVersions: attr('number', {
+  @attr('number', {
     defaultValue: 0,
     label: 'Maximum number of versions',
     subText:
       'The number of versions to keep per key. Once the number of keys exceeds the maximum number set here, the oldest version will be permanently deleted. This value applies to all keys, but a key’s metadata settings can overwrite this value. When 0 is used or the value is unset, Vault will keep 10 versions.',
-  }),
-  casRequired: attr('boolean', {
+  })
+  maxVersions;
+  @attr('boolean', {
     defaultValue: false,
     label: 'Require Check and Set',
     subText:
       'If checked, all keys will require the cas parameter to be set on all write requests. A key’s metadata settings can overwrite this value.',
-  }),
-  deleteVersionAfter: attr({
+  })
+  casRequired;
+  @attr({
     defaultValue: 0,
     editType: 'ttl',
     label: 'Automate secret deletion',
     helperTextDisabled: 'A secret’s version must be manually deleted.',
     helperTextEnabled: 'Delete all new versions of this secret after',
-  }),
+  })
+  deleteVersionAfter;
 
-  modelTypeForKV: computed('engineType', 'version', function () {
-    const type = this.engineType;
-    let modelType = 'secret';
-    if ((type === 'kv' || type === 'generic') && this.version === 2) {
-      modelType = 'secret-v2';
+  /* GETTERS */
+  get modelTypeForKV() {
+    const engineType = this.engineType;
+    if ((engineType === 'kv' || engineType === 'generic') && this.version === 2) {
+      return 'secret-v2';
     }
-    return modelType;
-  }),
+    return 'secret';
+  }
+  get isV2KV() {
+    return this.modelTypeForKV === 'secret-v2';
+  }
 
-  isV2KV: equal('modelTypeForKV', 'secret-v2'),
+  get attrs() {
+    return this.formFields.map((fieldName) => {
+      return this.allByKey[fieldName];
+    });
+  }
 
-  formFields: computed('engineType', 'version', function () {
+  get fieldGroups() {
+    return this._expandGroups(this.formFieldGroups);
+  }
+
+  get icon() {
+    if (!this.engineType || this.engineType === 'kmip') {
+      return 'secrets';
+    }
+    if (this.engineType === 'keymgmt') {
+      return 'key';
+    }
+    return this.engineType;
+  }
+
+  get engineType() {
+    return (this.type || '').replace(/^ns_/, '');
+  }
+
+  get shouldIncludeInList() {
+    return !LIST_EXCLUDED_BACKENDS.includes(this.engineType);
+  }
+
+  get localDisplay() {
+    return this.local ? 'local' : 'replicated';
+  }
+
+  get formFields() {
     const type = this.engineType;
     const fields = ['type', 'path', 'description', 'accessor', 'local', 'sealWrap'];
     // no ttl options for keymgmt
-    const ttl = type !== 'keymgmt' ? 'defaultLeaseTtl,maxLeaseTtl,' : '';
+    if (type !== 'keymgmt') {
+      fields.push('config.defaultLeaseTtl', 'config.maxLeaseTtl');
+    }
     fields.push(
-      `config.{${ttl}auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders}`
+      'config.auditNonHmacRequestKeys',
+      'config.auditNonHmacResponseKeys',
+      'config.passthroughRequestHeaders',
+      'config.allowedResponseHeaders'
     );
     if (type === 'kv' || type === 'generic') {
       fields.push('version');
     }
     // version comes in as number not string
-    if (type === 'kv' && this.version === 2) {
+    if (type === 'kv' && parseInt(this.version, 10) === 2) {
       fields.push('casRequired', 'deleteVersionAfter', 'maxVersions');
     }
     return fields;
-  }),
+  }
 
-  formFieldGroups: computed('engineType', function () {
+  get formFieldGroups() {
     let defaultFields = ['path'];
     let optionFields;
     const CORE_OPTIONS = ['description', 'config.listingVisibility', 'local', 'sealWrap'];
+    const STANDARD_CONFIG = [
+      'config.auditNonHmacRequestKeys',
+      'config.auditNonHmacResponseKeys',
+      'config.passthroughRequestHeaders',
+      'config.allowedResponseHeaders',
+    ];
 
     switch (this.engineType) {
       case 'kv':
@@ -112,37 +179,32 @@ export default SecretEngineModel.extend({
         optionFields = [
           'version',
           ...CORE_OPTIONS,
-          `config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders}`,
+          'config.defaultLeaseTtl',
+          'config.maxLeaseTtl',
+          ...STANDARD_CONFIG,
         ];
         break;
       case 'generic':
         optionFields = [
           'version',
           ...CORE_OPTIONS,
-          `config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders}`,
+          'config.defaultLeaseTtl',
+          'config.maxLeaseTtl',
+          ...STANDARD_CONFIG,
         ];
         break;
       case 'database':
         // Highlight TTLs in default
-        defaultFields = ['path', 'config.{defaultLeaseTtl}', 'config.{maxLeaseTtl}'];
-        optionFields = [
-          ...CORE_OPTIONS,
-          'config.{auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders}',
-        ];
+        defaultFields = ['path', 'config.defaultLeaseTtl', 'config.maxLeaseTtl'];
+        optionFields = [...CORE_OPTIONS, ...STANDARD_CONFIG];
         break;
       case 'keymgmt':
         // no ttl options for keymgmt
-        optionFields = [
-          ...CORE_OPTIONS,
-          'config.{auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders}',
-        ];
+        optionFields = [...CORE_OPTIONS, ...STANDARD_CONFIG];
         break;
       default:
         defaultFields = ['path'];
-        optionFields = [
-          ...CORE_OPTIONS,
-          `config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders,allowedResponseHeaders}`,
-        ];
+        optionFields = [...CORE_OPTIONS, 'config.defaultLeaseTtl', 'config.maxLeaseTtl', ...STANDARD_CONFIG];
         break;
     }
 
@@ -152,57 +214,17 @@ export default SecretEngineModel.extend({
         'Method Options': optionFields,
       },
     ];
-  }),
+  }
 
-  attrs: computed('formFields', function () {
-    return expandAttributeMeta(this, this.formFields);
-  }),
-
-  fieldGroups: computed('formFieldGroups', function () {
-    return fieldToAttrs(this, this.formFieldGroups);
-  }),
-
-  icon: computed('engineType', function () {
-    if (!this.engineType || this.engineType === 'kmip') {
-      return 'secrets';
-    }
-    if (this.engineType === 'keymgmt') {
-      return 'key';
-    }
-    return this.engineType;
-  }),
-
-  // namespaces introduced types with a `ns_` prefix for built-in engines
-  // so we need to strip that to normalize the type
-  engineType: computed('type', function () {
-    return (this.type || '').replace(/^ns_/, '');
-  }),
-
-  shouldIncludeInList: computed('engineType', function () {
-    return !LIST_EXCLUDED_BACKENDS.includes(this.engineType);
-  }),
-
-  localDisplay: computed('local', function () {
-    return this.local ? 'local' : 'replicated';
-  }),
-
-  // ssh specific ones
-  privateKey: attr('string'),
-  publicKey: attr('string'),
-  generateSigningKey: attr('boolean', {
-    defaultValue: true,
-  }),
-
+  /* ACTIONS */
   saveCA(options) {
     if (this.type !== 'ssh') {
       return;
     }
     if (options.isDelete) {
-      this.setProperties({
-        privateKey: null,
-        publicKey: null,
-        generateSigningKey: false,
-      });
+      this.privateKey = null;
+      this.publicKey = null;
+      this.generateSigningKey = false;
     }
     return this.save({
       adapterOptions: {
@@ -211,7 +233,7 @@ export default SecretEngineModel.extend({
         attrsToSend: ['privateKey', 'publicKey', 'generateSigningKey'],
       },
     });
-  },
+  }
 
   saveZeroAddressConfig() {
     return this.save({
@@ -219,9 +241,5 @@ export default SecretEngineModel.extend({
         adapterMethod: 'saveZeroAddressConfig',
       },
     });
-  },
-
-  // aws backend attrs
-  lease: attr('string'),
-  leaseMax: attr('string'),
-});
+  }
+}
