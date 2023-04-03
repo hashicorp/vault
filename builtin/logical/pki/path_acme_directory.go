@@ -55,7 +55,7 @@ func patternAcmeDirectory(b *backend, pattern string) *framework.Path {
 	}
 }
 
-type acmeOperation func(acmeCtx acmeContext, r *logical.Request, _ *framework.FieldData) (*logical.Response, error)
+type acmeOperation func(acmeCtx *acmeContext, r *logical.Request, _ *framework.FieldData) (*logical.Response, error)
 
 type acmeContext struct {
 	baseUrl *url.URL
@@ -76,7 +76,7 @@ func (b *backend) acmeWrapper(op acmeOperation) framework.OperationFunc {
 			return nil, err
 		}
 
-		acmeCtx := acmeContext{
+		acmeCtx := &acmeContext{
 			baseUrl: baseUrl,
 			sc:      sc,
 		}
@@ -120,7 +120,7 @@ func acmeErrorWrapper(op framework.OperationFunc) framework.OperationFunc {
 	}
 }
 
-func (b *backend) acmeDirectoryHandler(acmeCtx acmeContext, r *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+func (b *backend) acmeDirectoryHandler(acmeCtx *acmeContext, r *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	rawBody, err := json.Marshal(map[string]interface{}{
 		"newNonce":   acmeCtx.baseUrl.JoinPath("new-nonce").String(),
 		"newAccount": acmeCtx.baseUrl.JoinPath("new-account").String(),

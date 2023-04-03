@@ -15,12 +15,12 @@ export default class App extends Application {
   engines = {
     openApiExplorer: {
       dependencies: {
-        services: ['auth', 'namespace', 'router', 'version'],
+        services: ['auth', 'flash-messages', 'namespace', 'router', 'version'],
       },
     },
     replication: {
       dependencies: {
-        services: ['auth', 'namespace', 'replication-mode', 'router', 'store', 'version'],
+        services: ['auth', 'flash-messages', 'namespace', 'replication-mode', 'router', 'store', 'version'],
         externalRoutes: {
           replication: 'vault.cluster.replication.index',
         },
@@ -31,6 +31,7 @@ export default class App extends Application {
         services: [
           'auth',
           'download',
+          'flash-messages',
           'namespace',
           'path-help',
           'router',
@@ -45,7 +46,7 @@ export default class App extends Application {
     },
     kubernetes: {
       dependencies: {
-        services: ['router', 'store', 'secret-mount-path'],
+        services: ['router', 'store', 'secret-mount-path', 'flash-messages'],
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
         },
@@ -56,6 +57,7 @@ export default class App extends Application {
         services: [
           'auth',
           'download',
+          'flash-messages',
           'namespace',
           'path-help',
           'router',

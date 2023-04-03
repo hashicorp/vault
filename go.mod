@@ -63,8 +63,8 @@ require (
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/google/tink/go v1.6.1
 	github.com/hashicorp/cap v0.2.1-0.20220727210936-60cd1534e220
-	github.com/hashicorp/consul-template v0.29.5
-	github.com/hashicorp/consul/api v1.17.0
+	github.com/hashicorp/consul-template v0.30.1-0.20230322153229-821bc07137f5
+	github.com/hashicorp/consul/api v1.18.0
 	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/eventlogger v0.1.1
 	github.com/hashicorp/go-cleanhttp v0.5.2
@@ -105,7 +105,7 @@ require (
 	github.com/hashicorp/hcp-link v0.1.0
 	github.com/hashicorp/hcp-scada-provider v0.2.1
 	github.com/hashicorp/hcp-sdk-go v0.23.0
-	github.com/hashicorp/nomad/api v0.0.0-20220707195938-75f4c2237b28
+	github.com/hashicorp/nomad/api v0.0.0-20230103221135-ce00d683f9be
 	github.com/hashicorp/raft v1.3.10
 	github.com/hashicorp/raft-autopilot v0.2.0
 	github.com/hashicorp/raft-boltdb/v2 v2.0.0-20210421194847-a7e34179d62c
@@ -192,7 +192,7 @@ require (
 	go.opentelemetry.io/otel v1.11.2
 	go.opentelemetry.io/otel/sdk v1.11.2
 	go.opentelemetry.io/otel/trace v1.11.2
-	go.uber.org/atomic v1.9.0
+	go.uber.org/atomic v1.10.0
 	go.uber.org/goleak v1.1.12
 	golang.org/x/crypto v0.6.0
 	golang.org/x/exp v0.0.0-20230213192124-5e25df0256eb
@@ -247,7 +247,9 @@ require (
 	github.com/Jeffail/gabs v1.1.1 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
+	github.com/Masterminds/semver/v3 v3.2.0 // indirect
 	github.com/Masterminds/sprig v2.22.0+incompatible // indirect
+	github.com/Masterminds/sprig/v3 v3.2.3 // indirect
 	github.com/Microsoft/go-winio v0.5.2 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
@@ -356,8 +358,8 @@ require (
 	github.com/hashicorp/serf v0.10.1 // indirect
 	github.com/hashicorp/vault/api/auth/kubernetes v0.3.0 // indirect
 	github.com/hashicorp/vic v1.5.1-0.20190403131502-bbfe86ec9443 // indirect
-	github.com/hashicorp/yamux v0.0.0-20211028200310-0bc27b27de87 // indirect
-	github.com/huandu/xstrings v1.3.2 // indirect
+	github.com/hashicorp/yamux v0.1.1 // indirect
+	github.com/huandu/xstrings v1.4.0 // indirect
 	github.com/imdario/mergo v0.3.13 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.11.0 // indirect
@@ -417,11 +419,13 @@ require (
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/renier/xmlrpc v0.0.0-20170708154548-ce4a1a486c03 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
+	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966 // indirect
 	github.com/snowflakedb/gosnowflake v1.6.3 // indirect
 	github.com/softlayer/softlayer-go v0.0.0-20180806151055-260589d94c7d // indirect
 	github.com/sony/gobreaker v0.4.2-0.20210216022020-dd874f9dd33b // indirect
+	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/tencentcloud/tencentcloud-sdk-go v1.0.162 // indirect
@@ -448,7 +452,7 @@ require (
 	golang.org/x/exp/typeparams v0.0.0-20221208152030-732eee02a75a // indirect
 	golang.org/x/mod v0.8.0 // indirect
 	golang.org/x/text v0.8.0 // indirect
-	golang.org/x/time v0.0.0-20220411224347-583f2d630306 // indirect
+	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20221227171554-f9683d7f8bef // indirect

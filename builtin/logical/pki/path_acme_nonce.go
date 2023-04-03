@@ -51,7 +51,7 @@ func patternAcmeNonce(b *backend, pattern string) *framework.Path {
 	}
 }
 
-func (b *backend) acmeNonceHandler(ctx acmeContext, r *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+func (b *backend) acmeNonceHandler(ctx *acmeContext, r *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	nonce, _, err := b.acmeState.GetNonce()
 	if err != nil {
 		return nil, err
@@ -78,7 +78,7 @@ func (b *backend) acmeNonceHandler(ctx acmeContext, r *logical.Request, _ *frame
 	}, nil
 }
 
-func genAcmeLinkHeader(ctx acmeContext) []string {
+func genAcmeLinkHeader(ctx *acmeContext) []string {
 	path := fmt.Sprintf("<%s>;rel=\"index\"", ctx.baseUrl.JoinPath("directory").String())
 	return []string{path}
 }
