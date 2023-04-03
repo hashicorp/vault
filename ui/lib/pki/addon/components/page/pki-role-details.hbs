@@ -35,7 +35,7 @@
 {{#each @role.formFieldGroups as |fg|}}
   {{#each-in fg as |group fields|}}
     {{#if (not-eq group "default")}}
-      <h3 class="is-size-4 has-text-semibold has-top-margin-m">{{group}}</h3>
+      <h3 class="is-size-4 has-text-weight-semibold has-top-margin-m">{{group}}</h3>
     {{/if}}
     {{#each fields as |attr|}}
       {{#let (get @role attr.name) as |val|}}

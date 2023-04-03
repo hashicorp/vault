@@ -6,7 +6,7 @@
 /* This helper includes styles relating to: font-size, font-family, font-alignment, text-transform, text-weight, font-style, text-decoration. */
 
 // font size helpers
-// ARG TODO future pr once bulma is removed, replace these naming: font-size-xx
+// ARG TODO future pr once bulma is removed, replace these helper names, example: font-size-4
 
 .is-size-4 {
   font-size: $size-4 !important;
@@ -32,6 +32,15 @@
   font-size: $size-9 !important;
 }
 
+// Font weight
+.has-text-weight-semibold {
+  font-weight: $font-weight-semibold !important;
+}
+
+.has-text-weight-bold {
+  font-weight: 700 !important;
+}
+
 // Font family
 .is-font-mono {
   font-family: $family-monospace;
@@ -48,20 +57,6 @@
 }
 .is-no-underline {
   text-decoration: none;
-}
-
-// Text weight
-// ARG TODO: duplicate, need to agree on naming syntax
-.has-text-semibold {
-  font-weight: $font-weight-semibold;
-}
-
-.has-text-weight-semibold {
-  font-weight: 600 !important;
-}
-
-.has-text-weight-bold {
-  font-weight: 700 !important;
 }
 
 // Text transformations
