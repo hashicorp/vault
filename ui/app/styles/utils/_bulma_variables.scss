@@ -234,12 +234,6 @@ $shades: (
   'white-bis': $white-bis,
 ) !default;
 
-// Typography
-$family-sans-serif: BlinkMacSystemFont, -apple-system, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
-  'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif !default;
-$family-monospace: monospace !default;
-$render-mode: optimizeLegibility !default;
-
 // Spacing
 $block-spacing: 1.5rem !default;
 

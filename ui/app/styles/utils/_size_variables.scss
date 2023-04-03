@@ -5,7 +5,7 @@
 
 /*
 File notes:
-
+- size-x and and spacing-x variables often overlap. Ideally, we could combine these to cover all the size requirements.
  */
 
 /* General sizing: used in fonts and in padding, margin, etc. */
@@ -25,14 +25,7 @@ $size-normal: $size-6;
 $size-medium: $size-5;
 $size-large: $size-4;
 
-/* Font weight */
-$font-weight-normal: 400;
-$font-weight-semibold: 600;
-$font-weight-bold: 700;
-
 /* Spacing */
-$block-spacing: 1.5rem !default;
-
 $spacing-xxs: 4px;
 $spacing-xs: 8px;
 $spacing-s: 12px;
@@ -41,13 +34,15 @@ $spacing-l: 24px;
 $spacing-xl: 36px;
 $spacing-xxl: 48px;
 
-/* Misc. */
-$column-gap: 0.75rem !default;
-// The container horizontal gap, which acts as the offset for breakpoints
-$gap: 32px !default;
-// 960, 1152, and 1344 have been chosen because they are divisible by both 12 and 16
+/* Font weight */
+$font-weight-normal: 400;
+$font-weight-semibold: 600;
+$font-weight-bold: 700;
 
 /* Responsiveness */
+// 960, 1152, and 1344 have been chosen because they are divisible by both 12 and 16
+
+$gap: 32px !default; // The container horizontal gap, which acts as the offset for breakpoints
 $mobile: 769px;
 $tablet: 769px !default;
 // 960px container + 4rem
