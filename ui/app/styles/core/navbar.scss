@@ -42,7 +42,7 @@
 .navbar-actions {
   background-color: $black;
   display: flex;
-  height: $header-height;
+  height: $spacing-xxxl;
   justify-content: flex-start;
   padding: $spacing-xs $spacing-s $spacing-xs 0;
 }
@@ -282,7 +282,7 @@
     left: 0;
     position: absolute;
     right: 0;
-    top: $header-height;
+    top: $spacing-xxxl;
     z-index: 1;
 
     @include from($mobile) {

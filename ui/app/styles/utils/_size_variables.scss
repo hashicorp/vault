@@ -33,11 +33,17 @@ $spacing-m: 16px;
 $spacing-l: 24px;
 $spacing-xl: 36px;
 $spacing-xxl: 48px;
+$spacing-xxxl: 64px;
 
 /* Font weight */
 $font-weight-normal: 400;
 $font-weight-semibold: 600;
 $font-weight-bold: 700;
+
+/* Border radius */
+$radius-small: 2px;
+$radius: 4px;
+$radius-large: 6px;
 
 /* Responsiveness */
 // 960, 1152, and 1344 have been chosen because they are divisible by both 12 and 16
@@ -47,13 +53,9 @@ $desktop: 960px + (2 * 32px);
 // 1344px container + 4rem
 $fullhd: 1344px + (2 * 32px);
 
-/* Miscellaneous sizing*/
-$radius-small: 2px;
-$radius: 4px;
-$radius-large: 6px;
+/* Transition */
 $speed: 86ms;
 
-$header-height: 4rem;
 $body-size: 14px;
 
 $console-spacing: 1.5rem; // 24px

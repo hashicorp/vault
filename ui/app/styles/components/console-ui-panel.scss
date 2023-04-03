@@ -11,7 +11,7 @@
   min-height: 0;
   overflow: scroll;
   right: 0;
-  top: $header-height;
+  top: $spacing-xxxl;
   transition: min-height $speed ease-out, transform $speed ease-in;
   will-change: transform, min-height;
   -webkit-overflow-scrolling: touch;
