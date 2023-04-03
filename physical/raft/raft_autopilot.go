@@ -292,7 +292,7 @@ type Delegate struct {
 	emptyVersionLogs map[raft.ServerID]struct{}
 }
 
-func NewDelegate(b *RaftBackend) *Delegate {
+func newDelegate(b *RaftBackend) *Delegate {
 	return &Delegate{
 		RaftBackend:      b,
 		inflightRemovals: make(map[raft.ServerID]bool),
@@ -833,7 +833,7 @@ func (b *RaftBackend) SetupAutopilot(ctx context.Context, storageConfig *Autopil
 	if b.autopilotUpdateInterval != 0 {
 		options = append(options, autopilot.WithUpdateInterval(b.autopilotUpdateInterval))
 	}
-	b.autopilot = autopilot.New(b.raft, NewDelegate(b), options...)
+	b.autopilot = autopilot.New(b.raft, newDelegate(b), options...)
 	b.followerStates = followerStates
 	b.followerHeartbeatTicker = time.NewTicker(1 * time.Second)
 
