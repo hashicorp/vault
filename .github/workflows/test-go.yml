@@ -22,19 +22,15 @@ on:
         description: A space-separated list of additional build flags.
         required: false
         type: string
-      go-build-tags:
-          description: A comma-separated list of additional build tags to consider satisfied during the build.
-          required: false
-          type: string
-      matrix-job-name:
-          description: A suffix to be added to the matrix job names.
-          required: false
-          type: string
       runs-on:
         description: An expression indicating which kind of runners to use.
         required: false
         type: string
         default: ubuntu-latest
+      go-build-tags:
+        description: A comma-separated list of additional build tags to consider satisfied during the build.
+        required: false
+        type: string
 
 env: ${{ fromJSON(inputs.env-vars) }}
 
@@ -67,7 +63,7 @@ jobs:
     permissions:
       id-token: write  # Note: this permission is explicitly required for Vault auth
       contents: read
-    name: "${{ matrix.runner-index }} ${{ inputs.matrix-job-name }}"
+    name: "${{ matrix.runner-index }}"
     needs:
     - runner-indexes
     runs-on: ${{ fromJSON(inputs.runs-on) }}
@@ -83,10 +79,6 @@ jobs:
       GOPRIVATE: github.com/hashicorp/*
       TIMEOUT_IN_MINUTES: 60
     steps:
-      - id: setup-git
-        name: Setup Git configuration
-        run: |
-          git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN }}@github.com".insteadOf https://github.com
       - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
       - uses: actions/setup-go@d0a58c1c4d2b25278816e339b944508c875f3613
         with:
@@ -106,6 +98,7 @@ jobs:
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
             kv/data/github/${{ github.repository }}/datadog-ci DATADOG_API_KEY;
+            kv/data/github/${{ github.repository }}/github-token username-and-token | github-token;
             kv/data/github/${{ github.repository }}/license license_1 | VAULT_LICENSE_CI;
             kv/data/github/${{ github.repository }}/license license_2 | VAULT_LICENSE_2;
             kv/data/github/${{ github.repository }}/hcp-link HCP_API_ADDRESS;
@@ -113,6 +106,16 @@ jobs:
             kv/data/github/${{ github.repository }}/hcp-link HCP_CLIENT_ID;
             kv/data/github/${{ github.repository }}/hcp-link HCP_CLIENT_SECRET;
             kv/data/github/${{ github.repository }}/hcp-link HCP_RESOURCE_ID;
+      - id: setup-git-private
+        name: Setup Git configuration (private)
+        if: github.repository == 'hashicorp/vault-enterprise'
+        run: |
+          git config --global url."https://${{ steps.secrets.outputs.github-token }}@github.com".insteadOf https://github.com
+      - id: setup-git-public
+        name: Setup Git configuration (public)
+        if: github.repository != 'hashicorp/vault-enterprise'
+        run: |
+          git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
       - id: run-go-tests
         name: Run Go tests
         timeout-minutes: ${{ fromJSON(env.TIMEOUT_IN_MINUTES) }}
