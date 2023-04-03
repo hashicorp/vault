@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-import FlashMessages from 'ember-cli-flash/services/flash-messages';
+import EmberCliFlash from 'ember-cli-flash/services/flash-messages';
 
-export default class FlashMessageService extends FlashMessages {
+export default class FlashMessages extends EmberCliFlash {
   stickyInfo(message: string) {
     return this.info(message, {
       sticky: true,

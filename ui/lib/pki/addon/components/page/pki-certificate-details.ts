@@ -9,7 +9,7 @@ import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import errorMessage from 'vault/utils/error-message';
-import FlashMessageService from 'vault/services/flash-messages';
+import FlashMessages from 'vault/services/flash-messages';
 import DownloadService from 'vault/services/download';
 import PkiCertificateBaseModel from 'vault/models/pki/certificate/base';
 
@@ -20,7 +20,7 @@ interface Args {
 }
 
 export default class PkiCertificateDetailsComponent extends Component<Args> {
-  @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly flashMessages: FlashMessages;
   @service declare readonly download: DownloadService;
 
   @action

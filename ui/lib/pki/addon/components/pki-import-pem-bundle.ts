@@ -5,7 +5,7 @@
 
 import { action } from '@ember/object';
 import Component from '@glimmer/component';
-import FlashMessageService from 'vault/services/flash-messages';
+import FlashMessages from 'vault/services/flash-messages';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
@@ -41,7 +41,7 @@ interface Args {
 }
 
 export default class PkiImportPemBundle extends Component<Args> {
-  @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly flashMessages: FlashMessages;
 
   @tracked errorBanner = '';
 

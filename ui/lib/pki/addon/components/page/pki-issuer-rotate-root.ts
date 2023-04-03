@@ -8,7 +8,7 @@ import errorMessage from 'vault/utils/error-message';
 // TYPES
 import Store from '@ember-data/store';
 import Router from '@ember/routing/router';
-import FlashMessageService from 'vault/services/flash-messages';
+import FlashMessages from 'vault/services/flash-messages';
 import SecretMountPath from 'vault/services/secret-mount-path';
 import PkiIssuerModel from 'vault/models/pki/issuer';
 import PkiActionModel from 'vault/vault/models/pki/action';
@@ -30,7 +30,7 @@ const RADIO_BUTTON_KEY = {
 export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
   @service declare readonly store: Store;
   @service declare readonly router: Router;
-  @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly flashMessages: FlashMessages;
   @service declare readonly secretMountPath: SecretMountPath;
 
   @tracked displayedForm = RADIO_BUTTON_KEY.oldSettings;

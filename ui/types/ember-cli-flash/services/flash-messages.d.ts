@@ -27,10 +27,10 @@ declare module 'ember-cli-flash/services/flash-messages' {
   }
 
   interface FlashFunction {
-    (message: string, options?: Partial<MessageOptions>): FlashMessageService;
+    (message: string, options?: Partial<MessageOptions>): FlashMessages;
   }
 
-  class FlashMessageService extends Service {
+  class FlashMessages extends Service {
     queue: A<FlashObject>;
     success: FlashFunction;
     warning: FlashFunction;
@@ -39,11 +39,11 @@ declare module 'ember-cli-flash/services/flash-messages' {
     danger: FlashFunction;
     alert: FlashFunction;
     secondary: FlashFunction;
-    add(messageInfo: CustomMessageInfo): FlashMessageService;
-    clearMessages(): FlashMessageService;
-    registerTypes(types: string[]): FlashMessageService;
+    add(messageInfo: CustomMessageInfo): FlashMessages;
+    clearMessages(): FlashMessages;
+    registerTypes(types: string[]): FlashMessages;
     getFlashObject(): FlashObject;
   }
 
-  export default FlashMessageService;
+  export default FlashMessages;
 }
