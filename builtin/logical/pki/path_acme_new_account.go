@@ -1,7 +1,9 @@
 package pki
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -88,31 +90,102 @@ func patternAcmeNewAccount(b *backend, pattern string) *framework.Path {
 	}
 }
 
-type acmeParsedOperation func(acmeCtx acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}) (*logical.Response, error)
+type acmeParsedOperation func(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}) (*logical.Response, error)
 
 func (b *backend) acmeParsedWrapper(op acmeParsedOperation) framework.OperationFunc {
-	return b.acmeWrapper(func(acmeCtx acmeContext, r *logical.Request, fields *framework.FieldData) (*logical.Response, error) {
-		user, data, err := b.acmeState.ParseRequestParams(fields)
+	return b.acmeWrapper(func(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData) (*logical.Response, error) {
+		user, data, err := b.acmeState.ParseRequestParams(acmeCtx, fields)
 		if err != nil {
 			return nil, err
 		}
 
-		return op(acmeCtx, r, fields, user, data)
+		resp, err := op(acmeCtx, r, fields, user, data)
+
+		// Our response handlers might not add the necessary headers.
+		if resp != nil {
+			if resp.Headers == nil {
+				resp.Headers = map[string][]string{}
+			}
+
+			if _, ok := resp.Headers["Replay-Nonce"]; !ok {
+				nonce, _, err := b.acmeState.GetNonce()
+				if err != nil {
+					return nil, err
+				}
+
+				resp.Headers["Replay-Nonce"] = []string{nonce}
+			}
+
+			if _, ok := resp.Headers["Link"]; !ok {
+				resp.Headers["Link"] = genAcmeLinkHeader(acmeCtx)
+			} else {
+				directory := genAcmeLinkHeader(acmeCtx)[0]
+				addDirectory := true
+				for _, item := range resp.Headers["Link"] {
+					if item == directory {
+						addDirectory = false
+						break
+					}
+				}
+				if addDirectory {
+					resp.Headers["Link"] = append(resp.Headers["Link"], directory)
+				}
+			}
+
+			// ACME responses don't understand Vault's default encoding
+			// format. Rather than expecting everything to handle creating
+			// ACME-formatted responses, do the marshaling in one place.
+			if _, ok := resp.Data[logical.HTTPRawBody]; !ok {
+				ignored_values := map[string]bool{logical.HTTPContentType: true, logical.HTTPStatusCode: true}
+				fields := map[string]interface{}{}
+				body := map[string]interface{}{
+					logical.HTTPContentType: "application/json",
+					logical.HTTPStatusCode:  http.StatusOK,
+				}
+
+				for key, value := range resp.Data {
+					if _, present := ignored_values[key]; !present {
+						fields[key] = value
+					} else {
+						body[key] = value
+					}
+				}
+
+				rawBody, err := json.Marshal(fields)
+				if err != nil {
+					return nil, fmt.Errorf("Error marshaling JSON body: %w", err)
+				}
+
+				body[logical.HTTPRawBody] = rawBody
+				resp.Data = body
+			}
+		}
+
+		return resp, err
 	})
 }
 
-func (b *backend) acmeNewAccountHandler(acmeCtx acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}) (*logical.Response, error) {
+func (b *backend) acmeNewAccountHandler(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}) (*logical.Response, error) {
 	// Parameters
 	var ok bool
 	var onlyReturnExisting bool
-	var contact []string
+	var contacts []string
 	var termsOfServiceAgreed bool
 
 	rawContact, present := data["contact"]
 	if present {
-		contact, ok = rawContact.([]string)
+		listContact, ok := rawContact.([]interface{})
 		if !ok {
-			return nil, fmt.Errorf("invalid type for field 'contact': %w", ErrMalformed)
+			return nil, fmt.Errorf("invalid type (%T) for field 'contact': %w", rawContact, ErrMalformed)
+		}
+
+		for index, singleContact := range listContact {
+			contact, ok := singleContact.(string)
+			if !ok {
+				return nil, fmt.Errorf("invalid type (%T) for field 'contact' item %d: %w", singleContact, index, ErrMalformed)
+			}
+
+			contacts = append(contacts, contact)
 		}
 	}
 
@@ -120,7 +193,7 @@ func (b *backend) acmeNewAccountHandler(acmeCtx acmeContext, r *logical.Request,
 	if present {
 		termsOfServiceAgreed, ok = rawTermsOfServiceAgreed.(bool)
 		if !ok {
-			return nil, fmt.Errorf("invalid type for field 'termsOfServiceAgreed': %w", ErrMalformed)
+			return nil, fmt.Errorf("invalid type (%T) for field 'termsOfServiceAgreed': %w", rawTermsOfServiceAgreed, ErrMalformed)
 		}
 	}
 
@@ -128,7 +201,7 @@ func (b *backend) acmeNewAccountHandler(acmeCtx acmeContext, r *logical.Request,
 	if present {
 		onlyReturnExisting, ok = rawOnlyReturnExisting.(bool)
 		if !ok {
-			return nil, fmt.Errorf("invalid type for field 'onlyReturnExisting': %w", ErrMalformed)
+			return nil, fmt.Errorf("invalid type (%T) for field 'onlyReturnExisting': %w", rawOnlyReturnExisting, ErrMalformed)
 		}
 	}
 
@@ -139,38 +212,39 @@ func (b *backend) acmeNewAccountHandler(acmeCtx acmeContext, r *logical.Request,
 		return b.acmeNewAccountSearchHandler(acmeCtx, r, fields, userCtx, data)
 	}
 
-	return b.acmeNewAccountCreateHandler(acmeCtx, r, fields, userCtx, data, contact, termsOfServiceAgreed)
+	return b.acmeNewAccountCreateHandler(acmeCtx, r, fields, userCtx, data, contacts, termsOfServiceAgreed)
 }
 
-func formatAccountResponse(location string, status string, contact []string) *logical.Response {
+func formatAccountResponse(location string, acct *acmeAccount) *logical.Response {
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"status": status,
+			"status": acct.Status,
 			"orders": location + "/orders",
+		},
+		Headers: map[string][]string{
+			"Location": {location},
 		},
 	}
 
-	if len(contact) > 0 {
-		resp.Data["contact"] = contact
+	if len(acct.Contact) > 0 {
+		resp.Data["contact"] = acct.Contact
 	}
-
-	resp.Headers["Location"] = []string{location}
 
 	return resp
 }
 
-func (b *backend) acmeNewAccountSearchHandler(acmeCtx acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}) (*logical.Response, error) {
-	if userCtx.Existing || b.acmeState.DoesAccountExist(userCtx.Kid) {
+func (b *backend) acmeNewAccountSearchHandler(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}) (*logical.Response, error) {
+	if userCtx.Existing || b.acmeState.DoesAccountExist(acmeCtx, userCtx.Kid) {
 		// This account exists; return its details. It would be slightly
 		// weird to specify a kid in the request (and not use an explicit
 		// jwk here), but we might as well support it too.
-		account, err := b.acmeState.LoadAccount(userCtx.Kid)
+		account, err := b.acmeState.LoadAccount(acmeCtx, userCtx.Kid)
 		if err != nil {
 			return nil, fmt.Errorf("error loading account: %w", err)
 		}
 
 		location := acmeCtx.baseUrl.String() + "account/" + userCtx.Kid
-		return formatAccountResponse(location, account["status"].(string), account["contact"].([]string)), nil
+		return formatAccountResponse(location, account), nil
 	}
 
 	// Per RFC 8555 Section 7.3.1. Finding an Account URL Given a Key:
@@ -181,13 +255,13 @@ func (b *backend) acmeNewAccountSearchHandler(acmeCtx acmeContext, r *logical.Re
 	return nil, fmt.Errorf("An account with this key does not exist: %w", ErrAccountDoesNotExist)
 }
 
-func (b *backend) acmeNewAccountCreateHandler(acmeCtx acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}, contact []string, termsOfServiceAgreed bool) (*logical.Response, error) {
+func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}, contact []string, termsOfServiceAgreed bool) (*logical.Response, error) {
 	if userCtx.Existing {
 		return nil, fmt.Errorf("cannot submit to newAccount with 'kid': %w", ErrMalformed)
 	}
 
 	// If the account already exists, return the existing one.
-	if b.acmeState.DoesAccountExist(userCtx.Kid) {
+	if b.acmeState.DoesAccountExist(acmeCtx, userCtx.Kid) {
 		return b.acmeNewAccountSearchHandler(acmeCtx, r, fields, userCtx, data)
 	}
 
@@ -196,11 +270,18 @@ func (b *backend) acmeNewAccountCreateHandler(acmeCtx acmeContext, r *logical.Re
 		return nil, fmt.Errorf("terms of service not agreed to: %w", ErrUserActionRequired)
 	}
 
-	account, err := b.acmeState.CreateAccount(userCtx, contact, termsOfServiceAgreed)
+	account, err := b.acmeState.CreateAccount(acmeCtx, userCtx, contact, termsOfServiceAgreed)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create account: %w", err)
 	}
 
 	location := acmeCtx.baseUrl.String() + "account/" + userCtx.Kid
-	return formatAccountResponse(location, account["status"].(string), account["contact"].([]string)), nil
+	resp := formatAccountResponse(location, account)
+
+	// Per RFC 8555 Section 7.3. Account Management:
+	//
+	// > The server returns this account object in a 201 (Created) response,
+	// > with the account URL in a Location header field.
+	resp.Data[logical.HTTPStatusCode] = http.StatusCreated
+	return resp, nil
 }

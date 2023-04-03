@@ -5,7 +5,7 @@
 
 import { action } from '@ember/object';
 import Component from '@glimmer/component';
-import FlashMessageService from 'ember-cli-flash/services/flash-messages';
+import FlashMessageService from 'vault/services/flash-messages';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';

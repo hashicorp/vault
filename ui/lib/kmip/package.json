@@ -6,7 +6,6 @@
   ],
   "dependencies": {
     "ember-cli-htmlbars": "*",
-    "ember-cli-flash": "*",
     "ember-cli-babel": "*"
   },
   "ember-addon": {

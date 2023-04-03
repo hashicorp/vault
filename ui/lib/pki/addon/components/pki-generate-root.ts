@@ -12,7 +12,7 @@ import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import PkiActionModel from 'vault/models/pki/action';
 import PkiUrlsModel from 'vault/models/pki/urls';
-import FlashMessageService from 'ember-cli-flash/services/flash-messages';
+import FlashMessageService from 'vault/services/flash-messages';
 import errorMessage from 'vault/utils/error-message';
 import { parsedParameters } from 'vault/utils/parse-pki-cert-oids';
 

@@ -7,7 +7,6 @@
   "dependencies": {
     "ember-cli-htmlbars": "*",
     "ember-cli-babel": "*",
-    "ember-cli-flash": "*",
     "ember-concurrency": "*",
     "@ember/test-waiters": "*",
     "ember-inflector": "*"
