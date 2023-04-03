@@ -8,9 +8,11 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"net/http"
 	"reflect"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -385,6 +387,11 @@ func appendToCertPool(t *testing.T, pool *x509.CertPool, caPem []byte) *x509.Cer
 }
 
 var cmpClientOptionsOpts = cmp.Options{
+	cmp.AllowUnexported(http.Transport{}),
+	cmpopts.IgnoreFields(http.Transport{}, "idleLRU"),
+	cmpopts.IgnoreFields(http.Transport{}, "Proxy"),
+	cmpopts.IgnoreTypes(atomic.Value{}, sync.Once{}),
+
 	cmp.AllowUnexported(options.ClientOptions{}),
 
 	cmp.AllowUnexported(tls.Config{}),
