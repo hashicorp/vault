@@ -6,32 +6,22 @@
 /* This helper includes styles relating to: font-size, font-family, font-alignment, text-transform, text-weight, font-style, text-decoration. */
 
 // font size helpers
-.is-size-1 {
-  font-size: 3rem !important;
-}
-
-.is-size-2 {
-  font-size: 2.5rem !important;
-}
-
-.is-size-3 {
-  font-size: 1.71429rem !important;
-}
+// ARG TODO future pr once bulma is removed, replace these helper names, example: font-size-4
 
 .is-size-4 {
-  font-size: 1.5rem !important;
+  font-size: $size-4 !important;
 }
 
 .is-size-5 {
-  font-size: 1.25rem !important;
+  font-size: $size-5 !important;
 }
 
 .is-size-6 {
-  font-size: 1rem !important;
+  font-size: $size-6 !important;
 }
 
 .is-size-7 {
-  font-size: 0.92857rem !important;
+  font-size: $size-7 !important;
 }
 
 .is-size-8 {
@@ -40,6 +30,15 @@
 
 .is-size-9 {
   font-size: $size-9 !important;
+}
+
+// Font weight
+.has-text-weight-semibold {
+  font-weight: $font-weight-semibold !important;
+}
+
+.has-text-weight-bold {
+  font-weight: $font-weight-bold !important;
 }
 
 // Font family
@@ -58,20 +57,6 @@
 }
 .is-no-underline {
   text-decoration: none;
-}
-
-// Text weight
-// ARG TODO: duplicate, need to agree on naming syntax
-.has-text-semibold {
-  font-weight: $font-weight-semibold;
-}
-
-.has-text-weight-semibold {
-  font-weight: 600 !important;
-}
-
-.has-text-weight-bold {
-  font-weight: 700 !important;
 }
 
 // Text transformations

@@ -4,9 +4,8 @@
  */
 
 /*
- ARG TODO:
- - Good amount of cleanup work, especially towards the bottom of this file. Copy/pasted what was already there. Didn't modify things.
- - Need to discuss the creation of additional variables like $size-small: $size-8;. This is a pattern we use heavily in the app and it would take some work (not hard, but a good chunk of changes) to revert.
+ARG TODO post bulma removal:
+- size-x and and spacing-x variables often overlap. Ideally, we could combine these to cover all the size requirements.
  */
 
 /* General sizing: used in fonts and in padding, margin, etc. */
@@ -26,19 +25,7 @@ $size-normal: $size-6;
 $size-medium: $size-5;
 $size-large: $size-4;
 
-/* Font weight */
-$weight-light: 300 !default;
-$weight-normal: 400 !default;
-$weight-medium: 500 !default;
-$weight-semibold: 600 !default;
-$weight-bold: 700 !default;
-$font-weight-normal: 400;
-$font-weight-semibold: 600;
-$font-weight-bold: 700;
-
 /* Spacing */
-$block-spacing: 1.5rem !default;
-
 $spacing-xxs: 4px;
 $spacing-xs: 8px;
 $spacing-s: 12px;
@@ -46,81 +33,34 @@ $spacing-m: 16px;
 $spacing-l: 24px;
 $spacing-xl: 36px;
 $spacing-xxl: 48px;
+$spacing-xxxl: 64px;
 
-/* Misc. */
-$column-gap: 0.75rem !default;
-// The container horizontal gap, which acts as the offset for breakpoints
-$gap: 32px !default;
-// 960, 1152, and 1344 have been chosen because they are divisible by both 12 and 16
+/* Font weight */
+$font-weight-normal: 400;
+$font-weight-semibold: 600;
+$font-weight-bold: 700;
+
+/* Border radius */
+$radius: 2px;
+$radius-large: 4px;
 
 /* Responsiveness */
+// 960, 1152, and 1344 have been chosen because they are divisible by both 12 and 16
 $mobile: 769px;
-$tablet: 769px !default;
 // 960px container + 4rem
-$desktop: 960px + (2 * $gap) !default;
-// 1152px container + 4rem
-$widescreen: 1152px + (2 * $gap) !default;
-$widescreen-enabled: true !default;
+$desktop: 960px + (2 * 32px);
 // 1344px container + 4rem
-$fullhd: 1344px + (2 * $gap) !default;
-$fullhd-enabled: true !default;
-$breakpoints: (
-  'mobile': (
-    'until': $tablet,
-  ),
-  'tablet': (
-    'from': $tablet,
-  ),
-  'tablet-only': (
-    'from': $tablet,
-    'until': $desktop,
-  ),
-  'touch': (
-    'from': $desktop,
-  ),
-  'desktop': (
-    'from': $desktop,
-  ),
-  'desktop-only': (
-    'from': $desktop,
-    'until': $widescreen,
-  ),
-  'until-widescreen': (
-    'until': $widescreen,
-  ),
-  'widescreen': (
-    'from': $widescreen,
-  ),
-  'widescreen-only': (
-    'from': $widescreen,
-    'until': $fullhd,
-  ),
-  'until-fullhd': (
-    'until': $fullhd,
-  ),
-  'fullhd': (
-    'from': $fullhd,
-  ),
-) !default;
+$fullhd: 1344px + (2 * 32px);
 
-/* Miscellaneous sizing*/
-// ARG TODO clean up
-$radius-small: 2px !default;
-$radius: 4px !default;
-$radius-large: 6px !default;
-$radius-rounded: 9999px !default;
-$input-radius: $radius;
-$speed: 86ms !default;
+/* Animations and transitions */
+$speed: 150ms;
+$speed-slow: $speed * 2;
+$easing: ease-out;
 
-$header-height: 4rem;
-$body-size: 14px;
-
-$console-spacing: 1.5rem; // 24px
+/* Nav */
+$drawer-width: 300px;
 
 // Wizard
 // Not being used: https://github.com/hashicorp/vault/pull/19220
 // $wizard-progress-bar-height: 6px;
 // $wizard-progress-check-size: 16px;
-
-// Div height
-$medium-height: 125px;

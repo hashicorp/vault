@@ -46,7 +46,7 @@
 
 // other
 .has-background-transition {
-  transition: background-color $easing $speed;
+  transition: background-color ease-out $speed;
 }
 
 .has-current-color-fill {

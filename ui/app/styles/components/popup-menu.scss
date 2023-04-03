@@ -5,11 +5,11 @@
 
 .popup-menu-content,
 .ember-power-select-options {
-  border-radius: 2px;
+  border-radius: $radius;
   margin: -2px 0 0 0;
 
   & > .box {
-    border-radius: 2px;
+    border-radius: $radius;
     box-shadow: $box-shadow, $box-shadow-middle;
     padding: 0;
     position: relative;

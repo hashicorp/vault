@@ -37,13 +37,13 @@
 .progress[value]::-webkit-progress-value {
   background-color: #4a4a4a;
   border-radius: $radius;
-  transition: width 1s ease-out;
+  transition: width 1s $easing;
 }
 
 // style the bar in firefox
 .progress[value]::-moz-progress-bar {
   border-radius: $radius;
-  transition: width 1s ease-out;
+  transition: width 1s $easing;
 }
 
 .progress::-ms-fill {

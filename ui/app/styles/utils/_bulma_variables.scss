@@ -234,94 +234,6 @@ $shades: (
   'white-bis': $white-bis,
 ) !default;
 
-// Typography
-
-$family-sans-serif: BlinkMacSystemFont, -apple-system, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
-  'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif !default;
-$family-monospace: monospace !default;
-$render-mode: optimizeLegibility !default;
-
-$size-1: 3rem !default;
-$size-2: 2.5rem !default;
-$size-3: 2rem !default;
-$size-4: 1.5rem !default;
-$size-5: 1.25rem !default;
-$size-6: 1rem !default;
-$size-7: 0.75rem !default;
-
-$weight-light: 300 !default;
-$weight-normal: 400 !default;
-$weight-medium: 500 !default;
-$weight-semibold: 600 !default;
-$weight-bold: 700 !default;
-
-// Spacing
-
-$block-spacing: 1.5rem !default;
-
-// Responsiveness
-
-// The container horizontal gap, which acts as the offset for breakpoints
-$gap: 32px !default;
-// 960, 1152, and 1344 have been chosen because they are divisible by both 12 and 16
-$tablet: 769px !default;
-// 960px container + 4rem
-$desktop: 960px + (2 * $gap) !default;
-// 1152px container + 4rem
-$widescreen: 1152px + (2 * $gap) !default;
-$widescreen-enabled: true !default;
-// 1344px container + 4rem
-$fullhd: 1344px + (2 * $gap) !default;
-$fullhd-enabled: true !default;
-$breakpoints: (
-  'mobile': (
-    'until': $tablet,
-  ),
-  'tablet': (
-    'from': $tablet,
-  ),
-  'tablet-only': (
-    'from': $tablet,
-    'until': $desktop,
-  ),
-  'touch': (
-    'from': $desktop,
-  ),
-  'desktop': (
-    'from': $desktop,
-  ),
-  'desktop-only': (
-    'from': $desktop,
-    'until': $widescreen,
-  ),
-  'until-widescreen': (
-    'until': $widescreen,
-  ),
-  'widescreen': (
-    'from': $widescreen,
-  ),
-  'widescreen-only': (
-    'from': $widescreen,
-    'until': $fullhd,
-  ),
-  'until-fullhd': (
-    'until': $fullhd,
-  ),
-  'fullhd': (
-    'from': $fullhd,
-  ),
-) !default;
-
-// Miscellaneous
-
-$easing: ease-out !default;
-$radius-small: 2px !default;
-$radius: 4px !default;
-$radius-large: 6px !default;
-$radius-rounded: 9999px !default;
-$input-radius: $radius;
-$speed: 86ms !default;
-
 // Flags
 
 $variable-columns: true !default;
@@ -337,10 +249,6 @@ $rtl: false !default;
     @content;
   }
 }
-
-// Manually added
-
-$size-medium: 1.25rem;
 
 /* OVERRIDES START */
 // Color overrides
@@ -363,45 +271,19 @@ $code: $grey-dark;
 $code-background: transparent;
 $border: $grey-light;
 
-$hr-margin: 1rem 0;
-
-$mobile: 769px;
-$header-height: 4rem;
-
 //typography
 $family-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu',
   'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
 $family-monospace: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
 $family-primary: $family-sans;
 $family-code: $family-monospace !default;
-$body-size: 14px;
-$size-3: (24/14) + 0rem; // ~1.714rem ~27px
-$size-4: 1.5rem; // 24px
-$size-5: 1.25rem; // 20px
-$size-7: (13/14) + 0rem; // ~.929rem ~15px
-$size-8: (12/14) + 0rem; // ~.857rem  ~13.7px
-$size-9: 0.75rem; // 12px
-$size-10: 0.5rem; // 8px
-$size-11: 0.25rem; // 4px
-$console-spacing: 1.5rem; // 24px
-$size-small: $size-8;
-$size-normal: $size-6;
-$size-medium: $size-5;
-$size-large: $size-4;
-$font-weight-normal: 400;
-$font-weight-semibold: 600;
-$font-weight-bold: 700;
 
 //input
 $input-background-color: $white;
 $input-focus-background-color: $white;
 $input-border-color: $grey;
 
-$radius: 2px;
-$radius-large: 4px;
-
 //box
-$box-radius: 0;
 $box-shadow: 0 0 0 1px rgba($black, 0.1);
 $box-shadow-low: 0 5px 1px -2px rgba($black, 0.12), 0 3px 2px -1px rgba($black, 0);
 $box-shadow-middle: 0 8px 4px -4px rgba($black, 0.1), 0 6px 8px -2px rgba($black, 0.05);
@@ -430,17 +312,3 @@ $menu-item-active-background-color: transparent;
 
 $box-link-shadow: 0 0 0 1px $ui-gray-200;
 $box-link-hover-shadow: 0 0 0 1px $grey-light;
-
-// Nav
-$drawer-width: 300px;
-
-// animations
-$speed: 150ms;
-$speed-slow: $speed * 2;
-
-// Wizard
-$wizard-progress-bar-height: 6px;
-$wizard-progress-check-size: 16px;
-
-// Div height
-$medium-height: 125px;
