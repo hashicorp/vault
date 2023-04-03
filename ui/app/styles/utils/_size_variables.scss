@@ -41,55 +41,12 @@ $font-weight-bold: 700;
 
 /* Responsiveness */
 // 960, 1152, and 1344 have been chosen because they are divisible by both 12 and 16
-
 $gap: 32px !default; // The container horizontal gap, which acts as the offset for breakpoints
 $mobile: 769px;
 // 960px container + 4rem
 $desktop: 960px + (2 * $gap) !default;
-// 1152px container + 4rem
-$widescreen: 1152px + (2 * $gap) !default;
-$widescreen-enabled: true !default;
 // 1344px container + 4rem
 $fullhd: 1344px + (2 * $gap) !default;
-$fullhd-enabled: true !default;
-$breakpoints: (
-  'mobile': (
-    'until': $mobile,
-  ),
-  'tablet': (
-    'from': $mobile,
-  ),
-  'tablet-only': (
-    'from': $mobile,
-    'until': $desktop,
-  ),
-  'touch': (
-    'from': $desktop,
-  ),
-  'desktop': (
-    'from': $desktop,
-  ),
-  'desktop-only': (
-    'from': $desktop,
-    'until': $widescreen,
-  ),
-  'until-widescreen': (
-    'until': $widescreen,
-  ),
-  'widescreen': (
-    'from': $widescreen,
-  ),
-  'widescreen-only': (
-    'from': $widescreen,
-    'until': $fullhd,
-  ),
-  'until-fullhd': (
-    'until': $fullhd,
-  ),
-  'fullhd': (
-    'from': $fullhd,
-  ),
-) !default;
 
 /* Miscellaneous sizing*/
 // ARG TODO clean up

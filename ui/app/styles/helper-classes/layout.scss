@@ -71,7 +71,7 @@
 }
 
 @media screen and (max-width: 1215px) {
-  is-widescreen:not(.is-max-desktop) {
+  .is-widescreen:not(.is-max-desktop) {
     max-width: 1152px;
   }
 }

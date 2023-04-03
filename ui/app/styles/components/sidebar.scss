@@ -99,7 +99,7 @@
         border-right: 4px solid $blue;
       }
     }
-
+    // ARG TODO follow up, only use case of $fullhd
     .tag {
       @include from($fullhd) {
         float: right;
