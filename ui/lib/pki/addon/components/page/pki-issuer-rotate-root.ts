@@ -8,7 +8,7 @@ import errorMessage from 'vault/utils/error-message';
 // TYPES
 import Store from '@ember-data/store';
 import Router from '@ember/routing/router';
-import FlashMessageService from 'vault/services/flash-messages';
+import FlashMessageService from 'ember-cli-flash/services/flash-messages';
 import SecretMountPath from 'vault/services/secret-mount-path';
 import PkiIssuerModel from 'vault/models/pki/issuer';
 import PkiActionModel from 'vault/vault/models/pki/action';
