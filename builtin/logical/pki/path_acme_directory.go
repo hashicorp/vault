@@ -106,7 +106,7 @@ func getAcmeBaseUrl(sc *storageContext, path string) (*url.URL, error) {
 		directoryPrefix = path[0:lastIndex]
 	}
 
-	return baseUrl.JoinPath(directoryPrefix), nil
+	return baseUrl.JoinPath(directoryPrefix, "/acme/"), nil
 }
 
 func acmeErrorWrapper(op framework.OperationFunc) framework.OperationFunc {
@@ -122,11 +122,11 @@ func acmeErrorWrapper(op framework.OperationFunc) framework.OperationFunc {
 
 func (b *backend) acmeDirectoryHandler(acmeCtx acmeContext, r *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	rawBody, err := json.Marshal(map[string]interface{}{
-		"newNonce":   acmeCtx.baseUrl.JoinPath("/acme/new-nonce").String(),
-		"newAccount": acmeCtx.baseUrl.JoinPath("/acme/new-account").String(),
-		"newOrder":   acmeCtx.baseUrl.JoinPath("/acme/new-order").String(),
-		"revokeCert": acmeCtx.baseUrl.JoinPath("/acme/revoke-cert").String(),
-		"keyChange":  acmeCtx.baseUrl.JoinPath("/acme/key-change").String(),
+		"newNonce":   acmeCtx.baseUrl.JoinPath("new-nonce").String(),
+		"newAccount": acmeCtx.baseUrl.JoinPath("new-account").String(),
+		"newOrder":   acmeCtx.baseUrl.JoinPath("new-order").String(),
+		"revokeCert": acmeCtx.baseUrl.JoinPath("revoke-cert").String(),
+		"keyChange":  acmeCtx.baseUrl.JoinPath("key-change").String(),
 		"meta": map[string]interface{}{
 			"externalAccountRequired": false,
 		},
