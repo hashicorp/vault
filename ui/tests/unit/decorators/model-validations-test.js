@@ -74,7 +74,7 @@ module('Unit | Decorators | ModelValidations', function (hooks) {
     assert.false(v1.isValid, 'isValid state is correct when errors exist');
     assert.deepEqual(
       v1.state,
-      { foo: { isValid: false, errors: [message] } },
+      { foo: { isValid: false, errors: [message], warnings: [] } },
       'Correct state returned when property is invalid'
     );
 
@@ -83,7 +83,7 @@ module('Unit | Decorators | ModelValidations', function (hooks) {
     assert.true(v2.isValid, 'isValid state is correct when no errors exist');
     assert.deepEqual(
       v2.state,
-      { foo: { isValid: true, errors: [] } },
+      { foo: { isValid: true, errors: [], warnings: [] } },
       'Correct state returned when property is valid'
     );
   });
