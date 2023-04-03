@@ -9,7 +9,7 @@ import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import errorMessage from 'vault/utils/error-message';
-import FlashMessageService from 'vault/services/flash-messages';
+import FlashMessageService from 'ember-cli-flash/services/flash-messages';
 import DownloadService from 'vault/services/download';
 import PkiCertificateBaseModel from 'vault/models/pki/certificate/base';
 

@@ -77,10 +77,10 @@ jobs:
           ref: ${{ inputs.vault-revision }}
       - id: metadata
         run: |
-          echo "build-date=$(make ci-get-date)" >> $GITHUB_OUTPUT
-          echo "version=$(make ci-get-version)" >> $GITHUB_OUTPUT
-          filtered=$(make ci-filter-matrix)
-          echo "matrix=$(echo $filtered)}" >> $GITHUB_OUTPUT
+          # shellcheck disable=SC2129
+          echo "build-date=$(make ci-get-date)" >> "$GITHUB_OUTPUT"
+          echo "version=$(make ci-get-version)" >> "$GITHUB_OUTPUT"
+          echo "matrix=$(make ci-filter-matrix)" >> "$GITHUB_OUTPUT"
 
   # Run the Enos test scenarios
   run:
@@ -104,6 +104,7 @@ jobs:
       ENOS_VAR_vault_revision: ${{ inputs.vault-revision }}
       ENOS_VAR_vault_bundle_path: ./support/downloads/${{ inputs.build-artifact-name }}
       ENOS_VAR_vault_license_path: ./support/vault.hclic
+      ENOS_DEBUG_DATA_ROOT_DIR: ./enos/support/debug-data
     steps:
       - uses: actions/checkout@v3
       - uses: hashicorp/setup-terraform@v2
@@ -111,9 +112,6 @@ jobs:
           # the Terraform wrapper will break Terraform execution in Enos because
           # it changes the output to text when we expect it to be JSON.
           terraform_wrapper: false
-          # Terraform 1.4.x introduced an issue that prevents some resources from
-          # planning. Pin to 1.3.x until it is resolved.
-          terraform_version: 1.3.9
       - uses: aws-actions/configure-aws-credentials@v1-node16
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI }}
@@ -126,10 +124,12 @@ jobs:
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - name: Prepare scenario dependencies
+        id: prepare_scenario
         run: |
           mkdir -p ./enos/support/terraform-plugin-cache
           echo "${{ secrets.SSH_KEY_PRIVATE_CI }}" > ./enos/support/private_key.pem
           chmod 600 ./enos/support/private_key.pem
+          echo "debug_data_artifact_name=enos-debug-data_$(echo ${{ matrix.scenario }} | sed -e 's/ /_/g' | sed -e 's/:/=/g')" >> $GITHUB_OUTPUT
       - if: contains(inputs.matrix-file-name, 'github')
         uses: actions/download-artifact@v3
         with:
@@ -148,6 +148,14 @@ jobs:
         id: run_retry
         if: steps.run.outcome == 'failure'
         run: enos scenario run --timeout 60m0s --chdir ./enos ${{ matrix.scenario }}
+      - name: Upload Debug Data
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          # The name of the artifact is the same as the matrix scenario name with the spaces replaced with underscores and colons replaced by equals.
+          name: ${{ steps.prepare_scenario.outputs.debug_data_artifact_name }}
+          path: ${{ env.ENOS_DEBUG_DATA_ROOT_DIR }}
+          retention-days: 30
       - name: Ensure scenario has been destroyed
         if: ${{ always() }}
         # With Enos version 0.0.11 the destroy step returns an error if the infrastructure

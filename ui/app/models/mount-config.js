@@ -62,4 +62,6 @@ export default class MountConfigModel extends Model {
     noDefault: true,
   })
   tokenType;
+
+  @attr() allowedManagedKeys;
 }

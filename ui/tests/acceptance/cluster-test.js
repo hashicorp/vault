@@ -7,6 +7,8 @@ import { create } from 'ember-cli-page-object';
 import { settled, click } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { v4 as uuidv4 } from 'uuid';
+
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
@@ -31,8 +33,8 @@ const authAccessor = async function (path) {
   await consoleComponent.runCommands([`write auth/${path}/users/end-user password="${PASSWORD}"`]);
 };
 
-const setupUser = async function () {
-  const authMethodPath = `userpass-${new Date().getTime()}`;
+const setupUser = async function (uid) {
+  const authMethodPath = `cluster-userpass-${uid}`;
   await authAccessor(authMethodPath);
 };
 
@@ -40,6 +42,7 @@ module('Acceptance | cluster', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
+    this.uid = uuidv4();
     await logout.visit();
     return authPage.login();
   });
@@ -60,7 +63,7 @@ module('Acceptance | cluster', function (hooks) {
   });
 
   test('it hides mfa setup if user has not entityId (ex: is a root user)', async function (assert) {
-    await setupUser();
+    await setupUser(this.uid);
 
     await logout.visit();
     await settled();

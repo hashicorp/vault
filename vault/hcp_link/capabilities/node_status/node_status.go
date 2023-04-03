@@ -77,7 +77,7 @@ func (c *NodeStatusReporter) GetNodeStatus(ctx context.Context) (retStatus nodes
 		ReplicationState:       replState.StateStrings(),
 		Hostname:               hostInfo.Hostname,
 		ListenerAddresses:      listenerAddresses,
-		OperatingSystem:        hostInfo.OS,
+		OperatingSystem:        hostInfo.Platform,
 		OperatingSystemVersion: hostInfo.PlatformVersion,
 		LogLevel:               node_status.LogLevel(logLevel),
 		ActiveTime:             timestamppb.New(c.NodeStatusGetter.ActiveTime()),

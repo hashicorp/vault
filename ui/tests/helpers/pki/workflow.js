@@ -8,7 +8,7 @@ import { SELECTORS as GENERATECERT } from './pki-role-generate';
 import { SELECTORS as KEYFORM } from './pki-key-form';
 import { SELECTORS as KEYPAGES } from './page/pki-keys';
 import { SELECTORS as ISSUERDETAILS } from './pki-issuer-details';
-import { SELECTORS as CONFIGURATION } from './pki-configure-form';
+import { SELECTORS as CONFIGURATION } from './pki-configure-create';
 
 export const SELECTORS = {
   breadcrumbContainer: '[data-test-breadcrumbs]',
@@ -50,6 +50,8 @@ export const SELECTORS = {
   generateIssuerDropdown: '[data-test-issuer-generate-dropdown]',
   generateIssuerRoot: '[data-test-generate-issuer="root"]',
   generateIssuerIntermediate: '[data-test-generate-issuer="intermediate"]',
+  issuerPopupMenu: '[data-test-popup-menu-trigger]',
+  issuerPopupDetails: '[data-test-popup-menu-details] a',
   issuerDetails: {
     title: '[data-test-pki-issuer-page-title]',
     ...ISSUERDETAILS,

@@ -183,8 +183,10 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 		}
 
 		data = parseQuery(r.URL.Query())
-
-	case "OPTIONS", "HEAD":
+	case "HEAD":
+		op = logical.HeaderOperation
+		data = parseQuery(r.URL.Query())
+	case "OPTIONS":
 	default:
 		return nil, nil, http.StatusMethodNotAllowed, nil
 	}
