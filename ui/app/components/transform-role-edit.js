@@ -65,10 +65,7 @@ export default TransformBase.extend({
           message =
             'This role was edited to remove transformations, but this role was not removed from those transformations’ allowed_roles due to a lack of permissions.';
         }
-        this.flashMessages.info(message, {
-          sticky: true,
-          priority: 300,
-        });
+        this.flashMessages.stickyInfo(message);
       }
     });
   },

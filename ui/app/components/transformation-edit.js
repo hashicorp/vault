@@ -82,10 +82,7 @@ export default TransformBase.extend({
           // eg. trying to update a role with empty array as transformations
           message = `You've edited the allowed_roles for this transformation. However, the corresponding edits to some roles' transformations were not made`;
         }
-        this.flashMessages.info(message, {
-          sticky: true,
-          priority: 300,
-        });
+        this.flashMessages.stickyInfo(message);
       }
     });
   },
