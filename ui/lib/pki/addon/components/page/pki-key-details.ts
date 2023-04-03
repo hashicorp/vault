@@ -6,7 +6,7 @@
 import { action } from '@ember/object';
 import Component from '@glimmer/component';
 import RouterService from '@ember/routing/router-service';
-import FlashMessages from 'vault/services/flash-messages';
+import FlashMessageService from 'vault/services/flash-messages';
 import { inject as service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
 import PkiKeyModel from 'vault/models/pki/key';
@@ -16,7 +16,7 @@ interface Args {
 
 export default class PkiKeyDetails extends Component<Args> {
   @service declare readonly router: RouterService;
-  @service declare readonly flashMessages: FlashMessages;
+  @service declare readonly flashMessages: FlashMessageService;
 
   @action
   async deleteKey() {

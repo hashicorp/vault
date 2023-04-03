@@ -10,7 +10,7 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import PkiCertificateSignIntermediate from 'vault/models/pki/certificate/sign-intermediate';
-import FlashMessages from 'vault/services/flash-messages';
+import FlashMessageService from 'vault/services/flash-messages';
 import errorMessage from 'vault/utils/error-message';
 
 interface Args {
@@ -19,7 +19,7 @@ interface Args {
 }
 
 export default class PkiSignIntermediateFormComponent extends Component<Args> {
-  @service declare readonly flashMessages: FlashMessages;
+  @service declare readonly flashMessages: FlashMessageService;
   @tracked errorBanner = '';
   @tracked inlineFormAlert = '';
   @tracked modelValidations = null;

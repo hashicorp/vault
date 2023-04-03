@@ -12,7 +12,7 @@ import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import PkiActionModel from 'vault/models/pki/action';
 import PkiUrlsModel from 'vault/models/pki/urls';
-import FlashMessages from 'vault/services/flash-messages';
+import FlashMessageService from 'vault/services/flash-messages';
 import errorMessage from 'vault/utils/error-message';
 import { parsedParameters } from 'vault/utils/parse-pki-cert-oids';
 
@@ -50,7 +50,7 @@ interface Args {
  * @param {Object} adapterOptions - object passed as adapterOptions on the model.save method
  */
 export default class PkiGenerateRootComponent extends Component<Args> {
-  @service declare readonly flashMessages: FlashMessages;
+  @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly router: RouterService;
 
   @tracked modelValidations = null;

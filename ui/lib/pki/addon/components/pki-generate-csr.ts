@@ -10,7 +10,7 @@ import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-import FlashMessages from 'vault/services/flash-messages';
+import FlashMessageService from 'vault/services/flash-messages';
 import PkiActionModel from 'vault/models/pki/action';
 import errorMessage from 'vault/utils/error-message';
 
@@ -42,7 +42,7 @@ interface Args {
  * @param {Object} adapterOptions - object passed as adapterOptions on the model.save method
  */
 export default class PkiGenerateCsrComponent extends Component<Args> {
-  @service declare readonly flashMessages: FlashMessages;
+  @service declare readonly flashMessages: FlashMessageService;
 
   @tracked modelValidations = null;
   @tracked error: string | null = null;

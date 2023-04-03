@@ -11,7 +11,7 @@ import Router from '@ember/routing/router';
 import Store from '@ember-data/store';
 import { tracked } from '@glimmer/tracking';
 import errorMessage from 'vault/utils/error-message';
-import FlashMessages from 'vault/services/flash-messages';
+import FlashMessageService from 'vault/services/flash-messages';
 import DownloadService from 'vault/services/download';
 import PkiCertificateGenerateModel from 'vault/models/pki/certificate/generate';
 import PkiCertificateSignModel from 'vault/models/pki/certificate/sign';
@@ -25,7 +25,7 @@ interface Args {
 export default class PkiRoleGenerate extends Component<Args> {
   @service declare readonly router: Router;
   @service declare readonly store: Store;
-  @service declare readonly flashMessages: FlashMessages;
+  @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly download: DownloadService;
 
   @tracked errorBanner = '';
