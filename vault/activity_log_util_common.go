@@ -7,9 +7,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/golang/protobuf/proto"
 
 	"github.com/axiomhq/hyperloglog"
 	"github.com/hashicorp/vault/helper/timeutil"
@@ -287,4 +290,96 @@ func (a *ActivityLog) mountAccessorToMountPath(mountAccessor string) string {
 		}
 	}
 	return displayPath
+}
+
+type singleTypeSegmentReader struct {
+	basePath         string
+	startTime        time.Time
+	paths            []string
+	currentPathIndex int
+	a                *ActivityLog
+}
+type segmentReader struct {
+	tokens   *singleTypeSegmentReader
+	entities *singleTypeSegmentReader
+}
+
+// SegmentReader is an interface that provides methods to read tokens and entities in order
+type SegmentReader interface {
+	ReadToken(ctx context.Context) (*activity.TokenCount, error)
+	ReadEntity(ctx context.Context) (*activity.EntityActivityLog, error)
+}
+
+func (a *ActivityLog) NewSegmentFileReader(ctx context.Context, startTime time.Time) (SegmentReader, error) {
+	entities, err := a.newSingleTypeSegmentReader(ctx, startTime, activityEntityBasePath)
+	if err != nil {
+		return nil, err
+	}
+	tokens, err := a.newSingleTypeSegmentReader(ctx, startTime, activityTokenBasePath)
+	if err != nil {
+		return nil, err
+	}
+	return &segmentReader{entities: entities, tokens: tokens}, nil
+}
+
+func (a *ActivityLog) newSingleTypeSegmentReader(ctx context.Context, startTime time.Time, prefix string) (*singleTypeSegmentReader, error) {
+	basePath := prefix + fmt.Sprint(startTime.Unix()) + "/"
+	pathList, err := a.view.List(ctx, basePath)
+	if err != nil {
+		return nil, err
+	}
+	return &singleTypeSegmentReader{
+		basePath:         basePath,
+		startTime:        startTime,
+		paths:            pathList,
+		currentPathIndex: 0,
+		a:                a,
+	}, nil
+}
+
+func (s *singleTypeSegmentReader) nextValue(ctx context.Context, out proto.Message) error {
+	var raw *logical.StorageEntry
+	var path string
+	for raw == nil {
+		if s.currentPathIndex >= len(s.paths) {
+			return io.EOF
+		}
+		path = s.paths[s.currentPathIndex]
+		s.currentPathIndex++
+		var err error
+		raw, err = s.a.view.Get(ctx, s.basePath+path)
+		if err != nil {
+			return err
+		}
+		if raw == nil {
+			s.a.logger.Warn("expected log segment not found", "startTime", s.startTime, "segment", path)
+		}
+	}
+	err := proto.Unmarshal(raw.Value, out)
+	if err != nil {
+		return fmt.Errorf("unable to parse segment %v%v: %w", s.basePath, path, err)
+	}
+	return nil
+}
+
+// ReadToken reads a token from the segment
+// If there is none available, then the error will be io.EOF
+func (e *segmentReader) ReadToken(ctx context.Context) (*activity.TokenCount, error) {
+	out := &activity.TokenCount{}
+	err := e.tokens.nextValue(ctx, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ReadEntity reads an entity from the segment
+// If there is none available, then the error will be io.EOF
+func (e *segmentReader) ReadEntity(ctx context.Context) (*activity.EntityActivityLog, error) {
+	out := &activity.EntityActivityLog{}
+	err := e.entities.nextValue(ctx, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }

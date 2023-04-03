@@ -5,9 +5,15 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"testing"
 	"time"
+
+	"github.com/golang/protobuf/proto"
+	"github.com/hashicorp/vault/vault/activity"
+	"github.com/stretchr/testify/require"
 
 	"github.com/axiomhq/hyperloglog"
 	"github.com/hashicorp/vault/helper/timeutil"
@@ -156,5 +162,188 @@ func Test_ActivityLog_ComputeCurrentMonthForBillingPeriodInternal(t *testing.T) 
 	}
 	if monthRecord.NewClients.Counts.NonEntityClients != 0 {
 		t.Fatalf("wrong number of new non entity clients. Expected 0, got %d", monthRecord.NewClients.Counts.NonEntityClients)
+	}
+}
+
+// writeSegment writes a single segment file with the given time and index
+// the correct path is inferred from the datatype of `item`
+func writeSegment(t *testing.T, core *Core, ts time.Time, index int, item proto.Message) {
+	t.Helper()
+	var isEntity bool
+	switch item.(type) {
+	case *activity.EntityActivityLog:
+		isEntity = true
+	case *activity.TokenCount:
+	default:
+		require.Fail(t, "unknown segment data type", item)
+	}
+	protoItem, err := proto.Marshal(item)
+	require.NoError(t, err)
+	WriteToStorage(t, core, makeSegmentPath(t, isEntity, ts, index), protoItem)
+}
+
+// makeSegmentPath formats the path for a segment at a particular time and index
+func makeSegmentPath(t *testing.T, isEntity bool, ts time.Time, index int) string {
+	t.Helper()
+	typ := activityTokenBasePath
+	if isEntity {
+		typ = activityEntityBasePath
+	}
+	return fmt.Sprintf("%s%s%d/%d", ActivityPrefix, typ, ts.Unix(), index)
+}
+
+// TestSegmentFileReader_BadData verifies that the reader returns errors when the data is unable to be parsed
+// However, the next time that Read*() is called, the reader should still progress and be able to then return any
+// valid data without errors
+func TestSegmentFileReader_BadData(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	now := time.Now()
+
+	// write bad data that won't be able to be unmarshaled at index 0
+	WriteToStorage(t, core, makeSegmentPath(t, true, now, 0), []byte("fake data"))
+	WriteToStorage(t, core, makeSegmentPath(t, false, now, 0), []byte("fake data"))
+
+	// write entity at index 1
+	entity := &activity.EntityActivityLog{Clients: []*activity.EntityRecord{
+		{
+			ClientID: "id",
+		},
+	}}
+	writeSegment(t, core, now, 1, entity)
+
+	// write token at index 1
+	token := &activity.TokenCount{CountByNamespaceID: map[string]uint64{
+		"ns": 1,
+	}}
+	writeSegment(t, core, now, 1, token)
+	reader, err := core.activityLog.NewSegmentFileReader(context.Background(), now)
+	require.NoError(t, err)
+
+	// first the bad entity is read, which returns an error
+	_, err = reader.ReadEntity(context.Background())
+	require.Error(t, err)
+	// then, the reader can read the good entity at index 1
+	gotEntity, err := reader.ReadEntity(context.Background())
+	require.True(t, proto.Equal(gotEntity, entity))
+	require.Nil(t, err)
+
+	// the bad token causes an error
+	_, err = reader.ReadToken(context.Background())
+	require.Error(t, err)
+	// but the good token is able to be read
+	gotToken, err := reader.ReadToken(context.Background())
+	require.True(t, proto.Equal(gotToken, token))
+	require.Nil(t, err)
+}
+
+// TestSegmentFileReader_MissingData verifies that the segment file reader will skip over missing segment paths without
+// errorring until it is able to find a valid segment path
+func TestSegmentFileReader_MissingData(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	now := time.Now()
+	// write entities and tokens at indexes 0, 1, 2
+	for i := 0; i < 3; i++ {
+		WriteToStorage(t, core, makeSegmentPath(t, true, now, i), []byte("fake data"))
+		WriteToStorage(t, core, makeSegmentPath(t, false, now, i), []byte("fake data"))
+
+	}
+	// write entity at index 3
+	entity := &activity.EntityActivityLog{Clients: []*activity.EntityRecord{
+		{
+			ClientID: "id",
+		},
+	}}
+	writeSegment(t, core, now, 3, entity)
+	// write token at index 3
+	token := &activity.TokenCount{CountByNamespaceID: map[string]uint64{
+		"ns": 1,
+	}}
+	writeSegment(t, core, now, 3, token)
+	reader, err := core.activityLog.NewSegmentFileReader(context.Background(), now)
+	require.NoError(t, err)
+
+	// delete the indexes 0, 1, 2
+	for i := 0; i < 3; i++ {
+		require.NoError(t, core.barrier.Delete(context.Background(), makeSegmentPath(t, true, now, i)))
+		require.NoError(t, core.barrier.Delete(context.Background(), makeSegmentPath(t, false, now, i)))
+	}
+
+	// we expect the reader to only return the data at index 3, and then be done
+	gotEntity, err := reader.ReadEntity(context.Background())
+	require.NoError(t, err)
+	require.True(t, proto.Equal(gotEntity, entity))
+	_, err = reader.ReadEntity(context.Background())
+	require.Equal(t, err, io.EOF)
+
+	gotToken, err := reader.ReadToken(context.Background())
+	require.NoError(t, err)
+	require.True(t, proto.Equal(gotToken, token))
+	_, err = reader.ReadToken(context.Background())
+	require.Equal(t, err, io.EOF)
+}
+
+// TestSegmentFileReader_NoData verifies that the reader return io.EOF when there is no data
+func TestSegmentFileReader_NoData(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	now := time.Now()
+	reader, err := core.activityLog.NewSegmentFileReader(context.Background(), now)
+	require.NoError(t, err)
+	entity, err := reader.ReadEntity(context.Background())
+	require.Nil(t, entity)
+	require.Equal(t, err, io.EOF)
+	token, err := reader.ReadToken(context.Background())
+	require.Nil(t, token)
+	require.Equal(t, err, io.EOF)
+}
+
+// TestSegmentFileReader verifies that the reader iterates through all segments paths in ascending order and returns
+// io.EOF when it's done
+func TestSegmentFileReader(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	now := time.Now()
+	entities := make([]*activity.EntityActivityLog, 0, 3)
+	tokens := make([]*activity.TokenCount, 0, 3)
+
+	// write 3 entity segment pieces and 3 token segment pieces
+	for i := 0; i < 3; i++ {
+		entity := &activity.EntityActivityLog{Clients: []*activity.EntityRecord{
+			{
+				ClientID: fmt.Sprintf("id-%d", i),
+			},
+		}}
+		token := &activity.TokenCount{CountByNamespaceID: map[string]uint64{
+			fmt.Sprintf("ns-%d", i): uint64(i),
+		}}
+		writeSegment(t, core, now, i, entity)
+		writeSegment(t, core, now, i, token)
+		entities = append(entities, entity)
+		tokens = append(tokens, token)
+	}
+
+	reader, err := core.activityLog.NewSegmentFileReader(context.Background(), now)
+	require.NoError(t, err)
+
+	gotEntities := make([]*activity.EntityActivityLog, 0, 3)
+	gotTokens := make([]*activity.TokenCount, 0, 3)
+
+	// read the entities from the reader
+	for entity, err := reader.ReadEntity(context.Background()); !errors.Is(err, io.EOF); entity, err = reader.ReadEntity(context.Background()) {
+		require.NoError(t, err)
+		gotEntities = append(gotEntities, entity)
+	}
+
+	// read the tokens from the reader
+	for token, err := reader.ReadToken(context.Background()); !errors.Is(err, io.EOF); token, err = reader.ReadToken(context.Background()) {
+		require.NoError(t, err)
+		gotTokens = append(gotTokens, token)
+	}
+	require.Len(t, gotEntities, 3)
+	require.Len(t, gotTokens, 3)
+
+	// verify that the entities and tokens we got from the reader are correct
+	// we can't use require.Equals() here because there are protobuf differences in unexported fields
+	for i := 0; i < 3; i++ {
+		require.True(t, proto.Equal(gotEntities[i], entities[i]))
+		require.True(t, proto.Equal(gotTokens[i], tokens[i]))
 	}
 }
