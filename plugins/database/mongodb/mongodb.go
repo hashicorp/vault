@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 
 	log "github.com/hashicorp/go-hclog"
@@ -61,6 +62,10 @@ func (m *MongoDB) Type() (string, error) {
 func (m *MongoDB) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
 	m.Lock()
 	defer m.Unlock()
+
+	if strconv.IntSize == 32 {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("this plugin is disabled on 32-bit architectures")
+	}
 
 	m.RawConfig = req.Config
 

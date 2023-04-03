@@ -8,8 +8,8 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"os"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -29,11 +29,14 @@ import (
 
 const mongoAdminRole = `{ "db": "admin", "roles": [ { "role": "readWrite" } ] }`
 
-func TestMongoDB_Initialize(t *testing.T) {
-	if v := os.Getenv("GOARCH"); v == "386" {
-		t.Skip("Skipping for 32bit architecture")
+func skipIf32Bit(t *testing.T) {
+	if strconv.IntSize == 32 {
+		t.Skip("Skipping for 32-bit architecture")
 	}
+}
 
+func TestMongoDB_Initialize(t *testing.T) {
+	skipIf32Bit(t)
 	cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
@@ -64,6 +67,7 @@ func TestMongoDB_Initialize(t *testing.T) {
 }
 
 func TestNewUser_usernameTemplate(t *testing.T) {
+	skipIf32Bit(t)
 	type testCase struct {
 		usernameTemplate string
 
@@ -153,6 +157,7 @@ func TestNewUser_usernameTemplate(t *testing.T) {
 }
 
 func TestMongoDB_CreateUser(t *testing.T) {
+	skipIf32Bit(t)
 	cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
@@ -185,6 +190,7 @@ func TestMongoDB_CreateUser(t *testing.T) {
 }
 
 func TestMongoDB_CreateUser_writeConcern(t *testing.T) {
+	skipIf32Bit(t)
 	cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
@@ -219,6 +225,7 @@ func TestMongoDB_CreateUser_writeConcern(t *testing.T) {
 }
 
 func TestMongoDB_DeleteUser(t *testing.T) {
+	skipIf32Bit(t)
 	cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
@@ -259,6 +266,7 @@ func TestMongoDB_DeleteUser(t *testing.T) {
 }
 
 func TestMongoDB_UpdateUser_Password(t *testing.T) {
+	skipIf32Bit(t)
 	cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
@@ -295,6 +303,7 @@ func TestMongoDB_UpdateUser_Password(t *testing.T) {
 }
 
 func TestGetTLSAuth(t *testing.T) {
+	skipIf32Bit(t)
 	ca := certhelpers.NewCert(t,
 		certhelpers.CommonName("certificate authority"),
 		certhelpers.IsCA(true),
