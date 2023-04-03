@@ -64,6 +64,8 @@ func (m *MongoDB) Initialize(ctx context.Context, req dbplugin.InitializeRequest
 	defer m.Unlock()
 
 	if strconv.IntSize == 32 {
+		// Disable the plugin on 32-bit architectures, otherwise we will get
+		// a panic in the mongo driver due to a field not being 64-bit aligned.
 		return dbplugin.InitializeResponse{}, fmt.Errorf("this plugin is disabled on 32-bit architectures")
 	}
 
