@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
+//  This file defines classes for list type items, like: .sep, .list-header and ul.bullet.
+
 .sep {
   display: inline-flex;
   align-items: center;
@@ -20,4 +22,9 @@
   font-size: $size-8;
   font-weight: $font-weight-semibold;
   text-transform: uppercase;
+}
+
+ul.bullet {
+  list-style: disc;
+  padding-left: $spacing-m;
 }

@@ -30,7 +30,7 @@
       {{this.description}}
       <DocLink @path={{concat "/api-docs/secret/identity/mfa/" this.type}}>Learn more.</DocLink>
     </p>
-    <Mfa::MethodForm @model={{this.method}} @validations={{this.methodErrors}} class="is-box-shadowless" />
+    <Mfa::MethodForm @model={{this.method}} @validations={{this.methodErrors}} class="is-shadowless" />
     <Mfa::MfaLoginEnforcementHeader
       @isInline={{true}}
       @radioCardGroupValue={{this.enforcementPreference}}

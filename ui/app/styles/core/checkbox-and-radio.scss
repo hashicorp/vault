@@ -3,10 +3,50 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-// This file defines the classes for .b-checkboxes. The prefix "b" comes from Bulma were this CSS originated from and is subsequently modified.
+// This file defines the classes for .checkbox, .radio and .b-checkboxes. The prefix "b" comes from Bulma.
 
 @import '../sass-svg-uri/svg-uri';
 
+// checkbox and radio styling
+.checkbox,
+.radio {
+  cursor: pointer;
+  display: inline-block;
+  line-height: 1.25;
+  position: relative;
+}
+
+.checkbox input,
+.radio input {
+  cursor: pointer;
+}
+
+.checkbox:hover,
+.radio:hover {
+  color: hsl(0, 0%, 21%);
+}
+
+.checkbox[disabled],
+.radio[disabled],
+.checkbox input[disabled],
+.radio input[disabled] {
+  color: #7a7a7a;
+  cursor: not-allowed;
+}
+
+// radio only styling
+.radio + .radio {
+  margin-left: 0.5em;
+}
+
+// one-off checkbox class
+.checkbox-help-text {
+  color: $ui-gray-700;
+  font-size: $size-7;
+  padding-left: 28px;
+}
+
+// b-checkbox styling
 .b-checkbox {
   position: relative;
 }
@@ -80,10 +120,4 @@
 
 .b-checkbox > .sub-text {
   padding-left: 2rem;
-}
-
-.checkbox-help-text {
-  color: $ui-gray-700;
-  font-size: $size-7;
-  padding-left: 28px;
 }

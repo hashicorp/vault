@@ -4,7 +4,7 @@
  */
 
 //  ARG TODO, more to come
-/* This helper includes styles relating to: display, max-width */
+/* This helper includes styles relating to: display, max-width, float, visibility, position, alignment. */
 
 .is-block {
   display: block !important;
@@ -12,6 +12,21 @@
 
 .is-centered {
   justify-content: center;
+}
+
+.is-fullwidth {
+  width: 100%;
+}
+
+.is-hidden {
+  display: none !important;
+}
+
+.is-in-bottom-right {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 10;
 }
 
 .is-inline {
@@ -22,8 +37,24 @@
   display: inline-block !important;
 }
 
-.is-hidden {
-  display: none !important;
+.is-invisible {
+  visibility: hidden;
+}
+
+.is-pulled-left {
+  float: left !important;
+}
+
+.is-pulled-right {
+  float: right !important;
+}
+
+.is-relative {
+  position: relative;
+}
+
+.is-v-centered {
+  vertical-align: middle;
 }
 
 // responsive css

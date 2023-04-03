@@ -7,7 +7,7 @@
         @icon="alert-circle"
         @bottomBorder={{true}}
         @subTitle={{join ". " this.mfaErrors}}
-        class="is-box-shadowless"
+        class="is-shadowless"
       >
         <button type="button" class="button is-ghost is-transparent" {{on "click" (action "onMfaErrorDismiss")}}>
           <Icon @name="chevron-left" />

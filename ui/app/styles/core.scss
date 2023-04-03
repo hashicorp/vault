@@ -11,25 +11,27 @@
 @import './utils/bulma_variables';
 
 @import './core/element-styling';
-@import './core/bulma-classes';
 @import './utils/bulma_switch';
 
 // Utils
 @import './utils/mixins';
 @import './utils/animations';
 
-// Core element styling
+/* Core Styles: each file styles a class that is not associated with a component. Ex: box and not box-label. */
 @import './core/alert-banner';
 @import './core/box';
 @import './core/breadcrumb';
 @import './core/buttons';
 @import './core/charts';
-@import './core/checkboxes';
+@import './core/checkbox-and-radio';
 @import './core/columns';
+@import './core/container';
+@import './core/control';
+@import './core/field';
 @import './core/file';
 @import './core/footer';
-@import './core/forms';
 @import './core/inputs';
+@import './core/label';
 @import './core/level';
 @import './core/link';
 @import './core/menu';
@@ -38,7 +40,7 @@
 @import './core/progress';
 @import './core/select';
 @import './core/switch';
-@import './core/tags';
+@import './core/tag';
 @import './core/title';
 @import './core/toggle';
 
