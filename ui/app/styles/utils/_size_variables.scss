@@ -6,6 +6,8 @@
 /*
 ARG TODO post bulma removal:
 - size-x and and spacing-x variables often overlap. Ideally, we could combine these to cover all the size requirements.
+We need to confirm as a team use cases for px vs rem and how to address missing size values ex: 14px.
+- Figure out when a var is appropriate, should we have $easing?
  */
 
 /* General sizing: used in fonts and in padding, margin, etc. */
