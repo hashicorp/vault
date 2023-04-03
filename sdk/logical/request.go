@@ -164,9 +164,9 @@ type Request struct {
 	// of the mounted plugin as reported its vault.MountEntry to audit logging
 	mountRunningSha256 string
 
-	// 	mountIsExternalPlugin is used internally to propagate whether
-	//	the backend of the mounted plugin is running externally (i.e., over GRPC)
-	//	to audit logging
+	// mountIsExternalPlugin is used internally to propagate whether
+	// the backend of the mounted plugin is running externally (i.e., over GRPC)
+	// to audit logging
 	mountIsExternalPlugin bool
 
 	// WrapInfo contains requested response wrapping parameters

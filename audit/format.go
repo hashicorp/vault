@@ -123,7 +123,7 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 			MountRunningVersion:   req.MountRunningVersion(),
 			MountRunningSha256:    req.MountRunningSha256(),
 			MountIsExternalPlugin: req.MountIsExternalPlugin(),
-			MountPluginType:       getMountPluginType(req),
+			MountClass:            getMountClass(req),
 			Namespace: &AuditNamespace{
 				ID:   ns.ID,
 				Path: ns.Path,
@@ -326,7 +326,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			MountRunningVersion:   req.MountRunningVersion(),
 			MountRunningSha256:    req.MountRunningSha256(),
 			MountIsExternalPlugin: req.MountIsExternalPlugin(),
-			MountPluginType:       getMountPluginType(req),
+			MountClass:            getMountClass(req),
 			Namespace: &AuditNamespace{
 				ID:   ns.ID,
 				Path: ns.Path,
@@ -347,7 +347,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			MountRunningVersion:   req.MountRunningVersion(),
 			MountRunningSha256:    req.MountRunningSha256(),
 			MountIsExternalPlugin: req.MountIsExternalPlugin(),
-			MountPluginType:       getMountPluginType(req),
+			MountClass:            getMountClass(req),
 			Auth:                  respAuth,
 			Secret:                respSecret,
 			Data:                  respData,
@@ -412,9 +412,9 @@ type AuditRequest struct {
 	Operation                     logical.Operation      `json:"operation,omitempty"`
 	MountType                     string                 `json:"mount_type,omitempty"`
 	MountAccessor                 string                 `json:"mount_accessor,omitempty"`
-	MountRunningVersion           string                 `json:"mount_running_plugin_version,omitempty"`
+	MountRunningVersion           string                 `json:"mount_running_version,omitempty"`
 	MountRunningSha256            string                 `json:"mount_running_sha256,omitempty"`
-	MountPluginType               string                 `json:"mount_plugin_type,omitempty"`
+	MountClass                    string                 `json:"mount_class,omitempty"`
 	MountIsExternalPlugin         bool                   `json:"mount_is_external_plugin,omitempty"`
 	ClientToken                   string                 `json:"client_token,omitempty"`
 	ClientTokenAccessor           string                 `json:"client_token_accessor,omitempty"`
@@ -435,7 +435,7 @@ type AuditResponse struct {
 	MountAccessor         string                 `json:"mount_accessor,omitempty"`
 	MountRunningVersion   string                 `json:"mount_running_plugin_version,omitempty"`
 	MountRunningSha256    string                 `json:"mount_running_sha256,omitempty"`
-	MountPluginType       string                 `json:"mount_plugin_type,omitempty"`
+	MountClass            string                 `json:"mount_class,omitempty"`
 	MountIsExternalPlugin bool                   `json:"mount_is_external_plugin,omitempty"`
 	Secret                *AuditSecret           `json:"secret,omitempty"`
 	Data                  map[string]interface{} `json:"data,omitempty"`
@@ -579,13 +579,13 @@ func doElideListResponseData(data map[string]interface{}) {
 	}
 }
 
-// getMountPluginType returns the plugin type based the mount accessor of a logical.Request.
-func getMountPluginType(req *logical.Request) string {
-	if req.MountAccessor == "" {
+// getMountClass returns the mount class based the mount accessor of a logical.Request.
+func getMountClass(req *logical.Request) string {
+	if req.MountAccessor == "" || strings.HasPrefix(req.Path, "sys/") {
 		return ""
 	}
 
-	if strings.HasPrefix(req.MountAccessor, fmt.Sprintf("%s_", consts.PluginTypeCredential.String())) {
+	if strings.HasPrefix(req.Path, fmt.Sprintf("%s/", consts.PluginTypeCredential.String())) {
 		return consts.PluginTypeCredential.String()
 	}
 

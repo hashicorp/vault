@@ -620,7 +620,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	req.MountType = re.mountEntry.Type
 	req.SetMountRunningSha256(re.mountEntry.RunningSha256)
 	req.SetMountRunningVersion(re.mountEntry.RunningVersion)
-	req.SetMountIsExternalPlugin(re.mountEntry.IsExternalPlugin)
+	req.SetMountIsExternalPlugin(re.mountEntry.IsExternalPlugin())
 
 	if req.Path == "/" {
 		req.Path = ""
@@ -739,7 +739,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		req.MountType = re.mountEntry.Type
 		req.SetMountRunningSha256(re.mountEntry.RunningSha256)
 		req.SetMountRunningVersion(re.mountEntry.RunningVersion)
-		req.SetMountIsExternalPlugin(re.mountEntry.IsExternalPlugin)
+		req.SetMountIsExternalPlugin(re.mountEntry.IsExternalPlugin())
 
 		req.Connection = originalConn
 		req.ID = originalReqID
