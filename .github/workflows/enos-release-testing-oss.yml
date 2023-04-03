@@ -1,4 +1,4 @@
-name: enos-release-testing-oss-${{ github.event.client_payload.payload.sha }}
+name: enos-release-testing-oss
 
 on:
   repository_dispatch:
