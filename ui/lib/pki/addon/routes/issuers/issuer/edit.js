@@ -8,7 +8,7 @@ import { inject as service } from '@ember/service';
 import { withConfirmLeave } from 'core/decorators/confirm-leave';
 
 @withConfirmLeave()
-export default class PkiIssuerDetailRoute extends Route {
+export default class PkiIssuerEditRoute extends Route {
   @service store;
   @service secretMountPath;
   @service pathHelp;
