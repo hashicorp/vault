@@ -10,7 +10,7 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import PkiCertificateSignIntermediate from 'vault/models/pki/certificate/sign-intermediate';
-import FlashMessageService from 'ember-cli-flash/services/flash-messages';
+import FlashMessageService from 'vault/services/flash-messages';
 import errorMessage from 'vault/utils/error-message';
 
 interface Args {
