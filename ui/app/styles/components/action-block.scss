@@ -53,7 +53,7 @@
   display: flex;
   flex-wrap: wrap;
   margin: $spacing-m 0;
-  @include until($tablet) {
+  @include until($mobile) {
     display: block;
   }
 }
@@ -67,7 +67,7 @@
 
 .replication-actions-grid-item .action-block {
   width: 100%;
-  @include until($tablet) {
+  @include until($mobile) {
     height: inherit;
   }
 }

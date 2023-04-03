@@ -24,7 +24,7 @@
   padding-right: 324px;
   padding-right: calc(324px + env(safe-area-inset-right));
 
-  @include until($tablet) {
+  @include until($mobile) {
     padding-right: 0;
     padding-bottom: 50vh;
   }
@@ -54,7 +54,7 @@
     z-index: 30;
   }
 
-  @include until($tablet) {
+  @include until($mobile) {
     box-shadow: $box-shadow, 0 0 20px rgba($black, 0.24);
     bottom: 0;
     left: 0;
@@ -80,7 +80,7 @@
   margin: $size-4 0;
   position: relative;
 
-  @include until($tablet) {
+  @include until($mobile) {
     margin-top: 0;
     padding-top: 0;
   }
@@ -106,7 +106,7 @@
   right: $size-8;
   top: calc(#{$header-height} + #{$size-8});
 
-  @include until($tablet) {
+  @include until($mobile) {
     box-shadow: $box-shadow, 0 0 20px rgba($black, 0.24);
     bottom: 0;
     left: 0;

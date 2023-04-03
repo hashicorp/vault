@@ -108,7 +108,7 @@
   background: $white;
   max-width: 8rem;
 
-  @include until($tablet) {
+  @include until($mobile) {
     max-width: 2rem;
     padding-left: 0;
     padding-right: 0;
@@ -116,7 +116,7 @@
 
   .pagination-next-label,
   .pagination-previous-label {
-    @include until($tablet) {
+    @include until($mobile) {
       display: none;
     }
   }
@@ -181,7 +181,7 @@
 }
 
 .list-pagination .pagination-next {
-  @include until($tablet) {
+  @include until($mobile) {
     order: 3;
   }
 }

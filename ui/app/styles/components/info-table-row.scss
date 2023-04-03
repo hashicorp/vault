@@ -11,7 +11,7 @@
     box-shadow: none;
   }
 
-  @include from($tablet) {
+  @include from($mobile) {
     display: flex;
   }
 
@@ -63,14 +63,14 @@
 }
 
 .info-table-row:not(.is-mobile) .column {
-  @include until($tablet) {
+  @include until($mobile) {
     padding: 0;
   }
 
   &:first-child {
     padding-left: 0;
 
-    @include until($tablet) {
+    @include until($mobile) {
       padding: $size-8 0 0;
     }
   }
@@ -78,7 +78,7 @@
   &:last-child {
     padding-right: 0;
 
-    @include until($tablet) {
+    @include until($mobile) {
       padding: 0 0 $size-8;
     }
   }
@@ -90,7 +90,7 @@
   color: $grey;
   font-weight: $font-weight-semibold;
 
-  @include until($tablet) {
+  @include until($mobile) {
     display: none;
   }
   .info-table-row:not(.is-mobile) .column:last-child {

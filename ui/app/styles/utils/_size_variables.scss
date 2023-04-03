@@ -44,7 +44,6 @@ $font-weight-bold: 700;
 
 $gap: 32px !default; // The container horizontal gap, which acts as the offset for breakpoints
 $mobile: 769px;
-$tablet: 769px !default;
 // 960px container + 4rem
 $desktop: 960px + (2 * $gap) !default;
 // 1152px container + 4rem
@@ -55,13 +54,13 @@ $fullhd: 1344px + (2 * $gap) !default;
 $fullhd-enabled: true !default;
 $breakpoints: (
   'mobile': (
-    'until': $tablet,
+    'until': $mobile,
   ),
   'tablet': (
-    'from': $tablet,
+    'from': $mobile,
   ),
   'tablet-only': (
-    'from': $tablet,
+    'from': $mobile,
     'until': $desktop,
   ),
   'touch': (
