@@ -49,8 +49,8 @@ require (
 	github.com/fatih/structs v1.1.0
 	github.com/favadi/protoc-go-inject-tag v1.3.0
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
-	github.com/go-errors/errors v1.4.1
-	github.com/go-ldap/ldap/v3 v3.4.1
+	github.com/go-errors/errors v1.4.2
+	github.com/go-ldap/ldap/v3 v3.4.4
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/go-test/deep v1.1.0
 	github.com/go-zookeeper/zk v1.0.3
@@ -107,7 +107,7 @@ require (
 	github.com/hashicorp/hcp-sdk-go v0.23.0
 	github.com/hashicorp/nomad/api v0.0.0-20220707195938-75f4c2237b28
 	github.com/hashicorp/raft v1.3.10
-	github.com/hashicorp/raft-autopilot v0.1.6
+	github.com/hashicorp/raft-autopilot v0.2.0
 	github.com/hashicorp/raft-boltdb/v2 v2.0.0-20210421194847-a7e34179d62c
 	github.com/hashicorp/raft-snapshot v1.0.4
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.14.0
@@ -126,14 +126,14 @@ require (
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.2.0
 	github.com/hashicorp/vault-plugin-database-snowflake v0.7.0
 	github.com/hashicorp/vault-plugin-mock v0.16.1
-	github.com/hashicorp/vault-plugin-secrets-ad v0.15.0
+	github.com/hashicorp/vault-plugin-secrets-ad v0.10.1-0.20230329210417-0b2cdb26cf5d
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.4-beta1.0.20230330124709-3fcfc5914a22
 	github.com/hashicorp/vault-plugin-secrets-azure v0.15.0
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.15.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.14.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.3.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.14.2
-	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.9.1
+	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.0-beta1.0.20230330173411-06ce71bfa658
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.10.1
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.1.1-0.20230321230503-ee76cdb16f93
 	github.com/hashicorp/vault-testing-stepwise v0.1.3
@@ -187,7 +187,7 @@ require (
 	go.etcd.io/etcd/client/pkg/v3 v3.5.0
 	go.etcd.io/etcd/client/v2 v2.305.0
 	go.etcd.io/etcd/client/v3 v3.5.0
-	go.mongodb.org/atlas v0.15.0
+	go.mongodb.org/atlas v0.24.0
 	go.mongodb.org/mongo-driver v1.7.3
 	go.opentelemetry.io/otel v1.11.2
 	go.opentelemetry.io/otel/sdk v1.11.2
@@ -201,7 +201,7 @@ require (
 	golang.org/x/sync v0.1.0
 	golang.org/x/sys v0.5.0
 	golang.org/x/term v0.5.0
-	golang.org/x/tools v0.4.1-0.20221208213631-3f74d914ae6d
+	golang.org/x/tools v0.6.0
 	google.golang.org/api v0.109.0
 	google.golang.org/grpc v1.51.0
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0
@@ -240,7 +240,7 @@ require (
 	github.com/Azure/go-autorest/autorest/validation v0.3.1 // indirect
 	github.com/Azure/go-autorest/logger v0.2.1 // indirect
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
-	github.com/Azure/go-ntlmssp v0.0.0-20200615164410-66371956d46c // indirect
+	github.com/Azure/go-ntlmssp v0.0.0-20220621081337-cb9428e4ac1e // indirect
 	github.com/AzureAD/microsoft-authentication-library-for-go v0.8.1 // indirect
 	github.com/BurntSushi/toml v1.2.1 // indirect
 	github.com/DataDog/datadog-go v3.2.0+incompatible // indirect
@@ -308,7 +308,7 @@ require (
 	github.com/gabriel-vasile/mimetype v1.3.1 // indirect
 	github.com/gammazero/deque v0.0.0-20190130191400-2afb3858e9c7 // indirect
 	github.com/gammazero/workerpool v0.0.0-20190406235159-88d534f22b56 // indirect
-	github.com/go-asn1-ber/asn1-ber v1.5.1 // indirect
+	github.com/go-asn1-ber/asn1-ber v1.5.4 // indirect
 	github.com/go-ldap/ldif v0.0.0-20200320164324-fd88d9b715b3 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -396,14 +396,13 @@ require (
 	github.com/moby/term v0.0.0-20220808134915-39b0c02b01ae // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/mongodb-forks/digest v1.0.3 // indirect
+	github.com/mongodb-forks/digest v1.0.4 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/nicolai86/scaleway-sdk v1.10.2-0.20180628010248-798f60e20bb2 // indirect
 	github.com/nwaples/rardecode v1.1.2 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.3-0.20211202183452-c5a74bcca799 // indirect
 	github.com/opencontainers/runc v1.1.4 // indirect
-	github.com/openlyinc/pointy v1.1.2 // indirect
 	github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b // indirect
 	github.com/oracle/oci-go-sdk/v60 v60.0.0 // indirect
 	github.com/packethost/packngo v0.1.1-0.20180711074735-b9cb5096f54c // indirect
@@ -447,8 +446,8 @@ require (
 	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.19.1 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20221208152030-732eee02a75a // indirect
-	golang.org/x/mod v0.7.0 // indirect
-	golang.org/x/text v0.7.0 // indirect
+	golang.org/x/mod v0.8.0 // indirect
+	golang.org/x/text v0.8.0 // indirect
 	golang.org/x/time v0.0.0-20220411224347-583f2d630306 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/appengine v1.6.7 // indirect

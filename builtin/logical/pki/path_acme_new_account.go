@@ -169,7 +169,7 @@ func (b *backend) acmeNewAccountSearchHandler(acmeCtx acmeContext, r *logical.Re
 			return nil, fmt.Errorf("error loading account: %w", err)
 		}
 
-		location := acmeCtx.baseUrl.String() + "/acme/account/" + userCtx.Kid
+		location := acmeCtx.baseUrl.String() + "account/" + userCtx.Kid
 		return formatAccountResponse(location, account["status"].(string), account["contact"].([]string)), nil
 	}
 
@@ -201,6 +201,6 @@ func (b *backend) acmeNewAccountCreateHandler(acmeCtx acmeContext, r *logical.Re
 		return nil, fmt.Errorf("failed to create account: %w", err)
 	}
 
-	location := acmeCtx.baseUrl.String() + "/acme/account/" + userCtx.Kid
+	location := acmeCtx.baseUrl.String() + "account/" + userCtx.Kid
 	return formatAccountResponse(location, account["status"].(string), account["contact"].([]string)), nil
 }
