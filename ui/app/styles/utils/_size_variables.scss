@@ -41,21 +41,17 @@ $font-weight-bold: 700;
 
 /* Responsiveness */
 // 960, 1152, and 1344 have been chosen because they are divisible by both 12 and 16
-$gap: 32px !default; // The container horizontal gap, which acts as the offset for breakpoints
 $mobile: 769px;
 // 960px container + 4rem
-$desktop: 960px + (2 * $gap) !default;
+$desktop: 960px + (2 * 32px);
 // 1344px container + 4rem
-$fullhd: 1344px + (2 * $gap) !default;
+$fullhd: 1344px + (2 * 32px);
 
 /* Miscellaneous sizing*/
-// ARG TODO clean up
-$radius-small: 2px !default;
-$radius: 4px !default;
-$radius-large: 6px !default;
-$radius-rounded: 9999px !default;
-$input-radius: $radius;
-$speed: 86ms !default;
+$radius-small: 2px;
+$radius: 4px;
+$radius-large: 6px;
+$speed: 86ms;
 
 $header-height: 4rem;
 $body-size: 14px;

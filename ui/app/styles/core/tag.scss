@@ -8,7 +8,7 @@
 .tag:not(body) {
   align-items: center;
   background-color: $ui-gray-100;
-  border-radius: 2px;
+  border-radius: $radius-small;
   color: $grey;
   display: inline-flex;
   font-size: 0.75rem;

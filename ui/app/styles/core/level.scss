@@ -9,7 +9,7 @@
 }
 
 .level code {
-  border-radius: 2px;
+  border-radius: $radius-small;
 }
 
 .level:not(:last-child) {

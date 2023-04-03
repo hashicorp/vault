@@ -10,7 +10,7 @@
 }
 
 .file-name {
-  border-radius: 2px;
+  border-radius: $radius-small;
   border-width: 1px 1px 1px 0 !important;
   border: 1px solid $ui-gray-300;
   box-shadow: 0 4px 1px rgba(10, 10, 10, 0.06) inset;
@@ -52,7 +52,7 @@
 
 .file-cta {
   border: 1px solid $ui-gray-300;
-  border-radius: 2px;
+  border-radius: $radius-small;
   min-width: auto;
   position: relative;
   white-space: nowrap;
@@ -71,7 +71,7 @@
 .file-name {
   @extend .input;
   border: 1px solid $ui-gray-300;
-  border-radius: 2px;
+  border-radius: $radius-small;
 }
 
 .file-delete-button {

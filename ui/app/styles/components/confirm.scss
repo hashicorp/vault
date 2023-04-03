@@ -6,7 +6,7 @@
 .confirm-wrapper {
   position: relative;
   overflow: hidden;
-  border-radius: 2px;
+  border-radius: $radius-small;
   box-shadow: $box-shadow, $box-shadow-middle;
 }
 
