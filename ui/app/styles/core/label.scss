@@ -20,16 +20,6 @@
   &:not(:last-child) {
     margin-bottom: 0.25rem;
   }
-  // Sizes
-  &.is-small {
-    font-size: $size-8;
-  }
-  &.is-medium {
-    font-size: $size-5;
-  }
-  &.is-large {
-    font-size: $size-4;
-  }
 
   &::before,
   &::after {
