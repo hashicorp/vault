@@ -265,7 +265,7 @@ func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, r *logical.R
 		return b.acmeNewAccountSearchHandler(acmeCtx, r, fields, userCtx, data)
 	}
 
-	// TODO: Limit this only when ToS are required by the operator.
+	// TODO: Limit this only when ToS are required or set by the operator.
 	if !termsOfServiceAgreed {
 		return nil, fmt.Errorf("terms of service not agreed to: %w", ErrUserActionRequired)
 	}

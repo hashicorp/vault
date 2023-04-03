@@ -2,10 +2,18 @@ package pki
 
 import (
 	"context"
+	"crypto"
+	"crypto/rand"
+	"crypto/rsa"
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"testing"
+
+	"github.com/hashicorp/go-cleanhttp"
+	"golang.org/x/crypto/acme"
+	"golang.org/x/net/http2"
 
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -17,54 +25,45 @@ import (
 	"gopkg.in/square/go-jose.v2/json"
 )
 
-// TestAcmeDirectory a basic test that will validate the various directory APIs
-// are available and produce the correct responses.
-func TestAcmeDirectory(t *testing.T) {
+// TestAcmeBasicWorkflow a basic test that will validate a basic ACME workflow using the Golang ACME client.
+func TestAcmeBasicWorkflow(t *testing.T) {
 	t.Parallel()
-	cluster, client, pathConfig := setupAcmeBackend(t)
+	cluster, client, _ := setupAcmeBackend(t)
 	defer cluster.Cleanup()
-
 	cases := []struct {
-		name         string
-		prefixUrl    string
-		directoryUrl string
+		name      string
+		prefixUrl string
 	}{
-		{"root", "", "pki/acme/directory"},
-		{"role", "/roles/test-role", "pki/roles/test-role/acme/directory"},
-		{"issuer", "/issuer/default", "pki/issuer/default/acme/directory"},
-		{"issuer_role", "/issuer/default/roles/test-role", "pki/issuer/default/roles/test-role/acme/directory"},
-		{"issuer_role_acme", "/issuer/acme/roles/acme", "pki/issuer/acme/roles/acme/acme/directory"},
+		{"root", ""},
+		{"role", "/roles/test-role"},
+		{"issuer", "/issuer/default"},
+		{"issuer_role", "/issuer/default/roles/test-role"},
+		{"issuer_role_acme", "/issuer/acme/roles/acme"},
 	}
 	testCtx := context.Background()
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			dirResp, err := client.Logical().ReadRawWithContext(testCtx, tc.directoryUrl)
-			require.NoError(t, err, "failed reading ACME directory configuration")
+			baseAcmeURL := "/v1/pki" + tc.prefixUrl + "/acme/"
+			key, err := rsa.GenerateKey(rand.Reader, 2048)
+			require.NoError(t, err, "failed creating rsa key")
 
-			require.Equal(t, 200, dirResp.StatusCode)
-			require.Equal(t, "application/json", dirResp.Header.Get("Content-Type"))
+			acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, key)
 
-			requiredUrls := map[string]string{
-				"newNonce":   pathConfig + tc.prefixUrl + "/acme/new-nonce",
-				"newAccount": pathConfig + tc.prefixUrl + "/acme/new-account",
-				"newOrder":   pathConfig + tc.prefixUrl + "/acme/new-order",
-				"revokeCert": pathConfig + tc.prefixUrl + "/acme/revoke-cert",
-				"keyChange":  pathConfig + tc.prefixUrl + "/acme/key-change",
-			}
+			discovery, err := acmeClient.Discover(testCtx)
+			require.NoError(t, err, "failed acme discovery call")
 
-			rawBodyBytes, err := io.ReadAll(dirResp.Body)
-			require.NoError(t, err, "failed reading from directory response body")
-			_ = dirResp.Body.Close()
+			discoveryBaseUrl := client.Address() + baseAcmeURL
+			require.Equal(t, discoveryBaseUrl+"new-nonce", discovery.NonceURL)
+			require.Equal(t, discoveryBaseUrl+"new-account", discovery.RegURL)
+			require.Equal(t, discoveryBaseUrl+"new-order", discovery.OrderURL)
+			require.Equal(t, discoveryBaseUrl+"revoke-cert", discovery.RevokeURL)
+			require.Equal(t, discoveryBaseUrl+"key-change", discovery.KeyChangeURL)
 
-			respType := map[string]interface{}{}
-			err = json.Unmarshal(rawBodyBytes, &respType)
-			require.NoError(t, err, "failed unmarshalling ACME directory response body")
-
-			for key, expectedUrl := range requiredUrls {
-				require.Contains(t, respType, key, "missing required value %s from data", key)
-				require.Equal(t, expectedUrl, respType[key], "different URL returned for %s", key)
-			}
+			// TODO: Still in progress
+			// register, err := acmeClient.Register(testCtx, &acme.Account{}, func(tosURL string) bool { return true })
+			// require.NoError(t, err, "failed registering account")
+			// require.Equal(t, acme.StatusValid, register.Status)
 		})
 	}
 }
@@ -172,7 +171,7 @@ func setupAcmeBackend(t *testing.T) (*vault.TestCluster, *api.Client, string) {
 	cluster, client := setupTestPkiCluster(t)
 
 	// Setting templated AIAs should succeed.
-	pathConfig := "https://localhost:8200/v1/pki"
+	pathConfig := client.Address() + "/v1/pki"
 
 	_, err := client.Logical().WriteWithContext(context.Background(), "pki/config/cluster", map[string]interface{}{
 		"path":     pathConfig,
@@ -202,4 +201,28 @@ func setupTestPkiCluster(t *testing.T) (*vault.TestCluster, *api.Client) {
 	client := cluster.Cores[0].Client
 	mountPKIEndpoint(t, client, "pki")
 	return cluster, client
+}
+
+func getAcmeClientForCluster(t *testing.T, cluster *vault.TestCluster, baseUrl string, key crypto.Signer) acme.Client {
+	coreAddr := cluster.Cores[0].Listeners[0].Address
+	tlsConfig := cluster.Cores[0].TLSConfig()
+
+	transport := cleanhttp.DefaultPooledTransport()
+	transport.TLSClientConfig = tlsConfig.Clone()
+	if err := http2.ConfigureTransport(transport); err != nil {
+		t.Fatal(err)
+	}
+	httpClient := &http.Client{Transport: transport}
+	if baseUrl[0] == '/' {
+		baseUrl = baseUrl[1:]
+	}
+	if !strings.HasPrefix(baseUrl, "v1/") {
+		baseUrl = "v1/" + baseUrl
+	}
+	baseAcmeURL := fmt.Sprintf("https://%s/%s", coreAddr.String(), baseUrl)
+	return acme.Client{
+		Key:          key,
+		HTTPClient:   httpClient,
+		DirectoryURL: baseAcmeURL + "directory",
+	}
 }
