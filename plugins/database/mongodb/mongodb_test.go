@@ -12,7 +12,6 @@ import (
 	"reflect"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -387,10 +386,7 @@ func appendToCertPool(t *testing.T, pool *x509.CertPool, caPem []byte) *x509.Cer
 }
 
 var cmpClientOptionsOpts = cmp.Options{
-	cmp.AllowUnexported(http.Transport{}),
-	cmpopts.IgnoreFields(http.Transport{}, "idleLRU"),
-	cmpopts.IgnoreFields(http.Transport{}, "Proxy"),
-	cmpopts.IgnoreTypes(atomic.Value{}, sync.Once{}),
+	cmpopts.IgnoreTypes(http.Transport{}),
 
 	cmp.AllowUnexported(options.ClientOptions{}),
 
