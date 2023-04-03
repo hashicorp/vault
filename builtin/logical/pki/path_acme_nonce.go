@@ -71,11 +71,14 @@ func (b *backend) acmeNonceHandler(ctx acmeContext, r *logical.Request, _ *frame
 		},
 		Data: map[string]interface{}{
 			logical.HTTPStatusCode: httpStatus,
+			// Get around Vault limitation of requiring a body set if the status is not http.StatusNoContent
+			// for our HEAD request responses.
+			logical.HTTPContentType: "",
 		},
 	}, nil
 }
 
 func genAcmeLinkHeader(ctx acmeContext) []string {
-	path := fmt.Sprintf("<%s>;rel=\"index\"", ctx.baseUrl.JoinPath("/acme/directory").String())
+	path := fmt.Sprintf("<%s>;rel=\"index\"", ctx.baseUrl.JoinPath("directory").String())
 	return []string{path}
 }
