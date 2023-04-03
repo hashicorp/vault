@@ -4,7 +4,7 @@
  */
 
 /*
-File notes:
+ARG TODO post bulma removal:
 - size-x and and spacing-x variables often overlap. Ideally, we could combine these to cover all the size requirements.
  */
 
@@ -57,9 +57,7 @@ $fullhd: 1344px + (2 * 32px);
 $speed: 150ms;
 $speed-slow: $speed * 2;
 
-$console-spacing: 1.5rem; // 24px
-
-// Nav
+/* Nav */
 $drawer-width: 300px;
 
 // Wizard
