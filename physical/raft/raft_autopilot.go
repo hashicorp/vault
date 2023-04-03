@@ -436,7 +436,7 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 		// It shouldn't be a voter and end up in this state.
 		if apServerState, found := apServerStates[raft.ServerID(id)]; found && apServerState.Server.NodeType != "" {
 			server.NodeType = apServerState.Server.NodeType
-		} else if state.DesiredSuffrage != "non-voter" {
+		} else if state.DesiredSuffrage == "voter" {
 			server.NodeType = autopilot.NodeVoter
 		}
 
