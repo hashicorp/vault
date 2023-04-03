@@ -613,20 +613,12 @@ func waitForCoreUnseal(t *testing.T, core *vault.TestClusterCore) {
 	t.Fatalf("expected core %v to unseal before deadline but it has not", core.NodeID)
 }
 
-// isHealthyAfterStabilization will use the supplied leader core to query the health of Raft Autopilot up until just after the supplied deadline.
-// It will return when the Raft Autopilot state is reported as healthy, or just after the specified stabilization time.
+// isHealthyAfterStabilization will use the supplied leader core to query the health of Raft Autopilot just after the specified deadline.
 func isHealthyAfterStabilization(t *testing.T, leaderCore *vault.TestClusterCore, stabilizationTime time.Duration) bool {
 	timeoutGrace := 2 * time.Second
-	deadline := time.Now().Add(stabilizationTime).Add(timeoutGrace)
-	healthy := false
-	for time.Now().Before(deadline) {
-		state, err := leaderCore.Client.Sys().RaftAutopilotState()
-		require.NoError(t, err)
-		if state.Healthy {
-			healthy = true
-		}
-		time.Sleep(1 * time.Second)
-	}
-
-	return healthy
+	time.Sleep(stabilizationTime + timeoutGrace)
+	state, err := leaderCore.Client.Sys().RaftAutopilotState()
+	require.NoError(t, err)
+	require.NotNil(t, state)
+	return state.Healthy
 }
