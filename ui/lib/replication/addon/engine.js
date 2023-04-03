@@ -3,22 +3,20 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-import Engine from 'ember-engines/engine';
+import Engine from '@ember/engine';
 import loadInitializers from 'ember-load-initializers';
-import Resolver from './resolver';
+import Resolver from 'ember-resolver';
 import config from './config/environment';
 
 const { modulePrefix } = config;
-/* eslint-disable ember/avoid-leaking-state-in-ember-objects */
-const Eng = Engine.extend({
-  modulePrefix,
-  Resolver,
-  dependencies: {
-    services: ['auth', 'flash-messages', 'namespace', 'replication-mode', 'router', 'store', 'version'],
+
+export default class ReplicationEngine extends Engine {
+  modulePrefix = modulePrefix;
+  Resolver = Resolver;
+  dependencies = {
+    services: ['auth', 'namespace', 'replication-mode', 'router', 'store', 'version'],
     externalRoutes: ['replication'],
-  },
-});
+  };
+}
 
-loadInitializers(Eng, modulePrefix);
-
-export default Eng;
+loadInitializers(ReplicationEngine, modulePrefix);

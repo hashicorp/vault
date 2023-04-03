@@ -19,7 +19,6 @@ export default class PkiEngine extends Engine {
     services: [
       'auth',
       'download',
-      'flash-messages',
       'namespace',
       'path-help',
       'router',

@@ -17,7 +17,6 @@ const Eng = Engine.extend({
     services: [
       'auth',
       'download',
-      'flash-messages',
       'namespace',
       'path-help',
       'router',
