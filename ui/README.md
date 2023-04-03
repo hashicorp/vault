@@ -69,7 +69,7 @@ These commands may also be [aliased on your local device](https://github.com/has
 
 ## Running the UI locally
 
-> a Vault server must be running, see step above.
+> a Vault server must be running, see previous step.
 > These steps will start an Ember CLI server that proxies requests to port 8200,
 > and enable live rebuilding of the application as you change the UI application code.
 > Visit your app at [http://localhost:4200](http://localhost:4200).
@@ -111,7 +111,7 @@ setting `VAULT_UI` environment variable.
 
 ## Development
 
-## Quick commands
+### Quick commands
 
 | Command                                                                                  | Description                                                         |
 | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
@@ -121,8 +121,9 @@ setting `VAULT_UI` environment variable.
 | `ember g component foo --in lib/core`                                                    | generate a component in the /addon engine                           |
 | `echo "export { default } from 'core/components/foo';" > lib/core/app/components/foo.js` | export component from addon engine to main app                      |
 | `yarn test:quick -f='<test name>'` -s                                                    | run tests in the browser, filtering by test name                    |
+| `yarn lint:js`                                                                           | lint javascript files                                               |
 
-### Code Generators
+#### Code Generators
 
 Make use of the many generators for code, try `ember help generate` for more details. If you're using a component that can be widely-used, consider making it an `addon` component instead (see [this PR](https://github.com/hashicorp/vault/pull/6629) for more details)
 
@@ -131,7 +132,7 @@ eg. a reusable component named foo that you'd like in the core engine (read more
 - `ember g component foo --in lib/core`
 - `echo "export { default } from 'core/components/foo';" > lib/core/app/components/foo.js`
 
-### Running Tests
+#### Running Tests
 
 Running tests will spin up a Vault dev server on port :9200 via a
 pretest script that testem (the test runner) executes. All of the
@@ -142,13 +143,13 @@ acceptance tests then run, which proxy requests back to that server.
 - `yarn run test -f="policies"` to filter the tests that are run. `-f` gets passed into
   [QUnit's `filter` config](https://api.qunitjs.com/config/QUnit.config#qunitconfigfilter-string--default-undefined)
 
-### Linting
+#### Linting
 
 - `yarn lint:js`
 - `yarn lint:hbs`
 - `yarn lint:fix`
 
-### Further Reading / Useful Links
+#### Further Reading / Useful Links
 
 - [ember.js](https://emberjs.com/)
 - [ember-cli](https://cli.emberjs.com/release/)
@@ -156,4 +157,6 @@ acceptance tests then run, which proxy requests back to that server.
   - [ember inspector for chrome](https://chrome.google.com/webstore/detail/ember-inspector/bmdblncegkenkacieihfhpjfppoconhi)
   - [ember inspector for firefox](https://addons.mozilla.org/en-US/firefox/addon/ember-inspector/)
 
-## Best Practices
+### Best Practices
+
+Hello and thank you for contributing to the Vault UI! Below is a list of patterns we follow on the UI team to keep in mind when contributing to the UI codebase. This is an ever-evolving process, so we welcome any comments, questions or general feedback.
