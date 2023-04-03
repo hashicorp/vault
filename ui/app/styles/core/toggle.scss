@@ -55,7 +55,7 @@
   transform: translate3d(0, 0, 0);
   border-radius: 50%;
   background: white;
-  transition: all 0.25s ease-out;
+  transition: all 0.25s $easing;
   content: '';
 }
 .toggle[type='checkbox']:checked + label::before {

@@ -55,6 +55,7 @@ $fullhd: 1344px + (2 * 32px);
 /* Animations and transitions */
 $speed: 150ms;
 $speed-slow: $speed * 2;
+$easing: ease-out;
 
 /* Nav */
 $drawer-width: 300px;
