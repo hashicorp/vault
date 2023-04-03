@@ -88,11 +88,11 @@ func patternAcmeNewAccount(b *backend, pattern string) *framework.Path {
 	}
 }
 
-type acmeParsedOperation func(acmeCtx acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}) (*logical.Response, error)
+type acmeParsedOperation func(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}) (*logical.Response, error)
 
 func (b *backend) acmeParsedWrapper(op acmeParsedOperation) framework.OperationFunc {
-	return b.acmeWrapper(func(acmeCtx acmeContext, r *logical.Request, fields *framework.FieldData) (*logical.Response, error) {
-		user, data, err := b.acmeState.ParseRequestParams(fields)
+	return b.acmeWrapper(func(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData) (*logical.Response, error) {
+		user, data, err := b.acmeState.ParseRequestParams(acmeCtx, fields)
 		if err != nil {
 			return nil, err
 		}
@@ -101,7 +101,7 @@ func (b *backend) acmeParsedWrapper(op acmeParsedOperation) framework.OperationF
 	})
 }
 
-func (b *backend) acmeNewAccountHandler(acmeCtx acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}) (*logical.Response, error) {
+func (b *backend) acmeNewAccountHandler(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}) (*logical.Response, error) {
 	// Parameters
 	var ok bool
 	var onlyReturnExisting bool
@@ -142,16 +142,16 @@ func (b *backend) acmeNewAccountHandler(acmeCtx acmeContext, r *logical.Request,
 	return b.acmeNewAccountCreateHandler(acmeCtx, r, fields, userCtx, data, contact, termsOfServiceAgreed)
 }
 
-func formatAccountResponse(location string, status string, contact []string) *logical.Response {
+func formatAccountResponse(location string, acct *acmeAccount) *logical.Response {
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"status": status,
+			"status": acct.Status,
 			"orders": location + "/orders",
 		},
 	}
 
-	if len(contact) > 0 {
-		resp.Data["contact"] = contact
+	if len(acct.Contact) > 0 {
+		resp.Data["contact"] = acct.Contact
 	}
 
 	resp.Headers["Location"] = []string{location}
@@ -159,18 +159,18 @@ func formatAccountResponse(location string, status string, contact []string) *lo
 	return resp
 }
 
-func (b *backend) acmeNewAccountSearchHandler(acmeCtx acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}) (*logical.Response, error) {
-	if userCtx.Existing || b.acmeState.DoesAccountExist(userCtx.Kid) {
+func (b *backend) acmeNewAccountSearchHandler(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}) (*logical.Response, error) {
+	if userCtx.Existing || b.acmeState.DoesAccountExist(acmeCtx, userCtx.Kid) {
 		// This account exists; return its details. It would be slightly
 		// weird to specify a kid in the request (and not use an explicit
 		// jwk here), but we might as well support it too.
-		account, err := b.acmeState.LoadAccount(userCtx.Kid)
+		account, err := b.acmeState.LoadAccount(acmeCtx, userCtx.Kid)
 		if err != nil {
 			return nil, fmt.Errorf("error loading account: %w", err)
 		}
 
 		location := acmeCtx.baseUrl.String() + "account/" + userCtx.Kid
-		return formatAccountResponse(location, account["status"].(string), account["contact"].([]string)), nil
+		return formatAccountResponse(location, account), nil
 	}
 
 	// Per RFC 8555 Section 7.3.1. Finding an Account URL Given a Key:
@@ -181,13 +181,13 @@ func (b *backend) acmeNewAccountSearchHandler(acmeCtx acmeContext, r *logical.Re
 	return nil, fmt.Errorf("An account with this key does not exist: %w", ErrAccountDoesNotExist)
 }
 
-func (b *backend) acmeNewAccountCreateHandler(acmeCtx acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}, contact []string, termsOfServiceAgreed bool) (*logical.Response, error) {
+func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}, contact []string, termsOfServiceAgreed bool) (*logical.Response, error) {
 	if userCtx.Existing {
 		return nil, fmt.Errorf("cannot submit to newAccount with 'kid': %w", ErrMalformed)
 	}
 
 	// If the account already exists, return the existing one.
-	if b.acmeState.DoesAccountExist(userCtx.Kid) {
+	if b.acmeState.DoesAccountExist(acmeCtx, userCtx.Kid) {
 		return b.acmeNewAccountSearchHandler(acmeCtx, r, fields, userCtx, data)
 	}
 
@@ -196,11 +196,11 @@ func (b *backend) acmeNewAccountCreateHandler(acmeCtx acmeContext, r *logical.Re
 		return nil, fmt.Errorf("terms of service not agreed to: %w", ErrUserActionRequired)
 	}
 
-	account, err := b.acmeState.CreateAccount(userCtx, contact, termsOfServiceAgreed)
+	account, err := b.acmeState.CreateAccount(acmeCtx, userCtx, contact, termsOfServiceAgreed)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create account: %w", err)
 	}
 
 	location := acmeCtx.baseUrl.String() + "account/" + userCtx.Kid
-	return formatAccountResponse(location, account["status"].(string), account["contact"].([]string)), nil
+	return formatAccountResponse(location, account), nil
 }

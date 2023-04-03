@@ -5,15 +5,23 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
-// How long nonces are considered valid.
-const nonceExpiry = 15 * time.Minute
+const (
+	// How long nonces are considered valid.
+	nonceExpiry = 15 * time.Minute
+
+	// Path Prefixes
+	acmePathPrefix    = "acme/"
+	acmeAccountPrefix = acmePathPrefix + "accounts/"
+)
 
 type acmeState struct {
 	nextExpiry *atomic.Int64
@@ -99,36 +107,85 @@ func (a *acmeState) TidyNonces() {
 	a.nextExpiry.Store(nextRun.Unix())
 }
 
-func (a *acmeState) CreateAccount(c *jwsCtx, contact []string, termsOfServiceAgreed bool) (map[string]interface{}, error) {
-	// TODO
-	return nil, nil
+type ACMEStates string
+const (
+  StatusValid = "valid"
+  StatusDeactivated = "deactivated"
+  StatusRevoked = "revoked"
+)
+
+type acmeAccount struct {
+	KeyId                string   `json:"-"`
+	Status                ACMEStates   `json:"state"`
+	Contact              []string `json:"contact"`
+	TermsOfServiceAgreed bool     `json:"termsOfServiceAgreed"`
+	Jwk                  []byte   `json:"jwk"`
 }
 
-func (a *acmeState) LoadAccount(keyID string) (map[string]interface{}, error) {
-	// TODO
-	return nil, nil
+func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, contact []string, termsOfServiceAgreed bool) (*acmeAccount, error) {
+	acct := &acmeAccount{
+		KeyId:                c.Kid,
+		Contact:              contact,
+		TermsOfServiceAgreed: termsOfServiceAgreed,
+		Jwk:                  c.Jwk,
+	}
+
+	json, err := logical.StorageEntryJSON(acmeAccountPrefix+c.Kid, acct)
+	if err != nil {
+		return nil, fmt.Errorf("error creating account entry: %w", err)
+	}
+
+	if err := ac.sc.Storage.Put(ac.sc.Context, json); err != nil {
+		return nil, fmt.Errorf("error writing account entry: %w", err)
+	}
+
+	return acct, nil
 }
 
-func (a *acmeState) DoesAccountExist(keyId string) bool {
-	account, err := a.LoadAccount(keyId)
-	return err == nil && len(account) > 0
+func cleanKid(keyID string) string {
+	pieces := strings.Split(keyID, "/")
+	return pieces[len(pieces)-1]
 }
 
-func (a *acmeState) LoadJWK(keyID string) ([]byte, error) {
-	key, err := a.LoadAccount(keyID)
+func (a *acmeState) LoadAccount(ac *acmeContext, keyID string) (*acmeAccount, error) {
+	kid := cleanKid(keyID)
+
+	entry, err := ac.sc.Storage.Get(ac.sc.Context, acmeAccountPrefix+kid)
+	if err != nil {
+		return nil, fmt.Errorf("error loading account: %w", err)
+	}
+	if entry == nil {
+		return nil, fmt.Errorf("account not found: %w", ErrMalformed)
+	}
+
+	var acct acmeAccount
+	err = entry.DecodeJSON(&acct)
+	if err != nil {
+		return nil, fmt.Errorf("error loading account: %w", err)
+	}
+
+	return &acct, nil
+}
+
+func (a *acmeState) DoesAccountExist(ac *acmeContext, keyId string) bool {
+	account, err := a.LoadAccount(ac, keyId)
+	return err == nil && account != nil
+}
+
+func (a *acmeState) LoadJWK(ac *acmeContext, keyID string) ([]byte, error) {
+	key, err := a.LoadAccount(ac, keyID)
 	if err != nil {
 		return nil, err
 	}
 
-	jwk, present := key["jwk"]
-	if !present {
+	if len(key.Jwk) == 0 {
 		return nil, fmt.Errorf("malformed key entry lacks JWK")
 	}
 
-	return jwk.([]byte), nil
+	return key.Jwk, nil
 }
 
-func (a *acmeState) ParseRequestParams(data *framework.FieldData) (*jwsCtx, map[string]interface{}, error) {
+func (a *acmeState) ParseRequestParams(ac *acmeContext, data *framework.FieldData) (*jwsCtx, map[string]interface{}, error) {
 	var c jwsCtx
 	var m map[string]interface{}
 
@@ -143,7 +200,7 @@ func (a *acmeState) ParseRequestParams(data *framework.FieldData) (*jwsCtx, map[
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to base64 parse 'protected': %s: %w", err, ErrMalformed)
 	}
-	if err = c.UnmarshalJSON(a, jwkBytes); err != nil {
+	if err = c.UnmarshalJSON(a, ac, jwkBytes); err != nil {
 		return nil, nil, fmt.Errorf("failed to json unmarshal 'protected': %w", err)
 	}
 
