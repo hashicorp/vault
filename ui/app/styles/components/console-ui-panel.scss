@@ -37,7 +37,7 @@
   color: $white;
   display: flex;
   flex-direction: column;
-  font-size: $body-size;
+  font-size: $size-8;
   font-weight: $font-weight-semibold;
   justify-content: flex-end;
   min-height: 100%;
@@ -48,19 +48,19 @@
   p {
     background: none;
     color: inherit;
-    font-size: $body-size;
+    font-size: $size-8;
     min-height: 2rem;
     padding: 0;
 
     &:not(.console-ui-command):not(.CodeMirror-line) {
-      padding-left: $console-spacing;
+      padding-left: $size-4;
     }
   }
 
   .cm-s-hashi.CodeMirror {
     background-color: rgba($black, 0.5) !important;
     font-weight: $font-weight-normal;
-    margin-left: $console-spacing;
+    margin-left: $size-4;
     padding: $size-8 $size-4;
   }
 }
@@ -108,7 +108,7 @@
 }
 
 .console-ui-alert {
-  margin-left: calc(#{$console-spacing} - 0.33rem);
+  margin-left: calc(#{$size-4} - 0.33rem);
   position: relative;
 
   svg {

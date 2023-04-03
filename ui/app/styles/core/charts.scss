@@ -204,7 +204,7 @@ h2.chart-title {
 
 p.chart-description {
   color: $ui-gray-700;
-  font-size: $body-size;
+  font-size: $size-8;
   line-height: 18px;
   margin-bottom: $spacing-xs;
 }
@@ -219,7 +219,7 @@ p.chart-subtext {
 h3.data-details {
   font-weight: $font-weight-bold;
   font-size: $size-8;
-  line-height: $body-size;
+  line-height: $size-8;
   margin-bottom: $spacing-xs;
 }
 

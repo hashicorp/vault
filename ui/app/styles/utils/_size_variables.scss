@@ -53,17 +53,16 @@ $desktop: 960px + (2 * 32px);
 // 1344px container + 4rem
 $fullhd: 1344px + (2 * 32px);
 
-/* Transition */
-$speed: 86ms;
-
-$body-size: 14px;
+/* Animations and transitions */
+$speed: 150ms;
+$speed-slow: $speed * 2;
 
 $console-spacing: 1.5rem; // 24px
+
+// Nav
+$drawer-width: 300px;
 
 // Wizard
 // Not being used: https://github.com/hashicorp/vault/pull/19220
 // $wizard-progress-bar-height: 6px;
 // $wizard-progress-check-size: 16px;
-
-// Div height
-$medium-height: 125px;

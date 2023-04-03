@@ -107,7 +107,7 @@
   grid-template-columns: repeat(3, 1fr);
 }
 .is-medium-height {
-  height: $medium-height;
+  height: 125px;
 }
 .is-grid-column-span-3 {
   grid-column-end: span 3;
