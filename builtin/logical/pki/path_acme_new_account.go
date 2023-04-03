@@ -1,7 +1,9 @@
 package pki
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -97,7 +99,69 @@ func (b *backend) acmeParsedWrapper(op acmeParsedOperation) framework.OperationF
 			return nil, err
 		}
 
-		return op(acmeCtx, r, fields, user, data)
+		resp, err := op(acmeCtx, r, fields, user, data)
+
+		// Our response handlers might not add the necessary headers.
+		if resp != nil {
+			if resp.Headers == nil {
+				resp.Headers = map[string][]string{}
+			}
+
+			if _, ok := resp.Headers["Replay-Nonce"]; !ok {
+				nonce, _, err := b.acmeState.GetNonce()
+				if err != nil {
+					return nil, err
+				}
+
+				resp.Headers["Replay-Nonce"] = []string{nonce}
+			}
+
+			if _, ok := resp.Headers["Link"]; !ok {
+				resp.Headers["Link"] = genAcmeLinkHeader(acmeCtx)
+			} else {
+				directory := genAcmeLinkHeader(acmeCtx)[0]
+				addDirectory := true
+				for _, item := range resp.Headers["Link"] {
+					if item == directory {
+						addDirectory = false
+						break
+					}
+				}
+				if addDirectory {
+					resp.Headers["Link"] = append(resp.Headers["Link"], directory)
+				}
+			}
+
+			// ACME responses don't understand Vault's default encoding
+			// format. Rather than expecting everything to handle creating
+			// ACME-formatted responses, do the marshaling in one place.
+			if _, ok := resp.Data[logical.HTTPRawBody]; !ok {
+				ignored_values := map[string]bool{logical.HTTPContentType: true, logical.HTTPStatusCode: true}
+				fields := map[string]interface{}{}
+				body := map[string]interface{}{
+					logical.HTTPContentType: "application/json",
+					logical.HTTPStatusCode:  http.StatusOK,
+				}
+
+				for key, value := range resp.Data {
+					if _, present := ignored_values[key]; !present {
+						fields[key] = value
+					} else {
+						body[key] = value
+					}
+				}
+
+				rawBody, err := json.Marshal(fields)
+				if err != nil {
+					return nil, fmt.Errorf("Error marshaling JSON body: %w", err)
+				}
+
+				body[logical.HTTPRawBody] = rawBody
+				resp.Data = body
+			}
+		}
+
+		return resp, err
 	})
 }
 
@@ -105,14 +169,23 @@ func (b *backend) acmeNewAccountHandler(acmeCtx *acmeContext, r *logical.Request
 	// Parameters
 	var ok bool
 	var onlyReturnExisting bool
-	var contact []string
+	var contacts []string
 	var termsOfServiceAgreed bool
 
 	rawContact, present := data["contact"]
 	if present {
-		contact, ok = rawContact.([]string)
+		listContact, ok := rawContact.([]interface{})
 		if !ok {
-			return nil, fmt.Errorf("invalid type for field 'contact': %w", ErrMalformed)
+			return nil, fmt.Errorf("invalid type (%T) for field 'contact': %w", rawContact, ErrMalformed)
+		}
+
+		for index, singleContact := range listContact {
+			contact, ok := singleContact.(string)
+			if !ok {
+				return nil, fmt.Errorf("invalid type (%T) for field 'contact' item %d: %w", singleContact, index, ErrMalformed)
+			}
+
+			contacts = append(contacts, contact)
 		}
 	}
 
@@ -120,7 +193,7 @@ func (b *backend) acmeNewAccountHandler(acmeCtx *acmeContext, r *logical.Request
 	if present {
 		termsOfServiceAgreed, ok = rawTermsOfServiceAgreed.(bool)
 		if !ok {
-			return nil, fmt.Errorf("invalid type for field 'termsOfServiceAgreed': %w", ErrMalformed)
+			return nil, fmt.Errorf("invalid type (%T) for field 'termsOfServiceAgreed': %w", rawTermsOfServiceAgreed, ErrMalformed)
 		}
 	}
 
@@ -128,7 +201,7 @@ func (b *backend) acmeNewAccountHandler(acmeCtx *acmeContext, r *logical.Request
 	if present {
 		onlyReturnExisting, ok = rawOnlyReturnExisting.(bool)
 		if !ok {
-			return nil, fmt.Errorf("invalid type for field 'onlyReturnExisting': %w", ErrMalformed)
+			return nil, fmt.Errorf("invalid type (%T) for field 'onlyReturnExisting': %w", rawOnlyReturnExisting, ErrMalformed)
 		}
 	}
 
@@ -139,7 +212,7 @@ func (b *backend) acmeNewAccountHandler(acmeCtx *acmeContext, r *logical.Request
 		return b.acmeNewAccountSearchHandler(acmeCtx, r, fields, userCtx, data)
 	}
 
-	return b.acmeNewAccountCreateHandler(acmeCtx, r, fields, userCtx, data, contact, termsOfServiceAgreed)
+	return b.acmeNewAccountCreateHandler(acmeCtx, r, fields, userCtx, data, contacts, termsOfServiceAgreed)
 }
 
 func formatAccountResponse(location string, acct *acmeAccount) *logical.Response {
@@ -148,13 +221,14 @@ func formatAccountResponse(location string, acct *acmeAccount) *logical.Response
 			"status": acct.Status,
 			"orders": location + "/orders",
 		},
+		Headers: map[string][]string{
+			"Location": {location},
+		},
 	}
 
 	if len(acct.Contact) > 0 {
 		resp.Data["contact"] = acct.Contact
 	}
-
-	resp.Headers["Location"] = []string{location}
 
 	return resp
 }
@@ -202,5 +276,12 @@ func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, r *logical.R
 	}
 
 	location := acmeCtx.baseUrl.String() + "account/" + userCtx.Kid
-	return formatAccountResponse(location, account), nil
+	resp := formatAccountResponse(location, account)
+
+	// Per RFC 8555 Section 7.3. Account Management:
+	//
+	// > The server returns this account object in a 201 (Created) response,
+	// > with the account URL in a Location header field.
+	resp.Data[logical.HTTPStatusCode] = http.StatusCreated
+	return resp, nil
 }

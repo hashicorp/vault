@@ -85,7 +85,7 @@ func (c *jwsCtx) UnmarshalJSON(a *acmeState, ac *acmeContext, jws []byte) error 
 		return fmt.Errorf("received invalid jwk: %w", ErrMalformed)
 	}
 
-	if c.Kid != "" {
+	if c.Kid == "" {
 		// Create a key ID
 		kid, err := c.Key.Thumbprint(crypto.SHA256)
 		if err != nil {

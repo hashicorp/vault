@@ -108,18 +108,19 @@ func (a *acmeState) TidyNonces() {
 }
 
 type ACMEStates string
+
 const (
-  StatusValid = "valid"
-  StatusDeactivated = "deactivated"
-  StatusRevoked = "revoked"
+	StatusValid       = "valid"
+	StatusDeactivated = "deactivated"
+	StatusRevoked     = "revoked"
 )
 
 type acmeAccount struct {
-	KeyId                string   `json:"-"`
-	Status                ACMEStates   `json:"state"`
-	Contact              []string `json:"contact"`
-	TermsOfServiceAgreed bool     `json:"termsOfServiceAgreed"`
-	Jwk                  []byte   `json:"jwk"`
+	KeyId                string     `json:"-"`
+	Status               ACMEStates `json:"state"`
+	Contact              []string   `json:"contact"`
+	TermsOfServiceAgreed bool       `json:"termsOfServiceAgreed"`
+	Jwk                  []byte     `json:"jwk"`
 }
 
 func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, contact []string, termsOfServiceAgreed bool) (*acmeAccount, error) {
