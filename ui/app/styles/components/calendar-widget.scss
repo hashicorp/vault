@@ -71,7 +71,7 @@ $dark-gray: #535f73;
       color: black;
       text-align: center;
       border: 1px solid $ui-gray-200;
-      border-radius: $radius-small;
+      border-radius: $radius;
     }
     &.is-current-month {
       border: 1px solid $ui-gray-900;
@@ -104,7 +104,7 @@ $dark-gray: #535f73;
   grid-template-rows: 0.7fr 3fr;
   box-shadow: $box-shadow, $box-shadow-middle;
   background-color: white;
-  border-radius: $radius-small;
+  border-radius: $radius;
 }
 
 .calendar-widget-grid {

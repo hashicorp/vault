@@ -11,7 +11,7 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
 .button {
   background-color: $grey-lightest;
   border: 1px solid $grey-light;
-  border-radius: $radius-small;
+  border-radius: $radius;
   box-shadow: $box-shadow-low;
   cursor: pointer;
   color: $ui-gray-800;
