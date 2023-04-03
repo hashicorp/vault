@@ -6,17 +6,7 @@
 /* This helper includes styles relating to: font-size, font-family, font-alignment, text-transform, text-weight, font-style, text-decoration. */
 
 // font size helpers
-.is-size-1 {
-  font-size: $size-1 !important;
-}
-
-.is-size-2 {
-  font-size: $size-2 !important;
-}
-
-.is-size-3 {
-  font-size: $size-3 !important;
-}
+// ARG TODO future pr once bulma is removed, replace these naming: font-size-xx
 
 .is-size-4 {
   font-size: $size-4 !important;
