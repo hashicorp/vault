@@ -69,7 +69,7 @@ func AgentProxyStringWithProxiedUserAgent(proxiedUserAgent string) string {
 
 // AgentAutoAuthString returns the consistent user-agent string for Vault Agent Auto-Auth.
 //
-// e.g. Vault Agent Auto Auth/0.10.4 (+https://www.vaultproject.io/; go1.10.1)
+// e.g. Vault Agent Auto-Auth/0.10.4 (+https://www.vaultproject.io/; go1.10.1)
 func AgentAutoAuthString() string {
 	return fmt.Sprintf("Vault Agent Auto-Auth/%s (+%s; %s)",
 		versionFunc(), projectURL, rt)

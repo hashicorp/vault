@@ -5,6 +5,8 @@ package useragent
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestUserAgent(t *testing.T) {
@@ -15,14 +17,12 @@ func TestUserAgent(t *testing.T) {
 	act := String()
 
 	exp := "Vault/1.2.3 (+https://vault-test.com; go5.0)"
-	if exp != act {
-		t.Errorf("expected %q to be %q", act, exp)
-	}
+	require.Equal(t, exp, act)
 }
 
-// TestUserAgentVaultAgent tests the AgentString() function works
+// TestUserAgent_VaultAgent tests the AgentString() function works
 // as expected
-func TestUserAgentVaultAgent(t *testing.T) {
+func TestUserAgent_VaultAgent(t *testing.T) {
 	projectURL = "https://vault-test.com"
 	rt = "go5.0"
 	versionFunc = func() string { return "1.2.3" }
@@ -30,14 +30,12 @@ func TestUserAgentVaultAgent(t *testing.T) {
 	act := AgentString()
 
 	exp := "Vault Agent/1.2.3 (+https://vault-test.com; go5.0)"
-	if exp != act {
-		t.Errorf("expected %q to be %q", act, exp)
-	}
+	require.Equal(t, exp, act)
 }
 
-// TestUserAgentVaultAgentTemplating tests the AgentTemplatingString() function works
+// TestUserAgent_VaultAgentTemplating tests the AgentTemplatingString() function works
 // as expected
-func TestUserAgentVaultAgentTemplating(t *testing.T) {
+func TestUserAgent_VaultAgentTemplating(t *testing.T) {
 	projectURL = "https://vault-test.com"
 	rt = "go5.0"
 	versionFunc = func() string { return "1.2.3" }
@@ -45,14 +43,12 @@ func TestUserAgentVaultAgentTemplating(t *testing.T) {
 	act := AgentTemplatingString()
 
 	exp := "Vault Agent Templating/1.2.3 (+https://vault-test.com; go5.0)"
-	if exp != act {
-		t.Errorf("expected %q to be %q", act, exp)
-	}
+	require.Equal(t, exp, act)
 }
 
-// TestUserAgentVaultAgentProxy tests the AgentProxyString() function works
+// TestUserAgent_VaultAgentProxy tests the AgentProxyString() function works
 // as expected
-func TestUserAgentVaultAgentProxy(t *testing.T) {
+func TestUserAgent_VaultAgentProxy(t *testing.T) {
 	projectURL = "https://vault-test.com"
 	rt = "go5.0"
 	versionFunc = func() string { return "1.2.3" }
@@ -60,14 +56,12 @@ func TestUserAgentVaultAgentProxy(t *testing.T) {
 	act := AgentProxyString()
 
 	exp := "Vault Agent API Proxy/1.2.3 (+https://vault-test.com; go5.0)"
-	if exp != act {
-		t.Errorf("expected %q to be %q", act, exp)
-	}
+	require.Equal(t, exp, act)
 }
 
-// TestUserAgentVaultAgentProxyWithProxiedUserAgent tests the AgentProxyStringWithProxiedUserAgent()
+// TestUserAgent_VaultAgentProxyWithProxiedUserAgent tests the AgentProxyStringWithProxiedUserAgent()
 // function works as expected
-func TestUserAgentVaultAgentProxyWithProxiedUserAgent(t *testing.T) {
+func TestUserAgent_VaultAgentProxyWithProxiedUserAgent(t *testing.T) {
 	projectURL = "https://vault-test.com"
 	rt = "go5.0"
 	versionFunc = func() string { return "1.2.3" }
@@ -76,14 +70,12 @@ func TestUserAgentVaultAgentProxyWithProxiedUserAgent(t *testing.T) {
 	act := AgentProxyStringWithProxiedUserAgent(userAgent)
 
 	exp := "Vault Agent API Proxy/1.2.3 (+https://vault-test.com; go5.0); my-user-agent"
-	if exp != act {
-		t.Errorf("expected %q to be %q", act, exp)
-	}
+	require.Equal(t, exp, act)
 }
 
-// TestUserAgentVaultAgentAutoAuth tests the AgentAutoAuthString() function works
+// TestUserAgent_VaultAgentAutoAuth tests the AgentAutoAuthString() function works
 // as expected
-func TestUserAgentVaultAgentAutoAuth(t *testing.T) {
+func TestUserAgent_VaultAgentAutoAuth(t *testing.T) {
 	projectURL = "https://vault-test.com"
 	rt = "go5.0"
 	versionFunc = func() string { return "1.2.3" }
@@ -91,7 +83,5 @@ func TestUserAgentVaultAgentAutoAuth(t *testing.T) {
 	act := AgentAutoAuthString()
 
 	exp := "Vault Agent Auto-Auth/1.2.3 (+https://vault-test.com; go5.0)"
-	if exp != act {
-		t.Errorf("expected %q to be %q", act, exp)
-	}
+	require.Equal(t, exp, act)
 }
