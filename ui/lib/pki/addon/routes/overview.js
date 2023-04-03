@@ -62,6 +62,8 @@ export default class PkiOverviewRoute extends Route {
     const roles = resolvedModel.roles;
     const certificates = resolvedModel.certificates;
 
+    controller.message = PKI_DEFAULT_EMPTY_STATE_MSG;
+
     if (roles?.length) controller.message = getCliMessage('roles');
     if (certificates?.length) controller.message = getCliMessage('certificates');
     if (roles?.length && certificates?.length) controller.message = getCliMessage('roles and certificates');
