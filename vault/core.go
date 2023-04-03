@@ -2215,7 +2215,7 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, performCleanup
 
 	// Perform additional cleanup upon sealing.
 	if performCleanup {
-		if raftBackend := c.GetRaftBackend(); raftBackend != nil {
+		if raftBackend := c.getRaftBackend(); raftBackend != nil {
 			if err := raftBackend.TeardownCluster(c.getClusterListener()); err != nil {
 				c.logger.Error("error stopping storage cluster", "error", err)
 				return err
@@ -3990,7 +3990,7 @@ func (c *Core) HAEnabled() bool {
 }
 
 func (c *Core) GetRaftConfiguration(ctx context.Context) (*raft.RaftConfigurationResponse, error) {
-	raftBackend := c.GetRaftBackend()
+	raftBackend := c.getRaftBackend()
 
 	if raftBackend == nil {
 		return nil, nil
@@ -4000,7 +4000,7 @@ func (c *Core) GetRaftConfiguration(ctx context.Context) (*raft.RaftConfiguratio
 }
 
 func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState, error) {
-	raftBackend := c.GetRaftBackend()
+	raftBackend := c.getRaftBackend()
 	if raftBackend == nil {
 		return nil, nil
 	}

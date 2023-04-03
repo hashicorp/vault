@@ -202,7 +202,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	if core.rawEnabled {
 		b.Backend.Paths = append(b.Backend.Paths, b.rawPaths()...)
 	}
-	if backend := core.GetRaftBackend(); backend != nil {
+	if backend := core.getRaftBackend(); backend != nil {
 		b.Backend.Paths = append(b.Backend.Paths, b.raftStoragePaths()...)
 	}
 
