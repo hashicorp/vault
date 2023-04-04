@@ -79,6 +79,7 @@ module('Acceptance | pki configuration', function (hooks) {
       max_ttl="720h"`,
     ]);
     await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
+    assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
     await click(SELECTORS.configuration.issuerLink);
     assert.dom(SELECTORS.configuration.deleteAllIssuerModal).exists();
     await fillIn(SELECTORS.configuration.deleteAllIssuerInput, 'delete-all');
@@ -89,6 +90,8 @@ module('Acceptance | pki configuration', function (hooks) {
       .hasText("This PKI mount hasn't yet been configured with a certificate issuer.");
 
     await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+    await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+    assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
     assert
       .dom(SELECTORS.emptyStateMessage)
       .hasText(
@@ -184,6 +187,7 @@ module('Acceptance | pki configuration', function (hooks) {
     await click('[data-test-pki-import-pem-bundle]');
     await runCommands([`write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test"`]);
     await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
+    assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
     await click(SELECTORS.configuration.issuerLink);
     assert.dom(SELECTORS.configuration.deleteAllIssuerModal).exists();
     await fillIn(SELECTORS.configuration.deleteAllIssuerInput, 'delete-all');
@@ -194,6 +198,8 @@ module('Acceptance | pki configuration', function (hooks) {
       .hasText("This PKI mount hasn't yet been configured with a certificate issuer.");
 
     await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+    await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+    assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
     assert
       .dom(SELECTORS.emptyStateMessage)
       .hasText(
