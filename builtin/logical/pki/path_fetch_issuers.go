@@ -351,9 +351,9 @@ func buildPathGetIssuer(b *backend, pattern string, displayAttrs *framework.Disp
 
 	return &framework.Path{
 		// Returns a JSON entry.
-		Pattern: pattern,
+		Pattern:      pattern,
 		DisplayAttrs: displayAttrs,
-		Fields:  fields,
+		Fields:       fields,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
