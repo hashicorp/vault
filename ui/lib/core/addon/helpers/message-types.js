@@ -37,6 +37,11 @@ export const MESSAGE_TYPES = {
     glyph: 'loading',
     text: 'Loading',
   },
+  rotation: {
+    class: 'is-info',
+    glyphClass: 'has-text-grey',
+    glyph: 'rotate-cw',
+  },
 };
 
 export function messageTypes([type]) {

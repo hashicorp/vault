@@ -204,20 +204,20 @@ jobs:
     # Setup node.js without caching to allow running npm install -g yarn (next step)
     - uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c
       with:
-        node-version: 14
+        node-version: 16
     - id: install-yarn
       run: |
         npm install -g yarn
     # Setup node.js with caching using the yarn.lock file
     - uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c
       with:
-        node-version: 14
+        node-version: 16
         cache: yarn
         cache-dependency-path: ui/yarn.lock
     - id: install-browser-libraries
       run: sudo apt install -y libnss3-dev libgdk-pixbuf2.0-dev libgtk-3-dev libxss-dev libasound2
     - id: install-browser
-      uses: browser-actions/setup-chrome@597130847c84cdac5acceccbd676d612e6f8beb8
+      uses: browser-actions/setup-chrome@29abc1a83d1d71557708563b4bc962d0f983a376
     - id: ui-dependencies
       name: ui-dependencies
       working-directory: ./ui
@@ -283,10 +283,8 @@ jobs:
     - setup
     - test-go
     - test-ui
-    if: |
-      always() &&
-      !contains(needs.*.result, 'failure') &&
-      !contains(needs.*.result, 'cancelled')
+    if: always()
     runs-on: ${{ fromJSON(needs.setup.outputs.compute-tiny) }}
     steps:
-    - run: echo "All Go tests successfully passed"
+    - run: |
+        tr -d '\n' <<< '${{ toJSON(needs.*.result) }}' | grep -q -v -E '(failure|cancelled)' 
