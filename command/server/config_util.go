@@ -26,6 +26,10 @@ func (ec entConfig) Sanitized() map[string]interface{} {
 }
 
 func (c *Config) checkSealConfig() error {
+	if len(c.Seals) == 0 {
+		return nil
+	}
+
 	disabledSeals := 0
 	for _, seal := range c.Seals {
 		if seal.Disabled {
@@ -38,7 +42,7 @@ func (c *Config) checkSealConfig() error {
 	}
 
 	if disabledSeals < len(c.Seals)-1 {
-		return errors.New("seals: multiple seals provided but ")
+		return errors.New("seals: only one seal can be enabled")
 	}
 
 	return nil
