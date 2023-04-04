@@ -14,6 +14,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // OpenAPI specification (OAS): https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md
@@ -389,7 +391,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 
 				// Set the final request body. Only JSON request data is supported.
 				if len(s.Properties) > 0 || s.Example != nil {
-					requestName := operationID + "-request"
+					requestName := hyphenatedToTitleCase(operationID) + "Request"
 					doc.Components.Schemas[requestName] = s
 					op.RequestBody = &OASRequestBody{
 						Required: true,
@@ -496,7 +498,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 					}
 
 					if len(resp.Fields) != 0 {
-						responseName := operationID + "-response"
+						responseName := hyphenatedToTitleCase(operationID) + "Response"
 						doc.Components.Schemas[responseName] = responseSchema
 						content = OASContent{
 							"application/json": &OASMediaTypeObject{
@@ -1002,6 +1004,18 @@ func withoutOperationHints(in *DisplayAttributes) *DisplayAttributes {
 	}
 
 	return &copy
+}
+
+func hyphenatedToTitleCase(in string) string {
+	var b strings.Builder
+
+	title := cases.Title(language.English, cases.NoLower)
+
+	for _, word := range strings.Split(in, "-") {
+		b.WriteString(title.String(word))
+	}
+
+	return b.String()
 }
 
 // cleanedResponse is identical to logical.Response but with nulls
