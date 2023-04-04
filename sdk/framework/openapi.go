@@ -14,6 +14,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // OpenAPI specification (OAS): https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md
@@ -250,7 +252,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 
 		pi.Sudo = specialPathMatch(path, sudoPaths)
 		pi.Unauthenticated = specialPathMatch(path, unauthPaths)
-		pi.DisplayAttrs = p.DisplayAttrs
+		pi.DisplayAttrs = withoutOperationHints(p.DisplayAttrs)
 
 		// If the newer style Operations map isn't defined, create one from the legacy fields.
 		operations := p.Operations
@@ -292,7 +294,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 					Pattern:      t.pattern,
 					Enum:         field.AllowedValues,
 					Default:      field.Default,
-					DisplayAttrs: field.DisplayAttrs,
+					DisplayAttrs: withoutOperationHints(field.DisplayAttrs),
 				},
 				Required:   required,
 				Deprecated: field.Deprecated,
@@ -371,7 +373,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 						Enum:         field.AllowedValues,
 						Default:      field.Default,
 						Deprecated:   field.Deprecated,
-						DisplayAttrs: field.DisplayAttrs,
+						DisplayAttrs: withoutOperationHints(field.DisplayAttrs),
 					}
 					if openapiField.baseType == "array" {
 						p.Items = &OASSchema{
@@ -389,7 +391,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 
 				// Set the final request body. Only JSON request data is supported.
 				if len(s.Properties) > 0 || s.Example != nil {
-					requestName := operationID + "-request"
+					requestName := hyphenatedToTitleCase(operationID) + "Request"
 					doc.Components.Schemas[requestName] = s
 					op.RequestBody = &OASRequestBody{
 						Required: true,
@@ -485,7 +487,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 							Enum:         field.AllowedValues,
 							Default:      field.Default,
 							Deprecated:   field.Deprecated,
-							DisplayAttrs: field.DisplayAttrs,
+							DisplayAttrs: withoutOperationHints(field.DisplayAttrs),
 						}
 						if openapiField.baseType == "array" {
 							p.Items = &OASSchema{
@@ -496,7 +498,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 					}
 
 					if len(resp.Fields) != 0 {
-						responseName := operationID + "-response"
+						responseName := hyphenatedToTitleCase(operationID) + "Response"
 						doc.Components.Schemas[responseName] = responseSchema
 						content = OASContent{
 							"application/json": &OASMediaTypeObject{
@@ -980,6 +982,40 @@ func splitFields(allFields map[string]*FieldSchema, pattern string) (pathFields,
 	}
 
 	return pathFields, bodyFields
+}
+
+// withoutOperationHints returns a copy of the given DisplayAttributes without
+// OperationPrefix / OperationVerb / OperationSuffix since we don't need these
+// fields in the final output.
+func withoutOperationHints(in *DisplayAttributes) *DisplayAttributes {
+	if in == nil {
+		return nil
+	}
+
+	copy := *in
+
+	copy.OperationPrefix = ""
+	copy.OperationVerb = ""
+	copy.OperationSuffix = ""
+
+	// return nil if all fields are empty to avoid empty JSON objects
+	if copy == (DisplayAttributes{}) {
+		return nil
+	}
+
+	return &copy
+}
+
+func hyphenatedToTitleCase(in string) string {
+	var b strings.Builder
+
+	title := cases.Title(language.English, cases.NoLower)
+
+	for _, word := range strings.Split(in, "-") {
+		b.WriteString(title.String(word))
+	}
+
+	return b.String()
 }
 
 // cleanedResponse is identical to logical.Response but with nulls
