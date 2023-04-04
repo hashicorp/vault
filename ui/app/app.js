@@ -46,7 +46,7 @@ export default class App extends Application {
     },
     kubernetes: {
       dependencies: {
-        services: ['router', 'store', 'secret-mount-path', 'flashMessages'],
+        services: ['router', 'store', 'secret-mount-path', 'flash-messages'],
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
         },

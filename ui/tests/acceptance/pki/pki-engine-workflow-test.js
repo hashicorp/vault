@@ -363,5 +363,40 @@ module('Acceptance | pki workflow', function (hooks) {
         .exists({ count: 3 }, 'Renders 3 info table items under URLs group');
       assert.dom(SELECTORS.issuerDetails.groupTitle).exists({ count: 1 }, 'only 1 group title rendered');
     });
+
+    test('toolbar links navigate to expected routes', async function (assert) {
+      await authPage.login(this.pkiAdminToken);
+      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      await click(SELECTORS.issuersTab);
+      await click(SELECTORS.issuerPopupMenu);
+      await click(SELECTORS.issuerPopupDetails);
+
+      const issuerId = find(SELECTORS.issuerDetails.valueByName('Issuer ID')).innerText;
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.mountPath}/pki/issuers/${issuerId}/details`,
+        'it navigates to details route'
+      );
+      assert
+        .dom(SELECTORS.issuerDetails.crossSign)
+        .hasAttribute('href', `/ui/vault/secrets/${this.mountPath}/pki/issuers/${issuerId}/cross-sign`);
+      assert
+        .dom(SELECTORS.issuerDetails.signIntermediate)
+        .hasAttribute('href', `/ui/vault/secrets/${this.mountPath}/pki/issuers/${issuerId}/sign`);
+      assert
+        .dom(SELECTORS.issuerDetails.configure)
+        .hasAttribute('href', `/ui/vault/secrets/${this.mountPath}/pki/issuers/${issuerId}/edit`);
+      await click(SELECTORS.issuerDetails.rotateRoot);
+      assert.dom(find(SELECTORS.issuerDetails.rotateModal).parentElement).hasClass('is-active');
+      await click(SELECTORS.issuerDetails.rotateModalGenerate);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.mountPath}/pki/issuers/${issuerId}/rotate-root`,
+        'it navigates to root rotate form'
+      );
+      assert
+        .dom('[data-test-input="commonName"]')
+        .hasValue('Hashicorp Test', 'form prefilled with parent issuer cn');
+    });
   });
 });
