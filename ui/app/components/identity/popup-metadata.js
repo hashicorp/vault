@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Base from './_popup-base';
 import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';

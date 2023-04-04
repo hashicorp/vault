@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package http
 
 import (
@@ -414,6 +417,72 @@ func TestSysMount_put(t *testing.T) {
 
 	// The TestSysMount test tests the thing is actually created. See that test
 	// for more info.
+}
+
+// TestSysRemountSpacesFrom ensure we succeed in a remount where the 'from' mount has spaces in the name
+func TestSysRemountSpacesFrom(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	resp := testHttpPost(t, token, addr+"/v1/sys/mounts/foo%20bar", map[string]interface{}{
+		"type":        "kv",
+		"description": "foo",
+	})
+	testResponseStatus(t, resp, 204)
+
+	resp = testHttpPost(t, token, addr+"/v1/sys/remount", map[string]interface{}{
+		"from": "foo bar",
+		"to":   "baz",
+	})
+	testResponseStatus(t, resp, 200)
+}
+
+// TestSysRemountSpacesTo ensure we succeed in a remount where the 'to' mount has spaces in the name
+func TestSysRemountSpacesTo(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	resp := testHttpPost(t, token, addr+"/v1/sys/mounts/foo%20bar", map[string]interface{}{
+		"type":        "kv",
+		"description": "foo",
+	})
+	testResponseStatus(t, resp, 204)
+
+	resp = testHttpPost(t, token, addr+"/v1/sys/remount", map[string]interface{}{
+		"from": "foo bar",
+		"to":   "bar baz",
+	})
+	testResponseStatus(t, resp, 200)
+}
+
+// TestSysRemountTrailingSpaces ensures we fail on trailing spaces
+func TestSysRemountTrailingSpaces(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	resp := testHttpPost(t, token, addr+"/v1/sys/mounts/foo%20bar", map[string]interface{}{
+		"type":        "kv",
+		"description": "foo",
+	})
+	testResponseStatus(t, resp, 204)
+
+	resp = testHttpPost(t, token, addr+"/v1/sys/remount", map[string]interface{}{
+		"from": "foo bar",
+		"to":   " baz ",
+	})
+	testResponseStatus(t, resp, 400)
+
+	resp = testHttpPost(t, token, addr+"/v1/sys/remount", map[string]interface{}{
+		"from": " foo bar ",
+		"to":   "baz",
+	})
+	testResponseStatus(t, resp, 400)
 }
 
 func TestSysRemount(t *testing.T) {

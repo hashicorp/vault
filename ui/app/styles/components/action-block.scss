@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 @mixin stacked-grid {
   grid-template-columns: 1fr;
   grid-row: 1/1;

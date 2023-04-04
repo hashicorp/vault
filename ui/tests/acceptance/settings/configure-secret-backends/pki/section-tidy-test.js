@@ -1,6 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { currentRouteName, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { v4 as uuidv4 } from 'uuid';
+
 import page from 'vault/tests/pages/settings/configure-secret-backends/pki/section';
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
@@ -13,7 +20,7 @@ module('Acceptance | settings/configure/secrets/pki/tidy', function (hooks) {
   });
 
   test('it saves tidy config', async function (assert) {
-    const path = `pki-${new Date().getTime()}`;
+    const path = `pki-tidy-${uuidv4()}`;
     await enablePage.enable('pki', path);
     await settled();
     await page.visit({ backend: path, section: 'tidy' });

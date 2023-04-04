@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package postgresql
 
 import (
@@ -15,6 +18,7 @@ import (
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/template"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -88,6 +92,97 @@ func TestPostgreSQL_Initialize_ConnURLWithDSNFormat(t *testing.T) {
 	if !db.Initialized {
 		t.Fatal("Database should be initialized")
 	}
+}
+
+// TestPostgreSQL_PasswordAuthentication tests that the default "password_authentication" is "none", and that
+// an error is returned if an invalid "password_authentication" is provided.
+func TestPostgreSQL_PasswordAuthentication(t *testing.T) {
+	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
+	defer cleanup()
+
+	dsnConnURL, err := dbutil.ParseURL(connURL)
+	assert.NoError(t, err)
+	db := new()
+
+	ctx := context.Background()
+
+	t.Run("invalid-password-authentication", func(t *testing.T) {
+		connectionDetails := map[string]interface{}{
+			"connection_url":          dsnConnURL,
+			"password_authentication": "invalid-password-authentication",
+		}
+
+		req := dbplugin.InitializeRequest{
+			Config:           connectionDetails,
+			VerifyConnection: true,
+		}
+
+		_, err := db.Initialize(ctx, req)
+		assert.EqualError(t, err, "'invalid-password-authentication' is not a valid password authentication type")
+	})
+
+	t.Run("default-is-none", func(t *testing.T) {
+		connectionDetails := map[string]interface{}{
+			"connection_url": dsnConnURL,
+		}
+
+		req := dbplugin.InitializeRequest{
+			Config:           connectionDetails,
+			VerifyConnection: true,
+		}
+
+		_ = dbtesting.AssertInitialize(t, db, req)
+		assert.Equal(t, passwordAuthenticationPassword, db.passwordAuthentication)
+	})
+}
+
+// TestPostgreSQL_PasswordAuthentication_SCRAMSHA256 tests that password_authentication works when set to scram-sha-256.
+// When sending an encrypted password, the raw password should still successfully authenticate the user.
+func TestPostgreSQL_PasswordAuthentication_SCRAMSHA256(t *testing.T) {
+	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
+	defer cleanup()
+
+	dsnConnURL, err := dbutil.ParseURL(connURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	connectionDetails := map[string]interface{}{
+		"connection_url":          dsnConnURL,
+		"password_authentication": string(passwordAuthenticationSCRAMSHA256),
+	}
+
+	req := dbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
+	}
+
+	db := new()
+	resp := dbtesting.AssertInitialize(t, db, req)
+	assert.Equal(t, string(passwordAuthenticationSCRAMSHA256), resp.Config["password_authentication"])
+
+	if !db.Initialized {
+		t.Fatal("Database should be initialized")
+	}
+
+	ctx := context.Background()
+	newUserRequest := dbplugin.NewUserRequest{
+		Statements: dbplugin.Statements{
+			Commands: []string{
+				`
+						CREATE ROLE "{{name}}" WITH
+						  LOGIN
+						  PASSWORD '{{password}}'
+						  VALID UNTIL '{{expiration}}';
+						GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";`,
+			},
+		},
+		Password:   "somesecurepassword",
+		Expiration: time.Now().Add(1 * time.Minute),
+	}
+	newUserResponse, err := db.NewUser(ctx, newUserRequest)
+
+	assertCredsExist(t, db.ConnectionURL, newUserResponse.Username, newUserRequest.Password)
 }
 
 func TestPostgreSQL_NewUser(t *testing.T) {

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 // Type that comes back from expandAttributeMeta
 export interface FormField {
   name: string;
@@ -22,4 +27,10 @@ export interface ModelValidation {
     };
   };
   invalidFormMessage: string;
+}
+
+export interface Breadcrumb {
+  label: string;
+  route?: string;
+  linkExternal?: boolean;
 }

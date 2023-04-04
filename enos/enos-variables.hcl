@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 variable "artifact_path" {
   type        = string
   description = "The local path for dev artifact to test"
