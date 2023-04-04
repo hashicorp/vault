@@ -290,7 +290,7 @@ func (c *AgentCommand) Run(args []string) int {
 		Ui:          c.UI,
 		ServiceName: "vault",
 		DisplayName: "Vault",
-		UserAgent:   useragent.String(),
+		UserAgent:   useragent.AgentString(),
 		ClusterName: config.ClusterName,
 	})
 	if err != nil {
