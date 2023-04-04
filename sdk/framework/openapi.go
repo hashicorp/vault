@@ -14,6 +14,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // OpenAPI specification (OAS): https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md
@@ -305,13 +307,6 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 			return strings.ToLower(pi.Parameters[i].Name) < strings.ToLower(pi.Parameters[j].Name)
 		})
 
-		for opType := range operations {
-			if opType == logical.CreateOperation {
-				pi.CreateSupported = true
-				break
-			}
-		}
-
 		// Process each supported operation by building up an Operation object
 		// with descriptions, properties and examples from the framework.Path data.
 		for opType, opHandler := range operations {
@@ -321,6 +316,8 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 			}
 
 			if opType == logical.CreateOperation {
+				pi.CreateSupported = true
+
 				// If both Create and Update are defined, only process Update.
 				if operations[logical.UpdateOperation] != nil {
 					continue
@@ -340,7 +337,6 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 				p.DisplayAttrs,
 				opType,
 				props.DisplayAttrs,
-				pi.CreateSupported,
 				requestResponsePrefix,
 			)
 
@@ -395,7 +391,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 
 				// Set the final request body. Only JSON request data is supported.
 				if len(s.Properties) > 0 || s.Example != nil {
-					requestName := operationID + "-request"
+					requestName := hyphenatedToTitleCase(operationID) + "Request"
 					doc.Components.Schemas[requestName] = s
 					op.RequestBody = &OASRequestBody{
 						Required: true,
@@ -502,7 +498,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 					}
 
 					if len(resp.Fields) != 0 {
-						responseName := operationID + "-response"
+						responseName := hyphenatedToTitleCase(operationID) + "Response"
 						doc.Components.Schemas[responseName] = responseSchema
 						content = OASContent{
 							"application/json": &OASMediaTypeObject{
@@ -605,7 +601,6 @@ func constructOperationID(
 	pathAttributes *DisplayAttributes,
 	operation logical.Operation,
 	operationAttributes *DisplayAttributes,
-	createSupported bool,
 	defaultPrefix string,
 ) string {
 	var (
@@ -684,12 +679,9 @@ func constructOperationID(
 	}
 
 	if needVerb {
-		switch {
-		case operation == logical.UpdateOperation && createSupported == true:
-			verb = "create-or-update"
-		case operation == logical.UpdateOperation && createSupported == false:
-			verb = "update"
-		default:
+		if operation == logical.UpdateOperation {
+			verb = "write"
+		} else {
 			verb = string(operation)
 		}
 	}
@@ -1012,6 +1004,18 @@ func withoutOperationHints(in *DisplayAttributes) *DisplayAttributes {
 	}
 
 	return &copy
+}
+
+func hyphenatedToTitleCase(in string) string {
+	var b strings.Builder
+
+	title := cases.Title(language.English, cases.NoLower)
+
+	for _, word := range strings.Split(in, "-") {
+		b.WriteString(title.String(word))
+	}
+
+	return b.String()
 }
 
 // cleanedResponse is identical to logical.Response but with nulls

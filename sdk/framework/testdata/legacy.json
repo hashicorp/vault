@@ -36,7 +36,7 @@
         }
       },
       "post": {
-        "operationId": "kv-update-lookup-id",
+        "operationId": "kv-write-lookup-id",
         "summary": "Synopsis",
         "tags": [
           "secrets"
@@ -46,7 +46,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/kv-update-lookup-id-request"
+                "$ref": "#/components/schemas/kv-write-lookup-id-request"
               }
             }
           }
@@ -61,7 +61,7 @@
   },
   "components": {
     "schemas": {
-      "kv-update-lookup-id-request": {
+      "kv-write-lookup-id-request": {
         "type": "object",
         "properties": {
           "token": {
