@@ -1,0 +1,3 @@
+```release-note:improvement
+agent: Vault Agent now reports its name and version as part of the User-Agent header in all requests issued.
+```
