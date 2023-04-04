@@ -46,7 +46,7 @@ jobs:
           go-version: ${{ inputs.go-version }}
       - name: Read node version from .nvmrc
         id: node-version
-        run: echo "::set-output name=version::$(cat ./ui/.nvmrc)"
+        run: echo "version=$(cat ./ui/.nvmrc)" >> "$GITHUB_OUTPUT"
       - name: Set up node and yarn
         uses: actions/setup-node@v3
         with:

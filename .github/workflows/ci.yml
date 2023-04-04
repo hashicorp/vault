@@ -203,7 +203,7 @@ jobs:
         cache: true
     - name: Read node version from .nvmrc
       id: node-version
-      run: echo "::set-output name=version::$(cat ./ui/.nvmrc)"
+      run: echo "version=$(cat ./ui/.nvmrc)" >> "$GITHUB_OUTPUT"
     # Setup node.js without caching to allow running npm install -g yarn (next step)
     - uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c
       with:
