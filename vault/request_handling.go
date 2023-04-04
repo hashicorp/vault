@@ -853,6 +853,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		req.SetMountRunningSha256(entry.RunningSha256)
 		req.SetMountRunningVersion(entry.RunningVersion)
 		req.SetMountIsExternalPlugin(entry.IsExternalPlugin())
+		req.SetMountClass(entry.MountClass())
 
 		// Get and set ignored HMAC'd value.
 		if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
@@ -1277,6 +1278,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		req.SetMountRunningSha256(entry.RunningSha256)
 		req.SetMountRunningVersion(entry.RunningVersion)
 		req.SetMountIsExternalPlugin(entry.IsExternalPlugin())
+		req.SetMountClass(entry.MountClass())
 
 		// Get and set ignored HMAC'd value.
 		if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {

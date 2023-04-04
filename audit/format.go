@@ -14,7 +14,6 @@ import (
 	squarejwt "gopkg.in/square/go-jose.v2/jwt"
 
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -123,7 +122,7 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 			MountRunningVersion:   req.MountRunningVersion(),
 			MountRunningSha256:    req.MountRunningSha256(),
 			MountIsExternalPlugin: req.MountIsExternalPlugin(),
-			MountClass:            getMountClass(req),
+			MountClass:            req.MountClass(),
 			Namespace: &AuditNamespace{
 				ID:   ns.ID,
 				Path: ns.Path,
@@ -326,7 +325,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			MountRunningVersion:   req.MountRunningVersion(),
 			MountRunningSha256:    req.MountRunningSha256(),
 			MountIsExternalPlugin: req.MountIsExternalPlugin(),
-			MountClass:            getMountClass(req),
+			MountClass:            req.MountClass(),
 			Namespace: &AuditNamespace{
 				ID:   ns.ID,
 				Path: ns.Path,
@@ -347,7 +346,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			MountRunningVersion:   req.MountRunningVersion(),
 			MountRunningSha256:    req.MountRunningSha256(),
 			MountIsExternalPlugin: req.MountIsExternalPlugin(),
-			MountClass:            getMountClass(req),
+			MountClass:            req.MountClass(),
 			Auth:                  respAuth,
 			Secret:                respSecret,
 			Data:                  respData,
@@ -577,17 +576,4 @@ func doElideListResponseData(data map[string]interface{}) {
 			}
 		}
 	}
-}
-
-// getMountClass returns the mount class based the mount accessor of a logical.Request.
-func getMountClass(req *logical.Request) string {
-	if req.MountAccessor == "" || strings.HasPrefix(req.Path, "sys/") {
-		return ""
-	}
-
-	if strings.HasPrefix(req.Path, fmt.Sprintf("%s/", consts.PluginTypeCredential.String())) {
-		return consts.PluginTypeCredential.String()
-	}
-
-	return consts.PluginTypeSecrets.String()
 }

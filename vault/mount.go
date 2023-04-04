@@ -424,8 +424,21 @@ func (e *MountEntry) Clone() (*MountEntry, error) {
 
 // IsExternalPlugin returns whether the plugin is running externally
 // if the RunningSha256 is non-empty, the builtin is external. Otherwise, it's builtin
-func (entry *MountEntry) IsExternalPlugin() bool {
-	return entry.RunningSha256 != ""
+func (e *MountEntry) IsExternalPlugin() bool {
+	return e.RunningSha256 != ""
+}
+
+// MountClass returns the mount class based on Accessor and Path
+func (e *MountEntry) MountClass() string {
+	if e.Accessor == "" || strings.HasPrefix(e.Path, fmt.Sprintf("%s/", systemMountPath)) {
+		return ""
+	}
+
+	if e.Table == credentialTableType {
+		return consts.PluginTypeCredential.String()
+	}
+
+	return consts.PluginTypeSecrets.String()
 }
 
 // Namespace returns the namespace for the mount entry

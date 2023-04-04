@@ -169,6 +169,9 @@ type Request struct {
 	// to audit logging
 	mountIsExternalPlugin bool
 
+	// mountClass is used internally to propagate the mount class of the mounted plugin to audit logging
+	mountClass string
+
 	// WrapInfo contains requested response wrapping parameters
 	WrapInfo *RequestWrapInfo `json:"wrap_info" structs:"wrap_info" mapstructure:"wrap_info" sentinel:""`
 
@@ -318,6 +321,14 @@ func (r *Request) MountIsExternalPlugin() bool {
 
 func (r *Request) SetMountIsExternalPlugin(mountIsExternalPlugin bool) {
 	r.mountIsExternalPlugin = mountIsExternalPlugin
+}
+
+func (r *Request) MountClass() string {
+	return r.mountClass
+}
+
+func (r *Request) SetMountClass(mountClass string) {
+	r.mountClass = mountClass
 }
 
 func (r *Request) LastRemoteWAL() uint64 {

@@ -937,6 +937,15 @@ func TestExternalPlugin_AuditEnabled_ShouldLogPluginMetadata_Auth(t *testing.T) 
 		}
 		testExternalPluginMetadataAuditLog(t, auditResponse, consts.PluginTypeCredential.String())
 	}
+
+	// Deregister
+	if err := client.Sys().DeregisterPlugin(&api.DeregisterPluginInput{
+		Name:    plugin.Name,
+		Type:    api.PluginType(plugin.Typ),
+		Version: plugin.Version,
+	}); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // TestExternalPlugin_AuditEnabled_ShouldLogPluginMetadata_Secret tests that we have plugin metadata of a secret plugin
@@ -1000,5 +1009,14 @@ func TestExternalPlugin_AuditEnabled_ShouldLogPluginMetadata_Secret(t *testing.T
 			}
 		}
 		testExternalPluginMetadataAuditLog(t, auditResponse, consts.PluginTypeSecrets.String())
+	}
+
+	// Deregister
+	if err := client.Sys().DeregisterPlugin(&api.DeregisterPluginInput{
+		Name:    plugin.Name,
+		Type:    api.PluginType(plugin.Typ),
+		Version: plugin.Version,
+	}); err != nil {
+		t.Fatal(err)
 	}
 }
