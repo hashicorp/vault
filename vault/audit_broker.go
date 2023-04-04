@@ -5,8 +5,11 @@ package vault
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"time"
 
@@ -102,6 +105,49 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 			defer func() {
 				in.Auth.ClientToken = reqAuthToken
 			}()
+		}
+	}
+	{
+		// Try to detect, from quickest to most precise, if we're inside a
+		// non-authenticated ACME request. If so, attempt to enable client
+		// counting on these requests, by exposing the inner "kid" header
+		// as a value in the audit log directly. Otherwise, it would be
+		// a substring of a HMAC'd value, which is not searchable.
+		rawProtectedHeader, protectedPresent := in.Request.Data["protected"]
+		_, payloadPresent := in.Request.Data["payload"]
+		_, signaturePresent := in.Request.Data["signature"]
+		if protectedPresent && payloadPresent && signaturePresent {
+			// Valid ACME requests should have very finite amount of data
+			// contained in their 'protected' header. We should attempt to
+			// avoid malicious clients DoSing the audit log here with garbage
+			// data.
+			protectedHeader, ok := rawProtectedHeader.(string)
+			if ok && len(protectedHeader) < 10240 && strings.Contains(in.Request.Path, "/acme/") && in.Auth.ClientToken == "" {
+				// We're fairly confident we're handling an ACME responder
+				// path. We could try to dig into the particular subsystem
+				// and tell if we're against a PKI mount, but we'll hold
+				// off for now. Decode the protected header and then
+				// set the KID as the auth token.
+				rawHeader, err := base64.RawURLEncoding.DecodeString(protectedHeader)
+				if err == nil && len(rawHeader) > 0 {
+					var header map[string]interface{}
+					err := json.Unmarshal(rawHeader, &header)
+					if err == nil && len(header) > 0 {
+						// Ignore the signature over the blob; we're trusting
+						// PKI will validate that and respond appropriately.
+						// However, we still need to type check the encoded
+						// field to avoid panicing due to malicious requests
+						// as we are before the recover defer.
+						rawKid, present := header["kid"]
+						if present {
+							kid, ok := rawKid.(string)
+							if len(kid) > 0 && ok {
+								in.Auth.ClientToken = kid
+							}
+						}
+					}
+				}
+			}
 		}
 	}
 
