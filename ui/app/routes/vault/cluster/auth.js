@@ -31,7 +31,10 @@ export default ClusterRouteBase.extend({
 
   afterModel() {
     if (config.welcomeMessage) {
-      this.flashMessages.stickyInfo(config.welcomeMessage);
+      this.flashMessages.info(config.welcomeMessage, {
+        sticky: true,
+        priority: 300,
+      });
     }
   },
 });
