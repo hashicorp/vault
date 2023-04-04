@@ -26,20 +26,20 @@ var AllowedOuterJWSTypes = map[string]interface{}{
 type jwsCtx struct {
 	Algo     string          `json:"alg"`
 	Kid      string          `json:"kid"`
-	jwk      json.RawMessage `json:"jwk"`
+	Jwk      json.RawMessage `json:"jwk"`
 	Nonce    string          `json:"nonce"`
 	Url      string          `json:"url"`
-	key      jose.JSONWebKey `json:"-"`
+	Key      jose.JSONWebKey `json:"-"`
 	Existing bool            `json:"-"`
 }
 
-func (c *jwsCtx) UnmarshalJSON(a *acmeState, jws []byte) error {
+func (c *jwsCtx) UnmarshalJSON(a *acmeState, ac *acmeContext, jws []byte) error {
 	var err error
 	if err = json.Unmarshal(jws, c); err != nil {
 		return err
 	}
 
-	if c.Kid != "" && len(c.jwk) > 0 {
+	if c.Kid != "" && len(c.Jwk) > 0 {
 		// See RFC 8555 Section 6.2. Request Authentication:
 		//
 		// > The "jwk" and "kid" fields are mutually exclusive.  Servers MUST
@@ -47,7 +47,7 @@ func (c *jwsCtx) UnmarshalJSON(a *acmeState, jws []byte) error {
 		return fmt.Errorf("invalid header: got both account 'kid' and 'jwk' in the same message; expected only one: %w", ErrMalformed)
 	}
 
-	if c.Kid == "" && len(c.jwk) == 0 {
+	if c.Kid == "" && len(c.Jwk) == 0 {
 		// See RFC 8555 Section 6.2. Request Authentication:
 		//
 		// > Either "jwk" (JSON Web Key) or "kid" (Key ID) as specified
@@ -70,24 +70,24 @@ func (c *jwsCtx) UnmarshalJSON(a *acmeState, jws []byte) error {
 
 	if c.Kid != "" {
 		// Load KID from storage first.
-		c.jwk, err = a.LoadJWK(c.Kid)
+		c.Jwk, err = a.LoadJWK(ac, c.Kid)
 		if err != nil {
 			return err
 		}
 		c.Existing = true
 	}
 
-	if err = c.key.UnmarshalJSON(c.jwk); err != nil {
+	if err = c.Key.UnmarshalJSON(c.Jwk); err != nil {
 		return err
 	}
 
-	if !c.key.Valid() {
+	if !c.Key.Valid() {
 		return fmt.Errorf("received invalid jwk: %w", ErrMalformed)
 	}
 
-	if c.Kid != "" {
+	if c.Kid == "" {
 		// Create a key ID
-		kid, err := c.key.Thumbprint(crypto.SHA256)
+		kid, err := c.Key.Thumbprint(crypto.SHA256)
 		if err != nil {
 			return fmt.Errorf("failed creating thumbprint: %w", err)
 		}
@@ -128,7 +128,7 @@ func (c *jwsCtx) VerifyJWS(signature string) (map[string]interface{}, error) {
 		return nil, fmt.Errorf("request had unprotected headers: %w", ErrMalformed)
 	}
 
-	payload, err := sig.Verify(c.key)
+	payload, err := sig.Verify(c.Key)
 	if err != nil {
 		return nil, err
 	}
