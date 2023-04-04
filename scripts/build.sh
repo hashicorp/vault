@@ -50,13 +50,17 @@ ${GO_CMD} build \
 
 # Move all the compiled things to the $GOPATH/bin
 OLDIFS=$IFS
-IFS=: MAIN_GOPATH=($GOPATH)
+IFS=: FIRST=($GOPATH) MAIN_BIN_PATH=${GOBIN:-$FIRST}
 IFS=$OLDIFS
 
+if [ ! -n "$GOBIN" ]; then
+    MAIN_BIN_PATH+="/bin"
+fi
+
 # Ensure the go bin folder exists
-mkdir -p ${MAIN_GOPATH}/bin
-rm -f ${MAIN_GOPATH}/bin/vault
-cp bin/vault ${MAIN_GOPATH}/bin/
+mkdir -p ${MAIN_BIN_PATH}
+rm -f ${MAIN_BIN_PATH}/vault
+cp bin/vault ${MAIN_BIN_PATH}
 
 # Done!
 echo
