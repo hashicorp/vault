@@ -28,3 +28,9 @@ export interface ModelValidation {
   };
   invalidFormMessage: string;
 }
+
+export interface Breadcrumb {
+  label: string;
+  route?: string;
+  linkExternal?: boolean;
+}
