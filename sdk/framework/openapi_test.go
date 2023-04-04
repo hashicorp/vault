@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package framework
 
 import (
@@ -223,42 +226,123 @@ func TestOpenAPI_SplitFields(t *testing.T) {
 }
 
 func TestOpenAPI_SpecialPaths(t *testing.T) {
-	tests := []struct {
-		pattern     string
-		rootPaths   []string
-		root        bool
-		unauthPaths []string
-		unauth      bool
+	tests := map[string]struct {
+		pattern                 string
+		rootPaths               []string
+		rootExpected            bool
+		unauthenticatedPaths    []string
+		unauthenticatedExpected bool
 	}{
-		{"foo", []string{}, false, []string{"foo"}, true},
-		{"foo", []string{"foo"}, true, []string{"bar"}, false},
-		{"foo/bar", []string{"foo"}, false, []string{"foo/*"}, true},
-		{"foo/bar", []string{"foo/*"}, true, []string{"foo"}, false},
-		{"foo/", []string{"foo/*"}, true, []string{"a", "b", "foo/"}, true},
-		{"foo", []string{"foo*"}, true, []string{"a", "fo*"}, true},
-		{"foo/bar", []string{"a", "b", "foo/*"}, true, []string{"foo/baz/*"}, false},
+		"empty": {
+			pattern:                 "foo",
+			rootPaths:               []string{},
+			rootExpected:            false,
+			unauthenticatedPaths:    []string{},
+			unauthenticatedExpected: false,
+		},
+		"exact-match-unauthenticated": {
+			pattern:                 "foo",
+			rootPaths:               []string{},
+			rootExpected:            false,
+			unauthenticatedPaths:    []string{"foo"},
+			unauthenticatedExpected: true,
+		},
+		"exact-match-root": {
+			pattern:                 "foo",
+			rootPaths:               []string{"foo"},
+			rootExpected:            true,
+			unauthenticatedPaths:    []string{"bar"},
+			unauthenticatedExpected: false,
+		},
+		"asterisk-match-unauthenticated": {
+			pattern:                 "foo/bar",
+			rootPaths:               []string{"foo"},
+			rootExpected:            false,
+			unauthenticatedPaths:    []string{"foo/*"},
+			unauthenticatedExpected: true,
+		},
+		"asterisk-match-root": {
+			pattern:                 "foo/bar",
+			rootPaths:               []string{"foo/*"},
+			rootExpected:            true,
+			unauthenticatedPaths:    []string{"foo"},
+			unauthenticatedExpected: false,
+		},
+		"path-ends-with-slash": {
+			pattern:                 "foo/",
+			rootPaths:               []string{"foo/*"},
+			rootExpected:            true,
+			unauthenticatedPaths:    []string{"a", "b", "foo*"},
+			unauthenticatedExpected: true,
+		},
+		"asterisk-match-no-slash": {
+			pattern:                 "foo",
+			rootPaths:               []string{"foo*"},
+			rootExpected:            true,
+			unauthenticatedPaths:    []string{"a", "fo*"},
+			unauthenticatedExpected: true,
+		},
+		"multiple-root-paths": {
+			pattern:                 "foo/bar",
+			rootPaths:               []string{"a", "b", "foo/*"},
+			rootExpected:            true,
+			unauthenticatedPaths:    []string{"foo/baz/*"},
+			unauthenticatedExpected: false,
+		},
+		"plus-match-unauthenticated": {
+			pattern:                 "foo/bar/baz",
+			rootPaths:               []string{"foo/bar"},
+			rootExpected:            false,
+			unauthenticatedPaths:    []string{"foo/+/baz"},
+			unauthenticatedExpected: true,
+		},
+		"plus-match-root": {
+			pattern:                 "foo/bar/baz",
+			rootPaths:               []string{"foo/+/baz"},
+			rootExpected:            true,
+			unauthenticatedPaths:    []string{"foo/bar"},
+			unauthenticatedExpected: false,
+		},
+		"plus-and-asterisk": {
+			pattern:                 "foo/bar/baz/something",
+			rootPaths:               []string{"foo/+/baz/*"},
+			rootExpected:            true,
+			unauthenticatedPaths:    []string{"foo/+/baz*"},
+			unauthenticatedExpected: true,
+		},
+		"double-plus-good": {
+			pattern:                 "foo/bar/baz",
+			rootPaths:               []string{"foo/+/+"},
+			rootExpected:            true,
+			unauthenticatedPaths:    []string{"foo/bar"},
+			unauthenticatedExpected: false,
+		},
 	}
-	for i, test := range tests {
-		doc := NewOASDocument("version")
-		path := Path{
-			Pattern: test.pattern,
-		}
-		sp := &logical.Paths{
-			Root:            test.rootPaths,
-			Unauthenticated: test.unauthPaths,
-		}
-		err := documentPath(&path, sp, "kv", logical.TypeLogical, doc)
-		if err != nil {
-			t.Fatal(err)
-		}
-		result := test.root
-		if doc.Paths["/"+test.pattern].Sudo != result {
-			t.Fatalf("Test (root) %d: Expected %v got %v", i, test.root, result)
-		}
-		result = test.unauth
-		if doc.Paths["/"+test.pattern].Unauthenticated != result {
-			t.Fatalf("Test (unauth) %d: Expected %v got %v", i, test.unauth, result)
-		}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			doc := NewOASDocument("version")
+			path := Path{
+				Pattern: test.pattern,
+			}
+			specialPaths := &logical.Paths{
+				Root:            test.rootPaths,
+				Unauthenticated: test.unauthenticatedPaths,
+			}
+
+			if err := documentPath(&path, specialPaths, "kv", logical.TypeLogical, doc); err != nil {
+				t.Fatal(err)
+			}
+
+			actual := doc.Paths["/"+test.pattern].Sudo
+			if actual != test.rootExpected {
+				t.Fatalf("Test (root): expected: %v; got: %v", test.rootExpected, actual)
+			}
+
+			actual = doc.Paths["/"+test.pattern].Unauthenticated
+			if actual != test.unauthenticatedExpected {
+				t.Fatalf("Test (unauth): expected: %v; got: %v", test.unauthenticatedExpected, actual)
+			}
+		})
 	}
 }
 
@@ -605,6 +689,24 @@ func TestOpenAPI_constructOperationID(t *testing.T) {
 			defaultPrefix:       "test",
 			expected:            "test-write-path-to-thing",
 		},
+		"operation-verb": {
+			path:                "path/to/thing",
+			pathIndex:           0,
+			pathAttributes:      &DisplayAttributes{OperationVerb: "do-something"},
+			operation:           logical.UpdateOperation,
+			operationAttributes: nil,
+			defaultPrefix:       "test",
+			expected:            "do-something",
+		},
+		"operation-verb-override": {
+			path:                "path/to/thing",
+			pathIndex:           0,
+			pathAttributes:      &DisplayAttributes{OperationVerb: "do-something"},
+			operation:           logical.UpdateOperation,
+			operationAttributes: &DisplayAttributes{OperationVerb: "do-something-else"},
+			defaultPrefix:       "test",
+			expected:            "do-something-else",
+		},
 		"operation-prefix": {
 			path:                "path/to/thing",
 			pathIndex:           0,
@@ -718,6 +820,41 @@ func TestOpenAPI_constructOperationID(t *testing.T) {
 				test.operationAttributes,
 				test.defaultPrefix,
 			)
+			if actual != test.expected {
+				t.Fatalf("expected: %s; got: %s", test.expected, actual)
+			}
+		})
+	}
+}
+
+func TestOpenAPI_hyphenatedToTitleCase(t *testing.T) {
+	tests := map[string]struct {
+		in       string
+		expected string
+	}{
+		"simple": {
+			in:       "test",
+			expected: "Test",
+		},
+		"two-words": {
+			in:       "two-words",
+			expected: "TwoWords",
+		},
+		"three-words": {
+			in:       "one-two-three",
+			expected: "OneTwoThree",
+		},
+		"not-hyphenated": {
+			in:       "something_like_this",
+			expected: "Something_like_this",
+		},
+	}
+
+	for name, test := range tests {
+		name, test := name, test
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			actual := hyphenatedToTitleCase(test.in)
 			if actual != test.expected {
 				t.Fatalf("expected: %s; got: %s", test.expected, actual)
 			}

@@ -570,7 +570,23 @@
           {
             "title": "<code>health-check</code>",
             "path": "commands/pki/health-check"
-          }
+          },
+	  {
+	    "title": "<code>verify-sign</code>",
+	    "path": "commands/pki/verify-sign"
+	  },
+	  {
+	    "title": "<code>list-intermeidates</code>",
+	    "path": "commands/pki/list-intermediates"
+	  },
+	  {
+	    "title": "<code>issue</code>",
+	    "path": "commands/pki/issue"
+	  },
+	  {
+	    "title": "<code>reissue</code>",
+	    "path": "commands/pki/reissue"
+	  }
         ]
       },
       {
@@ -927,6 +943,10 @@
               {
                 "title": "Kubernetes",
                 "path": "agent/autoauth/methods/kubernetes"
+              },
+              {
+                "title": "Oracle Cloud Infrastructure",
+                "path": "agent/autoauth/methods/oci"
               },
               {
                 "title": "Token File",
@@ -1442,7 +1462,7 @@
         "path": "auth/token"
       },
       {
-        "title": "Username &amp; Password",
+        "title": "Username and Password",
         "path": "auth/userpass"
       },
       {
@@ -1696,6 +1716,35 @@
                 "path": "platform/k8s/csi/examples"
               }
             ]
+          },
+          {
+            "title": "Vault Secrets Operator",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "platform/k8s/vso"
+              },
+              {
+                "title": "Installation",
+                "path": "platform/k8s/vso/installation"
+              },
+              {
+                "title": "Examples",
+                "path": "platform/k8s/vso/examples"
+              },
+              {
+                "title": "Helm Chart",
+                "path": "platform/k8s/vso/helm"
+              },
+              {
+                "title": "Telemetry",
+                "path": "platform/k8s/vso/telemetry"
+              },
+              {
+                "title": "API Reference",
+                "path": "platform/k8s/vso/api-reference"
+              }
+            ]
           }
         ]
       },
@@ -1767,8 +1816,7 @@
       },
       {
         "title": "Upgrade to 1.13.x",
-        "path": "upgrading/upgrade-to-1.13.x",
-        "hidden": true
+        "path": "upgrading/upgrade-to-1.13.x"
       },
       {
         "title": "Upgrade to 1.12.x",

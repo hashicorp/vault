@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@glimmer/component';
 import utils from 'vault/lib/key-utils';
 import { encodePath } from 'vault/utils/path-encoding-helpers';

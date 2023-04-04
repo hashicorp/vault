@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -1425,7 +1428,7 @@ func (sc *storageContext) fetchRevocationInfo(serial string) (*revocationInfo, e
 	if revEntry != nil {
 		err = revEntry.DecodeJSON(&revInfo)
 		if err != nil {
-			return nil, fmt.Errorf("error decoding existing revocation info")
+			return nil, fmt.Errorf("error decoding existing revocation info: %w", err)
 		}
 	}
 
