@@ -46,6 +46,7 @@ module('Acceptance | secrets/cubbyhole/create', function (hooks) {
       'vault.cluster.secrets.backend.show',
       'redirects to the show page'
     );
+    assert.dom('[data-test-created-time]').hasText('', 'it does not render created time if blank');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
   });
 });
