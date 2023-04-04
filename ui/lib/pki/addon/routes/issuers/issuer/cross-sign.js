@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import PkiIssuerIndexRoute from './index';
 import { withConfirmLeave } from 'core/decorators/confirm-leave';
 

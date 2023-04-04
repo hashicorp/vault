@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { withConfirmLeave } from 'core/decorators/confirm-leave';
 import PkiKeyRoute from '../key';
 

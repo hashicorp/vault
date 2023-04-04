@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+/**
  * @module OidcConsentBlock
  * OidcConsentBlock components are used to show the consent form for the OIDC Authorization Code Flow
  *

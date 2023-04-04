@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { create, visitable } from 'ember-cli-page-object';
 import backendForm from '../../components/mount-backend-form';
 import flashMessages from '../../components/flash-message';

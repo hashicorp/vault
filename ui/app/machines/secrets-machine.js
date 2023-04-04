@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 const supportedBackends = supportedSecretBackends();
 
