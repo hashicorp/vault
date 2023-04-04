@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Model from '@ember-data/model';
 import { FormField, FormFieldGroups, ModelValidations } from 'vault/app-types';
 export default class PkiIssuerModel extends Model {

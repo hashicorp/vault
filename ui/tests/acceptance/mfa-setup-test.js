@@ -1,5 +1,11 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { create } from 'ember-cli-page-object';
+import { v4 as uuidv4 } from 'uuid';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, fillIn } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
@@ -30,7 +36,7 @@ const writeUserWithPolicy = async function (path) {
 };
 
 const setupUser = async function () {
-  const path = `userpass-${new Date().getTime()}`;
+  const path = `userpass-${uuidv4()}`;
   await writePolicy(path);
   await writeUserWithPolicy(path);
   await click('[data-test-save-config="true"]');

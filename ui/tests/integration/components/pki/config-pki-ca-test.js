@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { resolve } from 'rsvp';
 import EmberObject from '@ember/object';
 import Service from '@ember/service';

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
@@ -5,6 +10,7 @@ import { inject as service } from '@ember/service';
 import isAfter from 'date-fns/isAfter';
 import differenceInDays from 'date-fns/differenceInDays';
 import localStorage from 'vault/lib/local-storage';
+import timestamp from 'core/utils/timestamp';
 
 /**
  * @module LicenseBanners
@@ -36,13 +42,13 @@ export default class LicenseBanners extends Component {
 
   get licenseExpired() {
     if (!this.args.expiry) return false;
-    return isAfter(new Date(), new Date(this.args.expiry));
+    return isAfter(timestamp.now(), new Date(this.args.expiry));
   }
 
   get licenseExpiringInDays() {
     // Anything more than 30 does not render a warning
     if (!this.args.expiry) return 99;
-    return differenceInDays(new Date(this.args.expiry), new Date());
+    return differenceInDays(new Date(this.args.expiry), timestamp.now());
   }
 
   @action

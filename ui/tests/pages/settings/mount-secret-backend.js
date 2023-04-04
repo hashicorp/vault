@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { create, visitable, fillable, clickable } from 'ember-cli-page-object';
 import { settled } from '@ember/test-helpers';
 import mountForm from 'vault/tests/pages/components/mount-backend-form';
