@@ -44,13 +44,10 @@ jobs:
       - uses: actions/setup-go@v3
         with:
           go-version: ${{ inputs.go-version }}
-      - name: Read node version from .nvmrc
-        id: node-version
-        run: echo "version=$(cat ./ui/.nvmrc)" >> "$GITHUB_OUTPUT"
       - name: Set up node and yarn
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ steps.node-version.outputs.version}}
+          node-version-file: './ui/package.json'
           cache: yarn
           cache-dependency-path: ui/yarn.lock
       - name: Build UI

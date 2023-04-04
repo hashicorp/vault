@@ -201,20 +201,17 @@ jobs:
       with:
         go-version-file: ./.go-version
         cache: true
-    - name: Read node version from .nvmrc
-      id: node-version
-      run: echo "version=$(cat ./ui/.nvmrc)" >> "$GITHUB_OUTPUT"
     # Setup node.js without caching to allow running npm install -g yarn (next step)
     - uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c
       with:
-        node-version: ${{ steps.node-version.outputs.version}}
+        node-version-file: './ui/package.json'
     - id: install-yarn
       run: |
         npm install -g yarn
     # Setup node.js with caching using the yarn.lock file
     - uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c
       with:
-        node-version: ${{ steps.node-version.outputs.version}}
+        node-version-file: './ui/package.json'
         cache: yarn
         cache-dependency-path: ui/yarn.lock
     - id: install-browser-libraries
