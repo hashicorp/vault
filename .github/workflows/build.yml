@@ -82,7 +82,7 @@ jobs:
     strategy:
       matrix:
         goos: [linux]
-        goarch: [arm, arm64, 386, amd64]
+        goarch: [arm, arm64, 386, amd64, ppc64le]
       fail-fast: true
     uses: ./.github/workflows/build-vault-oss.yml
     with:
@@ -121,7 +121,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        arch: [arm, arm64, 386, amd64]
+        arch: [arm, arm64, 386, amd64, ppc64le]
     steps:
       - uses: actions/checkout@v3
       - uses: hashicorp/actions-docker-build@v1
