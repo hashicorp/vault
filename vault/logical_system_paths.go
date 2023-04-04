@@ -1127,6 +1127,11 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Summary: "Seal the Vault.",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["seal"][0]),
@@ -1154,6 +1159,77 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Summary: "Unseal the Vault.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							// unseal returns `vault.SealStatusResponse` struct
+							Fields: map[string]*framework.FieldSchema{
+								"type": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"initialized": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"sealed": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"t": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"n": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"progress": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"nonce": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"version": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"build_date": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"migration": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"cluster_name": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+								"cluster_id": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+								"recovery_seal": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"storage_type": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+								"hcp_link_status": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+								"hcp_link_resource_ID": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+							},
+						}},
+					},
 				},
 			},
 
@@ -1177,6 +1253,55 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleLeaderStatus,
 					Summary:  "Returns the high availability status and current leader instance of Vault.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							// returns `vault.LeaderResponse` struct
+							Fields: map[string]*framework.FieldSchema{
+								"ha_enabled": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"is_self": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"active_time": {
+									Type: framework.TypeTime,
+									// active_time has 'omitempty' tag, but its not a pointer so never "empty"
+									Required: true,
+								},
+								"leader_address": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"leader_cluster_address": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"performance_standby": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"performance_standby_last_remote_wal": {
+									Type:     framework.TypeInt64,
+									Required: true,
+								},
+								"last_wal": {
+									Type:     framework.TypeInt64,
+									Required: false,
+								},
+								"raft_committed_index": {
+									Type:     framework.TypeInt64,
+									Required: false,
+								},
+								"raft_applied_index": {
+									Type:     framework.TypeInt64,
+									Required: false,
+								},
+							},
+						}},
+					},
 				},
 			},
 
@@ -1194,6 +1319,77 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleSealStatus,
 					Summary:  "Check the seal status of a Vault.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							// unseal returns `vault.SealStatusResponse` struct
+							Fields: map[string]*framework.FieldSchema{
+								"type": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"initialized": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"sealed": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"t": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"n": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"progress": {
+									Type:     framework.TypeInt,
+									Required: true,
+								},
+								"nonce": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"version": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"build_date": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"migration": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"cluster_name": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+								"cluster_id": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+								"recovery_seal": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"storage_type": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+								"hcp_link_status": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+								"hcp_link_resource_ID": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+							},
+						}},
+					},
 				},
 			},
 
@@ -1212,6 +1408,17 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleHAStatus,
 					Summary:  "Check the HA status of a Vault cluster",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"nodes": {
+									Type:     framework.TypeSlice,
+									Required: true,
+								},
+							},
+						}},
+					},
 				},
 			},
 
@@ -1229,6 +1436,21 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 				logical.ListOperation: &framework.PathOperation{
 					Callback: b.handleVersionHistoryList,
 					Summary:  "Returns map of historical version change entries",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:     framework.TypeCommaStringSlice,
+									Required: true,
+								},
+								"key_info": {
+									Type:     framework.TypeKVPairs,
+									Required: true,
+								},
+							},
+						}},
+					},
 				},
 			},
 
@@ -1516,12 +1738,36 @@ func (b *SystemBackend) sealPaths() []*framework.Path {
 						OperationVerb:   "read",
 						OperationSuffix: "rotation-configuration",
 					},
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"max_operations": {
+									Type:     framework.TypeInt64,
+									Required: true,
+								},
+								"enabled": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"interval": {
+									Type:     framework.TypeDurationSecond,
+									Required: true,
+								},
+							},
+						}},
+					},
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleKeyRotationConfigUpdate,
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb:   "configure",
 						OperationSuffix: "rotation",
+					},
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
 					},
 					ForwardPerformanceSecondary: true,
 					ForwardPerformanceStandby:   true,
@@ -1542,6 +1788,17 @@ func (b *SystemBackend) sealPaths() []*framework.Path {
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: b.handleRotate,
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleRotate,
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["rotate"][0]),
@@ -1847,8 +2104,21 @@ func (b *SystemBackend) toolsPaths() []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathHashWrite,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.pathHashWrite,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"sum": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+							},
+						}},
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["hash"][0]),
@@ -1888,8 +2158,21 @@ func (b *SystemBackend) toolsPaths() []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathRandomWrite,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.pathRandomWrite,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"random_bytes": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+							},
+						}},
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["random"][0]),
@@ -2161,10 +2444,9 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback: b.pathInternalCountersRequests,
-					Summary:  "Backwards compatibility is not guaranteed for this API",
-					// callback only returns errors
-					Responses: nil,
+					Callback:   b.pathInternalCountersRequests,
+					Deprecated: true,
+					Summary:    "Backwards compatibility is not guaranteed for this API",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-requests"][0]),
@@ -2926,6 +3208,12 @@ func (b *SystemBackend) inFlightRequestPath() *framework.Path {
 				Callback:    b.handleInFlightRequestData,
 				Summary:     strings.TrimSpace(sysHelp["in-flight-req"][0]),
 				Description: strings.TrimSpace(sysHelp["in-flight-req"][1]),
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields:      nil, // dynamic fields
+					}},
+				},
 			},
 		},
 	}
@@ -2945,6 +3233,37 @@ func (b *SystemBackend) hostInfoPath() *framework.Path {
 				Callback:    b.handleHostInfo,
 				Summary:     strings.TrimSpace(sysHelp["host-info"][0]),
 				Description: strings.TrimSpace(sysHelp["host-info"][1]),
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"timestamp": {
+								Type:     framework.TypeTime,
+								Required: true,
+							},
+							"cpu": {
+								Type:     framework.TypeSlice,
+								Required: false,
+							},
+							"cpu_times": {
+								Type:     framework.TypeSlice,
+								Required: false,
+							},
+							"disk": {
+								Type:     framework.TypeSlice,
+								Required: false,
+							},
+							"host": {
+								Type:     framework.TypeMap,
+								Required: false,
+							},
+							"memory": {
+								Type:     framework.TypeMap,
+								Required: false,
+							},
+						},
+					}},
+				},
 			},
 		},
 		HelpSynopsis:    strings.TrimSpace(sysHelp["host-info"][0]),
@@ -3670,6 +3989,19 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 				logical.UpdateOperation: b.handleWrappingWrap,
 			},
 
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleWrappingWrap,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							// dynamic fields
+							Fields: nil,
+						}},
+					},
+				},
+			},
+
 			HelpSynopsis:    strings.TrimSpace(sysHelp["wrap"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["wrap"][1]),
 
@@ -3689,8 +4021,20 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.handleWrappingUnwrap,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleWrappingUnwrap,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							// dynamic fields
+							Fields: nil,
+						}},
+						http.StatusNoContent: {{
+							Description: "No content",
+						}},
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["unwrap"][0]),
@@ -3714,6 +4058,25 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 						OperationSuffix: "wrapping-properties",
 					},
 					Summary: "Look up wrapping properties for the given token.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"creation_ttl": {
+									Type:     framework.TypeDurationSecond,
+									Required: false,
+								},
+								"creation_time": {
+									Type:     framework.TypeTime,
+									Required: false,
+								},
+								"creation_path": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+							},
+						}},
+					},
 				},
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleWrappingLookup,
@@ -3722,6 +4085,25 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 						OperationSuffix: "wrapping-properties2",
 					},
 					Summary: "Look up wrapping properties for the requester's token.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"creation_ttl": {
+									Type:     framework.TypeDurationSecond,
+									Required: false,
+								},
+								"creation_time": {
+									Type:     framework.TypeTime,
+									Required: false,
+								},
+								"creation_path": {
+									Type:     framework.TypeString,
+									Required: false,
+								},
+							},
+						}},
+					},
 				},
 			},
 
@@ -3742,8 +4124,17 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.handleWrappingRewrap,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleWrappingRewrap,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							// dynamic fields
+							Fields: nil,
+						}},
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["rewrap"][0]),
