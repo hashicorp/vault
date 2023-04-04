@@ -102,6 +102,20 @@ vet:
 			echo "and fix them if necessary before submitting the code for reviewal."; \
 		fi
 
+# deprecations runs staticcheck tool to look for deprecations. Checks entire code to see if it 
+# has deprecated function, variable, constant or field
+deprecations:
+	make bootstrap
+	repositoryName=$(basename `git rev-parse --show-toplevel`)
+	./scripts/deprecations-checker.sh "" repositoryName
+
+# ci-deprecations runs staticcheck tool to look for deprecations. All output gets piped to revgrep
+# which will only return an error if changes that is not on main has deprecated function, variable, constant or field
+ci-deprecations:
+	make bootstrap
+	repositoryName=$(basename `git rev-parse --show-toplevel`)
+	./scripts/deprecations-checker.sh main repositoryName
+
 # tools/godoctests/.bin/godoctests builds the custom analyzer to check for godocs for tests
 tools/godoctests/.bin/godoctests:
 	@cd tools/godoctests && $(GO_CMD) build -o .bin/godoctests .
@@ -256,13 +270,6 @@ hana-database-plugin:
 
 mongodb-database-plugin:
 	@CGO_ENABLED=0 $(GO_CMD) build -o bin/mongodb-database-plugin ./plugins/database/mongodb/mongodb-database-plugin
-
-.PHONY: ci-config
-ci-config:
-	@$(MAKE) -C .circleci ci-config
-.PHONY: ci-verify
-ci-verify:
-	@$(MAKE) -C .circleci ci-verify
 
 .PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path packages build build-ci semgrep semgrep-ci vet-godoctests ci-vet-godoctests
 
