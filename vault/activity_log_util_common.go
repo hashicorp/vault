@@ -12,12 +12,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/protobuf/proto"
-
 	"github.com/axiomhq/hyperloglog"
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
+	"google.golang.org/protobuf/proto"
 )
 
 type HLLGetter func(ctx context.Context, startTime time.Time) (*hyperloglog.Sketch, error)
