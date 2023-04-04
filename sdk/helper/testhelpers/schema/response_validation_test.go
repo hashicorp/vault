@@ -275,6 +275,36 @@ func TestValidateResponse(t *testing.T) {
 			errorExpected: false,
 		},
 
+		"string schema field, response has non-200 http_status_code, strict": {
+			schema: &framework.Response{
+				Fields: map[string]*framework.FieldSchema{
+					"foo": {
+						Type: framework.TypeString,
+					},
+				},
+			},
+			response: map[string]interface{}{
+				"http_status_code": 304,
+			},
+			strict:        true,
+			errorExpected: false,
+		},
+
+		"string schema field, response has non-200 http_status_code, not strict": {
+			schema: &framework.Response{
+				Fields: map[string]*framework.FieldSchema{
+					"foo": {
+						Type: framework.TypeString,
+					},
+				},
+			},
+			response: map[string]interface{}{
+				"http_status_code": 304,
+			},
+			strict:        false,
+			errorExpected: false,
+		},
+
 		"schema has http_raw_body, strict": {
 			schema: &framework.Response{
 				Fields: map[string]*framework.FieldSchema{
