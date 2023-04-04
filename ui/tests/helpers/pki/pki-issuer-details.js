@@ -13,5 +13,7 @@ export const SELECTORS = {
   signIntermediate: '[data-test-pki-issuer-sign-int]',
   download: '[data-test-issuer-download]',
   configure: '[data-test-pki-issuer-configure]',
+  rotateModal: '[data-test-modal-background="Rotate this root"]',
+  rotateModalGenerate: '[data-test-root-rotate-step-one]',
   valueByName: (name) => `[data-test-value-div="${name}"]`,
 };
