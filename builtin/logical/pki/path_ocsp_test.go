@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -13,6 +16,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/vault"
@@ -197,6 +202,7 @@ func TestOcsp_UnknownIssuerIdWithDefaultHavingOcspUsageRemoved(t *testing.T) {
 	resp, err := CBWrite(b, s, "revoke", map[string]interface{}{
 		"serial_number": serial,
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("revoke"), logical.UpdateOperation), resp, true)
 	requireSuccessNonNilResponse(t, resp, err, "revoke")
 
 	// Twiddle the entry so that the issuer id is no longer valid.

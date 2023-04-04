@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { isWildcardString } from 'vault/helpers/is-wildcard-string';
 import { module, test } from 'qunit';
 

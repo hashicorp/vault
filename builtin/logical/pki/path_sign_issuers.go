@@ -1,6 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
+	"net/http"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -23,6 +28,38 @@ func buildPathIssuerSignIntermediateRaw(b *backend, pattern string) *framework.P
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathIssuerSignIntermediate,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"expiration": {
+								Type:        framework.TypeInt64,
+								Description: `Expiration Time`,
+								Required:    true,
+							},
+							"serial_number": {
+								Type:        framework.TypeString,
+								Description: `Serial Number`,
+								Required:    false,
+							},
+							"certificate": {
+								Type:        framework.TypeString,
+								Description: `Certificate`,
+								Required:    true,
+							},
+							"issuing_ca": {
+								Type:        framework.TypeString,
+								Description: `Issuing CA`,
+								Required:    true,
+							},
+							"ca_chain": {
+								Type:        framework.TypeStringSlice,
+								Description: `CA Chain`,
+								Required:    true,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -140,6 +177,23 @@ func buildPathIssuerSignSelfIssued(b *backend, pattern string) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathIssuerSignSelfIssued,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"certificate": {
+								Type:        framework.TypeString,
+								Description: `Certificate`,
+								Required:    true,
+							},
+							"issuing_ca": {
+								Type:        framework.TypeString,
+								Description: `Issuing CA`,
+								Required:    true,
+							},
+						},
+					}},
+				},
 			},
 		},
 

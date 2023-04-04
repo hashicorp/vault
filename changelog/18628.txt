@@ -1,0 +1,3 @@
+```release-note:improvement
+openapi: add openapi response definitions to /sys/version-history, /sys/leader, /sys/ha-status, /sys/host-info, /sys/in-flight-req
+```

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
@@ -19,6 +24,13 @@ const validations = {
   ],
 };
 
+/**
+ * This model maps to multiple PKI endpoints, specifically the ones that make up the
+ * configuration/create workflow. These endpoints also share a nontypical behavior in that
+ * a POST request to the endpoints don't necessarily result in a single entity created --
+ * depending on the inputs, some number of issuers, keys, and certificates can be created
+ * from the API.
+ */
 @withModelValidations(validations)
 @withFormFields()
 export default class PkiActionModel extends Model {
@@ -28,6 +40,11 @@ export default class PkiActionModel extends Model {
 
   /* actionType import */
   @attr('string') pemBundle;
+  // readonly attrs returned after importing
+  @attr importedIssuers;
+  @attr importedKeys;
+  @attr mapping;
+  @attr('string', { readOnly: true, masked: true }) certificate;
 
   /* actionType generate-root */
   @attr('string', {
@@ -167,12 +184,12 @@ export default class PkiActionModel extends Model {
   @attr('string') ttl;
   @attr('date') notAfter;
 
-  @attr('string', { readOnly: true }) issuerId; // returned from generate-root action
+  @attr('string', { label: 'Issuer ID', readOnly: true, detailLinkTo: 'issuers.issuer.details' }) issuerId; // returned from generate-root action
 
   // For generating and signing a CSR
   @attr('string', { label: 'CSR', masked: true }) csr;
   @attr caChain;
-  @attr('string', { label: 'Key ID' }) keyId;
+  @attr('string', { label: 'Key ID', detailLinkTo: 'keys.key.details' }) keyId;
   @attr('string', { masked: true }) privateKey;
   @attr('string') privateKeyType;
 
