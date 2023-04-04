@@ -14,6 +14,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
 
@@ -154,6 +155,15 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 	}
 	if credCh == nil {
 		credCh = make(chan struct{})
+	}
+
+	if ah.client != nil {
+		headers := ah.client.Headers()
+		if headers == nil {
+			headers = make(http.Header)
+		}
+		headers.Set("User-Agent", useragent.AgentAutoAuthString())
+		ah.client.SetHeaders(headers)
 	}
 
 	var watcher *api.LifetimeWatcher

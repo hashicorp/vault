@@ -11,14 +11,20 @@ import { get } from '@ember/object';
  * used to validate properties on a class
  *
  * decorator expects validations object with the following shape:
- * { [propertyKeyName]: [{ type, options, message, validator }] }
+ * { [propertyKeyName]: [{ type, options, message, level, validator }] }
  * each key in the validations object should refer to the property on the class to apply the validation to
- * type refers to the type of validation to apply -- must be exported from validators util for lookup
- * options is an optional object for given validator -- min, max, nullable etc. -- see validators in util
- * message is added to the errors array and returned from the validate method if validation fails
- * validator may be used in place of type to provide a function that gets executed in the validate method
- * validator is useful when specific validations are needed (dependent on other class properties etc.)
- * validator must be passed as function that takes the class context (this) as the only argument and returns true or false
+ *
+ * type - string referring to the type of validation to apply -- must be exported from validators util for lookup
+ *
+ * options - an optional object for given validator -- min, max, nullable etc. -- see validators in util
+ *
+ * message - string added to the errors array and returned from the validate method if validation fails
+ *
+ * level - optional string that defaults to 'error'. Currently the only other accepted value is 'warn'
+ *
+ * validator - function that may be used in place of type that is invoked in the validate method
+ * useful when specific validations are needed (dependent on other class properties etc.)
+ * must be passed as function that takes the class context (this) as the only argument and returns true or false
  * each property supports multiple validations provided as an array -- for example, presence and length for string
  *
  * validations must be invoked using the validate method which is added directly to the decorated class
@@ -59,6 +65,7 @@ import { get } from '@ember/object';
  * -> state.foo.errors = ['foo is required if bar includes test.'];
  *
  * *** example adding class in hbs file
+ *
  * all form-validations need to have a red border around them. Add this by adding a conditional class 'has-error-border'
  * class="input field {{if this.errors.name.errors 'has-error-border'}}"
  */
@@ -91,10 +98,10 @@ export function withModelValidations(validations) {
             continue;
           }
 
-          state[key] = { errors: [] };
+          state[key] = { errors: [], warnings: [] };
 
           for (const rule of rules) {
-            const { type, options, message, validator: customValidator } = rule;
+            const { type, options, level, message, validator: customValidator } = rule;
             // check for custom validator or lookup in validators util by type
             const useCustomValidator = typeof customValidator === 'function';
             const validator = useCustomValidator ? customValidator : validators[type];
@@ -115,9 +122,13 @@ export function withModelValidations(validations) {
             if (!passedValidation) {
               // consider setting a prop like validationErrors directly on the model
               // for now return an errors object
-              state[key].errors.push(message);
-              if (isValid) {
-                isValid = false;
+              if (level === 'warn') {
+                state[key].warnings.push(message);
+              } else {
+                state[key].errors.push(message);
+                if (isValid) {
+                  isValid = false;
+                }
               }
             }
           }
