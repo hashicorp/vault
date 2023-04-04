@@ -10,7 +10,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 
-module('Integration | Component | pki generate csr', function (hooks) {
+module('Integration | Component | ', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'pki');
   setupMirage(hooks);
@@ -47,7 +47,7 @@ module('Integration | Component | pki generate csr', function (hooks) {
       'commonName',
       'excludeCnFromSans',
       'format',
-      'serialNumber',
+      'subjectSerialNumber',
       'addBasicConstraints',
     ];
     fields.forEach((key) => {
