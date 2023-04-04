@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package logical
 
 import (
@@ -366,6 +369,7 @@ const (
 	HelpOperation                     = "help"
 	AliasLookaheadOperation           = "alias-lookahead"
 	ResolveRoleOperation              = "resolve-role"
+	HeaderOperation                   = "header"
 
 	// The operations below are called globally, the path is less relevant.
 	RevokeOperation   Operation = "revoke"

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
@@ -6,7 +11,7 @@ import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { add } from 'date-fns';
 import errorMessage from 'vault/utils/error-message';
-
+import timestamp from 'vault/utils/timestamp';
 /**
  * @module Credentials
  * CredentialsPage component is a child component to show the generate and view
@@ -28,7 +33,7 @@ export default class CredentialsPageComponent extends Component {
   @tracked credentials;
 
   get leaseExpiry() {
-    return add(new Date(), { seconds: this.credentials.lease_duration });
+    return add(timestamp.now(), { seconds: this.credentials.lease_duration });
   }
 
   @action

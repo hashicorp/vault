@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { Response } from 'miragejs';
 
 export const OIDC_BASE_URL = `/vault/access/oidc`;
