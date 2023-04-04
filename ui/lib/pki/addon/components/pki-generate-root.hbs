@@ -1,21 +1,13 @@
 {{! Show results if model has an ID, which is only generated after save }}
 {{#if @model.id}}
-  <Toolbar />
-  {{#if @model.privateKey}}
-    <div class="has-top-margin-m">
-      <AlertBanner
-        @title="Next steps"
-        @type="warning"
-        @message="The private_key is only available once. Make sure you copy and save it now."
-      />
-    </div>
-  {{/if}}
   <main class="box is-fullwidth is-sideless is-paddingless is-marginless">
     {{#each this.returnedFields as |field|}}
       {{#let (find-by "name" field @model.allFields) as |attr|}}
         {{#if attr.options.detailLinkTo}}
           <InfoTableRow
             @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
+            @value={{get @model attr.name}}
+            @addCopyButton={{or (eq attr.name "issuerId") (eq attr.name "keyId")}}
           >
             <LinkTo @route={{attr.options.detailLinkTo}} @model={{get @model attr.name}}>{{get @model attr.name}}</LinkTo>
           </InfoTableRow>
