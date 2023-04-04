@@ -96,11 +96,16 @@ their identifier and their name (if set).
 )
 
 func pathGetIssuer(b *backend) *framework.Path {
-	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "(/der|/pem|/json)?"
+	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "$"
+	return buildPathIssuer(b, pattern)
+}
+
+func pathGetUnauthedIssuer(b *backend) *framework.Path {
+	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/(json|der|pem)$"
 	return buildPathGetIssuer(b, pattern)
 }
 
-func buildPathGetIssuer(b *backend, pattern string) *framework.Path {
+func buildPathIssuer(b *backend, pattern string) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	fields = addIssuerRefNameFields(fields)
 
@@ -283,6 +288,58 @@ to be set on all PR secondary clusters.`,
 				// Read more about why these flags are set in backend.go.
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
+			},
+		},
+
+		HelpSynopsis:    pathGetIssuerHelpSyn,
+		HelpDescription: pathGetIssuerHelpDesc,
+	}
+}
+
+func buildPathGetIssuer(b *backend, pattern string) *framework.Path {
+	fields := map[string]*framework.FieldSchema{}
+	fields = addIssuerRefField(fields)
+
+	getIssuerSchema := map[int][]framework.Response{
+		http.StatusNotModified: {{
+			Description: "Not Modified",
+		}},
+		http.StatusOK: {{
+			Description: "OK",
+			Fields: map[string]*framework.FieldSchema{
+				"issuer_id": {
+					Type:        framework.TypeString,
+					Description: `Issuer Id`,
+					Required:    true,
+				},
+				"issuer_name": {
+					Type:        framework.TypeString,
+					Description: `Issuer Name`,
+					Required:    true,
+				},
+				"certificate": {
+					Type:        framework.TypeString,
+					Description: `Certificate`,
+					Required:    true,
+				},
+				"ca_chain": {
+					Type:        framework.TypeStringSlice,
+					Description: `CA Chain`,
+					Required:    true,
+				},
+			},
+		}},
+	}
+
+	return &framework.Path{
+		// Returns a JSON entry.
+		Pattern: pattern,
+		Fields:  fields,
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback:  b.pathGetIssuer,
+				Responses: getIssuerSchema,
 			},
 		},
 
