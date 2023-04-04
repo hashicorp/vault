@@ -155,7 +155,9 @@ export default Component.extend({
 
   namespaceDisplay: computed('namespacePath', 'accessibleNamespaces', 'accessibleNamespaces.[]', function () {
     const namespace = this.namespacePath;
-    if (!namespace) return '';
+    if (!namespace) {
+      return 'root';
+    }
     const parts = namespace?.split('/');
     return parts[parts.length - 1];
   }),
