@@ -1833,6 +1833,12 @@ func (a *ActivityLog) namespaceToLabel(ctx context.Context, nsID string) string 
 	return ns.Path
 }
 
+type (
+	summaryByNamespace map[string]*processByNamespace
+	summaryByMount     map[string]*processMount
+	summaryByMonth     map[int64]*processMonth
+)
+
 type processCounts struct {
 	// entityID -> present
 	Entities map[string]struct{}
@@ -1850,6 +1856,23 @@ func newProcessCounts() *processCounts {
 	}
 }
 
+func (p *processCounts) add(client *activity.EntityRecord) {
+	if client.NonEntity {
+		p.NonEntities[client.ClientID] = struct{}{}
+	} else {
+		p.Entities[client.ClientID] = struct{}{}
+	}
+}
+
+func (p *processCounts) contains(client *activity.EntityRecord) bool {
+	if client.NonEntity {
+		_, ok := p.NonEntities[client.ClientID]
+		return ok
+	}
+	_, ok := p.Entities[client.ClientID]
+	return ok
+}
+
 type processMount struct {
 	Counts *processCounts
 }
@@ -1860,117 +1883,90 @@ func newProcessMount() *processMount {
 	}
 }
 
+func (p *processMount) add(client *activity.EntityRecord) {
+	p.Counts.add(client)
+}
+
+func (s summaryByMount) add(client *activity.EntityRecord) {
+	if _, present := s[client.MountAccessor]; !present {
+		s[client.MountAccessor] = newProcessMount()
+	}
+	s[client.MountAccessor].add(client)
+}
+
 type processByNamespace struct {
 	Counts *processCounts
-	Mounts map[string]*processMount
+	Mounts summaryByMount
 }
 
 func newByNamespace() *processByNamespace {
 	return &processByNamespace{
 		Counts: newProcessCounts(),
-		Mounts: make(map[string]*processMount),
+		Mounts: make(summaryByMount),
 	}
 }
-
-type processNamespace struct {
-	Counts *processCounts
-	Mounts map[string]*processMount
+func (p *processByNamespace) add(client *activity.EntityRecord) {
+	p.Counts.add(client)
+	p.Mounts.add(client)
 }
 
-func newProcessNamespace() *processNamespace {
-	return &processNamespace{
-		Counts: newProcessCounts(),
-		Mounts: make(map[string]*processMount),
+func (s summaryByNamespace) add(client *activity.EntityRecord) {
+	if _, present := s[client.NamespaceID]; !present {
+		s[client.NamespaceID] = newByNamespace()
 	}
+	s[client.NamespaceID].add(client)
 }
 
 type processNewClients struct {
 	Counts     *processCounts
-	Namespaces map[string]*processNamespace
+	Namespaces summaryByNamespace
 }
 
 func newProcessNewClients() *processNewClients {
 	return &processNewClients{
 		Counts:     newProcessCounts(),
-		Namespaces: make(map[string]*processNamespace),
+		Namespaces: make(summaryByNamespace),
 	}
+}
+
+func (p *processNewClients) add(client *activity.EntityRecord) {
+	p.Counts.add(client)
+	p.Namespaces.add(client)
 }
 
 type processMonth struct {
 	Counts     *processCounts
-	Namespaces map[string]*processNamespace
+	Namespaces summaryByNamespace
 	NewClients *processNewClients
 }
 
 func newProcessMonth() *processMonth {
 	return &processMonth{
 		Counts:     newProcessCounts(),
-		Namespaces: make(map[string]*processNamespace),
+		Namespaces: make(summaryByNamespace),
 		NewClients: newProcessNewClients(),
 	}
 }
 
+func (p *processMonth) add(client *activity.EntityRecord) {
+	p.Counts.add(client)
+	p.NewClients.add(client)
+	p.Namespaces.add(client)
+}
+
+func (s summaryByMonth) add(client *activity.EntityRecord, startTime time.Time) {
+	monthTimestamp := timeutil.StartOfMonth(startTime).UTC().Unix()
+	if _, present := s[monthTimestamp]; !present {
+		s[monthTimestamp] = newProcessMonth()
+	}
+	s[monthTimestamp].add(client)
+}
+
 // processClientRecord parses the client record e and stores the breakdowns in
 // the maps provided.
-func processClientRecord(e *activity.EntityRecord, byNamespace map[string]*processByNamespace, byMonth map[int64]*processMonth, startTime time.Time) {
-	if _, present := byNamespace[e.NamespaceID]; !present {
-		byNamespace[e.NamespaceID] = newByNamespace()
-	}
-
-	if _, present := byNamespace[e.NamespaceID].Mounts[e.MountAccessor]; !present {
-		byNamespace[e.NamespaceID].Mounts[e.MountAccessor] = newProcessMount()
-	}
-
-	if e.NonEntity {
-		byNamespace[e.NamespaceID].Counts.NonEntities[e.ClientID] = struct{}{}
-		byNamespace[e.NamespaceID].Mounts[e.MountAccessor].Counts.NonEntities[e.ClientID] = struct{}{}
-	} else {
-		byNamespace[e.NamespaceID].Counts.Entities[e.ClientID] = struct{}{}
-		byNamespace[e.NamespaceID].Mounts[e.MountAccessor].Counts.Entities[e.ClientID] = struct{}{}
-	}
-
-	monthTimestamp := timeutil.StartOfMonth(startTime).UTC().Unix()
-	if _, present := byMonth[monthTimestamp]; !present {
-		byMonth[monthTimestamp] = newProcessMonth()
-	}
-
-	if _, present := byMonth[monthTimestamp].Namespaces[e.NamespaceID]; !present {
-		byMonth[monthTimestamp].Namespaces[e.NamespaceID] = newProcessNamespace()
-	}
-
-	if _, present := byMonth[monthTimestamp].Namespaces[e.NamespaceID].Mounts[e.MountAccessor]; !present {
-		byMonth[monthTimestamp].Namespaces[e.NamespaceID].Mounts[e.MountAccessor] = newProcessMount()
-	}
-
-	if _, present := byMonth[monthTimestamp].NewClients.Namespaces[e.NamespaceID]; !present {
-		byMonth[monthTimestamp].NewClients.Namespaces[e.NamespaceID] = newProcessNamespace()
-	}
-
-	if _, present := byMonth[monthTimestamp].NewClients.Namespaces[e.NamespaceID].Mounts[e.MountAccessor]; !present {
-		byMonth[monthTimestamp].NewClients.Namespaces[e.NamespaceID].Mounts[e.MountAccessor] = newProcessMount()
-	}
-
-	// At first assume all the clients in the given month, as new.
-	// Before persisting this information to disk, clients that have
-	// activity in the previous months of a given billing cycle will be
-	// deleted.
-	if e.NonEntity == true {
-		byMonth[monthTimestamp].Counts.NonEntities[e.ClientID] = struct{}{}
-		byMonth[monthTimestamp].Namespaces[e.NamespaceID].Counts.NonEntities[e.ClientID] = struct{}{}
-		byMonth[monthTimestamp].Namespaces[e.NamespaceID].Mounts[e.MountAccessor].Counts.NonEntities[e.ClientID] = struct{}{}
-
-		byMonth[monthTimestamp].NewClients.Counts.NonEntities[e.ClientID] = struct{}{}
-		byMonth[monthTimestamp].NewClients.Namespaces[e.NamespaceID].Counts.NonEntities[e.ClientID] = struct{}{}
-		byMonth[monthTimestamp].NewClients.Namespaces[e.NamespaceID].Mounts[e.MountAccessor].Counts.NonEntities[e.ClientID] = struct{}{}
-	} else {
-		byMonth[monthTimestamp].Counts.Entities[e.ClientID] = struct{}{}
-		byMonth[monthTimestamp].Namespaces[e.NamespaceID].Counts.Entities[e.ClientID] = struct{}{}
-		byMonth[monthTimestamp].Namespaces[e.NamespaceID].Mounts[e.MountAccessor].Counts.Entities[e.ClientID] = struct{}{}
-
-		byMonth[monthTimestamp].NewClients.Counts.Entities[e.ClientID] = struct{}{}
-		byMonth[monthTimestamp].NewClients.Namespaces[e.NamespaceID].Counts.Entities[e.ClientID] = struct{}{}
-		byMonth[monthTimestamp].NewClients.Namespaces[e.NamespaceID].Mounts[e.MountAccessor].Counts.Entities[e.ClientID] = struct{}{}
-	}
+func processClientRecord(e *activity.EntityRecord, byNamespace summaryByNamespace, byMonth summaryByMonth, startTime time.Time) {
+	byNamespace.add(e)
+	byMonth.add(e, startTime)
 }
 
 // goroutine to process the request in the intent log, creating precomputed queries.
@@ -2149,7 +2145,7 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context) error {
 			Months:     make([]*activity.MonthRecord, 0, len(byMonth)),
 		}
 
-		processNamespaces := func(nsMap map[string]*processNamespace) []*activity.MonthlyNamespaceRecord {
+		processNamespaces := func(nsMap map[string]*processByNamespace) []*activity.MonthlyNamespaceRecord {
 			nsRecord := make([]*activity.MonthlyNamespaceRecord, 0, len(nsMap))
 			for nsID, nsData := range nsMap {
 				// Process mount specific data within a namespace within a given month
@@ -2449,7 +2445,7 @@ func (a *ActivityLog) partialMonthClientCount(ctx context.Context) (map[string]i
 	responseData["clients"] = totalEntities + totalTokens
 
 	months := make([]*ResponseMonth, 0, len(byMonth))
-	prepareNSResponse := func(processedNamespaces map[string]*processNamespace) ([]*ResponseMonthlyNamespace, error) {
+	prepareNSResponse := func(processedNamespaces map[string]*processByNamespace) ([]*ResponseMonthlyNamespace, error) {
 		nsResponse := make([]*ResponseMonthlyNamespace, 0, len(processedNamespaces))
 		for nsID, nsRecord := range processedNamespaces {
 			if len(nsRecord.Counts.Entities) == 0 && len(nsRecord.Counts.NonEntities) == 0 {
