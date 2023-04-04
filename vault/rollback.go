@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -44,6 +47,7 @@ type RollbackManager struct {
 	shutdown     bool
 	shutdownCh   chan struct{}
 	shutdownLock sync.Mutex
+	stopTicker   chan struct{}
 	quitContext  context.Context
 
 	core *Core
@@ -67,6 +71,7 @@ func NewRollbackManager(ctx context.Context, logger log.Logger, backendsFunc fun
 		inflight:    make(map[string]*rollbackState),
 		doneCh:      make(chan struct{}),
 		shutdownCh:  make(chan struct{}),
+		stopTicker:  make(chan struct{}),
 		quitContext: ctx,
 		core:        core,
 	}
@@ -91,6 +96,10 @@ func (m *RollbackManager) Stop() {
 	m.inflightAll.Wait()
 }
 
+func (m *RollbackManager) StopTicker() {
+	close(m.stopTicker)
+}
+
 // run is a long running routine to periodically invoke rollback
 func (m *RollbackManager) run() {
 	m.logger.Info("starting rollback manager")
@@ -105,6 +114,10 @@ func (m *RollbackManager) run() {
 		case <-m.shutdownCh:
 			m.logger.Info("stopping rollback manager")
 			return
+
+		case <-m.stopTicker:
+			m.logger.Info("stopping rollback manager ticker for tests")
+			tick.Stop()
 		}
 	}
 }

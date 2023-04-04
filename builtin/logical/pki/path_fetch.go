@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -25,12 +28,12 @@ var pathFetchReadSchema = map[int][]framework.Response{
 				Required:    false,
 			},
 			"revocation_time": {
-				Type:        framework.TypeInt,
+				Type:        framework.TypeString,
 				Description: `Revocation time`,
 				Required:    false,
 			},
 			"revocation_time_rfc3339": {
-				Type:        framework.TypeInt,
+				Type:        framework.TypeString,
 				Description: `Revocation time RFC 3339 formatted`,
 				Required:    false,
 			},
@@ -43,18 +46,6 @@ var pathFetchReadSchema = map[int][]framework.Response{
 				Type:        framework.TypeStringSlice,
 				Description: `Issuing CA Chain`,
 				Required:    false,
-			},
-			"http_content_type": {
-				Type:     framework.TypeString,
-				Required: false,
-			},
-			"http_raw_body": {
-				Type:     framework.TypeString,
-				Required: false,
-			},
-			"http_status_code": {
-				Type:     framework.TypeString,
-				Required: false,
 			},
 		},
 	}},

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -11,16 +14,13 @@ import (
 
 	atomic2 "go.uber.org/atomic"
 
-	"github.com/hashicorp/vault/helper/constants"
-
-	"github.com/hashicorp/go-multierror"
-
-	"github.com/hashicorp/vault/sdk/helper/consts"
-
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -97,6 +97,12 @@ func Backend(conf *logical.BackendConfig) *backend {
 				"issuer/+/crl/delta/der",
 				"issuer/+/crl/delta/pem",
 				"issuer/+/crl/delta",
+				"issuer/+/unified-crl/der",
+				"issuer/+/unified-crl/pem",
+				"issuer/+/unified-crl",
+				"issuer/+/unified-crl/delta/der",
+				"issuer/+/unified-crl/delta/pem",
+				"issuer/+/unified-crl/delta",
 				"issuer/+/pem",
 				"issuer/+/der",
 				"issuer/+/json",
@@ -109,6 +115,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 				"unified-crl",
 				"unified-ocsp",   // Unified OCSP POST
 				"unified-ocsp/*", // Unified OCSP GET
+
+				// ACME paths are added below
 			},
 
 			LocalStorage: []string{
@@ -167,6 +175,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			// Issuer APIs
 			pathListIssuers(&b),
 			pathGetIssuer(&b),
+			pathGetUnauthedIssuer(&b),
 			pathGetIssuerCRL(&b),
 			pathImportIssuer(&b),
 			pathIssuerIssue(&b),
@@ -205,6 +214,20 @@ func Backend(conf *logical.BackendConfig) *backend {
 			// CRL Signing
 			pathResignCrls(&b),
 			pathSignRevocationList(&b),
+
+			// ACME APIs
+			pathAcmeRootDirectory(&b),
+			pathAcmeRoleDirectory(&b),
+			pathAcmeIssuerDirectory(&b),
+			pathAcmeIssuerAndRoleDirectory(&b),
+			pathAcmeRootNonce(&b),
+			pathAcmeRoleNonce(&b),
+			pathAcmeIssuerNonce(&b),
+			pathAcmeIssuerAndRoleNonce(&b),
+			pathAcmeRootNewAccount(&b),
+			pathAcmeRoleNewAccount(&b),
+			pathAcmeIssuerNewAccount(&b),
+			pathAcmeIssuerAndRoleNewAccount(&b),
 		},
 
 		Secrets: []*framework.Secret{
@@ -215,6 +238,16 @@ func Backend(conf *logical.BackendConfig) *backend {
 		InitializeFunc: b.initialize,
 		Invalidate:     b.invalidate,
 		PeriodicFunc:   b.periodicFunc,
+	}
+
+	// Add specific un-auth'd paths for ACME APIs
+	for _, acmePrefix := range []string{"", "issuer/+/", "roles/+/", "issuer/+/roles/+/"} {
+		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/directory")
+		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/new-nonce")
+		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/new-account")
+		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/new-order")
+		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/revoke-cert")
+		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/key-change")
 	}
 
 	if constants.IsEnterprise {
@@ -260,6 +293,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 	b.unifiedTransferStatus = newUnifiedTransferStatus()
 
+	b.acmeState = NewACMEState()
 	return &b
 }
 
@@ -292,6 +326,9 @@ type backend struct {
 
 	// Write lock around issuers and keys.
 	issuersLock sync.RWMutex
+
+	// Context around ACME operations
+	acmeState *acmeState
 }
 
 type roleOperation func(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error)
@@ -379,6 +416,7 @@ func (b *backend) initialize(ctx context.Context, _ *logical.InitializationReque
 		b.Logger().Error("Could not initialize stored certificate counts", err)
 		b.certCountError = err.Error()
 	}
+
 	return nil
 }
 

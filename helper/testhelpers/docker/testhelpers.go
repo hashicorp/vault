@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package docker
 
 import (
@@ -333,8 +336,12 @@ func (d *Runner) Stop(ctx context.Context, containerID string) error {
 		}
 	}
 
-	timeout := 5 * time.Second
-	if err := d.DockerAPI.ContainerStop(ctx, containerID, &timeout); err != nil {
+	// timeout in seconds
+	timeout := 5
+	options := container.StopOptions{
+		Timeout: &timeout,
+	}
+	if err := d.DockerAPI.ContainerStop(ctx, containerID, options); err != nil {
 		return fmt.Errorf("error stopping container: %v", err)
 	}
 

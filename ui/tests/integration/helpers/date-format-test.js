@@ -1,31 +1,44 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
+import sinon from 'sinon';
 import { setupRenderingTest } from 'ember-qunit';
-import { render } from '@ember/test-helpers';
-import { format } from 'date-fns';
+import { find, render, settled } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
+import timestamp from 'core/utils/timestamp';
 
 module('Integration | Helper | date-format', function (hooks) {
   setupRenderingTest(hooks);
 
+  hooks.before(function () {
+    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
+  });
+  hooks.after(function () {
+    timestamp.now.restore();
+  });
+
   test('it is able to format a date object', async function (assert) {
-    const today = new Date();
+    const today = timestamp.now();
     this.set('today', today);
 
     await render(hbs`{{date-format this.today "yyyy"}}`);
-    assert.dom(this.element).includesText(today.getFullYear(), 'it renders the date in the year format');
+    assert.dom(this.element).includesText('2018', 'it renders the date in the year format');
   });
 
   test('it supports date timestamps', async function (assert) {
-    const today = new Date().getTime();
+    const today = timestamp.now().getTime();
     this.set('today', today);
 
     await render(hbs`{{date-format this.today 'hh:mm:ss'}}`);
     const formattedDate = this.element.innerText;
-    assert.ok(formattedDate.match(/^\d{2}:\d{2}:\d{2}$/));
+    assert.strictEqual(formattedDate, '02:15:30');
   });
 
   test('it supports date strings', async function (assert) {
-    const todayString = new Date().getFullYear().toString();
+    const todayString = timestamp.now().getFullYear().toString();
     this.set('todayString', todayString);
 
     await render(hbs`{{date-format this.todayString "yyyy"}}`);
@@ -41,19 +54,26 @@ module('Integration | Helper | date-format', function (hooks) {
   });
 
   test('it supports already formatted dates', async function (assert) {
-    const formattedDate = new Date();
+    const formattedDate = timestamp.now();
     this.set('formattedDate', formattedDate);
 
     await render(hbs`{{date-format this.formattedDate 'MMMM dd, yyyy hh:mm:ss a' isFormatted=true}}`);
-    assert.dom(this.element).includesText(format(formattedDate, 'MMMM dd, yyyy hh:mm:ss a'));
+    assert.dom(this.element).hasText('April 03, 2018 02:15:30 PM');
   });
 
   test('displays time zone if withTimeZone=true', async function (assert) {
     const timestampDate = '2022-12-06T11:29:15-08:00';
-    const zone = new Date().toLocaleTimeString(undefined, { timeZoneName: 'short' }).split(' ')[2];
+    this.set('withTimezone', false);
     this.set('timestampDate', timestampDate);
 
-    await render(hbs`{{date-format this.timestampDate 'MMM d yyyy, h:mm:ss aaa' withTimeZone=true}}`);
-    assert.dom(this.element).hasTextContaining(`${zone}`);
+    await render(
+      hbs`<span data-test-formatted>{{date-format this.timestampDate 'MMM d yyyy, h:mm:ss aaa' withTimeZone=this.withTimezone}}</span>`
+    );
+    const result = find('[data-test-formatted]');
+    assert.strictEqual(result.innerText.length, 22);
+    // Compare to with timezone, which should add 4 characters
+    this.set('withTimezone', true);
+    await settled();
+    assert.strictEqual(result.innerText.length, 26);
   });
 });

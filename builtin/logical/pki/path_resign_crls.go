@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -12,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -84,6 +88,18 @@ base64 encoded. Defaults to "pem".`,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathUpdateResignCrlsHandler,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"crl": {
+								Type:        framework.TypeString,
+								Description: `CRL`,
+								Required:    true,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -147,6 +163,18 @@ value (string)`,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathUpdateSignRevocationListHandler,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"crl": {
+								Type:        framework.TypeString,
+								Description: `CRL`,
+								Required:    true,
+							},
+						},
+					}},
+				},
 			},
 		},
 

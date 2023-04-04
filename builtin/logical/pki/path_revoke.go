@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -9,8 +12,11 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/helper/consts"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -30,6 +36,18 @@ func pathListCertsRevoked(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathListRevokedCertsHandler,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"keys": {
+								Type:        framework.TypeStringSlice,
+								Description: `List of Keys`,
+								Required:    false,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -87,6 +105,28 @@ signed by an issuer in this mount.`,
 				// If this needs to write, the entire request will be forwarded to the
 				// active node of the current performance cluster, but we don't want to
 				// forward invalid revoke requests there.
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"revocation_time": {
+								Type:        framework.TypeDurationSecond,
+								Description: `Revocation Time`,
+								Required:    false,
+							},
+							"revocation_time_rfc3339": {
+								Type:        framework.TypeTime,
+								Description: `Revocation Time`,
+								Required:    false,
+							},
+							"state": {
+								Type:        framework.TypeString,
+								Description: `Revocation State`,
+								Required:    false,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -130,6 +170,28 @@ be in PEM format.`,
 				// If this needs to write, the entire request will be forwarded to the
 				// active node of the current performance cluster, but we don't want to
 				// forward invalid revoke requests there.
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"revocation_time": {
+								Type:        framework.TypeDurationSecond,
+								Description: `Revocation Time`,
+								Required:    false,
+							},
+							"revocation_time_rfc3339": {
+								Type:        framework.TypeTime,
+								Description: `Revocation Time`,
+								Required:    false,
+							},
+							"state": {
+								Type:        framework.TypeString,
+								Description: `Revocation State`,
+								Required:    false,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -155,6 +217,18 @@ func pathRotateCRL(b *backend) *framework.Path {
 				// so this request should be forwarded when it is first seen, not
 				// when it is ready to write.
 				ForwardPerformanceStandby: true,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"success": {
+								Type:        framework.TypeBool,
+								Description: `Whether rotation was successful`,
+								Required:    true,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -180,6 +254,18 @@ func pathRotateDeltaCRL(b *backend) *framework.Path {
 				// so this request should be forwarded when it is first seen, not
 				// when it is ready to write.
 				ForwardPerformanceStandby: true,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"success": {
+								Type:        framework.TypeBool,
+								Description: `Whether rotation was successful`,
+								Required:    true,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -200,6 +286,23 @@ func pathListUnifiedRevoked(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathListUnifiedRevokedCertsHandler,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"keys": {
+								Type:        framework.TypeStringSlice,
+								Description: `List of Keys`,
+								Required:    false,
+							},
+							"key_info": {
+								Type:        framework.TypeString,
+								Description: `Key information`,
+								Required:    false,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -528,6 +631,13 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	// Assumption: this check is cheap. Call this twice, in the cert-import
+	// case, to allow cert verification to get rejected on the standby node,
+	// but we still need it to protect the serial number case.
+	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
+		return nil, logical.ErrReadOnly
 	}
 
 	b.revokeStorageLock.Lock()
