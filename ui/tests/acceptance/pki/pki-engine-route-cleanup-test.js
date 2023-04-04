@@ -142,7 +142,8 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
 
       // Edit role
       await click(SELECTORS.editRoleLink);
-      await fillIn(SELECTORS.roleForm.issuerRef, 'foobar');
+      await click(SELECTORS.roleForm.issuerRefToggle);
+      await fillIn(SELECTORS.roleForm.issuerRefSelect, 'foobar');
       role = this.store.peekRecord('pki/role', roleId);
       assert.true(role.hasDirtyAttributes, 'Role has dirty attrs');
       // Exit page via cancel button
@@ -153,7 +154,8 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
 
       // Edit again
       await click(SELECTORS.editRoleLink);
-      await fillIn(SELECTORS.roleForm.issuerRef, 'foobar2');
+      await click(SELECTORS.roleForm.issuerRefToggle);
+      await fillIn(SELECTORS.roleForm.issuerRefSelect, 'foobar2');
       role = this.store.peekRecord('pki/role', roleId);
       assert.true(role.hasDirtyAttributes, 'Role has dirty attrs');
       // Exit page via breadcrumbs

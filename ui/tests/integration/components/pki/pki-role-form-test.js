@@ -19,8 +19,11 @@ module('Integration | Component | pki-role-form', function (hooks) {
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
-    this.model = this.store.createRecord('pki/role');
-    this.model.backend = 'pki';
+    this.role = this.store.createRecord('pki/role');
+    this.store.createRecord('pki/issuer', { issuerName: 'issuer-0', issuerId: 'abcd-efgh' });
+    this.store.createRecord('pki/issuer', { issuerName: 'issuer-1', issuerId: 'ijkl-mnop' });
+    this.issuers = this.store.peekAll('pki/issuer');
+    this.role.backend = 'pki';
     this.onCancel = sinon.spy();
   });
 
@@ -29,14 +32,15 @@ module('Integration | Component | pki-role-form', function (hooks) {
     await render(
       hbs`
       <PkiRoleForm
-         @model={{this.model}}
+         @role={{this.role}}
+         @issuers={{this.issuers}}
          @onCancel={{this.onCancel}}
          @onSave={{this.onSave}}
        />
   `,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.issuerRef).exists('shows form-field issuer ref');
+    assert.dom(SELECTORS.issuerRefToggle).exists('shows issuer ref toggle');
     assert.dom(SELECTORS.backdateValidity).exists('shows form-field backdate validity');
     assert.dom(SELECTORS.customTtl).exists('shows custom yielded form field');
     assert.dom(SELECTORS.maxTtl).exists('shows form-field max ttl');
@@ -54,7 +58,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
   test('it should save a new pki role with various options selected', async function (assert) {
     // Key usage, Key params and Not valid after options are tested in their respective component tests
     assert.expect(9);
-    this.server.post(`/${this.model.backend}/roles/test-role`, (schema, req) => {
+    this.server.post(`/${this.role.backend}/roles/test-role`, (schema, req) => {
       assert.ok(true, 'Request made to save role');
       const request = JSON.parse(req.requestBody);
       const allowedDomainsTemplate = request.allowed_domains_template;
@@ -78,7 +82,8 @@ module('Integration | Component | pki-role-form', function (hooks) {
     await render(
       hbs`
       <PkiRoleForm
-         @model={{this.model}}
+         @role={{this.role}}
+         @issuers={{this.issuers}}
          @onCancel={{this.onCancel}}
          @onSave={{this.onSave}}
        />
@@ -87,6 +92,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
     );
 
     await click(SELECTORS.roleCreateButton);
+
     assert
       .dom(SELECTORS.roleName)
       .hasClass('has-error-border', 'shows border error on role name field when no role name is submitted');
@@ -120,6 +126,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
 
   test('it should update attributes on the model on update', async function (assert) {
     assert.expect(1);
+
     this.store.pushPayload('pki/role', {
       modelName: 'pki/role',
       name: 'test-role',
@@ -127,21 +134,22 @@ module('Integration | Component | pki-role-form', function (hooks) {
       id: 'role-id',
     });
 
-    this.model = this.store.peekRecord('pki/role', 'role-id');
+    this.role = this.store.peekRecord('pki/role', 'role-id');
 
     await render(
       hbs`
       <PkiRoleForm
-        @model={{this.model}}
+        @role={{this.role}}
+        @issuers={{this.issuers}}
         @onCancel={{this.onCancel}}
         @onSave={{this.onSave}}
       />
       `,
       { owner: this.engine }
     );
-
-    await fillIn(SELECTORS.issuerRef, 'not-default');
+    await click(SELECTORS.issuerRefToggle);
+    await fillIn(SELECTORS.issuerRefSelect, 'issuer-1');
     await click(SELECTORS.roleCreateButton);
-    assert.strictEqual(this.model.issuerRef, 'not-default', 'Issuer Ref correctly saved on create');
+    assert.strictEqual(this.role.issuerRef, 'issuer-1', 'Issuer Ref correctly saved on create');
   });
 });
