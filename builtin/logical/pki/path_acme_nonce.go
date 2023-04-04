@@ -51,7 +51,7 @@ func patternAcmeNonce(b *backend, pattern string) *framework.Path {
 	}
 }
 
-func (b *backend) acmeNonceHandler(ctx acmeContext, r *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+func (b *backend) acmeNonceHandler(ctx *acmeContext, r *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	nonce, _, err := b.acmeState.GetNonce()
 	if err != nil {
 		return nil, err
@@ -71,11 +71,14 @@ func (b *backend) acmeNonceHandler(ctx acmeContext, r *logical.Request, _ *frame
 		},
 		Data: map[string]interface{}{
 			logical.HTTPStatusCode: httpStatus,
+			// Get around Vault limitation of requiring a body set if the status is not http.StatusNoContent
+			// for our HEAD request responses.
+			logical.HTTPContentType: "",
 		},
 	}, nil
 }
 
-func genAcmeLinkHeader(ctx acmeContext) []string {
-	path := fmt.Sprintf("<%s>;rel=\"index\"", ctx.baseUrl.JoinPath("/acme/directory").String())
+func genAcmeLinkHeader(ctx *acmeContext) []string {
+	path := fmt.Sprintf("<%s>;rel=\"index\"", ctx.baseUrl.JoinPath("directory").String())
 	return []string{path}
 }

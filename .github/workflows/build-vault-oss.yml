@@ -47,7 +47,7 @@ jobs:
       - name: Set up node and yarn
         uses: actions/setup-node@v3
         with:
-          node-version: 14
+          node-version: 16
           cache: yarn
           cache-dependency-path: ui/yarn.lock
       - name: Build UI

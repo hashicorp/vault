@@ -43,7 +43,7 @@ export default class PkiGenerateToggleGroupsComponent extends Component<Args> {
     };
     // excludeCnFromSans and serialNumber are present in default fields for generate-csr -- only include for other types
     if (this.args.model.actionType !== 'generate-csr') {
-      groups['Subject Alternative Name (SAN) Options'].unshift('excludeCnFromSans', 'serialNumber');
+      groups['Subject Alternative Name (SAN) Options'].unshift('excludeCnFromSans', 'subjectSerialNumber');
     }
     return groups;
   }
