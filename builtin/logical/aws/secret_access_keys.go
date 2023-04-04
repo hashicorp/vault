@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package aws
 
 import (
@@ -150,7 +153,7 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 		return logical.ErrorResponse("must specify at least one of policy_arns or policy_document with %s credential_type", federationTokenCred), nil
 	}
 
-	tokenResp, err := stsClient.GetFederationToken(getTokenInput)
+	tokenResp, err := stsClient.GetFederationTokenWithContext(ctx, getTokenInput)
 	if err != nil {
 		return logical.ErrorResponse("Error generating STS keys: %s", err), awsutil.CheckAWSError(err)
 	}
@@ -225,7 +228,7 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	if len(policyARNs) > 0 {
 		assumeRoleInput.SetPolicyArns(convertPolicyARNs(policyARNs))
 	}
-	tokenResp, err := stsClient.AssumeRole(assumeRoleInput)
+	tokenResp, err := stsClient.AssumeRoleWithContext(ctx, assumeRoleInput)
 	if err != nil {
 		return logical.ErrorResponse("Error assuming role: %s", err), awsutil.CheckAWSError(err)
 	}
@@ -311,7 +314,7 @@ func (b *backend) secretAccessKeysCreate(
 	}
 
 	// Create the user
-	_, err = iamClient.CreateUser(createUserRequest)
+	_, err = iamClient.CreateUserWithContext(ctx, createUserRequest)
 	if err != nil {
 		if walErr := framework.DeleteWAL(ctx, s, walID); walErr != nil {
 			iamErr := fmt.Errorf("error creating IAM user: %w", err)
@@ -322,7 +325,7 @@ func (b *backend) secretAccessKeysCreate(
 
 	for _, arn := range role.PolicyArns {
 		// Attach existing policy against user
-		_, err = iamClient.AttachUserPolicy(&iam.AttachUserPolicyInput{
+		_, err = iamClient.AttachUserPolicyWithContext(ctx, &iam.AttachUserPolicyInput{
 			UserName:  aws.String(username),
 			PolicyArn: aws.String(arn),
 		})
@@ -333,7 +336,7 @@ func (b *backend) secretAccessKeysCreate(
 	}
 	if role.PolicyDocument != "" {
 		// Add new inline user policy against user
-		_, err = iamClient.PutUserPolicy(&iam.PutUserPolicyInput{
+		_, err = iamClient.PutUserPolicyWithContext(ctx, &iam.PutUserPolicyInput{
 			UserName:       aws.String(username),
 			PolicyName:     aws.String(policyName),
 			PolicyDocument: aws.String(role.PolicyDocument),
@@ -345,7 +348,7 @@ func (b *backend) secretAccessKeysCreate(
 
 	for _, group := range role.IAMGroups {
 		// Add user to IAM groups
-		_, err = iamClient.AddUserToGroup(&iam.AddUserToGroupInput{
+		_, err = iamClient.AddUserToGroupWithContext(ctx, &iam.AddUserToGroupInput{
 			UserName:  aws.String(username),
 			GroupName: aws.String(group),
 		})
@@ -364,7 +367,7 @@ func (b *backend) secretAccessKeysCreate(
 	}
 
 	if len(tags) > 0 {
-		_, err = iamClient.TagUser(&iam.TagUserInput{
+		_, err = iamClient.TagUserWithContext(ctx, &iam.TagUserInput{
 			Tags:     tags,
 			UserName: &username,
 		})
@@ -375,7 +378,7 @@ func (b *backend) secretAccessKeysCreate(
 	}
 
 	// Create the keys
-	keyResp, err := iamClient.CreateAccessKey(&iam.CreateAccessKeyInput{
+	keyResp, err := iamClient.CreateAccessKeyWithContext(ctx, &iam.CreateAccessKeyInput{
 		UserName: aws.String(username),
 	})
 	if err != nil {

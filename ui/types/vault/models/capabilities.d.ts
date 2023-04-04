@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import ComputedProperty from '@ember/object/computed';
 import Model from '@ember-data/model';
 

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { isBlank } from '@ember/utils';
 import { set } from '@ember/object';
 import RoleEdit from './role-edit';
