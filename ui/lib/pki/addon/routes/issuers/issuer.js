@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-import PkiIssuersListRoute from '../index';
+import PkiIssuersListRoute from '.';
 
 // Single issuer index route extends issuers list route
 export default class PkiIssuerIndexRoute extends PkiIssuersListRoute {
