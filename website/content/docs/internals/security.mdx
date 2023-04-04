@@ -75,6 +75,12 @@ The following are not considered part of the Vault threat model:
   credentials, they can access Vault with the level of privilege associated with this
   client.
 
+- Protecting against Vault administrators supplying vulnerable or malicious configuration
+  data. Any data provided as configuration values to Vault's administrative endpoints
+  (e.g. [secret engines](/vault/docs/secrets) configurations), or Vault's
+  configuration files should be validated. If an attacker can write to Vault's
+  configuration, then the confidentiality or integrity of data can be compromised.
+
 # External Threat Overview
 
 Vault architecture compromises of three distinct systems:

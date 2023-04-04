@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 # This script is meant to be sourced into the shell running in a Github
 # workflow.
 
@@ -243,6 +246,7 @@ test_packages[13]+=" $base/command/server"
 test_packages[13]+=" $base/physical/aerospike"
 test_packages[13]+=" $base/physical/cockroachdb"
 test_packages[13]+=" $base/plugins/database/postgresql"
+test_packages[13]+=" $base/plugins/database/postgresql/scram"
 if [ "${ENTERPRISE:+x}" == "x" ] ; then
     test_packages[13]+=" $base/vault/external_tests/filteredpathsext"
 fi

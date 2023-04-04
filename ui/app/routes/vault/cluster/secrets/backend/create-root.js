@@ -1,10 +1,15 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { hash } from 'rsvp';
 import { inject as service } from '@ember/service';
 import EditBase from './secret-edit';
 
 const secretModel = (store, backend, key) => {
   const backendModel = store.peekRecord('secret-engine', backend);
-  const modelType = backendModel.get('modelTypeForKV');
+  const modelType = backendModel.modelTypeForKV;
   if (modelType !== 'secret-v2') {
     const model = store.createRecord(modelType, {
       path: key,
