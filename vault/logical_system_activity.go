@@ -75,6 +75,7 @@ func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 	return []*framework.Path{
 		b.activityQueryPath(),
 		b.monthlyActivityCountPath(),
+		b.activityWritePath(),
 		{
 			Pattern: "internal/counters/config$",
 			Fields: map[string]*framework.FieldSchema{
