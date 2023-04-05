@@ -23,10 +23,9 @@ export default class PkiIssuerSerializer extends ApplicationSerializer {
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     if (payload.data.certificate) {
       // Parse certificate back from the API and add to payload
-      const parsedCert = parseCertificate(payload.data.certificate);
-      const data = { issuer_ref: payload.issuer_id, ...payload.data, ...parsedCert };
-      const json = super.normalizeResponse(store, primaryModelClass, { ...payload, data }, id, requestType);
-      return json;
+      const parsedCert = parseCertificate(payload.data.certificate || payload.data.csr);
+      const data = { issuer_ref: payload.issuer_id, ...payload.data, parsed_certificate: parsedCert };
+      return super.normalizeResponse(store, primaryModelClass, { ...payload, data }, id, requestType);
     }
     return super.normalizeResponse(...arguments);
   }
