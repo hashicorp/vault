@@ -28,6 +28,24 @@ func pathAcmeIssuerAndRoleNewAccount(b *backend) *framework.Path {
 			"/roles/"+framework.GenericNameRegex("role")+"/acme/new-account")
 }
 
+func pathAcmeRootUpdateAccount(b *backend) *framework.Path {
+	return patternAcmeNewAccount(b, "acme/account/"+framework.MatchAllRegex("kid"))
+}
+
+func pathAcmeRoleUpdateAccount(b *backend) *framework.Path {
+	return patternAcmeNewAccount(b, "roles/"+framework.GenericNameRegex("role")+"/acme/account/"+framework.MatchAllRegex("kid"))
+}
+
+func pathAcmeIssuerUpdateAccount(b *backend) *framework.Path {
+	return patternAcmeNewAccount(b, "issuer/"+framework.GenericNameRegex(issuerRefParam)+"/acme/account/"+framework.MatchAllRegex("kid"))
+}
+
+func pathAcmeIssuerAndRoleUpdateAccount(b *backend) *framework.Path {
+	return patternAcmeNewAccount(b,
+		"issuer/"+framework.GenericNameRegex(issuerRefParam)+
+			"/roles/"+framework.GenericNameRegex("role")+"/acme/account/"+framework.MatchAllRegex("kid"))
+}
+
 func addFieldsForACMEPath(fields map[string]*framework.FieldSchema, pattern string) map[string]*framework.FieldSchema {
 	if strings.Contains(pattern, framework.GenericNameRegex("role")) {
 		fields["role"] = &framework.FieldSchema{
@@ -256,19 +274,21 @@ func (b *backend) acmeNewAccountSearchHandler(acmeCtx *acmeContext, r *logical.R
 }
 
 func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}, contact []string, termsOfServiceAgreed bool) (*logical.Response, error) {
+	// If the account already exists, return the existing one.
+	if b.acmeState.DoesAccountExist(acmeCtx, userCtx.Kid) {
+		// TODO: We should possibly update account values here such as contact.
+		return b.acmeNewAccountSearchHandler(acmeCtx, r, fields, userCtx, data)
+	}
+
 	if userCtx.Existing {
 		return nil, fmt.Errorf("cannot submit to newAccount with 'kid': %w", ErrMalformed)
 	}
 
-	// If the account already exists, return the existing one.
-	if b.acmeState.DoesAccountExist(acmeCtx, userCtx.Kid) {
-		return b.acmeNewAccountSearchHandler(acmeCtx, r, fields, userCtx, data)
-	}
-
-	// TODO: Limit this only when ToS are required or set by the operator.
-	if !termsOfServiceAgreed {
-		return nil, fmt.Errorf("terms of service not agreed to: %w", ErrUserActionRequired)
-	}
+	// TODO: Limit this only when ToS are required or set by the operator, since we don't have a
+	//       ToS URL in the directory at the moment, we can not enforce this.
+	//if !termsOfServiceAgreed {
+	//	return nil, fmt.Errorf("terms of service not agreed to: %w", ErrUserActionRequired)
+	//}
 
 	account, err := b.acmeState.CreateAccount(acmeCtx, userCtx, contact, termsOfServiceAgreed)
 	if err != nil {

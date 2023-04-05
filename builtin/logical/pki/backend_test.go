@@ -6813,6 +6813,7 @@ func TestProperAuthing(t *testing.T) {
 		paths[acmePrefix+"acme/directory"] = shouldBeUnauthedReadList
 		paths[acmePrefix+"acme/new-nonce"] = shouldBeUnauthedReadList
 		paths[acmePrefix+"acme/new-account"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"acme/account/hrKmDYTvicHoHGVN2-3uzZV_BPGdE0W_dNaqYTtYqeo="] = shouldBeUnauthedWriteOnly
 	}
 
 	for path, checkerType := range paths {
@@ -6857,6 +6858,9 @@ func TestProperAuthing(t *testing.T) {
 		}
 		if strings.Contains(raw_path, "{serial}") {
 			raw_path = strings.ReplaceAll(raw_path, "{serial}", serial)
+		}
+		if strings.Contains(raw_path, "acme/account/") && strings.Contains(raw_path, "{kid}") {
+			raw_path = strings.ReplaceAll(raw_path, "{kid}", "hrKmDYTvicHoHGVN2-3uzZV_BPGdE0W_dNaqYTtYqeo=")
 		}
 
 		handler, present := paths[raw_path]

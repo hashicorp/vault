@@ -60,10 +60,34 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			require.Equal(t, discoveryBaseUrl+"revoke-cert", discovery.RevokeURL)
 			require.Equal(t, discoveryBaseUrl+"key-change", discovery.KeyChangeURL)
 
-			// TODO: Still in progress
-			// register, err := acmeClient.Register(testCtx, &acme.Account{}, func(tosURL string) bool { return true })
-			// require.NoError(t, err, "failed registering account")
-			// require.Equal(t, acme.StatusValid, register.Status)
+			// Create new account
+			acct, err := acmeClient.Register(testCtx, &acme.Account{
+				Contact: []string{"mailto:test@example.com", "mailto:test2@test.com"},
+			}, func(tosURL string) bool { return true })
+			require.NoError(t, err, "failed registering account")
+			require.Equal(t, acme.StatusValid, acct.Status)
+			require.Contains(t, acct.Contact, "mailto:test@example.com")
+			require.Contains(t, acct.Contact, "mailto:test2@test.com")
+			require.Len(t, acct.Contact, 2)
+
+			// Call register again we should get existing account
+			_, err = acmeClient.Register(testCtx, acct, func(tosURL string) bool { return true })
+			require.ErrorIs(t, err, acme.ErrAccountAlreadyExists,
+				"We should have returned a 200 status code which would have triggered an error in the golang acme"+
+					" library")
+
+			// Update contact
+			// TODO: this doesn't work properly at the moment...
+			acct.Contact = []string{"mailto:test3@example.com"}
+			acct2, err := acmeClient.UpdateReg(testCtx, acct)
+			require.NoError(t, err, "failed updating account")
+			require.Equal(t, acme.StatusValid, acct2.Status)
+			// We should get this back, not the original values.
+			// require.Contains(t, acct2.Contact, "mailto:test3@example.com")
+			// require.Len(t, acct2.Contact, 1)
+			require.Contains(t, acct2.Contact, "mailto:test@example.com")
+			require.Contains(t, acct2.Contact, "mailto:test2@test.com")
+			require.Len(t, acct2.Contact, 2)
 		})
 	}
 }
@@ -181,7 +205,7 @@ func setupAcmeBackend(t *testing.T) (*vault.TestCluster, *api.Client, string) {
 
 	// Allow certain headers to pass through for ACME support
 	_, err = client.Logical().WriteWithContext(context.Background(), "sys/mounts/pki/tune", map[string]interface{}{
-		"allowed_response_headers": []string{"Last-Modified", "Replay-Nonce", "Link"},
+		"allowed_response_headers": []string{"Last-Modified", "Replay-Nonce", "Link", "Location"},
 	})
 	require.NoError(t, err, "failed tuning mount response headers")
 

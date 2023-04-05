@@ -10,6 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"golang.org/x/crypto/acme"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -129,6 +131,7 @@ func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, contact []string, 
 		Contact:              contact,
 		TermsOfServiceAgreed: termsOfServiceAgreed,
 		Jwk:                  c.Jwk,
+		Status:               acme.StatusValid,
 	}
 
 	json, err := logical.StorageEntryJSON(acmeAccountPrefix+c.Kid, acct)

@@ -126,6 +126,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 				clusterConfigPath,
 				"crls/",
 				"certs/",
+				acmePathPrefix,
 			},
 
 			Root: []string{
@@ -228,6 +229,10 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathAcmeRoleNewAccount(&b),
 			pathAcmeIssuerNewAccount(&b),
 			pathAcmeIssuerAndRoleNewAccount(&b),
+			pathAcmeRootUpdateAccount(&b),
+			pathAcmeRoleUpdateAccount(&b),
+			pathAcmeIssuerUpdateAccount(&b),
+			pathAcmeIssuerAndRoleUpdateAccount(&b),
 		},
 
 		Secrets: []*framework.Secret{
@@ -248,6 +253,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/new-order")
 		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/revoke-cert")
 		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/key-change")
+		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/account/+")
 	}
 
 	if constants.IsEnterprise {
