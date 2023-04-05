@@ -19,7 +19,9 @@
 </Toolbar>
 
 {{#each @model.formFields as |field|}}
-  {{#if (eq field.name "certificate")}}
+  {{#if (eq field.name "parsedCertificate")}}
+    <ParsedCertificateInfoRows @model={{@model.parsedCertificate}} />
+  {{else if (eq field.name "certificate")}}
     <InfoTableRow @label="Certificate">
       <MaskedInput @value={{@model.certificate}} @displayOnly={{true}} @allowCopy={{true}} />
     </InfoTableRow>

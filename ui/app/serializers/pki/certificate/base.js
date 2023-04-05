@@ -17,14 +17,13 @@ export default class PkiCertificateBaseSerializer extends ApplicationSerializer 
     if (payload.data.certificate) {
       // Parse certificate back from the API and add to payload
       const parsedCert = parseCertificate(payload.data.certificate);
-      const json = super.normalizeResponse(
+      return super.normalizeResponse(
         store,
         primaryModelClass,
-        { ...payload, ...parsedCert },
+        { ...payload, parsed_certificate: parsedCert },
         id,
         requestType
       );
-      return json;
     }
     return super.normalizeResponse(...arguments);
   }
