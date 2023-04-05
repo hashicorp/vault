@@ -11,7 +11,6 @@ export default class PkiActionSerializer extends ApplicationSerializer {
   attrs = {
     customTtl: { serialize: false },
     type: { serialize: false },
-    subjectSerialNumber: { serialize: false },
   };
 
   serialize(snapshot, requestType) {
