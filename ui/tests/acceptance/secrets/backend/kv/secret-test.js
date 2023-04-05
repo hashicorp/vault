@@ -290,7 +290,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await editPage.createSecret(secretPath, 'foo', 'bar');
     await click('[data-test-popup-menu-trigger="version"]');
 
-    assert.dom('[ data-test-created-time]').includesText('Version created ', 'shows version created time');
+    assert.dom('[data-test-created-time]').includesText('Version created ', 'shows version created time');
 
     await click('[data-test-version-history]');
 

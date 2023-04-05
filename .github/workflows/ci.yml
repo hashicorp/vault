@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "main"
+  workflow_dispatch:
 
 jobs:
   setup:
@@ -204,14 +205,14 @@ jobs:
     # Setup node.js without caching to allow running npm install -g yarn (next step)
     - uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c
       with:
-        node-version: 14
+        node-version-file: './ui/package.json'
     - id: install-yarn
       run: |
         npm install -g yarn
     # Setup node.js with caching using the yarn.lock file
     - uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c
       with:
-        node-version: 14
+        node-version-file: './ui/package.json'
         cache: yarn
         cache-dependency-path: ui/yarn.lock
     - id: install-browser-libraries

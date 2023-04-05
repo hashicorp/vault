@@ -126,10 +126,10 @@ jobs:
       - name: Prepare scenario dependencies
         id: prepare_scenario
         run: |
-          mkdir -p ./enos/support/terraform-plugin-cache
-          echo "${{ secrets.SSH_KEY_PRIVATE_CI }}" > ./enos/support/private_key.pem
-          chmod 600 ./enos/support/private_key.pem
-          echo "debug_data_artifact_name=enos-debug-data_$(echo ${{ matrix.scenario }} | sed -e 's/ /_/g' | sed -e 's/:/=/g')" >> $GITHUB_OUTPUT
+          mkdir -p "./enos/support/terraform-plugin-cache"
+          echo "${{ secrets.SSH_KEY_PRIVATE_CI }}" > "./enos/support/private_key.pem"
+          chmod 600 "./enos/support/private_key.pem"
+          echo "debug_data_artifact_name=enos-debug-data_$(echo "${{ matrix.scenario }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')" >> $GITHUB_OUTPUT
       - if: contains(inputs.matrix-file-name, 'github')
         uses: actions/download-artifact@v3
         with:
