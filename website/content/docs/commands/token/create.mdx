@@ -122,3 +122,8 @@ flags](/docs/commands) included on all commands.
 - `-use-limit` `(int: 0)` - Number of times this token can be used. After the
   last use, the token is automatically revoked. By default, tokens can be used
   an unlimited number of times until their expiration.
+
+- `-wrap-ttl` `(duration: "")` -  Wraps the response in a cubbyhole token with the
+  requested TTL. The response is available via the "vault unwrap" command. The TTL
+  is specified as a numeric string with suffix like "30s" or "5m". This can also be
+  specified via the `VAULT_WRAP_TTL` environment variable.
