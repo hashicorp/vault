@@ -31,13 +31,6 @@ import (
 var (
 	ConfigureWrapper             = configureWrapper
 	CreateSecureRandomReaderFunc = createSecureRandomReader
-
-	AliCloudKMSEnvVars = []string{"ALICLOUD_REGION", "ALICLOUD_DOMAIN", "ALICLOUD_ACCESS_KEY", "ALICLOUD_SECRET_KEY", "VAULT_ALICLOUDKMS_SEAL_KEY_ID"}
-	AWSKMSEnvVars      = []string{"AWS_REGION", "AWS_DEFAULT_REGION", "AWS_ACCESS_KEY_ID", "AWS_SESSION_TOKEN", "AWS_SECRET_ACCESS_KEY", "VAULT_AWSKMS_SEAL_KEY_ID", "AWS_KMS_ENDPOINT"}
-	AzureEnvVars       = []string{"AZURE_TENANT_ID", "AZURE_CLIENT_ID", "AZURE_CLIENT_SECRET", "AZURE_ENVIRONMENT", "VAULT_AZUREKEYVAULT_VAULT_NAME", "VAULT_AZUREKEYVAULT_KEY_NAME", "AZURE_AD_RESOURCE"}
-	GCPCKMSEnvVars     = []string{"GOOGLE_CREDENTIALS", "GOOGLE_APPLICATION_CREDENTIALS", "GOOGLE_PROJECT", "GOOGLE_REGION", "VAULT_GCPCKMS_SEAL_KEY_RING", "VAULT_GCPCKMS_SEAL_CRYPTO_KEY"}
-	OCIKMSEnvVars      = []string{"VAULT_OCIKMS_SEAL_KEY_ID", "VAULT_OCIKMS_CRYPTO_ENDPOINT", "VAULT_OCIKMS_MANAGEMENT_ENDPOINT"}
-	TransitEnvVars     = []string{"VAULT_ADDR", "VAULT_TOKEN", "VAULT_TRANSIT_SEAL_KEY_NAME", "VAULT_TRANSIT_SEAL_MOUNT_PATH", "VAULT_NAMESPACE", "VAULT_TRANSIT_SEAL_DISABLE_RENEWAL", "VAULT_CACERT", "VAULT_CLIENT_CERT", "VAULT_CLIENT_KEY", "VAULT_TLS_SERVER_NAME", "VAULT_SKIP_VERIFY"}
 )
 
 // Entropy contains Entropy configuration for the server
@@ -199,6 +192,11 @@ func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]strin
 	var kmsInfo map[string]string
 	var err error
 
+	envConfig := getEnvConfig(configKMS)
+	for name,val := range envConfig {
+		configKMS.Config[name] = val
+	}
+
 	switch wrapping.WrapperType(configKMS.Type) {
 	case wrapping.WrapperTypeShamir:
 		return nil, nil
@@ -265,16 +263,6 @@ func GetAEADKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map[st
 }
 
 func GetAliCloudKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map[string]string, error) {
-	envVarSuffix := ""
-	if kms.Priority > 1 {
-		envVarSuffix = kms.Name
-	}
-
-	envConfig := getAliCloudEnvConfig(envVarSuffix)
-	for name, val := range envConfig {
-		kms.Config[name] = val
-	}
-
 	wrapper := alicloudkms.NewWrapper()
 	wrapperInfo, err := wrapper.SetConfig(context.Background(), append(opts, wrapping.WithDisallowEnvVars(true), wrapping.WithConfigMap(kms.Config))...)
 	if err != nil {
@@ -295,16 +283,6 @@ func GetAliCloudKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, ma
 }
 
 var GetAWSKMSFunc = func(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map[string]string, error) {
-	envVarSuffix := ""
-	if kms.Priority > 1 {
-		envVarSuffix = kms.Name
-	}
-
-	envConfig := getAWSKMSEnvConfig(envVarSuffix)
-	for name, val := range envConfig {
-		kms.Config[name] = val
-	}
-
 	wrapper := awskms.NewWrapper()
 	wrapperInfo, err := wrapper.SetConfig(context.Background(), append(opts, wrapping.WithDisallowEnvVars(true), wrapping.WithConfigMap(kms.Config))...)
 	if err != nil {
@@ -325,16 +303,6 @@ var GetAWSKMSFunc = func(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, m
 }
 
 func GetAzureKeyVaultKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map[string]string, error) {
-	envVarSuffix := ""
-	if kms.Priority > 1 {
-		envVarSuffix = kms.Name
-	}
-
-	envConfig := getAzureEnvConfig(envVarSuffix)
-	for name, val := range envConfig {
-		kms.Config[name] = val
-	}
-
 	wrapper := azurekeyvault.NewWrapper()
 	wrapperInfo, err := wrapper.SetConfig(context.Background(), append(opts, wrapping.WithDisallowEnvVars(true), wrapping.WithConfigMap(kms.Config))...)
 	if err != nil {
@@ -353,16 +321,6 @@ func GetAzureKeyVaultKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrappe
 }
 
 func GetGCPCKMSKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map[string]string, error) {
-	envVarSuffix := ""
-	if kms.Priority > 1 {
-		envVarSuffix = kms.Name
-	}
-
-	envConfig := getGCPCKMSEnvConfig(envVarSuffix)
-	for name, val := range envConfig {
-		kms.Config[name] = val
-	}
-
 	wrapper := gcpckms.NewWrapper()
 	wrapperInfo, err := wrapper.SetConfig(context.Background(), append(opts, wrapping.WithDisallowEnvVars(true), wrapping.WithConfigMap(kms.Config))...)
 	if err != nil {
@@ -382,16 +340,6 @@ func GetGCPCKMSKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map
 }
 
 func GetOCIKMSKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map[string]string, error) {
-	envVarSuffix := ""
-	if kms.Priority > 1 {
-		envVarSuffix = kms.Name
-	}
-
-	envConfig := getOCIKMSEnvConfig(envVarSuffix)
-	for name, val := range envConfig {
-		kms.Config[name] = val
-	}
-
 	wrapper := ocikms.NewWrapper()
 	wrapperInfo, err := wrapper.SetConfig(context.Background(), append(opts, wrapping.WithDisallowEnvVars(true), wrapping.WithConfigMap(kms.Config))...)
 	if err != nil {
@@ -408,16 +356,6 @@ func GetOCIKMSKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map[
 }
 
 var GetTransitKMSFunc = func(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map[string]string, error) {
-	envVarSuffix := ""
-	if kms.Priority > 1 {
-		envVarSuffix = kms.Name
-	}
-
-	envConfig := getTransitEnvConfig(envVarSuffix)
-	for name, val := range envConfig {
-		kms.Config[name] = val
-	}
-
 	wrapper := transit.NewWrapper()
 	wrapperInfo, err := wrapper.SetConfig(context.Background(), append(opts, wrapping.WithDisallowEnvVars(true), wrapping.WithConfigMap(kms.Config))...)
 	if err != nil {
@@ -442,158 +380,38 @@ func createSecureRandomReader(conf *SharedConfig, wrapper wrapping.Wrapper) (io.
 	return rand.Reader, nil
 }
 
-func getAzureEnvConfig(suffix string) map[string]string {
+func getEnvConfig(kms *KMS) map[string]string {
 	envValues := make(map[string]string)
 
-	for _, envVar := range AzureEnvVars {
+	var wrapperEnvVars map[string]string
+	switch wrapping.WrapperType(kms.Type) {
+	case wrapping.WrapperTypeAliCloudKms:
+		wrapperEnvVars = AliCloudKMSEnvVars
+	case wrapping.WrapperTypeAwsKms:
+		wrapperEnvVars = AWSKMSEnvVars
+	case wrapping.WrapperTypeAzureKeyVault:
+		wrapperEnvVars = AzureEnvVars
+	case wrapping.WrapperTypeGcpCkms:
+		wrapperEnvVars = GCPCKMSEnvVars
+	case wrapping.WrapperTypeOciKms:
+		wrapperEnvVars = OCIKMSEnvVars
+	case wrapping.WrapperTypeTransit:
+		wrapperEnvVars = TransitEnvVars
+	default:
+		return nil
+	}
+
+	suffix := ""
+	if kms.Priority > 1 {
+		suffix = kms.Name
+	}
+
+	for envVar, configName := range wrapperEnvVars {
 		val := os.Getenv(fmt.Sprintf("%s_%s", envVar, suffix))
 		if val != "" {
-			switch envVar {
-			case "AZURE_TENANT_ID":
-				envValues["tenant_id"] = val
-			case "AZURE_CLIENT_ID":
-				envValues["client_id"] = val
-			case "AZURE_CLIENT_SECRET":
-				envValues["client_secret"] = val
-			case "AZURE_ENVIRONMENT":
-				envValues["environment"] = val
-			case "VAULT_AZUREKEYVAULT_VAULT_NAME":
-				envValues["vault_name"] = val
-			case "VAULT_AZUREKEYVAULT_KEY_NAME":
-				envValues["key_name"] = val
-			case "AZURE_AD_RESOURCE":
-				envValues["resource"] = val
-			}
+			envValues[configName] = val
 		}
 	}
 
-	return envValues
-}
-
-func getAliCloudEnvConfig(suffix string) map[string]string {
-	envValues := make(map[string]string)
-
-	for _, envVar := range AliCloudKMSEnvVars {
-		val := os.Getenv(fmt.Sprintf("%s_%s", envVar, suffix))
-		if val != "" {
-			switch envVar {
-			case "ALICLOUD_REGION":
-				envValues["region"] = val
-			case "ALICLOUD_DOMAIN":
-				envValues["domain"] = val
-			case "ALICLOUD_ACCESS_KEY":
-				envValues["access_key"] = val
-			case "ALICLOUD_SECRET_KEY":
-				envValues["secret_key"] = val
-			case "VAULT_ALICLOUDKMS_SEAL_KEY_ID":
-				envValues["kms_key_id"] = val
-			}
-		}
-	}
-
-	return envValues
-}
-
-func getAWSKMSEnvConfig(suffix string) map[string]string {
-	envValues := make(map[string]string)
-
-	for _, envVar := range AWSKMSEnvVars {
-		val := os.Getenv(fmt.Sprintf("%s_%s", envVar, suffix))
-		if val != "" {
-			switch envVar {
-			case "AWS_REGION", "AWS_DEFAULT_REGION":
-				envValues["region"] = val
-			case "AWS_ACCESS_KEY_ID":
-				envValues["access_key"] = val
-			case "AWS_SESSION_TOKEN":
-				envValues["session_token"] = val
-			case "AWS_SECRET_ACCESS_KEY":
-				envValues["secret_key"] = val
-			case "AWS_AWSKMS_SEAL_KEY_ID":
-				envValues["kms_key_id"] = val
-			case "AWS_KMS_ENDPOINT":
-				envValues["endpoint"] = val
-			}
-		}
-	}
-
-	return envValues
-}
-
-func getGCPCKMSEnvConfig(suffix string) map[string]string {
-	envValues := make(map[string]string)
-
-	for _, envVar := range GCPCKMSEnvVars {
-		val := os.Getenv(fmt.Sprintf("%s_%s", envVar, suffix))
-		if val != "" {
-			switch envVar {
-			case "GOOGLE_CREDENTIALS", "GOOGLE_APPLICATION_CREDENTIALS":
-				envValues["credentials"] = val
-			case "GOOGLE_PROJECT":
-				envValues["project"] = val
-			case "GOOGLE_REGION":
-				envValues["region"] = val
-			case "VAULT_GCPCKMS_SEAL_KEY_RING":
-				envValues["key_ring"] = val
-			case "VAULT_GCPCKMS_SEAL_CRYPTO_KEY":
-				envValues["crypto_key"] = val
-			}
-		}
-	}
-
-	return envValues
-}
-
-func getOCIKMSEnvConfig(suffix string) map[string]string {
-	envValues := make(map[string]string)
-
-	for _, envVar := range OCIKMSEnvVars {
-		val := os.Getenv(fmt.Sprintf("%s_%s", envVar, suffix))
-		if val != "" {
-			switch envVar {
-			case "VAULT_OCIKMS_SEAL_KEY_ID":
-				envValues["key_id"] = val
-			case "VAULT_OCIKMS_CRYPTO_ENDPOINT":
-				envValues["crypto_endpoint"] = val
-			case "VAULT_OCIKMS_MANAGEMENT_ENDPOINT":
-				envValues["management_endpoint"] = val
-			}
-		}
-	}
-	return envValues
-}
-
-func getTransitEnvConfig(suffix string) map[string]string {
-	envValues := make(map[string]string)
-
-	for _, envVar := range TransitEnvVars {
-		val := os.Getenv(fmt.Sprintf("%s_%s", envVar, suffix))
-		if val != "" {
-			switch envVar {
-			case "VAULT_ADDR":
-				envValues["address"] = val
-			case "VAULT_TOKEN":
-				envValues["token"] = val
-			case "VAULT_TRANSIT_SEAL_KEY_NAME":
-				envValues["key_name"] = val
-			case "VAULT_TRANSIT_SEAL_MOUNT_PATH":
-				envValues["mount_paht"] = val
-			case "VAULT_NAMESPACE":
-				envValues["namespace"] = val
-			case "VAULT_TRANSIT_SEAL_DISABLE_RENEWAL":
-				envValues["disable_renewal"] = val
-			case "VAULT_CACERT":
-				envValues["tls_ca_cert"] = val
-			case "VAULT_CLIENT_CERT":
-				envValues["tls_client_cert"] = val
-			case "VAULT_CLIENT_KEY":
-				envValues["tls_client_key"] = val
-			case "VAULT_TLS_SERVER_NAME":
-				envValues["tls_server_name"] = val
-			case "VAULT_SKIP_VERIFY":
-				envValues["tls_skip_verify"] = val
-			}
-		}
-	}
 	return envValues
 }
