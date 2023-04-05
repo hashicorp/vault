@@ -124,8 +124,16 @@
       Root parameters
     </h2>
     <form {{on "submit" (perform this.save)}} data-test-pki-rotate-old-settings-form>
+      {{#if @parsingErrors}}
+        <AlertBanner
+          @title="Not all of the certificate values could be parsed and transferred to new root"
+          @type="warning"
+          @message={{@parsingErrors}}
+          data-test-warning-banner
+        />
+      {{/if}}
       {{#if this.alertBanner}}
-        <AlertBanner @title={{this.bannerType.title}} @type={{this.bannerType.type}} @message={{this.alertBanner}} />
+        <AlertBanner @type="danger" @message={{this.alertBanner}} data-test-error-banner />
       {{/if}}
       {{#let (find-by "name" "commonName" @newRootModel.allFields) as |attr|}}
         <FormField @attr={{attr}} @model={{@newRootModel}} @modelValidations={{this.modelValidations}} />
