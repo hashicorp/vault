@@ -43,6 +43,8 @@ type Config struct {
 	DisableKeepAlivesAPIProxy   bool                       `hcl:"-"`
 	DisableKeepAlivesTemplating bool                       `hcl:"-"`
 	DisableKeepAlivesAutoAuth   bool                       `hcl:"-"`
+	Exec                        *ExecConfig                `hcl:"exec,optional"`
+	EnvTemplates                []*EnvTemplateConfig       `hcl:"env_templates,optional"`
 }
 
 const (
@@ -166,6 +168,20 @@ type TemplateConfig struct {
 	ExitOnRetryFailure       bool          `hcl:"exit_on_retry_failure"`
 	StaticSecretRenderIntRaw interface{}   `hcl:"static_secret_render_interval"`
 	StaticSecretRenderInt    time.Duration `hcl:"-"`
+}
+
+type EnvTemplateConfig struct {
+	Name            string `hcl:"name,label"`
+	Contents        string `hcl:"contents,attr"`
+	ErrOnMissingKey bool   `hcl:"err_on_missing_key,optional"`
+	Group           string `hcl:"group,optional"`
+}
+
+type ExecConfig struct {
+	Command            string    `hcl:"command,attr"`
+	Args               []string  `hcl:"args,optional"`
+	RestartOnNewSecret string    `hcl:"restart_on_new_secret,optional"`
+	RestartKillSignal  os.Signal `hcl:"restart_kill_signal,optional"`
 }
 
 func NewConfig() *Config {
