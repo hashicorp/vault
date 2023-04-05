@@ -11,12 +11,12 @@
     - [Mirage](#mirage)
     - [Building Vault UI into a Vault Binary](#building-vault-ui-into-a-vault-binary)
   - [Development](#development)
-  - [Quick commands](#quick-commands)
-    - [Code Generators](#code-generators)
-    - [Running Tests](#running-tests)
-    - [Linting](#linting)
-    - [Further Reading / Useful Links](#further-reading--useful-links)
-  - [Best Practices](#best-practices)
+    - [Quick commands](#quick-commands)
+      - [Code Generators](#code-generators)
+      - [Running Tests](#running-tests)
+      - [Linting](#linting)
+      - [Further Reading / Useful Links](#further-reading--useful-links)
+    - [Best Practices](#best-practices)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -160,3 +160,12 @@ acceptance tests then run, which proxy requests back to that server.
 ### Best Practices
 
 Hello and thank you for contributing to the Vault UI! Below is a list of patterns we follow on the UI team to keep in mind when contributing to the UI codebase. This is an ever-evolving process, so we welcome any comments, questions or general feedback.
+
+> remember to prefix your branch name with `ui/` so that UI tests will run
+
+- [routing](docs/routing.md)
+- [serializers/adapters](docs/serializers-adapters.md)
+- [models](docs/models.md)
+- [components](docs/components.md)
+- [forms](docs/forms.md)
+- [css](docs/css.md)
