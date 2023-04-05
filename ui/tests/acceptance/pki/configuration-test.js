@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { click, currentURL, fillIn, visit, isSettled } from '@ember/test-helpers';
+import { click, currentURL, fillIn, visit, isSettled, waitUntil } from '@ember/test-helpers';
 import { v4 as uuidv4 } from 'uuid';
 
 import authPage from 'vault/tests/pages/auth';
@@ -89,6 +89,7 @@ module('Acceptance | pki configuration', function (hooks) {
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
       await isSettled();
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      await waitUntil(() => currentURL() === `/vault/secrets/${this.mountPath}/pki/overview`);
       await isSettled();
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
       assert
@@ -155,6 +156,7 @@ module('Acceptance | pki configuration', function (hooks) {
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
       await isSettled();
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      await waitUntil(() => currentURL() === `/vault/secrets/${this.mountPath}/pki/overview`);
       await isSettled();
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
       assert
