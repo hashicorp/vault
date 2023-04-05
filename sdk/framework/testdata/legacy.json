@@ -46,7 +46,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/kv-write-lookup-id-request"
+                "$ref": "#/components/schemas/KvWriteLookupIdRequest"
               }
             }
           }
@@ -61,7 +61,7 @@
   },
   "components": {
     "schemas": {
-      "kv-write-lookup-id-request": {
+      "KvWriteLookupIdRequest": {
         "type": "object",
         "properties": {
           "token": {
