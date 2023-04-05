@@ -15,39 +15,40 @@ import (
 )
 
 var (
-	_ cli.Command             = (*AgentInitConfigCommand)(nil)
-	_ cli.CommandAutocomplete = (*AgentInitConfigCommand)(nil)
+	_ cli.Command             = (*AgentGenerateConfigCommand)(nil)
+	_ cli.CommandAutocomplete = (*AgentGenerateConfigCommand)(nil)
 )
 
-type AgentInitConfigCommand struct {
+type AgentGenerateConfigCommand struct {
 	*BaseCommand
 
-	flagConfigType string
-	flagPaths      []string
+	flagType  string
+	flagPaths []string
+	flagExec  string
 }
 
-func (c *AgentInitConfigCommand) Synopsis() string {
-	return "Create a vault agent configuration file."
+func (c *AgentGenerateConfigCommand) Synopsis() string {
+	return "Generate a Vault Agent configuration file."
 }
 
-func (c *AgentInitConfigCommand) Help() string {
+func (c *AgentGenerateConfigCommand) Help() string {
 	helpText := `
-Usage: vault agent init-config [options]
+Usage: vault agent generate-config [options]
 ` + c.Flags().Help()
 	return strings.TrimSpace(helpText)
 }
 
-func (c *AgentInitConfigCommand) Flags() *FlagSets {
+func (c *AgentGenerateConfigCommand) Flags() *FlagSets {
 	set := NewFlagSets(c.UI)
 
 	// Common Options
 	f := set.NewFlagSet("Command Options")
 
 	f.StringVar(&StringVar{
-		Name:    "config-type",
-		Target:  &c.flagConfigType,
+		Name:    "type",
+		Target:  &c.flagType,
 		Default: "env-template",
-		Usage:   "The type of configuration file to generate, currently only 'env-template' is supported.",
+		Usage:   "The type of configuration file to generate; currently, only 'env-template' is supported.",
 	})
 
 	f.StringSliceVar(&StringSliceVar{
@@ -56,18 +57,25 @@ func (c *AgentInitConfigCommand) Flags() *FlagSets {
 		Usage:  "Path to a KV v1/v2 secret (e.g. secret/data/foo, secret/prefix/*).",
 	})
 
+	f.StringVar(&StringVar{
+		Name:    "exec",
+		Target:  &c.flagExec,
+		Default: "env",
+		Usage:   "The command to execute for in env-template mode.",
+	})
+
 	return set
 }
 
-func (c *AgentInitConfigCommand) AutocompleteArgs() complete.Predictor {
+func (c *AgentGenerateConfigCommand) AutocompleteArgs() complete.Predictor {
 	return c.PredictVaultFolders()
 }
 
-func (c *AgentInitConfigCommand) AutocompleteFlags() complete.Flags {
+func (c *AgentGenerateConfigCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
 }
 
-func (c *AgentInitConfigCommand) Run(args []string) int {
+func (c *AgentGenerateConfigCommand) Run(args []string) int {
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {
@@ -76,18 +84,9 @@ func (c *AgentInitConfigCommand) Run(args []string) int {
 	}
 
 	args = f.Args()
-	// Pull our fake stdin if needed
-	stdin := (io.Reader)(os.Stdin)
-	if c.testStdin != nil {
-		stdin = c.testStdin
-	}
 
-	switch {
-	case len(args) < 1:
-		c.UI.Error(fmt.Sprintf("Not enough arguments (expected >1, got %d)", len(args)))
-		return 1
-	case len(args) == 1:
-		c.UI.Error("Must supply data")
+	if len(args) > 1 {
+		c.UI.Error(fmt.Sprintf("Too many arguments (expected at most 1, got %d)", len(args)))
 		return 1
 	}
 
@@ -99,44 +98,18 @@ func (c *AgentInitConfigCommand) Run(args []string) int {
 		return 2
 	}
 
-	data, err := parseArgsData(stdin, args[1:])
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("Failed to parse K=V data: %s", err))
-		return 1
-	}
-
-	// If true, we're working with "-mount=secret foo" syntax.
-	// If false, we're using "secret/foo" syntax.
-	mountFlagSyntax := c.flagMount != ""
-
 	var (
-		mountPath   string
 		partialPath string
 		v2          bool
 	)
 
-	// Parse the paths and grab the KV version
-	if mountFlagSyntax {
-		// In this case, this arg is the secret path (e.g. "foo").
-		partialPath = sanitizePath(args[0])
-		mountPath, v2, err = isKVv2(sanitizePath(c.flagMount), client)
-		if err != nil {
-			c.UI.Error(err.Error())
-			return 2
-		}
-
-		if v2 {
-			partialPath = path.Join(mountPath, partialPath)
-		}
-	} else {
-		// In this case, this arg is a path-like combination of mountPath/secretPath.
-		// (e.g. "secret/foo")
-		partialPath = sanitizePath(args[0])
-		mountPath, v2, err = isKVv2(partialPath, client)
-		if err != nil {
-			c.UI.Error(err.Error())
-			return 2
-		}
+	// In this case, this arg is a path-like combination of mountPath/secretPath.
+	// (e.g. "secret/foo")
+	partialPath = sanitizePath(args[0])
+	mountPath, v2, err = isKVv2(partialPath, client)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 2
 	}
 
 	// Add /data to v2 paths only

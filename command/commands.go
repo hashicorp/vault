@@ -268,8 +268,8 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 				SighupCh:   MakeSighupCh(),
 			}, nil
 		},
-		"agent init-config": func() (cli.Command, error) {
-			return &AgentInitConfigCommand{
+		"agent generate-config": func() (cli.Command, error) {
+			return &AgentGenerateConfigCommand{
 				BaseCommand: &BaseCommand{
 					BaseCommand: getBaseCommand(),
 				},
