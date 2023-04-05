@@ -14,6 +14,7 @@ import PkiActionModel from 'vault/models/pki/action';
 import PkiUrlsModel from 'vault/models/pki/urls';
 import FlashMessageService from 'vault/services/flash-messages';
 import errorMessage from 'vault/utils/error-message';
+import { parsedParameters } from 'vault/utils/parse-pki-cert-oids';
 
 interface AdapterOptions {
   actionType: string;
@@ -26,6 +27,7 @@ interface Args {
   onComplete: CallableFunction;
   onSave?: CallableFunction;
   adapterOptions: AdapterOptions;
+  hideAlertBanner: boolean;
 }
 
 /**
@@ -71,13 +73,13 @@ export default class PkiGenerateRootComponent extends Component<Args> {
   get returnedFields() {
     return [
       'certificate',
-      'expiration',
       'issuerId',
       'issuerName',
       'issuingCa',
-      'keyId',
       'keyName',
+      'keyId',
       'serialNumber',
+      ...parsedParameters,
     ];
   }
 
