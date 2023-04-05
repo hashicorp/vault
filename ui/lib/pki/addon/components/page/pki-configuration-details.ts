@@ -33,6 +33,7 @@ export default class PkiConfigurationDetails extends Component<Args> {
       this.flashMessages.success('Successfully deleted all issuers and keys');
       this.showDeleteAllIssuers = false;
       this.router.transitionTo('vault.cluster.secrets.backend.pki.configuration.index');
+      return;
     } catch (error) {
       this.showDeleteAllIssuers = false;
       this.flashMessages.danger(errorMessage(error));
