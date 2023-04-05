@@ -27,7 +27,7 @@ type AgentInitConfigCommand struct {
 }
 
 func (c *AgentInitConfigCommand) Synopsis() string {
-	return "Sets or updates data in the KV store"
+	return "Create a vault agent configuration file."
 }
 
 func (c *AgentInitConfigCommand) Help() string {
