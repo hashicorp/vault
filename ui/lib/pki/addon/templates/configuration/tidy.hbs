@@ -1,1 +1,43 @@
-configuration.tidy
+<PageHeader as |p|>
+  <p.top>
+    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      <Icon @name="file" @size="24" class="has-text-grey-light" />
+      Tidy
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<p class="has-top-margin-s has-bottom-margin-s">Tidying cleans up the storage backend and/or CRL by removing certificates
+  that have expired and are past a certain buffer period beyond their expiration time.</p>
+
+<div class="has-top-margin-m">
+  <div class="b-checkbox has-bottom-margin-s">
+    <input type="checkbox" checked={{@key.deletionAllowed}} class="styled" onchange={{@setValueOnKey}} />
+    <label for="tidy-certificate-store" class="is-label">
+      Tidy the certificate store
+    </label>
+  </div>
+  <div class="b-checkbox has-bottom-margin-s">
+    <input type="checkbox" checked={{@key.deletionAllowed}} class="styled" onchange={{@setValueOnKey}} />
+    <label for="tidy-certificate-store" class="is-label">
+      Tidy the revocation list (CRL)
+    </label>
+  </div>
+</div>
+
+<div>
+  <h2 class="title is-6">Safety buffer</h2>
+  <p>For a certificate to be expunged, the time must be after the expiration time of the certificate (according to the local
+    clock) plus the safety buffer. The default is 72 hours.</p>
+  <TtlPicker
+    @initialValue="30m"
+    @label="Time to Live (TTL) for generated secondary token"
+    @helperTextDisabled="If not set, the default value (30 minutes) will be used"
+    @helperTextEnabled="After this period, the generated token will no longer be valid."
+    @onChange={{action "updateTtl"}}
+    @changeOnInit={{true}}
+  />
+</div>
