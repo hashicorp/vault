@@ -14,6 +14,7 @@ import { click, currentURL, fillIn, find, isSettled, visit } from '@ember/test-h
 import { SELECTORS } from 'vault/tests/helpers/pki/workflow';
 import { adminPolicy, readerPolicy, updatePolicy } from 'vault/tests/helpers/policy-generator/pki';
 import { tokenWithPolicy, runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
+import { unsupportedPem } from 'vault/tests/helpers/pki/values';
 
 /**
  * This test module should test the PKI workflow, including:
@@ -397,6 +398,40 @@ module('Acceptance | pki workflow', function (hooks) {
       assert
         .dom('[data-test-input="commonName"]')
         .hasValue('Hashicorp Test', 'form prefilled with parent issuer cn');
+    });
+  });
+
+  module('rotate', function (hooks) {
+    hooks.beforeEach(async function () {
+      await authPage.login();
+      await runCommands([`write ${this.mountPath}/root/generate/internal issuer_name="existing-issuer"`]);
+      await logout.visit();
+    });
+    test('it renders a warning banner when parent issuer has unsupported OIDs', async function (assert) {
+      await authPage.login();
+      await visit(`/vault/secrets/${this.mountPath}/pki/configuration/create`);
+      await click(SELECTORS.configuration.optionByKey('import'));
+      await click('[data-test-text-toggle]');
+      await fillIn('[data-test-text-file-textarea]', unsupportedPem);
+      await click(SELECTORS.configuration.importSubmit);
+      const issuerId = find(SELECTORS.configuration.importedIssuer).innerText;
+      await click(`${SELECTORS.configuration.importedIssuer} a`);
+
+      // navigating directly to route because the rotate button is not visible for non-root issuers
+      // but we're just testing that route model was parsed and passed as expected
+      await visit(`/vault/secrets/${this.mountPath}/pki/issuers/${issuerId}/rotate-root`);
+      assert
+        .dom('[data-test-warning-banner]')
+        .hasTextContaining(
+          'Not all of the certificate values could be parsed and transferred to new root',
+          'it renders warning banner'
+        );
+      assert.dom('[data-test-input="commonName"]').hasValue('fancy-cert-unsupported-subj-and-ext-oids');
+      await fillIn('[data-test-input="issuerName"]', 'existing-issuer');
+      await click('[data-test-pki-rotate-root-save]');
+      assert
+        .dom('[data-test-error-banner]')
+        .hasText('Error issuer name already in use', 'it renders error banner');
     });
   });
 });
