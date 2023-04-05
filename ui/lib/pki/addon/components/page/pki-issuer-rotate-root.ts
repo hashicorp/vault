@@ -13,7 +13,6 @@ import SecretMountPath from 'vault/services/secret-mount-path';
 import PkiIssuerModel from 'vault/models/pki/issuer';
 import PkiActionModel from 'vault/vault/models/pki/action';
 import { Breadcrumb } from 'vault/vault/app-types';
-import { parsedParameters } from 'vault/utils/parse-pki-cert-oids';
 
 interface Args {
   oldRoot: PkiIssuerModel;
@@ -81,7 +80,6 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
       'keyName',
       'keyId',
       'serialNumber',
-      ...parsedParameters,
     ];
     return this.args.newRootModel.id ? [...defaultFields, ...addKeyFields] : defaultFields;
   }
