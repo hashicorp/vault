@@ -38,7 +38,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/kv-read-foo-response"
+                  "$ref": "#/components/schemas/KvReadFooResponse"
                 }
               }
             }
@@ -49,7 +49,7 @@
   },
   "components": {
     "schemas": {
-      "kv-read-foo-response": {
+      "KvReadFooResponse": {
         "type": "object",
         "properties": {
           "field_a": {

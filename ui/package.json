@@ -226,7 +226,7 @@
     "@hashicorp/ember-flight-icons": "2.0.3"
   },
   "engines": {
-    "node": ">= 16"
+    "node": "16"
   },
   "ember": {
     "edition": "octane"
