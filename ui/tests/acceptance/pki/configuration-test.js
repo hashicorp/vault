@@ -79,7 +79,7 @@ module('Acceptance | pki configuration', function (hooks) {
     await fillIn(SELECTORS.configuration.deleteAllIssuerInput, 'delete-all');
     await click(SELECTORS.configuration.deleteAllIssuerButton);
     await isSettled();
-    await click(SELECTORS.overviewTab);
+    await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
     await isSettled();
     assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
     assert
@@ -88,25 +88,25 @@ module('Acceptance | pki configuration', function (hooks) {
         "This PKI mount hasn't yet been configured with a certificate issuer. There are existing certificates. Use the CLI to perform any operations with them until an issuer is configured."
       );
 
-    await click(SELECTORS.rolesTab);
+    await visit(`/vault/secrets/${this.mountPath}/pki/roles`);
     await isSettled();
     assert
       .dom(SELECTORS.emptyStateMessage)
       .hasText("This PKI mount hasn't yet been configured with a certificate issuer.");
 
-    await click(SELECTORS.issuersTab);
+    await visit(`/vault/secrets/${this.mountPath}/pki/issuers`);
     await isSettled();
     assert
       .dom(SELECTORS.emptyStateMessage)
       .hasText("This PKI mount hasn't yet been configured with a certificate issuer.");
 
-    await click(SELECTORS.keysTab);
+    await visit(`/vault/secrets/${this.mountPath}/pki/keys`);
     await isSettled();
     assert
       .dom(SELECTORS.emptyStateMessage)
       .hasText("This PKI mount hasn't yet been configured with a certificate issuer.");
 
-    await click(SELECTORS.certsTab);
+    await visit(`/vault/secrets/${this.mountPath}/pki/certificates`);
     await isSettled();
     assert
       .dom(SELECTORS.emptyStateMessage)
@@ -142,7 +142,7 @@ module('Acceptance | pki configuration', function (hooks) {
     await fillIn(SELECTORS.configuration.deleteAllIssuerInput, 'delete-all');
     await click(SELECTORS.configuration.deleteAllIssuerButton);
     await isSettled();
-    await click(SELECTORS.overviewTab);
+    await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
     await isSettled();
     assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
     assert
@@ -151,7 +151,7 @@ module('Acceptance | pki configuration', function (hooks) {
         "This PKI mount hasn't yet been configured with a certificate issuer. There are existing roles and certificates. Use the CLI to perform any operations with them until an issuer is configured."
       );
 
-    await click(SELECTORS.rolesTab);
+    await visit(`/vault/secrets/${this.mountPath}/pki/roles`);
     await isSettled();
     assert
       .dom(SELECTORS.emptyStateMessage)
@@ -159,19 +159,19 @@ module('Acceptance | pki configuration', function (hooks) {
         "This PKI mount hasn't yet been configured with a certificate issuer. There are existing roles. Use the CLI to perform any operations with them until an issuer is configured."
       );
 
-    await click(SELECTORS.issuersTab);
+    await visit(`/vault/secrets/${this.mountPath}/pki/issuers`);
     await isSettled();
     assert
       .dom(SELECTORS.emptyStateMessage)
       .hasText("This PKI mount hasn't yet been configured with a certificate issuer.");
 
-    await click(SELECTORS.keysTab);
+    await visit(`/vault/secrets/${this.mountPath}/pki/keys`);
     await isSettled();
     assert
       .dom(SELECTORS.emptyStateMessage)
       .hasText("This PKI mount hasn't yet been configured with a certificate issuer.");
 
-    await click(SELECTORS.certsTab);
+    await visit(`/vault/secrets/${this.mountPath}/pki/certificates`);
     await isSettled();
     assert
       .dom(SELECTORS.emptyStateMessage)
