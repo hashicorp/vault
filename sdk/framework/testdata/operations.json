@@ -71,7 +71,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/kv-write-foo-id-request"
+                "$ref": "#/components/schemas/KvWriteFooIdRequest"
               }
             }
           }
@@ -86,7 +86,7 @@
   },
   "components": {
     "schemas": {
-      "kv-write-foo-id-request": {
+      "KvWriteFooIdRequest": {
         "type": "object",
         "required": [
           "age"
