@@ -7,5 +7,5 @@ exec {
   command               = "/path/to/my/app"
   args                  = ["arg1", "arg2"]
   restart_on_new_secret = "always"
-  restart_kill_signal   = "SIGTERM"
+  #restart_kill_signal   = "SIGTERM"
 }
