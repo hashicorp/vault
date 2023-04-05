@@ -41,16 +41,6 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
   @tracked invalidFormAlert = '';
   @tracked modelValidations = null;
 
-  get bannerType() {
-    if (this.args.parsingErrors && !this.invalidFormAlert) {
-      return {
-        title: 'Not all of the certificate values could be parsed and transfered to new root',
-        type: 'warning',
-      };
-    }
-    return { type: 'danger' };
-  }
-
   get generateOptions() {
     return [
       {

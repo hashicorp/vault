@@ -7,6 +7,7 @@ import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 import { withConfig } from 'pki/decorators/check-config';
 import { hash } from 'rsvp';
+import { PKI_DEFAULT_EMPTY_STATE_MSG } from 'pki/routes/overview';
 
 @withConfig()
 export default class PkiKeysIndexRoute extends Route {
@@ -40,5 +41,6 @@ export default class PkiKeysIndexRoute extends Route {
       { label: this.secretMountPath.currentPath, route: 'overview' },
       { label: 'keys', route: 'keys.index' },
     ];
+    controller.message = PKI_DEFAULT_EMPTY_STATE_MSG;
   }
 }

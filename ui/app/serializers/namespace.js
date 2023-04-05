@@ -5,7 +5,11 @@
 
 import ApplicationSerializer from './application';
 
-export default ApplicationSerializer.extend({
+export default class NamespaceSerializer extends ApplicationSerializer {
+  attrs = {
+    path: { serialize: false },
+  };
+
   normalizeList(payload) {
     const data = payload.data.keys
       ? payload.data.keys.map((key) => ({
@@ -16,7 +20,7 @@ export default ApplicationSerializer.extend({
       : payload.data;
 
     return data;
-  },
+  }
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     const nullResponses = ['deleteRecord', 'createRecord'];
@@ -24,6 +28,6 @@ export default ApplicationSerializer.extend({
     const normalizedPayload = nullResponses.includes(requestType)
       ? { id: cid, path: cid }
       : this.normalizeList(payload);
-    return this._super(store, primaryModelClass, normalizedPayload, id, requestType);
-  },
-});
+    return super.normalizeResponse(store, primaryModelClass, normalizedPayload, id, requestType);
+  }
+}
