@@ -915,7 +915,7 @@ func TestExternalPlugin_AuditEnabled_ShouldLogPluginMetadata_Auth(t *testing.T) 
 		t.Fatal(err)
 	}
 
-	// Check the audit trail on request
+	// Check the audit trail on request and response
 	decoder := json.NewDecoder(auditLogFile)
 	var auditRecord map[string]interface{}
 	for decoder.Decode(&auditRecord) == nil {

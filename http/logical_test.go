@@ -778,7 +778,7 @@ func testBuiltinPluginMetadataAuditLog(t *testing.T, log map[string]interface{},
 	}
 
 	if mountIsExternalPlugin, ok := log["mount_is_external_plugin"].(bool); ok && mountIsExternalPlugin {
-		t.Fatalf("mount_is_external_plugin should be nil or false, not %T", log["mount_running_sha256"])
+		t.Fatalf("mount_is_external_plugin should be nil or false, not %T", log["mount_is_external_plugin"])
 	}
 }
 
@@ -828,7 +828,7 @@ func TestLogical_AuditEnabled_ShouldLogPluginMetadata_Auth(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Check the audit trail on request
+	// Check the audit trail on request and response
 	decoder := json.NewDecoder(auditLogFile)
 	var auditRecord map[string]interface{}
 	for decoder.Decode(&auditRecord) == nil {
