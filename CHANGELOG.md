@@ -1,3 +1,34 @@
+## 1.13.1
+### March 29, 2023
+
+IMPROVEMENTS:
+
+* auth/github: Allow for an optional Github auth token environment variable to make authenticated requests when fetching org id
+website/docs: Add docs for `VAULT_AUTH_CONFIG_GITHUB_TOKEN` environment variable when writing Github config [[GH-19244](https://github.com/hashicorp/vault/pull/19244)]
+* core: Allow overriding gRPC connect timeout via VAULT_GRPC_MIN_CONNECT_TIMEOUT. This is an env var rather than a config setting because we don't expect this to ever be needed.  It's being added as a last-ditch
+option in case all else fails for some replication issues we may not have fully reproduced. [[GH-19676](https://github.com/hashicorp/vault/pull/19676)]
+* core: validate name identifiers in mssql physical storage backend prior use [[GH-19591](https://github.com/hashicorp/vault/pull/19591)]
+* database/elasticsearch: Update error messages resulting from Elasticsearch API errors [[GH-19545](https://github.com/hashicorp/vault/pull/19545)]
+* events: Suppress log warnings triggered when events are sent but the events system is not enabled. [[GH-19593](https://github.com/hashicorp/vault/pull/19593)]
+
+BUG FIXES:
+
+* agent: Fix panic when SIGHUP is issued to Agent while it has a non-TLS listener. [[GH-19483](https://github.com/hashicorp/vault/pull/19483)]
+* core (enterprise): Attempt to reconnect to a PKCS#11 HSM if we retrieve a CKR_FUNCTION_FAILED error.
+* core: Fixed issue with remounting mounts that have a non-trailing space in the 'to' or 'from' paths. [[GH-19585](https://github.com/hashicorp/vault/pull/19585)]
+* kmip (enterprise): Do not require attribute Cryptographic Usage Mask when registering Secret Data managed objects.
+* kmip (enterprise): Fix a problem forwarding some requests to the active node.
+* openapi: Fix logic for labeling unauthenticated/sudo paths. [[GH-19600](https://github.com/hashicorp/vault/pull/19600)]
+* secrets/ldap: Invalidates WAL entry for static role if `password_policy` has changed. [[GH-19640](https://github.com/hashicorp/vault/pull/19640)]
+* secrets/pki: Fix PKI revocation request forwarding from standby nodes due to an error wrapping bug [[GH-19624](https://github.com/hashicorp/vault/pull/19624)]
+* secrets/transform (enterprise): Fix persistence problem with rotated tokenization key versions
+* ui: Fixes crypto.randomUUID error in unsecure contexts from third party ember-data library [[GH-19428](https://github.com/hashicorp/vault/pull/19428)]
+* ui: fixes SSH engine config deletion [[GH-19448](https://github.com/hashicorp/vault/pull/19448)]
+* ui: fixes issue navigating back a level using the breadcrumb from secret metadata view [[GH-19703](https://github.com/hashicorp/vault/pull/19703)]
+* ui: fixes oidc tabs in auth form submitting with the root's default_role value after a namespace has been inputted [[GH-19541](https://github.com/hashicorp/vault/pull/19541)]
+* ui: pass encodeBase64 param to HMAC transit-key-actions. [[GH-19429](https://github.com/hashicorp/vault/pull/19429)]
+* ui: use URLSearchParams interface to capture namespace param from SSOs (ex. ADFS) with decoded state param in callback url [[GH-19460](https://github.com/hashicorp/vault/pull/19460)]
+
 ## 1.13.0
 ### March 01, 2023
 
@@ -300,7 +331,32 @@ non-voter.  In some scenarios this resulted in loss of quorum. [[GH-18263](https
 * ui: fixes query parameters not passed in api explorer test requests [[GH-18743](https://github.com/hashicorp/vault/pull/18743)]
 * ui: fixes reliance on secure context (https) by removing methods using the Crypto interface [[GH-19403](https://github.com/hashicorp/vault/pull/19403)]
 * ui: show Get credentials button for static roles detail page when a user has the proper permissions. [[GH-19190](https://github.com/hashicorp/vault/pull/19190)]
-                                                                       
+
+## 1.12.5
+### March 29, 2023
+
+IMPROVEMENTS:
+
+* auth/github: Allow for an optional Github auth token environment variable to make authenticated requests when fetching org id
+website/docs: Add docs for `VAULT_AUTH_CONFIG_GITHUB_TOKEN` environment variable when writing Github config [[GH-19244](https://github.com/hashicorp/vault/pull/19244)]
+* core: Allow overriding gRPC connect timeout via VAULT_GRPC_MIN_CONNECT_TIMEOUT. This is an env var rather than a config setting because we don't expect this to ever be needed.  It's being added as a last-ditch
+option in case all else fails for some replication issues we may not have fully reproduced. [[GH-19676](https://github.com/hashicorp/vault/pull/19676)]
+* core: validate name identifiers in mssql physical storage backend prior use [[GH-19591](https://github.com/hashicorp/vault/pull/19591)]
+
+BUG FIXES:
+
+* cli: Fix vault read handling to return raw data as secret.Data when there is no top-level data object from api response. [[GH-17913](https://github.com/hashicorp/vault/pull/17913)]
+* core (enterprise): Attempt to reconnect to a PKCS#11 HSM if we retrieve a CKR_FUNCTION_FAILED error.
+* core: Fixed issue with remounting mounts that have a non-trailing space in the 'to' or 'from' paths. [[GH-19585](https://github.com/hashicorp/vault/pull/19585)]
+* kmip (enterprise): Do not require attribute Cryptographic Usage Mask when registering Secret Data managed objects.
+* kmip (enterprise): Fix a problem forwarding some requests to the active node.
+* openapi: Fix logic for labeling unauthenticated/sudo paths. [[GH-19600](https://github.com/hashicorp/vault/pull/19600)]
+* secrets/ldap: Invalidates WAL entry for static role if `password_policy` has changed. [[GH-19641](https://github.com/hashicorp/vault/pull/19641)]
+* secrets/transform (enterprise): Fix persistence problem with rotated tokenization key versions
+* ui: fixes issue navigating back a level using the breadcrumb from secret metadata view [[GH-19703](https://github.com/hashicorp/vault/pull/19703)]
+* ui: pass encodeBase64 param to HMAC transit-key-actions. [[GH-19429](https://github.com/hashicorp/vault/pull/19429)]
+* ui: use URLSearchParams interface to capture namespace param from SSOs (ex. ADFS) with decoded state param in callback url [[GH-19460](https://github.com/hashicorp/vault/pull/19460)]
+
 ## 1.12.4
 ### March 01, 2023
 
@@ -669,6 +725,29 @@ BUG FIXES:
 * ui: Fixes secret version and status menu links transitioning to auth screen [[GH-16983](https://github.com/hashicorp/vault/pull/16983)]
 * ui: OIDC login type uses localStorage instead of sessionStorage [[GH-16170](https://github.com/hashicorp/vault/pull/16170)]
 * vault: Fix a bug where duplicate policies could be added to an identity group. [[GH-15638](https://github.com/hashicorp/vault/pull/15638)]
+
+## 1.11.9
+### March 29, 2023
+
+IMPROVEMENTS:
+
+* auth/github: Allow for an optional Github auth token environment variable to make authenticated requests when fetching org id
+website/docs: Add docs for `VAULT_AUTH_CONFIG_GITHUB_TOKEN` environment variable when writing Github config [[GH-19244](https://github.com/hashicorp/vault/pull/19244)]
+* core: Allow overriding gRPC connect timeout via VAULT_GRPC_MIN_CONNECT_TIMEOUT. This is an env var rather than a config setting because we don't expect this to ever be needed.  It's being added as a last-ditch
+option in case all else fails for some replication issues we may not have fully reproduced. [[GH-19676](https://github.com/hashicorp/vault/pull/19676)]
+* core: validate name identifiers in mssql physical storage backend prior use [[GH-19591](https://github.com/hashicorp/vault/pull/19591)]
+
+BUG FIXES:
+
+* auth/kubernetes: Ensure a consistent TLS configuration for all k8s API requests [[#190](https://github.com/hashicorp/vault-plugin-auth-kubernetes/pull/190)] [[GH-19720](https://github.com/hashicorp/vault/pull/19720)]
+* cli: Fix vault read handling to return raw data as secret.Data when there is no top-level data object from api response. [[GH-17913](https://github.com/hashicorp/vault/pull/17913)]
+* core (enterprise): Attempt to reconnect to a PKCS#11 HSM if we retrieve a CKR_FUNCTION_FAILED error.
+* core: Fixed issue with remounting mounts that have a non-trailing space in the 'to' or 'from' paths. [[GH-19585](https://github.com/hashicorp/vault/pull/19585)]
+* openapi: Fix logic for labeling unauthenticated/sudo paths. [[GH-19600](https://github.com/hashicorp/vault/pull/19600)]
+* secrets/transform (enterprise): Fix persistence problem with rotated tokenization key versions
+* ui: fixes issue navigating back a level using the breadcrumb from secret metadata view [[GH-19703](https://github.com/hashicorp/vault/pull/19703)]
+* ui: pass encodeBase64 param to HMAC transit-key-actions. [[GH-19429](https://github.com/hashicorp/vault/pull/19429)]
+* ui: use URLSearchParams interface to capture namespace param from SSOs (ex. ADFS) with decoded state param in callback url [[GH-19460](https://github.com/hashicorp/vault/pull/19460)]
 
 ## 1.11.8
 ### March 01, 2023

@@ -827,6 +827,41 @@ func TestOpenAPI_constructOperationID(t *testing.T) {
 	}
 }
 
+func TestOpenAPI_hyphenatedToTitleCase(t *testing.T) {
+	tests := map[string]struct {
+		in       string
+		expected string
+	}{
+		"simple": {
+			in:       "test",
+			expected: "Test",
+		},
+		"two-words": {
+			in:       "two-words",
+			expected: "TwoWords",
+		},
+		"three-words": {
+			in:       "one-two-three",
+			expected: "OneTwoThree",
+		},
+		"not-hyphenated": {
+			in:       "something_like_this",
+			expected: "Something_like_this",
+		},
+	}
+
+	for name, test := range tests {
+		name, test := name, test
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			actual := hyphenatedToTitleCase(test.in)
+			if actual != test.expected {
+				t.Fatalf("expected: %s; got: %s", test.expected, actual)
+			}
+		})
+	}
+}
+
 func testPath(t *testing.T, path *Path, sp *logical.Paths, expectedJSON string) {
 	t.Helper()
 
