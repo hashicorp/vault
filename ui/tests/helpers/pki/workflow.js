@@ -17,6 +17,7 @@ export const SELECTORS = {
   overviewBreadcrumb: '[data-test-breadcrumbs] li:nth-of-type(2) > a',
   pageTitle: '[data-test-pki-role-page-title]',
   alertBanner: '[data-test-alert-banner="alert"]',
+  emptyState: '[data-test-component="empty-state"]',
   emptyStateTitle: '[data-test-empty-state-title]',
   emptyStateLink: '.empty-state-actions a',
   emptyStateMessage: '[data-test-empty-state-message]',
