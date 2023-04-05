@@ -344,6 +344,7 @@ func (s *singleTypeSegmentReader) nextValue(ctx context.Context, out proto.Messa
 			return io.EOF
 		}
 		path = s.paths[s.currentPathIndex]
+		// increment the index to continue iterating for the next read call, even if an error occurs during this call
 		s.currentPathIndex++
 		var err error
 		raw, err = s.a.view.Get(ctx, s.basePath+path)
@@ -351,12 +352,12 @@ func (s *singleTypeSegmentReader) nextValue(ctx context.Context, out proto.Messa
 			return err
 		}
 		if raw == nil {
-			s.a.logger.Warn("expected log segment not found", "startTime", s.startTime, "segment", path)
+			s.a.logger.Warn("expected log segment file has been deleted", "startTime", s.startTime, "segmentPath", path)
 		}
 	}
 	err := proto.Unmarshal(raw.Value, out)
 	if err != nil {
-		return fmt.Errorf("unable to parse segment %v%v: %w", s.basePath, path, err)
+		return fmt.Errorf("unable to parse segment file %v%v: %w", s.basePath, path, err)
 	}
 	return nil
 }
