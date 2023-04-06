@@ -12,6 +12,9 @@
 .is-no-underline {
   text-decoration: none;
 }
+.has-line-height-1 {
+  line-height: 1;
+}
 .is-sideless {
   box-shadow: 0 2px 0 -1px $grey-light, 0 -2px 0 -1px $grey-light;
 }
@@ -244,6 +247,9 @@
 }
 .has-top-padding-xxl {
   padding-top: $spacing-xxl;
+}
+.has-bottom-padding-l {
+  padding-bottom: $spacing-l;
 }
 .has-bottom-margin-xs {
   margin-bottom: $spacing-xs;
