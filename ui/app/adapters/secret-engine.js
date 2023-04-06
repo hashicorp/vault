@@ -42,7 +42,7 @@ export default ApplicationAdapter.extend({
       }
     } catch (error) {
       // no path means this was an error on listing
-      if (!query.path) {
+      if (!query.path || !mountModel) {
         throw error;
       }
       // control groups will throw a 403 permission denied error. If this happens return the mountModel
