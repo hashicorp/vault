@@ -270,9 +270,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 		},
 		"agent generate-config": func() (cli.Command, error) {
 			return &AgentGenerateConfigCommand{
-				BaseCommand: &BaseCommand{
-					BaseCommand: getBaseCommand(),
-				},
+				BaseCommand: getBaseCommand(),
 			}, nil
 		},
 		"audit": func() (cli.Command, error) {

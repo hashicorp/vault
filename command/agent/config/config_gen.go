@@ -20,10 +20,10 @@ type AutoAuthGen struct {
 }
 
 type AutoAuthMethodGen struct {
-	Type   string
+	Type   string                  `hcl:"type"`
 	Config AutoAuthMethodConfigGen `hcl:"config,block"`
 }
 
 type AutoAuthMethodConfigGen struct {
-	TokenFileLocation string `hcl:"token_file_location"`
+	TokenFilePath string `hcl:"token_file_path"`
 }

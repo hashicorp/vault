@@ -102,6 +102,7 @@ require (
 	github.com/hashicorp/go-version v1.6.0
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/hashicorp/hcl v1.0.1-vault-5
+	github.com/hashicorp/hcl/v2 v2.16.2
 	github.com/hashicorp/hcp-link v0.1.0
 	github.com/hashicorp/hcp-scada-provider v0.2.1
 	github.com/hashicorp/hcp-sdk-go v0.23.0
@@ -254,8 +255,10 @@ require (
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
+	github.com/agext/levenshtein v1.2.1 // indirect
 	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/apache/arrow/go/arrow v0.0.0-20210818145353-234c94e4ce64 // indirect
+	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.8.0 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.3.2 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.4.0 // indirect
@@ -445,6 +448,7 @@ require (
 	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d // indirect
 	github.com/yuin/gopher-lua v0.0.0-20210529063254-f4c35e4016d9 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
+	github.com/zclconf/go-cty v1.12.1 // indirect
 	go.etcd.io/etcd/api/v3 v3.5.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.uber.org/multierr v1.7.0 // indirect
