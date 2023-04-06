@@ -8,7 +8,7 @@
 .input,
 .textarea {
   border-radius: $radius;
-  border: 1px solid $ui-gray-300;
+  border: $base-border;
   box-shadow: 0 4px 1px rgba($black, 0.06) inset;
   color: $grey-dark;
   height: 2.5rem;
@@ -22,8 +22,8 @@
   &.is-active,
   &:focus-visible {
     outline: none;
-    background-color: $input-focus-background-color;
-    border-color: #1563ff !important;
+    background-color: $white;
+    border-color: $blue-500 !important;
     box-shadow: 0 0 0 0.125em rgba(21, 99, 255, 0.25) !important;
   }
 

@@ -106,6 +106,8 @@
   @extend .is-outlined;
   @extend .is-compact;
   background: $white;
+  border-color: $blue-500;
+  color: $blue-500;
   max-width: 8rem;
 
   @include until($mobile) {

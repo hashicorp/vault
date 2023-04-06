@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
+// This file defines the following mixins: css-arrow, css-top-arrow, css-bottom-arrow, from, until, and vault-block
 @mixin css-arrow(
   $vertical-direction,
   $size,
@@ -66,6 +67,18 @@
 }
 @mixin css-bottom-arrow($size, $color, $border-width, $border-color, $left: 50%, $left-offset: 0px) {
   @include css-arrow('bottom', $size, $color, $border-width, $border-color, $left, $left-offset);
+}
+
+@mixin from($breakpoint) {
+  @media (min-width: $breakpoint) {
+    @content;
+  }
+}
+
+@mixin until($breakpoint) {
+  @media (max-width: $breakpoint) {
+    @content;
+  }
 }
 
 @mixin vault-block {

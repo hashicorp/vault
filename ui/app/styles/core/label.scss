@@ -6,13 +6,13 @@
 // This file defines the classes for .label, .is-label
 
 .label {
-  color: $grey-darker;
+  color: $grey-darkest;
   text-transform: uppercase;
   font-size: $size-8;
 }
 
 .is-label {
-  color: $grey-darker;
+  color: $grey-darkest;
   display: inline-block;
   font-size: $size-8;
   font-weight: $font-weight-bold;

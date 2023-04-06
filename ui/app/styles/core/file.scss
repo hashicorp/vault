@@ -12,7 +12,7 @@
 .file-name {
   border-radius: $radius;
   border-width: 1px 1px 1px 0 !important;
-  border: 1px solid $ui-gray-300;
+  border: $base-border;
   box-shadow: 0 4px 1px rgba(10, 10, 10, 0.06) inset;
   display: block;
   font-size: 1em;
@@ -51,7 +51,7 @@
 }
 
 .file-cta {
-  border: 1px solid $ui-gray-300;
+  border: $base-border;
   border-radius: $radius;
   min-width: auto;
   position: relative;
@@ -70,7 +70,7 @@
 
 .file-name {
   @extend .input;
-  border: 1px solid $ui-gray-300;
+  border: $base-border;
   border-radius: $radius;
 }
 

@@ -13,20 +13,13 @@
 .has-background-transparent {
   background: transparent !important;
 }
+
 .has-background-gray-200 {
   background-color: $ui-gray-200;
 }
 
-@each $name, $shade in $shades {
-  .has-background-#{$name} {
-    background: $shade !important;
-  }
-}
-@each $name, $pair in $colors {
-  $color: nth($pair, 1);
-  .has-background-#{$name} {
-    background: $color !important;
-  }
+.has-background-grey-lighter {
+  background-color: $ui-gray-050;
 }
 
 .has-border-top-light {
@@ -57,37 +50,33 @@ select.has-error-border {
 }
 
 .has-text-white {
-  color: white !important;
+  color: $white !important;
 }
 
 .has-text-black {
-  color: #0a0a0a !important;
+  color: $black !important;
 }
 
 .has-text-success {
-  color: #2eb039 !important;
+  color: $green-500 !important;
 }
 
 .has-text-grey-dark {
-  color: #525761 !important;
+  color: $ui-gray-700 !important;
 }
 
 .has-text-grey {
-  color: #6f7682 !important;
+  color: $ui-gray-500 !important;
 }
 
 .has-text-grey-light {
-  color: #bac1cc !important;
+  color: $ui-gray-300 !important;
 }
 
 .has-text-highlight {
   color: $yellow-500;
 }
 
-// ARG TODO: Duplicate, has-text-danger is bulma has-text-red is ours.
-.has-text-red {
-  color: $red;
-}
 .has-text-danger {
-  color: #c73445 !important;
+  color: $red-500 !important;
 }

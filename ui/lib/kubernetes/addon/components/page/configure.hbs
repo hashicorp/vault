@@ -49,8 +49,8 @@
     <Icon @name="check-circle-fill" class="has-text-green" />
     <span>Configuration values were inferred successfully.</span>
   {{else if (eq this.inferredState "error")}}
-    <Icon @name="x-square-fill" class="has-text-red" />
-    <span class="has-text-red">
+    <Icon @name="x-square-fill" class="has-text-danger" />
+    <span class="has-text-danger">
       Vault could not infer a configuration from your environment variables. Check your configuration file to edit or delete
       them, or configure manually.
     </span>

@@ -8,7 +8,7 @@
   width: 31px;
   background: $white;
   border-radius: 1px;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 0 1px rgba($white, 0.4);
 }
 .auth-button-type-google {
   position: relative;

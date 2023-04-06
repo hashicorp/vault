@@ -89,7 +89,7 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     await click('[data-test-config] button');
     assert
       .dom('[data-test-icon="x-square-fill"]')
-      .hasClass('has-text-red', 'Icon is displayed for error state with correct styling');
+      .hasClass('has-text-danger', 'Icon is displayed for error state with correct styling');
     const error =
       'Vault could not infer a configuration from your environment variables. Check your configuration file to edit or delete them, or configure manually.';
     assert.dom('[data-test-config] span').hasText(error, 'Error text is displayed');

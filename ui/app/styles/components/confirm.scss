@@ -37,16 +37,16 @@
   button.link,
   a {
     background-color: $white;
-    color: $text;
+    color: $grey-darkest;
 
     &:hover {
-      background-color: $menu-item-hover-background-color;
-      color: $menu-item-hover-color;
+      background-color: $ui-gray-050;
+      color: $ui-gray-900;
     }
 
     &.is-active {
-      background-color: $menu-item-active-background-color;
-      color: $menu-item-active-color;
+      background-color: $blue-500;
+      color: $blue;
     }
 
     &.is-destroy {
