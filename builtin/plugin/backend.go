@@ -301,6 +301,4 @@ func (b *PluginBackend) PluginVersion() logical.PluginVersion {
 	return logical.EmptyPluginVersion
 }
 
-var (
-	_ logical.PluginVersioner = (*PluginBackend)(nil)
-)
+var _ logical.PluginVersioner = (*PluginBackend)(nil)
