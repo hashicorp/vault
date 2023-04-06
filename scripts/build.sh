@@ -40,7 +40,7 @@ rm -rf pkg/*
 mkdir -p bin/
 
 # Build!
-echo "==> Building with tags \"${BUILD_TAGS}\"..."
+echo "==> Building..."
 ${GO_CMD} build \
     -gcflags "${GCFLAGS}" \
     -ldflags "${LD_FLAGS} -X github.com/hashicorp/vault/version.GitCommit='${GIT_COMMIT}${GIT_DIRTY}' -X github.com/hashicorp/vault/version.BuildDate=${BUILD_DATE}" \
