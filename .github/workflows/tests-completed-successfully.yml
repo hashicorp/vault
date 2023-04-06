@@ -1,0 +1,18 @@
+---
+name: completed-successfully
+
+on:
+  workflow_call:
+
+jobs:
+  completed-successfully:
+      runs-on: ubuntu-latest
+      steps:
+        # Do not run for docs branches
+        - if: |
+            !startsWith(github.head_ref, 'docs/') &&
+            !startsWith(github.head_ref, 'backport/docs/')
+          run: echo "All required build and test workflows have succeeded!"
+        # Run only for docs branches
+        - if: "startsWith(github.head_ref, 'docs/') || startsWith(github.head_ref, 'backport/docs/')"
+          run: echo "Docs workflows succeeded!"

@@ -11,6 +11,10 @@ on:
 
 jobs:
   product-metadata:
+    # Do not run for docs branches
+    if: |
+      !startsWith(github.head_ref, 'docs/') &&
+      !startsWith(github.head_ref, 'backport/docs/')
     runs-on: ubuntu-latest
     outputs:
       build-date: ${{ steps.get-metadata.outputs.build-date }}
@@ -203,8 +207,7 @@ jobs:
       artifact-version: ${{ needs.product-metadata.outputs.vault-version }}
     secrets: inherit
 
-  completed-successfully:
-    runs-on: ubuntu-latest
+  builds-completed-successfully:
     needs:
       - build-other
       - build-linux
@@ -213,5 +216,9 @@ jobs:
       - build-ubi
       - test
       - test-docker-k8s
-    steps:
-      - run: echo "All required build and test workflows have succeeded!"
+    uses: ./.github/workflows/tests-completed-successfully.yml
+
+  docs-completed-successfully:
+    # Run only for docs branches
+    if: "startsWith(github.head_ref, 'docs/') || startsWith(github.head_ref, 'backport/docs/')"
+    uses: ./.github/workflows/tests-completed-successfully.yml
