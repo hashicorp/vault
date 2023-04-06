@@ -2740,6 +2740,7 @@ type singleTypeSegmentReader struct {
 	currentPathIndex int
 	a                *ActivityLog
 }
+
 type segmentReader struct {
 	tokens   *singleTypeSegmentReader
 	entities *singleTypeSegmentReader
