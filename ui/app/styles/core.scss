@@ -4,12 +4,10 @@
  */
 
 // Start with Structure & Bulma variables as a foundation
-@import './utils/color_variables';
+@import './utils/color_variables'; // colors need to come first.
+@import './utils/box-shadow_variables';
 @import './utils/font_family_variables';
 @import './utils/size_variables';
-
-// Consolidate Bulma variables and mixins
-@import './utils/bulma_variables';
 
 @import './core/element-styling';
 @import './utils/bulma_switch';

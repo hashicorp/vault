@@ -5,9 +5,9 @@
 
 .progress {
   appearance: none;
-  background: $progress-bar-background-color;
+  background: $ui-gray-050;
   border: none;
-  box-shadow: inset 0 0 0 1px $ui-gray-200;
+  box-shadow: inset $box-link-shadow;
   border-radius: $radius;
   display: block;
   height: 1rem;
@@ -30,7 +30,7 @@
 // style the container in chrome
 .progress[value]::-webkit-progress-bar {
   background-color: #ededed;
-  box-shadow: inset 0 0 0 1px $ui-gray-200;
+  box-shadow: inset $box-link-shadow;
 }
 
 // style the bar in chrome

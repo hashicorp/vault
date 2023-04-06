@@ -27,7 +27,7 @@ label.box-label {
   }
 
   &.is-selected {
-    box-shadow: $box-link-hover-shadow, $box-shadow-middle;
+    box-shadow: 0 0 0 1px $grey-light, $box-shadow-middle;
 
     .icon {
       color: $grey;
@@ -63,6 +63,6 @@ label.box-label {
   color: $grey;
 
   .is-selected & {
-    color: $text;
+    color: $grey-darkest;
   }
 }
