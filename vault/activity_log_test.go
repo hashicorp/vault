@@ -838,6 +838,8 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 			"retention_months":      24,
 			"enabled":               activityLogEnabledDefaultValue,
 			"queries_available":     false,
+			"reporting_enabled":     false,
+			"billing_start_time":    time.Time{},
 		}
 
 		if diff := deep.Equal(resp.Data, defaults); len(diff) > 0 {
@@ -908,6 +910,28 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 			t.Fatalf("bad: %#v", resp)
 		}
 
+		req = logical.TestRequest(t, logical.UpdateOperation, "internal/counters/config")
+		req.Storage = view
+		req.Data["reporting_enabled"] = true
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		if !strings.Contains(resp.Error().Error(), "read-only") {
+			t.Fatalf("expected error in response, got %#v", resp)
+		}
+
+		req = logical.TestRequest(t, logical.UpdateOperation, "internal/counters/config")
+		req.Storage = view
+		req.Data["billing_start_time"] = time.Now().UTC()
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		if !strings.Contains(resp.Error().Error(), "read-only") {
+			t.Fatalf("expected error in response, got %#v", resp)
+		}
+
 		req = logical.TestRequest(t, logical.ReadOperation, "internal/counters/config")
 		req.Storage = view
 		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
@@ -919,6 +943,8 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 			"retention_months":      2,
 			"enabled":               "enable",
 			"queries_available":     false,
+			"reporting_enabled":     false,
+			"billing_start_time":    time.Time{},
 		}
 
 		if diff := deep.Equal(resp.Data, expected); len(diff) > 0 {
