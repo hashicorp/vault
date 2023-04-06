@@ -1,11 +1,10 @@
 <HcAppFrame::SidenavPanel as |Nav|>
   <Nav.BackLink
-    @route={{get (route-params-for "access") "route"}}
-    @models={{get (route-params-for "access") "models"}}
+    @route="vault.cluster"
     @current-when={{false}}
     @icon="arrow-left"
-    @text="Back to access"
-    data-test-sidebar-nav-link="Back to access"
+    @text="Back to main navigation"
+    data-test-sidebar-nav-link="Back to main navigation"
   />
 
   <Nav.Title data-test-sidebar-nav-heading="Policies">Policies</Nav.Title>

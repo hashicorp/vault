@@ -17,6 +17,15 @@
       data-test-sidebar-nav-link="Access"
     />
   {{/if}}
+  {{#if (has-permission "policies")}}
+    <Nav.Link
+      @route="vault.cluster.policies"
+      @models={{get (route-params-for "policies") "models"}}
+      @text="Policies"
+      @hasSubItems={{true}}
+      data-test-sidebar-nav-link="Policies"
+    />
+  {{/if}}
   {{#if (has-permission "tools")}}
     <Nav.Link
       @route="vault.cluster.tools.tool"

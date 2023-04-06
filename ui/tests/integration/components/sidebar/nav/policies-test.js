@@ -24,7 +24,7 @@ module('Integration | Component | sidebar-nav-policies', function (hooks) {
 
   test('it should render nav headings and links', async function (assert) {
     const links = [
-      'Back to access',
+      'Back to main navigation',
       'ACL Policies',
       'Role-Governing Policies',
       'Endpoint Governing Policies',
