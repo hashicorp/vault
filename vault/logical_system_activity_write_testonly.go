@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 //go:build testonly
 
 package vault
@@ -25,7 +28,7 @@ func (b *SystemBackend) activityWritePath() *framework.Path {
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
-			logical.UpdateOperation: &framework.PathOperation{
+			logical.CreateOperation: &framework.PathOperation{
 				Callback: b.handleActivityWriteData,
 				Summary:  "Write activity log data",
 			},
@@ -39,6 +42,12 @@ func (b *SystemBackend) handleActivityWriteData(ctx context.Context, request *lo
 	err := protojson.Unmarshal([]byte(json.(string)), input)
 	if err != nil {
 		return logical.ErrorResponse("Invalid input data: %s", err), logical.ErrInvalidRequest
+	}
+	if len(input.Write) == 0 {
+		return logical.ErrorResponse("Missing required \"write\" values"), logical.ErrInvalidRequest
+	}
+	if len(input.Data) == 0 {
+		return logical.ErrorResponse("Missing required \"data\" values"), logical.ErrInvalidRequest
 	}
 	return nil, nil
 }

@@ -72,10 +72,9 @@ func (b *SystemBackend) activityPaths() []*framework.Path {
 
 // rootActivityPaths are available only in the root namespace
 func (b *SystemBackend) rootActivityPaths() []*framework.Path {
-	return []*framework.Path{
+	paths := []*framework.Path{
 		b.activityQueryPath(),
 		b.monthlyActivityCountPath(),
-		b.activityWritePath(),
 		{
 			Pattern: "internal/counters/config$",
 			Fields: map[string]*framework.FieldSchema{
@@ -136,6 +135,10 @@ func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 			},
 		},
 	}
+	if writePath := b.activityWritePath(); writePath != nil {
+		paths = append(paths, writePath)
+	}
+	return paths
 }
 
 func parseStartEndTimes(a *ActivityLog, d *framework.FieldData) (time.Time, time.Time, error) {
