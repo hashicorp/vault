@@ -1,0 +1,58 @@
+<PageHeader as |p|>
+  <p.top>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      <Icon @name="file" @size="24" class="has-text-grey-light" />
+      Tidy
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<hr class="is-marginless has-background-gray-200" />
+<p class="has-top-margin-s has-bottom-margin-s">Tidying cleans up the storage backend and/or CRL by removing certificates
+  that have expired and are past a certain buffer period beyond their expiration time.</p>
+
+<div class="has-top-margin-s has-bottom-margin-s">
+  <div class="has-bottom-margin-s">
+    <Input
+      @type="checkbox"
+      @checked={{@tidy.tidyCertStore}}
+      {{on "input" (fn (mut @tidy.tidyCertStore) (not @tidy.tidyCertStore))}}
+    />
+
+    <label for="tidy-certificate-store" class="is-label">
+      Tidy the certificate store
+    </label>
+  </div>
+  <div class="has-bottom-margin-s">
+    <Input
+      @type="checkbox"
+      @checked={{@tidy.tidyRevocationQueue}}
+      {{on "input" (fn (mut @tidy.tidyRevocationQueue) (not @tidy.tidyRevocationQueue))}}
+    />
+
+    <label for="tidy-certificate-revocation-list" class="is-label">
+      Tidy the revocation list (CRL)
+    </label>
+  </div>
+</div>
+
+<TtlPicker
+  @onChange={{this.updateSafetyBuffer}}
+  @hideToggle={{true}}
+  @label="Safety buffer"
+  @helperTextEnabled="For a certificate to be expunged, the time must be after the expiration time of the certificate (according to the local
+    clock) plus the safety buffer. The default is 72 hours."
+/>
+<hr class="is-marginless has-background-gray-200" />
+
+<div class="has-top-margin-m">
+  <button type="button" class="button is-primary" {{on "click" this.performTidy}}>
+    Tidy
+  </button>
+  <button type="button" class="button is-secondary" {{on "click" this.cancel}}>
+    Cancel
+  </button>
+</div>

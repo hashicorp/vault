@@ -6,14 +6,18 @@
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 import { hash } from 'rsvp';
-
+import { withConfirmLeave } from 'core/decorators/confirm-leave';
+@withConfirmLeave('model.tidy')
 export default class PkiConfigurationTidyRoute extends Route {
   @service store;
   @service secretMountPath;
 
   model() {
+    const backend = this.secretMountPath.currentPath;
+
     return hash({
       engine: this.modelFor('application'),
+      tidy: this.store.createRecord('pki/tidy', { backend }),
     });
   }
 
