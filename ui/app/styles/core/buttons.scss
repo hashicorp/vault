@@ -7,6 +7,7 @@
 $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
 
 .button {
+  align-items: center;
   background-color: $grey-lightest;
   border: 1px solid $grey-light;
   border-radius: $radius;

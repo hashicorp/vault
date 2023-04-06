@@ -42,7 +42,7 @@
 .navbar-actions {
   background-color: $black;
   display: flex;
-  height: $spacing-xxxl;
+  height: 4rem;
   justify-content: flex-start;
   padding: $spacing-xs $spacing-s $spacing-xs 0;
 }
@@ -294,5 +294,14 @@
 .navbar-drawer .ember-basic-dropdown-content {
   @include until($mobile) {
     position: relative;
+  }
+}
+
+// responsive css
+@media screen and (min-width: 1024px) {
+  .navbar-item,
+  .navbar-link {
+    align-items: center;
+    display: flex;
   }
 }
