@@ -14,7 +14,8 @@ jobs:
     # Do not run for docs branches
     if: |
       !startsWith(github.head_ref, 'docs/') &&
-      !startsWith(github.head_ref, 'backport/docs/')
+      !startsWith(github.head_ref, 'backport/docs/') &&
+      !contains(github.event.pull_request.labels.*.name, 'docs')
     runs-on: ubuntu-latest
     outputs:
       build-date: ${{ steps.get-metadata.outputs.build-date }}
@@ -207,7 +208,12 @@ jobs:
       artifact-version: ${{ needs.product-metadata.outputs.vault-version }}
     secrets: inherit
 
-  builds-completed-successfully:
+  completed-successfully:
+    if: |
+      !startsWith(github.head_ref, 'docs/') &&
+      !startsWith(github.head_ref, 'backport/docs/') &&
+      !contains(github.event.pull_request.labels.*.name, 'docs')
+    runs-on: ubuntu-latest
     needs:
       - build-other
       - build-linux
@@ -216,9 +222,5 @@ jobs:
       - build-ubi
       - test
       - test-docker-k8s
-    uses: ./.github/workflows/tests-completed-successfully.yml
-
-  docs-completed-successfully:
-    # Run only for docs branches
-    if: "startsWith(github.head_ref, 'docs/') || startsWith(github.head_ref, 'backport/docs/')"
-    uses: ./.github/workflows/tests-completed-successfully.yml
+    steps:
+      - run: echo "All required build and test workflows have succeeded!"
