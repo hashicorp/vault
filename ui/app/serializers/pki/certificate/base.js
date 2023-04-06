@@ -20,7 +20,7 @@ export default class PkiCertificateBaseSerializer extends ApplicationSerializer 
       return super.normalizeResponse(
         store,
         primaryModelClass,
-        { ...payload, parsed_certificate: parsedCert },
+        { ...payload, parsed_certificate: parsedCert, common_name: parsedCert.common_name },
         id,
         requestType
       );

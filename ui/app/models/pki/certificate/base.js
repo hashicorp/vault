@@ -23,8 +23,6 @@ const certDisplayFields = [
   'commonName',
   'revocationTime',
   'serialNumber',
-  'notValidBefore',
-  'notValidAfter',
   'parsedCertificate',
 ];
 
@@ -42,12 +40,10 @@ export default class PkiCertificateBaseModel extends Model {
     assert('You must provide a helpUrl for OpenAPI', true);
   }
 
-  get commonName() {
-    return this.parsedCertificate.common_name;
-  }
   // The attributes parsed from parse-pki-cert util live here
   @attr parsedCertificate;
 
+  @attr('string') commonName;
   @attr({
     label: 'Not valid after',
     detailsLabel: 'Issued certificates expire after',
