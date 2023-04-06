@@ -37,7 +37,8 @@ Below, `details.js` and `edit.js` will automatically receive the model returned 
 │   │   │   │   ├── edit.js
 ```
 
-> Example with [OIDC](../app/routes/vault/cluster/access/oidc/) in codebase [sample PR](https://github.com/hashicorp/vault/pull/16028):
+> Example with [OIDC](../app/routes/vault/cluster/access/oidc/) in codebase:
+> [_original PR_](https://github.com/hashicorp/vault/pull/16028)
 
 ```
 ├── routes/vault/cluster/access
@@ -50,5 +51,5 @@ Below, `details.js` and `edit.js` will automatically receive the model returned 
 │   │   │   ├── client/
 │   │   │   │   ├── details.js
 │   │   │   │   ├── edit.js
-│   │   │   │   ├── providers.js <- utilizes the `modelFor` method to get parent `client`
+│   │   │   │   ├── providers.js <- utilizes the modelFor method to get id about parent's clientId
 ```
