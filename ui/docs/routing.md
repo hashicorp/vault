@@ -1,14 +1,15 @@
+# Routing
+
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+**Table of Contents**
 
 - [Routing](#routing)
   - [Guidelines](#guidelines)
   - [File structure](#file-structure)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
-
-# Routing
 
 ## Guidelines
 
@@ -36,7 +37,7 @@ Below, `details.js` and `edit.js` will automatically receive the model returned 
 │   │   │   │   ├── edit.js
 ```
 
-> Example in current code [oidc](../app/routes/vault/cluster/access/oidc/):
+> Example with [OIDC](../app/routes/vault/cluster/access/oidc/) in codebase [sample PR](https://github.com/hashicorp/vault/pull/16028):
 
 ```
 ├── routes/vault/cluster/access
