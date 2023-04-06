@@ -27,7 +27,7 @@ label.box-label {
   }
 
   &.is-selected {
-    box-shadow: $box-link-hover-shadowbox, $box-shadow-middle;
+    box-shadow: $box-link-hover-shadow, $box-shadow-middle;
 
     .icon {
       color: $grey;
