@@ -1105,6 +1105,14 @@ func parseEnvTemplates(result *Config, list *ast.ObjectList) error {
 			return err
 		}
 
+		// parse the keys in the item for the env var name
+		if nkeys := len(item.Keys); nkeys != 1 {
+			return fmt.Errorf("expected one and only one env var name, got %d", nkeys)
+		}
+
+		// hcl parses this with extra quotes if quoted in config file
+		et.Name = strings.Trim(item.Keys[0].Token.Text, `"`)
+
 		envTemplates = append(envTemplates, &et)
 	}
 
