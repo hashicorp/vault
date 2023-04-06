@@ -3,11 +3,9 @@
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-**Table of Contents**
-
-- [Routing](#routing)
-  - [Guidelines](#guidelines)
-  - [File structure](#file-structure)
+- [Guidelines](#guidelines)
+- [File structure](#file-structure)
+- [Shared functionality](#shared-functionality)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -17,7 +15,8 @@
 - Parent index route typically displays empty state placeholder with call to action or redirects to default child resource
 - Child resource names are pluralized
 - Child index route represents list view.
-- Child singularized name /details is the read
+- Child singularized name + /details is the read view.
+- _Avoid_ extending routes. This can lead to unnecessary inheritance which gets messy quickly. For [shared functionality](#shared-functionality), consider a decorator.
 
 ## File structure
 
@@ -37,8 +36,7 @@ Below, `details.js` and `edit.js` will automatically receive the model returned 
 │   │   │   │   ├── edit.js
 ```
 
-> Example with [OIDC](../app/routes/vault/cluster/access/oidc/) in codebase:
-> [_original PR_](https://github.com/hashicorp/vault/pull/16028)
+> For example, [OIDC](../app/routes/vault/cluster/access/oidc/) route structure [_original PR_](https://github.com/hashicorp/vault/pull/16028):
 
 ```
 ├── routes/vault/cluster/access
@@ -53,3 +51,9 @@ Below, `details.js` and `edit.js` will automatically receive the model returned 
 │   │   │   │   ├── edit.js
 │   │   │   │   ├── providers.js <- utilizes the modelFor method to get id about parent's clientId
 ```
+
+## Shared functionality
+
+To guide users, we sometimes have a call to action that depends on a resource's state. For example, if a secret engine hasn't been configured routing to the first step to do so, and otherwise navigating to its overview page.
+
+Instead of extending route classes to share this `isConfigured` state, consider a decorator! [withConfig()](../../ui/lib/kubernetes/addon/decorators/fetch-config.js) is a great example.
