@@ -56,45 +56,43 @@ in the `.yarn/releases` folder. To update to a different version of `yarn`, use 
 ## Running a Vault Server
 
 Before running Vault UI locally, a Vault server must be running. First, ensure
-Vault dev is built according the the instructions in `../README.md`. To start a
-single local Vault server:
+Vault dev is built according the the instructions in `../README.md`.
 
-- `yarn vault`
-
-To start a local Vault cluster:
-
-- `yarn vault:cluster`
+- To start a single local Vault server: `yarn vault`
+- To start a local Vault cluster: `yarn vault:cluster`
 
 These commands may also be [aliased on your local device](https://github.com/hashicorp/vault-tools/blob/master/users/noelle/vault_aliases).
 
 ## Running the UI locally
 
-> a Vault server must be running, see previous step.
+To spin up the UI, a Vault server must be running (see previous step).
+_All of the commands below assume you're in the `ui/` directory._
+
 > These steps will start an Ember CLI server that proxies requests to port 8200,
 > and enable live rebuilding of the application as you change the UI application code.
 > Visit your app at [http://localhost:4200](http://localhost:4200).
 
-To get all of the JavaScript dependencies installed, run this in the `ui` directory:
+1. Install dependencies:
 
-- `yarn`
+`yarn`
 
-If you want to run Vault UI and proxy back to a Vault server running
-on the default port, 8200, run the following in the `ui` directory:
+2. Run Vault UI and proxy back to a Vault server running on the default port, 8200:
 
-- `yarn start`
+`yarn start`
 
-If your Vault server is running on a different port you can use the
-long-form version of the npm script:
+> If your Vault server is running on a different port you can use the
+> long-form version of the npm script:
 
 `ember server --proxy=http://localhost:PORT`
 
 ### Mirage
 
-To run yarn with mirage, do:
+[Mirage](https://miragejs.com/docs/getting-started/introduction/) can be helpful for mocking backend endpoints.
+Look in [mirage/handlers](mirage/handlers/) for existing mocked backends.
 
-- `yarn start:mirage handlername`
+Run yarn with mirage: `yarn start:mirage handlername`
 
-Where `handlername` is one of the options exported in `mirage/handlers/index`
+Where `handlername` is one of the options exported in [mirage/handlers/index](mirage/handlers/index.js)
 
 ### Building Vault UI into a Vault Binary
 
