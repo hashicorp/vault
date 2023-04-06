@@ -96,10 +96,9 @@ to the fact that they cannot be revoked or renewed. As part of this change, a bu
 a non-zero lease_duration. This prevents the Vault Agent from refreshing STS credentials and may introduce undesired behaviour
 for anything which relies on a non-zero lease_duration.
 
-There is currently no workaround.
+For applications that can control what value to look for, the ttl value in the response can be used to know when to
+request STS credentials next.
 
 #### Impacted Versions
 
 Affects Vault 1.13.0 only.
-
-
