@@ -46,6 +46,10 @@ select {
   }
 }
 
+.select select:not([multiple]) {
+  padding-right: $size-2;
+}
+
 .select select[disabled] {
   border-color: $grey-light;
   background-color: $ui-gray-100;
