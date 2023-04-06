@@ -94,7 +94,7 @@ As a workaround, submit revocation requests to the active node only.
 Vault 1.13.0 introduced a change to the AWS Secrets Engine such that it no longer returns leases for STS credentials due
 to the fact that they cannot be revoked or renewed. As part of this change, a bug was introduced which no longer returns
 a non-zero lease_duration. This prevents the Vault Agent from refreshing STS credentials and may introduce undesired behaviour
-for anything which relies on a non-zero lease_duration.
+for anything which relies on a non-zero `lease_duration`.
 
 There is currently no workaround.
 
