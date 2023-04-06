@@ -2115,5 +2115,8 @@ func TestLoadConfigFile_EnvTemplates(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error loading config file: %s", err)
 	}
-	t.Logf("%#v", cfg)
+
+	if cfg.EnvTemplates[0].Name != "MY_DATABASE_USER" {
+		t.Fatalf("expected env var name to be populated")
+	}
 }
