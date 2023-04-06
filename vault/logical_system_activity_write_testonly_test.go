@@ -45,7 +45,7 @@ func TestSystemBackend_handleActivityWriteData(t *testing.T) {
 			wantError: logical.ErrInvalidRequest,
 		},
 		{
-			name:      "correctly json data fails",
+			name:      "incorrect json data fails",
 			operation: logical.CreateOperation,
 			input:     map[string]interface{}{"input": `{"other":"json"}`},
 			wantError: logical.ErrInvalidRequest,
