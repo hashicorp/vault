@@ -8,7 +8,7 @@
 .label {
   color: $grey-darker;
   text-transform: uppercase;
-  font-size: $size-small;
+  font-size: $size-8;
 }
 
 .is-label {
@@ -19,16 +19,6 @@
 
   &:not(:last-child) {
     margin-bottom: 0.25rem;
-  }
-  // Sizes
-  &.is-small {
-    font-size: $size-small;
-  }
-  &.is-medium {
-    font-size: $size-medium;
-  }
-  &.is-large {
-    font-size: $size-large;
   }
 
   &::before,

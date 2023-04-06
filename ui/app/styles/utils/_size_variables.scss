@@ -6,24 +6,22 @@
 /*
 ARG TODO post bulma removal:
 - size-x and and spacing-x variables often overlap. Ideally, we could combine these to cover all the size requirements.
+We need to confirm as a team use cases for px vs rem and how to address missing size values ex: 14px.
+- Figure out when a var is appropriate, should we have $easing?
  */
 
 /* General sizing: used in fonts and in padding, margin, etc. */
-$size-1: 3rem !default;
-$size-2: 2.5rem !default;
+$size-1: 3rem; // 48px, same as $spacing-xxl
+$size-2: 2.5rem; // 40px
 $size-3: (24/14) + 0rem; // ~1.714rem ~27px
-$size-4: 1.5rem; // 24px
+$size-4: 1.5rem; // 24px same as $spacing-l
 $size-5: 1.25rem; // 20px
-$size-6: 1rem !default;
+$size-6: 1rem; // 16px same as $spacing-m
 $size-7: (13/14) + 0rem; // ~.929rem ~15px
 $size-8: (12/14) + 0rem; // ~.857rem  ~13.7px
-$size-9: 0.75rem; // 12px
-$size-10: 0.5rem; // 8px
-$size-11: 0.25rem; // 4px
-$size-small: $size-8;
-$size-normal: $size-6;
-$size-medium: $size-5;
-$size-large: $size-4;
+$size-9: 0.75rem; // 12px same as $spacing-s
+$size-10: 0.5rem; // 8px same as $spacing-xs
+$size-11: 0.25rem; // 4px same as spacing-xxs
 
 /* Spacing */
 $spacing-xxs: 4px;
