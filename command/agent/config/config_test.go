@@ -2108,3 +2108,15 @@ func TestLoadConfigFile_Bad_Value_Disable_Keep_Alives(t *testing.T) {
 		t.Fatal("should have error, it didn't")
 	}
 }
+
+func TestLoadConfigFile_EnvTemplates(t *testing.T) {
+	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-simple.hcl")
+
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if cfg.EnvTemplates[0].Name != "MY_DATABASE_USER" {
+		t.Fatalf("expected env var name to be populated")
+	}
+}

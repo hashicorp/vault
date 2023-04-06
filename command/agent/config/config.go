@@ -15,6 +15,7 @@ import (
 	"time"
 
 	ctconfig "github.com/hashicorp/consul-template/config"
+	ctsignals "github.com/hashicorp/consul-template/signals"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
@@ -44,7 +45,7 @@ type Config struct {
 	DisableKeepAlivesTemplating bool                       `hcl:"-"`
 	DisableKeepAlivesAutoAuth   bool                       `hcl:"-"`
 	Exec                        *ExecConfig                `hcl:"exec,optional"`
-	EnvTemplates                []*EnvTemplateConfig       `hcl:"env_templates,optional"`
+	EnvTemplates                []*EnvTemplateConfig       `hcl:"env_template,optional"`
 }
 
 const (
@@ -178,10 +179,10 @@ type EnvTemplateConfig struct {
 }
 
 type ExecConfig struct {
-	Command            string    `hcl:"command,attr"`
-	Args               []string  `hcl:"args,optional"`
-	RestartOnNewSecret string    `hcl:"restart_on_new_secret,optional"`
-	RestartKillSignal  os.Signal `hcl:"restart_kill_signal,optional"`
+	Command            string    `hcl:"command,attr" mapstructure:"command"`
+	Args               []string  `hcl:"args,optional" mapstructure:"args"`
+	RestartOnNewSecret string    `hcl:"restart_on_new_secret,optional" mapstructure:"restart_on_new_secret"`
+	RestartKillSignal  os.Signal `hcl:"restart_kill_signal,optional" mapstructure:"restart_kill_signal"`
 }
 
 func NewConfig() *Config {
@@ -502,6 +503,14 @@ func LoadConfigFile(path string) (*Config, error) {
 
 	if err := parseTemplates(result, list); err != nil {
 		return nil, fmt.Errorf("error parsing 'template': %w", err)
+	}
+
+	if err := parseEnvTemplates(result, list); err != nil {
+		return nil, fmt.Errorf("error parsing 'env_template': %w", err)
+	}
+
+	if err := parseExec(result, list); err != nil {
+		return nil, fmt.Errorf("error parsing 'exec': %w", err)
 	}
 
 	if result.Cache != nil && result.APIProxy == nil {
@@ -1049,5 +1058,112 @@ func parseTemplates(result *Config, list *ast.ObjectList) error {
 		tcs = append(tcs, &tc)
 	}
 	result.Templates = tcs
+	return nil
+}
+
+func parseEnvTemplates(result *Config, list *ast.ObjectList) error {
+	name := "env_template"
+
+	envTemplateList := list.Filter(name)
+
+	if len(envTemplateList.Items) < 1 {
+		return nil
+	}
+
+	var envTemplates []*EnvTemplateConfig
+
+	for _, item := range envTemplateList.Items {
+		var shadow interface{}
+		if err := hcl.DecodeObject(&shadow, item.Val); err != nil {
+			return fmt.Errorf("error decoding config: %s", err)
+		}
+
+		// Convert to a map and flatten the keys we want to flatten
+		parsed, ok := shadow.(map[string]interface{})
+		if !ok {
+			return errors.New("error converting config")
+		}
+
+		var et EnvTemplateConfig
+		var md mapstructure.Metadata
+		decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+			DecodeHook: mapstructure.ComposeDecodeHookFunc(
+				ctconfig.StringToFileModeFunc(),
+				ctconfig.StringToWaitDurationHookFunc(),
+				mapstructure.StringToSliceHookFunc(","),
+				mapstructure.StringToTimeDurationHookFunc(),
+				ctsignals.StringToSignalFunc(),
+			),
+			ErrorUnused: true,
+			Metadata:    &md,
+			Result:      &et,
+		})
+		if err != nil {
+			return errors.New("mapstructure decoder creation failed")
+		}
+		if err := decoder.Decode(parsed); err != nil {
+			return err
+		}
+
+		// parse the keys in the item for the env var name
+		if nkeys := len(item.Keys); nkeys != 1 {
+			return fmt.Errorf("expected one and only one env var name, got %d", nkeys)
+		}
+
+		// hcl parses this with extra quotes if quoted in config file
+		et.Name = strings.Trim(item.Keys[0].Token.Text, `"`)
+
+		envTemplates = append(envTemplates, &et)
+	}
+
+	result.EnvTemplates = envTemplates
+	return nil
+}
+
+func parseExec(result *Config, list *ast.ObjectList) error {
+	name := "exec"
+
+	execList := list.Filter(name)
+	if len(execList.Items) == 0 {
+		return nil
+	}
+
+	if len(execList.Items) > 1 {
+		return fmt.Errorf("at most one %q block is allowed", name)
+	}
+
+	item := execList.Items[0]
+	var shadow interface{}
+	if err := hcl.DecodeObject(&shadow, item.Val); err != nil {
+		return fmt.Errorf("error decoding config: %s", err)
+	}
+
+	parsed, ok := shadow.(map[string]interface{})
+	if !ok {
+		return errors.New("error converting config")
+	}
+
+	var ec ExecConfig
+	var md mapstructure.Metadata
+	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		DecodeHook: mapstructure.ComposeDecodeHookFunc(
+			ctconfig.StringToFileModeFunc(),
+			ctconfig.StringToWaitDurationHookFunc(),
+			mapstructure.StringToSliceHookFunc(","),
+			mapstructure.StringToTimeDurationHookFunc(),
+			ctsignals.StringToSignalFunc(),
+		),
+		ErrorUnused: true,
+		Metadata:    &md,
+		Result:      &ec,
+	})
+	if err != nil {
+		return errors.New("mapstructure decoder creation failed")
+	}
+	if err := decoder.Decode(parsed); err != nil {
+		return err
+	}
+
+	result.Exec = &ec
 	return nil
 }
