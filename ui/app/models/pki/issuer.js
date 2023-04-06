@@ -150,6 +150,7 @@ export default class PkiIssuerModel extends Model {
   @lazyCapabilities(apiPath`${'backend'}/root/rotate/exported`) rotateExported;
   @lazyCapabilities(apiPath`${'backend'}/root/rotate/internal`) rotateInternal;
   @lazyCapabilities(apiPath`${'backend'}/root/rotate/existing`) rotateExisting;
+  @lazyCapabilities(apiPath`${'backend'}/root`, 'backend') deletePath;
   @lazyCapabilities(apiPath`${'backend'}/intermediate/cross-sign`) crossSignPath;
   @lazyCapabilities(apiPath`${'backend'}/issuer/${'issuerId'}/sign-intermediate`) signIntermediate;
   get canRotateIssuer() {
@@ -167,5 +168,8 @@ export default class PkiIssuerModel extends Model {
   }
   get canConfigure() {
     return this.issuerPath.get('canUpdate') !== false;
+  }
+  get canDeleteAllIssuers() {
+    return this.deletePath.get('isLoading') || this.deletePath.get('canDelete') !== false;
   }
 }
