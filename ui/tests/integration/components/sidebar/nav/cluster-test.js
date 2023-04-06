@@ -41,6 +41,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     const links = [
       'Secrets engines',
       'Access',
+      'Policies',
       'Tools',
       'DR Primary',
       'Performance Secondary',

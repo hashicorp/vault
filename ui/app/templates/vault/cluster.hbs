@@ -20,18 +20,15 @@
     </FlashMessage>
   {{/each}}
 </div>
-{{#if this.currentlyLoading}}
-  <LogoSplash />
+
+{{#if this.auth.isActiveSession}}
+  <section class="section">
+    <div class="container is-widescreen">
+      <TokenExpireWarning @expirationDate={{this.auth.tokenExpirationDate}}>
+        {{outlet}}
+      </TokenExpireWarning>
+    </div>
+  </section>
 {{else}}
-  {{#if this.auth.isActiveSession}}
-    <section class="section">
-      <div class="container is-widescreen">
-        <TokenExpireWarning @expirationDate={{this.auth.tokenExpirationDate}}>
-          {{outlet}}
-        </TokenExpireWarning>
-      </div>
-    </section>
-  {{else}}
-    {{outlet}}
-  {{/if}}
+  {{outlet}}
 {{/if}}

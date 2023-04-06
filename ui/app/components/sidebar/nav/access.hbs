@@ -38,15 +38,6 @@
       data-test-sidebar-nav-link="Control Groups"
     />
   {{/if}}
-  {{#if (has-permission "policies")}}
-    <Nav.Link
-      @route="vault.cluster.policies"
-      @models={{get (route-params-for "policies") "models"}}
-      @text="Policies"
-      @hasSubItems={{true}}
-      data-test-sidebar-nav-link="Policies"
-    />
-  {{/if}}
 
   <Nav.Title data-test-sidebar-nav-heading="Organization">Organization</Nav.Title>
 

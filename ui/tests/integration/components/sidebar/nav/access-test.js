@@ -44,7 +44,6 @@ module('Integration | Component | sidebar-nav-access', function (hooks) {
       'Multi-factor authentication',
       'OIDC',
       'Control Groups',
-      'Policies',
       'Namespaces',
       'Groups',
       'Entities',
