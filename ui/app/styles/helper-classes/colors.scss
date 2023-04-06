@@ -77,10 +77,6 @@ select.has-error-border {
   color: $yellow-500;
 }
 
-// ARG TODO: Duplicate, has-text-danger is bulma has-text-red is ours.
-.has-text-red {
-  color: $red;
-}
 .has-text-danger {
   color: $red-500 !important;
 }
