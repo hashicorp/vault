@@ -1,6 +1,7 @@
 package exec
 
 import (
+	"context"
 	"io"
 
 	"go.uber.org/atomic"
@@ -64,4 +65,8 @@ func NewServer(cfg *ServerConfig) *Server {
 	}
 
 	return &server
+}
+
+func (s Server) Run(ctx context.Context) error {
+	return nil
 }
