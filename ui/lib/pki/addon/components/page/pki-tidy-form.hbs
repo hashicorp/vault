@@ -4,14 +4,14 @@
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
-      <Icon @name="file" @size="24" class="has-text-grey-light" />
+      <Icon @name="pki" @size="24" class="has-text-grey-light" />
       Tidy
     </h1>
   </p.levelLeft>
 </PageHeader>
 
 <hr class="is-marginless has-background-gray-200" />
-<p class="has-top-margin-s has-bottom-margin-s">Tidying cleans up the storage backend and/or CRL by removing certificates
+<p class="has-top-margin-m has-bottom-margin-l">Tidying cleans up the storage backend and/or CRL by removing certificates
   that have expired and are past a certain buffer period beyond their expiration time.</p>
 
 <form class="has-bottom-margin-s" {{on "submit" (perform this.save)}}>
@@ -41,7 +41,7 @@
   </div>
 
   <TtlPicker
-    class="has-top-margin-s"
+    class="has-top-margin-l has-bottom-margin-l"
     @onChange={{this.updateSafetyBuffer}}
     @hideToggle={{true}}
     @label="Safety buffer"
