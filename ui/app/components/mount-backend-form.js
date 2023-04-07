@@ -58,7 +58,6 @@ export default class MountBackendForm extends Component {
 
   typeChangeSideEffect(type) {
     if (!this.args.mountType === 'secret') return;
-
     if (type === 'pki') {
       // If type PKI, set max lease to ~10years
       this.args.mountModel.config.maxLeaseTtl = '3650d';
