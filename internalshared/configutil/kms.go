@@ -67,7 +67,7 @@ func (k *KMS) GoString() string {
 
 func parseKMS(result *[]*KMS, list *ast.ObjectList, blockName string, maxKMS int) error {
 	if len(list.Items) > maxKMS {
-		return fmt.Errorf("only two or less %q blocks are permitted", blockName)
+		return fmt.Errorf("only %d or less %q blocks are permitted", maxKMS, blockName)
 	}
 
 	seals := make([]*KMS, 0, len(list.Items))
@@ -113,6 +113,10 @@ func parseKMS(result *[]*KMS, list *ast.ObjectList, blockName string, maxKMS int
 				return multierror.Prefix(fmt.Errorf("unable to parse 'priority' in kms type %q: %w", key, err), fmt.Sprintf("%s.%s", blockName, key))
 			}
 			delete(m, "priority")
+
+			if priority < 1 {
+				return multierror.Prefix(fmt.Errorf("invalid priority in kms type %q: %d", key, priority), fmt.Sprintf("%s.%s", blockName, key))
+			}
 		}
 
 		name := strings.ToLower(key)
@@ -144,6 +148,15 @@ func parseKMS(result *[]*KMS, list *ast.ObjectList, blockName string, maxKMS int
 			seal.Config = strMap
 		}
 		seals = append(seals, seal)
+	}
+
+	priorityMap := make(map[int]*KMS)
+	for _, seal := range seals {
+		if _, ok := priorityMap[seal.Priority]; ok {
+			return multierror.Prefix(fmt.Errorf("multiple seals found with priority %d; priority must be unique", seal.Priority), fmt.Sprintf("%s", blockName))
+		}
+
+		priorityMap[seal.Priority] = seal
 	}
 
 	*result = append(*result, seals...)
@@ -193,7 +206,7 @@ func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]strin
 	var err error
 
 	envConfig := getEnvConfig(configKMS)
-	for name,val := range envConfig {
+	for name, val := range envConfig {
 		configKMS.Config[name] = val
 	}
 
@@ -403,11 +416,11 @@ func getEnvConfig(kms *KMS) map[string]string {
 
 	suffix := ""
 	if kms.Priority > 1 {
-		suffix = kms.Name
+		suffix = "_" + kms.Name
 	}
 
 	for envVar, configName := range wrapperEnvVars {
-		val := os.Getenv(fmt.Sprintf("%s_%s", envVar, suffix))
+		val := os.Getenv(fmt.Sprintf("%s%s", envVar, suffix))
 		if val != "" {
 			envValues[configName] = val
 		}
