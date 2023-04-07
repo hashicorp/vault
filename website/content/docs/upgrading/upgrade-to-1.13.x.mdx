@@ -90,6 +90,19 @@ forwarded to the active node of this cluster.
 
 As a workaround, submit revocation requests to the active node only.
 
+### STS credentials do not return a lease_duration
+Vault 1.13.0 introduced a change to the AWS Secrets Engine such that it no longer creates leases for STS credentials due
+to the fact that they cannot be revoked or renewed. As part of this change, a bug was introduced which causes `lease_duration`
+to always return zero. This prevents the Vault Agent from refreshing STS credentials and may introduce undesired behaviour
+for anything which relies on a non-zero `lease_duration`.
+
+For applications that can control what value to look for, the `ttl` value in the response can be used to know when to
+request STS credentials next.
+
+An additional workaround for users rendering STS credentials via the Vault Agent is to set the
+`static-secret-render-interval` for a template using the credentials. Setting this configuration to 15 minutes
+accommodates the default minimum duration of an STS token and overrides the default render interval of 5 minutes.
+
 #### Impacted Versions
 
 Affects Vault 1.13.0 only.
