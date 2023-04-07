@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	sdkResource "github.com/hashicorp/hcp-sdk-go/resource"
@@ -23,6 +24,11 @@ type HCPLinkConfig struct {
 	EnablePassThroughCapability bool                  `hcl:"enable_passthrough_capability"`
 	ClientID                    string                `hcl:"client_id"`
 	ClientSecret                string                `hcl:"client_secret"`
+
+	TLSDisable    bool        `hcl:"-"`
+	TLSDisableRaw interface{} `hcl:"tls_disable"`
+	TLSCertFile   string      `hcl:"tls_cert_file"`
+	TLSKeyFile    string      `hcl:"tls_key_file"`
 }
 
 func parseCloud(result *SharedConfig, list *ast.ObjectList) error {
@@ -67,6 +73,18 @@ func parseCloud(result *SharedConfig, list *ast.ObjectList) error {
 
 	if passthroughCapEnv := os.Getenv("HCP_LINK_ENABLE_PASSTHROUGH_CAPABILITY"); passthroughCapEnv != "" {
 		result.HCPLinkConf.EnablePassThroughCapability = true
+	}
+
+	if result.HCPLinkConf.TLSDisableRaw != nil {
+		if result.HCPLinkConf.TLSDisable, err = parseutil.ParseBool(result.HCPLinkConf.TLSDisableRaw); err != nil {
+			return multierror.Prefix(fmt.Errorf("invalid value for tls_disable: %w", err), "cloud:")
+		}
+
+		result.HCPLinkConf.TLSDisableRaw = nil
+	}
+
+	if !result.HCPLinkConf.TLSDisable && (result.HCPLinkConf.TLSCertFile == "" || result.HCPLinkConf.TLSKeyFile == "") {
+		return multierror.Prefix(fmt.Errorf("TLS is enabled but failed to find TLS cert and key file"), "cloud:")
 	}
 
 	return nil
