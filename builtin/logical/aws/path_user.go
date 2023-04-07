@@ -21,6 +21,12 @@ import (
 func pathUser(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "(creds|sts)/" + framework.GenericNameWithAtRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationVerb:   "generate",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -41,9 +47,19 @@ func pathUser(b *backend) *framework.Path {
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathCredsRead,
-			logical.UpdateOperation: b.pathCredsRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathCredsRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "credentials|sts-credentials",
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathCredsRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "credentials2|sts-credentials2",
+				},
+			},
 		},
 
 		HelpSynopsis:    pathUserHelpSyn,

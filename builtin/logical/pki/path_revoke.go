@@ -28,6 +28,11 @@ func pathListCertsRevoked(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "certs/revoked/?$",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "revoked-certs",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathListRevokedCertsHandler,
@@ -55,6 +60,11 @@ func pathListCertsRevocationQueue(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "certs/revocation-queue/?$",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "certs-revocation-queue",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathListRevocationQueueHandler,
@@ -69,6 +79,12 @@ func pathListCertsRevocationQueue(b *backend) *framework.Path {
 func pathRevoke(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `revoke`,
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "revoke",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"serial_number": {
 				Type: framework.TypeString,
@@ -122,6 +138,13 @@ signed by an issuer in this mount.`,
 func pathRevokeWithKey(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `revoke-with-key`,
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "revoke",
+			OperationSuffix: "with-key",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"serial_number": {
 				Type: framework.TypeString,
@@ -181,6 +204,12 @@ func pathRotateCRL(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `crl/rotate`,
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "rotate",
+			OperationSuffix: "crl",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathRotateCRLRead,
@@ -212,6 +241,12 @@ func pathRotateDeltaCRL(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `crl/rotate-delta`,
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "rotate",
+			OperationSuffix: "delta-crl",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathRotateDeltaCRLRead,
@@ -242,6 +277,11 @@ func pathRotateDeltaCRL(b *backend) *framework.Path {
 func pathListUnifiedRevoked(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "certs/unified-revoked/?$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "unified-revoked-certs",
+		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
