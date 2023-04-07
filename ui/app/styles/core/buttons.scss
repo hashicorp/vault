@@ -45,6 +45,10 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
     color: darken($grey-dark, 10%);
   }
 
+  &:focus:not(:active) {
+    box-shadow: 0 0 0 0.125em rgba(21, 99, 255, 0.25);
+  }
+
   &:disabled {
     background-color: $white;
     border-color: #dbdbdb;
