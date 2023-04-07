@@ -40,8 +40,7 @@
 }
 
 .is-flex-v-centered-tablet {
-  // TODO check if this is from or until
-  @include until($mobile) {
+  @include from($mobile) {
     display: flex;
     align-items: center;
     align-self: center;

@@ -11,14 +11,15 @@
   border-radius: $radius;
   color: $grey;
   display: inline-flex;
-  font-size: 0.75rem;
-  font-weight: normal;
+  font-size: $size-8;
+  font-weight: $font-weight-normal;
   height: auto;
   justify-content: center;
   line-height: 1.5;
   margin-right: 0.5rem;
   padding: 0 $size-10;
   white-space: nowrap;
+  vertical-align: middle;
 
   code {
     color: $grey;

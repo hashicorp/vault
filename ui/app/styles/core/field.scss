@@ -115,6 +115,24 @@ fieldset.form-fieldset {
 // responsive css
 /* ARG TODO: used is-normal in one place */
 @media screen and (min-width: 769px), print {
+  .field.is-horizontal {
+    display: flex;
+  }
+
+  .field-body {
+    display: flex;
+    flex-basis: 0;
+    flex-grow: 5;
+    flex-shrink: 1;
+
+    > .field:not(:last-child) {
+      margin-right: $size-9;
+    }
+    .field:not(.is-narrow) {
+      flex-grow: 1;
+    }
+  }
+
   .field-label {
     flex-basis: 0;
     flex-grow: 1;

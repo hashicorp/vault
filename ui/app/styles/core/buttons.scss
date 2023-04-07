@@ -7,6 +7,7 @@
 $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
 
 .button {
+  align-items: center;
   background-color: $grey-lightest;
   border: 1px solid $grey-light;
   border-radius: $radius;
@@ -42,6 +43,10 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
     border-color: darken($grey-light, 10%);
     box-shadow: $button-box-shadow-standard;
     color: darken($grey-dark, 10%);
+  }
+
+  &:focus:not(:active) {
+    box-shadow: 0 0 0 0.125em rgba(21, 99, 255, 0.25);
   }
 
   &:disabled {
@@ -105,7 +110,6 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
     &:hover {
       color: $blue-500;
       background-color: $grey-lightest;
-      text-decoration: underline;
     }
   }
 
@@ -138,33 +142,6 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
     font-weight: $font-weight-semibold;
     box-shadow: none;
     min-width: 4rem;
-  }
-
-  &.is-outlined {
-    background-color: transparent;
-    border-color: $blue;
-    color: $blue;
-
-    &:hover,
-    &:focus {
-      background-color: transparent;
-      border-color: darken($blue, 10%);
-      color: $blue;
-    }
-
-    &:active,
-    &.is-active {
-      background-color: transparent;
-      border-color: darken($blue, 10%);
-      color: darken($blue, 10%);
-    }
-  }
-
-  &.is-outlined[disabled] {
-    background-color: transparent;
-    border-color: $ui-gray-700;
-    box-shadow: none;
-    color: $ui-gray-700;
   }
 
   &.is-primary {
@@ -204,6 +181,33 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
         border-radius: unset;
         color: darken($blue, 10%);
       }
+    }
+    // is-primary.is-outlined the only is-outlined buttons are primary.
+    &.is-outlined {
+      background-color: transparent;
+      border-color: $blue;
+      color: $blue;
+
+      &:hover,
+      &:focus {
+        background-color: transparent;
+        border-color: darken($blue, 10%);
+        color: $blue;
+      }
+
+      &:active,
+      &.is-active {
+        background-color: transparent;
+        border-color: darken($blue, 10%);
+        color: darken($blue, 10%);
+      }
+    }
+
+    &.is-outlined [disabled] {
+      background-color: transparent;
+      border-color: $ui-gray-700;
+      box-shadow: none;
+      color: $ui-gray-700;
     }
   }
 

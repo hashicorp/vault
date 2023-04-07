@@ -151,14 +151,7 @@
   width: 25%;
 }
 
-// responsive css column
-@media screen and (min-width: 1024px) {
-  .column.is-4-desktop {
-    flex: none;
-    width: 33.33333%;
-  }
-}
-
+// responsive css column (order matters here because some columns have several of these classes and they need to override in the correct order).
 @media screen and (min-width: 769px), print {
   .column.is-5 {
     flex: none;
@@ -171,6 +164,13 @@
   .column.is-6-tablet {
     flex: none;
     width: 50%;
+  }
+}
+
+@media screen and (min-width: 1024px) {
+  .column.is-4-desktop {
+    flex: none;
+    width: 33.33333%;
   }
 }
 
