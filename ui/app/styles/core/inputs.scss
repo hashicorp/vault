@@ -52,6 +52,11 @@
   }
 }
 
+.textarea:not([rows]) {
+  max-height: 600px;
+  min-height: 120px;
+}
+
 // custom input
 .input-hint {
   padding: 0 $size-9;
