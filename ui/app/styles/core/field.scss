@@ -124,6 +124,13 @@ fieldset.form-fieldset {
     flex-basis: 0;
     flex-grow: 5;
     flex-shrink: 1;
+
+    > .field:not(:last-child) {
+      margin-right: $size-9;
+    }
+    .field:not(.is-narrow) {
+      flex-grow: 1;
+    }
   }
 
   .field-label {
