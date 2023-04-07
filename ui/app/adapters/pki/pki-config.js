@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import AdapterError from '@ember-data/adapter/error';
 import { hash, resolve } from 'rsvp';
 import { capitalize } from '@ember/string';

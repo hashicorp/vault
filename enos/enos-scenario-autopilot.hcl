@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 scenario "autopilot" {
   matrix {
     arch            = ["amd64", "arm64"]
@@ -132,6 +135,9 @@ scenario "autopilot" {
       vault_release     = var.vault_autopilot_initial_release
       vault_license     = step.read_license.license
       vpc_id            = step.create_vpc.vpc_id
+      vault_environment = {
+        VAULT_LOG_LEVEL = var.vault_log_level
+      }
     }
   }
 
@@ -219,7 +225,7 @@ scenario "autopilot" {
       vault_unseal_keys           = matrix.seal == "shamir" ? step.create_vault_cluster.vault_unseal_keys_hex : null
       vpc_id                      = step.create_vpc.vpc_id
       vault_environment = {
-        "VAULT_LOG_LEVEL" : "debug"
+        VAULT_LOG_LEVEL = var.vault_log_level
       }
     }
   }

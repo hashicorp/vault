@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -171,6 +174,14 @@ type ActivityLog struct {
 	partialMonthClientTracker map[string]*activity.EntityRecord
 
 	inprocessExport *atomic.Bool
+
+	// CensusReportDone is a channel used to signal tests upon successful calls
+	// to (CensusReporter).Write() in CensusReport.
+	CensusReportDone chan bool
+
+	// CensusReportInterval is the testing configuration for time between
+	// Write() calls initiated in CensusReport.
+	CensusReportInterval time.Duration
 }
 
 // These non-persistent configuration options allow us to disable
@@ -182,6 +193,12 @@ type ActivityLogCoreConfig struct {
 
 	// Do not start timers to send or persist fragments.
 	DisableTimers bool
+
+	// CensusReportInterval is the testing configuration for time
+	CensusReportInterval time.Duration
+
+	// MinimumRetentionMonths defines the minimum value for retention
+	MinimumRetentionMonths int
 }
 
 // NewActivityLog creates an activity log.
@@ -203,6 +220,7 @@ func NewActivityLog(core *Core, logger log.Logger, view *BarrierView, metrics me
 		writeCh:                   make(chan struct{}, 1), // same for full segment
 		doneCh:                    make(chan struct{}, 1),
 		partialMonthClientTracker: make(map[string]*activity.EntityRecord),
+		CensusReportInterval:      time.Hour * 1,
 
 		currentSegment: segmentInfo{
 			startTimestamp: 0,
@@ -940,6 +958,14 @@ func (a *ActivityLog) SetConfigInit(config activityConfig) {
 
 	a.defaultReportMonths = config.DefaultReportMonths
 	a.retentionMonths = config.RetentionMonths
+
+	if a.retentionMonths < a.configOverrides.MinimumRetentionMonths {
+		a.retentionMonths = a.configOverrides.MinimumRetentionMonths
+	}
+
+	if a.configOverrides.CensusReportInterval > 0 {
+		a.CensusReportInterval = a.configOverrides.CensusReportInterval
+	}
 }
 
 // This version reacts to user changes
@@ -994,6 +1020,9 @@ func (a *ActivityLog) SetConfig(ctx context.Context, config activityConfig) {
 
 	a.defaultReportMonths = config.DefaultReportMonths
 	a.retentionMonths = config.RetentionMonths
+	if a.retentionMonths < a.configOverrides.MinimumRetentionMonths {
+		a.retentionMonths = a.configOverrides.MinimumRetentionMonths
+	}
 
 	// check for segments out of retention period, if it has changed
 	go a.retentionWorker(ctx, time.Now(), a.retentionMonths)
@@ -1076,6 +1105,9 @@ func (c *Core) setupActivityLog(ctx context.Context, wg *sync.WaitGroup) error {
 			manager.retentionWorker(ctx, time.Now(), months)
 			close(manager.retentionDone)
 		}(manager.retentionMonths)
+
+		manager.CensusReportDone = make(chan bool)
+		go c.activityLog.CensusReport(ctx, c.censusAgent)
 	}
 
 	return nil
@@ -1576,7 +1608,9 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 	if computePartial {
 		// Traverse through current month's activitylog data and group clients
 		// into months and namespaces
+		a.fragmentLock.RLock()
 		partialByMonth, partialByNamespace = a.populateNamespaceAndMonthlyBreakdowns()
+		a.fragmentLock.RUnlock()
 
 		// Convert the byNamespace breakdowns into structs that are
 		// consumable by the /activity endpoint, so as to reuse code between these two
@@ -1760,6 +1794,8 @@ type activityConfig struct {
 
 	// Enabled is one of enable, disable, default.
 	Enabled string `json:"enabled"`
+
+	CensusReportInterval time.Duration `json:"census_report_interval"`
 }
 
 func defaultActivityConfig() activityConfig {
@@ -1836,6 +1872,12 @@ func (a *ActivityLog) namespaceToLabel(ctx context.Context, nsID string) string 
 	return ns.Path
 }
 
+type (
+	summaryByNamespace map[string]*processByNamespace
+	summaryByMount     map[string]*processMount
+	summaryByMonth     map[int64]*processMonth
+)
+
 type processCounts struct {
 	// entityID -> present
 	Entities map[string]struct{}
@@ -1853,6 +1895,23 @@ func newProcessCounts() *processCounts {
 	}
 }
 
+func (p *processCounts) add(client *activity.EntityRecord) {
+	if client.NonEntity {
+		p.NonEntities[client.ClientID] = struct{}{}
+	} else {
+		p.Entities[client.ClientID] = struct{}{}
+	}
+}
+
+func (p *processCounts) contains(client *activity.EntityRecord) bool {
+	if client.NonEntity {
+		_, ok := p.NonEntities[client.ClientID]
+		return ok
+	}
+	_, ok := p.Entities[client.ClientID]
+	return ok
+}
+
 type processMount struct {
 	Counts *processCounts
 }
@@ -1863,105 +1922,91 @@ func newProcessMount() *processMount {
 	}
 }
 
+func (p *processMount) add(client *activity.EntityRecord) {
+	p.Counts.add(client)
+}
+
+func (s summaryByMount) add(client *activity.EntityRecord) {
+	if _, present := s[client.MountAccessor]; !present {
+		s[client.MountAccessor] = newProcessMount()
+	}
+	s[client.MountAccessor].add(client)
+}
+
 type processByNamespace struct {
 	Counts *processCounts
-	Mounts map[string]*processMount
+	Mounts summaryByMount
 }
 
 func newByNamespace() *processByNamespace {
 	return &processByNamespace{
 		Counts: newProcessCounts(),
-		Mounts: make(map[string]*processMount),
+		Mounts: make(summaryByMount),
 	}
+}
+
+func (p *processByNamespace) add(client *activity.EntityRecord) {
+	p.Counts.add(client)
+	p.Mounts.add(client)
+}
+
+func (s summaryByNamespace) add(client *activity.EntityRecord) {
+	if _, present := s[client.NamespaceID]; !present {
+		s[client.NamespaceID] = newByNamespace()
+	}
+	s[client.NamespaceID].add(client)
 }
 
 type processNewClients struct {
 	Counts     *processCounts
-	Namespaces map[string]*processByNamespace
+	Namespaces summaryByNamespace
 }
 
 func newProcessNewClients() *processNewClients {
 	return &processNewClients{
 		Counts:     newProcessCounts(),
-		Namespaces: make(map[string]*processByNamespace),
+		Namespaces: make(summaryByNamespace),
 	}
+}
+
+func (p *processNewClients) add(client *activity.EntityRecord) {
+	p.Counts.add(client)
+	p.Namespaces.add(client)
 }
 
 type processMonth struct {
 	Counts     *processCounts
-	Namespaces map[string]*processByNamespace
+	Namespaces summaryByNamespace
 	NewClients *processNewClients
 }
 
 func newProcessMonth() *processMonth {
 	return &processMonth{
 		Counts:     newProcessCounts(),
-		Namespaces: make(map[string]*processByNamespace),
+		Namespaces: make(summaryByNamespace),
 		NewClients: newProcessNewClients(),
 	}
 }
 
+func (p *processMonth) add(client *activity.EntityRecord) {
+	p.Counts.add(client)
+	p.NewClients.add(client)
+	p.Namespaces.add(client)
+}
+
+func (s summaryByMonth) add(client *activity.EntityRecord, startTime time.Time) {
+	monthTimestamp := timeutil.StartOfMonth(startTime).UTC().Unix()
+	if _, present := s[monthTimestamp]; !present {
+		s[monthTimestamp] = newProcessMonth()
+	}
+	s[monthTimestamp].add(client)
+}
+
 // processClientRecord parses the client record e and stores the breakdowns in
 // the maps provided.
-func processClientRecord(e *activity.EntityRecord, byNamespace map[string]*processByNamespace, byMonth map[int64]*processMonth, startTime time.Time) {
-	if _, present := byNamespace[e.NamespaceID]; !present {
-		byNamespace[e.NamespaceID] = newByNamespace()
-	}
-
-	if _, present := byNamespace[e.NamespaceID].Mounts[e.MountAccessor]; !present {
-		byNamespace[e.NamespaceID].Mounts[e.MountAccessor] = newProcessMount()
-	}
-
-	if e.NonEntity {
-		byNamespace[e.NamespaceID].Counts.NonEntities[e.ClientID] = struct{}{}
-		byNamespace[e.NamespaceID].Mounts[e.MountAccessor].Counts.NonEntities[e.ClientID] = struct{}{}
-	} else {
-		byNamespace[e.NamespaceID].Counts.Entities[e.ClientID] = struct{}{}
-		byNamespace[e.NamespaceID].Mounts[e.MountAccessor].Counts.Entities[e.ClientID] = struct{}{}
-	}
-
-	monthTimestamp := timeutil.StartOfMonth(startTime).UTC().Unix()
-	if _, present := byMonth[monthTimestamp]; !present {
-		byMonth[monthTimestamp] = newProcessMonth()
-	}
-
-	if _, present := byMonth[monthTimestamp].Namespaces[e.NamespaceID]; !present {
-		byMonth[monthTimestamp].Namespaces[e.NamespaceID] = newByNamespace()
-	}
-
-	if _, present := byMonth[monthTimestamp].Namespaces[e.NamespaceID].Mounts[e.MountAccessor]; !present {
-		byMonth[monthTimestamp].Namespaces[e.NamespaceID].Mounts[e.MountAccessor] = newProcessMount()
-	}
-
-	if _, present := byMonth[monthTimestamp].NewClients.Namespaces[e.NamespaceID]; !present {
-		byMonth[monthTimestamp].NewClients.Namespaces[e.NamespaceID] = newByNamespace()
-	}
-
-	if _, present := byMonth[monthTimestamp].NewClients.Namespaces[e.NamespaceID].Mounts[e.MountAccessor]; !present {
-		byMonth[monthTimestamp].NewClients.Namespaces[e.NamespaceID].Mounts[e.MountAccessor] = newProcessMount()
-	}
-
-	// At first assume all the clients in the given month, as new.
-	// Before persisting this information to disk, clients that have
-	// activity in the previous months of a given billing cycle will be
-	// deleted.
-	if e.NonEntity == true {
-		byMonth[monthTimestamp].Counts.NonEntities[e.ClientID] = struct{}{}
-		byMonth[monthTimestamp].Namespaces[e.NamespaceID].Counts.NonEntities[e.ClientID] = struct{}{}
-		byMonth[monthTimestamp].Namespaces[e.NamespaceID].Mounts[e.MountAccessor].Counts.NonEntities[e.ClientID] = struct{}{}
-
-		byMonth[monthTimestamp].NewClients.Counts.NonEntities[e.ClientID] = struct{}{}
-		byMonth[monthTimestamp].NewClients.Namespaces[e.NamespaceID].Counts.NonEntities[e.ClientID] = struct{}{}
-		byMonth[monthTimestamp].NewClients.Namespaces[e.NamespaceID].Mounts[e.MountAccessor].Counts.NonEntities[e.ClientID] = struct{}{}
-	} else {
-		byMonth[monthTimestamp].Counts.Entities[e.ClientID] = struct{}{}
-		byMonth[monthTimestamp].Namespaces[e.NamespaceID].Counts.Entities[e.ClientID] = struct{}{}
-		byMonth[monthTimestamp].Namespaces[e.NamespaceID].Mounts[e.MountAccessor].Counts.Entities[e.ClientID] = struct{}{}
-
-		byMonth[monthTimestamp].NewClients.Counts.Entities[e.ClientID] = struct{}{}
-		byMonth[monthTimestamp].NewClients.Namespaces[e.NamespaceID].Counts.Entities[e.ClientID] = struct{}{}
-		byMonth[monthTimestamp].NewClients.Namespaces[e.NamespaceID].Mounts[e.MountAccessor].Counts.Entities[e.ClientID] = struct{}{}
-	}
+func processClientRecord(e *activity.EntityRecord, byNamespace summaryByNamespace, byMonth summaryByMonth, startTime time.Time) {
+	byNamespace.add(e)
+	byMonth.add(e, startTime)
 }
 
 // goroutine to process the request in the intent log, creating precomputed queries.

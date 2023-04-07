@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import TransformBase, { addToList, removeFromList } from './transform-edit-base';
 import { inject as service } from '@ember/service';
 
@@ -77,7 +82,10 @@ export default TransformBase.extend({
           // eg. trying to update a role with empty array as transformations
           message = `You've edited the allowed_roles for this transformation. However, the corresponding edits to some roles' transformations were not made`;
         }
-        this.flashMessages.stickyInfo(message);
+        this.flashMessages.info(message, {
+          sticky: true,
+          priority: 300,
+        });
       }
     });
   },
@@ -97,7 +105,7 @@ export default TransformBase.extend({
       event.preventDefault();
 
       this.applyChanges('save', () => {
-        const transformationId = this.model.id;
+        const transformationId = this.model.id || this.model.name;
         const newModelRoles = this.model.allowed_roles || [];
         const initialRoles = this.initialRoles || [];
 

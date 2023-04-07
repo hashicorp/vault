@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -13,7 +16,6 @@ import (
 	"io"
 	"math/big"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -69,16 +71,33 @@ var (
 )
 
 func buildPathOcspGet(b *backend) *framework.Path {
-	return buildOcspGetWithPath(b, "ocsp/"+framework.MatchAllRegex(ocspReqParam))
+	pattern := "ocsp/" + framework.MatchAllRegex(ocspReqParam)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationVerb:   "query",
+		OperationSuffix: "ocsp-with-get-req",
+	}
+
+	return buildOcspGetWithPath(b, pattern, displayAttrs)
 }
 
 func buildPathUnifiedOcspGet(b *backend) *framework.Path {
-	return buildOcspGetWithPath(b, "unified-ocsp/"+framework.MatchAllRegex(ocspReqParam))
+	pattern := "unified-ocsp/" + framework.MatchAllRegex(ocspReqParam)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationVerb:   "query",
+		OperationSuffix: "unified-ocsp-with-get-req",
+	}
+
+	return buildOcspGetWithPath(b, pattern, displayAttrs)
 }
 
-func buildOcspGetWithPath(b *backend, pattern string) *framework.Path {
+func buildOcspGetWithPath(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	return &framework.Path{
-		Pattern: pattern,
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
 		Fields: map[string]*framework.FieldSchema{
 			ocspReqParam: {
 				Type:        framework.TypeString,
@@ -97,16 +116,33 @@ func buildOcspGetWithPath(b *backend, pattern string) *framework.Path {
 }
 
 func buildPathOcspPost(b *backend) *framework.Path {
-	return buildOcspPostWithPath(b, "ocsp")
+	pattern := "ocsp"
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationVerb:   "query",
+		OperationSuffix: "ocsp",
+	}
+
+	return buildOcspPostWithPath(b, pattern, displayAttrs)
 }
 
 func buildPathUnifiedOcspPost(b *backend) *framework.Path {
-	return buildOcspPostWithPath(b, "unified-ocsp")
+	pattern := "unified-ocsp"
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationVerb:   "query",
+		OperationSuffix: "unified-ocsp",
+	}
+
+	return buildOcspPostWithPath(b, pattern, displayAttrs)
 }
 
-func buildOcspPostWithPath(b *backend, pattern string) *framework.Path {
+func buildOcspPostWithPath(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	return &framework.Path{
-		Pattern: pattern,
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.ocspHandler,
@@ -249,12 +285,7 @@ func fetchDerEncodedRequest(request *logical.Request, data *framework.FieldData)
 			return nil, errors.New("request is too large")
 		}
 
-		unescapedBase64, err := url.QueryUnescape(base64Req)
-		if err != nil {
-			return nil, fmt.Errorf("failed to unescape base64 string: %w", err)
-		}
-
-		return base64.StdEncoding.DecodeString(unescapedBase64)
+		return base64.StdEncoding.DecodeString(base64Req)
 	case logical.UpdateOperation:
 		// POST bodies should contain the binary form of the DER request.
 		// NOTE: Writing an empty update request to Vault causes a nil request.HTTPRequest, and that object

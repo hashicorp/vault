@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package approle
 
 import (
@@ -16,6 +19,10 @@ import (
 func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login$",
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAppRole,
+			OperationVerb:   "log-in",
+		},
 		Fields: map[string]*framework.FieldSchema{
 			"role_id": {
 				Type:        framework.TypeString,

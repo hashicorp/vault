@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -1721,7 +1724,6 @@ func (c *ServerCommand) configureLogging(config *server.Config) (hclog.Intercept
 	}
 
 	logCfg := &loghelper.LogConfig{
-		Name:              "vault",
 		LogLevel:          logLevel,
 		LogFormat:         logFormat,
 		LogFilePath:       config.LogFile,

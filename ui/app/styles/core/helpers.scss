@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 .is-invisible {
   visibility: hidden;
 }
@@ -153,6 +158,15 @@
 .has-padding-m {
   padding: $spacing-m;
 }
+.has-bottom-padding-s {
+  padding-bottom: $spacing-s;
+}
+.has-padding-xs {
+  padding: $spacing-xs;
+}
+.has-padding-xxs {
+  padding: $spacing-xxs;
+}
 .has-top-bottom-margin {
   margin: 1.25rem 0rem;
 }
@@ -208,6 +222,9 @@
 .has-background-gray-200 {
   background-color: $ui-gray-200;
 }
+.has-background-gray-100 {
+  background-color: $ui-gray-100;
+}
 @each $name, $pair in $colors {
   $color: nth($pair, 1);
   .has-background-#{$name} {
@@ -218,6 +235,9 @@
   color: $grey;
   font-size: $size-8;
   text-transform: lowercase;
+}
+.has-top-padding-xxs {
+  padding-top: $spacing-xxs;
 }
 .has-top-padding-s {
   padding-top: $spacing-s;

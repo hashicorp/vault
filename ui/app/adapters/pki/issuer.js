@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import ApplicationAdapter from '../application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
@@ -26,16 +31,6 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
     }
   }
 
-  createRecord(store, type, snapshot) {
-    let url = this.urlForQuery(this._getBackend(snapshot));
-    if (snapshot.adapterOptions.import) {
-      url = `${url}/import/bundle`;
-    }
-    return this.ajax(url, 'POST', { data: this.serialize(snapshot) }).then((resp) => {
-      return resp;
-    });
-  }
-
   updateRecord(store, type, snapshot) {
     const { issuerId } = snapshot.record;
     const backend = this._getBackend(snapshot);
@@ -51,5 +46,11 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
   queryRecord(store, type, query) {
     const { backend, id } = query;
     return this.ajax(this.urlForQuery(backend, id), 'GET', this.optionsForQuery(id));
+  }
+
+  deleteAllIssuers(backend) {
+    const deleteAllIssuersAndKeysUrl = `${this.buildURL()}/${encodePath(backend)}/root`;
+
+    return this.ajax(deleteAllIssuersAndKeysUrl, 'DELETE');
   }
 }

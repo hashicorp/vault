@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Engine from '@ember/engine';
 
 import loadInitializers from 'ember-load-initializers';
@@ -21,7 +26,6 @@ export default class PkiEngine extends Engine {
       'secret-mount-path',
       'store',
       'version',
-      'wizard',
     ],
     externalRoutes: ['secrets', 'secretsListRoot', 'secretsListRootConfiguration', 'externalMountIssuer'],
   };

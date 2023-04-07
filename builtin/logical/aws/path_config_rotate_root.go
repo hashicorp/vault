@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package aws
 
 import (
@@ -13,6 +16,13 @@ import (
 func pathConfigRotateRoot(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/rotate-root",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "root-iam-credentials",
+			OperationVerb:   "rotate",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback:                    b.pathConfigRotateRootUpdate,
@@ -56,7 +66,7 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 	}
 
 	var getUserInput iam.GetUserInput // empty input means get current user
-	getUserRes, err := client.GetUser(&getUserInput)
+	getUserRes, err := client.GetUserWithContext(ctx, &getUserInput)
 	if err != nil {
 		return nil, fmt.Errorf("error calling GetUser: %w", err)
 	}
@@ -73,7 +83,7 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 	createAccessKeyInput := iam.CreateAccessKeyInput{
 		UserName: getUserRes.User.UserName,
 	}
-	createAccessKeyRes, err := client.CreateAccessKey(&createAccessKeyInput)
+	createAccessKeyRes, err := client.CreateAccessKeyWithContext(ctx, &createAccessKeyInput)
 	if err != nil {
 		return nil, fmt.Errorf("error calling CreateAccessKey: %w", err)
 	}
@@ -104,7 +114,7 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 		AccessKeyId: aws.String(oldAccessKey),
 		UserName:    getUserRes.User.UserName,
 	}
-	_, err = client.DeleteAccessKey(&deleteAccessKeyInput)
+	_, err = client.DeleteAccessKeyWithContext(ctx, &deleteAccessKeyInput)
 	if err != nil {
 		return nil, fmt.Errorf("error deleting old access key: %w", err)
 	}

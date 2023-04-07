@@ -1,8 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/hashicorp/vault/helper/constants"
@@ -48,6 +52,11 @@ var defaultCrlConfig = crlConfig{
 func pathConfigCRL(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/crl",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"expiry": {
 				Type: framework.TypeString,
@@ -109,10 +118,149 @@ existing CRL and OCSP paths will return the unified CRL instead of a response ba
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "crl-configuration",
+				},
 				Callback: b.pathCRLRead,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"expiry": {
+								Type: framework.TypeString,
+								Description: `The amount of time the generated CRL should be
+valid; defaults to 72 hours`,
+								Required: true,
+							},
+							"disable": {
+								Type:        framework.TypeBool,
+								Description: `If set to true, disables generating the CRL entirely.`,
+								Required:    true,
+							},
+							"ocsp_disable": {
+								Type:        framework.TypeBool,
+								Description: `If set to true, ocsp unauthorized responses will be returned.`,
+								Required:    true,
+							},
+							"ocsp_expiry": {
+								Type: framework.TypeString,
+								Description: `The amount of time an OCSP response will be valid (controls 
+the NextUpdate field); defaults to 12 hours`,
+								Required: true,
+							},
+							"auto_rebuild": {
+								Type:        framework.TypeBool,
+								Description: `If set to true, enables automatic rebuilding of the CRL`,
+								Required:    true,
+							},
+							"auto_rebuild_grace_period": {
+								Type:        framework.TypeString,
+								Description: `The time before the CRL expires to automatically rebuild it, when enabled. Must be shorter than the CRL expiry. Defaults to 12h.`,
+								Required:    true,
+							},
+							"enable_delta": {
+								Type:        framework.TypeBool,
+								Description: `Whether to enable delta CRLs between authoritative CRL rebuilds`,
+								Required:    true,
+							},
+							"delta_rebuild_interval": {
+								Type:        framework.TypeString,
+								Description: `The time between delta CRL rebuilds if a new revocation has occurred. Must be shorter than the CRL expiry. Defaults to 15m.`,
+								Required:    true,
+							},
+							"cross_cluster_revocation": {
+								Type: framework.TypeBool,
+								Description: `Whether to enable a global, cross-cluster revocation queue.
+Must be used with auto_rebuild=true.`,
+								Required: true,
+							},
+							"unified_crl": {
+								Type: framework.TypeBool,
+								Description: `If set to true enables global replication of revocation entries,
+also enabling unified versions of OCSP and CRLs if their respective features are enabled.
+disable for CRLs and ocsp_disable for OCSP.`,
+								Required: true,
+							},
+							"unified_crl_on_existing_paths": {
+								Type: framework.TypeBool,
+								Description: `If set to true, 
+existing CRL and OCSP paths will return the unified CRL instead of a response based on cluster-local data`,
+								Required: true,
+							},
+						},
+					}},
+				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathCRLWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "crl",
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"expiry": {
+								Type: framework.TypeString,
+								Description: `The amount of time the generated CRL should be
+valid; defaults to 72 hours`,
+								Default: "72h",
+							},
+							"disable": {
+								Type:        framework.TypeBool,
+								Description: `If set to true, disables generating the CRL entirely.`,
+							},
+							"ocsp_disable": {
+								Type:        framework.TypeBool,
+								Description: `If set to true, ocsp unauthorized responses will be returned.`,
+							},
+							"ocsp_expiry": {
+								Type: framework.TypeString,
+								Description: `The amount of time an OCSP response will be valid (controls 
+the NextUpdate field); defaults to 12 hours`,
+								Default: "1h",
+							},
+							"auto_rebuild": {
+								Type:        framework.TypeBool,
+								Description: `If set to true, enables automatic rebuilding of the CRL`,
+							},
+							"auto_rebuild_grace_period": {
+								Type:        framework.TypeString,
+								Description: `The time before the CRL expires to automatically rebuild it, when enabled. Must be shorter than the CRL expiry. Defaults to 12h.`,
+								Default:     "12h",
+							},
+							"enable_delta": {
+								Type:        framework.TypeBool,
+								Description: `Whether to enable delta CRLs between authoritative CRL rebuilds`,
+							},
+							"delta_rebuild_interval": {
+								Type:        framework.TypeString,
+								Description: `The time between delta CRL rebuilds if a new revocation has occurred. Must be shorter than the CRL expiry. Defaults to 15m.`,
+								Default:     "15m",
+							},
+							"cross_cluster_revocation": {
+								Type: framework.TypeBool,
+								Description: `Whether to enable a global, cross-cluster revocation queue.
+Must be used with auto_rebuild=true.`,
+								Required: false,
+							},
+							"unified_crl": {
+								Type: framework.TypeBool,
+								Description: `If set to true enables global replication of revocation entries,
+also enabling unified versions of OCSP and CRLs if their respective features are enabled.
+disable for CRLs and ocsp_disable for OCSP.`,
+								Required: false,
+							},
+							"unified_crl_on_existing_paths": {
+								Type: framework.TypeBool,
+								Description: `If set to true, 
+existing CRL and OCSP paths will return the unified CRL instead of a response based on cluster-local data`,
+								Required: false,
+							},
+						},
+					}},
+				},
 				// Read more about why these flags are set in backend.go.
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,

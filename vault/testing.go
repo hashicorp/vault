@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -214,6 +217,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	conf.PluginDirectory = opts.PluginDirectory
 	conf.DetectDeadlocks = opts.DetectDeadlocks
 	conf.Experiments = []string{experiments.VaultExperimentEventsAlpha1}
+	conf.censusAgent = opts.censusAgent
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
@@ -235,6 +239,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	}
 
 	conf.ActivityLogConfig = opts.ActivityLogConfig
+	testApplyEntBaseConfig(conf, opts)
 
 	c, err := NewCore(conf)
 	if err != nil {
@@ -526,6 +531,9 @@ func TestAddTestPlugin(t testing.T, c *Core, name string, pluginType consts.Plug
 
 		// Copy over the file to the temp dir
 		dst := filepath.Join(tempDir, fileName)
+
+		// delete the file first to avoid notary failures in macOS
+		_ = os.Remove(dst) // ignore error
 		out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, fi.Mode())
 		if err != nil {
 			t.Fatal(err)
@@ -539,6 +547,9 @@ func TestAddTestPlugin(t testing.T, c *Core, name string, pluginType consts.Plug
 		if err != nil {
 			t.Fatal(err)
 		}
+		// Ensure that the file is closed and written. This seems to be
+		// necessary on Linux systems.
+		out.Close()
 
 		dirPath = tempDir
 	}
@@ -992,6 +1003,10 @@ func (c *TestClusterCore) stop() error {
 	return nil
 }
 
+func (c *TestClusterCore) StopAutomaticRollbacks() {
+	c.rollback.StopTicker()
+}
+
 func (c *TestClusterCore) GrabRollbackLock() {
 	// Ensure we don't hold this lock while there are in flight rollbacks.
 	c.rollback.inflightAll.Wait()
@@ -1186,6 +1201,9 @@ type TestClusterOptions struct {
 	NoDefaultQuotas bool
 
 	Plugins *TestPluginConfig
+
+	// if populated, the callback is called for every request
+	RequestResponseCallback func(logical.Backend, *logical.Request, *logical.Response)
 }
 
 type TestPluginConfig struct {
@@ -1934,6 +1952,10 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 			props.ListenerConfig.MaxRequestDuration = DefaultMaxRequestDuration
 		}
 		handler = opts.HandlerFunc.Handler(&props)
+	}
+
+	if opts != nil && opts.RequestResponseCallback != nil {
+		c.requestResponseCallback = opts.RequestResponseCallback
 	}
 
 	// Set this in case the Seal was manually set before the core was

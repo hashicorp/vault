@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import { parseCertificate, parseExtensions, parseSubject, formatValues } from 'vault/utils/parse-pki-cert';
@@ -57,7 +62,7 @@ module('Integration | Util | parse pki certificate', function (hooks) {
         permitted_dns_domains: 'dnsname1.com, dsnname2.com',
         postal_code: '123456',
         province: 'Champagne',
-        serial_number: 'cereal1292',
+        subject_serial_number: 'cereal1292',
         signature_bits: '256',
         street_address: '234 sesame',
         ttl: '768h',
@@ -136,7 +141,7 @@ module('Integration | Util | parse pki certificate', function (hooks) {
         ou: null,
         postal_code: null,
         province: null,
-        serial_number: null,
+        subject_serial_number: null,
         street_address: null,
         uri_sans: null,
       },
@@ -159,7 +164,7 @@ module('Integration | Util | parse pki certificate', function (hooks) {
           ou: 'Finance',
           postal_code: '123456',
           province: 'Champagne',
-          serial_number: 'cereal1292',
+          subject_serial_number: 'cereal1292',
           street_address: '234 sesame',
         },
       },
@@ -246,7 +251,7 @@ module('Integration | Util | parse pki certificate', function (hooks) {
         parsing_errors: [{}, {}],
         postal_code: null,
         province: null,
-        serial_number: null,
+        subject_serial_number: null,
         signature_bits: '256',
         street_address: null,
         ttl: '87600h',

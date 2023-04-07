@@ -1,15 +1,23 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 import { withConfirmLeave } from 'core/decorators/confirm-leave';
+import { hash } from 'rsvp';
 
-@withConfirmLeave()
+@withConfirmLeave('model.role', ['model.issuers'])
 export default class PkiRolesCreateRoute extends Route {
   @service store;
   @service secretMountPath;
 
   model() {
-    return this.store.createRecord('pki/role', {
-      backend: this.secretMountPath.currentPath,
+    const backend = this.secretMountPath.currentPath;
+    return hash({
+      role: this.store.createRecord('pki/role', { backend }),
+      issuers: this.store.query('pki/issuer', { backend }),
     });
   }
 

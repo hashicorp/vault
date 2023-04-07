@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package aws
 
 import (
@@ -16,6 +19,8 @@ import (
 const (
 	rootConfigPath        = "config/root"
 	minAwsUserRollbackAge = 5 * time.Minute
+	operationPrefixAWS    = "aws"
+	operationPrefixAWSASD = "aws-config"
 )
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {

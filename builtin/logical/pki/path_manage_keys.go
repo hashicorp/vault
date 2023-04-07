@@ -1,9 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
 	"bytes"
 	"context"
 	"encoding/pem"
+	"net/http"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -14,6 +18,12 @@ import (
 func pathGenerateKey(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/generate/(internal|exported|kms)",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "generate",
+			OperationSuffix: "internal-key|exported-key|kms-key",
+		},
 
 		Fields: map[string]*framework.FieldSchema{
 			keyNameParam: {
@@ -54,7 +64,36 @@ is required. Ignored for other types.`,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.pathGenerateKeyHandler,
+				Callback: b.pathGenerateKeyHandler,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"key_id": {
+								Type:        framework.TypeString,
+								Description: `ID assigned to this key.`,
+								Required:    true,
+							},
+							"key_name": {
+								Type:        framework.TypeString,
+								Description: `Name assigned to this key.`,
+								Required:    true,
+							},
+							"key_type": {
+								Type: framework.TypeString,
+								Description: `The type of key to use; defaults to RSA. "rsa"
+								"ec" and "ed25519" are the only valid values.`,
+								Required: true,
+							},
+							"private_key": {
+								Type:        framework.TypeString,
+								Description: `The private key string`,
+								Required:    false,
+							},
+						},
+					}},
+				},
+
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
 			},
@@ -149,6 +188,12 @@ func pathImportKey(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/import",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "import",
+			OperationSuffix: "key",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			keyNameParam: {
 				Type:        framework.TypeString,
@@ -162,7 +207,30 @@ func pathImportKey(b *backend) *framework.Path {
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.pathImportKeyHandler,
+				Callback: b.pathImportKeyHandler,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"key_id": {
+								Type:        framework.TypeString,
+								Description: `ID assigned to this key.`,
+								Required:    true,
+							},
+							"key_name": {
+								Type:        framework.TypeString,
+								Description: `Name assigned to this key.`,
+								Required:    true,
+							},
+							"key_type": {
+								Type: framework.TypeString,
+								Description: `The type of key to use; defaults to RSA. "rsa"
+								"ec" and "ed25519" are the only valid values.`,
+								Required: true,
+							},
+						},
+					}},
+				},
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
 			},

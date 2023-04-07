@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { render, settled } from '@ember/test-helpers';
@@ -18,7 +23,13 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
   });
 
   test('it renders with correct toolbar by default', async function (assert) {
-    await render(hbs`<Page::PkiIssuerDetails @issuer={{this.issuer}} />`, this.context);
+    await render(
+      hbs`
+      <Page::PkiIssuerDetails @issuer={{this.issuer}} />
+      <div id="modal-wormhole"></div>
+      `,
+      this.context
+    );
 
     assert.dom(SELECTORS.rotateRoot).doesNotExist();
     assert.dom(SELECTORS.crossSign).doesNotExist();
@@ -28,19 +39,29 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
   });
 
   test('it renders toolbar actions depending on passed capabilities', async function (assert) {
+    this.set('isRotatable', true);
     this.set('canRotate', true);
     this.set('canCrossSign', true);
     this.set('canSignIntermediate', true);
     this.set('canConfigure', true);
 
     await render(
-      hbs`<Page::PkiIssuerDetails @issuer={{this.issuer}} @canRotate={{this.canRotate}} @canCrossSign={{this.canCrossSign}} @canSignIntermediate={{this.canSignIntermediate}} @canConfigure={{this.canConfigure}} />`,
+      hbs`
+      <Page::PkiIssuerDetails
+        @issuer={{this.issuer}}
+        @isRotatable={{this.isRotatable}}
+        @canRotate={{this.canRotate}}
+        @canCrossSign={{this.canCrossSign}}
+        @canSignIntermediate={{this.canSignIntermediate}}
+        @canConfigure={{this.canConfigure}}
+      />
+      <div id="modal-wormhole"></div>
+      `,
       this.context
     );
 
-    // Add back when rotate root capability is added
-    // assert.dom(SELECTORS.rotateRoot).hasText('Rotate this root');
-    assert.dom(SELECTORS.crossSign).hasText('Cross-sign Issuer');
+    assert.dom(SELECTORS.rotateRoot).hasText('Rotate this root');
+    assert.dom(SELECTORS.crossSign).hasText('Cross-sign issuers');
     assert.dom(SELECTORS.signIntermediate).hasText('Sign Intermediate');
     assert.dom(SELECTORS.download).hasText('Download');
     assert.dom(SELECTORS.configure).hasText('Configure');

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -47,7 +50,7 @@ type PKIHealthCheckCommand struct {
 }
 
 func (c *PKIHealthCheckCommand) Synopsis() string {
-	return "Check PKI Secrets Engine health and operational status"
+	return "Check a PKI Secrets Engine mount's health and operational status"
 }
 
 func (c *PKIHealthCheckCommand) Help() string {
@@ -135,7 +138,7 @@ default unless enabled by the configuration file explicitly.`,
 		Default: false,
 		EnvVar:  "",
 		Usage: `When specified, no health checks are run, but all known health
-checks are printed. Still requires a positional mount argument.`,
+checks are printed.`,
 	})
 
 	return set
@@ -170,10 +173,10 @@ func (c *PKIHealthCheckCommand) Run(args []string) int {
 	}
 
 	args = f.Args()
-	if len(args) < 1 {
+	if !c.flagList && len(args) < 1 {
 		c.UI.Error("Not enough arguments (expected mount path, got nothing)")
 		return pkiRetUsage
-	} else if len(args) > 1 {
+	} else if !c.flagList && len(args) > 1 {
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected only mount path, got %d arguments)", len(args)))
 		for _, arg := range args {
 			if strings.HasPrefix(arg, "-") {
@@ -196,7 +199,14 @@ func (c *PKIHealthCheckCommand) Run(args []string) int {
 		return pkiRetUsage
 	}
 
-	mount := sanitizePath(args[0])
+	// When listing is enabled, we lack an argument here, but do not contact
+	// the server at all, so we're safe to use a hard-coded default here.
+	pkiPath := "<mount>"
+	if len(args) == 1 {
+		pkiPath = args[0]
+	}
+
+	mount := sanitizePath(pkiPath)
 	executor := healthcheck.NewExecutor(client, mount)
 	executor.AddCheck(healthcheck.NewCAValidityPeriodCheck())
 	executor.AddCheck(healthcheck.NewCRLValidityPeriodCheck())
@@ -216,33 +226,43 @@ func (c *PKIHealthCheckCommand) Run(args []string) int {
 
 	// Handle listing, if necessary.
 	if c.flagList {
-		c.UI.Output("Health Checks:")
-		for _, checker := range executor.Checkers {
-			c.UI.Output(" - " + checker.Name())
-
-			prefix := "   "
-			cfg := checker.DefaultConfig()
-			marshaled, err := json.MarshalIndent(cfg, prefix, " ")
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Failed to marshal default config for check: %v", err))
-				return pkiRetUsage
-			}
-			c.UI.Output(prefix + string(marshaled))
+		uiFormat := Format(c.UI)
+		if uiFormat == "yaml" {
+			c.UI.Error("YAML output format is not supported by the --list command")
+			return pkiRetUsage
 		}
 
+		if uiFormat != "json" {
+			c.UI.Output("Default health check config:")
+		}
+		config := map[string]map[string]interface{}{}
+		for _, checker := range executor.Checkers {
+			config[checker.Name()] = checker.DefaultConfig()
+		}
+
+		marshaled, err := json.MarshalIndent(config, "", "  ")
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Failed to marshal default config for check: %v", err))
+			return pkiRetUsage
+		}
+
+		c.UI.Output(string(marshaled))
 		return pkiRetOK
 	}
 
 	// Handle config merging.
 	external_config := map[string]interface{}{}
 	if c.flagConfig != "" {
-		contents, err := os.ReadFile(c.flagConfig)
+		contents, err := os.Open(c.flagConfig)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Failed to read configuration file %v: %v", c.flagConfig, err))
 			return pkiRetUsage
 		}
 
-		if err := json.Unmarshal(contents, &external_config); err != nil {
+		decoder := json.NewDecoder(contents)
+		decoder.UseNumber() // Use json.Number instead of float64 values as we are decoding to an interface{}.
+
+		if err := decoder.Decode(&external_config); err != nil {
 			c.UI.Error(fmt.Sprintf("Failed to parse configuration file %v: %v", c.flagConfig, err))
 			return pkiRetUsage
 		}

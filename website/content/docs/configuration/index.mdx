@@ -13,15 +13,21 @@ The format of this file is [HCL](https://github.com/hashicorp/hcl) or JSON.
 
 An example configuration is shown below:
 
-```javascript
+```hcl
+ui            = true
+cluster_addr  = "https://127.0.0.1:8201"
+api_addr      = "https://127.0.0.1:8200"
+disable_mlock = true
+
 storage "consul" {
   address = "127.0.0.1:8500"
   path    = "vault/"
 }
 
 listener "tcp" {
-  address     = "127.0.0.1:8200"
-  tls_disable = 1
+  address       = "127.0.0.1:8200"
+  tls_cert_file = "/path/to/full-chain.pem"
+  tls_key_file  = "/path/to/private-key.pem"
 }
 
 telemetry {
@@ -52,7 +58,7 @@ to specify where the configuration is.
   storage backend supports HA coordination and if HA specific options are
   already specified with `storage` parameter. (Refer to [Use Integrated Storage
   for HA
-  Coordination](https://learn.hashicorp.com/vault/operations/raft-ha-storage)
+  Coordination](/vault/tutorials/raft/raft-ha-storage)
   for a usage example.)
 
 - `listener` `([Listener][listener]: <required>)` – Configures how

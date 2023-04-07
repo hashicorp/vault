@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package radius
 
 import (
@@ -12,6 +15,12 @@ import (
 func pathConfig(b *backend) *framework.Path {
 	p := &framework.Path{
 		Pattern: "config",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixRadius,
+			Action:          "Configure",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"host": {
 				Type:        framework.TypeString,
@@ -77,17 +86,29 @@ func pathConfig(b *backend) *framework.Path {
 
 		ExistenceCheck: b.configExistenceCheck,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathConfigRead,
-			logical.CreateOperation: b.pathConfigCreateUpdate,
-			logical.UpdateOperation: b.pathConfigCreateUpdate,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathConfigRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "configuration",
+				},
+			},
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.pathConfigCreateUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "configure",
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathConfigCreateUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "configure",
+				},
+			},
 		},
 
 		HelpSynopsis:    pathConfigHelpSyn,
 		HelpDescription: pathConfigHelpDesc,
-		DisplayAttrs: &framework.DisplayAttributes{
-			Action: "Configure",
-		},
 	}
 
 	tokenutil.AddTokenFields(p.Fields)

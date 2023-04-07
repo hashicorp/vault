@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package mongodb
 
 import (
@@ -5,6 +8,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"net/http"
 	"reflect"
 	"strings"
 	"sync"
@@ -382,6 +386,8 @@ func appendToCertPool(t *testing.T, pool *x509.CertPool, caPem []byte) *x509.Cer
 }
 
 var cmpClientOptionsOpts = cmp.Options{
+	cmpopts.IgnoreTypes(http.Transport{}),
+
 	cmp.AllowUnexported(options.ClientOptions{}),
 
 	cmp.AllowUnexported(tls.Config{}),

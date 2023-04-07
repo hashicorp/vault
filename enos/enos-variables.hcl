@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 variable "artifact_path" {
   type        = string
   description = "The local path for dev artifact to test"
@@ -137,6 +140,12 @@ variable "vault_local_build_tags" {
   description = "The build tags to pass to the Go compiler for builder:local variants"
   type        = list(string)
   default     = null
+}
+
+variable "vault_log_level" {
+  description = "The server log level for Vault logs. Supported values (in order of detail) are trace, debug, info, warn, and err."
+  type        = string
+  default     = "info"
 }
 
 variable "vault_build_date" {

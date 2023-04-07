@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package awsauth
 
 import (
@@ -12,6 +15,12 @@ import (
 func (b *backend) pathRoletagDenyList() *framework.Path {
 	return &framework.Path{
 		Pattern: "roletag-denylist/(?P<role_tag>.*)",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "role-tag-deny-list",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"role_tag": {
 				Type: framework.TypeString,
@@ -41,6 +50,11 @@ to avoid any encoding problems, it can be base64 encoded.`,
 func (b *backend) pathListRoletagDenyList() *framework.Path {
 	return &framework.Path{
 		Pattern: "roletag-denylist/?",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "role-tag-deny-lists",
+		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{

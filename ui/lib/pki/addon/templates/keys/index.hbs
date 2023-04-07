@@ -8,7 +8,7 @@
   }}
   @isEngine={{true}}
 />
-{{#if this.model.hasConfig}}
+{{#if (or this.model.hasConfig this.model.keyModels)}}
   <Page::PkiKeyList
     @keyModels={{this.model.keyModels}}
     @mountPoint={{this.mountPoint}}
@@ -19,7 +19,7 @@
   />
 {{else}}
   <Toolbar />
-  <EmptyState @title="PKI not configured" @message="This PKI mount hasn't yet been configured with a certificate issuer.">
+  <EmptyState @title="PKI not configured" @message={{this.message}}>
     <LinkTo @route="configuration.create">
       Configure PKI
     </LinkTo>

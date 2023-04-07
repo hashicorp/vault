@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import ENV from 'vault/config/environment';
 const { handler } = ENV['ember-cli-mirage'];
 import kubernetesScenario from './kubernetes';

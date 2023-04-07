@@ -28,7 +28,7 @@ them, optional commands to run, etc.
 
 - `vault.hashicorp.com/agent-image` - name of the Vault docker image to use. This
   value overrides the default image configured in the injector and is usually
-  not needed. Defaults to `hashicorp/vault:1.12.1`.
+  not needed. Defaults to `hashicorp/vault:1.12.3`.
 
 - `vault.hashicorp.com/agent-init-first` - configures the pod to run the Vault Agent
   init container first if `true` (last if `false`). This is useful when other init
@@ -192,6 +192,10 @@ them, optional commands to run, etc.
   ~> **Note**: If the first application container in the pod is running as root
   (uid 0), the `run-as-same-user` annotation will fail injection with an error.
 
+- `vault.hashicorp.com/agent-share-process-namespace` - sets
+  [shareProcessNamespace] in the Pod spec where Vault Agent is injected.
+  Defaults to `false`.
+
 - `vault.hashicorp.com/agent-cache-enable` - configures Vault Agent to enable
   [caching](/vault/docs/agent/caching). In Vault 1.7+ this annotation will also enable
   a Vault Agent persistent cache. This persistent cache will be shared between the init
@@ -212,6 +216,11 @@ them, optional commands to run, etc.
 - `vault.hashicorp.com/agent-service-account-token-volume-name` - the optional name of a projected volume containing a service account token for use with auto-auth against Vault's Kubernetes auth method. If the volume is mounted to another container in the deployment, the token volume will be mounted to the same location in the vault-agent containers. Otherwise it will be mounted at the default location of `/var/run/secrets/vault.hashicorp.com/serviceaccount/`.
 
 - `vault.hashicorp.com/agent-enable-quit` - enable the [`/agent/v1/quit` endpoint](/vault/docs/agent#quit) on an injected agent. This option defaults to false, and if true will be set on the existing cache listener, or a new localhost listener with a basic cache stanza configured. The [agent-cache-listener-port annotation](/vault/docs/platform/k8s/injector/annotations#vault-hashicorp-com-agent-cache-listener-port) can be used to change the port.
+
+- `vault.hashicorp.com/agent-telemetry` - specifies the [telemetry](/vault/docs/configuration/telemetry) configuration for the
+  Vault Agent sidecar. The name of the config is any unique string after
+  `vault.hashicorp.com/agent-telemetry-`, such as `vault.hashicorp.com/agent-telemetry-prometheus_retention_time`.
+  This annotation can be reused multiple times to configure multiple settings for the agent telemetry.
 
 - `vault.hashicorp.com/go-max-procs` - set the `GOMAXPROCS` environment variable for injected agents
 
@@ -319,3 +328,4 @@ etc.
   Agents.
 
 [k8s-resources]: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-requests-and-limits-of-pod-and-container
+[shareProcessNamespace]: https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/

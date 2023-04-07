@@ -198,7 +198,16 @@
       {
         "title": "User Lockout",
         "path": "concepts/user-lockout"
-      }
+      },
+      {
+        "title": "Events",
+        "path": "concepts/events",
+        "badge": {
+          "text": "ALPHA",
+          "type": "outlined",
+          "color": "neutral"
+        }
+  }
     ]
   },
   {
@@ -561,7 +570,23 @@
           {
             "title": "<code>health-check</code>",
             "path": "commands/pki/health-check"
-          }
+          },
+	  {
+	    "title": "<code>verify-sign</code>",
+	    "path": "commands/pki/verify-sign"
+	  },
+	  {
+	    "title": "<code>list-intermeidates</code>",
+	    "path": "commands/pki/list-intermediates"
+	  },
+	  {
+	    "title": "<code>issue</code>",
+	    "path": "commands/pki/issue"
+	  },
+	  {
+	    "title": "<code>reissue</code>",
+	    "path": "commands/pki/reissue"
+	  }
         ]
       },
       {
@@ -746,6 +771,10 @@
         ]
       },
       {
+        "title": "<code>print</code>",
+        "path": "commands/print"
+      },
+      {
         "title": "<code>read</code>",
         "path": "commands/read"
       },
@@ -816,6 +845,19 @@
           {
             "title": "<code>revoke</code>",
             "path": "commands/token/revoke"
+          }
+        ]
+      },
+      {
+        "title": "<code>transit</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/transit"
+          },
+          {
+            "title": "<code>import</code> and <code>import-version</code>",
+            "path": "commands/transit/import"
           }
         ]
       },
@@ -903,6 +945,10 @@
                 "path": "agent/autoauth/methods/kubernetes"
               },
               {
+                "title": "Oracle Cloud Infrastructure",
+                "path": "agent/autoauth/methods/oci"
+              },
+              {
                 "title": "Token File",
                 "path": "agent/autoauth/methods/token_file"
               }
@@ -971,7 +1017,16 @@
       },
       {
         "title": "Active Directory",
-        "path": "secrets/ad"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secrets/ad"
+          },
+          {
+            "title": "Migration Guide",
+            "path": "secrets/ad/migration-guide"
+          }
+        ]
       },
       {
         "title": "AliCloud",
@@ -1407,7 +1462,7 @@
         "path": "auth/token"
       },
       {
-        "title": "Username &amp; Password",
+        "title": "Username and Password",
         "path": "auth/userpass"
       },
       {
@@ -1661,6 +1716,35 @@
                 "path": "platform/k8s/csi/examples"
               }
             ]
+          },
+          {
+            "title": "Vault Secrets Operator",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "platform/k8s/vso"
+              },
+              {
+                "title": "Installation",
+                "path": "platform/k8s/vso/installation"
+              },
+              {
+                "title": "Examples",
+                "path": "platform/k8s/vso/examples"
+              },
+              {
+                "title": "Helm Chart",
+                "path": "platform/k8s/vso/helm"
+              },
+              {
+                "title": "Telemetry",
+                "path": "platform/k8s/vso/telemetry"
+              },
+              {
+                "title": "API Reference",
+                "path": "platform/k8s/vso/api-reference"
+              }
+            ]
           }
         ]
       },
@@ -1732,8 +1816,7 @@
       },
       {
         "title": "Upgrade to 1.13.x",
-        "path": "upgrading/upgrade-to-1.13.x",
-        "hidden": true
+        "path": "upgrading/upgrade-to-1.13.x"
       },
       {
         "title": "Upgrade to 1.12.x",
@@ -1974,6 +2057,10 @@
       {
         "title": "Overview",
         "path": "release-notes"
+      },
+      {
+         "title": "1.13.0",
+         "path": "release-notes/1.13.0"
       },
       {
         "title": "1.12.0",

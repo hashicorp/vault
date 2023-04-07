@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -516,6 +519,23 @@ stored in memory during the entire tidy operation, but resources to
 read/process/update existing entries will be spread out over a
 greater period of time. By default this is zero seconds.`,
 		Default: "0s",
+	}
+
+	fields["maintain_stored_certificate_counts"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `This configures whether stored certificates 
+are counted upon initialization of the backend, and whether during 
+normal operation, a running count of certificates stored is maintained.`,
+		Default: false,
+	}
+
+	fields["publish_stored_certificate_count_metrics"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `This configures whether the stored certificate 
+count is published to the metrics consumer.  It does not affect if the
+stored certificate count is maintained, and if maintained, it will be
+available on the tidy-status endpoint.`,
+		Default: false,
 	}
 
 	fields["tidy_revocation_queue"] = &framework.FieldSchema{

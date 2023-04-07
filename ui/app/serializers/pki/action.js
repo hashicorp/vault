@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { underscore } from '@ember/string';
 import { keyParamsByType } from 'pki/utils/action-params';
 import ApplicationSerializer from '../application';
@@ -6,6 +11,7 @@ export default class PkiActionSerializer extends ApplicationSerializer {
   attrs = {
     customTtl: { serialize: false },
     type: { serialize: false },
+    subjectSerialNumber: { serialize: false },
   };
 
   serialize(snapshot, requestType) {
@@ -13,6 +19,9 @@ export default class PkiActionSerializer extends ApplicationSerializer {
     // requestType is a custom value specified from the pki/action adapter
     const allowedPayloadAttributes = this._allowedParamsByType(requestType, snapshot.record.type);
     if (!allowedPayloadAttributes) return data;
+    // the backend expects the subject's serial number param to be 'serial_number'
+    // we label it as subject_serial_number to differentiate from the vault generated UUID
+    data.serial_number = data.subject_serial_number;
 
     const payload = {};
     allowedPayloadAttributes.forEach((key) => {
@@ -48,6 +57,17 @@ export default class PkiActionSerializer extends ApplicationSerializer {
       case 'import':
         return ['pem_bundle'];
       case 'generate-root':
+        return [
+          ...commonProps,
+          'issuer_name',
+          'max_path_length',
+          'not_after',
+          'not_before_duration',
+          'permitted_dns_domains',
+          'private_key_format',
+          'ttl',
+        ];
+      case 'rotate-root':
         return [
           ...commonProps,
           'issuer_name',

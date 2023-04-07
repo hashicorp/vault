@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import EmberObject from '@ember/object';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
@@ -204,5 +209,21 @@ module('Integration | Component | form field', function (hooks) {
     await render(hbs`<FormField @attr={{this.attr}} @model={{this.model}} @onChange={{this.onChange}} />`);
     assert.dom('[data-test-toggle-input="Foo"]').isChecked('Toggle is initially checked when given value');
     assert.dom('[data-test-ttl-value="Foo"]').hasValue('1', 'Ttl input displays with correct value');
+  });
+
+  test('it should show validation warning', async function (assert) {
+    const model = this.owner.lookup('service:store').createRecord('auth-method');
+    model.path = 'foo bar';
+    this.validations = model.validate().state;
+    this.setProperties({
+      model,
+      attr: createAttr('path', 'string'),
+      onChange: () => {},
+    });
+
+    await render(
+      hbs`<FormField @attr={{this.attr}} @model={{this.model}} @modelValidations={{this.validations}} @onChange={{this.onChange}} />`
+    );
+    assert.dom('[data-test-validation-warning]').exists('Validation warning renders');
   });
 });

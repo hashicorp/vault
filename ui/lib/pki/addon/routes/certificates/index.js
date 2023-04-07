@@ -1,8 +1,16 @@
-import PkiOverviewRoute from '../overview';
-import { inject as service } from '@ember/service';
-import { hash } from 'rsvp';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
 
-export default class PkiCertificatesIndexRoute extends PkiOverviewRoute {
+import Route from '@ember/routing/route';
+import { inject as service } from '@ember/service';
+import { withConfig } from 'pki/decorators/check-config';
+import { hash } from 'rsvp';
+import { getCliMessage } from 'pki/routes/overview';
+
+@withConfig()
+export default class PkiCertificatesIndexRoute extends Route {
   @service store;
   @service secretMountPath;
 
@@ -20,9 +28,17 @@ export default class PkiCertificatesIndexRoute extends PkiOverviewRoute {
 
   model() {
     return hash({
-      hasConfig: this.hasConfig(),
+      hasConfig: this.shouldPromptConfig,
       certificates: this.fetchCertificates(),
       parentModel: this.modelFor('certificates'),
     });
+  }
+
+  setupController(controller, resolvedModel) {
+    super.setupController(controller, resolvedModel);
+    const certificates = resolvedModel.certificates;
+
+    if (certificates?.length) controller.message = getCliMessage('certificates');
+    else controller.message = getCliMessage();
   }
 }

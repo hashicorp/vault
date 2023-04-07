@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package ssh
 
 import (
@@ -130,6 +133,8 @@ SjOQL/GkH1nkRcDS9++aAAAAAmNhAQID
 	dockerImageTagSupportsRSA1   = "8.1_p1-r0-ls20"
 	dockerImageTagSupportsNoRSA1 = "8.4_p1-r3-ls48"
 )
+
+var ctx = context.Background()
 
 func prepareTestContainer(t *testing.T, tag, caPublicKeyPEM string) (func(), string) {
 	if tag == "" {
@@ -2461,4 +2466,327 @@ func TestBackend_CleanupDynamicHostKeys(t *testing.T) {
 	require.NotNil(t, resp.Data)
 	require.NotNil(t, resp.Data["message"])
 	require.Contains(t, resp.Data["message"], "0 of 0")
+}
+
+type pathAuthCheckerFunc func(t *testing.T, client *api.Client, path string, token string)
+
+func isPermDenied(err error) bool {
+	return strings.Contains(err.Error(), "permission denied")
+}
+
+func isUnsupportedPathOperation(err error) bool {
+	return strings.Contains(err.Error(), "unsupported path") || strings.Contains(err.Error(), "unsupported operation")
+}
+
+func isDeniedOp(err error) bool {
+	return isPermDenied(err) || isUnsupportedPathOperation(err)
+}
+
+func pathShouldBeAuthed(t *testing.T, client *api.Client, path string, token string) {
+	client.SetToken("")
+	resp, err := client.Logical().ReadWithContext(ctx, path)
+	if err == nil || !isPermDenied(err) {
+		t.Fatalf("expected failure to read %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().ListWithContext(ctx, path)
+	if err == nil || !isPermDenied(err) {
+		t.Fatalf("expected failure to list %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().WriteWithContext(ctx, path, map[string]interface{}{})
+	if err == nil || !isPermDenied(err) {
+		t.Fatalf("expected failure to write %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().DeleteWithContext(ctx, path)
+	if err == nil || !isPermDenied(err) {
+		t.Fatalf("expected failure to delete %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().JSONMergePatch(ctx, path, map[string]interface{}{})
+	if err == nil || !isPermDenied(err) {
+		t.Fatalf("expected failure to patch %v while unauthed: %v / %v", path, err, resp)
+	}
+}
+
+func pathShouldBeUnauthedReadList(t *testing.T, client *api.Client, path string, token string) {
+	// Should be able to read both with and without a token.
+	client.SetToken("")
+	resp, err := client.Logical().ReadWithContext(ctx, path)
+	if err != nil && isPermDenied(err) {
+		// Read will sometimes return permission denied, when the handler
+		// does not support the given operation. Retry with the token.
+		client.SetToken(token)
+		resp2, err2 := client.Logical().ReadWithContext(ctx, path)
+		if err2 != nil && !isUnsupportedPathOperation(err2) {
+			t.Fatalf("unexpected failure to read %v while unauthed: %v / %v\nWhile authed: %v / %v", path, err, resp, err2, resp2)
+		}
+		client.SetToken("")
+	}
+	resp, err = client.Logical().ListWithContext(ctx, path)
+	if err != nil && isPermDenied(err) {
+		// List will sometimes return permission denied, when the handler
+		// does not support the given operation. Retry with the token.
+		client.SetToken(token)
+		resp2, err2 := client.Logical().ListWithContext(ctx, path)
+		if err2 != nil && !isUnsupportedPathOperation(err2) {
+			t.Fatalf("unexpected failure to list %v while unauthed: %v / %v\nWhile authed: %v / %v", path, err, resp, err2, resp2)
+		}
+		client.SetToken("")
+	}
+
+	// These should all be denied.
+	resp, err = client.Logical().WriteWithContext(ctx, path, map[string]interface{}{})
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during write on read-only path %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().DeleteWithContext(ctx, path)
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during delete on read-only path %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().JSONMergePatch(ctx, path, map[string]interface{}{})
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during patch on read-only path %v while unauthed: %v / %v", path, err, resp)
+	}
+
+	// Retrying with token should allow read/list, but not modification still.
+	client.SetToken(token)
+	resp, err = client.Logical().ReadWithContext(ctx, path)
+	if err != nil && isPermDenied(err) {
+		t.Fatalf("unexpected failure to read %v while authed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().ListWithContext(ctx, path)
+	if err != nil && isPermDenied(err) {
+		t.Fatalf("unexpected failure to list %v while authed: %v / %v", path, err, resp)
+	}
+
+	// Should all be denied.
+	resp, err = client.Logical().WriteWithContext(ctx, path, map[string]interface{}{})
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during write on read-only path %v while authed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().DeleteWithContext(ctx, path)
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during delete on read-only path %v while authed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().JSONMergePatch(ctx, path, map[string]interface{}{})
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during patch on read-only path %v while authed: %v / %v", path, err, resp)
+	}
+}
+
+func pathShouldBeUnauthedWriteOnly(t *testing.T, client *api.Client, path string, token string) {
+	client.SetToken("")
+	resp, err := client.Logical().WriteWithContext(ctx, path, map[string]interface{}{})
+	if err != nil && isPermDenied(err) {
+		t.Fatalf("unexpected failure to write %v while unauthed: %v / %v", path, err, resp)
+	}
+
+	// These should all be denied.
+	resp, err = client.Logical().ReadWithContext(ctx, path)
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during read on write-only path %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().ListWithContext(ctx, path)
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during list on write-only path %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().DeleteWithContext(ctx, path)
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during delete on write-only path %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().JSONMergePatch(ctx, path, map[string]interface{}{})
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during patch on write-only path %v while unauthed: %v / %v", path, err, resp)
+	}
+
+	// Retrying with token should allow writing, but nothing else.
+	client.SetToken(token)
+	resp, err = client.Logical().WriteWithContext(ctx, path, map[string]interface{}{})
+	if err != nil && isPermDenied(err) {
+		t.Fatalf("unexpected failure to write %v while unauthed: %v / %v", path, err, resp)
+	}
+
+	// These should all be denied.
+	resp, err = client.Logical().ReadWithContext(ctx, path)
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during read on write-only path %v while authed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().ListWithContext(ctx, path)
+	if err == nil || !isDeniedOp(err) {
+		if resp != nil || err != nil {
+			t.Fatalf("unexpected failure during list on write-only path %v while authed: %v / %v", path, err, resp)
+		}
+	}
+	resp, err = client.Logical().DeleteWithContext(ctx, path)
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during delete on write-only path %v while authed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().JSONMergePatch(ctx, path, map[string]interface{}{})
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during patch on write-only path %v while authed: %v / %v", path, err, resp)
+	}
+}
+
+type pathAuthChecker int
+
+const (
+	shouldBeAuthed pathAuthChecker = iota
+	shouldBeUnauthedReadList
+	shouldBeUnauthedWriteOnly
+)
+
+var pathAuthChckerMap = map[pathAuthChecker]pathAuthCheckerFunc{
+	shouldBeAuthed:            pathShouldBeAuthed,
+	shouldBeUnauthedReadList:  pathShouldBeUnauthedReadList,
+	shouldBeUnauthedWriteOnly: pathShouldBeUnauthedWriteOnly,
+}
+
+func TestProperAuthing(t *testing.T) {
+	t.Parallel()
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"ssh": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+	token := client.Token()
+
+	// Mount SSH.
+	err := client.Sys().MountWithContext(ctx, "ssh", &api.MountInput{
+		Type: "ssh",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "60h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Setup basic configuration.
+	_, err = client.Logical().WriteWithContext(ctx, "ssh/config/ca", map[string]interface{}{
+		"generate_signing_key": true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().WriteWithContext(ctx, "ssh/roles/test-ca", map[string]interface{}{
+		"key_type":                "ca",
+		"allow_user_certificates": true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().WriteWithContext(ctx, "ssh/issue/test-ca", map[string]interface{}{
+		"username": "toor",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().WriteWithContext(ctx, "ssh/roles/test-otp", map[string]interface{}{
+		"key_type":     "otp",
+		"default_user": "toor",
+		"cidr_list":    "127.0.0.0/24",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := client.Logical().WriteWithContext(ctx, "ssh/creds/test-otp", map[string]interface{}{
+		"username": "toor",
+		"ip":       "127.0.0.1",
+	})
+	if err != nil || resp == nil {
+		t.Fatal(err)
+	}
+	// key := resp.Data["key"].(string)
+
+	paths := map[string]pathAuthChecker{
+		"config/ca":          shouldBeAuthed,
+		"config/zeroaddress": shouldBeAuthed,
+		"creds/test-otp":     shouldBeAuthed,
+		"issue/test-ca":      shouldBeAuthed,
+		"lookup":             shouldBeAuthed,
+		"public_key":         shouldBeUnauthedReadList,
+		"roles/test-ca":      shouldBeAuthed,
+		"roles/test-otp":     shouldBeAuthed,
+		"roles":              shouldBeAuthed,
+		"sign/test-ca":       shouldBeAuthed,
+		"tidy/dynamic-keys":  shouldBeAuthed,
+		"verify":             shouldBeUnauthedWriteOnly,
+	}
+	for path, checkerType := range paths {
+		checker := pathAuthChckerMap[checkerType]
+		checker(t, client, "ssh/"+path, token)
+	}
+
+	client.SetToken(token)
+	openAPIResp, err := client.Logical().ReadWithContext(ctx, "sys/internal/specs/openapi")
+	if err != nil {
+		t.Fatalf("failed to get openapi data: %v", err)
+	}
+
+	if len(openAPIResp.Data["paths"].(map[string]interface{})) == 0 {
+		t.Fatalf("expected to get response from OpenAPI; got empty path list")
+	}
+
+	validatedPath := false
+	for openapi_path, raw_data := range openAPIResp.Data["paths"].(map[string]interface{}) {
+		if !strings.HasPrefix(openapi_path, "/ssh/") {
+			t.Logf("Skipping path: %v", openapi_path)
+			continue
+		}
+
+		t.Logf("Validating path: %v", openapi_path)
+		validatedPath = true
+
+		// Substitute values in from our testing map.
+		raw_path := openapi_path[5:]
+		if strings.Contains(raw_path, "{role}") && strings.Contains(raw_path, "roles/") {
+			raw_path = strings.ReplaceAll(raw_path, "{role}", "test-ca")
+		}
+		if strings.Contains(raw_path, "{role}") && (strings.Contains(raw_path, "sign/") || strings.Contains(raw_path, "issue/")) {
+			raw_path = strings.ReplaceAll(raw_path, "{role}", "test-ca")
+		}
+		if strings.Contains(raw_path, "{role}") && strings.Contains(raw_path, "creds") {
+			raw_path = strings.ReplaceAll(raw_path, "{role}", "test-otp")
+		}
+
+		handler, present := paths[raw_path]
+		if !present {
+			t.Fatalf("OpenAPI reports SSH mount contains %v->%v  but was not tested to be authed or authed.", openapi_path, raw_path)
+		}
+
+		openapi_data := raw_data.(map[string]interface{})
+		hasList := false
+		rawGetData, hasGet := openapi_data["get"]
+		if hasGet {
+			getData := rawGetData.(map[string]interface{})
+			getParams, paramsPresent := getData["parameters"].(map[string]interface{})
+			if getParams != nil && paramsPresent {
+				if _, hasList = getParams["list"]; hasList {
+					// LIST is exclusive from GET on the same endpoint usually.
+					hasGet = false
+				}
+			}
+		}
+		_, hasPost := openapi_data["post"]
+		_, hasDelete := openapi_data["delete"]
+
+		if handler == shouldBeUnauthedReadList {
+			if hasPost || hasDelete {
+				t.Fatalf("Unauthed read-only endpoints should not have POST/DELETE capabilities")
+			}
+		}
+	}
+
+	if !validatedPath {
+		t.Fatalf("Expected to have validated at least one path.")
+	}
 }

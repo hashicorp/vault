@@ -12,7 +12,7 @@
 <Toolbar>
   {{#if this.model.certificates.length}}
     <ToolbarFilters>
-      {{! ARG TODO glimmerize the NavigateInput and refactor so you can use it in an engine }}
+      {{! TODO add NavigateInput component }}
     </ToolbarFilters>
   {{/if}}
 </Toolbar>
@@ -68,7 +68,7 @@
     </EmptyState>
   {{/if}}
 {{else}}
-  <EmptyState @title="PKI not configured" @message="This PKI mount hasn't yet been configured with a certificate issuer.">
+  <EmptyState @title="PKI not configured" @message={{this.message}}>
     <LinkTo @route="configuration.create">
       Configure PKI
     </LinkTo>

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -15,6 +18,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/plugin"
+	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/versions"
@@ -416,6 +420,25 @@ func (e *MountEntry) Clone() (*MountEntry, error) {
 		return nil, err
 	}
 	return cp.(*MountEntry), nil
+}
+
+// IsExternalPlugin returns whether the plugin is running externally
+// if the RunningSha256 is non-empty, the builtin is external. Otherwise, it's builtin
+func (e *MountEntry) IsExternalPlugin() bool {
+	return e.RunningSha256 != ""
+}
+
+// MountClass returns the mount class based on Accessor and Path
+func (e *MountEntry) MountClass() string {
+	if e.Accessor == "" || strings.HasPrefix(e.Path, fmt.Sprintf("%s/", systemMountPath)) {
+		return ""
+	}
+
+	if e.Table == credentialTableType {
+		return consts.PluginTypeCredential.String()
+	}
+
+	return consts.PluginTypeSecrets.String()
 }
 
 // Namespace returns the namespace for the mount entry
@@ -1660,12 +1683,14 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 		return nil, "", err
 	}
 	config := &logical.BackendConfig{
-		StorageView:  view,
-		Logger:       backendLogger,
-		Config:       conf,
-		System:       sysView,
-		BackendUUID:  entry.BackendAwareUUID,
-		EventsSender: pluginEventSender,
+		StorageView: view,
+		Logger:      backendLogger,
+		Config:      conf,
+		System:      sysView,
+		BackendUUID: entry.BackendAwareUUID,
+	}
+	if c.IsExperimentEnabled(experiments.VaultExperimentEventsAlpha1) {
+		config.EventsSender = pluginEventSender
 	}
 
 	ctx = context.WithValue(ctx, "core_number", c.coreNumber)

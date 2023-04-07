@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -7,6 +10,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -19,21 +23,78 @@ import (
 
 func pathIssue(b *backend) *framework.Path {
 	pattern := "issue/" + framework.GenericNameRegex("role")
-	return buildPathIssue(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationVerb:   "issue",
+		OperationSuffix: "with-role",
+	}
+
+	return buildPathIssue(b, pattern, displayAttrs)
 }
 
 func pathIssuerIssue(b *backend) *framework.Path {
 	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/issue/" + framework.GenericNameRegex("role")
-	return buildPathIssue(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKIIssuer,
+		OperationVerb:   "issue",
+		OperationSuffix: "with-role",
+	}
+
+	return buildPathIssue(b, pattern, displayAttrs)
 }
 
-func buildPathIssue(b *backend, pattern string) *framework.Path {
+func buildPathIssue(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	ret := &framework.Path{
-		Pattern: pattern,
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.metricsWrap("issue", roleRequired, b.pathIssue),
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"certificate": {
+								Type:        framework.TypeString,
+								Description: `Certificate`,
+								Required:    true,
+							},
+							"issuing_ca": {
+								Type:        framework.TypeString,
+								Description: `Issuing Certificate Authority`,
+								Required:    true,
+							},
+							"ca_chain": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: `Certificate Chain`,
+								Required:    false,
+							},
+							"serial_number": {
+								Type:        framework.TypeString,
+								Description: `Serial Number`,
+								Required:    false,
+							},
+							"expiration": {
+								Type:        framework.TypeString,
+								Description: `Time of expiration`,
+								Required:    false,
+							},
+							"private_key": {
+								Type:        framework.TypeString,
+								Description: `Private key`,
+								Required:    false,
+							},
+							"private_key_type": {
+								Type:        framework.TypeString,
+								Description: `Private key type`,
+								Required:    false,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -47,21 +108,78 @@ func buildPathIssue(b *backend, pattern string) *framework.Path {
 
 func pathSign(b *backend) *framework.Path {
 	pattern := "sign/" + framework.GenericNameRegex("role")
-	return buildPathSign(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationVerb:   "sign",
+		OperationSuffix: "with-role",
+	}
+
+	return buildPathSign(b, pattern, displayAttrs)
 }
 
 func pathIssuerSign(b *backend) *framework.Path {
 	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/sign/" + framework.GenericNameRegex("role")
-	return buildPathSign(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKIIssuer,
+		OperationVerb:   "sign",
+		OperationSuffix: "with-role",
+	}
+
+	return buildPathSign(b, pattern, displayAttrs)
 }
 
-func buildPathSign(b *backend, pattern string) *framework.Path {
+func buildPathSign(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	ret := &framework.Path{
-		Pattern: pattern,
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.metricsWrap("sign", roleRequired, b.pathSign),
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"certificate": {
+								Type:        framework.TypeString,
+								Description: `Certificate`,
+								Required:    true,
+							},
+							"issuing_ca": {
+								Type:        framework.TypeString,
+								Description: `Issuing Certificate Authority`,
+								Required:    true,
+							},
+							"ca_chain": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: `Certificate Chain`,
+								Required:    false,
+							},
+							"serial_number": {
+								Type:        framework.TypeString,
+								Description: `Serial Number`,
+								Required:    true,
+							},
+							"expiration": {
+								Type:        framework.TypeString,
+								Description: `Time of expiration`,
+								Required:    true,
+							},
+							"private_key": {
+								Type:        framework.TypeString,
+								Description: `Private key`,
+								Required:    false,
+							},
+							"private_key_type": {
+								Type:        framework.TypeString,
+								Description: `Private key type`,
+								Required:    false,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -82,22 +200,79 @@ func buildPathSign(b *backend, pattern string) *framework.Path {
 
 func pathIssuerSignVerbatim(b *backend) *framework.Path {
 	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/sign-verbatim" + framework.OptionalParamRegex("role")
-	return buildPathIssuerSignVerbatim(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKIIssuer,
+		OperationVerb:   "sign",
+		OperationSuffix: "verbatim|verbatim-with-role",
+	}
+
+	return buildPathIssuerSignVerbatim(b, pattern, displayAttrs)
 }
 
 func pathSignVerbatim(b *backend) *framework.Path {
 	pattern := "sign-verbatim" + framework.OptionalParamRegex("role")
-	return buildPathIssuerSignVerbatim(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationVerb:   "sign",
+		OperationSuffix: "verbatim|verbatim-with-role",
+	}
+
+	return buildPathIssuerSignVerbatim(b, pattern, displayAttrs)
 }
 
-func buildPathIssuerSignVerbatim(b *backend, pattern string) *framework.Path {
+func buildPathIssuerSignVerbatim(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	ret := &framework.Path{
-		Pattern: pattern,
-		Fields:  map[string]*framework.FieldSchema{},
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
+		Fields:       map[string]*framework.FieldSchema{},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.metricsWrap("sign-verbatim", roleOptional, b.pathSignVerbatim),
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"certificate": {
+								Type:        framework.TypeString,
+								Description: `Certificate`,
+								Required:    true,
+							},
+							"issuing_ca": {
+								Type:        framework.TypeString,
+								Description: `Issuing Certificate Authority`,
+								Required:    true,
+							},
+							"ca_chain": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: `Certificate Chain`,
+								Required:    false,
+							},
+							"serial_number": {
+								Type:        framework.TypeString,
+								Description: `Serial Number`,
+								Required:    false,
+							},
+							"expiration": {
+								Type:        framework.TypeString,
+								Description: `Time of expiration`,
+								Required:    false,
+							},
+							"private_key": {
+								Type:        framework.TypeString,
+								Description: `Private key`,
+								Required:    false,
+							},
+							"private_key_type": {
+								Type:        framework.TypeString,
+								Description: `Private key type`,
+								Required:    false,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -419,7 +594,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		if err != nil {
 			return nil, fmt.Errorf("unable to store certificate locally: %w", err)
 		}
-		b.incrementTotalCertificatesCount(certsCounted, key)
+		b.ifCountEnabledIncrementTotalCertificatesCount(certsCounted, key)
 	}
 
 	if useCSR {

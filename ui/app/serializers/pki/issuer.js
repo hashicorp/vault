@@ -1,4 +1,10 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { parseCertificate } from 'vault/utils/parse-pki-cert';
+import { parsedParameters } from 'vault/utils/parse-pki-cert-oids';
 import ApplicationSerializer from '../application';
 
 export default class PkiIssuerSerializer extends ApplicationSerializer {
@@ -7,17 +13,7 @@ export default class PkiIssuerSerializer extends ApplicationSerializer {
   constructor() {
     super(...arguments);
     // remove following attrs from serialization
-    const attrs = [
-      'caChain',
-      'certificate',
-      'commonName',
-      'issuerId',
-      'keyId',
-      'notValidAfter',
-      'notValidBefore',
-      'serialNumber',
-      'signatureBits',
-    ];
+    const attrs = ['caChain', 'certificate', 'issuerId', 'keyId', ...parsedParameters];
     this.attrs = attrs.reduce((attrObj, attr) => {
       attrObj[attr] = { serialize: false };
       return attrObj;

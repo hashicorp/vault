@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 // Package pluginhelpers contains testhelpers that don't depend on package
 // vault, and thus can be used within vault (as well as elsewhere.)
 package pluginhelpers
@@ -71,13 +74,17 @@ func CompilePlugin(t testing.T, typ consts.PluginType, pluginVersion string, plu
 
 	dir := ""
 	var err error
+	pluginRootDir := "builtin"
+	if typ == consts.PluginTypeDatabase {
+		pluginRootDir = "plugins"
+	}
 	for {
 		dir, err = os.Getwd()
 		if err != nil {
 			t.Fatal(err)
 		}
 		// detect if we are in a subdirectory or the root directory and compensate
-		if _, err := os.Stat("builtin"); os.IsNotExist(err) {
+		if _, err := os.Stat(pluginRootDir); os.IsNotExist(err) {
 			err := os.Chdir("..")
 			if err != nil {
 				t.Fatal(err)

@@ -1,7 +1,13 @@
-import PkiOverviewRoute from '../overview';
-import { inject as service } from '@ember/service';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
 
-export default class PkiIssuersListRoute extends PkiOverviewRoute {
+import Route from '@ember/routing/route';
+import { inject as service } from '@ember/service';
+import { PKI_DEFAULT_EMPTY_STATE_MSG } from 'pki/routes/overview';
+
+export default class PkiIssuersListRoute extends Route {
   @service store;
   @service secretMountPath;
   @service pathHelp;
@@ -33,5 +39,6 @@ export default class PkiIssuersListRoute extends PkiOverviewRoute {
       { label: this.secretMountPath.currentPath, route: 'overview' },
       { label: 'issuers', route: 'issuers.index' },
     ];
+    controller.message = PKI_DEFAULT_EMPTY_STATE_MSG;
   }
 }

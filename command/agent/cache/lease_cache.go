@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package cache
 
 import (
@@ -24,6 +27,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/cache/cachememdb"
 	"github.com/hashicorp/vault/helper/namespace"
 	nshelper "github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/useragent"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
@@ -474,7 +478,18 @@ func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index,
 		return
 	}
 	client.SetToken(req.Token)
-	client.SetHeaders(req.Request.Header)
+
+	headers := client.Headers()
+	if headers == nil {
+		headers = make(http.Header)
+	}
+
+	// We do not preserve the initial User-Agent here (i.e. use
+	// AgentProxyStringWithProxiedUserAgent) since these requests are from
+	// the proxy subsystem, but are made by Agent's lifetime watcher,
+	// not triggered by a specific request.
+	headers.Set("User-Agent", useragent.AgentProxyString())
+	client.SetHeaders(headers)
 
 	watcher, err := client.NewLifetimeWatcher(&api.LifetimeWatcherInput{
 		Secret: secret,

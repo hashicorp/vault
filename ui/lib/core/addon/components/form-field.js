@@ -1,9 +1,15 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { capitalize } from 'vault/helpers/capitalize';
 import { humanize } from 'vault/helpers/humanize';
 import { dasherize } from 'vault/helpers/dasherize';
+import { assert } from '@ember/debug';
 /**
  * @module FormField
  * `FormField` components are field elements associated with a particular model.
@@ -61,6 +67,10 @@ export default class FormFieldComponent extends Component {
     super(...arguments);
     const { attr, model } = this.args;
     const valuePath = attr.options?.fieldValue || attr.name;
+    assert(
+      'Form is attempting to modify an ID. Ember-data does not allow this.',
+      valuePath.toLowerCase() !== 'id'
+    );
     const modelValue = model[valuePath];
     this.showInput = !!modelValue;
   }
@@ -106,6 +116,11 @@ export default class FormFieldComponent extends Component {
     const validations = this.args.modelValidations || {};
     const state = validations[this.valuePath];
     return state && !state.isValid ? state.errors.join(' ') : null;
+  }
+  get validationWarning() {
+    const validations = this.args.modelValidations || {};
+    const state = validations[this.valuePath];
+    return state?.warnings?.length ? state.warnings.join(' ') : null;
   }
 
   onChange() {

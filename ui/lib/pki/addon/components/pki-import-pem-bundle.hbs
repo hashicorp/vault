@@ -1,0 +1,86 @@
+{{#if this.importedResponse}}
+  <div class="is-flex-start has-top-margin-xs">
+    <div class="is-flex-1 basis-0 has-text-grey has-bottom-margin-xs">
+      <h2>
+        Imported Issuer
+      </h2>
+    </div>
+    <div class="is-flex-1 basis-0 has-text-grey has-bottom-margin-xs">
+      <h2>
+        Imported Key
+      </h2>
+    </div>
+  </div>
+  <div class="box is-fullwidth is-sideless is-marginless is-paddingless" data-test-imported-bundle-mapping>
+    {{#each-in this.importedResponse as |issuer key|}}
+      <div class="box is-marginless no-top-shadow has-slim-padding">
+        <div class="is-flex-start">
+          <div class="is-flex-1 basis-0 has-bottom-margin-xs" data-test-imported-issuer>
+            {{#if issuer}}
+              <LinkTo @route="issuers.issuer.details" @model={{issuer}}>
+                {{issuer}}
+              </LinkTo>
+            {{else}}
+              None
+            {{/if}}
+          </div>
+          <div class="is-flex-1 basis-0 has-bottom-margin-xs" data-test-imported-key>
+            {{#if key}}
+              <LinkTo @route="keys.key.details" @model={{key}}>
+                {{key}}
+              </LinkTo>
+            {{else}}
+              None
+            {{/if}}
+          </div>
+        </div>
+      </div>
+    {{/each-in}}
+  </div>
+  <footer>
+    <div class="field is-grouped is-fullwidth has-top-margin-l">
+      <div class="control">
+        <button type="button" class="button is-primary" {{on "click" @onComplete}} data-test-done>
+          Done
+        </button>
+      </div>
+    </div>
+  </footer>
+{{else}}
+  <div class="field">
+    <div class="form-section">
+      <label class="title has-padding-top is-5" data-test-import-section-label>
+        Certificate parameters
+      </label>
+      <form {{on "submit" (perform this.submitForm)}} data-test-pki-import-pem-bundle-form>
+        <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
+        <div class="box is-sideless is-fullwidth is-marginless has-top-padding-l">
+          <TextFile @onChange={{this.onFileUploaded}} @label="PEM Bundle" />
+          <p class="has-top-margin-m has-bottom-margin-l">
+            Issuer URLs (Issuing certificates, CRL distribution points, OCSP servers, and delta CRL URLs) can be specified by
+            editing the individual issuer once it is uploaded to Vault.
+          </p>
+        </div>
+        <div class="has-top-padding-s">
+          <button
+            type="submit"
+            class="button is-primary {{if this.submitForm.isRunning 'is-loading'}}"
+            disabled={{this.submitForm.isRunning}}
+            data-test-pki-import-pem-bundle
+          >
+            Import issuer
+          </button>
+          <button
+            type="button"
+            class="button has-left-margin-s"
+            disabled={{this.submitForm.isRunning}}
+            {{on "click" this.cancel}}
+            data-test-pki-ca-cert-cancel
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+{{/if}}

@@ -1,0 +1,83 @@
+<Toolbar>
+  <ToolbarActions>
+    {{#if @canDeleteAllIssuers}}
+      <button
+        type="button"
+        class="toolbar-link"
+        {{on "click" (fn (mut this.showDeleteAllIssuers) true)}}
+        data-test-delete-all-issuers-link
+      >
+        Delete all issuers
+        <Icon @name="chevron-right" />
+
+      </button>
+      <div class="toolbar-separator"></div>
+    {{/if}}
+    <ToolbarLink @route="configuration.tidy">
+      Tidy
+    </ToolbarLink>
+    <ToolbarLink @route="configuration.edit">
+      Edit configuration
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar>
+
+{{#if (not (eq @urls 403))}}
+  <h2 class="title is-4 has-bottom-margin-xs has-top-margin-m has-border-bottom-light has-bottom-padding-s">
+    Global URLs
+  </h2>
+  <InfoTableRow @label="Issuing certificates" @value={{or @urls.issuingCertificates "None"}} />
+  <InfoTableRow
+    @label="CRL distribution points"
+    @value={{if @urls.crlDistributionPoints @urls.crlDistributionPoints "None"}}
+  />
+{{/if}}
+
+{{#if (not (eq @crl 403))}}
+  <h2 class="title is-4 has-bottom-margin-xs has-top-margin-xl has-border-bottom-light has-bottom-padding-s">
+    Certificate Revocation List (CRL)
+  </h2>
+  <InfoTableRow @label="Expiry" @value={{@crl.expiry}} />
+  <InfoTableRow @label="Auto-rebuild" @value={{if @crl.autoRebuild "On" "Off"}} />
+
+  <h2 class="title is-4 has-bottom-margin-xs has-top-margin-xl has-border-bottom-light has-bottom-padding-s">
+    Online Certificate Status Protocol (OCSP)
+  </h2>
+  <InfoTableRow @label="Responder APIs" @value={{if @crl.ocspDisable "Disabled" "Enabled"}} />
+  <InfoTableRow @label="Interval" @value={{@crl.ocspExpiry}} />
+{{/if}}
+
+<h2
+  class="title is-4 has-bottom-margin-xs has-border-bottom-light has-bottom-padding-s
+    {{if (and (eq @crl 403) (eq @urls 403)) 'has-top-margin-m' 'has-top-margin-xl'}}"
+>
+  Mount Configuration
+</h2>
+<InfoTableRow @label="Secret engine type" @value={{@mountConfig.engineType}} />
+<InfoTableRow @label="Path" @value={{@mountConfig.path}} />
+<InfoTableRow @label="Accessor" @value={{@mountConfig.accessor}} />
+<InfoTableRow @label="Local" @value={{@mountConfig.local}} />
+<InfoTableRow @label="Seal wrap" @value={{@mountConfig.sealWrap}} />
+<InfoTableRow @label="Default lease TTL" @value={{@mountConfig.config.defaultLeaseTtl}} />
+<InfoTableRow @label="Max lease TTL" @value={{@mountConfig.config.maxLeaseTtl}} />
+<InfoTableRow @label="Allowed managed keys" @value={{or @mountConfig.config.allowedManagedKeys "None"}} />
+<div class="has-top-margin-l"></div>
+
+{{#if this.showDeleteAllIssuers}}
+  <ConfirmationModal
+    @title="Delete All Issuers?"
+    @toConfirmMsg="deleting all issuers and keys."
+    @buttonText="Confirm"
+    @confirmText="delete-all"
+    @isActive={{this.showDeleteAllIssuers}}
+    @onClose={{action (mut this.showDeleteAllIssuers) false}}
+    @onConfirm={{this.deleteAllIssuers}}
+  >
+    <section class="modal-card-custom">
+      This endpoint deletes
+      <strong>all</strong>
+      issuers and keys within the mount. It is highly recommended to use the individual delete operations instead. This mount
+      will be unusable until new issuers and keys are provisioned.
+    </section>
+  </ConfirmationModal>
+{{/if}}

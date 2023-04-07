@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
@@ -21,7 +26,6 @@ import { methods } from 'vault/helpers/mountable-auth-methods';
 
 export default class MountBackendForm extends Component {
   @service store;
-  @service wizard;
   @service flashMessages;
 
   // validation related properties
@@ -57,6 +61,17 @@ export default class MountBackendForm extends Component {
     this.modelValidations = state;
     this.invalidFormAlert = invalidFormMessage;
     return isValid;
+  }
+
+  checkModelWarnings() {
+    // check for warnings on change
+    // since we only show errors on submit we need to clear those out and only send warning state
+    const { state } = this.args.mountModel.validate();
+    for (const key in state) {
+      state[key].errors = [];
+    }
+    this.modelValidations = state;
+    this.invalidFormAlert = null;
   }
 
   async showWarningsForKvv2() {
@@ -127,7 +142,7 @@ export default class MountBackendForm extends Component {
     }
     this.flashMessages.success(
       `Successfully mounted the ${type} ${
-        this.mountType === 'secret' ? 'secrets engine' : 'auth method'
+        this.args.mountType === 'secret' ? 'secrets engine' : 'auth method'
       } at ${path}.`
     );
     yield this.args.onMountSuccess(type, path);
@@ -137,24 +152,12 @@ export default class MountBackendForm extends Component {
   @action
   onKeyUp(name, value) {
     this.args.mountModel[name] = value;
-  }
-
-  @action
-  onTypeChange(path, value) {
-    if (path === 'type') {
-      this.wizard.set('componentState', value);
-    }
+    this.checkModelWarnings();
   }
 
   @action
   setMountType(value) {
     this.args.mountModel.type = value;
     this.checkPathChange(value);
-    if (value) {
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', this.args.mountModel.type);
-    } else if (this.wizard.featureState === 'idle') {
-      // resets wizard
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'RESET', this.args.mountModel.type);
-    }
   }
 }

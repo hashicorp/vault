@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-retryablehttp"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -283,12 +284,8 @@ func (c *Client) retryOCSP(
 	headers map[string]string,
 	reqBody []byte,
 	issuer *x509.Certificate,
-) (ocspRes *ocsp.Response, ocspResBytes []byte, ocspS *ocspStatus, err error) {
-	origHost := *ocspHost
+) (ocspRes *ocsp.Response, ocspResBytes []byte, ocspS *ocspStatus, retErr error) {
 	doRequest := func(request *retryablehttp.Request) (*http.Response, error) {
-		if err != nil {
-			return nil, err
-		}
 		if request != nil {
 			request = request.WithContext(ctx)
 			for k, v := range headers {
@@ -303,43 +300,90 @@ func (c *Client) retryOCSP(
 		return res, err
 	}
 
-	ocspHost.Path = ocspHost.Path + "/" + base64.StdEncoding.EncodeToString(reqBody)
-	var res *http.Response
-	request, err := req("GET", ocspHost.String(), nil)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	if res, err = doRequest(request); err != nil {
-		return nil, nil, nil, err
-	} else {
-		defer res.Body.Close()
-	}
-	if res.StatusCode == http.StatusMethodNotAllowed {
-		request, err := req("POST", origHost.String(), bytes.NewBuffer(reqBody))
-		if err != nil {
-			return nil, nil, nil, err
+	for _, method := range []string{"GET", "POST"} {
+		reqUrl := *ocspHost
+		var body []byte
+
+		switch method {
+		case "GET":
+			reqUrl.Path = reqUrl.Path + "/" + base64.StdEncoding.EncodeToString(reqBody)
+		case "POST":
+			body = reqBody
+		default:
+			// Programming error; all request/systems errors are multierror
+			// and appended.
+			return nil, nil, nil, fmt.Errorf("unknown request method: %v", method)
 		}
-		if res, err := doRequest(request); err != nil {
-			return nil, nil, nil, err
+
+		var res *http.Response
+		request, err := req(method, reqUrl.String(), bytes.NewBuffer(body))
+		if err != nil {
+			err = fmt.Errorf("error creating %v request: %w", method, err)
+			retErr = multierror.Append(retErr, err)
+			continue
+		}
+		if res, err = doRequest(request); err != nil {
+			err = fmt.Errorf("error doing %v request: %w", method, err)
+			retErr = multierror.Append(retErr, err)
+			continue
 		} else {
 			defer res.Body.Close()
 		}
-	}
-	if res.StatusCode != http.StatusOK {
-		return nil, nil, nil, fmt.Errorf("HTTP code is not OK. %v: %v", res.StatusCode, res.Status)
-	}
-	ocspResBytes, err = io.ReadAll(res.Body)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	ocspRes, err = ocsp.ParseResponse(ocspResBytes, issuer)
-	if err != nil {
-		return nil, nil, nil, err
+
+		if res.StatusCode != http.StatusOK {
+			err = fmt.Errorf("HTTP code is not OK on %v request. %v: %v", method, res.StatusCode, res.Status)
+			retErr = multierror.Append(retErr, err)
+			continue
+		}
+
+		ocspResBytes, err = io.ReadAll(res.Body)
+		if err != nil {
+			err = fmt.Errorf("error reading %v request body: %w", method, err)
+			retErr = multierror.Append(retErr, err)
+			continue
+		}
+
+		// Reading an OCSP response shouldn't be fatal. A misconfigured
+		// endpoint might return invalid results for e.g., GET but return
+		// valid results for POST on retry. This could happen if e.g., the
+		// server responds with JSON.
+		ocspRes, err = ocsp.ParseResponse(ocspResBytes, issuer)
+		if err != nil {
+			err = fmt.Errorf("error parsing %v OCSP response: %w", method, err)
+			retErr = multierror.Append(retErr, err)
+			continue
+		}
+
+		// While we haven't validated the signature on the OCSP response, we
+		// got what we presume is a definitive answer and simply changing
+		// methods will likely not help us in that regard. Use this status
+		// to return without retrying another method, when it looks definitive.
+		//
+		// We don't accept ocsp.Unknown here: presumably, we could've hit a CDN
+		// with static mapping of request->responses, with a default "unknown"
+		// handler for everything else. By retrying here, we use POST, which
+		// could hit a live OCSP server with fresher data than the cached CDN.
+		if ocspRes.Status == ocsp.Good || ocspRes.Status == ocsp.Revoked {
+			break
+		}
+
+		// Here, we didn't have a valid response. Even though we didn't get an
+		// error, we should inform the user that this (valid-looking) response
+		// wasn't utilized.
+		err = fmt.Errorf("fetched %v OCSP response of status %v; wanted either good (%v) or revoked (%v)", method, ocspRes.Status, ocsp.Good, ocsp.Revoked)
+		retErr = multierror.Append(retErr, err)
 	}
 
-	return ocspRes, ocspResBytes, &ocspStatus{
-		code: ocspSuccess,
-	}, nil
+	if ocspRes != nil && ocspResBytes != nil {
+		// Clear retErr, because we have one parseable-but-maybe-not-quite-correct
+		// OCSP response.
+		retErr = nil
+		ocspS = &ocspStatus{
+			code: ocspSuccess,
+		}
+	}
+
+	return
 }
 
 // GetRevocationStatus checks the certificate revocation status for subject using issuer certificate.

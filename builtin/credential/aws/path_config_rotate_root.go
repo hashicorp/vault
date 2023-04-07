@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package awsauth
 
 import (
@@ -20,6 +23,12 @@ import (
 func (b *backend) pathConfigRotateRoot() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/rotate-root",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationVerb:   "rotate",
+			OperationSuffix: "auth-root-credentials",
+		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
@@ -97,7 +106,7 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 	// Get the current user's name since it's required to create an access key.
 	// Empty input means get the current user.
 	var getUserInput iam.GetUserInput
-	getUserRes, err := iamClient.GetUser(&getUserInput)
+	getUserRes, err := iamClient.GetUserWithContext(ctx, &getUserInput)
 	if err != nil {
 		return nil, fmt.Errorf("error calling GetUser: %w", err)
 	}
@@ -115,7 +124,7 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 	createAccessKeyInput := iam.CreateAccessKeyInput{
 		UserName: getUserRes.User.UserName,
 	}
-	createAccessKeyRes, err := iamClient.CreateAccessKey(&createAccessKeyInput)
+	createAccessKeyRes, err := iamClient.CreateAccessKeyWithContext(ctx, &createAccessKeyInput)
 	if err != nil {
 		return nil, fmt.Errorf("error calling CreateAccessKey: %w", err)
 	}
@@ -139,7 +148,7 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 			AccessKeyId: createAccessKeyRes.AccessKey.AccessKeyId,
 			UserName:    getUserRes.User.UserName,
 		}
-		if _, err := iamClient.DeleteAccessKey(&deleteAccessKeyInput); err != nil {
+		if _, err := iamClient.DeleteAccessKeyWithContext(ctx, &deleteAccessKeyInput); err != nil {
 			// Include this error in the errs returned by this method.
 			errs = multierror.Append(errs, fmt.Errorf("error deleting newly created but unstored access key ID %s: %s", *createAccessKeyRes.AccessKey.AccessKeyId, err))
 		}
@@ -176,7 +185,7 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 		AccessKeyId: aws.String(oldAccessKey),
 		UserName:    getUserRes.User.UserName,
 	}
-	if _, err = iamClient.DeleteAccessKey(&deleteAccessKeyInput); err != nil {
+	if _, err = iamClient.DeleteAccessKeyWithContext(ctx, &deleteAccessKeyInput); err != nil {
 		errs = multierror.Append(errs, fmt.Errorf("error deleting old access key ID %s: %w", oldAccessKey, err))
 		return nil, errs
 	}

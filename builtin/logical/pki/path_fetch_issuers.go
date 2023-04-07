@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -5,6 +8,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -17,9 +21,31 @@ func pathListIssuers(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "issuers/?$",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "issuers",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathListIssuersHandler,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"keys": {
+								Type:        framework.TypeStringSlice,
+								Description: `A list of keys`,
+								Required:    true,
+							},
+							"key_info": {
+								Type:        framework.TypeMap,
+								Description: `Key info with issuer name`,
+								Required:    false,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -75,11 +101,28 @@ their identifier and their name (if set).
 )
 
 func pathGetIssuer(b *backend) *framework.Path {
-	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "(/der|/pem|/json)?"
-	return buildPathGetIssuer(b, pattern)
+	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "$"
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationSuffix: "issuer",
+	}
+
+	return buildPathIssuer(b, pattern, displayAttrs)
 }
 
-func buildPathGetIssuer(b *backend, pattern string) *framework.Path {
+func pathGetUnauthedIssuer(b *backend) *framework.Path {
+	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/(json|der|pem)$"
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationSuffix: "issuer-json|issuer-der|issuer-pem",
+	}
+
+	return buildPathGetIssuer(b, pattern, displayAttrs)
+}
+
+func buildPathIssuer(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	fields = addIssuerRefNameFields(fields)
 
@@ -146,32 +189,176 @@ to be set on all PR secondary clusters.`,
 		Default: false,
 	}
 
+	updateIssuerSchema := map[int][]framework.Response{
+		http.StatusOK: {{
+			Description: "OK",
+			Fields: map[string]*framework.FieldSchema{
+				"issuer_id": {
+					Type:        framework.TypeString,
+					Description: `Issuer Id`,
+					Required:    false,
+				},
+				"issuer_name": {
+					Type:        framework.TypeString,
+					Description: `Issuer Name`,
+					Required:    false,
+				},
+				"key_id": {
+					Type:        framework.TypeString,
+					Description: `Key Id`,
+					Required:    false,
+				},
+				"certificate": {
+					Type:        framework.TypeString,
+					Description: `Certificate`,
+					Required:    false,
+				},
+				"manual_chain": {
+					Type:        framework.TypeStringSlice,
+					Description: `Manual Chain`,
+					Required:    false,
+				},
+				"ca_chain": {
+					Type:        framework.TypeStringSlice,
+					Description: `CA Chain`,
+					Required:    false,
+				},
+				"leaf_not_after_behavior": {
+					Type:        framework.TypeString,
+					Description: `Leaf Not After Behavior`,
+					Required:    false,
+				},
+				"usage": {
+					Type:        framework.TypeStringSlice,
+					Description: `Usage`,
+					Required:    false,
+				},
+				"revocation_signature_algorithm": {
+					Type:        framework.TypeString,
+					Description: `Revocation Signature Alogrithm`,
+					Required:    false,
+				},
+				"revoked": {
+					Type:        framework.TypeBool,
+					Description: `Revoked`,
+					Required:    false,
+				},
+				"revocation_time": {
+					Type:     framework.TypeInt,
+					Required: false,
+				},
+				"revocation_time_rfc3339": {
+					Type:     framework.TypeString,
+					Required: false,
+				},
+				"issuing_certificates": {
+					Type:        framework.TypeStringSlice,
+					Description: `Issuing Certificates`,
+					Required:    false,
+				},
+				"crl_distribution_points": {
+					Type:        framework.TypeStringSlice,
+					Description: `CRL Distribution Points`,
+					Required:    false,
+				},
+				"ocsp_servers": {
+					Type:        framework.TypeStringSlice,
+					Description: `OSCP Servers`,
+					Required:    false,
+				},
+			},
+		}},
+	}
+
 	return &framework.Path{
 		// Returns a JSON entry.
-		Pattern: pattern,
-		Fields:  fields,
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
+		Fields:       fields,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
-				Callback: b.pathGetIssuer,
+				Callback:  b.pathGetIssuer,
+				Responses: updateIssuerSchema,
 			},
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback: b.pathUpdateIssuer,
+				Callback:  b.pathUpdateIssuer,
+				Responses: updateIssuerSchema,
+
 				// Read more about why these flags are set in backend.go.
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathDeleteIssuer,
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{
+						Description: "No Content",
+					}},
+				},
 				// Read more about why these flags are set in backend.go.
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
 			},
 			logical.PatchOperation: &framework.PathOperation{
-				Callback: b.pathPatchIssuer,
+				Callback:  b.pathPatchIssuer,
+				Responses: updateIssuerSchema,
 				// Read more about why these flags are set in backend.go.
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
+			},
+		},
+
+		HelpSynopsis:    pathGetIssuerHelpSyn,
+		HelpDescription: pathGetIssuerHelpDesc,
+	}
+}
+
+func buildPathGetIssuer(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
+	fields := map[string]*framework.FieldSchema{}
+	fields = addIssuerRefField(fields)
+
+	getIssuerSchema := map[int][]framework.Response{
+		http.StatusNotModified: {{
+			Description: "Not Modified",
+		}},
+		http.StatusOK: {{
+			Description: "OK",
+			Fields: map[string]*framework.FieldSchema{
+				"issuer_id": {
+					Type:        framework.TypeString,
+					Description: `Issuer Id`,
+					Required:    true,
+				},
+				"issuer_name": {
+					Type:        framework.TypeString,
+					Description: `Issuer Name`,
+					Required:    true,
+				},
+				"certificate": {
+					Type:        framework.TypeString,
+					Description: `Certificate`,
+					Required:    true,
+				},
+				"ca_chain": {
+					Type:        framework.TypeStringSlice,
+					Description: `CA Chain`,
+					Required:    true,
+				},
+			},
+		}},
+	}
+
+	return &framework.Path{
+		// Returns a JSON entry.
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
+		Fields:       fields,
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback:  b.pathGetIssuer,
+				Responses: getIssuerSchema,
 			},
 		},
 
@@ -942,26 +1129,50 @@ the certificate.
 
 func pathGetIssuerCRL(b *backend) *framework.Path {
 	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/crl(/pem|/der|/delta(/pem|/der)?)?"
-	return buildPathGetIssuerCRL(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKIIssuer,
+		OperationSuffix: "crl|crl-pem|crl-der|crl-delta|crl-delta-pem|crl-delta-der",
+	}
+
+	return buildPathGetIssuerCRL(b, pattern, displayAttrs)
 }
 
 func pathGetIssuerUnifiedCRL(b *backend) *framework.Path {
 	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/unified-crl(/pem|/der|/delta(/pem|/der)?)?"
-	return buildPathGetIssuerCRL(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKIIssuer,
+		OperationSuffix: "unified-crl|unified-crl-pem|unified-crl-der|unified-crl-delta|unified-crl-delta-pem|unified-crl-delta-der",
+	}
+
+	return buildPathGetIssuerCRL(b, pattern, displayAttrs)
 }
 
-func buildPathGetIssuerCRL(b *backend, pattern string) *framework.Path {
+func buildPathGetIssuerCRL(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	fields = addIssuerRefNameFields(fields)
 
 	return &framework.Path{
 		// Returns raw values.
-		Pattern: pattern,
-		Fields:  fields,
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
+		Fields:       fields,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathGetIssuerCRL,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"crl": {
+								Type:     framework.TypeString,
+								Required: false,
+							},
+						},
+					}},
+				},
 			},
 		},
 

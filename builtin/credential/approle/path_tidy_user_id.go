@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package approle
 
 import (
@@ -16,6 +19,12 @@ import (
 func pathTidySecretID(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "tidy/secret-id$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAppRole,
+			OperationSuffix: "secret-id",
+			OperationVerb:   "tidy",
+		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{

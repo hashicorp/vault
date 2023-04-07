@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package ssh
 
 import (
@@ -333,7 +336,7 @@ func pathRoles(b *backend) *framework.Path {
 				When supplied, this value specifies a signing algorithm for the key. Possible values:
 				ssh-rsa, rsa-sha2-256, rsa-sha2-512, default, or the empty string.
 				`,
-				AllowedValues: []interface{}{"", ssh.SigAlgoRSA, ssh.SigAlgoRSASHA2256, ssh.SigAlgoRSASHA2512},
+				AllowedValues: []interface{}{"", DefaultAlgorithmSigner, ssh.SigAlgoRSA, ssh.SigAlgoRSASHA2256, ssh.SigAlgoRSASHA2512},
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Signing Algorithm",
 				},

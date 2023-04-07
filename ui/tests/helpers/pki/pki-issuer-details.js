@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 export const SELECTORS = {
   defaultGroup: '[data-test-details-group="default"]',
   urlsGroup: '[data-test-details-group="Issuer URLs"]',
@@ -8,5 +13,7 @@ export const SELECTORS = {
   signIntermediate: '[data-test-pki-issuer-sign-int]',
   download: '[data-test-issuer-download]',
   configure: '[data-test-pki-issuer-configure]',
+  rotateModal: '[data-test-modal-background="Rotate this root"]',
+  rotateModalGenerate: '[data-test-root-rotate-step-one]',
   valueByName: (name) => `[data-test-value-div="${name}"]`,
 };
