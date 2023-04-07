@@ -164,7 +164,7 @@ func initializeCapabilities(linkConf *configutil.HCPLinkConfig, scadaConfig *sca
 
 	// Initializing Passthrough capability
 	if linkConf.EnablePassThroughCapability {
-		apiPassCap, err := api_capability.NewAPIPassThroughCapability(scadaProvider, core, logger)
+		apiPassCap, err := api_capability.NewAPIPassThroughCapability(linkConf, scadaProvider, core, logger)
 		if err != nil {
 			retErr = multierror.Append(retErr, fmt.Errorf("failed to instantiate PassThrough capability, %w", err))
 		}

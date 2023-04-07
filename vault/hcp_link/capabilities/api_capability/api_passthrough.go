@@ -5,10 +5,13 @@ package api_capability
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/hashicorp/vault/internalshared/configutil"
 
 	"github.com/hashicorp/go-hclog"
 	scada "github.com/hashicorp/hcp-scada-provider"
@@ -23,12 +26,15 @@ type APIPassThroughCapability struct {
 	logger        hclog.Logger
 	scadaProvider scada.SCADAProvider
 	scadaServer   *http.Server
+	tlsCertFile   string
+	tlsKeyFile    string
+	tlsDisable    bool
 	running       bool
 }
 
 var _ capabilities.Capability = &APIPassThroughCapability{}
 
-func NewAPIPassThroughCapability(scadaProvider scada.SCADAProvider, core *vault.Core, logger hclog.Logger) (*APIPassThroughCapability, error) {
+func NewAPIPassThroughCapability(linkConf *configutil.HCPLinkConfig, scadaProvider scada.SCADAProvider, core *vault.Core, logger hclog.Logger) (*APIPassThroughCapability, error) {
 	apiLogger := logger.Named(capabilities.APIPassThroughCapability)
 
 	linkHandler := requestHandler(vaulthttp.Handler.Handler(&vault.HandlerProperties{Core: core}), core, apiLogger)
@@ -43,10 +49,22 @@ func NewAPIPassThroughCapability(scadaProvider scada.SCADAProvider, core *vault.
 		IdleTimeout:       5 * time.Minute,
 		ErrorLog:          apiLogger.StandardLogger(nil),
 	}
+
+	if !linkConf.TLSDisable {
+		server.TLSConfig = &tls.Config{
+			MinVersion: tls.VersionTLS12,
+			MaxVersion: tls.VersionTLS13,
+			ClientAuth: tls.RequestClientCert,
+		}
+	}
+
 	return &APIPassThroughCapability{
 		logger:        apiLogger,
 		scadaProvider: scadaProvider,
 		scadaServer:   server,
+		tlsCertFile:   linkConf.TLSCertFile,
+		tlsKeyFile:    linkConf.TLSKeyFile,
+		tlsDisable:    linkConf.TLSDisable,
 	}, nil
 }
 
@@ -65,12 +83,17 @@ func (p *APIPassThroughCapability) Start() error {
 	}
 
 	go func() {
-		err = p.scadaServer.Serve(listener)
+		if p.tlsDisable {
+			err = p.scadaServer.Serve(listener)
+		} else {
+			err = p.scadaServer.ServeTLS(listener, p.tlsCertFile, p.tlsKeyFile)
+		}
+
 		p.logger.Error("server closed", "error", err)
 	}()
 
 	p.running = true
-	p.logger.Info("started HCP Link API PassThrough capability")
+	p.logger.Info("started HCP Link API PassThrough capability", "tls_disable", p.tlsDisable)
 
 	return nil
 }
