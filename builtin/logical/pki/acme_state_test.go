@@ -1,4 +1,4 @@
-package acme
+package pki
 
 import (
 	"testing"
@@ -9,8 +9,7 @@ import (
 func TestAcmeNonces(t *testing.T) {
 	t.Parallel()
 
-	a, err := NewACMEState()
-	require.NoError(t, err)
+	a := NewACMEState()
 
 	// Simple operation should succeed.
 	nonce, _, err := a.GetNonce()

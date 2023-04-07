@@ -20,7 +20,10 @@ import (
 	cache "github.com/patrickmn/go-cache"
 )
 
-const amzHeaderPrefix = "X-Amz-"
+const (
+	amzHeaderPrefix    = "X-Amz-"
+	operationPrefixAWS = "aws"
+)
 
 var defaultAllowedSTSRequestHeaders = []string{
 	"X-Amz-Algorithm",
@@ -126,7 +129,9 @@ func Backend(_ *logical.BackendConfig) (*backend, error) {
 
 		deprecatedTerms: strings.NewReplacer(
 			"accesslist", "whitelist",
+			"access-list", "whitelist",
 			"denylist", "blacklist",
+			"deny-list", "blacklist",
 		),
 	}
 
@@ -343,12 +348,32 @@ func (b *backend) resolveArnToRealUniqueId(ctx context.Context, s logical.Storag
 	}
 }
 
-// genDeprecatedPath will return a deprecated version of a framework.Path. The will include
-// using deprecated terms in the path pattern, and marking the path as deprecated.
+// genDeprecatedPath will return a deprecated version of a framework.Path. The
+// path pattern and display attributes (if any) will contain deprecated terms,
+// and the path will be marked as deprecated.
 func (b *backend) genDeprecatedPath(path *framework.Path) *framework.Path {
 	pathDeprecated := *path
 	pathDeprecated.Pattern = b.deprecatedTerms.Replace(path.Pattern)
 	pathDeprecated.Deprecated = true
+
+	if path.DisplayAttrs != nil {
+		deprecatedDisplayAttrs := *path.DisplayAttrs
+		deprecatedDisplayAttrs.OperationPrefix = b.deprecatedTerms.Replace(path.DisplayAttrs.OperationPrefix)
+		deprecatedDisplayAttrs.OperationVerb = b.deprecatedTerms.Replace(path.DisplayAttrs.OperationVerb)
+		deprecatedDisplayAttrs.OperationSuffix = b.deprecatedTerms.Replace(path.DisplayAttrs.OperationSuffix)
+		pathDeprecated.DisplayAttrs = &deprecatedDisplayAttrs
+	}
+
+	for i, op := range path.Operations {
+		if op.Properties().DisplayAttrs != nil {
+			deprecatedDisplayAttrs := *op.Properties().DisplayAttrs
+			deprecatedDisplayAttrs.OperationPrefix = b.deprecatedTerms.Replace(op.Properties().DisplayAttrs.OperationPrefix)
+			deprecatedDisplayAttrs.OperationVerb = b.deprecatedTerms.Replace(op.Properties().DisplayAttrs.OperationVerb)
+			deprecatedDisplayAttrs.OperationSuffix = b.deprecatedTerms.Replace(op.Properties().DisplayAttrs.OperationSuffix)
+			deprecatedProperties := pathDeprecated.Operations[i].(*framework.PathOperation)
+			deprecatedProperties.DisplayAttrs = &deprecatedDisplayAttrs
+		}
+	}
 
 	return &pathDeprecated
 }

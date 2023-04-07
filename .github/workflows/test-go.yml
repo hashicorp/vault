@@ -1,10 +1,6 @@
 on:
   workflow_call:
     inputs:
-      name:
-        description: A suffix to be added to the matrix job names.
-        required: true
-        type: string
       go-arch:
         description: The execution architecture (arm, amd64, etc.)
         required: true
@@ -67,7 +63,7 @@ jobs:
     permissions:
       id-token: write  # Note: this permission is explicitly required for Vault auth
       contents: read
-    name: "${{ matrix.runner-index }} ${{ inputs.name }}"
+    name: "${{ matrix.runner-index }}"
     needs:
     - runner-indexes
     runs-on: ${{ fromJSON(inputs.runs-on) }}
@@ -83,10 +79,6 @@ jobs:
       GOPRIVATE: github.com/hashicorp/*
       TIMEOUT_IN_MINUTES: 60
     steps:
-      - id: setup-git
-        name: Setup Git configuration
-        run: |
-          git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN }}@github.com".insteadOf https://github.com
       - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
       - uses: actions/setup-go@d0a58c1c4d2b25278816e339b944508c875f3613
         with:
@@ -105,6 +97,8 @@ jobs:
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
+            kv/data/github/${{ github.repository }}/datadog-ci DATADOG_API_KEY;
+            kv/data/github/${{ github.repository }}/github-token username-and-token | github-token;
             kv/data/github/${{ github.repository }}/license license_1 | VAULT_LICENSE_CI;
             kv/data/github/${{ github.repository }}/license license_2 | VAULT_LICENSE_2;
             kv/data/github/${{ github.repository }}/hcp-link HCP_API_ADDRESS;
@@ -112,6 +106,16 @@ jobs:
             kv/data/github/${{ github.repository }}/hcp-link HCP_CLIENT_ID;
             kv/data/github/${{ github.repository }}/hcp-link HCP_CLIENT_SECRET;
             kv/data/github/${{ github.repository }}/hcp-link HCP_RESOURCE_ID;
+      - id: setup-git-private
+        name: Setup Git configuration (private)
+        if: github.repository == 'hashicorp/vault-enterprise'
+        run: |
+          git config --global url."https://${{ steps.secrets.outputs.github-token }}@github.com".insteadOf https://github.com
+      - id: setup-git-public
+        name: Setup Git configuration (public)
+        if: github.repository != 'hashicorp/vault-enterprise'
+        run: |
+          git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
       - id: run-go-tests
         name: Run Go tests
         timeout-minutes: ${{ fromJSON(env.TIMEOUT_IN_MINUTES) }}
@@ -166,6 +170,21 @@ jobs:
               ${{ inputs.extra-flags }} \
                 \
               ${test_packages[${{ matrix.runner-index }}]}
+      - name: Prepare datadog-ci
+        if: github.repository == 'hashicorp/vault'
+        continue-on-error: true
+        run: |
+          curl -L --fail "https://github.com/DataDog/datadog-ci/releases/latest/download/datadog-ci_linux-x64" --output "/usr/local/bin/datadog-ci"
+          chmod +x /usr/local/bin/datadog-ci
+      - name: Upload test results to DataDog
+        continue-on-error: true
+        env:
+          DD_ENV: ci
+        run: |
+          if [[ ${{ github.repository }} == 'hashicorp/vault' ]]; then
+            export DATADOG_API_KEY=${{ secrets.DATADOG_API_KEY }}
+          fi
+          datadog-ci junit upload --service "$GITHUB_REPOSITORY" test-results/go-test/results.xml
       - name: Archive test results
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce
         with:

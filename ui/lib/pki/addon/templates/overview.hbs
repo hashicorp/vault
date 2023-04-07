@@ -21,8 +21,8 @@
 {{#if this.model.hasConfig}}
   <Page::PkiOverview @issuers={{this.model.issuers}} @roles={{this.model.roles}} @engine={{this.model.engine}} />
 {{else}}
-  <EmptyState @title="PKI not configured" @message="This PKI mount hasn't yet been configured with a certificate issuer.">
-    <LinkTo @route="configuration.create" @model={{this.model.engine}}>
+  <EmptyState @title="PKI not configured" @message={{this.message}}>
+    <LinkTo @route="configuration.create">
       Configure PKI
     </LinkTo>
   </EmptyState>
