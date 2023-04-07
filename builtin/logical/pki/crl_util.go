@@ -1317,7 +1317,7 @@ func buildAnyCRLs(sc *storageContext, forceNew bool, isDelta bool) error {
 }
 
 func getLastWALSerial(sc *storageContext, path string) (string, error) {
-	lastWALEntry, err := sc.Storage.Get(sc.Context, localDeltaWALLastRevokedSerial)
+	lastWALEntry, err := sc.Storage.Get(sc.Context, path)
 	if err != nil {
 		return "", err
 	}
