@@ -48,7 +48,7 @@ a copy of [`git`](https://www.git-scm.com/) in your `PATH`.
 
 Clone the Vault repository from GitHub into your `GOPATH`:
 
-```shell
+```shell-session
 $ mkdir -p $GOPATH/src/github.com/hashicorp && cd $_
 $ git clone https://github.com/hashicorp/vault.git
 $ cd vault
@@ -57,7 +57,7 @@ $ cd vault
 Bootstrap the project. This will download and compile libraries and tools needed
 to compile Vault:
 
-```shell
+```shell-session
 $ make bootstrap
 ```
 
@@ -65,7 +65,7 @@ Build Vault for your current system and put the binary in `./bin/` (relative to
 the git checkout). The `make dev` target is just a shortcut that builds `vault`
 for only your local build environment (no cross-compiled targets).
 
-```shell
+```shell-session
 $ make dev
 ```
 
@@ -78,6 +78,15 @@ on your `PATH` to avoid receiving an error that Vault is not found.
 ```shell-session
 $ vault -h
 ```
+
+## Tutorial
+
+Following tutorials provide some guidance on production cluster deployment: 
+
+- [Day One Preperation](/vault/tutorials/day-one-raft) 
+- [Recommended Patterns](/vault/tutorials/recommended-patterns)
+
+
 
 [learn-vault-install]: /vault/tutorials/getting-started/getting-started-install
 [learn-vault-dev-server]: /vault/tutorials/getting-started/getting-started-dev-server
