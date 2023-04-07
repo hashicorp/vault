@@ -9,6 +9,7 @@ import { click, render, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { SELECTORS } from 'vault/tests/helpers/pki/page/pki-tidy-form';
 
 module('Integration | Component | pki | Page::PkiTidyForm', function (hooks) {
   setupRenderingTest(hooks);
@@ -35,20 +36,20 @@ module('Integration | Component | pki | Page::PkiTidyForm', function (hooks) {
     await render(hbs`<Page::PkiTidyForm @tidy={{this.tidy}} @breadcrumbs={{this.breadcrumbs}} />`, {
       owner: this.engine,
     });
-    assert.dom('[data-test-tidy-cert-store-label]').hasText('Tidy the certificate store');
-    assert.dom('[data-test-tidy-revocation-queue-label]').hasText('Tidy the revocation list (CRL)');
-    assert.dom('[data-test-ttl-inputs]').exists();
+    assert.dom(SELECTORS.tidyCertStoreLabel).hasText('Tidy the certificate store');
+    assert.dom(SELECTORS.tidyRevocationList).hasText('Tidy the revocation list (CRL)');
+    assert.dom(SELECTORS.safetyBufferTTL).exists();
   });
 
   test('it should change the attributes on the model', async function (assert) {
     await render(hbs`<Page::PkiTidyForm @tidy={{this.tidy}} @breadcrumbs={{this.breadcrumbs}} />`, {
       owner: this.engine,
     });
-    await click('[data-test-tidy-cert-store-checkbox]');
-    await click('[data-test-tidy-revocation-queue-checkbox]');
-    await fillIn('[data-test-ttl-value="Safety buffer"]', '72h');
+    await click(SELECTORS.tidyCertStoreCheckbox);
+    await click(SELECTORS.tidyRevocationCheckbox);
+    await fillIn(SELECTORS.safetyBufferInput, '72h');
     assert.true(this.tidy.tidyCertStore);
     assert.true(this.tidy.tidyRevocationQueue);
-    assert.dom('[data-test-ttl-value="Safety buffer"]').hasValue('72h');
+    assert.dom(SELECTORS.safetyBufferInput).hasValue('72h');
   });
 });
