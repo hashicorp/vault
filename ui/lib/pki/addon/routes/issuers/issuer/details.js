@@ -3,17 +3,23 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-import PkiIssuerIndexRoute from './index';
+import PkiIssuerRoute from '../issuer';
+import { verifyCertificates } from 'vault/utils/parse-pki-cert';
+import { hash } from 'rsvp';
+export default class PkiIssuerDetailsRoute extends PkiIssuerRoute {
+  model() {
+    const issuer = this.modelFor('issuers.issuer');
+    return hash({
+      issuer,
+      pem: this.fetchCertByFormat(issuer.id, 'pem'),
+      der: this.fetchCertByFormat(issuer.id, 'der'),
+      isRotatable: this.isRoot(issuer),
+    });
+  }
 
-export default class PkiIssuerDetailsRoute extends PkiIssuerIndexRoute {
-  // Details route gets issuer data from PkiIssuerIndexRoute
-  async setupController(controller, resolvedModel) {
+  setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-    controller.breadcrumbs.push({ label: resolvedModel.id });
-    const pem = await this.fetchCertByFormat(resolvedModel.id, 'pem');
-    const der = await this.fetchCertByFormat(resolvedModel.id, 'der');
-    controller.pem = pem;
-    controller.der = der;
+    controller.breadcrumbs.push({ label: resolvedModel.issuer.id });
   }
 
   /**
@@ -32,5 +38,10 @@ export default class PkiIssuerDetailsRoute extends PkiIssuerIndexRoute {
     } catch (e) {
       return null;
     }
+  }
+
+  async isRoot({ certificate, keyId }) {
+    const isSelfSigned = await verifyCertificates(certificate, certificate);
+    return isSelfSigned && !!keyId;
   }
 }
