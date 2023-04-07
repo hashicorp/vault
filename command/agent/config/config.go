@@ -172,10 +172,10 @@ type TemplateConfig struct {
 }
 
 type EnvTemplateConfig struct {
-	Name            string `hcl:"name,label"`
-	Contents        string `hcl:"contents,attr"`
-	ErrOnMissingKey bool   `hcl:"err_on_missing_key,optional"`
-	Group           string `hcl:"group,optional"`
+	Name            string  `hcl:"name,label"`
+	Contents        string  `hcl:"contents,attr"`
+	ErrOnMissingKey bool    `hcl:"err_on_missing_key,optional"`
+	Group           *string `hcl:"group,optional"`
 }
 
 type ExecConfig struct {

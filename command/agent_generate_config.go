@@ -4,9 +4,11 @@
 package command
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/hashicorp/hcl/v2/hclwrite"
@@ -81,6 +83,9 @@ func (c *AgentGenerateConfigCommand) AutocompleteFlags() complete.Flags {
 }
 
 func (c *AgentGenerateConfigCommand) Run(args []string) int {
+	ctx, cancelContextFunc := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancelContextFunc()
+
 	flags := c.Flags()
 
 	if err := flags.Parse(args); err != nil {
@@ -101,71 +106,40 @@ func (c *AgentGenerateConfigCommand) Run(args []string) int {
 		return 2
 	}
 
-	// var (
-	// 	partialPath string
-	// 	v2          bool
-	// )
+	var envTemplates []*config.EnvTemplateConfig
 
-	// In this case, this arg is a path-like combination of mountPath/secretPath.
-	// (e.g. "secret/foo")
-	// partialPath = sanitizePath(args[0])
-	// mountPath, v2, err = isKVv2(partialPath, client)
-	// if err != nil {
-	// 	c.UI.Error(err.Error())
-	// 	return 2
-	// }
-
-	/*
-		// Add /data to v2 paths only
-		var fullPath string
-		if v2 {
-			fullPath = addPrefixToKVPath(partialPath, mountPath, "data")
-			data = map[string]interface{}{
-				"data":    data,
-				"options": map[string]interface{}{},
-			}
-
-			if c.flagCAS > -1 {
-				data["options"].(map[string]interface{})["cas"] = c.flagCAS
-			}
-		} else {
-			// v1
-			if mountFlagSyntax {
-				fullPath = path.Join(mountPath, partialPath)
-			} else {
-				fullPath = partialPath
-			}
-		}
-
-		secret, err := client.Logical().Write(fullPath, data)
+	for _, path := range c.flagPaths {
+		pathSanitized := sanitizePath(path)
+		pathMount, v2, err := isKVv2(pathSanitized, client)
 		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error writing data to %s: %s", fullPath, err))
-			if secret != nil {
-				OutputSecret(c.UI, secret)
-			}
+			c.UI.Error(fmt.Sprintf("Could not validate secret path %q: %v", path, err))
 			return 2
 		}
-		if secret == nil {
-			// Don't output anything unless using the "table" format
-			if Format(c.UI) == "table" {
-				c.UI.Info(fmt.Sprintf("Success! Data written to: %s", fullPath))
-			}
-			return 0
+
+		var pathFull string
+		if v2 {
+			pathFull = addPrefixToKVPath(pathSanitized, pathMount, "data")
+		} else {
+			pathFull = pathSanitized
 		}
 
-		if c.flagField != "" {
-			return PrintRawField(c.UI, secret, c.flagField)
+		resp, err := client.Logical().ReadWithContext(ctx, pathFull)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error querying %q: %v", pathFull, err))
+			return 2
+		}
+		if resp == nil {
+			c.UI.Error(fmt.Sprintf("Secret not found at %q", pathFull))
+			return 2
 		}
 
-		if Format(c.UI) == "table" {
-			outputPath(c.UI, fullPath, "Secret Path")
-			metadata := secret.Data
-			c.UI.Info(getHeaderForMap("Metadata", metadata))
-			return OutputData(c.UI, metadata)
+		for field := range resp.Data {
+			envTemplates = append(envTemplates, &config.EnvTemplateConfig{
+				Name:     strings.ToUpper(field),
+				Contents: fmt.Sprintf("{{ with secret %s }}{{ Data.data.%s }}", pathFull, field),
+			})
 		}
-
-		return OutputSecret(c.UI, secret)
-	*/
+	}
 
 	var execCommand string
 	if c.flagExec != "" {
@@ -186,6 +160,7 @@ func (c *AgentGenerateConfigCommand) Run(args []string) int {
 				},
 			},
 		},
+		EnvTemplates: envTemplates,
 		Exec: &config.ExecConfig{
 			Command:            execCommand,
 			Args:               []string{},
@@ -207,17 +182,17 @@ func (c *AgentGenerateConfigCommand) Run(args []string) int {
 
 	f, err := os.Create(configPath)
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Could not create configuration file %q: %v", configPath, err.Error()))
+		c.UI.Error(fmt.Sprintf("Could not create configuration file %q: %v", configPath, err))
 		return 1
 	}
 	defer func() {
 		if err := f.Close(); err != nil {
-			c.UI.Error(fmt.Sprintf("Could not close configuration file %q: %v", configPath, err.Error()))
+			c.UI.Error(fmt.Sprintf("Could not close configuration file %q: %v", configPath, err))
 		}
 	}()
 
 	if _, err := contents.WriteTo(f); err != nil {
-		c.UI.Error(fmt.Sprintf("Could not write to configuration file %q: %v", configPath, err.Error()))
+		c.UI.Error(fmt.Sprintf("Could not write to configuration file %q: %v", configPath, err))
 		return 1
 	}
 
