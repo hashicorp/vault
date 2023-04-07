@@ -70,7 +70,16 @@ export default class PkiGenerateRootComponent extends Component<Args> {
   }
 
   get returnedFields() {
-    return ['certificate', 'issuerId', 'issuerName', 'issuingCa', 'keyName', 'keyId', 'serialNumber'];
+    return [
+      'certificate',
+      'commonName',
+      'issuerId',
+      'issuerName',
+      'issuingCa',
+      'keyName',
+      'keyId',
+      'serialNumber',
+    ];
   }
 
   @action cancel() {
