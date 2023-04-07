@@ -7,15 +7,20 @@
 
 .input,
 .textarea {
+  align-items: center;
   border-radius: $radius;
   border: $base-border;
   box-shadow: 0 4px 1px rgba($black, 0.06) inset;
   color: $grey-dark;
+  display: inline-flex;
   font-size: $size-6;
   height: 2.5rem;
+  line-height: 1.5;
   max-width: 100%;
+  padding-bottom: calc(0.375em - 1px);
   padding-left: $size-8;
   padding-right: $size-8;
+  padding-top: calc(0.375em - 1px);
   width: 100%;
 
   &:focus,
