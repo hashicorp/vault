@@ -99,6 +99,10 @@ for anything which relies on a non-zero `lease_duration`.
 For applications that can control what value to look for, the `ttl` value in the response can be used to know when to
 request STS credentials next.
 
+An additional workaround for users rendering STS credentials via the Vault Agent is to modify the
+`static-secret-render-interval` for a STS secret to control the frequency of rendering the secrets.
+Setting this to the minimum STS interval (15 minutes) should restore expected behaviour.
+
 #### Impacted Versions
 
 Affects Vault 1.13.0 only.
