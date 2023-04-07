@@ -20,9 +20,10 @@
       @type="checkbox"
       @checked={{@tidy.tidyCertStore}}
       {{on "input" (fn (mut @tidy.tidyCertStore) (not @tidy.tidyCertStore))}}
+      data-test-tidy-cert-store-checkbox
     />
 
-    <label for="tidy-certificate-store" class="is-label">
+    <label for="tidy-certificate-store" class="is-label" data-test-tidy-cert-store-label>
       Tidy the certificate store
     </label>
   </div>
@@ -31,9 +32,10 @@
       @type="checkbox"
       @checked={{@tidy.tidyRevocationQueue}}
       {{on "input" (fn (mut @tidy.tidyRevocationQueue) (not @tidy.tidyRevocationQueue))}}
+      data-test-tidy-revocation-queue-checkbox
     />
 
-    <label for="tidy-certificate-revocation-list" class="is-label">
+    <label for="tidy-revocation-queue" class="is-label" data-test-tidy-revocation-queue-label>
       Tidy the revocation list (CRL)
     </label>
   </div>
