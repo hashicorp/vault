@@ -99,9 +99,9 @@ for anything which relies on a non-zero `lease_duration`.
 For applications that can control what value to look for, the `ttl` value in the response can be used to know when to
 request STS credentials next.
 
-An additional workaround for users rendering STS credentials via the Vault Agent is to modify the
-`static-secret-render-interval` for a STS secret to control the frequency of rendering the secrets.
-Setting this to the minimum STS interval (15 minutes) should restore expected behaviour.
+An additional workaround for users rendering STS credentials via the Vault Agent is to set the
+`static-secret-render-interval` for a template using the credentials. Setting this configuration to 15 minutes
+accommodates the default minimum duration of an STS token and overrides the default render interval of 5 minutes.
 
 #### Impacted Versions
 
