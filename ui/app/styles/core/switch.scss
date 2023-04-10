@@ -3,41 +3,161 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
+ /* the following nested classes are used with switch: is-small, is-rounded, is-success */
+
 .switch[type='checkbox'] {
-  &.is-small {
-    + label {
-      cursor: pointer;
-      display: inline-block;
-      font-size: $size-8;
-      font-weight: bold;
-      padding-left: $size-8 * 2.5;
-      position: relative;
-      margin: 0 0.25rem;
-      &::before {
-        top: $size-8 / 5;
-        height: $size-8;
-        width: $size-8 * 2;
-      }
-      &::after {
-        width: $size-8 * 0.8;
-        height: $size-8 * 0.8;
-        transform: translateX(0.15rem);
-        left: 0;
-        top: $size-8/ 4;
-      }
-    }
-    &:checked + label::after {
+  display: inline-block;
+  outline: 0;
+  opacity: 0;
+  position: absolute;
+  user-select: none;
+
+  +label {
+    align-items: center;
+    cursor: pointer;
+    display: inline-flex;
+    font-size: $size-6;
+    justify-content: flex-start;
+    line-height: 1.5;
+    padding-left: 3.5rem;
+    position: relative;
+
+    &::before {
+      position: absolute;
+      display: block;
+      top: calc(50% - 1.5rem * .5);
       left: 0;
-      transform: translateX(($size-8 * 2) - ($size-8 * 0.94));
+      width: $size-1;
+      height: $size-4;
+      border: .1rem solid transparent;
+      border-radius: $radius-large;
+      background: $ui-gray-300; 
+      content: "" 
+    }
+
+    &::after {
+      background: $white;
+      border-radius: $radius-large;
+      content: "";
+      display: block;
+      height: $size-6;
+      left: $size-11;
+      position: absolute;
+      top: calc(50% - 1rem * .5);
+      transform: translate3d(0, 0, 0);
+      transition: all .25s ease-out;
+      width: $size-6;
+    }
+
+    &:checked::after {
+      left: 1.625rem;
     }
   }
 }
-.switch[type='checkbox'].is-small + label::after {
-  will-change: left;
+
+// is-rounded
+.switch[type='checkbox'].is-rounded {
+  + label {
+    &::before {
+      border-radius: 16px;
+    }
+    &::after {
+      border-radius: 50%
+    }
+  }
+  &.is-small {
+    + label {
+      &::before {
+        border-radius: 16px;
+      }
+      &::after {
+        border-radius: 50%;
+      }
+    }
+  }
 }
-.switch[type='checkbox']:focus + label {
-  box-shadow: 0 0 1px $blue;
+// is-small
+.switch[type='checkbox'].is-small {
+  + label {
+    cursor: pointer;
+    display: inline-block;
+    font-size: $size-8;
+    font-weight: bold;
+    height: 18px;
+    padding-left: $size-8 * 2.5;
+    position: relative;
+    margin: 0 0.25rem;
+    &::before {
+      border: .1rem solid transparent;
+      border-radius: $radius-large;
+      background: $ui-gray-300;
+      display: block;
+      content: "";
+      height: $size-8;
+      position: absolute;
+      top: $size-8 / 5;
+      width: $size-8 * 2;
+    }
+    &::after {
+      background: $white;
+      border-radius: $radius-large;
+      content: "";
+      display: block;
+      height: $size-8 * 0.8;
+      left: 0;
+      position: absolute;
+      top: $size-8/ 4;
+      transform: translateX(0.15rem);
+      transition: all .25s ease-out;
+      width: $size-8 * 0.8;
+      will-change: left;
+
+      &:checked {
+        left: 1.25rem;
+      }
+    }
+  }
+  &:checked + label::after {
+    left: 0;
+    transform: translateX(($size-8 * 2) - ($size-8 * 0.94));
+  }
+
 }
+
+// is-success
 .switch[type='checkbox'].is-success:checked + label::before {
   background: $blue;
 }
+
+// focus
+.switch[type='checkbox']:focus + label {
+  box-shadow: 0 0 1px $blue;
+}
+
+// disabled
+.switch[type=checkbox][disabled] {
+  cursor: not-allowed;
+}
+
+.switch[type=checkbox][disabled]+label {
+  opacity: .5;
+}
+
+.switch[type=checkbox][disabled]+label::before, .switch[type=checkbox][disabled]+label:before {
+  opacity: .5;
+}
+
+.switch[type=checkbox][disabled]+label::after, .switch[type=checkbox][disabled]+label:after {
+  opacity: .5;
+}
+
+.switch[type=checkbox][disabled]+label:hover {
+  cursor: not-allowed;
+}
+
+// misc.
+.field-body .switch[type=checkbox]+label {
+  margin-top: .375em;
+}
+
+
