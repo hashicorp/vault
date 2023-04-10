@@ -143,14 +143,6 @@
   opacity: .5;
 }
 
-.switch[type=checkbox][disabled]+label::before, .switch[type=checkbox][disabled]+label:before {
-  opacity: .5;
-}
-
-.switch[type=checkbox][disabled]+label::after, .switch[type=checkbox][disabled]+label:after {
-  opacity: .5;
-}
-
 .switch[type=checkbox][disabled]+label:hover {
   cursor: not-allowed;
 }
