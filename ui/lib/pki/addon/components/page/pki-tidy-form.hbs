@@ -11,14 +11,18 @@
 </PageHeader>
 
 <hr class="is-marginless has-background-gray-200" />
+
 <p class="has-top-margin-m has-bottom-margin-l">Tidying cleans up the storage backend and/or CRL by removing certificates
   that have expired and are past a certain buffer period beyond their expiration time.</p>
+
+<MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
 
 <form class="has-bottom-margin-s" {{on "submit" (perform this.save)}}>
   <div class="has-bottom-margin-s">
     <Input
       @type="checkbox"
       @checked={{@tidy.tidyCertStore}}
+      id="tidy-certificate-store"
       {{on "input" (fn (mut @tidy.tidyCertStore) (not @tidy.tidyCertStore))}}
       data-test-tidy-cert-store-checkbox
     />
@@ -31,6 +35,7 @@
     <Input
       @type="checkbox"
       @checked={{@tidy.tidyRevocationQueue}}
+      id="tidy-revocation-queue"
       {{on "input" (fn (mut @tidy.tidyRevocationQueue) (not @tidy.tidyRevocationQueue))}}
       data-test-tidy-revocation-queue-checkbox
     />
@@ -42,6 +47,7 @@
 
   <TtlPicker
     class="has-top-margin-l has-bottom-margin-l"
+    @initialValue={{@tidy.safetyBuffer}}
     @onChange={{this.updateSafetyBuffer}}
     @hideToggle={{true}}
     @label="Safety buffer"
@@ -68,5 +74,10 @@
     >
       Cancel
     </button>
+    {{#if this.invalidFormAlert}}
+      <div class="control">
+        <AlertInline @type="danger" @paddingTop={{true}} @message={{this.invalidFormAlert}} @mimicRefresh={{true}} />
+      </div>
+    {{/if}}
   </div>
 </form>

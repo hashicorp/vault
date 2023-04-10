@@ -6,6 +6,7 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
+import errorMessage from 'vault/utils/error-message';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 
@@ -29,8 +30,7 @@ export default class PkiTidyForm extends Component {
       yield this.args.tidy.save();
       this.returnToConfiguration();
     } catch (e) {
-      const message = e.errors ? e.errors.join('. ') : e.message;
-      this.errorBanner = message;
+      this.errorBanner = errorMessage();
       this.invalidFormAlert = 'There was an error submitting this form.';
     }
   }

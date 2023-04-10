@@ -21,9 +21,8 @@ module('Integration | Component | pki | Page::PkiTidyForm', function (hooks) {
     this.secretMountPath = this.owner.lookup('service:secret-mount-path');
     this.secretMountPath.currentPath = 'pki-test';
 
-    this.store.createRecord('pki/tidy', { backend: 'pki-test' });
+    this.tidy = this.store.createRecord('pki/tidy', { backend: 'pki-test' });
 
-    this.tidy = this.store.peekAll('pki/tidy');
     this.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
       { label: 'pki-test', route: 'overview' },
@@ -39,6 +38,8 @@ module('Integration | Component | pki | Page::PkiTidyForm', function (hooks) {
     assert.dom(SELECTORS.tidyCertStoreLabel).hasText('Tidy the certificate store');
     assert.dom(SELECTORS.tidyRevocationList).hasText('Tidy the revocation list (CRL)');
     assert.dom(SELECTORS.safetyBufferTTL).exists();
+    assert.dom(SELECTORS.safetyBufferInput).hasValue('3');
+    assert.dom('[data-test-select="ttl-unit"]').hasValue('d');
   });
 
   test('it should change the attributes on the model', async function (assert) {
@@ -47,9 +48,11 @@ module('Integration | Component | pki | Page::PkiTidyForm', function (hooks) {
     });
     await click(SELECTORS.tidyCertStoreCheckbox);
     await click(SELECTORS.tidyRevocationCheckbox);
-    await fillIn(SELECTORS.safetyBufferInput, '72h');
+    await fillIn(SELECTORS.safetyBufferInput, '5');
     assert.true(this.tidy.tidyCertStore);
     assert.true(this.tidy.tidyRevocationQueue);
-    assert.dom(SELECTORS.safetyBufferInput).hasValue('72h');
+    assert.dom(SELECTORS.safetyBufferInput).hasValue('5');
+    assert.dom('[data-test-select="ttl-unit"]').hasValue('d');
+    assert.strictEqual(this.tidy.safetyBuffer, '120h');
   });
 });
