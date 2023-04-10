@@ -93,6 +93,12 @@ func (m *RollbackManager) Stop() {
 	m.inflightAll.Wait()
 }
 
+// StopTicker stops the automatic Rollback manager's ticker, causing us
+// to not do automatic rollbacks. This is useful for testing plugin's
+// periodic function's behavior, without trying to race against the
+// rollback manager proper.
+//
+// THIS SHOULD ONLY BE CALLED FROM TEST HELPERS.
 func (m *RollbackManager) StopTicker() {
 	close(m.stopTicker)
 }
@@ -101,6 +107,7 @@ func (m *RollbackManager) StopTicker() {
 func (m *RollbackManager) run() {
 	m.logger.Info("starting rollback manager")
 	tick := time.NewTicker(m.period)
+	logTestStopOnce := false
 	defer tick.Stop()
 	defer close(m.doneCh)
 	for {
@@ -113,7 +120,10 @@ func (m *RollbackManager) run() {
 			return
 
 		case <-m.stopTicker:
-			m.logger.Info("stopping rollback manager ticker for tests")
+			if !logTestStopOnce {
+				m.logger.Info("stopping rollback manager ticker for tests")
+				logTestStopOnce = true
+			}
 			tick.Stop()
 		}
 	}
