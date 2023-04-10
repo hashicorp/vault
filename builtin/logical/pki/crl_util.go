@@ -1037,6 +1037,7 @@ func revokeCert(sc *storageContext, config *crlConfig, cert *x509.Certificate) (
 
 	// If this flag is enabled after the fact, existing local entries will be published to
 	// the unified storage space through a periodic function.
+	failedWritingUnifiedCRL := false
 	if config.UnifiedCRL {
 		entry := &unifiedRevocationEntry{
 			SerialNumber:      colonSerial,
@@ -1054,6 +1055,7 @@ func revokeCert(sc *storageContext, config *crlConfig, cert *x509.Certificate) (
 			sc.Backend.unifiedTransferStatus.forceRun()
 
 			resp.AddWarning(fmt.Sprintf("Failed to write unified revocation entry, will re-attempt later: %v", err))
+			failedWritingUnifiedCRL = true
 		}
 	}
 
@@ -1072,7 +1074,7 @@ func revokeCert(sc *storageContext, config *crlConfig, cert *x509.Certificate) (
 			}
 		}
 	} else if config.EnableDelta {
-		if err := writeRevocationDeltaWALs(sc, config, resp, hyphenSerial, colonSerial); err != nil {
+		if err := writeRevocationDeltaWALs(sc, config, resp, failedWritingUnifiedCRL, hyphenSerial, colonSerial); err != nil {
 			return nil, fmt.Errorf("failed to write WAL entries for Delta CRLs: %w", err)
 		}
 	}
@@ -1080,12 +1082,12 @@ func revokeCert(sc *storageContext, config *crlConfig, cert *x509.Certificate) (
 	return resp, nil
 }
 
-func writeRevocationDeltaWALs(sc *storageContext, config *crlConfig, resp *logical.Response, hyphenSerial string, colonSerial string) error {
+func writeRevocationDeltaWALs(sc *storageContext, config *crlConfig, resp *logical.Response, failedWritingUnifiedCRL bool, hyphenSerial string, colonSerial string) error {
 	if err := writeSpecificRevocationDeltaWALs(sc, hyphenSerial, colonSerial, localDeltaWALPath); err != nil {
 		return fmt.Errorf("failed to write local delta WAL entry: %w", err)
 	}
 
-	if config.UnifiedCRL {
+	if config.UnifiedCRL && !failedWritingUnifiedCRL {
 		// We only need to write cross-cluster unified Delta WAL entries when
 		// it is enabled; in particular, because we rebuild CRLs when enabling
 		// this flag, any revocations that happened prior to enabling unified
@@ -1095,6 +1097,10 @@ func writeRevocationDeltaWALs(sc *storageContext, config *crlConfig, resp *logic
 		// listing for the unified CRL rebuild, this revocation will not
 		// appear on either the main or the next delta CRL, but will need to
 		// wait for a subsequent complete CRL rebuild).
+		//
+		// Lastly, we don't attempt this if the unified CRL entry failed to
+		// write, as we need that entry before the delta WAL entry will make
+		// sense.
 		if ignoredErr := writeSpecificRevocationDeltaWALs(sc, hyphenSerial, colonSerial, unifiedDeltaWALPath); ignoredErr != nil {
 			// Just log the error if we fail to write across clusters, a separate background
 			// thread will reattempt it later on as we have the local write done.
@@ -1104,6 +1110,8 @@ func writeRevocationDeltaWALs(sc *storageContext, config *crlConfig, resp *logic
 
 			resp.AddWarning(fmt.Sprintf("Failed to write cross-cluster delta WAL entry, will re-attempt later: %v", ignoredErr))
 		}
+	} else if failedWritingUnifiedCRL {
+		resp.AddWarning("Skipping cross-cluster delta WAL entry as cross-cluster revocation failed to write; will re-attempt later.")
 	}
 
 	return nil
