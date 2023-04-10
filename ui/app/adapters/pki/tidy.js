@@ -10,7 +10,8 @@ export default class PkiTidyAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
   urlForCreateRecord(snapshot) {
-    const { type, backend } = snapshot.record;
+    const { backend } = snapshot.record;
+    const { actionType } = snapshot.adapterOptions;
 
     if (!backend) {
       throw new Error('Backend missing');
@@ -18,7 +19,7 @@ export default class PkiTidyAdapter extends ApplicationAdapter {
 
     const baseUrl = `${this.buildURL()}/${encodePath(backend)}`;
 
-    switch (type) {
+    switch (actionType) {
       case 'manual-tidy':
         return `${baseUrl}/tidy`;
       case 'auto-tidy':

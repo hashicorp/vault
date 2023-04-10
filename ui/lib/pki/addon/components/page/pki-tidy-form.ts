@@ -16,6 +16,7 @@ import RouterService from '@ember/routing/router-service';
 
 interface Args {
   tidy: PkiTidyModel;
+  adapterOptions: object;
 }
 
 export default class PkiTidyForm extends Component<Args> {
@@ -38,10 +39,10 @@ export default class PkiTidyForm extends Component<Args> {
   *save(event: Event) {
     event.preventDefault();
     try {
-      yield this.args.tidy.save();
+      yield this.args.tidy.save({ adapterOptions: this.args.adapterOptions });
       this.returnToConfiguration();
     } catch (e) {
-      this.errorBanner = errorMessage();
+      this.errorBanner = errorMessage(e);
       this.invalidFormAlert = 'There was an error submitting this form.';
     }
   }
