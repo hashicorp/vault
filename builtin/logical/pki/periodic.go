@@ -132,7 +132,7 @@ func doUnifiedTransferMissingLocalSerials(sc *storageContext, clusterId string) 
 			err := readRevocationEntryAndTransfer(sc, serialNum)
 			if err != nil {
 				errCount++
-				sc.Backend.Logger().Debug("Failed transferring local revocation to unified space",
+				sc.Backend.Logger().Error("Failed transferring local revocation to unified space",
 					"serial", serialNum, "error", err)
 			}
 		}
