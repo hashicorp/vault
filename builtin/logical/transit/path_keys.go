@@ -25,6 +25,11 @@ func (b *backend) pathListKeys() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/?$",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationSuffix: "keys",
+		},
+
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.pathKeysList,
 		},
@@ -37,6 +42,12 @@ func (b *backend) pathListKeys() *framework.Path {
 func (b *backend) pathKeys() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/" + framework.GenericNameRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationSuffix: "key",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -121,10 +132,25 @@ key.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathPolicyWrite,
-			logical.DeleteOperation: b.pathPolicyDelete,
-			logical.ReadOperation:   b.pathPolicyRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathPolicyWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "create",
+				},
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathPolicyDelete,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "delete",
+				},
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathPolicyRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "read",
+				},
+			},
 		},
 
 		HelpSynopsis:    pathPolicyHelpSyn,
