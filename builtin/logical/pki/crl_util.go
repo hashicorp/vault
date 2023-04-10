@@ -1024,6 +1024,17 @@ func revokeCert(sc *storageContext, config *crlConfig, cert *x509.Certificate) (
 	}
 	sc.Backend.ifCountEnabledIncrementTotalRevokedCertificatesCount(certsCounted, revEntry.Key)
 
+	// From here on out, the certificate has been revoked locally. Any other
+	// persistence issues might still err, but any other failure messages
+	// should be added as warnings to the revocation.
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"revocation_time":         revInfo.RevocationTime,
+			"revocation_time_rfc3339": revInfo.RevocationTimeUTC.Format(time.RFC3339Nano),
+			"state":                   "revoked",
+		},
+	}
+
 	// If this flag is enabled after the fact, existing local entries will be published to
 	// the unified storage space through a periodic function.
 	if config.UnifiedCRL {
@@ -1041,6 +1052,8 @@ func revokeCert(sc *storageContext, config *crlConfig, cert *x509.Certificate) (
 			sc.Backend.Logger().Error("Failed to write unified revocation entry, will re-attempt later",
 				"serial_number", colonSerial, "error", ignoreErr)
 			sc.Backend.unifiedTransferStatus.forceRun()
+
+			resp.AddWarning(fmt.Sprintf("Failed to write unified revocation entry, will re-attempt later: %v", err))
 		}
 	}
 
@@ -1059,21 +1072,15 @@ func revokeCert(sc *storageContext, config *crlConfig, cert *x509.Certificate) (
 			}
 		}
 	} else if config.EnableDelta {
-		if err := writeRevocationDeltaWALs(sc, config, hyphenSerial, colonSerial); err != nil {
+		if err := writeRevocationDeltaWALs(sc, config, resp, hyphenSerial, colonSerial); err != nil {
 			return nil, fmt.Errorf("failed to write WAL entries for Delta CRLs: %w", err)
 		}
 	}
 
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"revocation_time":         revInfo.RevocationTime,
-			"revocation_time_rfc3339": revInfo.RevocationTimeUTC.Format(time.RFC3339Nano),
-			"state":                   "revoked",
-		},
-	}, nil
+	return resp, nil
 }
 
-func writeRevocationDeltaWALs(sc *storageContext, config *crlConfig, hyphenSerial string, colonSerial string) error {
+func writeRevocationDeltaWALs(sc *storageContext, config *crlConfig, resp *logical.Response, hyphenSerial string, colonSerial string) error {
 	if err := writeSpecificRevocationDeltaWALs(sc, hyphenSerial, colonSerial, localDeltaWALPath); err != nil {
 		return fmt.Errorf("failed to write local delta WAL entry: %w", err)
 	}
@@ -1094,6 +1101,8 @@ func writeRevocationDeltaWALs(sc *storageContext, config *crlConfig, hyphenSeria
 			sc.Backend.Logger().Error("Failed to write cross-cluster delta WAL entry, will re-attempt later",
 				"serial_number", colonSerial, "error", ignoredErr)
 			sc.Backend.unifiedTransferStatus.forceRun()
+
+			resp.AddWarning(fmt.Sprintf("Failed to write cross-cluster delta WAL entry, will re-attempt later: %v", ignoredErr))
 		}
 	}
 
