@@ -570,7 +570,23 @@
           {
             "title": "<code>health-check</code>",
             "path": "commands/pki/health-check"
-          }
+          },
+	  {
+	    "title": "<code>verify-sign</code>",
+	    "path": "commands/pki/verify-sign"
+	  },
+	  {
+	    "title": "<code>list-intermeidates</code>",
+	    "path": "commands/pki/list-intermediates"
+	  },
+	  {
+	    "title": "<code>issue</code>",
+	    "path": "commands/pki/issue"
+	  },
+	  {
+	    "title": "<code>reissue</code>",
+	    "path": "commands/pki/reissue"
+	  }
         ]
       },
       {
@@ -1690,6 +1706,35 @@
               {
                 "title": "Examples",
                 "path": "platform/k8s/csi/examples"
+              }
+            ]
+          },
+          {
+            "title": "Vault Secrets Operator",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "platform/k8s/vso"
+              },
+              {
+                "title": "Installation",
+                "path": "platform/k8s/vso/installation"
+              },
+              {
+                "title": "Examples",
+                "path": "platform/k8s/vso/examples"
+              },
+              {
+                "title": "Helm Chart",
+                "path": "platform/k8s/vso/helm"
+              },
+              {
+                "title": "Telemetry",
+                "path": "platform/k8s/vso/telemetry"
+              },
+              {
+                "title": "API Reference",
+                "path": "platform/k8s/vso/api-reference"
               }
             ]
           }
