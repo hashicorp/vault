@@ -18,7 +18,7 @@ export default class PkiConfigurationTidyRoute extends Route {
 
     return hash({
       engine: this.modelFor('application'),
-      tidy: this.store.createRecord('pki/tidy', { backend }),
+      tidy: this.store.createRecord('pki/tidy', { backend, type: 'manual-tidy' }),
     });
   }
 
