@@ -25,7 +25,8 @@ import PkiActionModel from 'vault/models/pki/action';
  *
  * @param {Object} model - certificate model from route
  * @callback onCancel - Callback triggered when cancel button is clicked.
- * @callback onSubmit - Callback triggered on submit success.
+ * @callback onSave - Callback triggered on submit success.
+ * @callback onComplete - Callback triggered on "done" button click.
  */
 
 interface AdapterOptions {
