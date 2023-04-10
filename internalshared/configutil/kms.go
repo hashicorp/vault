@@ -151,12 +151,17 @@ func parseKMS(result *[]*KMS, list *ast.ObjectList, blockName string, maxKMS int
 	}
 
 	priorityMap := make(map[int]*KMS)
+	nameMap := make(map[string]*KMS)
 	for _, seal := range seals {
 		if _, ok := priorityMap[seal.Priority]; ok {
 			return multierror.Prefix(fmt.Errorf("multiple seals found with priority %d; priority must be unique", seal.Priority), fmt.Sprintf("%s", blockName))
 		}
+		if _, ok := nameMap[seal.Name]; ok {
+			return multierror.Prefix(fmt.Errorf("multiple seals found with name %s; name must be unique", seal.Name), fmt.Sprintf("%s", blockName))
+		}
 
 		priorityMap[seal.Priority] = seal
+		nameMap[seal.Name] = seal
 	}
 
 	*result = append(*result, seals...)
@@ -420,7 +425,7 @@ func getEnvConfig(kms *KMS) map[string]string {
 	}
 
 	for envVar, configName := range wrapperEnvVars {
-		val := os.Getenv(fmt.Sprintf("%s%s", envVar, suffix))
+		val := os.Getenv(envVar + suffix)
 		if val != "" {
 			envValues[configName] = val
 		}
