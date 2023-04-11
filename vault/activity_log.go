@@ -1895,6 +1895,17 @@ func newProcessCounts() *processCounts {
 	}
 }
 
+func (p *processCounts) delete(client *activity.EntityRecord) {
+	if !p.contains(client) {
+		return
+	}
+	if client.NonEntity {
+		delete(p.NonEntities, client.ClientID)
+	} else {
+		delete(p.Entities, client.ClientID)
+	}
+}
+
 func (p *processCounts) add(client *activity.EntityRecord) {
 	if client.NonEntity {
 		p.NonEntities[client.ClientID] = struct{}{}
@@ -1926,11 +1937,21 @@ func (p *processMount) add(client *activity.EntityRecord) {
 	p.Counts.add(client)
 }
 
+func (p *processMount) delete(client *activity.EntityRecord) {
+	p.Counts.delete(client)
+}
+
 func (s summaryByMount) add(client *activity.EntityRecord) {
 	if _, present := s[client.MountAccessor]; !present {
 		s[client.MountAccessor] = newProcessMount()
 	}
 	s[client.MountAccessor].add(client)
+}
+
+func (s summaryByMount) delete(client *activity.EntityRecord) {
+	if m, present := s[client.MountAccessor]; present {
+		m.delete(client)
+	}
 }
 
 type processByNamespace struct {
@@ -1950,11 +1971,22 @@ func (p *processByNamespace) add(client *activity.EntityRecord) {
 	p.Mounts.add(client)
 }
 
+func (p *processByNamespace) delete(client *activity.EntityRecord) {
+	p.Counts.delete(client)
+	p.Mounts.delete(client)
+}
+
 func (s summaryByNamespace) add(client *activity.EntityRecord) {
 	if _, present := s[client.NamespaceID]; !present {
 		s[client.NamespaceID] = newByNamespace()
 	}
 	s[client.NamespaceID].add(client)
+}
+
+func (s summaryByNamespace) delete(client *activity.EntityRecord) {
+	if n, present := s[client.NamespaceID]; present {
+		n.delete(client)
+	}
 }
 
 type processNewClients struct {
@@ -1972,6 +2004,11 @@ func newProcessNewClients() *processNewClients {
 func (p *processNewClients) add(client *activity.EntityRecord) {
 	p.Counts.add(client)
 	p.Namespaces.add(client)
+}
+
+func (p *processNewClients) delete(client *activity.EntityRecord) {
+	p.Counts.delete(client)
+	p.Namespaces.delete(client)
 }
 
 type processMonth struct {
@@ -2042,31 +2079,9 @@ func (a *ActivityLog) handleEntitySegment(l *activity.EntityActivityLog, segment
 				continue
 			}
 
-			newClients := opts.byMonth[next].NewClients
-
-			// Remove the client from the top level counts within the month.
-			if e.NonEntity {
-				delete(newClients.Counts.NonEntities, e.ClientID)
-			} else {
-				delete(newClients.Counts.Entities, e.ClientID)
-			}
-
-			if _, present := newClients.Namespaces[e.NamespaceID]; present {
-				// Remove the client from the namespace within the month.
-				if e.NonEntity {
-					delete(newClients.Namespaces[e.NamespaceID].Counts.NonEntities, e.ClientID)
-				} else {
-					delete(newClients.Namespaces[e.NamespaceID].Counts.Entities, e.ClientID)
-				}
-				if _, present := newClients.Namespaces[e.NamespaceID].Mounts[e.MountAccessor]; present {
-					// Remove the client from the mount within the namespace within the month.
-					if e.NonEntity {
-						delete(newClients.Namespaces[e.NamespaceID].Mounts[e.MountAccessor].Counts.NonEntities, e.ClientID)
-					} else {
-						delete(newClients.Namespaces[e.NamespaceID].Mounts[e.MountAccessor].Counts.Entities, e.ClientID)
-					}
-				}
-			}
+			// delete from the new clients map for the next month
+			// this will handle deleting from the per-namespace and per-mount maps of NewClients
+			opts.byMonth[next].NewClients.delete(e)
 		}
 	}
 
