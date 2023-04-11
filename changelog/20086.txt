@@ -1,0 +1,4 @@
+```release-note:improvement
+api: `/sys/internal/counters/config` endpoint now contains read-only
+`reporting_enabled` and `billing_start_time` fields.
+```
