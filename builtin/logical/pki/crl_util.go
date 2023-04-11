@@ -1480,11 +1480,23 @@ func buildAnyUnifiedCRLs(
 	// (and potentially more) in it; when we're done writing the delta CRL,
 	// we'll write this serial as a sentinel to see if we need to rebuild it
 	// in the future.
-	var lastDeltaSerial string
+	//
+	// We need to do this per-cluster.
+	lastDeltaSerial := map[string]string{}
 	if isDelta {
-		lastDeltaSerial, err = getLastWALSerial(sc, unifiedDeltaWALLastRevokedSerial)
+		clusters, err := sc.Storage.List(sc.Context, unifiedDeltaWALPrefix)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error listing clusters for unified delta WAL building: %w", err)
+		}
+
+		for index, cluster := range clusters {
+			path := unifiedDeltaWALPrefix + cluster + deltaWALLastRevokedSerialName
+			serial, err := getLastWALSerial(sc, path)
+			if err != nil {
+				return nil, fmt.Errorf("error getting last written Delta WAL serial for cluster (%v / %v): %w", index, cluster, err)
+			}
+
+			lastDeltaSerial[cluster] = serial
 		}
 	}
 
@@ -1555,12 +1567,20 @@ func buildAnyUnifiedCRLs(
 		// for a while.
 		sc.Backend.crlBuilder.lastDeltaRebuildCheck = time.Now()
 
-		if len(lastDeltaSerial) > 0 {
-			// When we have a last delta serial, write out the relevant info
-			// so we can skip extra CRL rebuilds.
-			deltaInfo := lastDeltaInfo{Serial: lastDeltaSerial}
+		// Persist all of our known last revoked serial numbers here, as the
+		// last seen serial during build. This will allow us to detect if any
+		// new revocations have occurred, forcing us to rebuild the delta CRL.
+		for cluster, serial := range lastDeltaSerial {
+			if len(serial) == 0 {
+				continue
+			}
 
-			lastDeltaBuildEntry, err := logical.StorageEntryJSON(unifiedDeltaWALLastBuildSerial, deltaInfo)
+			// Make sure to use the cluster-specific path. Since we're on the
+			// active node of the primary cluster, we own this entry and can
+			// safely write it.
+			path := unifiedDeltaWALPrefix + cluster + deltaWALLastBuildSerialName
+			deltaInfo := lastDeltaInfo{Serial: serial}
+			lastDeltaBuildEntry, err := logical.StorageEntryJSON(path, deltaInfo)
 			if err != nil {
 				return nil, fmt.Errorf("error creating last delta CRL rebuild serial entry: %w", err)
 			}
