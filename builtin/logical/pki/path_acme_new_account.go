@@ -12,6 +12,10 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+func uuidNameRegex(name string) string {
+	return fmt.Sprintf("(?P<%s>[[:alnum:]]{8}-[[:alnum:]]{4}-[[:alnum:]]{4}-[[:alnum:]]{4}-[[:alnum:]]{12}?)", name)
+}
+
 func pathAcmeRootNewAccount(b *backend) *framework.Path {
 	return patternAcmeNewAccount(b, "acme/new-account")
 }
@@ -31,21 +35,21 @@ func pathAcmeIssuerAndRoleNewAccount(b *backend) *framework.Path {
 }
 
 func pathAcmeRootUpdateAccount(b *backend) *framework.Path {
-	return patternAcmeNewAccount(b, "acme/account/"+framework.MatchAllRegex("kid"))
+	return patternAcmeNewAccount(b, "acme/account/"+uuidNameRegex("kid"))
 }
 
 func pathAcmeRoleUpdateAccount(b *backend) *framework.Path {
-	return patternAcmeNewAccount(b, "roles/"+framework.GenericNameRegex("role")+"/acme/account/"+framework.MatchAllRegex("kid"))
+	return patternAcmeNewAccount(b, "roles/"+framework.GenericNameRegex("role")+"/acme/account/"+uuidNameRegex("kid"))
 }
 
 func pathAcmeIssuerUpdateAccount(b *backend) *framework.Path {
-	return patternAcmeNewAccount(b, "issuer/"+framework.GenericNameRegex(issuerRefParam)+"/acme/account/"+framework.MatchAllRegex("kid"))
+	return patternAcmeNewAccount(b, "issuer/"+framework.GenericNameRegex(issuerRefParam)+"/acme/account/"+uuidNameRegex("kid"))
 }
 
 func pathAcmeIssuerAndRoleUpdateAccount(b *backend) *framework.Path {
 	return patternAcmeNewAccount(b,
 		"issuer/"+framework.GenericNameRegex(issuerRefParam)+
-			"/roles/"+framework.GenericNameRegex("role")+"/acme/account/"+framework.MatchAllRegex("kid"))
+			"/roles/"+framework.GenericNameRegex("role")+"/acme/account/"+uuidNameRegex("kid"))
 }
 
 func addFieldsForACMEPath(fields map[string]*framework.FieldSchema, pattern string) map[string]*framework.FieldSchema {
@@ -252,19 +256,21 @@ func (b *backend) acmeNewAccountHandler(acmeCtx *acmeContext, r *logical.Request
 
 	// We have two paths here: search or create.
 	if onlyReturnExisting {
-		return b.acmeNewAccountSearchHandler(acmeCtx, r, fields, userCtx, data)
+		return b.acmeNewAccountSearchHandler(acmeCtx, userCtx)
 	}
 
 	// Pass through the /new-account API calls to this specific handler as its requirements are different
 	// from the account update handler.
 	if strings.HasSuffix(r.Path, "/new-account") {
-		return b.acmeNewAccountCreateHandler(acmeCtx, r, fields, userCtx, data, contacts, termsOfServiceAgreed)
+		return b.acmeNewAccountCreateHandler(acmeCtx, userCtx, contacts, termsOfServiceAgreed)
 	}
 
 	return b.acmeNewAccountUpdateHandler(acmeCtx, userCtx, contacts, status)
 }
 
-func formatAccountResponse(location string, acct *acmeAccount) *logical.Response {
+func formatAccountResponse(acmeCtx *acmeContext, acct *acmeAccount) *logical.Response {
+	location := acmeCtx.baseUrl.String() + "account/" + acct.KeyId
+
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"status": acct.Status,
@@ -282,18 +288,19 @@ func formatAccountResponse(location string, acct *acmeAccount) *logical.Response
 	return resp
 }
 
-func (b *backend) acmeNewAccountSearchHandler(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}) (*logical.Response, error) {
-	if userCtx.Existing || b.acmeState.DoesAccountExist(acmeCtx, userCtx.Kid) {
-		// This account exists; return its details. It would be slightly
-		// weird to specify a kid in the request (and not use an explicit
-		// jwk here), but we might as well support it too.
-		account, err := b.acmeState.LoadAccount(acmeCtx, userCtx.Kid)
-		if err != nil {
-			return nil, fmt.Errorf("error loading account: %w", err)
-		}
+func (b *backend) acmeNewAccountSearchHandler(acmeCtx *acmeContext, userCtx *jwsCtx) (*logical.Response, error) {
+	thumbprint, err := userCtx.GetKeyThumbprint()
+	if err != nil {
+		return nil, fmt.Errorf("failed generating thumbprint for key: %w", err)
+	}
 
-		location := acmeCtx.baseUrl.String() + "account/" + userCtx.Kid
-		return formatAccountResponse(location, account), nil
+	account, err := b.acmeState.LoadAccountByKey(acmeCtx, thumbprint)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load account by thumbprint: %w", err)
+	}
+
+	if account != nil {
+		return formatAccountResponse(acmeCtx, account), nil
 	}
 
 	// Per RFC 8555 Section 7.3.1. Finding an Account URL Given a Key:
@@ -304,14 +311,24 @@ func (b *backend) acmeNewAccountSearchHandler(acmeCtx *acmeContext, r *logical.R
 	return nil, fmt.Errorf("An account with this key does not exist: %w", ErrAccountDoesNotExist)
 }
 
-func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}, contact []string, termsOfServiceAgreed bool) (*logical.Response, error) {
+func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, userCtx *jwsCtx, contact []string, termsOfServiceAgreed bool) (*logical.Response, error) {
 	if userCtx.Existing {
 		return nil, fmt.Errorf("cannot submit to newAccount with 'kid': %w", ErrMalformed)
 	}
 
 	// If the account already exists, return the existing one.
-	if b.acmeState.DoesAccountExist(acmeCtx, userCtx.Kid) {
-		return b.acmeNewAccountSearchHandler(acmeCtx, r, fields, userCtx, data)
+	thumbprint, err := userCtx.GetKeyThumbprint()
+	if err != nil {
+		return nil, fmt.Errorf("failed generating thumbprint for key: %w", err)
+	}
+
+	accountByKey, err := b.acmeState.LoadAccountByKey(acmeCtx, thumbprint)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load account by thumbprint: %w", err)
+	}
+
+	if accountByKey != nil {
+		return formatAccountResponse(acmeCtx, accountByKey), nil
 	}
 
 	// TODO: Limit this only when ToS are required or set by the operator, since we don't have a
@@ -320,13 +337,12 @@ func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, r *logical.R
 	//	return nil, fmt.Errorf("terms of service not agreed to: %w", ErrUserActionRequired)
 	//}
 
-	account, err := b.acmeState.CreateAccount(acmeCtx, userCtx, contact, termsOfServiceAgreed)
+	accountByKid, err := b.acmeState.CreateAccount(acmeCtx, userCtx, thumbprint, contact, termsOfServiceAgreed)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create account: %w", err)
 	}
 
-	location := acmeCtx.baseUrl.String() + "account/" + userCtx.Kid
-	resp := formatAccountResponse(location, account)
+	resp := formatAccountResponse(acmeCtx, accountByKid)
 
 	// Per RFC 8555 Section 7.3. Account Management:
 	//
@@ -341,13 +357,13 @@ func (b *backend) acmeNewAccountUpdateHandler(acmeCtx *acmeContext, userCtx *jws
 		return nil, fmt.Errorf("cannot submit to account updates without a 'kid': %w", ErrMalformed)
 	}
 
-	if !b.acmeState.DoesAccountExist(acmeCtx, userCtx.Kid) {
-		return nil, fmt.Errorf("an account with this key does not exist: %w", ErrAccountDoesNotExist)
-	}
-
 	account, err := b.acmeState.LoadAccount(acmeCtx, userCtx.Kid)
 	if err != nil {
 		return nil, fmt.Errorf("error loading account: %w", err)
+	}
+
+	if account == nil {
+		return nil, fmt.Errorf("account not found: %w", ErrAccountDoesNotExist)
 	}
 
 	// Per RFC 8555 7.3.6 Account deactivation, if we were previously deactivated, we should return
@@ -380,7 +396,6 @@ func (b *backend) acmeNewAccountUpdateHandler(acmeCtx *acmeContext, userCtx *jws
 		}
 	}
 
-	location := acmeCtx.baseUrl.String() + "account/" + userCtx.Kid
-	resp := formatAccountResponse(location, account)
+	resp := formatAccountResponse(acmeCtx, account)
 	return resp, nil
 }

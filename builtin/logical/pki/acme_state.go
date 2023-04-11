@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -19,13 +18,19 @@ const (
 	nonceExpiry = 15 * time.Minute
 
 	// Path Prefixes
-	acmePathPrefix    = "acme/"
-	acmeAccountPrefix = acmePathPrefix + "accounts/"
+	acmePathPrefix       = "acme/"
+	acmeAccountPrefix    = acmePathPrefix + "accounts/"
+	acmeThumbprintPrefix = acmePathPrefix + "account-thumbprints/"
 )
 
 type acmeState struct {
 	nextExpiry *atomic.Int64
 	nonces     *sync.Map // map[string]time.Time
+}
+
+type acmeThumbprint struct {
+	Kid        string `json:"kid"`
+	Thumbprint string `json:"-"`
 }
 
 func NewACMEState() *acmeState {
@@ -127,7 +132,7 @@ type acmeAccount struct {
 	Jwk                  []byte            `json:"jwk"`
 }
 
-func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, contact []string, termsOfServiceAgreed bool) (*acmeAccount, error) {
+func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, thumbprint string, contact []string, termsOfServiceAgreed bool) (*acmeAccount, error) {
 	acct := &acmeAccount{
 		KeyId:                c.Kid,
 		Contact:              contact,
@@ -135,10 +140,7 @@ func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, contact []string, 
 		Jwk:                  c.Jwk,
 		Status:               StatusValid,
 	}
-
-	kid := cleanKid(c.Kid)
-
-	json, err := logical.StorageEntryJSON(acmeAccountPrefix+kid, acct)
+	json, err := logical.StorageEntryJSON(acmeAccountPrefix+c.Kid, acct)
 	if err != nil {
 		return nil, fmt.Errorf("error creating account entry: %w", err)
 	}
@@ -147,13 +149,23 @@ func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, contact []string, 
 		return nil, fmt.Errorf("error writing account entry: %w", err)
 	}
 
+	thumbPrint := &acmeThumbprint{
+		Kid:        c.Kid,
+		Thumbprint: thumbprint,
+	}
+	thumbPrintEntry, err := logical.StorageEntryJSON(acmeThumbprintPrefix+thumbprint, thumbPrint)
+	if err != nil {
+		return nil, fmt.Errorf("error generating account thumbprint entry: %w", err)
+	}
+
+	if err := ac.sc.Storage.Put(ac.sc.Context, thumbPrintEntry); err != nil {
+		return nil, fmt.Errorf("error writing account thumbprint entry: %w", err)
+	}
 	return acct, nil
 }
 
 func (a *acmeState) UpdateAccount(ac *acmeContext, acct *acmeAccount) error {
-	kid := cleanKid(acct.KeyId)
-
-	json, err := logical.StorageEntryJSON(acmeAccountPrefix+kid, acct)
+	json, err := logical.StorageEntryJSON(acmeAccountPrefix+acct.KeyId, acct)
 	if err != nil {
 		return fmt.Errorf("error creating account entry: %w", err)
 	}
@@ -165,26 +177,19 @@ func (a *acmeState) UpdateAccount(ac *acmeContext, acct *acmeAccount) error {
 	return nil
 }
 
-func cleanKid(keyID string) string {
-	pieces := strings.Split(keyID, "/")
-	return pieces[len(pieces)-1]
-}
-
 func (a *acmeState) LoadAccount(ac *acmeContext, keyID string) (*acmeAccount, error) {
-	kid := cleanKid(keyID)
-
-	entry, err := ac.sc.Storage.Get(ac.sc.Context, acmeAccountPrefix+kid)
+	entry, err := ac.sc.Storage.Get(ac.sc.Context, acmeAccountPrefix+keyID)
 	if err != nil {
 		return nil, fmt.Errorf("error loading account: %w", err)
 	}
 	if entry == nil {
-		return nil, fmt.Errorf("account not found: %w", ErrMalformed)
+		return nil, nil
 	}
 
 	var acct acmeAccount
 	err = entry.DecodeJSON(&acct)
 	if err != nil {
-		return nil, fmt.Errorf("error loading account: %w", err)
+		return nil, fmt.Errorf("error decoding account: %w", err)
 	}
 
 	acct.KeyId = keyID
@@ -192,15 +197,36 @@ func (a *acmeState) LoadAccount(ac *acmeContext, keyID string) (*acmeAccount, er
 	return &acct, nil
 }
 
-func (a *acmeState) DoesAccountExist(ac *acmeContext, keyId string) bool {
-	account, err := a.LoadAccount(ac, keyId)
-	return err == nil && account != nil
+func (a *acmeState) LoadAccountByKey(ac *acmeContext, keyThumbprint string) (*acmeAccount, error) {
+	thumbprintEntry, err := ac.sc.Storage.Get(ac.sc.Context, acmeThumbprintPrefix+keyThumbprint)
+	if err != nil {
+		return nil, fmt.Errorf("failed loading acme thumbprintEntry for key: %w", err)
+	}
+	if thumbprintEntry == nil {
+		return nil, nil
+	}
+
+	var thumbprint acmeThumbprint
+	err = thumbprintEntry.DecodeJSON(&thumbprint)
+	if err != nil {
+		return nil, fmt.Errorf("failed decoding thumbprint entry: %s: %w", keyThumbprint, err)
+	}
+
+	if len(thumbprint.Kid) == 0 {
+		return nil, fmt.Errorf("empty kid within thumbprint entry: %s", keyThumbprint)
+	}
+
+	return a.LoadAccount(ac, thumbprint.Kid)
 }
 
-func (a *acmeState) LoadJWK(ac *acmeContext, keyID string) ([]byte, error) {
-	key, err := a.LoadAccount(ac, keyID)
+func (a *acmeState) LoadJWK(ac *acmeContext, keyId string) ([]byte, error) {
+	key, err := a.LoadAccount(ac, keyId)
 	if err != nil {
 		return nil, err
+	}
+
+	if key == nil {
+		return nil, fmt.Errorf("account not found: %w", ErrAccountDoesNotExist)
 	}
 
 	if len(key.Jwk) == 0 {
