@@ -535,49 +535,70 @@ func (cb *crlBuilder) _shouldRebuildUnifiedCRLs(sc *storageContext, override boo
 		return false, nil
 	}
 
+	// If we're overriding whether we should build Delta CRLs, always return
+	// true, even if storage errors might've happen.
+	if override {
+		return true, nil
+	}
+
 	// Fetch two storage entries to see if we actually need to do this
-	// rebuild, given we're within the window.
-	lastWALEntry, err := sc.Storage.Get(sc.Context, unifiedDeltaWALLastRevokedSerial)
-	if err != nil || !override && (lastWALEntry == nil || lastWALEntry.Value == nil) {
-		// If this entry does not exist, we don't need to rebuild the
-		// delta WAL due to the expiration assumption above. There must
-		// not have been any new revocations. Since err should be nil
-		// in this case, we can safely return it.
-		return false, err
-	}
-
-	lastBuildEntry, err := sc.Storage.Get(sc.Context, unifiedDeltaWALLastBuildSerial)
+	// rebuild, given we're within the window. We need to fetch these
+	// two entries per cluster.
+	clusters, err := sc.Storage.List(sc.Context, unifiedDeltaWALPrefix)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to get the list of clusters having written Delta WALs: %w", err)
 	}
 
-	if !override && lastBuildEntry != nil && lastBuildEntry.Value != nil {
-		// If the last build entry doesn't exist, we still want to build a
-		// new delta WAL, since this could be our very first time doing so.
-		//
+	// If any cluster tells us to rebuild, we should rebuild.
+	shouldRebuild := false
+	for index, cluster := range clusters {
+		prefix := unifiedDeltaWALPrefix + cluster
+		clusterUnifiedLastRevokedWALEntry := prefix + deltaWALLastRevokedSerialName
+		clusterUnifiedLastBuiltWALEntry := prefix + deltaWALLastBuildSerialName
+
+		lastWALEntry, err := sc.Storage.Get(sc.Context, clusterUnifiedLastRevokedWALEntry)
+		if err != nil {
+			return false, fmt.Errorf("failed fetching last revoked WAL entry for cluster (%v / %v): %w", index, cluster, err)
+		}
+
+		if lastWALEntry == nil || lastWALEntry.Value == nil {
+			continue
+		}
+
+		lastBuildEntry, err := sc.Storage.Get(sc.Context, clusterUnifiedLastBuiltWALEntry)
+		if err != nil {
+			return false, fmt.Errorf("failed fetching last built CRL WAL entry for cluster (%v / %v): %w", index, cluster, err)
+		}
+
+		if lastBuildEntry == nil || lastBuildEntry.Value == nil {
+			// If the last build entry doesn't exist, we still want to build a
+			// new delta WAL, since this could be our very first time doing so.
+			shouldRebuild = true
+			break
+		}
+
 		// Otherwise, here, now that we know it exists, we want to check this
 		// value against the other value. Since we previously guarded the WAL
 		// entry being non-empty, we're good to decode everything within this
 		// guard.
 		var walInfo lastWALInfo
 		if err := lastWALEntry.DecodeJSON(&walInfo); err != nil {
-			return false, err
+			return false, fmt.Errorf("failed decoding last revoked WAL entry for cluster (%v / %v): %w", index, cluster, err)
 		}
 
 		var deltaInfo lastDeltaInfo
 		if err := lastBuildEntry.DecodeJSON(&deltaInfo); err != nil {
-			return false, err
+			return false, fmt.Errorf("failed decoding last built CRL WAL entry for cluster (%v / %v): %w", index, cluster, err)
 		}
 
-		// Here, everything decoded properly and we know that no new certs
-		// have been revoked since we built this last delta CRL. We can exit
-		// without rebuilding then.
-		if walInfo.Serial == deltaInfo.Serial {
-			return false, nil
+		if walInfo.Serial != deltaInfo.Serial {
+			shouldRebuild = true
+			break
 		}
 	}
 
-	return true, nil
+	// No errors occurred, so return the result.
+	return shouldRebuild, nil
 }
 
 func (cb *crlBuilder) rebuildDeltaCRLs(sc *storageContext, forceNew bool) error {
