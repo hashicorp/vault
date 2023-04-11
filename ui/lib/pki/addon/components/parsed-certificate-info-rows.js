@@ -8,7 +8,7 @@ import { parsedParameterKeys } from 'vault/utils/parse-pki-cert-oids';
  * the value is returned from the parse cert util, because `common_name` is important to PKI and we render it at the top.
  *
  * @example ```js
- * <ParsedCertificateInfoRows @parsedCertificate={{@model.parsedCertificate}} />
+ * <ParsedCertificateInfoRows @model={{@model.parsedCertificate}} />
  * ```
  *
  * @param {object} model - object of parsed attributes from parse-pki-cert util
