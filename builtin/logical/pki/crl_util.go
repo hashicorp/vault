@@ -367,7 +367,28 @@ func (cb *crlBuilder) getPresentLocalDeltaWALForClearing(sc *storageContext) ([]
 }
 
 func (cb *crlBuilder) getPresentUnifiedDeltaWALForClearing(sc *storageContext) ([]string, error) {
-	return cb._getPresentDeltaWALForClearing(sc, unifiedDeltaWALPath)
+	walClusters, err := sc.Storage.List(sc.Context, unifiedDeltaWALPrefix)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching list of clusters with delta WAL entries: %w", err)
+	}
+
+	var allPaths []string
+	for index, cluster := range walClusters {
+		prefix := unifiedDeltaWALPrefix + cluster
+		clusterPaths, err := cb._getPresentDeltaWALForClearing(sc, prefix)
+		if err != nil {
+			return nil, fmt.Errorf("error fetching delta WAL entries for cluster (%v / %v): %w", index, cluster, err)
+		}
+
+		// Here, we don't want to include the unifiedDeltaWALPrefix because
+		// clearUnifiedDeltaWAL handles that for us. Instead, just include
+		// the cluster identifier.
+		for _, clusterPath := range clusterPaths {
+			allPaths = append(allPaths, cluster+clusterPath)
+		}
+	}
+
+	return allPaths, nil
 }
 
 func (cb *crlBuilder) _clearDeltaWAL(sc *storageContext, walSerials []string, path string) error {
