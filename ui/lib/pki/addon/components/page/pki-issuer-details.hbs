@@ -94,9 +94,7 @@
           </h2>
         {{/if}}
         {{#each fields as |attr|}}
-          {{#if (eq attr.name "parsedCertificate")}}
-            <ParsedCertificateInfoRows @model={{@issuer.parsedCertificate}} />
-          {{else if attr.options.masked}}
+          {{#if attr.options.masked}}
             <InfoTableRow @label={{or attr.options.label (humanize (dasherize attr.name))}} @value={{get @issuer attr.name}}>
               <MaskedInput
                 @name={{or attr.options.label (humanize (dasherize attr.name))}}
@@ -123,6 +121,9 @@
             />
           {{/if}}
         {{/each}}
+        {{#if (eq group "default")}}
+          <ParsedCertificateInfoRows @model={{@issuer.parsedCertificate}} />
+        {{/if}}
       </div>
     {{/each-in}}
   {{/each}}

@@ -18,13 +18,8 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
  * render if included in certDisplayFields below).
  */
 
-const certDisplayFields = [
-  'certificate',
-  'commonName',
-  'revocationTime',
-  'serialNumber',
-  'parsedCertificate',
-];
+// also displays parsedCertificate values in the template
+const certDisplayFields = ['certificate', 'commonName', 'revocationTime', 'serialNumber'];
 
 @withFormFields(certDisplayFields)
 export default class PkiCertificateBaseModel extends Model {

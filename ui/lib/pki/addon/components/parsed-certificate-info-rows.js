@@ -2,7 +2,16 @@ import Component from '@glimmer/component';
 import { parsedParameterKeys } from 'vault/utils/parse-pki-cert-oids';
 
 /**
- * Expects to have parsedCertificate from parse-pki-cert util passed in, and will render attributes if values exist
+ * @module ParsedCertificateInfoRowsComponent
+ * Renders attributes parsed from a PKI certificate (provided from parse-pki-cert util). It will only render rows for
+ * defined values that match `parsedParameterKeys` imported from the helper. It never renders common_name, even though
+ * the value is returned from the parse cert util, because `common_name` is important to PKI and we render it at the top.
+ *
+ * @example ```js
+ * <ParsedCertificateInfoRows @parsedCertificate={{@model.parsedCertificate}} />
+ * ```
+ *
+ * @param {object} parsedCertificate - object of parsed attributes from parse-pki-cert util
  */
 export default class ParsedCertificateInfoRowsComponent extends Component {
   get possibleFields() {

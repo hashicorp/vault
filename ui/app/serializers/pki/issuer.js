@@ -4,21 +4,19 @@
  */
 
 import { parseCertificate } from 'vault/utils/parse-pki-cert';
-import { parsedParameters } from 'vault/utils/parse-pki-cert-oids';
 import ApplicationSerializer from '../application';
 
 export default class PkiIssuerSerializer extends ApplicationSerializer {
   primaryKey = 'issuer_id';
 
-  constructor() {
-    super(...arguments);
-    // remove following attrs from serialization
-    const attrs = ['caChain', 'certificate', 'issuerId', 'keyId', ...parsedParameters];
-    this.attrs = attrs.reduce((attrObj, attr) => {
-      attrObj[attr] = { serialize: false };
-      return attrObj;
-    }, {});
-  }
+  attrs = {
+    caChain: { serialize: false },
+    certificate: { serialize: false },
+    issuerId: { serialize: false },
+    keyId: { serialize: false },
+    parsedCertificate: { serialize: false },
+    commonName: { serialize: false },
+  };
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     if (payload.data.certificate) {

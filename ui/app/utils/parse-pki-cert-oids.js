@@ -2,10 +2,8 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: MPL-2.0
  */
-import { camelize } from '@ember/string';
 
 //* lookup OIDs: http://oid-info.com/basic-search.htm
-
 export const SUBJECT_OIDs = {
   common_name: '2.5.4.3',
   subject_serial_number: '2.5.4.5',
@@ -86,7 +84,3 @@ export const parsedParameterKeys = [
   'not_valid_before',
   'not_valid_after',
 ];
-
-// returns array of strings that correspond to model attributes
-// can be passed to display views in details pages containing certificates
-export const parsedParameters = parsedParameterKeys.map((key) => camelize(key));

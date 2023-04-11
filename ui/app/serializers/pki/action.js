@@ -21,7 +21,6 @@ export default class PkiActionSerializer extends ApplicationSerializer {
       const data = {
         ...payload.data,
         common_name: parsedCert.common_name,
-        ...parsedCert,
         parsed_certificate: parsedCert,
       };
       return super.normalizeResponse(store, primaryModelClass, { ...payload, data }, id, requestType);

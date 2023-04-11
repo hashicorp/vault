@@ -19,7 +19,8 @@ const inputFields = [
 ];
 const displayFields = [
   {
-    default: ['certificate', 'caChain', 'commonName', 'issuerName', 'issuerId', 'keyId', 'parsedCertificate'],
+    default: ['certificate', 'caChain', 'commonName', 'issuerName', 'issuerId', 'keyId'],
+    // also displays parsedCertificate values in the template
   },
   { 'Issuer URLs': issuerUrls },
 ];
