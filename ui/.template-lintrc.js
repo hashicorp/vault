@@ -47,7 +47,7 @@ module.exports = {
     },
     'require-input-label': 'off',
   },
-  ignore: ['lib/story-md', 'tests/**', 'app/templates/components/console/*'],
+  ignore: ['lib/story-md', 'tests/**'],
   // ember language server vscode extension does not currently respect the ignore field
   // override all rules manually as workaround to align with cli
   overrides: [
