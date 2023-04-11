@@ -25,6 +25,10 @@
   vertical-align: top;
   white-space: nowrap;
 
+  &.button {
+    height: $size-2; // in older parts of the code, like shamir-modal-flow this class is not a button. In newer parts of the code it is and the height needs to match the heigh of a button (2.5rem).
+  }
+
   &:disabled {
     cursor: not-allowed;
   }
