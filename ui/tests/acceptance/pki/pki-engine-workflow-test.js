@@ -344,6 +344,7 @@ module('Acceptance | pki workflow', function (hooks) {
       await logout.visit();
     });
     test('details view renders correct number of info items', async function (assert) {
+      assert.expect(13);
       await authPage.login(this.pkiAdminToken);
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       assert.dom(SELECTORS.issuersTab).exists('Issuers tab is present');
@@ -356,9 +357,13 @@ module('Acceptance | pki workflow', function (hooks) {
         `/vault/secrets/${this.mountPath}/pki/issuers/my-issuer/details`
       );
       assert.dom(SELECTORS.issuerDetails.title).hasText('View issuer certificate');
-      assert
-        .dom(`${SELECTORS.issuerDetails.defaultGroup} ${SELECTORS.issuerDetails.row}`)
-        .exists({ count: 13 }, 'Renders 13 info table items under default group');
+      ['Certificate', 'CA Chain', 'Common name', 'Issuer name', 'Issuer ID', 'Default key ID'].forEach(
+        (label) => {
+          assert
+            .dom(`${SELECTORS.issuerDetails.defaultGroup} ${SELECTORS.issuerDetails.valueByName(label)}`)
+            .exists({ count: 1 }, `${label} value rendered`);
+        }
+      );
       assert
         .dom(`${SELECTORS.issuerDetails.urlsGroup} ${SELECTORS.issuerDetails.row}`)
         .exists({ count: 3 }, 'Renders 3 info table items under URLs group');

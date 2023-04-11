@@ -6,13 +6,27 @@
 import { underscore } from '@ember/string';
 import { keyParamsByType } from 'pki/utils/action-params';
 import ApplicationSerializer from '../application';
+import { parseCertificate } from 'vault/utils/parse-pki-cert';
 
 export default class PkiActionSerializer extends ApplicationSerializer {
   attrs = {
     customTtl: { serialize: false },
     type: { serialize: false },
-    subjectSerialNumber: { serialize: false },
   };
+
+  normalizeResponse(store, primaryModelClass, payload, id, requestType) {
+    if (payload.data.certificate) {
+      // Parse certificate back from the API and add to payload
+      const parsedCert = parseCertificate(payload.data.certificate);
+      const data = {
+        ...payload.data,
+        common_name: parsedCert.common_name,
+        parsed_certificate: parsedCert,
+      };
+      return super.normalizeResponse(store, primaryModelClass, { ...payload, data }, id, requestType);
+    }
+    return super.normalizeResponse(...arguments);
+  }
 
   serialize(snapshot, requestType) {
     const data = super.serialize(snapshot);

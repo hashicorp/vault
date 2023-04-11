@@ -12,6 +12,7 @@ import { task } from 'ember-concurrency';
 import PkiCertificateSignIntermediate from 'vault/models/pki/certificate/sign-intermediate';
 import FlashMessageService from 'vault/services/flash-messages';
 import errorMessage from 'vault/utils/error-message';
+import { ValidationMap } from 'vault/vault/app-types';
 
 interface Args {
   onCancel: CallableFunction;
@@ -22,7 +23,7 @@ export default class PkiSignIntermediateFormComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
   @tracked errorBanner = '';
   @tracked inlineFormAlert = '';
-  @tracked modelValidations = null;
+  @tracked modelValidations: ValidationMap | null = null;
 
   @action cancel() {
     this.args.model.unloadRecord();
