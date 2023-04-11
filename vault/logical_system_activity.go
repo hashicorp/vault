@@ -96,12 +96,12 @@ func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 				"reporting_enabled": {
 					Type:        framework.TypeBool,
 					Default:     b.Core.censusLicensingEnabled,
-					Description: "Automated reporting of billing information true (enabled) or false (disabled).",
+					Description: "Automated reporting of billing information true (enabled) or false (disabled). [read-only]",
 				},
 				"billing_start_timestamp": {
 					Type:        framework.TypeTime,
 					Default:     b.Core.GetBillingStart(),
-					Description: "Billing start timestamp for automated reporting of billing information.",
+					Description: "Billing start timestamp for automated reporting of billing information. [read-only]",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["activity-config"][0]),
@@ -298,17 +298,6 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 	config, err := a.loadConfigOrDefault(ctx)
 	if err != nil {
 		return nil, err
-	}
-
-	// Handle attempts to update read-only fields
-	{
-		if _, ok := req.Data["reporting_enabled"]; ok {
-			return logical.ErrorResponse("reporting_enabled is a read-only field"), logical.ErrInvalidRequest
-		}
-
-		if _, ok := req.Data["billing_start_timestamp"]; ok {
-			return logical.ErrorResponse("billing_start_timestamp is a read-only field"), logical.ErrInvalidRequest
-		}
 	}
 
 	{
