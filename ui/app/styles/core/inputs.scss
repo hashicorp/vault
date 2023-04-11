@@ -40,6 +40,7 @@
   @include until($desktop) {
     font-size: 16px;
   }
+
   &::placeholder {
     opacity: 0.5;
   }
@@ -71,6 +72,7 @@
   padding-bottom: .625em;
   padding-top: .625em;
 }
+
 .textarea:not([rows]) {
   max-height: 600px;
   min-height: 120px;
