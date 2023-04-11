@@ -993,7 +993,7 @@ func revokeCert(sc *storageContext, config *crlConfig, cert *x509.Certificate) (
 		if ignoreErr != nil {
 			// Just log the error if we fail to write across clusters, a separate background
 			// thread will reattempt it later on as we have the local write done.
-			sc.Backend.Logger().Debug("Failed to write unified revocation entry, will re-attempt later",
+			sc.Backend.Logger().Error("Failed to write unified revocation entry, will re-attempt later",
 				"serial_number", colonSerial, "error", ignoreErr)
 			sc.Backend.unifiedTransferStatus.forceRun()
 		}
@@ -1043,8 +1043,12 @@ func writeRevocationDeltaWALs(sc *storageContext, config *crlConfig, hyphenSeria
 		// listing for the unified CRL rebuild, this revocation will not
 		// appear on either the main or the next delta CRL, but will need to
 		// wait for a subsequent complete CRL rebuild).
-		if err := writeSpecificRevocationDeltaWALs(sc, hyphenSerial, colonSerial, unifiedDeltaWALPath); err != nil {
-			return fmt.Errorf("failed to write cross-cluster delta WAL entry: %w", err)
+		if ignoredErr := writeSpecificRevocationDeltaWALs(sc, hyphenSerial, colonSerial, unifiedDeltaWALPath); ignoredErr != nil {
+			// Just log the error if we fail to write across clusters, a separate background
+			// thread will reattempt it later on as we have the local write done.
+			sc.Backend.Logger().Error("Failed to write cross-cluster delta WAL entry, will re-attempt later",
+				"serial_number", colonSerial, "error", ignoredErr)
+			sc.Backend.unifiedTransferStatus.forceRun()
 		}
 	}
 
