@@ -364,7 +364,28 @@ func (cb *crlBuilder) getPresentLocalDeltaWALForClearing(sc *storageContext) ([]
 }
 
 func (cb *crlBuilder) getPresentUnifiedDeltaWALForClearing(sc *storageContext) ([]string, error) {
-	return cb._getPresentDeltaWALForClearing(sc, unifiedDeltaWALPath)
+	walClusters, err := sc.Storage.List(sc.Context, unifiedDeltaWALPrefix)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching list of clusters with delta WAL entries: %w", err)
+	}
+
+	var allPaths []string
+	for index, cluster := range walClusters {
+		prefix := unifiedDeltaWALPrefix + cluster
+		clusterPaths, err := cb._getPresentDeltaWALForClearing(sc, prefix)
+		if err != nil {
+			return nil, fmt.Errorf("error fetching delta WAL entries for cluster (%v / %v): %w", index, cluster, err)
+		}
+
+		// Here, we don't want to include the unifiedDeltaWALPrefix because
+		// clearUnifiedDeltaWAL handles that for us. Instead, just include
+		// the cluster identifier.
+		for _, clusterPath := range clusterPaths {
+			allPaths = append(allPaths, cluster+clusterPath)
+		}
+	}
+
+	return allPaths, nil
 }
 
 func (cb *crlBuilder) _clearDeltaWAL(sc *storageContext, walSerials []string, path string) error {
@@ -511,49 +532,70 @@ func (cb *crlBuilder) _shouldRebuildUnifiedCRLs(sc *storageContext, override boo
 		return false, nil
 	}
 
+	// If we're overriding whether we should build Delta CRLs, always return
+	// true, even if storage errors might've happen.
+	if override {
+		return true, nil
+	}
+
 	// Fetch two storage entries to see if we actually need to do this
-	// rebuild, given we're within the window.
-	lastWALEntry, err := sc.Storage.Get(sc.Context, unifiedDeltaWALLastRevokedSerial)
-	if err != nil || !override && (lastWALEntry == nil || lastWALEntry.Value == nil) {
-		// If this entry does not exist, we don't need to rebuild the
-		// delta WAL due to the expiration assumption above. There must
-		// not have been any new revocations. Since err should be nil
-		// in this case, we can safely return it.
-		return false, err
-	}
-
-	lastBuildEntry, err := sc.Storage.Get(sc.Context, unifiedDeltaWALLastBuildSerial)
+	// rebuild, given we're within the window. We need to fetch these
+	// two entries per cluster.
+	clusters, err := sc.Storage.List(sc.Context, unifiedDeltaWALPrefix)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to get the list of clusters having written Delta WALs: %w", err)
 	}
 
-	if !override && lastBuildEntry != nil && lastBuildEntry.Value != nil {
-		// If the last build entry doesn't exist, we still want to build a
-		// new delta WAL, since this could be our very first time doing so.
-		//
+	// If any cluster tells us to rebuild, we should rebuild.
+	shouldRebuild := false
+	for index, cluster := range clusters {
+		prefix := unifiedDeltaWALPrefix + cluster
+		clusterUnifiedLastRevokedWALEntry := prefix + deltaWALLastRevokedSerialName
+		clusterUnifiedLastBuiltWALEntry := prefix + deltaWALLastBuildSerialName
+
+		lastWALEntry, err := sc.Storage.Get(sc.Context, clusterUnifiedLastRevokedWALEntry)
+		if err != nil {
+			return false, fmt.Errorf("failed fetching last revoked WAL entry for cluster (%v / %v): %w", index, cluster, err)
+		}
+
+		if lastWALEntry == nil || lastWALEntry.Value == nil {
+			continue
+		}
+
+		lastBuildEntry, err := sc.Storage.Get(sc.Context, clusterUnifiedLastBuiltWALEntry)
+		if err != nil {
+			return false, fmt.Errorf("failed fetching last built CRL WAL entry for cluster (%v / %v): %w", index, cluster, err)
+		}
+
+		if lastBuildEntry == nil || lastBuildEntry.Value == nil {
+			// If the last build entry doesn't exist, we still want to build a
+			// new delta WAL, since this could be our very first time doing so.
+			shouldRebuild = true
+			break
+		}
+
 		// Otherwise, here, now that we know it exists, we want to check this
 		// value against the other value. Since we previously guarded the WAL
 		// entry being non-empty, we're good to decode everything within this
 		// guard.
 		var walInfo lastWALInfo
 		if err := lastWALEntry.DecodeJSON(&walInfo); err != nil {
-			return false, err
+			return false, fmt.Errorf("failed decoding last revoked WAL entry for cluster (%v / %v): %w", index, cluster, err)
 		}
 
 		var deltaInfo lastDeltaInfo
 		if err := lastBuildEntry.DecodeJSON(&deltaInfo); err != nil {
-			return false, err
+			return false, fmt.Errorf("failed decoding last built CRL WAL entry for cluster (%v / %v): %w", index, cluster, err)
 		}
 
-		// Here, everything decoded properly and we know that no new certs
-		// have been revoked since we built this last delta CRL. We can exit
-		// without rebuilding then.
-		if walInfo.Serial == deltaInfo.Serial {
-			return false, nil
+		if walInfo.Serial != deltaInfo.Serial {
+			shouldRebuild = true
+			break
 		}
 	}
 
-	return true, nil
+	// No errors occurred, so return the result.
+	return shouldRebuild, nil
 }
 
 func (cb *crlBuilder) rebuildDeltaCRLs(sc *storageContext, forceNew bool) error {
@@ -979,8 +1021,20 @@ func revokeCert(sc *storageContext, config *crlConfig, cert *x509.Certificate) (
 	}
 	sc.Backend.incrementTotalRevokedCertificatesCount(certsCounted, revEntry.Key)
 
+	// From here on out, the certificate has been revoked locally. Any other
+	// persistence issues might still err, but any other failure messages
+	// should be added as warnings to the revocation.
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"revocation_time":         revInfo.RevocationTime,
+			"revocation_time_rfc3339": revInfo.RevocationTimeUTC.Format(time.RFC3339Nano),
+			"state":                   "revoked",
+		},
+	}
+
 	// If this flag is enabled after the fact, existing local entries will be published to
 	// the unified storage space through a periodic function.
+	failedWritingUnifiedCRL := false
 	if config.UnifiedCRL {
 		entry := &unifiedRevocationEntry{
 			SerialNumber:      colonSerial,
@@ -996,6 +1050,9 @@ func revokeCert(sc *storageContext, config *crlConfig, cert *x509.Certificate) (
 			sc.Backend.Logger().Error("Failed to write unified revocation entry, will re-attempt later",
 				"serial_number", colonSerial, "error", ignoreErr)
 			sc.Backend.unifiedTransferStatus.forceRun()
+
+			resp.AddWarning(fmt.Sprintf("Failed to write unified revocation entry, will re-attempt later: %v", err))
+			failedWritingUnifiedCRL = true
 		}
 	}
 
@@ -1014,26 +1071,20 @@ func revokeCert(sc *storageContext, config *crlConfig, cert *x509.Certificate) (
 			}
 		}
 	} else if config.EnableDelta {
-		if err := writeRevocationDeltaWALs(sc, config, hyphenSerial, colonSerial); err != nil {
+		if err := writeRevocationDeltaWALs(sc, config, resp, failedWritingUnifiedCRL, hyphenSerial, colonSerial); err != nil {
 			return nil, fmt.Errorf("failed to write WAL entries for Delta CRLs: %w", err)
 		}
 	}
 
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"revocation_time":         revInfo.RevocationTime,
-			"revocation_time_rfc3339": revInfo.RevocationTimeUTC.Format(time.RFC3339Nano),
-			"state":                   "revoked",
-		},
-	}, nil
+	return resp, nil
 }
 
-func writeRevocationDeltaWALs(sc *storageContext, config *crlConfig, hyphenSerial string, colonSerial string) error {
+func writeRevocationDeltaWALs(sc *storageContext, config *crlConfig, resp *logical.Response, failedWritingUnifiedCRL bool, hyphenSerial string, colonSerial string) error {
 	if err := writeSpecificRevocationDeltaWALs(sc, hyphenSerial, colonSerial, localDeltaWALPath); err != nil {
 		return fmt.Errorf("failed to write local delta WAL entry: %w", err)
 	}
 
-	if config.UnifiedCRL {
+	if config.UnifiedCRL && !failedWritingUnifiedCRL {
 		// We only need to write cross-cluster unified Delta WAL entries when
 		// it is enabled; in particular, because we rebuild CRLs when enabling
 		// this flag, any revocations that happened prior to enabling unified
@@ -1043,13 +1094,21 @@ func writeRevocationDeltaWALs(sc *storageContext, config *crlConfig, hyphenSeria
 		// listing for the unified CRL rebuild, this revocation will not
 		// appear on either the main or the next delta CRL, but will need to
 		// wait for a subsequent complete CRL rebuild).
+		//
+		// Lastly, we don't attempt this if the unified CRL entry failed to
+		// write, as we need that entry before the delta WAL entry will make
+		// sense.
 		if ignoredErr := writeSpecificRevocationDeltaWALs(sc, hyphenSerial, colonSerial, unifiedDeltaWALPath); ignoredErr != nil {
 			// Just log the error if we fail to write across clusters, a separate background
 			// thread will reattempt it later on as we have the local write done.
 			sc.Backend.Logger().Error("Failed to write cross-cluster delta WAL entry, will re-attempt later",
 				"serial_number", colonSerial, "error", ignoredErr)
 			sc.Backend.unifiedTransferStatus.forceRun()
+
+			resp.AddWarning(fmt.Sprintf("Failed to write cross-cluster delta WAL entry, will re-attempt later: %v", ignoredErr))
 		}
+	} else if failedWritingUnifiedCRL {
+		resp.AddWarning("Skipping cross-cluster delta WAL entry as cross-cluster revocation failed to write; will re-attempt later.")
 	}
 
 	return nil
@@ -1272,7 +1331,7 @@ func buildAnyCRLs(sc *storageContext, forceNew bool, isDelta bool) error {
 }
 
 func getLastWALSerial(sc *storageContext, path string) (string, error) {
-	lastWALEntry, err := sc.Storage.Get(sc.Context, localDeltaWALLastRevokedSerial)
+	lastWALEntry, err := sc.Storage.Get(sc.Context, path)
 	if err != nil {
 		return "", err
 	}
@@ -1435,11 +1494,23 @@ func buildAnyUnifiedCRLs(
 	// (and potentially more) in it; when we're done writing the delta CRL,
 	// we'll write this serial as a sentinel to see if we need to rebuild it
 	// in the future.
-	var lastDeltaSerial string
+	//
+	// We need to do this per-cluster.
+	lastDeltaSerial := map[string]string{}
 	if isDelta {
-		lastDeltaSerial, err = getLastWALSerial(sc, unifiedDeltaWALLastRevokedSerial)
+		clusters, err := sc.Storage.List(sc.Context, unifiedDeltaWALPrefix)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error listing clusters for unified delta WAL building: %w", err)
+		}
+
+		for index, cluster := range clusters {
+			path := unifiedDeltaWALPrefix + cluster + deltaWALLastRevokedSerialName
+			serial, err := getLastWALSerial(sc, path)
+			if err != nil {
+				return nil, fmt.Errorf("error getting last written Delta WAL serial for cluster (%v / %v): %w", index, cluster, err)
+			}
+
+			lastDeltaSerial[cluster] = serial
 		}
 	}
 
@@ -1510,12 +1581,20 @@ func buildAnyUnifiedCRLs(
 		// for a while.
 		sc.Backend.crlBuilder.lastDeltaRebuildCheck = time.Now()
 
-		if len(lastDeltaSerial) > 0 {
-			// When we have a last delta serial, write out the relevant info
-			// so we can skip extra CRL rebuilds.
-			deltaInfo := lastDeltaInfo{Serial: lastDeltaSerial}
+		// Persist all of our known last revoked serial numbers here, as the
+		// last seen serial during build. This will allow us to detect if any
+		// new revocations have occurred, forcing us to rebuild the delta CRL.
+		for cluster, serial := range lastDeltaSerial {
+			if len(serial) == 0 {
+				continue
+			}
 
-			lastDeltaBuildEntry, err := logical.StorageEntryJSON(unifiedDeltaWALLastBuildSerial, deltaInfo)
+			// Make sure to use the cluster-specific path. Since we're on the
+			// active node of the primary cluster, we own this entry and can
+			// safely write it.
+			path := unifiedDeltaWALPrefix + cluster + deltaWALLastBuildSerialName
+			deltaInfo := lastDeltaInfo{Serial: serial}
+			lastDeltaBuildEntry, err := logical.StorageEntryJSON(path, deltaInfo)
 			if err != nil {
 				return nil, fmt.Errorf("error creating last delta CRL rebuild serial entry: %w", err)
 			}
