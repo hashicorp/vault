@@ -60,6 +60,10 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			require.Equal(t, discoveryBaseUrl+"revoke-cert", discovery.RevokeURL)
 			require.Equal(t, discoveryBaseUrl+"key-change", discovery.KeyChangeURL)
 
+			// Attempt to update prior to creating an account
+			_, err = acmeClient.UpdateReg(testCtx, &acme.Account{Contact: []string{"mailto:shouldfail@example.com"}})
+			require.ErrorIs(t, err, acme.ErrNoAccount, "expected failure attempting to update prior to account registration")
+
 			// Create new account
 			acct, err := acmeClient.Register(testCtx, &acme.Account{
 				Contact: []string{"mailto:test@example.com", "mailto:test2@test.com"},
@@ -77,17 +81,24 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 					" library")
 
 			// Update contact
-			// TODO: this doesn't work properly at the moment...
 			acct.Contact = []string{"mailto:test3@example.com"}
 			acct2, err := acmeClient.UpdateReg(testCtx, acct)
 			require.NoError(t, err, "failed updating account")
 			require.Equal(t, acme.StatusValid, acct2.Status)
 			// We should get this back, not the original values.
-			// require.Contains(t, acct2.Contact, "mailto:test3@example.com")
-			// require.Len(t, acct2.Contact, 1)
-			require.Contains(t, acct2.Contact, "mailto:test@example.com")
-			require.Contains(t, acct2.Contact, "mailto:test2@test.com")
-			require.Len(t, acct2.Contact, 2)
+			require.Contains(t, acct2.Contact, "mailto:test3@example.com")
+			require.Len(t, acct2.Contact, 1)
+
+			// Deactivate account
+			err = acmeClient.DeactivateReg(testCtx)
+			require.NoError(t, err, "failed deactivating account")
+
+			// Make sure we get an unauthorized error trying to update the account again.
+			_, err = acmeClient.UpdateReg(testCtx, acct)
+			require.Error(t, err, "expected account to be deactivated")
+			require.IsType(t, &acme.Error{}, err, "expected acme error type")
+			acmeErr := err.(*acme.Error)
+			require.Equal(t, "urn:ietf:params:acme:error:unauthorized", acmeErr.ProblemType)
 		})
 	}
 }

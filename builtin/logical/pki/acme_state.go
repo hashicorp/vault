@@ -10,8 +10,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"golang.org/x/crypto/acme"
-
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -109,20 +107,24 @@ func (a *acmeState) TidyNonces() {
 	a.nextExpiry.Store(nextRun.Unix())
 }
 
-type ACMEStates string
+type ACMEAccountStatus string
+
+func (aas ACMEAccountStatus) String() string {
+	return string(aas)
+}
 
 const (
-	StatusValid       = "valid"
-	StatusDeactivated = "deactivated"
-	StatusRevoked     = "revoked"
+	StatusValid       ACMEAccountStatus = "valid"
+	StatusDeactivated ACMEAccountStatus = "deactivated"
+	StatusRevoked     ACMEAccountStatus = "revoked"
 )
 
 type acmeAccount struct {
-	KeyId                string     `json:"-"`
-	Status               ACMEStates `json:"state"`
-	Contact              []string   `json:"contact"`
-	TermsOfServiceAgreed bool       `json:"termsOfServiceAgreed"`
-	Jwk                  []byte     `json:"jwk"`
+	KeyId                string            `json:"-"`
+	Status               ACMEAccountStatus `json:"status"`
+	Contact              []string          `json:"contact"`
+	TermsOfServiceAgreed bool              `json:"termsOfServiceAgreed"`
+	Jwk                  []byte            `json:"jwk"`
 }
 
 func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, contact []string, termsOfServiceAgreed bool) (*acmeAccount, error) {
@@ -131,10 +133,12 @@ func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, contact []string, 
 		Contact:              contact,
 		TermsOfServiceAgreed: termsOfServiceAgreed,
 		Jwk:                  c.Jwk,
-		Status:               acme.StatusValid,
+		Status:               StatusValid,
 	}
 
-	json, err := logical.StorageEntryJSON(acmeAccountPrefix+c.Kid, acct)
+	kid := cleanKid(c.Kid)
+
+	json, err := logical.StorageEntryJSON(acmeAccountPrefix+kid, acct)
 	if err != nil {
 		return nil, fmt.Errorf("error creating account entry: %w", err)
 	}
@@ -144,6 +148,21 @@ func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, contact []string, 
 	}
 
 	return acct, nil
+}
+
+func (a *acmeState) UpdateAccount(ac *acmeContext, acct *acmeAccount) error {
+	kid := cleanKid(acct.KeyId)
+
+	json, err := logical.StorageEntryJSON(acmeAccountPrefix+kid, acct)
+	if err != nil {
+		return fmt.Errorf("error creating account entry: %w", err)
+	}
+
+	if err := ac.sc.Storage.Put(ac.sc.Context, json); err != nil {
+		return fmt.Errorf("error writing account entry: %w", err)
+	}
+
+	return nil
 }
 
 func cleanKid(keyID string) string {
@@ -167,6 +186,8 @@ func (a *acmeState) LoadAccount(ac *acmeContext, keyID string) (*acmeAccount, er
 	if err != nil {
 		return nil, fmt.Errorf("error loading account: %w", err)
 	}
+
+	acct.KeyId = keyID
 
 	return &acct, nil
 }
