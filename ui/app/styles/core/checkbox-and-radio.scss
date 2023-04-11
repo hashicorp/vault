@@ -54,7 +54,7 @@
 .b-checkbox label::before {
   background-color: $white;
   border-radius: 3px;
-  border: 1px solid #dbdbdb;
+  border: 1px solid $ui-gray-050;
   content: '';
   height: 17px;
   left: 0;

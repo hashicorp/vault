@@ -51,7 +51,7 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
 
   &:disabled {
     background-color: $white;
-    border-color: #dbdbdb;
+    border-color: $ui-gray-050;
     box-shadow: none;
     cursor: not-allowed;
     opacity: 0.5;
