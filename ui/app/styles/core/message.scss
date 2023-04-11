@@ -78,6 +78,10 @@
     background: $red-010;
     border: 1px solid $red-050;
 
+    .message-body {
+      color: $red-700; // replaced hard-coded #8e2c37 with color var for consistency.
+    }
+
     .message-icon {
       color: $red-500;
     }
@@ -91,6 +95,10 @@
     background: $yellow-010;
     border: 1px solid $yellow-100;
 
+    .message-body {
+      color: $ui-gray-900;
+    }
+
     .message-icon {
       color: $yellow-500;
     }
@@ -101,26 +109,29 @@
   }
 
   &.is-info {
-    background-color: #eff5fb;
+    background-color: $blue-010; // changed from hardcoded #eff5fb to ui color var
 
     .message-body {
-      border-color: #3e8ed0;
-      color: #296fa8;
+      color: $blue-700;
     }
 
     .message-header {
-      background-color: #3e8ed0;
+      background-color: $blue-500;
       color: $white;
     }
 
     .message-title {
-      color: $blue-500;
+      color: $blue-700;
     }
   }
 
   &.is-success {
     background: $green-010;
     border: 1px solid $green-100;
+
+    .message-body {
+      color: $green-700; // changed from hardcoded #17421b to a ui var.
+    }
 
     .message-icon {
       color: $green-500;
