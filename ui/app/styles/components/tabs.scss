@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
+ // this file defines the classes for .tabs-container, .tabs and .tab
+
 .page-header + .tabs-container {
   box-shadow: none;
 }
@@ -29,7 +31,7 @@
     li {
       > a &.active {
         border-color: $blue;
-        color: $blue !important;
+        color: $blue !important;   
       }
     }
   }
@@ -68,4 +70,8 @@
   .ember-basic-dropdown-trigger {
     outline: none;
   }
+}
+
+.tabs:not(:last-child) {
+  margin-bottom: $size-4;
 }
