@@ -399,6 +399,27 @@ module('Acceptance | pki workflow', function (hooks) {
         .dom('[data-test-input="commonName"]')
         .hasValue('Hashicorp Test', 'form prefilled with parent issuer cn');
     });
+
+    test('it navigates to the tidy page from configuration toolbar', async function (assert) {
+      await authPage.login(this.pkiAdminToken);
+      await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
+      await click(SELECTORS.configuration.tidyToolbar);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/tidy`);
+    });
+
+    test('it returns to the configuration page after submit', async function (assert) {
+      await authPage.login(this.pkiAdminToken);
+      await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
+      await click(SELECTORS.configuration.tidyToolbar);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/tidy`);
+      await click(SELECTORS.configuration.tidyCertStoreCheckbox);
+      await click(SELECTORS.configuration.tidyRevocationCheckbox);
+      await fillIn(SELECTORS.configuration.safetyBufferInput, '100');
+      await fillIn(SELECTORS.configuration.safetyBufferInputDropdown, 'd');
+      await click(SELECTORS.configuration.tidySave);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
+    });
   });
 
   module('rotate', function (hooks) {
