@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -133,9 +134,19 @@ func (c *AgentGenerateConfigCommand) Run(args []string) int {
 			return 2
 		}
 
-		for field := range resp.Data {
+		data := resp.Data
+		if v2 {
+			internal, ok := resp.Data["data"]
+			if !ok {
+				c.UI.Error(fmt.Sprintf("Secret not found at %s/data", pathFull))
+				return 2
+			}
+			data = internal.(map[string]interface{})
+		}
+
+		for field := range data {
 			envTemplates = append(envTemplates, &config.EnvTemplateConfig{
-				Name:     strings.ToUpper(field),
+				Name:     constructDefaultEnvironmentKey(pathFull, field),
 				Contents: fmt.Sprintf("{{ with secret %s }}{{ Data.data.%s }}", pathFull, field),
 			})
 		}
@@ -199,4 +210,19 @@ func (c *AgentGenerateConfigCommand) Run(args []string) int {
 	c.UI.Info(fmt.Sprintf("Successfully generated %q configuration file!", configPath))
 
 	return 0
+}
+
+func constructDefaultEnvironmentKey(path string, field string) string {
+	pathParts := strings.Split(path, "/")
+	pathPartsLast := pathParts[len(pathParts)-1]
+
+	nonWordRegex := regexp.MustCompile(`[^\w]+`) // match a sequence of non-word characters
+
+	p1 := nonWordRegex.Split(pathPartsLast, -1)
+	p2 := nonWordRegex.Split(field, -1)
+
+	keyParts := append(p1, p2...)
+
+	return strings.ToUpper(strings.Join(keyParts, "_"))
+
 }
