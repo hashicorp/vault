@@ -12,7 +12,7 @@
               data-test-modal-glyph={{this.glyph.glyph}}
             />
           {{/if}}
-          <span>{{@title}}</span>
+          <span class={{if this.glyph "has-left-padding-xs"}}>{{@title}}</span>
         </h2>
         {{#if this.showCloseButton}}
           <button
