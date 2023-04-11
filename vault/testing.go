@@ -793,11 +793,9 @@ type TestCluster struct {
 	CleanupFunc        func()
 	SetupFunc          func()
 
-	cleanupFuncs      []func()
-	base              *CoreConfig
-	LicensePublicKey  ed25519.PublicKey
-	LicensePrivateKey ed25519.PrivateKey
-	opts              *TestClusterOptions
+	cleanupFuncs []func()
+	base         *CoreConfig
+	opts         *TestClusterOptions
 }
 
 func (c *TestCluster) Start() {
@@ -1622,15 +1620,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.HAPhysical = haPhys.(physical.HABackend)
 	}
 
-	if testCluster.LicensePublicKey == nil {
-		pubKey, priKey, err := GenerateTestLicenseKeys()
-		if err != nil {
-			t.Fatalf("err: %v", err)
-		}
-		testCluster.LicensePublicKey = pubKey
-		testCluster.LicensePrivateKey = priKey
-	}
-
 	if opts != nil && opts.InmemClusterLayers {
 		if opts.ClusterLayers != nil {
 			t.Fatalf("cannot specify ClusterLayers when InmemClusterLayers is true")
@@ -1665,7 +1654,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	coreConfigs := []*CoreConfig{}
 
 	for i := 0; i < numCores; i++ {
-		cleanup, c, localConfig, handler := testCluster.newCore(t, i, coreConfig, opts, listeners[i], testCluster.LicensePublicKey)
+		cleanup, c, localConfig, handler := testCluster.newCore(t, i, coreConfig, opts, listeners[i])
 
 		testCluster.cleanupFuncs = append(testCluster.cleanupFuncs, cleanup)
 		cores = append(cores, c)
@@ -1723,11 +1712,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	// Assign clients
 	for i := 0; i < numCores; i++ {
 		testCluster.Cores[i].Client = testCluster.getAPIClient(t, opts, listeners[i][0].Address.Port, tlsConfigs[i])
-	}
-
-	// Extra Setup
-	for _, tcc := range testCluster.Cores {
-		testExtraTestCoreSetup(t, testCluster.LicensePrivateKey, tcc)
 	}
 
 	// Cleanup
@@ -1807,7 +1791,7 @@ func (cluster *TestCluster) StartCore(t testing.T, idx int, opts *TestClusterOpt
 	}
 
 	// Create a new Core
-	cleanup, newCore, localConfig, coreHandler := cluster.newCore(t, idx, tcc.CoreConfig, opts, tcc.Listeners, cluster.LicensePublicKey)
+	cleanup, newCore, localConfig, coreHandler := cluster.newCore(t, idx, tcc.CoreConfig, opts, tcc.Listeners)
 	if coreHandler != nil {
 		tcc.Handler = coreHandler
 		tcc.Server.Handler = coreHandler
@@ -1825,7 +1809,6 @@ func (cluster *TestCluster) StartCore(t testing.T, idx int, opts *TestClusterOpt
 	tcc.Client = cluster.getAPIClient(t, opts, tcc.Listeners[0].Address.Port, tcc.tlsConfig)
 
 	testAdjustUnderlyingStorage(tcc)
-	testExtraTestCoreSetup(t, cluster.LicensePrivateKey, tcc)
 
 	// Start listeners
 	for _, ln := range tcc.Listeners {
@@ -1836,7 +1819,7 @@ func (cluster *TestCluster) StartCore(t testing.T, idx int, opts *TestClusterOpt
 	tcc.Logger().Info("restarted test core", "core", idx)
 }
 
-func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreConfig, opts *TestClusterOptions, listeners []*TestListener, pubKey ed25519.PublicKey) (func(), *Core, CoreConfig, http.Handler) {
+func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreConfig, opts *TestClusterOptions, listeners []*TestListener) (func(), *Core, CoreConfig, http.Handler) {
 	localConfig := *coreConfig
 	cleanupFunc := func() {}
 	var handler http.Handler
@@ -1915,14 +1898,7 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 		localConfig.ClusterAddr = "https://" + localConfig.ClusterNetworkLayer.Listeners()[0].Addr().String()
 	}
 
-	switch {
-	case localConfig.LicensingConfig != nil:
-		if pubKey != nil {
-			localConfig.LicensingConfig.AdditionalPublicKeys = append(localConfig.LicensingConfig.AdditionalPublicKeys, pubKey)
-		}
-	default:
-		localConfig.LicensingConfig = testGetLicensingConfig(pubKey)
-	}
+	localConfig.LicensingConfig = testGetLicensingConfig(nil)
 
 	if localConfig.MetricsHelper == nil {
 		inm := metrics.NewInmemSink(10*time.Second, time.Minute)
