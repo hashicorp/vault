@@ -14,6 +14,7 @@ import PkiActionModel from 'vault/models/pki/action';
 import PkiUrlsModel from 'vault/models/pki/urls';
 import FlashMessageService from 'vault/services/flash-messages';
 import errorMessage from 'vault/utils/error-message';
+import { ValidationMap } from 'vault/vault/app-types';
 
 interface AdapterOptions {
   actionType: string;
@@ -52,7 +53,7 @@ export default class PkiGenerateRootComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly router: RouterService;
 
-  @tracked modelValidations = null;
+  @tracked modelValidations: ValidationMap | null = null;
   @tracked errorBanner = '';
   @tracked invalidFormAlert = '';
 
