@@ -11,7 +11,7 @@ import { parsedParameterKeys } from 'vault/utils/parse-pki-cert-oids';
  * <ParsedCertificateInfoRows @parsedCertificate={{@model.parsedCertificate}} />
  * ```
  *
- * @param {object} parsedCertificate - object of parsed attributes from parse-pki-cert util
+ * @param {object} model - object of parsed attributes from parse-pki-cert util
  */
 export default class ParsedCertificateInfoRowsComponent extends Component {
   get possibleFields() {
