@@ -56,6 +56,9 @@ func GenerateRootWithError(t testing.T, cluster *vault.TestCluster, kind Generat
 		keys = cluster.BarrierKeys
 	}
 	client := cluster.Cores[0].Client
+	oldNS := client.Namespace()
+	defer client.SetNamespace(oldNS)
+	client.ClearNamespace()
 
 	var err error
 	var status *api.GenerateRootStatusResponse
@@ -177,6 +180,10 @@ func AttemptUnsealCore(c *vault.TestCluster, core *vault.TestClusterCore) error 
 	}
 
 	client := core.Client
+	oldNS := client.Namespace()
+	defer client.SetNamespace(oldNS)
+	client.ClearNamespace()
+
 	client.Sys().ResetUnsealProcess()
 	for j := 0; j < len(c.BarrierKeys); j++ {
 		statusResp, err := client.Sys().Unseal(base64.StdEncoding.EncodeToString(c.BarrierKeys[j]))
@@ -245,7 +252,10 @@ func DeriveActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestCluste
 	t.Helper()
 	for i := 0; i < 60; i++ {
 		for _, core := range cluster.Cores {
+			oldNS := core.Client.Namespace()
+			core.Client.ClearNamespace()
 			leaderResp, err := core.Client.Sys().Leader()
+			core.Client.SetNamespace(oldNS)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -263,7 +273,10 @@ func DeriveStandbyCores(t testing.T, cluster *vault.TestCluster) []*vault.TestCl
 	t.Helper()
 	cores := make([]*vault.TestClusterCore, 0, 2)
 	for _, core := range cluster.Cores {
+		oldNS := core.Client.Namespace()
+		core.Client.ClearNamespace()
 		leaderResp, err := core.Client.Sys().Leader()
+		core.Client.SetNamespace(oldNS)
 		if err != nil {
 			t.Fatal(err)
 		}
