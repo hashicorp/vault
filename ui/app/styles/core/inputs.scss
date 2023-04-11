@@ -30,12 +30,11 @@
     outline: none;
     background-color: $white;
     border-color: $blue-500 !important;
-    box-shadow: 0 0 0 0.125em rgba(21, 99, 255, 0.25) !important;
+    box-shadow: 0 0 0 0.125em rgba(21, 99, 255, 0.25);
   }
 
-  // ARG TODO confirm this isn't ui-gray-300 #bac1cc
   &:hover {
-    border-color: #b5b5b5;
+    border-color: $ui-gray-300;
   }
 
   @include until($desktop) {
@@ -43,6 +42,10 @@
   }
   &::placeholder {
     opacity: 0.5;
+  }
+
+  &:read-only {
+    box-shadow: none;
   }
 }
 
@@ -58,6 +61,16 @@
   }
 }
 
+.input[readonly],
+.textarea[readonly] {
+  box-shadow: none;
+}
+
+// textarea specific css
+.textarea {
+  padding-bottom: .625em;
+  padding-top: .625em;
+}
 .textarea:not([rows]) {
   max-height: 600px;
   min-height: 120px;
