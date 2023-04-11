@@ -16,6 +16,8 @@ import (
 	"github.com/hashicorp/vault/vault/eventbus"
 )
 
+// TestCanSendEventsFromBuiltinPlugin checks that if events are globally enabled, an event can be sent
+// a subscription will receive the event.
 func TestCanSendEventsFromBuiltinPlugin(t *testing.T) {
 	c, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
 		Experiments: []string{experiments.VaultExperimentEventsAlpha1},
@@ -63,6 +65,8 @@ func TestCanSendEventsFromBuiltinPlugin(t *testing.T) {
 	}
 }
 
+// TestCanAlwaysSendCubbyholeEvents checks a plugin on the allow list can send events even  if events are disabled
+// globally.
 func TestCanAlwaysSendCubbyholeEvents(t *testing.T) {
 	eventbus.EnabledPlugins["cubbyhole"] = struct{}{}
 	t.Cleanup(func() {
@@ -109,6 +113,8 @@ func TestCanAlwaysSendCubbyholeEvents(t *testing.T) {
 	}
 }
 
+// TestCannotSendEventsByDefault checks that events are disabled for plugins (not in the allow list)  if they are
+// globally disabled.
 func TestCannotSendEventsByDefault(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
