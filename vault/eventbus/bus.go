@@ -34,6 +34,12 @@ var (
 	ErrNotStarted              = errors.New("event broker has not been started")
 	cloudEventsFormatterFilter *cloudevents.FormatterFilter
 	subscriptions              atomic.Int64 // keeps track of event subscription count in all event buses
+
+	// EnabledPlugins are plugins that are always allowed to send events.
+	// This is only visible for testing purposes.
+	EnabledPlugins = map[string]struct{}{
+		"pki": {},
+	}
 )
 
 // EventBus contains the main logic of running an event broker for Vault.
@@ -44,6 +50,7 @@ type EventBus struct {
 	started         atomic.Bool
 	formatterNodeID eventlogger.NodeID
 	timeout         time.Duration
+	enabledAll      bool // whether the system is enabled for all
 }
 
 type pluginEventBus struct {
@@ -70,13 +77,21 @@ var (
 	_ logical.EventSender = (*pluginEventBus)(nil)
 )
 
+// IsPluginAlwaysEnabled returns true if the given plugin should always have events enabled.
+func IsPluginAlwaysEnabled(plugin string) bool {
+	_, ok := EnabledPlugins[plugin]
+	return ok
+}
+
 // Start starts the event bus, allowing events to be written.
 // It is not possible to stop or restart the event bus.
-// It is safe to call Start() multiple times.
-func (bus *EventBus) Start() {
+// If enabledAll is true, then enable events globally.
+// It is safe to call Start() multiple times, but parameters are ignored after the first call.
+func (bus *EventBus) Start(enabledAll bool) {
 	wasStarted := bus.started.Swap(true)
 	if !wasStarted {
 		bus.logger.Info("Starting event system")
+		bus.enabledAll = enabledAll
 	}
 }
 
@@ -90,6 +105,9 @@ func (bus *EventBus) SendInternal(ctx context.Context, ns *namespace.Namespace, 
 		return namespace.ErrNoNamespace
 	}
 	if !bus.started.Load() {
+		return ErrNotStarted
+	}
+	if !bus.enabledAll && (pluginInfo == nil || !IsPluginAlwaysEnabled(pluginInfo.Plugin)) {
 		return ErrNotStarted
 	}
 	eventReceived := &logical.EventReceived{
