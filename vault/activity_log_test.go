@@ -834,12 +834,12 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 			t.Fatalf("err: %v", err)
 		}
 		defaults := map[string]interface{}{
-			"default_report_months": 12,
-			"retention_months":      24,
-			"enabled":               activityLogEnabledDefaultValue,
-			"queries_available":     false,
-			"reporting_enabled":     false,
-			"billing_start_time":    time.Time{},
+			"default_report_months":   12,
+			"retention_months":        24,
+			"enabled":                 activityLogEnabledDefaultValue,
+			"queries_available":       false,
+			"reporting_enabled":       false,
+			"billing_start_timestamp": time.Time{},
 		}
 
 		if diff := deep.Equal(resp.Data, defaults); len(diff) > 0 {
@@ -923,7 +923,7 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 
 		req = logical.TestRequest(t, logical.UpdateOperation, "internal/counters/config")
 		req.Storage = view
-		req.Data["billing_start_time"] = time.Now().UTC()
+		req.Data["billing_start_timestamp"] = time.Now().Format(time.RFC3339)
 		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 		if err == nil {
 			t.Fatal("expected error")
@@ -939,12 +939,12 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 			t.Fatalf("err: %v", err)
 		}
 		expected := map[string]interface{}{
-			"default_report_months": 1,
-			"retention_months":      2,
-			"enabled":               "enable",
-			"queries_available":     false,
-			"reporting_enabled":     false,
-			"billing_start_time":    time.Time{},
+			"default_report_months":   1,
+			"retention_months":        2,
+			"enabled":                 "enable",
+			"queries_available":       false,
+			"reporting_enabled":       false,
+			"billing_start_timestamp": time.Time{},
 		}
 
 		if diff := deep.Equal(resp.Data, expected); len(diff) > 0 {
@@ -977,10 +977,12 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 		}
 
 		defaults := map[string]interface{}{
-			"default_report_months": 12,
-			"retention_months":      24,
-			"enabled":               activityLogEnabledDefaultValue,
-			"queries_available":     false,
+			"default_report_months":   12,
+			"retention_months":        24,
+			"enabled":                 activityLogEnabledDefaultValue,
+			"queries_available":       false,
+			"reporting_enabled":       false,
+			"billing_start_timestamp": time.Time{},
 		}
 
 		if diff := deep.Equal(resp.Data, defaults); len(diff) > 0 {

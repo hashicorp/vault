@@ -98,7 +98,7 @@ func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 					Default:     b.Core.censusLicensingEnabled,
 					Description: "Automated reporting of billing information true (enabled) or false (disabled).",
 				},
-				"billing_start_time": {
+				"billing_start_timestamp": {
 					Type:        framework.TypeTime,
 					Default:     b.Core.GetBillingStart(),
 					Description: "Billing start timestamp for automated reporting of billing information.",
@@ -277,12 +277,12 @@ func (b *SystemBackend) handleActivityConfigRead(ctx context.Context, req *logic
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"default_report_months": config.DefaultReportMonths,
-			"retention_months":      config.RetentionMonths,
-			"enabled":               config.Enabled,
-			"queries_available":     qa,
-			"reporting_enabled":     b.Core.censusLicensingEnabled,
-			"billing_start_time":    b.Core.GetBillingStart(),
+			"default_report_months":   config.DefaultReportMonths,
+			"retention_months":        config.RetentionMonths,
+			"enabled":                 config.Enabled,
+			"queries_available":       qa,
+			"reporting_enabled":       b.Core.censusLicensingEnabled,
+			"billing_start_timestamp": b.Core.GetBillingStart(),
 		},
 	}, nil
 }
@@ -306,8 +306,8 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 			return logical.ErrorResponse("reporting_enabled is a read-only field"), logical.ErrInvalidRequest
 		}
 
-		if _, ok := req.Data["billing_start_time"]; ok {
-			return logical.ErrorResponse("billing_start_time is a read-only field"), logical.ErrInvalidRequest
+		if _, ok := req.Data["billing_start_timestamp"]; ok {
+			return logical.ErrorResponse("billing_start_timestamp is a read-only field"), logical.ErrInvalidRequest
 		}
 	}
 
