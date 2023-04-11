@@ -352,7 +352,7 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 	}
 
 	if a.core.censusLicensingEnabled && config.RetentionMonths < a.configOverrides.MinimumRetentionMonths {
-		return logical.ErrorResponse("retention months must be greater or equal to %d", a.configOverrides.MinimumRetentionMonths), logical.ErrInvalidRequest
+		return logical.ErrorResponse("retention months must be at least %d while Reporting is enabled", a.configOverrides.MinimumRetentionMonths), logical.ErrInvalidRequest
 	}
 
 	// Store the config
