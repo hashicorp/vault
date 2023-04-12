@@ -322,6 +322,11 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 			if config.Enabled == "enable" && enabledStr == "disable" ||
 				!activityLogEnabledDefault && config.Enabled == "enable" && enabledStr == "default" ||
 				activityLogEnabledDefault && config.Enabled == "default" && enabledStr == "disable" {
+
+				// if census is enabled, the activity log cannot be disabled
+				if a.core.censusLicensingEnabled {
+					return logical.ErrorResponse("cannot disable the activity log while Reporting is enabled"), logical.ErrInvalidRequest
+				}
 				warnings = append(warnings, "the current monthly segment will be deleted because the activity log was disabled")
 			}
 
