@@ -3,6 +3,7 @@ package pki
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -132,7 +133,30 @@ type acmeAccount struct {
 	Jwk                  []byte            `json:"jwk"`
 }
 
-func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, thumbprint string, contact []string, termsOfServiceAgreed bool) (*acmeAccount, error) {
+func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, contact []string, termsOfServiceAgreed bool) (*acmeAccount, error) {
+	// Write out the thumbprint value/entry out first, if we get an error mid-way through
+	// this is easier to recover from if we have an entry in this table with no corresponding
+	// kid entry, as the end-user will most likely retry with the same key but will have a
+	// newly generated kid value.
+	thumbprint, err := c.GetKeyThumbprint()
+	if err != nil {
+		return nil, fmt.Errorf("failed generating thumbprint: %w", err)
+	}
+
+	thumbPrint := &acmeThumbprint{
+		Kid:        c.Kid,
+		Thumbprint: thumbprint,
+	}
+	thumbPrintEntry, err := logical.StorageEntryJSON(acmeThumbprintPrefix+thumbprint, thumbPrint)
+	if err != nil {
+		return nil, fmt.Errorf("error generating account thumbprint entry: %w", err)
+	}
+
+	if err = ac.sc.Storage.Put(ac.sc.Context, thumbPrintEntry); err != nil {
+		return nil, fmt.Errorf("error writing account thumbprint entry: %w", err)
+	}
+
+	// Now write out the main value that the thumbprint points too.
 	acct := &acmeAccount{
 		KeyId:                c.Kid,
 		Contact:              contact,
@@ -149,18 +173,6 @@ func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, thumbprint string,
 		return nil, fmt.Errorf("error writing account entry: %w", err)
 	}
 
-	thumbPrint := &acmeThumbprint{
-		Kid:        c.Kid,
-		Thumbprint: thumbprint,
-	}
-	thumbPrintEntry, err := logical.StorageEntryJSON(acmeThumbprintPrefix+thumbprint, thumbPrint)
-	if err != nil {
-		return nil, fmt.Errorf("error generating account thumbprint entry: %w", err)
-	}
-
-	if err := ac.sc.Storage.Put(ac.sc.Context, thumbPrintEntry); err != nil {
-		return nil, fmt.Errorf("error writing account thumbprint entry: %w", err)
-	}
 	return acct, nil
 }
 
@@ -177,13 +189,15 @@ func (a *acmeState) UpdateAccount(ac *acmeContext, acct *acmeAccount) error {
 	return nil
 }
 
-func (a *acmeState) LoadAccount(ac *acmeContext, keyID string) (*acmeAccount, error) {
-	entry, err := ac.sc.Storage.Get(ac.sc.Context, acmeAccountPrefix+keyID)
+// LoadAccount will load the account object based on the passed in keyId field value
+// otherwise will return an error if the account does not exist.
+func (a *acmeState) LoadAccount(ac *acmeContext, keyId string) (*acmeAccount, error) {
+	entry, err := ac.sc.Storage.Get(ac.sc.Context, acmeAccountPrefix+keyId)
 	if err != nil {
 		return nil, fmt.Errorf("error loading account: %w", err)
 	}
 	if entry == nil {
-		return nil, nil
+		return nil, fmt.Errorf("account not found: %w", ErrAccountDoesNotExist)
 	}
 
 	var acct acmeAccount
@@ -192,11 +206,13 @@ func (a *acmeState) LoadAccount(ac *acmeContext, keyID string) (*acmeAccount, er
 		return nil, fmt.Errorf("error decoding account: %w", err)
 	}
 
-	acct.KeyId = keyID
+	acct.KeyId = keyId
 
 	return &acct, nil
 }
 
+// LoadAccountByKey will attempt to load the account based on a key thumbprint. If the thumbprint
+// or kid is unknown a nil, nil will be returned.
 func (a *acmeState) LoadAccountByKey(ac *acmeContext, keyThumbprint string) (*acmeAccount, error) {
 	thumbprintEntry, err := ac.sc.Storage.Get(ac.sc.Context, acmeThumbprintPrefix+keyThumbprint)
 	if err != nil {
@@ -216,17 +232,24 @@ func (a *acmeState) LoadAccountByKey(ac *acmeContext, keyThumbprint string) (*ac
 		return nil, fmt.Errorf("empty kid within thumbprint entry: %s", keyThumbprint)
 	}
 
-	return a.LoadAccount(ac, thumbprint.Kid)
+	acct, err := a.LoadAccount(ac, thumbprint.Kid)
+	if err != nil {
+		// If we fail to lookup the account that the thumbprint entry references, assume a bad
+		// write previously occurred in which we managed to write out the thumbprint but failed
+		// writing out the main account information.
+		if errors.Is(err, ErrAccountDoesNotExist) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return acct, nil
 }
 
 func (a *acmeState) LoadJWK(ac *acmeContext, keyId string) ([]byte, error) {
 	key, err := a.LoadAccount(ac, keyId)
 	if err != nil {
 		return nil, err
-	}
-
-	if key == nil {
-		return nil, fmt.Errorf("account not found: %w", ErrAccountDoesNotExist)
 	}
 
 	if len(key.Jwk) == 0 {

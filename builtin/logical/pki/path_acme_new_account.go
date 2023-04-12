@@ -337,7 +337,7 @@ func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, userCtx *jws
 	//	return nil, fmt.Errorf("terms of service not agreed to: %w", ErrUserActionRequired)
 	//}
 
-	accountByKid, err := b.acmeState.CreateAccount(acmeCtx, userCtx, thumbprint, contact, termsOfServiceAgreed)
+	accountByKid, err := b.acmeState.CreateAccount(acmeCtx, userCtx, contact, termsOfServiceAgreed)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create account: %w", err)
 	}
@@ -360,10 +360,6 @@ func (b *backend) acmeNewAccountUpdateHandler(acmeCtx *acmeContext, userCtx *jws
 	account, err := b.acmeState.LoadAccount(acmeCtx, userCtx.Kid)
 	if err != nil {
 		return nil, fmt.Errorf("error loading account: %w", err)
-	}
-
-	if account == nil {
-		return nil, fmt.Errorf("account not found: %w", ErrAccountDoesNotExist)
 	}
 
 	// Per RFC 8555 7.3.6 Account deactivation, if we were previously deactivated, we should return
