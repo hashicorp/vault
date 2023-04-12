@@ -95,7 +95,7 @@
       content: "";
       height: $size-8;
       position: absolute;
-      top: 0.147rem;
+      top: $size-8/ 5;
       width: $size-8 * 2;
     }
     &::after {
