@@ -25,6 +25,7 @@ export default class ConfigComponent extends Component {
   @service router;
   @tracked mode = 'show';
   @tracked modalOpen = false;
+  @tracked validations;
   error = null;
 
   get infoRows() {
@@ -43,38 +44,35 @@ export default class ConfigComponent extends Component {
   }
 
   get modalTitle() {
-    let content = 'Turn usage tracking off?';
-    if (this.args.model && this.args.model.enabled === 'On') {
-      content = 'Turn usage tracking on?';
-    }
-    return content;
+    return `Turn usage tracking ${this.args.model.enabled.toLowerCase()}?`;
   }
 
   @(task(function* () {
     try {
       yield this.args.model.save();
+      this.router.transitionTo('vault.cluster.clients.config');
     } catch (err) {
       this.error = err.message;
-      return;
     }
-    this.router.transitionTo('vault.cluster.clients.config');
   }).drop())
   save;
 
   @action
-  updateBooleanValue(attr, value) {
-    const valueToSet = value === true ? attr.options.trueValue : attr.options.falseValue;
-    this.args.model[attr.name] = valueToSet;
+  toggleEnabled(event) {
+    this.args.model.enabled = event.target.checked ? 'On' : 'Off';
   }
 
   @action
   onSaveChanges(evt) {
     evt.preventDefault();
+    const { isValid, state } = this.args.model.validate();
     const changed = this.args.model.changedAttributes();
-    if (!changed.enabled) {
+    if (!isValid) {
+      this.validations = state;
+    } else if (changed.enabled) {
+      this.modalOpen = true;
+    } else {
       this.save.perform();
-      return;
     }
-    this.modalOpen = true;
   }
 }
