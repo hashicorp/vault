@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -26,6 +28,24 @@ func pathAcmeIssuerAndRoleNewAccount(b *backend) *framework.Path {
 	return patternAcmeNewAccount(b,
 		"issuer/"+framework.GenericNameRegex(issuerRefParam)+
 			"/roles/"+framework.GenericNameRegex("role")+"/acme/new-account")
+}
+
+func pathAcmeRootUpdateAccount(b *backend) *framework.Path {
+	return patternAcmeNewAccount(b, "acme/account/"+framework.MatchAllRegex("kid"))
+}
+
+func pathAcmeRoleUpdateAccount(b *backend) *framework.Path {
+	return patternAcmeNewAccount(b, "roles/"+framework.GenericNameRegex("role")+"/acme/account/"+framework.MatchAllRegex("kid"))
+}
+
+func pathAcmeIssuerUpdateAccount(b *backend) *framework.Path {
+	return patternAcmeNewAccount(b, "issuer/"+framework.GenericNameRegex(issuerRefParam)+"/acme/account/"+framework.MatchAllRegex("kid"))
+}
+
+func pathAcmeIssuerAndRoleUpdateAccount(b *backend) *framework.Path {
+	return patternAcmeNewAccount(b,
+		"issuer/"+framework.GenericNameRegex(issuerRefParam)+
+			"/roles/"+framework.GenericNameRegex("role")+"/acme/account/"+framework.MatchAllRegex("kid"))
 }
 
 func addFieldsForACMEPath(fields map[string]*framework.FieldSchema, pattern string) map[string]*framework.FieldSchema {
@@ -69,10 +89,23 @@ func addFieldsForACMERequest(fields map[string]*framework.FieldSchema) map[strin
 	return fields
 }
 
+func addFieldsForACMEKidRequest(fields map[string]*framework.FieldSchema, pattern string) map[string]*framework.FieldSchema {
+	if strings.Contains(pattern, framework.GenericNameRegex("kid")) {
+		fields["kid"] = &framework.FieldSchema{
+			Type:        framework.TypeString,
+			Description: `The key identifier provided by the CA`,
+			Required:    true,
+		}
+	}
+
+	return fields
+}
+
 func patternAcmeNewAccount(b *backend, pattern string) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	addFieldsForACMEPath(fields, pattern)
 	addFieldsForACMERequest(fields)
+	addFieldsForACMEKidRequest(fields, pattern)
 
 	return &framework.Path{
 		Pattern: pattern,
@@ -171,6 +204,7 @@ func (b *backend) acmeNewAccountHandler(acmeCtx *acmeContext, r *logical.Request
 	var onlyReturnExisting bool
 	var contacts []string
 	var termsOfServiceAgreed bool
+	var status string
 
 	rawContact, present := data["contact"]
 	if present {
@@ -205,6 +239,15 @@ func (b *backend) acmeNewAccountHandler(acmeCtx *acmeContext, r *logical.Request
 		}
 	}
 
+	// Per RFC 8555 7.3.6 Account deactivation, we will handle it within our update API.
+	rawStatus, present := data["status"]
+	if present {
+		status, ok = rawStatus.(string)
+		if !ok {
+			return nil, fmt.Errorf("invalid type (%T) for field 'onlyReturnExisting': %w", rawOnlyReturnExisting, ErrMalformed)
+		}
+	}
+
 	// We ignore the EAB parameter as it is currently not supported.
 
 	// We have two paths here: search or create.
@@ -212,7 +255,13 @@ func (b *backend) acmeNewAccountHandler(acmeCtx *acmeContext, r *logical.Request
 		return b.acmeNewAccountSearchHandler(acmeCtx, r, fields, userCtx, data)
 	}
 
-	return b.acmeNewAccountCreateHandler(acmeCtx, r, fields, userCtx, data, contacts, termsOfServiceAgreed)
+	// Pass through the /new-account API calls to this specific handler as its requirements are different
+	// from the account update handler.
+	if strings.HasSuffix(r.Path, "/new-account") {
+		return b.acmeNewAccountCreateHandler(acmeCtx, r, fields, userCtx, data, contacts, termsOfServiceAgreed)
+	}
+
+	return b.acmeNewAccountUpdateHandler(acmeCtx, userCtx, contacts, status)
 }
 
 func formatAccountResponse(location string, acct *acmeAccount) *logical.Response {
@@ -265,10 +314,11 @@ func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, r *logical.R
 		return b.acmeNewAccountSearchHandler(acmeCtx, r, fields, userCtx, data)
 	}
 
-	// TODO: Limit this only when ToS are required by the operator.
-	if !termsOfServiceAgreed {
-		return nil, fmt.Errorf("terms of service not agreed to: %w", ErrUserActionRequired)
-	}
+	// TODO: Limit this only when ToS are required or set by the operator, since we don't have a
+	//       ToS URL in the directory at the moment, we can not enforce this.
+	//if !termsOfServiceAgreed {
+	//	return nil, fmt.Errorf("terms of service not agreed to: %w", ErrUserActionRequired)
+	//}
 
 	account, err := b.acmeState.CreateAccount(acmeCtx, userCtx, contact, termsOfServiceAgreed)
 	if err != nil {
@@ -283,5 +333,54 @@ func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, r *logical.R
 	// > The server returns this account object in a 201 (Created) response,
 	// > with the account URL in a Location header field.
 	resp.Data[logical.HTTPStatusCode] = http.StatusCreated
+	return resp, nil
+}
+
+func (b *backend) acmeNewAccountUpdateHandler(acmeCtx *acmeContext, userCtx *jwsCtx, contact []string, status string) (*logical.Response, error) {
+	if !userCtx.Existing {
+		return nil, fmt.Errorf("cannot submit to account updates without a 'kid': %w", ErrMalformed)
+	}
+
+	if !b.acmeState.DoesAccountExist(acmeCtx, userCtx.Kid) {
+		return nil, fmt.Errorf("an account with this key does not exist: %w", ErrAccountDoesNotExist)
+	}
+
+	account, err := b.acmeState.LoadAccount(acmeCtx, userCtx.Kid)
+	if err != nil {
+		return nil, fmt.Errorf("error loading account: %w", err)
+	}
+
+	// Per RFC 8555 7.3.6 Account deactivation, if we were previously deactivated, we should return
+	// unauthorized. There is no way to reactivate any accounts per ACME RFC.
+	if account.Status != StatusValid {
+		// Treating "revoked" and "deactivated" as the same here.
+		return nil, ErrUnauthorized
+	}
+
+	shouldUpdate := false
+	// Check to see if we should update, we don't really care about ordering
+	if !strutil.EquivalentSlices(account.Contact, contact) {
+		shouldUpdate = true
+		account.Contact = contact
+	}
+
+	// Check to process account de-activation status was requested.
+	// 7.3.6. Account Deactivation
+	if string(StatusDeactivated) == status {
+		shouldUpdate = true
+		// TODO: This should cancel any ongoing operations (do not revoke certs),
+		//       perhaps we should delete this account here?
+		account.Status = StatusDeactivated
+	}
+
+	if shouldUpdate {
+		err = b.acmeState.UpdateAccount(acmeCtx, account)
+		if err != nil {
+			return nil, fmt.Errorf("failed to update account: %w", err)
+		}
+	}
+
+	location := acmeCtx.baseUrl.String() + "account/" + userCtx.Kid
+	resp := formatAccountResponse(location, account)
 	return resp, nil
 }
