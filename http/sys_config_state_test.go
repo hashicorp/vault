@@ -88,6 +88,8 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 		tc := tc
 
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			var resp *http.Response
 			confRaw := &server.Config{
 				Storage:   tc.storageConfig,
