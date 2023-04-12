@@ -38,12 +38,13 @@ message Segments {
 
 message Segment {
   optional int32 segment_index = 1;
-  repeated Client clients = 2;
+  Clients clients = 2;
 }
 
 message Clients {
   repeated Client clients = 1;
 }
+
 message Client {
   string id = 1;
   int32 count = 2;
