@@ -51,6 +51,15 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/wrapping/unwrap
 ```
 
+Or you can use token to unwrap without authentication in vault
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: abcd1234..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/wrapping/unwrap
+```
+
 ### Sample Response
 
 ```json
