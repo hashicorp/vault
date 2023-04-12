@@ -9,10 +9,10 @@
   flex-direction: column;
 }
 .page-container {
-  min-height: calc(100vh - #{$spacing-xxxl});
+  min-height: calc(100vh - 4rem);
   display: flex;
   flex-direction: column;
-  margin-top: $spacing-xxxl;
+  margin-top: 4rem;
   justify-content: flex-end;
 }
 
