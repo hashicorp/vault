@@ -135,9 +135,11 @@ type acmeAccount struct {
 
 func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, contact []string, termsOfServiceAgreed bool) (*acmeAccount, error) {
 	// Write out the thumbprint value/entry out first, if we get an error mid-way through
-	// this is easier to recover from if we have an entry in this table with no corresponding
-	// kid entry, as the end-user will most likely retry with the same key but will have a
-	// newly generated kid value.
+	// this is easier to recover from. The new kid with the same existing public key
+	// will rewrite the thumbprint entry. This goes in hand with LoadAccountByKey that
+	// will return a nil, nil value if the referenced kid in a loaded thumbprint does not
+	// exist. This effectively makes this self-healing IF the end-user re-attempts the
+	// account creation with the same public key.
 	thumbprint, err := c.GetKeyThumbprint()
 	if err != nil {
 		return nil, fmt.Errorf("failed generating thumbprint: %w", err)
