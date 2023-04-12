@@ -93,16 +93,6 @@ func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 					Default:     "default",
 					Description: "Enable or disable collection of client count: enable, disable, or default.",
 				},
-				"reporting_enabled": {
-					Type:        framework.TypeBool,
-					Default:     b.Core.censusLicensingEnabled,
-					Description: "Automated reporting of billing information true (enabled) or false (disabled). [read-only]",
-				},
-				"billing_start_timestamp": {
-					Type:        framework.TypeTime,
-					Default:     b.Core.GetBillingStart(),
-					Description: "Billing start timestamp for automated reporting of billing information. [read-only]",
-				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["activity-config"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["activity-config"][1]),
