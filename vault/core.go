@@ -3600,3 +3600,14 @@ func (c *Core) GetHCPLinkStatus() (string, string) {
 
 	return status, resourceID
 }
+
+// GetBillingStart gets the billing start timestamp from the configured Census
+// Agent, handling a nil agent.
+func (c *Core) GetBillingStart() time.Time {
+	var billingStart time.Time
+	if c.censusAgent != nil {
+		billingStart = c.censusAgent.billingStart
+	}
+
+	return billingStart
+}
