@@ -1,0 +1,3 @@
+```release-note:bug
+docs: Fix a bad link to GDPR in namespaces.
+```
