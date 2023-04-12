@@ -143,6 +143,11 @@ func (c *jwsCtx) VerifyJWS(signature string) (map[string]interface{}, error) {
 		return nil, err
 	}
 
+	if len(payload) == 0 {
+		// Distinguish POST-AS-GET from POST-with-an-empty-body.
+		return nil, nil
+	}
+
 	var m map[string]interface{}
 	if err := json.Unmarshal(payload, &m); err != nil {
 		return nil, fmt.Errorf("failed to json unmarshal 'payload': %s: %w", err, ErrMalformed)

@@ -19,9 +19,10 @@ const (
 	nonceExpiry = 15 * time.Minute
 
 	// Path Prefixes
-	acmePathPrefix       = "acme/"
-	acmeAccountPrefix    = acmePathPrefix + "accounts/"
-	acmeThumbprintPrefix = acmePathPrefix + "account-thumbprints/"
+	acmePathPrefix          = "acme/"
+	acmeAccountPrefix       = acmePathPrefix + "accounts/"
+	acmeThumbprintPrefix    = acmePathPrefix + "account-thumbprints/"
+	acmeAuthroizationPrefix = acmePathPrefix + "authz/"
 )
 
 type acmeState struct {
@@ -259,6 +260,50 @@ func (a *acmeState) LoadJWK(ac *acmeContext, keyId string) ([]byte, error) {
 	}
 
 	return key.Jwk, nil
+}
+
+func (a *acmeState) LoadAuthorization(ac *acmeContext, userCtx *jwsCtx, authId string) (*ACMEAuthorization, error) {
+	if authId == "" {
+		return nil, fmt.Errorf("malformed authorization identifier")
+	}
+
+	entry, err := ac.sc.Storage.Get(ac.sc.Context, acmeAuthroizationPrefix+authId)
+	if err != nil {
+		return nil, fmt.Errorf("error loading authorization: %w", err)
+	}
+
+	if entry == nil {
+		return nil, fmt.Errorf("authorization does not exist: %w", ErrMalformed)
+	}
+
+	var authz ACMEAuthorization
+	err = entry.DecodeJSON(&authz)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding authorization: %w", err)
+	}
+
+	if userCtx.Kid != authz.AccountId {
+		return nil, ErrUnauthorized
+	}
+
+	return &authz, nil
+}
+
+func (a *acmeState) SaveAuthorization(ac *acmeContext, authz *ACMEAuthorization) error {
+	if authz.Id == "" {
+		return fmt.Errorf("invalid authorization, missing id")
+	}
+
+	json, err := logical.StorageEntryJSON(acmeAuthroizationPrefix+authz.Id, authz)
+	if err != nil {
+		return fmt.Errorf("error creating authorization entry: %w", err)
+	}
+
+	if err := ac.sc.Storage.Put(ac.sc.Context, json); err != nil {
+		return fmt.Errorf("error writing authorization entry: %w", err)
+	}
+
+	return nil
 }
 
 func (a *acmeState) ParseRequestParams(ac *acmeContext, data *framework.FieldData) (*jwsCtx, map[string]interface{}, error) {
