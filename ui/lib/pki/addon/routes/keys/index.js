@@ -13,12 +13,6 @@ import { PKI_DEFAULT_EMPTY_STATE_MSG } from 'pki/routes/overview';
 export default class PkiKeysIndexRoute extends Route {
   @service store;
   @service secretMountPath;
-  @service pathHelp;
-
-  beforeModel() {
-    // Must call this promise before the model hook otherwise it doesn't add OpenApi to record.
-    return this.pathHelp.getNewModel('pki/key', this.secretMountPath.currentPath);
-  }
 
   model() {
     return hash({
