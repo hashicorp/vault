@@ -62,7 +62,13 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "group$",
-			Fields:  groupPathFields(),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "group",
+				OperationVerb:   "create",
+			},
+
+			Fields: groupPathFields(),
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: i.pathGroupRegister(),
 			},
@@ -72,11 +78,33 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "group/id/" + framework.GenericNameRegex("id"),
-			Fields:  groupPathFields(),
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathGroupIDUpdate(),
-				logical.ReadOperation:   i.pathGroupIDRead(),
-				logical.DeleteOperation: i.pathGroupIDDelete(),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "group",
+				OperationSuffix: "by-id",
+			},
+
+			Fields: groupPathFields(),
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.pathGroupIDUpdate(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "update",
+					},
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: i.pathGroupIDRead(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "read",
+					},
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: i.pathGroupIDDelete(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "delete",
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(groupHelp["group-by-id"][0]),
@@ -84,6 +112,12 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "group/id/?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "group",
+				OperationSuffix: "by-id",
+			},
+
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: i.pathGroupIDList(),
 			},
@@ -93,11 +127,33 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "group/name/(?P<name>.+)",
-			Fields:  groupPathFields(),
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathGroupNameUpdate(),
-				logical.ReadOperation:   i.pathGroupNameRead(),
-				logical.DeleteOperation: i.pathGroupNameDelete(),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "group",
+				OperationSuffix: "by-name",
+			},
+
+			Fields: groupPathFields(),
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.pathGroupNameUpdate(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "update",
+					},
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: i.pathGroupNameRead(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "read",
+					},
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: i.pathGroupNameDelete(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "delete",
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(groupHelp["group-by-name"][0]),
@@ -105,6 +161,12 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "group/name/?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "group",
+				OperationSuffix: "by-name",
+			},
+
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: i.pathGroupNameList(),
 			},
