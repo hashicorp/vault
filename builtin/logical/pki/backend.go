@@ -237,6 +237,10 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathAcmeRoleAuthorization(&b),
 			pathAcmeIssuerAuthorization(&b),
 			pathAcmeIssuerAndRoleAuthorization(&b),
+			pathAcmeRootChallenge(&b),
+			pathAcmeRoleChallenge(&b),
+			pathAcmeIssuerChallenge(&b),
+			pathAcmeIssuerAndRoleChallenge(&b),
 		},
 
 		Secrets: []*framework.Secret{
@@ -259,6 +263,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/key-change")
 		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/account/+")
 		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/authorization/+")
+		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/challenge/+/+")
 	}
 
 	if constants.IsEnterprise {
