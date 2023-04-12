@@ -6813,6 +6813,7 @@ func TestProperAuthing(t *testing.T) {
 		paths[acmePrefix+"acme/directory"] = shouldBeUnauthedReadList
 		paths[acmePrefix+"acme/new-nonce"] = shouldBeUnauthedReadList
 		paths[acmePrefix+"acme/new-account"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"acme/new-order"] = shouldBeUnauthedWriteOnly
 		paths[acmePrefix+"acme/account/hrKmDYTvicHoHGVN2-3uzZV_BPGdE0W_dNaqYTtYqeo="] = shouldBeUnauthedWriteOnly
 		paths[acmePrefix+"acme/authorization/29da8c38-7a09-465e-b9a6-3d76802b1afd"] = shouldBeUnauthedWriteOnly
 		paths[acmePrefix+"acme/challenge/29da8c38-7a09-465e-b9a6-3d76802b1afd/http-01"] = shouldBeUnauthedWriteOnly

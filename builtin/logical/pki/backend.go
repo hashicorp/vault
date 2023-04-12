@@ -241,6 +241,10 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathAcmeRoleChallenge(&b),
 			pathAcmeIssuerChallenge(&b),
 			pathAcmeIssuerAndRoleChallenge(&b),
+			pathAcmeRootNewOrder(&b),
+			pathAcmeRoleNewOrder(&b),
+			pathAcmeIssuerNewOrder(&b),
+			pathAcmeIssuerAndRoleNewOrder(&b),
 		},
 
 		Secrets: []*framework.Secret{
