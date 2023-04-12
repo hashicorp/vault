@@ -117,6 +117,42 @@ isn’t trying to send reports.
 HashiCorp collects the following utilization data as JSON payloads:
 `exporter_version` - The version of the licensing exporter
 
+<CodeBlockConfig hideClipboard>
+
 ```json
-TO DO: Add example
+"metrics": {
+        "vault.clientcount.current_month_estimate": {
+          "key": "vault.clientcount.current_month_estimate",
+          "kind": "sum",
+          "mode": "write",
+          "value": 40,
+          "labels": {
+            "type": {
+              "entity": 30,
+              "nonentity": 10
+            }
+          }
+        },
+        "vault.clientcount.previous_month_complete": {
+          "key": "vault.clientcount.previous_month_complete",
+          "kind": "sum",
+          "mode": "write",
+          "value": 20,
+          "labels": {
+            "type": {
+              "entity": 15,
+              "nonentity": 5
+            }
+          }
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "vault": {
+      "billing_start": "2023-03-24T00:00:00Z"
+    }
+  }
 ```
+
+</CodeBlockConfig>
