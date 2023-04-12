@@ -20,13 +20,15 @@ Reference: [Azure Active Directory v2.0 and the OpenID Connect protocol](https:/
 
 1. Add Redirect URIs with the "Web" type. You may include two redirect URIs,
    one for CLI access another one for Vault UI access.
-  - `http://localhost:8250/oidc/callback`
-  - `https://hostname:port_number/ui/vault/auth/oidc/oidc/callback`
+
+    - `http://localhost:8250/oidc/callback`
+    - `https://hostname:port_number/ui/vault/auth/oidc/oidc/callback`
 
 1. Record the "Application (client) ID" as you will need it as the `oidc_client_id`.
 
 1. Under **Endpoints**, copy the OpenID Connect metadata document URL, omitting the `/well-known...` portion.
-  - The endpoint URL (`oidc_discovery_url`) will look like: https://login.microsoftonline.com/tenant-guid-dead-beef-aaaa-aaaa/v2.0
+
+   - The endpoint URL (`oidc_discovery_url`) will look like: https://login.microsoftonline.com/tenant-guid-dead-beef-aaaa-aaaa/v2.0
 
 1. Under **Certificates & secrets**,
    [add a client secret](https://docs.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app#add-a-client-secret)
@@ -60,12 +62,14 @@ You should set up a [Vault policy](/vault/tutorials/policies/policies) for the A
    ```
 
 1. Configure the [OIDC Role](/vault/api-docs/auth/jwt#create-role) with the following:
-  - `user_claim` should be `"sub"` or `"oid"` following the
-  [recommendation](https://docs.microsoft.com/en-us/azure/active-directory/develop/id-tokens#using-claims-to-reliably-identify-a-user-subject-and-object-id)
+
+   - `user_claim` should be `"sub"` or `"oid"` following the
+   [recommendation](https://docs.microsoft.com/en-us/azure/active-directory/develop/id-tokens#using-claims-to-reliably-identify-a-user-subject-and-object-id)
   from Azure.
-  - `allowed_redirect_uris` should be the two redirect URIs for Vault CLI and UI access.
-  - `groups_claim` should be set to `"groups"`.
-  - `oidc_scopes` should be set to `"https://graph.microsoft.com/.default"`.
+   - `allowed_redirect_uris` should be the two redirect URIs for Vault CLI and UI access.
+   - `groups_claim` should be set to `"groups"`.
+   - `oidc_scopes` should be set to `"https://graph.microsoft.com/.default"`.
+   
    ```shell
    vault write auth/oidc/role/your_default_role \
       user_claim="sub" \
@@ -125,11 +129,10 @@ To set the proper permissions on the Azure app:
 1. Select "Delegated permissions"
 1. Add the [User.Read](https://learn.microsoft.com/en-us/graph/permissions-reference#delegated-permissions-93) permission
 1. Check the "Grant admin consent for Default Directory" checkbox
-
-Next, configure the OIDC auth method in Vault by setting `"provider_config"` to Azure.
-  ```shell
-  vault write auth/oidc/config -<<"EOH"
-  {
+1. Configure the OIDC auth method in Vault by setting `"provider_config"` to Azure.
+   ```shell
+   vault write auth/oidc/config -<<"EOH"
+   {
      "oidc_client_id": "your_client_id",
      "oidc_client_secret": "your_client_secret",
      "default_role": "your_default_role",
@@ -137,16 +140,16 @@ Next, configure the OIDC auth method in Vault by setting `"provider_config"` to 
      "provider_config": {
         "provider": "azure"
      }
-  }
-  EOH
-  ```
+   }
+   EOH
+   ```
 
-Finally, add `"profile"` to `oidc_scopes` so the user's ID comes back on the JWT.
-  ```shell
-  vault write auth/oidc/role/your_default_role \
-   user_claim="email" \
-   allowed_redirect_uris="http://localhost:8250/oidc/callback,https://online_version_hostname:port_number/ui/vault/auth/oidc/oidc/callback"  \
-   groups_claim="groups" \
-   oidc_scopes="profile" \
-   policies="default"
-  ```
+1. Add `"profile"` to `oidc_scopes` so the user's ID comes back on the JWT.
+   ```shell
+   vault write auth/oidc/role/your_default_role \
+    user_claim="email" \
+    allowed_redirect_uris="http://localhost:8250/oidc/callback,https://online_version_hostname:port_number/ui/vault/auth/oidc/oidc/callback"  \
+    groups_claim="groups" \
+    oidc_scopes="profile" \
+    policies="default"
+   ```
