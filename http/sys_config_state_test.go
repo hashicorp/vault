@@ -48,6 +48,23 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 			nil,
 		},
 		{
+			"inmem storage, no HA storage",
+			&server.Storage{
+				Type:              "inmem",
+				RedirectAddr:      "http://127.0.0.1:8200",
+				ClusterAddr:       "http://127.0.0.1:8201",
+				DisableClustering: false,
+			},
+			nil,
+			map[string]interface{}{
+				"type":               "inmem",
+				"redirect_addr":      "http://127.0.0.1:8200",
+				"cluster_addr":       "http://127.0.0.1:8201",
+				"disable_clustering": false,
+			},
+			nil,
+		},
+		{
 			"inmem storage, raft HA storage",
 			&server.Storage{
 				Type:              "inmem",
