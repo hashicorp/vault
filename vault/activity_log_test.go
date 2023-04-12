@@ -922,7 +922,7 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 			"enabled":                 "enable",
 			"queries_available":       false,
 			"reporting_enabled":       false,
-			"billing_start_timestamp": time.Time{},
+			"billing_start_timestamp": core.GetBillingStart(),
 		}
 
 		if diff := deep.Equal(resp.Data, expected); len(diff) > 0 {
@@ -960,7 +960,7 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 			"enabled":                 activityLogEnabledDefaultValue,
 			"queries_available":       false,
 			"reporting_enabled":       false,
-			"billing_start_timestamp": time.Time{},
+			"billing_start_timestamp": core.GetBillingStart(),
 		}
 
 		if diff := deep.Equal(resp.Data, defaults); len(diff) > 0 {
