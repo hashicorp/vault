@@ -8,6 +8,19 @@ import { getOwner } from '@ember/application';
 import { action } from '@ember/object';
 
 export default class PkiCertificatesIndexController extends Controller {
+  queryParams = ['pageFilter'];
+
+  get filteredCertificates() {
+    const pageFilter = this.pageFilter;
+    const certificates = this.model.certificates;
+
+    if (pageFilter) {
+      return certificates.filter((cert) => cert.id.toLowerCase().includes(pageFilter.toLowerCase()));
+    } else {
+      return certificates;
+    }
+  }
+
   get mountPoint() {
     return getOwner(this).mountPoint;
   }

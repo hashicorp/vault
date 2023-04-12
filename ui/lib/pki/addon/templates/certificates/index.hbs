@@ -10,16 +10,20 @@
 />
 {{outlet}}
 <Toolbar>
-  {{#if this.model.certificates.length}}
+  {{#if this.model.hasConfig}}
     <ToolbarFilters>
-      {{! TODO add NavigateInput component }}
+      <NavigateInput
+        @filter={{this.pageFilter}}
+        @placeholder="Filter certificates"
+        @urls={{hash list="vault.cluster.secrets.backend.pki.certificates"}}
+      />
     </ToolbarFilters>
   {{/if}}
 </Toolbar>
 
 {{#if this.model.hasConfig}}
-  {{#if this.model.certificates.length}}
-    {{#each this.model.certificates as |pkiCertificate|}}
+  {{#if this.filteredCertificates.length}}
+    {{#each this.filteredCertificates as |pkiCertificate|}}
       <LinkedBlock
         class="list-item-row"
         @params={{array "certificates.certificate.details" pkiCertificate.id}}
@@ -56,16 +60,20 @@
       </LinkedBlock>
     {{/each}}
   {{else}}
-    <EmptyState @title="No certificates yet">
-      <div>
-        <p>When created, certificates will be listed here. Select a role to start generating certificates.</p>
-        <div class="has-top-margin-m">
-          <LinkTo @route="roles.index">
-            View roles
-          </LinkTo>
+    {{#if this.pageFilter}}
+      <EmptyState @title="There are no certificates matching &quot;{{this.pageFilter}}&quot;" />
+    {{else}}
+      <EmptyState @title="No certificates yet">
+        <div>
+          <p>When created, certificates will be listed here. Select a role to start generating certificates.</p>
+          <div class="has-top-margin-m">
+            <LinkTo @route="roles.index">
+              View roles
+            </LinkTo>
+          </div>
         </div>
-      </div>
-    </EmptyState>
+      </EmptyState>
+    {{/if}}
   {{/if}}
 {{else}}
   <EmptyState @title="PKI not configured" @message={{this.message}}>

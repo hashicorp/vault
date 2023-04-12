@@ -19,6 +19,7 @@ export default class PkiCertificateBaseAdapter extends ApplicationAdapter {
     const data = !id ? { list: true } : {};
     return this.ajax(this.getURL(backend, id), 'GET', { data }).then((resp) => {
       resp.data.backend = backend;
+
       if (id) {
         resp.data.id = id;
         resp.data.serial_number = id;
