@@ -168,10 +168,6 @@
     flex: none;
     width: 58.33333%;
   }
-  .column.is-10-mobile {
-    flex: none;
-    width: 83.33333%;
-  }
   .column.is-12 {
     flex: none;
     width: 100%;
@@ -179,6 +175,13 @@
   .column.is-full,.column.is-full-tablet {
     flex: none;
     width: 100%
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .column.is-10-mobile {
+    flex: none;
+    width: 83.33333%;
   }
 }
 
