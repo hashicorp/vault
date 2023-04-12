@@ -34,12 +34,6 @@ var (
 	ErrNotStarted              = errors.New("event broker has not been started")
 	cloudEventsFormatterFilter *cloudevents.FormatterFilter
 	subscriptions              atomic.Int64 // keeps track of event subscription count in all event buses
-
-	// EnabledPlugins are plugins that are always allowed to send events.
-	// This is only visible for testing purposes.
-	EnabledPlugins = map[string]struct{}{
-		"pki": {},
-	}
 )
 
 // EventBus contains the main logic of running an event broker for Vault.
