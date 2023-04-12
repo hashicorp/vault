@@ -3340,3 +3340,14 @@ func (c *Core) CheckPluginPerms(pluginName string) (err error) {
 	}
 	return err
 }
+
+// GetBillingStart gets the billing start timestamp from the configured Census
+// Agent, handling a nil agent.
+func (c *Core) GetBillingStart() time.Time {
+	var billingStart time.Time
+	if c.censusAgent != nil {
+		billingStart = c.censusAgent.billingStart
+	}
+
+	return billingStart
+}
