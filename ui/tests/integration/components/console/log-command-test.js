@@ -11,7 +11,6 @@ module('Integration | Component | console/log command', function (hooks) {
     this.set('content', commandText);
 
     await render(hbs`{{console/log-command content=this.content}}`);
-
-    assert.dom('pre').includesText(commandText);
+    assert.dom('p').includesText(commandText);
   });
 });
