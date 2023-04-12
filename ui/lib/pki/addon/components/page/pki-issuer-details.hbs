@@ -121,6 +121,9 @@
             />
           {{/if}}
         {{/each}}
+        {{#if (eq group "default")}}
+          <ParsedCertificateInfoRows @model={{@issuer.parsedCertificate}} />
+        {{/if}}
       </div>
     {{/each-in}}
   {{/each}}

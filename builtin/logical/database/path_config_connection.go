@@ -62,6 +62,13 @@ func (c *DatabaseConfig) SupportsCredentialType(credentialType v5.CredentialType
 func pathResetConnection(b *databaseBackend) *framework.Path {
 	return &framework.Path{
 		Pattern: fmt.Sprintf("reset/%s", framework.GenericNameRegex("name")),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixDatabase,
+			OperationVerb:   "reset",
+			OperationSuffix: "connection",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -106,6 +113,11 @@ func (b *databaseBackend) pathConnectionReset() framework.OperationFunc {
 func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 	return &framework.Path{
 		Pattern: fmt.Sprintf("config/%s", framework.GenericNameRegex("name")),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixDatabase,
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -152,11 +164,36 @@ func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 		},
 
 		ExistenceCheck: b.connectionExistenceCheck(),
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.CreateOperation: b.connectionWriteHandler(),
-			logical.UpdateOperation: b.connectionWriteHandler(),
-			logical.ReadOperation:   b.connectionReadHandler(),
-			logical.DeleteOperation: b.connectionDeleteHandler(),
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.connectionWriteHandler(),
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "connection",
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.connectionWriteHandler(),
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "connection",
+				},
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.connectionReadHandler(),
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "read",
+					OperationSuffix: "connection-configuration",
+				},
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.connectionDeleteHandler(),
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "delete",
+					OperationSuffix: "connection-configuration",
+				},
+			},
 		},
 
 		HelpSynopsis:    pathConfigConnectionHelpSyn,
@@ -183,6 +220,11 @@ func (b *databaseBackend) connectionExistenceCheck() framework.ExistenceFunc {
 func pathListPluginConnection(b *databaseBackend) *framework.Path {
 	return &framework.Path{
 		Pattern: fmt.Sprintf("config/?$"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixDatabase,
+			OperationSuffix: "connections",
+		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.connectionListHandler(),

@@ -61,7 +61,7 @@ const (
 	// TypeFloat parses both float32 and float64 values
 	TypeFloat
 
-	// TypeTime represents absolute time. It accepts an RFC3999-formatted
+	// TypeTime represents absolute time. It accepts an RFC3339-formatted
 	// string (with or without fractional seconds), or an epoch timestamp
 	// formatted as a string or a number. The resulting time.Time
 	// is converted to UTC.

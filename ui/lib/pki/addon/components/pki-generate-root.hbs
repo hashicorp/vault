@@ -35,6 +35,7 @@
     <InfoTableRow @label="Private key type" @value={{@model.privateKeyType}}>
       <span class="{{unless @model.privateKeyType 'tag'}}">{{or @model.privateKeyType "internal"}}</span>
     </InfoTableRow>
+    <ParsedCertificateInfoRows @model={{@model.parsedCertificate}} />
   </main>
   <footer>
     <div class="field is-grouped is-fullwidth has-top-margin-l">
@@ -62,7 +63,7 @@
       {{/let}}
     {{/each}}
 
-    <PkiGenerateToggleGroups @model={{@model}} />
+    <PkiGenerateToggleGroups @model={{@model}} @modelValidations={{this.modelValidations}} />
 
     {{#if @urls}}
       <fieldset class="box is-shadowless is-marginless is-borderless is-fullwidth" data-test-urls-section>

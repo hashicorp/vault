@@ -55,7 +55,6 @@ vault auth enable "kubernetes"
 vault auth enable "ldap"
 vault auth enable "oci"
 vault auth enable "okta"
-vault auth enable "pcf"
 vault auth enable "radius"
 vault auth enable "userpass"
 

@@ -18,7 +18,13 @@ export interface FormFieldGroupOptions {
   [key: string]: Array<string>;
 }
 
-export interface ModelValidation {
+export interface ValidationMap {
+  [key: string]: {
+    isValid: boolean;
+    errors: Array<string>;
+  };
+}
+export interface ModelValidations {
   isValid: boolean;
   state: {
     [key: string]: {

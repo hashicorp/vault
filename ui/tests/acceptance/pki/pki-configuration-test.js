@@ -16,7 +16,7 @@ import { runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
 import { SELECTORS } from 'vault/tests/helpers/pki/workflow';
 import { issuerPemBundle } from 'vault/tests/helpers/pki/values';
 
-module('Acceptance | pki configuration', function (hooks) {
+module('Acceptance | pki configuration test', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
