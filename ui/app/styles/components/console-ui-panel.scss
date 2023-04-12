@@ -11,7 +11,7 @@
   min-height: 0;
   overflow: scroll;
   right: 0;
-  top: $spacing-xxxl;
+  top: 4rem;
   transition: min-height $speed $easing, transform $speed ease-in;
   will-change: transform, min-height;
   -webkit-overflow-scrolling: touch;
