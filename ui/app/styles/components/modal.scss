@@ -33,9 +33,12 @@
 .modal-card {
   box-shadow: $box-shadow-highest;
   border: 1px solid $grey-light;
+  display: flex;
+  flex-direction: column;
   max-height: calc(100vh - 70px);
   margin-top: 60px;
   min-width: calc(100vw * 0.3);
+  overflow: hidden;
   position: relative;
 
   &-head {
@@ -87,6 +90,9 @@
 
 .modal-card-body {
   background-color: $white;
+  flex-grow: 1;
+  flex-shrink: 1;
+  overflow: auto;
   padding: 20px;
 }
 

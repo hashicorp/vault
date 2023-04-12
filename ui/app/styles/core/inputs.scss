@@ -30,18 +30,23 @@
     outline: none;
     background-color: $white;
     border-color: $blue-500 !important;
-    box-shadow: 0 0 0 0.125em rgba(21, 99, 255, 0.25) !important;
+    box-shadow: 0 0 0 0.125em rgba(21, 99, 255, 0.25);
   }
 
   &:hover {
-    border-color: #b5b5b5;
+    border-color: $ui-gray-300;
   }
 
   @include until($desktop) {
     font-size: 16px;
   }
+
   &::placeholder {
     opacity: 0.5;
+  }
+
+  &:read-only {
+    box-shadow: none;
   }
 }
 
@@ -55,6 +60,17 @@
   &:hover {
     border-color: $grey-light;
   }
+}
+
+.input[readonly],
+.textarea[readonly] {
+  box-shadow: none;
+}
+
+// textarea specific css
+.textarea {
+  padding-bottom: .625em;
+  padding-top: .625em;
 }
 
 .textarea:not([rows]) {

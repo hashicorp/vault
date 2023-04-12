@@ -3,16 +3,83 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-// This file defines the classes for .file
+// This file defines the classes for file, file-cta, file-delete-button, file-icon, file-input,  file-label, file-name.
 
 .file {
   user-select: none;
 }
 
-.file-name {
-  border-radius: $radius;
-  border-width: 1px 1px 1px 0 !important;
+.file-cta {
+  align-items: center;
   border: $base-border;
+  border-radius: $radius;
+  display: inline-flex;
+  height: 2.25em;
+  justify-content: flex-start;
+  min-width: auto;
+  padding-bottom: calc(0.375em -1px);
+  padding-left: 1em;
+  padding-right: 1em;
+  padding-top: calc(0.375em -1px);
+  position: relative;
+  vertical-align: top;
+  white-space: nowrap;
+
+  &.button {
+    height: $size-2; // in older parts of the code, like shamir-modal-flow this class is not a button. In newer parts of the code it is and the height needs to match the heigh of a button (2.5rem).
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+
+  .icon:first-child:last-child {
+    display: inline-block;
+    margin-right: 0.1rem;
+    vertical-align: middle;
+  }
+}
+
+.file-delete-button {
+  @extend .button;
+  @extend .is-transparent;
+  color: $grey;
+  position: absolute;
+  right: 8px;
+}
+
+
+.file-icon {
+  align-items: center;
+  display: flex;
+  height: 1em;
+  justify-content: center;
+  margin-right: 0.5em;
+  width: 1em;
+}
+
+.file-input {
+  height: 0.01em;
+  left: 0;
+  outline: 0;
+  position: absolute;
+  top: 0;
+  width: 0.01em;
+  visibility: hidden;
+}
+
+.file-label {
+  align-items: stretch;
+  cursor: pointer;
+  display: flex;
+  justify-content: flex-start;
+  position: relative;
+}
+
+.file-name {
+  @extend .input;
+  border: $base-border;
+  border-radius: $radius;
   box-shadow: 0 4px 1px rgba(10, 10, 10, 0.06) inset;
   display: block;
   font-size: 1em;
@@ -32,52 +99,3 @@
   }
 }
 
-.file-label {
-  align-items: stretch;
-  cursor: pointer;
-  display: flex;
-  justify-content: flex-start;
-  overflow: visible;
-}
-
-.file-input {
-  height: 0.01em;
-  left: 0;
-  outline: 0;
-  position: absolute;
-  top: 0;
-  width: 0.01em;
-  visibility: hidden;
-}
-
-.file-cta {
-  border: $base-border;
-  border-radius: $radius;
-  min-width: auto;
-  position: relative;
-  white-space: nowrap;
-
-  &:disabled {
-    cursor: not-allowed;
-  }
-
-  .icon:first-child:last-child {
-    display: inline-block;
-    margin-right: 0.1rem;
-    vertical-align: middle;
-  }
-}
-
-.file-name {
-  @extend .input;
-  border: $base-border;
-  border-radius: $radius;
-}
-
-.file-delete-button {
-  @extend .button;
-  @extend .is-transparent;
-  color: $grey;
-  position: absolute;
-  right: 8px;
-}

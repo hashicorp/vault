@@ -51,7 +51,7 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
 
   &:disabled {
     background-color: $white;
-    border-color: #dbdbdb;
+    border-color: $ui-gray-050;
     box-shadow: none;
     cursor: not-allowed;
     opacity: 0.5;
@@ -137,6 +137,8 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
   }
 
   &.is-link {
+    background-color: transparent;
+    border-color: transparent;
     color: $blue;
     text-decoration: none;
     font-weight: $font-weight-semibold;
@@ -150,6 +152,12 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
     color: $white;
     font-weight: $font-weight-bold;
     text-shadow: 0 1px 1px rgba($black, 0.25);
+
+    &:disabled {
+      background-color: $ui-gray-700;
+      border-color: transparent;
+      box-shadow: none;
+    }
 
     &:hover:not([disabled]) {
       background-color: darken($blue, 5%);
