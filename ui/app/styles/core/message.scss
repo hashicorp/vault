@@ -10,7 +10,7 @@
   padding: $spacing-s $spacing-m $spacing-m $spacing-s;
   position: relative;
 
-  &::not(:last-child) {
+  &:not(:last-child) {
     margin-bottom: $size-4;
   }
 
