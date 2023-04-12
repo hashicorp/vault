@@ -1,0 +1,125 @@
+---
+layout: docs
+page_title: Automated entitlement utilization reporting
+description: >-
+  Learn what data HashiCorp collects to meter Enterprise entitlement utilization. Enable or disable reporting. Review sample payloads and logs.
+---
+
+# Automated entitlement utilization reporting
+
+Automated entitlement utilization reporting sends minimal product-entitlement
+metering data to HashiCorp without requiring you to manually collect and report
+them. It also lets you review your entitlement usage with the monitoring
+solution you already use (Splunk, Datadog, etc.) so you can optimize and manage
+your deployments. 
+
+Utilization reporting shares the minimum data required to validate entitlement
+utilization as contractually obligated. They consist of mostly computed metrics
+and will never contain PII or other sensitive information. Utilization reporting
+shares the data with HashiCorp using a secure, unidirectional HTTPS API, and
+makes an auditable record in the product logs each time it submits a report.
+
+To enable automated reporting you need to upgrade to a version that supports it,
+and open your network to outbound HTTPS traffic on port 443 from
+`https://reporting.hashicorp.services`. If your installation is completely
+air-gapped, you can’t use automated entitlement utilization and can opt out
+instead. You do not need to re-sign the EULA to opt in or out. 
+
+## Enable reporting
+
+To enable automated entitlement utilization reporting, upgrade to a version that
+supports it and make sure that your network allows the right egress traffic. 
+
+### 1. Allow outbound traffic on port 443
+
+Make sure that your network allows HTTPS egress on port 443 to
+https://reporting.hashicorp.services. 
+
+### 2. Upgrade
+
+Upgrade to a release that supports entitlement utilization reporting. These
+releases include:
+
+- [Vault Enterprise 1.13.2](https://releases.hashicorp.com/vault/1.13.2+ent/) and later. 
+
+### 3. Check logs
+
+Automatic entitlement utilization reporting will start sending data within 24
+hours. Check the product logs for records that the data sent successfully. 
+
+Instructions on how to check logs. 
+
+<CodeBlockConfig hideClipboard>
+
+```
+TO DO: Add example log output
+```
+
+</CodeBlockConfig>
+
+If your installation is air-gapped or your network doesn’t allow the correct
+egress, logs will show an error. 
+
+<CodeBlockConfig hideClipboard>
+
+```
+TO DO: Add example error log
+```
+
+</CodeBlockConfig>
+
+Reconfigure your network to allow egress and check back in 24 hours. 
+
+## Opt out
+
+If your installation is air-gapped, or you want to manually collect and report
+on the same entitlement utilization metrics, you can opt-out of automated
+reporting. 
+
+Manually reporting these metrics can be time consuming and does not prevent you
+from sharing the minimum data required to validate entitlement utilization. If
+you are considering opting out because you’re worried about the data, we
+strongly recommend that you review the [example payloads]() before opting out.
+If you have concerns with any of the automatically-reported data please bring
+them to your account representative. 
+
+You have two options to opt out of automated reporting: HCL configuration
+(recommended) Environment variable (requires restart)
+
+Opting out in your product’s configuration file doesn’t require a system
+restart, and is the method we recommend. Add the following block to your
+`configuration.hcl/json` file.
+
+```hcl
+reporting {
+	license {
+		enabled = false
+   }
+}
+```
+
+If you need to, you can also opt out using an environment variable, which will
+provide a CLI message confirming that you have disabled automated reporting.
+This option requires a system restart. Set the following environment variable on
+the CLI.
+
+```shell-session
+$ export OPTOUT_LICENSE_REPORTING=true
+```
+
+Now, restart your system by following these instructions. 
+
+Check your product logs 24 hours after opting out to make sure that the system
+isn’t trying to send reports. 
+
+## Example payloads
+
+HashiCorp collects the following utilization data as JSON payloads:
+`exporter_version` - The version of the licensing exporter
+
+```json
+TO DO: Add example
+```
+
+
+
