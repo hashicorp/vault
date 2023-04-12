@@ -79,7 +79,7 @@
     border: 1px solid $red-050;
 
     .message-body {
-      color: $red-700; // replaced hard-coded #8e2c37 with color var for consistency.
+      color: $red-700; 
     }
 
     .message-icon {
@@ -109,7 +109,7 @@
   }
 
   &.is-info {
-    background-color: $blue-010; // changed from hardcoded #eff5fb to ui color var
+    background-color: $blue-010;
 
     .message-body {
       color: $blue-700;
@@ -130,7 +130,7 @@
     border: 1px solid $green-100;
 
     .message-body {
-      color: $green-900; // changed from hardcoded #17421b to a ui var.
+      color: $green-900;
     }
 
     .message-icon {
