@@ -121,6 +121,10 @@ $ curl \
     - `0x0009` `CKM_RSA_PKCS_OAEP`
     - `0x0001` `CKM_RSA_PKCS`
 
+  ~> **Note**: It is possible to use unsupported mechanisms with a managed key, however automatic key generation is only
+  possible with the above supported mechanisms. Automatic key generation is also currently a best effort operation and may
+  not function correctly on all HSMs.
+
 - `pin` `(string: <required>)`: The PIN for login.
 
 - `slot` `(string: <slot or token label required>)`: The slot number to use,
