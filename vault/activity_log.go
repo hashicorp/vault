@@ -171,14 +171,6 @@ type ActivityLog struct {
 	partialMonthClientTracker map[string]*activity.EntityRecord
 
 	inprocessExport *atomic.Bool
-
-	// CensusReportDone is a channel used to signal tests upon successful calls
-	// to (CensusReporter).Write() in CensusReport.
-	CensusReportDone chan bool
-
-	// CensusReportInterval is the testing configuration for time between
-	// Write() calls initiated in CensusReport.
-	CensusReportInterval time.Duration
 }
 
 // These non-persistent configuration options allow us to disable
@@ -190,9 +182,6 @@ type ActivityLogCoreConfig struct {
 
 	// Do not start timers to send or persist fragments.
 	DisableTimers bool
-
-	// CensusReportInterval is the testing configuration for time
-	CensusReportInterval time.Duration
 }
 
 // NewActivityLog creates an activity log.
@@ -214,7 +203,6 @@ func NewActivityLog(core *Core, logger log.Logger, view *BarrierView, metrics me
 		writeCh:                   make(chan struct{}, 1), // same for full segment
 		doneCh:                    make(chan struct{}, 1),
 		partialMonthClientTracker: make(map[string]*activity.EntityRecord),
-		CensusReportInterval:      time.Hour * 1,
 
 		currentSegment: segmentInfo{
 			startTimestamp: 0,
@@ -952,10 +940,6 @@ func (a *ActivityLog) SetConfigInit(config activityConfig) {
 
 	a.defaultReportMonths = config.DefaultReportMonths
 	a.retentionMonths = config.RetentionMonths
-
-	if a.configOverrides.CensusReportInterval > 0 {
-		a.CensusReportInterval = a.configOverrides.CensusReportInterval
-	}
 }
 
 // This version reacts to user changes
@@ -1092,9 +1076,6 @@ func (c *Core) setupActivityLog(ctx context.Context, wg *sync.WaitGroup) error {
 			manager.retentionWorker(ctx, time.Now(), months)
 			close(manager.retentionDone)
 		}(manager.retentionMonths)
-
-		manager.CensusReportDone = make(chan bool)
-		go c.activityLog.CensusReport(ctx, c.censusAgent)
 	}
 
 	return nil
@@ -1595,9 +1576,7 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 	if computePartial {
 		// Traverse through current month's activitylog data and group clients
 		// into months and namespaces
-		a.fragmentLock.RLock()
 		partialByMonth, partialByNamespace = a.populateNamespaceAndMonthlyBreakdowns()
-		a.fragmentLock.RUnlock()
 
 		// Convert the byNamespace breakdowns into structs that are
 		// consumable by the /activity endpoint, so as to reuse code between these two
@@ -1781,8 +1760,6 @@ type activityConfig struct {
 
 	// Enabled is one of enable, disable, default.
 	Enabled string `json:"enabled"`
-
-	CensusReportInterval time.Duration `json:"census_report_interval"`
 }
 
 func defaultActivityConfig() activityConfig {
