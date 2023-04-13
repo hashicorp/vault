@@ -1905,6 +1905,7 @@ func newByNamespace() *processByNamespace {
 		Mounts: make(summaryByMount),
 	}
 }
+
 func (p *processByNamespace) add(client *activity.EntityRecord) {
 	p.Counts.add(client)
 	p.Mounts.add(client)
