@@ -23,8 +23,8 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 		expectedHAStorageOutput map[string]interface{}
 	}{
 		{
-			"raft storage",
-			&server.Storage{
+			name: "raft storage",
+			storageConfig: &server.Storage{
 				Type:              "raft",
 				RedirectAddr:      "http://127.0.0.1:8200",
 				ClusterAddr:       "http://127.0.0.1:8201",
@@ -35,8 +35,8 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 					"max_entry_size": "2097152",
 				},
 			},
-			nil,
-			map[string]interface{}{
+			haStorageConfig: nil,
+			expectedStorageOutput: map[string]interface{}{
 				"type":               "raft",
 				"redirect_addr":      "http://127.0.0.1:8200",
 				"cluster_addr":       "http://127.0.0.1:8201",
@@ -45,34 +45,34 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 					"max_entry_size": "2097152",
 				},
 			},
-			nil,
+			expectedHAStorageOutput: nil,
 		},
 		{
-			"inmem storage, no HA storage",
-			&server.Storage{
+			name: "inmem storage, no HA storage",
+			storageConfig: &server.Storage{
 				Type:              "inmem",
 				RedirectAddr:      "http://127.0.0.1:8200",
 				ClusterAddr:       "http://127.0.0.1:8201",
 				DisableClustering: false,
 			},
-			nil,
-			map[string]interface{}{
+			haStorageConfig: nil,
+			expectedStorageOutput: map[string]interface{}{
 				"type":               "inmem",
 				"redirect_addr":      "http://127.0.0.1:8200",
 				"cluster_addr":       "http://127.0.0.1:8201",
 				"disable_clustering": false,
 			},
-			nil,
+			expectedHAStorageOutput: nil,
 		},
 		{
-			"inmem storage, raft HA storage",
-			&server.Storage{
+			name: "inmem storage, raft HA storage",
+			storageConfig: &server.Storage{
 				Type:              "inmem",
 				RedirectAddr:      "http://127.0.0.1:8200",
 				ClusterAddr:       "http://127.0.0.1:8201",
 				DisableClustering: false,
 			},
-			&server.Storage{
+			haStorageConfig: &server.Storage{
 				Type:              "raft",
 				RedirectAddr:      "http://127.0.0.1:8200",
 				ClusterAddr:       "http://127.0.0.1:8201",
@@ -83,13 +83,13 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 					"max_entry_size": "2097152",
 				},
 			},
-			map[string]interface{}{
+			expectedStorageOutput: map[string]interface{}{
 				"type":               "inmem",
 				"redirect_addr":      "http://127.0.0.1:8200",
 				"cluster_addr":       "http://127.0.0.1:8201",
 				"disable_clustering": false,
 			},
-			map[string]interface{}{
+			expectedHAStorageOutput: map[string]interface{}{
 				"type":               "raft",
 				"redirect_addr":      "http://127.0.0.1:8200",
 				"cluster_addr":       "http://127.0.0.1:8201",
