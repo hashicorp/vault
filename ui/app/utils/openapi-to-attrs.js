@@ -30,6 +30,23 @@ export const expandOpenApiProps = function (props) {
       editType = items.type + capitalize(type);
     }
 
+    // remove references to comma separated strings from tooltips
+    if (editType === 'stringArray') {
+      if (description?.includes('Comma separated string or')) {
+        description = description.replace(/\bComma\b \bseparated\b \bstring\b \bor\b |\bJSON\b /g, '');
+        description = description.replace(/\blist\b|\barray\b/, 'List');
+      } else if (description?.includes('Comma separated list')) {
+        description = description.replace(/\bComma\b \bseparated\b \blist\b/, 'List');
+      } else if (description?.includes('Comma-separated list')) {
+        description = description.replace(/\bComma\b-\bseparated\b \blist\b/, 'List');
+      } else if (description?.includes('comma-separated list')) {
+        description = description.replace(/\bcomma\b-\bseparated\b /, '');
+      } else if (description?.includes('comma-separated string or')) {
+        description = description.replace(/\bcomma\b-\bseparated\b \bstring\b \bor\b /, '');
+        description = description.replace(/\barray\b/, 'list');
+      }
+    }
+
     const attrDefn = {
       editType,
       helpText: description,

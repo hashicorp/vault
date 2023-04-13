@@ -196,7 +196,7 @@ export default class PkiRoleModel extends Model {
   /* Overriding API Policy identifier option */
   @attr({
     label: 'Policy identifiers',
-    subText: 'A comma-separated string or list of policy object identifiers (OIDs).',
+    subText: 'A list of policy object identifiers (OIDs).',
     editType: 'stringArray',
   })
   policyIdentifiers;

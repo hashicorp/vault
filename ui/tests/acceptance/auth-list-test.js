@@ -87,10 +87,7 @@ module('Acceptance | auth backend list', function (hooks) {
     await triggerEvent(tooltipTrigger, 'mouseenter');
     assert
       .dom('[data-test-info-tooltip-content]')
-      .hasText(
-        'Add policies that will apply to the generated token for this user. One policy per row.',
-        'Overwritten tooltip text displays in token form field.'
-      );
+      .hasText('List of policies', 'Overwritten tooltip text displays in token form field.');
 
     await click('[data-test-save-config="true"]');
 

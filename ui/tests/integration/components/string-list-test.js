@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, fillIn, triggerKeyEvent, triggerEvent } from '@ember/test-helpers';
+import { render, click, fillIn, triggerKeyEvent } from '@ember/test-helpers';
 import sinon from 'sinon';
 import hbs from 'htmlbars-inline-precompile';
 
@@ -136,17 +136,5 @@ module('Integration | Component | string list', function (hooks) {
     assert.dom('[data-test-string-list-input]').exists({ count: 2 }, 'renders 2 inputs');
     assert.dom('[data-test-string-list-input="0"]').hasValue('bar');
     assert.dom('[data-test-string-list-input="1"]').hasValue('');
-  });
-
-  test('it replaces helpText if name is tokenBoundCidrs', async function (assert) {
-    assert.expect(1);
-    await render(hbs`<StringList @label={{'blah'}} @helpText={{'blah'}} @attrName={{'tokenBoundCidrs'}} />`);
-    const tooltipTrigger = document.querySelector('[data-test-tool-tip-trigger]');
-    await triggerEvent(tooltipTrigger, 'mouseenter');
-    assert
-      .dom('[data-test-info-tooltip-content]')
-      .hasText(
-        'Specifies the blocks of IP addresses which are allowed to use the generated token. One entry per row.'
-      );
   });
 });
