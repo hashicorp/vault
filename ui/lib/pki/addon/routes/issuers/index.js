@@ -33,6 +33,6 @@ export default class PkiIssuersListRoute extends Route {
       { label: this.secretMountPath.currentPath, route: 'overview' },
       { label: 'issuers', route: 'issuers.index' },
     ];
-    controller.message = PKI_DEFAULT_EMPTY_STATE_MSG;
+    controller.notConfiguredMessage = PKI_DEFAULT_EMPTY_STATE_MSG;
   }
 }

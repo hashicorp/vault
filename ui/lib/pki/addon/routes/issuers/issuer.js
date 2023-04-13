@@ -3,10 +3,13 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-import PkiIssuersListRoute from '.';
+import Route from '@ember/routing/route';
+import { inject as service } from '@ember/service';
 
-// Single issuer index route extends issuers list route
-export default class PkiIssuerIndexRoute extends PkiIssuersListRoute {
+export default class PkiIssuerIndexRoute extends Route {
+  @service store;
+  @service secretMountPath;
+
   model() {
     const { issuer_ref } = this.paramsFor('issuers/issuer');
     return this.store.queryRecord('pki/issuer', {
