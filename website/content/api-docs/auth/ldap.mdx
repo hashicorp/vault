@@ -35,6 +35,9 @@ This endpoint configures the LDAP auth method.
   names will be normalized to lower case. Case will still be preserved when
   sending the username to the LDAP server at login time; this is only for
   matching local user/group definitions.
+- `connection_timeout` `(integer: 60 or string: "60s")` - Timeout, in seconds, 
+  when attempting to connect to the LDAP server before trying the next URL in 
+  the configuration.
 - `request_timeout` `(integer: 90 or string: "90s")` - Timeout, in seconds, for
   the connection when making requests against the server before returning back
   an error.
