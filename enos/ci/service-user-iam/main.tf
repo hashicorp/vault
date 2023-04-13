@@ -31,6 +31,7 @@ resource "aws_iam_role" "role" {
 
 data "aws_iam_policy_document" "assume_role_policy_document" {
   provider = aws.us_east_1
+
   statement {
     effect  = "Allow"
     actions = ["sts:AssumeRole"]
@@ -46,11 +47,47 @@ resource "aws_iam_role_policy" "role_policy" {
   provider = aws.us_east_1
   role     = aws_iam_role.role.name
   name     = "${local.service_user}_policy"
-  policy   = data.aws_iam_policy_document.iam_policy_document.json
+  policy   = data.aws_iam_policy_document.role_policy.json
 }
 
-data "aws_iam_policy_document" "iam_policy_document" {
+data "aws_iam_policy_document" "role_policy" {
+  source_policy_documents = [
+    data.aws_iam_policy_document.enos_scenario.json,
+    data.aws_iam_policy_document.aws_nuke.json,
+  ]
+}
+
+data "aws_iam_policy_document" "aws_nuke" {
   provider = aws.us_east_1
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "ec2:DescribeInternetGateways",
+      "ec2:DescribeNatGateways",
+      "ec2:DescribeRegions",
+      "ec2:DescribeVpnGateways",
+      "iam:DeleteAccessKey",
+      "iam:DeleteUser",
+      "iam:DeleteUserPolicy",
+      "iam:GetUser",
+      "iam:ListAccessKeys",
+      "iam:ListAccountAliases",
+      "iam:ListGroupsForUser",
+      "iam:ListUserPolicies",
+      "iam:ListUserTags",
+      "iam:ListUsers",
+      "iam:UntagUser",
+      "servicequotas:ListServiceQuotas"
+    ]
+
+    resources = ["*"]
+  }
+}
+
+data "aws_iam_policy_document" "enos_scenario" {
+  provider = aws.us_east_1
+
   statement {
     effect = "Allow"
     actions = [
@@ -58,19 +95,27 @@ data "aws_iam_policy_document" "iam_policy_document" {
       "ec2:AttachInternetGateway",
       "ec2:AuthorizeSecurityGroupEgress",
       "ec2:AuthorizeSecurityGroupIngress",
+      "ec2:CancelSpotFleetRequests",
+      "ec2:CancelSpotInstanceRequests",
       "ec2:CreateInternetGateway",
       "ec2:CreateKeyPair",
+      "ec2:CreateLaunchTemplate",
+      "ec2:CreateLaunchTemplateVersion",
       "ec2:CreateRoute",
       "ec2:CreateRouteTable",
       "ec2:CreateSecurityGroup",
+      "ec2:CreateSpotDatafeedSubscription",
       "ec2:CreateSubnet",
       "ec2:CreateTags",
       "ec2:CreateVolume",
       "ec2:CreateVPC",
       "ec2:DeleteInternetGateway",
+      "ec2:DeleteLaunchTemplate",
+      "ec2:DeleteLaunchTemplateVersions",
       "ec2:DeleteKeyPair",
       "ec2:DeleteRouteTable",
       "ec2:DeleteSecurityGroup",
+      "ec2:DeleteSpotDatafeedSubscription",
       "ec2:DeleteSubnet",
       "ec2:DeleteTags",
       "ec2:DeleteVolume",
@@ -84,14 +129,22 @@ data "aws_iam_policy_document" "iam_policy_document" {
       "ec2:DescribeInstanceTypeOfferings",
       "ec2:DescribeInstanceTypes",
       "ec2:DescribeInternetGateways",
-      "ec2:DescribeInternetGateways",
       "ec2:DescribeKeyPairs",
+      "ec2:DescribeLaunchTemplates",
+      "ec2:DescribeLaunchTemplateVersions",
       "ec2:DescribeNatGateways",
       "ec2:DescribeNetworkAcls",
       "ec2:DescribeNetworkInterfaces",
       "ec2:DescribeRegions",
       "ec2:DescribeRouteTables",
       "ec2:DescribeSecurityGroups",
+      "ec2:DescribeSpotDatafeedSubscription",
+      "ec2:DescribeSpotFleetInstances",
+      "ec2:DescribeSpotFleetInstanceRequests",
+      "ec2:DescribeSpotFleetRequests",
+      "ec2:DescribeSpotFleetRequestHistory",
+      "ec2:DescribeSpotInstanceRequests",
+      "ec2:DescribeSpotPriceHistory",
       "ec2:DescribeSubnets",
       "ec2:DescribeTags",
       "ec2:DescribeVolumes",
@@ -102,14 +155,21 @@ data "aws_iam_policy_document" "iam_policy_document" {
       "ec2:DescribeVpnGateways",
       "ec2:DetachInternetGateway",
       "ec2:DisassociateRouteTable",
+      "ec2:GetLaunchTemplateData",
+      "ec2:GetSpotPlacementScores",
       "ec2:ImportKeyPair",
       "ec2:ModifyInstanceAttribute",
+      "ec2:ModifyLaunchTemplate",
+      "ec2:ModifySpotFleetRequest",
       "ec2:ModifySubnetAttribute",
       "ec2:ModifyVPCAttribute",
+      "ec2:RequestSpotInstances",
+      "ec2:RequestSpotFleet",
       "ec2:ResetInstanceAttribute",
       "ec2:RevokeSecurityGroupEgress",
       "ec2:RevokeSecurityGroupIngress",
       "ec2:RunInstances",
+      "ec2:SendSpotInstanceInterruptions",
       "ec2:TerminateInstances",
       "elasticloadbalancing:DescribeLoadBalancers",
       "elasticloadbalancing:DescribeTargetGroups",
@@ -118,10 +178,9 @@ data "aws_iam_policy_document" "iam_policy_document" {
       "iam:CreateInstanceProfile",
       "iam:CreatePolicy",
       "iam:CreateRole",
-      "iam:CreateRole",
+      "iam:CreateServiceLinkedRole",
       "iam:DeleteInstanceProfile",
       "iam:DeletePolicy",
-      "iam:DeleteRole",
       "iam:DeleteRole",
       "iam:DeleteRolePolicy",
       "iam:DetachRolePolicy",
@@ -134,7 +193,6 @@ data "aws_iam_policy_document" "iam_policy_document" {
       "iam:ListInstanceProfilesForRole",
       "iam:ListPolicies",
       "iam:ListRolePolicies",
-      "iam:ListRoles",
       "iam:ListRoles",
       "iam:PassRole",
       "iam:PutRolePolicy",
@@ -153,6 +211,7 @@ data "aws_iam_policy_document" "iam_policy_document" {
       "kms:ScheduleKeyDeletion",
       "servicequotas:ListServiceQuotas"
     ]
+
     resources = ["*"]
   }
 }
