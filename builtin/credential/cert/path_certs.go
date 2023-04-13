@@ -288,6 +288,11 @@ func (b *backend) pathCertRead(ctx context.Context, req *logical.Request, d *fra
 		"allowed_organizational_units": cert.AllowedOrganizationalUnits,
 		"required_extensions":          cert.RequiredExtensions,
 		"allowed_metadata_extensions":  cert.AllowedMetadataExtensions,
+		"ocsp_ca_certificates":         cert.OcspCaCertificates,
+		"ocsp_enabled":                 cert.OcspEnabled,
+		"ocsp_servers_override":        cert.OcspServersOverride,
+		"ocsp_fail_open":               cert.OcspFailOpen,
+		"ocsp_query_all_servers":       cert.OcspQueryAllServers,
 	}
 	cert.PopulateTokenData(data)
 
