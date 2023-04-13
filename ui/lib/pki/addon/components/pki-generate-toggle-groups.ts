@@ -8,10 +8,12 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { keyParamsByType } from 'pki/utils/action-params';
 import PkiActionModel from 'vault/models/pki/action';
+import { ModelValidations } from 'vault/vault/app-types';
 
 interface Args {
   model: PkiActionModel;
   groups: Map<[key: string], Array<string>> | null;
+  modelValidations?: ModelValidations;
 }
 
 export default class PkiGenerateToggleGroupsComponent extends Component<Args> {
@@ -43,7 +45,7 @@ export default class PkiGenerateToggleGroupsComponent extends Component<Args> {
     };
     // excludeCnFromSans and serialNumber are present in default fields for generate-csr -- only include for other types
     if (this.args.model.actionType !== 'generate-csr') {
-      groups['Subject Alternative Name (SAN) Options'].unshift('excludeCnFromSans', 'serialNumber');
+      groups['Subject Alternative Name (SAN) Options'].unshift('excludeCnFromSans', 'subjectSerialNumber');
     }
     return groups;
   }

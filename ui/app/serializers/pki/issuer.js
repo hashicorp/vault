@@ -9,37 +9,26 @@ import ApplicationSerializer from '../application';
 export default class PkiIssuerSerializer extends ApplicationSerializer {
   primaryKey = 'issuer_id';
 
-  constructor() {
-    super(...arguments);
-    // remove following attrs from serialization
-    const attrs = [
-      'altNames',
-      'caChain',
-      'certificate',
-      'commonName',
-      'ipSans',
-      'issuerId',
-      'keyId',
-      'otherSans',
-      'notValidAfter',
-      'notValidBefore',
-      'serialNumber',
-      'signatureBits',
-      'uriSans',
-    ];
-    this.attrs = attrs.reduce((attrObj, attr) => {
-      attrObj[attr] = { serialize: false };
-      return attrObj;
-    }, {});
-  }
+  attrs = {
+    caChain: { serialize: false },
+    certificate: { serialize: false },
+    issuerId: { serialize: false },
+    keyId: { serialize: false },
+    parsedCertificate: { serialize: false },
+    commonName: { serialize: false },
+  };
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     if (payload.data.certificate) {
       // Parse certificate back from the API and add to payload
       const parsedCert = parseCertificate(payload.data.certificate);
-      const data = { issuer_ref: payload.issuer_id, ...payload.data, ...parsedCert };
-      const json = super.normalizeResponse(store, primaryModelClass, { ...payload, data }, id, requestType);
-      return json;
+      const data = {
+        issuer_ref: payload.issuer_id,
+        ...payload.data,
+        parsed_certificate: parsedCert,
+        common_name: parsedCert.common_name,
+      };
+      return super.normalizeResponse(store, primaryModelClass, { ...payload, data }, id, requestType);
     }
     return super.normalizeResponse(...arguments);
   }

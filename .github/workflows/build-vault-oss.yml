@@ -47,7 +47,7 @@ jobs:
       - name: Set up node and yarn
         uses: actions/setup-node@v3
         with:
-          node-version: 14
+          node-version-file: './ui/package.json'
           cache: yarn
           cache-dependency-path: ui/yarn.lock
       - name: Build UI
@@ -63,7 +63,7 @@ jobs:
         env:
           GOARCH: ${{ inputs.goarch }}
           GOOS: ${{ inputs.goos }}
-        run: echo "ARTIFACT_BASENAME=$(make ci-get-artifact-basename)" >> $GITHUB_ENV
+        run: echo "ARTIFACT_BASENAME=$(make ci-get-artifact-basename)" >> "$GITHUB_ENV"
       - name: Bundle Vault
         env:
           BUNDLE_PATH: out/${{ env.ARTIFACT_BASENAME }}.zip
@@ -93,8 +93,8 @@ jobs:
       - if: ${{ inputs.create-packages }}
         name: Determine package file names
         run: |
-          echo "RPM_PACKAGE=$(basename out/*.rpm)" >> $GITHUB_ENV
-          echo "DEB_PACKAGE=$(basename out/*.deb)" >> $GITHUB_ENV
+          echo "RPM_PACKAGE=$(basename out/*.rpm)" >> "$GITHUB_ENV"
+          echo "DEB_PACKAGE=$(basename out/*.deb)" >> "$GITHUB_ENV"
       - if: ${{ inputs.create-packages }}
         uses: actions/upload-artifact@v3
         with:

@@ -834,10 +834,13 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 			t.Fatalf("err: %v", err)
 		}
 		defaults := map[string]interface{}{
-			"default_report_months": 12,
-			"retention_months":      24,
-			"enabled":               activityLogEnabledDefaultValue,
-			"queries_available":     false,
+			"default_report_months":    12,
+			"retention_months":         24,
+			"enabled":                  activityLogEnabledDefaultValue,
+			"queries_available":        false,
+			"reporting_enabled":        core.censusLicensingEnabled,
+			"billing_start_timestamp":  core.GetBillingStart(),
+			"minimum_retention_months": core.activityLog.configOverrides.MinimumRetentionMonths,
 		}
 
 		if diff := deep.Equal(resp.Data, defaults); len(diff) > 0 {
@@ -915,10 +918,13 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 			t.Fatalf("err: %v", err)
 		}
 		expected := map[string]interface{}{
-			"default_report_months": 1,
-			"retention_months":      2,
-			"enabled":               "enable",
-			"queries_available":     false,
+			"default_report_months":    1,
+			"retention_months":         2,
+			"enabled":                  "enable",
+			"queries_available":        false,
+			"reporting_enabled":        core.censusLicensingEnabled,
+			"billing_start_timestamp":  core.GetBillingStart(),
+			"minimum_retention_months": core.activityLog.configOverrides.MinimumRetentionMonths,
 		}
 
 		if diff := deep.Equal(resp.Data, expected); len(diff) > 0 {
@@ -951,10 +957,13 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 		}
 
 		defaults := map[string]interface{}{
-			"default_report_months": 12,
-			"retention_months":      24,
-			"enabled":               activityLogEnabledDefaultValue,
-			"queries_available":     false,
+			"default_report_months":    12,
+			"retention_months":         24,
+			"enabled":                  activityLogEnabledDefaultValue,
+			"queries_available":        false,
+			"reporting_enabled":        core.censusLicensingEnabled,
+			"billing_start_timestamp":  core.GetBillingStart(),
+			"minimum_retention_months": core.activityLog.configOverrides.MinimumRetentionMonths,
 		}
 
 		if diff := deep.Equal(resp.Data, defaults); len(diff) > 0 {
@@ -4232,4 +4241,63 @@ func TestActivityLog_partialMonthClientCountWithMultipleMountPaths(t *testing.T)
 			t.Fatalf("incorrect count value %d for path %s", count, expectedPath)
 		}
 	}
+}
+
+// TestActivityLog_processClientRecord calls processClientRecord for an entity and a non-entity record and verifies that
+// the record is present in the namespace and month maps
+func TestActivityLog_processClientRecord(t *testing.T) {
+	startTime := time.Now()
+	mount := "mount"
+	namespace := "namespace"
+	clientID := "client-id"
+	run := func(t *testing.T, isNonEntity bool) {
+		t.Helper()
+		record := &activity.EntityRecord{
+			MountAccessor: mount,
+			NamespaceID:   namespace,
+			ClientID:      clientID,
+			NonEntity:     isNonEntity,
+		}
+		byNS := make(summaryByNamespace)
+		byMonth := make(summaryByMonth)
+		processClientRecord(record, byNS, byMonth, startTime)
+		require.Contains(t, byNS, namespace)
+		require.Contains(t, byNS[namespace].Mounts, mount)
+		monthIndex := timeutil.StartOfMonth(startTime).UTC().Unix()
+		require.Contains(t, byMonth, monthIndex)
+		require.Equal(t, byMonth[monthIndex].Namespaces, byNS)
+		require.Equal(t, byMonth[monthIndex].NewClients.Namespaces, byNS)
+
+		if isNonEntity {
+			require.Contains(t, byMonth[monthIndex].Counts.NonEntities, clientID)
+			require.NotContains(t, byMonth[monthIndex].Counts.Entities, clientID)
+
+			require.Contains(t, byMonth[monthIndex].NewClients.Counts.NonEntities, clientID)
+			require.NotContains(t, byMonth[monthIndex].NewClients.Counts.Entities, clientID)
+
+			require.Contains(t, byNS[namespace].Mounts[mount].Counts.NonEntities, clientID)
+			require.Contains(t, byNS[namespace].Counts.NonEntities, clientID)
+
+			require.NotContains(t, byNS[namespace].Mounts[mount].Counts.Entities, clientID)
+			require.NotContains(t, byNS[namespace].Counts.Entities, clientID)
+		} else {
+			require.Contains(t, byMonth[monthIndex].Counts.Entities, clientID)
+			require.NotContains(t, byMonth[monthIndex].Counts.NonEntities, clientID)
+
+			require.Contains(t, byMonth[monthIndex].NewClients.Counts.Entities, clientID)
+			require.NotContains(t, byMonth[monthIndex].NewClients.Counts.NonEntities, clientID)
+
+			require.Contains(t, byNS[namespace].Mounts[mount].Counts.Entities, clientID)
+			require.Contains(t, byNS[namespace].Counts.Entities, clientID)
+
+			require.NotContains(t, byNS[namespace].Mounts[mount].Counts.NonEntities, clientID)
+			require.NotContains(t, byNS[namespace].Counts.NonEntities, clientID)
+		}
+	}
+	t.Run("non entity", func(t *testing.T) {
+		run(t, true)
+	})
+	t.Run("entity", func(t *testing.T) {
+		run(t, false)
+	})
 }

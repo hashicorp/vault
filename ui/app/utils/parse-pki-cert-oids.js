@@ -4,10 +4,9 @@
  */
 
 //* lookup OIDs: http://oid-info.com/basic-search.htm
-
 export const SUBJECT_OIDs = {
   common_name: '2.5.4.3',
-  serial_number: '2.5.4.5',
+  subject_serial_number: '2.5.4.5',
   ou: '2.5.4.11',
   organization: '2.5.4.10',
   country: '2.5.4.6',
@@ -75,3 +74,13 @@ export const SIGNATURE_ALGORITHM_OIDs = {
   '1.2.840.10045.4.3.4': '512', // ECDSA-SHA512
   '1.3.101.112': '0', // Ed25519
 };
+
+// returns array of strings that correspond to possible returned values from parsing cert
+export const parsedParameterKeys = [
+  ...Object.keys(SUBJECT_OIDs),
+  ...Object.keys(EXTENSION_OIDs),
+  ...Object.keys(SAN_TYPES),
+  'use_pss',
+  'not_valid_before',
+  'not_valid_after',
+];

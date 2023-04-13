@@ -21,6 +21,11 @@ func pathListIssuers(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "issuers/?$",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "issuers",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathListIssuersHandler,
@@ -96,11 +101,28 @@ their identifier and their name (if set).
 )
 
 func pathGetIssuer(b *backend) *framework.Path {
-	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "(/der|/pem|/json)?"
-	return buildPathGetIssuer(b, pattern)
+	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "$"
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationSuffix: "issuer",
+	}
+
+	return buildPathIssuer(b, pattern, displayAttrs)
 }
 
-func buildPathGetIssuer(b *backend, pattern string) *framework.Path {
+func pathGetUnauthedIssuer(b *backend) *framework.Path {
+	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/(json|der|pem)$"
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationSuffix: "issuer-json|issuer-der|issuer-pem",
+	}
+
+	return buildPathGetIssuer(b, pattern, displayAttrs)
+}
+
+func buildPathIssuer(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	fields = addIssuerRefNameFields(fields)
 
@@ -250,8 +272,9 @@ to be set on all PR secondary clusters.`,
 
 	return &framework.Path{
 		// Returns a JSON entry.
-		Pattern: pattern,
-		Fields:  fields,
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
+		Fields:       fields,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
@@ -283,6 +306,59 @@ to be set on all PR secondary clusters.`,
 				// Read more about why these flags are set in backend.go.
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
+			},
+		},
+
+		HelpSynopsis:    pathGetIssuerHelpSyn,
+		HelpDescription: pathGetIssuerHelpDesc,
+	}
+}
+
+func buildPathGetIssuer(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
+	fields := map[string]*framework.FieldSchema{}
+	fields = addIssuerRefField(fields)
+
+	getIssuerSchema := map[int][]framework.Response{
+		http.StatusNotModified: {{
+			Description: "Not Modified",
+		}},
+		http.StatusOK: {{
+			Description: "OK",
+			Fields: map[string]*framework.FieldSchema{
+				"issuer_id": {
+					Type:        framework.TypeString,
+					Description: `Issuer Id`,
+					Required:    true,
+				},
+				"issuer_name": {
+					Type:        framework.TypeString,
+					Description: `Issuer Name`,
+					Required:    true,
+				},
+				"certificate": {
+					Type:        framework.TypeString,
+					Description: `Certificate`,
+					Required:    true,
+				},
+				"ca_chain": {
+					Type:        framework.TypeStringSlice,
+					Description: `CA Chain`,
+					Required:    true,
+				},
+			},
+		}},
+	}
+
+	return &framework.Path{
+		// Returns a JSON entry.
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
+		Fields:       fields,
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback:  b.pathGetIssuer,
+				Responses: getIssuerSchema,
 			},
 		},
 
@@ -1053,22 +1129,35 @@ the certificate.
 
 func pathGetIssuerCRL(b *backend) *framework.Path {
 	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/crl(/pem|/der|/delta(/pem|/der)?)?"
-	return buildPathGetIssuerCRL(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKIIssuer,
+		OperationSuffix: "crl|crl-pem|crl-der|crl-delta|crl-delta-pem|crl-delta-der",
+	}
+
+	return buildPathGetIssuerCRL(b, pattern, displayAttrs)
 }
 
 func pathGetIssuerUnifiedCRL(b *backend) *framework.Path {
 	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/unified-crl(/pem|/der|/delta(/pem|/der)?)?"
-	return buildPathGetIssuerCRL(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKIIssuer,
+		OperationSuffix: "unified-crl|unified-crl-pem|unified-crl-der|unified-crl-delta|unified-crl-delta-pem|unified-crl-delta-der",
+	}
+
+	return buildPathGetIssuerCRL(b, pattern, displayAttrs)
 }
 
-func buildPathGetIssuerCRL(b *backend, pattern string) *framework.Path {
+func buildPathGetIssuerCRL(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	fields = addIssuerRefNameFields(fields)
 
 	return &framework.Path{
 		// Returns raw values.
-		Pattern: pattern,
-		Fields:  fields,
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
+		Fields:       fields,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{

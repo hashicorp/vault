@@ -1,6 +1,5 @@
 {{#if @model.id}}
   {{! Model only has ID once form has been submitted and saved }}
-  <Toolbar />
   <main data-test-generate-csr-result>
     <div class="box is-sideless is-fullwidth is-shadowless">
       <AlertBanner @title="Next steps" @type="warning">
@@ -55,7 +54,7 @@
       <FormField @attr={{field}} @model={{@model}} @modelValidations={{this.modelValidations}} />
     {{/each}}
 
-    <PkiGenerateToggleGroups @model={{@model}} />
+    <PkiGenerateToggleGroups @model={{@model}} @modelValidations={{this.modelValidations}} />
 
     <div class="field is-grouped box is-fullwidth is-bottomless has-top-margin-l">
       <div class="control">

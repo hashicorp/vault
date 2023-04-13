@@ -5,57 +5,42 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, find, click } from '@ember/test-helpers';
-import { resolve } from 'rsvp';
+import { render, find, click, fillIn } from '@ember/test-helpers';
+import { setupMirage } from 'ember-cli-mirage/test-support';
 import hbs from 'htmlbars-inline-precompile';
+import sinon from 'sinon';
 
 module('Integration | Component | client count config', function (hooks) {
   setupRenderingTest(hooks);
-
-  const createAttr = (name, type, options) => {
-    return {
-      name,
-      type,
-      options,
-    };
-  };
-
-  const generateModel = (overrides) => {
-    return {
-      enabled: 'On',
-      retentionMonths: 24,
-      defaultReportMonths: 12,
-      configAttrs: [
-        createAttr('enabled', 'string', { editType: 'boolean' }),
-        createAttr('retentionMonths', 'number'),
-      ],
-      changedAttributes: () => ({}),
-      save: () => {},
-      ...overrides,
-    };
-  };
+  setupMirage(hooks);
 
   hooks.beforeEach(function () {
     this.router = this.owner.lookup('service:router');
-    this.router.reopen({
-      transitionTo() {
-        return {
-          followRedirects() {
-            return resolve();
-          },
-        };
-      },
-    });
-    const model = generateModel();
-    this.model = model;
+    this.transitionStub = sinon.stub(this.router, 'transitionTo');
+    const store = this.owner.lookup('service:store');
+    this.createModel = (enabled = 'enable', reporting_enabled = false, minimum_retention_months = 0) => {
+      store.pushPayload('clients/config', {
+        modelName: 'clients/config',
+        id: 'foo',
+        data: {
+          enabled,
+          reporting_enabled,
+          minimum_retention_months,
+          retention_months: 24,
+        },
+      });
+      this.model = store.peekRecord('clients/config', 'foo');
+    };
   });
 
   test('it shows the table with the correct rows by default', async function (assert) {
+    this.createModel();
+
     await render(hbs`<Clients::Config @model={{this.model}} />`);
 
-    assert.dom('[data-test-pricing-metrics-config-table]').exists('Pricing metrics config table exists');
+    assert.dom('[data-test-clients-config-table]').exists('Clients config table exists');
     const rows = document.querySelectorAll('.info-table-row');
-    assert.strictEqual(rows.length, 2, 'renders 2 infotable rows');
+    assert.strictEqual(rows.length, 2, 'renders 2 info table rows');
     assert.ok(
       find('[data-test-row-value="Usage data collection"]').textContent.includes('On'),
       'Enabled value matches model'
@@ -66,72 +51,122 @@ module('Integration | Component | client count config', function (hooks) {
     );
   });
 
-  test('TODO: it shows the config edit form when mode = edit', async function (assert) {
-    await render(hbs`
-      <div id="modal-wormhole"></div>
-      <Clients::Config @model={{this.model}} @mode="edit" />
-    `);
+  test('it should function in edit mode when reporting is disabled', async function (assert) {
+    assert.expect(13);
 
-    assert.dom('[data-test-pricing-metrics-config-form]').exists('Pricing metrics config form exists');
-    const fields = document.querySelectorAll('[data-test-field]');
-    assert.strictEqual(fields.length, 2, 'renders 2 fields');
-  });
-
-  test('it shows a modal with correct messaging when disabling', async function (assert) {
-    // Simulates the model when enabled value has been changed from On to Off
-    const simModel = generateModel({
-      enabled: 'Off',
-      changedAttributes: () => ({ enabled: ['On', 'Off'] }),
+    this.server.put('/sys/internal/counters/config', (schema, req) => {
+      const { enabled, retention_months } = JSON.parse(req.requestBody);
+      const expected = { enabled: 'enable', retention_months: 5 };
+      assert.deepEqual(expected, { enabled, retention_months }, 'Correct data sent in PUT request');
+      return {};
     });
-    this.set('model', simModel);
+
+    this.createModel('disable');
+
     await render(hbs`
       <div id="modal-wormhole"></div>
       <Clients::Config @model={{this.model}} @mode="edit" />
     `);
 
-    await click('[data-test-edit-metrics-config-save]');
-    assert.dom('.modal.is-active').exists('Modal appears');
+    assert.dom('[data-test-input="enabled"]').isNotChecked('Data collection checkbox is not checked');
+    assert
+      .dom('label[for="enabled"]')
+      .hasText('Data collection is off', 'Correct label renders when data collection is off');
+    assert.dom('[data-test-input="retentionMonths"]').hasValue('24', 'Retention months render');
+
+    await click('[data-test-input="enabled"]');
+    await fillIn('[data-test-input="retentionMonths"]', -3);
+    await click('[data-test-clients-config-save]');
+    assert
+      .dom('[data-test-inline-error-message]')
+      .hasText(
+        'Retention period must be greater than or equal to 0.',
+        'Validation error shows for incorrect retention period'
+      );
+
+    await fillIn('[data-test-input="retentionMonths"]', 5);
+    await click('[data-test-clients-config-save]');
+    assert.dom('.modal.is-active').exists('Modal renders');
+    assert
+      .dom('[data-test-modal-title] span')
+      .hasText('Turn usage tracking on?', 'Correct modal title renders');
+    assert.dom('[data-test-clients-config-modal="on"]').exists('Correct modal description block renders');
+
+    await click('[data-test-clients-config-modal="continue"]');
     assert.ok(
-      find('[data-test-modal-title]').textContent.includes('Turn usage tracking off?'),
-      'Modal confirming turn tracking off'
+      this.transitionStub.calledWith('vault.cluster.clients.config'),
+      'Route transitions correctly on save success'
     );
-    await click('[data-test-metrics-config-cancel]');
-    assert.dom('.modal.is-active').doesNotExist('Modal goes away');
+
+    await click('[data-test-input="enabled"]');
+    await click('[data-test-clients-config-save]');
+    assert.dom('.modal.is-active').exists('Modal renders');
+    assert
+      .dom('[data-test-modal-title] span')
+      .hasText('Turn usage tracking off?', 'Correct modal title renders');
+    assert.dom('[data-test-clients-config-modal="off"]').exists('Correct modal description block renders');
+
+    await click('[data-test-clients-config-modal="cancel"]');
+    assert.dom('.modal.is-active').doesNotExist('Modal is hidden on cancel');
   });
 
-  test('it shows a modal with correct messaging when enabling', async function (assert) {
-    // Simulates the model when enabled value has been changed from On to Off
-    const simModel = generateModel({
-      changedAttributes: () => ({ enabled: ['Off', 'On'] }),
+  test('it should function in edit mode when reporting is enabled', async function (assert) {
+    assert.expect(6);
+
+    this.server.put('/sys/internal/counters/config', (schema, req) => {
+      const { enabled, retention_months } = JSON.parse(req.requestBody);
+      const expected = { enabled: 'enable', retention_months: 48 };
+      assert.deepEqual(expected, { enabled, retention_months }, 'Correct data sent in PUT request');
+      return {};
     });
-    this.set('model', simModel);
+
+    this.createModel('enable', true, 24);
+
     await render(hbs`
       <div id="modal-wormhole"></div>
       <Clients::Config @model={{this.model}} @mode="edit" />
     `);
 
-    await click('[data-test-edit-metrics-config-save]');
-    assert.dom('.modal.is-active').exists('Modal appears');
-    assert.ok(
-      find('[data-test-modal-title]').textContent.includes('Turn usage tracking on?'),
-      'Modal confirming turn tracking on'
-    );
-    await click('[data-test-metrics-config-cancel]');
-    assert.dom('.modal.is-active').doesNotExist('Modal goes away');
+    assert.dom('[data-test-input="enabled"]').isChecked('Data collection input is checked');
+    assert
+      .dom('[data-test-input="enabled"]')
+      .isDisabled('Data collection input disabled when reporting is enabled');
+    assert
+      .dom('label[for="enabled"]')
+      .hasText('Data collection is on', 'Correct label renders when data collection is on');
+    assert.dom('[data-test-input="retentionMonths"]').hasValue('24', 'Retention months render');
+
+    await fillIn('[data-test-input="retentionMonths"]', 5);
+    await click('[data-test-clients-config-save]');
+    assert
+      .dom('[data-test-inline-error-message]')
+      .hasText(
+        'Retention period must be greater than or equal to 24.',
+        'Validation error shows for incorrect retention period'
+      );
+
+    await fillIn('[data-test-input="retentionMonths"]', 48);
+    await click('[data-test-clients-config-save]');
   });
 
-  test('it does not show a modal on save if enable left unchanged', async function (assert) {
-    // Simulates the model when something other than enabled changed
-    const simModel = generateModel({
-      changedAttributes: () => ({ retentionMonths: [24, '48'] }),
+  test('it should not show modal when data collection is not changed', async function (assert) {
+    assert.expect(1);
+
+    this.server.put('/sys/internal/counters/config', (schema, req) => {
+      const { enabled, retention_months } = JSON.parse(req.requestBody);
+      const expected = { enabled: 'enable', retention_months: 5 };
+      assert.deepEqual(expected, { enabled, retention_months }, 'Correct data sent in PUT request');
+      return {};
     });
-    this.set('model', simModel);
+
+    this.createModel();
+
     await render(hbs`
       <div id="modal-wormhole"></div>
       <Clients::Config @model={{this.model}} @mode="edit" />
     `);
 
-    await click('[data-test-edit-metrics-config-save]');
-    assert.dom('.modal.is-active').doesNotExist('No modal appears');
+    await fillIn('[data-test-input="retentionMonths"]', 5);
+    await click('[data-test-clients-config-save]');
   });
 });

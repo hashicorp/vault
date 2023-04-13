@@ -4,22 +4,32 @@
  */
 
 import { module, test } from 'qunit';
+import sinon from 'sinon';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import subDays from 'date-fns/subDays';
 import addDays from 'date-fns/addDays';
 import formatRFC3339 from 'date-fns/formatRFC3339';
-
-const YESTERDAY = subDays(new Date(), 1);
-const NEXT_MONTH = addDays(new Date(), 30);
+import timestamp from 'core/utils/timestamp';
 
 module('Integration | Component | license-banners', function (hooks) {
   setupRenderingTest(hooks);
 
+  hooks.before(function () {
+    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
+  });
   hooks.beforeEach(function () {
+    const mockNow = timestamp.now();
+    this.now = mockNow;
+    this.yesterday = subDays(mockNow, 1);
+    this.nextMonth = addDays(mockNow, 30);
+    this.outside30 = addDays(mockNow, 32);
     this.version = this.owner.lookup('service:version');
     this.version.version = '1.13.1+ent';
+  });
+  hooks.after(function () {
+    timestamp.now.restore();
   });
 
   test('it does not render if no expiry', async function (assert) {
@@ -30,7 +40,7 @@ module('Integration | Component | license-banners', function (hooks) {
 
   test('it renders an error if expiry is before now', async function (assert) {
     assert.expect(2);
-    this.set('expiry', formatRFC3339(YESTERDAY));
+    this.set('expiry', formatRFC3339(this.yesterday));
     await render(hbs`<LicenseBanners @expiry={{this.expiry}} />`);
     assert.dom('[data-test-license-banner-expired]').exists('Expired license banner renders');
     assert.dom('.message-title').hasText('License expired', 'Shows correct title on alert');
@@ -38,7 +48,7 @@ module('Integration | Component | license-banners', function (hooks) {
 
   test('it renders a warning if expiry is within 30 days', async function (assert) {
     assert.expect(2);
-    this.set('expiry', formatRFC3339(NEXT_MONTH));
+    this.set('expiry', formatRFC3339(this.nextMonth));
     await render(hbs`<LicenseBanners @expiry={{this.expiry}} />`);
     assert.dom('[data-test-license-banner-warning]').exists('Warning license banner renders');
     assert.dom('.message-title').hasText('Vault license expiring', 'Shows correct title on alert');
@@ -46,15 +56,14 @@ module('Integration | Component | license-banners', function (hooks) {
 
   test('it does not render a banner if expiry is outside 30 days', async function (assert) {
     assert.expect(1);
-    const outside30 = addDays(new Date(), 32);
-    this.set('expiry', formatRFC3339(outside30));
+    this.set('expiry', formatRFC3339(this.outside30));
     await render(hbs`<LicenseBanners @expiry={{this.expiry}} />`);
     assert.dom('[data-test-license-banner]').doesNotExist('License banner does not render');
   });
 
   test('it does not render the expired banner if it has been dismissed', async function (assert) {
     assert.expect(3);
-    this.set('expiry', formatRFC3339(YESTERDAY));
+    this.set('expiry', formatRFC3339(this.yesterday));
     await render(hbs`<LicenseBanners @expiry={{this.expiry}} />`);
     await click('[data-test-dismiss-expired]');
     assert.dom('[data-test-license-banner-expired]').doesNotExist('Expired license banner does not render');
@@ -70,7 +79,7 @@ module('Integration | Component | license-banners', function (hooks) {
 
   test('it does not render the warning banner if it has been dismissed', async function (assert) {
     assert.expect(3);
-    this.set('expiry', formatRFC3339(NEXT_MONTH));
+    this.set('expiry', formatRFC3339(this.nextMonth));
     await render(hbs`<LicenseBanners @expiry={{this.expiry}} />`);
     await click('[data-test-dismiss-warning]');
     assert.dom('[data-test-license-banner-warning]').doesNotExist('Warning license banner does not render');
@@ -87,7 +96,7 @@ module('Integration | Component | license-banners', function (hooks) {
   test('it renders a banner if the vault license has changed', async function (assert) {
     assert.expect(3);
     this.version.version = '1.12.1+ent';
-    this.set('expiry', formatRFC3339(NEXT_MONTH));
+    this.set('expiry', formatRFC3339(this.nextMonth));
     await render(hbs`<LicenseBanners @expiry={{this.expiry}} />`);
     await click('[data-test-dismiss-warning]');
     this.version.version = '1.13.1+ent';

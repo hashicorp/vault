@@ -850,6 +850,11 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	if entry != nil {
 		// Set here so the audit log has it even if authorization fails
 		req.MountType = entry.Type
+		req.SetMountRunningSha256(entry.RunningSha256)
+		req.SetMountRunningVersion(entry.RunningVersion)
+		req.SetMountIsExternalPlugin(entry.IsExternalPlugin())
+		req.SetMountClass(entry.MountClass())
+
 		// Get and set ignored HMAC'd value.
 		if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
 			nonHMACReqDataKeys = rawVals.([]string)
@@ -1270,6 +1275,11 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	if entry != nil {
 		// Set here so the audit log has it even if authorization fails
 		req.MountType = entry.Type
+		req.SetMountRunningSha256(entry.RunningSha256)
+		req.SetMountRunningVersion(entry.RunningVersion)
+		req.SetMountIsExternalPlugin(entry.IsExternalPlugin())
+		req.SetMountClass(entry.MountClass())
+
 		// Get and set ignored HMAC'd value.
 		if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
 			nonHMACReqDataKeys = rawVals.([]string)
@@ -2208,7 +2218,30 @@ func (c *Core) PopulateTokenEntry(ctx context.Context, req *logical.Request) err
 	req.InboundSSCToken = token
 	decodedToken := token
 	if IsSSCToken(token) {
-		decodedToken, err = c.CheckSSCToken(ctx, token, c.isLoginRequest(ctx, req), c.perfStandby)
+		// If ForwardToActive is set to ForwardSSCTokenToActive, we ignore
+		// whether the endpoint is a login request, as since we have the token
+		// forwarded to us, we should treat it as an unauthenticated endpoint
+		// and ensure the token is populated too regardless.
+		// Notably, this is important for some endpoints, such as endpoints
+		// such as sys/ui/mounts/internal, which is unauthenticated but a token
+		// may be provided to be used.
+		// Without the check to see if
+		// c.ForwardToActive() == ForwardSSCTokenToActive unauthenticated
+		// requests that do not use a token but were provided one anyway
+		// could fail with a 412.
+		// We only follow this behaviour if we're a perf standby, as
+		// this behaviour only makes sense in that case as only they
+		// could be missing the token population.
+		// Without ForwardToActive being set to ForwardSSCTokenToActive,
+		// behaviours that rely on this functionality also wouldn't make
+		// much sense, as they would fail with 412 required index not present
+		// as perf standbys aren't guaranteed to have the WAL state
+		// for new tokens.
+		unauth := c.isLoginRequest(ctx, req)
+		if c.ForwardToActive() == ForwardSSCTokenToActive && c.perfStandby {
+			unauth = false
+		}
+		decodedToken, err = c.CheckSSCToken(ctx, token, unauth, c.perfStandby)
 		// If we receive an error from CheckSSCToken, we can assume the token is bad somehow, and the client
 		// should receive a 403 bad token error like they do for all other invalid tokens, unless the error
 		// specifies that we should forward the request or retry the request.
@@ -2220,17 +2253,18 @@ func (c *Core) PopulateTokenEntry(ctx context.Context, req *logical.Request) err
 		}
 	}
 	req.ClientToken = decodedToken
-	// We ignore the token returned from CheckSSCToken here as Lookup also decodes the SSCT, and
-	// it may need the original SSCT to check state.
+	// We ignore the token returned from CheckSSCToken here as Lookup also
+	// decodes the SSCT, and it may need the original SSCT to check state.
 	te, err := c.LookupToken(ctx, token)
 	if err != nil {
-		// If we're missing required state, return that error as-is to the client
+		// If we're missing required state, return that error
+		// as-is to the client
 		if errors.Is(err, logical.ErrPerfStandbyPleaseForward) || errors.Is(err, logical.ErrMissingRequiredState) {
 			return err
 		}
 		// If we have two dots but the second char is a dot it's a vault
 		// token of the form s.SOMETHING.nsid, not a JWT
-		if !IsJWT(decodedToken) {
+		if !IsJWT(token) {
 			return fmt.Errorf("error performing token check: %w", err)
 		}
 	}

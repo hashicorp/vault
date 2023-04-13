@@ -148,6 +148,11 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "mfa/method" + genericOptionalUUIDRegex("method_id"),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "mfa",
+				OperationVerb:   "read",
+				OperationSuffix: "method-configuration|method-configuration",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"method_id": {
 					Type:        framework.TypeString,
@@ -163,6 +168,11 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "mfa/method/?$",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "mfa",
+				OperationVerb:   "list",
+				OperationSuffix: "methods",
+			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: i.handleMFAMethodListGlobal,
@@ -172,6 +182,9 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "mfa/method/totp" + genericOptionalUUIDRegex("method_id"),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "mfa",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"method_name": {
 					Type:        framework.TypeString,
@@ -223,20 +236,37 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: i.handleMFAMethodTOTPRead,
-					Summary:  "Read the current configuration for the given MFA method",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "totp-method-configuration|totp-method-configuration",
+					},
+					Summary: "Read the current configuration for the given MFA method",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: i.handleMFAMethodTOTPUpdate,
-					Summary:  "Update or create a configuration for the given MFA method",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "configure",
+						OperationSuffix: "totp-method|totp-method",
+					},
+					Summary: "Update or create a configuration for the given MFA method",
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: i.handleMFAMethodTOTPDelete,
-					Summary:  "Delete a configuration for the given MFA method",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "delete",
+						OperationSuffix: "totp-method|totp-method",
+					},
+					Summary: "Delete a configuration for the given MFA method",
 				},
 			},
 		},
 		{
 			Pattern: "mfa/method/totp/?$",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "mfa",
+				OperationVerb:   "list",
+				OperationSuffix: "totp-methods",
+			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: i.handleMFAMethodListTOTP,
@@ -246,6 +276,11 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "mfa/method/totp/generate$",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "mfa",
+				OperationVerb:   "generate",
+				OperationSuffix: "totp-secret",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"method_id": {
 					Type:        framework.TypeString,
@@ -262,6 +297,11 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "mfa/method/totp/admin-generate$",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "mfa",
+				OperationVerb:   "admin-generate",
+				OperationSuffix: "totp-secret",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"method_id": {
 					Type:        framework.TypeString,
@@ -283,6 +323,11 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "mfa/method/totp/admin-destroy$",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "mfa",
+				OperationVerb:   "admin-destroy",
+				OperationSuffix: "totp-secret",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"method_id": {
 					Type:        framework.TypeString,
@@ -304,6 +349,9 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "mfa/method/okta" + genericOptionalUUIDRegex("method_id"),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "mfa",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"method_name": {
 					Type:        framework.TypeString,
@@ -341,15 +389,27 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: i.handleMFAMethodOKTARead,
-					Summary:  "Read the current configuration for the given MFA method",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "okta-method-configuration|okta-method-configuration",
+					},
+					Summary: "Read the current configuration for the given MFA method",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: i.handleMFAMethodOKTAUpdate,
-					Summary:  "Update or create a configuration for the given MFA method",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "configure",
+						OperationSuffix: "okta-method|okta-method",
+					},
+					Summary: "Update or create a configuration for the given MFA method",
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: i.handleMFAMethodOKTADelete,
-					Summary:  "Delete a configuration for the given MFA method",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "delete",
+						OperationSuffix: "okta-method|okta-method",
+					},
+					Summary: "Delete a configuration for the given MFA method",
 				},
 			},
 		},
@@ -358,12 +418,20 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: i.handleMFAMethodListOkta,
-					Summary:  "List MFA method configurations for the given MFA method",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationPrefix: "mfa",
+						OperationVerb:   "list",
+						OperationSuffix: "okta-methods",
+					},
+					Summary: "List MFA method configurations for the given MFA method",
 				},
 			},
 		},
 		{
 			Pattern: "mfa/method/duo" + genericOptionalUUIDRegex("method_id"),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "mfa",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"method_name": {
 					Type:        framework.TypeString,
@@ -401,15 +469,27 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: i.handleMFAMethodDuoRead,
-					Summary:  "Read the current configuration for the given MFA method",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "duo-method-configuration|duo-method-configuration",
+					},
+					Summary: "Read the current configuration for the given MFA method",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: i.handleMFAMethodDuoUpdate,
-					Summary:  "Update or create a configuration for the given MFA method",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "configure",
+						OperationSuffix: "duo-method|duo-method",
+					},
+					Summary: "Update or create a configuration for the given MFA method",
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: i.handleMFAMethodDUODelete,
-					Summary:  "Delete a configuration for the given MFA method",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "delete",
+						OperationSuffix: "duo-method|duo-method",
+					},
+					Summary: "Delete a configuration for the given MFA method",
 				},
 			},
 		},
@@ -418,12 +498,20 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: i.handleMFAMethodListDuo,
-					Summary:  "List MFA method configurations for the given MFA method",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationPrefix: "mfa",
+						OperationVerb:   "list",
+						OperationSuffix: "duo-methods",
+					},
+					Summary: "List MFA method configurations for the given MFA method",
 				},
 			},
 		},
 		{
 			Pattern: "mfa/method/pingid" + genericOptionalUUIDRegex("method_id"),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "mfa",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"method_name": {
 					Type:        framework.TypeString,
@@ -445,15 +533,27 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: i.handleMFAMethodPingIDRead,
-					Summary:  "Read the current configuration for the given MFA method",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "ping-id-method-configuration|ping-id-method-configuration",
+					},
+					Summary: "Read the current configuration for the given MFA method",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: i.handleMFAMethodPingIDUpdate,
-					Summary:  "Update or create a configuration for the given MFA method",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "configure",
+						OperationSuffix: "ping-id-method|ping-id-method",
+					},
+					Summary: "Update or create a configuration for the given MFA method",
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: i.handleMFAMethodPingIDDelete,
-					Summary:  "Delete a configuration for the given MFA method",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "delete",
+						OperationSuffix: "ping-id-method|ping-id-method",
+					},
+					Summary: "Delete a configuration for the given MFA method",
 				},
 			},
 		},
@@ -462,12 +562,21 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: i.handleMFAMethodListPingID,
-					Summary:  "List MFA method configurations for the given MFA method",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationPrefix: "mfa",
+						OperationVerb:   "list",
+						OperationSuffix: "ping-id-methods",
+					},
+					Summary: "List MFA method configurations for the given MFA method",
 				},
 			},
 		},
 		{
 			Pattern: "mfa/login-enforcement/" + framework.GenericNameRegex("name"),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "mfa",
+				OperationSuffix: "login-enforcement",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -513,6 +622,10 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "mfa/login-enforcement/?$",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "mfa",
+				OperationSuffix: "login-enforcements",
+			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: i.handleMFALoginEnforcementList,

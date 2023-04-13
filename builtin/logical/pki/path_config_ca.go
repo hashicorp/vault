@@ -14,6 +14,13 @@ import (
 func pathConfigCA(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/ca",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "configure",
+			OperationSuffix: "ca",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"pem_bundle": {
 				Type: framework.TypeString,
@@ -73,6 +80,11 @@ For security reasons, the secret key cannot be retrieved later.
 func pathConfigIssuers(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/issuers",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			defaultRef: {
 				Type:        framework.TypeString,
@@ -87,6 +99,9 @@ func pathConfigIssuers(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathCAIssuersRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "issuers-configuration",
+				},
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
@@ -107,6 +122,10 @@ func pathConfigIssuers(b *backend) *framework.Path {
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathCAIssuersWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "issuers",
+				},
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
@@ -136,6 +155,13 @@ func pathConfigIssuers(b *backend) *framework.Path {
 func pathReplaceRoot(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "root/replace",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "replace",
+			OperationSuffix: "root",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"default": {
 				Type:        framework.TypeString,
@@ -273,6 +299,11 @@ value of the issuer with the name "next", if it exists.
 func pathConfigKeys(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/keys",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			defaultRef: {
 				Type:        framework.TypeString,
@@ -283,6 +314,10 @@ func pathConfigKeys(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathKeyDefaultWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "keys",
+				},
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
@@ -300,6 +335,9 @@ func pathConfigKeys(b *backend) *framework.Path {
 			},
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathKeyDefaultRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "keys-configuration",
+				},
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",

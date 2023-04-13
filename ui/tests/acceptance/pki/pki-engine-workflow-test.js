@@ -5,6 +5,8 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { v4 as uuidv4 } from 'uuid';
+
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
@@ -12,7 +14,7 @@ import { click, currentURL, fillIn, find, isSettled, visit } from '@ember/test-h
 import { SELECTORS } from 'vault/tests/helpers/pki/workflow';
 import { adminPolicy, readerPolicy, updatePolicy } from 'vault/tests/helpers/policy-generator/pki';
 import { tokenWithPolicy, runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
-import { rootPem } from 'vault/tests/helpers/pki/values';
+import { unsupportedPem } from 'vault/tests/helpers/pki/values';
 
 /**
  * This test module should test the PKI workflow, including:
@@ -25,7 +27,7 @@ module('Acceptance | pki workflow', function (hooks) {
   hooks.beforeEach(async function () {
     await authPage.login();
     // Setup PKI engine
-    const mountPath = `pki-workflow-${new Date().getTime()}`;
+    const mountPath = `pki-workflow-${uuidv4()}`;
     await enablePage.enable('pki', mountPath);
     this.mountPath = mountPath;
     await logout.visit();
@@ -72,83 +74,6 @@ module('Acceptance | pki workflow', function (hooks) {
 
     await click(SELECTORS.keysTab);
     assertEmptyState(assert, 'keys');
-  });
-  test('shows pki beta banner to return to old pki on new pki configuration page', async function (assert) {
-    assert.expect(3);
-    await authPage.login(this.pkiAdminToken);
-    await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
-    assert.dom(SELECTORS.configTab).exists('Configuration tab is present');
-    assert.dom(SELECTORS.configuration.pkiBetaBanner).exists('Configuration beta banner exists');
-    await click(SELECTORS.configuration.pkiBetaBannerLink);
-    assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/configuration`);
-  });
-
-  module('configuration', function (hooks) {
-    hooks.beforeEach(function () {
-      this.pemBundle = rootPem;
-    });
-    test('import happy path', async function (assert) {
-      await authPage.login(this.pkiAdminToken);
-      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
-      await click(SELECTORS.emptyStateLink);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/create`);
-      assert.dom(SELECTORS.configuration.title).hasText('Configure PKI');
-      assert.dom(SELECTORS.configuration.emptyState).exists({ count: 1 }, 'Shows empty state by default');
-      await click(SELECTORS.configuration.optionByKey('import'));
-      assert.dom(SELECTORS.configuration.emptyState).doesNotExist();
-      await click('[data-test-text-toggle]');
-      await fillIn('[data-test-text-file-textarea]', this.pemBundle);
-      await click('[data-test-pki-import-pem-bundle]');
-      assert.strictEqual(
-        currentURL(),
-        `/vault/secrets/${this.mountPath}/pki/issuers`,
-        'redirects to issuers list on success'
-      );
-    });
-
-    test('generate-root happy path', async function (assert) {
-      await authPage.login(this.pkiAdminToken);
-      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
-      await click(SELECTORS.emptyStateLink);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/create`);
-      assert.dom(SELECTORS.configuration.title).hasText('Configure PKI');
-      assert.dom(SELECTORS.configuration.emptyState).exists({ count: 1 }, 'Shows empty state by default');
-      await click(SELECTORS.configuration.optionByKey('generate-root'));
-      assert.dom(SELECTORS.configuration.emptyState).doesNotExist();
-      // The URLs section is populated based on params returned from OpenAPI. This test will break when
-      // the backend adds fields. We should update the count accordingly.
-      assert.dom(SELECTORS.configuration.urlField).exists({ count: 4 });
-      // Fill in form
-      await fillIn(SELECTORS.configuration.typeField, 'exported');
-      await fillIn(SELECTORS.configuration.inputByName('commonName'), 'my-common-name');
-      await fillIn(SELECTORS.configuration.inputByName('issuerName'), 'my-first-issuer');
-      await click(SELECTORS.configuration.generateRootSave);
-
-      assert
-        .dom(SELECTORS.issuerDetails.title)
-        .hasText('View issuer certificate', 'Redirects to view issuer page');
-      assert.dom(SELECTORS.issuerDetails.valueByName('Common name')).hasText('my-common-name');
-      assert.dom(SELECTORS.issuerDetails.valueByName('Issuer name')).hasText('my-first-issuer');
-    });
-
-    test('it should generate intermediate csr', async function (assert) {
-      await authPage.login(this.pkiAdminToken);
-      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
-      await click(SELECTORS.emptyStateLink);
-      await click(SELECTORS.configuration.optionByKey('generate-csr'));
-      await fillIn(SELECTORS.configuration.typeField, 'exported');
-      await fillIn(SELECTORS.configuration.inputByName('commonName'), 'my-common-name');
-      await click('[data-test-save]');
-      await assert.dom(SELECTORS.configuration.csrDetails).exists('renders CSR details after save');
-      await click('[data-test-done]');
-      assert.strictEqual(
-        currentURL(),
-        `/vault/secrets/${this.mountPath}/pki/issuers`,
-        'Transitions to issuers after viewing csr details'
-      );
-    });
   });
 
   module('roles', function (hooks) {
@@ -341,7 +266,6 @@ module('Acceptance | pki workflow', function (hooks) {
         `/vault/secrets/${this.mountPath}/pki/keys/${keyId}/details`,
         'navigates to details after save'
       );
-      await this.pauseTest;
       assert.dom(SELECTORS.keyPages.keyNameValue).hasText('test-key', 'updates key name');
 
       // key generate and delete navigation
@@ -420,6 +344,7 @@ module('Acceptance | pki workflow', function (hooks) {
       await logout.visit();
     });
     test('details view renders correct number of info items', async function (assert) {
+      assert.expect(13);
       await authPage.login(this.pkiAdminToken);
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       assert.dom(SELECTORS.issuersTab).exists('Issuers tab is present');
@@ -432,13 +357,107 @@ module('Acceptance | pki workflow', function (hooks) {
         `/vault/secrets/${this.mountPath}/pki/issuers/my-issuer/details`
       );
       assert.dom(SELECTORS.issuerDetails.title).hasText('View issuer certificate');
-      assert
-        .dom(`${SELECTORS.issuerDetails.defaultGroup} ${SELECTORS.issuerDetails.row}`)
-        .exists({ count: 13 }, 'Renders 13 info table items under default group');
+      ['Certificate', 'CA Chain', 'Common name', 'Issuer name', 'Issuer ID', 'Default key ID'].forEach(
+        (label) => {
+          assert
+            .dom(`${SELECTORS.issuerDetails.defaultGroup} ${SELECTORS.issuerDetails.valueByName(label)}`)
+            .exists({ count: 1 }, `${label} value rendered`);
+        }
+      );
       assert
         .dom(`${SELECTORS.issuerDetails.urlsGroup} ${SELECTORS.issuerDetails.row}`)
         .exists({ count: 3 }, 'Renders 3 info table items under URLs group');
       assert.dom(SELECTORS.issuerDetails.groupTitle).exists({ count: 1 }, 'only 1 group title rendered');
+    });
+
+    test('toolbar links navigate to expected routes', async function (assert) {
+      await authPage.login(this.pkiAdminToken);
+      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      await click(SELECTORS.issuersTab);
+      await click(SELECTORS.issuerPopupMenu);
+      await click(SELECTORS.issuerPopupDetails);
+
+      const issuerId = find(SELECTORS.issuerDetails.valueByName('Issuer ID')).innerText;
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.mountPath}/pki/issuers/${issuerId}/details`,
+        'it navigates to details route'
+      );
+      assert
+        .dom(SELECTORS.issuerDetails.crossSign)
+        .hasAttribute('href', `/ui/vault/secrets/${this.mountPath}/pki/issuers/${issuerId}/cross-sign`);
+      assert
+        .dom(SELECTORS.issuerDetails.signIntermediate)
+        .hasAttribute('href', `/ui/vault/secrets/${this.mountPath}/pki/issuers/${issuerId}/sign`);
+      assert
+        .dom(SELECTORS.issuerDetails.configure)
+        .hasAttribute('href', `/ui/vault/secrets/${this.mountPath}/pki/issuers/${issuerId}/edit`);
+      await click(SELECTORS.issuerDetails.rotateRoot);
+      assert.dom(find(SELECTORS.issuerDetails.rotateModal).parentElement).hasClass('is-active');
+      await click(SELECTORS.issuerDetails.rotateModalGenerate);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.mountPath}/pki/issuers/${issuerId}/rotate-root`,
+        'it navigates to root rotate form'
+      );
+      assert
+        .dom('[data-test-input="commonName"]')
+        .hasValue('Hashicorp Test', 'form prefilled with parent issuer cn');
+    });
+
+    test('it navigates to the tidy page from configuration toolbar', async function (assert) {
+      await authPage.login(this.pkiAdminToken);
+      await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
+      await click(SELECTORS.configuration.tidyToolbar);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/tidy`);
+    });
+
+    test('it returns to the configuration page after submit', async function (assert) {
+      await authPage.login(this.pkiAdminToken);
+      await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
+      await click(SELECTORS.configuration.tidyToolbar);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/tidy`);
+      await click(SELECTORS.configuration.tidyCertStoreCheckbox);
+      await click(SELECTORS.configuration.tidyRevocationCheckbox);
+      await fillIn(SELECTORS.configuration.safetyBufferInput, '100');
+      await fillIn(SELECTORS.configuration.safetyBufferInputDropdown, 'd');
+      await click(SELECTORS.configuration.tidySave);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
+    });
+  });
+
+  module('rotate', function (hooks) {
+    hooks.beforeEach(async function () {
+      await authPage.login();
+      await runCommands([`write ${this.mountPath}/root/generate/internal issuer_name="existing-issuer"`]);
+      await logout.visit();
+    });
+    test('it renders a warning banner when parent issuer has unsupported OIDs', async function (assert) {
+      await authPage.login();
+      await visit(`/vault/secrets/${this.mountPath}/pki/configuration/create`);
+      await click(SELECTORS.configuration.optionByKey('import'));
+      await click('[data-test-text-toggle]');
+      await fillIn('[data-test-text-file-textarea]', unsupportedPem);
+      await click(SELECTORS.configuration.importSubmit);
+      const issuerId = find(SELECTORS.configuration.importedIssuer).innerText;
+      await click(`${SELECTORS.configuration.importedIssuer} a`);
+
+      // navigating directly to route because the rotate button is not visible for non-root issuers
+      // but we're just testing that route model was parsed and passed as expected
+      await visit(`/vault/secrets/${this.mountPath}/pki/issuers/${issuerId}/rotate-root`);
+      assert
+        .dom('[data-test-warning-banner]')
+        .hasTextContaining(
+          'Not all of the certificate values could be parsed and transferred to new root',
+          'it renders warning banner'
+        );
+      assert.dom('[data-test-input="commonName"]').hasValue('fancy-cert-unsupported-subj-and-ext-oids');
+      await fillIn('[data-test-input="issuerName"]', 'existing-issuer');
+      await click('[data-test-pki-rotate-root-save]');
+      assert
+        .dom('[data-test-error-banner]')
+        .hasText('Error issuer name already in use', 'it renders error banner');
     });
   });
 });

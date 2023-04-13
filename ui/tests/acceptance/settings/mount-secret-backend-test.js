@@ -6,6 +6,8 @@
 import { currentRouteName, currentURL, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { v4 as uuidv4 } from 'uuid';
+
 import { create } from 'ember-cli-page-object';
 import page from 'vault/tests/pages/settings/mount-secret-backend';
 import configPage from 'vault/tests/pages/secrets/backend/configuration';
@@ -21,16 +23,15 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
+    this.uid = uuidv4();
     return authPage.login();
   });
 
   test('it sets the ttl correctly when mounting', async function (assert) {
     // always force the new mount to the top of the list
-    const path = `kv-${new Date().getTime()}`;
+    const path = `mount-kv-${this.uid}`;
     const defaultTTLHours = 100;
     const maxTTLHours = 300;
-    const defaultTTLSeconds = (defaultTTLHours * 60 * 60).toString();
-    const maxTTLSeconds = (maxTTLHours * 60 * 60).toString();
 
     await page.visit();
 
@@ -48,15 +49,14 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       .maxTTLVal(maxTTLHours)
       .submit();
     await configPage.visit({ backend: path });
-    assert.strictEqual(configPage.defaultTTL, defaultTTLSeconds, 'shows the proper TTL');
-    assert.strictEqual(configPage.maxTTL, maxTTLSeconds, 'shows the proper max TTL');
+    assert.strictEqual(configPage.defaultTTL, `${defaultTTLHours}h`, 'shows the proper TTL');
+    assert.strictEqual(configPage.maxTTL, `${maxTTLHours}h`, 'shows the proper max TTL');
   });
 
   test('it sets the ttl when enabled then disabled', async function (assert) {
     // always force the new mount to the top of the list
-    const path = `kv-${new Date().getTime()}`;
+    const path = `mount-kv-${this.uid}`;
     const maxTTLHours = 300;
-    const maxTTLSeconds = (maxTTLHours * 60 * 60).toString();
 
     await page.visit();
 
@@ -73,8 +73,33 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       .maxTTLVal(maxTTLHours)
       .submit();
     await configPage.visit({ backend: path });
-    assert.strictEqual(configPage.defaultTTL, '0', 'shows the proper TTL');
-    assert.strictEqual(configPage.maxTTL, maxTTLSeconds, 'shows the proper max TTL');
+    assert.strictEqual(configPage.defaultTTL, '0s', 'shows the proper TTL');
+    assert.strictEqual(configPage.maxTTL, `${maxTTLHours}h`, 'shows the proper max TTL');
+  });
+
+  test('it sets the max ttl after pki chosen, resets after', async function (assert) {
+    await page.visit();
+    assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
+    await page.selectType('pki');
+    await page.next();
+    assert.dom('[data-test-input="maxLeaseTtl"]').exists();
+    assert
+      .dom('[data-test-input="maxLeaseTtl"] [data-test-ttl-toggle]')
+      .isChecked('Toggle is checked by default');
+    assert.dom('[data-test-input="maxLeaseTtl"] [data-test-ttl-value]').hasValue('3650');
+    assert.dom('[data-test-input="maxLeaseTtl"] [data-test-select="ttl-unit"]').hasValue('d');
+
+    // Go back and choose a different type
+    await page.back();
+    await page.selectType('database');
+    await page.next();
+    assert.dom('[data-test-input="maxLeaseTtl"]').exists('3650');
+    assert
+      .dom('[data-test-input="maxLeaseTtl"] [data-test-ttl-toggle]')
+      .isNotChecked('Toggle is unchecked by default');
+    await page.enableMaxTtl();
+    assert.dom('[data-test-input="maxLeaseTtl"] [data-test-ttl-value]').hasValue('');
+    assert.dom('[data-test-input="maxLeaseTtl"] [data-test-select="ttl-unit"]').hasValue('s');
   });
 
   test('it throws error if setting duplicate path name', async function (assert) {
@@ -106,7 +131,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
   });
 
   test('version 2 with no update to config endpoint still allows mount of secret engine', async function (assert) {
-    const enginePath = `kv-noUpdate-${new Date().getTime()}`;
+    const enginePath = `kv-noUpdate-${this.uid}`;
     const V2_POLICY = `
       path "${enginePath}/*" {
         capabilities = ["list","create","read","sudo","delete"]

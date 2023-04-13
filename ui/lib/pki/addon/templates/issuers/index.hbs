@@ -74,7 +74,7 @@
             <PopupMenu>
               <nav class="menu" aria-label="issuer config options">
                 <ul class="menu-list">
-                  <li>
+                  <li data-test-popup-menu-details>
                     <LinkTo @route="issuers.issuer.details" @model={{pkiIssuer.id}}>
                       Details
                     </LinkTo>
@@ -93,7 +93,7 @@
     </LinkedBlock>
   {{/each}}
 {{else}}
-  <EmptyState @title="PKI not configured" @message="This PKI mount hasn't yet been configured with a certificate issuer.">
+  <EmptyState @title="PKI not configured" @message={{this.message}}>
     <LinkTo @route="configuration.create">
       Configure PKI
     </LinkTo>

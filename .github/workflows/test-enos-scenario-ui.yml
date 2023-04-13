@@ -32,8 +32,6 @@ jobs:
     name: Get metadata
     runs-on: ubuntu-latest
     outputs:
-      go-version: ${{ steps.get-metadata.outputs.go-version }}
-      node-version: ${{ steps.get-metadata.outputs.node-version }}
       runs-on: ${{ steps.get-metadata.outputs.runs-on }}
       vault_edition: ${{ steps.get-metadata.outputs.vault_edition }}
     steps:
@@ -42,16 +40,14 @@ jobs:
         env:
           IS_ENT: ${{ startsWith(github.event.repository.name, 'vault-enterprise' ) }}
         run: |
-          echo "go-version=$(cat ./.go-version)" >> $GITHUB_OUTPUT
-          echo "node-version=$(cat ./ui/.nvmrc)" >> $GITHUB_OUTPUT
-          if ${IS_ENT} == true; then
+          if [ "$IS_ENT" == true ]; then
             echo "detected vault_edition=ent"
-            echo "runs-on=['self-hosted', 'ondemand', 'os=linux', 'type=m5d.4xlarge']" >> $GITHUB_OUTPUT
-            echo "vault_edition=ent" >> $GITHUB_OUTPUT
+            echo "runs-on=['self-hosted', 'ondemand', 'os=linux', 'type=m5d.4xlarge']" >> "$GITHUB_OUTPUT"
+            echo "vault_edition=ent" >> "$GITHUB_OUTPUT"
           else
             echo "detected vault_edition=oss"
-            echo "runs-on=\"custom-linux-xl-vault-latest\"" >> $GITHUB_OUTPUT
-            echo "vault_edition=oss" >> $GITHUB_OUTPUT
+            echo "runs-on=\"custom-linux-xl-vault-latest\"" >> "$GITHUB_OUTPUT"
+            echo "vault_edition=oss" >> "$GITHUB_OUTPUT"
           fi
 
   run-ui-tests:
@@ -75,7 +71,7 @@ jobs:
       - name: Set Up Go
         uses: actions/setup-go@v3
         with:
-          go-version: ${{ needs.get-metadata.outputs.go-version }}
+          go-version-file: ./.go-version
       - uses: hashicorp/action-setup-enos@v1
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
@@ -84,15 +80,12 @@ jobs:
       - name: Set Up Node
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ needs.get-metadata.outputs.node-version }}
+          node-version-file: './ui/package.json'
       - name: Set Up Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
           terraform_wrapper: false
-          # Terraform 1.4.x introduced an issue that prevents some resources from
-          # planning. Pin to 1.3.x until it is resolved.
-          terraform_version: 1.3.9
       - name: Prepare scenario dependencies
         run: |
           mkdir -p ./enos/support/terraform-plugin-cache
@@ -103,7 +96,7 @@ jobs:
         run: echo "${{ secrets.VAULT_LICENSE }}" > ./enos/support/vault.hclic || true
       - name: Check Chrome Installed
         id: chrome-check
-        run: echo "chrome-version=$(chrome --version 2> /dev/null || google-chrome --version 2> /dev/null || google-chrome-stable --version 2> /dev/null || echo 'not-installed')" >> $GITHUB_OUTPUT
+        run: echo "chrome-version=$(chrome --version 2> /dev/null || google-chrome --version 2> /dev/null || google-chrome-stable --version 2> /dev/null || echo 'not-installed')" >> "$GITHUB_OUTPUT"
       - name: Install Chrome Dependencies
         if: steps.chrome-check.outputs.chrome-version == 'not-installed'
         run: |

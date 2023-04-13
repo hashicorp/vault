@@ -24,6 +24,12 @@ func pathListRoles(b *databaseBackend) []*framework.Path {
 		{
 			Pattern: "roles/?$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixDatabase,
+				OperationVerb:   "list",
+				OperationSuffix: "roles",
+			},
+
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: b.pathRoleList,
 			},
@@ -33,6 +39,12 @@ func pathListRoles(b *databaseBackend) []*framework.Path {
 		},
 		{
 			Pattern: "static-roles/?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixDatabase,
+				OperationVerb:   "list",
+				OperationSuffix: "static-roles",
+			},
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: b.pathRoleList,
@@ -47,7 +59,11 @@ func pathListRoles(b *databaseBackend) []*framework.Path {
 func pathRoles(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
 		{
-			Pattern:        "roles/" + framework.GenericNameRegex("name"),
+			Pattern: "roles/" + framework.GenericNameRegex("name"),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixDatabase,
+				OperationSuffix: "role",
+			},
 			Fields:         fieldsForType(databaseRolePath),
 			ExistenceCheck: b.pathRoleExistenceCheck,
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -62,7 +78,11 @@ func pathRoles(b *databaseBackend) []*framework.Path {
 		},
 
 		{
-			Pattern:        "static-roles/" + framework.GenericNameRegex("name"),
+			Pattern: "static-roles/" + framework.GenericNameRegex("name"),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixDatabase,
+				OperationSuffix: "static-role",
+			},
 			Fields:         fieldsForType(databaseStaticRolePath),
 			ExistenceCheck: b.pathStaticRoleExistenceCheck,
 			Callbacks: map[logical.Operation]framework.OperationFunc{

@@ -18,6 +18,11 @@ func pathListKeys(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/?$",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "keys",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathListKeysHandler,
@@ -91,12 +96,19 @@ func (b *backend) pathListKeysHandler(ctx context.Context, req *logical.Request,
 
 func pathKey(b *backend) *framework.Path {
 	pattern := "key/" + framework.GenericNameRegex(keyRefParam)
-	return buildPathKey(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationSuffix: "key",
+	}
+
+	return buildPathKey(b, pattern, displayAttrs)
 }
 
-func buildPathKey(b *backend, pattern string) *framework.Path {
+func buildPathKey(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	return &framework.Path{
-		Pattern: pattern,
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
 
 		Fields: map[string]*framework.FieldSchema{
 			keyRefParam: {

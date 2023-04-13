@@ -161,6 +161,9 @@
 .has-padding-m {
   padding: $spacing-m;
 }
+.has-bottom-padding-s {
+  padding-bottom: $spacing-s;
+}
 .has-padding-xs {
   padding: $spacing-xs;
 }
@@ -221,6 +224,9 @@
 }
 .has-background-gray-200 {
   background-color: $ui-gray-200;
+}
+.has-background-gray-100 {
+  background-color: $ui-gray-100;
 }
 @each $name, $pair in $colors {
   $color: nth($pair, 1);

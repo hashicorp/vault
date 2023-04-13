@@ -292,9 +292,13 @@ func Test_RegistryMatchesGenOpenapi(t *testing.T) {
 	ensureInScript := func(t *testing.T, scriptBackends []string, name string) {
 		t.Helper()
 
-		// "openldap" is an alias for "ldap" secrets engine
-		if name == "openldap" {
-			return
+		for _, excluded := range []string{
+			"oidc",     // alias for "jwt"
+			"openldap", // alias for "ldap"
+		} {
+			if name == excluded {
+				return
+			}
 		}
 
 		if !slices.Contains(scriptBackends, name) {
@@ -308,19 +312,23 @@ func Test_RegistryMatchesGenOpenapi(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for _, b := range scriptCredentialBackends {
-		ensureInRegistry(t, b, consts.PluginTypeCredential)
+	for _, name := range scriptCredentialBackends {
+		ensureInRegistry(t, name, consts.PluginTypeCredential)
 	}
 
-	for _, b := range scriptSecretsBackends {
-		ensureInRegistry(t, b, consts.PluginTypeSecrets)
+	for _, name := range scriptSecretsBackends {
+		ensureInRegistry(t, name, consts.PluginTypeSecrets)
 	}
 
-	for _, b := range Registry.Keys(consts.PluginTypeCredential) {
-		ensureInScript(t, scriptCredentialBackends, b)
+	for name, backend := range Registry.credentialBackends {
+		if backend.DeprecationStatus == consts.Supported {
+			ensureInScript(t, scriptCredentialBackends, name)
+		}
 	}
 
-	for _, b := range Registry.Keys(consts.PluginTypeSecrets) {
-		ensureInScript(t, scriptSecretsBackends, b)
+	for name, backend := range Registry.logicalBackends {
+		if backend.DeprecationStatus == consts.Supported {
+			ensureInScript(t, scriptSecretsBackends, name)
+		}
 	}
 }
