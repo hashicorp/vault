@@ -304,12 +304,13 @@ func (b *SystemBackend) handleActivityConfigRead(ctx context.Context, req *logic
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"default_report_months":   config.DefaultReportMonths,
-			"retention_months":        config.RetentionMonths,
-			"enabled":                 config.Enabled,
-			"queries_available":       qa,
-			"reporting_enabled":       b.Core.censusLicensingEnabled,
-			"billing_start_timestamp": b.Core.GetBillingStart(),
+			"default_report_months":    config.DefaultReportMonths,
+			"retention_months":         config.RetentionMonths,
+			"enabled":                  config.Enabled,
+			"queries_available":        qa,
+			"reporting_enabled":        b.Core.censusLicensingEnabled,
+			"billing_start_timestamp":  b.Core.GetBillingStart(),
+			"minimum_retention_months": a.configOverrides.MinimumRetentionMonths,
 		},
 	}, nil
 }
