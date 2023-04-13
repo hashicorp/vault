@@ -159,7 +159,7 @@ export default class PkiRoleModel extends Model {
   /* Overriding OpenApi Domain handling options */
   @attr({
     label: 'Allowed domains',
-    subText: 'Specifies the domains this role is allowed to issue certificates for. Add one item per row.',
+    subText: 'Specifies the domains this role is allowed to issue certificates for.',
     editType: 'stringArray',
   })
   allowedDomains;
@@ -196,7 +196,7 @@ export default class PkiRoleModel extends Model {
   /* Overriding API Policy identifier option */
   @attr({
     label: 'Policy identifiers',
-    subText: 'A comma-separated string or list of policy object identifiers (OIDs). Add one per row. ',
+    subText: 'A comma-separated string or list of policy object identifiers (OIDs).',
     editType: 'stringArray',
   })
   policyIdentifiers;
@@ -213,7 +213,7 @@ export default class PkiRoleModel extends Model {
 
   @attr({
     label: 'URI Subject Alternative Names (URI SANs)',
-    subText: 'Defines allowed URI Subject Alternative Names. Add one item per row',
+    subText: 'Defines allowed URI Subject Alternative Names.',
     editType: 'stringArray',
     docLink: '/vault/docs/concepts/policies',
   })
@@ -229,7 +229,7 @@ export default class PkiRoleModel extends Model {
 
   @attr({
     label: 'Other SANs',
-    subText: 'Defines allowed custom OID/UTF8-string SANs. Add one item per row.',
+    subText: 'Defines allowed custom OID/UTF8-string SANs.',
     editType: 'stringArray',
   })
   allowedOtherSans;

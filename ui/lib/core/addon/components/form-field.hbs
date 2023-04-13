@@ -214,7 +214,7 @@
       @inputValue={{get @model this.valuePath}}
       @onChange={{this.setAndBroadcast}}
       @attrName={{@attr.name}}
-      @subText={{@attr.options.subText}}
+      @subText="{{@attr.options.subText}} Add one item per row."
     />
   {{else if (eq @attr.options.sensitive true)}}
     {{! Masked Input }}

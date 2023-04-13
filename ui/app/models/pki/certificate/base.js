@@ -59,7 +59,7 @@ export default class PkiCertificateBaseModel extends Model {
   @attr('string', {
     label: 'Subject Alternative Names (SANs)',
     subText:
-      'The requested Subject Alternative Names; if email protection is enabled for the role, this may contain email addresses. Add one per row.',
+      'The requested Subject Alternative Names; if email protection is enabled for the role, this may contain email addresses.',
     editType: 'stringArray',
   })
   altNames;
@@ -67,20 +67,18 @@ export default class PkiCertificateBaseModel extends Model {
   // SANs below are editType: stringArray from openApi
   @attr('string', {
     label: 'IP Subject Alternative Names (IP SANs)',
-    subText: 'Only valid if the role allows IP SANs (which is the default). Add one per row.',
+    subText: 'Only valid if the role allows IP SANs (which is the default).',
   })
   ipSans;
 
   @attr('string', {
     label: 'URI Subject Alternative Names (URI SANs)',
-    subText:
-      'If any requested URIs do not match role policy, the entire request will be denied. Add one per row.',
+    subText: 'If any requested URIs do not match role policy, the entire request will be denied.',
   })
   uriSans;
 
   @attr('string', {
-    subText:
-      'Requested other SANs with the format <oid>;UTF8:<utf8 string value> for each entry. Add one per row.',
+    subText: 'Requested other SANs with the format <oid>;UTF8:<utf8 string value> for each entry.',
   })
   otherSans;
 

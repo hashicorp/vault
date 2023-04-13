@@ -20,7 +20,7 @@ export default class PkiUrlsModel extends Model {
   @attr({
     label: 'Issuing certificates',
     subText:
-      'The URL values for the Issuing Certificate field. These are different URLs for the same resource, and should be added individually, not in a comma-separated list.',
+      'The URL values for the Issuing Certificate field; these are different URLs for the same resource.',
     showHelpText: false,
     editType: 'stringArray',
   })
