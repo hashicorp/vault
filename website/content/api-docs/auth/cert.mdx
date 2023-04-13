@@ -79,6 +79,11 @@ Sets a CA cert and associated parameters in a role name.
 - `ocsp_query_all_servers` `(bool: false)` - If set to true, rather than accepting
   the first successful OCSP response, query all servers and consider the certificate
   valid only if all servers agree.
+
+  ~> **Note**: When using Vault's PKI engine with Performance Replication clusters
+     as the OCSP provider, and without `unified_crls=true` set on the source mount
+     or when using cluster-local OCSP resolvers, we recommend enabling this option.
+
 - `display_name` `(string: "")` - The `display_name` to set on tokens issued
   when authenticating against this CA certificate. If not set, defaults to the
   name of the role.
