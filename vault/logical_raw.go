@@ -319,6 +319,11 @@ func rawPaths(prefix string, r *RawBackend) []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: r.handleRawRead,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationPrefix: "raw",
+						OperationVerb:   "read",
+						OperationSuffix: "|path",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -334,6 +339,11 @@ func rawPaths(prefix string, r *RawBackend) []*framework.Path {
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: r.handleRawWrite,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationPrefix: "raw",
+						OperationVerb:   "write",
+						OperationSuffix: "|path",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -343,6 +353,11 @@ func rawPaths(prefix string, r *RawBackend) []*framework.Path {
 				},
 				logical.CreateOperation: &framework.PathOperation{
 					Callback: r.handleRawWrite,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationPrefix: "raw",
+						OperationVerb:   "write",
+						OperationSuffix: "|path",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -352,6 +367,11 @@ func rawPaths(prefix string, r *RawBackend) []*framework.Path {
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: r.handleRawDelete,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationPrefix: "raw",
+						OperationVerb:   "delete",
+						OperationSuffix: "|path",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -361,6 +381,11 @@ func rawPaths(prefix string, r *RawBackend) []*framework.Path {
 				},
 				logical.ListOperation: &framework.PathOperation{
 					Callback: r.handleRawList,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationPrefix: "raw",
+						OperationVerb:   "list",
+						OperationSuffix: "|path",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
