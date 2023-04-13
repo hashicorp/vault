@@ -1,3 +1,0 @@
-```release-note:improvement
-core (enterprise): add configuration for license reporting 
-```

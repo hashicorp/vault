@@ -236,7 +236,6 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	}
 
 	conf.ActivityLogConfig = opts.ActivityLogConfig
-	testApplyEntBaseConfig(conf, opts)
 
 	c, err := NewCore(conf)
 	if err != nil {
