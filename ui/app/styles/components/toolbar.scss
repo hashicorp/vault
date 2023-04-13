@@ -47,7 +47,7 @@
   @include from($mobile) {
     padding: 0 $spacing-xxs;
   }
-  // ARG TODO return, these are non-standard selectors
+
   &::-webkit-scrollbar {
     border-bottom: $base-border;
     height: $spacing-xxs;
