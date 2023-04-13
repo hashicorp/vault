@@ -641,9 +641,6 @@ type Core struct {
 	// censusAgent is the mechanism used for reporting Vault's billing data.
 	censusAgent *CensusAgent
 
-	// censusLicensingEnabled records whether Vault is exporting census metrics
-	censusLicensingEnabled bool
-
 	// activeTime is set on active nodes indicating the time at which this node
 	// became active.
 	activeTime time.Time
