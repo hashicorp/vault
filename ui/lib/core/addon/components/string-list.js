@@ -75,14 +75,6 @@ export default class StringList extends Component {
     return inputs;
   }
 
-  get helpText() {
-    if (this.args.attrName === 'tokenBoundCidrs') {
-      return 'Specifies the blocks of IP addresses which are allowed to use the generated token. One entry per row.';
-    } else {
-      return this.args.helpText;
-    }
-  }
-
   @action
   autoSize(element) {
     autosize(element.querySelector('textarea'));
