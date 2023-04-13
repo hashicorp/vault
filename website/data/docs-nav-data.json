@@ -239,6 +239,10 @@
         "path": "configuration/replication"
       },
       {
+         "title": "<code>reporting</code>",
+         "path": "configuration/reporting"
+      }, 
+      {
         "title": "<code>seal</code>",
         "routes": [
           {

@@ -40,7 +40,8 @@ https://reporting.hashicorp.services.
 Upgrade to a release that supports entitlement utilization reporting. These
 releases include:
 
-- [Vault Enterprise 1.13.2](https://releases.hashicorp.com/vault/1.13.2+ent/) and later. 
+- [Vault Enterprise 1.13.2](https://releases.hashicorp.com/vault/) and later
+
 
 ### 3. Check logs
 
@@ -120,7 +121,21 @@ HashiCorp collects the following utilization data as JSON payloads:
 <CodeBlockConfig hideClipboard>
 
 ```json
-"metrics": {
+{
+  "payload_version": "1",
+  "license_id": "934b62bd-7e7b-7872-7341-9683ecd9acb4",
+  "product": "vault",
+  "product_version": "1.2.3",
+  "export_timestamp": "2023-03-24T10:11:12Z",
+  "snapshots": [
+    {
+      "snapshot_version": 1,
+      "snapshot_id": "01GW2Y117Z2BZ7MGS9YQXPF2A4",
+      "process_id": "01GVKT7533WF8TBNSJYZV0T10F",
+      "timestamp": "2023-03-21T20:33:32.927Z",
+      "schema_version": "1.0.0",
+      "service": "vault",
+      "metrics": {
         "vault.clientcount.current_month_estimate": {
           "key": "vault.clientcount.current_month_estimate",
           "kind": "sum",
@@ -153,6 +168,7 @@ HashiCorp collects the following utilization data as JSON payloads:
       "billing_start": "2023-03-24T00:00:00Z"
     }
   }
+}
 ```
 
 </CodeBlockConfig>
