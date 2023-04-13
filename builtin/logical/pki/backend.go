@@ -245,6 +245,10 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathAcmeRoleNewOrder(&b),
 			pathAcmeIssuerNewOrder(&b),
 			pathAcmeIssuerAndRoleNewOrder(&b),
+			pathAcmeRootListOrders(&b),
+			pathAcmeRoleListOrders(&b),
+			pathAcmeIssuerListOrders(&b),
+			pathAcmeIssuerAndRoleListOrders(&b),
 		},
 
 		Secrets: []*framework.Secret{
@@ -268,6 +272,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/account/+")
 		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/authorization/+")
 		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/challenge/+/+")
+		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/orders")
+
 	}
 
 	if constants.IsEnterprise {

@@ -90,11 +90,12 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			require.Contains(t, acct2.Contact, "mailto:test3@example.com")
 			require.Len(t, acct2.Contact, 1)
 
-			order, err := acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{{Type: "dns", Value: "www.test.com"}},
+			// Create an order
+			createOrder, err := acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{{Type: "dns", Value: "www.test.com"}},
 				acme.WithOrderNotBefore(time.Now().Add(10*time.Minute)),
 				acme.WithOrderNotAfter(time.Now().Add(7*24*time.Hour)))
-			require.NoError(t, err, "failed updating account")
-			require.Equal(t, acme.StatusPending, order.Status)
+			require.NoError(t, err, "failed creating order")
+			require.Equal(t, acme.StatusPending, createOrder.Status)
 
 			// Deactivate account
 			err = acmeClient.DeactivateReg(testCtx)

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -415,6 +416,25 @@ func (a *acmeState) SaveOrder(ac *acmeContext, order *acmeOrder) error {
 	}
 
 	return nil
+}
+
+func (a *acmeState) ListOrderIds(ac *acmeContext, accountId string) ([]string, error) {
+	accountOrderPrefixPath := acmeAccountPrefix + accountId + "/orders/"
+
+	rawOrderIds, err := ac.sc.Storage.List(ac.sc.Context, accountOrderPrefixPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed listing order ids for account %s: %w", accountId, err)
+	}
+
+	orderIds := []string{}
+	for _, order := range rawOrderIds {
+		if strings.HasSuffix(order, "/") {
+			// skip any folders we might have for some reason
+			continue
+		}
+		orderIds = append(orderIds, order)
+	}
+	return orderIds, nil
 }
 
 func getAuthorizationPath(accountId string, authId string) string {

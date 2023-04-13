@@ -10,6 +10,24 @@ import (
 	"golang.org/x/net/idna"
 )
 
+func pathAcmeRootListOrders(b *backend) *framework.Path {
+	return patternAcmeListOrders(b, "acme/orders")
+}
+
+func pathAcmeRoleListOrders(b *backend) *framework.Path {
+	return patternAcmeListOrders(b, "roles/"+framework.GenericNameRegex("role")+"/acme/orders")
+}
+
+func pathAcmeIssuerListOrders(b *backend) *framework.Path {
+	return patternAcmeListOrders(b, "issuer/"+framework.GenericNameRegex(issuerRefParam)+"/acme/orders")
+}
+
+func pathAcmeIssuerAndRoleListOrders(b *backend) *framework.Path {
+	return patternAcmeListOrders(b,
+		"issuer/"+framework.GenericNameRegex(issuerRefParam)+
+			"/roles/"+framework.GenericNameRegex("role")+"/acme/orders")
+}
+
 func pathAcmeRootNewOrder(b *backend) *framework.Path {
 	return patternAcmeNewOrder(b, "acme/new-order")
 }
@@ -38,7 +56,7 @@ func patternAcmeNewOrder(b *backend, pattern string) *framework.Path {
 		Fields:  fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.acmeParsedWrapper(b.acmeNewOrderHandler),
+				Callback:                    b.acmeAccountRequiredWrapper(b.acmeNewOrderHandler),
 				ForwardPerformanceSecondary: false,
 				ForwardPerformanceStandby:   true,
 			},
@@ -49,22 +67,82 @@ func patternAcmeNewOrder(b *backend, pattern string) *framework.Path {
 	}
 }
 
-func (b *backend) acmeNewOrderHandler(ac *acmeContext, _ *logical.Request, _ *framework.FieldData, uc *jwsCtx, data map[string]interface{}) (*logical.Response, error) {
-	// TODO: Account loading and verification should be moved into a wrapper...
-	if !uc.Existing {
-		return nil, fmt.Errorf("cannot submit order without a 'kid': %w", ErrMalformed)
-	}
+func patternAcmeListOrders(b *backend, pattern string) *framework.Path {
+	fields := map[string]*framework.FieldSchema{}
+	addFieldsForACMEPath(fields, pattern)
+	addFieldsForACMERequest(fields)
 
-	account, err := b.acmeState.LoadAccount(ac, uc.Kid)
+	return &framework.Path{
+		Pattern: pattern,
+		Fields:  fields,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback:                    b.acmeAccountRequiredWrapper(b.acmeListOrdersHandler),
+				ForwardPerformanceSecondary: false,
+				ForwardPerformanceStandby:   true,
+			},
+		},
+
+		HelpSynopsis:    "",
+		HelpDescription: "",
+	}
+}
+
+type acmeAccountRequiredOperation func(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}, acct *acmeAccount) (*logical.Response, error)
+
+func (b *backend) acmeAccountRequiredWrapper(op acmeAccountRequiredOperation) framework.OperationFunc {
+	return b.acmeParsedWrapper(func(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, uc *jwsCtx, data map[string]interface{}) (*logical.Response, error) {
+		if !uc.Existing {
+			return nil, fmt.Errorf("cannot process request without a 'kid': %w", ErrMalformed)
+		}
+
+		account, err := b.acmeState.LoadAccount(acmeCtx, uc.Kid)
+		if err != nil {
+			return nil, fmt.Errorf("error loading account: %w", err)
+		}
+
+		if account.Status != StatusValid {
+			// Treating "revoked" and "deactivated" as the same here.
+			return nil, ErrUnauthorized
+		}
+
+		return op(acmeCtx, r, fields, uc, data, account)
+	})
+}
+
+func (b *backend) acmeListOrdersHandler(ac *acmeContext, _ *logical.Request, _ *framework.FieldData, uc *jwsCtx, _ map[string]interface{}, acct *acmeAccount) (*logical.Response, error) {
+	orderIds, err := b.acmeState.ListOrderIds(ac, acct.KeyId)
 	if err != nil {
-		return nil, fmt.Errorf("error loading account: %w", err)
+		return nil, err
 	}
 
-	if account.Status != StatusValid {
-		// Treating "revoked" and "deactivated" as the same here.
-		return nil, ErrUnauthorized
+	orderUrls := []string{}
+	for _, orderId := range orderIds {
+		order, err := b.acmeState.LoadOrder(ac, uc, orderId)
+		if err != nil {
+			return nil, err
+		}
+
+		if order.Status == ACMEOrderInvalid {
+			// Per RFC8555 -> 7.1.2.1 - Orders List
+			// The server SHOULD include pending orders and SHOULD NOT
+			// include orders that are invalid in the array of URLs.
+			continue
+		}
+
+		orderUrls = append(orderUrls, buildOrderUrl(ac, orderId))
 	}
 
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"orders": orderUrls,
+		},
+	}
+
+	return resp, nil
+}
+
+func (b *backend) acmeNewOrderHandler(ac *acmeContext, _ *logical.Request, _ *framework.FieldData, _ *jwsCtx, data map[string]interface{}, account *acmeAccount) (*logical.Response, error) {
 	identifiers, err := parseOrderIdentifiers(data)
 	if err != nil {
 		return nil, err
@@ -129,7 +207,7 @@ func (b *backend) acmeNewOrderHandler(ac *acmeContext, _ *logical.Request, _ *fr
 }
 
 func formatOrderResponse(acmeCtx *acmeContext, order *acmeOrder) *logical.Response {
-	location := acmeCtx.baseUrl.String() + "order/" + order.OrderId
+	location := buildOrderUrl(acmeCtx, order.OrderId)
 
 	var authorizationUrls []string
 	for _, authId := range order.AuthorizationIds {
@@ -150,6 +228,10 @@ func formatOrderResponse(acmeCtx *acmeContext, order *acmeOrder) *logical.Respon
 	}
 
 	return resp
+}
+
+func buildOrderUrl(acmeCtx *acmeContext, orderId string) string {
+	return acmeCtx.baseUrl.String() + "order/" + orderId
 }
 
 func generateAuthorization(acct *acmeAccount, identifier *ACMEIdentifier) *ACMEAuthorization {
