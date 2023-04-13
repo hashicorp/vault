@@ -16,9 +16,9 @@
               id="enabled"
               name="enabled"
               class="switch is-rounded is-success is-small"
-              disabled={{@model.reportingEnabled}}
+              {{!-- disabled={{@model.reportingEnabled}} --}}
               checked={{eq @model.enabled "On"}}
-              onchange={{this.toggleEnabled}}
+              {{on "change" this.toggleEnabled}}
             />
             <label for="enabled">
               Data collection is

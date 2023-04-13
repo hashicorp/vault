@@ -23,10 +23,11 @@ import { task } from 'ember-concurrency';
 
 export default class ConfigComponent extends Component {
   @service router;
+
   @tracked mode = 'show';
   @tracked modalOpen = false;
   @tracked validations;
-  error = null;
+  @tracked error = null;
 
   get infoRows() {
     return [
@@ -53,6 +54,7 @@ export default class ConfigComponent extends Component {
       this.router.transitionTo('vault.cluster.clients.config');
     } catch (err) {
       this.error = err.message;
+      this.modalOpen = false;
     }
   }).drop())
   save;
