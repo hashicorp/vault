@@ -53,9 +53,7 @@ module('Integration | Component | pki-generate-root', function (hooks) {
     await click(SELECTORS.additionalGroupToggle);
     assert
       .dom(SELECTORS.toggleGroupDescription)
-      .hasText(
-        'These fields provide more information about the client to which the certificate belongs. Add one item per row.'
-      );
+      .hasText('These fields provide more information about the client to which the certificate belongs.');
     assert
       .dom(`[data-test-group="Additional subject fields"] ${SELECTORS.formField}`)
       .exists({ count: 7 }, '7 form fields under Additional Fields toggle');
