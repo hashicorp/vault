@@ -50,6 +50,10 @@ func (b *CubbyholeBackend) paths() []*framework.Path {
 		{
 			Pattern: framework.MatchAllRegex("path"),
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "cubbyhole",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"path": {
 					Type:        framework.TypeString,
@@ -60,21 +64,36 @@ func (b *CubbyholeBackend) paths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleRead,
-					Summary:  "Retrieve the secret at the specified location.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "read",
+					},
+					Summary: "Retrieve the secret at the specified location.",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleWrite,
-					Summary:  "Store a secret at the specified location.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "write",
+					},
+					Summary: "Store a secret at the specified location.",
 				},
 				logical.CreateOperation: &framework.PathOperation{
 					Callback: b.handleWrite,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "write",
+					},
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleDelete,
-					Summary:  "Deletes the secret at the specified location.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "delete",
+					},
+					Summary: "Deletes the secret at the specified location.",
 				},
 				logical.ListOperation: &framework.PathOperation{
-					Callback:    b.handleList,
+					Callback: b.handleList,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "list",
+					},
 					Summary:     "List secret entries at the specified location.",
 					Description: "Folders are suffixed with /. The input must be a folder; list on a file will not return a value. The values themselves are not accessible via this command.",
 				},
