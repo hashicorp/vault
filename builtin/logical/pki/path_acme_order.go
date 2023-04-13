@@ -28,6 +28,24 @@ func pathAcmeIssuerAndRoleListOrders(b *backend) *framework.Path {
 			"/roles/"+framework.GenericNameRegex("role")+"/acme/orders")
 }
 
+func pathAcmeRootGetOrder(b *backend) *framework.Path {
+	return patternAcmeGetOrder(b, "acme/order/"+uuidNameRegex("order_id"))
+}
+
+func pathAcmeRoleGetOrder(b *backend) *framework.Path {
+	return patternAcmeGetOrder(b, "roles/"+framework.GenericNameRegex("role")+"/acme/order/"+uuidNameRegex("order_id"))
+}
+
+func pathAcmeIssuerGetOrder(b *backend) *framework.Path {
+	return patternAcmeGetOrder(b, "issuer/"+framework.GenericNameRegex(issuerRefParam)+"/acme/order/"+uuidNameRegex("order_id"))
+}
+
+func pathAcmeIssuerAndRoleGetOrder(b *backend) *framework.Path {
+	return patternAcmeGetOrder(b,
+		"issuer/"+framework.GenericNameRegex(issuerRefParam)+
+			"/roles/"+framework.GenericNameRegex("role")+"/acme/order/"+uuidNameRegex("order_id"))
+}
+
 func pathAcmeRootNewOrder(b *backend) *framework.Path {
 	return patternAcmeNewOrder(b, "acme/new-order")
 }
@@ -88,6 +106,32 @@ func patternAcmeListOrders(b *backend, pattern string) *framework.Path {
 	}
 }
 
+func patternAcmeGetOrder(b *backend, pattern string) *framework.Path {
+	fields := map[string]*framework.FieldSchema{}
+	addFieldsForACMEPath(fields, pattern)
+	addFieldsForACMERequest(fields)
+	fields["order_id"] = &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Description: `The ACME order identifier to fetch`,
+		Required:    true,
+	}
+
+	return &framework.Path{
+		Pattern: pattern,
+		Fields:  fields,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback:                    b.acmeAccountRequiredWrapper(b.acmeGetOrderHandler),
+				ForwardPerformanceSecondary: false,
+				ForwardPerformanceStandby:   true,
+			},
+		},
+
+		HelpSynopsis:    "",
+		HelpDescription: "",
+	}
+}
+
 type acmeAccountRequiredOperation func(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}, acct *acmeAccount) (*logical.Response, error)
 
 func (b *backend) acmeAccountRequiredWrapper(op acmeAccountRequiredOperation) framework.OperationFunc {
@@ -108,6 +152,17 @@ func (b *backend) acmeAccountRequiredWrapper(op acmeAccountRequiredOperation) fr
 
 		return op(acmeCtx, r, fields, uc, data, account)
 	})
+}
+
+func (b *backend) acmeGetOrderHandler(ac *acmeContext, _ *logical.Request, fields *framework.FieldData, uc *jwsCtx, _ map[string]interface{}, acct *acmeAccount) (*logical.Response, error) {
+	orderId := fields.Get("order_id").(string)
+
+	order, err := b.acmeState.LoadOrder(ac, uc, orderId)
+	if err != nil {
+		return nil, err
+	}
+
+	return formatOrderResponse(ac, order), nil
 }
 
 func (b *backend) acmeListOrdersHandler(ac *acmeContext, _ *logical.Request, _ *framework.FieldData, uc *jwsCtx, _ map[string]interface{}, acct *acmeAccount) (*logical.Response, error) {
