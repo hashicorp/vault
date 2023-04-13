@@ -11,13 +11,9 @@ import { withModelValidations } from 'vault/decorators/model-validations';
 const validations = {
   retentionMonths: [
     {
-      validator: (model) => parseInt(model.retentionMonths) >= (model.reportingEnabled ? 24 : 0),
-      message: (model) => {
-        if (model.reportingEnabled) {
-          return 'Retention period must be a minimum of 24 months.';
-        }
-        return 'Retention period must be greater than or equal to 0.';
-      },
+      validator: (model) => parseInt(model.retentionMonths) >= model.minimumRetentionMonths,
+      message: (model) =>
+        `Retention period must be greater than or equal to ${model.minimumRetentionMonths}.`,
     },
   ],
 };
@@ -32,6 +28,8 @@ export default class ClientsConfigModel extends Model {
     subText: 'The number of months of activity logs to maintain for client tracking.',
   })
   retentionMonths;
+
+  @attr('number') minimumRetentionMonths;
 
   @attr('string') enabled;
 

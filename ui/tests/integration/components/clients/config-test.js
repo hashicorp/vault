@@ -18,13 +18,14 @@ module('Integration | Component | client count config', function (hooks) {
     this.router = this.owner.lookup('service:router');
     this.transitionStub = sinon.stub(this.router, 'transitionTo');
     const store = this.owner.lookup('service:store');
-    this.createModel = (enabled = 'enable', reporting_enabled = false) => {
+    this.createModel = (enabled = 'enable', reporting_enabled = false, minimum_retention_months = 0) => {
       store.pushPayload('clients/config', {
         modelName: 'clients/config',
         id: 'foo',
         data: {
           enabled,
           reporting_enabled,
+          minimum_retention_months,
           retention_months: 24,
         },
       });
@@ -119,7 +120,7 @@ module('Integration | Component | client count config', function (hooks) {
       return {};
     });
 
-    this.createModel('enable', true);
+    this.createModel('enable', true, 24);
 
     await render(hbs`
       <div id="modal-wormhole"></div>
@@ -140,7 +141,7 @@ module('Integration | Component | client count config', function (hooks) {
     assert
       .dom('[data-test-inline-error-message]')
       .hasText(
-        'Retention period must be a minimum of 24 months.',
+        'Retention period must be greater than or equal to 24.',
         'Validation error shows for incorrect retention period'
       );
 
