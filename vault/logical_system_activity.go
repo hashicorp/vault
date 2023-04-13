@@ -348,10 +348,6 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 		return logical.ErrorResponse("retention_months cannot be 0 while enabled"), logical.ErrInvalidRequest
 	}
 
-	if a.core.censusLicensingEnabled && config.RetentionMonths < a.configOverrides.MinimumRetentionMonths {
-		return logical.ErrorResponse("retention_months must be at least %d while Reporting is enabled", a.configOverrides.MinimumRetentionMonths), logical.ErrInvalidRequest
-	}
-
 	// Store the config
 	entry, err := logical.StorageEntryJSON(path.Join(activitySubPath, activityConfigKey), config)
 	if err != nil {

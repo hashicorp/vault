@@ -1,3 +1,0 @@
-```release-note:improvement
-core/activity: error when attempting to update retention configuration below the minimum 
-```
