@@ -81,7 +81,7 @@ func testConfig(t *testing.T) *ConfigEntry {
 		TLSMaxVersion:     "tls12",
 		TLSMinVersion:     "tls12",
 		RequestTimeout:    30,
-		ConnectionTimeout: 30,
+		ConnectionTimeout: 15,
 		ClientTLSCert:     "",
 		ClientTLSKey:      "",
 	}
@@ -142,7 +142,7 @@ var jsonConfig = []byte(`{
 	"tls_max_version": "tls12",
 	"tls_min_version": "tls12",
 	"request_timeout": 30,
-	"connection_timeout": 30,
+	"connection_timeout": 15,
 	"ClientTLSCert":  "",
 	"ClientTLSKey":   ""
 }`)
@@ -173,7 +173,7 @@ var jsonConfigDefault = []byte(`
   "use_pre111_group_cn_behavior": null,
   "username_as_alias": false,
   "request_timeout": 90,
-  "connection_timeout": 60,
+  "connection_timeout": 30,
   "dereference_aliases": "never",
   "CaseSensitiveNames": false,
   "ClientTLSCert": "",

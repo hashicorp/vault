@@ -242,7 +242,7 @@ Default: ({{.UserAttr}}={{.Username}})`,
 		"connection_timeout": {
 			Type:        framework.TypeDurationSecond,
 			Description: "Timeout, in seconds, when attempting to connect to the LDAP server before trying the next URL in the configuration.",
-			Default:     "60s",
+			Default:     "30s",
 		},
 
 		"dereference_aliases": {
