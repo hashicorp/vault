@@ -97,7 +97,8 @@ This endpoint configures the LDAP auth method.
 - `max_page_size` `(int: math.MaxInt32)` - If set to a value greater than 0, the LDAP
   backend will use the LDAP server's paged search control to request pages of
   up to the given size. This can be used to avoid hitting the LDAP server's
-  maximum result size limit. If set to 0, the LDAP backend will not use the
+  maximum result size limit. A vault of 0 will be interpreted by the LDAP
+  server as unlimited. If set to -1, the LDAP backend will not use the
   paged search control.
 
 @include 'tokenfields.mdx'

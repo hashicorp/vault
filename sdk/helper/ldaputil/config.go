@@ -249,7 +249,7 @@ Default: ({{.UserAttr}}={{.Username}})`,
 
 		"max_page_size": {
 			Type:        framework.TypeInt,
-			Description: "The maximum number of results to return for a single paged query. If not set, the server default will be used for paged searches. A requested max_page_size of 0 is interpreted as no limit by LDAP servers.",
+			Description: "The maximum number of results to return for a single paged query. If not set, the server default will be used for paged searches. A requested max_page_size of 0 is interpreted as no limit by LDAP servers. If set to a negative value, search requests will not be paged.",
 			Default:     math.MaxInt32,
 		},
 	}

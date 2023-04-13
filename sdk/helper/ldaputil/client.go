@@ -536,7 +536,7 @@ func (c *Client) GetLdapGroups(cfg *ConfigEntry, conn Connection, userDN string,
 	if cfg.UseTokenGroups {
 		entries, err = c.performLdapTokenGroupsSearch(cfg, conn, userDN)
 	} else {
-		if paging, ok := conn.(PagingConnection); ok {
+		if paging, ok := conn.(PagingConnection); ok && cfg.MaximumPageSize >= 0 {
 			entries, err = c.performLdapFilterGroupsSearchPaging(cfg, paging, userDN, username)
 		} else {
 			entries, err = c.performLdapFilterGroupsSearch(cfg, conn, userDN, username)
