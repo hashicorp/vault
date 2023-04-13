@@ -7,14 +7,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
+	"github.com/hashicorp/vault/helper/useragent"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	az "github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/auth"
-	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
 
@@ -109,7 +112,7 @@ func (a *azureMethod) Authenticate(ctx context.Context, client *api.Client) (ret
 		}
 	}
 
-	body, err := getMetadataInfo(ctx, instanceEndpoint, "", "", "")
+	body, err := getInstanceMetadataInfo(ctx)
 	if err != nil {
 		retErr = err
 		return
@@ -121,20 +124,9 @@ func (a *azureMethod) Authenticate(ctx context.Context, client *api.Client) (ret
 		return
 	}
 
-	// Fetch JWT
-	var identity struct {
-		AccessToken string `json:"access_token"`
-	}
-
-	body, err = getMetadataInfo(ctx, identityEndpoint, a.resource, a.objectID, a.clientID)
+	token, err := getManagedIdentityCredentialToken(ctx, a.resource, a.objectID, a.clientID)
 	if err != nil {
 		retErr = err
-		return
-	}
-
-	err = jsonutil.DecodeJSON(body, &identity)
-	if err != nil {
-		retErr = fmt.Errorf("error parsing identity metadata response: %w", err)
 		return
 	}
 
@@ -145,7 +137,7 @@ func (a *azureMethod) Authenticate(ctx context.Context, client *api.Client) (ret
 		"vmss_name":           instance.Compute.VMScaleSetName,
 		"resource_group_name": instance.Compute.ResourceGroupName,
 		"subscription_id":     instance.Compute.SubscriptionID,
-		"jwt":                 identity.AccessToken,
+		"jwt":                 token,
 	}
 
 	return fmt.Sprintf("%s/login", a.mountPath), nil, data, nil
@@ -161,7 +153,29 @@ func (a *azureMethod) CredSuccess() {
 func (a *azureMethod) Shutdown() {
 }
 
-func getMetadataInfo(ctx context.Context, endpoint, resource, objectID, clientID string) ([]byte, error) {
+func getManagedIdentityCredentialToken(ctx context.Context, resource, objectID, clientID string) (string, error) {
+	opts := &az.ManagedIdentityCredentialOptions{}
+	if objectID != "" {
+		opts.ID = az.ResourceID(objectID)
+	}
+	if clientID != "" {
+		opts.ID = az.ClientID(clientID)
+	}
+
+	cred, err := az.NewManagedIdentityCredential(opts)
+	if err != nil {
+		return "", err
+	}
+	tokenOpts := policy.TokenRequestOptions{Scopes: []string{resource}}
+	tk, err := cred.GetToken(ctx, tokenOpts)
+	if err != nil {
+		return "", err
+	}
+	return tk.Token, nil
+}
+
+func getInstanceMetadataInfo(ctx context.Context) ([]byte, error) {
+	endpoint := instanceEndpoint
 	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
 		return nil, err
@@ -169,18 +183,9 @@ func getMetadataInfo(ctx context.Context, endpoint, resource, objectID, clientID
 
 	q := req.URL.Query()
 	q.Add("api-version", apiVersion)
-	if resource != "" {
-		q.Add("resource", resource)
-	}
-	if objectID != "" {
-		q.Add("object_id", objectID)
-	}
-	if clientID != "" {
-		q.Add("client_id", clientID)
-	}
 	req.URL.RawQuery = q.Encode()
 	req.Header.Set("Metadata", "true")
-	req.Header.Set("User-Agent", useragent.String())
+	req.Header.Set("User-Agent", useragent.AgentString())
 	req = req.WithContext(ctx)
 
 	client := cleanhttp.DefaultClient()
@@ -194,7 +199,7 @@ func getMetadataInfo(ctx context.Context, endpoint, resource, objectID, clientID
 	}
 
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("error reading metadata from %s: %w", endpoint, err)
 	}
