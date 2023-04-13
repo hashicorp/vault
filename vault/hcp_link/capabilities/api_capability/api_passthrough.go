@@ -51,6 +51,7 @@ func NewAPIPassThroughCapability(linkConf *configutil.HCPLinkConfig, scadaProvid
 	}
 
 	if !linkConf.TLSDisable {
+		// Prefer sensible defaults based on the defaults we use for "tcp" listener config
 		server.TLSConfig = &tls.Config{
 			MinVersion: tls.VersionTLS12,
 			MaxVersion: tls.VersionTLS13,
