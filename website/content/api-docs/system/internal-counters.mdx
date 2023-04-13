@@ -9,7 +9,9 @@ description: >-
 
 The `/sys/internal/counters` endpoints are used to return data about the number of Tokens and Entities in Vault. They return information for the entire cluster.
 
-~> **NOTE**: These endpoints are only available in Vault version 1.3+. Backwards compatibility is not guaranteed. These endpoints are subject to change or may disappear without notice.
+<Note>
+These endpoints are only available in Vault version 1.3+. Backwards compatibility is not guaranteed. These endpoints are subject to change or may disappear without notice.
+</Note>
 
 ## Entities
 
@@ -875,6 +877,15 @@ The `/sys/internal/counters/config` endpoint is used to configure logging of act
 
 Any missing parameters are left at their existing value.
 
+<Note>
+
+When [automated utilization
+reporting](/vault/docs/enterprise/license/utilization-reporting) is enabled, the
+`retention_months` parameter cannot be configured below the default setting (24)
+and the `enabled` parameter cannot be set to `disable`.
+
+</Note>
+
 ### Sample Payload
 
 ```json
@@ -897,11 +908,30 @@ $ curl \
 
 ## Read the Client Count Configuration
 
-Reading the configuration shows the current settings, as well as a flag as to whether any data can be queried.
+Reading the configuration shows the current settings, as well as a flag as to
+whether any data can be queried.
 
-- `enabled` `(string)` - returns `default-enabled` or `default-disabled` if the configuration is `default`.
-- `queries_available` `(bool)` - indicates whether any usage report is available. This will initially be
-  false until the end of the first calendar month after the feature is enabled.
+- `enabled` `(string)` - returns `default-enabled` or `default-disabled` if the
+  configuration is `default`.
+- `queries_available` `(bool)` - indicates whether any usage report is
+  available. This will initially be false until the end of the first calendar
+  month after the feature is enabled.
+
+**Vault 1.14.0 or later:** The automated reporting feature exposes two
+additional read-only system settings:
+
+- `reporting_enabled` `(bool)` - indicates whether automated reporting is
+  enabled.
+- `billing_start_timestamp` `(time)` - returns the configured billing start
+  timestamp to be used for automated reporting.
+
+<Note>
+
+The `reporting_enabled` and `billing_start_timestamp` parameters are read-only
+fields and will have no effect if specified in the request payload. All other
+fields will still be honored.
+
+</Note>
 
 ### Sample Request
 
