@@ -66,6 +66,24 @@ Sets a CA cert and associated parameters in a role name.
   will be added as metadata if they are present in the certificate. The
   metadata key will be the string consisting of the oid numbers separated
   by a dash (-) instead of a dot (.) to allow usage in ACL templates.
+- `ocsp_enabled` `(bool: false)` - If enabled, validate certificates' revocation
+  status using OCSP.
+- `ocsp_ca_certificates` `(string: "")` Any additional CA certificates needed to
+  verify OCSP responses.  Provided as base64 encoded PEM data.
+- `ocsp_servers_override` `(array: [])`: A comma-separated list of OCSP server
+  addresses.  If unset, the OCSP server is determined from the AuthorityInformationAccess
+  extension on the certificate being inspected.
+- `ocsp_fail_open` `(bool: false)` - If true and an OCSP response cannot be fetched
+  or is of an unknown status, the login will proceed as if the certificate has not
+  been revoked.
+- `ocsp_query_all_servers` `(bool: false)` - If set to true, rather than accepting
+  the first successful OCSP response, query all servers and consider the certificate
+  valid only if all servers agree.
+
+  ~> **Note**: When using Vault's PKI engine with Performance Replication clusters
+     as the OCSP provider, and without `unified_crls=true` set on the source mount
+     or when using cluster-local OCSP resolvers, we recommend enabling this option.
+
 - `display_name` `(string: "")` - The `display_name` to set on tokens issued
   when authenticating against this CA certificate. If not set, defaults to the
   name of the role.
@@ -336,6 +354,8 @@ Configuration options for the method.
 - `enable_identity_alias_metadata` `(boolean: false)` - If set, metadata of
   the certificate including the metadata corresponding to
   `allowed_metadata_extensions` will be stored in the alias
+- `ocsp_cache_size` `(int: 100)` - The size of the OCSP response LRU cache.  Note
+  that this cache is used for all configured certificates.
 
 ### Sample Payload
 
