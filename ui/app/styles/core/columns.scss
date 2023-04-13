@@ -103,26 +103,6 @@
   width: unset;
 }
 
-.column.is-one-quarter {
-  flex: none;
-  width: 25%;
-}
-
-.column.is-one-third {
-  flex: none;
-  width: 33.3333%;
-}
-
-.column.is-half {
-  flex: none;
-  width: 50%;
-}
-
-.column.is-two-thirds {
-  flex: none;
-  width: 66.6666%;
-}
-
 .columns.is-mobile > .column.is-1 {
   flex: none;
   width: 8.33333%;
@@ -150,28 +130,53 @@
 
 // responsive css column (order matters here because some columns have several of these classes and they need to override in the correct order).
 @media screen and (min-width: 769px), print {
+  .column.is-one-quarter {
+    flex: none;
+    width: 25%;
+  }
+  
+  .column.is-half {
+    flex: none;
+    width: 50%;
+  }
+  
+  .column.is-two-thirds {
+    flex: none;
+    width: 66.6666%;
+  }
+  
+  .column.is-one-third {
+    flex: none;
+    width: 33.3333%;
+  }
+
   .column.is-5 {
     flex: none;
     width: 41.66667%;
   }
+
   .column.is-6,
   .column.is-6-tablet {
     flex: none;
     width: 50%;
   }
+
   .column.is-9 {
     flex: none;
     width: 75%;
   }
+
   .column.is-7,
   .column.is-7-tablet {
     flex: none;
     width: 58.33333%;
   }
+
   .column.is-12 {
     flex: none;
     width: 100%;
   }
+  
   .column.is-full,.column.is-full-tablet {
     flex: none;
     width: 100%
