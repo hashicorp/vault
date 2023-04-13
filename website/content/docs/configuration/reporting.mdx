@@ -2,37 +2,105 @@
 layout: docs
 page_title: Reporting - Configuration
 description: |-
-  The reporting stanza is used to opt out the automated entitlement utilization reporting on your Vault Enterprise server.
+  The reporting stanza configures per-cluster automated reporting of billing
+  information. Vault Enterprise will automatically report the cluster's client
+  counts using the license start date. Any modification of the default behavior
+  should be specified in the reporting stanza.
 ---
 
-# `reporting` Stanza
+# `reporting` stanza
 
-Opting out in your Vault Enterprise configuration file doesn’t require a system
-restart. Add the following block to your `configuration.hcl` file.
+The reporting stanza specifies configuration for [layout: docs
+Automated entitlement utilization reporting](/vault/docs/enterprise/license/utilization-reporting). 
+
+<CodeBlockConfig hideClipboard>
 
 ```hcl
 reporting {
 	license {
-		enabled = false
-   }
+		...
+	}
+}
+```
+
+</CodeBlockConfig>
+
+## Requirements
+
+A valid Vault Enterprise license is required to enable automated reporting of
+billing information.
+
+## `reporting` parameters
+
+The automated reporting feature exposes two read-only system settings:
+
+- `reporting_enabled` `(bool)` - indicates whether automated reporting is
+  enabled.
+- `billing_start_timestamp` `(time)` - returns the configured billing start
+  timestamp to be used for automated reporting.
+
+**Example configuration:**
+
+```hcl
+reporting {
+	license {
+        enabled = true
+        billing_start_timestamp = "2022-03-01T00:00:00Z"
+	}
+}
+```
+
+If an equivalent environment variable is set, the environment variable will take
+precedence over values in the configuration file.
+
+<Note>
+
+Vault Enterprise uses client counts to calculate its billing information. To
+provide the most accurate billing information, client count configuration
+parameters require some restrictions while reporting is enabled. For more
+information, refer to the [client counts API
+doc](/vault/api-docs/system/internal-counters/#update-the-client-count-configuration).
+
+</Note>
+
+## Configuring a billing start timestamp
+
+Vault Enterprise defaultS to reporting client counts periodically for the
+current billing period. The current billing period must be specified via the
+`reporting` stanza:
+
+```hcl
+reporting {
+	license {
+        billing_start_timestamp = "2022-03-01T00:00:00Z"
+	}
+}
+```
+
+If no `billing_start_timestamp` is specified, Vault Enterprise will default to
+using the date associated with Vault's license.
+
+<Note>
+
+Vault Enterprise will not replicate reporting configuration changes to other
+clusters. Any changes to the `reporting` stanza must be specified within each
+cluster's HCL.
+
+</Note>
+
+## Disabling automated reporting
+
+Reporting of billing information is enabled by default and you can disable it in
+the `reporting` stanza. To disable automated reporting, set the `enabled`
+parameter value to `false`:
+
+```hcl
+reporting {
+	license {
+        enabled = false
+    }
 }
 ```
 
 Or, you can set an `OPTOUT_LICENSE_REPORTING` environment variable to
 `true`.
-
-<Note>
-
-Refer to the [Automated entitlement utilization
-reporting](/vault/docs/enterprise/license/utilization-reporting) page for more
-details.
-
-</Note>
-
-
-## Requirements
-
-Vault Enterprise release that supports entitlement utilization reporting. These
-releases include:
-
-- [Vault Enterprise 1.14.0](https://releases.hashicorp.com/vault/) and later 
