@@ -239,6 +239,12 @@ Default: ({{.UserAttr}}={{.Username}})`,
 			Default:     "90s",
 		},
 
+		"connection_timeout": {
+			Type:        framework.TypeDurationSecond,
+			Description: "Timeout, in seconds, when attempting to connect to the LDAP server before trying the next URL in the configuration.",
+			Default:     "60s",
+		},
+
 		"dereference_aliases": {
 			Type:          framework.TypeString,
 			Description:   "When aliases should be dereferenced on search operations. Accepted values are 'never', 'finding', 'searching', 'always'. Defaults to 'never'.",
@@ -411,6 +417,10 @@ func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry
 		cfg.RequestTimeout = d.Get("request_timeout").(int)
 	}
 
+	if _, ok := d.Raw["connection_timeout"]; ok || !hadExisting {
+		cfg.ConnectionTimeout = d.Get("connection_timeout").(int)
+	}
+
 	if _, ok := d.Raw["dereference_aliases"]; ok || !hadExisting {
 		cfg.DerefAliases = d.Get("dereference_aliases").(string)
 	}
@@ -441,6 +451,7 @@ type ConfigEntry struct {
 	UseTokenGroups           bool   `json:"use_token_groups"`
 	UsePre111GroupCNBehavior *bool  `json:"use_pre111_group_cn_behavior"`
 	RequestTimeout           int    `json:"request_timeout"`
+	ConnectionTimeout        int    `json:"connection_timeout"`
 	DerefAliases             string `json:"dereference_aliases"`
 
 	// These json tags deviate from snake case because there was a past issue
@@ -479,6 +490,7 @@ func (c *ConfigEntry) PasswordlessMap() map[string]interface{} {
 		"use_token_groups":       c.UseTokenGroups,
 		"anonymous_group_search": c.AnonymousGroupSearch,
 		"request_timeout":        c.RequestTimeout,
+		"connection_timeout":     c.ConnectionTimeout,
 		"username_as_alias":      c.UsernameAsAlias,
 		"dereference_aliases":    c.DerefAliases,
 	}

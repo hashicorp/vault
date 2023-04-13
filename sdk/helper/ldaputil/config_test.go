@@ -74,15 +74,16 @@ func testConfig(t *testing.T) *ConfigEntry {
 	t.Helper()
 
 	return &ConfigEntry{
-		Url:            "ldap://138.91.247.105",
-		UserDN:         "example,com",
-		BindDN:         "kitty",
-		BindPassword:   "cats",
-		TLSMaxVersion:  "tls12",
-		TLSMinVersion:  "tls12",
-		RequestTimeout: 30,
-		ClientTLSCert:  "",
-		ClientTLSKey:   "",
+		Url:               "ldap://138.91.247.105",
+		UserDN:            "example,com",
+		BindDN:            "kitty",
+		BindPassword:      "cats",
+		TLSMaxVersion:     "tls12",
+		TLSMinVersion:     "tls12",
+		RequestTimeout:    30,
+		ConnectionTimeout: 30,
+		ClientTLSCert:     "",
+		ClientTLSKey:      "",
 	}
 }
 
@@ -141,6 +142,7 @@ var jsonConfig = []byte(`{
 	"tls_max_version": "tls12",
 	"tls_min_version": "tls12",
 	"request_timeout": 30,
+	"connection_timeout": 30,
 	"ClientTLSCert":  "",
 	"ClientTLSKey":   ""
 }`)
@@ -171,6 +173,7 @@ var jsonConfigDefault = []byte(`
   "use_pre111_group_cn_behavior": null,
   "username_as_alias": false,
   "request_timeout": 90,
+  "connection_timeout": 60,
   "dereference_aliases": "never",
   "CaseSensitiveNames": false,
   "ClientTLSCert": "",
