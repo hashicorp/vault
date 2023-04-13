@@ -186,7 +186,6 @@ jobs:
     if: |
       github.ref_name == 'main' ||
       startsWith(github.ref_name, 'release/') ||
-      startsWith(github.base_ref, 'release/') ||
       startsWith(github.head_ref, 'ui/') ||
       startsWith(github.head_ref, 'backport/ui/') ||
       startsWith(github.head_ref, 'merge')
