@@ -44,7 +44,7 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
 
   test('shows the correct information on global urls section', async function (assert) {
     await render(
-      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @mountConfig={{this.mountConfig}} />,`,
+      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @mountConfig={{this.mountConfig}} @hasConfig={{true}} />,`,
       { owner: this.engine }
     );
 
@@ -56,7 +56,7 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
       .hasText('example.com', 'issuing certificate value renders');
     this.urls.issuingCertificates = null;
     await render(
-      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @mountConfig={{this.mountConfig}} />,`,
+      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @mountConfig={{this.mountConfig}} @hasConfig={{true}} />,`,
       { owner: this.engine }
     );
     assert
@@ -72,7 +72,7 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
 
   test('shows the correct information on crl section', async function (assert) {
     await render(
-      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @mountConfig={{this.mountConfig}} />,`,
+      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @mountConfig={{this.mountConfig}} @hasConfig={{true}} />,`,
       { owner: this.engine }
     );
 
@@ -84,7 +84,7 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
       .hasText('Off', 'auto-rebuild value renders off if auto rebuild is false');
     this.crl.autoRebuild = true;
     await render(
-      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @mountConfig={{this.mountConfig}} />,`,
+      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @mountConfig={{this.mountConfig}} @hasConfig={{true}} />,`,
       { owner: this.engine }
     );
     assert
@@ -100,7 +100,36 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
 
   test('shows the correct information on mount configuration section', async function (assert) {
     await render(
-      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @mountConfig={{this.mountConfig}} />,`,
+      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @mountConfig={{this.mountConfig}} @hasConfig={{true}} />,`,
+      { owner: this.engine }
+    );
+
+    assert.dom(SELECTORS.engineTypeLabel).hasText('Secret engine type', 'engine type row label renders');
+    assert.dom(SELECTORS.engineTypeRowVal).hasText('pki', 'engine type row value renders');
+    assert.dom(SELECTORS.pathLabel).hasText('Path', 'path row label renders');
+    assert.dom(SELECTORS.pathRowVal).hasText('/pki-test', 'path row value renders');
+    assert.dom(SELECTORS.accessorLabel).hasText('Accessor', 'accessor row label renders');
+    assert.dom(SELECTORS.accessorRowVal).hasText('pki_33345b0d', 'accessor row value renders');
+    assert.dom(SELECTORS.localLabel).hasText('Local', 'local row label renders');
+    assert.dom(SELECTORS.localRowVal).hasText('No', 'local row value renders');
+    assert.dom(SELECTORS.sealWrapLabel).hasText('Seal wrap', 'seal wrap row label renders');
+    assert
+      .dom(SELECTORS.sealWrapRowVal)
+      .hasText('Yes', 'seal wrap row value renders Yes if sealWrap is true');
+    assert.dom(SELECTORS.maxLeaseTtlLabel).hasText('Max lease TTL', 'max lease label renders');
+    assert.dom(SELECTORS.maxLeaseTtlRowVal).hasText('400h', 'max lease value renders');
+    assert
+      .dom(SELECTORS.allowedManagedKeysLabel)
+      .hasText('Allowed managed keys', 'allowed managed keys label renders');
+    assert.dom(SELECTORS.allowedManagedKeysRowVal).hasText('Yes', 'allowed managed keys value renders');
+  });
+
+  test('shows mount configuration when hasConfig is false', async function (assert) {
+    this.urls = 403;
+    this.crl = 403;
+
+    await render(
+      hbs`<Page::PkiConfigurationDetails @mountConfig={{this.mountConfig}} @hasConfig={{false}} />,`,
       { owner: this.engine }
     );
 
