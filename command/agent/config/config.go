@@ -29,23 +29,23 @@ import (
 type Config struct {
 	*configutil.SharedConfig `hcl:"-"`
 
-	AutoAuth                    *AutoAuth                  `hcl:"auto_auth"`
-	ExitAfterAuth               bool                       `hcl:"exit_after_auth"`
-	Cache                       *Cache                     `hcl:"cache"`
-	APIProxy                    *APIProxy                  `hcl:"api_proxy""`
-	Vault                       *Vault                     `hcl:"vault"`
-	TemplateConfig              *TemplateConfig            `hcl:"template_config"`
-	Templates                   []*ctconfig.TemplateConfig `hcl:"templates"`
-	DisableIdleConns            []string                   `hcl:"disable_idle_connections"`
-	DisableIdleConnsAPIProxy    bool                       `hcl:"-"`
-	DisableIdleConnsTemplating  bool                       `hcl:"-"`
-	DisableIdleConnsAutoAuth    bool                       `hcl:"-"`
-	DisableKeepAlives           []string                   `hcl:"disable_keep_alives"`
-	DisableKeepAlivesAPIProxy   bool                       `hcl:"-"`
-	DisableKeepAlivesTemplating bool                       `hcl:"-"`
-	DisableKeepAlivesAutoAuth   bool                       `hcl:"-"`
-	Exec                        *ExecConfig                `hcl:"exec,optional"`
-	EnvTemplates                []*EnvTemplateConfig       `hcl:"env_template,optional"`
+	AutoAuth                    *AutoAuth                     `hcl:"auto_auth"`
+	ExitAfterAuth               bool                          `hcl:"exit_after_auth"`
+	Cache                       *Cache                        `hcl:"cache"`
+	APIProxy                    *APIProxy                     `hcl:"api_proxy""`
+	Vault                       *Vault                        `hcl:"vault"`
+	TemplateConfig              *TemplateConfig               `hcl:"template_config"`
+	Templates                   []*ctconfig.TemplateConfig    `hcl:"templates"`
+	DisableIdleConns            []string                      `hcl:"disable_idle_connections"`
+	DisableIdleConnsAPIProxy    bool                          `hcl:"-"`
+	DisableIdleConnsTemplating  bool                          `hcl:"-"`
+	DisableIdleConnsAutoAuth    bool                          `hcl:"-"`
+	DisableKeepAlives           []string                      `hcl:"disable_keep_alives"`
+	DisableKeepAlivesAPIProxy   bool                          `hcl:"-"`
+	DisableKeepAlivesTemplating bool                          `hcl:"-"`
+	DisableKeepAlivesAutoAuth   bool                          `hcl:"-"`
+	Exec                        *ExecConfig                   `hcl:"exec,optional"`
+	EnvTemplates                map[string]*EnvTemplateConfig `hcl:"env_template,optional"`
 }
 
 const (
@@ -172,10 +172,9 @@ type TemplateConfig struct {
 }
 
 type EnvTemplateConfig struct {
-	Name            string `hcl:"name,label"`
-	Contents        string `hcl:"contents,attr"`
-	ErrOnMissingKey bool   `hcl:"err_on_missing_key,optional"`
-	Group           string `hcl:"group,optional"`
+	*ctconfig.TemplateConfig `mapstructure:",squash"`
+	Name                     string `hcl:"name,label"`
+	Group                    string `hcl:"group,optional"`
 }
 
 type ExecConfig struct {
@@ -1070,7 +1069,7 @@ func parseEnvTemplates(result *Config, list *ast.ObjectList) error {
 		return nil
 	}
 
-	var envTemplates []*EnvTemplateConfig
+	envTemplates := make(map[string]*EnvTemplateConfig)
 
 	for _, item := range envTemplateList.Items {
 		var shadow interface{}
@@ -1111,9 +1110,14 @@ func parseEnvTemplates(result *Config, list *ast.ObjectList) error {
 		}
 
 		// hcl parses this with extra quotes if quoted in config file
-		et.Name = strings.Trim(item.Keys[0].Token.Text, `"`)
+		name := strings.Trim(item.Keys[0].Token.Text, `"`)
 
-		envTemplates = append(envTemplates, &et)
+		// added EnvVar after Name, will probably keep one
+		et.Name = name
+		et.EnvVar = &name
+
+		// TODO: add validation, should not have duplicate keys
+		envTemplates[name] = &et
 	}
 
 	result.EnvTemplates = envTemplates

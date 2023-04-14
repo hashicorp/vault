@@ -130,3 +130,4 @@ website/components/node_modules
 tools/godoctests/.bin
 # Go workspace file
 go.work
+go.work.sum
