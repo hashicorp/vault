@@ -197,6 +197,7 @@ func (s *Server) Run(ctx context.Context, envTmpls map[string]*config.EnvTemplat
 			}
 
 			if doneRendering {
+				s.logger.Info("done rendering templates, bouncing process")
 				if err := s.bounceCmd(envVarToContents); err != nil {
 					return fmt.Errorf("unable to bounce command: %w", err)
 				}
