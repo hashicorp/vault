@@ -44,9 +44,10 @@ func pathConfig(b *backend) *framework.Path {
 			"unregistered_user_policies": {
 				Type:        framework.TypeString,
 				Default:     "",
-				Description: "Comma-separated list of policies to grant upon successful RADIUS authentication of an unregisted user (default: empty)",
+				Description: "Comma-separated list of policies to grant upon successful RADIUS authentication of an unregistered user (default: empty)",
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Policies for unregistered users",
+					Description: "List of policies to grant upon successful RADIUS authentication of an unregistered user (default: empty)",
 				},
 			},
 			"dial_timeout": {
