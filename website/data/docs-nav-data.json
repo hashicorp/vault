@@ -240,6 +240,11 @@
       },
       {
          "title": "<code>reporting</code>",
+         "badge": {
+            "text": "ENT",
+            "type": "outlined",
+            "color": "neutral"
+          },  
          "path": "configuration/reporting"
       }, 
       {
@@ -286,6 +291,11 @@
       },
       {
         "title": "<code>sentinel</code>",
+        "badge": {
+         "text": "ENT",
+         "type": "outlined",
+         "color": "neutral"
+       },
         "path": "configuration/sentinel"
       },
       {
@@ -2186,7 +2196,6 @@
           }
         ]
       },
-
       {
         "title": "Replication",
         "path": "enterprise/replication"
