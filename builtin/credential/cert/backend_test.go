@@ -1965,6 +1965,27 @@ func testAccStepCertWithExtraParams(t *testing.T, name string, cert []byte, poli
 	}
 }
 
+func testAccStepReadCertPolicy(t *testing.T, name string, expectError bool, expected map[string]interface{}) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "certs/" + name,
+		ErrorOk:   expectError,
+		Data:      nil,
+		Check: func(resp *logical.Response) error {
+			if (resp == nil || len(resp.Data) == 0) && expectError {
+				return fmt.Errorf("expected error but received nil")
+			}
+			for key, expectedValue := range expected {
+				actualValue := resp.Data[key]
+				if expectedValue != actualValue {
+					return fmt.Errorf("Expected to get [%v]=[%v] but read [%v]=[%v] from server for certs/%v: %v", key, expectedValue, key, actualValue, name, resp)
+				}
+			}
+			return nil
+		},
+	}
+}
+
 func testAccStepCertLease(
 	t *testing.T, name string, cert []byte, policies string,
 ) logicaltest.TestStep {
