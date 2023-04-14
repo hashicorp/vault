@@ -172,6 +172,7 @@ func (s *Server) Run(ctx context.Context, envTmpls map[string]*config.EnvTemplat
 			go s.runner.Start()
 		case <-s.runner.TemplateRenderedCh():
 			// A template has been rendered, figure out what to do
+			s.logger.Debug("template rendered")
 			events := s.runner.RenderEvents()
 
 			// events are keyed by template ID, and can be matched up to the id's from
