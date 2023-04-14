@@ -44,7 +44,7 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
 
   test('shows the correct information on global urls section', async function (assert) {
     await render(
-      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @mountConfig={{this.mountConfig}} />,`,
+      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @mountConfig={{this.mountConfig}} @hasConfig={{true}} />,`,
       { owner: this.engine }
     );
 
@@ -56,7 +56,7 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
       .hasText('example.com', 'issuing certificate value renders');
     this.urls.issuingCertificates = null;
     await render(
-      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @mountConfig={{this.mountConfig}} />,`,
+      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @mountConfig={{this.mountConfig}} @hasConfig={{true}} />,`,
       { owner: this.engine }
     );
     assert
@@ -72,7 +72,7 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
 
   test('shows the correct information on crl section', async function (assert) {
     await render(
-      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @mountConfig={{this.mountConfig}} />,`,
+      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @mountConfig={{this.mountConfig}} @hasConfig={{true}} />,`,
       { owner: this.engine }
     );
 
@@ -84,7 +84,7 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
       .hasText('Off', 'auto-rebuild value renders off if auto rebuild is false');
     this.crl.autoRebuild = true;
     await render(
-      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @mountConfig={{this.mountConfig}} />,`,
+      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @mountConfig={{this.mountConfig}} @hasConfig={{true}} />,`,
       { owner: this.engine }
     );
     assert
@@ -100,7 +100,7 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
 
   test('shows the correct information on mount configuration section', async function (assert) {
     await render(
-      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @mountConfig={{this.mountConfig}} />,`,
+      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @mountConfig={{this.mountConfig}} @hasConfig={{true}} />,`,
       { owner: this.engine }
     );
 
