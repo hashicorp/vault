@@ -119,7 +119,7 @@ func (c *AgentGenerateConfigCommand) Run(args []string) int {
 
 		var pathFull string
 		if v2 {
-			pathFull = addPrefixToKVPath(pathSanitized, pathMount, "data")
+			pathFull = addPrefixToKVPath(pathSanitized, pathMount, "data", true)
 		} else {
 			pathFull = pathSanitized
 		}
