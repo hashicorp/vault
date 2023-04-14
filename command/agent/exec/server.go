@@ -84,7 +84,7 @@ func (s *Server) Run(ctx context.Context, envTmpls map[string]*config.EnvTemplat
 	for envName, envTmpl := range envTmpls {
 		tmpl := envTmpl.TemplateConfig
 		tmpl.EnvVar = &envName
-		templates = append(templates, tmpl)
+		templates = append(templates, &tmpl)
 	}
 
 	managerConfig := ctmanager.ManagerConfig{
