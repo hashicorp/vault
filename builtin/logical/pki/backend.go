@@ -127,6 +127,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 				"crls/",
 				"certs/",
 				acmePathPrefix,
+				"config/acme/local",
 			},
 
 			Root: []string{
@@ -241,6 +242,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathAcmeRoleChallenge(&b),
 			pathAcmeIssuerChallenge(&b),
 			pathAcmeIssuerAndRoleChallenge(&b),
+			pathAcmeConfig(&b),
 		},
 
 		Secrets: []*framework.Secret{
