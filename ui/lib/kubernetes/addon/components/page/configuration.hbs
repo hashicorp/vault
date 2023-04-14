@@ -22,7 +22,7 @@
                 {{@config.kubernetesCaCert}}
               </code>
             </div>
-            <div class="is-flex has-background-grey-lighter has-side-padding-s has-top-bottom-margin-negative-m">
+            <div class="is-flex has-background-white-bis has-side-padding-s has-top-bottom-margin-negative-m">
               <CopyButton
                 data-test-certificate-copy
                 class="button is-transparent is-flex-v-centered"
@@ -39,7 +39,7 @@
     {{/if}}
   {{else}}
     <div class="has-top-margin-l" data-test-inferred-message>
-      <Icon @name="check-circle-fill" class="has-text-green" />
+      <Icon @name="check-circle-fill" class="has-text-success" />
       <span>
         These details were successfully inferred from Vault’s kubernetes environment and were not explicity set in this
         config.
