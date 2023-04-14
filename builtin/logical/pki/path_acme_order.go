@@ -14,58 +14,16 @@ import (
 	"golang.org/x/net/idna"
 )
 
-func pathAcmeRootListOrders(b *backend) *framework.Path {
-	return patternAcmeListOrders(b, "acme/orders")
+func pathAcmeListOrders(b *backend) []*framework.Path {
+	return buildAcmeFrameworkPaths(b, patternAcmeListOrders, "/orders")
 }
 
-func pathAcmeRoleListOrders(b *backend) *framework.Path {
-	return patternAcmeListOrders(b, "roles/"+framework.GenericNameRegex("role")+"/acme/orders")
+func pathAcmeGetOrder(b *backend) []*framework.Path {
+	return buildAcmeFrameworkPaths(b, patternAcmeGetOrder, "/order/"+uuidNameRegex("order_id"))
 }
 
-func pathAcmeIssuerListOrders(b *backend) *framework.Path {
-	return patternAcmeListOrders(b, "issuer/"+framework.GenericNameRegex(issuerRefParam)+"/acme/orders")
-}
-
-func pathAcmeIssuerAndRoleListOrders(b *backend) *framework.Path {
-	return patternAcmeListOrders(b,
-		"issuer/"+framework.GenericNameRegex(issuerRefParam)+
-			"/roles/"+framework.GenericNameRegex("role")+"/acme/orders")
-}
-
-func pathAcmeRootGetOrder(b *backend) *framework.Path {
-	return patternAcmeGetOrder(b, "acme/order/"+uuidNameRegex("order_id"))
-}
-
-func pathAcmeRoleGetOrder(b *backend) *framework.Path {
-	return patternAcmeGetOrder(b, "roles/"+framework.GenericNameRegex("role")+"/acme/order/"+uuidNameRegex("order_id"))
-}
-
-func pathAcmeIssuerGetOrder(b *backend) *framework.Path {
-	return patternAcmeGetOrder(b, "issuer/"+framework.GenericNameRegex(issuerRefParam)+"/acme/order/"+uuidNameRegex("order_id"))
-}
-
-func pathAcmeIssuerAndRoleGetOrder(b *backend) *framework.Path {
-	return patternAcmeGetOrder(b,
-		"issuer/"+framework.GenericNameRegex(issuerRefParam)+
-			"/roles/"+framework.GenericNameRegex("role")+"/acme/order/"+uuidNameRegex("order_id"))
-}
-
-func pathAcmeRootNewOrder(b *backend) *framework.Path {
-	return patternAcmeNewOrder(b, "acme/new-order")
-}
-
-func pathAcmeRoleNewOrder(b *backend) *framework.Path {
-	return patternAcmeNewOrder(b, "roles/"+framework.GenericNameRegex("role")+"/acme/new-order")
-}
-
-func pathAcmeIssuerNewOrder(b *backend) *framework.Path {
-	return patternAcmeNewOrder(b, "issuer/"+framework.GenericNameRegex(issuerRefParam)+"/acme/new-order")
-}
-
-func pathAcmeIssuerAndRoleNewOrder(b *backend) *framework.Path {
-	return patternAcmeNewOrder(b,
-		"issuer/"+framework.GenericNameRegex(issuerRefParam)+
-			"/roles/"+framework.GenericNameRegex("role")+"/acme/new-order")
+func pathAcmeNewOrder(b *backend) []*framework.Path {
+	return buildAcmeFrameworkPaths(b, patternAcmeNewOrder, "/new-order")
 }
 
 func patternAcmeNewOrder(b *backend, pattern string) *framework.Path {

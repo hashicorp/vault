@@ -18,40 +18,12 @@ func uuidNameRegex(name string) string {
 	return fmt.Sprintf("(?P<%s>[[:alnum:]]{8}-[[:alnum:]]{4}-[[:alnum:]]{4}-[[:alnum:]]{4}-[[:alnum:]]{12}?)", name)
 }
 
-func pathAcmeRootNewAccount(b *backend) *framework.Path {
-	return patternAcmeNewAccount(b, "acme/new-account")
+func pathAcmeNewAccount(b *backend) []*framework.Path {
+	return buildAcmeFrameworkPaths(b, patternAcmeNewAccount, "/new-account")
 }
 
-func pathAcmeRoleNewAccount(b *backend) *framework.Path {
-	return patternAcmeNewAccount(b, "roles/"+framework.GenericNameRegex("role")+"/acme/new-account")
-}
-
-func pathAcmeIssuerNewAccount(b *backend) *framework.Path {
-	return patternAcmeNewAccount(b, "issuer/"+framework.GenericNameRegex(issuerRefParam)+"/acme/new-account")
-}
-
-func pathAcmeIssuerAndRoleNewAccount(b *backend) *framework.Path {
-	return patternAcmeNewAccount(b,
-		"issuer/"+framework.GenericNameRegex(issuerRefParam)+
-			"/roles/"+framework.GenericNameRegex("role")+"/acme/new-account")
-}
-
-func pathAcmeRootUpdateAccount(b *backend) *framework.Path {
-	return patternAcmeNewAccount(b, "acme/account/"+uuidNameRegex("kid"))
-}
-
-func pathAcmeRoleUpdateAccount(b *backend) *framework.Path {
-	return patternAcmeNewAccount(b, "roles/"+framework.GenericNameRegex("role")+"/acme/account/"+uuidNameRegex("kid"))
-}
-
-func pathAcmeIssuerUpdateAccount(b *backend) *framework.Path {
-	return patternAcmeNewAccount(b, "issuer/"+framework.GenericNameRegex(issuerRefParam)+"/acme/account/"+uuidNameRegex("kid"))
-}
-
-func pathAcmeIssuerAndRoleUpdateAccount(b *backend) *framework.Path {
-	return patternAcmeNewAccount(b,
-		"issuer/"+framework.GenericNameRegex(issuerRefParam)+
-			"/roles/"+framework.GenericNameRegex("role")+"/acme/account/"+uuidNameRegex("kid"))
+func pathAcmeUpdateAccount(b *backend) []*framework.Path {
+	return buildAcmeFrameworkPaths(b, patternAcmeNewAccount, "/account/"+uuidNameRegex("kid"))
 }
 
 func addFieldsForACMEPath(fields map[string]*framework.FieldSchema, pattern string) map[string]*framework.FieldSchema {
