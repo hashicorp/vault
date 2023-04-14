@@ -2123,3 +2123,22 @@ func TestLoadConfigFile_EnvTemplates(t *testing.T) {
 		t.Fatalf("expected env var name to be populated")
 	}
 }
+
+func TestLoadConfigFile_EnvTemplateComplex(t *testing.T) {
+	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-complex.hcl")
+
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+	expectedKeys := []string{
+		"FOO_DATA_LOCK",
+		"FOO_DATA_PASSWORD",
+		"FOO_DATA_USER",
+	}
+	for _, expected := range expectedKeys {
+		_, ok := cfg.EnvTemplates[expected]
+		if !ok {
+			t.Fatalf("expected env var %s", expected)
+		}
+	}
+}
