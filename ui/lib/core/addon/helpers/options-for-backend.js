@@ -54,33 +54,6 @@ const SECRET_BACKENDS = {
     editComponent: 'role-aws-edit',
     listItemPartial: 'secret-list/aws-role-item',
   },
-  pki: {
-    displayName: 'PKI',
-    navigateTree: false,
-    listItemPartial: 'secret-list/pki-role-item',
-    tabs: [
-      {
-        name: 'roles',
-        label: 'Roles',
-        searchPlaceholder: 'Filter roles',
-        item: 'role',
-        create: 'Create role',
-        editComponent: 'pki/role-pki-edit',
-      },
-      {
-        name: 'cert',
-        modelPrefix: 'cert/',
-        label: 'Certificates',
-        searchPlaceholder: 'Filter certificates',
-        item: 'certificate',
-        message: 'Issue a certificate from a role.',
-        create: 'Create role',
-        tab: 'cert',
-        listItemPartial: 'secret-list/pki-cert-item',
-        editComponent: 'pki/pki-cert-show',
-      },
-    ],
-  },
   ssh: {
     displayName: 'SSH',
     searchPlaceholder: 'Filter roles',

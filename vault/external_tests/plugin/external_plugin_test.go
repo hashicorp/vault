@@ -5,11 +5,15 @@ package plugin_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/audit"
+	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/api/auth/approle"
@@ -26,6 +30,35 @@ import (
 
 	_ "github.com/jackc/pgx/v4/stdlib"
 )
+
+func getClusterWithFileAuditBackend(t *testing.T, typ consts.PluginType, numCores int) *vault.TestCluster {
+	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
+	t.Cleanup(func() { cleanup(t) })
+	coreConfig := &vault.CoreConfig{
+		PluginDirectory: pluginDir,
+		LogicalBackends: map[string]logical.Factory{
+			"database": database.Factory,
+		},
+		AuditBackends: map[string]audit.Factory{
+			"file": auditFile.Factory,
+		},
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		TempDir:  pluginDir,
+		NumCores: numCores,
+		Plugins: &vault.TestPluginConfig{
+			Typ:      typ,
+			Versions: []string{""},
+		},
+		HandlerFunc: vaulthttp.Handler,
+	})
+
+	cluster.Start()
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+
+	return cluster
+}
 
 func getCluster(t *testing.T, typ consts.PluginType, numCores int) *vault.TestCluster {
 	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
@@ -826,3 +859,164 @@ CREATE ROLE "{{name}}" WITH
   VALID UNTIL '{{expiration}}';
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";
 `
+
+func testExternalPluginMetadataAuditLog(t *testing.T, log map[string]interface{}, expectedMountClass string) {
+	if mountClass, ok := log["mount_class"].(string); !ok {
+		t.Fatalf("mount_class should be a string, not %T", log["mount_class"])
+	} else if mountClass != expectedMountClass {
+		t.Fatalf("bad: mount_class should be %s, not %s", expectedMountClass, mountClass)
+	}
+
+	if mountIsExternalPlugin, ok := log["mount_is_external_plugin"].(bool); !ok {
+		t.Fatalf("mount_is_external_plugin should be a bool, not %T", log["mount_is_external_plugin"])
+	} else if !mountIsExternalPlugin {
+		t.Fatalf("bad: mount_is_external_plugin should be true, not %t", mountIsExternalPlugin)
+	}
+
+	if _, ok := log["mount_running_sha256"].(string); !ok {
+		t.Fatalf("mount_running_sha256 should be a string, not %T", log["mount_running_sha256"])
+	}
+}
+
+// TestExternalPlugin_AuditEnabled_ShouldLogPluginMetadata_Auth tests that we have plugin metadata of an auth plugin
+// in audit log when it is enabled
+func TestExternalPlugin_AuditEnabled_ShouldLogPluginMetadata_Auth(t *testing.T) {
+	cluster := getClusterWithFileAuditBackend(t, consts.PluginTypeCredential, 1)
+	defer cluster.Cleanup()
+
+	plugin := cluster.Plugins[0]
+	client := cluster.Cores[0].Client
+	client.SetToken(cluster.RootToken)
+
+	testRegisterAndEnable(t, client, plugin)
+
+	// Enable the audit backend
+	tempDir := t.TempDir()
+	auditLogFile, err := os.CreateTemp(tempDir, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = client.Sys().EnableAuditWithOptions("file", &api.EnableAuditOptions{
+		Type: "file",
+		Options: map[string]string{
+			"file_path": auditLogFile.Name(),
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("auth/"+plugin.Name+"/role/role1", map[string]interface{}{
+		"bind_secret_id": "true",
+		"period":         "300",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check the audit trail on request and response
+	decoder := json.NewDecoder(auditLogFile)
+	var auditRecord map[string]interface{}
+	for decoder.Decode(&auditRecord) == nil {
+		auditRequest := map[string]interface{}{}
+		if req, ok := auditRecord["request"]; ok {
+			auditRequest = req.(map[string]interface{})
+			if auditRequest["path"] != "auth/"+plugin.Name+"/role/role1" {
+				continue
+			}
+		}
+		testExternalPluginMetadataAuditLog(t, auditRequest, consts.PluginTypeCredential.String())
+
+		auditResponse := map[string]interface{}{}
+		if req, ok := auditRecord["response"]; ok {
+			auditRequest = req.(map[string]interface{})
+			if auditResponse["path"] != "auth/"+plugin.Name+"/role/role1" {
+				continue
+			}
+		}
+		testExternalPluginMetadataAuditLog(t, auditResponse, consts.PluginTypeCredential.String())
+	}
+
+	// Deregister
+	if err := client.Sys().DeregisterPlugin(&api.DeregisterPluginInput{
+		Name:    plugin.Name,
+		Type:    api.PluginType(plugin.Typ),
+		Version: plugin.Version,
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestExternalPlugin_AuditEnabled_ShouldLogPluginMetadata_Secret tests that we have plugin metadata of a secret plugin
+// in audit log when it is enabled
+func TestExternalPlugin_AuditEnabled_ShouldLogPluginMetadata_Secret(t *testing.T) {
+	cluster := getClusterWithFileAuditBackend(t, consts.PluginTypeSecrets, 1)
+	defer cluster.Cleanup()
+
+	plugin := cluster.Plugins[0]
+	client := cluster.Cores[0].Client
+	client.SetToken(cluster.RootToken)
+
+	testRegisterAndEnable(t, client, plugin)
+
+	// Enable the audit backend
+	tempDir := t.TempDir()
+	auditLogFile, err := os.CreateTemp(tempDir, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = client.Sys().EnableAuditWithOptions("file", &api.EnableAuditOptions{
+		Type: "file",
+		Options: map[string]string{
+			"file_path": auditLogFile.Name(),
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Configure
+	cleanupConsul, consulConfig := consul.PrepareTestContainer(t, "", false, true)
+	defer cleanupConsul()
+	_, err = client.Logical().Write(plugin.Name+"/config/access", map[string]interface{}{
+		"address": consulConfig.Address(),
+		"token":   consulConfig.Token,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check the audit trail on request and response
+	decoder := json.NewDecoder(auditLogFile)
+	var auditRecord map[string]interface{}
+	for decoder.Decode(&auditRecord) == nil {
+		auditRequest := map[string]interface{}{}
+		if req, ok := auditRecord["request"]; ok {
+			auditRequest = req.(map[string]interface{})
+			if auditRequest["path"] != plugin.Name+"/config/access" {
+				continue
+			}
+		}
+		testExternalPluginMetadataAuditLog(t, auditRequest, consts.PluginTypeSecrets.String())
+
+		auditResponse := map[string]interface{}{}
+		if req, ok := auditRecord["response"]; ok {
+			auditRequest = req.(map[string]interface{})
+			if auditResponse["path"] != plugin.Name+"/config/access" {
+				continue
+			}
+		}
+		testExternalPluginMetadataAuditLog(t, auditResponse, consts.PluginTypeSecrets.String())
+	}
+
+	// Deregister
+	if err := client.Sys().DeregisterPlugin(&api.DeregisterPluginInput{
+		Name:    plugin.Name,
+		Type:    api.PluginType(plugin.Typ),
+		Version: plugin.Version,
+	}); err != nil {
+		t.Fatal(err)
+	}
+}

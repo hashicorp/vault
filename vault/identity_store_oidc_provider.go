@@ -184,6 +184,10 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "oidc/assignment/" + framework.GenericNameRegex("name"),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationSuffix: "assignment",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -218,6 +222,10 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/assignment/?$",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationSuffix: "assignments",
+			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: i.pathOIDCListAssignment,
@@ -228,6 +236,10 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/scope/" + framework.GenericNameRegex("name"),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationSuffix: "scope",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -262,6 +274,10 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/scope/?$",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationSuffix: "scopes",
+			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: i.pathOIDCListScope,
@@ -272,6 +288,10 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/client/" + framework.GenericNameRegex("name"),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationSuffix: "client",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -326,6 +346,10 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/client/?$",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationSuffix: "clients",
+			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: i.pathOIDCListClient,
@@ -336,6 +360,10 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/provider/" + framework.GenericNameRegex("name"),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationSuffix: "provider",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -374,6 +402,10 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/provider/?$",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationSuffix: "providers",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"allowed_client_id": {
 					Type: framework.TypeString,
@@ -393,6 +425,10 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/provider/" + framework.GenericNameRegex("name") + "/\\.well-known/openid-configuration",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationSuffix: "provider-open-id-configuration",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -409,6 +445,10 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/provider/" + framework.GenericNameRegex("name") + "/\\.well-known/keys",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationSuffix: "provider-public-keys",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -425,6 +465,9 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/provider/" + framework.GenericNameRegex("name") + "/authorize",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc-provider",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -474,12 +517,18 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback:                    i.pathOIDCAuthorize,
+					Callback: i.pathOIDCAuthorize,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "authorize",
+					},
 					ForwardPerformanceStandby:   true,
 					ForwardPerformanceSecondary: false,
 				},
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback:                    i.pathOIDCAuthorize,
+					Callback: i.pathOIDCAuthorize,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "authorize2",
+					},
 					ForwardPerformanceStandby:   true,
 					ForwardPerformanceSecondary: false,
 				},
@@ -489,6 +538,10 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/provider/" + framework.GenericNameRegex("name") + "/token",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc-provider",
+				OperationVerb:   "token",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -543,6 +596,9 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/provider/" + framework.GenericNameRegex("name") + "/userinfo",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc-provider",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -552,9 +608,15 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: i.pathOIDCUserInfo,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "user-info",
+					},
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: i.pathOIDCUserInfo,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "user-info2",
+					},
 				},
 			},
 			HelpSynopsis:    "Provides the OIDC UserInfo Endpoint.",

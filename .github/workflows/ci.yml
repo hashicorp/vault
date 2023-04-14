@@ -33,10 +33,10 @@ jobs:
           echo 'go-build-tags=ent,enterprise' >> "$GITHUB_OUTPUT"
         else
           # shellcheck disable=SC2129
-          echo 'compute-tiny="ubuntu-latest"' >> "$GITHUB_OUTPUT"
-          echo 'compute-standard="custom-linux-xl-vault-latest"' >> "$GITHUB_OUTPUT"
-          echo 'compute-larger="custom-linux-xl-vault-latest"' >> "$GITHUB_OUTPUT"
-          echo 'compute-huge="custom-linux-xl-vault-latest"' >> "$GITHUB_OUTPUT"
+          echo 'compute-tiny="ubuntu-latest"' >> "$GITHUB_OUTPUT"                         #  2 cores,   7 GB RAM,   14 GB SSD
+          echo 'compute-standard="custom-linux-small-vault-latest"' >> "$GITHUB_OUTPUT"   #  8 cores,  32 GB RAM,  300 GB SSD
+          echo 'compute-larger="custom-linux-medium-vault-latest"' >> "$GITHUB_OUTPUT"    # 16 cores,  64 GB RAM,  600 GB SSD
+          echo 'compute-huge="custom-linux-xl-vault-latest"' >> "$GITHUB_OUTPUT"          # 32-cores, 128 GB RAM, 1200 GB SSD
           echo 'enterprise=' >> "$GITHUB_OUTPUT"
           echo 'go-build-tags=' >> "$GITHUB_OUTPUT"
         fi
@@ -186,7 +186,6 @@ jobs:
     if: |
       github.ref_name == 'main' ||
       startsWith(github.ref_name, 'release/') ||
-      startsWith(github.base_ref, 'release/') ||
       startsWith(github.head_ref, 'ui/') ||
       startsWith(github.head_ref, 'backport/ui/') ||
       startsWith(github.head_ref, 'merge')

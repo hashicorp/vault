@@ -25,6 +25,11 @@ import (
 )
 
 const (
+	operationPrefixPKI        = "pki"
+	operationPrefixPKIIssuer  = "pki-issuer"
+	operationPrefixPKIIssuers = "pki-issuers"
+	operationPrefixPKIRoot    = "pki-root"
+
 	noRole       = 0
 	roleOptional = 1
 	roleRequired = 2
@@ -121,6 +126,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 				clusterConfigPath,
 				"crls/",
 				"certs/",
+				acmePathPrefix,
 			},
 
 			Root: []string{
@@ -223,6 +229,18 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathAcmeRoleNewAccount(&b),
 			pathAcmeIssuerNewAccount(&b),
 			pathAcmeIssuerAndRoleNewAccount(&b),
+			pathAcmeRootUpdateAccount(&b),
+			pathAcmeRoleUpdateAccount(&b),
+			pathAcmeIssuerUpdateAccount(&b),
+			pathAcmeIssuerAndRoleUpdateAccount(&b),
+			pathAcmeRootAuthorization(&b),
+			pathAcmeRoleAuthorization(&b),
+			pathAcmeIssuerAuthorization(&b),
+			pathAcmeIssuerAndRoleAuthorization(&b),
+			pathAcmeRootChallenge(&b),
+			pathAcmeRoleChallenge(&b),
+			pathAcmeIssuerChallenge(&b),
+			pathAcmeIssuerAndRoleChallenge(&b),
 		},
 
 		Secrets: []*framework.Secret{
@@ -243,6 +261,9 @@ func Backend(conf *logical.BackendConfig) *backend {
 		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/new-order")
 		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/revoke-cert")
 		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/key-change")
+		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/account/+")
+		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/authorization/+")
+		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/challenge/+/+")
 	}
 
 	if constants.IsEnterprise {

@@ -29,7 +29,7 @@
           {{/if}}
         </p>
         {{#if this.keyParamFields}}
-          <PkiKeyParameters @model={{@model}} @fields={{this.keyParamFields}} />
+          <PkiKeyParameters @model={{@model}} @fields={{this.keyParamFields}} @modelValidations={{@modelValidations}} />
         {{/if}}
       {{else}}
         <p class="has-bottom-margin-m" data-test-toggle-group-description>
@@ -43,7 +43,13 @@
         </p>
         {{#each fields as |fieldName|}}
           {{#let (find-by "name" fieldName @model.allFields) as |attr|}}
-            <FormField data-test-field @attr={{attr}} @model={{@model}} @showHelpText={{false}} />
+            <FormField
+              data-test-field
+              @attr={{attr}}
+              @model={{@model}}
+              @showHelpText={{false}}
+              @modelValidations={{@modelValidations}}
+            />
           {{/let}}
         {{/each}}
       {{/if}}

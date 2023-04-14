@@ -618,6 +618,11 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	req.Path = strings.TrimPrefix(ns.Path+req.Path, mount)
 	req.MountPoint = mount
 	req.MountType = re.mountEntry.Type
+	req.SetMountRunningSha256(re.mountEntry.RunningSha256)
+	req.SetMountRunningVersion(re.mountEntry.RunningVersion)
+	req.SetMountIsExternalPlugin(re.mountEntry.IsExternalPlugin())
+	req.SetMountClass(re.mountEntry.MountClass())
+
 	if req.Path == "/" {
 		req.Path = ""
 	}
@@ -733,6 +738,11 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		req.Path = originalPath
 		req.MountPoint = mount
 		req.MountType = re.mountEntry.Type
+		req.SetMountRunningSha256(re.mountEntry.RunningSha256)
+		req.SetMountRunningVersion(re.mountEntry.RunningVersion)
+		req.SetMountIsExternalPlugin(re.mountEntry.IsExternalPlugin())
+		req.SetMountClass(re.mountEntry.MountClass())
+
 		req.Connection = originalConn
 		req.ID = originalReqID
 		req.Storage = nil

@@ -26,6 +26,15 @@ const validations = {
       message: `Issuer name must be unique across all issuers and not be the reserved value 'default'.`,
     },
   ],
+  keyName: [
+    {
+      validator(model) {
+        if (model.keyName === 'default') return false;
+        return true;
+      },
+      message: `Key name cannot be the reserved value 'default'`,
+    },
+  ],
 };
 
 /**
@@ -44,6 +53,10 @@ export default class PkiActionModel extends Model {
 
   /* actionType import */
   @attr('string') pemBundle;
+
+  // parsed attrs from parse-pki-cert util if certificate on response
+  @attr parsedCertificate;
+
   // readonly attrs returned after importing
   @attr importedIssuers;
   @attr importedKeys;
@@ -55,7 +68,6 @@ export default class PkiActionModel extends Model {
   // readonly attrs returned right after root generation
   @attr serialNumber;
   @attr('string', { label: 'Issuing CA', readOnly: true, masked: true }) issuingCa;
-  @attr keyName;
   // end of readonly
 
   @attr('string', {
@@ -64,9 +76,9 @@ export default class PkiActionModel extends Model {
   })
   type;
 
-  @attr('string') issuerName; // REQUIRED for generate-root actionType, cannot be "default"
+  @attr('string') issuerName;
 
-  @attr('string') keyName; // cannot be "default"
+  @attr('string') keyName;
 
   @attr('string', {
     defaultValue: 'default',
