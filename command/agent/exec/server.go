@@ -127,7 +127,7 @@ func (s *Server) Run(ctx context.Context, envTmpls map[string]*config.EnvTemplat
 		Timeout:      0,
 		Env:          nil,
 		ReloadSignal: nil,
-		KillSignal:   execCfg.RestartKillSignal,
+		KillSignal:   os.Interrupt,
 		KillTimeout:  30 * time.Second,
 		Splay:        0,
 		Setpgid:      true,
