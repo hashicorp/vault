@@ -126,7 +126,7 @@ func isKVv2(path string, client *api.Client) (string, bool, error) {
 	return mountPath, version == 2, nil
 }
 
-func addPrefixToKVPath(p, mountPath, apiPrefix string) string {
+func addPrefixToKVPath(p, mountPath, apiPrefix string, checkExists bool) string {
 	if p == mountPath || p == strings.TrimSuffix(mountPath, "/") {
 		return path.Join(mountPath, apiPrefix)
 	}
@@ -146,6 +146,10 @@ func addPrefixToKVPath(p, mountPath, apiPrefix string) string {
 		}
 		mountPath = strings.TrimSuffix(partialMountPath[1], "/")
 		tp = strings.TrimPrefix(tp, mountPath)
+	}
+
+	if checkExists && strings.HasPrefix(tp, prefix) {
+		return path.Join(mountPath, tp)
 	}
 
 	return path.Join(mountPath, apiPrefix, tp)
