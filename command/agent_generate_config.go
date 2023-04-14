@@ -271,12 +271,13 @@ func readSecret(ctx context.Context, client *api.Client, path, pathMount string,
 	sort.Strings(fields)
 
 	for _, field := range fields {
+		v2AdjustedField := field
 		if v2 {
-			field = "data." + field
+			v2AdjustedField = "data." + field
 		}
 		templates = append(templates, &config.EnvTemplateConfig{
 			Name:     constructDefaultEnvironmentKey(path, field),
-			Contents: fmt.Sprintf(`{{ with secret "%s" }}{{ Data.%s }}{{ end }}`, path, field),
+			Contents: fmt.Sprintf(`{{ with secret "%s" }}{{ Data.%s }}{{ end }}`, path, v2AdjustedField),
 		})
 	}
 
