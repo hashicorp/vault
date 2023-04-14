@@ -188,6 +188,7 @@ type ExecConfig struct {
 func NewConfig() *Config {
 	return &Config{
 		SharedConfig: new(configutil.SharedConfig),
+		EnvTemplates: map[string]*EnvTemplateConfig{},
 	}
 }
 
@@ -267,6 +268,14 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.Templates = append(result.Templates, l)
 	}
 
+	for key, val := range c.EnvTemplates {
+		result.EnvTemplates[key] = val
+	}
+
+	for key, val := range c2.EnvTemplates {
+		result.EnvTemplates[key] = val
+	}
+
 	result.ExitAfterAuth = c.ExitAfterAuth
 	if c2.ExitAfterAuth {
 		result.ExitAfterAuth = c2.ExitAfterAuth
@@ -331,8 +340,9 @@ func (c *Config) ValidateConfig() error {
 	if c.AutoAuth != nil {
 		if len(c.AutoAuth.Sinks) == 0 &&
 			(c.APIProxy == nil || !c.APIProxy.UseAutoAuthToken) &&
-			len(c.Templates) == 0 {
-			return fmt.Errorf("auto_auth requires at least one sink or at least one template or api_proxy.use_auto_auth_token=true")
+			len(c.Templates) == 0 &&
+			len(c.EnvTemplates) == 0 {
+			return fmt.Errorf("auto_auth requires at least one sink, template or env_template or api_proxy.use_auto_auth_token=true")
 		}
 	}
 
