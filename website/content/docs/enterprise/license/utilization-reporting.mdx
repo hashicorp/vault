@@ -53,7 +53,17 @@ Instructions on how to check logs.
 <CodeBlockConfig hideClipboard>
 
 ```
-TO DO: Add example log output
+[DEBUG] beginning snapshot export
+[DEBUG] creating payload
+[DEBUG] marshalling payload to json
+[DEBUG] generating authentication headers
+[DEBUG] creating request
+[DEBUG] sending request
+[DEBUG] performing request: method=POST url=https://census.license.hashicorp.services
+[DEBUG] recording audit record
+[INFO]  {"payload":{"payload_version":"1","license_id":"974b62bd-7e7b-4556-7741-9683ecd9acb4","product":"vault","product_version":"1.2.3","export_timestamp":"2023-04-14T15:06:35.258709-04:00","snapshots":[{"snapshot_version":1,"snapshot_id":"0001J3K91VB1SYJGSHM9JTFXJ8","process_id":"01GY0JJYXZ6MY01GNM9VN88ZEJ","timestamp":"2023-04-14T15:06:35.257143-04:00","schema_version":"0.1.0","service":"vault","metrics":{"clientcount.current_month_estimate":{"key":"clientcount.current_month_estimate","kind":"sum","mode":"write","value":117,"labels":{"type":{"entity":58,"nonentity":59}}},"clientcount.previous_month_complete":{"key":"clientcount.previous_month_complete","kind":"sum","mode":"write","value":300,"labels":{"type":{"entity":100,"nonentity":200}}}}}],"metadata":{"vault":{"billing_start":"2023-03-24T00:00:00Z"}}}}
+[DEBUG] completed recording audit record
+[DEBUG] export finished successfully"
 ```
 
 </CodeBlockConfig>
@@ -64,7 +74,7 @@ egress, logs will show an error.
 <CodeBlockConfig hideClipboard>
 
 ```
-TO DO: Add example error log
+[INFO]  core: usage gauge collection is disabled
 ```
 
 </CodeBlockConfig>
@@ -88,8 +98,8 @@ You have two options to opt out of automated reporting: HCL configuration
 (recommended) Environment variable (requires restart)
 
 Opting out in your product’s configuration file doesn’t require a system
-restart, and is the method we recommend. Add the following block to your
-`configuration.hcl/json` file.
+restart, and is the method we recommend. Add the following block to your server
+configuration file (e.g. `vault-config.hcl`).
 
 ```hcl
 reporting {
@@ -99,16 +109,16 @@ reporting {
 }
 ```
 
-If you need to, you can also opt out using an environment variable, which will
-provide a CLI message confirming that you have disabled automated reporting.
-This option requires a system restart. Set the following environment variable on
-the CLI.
+If you need to, you can also opt out using an environment variable. This option
+requires a system restart. 
+
+Set the following environment variable.
 
 ```shell-session
 $ export OPTOUT_LICENSE_REPORTING=true
 ```
 
-Now, restart your system by following these instructions. 
+Now, restart your Vault servers.
 
 Check your product logs 24 hours after opting out to make sure that the system
 isn’t trying to send reports. 
@@ -116,7 +126,6 @@ isn’t trying to send reports.
 ## Example payloads
 
 HashiCorp collects the following utilization data as JSON payloads:
-`exporter_version` - The version of the licensing exporter
 
 <CodeBlockConfig hideClipboard>
 
