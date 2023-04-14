@@ -148,7 +148,7 @@ func (b *backend) acmeAccountRequiredWrapper(op acmeAccountRequiredOperation) fr
 
 		if account.Status != StatusValid {
 			// Treating "revoked" and "deactivated" as the same here.
-			return nil, ErrUnauthorized
+			return nil, fmt.Errorf("%w: account status is %s", ErrUnauthorized, account.Status)
 		}
 
 		return op(acmeCtx, r, fields, uc, data, account)
