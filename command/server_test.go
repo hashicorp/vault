@@ -80,11 +80,24 @@ listener "tcp" {
   tls_key_file  = "TMPDIR/reload_key.pem"
 }
 `
-	cloudHCL = `
+	cloudTLSDisabledHCL = `
 cloud {
-      resource_id = "organization/bc58b3d0-2eab-4ab8-abf4-f61d3c9975ff/project/1c78e888-2142-4000-8918-f933bbbc7690/hashicorp.example.resource/example"
-    client_id = "J2TtcSYOyPUkPV2z0mSyDtvitxLVjJmu"
-    client_secret = "N9JtHZyOnHrIvJZs82pqa54vd4jnkyU3xCcqhFXuQKJZZuxqxxbP1xCfBZVB82vY"
+  resource_id = "organization/bc58b3d0-2eab-4ab8-abf4-f61d3c9975ff/project/1c78e888-2142-4000-8918-f933bbbc7690/hashicorp.example.resource/example"
+  client_id = "J2TtcSYOyPUkPV2z0mSyDtvitxLVjJmu"
+  client_secret = "N9JtHZyOnHrIvJZs82pqa54vd4jnkyU3xCcqhFXuQKJZZuxqxxbP1xCfBZVB82vY"
+  enable_passthrough_capability = true
+  tls_disable = true
+}
+`
+
+	cloudTLSEnabledHCL = `
+cloud {
+  resource_id = "organization/bc58b3d0-2eab-4ab8-abf4-f61d3c9975ff/project/1c78e888-2142-4000-8918-f933bbbc7690/hashicorp.example.resource/example"
+  client_id = "J2TtcSYOyPUkPV2z0mSyDtvitxLVjJmu"
+  client_secret = "N9JtHZyOnHrIvJZs82pqa54vd4jnkyU3xCcqhFXuQKJZZuxqxxbP1xCfBZVB82vY"
+  enable_passthrough_capability = true
+  tls_cert_file = "./../api/test-fixtures/keys/cert.pem"
+  tls_key_file = "./../api/test-fixtures/keys/key.pem"
 }
 `
 )
@@ -279,9 +292,16 @@ func TestServer(t *testing.T) {
 			[]string{"-test-verify-only"},
 		},
 		{
-			"cloud_config",
-			testBaseHCL(t, "") + inmemHCL + cloudHCL,
-			"HCP Organization: bc58b3d0-2eab-4ab8-abf4-f61d3c9975ff",
+			"cloud_config_tls_disabled",
+			testBaseHCL(t, "") + inmemHCL + cloudTLSDisabledHCL,
+			"HCP Passthrough TLS: disabled",
+			0,
+			[]string{"-test-verify-only"},
+		},
+		{
+			"cloud_config_tls_enabled",
+			testBaseHCL(t, "") + inmemHCL + cloudTLSEnabledHCL,
+			"HCP Passthrough TLS: enabled",
 			0,
 			[]string{"-test-verify-only"},
 		},

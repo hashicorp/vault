@@ -5,7 +5,6 @@ package api_capability
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"net/http"
 	"sync"
@@ -26,9 +25,6 @@ type APIPassThroughCapability struct {
 	logger        hclog.Logger
 	scadaProvider scada.SCADAProvider
 	scadaServer   *http.Server
-	tlsCertFile   string
-	tlsKeyFile    string
-	tlsDisable    bool
 	running       bool
 }
 
@@ -48,24 +44,13 @@ func NewAPIPassThroughCapability(linkConf *configutil.HCPLinkConfig, scadaProvid
 		ReadTimeout:       30 * time.Second,
 		IdleTimeout:       5 * time.Minute,
 		ErrorLog:          apiLogger.StandardLogger(nil),
-	}
-
-	if !linkConf.TLSDisable {
-		// Prefer sensible defaults based on the defaults we use for "tcp" listener config
-		server.TLSConfig = &tls.Config{
-			MinVersion: tls.VersionTLS12,
-			MaxVersion: tls.VersionTLS13,
-			ClientAuth: tls.RequestClientCert,
-		}
+		TLSConfig:         linkConf.TLSConfig,
 	}
 
 	return &APIPassThroughCapability{
 		logger:        apiLogger,
 		scadaProvider: scadaProvider,
 		scadaServer:   server,
-		tlsCertFile:   linkConf.TLSCertFile,
-		tlsKeyFile:    linkConf.TLSKeyFile,
-		tlsDisable:    linkConf.TLSDisable,
 	}, nil
 }
 
@@ -84,17 +69,19 @@ func (p *APIPassThroughCapability) Start() error {
 	}
 
 	go func() {
-		if p.tlsDisable {
+		if p.scadaServer.TLSConfig == nil {
 			err = p.scadaServer.Serve(listener)
 		} else {
-			err = p.scadaServer.ServeTLS(listener, p.tlsCertFile, p.tlsKeyFile)
+			// certFile and keyFile not required as server's
+			// TLSConfig.GetCertificate will be used
+			err = p.scadaServer.ServeTLS(listener, "", "")
 		}
 
 		p.logger.Error("server closed", "error", err)
 	}()
 
 	p.running = true
-	p.logger.Info("started HCP Link API PassThrough capability", "tls_disable", p.tlsDisable)
+	p.logger.Info("started HCP Link API PassThrough capability")
 
 	return nil
 }

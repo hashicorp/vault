@@ -1413,6 +1413,16 @@ func (c *ServerCommand) Run(args []string) int {
 
 		infoKeys = append(infoKeys, "HCP resource ID")
 		info["HCP resource ID"] = config.HCPLinkConf.Resource.ID
+
+		if config.HCPLinkConf.EnablePassThroughCapability {
+			passthroughTLSEnabled := "enabled"
+			if config.HCPLinkConf.TLSDisable {
+				passthroughTLSEnabled = "disabled"
+			}
+			infoKeys = append(infoKeys, "HCP Passthrough TLS")
+			info["HCP Passthrough TLS"] = passthroughTLSEnabled
+
+		}
 	}
 
 	sort.Strings(infoKeys)
@@ -1485,6 +1495,13 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	hcpLogger := c.logger.Named("hcp-connectivity")
+
+	err = config.HCPLinkConf.ParseTLSConfig(c.UI)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("error parsing HCP TLS configuration: %v", err))
+		return 1
+	}
+
 	hcpLink, err := hcp_link.NewHCPLink(config.HCPLinkConf, core, hcpLogger)
 	if err != nil {
 		c.logger.Error("failed to establish HCP connection", "error", err)
@@ -1749,6 +1766,14 @@ func (c *ServerCommand) reloadHCPLink(hcpLinkVault *hcp_link.HCPLinkVault, conf 
 		// in the seal-status related to HCP link
 		core.SetHCPLinkStatus("", "")
 		return nil, nil
+	}
+
+	var err error
+
+	err = conf.HCPLinkConf.ParseTLSConfig(c.UI)
+	if err != nil {
+		c.logger.Error("error parsing HCP TLS configuration", "error", err)
+		return nil, fmt.Errorf("error parsing cloud TLS configuration: %w", err)
 	}
 
 	// starting HCP link

@@ -4,14 +4,19 @@
 package configutil
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"os"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	sdkResource "github.com/hashicorp/hcp-sdk-go/resource"
+	"github.com/mitchellh/cli"
 )
 
 // HCPLinkConfig is the HCP Link configuration for the server.
@@ -29,6 +34,7 @@ type HCPLinkConfig struct {
 	TLSDisableRaw interface{} `hcl:"tls_disable"`
 	TLSCertFile   string      `hcl:"tls_cert_file"`
 	TLSKeyFile    string      `hcl:"tls_key_file"`
+	TLSConfig     *tls.Config `hcl:"-"`
 }
 
 func parseCloud(result *SharedConfig, list *ast.ObjectList) error {
@@ -85,6 +91,42 @@ func parseCloud(result *SharedConfig, list *ast.ObjectList) error {
 
 	if !result.HCPLinkConf.TLSDisable && (result.HCPLinkConf.TLSCertFile == "" || result.HCPLinkConf.TLSKeyFile == "") {
 		return multierror.Prefix(fmt.Errorf("TLS is enabled but failed to find TLS cert and key file"), "cloud:")
+	}
+
+	return nil
+}
+
+func (h *HCPLinkConfig) ParseTLSConfig(ui cli.Ui) error {
+	if !h.TLSDisable {
+		// We try the key without a passphrase first and if we get an incorrect
+		// passphrase response, try again after prompting for a passphrase
+		cg := reloadutil.NewCertificateGetter(h.TLSCertFile, h.TLSKeyFile, "")
+		if err := cg.Reload(); err != nil {
+			if errwrap.Contains(err, x509.IncorrectPasswordError.Error()) {
+				var passphrase string
+				passphrase, err = ui.AskSecret(fmt.Sprintf("Enter passphrase for cloud TLS key file %s:", h.TLSKeyFile))
+
+				if err == nil {
+					cg = reloadutil.NewCertificateGetter(h.TLSCertFile, h.TLSKeyFile, passphrase)
+					if err = cg.Reload(); err != nil {
+						return fmt.Errorf("error loading cloud config TLS cert with provided passphrase: %w", err)
+					}
+
+					h.TLSConfig = &tls.Config{
+						GetCertificate: cg.GetCertificate,
+
+						// Prefer sensible defaults based on the defaults we use for "tcp" listener config
+						MinVersion: tls.VersionTLS12,
+						MaxVersion: tls.VersionTLS13,
+						ClientAuth: tls.RequestClientCert,
+					}
+
+					return nil
+				}
+			}
+
+			return fmt.Errorf("error loading cloud config TLS cert: %w", err)
+		}
 	}
 
 	return nil
