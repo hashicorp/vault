@@ -3,6 +3,7 @@ package pki
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -162,6 +163,29 @@ func (b *backend) acmeGetOrderHandler(ac *acmeContext, _ *logical.Request, field
 		return nil, err
 	}
 
+	// Per RFC 8555 -> 7.1.3.  Order Objects
+	// For final orders (in the "valid" or "invalid" state), the authorizations that were completed.
+	//
+	// Otherwise, for "pending" orders we will return our list as it was originally saved.
+	requiresFiltering := order.Status == ACMEOrderValid || order.Status == ACMEOrderInvalid
+	if requiresFiltering {
+		filteredAuthorizationIds := []string{}
+
+		for _, authId := range order.AuthorizationIds {
+			authorization, err := b.acmeState.LoadAuthorization(ac, uc, authId)
+			if err != nil {
+				return nil, err
+			}
+
+			if (order.Status == ACMEOrderInvalid || order.Status == ACMEOrderValid) &&
+				authorization.Status == ACMEAuthorizationValid {
+				filteredAuthorizationIds = append(filteredAuthorizationIds, authId)
+			}
+		}
+
+		order.AuthorizationIds = filteredAuthorizationIds
+	}
+
 	return formatOrderResponse(ac, order), nil
 }
 
@@ -197,24 +221,38 @@ func (b *backend) acmeListOrdersHandler(ac *acmeContext, _ *logical.Request, _ *
 	return resp, nil
 }
 
-func (b *backend) acmeNewOrderHandler(ac *acmeContext, _ *logical.Request, _ *framework.FieldData, _ *jwsCtx, data map[string]interface{}, account *acmeAccount) (*logical.Response, error) {
+func (b *backend) acmeNewOrderHandler(ac *acmeContext, r *logical.Request, _ *framework.FieldData, _ *jwsCtx, data map[string]interface{}, account *acmeAccount) (*logical.Response, error) {
 	identifiers, err := parseOrderIdentifiers(data)
 	if err != nil {
 		return nil, err
 	}
 
-	notBefore, _, err := parseOptRFC3339Field(data, "notBefore")
+	notBefore, err := parseOptRFC3339Field(data, "notBefore")
 	if err != nil {
 		return nil, err
 	}
 
-	notAfter, _, err := parseOptRFC3339Field(data, "notAfter")
+	notAfter, err := parseOptRFC3339Field(data, "notAfter")
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO DO more validations here, role can issue, notBefore/notAfter makes sense...
+	err = validateAcmeProvidedOrderDates(notBefore, notAfter)
+	if err != nil {
+		return nil, err
+	}
 
+	// TODO: Implement checks against role here.
+
+	// Per RFC 8555 -> 7.1.3. Order Objects
+	// For pending orders, the authorizations that the client needs to complete before the
+	// requested certificate can be issued (see Section 7.5), including
+	// unexpired authorizations that the client has completed in the past
+	// for identifiers specified in the order.
+	//
+	// Since we are generating all authorizations here, there is no need to filter them out
+	// IF/WHEN we support pre-authz workflows and associate existing authorizations to this
+	// order they will need filtering.
 	var authorizations []*ACMEAuthorization
 	var authorizationIds []string
 	for _, identifier := range identifiers {
@@ -261,8 +299,28 @@ func (b *backend) acmeNewOrderHandler(ac *acmeContext, _ *logical.Request, _ *fr
 	return resp, nil
 }
 
+func validateAcmeProvidedOrderDates(notBefore time.Time, notAfter time.Time) error {
+	if !notBefore.IsZero() && !notAfter.IsZero() {
+		if notBefore.Equal(notAfter) {
+			return fmt.Errorf("%w: provided notBefore and notAfter dates can not be equal", ErrMalformed)
+		}
+
+		if notBefore.After(notAfter) {
+			return fmt.Errorf("%w: provided notBefore can not be greater than notAfter", ErrMalformed)
+		}
+	}
+
+	if !notAfter.IsZero() {
+		if time.Now().After(notAfter) {
+			return fmt.Errorf("%w: provided notAfter can not be in the past", ErrMalformed)
+		}
+	}
+
+	return nil
+}
+
 func formatOrderResponse(acmeCtx *acmeContext, order *acmeOrder) *logical.Response {
-	location := buildOrderUrl(acmeCtx, order.OrderId)
+	baseOrderUrl := buildOrderUrl(acmeCtx, order.OrderId)
 
 	var authorizationUrls []string
 	for _, authId := range order.AuthorizationIds {
@@ -275,11 +333,16 @@ func formatOrderResponse(acmeCtx *acmeContext, order *acmeOrder) *logical.Respon
 			"expires":        order.Expires,
 			"identifiers":    order.Identifiers,
 			"authorizations": authorizationUrls,
-			"finalize":       location + "/finalize",
+			"finalize":       baseOrderUrl + "/finalize",
 		},
 		Headers: map[string][]string{
-			"Location": {location},
+			"Location": {baseOrderUrl},
 		},
+	}
+
+	// Only reply with the certificate URL if we are in a valid order state.
+	if order.Status == ACMEOrderValid {
+		resp.Data["certificate"] = baseOrderUrl + "/cert"
 	}
 
 	return resp
@@ -306,11 +369,11 @@ func generateAuthorization(acct *acmeAccount, identifier *ACMEIdentifier) *ACMEA
 		Status:     ACMEAuthorizationPending,
 		Expires:    "", // only populated when it switches to valid.
 		Challenges: challenges,
-		Wildcard:   false,
+		Wildcard:   strings.HasPrefix(identifier.Value, "*."),
 	}
 }
 
-func parseOptRFC3339Field(data map[string]interface{}, keyName string) (time.Time, bool, error) {
+func parseOptRFC3339Field(data map[string]interface{}, keyName string) (time.Time, error) {
 	var timeVal time.Time
 	var err error
 
@@ -318,17 +381,19 @@ func parseOptRFC3339Field(data map[string]interface{}, keyName string) (time.Tim
 	if present {
 		beforeStr, ok := rawBefore.(string)
 		if !ok {
-			return timeVal, false, fmt.Errorf("invalid type (%T) for field '%s': %w", rawBefore, keyName, ErrMalformed)
+			return timeVal, fmt.Errorf("invalid type (%T) for field '%s': %w", rawBefore, keyName, ErrMalformed)
 		}
 		timeVal, err = time.Parse(time.RFC3339, beforeStr)
 		if err != nil {
-			return timeVal, false, fmt.Errorf("failed parsing field '%s' (%s): %s: %w", keyName, rawBefore, err.Error(), ErrMalformed)
+			return timeVal, fmt.Errorf("failed parsing field '%s' (%s): %s: %w", keyName, rawBefore, err.Error(), ErrMalformed)
 		}
 
-		return timeVal, true, nil
+		if timeVal.IsZero() {
+			return timeVal, fmt.Errorf("provided time value is invalid '%s' (%s): %w", keyName, rawBefore, ErrMalformed)
+		}
 	}
 
-	return timeVal, false, nil
+	return timeVal, nil
 }
 
 func parseOrderIdentifiers(data map[string]interface{}) ([]*ACMEIdentifier, error) {

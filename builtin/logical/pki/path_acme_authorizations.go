@@ -46,7 +46,7 @@ func patternAcmeAuthorization(b *backend, pattern string) *framework.Path {
 		Fields:  fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.acmeParsedWrapper(b.acmeAuthorizationHandler),
+				Callback:                    b.acmeAccountRequiredWrapper(b.acmeAuthorizationHandler),
 				ForwardPerformanceSecondary: false,
 				ForwardPerformanceStandby:   true,
 			},
@@ -57,7 +57,7 @@ func patternAcmeAuthorization(b *backend, pattern string) *framework.Path {
 	}
 }
 
-func (b *backend) acmeAuthorizationHandler(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}) (*logical.Response, error) {
+func (b *backend) acmeAuthorizationHandler(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}, _ *acmeAccount) (*logical.Response, error) {
 	authId := fields.Get("auth_id").(string)
 	authz, err := b.acmeState.LoadAuthorization(acmeCtx, userCtx, authId)
 	if err != nil {
