@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-// This file defines the classes for .input and .textarea We use the following input classes: .textarea, .input, .input-hint, .autocomplete-input, .autocomplete-input-option and screen-reader only class for toggle input labels.
+// This file defines the classes for .input and .textarea We use the following input classes: .textarea, .input, .input-hint, .autocomplete-input, .autocomplete-input-option.
 
 .input,
 .textarea {
@@ -84,18 +84,4 @@
   padding: 0 $size-9;
   font-size: $size-8;
   color: $grey;
-}
-
-// screen reader only 
-.sr-only {
-  border: 0;
-  clip-path: inset(50%);
-  clip: rect(0 0 0 0);
-  height: 1px;
-  margin: -1px;;
-  overflow: hidden;
-  padding: 0px;
-  position: absolute;
-  white-space: nowrap;
-  width: 1px;
 }

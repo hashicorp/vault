@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-/* This helper includes styles relating to: box-shadow, border, transition, pointer, and grouped css in one helper.*/
+/* This helper includes styles relating to: box-shadow, border, transition, pointer, grouped css in one helper, and screen-reader only.*/
 
 // box-shadow helpers
 .has-only-top-shadow {
@@ -82,4 +82,18 @@
   -webkit-box-orient: vertical;
   text-overflow: ellipsis;
   overflow: hidden;
+}
+
+// screen reader only 
+.sr-only {
+  border: 0;
+  clip-path: inset(50%);
+  clip: rect(0 0 0 0);
+  height: 1px;
+  margin: -1px;;
+  overflow: hidden;
+  padding: 0px;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
 }
