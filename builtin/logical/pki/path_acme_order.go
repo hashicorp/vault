@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -131,28 +134,6 @@ func patternAcmeGetOrder(b *backend, pattern string) *framework.Path {
 		HelpSynopsis:    "",
 		HelpDescription: "",
 	}
-}
-
-type acmeAccountRequiredOperation func(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}, acct *acmeAccount) (*logical.Response, error)
-
-func (b *backend) acmeAccountRequiredWrapper(op acmeAccountRequiredOperation) framework.OperationFunc {
-	return b.acmeParsedWrapper(func(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, uc *jwsCtx, data map[string]interface{}) (*logical.Response, error) {
-		if !uc.Existing {
-			return nil, fmt.Errorf("cannot process request without a 'kid': %w", ErrMalformed)
-		}
-
-		account, err := b.acmeState.LoadAccount(acmeCtx, uc.Kid)
-		if err != nil {
-			return nil, fmt.Errorf("error loading account: %w", err)
-		}
-
-		if account.Status != StatusValid {
-			// Treating "revoked" and "deactivated" as the same here.
-			return nil, fmt.Errorf("%w: account status is %s", ErrUnauthorized, account.Status)
-		}
-
-		return op(acmeCtx, r, fields, uc, data, account)
-	})
 }
 
 func (b *backend) acmeGetOrderHandler(ac *acmeContext, _ *logical.Request, fields *framework.FieldData, uc *jwsCtx, _ map[string]interface{}, acct *acmeAccount) (*logical.Response, error) {
