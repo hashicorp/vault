@@ -41,6 +41,11 @@ select.has-error-border {
   border: 1px solid $red-500;
 }
 
+// specifically for the SearchSelect dropdown.
+.dropdown-has-error-border > div.ember-basic-dropdown-trigger {
+  border: 1px solid $red-500;
+}
+
 .has-text-grey-400 {
   color: $ui-gray-400;
 }

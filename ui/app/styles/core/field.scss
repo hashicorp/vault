@@ -98,11 +98,6 @@ fieldset.form-fieldset {
   flex-shrink: 1;
 }
 
-// ARG TODO return to. Doesn't have a home, consider some other solution
-.dropdown-has-error-border > div.ember-basic-dropdown-trigger {
-  border: 1px solid $red-500;
-}
-
 // responsive css
 /* ARG TODO: used is-normal in one place */
 @media screen and (min-width: 769px), print {
