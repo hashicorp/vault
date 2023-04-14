@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-test/deep"
 	ctconfig "github.com/hashicorp/consul-template/config"
+
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
@@ -2116,7 +2117,9 @@ func TestLoadConfigFile_EnvTemplates(t *testing.T) {
 		t.Fatalf("error loading config file: %s", err)
 	}
 
-	if cfg.EnvTemplates[0].Name != "MY_DATABASE_USER" {
+	expectedKey := "MY_DATABASE_USER"
+	_, ok := cfg.EnvTemplates[expectedKey]
+	if !ok {
 		t.Fatalf("expected env var name to be populated")
 	}
 }

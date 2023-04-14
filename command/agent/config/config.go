@@ -173,9 +173,9 @@ type TemplateConfig struct {
 }
 
 type EnvTemplateConfig struct {
-	*ctconfig.TemplateConfig `mapstructure:",squash"`
-	Name                     string `hcl:"name,label"`
-	Group                    string `hcl:"group,optional"`
+	ctconfig.TemplateConfig `mapstructure:",squash"`
+	Name                    string `hcl:"name,label"`
+	Group                   string `hcl:"group,optional"`
 }
 
 type ExecConfig struct {
