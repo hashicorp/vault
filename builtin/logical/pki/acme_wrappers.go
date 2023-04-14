@@ -153,6 +153,27 @@ func (b *backend) acmeAccountRequiredWrapper(op acmeAccountRequiredOperation) fr
 	})
 }
 
+// A helper function that will build up the various path patterns we want for ACME APIs.
+func buildAcmeFrameworkPaths(b *backend, patternFunc func(b *backend, pattern string) *framework.Path, acmeApi string) []*framework.Path {
+	var patterns []*framework.Path
+	for _, baseUrl := range []string{
+		"acme",
+		"roles/" + framework.GenericNameRegex("role") + "/acme",
+		"issuer/" + framework.GenericNameRegex(issuerRefParam) + "/acme",
+		"issuer/" + framework.GenericNameRegex(issuerRefParam) + "/roles/" + framework.GenericNameRegex("role") + "/acme",
+	} {
+
+		if !strings.HasPrefix(acmeApi, "/") {
+			acmeApi = "/" + acmeApi
+		}
+
+		path := patternFunc(b, baseUrl+acmeApi)
+		patterns = append(patterns, path)
+	}
+
+	return patterns
+}
+
 func getAcmeBaseUrl(sc *storageContext, path string) (*url.URL, error) {
 	cfg, err := sc.getClusterConfig()
 	if err != nil {

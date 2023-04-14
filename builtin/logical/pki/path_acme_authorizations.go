@@ -10,22 +10,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func pathAcmeRootAuthorization(b *backend) *framework.Path {
-	return patternAcmeAuthorization(b, "acme/authorization/"+framework.MatchAllRegex("auth_id"))
-}
-
-func pathAcmeRoleAuthorization(b *backend) *framework.Path {
-	return patternAcmeAuthorization(b, "roles/"+framework.GenericNameRegex("role")+"/acme/authorization/"+framework.MatchAllRegex("auth_id"))
-}
-
-func pathAcmeIssuerAuthorization(b *backend) *framework.Path {
-	return patternAcmeAuthorization(b, "issuer/"+framework.GenericNameRegex(issuerRefParam)+"/acme/authorization/"+framework.MatchAllRegex("auth_id"))
-}
-
-func pathAcmeIssuerAndRoleAuthorization(b *backend) *framework.Path {
-	return patternAcmeAuthorization(b,
-		"issuer/"+framework.GenericNameRegex(issuerRefParam)+
-			"/roles/"+framework.GenericNameRegex("role")+"/acme/authorization/"+framework.MatchAllRegex("auth_id"))
+func pathAcmeAuthorization(b *backend) []*framework.Path {
+	return buildAcmeFrameworkPaths(b, patternAcmeAuthorization, "/authorization/"+framework.MatchAllRegex("auth_id"))
 }
 
 func addFieldsForACMEAuthorization(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {

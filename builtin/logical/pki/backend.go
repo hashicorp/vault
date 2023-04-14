@@ -216,43 +216,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathResignCrls(&b),
 			pathSignRevocationList(&b),
 
-			// ACME APIs
-			pathAcmeRootDirectory(&b),
-			pathAcmeRoleDirectory(&b),
-			pathAcmeIssuerDirectory(&b),
-			pathAcmeIssuerAndRoleDirectory(&b),
-			pathAcmeRootNonce(&b),
-			pathAcmeRoleNonce(&b),
-			pathAcmeIssuerNonce(&b),
-			pathAcmeIssuerAndRoleNonce(&b),
-			pathAcmeRootNewAccount(&b),
-			pathAcmeRoleNewAccount(&b),
-			pathAcmeIssuerNewAccount(&b),
-			pathAcmeIssuerAndRoleNewAccount(&b),
-			pathAcmeRootUpdateAccount(&b),
-			pathAcmeRoleUpdateAccount(&b),
-			pathAcmeIssuerUpdateAccount(&b),
-			pathAcmeIssuerAndRoleUpdateAccount(&b),
-			pathAcmeRootAuthorization(&b),
-			pathAcmeRoleAuthorization(&b),
-			pathAcmeIssuerAuthorization(&b),
-			pathAcmeIssuerAndRoleAuthorization(&b),
-			pathAcmeRootChallenge(&b),
-			pathAcmeRoleChallenge(&b),
-			pathAcmeIssuerChallenge(&b),
-			pathAcmeIssuerAndRoleChallenge(&b),
-			pathAcmeRootNewOrder(&b),
-			pathAcmeRoleNewOrder(&b),
-			pathAcmeIssuerNewOrder(&b),
-			pathAcmeIssuerAndRoleNewOrder(&b),
-			pathAcmeRootListOrders(&b),
-			pathAcmeRoleListOrders(&b),
-			pathAcmeIssuerListOrders(&b),
-			pathAcmeIssuerAndRoleListOrders(&b),
-			pathAcmeRootGetOrder(&b),
-			pathAcmeRoleGetOrder(&b),
-			pathAcmeIssuerGetOrder(&b),
-			pathAcmeIssuerAndRoleGetOrder(&b),
+			// ACME APIs see below
 		},
 
 		Secrets: []*framework.Secret{
@@ -263,6 +227,22 @@ func Backend(conf *logical.BackendConfig) *backend {
 		InitializeFunc: b.initialize,
 		Invalidate:     b.invalidate,
 		PeriodicFunc:   b.periodicFunc,
+	}
+
+	// Add ACME paths to backend
+	var acmePaths []*framework.Path
+	acmePaths = append(acmePaths, pathAcmeDirectory(&b)...)
+	acmePaths = append(acmePaths, pathAcmeNonce(&b)...)
+	acmePaths = append(acmePaths, pathAcmeNewAccount(&b)...)
+	acmePaths = append(acmePaths, pathAcmeUpdateAccount(&b)...)
+	acmePaths = append(acmePaths, pathAcmeGetOrder(&b)...)
+	acmePaths = append(acmePaths, pathAcmeListOrders(&b)...)
+	acmePaths = append(acmePaths, pathAcmeNewOrder(&b)...)
+	acmePaths = append(acmePaths, pathAcmeChallenge(&b)...)
+	acmePaths = append(acmePaths, pathAcmeAuthorization(&b)...)
+
+	for _, acmePath := range acmePaths {
+		b.Backend.Paths = append(b.Backend.Paths, acmePath)
 	}
 
 	// Add specific un-auth'd paths for ACME APIs

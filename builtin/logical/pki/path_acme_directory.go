@@ -17,22 +17,8 @@ const (
 	pathAcmeDirectoryHelpDesc = `Provide an ACME directory response that contains URLS for various ACME operations.`
 )
 
-func pathAcmeRootDirectory(b *backend) *framework.Path {
-	return patternAcmeDirectory(b, "acme/directory")
-}
-
-func pathAcmeRoleDirectory(b *backend) *framework.Path {
-	return patternAcmeDirectory(b, "roles/"+framework.GenericNameRegex("role")+"/acme/directory")
-}
-
-func pathAcmeIssuerDirectory(b *backend) *framework.Path {
-	return patternAcmeDirectory(b, "issuer/"+framework.GenericNameRegex(issuerRefParam)+"/acme/directory")
-}
-
-func pathAcmeIssuerAndRoleDirectory(b *backend) *framework.Path {
-	return patternAcmeDirectory(b,
-		"issuer/"+framework.GenericNameRegex(issuerRefParam)+
-			"/roles/"+framework.GenericNameRegex("role")+"/acme/directory")
+func pathAcmeDirectory(b *backend) []*framework.Path {
+	return buildAcmeFrameworkPaths(b, patternAcmeDirectory, "/directory")
 }
 
 func patternAcmeDirectory(b *backend, pattern string) *framework.Path {

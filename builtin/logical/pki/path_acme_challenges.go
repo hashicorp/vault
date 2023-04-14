@@ -10,32 +10,9 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func pathAcmeRootChallenge(b *backend) *framework.Path {
-	return patternAcmeChallenge(b,
-		"acme/challenge/"+framework.MatchAllRegex("auth_id")+"/"+
-			framework.MatchAllRegex("challenge_type"))
-}
-
-func pathAcmeRoleChallenge(b *backend) *framework.Path {
-	return patternAcmeChallenge(b,
-		"roles/"+framework.GenericNameRegex("role")+"/acme/challenge/"+
-			framework.MatchAllRegex("auth_id")+"/"+
-			framework.MatchAllRegex("challenge_type"))
-}
-
-func pathAcmeIssuerChallenge(b *backend) *framework.Path {
-	return patternAcmeChallenge(b,
-		"issuer/"+framework.GenericNameRegex(issuerRefParam)+"/acme/challenge/"+
-			framework.MatchAllRegex("auth_id")+"/"+
-			framework.MatchAllRegex("challenge_type"))
-}
-
-func pathAcmeIssuerAndRoleChallenge(b *backend) *framework.Path {
-	return patternAcmeChallenge(b,
-		"issuer/"+framework.GenericNameRegex(issuerRefParam)+
-			"/roles/"+framework.GenericNameRegex("role")+"/acme/challenge/"+
-			framework.MatchAllRegex("auth_id")+"/"+
-			framework.MatchAllRegex("challenge_type"))
+func pathAcmeChallenge(b *backend) []*framework.Path {
+	return buildAcmeFrameworkPaths(b, patternAcmeChallenge,
+		"/challenge/"+framework.MatchAllRegex("auth_id")+"/"+framework.MatchAllRegex("challenge_type"))
 }
 
 func addFieldsForACMEChallenge(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
