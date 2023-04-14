@@ -9,6 +9,7 @@ import (
 	"os"
 	paths "path"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -261,13 +262,21 @@ func readSecret(ctx context.Context, client *api.Client, path, pathMount string,
 		data = internal.(map[string]interface{})
 	}
 
+	var fields []string
+
 	for field := range data {
+		fields = append(fields, field)
+	}
+
+	sort.Strings(fields)
+
+	for _, field := range fields {
 		if v2 {
 			field = "data." + field
 		}
 		templates = append(templates, &config.EnvTemplateConfig{
 			Name:     constructDefaultEnvironmentKey(path, field),
-			Contents: fmt.Sprintf(`{{ with secret \"%s\" }}{{ Data.%s }}{{ end }}`, path, field),
+			Contents: fmt.Sprintf(`{{ with secret "%s" }}{{ Data.%s }}{{ end }}`, path, field),
 		})
 	}
 
