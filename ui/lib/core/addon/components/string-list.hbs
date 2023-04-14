@@ -19,15 +19,12 @@
       </p>
     {{/if}}
   {{/if}}
-  {{#if @warning}}
-    <AlertBanner @type="warning" @message={{@warning}} />
-  {{/if}}
   {{#each this.inputList as |data index|}}
     <div class="field is-grouped" data-test-string-list-row={{index}}>
       <div class="control is-expanded">
         <Textarea
           data-test-string-list-input={{index}}
-          class="input"
+          class="input {{if (includes index this.indicesWithComma) 'has-warning-border'}}"
           @value={{data.value}}
           name={{concat this.elementId "-" index}}
           id={{concat this.elementId "-" index}}
@@ -56,6 +53,16 @@
           </button>
         {{/if}}
       </div>
+      {{#if (includes index this.indicesWithComma)}}
+        <Icon class="is-flex-v-centered has-text-highlight" @name="alert-triangle-fill" />
+      {{/if}}
     </div>
   {{/each}}
+  {{#if this.indicesWithComma}}
+    <AlertInline
+      @type="warning"
+      @message="Input contains a comma. Please separate values into individual rows."
+      @isMarginless={{true}}
+    />
+  {{/if}}
 </div>
