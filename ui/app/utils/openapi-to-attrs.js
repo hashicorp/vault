@@ -30,7 +30,7 @@ export const expandOpenApiProps = function (props) {
       editType = items.type + capitalize(type);
     }
 
-    // remove references to comma separated strings from tooltips
+    // would be preferable to add a Description key to the x-vault-displayAttrs block
     if (editType === 'stringArray') {
       if (description?.includes('Comma separated string or')) {
         description = description.replace(/\bComma\b \bseparated\b \bstring\b \bor\b |\bJSON\b /g, '');
