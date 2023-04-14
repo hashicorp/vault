@@ -1,7 +1,6 @@
 package pki
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -125,81 +124,6 @@ func patternAcmeNewAccount(b *backend, pattern string) *framework.Path {
 		HelpSynopsis:    pathOcspHelpSyn,
 		HelpDescription: pathOcspHelpDesc,
 	}
-}
-
-type acmeParsedOperation func(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}) (*logical.Response, error)
-
-func (b *backend) acmeParsedWrapper(op acmeParsedOperation) framework.OperationFunc {
-	return b.acmeWrapper(func(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData) (*logical.Response, error) {
-		user, data, err := b.acmeState.ParseRequestParams(acmeCtx, fields)
-		if err != nil {
-			return nil, err
-		}
-
-		resp, err := op(acmeCtx, r, fields, user, data)
-
-		// Our response handlers might not add the necessary headers.
-		if resp != nil {
-			if resp.Headers == nil {
-				resp.Headers = map[string][]string{}
-			}
-
-			if _, ok := resp.Headers["Replay-Nonce"]; !ok {
-				nonce, _, err := b.acmeState.GetNonce()
-				if err != nil {
-					return nil, err
-				}
-
-				resp.Headers["Replay-Nonce"] = []string{nonce}
-			}
-
-			if _, ok := resp.Headers["Link"]; !ok {
-				resp.Headers["Link"] = genAcmeLinkHeader(acmeCtx)
-			} else {
-				directory := genAcmeLinkHeader(acmeCtx)[0]
-				addDirectory := true
-				for _, item := range resp.Headers["Link"] {
-					if item == directory {
-						addDirectory = false
-						break
-					}
-				}
-				if addDirectory {
-					resp.Headers["Link"] = append(resp.Headers["Link"], directory)
-				}
-			}
-
-			// ACME responses don't understand Vault's default encoding
-			// format. Rather than expecting everything to handle creating
-			// ACME-formatted responses, do the marshaling in one place.
-			if _, ok := resp.Data[logical.HTTPRawBody]; !ok {
-				ignored_values := map[string]bool{logical.HTTPContentType: true, logical.HTTPStatusCode: true}
-				fields := map[string]interface{}{}
-				body := map[string]interface{}{
-					logical.HTTPContentType: "application/json",
-					logical.HTTPStatusCode:  http.StatusOK,
-				}
-
-				for key, value := range resp.Data {
-					if _, present := ignored_values[key]; !present {
-						fields[key] = value
-					} else {
-						body[key] = value
-					}
-				}
-
-				rawBody, err := json.Marshal(fields)
-				if err != nil {
-					return nil, fmt.Errorf("Error marshaling JSON body: %w", err)
-				}
-
-				body[logical.HTTPRawBody] = rawBody
-				resp.Data = body
-			}
-		}
-
-		return resp, err
-	})
 }
 
 func (b *backend) acmeNewAccountHandler(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}) (*logical.Response, error) {
