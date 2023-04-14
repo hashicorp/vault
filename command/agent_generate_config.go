@@ -7,12 +7,14 @@ import (
 	"context"
 	"fmt"
 	"os"
+	paths "path"
 	"regexp"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/hashicorp/hcl/v2/hclwrite"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
@@ -107,7 +109,7 @@ func (c *AgentGenerateConfigCommand) Run(args []string) int {
 		return 2
 	}
 
-	var envTemplates []*config.EnvTemplateConfig
+	var templates []*config.EnvTemplateConfig
 
 	for _, path := range c.flagPaths {
 		pathSanitized := sanitizePath(path)
@@ -117,38 +119,20 @@ func (c *AgentGenerateConfigCommand) Run(args []string) int {
 			return 2
 		}
 
-		var pathFull string
-		if v2 {
-			pathFull = addPrefixToKVPath(pathSanitized, pathMount, "data", true)
-		} else {
-			pathFull = pathSanitized
-		}
-
-		resp, err := client.Logical().ReadWithContext(ctx, pathFull)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error querying %q: %v", pathFull, err))
-			return 2
-		}
-		if resp == nil {
-			c.UI.Error(fmt.Sprintf("Secret not found at %q", pathFull))
-			return 2
-		}
-
-		data := resp.Data
-		if v2 {
-			internal, ok := resp.Data["data"]
-			if !ok {
-				c.UI.Error(fmt.Sprintf("Secret not found at %s/data", pathFull))
+		if strings.HasSuffix(pathSanitized, "/*") {
+			t, err := traverseSecrets(ctx, client, pathSanitized[:len(pathSanitized)-2], pathMount, v2)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Could not traverse secret at %q: %v", pathSanitized[:len(pathSanitized)-2], err))
 				return 2
 			}
-			data = internal.(map[string]interface{})
-		}
-
-		for field := range data {
-			envTemplates = append(envTemplates, &config.EnvTemplateConfig{
-				Name:     constructDefaultEnvironmentKey(pathFull, field),
-				Contents: fmt.Sprintf("{{ with secret %s }}{{ Data.data.%s }}", pathFull, field),
-			})
+			templates = append(templates, t...)
+		} else {
+			t, err := readSecret(ctx, client, pathSanitized, pathMount, v2)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Could not read secret at %q: %v", pathSanitized, err))
+				return 2
+			}
+			templates = append(templates, t...)
 		}
 	}
 
@@ -171,7 +155,7 @@ func (c *AgentGenerateConfigCommand) Run(args []string) int {
 				},
 			},
 		},
-		EnvTemplates: envTemplates,
+		EnvTemplates: templates,
 		Exec: &config.ExecConfig{
 			Command:            execCommand,
 			Args:               []string{},
@@ -210,6 +194,84 @@ func (c *AgentGenerateConfigCommand) Run(args []string) int {
 	c.UI.Info(fmt.Sprintf("Successfully generated %q configuration file!", configPath))
 
 	return 0
+}
+
+func traverseSecrets(ctx context.Context, client *api.Client, path, pathMount string, v2 bool) ([]*config.EnvTemplateConfig, error) {
+	var templates []*config.EnvTemplateConfig
+
+	if v2 {
+		path = addPrefixToKVPath(path, pathMount, "metadata", true)
+	}
+
+	resp, err := client.Logical().ListWithContext(ctx, path)
+	if err != nil {
+		return nil, fmt.Errorf("error querying: %w", err)
+	}
+
+	if resp != nil {
+		k, ok := resp.Data["keys"]
+		if !ok {
+			return nil, fmt.Errorf("unexpected list response: %v", resp.Data)
+		}
+
+		keys, ok := k.([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("unexpected list response type %T", k)
+		}
+
+		for _, key := range keys {
+			t, err := traverseSecrets(ctx, client, paths.Join(path, key.(string)), pathMount, v2)
+			if err != nil {
+				return nil, err
+			}
+			templates = append(templates, t...)
+		}
+	} else {
+		t, err := readSecret(ctx, client, path, pathMount, v2)
+		if err != nil {
+			return nil, err
+		}
+		templates = append(templates, t...)
+	}
+
+	return templates, nil
+}
+
+func readSecret(ctx context.Context, client *api.Client, path, pathMount string, v2 bool) ([]*config.EnvTemplateConfig, error) {
+	var templates []*config.EnvTemplateConfig
+
+	if v2 {
+		path = addPrefixToKVPath(path, pathMount, "data", true)
+	}
+
+	resp, err := client.Logical().ReadWithContext(ctx, path)
+	if err != nil {
+		return nil, fmt.Errorf("error querying: %w", err)
+	}
+	if resp == nil {
+		return nil, fmt.Errorf("secret not found")
+	}
+
+	data := resp.Data
+	if v2 {
+		internal, ok := resp.Data["data"]
+		if !ok {
+			return nil, fmt.Errorf("secret.Data not found")
+		}
+		data = internal.(map[string]interface{})
+	}
+
+	for field := range data {
+		if v2 {
+			field = "data." + field
+		}
+		templates = append(templates, &config.EnvTemplateConfig{
+			Name:     constructDefaultEnvironmentKey(path, field),
+			Contents: fmt.Sprintf(`{{ with secret \"%s\" }}{{ Data.%s }}{{ end }}`, path, field),
+		})
+	}
+
+	return templates, nil
 }
 
 func constructDefaultEnvironmentKey(path string, field string) string {
