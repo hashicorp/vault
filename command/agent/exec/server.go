@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/consul-template/child"
@@ -55,6 +56,7 @@ type Server struct {
 	child        *child.Child
 	childInput   *child.NewInput
 	childStarted *atomic.Bool
+	childLock    sync.Mutex
 
 	exitCh chan int
 }
@@ -78,13 +80,11 @@ func (s *Server) ExitCh() <-chan int {
 }
 
 func (s *Server) Run(ctx context.Context, envTmpls []*config.EnvTemplateConfig, execCfg *config.ExecConfig) error {
-	envVarToTemplateCfg := make(map[string]*ctconfig.TemplateConfig, len(s.config.AgentConfig.EnvTemplates))
 	templates := make([]*ctconfig.TemplateConfig, len(s.config.AgentConfig.EnvTemplates))
 
 	for _, envTmpl := range envTmpls {
 		tmpl := envTmpl.TemplateConfig
 		tmpl.EnvVar = pointerutil.StringPtr(envTmpl.Name)
-		envVarToTemplateCfg[envTmpl.Name] = envTmpl.TemplateConfig
 		templates = append(templates, envTmpl.TemplateConfig)
 	}
 
@@ -139,14 +139,18 @@ func (s *Server) Run(ctx context.Context, envTmpls []*config.EnvTemplateConfig, 
 		select {
 		case <-ctx.Done():
 			s.runner.Stop()
-
+			s.childLock.Lock()
+			if s.child != nil {
+				// TODO: use kill to immediately kill or gracefully?
+				s.child.Kill()
+			}
+			s.childLock.Unlock()
 			return nil
 		case err := <-s.runner.ErrCh:
 			s.logger.Error("template server error", "error", err.Error())
 			s.runner.StopImmediately()
 
-			// Return after stopping the runner if exit on retry failure was
-			// specified
+			// Return after stopping the runner if exit on retry failure was specified
 			if s.config.AgentConfig.TemplateConfig != nil && s.config.AgentConfig.TemplateConfig.ExitOnRetryFailure {
 				return fmt.Errorf("template server: %w", err)
 			}
@@ -187,15 +191,15 @@ func (s *Server) Run(ctx context.Context, envTmpls []*config.EnvTemplateConfig, 
 				if err := s.bounceCmd(envVarToContents); err != nil {
 					return fmt.Errorf("unable to bounce command: %w", err)
 				}
-
 			}
 		}
 	}
 
-	return nil
 }
 
 func (s *Server) bounceCmd(newEnvVars map[string]string) error {
+	s.childLock.Lock()
+	defer s.childLock.Unlock()
 	if s.childStarted.Load() && s.child != nil {
 		// process is running, need to kill it first
 		s.child.Stop()
@@ -207,6 +211,7 @@ func (s *Server) bounceCmd(newEnvVars map[string]string) error {
 		return err
 	}
 
+	// TODO: would this leak?
 	// forward process exits to server chan
 	go func() {
 		select {
