@@ -98,15 +98,6 @@ fieldset.form-fieldset {
   flex-shrink: 1;
 }
 
-.field.is-grouped.is-grouped-centered {
-  justify-content: center;
-}
-
-// ARG TODO return to, replace with helper. Used in one place.
-.field.is-grouped.is-grouped-centered {
-  justify-content: center;
-}
-
 // ARG TODO return to. Doesn't have a home, consider some other solution
 .dropdown-has-error-border > div.ember-basic-dropdown-trigger {
   border: 1px solid $red-500;

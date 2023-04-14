@@ -3,29 +3,15 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-/* This helper includes styles relating to: display, justify-content, width, float, visibility, position, alignment. */
+/* This helper includes styles relating to: display, width, height, float, visibility, position, alignment. */
 
+// display
 .is-block {
   display: block !important;
 }
 
-.is-centered {
-  justify-content: center;
-}
-
-.is-fullwidth {
-  width: 100%;
-}
-
 .is-hidden {
   display: none !important;
-}
-
-.is-in-bottom-right {
-  position: absolute;
-  bottom: 1rem;
-  right: 1rem;
-  z-index: 10;
 }
 
 .is-inline {
@@ -36,10 +22,41 @@
   display: inline-block !important;
 }
 
+// position
+.is-in-bottom-right {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 10;
+}
+
+.is-relative {
+  position: relative;
+}
+
+// visibility
 .is-invisible {
   visibility: hidden;
 }
 
+// width and height
+.is-fullwidth {
+  width: 100%;
+}
+
+.is-auto-width {
+  width: auto;
+}
+
+.is-min-width-0 {
+  min-width: 0;
+}
+
+.is-medium-height {
+  height: 125px;
+}
+
+// float
 .is-pulled-left {
   float: left !important;
 }
@@ -48,10 +65,7 @@
   float: right !important;
 }
 
-.is-relative {
-  position: relative;
-}
-
+// alignment
 .is-v-centered {
   vertical-align: middle;
 }
