@@ -16,6 +16,7 @@ import (
 
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/internal/ctmanager"
+	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
 
 type ServerConfig struct {
@@ -95,7 +96,7 @@ func (s *Server) Run(ctx context.Context, envTmpls map[string]*config.EnvTemplat
 
 	for envName, envTmpl := range envTmpls {
 		tmpl := envTmpl.TemplateConfig
-		tmpl.EnvVar = &envName
+		tmpl.EnvVar = pointerutil.StringPtr(envName)
 		templates = append(templates, &tmpl)
 	}
 
@@ -188,7 +189,7 @@ func (s *Server) Run(ctx context.Context, envTmpls map[string]*config.EnvTemplat
 
 			// assume the renders are finished, until we find otherwise
 			doneRendering := true
-			envVarToContents := make(map[string]string)
+			envVarToContents := map[string]string{}
 			for _, event := range events {
 				// This template hasn't been rendered
 				if event.LastWouldRender.IsZero() {
