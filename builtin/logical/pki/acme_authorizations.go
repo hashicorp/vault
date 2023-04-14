@@ -27,6 +27,15 @@ const (
 	ACMEAuthorizationRevoked     ACMEAuthorizationStatusType = "revoked"
 )
 
+type ACMEOrderStatusType string
+
+const (
+	ACMEOrderPending    ACMEOrderStatusType = "pending"
+	ACMEOrderProcessing ACMEOrderStatusType = "processing"
+	ACMEOrderValid      ACMEOrderStatusType = "valid"
+	ACMEOrderInvalid    ACMEOrderStatusType = "invalid"
+)
+
 type ACMEChallengeType string
 
 const (
