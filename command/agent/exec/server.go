@@ -117,6 +117,8 @@ func (s *Server) Run(ctx context.Context, envTmpls map[string]*config.EnvTemplat
 		return fmt.Errorf("template server failed to create: %w", err)
 	}
 
+	go s.runner.Start()
+
 	idMap := s.runner.TemplateConfigMapping()
 	lookupMap := make(map[string][]*ctconfig.TemplateConfig, len(idMap))
 	for id, ctmpls := range idMap {
