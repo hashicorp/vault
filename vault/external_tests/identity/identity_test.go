@@ -145,7 +145,6 @@ func TestIdentityStore_ExternalGroupMemberships_DifferentMounts(t *testing.T) {
 }
 
 func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
-	t.Parallel()
 
 	var err error
 	coreConfig := &vault.CoreConfig{
