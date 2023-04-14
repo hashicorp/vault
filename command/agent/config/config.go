@@ -291,6 +291,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.PidFile = c2.PidFile
 	}
 
+	result.Exec = c.Exec
+	if c2.Exec != nil {
+		result.Exec = c2.Exec
+	}
+
 	return result
 }
 

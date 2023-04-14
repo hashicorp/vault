@@ -85,6 +85,7 @@ func (s *Server) Run(ctx context.Context, envTmpls map[string]*config.EnvTemplat
 	}()
 
 	if len(envTmpls) == 0 || execCfg == nil {
+		s.logger.Info("no env templates or exec config, exiting")
 		<-ctx.Done()
 		return nil
 	}

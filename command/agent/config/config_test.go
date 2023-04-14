@@ -2141,4 +2141,12 @@ func TestLoadConfigFile_EnvTemplateComplex(t *testing.T) {
 			t.Fatalf("expected env var %s", expected)
 		}
 	}
+
+	if cfg.Exec == nil {
+		t.Fatal("expected exec block to be parsed")
+	}
+
+	if cfg.Exec.Command != "env" {
+		t.Fatal("expected the command to be 'env'")
+	}
 }

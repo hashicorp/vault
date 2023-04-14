@@ -14,15 +14,15 @@ vault {
 }
 
 env_template "FOO_DATA_LOCK" {
-  contents             = "{{ with secret \"secret/data/foo\" }}{{ Data.data.lock }}{{ end }}"
+  contents             = "{{ with secret \"secret/data/foo\" }}{{ .Data.data.lock }}{{ end }}"
   error_on_missing_key = false
 }
 env_template "FOO_DATA_PASSWORD" {
-  contents             = "{{ with secret \"secret/data/foo\" }}{{ Data.data.password }}{{ end }}"
+  contents             = "{{ with secret \"secret/data/foo\" }}{{ .Data.data.password }}{{ end }}"
   error_on_missing_key = false
 }
 env_template "FOO_DATA_USER" {
-  contents             = "{{ with secret \"secret/data/foo\" }}{{ Data.data.user }}{{ end }}"
+  contents             = "{{ with secret \"secret/data/foo\" }}{{ .Data.data.user }}{{ end }}"
   error_on_missing_key = false
 }
 
