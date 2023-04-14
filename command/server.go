@@ -1496,13 +1496,13 @@ func (c *ServerCommand) Run(args []string) int {
 
 	hcpLogger := c.logger.Named("hcp-connectivity")
 
-	err = config.HCPLinkConf.ParseTLSConfig(c.UI)
+	tlsBundle, err := configutil.ParseCloudTLSConfig(config.HCPLinkConf, c.UI)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("error parsing HCP TLS configuration: %v", err))
 		return 1
 	}
 
-	hcpLink, err := hcp_link.NewHCPLink(config.HCPLinkConf, core, hcpLogger)
+	hcpLink, err := hcp_link.NewHCPLink(config.HCPLinkConf, tlsBundle, core, hcpLogger)
 	if err != nil {
 		c.logger.Error("failed to establish HCP connection", "error", err)
 	} else if hcpLink != nil {
@@ -1768,16 +1768,14 @@ func (c *ServerCommand) reloadHCPLink(hcpLinkVault *hcp_link.HCPLinkVault, conf 
 		return nil, nil
 	}
 
-	var err error
-
-	err = conf.HCPLinkConf.ParseTLSConfig(c.UI)
+	err := hcpLinkVault.TLSBundle.ReloadFunc()
 	if err != nil {
-		c.logger.Error("error parsing HCP TLS configuration", "error", err)
+		c.logger.Error("error reloading HCP TLS configuration", "error", err)
 		return nil, fmt.Errorf("error parsing cloud TLS configuration: %w", err)
 	}
 
 	// starting HCP link
-	hcpLink, err := hcp_link.NewHCPLink(conf.HCPLinkConf, core, hcpLogger)
+	hcpLink, err := hcp_link.NewHCPLink(conf.HCPLinkConf, hcpLinkVault.TLSBundle, core, hcpLogger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to restart HCP Link and it is no longer running, %w", err)
 	}

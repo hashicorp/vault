@@ -5,12 +5,11 @@ package api_capability
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"sync"
 	"time"
-
-	"github.com/hashicorp/vault/internalshared/configutil"
 
 	"github.com/hashicorp/go-hclog"
 	scada "github.com/hashicorp/hcp-scada-provider"
@@ -30,7 +29,7 @@ type APIPassThroughCapability struct {
 
 var _ capabilities.Capability = &APIPassThroughCapability{}
 
-func NewAPIPassThroughCapability(linkConf *configutil.HCPLinkConfig, scadaProvider scada.SCADAProvider, core *vault.Core, logger hclog.Logger) (*APIPassThroughCapability, error) {
+func NewAPIPassThroughCapability(tlsConfig *tls.Config, scadaProvider scada.SCADAProvider, core *vault.Core, logger hclog.Logger) (*APIPassThroughCapability, error) {
 	apiLogger := logger.Named(capabilities.APIPassThroughCapability)
 
 	linkHandler := requestHandler(vaulthttp.Handler.Handler(&vault.HandlerProperties{Core: core}), core, apiLogger)
@@ -44,7 +43,7 @@ func NewAPIPassThroughCapability(linkConf *configutil.HCPLinkConfig, scadaProvid
 		ReadTimeout:       30 * time.Second,
 		IdleTimeout:       5 * time.Minute,
 		ErrorLog:          apiLogger.StandardLogger(nil),
-		TLSConfig:         linkConf.TLSConfig,
+		TLSConfig:         tlsConfig,
 	}
 
 	return &APIPassThroughCapability{

@@ -48,6 +48,7 @@ var (
 type HCPLinkVault struct {
 	l            sync.RWMutex
 	LinkStatus   internal.WrappedCoreHCPLinkStatus
+	TLSBundle    *configutil.HCPLinkTLSBundle
 	scadaConfig  *scada.Config
 	linkConfig   *linkConfig.Config
 	link         link.Link
@@ -57,7 +58,7 @@ type HCPLinkVault struct {
 	running      bool
 }
 
-func NewHCPLink(linkConf *configutil.HCPLinkConfig, core *vault.Core, logger hclog.Logger) (*HCPLinkVault, error) {
+func NewHCPLink(linkConf *configutil.HCPLinkConfig, tlsBundle *configutil.HCPLinkTLSBundle, core *vault.Core, logger hclog.Logger) (*HCPLinkVault, error) {
 	if linkConf == nil {
 		return nil, nil
 	}
@@ -117,19 +118,19 @@ func NewHCPLink(linkConf *configutil.HCPLinkConfig, core *vault.Core, logger hcl
 		return nil, fmt.Errorf("failed to instantiate Link library: %w", err)
 	}
 
-	hcpLinkCaps, err := initializeCapabilities(linkConf, scadaConfig, scadaProvider, core, logger)
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize capabilities: %w", err)
+	hcpLinkVault := &HCPLinkVault{
+		LinkStatus:  core,
+		TLSBundle:   tlsBundle,
+		scadaConfig: scadaConfig,
+		linkConfig:  conf,
+		link:        hcpLink,
+		stopCh:      make(chan struct{}),
+		logger:      logger,
 	}
 
-	hcpLinkVault := &HCPLinkVault{
-		LinkStatus:   core,
-		scadaConfig:  scadaConfig,
-		linkConfig:   conf,
-		link:         hcpLink,
-		capabilities: hcpLinkCaps,
-		stopCh:       make(chan struct{}),
-		logger:       logger,
+	err = hcpLinkVault.initializeCapabilities(linkConf, scadaConfig, scadaProvider, core, logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize capabilities: %w", err)
 	}
 
 	// Start hcpLink and ScadaProvider
@@ -141,7 +142,7 @@ func NewHCPLink(linkConf *configutil.HCPLinkConfig, core *vault.Core, logger hcl
 	return hcpLinkVault, nil
 }
 
-func initializeCapabilities(linkConf *configutil.HCPLinkConfig, scadaConfig *scada.Config, scadaProvider scada.SCADAProvider, core *vault.Core, logger hclog.Logger) (map[string]capabilities.Capability, error) {
+func (h *HCPLinkVault) initializeCapabilities(linkConf *configutil.HCPLinkConfig, scadaConfig *scada.Config, scadaProvider scada.SCADAProvider, core *vault.Core, logger hclog.Logger) error {
 	hcpLinkCaps := make(map[string]capabilities.Capability, 0)
 
 	metaCap := meta.NewHCPLinkMetaService(scadaProvider, core, logger)
@@ -164,14 +165,15 @@ func initializeCapabilities(linkConf *configutil.HCPLinkConfig, scadaConfig *sca
 
 	// Initializing Passthrough capability
 	if linkConf.EnablePassThroughCapability {
-		apiPassCap, err := api_capability.NewAPIPassThroughCapability(linkConf, scadaProvider, core, logger)
+		apiPassCap, err := api_capability.NewAPIPassThroughCapability(h.TLSBundle.Config, scadaProvider, core, logger)
 		if err != nil {
 			retErr = multierror.Append(retErr, fmt.Errorf("failed to instantiate PassThrough capability, %w", err))
 		}
 		hcpLinkCaps[capabilities.APIPassThroughCapability] = apiPassCap
 	}
 
-	return hcpLinkCaps, retErr.ErrorOrNil()
+	h.capabilities = hcpLinkCaps
+	return retErr.ErrorOrNil()
 }
 
 // Start the connection regardless if the node is in seal mode or not

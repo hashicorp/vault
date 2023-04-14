@@ -34,7 +34,11 @@ type HCPLinkConfig struct {
 	TLSDisableRaw interface{} `hcl:"tls_disable"`
 	TLSCertFile   string      `hcl:"tls_cert_file"`
 	TLSKeyFile    string      `hcl:"tls_key_file"`
-	TLSConfig     *tls.Config `hcl:"-"`
+}
+
+type HCPLinkTLSBundle struct {
+	Config     *tls.Config
+	ReloadFunc reloadutil.ReloadFunc
 }
 
 func parseCloud(result *SharedConfig, list *ast.ObjectList) error {
@@ -96,38 +100,41 @@ func parseCloud(result *SharedConfig, list *ast.ObjectList) error {
 	return nil
 }
 
-func (h *HCPLinkConfig) ParseTLSConfig(ui cli.Ui) error {
-	if !h.TLSDisable {
+func ParseCloudTLSConfig(config *HCPLinkConfig, ui cli.Ui) (*HCPLinkTLSBundle, error) {
+	if !config.TLSDisable {
 		// We try the key without a passphrase first and if we get an incorrect
 		// passphrase response, try again after prompting for a passphrase
-		cg := reloadutil.NewCertificateGetter(h.TLSCertFile, h.TLSKeyFile, "")
+		cg := reloadutil.NewCertificateGetter(config.TLSCertFile, config.TLSKeyFile, "")
 		if err := cg.Reload(); err != nil {
 			if errwrap.Contains(err, x509.IncorrectPasswordError.Error()) {
 				var passphrase string
-				passphrase, err = ui.AskSecret(fmt.Sprintf("Enter passphrase for cloud TLS key file %s:", h.TLSKeyFile))
+				passphrase, err = ui.AskSecret(fmt.Sprintf("Enter passphrase for cloud TLS key file %s:", config.TLSKeyFile))
 
 				if err == nil {
-					cg = reloadutil.NewCertificateGetter(h.TLSCertFile, h.TLSKeyFile, passphrase)
+					cg = reloadutil.NewCertificateGetter(config.TLSCertFile, config.TLSKeyFile, passphrase)
 					if err = cg.Reload(); err != nil {
-						return fmt.Errorf("error loading cloud config TLS cert with provided passphrase: %w", err)
+						return nil, fmt.Errorf("error loading cloud config TLS cert with provided passphrase: %w", err)
 					}
 
-					h.TLSConfig = &tls.Config{
-						GetCertificate: cg.GetCertificate,
+					tlsBundle := &HCPLinkTLSBundle{
+						Config: &tls.Config{
+							GetCertificate: cg.GetCertificate,
 
-						// Prefer sensible defaults based on the defaults we use for "tcp" listener config
-						MinVersion: tls.VersionTLS12,
-						MaxVersion: tls.VersionTLS13,
-						ClientAuth: tls.RequestClientCert,
+							// Prefer sensible defaults based on the defaults we use for "tcp" listener config
+							MinVersion: tls.VersionTLS12,
+							MaxVersion: tls.VersionTLS13,
+							ClientAuth: tls.RequestClientCert,
+						},
+						ReloadFunc: cg.Reload,
 					}
 
-					return nil
+					return tlsBundle, nil
 				}
 			}
 
-			return fmt.Errorf("error loading cloud config TLS cert: %w", err)
+			return nil, fmt.Errorf("error loading cloud config TLS cert: %w", err)
 		}
 	}
 
-	return nil
+	return nil, nil
 }

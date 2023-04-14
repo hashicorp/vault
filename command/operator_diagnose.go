@@ -721,8 +721,9 @@ SEALFAIL:
 		config.HCPLinkConf.EnablePassThroughCapability = false
 		config.HCPLinkConf.EnableAPICapability = false
 
+		var hcpLinkTLSBundle *configutil.HCPLinkTLSBundle
 		diagnose.Test(ctx, "Check HCP TLS config", func(ctx context.Context) error {
-			err = config.HCPLinkConf.ParseTLSConfig(c.UI)
+			hcpLinkTLSBundle, err = configutil.ParseCloudTLSConfig(config.HCPLinkConf, c.UI)
 			if err != nil {
 				return fmt.Errorf("error parsing HCP TLS configuration: %v", err)
 			}
@@ -731,7 +732,7 @@ SEALFAIL:
 		})
 
 		diagnose.Test(ctx, "Check HCP Connection", func(ctx context.Context) error {
-			hcpLink, err := hcp_link.NewHCPLink(config.HCPLinkConf, vaultCore, server.logger)
+			hcpLink, err := hcp_link.NewHCPLink(config.HCPLinkConf, hcpLinkTLSBundle, vaultCore, server.logger)
 			if err != nil || hcpLink == nil {
 				return fmt.Errorf("failed to start HCP link, %w", err)
 			}
