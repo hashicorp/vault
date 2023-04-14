@@ -31,6 +31,12 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
+	"github.com/kr/pretty"
+	"github.com/mitchellh/cli"
+	"github.com/oklog/run"
+	"github.com/posener/complete"
+	"google.golang.org/grpc/test/bufconn"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/auth"
 	"github.com/hashicorp/vault/command/agent/auth/alicloud"
@@ -49,6 +55,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/cache/cachememdb"
 	"github.com/hashicorp/vault/command/agent/cache/keymanager"
 	agentConfig "github.com/hashicorp/vault/command/agent/config"
+	"github.com/hashicorp/vault/command/agent/exec"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/command/agent/sink/file"
 	"github.com/hashicorp/vault/command/agent/template"
@@ -61,11 +68,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/version"
-	"github.com/kr/pretty"
-	"github.com/mitchellh/cli"
-	"github.com/oklog/run"
-	"github.com/posener/complete"
-	"google.golang.org/grpc/test/bufconn"
 )
 
 var (
@@ -890,6 +892,14 @@ func (c *AgentCommand) Run(args []string) int {
 			ExitAfterAuth: config.ExitAfterAuth,
 		})
 
+		es := exec.NewServer(&exec.ServerConfig{
+			AgentConfig: c.config,
+			Namespace:   templateNamespace,
+			Logger:      c.logger.Named("exec.server"),
+			LogLevel:    c.logger.GetLevel(),
+			LogWriter:   c.logWriter,
+		})
+
 		g.Add(func() error {
 			return ah.Run(ctx, method)
 		}, func(error) {
@@ -942,6 +952,12 @@ func (c *AgentCommand) Run(args []string) int {
 			}
 			cancelFunc()
 			ts.Stop()
+		})
+
+		g.Add(func() error {
+			return es.Run(ctx, config.EnvTemplates, config.Exec)
+		}, func(err error) {
+
 		})
 
 	}

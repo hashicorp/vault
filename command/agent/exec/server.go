@@ -16,7 +16,6 @@ import (
 
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/internal/ctmanager"
-	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
 
 type ServerConfig struct {
@@ -79,13 +78,13 @@ func (s *Server) ExitCh() <-chan int {
 	return s.exitCh
 }
 
-func (s *Server) Run(ctx context.Context, envTmpls []*config.EnvTemplateConfig, execCfg *config.ExecConfig) error {
+func (s *Server) Run(ctx context.Context, envTmpls map[string]*config.EnvTemplateConfig, execCfg *config.ExecConfig) error {
 	templates := make([]*ctconfig.TemplateConfig, len(s.config.AgentConfig.EnvTemplates))
 
-	for _, envTmpl := range envTmpls {
+	for envName, envTmpl := range envTmpls {
 		tmpl := envTmpl.TemplateConfig
-		tmpl.EnvVar = pointerutil.StringPtr(envTmpl.Name)
-		templates = append(templates, envTmpl.TemplateConfig)
+		tmpl.EnvVar = &envName
+		templates = append(templates, tmpl)
 	}
 
 	managerConfig := ctmanager.ManagerConfig{
