@@ -1,6 +1,8 @@
-<button type="button" class="button is-ghost console-close-button" {{action "closeConsole"}} data-test-console-panel-close>
-  <Icon @name="x" aria-label="Close console" />
-</button>
+<div class="console-close-button">
+  <button type="button" class="button is-ghost" {{action "closeConsole"}} data-test-console-panel-close>
+    <Icon @name="x" aria-label="Close console" />
+  </button>
+</div>
 <div class="console-ui-panel-content">
   <div class="content">
     <p class="has-text-grey is-font-mono">

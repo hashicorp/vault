@@ -36,13 +36,13 @@
       </Sidebar.Footer>
     </HcAppFrame::Sidenav>
   </Frame.Sidebar>
-  <Frame.Main>
+  <Frame.Main class="is-relative">
     {{! outlet for app content }}
     <div id="modal-wormhole"></div>
     <LinkStatus @status={{this.currentCluster.cluster.hcpLinkStatus}} />
+    {{yield}}
     <div data-test-console-panel class={{if this.console.isOpen "panel-open"}}>
       <Console::UiPanel @isFullscreen={{this.consoleFullscreen}} />
     </div>
-    {{yield}}
   </Frame.Main>
 </HcAppFrame::Frame>
