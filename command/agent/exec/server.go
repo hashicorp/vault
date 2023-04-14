@@ -79,7 +79,17 @@ func (s *Server) ExitCh() <-chan int {
 }
 
 func (s *Server) Run(ctx context.Context, envTmpls map[string]*config.EnvTemplateConfig, execCfg *config.ExecConfig) error {
-	templates := make([]*ctconfig.TemplateConfig, len(s.config.AgentConfig.EnvTemplates))
+	s.logger.Info("starting exec server")
+	defer func() {
+		s.logger.Info("template server stopped")
+	}()
+
+	if len(envTmpls) == 0 || execCfg == nil {
+		<-ctx.Done()
+		return nil
+	}
+
+	templates := make([]*ctconfig.TemplateConfig, len(envTmpls))
 
 	for envName, envTmpl := range envTmpls {
 		tmpl := envTmpl.TemplateConfig
