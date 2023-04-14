@@ -74,7 +74,14 @@ egress, logs will show an error.
 <CodeBlockConfig hideClipboard>
 
 ```
-[INFO]  core: usage gauge collection is disabled
+[DEBUG] reporting: beginning snapshot export
+[DEBUG] reporting: creating payload
+[DEBUG] reporting: marshalling payload to json
+[DEBUG] reporting: generating authentication headers
+[DEBUG] reporting: creating request
+[DEBUG] reporting: sending request
+[DEBUG] reporting: performing request: method=POST url=https://census.license.hashicorp.services
+[DEBUG] reporting: error status code received: statusCode=403
 ```
 
 </CodeBlockConfig>
