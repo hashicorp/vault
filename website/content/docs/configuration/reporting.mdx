@@ -2,8 +2,8 @@
 layout: docs
 page_title: Reporting - Configuration
 description: |-
-  The reporting stanza configures per-cluster automated reporting of billing
-  information. Vault Enterprise will automatically report the cluster's client
+  The reporting stanza configures per-cluster automated reporting of entitlement 
+  utilization. Vault Enterprise will automatically report the cluster's client
   counts using the license start date. Any modification of the default behavior
   should be specified in the reporting stanza.
 ---
@@ -54,10 +54,10 @@ precedence over values in the configuration file.
 
 <Note>
 
-Vault Enterprise uses client counts to calculate its billing information. To
-provide the most accurate billing information, client count configuration
-parameters require some restrictions while reporting is enabled. For more
-information, refer to the [client counts API
+Vault Enterprise uses client counts to calculate its entitlement utilization. To
+provide the most accurate information, client count configuration parameters
+require some restrictions while reporting is enabled. For more information,
+refer to the [client counts API
 doc](/vault/api-docs/system/internal-counters/#update-the-client-count-configuration).
 
 </Note>
@@ -89,8 +89,8 @@ cluster's HCL.
 
 ## Disabling automated reporting
 
-Reporting of billing information is enabled by default and you can disable it
-using the `reporting` stanza. To disable the automated reporting, set the
+Reporting of entitlement utilization is enabled by default and you can disable
+it using the `reporting` stanza. To disable the automated reporting, set the
 `enabled` parameter value to `false`:
 
 ```hcl
