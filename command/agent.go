@@ -956,8 +956,8 @@ func (c *AgentCommand) Run(args []string) int {
 
 		g.Add(func() error {
 			return es.Run(ctx, config.EnvTemplates, config.Exec)
-		}, func(err error) {
-
+		}, func(error) {
+			cancelFunc()
 		})
 
 	}
