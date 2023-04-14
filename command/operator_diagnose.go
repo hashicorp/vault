@@ -714,44 +714,49 @@ SEALFAIL:
 
 	// Checking HCP link to make sure Vault could connect to SCADA.
 	// If it could not connect to SCADA in 5 seconds, diagnose reports an issue
-	if !constants.IsEnterprise {
-		diagnose.Skipped(ctx, "HCP link check will not run on OSS Vault.")
-	} else {
-		if config.HCPLinkConf != nil {
-			// we need to override API and Passthrough capabilities
-			// as they could not be initialized when Vault http handler
-			// is not fully initialized
-			config.HCPLinkConf.EnablePassThroughCapability = false
-			config.HCPLinkConf.EnableAPICapability = false
+	if config.HCPLinkConf != nil {
+		// we need to override API and Passthrough capabilities
+		// as they could not be initialized when Vault http handler
+		// is not fully initialized
+		config.HCPLinkConf.EnablePassThroughCapability = false
+		config.HCPLinkConf.EnableAPICapability = false
 
-			diagnose.Test(ctx, "Check HCP Connection", func(ctx context.Context) error {
-				hcpLink, err := hcp_link.NewHCPLink(config.HCPLinkConf, vaultCore, server.logger)
-				if err != nil || hcpLink == nil {
-					return fmt.Errorf("failed to start HCP link, %w", err)
-				}
+		diagnose.Test(ctx, "Check HCP TLS config", func(ctx context.Context) error {
+			err = config.HCPLinkConf.ParseTLSConfig(c.UI)
+			if err != nil {
+				return fmt.Errorf("error parsing HCP TLS configuration: %v", err)
+			}
 
-				// check if a SCADA session is established successfully
-				deadline := time.Now().Add(5 * time.Second)
-				linkSessionStatus := "disconnected"
-				for time.Now().Before(deadline) {
-					linkSessionStatus = hcpLink.GetConnectionStatusMessage(hcpLink.GetScadaSessionStatus())
-					if linkSessionStatus == "connected" {
-						break
-					}
-					time.Sleep(500 * time.Millisecond)
-				}
-				if linkSessionStatus != "connected" {
-					return fmt.Errorf("failed to connect to HCP in 5 seconds. HCP session status is: %s", linkSessionStatus)
-				}
+			return nil
+		})
 
-				err = hcpLink.Shutdown()
-				if err != nil {
-					return fmt.Errorf("failed to shutdown HCP link: %w", err)
-				}
+		diagnose.Test(ctx, "Check HCP Connection", func(ctx context.Context) error {
+			hcpLink, err := hcp_link.NewHCPLink(config.HCPLinkConf, vaultCore, server.logger)
+			if err != nil || hcpLink == nil {
+				return fmt.Errorf("failed to start HCP link, %w", err)
+			}
 
-				return nil
-			})
-		}
+			// check if a SCADA session is established successfully
+			deadline := time.Now().Add(5 * time.Second)
+			linkSessionStatus := "disconnected"
+			for time.Now().Before(deadline) {
+				linkSessionStatus = hcpLink.GetConnectionStatusMessage(hcpLink.GetScadaSessionStatus())
+				if linkSessionStatus == "connected" {
+					break
+				}
+				time.Sleep(500 * time.Millisecond)
+			}
+			if linkSessionStatus != "connected" {
+				return fmt.Errorf("failed to connect to HCP in 5 seconds. HCP session status is: %s", linkSessionStatus)
+			}
+
+			err = hcpLink.Shutdown()
+			if err != nil {
+				return fmt.Errorf("failed to shutdown HCP link: %w", err)
+			}
+
+			return nil
+		})
 	}
 
 	return nil
