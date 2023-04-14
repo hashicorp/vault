@@ -5,23 +5,16 @@
 
 /* This helper includes styles referencing background color, border color, and text color. */
 
-/* ARG TODO WIP:
-- organize a little more.
-- comb through and make sure these are used and not replaced.
-*/
-
-.has-background-transparent {
-  background: transparent !important;
+// background colors
+.has-background-white-bis {
+  background: $ui-gray-050;
 }
 
 .has-background-gray-200 {
   background-color: $ui-gray-200;
 }
 
-.has-background-grey-lighter {
-  background-color: $ui-gray-050;
-}
-
+// borders
 .has-border-top-light {
   border-radius: 0;
   border-top: 1px solid $grey-light;
@@ -37,16 +30,26 @@ select.has-error-border {
   border: 1px solid $red-500;
 }
 
+// specifically for the SearchSelect dropdown.
+.dropdown-has-error-border > div.ember-basic-dropdown-trigger {
+  border: 1px solid $red-500;
+}
+
+// text color
+.has-text-grey-light {
+  color: $ui-gray-300 !important;
+}
+
 .has-text-grey-400 {
   color: $ui-gray-400;
 }
 
-.has-text-grey-500 {
-  color: $ui-gray-500;
+.has-text-grey {
+  color: $ui-gray-500 !important;
 }
 
-.has-text-green {
-  color: $green;
+.has-text-grey-dark {
+  color: $ui-gray-700 !important;
 }
 
 .has-text-white {
@@ -59,18 +62,6 @@ select.has-error-border {
 
 .has-text-success {
   color: $green-500 !important;
-}
-
-.has-text-grey-dark {
-  color: $ui-gray-700 !important;
-}
-
-.has-text-grey {
-  color: $ui-gray-500 !important;
-}
-
-.has-text-grey-light {
-  color: $ui-gray-300 !important;
 }
 
 .has-text-highlight {

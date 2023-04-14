@@ -46,7 +46,7 @@
       <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
     {{/each}}
   {{else if (eq this.inferredState "success")}}
-    <Icon @name="check-circle-fill" class="has-text-green" />
+    <Icon @name="check-circle-fill" class="has-text-success" />
     <span>Configuration values were inferred successfully.</span>
   {{else if (eq this.inferredState "error")}}
     <Icon @name="x-square-fill" class="has-text-danger" />

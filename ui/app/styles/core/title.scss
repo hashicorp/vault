@@ -43,39 +43,35 @@
 
 // title sizes
 .title.is-2 {
-  font-size: 2.5rem;
+  font-size: $size-2;
 }
 
 .title.is-3 {
-  font-size: 1.71429rem;
+  font-size: $size-3;
 }
 
 .title.is-4 {
-  font-size: 1.5rem;
+  font-size: $size-4;
 }
 
 .title.is-5 {
-  font-size: 1.25rem;
+  font-size: $size-5;
 }
 
 .title.is-6 {
-  font-size: 1rem;
+  font-size: $size-6;
 }
 
 .title.is-7 {
-  font-size: 0.75rem;
+  font-size: $size-7;
 }
 
 // responsive css
-/* ARG TODO: Used in one place title.is-2 */
 @media screen and (min-width: 769px), print {
   .tile.is-2 {
     flex: none;
     width: 16.66667%;
   }
-}
-
-@media screen and (min-width: 769px), print {
   .tile.is-4 {
     flex: none;
     width: 33.33333%;

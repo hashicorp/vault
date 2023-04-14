@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-/* This helper includes styles relating to: box-shadow, border, transition, pointer, and grouped css in one helper.*/
+/* This helper includes styles relating to: box-shadow, border, transition, pointer, grouped css in one helper, and screen-reader only.*/
 
 // box-shadow helpers
 .has-only-top-shadow {
@@ -84,18 +84,16 @@
   overflow: hidden;
 }
 
-// Screen Readers only
-// ARG TODO: we have this class in the app/styes/app.scss file. See if we can consolidate.
+// screen reader only 
 .sr-only {
-  border: 0 !important;
-  clip: rect(1px, 1px, 1px, 1px) !important;
-  -webkit-clip-path: inset(50%) !important;
-  clip-path: inset(50%) !important;
-  height: 1px !important;
-  overflow: hidden !important;
-  margin: -1px !important;
-  padding: 0 !important;
-  position: absolute !important;
-  width: 1px !important;
-  white-space: nowrap !important;
+  border: 0;
+  clip-path: inset(50%);
+  clip: rect(0 0 0 0);
+  height: 1px;
+  margin: -1px;;
+  overflow: hidden;
+  padding: 0px;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
 }

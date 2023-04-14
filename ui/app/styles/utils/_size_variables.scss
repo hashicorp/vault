@@ -3,14 +3,8 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-/*
-ARG TODO post bulma removal:
-- size-x and and spacing-x variables often overlap. Ideally, we could combine these to cover all the size requirements.
-We need to confirm as a team use cases for px vs rem and how to address missing size values ex: 14px.
-- Figure out when a var is appropriate, should we have $easing?
- */
 
-/* General sizing: used in fonts and in padding, margin, etc. */
+/* General sizing in rem values used largely for text sizing.*/
 $size-1: 3rem; // 48px, same as $spacing-xxl
 $size-2: 2.5rem; // 40px
 $size-3: (24/14) + 0rem; // ~1.714rem ~27px
@@ -23,7 +17,7 @@ $size-9: 0.75rem; // 12px same as $spacing-s
 $size-10: 0.5rem; // 8px same as $spacing-xs
 $size-11: 0.25rem; // 4px same as spacing-xxs
 
-/* Spacing */
+/* Spacing vars in px */
 $spacing-xxs: 4px;
 $spacing-xs: 8px;
 $spacing-s: 12px;
@@ -31,7 +25,6 @@ $spacing-m: 16px;
 $spacing-l: 24px;
 $spacing-xl: 36px;
 $spacing-xxl: 48px;
-$spacing-xxxl: 64px;
 
 /* Font weight */
 $font-weight-normal: 400;

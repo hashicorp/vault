@@ -6,8 +6,6 @@
 /* This helper includes styles relating to: font-size, font-family, font-alignment, text-transform, text-weight, font-style, text-decoration. */
 
 // font size helpers
-// ARG TODO future pr once bulma is removed, replace these helper names, example: font-size-4
-
 .is-size-4 {
   font-size: $size-4 !important;
 }
@@ -73,34 +71,28 @@
   text-align: right !important;
 }
 
-// ARG TODO duplicate, need to confirm naming style.
-.has-text-align-center {
-  text-align: center;
-}
-
 .has-text-centered {
   text-align: center !important;
 }
 
 // Text color or styling
-// ARG TODO naming is not consistent, pulling these in from various places
 .has-text-info {
   color: $blue-500 !important;
 }
 
 .is-help {
   font-size: $size-8;
-  margin-top: 0.25rem;
+  margin-top: $size-11;
 }
 
 .help {
   display: block;
   font-size: 0.85714rem;
-  margin-top: 0.25rem;
+  margin-top: $size-11;
 }
 
 .sub-text {
   color: $grey;
-  margin-bottom: 0.25rem;
+  margin-bottom: $size-11;
   font-size: $size-8;
 }

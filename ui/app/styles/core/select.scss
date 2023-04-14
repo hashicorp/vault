@@ -40,10 +40,6 @@ select {
     border-color: $blue-500;
     box-shadow: 0 0 0 0.125em rgba(21, 99, 255, 0.25);
   }
-
-  .has-background-grey-lighter & {
-    background-color: $white;
-  }
 }
 
 .select select:not([multiple]) {

@@ -99,7 +99,7 @@
         border-right: 4px solid $blue;
       }
     }
-    // ARG TODO follow up, only use case of $fullhd
+    // TODO will be removed with the navbar work. Reminder to remove the var $fullhd as this is the only use case.
     .tag {
       @include from($fullhd) {
         float: right;

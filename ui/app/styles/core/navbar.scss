@@ -282,7 +282,7 @@
     left: 0;
     position: absolute;
     right: 0;
-    top: $spacing-xxxl;
+    top: 4rem;
     z-index: 1;
 
     @include from($mobile) {

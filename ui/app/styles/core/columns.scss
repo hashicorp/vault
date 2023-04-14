@@ -78,17 +78,14 @@
   .columns:not(.is-desktop) {
     display: flex;
   }
+  .columns.is-variable.is-7-tablet {
+    --columnGap: 1.75rem;
+  }
 }
 
 @media screen and (min-width: 1024px) {
   .columns.is-desktop {
     display: flex;
-  }
-}
-
-@media screen and (min-width: 769px), print {
-  .columns.is-variable.is-7-tablet {
-    --columnGap: 1.75rem;
   }
 }
 
@@ -104,26 +101,6 @@
 .column.is-narrow {
   flex: none;
   width: unset;
-}
-
-.column.is-one-quarter {
-  flex: none;
-  width: 25%;
-}
-
-.column.is-one-third {
-  flex: none;
-  width: 33.3333%;
-}
-
-.column.is-half {
-  flex: none;
-  width: 50%;
-}
-
-.column.is-two-thirds {
-  flex: none;
-  width: 66.6666%;
 }
 
 .columns.is-mobile > .column.is-1 {
@@ -153,43 +130,56 @@
 
 // responsive css column (order matters here because some columns have several of these classes and they need to override in the correct order).
 @media screen and (min-width: 769px), print {
+  .column.is-one-quarter {
+    flex: none;
+    width: 25%;
+  }
+  
+  .column.is-half {
+    flex: none;
+    width: 50%;
+  }
+  
+  .column.is-two-thirds {
+    flex: none;
+    width: 66.6666%;
+  }
+  
+  .column.is-one-third {
+    flex: none;
+    width: 33.3333%;
+  }
+
   .column.is-5 {
     flex: none;
     width: 41.66667%;
   }
-}
 
-@media screen and (min-width: 769px), print {
   .column.is-6,
   .column.is-6-tablet {
     flex: none;
     width: 50%;
   }
-}
 
-@media screen and (min-width: 1024px) {
-  .column.is-4-desktop {
-    flex: none;
-    width: 33.33333%;
-  }
-}
-
-@media screen and (min-width: 769px), print {
   .column.is-9 {
     flex: none;
     width: 75%;
   }
-}
 
-@media screen and (min-width: 769px), print {
   .column.is-7,
   .column.is-7-tablet {
     flex: none;
     width: 58.33333%;
   }
-  .column.is-10-mobile {
+
+  .column.is-12 {
     flex: none;
-    width: 83.33333%;
+    width: 100%;
+  }
+  
+  .column.is-full,.column.is-full-tablet {
+    flex: none;
+    width: 100%
   }
 }
 
@@ -200,16 +190,9 @@
   }
 }
 
-@media screen and (min-width: 769px), print {
-  .column.is-10 {
+@media screen and (min-width: 1024px) {
+  .column.is-4-desktop {
     flex: none;
-    width: 83.33333%;
-  }
-}
-
-@media screen and (min-width: 769px), print {
-  .column.is-12 {
-    flex: none;
-    width: 100%;
+    width: 33.33333%;
   }
 }

@@ -12,10 +12,15 @@
   &.sticky-header {
     thead th {
       position: sticky;
-      background: #fff;
+      background: $white;
       box-shadow: 0 1px 0px 0px rgba($grey-dark, 0.3);
       top: 0;
     }
+  }
+
+  table {
+    border-collapse: collapse;
+    border-spacing: 0
   }
 
   th,
@@ -27,6 +32,8 @@
     color: $grey-dark;
     font-weight: 500;
     font-size: $size-8;
+    text-align: left;
+    vertical-align: top;
   }
 
   tbody th {
