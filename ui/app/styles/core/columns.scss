@@ -7,70 +7,79 @@
 
 // Columns (plural)
 .columns {
-  margin-left: -0.75rem;
-  margin-right: -0.75rem;
-  margin-top: -0.75rem;
-}
+  margin-left: -$size-9;
+  margin-right: -$size-9;
+  margin-top: -$size-9;
 
-.columns:last-child {
-  margin-bottom: -0.75rem;
-}
+  &:last-child {
+    margin-bottom: -$size-9;
+  }
 
-.columns.is-centered {
-  justify-content: center;
-}
+  &.is-centered {
+    justify-content: center;
+  }
 
-.columns.is-gapless {
-  margin-left: 0;
-  margin-right: 0;
-  margin-top: 0;
-}
+  &.is-gapless {
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 0;
+  }
 
-.columns.is-gapless > .column {
-  margin: 0;
-  padding: 0 !important;
-}
+  &.is-gapless > .column {
+    margin: 0;
+    padding: 0 !important;
+  }
 
-.columns.is-gapless:not(:last-child) {
-  margin-bottom: 1.5rem;
-}
+  &.is-gapless:not(:last-child) {
+    margin-bottom: $size-4;
+  }
 
-.columns.is-gapless:last-child {
-  margin-bottom: 0;
-}
+  &.is-gapless:last-child {
+    margin-bottom: 0;
+  }
 
-.columns.is-mobile {
-  display: flex;
-}
+  &.is-mobile {
+    display: flex;
 
-.column.is-5,
-.column.is-5-tablet {
-  flex: none;
-  width: 41.66667%;
-}
+    > .column.is-1 {
+      flex: none;
+      width: 8.33333%;
+    }
 
-.columns.is-multiline {
-  flex-wrap: wrap;
-}
+    > .column.is-3 {
+      flex: none;
+      width: 25%;
+    }
 
-.columns.is-variable.is-1 {
-  --columnGap: $i * 0.25rem;
-}
+    > .column.is-10 {
+      flex: none;
+      width: 83.33333%;
+    }
 
-.columns.is-variable {
-  --columnGap: 0.75rem;
-  margin-left: calc(-1 * var(--columnGap));
-  margin-right: calc(-1 * var(--columnGap));
-}
+    > .column.is-12 {
+      flex: none;
+      width: 100%;
+    }
+  }
 
-.columns.is-variable > .column {
-  padding-left: var(--columnGap);
-  padding-right: var(--columnGap);
-}
+  &.is-multiline {
+    flex-wrap: wrap;
+  }
 
-.column.is-1 {
-  flex: none;
-  width: 8.33333%;
+  &.is-variable.is-1 {
+    --columnGap: $i * $size-11;
+  }
+
+  &.is-variable {
+    --columnGap: $size-9;
+    margin-left: calc(-1 * var(--columnGap));
+    margin-right: calc(-1 * var(--columnGap));
+  }
+
+  &.is-variable > .column {
+    padding-left: var(--columnGap);
+    padding-right: var(--columnGap);
+  }
 }
 
 // responsive css columns
@@ -96,90 +105,83 @@
   flex-grow: 1;
   flex-shrink: 1;
   padding: 0.75rem;
-}
 
-.column.is-narrow {
-  flex: none;
-  width: unset;
-}
+  &.is-narrow {
+    flex: none;
+    width: unset;
+  }
 
-.columns.is-mobile > .column.is-1 {
-  flex: none;
-  width: 8.33333%;
-}
+  &.is-1 {
+    flex: none;
+    width: 8.33333%;
+  }
 
-.columns.is-mobile > .column.is-3 {
-  flex: none;
-  width: 25%;
-}
+  &.is-3 {
+    flex: none;
+    width: 25%;
+  }
 
-.columns.is-mobile > .column.is-10 {
-  flex: none;
-  width: 83.33333%;
-}
-
-.columns.is-mobile > .column.is-12 {
-  flex: none;
-  width: 100%;
-}
-
-.column.is-3 {
-  flex: none;
-  width: 25%;
+  &.is-5,
+  .is-5-tablet {
+    flex: none;
+    width: 41.66667%;
+  }
 }
 
 // responsive css column (order matters here because some columns have several of these classes and they need to override in the correct order).
 @media screen and (min-width: 769px), print {
-  .column.is-one-quarter {
-    flex: none;
-    width: 25%;
-  }
-  
-  .column.is-half {
-    flex: none;
-    width: 50%;
-  }
-  
-  .column.is-two-thirds {
-    flex: none;
-    width: 66.6666%;
-  }
-  
-  .column.is-one-third {
-    flex: none;
-    width: 33.3333%;
-  }
+  .column {
+    &.is-one-quarter {
+      flex: none;
+      width: 25%;
+    }
 
-  .column.is-5 {
-    flex: none;
-    width: 41.66667%;
-  }
+    &.is-half {
+      flex: none;
+      width: 50%;
+    }
 
-  .column.is-6,
-  .column.is-6-tablet {
-    flex: none;
-    width: 50%;
-  }
+    &.is-two-thirds {
+      flex: none;
+      width: 66.6666%;
+    }
 
-  .column.is-9 {
-    flex: none;
-    width: 75%;
-  }
+    &.is-one-third {
+      flex: none;
+      width: 33.3333%;
+    }
 
-  .column.is-7,
-  .column.is-7-tablet {
-    flex: none;
-    width: 58.33333%;
-  }
+    &.is-5 {
+      flex: none;
+      width: 41.66667%;
+    }
 
-  .column.is-12 {
-    flex: none;
-    width: 100%;
-  }
-  
-  .column.is-full,.column.is-full-tablet {
-    flex: none;
-    width: 100%
+    &.is-6,
+    .is-6-tablet {
+      flex: none;
+      width: 50%;
+    }
+    &.is-9 {
+      flex: none;
+      width: 75%;
+    }
+
+    &.is-7,
+    &.is-7-tablet {
+      flex: none;
+      width: 58.33333%;
+    }
+
+    &.is-12 {
+      flex: none;
+      width: 100%;
+    }
+
+    &.is-full,
+    .is-full-tablet {
+      flex: none;
+      width: 100%;
+    }
   }
 }
 

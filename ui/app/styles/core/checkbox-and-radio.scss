@@ -30,7 +30,7 @@
 .radio[disabled],
 .checkbox input[disabled],
 .radio input[disabled] {
-  color: #7a7a7a;
+  color: $grey;
   cursor: not-allowed;
 }
 
@@ -85,7 +85,7 @@
 }
 
 .b-checkbox label::after {
-  color: #363636;
+  color: $ui-gray-800;
   font-size: 12px;
   height: 16px;
   left: 3px;

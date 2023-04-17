@@ -3,9 +3,6 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-// Button specific vars
-$button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
-
 .button {
   align-items: center;
   background-color: $grey-lightest;
@@ -17,7 +14,7 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
   display: inline-block;
   font-size: $size-8;
   font-weight: $font-weight-semibold;
-  height: 2.5rem;
+  height: $size-2;
   line-height: 1.6;
   min-width: 6rem;
   padding: $size-10 $size-8;
