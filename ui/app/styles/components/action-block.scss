@@ -7,6 +7,7 @@
   grid-template-columns: 1fr;
   grid-row: 1/1;
 }
+
 @mixin stacked-content {
   margin-bottom: $spacing-l;
 }
@@ -33,6 +34,7 @@
 .action-block.stacked {
   @include stacked-grid();
 }
+
 .stacked > .action-block-info {
   @include stacked-content();
 }
@@ -41,6 +43,7 @@
   font-size: $size-5;
   font-weight: $font-weight-bold;
 }
+
 .action-block-action {
   text-align: right;
   @include until($mobile) {
