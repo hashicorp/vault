@@ -250,5 +250,6 @@
     "highlight.js": "^10.4.1",
     "node-notifier": "^8.0.1",
     "uuid": "^9.0.0"
-  }
+  },
+  "packageManager": "yarn@3.5.0"
 }

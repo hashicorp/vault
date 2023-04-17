@@ -29,3 +29,6 @@ package-lock.json
 
 # broccoli-debug
 /DEBUG/
+
+# yarn
+/.yarn/cache
