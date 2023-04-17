@@ -35,6 +35,6 @@ export default class PkiKeysIndexRoute extends Route {
       { label: this.secretMountPath.currentPath, route: 'overview' },
       { label: 'keys', route: 'keys.index' },
     ];
-    controller.message = PKI_DEFAULT_EMPTY_STATE_MSG;
+    controller.notConfiguredMessage = PKI_DEFAULT_EMPTY_STATE_MSG;
   }
 }
