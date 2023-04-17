@@ -23,6 +23,12 @@ const (
 func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `login/(?P<username>.+)`,
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixOkta,
+			OperationVerb:   "log-in",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"username": {
 				Type:        framework.TypeString,
@@ -192,6 +198,10 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 func pathVerify(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `verify/(?P<nonce>.+)`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixOkta,
+			OperationVerb:   "verify",
+		},
 		Fields: map[string]*framework.FieldSchema{
 			"nonce": {
 				Type: framework.TypeString,

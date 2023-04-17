@@ -38,6 +38,10 @@
 .selectable-card-container.has-grid.has-two-col-grid {
   grid-template-columns: 2fr 2fr;
   grid-template-rows: none;
+
+  @include until($mobile) {
+    grid-template-columns: 1fr;
+  }
 }
 .selectable-card-container.has-grid.has-three-col-grid {
   grid-template-columns: 1fr 1fr 1fr;

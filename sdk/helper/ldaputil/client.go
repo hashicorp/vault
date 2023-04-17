@@ -31,6 +31,12 @@ func (c *Client) DialLDAP(cfg *ConfigEntry) (Connection, error) {
 	var retErr *multierror.Error
 	var conn Connection
 	urls := strings.Split(cfg.Url, ",")
+
+	// Default timeout in the pacakge is 60 seconds, which we default to on our
+	// end. This is useful if you want to take advantage of the URL list to increase
+	// availability of LDAP.
+	ldap.DefaultTimeout = time.Duration(cfg.ConnectionTimeout) * time.Second
+
 	for _, uut := range urls {
 		u, err := url.Parse(uut)
 		if err != nil {

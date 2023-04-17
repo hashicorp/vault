@@ -19,22 +19,33 @@ func pathUsersList(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "users/?",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixUserpass,
+			OperationSuffix: "users",
+			Navigation:      true,
+			ItemType:        "User",
+		},
+
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.pathUserList,
 		},
 
 		HelpSynopsis:    pathUserHelpSyn,
 		HelpDescription: pathUserHelpDesc,
-		DisplayAttrs: &framework.DisplayAttributes{
-			Navigation: true,
-			ItemType:   "User",
-		},
 	}
 }
 
 func pathUsers(b *backend) *framework.Path {
 	p := &framework.Path{
 		Pattern: "users/" + framework.GenericNameRegex("username"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixUserpass,
+			OperationSuffix: "user",
+			Action:          "Create",
+			ItemType:        "User",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"username": {
 				Type:        framework.TypeString,
@@ -85,10 +96,6 @@ func pathUsers(b *backend) *framework.Path {
 
 		HelpSynopsis:    pathUserHelpSyn,
 		HelpDescription: pathUserHelpDesc,
-		DisplayAttrs: &framework.DisplayAttributes{
-			Action:   "Create",
-			ItemType: "User",
-		},
 	}
 
 	tokenutil.AddTokenFields(p.Fields)

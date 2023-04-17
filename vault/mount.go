@@ -698,7 +698,7 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	entry.RunningVersion = entry.Version
 	if entry.RunningVersion == "" {
 		// don't set the running version to a builtin if it is running as an external plugin
-		if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
+		if entry.RunningSha256 == "" {
 			entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeSecrets, entry.Type)
 		}
 	}
@@ -1512,7 +1512,7 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		entry.RunningVersion = entry.Version
 		if entry.RunningVersion == "" {
 			// don't set the running version to a builtin if it is running as an external plugin
-			if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
+			if entry.RunningSha256 == "" {
 				entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeSecrets, entry.Type)
 			}
 		}

@@ -113,11 +113,29 @@ scenario "ui" {
     }
   }
 
+  step "create_vault_cluster_targets" {
+    module     = module.target_ec2_spot_fleet // "target_ec2_instances" can be used for on-demand instances
+    depends_on = [step.create_vpc]
+
+    providers = {
+      enos = provider.enos.ubuntu
+    }
+
+    variables {
+      ami_id                = step.create_vpc.ami_ids[local.distro][local.arch]
+      awskms_unseal_key_arn = step.create_vpc.kms_key_arn
+      common_tags           = local.tags
+      instance_type         = local.vault_instance_type // only used for on-demand instances
+      vpc_id                = step.create_vpc.vpc_id
+    }
+  }
+
   step "create_vault_cluster" {
     module = module.vault_cluster
     depends_on = [
       step.create_backend_cluster,
       step.build_vault,
+      step.create_vault_cluster_targets
     ]
 
     providers = {
@@ -125,20 +143,22 @@ scenario "ui" {
     }
 
     variables {
-      ami_id                    = step.create_vpc.ami_ids[local.distro][local.arch]
-      common_tags               = local.tags
-      consul_cluster_tag        = step.create_backend_cluster.consul_cluster_tag
-      instance_type             = local.vault_instance_type
-      kms_key_arn               = step.create_vpc.kms_key_arn
-      storage_backend           = matrix.backend
-      unseal_method             = local.seal
-      vault_local_artifact_path = local.bundle_path
-      vault_install_dir         = local.vault_install_dir
-      vault_license             = matrix.edition != "oss" ? step.read_license.license : null
-      vpc_id                    = step.create_vpc.vpc_id
-      vault_environment = {
+      awskms_unseal_key_arn = step.create_vpc.kms_key_arn
+      cluster_name          = step.create_vault_cluster_targets.cluster_name
+      config_env_vars = {
         VAULT_LOG_LEVEL = var.vault_log_level
       }
+      consul_cluster_tag = step.create_backend_cluster.consul_cluster_tag
+      consul_release = matrix.backend == "consul" ? {
+        edition = var.backend_edition
+        version = local.consul_version
+      } : null
+      install_dir         = local.vault_install_dir
+      license             = matrix.edition != "oss" ? step.read_license.license : null
+      local_artifact_path = local.bundle_path
+      storage_backend     = matrix.backend
+      target_hosts        = step.create_vault_cluster_targets.hosts
+      unseal_method       = local.seal
     }
   }
 
@@ -146,52 +166,72 @@ scenario "ui" {
     module = module.vault_test_ui
 
     variables {
-      vault_addr               = step.create_vault_cluster.instance_public_ips[0]
-      vault_root_token         = step.create_vault_cluster.vault_root_token
-      vault_unseal_keys        = step.create_vault_cluster.vault_recovery_keys_b64
-      vault_recovery_threshold = step.create_vault_cluster.vault_recovery_threshold
+      vault_addr               = step.create_vault_cluster_targets.hosts[0].public_ip
+      vault_root_token         = step.create_vault_cluster.root_token
+      vault_unseal_keys        = step.create_vault_cluster.recovery_keys_b64
+      vault_recovery_threshold = step.create_vault_cluster.recovery_threshold
       ui_test_filter           = local.ui_test_filter
     }
   }
 
-  output "vault_cluster_instance_ids" {
-    description = "The Vault cluster instance IDs"
-    value       = step.create_vault_cluster.instance_ids
+  output "awskms_unseal_key_arn" {
+    description = "The Vault cluster KMS key arn"
+    value       = step.create_vpc.kms_key_arn
   }
 
-  output "vault_cluster_pub_ips" {
-    description = "The Vault cluster public IPs"
-    value       = step.create_vault_cluster.instance_public_ips
+  output "cluster_name" {
+    description = "The Vault cluster name"
+    value       = step.create_vault_cluster.cluster_name
   }
 
-  output "vault_cluster_priv_ips" {
+  output "hosts" {
+    description = "The Vault cluster target hosts"
+    value       = step.create_vault_cluster.target_hosts
+  }
+
+  output "private_ips" {
     description = "The Vault cluster private IPs"
-    value       = step.create_vault_cluster.instance_private_ips
+    value       = step.create_vault_cluster.private_ips
   }
 
-  output "vault_cluster_key_id" {
-    description = "The Vault cluster Key ID"
-    value       = step.create_vault_cluster.key_id
+  output "public_ips" {
+    description = "The Vault cluster public IPs"
+    value       = step.create_vault_cluster.public_ips
   }
 
-  output "vault_cluster_root_token" {
+  output "root_token" {
     description = "The Vault cluster root token"
-    value       = step.create_vault_cluster.vault_root_token
+    value       = step.create_vault_cluster.root_token
   }
 
-  output "vault_cluster_unseal_keys_b64" {
+  output "recovery_key_shares" {
+    description = "The Vault cluster recovery key shares"
+    value       = step.create_vault_cluster.recovery_key_shares
+  }
+
+  output "recovery_keys_b64" {
+    description = "The Vault cluster recovery keys b64"
+    value       = step.create_vault_cluster.recovery_keys_b64
+  }
+
+  output "recovery_keys_hex" {
+    description = "The Vault cluster recovery keys hex"
+    value       = step.create_vault_cluster.recovery_keys_hex
+  }
+
+  output "unseal_keys_b64" {
     description = "The Vault cluster unseal keys"
-    value       = step.create_vault_cluster.vault_unseal_keys_b64
+    value       = step.create_vault_cluster.unseal_keys_b64
   }
 
-  output "vault_cluster_unseal_keys_hex" {
+  output "unseal_keys_hex" {
     description = "The Vault cluster unseal keys hex"
-    value       = step.create_vault_cluster.vault_unseal_keys_hex
+    value       = step.create_vault_cluster.unseal_keys_hex
   }
 
-  output "vault_cluster_tag" {
-    description = "The Vault cluster tag"
-    value       = step.create_vault_cluster.vault_cluster_tag
+  output "ui_test_environment" {
+    value       = step.test_ui.ui_test_environment
+    description = "The environment variables that are required in order to run the test:enos yarn target"
   }
 
   output "ui_test_stderr" {
@@ -202,10 +242,5 @@ scenario "ui" {
   output "ui_test_stdout" {
     description = "The stdout of the ui tests that ran"
     value       = step.test_ui.ui_test_stdout
-  }
-
-  output "ui_test_environment" {
-    value       = step.test_ui.ui_test_environment
-    description = "The environment variables that are required in order to run the test:enos yarn target"
   }
 }

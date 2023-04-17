@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -5,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	jose "gopkg.in/square/go-jose.v2"
 )
@@ -31,6 +35,14 @@ type jwsCtx struct {
 	Url      string          `json:"url"`
 	Key      jose.JSONWebKey `json:"-"`
 	Existing bool            `json:"-"`
+}
+
+func (c *jwsCtx) GetKeyThumbprint() (string, error) {
+	keyThumbprint, err := c.Key.Thumbprint(crypto.SHA256)
+	if err != nil {
+		return "", fmt.Errorf("failed creating thumbprint: %w", err)
+	}
+	return base64.URLEncoding.EncodeToString(keyThumbprint), nil
 }
 
 func (c *jwsCtx) UnmarshalJSON(a *acmeState, ac *acmeContext, jws []byte) error {
@@ -70,10 +82,12 @@ func (c *jwsCtx) UnmarshalJSON(a *acmeState, ac *acmeContext, jws []byte) error 
 
 	if c.Kid != "" {
 		// Load KID from storage first.
-		c.Jwk, err = a.LoadJWK(ac, c.Kid)
+		kid := getKeyIdFromAccountUrl(c.Kid)
+		c.Jwk, err = a.LoadJWK(ac, kid)
 		if err != nil {
 			return err
 		}
+		c.Kid = kid // Use the uuid itself, not the full account url that was originally provided to us.
 		c.Existing = true
 	}
 
@@ -86,17 +100,16 @@ func (c *jwsCtx) UnmarshalJSON(a *acmeState, ac *acmeContext, jws []byte) error 
 	}
 
 	if c.Kid == "" {
-		// Create a key ID
-		kid, err := c.Key.Thumbprint(crypto.SHA256)
-		if err != nil {
-			return fmt.Errorf("failed creating thumbprint: %w", err)
-		}
-
-		c.Kid = base64.URLEncoding.EncodeToString(kid)
+		c.Kid = genUuid()
 		c.Existing = false
 	}
 
 	return nil
+}
+
+func getKeyIdFromAccountUrl(accountUrl string) string {
+	pieces := strings.Split(accountUrl, "/")
+	return pieces[len(pieces)-1]
 }
 
 func hasValues(h jose.Header) bool {
@@ -131,6 +144,11 @@ func (c *jwsCtx) VerifyJWS(signature string) (map[string]interface{}, error) {
 	payload, err := sig.Verify(c.Key)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(payload) == 0 {
+		// Distinguish POST-AS-GET from POST-with-an-empty-body.
+		return nil, nil
 	}
 
 	var m map[string]interface{}

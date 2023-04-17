@@ -834,10 +834,13 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 			t.Fatalf("err: %v", err)
 		}
 		defaults := map[string]interface{}{
-			"default_report_months": 12,
-			"retention_months":      24,
-			"enabled":               activityLogEnabledDefaultValue,
-			"queries_available":     false,
+			"default_report_months":    12,
+			"retention_months":         24,
+			"enabled":                  activityLogEnabledDefaultValue,
+			"queries_available":        false,
+			"reporting_enabled":        core.censusLicensingEnabled,
+			"billing_start_timestamp":  core.GetBillingStart(),
+			"minimum_retention_months": core.activityLog.configOverrides.MinimumRetentionMonths,
 		}
 
 		if diff := deep.Equal(resp.Data, defaults); len(diff) > 0 {
@@ -915,10 +918,13 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 			t.Fatalf("err: %v", err)
 		}
 		expected := map[string]interface{}{
-			"default_report_months": 1,
-			"retention_months":      2,
-			"enabled":               "enable",
-			"queries_available":     false,
+			"default_report_months":    1,
+			"retention_months":         2,
+			"enabled":                  "enable",
+			"queries_available":        false,
+			"reporting_enabled":        core.censusLicensingEnabled,
+			"billing_start_timestamp":  core.GetBillingStart(),
+			"minimum_retention_months": core.activityLog.configOverrides.MinimumRetentionMonths,
 		}
 
 		if diff := deep.Equal(resp.Data, expected); len(diff) > 0 {
@@ -951,10 +957,13 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 		}
 
 		defaults := map[string]interface{}{
-			"default_report_months": 12,
-			"retention_months":      24,
-			"enabled":               activityLogEnabledDefaultValue,
-			"queries_available":     false,
+			"default_report_months":    12,
+			"retention_months":         24,
+			"enabled":                  activityLogEnabledDefaultValue,
+			"queries_available":        false,
+			"reporting_enabled":        core.censusLicensingEnabled,
+			"billing_start_timestamp":  core.GetBillingStart(),
+			"minimum_retention_months": core.activityLog.configOverrides.MinimumRetentionMonths,
 		}
 
 		if diff := deep.Equal(resp.Data, defaults); len(diff) > 0 {

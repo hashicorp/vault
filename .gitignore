@@ -67,6 +67,10 @@ enos/.terraform/*
 enos/.terraform.lock.hcl
 enos/*.tfstate
 enos/*.tfstate.*
+enos/**/.terraform/*
+enos/**/.terraform.lock.hcl
+enos/**/*.tfstate
+enos/**/*.tfstate.*
 
 .DS_Store
 .idea

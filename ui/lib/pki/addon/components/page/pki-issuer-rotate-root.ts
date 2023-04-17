@@ -12,8 +12,7 @@ import FlashMessageService from 'vault/services/flash-messages';
 import SecretMountPath from 'vault/services/secret-mount-path';
 import PkiIssuerModel from 'vault/models/pki/issuer';
 import PkiActionModel from 'vault/vault/models/pki/action';
-import { Breadcrumb } from 'vault/vault/app-types';
-import { parsedParameters } from 'vault/utils/parse-pki-cert-oids';
+import { Breadcrumb, ValidationMap } from 'vault/vault/app-types';
 
 interface Args {
   oldRoot: PkiIssuerModel;
@@ -35,11 +34,11 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
 
   @tracked displayedForm = RADIO_BUTTON_KEY.oldSettings;
   @tracked showOldSettings = false;
+  @tracked modelValidations: ValidationMap | null = null;
   // form alerts below are only for "use old settings" option
   // validations/errors for "customize new root" are handled by <PkiGenerateRoot> component
   @tracked alertBanner = '';
   @tracked invalidFormAlert = '';
-  @tracked modelValidations = null;
 
   get generateOptions() {
     return [
@@ -71,7 +70,6 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
       'keyName',
       'keyId',
       'serialNumber',
-      ...parsedParameters,
     ];
     return this.args.newRootModel.id ? [...defaultFields, ...addKeyFields] : defaultFields;
   }

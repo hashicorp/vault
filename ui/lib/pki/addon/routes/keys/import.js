@@ -3,12 +3,13 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-import PkiKeysIndexRoute from '.';
+import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 import { withConfirmLeave } from 'core/decorators/confirm-leave';
 
 @withConfirmLeave()
-export default class PkiKeysImportRoute extends PkiKeysIndexRoute {
+export default class PkiKeysImportRoute extends Route {
+  @service secretMountPath;
   @service store;
 
   model() {
@@ -17,6 +18,11 @@ export default class PkiKeysImportRoute extends PkiKeysIndexRoute {
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-    controller.breadcrumbs.push({ label: 'import' });
+    controller.breadcrumbs = [
+      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: this.secretMountPath.currentPath, route: 'overview' },
+      { label: 'keys', route: 'keys.index' },
+      { label: 'import' },
+    ];
   }
 }

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -8,22 +11,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func pathAcmeRootNonce(b *backend) *framework.Path {
-	return patternAcmeNonce(b, "acme/new-nonce")
-}
-
-func pathAcmeRoleNonce(b *backend) *framework.Path {
-	return patternAcmeNonce(b, "roles/"+framework.GenericNameRegex("role")+"/acme/new-nonce")
-}
-
-func pathAcmeIssuerNonce(b *backend) *framework.Path {
-	return patternAcmeNonce(b, "issuer/"+framework.GenericNameRegex(issuerRefParam)+"/acme/new-nonce")
-}
-
-func pathAcmeIssuerAndRoleNonce(b *backend) *framework.Path {
-	return patternAcmeNonce(b,
-		"issuer/"+framework.GenericNameRegex(issuerRefParam)+
-			"/roles/"+framework.GenericNameRegex("role")+"/acme/new-nonce")
+func pathAcmeNonce(b *backend) []*framework.Path {
+	return buildAcmeFrameworkPaths(b, patternAcmeNonce, "/new-nonce")
 }
 
 func patternAcmeNonce(b *backend, pattern string) *framework.Path {

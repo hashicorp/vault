@@ -8,10 +8,12 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { keyParamsByType } from 'pki/utils/action-params';
 import PkiActionModel from 'vault/models/pki/action';
+import { ModelValidations } from 'vault/vault/app-types';
 
 interface Args {
   model: PkiActionModel;
   groups: Map<[key: string], Array<string>> | null;
+  modelValidations?: ModelValidations;
 }
 
 export default class PkiGenerateToggleGroupsComponent extends Component<Args> {

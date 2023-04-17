@@ -104,7 +104,7 @@ jobs:
       ENOS_VAR_vault_revision: ${{ inputs.vault-revision }}
       ENOS_VAR_vault_bundle_path: ./support/downloads/${{ inputs.build-artifact-name }}
       ENOS_VAR_vault_license_path: ./support/vault.hclic
-      ENOS_DEBUG_DATA_ROOT_DIR: ./enos/support/debug-data
+      ENOS_DEBUG_DATA_ROOT_DIR: /tmp/enos-debug-data
     steps:
       - uses: actions/checkout@v3
       - uses: hashicorp/setup-terraform@v2
@@ -129,7 +129,7 @@ jobs:
           mkdir -p "./enos/support/terraform-plugin-cache"
           echo "${{ secrets.SSH_KEY_PRIVATE_CI }}" > "./enos/support/private_key.pem"
           chmod 600 "./enos/support/private_key.pem"
-          echo "debug_data_artifact_name=enos-debug-data_$(echo "${{ matrix.scenario }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')" >> $GITHUB_OUTPUT
+          echo "debug_data_artifact_name=enos-debug-data_$(echo "${{ matrix.scenario }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')" >> "$GITHUB_OUTPUT"
       - if: contains(inputs.matrix-file-name, 'github')
         uses: actions/download-artifact@v3
         with:

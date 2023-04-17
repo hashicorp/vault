@@ -347,11 +347,73 @@ func (c *Client) retryOCSP(
 		// endpoint might return invalid results for e.g., GET but return
 		// valid results for POST on retry. This could happen if e.g., the
 		// server responds with JSON.
-		ocspRes, err = ocsp.ParseResponse(ocspResBytes, issuer)
+		ocspRes, err = ocsp.ParseResponse(ocspResBytes /*issuer = */, nil /* !!unsafe!! */)
 		if err != nil {
 			err = fmt.Errorf("error parsing %v OCSP response: %w", method, err)
 			retErr = multierror.Append(retErr, err)
 			continue
+		}
+
+		// Above, we use the unsafe issuer=nil parameter to ocsp.ParseResponse
+		// because Go's library does the wrong thing.
+		//
+		// Here, we lack a full chain, but we know we trust the parent issuer,
+		// so if the Go library incorrectly discards useful certificates, we
+		// likely cannot verify this without passing through the full chain
+		// back to the root.
+		//
+		// Instead, take one of two paths: 1. if there is no certificate in
+		// the ocspRes, verify the OCSP response directly with our trusted
+		// issuer certificate, or 2. if there is a certificate, either verify
+		// it directly matches our trusted issuer certificate, or verify it
+		// is signed by our trusted issuer certificate.
+		//
+		// See also: https://github.com/golang/go/issues/59641
+		//
+		// This addresses the !!unsafe!! behavior above.
+		if ocspRes.Certificate == nil {
+			if err := ocspRes.CheckSignatureFrom(issuer); err != nil {
+				err = fmt.Errorf("error directly verifying signature on %v OCSP response: %w", method, err)
+				retErr = multierror.Append(retErr, err)
+				continue
+			}
+		} else {
+			// Because we have at least one certificate here, we know that
+			// Go's ocsp library verified the signature from this certificate
+			// onto the response and it was valid. Now we need to know we trust
+			// this certificate. There's two ways we can do this:
+			//
+			// 1. Via confirming issuer == ocspRes.Certificate, or
+			// 2. Via confirming ocspRes.Certificate.CheckSignatureFrom(issuer).
+			if !bytes.Equal(issuer.Raw, ocspRes.Raw) {
+				// 1 must not hold, so 2 holds; verify the signature.
+				if err := ocspRes.Certificate.CheckSignatureFrom(issuer); err != nil {
+					err = fmt.Errorf("error checking chain of trust on %v OCSP response via %v failed: %w", method, issuer.Subject.String(), err)
+					retErr = multierror.Append(retErr, err)
+					continue
+				}
+
+				// Verify the OCSP responder certificate is still valid and
+				// contains the required EKU since it is a delegated OCSP
+				// responder certificate.
+				if ocspRes.Certificate.NotAfter.Before(time.Now()) {
+					err := fmt.Errorf("error checking delegated OCSP responder on %v OCSP response: certificate has expired", method)
+					retErr = multierror.Append(retErr, err)
+					continue
+				}
+				haveEKU := false
+				for _, ku := range ocspRes.Certificate.ExtKeyUsage {
+					if ku == x509.ExtKeyUsageOCSPSigning {
+						haveEKU = true
+						break
+					}
+				}
+				if !haveEKU {
+					err := fmt.Errorf("error checking delegated OCSP responder on %v OCSP response: certificate lacks the OCSP Signing EKU", method)
+					retErr = multierror.Append(retErr, err)
+					continue
+				}
+			}
 		}
 
 		// While we haven't validated the signature on the OCSP response, we

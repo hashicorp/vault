@@ -87,6 +87,7 @@ const MOUNTABLE_SECRET_ENGINES = [
   {
     displayName: 'PKI Certificates',
     type: 'pki',
+    engineRoute: 'pki.overview',
     category: 'generic',
   },
   {
