@@ -59,8 +59,10 @@ func (c *Client) DialLDAP(cfg *ConfigEntry) (Connection, error) {
 				port = "389"
 			}
 
+			fullAddr := fmt.Sprintf("%s://%s", u.Scheme, net.JoinHostPort(host, port))
 			opt := ldap.DialWithDialer(&dialer)
-			conn, err = c.LDAP.Dial(net.JoinHostPort(host, port), opt)
+
+			conn, err = c.LDAP.DialURL(fullAddr, opt)
 			if err != nil {
 				break
 			}
@@ -83,8 +85,11 @@ func (c *Client) DialLDAP(cfg *ConfigEntry) (Connection, error) {
 			if err != nil {
 				break
 			}
+
+			fullAddr := fmt.Sprintf("%s://%s", u.Scheme, net.JoinHostPort(host, port))
 			opt := ldap.DialWithTLSDialer(tlsConfig, &dialer)
-			conn, err = c.LDAP.Dial(net.JoinHostPort(host, port), opt)
+
+			conn, err = c.LDAP.DialURL(fullAddr, opt)
 			if err != nil {
 				break
 			}

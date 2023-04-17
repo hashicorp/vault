@@ -14,11 +14,11 @@ func NewLDAP() LDAP {
 // LDAP provides ldap functionality, but through an interface
 // rather than statically. This allows faking it for tests.
 type LDAP interface {
-	Dial(addr string, opts ...ldap.DialOpt) (Connection, error)
+	DialURL(addr string, opts ...ldap.DialOpt) (Connection, error)
 }
 
 type ldapIfc struct{}
 
-func (l *ldapIfc) Dial(addr string, opts ...ldap.DialOpt) (Connection, error) {
+func (l *ldapIfc) DialURL(addr string, opts ...ldap.DialOpt) (Connection, error) {
 	return ldap.DialURL(addr, opts...)
 }
