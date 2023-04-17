@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -8,22 +11,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func pathAcmeRootNonce(b *backend) *framework.Path {
-	return patternAcmeNonce(b, "acme/new-nonce")
-}
-
-func pathAcmeRoleNonce(b *backend) *framework.Path {
-	return patternAcmeNonce(b, "roles/"+framework.GenericNameRegex("role")+"/acme/new-nonce")
-}
-
-func pathAcmeIssuerNonce(b *backend) *framework.Path {
-	return patternAcmeNonce(b, "issuer/"+framework.GenericNameRegex(issuerRefParam)+"/acme/new-nonce")
-}
-
-func pathAcmeIssuerAndRoleNonce(b *backend) *framework.Path {
-	return patternAcmeNonce(b,
-		"issuer/"+framework.GenericNameRegex(issuerRefParam)+
-			"/roles/"+framework.GenericNameRegex("role")+"/acme/new-nonce")
+func pathAcmeNonce(b *backend) []*framework.Path {
+	return buildAcmeFrameworkPaths(b, patternAcmeNonce, "/new-nonce")
 }
 
 func patternAcmeNonce(b *backend, pattern string) *framework.Path {
@@ -51,7 +40,7 @@ func patternAcmeNonce(b *backend, pattern string) *framework.Path {
 	}
 }
 
-func (b *backend) acmeNonceHandler(ctx acmeContext, r *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+func (b *backend) acmeNonceHandler(ctx *acmeContext, r *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	nonce, _, err := b.acmeState.GetNonce()
 	if err != nil {
 		return nil, err
@@ -71,11 +60,14 @@ func (b *backend) acmeNonceHandler(ctx acmeContext, r *logical.Request, _ *frame
 		},
 		Data: map[string]interface{}{
 			logical.HTTPStatusCode: httpStatus,
+			// Get around Vault limitation of requiring a body set if the status is not http.StatusNoContent
+			// for our HEAD request responses.
+			logical.HTTPContentType: "",
 		},
 	}, nil
 }
 
-func genAcmeLinkHeader(ctx acmeContext) []string {
-	path := fmt.Sprintf("<%s>;rel=\"index\"", ctx.baseUrl.JoinPath("/acme/directory").String())
+func genAcmeLinkHeader(ctx *acmeContext) []string {
+	path := fmt.Sprintf("<%s>;rel=\"index\"", ctx.baseUrl.JoinPath("directory").String())
 	return []string{path}
 }

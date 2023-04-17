@@ -7,6 +7,7 @@ import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 import { withConfig } from 'pki/decorators/check-config';
 import { hash } from 'rsvp';
+import { getCliMessage } from 'pki/routes/overview';
 
 @withConfig()
 export default class PkiCertificatesIndexRoute extends Route {
@@ -31,5 +32,13 @@ export default class PkiCertificatesIndexRoute extends Route {
       certificates: this.fetchCertificates(),
       parentModel: this.modelFor('certificates'),
     });
+  }
+
+  setupController(controller, resolvedModel) {
+    super.setupController(controller, resolvedModel);
+    const certificates = resolvedModel.certificates;
+
+    if (certificates?.length) controller.notConfiguredMessage = getCliMessage('certificates');
+    else controller.notConfiguredMessage = getCliMessage();
   }
 }

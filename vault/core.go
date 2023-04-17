@@ -644,6 +644,9 @@ type Core struct {
 	// censusAgent is the mechanism used for reporting Vault's billing data.
 	censusAgent *CensusAgent
 
+	// censusLicensingEnabled records whether Vault is exporting census metrics
+	censusLicensingEnabled bool
+
 	// activeTime is set on active nodes indicating the time at which this node
 	// became active.
 	activeTime time.Time
@@ -4011,4 +4014,15 @@ func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState,
 // Events returns a reference to the common event bus for sending and subscribint to events.
 func (c *Core) Events() *eventbus.EventBus {
 	return c.events
+}
+
+// GetBillingStart gets the billing start timestamp from the configured Census
+// Agent, handling a nil agent.
+func (c *Core) GetBillingStart() time.Time {
+	var billingStart time.Time
+	if c.censusAgent != nil {
+		billingStart = c.censusAgent.billingStart
+	}
+
+	return billingStart
 }

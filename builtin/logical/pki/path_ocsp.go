@@ -71,16 +71,33 @@ var (
 )
 
 func buildPathOcspGet(b *backend) *framework.Path {
-	return buildOcspGetWithPath(b, "ocsp/"+framework.MatchAllRegex(ocspReqParam))
+	pattern := "ocsp/" + framework.MatchAllRegex(ocspReqParam)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationVerb:   "query",
+		OperationSuffix: "ocsp-with-get-req",
+	}
+
+	return buildOcspGetWithPath(b, pattern, displayAttrs)
 }
 
 func buildPathUnifiedOcspGet(b *backend) *framework.Path {
-	return buildOcspGetWithPath(b, "unified-ocsp/"+framework.MatchAllRegex(ocspReqParam))
+	pattern := "unified-ocsp/" + framework.MatchAllRegex(ocspReqParam)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationVerb:   "query",
+		OperationSuffix: "unified-ocsp-with-get-req",
+	}
+
+	return buildOcspGetWithPath(b, pattern, displayAttrs)
 }
 
-func buildOcspGetWithPath(b *backend, pattern string) *framework.Path {
+func buildOcspGetWithPath(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	return &framework.Path{
-		Pattern: pattern,
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
 		Fields: map[string]*framework.FieldSchema{
 			ocspReqParam: {
 				Type:        framework.TypeString,
@@ -99,16 +116,33 @@ func buildOcspGetWithPath(b *backend, pattern string) *framework.Path {
 }
 
 func buildPathOcspPost(b *backend) *framework.Path {
-	return buildOcspPostWithPath(b, "ocsp")
+	pattern := "ocsp"
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationVerb:   "query",
+		OperationSuffix: "ocsp",
+	}
+
+	return buildOcspPostWithPath(b, pattern, displayAttrs)
 }
 
 func buildPathUnifiedOcspPost(b *backend) *framework.Path {
-	return buildOcspPostWithPath(b, "unified-ocsp")
+	pattern := "unified-ocsp"
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationVerb:   "query",
+		OperationSuffix: "unified-ocsp",
+	}
+
+	return buildOcspPostWithPath(b, pattern, displayAttrs)
 }
 
-func buildOcspPostWithPath(b *backend, pattern string) *framework.Path {
+func buildOcspPostWithPath(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	return &framework.Path{
-		Pattern: pattern,
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.ocspHandler,
@@ -465,13 +499,19 @@ func genResponse(cfg *crlConfig, caBundle *certutil.ParsedCertBundle, info *ocsp
 		revSigAlg = x509.SHA512WithRSA
 	}
 
+	// Due to a bug in Go's ocsp.ParseResponse(...), we do not provision
+	// Certificate any more on the response to help Go based OCSP clients.
+	// This was technically unnecessary, as the Certificate given here
+	// both signed the OCSP response and issued the leaf cert, and so
+	// should already be trusted by the client.
+	//
+	// See also: https://github.com/golang/go/issues/59641
 	template := ocsp.Response{
 		IssuerHash:         reqHash,
 		Status:             info.ocspStatus,
 		SerialNumber:       info.serialNumber,
 		ThisUpdate:         curTime,
 		NextUpdate:         curTime.Add(duration),
-		Certificate:        caBundle.Certificate,
 		ExtraExtensions:    []pkix.Extension{},
 		SignatureAlgorithm: revSigAlg,
 	}

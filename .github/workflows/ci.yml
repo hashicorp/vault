@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "main"
+  workflow_dispatch:
 
 jobs:
   setup:
@@ -32,10 +33,10 @@ jobs:
           echo 'go-build-tags=ent,enterprise' >> "$GITHUB_OUTPUT"
         else
           # shellcheck disable=SC2129
-          echo 'compute-tiny="ubuntu-latest"' >> "$GITHUB_OUTPUT"
-          echo 'compute-standard="custom-linux-xl-vault-latest"' >> "$GITHUB_OUTPUT"
-          echo 'compute-larger="custom-linux-xl-vault-latest"' >> "$GITHUB_OUTPUT"
-          echo 'compute-huge="custom-linux-xl-vault-latest"' >> "$GITHUB_OUTPUT"
+          echo 'compute-tiny="ubuntu-latest"' >> "$GITHUB_OUTPUT"                         #  2 cores,   7 GB RAM,   14 GB SSD
+          echo 'compute-standard="custom-linux-small-vault-latest"' >> "$GITHUB_OUTPUT"   #  8 cores,  32 GB RAM,  300 GB SSD
+          echo 'compute-larger="custom-linux-medium-vault-latest"' >> "$GITHUB_OUTPUT"    # 16 cores,  64 GB RAM,  600 GB SSD
+          echo 'compute-huge="custom-linux-xl-vault-latest"' >> "$GITHUB_OUTPUT"          # 32-cores, 128 GB RAM, 1200 GB SSD
           echo 'enterprise=' >> "$GITHUB_OUTPUT"
           echo 'go-build-tags=' >> "$GITHUB_OUTPUT"
         fi
@@ -185,7 +186,6 @@ jobs:
     if: |
       github.ref_name == 'main' ||
       startsWith(github.ref_name, 'release/') ||
-      startsWith(github.base_ref, 'release/') ||
       startsWith(github.head_ref, 'ui/') ||
       startsWith(github.head_ref, 'backport/ui/') ||
       startsWith(github.head_ref, 'merge')
@@ -204,20 +204,20 @@ jobs:
     # Setup node.js without caching to allow running npm install -g yarn (next step)
     - uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c
       with:
-        node-version: 14
+        node-version-file: './ui/package.json'
     - id: install-yarn
       run: |
         npm install -g yarn
     # Setup node.js with caching using the yarn.lock file
     - uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c
       with:
-        node-version: 14
+        node-version-file: './ui/package.json'
         cache: yarn
         cache-dependency-path: ui/yarn.lock
     - id: install-browser-libraries
       run: sudo apt install -y libnss3-dev libgdk-pixbuf2.0-dev libgtk-3-dev libxss-dev libasound2
     - id: install-browser
-      uses: browser-actions/setup-chrome@597130847c84cdac5acceccbd676d612e6f8beb8
+      uses: browser-actions/setup-chrome@29abc1a83d1d71557708563b4bc962d0f983a376
     - id: ui-dependencies
       name: ui-dependencies
       working-directory: ./ui
@@ -283,10 +283,8 @@ jobs:
     - setup
     - test-go
     - test-ui
-    if: |
-      always() &&
-      !contains(needs.*.result, 'failure') &&
-      !contains(needs.*.result, 'cancelled')
+    if: always()
     runs-on: ${{ fromJSON(needs.setup.outputs.compute-tiny) }}
     steps:
-    - run: echo "All Go tests successfully passed"
+    - run: |
+        tr -d '\n' <<< '${{ toJSON(needs.*.result) }}' | grep -q -v -E '(failure|cancelled)' 

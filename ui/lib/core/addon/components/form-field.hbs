@@ -318,6 +318,14 @@
         {{#if this.validationError}}
           <AlertInline @type="danger" @message={{this.validationError}} @paddingTop={{true}} />
         {{/if}}
+        {{#if this.validationWarning}}
+          <AlertInline
+            @type="warning"
+            @message={{this.validationWarning}}
+            @paddingTop={{true}}
+            data-test-validation-warning
+          />
+        {{/if}}
       {{/if}}
     </div>
   {{else if (eq @attr.type "boolean")}}

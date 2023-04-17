@@ -13,15 +13,20 @@ export default class ConfigurationIndexRoute extends Route {
   @service store;
   @service secretMountPath;
 
-  model() {
-    const backend = this.secretMountPath.currentPath;
-    return hash({
-      hasConfig: this.shouldPromptConfig,
-      engine: this.modelFor('application'),
-      urls: this.store.findRecord('pki/urls', backend),
-      crl: this.store.findRecord('pki/crl', backend),
-      mountConfig: this.fetchMountConfig(backend),
-    });
+  async fetchUrls(backend) {
+    try {
+      return await this.store.findRecord('pki/urls', backend);
+    } catch (e) {
+      return e.httpStatus;
+    }
+  }
+
+  async fetchCrl(backend) {
+    try {
+      return await this.store.findRecord('pki/crl', backend);
+    } catch (e) {
+      return e.httpStatus;
+    }
   }
 
   async fetchMountConfig(path) {
@@ -30,5 +35,22 @@ export default class ConfigurationIndexRoute extends Route {
     if (mountConfig) {
       return mountConfig.get('firstObject');
     }
+  }
+
+  async model() {
+    const backend = this.secretMountPath.currentPath;
+
+    return hash({
+      hasConfig: this.shouldPromptConfig,
+      engine: this.modelFor('application'),
+      urls: this.fetchUrls(backend),
+      crl: this.fetchCrl(backend),
+      mountConfig: this.fetchMountConfig(backend),
+      issuerModel: this.store.createRecord('pki/issuer'),
+    });
+  }
+
+  setupController(controller, resolvedModel) {
+    super.setupController(controller, resolvedModel);
   }
 }

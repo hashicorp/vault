@@ -208,17 +208,11 @@
     "eslint-utils": "^1.4.1",
     "ember-basic-dropdown": "6.0.1",
     "growl": "^1.10.0",
-    "handlebars": "^4.3.0",
     "highlight.js": "^10.4.1",
     "https-proxy-agent": "^2.2.3",
     "ini": "^1.3.6",
-    "js-yaml": "^3.13.1",
     "kind-of": "^6.0.3",
-    "lodash.defaultsdeep": "^4.6.1",
-    "lodash.merge": "^4.6.2",
-    "lodash": "^4.17.13",
     "minimatch": "^3.0.2",
-    "minimist": "^1.2.2",
     "node-notifier": "^8.0.1",
     "prismjs": "^1.21.0",
     "qs": "^6.3.0",
@@ -229,7 +223,7 @@
     "@hashicorp/ember-flight-icons": "2.0.3"
   },
   "engines": {
-    "node": "12.* || 14.* || >= 16"
+    "node": "16"
   },
   "ember": {
     "edition": "octane"
@@ -249,10 +243,8 @@
     ]
   },
   "dependencies": {
-    "handlebars": "^4.3.0",
+    "handlebars": "4.7.7",
     "highlight.js": "^10.4.1",
-    "js-yaml": "^3.13.1",
-    "lodash": "^4.17.13",
     "node-notifier": "^8.0.1",
     "uuid": "^9.0.0"
   }

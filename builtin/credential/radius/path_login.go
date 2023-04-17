@@ -23,6 +23,13 @@ import (
 func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login" + framework.OptionalParamRegex("urlusername"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixRadius,
+			OperationVerb:   "log-in",
+			OperationSuffix: "|with-username",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"urlusername": {
 				Type:        framework.TypeString,

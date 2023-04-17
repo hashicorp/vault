@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix bad link to namespace when namespace name includes `.`
+```
