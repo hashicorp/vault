@@ -28,12 +28,10 @@
     .input,
     .select select {
       border-radius: 0;
-      &:hover,
-      &.is-hovered {
+      &:hover {
         z-index: 2;
       }
       &:focus,
-      &.is-focused,
       &:active,
       &.is-active {
         z-index: 3;

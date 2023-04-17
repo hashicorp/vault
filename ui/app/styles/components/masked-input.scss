@@ -80,7 +80,6 @@
     &:active,
     &.is-active,
     &:focus,
-    &.is-focused,
     &:hover,
     &:focus:not(:active) {
       color: $blue;
