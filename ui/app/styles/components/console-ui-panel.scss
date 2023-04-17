@@ -5,12 +5,13 @@
 
 .console-ui-panel {
   background: var(--token-color-palette-neutral-700);
+  width: 100%;
   height: 0;
-  left: 0;
   min-height: 0;
   overflow: auto;
+  position: absolute;
   right: 0;
-  top: $header-height;
+  bottom: 0;
   transition: min-height $speed ease-out, transform $speed ease-in;
   will-change: transform, min-height;
   -webkit-overflow-scrolling: touch;
@@ -39,7 +40,7 @@
   font-weight: $font-weight-semibold;
   justify-content: flex-end;
   min-height: 100%;
-  padding: $size-8 $size-8 $size-4;
+  padding: $size-8 $size-8 $size-5;
   transition: justify-content $speed ease-in;
 
   pre,
@@ -124,7 +125,6 @@
 
 .panel-open .console-ui-panel.fullscreen {
   bottom: 0;
-  top: 0;
   min-height: 100vh;
   min-width: 100vh;
   position: fixed;
@@ -146,8 +146,13 @@
 }
 
 .console-close-button {
-  position: absolute;
+  position: sticky;
   top: $spacing-xs;
-  right: $spacing-xs;
+  display: flex;
+  justify-content: flex-end;
   z-index: 210;
+
+  button {
+    margin-right: $spacing-xs;
+  }
 }
