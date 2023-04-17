@@ -82,9 +82,10 @@ func (c *Client) DialLDAP(cfg *ConfigEntry) (Connection, error) {
 			}
 
 			fullAddr := fmt.Sprintf("%s://%s", u.Scheme, net.JoinHostPort(host, port))
-			opt := ldap.DialWithTLSDialer(tlsConfig, &dialer)
+			opt := ldap.DialWithDialer(&dialer)
+			tls := ldap.DialWithTLSConfig(tlsConfig)
 
-			conn, err = c.LDAP.DialURL(fullAddr, opt)
+			conn, err = c.LDAP.DialURL(fullAddr, opt, tls)
 			if err != nil {
 				break
 			}
