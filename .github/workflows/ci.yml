@@ -1,6 +1,7 @@
 name: CI
 on:
   pull_request:
+    types: [ labeled, unlabeled ]
   push:
     branches:
       - "main"
