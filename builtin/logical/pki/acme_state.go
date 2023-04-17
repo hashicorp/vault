@@ -18,11 +18,11 @@ const (
 	// How long nonces are considered valid.
 	nonceExpiry = 15 * time.Minute
 
-	// Path Prefixes
+	// Path Prefixes // TODO, these are the things to tidy
 	acmePathPrefix          = "acme/"
 	acmeAccountPrefix       = acmePathPrefix + "accounts/"
 	acmeThumbprintPrefix    = acmePathPrefix + "account-thumbprints/"
-	acmeAuthroizationPrefix = acmePathPrefix + "authz/"
+	acmeAuthroizationPrefix = acmePathPrefix + "authz/" // TODO: These contain the challenges, which will need to be cleaned up by tidy (need to wait on orders)
 )
 
 type acmeState struct {
@@ -132,6 +132,8 @@ type acmeAccount struct {
 	Contact              []string          `json:"contact"`
 	TermsOfServiceAgreed bool              `json:"termsOfServiceAgreed"`
 	Jwk                  []byte            `json:"jwk"`
+	LastAccessDate       time.Time         `json:"last_access_date"`
+	MarkedAsRevokedDate  *time.Time        `json:"marked_as_revoked_date"`
 }
 
 func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, contact []string, termsOfServiceAgreed bool) (*acmeAccount, error) {
@@ -166,6 +168,8 @@ func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, contact []string, 
 		TermsOfServiceAgreed: termsOfServiceAgreed,
 		Jwk:                  c.Jwk,
 		Status:               StatusValid,
+		LastAccessDate:       time.Now(),
+		MarkedAsRevokedDate:  nil,
 	}
 	json, err := logical.StorageEntryJSON(acmeAccountPrefix+c.Kid, acct)
 	if err != nil {
@@ -214,6 +218,40 @@ func (a *acmeState) LoadAccount(ac *acmeContext, keyId string) (*acmeAccount, er
 	return &acct, nil
 }
 
+func (a *acmeState) DeleteAccountByThumbprint(ac *acmeContext, keyThumbprint string) error {
+	thumbprintEntry, err := ac.sc.Storage.Get(ac.sc.Context, acmeThumbprintPrefix+keyThumbprint)
+	if err != nil {
+		return fmt.Errorf("error retrieving thumbprint entry %v, unable to find corresponding account entry: %w", keyThumbprint, err)
+	}
+	if thumbprintEntry == nil {
+		return fmt.Errorf("empty thumbprint entry %v, unable to find corresponding account entry", keyThumbprint)
+	}
+
+	var thumbprint acmeThumbprint
+	err = thumbprintEntry.DecodeJSON(&thumbprint)
+	if err != nil {
+		return fmt.Errorf("unable to decode thumbprint entry %v to find account entry: %w", keyThumbprint, err)
+	}
+
+	if len(thumbprint.Kid) == 0 {
+		return fmt.Errorf("unable to find account entry: empty kid within thumbprint entry: %s", keyThumbprint)
+	}
+
+	// We Delete the Account Associated with this Thumbprint:
+	err = ac.sc.Storage.Delete(ac.sc.Context, acmeAccountPrefix+thumbprint.Kid)
+	if err != nil {
+		return err
+	}
+
+	// Now we delete the Thumbprint Associated with the Account:
+	err = ac.sc.Storage.Delete(ac.sc.Context, acmeThumbprintPrefix+keyThumbprint)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // LoadAccountByKey will attempt to load the account based on a key thumbprint. If the thumbprint
 // or kid is unknown a nil, nil will be returned.
 func (a *acmeState) LoadAccountByKey(ac *acmeContext, keyThumbprint string) (*acmeAccount, error) {
@@ -247,6 +285,33 @@ func (a *acmeState) LoadAccountByKey(ac *acmeContext, keyThumbprint string) (*ac
 	}
 
 	return acct, nil
+}
+
+func (a *acmeState) TidyAcmeAccount(ac *acmeContext, keyThumbprint string, markRevokedIfLastAccessedBefore time.Time, deleteIfMarkedRevokedBefore time.Time) (wasRevoked bool, wasDeleted bool, err error) {
+	acmeAccount, err := a.LoadAccountByKey(ac, keyThumbprint)
+	if err != nil { // Possibly Already Deleted
+		return false, false, err
+	}
+	if acmeAccount.MarkedAsRevokedDate != nil && !acmeAccount.MarkedAsRevokedDate.IsZero() && acmeAccount.MarkedAsRevokedDate.Before(deleteIfMarkedRevokedBefore) {
+		err := a.DeleteAccountByThumbprint(ac, keyThumbprint)
+		if err != nil {
+			return false, false, err
+		}
+		return false, true, nil
+	}
+	if acmeAccount.LastAccessDate.Before(markRevokedIfLastAccessedBefore) {
+		acmeAccount.MarkedAsRevokedDate = new(time.Time)
+		*acmeAccount.MarkedAsRevokedDate = time.Now()
+		acmeAccount.Status = StatusRevoked
+		err := a.UpdateAccount(ac, acmeAccount)
+		if err != nil {
+			return false, false, err
+		}
+		return true, false, nil
+	}
+
+	return false, false, nil
+
 }
 
 func (a *acmeState) LoadJWK(ac *acmeContext, keyId string) ([]byte, error) {
