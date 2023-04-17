@@ -32,6 +32,9 @@ jobs:
           MATRIX_MAX_TEST_GROUPS: 5
         run: |
           # shellcheck disable=SC2129
+          echo contains(github.event.pull_request.labels.*.name, 'ui') 
+          echo ${{ github.event.label.name == 'ui' }}
+          echo ${{ github.event.pull_request.label.name == 'ui' }}
           echo "build-date=$(make ci-get-date)" >> "$GITHUB_OUTPUT"
           echo "go-version=$(cat ./.go-version)" >> "$GITHUB_OUTPUT"
           echo "matrix-test-group=$(make ci-get-matrix-group-id)" >> "$GITHUB_OUTPUT"
