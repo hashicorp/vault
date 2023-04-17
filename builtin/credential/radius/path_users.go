@@ -54,7 +54,7 @@ func pathUsers(b *backend) *framework.Path {
 				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-separated list of policies associated to the user.",
 				DisplayAttrs: &framework.DisplayAttributes{
-					Description: "A list of policies associated to the user."
+					Description: "A list of policies associated to the user.",
 				},
 			},
 		},
