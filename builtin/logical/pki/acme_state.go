@@ -22,6 +22,13 @@ const (
 	// How long nonces are considered valid.
 	nonceExpiry = 15 * time.Minute
 
+	// How many bytes are in a token. Per RFC 8555 Section
+	// 8.3. HTTP Challenge and Section 11.3 Token Entropy:
+	//
+	// > token (required, string):  A random value that uniquely identifies
+	// >   the challenge.  This value MUST have at least 128 bits of entropy.
+	tokenBytes = 128 / 8
+
 	// Path Prefixes
 	acmePathPrefix       = "acme/"
 	acmeAccountPrefix    = acmePathPrefix + "accounts/"
@@ -46,6 +53,10 @@ func NewACMEState() *acmeState {
 }
 
 func generateNonce() (string, error) {
+	return generateRandomBase64(21)
+}
+
+func generateRandomBase64(srcBytes int) (string, error) {
 	data := make([]byte, 21)
 	if _, err := io.ReadFull(rand.Reader, data); err != nil {
 		return "", err
@@ -446,4 +457,8 @@ func getAuthorizationPath(accountId string, authId string) string {
 
 func getOrderPath(accountId string, orderId string) string {
 	return acmeAccountPrefix + accountId + "/orders/" + orderId
+}
+
+func getACMEToken() (string, error) {
+	return generateRandomBase64(tokenBytes)
 }

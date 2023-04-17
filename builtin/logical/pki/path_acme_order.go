@@ -195,7 +195,10 @@ func (b *backend) acmeNewOrderHandler(ac *acmeContext, r *logical.Request, _ *fr
 	var authorizations []*ACMEAuthorization
 	var authorizationIds []string
 	for _, identifier := range identifiers {
-		authz := generateAuthorization(ac, account, identifier)
+		authz, err := generateAuthorization(ac, account, identifier)
+		if err != nil {
+			return nil, fmt.Errorf("error generating authorizations: %w", err)
+		}
 		authorizations = append(authorizations, authz)
 
 		err = b.acmeState.SaveAuthorization(ac, authz)
@@ -295,15 +298,24 @@ func buildOrderUrl(acmeCtx *acmeContext, orderId string) string {
 	return acmeCtx.baseUrl.JoinPath("order", orderId).String()
 }
 
-func generateAuthorization(acmeCtx *acmeContext, acct *acmeAccount, identifier *ACMEIdentifier) *ACMEAuthorization {
+func generateAuthorization(acmeCtx *acmeContext, acct *acmeAccount, identifier *ACMEIdentifier) (*ACMEAuthorization, error) {
 	authId := genUuid()
+	var challenges []*ACMEChallenge
+	for _, challengeType := range []ACMEChallengeType{ACMEHTTPChallenge} {
+		token, err := getACMEToken()
+		if err != nil {
+			return nil, err
+		}
 
-	challenges := []*ACMEChallenge{
-		{
-			Type:            ACMEHTTPChallenge,
-			Status:          ACMEChallengePending,
-			ChallengeFields: map[string]interface{}{}, // TODO fill this in properly
-		},
+		challenge := &ACMEChallenge{
+			Type:   challengeType,
+			Status: ACMEChallengePending,
+			ChallengeFields: map[string]interface{}{
+				"token": token,
+			},
+		}
+
+		challenges = append(challenges, challenge)
 	}
 
 	return &ACMEAuthorization{
@@ -314,7 +326,7 @@ func generateAuthorization(acmeCtx *acmeContext, acct *acmeAccount, identifier *
 		Expires:    "", // only populated when it switches to valid.
 		Challenges: challenges,
 		Wildcard:   strings.HasPrefix(identifier.Value, "*."),
-	}
+	}, nil
 }
 
 func parseOptRFC3339Field(data map[string]interface{}, keyName string) (time.Time, error) {
