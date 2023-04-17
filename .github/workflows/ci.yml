@@ -181,15 +181,14 @@ jobs:
   test-ui:
     name: Test UI
     # The test-ui job is only run on:
-    # - pushes to main and branches starting with "release/"
-    # - PRs where the branch starts with "ui/", "backport/ui/", "merge", or when base branch starts with "release/"
+    # - pushes to main and branches starting with "release/" or "merge"
+    # - PRs which include the "ui" label
     if: |
       github.ref_name == 'main' ||
       startsWith(github.ref_name, 'release/') ||
       startsWith(github.base_ref, 'release/') ||
-      startsWith(github.head_ref, 'ui/') ||
-      startsWith(github.head_ref, 'backport/ui/') ||
-      startsWith(github.head_ref, 'merge')
+      startsWith(github.head_ref, 'merge') ||
+      github.event.label.name == 'ui'
     needs:
     - setup
     permissions:
