@@ -14,7 +14,7 @@
   color: $grey-dark;
   display: inline-flex;
   font-size: $size-6;
-  height: 2.5rem;
+  height: $size-2;
   line-height: 1.5;
   max-width: 100%;
   padding-bottom: calc(0.375em - 1px);
@@ -38,7 +38,8 @@
   }
 
   @include until($desktop) {
-    font-size: 16px;
+    // TODO change to rem value
+    font-size: $spacing-m;
   }
 
   &::placeholder {
@@ -70,8 +71,8 @@
 // textarea specific css
 .textarea {
   min-width: 100%;
-  padding-bottom: .625em;
-  padding-top: .625em;
+  padding-bottom: 0.625em;
+  padding-top: 0.625em;
 }
 
 .textarea:not([rows]) {

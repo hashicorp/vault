@@ -81,22 +81,17 @@
   .level > .level-item:not(.is-narrow) {
     flex-grow: 1;
   }
+  .level-left {
+    display: flex;
+  }
+
+  .level-right {
+    display: flex;
+  }
 }
 
 @media screen and (max-width: 768px) {
   .level-item:not(:last-child) {
     margin-bottom: $size-9;
-  }
-}
-
-@media screen and (min-width: 769px), print {
-  .level-left {
-    display: flex;
-  }
-}
-
-@media screen and (min-width: 769px), print {
-  .level-right {
-    display: flex;
   }
 }
