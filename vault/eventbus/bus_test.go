@@ -36,7 +36,7 @@ func TestBusBasics(t *testing.T) {
 		t.Errorf("Expected not started error but got: %v", err)
 	}
 
-	bus.Start()
+	bus.Start(true)
 
 	err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType, event)
 	if err != nil {
@@ -76,7 +76,7 @@ func TestNamespaceFiltering(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	bus.Start()
+	bus.Start(true)
 	ctx := context.Background()
 
 	eventType := logical.EventType("someType")
@@ -140,7 +140,7 @@ func TestBus2Subscriptions(t *testing.T) {
 
 	eventType1 := logical.EventType("someType1")
 	eventType2 := logical.EventType("someType2")
-	bus.Start()
+	bus.Start(true)
 
 	ch1, cancel1, err := bus.Subscribe(ctx, namespace.RootNamespace, string(eventType1))
 	if err != nil {
@@ -212,7 +212,7 @@ func TestBusSubscriptionsCancel(t *testing.T) {
 				// set the timeout very short to make the test faster if we aren't canceling explicitly
 				bus.SetSendTimeout(100 * time.Millisecond)
 			}
-			bus.Start()
+			bus.Start(true)
 
 			// create and stop a bunch of subscriptions
 			const create = 100
@@ -314,7 +314,7 @@ func TestBusWildcardSubscriptions(t *testing.T) {
 
 	fooEventType := logical.EventType("kv/foo")
 	barEventType := logical.EventType("kv/bar")
-	bus.Start()
+	bus.Start(true)
 
 	ch1, cancel1, err := bus.Subscribe(ctx, namespace.RootNamespace, "kv/*")
 	if err != nil {

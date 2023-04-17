@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/eventbus"
 	"github.com/mitchellh/copystructure"
 )
 
@@ -1689,7 +1690,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 		System:      sysView,
 		BackendUUID: entry.BackendAwareUUID,
 	}
-	if c.IsExperimentEnabled(experiments.VaultExperimentEventsAlpha1) {
+	if c.IsExperimentEnabled(experiments.VaultExperimentEventsAlpha1) || eventbus.IsPluginAlwaysEnabled(conf["plugin_name"]) {
 		config.EventsSender = pluginEventSender
 	}
 

@@ -1288,9 +1288,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, err
 	}
 	c.events = events
-	if c.IsExperimentEnabled(experiments.VaultExperimentEventsAlpha1) {
-		c.events.Start()
-	}
+	c.events.Start(c.IsExperimentEnabled(experiments.VaultExperimentEventsAlpha1))
 
 	minConnectTimeoutRaw := os.Getenv("VAULT_GRPC_MIN_CONNECT_TIMEOUT")
 	if minConnectTimeoutRaw != "" {
