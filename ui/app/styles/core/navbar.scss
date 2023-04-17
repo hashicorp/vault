@@ -23,7 +23,7 @@
 
   &.connected {
     background-color: $ui-gray-800;
-    color: #c2c5cb;
+    color: $ui-gray-300;
 
     a {
       color: #c2c5cb;
@@ -260,6 +260,7 @@
 .nav-user-button .icon {
   position: relative;
 }
+
 .nav-user-button.may-expire .icon:first-of-type::after {
   content: '';
   position: absolute;
@@ -270,6 +271,7 @@
   border-radius: 50%;
   background: $yellow;
 }
+
 .navbar-drawer-scroll {
   overflow: auto;
   height: 100%;

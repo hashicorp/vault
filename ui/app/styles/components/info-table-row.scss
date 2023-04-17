@@ -48,11 +48,13 @@
   }
 
   .hs-icon {
-    margin-right: 0.25rem;
+    margin-right: $size-11;
   }
+
   .icon-true {
     color: $green-500;
   }
+
   .icon-false {
     color: $ui-gray-300;
   }

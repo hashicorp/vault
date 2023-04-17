@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
- /* the following nested classes are used with switch: is-small, is-rounded, is-success */
+/* the following nested classes are used with switch: is-small, is-rounded, is-success */
 
 .switch[type='checkbox'] {
   display: inline-block;
@@ -12,7 +12,7 @@
   position: absolute;
   user-select: none;
 
-  +label {
+  + label {
     align-items: center;
     cursor: pointer;
     display: inline-flex;
@@ -25,27 +25,27 @@
     &::before {
       position: absolute;
       display: block;
-      top: calc(50% - 1.5rem * .5);
+      top: calc(50% - 1.5rem * 0.5);
       left: 0;
       width: $size-1;
       height: $size-4;
-      border: .1rem solid transparent;
+      border: 0.1rem solid transparent;
       border-radius: $radius-large;
-      background: $ui-gray-300; 
-      content: "" 
+      background: $ui-gray-300;
+      content: '';
     }
 
     &::after {
       background: $white;
       border-radius: $radius-large;
-      content: "";
+      content: '';
       display: block;
       height: $size-6;
       left: $size-11;
       position: absolute;
-      top: calc(50% - 1rem * .5);
+      top: calc(50% - 1rem * 0.5);
       transform: translate3d(0, 0, 0);
-      transition: all .25s ease-out;
+      transition: all 0.25s ease-out;
       width: $size-6;
     }
 
@@ -62,7 +62,7 @@
       border-radius: 16px;
     }
     &::after {
-      border-radius: 50%
+      border-radius: 50%;
     }
   }
   &.is-small {
@@ -86,13 +86,13 @@
     height: 18px;
     padding-left: $size-8 * 2.5;
     position: relative;
-    margin: 0 0.25rem;
+    margin: 0 $size-11;
     &::before {
-      border: .1rem solid transparent;
+      border: 0.1rem solid transparent;
       border-radius: $radius-large;
       background: $ui-gray-300;
       display: block;
-      content: "";
+      content: '';
       height: $size-8;
       position: absolute;
       top: $size-8/ 5;
@@ -101,19 +101,19 @@
     &::after {
       background: $white;
       border-radius: $radius-large;
-      content: "";
+      content: '';
       display: block;
       height: $size-8 * 0.8;
       left: 0;
       position: absolute;
       top: $size-8/ 4;
       transform: translateX(0.15rem);
-      transition: all .25s ease-out;
+      transition: all 0.25s ease-out;
       width: $size-8 * 0.8;
       will-change: left;
 
       &:checked {
-        left: 1.25rem;
+        left: $size-5;
       }
     }
   }
@@ -121,7 +121,6 @@
     left: 0;
     transform: translateX(($size-8 * 2) - ($size-8 * 0.94));
   }
-
 }
 
 // is-success
@@ -135,21 +134,19 @@
 }
 
 // disabled
-.switch[type=checkbox][disabled] {
+.switch[type='checkbox'][disabled] {
   cursor: not-allowed;
 }
 
-.switch[type=checkbox][disabled]+label {
-  opacity: .5;
+.switch[type='checkbox'][disabled] + label {
+  opacity: 0.5;
 }
 
-.switch[type=checkbox][disabled]+label:hover {
+.switch[type='checkbox'][disabled] + label:hover {
   cursor: not-allowed;
 }
 
 // misc.
-.field-body .switch[type=checkbox]+label {
-  margin-top: .375em;
+.field-body .switch[type='checkbox'] + label {
+  margin-top: 0.375em;
 }
-
-

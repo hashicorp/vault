@@ -6,10 +6,10 @@
 .icon {
   align-items: center;
   display: inline-flex;
-  height: 1.5rem;
+  height: $size-4;
   justify-content: center;
   vertical-align: middle;
-  width: 1.5rem;
+  width: $size-4;
 }
 
 .icon-blue {
@@ -41,8 +41,8 @@
 }
 
 .hs-icon-button-right {
-  margin-left: 0.25rem;
-  margin-right: -0.5rem;
+  margin-left: $size-11;
+  margin-right: -$size-10;
   align-items: center;
 }
 
@@ -60,6 +60,7 @@
   width: 24px;
   height: 24px;
 }
+
 .hs-icon-xl {
   width: 28px;
   height: 28px;

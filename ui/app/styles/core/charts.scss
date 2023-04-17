@@ -68,9 +68,7 @@
     text-align: right;
     > button {
       &:hover,
-      &.is-hovered,
-      &:focus,
-      &.is-focused {
+      &:focus {
         background-color: transparent;
         background-color: darken($ui-gray-050, 5%);
         border-color: darken($ui-gray-300, 5%);

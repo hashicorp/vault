@@ -10,19 +10,20 @@
   box-shadow: inset $box-link-shadow;
   border-radius: $radius;
   display: block;
-  height: 1rem;
+  height: $size-6;
   overflow: hidden;
   padding: 0;
   margin-bottom: 0;
   width: 100%;
+
   &.is-small {
-    height: 0.5rem;
+    height: $size-10;
   }
   &.is-narrow {
     width: 30px;
   }
   &.is-medium {
-    height: 1.25rem;
+    height: $size-5;
     width: 120px;
   }
 }

@@ -48,6 +48,7 @@
     border: 0;
     margin-top: $spacing-xxs;
   }
+
   .message-body.pre {
     white-space: pre-wrap;
   }
@@ -79,7 +80,7 @@
     border: 1px solid $red-050;
 
     .message-body {
-      color: $red-700; 
+      color: $red-700;
     }
 
     .message-icon {
@@ -157,7 +158,7 @@
   }
 
   &.has-top {
-    margin-top: 1rem;
+    margin-top: $size-6;
   }
 
   &.size-small {

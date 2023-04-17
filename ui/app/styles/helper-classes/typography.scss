@@ -31,6 +31,10 @@
 }
 
 // Font weight
+.has-font-weight-normal {
+  font-weight: $font-weight-normal;
+}
+
 .has-text-weight-semibold {
   font-weight: $font-weight-semibold !important;
 }
