@@ -8,6 +8,7 @@ import (
 	"crypto"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -18,9 +19,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/builtin/logical/pki"
+	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-retryablehttp"
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ocsp"
 )
 
@@ -421,6 +429,165 @@ func TestCanEarlyExitForOCSP(t *testing.T) {
 		if !(tt.retFailClosed == nil && r == nil) && !(tt.retFailClosed != nil && r != nil && tt.retFailClosed.code == r.code) {
 			t.Fatalf("%d: failed to match return. expected: %v, got: %v", idx, tt.retFailClosed, r)
 		}
+	}
+}
+
+func TestWithVaultPKI(t *testing.T) {
+	t.Parallel()
+
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": pki.Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+
+	cluster.Start()
+	defer cluster.Cleanup()
+	cores := cluster.Cores
+	vault.TestWaitActive(t, cores[0].Core)
+	client := cores[0].Client
+
+	err := client.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "32h",
+		},
+	})
+	require.NoError(t, err)
+
+	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"ttl":         "40h",
+		"common_name": "Root R1",
+		"key_type":    "ec",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.NotEmpty(t, resp.Data["issuer_id"])
+	rootIssuerId := resp.Data["issuer_id"].(string)
+
+	// Set URLs pointing to the issuer.
+	_, err = client.Logical().Write("pki/config/cluster", map[string]interface{}{
+		"path":     client.Address() + "/v1/pki",
+		"aia_path": client.Address() + "/v1/pki",
+	})
+	require.NoError(t, err)
+
+	_, err = client.Logical().Write("pki/config/urls", map[string]interface{}{
+		"enable_templating":       true,
+		"crl_distribution_points": "{{cluster_aia_path}}/issuer/{{issuer_id}}/crl/der",
+		"issuing_certificates":    "{{cluster_aia_path}}/issuer/{{issuer_id}}/der",
+		"ocsp_servers":            "{{cluster_aia_path}}/ocsp",
+	})
+	require.NoError(t, err)
+
+	// Build an intermediate CA
+	resp, err = client.Logical().Write("pki/intermediate/generate/internal", map[string]interface{}{
+		"common_name": "Int X1",
+		"key_type":    "ec",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.NotEmpty(t, resp.Data["csr"])
+	intermediateCSR := resp.Data["csr"].(string)
+
+	resp, err = client.Logical().Write("pki/root/sign-intermediate", map[string]interface{}{
+		"csr": intermediateCSR,
+		"ttl": "20h",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.NotEmpty(t, resp.Data["certificate"])
+	intermediateCert := resp.Data["certificate"]
+
+	resp, err = client.Logical().Write("pki/intermediate/set-signed", map[string]interface{}{
+		"certificate": intermediateCert,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.NotEmpty(t, resp.Data["imported_issuers"])
+	rawImportedIssuers := resp.Data["imported_issuers"].([]interface{})
+	require.Equal(t, len(rawImportedIssuers), 1)
+	importedIssuer := rawImportedIssuers[0].(string)
+	require.NotEmpty(t, importedIssuer)
+
+	// Set intermediate as default.
+	_, err = client.Logical().Write("pki/config/issuers", map[string]interface{}{
+		"default": importedIssuer,
+	})
+	require.NoError(t, err)
+
+	// Setup roles for root, intermediate.
+	_, err = client.Logical().Write("pki/roles/example-root", map[string]interface{}{
+		"allowed_domains":  "example.com",
+		"allow_subdomains": "true",
+		"max_ttl":          "1h",
+		"key_type":         "ec",
+		"issuer_ref":       rootIssuerId,
+	})
+	require.NoError(t, err)
+
+	_, err = client.Logical().Write("pki/roles/example-int", map[string]interface{}{
+		"allowed_domains":  "example.com",
+		"allow_subdomains": "true",
+		"max_ttl":          "1h",
+		"key_type":         "ec",
+	})
+	require.NoError(t, err)
+
+	// Issue certs and validate them against OCSP.
+	for _, path := range []string{"pki/issue/example-int", "pki/issue/example-root"} {
+		t.Logf("Validating against path: %v", path)
+		resp, err = client.Logical().Write(path, map[string]interface{}{
+			"common_name": "test.example.com",
+			"ttl":         "5m",
+		})
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.NotEmpty(t, resp.Data["certificate"])
+		require.NotEmpty(t, resp.Data["issuing_ca"])
+		require.NotEmpty(t, resp.Data["serial_number"])
+
+		certPEM := resp.Data["certificate"].(string)
+		certBlock, _ := pem.Decode([]byte(certPEM))
+		require.NotNil(t, certBlock)
+		cert, err := x509.ParseCertificate(certBlock.Bytes)
+		require.NoError(t, err)
+		require.NotNil(t, cert)
+
+		issuerPEM := resp.Data["issuing_ca"].(string)
+		issuerBlock, _ := pem.Decode([]byte(issuerPEM))
+		require.NotNil(t, issuerBlock)
+		issuer, err := x509.ParseCertificate(issuerBlock.Bytes)
+		require.NoError(t, err)
+		require.NotNil(t, issuer)
+
+		serialNumber := resp.Data["serial_number"].(string)
+
+		conf := &VerifyConfig{
+			OcspFailureMode: FailOpenFalse,
+			ExtraCas:        []*x509.Certificate{cluster.CACert},
+		}
+		ocspClient := New(testLogFactory, 10)
+
+		err = ocspClient.VerifyLeafCertificate(context.Background(), cert, issuer, conf)
+		require.NoError(t, err)
+
+		_, err = client.Logical().Write("pki/revoke", map[string]interface{}{
+			"serial_number": serialNumber,
+		})
+		require.NoError(t, err)
+
+		err = ocspClient.VerifyLeafCertificate(context.Background(), cert, issuer, conf)
+		require.Error(t, err)
 	}
 }
 
