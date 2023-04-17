@@ -46,7 +46,7 @@ $dark-gray: #535f73;
 
   > button {
     &.is-month-list {
-      background-color: white;
+      background-color: $white;
       color: black;
       text-align: center;
       border: $light-border;
@@ -57,7 +57,7 @@ $dark-gray: #535f73;
     }
     &:hover {
       background-color: lighten($dark-gray, 30%);
-      color: white;
+      color: $white;
       text-align: center;
       cursor: pointer;
     }
@@ -97,12 +97,13 @@ $dark-gray: #535f73;
 // for modal-dialog tooltips
 .calendar-tooltip {
   background-color: $ui-gray-700;
-  color: white;
+  color: $white;
   font-size: $size-8;
   padding: $size-9;
   border-radius: $radius-large;
   width: 141px;
 }
+
 .ember-modal-dialog {
   z-index: 1000;
 }

@@ -16,7 +16,7 @@
     flex-shrink: 1;
 
     @include until($mobile) {
-      margin-top: 0.5rem;
+      margin-top: $size-10;
     }
   }
   .level-right {
@@ -36,6 +36,7 @@
   .breadcrumb + .level .title {
     margin-top: $size-4;
   }
+
   .title .icon {
     height: auto;
     vertical-align: -0.15em;

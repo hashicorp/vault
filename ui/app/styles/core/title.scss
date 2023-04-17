@@ -3,16 +3,12 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-// This file styles the following classes: title, subtitle, form-section.title
+// This file styles the following classes: title, subtitle, form-section.title and title sizes (is-2, etc)/
 
 .title:not(:last-child),
 .subtitle:not(:last-child) {
   display: block;
   margin-bottom: 1rem;
-
-  &.has-bottom-margin-xs {
-    margin-bottom: $spacing-xs;
-  }
 }
 
 .title {
@@ -26,8 +22,30 @@
     color: $black;
     text-decoration: none;
   }
-  .has-font-weight-normal {
-    font-weight: $font-weight-normal;
+
+  // title sizes
+  &.is-2 {
+    font-size: $size-2;
+  }
+
+  &.is-3 {
+    font-size: $size-3;
+  }
+
+  &.is-4 {
+    font-size: $size-4;
+  }
+
+  &.is-5 {
+    font-size: $size-5;
+  }
+
+  &.is-6 {
+    font-size: $size-6;
+  }
+
+  &.is-7 {
+    font-size: $size-7;
   }
 }
 
@@ -41,39 +59,17 @@
   color: $ui-gray-500;
 }
 
-// title sizes
-.title.is-2 {
-  font-size: $size-2;
-}
-
-.title.is-3 {
-  font-size: $size-3;
-}
-
-.title.is-4 {
-  font-size: $size-4;
-}
-
-.title.is-5 {
-  font-size: $size-5;
-}
-
-.title.is-6 {
-  font-size: $size-6;
-}
-
-.title.is-7 {
-  font-size: $size-7;
-}
-
 // responsive css
 @media screen and (min-width: 769px), print {
-  .tile.is-2 {
-    flex: none;
-    width: 16.66667%;
-  }
-  .tile.is-4 {
-    flex: none;
-    width: 33.33333%;
+  .title {
+    &.is-2 {
+      flex: none;
+      width: 16.66667%;
+    }
+
+    &.is-4 {
+      flex: none;
+      width: 33.33333%;
+    }
   }
 }

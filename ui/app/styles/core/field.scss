@@ -5,10 +5,6 @@
 
 // This file defines the classes for .field, .field-body, .form-fieldset
 
-.field:not(:last-child) {
-  margin-bottom: 1.5rem;
-}
-
 .field-body .field {
   margin-bottom: 0;
 }
@@ -19,7 +15,12 @@
     background-color: $ui-gray-100;
     cursor: not-allowed;
   }
+
+  &:not(:last-child) {
+    margin-bottom: $size-4;
+  }
 }
+
 .field.has-addons {
   flex-wrap: wrap;
   .control {
@@ -28,12 +29,10 @@
     .input,
     .select select {
       border-radius: 0;
-      &:hover,
-      &.is-hovered {
+      &:hover {
         z-index: 2;
       }
       &:focus,
-      &.is-focused,
       &:active,
       &.is-active {
         z-index: 3;
@@ -74,28 +73,28 @@ fieldset.form-fieldset {
 }
 
 // field.is-grouped styles
-.field.is-grouped > .control.is-expanded {
-  flex-grow: 1;
-  flex-shrink: 1;
-}
-
 .field.is-grouped {
   display: flex;
   justify-content: flex-start;
-}
 
-.field.is-grouped > .control {
-  flex-shrink: 0;
-}
+  > .control.is-expanded {
+    flex-grow: 1;
+    flex-shrink: 1;
+  }
 
-.field.is-grouped > .control:not(:last-child) {
-  margin-bottom: 0;
-  margin-right: 0.75rem;
-}
+  > .control {
+    flex-shrink: 0;
+  }
 
-.field.is-grouped > .control.is-expanded {
-  flex-grow: 1;
-  flex-shrink: 1;
+  > .control:not(:last-child) {
+    margin-bottom: 0;
+    margin-right: 0.75rem;
+  }
+
+  > .control.is-expanded {
+    flex-grow: 1;
+    flex-shrink: 1;
+  }
 }
 
 // responsive css
@@ -124,19 +123,19 @@ fieldset.form-fieldset {
     flex-shrink: 0;
     margin-right: 1.5rem;
     text-align: right;
-  }
 
-  .field-label.is-normal {
-    padding-top: 0.375em;
-  }
+    &.is-normal {
+      padding-top: 0.375em;
+    }
 
-  .field-label.is-medium {
-    font-size: 1.25rem;
-    padding-top: 0.375em;
-  }
+    &.is-medium {
+      font-size: 1.25rem;
+      padding-top: 0.375em;
+    }
 
-  .field-label.is-large {
-    font-size: 1.5rem;
-    padding-top: 0.375em;
+    &.is-large {
+      font-size: 1.5rem;
+      padding-top: 0.375em;
+    }
   }
 }

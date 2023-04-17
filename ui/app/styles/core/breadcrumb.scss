@@ -5,10 +5,8 @@
 
 .breadcrumb {
   display: flex;
-  -ms-user-select: text;
-  -webkit-user-select: text;
   user-select: text;
-  min-height: 1.5rem;
+  min-height: $size-4;
   margin: 0;
   overflow-x: auto;
   white-space: nowrap;
@@ -75,7 +73,7 @@
     &::before {
       color: $blue;
       content: '❮';
-      font-size: 1rem;
+      font-size: $size-6;
       line-height: 1;
       opacity: 0.33;
     }

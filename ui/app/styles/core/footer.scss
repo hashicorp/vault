@@ -11,7 +11,7 @@
 
   span:not(:first-child) {
     display: inline-block;
-    padding: 0 0.5rem;
+    padding: 0 $size-10;
 
     @include until($mobile) {
       display: none;

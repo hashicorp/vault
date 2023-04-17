@@ -27,10 +27,10 @@
   align-items: center;
   box-shadow: none;
   display: inline-flex;
-  font-size: 1rem;
+  font-size: $size-6;
   justify-content: flex-start;
   line-height: 1.5;
-  margin: 0.25rem;
+  margin: $size-11;
   padding-bottom: calc(0.5em - 1px);
   padding-left: calc(0.75em - 1px);
   padding-right: calc(0.75em - 1px);
@@ -59,8 +59,8 @@
 
   a {
     text-decoration: none;
-    height: 1.5rem;
-    min-width: 1.5rem;
+    height: $size-4;
+    min-width: $size-4;
     border: none;
   }
   a.pagination-link {
@@ -140,30 +140,41 @@
 }
 
 .pagination-previous {
-  order: 2;
+  order: 1;
 }
+
 .pagination-next {
   order: 3;
 }
-.pagination.is-centered .pagination-previous {
-  order: 1;
+
+.pagination.is-centered {
+  &.pagination-previous {
+    order: 1;
+  }
+
+  &.pagination-list {
+    justify-content: center;
+    order: 2;
+  }
+
+  &.pagination-next {
+    order: 3;
+  }
 }
-.pagination.is-centered .pagination-list {
-  justify-content: center;
-  order: 2;
-}
-.pagination.is-centered .pagination-next {
-  order: 3;
-}
-.pagination.is-right .pagination-previous {
-  order: 1;
-}
-.pagination.is-right .pagination-next {
-  order: 2;
-}
-.pagination.is-right .pagination-list {
-  justify-content: flex-end;
-  order: 3;
+
+.pagination.is-right {
+  &.pagination-previous {
+    order: 1;
+  }
+
+  &.pagination-next {
+    order: 2;
+  }
+
+  &.pagination-list {
+    justify-content: flex-end;
+    order: 3;
+  }
 }
 
 // responsive css

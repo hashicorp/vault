@@ -16,7 +16,7 @@
   height: auto;
   justify-content: center;
   line-height: 1.5;
-  margin-right: 0.5rem;
+  margin-right: $size-10;
   padding: 0 $size-10;
   white-space: nowrap;
   vertical-align: middle;
@@ -38,29 +38,31 @@
   }
 }
 
-.tag.is-bold {
-  font-weight: bold;
-}
+.tag {
+  &.is-bold {
+    font-weight: bold;
+  }
 
-.tag.is-light {
-  background-color: whitesmoke;
-  color: rgba(0, 0, 0, 0.7);
-}
+  &.is-light {
+    background-color: whitesmoke;
+    color: rgba(0, 0, 0, 0.7);
+  }
 
-.tag.is-outlined {
-  background-color: transparent;
-  border: 1px solid $grey-light;
-}
+  &.is-outlined {
+    background-color: transparent;
+    border: 1px solid $grey-light;
+  }
 
-.tag.is-small {
-  height: auto;
-}
+  &.is-small {
+    height: auto;
+  }
 
-.tag.is-medium {
-  font-size: 1rem;
-}
+  &.is-medium {
+    font-size: $size-6;
+  }
 
-.tag.is-success {
-  background-color: $green-500;
-  color: $white;
+  &.is-success {
+    background-color: $green-500;
+    color: $white;
+  }
 }

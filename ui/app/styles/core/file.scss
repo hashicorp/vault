@@ -45,9 +45,8 @@
   @extend .is-transparent;
   color: $grey;
   position: absolute;
-  right: 8px;
+  right: $spacing-xs;
 }
-
 
 .file-icon {
   align-items: center;
@@ -98,4 +97,3 @@
     cursor: not-allowed;
   }
 }
-

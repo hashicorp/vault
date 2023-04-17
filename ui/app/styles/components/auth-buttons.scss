@@ -10,6 +10,7 @@
   border-radius: 1px;
   box-shadow: 0 0 0 1px rgba($white, 0.4);
 }
+
 .auth-button-type-google {
   position: relative;
   top: -10px;
@@ -20,8 +21,9 @@
 .auth-button-type-gitlab {
   position: relative;
   top: -6px;
-  left: -0.75rem;
+  left: -$size-9;
 }
+
 [class*='auth-button-type'] .text {
   padding-left: $spacing-m;
 }

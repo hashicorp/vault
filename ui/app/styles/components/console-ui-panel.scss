@@ -160,10 +160,10 @@ header .navbar-sections {
   &::after {
     height: auto;
     width: auto;
-    right: 0.25rem;
-    left: 0.25rem;
-    top: 0.25rem;
-    bottom: 0.25rem;
+    right: $size-11;
+    left: $size-11;
+    top: $size-11;
+    bottom: $size-11;
   }
 }
 
