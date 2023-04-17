@@ -1,42 +1,47 @@
-<HcAppFrame::Frame @hasSidebar={{@showSidebar}} as |Frame|>
+<Hds::AppFrame @hasSidebar={{@showSidebar}} as |Frame|>
   <Frame.Sidebar data-test-sidebar-nav>
-    <HcAppFrame::Sidenav @contentNodeID="sidebar-nav" as |Sidebar|>
-      <Sidebar.Header as |Header|>
-        {{#if this.currentCluster.cluster}}
-          <Header.Logo
-            @icon="vault"
-            @route="vault.cluster"
-            @model={{this.currentCluster.cluster.name}}
-            @ariaLabel="home link"
-            data-test-sidebar-logo
-          />
-        {{/if}}
-        {{#if Header.shouldRenderActions}}
-          <Header.Action>
-            <button
-              type="button"
-              class="button is-transparent has-text-white"
-              {{on "click" (fn (mut this.console.isOpen) (not this.console.isOpen))}}
-              data-test-console-toggle
-            >
-              <Icon @name="terminal-screen" @size="24" />
-            </button>
-          </Header.Action>
-          <Header.Action>
-            <Sidebar::UserMenu />
-          </Header.Action>
-        {{/if}}
-      </Sidebar.Header>
-      {{! this block is where the HcAppFrame::SidenavPanel components render into }}
+    <Hds::SideNav @isResponsive={{true}} @hasA11yRefocus={{true}} @a11yRefocusSkipTo="app-main-content">
+      <:header>
+        <Hds::SideNav::Header>
+          <:logo>
+            {{#if this.currentCluster.cluster}}
+              <Hds::SideNav::Header::HomeLink
+                @icon="vault"
+                @route="vault.cluster"
+                @model={{this.currentCluster.cluster.name}}
+                @ariaLabel="home link"
+                data-test-sidebar-logo
+              />
+            {{/if}}
+          </:logo>
+        </Hds::SideNav::Header>
+        <:actions>
+          <button
+            type="button"
+            class="button is-transparent has-text-white"
+            {{on "click" (fn (mut this.console.isOpen) (not this.console.isOpen))}}
+            data-test-console-toggle
+          >
+            <Icon @name="terminal-screen" @size="24" />
+          </button>
+          <Sidebar::UserMenu />
+        </:actions>
+      </:header>
+
+      {{! this block is where the Hds::SideNav::Portal components render into }}
+      <:body>
+        <Hds::SideNav::Portal::Target aria-label="sidebar navigation links" />
+      </:body>
       <Sidebar.Content />
-      <Sidebar.Footer>
+
+      <:footer>
         {{#if (has-feature "Namespaces")}}
           <NamespacePicker @namespace={{@namespace}} />
         {{/if}}
-      </Sidebar.Footer>
-    </HcAppFrame::Sidenav>
+      </:footer>
+    </Hds::SideNav>
   </Frame.Sidebar>
-  <Frame.Main class="is-relative">
+  <Frame.Main id="app-main-content" class="is-relative">
     {{! outlet for app content }}
     <div id="modal-wormhole"></div>
     <LinkStatus @status={{this.currentCluster.cluster.hcpLinkStatus}} />
@@ -45,4 +50,4 @@
       <Console::UiPanel @isFullscreen={{this.consoleFullscreen}} />
     </div>
   </Frame.Main>
-</HcAppFrame::Frame>
+</Hds::AppFrame>

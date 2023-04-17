@@ -1,4 +1,4 @@
-<HcAppFrame::SidenavPanel as |Nav|>
+<Hds::SideNav::Portal @ariaLabel="Access Navigation Links" as |Nav|>
   <Nav.BackLink
     @route="vault.cluster"
     @current-when={{false}}
@@ -61,4 +61,4 @@
   {{#if (has-permission "access" routeParams="leases")}}
     <Nav.Link @route="vault.cluster.access.leases" @text="Leases" data-test-sidebar-nav-link="Leases" />
   {{/if}}
-</HcAppFrame::SidenavPanel>
+</Hds::SideNav::Portal>
