@@ -52,6 +52,9 @@ func pathGroups(b *backend) *framework.Path {
 			"policies": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-separated list of policies associated to the group.",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Description: "A list of policies associated to the group.",
+				},
 			},
 		},
 

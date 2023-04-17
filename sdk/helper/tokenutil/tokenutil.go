@@ -80,7 +80,7 @@ func TokenFields() map[string]*framework.FieldSchema {
 			DisplayAttrs: &framework.DisplayAttributes{
 				Name:  "Generated Token's Bound CIDRs",
 				Group: "Tokens",
-				Description: `A list of CIDR blocks. If set, specifies the blocks of IP addresses which are allowed to use the generated token.`,
+				Description: "A list of CIDR blocks. If set, specifies the blocks of IP addresses which are allowed to use the generated token.",
 			},
 		},
 
@@ -126,6 +126,7 @@ func TokenFields() map[string]*framework.FieldSchema {
 			DisplayAttrs: &framework.DisplayAttributes{
 				Name:  "Generated Token's Policies",
 				Group: "Tokens",
+				Description: "A list of policies that will apply to the generated token for this user."
 			},
 		},
 

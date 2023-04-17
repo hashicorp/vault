@@ -36,6 +36,9 @@ func pathUserPolicies(b *backend) *framework.Path {
 			"token_policies": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-separated list of policies",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Description: "A list of policies that will apply to the generated token for this user."
+				},
 			},
 		},
 

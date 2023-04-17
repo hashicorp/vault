@@ -78,7 +78,7 @@ Must be x509 PEM encoded.`,
 				Description: `A comma-separated list of OCSP server addresses.  If unset, the OCSP server is determined 
 from the AuthorityInformationAccess extension on the certificate being inspected.`,
 				DisplayAttrs: &framework.DisplayAttributes{
-					Description: `A list of OCSP server addresses. If unset, the OCSP server is determined from the AuthorityInformationAccess extension on the certificate being inspected.`
+					Description: "A list of OCSP server addresses. If unset, the OCSP server is determined from the AuthorityInformationAccess extension on the certificate being inspected.",
 				},
 			},
 			"ocsp_fail_open": {
@@ -99,9 +99,7 @@ This parameter is deprecated, please use allowed_common_names, allowed_dns_sans,
 allowed_email_sans, allowed_uri_sans.`,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Group: "Constraints",
-					Description: `A list of names. At least one must exist in either the Common Name or SANs. Supports globbing.  
-					This parameter is deprecated, please use allowed_common_names, allowed_dns_sans, 
-					allowed_email_sans, allowed_uri_sans.`,
+					Description: "A list of names. At least one must exist in either the Common Name or SANs. Supports globbing. This parameter is deprecated, please use allowed_common_names, allowed_dns_sans, allowed_email_sans, allowed_uri_sans.",
 				},
 			},
 
@@ -164,8 +162,7 @@ At least one must exist in the OU field.`,
 formatted as "oid:value". Expects the extension value to be some type of ASN1 encoded string.
 All values much match. Supports globbing on "value".`,
 				DisplayAttrs: &framework.DisplayAttributes{
-					Description: `A list of extensions formatted as "oid:value". Expects the extension value to be some type of ASN1 encoded string.
-					All values much match. Supports globbing on "value".`,
+					Description: "A list of extensions formatted as 'oid:value'. Expects the extension value to be some type of ASN1 encoded string. All values much match. Supports globbing on 'value'.",
 				},
 			},
 
@@ -176,10 +173,7 @@ Upon successful authentication, these extensions will be added as metadata if th
 in the certificate. The metadata key will be the string consisting of the oid numbers
 separated by a dash (-) instead of a dot (.) to allow usage in ACL templates.`,
 				DisplayAttrs: &framework.DisplayAttributes{
-					Description:  `A list of OID extensions.
-					Upon successful authentication, these extensions will be added as metadata if they are present
-					in the certificate. The metadata key will be the string consisting of the OID numbers
-					separated by a dash (-) instead of a dot (.) to allow usage in ACL templates.`,
+					Description:  "A list of OID extensions. Upon successful authentication, these extensions will be added as metadata if they are present in the certificate. The metadata key will be the string consisting of the OID numbers separated by a dash (-) instead of a dot (.) to allow usage in ACL templates.",
 				},
 			},
 
