@@ -87,9 +87,24 @@ func (b *backend) acmeChallengeFetchHandler(acmeCtx *acmeContext, r *logical.Req
 		return nil, fmt.Errorf("unexpected request parameters: %w", ErrMalformed)
 	}
 
-	// XXX: Prompt for challenge to be tried by the server.
+	thumbprint, err := userCtx.GetKeyThumbprint()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get thumbprint for key: %w", err)
+	}
+
+	if err := b.acmeState.validator.AcceptChallenge(acmeCtx.sc, userCtx.Kid, authz, challenge, thumbprint); err != nil {
+		return nil, fmt.Errorf("error submitting challenge for validation: %w", err)
+	}
 
 	return &logical.Response{
 		Data: challenge.NetworkMarshal(acmeCtx, authz.Id),
+
+		// Per RFC 8555 Section 7.1. Resources:
+		//
+		// > The "up" link relation is used with challenge resources to indicate
+		// > the authorization resource to which a challenge belongs.
+		Headers: map[string][]string{
+			"Link": {fmt.Sprintf("<%s>;rel=\"up\"", buildAuthorizationUrl(acmeCtx, authz.Id))},
+		},
 	}, nil
 }
