@@ -23,7 +23,7 @@ export const expandOpenApiProps = function (props) {
     }
 
     if (prop['x-vault-displayAttrs']?.description) {
-      description = prop['x-vault-displayAttrs']?.description;
+      description = prop['x-vault-displayAttrs'].description;
     }
 
     editType = editType || type;
