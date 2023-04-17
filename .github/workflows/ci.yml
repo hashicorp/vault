@@ -190,7 +190,7 @@ jobs:
       startsWith(github.head_ref, 'ui/') ||
       startsWith(github.head_ref, 'backport/ui/') ||
       startsWith(github.head_ref, 'merge') || 
-      ${{ contains(github.event.pull_request.labels.*.name, 'ui') }}
+      contains(github.event.pull_request.labels.*.name, 'ui')
     needs:
     - setup
     permissions:
