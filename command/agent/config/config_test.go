@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-test/deep"
 	ctconfig "github.com/hashicorp/consul-template/config"
+
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
@@ -2116,7 +2117,36 @@ func TestLoadConfigFile_EnvTemplates(t *testing.T) {
 		t.Fatalf("error loading config file: %s", err)
 	}
 
-	if cfg.EnvTemplates[0].Name != "MY_DATABASE_USER" {
+	expectedKey := "MY_DATABASE_USER"
+	_, ok := cfg.EnvTemplates[expectedKey]
+	if !ok {
 		t.Fatalf("expected env var name to be populated")
+	}
+}
+
+func TestLoadConfigFile_EnvTemplateComplex(t *testing.T) {
+	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-complex.hcl")
+
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+	expectedKeys := []string{
+		"FOO_DATA_LOCK",
+		"FOO_DATA_PASSWORD",
+		"FOO_DATA_USER",
+	}
+	for _, expected := range expectedKeys {
+		_, ok := cfg.EnvTemplates[expected]
+		if !ok {
+			t.Fatalf("expected env var %s", expected)
+		}
+	}
+
+	if cfg.Exec == nil {
+		t.Fatal("expected exec block to be parsed")
+	}
+
+	if cfg.Exec.Command != "env" {
+		t.Fatal("expected the command to be 'env'")
 	}
 }

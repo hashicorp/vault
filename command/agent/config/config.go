@@ -20,32 +20,33 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/mitchellh/mapstructure"
+
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/mitchellh/mapstructure"
 )
 
 // Config is the configuration for Vault Agent.
 type Config struct {
 	*configutil.SharedConfig `hcl:"-"`
 
-	AutoAuth                    *AutoAuth                  `hcl:"auto_auth"`
-	ExitAfterAuth               bool                       `hcl:"exit_after_auth"`
-	Cache                       *Cache                     `hcl:"cache"`
-	APIProxy                    *APIProxy                  `hcl:"api_proxy""`
-	Vault                       *Vault                     `hcl:"vault"`
-	TemplateConfig              *TemplateConfig            `hcl:"template_config"`
-	Templates                   []*ctconfig.TemplateConfig `hcl:"templates"`
-	DisableIdleConns            []string                   `hcl:"disable_idle_connections"`
-	DisableIdleConnsAPIProxy    bool                       `hcl:"-"`
-	DisableIdleConnsTemplating  bool                       `hcl:"-"`
-	DisableIdleConnsAutoAuth    bool                       `hcl:"-"`
-	DisableKeepAlives           []string                   `hcl:"disable_keep_alives"`
-	DisableKeepAlivesAPIProxy   bool                       `hcl:"-"`
-	DisableKeepAlivesTemplating bool                       `hcl:"-"`
-	DisableKeepAlivesAutoAuth   bool                       `hcl:"-"`
-	Exec                        *ExecConfig                `hcl:"exec,optional"`
-	EnvTemplates                []*EnvTemplateConfig       `hcl:"env_template,optional"`
+	AutoAuth                    *AutoAuth                     `hcl:"auto_auth"`
+	ExitAfterAuth               bool                          `hcl:"exit_after_auth"`
+	Cache                       *Cache                        `hcl:"cache"`
+	APIProxy                    *APIProxy                     `hcl:"api_proxy""`
+	Vault                       *Vault                        `hcl:"vault"`
+	TemplateConfig              *TemplateConfig               `hcl:"template_config"`
+	Templates                   []*ctconfig.TemplateConfig    `hcl:"templates"`
+	DisableIdleConns            []string                      `hcl:"disable_idle_connections"`
+	DisableIdleConnsAPIProxy    bool                          `hcl:"-"`
+	DisableIdleConnsTemplating  bool                          `hcl:"-"`
+	DisableIdleConnsAutoAuth    bool                          `hcl:"-"`
+	DisableKeepAlives           []string                      `hcl:"disable_keep_alives"`
+	DisableKeepAlivesAPIProxy   bool                          `hcl:"-"`
+	DisableKeepAlivesTemplating bool                          `hcl:"-"`
+	DisableKeepAlivesAutoAuth   bool                          `hcl:"-"`
+	Exec                        *ExecConfig                   `hcl:"exec,optional"`
+	EnvTemplates                map[string]*EnvTemplateConfig `hcl:"env_template,optional"`
 }
 
 const (
@@ -188,6 +189,7 @@ type ExecConfig struct {
 func NewConfig() *Config {
 	return &Config{
 		SharedConfig: new(configutil.SharedConfig),
+		EnvTemplates: map[string]*EnvTemplateConfig{},
 	}
 }
 
@@ -267,6 +269,14 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.Templates = append(result.Templates, l)
 	}
 
+	for key, val := range c.EnvTemplates {
+		result.EnvTemplates[key] = val
+	}
+
+	for key, val := range c2.EnvTemplates {
+		result.EnvTemplates[key] = val
+	}
+
 	result.ExitAfterAuth = c.ExitAfterAuth
 	if c2.ExitAfterAuth {
 		result.ExitAfterAuth = c2.ExitAfterAuth
@@ -280,6 +290,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.PidFile = c.PidFile
 	if c2.PidFile != "" {
 		result.PidFile = c2.PidFile
+	}
+
+	result.Exec = c.Exec
+	if c2.Exec != nil {
+		result.Exec = c2.Exec
 	}
 
 	return result
@@ -331,8 +346,9 @@ func (c *Config) ValidateConfig() error {
 	if c.AutoAuth != nil {
 		if len(c.AutoAuth.Sinks) == 0 &&
 			(c.APIProxy == nil || !c.APIProxy.UseAutoAuthToken) &&
-			len(c.Templates) == 0 {
-			return fmt.Errorf("auto_auth requires at least one sink or at least one template or api_proxy.use_auto_auth_token=true")
+			len(c.Templates) == 0 &&
+			len(c.EnvTemplates) == 0 {
+			return fmt.Errorf("auto_auth requires at least one sink, template or env_template or api_proxy.use_auto_auth_token=true")
 		}
 	}
 
@@ -1070,7 +1086,7 @@ func parseEnvTemplates(result *Config, list *ast.ObjectList) error {
 		return nil
 	}
 
-	var envTemplates []*EnvTemplateConfig
+	envTemplates := make(map[string]*EnvTemplateConfig)
 
 	for _, item := range envTemplateList.Items {
 		var shadow interface{}
@@ -1111,9 +1127,14 @@ func parseEnvTemplates(result *Config, list *ast.ObjectList) error {
 		}
 
 		// hcl parses this with extra quotes if quoted in config file
-		et.Name = strings.Trim(item.Keys[0].Token.Text, `"`)
+		name := strings.Trim(item.Keys[0].Token.Text, `"`)
 
-		envTemplates = append(envTemplates, &et)
+		// added EnvVar after Name, will probably keep one
+		et.Name = name
+		et.EnvVar = &name
+
+		// TODO: add validation, should not have duplicate keys
+		envTemplates[name] = &et
 	}
 
 	result.EnvTemplates = envTemplates
