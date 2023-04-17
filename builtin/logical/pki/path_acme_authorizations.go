@@ -76,7 +76,7 @@ func (b *backend) acmeAuthorizationHandler(acmeCtx *acmeContext, r *logical.Requ
 
 func (b *backend) acmeAuthorizationFetchHandler(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}, authz *ACMEAuthorization) (*logical.Response, error) {
 	return &logical.Response{
-		Data: authz.NetworkMarshal(),
+		Data: authz.NetworkMarshal(acmeCtx),
 	}, nil
 }
 
@@ -95,6 +95,6 @@ func (b *backend) acmeAuthorizationDeactivateHandler(acmeCtx *acmeContext, r *lo
 	}
 
 	return &logical.Response{
-		Data: authz.NetworkMarshal(),
+		Data: authz.NetworkMarshal(acmeCtx),
 	}, nil
 }
