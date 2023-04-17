@@ -67,7 +67,7 @@
   {{/if}}
 {{else}}
   <Toolbar />
-  <EmptyState @title="PKI not configured" @message={{this.message}}>
+  <EmptyState @title="PKI not configured" @message={{this.notConfiguredMessage}}>
     <LinkTo @route="configuration.create">
       Configure PKI
     </LinkTo>
