@@ -208,8 +208,8 @@ type DisplayAttributes struct {
 	Name string `json:"name,omitempty"`
 
 	// Description of the field that renders as tooltip help text beside the label (name) in the UI.
-	// This may be used to override descriptions that reference comma separation and correspond 
-	// to UI inputs where only arrays are valid, for example framework.TypeCommaStringSlice
+	// This may be used to replace descriptions that reference comma separation but correspond 
+	// to UI inputs where only arrays are valid. For example params with Type: framework.TypeCommaStringSlice
 	Description string `json:"description,omitempty"`
 
 	// Value is a sample value to display for this field. This may be used
