@@ -66,12 +66,13 @@
     flex-wrap: wrap;
   }
 
+  // columnGap does not take vars
   &.is-variable.is-1 {
-    --columnGap: $i * $size-11;
+    --columnGap: $i * 0.25rem;
   }
 
   &.is-variable {
-    --columnGap: $size-9;
+    --columnGap: 0.75rem;
     margin-left: calc(-1 * var(--columnGap));
     margin-right: calc(-1 * var(--columnGap));
   }
