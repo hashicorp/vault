@@ -207,6 +207,11 @@ type DisplayAttributes struct {
 	// Name is the name of the field suitable as a label or documentation heading.
 	Name string `json:"name,omitempty"`
 
+	// Description of the field that renders as tooltip help text beside the label (name) in the UI.
+	// This may be used to override descriptions that reference comma separation and correspond 
+	// to UI inputs where only arrays are valid, for example framework.TypeCommaStringSlice
+	Description string `json:"description,omitempty"`
+
 	// Value is a sample value to display for this field. This may be used
 	// to indicate a default value, but it is for display only and completely separate
 	// from any Default member handling.
