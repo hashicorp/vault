@@ -134,8 +134,7 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			require.True(t, auth.Challenges[0].Validated.IsZero(), "validated time should be 0 on challenge")
 			require.Equal(t, "http-01", auth.Challenges[0].Type)
 
-			// TODO: This currently does fail
-			// require.NotEmpty(t, auth.Challenges[0].Token, "missing challenge token")
+			require.NotEmpty(t, auth.Challenges[0].Token, "missing challenge token")
 
 			// Load a challenge directly
 			challenge, err := acmeClient.GetChallenge(testCtx, auth.Challenges[0].URI)
@@ -144,8 +143,7 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			require.True(t, challenge.Validated.IsZero(), "validated time should be 0 on challenge")
 			require.Equal(t, "http-01", challenge.Type)
 
-			// TODO: This currently does fail
-			// require.NotEmpty(t, challenge.Token, "missing challenge token")
+			require.NotEmpty(t, challenge.Token, "missing challenge token")
 
 			// Deactivate account
 			t.Logf("Testing deactivate account on %s", baseAcmeURL)
