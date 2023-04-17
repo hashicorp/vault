@@ -22,29 +22,16 @@ export const expandOpenApiProps = function (props) {
       type = 'number';
     }
 
+    if (prop['x-vault-displayAttrs']?.description) {
+      description = prop['x-vault-displayAttrs']?.description;
+    }
+
     editType = editType || type;
 
     if (format === 'seconds') {
       editType = 'ttl';
     } else if (items) {
       editType = items.type + capitalize(type);
-    }
-
-    // would be preferable to add a Description key to the x-vault-displayAttrs block
-    if (editType === 'stringArray') {
-      if (description?.includes('Comma separated string or')) {
-        description = description.replace(/\bComma\b \bseparated\b \bstring\b \bor\b |\bJSON\b /g, '');
-        description = description.replace(/\blist\b|\barray\b/, 'List');
-      } else if (description?.includes('Comma separated list')) {
-        description = description.replace(/\bComma\b \bseparated\b \blist\b/, 'List');
-      } else if (description?.includes('Comma-separated list')) {
-        description = description.replace(/\bComma\b-\bseparated\b \blist\b/, 'List');
-      } else if (description?.includes('comma-separated list')) {
-        description = description.replace(/\bcomma\b-\bseparated\b /, '');
-      } else if (description?.includes('comma-separated string or')) {
-        description = description.replace(/\bcomma\b-\bseparated\b \bstring\b \bor\b /, '');
-        description = description.replace(/\barray\b/, 'list');
-      }
     }
 
     const attrDefn = {
@@ -67,8 +54,8 @@ export const expandOpenApiProps = function (props) {
       attrDefn.sensitive = true;
     }
 
-    //only set a label if we have one from OpenAPI
-    //otherwise the propName will be humanized by the form-field component
+    // only set a label if we have one from OpenAPI
+    // otherwise the propName will be humanized by the form-field component
     if (name) {
       attrDefn.label = name;
     }
