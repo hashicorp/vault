@@ -419,6 +419,11 @@ func (b *backend) initialize(ctx context.Context, _ *logical.InitializationReque
 		return err
 	}
 
+	err = b.acmeState.Initialize(b, sc)
+	if err != nil {
+		return err
+	}
+
 	// Initialize also needs to populate our certificate and revoked certificate count
 	err = b.initializeStoredCertificateCounts(ctx)
 	if err != nil {

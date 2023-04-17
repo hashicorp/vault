@@ -39,6 +39,7 @@ const (
 type acmeState struct {
 	nextExpiry *atomic.Int64
 	nonces     *sync.Map // map[string]time.Time
+	validator  *ACMEChallengeEngine
 }
 
 type acmeThumbprint struct {
@@ -50,7 +51,18 @@ func NewACMEState() *acmeState {
 	return &acmeState{
 		nextExpiry: new(atomic.Int64),
 		nonces:     new(sync.Map),
+		validator:  NewACMEChallengeEngine(),
 	}
+}
+
+func (a *acmeState) Initialize(b *backend, sc *storageContext) error {
+	if err := a.validator.Initialize(b, sc); err != nil {
+		return fmt.Errorf("error initializing ACME engine: %w", err)
+	}
+
+	go a.validator.Run(b)
+
+	return nil
 }
 
 func generateNonce() (string, error) {
