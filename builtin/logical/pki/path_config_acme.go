@@ -123,7 +123,8 @@ func (b *backend) pathAcmeRead(ctx context.Context, req *logical.Request, _ *fra
 }
 
 func genResponseFromAcmeConfig(config *acmeConfigEntry) *logical.Response {
-	return nil
+
+	return nil // TODO: PRINT PRITY // Add something nice if we are on a replication cluster and path isn't set
 }
 
 func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
