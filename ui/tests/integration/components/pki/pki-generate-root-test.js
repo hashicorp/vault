@@ -62,7 +62,7 @@ module('Integration | Component | pki-generate-root', function (hooks) {
     assert
       .dom(SELECTORS.toggleGroupDescription)
       .hasText(
-        'SAN fields are an extension that allow you specify additional host names (sites, IP addresses, common names, etc.) to be protected by a single certificate. Add one item per row.'
+        'SAN fields are an extension that allow you specify additional host names (sites, IP addresses, common names, etc.) to be protected by a single certificate.'
       );
     assert
       .dom(`[data-test-group="Subject Alternative Name (SAN) Options"] ${SELECTORS.formField}`)

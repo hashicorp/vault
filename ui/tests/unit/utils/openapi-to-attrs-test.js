@@ -282,7 +282,7 @@ module('Unit | Util | OpenAPI Data Utilities', function () {
   });
 
   test('it uses the description from the display attrs block if it exists', async function (assert) {
-    assert.expect(10);
+    assert.expect(3);
     const generatedProps = expandOpenApiProps(OPENAPI_DESCRIPTIONS);
     for (const propName in STRING_ARRAY_DESCRIPTIONS) {
       assert.strictEqual(
