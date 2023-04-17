@@ -90,6 +90,6 @@ func (b *backend) acmeChallengeFetchHandler(acmeCtx *acmeContext, r *logical.Req
 	// XXX: Prompt for challenge to be tried by the server.
 
 	return &logical.Response{
-		Data: challenge.NetworkMarshal(),
+		Data: challenge.NetworkMarshal(acmeCtx, authz.Id),
 	}, nil
 }

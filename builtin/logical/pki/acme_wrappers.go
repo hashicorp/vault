@@ -16,6 +16,7 @@ import (
 )
 
 type acmeContext struct {
+	// baseUrl is the combination of the configured cluster local URL and the acmePath up to /acme/
 	baseUrl *url.URL
 	sc      *storageContext
 }
@@ -46,13 +47,13 @@ func (b *backend) acmeWrapper(op acmeOperation) framework.OperationFunc {
 			return nil, fmt.Errorf("ACME is disabled in configuration: %w", ErrServerInternal)
 		}
 
-		baseUrl, err := getAcmeBaseUrl(sc, r.Path)
+		acmeBaseUrl, err := getAcmeBaseUrl(sc, r.Path)
 		if err != nil {
 			return nil, err
 		}
 
 		acmeCtx := &acmeContext{
-			baseUrl: baseUrl,
+			baseUrl: acmeBaseUrl,
 			sc:      sc,
 		}
 

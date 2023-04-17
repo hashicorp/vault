@@ -195,7 +195,7 @@ func (b *backend) acmeNewOrderHandler(ac *acmeContext, r *logical.Request, _ *fr
 	var authorizations []*ACMEAuthorization
 	var authorizationIds []string
 	for _, identifier := range identifiers {
-		authz := generateAuthorization(account, identifier)
+		authz := generateAuthorization(ac, account, identifier)
 		authorizations = append(authorizations, authz)
 
 		err = b.acmeState.SaveAuthorization(ac, authz)
@@ -263,7 +263,7 @@ func formatOrderResponse(acmeCtx *acmeContext, order *acmeOrder) *logical.Respon
 
 	var authorizationUrls []string
 	for _, authId := range order.AuthorizationIds {
-		authorizationUrls = append(authorizationUrls, acmeCtx.baseUrl.String()+"authz/"+authId)
+		authorizationUrls = append(authorizationUrls, buildAuthorizationUrl(acmeCtx, authId))
 	}
 
 	resp := &logical.Response{
@@ -287,22 +287,27 @@ func formatOrderResponse(acmeCtx *acmeContext, order *acmeOrder) *logical.Respon
 	return resp
 }
 
-func buildOrderUrl(acmeCtx *acmeContext, orderId string) string {
-	return acmeCtx.baseUrl.String() + "order/" + orderId
+func buildAuthorizationUrl(acmeCtx *acmeContext, authId string) string {
+	return acmeCtx.baseUrl.JoinPath("authorization", authId).String()
 }
 
-func generateAuthorization(acct *acmeAccount, identifier *ACMEIdentifier) *ACMEAuthorization {
+func buildOrderUrl(acmeCtx *acmeContext, orderId string) string {
+	return acmeCtx.baseUrl.JoinPath("order", orderId).String()
+}
+
+func generateAuthorization(acmeCtx *acmeContext, acct *acmeAccount, identifier *ACMEIdentifier) *ACMEAuthorization {
+	authId := genUuid()
+
 	challenges := []*ACMEChallenge{
 		{
 			Type:            ACMEHTTPChallenge,
-			URL:             genUuid(),
 			Status:          ACMEChallengePending,
 			ChallengeFields: map[string]interface{}{}, // TODO fill this in properly
 		},
 	}
 
 	return &ACMEAuthorization{
-		Id:         genUuid(),
+		Id:         authId,
 		AccountId:  acct.KeyId,
 		Identifier: identifier,
 		Status:     ACMEAuthorizationPending,
