@@ -1,4 +1,4 @@
-<HcAppFrame::SidenavPanel as |Nav|>
+<Hds::SideNav::Portal @ariaLabel="Policies Navigation Links" as |Nav|>
   <Nav.BackLink
     @route="vault.cluster"
     @current-when={{false}}
@@ -36,4 +36,4 @@
       data-test-sidebar-nav-link="Endpoint Governing Policies"
     />
   {{/if}}
-</HcAppFrame::SidenavPanel>
+</Hds::SideNav::Portal>

@@ -49,7 +49,6 @@ const appConfig = {
     includePaths: [
       './node_modules/@hashicorp/design-system-components/app/styles',
       './node_modules/@hashicorp/design-system-tokens/dist/products/css',
-      './node_modules/@hashicorp/hc-nav/dist/styles',
     ],
   },
   minifyCSS: {
