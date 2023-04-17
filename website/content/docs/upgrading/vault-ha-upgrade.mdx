@@ -1,0 +1,102 @@
+---
+layout: docs
+page_title: Vault HA upgrades Pre 1.11/Without Autopilot Upgrade Automation
+description: |-
+  These are upgrade instructions for for Vault HA Pre 1.11 or Without Autopilot Upgrade Automation being enabled. Please ensure that you also read the Upgrading-Vault Guides
+---
+# Upgrading Vault HA Pre 1.11/Without Autopilot Upgrade Automation
+
+This guide pertains to Vault HA Upgrades when running on a version of Vault before 1.11, or you've chosen to opt-out the Autopilot automated upgrade features when running Vault after 1.11 with Integrated Storage, or if you are running Vault with other storage backend such as Consul.
+
+If you are running on Vault 1.11+ with Integrated Storage and do wish to use the Autopilot upgrade automation features, please refer to our [automated
+upgrades](/vault/docs/concepts/integrated-storage/autopilot#automated-upgrades) documentation for information on this feature and our [Automate Upgrades with Vault
+Enterprise](/vault/tutorials/raft/raft-upgrade-automation) tutorial for more details.
+
+
+## HA Installations
+
+
+This is our recommended upgrade procedure if you're on a version of Vault before
+1.11, chosen to opt-out the Autopilot automated upgrade features when running Vault after 1.11 with Integrated Storage, or if you are running Vault with other storage backend such as Consul. However, you should consider how to
+apply these steps to your particular setup since HA setups can differ on whether
+a load balancer is in use, what addresses clients are being given to connect to
+Vault (standby + leader, leader-only, or discovered via service discovery), etc.
+
+Whatever method you use, you should ensure that you never fail over from a
+newer version of Vault to an older version. Our suggested procedure is designed
+to prevent this.
+
+Please note that Vault does not support true zero-downtime upgrades, but with
+proper upgrade procedure the downtime should be very short (a few hundred
+milliseconds to a second depending on how the speed of access to the storage
+backend).
+
+!> **Important:** If you are currently running on Vault 1.11+ with Integrated Storage Option and have chosen to opt-out the Autopilot automated upgrade features, please disable the default automated upgrade migrations feature of the Vault. To disable this feature, please follow the our [Automate Upgrades with Vault Enterprise Autopilot configuration] (/vault/tutorials/raft/raft-upgrade-automation#autopilot-configuration) for more details. Without disabling this feature you may run into Lost Quorum issue as detailed in our KB [Quorum lost while upgrading the vault from 1.11.0 to later version of it] (https://support.hashicorp.com/hc/en-us/articles/7122445204755-Quorum-lost-while-upgrading-the-vault-from-1-11-0-to-later-version-of-it).
+
+Perform these steps on each standby:
+
+1. Properly shut down Vault on the standby node via `SIGINT` or `SIGTERM`
+2. Replace the Vault binary with the new version; ensure that `mlock()` capability is added to the new binary with [setcap](/vault/docs/configuration#disable_mlock)
+3. Start the standby node
+4. Unseal the standby node
+5. Verify `vault status` shows correct Version and HA Mode is `standby`
+6. Review the node's logs to ensure successful startup and unseal
+
+At this point all standby nodes will be upgraded and ready to take over. The
+upgrade will not be complete until one of the upgraded standby nodes takes over
+active duty. To do this:
+
+1. Properly shut down the remaining (active) node
+
+   ~> **Note:** It is important that you shut the node down properly.
+   This will perform a step-down and release the HA lock, allowing a standby
+   node to take over with a very short delay.
+   If you kill Vault without letting it release the lock, a standby node will
+   not be able to take over until the lock's timeout period has expired. This
+   is backend-specific but could be ten seconds or more.
+
+2. Replace the Vault binary with the new version; ensure that `mlock()` capability is added to the new binary with [setcap](/vault/docs/configuration#disable_mlock)
+3. Start the node
+4. Unseal the node
+5. Verify `vault status` shows correct Version and HA Mode is `standby`
+6. Review the node's logs to ensure successful startup and unseal
+
+Internal upgrade tasks will happen after one of the upgraded standby nodes
+takes over active duty.
+
+Be sure to also read and follow any instructions in the version-specific
+upgrade notes.
+
+## Replication Installations
+
+-> **Note:** Prior to any upgrade, be sure to also read and follow any instructions in the version-specific
+upgrade notes which are found in the navigation menu for this documentation.
+
+Upgrading installations of Vault which participate in [Enterprise Replication](/vault/docs/enterprise/replication) requires the following basic order of operations:
+
+- **Upgrade the replication secondary instances first** using appropriate
+  guidance from the previous sections depending on whether each secondary
+  instance is Non-HA or HA
+- Verify functionality of each secondary instance after upgrading
+- When satisfied with functionality of upgraded secondary instances, upgrade
+  the primary instance
+
+~> **Note:** It is not safe to replicate from a newer version of Vault to an
+older version. When upgrading replicated clusters, ensure that upstream clusters
+are always on older versions of Vault than downstream clusters.
+
+Here is an example of upgrading four Vault replicated Vault clusters:
+
+![Upgrading multiple replicated clusters](/img/vault-replication-upgrade.png)
+
+In the above scenario, the ideal upgrade procedure would be as follows,
+verifying functionality after each cluster upgrade.
+
+1. Upgrade Clusters B and D, using the HA upgrade process above. These clusters
+   have no downstream clusters, so they should be upgraded first, but the
+   ordering of B vs D does not matter.
+2. Upgrade Cluster C, which now has an upgraded downstream cluster (Cluster D).
+   Because Cluster C is a cluster, it should also use the HA upgrade process.
+3. Finally, upgrade Cluster A. All clusters downstream of A will already be
+   upgraded. It should be upgraded last, as it is a Performance Primary and a DR
+   Primary.
