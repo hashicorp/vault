@@ -126,7 +126,7 @@ func TokenFields() map[string]*framework.FieldSchema {
 			DisplayAttrs: &framework.DisplayAttributes{
 				Name:  "Generated Token's Policies",
 				Group: "Tokens",
-				Description: "A list of policies that will apply to the generated token for this user."
+				Description: "A list of policies that will apply to the generated token for this user.",
 			},
 		},
 
