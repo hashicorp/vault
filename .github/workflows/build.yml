@@ -10,7 +10,28 @@ on:
       - release/**
 
 jobs:
+  verify-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      changed-pr-dirs: ${{ steps.get-changeddir-pr.outputs.dirname }}
+      changed-dirs: ${{ steps.get-changeddir.outputs.dirname }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Get PR changed directories
+        if: ${{ github.event_name == 'pull_request' }}
+        id: get-changeddir-pr
+        run: |
+          echo "dir_count=$(git diff ${{ github.head_ref }} ${{ github.base_ref }} --dirstat=files,0 |awk '{print $2}' |awk -F "/" '{print $1}'|wc -l)" >> "$GITHUB_ENV"
+          [[ github.env.dir_count == 1 ]] && echo "dirname=$(git diff ${{ github.head_ref }} ${{ github.base_ref }} --dirstat=files,0 |awk '{print $2}' |awk -F "/" '{print $1}')" >> "$GITHUB_OUTPUT"
+      - name: Get pushed changed directories
+        if: ${{ github.event_name != 'pull_request' }}
+        id: get-changeddir
+        run: |
+          echo "dir_count=$(git diff HEAD^1 HEAD --dirstat=files,0 |awk '{print $2}' |awk -F "/" '{print $1}'|wc -l)" >> "$GITHUB_ENV"
+          [[ github.env.dir_count == 1 ]] && echo "dirname=$(git diff HEAD^1 HEAD --dirstat=files,0 |awk '{print $2}' |awk -F "/" '{print $1}')" >> "$GITHUB_OUTPUT"
+
   product-metadata:
+    if: ${{ needs.verify-changes.outputs.changed-pr-dirs != 'website' }} || ${{ needs.verify-changes.outputs.changed-dirs != 'website' }}
     runs-on: ubuntu-latest
     outputs:
       build-date: ${{ steps.get-metadata.outputs.build-date }}
@@ -205,13 +226,14 @@ jobs:
 
   completed-successfully:
     runs-on: ubuntu-latest
-    needs:
-      - build-other
-      - build-linux
-      - build-darwin
-      - build-docker
-      - build-ubi
-      - test
-      - test-docker-k8s
     steps:
-      - run: echo "All required build and test workflows have succeeded!"
+      - name: Succeed workflow for docs workflows
+        if: ${{ needs.verify-changes.outputs.changed-pr-dirs == 'website' }} || ${{ needs.verify-changes.outputs.changed-dirs == 'website' }}
+        run: echo "Docs workflows have succeeded!"
+      - name: Succeed workflow for passing tests
+        if: |
+          ${{ needs.test.conclusion != 'skipped' }} &&
+          ${{ needs.test-docker-k8s.conclusion != 'skipped' }} &&
+          ${{ needs.test.conclusion == 'success' }} &&
+          ${{ needs.test-docker-k8s.conclusion == 'success' }}
+        run: echo "All required build and test workflows have succeeded!"
