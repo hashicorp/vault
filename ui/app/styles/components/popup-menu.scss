@@ -22,7 +22,7 @@
 
   .confirm-action span .button {
     display: block;
-    margin: 0.25rem auto;
+    margin: $size-11 auto;
     width: 95%;
   }
 
@@ -125,15 +125,15 @@
 .info-table-row,
 .wizard-dismiss-menu {
   .popup-menu-trigger {
-    height: 2.5rem;
+    height: $size-2;
     min-width: 0;
     padding: 0;
-    width: 2.5rem;
+    width: $size-2;
   }
 }
 
 .status-menu-content {
-  margin-top: 8px;
+  margin-top: $spacing-xs;
 
   .box {
     @include until($mobile) {

@@ -41,7 +41,7 @@
 //override bulma's pre styling
 .masked-input .display-only {
   line-height: 1.5;
-  font-size: 1rem;
+  font-size: $size-6;
   padding-top: 0;
   padding-bottom: 0;
   padding-left: $spacing-s;
@@ -69,7 +69,7 @@
   .button.copy-button {
     background: transparent;
     height: auto;
-    line-height: 1rem;
+    line-height: $size-6;
     min-width: $spacing-l;
     border: 0;
     box-shadow: none;

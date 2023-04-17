@@ -11,13 +11,10 @@
 
 .overflow-ellipsis {
   box-sizing: border-box;
+
   &.is-closed {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-}
-
-.has-font-weight-normal {
-  font-weight: $font-weight-normal;
 }
