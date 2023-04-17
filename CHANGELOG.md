@@ -1,6 +1,12 @@
 ## 1.13.1
 ### March 29, 2023
 
+SECURITY:
+
+* storage/mssql: When using Vault’s community-supported Microsoft SQL (MSSQL) database storage backend, a privileged attacker with the ability to write arbitrary data to Vault’s configuration may be able to perform arbitrary SQL commands on the underlying database server through Vault. This vulnerability, CVE-2023-0620, is fixed in Vault 1.13.1, 1.12.5, and 1.11.9. [[HCSEC-2023-12](https://discuss.hashicorp.com/t/hcsec-2023-12-vault-s-microsoft-sql-database-storage-backend-vulnerable-to-sql-injection-via-configuration-file/52080)]
+* secrets/pki: Vault’s PKI mount issuer endpoints did not correctly authorize access to remove an issuer or modify issuer metadata, potentially resulting in denial of service of the PKI mount. This bug did not affect public or private key material, trust chains or certificate issuance. This vulnerability, CVE-2023-0665, is fixed in Vault 1.13.1, 1.12.5, and 1.11.9. [[HCSEC-2023-11](https://discuss.hashicorp.com/t/hcsec-2023-11-vault-s-pki-issuer-endpoint-did-not-correctly-authorize-access-to-issuer-metadata/52079)]
+* core: HashiCorp Vault’s implementation of Shamir’s secret sharing used precomputed table lookups, and was vulnerable to cache-timing attacks. An attacker with access to, and the ability to observe a large number of unseal operations on the host through a side channel may reduce the search space of a brute force effort to recover the Shamir shares. This vulnerability, CVE-2023-25000, is fixed in Vault 1.13.1, 1.12.5, and 1.11.9. [[HCSEC-2023-10](https://discuss.hashicorp.com/t/hcsec-2023-10-vault-vulnerable-to-cache-timing-attacks-during-seal-and-unseal-operations/52078)]
+
 IMPROVEMENTS:
 
 * auth/github: Allow for an optional Github auth token environment variable to make authenticated requests when fetching org id
@@ -334,6 +340,12 @@ non-voter.  In some scenarios this resulted in loss of quorum. [[GH-18263](https
 
 ## 1.12.5
 ### March 29, 2023
+
+SECURITY:
+
+* storage/mssql: When using Vault’s community-supported Microsoft SQL (MSSQL) database storage backend, a privileged attacker with the ability to write arbitrary data to Vault’s configuration may be able to perform arbitrary SQL commands on the underlying database server through Vault. This vulnerability, CVE-2023-0620, is fixed in Vault 1.13.1, 1.12.5, and 1.11.9. [[HCSEC-2023-12](https://discuss.hashicorp.com/t/hcsec-2023-12-vault-s-microsoft-sql-database-storage-backend-vulnerable-to-sql-injection-via-configuration-file/52080)]
+* secrets/pki: Vault’s PKI mount issuer endpoints did not correctly authorize access to remove an issuer or modify issuer metadata, potentially resulting in denial of service of the PKI mount. This bug did not affect public or private key material, trust chains or certificate issuance. This vulnerability, CVE-2023-0665, is fixed in Vault 1.13.1, 1.12.5, and 1.11.9. [[HCSEC-2023-11](https://discuss.hashicorp.com/t/hcsec-2023-11-vault-s-pki-issuer-endpoint-did-not-correctly-authorize-access-to-issuer-metadata/52079)]
+* core: HashiCorp Vault’s implementation of Shamir’s secret sharing used precomputed table lookups, and was vulnerable to cache-timing attacks. An attacker with access to, and the ability to observe a large number of unseal operations on the host through a side channel may reduce the search space of a brute force effort to recover the Shamir shares. This vulnerability, CVE-2023-25000, is fixed in Vault 1.13.1, 1.12.5, and 1.11.9. [[HCSEC-2023-10](https://discuss.hashicorp.com/t/hcsec-2023-10-vault-vulnerable-to-cache-timing-attacks-during-seal-and-unseal-operations/52078)]
 
 IMPROVEMENTS:
 
@@ -728,6 +740,12 @@ BUG FIXES:
 
 ## 1.11.9
 ### March 29, 2023
+
+SECURITY:
+
+* storage/mssql: When using Vault’s community-supported Microsoft SQL (MSSQL) database storage backend, a privileged attacker with the ability to write arbitrary data to Vault’s configuration may be able to perform arbitrary SQL commands on the underlying database server through Vault. This vulnerability, CVE-2023-0620, is fixed in Vault 1.13.1, 1.12.5, and 1.11.9. [[HCSEC-2023-12](https://discuss.hashicorp.com/t/hcsec-2023-12-vault-s-microsoft-sql-database-storage-backend-vulnerable-to-sql-injection-via-configuration-file/52080)]
+* secrets/pki: Vault’s PKI mount issuer endpoints did not correctly authorize access to remove an issuer or modify issuer metadata, potentially resulting in denial of service of the PKI mount. This bug did not affect public or private key material, trust chains or certificate issuance. This vulnerability, CVE-2023-0665, is fixed in Vault 1.13.1, 1.12.5, and 1.11.9. [[HCSEC-2023-11](https://discuss.hashicorp.com/t/hcsec-2023-11-vault-s-pki-issuer-endpoint-did-not-correctly-authorize-access-to-issuer-metadata/52079)]
+* core: HashiCorp Vault’s implementation of Shamir’s secret sharing used precomputed table lookups, and was vulnerable to cache-timing attacks. An attacker with access to, and the ability to observe a large number of unseal operations on the host through a side channel may reduce the search space of a brute force effort to recover the Shamir shares. This vulnerability, CVE-2023-25000, is fixed in Vault 1.13.1, 1.12.5, and 1.11.9. [[HCSEC-2023-10](https://discuss.hashicorp.com/t/hcsec-2023-10-vault-vulnerable-to-cache-timing-attacks-during-seal-and-unseal-operations/52078)]
 
 IMPROVEMENTS:
 
