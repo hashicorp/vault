@@ -361,7 +361,12 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 
 	req.URL.Path = req.Context().Value("original_request_path").(string)
 
-	freq, err := forwarding.GenerateForwardedRequest(req)
+	// Forwarded 'From' and 'To' host metadata which we need to augment the gRPC request with.
+	from, _ := url.Parse(c.redirectAddr) // TODO: PW: Error handling.
+	_, leaderAddr, _, _ := c.Leader()    // TODO: PW: Error handling.
+	to, _ := url.Parse(leaderAddr)       // TODO: PW: Error handling.
+
+	freq, err := forwarding.GenerateForwardedRequest(req, from, to)
 	if err != nil {
 		c.logger.Error("error creating forwarding RPC request", "error", err)
 		return 0, nil, nil, fmt.Errorf("error creating forwarding RPC request")
