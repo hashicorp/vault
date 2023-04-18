@@ -22,6 +22,7 @@ on:
         description: A space-separated list of additional build flags.
         required: false
         type: string
+        default: ''
       runs-on:
         description: An expression indicating which kind of runners to use.
         required: false
