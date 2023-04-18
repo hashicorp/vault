@@ -112,17 +112,16 @@ jobs:
       run: |
         ./.github/scripts/oss-diff.sh ${{ steps.determine-branch.outputs.BRANCH }} HEAD
   build-vault:
+    name: Build Vault
     needs:
       - setup
-    name: Build Vault
+    runs-on: ${{ needs.setup.outputs.compute-standard }}
     steps:
-      - id: build-go-dev
-        name: build-go-dev
-        run: |
-          rm -rf ./pkg
-          mkdir ./pkg
-          
-          make ci-bootstrap dev
+    - id: build-go-dev
+      run: |
+        rm -rf ./pkg
+        mkdir ./pkg
+        make ci-bootstrap dev
   test-go:
     name: Run Go tests
     needs:
