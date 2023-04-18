@@ -16,14 +16,21 @@ export const expandOpenApiProps = function (props) {
     if (deprecated === true) {
       continue;
     }
-    let { name, value, group, sensitive, editType } = prop['x-vault-displayAttrs'] || {};
+    let {
+      name,
+      value,
+      group,
+      sensitive,
+      editType,
+      description: displayDescription,
+    } = prop['x-vault-displayAttrs'] || {};
 
     if (type === 'integer') {
       type = 'number';
     }
 
-    if (prop['x-vault-displayAttrs']?.description) {
-      description = prop['x-vault-displayAttrs'].description;
+    if (displayDescription) {
+      description = displayDescription;
     }
 
     editType = editType || type;
