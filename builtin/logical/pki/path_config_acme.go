@@ -123,8 +123,20 @@ func (b *backend) pathAcmeRead(ctx context.Context, req *logical.Request, _ *fra
 }
 
 func genResponseFromAcmeConfig(config *acmeConfigEntry) *logical.Response {
+	response := &logical.Response{
+		Data: map[string]interface{}{
+			"allow_any_domain":         config.AllowAnyDomain,
+			"allowed_roles":            config.AllowedRoles,
+			"allow_no_allowed_domains": config.AllowNoAllowedDomains,
+			"allowed_issuers":          config.AllowedIssuers,
+			"default_role":             config.DefaultRole,
+			"enabled":                  config.Enabled,
+		},
+	}
 
-	return nil // TODO: PRINT PRITY // Add something nice if we are on a replication cluster and path isn't set
+	// TODO: Add some nice warning if we are on a replication cluster and path isn't set
+
+	return response
 }
 
 func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
