@@ -1203,7 +1203,6 @@ func (b *backend) doTidyAcmeAccounts(ctx context.Context, req *logical.Request, 
 	}
 
 	return nil
-
 }
 
 func (b *backend) doTidyMoveCABundle(ctx context.Context, req *logical.Request, logger hclog.Logger, config *tidyConfig) error {
