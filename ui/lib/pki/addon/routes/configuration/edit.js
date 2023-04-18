@@ -4,5 +4,21 @@
  */
 
 import Route from '@ember/routing/route';
+import { inject as service } from '@ember/service';
+// import { withConfirmLeave } from 'core/decorators/confirm-leave';
 
-export default class PkiConfigurationEditRoute extends Route {}
+// @withConfirmLeave()
+export default class PkiConfigurationEditRoute extends Route {
+  @service secretMountPath;
+
+  setupController(controller, resolvedModel) {
+    super.setupController(controller, resolvedModel);
+
+    controller.breadcrumbs = [
+      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: this.secretMountPath.currentPath, route: 'overview' },
+      { label: 'configuration', route: 'configuration.index' },
+      { label: 'edit' },
+    ];
+  }
+}
