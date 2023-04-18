@@ -491,6 +491,14 @@ this removes ALL issuers within the mount (and is thus not desirable
 in most operational scenarios).`,
 	}
 
+	fields["tidy_acme_accounts"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `Set to true to mark accounts that haven't been
+used for a safety buffer as revoked, and remove
+acme accounts that have been revoked before the
+time interval given by the acme safety buffer.`,
+	}
+
 	fields["safety_buffer"] = &framework.FieldSchema{
 		Type: framework.TypeDurationSecond,
 		Description: `The amount of extra time that must have passed
@@ -507,6 +515,28 @@ beyond issuer's expiration before it is removed
 from the backend storage.
 Defaults to 8760 hours (1 year).`,
 		Default: int(defaultTidyConfig.IssuerSafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
+	}
+
+	fields["acme_account_revocation_safety_buffer"] = &framework.FieldSchema{
+		Type: framework.TypeDurationSecond,
+		Description: `The amount of extra time that must have passed
+where an acme account is not used before it is
+marked as revoked.
+Typically this should be set to a 1.2*(length of
+certificate validity), or similar.
+Defaults to 10512 hours (1.2 years)`,
+		Default: int(defaultTidyConfig.RevokeAcmeAccountsSafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
+	}
+
+	fields["acme_account_revocation_safety_buffer"] = &framework.FieldSchema{
+		Type: framework.TypeDurationSecond,
+		Description: `The amount of extra time that must have passed
+after an acme account is marked as revoked before
+it is deleted.
+Typically this should be set to a 1.2*(length of
+certificate validity), or similar.
+Defaults to 10512 hours (1.2 years)`,
+		Default: int(defaultTidyConfig.DeleteAcmeAccountsSafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
 	}
 
 	fields["pause_duration"] = &framework.FieldSchema{

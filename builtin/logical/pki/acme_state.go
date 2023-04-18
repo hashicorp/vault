@@ -311,7 +311,6 @@ func (a *acmeState) TidyAcmeAccount(ac *acmeContext, keyThumbprint string, markR
 	}
 
 	return false, false, nil
-
 }
 
 func (a *acmeState) LoadJWK(ac *acmeContext, keyId string) ([]byte, error) {

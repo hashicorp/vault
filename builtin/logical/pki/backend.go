@@ -309,6 +309,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 	b.unifiedTransferStatus = newUnifiedTransferStatus()
 
+	b.acmeAccountCount = atomic2.Uint32{} // Not a Metric, Just Used by Tidy
 	b.acmeState = NewACMEState()
 	return &b
 }
@@ -344,7 +345,9 @@ type backend struct {
 	issuersLock sync.RWMutex
 
 	// Context around ACME operations
-	acmeState *acmeState
+	acmeState        *acmeState
+	acmeAccountLock  sync.RWMutex
+	acmeAccountCount *atomic.Uint32
 }
 
 type roleOperation func(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error)
