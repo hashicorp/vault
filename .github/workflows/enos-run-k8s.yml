@@ -31,7 +31,7 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v2
         with:
@@ -44,7 +44,7 @@ jobs:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - name: Download Docker Image
         id: download
-        uses: actions/download-artifact@e9ef242655d12993efdcda9058dee2db83a2cb9b
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
         with:
           name: ${{ inputs.artifact-name }}
           path: ./enos/support/downloads

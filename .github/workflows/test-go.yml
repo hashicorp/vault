@@ -39,7 +39,7 @@ jobs:
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     name: Verify Test Package Distribution
     steps:
-    - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
+    - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
     - id: test
       working-directory: .github/scripts
       run: |
@@ -79,8 +79,8 @@ jobs:
       GOPRIVATE: github.com/hashicorp/*
       TIMEOUT_IN_MINUTES: 60
     steps:
-      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
-      - uses: actions/setup-go@d0a58c1c4d2b25278816e339b944508c875f3613
+      - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
+      - uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
         with:
           go-version-file: ./.go-version
           cache: true
@@ -186,13 +186,13 @@ jobs:
           fi
           datadog-ci junit upload --service "$GITHUB_REPOSITORY" test-results/go-test/results.xml
       - name: Archive test results
-        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
           name: test-results-${{ matrix.runner-index }}
           path: test-results/
         if: always()
       - name: Create a summary of tests
-        uses: test-summary/action@62bc5c68de2a6a0d02039763b8c754569df99e3f
+        uses: test-summary/action@62bc5c68de2a6a0d02039763b8c754569df99e3f # TSCCR: no entry for repository "test-summary/action"
         with:
           paths: "test-results/go-test/results.xml"
           show: "fail"

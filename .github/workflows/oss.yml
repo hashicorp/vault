@@ -19,9 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - if: github.event.pull_request != null
-        uses: actions/checkout@v3
+        uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
       - if: github.event.pull_request != null
-        uses: dorny/paths-filter@v2
+        uses: dorny/paths-filter@4512585405083f25c027a35db413c2b3b9006d50 # v2.11.1
         id: changes
         with:
           # derived from CODEOWNERS
@@ -68,7 +68,7 @@ jobs:
       - if: github.event.pull_request != null && steps.changes.outputs.ui == 'true'
         run: echo "PROJECT=171" >> "$GITHUB_ENV"
 
-      - uses: actions/add-to-project@v0.3.0
+      - uses: actions/add-to-project@v0.3.0 # TSCCR: no entry for repository "actions/add-to-project"
         with:
           project-url: https://github.com/orgs/hashicorp/projects/${{ env.PROJECT }}
           github-token: ${{ secrets.TRIAGE_GITHUB_TOKEN }}

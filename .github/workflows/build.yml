@@ -22,7 +22,7 @@ jobs:
       vault-version: ${{ steps.get-metadata.outputs.vault-version }}
       vault-base-version: ${{ steps.get-metadata.outputs.vault-base-version }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
       - name: Get metadata
         id: get-metadata
         env:
@@ -44,7 +44,7 @@ jobs:
         with:
           version: ${{ steps.get-metadata.outputs.vault-version }}
           product: ${{ steps.get-metadata.outputs.package-name }}
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
           name: metadata.json
           path: ${{ steps.generate-metadata-file.outputs.filepath }}
@@ -123,7 +123,7 @@ jobs:
       matrix:
         arch: [arm, arm64, 386, amd64]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
       - uses: hashicorp/actions-docker-build@v1
         with:
           version: ${{ needs.product-metadata.outputs.vault-version }}
@@ -144,7 +144,7 @@ jobs:
       matrix:
         arch: [amd64]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
       - uses: hashicorp/actions-docker-build@v1
         with:
           version: ${{ needs.product-metadata.outputs.vault-version }}
