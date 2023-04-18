@@ -111,28 +111,17 @@ jobs:
     - id: diff
       run: |
         ./.github/scripts/oss-diff.sh ${{ steps.determine-branch.outputs.BRANCH }} HEAD
+  build-vault:
+    name: Build Vault
+    runs-on: ${{ fromJSON(needs.setup.outputs.compute-tiny) }}
+    steps:
+      - env:
+          GO_TAGS: '${{ needs.setup.outputs.go-build-tags }},deadlock'
+        run: make ci-build
   test-go:
     name: Run Go tests
     needs:
-    - setup
-    - setup-go-cache
-    # Don't run this job for PR branches starting with 'ui/', 'backport/ui/', 'docs/', or 'backport/docs/'
-    if: |
-      !startsWith(github.head_ref, 'ui/') &&
-      !startsWith(github.head_ref, 'backport/ui/') &&
-      !startsWith(github.head_ref, 'docs/') &&
-      !startsWith(github.head_ref, 'backport/docs/')
-    uses: ./.github/workflows/test-go.yml
-    with:
-      total-runners: 16
-      go-arch: amd64
-      go-build-tags: '${{ needs.setup.outputs.go-build-tags }},deadlock'
-      runs-on: ${{ needs.setup.outputs.compute-larger }}
-      enterprise: ${{ needs.setup.outputs.enterprise }}
-    secrets: inherit
-  test-go-race:
-    name: Run Go tests with data race detection
-    needs:
+    - build-vault
     - setup
     - setup-go-cache
     # Don't run this job for PR branches starting with 'ui/', 'backport/ui/', 'docs/', or 'backport/docs/'
@@ -146,7 +135,32 @@ jobs:
       total-runners: 16
       env-vars: |
         {
-          "VAULT_CI_GO_TEST_RACE": 1
+          "VAULT_BINARY": "dist/vault"
+        }
+      go-arch: amd64
+      go-build-tags: '${{ needs.setup.outputs.go-build-tags }},deadlock'
+      runs-on: ${{ needs.setup.outputs.compute-larger }}
+      enterprise: ${{ needs.setup.outputs.enterprise }}
+    secrets: inherit
+  test-go-race:
+    name: Run Go tests with data race detection
+    needs:
+    - build-vault
+    - setup
+    - setup-go-cache
+    # Don't run this job for PR branches starting with 'ui/', 'backport/ui/', 'docs/', or 'backport/docs/'
+    if: |
+      !startsWith(github.head_ref, 'ui/') &&
+      !startsWith(github.head_ref, 'backport/ui/') &&
+      !startsWith(github.head_ref, 'docs/') &&
+      !startsWith(github.head_ref, 'backport/docs/')
+    uses: ./.github/workflows/test-go.yml
+    with:
+      total-runners: 16
+      env-vars: |
+        {
+          "VAULT_CI_GO_TEST_RACE": 1,
+          "VAULT_BINARY": "dist/vault"
         }
       extra-flags: '-race'
       go-arch: amd64
@@ -164,6 +178,7 @@ jobs:
       !startsWith(github.head_ref, 'docs/') &&
       !startsWith(github.head_ref, 'backport/docs/')
     needs:
+    - build-vault
     - setup
     - setup-go-cache
     uses: ./.github/workflows/test-go.yml
@@ -171,7 +186,8 @@ jobs:
       total-runners: 16
       env-vars: |
         {
-          "GOEXPERIMENT": "boringcrypto"
+          "GOEXPERIMENT": "boringcrypto",
+          "VAULT_BINARY": "dist/vault"
         }
       go-arch: amd64
       go-build-tags: '${{ needs.setup.outputs.go-build-tags }},deadlock,cgo,fips,fips_140_2'

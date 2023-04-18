@@ -203,6 +203,7 @@ type Config struct {
 	// commands such as 'vault operator raft snapshot' as this redirects to the
 	// primary node.
 	DisableRedirects bool
+	clientTLSConfig  *tls.Config
 }
 
 // TLSConfig contains the parameters needed to configure TLS on the HTTP client
@@ -337,8 +338,13 @@ func (c *Config) configureTLS(t *TLSConfig) error {
 	if t.TLSServerName != "" {
 		clientTLSConfig.ServerName = t.TLSServerName
 	}
+	c.clientTLSConfig = clientTLSConfig
 
 	return nil
+}
+
+func (c *Config) TLSConfig() *tls.Config {
+	return c.clientTLSConfig.Clone()
 }
 
 // ConfigureTLS takes a set of TLS configurations and applies those to the
@@ -665,6 +671,7 @@ func (c *Client) CloneConfig() *Config {
 	newConfig.CloneHeaders = c.config.CloneHeaders
 	newConfig.CloneToken = c.config.CloneToken
 	newConfig.ReadYourWrites = c.config.ReadYourWrites
+	newConfig.clientTLSConfig = c.config.clientTLSConfig
 
 	// we specifically want a _copy_ of the client here, not a pointer to the original one
 	newClient := *c.config.HttpClient

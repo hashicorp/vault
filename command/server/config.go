@@ -24,6 +24,8 @@ import (
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/testcluster"
+	"github.com/mitchellh/mapstructure"
 )
 
 const (
@@ -1187,4 +1189,13 @@ func (c *Config) Prune() {
 func (c *Config) found(s, k string) {
 	delete(c.UnusedKeys, s)
 	c.FoundKeys = append(c.FoundKeys, k)
+}
+
+func (c *Config) ToVaultNodeConfig() (*testcluster.VaultNodeConfig, error) {
+	var vnc testcluster.VaultNodeConfig
+	err := mapstructure.Decode(c, &vnc)
+	if err != nil {
+		return nil, err
+	}
+	return &vnc, nil
 }

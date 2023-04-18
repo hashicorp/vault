@@ -51,6 +51,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/helper/testcluster"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
@@ -2191,3 +2192,74 @@ func (testCluster *TestCluster) getAPIClient(
 	}
 	return apiClient
 }
+
+func (c *TestCluster) GetBarrierOrRecoveryKeys() [][]byte {
+	if c.Cores[0].SealAccess().RecoveryKeySupported() {
+		return c.GetRecoveryKeys()
+	} else {
+		return c.GetBarrierKeys()
+	}
+}
+
+func (c *TestCluster) GetCACertPEMFile() string {
+	return c.CACertPEMFile
+}
+
+func (c *TestCluster) ClusterID() string {
+	return c.ID
+}
+
+func (c *TestCluster) Nodes() []testcluster.VaultClusterNode {
+	ret := make([]testcluster.VaultClusterNode, len(c.Cores))
+	for i, core := range c.Cores {
+		ret[i] = core
+	}
+	return ret
+}
+
+func (c *TestCluster) SetBarrierKeys(keys [][]byte) {
+	c.BarrierKeys = make([][]byte, len(keys))
+	for i, k := range keys {
+		c.BarrierKeys[i] = TestKeyCopy(k)
+	}
+}
+
+func (c *TestCluster) SetRecoveryKeys(keys [][]byte) {
+	c.RecoveryKeys = make([][]byte, len(keys))
+	for i, k := range keys {
+		c.RecoveryKeys[i] = TestKeyCopy(k)
+	}
+}
+
+func (c *TestCluster) GetBarrierKeys() [][]byte {
+	ret := make([][]byte, len(c.BarrierKeys))
+	for i, k := range c.BarrierKeys {
+		ret[i] = TestKeyCopy(k)
+	}
+	return ret
+}
+
+func (c *TestCluster) GetRecoveryKeys() [][]byte {
+	ret := make([][]byte, len(c.RecoveryKeys))
+	for i, k := range c.RecoveryKeys {
+		ret[i] = TestKeyCopy(k)
+	}
+	return ret
+}
+
+func (c *TestCluster) NamedLogger(name string) log.Logger {
+	return c.Logger.Named(name)
+}
+
+func (c *TestClusterCore) Name() string {
+	return c.NodeID
+}
+
+func (c *TestClusterCore) APIClient() *api.Client {
+	return c.Client
+}
+
+var (
+	_ testcluster.VaultCluster     = &TestCluster{}
+	_ testcluster.VaultClusterNode = &TestClusterCore{}
+)
