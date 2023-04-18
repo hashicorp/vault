@@ -62,8 +62,7 @@ jobs:
   build-vault:
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     name: Build Vault dev binary
-    if: ${{ fromJSON(env.GOEXPERIMENT) }} == "" &&
-        ${{ fromJSON(env.VAULT_CI_GO_TEST_RACE) }} == ""
+    if: !contains(inputs.extra_flags, "-race")
     steps:
     - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
     - uses: actions/setup-go@d0a58c1c4d2b25278816e339b944508c875f3613
@@ -71,13 +70,12 @@ jobs:
         go-version-file: ./.go-version
         cache: true
     - id: build
-      run: make ci-bootstrap dev # TODO build in -race mode when we're in -race mode
+      run: make ci-bootstrap dev
     - name: Save dev binary
       uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce
       with:
         name: vault-dev
         path: bin/vault
-      if: always()
   test-go:
     permissions:
       id-token: write  # Note: this permission is explicitly required for Vault auth
@@ -137,13 +135,13 @@ jobs:
         run: |
           git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
       - name: Retrieve vault dev binary
-        if: ${{ fromJSON(env.GOEXPERIMENT) }} == "" &&
-          ${{ fromJSON(env.VAULT_CI_GO_TEST_RACE) }} == ""
+        if: !contains(inputs.extra_flags, "-race")
         uses: actions/download-artifact@e9ef242655d12993efdcda9058dee2db83a2cb9b
         with:
           name: vault-dev
           path: bin/vault
       - name: Make vault dev binary executable
+        if: !contains(inputs.extra_flags, "-race")
         run: chmod a+x bin/vault
       - id: run-go-tests
         name: Run Go tests
