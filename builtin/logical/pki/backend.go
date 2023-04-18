@@ -227,6 +227,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 		InitializeFunc: b.initialize,
 		Invalidate:     b.invalidate,
 		PeriodicFunc:   b.periodicFunc,
+		Clean:          b.cleanup,
 	}
 
 	// Add ACME paths to backend
@@ -433,6 +434,10 @@ func (b *backend) initialize(ctx context.Context, _ *logical.InitializationReque
 	}
 
 	return nil
+}
+
+func (b *backend) cleanup(_ context.Context) {
+	b.acmeState.validator.Closing <- struct{}{}
 }
 
 func (b *backend) initializePKIIssuersStorage(ctx context.Context) error {
