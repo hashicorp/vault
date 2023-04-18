@@ -185,8 +185,9 @@ jobs:
             #export HCP_SCADA_ADDRESS=${{ secrets.HCP_SCADA_ADDRESS }}
           fi
 
-          if -f bin/vault; then
-            export VAULT_BINARY=$(PWD)/bin/vault
+          if [ -f bin/vault ]; then
+            VAULT_BINARY="$(PWD)/bin/vault"
+            export VAULT_BINARY
           fi
           
           # shellcheck disable=SC2086 # can't quote package list
