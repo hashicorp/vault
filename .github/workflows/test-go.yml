@@ -137,6 +137,8 @@ jobs:
         run: |
           git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
       - name: Retrieve vault dev binary
+        if: ${{ fromJSON(env.GOEXPERIMENT) }} == "" &&
+          ${{ fromJSON(env.VAULT_CI_GO_TEST_RACE) }} == ""
         uses: actions/download-artifact@e9ef242655d12993efdcda9058dee2db83a2cb9b
         with:
           name: vault-dev
@@ -185,6 +187,10 @@ jobs:
             #export HCP_SCADA_ADDRESS=${{ secrets.HCP_SCADA_ADDRESS }}
           fi
 
+          if -f bin/vault; then
+            export VAULT_BINARY=$(PWD)/bin/vault
+          fi
+          
           # shellcheck disable=SC2086 # can't quote package list
           GOARCH=${{ inputs.go-arch }} \
             go run gotest.tools/gotestsum --format=short-verbose \

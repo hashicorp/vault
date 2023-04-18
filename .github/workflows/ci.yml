@@ -125,10 +125,6 @@ jobs:
     uses: ./.github/workflows/test-go.yml
     with:
       total-runners: 16
-      env-vars: |
-        {
-          "VAULT_BINARY": "bin/vault"
-        }
       go-arch: amd64
       go-build-tags: '${{ needs.setup.outputs.go-build-tags }},deadlock'
       runs-on: ${{ needs.setup.outputs.compute-larger }}
@@ -151,7 +147,6 @@ jobs:
       env-vars: |
         {
           "VAULT_CI_GO_TEST_RACE": 1,
-          "VAULT_BINARY": "bin/vault"
         }
       extra-flags: '-race'
       go-arch: amd64
@@ -177,7 +172,6 @@ jobs:
       env-vars: |
         {
           "GOEXPERIMENT": "boringcrypto",
-          "VAULT_BINARY": "bin/vault"
         }
       go-arch: amd64
       go-build-tags: '${{ needs.setup.outputs.go-build-tags }},deadlock,cgo,fips,fips_140_2'
