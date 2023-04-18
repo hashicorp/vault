@@ -709,7 +709,7 @@ func (sc *storageContext) upgradeIssuerIfRequired(issuer *issuerEntry) *issuerEn
 		// Remove CRL signing usage if it exists on the issuer but doesn't
 		// exist in the KU of the x509 certificate.
 		if hadCRL && (cert.KeyUsage&x509.KeyUsageCRLSign) == 0 {
-			issuer.Usage.ToggleUsage(OCSPSigningUsage)
+			issuer.Usage.ToggleUsage(CRLSigningUsage)
 		}
 
 		// Handle our new OCSPSigning usage flag for earlier versions. If we
