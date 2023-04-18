@@ -112,6 +112,8 @@ jobs:
       run: |
         ./.github/scripts/oss-diff.sh ${{ steps.determine-branch.outputs.BRANCH }} HEAD
   build-vault:
+    needs:
+      - setup
     name: Build Vault
     runs-on: ${{ fromJSON(needs.setup.outputs.compute-tiny) }}
     steps:
