@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/mitchellh/cli"
+	"github.com/mitchellh/go-homedir"
 	"github.com/posener/complete"
 )
 
@@ -110,7 +111,7 @@ func (c *AgentGenerateConfigCommand) Run(args []string) int {
 		return 2
 	}
 
-	var templates []*config.EnvTemplateConfig
+	var templates []*config.EnvTemplateGen
 
 	for _, path := range c.flagPaths {
 		pathSanitized := sanitizePath(path)
@@ -144,6 +145,12 @@ func (c *AgentGenerateConfigCommand) Run(args []string) int {
 		execCommand = "env"
 	}
 
+	tokenPath, err := homedir.Expand("~/.vault-token")
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Could not expand home directory: %v", err))
+		return 2
+	}
+
 	agentConfig := config.ConfigGen{
 		Vault: &config.VaultGen{
 			Address: client.Address(),
@@ -152,7 +159,7 @@ func (c *AgentGenerateConfigCommand) Run(args []string) int {
 			Method: &config.AutoAuthMethodGen{
 				Type: "token_file",
 				Config: config.AutoAuthMethodConfigGen{
-					TokenFilePath: "$HOME/.vault-token",
+					TokenFilePath: tokenPath,
 				},
 			},
 		},
@@ -197,8 +204,8 @@ func (c *AgentGenerateConfigCommand) Run(args []string) int {
 	return 0
 }
 
-func traverseSecrets(ctx context.Context, client *api.Client, path, pathMount string, v2 bool) ([]*config.EnvTemplateConfig, error) {
-	var templates []*config.EnvTemplateConfig
+func traverseSecrets(ctx context.Context, client *api.Client, path, pathMount string, v2 bool) ([]*config.EnvTemplateGen, error) {
+	var templates []*config.EnvTemplateGen
 
 	if v2 {
 		path = addPrefixToKVPath(path, pathMount, "metadata", true)
@@ -238,8 +245,8 @@ func traverseSecrets(ctx context.Context, client *api.Client, path, pathMount st
 	return templates, nil
 }
 
-func readSecret(ctx context.Context, client *api.Client, path, pathMount string, v2 bool) ([]*config.EnvTemplateConfig, error) {
-	var templates []*config.EnvTemplateConfig
+func readSecret(ctx context.Context, client *api.Client, path, pathMount string, v2 bool) ([]*config.EnvTemplateGen, error) {
+	var templates []*config.EnvTemplateGen
 
 	if v2 {
 		path = addPrefixToKVPath(path, pathMount, "data", true)
@@ -275,9 +282,9 @@ func readSecret(ctx context.Context, client *api.Client, path, pathMount string,
 		if v2 {
 			v2AdjustedField = "data." + field
 		}
-		templates = append(templates, &config.EnvTemplateConfig{
+		templates = append(templates, &config.EnvTemplateGen{
 			Name:     constructDefaultEnvironmentKey(path, field),
-			Contents: fmt.Sprintf(`{{ with secret "%s" }}{{ Data.%s }}{{ end }}`, path, v2AdjustedField),
+			Contents: fmt.Sprintf(`{{ with secret "%s" }}{{ .Data.%s }}{{ end }}`, path, v2AdjustedField),
 		})
 	}
 

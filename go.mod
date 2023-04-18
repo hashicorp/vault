@@ -14,6 +14,8 @@ replace github.com/hashicorp/vault/sdk => ./sdk
 
 replace go.etcd.io/etcd/client/pkg/v3 v3.5.0 => go.etcd.io/etcd/client/pkg/v3 v3.0.0-20210928084031-3df272774672
 
+replace github.com/hashicorp/consul-template => ../consul-template
+
 require (
 	cloud.google.com/go/monitoring v1.8.0
 	cloud.google.com/go/spanner v1.41.0
