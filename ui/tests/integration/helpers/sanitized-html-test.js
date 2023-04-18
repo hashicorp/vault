@@ -30,6 +30,6 @@ module('Integration | Helper | sanitized-html', function (hooks) {
       window.alert('h4cK3d');
     });
     await render(hbs`{{sanitized-html this.inputValue}}`);
-    assert.dom(this.element).hasText("() => { window.alert('h4cK3d') }");
+    assert.dom(this.element).hasText("() => { window.alert('h4cK3d'); }");
   });
 });
