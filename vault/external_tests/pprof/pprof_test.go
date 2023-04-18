@@ -230,6 +230,7 @@ func TestSysPprof_Standby_Exec(t *testing.T) {
 				DisablePerformanceStandby: true,
 			},
 		},
+		BinaryPath: os.Getenv("VAULT_BINARY"),
 	})
 	defer cluster.Cleanup()
 

@@ -123,10 +123,11 @@ jobs:
         go-version-file: ./.go-version
         cache: true
     - id: build-go-dev
-      run: |
-        rm -rf ./pkg
-        mkdir ./pkg
-        make ci-bootstrap dev
+      run: make ci-bootstrap dev
+    - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce
+      with:
+        name: vault-dev
+        path: bin/vault
   test-go:
     name: Run Go tests
     needs:
@@ -139,18 +140,23 @@ jobs:
       !startsWith(github.head_ref, 'backport/ui/') &&
       !startsWith(github.head_ref, 'docs/') &&
       !startsWith(github.head_ref, 'backport/docs/')
-    uses: ./.github/workflows/test-go.yml
-    with:
-      total-runners: 16
-      env-vars: |
-        {
-          "VAULT_BINARY": "bin/vault"
-        }
-      go-arch: amd64
-      go-build-tags: '${{ needs.setup.outputs.go-build-tags }},deadlock'
-      runs-on: ${{ needs.setup.outputs.compute-larger }}
-      enterprise: ${{ needs.setup.outputs.enterprise }}
-    secrets: inherit
+    steps:
+    - uses: actions/download-artifact@e9ef242655d12993efdcda9058dee2db83a2cb9b
+      with:
+        name: vault-dev
+        path: bin/vault
+    - uses: ./.github/workflows/test-go.yml
+      with:
+        total-runners: 16
+        env-vars: |
+          {
+            "VAULT_BINARY": "bin/vault"
+          }
+        go-arch: amd64
+        go-build-tags: '${{ needs.setup.outputs.go-build-tags }},deadlock'
+        runs-on: ${{ needs.setup.outputs.compute-larger }}
+        enterprise: ${{ needs.setup.outputs.enterprise }}
+      secrets: inherit
   test-go-race:
     name: Run Go tests with data race detection
     needs:
