@@ -419,6 +419,18 @@ func pathTidyStatus(b *backend) *framework.Path {
 								Type:     framework.TypeString,
 								Required: true,
 							},
+							"tidy_acme_accounts": {
+								Type:     framework.TypeBool,
+								Required: true,
+							},
+							"revoke_acme_accounts_safety_buffer": {
+								Type:     framework.TypeDurationSecond,
+								Required: false,
+							},
+							"delete_acme_accounts_safety_buffer": {
+								Type:     framework.TypeDurationSecond,
+								Required: false,
+							},
 						},
 					}},
 				},
@@ -526,6 +538,18 @@ func pathConfigAutoTidy(b *backend) *framework.Path {
 								Type:     framework.TypeBool,
 								Required: true,
 							},
+							"tidy_acme_accounts": {
+								Type:     framework.TypeBool,
+								Required: true,
+							},
+							"revoke_acme_accounts_safety_buffer": {
+								Type:     framework.TypeDurationSecond,
+								Required: false,
+							},
+							"delete_acme_accounts_safety_buffer": {
+								Type:     framework.TypeDurationSecond,
+								Required: false,
+							},
 						},
 					}},
 				},
@@ -600,6 +624,18 @@ func pathConfigAutoTidy(b *backend) *framework.Path {
 							"revocation_queue_safety_buffer": {
 								Type:     framework.TypeDurationSecond,
 								Required: true,
+							},
+							"tidy_acme_accounts": {
+								Type:     framework.TypeBool,
+								Required: true,
+							},
+							"revoke_acme_accounts_safety_buffer": {
+								Type:     framework.TypeDurationSecond,
+								Required: false,
+							},
+							"delete_acme_accounts_safety_buffer": {
+								Type:     framework.TypeDurationSecond,
+								Required: false,
 							},
 						},
 					}},
