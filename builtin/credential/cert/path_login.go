@@ -15,14 +15,15 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/vault/sdk/helper/ocsp"
-
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/cidrutil"
+	"github.com/hashicorp/vault/sdk/helper/ocsp"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
 
-	"github.com/hashicorp/vault/sdk/helper/cidrutil"
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/errwrap"
 	glob "github.com/ryanuber/go-glob"
 )
 
@@ -271,6 +272,7 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 
 	// If trustedNonCAs is not empty it means that client had registered a non-CA cert
 	// with the backend.
+	var retErr error
 	if len(trustedNonCAs) != 0 {
 		for _, trustedNonCA := range trustedNonCAs {
 			tCert := trustedNonCA.Certificates[0]
@@ -278,9 +280,19 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 			if tCert.SerialNumber.Cmp(clientCert.SerialNumber) == 0 &&
 				bytes.Equal(tCert.AuthorityKeyId, clientCert.AuthorityKeyId) {
 				matches, err := b.matchesConstraints(ctx, clientCert, trustedNonCA.Certificates, trustedNonCA, verifyConf)
-				if err != nil {
-					return nil, nil, err
+
+				// matchesConstraints returns an error when OCSP verification fails,
+				// but some other path might still give us success. Add to the
+				// retErr multierror, but avoid duplicates. This way, if we reach a
+				// failure later, we can give additional context.
+				//
+				// XXX: If matchesConstraints is updated to generate additional,
+				// immediately fatal errors, we likely need to extend it to return
+				// another boolean (fatality) or other detection scheme.
+				if err != nil && (retErr == nil || !errwrap.Contains(retErr, err.Error())) {
+					retErr = multierror.Append(retErr, err)
 				}
+
 				if matches {
 					return trustedNonCA, nil, nil
 				}
@@ -291,6 +303,9 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 	// If no trusted chain was found, client is not authenticated
 	// This check happens after checking for a matching configured non-CA certs
 	if len(trustedChains) == 0 {
+		if retErr == nil {
+			return nil, logical.ErrorResponse(fmt.Sprintf("invalid certificate or no client certificate supplied; additionally got errors during verification: %v", retErr)), nil
+		}
 		return nil, logical.ErrorResponse("invalid certificate or no client certificate supplied"), nil
 	}
 
@@ -302,9 +317,12 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 				for _, cCert := range chain { // For each cert in the matched chain
 					if tCert.Equal(cCert) { // ParsedCert intersects with matched chain
 						match, err := b.matchesConstraints(ctx, clientCert, chain, trust, verifyConf) // validate client cert + matched chain against the config
-						if err != nil {
-							return nil, nil, err
+
+						// See note above.
+						if err != nil && (retErr == nil || !errwrap.Contains(retErr, err.Error())) {
+							retErr = multierror.Append(retErr, err)
 						}
+
 						if match {
 							// Add the match to the list
 							matches = append(matches, trust)
@@ -317,6 +335,9 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 
 	// Fail on no matches
 	if len(matches) == 0 {
+		if retErr != nil {
+			return nil, logical.ErrorResponse(fmt.Sprintf("no chain matching all constraints could be found for this login certificate; additionally got errors during verification: %v", retErr)), nil
+		}
 		return nil, logical.ErrorResponse("no chain matching all constraints could be found for this login certificate"), nil
 	}
 
@@ -608,6 +629,12 @@ func (b *backend) checkForCertInOCSP(ctx context.Context, clientCert *x509.Certi
 	defer b.ocspClientMutex.RUnlock()
 	err := b.ocspClient.VerifyLeafCertificate(ctx, clientCert, chain[1], conf)
 	if err != nil {
+		// We want to preserve error messages when they have additional,
+		// potentially useful information. Just having a revoked cert
+		// isn't additionally useful.
+		if !strings.Contains(err.Error(), "has been revoked") {
+			return false, err
+		}
 		return false, nil
 	}
 	return true, nil
