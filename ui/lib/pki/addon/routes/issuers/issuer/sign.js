@@ -11,12 +11,6 @@ import { withConfirmLeave } from 'core/decorators/confirm-leave';
 export default class PkiIssuerSignRoute extends Route {
   @service store;
   @service secretMountPath;
-  @service pathHelp;
-
-  beforeModel() {
-    // Must call this promise before the model hook otherwise it doesn't add OpenApi to record.
-    return this.pathHelp.getNewModel('pki/sign-intermediate', this.secretMountPath.currentPath);
-  }
 
   model() {
     const { issuer_ref } = this.paramsFor('issuers/issuer');

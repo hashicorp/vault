@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -27,6 +30,15 @@ const (
 	ACMEAuthorizationRevoked     ACMEAuthorizationStatusType = "revoked"
 )
 
+type ACMEOrderStatusType string
+
+const (
+	ACMEOrderPending    ACMEOrderStatusType = "pending"
+	ACMEOrderProcessing ACMEOrderStatusType = "processing"
+	ACMEOrderValid      ACMEOrderStatusType = "valid"
+	ACMEOrderInvalid    ACMEOrderStatusType = "invalid"
+)
+
 type ACMEChallengeType string
 
 const (
@@ -46,17 +58,16 @@ const (
 
 type ACMEChallenge struct {
 	Type            ACMEChallengeType       `json:"type"`
-	URL             string                  `json:"url"`
 	Status          ACMEChallengeStatusType `json:"status"`
 	Validated       string                  `json:"validated,optional"`
 	Error           map[string]interface{}  `json:"error,optional"`
 	ChallengeFields map[string]interface{}  `json:"challenge_fields"`
 }
 
-func (ac *ACMEChallenge) NetworkMarshal() map[string]interface{} {
+func (ac *ACMEChallenge) NetworkMarshal(acmeCtx *acmeContext, authId string) map[string]interface{} {
 	resp := map[string]interface{}{
 		"type":   ac.Type,
-		"url":    ac.URL,
+		"url":    buildChallengeUrl(acmeCtx, authId, string(ac.Type)),
 		"status": ac.Status,
 	}
 
@@ -73,6 +84,10 @@ func (ac *ACMEChallenge) NetworkMarshal() map[string]interface{} {
 	}
 
 	return resp
+}
+
+func buildChallengeUrl(acmeCtx *acmeContext, authId, challengeType string) string {
+	return acmeCtx.baseUrl.JoinPath("/challenge/", authId, challengeType).String()
 }
 
 type ACMEAuthorization struct {
@@ -100,7 +115,7 @@ func (aa *ACMEAuthorization) GetExpires() (time.Time, error) {
 	return time.Parse(time.RFC3339, aa.Expires)
 }
 
-func (aa *ACMEAuthorization) NetworkMarshal() map[string]interface{} {
+func (aa *ACMEAuthorization) NetworkMarshal(acmeCtx *acmeContext) map[string]interface{} {
 	resp := map[string]interface{}{
 		"identifier": aa.Identifier,
 		"status":     aa.Status,
@@ -114,7 +129,7 @@ func (aa *ACMEAuthorization) NetworkMarshal() map[string]interface{} {
 	if len(aa.Challenges) > 0 {
 		challenges := []map[string]interface{}{}
 		for _, challenge := range aa.Challenges {
-			challenges = append(challenges, challenge.NetworkMarshal())
+			challenges = append(challenges, challenge.NetworkMarshal(acmeCtx, aa.Id))
 		}
 		resp["challenges"] = challenges
 	}
