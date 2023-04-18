@@ -5,7 +5,6 @@
 
 import Component from '@ember/component';
 import { computed } from '@ember/object';
-import { htmlSafe } from '@ember/template';
 import layout from '../templates/components/confirm';
 import { next } from '@ember/runloop';
 
@@ -34,7 +33,7 @@ export default Component.extend({
   height: 0,
   focusTrigger: null,
   style: computed('height', function () {
-    return htmlSafe(`height: ${this.height}px`);
+    return `height: ${this.height}px`;
   }),
   wormholeReference: null,
   wormholeId: computed('elementId', function () {
