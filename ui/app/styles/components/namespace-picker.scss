@@ -22,7 +22,6 @@
   border: none;
   padding-right: 0;
 }
-
 .namespace-picker-trigger {
   align-items: center;
   display: flex;
@@ -53,7 +52,6 @@
     }
   }
 }
-
 .namespace-name {
   display: inline-block;
   flex: 1 1 auto;
@@ -64,7 +62,6 @@
     margin-left: $size-10;
   }
 }
-
 .namespace-picker-content {
   width: $drawer-width - ($spacing-xs * 2);
   max-height: 300px;
@@ -130,11 +127,9 @@
   bottom: 0;
   z-index: 1;
 }
-
 .leaf-panel-left {
   transform: translateX(-$drawer-width);
 }
-
 .leaf-panel-adding,
 .leaf-panel-current {
   position: relative;
@@ -142,7 +137,6 @@
     margin-bottom: 4px;
   }
 }
-
 .animated-list {
   .leaf-panel-exiting,
   .leaf-panel-adding {
@@ -150,7 +144,6 @@
     z-index: 20;
   }
 }
-
 .leaf-panel-adding {
   z-index: 100;
 }

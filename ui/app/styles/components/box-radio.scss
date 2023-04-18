@@ -43,6 +43,7 @@
   &.is-disabled {
     opacity: 0.5;
   }
+
   input[type='radio'].radio + label {
     border: 1px solid $grey-light;
     border-radius: 50%;
@@ -54,7 +55,6 @@
     flex-shrink: 0;
     flex-grow: 0;
   }
-
   input[type='radio'].radio:checked + label {
     background: $blue;
     border: 1px solid $blue;
