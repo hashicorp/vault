@@ -226,7 +226,7 @@ func TestSysPprof_Standby(t *testing.T) {
 	testSysPprof_Standby(t, cluster)
 }
 
-// TestSysPprof_Exec is the same as TestSysPprof, but using a Vault binary
+// TestSysPprof_Standby_Exec is the same as TestSysPprof_Standby, but using a Vault binary
 // running as -dev-three-node instead of a fake single node TestCluster.  There's
 // no particular reason why TestSysPprof was chosen to validate that mechanism,
 // other than that it was fast and simple.
