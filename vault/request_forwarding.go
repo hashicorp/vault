@@ -361,12 +361,14 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 
 	req.URL.Path = req.Context().Value("original_request_path").(string)
 
-	// Forwarded 'From' and 'To' host metadata which we need to augment the gRPC request with.
+	// Forwarded 'From' and 'To' host metadata which we need to augment the request with.
 	from, _ := url.Parse(c.redirectAddr) // TODO: PW: Error handling.
 	_, leaderAddr, _, _ := c.Leader()    // TODO: PW: Error handling.
 	to, _ := url.Parse(leaderAddr)       // TODO: PW: Error handling.
+	req.Header.Add("X-Vault-Forwarded-From", from.Host)
+	req.Header.Add("X-Vault-Forwarded-To", to.Host)
 
-	freq, err := forwarding.GenerateForwardedRequest(req, from, to)
+	freq, err := forwarding.GenerateForwardedRequest(req)
 	if err != nil {
 		c.logger.Error("error creating forwarding RPC request", "error", err)
 		return 0, nil, nil, fmt.Errorf("error creating forwarding RPC request")

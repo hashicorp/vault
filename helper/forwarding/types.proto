@@ -18,8 +18,6 @@ message Request {
 	string host = 6;
 	string remote_addr = 7;
 	repeated bytes peer_certificates = 8;
-	string forwarded_from_host = 9;
-	string forwarded_to_host = 10;
 }
 
 message URL {

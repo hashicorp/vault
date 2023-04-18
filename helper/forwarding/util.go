@@ -31,7 +31,7 @@ func (b bufCloser) Close() error {
 // GenerateForwardedRequest generates a new http.Request that contains the
 // original requests's information in the new request's body.
 func GenerateForwardedHTTPRequest(req *http.Request, addr string) (*http.Request, error) {
-	fq, err := GenerateForwardedRequest(req, nil, nil)
+	fq, err := GenerateForwardedRequest(req)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func GenerateForwardedHTTPRequest(req *http.Request, addr string) (*http.Request
 	return ret, nil
 }
 
-func GenerateForwardedRequest(req *http.Request, forwardedFrom, forwardedTo *url.URL) (*Request, error) {
+func GenerateForwardedRequest(req *http.Request) (*Request, error) {
 	var reader io.Reader = req.Body
 	ctx := req.Context()
 	maxRequestSize := ctx.Value("max_request_size")
@@ -86,14 +86,6 @@ func GenerateForwardedRequest(req *http.Request, forwardedFrom, forwardedTo *url
 		Host:          req.Host,
 		RemoteAddr:    req.RemoteAddr,
 		Body:          body,
-	}
-
-	// Augment the forwarded request with 'from'/'to' <host:port> if we were given them.
-	if forwardedFrom != nil {
-		fq.ForwardedFromHost = forwardedFrom.Host
-	}
-	if forwardedTo != nil {
-		fq.ForwardedToHost = forwardedTo.Host
 	}
 
 	reqURL := req.URL
