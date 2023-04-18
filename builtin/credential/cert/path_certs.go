@@ -98,7 +98,7 @@ At least one must exist in either the Common Name or SANs. Supports globbing.
 This parameter is deprecated, please use allowed_common_names, allowed_dns_sans, 
 allowed_email_sans, allowed_uri_sans.`,
 				DisplayAttrs: &framework.DisplayAttributes{
-					Group: "Constraints",
+					Group:       "Constraints",
 					Description: "A list of names. At least one must exist in either the Common Name or SANs. Supports globbing. This parameter is deprecated, please use allowed_common_names, allowed_dns_sans, allowed_email_sans, allowed_uri_sans.",
 				},
 			},
@@ -108,7 +108,7 @@ allowed_email_sans, allowed_uri_sans.`,
 				Description: `A comma-separated list of names.
 At least one must exist in the Common Name. Supports globbing.`,
 				DisplayAttrs: &framework.DisplayAttributes{
-					Group: "Constraints",
+					Group:       "Constraints",
 					Description: "A list of names. At least one must exist in the Common Name. Supports globbing.",
 				},
 			},
@@ -118,8 +118,8 @@ At least one must exist in the Common Name. Supports globbing.`,
 				Description: `A comma-separated list of DNS names.
 At least one must exist in the SANs. Supports globbing.`,
 				DisplayAttrs: &framework.DisplayAttributes{
-					Name:  "Allowed DNS SANs",
-					Group: "Constraints",
+					Name:        "Allowed DNS SANs",
+					Group:       "Constraints",
 					Description: "A list of DNS names. At least one must exist in the SANs. Supports globbing.",
 				},
 			},
@@ -129,8 +129,8 @@ At least one must exist in the SANs. Supports globbing.`,
 				Description: `A comma-separated list of Email Addresses.
 At least one must exist in the SANs. Supports globbing.`,
 				DisplayAttrs: &framework.DisplayAttributes{
-					Name:  "Allowed Email SANs",
-					Group: "Constraints",
+					Name:        "Allowed Email SANs",
+					Group:       "Constraints",
 					Description: "A list of Email Addresses. At least one must exist in the SANs. Supports globbing.",
 				},
 			},
@@ -140,8 +140,8 @@ At least one must exist in the SANs. Supports globbing.`,
 				Description: `A comma-separated list of URIs.
 At least one must exist in the SANs. Supports globbing.`,
 				DisplayAttrs: &framework.DisplayAttributes{
-					Name:  "Allowed URI SANs",
-					Group: "Constraints",
+					Name:        "Allowed URI SANs",
+					Group:       "Constraints",
 					Description: "A list of URIs. At least one must exist in the SANs. Supports globbing.",
 				},
 			},
@@ -151,7 +151,7 @@ At least one must exist in the SANs. Supports globbing.`,
 				Description: `A comma-separated list of Organizational Units names.
 At least one must exist in the OU field.`,
 				DisplayAttrs: &framework.DisplayAttributes{
-					Group: "Constraints",
+					Group:       "Constraints",
 					Description: "A list of Organizational Units names. At least one must exist in the OU field.",
 				},
 			},
@@ -173,7 +173,7 @@ Upon successful authentication, these extensions will be added as metadata if th
 in the certificate. The metadata key will be the string consisting of the oid numbers
 separated by a dash (-) instead of a dot (.) to allow usage in ACL templates.`,
 				DisplayAttrs: &framework.DisplayAttributes{
-					Description:  "A list of OID extensions. Upon successful authentication, these extensions will be added as metadata if they are present in the certificate. The metadata key will be the string consisting of the OID numbers separated by a dash (-) instead of a dot (.) to allow usage in ACL templates.",
+					Description: "A list of OID extensions. Upon successful authentication, these extensions will be added as metadata if they are present in the certificate. The metadata key will be the string consisting of the OID numbers separated by a dash (-) instead of a dot (.) to allow usage in ACL templates.",
 				},
 			},
 

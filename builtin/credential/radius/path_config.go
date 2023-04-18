@@ -46,7 +46,7 @@ func pathConfig(b *backend) *framework.Path {
 				Default:     "",
 				Description: "Comma-separated list of policies to grant upon successful RADIUS authentication of an unregistered user (default: empty)",
 				DisplayAttrs: &framework.DisplayAttributes{
-					Name: "Policies for unregistered users",
+					Name:        "Policies for unregistered users",
 					Description: "List of policies to grant upon successful RADIUS authentication of an unregistered user (default: empty)",
 				},
 			},
