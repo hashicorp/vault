@@ -127,6 +127,8 @@ structure is illustrated in the [examples](/vault/docs/platform/k8s/csi/examples
 
   - `filePermission` `(integer: 0o644)` - The file permissions to set for this secret's file.
 
+  - `encoding` `(string: "utf-8")` - The encoding of the secret value. Supports decoding `utf-8` (default), `hex`, and `base64` values.
+
   - `secretArgs` `(map: {})` - Additional arguments to be sent to Vault for a specific secret. Arguments can vary
     for different secret engines. For example:
 
