@@ -62,6 +62,8 @@ jobs:
   build-vault:
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     name: Build Vault dev binary
+    if: ${{ fromJSON(env.GOEXPERIMENT) }} == "" &&
+        ${{ fromJSON(env.VAULT_CI_GO_TEST_RACE) }} == ""
     steps:
     - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
     - uses: actions/setup-go@d0a58c1c4d2b25278816e339b944508c875f3613

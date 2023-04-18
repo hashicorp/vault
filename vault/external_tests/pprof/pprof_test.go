@@ -41,13 +41,15 @@ func TestSysPprof(t *testing.T) {
 // instead of a fake single node TestCluster.  There's no particular reason why
 // TestSysPprof was chosen to validate that mechanism, other than that it was fast and simple.
 func TestSysPprof_Exec(t *testing.T) {
+	binary := os.Getenv("VAULT_BINARY")
+	if binary == "" {
+		t.Skip("only running exec test when $VAULT_BINARY present")
+	}
 	cluster := testcluster.NewTestExecDevCluster(t, &testcluster.ExecDevClusterOptions{
 		ClusterOptions: testcluster.ClusterOptions{
 			NumCores: 1,
 		},
-		// If $VAULT_BINARY is unset, use the `vault` in the system path.  Our CI should
-		// populate the env var to use a `vault` built from the current commit.
-		BinaryPath: os.Getenv("VAULT_BINARY"),
+		BinaryPath: binary,
 	})
 	defer cluster.Cleanup()
 
@@ -224,13 +226,17 @@ func TestSysPprof_Standby(t *testing.T) {
 }
 
 func TestSysPprof_Standby_Exec(t *testing.T) {
+	binary := os.Getenv("VAULT_BINARY")
+	if binary == "" {
+		t.Skip("only running exec test when $VAULT_BINARY present")
+	}
 	cluster := testcluster.NewTestExecDevCluster(t, &testcluster.ExecDevClusterOptions{
 		ClusterOptions: testcluster.ClusterOptions{
 			VaultNodeConfig: &testcluster.VaultNodeConfig{
 				DisablePerformanceStandby: true,
 			},
 		},
-		BinaryPath: os.Getenv("VAULT_BINARY"),
+		BinaryPath: binary,
 	})
 	defer cluster.Cleanup()
 
