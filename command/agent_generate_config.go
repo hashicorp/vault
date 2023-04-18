@@ -283,8 +283,9 @@ func readSecret(ctx context.Context, client *api.Client, path, pathMount string,
 			v2AdjustedField = "data." + field
 		}
 		templates = append(templates, &config.EnvTemplateGen{
-			Name:     constructDefaultEnvironmentKey(path, field),
-			Contents: fmt.Sprintf(`{{ with secret "%s" }}{{ .Data.%s }}{{ end }}`, path, v2AdjustedField),
+			Name:              constructDefaultEnvironmentKey(path, field),
+			Contents:          fmt.Sprintf(`{{ with secret "%s" }}{{ .Data.%s }}{{ end }}`, path, v2AdjustedField),
+			ErrorOnMissingKey: true,
 		})
 	}
 

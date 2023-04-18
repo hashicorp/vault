@@ -14,7 +14,7 @@ type ConfigGen struct {
 type EnvTemplateGen struct {
 	Name              string  `hcl:"name,label"`
 	Contents          string  `hcl:"contents,attr"`
-	ErrorOnMissingKey *bool   `hcl:"error_on_missing_key,optional"`
+	ErrorOnMissingKey bool    `hcl:"error_on_missing_key,optional"`
 	Group             *string `hcl:"group,optional"`
 }
 
