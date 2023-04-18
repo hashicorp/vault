@@ -101,7 +101,7 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     await click('[data-test-config] button');
     assert
       .dom('[data-test-icon="check-circle-fill"]')
-      .hasClass('has-text-green', 'Icon is displayed for success state with correct styling');
+      .hasClass('has-text-success', 'Icon is displayed for success state with correct styling');
     assert
       .dom('[data-test-config] span')
       .hasText('Configuration values were inferred successfully.', 'Success text is displayed');
@@ -183,7 +183,7 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     assert.dom('[data-test-radio-card="local"] input').isChecked('Local cluster radio card is checked');
     assert
       .dom('[data-test-icon="check-circle-fill"]')
-      .hasClass('has-text-green', 'Icon is displayed for success state with correct styling');
+      .hasClass('has-text-success', 'Icon is displayed for success state with correct styling');
     assert
       .dom('[data-test-config] span')
       .hasText('Configuration values were inferred successfully.', 'Success text is displayed');
