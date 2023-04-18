@@ -26,7 +26,7 @@
   white-space: nowrap;
 
   &.button {
-    height: $size-2; // in older parts of the code, like shamir-modal-flow this class is not a button. In newer parts of the code it is and the height needs to match the heigh of a button (2.5rem).
+    height: $size-2; // in older parts of the code (Ex: shamir-modal-flow) this class is not a button. In newer parts of the code it is, and height needs to match the height of a button (2.5rem).
   }
 
   &:disabled {

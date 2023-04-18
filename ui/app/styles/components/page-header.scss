@@ -16,7 +16,7 @@
     flex-shrink: 1;
 
     @include until($mobile) {
-      margin-top: $size-10;
+      margin-top: 0.5rem;
     }
   }
   .level-right {

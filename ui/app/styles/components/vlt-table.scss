@@ -12,7 +12,7 @@
   &.sticky-header {
     thead th {
       position: sticky;
-      background: $white;
+      background: #fff;
       box-shadow: 0 1px 0px 0px rgba($grey-dark, 0.3);
       top: 0;
     }
@@ -20,7 +20,7 @@
 
   table {
     border-collapse: collapse;
-    border-spacing: 0
+    border-spacing: 0;
   }
 
   th,

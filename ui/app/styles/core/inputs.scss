@@ -38,7 +38,6 @@
   }
 
   @include until($desktop) {
-    // TODO change to rem value
     font-size: $spacing-m;
   }
 

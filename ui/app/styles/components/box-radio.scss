@@ -7,17 +7,14 @@
   display: flex;
   flex-wrap: wrap;
 }
-
 .title.box-radio-header {
   font-size: $size-6;
   color: $grey;
   margin: $size-7 0 0 0;
 }
-
 .box-radio-spacing {
   margin: $size-6 $size-3 $size-6 0;
 }
-
 .box-radio {
   box-sizing: border-box;
   flex-basis: 7rem;
@@ -46,7 +43,6 @@
   &.is-disabled {
     opacity: 0.5;
   }
-
   input[type='radio'].radio + label {
     border: 1px solid $grey-light;
     border-radius: 50%;
