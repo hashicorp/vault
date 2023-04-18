@@ -5,6 +5,7 @@
 
 import ApplicationAdapter from '../application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
+import { all } from 'rsvp';
 
 export default class PkiIssuerAdapter extends ApplicationAdapter {
   namespace = 'v1';
@@ -39,8 +40,19 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
     return this.ajax(url, 'POST', { data });
   }
 
-  query(store, type, query) {
-    return this.ajax(this.urlForQuery(query.backend), 'GET', this.optionsForQuery());
+  async query(store, type, query) {
+    const { backend } = query;
+    const url = this.urlForQuery(backend);
+    // return this.ajax(url, 'GET', this.optionsForQuery());
+    return this.ajax(url, 'GET', this.optionsForQuery()).then(async (res) => {
+      const records = await all(
+        res.data.keys.map((id) => {
+          return this.queryRecord(store, type, { id, backend });
+        })
+      );
+      res.data.keys = records.map((record) => record.data);
+      return res;
+    });
   }
 
   queryRecord(store, type, query) {
