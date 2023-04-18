@@ -111,29 +111,9 @@ jobs:
     - id: diff
       run: |
         ./.github/scripts/oss-diff.sh ${{ steps.determine-branch.outputs.BRANCH }} HEAD
-  build-vault:
-    name: Build Vault
-    needs:
-      - setup
-    runs-on: ${{ fromJSON(needs.setup.outputs.compute-standard) }}
-    steps:
-    - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
-    - uses: actions/setup-go@d0a58c1c4d2b25278816e339b944508c875f3613
-      with:
-        go-version-file: ./.go-version
-        cache: true
-    - id: build-go-dev
-      run: make ci-bootstrap dev
-    - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce
-      with:
-        name: vault-dev
-        path: bin/vault
-        if-no-files-found: error
-        retention-days: 1
   test-go:
     name: Run Go tests
     needs:
-    - build-vault
     - setup
     - setup-go-cache
     # Don't run this job for PR branches starting with 'ui/', 'backport/ui/', 'docs/', or 'backport/docs/'
@@ -142,28 +122,21 @@ jobs:
       !startsWith(github.head_ref, 'backport/ui/') &&
       !startsWith(github.head_ref, 'docs/') &&
       !startsWith(github.head_ref, 'backport/docs/')
-    steps:
-    - uses: actions/download-artifact@e9ef242655d12993efdcda9058dee2db83a2cb9b
-      with:
-        name: vault-dev
-        path: bin/vault
-    - run: chmod a+rx bin/vault
-    - uses: ./.github/workflows/test-go.yml
-      with:
-        total-runners: 16
-        env-vars: |
-          {
-            "VAULT_BINARY": "bin/vault"
-          }
-        go-arch: amd64
-        go-build-tags: '${{ needs.setup.outputs.go-build-tags }},deadlock'
-        runs-on: ${{ needs.setup.outputs.compute-larger }}
-        enterprise: ${{ needs.setup.outputs.enterprise }}
-      secrets: inherit
+    uses: ./.github/workflows/test-go.yml
+    with:
+      total-runners: 16
+      env-vars: |
+        {
+          "VAULT_BINARY": "bin/vault"
+        }
+      go-arch: amd64
+      go-build-tags: '${{ needs.setup.outputs.go-build-tags }},deadlock'
+      runs-on: ${{ needs.setup.outputs.compute-larger }}
+      enterprise: ${{ needs.setup.outputs.enterprise }}
+    secrets: inherit
   test-go-race:
     name: Run Go tests with data race detection
     needs:
-    - build-vault
     - setup
     - setup-go-cache
     # Don't run this job for PR branches starting with 'ui/', 'backport/ui/', 'docs/', or 'backport/docs/'
@@ -196,7 +169,6 @@ jobs:
       !startsWith(github.head_ref, 'docs/') &&
       !startsWith(github.head_ref, 'backport/docs/')
     needs:
-    - build-vault
     - setup
     - setup-go-cache
     uses: ./.github/workflows/test-go.yml
