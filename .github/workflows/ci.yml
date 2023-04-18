@@ -115,11 +115,14 @@ jobs:
     needs:
       - setup
     name: Build Vault
-    runs-on: ${{ fromJSON(needs.setup.outputs.compute-tiny) }}
     steps:
-      - env:
-          GO_TAGS: '${{ needs.setup.outputs.go-build-tags }},deadlock'
-        run: make ci-build
+      - id: build-go-dev
+        name: build-go-dev
+        run: |
+          rm -rf ./pkg
+          mkdir ./pkg
+          
+          make ci-bootstrap dev
   test-go:
     name: Run Go tests
     needs:
@@ -137,7 +140,7 @@ jobs:
       total-runners: 16
       env-vars: |
         {
-          "VAULT_BINARY": "dist/vault"
+          "VAULT_BINARY": "bin/vault"
         }
       go-arch: amd64
       go-build-tags: '${{ needs.setup.outputs.go-build-tags }},deadlock'
@@ -162,7 +165,7 @@ jobs:
       env-vars: |
         {
           "VAULT_CI_GO_TEST_RACE": 1,
-          "VAULT_BINARY": "dist/vault"
+          "VAULT_BINARY": "bin/vault"
         }
       extra-flags: '-race'
       go-arch: amd64
@@ -189,7 +192,7 @@ jobs:
       env-vars: |
         {
           "GOEXPERIMENT": "boringcrypto",
-          "VAULT_BINARY": "dist/vault"
+          "VAULT_BINARY": "bin/vault"
         }
       go-arch: amd64
       go-build-tags: '${{ needs.setup.outputs.go-build-tags }},deadlock,cgo,fips,fips_140_2'
