@@ -39,20 +39,20 @@
   display: block;
   top: 0;
   left: 0;
-  width: $size-1;
-  height: $size-4;
+  width: 3rem;
+  height: 1.5rem;
   border: 0.1rem solid transparent;
-  border-radius: $size-9;
+  border-radius: 0.75rem;
   background: $ui-gray-300;
   content: '';
 }
 .toggle[type='checkbox'] + label::after {
   display: block;
   position: absolute;
-  top: $size-11;
-  left: $size-11;
-  width: $size-6;
-  height: $size-6;
+  top: 0.25rem;
+  left: 0.25rem;
+  width: 1rem;
+  height: 1rem;
   transform: translate3d(0, 0, 0);
   border-radius: 50%;
   background: $white;
@@ -72,7 +72,7 @@
     + label {
       font-size: $size-7;
       padding-left: $size-8 * 2.5;
-      margin: 0 $size-11;
+      margin: 0 0.25rem;
       &::before {
         top: $size-8 / 5;
         height: $size-8;

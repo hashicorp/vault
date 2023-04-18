@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-
 /* General sizing in rem values used largely for text sizing.*/
 $size-1: 3rem; // 48px, same as $spacing-xxl
 $size-2: 2.5rem; // 40px
@@ -25,11 +24,6 @@ $spacing-m: 16px;
 $spacing-l: 24px;
 $spacing-xl: 36px;
 $spacing-xxl: 48px;
-
-/* Font weight */
-$font-weight-normal: 400;
-$font-weight-semibold: 600;
-$font-weight-bold: 700;
 
 /* Border radius */
 $radius: 2px;
