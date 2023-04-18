@@ -115,7 +115,7 @@ jobs:
     name: Build Vault
     needs:
       - setup
-    runs-on: ${{ needs.setup.outputs.compute-standard }}
+    runs-on: ${{ fromJSON(needs.setup.outputs.compute-standard) }}
     steps:
     - id: build-go-dev
       run: |
