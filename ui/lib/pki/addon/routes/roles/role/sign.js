@@ -11,13 +11,6 @@ withConfirmLeave();
 export default class PkiRoleSignRoute extends Route {
   @service store;
   @service secretMountPath;
-  @service pathHelp;
-
-  beforeModel() {
-    // Must call this promise before the model hook otherwise
-    // the model doesn't hydrate from OpenAPI correctly.
-    return this.pathHelp.getNewModel('pki/certificate/sign', this.secretMountPath.currentPath);
-  }
 
   model() {
     const { role } = this.paramsFor('roles/role');

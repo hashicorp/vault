@@ -1,55 +1,65 @@
-<Toolbar>
-  <ToolbarActions>
-    {{#if @canDeleteAllIssuers}}
-      <button
-        type="button"
-        class="toolbar-link"
-        {{on "click" (fn (mut this.showDeleteAllIssuers) true)}}
-        data-test-delete-all-issuers-link
-      >
-        Delete all issuers
-        <Icon @name="chevron-right" />
+{{#if @hasConfig}}
+  <Toolbar>
+    <ToolbarActions>
+      {{#if @canDeleteAllIssuers}}
+        <button
+          type="button"
+          class="toolbar-link"
+          {{on "click" (fn (mut this.showDeleteAllIssuers) true)}}
+          data-test-delete-all-issuers-link
+        >
+          Delete all issuers
+          <Icon @name="chevron-right" />
 
-      </button>
-      <div class="toolbar-separator"></div>
-    {{/if}}
-    <ToolbarLink @route="configuration.tidy" data-test-tidy-toolbar>
-      Tidy
-    </ToolbarLink>
-    <ToolbarLink @route="configuration.edit">
-      Edit configuration
-    </ToolbarLink>
-  </ToolbarActions>
-</Toolbar>
+        </button>
+        <div class="toolbar-separator"></div>
+      {{/if}}
+      <ToolbarLink @route="configuration.tidy" data-test-tidy-toolbar>
+        Tidy
+      </ToolbarLink>
+      <ToolbarLink @route="configuration.edit">
+        Edit configuration
+      </ToolbarLink>
+    </ToolbarActions>
+  </Toolbar>
 
-{{#if (not (eq @urls 403))}}
-  <h2 class="title is-4 has-bottom-margin-xs has-top-margin-m has-border-bottom-light has-bottom-padding-s">
-    Global URLs
-  </h2>
-  <InfoTableRow @label="Issuing certificates" @value={{or @urls.issuingCertificates "None"}} />
-  <InfoTableRow
-    @label="CRL distribution points"
-    @value={{if @urls.crlDistributionPoints @urls.crlDistributionPoints "None"}}
-  />
-{{/if}}
+  {{#if (not (eq @urls 403))}}
+    <h2 class="title is-4 has-bottom-margin-xs has-top-margin-m has-border-bottom-light has-bottom-padding-s">
+      Global URLs
+    </h2>
+    <InfoTableRow @label="Issuing certificates" @value={{or @urls.issuingCertificates "None"}} />
+    <InfoTableRow
+      @label="CRL distribution points"
+      @value={{if @urls.crlDistributionPoints @urls.crlDistributionPoints "None"}}
+    />
+  {{/if}}
 
-{{#if (not (eq @crl 403))}}
-  <h2 class="title is-4 has-bottom-margin-xs has-top-margin-xl has-border-bottom-light has-bottom-padding-s">
-    Certificate Revocation List (CRL)
-  </h2>
-  <InfoTableRow @label="Expiry" @value={{@crl.expiry}} />
-  <InfoTableRow @label="Auto-rebuild" @value={{if @crl.autoRebuild "On" "Off"}} />
+  {{#if (not (eq @crl 403))}}
+    <h2 class="title is-4 has-bottom-margin-xs has-top-margin-xl has-border-bottom-light has-bottom-padding-s">
+      Certificate Revocation List (CRL)
+    </h2>
+    <InfoTableRow @label="Expiry" @value={{@crl.expiry}} />
+    <InfoTableRow @label="Auto-rebuild" @value={{if @crl.autoRebuild "On" "Off"}} />
 
-  <h2 class="title is-4 has-bottom-margin-xs has-top-margin-xl has-border-bottom-light has-bottom-padding-s">
-    Online Certificate Status Protocol (OCSP)
-  </h2>
-  <InfoTableRow @label="Responder APIs" @value={{if @crl.ocspDisable "Disabled" "Enabled"}} />
-  <InfoTableRow @label="Interval" @value={{@crl.ocspExpiry}} />
+    <h2 class="title is-4 has-bottom-margin-xs has-top-margin-xl has-border-bottom-light has-bottom-padding-s">
+      Online Certificate Status Protocol (OCSP)
+    </h2>
+    <InfoTableRow @label="Responder APIs" @value={{if @crl.ocspDisable "Disabled" "Enabled"}} />
+    <InfoTableRow @label="Interval" @value={{@crl.ocspExpiry}} />
+  {{/if}}
+{{else}}
+  <Toolbar>
+    <ToolbarActions>
+      <ToolbarLink @route="configuration.create" data-test-configure-pki-button>
+        Configure
+      </ToolbarLink>
+    </ToolbarActions>
+  </Toolbar>
 {{/if}}
 
 <h2
   class="title is-4 has-bottom-margin-xs has-border-bottom-light has-bottom-padding-s
-    {{if (and (eq @crl 403) (eq @urls 403)) 'has-top-margin-m' 'has-top-margin-xl'}}"
+    {{if (or @hasConfig (and (eq @crl 403) (eq @urls 403))) 'has-top-margin-xl' 'has-top-margin-m'}}"
 >
   Mount Configuration
 </h2>

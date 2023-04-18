@@ -1,0 +1,4 @@
+```release-note:bug
+sdk/helper/ocsp: Workaround bug in Go's ocsp.ParseResponse(...), causing validation to fail with embedded CA certificates.
+auth/cert: Fix OCSP validation against Vault's PKI engine.
+```

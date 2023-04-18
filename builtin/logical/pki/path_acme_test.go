@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -10,6 +13,9 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/go-test/deep"
 
 	"github.com/hashicorp/go-cleanhttp"
 	"golang.org/x/crypto/acme"
@@ -50,6 +56,7 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 
 			acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, key)
 
+			t.Logf("Testing discover on %s", baseAcmeURL)
 			discovery, err := acmeClient.Discover(testCtx)
 			require.NoError(t, err, "failed acme discovery call")
 
@@ -61,10 +68,12 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			require.Equal(t, discoveryBaseUrl+"key-change", discovery.KeyChangeURL)
 
 			// Attempt to update prior to creating an account
+			t.Logf("Testing updates with no proper account fail on %s", baseAcmeURL)
 			_, err = acmeClient.UpdateReg(testCtx, &acme.Account{Contact: []string{"mailto:shouldfail@example.com"}})
 			require.ErrorIs(t, err, acme.ErrNoAccount, "expected failure attempting to update prior to account registration")
 
 			// Create new account
+			t.Logf("Testing register on %s", baseAcmeURL)
 			acct, err := acmeClient.Register(testCtx, &acme.Account{
 				Contact: []string{"mailto:test@example.com", "mailto:test2@test.com"},
 			}, func(tosURL string) bool { return true })
@@ -75,12 +84,14 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			require.Len(t, acct.Contact, 2)
 
 			// Call register again we should get existing account
+			t.Logf("Testing duplicate register returns existing account on %s", baseAcmeURL)
 			_, err = acmeClient.Register(testCtx, acct, func(tosURL string) bool { return true })
 			require.ErrorIs(t, err, acme.ErrAccountAlreadyExists,
 				"We should have returned a 200 status code which would have triggered an error in the golang acme"+
 					" library")
 
 			// Update contact
+			t.Logf("Testing Update account contacts on %s", baseAcmeURL)
 			acct.Contact = []string{"mailto:test3@example.com"}
 			acct2, err := acmeClient.UpdateReg(testCtx, acct)
 			require.NoError(t, err, "failed updating account")
@@ -89,11 +100,58 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			require.Contains(t, acct2.Contact, "mailto:test3@example.com")
 			require.Len(t, acct2.Contact, 1)
 
+			// Create an order
+			t.Logf("Testing Authorize Order on %s", baseAcmeURL)
+			createOrder, err := acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{{Type: "dns", Value: "www.test.com"}},
+				acme.WithOrderNotBefore(time.Now().Add(10*time.Minute)),
+				acme.WithOrderNotAfter(time.Now().Add(7*24*time.Hour)))
+			require.NoError(t, err, "failed creating order")
+			require.Equal(t, acme.StatusPending, createOrder.Status)
+			require.Empty(t, createOrder.CertURL)
+			require.Equal(t, createOrder.URI+"/finalize", createOrder.FinalizeURL)
+			require.Len(t, createOrder.AuthzURLs, 1, "expected one authzurls")
+
+			// Get order
+			t.Logf("Testing GetOrder on %s", baseAcmeURL)
+			getOrder, err := acmeClient.GetOrder(testCtx, createOrder.URI)
+			require.NoError(t, err, "failed fetching order")
+			require.Equal(t, acme.StatusPending, createOrder.Status)
+			if diffs := deep.Equal(createOrder, getOrder); diffs != nil {
+				t.Fatalf("Differences exist between create and get order: \n%v", strings.Join(diffs, "\n"))
+			}
+
+			// Load authorization
+			auth, err := acmeClient.GetAuthorization(testCtx, getOrder.AuthzURLs[0])
+			require.NoError(t, err, "failed fetching authorization")
+			require.Equal(t, acme.StatusPending, auth.Status)
+			require.Equal(t, "dns", auth.Identifier.Type)
+			require.Equal(t, "www.test.com", auth.Identifier.Value)
+			require.False(t, auth.Wildcard, "should not be a wildcard")
+			require.True(t, auth.Expires.IsZero(), "authorization should only have expiry set on valid status")
+
+			require.Len(t, auth.Challenges, 1, "expected one challenge")
+			require.Equal(t, acme.StatusPending, auth.Challenges[0].Status)
+			require.True(t, auth.Challenges[0].Validated.IsZero(), "validated time should be 0 on challenge")
+			require.Equal(t, "http-01", auth.Challenges[0].Type)
+
+			require.NotEmpty(t, auth.Challenges[0].Token, "missing challenge token")
+
+			// Load a challenge directly
+			challenge, err := acmeClient.GetChallenge(testCtx, auth.Challenges[0].URI)
+			require.NoError(t, err, "failed to load challenge")
+			require.Equal(t, acme.StatusPending, challenge.Status)
+			require.True(t, challenge.Validated.IsZero(), "validated time should be 0 on challenge")
+			require.Equal(t, "http-01", challenge.Type)
+
+			require.NotEmpty(t, challenge.Token, "missing challenge token")
+
 			// Deactivate account
+			t.Logf("Testing deactivate account on %s", baseAcmeURL)
 			err = acmeClient.DeactivateReg(testCtx)
 			require.NoError(t, err, "failed deactivating account")
 
 			// Make sure we get an unauthorized error trying to update the account again.
+			t.Logf("Testing update on deactivated account fails on %s", baseAcmeURL)
 			_, err = acmeClient.UpdateReg(testCtx, acct)
 			require.Error(t, err, "expected account to be deactivated")
 			require.IsType(t, &acme.Error{}, err, "expected acme error type")
