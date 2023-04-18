@@ -146,7 +146,7 @@ jobs:
       total-runners: 16
       env-vars: |
         {
-          "VAULT_CI_GO_TEST_RACE": 1,
+          "VAULT_CI_GO_TEST_RACE": 1
         }
       extra-flags: '-race'
       go-arch: amd64
@@ -171,7 +171,7 @@ jobs:
       total-runners: 16
       env-vars: |
         {
-          "GOEXPERIMENT": "boringcrypto",
+          "GOEXPERIMENT": "boringcrypto"
         }
       go-arch: amd64
       go-build-tags: '${{ needs.setup.outputs.go-build-tags }},deadlock,cgo,fips,fips_140_2'
