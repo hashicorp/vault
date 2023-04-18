@@ -102,7 +102,7 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 
 			// Create an order
 			t.Logf("Testing Authorize Order on %s", baseAcmeURL)
-			createOrder, err := acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{{Type: "dns", Value: "www.test.com"}},
+			createOrder, err := acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{{Type: "dns", Value: "localhost"}},
 				acme.WithOrderNotBefore(time.Now().Add(10*time.Minute)),
 				acme.WithOrderNotAfter(time.Now().Add(7*24*time.Hour)))
 			require.NoError(t, err, "failed creating order")
@@ -125,7 +125,7 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			require.NoError(t, err, "failed fetching authorization")
 			require.Equal(t, acme.StatusPending, auth.Status)
 			require.Equal(t, "dns", auth.Identifier.Type)
-			require.Equal(t, "www.test.com", auth.Identifier.Value)
+			require.Equal(t, "localhost", auth.Identifier.Value)
 			require.False(t, auth.Wildcard, "should not be a wildcard")
 			require.True(t, auth.Expires.IsZero(), "authorization should only have expiry set on valid status")
 
@@ -136,10 +136,10 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 
 			require.NotEmpty(t, auth.Challenges[0].Token, "missing challenge token")
 
-			// Load a challenge directly
+			// Load a challenge directly; this triggers validation to start.
 			challenge, err := acmeClient.GetChallenge(testCtx, auth.Challenges[0].URI)
 			require.NoError(t, err, "failed to load challenge")
-			require.Equal(t, acme.StatusPending, challenge.Status)
+			require.Equal(t, acme.StatusProcessing, challenge.Status)
 			require.True(t, challenge.Validated.IsZero(), "validated time should be 0 on challenge")
 			require.Equal(t, "http-01", challenge.Type)
 
