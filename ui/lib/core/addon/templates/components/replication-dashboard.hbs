@@ -5,7 +5,7 @@
         @title={{concat "Re-indexing in progress" this.reindexingStage}}
         @type="info"
         @progressBar={{this.progressBar}}
-        @message={{this.reindexMessage}}
+        @message={{sanitized-html this.reindexMessage}}
         data-test-isReindexing
       />
     </div>
