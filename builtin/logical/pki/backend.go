@@ -303,7 +303,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 	b.unifiedTransferStatus = newUnifiedTransferStatus()
 
-	b.acmeAccountCount = atomic2.Uint32{} // Not a Metric, Just Used by Tidy
+	b.acmeAccountCount = &atomic.Uint32{} // Not a Metric, Just Used by Tidy
 	b.acmeState = NewACMEState()
 	return &b
 }
