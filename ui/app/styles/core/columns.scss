@@ -158,7 +158,7 @@
     }
 
     &.is-6,
-    .is-6-tablet {
+    &.is-6-tablet {
       flex: none;
       width: 50%;
     }
@@ -179,7 +179,7 @@
     }
 
     &.is-full,
-    .is-full-tablet {
+    &.is-full-tablet {
       flex: none;
       width: 100%;
     }

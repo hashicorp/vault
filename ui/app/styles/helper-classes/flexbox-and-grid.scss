@@ -97,15 +97,6 @@
   }
 }
 
-.is-flex-v-centered-tablet {
-  @include from($mobile) {
-    display: flex;
-    align-items: center;
-    align-self: center;
-    justify-content: center;
-  }
-}
-
 /* CSS GRID */
 .is-grid {
   display: grid;
@@ -122,4 +113,3 @@
 .is-grid-column-span-3 {
   grid-column-end: span 3;
 }
-

@@ -64,7 +64,7 @@
     padding: $spacing-xs $spacing-l;
 
     &:hover,
-    .is-active {
+    &.is-active {
       background-color: transparent;
     }
   }
