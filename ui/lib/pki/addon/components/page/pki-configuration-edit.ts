@@ -49,6 +49,7 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
       yield this.args.urls.save();
       yield this.args.crl.save();
       this.flashMessages.success('Successfully updated configuration');
+      this.router.transitionTo('vault.cluster.secrets.backend.pki.configuration.index');
     } catch (error) {
       this.errorBanner = errorMessage(error);
     }
