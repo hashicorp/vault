@@ -51,4 +51,12 @@ module('Unit | Model | role-jwt', function (hooks) {
       }
     });
   });
+
+  test('it does not return provider unless domain matches completely', function (assert) {
+    assert.expect(12);
+    const model = this.owner.lookup('service:store').createRecord('role-jwt', {
+      authUrl: `http://custom-auth0-provider.com`,
+    });
+    assert.strictEqual(model.providerName, null, ``);
+  });
 });
