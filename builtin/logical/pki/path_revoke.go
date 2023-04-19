@@ -651,7 +651,7 @@ func (b *backend) pathRotateCRLRead(ctx context.Context, req *logical.Request, _
 	defer b.revokeStorageLock.RUnlock()
 
 	sc := b.makeStorageContext(ctx, req.Storage)
-	crlErr := b.crlBuilder.rebuild(sc, false)
+	warnings, crlErr := b.crlBuilder.rebuild(sc, false)
 	if crlErr != nil {
 		switch crlErr.(type) {
 		case errutil.UserError:
@@ -661,11 +661,17 @@ func (b *backend) pathRotateCRLRead(ctx context.Context, req *logical.Request, _
 		}
 	}
 
-	return &logical.Response{
+	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"success": true,
 		},
-	}, nil
+	}
+
+	for index, warning := range warnings {
+		resp.AddWarning(fmt.Sprintf("Warning %d during CRL rebuild: %v", index+1, warning))
+	}
+
+	return resp, nil
 }
 
 func (b *backend) pathRotateDeltaCRLRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
@@ -678,7 +684,7 @@ func (b *backend) pathRotateDeltaCRLRead(ctx context.Context, req *logical.Reque
 
 	isEnabled := cfg.EnableDelta
 
-	crlErr := b.crlBuilder.rebuildDeltaCRLsIfForced(sc, true)
+	warnings, crlErr := b.crlBuilder.rebuildDeltaCRLsIfForced(sc, true)
 	if crlErr != nil {
 		switch crlErr.(type) {
 		case errutil.UserError:
@@ -696,6 +702,9 @@ func (b *backend) pathRotateDeltaCRLRead(ctx context.Context, req *logical.Reque
 
 	if !isEnabled {
 		resp.AddWarning("requested rebuild of delta CRL when delta CRL is not enabled; this is a no-op")
+	}
+	for index, warning := range warnings {
+		resp.AddWarning(fmt.Sprintf("Warning %d during CRL rebuild: %v", index+1, warning))
 	}
 
 	return resp, nil

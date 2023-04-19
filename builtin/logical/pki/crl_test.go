@@ -415,15 +415,18 @@ func TestCrlRebuilder(t *testing.T) {
 	cb := newCRLBuilder(true /* can rebuild and write CRLs */)
 
 	// Force an initial build
-	err = cb.rebuild(sc, true)
+	warnings, err := cb.rebuild(sc, true)
 	require.NoError(t, err, "Failed to rebuild CRL")
+	require.Empty(t, warnings, "unexpectedly got warnings rebuilding CRL")
 
 	resp := requestCrlFromBackend(t, s, b)
 	crl1 := parseCrlPemBytes(t, resp.Data["http_raw_body"].([]byte))
 
 	// We shouldn't rebuild within this call.
-	err = cb.rebuildIfForced(sc)
+	warnings, err = cb.rebuildIfForced(sc)
 	require.NoError(t, err, "Failed to rebuild if forced CRL")
+	require.Empty(t, warnings, "unexpectedly got warnings rebuilding CRL")
+
 	resp = requestCrlFromBackend(t, s, b)
 	crl2 := parseCrlPemBytes(t, resp.Data["http_raw_body"].([]byte))
 	require.Equal(t, crl1.ThisUpdate, crl2.ThisUpdate, "According to the update field, we rebuilt the CRL")
@@ -439,8 +442,9 @@ func TestCrlRebuilder(t *testing.T) {
 
 	// This should rebuild the CRL
 	cb.requestRebuildIfActiveNode(b)
-	err = cb.rebuildIfForced(sc)
+	warnings, err = cb.rebuildIfForced(sc)
 	require.NoError(t, err, "Failed to rebuild if forced CRL")
+	require.Empty(t, warnings, "unexpectedly got warnings rebuilding CRL")
 	resp = requestCrlFromBackend(t, s, b)
 	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("crl/pem"), logical.ReadOperation), resp, true)
 
