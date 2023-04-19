@@ -1,18 +1,16 @@
-<Hds::AppFrame @hasSidebar={{@showSidebar}} as |Frame|>
+<Hds::AppFrame @hasSidebar={{@showSidebar}} @hasHeader={{false}} @hasFooter={{false}} as |Frame|>
   <Frame.Sidebar data-test-sidebar-nav>
     <Hds::SideNav @isResponsive={{true}} @hasA11yRefocus={{true}} @a11yRefocusSkipTo="app-main-content">
       <:header>
         <Hds::SideNav::Header>
           <:logo>
-            {{#if this.currentCluster.cluster}}
-              <Hds::SideNav::Header::HomeLink
-                @icon="vault"
-                @route="vault.cluster"
-                @model={{this.currentCluster.cluster.name}}
-                @ariaLabel="home link"
-                data-test-sidebar-logo
-              />
-            {{/if}}
+            <Hds::SideNav::Header::HomeLink
+              @icon="vault"
+              @route="vault.cluster"
+              @model={{this.currentCluster.cluster.name}}
+              @ariaLabel="home link"
+              data-test-sidebar-logo
+            />
           </:logo>
           <:actions>
             <Hds::SideNav::Header::IconButton
@@ -33,7 +31,7 @@
 
       <:footer>
         {{#if (has-feature "Namespaces")}}
-          <NamespacePicker @namespace={{@namespace}} />
+          <NamespacePicker @namespace={{this.clusterController.namespaceQueryParam}} />
         {{/if}}
       </:footer>
     </Hds::SideNav>
