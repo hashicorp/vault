@@ -36,6 +36,34 @@ query the matching endpoint in order to get a proper response. Any errors
 encountered during capture due to permissions or otherwise will be logged in the
 index file.
 
+The following policy can be used for generating debug packages with all targets:
+
+```hcl
+path "auth/token/lookup-self" {
+  capabilities = ["read"]
+}
+
+path "sys/pprof/*" {
+  capabilities = ["read"]
+}
+
+path "sys/config/state/sanitized" {
+  capabilities = ["read"]
+}
+
+path "sys/monitor" {
+  capabilities = ["read"]
+}
+
+path "sys/host-info" {
+  capabilities = ["read"]
+}
+
+path "sys/in-flight-req" {
+  capabilities = ["read"]
+}
+```
+
 ## Capture Targets
 
 The `-target` flag can be specified multiple times to capture specific

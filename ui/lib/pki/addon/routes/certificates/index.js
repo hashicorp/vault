@@ -38,7 +38,7 @@ export default class PkiCertificatesIndexRoute extends Route {
     super.setupController(controller, resolvedModel);
     const certificates = resolvedModel.certificates;
 
-    if (certificates?.length) controller.message = getCliMessage('certificates');
-    else controller.message = getCliMessage();
+    if (certificates?.length) controller.notConfiguredMessage = getCliMessage('certificates');
+    else controller.notConfiguredMessage = getCliMessage();
   }
 }

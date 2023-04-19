@@ -34,8 +34,10 @@ module('Integration | Component | pki | Page::PkiCertificateDetails', function (
         common_name: 'example.com Intermediate Authority',
         issue_date: 1673540867000,
         serial_number: id,
-        not_valid_after: 1831220897000,
-        not_valid_before: 1673540867000,
+        parsed_certificate: {
+          not_valid_after: 1831220897000,
+          not_valid_before: 1673540867000,
+        },
       },
     });
     this.model = store.peekRecord('pki/certificate/base', id);
@@ -67,7 +69,6 @@ module('Integration | Component | pki | Page::PkiCertificateDetails', function (
     });
 
     await render(hbs`<Page::PkiCertificateDetails @model={{this.model}} />`, { owner: this.engine });
-
     assert
       .dom('[data-test-component="info-table-row"]')
       .exists({ count: 5 }, 'Correct number of fields render when certificate has not been revoked');
