@@ -66,7 +66,7 @@ and consider if they're appropriate for your deployment.
 
 - `injector` - Values that configure running a Vault Agent Injector Admission Webhook Controller within Kubernetes.
 
-  - `enabled` (`string: global.enabled`) - When set to `true`, the Vault Agent Injector Admission Webhook controller will be created. When set to `"-"`, defaults to the value of `global.enabled`.
+  - `enabled` (`boolean or string: -`) - When set to `true`, the Vault Agent Injector Admission Webhook controller will be created. When set to `"-"`, defaults to the value of `global.enabled`.
 
   - `externalVaultAddr` (`string: ""`) - Deprecated: Please use [global.externalVaultAddr](/vault/docs/platform/k8s/helm/configuration#externalvaultaddr) instead.
 
@@ -122,7 +122,7 @@ and consider if they're appropriate for your deployment.
 
   - `securityContext` - Security context for the pod template and the injector container.
 
-    - `pod` - Defines the securityContext for the injector Pod, as YAML or a YAML-formatted multi-line templated string. Default if not specified:
+    - `pod` (`dictionary: {}`) - Defines the securityContext for the injector Pod, as YAML or a YAML-formatted multi-line templated string. Default if not specified:
 
       ```yaml
       runAsNonRoot: true
@@ -131,7 +131,7 @@ and consider if they're appropriate for your deployment.
       fsGroup: {{ .Values.injector.gid | default 1000 }}
       ```
 
-    - `container` - Defines the securityContext for the injector container, as YAML or a YAML-formatted multi-line templated string. Default if not specified:
+    - `container` (`dictionary: {}`) - Defines the securityContext for the injector container, as YAML or a YAML-formatted multi-line templated string. Default if not specified:
 
       ```yaml
       allowPrivilegeEscalation: false
@@ -140,7 +140,7 @@ and consider if they're appropriate for your deployment.
           - ALL
       ```
 
-  - `resources` - The resource requests and limits (CPU, memory, etc.) for each container of the injector. This should be a YAML dictionary of a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#resourcerequirements-v1-core) object. If this isn't specified, then the pods won't request any specific amount of resources, which limits the ability for Kubernetes to make efficient use of compute resources.
+  - `resources` (`dictionary: {}`) - The resource requests and limits (CPU, memory, etc.) for each container of the injector. This should be a YAML dictionary of a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#resourcerequirements-v1-core) object. If this isn't specified, then the pods won't request any specific amount of resources, which limits the ability for Kubernetes to make efficient use of compute resources.
  **Setting this is highly recommended.**
 
     ```yaml
@@ -161,7 +161,7 @@ and consider if they're appropriate for your deployment.
 
     - `timeoutSeconds` (`int: 30`) - Specifies the number of seconds before the webhook request will be ignored or fails. If it is ignored or fails depends on the `failurePolicy`. See [timeouts](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#timeouts).
 
-    - `namespaceSelector` -  The selector used by the admission webhook controller to limit what namespaces where injection can happen. If unset, all non-system namespaces are eligible for injection. See [Matching requests: namespace selector](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-namespaceselector).
+    - `namespaceSelector` (`object: {}`) -  The selector used by the admission webhook controller to limit what namespaces where injection can happen. If unset, all non-system namespaces are eligible for injection. See [Matching requests: namespace selector](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-namespaceselector).
 
       ```yaml
       namespaceSelector:
@@ -169,7 +169,7 @@ and consider if they're appropriate for your deployment.
           sidecar-injector: enabled
       ```
 
-    - `objectSelector` (`string`) -  The selector used by the admission webhook controller to limit what objects can be affected by mutation. See [Matching requests: object selector](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-objectselector).
+    - `objectSelector` (`object: {}`) - The selector used by the admission webhook controller to limit what objects can be affected by mutation. See [Matching requests: object selector](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-objectselector).
 
       ```yaml
       objectSelector:
@@ -177,13 +177,13 @@ and consider if they're appropriate for your deployment.
           sidecar-injector: enabled
       ```
 
-    - `annotations` - Defines additional annotations to attach to the webhook. This can either be YAML or a YAML-formatted multi-line templated string.
+    - `annotations` (`string or object: {}`) - Defines additional annotations to attach to the webhook. This can either be YAML or a YAML-formatted multi-line templated string.
 
-  - `namespaceSelector` - Deprecated: please use [`webhook.namespaceSelector`](/vault/docs/platform/k8s/helm/configuration#namespaceselector) instead.
+  - `namespaceSelector` (`dictionary: {}`) - Deprecated: please use [`webhook.namespaceSelector`](/vault/docs/platform/k8s/helm/configuration#namespaceselector) instead.
 
-  - `objectSelector` - Deprecated: please use [`webhook.objectSelector`](/vault/docs/platform/k8s/helm/configuration#objectselector) instead.
+  - `objectSelector` (`dictionary: {}`) - Deprecated: please use [`webhook.objectSelector`](/vault/docs/platform/k8s/helm/configuration#objectselector) instead.
 
-  - `extraLabels` -  This value defines additional labels for Vault Agent Injector pods.
+  - `extraLabels` (`dictionary: {}`) -  This value defines additional labels for Vault Agent Injector pods.
 
     ```yaml
     extraLabels:
@@ -201,7 +201,7 @@ and consider if they're appropriate for your deployment.
 
     - `keyName` (`string: "tls.key"`) - The name of the key file within the `secretName` secret.
 
-  - `extraEnvironmentVars` - Extra environment variables to set in the injector deployment.
+  - `extraEnvironmentVars` (`dictionary: {}`) - Extra environment variables to set in the injector deployment.
 
     ```yaml
     # Example setting injector TLS options in a deployment:
@@ -210,10 +210,10 @@ and consider if they're appropriate for your deployment.
       AGENT_INJECT_TLS_CIPHER_SUITES: ...
     ```
 
-  - `affinity` (`string`) - This value defines the [affinity](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity) for Vault Agent Injector pods. This can either be multi-line string or YAML matching the PodSpec's affinity field. It defaults to allowing only a single pod on each node, which minimizes risk of the cluster becoming unusable if a node is lost. If you need to run more pods per node (for example, testing on Minikube), set this value to `null`.
- Recommended and default server affinity:
+  - `affinity` (`string or dictionary`) - This value defines the [affinity](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity) for Vault Agent Injector pods. This can either be multi-line string or YAML matching the PodSpec's affinity field. It defaults to allowing only a single pod on each node, which minimizes risk of the cluster becoming unusable if a node is lost. If you need to run more pods per node (for example, testing on Minikube), set this value to `null`.
 
     ```yaml
+    # Recommended default server affinity:
     affinity: |
       podAntiAffinity:
         requiredDuringSchedulingIgnoredDuringExecution:
@@ -229,12 +229,12 @@ and consider if they're appropriate for your deployment.
 
   - `tolerations` (`array: []`) - Toleration Settings for injector pods. This should be either a multi-line string or YAML matching the Toleration array.
 
-  - `nodeSelector` - The nodeSelector labels for injector pod assignment, formatted as a multi-line string or YAML map. See https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
+  - `nodeSelector` (`dictionary: {}`) - The nodeSelector labels for injector pod assignment, formatted as a multi-line string or YAML map. See https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
  nodeSelector:   beta.kubernetes.io/arch: amd64
 
   - `priorityClassName` (`string: ""`) - Priority class for injector pods.
 
-  - `annotations` - This value defines additional annotations for injector pods. This can either be YAML or a YAML-formatted multi-line templated string.
+  - `annotations` (`dictionary: {}`) - This value defines additional annotations for injector pods. This can either be YAML or a YAML-formatted multi-line templated string.
 
     ```yaml
     annotations:
@@ -248,11 +248,11 @@ and consider if they're appropriate for your deployment.
 
   - `failurePolicy` (`string: "Ignore"`) - Deprecated: please use [`webhook.failurePolicy`](/vault/docs/platform/k8s/helm/configuration#failurepolicy) instead.
 
-  - `webhookAnnotations` - Deprecated: please use [`webhook.annotations`](/vault/docs/platform/k8s/helm/configuration#annotations-1) instead.
+  - `webhookAnnotations` (`dictionary: {}`) - Deprecated: please use [`webhook.annotations`](/vault/docs/platform/k8s/helm/configuration#annotations-1) instead.
 
   - `service` - The service section configures the Kubernetes service for the Vault Agent Injector.
 
-    - `annotations` - This value defines additional annotations to add to the Vault Agent Injector service. This can either be YAML or a YAML-formatted multi-line templated string.
+    - `annotations` (`dictionary: {}`) - This value defines additional annotations to add to the Vault Agent Injector service. This can either be YAML or a YAML-formatted multi-line templated string.
 
       ```yaml
       annotations:
@@ -266,20 +266,20 @@ and consider if they're appropriate for your deployment.
 
   - `serviceAccount` - Injector serviceAccount specific config.
 
-    - `annotations` - Extra annotations to attach to the injector serviceAccount. This can either be YAML or a YAML-formatted multi-line templated string.
+    - `annotations` (`dictionary: {}`) - Extra annotations to attach to the injector serviceAccount. This can either be YAML or a YAML-formatted multi-line templated string.
 
   - `hostNetwork` (`boolean: false`) - When set to true, configures the Vault Agent Injector to run on the host network. This is useful when alternative cluster networking is used.
 
   - `port` (`int: 8080`) - Configures the port the Vault Agent Injector listens on.
 
-  - `podDisruptionBudget` - A disruption budget limits the number of pods of a replicated application that are down simultaneously from voluntary disruptions.
+  - `podDisruptionBudget` (`dictionary: {}`) - A disruption budget limits the number of pods of a replicated application that are down simultaneously from voluntary disruptions.
 
     ```yaml
     podDisruptionBudget:
       maxUnavailable: 1
     ```
 
-  - `strategy` - Strategy for updating the deployment. This can be a multi-line string or a YAML map.
+  - `strategy` (`dictionary: {}`) - Strategy for updating the deployment. This can be a multi-line string or a YAML map.
 
     ```yaml
     strategy:
@@ -591,7 +591,7 @@ and consider if they're appropriate for your deployment.
 
     - `extraLabels` - Extra labels to attach to the serviceAccount This should be a YAML map of the labels to apply to the serviceAccount
 
-    - `serviceDiscovery` - Enable or disable a service account role binding with the permissions required for Vault's Kubernetes service_registration config option. See https://developer.hashicorp.com/vault/docs/configuration/service-registration/kubernetes
+    - `serviceDiscovery` - Enable or disable a service account role binding with the permissions required for Vault's Kubernetes service_registration config option. See /vault/docs/configuration/service-registration/kubernetes
 
       - `enabled` (`boolean: true`)
 
@@ -772,5 +772,6 @@ and consider if they're appropriate for your deployment.
       - `selectors` - Selector labels to add to the PrometheusRules. When empty, defaults to:  release: prometheus
 
       - `rules` - Some example rules.
-  <!-- codegen: end -->
-  
+
+
+<!-- codegen: end -->
