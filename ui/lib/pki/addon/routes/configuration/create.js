@@ -12,12 +12,6 @@ import { hash } from 'rsvp';
 export default class PkiConfigurationCreateRoute extends Route {
   @service secretMountPath;
   @service store;
-  @service pathHelp;
-
-  beforeModel() {
-    // pki/urls uses openApi to hydrate model
-    return this.pathHelp.getNewModel('pki/urls', this.secretMountPath.currentPath);
-  }
 
   model() {
     return hash({

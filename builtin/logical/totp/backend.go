@@ -13,6 +13,8 @@ import (
 	cache "github.com/patrickmn/go-cache"
 )
 
+const operationPrefixTOTP = "totp"
+
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
 	if err := b.Setup(ctx, conf); err != nil {

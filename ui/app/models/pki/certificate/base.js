@@ -18,14 +18,8 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
  * render if included in certDisplayFields below).
  */
 
-const certDisplayFields = [
-  'certificate',
-  'commonName',
-  'revocationTime',
-  'serialNumber',
-  'notValidBefore',
-  'notValidAfter',
-];
+// also displays parsedCertificate values in the template
+const certDisplayFields = ['certificate', 'commonName', 'revocationTime', 'serialNumber'];
 
 @withFormFields(certDisplayFields)
 export default class PkiCertificateBaseModel extends Model {
@@ -41,8 +35,10 @@ export default class PkiCertificateBaseModel extends Model {
     assert('You must provide a helpUrl for OpenAPI', true);
   }
 
-  @attr('string') commonName;
+  // The attributes parsed from parse-pki-cert util live here
+  @attr parsedCertificate;
 
+  @attr('string') commonName;
   @attr({
     label: 'Not valid after',
     detailsLabel: 'Issued certificates expire after',
@@ -97,11 +93,6 @@ export default class PkiCertificateBaseModel extends Model {
   @attr('string') privateKeyType; // only returned for type=exported
   @attr('number', { formatDate: true }) revocationTime;
   @attr('string') serialNumber;
-
-  // read only attrs parsed from certificate contents in serializer on GET requests (see parse-pki-cert.js)
-  @attr('number', { formatDate: true }) notValidAfter; // set by ttl or notAfter (customTtL above)
-  @attr('number', { formatDate: true }) notValidBefore; // date certificate was issued
-  @attr('string') signatureBits;
 
   @lazyCapabilities(apiPath`${'backend'}/revoke`, 'backend') revokePath;
   get canRevoke() {

@@ -222,6 +222,9 @@
 .has-background-gray-200 {
   background-color: $ui-gray-200;
 }
+.has-background-gray-100 {
+  background-color: $ui-gray-100;
+}
 @each $name, $pair in $colors {
   $color: nth($pair, 1);
   .has-background-#{$name} {

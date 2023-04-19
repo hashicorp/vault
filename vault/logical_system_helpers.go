@@ -64,6 +64,12 @@ var (
 		return []*framework.Path{
 			{
 				Pattern: "replication/status",
+
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationPrefix: "replication",
+					OperationVerb:   "status",
+				},
+
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation: func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 						resp := &logical.Response{

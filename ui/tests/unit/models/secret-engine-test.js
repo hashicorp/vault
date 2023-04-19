@@ -66,6 +66,7 @@ module('Unit | Model | secret-engine', function (hooks) {
         'sealWrap',
         'config.defaultLeaseTtl',
         'config.maxLeaseTtl',
+        'config.allowedManagedKeys',
         'config.auditNonHmacRequestKeys',
         'config.auditNonHmacResponseKeys',
         'config.passthroughRequestHeaders',
@@ -88,6 +89,7 @@ module('Unit | Model | secret-engine', function (hooks) {
         'sealWrap',
         'config.defaultLeaseTtl',
         'config.maxLeaseTtl',
+        'config.allowedManagedKeys',
         'config.auditNonHmacRequestKeys',
         'config.auditNonHmacResponseKeys',
         'config.passthroughRequestHeaders',
@@ -112,6 +114,7 @@ module('Unit | Model | secret-engine', function (hooks) {
         'sealWrap',
         'config.defaultLeaseTtl',
         'config.maxLeaseTtl',
+        'config.allowedManagedKeys',
         'config.auditNonHmacRequestKeys',
         'config.auditNonHmacResponseKeys',
         'config.passthroughRequestHeaders',
@@ -136,6 +139,7 @@ module('Unit | Model | secret-engine', function (hooks) {
         'accessor',
         'local',
         'sealWrap',
+        'config.allowedManagedKeys',
         'config.auditNonHmacRequestKeys',
         'config.auditNonHmacResponseKeys',
         'config.passthroughRequestHeaders',
@@ -161,6 +165,7 @@ module('Unit | Model | secret-engine', function (hooks) {
             'sealWrap',
             'config.defaultLeaseTtl',
             'config.maxLeaseTtl',
+            'config.allowedManagedKeys',
             'config.auditNonHmacRequestKeys',
             'config.auditNonHmacResponseKeys',
             'config.passthroughRequestHeaders',
@@ -186,6 +191,7 @@ module('Unit | Model | secret-engine', function (hooks) {
             'sealWrap',
             'config.defaultLeaseTtl',
             'config.maxLeaseTtl',
+            'config.allowedManagedKeys',
             'config.auditNonHmacRequestKeys',
             'config.auditNonHmacResponseKeys',
             'config.passthroughRequestHeaders',
@@ -212,6 +218,7 @@ module('Unit | Model | secret-engine', function (hooks) {
             'sealWrap',
             'config.defaultLeaseTtl',
             'config.maxLeaseTtl',
+            'config.allowedManagedKeys',
             'config.auditNonHmacRequestKeys',
             'config.auditNonHmacResponseKeys',
             'config.passthroughRequestHeaders',
@@ -229,6 +236,30 @@ module('Unit | Model | secret-engine', function (hooks) {
 
       assert.deepEqual(model.get('formFieldGroups'), [
         { default: ['path', 'config.defaultLeaseTtl', 'config.maxLeaseTtl'] },
+        {
+          'Method Options': [
+            'description',
+            'config.listingVisibility',
+            'local',
+            'sealWrap',
+            'config.allowedManagedKeys',
+            'config.auditNonHmacRequestKeys',
+            'config.auditNonHmacResponseKeys',
+            'config.passthroughRequestHeaders',
+            'config.allowedResponseHeaders',
+          ],
+        },
+      ]);
+    });
+
+    test('returns correct values for pki', function (assert) {
+      assert.expect(1);
+      const model = this.store.createRecord('secret-engine', {
+        type: 'pki',
+      });
+
+      assert.deepEqual(model.get('formFieldGroups'), [
+        { default: ['path', 'config.defaultLeaseTtl', 'config.maxLeaseTtl', 'config.allowedManagedKeys'] },
         {
           'Method Options': [
             'description',
@@ -258,6 +289,7 @@ module('Unit | Model | secret-engine', function (hooks) {
             'config.listingVisibility',
             'local',
             'sealWrap',
+            'config.allowedManagedKeys',
             'config.auditNonHmacRequestKeys',
             'config.auditNonHmacResponseKeys',
             'config.passthroughRequestHeaders',

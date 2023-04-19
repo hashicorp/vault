@@ -23,17 +23,32 @@ import (
 
 func pathIssue(b *backend) *framework.Path {
 	pattern := "issue/" + framework.GenericNameRegex("role")
-	return buildPathIssue(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationVerb:   "issue",
+		OperationSuffix: "with-role",
+	}
+
+	return buildPathIssue(b, pattern, displayAttrs)
 }
 
 func pathIssuerIssue(b *backend) *framework.Path {
 	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/issue/" + framework.GenericNameRegex("role")
-	return buildPathIssue(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKIIssuer,
+		OperationVerb:   "issue",
+		OperationSuffix: "with-role",
+	}
+
+	return buildPathIssue(b, pattern, displayAttrs)
 }
 
-func buildPathIssue(b *backend, pattern string) *framework.Path {
+func buildPathIssue(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	ret := &framework.Path{
-		Pattern: pattern,
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
@@ -93,17 +108,32 @@ func buildPathIssue(b *backend, pattern string) *framework.Path {
 
 func pathSign(b *backend) *framework.Path {
 	pattern := "sign/" + framework.GenericNameRegex("role")
-	return buildPathSign(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationVerb:   "sign",
+		OperationSuffix: "with-role",
+	}
+
+	return buildPathSign(b, pattern, displayAttrs)
 }
 
 func pathIssuerSign(b *backend) *framework.Path {
 	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/sign/" + framework.GenericNameRegex("role")
-	return buildPathSign(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKIIssuer,
+		OperationVerb:   "sign",
+		OperationSuffix: "with-role",
+	}
+
+	return buildPathSign(b, pattern, displayAttrs)
 }
 
-func buildPathSign(b *backend, pattern string) *framework.Path {
+func buildPathSign(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	ret := &framework.Path{
-		Pattern: pattern,
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
@@ -170,18 +200,33 @@ func buildPathSign(b *backend, pattern string) *framework.Path {
 
 func pathIssuerSignVerbatim(b *backend) *framework.Path {
 	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/sign-verbatim" + framework.OptionalParamRegex("role")
-	return buildPathIssuerSignVerbatim(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKIIssuer,
+		OperationVerb:   "sign",
+		OperationSuffix: "verbatim|verbatim-with-role",
+	}
+
+	return buildPathIssuerSignVerbatim(b, pattern, displayAttrs)
 }
 
 func pathSignVerbatim(b *backend) *framework.Path {
 	pattern := "sign-verbatim" + framework.OptionalParamRegex("role")
-	return buildPathIssuerSignVerbatim(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationVerb:   "sign",
+		OperationSuffix: "verbatim|verbatim-with-role",
+	}
+
+	return buildPathIssuerSignVerbatim(b, pattern, displayAttrs)
 }
 
-func buildPathIssuerSignVerbatim(b *backend, pattern string) *framework.Path {
+func buildPathIssuerSignVerbatim(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	ret := &framework.Path{
-		Pattern: pattern,
-		Fields:  map[string]*framework.FieldSchema{},
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
+		Fields:       map[string]*framework.FieldSchema{},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{

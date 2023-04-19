@@ -20,6 +20,11 @@ import (
 func pathConfig(b *backend) *framework.Path {
 	p := &framework.Path{
 		Pattern: "config",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixGithub,
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"organization": {
 				Type:        framework.TypeString,
@@ -52,9 +57,20 @@ API-compatible authentication server.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathConfigWrite,
-			logical.ReadOperation:   b.pathConfigRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathConfigWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationPrefix: operationPrefixGithub,
+					OperationVerb:   "configure",
+				},
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathConfigRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "configuration",
+				},
+			},
 		},
 	}
 

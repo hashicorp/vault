@@ -47,4 +47,10 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
     const { backend, id } = query;
     return this.ajax(this.urlForQuery(backend, id), 'GET', this.optionsForQuery(id));
   }
+
+  deleteAllIssuers(backend) {
+    const deleteAllIssuersAndKeysUrl = `${this.buildURL()}/${encodePath(backend)}/root`;
+
+    return this.ajax(deleteAllIssuersAndKeysUrl, 'DELETE');
+  }
 }

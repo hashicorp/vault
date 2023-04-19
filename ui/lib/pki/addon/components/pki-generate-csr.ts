@@ -13,6 +13,7 @@ import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import FlashMessageService from 'vault/services/flash-messages';
 import PkiActionModel from 'vault/models/pki/action';
 import errorMessage from 'vault/utils/error-message';
+import { ValidationMap } from 'vault/vault/app-types';
 
 interface Args {
   model: PkiActionModel;
@@ -44,7 +45,7 @@ interface Args {
 export default class PkiGenerateCsrComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
 
-  @tracked modelValidations = null;
+  @tracked modelValidations: ValidationMap | null = null;
   @tracked error: string | null = null;
   @tracked alert: string | null = null;
 

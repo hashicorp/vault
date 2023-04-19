@@ -19,6 +19,12 @@ func pathGenerateKey(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/generate/(internal|exported|kms)",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "generate",
+			OperationSuffix: "internal-key|exported-key|kms-key",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			keyNameParam: {
 				Type:        framework.TypeString,
@@ -181,6 +187,12 @@ func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Reque
 func pathImportKey(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/import",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "import",
+			OperationSuffix: "key",
+		},
 
 		Fields: map[string]*framework.FieldSchema{
 			keyNameParam: {

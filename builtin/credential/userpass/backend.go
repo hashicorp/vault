@@ -10,6 +10,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+const operationPrefixUserpass = "userpass"
+
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
 	if err := b.Setup(ctx, conf); err != nil {

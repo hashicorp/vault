@@ -64,8 +64,6 @@ export function parseCertificate(certificateContent) {
   return {
     ...parsedCertificateValues,
     can_parse: true,
-    expiry_date: expiryDate, // remove along with old PKI work
-    issue_date: issueDate, // remove along with old PKI work
     not_valid_after: getUnixTime(expiryDate),
     not_valid_before: getUnixTime(issueDate),
     ttl,

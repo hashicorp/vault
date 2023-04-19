@@ -20,6 +20,11 @@ func (b *backend) pathListSts() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/sts/?",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "sts-role-relationships",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathStsList,
@@ -34,6 +39,12 @@ func (b *backend) pathListSts() *framework.Path {
 func (b *backend) pathConfigSts() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/sts/" + framework.GenericNameRegex("account_id"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "sts-role",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"account_id": {
 				Type: framework.TypeString,
