@@ -1,3 +1,3 @@
 ```release-note:improvement
-command/server: New server option -dev-three-docker-node is like -dev-three-node but uses docker containers for each node.  Also add new docker-based cluster testing framework to the sdk.
+sdk: Add new docker-based cluster testing framework to the sdk.
 ```
