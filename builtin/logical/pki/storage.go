@@ -284,6 +284,15 @@ func (b *backend) makeStorageContext(ctx context.Context, s logical.Storage) *st
 	}
 }
 
+func (sc *storageContext) WithFreshTimeout(timeout time.Duration) (*storageContext, context.CancelFunc) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	return &storageContext{
+		Context: ctx,
+		Storage: sc.Storage,
+		Backend: sc.Backend,
+	}, cancel
+}
+
 func (sc *storageContext) listKeys() ([]keyID, error) {
 	strList, err := sc.Storage.List(sc.Context, keyPrefix)
 	if err != nil {

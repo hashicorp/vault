@@ -87,6 +87,9 @@ auth_type is ec2 or inferred_entity_type is ec2_instance.`,
 given instance IDs. Can be a list or comma-separated string of EC2 instance
 IDs. This is only applicable when auth_type is ec2 or inferred_entity_type is
 ec2_instance.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Description: "If set, defines a constraint on the EC2 instances to have one of the given instance IDs. A list of EC2 instance IDs. This is only applicable when auth_type is ec2 or inferred_entity_type is ec2_instance.",
+				},
 			},
 			"resolve_aws_unique_ids": {
 				Type:    framework.TypeBool,
