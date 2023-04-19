@@ -977,8 +977,16 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 		}
 
 		if !config.AutoRebuild {
-			if err := b.crlBuilder.rebuild(sc, false); err != nil {
+			warnings, err := b.crlBuilder.rebuild(sc, false)
+			if err != nil {
 				return err
+			}
+			if len(warnings) > 0 {
+				msg := "During rebuild of CRL for tidy, got the following warnings:"
+				for index, warning := range warnings {
+					msg = fmt.Sprintf("%v\n %d. %v", msg, index+1, warning)
+				}
+				b.Logger().Warn(msg)
 			}
 		}
 	}
@@ -1081,8 +1089,16 @@ func (b *backend) doTidyExpiredIssuers(ctx context.Context, req *logical.Request
 		b.revokeStorageLock.Lock()
 		defer b.revokeStorageLock.Unlock()
 
-		if err := b.crlBuilder.rebuild(sc, false); err != nil {
+		warnings, err := b.crlBuilder.rebuild(sc, false)
+		if err != nil {
 			return err
+		}
+		if len(warnings) > 0 {
+			msg := "During rebuild of CRL for tidy, got the following warnings:"
+			for index, warning := range warnings {
+				msg = fmt.Sprintf("%v\n %d. %v", msg, index+1, warning)
+			}
+			b.Logger().Warn(msg)
 		}
 	}
 
