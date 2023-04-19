@@ -410,9 +410,13 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 // Existing headers should be removed in case of failure, we should only set the headers in this method.
 // An error indicates that the headers have not been added.
 func (c *Core) addForwardingHeaders(req *http.Request) error {
-	// Sanity check by clearing existing headers, we don't expect them to exist.
-	delete(req.Header, HTTPHeaderVaultForwardFrom)
-	delete(req.Header, HTTPHeaderVaultForwardTo)
+	if req.Header != nil {
+		// Sanity check by clearing existing headers, we don't expect them to exist.
+		delete(req.Header, HTTPHeaderVaultForwardFrom)
+		delete(req.Header, HTTPHeaderVaultForwardTo)
+	} else {
+		req.Header = http.Header{}
+	}
 
 	from, err := url.Parse(c.redirectAddr)
 	if err != nil {
