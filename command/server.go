@@ -2214,9 +2214,24 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	return 0
 }
 
+// TODO I guess we have to get rid of this, I can't think of an easy way to
+// fix builds on platforms that don't support docker
 func (c *ServerCommand) enableThreeNodeDockerCluster(devListenAddress, tempDir string, vnc *testcluster.VaultNodeConfig) int {
 	ctx := namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
+	me, err := os.Executable()
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Failed to get path to current vault executable: %v", err))
+		return 1
+	}
+
+	repo := "hashicorp/vault"
+	if constants.IsEnterprise {
+		repo = "hashicorp/vault-enterprise"
+	}
 	testCluster, err := docker.NewDockerCluster(ctx, &docker.DockerClusterOptions{
+		ImageRepo:   repo,
+		ImageTag:    version.GetVersion().Version,
+		VaultBinary: me,
 		ClusterOptions: testcluster.ClusterOptions{
 			ClusterName:     "vault-dev",
 			Logger:          c.logger.Named("docker-cluster"),

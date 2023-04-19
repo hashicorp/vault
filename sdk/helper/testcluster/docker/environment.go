@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math/big"
 	mathrand "math/rand"
@@ -37,8 +38,6 @@ import (
 	uberAtomic "go.uber.org/atomic"
 	"golang.org/x/net/http2"
 )
-
-const dockerVersion = "1.40"
 
 var (
 	_ testcluster.VaultCluster     = &DockerCluster{}
@@ -414,13 +413,47 @@ func NewTestDockerCluster(t *testing.T, opts *DockerClusterOptions) *DockerClust
 }
 
 func NewDockerCluster(ctx context.Context, opts *DockerClusterOptions) (*DockerCluster, error) {
-	cli, err := docker.NewClientWithOpts(docker.FromEnv, docker.WithVersion(dockerVersion))
+	api, err := dockhelper.NewDockerAPI()
 	if err != nil {
 		return nil, err
 	}
 
+	if opts.VaultBinary != "" {
+		f, err := os.Open(opts.VaultBinary)
+		if err != nil {
+			return nil, err
+		}
+		data, err := io.ReadAll(f)
+		if err != nil {
+			return nil, err
+		}
+		bCtx := dockhelper.NewBuildContext()
+		bCtx["vault"] = &dockhelper.FileContents{
+			Data: data,
+			Mode: 0o755,
+		}
+
+		containerFile := fmt.Sprintf(`
+	FROM %s:%s
+	COPY vault /bin/vault
+`, opts.ImageRepo, opts.ImageTag)
+
+		// TODO would be nice to use current SHA as tag
+		newTag := opts.ImageTag + "-testing"
+		_, err = dockhelper.BuildImage(ctx, api, containerFile, bCtx,
+			dockhelper.BuildRemove(true), dockhelper.BuildForceRemove(true),
+			dockhelper.BuildPullParent(true),
+			dockhelper.BuildTags([]string{opts.ImageRepo + ":" + newTag}))
+		if err != nil {
+			return nil, err
+		}
+		newOpts := *opts
+		newOpts.ImageTag = newTag
+		opts = &newOpts
+	}
+
 	dc := &DockerCluster{
-		dockerAPI:   cli,
+		dockerAPI:   api,
 		RaftStorage: true,
 		ClusterName: opts.ClusterName,
 	}
@@ -719,6 +752,7 @@ type DockerClusterOptions struct {
 	ImageRepo   string
 	ImageTag    string
 	CloneCA     *DockerCluster
+	VaultBinary string
 }
 
 func ensureLeaderMatches(ctx context.Context, client *api.Client, ready func(response *api.LeaderResponse) error) error {

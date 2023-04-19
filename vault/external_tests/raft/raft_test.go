@@ -12,6 +12,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -446,9 +447,16 @@ func TestRaft_Configuration(t *testing.T) {
 
 func TestRaft_Configuration_Docker(t *testing.T) {
 	t.Parallel()
+	binary := os.Getenv("VAULT_BINARY")
+	if binary == "" {
+		t.Skip("only running docker test when $VAULT_BINARY present")
+	}
 	opts := &docker.DockerClusterOptions{
 		ImageRepo: "hashicorp/vault",
-		ImageTag:  "1.13.0",
+		// TODO ideally we'd use this branch's latest version, which works
+		// fine on release branches, but on main it might not exist yet.
+		ImageTag:    "1.13.0",
+		VaultBinary: binary,
 		ClusterOptions: testcluster.ClusterOptions{
 			VaultNodeConfig: &testcluster.VaultNodeConfig{
 				LogLevel: "TRACE",

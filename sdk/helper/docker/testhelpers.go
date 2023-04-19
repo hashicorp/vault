@@ -34,6 +34,8 @@ import (
 	"github.com/hashicorp/go-uuid"
 )
 
+const DockerAPIVersion = "1.40"
+
 type Runner struct {
 	DockerAPI  *client.Client
 	RunOptions RunOptions
@@ -59,8 +61,12 @@ type RunOptions struct {
 	PostStart       func(string, string) error
 }
 
+func NewDockerAPI() (*client.Client, error) {
+	return client.NewClientWithOpts(client.FromEnv, client.WithVersion(DockerAPIVersion))
+}
+
 func NewServiceRunner(opts RunOptions) (*Runner, error) {
-	dapi, err := client.NewClientWithOpts(client.FromEnv, client.WithVersion("1.39"))
+	dapi, err := NewDockerAPI()
 	if err != nil {
 		return nil, err
 	}
@@ -763,6 +769,10 @@ func (u BuildTags) Apply(cfg *types.ImageBuildOptions) error {
 const containerfilePath = "_containerfile"
 
 func (d *Runner) BuildImage(ctx context.Context, containerfile string, containerContext BuildContext, opts ...BuildOpt) ([]byte, error) {
+	return BuildImage(ctx, d.DockerAPI, containerfile, containerContext, opts...)
+}
+
+func BuildImage(ctx context.Context, api *client.Client, containerfile string, containerContext BuildContext, opts ...BuildOpt) ([]byte, error) {
 	var cfg types.ImageBuildOptions
 
 	// Build Container context tarball, provisioning containerfile in.
@@ -780,7 +790,7 @@ func (d *Runner) BuildImage(ctx context.Context, containerfile string, container
 		}
 	}
 
-	resp, err := d.DockerAPI.ImageBuild(ctx, tar, cfg)
+	resp, err := api.ImageBuild(ctx, tar, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build image: %v", err)
 	}
