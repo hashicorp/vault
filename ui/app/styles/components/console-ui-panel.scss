@@ -37,7 +37,7 @@
   color: $white;
   display: flex;
   flex-direction: column;
-  font-size: $size-8;
+  font-size: 14px;
   font-weight: $font-weight-semibold;
   justify-content: flex-end;
   min-height: 100%;
@@ -48,7 +48,7 @@
   p {
     background: none;
     color: inherit;
-    font-size: $size-8;
+    font-size: 14px;
     min-height: 2rem;
     padding: 0;
 

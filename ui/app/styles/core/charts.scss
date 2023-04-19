@@ -209,7 +209,7 @@ p.chart-description {
 
 p.chart-subtext {
   color: $ui-gray-500;
-  font-size: 14px;
+  font-size: $size-8;
   line-height: 16px;
   margin-top: $spacing-xs;
 }
@@ -217,7 +217,7 @@ p.chart-subtext {
 h3.data-details {
   font-weight: $font-weight-bold;
   font-size: $size-8;
-  line-height: $size-8;
+  line-height: 14px;
   margin-bottom: $spacing-xs;
 }
 
