@@ -55,6 +55,9 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
     const { enabled, goSafeTimeString } = e;
     const ttlAttr = attr.name;
     this.args.crl[ttlAttr as keyof PkiCrlTtls] = goSafeTimeString;
-    this.args.crl[attr.options.booleanBuddy as keyof PkiCrlBooleans] = enabled;
+    // expiry and ocspExpiry both correspond to 'disable' booleans
+    // so their values are opposite of what the ttl is toggled to
+    this.args.crl[attr.options.mapToBoolean as keyof PkiCrlBooleans] =
+      attr.name === 'expiry' || attr.name === 'ocspExpiry' ? !enabled : enabled;
   }
 }

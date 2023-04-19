@@ -12,7 +12,7 @@ export interface FormField {
 
 interface AttributeOptions {
   label: string;
-  booleanBuddy: string;
+  mapToBoolean: string;
 }
 
 export interface FormFieldGroups {
