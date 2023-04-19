@@ -7,12 +7,12 @@ import Model, { attr } from '@ember-data/model';
 import parseURL from 'core/utils/parse-url';
 
 const DOMAIN_STRINGS = {
-  github: 'GitHub',
-  gitlab: 'GitLab',
-  google: 'Google',
-  ping: 'Ping',
-  okta: 'Okta',
-  auth0: 'Auth0',
+  'github.com': 'GitHub',
+  'gitlab.com': 'GitLab',
+  'google.com': 'Google',
+  'ping.com': 'Ping',
+  'okta.com': 'Okta',
+  'auth0.com': 'Auth0',
 };
 
 const PROVIDER_WITH_LOGO = ['GitLab', 'Google', 'Auth0'];
