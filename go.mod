@@ -12,7 +12,7 @@ replace github.com/hashicorp/vault/api/auth/userpass => ./api/auth/userpass
 
 replace github.com/hashicorp/vault/sdk => ./sdk
 
-replace go.etcd.io/etcd/client/pkg/v3 v3.5.0 => go.etcd.io/etcd/client/pkg/v3 v3.0.0-20210928084031-3df272774672
+replace go.etcd.io/etcd/client/pkg/v3 v3.5.5 => go.etcd.io/etcd/client/pkg/v3 v3.0.0-20210928084031-3df272774672
 
 require (
 	cloud.google.com/go/monitoring v1.12.0
