@@ -137,7 +137,6 @@ type ServerCommand struct {
 	flagDevKVV1            bool
 	flagDevSkipInit        bool
 	flagDevThreeNode       bool
-	flagDevThreeDockerNode bool
 	flagDevFourCluster     bool
 	flagDevTransactional   bool
 	flagDevAutoSeal        bool
@@ -948,7 +947,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Automatically enable dev mode if other dev flags are provided.
-	if c.flagDevConsul || c.flagDevHA || c.flagDevTransactional || c.flagDevLeasedKV || c.flagDevThreeNode || c.flagDevFourCluster || c.flagDevAutoSeal || c.flagDevKVV1 || c.flagDevTLS || c.flagDevThreeDockerNode {
+	if c.flagDevConsul || c.flagDevHA || c.flagDevTransactional || c.flagDevLeasedKV || c.flagDevThreeNode || c.flagDevFourCluster || c.flagDevAutoSeal || c.flagDevKVV1 || c.flagDevTLS {
 		c.flagDev = true
 	}
 

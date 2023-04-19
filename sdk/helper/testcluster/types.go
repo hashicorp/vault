@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/vault/api"
 )
 

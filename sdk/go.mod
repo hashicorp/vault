@@ -8,8 +8,8 @@ replace github.com/hashicorp/vault/api => ../api
 require (
 	github.com/armon/go-metrics v0.3.9
 	github.com/armon/go-radix v1.0.0
-	github.com/cenkalti/backoff/v3 v3.2.2
-	github.com/docker/docker v23.0.1+incompatible
+	github.com/cenkalti/backoff/v3 v3.0.0
+	github.com/docker/docker v23.0.4+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/evanphx/json-patch/v5 v5.5.0
 	github.com/fatih/structs v1.1.0

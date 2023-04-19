@@ -28,15 +28,14 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/sdk/helper/logging"
-
 	"github.com/docker/docker/api/types"
 	docker "github.com/docker/docker/client"
 	"github.com/hashicorp/go-cleanhttp"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/api"
 	dockhelper "github.com/hashicorp/vault/sdk/helper/docker"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/testcluster"
 	uberAtomic "go.uber.org/atomic"
 	"golang.org/x/net/http2"
