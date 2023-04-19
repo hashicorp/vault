@@ -70,7 +70,7 @@ and consider if they're appropriate for your deployment.
 
   - `externalVaultAddr` (`string: ""`) - Deprecated: Please use [global.externalVaultAddr](/vault/docs/platform/k8s/helm/configuration#externalvaultaddr) instead.
 
-  - `replicas` (`integer: 1`) - The number of pods to deploy to create a highly available cluster of Vault Agent Injectors. Requires Vault K8s 0.7.0 to have more than 1 replica.
+  - `replicas` (`int: 1`) - The number of pods to deploy to create a highly available cluster of Vault Agent Injectors. Requires Vault K8s 0.7.0 to have more than 1 replica.
 
   - `leaderElector` - Values that configure the Vault Agent Injector leader election for HA deployments.
 
@@ -159,7 +159,7 @@ and consider if they're appropriate for your deployment.
 
     - `matchPolicy` (`string: "Exact"`) - Specifies the approach to accepting changes based on the rules of the MutatingWebhookConfiguration. See [Match Policy](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-matchpolicy).
 
-    - `timeoutSeconds` (`integer: 30`) - Specifies the number of seconds before the webhook request will be ignored or fails. If it is ignored or fails depends on the `failurePolicy`. See [timeouts](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#timeouts).
+    - `timeoutSeconds` (`int: 30`) - Specifies the number of seconds before the webhook request will be ignored or fails. If it is ignored or fails depends on the `failurePolicy`. See [timeouts](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#timeouts).
 
     - `namespaceSelector` -  The selector used by the admission webhook controller to limit what namespaces where injection can happen. If unset, all non-system namespaces are eligible for injection. See [Matching requests: namespace selector](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-namespaceselector).
 
@@ -270,7 +270,7 @@ and consider if they're appropriate for your deployment.
 
   - `hostNetwork` (`boolean: false`) - When set to true, configures the Vault Agent Injector to run on the host network. This is useful when alternative cluster networking is used.
 
-  - `port` (`integer: 8080`) - Configures the port the Vault Agent Injector listens on.
+  - `port` (`int: 8080`) - Configures the port the Vault Agent Injector listens on.
 
   - `podDisruptionBudget` - A disruption budget limits the number of pods of a replicated application that are down simultaneously from voluntary disruptions.
 
@@ -297,39 +297,39 @@ and consider if they're appropriate for your deployment.
 
   - `livenessProbe` - Values that configure the liveness probe for the injector.
 
-    - `failureThreshold` (`integer: 2`) - When set to a value, configures how many probe failures will be tolerated by Kubernetes.
+    - `failureThreshold` (`int: 2`) - When set to a value, configures how many probe failures will be tolerated by Kubernetes.
 
-    - `initialDelaySeconds` (`integer: 5`) - Sets the initial delay of the liveness probe when the container starts.
+    - `initialDelaySeconds` (`int: 5`) - Sets the initial delay of the liveness probe when the container starts.
 
-    - `periodSeconds` (`integer: 2`) - When set to a value, configures how often (in seconds) to perform the probe.
+    - `periodSeconds` (`int: 2`) - When set to a value, configures how often (in seconds) to perform the probe.
 
-    - `successThreshold` (`integer: 1`) - When set to a value, configures the minimum consecutive successes for the probe to be considered successful after having failed.
+    - `successThreshold` (`int: 1`) - When set to a value, configures the minimum consecutive successes for the probe to be considered successful after having failed.
 
-    - `timeoutSeconds` (`integer: 5`) - When set to a value, configures the number of seconds after which the probe times out.
+    - `timeoutSeconds` (`int: 5`) - When set to a value, configures the number of seconds after which the probe times out.
 
   - `readinessProbe` - Values that configure the readiness probe for the injector.
 
-    - `failureThreshold` (`integer: 2`) - When set to a value, configures how many probe failures will be tolerated by Kubernetes.
+    - `failureThreshold` (`int: 2`) - When set to a value, configures how many probe failures will be tolerated by Kubernetes.
 
-    - `initialDelaySeconds` (`integer: 5`) - Sets the initial delay of the readiness probe when the container starts.
+    - `initialDelaySeconds` (`int: 5`) - Sets the initial delay of the readiness probe when the container starts.
 
-    - `periodSeconds` (`integer: 2`) - When set to a value, configures how often (in seconds) to perform the probe.
+    - `periodSeconds` (`int: 2`) - When set to a value, configures how often (in seconds) to perform the probe.
 
-    - `successThreshold` (`integer: 1`) - When set to a value, configures the minimum consecutive successes for the probe to be considered successful after having failed.
+    - `successThreshold` (`int: 1`) - When set to a value, configures the minimum consecutive successes for the probe to be considered successful after having failed.
 
-    - `timeoutSeconds` (`integer: 5`) - When set to a value, configures the number of seconds after which the probe times out.
+    - `timeoutSeconds` (`int: 5`) - When set to a value, configures the number of seconds after which the probe times out.
 
   - `startupProbe` - Values that configure the startup probe for the injector.
 
-    - `failureThreshold` (`integer: 12`) - When set to a value, configures how many probe failures will be tolerated by Kubernetes.
+    - `failureThreshold` (`int: 12`) - When set to a value, configures how many probe failures will be tolerated by Kubernetes.
 
-    - `initialDelaySeconds` (`integer: 5`) - Sets the initial delay of the startup probe when the container starts.
+    - `initialDelaySeconds` (`int: 5`) - Sets the initial delay of the startup probe when the container starts.
 
-    - `periodSeconds` (`integer: 5`) - When set to a value, configures how often (in seconds) to perform the probe.
+    - `periodSeconds` (`int: 5`) - When set to a value, configures how often (in seconds) to perform the probe.
 
-    - `successThreshold` (`integer: 1`) - When set to a value, configures the minimum consecutive successes for the probe to be considered successful after having failed.
+    - `successThreshold` (`int: 1`) - When set to a value, configures the minimum consecutive successes for the probe to be considered successful after having failed.
 
-    - `timeoutSeconds` (`integer: 5`) - When set to a value, configures the number of seconds after which the probe times out.
+    - `timeoutSeconds` (`int: 5`) - When set to a value, configures the number of seconds after which the probe times out.
 
 ## server
 
@@ -417,17 +417,17 @@ and consider if they're appropriate for your deployment.
 
     - `enabled` (`boolean: true`)
 
-    - `port` (`integer: 8200`) - Port number on which readinessProbe will be checked.
+    - `port` (`int: 8200`) - Port number on which readinessProbe will be checked.
 
-    - `failureThreshold` (`integer: 2`) - When a probe fails, Kubernetes will try failureThreshold times before giving up
+    - `failureThreshold` (`int: 2`) - When a probe fails, Kubernetes will try failureThreshold times before giving up
 
-    - `initialDelaySeconds` (`integer: 5`) - Number of seconds after the container has started before probe initiates
+    - `initialDelaySeconds` (`int: 5`) - Number of seconds after the container has started before probe initiates
 
-    - `periodSeconds` (`integer: 5`) - How often (in seconds) to perform the probe
+    - `periodSeconds` (`int: 5`) - How often (in seconds) to perform the probe
 
-    - `successThreshold` (`integer: 1`) - Minimum consecutive successes for the probe to be considered successful after having failed
+    - `successThreshold` (`int: 1`) - Minimum consecutive successes for the probe to be considered successful after having failed
 
-    - `timeoutSeconds` (`integer: 3`) - Number of seconds after which the probe times out.
+    - `timeoutSeconds` (`int: 3`) - Number of seconds after which the probe times out.
 
   - `livenessProbe` - Used to enable a livenessProbe for the pods
 
@@ -435,21 +435,21 @@ and consider if they're appropriate for your deployment.
 
     - `path` (`string: "/v1/sys/health?standbyok=true"`)
 
-    - `port` (`integer: 8200`) - Port nuumber on which livenessProbe will be checked.
+    - `port` (`int: 8200`) - Port nuumber on which livenessProbe will be checked.
 
-    - `failureThreshold` (`integer: 2`) - When a probe fails, Kubernetes will try failureThreshold times before giving up
+    - `failureThreshold` (`int: 2`) - When a probe fails, Kubernetes will try failureThreshold times before giving up
 
-    - `initialDelaySeconds` (`integer: 60`) - Number of seconds after the container has started before probe initiates
+    - `initialDelaySeconds` (`int: 60`) - Number of seconds after the container has started before probe initiates
 
-    - `periodSeconds` (`integer: 5`) - How often (in seconds) to perform the probe
+    - `periodSeconds` (`int: 5`) - How often (in seconds) to perform the probe
 
-    - `successThreshold` (`integer: 1`) - Minimum consecutive successes for the probe to be considered successful after having failed
+    - `successThreshold` (`int: 1`) - Minimum consecutive successes for the probe to be considered successful after having failed
 
-    - `timeoutSeconds` (`integer: 3`) - Number of seconds after which the probe times out.
+    - `timeoutSeconds` (`int: 3`) - Number of seconds after which the probe times out.
 
-  - `terminationGracePeriodSeconds` (`integer: 10`) - Optional duration in seconds the pod needs to terminate gracefully. See: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/
+  - `terminationGracePeriodSeconds` (`int: 10`) - Optional duration in seconds the pod needs to terminate gracefully. See: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/
 
-  - `preStopSleepSeconds` (`integer: 5`) - Used to set the sleep time during the preStop step
+  - `preStopSleepSeconds` (`int: 5`) - Used to set the sleep time during the preStop step
 
   - `postStart` (`array: []`) - Used to define commands to run after the pod is ready. This can be used to automate processes such as initialization or boostrapping auth methods.
 
@@ -504,12 +504,12 @@ and consider if they're appropriate for your deployment.
 
     - `externalTrafficPolicy` (`string: "Cluster"`) - The externalTrafficPolicy can be set to either Cluster or Local and is only valid for LoadBalancer and NodePort service types. The default value is Cluster. ref: https://kubernetes.io/docs/concepts/services-networking/service/#external-traffic-policy
 
-    - `port` (`integer: 8200`) - If type is set to "NodePort", a specific nodePort value can be configured, will be random if left blank. nodePort: 30000
+    - `port` (`int: 8200`) - If type is set to "NodePort", a specific nodePort value can be configured, will be random if left blank. nodePort: 30000
  When HA mode is enabled If type is set to "NodePort", a specific nodePort value can be configured, will be random if left blank. activeNodePort: 30001
  When HA mode is enabled If type is set to "NodePort", a specific nodePort value can be configured, will be random if left blank. standbyNodePort: 30002
  Port on which Vault server is listening
 
-    - `targetPort` (`integer: 8200`) - Target port to which the service should be mapped to
+    - `targetPort` (`int: 8200`) - Target port to which the service should be mapped to
 
     - `annotations` - Extra annotations for the service definition. This can either be YAML or a YAML-formatted multi-line templated string map of the annotations to apply to the service.
 
@@ -558,7 +558,7 @@ and consider if they're appropriate for your deployment.
 
     - `enabled` (`boolean: false`)
 
-    - `replicas` (`integer: 3`)
+    - `replicas` (`int: 3`)
 
     - `apiAddr` - Set the api_addr configuration for Vault HA See https://www.vaultproject.io/docs/configuration#api_addr If set to null, this will be set to the Pod IP Address
 
@@ -623,9 +623,9 @@ and consider if they're appropriate for your deployment.
 
   - `serviceNodePort`
 
-  - `externalPort` (`integer: 8200`)
+  - `externalPort` (`int: 8200`)
 
-  - `targetPort` (`integer: 8200`)
+  - `targetPort` (`int: 8200`)
 
   - `externalTrafficPolicy` (`string: "Cluster"`) - The externalTrafficPolicy can be set to either Cluster or Local and is only valid for LoadBalancer and NodePort service types. The default value is Cluster. ref: https://kubernetes.io/docs/concepts/services-networking/service/#external-traffic-policy
 
@@ -717,27 +717,27 @@ and consider if they're appropriate for your deployment.
 
   - `readinessProbe` - Used to configure readinessProbe for the pods.
 
-    - `failureThreshold` (`integer: 2`) - When a probe fails, Kubernetes will try failureThreshold times before giving up
+    - `failureThreshold` (`int: 2`) - When a probe fails, Kubernetes will try failureThreshold times before giving up
 
-    - `initialDelaySeconds` (`integer: 5`) - Number of seconds after the container has started before probe initiates
+    - `initialDelaySeconds` (`int: 5`) - Number of seconds after the container has started before probe initiates
 
-    - `periodSeconds` (`integer: 5`) - How often (in seconds) to perform the probe
+    - `periodSeconds` (`int: 5`) - How often (in seconds) to perform the probe
 
-    - `successThreshold` (`integer: 1`) - Minimum consecutive successes for the probe to be considered successful after having failed
+    - `successThreshold` (`int: 1`) - Minimum consecutive successes for the probe to be considered successful after having failed
 
-    - `timeoutSeconds` (`integer: 3`) - Number of seconds after which the probe times out.
+    - `timeoutSeconds` (`int: 3`) - Number of seconds after which the probe times out.
 
   - `livenessProbe` - Used to configure livenessProbe for the pods.
 
-    - `failureThreshold` (`integer: 2`) - When a probe fails, Kubernetes will try failureThreshold times before giving up
+    - `failureThreshold` (`int: 2`) - When a probe fails, Kubernetes will try failureThreshold times before giving up
 
-    - `initialDelaySeconds` (`integer: 5`) - Number of seconds after the container has started before probe initiates
+    - `initialDelaySeconds` (`int: 5`) - Number of seconds after the container has started before probe initiates
 
-    - `periodSeconds` (`integer: 5`) - How often (in seconds) to perform the probe
+    - `periodSeconds` (`int: 5`) - How often (in seconds) to perform the probe
 
-    - `successThreshold` (`integer: 1`) - Minimum consecutive successes for the probe to be considered successful after having failed
+    - `successThreshold` (`int: 1`) - Minimum consecutive successes for the probe to be considered successful after having failed
 
-    - `timeoutSeconds` (`integer: 3`) - Number of seconds after which the probe times out.
+    - `timeoutSeconds` (`int: 3`) - Number of seconds after which the probe times out.
 
   - `debug` (`boolean: false`) - Enables debug logging.
 
