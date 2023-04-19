@@ -6,8 +6,12 @@ package pki
 import (
 	"context"
 	"crypto"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"fmt"
 	"io"
 	"net/http"
@@ -42,8 +46,8 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 	}{
 		{"root", ""},
 		{"role", "/roles/test-role"},
-		{"issuer", "/issuer/default"},
-		{"issuer_role", "/issuer/default/roles/test-role"},
+		{"issuer", "/issuer/int-ca"},
+		{"issuer_role", "/issuer/int-ca/roles/test-role"},
 		{"issuer_role_acme", "/issuer/acme/roles/acme"},
 	}
 	testCtx := context.Background()
@@ -144,6 +148,22 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			require.Equal(t, "http-01", challenge.Type)
 
 			require.NotEmpty(t, challenge.Token, "missing challenge token")
+
+			// Create and send a CSR, this ACME library within CreateOrderCert, merges the finalize and cert fetching
+			// into a single call.
+			cr := &x509.CertificateRequest{
+				Subject: pkix.Name{CommonName: createOrder.Identifiers[0].Value},
+			}
+			csrKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+			require.NoError(t, err, "failed generated key for CSR")
+			csr, err := x509.CreateCertificateRequest(rand.Reader, cr, csrKey)
+			require.NoError(t, err, "failed generating csr")
+
+			certs, _, err := acmeClient.CreateOrderCert(testCtx, createOrder.FinalizeURL, csr, true)
+			require.NoError(t, err, "failed finalizing order")
+			require.Len(t, certs, 3, "expected three items within the returned certs")
+
+			testAcmeCertSignedByCa(t, client, certs, "int-ca")
 
 			// Deactivate account
 			t.Logf("Testing deactivate account on %s", baseAcmeURL)
@@ -278,7 +298,76 @@ func setupAcmeBackend(t *testing.T) (*vault.TestCluster, *api.Client, string) {
 	})
 	require.NoError(t, err, "failed tuning mount response headers")
 
+	_, err = client.Logical().WriteWithContext(context.Background(), "/pki/issuers/generate/root/internal", map[string]interface{}{
+		"issuer_name": "root-ca",
+		"key_name":    "root-key",
+		"key_type":    "ec",
+		"common_name": "root.com",
+		"ttl":         "10h",
+	})
+	require.NoError(t, err, "failed creating root CA")
+
+	resp, err := client.Logical().WriteWithContext(context.Background(), "/pki/issuers/generate/intermediate/internal",
+		map[string]interface{}{
+			"key_name":    "int-key",
+			"key_type":    "ec",
+			"common_name": "test.com",
+		})
+	require.NoError(t, err, "failed creating intermediary CSR")
+	intermediateCSR := resp.Data["csr"].(string)
+
+	// Sign the intermediate CSR using /pki
+	resp, err = client.Logical().Write("pki/issuer/root-ca/sign-intermediate", map[string]interface{}{
+		"csr": intermediateCSR,
+		"ttl": "5h",
+	})
+	require.NoError(t, err, "failed signing intermediary CSR")
+	intermediateCertPEM := resp.Data["certificate"].(string)
+
+	// Configure the intermediate cert as the CA in /pki2
+	resp, err = client.Logical().Write("/pki/issuers/import/cert", map[string]interface{}{
+		"pem_bundle": intermediateCertPEM,
+	})
+	require.NoError(t, err, "failed importing intermediary cert")
+	importedIssuersRaw := resp.Data["imported_issuers"].([]interface{})
+	require.Len(t, importedIssuersRaw, 1)
+	intCaUuid := importedIssuersRaw[0].(string)
+
+	_, err = client.Logical().Write("/pki/issuer/"+intCaUuid, map[string]interface{}{
+		"issuer_name": "int-ca",
+	})
+
+	_, err = client.Logical().Write("/pki/config/issuers", map[string]interface{}{
+		"default": "int-ca",
+	})
+
 	return cluster, client, pathConfig
+}
+
+func testAcmeCertSignedByCa(t *testing.T, client *api.Client, derCerts [][]byte, issuerRef string) {
+	t.Helper()
+	require.NotEmpty(t, derCerts)
+	acmeCert, err := x509.ParseCertificate(derCerts[0])
+	require.NoError(t, err, "failed parsing acme cert bytes")
+
+	resp, err := client.Logical().ReadWithContext(context.Background(), "pki/issuer/"+issuerRef)
+	require.NoError(t, err, "failed reading issuer with name %s", issuerRef)
+	issuerCert := parseCert(t, resp.Data["certificate"].(string))
+	issuerChainRaw := resp.Data["ca_chain"].([]interface{})
+
+	err = acmeCert.CheckSignatureFrom(issuerCert)
+	require.NoError(t, err, "issuer %s did not sign provided cert", issuerRef)
+
+	expectedCerts := [][]byte{derCerts[0]}
+
+	for _, entry := range issuerChainRaw {
+		chainCert := parseCert(t, entry.(string))
+		expectedCerts = append(expectedCerts, chainCert.Raw)
+	}
+
+	if diffs := deep.Equal(expectedCerts, derCerts); diffs != nil {
+		t.Fatalf("diffs were found between the acme chain returned and the expected value: \n%v", diffs)
+	}
 }
 
 func setupTestPkiCluster(t *testing.T) (*vault.TestCluster, *api.Client) {

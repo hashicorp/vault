@@ -162,14 +162,17 @@ type acmeAccount struct {
 }
 
 type acmeOrder struct {
-	OrderId          string              `json:"-"`
-	AccountId        string              `json:"account-id"`
-	Status           ACMEOrderStatusType `json:"status"`
-	Expires          string              `json:"expires"`
-	NotBefore        string              `json:"not-before"`
-	NotAfter         string              `json:"not-after"`
-	Identifiers      []*ACMEIdentifier   `json:"identifiers"`
-	AuthorizationIds []string            `json:"authorization-ids"`
+	OrderId                 string              `json:"-"`
+	AccountId               string              `json:"account-id"`
+	Status                  ACMEOrderStatusType `json:"status"`
+	Expires                 string              `json:"expires"`
+	NotBefore               string              `json:"not-before"`
+	NotAfter                string              `json:"not-after"`
+	Identifiers             []*ACMEIdentifier   `json:"identifiers"`
+	AuthorizationIds        []string            `json:"authorization-ids"`
+	CertificateSerialNumber string              `json:"cert-serial-number"`
+	CertificateExpiry       time.Time           `json:"cert-expiry"`
+	IssuerId                issuerID            `json:"issuer-id"`
 }
 
 func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, contact []string, termsOfServiceAgreed bool) (*acmeAccount, error) {

@@ -4,10 +4,15 @@
 package pki
 
 import (
+	"crypto/x509"
+	"encoding/base64"
+	"encoding/pem"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -24,6 +29,14 @@ func pathAcmeGetOrder(b *backend) []*framework.Path {
 
 func pathAcmeNewOrder(b *backend) []*framework.Path {
 	return buildAcmeFrameworkPaths(b, patternAcmeNewOrder, "/new-order")
+}
+
+func pathAcmeFinalizeOrder(b *backend) []*framework.Path {
+	return buildAcmeFrameworkPaths(b, patternAcmeFinalizeOrder, "/order/"+uuidNameRegex("order_id")+"/finalize")
+}
+
+func pathAcmeFetchOrderCert(b *backend) []*framework.Path {
+	return buildAcmeFrameworkPaths(b, patternAcmeFetchOrderCert, "/order/"+uuidNameRegex("order_id")+"/cert")
 }
 
 func patternAcmeNewOrder(b *backend, pattern string) *framework.Path {
@@ -72,11 +85,7 @@ func patternAcmeGetOrder(b *backend, pattern string) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	addFieldsForACMEPath(fields, pattern)
 	addFieldsForACMERequest(fields)
-	fields["order_id"] = &framework.FieldSchema{
-		Type:        framework.TypeString,
-		Description: `The ACME order identifier to fetch`,
-		Required:    true,
-	}
+	addFieldsForACMEOrder(fields)
 
 	return &framework.Path{
 		Pattern: pattern,
@@ -94,7 +103,278 @@ func patternAcmeGetOrder(b *backend, pattern string) *framework.Path {
 	}
 }
 
-func (b *backend) acmeGetOrderHandler(ac *acmeContext, _ *logical.Request, fields *framework.FieldData, uc *jwsCtx, _ map[string]interface{}, acct *acmeAccount) (*logical.Response, error) {
+func patternAcmeFinalizeOrder(b *backend, pattern string) *framework.Path {
+	fields := map[string]*framework.FieldSchema{}
+	addFieldsForACMEPath(fields, pattern)
+	addFieldsForACMERequest(fields)
+	addFieldsForACMEOrder(fields)
+
+	return &framework.Path{
+		Pattern: pattern,
+		Fields:  fields,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback:                    b.acmeAccountRequiredWrapper(b.acmeFinalizeOrderHandler),
+				ForwardPerformanceSecondary: false,
+				ForwardPerformanceStandby:   true,
+			},
+		},
+
+		HelpSynopsis:    "",
+		HelpDescription: "",
+	}
+}
+
+func patternAcmeFetchOrderCert(b *backend, pattern string) *framework.Path {
+	fields := map[string]*framework.FieldSchema{}
+	addFieldsForACMEPath(fields, pattern)
+	addFieldsForACMERequest(fields)
+	addFieldsForACMEOrder(fields)
+
+	return &framework.Path{
+		Pattern: pattern,
+		Fields:  fields,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback:                    b.acmeAccountRequiredWrapper(b.acmeFetchCertOrderHandler),
+				ForwardPerformanceSecondary: false,
+				ForwardPerformanceStandby:   true,
+			},
+		},
+
+		HelpSynopsis:    "",
+		HelpDescription: "",
+	}
+}
+
+func addFieldsForACMEOrder(fields map[string]*framework.FieldSchema) {
+	fields["order_id"] = &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Description: `The ACME order identifier to fetch`,
+		Required:    true,
+	}
+}
+
+func (b *backend) acmeFetchCertOrderHandler(ac *acmeContext, _ *logical.Request, fields *framework.FieldData, uc *jwsCtx, data map[string]interface{}, _ *acmeAccount) (*logical.Response, error) {
+	orderId := fields.Get("order_id").(string)
+
+	order, err := b.acmeState.LoadOrder(ac, uc, orderId)
+	if err != nil {
+		return nil, err
+	}
+
+	if order.Status != ACMEOrderValid {
+		return nil, fmt.Errorf("%w: order is status %s, needs to be in valid state", ErrOrderNotReady, order.Status)
+	}
+
+	if len(order.IssuerId) == 0 || len(order.CertificateSerialNumber) == 0 {
+		return nil, fmt.Errorf("order is missing required fields to load certificate")
+	}
+
+	certEntry, err := fetchCertBySerial(ac.sc, "certs/", order.CertificateSerialNumber)
+	if err != nil {
+		return nil, fmt.Errorf("failed reading certificate %s from storage: %w", order.CertificateSerialNumber, err)
+	}
+	if certEntry == nil || len(certEntry.Value) == 0 {
+		return nil, fmt.Errorf("missing certificate %s from storage", order.CertificateSerialNumber)
+	}
+
+	cert, err := x509.ParseCertificate(certEntry.Value)
+	if err != nil {
+		return nil, fmt.Errorf("failed parsing certificate %s: %w", order.CertificateSerialNumber, err)
+	}
+
+	issuer, err := ac.sc.fetchIssuerById(order.IssuerId)
+	if err != nil {
+		return nil, fmt.Errorf("failed loading certificate issuer %s from storage: %w", order.IssuerId, err)
+	}
+
+	allPems, err := func() ([]byte, error) {
+		leafPEM := pem.EncodeToMemory(&pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: cert.Raw,
+		})
+
+		chains := []byte(issuer.Certificate)
+		for _, chainVal := range issuer.CAChain {
+			if chainVal == issuer.Certificate {
+				continue
+			}
+			chains = append(chains, []byte(chainVal)...)
+		}
+
+		return append(leafPEM, chains...), nil
+	}()
+	if err != nil {
+		return nil, fmt.Errorf("failed encoding certificate ca chain: %w", err)
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			logical.HTTPContentType: "application/pem-certificate-chain",
+			logical.HTTPStatusCode:  http.StatusOK,
+			logical.HTTPRawBody:     allPems,
+		},
+	}, nil
+}
+
+func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, _ *logical.Request, fields *framework.FieldData, uc *jwsCtx, data map[string]interface{}, _ *acmeAccount) (*logical.Response, error) {
+	orderId := fields.Get("order_id").(string)
+
+	csr, err := parseCsrFromFinalize(data)
+	if err != nil {
+		return nil, err
+	}
+
+	order, err := b.acmeState.LoadOrder(ac, uc, orderId)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: Compute this status now based on the various authorization statuses
+	//if order.Status != ACMEOrderReady {
+	//	return nil, fmt.Errorf("%w: order is status %s, needs to be in ready state", ErrOrderNotReady, order.Status)
+	//}
+
+	// TODO Compare the CSR values to what we had okay'd in the order to make sure they match
+
+	signedCertBundle, issuerId, err := issueCertFromCsr(ac, csr)
+	if err != nil {
+		return nil, err
+	}
+
+	hyphenSerialNumber := normalizeSerialFromBigInt(signedCertBundle.Certificate.SerialNumber)
+	err = storeCertificate(ac.sc, signedCertBundle)
+	if err != nil {
+		return nil, err
+	}
+
+	order.Status = ACMEOrderValid
+	order.CertificateSerialNumber = hyphenSerialNumber
+	order.CertificateExpiry = signedCertBundle.Certificate.NotAfter
+	order.IssuerId = issuerId
+
+	err = b.acmeState.SaveOrder(ac, order)
+	if err != nil {
+		b.Logger().Warn("orphaned generated ACME certificate due to error saving order", "serial_number", hyphenSerialNumber, "error", err)
+		return nil, fmt.Errorf("failed saving updated order: %w", err)
+	}
+
+	return formatOrderResponse(ac, order), nil
+}
+
+func storeCertificate(sc *storageContext, signedCertBundle *certutil.ParsedCertBundle) error {
+	hyphenSerialNumber := normalizeSerialFromBigInt(signedCertBundle.Certificate.SerialNumber)
+	key := "certs/" + hyphenSerialNumber
+	certsCounted := sc.Backend.certsCounted.Load()
+	err := sc.Storage.Put(sc.Context, &logical.StorageEntry{
+		Key:   key,
+		Value: signedCertBundle.CertificateBytes,
+	})
+	if err != nil {
+		return fmt.Errorf("unable to store certificate locally: %w", err)
+	}
+	sc.Backend.ifCountEnabledIncrementTotalCertificatesCount(certsCounted, key)
+	return nil
+}
+
+func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.ParsedCertBundle, issuerID, error) {
+	entry := &roleEntry{
+		AllowLocalhost:            true,
+		AllowAnyName:              true,
+		AllowIPSANs:               true,
+		AllowWildcardCertificates: new(bool),
+		EnforceHostnames:          false,
+		KeyType:                   "any",
+		UseCSRCommonName:          true,
+		UseCSRSANs:                true,
+		AllowedOtherSANs:          []string{"*"},
+		AllowedSerialNumbers:      []string{"*"},
+		AllowedURISANs:            []string{"*"},
+		AllowedUserIDs:            []string{"*"},
+		CNValidations:             []string{"disabled"},
+		GenerateLease:             new(bool),
+		KeyUsage:                  []string{},
+		ExtKeyUsage:               []string{},
+		ExtKeyUsageOIDs:           []string{},
+		SignatureBits:             0,
+		UsePSS:                    false,
+		Issuer:                    defaultRef,
+	}
+	*entry.AllowWildcardCertificates = true
+	*entry.GenerateLease = false
+
+	pemBlock := &pem.Block{
+		Type:    "CERTIFICATE REQUEST",
+		Headers: nil,
+		Bytes:   csr.Raw,
+	}
+	pemCsr := string(pem.EncodeToMemory(pemBlock))
+
+	signingBundle, issuerId, err := ac.sc.fetchCAInfoWithIssuer(entry.Issuer, IssuanceUsage)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed loading CA %s: %w", entry.Issuer, err)
+	}
+
+	input := &inputBundle{
+		req: &logical.Request{},
+		apiData: &framework.FieldData{
+			Raw: map[string]interface{}{
+				"csr": pemCsr,
+				"ttl": "1h",
+			},
+			Schema: map[string]*framework.FieldSchema{
+				"csr":                  {Type: framework.TypeString},
+				"serial_number":        {Type: framework.TypeString},
+				"exclude_cn_from_sans": {Type: framework.TypeBool},
+				"other_sans":           {Type: framework.TypeCommaStringSlice},
+				"ttl":                  {Type: framework.TypeDurationSecond},
+			},
+		},
+		role: entry,
+	}
+
+	if csr.PublicKeyAlgorithm == x509.UnknownPublicKeyAlgorithm || csr.PublicKey == nil {
+		return nil, "", fmt.Errorf("%w: Refusing to sign CSR with empty PublicKey", ErrBadCSR)
+	}
+
+	parsedBundle, _, err := signCert(ac.sc.Backend, input, signingBundle, false, true)
+	if err != nil {
+		return nil, "", fmt.Errorf("%w: refusing to sign CSR: %s", ErrBadCSR, err.Error())
+	}
+
+	if err = parsedBundle.Verify(); err != nil {
+		return nil, "", fmt.Errorf("verification of parsed bundle failed: %w", err)
+	}
+
+	return parsedBundle, issuerId, err
+}
+
+func parseCsrFromFinalize(data map[string]interface{}) (*x509.CertificateRequest, error) {
+	csrInterface, present := data["csr"]
+	if !present {
+		return nil, fmt.Errorf("%w: missing csr in payload", ErrMalformed)
+	}
+
+	base64Csr, ok := csrInterface.(string)
+	if !ok {
+		return nil, fmt.Errorf("%w: csr in payload not the expected type: %T", ErrMalformed, csrInterface)
+	}
+
+	derCsr, err := base64.RawURLEncoding.DecodeString(base64Csr)
+	if err != nil {
+		return nil, fmt.Errorf("%w: failed base64 decoding csr: %s", ErrMalformed, err.Error())
+	}
+
+	csr, err := x509.ParseCertificateRequest(derCsr)
+	if err != nil {
+		return nil, fmt.Errorf("%w: failed to parse csr: %s", ErrMalformed, err.Error())
+	}
+
+	return csr, nil
+}
+
+func (b *backend) acmeGetOrderHandler(ac *acmeContext, _ *logical.Request, fields *framework.FieldData, uc *jwsCtx, _ map[string]interface{}, _ *acmeAccount) (*logical.Response, error) {
 	orderId := fields.Get("order_id").(string)
 
 	order, err := b.acmeState.LoadOrder(ac, uc, orderId)
@@ -160,7 +440,7 @@ func (b *backend) acmeListOrdersHandler(ac *acmeContext, _ *logical.Request, _ *
 	return resp, nil
 }
 
-func (b *backend) acmeNewOrderHandler(ac *acmeContext, r *logical.Request, _ *framework.FieldData, _ *jwsCtx, data map[string]interface{}, account *acmeAccount) (*logical.Response, error) {
+func (b *backend) acmeNewOrderHandler(ac *acmeContext, _ *logical.Request, _ *framework.FieldData, _ *jwsCtx, data map[string]interface{}, account *acmeAccount) (*logical.Response, error) {
 	identifiers, err := parseOrderIdentifiers(data)
 	if err != nil {
 		return nil, err
@@ -195,7 +475,7 @@ func (b *backend) acmeNewOrderHandler(ac *acmeContext, r *logical.Request, _ *fr
 	var authorizations []*ACMEAuthorization
 	var authorizationIds []string
 	for _, identifier := range identifiers {
-		authz, err := generateAuthorization(ac, account, identifier)
+		authz, err := generateAuthorization(account, identifier)
 		if err != nil {
 			return nil, fmt.Errorf("error generating authorizations: %w", err)
 		}
@@ -271,7 +551,7 @@ func formatOrderResponse(acmeCtx *acmeContext, order *acmeOrder) *logical.Respon
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"status":         ACMEOrderPending,
+			"status":         order.Status,
 			"expires":        order.Expires,
 			"identifiers":    order.Identifiers,
 			"authorizations": authorizationUrls,
@@ -298,7 +578,7 @@ func buildOrderUrl(acmeCtx *acmeContext, orderId string) string {
 	return acmeCtx.baseUrl.JoinPath("order", orderId).String()
 }
 
-func generateAuthorization(acmeCtx *acmeContext, acct *acmeAccount, identifier *ACMEIdentifier) (*ACMEAuthorization, error) {
+func generateAuthorization(acct *acmeAccount, identifier *ACMEIdentifier) (*ACMEAuthorization, error) {
 	authId := genUuid()
 	var challenges []*ACMEChallenge
 	for _, challengeType := range []ACMEChallengeType{ACMEHTTPChallenge} {
@@ -403,16 +683,10 @@ func parseOrderIdentifiers(data map[string]interface{}) ([]*ACMEIdentifier, erro
 			return nil, fmt.Errorf("value argument for value in 'identifiers' can not be blank: %w", ErrMalformed)
 		}
 
-		p := idna.New(
-			idna.StrictDomainName(true),
-			idna.VerifyDNSLength(true),
-		)
+		p := idna.New(idna.ValidateForRegistration())
 		converted, err := p.ToASCII(valueStr)
 		if err != nil {
 			return nil, fmt.Errorf("value argument (%s) failed validation: %s: %w", valueStr, err.Error(), ErrMalformed)
-		}
-		if !hostnameRegex.MatchString(converted) {
-			return nil, fmt.Errorf("value argument (%s) failed validation: %w", valueStr, ErrMalformed)
 		}
 
 		identifiers = append(identifiers, &ACMEIdentifier{

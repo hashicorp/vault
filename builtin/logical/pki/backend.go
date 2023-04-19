@@ -239,6 +239,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 	acmePaths = append(acmePaths, pathAcmeGetOrder(&b)...)
 	acmePaths = append(acmePaths, pathAcmeListOrders(&b)...)
 	acmePaths = append(acmePaths, pathAcmeNewOrder(&b)...)
+	acmePaths = append(acmePaths, pathAcmeFinalizeOrder(&b)...)
+	acmePaths = append(acmePaths, pathAcmeFetchOrderCert(&b)...)
 	acmePaths = append(acmePaths, pathAcmeChallenge(&b)...)
 	acmePaths = append(acmePaths, pathAcmeAuthorization(&b)...)
 
@@ -259,6 +261,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/challenge/+/+")
 		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/orders")
 		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/order/+")
+		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/order/+/finalize")
+		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/order/+/cert")
 	}
 
 	if constants.IsEnterprise {
