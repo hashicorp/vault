@@ -12,10 +12,9 @@ import (
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/vault/activity"
-
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/activity"
 	"github.com/hashicorp/vault/vault/activity/generation"
 	"google.golang.org/protobuf/encoding/protojson"
 )
