@@ -60,7 +60,7 @@ and consider if they're appropriate for your deployment.
 
   - `serverTelemetry` - Values that configure metrics and telemetry.
 
-    - `prometheusOperator` (`boolean: false`) -  When set to `true`, enables integration with the Prometheus Operator. Be sure to configure the top-level [`serverTelemetry`](/vault/docs/platform/k8s/helm/configuration#servertelemetry-1) section for more details and required configuration values.
+    - `prometheusOperator` (`boolean: false`) - When set to `true`, enables integration with the Prometheus Operator. Be sure to configure the top-level [`serverTelemetry`](/vault/docs/platform/k8s/helm/configuration#servertelemetry-1) section for more details and required configuration values.
 
 ## injector
 
@@ -161,7 +161,7 @@ and consider if they're appropriate for your deployment.
 
     - `timeoutSeconds` (`int: 30`) - Specifies the number of seconds before the webhook request will be ignored or fails. If it is ignored or fails depends on the `failurePolicy`. See [timeouts](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#timeouts).
 
-    - `namespaceSelector` (`object: {}`) -  The selector used by the admission webhook controller to limit what namespaces where injection can happen. If unset, all non-system namespaces are eligible for injection. See [Matching requests: namespace selector](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-namespaceselector).
+    - `namespaceSelector` (`object: {}`) - The selector used by the admission webhook controller to limit what namespaces where injection can happen. If unset, all non-system namespaces are eligible for injection. See [Matching requests: namespace selector](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-namespaceselector).
 
       ```yaml
       namespaceSelector:
@@ -183,7 +183,7 @@ and consider if they're appropriate for your deployment.
 
   - `objectSelector` (`dictionary: {}`) - Deprecated: please use [`webhook.objectSelector`](/vault/docs/platform/k8s/helm/configuration#objectselector) instead.
 
-  - `extraLabels` (`dictionary: {}`) -  This value defines additional labels for Vault Agent Injector pods.
+  - `extraLabels` (`dictionary: {}`) - This value defines additional labels for Vault Agent Injector pods.
 
     ```yaml
     extraLabels:
@@ -230,7 +230,11 @@ and consider if they're appropriate for your deployment.
   - `tolerations` (`array: []`) - Toleration Settings for injector pods. This should be either a multi-line string or YAML matching the Toleration array.
 
   - `nodeSelector` (`dictionary: {}`) - The nodeSelector labels for injector pod assignment, formatted as a multi-line string or YAML map. See https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
- nodeSelector:   beta.kubernetes.io/arch: amd64
+
+    ```yaml
+    nodeSelector:
+      beta.kubernetes.io/arch: amd64
+    ```
 
   - `priorityClassName` (`string: ""`) - Priority class for injector pods.
 
