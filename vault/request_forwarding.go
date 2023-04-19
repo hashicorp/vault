@@ -406,7 +406,8 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 }
 
 // addForwardingHeaders attempts to add two additional headers to provide metadata.
-// They describe which host the request is being 'forwarded from' and which host it is being 'forwarded to'
+// They describe which host the request is being 'forwarded from' and which host it is being 'forwarded to'.
+// Existing headers should be removed in case of failure, we should only set the headers in this method.
 // An error indicates that the headers have not been added.
 func (c *Core) addForwardingHeaders(req *http.Request) error {
 	// Sanity check by clearing existing headers, we don't expect them to exist.
