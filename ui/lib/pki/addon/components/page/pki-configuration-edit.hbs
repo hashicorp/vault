@@ -1,3 +1,42 @@
 <div class="box is-sideless is-fullwidth is-marginless">
-  Edit stuff happens here
+  <form>
+    <fieldset class="box is-shadowless is-marginless is-borderless is-fullwidth" data-test-urls-edit-section>
+      <h2 class="title is-4 has-bottom-margin-xs has-top-margin-m has-border-bottom-light has-bottom-padding-s">
+        Global URLs
+      </h2>
+      {{#if @urls.canSet}}
+        {{#each @urls.allFields as |attr|}}
+          <FormField @attr={{attr}} @model={{@urls}} data-test-urls-field={{attr.name}} />
+        {{/each}}
+      {{else}}
+        <EmptyState
+          @title="You do not have permissions to set URLs."
+          @message="These are not required but will need to be configured later. You can do this via the CLI or by changing your permissions and returning to this form."
+        />
+      {{/if}}
+    </fieldset>
+
+    <fieldset class="box is-shadowless is-marginless is-borderless is-fullwidth" data-test-crls-edit-section>
+      <h2 class="title is-4 has-bottom-margin-xs has-top-margin-xl has-border-bottom-light has-bottom-padding-s">
+        Certificate Revocation List (CRL)
+      </h2>
+      {{#if @crl.canSet}}
+        {{#each @crl.formFields as |attr|}}
+          <div class="field">
+            <TtlPicker
+              data-test-input={{attr.name}}
+              @onChange={{fn this.handleTtl attr}}
+              @label={{if (get @crl attr.options.booleanBuddy) attr.options.label attr.options.labelDisabled}}
+              @helperTextDisabled={{attr.options.helperTextDisabled}}
+              @helperTextEnabled={{attr.options.helperTextEnabled}}
+              @initialValue={{(get @crl attr.name)}}
+              @initialEnabled={{get @crl attr.options.booleanBuddy}}
+            />
+          </div>
+        {{/each}}
+      {{else}}
+        <EmptyState @title="You do not have permission to set the CRL." />
+      {{/if}}
+    </fieldset>
+  </form>
 </div>
