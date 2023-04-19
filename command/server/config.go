@@ -185,15 +185,15 @@ func DevTLSConfig(storageType, certDir string) (*Config, error) {
 		return nil, err
 	}
 
-	if err := os.WriteFile(fmt.Sprintf("%s/%s", certDir, VaultDevCAFilename), []byte(ca.PEM), 0o444); err != nil {
+	if err := os.WriteFile(filepath.Join(certDir, VaultDevCAFilename), []byte(ca.PEM), 0o444); err != nil {
 		return nil, err
 	}
 
-	if err := os.WriteFile(fmt.Sprintf("%s/%s", certDir, VaultDevCertFilename), []byte(cert), 0o400); err != nil {
+	if err := os.WriteFile(filepath.Join(certDir, VaultDevCertFilename), []byte(cert), 0o400); err != nil {
 		return nil, err
 	}
 
-	if err := os.WriteFile(fmt.Sprintf("%s/%s", certDir, VaultDevKeyFilename), []byte(key), 0o400); err != nil {
+	if err := os.WriteFile(filepath.Join(certDir, VaultDevKeyFilename), []byte(key), 0o400); err != nil {
 		return nil, err
 	}
 
