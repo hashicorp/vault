@@ -22,8 +22,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
 
-	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-multierror"
 	glob "github.com/ryanuber/go-glob"
 )
 
@@ -310,7 +310,6 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 	}
 
 	// Search for a ParsedCert that intersects with the validated chains and any additional constraints
-	matches := make([]*ParsedCert, 0)
 	for _, trust := range trusted { // For each ParsedCert in the config
 		for _, tCert := range trust.Certificates { // For each certificate in the entry
 			for _, chain := range trustedChains { // For each root chain that we matched
@@ -323,9 +322,17 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 							retErr = multierror.Append(retErr, err)
 						}
 
-						if match {
-							// Add the match to the list
-							matches = append(matches, trust)
+						// Return the first matching entry (for backwards
+						// compatibility, we continue to just pick the first
+						// one if we have multiple matches).
+						//
+						// Here, we return directly: this means that any
+						// future OCSP errors would be ignored; in the future,
+						// if these become fatal, we could revisit this
+						// choice and choose the first match after evaluating
+						// all possible candidates.
+						if match && err == nil {
+							return trust, nil, nil
 						}
 					}
 				}
@@ -333,16 +340,11 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 		}
 	}
 
-	// Fail on no matches
-	if len(matches) == 0 {
-		if retErr != nil {
-			return nil, logical.ErrorResponse(fmt.Sprintf("no chain matching all constraints could be found for this login certificate; additionally got errors during verification: %v", retErr)), nil
-		}
-		return nil, logical.ErrorResponse("no chain matching all constraints could be found for this login certificate"), nil
+	if retErr != nil {
+		return nil, logical.ErrorResponse(fmt.Sprintf("no chain matching all constraints could be found for this login certificate; additionally got errors during verification: %v", retErr)), nil
 	}
 
-	// Return the first matching entry (for backwards compatibility, we continue to just pick one if multiple match)
-	return matches[0], nil, nil
+	return nil, logical.ErrorResponse("no chain matching all constraints could be found for this login certificate"), nil
 }
 
 func (b *backend) matchesConstraints(ctx context.Context, clientCert *x509.Certificate, trustedChain []*x509.Certificate,
