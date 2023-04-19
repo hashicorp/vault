@@ -1302,14 +1302,14 @@ func buildAnyCRLs(sc *storageContext, forceNew bool, isDelta bool) ([]string, er
 	// Now we do two calls: building the cluster-local CRL, and potentially
 	// building the global CRL if we're on the active node of the performance
 	// primary.
-	localWarnings, currLocalDeltaSerials, err := buildAnyLocalCRLs(sc, issuersConfig, globalCRLConfig,
+	currLocalDeltaSerials, localWarnings, err := buildAnyLocalCRLs(sc, issuersConfig, globalCRLConfig,
 		issuers, issuerIDEntryMap,
 		issuerIDCertMap, keySubjectIssuersMap,
 		wasLegacy, forceNew, isDelta)
 	if err != nil {
 		return nil, err
 	}
-	unifiedWarnings, currUnifiedDeltaSerials, err := buildAnyUnifiedCRLs(sc, issuersConfig, globalCRLConfig,
+	currUnifiedDeltaSerials, unifiedWarnings, err := buildAnyUnifiedCRLs(sc, issuersConfig, globalCRLConfig,
 		issuers, issuerIDEntryMap,
 		issuerIDCertMap, keySubjectIssuersMap,
 		wasLegacy, forceNew, isDelta)
@@ -1483,7 +1483,7 @@ func buildAnyLocalCRLs(
 		}
 	}
 
-	return warnings, currDeltaCerts, nil
+	return currDeltaCerts, warnings, nil
 }
 
 func buildAnyUnifiedCRLs(
@@ -1634,7 +1634,7 @@ func buildAnyUnifiedCRLs(
 		}
 	}
 
-	return warnings, currDeltaCerts, nil
+	return currDeltaCerts, warnings, nil
 }
 
 func buildAnyCRLsWithCerts(
