@@ -53,10 +53,11 @@ module('Unit | Model | role-jwt', function (hooks) {
   });
 
   test('it does not return provider unless domain matches completely', function (assert) {
-    assert.expect(1);
+    assert.expect(2);
     const model = this.owner.lookup('service:store').createRecord('role-jwt', {
       authUrl: `http://custom-auth0-provider.com`,
     });
-    assert.strictEqual(model.providerName, null, ``);
+    assert.strictEqual(model.providerName, null, `no providerName for custom URL`);
+    assert.strictEqual(model.providerButtonComponent, null, 'no providerButtonComponent for custom URL');
   });
 });
