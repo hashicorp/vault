@@ -29,6 +29,11 @@ import (
 	"google.golang.org/grpc/keepalive"
 )
 
+const (
+	HTTPHeaderVaultForwardFrom = "X-Vault-Forwarded-From"
+	HTTPHeaderVaultForwardTo   = "X-Vault-Forwarded-To"
+)
+
 type requestForwardingHandler struct {
 	fws         *http2.Server
 	fwRPCServer *grpc.Server
@@ -361,12 +366,10 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 
 	req.URL.Path = req.Context().Value("original_request_path").(string)
 
-	// Forwarded 'From' and 'To' host metadata which we need to augment the request with.
-	from, _ := url.Parse(c.redirectAddr) // TODO: PW: Error handling.
-	_, leaderAddr, _, _ := c.Leader()    // TODO: PW: Error handling.
-	to, _ := url.Parse(leaderAddr)       // TODO: PW: Error handling.
-	req.Header.Add("X-Vault-Forwarded-From", from.Host)
-	req.Header.Add("X-Vault-Forwarded-To", to.Host)
+	err := c.addForwardingHeaders(req)
+	if err != nil {
+		c.logger.Error("error adding forwarding headers to request", err)
+	}
 
 	freq, err := forwarding.GenerateForwardedRequest(req)
 	if err != nil {
@@ -400,4 +403,33 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 	}
 
 	return int(resp.StatusCode), header, resp.Body, nil
+}
+
+// addForwardingHeaders attempts to add two additional headers to provide metadata.
+// They describe which host the request is being 'forwarded from' and which host it is being 'forwarded to'
+// An error indicates that the headers have not been added.
+func (c *Core) addForwardingHeaders(req *http.Request) error {
+	// Sanity check by clearing existing headers, we don't expect them to exist.
+	delete(req.Header, HTTPHeaderVaultForwardFrom)
+	delete(req.Header, HTTPHeaderVaultForwardTo)
+
+	from, err := url.Parse(c.redirectAddr)
+	if err != nil {
+		return fmt.Errorf("unable to add current standby node (from) address: %w", err)
+	}
+
+	leaderParams := c.clusterLeaderParams.Load().(*ClusterLeaderParams)
+	if leaderParams == nil {
+		return errors.New("unable to add primary node (to) address, cannot load cluster leader data")
+	}
+
+	to, err := url.Parse(leaderParams.LeaderRedirectAddr)
+	if err != nil {
+		return fmt.Errorf("unable to add primary node (to) address: %w", err)
+	}
+
+	req.Header.Add(HTTPHeaderVaultForwardFrom, from.Host)
+	req.Header.Add(HTTPHeaderVaultForwardTo, to.Host)
+
+	return nil
 }
