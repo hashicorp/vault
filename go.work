@@ -1,0 +1,10 @@
+go 1.20
+
+use (
+	.
+	../consul-template
+)
+
+replace (
+	github.com/hashicorp/consul-template v0.29.5 => ../consul-template
+)

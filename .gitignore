@@ -132,7 +132,3 @@ website/components/node_modules
 *.log
 
 tools/godoctests/.bin
-
-# Go workspace file
-go.work
-go.work.sum
