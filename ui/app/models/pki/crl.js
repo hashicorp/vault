@@ -17,9 +17,7 @@ export default class PkiCrlModel extends Model {
     return `/v1/${backendPath}/config/crl?help=1`;
   }
 
-  @attr('boolean', { defaultValue: true })
-  autoRebuild;
-
+  @attr('boolean') autoRebuild;
   @attr('string', {
     label: 'Auto-rebuild on',
     labelDisabled: 'Auto-rebuild off',
@@ -31,20 +29,7 @@ export default class PkiCrlModel extends Model {
   })
   autoRebuildGracePeriod;
 
-  @attr('boolean', { defaultValue: true })
-  enableDelta;
-
-  @attr('string', {
-    label: 'Expiry',
-    labelDisabled: 'No expiry',
-    defaultValue: '72h',
-    editType: 'ttl',
-    mapToBoolean: 'disable',
-    helperTextEnabled: 'The CRL will expire after:',
-    helperTextDisabled: 'The CRL will not be built.',
-  })
-  expiry;
-
+  @attr('boolean') enableDelta; // add validations auto_rebuild must be enabled
   @attr('string', {
     label: 'Delta CRL building on',
     labelDisabled: 'Delta CRL building off',
@@ -56,9 +41,19 @@ export default class PkiCrlModel extends Model {
   })
   deltaRebuildInterval;
 
-  @attr('boolean', { defaultValue: true })
-  disable;
+  @attr('boolean') disable;
+  @attr('string', {
+    label: 'Expiry',
+    labelDisabled: 'No expiry',
+    defaultValue: '72h',
+    editType: 'ttl',
+    mapToBoolean: 'disable',
+    helperTextEnabled: 'The CRL will expire after:',
+    helperTextDisabled: 'The CRL will not be built.',
+  })
+  expiry;
 
+  @attr('boolean', { label: 'OCSP disable' }) ocspDisable;
   @attr('string', {
     label: 'OCSP responder APIs enabled',
     labelDisabled: 'OCSP responder APIs disabled',
@@ -69,11 +64,12 @@ export default class PkiCrlModel extends Model {
   })
   ocspExpiry;
 
-  @attr('boolean', { label: 'OCSP disable', defaultValue: true })
-  ocspDisable;
-
   // TODO missing from designs, enterprise only - add?
   /*
+  to set cross_cluster_revocation=true or unified_crl=true
+  need to have auto_rebuild=true and
+  you need to have Vault Ent and this must not be a local-only mount.
+  
   "cross_cluster_revocation": true,
   "unified_crl": true,
   "unified_crl_on_existing_paths": true
