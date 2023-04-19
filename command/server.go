@@ -24,6 +24,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/testcluster/docker"
+
 	systemd "github.com/coreos/go-systemd/daemon"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
@@ -137,6 +139,7 @@ type ServerCommand struct {
 	flagDevKVV1            bool
 	flagDevSkipInit        bool
 	flagDevThreeNode       bool
+	flagDevThreeDockerNode bool
 	flagDevFourCluster     bool
 	flagDevTransactional   bool
 	flagDevAutoSeal        bool
@@ -361,6 +364,13 @@ func (c *ServerCommand) Flags() *FlagSets {
 	f.BoolVar(&BoolVar{
 		Name:    "dev-four-cluster",
 		Target:  &c.flagDevFourCluster,
+		Default: false,
+		Hidden:  true,
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "dev-three-docker-node",
+		Target:  &c.flagDevThreeDockerNode,
 		Default: false,
 		Hidden:  true,
 	})
@@ -947,7 +957,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Automatically enable dev mode if other dev flags are provided.
-	if c.flagDevConsul || c.flagDevHA || c.flagDevTransactional || c.flagDevLeasedKV || c.flagDevThreeNode || c.flagDevFourCluster || c.flagDevAutoSeal || c.flagDevKVV1 || c.flagDevTLS {
+	if c.flagDevConsul || c.flagDevHA || c.flagDevTransactional || c.flagDevLeasedKV || c.flagDevThreeNode || c.flagDevFourCluster || c.flagDevAutoSeal || c.flagDevKVV1 || c.flagDevTLS || c.flagDevThreeDockerNode {
 		c.flagDev = true
 	}
 
@@ -1262,6 +1272,23 @@ func (c *ServerCommand) Run(args []string) int {
 				consts.EnvVaultAllowPendingRemovalMounts + " env var: " +
 				"defaulting to false."))
 		}
+	}
+
+	if c.flagDevThreeDockerNode {
+		tempDir := os.Getenv("VAULT_DEV_TEMP_DIR")
+		if tempDir == "" {
+			tempDir, err = os.MkdirTemp(os.TempDir(), "vault-dev-three-docker")
+			if err != nil {
+				c.UI.Output(err.Error())
+				return 1
+			}
+		}
+		vnc, err := config.ToVaultNodeConfig()
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 1
+		}
+		return c.enableThreeNodeDockerCluster(c.flagDevListenAddr, tempDir, vnc)
 	}
 
 	// Initialize the separate HA storage backend, if it exists
@@ -2181,6 +2208,104 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 					c.UI.Error(fmt.Sprintf("Error(s) were encountered during reload: %s", err))
 				}
 			}
+		}
+	}
+
+	return 0
+}
+
+func (c *ServerCommand) enableThreeNodeDockerCluster(devListenAddress, tempDir string, vnc *testcluster.VaultNodeConfig) int {
+	ctx := namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
+	testCluster, err := docker.NewDockerCluster(ctx, &docker.DockerClusterOptions{
+		ClusterOptions: testcluster.ClusterOptions{
+			ClusterName:     "vault-dev",
+			Logger:          c.logger.Named("docker-cluster"),
+			TmpDir:          tempDir,
+			VaultNodeConfig: vnc,
+		},
+	})
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Failed to create docker cluster: %v", err))
+		// TODO log
+		return 1
+	}
+	defer c.cleanupGuard.Do(testCluster.Cleanup)
+
+	// Set the token
+	tokenHelper, err := c.TokenHelper()
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error getting token helper: %s", err))
+		return 1
+	}
+	if err := tokenHelper.Store(testCluster.RootToken()); err != nil {
+		c.UI.Error(fmt.Sprintf("Error storing in token helper: %s", err))
+		return 1
+	}
+
+	if err := ioutil.WriteFile(filepath.Join(tempDir, "root_token"), []byte(testCluster.RootToken()), 0o600); err != nil {
+		c.UI.Error(fmt.Sprintf("Error writing token to tempfile: %s", err))
+		return 1
+	}
+
+	c.UI.Output(fmt.Sprintf(
+		"==> Three node dev mode is enabled\n\n" +
+			"The unseal key and root token are reproduced below in case you\n" +
+			"want to seal/unseal the Vault or play with authentication.\n",
+	))
+
+	for i, key := range testCluster.GetBarrierKeys() {
+		c.UI.Output(fmt.Sprintf(
+			"Unseal Key %d: %s",
+			i+1, base64.StdEncoding.EncodeToString(key),
+		))
+	}
+
+	c.UI.Output(fmt.Sprintf(
+		"\nRoot Token: %s\n", testCluster.RootToken(),
+	))
+
+	c.UI.Output(fmt.Sprintf(
+		"\nUseful env vars:\n"+
+			"VAULT_TOKEN=%s\n"+
+			"VAULT_ADDR=%s\n"+
+			"VAULT_CACERT=%s/ca/ca.pem\n",
+		testCluster.RootToken(),
+		testCluster.Nodes()[0].APIClient().Address(),
+		tempDir,
+	))
+
+	// Output the header that the server has started
+	c.UI.Output("==> Vault server started! Log data will stream in below:\n")
+
+	// Inform any tests that the server is ready
+	select {
+	case c.startedCh <- struct{}{}:
+	default:
+	}
+
+	// Release the log gate.
+	c.flushLog()
+
+	// Wait for shutdown
+	shutdownTriggered := false
+
+	for !shutdownTriggered {
+		select {
+		case <-c.ShutdownCh:
+			c.UI.Output("==> Vault shutdown triggered")
+
+			// Stop the listeners so that we don't process further client requests.
+			c.cleanupGuard.Do(testCluster.Cleanup)
+
+			shutdownTriggered = true
+
+		case <-c.SighupCh:
+			//c.UI.Output("==> Vault reload triggered")
+			//for _, core := range testCluster.Cores {
+			//	if err := c.Reload(core.ReloadFuncsLock, core.ReloadFuncs, nil); err != nil {
+			//		c.UI.Error(fmt.Sprintf("Error(s) were encountered during reload: %s", err))
+			//	}
+			//}
 		}
 	}
 

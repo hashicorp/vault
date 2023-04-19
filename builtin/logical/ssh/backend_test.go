@@ -16,18 +16,16 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
-	"github.com/hashicorp/vault/sdk/logical"
-	"golang.org/x/crypto/ssh"
-
 	"github.com/hashicorp/vault/builtin/credential/userpass"
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/helper/docker"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
-
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/ssh"
 )
 
 const (
