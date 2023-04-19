@@ -34,7 +34,7 @@ and consider if they're appropriate for your deployment.
 
   - `tlsDisable` (`boolean: true`) - When set to `true`, changes URLs from `https` to `http` (such as the `VAULT_ADDR=http://127.0.0.1:8200` environment variable set on the Vault pods).
 
-  - `externalVaultAddr` (`string: ""`) - External vault server address for the injector and CSI provider to use. Setting this will disable deployment of a vault server. A service account with token review permissions is automatically created if `server.serviceAccount.create=true` is set for the external Vault server  to use.
+  - `externalVaultAddr` (`string: ""`) - External vault server address for the injector and CSI provider to use. Setting this will disable deployment of a vault server. A service account with token review permissions is automatically created if `server.serviceAccount.create=true` is set for the external Vault server to use.
 
   - `openshift` (`boolean: false`) - If `true`, enables configuration specific to OpenShift such as NetworkPolicy, SecurityContext, and Route.
 
@@ -78,29 +78,29 @@ and consider if they're appropriate for your deployment.
 
   - `image` - Values that configure the Vault Agent Injector Docker image.
 
-    - `repository` (`string: hashicorp/vault-k8s`) - The name of the Docker image for Vault Agent Injector.
+    - `repository` (`string: "hashicorp/vault-k8s"`) - The name of the Docker image for Vault Agent Injector.
 
-    - `tag` (`string: 1.2.1`) - The tag of the Docker image for the Vault Agent Injector. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
+    - `tag` (`string: "1.2.1"`) - The tag of the Docker image for the Vault Agent Injector. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
 
-    - `pullPolicy` (`string: IfNotPresent`) - The pull policy for container images. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
+    - `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
 
   - `agentImage` - Values that configure the Vault Agent sidecar image.
 
-    - `repository` (`string: hashicorp/vault`) - The name of the Docker image for the Vault Agent sidecar. This should be set to the official Vault Docker image.
+    - `repository` (`string: "hashicorp/vault"`) - The name of the Docker image for the Vault Agent sidecar. This should be set to the official Vault Docker image.
 
-    - `tag` (`string: 1.13.1`) - The tag of the Vault Docker image to use for the Vault Agent Sidecar. **Vault 1.3.1+ is required by the admission controller**.
+    - `tag` (`string: "1.13.1"`) - The tag of the Vault Docker image to use for the Vault Agent Sidecar. **Vault 1.3.1+ is required by the admission controller**.
 
   - `agentDefaults` - Values that configure the injected Vault Agent containers default values. For more information on configuring resources, see the K8s documentation: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 
-    - `cpuLimit` (`string: 500m`) - The default CPU limit for injected Vault Agent containers.
+    - `cpuLimit` (`string: "500m"`) - The default CPU limit for injected Vault Agent containers.
 
-    - `cpuRequest` (`string: 250m`) - The default CPU request for injected Vault Agent containers.
+    - `cpuRequest` (`string: "250m"`) - The default CPU request for injected Vault Agent containers.
 
-    - `memLimit` (`string: 128Mi`) - The default memory limit for injected Vault Agent containers.
+    - `memLimit` (`string: "128Mi"`) - The default memory limit for injected Vault Agent containers.
 
-    - `memRequest` (`string: 64Mi`) - The default memory request for injected Vault Agent containers.
+    - `memRequest` (`string: "64Mi"`) - The default memory request for injected Vault Agent containers.
 
-    - `template` (`string: map`) - The default template type for rendered secrets if no custom templates are defined. Possible values include `map` and `json`.
+    - `template` (`string: "map"`) - The default template type for rendered secrets if no custom templates are defined. Possible values include `map` and `json`.
 
     - `templateConfig` - Default values within Agent's [`template_config` stanza](/vault/docs/agent/template).
 
@@ -112,11 +112,11 @@ and consider if they're appropriate for your deployment.
 
     - `enabled` (`boolean: false`) - When set to `true`, the Vault Agent Injector exports Prometheus metrics at the `/metrics` path.
 
-  - `authPath` (`string: auth/kubernetes`) - Mount path of the Vault Kubernetes Auth Method.
+  - `authPath` (`string: "auth/kubernetes"`) - Mount path of the Vault Kubernetes Auth Method.
 
-  - `logLevel` (`string: info`) - Configures the log verbosity of the injector. Supported log levels: trace, debug, error, warn, info.
+  - `logLevel` (`string: "info"`) - Configures the log verbosity of the injector. Supported log levels: trace, debug, error, warn, info.
 
-  - `logFormat` (`string: standard`) - Configures the log format of the injector. Supported log formats: "standard", "json".
+  - `logFormat` (`string: "standard"`) - Configures the log format of the injector. Supported log formats: "standard", "json".
 
   - `revokeOnShutdown` (`boolean: false`) - Configures all Vault Agent sidecars to revoke their token when shutting down.
 
@@ -155,9 +155,9 @@ and consider if they're appropriate for your deployment.
 
   - `webhook` - Values that control the Mutating Webhook Configuration.
 
-    - `failurePolicy` (`string: Ignore`) - Configures failurePolicy of the webhook. To block pod creation while the webhook is unavailable, set the policy to `"Fail"`. See [Failure Policy](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#failure-policy).
+    - `failurePolicy` (`string: "Ignore"`) - Configures failurePolicy of the webhook. To block pod creation while the webhook is unavailable, set the policy to `"Fail"`. See [Failure Policy](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#failure-policy).
 
-    - `matchPolicy` (`string: Exact`) - Specifies the approach to accepting changes based on the rules of the MutatingWebhookConfiguration. See [Match Policy](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-matchpolicy).
+    - `matchPolicy` (`string: "Exact"`) - Specifies the approach to accepting changes based on the rules of the MutatingWebhookConfiguration. See [Match Policy](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-matchpolicy).
 
     - `timeoutSeconds` (`integer: 30`) - Specifies the number of seconds before the webhook request will be ignored or fails. If it is ignored or fails depends on the `failurePolicy`. See [timeouts](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#timeouts).
 
@@ -193,13 +193,13 @@ and consider if they're appropriate for your deployment.
 
   - `certs` - The certs section configures how the webhook TLS certs are configured. These are the TLS certs for the Kube apiserver communicating to the webhook. By default, the injector will generate and manage its own certs, but this requires the ability for the injector to update its own `MutatingWebhookConfiguration`. In a production environment, custom certs should probably be used. Configure the values below to enable this.
 
-    - `secretName` (`string: null`) - secretName is the name of the Kubernetes secret that has the TLS certificate and private key to serve the injector webhook. If this is null, then the injector will default to its automatic management mode.
+    - `secretName` (`string: "null"`) - secretName is the name of the Kubernetes secret that has the TLS certificate and private key to serve the injector webhook. If this is null, then the injector will default to its automatic management mode.
 
     - `caBundle` (`string: ""`) - The PEM-encoded CA public certificate bundle for the TLS certificate served by the injector. This must be specified as a string and can't come from a secret because it must be statically configured on the Kubernetes `MutatingAdmissionWebhook` resource. This only needs to be specified if `secretName` is not null.
 
-    - `certName` (`string: tls.crt`) - The name of the certificate file within the `secretName` secret.
+    - `certName` (`string: "tls.crt"`) - The name of the certificate file within the `secretName` secret.
 
-    - `keyName` (`string: tls.key`) - The name of the key file within the `secretName` secret.
+    - `keyName` (`string: "tls.key"`) - The name of the key file within the `secretName` secret.
 
   - `extraEnvironmentVars` - Extra environment variables to set in the injector deployment.
 
@@ -246,7 +246,7 @@ and consider if they're appropriate for your deployment.
       "sample/annotation2": "bar"
     ```
 
-  - `failurePolicy` (`string: Ignore`) - Deprecated: please use [`webhook.failurePolicy`](/vault/docs/platform/k8s/helm/configuration#failurepolicy) instead.
+  - `failurePolicy` (`string: "Ignore"`) - Deprecated: please use [`webhook.failurePolicy`](/vault/docs/platform/k8s/helm/configuration#failurepolicy) instead.
 
   - `webhookAnnotations` - Deprecated: please use [`webhook.annotations`](/vault/docs/platform/k8s/helm/configuration#annotations-1) instead.
 
@@ -335,23 +335,23 @@ and consider if they're appropriate for your deployment.
 
 - `server`
 
-  - `enabled` (`string: -`) - If true, or "-" with global.enabled true, Vault server will be installed. See vault.mode in _helpers.tpl for implementation details.
+  - `enabled` (`string: "-"`) - If true, or "-" with global.enabled true, Vault server will be installed. See vault.mode in _helpers.tpl for implementation details.
 
   - `enterpriseLicense` - [Enterprise Only] This value refers to a Kubernetes secret that you have created that contains your enterprise license. If you are not using an enterprise image or if you plan to introduce the license key via another route, then leave secretName blank ("") or set it to null. Requires Vault Enterprise 1.8 or later.
 
     - `secretName` (`string: ""`) - The name of the Kubernetes secret that holds the enterprise license. The secret must be in the same namespace that Vault is installed into.
 
-    - `secretKey` (`string: license`) - The key within the Kubernetes secret that holds the enterprise license.
+    - `secretKey` (`string: "license"`) - The key within the Kubernetes secret that holds the enterprise license.
 
   - `image` - Resource requests, limits, etc. for the server cluster placement. This should map directly to the value of the resources field for a PodSpec. By default no direct resource request is made.
 
-    - `repository` (`string: hashicorp/vault`)
+    - `repository` (`string: "hashicorp/vault"`)
 
-    - `tag` (`string: 1.13.1`)
+    - `tag` (`string: "1.13.1"`)
 
-    - `pullPolicy` (`string: IfNotPresent`) - Overrides the default Image Pull Policy
+    - `pullPolicy` (`string: "IfNotPresent"`) - Overrides the default Image Pull Policy
 
-  - `updateStrategyType` (`string: OnDelete`) - Configure the Update Strategy Type for the StatefulSet See https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
+  - `updateStrategyType` (`string: "OnDelete"`) - Configure the Update Strategy Type for the StatefulSet See https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
 
   - `logLevel` (`string: ""`) - Configure the logging verbosity for the Vault server. Supported log levels include: trace, debug, info, warn, error
 
@@ -369,13 +369,13 @@ and consider if they're appropriate for your deployment.
 
     - `ingressClassName` (`string: ""`) - Optionally use ingressClassName instead of deprecated annotation. See: https://kubernetes.io/docs/concepts/services-networking/ingress/#deprecated-annotation
 
-    - `pathType` (`string: Prefix`) - As of Kubernetes 1.19, all Ingress Paths must have a pathType configured. The default value below should be sufficient in most cases. See: https://kubernetes.io/docs/concepts/services-networking/ingress/#path-types for other possible values.
+    - `pathType` (`string: "Prefix"`) - As of Kubernetes 1.19, all Ingress Paths must have a pathType configured. The default value below should be sufficient in most cases. See: https://kubernetes.io/docs/concepts/services-networking/ingress/#path-types for other possible values.
 
     - `activeService` (`boolean: true`) - When HA mode is enabled and K8s service registration is being used, configure the ingress to point to the Vault active service.
 
     - `hosts` (`array: ""`)
 
-      - `host` (`string: chart-example.local`)
+      - `host` (`string: "chart-example.local"`)
 
       - `paths` (`array: []`)
 
@@ -393,11 +393,11 @@ and consider if they're appropriate for your deployment.
 
     - `annotations`
 
-    - `host` (`string: chart-example.local`)
+    - `host` (`string: "chart-example.local"`)
 
     - `tls` - tls will be passed directly to the route's TLS config, which can be used to configure other termination methods that terminate TLS at the router
 
-      - `termination` (`string: passthrough`)
+      - `termination` (`string: "passthrough"`)
 
   - `authDelegator` - authDelegator enables a cluster role binding to be attached to the service account.  This cluster role binding can be used to setup Kubernetes auth method.  https://www.vaultproject.io/docs/auth/kubernetes.html
 
@@ -433,7 +433,7 @@ and consider if they're appropriate for your deployment.
 
     - `enabled` (`boolean: false`)
 
-    - `path` (`string: /v1/sys/health?standbyok=true`)
+    - `path` (`string: "/v1/sys/health?standbyok=true"`)
 
     - `port` (`integer: 8200`) - Port nuumber on which livenessProbe will be checked.
 
@@ -502,7 +502,7 @@ and consider if they're appropriate for your deployment.
     - `publishNotReadyAddresses` (`boolean: true`) - Configures the service type for the main Vault service.  Can be ClusterIP or NodePort. type: ClusterIP
  Do not wait for pods to be ready
 
-    - `externalTrafficPolicy` (`string: Cluster`) - The externalTrafficPolicy can be set to either Cluster or Local and is only valid for LoadBalancer and NodePort service types. The default value is Cluster. ref: https://kubernetes.io/docs/concepts/services-networking/service/#external-traffic-policy
+    - `externalTrafficPolicy` (`string: "Cluster"`) - The externalTrafficPolicy can be set to either Cluster or Local and is only valid for LoadBalancer and NodePort service types. The default value is Cluster. ref: https://kubernetes.io/docs/concepts/services-networking/service/#external-traffic-policy
 
     - `port` (`integer: 8200`) - If type is set to "NodePort", a specific nodePort value can be configured, will be random if left blank. nodePort: 30000
  When HA mode is enabled If type is set to "NodePort", a specific nodePort value can be configured, will be random if left blank. activeNodePort: 30001
@@ -517,13 +517,13 @@ and consider if they're appropriate for your deployment.
 
     - `enabled` (`boolean: true`)
 
-    - `size` (`string: 10Gi`) - Size of the PVC created
+    - `size` (`string: "10Gi"`) - Size of the PVC created
 
-    - `mountPath` (`string: /vault/data`) - Location where the PVC will be mounted.
+    - `mountPath` (`string: "/vault/data"`) - Location where the PVC will be mounted.
 
     - `storageClass` - Name of the storage class to use.  If null it will use the configured default Storage Class.
 
-    - `accessMode` (`string: ReadWriteOnce`) - Access Mode of the storage device being used for the PVC
+    - `accessMode` (`string: "ReadWriteOnce"`) - Access Mode of the storage device being used for the PVC
 
     - `annotations` - Annotations to apply to the PVC
 
@@ -531,13 +531,13 @@ and consider if they're appropriate for your deployment.
 
     - `enabled` (`boolean: false`)
 
-    - `size` (`string: 10Gi`) - Size of the PVC created
+    - `size` (`string: "10Gi"`) - Size of the PVC created
 
-    - `mountPath` (`string: /vault/audit`) - Location where the PVC will be mounted.
+    - `mountPath` (`string: "/vault/audit"`) - Location where the PVC will be mounted.
 
     - `storageClass` - Name of the storage class to use.  If null it will use the configured default Storage Class.
 
-    - `accessMode` (`string: ReadWriteOnce`) - Access Mode of the storage device being used for the PVC
+    - `accessMode` (`string: "ReadWriteOnce"`) - Access Mode of the storage device being used for the PVC
 
     - `annotations` - Annotations to apply to the PVC
 
@@ -545,11 +545,11 @@ and consider if they're appropriate for your deployment.
 
     - `enabled` (`boolean: false`)
 
-    - `devRootToken` (`string: root`) - Set VAULT_DEV_ROOT_TOKEN_ID value
+    - `devRootToken` (`string: "root"`) - Set VAULT_DEV_ROOT_TOKEN_ID value
 
   - `standalone` - Run Vault in "standalone" mode. This is the default mode that will deploy if no arguments are given to helm. This requires a PVC for data storage to use the "file" backend.  This mode is not highly available and should not be scaled past a single replica.
 
-    - `enabled` (`string: -`)
+    - `enabled` (`string: "-"`)
 
     - `config` (`string`) - config is a raw string of default configuration when using a Stateful deployment. Default is to use a PersistentVolumeClaim mounted at /vault/data and store data there. This is only used when using a Replica count of 1, and using a stateful set. This should be HCL.
  Note: Configuration files are stored in ConfigMaps so sensitive data such as passwords should be either mounted through extraSecretEnvironmentVars or through a Kube secret.  For more information see: https://www.vaultproject.io/docs/platform/k8s/helm/run#protecting-sensitive-vault-configurations
@@ -619,7 +619,7 @@ and consider if they're appropriate for your deployment.
 
   - `activeVaultPodOnly` (`boolean: false`) - The service should only contain selectors for active Vault pod
 
-  - `serviceType` (`string: ClusterIP`)
+  - `serviceType` (`string: "ClusterIP"`)
 
   - `serviceNodePort`
 
@@ -627,7 +627,7 @@ and consider if they're appropriate for your deployment.
 
   - `targetPort` (`integer: 8200`)
 
-  - `externalTrafficPolicy` (`string: Cluster`) - The externalTrafficPolicy can be set to either Cluster or Local and is only valid for LoadBalancer and NodePort service types. The default value is Cluster. ref: https://kubernetes.io/docs/concepts/services-networking/service/#external-traffic-policy
+  - `externalTrafficPolicy` (`string: "Cluster"`) - The externalTrafficPolicy can be set to either Cluster or Local and is only valid for LoadBalancer and NodePort service types. The default value is Cluster. ref: https://kubernetes.io/docs/concepts/services-networking/service/#external-traffic-policy
 
   - `annotations` - loadBalancerSourceRanges:   - 10.0.0.0/16   - 1.78.23.3/32
  loadBalancerIP:
@@ -643,11 +643,11 @@ and consider if they're appropriate for your deployment.
 
   - `image`
 
-    - `repository` (`string: hashicorp/vault-csi-provider`)
+    - `repository` (`string: "hashicorp/vault-csi-provider"`)
 
-    - `tag` (`string: 1.3.0`)
+    - `tag` (`string: "1.3.0"`)
 
-    - `pullPolicy` (`string: IfNotPresent`)
+    - `pullPolicy` (`string: "IfNotPresent"`)
 
   - `volumes` - volumes is a list of volumes made available to all containers. These are rendered via toYaml rather than pre-processed like the extraVolumes value. The purpose is to make it easy to share volumes between containers.
 
@@ -661,15 +661,15 @@ and consider if they're appropriate for your deployment.
 
     - `updateStrategy`
 
-      - `type` (`string: RollingUpdate`)
+      - `type` (`string: "RollingUpdate"`)
 
       - `maxUnavailable` (`string: ""`)
 
     - `annotations` - Extra annotations for the daemonSet. This can either be YAML or a YAML-formatted multi-line templated string map of the annotations to apply to the daemonSet.
 
-    - `providersDir` (`string: /etc/kubernetes/secrets-store-csi-providers`) - Provider host path (must match the CSI provider's path)
+    - `providersDir` (`string: "/etc/kubernetes/secrets-store-csi-providers"`) - Provider host path (must match the CSI provider's path)
 
-    - `kubeletRootDir` (`string: /var/lib/kubelet`) - Kubelet host path
+    - `kubeletRootDir` (`string: "/var/lib/kubelet"`) - Kubelet host path
 
     - `extraLabels` - Extra labels to attach to the vault-csi-provider daemonSet This should be a YAML map of the labels to apply to the csi provider daemonSet
 
@@ -695,15 +695,15 @@ and consider if they're appropriate for your deployment.
 
     - `image`
 
-      - `repository` (`string: hashicorp/vault`)
+      - `repository` (`string: "hashicorp/vault"`)
 
-      - `tag` (`string: 1.13.1`)
+      - `tag` (`string: "1.13.1"`)
 
-      - `pullPolicy` (`string: IfNotPresent`)
+      - `pullPolicy` (`string: "IfNotPresent"`)
 
-    - `logFormat` (`string: standard`)
+    - `logFormat` (`string: "standard"`)
 
-    - `logLevel` (`string: info`)
+    - `logLevel` (`string: "info"`)
 
     - `resources`
 
@@ -760,9 +760,9 @@ and consider if they're appropriate for your deployment.
 
     - `selectors` - Selector labels to add to the ServiceMonitor. When empty, defaults to:  release: prometheus
 
-    - `interval` (`string: 30s`) - Interval at which Prometheus scrapes metrics
+    - `interval` (`string: "30s"`) - Interval at which Prometheus scrapes metrics
 
-    - `scrapeTimeout` (`string: 10s`) - Timeout for Prometheus scrapes
+    - `scrapeTimeout` (`string: "10s"`) - Timeout for Prometheus scrapes
 
   - `prometheusRules`
 
