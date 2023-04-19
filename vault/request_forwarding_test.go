@@ -21,7 +21,8 @@ func Test_RequestForwarding_ForwardingHeaders(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, standbyURL)
 
-	isLeader, leaderAddr, _, _ := leader.Leader()
+	isLeader, leaderAddr, _, err := leader.Leader()
+	require.NoError(t, err)
 	require.True(t, isLeader)
 	leaderURL, err := url.Parse(leaderAddr)
 	require.NoError(t, err)
