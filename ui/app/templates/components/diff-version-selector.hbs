@@ -98,6 +98,5 @@
 </Toolbar>
 
 <div class="form-section visual-diff">
-  {{! template-lint-configure no-triple-curlies "warn" }}
-  <pre>{{{this.visualDiff}}}</pre>
+  <pre>{{sanitized-html this.visualDiff}}</pre>
 </div>
