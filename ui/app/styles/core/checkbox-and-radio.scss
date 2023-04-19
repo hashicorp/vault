@@ -108,8 +108,9 @@
   outline-offset: -2px;
 }
 
-.b-checkbox input[type='checkbox']:disabled,
-.b-checkbox input[type='radio']:disabled {
+.b-checkbox input[type='checkbox']:disabled + label::before,
+.b-checkbox input[type='radio']:disabled + label::before {
+  background-color: $ui-gray-100;
   cursor: not-allowed;
 }
 
