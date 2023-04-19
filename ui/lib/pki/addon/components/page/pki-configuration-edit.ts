@@ -13,9 +13,12 @@ import RouterService from '@ember/routing/router-service';
 import FlashMessageService from 'vault/services/flash-messages';
 import { FormField, TtlEvent } from 'vault/app-types';
 import PkiCrlModel from 'vault/models/pki/crl';
+import PkiUrlsModel from 'vault/models/pki/urls';
+import errorMessage from 'vault/utils/error-message';
 
 interface Args {
   crl: PkiCrlModel;
+  urls: PkiUrlsModel;
 }
 
 interface PkiCrlTtls {
@@ -41,8 +44,14 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
   @task
   @waitFor
   *save(event: Event) {
-    yield event.preventDefault(); // remove yield
-    // do something
+    event.preventDefault();
+    try {
+      yield this.args.urls.save();
+      yield this.args.crl.save();
+      this.flashMessages.success('Successfully updated configuration');
+    } catch (error) {
+      this.errorMessage = errorMessage(error);
+    }
   }
 
   @action
@@ -56,7 +65,7 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
     const ttlAttr = attr.name;
     this.args.crl[ttlAttr as keyof PkiCrlTtls] = goSafeTimeString;
     // expiry and ocspExpiry both correspond to 'disable' booleans
-    // so their values are opposite of what the ttl is toggled to
+    // so when ttl is enabled, the booleans need to be false
     this.args.crl[attr.options.mapToBoolean as keyof PkiCrlBooleans] =
       attr.name === 'expiry' || attr.name === 'ocspExpiry' ? !enabled : enabled;
   }

@@ -1,12 +1,15 @@
 <div class="box is-sideless is-fullwidth is-marginless">
-  <form>
+  {{#if this.errorMessage}}
+    <AlertBanner @type="danger" @message={{this.errorMessage}} data-test-error-banner />
+  {{/if}}
+  <form {{on "submit" (perform this.save)}}>
     <fieldset class="box is-shadowless is-marginless is-borderless is-fullwidth" data-test-urls-edit-section>
-      <h2 class="title is-4 has-bottom-margin-xs has-top-margin-m has-border-bottom-light has-bottom-padding-s">
+      <h2 class="title is-4 has-bottom-margin-xs has-border-bottom-light has-bottom-padding-s">
         Global URLs
       </h2>
       {{#if @urls.canSet}}
         {{#each @urls.allFields as |attr|}}
-          <FormField @attr={{attr}} @model={{@urls}} data-test-urls-field={{attr.name}} />
+          <FormField @attr={{attr}} @model={{@urls}} @showHelpText={{false}} data-test-urls-field={{attr.name}} />
         {{/each}}
       {{else}}
         <EmptyState
@@ -17,7 +20,7 @@
     </fieldset>
 
     <fieldset class="box is-shadowless is-marginless is-borderless is-fullwidth" data-test-crls-edit-section>
-      <h2 class="title is-4 has-bottom-margin-xs has-top-margin-xl has-border-bottom-light has-bottom-padding-s">
+      <h2 class="title is-4 has-bottom-margin-xs has-border-bottom-light has-bottom-padding-s">
         Certificate Revocation List (CRL)
       </h2>
       {{#if @crl.canSet}}
@@ -52,7 +55,7 @@
             </div>
           {{/if}}
           {{#if (eq attr.name "ocspExpiry")}}
-            <h2 class="title is-4 has-bottom-margin-xs has-top-margin-xl has-border-bottom-light has-bottom-padding-s">
+            <h2 class="title is-4 has-bottom-margin-xs has-border-bottom-light has-bottom-padding-s">
               Online Certificate Status Protocol (OCSP)
             </h2>
             {{! boolean value is "ocspDisable" so false means enabled and ttl is toggled on}}
@@ -73,5 +76,32 @@
         <EmptyState @title="You do not have permission to set the CRL." />
       {{/if}}
     </fieldset>
+
+    <div class="field is-grouped box is-fullwidth is-bottomless">
+      <div class="control">
+        <button type="submit" class="button is-primary" data-test-configuration-edit-save>
+          Save
+        </button>
+        <button
+          {{on "click" this.cancel}}
+          type="button"
+          class="button has-left-margin-s"
+          data-test-configuration-edit-cancel
+        >
+          Cancel
+        </button>
+      </div>
+      {{#if this.invalidFormAlert}}
+        <div class="control">
+          <AlertInline
+            @type="danger"
+            @paddingTop={{true}}
+            @message={{this.invalidFormAlert}}
+            @mimicRefresh={{true}}
+            data-test-configuration-edit-validation-error
+          />
+        </div>
+      {{/if}}
+    </div>
   </form>
 </div>

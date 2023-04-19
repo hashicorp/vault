@@ -18,4 +18,8 @@ export default class PkiCrlAdapter extends ApplicationAdapter {
       return resp.data;
     });
   }
+
+  urlForUpdateRecord(store, type, snapshot) {
+    return this._url(snapshot.record.id);
+  }
 }
