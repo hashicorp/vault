@@ -13,8 +13,11 @@ export const SELECTORS = {
   optionByKey: (key) => `[data-test-pki-config-option="${key}"]`,
   cancelButton: '[data-test-pki-config-cancel]',
   saveButton: '[data-test-pki-config-save]',
+  doneButton: '[data-test-done]',
+  configureButton: '[data-test-configure-pki-button]',
   // pki-generate-root
   ...GENERATE_ROOT,
+  generateRootOption: '[data-test-pki-config-option="generate-root"]',
   // pki-ca-cert-import
   importForm: '[data-test-pki-import-pem-bundle-form]',
   importSubmit: '[data-test-pki-import-pem-bundle]',

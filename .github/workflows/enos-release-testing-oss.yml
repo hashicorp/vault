@@ -31,6 +31,15 @@ jobs:
           echo "matrix-test-group=$(make ci-get-matrix-group-id)" >> "$GITHUB_OUTPUT"
           echo "vault-revision=$(make ci-get-revision)" >> "$GITHUB_OUTPUT"
           echo "vault-version=$(make ci-get-version)" >> "$GITHUB_OUTPUT"
+        # Get the workflow summary similar to CRT workflows
+      - name: Release Artifact Info
+        run: |
+          # shellcheck disable=SC2129
+          echo "__Product:__ ${{ github.event.client_payload.payload.product }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "__Version:__ ${{ github.event.client_payload.payload.version }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "__Commit:__ ${{ github.event.client_payload.payload.sha }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "[Build Workflow](https://github.com/${{github.event.client_payload.payload.org}}/${{github.event.client_payload.payload.repo}}/actions/runs/${{github.event.client_payload.payload.buildworkflowid}})" >> "$GITHUB_STEP_SUMMARY"
 
   test:
     name: Test ${{ matrix.build-artifact-name }}
@@ -59,18 +68,3 @@ jobs:
     steps:
       - name: Persist metadata
         uses: hashicorp/actions-persist-metadata@v1
-
-  # Get the workflow summary similar to CRT workflows
-  release-artifact-info:
-    runs-on: linux
-    if: ${{ startsWith(github.event.action, 'enos-release-testing-oss') }}
-    continue-on-error: true
-    steps:
-      - name: Release Artifact Info
-        run: |
-          # shellcheck disable=SC2129
-          echo "__Product:__ ${{ github.event.client_payload.payload.product }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "__Version:__ ${{ github.event.client_payload.payload.version }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "__Commit:__ ${{ github.event.client_payload.payload.sha }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "[Build Workflow](https://github.com/${{github.event.client_payload.payload.org}}/${{github.event.client_payload.payload.repo}}/actions/runs/${{github.event.client_payload.payload.buildworkflowid}})" >> "$GITHUB_STEP_SUMMARY"

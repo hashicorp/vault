@@ -14,7 +14,7 @@ import PkiActionModel from 'vault/models/pki/action';
 import PkiUrlsModel from 'vault/models/pki/urls';
 import FlashMessageService from 'vault/services/flash-messages';
 import errorMessage from 'vault/utils/error-message';
-import { parsedParameters } from 'vault/utils/parse-pki-cert-oids';
+import { ValidationMap } from 'vault/vault/app-types';
 
 interface AdapterOptions {
   actionType: string;
@@ -53,7 +53,7 @@ export default class PkiGenerateRootComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly router: RouterService;
 
-  @tracked modelValidations = null;
+  @tracked modelValidations: ValidationMap | null = null;
   @tracked errorBanner = '';
   @tracked invalidFormAlert = '';
 
@@ -73,13 +73,13 @@ export default class PkiGenerateRootComponent extends Component<Args> {
   get returnedFields() {
     return [
       'certificate',
+      'commonName',
       'issuerId',
       'issuerName',
       'issuingCa',
       'keyName',
       'keyId',
       'serialNumber',
-      ...parsedParameters,
     ];
   }
 

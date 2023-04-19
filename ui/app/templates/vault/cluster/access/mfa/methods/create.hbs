@@ -28,7 +28,7 @@
     <h3 class="is-size-4 has-text-semibold">Settings</h3>
     <p class="has-border-top-light has-top-padding-l">
       {{this.description}}
-      <DocLink @path={{concat "/api-docs/secret/identity/mfa/" this.type}}>Learn more.</DocLink>
+      <DocLink @path={{concat "/vault/api-docs/secret/identity/mfa/" this.type}}>Learn more.</DocLink>
     </p>
     <Mfa::MethodForm @model={{this.method}} @validations={{this.methodErrors}} class="is-box-shadowless" />
     <Mfa::MfaLoginEnforcementHeader
@@ -49,7 +49,7 @@
     <p>
       Multi-factor authentication (MFA) allows you to set up another layer of security on top of existing authentication
       methods. Vault has four available methods.
-      <DocLink @path="/api-docs/secret/identity/mfa">Learn more.</DocLink>
+      <DocLink @path="/vault/api-docs/secret/identity/mfa">Learn more.</DocLink>
     </p>
     <div class="is-flex-row has-top-margin-xl">
       {{#each this.methodNames as |methodName|}}
@@ -77,7 +77,7 @@
     {{#if this.type}}
       <p class="has-top-margin-l">
         {{this.description}}
-        <DocLink @path={{concat "/api-docs/secret/identity/mfa/" this.type}}>Learn more.</DocLink>
+        <DocLink @path={{concat "/vault/api-docs/secret/identity/mfa/" this.type}}>Learn more.</DocLink>
       </p>
       {{! in a future release cards may be displayed to choose from either template or custom config for TOTP }}
       {{! if template is selected a user could choose a predefined config for common authenticators and the values would be populated on the model }}

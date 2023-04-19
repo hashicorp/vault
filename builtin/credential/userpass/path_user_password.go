@@ -16,6 +16,13 @@ import (
 func pathUserPassword(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "users/" + framework.GenericNameRegex("username") + "/password$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixUserpass,
+			OperationVerb:   "reset",
+			OperationSuffix: "password",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"username": {
 				Type:        framework.TypeString,
