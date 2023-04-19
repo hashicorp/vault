@@ -19,6 +19,7 @@ export default class PkiRoute extends Route {
     return hash({
       role: this.pathHelp.getNewModel('pki/role', mountPath),
       urls: this.pathHelp.getNewModel('pki/urls', mountPath),
+      crl: this.pathHelp.getNewModel('pki/crl', mountPath),
       key: this.pathHelp.getNewModel('pki/key', mountPath),
       signCsr: this.pathHelp.getNewModel('pki/sign-intermediate', mountPath),
       certGenerate: this.pathHelp.getNewModel('pki/certificate/generate', mountPath),
