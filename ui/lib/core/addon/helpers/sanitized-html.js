@@ -8,8 +8,7 @@ export default helper(function sanitizedHtml([htmlString]) {
     return htmlSafe(sanitize(htmlString));
   } catch (e) {
     debug('Error sanitizing string', e);
-    // I couldn't get this to actually fail but as a fallback,
-    // render the value as-is with HTML escaping
+    // I couldn't get this to actually fail but as a fallback render the value as-is
     return htmlString;
   }
 });
