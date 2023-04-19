@@ -600,15 +600,31 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 		}
 
 		// Then attempt to rebuild the CRLs if required.
-		if err := b.crlBuilder.rebuildIfForced(sc); err != nil {
+		warnings, err := b.crlBuilder.rebuildIfForced(sc)
+		if err != nil {
 			return err
+		}
+		if len(warnings) > 0 {
+			msg := "During rebuild of complete CRL, got the following warnings:"
+			for index, warning := range warnings {
+				msg = fmt.Sprintf("%v\n %d. %v", msg, index+1, warning)
+			}
+			b.Logger().Warn(msg)
 		}
 
 		// If a delta CRL was rebuilt above as part of the complete CRL rebuild,
 		// this will be a no-op. However, if we do need to rebuild delta CRLs,
 		// this would cause us to do so.
-		if err := b.crlBuilder.rebuildDeltaCRLsIfForced(sc, false); err != nil {
+		warnings, err = b.crlBuilder.rebuildDeltaCRLsIfForced(sc, false)
+		if err != nil {
 			return err
+		}
+		if len(warnings) > 0 {
+			msg := "During rebuild of delta CRL, got the following warnings:"
+			for index, warning := range warnings {
+				msg = fmt.Sprintf("%v\n %d. %v", msg, index+1, warning)
+			}
+			b.Logger().Warn(msg)
 		}
 
 		return nil
