@@ -1555,18 +1555,18 @@ func (c *ServerCommand) Run(args []string) int {
 		if c.flagDevTLS {
 			clusterJson.CACertPath = fmt.Sprintf("%s/%s", certDir, server.VaultDevCAFilename)
 		}
-	}
 
-	if c.flagDevClusterJson != "" {
-		b, err := jsonutil.EncodeJSON(clusterJson)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error encoding cluster.json: %s", err))
-			return 1
-		}
-		err = os.WriteFile(c.flagDevClusterJson, b, 0o700)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error writing cluster.json %q: %s", c.flagDevClusterJson, err))
-			return 1
+		if c.flagDevClusterJson != "" && !c.flagDevThreeNode {
+			b, err := jsonutil.EncodeJSON(clusterJson)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error encoding cluster.json: %s", err))
+				return 1
+			}
+			err = os.WriteFile(c.flagDevClusterJson, b, 0o600)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error writing cluster.json %q: %s", c.flagDevClusterJson, err))
+				return 1
+			}
 		}
 	}
 
@@ -2133,7 +2133,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 			c.UI.Error(fmt.Sprintf("Error encoding cluster.json: %s", err))
 			return 1
 		}
-		err = os.WriteFile(c.flagDevClusterJson, b, 0o700)
+		err = os.WriteFile(c.flagDevClusterJson, b, 0o600)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error writing cluster.json %q: %s", c.flagDevClusterJson, err))
 			return 1
