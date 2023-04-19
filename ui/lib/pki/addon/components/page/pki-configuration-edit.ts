@@ -38,8 +38,8 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
   @service declare readonly router: RouterService;
   @service declare readonly flashMessages: FlashMessageService;
 
-  @tracked invalidFormAlert = null;
-  @tracked errorMessage = null;
+  @tracked invalidFormAlert = '';
+  @tracked errorBanner = '';
 
   @task
   @waitFor
@@ -50,13 +50,13 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
       yield this.args.crl.save();
       this.flashMessages.success('Successfully updated configuration');
     } catch (error) {
-      this.errorMessage = errorMessage(error);
+      this.errorBanner = errorMessage(error);
     }
   }
 
   @action
   cancel() {
-    // handle cancel
+    this.router.transitionTo('vault.cluster.secrets.backend.pki.configuration.index');
   }
 
   @action
