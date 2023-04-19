@@ -26,6 +26,14 @@ h6 {
   padding: 0;
 }
 
+a:hover,
+body,
+pre,
+strong,
+table th {
+  color: $ui-gray-900;
+}
+
 h1,
 h2,
 h3,

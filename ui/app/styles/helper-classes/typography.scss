@@ -80,10 +80,6 @@
 }
 
 // Text color or styling
-.has-text-info {
-  color: $blue-500 !important;
-}
-
 .is-help {
   font-size: $size-8;
   margin-top: $size-11;
@@ -99,4 +95,8 @@
   color: $grey;
   margin-bottom: $size-11;
   font-size: $size-8;
+
+  strong {
+    color: inherit;
+  }
 }
