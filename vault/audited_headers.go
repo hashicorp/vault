@@ -155,6 +155,10 @@ func (c *Core) setupAuditedHeadersConfig(ctx context.Context) error {
 		lowerHeaders[strings.ToLower(k)] = v
 	}
 
+	// Explicitly allow forwarded from/to headers which are added during request forwarding.
+	lowerHeaders[strings.ToLower(HTTPHeaderVaultForwardFrom)] = &auditedHeaderSettings{HMAC: false}
+	lowerHeaders[strings.ToLower(HTTPHeaderVaultForwardTo)] = &auditedHeaderSettings{HMAC: false}
+
 	c.auditedHeaders = &AuditedHeadersConfig{
 		Headers: lowerHeaders,
 		view:    view,
