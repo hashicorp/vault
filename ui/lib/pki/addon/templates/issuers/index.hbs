@@ -66,6 +66,10 @@
               {{#if pkiIssuer.issuerName}}
                 <span class="tag has-text-grey-dark">{{pkiIssuer.id}}</span>
               {{/if}}
+              <span class="tag has-text-grey-dark">{{if pkiIssuer.isRotatable "root" "intermediate"}}</span>
+              {{#if pkiIssuer.parsedCertificate.common_name}}
+                <span class="tag has-text-grey-dark">{{pkiIssuer.parsedCertificate.common_name}}</span>
+              {{/if}}
             </div>
           </div>
         </div>

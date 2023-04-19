@@ -6,6 +6,7 @@
 import ApplicationAdapter from '../application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { all } from 'rsvp';
+import { verifyCertificates } from 'vault/utils/parse-pki-cert';
 
 export default class PkiIssuerAdapter extends ApplicationAdapter {
   namespace = 'v1';
@@ -43,21 +44,37 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
   async query(store, type, query) {
     const { backend } = query;
     const url = this.urlForQuery(backend);
-    // return this.ajax(url, 'GET', this.optionsForQuery());
+
     return this.ajax(url, 'GET', this.optionsForQuery()).then(async (res) => {
       const records = await all(
         res.data.keys.map((id) => {
           return this.queryRecord(store, type, { id, backend });
         })
       );
-      res.data.keys = records.map((record) => record.data);
+
+      const isRootRecords = await all(
+        records.map((record) => {
+          const { certificate } = record.data;
+          const keyId = record.data.key_id;
+
+          return verifyCertificates(certificate, certificate) && !!keyId;
+        })
+      );
+
+      res.data.keys = records.map((record, idx) => {
+        return {
+          ...record.data,
+          isRotatable: isRootRecords[idx],
+        };
+      });
+
       return res;
     });
   }
 
   queryRecord(store, type, query) {
     const { backend, id } = query;
-    return this.ajax(this.urlForQuery(backend, id), 'GET', this.optionsForQuery(id));
+    return this.ajax(`${this.urlForQuery(backend, id)}`, 'GET', this.optionsForQuery(id));
   }
 
   deleteAllIssuers(backend) {
