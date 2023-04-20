@@ -135,7 +135,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.7.1-0.20230405171328-0ba92be486aa
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.1.1-0.20230321230503-ee76cdb16f93
 	github.com/hashicorp/vault-testing-stepwise v0.1.3
-	github.com/hashicorp/vault/api v1.9.0
+	github.com/hashicorp/vault/api v1.9.1
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
 	github.com/hashicorp/vault/sdk v0.9.0
