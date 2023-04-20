@@ -1239,11 +1239,7 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 			RequestTimeout:           cfg.RequestTimeout,
 			ConnectionTimeout:        cfg.ConnectionTimeout,
 			UsernameAsAlias:          false,
-<<<<<<< HEAD
-=======
-			DerefAliases:             "never",
 			MaximumPageSize:          1000,
->>>>>>> 7f2deb1420 (Add Configurable LDAP Max Page Size (#19032))
 		},
 	}
 
