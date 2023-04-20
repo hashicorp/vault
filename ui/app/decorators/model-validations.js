@@ -19,6 +19,7 @@ import { get } from '@ember/object';
  * options - an optional object for given validator -- min, max, nullable etc. -- see validators in util
  *
  * message - string added to the errors array and returned from the validate method if validation fails
+ * function may also be provided with model as single argument that returns a string
  *
  * level - optional string that defaults to 'error'. Currently the only other accepted value is 'warn'
  *
@@ -120,12 +121,14 @@ export function withModelValidations(validations) {
               : validator(get(this, key), options); // dot notation may be used to define key for nested property
 
             if (!passedValidation) {
+              // message can also be a function
+              const validationMessage = typeof message === 'function' ? message(this) : message;
               // consider setting a prop like validationErrors directly on the model
               // for now return an errors object
               if (level === 'warn') {
-                state[key].warnings.push(message);
+                state[key].warnings.push(validationMessage);
               } else {
-                state[key].errors.push(message);
+                state[key].errors.push(validationMessage);
                 if (isValid) {
                   isValid = false;
                 }

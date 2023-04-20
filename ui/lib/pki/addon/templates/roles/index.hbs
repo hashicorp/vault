@@ -8,15 +8,16 @@
   }}
   @isEngine={{true}}
 />
-<Toolbar>
-  <ToolbarActions>
-    <ToolbarLink @type="add" @route="roles.create" data-test-pki-role-create-link>
-      Create role
-    </ToolbarLink>
-  </ToolbarActions>
-</Toolbar>
 
 {{#if this.model.hasConfig}}
+  <Toolbar>
+    <ToolbarActions>
+      <ToolbarLink @type="add" @route="roles.create" data-test-pki-role-create-link>
+        Create role
+      </ToolbarLink>
+    </ToolbarActions>
+  </Toolbar>
+
   {{#if this.model.roles.length}}
     {{#each this.model.roles as |pkiRole|}}
       <LinkedBlock class="list-item-row" @params={{array "roles.role.details" pkiRole.id}} @linkPrefix={{this.mountPoint}}>
@@ -65,7 +66,8 @@
     </EmptyState>
   {{/if}}
 {{else}}
-  <EmptyState @title="PKI not configured" @message={{this.message}}>
+  <Toolbar />
+  <EmptyState @title="PKI not configured" @message={{this.notConfiguredMessage}}>
     <LinkTo @route="configuration.create">
       Configure PKI
     </LinkTo>

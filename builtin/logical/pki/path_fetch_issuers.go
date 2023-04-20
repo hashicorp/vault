@@ -1192,8 +1192,19 @@ func (b *backend) pathGetIssuerCRL(ctx context.Context, req *logical.Request, da
 	}
 
 	sc := b.makeStorageContext(ctx, req.Storage)
-	if err := b.crlBuilder.rebuildIfForced(sc); err != nil {
+	warnings, err := b.crlBuilder.rebuildIfForced(sc)
+	if err != nil {
 		return nil, err
+	}
+	if len(warnings) > 0 {
+		// Since this is a fetch of a specific CRL, this most likely comes
+		// from an automated system of some sort; these warnings would be
+		// ignored and likely meaningless. Log them instead.
+		msg := "During rebuild of CRL on issuer CRL fetch, got the following warnings:"
+		for index, warning := range warnings {
+			msg = fmt.Sprintf("%v\n %d. %v", msg, index+1, warning)
+		}
+		b.Logger().Warn(msg)
 	}
 
 	var certificate []byte

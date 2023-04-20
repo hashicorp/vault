@@ -53,11 +53,17 @@ func pathUsers(b *backend) *framework.Path {
 			"groups": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-separated list of additional groups associated with the user.",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Description: "A list of additional groups associated with the user.",
+				},
 			},
 
 			"policies": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-separated list of policies associated with the user.",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Description: "A list of policies associated with the user.",
+				},
 			},
 		},
 

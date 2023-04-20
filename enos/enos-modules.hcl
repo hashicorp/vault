@@ -68,13 +68,33 @@ module "shutdown_multiple_nodes" {
   source = "./modules/shutdown_multiple_nodes"
 }
 
+module "target_ec2_instances" {
+  source = "./modules/target_ec2_instances"
+
+  common_tags    = var.tags
+  instance_count = var.vault_instance_count
+  project_name   = var.project_name
+  ssh_keypair    = var.aws_ssh_keypair_name
+}
+
+module "target_ec2_spot_fleet" {
+  source = "./modules/target_ec2_spot_fleet"
+
+  common_tags      = var.tags
+  instance_mem_min = 4096
+  instance_cpu_min = 2
+  project_name     = var.project_name
+  // Current on-demand cost of t3.medium in us-east.
+  spot_price_max = "0.0416"
+  ssh_keypair    = var.aws_ssh_keypair_name
+}
+
 module "vault_agent" {
   source = "./modules/vault_agent"
 
   vault_install_dir    = var.vault_install_dir
   vault_instance_count = var.vault_instance_count
 }
-
 
 module "vault_verify_agent_output" {
   source = "./modules/vault_verify_agent_output"
@@ -83,15 +103,9 @@ module "vault_verify_agent_output" {
 }
 
 module "vault_cluster" {
-  source = "app.terraform.io/hashicorp-qti/aws-vault/enos"
-  # source = "../../terraform-enos-aws-vault"
+  source = "./modules/vault_cluster"
 
-  common_tags       = var.tags
-  environment       = "ci"
-  instance_count    = var.vault_instance_count
-  project_name      = var.project_name
-  ssh_aws_keypair   = var.aws_ssh_keypair_name
-  vault_install_dir = var.vault_install_dir
+  install_dir = var.vault_install_dir
 }
 
 module "vault_get_cluster_ips" {
