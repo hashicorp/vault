@@ -172,7 +172,7 @@ var jsonConfigDefault = []byte(`
   "username_as_alias": false,
   "request_timeout": 90,
   "dereference_aliases": "never",
-  "max_page_size": 100,
+  "max_page_size": 2147483647,
   "CaseSensitiveNames": false,
   "ClientTLSCert": "",
   "ClientTLSKey": ""

@@ -1192,6 +1192,7 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 			"token_period":           "5m",
 			"token_explicit_max_ttl": "24h",
 			"request_timeout":        cfg.RequestTimeout,
+			"max_page_size":          cfg.MaximumPageSize,
 		},
 		Storage:    storage,
 		Connection: &logical.Connection{},
@@ -1235,7 +1236,7 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 			RequestTimeout:           cfg.RequestTimeout,
 			UsernameAsAlias:          false,
 			DerefAliases:             "never",
-			MaximumPageSize:          100,
+			MaximumPageSize:          1000,
 		},
 	}
 
