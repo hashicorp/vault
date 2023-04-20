@@ -8,9 +8,13 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"net"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 
@@ -218,7 +222,7 @@ func (b *backend) acmeFetchCertOrderHandler(ac *acmeContext, _ *logical.Request,
 	}, nil
 }
 
-func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, _ *logical.Request, fields *framework.FieldData, uc *jwsCtx, data map[string]interface{}, _ *acmeAccount) (*logical.Response, error) {
+func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, _ *logical.Request, fields *framework.FieldData, uc *jwsCtx, data map[string]interface{}, account *acmeAccount) (*logical.Response, error) {
 	orderId := fields.Get("order_id").(string)
 
 	csr, err := parseCsrFromFinalize(data)
@@ -236,7 +240,17 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, _ *logical.Request, 
 	//	return nil, fmt.Errorf("%w: order is status %s, needs to be in ready state", ErrOrderNotReady, order.Status)
 	//}
 
-	// TODO Compare the CSR values to what we had okay'd in the order to make sure they match
+	if !order.Expires.IsZero() && time.Now().After(order.Expires) {
+		return nil, fmt.Errorf("%w: order %s is expired", ErrMalformed, orderId)
+	}
+
+	if err = validateCsrMatchesOrder(csr, order); err != nil {
+		return nil, err
+	}
+
+	if err = validateCsrNotUsingAccountKey(csr, uc); err != nil {
+		return nil, err
+	}
 
 	signedCertBundle, issuerId, err := issueCertFromCsr(ac, csr)
 	if err != nil {
@@ -261,6 +275,93 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, _ *logical.Request, 
 	}
 
 	return formatOrderResponse(ac, order), nil
+}
+
+func validateCsrNotUsingAccountKey(csr *x509.CertificateRequest, uc *jwsCtx) error {
+	csrKey := csr.PublicKey
+	userKey := uc.Key.Public().Key
+
+	sameKey, err := certutil.ComparePublicKeysAndType(csrKey, userKey)
+	if err != nil {
+		return err
+	}
+
+	if sameKey {
+		return fmt.Errorf("%w: certificate public key must not match account key", ErrBadCSR)
+	}
+
+	return nil
+}
+
+func validateCsrMatchesOrder(csr *x509.CertificateRequest, order *acmeOrder) error {
+	csrDNSIdentifiers, csrIPIdentifiers := getIdentifiersFromCSR(csr)
+	orderDNSIdentifiers := strutil.RemoveDuplicates(order.getIdentifierDNSValues(), true)
+	orderIPIdentifiers := removeDuplicatesAndSortIps(order.getIdentifierIPValues())
+
+	if len(orderDNSIdentifiers) == 0 && len(orderIPIdentifiers) == 0 {
+		return fmt.Errorf("%w: order did not include any identifiers", ErrServerInternal)
+	}
+
+	if len(orderDNSIdentifiers) != len(csrDNSIdentifiers) {
+		return fmt.Errorf("%w: Order and CSR mismatch on number of DNS identifiers", ErrBadCSR)
+	}
+
+	if len(orderIPIdentifiers) != len(csrIPIdentifiers) {
+		return fmt.Errorf("%w: Order and CSR mismatch on number of IP identifiers", ErrBadCSR)
+	}
+
+	for i, identifier := range orderDNSIdentifiers {
+		if identifier != csrDNSIdentifiers[i] {
+			return fmt.Errorf("%w: CSR is missing order DNS identifier %s", ErrBadCSR, identifier)
+		}
+	}
+
+	for i, identifier := range orderIPIdentifiers {
+		if !identifier.Equal(csrIPIdentifiers[i]) {
+			return fmt.Errorf("%w: CSR is missing order IP identifier %s", ErrBadCSR, identifier.String())
+		}
+	}
+
+	// Since we do not support NotBefore/NotAfter dates at this time no need to validate CSR/Order match.
+
+	return nil
+}
+
+func getIdentifiersFromCSR(csr *x509.CertificateRequest) ([]string, []net.IP) {
+	dnsIdentifiers := append([]string(nil), csr.DNSNames...)
+	ipIdentifiers := append([]net.IP(nil), csr.IPAddresses...)
+
+	if csr.Subject.CommonName != "" {
+		ip := net.ParseIP(csr.Subject.CommonName)
+		if ip != nil {
+			ipIdentifiers = append(ipIdentifiers, ip)
+		} else {
+			dnsIdentifiers = append(dnsIdentifiers, csr.Subject.CommonName)
+		}
+	}
+
+	return strutil.RemoveDuplicates(dnsIdentifiers, true), removeDuplicatesAndSortIps(ipIdentifiers)
+}
+
+func removeDuplicatesAndSortIps(ipIdentifiers []net.IP) []net.IP {
+	var uniqueIpIdentifiers []net.IP
+	for _, ip := range ipIdentifiers {
+		found := false
+		for _, curIp := range uniqueIpIdentifiers {
+			if curIp.Equal(ip) {
+				found = true
+			}
+		}
+
+		if !found {
+			uniqueIpIdentifiers = append(uniqueIpIdentifiers, ip)
+		}
+	}
+
+	sort.Slice(uniqueIpIdentifiers, func(i, j int) bool {
+		return uniqueIpIdentifiers[i].String() < uniqueIpIdentifiers[j].String()
+	})
+	return uniqueIpIdentifiers
 }
 
 func storeCertificate(sc *storageContext, signedCertBundle *certutil.ParsedCertBundle) error {
@@ -371,6 +472,9 @@ func parseCsrFromFinalize(data map[string]interface{}) (*x509.CertificateRequest
 		return nil, fmt.Errorf("%w: failed to parse csr: %s", ErrMalformed, err.Error())
 	}
 
+	if csr.PublicKey == nil || csr.PublicKeyAlgorithm == x509.UnknownPublicKeyAlgorithm {
+		return nil, fmt.Errorf("%w: failed to parse csr no public key info or unknown key algorithm used", ErrBadCSR)
+	}
 	return csr, nil
 }
 
@@ -456,6 +560,10 @@ func (b *backend) acmeNewOrderHandler(ac *acmeContext, _ *logical.Request, _ *fr
 		return nil, err
 	}
 
+	if !notBefore.IsZero() || !notAfter.IsZero() {
+		return nil, fmt.Errorf("%w: NotBefore and NotAfter are not supported", ErrMalformed)
+	}
+
 	err = validateAcmeProvidedOrderDates(notBefore, notAfter)
 	if err != nil {
 		return nil, err
@@ -493,17 +601,9 @@ func (b *backend) acmeNewOrderHandler(ac *acmeContext, _ *logical.Request, _ *fr
 		OrderId:          genUuid(),
 		AccountId:        account.KeyId,
 		Status:           ACMEOrderPending,
-		Expires:          time.Now().Add(1 * time.Hour).Format(time.RFC3339),
+		Expires:          time.Now().Add(24 * time.Hour), // TODO: Readjust this based on authz and/or config
 		Identifiers:      identifiers,
 		AuthorizationIds: authorizationIds,
-	}
-
-	if !notBefore.IsZero() {
-		order.NotBefore = notBefore.Format(time.RFC3339)
-	}
-
-	if !notAfter.IsZero() {
-		order.NotAfter = notAfter.Format(time.RFC3339)
 	}
 
 	err = b.acmeState.SaveOrder(ac, order)
@@ -552,7 +652,7 @@ func formatOrderResponse(acmeCtx *acmeContext, order *acmeOrder) *logical.Respon
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"status":         order.Status,
-			"expires":        order.Expires,
+			"expires":        order.Expires.Format(time.RFC3339),
 			"identifiers":    order.Identifiers,
 			"authorizations": authorizationUrls,
 			"finalize":       baseOrderUrl + "/finalize",
@@ -659,17 +759,6 @@ func parseOrderIdentifiers(data map[string]interface{}) ([]*ACMEIdentifier, erro
 			return nil, fmt.Errorf("invalid type for type argument (%T) for value in 'identifiers': %w", typeStr, ErrMalformed)
 		}
 
-		var acmeIdentifierType ACMEIdentifierType
-		switch typeStr {
-		// TODO: No support for this yet.
-		// case string(ACMEIPIdentifier):
-		//	acmeIdentifierType = ACMEIPIdentifier
-		case string(ACMEDNSIdentifier):
-			acmeIdentifierType = ACMEDNSIdentifier
-		default:
-			return nil, fmt.Errorf("unsupported identifier type %s: %w", typeStr, ErrUnsupportedIdentifier)
-		}
-
 		valueVal, present := mapIdentifier["value"]
 		if !present {
 			return nil, fmt.Errorf("missing value argument for value in 'identifiers': %w", ErrMalformed)
@@ -683,16 +772,31 @@ func parseOrderIdentifiers(data map[string]interface{}) ([]*ACMEIdentifier, erro
 			return nil, fmt.Errorf("value argument for value in 'identifiers' can not be blank: %w", ErrMalformed)
 		}
 
-		p := idna.New(idna.ValidateForRegistration())
-		converted, err := p.ToASCII(valueStr)
-		if err != nil {
-			return nil, fmt.Errorf("value argument (%s) failed validation: %s: %w", valueStr, err.Error(), ErrMalformed)
-		}
+		switch typeStr {
+		case string(ACMEIPIdentifier):
+			ip := net.ParseIP(valueStr)
+			if ip == nil {
+				return nil, fmt.Errorf("value argument (%s) failed validation: failed parsing as IP: %w", valueStr, ErrMalformed)
+			}
+			identifiers = append(identifiers, &ACMEIdentifier{
+				Type:  ACMEIPIdentifier,
+				Value: valueStr,
+			})
 
-		identifiers = append(identifiers, &ACMEIdentifier{
-			Type:  acmeIdentifierType,
-			Value: converted,
-		})
+		case string(ACMEDNSIdentifier):
+			p := idna.New(idna.ValidateForRegistration())
+			converted, err := p.ToASCII(valueStr)
+			if err != nil {
+				return nil, fmt.Errorf("value argument (%s) failed validation: %s: %w", valueStr, err.Error(), ErrMalformed)
+			}
+
+			identifiers = append(identifiers, &ACMEIdentifier{
+				Type:  ACMEDNSIdentifier,
+				Value: converted,
+			})
+		default:
+			return nil, fmt.Errorf("unsupported identifier type %s: %w", typeStr, ErrUnsupportedIdentifier)
+		}
 	}
 
 	return identifiers, nil

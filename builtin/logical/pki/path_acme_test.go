@@ -55,10 +55,10 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			baseAcmeURL := "/v1/pki" + tc.prefixUrl + "/acme/"
-			key, err := rsa.GenerateKey(rand.Reader, 2048)
+			accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
 			require.NoError(t, err, "failed creating rsa key")
 
-			acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, key)
+			acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)
 
 			t.Logf("Testing discover on %s", baseAcmeURL)
 			discovery, err := acmeClient.Discover(testCtx)
@@ -104,11 +104,18 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			require.Contains(t, acct2.Contact, "mailto:test3@example.com")
 			require.Len(t, acct2.Contact, 1)
 
+			// Make sure order's do not accept dates
+			_, err = acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{{Type: "dns", Value: "localhost"}},
+				acme.WithOrderNotBefore(time.Now().Add(10*time.Minute)))
+			require.Error(t, err, "should have rejected a new order with NotBefore set")
+
+			_, err = acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{{Type: "dns", Value: "localhost"}},
+				acme.WithOrderNotAfter(time.Now().Add(10*time.Minute)))
+			require.Error(t, err, "should have rejected a new order with NotAfter set")
+
 			// Create an order
 			t.Logf("Testing Authorize Order on %s", baseAcmeURL)
-			createOrder, err := acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{{Type: "dns", Value: "localhost"}},
-				acme.WithOrderNotBefore(time.Now().Add(10*time.Minute)),
-				acme.WithOrderNotAfter(time.Now().Add(7*24*time.Hour)))
+			createOrder, err := acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{{Type: "dns", Value: "localhost"}})
 			require.NoError(t, err, "failed creating order")
 			require.Equal(t, acme.StatusPending, createOrder.Status)
 			require.Empty(t, createOrder.CertURL)
@@ -149,14 +156,34 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 
 			require.NotEmpty(t, challenge.Token, "missing challenge token")
 
-			// Create and send a CSR, this ACME library within CreateOrderCert, merges the finalize and cert fetching
-			// into a single call.
-			cr := &x509.CertificateRequest{
+			// Make sure sending a CSR with the account key gets rejected.
+			goodCr := &x509.CertificateRequest{
 				Subject: pkix.Name{CommonName: createOrder.Identifiers[0].Value},
 			}
+
+			// We want to make sure people are not using the same keys for CSR/Certs and their ACME account.
+			csrSignedWithAccountKey, err := x509.CreateCertificateRequest(rand.Reader, goodCr, accountKey)
+			require.NoError(t, err, "failed generating csr")
+			_, _, err = acmeClient.CreateOrderCert(testCtx, createOrder.FinalizeURL, csrSignedWithAccountKey, true)
+			require.Error(t, err, "should not be allowed to use the account key for a CSR")
+
 			csrKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 			require.NoError(t, err, "failed generated key for CSR")
-			csr, err := x509.CreateCertificateRequest(rand.Reader, cr, csrKey)
+
+			// Validate we reject CSRs that contain names that aren't in the original order
+			badCr := &x509.CertificateRequest{
+				Subject:  pkix.Name{CommonName: createOrder.Identifiers[0].Value},
+				DNSNames: []string{"www.notinorder.com"},
+			}
+
+			csrWithBadName, err := x509.CreateCertificateRequest(rand.Reader, badCr, csrKey)
+			require.NoError(t, err, "failed generating csr with bad name")
+
+			_, _, err = acmeClient.CreateOrderCert(testCtx, createOrder.FinalizeURL, csrWithBadName, true)
+			require.Error(t, err, "should not be allowed to csr with different names than order")
+
+			// Finally test a proper CSR, with the correct name and signed with a different key works.
+			csr, err := x509.CreateCertificateRequest(rand.Reader, goodCr, csrKey)
 			require.NoError(t, err, "failed generating csr")
 
 			certs, _, err := acmeClient.CreateOrderCert(testCtx, createOrder.FinalizeURL, csr, true)
