@@ -28,52 +28,35 @@
       </h2>
       {{#if @crl.canSet}}
         {{#each @crl.formFields as |attr|}}
-          {{#if (eq attr.name "expiry")}}
-            {{! boolean value is "disable" so false means enabled and ttl is toggled on}}
-            <div class="field">
-              <TtlPicker
-                data-test-input={{attr.name}}
-                @onChange={{fn this.handleTtl attr}}
-                @label={{if (get @crl attr.options.mapToBoolean) attr.options.labelDisabled attr.options.label}}
-                @helperTextDisabled={{attr.options.helperTextDisabled}}
-                @helperTextEnabled={{attr.options.helperTextEnabled}}
-                @initialValue={{get @crl attr.name}}
-                @initialEnabled={{not (get @crl attr.options.mapToBoolean)}}
-              />
-            </div>
-          {{/if}}
-          {{#if
-            (and (eq @crl.disable false) (or (eq attr.name "autoRebuildGracePeriod") (eq attr.name "deltaRebuildInterval")))
-          }}
-            <div class="field">
-              <TtlPicker
-                data-test-input={{attr.name}}
-                @onChange={{fn this.handleTtl attr}}
-                @label={{if (get @crl attr.options.mapToBoolean) attr.options.label attr.options.labelDisabled}}
-                @helperTextDisabled={{attr.options.helperTextDisabled}}
-                @helperTextEnabled={{attr.options.helperTextEnabled}}
-                @initialValue={{get @crl attr.name}}
-                @initialEnabled={{get @crl attr.options.mapToBoolean}}
-              />
-            </div>
-          {{/if}}
-          {{#if (eq attr.name "ocspExpiry")}}
-            <h2 class="title is-4 has-bottom-margin-xs has-border-bottom-light has-bottom-padding-s">
-              Online Certificate Status Protocol (OCSP)
-            </h2>
-            {{! boolean value is "ocspDisable" so false means enabled and ttl is toggled on}}
-            <div class="field">
-              <TtlPicker
-                data-test-input={{attr.name}}
-                @onChange={{fn this.handleTtl attr}}
-                @label={{if (get @crl attr.options.mapToBoolean) attr.options.labelDisabled attr.options.label}}
-                @helperTextDisabled={{attr.options.helperTextDisabled}}
-                @helperTextEnabled={{attr.options.helperTextEnabled}}
-                @initialValue={{get @crl attr.name}}
-                @initialEnabled={{not (get @crl attr.options.mapToBoolean)}}
-              />
-            </div>
-          {{/if}}
+          {{#let (get @crl attr.name) as |attrValue|}}
+            {{#if (eq attr.name "ocspExpiryData")}}
+              <h2 class="title is-4 has-bottom-margin-xs has-border-bottom-light has-bottom-padding-s">
+                Online Certificate Status Protocol (OCSP)
+              </h2>
+            {{/if}}
+            {{#if
+              (or
+                (eq attr.name "crlExpiryData")
+                (eq attr.name "ocspExpiryData")
+                (and
+                  (get @crl.crlExpiryData "enabled")
+                  (or (eq attr.name "autoRebuildData") (eq attr.name "deltaCrlBuildingData"))
+                )
+              )
+            }}
+              <div class="field">
+                <TtlPicker
+                  data-test-input={{attr.name}}
+                  @onChange={{fn this.handleTtl attr}}
+                  @label={{if attrValue.enabled attr.options.label attr.options.labelDisabled}}
+                  @helperTextDisabled={{attr.options.helperTextDisabled}}
+                  @helperTextEnabled={{attr.options.helperTextEnabled}}
+                  @initialEnabled={{attrValue.enabled}}
+                  @initialValue={{attrValue.duration}}
+                />
+              </div>
+            {{/if}}
+          {{/let}}
         {{/each}}
       {{else}}
         <EmptyState

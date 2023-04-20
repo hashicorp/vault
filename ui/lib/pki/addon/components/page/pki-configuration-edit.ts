@@ -20,20 +20,12 @@ interface Args {
   crl: PkiCrlModel;
   urls: PkiUrlsModel;
 }
-
-interface PkiCrlTtls {
-  autoRebuildGracePeriod: string;
-  expiry: string;
-  deltaRebuildInterval: string;
-  ocspExpiry: string;
+interface PkiCrlAttrs {
+  autoRebuildData: object;
+  deltaCrlBuildingData: object;
+  crlExpiryData: object;
+  ocspExpiryData: object;
 }
-interface PkiCrlBooleans {
-  autoRebuild: boolean;
-  enableDelta: boolean;
-  disable: boolean;
-  ocspDisable: boolean;
-}
-
 export default class PkiConfigurationEditComponent extends Component<Args> {
   @service declare readonly router: RouterService;
   @service declare readonly flashMessages: FlashMessageService;
@@ -63,11 +55,7 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
   @action
   handleTtl(attr: FormField, e: TtlEvent) {
     const { enabled, goSafeTimeString } = e;
-    const ttlAttr = attr.name;
-    this.args.crl[ttlAttr as keyof PkiCrlTtls] = goSafeTimeString;
-    // expiry and ocspExpiry both correspond to 'disable' booleans
-    // so when ttl is enabled, the booleans need to be false
-    this.args.crl[attr.options.mapToBoolean as keyof PkiCrlBooleans] =
-      attr.name === 'expiry' || attr.name === 'ocspExpiry' ? !enabled : enabled;
+    const modelAttr = attr.name;
+    this.args.crl[modelAttr as keyof PkiCrlAttrs] = { enabled, duration: goSafeTimeString };
   }
 }

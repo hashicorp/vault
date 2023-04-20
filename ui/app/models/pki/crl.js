@@ -7,58 +7,56 @@ import Model, { attr } from '@ember-data/model';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
-@withFormFields(['expiry', 'autoRebuildGracePeriod', 'deltaRebuildInterval', 'ocspExpiry'])
+@withFormFields(['crlExpiryData', 'autoRebuildData', 'deltaCrlBuildingData', 'ocspExpiryData'])
 export default class PkiCrlModel extends Model {
   // This model uses the backend value as the model ID
-  get useOpenAPI() {
-    return true;
-  }
-  getHelpUrl(backendPath) {
-    return `/v1/${backendPath}/config/crl?help=1`;
-  }
 
-  @attr('boolean') autoRebuild;
-  @attr('string', {
+  @attr('object', {
     label: 'Auto-rebuild on',
     labelDisabled: 'Auto-rebuild off',
     editType: 'ttl',
-    mapToBoolean: 'autoRebuild',
+    defaultValue() {
+      return { enabled: false, duration: '12h' };
+    },
     helperTextEnabled: 'Vault will rebuild the CRL in the below grace period before expiration',
     helperTextDisabled: 'Vault will not automatically rebuild the CRL',
   })
-  autoRebuildGracePeriod;
+  autoRebuildData; // sets auto_rebuild (boolean), auto_rebuild_grace_period (duration)
 
-  @attr('boolean') enableDelta; // add validations auto_rebuild must be enabled
-  @attr('string', {
+  @attr('object', {
     label: 'Delta CRL building on',
     labelDisabled: 'Delta CRL building off',
     editType: 'ttl',
-    mapToBoolean: 'enableDelta',
+    defaultValue() {
+      return { enabled: false, duration: '15m' };
+    },
     helperTextEnabled: 'Vault will rebuild the delta CRL at the interval below:',
     helperTextDisabled: 'Vault will not rebuild the delta CRL at an interval',
   })
-  deltaRebuildInterval;
+  deltaCrlBuildingData; // sets enable_delta (boolean), delta_rebuild_interval (duration)
 
-  @attr('boolean') disable;
-  @attr('string', {
+  @attr('object', {
     label: 'Expiry',
     labelDisabled: 'No expiry',
     editType: 'ttl',
-    mapToBoolean: 'disable',
+    defaultValue() {
+      return { enabled: true, duration: '72h' };
+    },
     helperTextEnabled: 'The CRL will expire after:',
     helperTextDisabled: 'The CRL will not be built.',
   })
-  expiry;
+  crlExpiryData; // sets disable (boolean), expiry (duration)
 
-  @attr('boolean', { label: 'OCSP disable' }) ocspDisable;
-  @attr('string', {
+  @attr('object', {
     label: 'OCSP responder APIs enabled',
     labelDisabled: 'OCSP responder APIs disabled',
-    mapToBoolean: 'ocspDisable',
+    defaultValue() {
+      return { enabled: true, duration: '12h' };
+    },
     helperTextEnabled: "Requests about a certificate's status will be valid for:",
     helperTextDisabled: 'Requests cannot be made to check if an individual certificate is valid.',
   })
-  ocspExpiry;
+  ocspExpiryData; // sets ocsp_disable (boolean), ocsp_expiry (duration)
 
   // TODO missing from designs, enterprise only - add?
   /*
