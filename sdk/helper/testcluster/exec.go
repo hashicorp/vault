@@ -8,7 +8,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -46,6 +45,8 @@ var _ VaultCluster = &ExecDevCluster{}
 type ExecDevClusterOptions struct {
 	ClusterOptions
 	BinaryPath string
+	// this is -dev-listen-address, defaults to "127.0.0.1:8200"
+	BaseListenAddress string
 }
 
 func NewTestExecDevCluster(t *testing.T, opts *ExecDevClusterOptions) *ExecDevCluster {
@@ -106,7 +107,7 @@ func (dc *ExecDevCluster) setupExecDevCluster(ctx context.Context, opts *ExecDev
 		}
 		dc.tmpDir = opts.TmpDir
 	} else {
-		tempDir, err := ioutil.TempDir("", "vault-test-cluster-")
+		tempDir, err := os.MkdirTemp("", "vault-test-cluster-")
 		if err != nil {
 			return err
 		}
@@ -140,17 +141,23 @@ func (dc *ExecDevCluster) setupExecDevCluster(ctx context.Context, opts *ExecDev
 	default:
 		return fmt.Errorf("NumCores=1 and NumCores=3 are the only supported options right now")
 	}
+	if opts.BaseListenAddress != "" {
+		args = append(args, "-dev-listen-address", opts.BaseListenAddress)
+	}
 	cmd := exec.CommandContext(execCtx, bin, args...)
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, "VAULT_LOG_FORMAT=json")
+	cmd.Env = append(cmd.Env, "VAULT_DEV_TEMP_DIR="+dc.tmpDir)
 	if opts.Logger != nil {
 		stdout, err := cmd.StdoutPipe()
 		if err != nil {
 			return err
 		}
 		go func() {
-			// TODO set bigger buffer
+			outlog := opts.Logger.Named("stdout")
 			scanner := bufio.NewScanner(stdout)
 			for scanner.Scan() {
-				opts.Logger.Trace(scanner.Text())
+				outlog.Trace(scanner.Text())
 			}
 		}()
 		stderr, err := cmd.StderrPipe()
@@ -158,9 +165,12 @@ func (dc *ExecDevCluster) setupExecDevCluster(ctx context.Context, opts *ExecDev
 			return err
 		}
 		go func() {
+			errlog := opts.Logger.Named("stderr")
 			scanner := bufio.NewScanner(stderr)
+			// The default buffer is 4k, and Vault can emit bigger log lines
+			scanner.Buffer(make([]byte, 64*1024), bufio.MaxScanTokenSize)
 			for scanner.Scan() {
-				opts.Logger.Trace(scanner.Text())
+				JSONLogNoTimestamp(errlog, scanner.Text())
 			}
 		}()
 	}
@@ -169,7 +179,6 @@ func (dc *ExecDevCluster) setupExecDevCluster(ctx context.Context, opts *ExecDev
 		return err
 	}
 
-	ctx, _ = context.WithTimeout(ctx, 5*time.Second)
 	for ctx.Err() == nil {
 		if b, err := os.ReadFile(clusterJsonPath); err == nil && len(b) > 0 {
 			var clusterJson ClusterJson
@@ -210,7 +219,6 @@ func (dc *ExecDevCluster) setupExecDevCluster(ctx context.Context, opts *ExecDev
 }
 
 type execDevClusterNode struct {
-	// HostPort          string
 	name   string
 	Client *api.Client
 }
@@ -245,7 +253,7 @@ func (dc *ExecDevCluster) GetBarrierKeys() [][]byte {
 	return dc.barrierKeys
 }
 
-func testKeyCopy(key []byte) []byte {
+func copyKey(key []byte) []byte {
 	result := make([]byte, len(key))
 	copy(result, key)
 	return result
@@ -254,7 +262,7 @@ func testKeyCopy(key []byte) []byte {
 func (dc *ExecDevCluster) GetRecoveryKeys() [][]byte {
 	ret := make([][]byte, len(dc.recoveryKeys))
 	for i, k := range dc.recoveryKeys {
-		ret[i] = testKeyCopy(k)
+		ret[i] = copyKey(k)
 	}
 	return ret
 }
@@ -266,14 +274,14 @@ func (dc *ExecDevCluster) GetBarrierOrRecoveryKeys() [][]byte {
 func (dc *ExecDevCluster) SetBarrierKeys(keys [][]byte) {
 	dc.barrierKeys = make([][]byte, len(keys))
 	for i, k := range keys {
-		dc.barrierKeys[i] = testKeyCopy(k)
+		dc.barrierKeys[i] = copyKey(k)
 	}
 }
 
 func (dc *ExecDevCluster) SetRecoveryKeys(keys [][]byte) {
 	dc.recoveryKeys = make([][]byte, len(keys))
 	for i, k := range keys {
-		dc.recoveryKeys[i] = testKeyCopy(k)
+		dc.recoveryKeys[i] = copyKey(k)
 	}
 }
 
