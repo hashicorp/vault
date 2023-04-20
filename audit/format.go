@@ -92,15 +92,6 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 		reqType = "request"
 	}
 
-	// Handle request forwarding metadata
-	var forwarding *RequestForwardingInfo
-	if in.Forwarding != nil {
-		forwarding = &RequestForwardingInfo{
-			From: in.Forwarding.From,
-			To:   in.Forwarding.To,
-		}
-	}
-
 	reqEntry := &AuditRequestEntry{
 		Type:  reqType,
 		Error: errString,
@@ -145,7 +136,7 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 			ReplicationCluster:            req.ReplicationCluster,
 			Headers:                       req.Headers,
 			ClientCertificateSerialNumber: getClientCertificateSerialNumber(connState),
-			Forwarded:                     forwarding,
+			Forwarded:                     requestForwardingInfo(in),
 		},
 	}
 
@@ -176,6 +167,17 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 	}
 
 	return f.AuditFormatWriter.WriteRequest(w, reqEntry)
+}
+
+func requestForwardingInfo(in *logical.LogInput) *RequestForwardingInfo {
+	if in.Forwarding == nil || !in.Forwarding.IsPresent() {
+		return nil
+	}
+
+	return &RequestForwardingInfo{
+		From: in.Forwarding.From,
+		To:   in.Forwarding.To,
+	}
 }
 
 func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config FormatterConfig, in *logical.LogInput) error {
@@ -349,6 +351,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			ClientCertificateSerialNumber: getClientCertificateSerialNumber(connState),
 			ReplicationCluster:            req.ReplicationCluster,
 			Headers:                       req.Headers,
+			Forwarded:                     requestForwardingInfo(in),
 		},
 
 		Response: &AuditResponse{

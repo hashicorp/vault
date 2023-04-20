@@ -28,8 +28,7 @@ type OptMarshaler interface {
 	MarshalJSONWithOptions(*MarshalOptions) ([]byte, error)
 }
 
-// IsPresent can be used to determine whether 'from' and/or 'to' forwarding
-// information is configured on the ForwardingInfo.
+// IsPresent can be used to determine whether 'from' and/or 'to' forwarding information is present.
 func (f *ForwardingInfo) IsPresent() bool {
 	return len(f.From) > 0 || len(f.To) > 0
 }
