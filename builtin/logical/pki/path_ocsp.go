@@ -417,13 +417,19 @@ func genResponse(cfg *crlConfig, caBundle *certutil.ParsedCertBundle, info *ocsp
 		revSigAlg = x509.SHA512WithRSA
 	}
 
+	// Due to a bug in Go's ocsp.ParseResponse(...), we do not provision
+	// Certificate any more on the response to help Go based OCSP clients.
+	// This was technically unnecessary, as the Certificate given here
+	// both signed the OCSP response and issued the leaf cert, and so
+	// should already be trusted by the client.
+	//
+	// See also: https://github.com/golang/go/issues/59641
 	template := ocsp.Response{
 		IssuerHash:         reqHash,
 		Status:             info.ocspStatus,
 		SerialNumber:       info.serialNumber,
 		ThisUpdate:         curTime,
 		NextUpdate:         curTime.Add(duration),
-		Certificate:        caBundle.Certificate,
 		ExtraExtensions:    []pkix.Extension{},
 		SignatureAlgorithm: revSigAlg,
 	}

@@ -829,6 +829,7 @@ func testAccStepConfigUrl(t *testing.T, cfg *ldaputil.ConfigEntry) logicaltest.T
 			"case_sensitive_names": true,
 			"token_policies":       "abc,xyz",
 			"request_timeout":      cfg.RequestTimeout,
+			"connection_timeout":   cfg.ConnectionTimeout,
 			"username_as_alias":    cfg.UsernameAsAlias,
 		},
 	}
@@ -851,6 +852,7 @@ func testAccStepConfigUrlWithAuthBind(t *testing.T, cfg *ldaputil.ConfigEntry) l
 			"case_sensitive_names": true,
 			"token_policies":       "abc,xyz",
 			"request_timeout":      cfg.RequestTimeout,
+			"connection_timeout":   cfg.ConnectionTimeout,
 		},
 	}
 }
@@ -871,6 +873,7 @@ func testAccStepConfigUrlWithDiscover(t *testing.T, cfg *ldaputil.ConfigEntry) l
 			"case_sensitive_names": true,
 			"token_policies":       "abc,xyz",
 			"request_timeout":      cfg.RequestTimeout,
+			"connection_timeout":   cfg.ConnectionTimeout,
 		},
 	}
 }
@@ -888,6 +891,7 @@ func testAccStepConfigUrlNoGroupDN(t *testing.T, cfg *ldaputil.ConfigEntry) logi
 			"discoverdn":           true,
 			"case_sensitive_names": true,
 			"request_timeout":      cfg.RequestTimeout,
+			"connection_timeout":   cfg.ConnectionTimeout,
 		},
 	}
 }
@@ -908,6 +912,7 @@ func testAccStepConfigUrlWarningCheck(t *testing.T, cfg *ldaputil.ConfigEntry, o
 			"case_sensitive_names": true,
 			"token_policies":       "abc,xyz",
 			"request_timeout":      cfg.RequestTimeout,
+			"connection_timeout":   cfg.ConnectionTimeout,
 		},
 		Check: func(response *logical.Response) error {
 			if len(response.Warnings) == 0 {
@@ -1189,6 +1194,7 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 			"token_period":           "5m",
 			"token_explicit_max_ttl": "24h",
 			"request_timeout":        cfg.RequestTimeout,
+			"connection_timeout":     cfg.ConnectionTimeout,
 		},
 		Storage:    storage,
 		Connection: &logical.Connection{},
@@ -1230,6 +1236,7 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 			CaseSensitiveNames:       falseBool,
 			UsePre111GroupCNBehavior: new(bool),
 			RequestTimeout:           cfg.RequestTimeout,
+			ConnectionTimeout:        cfg.ConnectionTimeout,
 			UsernameAsAlias:          false,
 		},
 	}

@@ -645,6 +645,9 @@ type Core struct {
 
 	pendingRemovalMountsAllowed bool
 	expirationRevokeRetryBase   time.Duration
+
+	// if populated, override the default gRPC min connect timeout (currently 20s in grpc 1.51)
+	grpcMinConnectTimeout time.Duration
 }
 
 func (c *Core) HAState() consts.HAState {
@@ -1184,6 +1187,16 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if c.versionHistory == nil {
 		c.logger.Info("Initializing version history cache for core")
 		c.versionHistory = make(map[string]VaultVersion)
+	}
+
+	minConnectTimeoutRaw := os.Getenv("VAULT_GRPC_MIN_CONNECT_TIMEOUT")
+	if minConnectTimeoutRaw != "" {
+		dur, err := time.ParseDuration(minConnectTimeoutRaw)
+		if err != nil {
+			c.logger.Warn("VAULT_GRPC_MIN_CONNECT_TIMEOUT contains non-duration value, ignoring")
+		} else if dur != 0 {
+			c.grpcMinConnectTimeout = dur
+		}
 	}
 
 	return c, nil
