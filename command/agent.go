@@ -957,6 +957,11 @@ func (c *AgentCommand) Run(args []string) int {
 		g.Add(func() error {
 			return es.Run(ctx, config.EnvTemplates, config.Exec)
 		}, func(error) {
+			// Let the lease cache know this is a shutdown; no need to evict
+			// everything
+			if leaseCache != nil {
+				leaseCache.SetShuttingDown(true)
+			}
 			cancelFunc()
 		})
 
