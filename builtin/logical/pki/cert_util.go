@@ -177,8 +177,16 @@ func fetchCertBySerial(sc *storageContext, prefix, serial string) (*logical.Stor
 		legacyPath = "revoked/" + colonSerial
 		path = "revoked/" + hyphenSerial
 	case serial == legacyCRLPath || serial == deltaCRLPath || serial == unifiedCRLPath || serial == unifiedDeltaCRLPath:
-		if err = sc.Backend.crlBuilder.rebuildIfForced(sc); err != nil {
+		warnings, err := sc.Backend.crlBuilder.rebuildIfForced(sc)
+		if err != nil {
 			return nil, err
+		}
+		if len(warnings) > 0 {
+			msg := "During rebuild of CRL for cert fetch, got the following warnings:"
+			for index, warning := range warnings {
+				msg = fmt.Sprintf("%v\n %d. %v", msg, index+1, warning)
+			}
+			sc.Backend.Logger().Warn(msg)
 		}
 
 		unified := serial == unifiedCRLPath || serial == unifiedDeltaCRLPath
