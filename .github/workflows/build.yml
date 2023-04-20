@@ -21,8 +21,11 @@ jobs:
         id: get-changeddir
         env:
           TYPE: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          HEAD_REF: ${{ github.head_ref }}
           BASE: ${{ github.base_ref }}
-        run: ./.github/scripts/verify_changes.sh ${{ env.TYPE }} ${{ env.BASE }}
+        run: ./.github/scripts/verify_changes.sh ${{ env.TYPE }} ${{ env.REF_NAME }} ${{ env.HEAD_REF }} ${{ env.BASE }}
+
   product-metadata:
     # do not run build and test steps for docs changes
     # Following https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/troubleshooting-required-status-checks#handling-skipped-but-required-checks
