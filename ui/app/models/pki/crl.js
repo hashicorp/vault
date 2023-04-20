@@ -21,7 +21,6 @@ export default class PkiCrlModel extends Model {
   @attr('string', {
     label: 'Auto-rebuild on',
     labelDisabled: 'Auto-rebuild off',
-    defaultValue: '12h',
     editType: 'ttl',
     mapToBoolean: 'autoRebuild',
     helperTextEnabled: 'Vault will rebuild the CRL in the below grace period before expiration',
@@ -33,7 +32,6 @@ export default class PkiCrlModel extends Model {
   @attr('string', {
     label: 'Delta CRL building on',
     labelDisabled: 'Delta CRL building off',
-    defaultValue: '15mh',
     editType: 'ttl',
     mapToBoolean: 'enableDelta',
     helperTextEnabled: 'Vault will rebuild the delta CRL at the interval below:',
@@ -45,7 +43,6 @@ export default class PkiCrlModel extends Model {
   @attr('string', {
     label: 'Expiry',
     labelDisabled: 'No expiry',
-    defaultValue: '72h',
     editType: 'ttl',
     mapToBoolean: 'disable',
     helperTextEnabled: 'The CRL will expire after:',
@@ -57,7 +54,6 @@ export default class PkiCrlModel extends Model {
   @attr('string', {
     label: 'OCSP responder APIs enabled',
     labelDisabled: 'OCSP responder APIs disabled',
-    defaultValue: '1h',
     mapToBoolean: 'ocspDisable',
     helperTextEnabled: "Requests about a certificate's status will be valid for:",
     helperTextDisabled: 'Requests cannot be made to check if an individual certificate is valid.',
