@@ -524,7 +524,7 @@ where an acme account is not used before it is
 marked as revoked.
 Typically this should be set to a 1.2*(length of
 certificate validity), or similar.
-Defaults to 10512 hours (1.2 years)`,
+Defaults to 100 days.`,
 		Default: int(defaultTidyConfig.RevokeAcmeAccountsSafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
 	}
 
@@ -535,7 +535,7 @@ after an acme account is marked as revoked before
 it is deleted.
 Typically this should be set to a 1.2*(length of
 certificate validity), or similar.
-Defaults to 10512 hours (1.2 years)`,
+Defaults to 50 days.`,
 		Default: int(defaultTidyConfig.DeleteAcmeAccountsSafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
 	}
 
