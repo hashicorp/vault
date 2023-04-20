@@ -36,6 +36,11 @@
       }
     }
     li {
+      // solves for tools -> sub-tabs like "Unwrap data" -> "Data"
+      &.is-active {
+        border-bottom: 2px solid $blue;
+        color: $blue;
+      }
       // solves for tabs on secret engines
       > a &.active {
         border-bottom: 2px solid $blue;
