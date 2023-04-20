@@ -1,0 +1,3 @@
+```release-note:improvement
+audit: forwarded requests now contain metadata on the node it was sent 'from' and the primary node it is sent 'to'
+```
