@@ -517,7 +517,7 @@ Defaults to 8760 hours (1 year).`,
 		Default: int(defaultTidyConfig.IssuerSafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
 	}
 
-	fields["acme_account_revocation_safety_buffer"] = &framework.FieldSchema{
+	fields["revoke_acme_accounts_safety_buffer"] = &framework.FieldSchema{
 		Type: framework.TypeDurationSecond,
 		Description: `The amount of extra time that must have passed
 where an acme account is not used before it is
@@ -528,7 +528,7 @@ Defaults to 10512 hours (1.2 years)`,
 		Default: int(defaultTidyConfig.RevokeAcmeAccountsSafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
 	}
 
-	fields["acme_account_revocation_safety_buffer"] = &framework.FieldSchema{
+	fields["delete_acme_accounts_safety_buffer"] = &framework.FieldSchema{
 		Type: framework.TypeDurationSecond,
 		Description: `The amount of extra time that must have passed
 after an acme account is marked as revoked before
