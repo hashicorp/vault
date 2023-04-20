@@ -60,6 +60,7 @@ import (
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/eventbus"
 	"github.com/hashicorp/vault/vault/quotas"
+	"github.com/hashicorp/vault/vault/replication"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
 	"github.com/patrickmn/go-cache"
@@ -519,9 +520,9 @@ type Core struct {
 
 	// The active set of upstream cluster addresses; stored via the Echo
 	// mechanism, loaded by the balancer
-	atomicPrimaryClusterAddrs *atomic.Value
+	atomicPrimaryClusterAddrs *atomic.Pointer[replication.Primaries]
 
-	atomicPrimaryFailoverAddrs *atomic.Value
+	atomicPrimaryFailoverAddrs *atomic.Pointer[replication.Primaries]
 
 	// replicationState keeps the current replication state cached for quick
 	// lookup; activeNodeReplicationState stores the active value on standbys
@@ -704,6 +705,8 @@ type Core struct {
 
 	// if populated, override the default gRPC min connect timeout (currently 20s in grpc 1.51)
 	grpcMinConnectTimeout time.Duration
+
+	synchronousMerkleClean bool
 }
 
 // c.stateLock needs to be held in read mode before calling this function.
@@ -861,6 +864,8 @@ type CoreConfig struct {
 	PendingRemovalMountsAllowed bool
 
 	ExpirationRevokeRetryBase time.Duration
+
+	SynchronousMerkleClean bool
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -990,8 +995,8 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		introspectionEnabled:           conf.EnableIntrospection,
 		shutdownDoneCh:                 new(atomic.Value),
 		replicationState:               new(uint32),
-		atomicPrimaryClusterAddrs:      new(atomic.Value),
-		atomicPrimaryFailoverAddrs:     new(atomic.Value),
+		atomicPrimaryClusterAddrs:      new(atomic.Pointer[replication.Primaries]),
+		atomicPrimaryFailoverAddrs:     new(atomic.Pointer[replication.Primaries]),
 		localClusterPrivateKey:         new(atomic.Value),
 		localClusterCert:               new(atomic.Value),
 		localClusterParsedCert:         new(atomic.Value),
@@ -1027,6 +1032,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		experiments:                    conf.Experiments,
 		pendingRemovalMountsAllowed:    conf.PendingRemovalMountsAllowed,
 		expirationRevokeRetryBase:      conf.ExpirationRevokeRetryBase,
+		synchronousMerkleClean:         conf.SynchronousMerkleClean,
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))
