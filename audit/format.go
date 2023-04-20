@@ -91,7 +91,6 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 	if reqType == "" {
 		reqType = "request"
 	}
-
 	reqEntry := &AuditRequestEntry{
 		Type:  reqType,
 		Error: errString,
