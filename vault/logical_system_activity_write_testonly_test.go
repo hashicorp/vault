@@ -93,7 +93,6 @@ func TestSystemBackend_handleActivityWriteData(t *testing.T) {
 func Test_singleMonthActivityClients_addNewClients(t *testing.T) {
 	tests := []struct {
 		name          string
-		namespace     string
 		mount         string
 		clients       *generation.Client
 		wantNamespace string
@@ -102,15 +101,13 @@ func Test_singleMonthActivityClients_addNewClients(t *testing.T) {
 	}{
 		{
 			name:          "default mount and namespace are used",
-			namespace:     "default_ns",
 			mount:         "default_mount",
-			wantNamespace: "default_ns",
+			wantNamespace: namespace.RootNamespaceID,
 			wantMount:     "default_mount",
 			clients:       &generation.Client{},
 		},
 		{
 			name:          "record namespace is used, default mount is used",
-			namespace:     "default_ns",
 			mount:         "default_mount",
 			wantNamespace: "ns",
 			wantMount:     "default_mount",
@@ -157,7 +154,7 @@ func Test_singleMonthActivityClients_addNewClients(t *testing.T) {
 			m := &singleMonthActivityClients{
 				allClients: make(map[string]*activity.EntityRecord),
 			}
-			err := m.addNewClients(tt.clients, tt.namespace, tt.mount)
+			err := m.addNewClients(tt.clients, tt.mount)
 			require.NoError(t, err)
 			numNew := tt.clients.Count
 			if numNew == 0 {

@@ -73,9 +73,8 @@ type multipleMonthsActivityClients struct {
 }
 
 // addNewClients generates clients according to the given parameters, and adds them to the month
-// if the namespace is empty, the client will be added to the defaultNamespace
-// the client will always have the actualMount as its mount accessor
-func (m *singleMonthActivityClients) addNewClients(c *generation.Client, defaultNamespace, actualMount string) error {
+// the client will always have the mountAccessor as its mount accessor
+func (s *singleMonthActivityClients) addNewClients(c *generation.Client, mountAccessor string) error {
 	count := 1
 	if c.Count > 1 {
 		count = int(c.Count)
@@ -85,7 +84,7 @@ func (m *singleMonthActivityClients) addNewClients(c *generation.Client, default
 			ClientID:      c.Id,
 			NamespaceID:   c.Namespace,
 			NonEntity:     c.NonEntity,
-			MountAccessor: actualMount,
+			MountAccessor: mountAccessor,
 		}
 		if record.ClientID == "" {
 			var err error
@@ -95,15 +94,15 @@ func (m *singleMonthActivityClients) addNewClients(c *generation.Client, default
 			}
 		}
 		if record.NamespaceID == "" {
-			record.NamespaceID = defaultNamespace
+			record.NamespaceID = namespace.RootNamespaceID
 		}
-		m.allClients[record.ClientID] = record
+		s.allClients[record.ClientID] = record
 		seen := 1
 		if c.TimesSeen > 1 {
 			seen = int(c.TimesSeen)
 		}
 		for j := 0; j < seen; j++ {
-			m.clients = append(m.clients, record.ClientID)
+			s.clients = append(s.clients, record.ClientID)
 		}
 	}
 	return nil
@@ -116,20 +115,16 @@ func (m *multipleMonthsActivityClients) processMonth(ctx context.Context, core *
 	}
 
 	// default to using the root namespace and the first mount on the root namespace
-	defaultNamespace := namespace.RootNamespaceID
 	mounts, err := core.ListMounts()
 	if err != nil {
 		return err
 	}
-	defaultMount := ""
+	defaultMountAccessor := ""
 	for _, mount := range mounts {
-		if mount.NamespaceID == defaultNamespace {
-			defaultMount = mount.Accessor
+		if mount.NamespaceID == namespace.RootNamespaceID {
+			defaultMountAccessor = mount.Accessor
 			break
 		}
-	}
-	if defaultMount == "" {
-		return fmt.Errorf("no mounts found in namespace %s", defaultNamespace)
 	}
 	addingTo := m.months[month.GetMonthsAgo()]
 
@@ -138,7 +133,7 @@ func (m *multipleMonthsActivityClients) processMonth(ctx context.Context, core *
 			return errors.New("repeated clients are not yet supported")
 		}
 
-		mountAccessor := defaultMount
+		mountAccessor := defaultMountAccessor
 		if clients.Namespace != "" {
 			mountAccessor = ""
 			// verify that the namespace exists, if the input data has specified one
@@ -153,7 +148,7 @@ func (m *multipleMonthsActivityClients) processMonth(ctx context.Context, core *
 				if mountEntry != nil {
 					mountAccessor = mountEntry.Accessor
 				}
-			} else if clients.Namespace != defaultNamespace {
+			} else if clients.Namespace != namespace.RootNamespaceID {
 				// if we're not using the root namespace, find a mount on the namespace that we are using
 				for _, mount := range mounts {
 					if mount.NamespaceID == clients.Namespace {
@@ -162,13 +157,13 @@ func (m *multipleMonthsActivityClients) processMonth(ctx context.Context, core *
 					}
 				}
 			} else {
-				mountAccessor = defaultMount
+				mountAccessor = defaultMountAccessor
 			}
 			if mountAccessor == "" {
 				return fmt.Errorf("unable to find matching mount in namespace %s", clients.Namespace)
 			}
 		}
-		err := addingTo.addNewClients(clients, defaultNamespace, mountAccessor)
+		err := addingTo.addNewClients(clients, mountAccessor)
 		if err != nil {
 			return err
 		}
