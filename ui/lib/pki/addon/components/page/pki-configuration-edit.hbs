@@ -17,7 +17,7 @@
           @title="You do not have permission to set URLs"
           @message="Ask your administrator if you think you should have access to:"
         >
-          <code>POST /{{@engine.id}}/config/urls</code>
+          <code>POST /{{@backend}}/config/urls</code>
         </EmptyState>
       {{/if}}
     </fieldset>
@@ -81,7 +81,7 @@
           @title="You do not have permission to set revocation configuration"
           @message="Ask your administrator if you think you should have access to:"
         >
-          <code>POST /{{@engine.id}}/config/crl</code>
+          <code>POST /{{@backend}}/config/crl</code>
         </EmptyState>
       {{/if}}
     </fieldset>
