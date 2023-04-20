@@ -698,8 +698,6 @@ type Core struct {
 
 	// if populated, override the default gRPC min connect timeout (currently 20s in grpc 1.51)
 	grpcMinConnectTimeout time.Duration
-
-	synchronousMerkleClean bool
 }
 
 // c.stateLock needs to be held in read mode before calling this function.
@@ -857,8 +855,6 @@ type CoreConfig struct {
 	PendingRemovalMountsAllowed bool
 
 	ExpirationRevokeRetryBase time.Duration
-
-	SynchronousMerkleClean bool
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -1023,7 +1019,6 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		experiments:                    conf.Experiments,
 		pendingRemovalMountsAllowed:    conf.PendingRemovalMountsAllowed,
 		expirationRevokeRetryBase:      conf.ExpirationRevokeRetryBase,
-		synchronousMerkleClean:         conf.SynchronousMerkleClean,
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))
