@@ -14,16 +14,17 @@
   box-shadow: $box-shadow !important;
 }
 
-.is-bottomless {
-  box-shadow: 0 -1px 0 0 $grey-light;
-}
-
 .is-shadowless {
   box-shadow: none !important;
 }
 
 .is-sideless {
   box-shadow: 0 2px 0 -1px $grey-light, 0 -2px 0 -1px $grey-light;
+}
+
+// this helper needs to go after is-sideless as they are often used together and is-bottomless needs to override is-sideless (no this is not ideal).
+.is-bottomless {
+  box-shadow: 0 -1px 0 0 $grey-light;
 }
 
 // border helpers
@@ -84,13 +85,13 @@
   overflow: hidden;
 }
 
-// screen reader only 
+// screen reader only
 .sr-only {
   border: 0;
   clip-path: inset(50%);
   clip: rect(0 0 0 0);
   height: 1px;
-  margin: -1px;;
+  margin: -1px;
   overflow: hidden;
   padding: 0px;
   position: absolute;
