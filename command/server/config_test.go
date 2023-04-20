@@ -211,7 +211,6 @@ func Test_parseDevTLSConfig(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, fmt.Sprintf("%s/%s", tt.certDirectory, VaultDevCertFilename), cfg.Listeners[0].TLSCertFile)
 			require.Equal(t, fmt.Sprintf("%s/%s", tt.certDirectory, VaultDevKeyFilename), cfg.Listeners[0].TLSKeyFile)
-
 		})
 	}
 }
