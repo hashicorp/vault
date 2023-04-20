@@ -60,7 +60,6 @@ import (
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/eventbus"
 	"github.com/hashicorp/vault/vault/quotas"
-	"github.com/hashicorp/vault/vault/replication"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
 	"github.com/patrickmn/go-cache"
@@ -517,12 +516,6 @@ type Core struct {
 
 	// CORS Information
 	corsConfig *CORSConfig
-
-	// The active set of upstream cluster addresses; stored via the Echo
-	// mechanism, loaded by the balancer
-	atomicPrimaryClusterAddrs *atomic.Pointer[replication.Primaries]
-
-	atomicPrimaryFailoverAddrs *atomic.Pointer[replication.Primaries]
 
 	// replicationState keeps the current replication state cached for quick
 	// lookup; activeNodeReplicationState stores the active value on standbys
@@ -995,8 +988,6 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		introspectionEnabled:           conf.EnableIntrospection,
 		shutdownDoneCh:                 new(atomic.Value),
 		replicationState:               new(uint32),
-		atomicPrimaryClusterAddrs:      new(atomic.Pointer[replication.Primaries]),
-		atomicPrimaryFailoverAddrs:     new(atomic.Pointer[replication.Primaries]),
 		localClusterPrivateKey:         new(atomic.Value),
 		localClusterCert:               new(atomic.Value),
 		localClusterParsedCert:         new(atomic.Value),
