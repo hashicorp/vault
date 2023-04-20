@@ -235,10 +235,16 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, _ *logical.Request, 
 		return nil, err
 	}
 
-	// TODO: Compute this status now based on the various authorization statuses
-	//if order.Status != ACMEOrderReady {
-	//	return nil, fmt.Errorf("%w: order is status %s, needs to be in ready state", ErrOrderNotReady, order.Status)
-	//}
+	if order.Status == ACMEOrderPending {
+		// Lets see if we can update our order status to ready if all the authorizations have been completed.
+		if requiredAuthorizationsCompleted(b, ac, uc, order) {
+			order.Status = ACMEOrderReady
+		}
+	}
+
+	if order.Status != ACMEOrderReady {
+		return nil, fmt.Errorf("%w: order is status %s, needs to be in ready state", ErrOrderNotReady, order.Status)
+	}
 
 	if !order.Expires.IsZero() && time.Now().After(order.Expires) {
 		return nil, fmt.Errorf("%w: order %s is expired", ErrMalformed, orderId)
@@ -275,6 +281,25 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, _ *logical.Request, 
 	}
 
 	return formatOrderResponse(ac, order), nil
+}
+
+func requiredAuthorizationsCompleted(b *backend, ac *acmeContext, uc *jwsCtx, order *acmeOrder) bool {
+	if len(order.AuthorizationIds) == 0 {
+		return false
+	}
+
+	for _, authId := range order.AuthorizationIds {
+		authorization, err := b.acmeState.LoadAuthorization(ac, uc, authId)
+		if err != nil {
+			return false
+		}
+
+		if authorization.Status != ACMEAuthorizationValid {
+			return false
+		}
+	}
+
+	return true
 }
 
 func validateCsrNotUsingAccountKey(csr *x509.CertificateRequest, uc *jwsCtx) error {

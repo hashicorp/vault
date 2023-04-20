@@ -12,12 +12,16 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net/http"
+	"path"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 
 	"github.com/go-test/deep"
 
@@ -155,6 +159,34 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			require.Equal(t, "http-01", challenge.Type)
 
 			require.NotEmpty(t, challenge.Token, "missing challenge token")
+
+			// HACK: Update authorization/challenge to completed as we can't really do it properly in this workflow
+			//       test.
+			pkiMount := findStorageMountUuid(t, client, "pki")
+			accountId := acct.URI[strings.LastIndex(acct.URI, "/"):]
+			authId := auth.URI[strings.LastIndex(auth.URI, "/"):]
+
+			rawPath := path.Join("/sys/raw/logical/", pkiMount, getAuthorizationPath(accountId, authId))
+			resp, err := client.Logical().ReadWithContext(testCtx, rawPath)
+			require.NoError(t, err, "failed looking up authorization storage")
+			require.NotNil(t, resp, "sys raw response was nil")
+			require.NotEmpty(t, resp.Data["value"], "no value field in sys raw response")
+
+			var authz ACMEAuthorization
+			err = jsonutil.DecodeJSON([]byte(resp.Data["value"].(string)), &authz)
+			require.NoError(t, err, "error decoding authorization: %w", err)
+			authz.Status = ACMEAuthorizationValid
+			for _, challenge := range authz.Challenges {
+				challenge.Status = ACMEChallengeValid
+			}
+
+			encodeJSON, err := jsonutil.EncodeJSON(authz)
+			require.NoError(t, err, "failed encoding authz json")
+			_, err = client.Logical().WriteWithContext(testCtx, rawPath, map[string]interface{}{
+				"value":    base64.StdEncoding.EncodeToString(encodeJSON),
+				"encoding": "base64",
+			})
+			require.NoError(t, err, "failed writing authorization storage")
 
 			// Make sure sending a CSR with the account key gets rejected.
 			goodCr := &x509.CertificateRequest{
@@ -402,6 +434,7 @@ func setupTestPkiCluster(t *testing.T) (*vault.TestCluster, *api.Client) {
 		LogicalBackends: map[string]logical.Factory{
 			"pki": Factory,
 		},
+		EnableRaw: true,
 	}
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
