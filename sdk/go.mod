@@ -1,6 +1,8 @@
 module github.com/hashicorp/vault/sdk
 
-go 1.19
+// The Go version directive for the sdk package should be updated whenever the
+// the root go.mod for the hashicorp/vault project gets updated.
+go 1.20
 
 require (
 	github.com/armon/go-metrics v0.3.9
