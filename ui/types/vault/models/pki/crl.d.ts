@@ -4,7 +4,10 @@ import { FormField } from 'vault/app-types';
 export default class PkiCrlModel extends Model {
   autoRebuildData: object;
   deltaCrlBuildingData: object;
-  crlExpiryData: object;
+  crlExpiryData: {
+    enabled: boolean;
+    duration: string;
+  };
   ocspExpiryData: object;
   formFields: FormField[];
   get canSet(): boolean;
