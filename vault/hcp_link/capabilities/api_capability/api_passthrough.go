@@ -68,14 +68,7 @@ func (p *APIPassThroughCapability) Start() error {
 	}
 
 	go func() {
-		if p.scadaServer.TLSConfig == nil {
-			err = p.scadaServer.Serve(listener)
-		} else {
-			// certFile and keyFile not required as server's
-			// TLSConfig.GetCertificate will be used
-			err = p.scadaServer.ServeTLS(listener, "", "")
-		}
-
+		err = p.scadaServer.Serve(listener)
 		p.logger.Error("server closed", "error", err)
 	}()
 
