@@ -344,6 +344,8 @@ func (c *Config) configureTLS(t *TLSConfig) error {
 }
 
 func (c *Config) TLSConfig() *tls.Config {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
 	return c.clientTLSConfig.Clone()
 }
 
