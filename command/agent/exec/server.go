@@ -201,7 +201,7 @@ func (s *Server) Run(ctx context.Context, envTmpls map[string]*config.EnvTemplat
 			}
 
 			if doneRendering {
-				s.logger.Info("done rendering templates, bouncing process")
+				s.logger.Debug("done rendering templates, bouncing process")
 				if err := s.bounceCmd(envVarToContents); err != nil {
 					return fmt.Errorf("unable to bounce command: %w", err)
 				}
@@ -243,7 +243,8 @@ func (s *Server) bounceCmd(newEnvVars map[string]string) error {
 
 func (s *Server) Stop() {
 	if s.stopped.CompareAndSwap(false, true) {
-		close(s.exitCh)
+		// TODO: if exited on its own or forced, we should get something?
+		// close(s.exitCh)
 	}
 }
 
