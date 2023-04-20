@@ -153,7 +153,7 @@ jobs:
         uses: actions/download-artifact@e9ef242655d12993efdcda9058dee2db83a2cb9b
         with:
           name: vault-dev
-          path: bin/vault
+          path: bin
       - name: Make vault dev binary executable
         if: |
           ! contains(inputs.extra-flags, '-race') &&
@@ -202,7 +202,7 @@ jobs:
           fi
 
           if [ -f bin/vault ]; then
-            VAULT_BINARY="$(PWD)/bin/vault"
+            VAULT_BINARY="$(pwd)/bin/vault"
             export VAULT_BINARY
           fi
           
