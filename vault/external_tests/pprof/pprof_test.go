@@ -25,6 +25,7 @@ import (
 )
 
 func TestSysPprof(t *testing.T) {
+	t.Parallel()
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc:             vaulthttp.Handler,
 		RequestResponseCallback: schema.ResponseValidatingCallback(t),
@@ -42,6 +43,7 @@ func TestSysPprof(t *testing.T) {
 // particular reason why TestSysPprof was chosen to validate that mechanism,
 // other than that it was fast and simple.
 func TestSysPprof_Exec(t *testing.T) {
+	t.Parallel()
 	binary := os.Getenv("VAULT_BINARY")
 	if binary == "" {
 		t.Skip("only running exec test when $VAULT_BINARY present")
@@ -50,7 +52,8 @@ func TestSysPprof_Exec(t *testing.T) {
 		ClusterOptions: testcluster.ClusterOptions{
 			NumCores: 1,
 		},
-		BinaryPath: binary,
+		BinaryPath:        binary,
+		BaseListenAddress: "127.0.0.1:8208",
 	})
 	defer cluster.Cleanup()
 
@@ -156,6 +159,7 @@ func testSysPprof(t *testing.T, cluster testcluster.VaultCluster) {
 }
 
 func TestSysPprof_MaxRequestDuration(t *testing.T) {
+	t.Parallel()
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
@@ -209,6 +213,7 @@ func TestSysPprof_MaxRequestDuration(t *testing.T) {
 }
 
 func TestSysPprof_Standby(t *testing.T) {
+	t.Parallel()
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
 		DisablePerformanceStandby: true,
 	}, &vault.TestClusterOptions{
@@ -231,6 +236,7 @@ func TestSysPprof_Standby(t *testing.T) {
 // no particular reason why TestSysPprof was chosen to validate that mechanism,
 // other than that it was fast and simple.
 func TestSysPprof_Standby_Exec(t *testing.T) {
+	t.Parallel()
 	binary := os.Getenv("VAULT_BINARY")
 	if binary == "" {
 		t.Skip("only running exec test when $VAULT_BINARY present")
@@ -241,7 +247,8 @@ func TestSysPprof_Standby_Exec(t *testing.T) {
 				DisablePerformanceStandby: true,
 			},
 		},
-		BinaryPath: binary,
+		BinaryPath:        binary,
+		BaseListenAddress: "127.0.0.1:8210",
 	})
 	defer cluster.Cleanup()
 

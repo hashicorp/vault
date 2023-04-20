@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package testcluster
 
 import (
@@ -5,7 +8,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/vault/api"
 )
 
