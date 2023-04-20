@@ -56,16 +56,15 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
         const isRootRecords = await all(
           records.map((record) => {
             const { certificate } = record.data;
-            const keyId = record.data.key_id;
 
-            return verifyCertificates(certificate, certificate) && !!keyId;
+            return verifyCertificates(certificate, certificate);
           })
         );
 
         res.data.keys = records.map((record, idx) => {
           return {
             ...record.data,
-            isRotatable: isRootRecords[idx],
+            isRoot: isRootRecords[idx],
           };
         });
       }

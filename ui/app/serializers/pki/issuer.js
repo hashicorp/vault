@@ -16,7 +16,7 @@ export default class PkiIssuerSerializer extends ApplicationSerializer {
     keyId: { serialize: false },
     parsedCertificate: { serialize: false },
     commonName: { serialize: false },
-    isRotatable: { serialize: false },
+    isRoot: { serialize: false },
   };
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
@@ -40,14 +40,14 @@ export default class PkiIssuerSerializer extends ApplicationSerializer {
       if (payload.data?.keys && Array.isArray(payload.data.keys)) {
         if (payload.data.keys.length <= 10) {
           return payload.data.keys.map((key) => {
-            const { issuer_id, certificate, isRotatable } = key;
+            const { issuer_id, certificate, isRoot } = key;
             const parsedCert = parseCertificate(certificate);
 
             return {
               issuer_id,
               ...payload.data.key_info[issuer_id],
               parsed_certificate: parsedCert,
-              isRotatable,
+              isRoot,
             };
           });
         } else {
