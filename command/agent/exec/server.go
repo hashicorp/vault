@@ -48,7 +48,6 @@ type Server struct {
 	// from the runner in the event we're using exit after auth.
 	lookupMap map[string][]*ctconfig.TemplateConfig
 
-	DoneCh  chan struct{}
 	stopped *atomic.Bool
 
 	logger hclog.Logger
@@ -63,7 +62,6 @@ type Server struct {
 
 func NewServer(cfg *ServerConfig) *Server {
 	server := Server{
-		DoneCh:       make(chan struct{}),
 		stopped:      atomic.NewBool(false),
 		logger:       cfg.Logger,
 		config:       cfg,
@@ -241,6 +239,12 @@ func (s *Server) bounceCmd(newEnvVars map[string]string) error {
 	}
 	s.childStarted.Store(true)
 	return nil
+}
+
+func (s *Server) Stop() {
+	if s.stopped.CompareAndSwap(false, true) {
+		close(s.exitCh)
+	}
 }
 
 func envsToList(envs map[string]string) []string {

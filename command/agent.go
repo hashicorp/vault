@@ -963,6 +963,7 @@ func (c *AgentCommand) Run(args []string) int {
 				leaseCache.SetShuttingDown(true)
 			}
 			cancelFunc()
+			es.Stop()
 		})
 
 	}
