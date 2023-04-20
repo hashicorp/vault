@@ -6,6 +6,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"text/template"
 
@@ -232,6 +233,12 @@ Default: ({{.UserAttr}}={{.Username}})`,
 			Description: "Timeout, in seconds, when attempting to connect to the LDAP server before trying the next URL in the configuration.",
 			Default:     "30s",
 		},
+
+		"max_page_size": {
+			Type:        framework.TypeInt,
+			Description: "The maximum number of results to return for a single paged query. If not set, the server default will be used for paged searches. A requested max_page_size of 0 is interpreted as no limit by LDAP servers. If set to a negative value, search requests will not be paged.",
+			Default:     math.MaxInt32,
+		},
 	}
 }
 
@@ -402,6 +409,10 @@ func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry
 		cfg.ConnectionTimeout = d.Get("connection_timeout").(int)
 	}
 
+	if _, ok := d.Raw["max_page_size"]; ok || !hadExisting {
+		cfg.MaximumPageSize = d.Get("max_page_size").(int)
+	}
+
 	return cfg, nil
 }
 
@@ -429,6 +440,7 @@ type ConfigEntry struct {
 	UsePre111GroupCNBehavior *bool  `json:"use_pre111_group_cn_behavior"`
 	RequestTimeout           int    `json:"request_timeout"`
 	ConnectionTimeout        int    `json:"connection_timeout"`
+	MaximumPageSize          int    `json:"max_page_size"`
 
 	// These json tags deviate from snake case because there was a past issue
 	// where the tag was being ignored, causing it to be jsonified as "CaseSensitiveNames", etc.
@@ -468,6 +480,7 @@ func (c *ConfigEntry) PasswordlessMap() map[string]interface{} {
 		"request_timeout":        c.RequestTimeout,
 		"connection_timeout":     c.ConnectionTimeout,
 		"username_as_alias":      c.UsernameAsAlias,
+		"max_page_size":          c.MaximumPageSize,
 	}
 	if c.CaseSensitiveNames != nil {
 		m["case_sensitive_names"] = *c.CaseSensitiveNames
