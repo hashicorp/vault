@@ -1194,6 +1194,7 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 			"token_period":           "5m",
 			"token_explicit_max_ttl": "24h",
 			"request_timeout":        cfg.RequestTimeout,
+			"max_page_size":          cfg.MaximumPageSize,
 			"connection_timeout":     cfg.ConnectionTimeout,
 		},
 		Storage:    storage,
@@ -1238,6 +1239,11 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 			RequestTimeout:           cfg.RequestTimeout,
 			ConnectionTimeout:        cfg.ConnectionTimeout,
 			UsernameAsAlias:          false,
+<<<<<<< HEAD
+=======
+			DerefAliases:             "never",
+			MaximumPageSize:          1000,
+>>>>>>> 7f2deb1420 (Add Configurable LDAP Max Page Size (#19032))
 		},
 	}
 
