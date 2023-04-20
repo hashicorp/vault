@@ -32,8 +32,8 @@ func Test_RequestForwarding_ForwardingHeaders(t *testing.T) {
 	err = standby.addForwardingHeaders(req)
 	require.NoError(t, err)
 
-	from := req.Header.Get("X-Vault-Forwarded-From")
-	to := req.Header.Get("X-Vault-Forwarded-To")
+	from := req.Header.Get(HTTPHeaderVaultForwardFrom)
+	to := req.Header.Get(HTTPHeaderVaultForwardTo)
 
 	require.Equal(t, standbyURL.Host, from)
 	require.Equal(t, leaderURL.Host, to)
