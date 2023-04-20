@@ -171,7 +171,6 @@ func (s *Server) Run(ctx context.Context, envTmpls map[string]*config.EnvTemplat
 			if err != nil {
 				return fmt.Errorf("template server failed to create: %w", err)
 			}
-			// TODO: why don't we start the runner above?
 			go s.runner.Start()
 		case <-s.runner.TemplateRenderedCh():
 			// A template has been rendered, figure out what to do
