@@ -5,10 +5,11 @@ package server
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestLoadConfigFile(t *testing.T) {
