@@ -71,11 +71,11 @@ type DockerCluster struct {
 	rootToken string
 	dockerAPI *docker.Client
 	ID        string
+	Logger    log.Logger
 }
 
 func (dc *DockerCluster) NamedLogger(s string) log.Logger {
-	// TODO implement me
-	panic("implement me")
+	return dc.Logger.Named(s)
 }
 
 func (dc *DockerCluster) ClusterID() string {
@@ -398,7 +398,7 @@ func NewTestDockerCluster(t *testing.T, opts *DockerClusterOptions) *DockerClust
 		opts.ClusterName = strings.ReplaceAll(t.Name(), "/", "-")
 	}
 	if opts.Logger == nil {
-		opts.Logger = logging.NewVaultLogger(log.Trace).Named(t.Name()) // .Named("container")
+		opts.Logger = logging.NewVaultLogger(log.Trace).Named(t.Name())
 	}
 	if opts.NetworkName == "" {
 		opts.NetworkName = os.Getenv("TEST_DOCKER_NETWORK_NAME")
@@ -418,6 +418,13 @@ func NewDockerCluster(ctx context.Context, opts *DockerClusterOptions) (*DockerC
 	api, err := dockhelper.NewDockerAPI()
 	if err != nil {
 		return nil, err
+	}
+
+	if opts == nil {
+		opts = &DockerClusterOptions{}
+	}
+	if opts.Logger == nil {
+		opts.Logger = log.NewNullLogger()
 	}
 
 	if opts.VaultBinary != "" {
@@ -458,6 +465,7 @@ func NewDockerCluster(ctx context.Context, opts *DockerClusterOptions) (*DockerC
 		dockerAPI:   api,
 		RaftStorage: true,
 		ClusterName: opts.ClusterName,
+		Logger:      opts.Logger,
 	}
 
 	if err := dc.setupDockerCluster(ctx, opts); err != nil {
@@ -497,33 +505,6 @@ func (n *dockerClusterNode) TLSConfig() *tls.Config {
 
 func (n *dockerClusterNode) APIClient() *api.Client {
 	return n.Client
-}
-
-func (n *dockerClusterNode) Pause(ctx context.Context) error {
-	return n.dockerAPI.ContainerPause(ctx, n.container.ID)
-}
-
-func (n *dockerClusterNode) AddNetworkDelay(ctx context.Context, delay time.Duration, targetIP string) error {
-	stdout, stderr, exitCode, err := n.runner.RunCmdWithOutput(ctx, n.container.ID, []string{
-		"/bin/sh",
-		"-xc", strings.Join([]string{
-			"echo isolating node",
-			"apk add iproute2",
-			"tc qdisc add dev eth0 root handle 1: prio",
-			fmt.Sprintf("tc filter add dev eth0 parent 1:0 protocol ip pref 55 handle ::55 u32 match ip dst %s flowid 2:1", targetIP),
-			fmt.Sprintf("tc qdisc add dev eth0 parent 1:1 handle 2: netem delay %dms", delay/time.Millisecond),
-		}, " && "),
-	})
-	if err != nil {
-		return err
-	}
-
-	n.Logger.Trace(string(stdout))
-	n.Logger.Trace(string(stderr))
-	if exitCode != 0 {
-		return fmt.Errorf("got nonzero exit code from iptables: %d", exitCode)
-	}
-	return nil
 }
 
 // NewAPIClient creates and configures a Vault API client to communicate with
@@ -573,7 +554,7 @@ func (n *dockerClusterNode) cleanup() error {
 	if n.container == nil || n.container.ID == "" {
 		return nil
 	}
-	n.cleanupContainer()
+	// n.cleanupContainer()
 	return nil
 }
 
@@ -707,7 +688,8 @@ func (n *dockerClusterNode) start(ctx context.Context, caDir string, opts *Docke
 			n.Logger.Trace("running poststart", "containerID", containerID, "IP", realIP)
 			return n.runner.RefreshFiles(ctx, containerID)
 		},
-		Capabilities: []string{"NET_ADMIN"},
+		Capabilities:      []string{"NET_ADMIN"},
+		OmitLogTimestamps: true,
 	})
 	if err != nil {
 		return err
@@ -781,13 +763,6 @@ const DefaultNumCores = 3
 
 // creates a managed docker container running Vault
 func (dc *DockerCluster) setupDockerCluster(ctx context.Context, opts *DockerClusterOptions) error {
-	if opts == nil {
-		opts = &DockerClusterOptions{}
-	}
-	if opts.Logger == nil {
-		opts.Logger = log.NewNullLogger()
-	}
-
 	if opts.TmpDir != "" {
 		if _, err := os.Stat(opts.TmpDir); os.IsNotExist(err) {
 			if err := os.MkdirAll(opts.TmpDir, 0o700); err != nil {
@@ -840,7 +815,7 @@ func (dc *DockerCluster) setupDockerCluster(ctx context.Context, opts *DockerClu
 				return nil
 			}
 		} else {
-			if err := dc.joinNode(ctx, i); err != nil {
+			if err := dc.joinNode(ctx, i, 0); err != nil {
 				return err
 			}
 		}
@@ -850,11 +825,15 @@ func (dc *DockerCluster) setupDockerCluster(ctx context.Context, opts *DockerClu
 }
 
 func (dc *DockerCluster) AddNode(ctx context.Context, opts *DockerClusterOptions) error {
+	leaderIdx, err := testcluster.LeaderNode(ctx, dc)
+	if err != nil {
+		return err
+	}
 	if err := dc.addNode(ctx, opts); err != nil {
 		return err
 	}
 
-	return dc.joinNode(ctx, len(dc.ClusterNodes)-1)
+	return dc.joinNode(ctx, len(dc.ClusterNodes)-1, leaderIdx)
 }
 
 func (dc *DockerCluster) addNode(ctx context.Context, opts *DockerClusterOptions) error {
@@ -865,7 +844,7 @@ func (dc *DockerCluster) addNode(ctx context.Context, opts *DockerClusterOptions
 		NodeID:    nodeID,
 		Cluster:   dc,
 		WorkDir:   filepath.Join(dc.tmpDir, nodeID),
-		Logger:    opts.Logger.Named(nodeID),
+		Logger:    dc.Logger.Named(nodeID),
 	}
 	dc.ClusterNodes = append(dc.ClusterNodes, node)
 	if err := os.MkdirAll(node.WorkDir, 0o755); err != nil {
@@ -883,11 +862,7 @@ func (dc *DockerCluster) addNode(ctx context.Context, opts *DockerClusterOptions
 	return nil
 }
 
-func (dc *DockerCluster) joinNode(ctx context.Context, nodeIdx int) error {
-	leaderIdx, err := testcluster.LeaderNode(ctx, dc)
-	if err != nil {
-		return err
-	}
+func (dc *DockerCluster) joinNode(ctx context.Context, nodeIdx int, leaderIdx int) error {
 	leader := dc.ClusterNodes[leaderIdx]
 
 	if nodeIdx >= len(dc.ClusterNodes) {
@@ -897,7 +872,7 @@ func (dc *DockerCluster) joinNode(ctx context.Context, nodeIdx int) error {
 	client := node.APIClient()
 
 	var resp *api.RaftJoinResponse
-	resp, err = client.Sys().RaftJoinWithContext(ctx, &api.RaftJoinRequest{
+	resp, err := client.Sys().RaftJoinWithContext(ctx, &api.RaftJoinRequest{
 		// When running locally on a bridge network, the containers must use their
 		// actual (private) IP to talk to one another.  Our code must instead use
 		// the portmapped address since we're not on their network in that case.

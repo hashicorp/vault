@@ -15,7 +15,6 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -42,23 +41,24 @@ type Runner struct {
 }
 
 type RunOptions struct {
-	ImageRepo       string
-	ImageTag        string
-	ContainerName   string
-	Cmd             []string
-	Entrypoint      []string
-	Env             []string
-	NetworkName     string
-	NetworkID       string
-	CopyFromTo      map[string]string
-	Ports           []string
-	DoNotAutoRemove bool
-	AuthUsername    string
-	AuthPassword    string
-	LogConsumer     func(string)
-	Capabilities    []string
-	PreDelete       bool
-	PostStart       func(string, string) error
+	ImageRepo         string
+	ImageTag          string
+	ContainerName     string
+	Cmd               []string
+	Entrypoint        []string
+	Env               []string
+	NetworkName       string
+	NetworkID         string
+	CopyFromTo        map[string]string
+	Ports             []string
+	DoNotAutoRemove   bool
+	AuthUsername      string
+	AuthPassword      string
+	OmitLogTimestamps bool
+	LogConsumer       func(string)
+	Capabilities      []string
+	PreDelete         bool
+	PostStart         func(string, string) error
 }
 
 func NewDockerAPI() (*client.Client, error) {
@@ -94,7 +94,7 @@ func NewServiceRunner(opts RunOptions) (*Runner, error) {
 			return nil, fmt.Errorf("ContainerName is required for non-library images")
 		}
 		// If there's no slash in the repo it's almost certainly going to be
-		// a good Container name.
+		// a good container name.
 		opts.ContainerName = opts.ImageRepo
 	}
 	return &Runner{
@@ -166,7 +166,7 @@ func (s ServiceURL) URL() *url.URL {
 // connection string (typically a URL) and nil, or empty string and an error.
 type ServiceAdapter func(ctx context.Context, host string, port int) (ServiceConfig, error)
 
-// StartService will start the runner's configured docker Container with a
+// StartService will start the runner's configured docker container with a
 // random UUID suffix appended to the name to make it unique and will return
 // either a hostname or local address depending on if a Docker network was given.
 //
@@ -181,41 +181,25 @@ type LogConsumerWriter struct {
 	consumer func(string)
 }
 
-var wsRegexp = regexp.MustCompile(` +`)
-
 func (l LogConsumerWriter) Write(p []byte) (n int, err error) {
-	trimTS := func(pieces []string) []string {
-		max := 2
-		if len(pieces) < max {
-			max = len(pieces)
-		}
-		for i := 0; i < 2; i++ {
-			if _, err := time.Parse(time.RFC3339, pieces[0]); err != nil {
-				// Once we see a non-timestamp, stop looking for them
-				break
-			} else {
-				pieces = pieces[1:]
-			}
-		}
-		return pieces
-	}
+	// TODO this assumes that we're never passed partial log lines, which
+	// seems a safe assumption for now based on how docker looks to implement
+	// logging, but might change in the future.
 	scanner := bufio.NewScanner(bytes.NewReader(p))
-	// TODO set larger buffer to handle long lines?
+	scanner.Buffer(make([]byte, 64*1024), bufio.MaxScanTokenSize)
 	for scanner.Scan() {
-		pieces := wsRegexp.Split(scanner.Text(), 3)
-		pieces = trimTS(pieces)
-		l.consumer(strings.Join(pieces, " "))
+		l.consumer(scanner.Text())
 	}
 	return len(p), nil
 }
 
 var _ io.Writer = &LogConsumerWriter{}
 
-// StartNewService will start the runner's configured docker Container but with the
+// StartNewService will start the runner's configured docker container but with the
 // ability to control adding a name suffix or forcing a local address to be returned.
-// 'addSuffix' will add a random UUID to the end of the Container name.
-// 'forceLocalAddr' will force the Container address returned to be in the
-// form of '127.0.0.1:1234' where 1234 is the mapped Container port.
+// 'addSuffix' will add a random UUID to the end of the container name.
+// 'forceLocalAddr' will force the container address returned to be in the
+// form of '127.0.0.1:1234' where 1234 is the mapped container port.
 func (d *Runner) StartNewService(ctx context.Context, addSuffix, forceLocalAddr bool, connect ServiceAdapter) (*Service, string, error) {
 	if d.RunOptions.PreDelete {
 		name := d.RunOptions.ContainerName
@@ -232,7 +216,7 @@ func (d *Runner) StartNewService(ctx context.Context, addSuffix, forceLocalAddr 
 		for _, cont := range matches {
 			err = d.DockerAPI.ContainerRemove(ctx, cont.ID, types.ContainerRemoveOptions{Force: true})
 			if err != nil {
-				return nil, "", fmt.Errorf("failed to pre-delete Container named %q", name)
+				return nil, "", fmt.Errorf("failed to pre-delete container named %q", name)
 			}
 		}
 	}
@@ -248,7 +232,7 @@ func (d *Runner) StartNewService(ctx context.Context, addSuffix, forceLocalAddr 
 			stream, err := d.DockerAPI.ContainerLogs(context.Background(), result.Container.ID, types.ContainerLogsOptions{
 				ShowStdout: true,
 				ShowStderr: true,
-				Timestamps: true,
+				Timestamps: !d.RunOptions.OmitLogTimestamps,
 				Details:    true,
 				Follow:     true,
 			})
@@ -256,7 +240,6 @@ func (d *Runner) StartNewService(ctx context.Context, addSuffix, forceLocalAddr 
 			if err != nil {
 				d.RunOptions.LogConsumer(fmt.Sprintf("error reading container logs: %v", err))
 			} else {
-				// TODO suppress this unless the test failed
 				wrapper := &LogConsumerWriter{d.RunOptions.LogConsumer}
 				_, err := stdcopy.StdCopy(wrapper, wrapper, stream)
 				if err != nil {
@@ -398,7 +381,7 @@ func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*st
 
 	c, err := d.DockerAPI.ContainerCreate(ctx, cfg, hostConfig, netConfig, nil, cfg.Hostname)
 	if err != nil {
-		return nil, fmt.Errorf("Container create failed: %v", err)
+		return nil, fmt.Errorf("container create failed: %v", err)
 	}
 
 	for from, to := range d.RunOptions.CopyFromTo {
@@ -411,7 +394,7 @@ func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*st
 	err = d.DockerAPI.ContainerStart(ctx, c.ID, types.ContainerStartOptions{})
 	if err != nil {
 		_ = d.DockerAPI.ContainerRemove(ctx, c.ID, types.ContainerRemoveOptions{})
-		return nil, fmt.Errorf("Container start failed: %v", err)
+		return nil, fmt.Errorf("container start failed: %v", err)
 	}
 
 	inspect, err := d.DockerAPI.ContainerInspect(ctx, c.ID)
@@ -775,7 +758,7 @@ func (d *Runner) BuildImage(ctx context.Context, containerfile string, container
 func BuildImage(ctx context.Context, api *client.Client, containerfile string, containerContext BuildContext, opts ...BuildOpt) ([]byte, error) {
 	var cfg types.ImageBuildOptions
 
-	// Build Container context tarball, provisioning containerfile in.
+	// Build container context tarball, provisioning containerfile in.
 	containerContext[containerfilePath] = PathContentsFromBytes([]byte(containerfile))
 	tar, err := containerContext.ToTarball()
 	if err != nil {
@@ -820,7 +803,7 @@ func (d *Runner) CopyTo(container string, destination string, contents BuildCont
 func (d *Runner) CopyFrom(container string, source string) (BuildContext, *types.ContainerPathStat, error) {
 	reader, stat, err := d.DockerAPI.CopyFromContainer(context.Background(), container, source)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to read %v from Container: %v", source, err)
+		return nil, nil, fmt.Errorf("failed to read %v from container: %v", source, err)
 	}
 
 	result, err := BuildContextFromTarball(reader)
