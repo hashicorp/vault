@@ -1547,6 +1547,9 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 			"internal_backend_uuid":                 nil,
 			"revocation_queue_deleted_count":        nil,
 			"cross_revoked_cert_deleted_count":      nil,
+			"tidy_acme_accounts":                    nil,
+			"revoke_acme_accounts_safety_buffer":    nil,
+			"delete_acme_accounts_safety_buffer":    nil,
 		},
 	}
 
@@ -1585,6 +1588,9 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 	resp.Data["missing_issuer_cert_count"] = b.tidyStatus.missingIssuerCertCount
 	resp.Data["revocation_queue_deleted_count"] = b.tidyStatus.revQueueDeletedCount
 	resp.Data["cross_revoked_cert_deleted_count"] = b.tidyStatus.crossRevokedDeletedCount
+	resp.Data["tidy_acme_accounts"] = b.tidyStatus.tidyAcmeAccounts
+	resp.Data["revoke_acme_accounts_safety_buffer"] = b.tidyStatus.acmeAccountRevokeSafetyBuffer
+	resp.Data["delete_acme_accounts_safety_buffer"] = b.tidyStatus.acmeAccountDeleteSafetyBuffer
 
 	switch b.tidyStatus.state {
 	case tidyStatusStarted:
@@ -1752,6 +1758,9 @@ func (b *backend) pathConfigAutoTidyWrite(ctx context.Context, req *logical.Requ
 			"tidy_revocation_queue":                 config.RevocationQueue,
 			"revocation_queue_safety_buffer":        int(config.QueueSafetyBuffer / time.Second),
 			"tidy_cross_cluster_revoked_certs":      config.CrossRevokedCerts,
+			"tidy_acme_accounts":                    config.AcmeAccounts,
+			"revoke_acme_accounts_safety_buffer":    int(config.RevokeAcmeAccountsSafetyBuffer / time.Second),
+			"delete_acme_accounts_safety_buffer":    int(config.DeleteAcmeAccountsSafetyBuffer / time.Second),
 		},
 	}, nil
 }
