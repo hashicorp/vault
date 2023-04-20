@@ -202,6 +202,7 @@ jobs:
           fi
 
           pwd
+          ls -l bin
           if [ -f bin/vault ]; then
             VAULT_BINARY="$(PWD)/bin/vault"
             export VAULT_BINARY
