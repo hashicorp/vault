@@ -1,0 +1,69 @@
+package vault
+
+import (
+	"testing"
+
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
+)
+
+func Test_AuditBroker_ForwardingHeaders(t *testing.T) {
+	tests := map[string]struct {
+		headers  map[string][]string
+		wantNil  bool
+		wantFrom string
+		wantTo   string
+	}{
+		"none": {
+			headers: map[string][]string{},
+			wantNil: true,
+		},
+		"from": {
+			headers: map[string][]string{
+				HTTPHeaderVaultForwardFrom: {"juan.808"},
+			},
+			wantNil:  false,
+			wantFrom: "juan.808",
+		},
+		"to": {
+			headers: map[string][]string{
+				HTTPHeaderVaultForwardTo: {"john.000"},
+			},
+			wantNil: false,
+			wantTo:  "john.000",
+		},
+		"from-and-to": {
+			headers: map[string][]string{
+				HTTPHeaderVaultForwardFrom: {"juan.808"},
+				HTTPHeaderVaultForwardTo:   {"john.000"},
+			},
+			wantNil:  false,
+			wantFrom: "juan.808",
+			wantTo:   "john.000",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			logInput := &logical.LogInput{Request: &logical.Request{Headers: tc.headers}}
+
+			extractForwardingHeaders(logInput)
+
+			if tc.wantNil {
+				require.Nil(t, logInput.Forwarding)
+				return
+			}
+
+			require.NotNil(t, logInput.Forwarding)
+			require.Equal(t, tc.wantFrom, logInput.Forwarding.From)
+			if tc.wantFrom != "" {
+				require.NotContains(t, logInput.Request.Headers, HTTPHeaderVaultForwardFrom)
+			}
+
+			require.Equal(t, tc.wantTo, logInput.Forwarding.To)
+			if tc.wantTo != "" {
+				require.NotContains(t, logInput.Request.Headers, HTTPHeaderVaultForwardTo)
+			}
+		})
+	}
+}
