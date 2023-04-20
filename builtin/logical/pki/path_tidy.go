@@ -1633,6 +1633,9 @@ func (b *backend) pathConfigAutoTidyRead(ctx context.Context, req *logical.Reque
 			"tidy_revocation_queue":                    config.RevocationQueue,
 			"revocation_queue_safety_buffer":           int(config.QueueSafetyBuffer / time.Second),
 			"tidy_cross_cluster_revoked_certs":         config.CrossRevokedCerts,
+			"tidy_acme_accounts":                       config.AcmeAccounts,
+			"revoke_acme_accounts_safety_buffer":       int(config.RevokeAcmeAccountsSafetyBuffer / time.Second),
+			"delete_acme_accounts_safety_buffer":       int(config.DeleteAcmeAccountsSafetyBuffer / time.Second),
 		},
 	}, nil
 }
