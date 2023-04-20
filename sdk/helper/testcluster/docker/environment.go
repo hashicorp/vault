@@ -4,6 +4,8 @@
 package docker
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -554,7 +556,7 @@ func (n *dockerClusterNode) cleanup() error {
 	if n.container == nil || n.container.ID == "" {
 		return nil
 	}
-	// n.cleanupContainer()
+	n.cleanupContainer()
 	return nil
 }
 
@@ -658,6 +660,13 @@ func (n *dockerClusterNode) start(ctx context.Context, caDir string, opts *Docke
 		}
 		n.Logger.Trace(s)
 	}
+	logStdout := &LogConsumerWriter{logConsumer}
+	logStderr := &LogConsumerWriter{func(s string) {
+		if seenLogs.CAS(false, true) {
+			wg.Done()
+		}
+		testcluster.JSONLogNoTimestamp(n.Logger, s)
+	}}
 	r, err := dockhelper.NewServiceRunner(dockhelper.RunOptions{
 		ImageRepo: repo,
 		ImageTag:  tag,
@@ -669,12 +678,15 @@ func (n *dockerClusterNode) start(ctx context.Context, caDir string, opts *Docke
 			// For now we're using disable_mlock, because this is for testing
 			// anyway, and because it prevents us using external plugins.
 			"SKIP_SETCAP=true",
+			"VAULT_LOG_FORMAT=json",
 		},
 		Ports:           []string{"8200/tcp", "8201/tcp"},
 		ContainerName:   n.Name(),
 		NetworkName:     opts.NetworkName,
 		CopyFromTo:      copyFromTo,
 		LogConsumer:     logConsumer,
+		LogStdout:       logStdout,
+		LogStderr:       logStderr,
 		PreDelete:       true,
 		DoNotAutoRemove: true,
 		PostStart: func(containerID string, realIP string) error {
@@ -726,6 +738,22 @@ func (n *dockerClusterNode) start(ctx context.Context, caDir string, opts *Docke
 	n.cleanupContainer = svc.Cleanup
 
 	return nil
+}
+
+type LogConsumerWriter struct {
+	consumer func(string)
+}
+
+func (l LogConsumerWriter) Write(p []byte) (n int, err error) {
+	// TODO this assumes that we're never passed partial log lines, which
+	// seems a safe assumption for now based on how docker looks to implement
+	// logging, but might change in the future.
+	scanner := bufio.NewScanner(bytes.NewReader(p))
+	scanner.Buffer(make([]byte, 64*1024), bufio.MaxScanTokenSize)
+	for scanner.Scan() {
+		l.consumer(scanner.Text())
+	}
+	return len(p), nil
 }
 
 // DockerClusterOptions has options for setting up the docker cluster

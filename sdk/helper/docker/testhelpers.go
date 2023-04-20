@@ -59,6 +59,8 @@ type RunOptions struct {
 	Capabilities      []string
 	PreDelete         bool
 	PostStart         func(string, string) error
+	LogStderr         io.Writer
+	LogStdout         io.Writer
 }
 
 func NewDockerAPI() (*client.Client, error) {
@@ -226,7 +228,19 @@ func (d *Runner) StartNewService(ctx context.Context, addSuffix, forceLocalAddr 
 	}
 
 	var wg sync.WaitGroup
-	if d.RunOptions.LogConsumer != nil {
+	consumeLogs := false
+	var logStdout, logStderr io.Writer
+	if d.RunOptions.LogStdout != nil && d.RunOptions.LogStderr != nil {
+		consumeLogs = true
+		logStdout = d.RunOptions.LogStdout
+		logStderr = d.RunOptions.LogStderr
+	} else if d.RunOptions.LogConsumer != nil {
+		consumeLogs = true
+		logStdout = &LogConsumerWriter{d.RunOptions.LogConsumer}
+		logStderr = &LogConsumerWriter{d.RunOptions.LogConsumer}
+	}
+
+	if consumeLogs {
 		wg.Add(1)
 		go func() {
 			stream, err := d.DockerAPI.ContainerLogs(context.Background(), result.Container.ID, types.ContainerLogsOptions{
@@ -240,8 +254,7 @@ func (d *Runner) StartNewService(ctx context.Context, addSuffix, forceLocalAddr 
 			if err != nil {
 				d.RunOptions.LogConsumer(fmt.Sprintf("error reading container logs: %v", err))
 			} else {
-				wrapper := &LogConsumerWriter{d.RunOptions.LogConsumer}
-				_, err := stdcopy.StdCopy(wrapper, wrapper, stream)
+				_, err := stdcopy.StdCopy(logStdout, logStderr, stream)
 				if err != nil {
 					d.RunOptions.LogConsumer(fmt.Sprintf("error demultiplexing docker logs: %v", err))
 				}
