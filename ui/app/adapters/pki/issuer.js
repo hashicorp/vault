@@ -46,27 +46,29 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
     const url = this.urlForQuery(backend);
 
     return this.ajax(url, 'GET', this.optionsForQuery()).then(async (res) => {
-      const records = await all(
-        res.data.keys.map((id) => {
-          return this.queryRecord(store, type, { id, backend });
-        })
-      );
+      if (res.data.keys.length <= 10) {
+        const records = await all(
+          res.data.keys.map((id) => {
+            return this.queryRecord(store, type, { id, backend });
+          })
+        );
 
-      const isRootRecords = await all(
-        records.map((record) => {
-          const { certificate } = record.data;
-          const keyId = record.data.key_id;
+        const isRootRecords = await all(
+          records.map((record) => {
+            const { certificate } = record.data;
+            const keyId = record.data.key_id;
 
-          return verifyCertificates(certificate, certificate) && !!keyId;
-        })
-      );
+            return verifyCertificates(certificate, certificate) && !!keyId;
+          })
+        );
 
-      res.data.keys = records.map((record, idx) => {
-        return {
-          ...record.data,
-          isRotatable: isRootRecords[idx],
-        };
-      });
+        res.data.keys = records.map((record, idx) => {
+          return {
+            ...record.data,
+            isRotatable: isRootRecords[idx],
+          };
+        });
+      }
 
       return res;
     });
