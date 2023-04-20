@@ -91,6 +91,16 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 	if reqType == "" {
 		reqType = "request"
 	}
+
+	// Handle request forwarding metadata
+	var forwarding *RequestForwardingInfo
+	if in.Forwarding != nil {
+		forwarding = &RequestForwardingInfo{
+			From: in.Forwarding.From,
+			To:   in.Forwarding.To,
+		}
+	}
+
 	reqEntry := &AuditRequestEntry{
 		Type:  reqType,
 		Error: errString,
@@ -135,6 +145,7 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 			ReplicationCluster:            req.ReplicationCluster,
 			Headers:                       req.Headers,
 			ClientCertificateSerialNumber: getClientCertificateSerialNumber(connState),
+			Forwarded:                     forwarding,
 		},
 	}
 
@@ -426,6 +437,7 @@ type AuditRequest struct {
 	WrapTTL                       int                    `json:"wrap_ttl,omitempty"`
 	Headers                       map[string][]string    `json:"headers,omitempty"`
 	ClientCertificateSerialNumber string                 `json:"client_certificate_serial_number,omitempty"`
+	Forwarded                     *RequestForwardingInfo `json:"forwarded,omitempty"`
 }
 
 type AuditResponse struct {
@@ -491,6 +503,13 @@ type AuditResponseWrapInfo struct {
 type AuditNamespace struct {
 	ID   string `json:"id,omitempty"`
 	Path string `json:"path,omitempty"`
+}
+
+// RequestForwardingInfo should be present and contain request forwarding metadata
+// when a request has been forwarded from a standby to a primary node.
+type RequestForwardingInfo struct {
+	From string `json:"from,omitempty"`
+	To   string `json:"to,omitempty"`
 }
 
 // getRemoteAddr safely gets the remote address avoiding a nil pointer

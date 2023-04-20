@@ -11,6 +11,13 @@ type LogInput struct {
 	OuterErr            error
 	NonHMACReqDataKeys  []string
 	NonHMACRespDataKeys []string
+	Forwarding          *ForwardingInfo
+}
+
+// ForwardingInfo should be used to describe the hosts a request is forwarded 'from' and 'to'.
+type ForwardingInfo struct {
+	From string
+	To   string
 }
 
 type MarshalOptions struct {
@@ -19,4 +26,10 @@ type MarshalOptions struct {
 
 type OptMarshaler interface {
 	MarshalJSONWithOptions(*MarshalOptions) ([]byte, error)
+}
+
+// IsPresent can be used to determine whether 'from' and/or 'to' forwarding
+// information is configured on the ForwardingInfo.
+func (f *ForwardingInfo) IsPresent() bool {
+	return len(f.From) > 0 || len(f.To) > 0
 }

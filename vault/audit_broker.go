@@ -133,6 +133,8 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 		in.Request.Headers = headers
 	}()
 
+	extractForwardingHeaders(in)
+
 	// Ensure at least one backend logs
 	anyLogged := false
 	for name, be := range a.backends {
@@ -158,6 +160,33 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 	}
 
 	return retErr.ErrorOrNil()
+}
+
+// extractForwardingHeaders attempts to move request forwarding metadata transported
+// in the request headers to explicit fields within the audit LogInput.
+func extractForwardingHeaders(logInput *logical.LogInput) {
+	if logInput == nil || logInput.Request == nil || logInput.Request.Headers == nil {
+		return
+	}
+
+	headers := logInput.Request.Headers
+	forwarding := &logical.ForwardingInfo{}
+
+	from, ok := headers[HTTPHeaderVaultForwardFrom]
+	if ok && from != nil && len(from) > 0 {
+		delete(headers, HTTPHeaderVaultForwardFrom)
+		forwarding.From = from[0]
+	}
+
+	to, ok := headers[HTTPHeaderVaultForwardTo]
+	if ok && to != nil && len(to) > 0 {
+		delete(headers, HTTPHeaderVaultForwardTo)
+		forwarding.To = to[0]
+	}
+
+	if forwarding.IsPresent() {
+		logInput.Forwarding = forwarding
+	}
 }
 
 // LogResponse is used to ensure all the audit backends have an opportunity to
