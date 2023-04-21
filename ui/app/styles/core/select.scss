@@ -27,7 +27,7 @@ select {
   text-rendering: auto !important;
 
   @include until($desktop) {
-    font-size: 16px;
+    font-size: 1rem;
   }
 
   &::placeholder {
