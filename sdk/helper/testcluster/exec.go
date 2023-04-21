@@ -230,7 +230,11 @@ func (e *execDevClusterNode) Name() string {
 }
 
 func (e *execDevClusterNode) APIClient() *api.Client {
-	return e.Client
+	clone, err := e.Client.Clone()
+	if err != nil {
+		panic(fmt.Sprintf("clone error: %v", err))
+	}
+	return clone
 }
 
 func (e *execDevClusterNode) TLSConfig() *tls.Config {
