@@ -133,6 +133,7 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 		in.Request.Headers = headers
 	}()
 
+	// extract/move any forwarding headers from the input to explicit fields
 	extractForwardingHeaders(in)
 
 	// Ensure at least one backend logs
