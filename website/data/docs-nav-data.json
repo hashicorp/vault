@@ -1811,7 +1811,7 @@
         "path": "upgrading"
       },
       {
-         "title": "Vault HA upgrades",
+         "title": "Vault HA upgrades (Pre 1.11)",
          "path": "upgrading/vault-ha-upgrade"
       }, 
       {
