@@ -5,7 +5,15 @@
 
 import ApplicationSerializer from '../application';
 
-const MAP_ATTRS_TO_MODEL = {
+// The object keys ('enabled', 'duration') in the pki/crl model map to an API parameter
+// Each object is updated by a single ttl input in the pki-configuration-edit form
+// In some cases 'false' means enabled (i.e. { disable: false } => ttl field is toggled ON)
+
+const MODEL_TO_API_PARAMS = {
+  // object key -> model attribute name
+  // "enabledKey" -> boolean api param
+  // "durationKey" -> duration api param
+  // "isOppositeValue" -> whether or not to flip the ttl's enabled value
   crl_expiry_data: {
     enabledKey: 'disable',
     isOppositeValue: true,
@@ -28,25 +36,23 @@ const MAP_ATTRS_TO_MODEL = {
   },
 };
 export default class PkiCrlSerializer extends ApplicationSerializer {
-  normalize(model, data) {
-    for (const key in MAP_ATTRS_TO_MODEL) {
-      const { enabledKey, durationKey, isOppositeValue } = MAP_ATTRS_TO_MODEL[key];
+  normalizeResponse(store, primaryModelClass, payload, id, requestType) {
+    for (const key in MODEL_TO_API_PARAMS) {
+      const { enabledKey, durationKey, isOppositeValue } = MODEL_TO_API_PARAMS[key];
       const valueBlock = {
-        enabled: isOppositeValue ? !data[enabledKey] : data[enabledKey],
-        duration: data[durationKey],
+        enabled: isOppositeValue ? !payload[enabledKey] : payload[enabledKey],
+        duration: payload[durationKey],
       };
-      data = { ...data, [key]: valueBlock };
-      delete data[enabledKey];
-      delete data[durationKey];
+      payload = { ...payload, [key]: valueBlock };
     }
-    return super.normalize(...arguments);
+    return super.normalizeResponse(store, primaryModelClass, payload, id, requestType);
   }
 
   serialize() {
     const json = super.serialize(...arguments);
-    for (const key in MAP_ATTRS_TO_MODEL) {
+    for (const key in MODEL_TO_API_PARAMS) {
       if (key in json) {
-        const { enabledKey, durationKey, isOppositeValue } = MAP_ATTRS_TO_MODEL[key];
+        const { enabledKey, durationKey, isOppositeValue } = MODEL_TO_API_PARAMS[key];
         const { enabled, duration } = json[key];
         json[enabledKey] = isOppositeValue ? !enabled : enabled;
         json[durationKey] = duration;
