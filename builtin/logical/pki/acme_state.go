@@ -178,7 +178,10 @@ func (o acmeOrder) getIdentifierDNSValues() []string {
 	var identifiers []string
 	for _, value := range o.Identifiers {
 		if value.Type == ACMEDNSIdentifier {
-			identifiers = append(identifiers, value.Value)
+			// Here, because of wildcard processing, we need to use the
+			// original value provided by the caller rather than the
+			// post-modification (trimmed '*.' prefix) value.
+			identifiers = append(identifiers, value.OriginalValue)
 		}
 	}
 	return identifiers
