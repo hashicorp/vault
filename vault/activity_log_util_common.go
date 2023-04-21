@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/axiomhq/hyperloglog"
@@ -279,6 +280,9 @@ func (a *ActivityLog) mountAccessorToMountPath(mountAccessor string) string {
 			displayPath = fmt.Sprintf(deletedMountFmt, mountAccessor)
 		} else {
 			displayPath = valResp.MountPath
+			if !strings.HasSuffix(displayPath, "/") {
+				displayPath += "/"
+			}
 		}
 	}
 	return displayPath
