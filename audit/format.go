@@ -168,6 +168,8 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 	return f.AuditFormatWriter.WriteRequest(w, reqEntry)
 }
 
+// requestForwardingInfo maps request forwarding data from within a logical.LogInput
+// to its own type for output as an entry in audit logs.
 func requestForwardingInfo(in *logical.LogInput) *RequestForwardingInfo {
 	if in.Forwarding == nil || !in.Forwarding.IsPresent() {
 		return nil

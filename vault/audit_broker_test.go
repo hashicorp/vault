@@ -53,6 +53,7 @@ func Test_AuditBroker_ForwardingHeaders(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			logInput := &logical.LogInput{Request: &logical.Request{Headers: tc.headers}}
 
+			// extract/move any forwarding headers from the input to explicit fields
 			extractForwardingHeaders(logInput)
 
 			if tc.wantNil {

@@ -30,8 +30,12 @@ import (
 )
 
 const (
+	// HTTPHeaderVaultForwardFrom represents an HTTP header that should contain
+	// information on the host node that forwarded a request.
 	HTTPHeaderVaultForwardFrom = "X-Vault-Forwarded-From"
-	HTTPHeaderVaultForwardTo   = "X-Vault-Forwarded-To"
+	// HTTPHeaderVaultForwardTo represents an HTTP header that should contain information
+	// on the host node that will receive a forwarded a request.
+	HTTPHeaderVaultForwardTo = "X-Vault-Forwarded-To"
 )
 
 type requestForwardingHandler struct {
