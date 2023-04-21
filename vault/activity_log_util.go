@@ -16,5 +16,4 @@ func (a *ActivityLog) sendCurrentFragment(ctx context.Context) error {
 }
 
 // CensusReport is a no-op on OSS
-func (a *ActivityLog) CensusReport(_ctx context.Context, _reporter CensusReporter, _billingStart time.Time) {
-}
+func (a *ActivityLog) CensusReport(context.Context, CensusReporter, time.Time) {}
