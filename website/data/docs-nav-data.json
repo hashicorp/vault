@@ -1811,6 +1811,10 @@
         "path": "upgrading"
       },
       {
+         "title": "Vault HA upgrades",
+         "path": "upgrading/vault-ha-upgrade"
+      }, 
+      {
         "title": "Upgrade Plugins",
         "path": "upgrading/plugins"
       },
