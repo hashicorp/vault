@@ -11,7 +11,6 @@ import (
 	"net"
 	"net/http"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -328,11 +327,11 @@ func validateCsrMatchesOrder(csr *x509.CertificateRequest, order *acmeOrder) err
 	}
 
 	if len(orderDNSIdentifiers) != len(csrDNSIdentifiers) {
-		return fmt.Errorf("%w: Order and CSR mismatch on number of DNS identifiers", ErrBadCSR)
+		return fmt.Errorf("%w: Order (%v) and CSR (%v) mismatch on number of DNS identifiers", ErrBadCSR, len(orderDNSIdentifiers), len(csrDNSIdentifiers))
 	}
 
 	if len(orderIPIdentifiers) != len(csrIPIdentifiers) {
-		return fmt.Errorf("%w: Order and CSR mismatch on number of IP identifiers", ErrBadCSR)
+		return fmt.Errorf("%w: Order (%v) and CSR (%v) mismatch on number of IP identifiers", ErrBadCSR, len(orderIPIdentifiers), len(csrIPIdentifiers))
 	}
 
 	for i, identifier := range orderDNSIdentifiers {
@@ -705,8 +704,19 @@ func buildOrderUrl(acmeCtx *acmeContext, orderId string) string {
 
 func generateAuthorization(acct *acmeAccount, identifier *ACMEIdentifier) (*ACMEAuthorization, error) {
 	authId := genUuid()
+
+	// Certain challenges have certain restrictions: DNS challenges cannot
+	// be used to validate IP addresses, and only DNS challenges can be used
+	// to validate wildcards.
+	allowedChallenges := []ACMEChallengeType{ACMEHTTPChallenge, ACMEDNSChallenge}
+	if identifier.Type == ACMEIPIdentifier {
+		allowedChallenges = []ACMEChallengeType{ACMEHTTPChallenge}
+	} else if identifier.IsWildcard {
+		allowedChallenges = []ACMEChallengeType{ACMEDNSChallenge}
+	}
+
 	var challenges []*ACMEChallenge
-	for _, challengeType := range []ACMEChallengeType{ACMEHTTPChallenge} {
+	for _, challengeType := range allowedChallenges {
 		token, err := getACMEToken()
 		if err != nil {
 			return nil, err
@@ -730,7 +740,7 @@ func generateAuthorization(acct *acmeAccount, identifier *ACMEIdentifier) (*ACME
 		Status:     ACMEAuthorizationPending,
 		Expires:    "", // only populated when it switches to valid.
 		Challenges: challenges,
-		Wildcard:   strings.HasPrefix(identifier.Value, "*."),
+		Wildcard:   identifier.IsWildcard,
 	}, nil
 }
 
@@ -797,31 +807,62 @@ func parseOrderIdentifiers(data map[string]interface{}) ([]*ACMEIdentifier, erro
 			return nil, fmt.Errorf("value argument for value in 'identifiers' can not be blank: %w", ErrMalformed)
 		}
 
+		identifier := &ACMEIdentifier{
+			Value:         valueStr,
+			OriginalValue: valueStr,
+		}
+
 		switch typeStr {
 		case string(ACMEIPIdentifier):
+			identifier.Type = ACMEIPIdentifier
 			ip := net.ParseIP(valueStr)
 			if ip == nil {
 				return nil, fmt.Errorf("value argument (%s) failed validation: failed parsing as IP: %w", valueStr, ErrMalformed)
 			}
-			identifiers = append(identifiers, &ACMEIdentifier{
-				Type:  ACMEIPIdentifier,
-				Value: valueStr,
-			})
-
 		case string(ACMEDNSIdentifier):
+			identifier.Type = ACMEDNSIdentifier
+
+			// This check modifies the identifier if it is a wildcard,
+			// removing the non-wildcard portion. We do this before the
+			// IP address checks, in case of an attempt to bypass the IP/DNS
+			// check via including a leading wildcard (e.g., *.127.0.0.1).
+			//
+			// Per RFC 8555 Section 7.1.4. Authorization Objects:
+			//
+			// > Wildcard domain names (with "*" as the first label) MUST NOT
+			// > be included in authorization objects.
+			if _, _, err := identifier.MaybeParseWildcard(); err != nil {
+				return nil, fmt.Errorf("value argument (%s) failed validation: invalid wildcard: %v: %w", valueStr, err, ErrMalformed)
+			}
+
+			if isIP := net.ParseIP(identifier.Value); isIP != nil {
+				return nil, fmt.Errorf("refusing to accept argument (%s) as DNS type identifier: parsed OK as IP address: %w", valueStr, ErrMalformed)
+			}
+
+			// Use the reduced (identifier.Value) in case this was a wildcard
+			// domain.
 			p := idna.New(idna.ValidateForRegistration())
-			converted, err := p.ToASCII(valueStr)
+			converted, err := p.ToASCII(identifier.Value)
 			if err != nil {
 				return nil, fmt.Errorf("value argument (%s) failed validation: %s: %w", valueStr, err.Error(), ErrMalformed)
 			}
 
-			identifiers = append(identifiers, &ACMEIdentifier{
-				Type:  ACMEDNSIdentifier,
-				Value: converted,
-			})
+			// Per RFC 8555 Section 7.1.4. Authorization Objects:
+			//
+			// > The domain name MUST be encoded in the form in which it
+			// > would appear in a certificate.  That is, it MUST be encoded
+			// > according to the rules in Section 7 of [RFC5280]. Servers
+			// > MUST verify any identifier values that begin with the
+			// > ASCII-Compatible Encoding prefix "xn--" as defined in
+			// > [RFC5890] are properly encoded.
+			if identifier.Value != converted {
+				return nil, fmt.Errorf("value argument (%s) failed IDNA round-tripping to ASCII: %w", valueStr, ErrMalformed)
+			}
 		default:
 			return nil, fmt.Errorf("unsupported identifier type %s: %w", typeStr, ErrUnsupportedIdentifier)
 		}
+
+		identifiers = append(identifiers, identifier)
 	}
 
 	return identifiers, nil

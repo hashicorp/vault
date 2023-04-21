@@ -117,14 +117,26 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 				acme.WithOrderNotAfter(time.Now().Add(10*time.Minute)))
 			require.Error(t, err, "should have rejected a new order with NotAfter set")
 
+			// Make sure DNS identifiers cannot include IP addresses
+			_, err = acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{{Type: "dns", Value: "127.0.0.1"}},
+				acme.WithOrderNotAfter(time.Now().Add(10*time.Minute)))
+			require.Error(t, err, "should have rejected a new order with IP-like DNS-type identifier")
+			_, err = acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{{Type: "dns", Value: "*.127.0.0.1"}},
+				acme.WithOrderNotAfter(time.Now().Add(10*time.Minute)))
+			require.Error(t, err, "should have rejected a new order with IP-like DNS-type identifier")
+
 			// Create an order
 			t.Logf("Testing Authorize Order on %s", baseAcmeURL)
-			createOrder, err := acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{{Type: "dns", Value: "localhost"}})
+			identifiers := []string{"localhost", "*.localhost"}
+			createOrder, err := acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{
+				{Type: "dns", Value: identifiers[0]},
+				{Type: "dns", Value: identifiers[1]},
+			})
 			require.NoError(t, err, "failed creating order")
 			require.Equal(t, acme.StatusPending, createOrder.Status)
 			require.Empty(t, createOrder.CertURL)
 			require.Equal(t, createOrder.URI+"/finalize", createOrder.FinalizeURL)
-			require.Len(t, createOrder.AuthzURLs, 1, "expected one authzurls")
+			require.Len(t, createOrder.AuthzURLs, 2, "expected two authzurls")
 
 			// Get order
 			t.Logf("Testing GetOrder on %s", baseAcmeURL)
@@ -144,12 +156,15 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			require.False(t, auth.Wildcard, "should not be a wildcard")
 			require.True(t, auth.Expires.IsZero(), "authorization should only have expiry set on valid status")
 
-			require.Len(t, auth.Challenges, 1, "expected one challenge")
+			require.Len(t, auth.Challenges, 2, "expected two challenges")
 			require.Equal(t, acme.StatusPending, auth.Challenges[0].Status)
 			require.True(t, auth.Challenges[0].Validated.IsZero(), "validated time should be 0 on challenge")
 			require.Equal(t, "http-01", auth.Challenges[0].Type)
-
 			require.NotEmpty(t, auth.Challenges[0].Token, "missing challenge token")
+			require.Equal(t, acme.StatusPending, auth.Challenges[1].Status)
+			require.True(t, auth.Challenges[1].Validated.IsZero(), "validated time should be 0 on challenge")
+			require.Equal(t, "dns-01", auth.Challenges[1].Type)
+			require.NotEmpty(t, auth.Challenges[1].Token, "missing challenge token")
 
 			// Load a challenge directly; this triggers validation to start.
 			challenge, err := acmeClient.GetChallenge(testCtx, auth.Challenges[0].URI)
@@ -164,34 +179,38 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			//       test.
 			pkiMount := findStorageMountUuid(t, client, "pki")
 			accountId := acct.URI[strings.LastIndex(acct.URI, "/"):]
-			authId := auth.URI[strings.LastIndex(auth.URI, "/"):]
+			for _, authURI := range getOrder.AuthzURLs {
+				authId := authURI[strings.LastIndex(authURI, "/"):]
 
-			rawPath := path.Join("/sys/raw/logical/", pkiMount, getAuthorizationPath(accountId, authId))
-			resp, err := client.Logical().ReadWithContext(testCtx, rawPath)
-			require.NoError(t, err, "failed looking up authorization storage")
-			require.NotNil(t, resp, "sys raw response was nil")
-			require.NotEmpty(t, resp.Data["value"], "no value field in sys raw response")
+				rawPath := path.Join("/sys/raw/logical/", pkiMount, getAuthorizationPath(accountId, authId))
+				resp, err := client.Logical().ReadWithContext(testCtx, rawPath)
+				require.NoError(t, err, "failed looking up authorization storage")
+				require.NotNil(t, resp, "sys raw response was nil")
+				require.NotEmpty(t, resp.Data["value"], "no value field in sys raw response")
 
-			var authz ACMEAuthorization
-			err = jsonutil.DecodeJSON([]byte(resp.Data["value"].(string)), &authz)
-			require.NoError(t, err, "error decoding authorization: %w", err)
-			authz.Status = ACMEAuthorizationValid
-			for _, challenge := range authz.Challenges {
-				challenge.Status = ACMEChallengeValid
+				var authz ACMEAuthorization
+				err = jsonutil.DecodeJSON([]byte(resp.Data["value"].(string)), &authz)
+				require.NoError(t, err, "error decoding authorization: %w", err)
+				authz.Status = ACMEAuthorizationValid
+				for _, challenge := range authz.Challenges {
+					challenge.Status = ACMEChallengeValid
+				}
+
+				encodeJSON, err := jsonutil.EncodeJSON(authz)
+				require.NoError(t, err, "failed encoding authz json")
+				_, err = client.Logical().WriteWithContext(testCtx, rawPath, map[string]interface{}{
+					"value":    base64.StdEncoding.EncodeToString(encodeJSON),
+					"encoding": "base64",
+				})
+				require.NoError(t, err, "failed writing authorization storage")
 			}
-
-			encodeJSON, err := jsonutil.EncodeJSON(authz)
-			require.NoError(t, err, "failed encoding authz json")
-			_, err = client.Logical().WriteWithContext(testCtx, rawPath, map[string]interface{}{
-				"value":    base64.StdEncoding.EncodeToString(encodeJSON),
-				"encoding": "base64",
-			})
-			require.NoError(t, err, "failed writing authorization storage")
 
 			// Make sure sending a CSR with the account key gets rejected.
 			goodCr := &x509.CertificateRequest{
-				Subject: pkix.Name{CommonName: createOrder.Identifiers[0].Value},
+				Subject:  pkix.Name{CommonName: identifiers[1]},
+				DNSNames: []string{identifiers[0], identifiers[1]},
 			}
+			t.Logf("csr: %v", goodCr)
 
 			// We want to make sure people are not using the same keys for CSR/Certs and their ACME account.
 			csrSignedWithAccountKey, err := x509.CreateCertificateRequest(rand.Reader, goodCr, accountKey)
@@ -209,6 +228,17 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			}
 
 			csrWithBadName, err := x509.CreateCertificateRequest(rand.Reader, badCr, csrKey)
+			require.NoError(t, err, "failed generating csr with bad name")
+
+			_, _, err = acmeClient.CreateOrderCert(testCtx, createOrder.FinalizeURL, csrWithBadName, true)
+			require.Error(t, err, "should not be allowed to csr with different names than order")
+
+			// Validate we reject CSRs that contains fewer names than in the original order.
+			badCr = &x509.CertificateRequest{
+				Subject: pkix.Name{CommonName: identifiers[0]},
+			}
+
+			csrWithBadName, err = x509.CreateCertificateRequest(rand.Reader, badCr, csrKey)
 			require.NoError(t, err, "failed generating csr with bad name")
 
 			_, _, err = acmeClient.CreateOrderCert(testCtx, createOrder.FinalizeURL, csrWithBadName, true)

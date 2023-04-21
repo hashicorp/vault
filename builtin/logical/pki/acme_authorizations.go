@@ -4,6 +4,7 @@
 package pki
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -15,8 +16,44 @@ const (
 )
 
 type ACMEIdentifier struct {
-	Type  ACMEIdentifierType `json:"type"`
-	Value string             `json:"value"`
+	Type          ACMEIdentifierType `json:"type"`
+	Value         string             `json:"value"`
+	OriginalValue string             `json:"original_value"`
+	IsWildcard    bool               `json:"is_wildcard"`
+}
+
+func (ai *ACMEIdentifier) MaybeParseWildcard() (bool, string, error) {
+	if ai.Type != ACMEDNSIdentifier || !isWildcardDomain(ai.Value) {
+		return false, ai.Value, nil
+	}
+
+	// Here on out, technically it is a wildcard.
+	ai.IsWildcard = true
+
+	wildcardLabel, reducedName, err := validateWildcardDomain(ai.Value)
+	if err != nil {
+		return true, "", err
+	}
+
+	if wildcardLabel != "*" {
+		// Per RFC 8555 Section. 7.1.3. Order Objects:
+		//
+		// > Any identifier of type "dns" in a newOrder request MAY have a
+		// > wildcard domain name as its value.  A wildcard domain name consists
+		// > of a single asterisk character followed by a single full stop
+		// > character ("*.") followed by a domain name as defined for use in the
+		// > Subject Alternate Name Extension by [RFC5280].
+		return true, "", fmt.Errorf("wildcard must be entire left-most label")
+	}
+
+	if reducedName == "" {
+		return true, "", fmt.Errorf("wildcard must not be entire domain name; need at least two domain labels")
+	}
+
+	// Parsing was indeed successful, so update our reduced name.
+	ai.Value = reducedName
+
+	return true, reducedName, nil
 }
 
 type ACMEAuthorizationStatusType string
