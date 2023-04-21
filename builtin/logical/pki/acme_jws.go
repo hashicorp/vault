@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -39,7 +42,7 @@ func (c *jwsCtx) GetKeyThumbprint() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed creating thumbprint: %w", err)
 	}
-	return base64.URLEncoding.EncodeToString(keyThumbprint), nil
+	return base64.RawURLEncoding.EncodeToString(keyThumbprint), nil
 }
 
 func (c *jwsCtx) UnmarshalJSON(a *acmeState, ac *acmeContext, jws []byte) error {

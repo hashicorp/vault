@@ -43,7 +43,7 @@ module('Acceptance | pki configuration test', function (hooks) {
     test('it shows the delete all issuers modal', async function (assert) {
       await authPage.login(this.pkiAdminToken);
       await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
-      await click(SELECTORS.emptyStateLink);
+      await click(SELECTORS.configuration.configureButton);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/create`);
       await isSettled();
       await click(SELECTORS.configuration.generateRootOption);
@@ -69,7 +69,7 @@ module('Acceptance | pki configuration test', function (hooks) {
     test('it shows the correct empty state message if certificates exists after delete all issuers', async function (assert) {
       await authPage.login(this.pkiAdminToken);
       await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
-      await click(SELECTORS.emptyStateLink);
+      await click(SELECTORS.configuration.configureButton);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/create`);
       await click(SELECTORS.configuration.generateRootOption);
       await fillIn(SELECTORS.configuration.typeField, 'exported');
@@ -128,7 +128,7 @@ module('Acceptance | pki configuration test', function (hooks) {
     test('it shows the correct empty state message if roles and certificates exists after delete all issuers', async function (assert) {
       await authPage.login(this.pkiAdminToken);
       await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
-      await click(SELECTORS.emptyStateLink);
+      await click(SELECTORS.configuration.configureButton);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/create`);
       await click(SELECTORS.configuration.generateRootOption);
       await fillIn(SELECTORS.configuration.typeField, 'exported');

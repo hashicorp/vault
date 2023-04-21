@@ -216,32 +216,6 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathResignCrls(&b),
 			pathSignRevocationList(&b),
 
-			// ACME APIs
-			pathAcmeRootDirectory(&b),
-			pathAcmeRoleDirectory(&b),
-			pathAcmeIssuerDirectory(&b),
-			pathAcmeIssuerAndRoleDirectory(&b),
-			pathAcmeRootNonce(&b),
-			pathAcmeRoleNonce(&b),
-			pathAcmeIssuerNonce(&b),
-			pathAcmeIssuerAndRoleNonce(&b),
-			pathAcmeRootNewAccount(&b),
-			pathAcmeRoleNewAccount(&b),
-			pathAcmeIssuerNewAccount(&b),
-			pathAcmeIssuerAndRoleNewAccount(&b),
-			pathAcmeRootUpdateAccount(&b),
-			pathAcmeRoleUpdateAccount(&b),
-			pathAcmeIssuerUpdateAccount(&b),
-			pathAcmeIssuerAndRoleUpdateAccount(&b),
-			pathAcmeRootAuthorization(&b),
-			pathAcmeRoleAuthorization(&b),
-			pathAcmeIssuerAuthorization(&b),
-			pathAcmeIssuerAndRoleAuthorization(&b),
-			pathAcmeRootChallenge(&b),
-			pathAcmeRoleChallenge(&b),
-			pathAcmeIssuerChallenge(&b),
-			pathAcmeIssuerAndRoleChallenge(&b),
-			pathAcmeConfig(&b),
 		},
 
 		Secrets: []*framework.Secret{
@@ -252,6 +226,25 @@ func Backend(conf *logical.BackendConfig) *backend {
 		InitializeFunc: b.initialize,
 		Invalidate:     b.invalidate,
 		PeriodicFunc:   b.periodicFunc,
+		Clean:          b.cleanup,
+	}
+
+	// Add ACME paths to backend
+	var acmePaths []*framework.Path
+	acmePaths = append(acmePaths, pathAcmeDirectory(&b)...)
+	acmePaths = append(acmePaths, pathAcmeNonce(&b)...)
+	acmePaths = append(acmePaths, pathAcmeNewAccount(&b)...)
+	acmePaths = append(acmePaths, pathAcmeUpdateAccount(&b)...)
+	acmePaths = append(acmePaths, pathAcmeGetOrder(&b)...)
+	acmePaths = append(acmePaths, pathAcmeListOrders(&b)...)
+	acmePaths = append(acmePaths, pathAcmeNewOrder(&b)...)
+	acmePaths = append(acmePaths, pathAcmeFinalizeOrder(&b)...)
+	acmePaths = append(acmePaths, pathAcmeFetchOrderCert(&b)...)
+	acmePaths = append(acmePaths, pathAcmeChallenge(&b)...)
+	acmePaths = append(acmePaths, pathAcmeAuthorization(&b)...)
+
+	for _, acmePath := range acmePaths {
+		b.Backend.Paths = append(b.Backend.Paths, acmePath)
 	}
 
 	// Add specific un-auth'd paths for ACME APIs
@@ -265,6 +258,10 @@ func Backend(conf *logical.BackendConfig) *backend {
 		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/account/+")
 		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/authorization/+")
 		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/challenge/+/+")
+		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/orders")
+		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/order/+")
+		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/order/+/finalize")
+		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/order/+/cert")
 	}
 
 	if constants.IsEnterprise {
@@ -426,6 +423,11 @@ func (b *backend) initialize(ctx context.Context, _ *logical.InitializationReque
 		return err
 	}
 
+	err = b.acmeState.Initialize(b, sc)
+	if err != nil {
+		return err
+	}
+
 	// Initialize also needs to populate our certificate and revoked certificate count
 	err = b.initializeStoredCertificateCounts(ctx)
 	if err != nil {
@@ -435,6 +437,10 @@ func (b *backend) initialize(ctx context.Context, _ *logical.InitializationReque
 	}
 
 	return nil
+}
+
+func (b *backend) cleanup(_ context.Context) {
+	b.acmeState.validator.Closing <- struct{}{}
 }
 
 func (b *backend) initializePKIIssuersStorage(ctx context.Context) error {
@@ -597,15 +603,31 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 		}
 
 		// Then attempt to rebuild the CRLs if required.
-		if err := b.crlBuilder.rebuildIfForced(sc); err != nil {
+		warnings, err := b.crlBuilder.rebuildIfForced(sc)
+		if err != nil {
 			return err
+		}
+		if len(warnings) > 0 {
+			msg := "During rebuild of complete CRL, got the following warnings:"
+			for index, warning := range warnings {
+				msg = fmt.Sprintf("%v\n %d. %v", msg, index+1, warning)
+			}
+			b.Logger().Warn(msg)
 		}
 
 		// If a delta CRL was rebuilt above as part of the complete CRL rebuild,
 		// this will be a no-op. However, if we do need to rebuild delta CRLs,
 		// this would cause us to do so.
-		if err := b.crlBuilder.rebuildDeltaCRLsIfForced(sc, false); err != nil {
+		warnings, err = b.crlBuilder.rebuildDeltaCRLsIfForced(sc, false)
+		if err != nil {
 			return err
+		}
+		if len(warnings) > 0 {
+			msg := "During rebuild of delta CRL, got the following warnings:"
+			for index, warning := range warnings {
+				msg = fmt.Sprintf("%v\n %d. %v", msg, index+1, warning)
+			}
+			b.Logger().Warn(msg)
 		}
 
 		return nil

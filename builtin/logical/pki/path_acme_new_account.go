@@ -1,7 +1,9 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -16,40 +18,12 @@ func uuidNameRegex(name string) string {
 	return fmt.Sprintf("(?P<%s>[[:alnum:]]{8}-[[:alnum:]]{4}-[[:alnum:]]{4}-[[:alnum:]]{4}-[[:alnum:]]{12}?)", name)
 }
 
-func pathAcmeRootNewAccount(b *backend) *framework.Path {
-	return patternAcmeNewAccount(b, "acme/new-account")
+func pathAcmeNewAccount(b *backend) []*framework.Path {
+	return buildAcmeFrameworkPaths(b, patternAcmeNewAccount, "/new-account")
 }
 
-func pathAcmeRoleNewAccount(b *backend) *framework.Path {
-	return patternAcmeNewAccount(b, "roles/"+framework.GenericNameRegex("role")+"/acme/new-account")
-}
-
-func pathAcmeIssuerNewAccount(b *backend) *framework.Path {
-	return patternAcmeNewAccount(b, "issuer/"+framework.GenericNameRegex(issuerRefParam)+"/acme/new-account")
-}
-
-func pathAcmeIssuerAndRoleNewAccount(b *backend) *framework.Path {
-	return patternAcmeNewAccount(b,
-		"issuer/"+framework.GenericNameRegex(issuerRefParam)+
-			"/roles/"+framework.GenericNameRegex("role")+"/acme/new-account")
-}
-
-func pathAcmeRootUpdateAccount(b *backend) *framework.Path {
-	return patternAcmeNewAccount(b, "acme/account/"+uuidNameRegex("kid"))
-}
-
-func pathAcmeRoleUpdateAccount(b *backend) *framework.Path {
-	return patternAcmeNewAccount(b, "roles/"+framework.GenericNameRegex("role")+"/acme/account/"+uuidNameRegex("kid"))
-}
-
-func pathAcmeIssuerUpdateAccount(b *backend) *framework.Path {
-	return patternAcmeNewAccount(b, "issuer/"+framework.GenericNameRegex(issuerRefParam)+"/acme/account/"+uuidNameRegex("kid"))
-}
-
-func pathAcmeIssuerAndRoleUpdateAccount(b *backend) *framework.Path {
-	return patternAcmeNewAccount(b,
-		"issuer/"+framework.GenericNameRegex(issuerRefParam)+
-			"/roles/"+framework.GenericNameRegex("role")+"/acme/account/"+uuidNameRegex("kid"))
+func pathAcmeUpdateAccount(b *backend) []*framework.Path {
+	return buildAcmeFrameworkPaths(b, patternAcmeNewAccount, "/account/"+uuidNameRegex("kid"))
 }
 
 func addFieldsForACMEPath(fields map[string]*framework.FieldSchema, pattern string) map[string]*framework.FieldSchema {
@@ -125,81 +99,6 @@ func patternAcmeNewAccount(b *backend, pattern string) *framework.Path {
 		HelpSynopsis:    pathOcspHelpSyn,
 		HelpDescription: pathOcspHelpDesc,
 	}
-}
-
-type acmeParsedOperation func(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}) (*logical.Response, error)
-
-func (b *backend) acmeParsedWrapper(op acmeParsedOperation) framework.OperationFunc {
-	return b.acmeWrapper(func(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData) (*logical.Response, error) {
-		user, data, err := b.acmeState.ParseRequestParams(acmeCtx, fields)
-		if err != nil {
-			return nil, err
-		}
-
-		resp, err := op(acmeCtx, r, fields, user, data)
-
-		// Our response handlers might not add the necessary headers.
-		if resp != nil {
-			if resp.Headers == nil {
-				resp.Headers = map[string][]string{}
-			}
-
-			if _, ok := resp.Headers["Replay-Nonce"]; !ok {
-				nonce, _, err := b.acmeState.GetNonce()
-				if err != nil {
-					return nil, err
-				}
-
-				resp.Headers["Replay-Nonce"] = []string{nonce}
-			}
-
-			if _, ok := resp.Headers["Link"]; !ok {
-				resp.Headers["Link"] = genAcmeLinkHeader(acmeCtx)
-			} else {
-				directory := genAcmeLinkHeader(acmeCtx)[0]
-				addDirectory := true
-				for _, item := range resp.Headers["Link"] {
-					if item == directory {
-						addDirectory = false
-						break
-					}
-				}
-				if addDirectory {
-					resp.Headers["Link"] = append(resp.Headers["Link"], directory)
-				}
-			}
-
-			// ACME responses don't understand Vault's default encoding
-			// format. Rather than expecting everything to handle creating
-			// ACME-formatted responses, do the marshaling in one place.
-			if _, ok := resp.Data[logical.HTTPRawBody]; !ok {
-				ignored_values := map[string]bool{logical.HTTPContentType: true, logical.HTTPStatusCode: true}
-				fields := map[string]interface{}{}
-				body := map[string]interface{}{
-					logical.HTTPContentType: "application/json",
-					logical.HTTPStatusCode:  http.StatusOK,
-				}
-
-				for key, value := range resp.Data {
-					if _, present := ignored_values[key]; !present {
-						fields[key] = value
-					} else {
-						body[key] = value
-					}
-				}
-
-				rawBody, err := json.Marshal(fields)
-				if err != nil {
-					return nil, fmt.Errorf("Error marshaling JSON body: %w", err)
-				}
-
-				body[logical.HTTPRawBody] = rawBody
-				resp.Data = body
-			}
-		}
-
-		return resp, err
-	})
 }
 
 func (b *backend) acmeNewAccountHandler(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}) (*logical.Response, error) {

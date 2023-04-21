@@ -1,15 +1,29 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
 	"context"
 	"crypto"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net/http"
+	"path"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+
+	"github.com/go-test/deep"
 
 	"github.com/hashicorp/go-cleanhttp"
 	"golang.org/x/crypto/acme"
@@ -36,8 +50,8 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 	}{
 		{"root", ""},
 		{"role", "/roles/test-role"},
-		{"issuer", "/issuer/default"},
-		{"issuer_role", "/issuer/default/roles/test-role"},
+		{"issuer", "/issuer/int-ca"},
+		{"issuer_role", "/issuer/int-ca/roles/test-role"},
 		{"issuer_role_acme", "/issuer/acme/roles/acme"},
 	}
 	testCtx := context.Background()
@@ -45,11 +59,12 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			baseAcmeURL := "/v1/pki" + tc.prefixUrl + "/acme/"
-			key, err := rsa.GenerateKey(rand.Reader, 2048)
+			accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
 			require.NoError(t, err, "failed creating rsa key")
 
-			acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, key)
+			acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)
 
+			t.Logf("Testing discover on %s", baseAcmeURL)
 			discovery, err := acmeClient.Discover(testCtx)
 			require.NoError(t, err, "failed acme discovery call")
 
@@ -61,10 +76,12 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			require.Equal(t, discoveryBaseUrl+"key-change", discovery.KeyChangeURL)
 
 			// Attempt to update prior to creating an account
+			t.Logf("Testing updates with no proper account fail on %s", baseAcmeURL)
 			_, err = acmeClient.UpdateReg(testCtx, &acme.Account{Contact: []string{"mailto:shouldfail@example.com"}})
 			require.ErrorIs(t, err, acme.ErrNoAccount, "expected failure attempting to update prior to account registration")
 
 			// Create new account
+			t.Logf("Testing register on %s", baseAcmeURL)
 			acct, err := acmeClient.Register(testCtx, &acme.Account{
 				Contact: []string{"mailto:test@example.com", "mailto:test2@test.com"},
 			}, func(tosURL string) bool { return true })
@@ -75,12 +92,14 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			require.Len(t, acct.Contact, 2)
 
 			// Call register again we should get existing account
+			t.Logf("Testing duplicate register returns existing account on %s", baseAcmeURL)
 			_, err = acmeClient.Register(testCtx, acct, func(tosURL string) bool { return true })
 			require.ErrorIs(t, err, acme.ErrAccountAlreadyExists,
 				"We should have returned a 200 status code which would have triggered an error in the golang acme"+
 					" library")
 
 			// Update contact
+			t.Logf("Testing Update account contacts on %s", baseAcmeURL)
 			acct.Contact = []string{"mailto:test3@example.com"}
 			acct2, err := acmeClient.UpdateReg(testCtx, acct)
 			require.NoError(t, err, "failed updating account")
@@ -89,11 +108,159 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			require.Contains(t, acct2.Contact, "mailto:test3@example.com")
 			require.Len(t, acct2.Contact, 1)
 
+			// Make sure order's do not accept dates
+			_, err = acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{{Type: "dns", Value: "localhost"}},
+				acme.WithOrderNotBefore(time.Now().Add(10*time.Minute)))
+			require.Error(t, err, "should have rejected a new order with NotBefore set")
+
+			_, err = acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{{Type: "dns", Value: "localhost"}},
+				acme.WithOrderNotAfter(time.Now().Add(10*time.Minute)))
+			require.Error(t, err, "should have rejected a new order with NotAfter set")
+
+			// Make sure DNS identifiers cannot include IP addresses
+			_, err = acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{{Type: "dns", Value: "127.0.0.1"}},
+				acme.WithOrderNotAfter(time.Now().Add(10*time.Minute)))
+			require.Error(t, err, "should have rejected a new order with IP-like DNS-type identifier")
+			_, err = acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{{Type: "dns", Value: "*.127.0.0.1"}},
+				acme.WithOrderNotAfter(time.Now().Add(10*time.Minute)))
+			require.Error(t, err, "should have rejected a new order with IP-like DNS-type identifier")
+
+			// Create an order
+			t.Logf("Testing Authorize Order on %s", baseAcmeURL)
+			identifiers := []string{"localhost", "*.localhost"}
+			createOrder, err := acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{
+				{Type: "dns", Value: identifiers[0]},
+				{Type: "dns", Value: identifiers[1]},
+			})
+			require.NoError(t, err, "failed creating order")
+			require.Equal(t, acme.StatusPending, createOrder.Status)
+			require.Empty(t, createOrder.CertURL)
+			require.Equal(t, createOrder.URI+"/finalize", createOrder.FinalizeURL)
+			require.Len(t, createOrder.AuthzURLs, 2, "expected two authzurls")
+
+			// Get order
+			t.Logf("Testing GetOrder on %s", baseAcmeURL)
+			getOrder, err := acmeClient.GetOrder(testCtx, createOrder.URI)
+			require.NoError(t, err, "failed fetching order")
+			require.Equal(t, acme.StatusPending, createOrder.Status)
+			if diffs := deep.Equal(createOrder, getOrder); diffs != nil {
+				t.Fatalf("Differences exist between create and get order: \n%v", strings.Join(diffs, "\n"))
+			}
+
+			// Load authorization
+			auth, err := acmeClient.GetAuthorization(testCtx, getOrder.AuthzURLs[0])
+			require.NoError(t, err, "failed fetching authorization")
+			require.Equal(t, acme.StatusPending, auth.Status)
+			require.Equal(t, "dns", auth.Identifier.Type)
+			require.Equal(t, "localhost", auth.Identifier.Value)
+			require.False(t, auth.Wildcard, "should not be a wildcard")
+			require.True(t, auth.Expires.IsZero(), "authorization should only have expiry set on valid status")
+
+			require.Len(t, auth.Challenges, 2, "expected two challenges")
+			require.Equal(t, acme.StatusPending, auth.Challenges[0].Status)
+			require.True(t, auth.Challenges[0].Validated.IsZero(), "validated time should be 0 on challenge")
+			require.Equal(t, "http-01", auth.Challenges[0].Type)
+			require.NotEmpty(t, auth.Challenges[0].Token, "missing challenge token")
+			require.Equal(t, acme.StatusPending, auth.Challenges[1].Status)
+			require.True(t, auth.Challenges[1].Validated.IsZero(), "validated time should be 0 on challenge")
+			require.Equal(t, "dns-01", auth.Challenges[1].Type)
+			require.NotEmpty(t, auth.Challenges[1].Token, "missing challenge token")
+
+			// Load a challenge directly; this triggers validation to start.
+			challenge, err := acmeClient.GetChallenge(testCtx, auth.Challenges[0].URI)
+			require.NoError(t, err, "failed to load challenge")
+			require.Equal(t, acme.StatusProcessing, challenge.Status)
+			require.True(t, challenge.Validated.IsZero(), "validated time should be 0 on challenge")
+			require.Equal(t, "http-01", challenge.Type)
+
+			require.NotEmpty(t, challenge.Token, "missing challenge token")
+
+			// HACK: Update authorization/challenge to completed as we can't really do it properly in this workflow
+			//       test.
+			pkiMount := findStorageMountUuid(t, client, "pki")
+			accountId := acct.URI[strings.LastIndex(acct.URI, "/"):]
+			for _, authURI := range getOrder.AuthzURLs {
+				authId := authURI[strings.LastIndex(authURI, "/"):]
+
+				rawPath := path.Join("/sys/raw/logical/", pkiMount, getAuthorizationPath(accountId, authId))
+				resp, err := client.Logical().ReadWithContext(testCtx, rawPath)
+				require.NoError(t, err, "failed looking up authorization storage")
+				require.NotNil(t, resp, "sys raw response was nil")
+				require.NotEmpty(t, resp.Data["value"], "no value field in sys raw response")
+
+				var authz ACMEAuthorization
+				err = jsonutil.DecodeJSON([]byte(resp.Data["value"].(string)), &authz)
+				require.NoError(t, err, "error decoding authorization: %w", err)
+				authz.Status = ACMEAuthorizationValid
+				for _, challenge := range authz.Challenges {
+					challenge.Status = ACMEChallengeValid
+				}
+
+				encodeJSON, err := jsonutil.EncodeJSON(authz)
+				require.NoError(t, err, "failed encoding authz json")
+				_, err = client.Logical().WriteWithContext(testCtx, rawPath, map[string]interface{}{
+					"value":    base64.StdEncoding.EncodeToString(encodeJSON),
+					"encoding": "base64",
+				})
+				require.NoError(t, err, "failed writing authorization storage")
+			}
+
+			// Make sure sending a CSR with the account key gets rejected.
+			goodCr := &x509.CertificateRequest{
+				Subject:  pkix.Name{CommonName: identifiers[1]},
+				DNSNames: []string{identifiers[0], identifiers[1]},
+			}
+			t.Logf("csr: %v", goodCr)
+
+			// We want to make sure people are not using the same keys for CSR/Certs and their ACME account.
+			csrSignedWithAccountKey, err := x509.CreateCertificateRequest(rand.Reader, goodCr, accountKey)
+			require.NoError(t, err, "failed generating csr")
+			_, _, err = acmeClient.CreateOrderCert(testCtx, createOrder.FinalizeURL, csrSignedWithAccountKey, true)
+			require.Error(t, err, "should not be allowed to use the account key for a CSR")
+
+			csrKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+			require.NoError(t, err, "failed generated key for CSR")
+
+			// Validate we reject CSRs that contain names that aren't in the original order
+			badCr := &x509.CertificateRequest{
+				Subject:  pkix.Name{CommonName: createOrder.Identifiers[0].Value},
+				DNSNames: []string{"www.notinorder.com"},
+			}
+
+			csrWithBadName, err := x509.CreateCertificateRequest(rand.Reader, badCr, csrKey)
+			require.NoError(t, err, "failed generating csr with bad name")
+
+			_, _, err = acmeClient.CreateOrderCert(testCtx, createOrder.FinalizeURL, csrWithBadName, true)
+			require.Error(t, err, "should not be allowed to csr with different names than order")
+
+			// Validate we reject CSRs that contains fewer names than in the original order.
+			badCr = &x509.CertificateRequest{
+				Subject: pkix.Name{CommonName: identifiers[0]},
+			}
+
+			csrWithBadName, err = x509.CreateCertificateRequest(rand.Reader, badCr, csrKey)
+			require.NoError(t, err, "failed generating csr with bad name")
+
+			_, _, err = acmeClient.CreateOrderCert(testCtx, createOrder.FinalizeURL, csrWithBadName, true)
+			require.Error(t, err, "should not be allowed to csr with different names than order")
+
+			// Finally test a proper CSR, with the correct name and signed with a different key works.
+			csr, err := x509.CreateCertificateRequest(rand.Reader, goodCr, csrKey)
+			require.NoError(t, err, "failed generating csr")
+
+			certs, _, err := acmeClient.CreateOrderCert(testCtx, createOrder.FinalizeURL, csr, true)
+			require.NoError(t, err, "failed finalizing order")
+			require.Len(t, certs, 3, "expected three items within the returned certs")
+
+			testAcmeCertSignedByCa(t, client, certs, "int-ca")
+
 			// Deactivate account
+			t.Logf("Testing deactivate account on %s", baseAcmeURL)
 			err = acmeClient.DeactivateReg(testCtx)
 			require.NoError(t, err, "failed deactivating account")
 
 			// Make sure we get an unauthorized error trying to update the account again.
+			t.Logf("Testing update on deactivated account fails on %s", baseAcmeURL)
 			_, err = acmeClient.UpdateReg(testCtx, acct)
 			require.Error(t, err, "expected account to be deactivated")
 			require.IsType(t, &acme.Error{}, err, "expected acme error type")
@@ -220,7 +387,76 @@ func setupAcmeBackend(t *testing.T) (*vault.TestCluster, *api.Client, string) {
 	})
 	require.NoError(t, err, "failed tuning mount response headers")
 
+	_, err = client.Logical().WriteWithContext(context.Background(), "/pki/issuers/generate/root/internal", map[string]interface{}{
+		"issuer_name": "root-ca",
+		"key_name":    "root-key",
+		"key_type":    "ec",
+		"common_name": "root.com",
+		"ttl":         "10h",
+	})
+	require.NoError(t, err, "failed creating root CA")
+
+	resp, err := client.Logical().WriteWithContext(context.Background(), "/pki/issuers/generate/intermediate/internal",
+		map[string]interface{}{
+			"key_name":    "int-key",
+			"key_type":    "ec",
+			"common_name": "test.com",
+		})
+	require.NoError(t, err, "failed creating intermediary CSR")
+	intermediateCSR := resp.Data["csr"].(string)
+
+	// Sign the intermediate CSR using /pki
+	resp, err = client.Logical().Write("pki/issuer/root-ca/sign-intermediate", map[string]interface{}{
+		"csr": intermediateCSR,
+		"ttl": "5h",
+	})
+	require.NoError(t, err, "failed signing intermediary CSR")
+	intermediateCertPEM := resp.Data["certificate"].(string)
+
+	// Configure the intermediate cert as the CA in /pki2
+	resp, err = client.Logical().Write("/pki/issuers/import/cert", map[string]interface{}{
+		"pem_bundle": intermediateCertPEM,
+	})
+	require.NoError(t, err, "failed importing intermediary cert")
+	importedIssuersRaw := resp.Data["imported_issuers"].([]interface{})
+	require.Len(t, importedIssuersRaw, 1)
+	intCaUuid := importedIssuersRaw[0].(string)
+
+	_, err = client.Logical().Write("/pki/issuer/"+intCaUuid, map[string]interface{}{
+		"issuer_name": "int-ca",
+	})
+
+	_, err = client.Logical().Write("/pki/config/issuers", map[string]interface{}{
+		"default": "int-ca",
+	})
+
 	return cluster, client, pathConfig
+}
+
+func testAcmeCertSignedByCa(t *testing.T, client *api.Client, derCerts [][]byte, issuerRef string) {
+	t.Helper()
+	require.NotEmpty(t, derCerts)
+	acmeCert, err := x509.ParseCertificate(derCerts[0])
+	require.NoError(t, err, "failed parsing acme cert bytes")
+
+	resp, err := client.Logical().ReadWithContext(context.Background(), "pki/issuer/"+issuerRef)
+	require.NoError(t, err, "failed reading issuer with name %s", issuerRef)
+	issuerCert := parseCert(t, resp.Data["certificate"].(string))
+	issuerChainRaw := resp.Data["ca_chain"].([]interface{})
+
+	err = acmeCert.CheckSignatureFrom(issuerCert)
+	require.NoError(t, err, "issuer %s did not sign provided cert", issuerRef)
+
+	expectedCerts := [][]byte{derCerts[0]}
+
+	for _, entry := range issuerChainRaw {
+		chainCert := parseCert(t, entry.(string))
+		expectedCerts = append(expectedCerts, chainCert.Raw)
+	}
+
+	if diffs := deep.Equal(expectedCerts, derCerts); diffs != nil {
+		t.Fatalf("diffs were found between the acme chain returned and the expected value: \n%v", diffs)
+	}
 }
 
 func setupTestPkiCluster(t *testing.T) (*vault.TestCluster, *api.Client) {
@@ -228,6 +464,7 @@ func setupTestPkiCluster(t *testing.T) (*vault.TestCluster, *api.Client) {
 		LogicalBackends: map[string]logical.Factory{
 			"pki": Factory,
 		},
+		EnableRaw: true,
 	}
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,

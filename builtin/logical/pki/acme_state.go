@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -6,6 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -18,16 +23,24 @@ const (
 	// How long nonces are considered valid.
 	nonceExpiry = 15 * time.Minute
 
+	// How many bytes are in a token. Per RFC 8555 Section
+	// 8.3. HTTP Challenge and Section 11.3 Token Entropy:
+	//
+	// > token (required, string):  A random value that uniquely identifies
+	// >   the challenge.  This value MUST have at least 128 bits of entropy.
+	tokenBytes = 128 / 8
+
 	// Path Prefixes
-	acmePathPrefix          = "acme/"
-	acmeAccountPrefix       = acmePathPrefix + "accounts/"
-	acmeThumbprintPrefix    = acmePathPrefix + "account-thumbprints/"
-	acmeAuthroizationPrefix = acmePathPrefix + "authz/"
+	acmePathPrefix       = "acme/"
+	acmeAccountPrefix    = acmePathPrefix + "accounts/"
+	acmeThumbprintPrefix = acmePathPrefix + "account-thumbprints/"
+	acmeValidationPrefix = acmePathPrefix + "validations/"
 )
 
 type acmeState struct {
 	nextExpiry *atomic.Int64
 	nonces     *sync.Map // map[string]time.Time
+	validator  *ACMEChallengeEngine
 }
 
 type acmeThumbprint struct {
@@ -39,10 +52,25 @@ func NewACMEState() *acmeState {
 	return &acmeState{
 		nextExpiry: new(atomic.Int64),
 		nonces:     new(sync.Map),
+		validator:  NewACMEChallengeEngine(),
 	}
 }
 
+func (a *acmeState) Initialize(b *backend, sc *storageContext) error {
+	if err := a.validator.Initialize(b, sc); err != nil {
+		return fmt.Errorf("error initializing ACME engine: %w", err)
+	}
+
+	go a.validator.Run(b)
+
+	return nil
+}
+
 func generateNonce() (string, error) {
+	return generateRandomBase64(21)
+}
+
+func generateRandomBase64(srcBytes int) (string, error) {
 	data := make([]byte, 21)
 	if _, err := io.ReadFull(rand.Reader, data); err != nil {
 		return "", err
@@ -132,6 +160,41 @@ type acmeAccount struct {
 	Contact              []string          `json:"contact"`
 	TermsOfServiceAgreed bool              `json:"termsOfServiceAgreed"`
 	Jwk                  []byte            `json:"jwk"`
+}
+
+type acmeOrder struct {
+	OrderId                 string              `json:"-"`
+	AccountId               string              `json:"account-id"`
+	Status                  ACMEOrderStatusType `json:"status"`
+	Expires                 time.Time           `json:"expires"`
+	Identifiers             []*ACMEIdentifier   `json:"identifiers"`
+	AuthorizationIds        []string            `json:"authorization-ids"`
+	CertificateSerialNumber string              `json:"cert-serial-number"`
+	CertificateExpiry       time.Time           `json:"cert-expiry"`
+	IssuerId                issuerID            `json:"issuer-id"`
+}
+
+func (o acmeOrder) getIdentifierDNSValues() []string {
+	var identifiers []string
+	for _, value := range o.Identifiers {
+		if value.Type == ACMEDNSIdentifier {
+			// Here, because of wildcard processing, we need to use the
+			// original value provided by the caller rather than the
+			// post-modification (trimmed '*.' prefix) value.
+			identifiers = append(identifiers, value.OriginalValue)
+		}
+	}
+	return identifiers
+}
+
+func (o acmeOrder) getIdentifierIPValues() []net.IP {
+	var identifiers []net.IP
+	for _, value := range o.Identifiers {
+		if value.Type == ACMEIPIdentifier {
+			identifiers = append(identifiers, net.ParseIP(value.Value))
+		}
+	}
+	return identifiers
 }
 
 func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, contact []string, termsOfServiceAgreed bool) (*acmeAccount, error) {
@@ -267,7 +330,22 @@ func (a *acmeState) LoadAuthorization(ac *acmeContext, userCtx *jwsCtx, authId s
 		return nil, fmt.Errorf("malformed authorization identifier")
 	}
 
-	entry, err := ac.sc.Storage.Get(ac.sc.Context, acmeAuthroizationPrefix+authId)
+	authorizationPath := getAuthorizationPath(userCtx.Kid, authId)
+
+	authz, err := loadAuthorizationAtPath(ac.sc, authorizationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if userCtx.Kid != authz.AccountId {
+		return nil, ErrUnauthorized
+	}
+
+	return authz, nil
+}
+
+func loadAuthorizationAtPath(sc *storageContext, authorizationPath string) (*ACMEAuthorization, error) {
+	entry, err := sc.Storage.Get(sc.Context, authorizationPath)
 	if err != nil {
 		return nil, fmt.Errorf("error loading authorization: %w", err)
 	}
@@ -282,24 +360,29 @@ func (a *acmeState) LoadAuthorization(ac *acmeContext, userCtx *jwsCtx, authId s
 		return nil, fmt.Errorf("error decoding authorization: %w", err)
 	}
 
-	if userCtx.Kid != authz.AccountId {
-		return nil, ErrUnauthorized
-	}
-
 	return &authz, nil
 }
 
 func (a *acmeState) SaveAuthorization(ac *acmeContext, authz *ACMEAuthorization) error {
+	path := getAuthorizationPath(authz.AccountId, authz.Id)
+	return saveAuthorizationAtPath(ac.sc, path, authz)
+}
+
+func saveAuthorizationAtPath(sc *storageContext, path string, authz *ACMEAuthorization) error {
 	if authz.Id == "" {
 		return fmt.Errorf("invalid authorization, missing id")
 	}
 
-	json, err := logical.StorageEntryJSON(acmeAuthroizationPrefix+authz.Id, authz)
+	if authz.AccountId == "" {
+		return fmt.Errorf("invalid authorization, missing account id")
+	}
+
+	json, err := logical.StorageEntryJSON(path, authz)
 	if err != nil {
 		return fmt.Errorf("error creating authorization entry: %w", err)
 	}
 
-	if err := ac.sc.Storage.Put(ac.sc.Context, json); err != nil {
+	if err = sc.Storage.Put(sc.Context, json); err != nil {
 		return fmt.Errorf("error writing authorization entry: %w", err)
 	}
 
@@ -352,4 +435,82 @@ func (a *acmeState) ParseRequestParams(ac *acmeContext, data *framework.FieldDat
 	}
 
 	return &c, m, nil
+}
+
+func (a *acmeState) LoadOrder(ac *acmeContext, userCtx *jwsCtx, orderId string) (*acmeOrder, error) {
+	path := getOrderPath(userCtx.Kid, orderId)
+	entry, err := ac.sc.Storage.Get(ac.sc.Context, path)
+	if err != nil {
+		return nil, fmt.Errorf("error loading order: %w", err)
+	}
+
+	if entry == nil {
+		return nil, fmt.Errorf("order does not exist: %w", ErrMalformed)
+	}
+
+	var order acmeOrder
+	err = entry.DecodeJSON(&order)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding order: %w", err)
+	}
+
+	if userCtx.Kid != order.AccountId {
+		return nil, ErrUnauthorized
+	}
+
+	order.OrderId = orderId
+
+	return &order, nil
+}
+
+func (a *acmeState) SaveOrder(ac *acmeContext, order *acmeOrder) error {
+	if order.OrderId == "" {
+		return fmt.Errorf("invalid order, missing order id")
+	}
+
+	if order.AccountId == "" {
+		return fmt.Errorf("invalid order, missing account id")
+	}
+	path := getOrderPath(order.AccountId, order.OrderId)
+	json, err := logical.StorageEntryJSON(path, order)
+	if err != nil {
+		return fmt.Errorf("error serializing order entry: %w", err)
+	}
+
+	if err = ac.sc.Storage.Put(ac.sc.Context, json); err != nil {
+		return fmt.Errorf("error writing order entry: %w", err)
+	}
+
+	return nil
+}
+
+func (a *acmeState) ListOrderIds(ac *acmeContext, accountId string) ([]string, error) {
+	accountOrderPrefixPath := acmeAccountPrefix + accountId + "/orders/"
+
+	rawOrderIds, err := ac.sc.Storage.List(ac.sc.Context, accountOrderPrefixPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed listing order ids for account %s: %w", accountId, err)
+	}
+
+	orderIds := []string{}
+	for _, order := range rawOrderIds {
+		if strings.HasSuffix(order, "/") {
+			// skip any folders we might have for some reason
+			continue
+		}
+		orderIds = append(orderIds, order)
+	}
+	return orderIds, nil
+}
+
+func getAuthorizationPath(accountId string, authId string) string {
+	return acmeAccountPrefix + accountId + "/authorizations/" + authId
+}
+
+func getOrderPath(accountId string, orderId string) string {
+	return acmeAccountPrefix + accountId + "/orders/" + orderId
+}
+
+func getACMEToken() (string, error) {
+	return generateRandomBase64(tokenBytes)
 }
