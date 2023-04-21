@@ -5,7 +5,7 @@
 
 import ApplicationAdapter from '../application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
-import { all } from 'rsvp';
+import { allSettled } from 'rsvp';
 import { verifyCertificates } from 'vault/utils/parse-pki-cert';
 
 export default class PkiIssuerAdapter extends ApplicationAdapter {
@@ -41,36 +41,35 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
     return this.ajax(url, 'POST', { data });
   }
 
-  async query(store, type, query) {
+  query(store, type, query) {
     const { backend } = query;
     const url = this.urlForQuery(backend);
 
     return this.ajax(url, 'GET', this.optionsForQuery()).then(async (res) => {
       if (res.data.keys.length <= 10) {
-        const records = await all(
-          res.data.keys.map((id) => {
+        const records = await allSettled(
+          res.data.keys.map(async (id) => {
             return this.queryRecord(store, type, { id, backend });
           })
         );
 
-        for (let i = 0; i < records.length; i++) {
-          if (records[i] instanceof Error) {
-            return res;
+        const issuerInfo = records.map((record) => {
+          if (record.state === 'rejected') {
+            return {};
           }
-        }
+          if (record.state === 'fulfilled') {
+            return record.value;
+          }
+        });
 
-        const isRootRecords = await all(
-          records.map((record) => {
-            const { certificate } = record.data;
+        res.data.keys.forEach((key, index) => {
+          const { certificate } = issuerInfo[index];
+          const isRoot = certificate ? verifyCertificates(certificate, certificate) : certificate;
 
-            return verifyCertificates(certificate, certificate);
-          })
-        );
-
-        res.data.keys = records.map((record, idx) => {
-          return {
-            ...record.data,
-            isRoot: isRootRecords[idx],
+          res.data.key_info[key] = {
+            ...res.data.key_info[key],
+            ...issuerInfo[index],
+            isRoot,
           };
         });
       }
@@ -81,7 +80,8 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
 
   queryRecord(store, type, query) {
     const { backend, id } = query;
-    return this.ajax(`${this.urlForQuery(backend, id)}`, 'GET', this.optionsForQuery(id)).catch((e) => e);
+
+    return this.ajax(`${this.urlForQuery(backend, id)}`, 'GET', this.optionsForQuery(id));
   }
 
   deleteAllIssuers(backend) {
