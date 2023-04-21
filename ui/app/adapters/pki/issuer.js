@@ -53,6 +53,12 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
           })
         );
 
+        for (let i = 0; i < records.length; i++) {
+          if (records[i] instanceof Error) {
+            return res;
+          }
+        }
+
         const isRootRecords = await all(
           records.map((record) => {
             const { certificate } = record.data;
@@ -74,8 +80,12 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
   }
 
   queryRecord(store, type, query) {
-    const { backend, id } = query;
-    return this.ajax(`${this.urlForQuery(backend, id)}`, 'GET', this.optionsForQuery(id));
+    try {
+      const { backend, id } = query;
+      return this.ajax(`${this.urlForQuery(backend, id)}`, 'GET', this.optionsForQuery(id));
+    } catch (e) {
+      return e;
+    }
   }
 
   deleteAllIssuers(backend) {
