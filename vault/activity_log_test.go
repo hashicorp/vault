@@ -835,7 +835,7 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 			"enabled":                  activityLogEnabledDefaultValue,
 			"queries_available":        false,
 			"reporting_enabled":        core.censusLicensingEnabled,
-			"billing_start_timestamp":  core.GetBillingStart(),
+			"billing_start_timestamp":  core.billingStart,
 			"minimum_retention_months": core.activityLog.configOverrides.MinimumRetentionMonths,
 		}
 
@@ -919,7 +919,7 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 			"enabled":                  "enable",
 			"queries_available":        false,
 			"reporting_enabled":        core.censusLicensingEnabled,
-			"billing_start_timestamp":  core.GetBillingStart(),
+			"billing_start_timestamp":  core.billingStart,
 			"minimum_retention_months": core.activityLog.configOverrides.MinimumRetentionMonths,
 		}
 
@@ -958,7 +958,7 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 			"enabled":                  activityLogEnabledDefaultValue,
 			"queries_available":        false,
 			"reporting_enabled":        core.censusLicensingEnabled,
-			"billing_start_timestamp":  core.GetBillingStart(),
+			"billing_start_timestamp":  core.billingStart,
 			"minimum_retention_months": core.activityLog.configOverrides.MinimumRetentionMonths,
 		}
 
