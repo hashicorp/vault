@@ -1,4 +1,4 @@
-<Hds::SideNav::Portal @ariaLabel="Cluster Navigation Links" as |Nav|>
+<Hds::SideNav::Portal @ariaLabel="Cluster Navigation Links" data-test-sidebar-nav-panel="Cluster" as |Nav|>
   <Nav.Title data-test-sidebar-nav-heading="Vault">Vault</Nav.Title>
 
   <Nav.Link
@@ -40,28 +40,20 @@
     (and this.version.isEnterprise this.cluster.anyReplicationEnabled (has-permission "status" routeParams="replication"))
   }}
     <Nav.Title data-test-sidebar-nav-heading="Replication">Replication</Nav.Title>
-    {{#if this.cluster.dr.isSecondary}}
-      <Nav.Link
-        @route="vault.cluster.replication-dr-promote.details"
-        @text="DR Primary"
-        data-test-sidebar-nav-link="DR Primary"
-      />
-    {{else}}
+    <Nav.Link
+      @route="vault.cluster.replication.mode.index"
+      @model="dr"
+      @text="DR Primary"
+      data-test-sidebar-nav-link="DR Primary"
+    />
+
+    {{#if (has-feature "Performance Replication")}}
       <Nav.Link
         @route="vault.cluster.replication.mode.index"
-        @model="dr"
-        @text="DR Primary"
-        data-test-sidebar-nav-link="DR Primary"
+        @model="performance"
+        @text="Performance Secondary"
+        data-test-sidebar-nav-link="Performance Secondary"
       />
-
-      {{#if (has-feature "Performance Replication")}}
-        <Nav.Link
-          @route="vault.cluster.replication.mode.index"
-          @model="performance"
-          @text="Performance Secondary"
-          data-test-sidebar-nav-link="Performance Secondary"
-        />
-      {{/if}}
     {{/if}}
   {{/if}}
 

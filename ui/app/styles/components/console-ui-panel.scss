@@ -3,14 +3,15 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
+$console-close-height: 35px;
+
 .console-ui-panel {
   background: var(--token-color-palette-neutral-700);
-  width: 100%;
+  width: inherit;
   height: 0;
   min-height: 0;
   overflow: auto;
-  position: absolute;
-  right: 0;
+  position: fixed;
   bottom: 0;
   transition: min-height $speed ease-out, transform $speed ease-in;
   will-change: transform, min-height;
@@ -39,7 +40,7 @@
   font-size: $body-size;
   font-weight: $font-weight-semibold;
   justify-content: flex-end;
-  min-height: 100%;
+  min-height: calc(100% - $console-close-height); // account for close button that is sticky positioned
   padding: $size-8 $size-8 $size-5;
   transition: justify-content $speed ease-in;
 
@@ -125,9 +126,9 @@
 
 .panel-open .console-ui-panel.fullscreen {
   bottom: 0;
+  right: 0;
   min-height: 100vh;
-  min-width: 100vh;
-  position: fixed;
+  width: 100%;
 }
 
 .console-spinner.control {
@@ -148,6 +149,7 @@
 .console-close-button {
   position: sticky;
   top: $spacing-xs;
+  height: $console-close-height;
   display: flex;
   justify-content: flex-end;
   z-index: 210;
