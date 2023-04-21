@@ -324,12 +324,24 @@ func (ace *ACMEChallengeEngine) _verifyChallenge(sc *storageContext, id string) 
 			err = fmt.Errorf("error validating http-01 challenge %v: %w", id, err)
 			return ace._verifyChallengeRetry(sc, cv, authz, err, id)
 		}
+	case ACMEDNSChallenge:
+		if authz.Identifier.Type != ACMEDNSIdentifier {
+			err = fmt.Errorf("unsupported identifier type for authorization %v/%v in challenge %v: %v", cv.Account, cv.Authorization, id, authz.Identifier.Type)
+            return ace._verifyChallengeCleanup(sc, err, id)
+		}
+
+		valid, err = ValidateDNS01Challenge(authz.Identifier.Value, cv.Token, cv.Thumbprint)
+        if err != nil {
+            err = fmt.Errorf("error validating dns-01 challenge %v: %w", id, err)
+            return ace._verifyChallengeRetry(sc, cv, authz, err, id)
+        }
 	default:
 		err = fmt.Errorf("unsupported ACME challenge type %v for challenge %v", cv.ChallengeType, id)
 		return ace._verifyChallengeCleanup(sc, err, id)
 	}
 
 	if !valid {
+		err = fmt.Errorf("challenge failed with no additional information")
 		return ace._verifyChallengeRetry(sc, cv, authz, err, id)
 	}
 
