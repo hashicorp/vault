@@ -88,6 +88,11 @@ func getFormat(data *framework.FieldData) string {
 // loading using the legacyBundleShimID and should be used with care. This should be called only once
 // within the request path otherwise you run the risk of a race condition with the issuer migration on perf-secondaries.
 func (sc *storageContext) fetchCAInfo(issuerRef string, usage issuerUsage) (*certutil.CAInfoBundle, error) {
+	bundle, _, err := sc.fetchCAInfoWithIssuer(issuerRef, usage)
+	return bundle, err
+}
+
+func (sc *storageContext) fetchCAInfoWithIssuer(issuerRef string, usage issuerUsage) (*certutil.CAInfoBundle, issuerID, error) {
 	var issuerId issuerID
 
 	if sc.Backend.useLegacyBundleCaStorage() {
@@ -99,11 +104,16 @@ func (sc *storageContext) fetchCAInfo(issuerRef string, usage issuerUsage) (*cer
 		issuerId, err = sc.resolveIssuerReference(issuerRef)
 		if err != nil {
 			// Usually a bad label from the user or mis-configured default.
-			return nil, errutil.UserError{Err: err.Error()}
+			return nil, IssuerRefNotFound, errutil.UserError{Err: err.Error()}
 		}
 	}
 
-	return sc.fetchCAInfoByIssuerId(issuerId, usage)
+	bundle, err := sc.fetchCAInfoByIssuerId(issuerId, usage)
+	if err != nil {
+		return nil, IssuerRefNotFound, err
+	}
+
+	return bundle, issuerId, nil
 }
 
 // fetchCAInfoByIssuerId will fetch the CA info, will return an error if no ca info exists for the given issuerId.

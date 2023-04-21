@@ -37,6 +37,7 @@ const (
 	ACMEOrderProcessing ACMEOrderStatusType = "processing"
 	ACMEOrderValid      ACMEOrderStatusType = "valid"
 	ACMEOrderInvalid    ACMEOrderStatusType = "invalid"
+	ACMEOrderReady      ACMEOrderStatusType = "ready"
 )
 
 type ACMEChallengeType string
