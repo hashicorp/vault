@@ -21,9 +21,20 @@ a default health check. When Consul is configured as the storage backend, the st
 - **HashiCorp Supported** – Consul Service Registration is officially supported
   by HashiCorp.
 
+## Configuration
+
 ```hcl
 service_registration "consul" {
   address      = "127.0.0.1:8500"
+}
+```
+
+If Vault is running in HA mode, include the transfer protocol (`http://` or
+`https://`) in the address:
+
+```hcl
+service_registration "consul" {
+  address      = "http://127.0.0.1:8500"
 }
 ```
 
