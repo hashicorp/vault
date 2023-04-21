@@ -57,7 +57,7 @@ func (b *backend) pathLogin() *framework.Path {
 		Pattern: "login$",
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixAWS,
-			OperationVerb:   "log-in",
+			OperationVerb:   "login",
 		},
 		Fields: map[string]*framework.FieldSchema{
 			"role": {
