@@ -453,13 +453,15 @@ func TestRaft_Configuration_Docker(t *testing.T) {
 	}
 	opts := &docker.DockerClusterOptions{
 		ImageRepo: "hashicorp/vault",
-		// TODO ideally we'd use this branch's latest version, which works
-		// fine on release branches, but on main it might not exist yet.
-		ImageTag:    "1.13.0",
+		// We're replacing the binary anyway, so we're not too particular about
+		// the docker image version tag.
+		ImageTag:    "latest",
 		VaultBinary: binary,
 		ClusterOptions: testcluster.ClusterOptions{
 			VaultNodeConfig: &testcluster.VaultNodeConfig{
 				LogLevel: "TRACE",
+				// If you want the test to run faster locally, you could
+				// uncomment this performance_multiplier change.
 				//StorageOptions: map[string]string{
 				//	"performance_multiplier": "1",
 				//},
