@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -118,6 +119,43 @@ func TestGitHub_WriteReadConfig_OrgID(t *testing.T) {
 	// the ID should be set to what was written in the config
 	assert.Equal(t, int64(98765), resp.Data["organization_id"])
 	assert.Equal(t, "foo-org", resp.Data["organization"])
+}
+
+// TestGitHub_WriteReadConfig_Token tests that we can successfully read and
+// write the github auth config with a token environment variable
+func TestGitHub_WriteReadConfig_Token(t *testing.T) {
+	b, s := createBackendWithStorage(t)
+	// use a test server to return our mock GH org info
+	ts := setupTestServer(t)
+	defer ts.Close()
+
+	err := os.Setenv("VAULT_AUTH_CONFIG_GITHUB_TOKEN", "foobar")
+	assert.NoError(t, err)
+
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "config",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"organization": "foo-org",
+			"base_url":     ts.URL, // base_url will call the test server
+		},
+		Storage: s,
+	})
+	assert.NoError(t, err)
+	assert.Nil(t, resp)
+	assert.NoError(t, resp.Error())
+
+	// Read the config
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "config",
+		Operation: logical.ReadOperation,
+		Storage:   s,
+	})
+	assert.NoError(t, err)
+	assert.NoError(t, resp.Error())
+
+	// the token should not be returned in the read config response.
+	assert.Nil(t, resp.Data["token"])
 }
 
 // TestGitHub_ErrorNoOrgID tests that an error is returned when we cannot fetch

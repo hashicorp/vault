@@ -327,7 +327,8 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 	c.clusterListener.Store(cluster.NewListener(networkLayer,
 		c.clusterCipherSuites,
 		listenerLogger,
-		5*c.clusterHeartbeatInterval))
+		5*c.clusterHeartbeatInterval,
+		c.grpcMinConnectTimeout))
 
 	c.AddLogger(listenerLogger)
 

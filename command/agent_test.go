@@ -2428,6 +2428,75 @@ func TestAgent_Config_ReloadTls(t *testing.T) {
 	wg.Wait()
 }
 
+// TestAgent_NonTLSListener_SIGHUP tests giving a SIGHUP signal to a listener
+// without a TLS configuration. Prior to fixing GitHub issue #19480, this
+// would cause a panic.
+func TestAgent_NonTLSListener_SIGHUP(t *testing.T) {
+	logger := logging.NewVaultLogger(hclog.Trace)
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	serverClient := cluster.Cores[0].Client
+
+	// Unset the environment variable so that agent picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Unsetenv(api.EnvVaultAddress)
+
+	listenAddr := generateListenerAddress(t)
+	listenConfig := fmt.Sprintf(`
+listener "tcp" {
+  address = "%s"
+  tls_disable = true
+}
+`, listenAddr)
+
+	config := fmt.Sprintf(`
+vault {
+  address = "%s"
+  tls_skip_verify = true
+}
+%s
+`, serverClient.Address(), listenConfig)
+	configPath := makeTempFile(t, "config.hcl", config)
+	defer os.Remove(configPath)
+
+	// Start the agent
+	ui, cmd := testAgentCommand(t, logger)
+
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		if code := cmd.Run([]string{"-config", configPath}); code != 0 {
+			output := ui.ErrorWriter.String() + ui.OutputWriter.String()
+			t.Errorf("got a non-zero exit status: %s", output)
+		}
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+	}
+
+	// Reload
+	cmd.SighupCh <- struct{}{}
+	select {
+	case <-cmd.reloadedCh:
+	case <-time.After(5 * time.Second):
+		t.Fatalf("timeout")
+	}
+
+	close(cmd.ShutdownCh)
+	wg.Wait()
+}
+
 // Get a randomly assigned port and then free it again before returning it.
 // There is still a race when trying to use it, but should work better
 // than a static port.

@@ -406,6 +406,8 @@ $ curl \
 This endpoint disables DR replication entirely on the cluster. The cluster will no
 longer be able to connect to the DR primary.
 
+This endpoint requires a DR Operation Token to be provided as means of authorization. See the DR Operation Token API docs for more information.
+
 !> Re-enabling this node as a DR primary or secondary will change its cluster ID;
 in the secondary case this means a wipe of the underlying storage when connected
 to a primary, and in the primary case, secondaries connecting back to the
@@ -416,12 +418,20 @@ underlying storage.
 | :----- | :-------------------------------------- |
 | `POST` | `/sys/replication/dr/secondary/disable` |
 
+### Sample Payload
+
+```json
+{
+  "dr_operation_token": "...",
+}
+```
+
 ### Sample Request
 
 ```shell-session
 $ curl \
-    --header "X-Vault-Token: ..." \
     --request POST \
+    --data @payload.json \
     http://127.0.0.1:8200/v1/sys/replication/dr/secondary/disable
 ```
 

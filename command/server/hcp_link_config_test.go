@@ -9,6 +9,10 @@ import (
 )
 
 func TestHCPLinkConfig(t *testing.T) {
+	t.Setenv("HCP_CLIENT_ID", "")
+	t.Setenv("HCP_CLIENT_SECRET", "")
+	t.Setenv("HCP_RESOURCE_ID", "")
+
 	config, err := LoadConfigFile("./test-fixtures/hcp_link_config.hcl")
 	if err != nil {
 		t.Fatalf("err: %s", err)

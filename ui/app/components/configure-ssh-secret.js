@@ -6,20 +6,28 @@ import { action } from '@ember/object';
  *
  * @example
  * ```js
- *  <ConfigureSshSecret 
-      @model={{model}} 
-      @configured={{configured}} 
-      @saveConfig={{action "saveConfig"}} />
+ * <ConfigureSshSecret
+ *    @model={{this.model}}
+ *    @configured={{this.configured}}
+ *    @saveConfig={{action "saveConfig"}}
+ *    @loading={{this.loading}}
+ *  />
  * ```
  *
  * @param {string} model - ssh secret engine model
  * @param {Function} saveConfig - parent action which updates the configuration
- * 
+ * @param {boolean} loading - property in parent that updates depending on status of parent's action
+ *
  */
 export default class ConfigureSshSecretComponent extends Component {
   @action
-  saveConfig(data, event) {
+  delete() {
+    this.args.saveConfig({ delete: true });
+  }
+
+  @action
+  saveConfig(event) {
     event.preventDefault();
-    this.args.saveConfig(data);
+    this.args.saveConfig({ delete: false });
   }
 }
