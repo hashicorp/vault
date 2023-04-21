@@ -7,6 +7,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Test_AuditBroker_ForwardingHeaders tests that we are able to extract the relevant headers
+// from a logical.LogInput Request's headers, and move the values of the headers to explicit
+// fields within the logical.LogInput struct.
+// The headers originate from the HTTP request headers that the node received, and should have
+// been augmented with metadata about forwarding from/to hosts if a request is forwarded from
+// a standby to a primary node.
 func Test_AuditBroker_ForwardingHeaders(t *testing.T) {
 	tests := map[string]struct {
 		headers  map[string][]string
