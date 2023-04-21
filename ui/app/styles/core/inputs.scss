@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-// This file defines the classes for .input, .textarea and .input-hint.
+// This file defines the styles for .input, .textarea and .input-hint.
 
 .input,
 .textarea {
@@ -38,7 +38,7 @@
   }
 
   @include until($desktop) {
-    font-size: $spacing-m;
+    font-size: $size-6;
   }
 
   &::placeholder {
