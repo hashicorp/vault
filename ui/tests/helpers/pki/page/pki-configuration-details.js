@@ -10,10 +10,10 @@ export const SELECTORS = {
   crlDistributionPointsLabel: '[data-test-row-label="CRL distribution points"]',
   crlDistributionPointsRowVal: '[data-test-row-value="CRL distribution points"]',
   // crl
-  expiryLabel: '[data-test-row-label="Expiry"]',
-  expiryRowVal: '[data-test-row-value="Expiry"]',
+  expiryLabel: '[data-test-row-label="CRL building"]',
+  expiryRowVal: '[data-test-row-value="CRL building"]',
   rebuildLabel: '[data-test-row-label="Auto-rebuild"]',
-  rebuildRowVal: '[data-test-row-value="Auto-rebuild"]',
+  rebuildRowVal: '[data-test-value-div="Auto-rebuild"]',
   responderApiLabel: '[data-test-row-label="Responder APIs"]',
   responderApiRowVal: '[data-test-row-value="Responder APIs"]',
   intervalLabel: '[data-test-row-label="Interval"]',

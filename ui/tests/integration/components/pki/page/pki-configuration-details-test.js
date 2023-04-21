@@ -76,8 +76,8 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
       { owner: this.engine }
     );
 
-    assert.dom(SELECTORS.expiryLabel).hasText('Expiry', 'crl expiry row label renders');
-    assert.dom(SELECTORS.expiryRowVal).hasText('20h', 'expiry value renders');
+    assert.dom(SELECTORS.expiryLabel).hasText('CRL building', 'crl expiry row label renders');
+    assert.dom(SELECTORS.expiryRowVal).hasText('Enabled', 'expiry value renders');
     assert.dom(SELECTORS.rebuildLabel).hasText('Auto-rebuild', 'auto rebuild label renders');
     assert
       .dom(SELECTORS.rebuildRowVal)
