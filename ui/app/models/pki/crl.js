@@ -11,15 +11,15 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 export default class PkiCrlModel extends Model {
   // This model uses the backend value as the model ID
 
-  // API params are readonly and values are set in the serializer from the attr objects below
-  @attr expiry;
-  @attr disable;
-  @attr ocspDisable;
-  @attr ocspExpiry;
-  @attr autoRebuild;
-  @attr autoRebuildGracePeriod;
-  @attr enableDelta;
-  @attr deltaRebuildInterval;
+  // API params are updated in the serializer from the attr objects below
+  @attr('string') expiry;
+  @attr('boolean') disable;
+  @attr('boolean') ocspDisable;
+  @attr('string') ocspExpiry;
+  @attr('boolean') autoRebuild;
+  @attr('string') autoRebuildGracePeriod;
+  @attr('boolean') enableDelta;
+  @attr('string') deltaRebuildInterval;
 
   @attr('object', {
     label: 'Auto-rebuild on',
