@@ -85,6 +85,7 @@
     "deepmerge": "^4.0.0",
     "doctoc": "^2.2.0",
     "ember-api-actions": "^0.2.8",
+    "dompurify": "^3.0.2",
     "ember-auto-import": "2.4.2",
     "ember-basic-dropdown": "4.0.3",
     "ember-cli": "~3.28.5",
