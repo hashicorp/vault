@@ -9,7 +9,7 @@
       </h2>
       {{#if @urls.canSet}}
         {{#each @urls.allFields as |attr|}}
-          <FormField @attr={{attr}} @model={{@urls}} @showHelpText={{false}} data-test-urls-field={{attr.name}} />
+          <FormField @attr={{attr}} @model={{@urls}} @showHelpText={{false}} />
         {{/each}}
       {{else}}
         <EmptyState
@@ -22,7 +22,7 @@
       {{/if}}
     </fieldset>
 
-    <fieldset class="box is-shadowless is-marginless is-borderless is-fullwidth" data-test-crls-edit-section>
+    <fieldset class="box is-shadowless is-marginless is-borderless is-fullwidth" data-test-crl-edit-section>
       <h2 class="title is-4 has-bottom-margin-xs has-border-bottom-light has-bottom-padding-s">
         Certificate Revocation List (CRL)
       </h2>
@@ -97,7 +97,7 @@
             @paddingTop={{true}}
             @message={{this.invalidFormAlert}}
             @mimicRefresh={{true}}
-            data-test-configuration-edit-validation-error
+            data-test-configuration-edit-validation-alert
           />
         </div>
       {{/if}}
