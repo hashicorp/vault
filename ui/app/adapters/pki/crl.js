@@ -19,7 +19,8 @@ export default class PkiCrlAdapter extends ApplicationAdapter {
     });
   }
 
-  urlForUpdateRecord(store, type, snapshot) {
-    return this._url(snapshot.record.id);
+  updateRecord(store, type, snapshot) {
+    const data = snapshot.serialize();
+    return this.ajax(this._url(snapshot.record.id), 'POST', { data });
   }
 }
