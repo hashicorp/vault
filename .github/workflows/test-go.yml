@@ -79,6 +79,8 @@ jobs:
       if: |
         ! contains(inputs.extra-flags, '-race') &&
         ! contains(inputs.go-build-tags, 'fips')
+      env:
+        GOPRIVATE: github.com/hashicorp/*
       run: make ci-bootstrap dev
     - name: Save dev binary
       if: |
