@@ -218,7 +218,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	conf.PluginDirectory = opts.PluginDirectory
 	conf.DetectDeadlocks = opts.DetectDeadlocks
 	conf.Experiments = []string{experiments.VaultExperimentEventsAlpha1}
-	conf.censusAgent = opts.censusAgent
+	conf.CensusAgent = opts.CensusAgent
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
@@ -972,6 +972,10 @@ func (c *TestClusterCore) Seal(t testing.T) {
 	}
 }
 
+func (c *TestClusterCore) LogicalStorage() logical.Storage {
+	return c.barrier
+}
+
 func (c *TestClusterCore) stop() error {
 	c.Logger().Info("stopping vault test core")
 
@@ -1024,6 +1028,10 @@ func (c *TestClusterCore) TriggerRollbacks() {
 
 func (c *TestClusterCore) TLSConfig() *tls.Config {
 	return c.tlsConfig.Clone()
+}
+
+func (c *TestClusterCore) ClusterListener() *cluster.Listener {
+	return c.getClusterListener()
 }
 
 func (c *TestCluster) Cleanup() {

@@ -208,7 +208,7 @@ func (dc *ExecDevCluster) setupExecDevCluster(ctx context.Context, opts *ExecDev
 
 				dc.ClusterNodes = append(dc.ClusterNodes, &execDevClusterNode{
 					name:   fmt.Sprintf("core-%d", i),
-					Client: client,
+					client: client,
 				})
 			}
 			return nil
@@ -220,7 +220,7 @@ func (dc *ExecDevCluster) setupExecDevCluster(ctx context.Context, opts *ExecDev
 
 type execDevClusterNode struct {
 	name   string
-	Client *api.Client
+	client *api.Client
 }
 
 var _ VaultClusterNode = &execDevClusterNode{}
@@ -230,11 +230,28 @@ func (e *execDevClusterNode) Name() string {
 }
 
 func (e *execDevClusterNode) APIClient() *api.Client {
-	return e.Client
+	// We clone to ensure that whenever this method is called, the caller gets
+	// back a pristine client, without e.g. any namespace or token changes that
+	// might pollute a shared client.  We clone the config instead of the
+	// client because (1) Client.clone propagates the replicationStateStore and
+	// the httpClient pointers, (2) it doesn't copy the tlsConfig at all, and
+	// (3) if clone returns an error, it doesn't feel as appropriate to panic
+	// below.  Who knows why clone might return an error?
+	cfg := e.client.CloneConfig()
+	client, err := api.NewClient(cfg)
+	if err != nil {
+		// It seems fine to panic here, since this should be the same input
+		// we provided to NewClient when we were setup, and we didn't panic then.
+		// Better not to completely ignore the error though, suppose there's a
+		// bug in CloneConfig?
+		panic(fmt.Sprintf("NewClient error on cloned config: %v", err))
+	}
+	client.SetToken(e.client.Token())
+	return client
 }
 
 func (e *execDevClusterNode) TLSConfig() *tls.Config {
-	return e.Client.CloneConfig().TLSConfig()
+	return e.client.CloneConfig().TLSConfig()
 }
 
 func (dc *ExecDevCluster) ClusterID() string {
