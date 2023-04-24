@@ -5,15 +5,24 @@
 
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
-// import { withConfirmLeave } from 'core/decorators/confirm-leave';
+import { hash } from 'rsvp';
+import { withConfirmLeave } from 'core/decorators/confirm-leave';
 
-// @withConfirmLeave()
+@withConfirmLeave('model.config', ['model.urls', 'model.crl'])
 export default class PkiConfigurationEditRoute extends Route {
   @service secretMountPath;
 
+  model() {
+    const { urls, crl, engine } = this.modelFor('configuration');
+    return hash({
+      engineId: engine.id,
+      urls,
+      crl,
+    });
+  }
+
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-
     controller.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview' },
