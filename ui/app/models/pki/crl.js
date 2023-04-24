@@ -21,6 +21,14 @@ export default class PkiCrlModel extends Model {
   @attr('boolean') enableDelta;
   @attr('string') deltaRebuildInterval;
 
+  // TODO follow-on ticket to add enterprise only attributes:
+  /*
+  @attr('boolean') crossClusterRevocation;
+  @attr('boolean') unifiedCrl;
+  @attr('boolean') unifiedCrlOnExistingPaths;
+  */
+
+  // edit form ttl attrs
   @attr('object', {
     label: 'Auto-rebuild on',
     labelDisabled: 'Auto-rebuild off',
@@ -67,17 +75,6 @@ export default class PkiCrlModel extends Model {
     helperTextDisabled: 'Requests cannot be made to check if an individual certificate is valid.',
   })
   ocspExpiryData; // sets ocsp_disable (boolean), ocsp_expiry (duration)
-
-  // TODO missing from designs, enterprise only - add?
-  /*
-  to set cross_cluster_revocation=true or unified_crl=true
-  need to have auto_rebuild=true and
-  you need to have Vault Ent and this must not be a local-only mount.
-  
-  "cross_cluster_revocation": true,
-  "unified_crl": true,
-  "unified_crl_on_existing_paths": true
-  */
 
   @lazyCapabilities(apiPath`${'id'}/config/crl`, 'id') crlPath;
 
