@@ -1,8 +1,11 @@
 module github.com/hashicorp/vault/api
 
+// The Go version directive for the api package should normally only be updated when
+// code in the api package requires a newer Go version to build.  It should not
+// automatically track the Go version used to build Vault itself.  Many projects import
+// the api module and we don't want to impose a newer version on them any more than we
+// have to.
 go 1.19
-
-replace github.com/hashicorp/vault/sdk => ../sdk
 
 require (
 	github.com/cenkalti/backoff/v3 v3.0.0

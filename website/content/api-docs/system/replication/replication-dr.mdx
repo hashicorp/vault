@@ -470,6 +470,13 @@ docs](#generate-disaster-recovery-operation-token) for more information.
   PEM-format files that the secondary can use when unwrapping the token from the
   primary. If this and ca_file are not given, defaults to system CA roots.
 
+- `update_primary_addrs` `array: []` – List of cluster addresses for potential
+  primary clusters. These addresses will be pinged in sequence, and if any of them
+  respond successfully, these will be recorded as the new primary addresses. This is
+  a lighter weight version of specifying a token and should result in less disruption
+  of replication. Note that it's invalid to specify this and `token` in the same API call.
+  They are mutually exclusive.
+
 ### Sample Payload
 
 ```json

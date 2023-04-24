@@ -1044,13 +1044,7 @@ func TestAutoRebuild(t *testing.T) {
 	// each revocation. Pull the storage from the cluster (via the sys/raw
 	// endpoint which requires the mount UUID) and verify the revInfo contains
 	// a matching issuer.
-	resp, err = client.Logical().Read("sys/mounts/pki")
-	require.NoError(t, err)
-	require.NotNil(t, resp)
-	require.NotNil(t, resp.Data)
-	require.NotEmpty(t, resp.Data["uuid"])
-	pkiMount := resp.Data["uuid"].(string)
-	require.NotEmpty(t, pkiMount)
+	pkiMount := findStorageMountUuid(t, client, "pki")
 	revEntryPath := "logical/" + pkiMount + "/" + revokedPath + normalizeSerial(newLeafSerial)
 
 	// storage from cluster.Core[0] is a physical storage copy, not a logical
@@ -1176,6 +1170,17 @@ func TestAutoRebuild(t *testing.T) {
 	crl = waitForUpdatedCrl(t, client, defaultCrlPath, lastCRLNumber, lastCRLExpiry.Sub(now)+delta)
 	requireSerialNumberInCRL(t, crl, leafSerial)
 	requireSerialNumberInCRL(t, crl, newLeafSerial)
+}
+
+func findStorageMountUuid(t *testing.T, client *api.Client, mount string) string {
+	resp, err := client.Logical().Read("sys/mounts/" + mount)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.NotEmpty(t, resp.Data["uuid"])
+	pkiMount := resp.Data["uuid"].(string)
+	require.NotEmpty(t, pkiMount)
+	return pkiMount
 }
 
 func TestTidyIssuerAssociation(t *testing.T) {
