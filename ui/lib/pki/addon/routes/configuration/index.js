@@ -5,8 +5,9 @@
 
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
-import { hash } from 'rsvp';
 import { withConfig } from 'pki/decorators/check-config';
+import { hash } from 'rsvp';
+
 @withConfig()
 export default class ConfigurationIndexRoute extends Route {
   @service store;
@@ -21,12 +22,12 @@ export default class ConfigurationIndexRoute extends Route {
   model() {
     const { urls, crl, engine } = this.modelFor('configuration');
     return hash({
-      engine,
       hasConfig: this.shouldPromptConfig,
-      mountConfig: this.fetchMountConfig(engine.id),
-      issuerModel: this.store.createRecord('pki/issuer'),
+      engine,
       urls,
       crl,
+      mountConfig: this.fetchMountConfig(engine.id),
+      issuerModel: this.store.createRecord('pki/issuer'),
     });
   }
 }
