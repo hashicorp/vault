@@ -171,7 +171,6 @@ scenario "upgrade" {
     }
 
     variables {
-      artifactory_release   = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
       awskms_unseal_key_arn = step.create_vpc.kms_key_arn
       cluster_name          = step.create_vault_cluster_targets.cluster_name
       config_env_vars = {
