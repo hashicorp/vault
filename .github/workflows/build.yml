@@ -165,7 +165,7 @@ jobs:
       matrix:
         arch: [amd64]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: hashicorp/actions-docker-build@v1
         with:
           version: ${{ needs.product-metadata.outputs.vault-version }}
