@@ -1,11 +1,11 @@
 module github.com/hashicorp/vault
 
-// The go version directive value isn't consulted when building our production binaries, 
+// The go version directive value isn't consulted when building our production binaries,
 // and the vault module isn't intended to be imported into other projects.  As such the
 // impact of this setting is usually rather limited.  Note however that in some cases the
 // Go project introduces new semantics for handling of go.mod depending on the value.
 //
-// The general policy for updating it is: when the Go major version used on the branch is 
+// The general policy for updating it is: when the Go major version used on the branch is
 // updated. If we choose not to do so at some point (e.g. because we don't want some new
 // semantic related to Go module handling), this comment should be updated to explain that.
 //
