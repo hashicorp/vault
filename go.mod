@@ -1,6 +1,16 @@
 module github.com/hashicorp/vault
 
-go 1.19
+// The go version directive value isn't consulted when building our production binaries, 
+// and the vault module isn't intended to be imported into other projects.  As such the
+// impact of this setting is usually rather limited.  Note however that in some cases the
+// Go project introduces new semantics for handling of go.mod depending on the value.
+//
+// The general policy for updating it is: when the Go major version used on the branch is 
+// updated. If we choose not to do so at some point (e.g. because we don't want some new
+// semantic related to Go module handling), this comment should be updated to explain that.
+//
+// Whenever this value gets updated, sdk/go.mod should be updated to the same value.
+go 1.20
 
 replace github.com/hashicorp/vault/api => ./api
 
@@ -135,7 +145,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.7.1-0.20230405171328-0ba92be486aa
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.1.1-0.20230321230503-ee76cdb16f93
 	github.com/hashicorp/vault-testing-stepwise v0.1.3
-	github.com/hashicorp/vault/api v1.9.0
+	github.com/hashicorp/vault/api v1.9.1
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
 	github.com/hashicorp/vault/sdk v0.9.0
