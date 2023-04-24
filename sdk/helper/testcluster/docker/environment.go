@@ -493,7 +493,7 @@ type DockerClusterNode struct {
 	tlsConfig            *tls.Config
 	WorkDir              string
 	Cluster              *DockerCluster
-	container            *types.ContainerJSON
+	Container            *types.ContainerJSON
 	dockerAPI            *docker.Client
 	runner               *dockhelper.Runner
 	Logger               log.Logger
@@ -572,7 +572,7 @@ func (n *DockerClusterNode) Cleanup() {
 }
 
 func (n *DockerClusterNode) cleanup() error {
-	if n.container == nil || n.container.ID == "" {
+	if n.Container == nil || n.Container.ID == "" {
 		return nil
 	}
 	n.cleanupContainer()
@@ -748,7 +748,7 @@ func (n *DockerClusterNode) start(ctx context.Context, caDir string, opts *Docke
 	}
 
 	n.HostPort = svc.Config.Address()
-	n.container = svc.Container
+	n.Container = svc.Container
 	netName := opts.NetworkName
 	if netName == "" {
 		if len(svc.Container.NetworkSettings.Networks) > 1 {
