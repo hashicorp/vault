@@ -58,18 +58,3 @@
   font-size: $size-7;
   color: $ui-gray-500;
 }
-
-// responsive css
-@media screen and (min-width: 769px), print {
-  .title {
-    &.is-2 {
-      flex: none;
-      width: 16.66667%;
-    }
-
-    &.is-4 {
-      flex: none;
-      width: 33.33333%;
-    }
-  }
-}
