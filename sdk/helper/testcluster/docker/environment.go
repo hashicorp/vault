@@ -732,7 +732,14 @@ func (n *dockerClusterNode) start(ctx context.Context, caDir string, opts *Docke
 	n.container = svc.Container
 	netName := opts.NetworkName
 	if netName == "" {
-		netName = "bridge"
+		if len(svc.Container.NetworkSettings.Networks) > 1 {
+			return fmt.Errorf("Set d.RunOptions.NetworkName instead for container with multiple networks: %v", svc.Container.NetworkSettings.Networks)
+		}
+		for netName = range svc.Container.NetworkSettings.Networks {
+			// Networks above is a map; we just need to find the first and
+			// only key of this map (network name). The range handles this
+			// for us, but we need a loop construction in order to use range.
+		}
 	}
 	n.RealAPIAddr = "https://" + svc.Container.NetworkSettings.Networks[netName].IPAddress + ":8200"
 	n.cleanupContainer = svc.Cleanup
