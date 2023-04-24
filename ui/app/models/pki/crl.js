@@ -28,11 +28,12 @@ export default class PkiCrlModel extends Model {
   @attr('boolean') unifiedCrlOnExistingPaths;
   */
 
-  // edit form ttl attrs
-  @attr('object', {
+  @attr('ttl', {
+    enabledKey: 'auto_rebuild',
+    durationKey: 'auto_rebuild_grace_period',
+    isOppositeValue: false,
     label: 'Auto-rebuild on',
     labelDisabled: 'Auto-rebuild off',
-    editType: 'ttl',
     defaultValue() {
       return { enabled: false, duration: '12h' };
     },
@@ -41,10 +42,9 @@ export default class PkiCrlModel extends Model {
   })
   autoRebuildData; // sets auto_rebuild (boolean), auto_rebuild_grace_period (duration)
 
-  @attr('object', {
+  @attr('ttl', {
     label: 'Delta CRL building on',
     labelDisabled: 'Delta CRL building off',
-    editType: 'ttl',
     defaultValue() {
       return { enabled: false, duration: '15m' };
     },
@@ -53,10 +53,9 @@ export default class PkiCrlModel extends Model {
   })
   deltaCrlBuildingData; // sets enable_delta (boolean), delta_rebuild_interval (duration)
 
-  @attr('object', {
+  @attr('ttl', {
     label: 'Expiry',
     labelDisabled: 'No expiry',
-    editType: 'ttl',
     defaultValue() {
       return { enabled: true, duration: '72h' };
     },
