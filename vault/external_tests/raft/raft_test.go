@@ -445,6 +445,8 @@ func TestRaft_Configuration(t *testing.T) {
 	testRaft_Configuration(t, cluster)
 }
 
+// TestRaft_Configuration_Docker is a variant of TestRaft_Configuration that
+// uses docker containers for the vault nodes.
 func TestRaft_Configuration_Docker(t *testing.T) {
 	t.Parallel()
 	binary := os.Getenv("VAULT_BINARY")
