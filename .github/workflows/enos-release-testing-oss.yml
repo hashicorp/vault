@@ -15,7 +15,7 @@ jobs:
       vault-revision: ${{ steps.get-metadata.outputs.vault-revision }}
       vault-version: ${{ steps.get-metadata.outputs.vault-version }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab
         with:
           # Check out the repository at the same Git SHA that was used to create
           # the artifacts to get the correct metadata.

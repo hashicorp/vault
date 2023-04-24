@@ -16,7 +16,7 @@ jobs:
     outputs:
       is_docs_change: ${{ steps.get-changeddir.outputs.is_docs_change }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab
       - name: Get changed directories
         id: get-changeddir
         env:
@@ -43,7 +43,7 @@ jobs:
       vault-version: ${{ steps.get-metadata.outputs.vault-version }}
       vault-base-version: ${{ steps.get-metadata.outputs.vault-base-version }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab
       - name: Get metadata
         id: get-metadata
         env:
@@ -144,7 +144,7 @@ jobs:
       matrix:
         arch: [arm, arm64, 386, amd64]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab
       - uses: hashicorp/actions-docker-build@v1
         with:
           version: ${{ needs.product-metadata.outputs.vault-version }}
@@ -165,7 +165,7 @@ jobs:
       matrix:
         arch: [amd64]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab
       - uses: hashicorp/actions-docker-build@v1
         with:
           version: ${{ needs.product-metadata.outputs.vault-version }}

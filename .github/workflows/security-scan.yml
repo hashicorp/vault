@@ -13,7 +13,7 @@ jobs:
     runs-on: ['linux', 'large']
     if: ${{ github.actor != 'dependabot[bot]' || github.actor != 'hc-github-team-secure-vault-core' }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab
 
     - name: Set up Go
       uses: actions/setup-go@v3
@@ -26,7 +26,7 @@ jobs:
         python-version: 3.x
 
     - name: Clone Security Scanner repo
-      uses: actions/checkout@v3
+      uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab
       with:
         repository: hashicorp/security-scanner
         token: ${{ secrets.HASHIBOT_PRODSEC_GITHUB_TOKEN }}
