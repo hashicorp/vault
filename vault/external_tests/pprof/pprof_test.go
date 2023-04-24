@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -16,6 +17,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/sdk/helper/testcluster"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/vault"
 	"github.com/stretchr/testify/require"
@@ -23,6 +25,7 @@ import (
 )
 
 func TestSysPprof(t *testing.T) {
+	t.Parallel()
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc:             vaulthttp.Handler,
 		RequestResponseCallback: schema.ResponseValidatingCallback(t),
@@ -32,10 +35,37 @@ func TestSysPprof(t *testing.T) {
 
 	core := cluster.Cores[0].Core
 	vault.TestWaitActive(t, core)
-	client := cluster.Cores[0].Client
+	testSysPprof(t, cluster)
+}
+
+// TestSysPprof_Exec is the same as TestSysPprof, but using a Vault binary
+// running as -dev instead of a fake single node TestCluster.  There's no
+// particular reason why TestSysPprof was chosen to validate that mechanism,
+// other than that it was fast and simple.
+func TestSysPprof_Exec(t *testing.T) {
+	t.Parallel()
+	binary := os.Getenv("VAULT_BINARY")
+	if binary == "" {
+		t.Skip("only running exec test when $VAULT_BINARY present")
+	}
+	cluster := testcluster.NewTestExecDevCluster(t, &testcluster.ExecDevClusterOptions{
+		ClusterOptions: testcluster.ClusterOptions{
+			NumCores: 1,
+		},
+		BinaryPath:        binary,
+		BaseListenAddress: "127.0.0.1:8208",
+	})
+	defer cluster.Cleanup()
+
+	testSysPprof(t, cluster)
+}
+
+func testSysPprof(t *testing.T, cluster testcluster.VaultCluster) {
+	nodes := cluster.Nodes()
+	client := nodes[0].APIClient()
 
 	transport := cleanhttp.DefaultPooledTransport()
-	transport.TLSClientConfig = cluster.Cores[0].TLSConfig()
+	transport.TLSClientConfig = nodes[0].TLSConfig()
 	if err := http2.ConfigureTransport(transport); err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +115,7 @@ func TestSysPprof(t *testing.T) {
 		},
 	}
 
-	pprofRequest := func(path string, seconds string) {
+	pprofRequest := func(t *testing.T, path string, seconds string) {
 		req := client.NewRequest("GET", path)
 		if seconds != "" {
 			req.Params.Set("seconds", seconds)
@@ -123,12 +153,13 @@ func TestSysPprof(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			pprofRequest(tc.path, tc.seconds)
+			pprofRequest(t, tc.path, tc.seconds)
 		})
 	}
 }
 
 func TestSysPprof_MaxRequestDuration(t *testing.T) {
+	t.Parallel()
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
@@ -182,6 +213,7 @@ func TestSysPprof_MaxRequestDuration(t *testing.T) {
 }
 
 func TestSysPprof_Standby(t *testing.T) {
+	t.Parallel()
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
 		DisablePerformanceStandby: true,
 	}, &vault.TestClusterOptions{
@@ -194,9 +226,36 @@ func TestSysPprof_Standby(t *testing.T) {
 			},
 		},
 	})
-	cluster.Start()
 	defer cluster.Cleanup()
 
+	testSysPprof_Standby(t, cluster)
+}
+
+// TestSysPprof_Standby_Exec is the same as TestSysPprof_Standby, but using a Vault binary
+// running as -dev-three-node instead of a fake single node TestCluster.  There's
+// no particular reason why TestSysPprof was chosen to validate that mechanism,
+// other than that it was fast and simple.
+func TestSysPprof_Standby_Exec(t *testing.T) {
+	t.Parallel()
+	binary := os.Getenv("VAULT_BINARY")
+	if binary == "" {
+		t.Skip("only running exec test when $VAULT_BINARY present")
+	}
+	cluster := testcluster.NewTestExecDevCluster(t, &testcluster.ExecDevClusterOptions{
+		ClusterOptions: testcluster.ClusterOptions{
+			VaultNodeConfig: &testcluster.VaultNodeConfig{
+				DisablePerformanceStandby: true,
+			},
+		},
+		BinaryPath:        binary,
+		BaseListenAddress: "127.0.0.1:8210",
+	})
+	defer cluster.Cleanup()
+
+	testSysPprof_Standby(t, cluster)
+}
+
+func testSysPprof_Standby(t *testing.T, cluster testcluster.VaultCluster) {
 	pprof := func(client *api.Client) (string, error) {
 		req := client.NewRequest("GET", "/v1/sys/pprof/cmdline")
 		resp, err := client.RawRequestWithContext(context.Background(), req)
@@ -209,12 +268,12 @@ func TestSysPprof_Standby(t *testing.T) {
 		return string(data), err
 	}
 
-	cmdline, err := pprof(cluster.Cores[0].Client)
+	cmdline, err := pprof(cluster.Nodes()[0].APIClient())
 	require.Nil(t, err)
 	require.NotEmpty(t, cmdline)
 	t.Log(cmdline)
 
-	cmdline, err = pprof(cluster.Cores[1].Client)
+	cmdline, err = pprof(cluster.Nodes()[1].APIClient())
 	require.Nil(t, err)
 	require.NotEmpty(t, cmdline)
 	t.Log(cmdline)
