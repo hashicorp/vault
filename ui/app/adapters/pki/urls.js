@@ -13,13 +13,20 @@ export default class PkiUrlsAdapter extends ApplicationAdapter {
     return `${this.buildURL()}/${encodePath(backend)}/config/urls`;
   }
 
-  urlForCreateRecord(modelName, snapshot) {
-    return this._url(snapshot.record.id);
+  createOrUpdate(store, type, snapshot) {
+    const data = snapshot.serialize();
+    return this.ajax(this._url(snapshot.record.id), 'POST', { data });
   }
+
+  createRecord() {
+    return this.createOrUpdate(...arguments);
+  }
+
+  updateRecord() {
+    return this.createOrUpdate(...arguments);
+  }
+
   urlForFindRecord(id) {
     return this._url(id);
-  }
-  urlForUpdateRecord(store, type, snapshot) {
-    return this._url(snapshot.record.id);
   }
 }
