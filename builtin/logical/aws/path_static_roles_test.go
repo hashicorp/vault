@@ -3,12 +3,13 @@ package aws
 import (
 	"context"
 	"errors"
+	"testing"
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"testing"
-	"time"
 )
 
 func TestStaticRolesValidation(t *testing.T) {
