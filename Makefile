@@ -31,7 +31,7 @@ bin: prep
 	@CGO_ENABLED=$(CGO_ENABLED) BUILD_TAGS='$(BUILD_TAGS) ui' sh -c "'$(CURDIR)/scripts/build.sh'"
 
 testonly: 
-    $(eval BUILD_TAGS += testonly)
+	$(eval BUILD_TAGS += testonly)
     
 # dev creates binaries for testing Vault locally. These are put
 # into ./bin/ as well as $GOPATH/bin
