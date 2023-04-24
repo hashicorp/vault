@@ -15,10 +15,13 @@
               <span class="tag has-text-grey-dark">{{pkiIssuer.id}}</span>
             {{/if}}
             {{#if (not (eq pkiIssuer.isRoot undefined))}}
-              <span class="tag has-text-grey-dark">{{if pkiIssuer.isRoot "root" "intermediate"}}</span>
+              <span class="tag has-text-grey-dark" data-test-is-root-tag>{{if pkiIssuer.isRoot "root" "intermediate"}}</span>
             {{/if}}
             {{#if pkiIssuer.parsedCertificate.common_name}}
-              <span class="tag has-text-grey-dark">{{pkiIssuer.parsedCertificate.common_name}}</span>
+              <span
+                class="tag has-text-grey-dark"
+                data-test-common-name-tag
+              >{{pkiIssuer.parsedCertificate.common_name}}</span>
             {{/if}}
             {{#if pkiIssuer.serialNumber}}
               <span class="tag has-text-grey-dark">{{pkiIssuer.serialNumber}}</span>

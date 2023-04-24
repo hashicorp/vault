@@ -343,6 +343,18 @@ module('Acceptance | pki workflow', function (hooks) {
       await runCommands([`write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test"`]);
       await logout.visit();
     });
+    test('lists the correct issuer metadata info', async function (assert) {
+      assert.expect(5);
+      await authPage.login(this.pkiAdminToken);
+      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      assert.dom(SELECTORS.issuersTab).exists('Issuers tab is present');
+      await click(SELECTORS.issuersTab);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/issuers`);
+      assert.dom('.linked-block').exists({ count: 1 }, 'One issuer is in list');
+      assert.dom('[data-test-is-root-tag]').hasText('root');
+      assert.dom('[data-test-common-name-tag]').hasText('Hashicorp Test');
+    });
+
     test('details view renders correct number of info items', async function (assert) {
       assert.expect(13);
       await authPage.login(this.pkiAdminToken);
