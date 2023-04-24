@@ -230,10 +230,14 @@ func (e *execDevClusterNode) Name() string {
 }
 
 func (e *execDevClusterNode) APIClient() *api.Client {
+	// We clone to ensure that whenever this method is called, the caller gets
+	// back a pristine client, without e.g. any namespace or token changes that
+	// might pollute a shared client.
 	clone, err := e.Client.Clone()
 	if err != nil {
 		panic(fmt.Sprintf("clone error: %v", err))
 	}
+	clone.SetToken(e.Client.Token())
 	return clone
 }
 
