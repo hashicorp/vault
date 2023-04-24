@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -162,14 +163,38 @@ type acmeAccount struct {
 }
 
 type acmeOrder struct {
-	OrderId          string              `json:"-"`
-	AccountId        string              `json:"account-id"`
-	Status           ACMEOrderStatusType `json:"status"`
-	Expires          string              `json:"expires"`
-	NotBefore        string              `json:"not-before"`
-	NotAfter         string              `json:"not-after"`
-	Identifiers      []*ACMEIdentifier   `json:"identifiers"`
-	AuthorizationIds []string            `json:"authorization-ids"`
+	OrderId                 string              `json:"-"`
+	AccountId               string              `json:"account-id"`
+	Status                  ACMEOrderStatusType `json:"status"`
+	Expires                 time.Time           `json:"expires"`
+	Identifiers             []*ACMEIdentifier   `json:"identifiers"`
+	AuthorizationIds        []string            `json:"authorization-ids"`
+	CertificateSerialNumber string              `json:"cert-serial-number"`
+	CertificateExpiry       time.Time           `json:"cert-expiry"`
+	IssuerId                issuerID            `json:"issuer-id"`
+}
+
+func (o acmeOrder) getIdentifierDNSValues() []string {
+	var identifiers []string
+	for _, value := range o.Identifiers {
+		if value.Type == ACMEDNSIdentifier {
+			// Here, because of wildcard processing, we need to use the
+			// original value provided by the caller rather than the
+			// post-modification (trimmed '*.' prefix) value.
+			identifiers = append(identifiers, value.OriginalValue)
+		}
+	}
+	return identifiers
+}
+
+func (o acmeOrder) getIdentifierIPValues() []net.IP {
+	var identifiers []net.IP
+	for _, value := range o.Identifiers {
+		if value.Type == ACMEIPIdentifier {
+			identifiers = append(identifiers, net.ParseIP(value.Value))
+		}
+	}
+	return identifiers
 }
 
 func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, contact []string, termsOfServiceAgreed bool) (*acmeAccount, error) {

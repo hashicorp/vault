@@ -2,9 +2,8 @@
 
 package vault
 
-import "time"
-
 // CensusAgent is a stub for OSS
-type CensusAgent struct {
-	billingStart time.Time
-}
+type CensusReporter struct{}
+
+// setupCensusAgent is a stub for OSS.
+func (c *Core) setupCensusAgent() error { return nil }
