@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -33,11 +34,13 @@ const (
 	acmePathPrefix       = "acme/"
 	acmeAccountPrefix    = acmePathPrefix + "accounts/"
 	acmeThumbprintPrefix = acmePathPrefix + "account-thumbprints/"
+	acmeValidationPrefix = acmePathPrefix + "validations/"
 )
 
 type acmeState struct {
 	nextExpiry *atomic.Int64
 	nonces     *sync.Map // map[string]time.Time
+	validator  *ACMEChallengeEngine
 }
 
 type acmeThumbprint struct {
@@ -49,7 +52,18 @@ func NewACMEState() *acmeState {
 	return &acmeState{
 		nextExpiry: new(atomic.Int64),
 		nonces:     new(sync.Map),
+		validator:  NewACMEChallengeEngine(),
 	}
+}
+
+func (a *acmeState) Initialize(b *backend, sc *storageContext) error {
+	if err := a.validator.Initialize(b, sc); err != nil {
+		return fmt.Errorf("error initializing ACME engine: %w", err)
+	}
+
+	go a.validator.Run(b)
+
+	return nil
 }
 
 func generateNonce() (string, error) {
@@ -149,14 +163,38 @@ type acmeAccount struct {
 }
 
 type acmeOrder struct {
-	OrderId          string              `json:"-"`
-	AccountId        string              `json:"account-id"`
-	Status           ACMEOrderStatusType `json:"status"`
-	Expires          string              `json:"expires"`
-	NotBefore        string              `json:"not-before"`
-	NotAfter         string              `json:"not-after"`
-	Identifiers      []*ACMEIdentifier   `json:"identifiers"`
-	AuthorizationIds []string            `json:"authorization-ids"`
+	OrderId                 string              `json:"-"`
+	AccountId               string              `json:"account-id"`
+	Status                  ACMEOrderStatusType `json:"status"`
+	Expires                 time.Time           `json:"expires"`
+	Identifiers             []*ACMEIdentifier   `json:"identifiers"`
+	AuthorizationIds        []string            `json:"authorization-ids"`
+	CertificateSerialNumber string              `json:"cert-serial-number"`
+	CertificateExpiry       time.Time           `json:"cert-expiry"`
+	IssuerId                issuerID            `json:"issuer-id"`
+}
+
+func (o acmeOrder) getIdentifierDNSValues() []string {
+	var identifiers []string
+	for _, value := range o.Identifiers {
+		if value.Type == ACMEDNSIdentifier {
+			// Here, because of wildcard processing, we need to use the
+			// original value provided by the caller rather than the
+			// post-modification (trimmed '*.' prefix) value.
+			identifiers = append(identifiers, value.OriginalValue)
+		}
+	}
+	return identifiers
+}
+
+func (o acmeOrder) getIdentifierIPValues() []net.IP {
+	var identifiers []net.IP
+	for _, value := range o.Identifiers {
+		if value.Type == ACMEIPIdentifier {
+			identifiers = append(identifiers, net.ParseIP(value.Value))
+		}
+	}
+	return identifiers
 }
 
 func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, contact []string, termsOfServiceAgreed bool) (*acmeAccount, error) {
@@ -294,7 +332,20 @@ func (a *acmeState) LoadAuthorization(ac *acmeContext, userCtx *jwsCtx, authId s
 
 	authorizationPath := getAuthorizationPath(userCtx.Kid, authId)
 
-	entry, err := ac.sc.Storage.Get(ac.sc.Context, authorizationPath)
+	authz, err := loadAuthorizationAtPath(ac.sc, authorizationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if userCtx.Kid != authz.AccountId {
+		return nil, ErrUnauthorized
+	}
+
+	return authz, nil
+}
+
+func loadAuthorizationAtPath(sc *storageContext, authorizationPath string) (*ACMEAuthorization, error) {
+	entry, err := sc.Storage.Get(sc.Context, authorizationPath)
 	if err != nil {
 		return nil, fmt.Errorf("error loading authorization: %w", err)
 	}
@@ -309,14 +360,15 @@ func (a *acmeState) LoadAuthorization(ac *acmeContext, userCtx *jwsCtx, authId s
 		return nil, fmt.Errorf("error decoding authorization: %w", err)
 	}
 
-	if userCtx.Kid != authz.AccountId {
-		return nil, ErrUnauthorized
-	}
-
 	return &authz, nil
 }
 
 func (a *acmeState) SaveAuthorization(ac *acmeContext, authz *ACMEAuthorization) error {
+	path := getAuthorizationPath(authz.AccountId, authz.Id)
+	return saveAuthorizationAtPath(ac.sc, path, authz)
+}
+
+func saveAuthorizationAtPath(sc *storageContext, path string, authz *ACMEAuthorization) error {
 	if authz.Id == "" {
 		return fmt.Errorf("invalid authorization, missing id")
 	}
@@ -324,13 +376,13 @@ func (a *acmeState) SaveAuthorization(ac *acmeContext, authz *ACMEAuthorization)
 	if authz.AccountId == "" {
 		return fmt.Errorf("invalid authorization, missing account id")
 	}
-	path := getAuthorizationPath(authz.AccountId, authz.Id)
+
 	json, err := logical.StorageEntryJSON(path, authz)
 	if err != nil {
 		return fmt.Errorf("error creating authorization entry: %w", err)
 	}
 
-	if err = ac.sc.Storage.Put(ac.sc.Context, json); err != nil {
+	if err = sc.Storage.Put(sc.Context, json); err != nil {
 		return fmt.Errorf("error writing authorization entry: %w", err)
 	}
 

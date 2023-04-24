@@ -388,7 +388,7 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 	}
 
 	if len(createdIssuers) > 0 {
-		err := b.crlBuilder.rebuild(sc, true)
+		warnings, err := b.crlBuilder.rebuild(sc, true)
 		if err != nil {
 			// Before returning, check if the error message includes the
 			// string "PSS". If so, it indicates we might've wanted to modify
@@ -402,6 +402,9 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 			}
 
 			return nil, err
+		}
+		for index, warning := range warnings {
+			response.AddWarning(fmt.Sprintf("Warning %d during CRL rebuild: %v", index+1, warning))
 		}
 
 		var issuersWithKeys []string
@@ -709,7 +712,7 @@ func (b *backend) pathRevokeIssuer(ctx context.Context, req *logical.Request, da
 	}
 
 	// Rebuild the CRL to include the newly revoked issuer.
-	crlErr := b.crlBuilder.rebuild(sc, false)
+	warnings, crlErr := b.crlBuilder.rebuild(sc, false)
 	if crlErr != nil {
 		switch crlErr.(type) {
 		case errutil.UserError:
@@ -724,6 +727,9 @@ func (b *backend) pathRevokeIssuer(ctx context.Context, req *logical.Request, da
 	if err != nil {
 		// Impossible.
 		return nil, err
+	}
+	for index, warning := range warnings {
+		response.AddWarning(fmt.Sprintf("Warning %d during CRL rebuild: %v", index+1, warning))
 	}
 
 	// For sanity, we'll add a warning message here if there's no other

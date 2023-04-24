@@ -26,7 +26,7 @@ func pathLogin(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixRadius,
-			OperationVerb:   "log-in",
+			OperationVerb:   "login",
 			OperationSuffix: "|with-username",
 		},
 

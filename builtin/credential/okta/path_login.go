@@ -26,7 +26,7 @@ func pathLogin(b *backend) *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixOkta,
-			OperationVerb:   "log-in",
+			OperationVerb:   "login",
 		},
 
 		Fields: map[string]*framework.FieldSchema{
