@@ -157,7 +157,7 @@ func (n *dockerClusterNode) Name() string {
 }
 
 func (dc *DockerCluster) setupNode0(ctx context.Context) error {
-	client := dc.ClusterNodes[0].Client
+	client := dc.ClusterNodes[0].client
 
 	var resp *api.InitResponse
 	var err error
@@ -196,7 +196,7 @@ func (dc *DockerCluster) setupNode0(ctx context.Context) error {
 
 	dc.rootToken = resp.RootToken
 	client.SetToken(dc.rootToken)
-	dc.ClusterNodes[0].Client = client
+	dc.ClusterNodes[0].client = client
 
 	err = testcluster.UnsealNode(ctx, dc, 0)
 	if err != nil {
@@ -222,7 +222,7 @@ func (dc *DockerCluster) setupNode0(ctx context.Context) error {
 func (dc *DockerCluster) clusterReady(ctx context.Context) error {
 	for i, node := range dc.ClusterNodes {
 		expectLeader := i == 0
-		err := ensureLeaderMatches(ctx, node.Client, func(leader *api.LeaderResponse) error {
+		err := ensureLeaderMatches(ctx, node.client, func(leader *api.LeaderResponse) error {
 			if expectLeader != leader.IsSelf {
 				return fmt.Errorf("node %d leader=%v, expected=%v", i, leader.IsSelf, expectLeader)
 			}
@@ -482,7 +482,7 @@ func NewDockerCluster(ctx context.Context, opts *DockerClusterOptions) (*DockerC
 type dockerClusterNode struct {
 	NodeID            string
 	HostPort          string
-	Client            *api.Client
+	client            *api.Client
 	ServerCert        *x509.Certificate
 	ServerCertBytes   []byte
 	ServerCertPEM     []byte
@@ -506,7 +506,24 @@ func (n *dockerClusterNode) TLSConfig() *tls.Config {
 }
 
 func (n *dockerClusterNode) APIClient() *api.Client {
-	return n.Client
+	// We clone to ensure that whenever this method is called, the caller gets
+	// back a pristine client, without e.g. any namespace or token changes that
+	// might pollute a shared client.  We clone the config instead of the
+	// client because (1) Client.clone propagates the replicationStateStore and
+	// the httpClient pointers, (2) it doesn't copy the tlsConfig at all, and
+	// (3) if clone returns an error, it doesn't feel as appropriate to panic
+	// below.  Who knows why clone might return an error?
+	cfg := n.client.CloneConfig()
+	client, err := api.NewClient(cfg)
+	if err != nil {
+		// It seems fine to panic here, since this should be the same input
+		// we provided to NewClient when we were setup, and we didn't panic then.
+		// Better not to completely ignore the error though, suppose there's a
+		// bug in CloneConfig?
+		panic(fmt.Sprintf("NewClient error on cloned config: %v", err))
+	}
+	client.SetToken(n.client.Token())
+	return client
 }
 
 // NewAPIClient creates and configures a Vault API client to communicate with
@@ -534,7 +551,7 @@ func (n *dockerClusterNode) apiConfig() (*api.Config, error) {
 	return config, nil
 }
 
-func (n *dockerClusterNode) NewAPIClient() (*api.Client, error) {
+func (n *dockerClusterNode) newAPIClient() (*api.Client, error) {
 	config, err := n.apiConfig()
 	if err != nil {
 		return nil, err
@@ -888,12 +905,12 @@ func (dc *DockerCluster) addNode(ctx context.Context, opts *DockerClusterOptions
 	if err := node.start(ctx, filepath.Join(dc.tmpDir, "ca"), opts); err != nil {
 		return err
 	}
-	client, err := node.NewAPIClient()
+	client, err := node.newAPIClient()
 	if err != nil {
 		return err
 	}
 	client.SetToken(dc.rootToken)
-	node.Client = client
+	node.client = client
 	return nil
 }
 
