@@ -72,6 +72,12 @@
               {{#if pkiIssuer.parsedCertificate.common_name}}
                 <span class="tag has-text-grey-dark">{{pkiIssuer.parsedCertificate.common_name}}</span>
               {{/if}}
+              {{#if pkiIssuer.serialNumber}}
+                <span class="tag has-text-grey-dark">{{pkiIssuer.serialNumber}}</span>
+              {{/if}}
+              {{#if pkiIssuer.keyId}}
+                <span class="tag has-text-grey-dark">{{pkiIssuer.keyId}}</span>
+              {{/if}}
             </div>
           </div>
         </div>

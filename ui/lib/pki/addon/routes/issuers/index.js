@@ -13,7 +13,7 @@ export default class PkiIssuersListRoute extends Route {
 
   model() {
     return this.store
-      .query('pki/issuer', { backend: this.secretMountPath.currentPath })
+      .query('pki/issuer', { backend: this.secretMountPath.currentPath, shouldShowIssuerMetaData: true })
       .then((issuersModel) => {
         return { issuersModel, parentModel: this.modelFor('issuers') };
       })

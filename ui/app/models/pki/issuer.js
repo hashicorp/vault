@@ -44,6 +44,7 @@ export default class PkiIssuerModel extends Model {
   @attr('string', { label: 'Default key ID', detailLinkTo: 'keys.key.details' }) keyId;
   @attr({ label: 'CA Chain', masked: true }) caChain;
   @attr({ masked: true }) certificate;
+  @attr('string') serialNumber;
 
   // parsed from certificate contents in serializer (see parse-pki-cert.js)
   @attr parsedCertificate;
