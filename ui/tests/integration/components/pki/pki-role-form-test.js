@@ -57,7 +57,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
 
   test('it should save a new pki role with various options selected', async function (assert) {
     // Key usage, Key params and Not valid after options are tested in their respective component tests
-    assert.expect(9);
+    assert.expect(8);
     this.server.post(`/${this.role.backend}/roles/test-role`, (schema, req) => {
       assert.ok(true, 'Request made to save role');
       const request = JSON.parse(req.requestBody);
@@ -99,6 +99,22 @@ module('Integration | Component | pki-role-form', function (hooks) {
     assert
       .dom('[data-test-inline-error-message]')
       .includesText('Name is required.', 'show correct error message');
+
+    await fillIn(SELECTORS.roleName, 'test-role');
+    await click('[data-test-input="addBasicConstraints"]');
+    await click(SELECTORS.domainHandling);
+    await click('[data-test-input="allowedDomainsTemplate"]');
+    await click(SELECTORS.policyIdentifiers);
+    await fillIn('[data-test-input="policyIdentifiers"] [data-test-string-list-input="0"]', 'some-oid');
+    await click(SELECTORS.san);
+    await click('[data-test-input="allowUriSansTemplate"]');
+    await click(SELECTORS.additionalSubjectFields);
+    await fillIn(
+      '[data-test-input="allowedSerialNumbers"] [data-test-string-list-input="0"]',
+      'some-serial-number'
+    );
+
+    await click(SELECTORS.roleCreateButton);
   });
 
   test('it should update attributes on the model on update', async function (assert) {
