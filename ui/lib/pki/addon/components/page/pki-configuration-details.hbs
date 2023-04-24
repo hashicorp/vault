@@ -40,7 +40,7 @@
     </h2>
     <InfoTableRow @label="CRL building" @value={{if @crl.disable "Disabled" "Enabled"}} />
     {{#unless @crl.disable}}
-      <InfoTableRow @label="CRL will expire after" @value={{@crl.expiry}} />
+      <InfoTableRow @label="Expiry" @value={{@crl.expiry}} />
       <InfoTableRow @label="Auto-rebuild">
         <Icon
           class={{if @crl.autoRebuild "icon-true" "icon-false"}}
