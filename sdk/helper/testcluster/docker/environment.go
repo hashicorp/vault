@@ -45,7 +45,7 @@ import (
 
 var (
 	_ testcluster.VaultCluster     = &DockerCluster{}
-	_ testcluster.VaultClusterNode = &dockerClusterNode{}
+	_ testcluster.VaultClusterNode = &DockerClusterNode{}
 )
 
 // DockerCluster is used to managing the lifecycle of the test Vault cluster
@@ -53,7 +53,7 @@ type DockerCluster struct {
 	ClusterName string
 
 	RaftStorage  bool
-	ClusterNodes []*dockerClusterNode
+	ClusterNodes []*DockerClusterNode
 
 	// Certificate fields
 	CACert        *x509.Certificate
@@ -152,7 +152,7 @@ func (dc *DockerCluster) RootToken() string {
 	return dc.rootToken
 }
 
-func (n *dockerClusterNode) Name() string {
+func (n *DockerClusterNode) Name() string {
 	return n.Cluster.ClusterName + "-" + n.NodeID
 }
 
@@ -307,7 +307,7 @@ func (dc *DockerCluster) setupCA(opts *DockerClusterOptions) error {
 	return nil
 }
 
-func (n *dockerClusterNode) setupCert(ip string) error {
+func (n *DockerClusterNode) setupCert(ip string) error {
 	var err error
 
 	n.ServerKey, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -479,33 +479,35 @@ func NewDockerCluster(ctx context.Context, opts *DockerClusterOptions) (*DockerC
 }
 
 // DockerClusterNode represents a single instance of Vault in a cluster
-type dockerClusterNode struct {
-	NodeID            string
-	HostPort          string
-	client            *api.Client
-	ServerCert        *x509.Certificate
-	ServerCertBytes   []byte
-	ServerCertPEM     []byte
-	ServerCertPEMFile string
-	ServerKey         *ecdsa.PrivateKey
-	ServerKeyPEM      []byte
-	ServerKeyPEMFile  string
-	tlsConfig         *tls.Config
-	WorkDir           string
-	Cluster           *DockerCluster
-	container         *types.ContainerJSON
-	dockerAPI         *docker.Client
-	runner            *dockhelper.Runner
-	Logger            log.Logger
-	RealAPIAddr       string
-	cleanupContainer  func()
+type DockerClusterNode struct {
+	NodeID               string
+	HostPort             string
+	client               *api.Client
+	ServerCert           *x509.Certificate
+	ServerCertBytes      []byte
+	ServerCertPEM        []byte
+	ServerCertPEMFile    string
+	ServerKey            *ecdsa.PrivateKey
+	ServerKeyPEM         []byte
+	ServerKeyPEMFile     string
+	tlsConfig            *tls.Config
+	WorkDir              string
+	Cluster              *DockerCluster
+	container            *types.ContainerJSON
+	dockerAPI            *docker.Client
+	runner               *dockhelper.Runner
+	Logger               log.Logger
+	cleanupContainer     func()
+	RealAPIAddr          string
+	ContainerNetworkName string
+	ContainerIPAddress   string
 }
 
-func (n *dockerClusterNode) TLSConfig() *tls.Config {
+func (n *DockerClusterNode) TLSConfig() *tls.Config {
 	return n.tlsConfig.Clone()
 }
 
-func (n *dockerClusterNode) APIClient() *api.Client {
+func (n *DockerClusterNode) APIClient() *api.Client {
 	// We clone to ensure that whenever this method is called, the caller gets
 	// back a pristine client, without e.g. any namespace or token changes that
 	// might pollute a shared client.  We clone the config instead of the
@@ -528,7 +530,7 @@ func (n *dockerClusterNode) APIClient() *api.Client {
 
 // NewAPIClient creates and configures a Vault API client to communicate with
 // the running Vault Cluster for this DockerClusterNode
-func (n *dockerClusterNode) apiConfig() (*api.Config, error) {
+func (n *DockerClusterNode) apiConfig() (*api.Config, error) {
 	transport := cleanhttp.DefaultPooledTransport()
 	transport.TLSClientConfig = n.TLSConfig()
 	if err := http2.ConfigureTransport(transport); err != nil {
@@ -551,7 +553,7 @@ func (n *dockerClusterNode) apiConfig() (*api.Config, error) {
 	return config, nil
 }
 
-func (n *dockerClusterNode) newAPIClient() (*api.Client, error) {
+func (n *DockerClusterNode) newAPIClient() (*api.Client, error) {
 	config, err := n.apiConfig()
 	if err != nil {
 		return nil, err
@@ -565,11 +567,11 @@ func (n *dockerClusterNode) newAPIClient() (*api.Client, error) {
 }
 
 // Cleanup kills the container of the node
-func (n *dockerClusterNode) Cleanup() {
+func (n *DockerClusterNode) Cleanup() {
 	n.cleanup()
 }
 
-func (n *dockerClusterNode) cleanup() error {
+func (n *DockerClusterNode) cleanup() error {
 	if n.container == nil || n.container.ID == "" {
 		return nil
 	}
@@ -577,7 +579,7 @@ func (n *dockerClusterNode) cleanup() error {
 	return nil
 }
 
-func (n *dockerClusterNode) start(ctx context.Context, caDir string, opts *DockerClusterOptions) error {
+func (n *DockerClusterNode) start(ctx context.Context, caDir string, opts *DockerClusterOptions) error {
 	vaultCfg := map[string]interface{}{}
 	vaultCfg["listener"] = map[string]interface{}{
 		"tcp": map[string]interface{}{
@@ -758,7 +760,9 @@ func (n *dockerClusterNode) start(ctx context.Context, caDir string, opts *Docke
 			// for us, but we need a loop construction in order to use range.
 		}
 	}
-	n.RealAPIAddr = "https://" + svc.Container.NetworkSettings.Networks[netName].IPAddress + ":8200"
+	n.ContainerNetworkName = netName
+	n.ContainerIPAddress = svc.Container.NetworkSettings.Networks[netName].IPAddress
+	n.RealAPIAddr = "https://" + n.ContainerIPAddress + ":8200"
 	n.cleanupContainer = svc.Cleanup
 
 	return nil
@@ -891,7 +895,7 @@ func (dc *DockerCluster) AddNode(ctx context.Context, opts *DockerClusterOptions
 func (dc *DockerCluster) addNode(ctx context.Context, opts *DockerClusterOptions) error {
 	i := len(dc.ClusterNodes)
 	nodeID := fmt.Sprintf("core-%d", i)
-	node := &dockerClusterNode{
+	node := &DockerClusterNode{
 		dockerAPI: dc.dockerAPI,
 		NodeID:    nodeID,
 		Cluster:   dc,

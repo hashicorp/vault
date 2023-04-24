@@ -253,6 +253,8 @@ func (d *Runner) StartNewService(ctx context.Context, addSuffix, forceLocalAddr 
 	if consumeLogs {
 		wg.Add(1)
 		go func() {
+			// We must run inside a goroutine because we're using Follow:true,
+			// and StdCopy will block until the log stream is closed.
 			stream, err := d.DockerAPI.ContainerLogs(context.Background(), result.Container.ID, types.ContainerLogsOptions{
 				ShowStdout: true,
 				ShowStderr: true,
