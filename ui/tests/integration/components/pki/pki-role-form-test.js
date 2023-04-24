@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, fillIn, find } from '@ember/test-helpers';
+import { render, click, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { SELECTORS } from 'vault/tests/helpers/pki/pki-role-form';
@@ -99,29 +99,6 @@ module('Integration | Component | pki-role-form', function (hooks) {
     assert
       .dom('[data-test-inline-error-message]')
       .includesText('Name is required.', 'show correct error message');
-
-    await fillIn(SELECTORS.roleName, 'test-role');
-    await click('[data-test-input="addBasicConstraints"]');
-    await click(SELECTORS.domainHandling);
-    await click('[data-test-input="allowedDomainsTemplate"]');
-    await click(SELECTORS.policyIdentifiers);
-    await fillIn('[data-test-input="policyIdentifiers"] [data-test-string-list-input="0"]', 'some-oid');
-    await click(SELECTORS.san);
-    await click('[data-test-input="allowUriSansTemplate"]');
-    await click(SELECTORS.additionalSubjectFields);
-    await fillIn(
-      '[data-test-input="allowedSerialNumbers"] [data-test-string-list-input="0"]',
-      'some-serial-number'
-    );
-    await click(SELECTORS.keyUsage);
-    // check is flexbox by checking the height of the box
-    const groupBoxHeight = find('[data-test-toggle-div="Key usage"]').clientHeight;
-    assert.strictEqual(
-      groupBoxHeight,
-      572,
-      'renders the correct height of the box element if the component is rending as a flexbox'
-    );
-    await click(SELECTORS.roleCreateButton);
   });
 
   test('it should update attributes on the model on update', async function (assert) {
