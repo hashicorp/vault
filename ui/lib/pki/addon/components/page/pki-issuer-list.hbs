@@ -1,4 +1,4 @@
-{{#each @issuers as |pkiIssuer|}}
+{{#each @issuers as |pkiIssuer idx|}}
   <LinkedBlock class="list-item-row" @params={{array "issuers.issuer.details" pkiIssuer.id}} @linkPrefix={{@mountPoint}}>
     <div class="level is-mobile">
       <div class="level-left">
@@ -9,22 +9,26 @@
           </span>
           <div class="is-flex-row has-left-margin-l has-top-margin-xs">
             {{#if pkiIssuer.isDefault}}
-              <span class="tag has-text-grey-dark">default issuer</span>
+              <span class="tag has-text-grey-dark" data-test-is-default={{idx}}>default issuer</span>
             {{/if}}
             {{#if pkiIssuer.issuerName}}
               <span class="tag has-text-grey-dark">{{pkiIssuer.id}}</span>
             {{/if}}
             {{#if (not (eq pkiIssuer.isRoot undefined))}}
-              <span class="tag has-text-grey-dark" data-test-is-root-tag>{{if pkiIssuer.isRoot "root" "intermediate"}}</span>
+              <span class="tag has-text-grey-dark" data-test-is-root-tag={{idx}}>{{if
+                  pkiIssuer.isRoot
+                  "root"
+                  "intermediate"
+                }}</span>
             {{/if}}
             {{#if pkiIssuer.parsedCertificate.common_name}}
               <span
                 class="tag has-text-grey-dark"
-                data-test-common-name-tag
+                data-test-common-name-tag={{idx}}
               >{{pkiIssuer.parsedCertificate.common_name}}</span>
             {{/if}}
             {{#if pkiIssuer.serialNumber}}
-              <span class="tag has-text-grey-dark">{{pkiIssuer.serialNumber}}</span>
+              <span class="tag has-text-grey-dark" data-test-serial-number={{idx}}>{{pkiIssuer.serialNumber}}</span>
             {{/if}}
             {{#if pkiIssuer.keyId}}
               <span class="tag has-text-grey-dark">{{pkiIssuer.keyId}}</span>
