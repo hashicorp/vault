@@ -13,6 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestACMEIssuerRoleLoading validates the role and issuer loading logic within the base
+// ACME wrapper is correct.
 func TestACMEIssuerRoleLoading(t *testing.T) {
 	b, s := CreateBackendWithStorage(t)
 
