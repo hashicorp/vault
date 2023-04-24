@@ -19,6 +19,8 @@ type acmeContext struct {
 	// baseUrl is the combination of the configured cluster local URL and the acmePath up to /acme/
 	baseUrl *url.URL
 	sc      *storageContext
+	role    *roleEntry
+	issuer  *issuerEntry
 }
 
 type (
@@ -47,7 +49,16 @@ func (b *backend) acmeWrapper(op acmeOperation) framework.OperationFunc {
 			return nil, fmt.Errorf("ACME is disabled in configuration: %w", ErrServerInternal)
 		}
 
+		if b.useLegacyBundleCaStorage() {
+			return nil, fmt.Errorf("%w: Can not perform ACME operations until migration has completed", ErrServerInternal)
+		}
+
 		acmeBaseUrl, err := getAcmeBaseUrl(sc, r.Path)
+		if err != nil {
+			return nil, err
+		}
+
+		role, issuer, err := getAcmeRoleAndIssuer(sc, data)
 		if err != nil {
 			return nil, err
 		}
@@ -55,10 +66,80 @@ func (b *backend) acmeWrapper(op acmeOperation) framework.OperationFunc {
 		acmeCtx := &acmeContext{
 			baseUrl: acmeBaseUrl,
 			sc:      sc,
+			role:    role,
+			issuer:  issuer,
 		}
 
 		return op(acmeCtx, r, data)
 	})
+}
+
+func getAcmeIssuer(sc *storageContext, issuerName string) (*issuerEntry, error) {
+	issuerId, err := sc.resolveIssuerReference(issuerName)
+	if err != nil {
+		return nil, fmt.Errorf("%w issuer does not exist", ErrMalformed)
+	}
+
+	issuer, err := sc.fetchIssuerById(issuerId)
+	if err != nil {
+		return nil, fmt.Errorf("issuer failed to load: %w", err)
+	}
+
+	if issuer.Usage.HasUsage(IssuanceUsage) && len(issuer.KeyID) > 0 {
+		return issuer, nil
+	}
+
+	return nil, fmt.Errorf("%w: issuer missing proper issuance usage or key", ErrServerInternal)
+}
+
+func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData) (*roleEntry, *issuerEntry, error) {
+	requestedIssuer := defaultRef
+	requestedIssuerRaw, present := data.GetOk("issuer")
+	if present {
+		requestedIssuer = requestedIssuerRaw.(string)
+	}
+
+	var role *roleEntry
+	roleNameRaw, present := data.GetOk("role")
+	if present {
+		roleName := roleNameRaw.(string)
+		if len(roleName) > 0 {
+			var err error
+			role, err = sc.Backend.getRole(sc.Context, sc.Storage, roleName)
+			if err != nil {
+				return nil, nil, fmt.Errorf("%w role does not exist", ErrMalformed)
+			}
+
+			if role == nil {
+				return nil, nil, fmt.Errorf("%w role does not exist", ErrMalformed)
+			}
+
+			if role.NoStore {
+				return nil, nil, fmt.Errorf("%w: role can not be used as NoStore is set to true", ErrMalformed)
+			}
+
+			if len(role.Issuer) > 0 {
+				requestedIssuer = role.Issuer
+			}
+		}
+	} else {
+		role = buildSignVerbatimRoleWithNoData(&roleEntry{
+			Issuer:  requestedIssuer,
+			NoStore: false,
+			Name:    "",
+		})
+	}
+
+	issuer, err := getAcmeIssuer(sc, requestedIssuer)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	role.Issuer = requestedIssuer
+
+	// TODO: Need additional configuration validation here, for allowed roles/issuers.
+
+	return role, issuer, nil
 }
 
 func (b *backend) acmeParsedWrapper(op acmeParsedOperation) framework.OperationFunc {

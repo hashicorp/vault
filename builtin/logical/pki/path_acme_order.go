@@ -404,31 +404,6 @@ func storeCertificate(sc *storageContext, signedCertBundle *certutil.ParsedCertB
 }
 
 func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.ParsedCertBundle, issuerID, error) {
-	entry := &roleEntry{
-		AllowLocalhost:            true,
-		AllowAnyName:              true,
-		AllowIPSANs:               true,
-		AllowWildcardCertificates: new(bool),
-		EnforceHostnames:          false,
-		KeyType:                   "any",
-		UseCSRCommonName:          true,
-		UseCSRSANs:                true,
-		AllowedOtherSANs:          []string{"*"},
-		AllowedSerialNumbers:      []string{"*"},
-		AllowedURISANs:            []string{"*"},
-		AllowedUserIDs:            []string{"*"},
-		CNValidations:             []string{"disabled"},
-		GenerateLease:             new(bool),
-		KeyUsage:                  []string{},
-		ExtKeyUsage:               []string{},
-		ExtKeyUsageOIDs:           []string{},
-		SignatureBits:             0,
-		UsePSS:                    false,
-		Issuer:                    defaultRef,
-	}
-	*entry.AllowWildcardCertificates = true
-	*entry.GenerateLease = false
-
 	pemBlock := &pem.Block{
 		Type:    "CERTIFICATE REQUEST",
 		Headers: nil,
@@ -436,27 +411,22 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 	}
 	pemCsr := string(pem.EncodeToMemory(pemBlock))
 
-	signingBundle, issuerId, err := ac.sc.fetchCAInfoWithIssuer(entry.Issuer, IssuanceUsage)
+	data := &framework.FieldData{
+		Raw: map[string]interface{}{
+			"csr": pemCsr,
+		},
+		Schema: getCsrSignVerbatimSchemaFields(),
+	}
+
+	signingBundle, issuerId, err := ac.sc.fetchCAInfoWithIssuer(ac.issuer.ID.String(), IssuanceUsage)
 	if err != nil {
-		return nil, "", fmt.Errorf("failed loading CA %s: %w", entry.Issuer, err)
+		return nil, "", fmt.Errorf("failed loading CA %s: %w", ac.issuer.ID.String(), err)
 	}
 
 	input := &inputBundle{
-		req: &logical.Request{},
-		apiData: &framework.FieldData{
-			Raw: map[string]interface{}{
-				"csr": pemCsr,
-				"ttl": "1h",
-			},
-			Schema: map[string]*framework.FieldSchema{
-				"csr":                  {Type: framework.TypeString},
-				"serial_number":        {Type: framework.TypeString},
-				"exclude_cn_from_sans": {Type: framework.TypeBool},
-				"other_sans":           {Type: framework.TypeCommaStringSlice},
-				"ttl":                  {Type: framework.TypeDurationSecond},
-			},
-		},
-		role: entry,
+		req:     &logical.Request{},
+		apiData: data,
+		role:    ac.role,
 	}
 
 	if csr.PublicKeyAlgorithm == x509.UnknownPublicKeyAlgorithm || csr.PublicKey == nil {
