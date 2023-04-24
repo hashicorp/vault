@@ -106,8 +106,14 @@ textarea {
 code,
 pre {
   -moz-osx-font-smoothing: auto;
-  -webkit-font-smoothing: auto;
+  -webkit-font-smoothing: inherit;
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+  font-smooth: inherit;
+}
+
+a strong,
+pre code {
+  color: currentColor;
 }
 
 body {
@@ -118,7 +124,7 @@ body {
 a {
   color: $blue-500;
   cursor: pointer;
-  text-decoration: none;
+  text-decoration: underline;
 
   &:hover,
   &:active,
@@ -126,9 +132,7 @@ a {
     position: relative;
   }
 }
-a strong {
-  color: currentColor;
-}
+
 a:hover {
   color: $ui-gray-900;
 }
@@ -137,7 +141,7 @@ code {
   background-color: transparent;
   color: $ui-gray-700;
   font-size: 1em;
-  font-weight: normal;
+  font-weight: 400;
   padding: 0;
 }
 
