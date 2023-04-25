@@ -5,7 +5,6 @@
 
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
-import { hash } from 'rsvp';
 import { withConfirmLeave } from 'core/decorators/confirm-leave';
 
 @withConfirmLeave('model.config', ['model.urls', 'model.crl'])
@@ -14,11 +13,11 @@ export default class PkiConfigurationEditRoute extends Route {
 
   model() {
     const { urls, crl, engine } = this.modelFor('configuration');
-    return hash({
+    return {
       engineId: engine.id,
       urls,
       crl,
-    });
+    };
   }
 
   setupController(controller, resolvedModel) {

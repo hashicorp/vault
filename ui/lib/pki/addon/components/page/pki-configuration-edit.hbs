@@ -77,6 +77,7 @@
           {{on "click" this.cancel}}
           type="button"
           class="button has-left-margin-s"
+          disabled={{this.save.isRunning}}
           data-test-configuration-edit-cancel
         >
           Cancel
