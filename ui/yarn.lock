@@ -4567,12 +4567,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hashicorp/design-system-components@git+https://github.com/hashicorp/design-system#head=app-sidenav-component&workspace=@hashicorp/design-system-components":
-  version: 2.1.0
-  resolution: "@hashicorp/design-system-components@https://github.com/hashicorp/design-system.git#workspace=%40hashicorp%2Fdesign-system-components&commit=fcab2fa7608fa2cbf5a6743a9ecd93fe84d233e3"
+"@hashicorp/design-system-components@npm:2.2.0":
+  version: 2.2.0
+  resolution: "@hashicorp/design-system-components@npm:2.2.0"
   dependencies:
     "@ember/render-modifiers": ^2.0.5
-    "@hashicorp/design-system-tokens": ^1.4.1
+    "@hashicorp/design-system-tokens": ^1.4.2
     "@hashicorp/ember-flight-icons": ^3.0.2
     dialog-polyfill: ^0.5.6
     ember-a11y-refocus: ^3.0.2
@@ -4589,14 +4589,14 @@ __metadata:
     ember-style-modifier: ^0.8.0
     ember-truth-helpers: ^3.0.0
     sass: ^1.58.3
-  checksum: 6265ff78e713eb58d751e90069fe59ae7efd7d708cf71f7e8da86a85fe918fc0c3f21f4d505cdb02bbc63494b24ca2c747a49bcd2cb3243f86f4820d7f09fccb
+  checksum: 82a0a0539db8d0348fb729a9654d0b656c9589c32b9cd9e8f64138231ad97a6ac46589b79b7d6f3f97e883063bead463a67b90117cf92b54e1268ae6c1f7f5e6
   languageName: node
   linkType: hard
 
-"@hashicorp/design-system-tokens@npm:^1.4.1":
-  version: 1.4.1
-  resolution: "@hashicorp/design-system-tokens@npm:1.4.1"
-  checksum: 3f9602be037643d6c1fe695ab07ff7a19bd71b27ec693fcb94373ba9eb6246b248bc4a0739f6248a6359de67e2236780d66b3206f0ae669bb31a4e3a519d877a
+"@hashicorp/design-system-tokens@npm:^1.4.2":
+  version: 1.4.2
+  resolution: "@hashicorp/design-system-tokens@npm:1.4.2"
+  checksum: 12a45d6869a79a9e0699731e69be053a6c485875dd780e6ac03d85cc83827b0d362f03c996646830f4a6d1ab86b5a1af0c0984a84edbcaddcf3843c0405b7bee
   languageName: node
   linkType: hard
 
@@ -24204,7 +24204,7 @@ __metadata:
     "@ember/test-waiters": ^3.0.0
     "@glimmer/component": ^1.1.2
     "@glimmer/tracking": ^1.1.2
-    "@hashicorp/design-system-components": "git+https://github.com/hashicorp/design-system#head=app-sidenav-component&workspace=@hashicorp/design-system-components"
+    "@hashicorp/design-system-components": 2.2.0
     "@hashicorp/ember-flight-icons": ^3.0.2
     "@hashicorp/structure-icons": ^1.3.0
     "@icholy/duration": ^5.1.0

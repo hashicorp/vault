@@ -31,4 +31,10 @@ package-lock.json
 /DEBUG/
 
 # yarn
-/.yarn/cache
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
