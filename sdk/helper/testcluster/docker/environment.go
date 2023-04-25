@@ -919,20 +919,20 @@ func (dc *DockerCluster) setupImage(ctx context.Context, opts *DockerClusterOpti
 	if opts == nil {
 		opts = &DockerClusterOptions{}
 	}
-	tag := opts.ImageTag
-	if tag == "" {
-		tag = "latest"
+	sourceTag := opts.ImageTag
+	if sourceTag == "" {
+		sourceTag = "latest"
 	}
 
 	if opts.VaultBinary == "" {
-		return tag, nil
+		return sourceTag, nil
 	}
 
 	suffix := "testing"
 	if sha := os.Getenv("COMMIT_SHA"); sha != "" {
 		suffix = sha
 	}
-	tag = tag + "-" + suffix
+	tag := sourceTag + "-" + suffix
 	if _, ok := dc.builtTags[tag]; ok {
 		return tag, nil
 	}
