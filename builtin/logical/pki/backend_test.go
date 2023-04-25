@@ -4895,12 +4895,13 @@ func TestIssuanceTTLs(t *testing.T) {
 	})
 	require.Error(t, err, "expected issuance to fail due to longer default ttl than cert ttl")
 
-	resp, err = CBWrite(b, s, "issuer/root", map[string]interface{}{
-		"issuer_name":             "root",
+	resp, err = CBPatch(b, s, "issuer/root", map[string]interface{}{
 		"leaf_not_after_behavior": "permit",
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.Equal(t, resp.Data["leaf_not_after_behavior"], "permit")
 
 	_, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
 		"common_name": "testing",
@@ -4913,6 +4914,8 @@ func TestIssuanceTTLs(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.Equal(t, resp.Data["leaf_not_after_behavior"], "truncate")
 
 	_, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
 		"common_name": "testing",
