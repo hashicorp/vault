@@ -22,10 +22,16 @@
                 }}</span>
             {{/if}}
             {{#if pkiIssuer.serialNumber}}
-              <span class="tag has-text-grey-dark" data-test-serial-number={{idx}}>{{pkiIssuer.serialNumber}}</span>
+              <InfoTooltip>
+                Serial number
+              </InfoTooltip>
+              <span class="tag has-background-transparent" data-test-serial-number={{idx}}>{{pkiIssuer.serialNumber}}</span>
             {{/if}}
             {{#if pkiIssuer.keyId}}
-              <span class="tag has-text-grey-dark">{{pkiIssuer.keyId}}</span>
+              <InfoTooltip>
+                Key ID
+              </InfoTooltip>
+              <span class="tag has-background-transparent">{{pkiIssuer.keyId}}</span>
             {{/if}}
           </div>
         </div>
