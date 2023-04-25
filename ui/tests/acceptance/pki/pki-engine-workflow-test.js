@@ -344,7 +344,7 @@ module('Acceptance | pki workflow', function (hooks) {
       await logout.visit();
     });
     test('lists the correct issuer metadata info', async function (assert) {
-      assert.expect(5);
+      assert.expect(4);
       await authPage.login(this.pkiAdminToken);
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       assert.dom(SELECTORS.issuersTab).exists('Issuers tab is present');
