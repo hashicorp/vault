@@ -26,7 +26,7 @@ func CheckCertBot(t *testing.T, vaultNetwork string, vaultNodeID string, directo
 
 	t.Logf("creating on network: %v", vaultNetwork)
 	runner, err := hDocker.NewServiceRunner(hDocker.RunOptions{
-		ImageRepo:     "certbot/certbot",
+		ImageRepo:     "docker.mirror.hashicorp.services/certbot/certbot",
 		ImageTag:      "latest",
 		ContainerName: "vault_pki_certbot_test",
 		NetworkName:   vaultNetwork,
@@ -91,7 +91,7 @@ func RunACMERootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS boo
 	testSuffix := fmt.Sprintf(" - %v %v %v - %v %v %v", caKeyType, caKeyType, caUsePSS, roleKeyType, roleKeyBits, roleUsePSS)
 
 	opts := &tcDocker.DockerClusterOptions{
-		ImageRepo: "hashicorp/vault",
+		ImageRepo: "docker.mirror.hashicorp.services/hashicorp/vault",
 		// We're replacing the binary anyway, so we're not too particular about
 		// the docker image version tag.
 		ImageTag:    "latest",
