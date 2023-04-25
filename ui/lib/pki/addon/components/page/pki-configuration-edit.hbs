@@ -4,7 +4,7 @@
   {{/if}}
   <form {{on "submit" (perform this.save)}}>
     <fieldset class="box is-shadowless is-marginless is-borderless is-fullwidth" data-test-urls-edit-section>
-      <h2 class="title is-4 has-bottom-margin-xs has-border-bottom-light has-bottom-padding-s">
+      <h2 class="title is-size-5 has-border-bottom-light page-header">
         Global URLs
       </h2>
       {{#if @urls.canSet}}
@@ -23,40 +23,32 @@
     </fieldset>
 
     <fieldset class="box is-shadowless is-marginless is-borderless is-fullwidth" data-test-crl-edit-section>
-      <h2 class="title is-4 has-bottom-margin-xs has-border-bottom-light has-bottom-padding-s">
+      <h2 class="title is-size-5 has-border-bottom-light page-header">
         Certificate Revocation List (CRL)
       </h2>
       {{#if @crl.canSet}}
         {{#each @crl.formFields as |attr|}}
-          {{#let (get @crl attr.name) as |attrValue|}}
-            {{#if (eq attr.name "ocspExpiryData")}}
-              <h2 class="title is-4 has-bottom-margin-xs has-border-bottom-light has-bottom-padding-s">
-                Online Certificate Status Protocol (OCSP)
-              </h2>
-            {{/if}}
-            {{#if
-              (or
-                (eq attr.name "crlExpiryData")
-                (eq attr.name "ocspExpiryData")
-                (and
-                  (get @crl.crlExpiryData "enabled")
-                  (or (eq attr.name "autoRebuildData") (eq attr.name "deltaCrlBuildingData"))
-                )
-              )
-            }}
+          {{#if (eq attr.name "ocspExpiry")}}
+            <h2 class="title is-size-5 has-border-bottom-light page-header">
+              Online Certificate Status Protocol (OCSP)
+            </h2>
+          {{/if}}
+          {{#if (or (includes attr.name this.alwaysRender) (not @crl.disable))}}
+            {{#let (get @crl attr.options.mapToBoolean) as |booleanValue|}}
               <div class="field">
                 <TtlPicker
                   data-test-input={{attr.name}}
                   @onChange={{fn this.handleTtl attr}}
-                  @label={{if attrValue.enabled attr.options.label attr.options.labelDisabled}}
+                  @label={{attr.options.label}}
+                  @labelDisabled={{attr.options.labelDisabled}}
                   @helperTextDisabled={{attr.options.helperTextDisabled}}
                   @helperTextEnabled={{attr.options.helperTextEnabled}}
-                  @initialEnabled={{attrValue.enabled}}
-                  @initialValue={{attrValue.duration}}
+                  @initialEnabled={{if attr.options.isOppositeValue (not booleanValue) booleanValue}}
+                  @initialValue={{get @crl attr.name}}
                 />
               </div>
-            {{/if}}
-          {{/let}}
+            {{/let}}
+          {{/if}}
         {{/each}}
       {{else}}
         <EmptyState

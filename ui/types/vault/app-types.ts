@@ -13,6 +13,7 @@ export interface FormField {
 interface AttributeOptions {
   label: string;
   mapToBoolean: string;
+  isOppositeValue: boolean;
 }
 
 export interface FormFieldGroups {

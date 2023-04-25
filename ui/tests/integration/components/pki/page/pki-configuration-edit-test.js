@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { click, render } from '@ember/test-helpers';
+import { click, fillIn, render } from '@ember/test-helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -24,17 +24,19 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
     this.store = this.owner.lookup('service:store');
     this.cancelSpy = sinon.spy();
     this.backend = 'pki-engine';
+    // both models only use findRecord. API parameters for pki/crl
+    // are set by default backend values when the engine is mounted
     this.store.pushPayload('pki/crl', {
       modelName: 'pki/crl',
       id: this.backend,
       auto_rebuild: false,
       auto_rebuild_grace_period: '12h',
-      delta_rebuild_interval: '3d',
+      delta_rebuild_interval: '15m',
       disable: false,
       enable_delta: false,
-      expiry: '24h',
+      expiry: '72h',
       ocsp_disable: false,
-      ocsp_expiry: '18m',
+      ocsp_expiry: '12h',
     });
     this.store.pushPayload('pki/urls', {
       modelName: 'pki/urls',
@@ -55,15 +57,15 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
         JSON.parse(req.requestBody),
         {
           auto_rebuild: true,
-          auto_rebuild_grace_period: '12h',
-          delta_rebuild_interval: '72h',
+          auto_rebuild_grace_period: '24h',
+          delta_rebuild_interval: '45m',
           disable: false,
           enable_delta: true,
-          expiry: '24h',
+          expiry: '1152h',
           ocsp_disable: false,
-          ocsp_expiry: '18m',
+          ocsp_expiry: '24h',
         },
-        'crl payload has correct data'
+        'it updates crl model attributes'
       );
     });
     this.server.post(`/${this.backend}/config/urls`, (schema, req) => {
@@ -71,11 +73,11 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
       assert.propEqual(
         JSON.parse(req.requestBody),
         {
-          crl_distribution_points: ['some-crl-distribution.com'],
-          issuing_certificates: ['hashicorp.com'],
-          ocsp_servers: ['ocsp-stuff.com'],
+          crl_distribution_points: ['test-crl.com'],
+          issuing_certificates: ['update-hashicorp.com'],
+          ocsp_servers: ['ocsp.com'],
         },
-        'url payload has correct data'
+        'it updates url model attributes'
       );
     });
     await render(
@@ -99,35 +101,45 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
     assert.dom(SELECTORS.urlFieldInput('crlDistributionPoints')).hasValue('some-crl-distribution.com');
     assert.dom(SELECTORS.urlFieldInput('ocspServers')).hasValue('ocsp-stuff.com');
 
+    await fillIn(SELECTORS.urlFieldInput('issuingCertificates'), 'update-hashicorp.com');
+    await fillIn(SELECTORS.urlFieldInput('crlDistributionPoints'), 'test-crl.com');
+    await fillIn(SELECTORS.urlFieldInput('ocspServers'), 'ocsp.com');
+
     // confirm default toggle state and text
     this.crl.eachAttribute((name, { options }) => {
-      if (['crlExpiryData', 'ocspExpiryData'].includes(name)) {
-        assert.dom(SELECTORS.crlFieldInput(name)).isChecked(`${name} defaults to toggled on`);
+      if (['expiry', 'ocspExpiry'].includes(name)) {
+        assert.dom(SELECTORS.crlToggleInput(name)).isChecked(`${name} defaults to toggled on`);
         assert.dom(SELECTORS.crlFieldLabel(name)).hasTextContaining(options.label);
         assert.dom(SELECTORS.crlFieldLabel(name)).hasTextContaining(options.helperTextEnabled);
       }
-      if (['autoRebuildData', 'deltaCrlBuildingData'].includes(name)) {
-        assert.dom(SELECTORS.crlFieldInput(name)).isNotChecked(`${name} defaults off`);
+      if (['autoRebuildGracePeriod', 'deltaRebuildInterval'].includes(name)) {
+        assert.dom(SELECTORS.crlToggleInput(name)).isNotChecked(`${name} defaults off`);
         assert.dom(SELECTORS.crlFieldLabel(name)).hasTextContaining(options.labelDisabled);
         assert.dom(SELECTORS.crlFieldLabel(name)).hasTextContaining(options.helperTextDisabled);
       }
     });
 
     // toggle everything on
-    await click(SELECTORS.crlFieldInput('autoRebuildData'));
+    await click(SELECTORS.crlToggleInput('autoRebuildGracePeriod'));
     assert
-      .dom(SELECTORS.crlFieldLabel('autoRebuildData'))
+      .dom(SELECTORS.crlFieldLabel('autoRebuildGracePeriod'))
       .hasTextContaining(
         'Auto-rebuild on Vault will rebuild the CRL in the below grace period before expiration',
         'it renders auto rebuild toggled on text'
       );
-    await click(SELECTORS.crlFieldInput('deltaCrlBuildingData'));
+    await click(SELECTORS.crlToggleInput('deltaRebuildInterval'));
     assert
-      .dom(SELECTORS.crlFieldLabel('deltaCrlBuildingData'))
+      .dom(SELECTORS.crlFieldLabel('deltaRebuildInterval'))
       .hasTextContaining(
         'Delta CRL building on Vault will rebuild the delta CRL at the interval below:',
         'it renders delta crl build toggled on text'
       );
+
+    // assert ttl values update model attributes
+    await fillIn(SELECTORS.crlTtlInput('Expiry'), '48');
+    await fillIn(SELECTORS.crlTtlInput('Auto-rebuild on'), '24');
+    await fillIn(SELECTORS.crlTtlInput('Delta CRL building on'), '45');
+    await fillIn(SELECTORS.crlTtlInput('OCSP responder APIs enabled'), '24');
     await click(SELECTORS.saveButton);
   });
 
@@ -140,12 +152,12 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
         {
           auto_rebuild: false,
           auto_rebuild_grace_period: '12h',
-          delta_rebuild_interval: '3d',
+          delta_rebuild_interval: '15m',
           disable: true,
           enable_delta: false,
-          expiry: '24h',
+          expiry: '72h',
           ocsp_disable: true,
-          ocsp_expiry: '18m',
+          ocsp_expiry: '12h',
         },
         'crl payload has correct data'
       );
@@ -178,17 +190,17 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
     await click(SELECTORS.deleteButton('ocspServers'));
 
     // toggle everything off
-    await click(SELECTORS.crlFieldInput('crlExpiryData'));
-    assert.dom(SELECTORS.crlFieldLabel('crlExpiryData')).hasText('No expiry The CRL will not be built.');
+    await click(SELECTORS.crlToggleInput('expiry'));
+    assert.dom(SELECTORS.crlFieldLabel('expiry')).hasText('No expiry The CRL will not be built.');
     assert
-      .dom(SELECTORS.crlFieldInput('autoRebuildData'))
+      .dom(SELECTORS.crlToggleInput('autoRebuildGracePeriod'))
       .doesNotExist('expiry off hides the auto rebuild toggle');
     assert
-      .dom(SELECTORS.crlFieldInput('deltaCrlBuildingData'))
+      .dom(SELECTORS.crlToggleInput('deltaRebuildInterval'))
       .doesNotExist('expiry off hides delta crl toggle');
-    await click(SELECTORS.crlFieldInput('ocspExpiryData'));
+    await click(SELECTORS.crlToggleInput('ocspExpiry'));
     assert
-      .dom(SELECTORS.crlFieldLabel('ocspExpiryData'))
+      .dom(SELECTORS.crlFieldLabel('ocspExpiry'))
       .hasTextContaining(
         'OCSP responder APIs disabled Requests cannot be made to check if an individual certificate is valid.',
         'it renders correct toggled off text'

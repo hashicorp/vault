@@ -20,11 +20,17 @@ interface Args {
   crl: PkiCrlModel;
   urls: PkiUrlsModel;
 }
-interface PkiCrlAttrs {
-  autoRebuildData: object;
-  deltaCrlBuildingData: object;
-  crlExpiryData: object;
-  ocspExpiryData: object;
+interface PkiCrlTtls {
+  autoRebuildGracePeriod: string;
+  expiry: string;
+  deltaRebuildInterval: string;
+  ocspExpiry: string;
+}
+interface PkiCrlBooleans {
+  autoRebuild: boolean;
+  enableDelta: boolean;
+  disable: boolean;
+  ocspDisable: boolean;
 }
 export default class PkiConfigurationEditComponent extends Component<Args> {
   @service declare readonly router: RouterService;
@@ -32,6 +38,10 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
 
   @tracked invalidFormAlert = '';
   @tracked errorBanner = '';
+
+  get alwaysRender() {
+    return ['expiry', 'ocspExpiry'];
+  }
 
   @task
   @waitFor
@@ -56,7 +66,12 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
   @action
   handleTtl(attr: FormField, e: TtlEvent) {
     const { enabled, goSafeTimeString } = e;
-    const modelAttr = attr.name;
-    this.args.crl[modelAttr as keyof PkiCrlAttrs] = { enabled, duration: goSafeTimeString };
+    const ttlAttr = attr.name;
+    this.args.crl[ttlAttr as keyof PkiCrlTtls] = goSafeTimeString;
+    // expiry and ocspExpiry both correspond to 'disable' booleans
+    // so when ttl is enabled, the booleans are set to false
+    this.args.crl[attr.options.mapToBoolean as keyof PkiCrlBooleans] = attr.options.isOppositeValue
+      ? !enabled
+      : enabled;
   }
 }
