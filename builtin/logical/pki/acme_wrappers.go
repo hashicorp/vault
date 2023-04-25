@@ -17,10 +17,11 @@ import (
 
 type acmeContext struct {
 	// baseUrl is the combination of the configured cluster local URL and the acmePath up to /acme/
-	baseUrl *url.URL
-	sc      *storageContext
-	role    *roleEntry
-	issuer  *issuerEntry
+	baseUrl    *url.URL
+	clusterUrl *url.URL
+	sc         *storageContext
+	role       *roleEntry
+	issuer     *issuerEntry
 }
 
 type (
@@ -53,7 +54,7 @@ func (b *backend) acmeWrapper(op acmeOperation) framework.OperationFunc {
 			return nil, fmt.Errorf("%w: Can not perform ACME operations until migration has completed", ErrServerInternal)
 		}
 
-		acmeBaseUrl, err := getAcmeBaseUrl(sc, r.Path)
+		acmeBaseUrl, clusterBase, err := getAcmeBaseUrl(sc, r.Path)
 		if err != nil {
 			return nil, err
 		}
@@ -64,10 +65,11 @@ func (b *backend) acmeWrapper(op acmeOperation) framework.OperationFunc {
 		}
 
 		acmeCtx := &acmeContext{
-			baseUrl: acmeBaseUrl,
-			sc:      sc,
-			role:    role,
-			issuer:  issuer,
+			baseUrl:    acmeBaseUrl,
+			clusterUrl: clusterBase,
+			sc:         sc,
+			role:       role,
+			issuer:     issuer,
 		}
 
 		return op(acmeCtx, r, data)
@@ -144,7 +146,7 @@ func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData) (*roleE
 
 func (b *backend) acmeParsedWrapper(op acmeParsedOperation) framework.OperationFunc {
 	return b.acmeWrapper(func(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData) (*logical.Response, error) {
-		user, data, err := b.acmeState.ParseRequestParams(acmeCtx, fields)
+		user, data, err := b.acmeState.ParseRequestParams(acmeCtx, r, fields)
 		if err != nil {
 			return nil, err
 		}
@@ -256,19 +258,19 @@ func buildAcmeFrameworkPaths(b *backend, patternFunc func(b *backend, pattern st
 	return patterns
 }
 
-func getAcmeBaseUrl(sc *storageContext, path string) (*url.URL, error) {
+func getAcmeBaseUrl(sc *storageContext, path string) (*url.URL, *url.URL, error) {
 	cfg, err := sc.getClusterConfig()
 	if err != nil {
-		return nil, fmt.Errorf("failed loading cluster config: %w", err)
+		return nil, nil, fmt.Errorf("failed loading cluster config: %w", err)
 	}
 
 	if cfg.Path == "" {
-		return nil, fmt.Errorf("ACME feature requires local cluster path configuration to be set: %w", ErrServerInternal)
+		return nil, nil, fmt.Errorf("ACME feature requires local cluster path configuration to be set: %w", ErrServerInternal)
 	}
 
 	baseUrl, err := url.Parse(cfg.Path)
 	if err != nil {
-		return nil, fmt.Errorf("ACME feature a proper URL configured in local cluster path: %w", ErrServerInternal)
+		return nil, nil, fmt.Errorf("ACME feature a proper URL configured in local cluster path: %w", ErrServerInternal)
 	}
 
 	directoryPrefix := ""
@@ -277,5 +279,5 @@ func getAcmeBaseUrl(sc *storageContext, path string) (*url.URL, error) {
 		directoryPrefix = path[0:lastIndex]
 	}
 
-	return baseUrl.JoinPath(directoryPrefix, "/acme/"), nil
+	return baseUrl.JoinPath(directoryPrefix, "/acme/"), baseUrl, nil
 }

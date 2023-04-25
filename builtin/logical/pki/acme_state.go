@@ -389,7 +389,7 @@ func saveAuthorizationAtPath(sc *storageContext, path string, authz *ACMEAuthori
 	return nil
 }
 
-func (a *acmeState) ParseRequestParams(ac *acmeContext, data *framework.FieldData) (*jwsCtx, map[string]interface{}, error) {
+func (a *acmeState) ParseRequestParams(ac *acmeContext, req *logical.Request, data *framework.FieldData) (*jwsCtx, map[string]interface{}, error) {
 	var c jwsCtx
 	var m map[string]interface{}
 
@@ -413,6 +413,22 @@ func (a *acmeState) ParseRequestParams(ac *acmeContext, data *framework.FieldDat
 	// work if it is invalid.
 	if !a.RedeemNonce(c.Nonce) {
 		return nil, nil, fmt.Errorf("invalid or reused nonce: %w", ErrBadNonce)
+	}
+
+	// If the path is incorrect, reject the request.
+	//
+	// See RFC 8555 Section 6.4. Request URL Integrity:
+	//
+	// > As noted in Section 6.2, all ACME request objects carry a "url"
+	// > header parameter in their protected header. ... On receiving such
+	// > an object in an HTTP request, the server MUST compare the "url"
+	// > header parameter to the request URL.  If the two do not match,
+	// > then the server MUST reject the request as unauthorized.
+	if len(c.Url) == 0 {
+		return nil, nil, fmt.Errorf("missing required parameter 'url' in 'protected': %w", ErrMalformed)
+	}
+	if ac.clusterUrl.JoinPath(req.Path).String() != c.Url {
+		return nil, nil, fmt.Errorf("invalid value for 'url' in 'protected': got '%v' expected '%v': %w", c.Url, ac.clusterUrl.JoinPath(req.Path).String(), ErrUnauthorized)
 	}
 
 	rawPayloadBase64, ok := data.GetOk("payload")
