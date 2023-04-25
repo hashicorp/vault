@@ -243,6 +243,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 	acmePaths = append(acmePaths, pathAcmeFetchOrderCert(&b)...)
 	acmePaths = append(acmePaths, pathAcmeChallenge(&b)...)
 	acmePaths = append(acmePaths, pathAcmeAuthorization(&b)...)
+	acmePaths = append(acmePaths, pathAcmeRevoke(&b)...)
 
 	for _, acmePath := range acmePaths {
 		b.Backend.Paths = append(b.Backend.Paths, acmePath)

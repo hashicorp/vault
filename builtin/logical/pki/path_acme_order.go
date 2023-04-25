@@ -268,6 +268,10 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, _ *logical.Request, 
 		return nil, err
 	}
 
+	if err := b.acmeState.TrackIssuedCert(ac, order.AccountId, hyphenSerialNumber, order.OrderId); err != nil {
+		return nil, err
+	}
+
 	order.Status = ACMEOrderValid
 	order.CertificateSerialNumber = hyphenSerialNumber
 	order.CertificateExpiry = signedCertBundle.Certificate.NotAfter
