@@ -6,6 +6,7 @@ package command
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -1003,7 +1004,12 @@ func (c *AgentCommand) Run(args []string) int {
 	if err := g.Run(); err != nil {
 		c.logger.Error("runtime error encountered", "error", err)
 		c.UI.Error("Error encountered during run, refer to logs for more details.")
-		exitCode = 1
+		var procError *exec.ProcessExitError
+		if errors.As(err, &procError) {
+			exitCode = procError.ExitCode
+		} else {
+			exitCode = 1
+		}
 	}
 	c.notifySystemd(systemd.SdNotifyStopping)
 	return exitCode
