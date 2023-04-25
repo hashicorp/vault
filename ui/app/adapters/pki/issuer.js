@@ -42,16 +42,22 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
           .then(async (resp) => {
             const { certificate } = resp.data;
             const isRoot = await verifyCertificates(certificate, certificate);
-
-            return { [id]: { ...keyInfo, isRoot } };
+            return { ...keyInfo, ...resp.data, isRoot };
           })
           .catch(() => {
-            return { [id]: { ...keyInfo } };
+            return { ...keyInfo };
           });
       })
     );
 
-    response.data.key_info = newKeyInfo;
+    const keyInfo = {};
+
+    newKeyInfo.forEach((newKey) => {
+      keyInfo[newKey.issuer_id] = newKey;
+    });
+
+    response.data.key_info = keyInfo;
+
     return response;
   }
 
@@ -64,16 +70,16 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
   }
 
   query(store, type, query) {
-    const { backend, shouldShowIssuerMetaData } = query;
+    const { backend, isListView } = query;
     const url = this.urlForQuery(backend);
 
     return this.ajax(url, 'GET', this.optionsForQuery()).then(async (res) => {
-      // To show issuer meta data tags, we have a flag called shouldShowIssuerMetaData and only want to
+      // To show issuer meta data tags, we have a flag called isListView and only want to
       // grab each issuer data only if there are less than 10 issuers to avoid making too many requests
-      if (shouldShowIssuerMetaData && res.data.keys.length <= 10) {
-        const issuerMetaData = await this.getIssuerMetadata(store, type, query, res);
-        return issuerMetaData;
+      if (isListView && res.data.keys.length <= 10) {
+        return await this.getIssuerMetadata(store, type, query, res);
       }
+
       return res;
     });
   }
@@ -81,7 +87,7 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
   queryRecord(store, type, query) {
     const { backend, id } = query;
 
-    return this.ajax(`${this.urlForQuery(backend, id)}`, 'GET', this.optionsForQuery(id));
+    return this.ajax(this.urlForQuery(backend, id), 'GET', this.optionsForQuery(id));
   }
 
   deleteAllIssuers(backend) {
