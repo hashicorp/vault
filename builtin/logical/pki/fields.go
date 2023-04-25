@@ -565,3 +565,72 @@ primary node.`,
 
 	return fields
 }
+
+// generate the entire list of schema fields we need for CSR sign verbatim, this is also
+// leveraged by ACME internally.
+func getCsrSignVerbatimSchemaFields() map[string]*framework.FieldSchema {
+	fields := map[string]*framework.FieldSchema{}
+	fields = addNonCACommonFields(fields)
+	fields = addSignVerbatimRoleFields(fields)
+
+	fields["csr"] = &framework.FieldSchema{
+		Type:    framework.TypeString,
+		Default: "",
+		Description: `PEM-format CSR to be signed. Values will be
+taken verbatim from the CSR, except for
+basic constraints.`,
+	}
+
+	return fields
+}
+
+// addSignVerbatimRoleFields provides the fields and defaults to be used by anything that is building up the fields
+// and their corresponding default values when generating/using a sign-verbatim type role such as buildSignVerbatimRole.
+func addSignVerbatimRoleFields(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields["key_usage"] = &framework.FieldSchema{
+		Type:    framework.TypeCommaStringSlice,
+		Default: []string{"DigitalSignature", "KeyAgreement", "KeyEncipherment"},
+		Description: `A comma-separated string or list of key usages (not extended
+key usages). Valid values can be found at
+https://golang.org/pkg/crypto/x509/#KeyUsage
+-- simply drop the "KeyUsage" part of the name.
+To remove all key usages from being set, set
+this value to an empty list.`,
+	}
+
+	fields["ext_key_usage"] = &framework.FieldSchema{
+		Type:    framework.TypeCommaStringSlice,
+		Default: []string{},
+		Description: `A comma-separated string or list of extended key usages. Valid values can be found at
+https://golang.org/pkg/crypto/x509/#ExtKeyUsage
+-- simply drop the "ExtKeyUsage" part of the name.
+To remove all key usages from being set, set
+this value to an empty list.`,
+	}
+
+	fields["ext_key_usage_oids"] = &framework.FieldSchema{
+		Type:        framework.TypeCommaStringSlice,
+		Description: `A comma-separated string or list of extended key usage oids.`,
+	}
+
+	fields["signature_bits"] = &framework.FieldSchema{
+		Type:    framework.TypeInt,
+		Default: 0,
+		Description: `The number of bits to use in the signature
+algorithm; accepts 256 for SHA-2-256, 384 for SHA-2-384, and 512 for
+SHA-2-512. Defaults to 0 to automatically detect based on key length
+(SHA-2-256 for RSA keys, and matching the curve size for NIST P-Curves).`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Value: 0,
+		},
+	}
+
+	fields["use_pss"] = &framework.FieldSchema{
+		Type:    framework.TypeBool,
+		Default: false,
+		Description: `Whether or not to use PSS signatures when using a
+RSA key-type issuer. Defaults to false.`,
+	}
+
+	return fields
+}

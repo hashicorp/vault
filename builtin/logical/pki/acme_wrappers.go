@@ -77,7 +77,7 @@ func (b *backend) acmeWrapper(op acmeOperation) framework.OperationFunc {
 func getAcmeIssuer(sc *storageContext, issuerName string) (*issuerEntry, error) {
 	issuerId, err := sc.resolveIssuerReference(issuerName)
 	if err != nil {
-		return nil, fmt.Errorf("%w issuer does not exist", ErrMalformed)
+		return nil, fmt.Errorf("%w: issuer does not exist", ErrMalformed)
 	}
 
 	issuer, err := sc.fetchIssuerById(issuerId)
@@ -107,15 +107,15 @@ func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData) (*roleE
 			var err error
 			role, err = sc.Backend.getRole(sc.Context, sc.Storage, roleName)
 			if err != nil {
-				return nil, nil, fmt.Errorf("%w role does not exist", ErrMalformed)
+				return nil, nil, fmt.Errorf("%w: err loading role", ErrServerInternal)
 			}
 
 			if role == nil {
-				return nil, nil, fmt.Errorf("%w role does not exist", ErrMalformed)
+				return nil, nil, fmt.Errorf("%w: role does not exist", ErrMalformed)
 			}
 
 			if role.NoStore {
-				return nil, nil, fmt.Errorf("%w: role can not be used as NoStore is set to true", ErrMalformed)
+				return nil, nil, fmt.Errorf("%w: role can not be used as NoStore is set to true", ErrServerInternal)
 			}
 
 			if len(role.Issuer) > 0 {
