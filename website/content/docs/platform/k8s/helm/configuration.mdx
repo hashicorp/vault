@@ -339,7 +339,7 @@ and consider if they're appropriate for your deployment.
 
 - `server` - Values that configure running a Vault server within Kubernetes.
 
-  - `enabled` (`string: "-"`) - When set to `true`, the Vault server will be created. When set to `"-"`, defaults to the value of `global.enabled`.
+  - `enabled` (`boolean or string: -`) - When set to `true`, the Vault server will be created. When set to `"-"`, defaults to the value of `global.enabled`.
 
   - `enterpriseLicense` - <EnterpriseAlert inline />This value refers to a Kubernetes secret that you have created that contains your enterprise license. If you are not using an enterprise image or if you plan to introduce the license key via another route, then leave secretName blank ("") or set it to null. Requires Vault Enterprise 1.8 or later.
 
@@ -347,8 +347,7 @@ and consider if they're appropriate for your deployment.
 
     - `secretKey` (`string: "license"`) - The key within the Kubernetes secret that holds the enterprise license.
 
-  - `image` - Resource requests, limits, etc. for the server cluster placement. This should map directly to the value of the resources field for a PodSpec. By default no direct resource request is made.
- Values that configure the Vault Docker image.
+  - `image` - Values that configure the Vault Docker image.
 
     - `repository` (`string: "hashicorp/vault"`) - The name of the Docker image for the containers running Vault.
 
@@ -362,7 +361,7 @@ and consider if they're appropriate for your deployment.
 
   - `logFormat` (`string: ""`) - Configures the Vault server logging format. If set this will override values defined in the Vault configuration file. Supported log formats include: `standard`, `json`.
 
-  - `resources` - The resource requests and limits (CPU, memory, etc.) for each container of the server. This should be a YAML dictionary of a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#resourcerequirements-v1-core) object. If this isn't specified, then the pods won't request any specific amount of resources, which limits the ability for Kubernetes to make efficient use of compute resources. **Setting this is highly recommended.**
+  - `resources` (`dictionary: {}`) - The resource requests and limits (CPU, memory, etc.) for each container of the server. This should be a YAML dictionary of a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#resourcerequirements-v1-core) object. If this isn't specified, then the pods won't request any specific amount of resources, which limits the ability for Kubernetes to make efficient use of compute resources. **Setting this is highly recommended.**
 
     ```yaml
     resources:
@@ -376,9 +375,9 @@ and consider if they're appropriate for your deployment.
 
     - `enabled` (`boolean: false`) - When set to `true`, an [Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/) service will be created.
 
-    - `labels` - Labels for the ingress service.
+    - `labels` (`dictionary: {}`) - Labels for the ingress service.
 
-    - `annotations` - This value defines additional annotations to add to the Ingress service. This can either be YAML or a YAML-formatted multi-line templated string.
+    - `annotations` (`dictionary: {}`) - This value defines additional annotations to add to the Ingress service. This can either be YAML or a YAML-formatted multi-line templated string.
 
       ```yaml
       annotations:
@@ -417,15 +416,15 @@ and consider if they're appropriate for your deployment.
       - `paths` (`array: []`)
 
   - `route` - Values that configure Route services for Vault in OpenShift
- ~> If [`ha`](#ha) is enabled the Route will point to the active vault server via the `active` Service (requires vault 1.4+ and [service_registration](/vault/docs/configuration/service-registration/kubernetes) to be set in the vault config).
+    ~> If [`ha`](#ha) is enabled the Route will point to the active vault server via the `active` Service (requires vault 1.4+ and [service_registration](/vault/docs/configuration/service-registration/kubernetes) to be set in the vault config).
 
     - `enabled` (`boolean: false`) - When set to `true`, a Route for Vault will be created.
 
     - `activeService` (`boolean: true`) - When HA mode is enabled and K8s service registration is being used, configure the route to point to the Vault active service.
 
-    - `labels` - Labels for the Route.
+    - `labels` (`dictionary: {}`) - Labels for the Route.
 
-    - `annotations` - Annotations to add to the Route. This can either be YAML or a YAML-formatted multi-line templated string.
+    - `annotations` (`dictionary: {}`) - Annotations to add to the Route. This can either be YAML or a YAML-formatted multi-line templated string.
 
     - `host` (`string: "chart-example.local"`) - Sets the hostname for the Route.
 
@@ -509,9 +508,9 @@ and consider if they're appropriate for your deployment.
       - /vault/userconfig/myscript/run.sh
     ```
 
-  - `extraInitContainers` (`array: ""`) - extraInitContainers is a list of init containers. Specified as a YAML list. This is useful if you need to run a script to provision TLS certificates or write out configuration files in a dynamic way.
+  - `extraInitContainers` (`array: null`) - extraInitContainers is a list of init containers. Specified as a YAML list. This is useful if you need to run a script to provision TLS certificates or write out configuration files in a dynamic way.
 
-  - `extraContainers` - The extra containers to be applied to the Vault server pods.
+  - `extraContainers` (`array: null`) - The extra containers to be applied to the Vault server pods.
 
     ```yaml
     extraContainers:
@@ -520,7 +519,7 @@ and consider if they're appropriate for your deployment.
         env: ...
     ```
 
-  - `extraEnvironmentVars` - The extra environment variables to be applied to the Vault server.
+  - `extraEnvironmentVars` (`dictionary: {}`) - The extra environment variables to be applied to the Vault server.
 
     ```yaml
     # Extra Environment Variables are defined as key/value strings.
@@ -550,7 +549,7 @@ and consider if they're appropriate for your deployment.
 
   - `extraVolumes` (`array: []`) - Deprecated: please use 'volumes' instead. extraVolumes is a list of extra volumes to mount. These will be exposed to Vault in the path `/vault/userconfig/<name>/`. The value below is an array of objects, examples are shown below.
 
-  - `volumes` (`array: ""`) - A list of volumes made available to all containers. This takes standard Kubernetes volume definitions.
+  - `volumes` (`array: null`) - A list of volumes made available to all containers. This takes standard Kubernetes volume definitions.
 
     ```yaml
     volumes:
@@ -558,7 +557,7 @@ and consider if they're appropriate for your deployment.
         emptyDir: {}
     ```
 
-  - `volumeMounts` - A list of volumes mounts made available to all containers. This takes standard Kubernetes volume mount definitions.
+  - `volumeMounts` (`array: null`) - A list of volumes mounts made available to all containers. This takes standard Kubernetes volume mount definitions.
 
     ```yaml
     volumeMounts:
@@ -567,7 +566,7 @@ and consider if they're appropriate for your deployment.
         readOnly: true
     ```
 
-  - `affinity` (`string`) - This value defines the [affinity](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity) for server pods. This should be either a multi-line string or YAML matching the PodSpec's affinity field. It defaults to allowing only a single pod on each node, which minimizes risk of the cluster becoming unusable if a node is lost. If you need to run more pods per node (for example, testing on Minikube), set this value to `null`.
+  - `affinity` (`string or object`) - This value defines the [affinity](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity) for server pods. This should be either a multi-line string or YAML matching the PodSpec's affinity field. It defaults to allowing only a single pod on each node, which minimizes risk of the cluster becoming unusable if a node is lost. If you need to run more pods per node (for example, testing on Minikube), set this value to `null`.
 
     ```yaml
     # Recommended default server affinity:
@@ -594,7 +593,7 @@ and consider if they're appropriate for your deployment.
         tolerationSeconds: 6000
     ```
 
-  - `nodeSelector` - This value defines additional node selection criteria for more control over where the Vault servers are deployed. This should be formatted as a multi-line string or YAML map.
+  - `nodeSelector` (`dictionary: {}`) - This value defines additional node selection criteria for more control over where the Vault servers are deployed. This should be formatted as a multi-line string or YAML map.
 
     ```yaml
     nodeSelector: |
@@ -619,7 +618,7 @@ and consider if they're appropriate for your deployment.
 
   - `priorityClassName` (`string: ""`) - Priority class for server pods.
 
-  - `extraLabels` - This value defines additional labels for server pods.
+  - `extraLabels` (`dictionary: {}`) - This value defines additional labels for server pods.
 
     ```yaml
     extraLabels:
@@ -627,7 +626,7 @@ and consider if they're appropriate for your deployment.
       'sample/label2': 'bar'
     ```
 
-  - `annotations` - This value defines additional annotations for server pods. This can either be YAML or a YAML-formatted multi-line templated string.
+  - `annotations` (`dictionary: {}`) - This value defines additional annotations for server pods. This can either be YAML or a YAML-formatted multi-line templated string.
 
     ```yaml
     annotations:
@@ -667,7 +666,7 @@ and consider if they're appropriate for your deployment.
 
       - `enabled` (`boolean: true`) - When set to false, the service selector used for the vault, vault-active, and vault-standby services will not filter on `app.kubernetes.io/instance`. This means they may select pods from outside this deployment of the Helm chart. Does not affect the headless vault-internal service with `ClusterIP: None`.
 
-    - `annotations` - This value defines additional annotations for the service. This can either be YAML or a YAML-formatted multi-line templated string.
+    - `annotations` (`dictionary: {}`) - This value defines additional annotations for the service. This can either be YAML or a YAML-formatted multi-line templated string.
 
       ```yaml
       annotations:
@@ -685,7 +684,7 @@ and consider if they're appropriate for your deployment.
 
     - `name` (`string: ""`) - Name of the service account to use. If not set and create is true, a name is generated using the name of the installation (default is "vault").
 
-    - `annotations` - This value defines additional annotations for the service account. This can either be YAML or a YAML-formatted multi-line templated string.
+    - `annotations` (`dictionary: {}`) - This value defines additional annotations for the service account. This can either be YAML or a YAML-formatted multi-line templated string.
 
       ```yaml
       annotations:
@@ -697,7 +696,7 @@ and consider if they're appropriate for your deployment.
         "sample/annotation2": "bar"
       ```
 
-    - `extraLabels` - This value defines additional labels for the Vault Server service account.
+    - `extraLabels` (`dictionary: {}`) - This value defines additional labels for the Vault Server service account.
 
       ```yaml
       extraLabels:
@@ -721,7 +720,7 @@ and consider if they're appropriate for your deployment.
 
     - `accessMode` (`string: "ReadWriteOnce"`) - Type of access mode of the storage device. See the [official Kubernetes documentation](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes) for more information.
 
-    - `annotations` - This value defines additional annotations to add to the data PVCs. This can either be YAML or a YAML-formatted multi-line templated string.
+    - `annotations` (`dictionary: {}`) - This value defines additional annotations to add to the data PVCs. This can either be YAML or a YAML-formatted multi-line templated string.
 
       ```yaml
       annotations:
@@ -743,7 +742,7 @@ and consider if they're appropriate for your deployment.
 
     - `accessMode` (`string: "ReadWriteOnce"`) - Type of access mode of the storage device.
 
-    - `annotations` - This value defines additional annotations to add to the audit PVCs. This can either be YAML or a YAML-formatted multi-line templated string.
+    - `annotations` (`dictionary: {}`) - This value defines additional annotations to add to the audit PVCs. This can either be YAML or a YAML-formatted multi-line templated string.
 
       ```yaml
       annotations:
@@ -835,7 +834,7 @@ and consider if they're appropriate for your deployment.
 
   - `statefulSet` - This configures settings for the Vault Statefulset.
 
-    - `annotations` - This value defines additional annotations to add to the Vault statefulset. This can either be YAML or a YAML-formatted multi-line templated string.
+    - `annotations` (`dictionary: {}`) - This value defines additional annotations to add to the Vault statefulset. This can either be YAML or a YAML-formatted multi-line templated string.
 
       ```yaml
       annotations:
@@ -847,7 +846,7 @@ and consider if they're appropriate for your deployment.
 
     - `securityContext` - Set the Pod and container security contexts.
 
-      - `pod` - Defines the securityContext for the server Pods, as YAML or a YAML-formatted multi-line templated string.
+      - `pod` (`dictionary: {}`) - Defines the securityContext for the server Pods, as YAML or a YAML-formatted multi-line templated string.
  Default if not specified and `global.openshift=false`:
 
         ```yaml
@@ -858,7 +857,7 @@ and consider if they're appropriate for your deployment.
         ```
  Defaults to empty if not specified and `global.openshift=true`.
 
-      - `container` - Defines the securityContext for the server containers, as YAML or a YAML-formatted multi-line templated string.
+      - `container` (`dictionary: {}`) - Defines the securityContext for the server containers, as YAML or a YAML-formatted multi-line templated string.
  Default if not specified and `global.openshift=false`:
 
         ```yaml
@@ -889,7 +888,7 @@ and consider if they're appropriate for your deployment.
 
   - `externalTrafficPolicy` (`string: "Cluster"`) - The externalTrafficPolicy can be set to either Cluster or Local and is only valid for LoadBalancer and NodePort service types. The default value is Cluster. ref: https://kubernetes.io/docs/concepts/services-networking/service/#external-traffic-policy
 
-  - `annotations` - loadBalancerSourceRanges:   - 10.0.0.0/16   - 1.78.23.3/32
+  - `annotations` (`dictionary: {}`) - loadBalancerSourceRanges:   - 10.0.0.0/16   - 1.78.23.3/32
  loadBalancerIP:
  Extra annotations to attach to the ui service This can either be YAML or a YAML-formatted multi-line templated string map of the annotations to apply to the ui service
 
@@ -913,7 +912,7 @@ and consider if they're appropriate for your deployment.
 
   - `volumeMounts` - volumeMounts is a list of volumeMounts for the main server container. These are rendered via toYaml rather than pre-processed like the extraVolumes value. The purpose is to make it easy to share volumes between containers.
 
-  - `resources`
+  - `resources` (`dictionary: {}`)
 
   - `hmacSecretName` (`string: ""`) - Override the default secret name for the CSI Provider's HMAC key used for generating secret versions.
 
@@ -925,27 +924,27 @@ and consider if they're appropriate for your deployment.
 
       - `maxUnavailable` (`string: ""`)
 
-    - `annotations` - Extra annotations for the daemonSet. This can either be YAML or a YAML-formatted multi-line templated string map of the annotations to apply to the daemonSet.
+    - `annotations` (`dictionary: {}`) - Extra annotations for the daemonSet. This can either be YAML or a YAML-formatted multi-line templated string map of the annotations to apply to the daemonSet.
 
     - `providersDir` (`string: "/etc/kubernetes/secrets-store-csi-providers"`) - Provider host path (must match the CSI provider's path)
 
     - `kubeletRootDir` (`string: "/var/lib/kubelet"`) - Kubelet host path
 
-    - `extraLabels` - Extra labels to attach to the vault-csi-provider daemonSet This should be a YAML map of the labels to apply to the csi provider daemonSet
+    - `extraLabels` (`dictionary: {}`) - Extra labels to attach to the vault-csi-provider daemonSet This should be a YAML map of the labels to apply to the csi provider daemonSet
 
     - `securityContext` - security context for the pod template and container in the csi provider daemonSet
 
-      - `pod`
+      - `pod` (`dictionary: {}`)
 
-      - `container`
+      - `container` (`dictionary: {}`)
 
   - `pod`
 
-    - `annotations` - Extra annotations for the provider pods. This can either be YAML or a YAML-formatted multi-line templated string map of the annotations to apply to the pod.
+    - `annotations` (`dictionary: {}`) - Extra annotations for the provider pods. This can either be YAML or a YAML-formatted multi-line templated string map of the annotations to apply to the pod.
 
     - `tolerations` (`array: []`) - Toleration Settings for provider pods This should be either a multi-line string or YAML matching the Toleration array in a PodSpec.
 
-    - `extraLabels` - Extra labels to attach to the vault-csi-provider pod This should be a YAML map of the labels to apply to the csi provider pod
+    - `extraLabels` (`dictionary: {}`) - Extra labels to attach to the vault-csi-provider pod This should be a YAML map of the labels to apply to the csi provider pod
 
   - `agent`
 
@@ -965,15 +964,15 @@ and consider if they're appropriate for your deployment.
 
     - `logLevel` (`string: "info"`)
 
-    - `resources`
+    - `resources` (`dictionary: {}`)
 
   - `priorityClassName` (`string: ""`) - Priority class for csi pods
 
   - `serviceAccount`
 
-    - `annotations` - Extra annotations for the serviceAccount definition. This can either be YAML or a YAML-formatted multi-line templated string map of the annotations to apply to the serviceAccount.
+    - `annotations` (`dictionary: {}`) - Extra annotations for the serviceAccount definition. This can either be YAML or a YAML-formatted multi-line templated string map of the annotations to apply to the serviceAccount.
 
-    - `extraLabels` - Extra labels to attach to the vault-csi-provider serviceAccount This should be a YAML map of the labels to apply to the csi provider serviceAccount
+    - `extraLabels` (`dictionary: {}`) - Extra labels to attach to the vault-csi-provider serviceAccount This should be a YAML map of the labels to apply to the csi provider serviceAccount
 
   - `readinessProbe` - Used to configure readinessProbe for the pods.
 
@@ -1018,7 +1017,7 @@ and consider if they're appropriate for your deployment.
  Instructions on how to install the Helm chart can be found here:  https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack More information can be found here:  https://github.com/prometheus-operator/prometheus-operator  https://github.com/prometheus-operator/kube-prometheus
  Enable deployment of the Vault Server ServiceMonitor CustomResource.
 
-    - `selectors` - Selector labels to add to the ServiceMonitor. When empty, defaults to:  release: prometheus
+    - `selectors` (`dictionary: {}`) - Selector labels to add to the ServiceMonitor. When empty, defaults to:  release: prometheus
 
     - `interval` (`string: "30s"`) - Interval at which Prometheus scrapes metrics
 
@@ -1029,9 +1028,9 @@ and consider if they're appropriate for your deployment.
       - `enabled` (`boolean: false`) - The Prometheus operator *must* be installed before enabling this feature, if not the chart will fail to install due to missing CustomResourceDefinitions provided by the operator.
  Deploy the PrometheusRule custom resource for AlertManager based alerts. Requires that AlertManager is properly deployed.
 
-      - `selectors` - Selector labels to add to the PrometheusRules. When empty, defaults to:  release: prometheus
+      - `selectors` (`dictionary: {}`) - Selector labels to add to the PrometheusRules. When empty, defaults to:  release: prometheus
 
-      - `rules` - Some example rules.
+      - `rules` (`dictionary: {}`) - Some example rules.
 
 
 <!-- codegen: end -->
