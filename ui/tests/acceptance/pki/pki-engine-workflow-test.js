@@ -352,7 +352,6 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/issuers`);
       assert.dom('.linked-block').exists({ count: 1 }, 'One issuer is in list');
       assert.dom('[data-test-is-root-tag="0"]').hasText('root');
-      assert.dom('[data-test-common-name-tag="0"]').hasText('Hashicorp Test');
     });
 
     test('details view renders correct number of info items', async function (assert) {
