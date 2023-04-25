@@ -38,24 +38,7 @@ export default class PkiIssuerSerializer extends ApplicationSerializer {
   normalizeItems(payload) {
     if (payload.data) {
       if (payload.data?.keys && Array.isArray(payload.data.keys)) {
-        return payload.data.keys.map((key) => {
-          if (key.shouldShowIssuerMetaData) {
-            const { certificate, issuer_id, isRoot } = key;
-            const parsedCert = parseCertificate(certificate);
-
-            return {
-              issuer_id,
-              ...payload.data.key_info[issuer_id],
-              parsed_certificate: parsedCert,
-              isRoot,
-            };
-          } else {
-            return {
-              issuer_id: key,
-              ...payload.data.key_info[key],
-            };
-          }
-        });
+        return payload.data.keys.map((key) => ({ issuer_id: key, ...payload.data.key_info[key] }));
       }
       Object.assign(payload, payload.data);
       delete payload.data;

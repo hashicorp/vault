@@ -5,7 +5,7 @@
 
 import ApplicationAdapter from '../application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
-import { allSettled, all } from 'rsvp';
+import { all } from 'rsvp';
 import { verifyCertificates } from 'vault/utils/parse-pki-cert';
 
 export default class PkiIssuerAdapter extends ApplicationAdapter {
@@ -33,43 +33,26 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
     }
   }
 
-  async getIssuerMetaData(store, type, query, res) {
-    const { backend, shouldShowIssuerMetaData } = query;
+  async getIssuerMetadata(store, type, query, response) {
+    const { backend } = query;
+    const newKeyInfo = await all(
+      response.data.keys.map((id) => {
+        const keyInfo = response.data.key_info[id];
+        return this.queryRecord(store, type, { id, backend })
+          .then(async (resp) => {
+            const { certificate } = resp.data;
+            const isRoot = await verifyCertificates(certificate, certificate);
 
-    const records = await allSettled(
-      res.data.keys.map((id) => {
-        return this.queryRecord(store, type, { id, backend });
+            return { [id]: { ...keyInfo, isRoot } };
+          })
+          .catch(() => {
+            return { [id]: { ...keyInfo } };
+          });
       })
     );
 
-    const issuerInfo = records.map((record) => {
-      if (record.state === 'rejected') {
-        return {};
-      }
-      if (record.state === 'fulfilled') {
-        return record.value;
-      }
-    });
-
-    // isRootRecords is a function that maps through each issuer meta data and uses the verifyCertificates function
-    // to check if a certificate is a root. This is done in the adapter instead of the serializer because verifyCertificates
-    // is an asynchronous function and we need to wait until every verifyCertificates function call is fulfilled.
-    const isRootRecords = await all(
-      issuerInfo.map((record) => {
-        const { certificate } = record.data;
-        return verifyCertificates(certificate, certificate);
-      })
-    );
-
-    res.data.keys = issuerInfo.map((record, idx) => {
-      return {
-        ...record.data,
-        shouldShowIssuerMetaData,
-        isRoot: isRootRecords[idx],
-      };
-    });
-
-    return res;
+    response.data.key_info = newKeyInfo;
+    return response;
   }
 
   updateRecord(store, type, snapshot) {
@@ -88,10 +71,9 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
       // To show issuer meta data tags, we have a flag called shouldShowIssuerMetaData and only want to
       // grab each issuer data only if there are less than 10 issuers to avoid making too many requests
       if (shouldShowIssuerMetaData && res.data.keys.length <= 10) {
-        const issuerMetaData = this.getIssuerMetaData(store, type, query, res);
-        res = issuerMetaData;
+        const issuerMetaData = await this.getIssuerMetadata(store, type, query, res);
+        return issuerMetaData;
       }
-
       return res;
     });
   }
