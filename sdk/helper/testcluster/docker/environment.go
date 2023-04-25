@@ -954,7 +954,7 @@ func (dc *DockerCluster) setupImage(ctx context.Context, opts *DockerClusterOpti
 	containerFile := fmt.Sprintf(`
 FROM %s:%s
 COPY vault /bin/vault
-`, opts.ImageRepo, tag)
+`, opts.ImageRepo, sourceTag)
 
 	_, err = dockhelper.BuildImage(ctx, dc.dockerAPI, containerFile, bCtx,
 		dockhelper.BuildRemove(true), dockhelper.BuildForceRemove(true),
