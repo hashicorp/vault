@@ -286,6 +286,11 @@ to be set on all PR secondary clusters.`,
 					Description: `OSCP Servers`,
 					Required:    false,
 				},
+				"enable_aia_url_templating": {
+					Type:        framework.TypeBool,
+					Description: `Whether or not templating is enabled for AIA fields`,
+					Required:    false,
+				},
 			},
 		}},
 	}
