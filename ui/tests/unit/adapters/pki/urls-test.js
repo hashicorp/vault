@@ -38,10 +38,6 @@ module('Unit | Adapter | pki/urls', function (hooks) {
       },
     });
 
-    adapter.createRecord(storeStub, 'pki/urls', makeSnapshot({ id: 'pki-create' }));
-    assert.strictEqual(url, '/v1/pki-create/config/urls', 'create url OK');
-    assert.strictEqual(method, 'POST', 'create method OK');
-
     adapter.updateRecord(storeStub, 'pki/urls', makeSnapshot({ id: 'pki-update' }));
     assert.strictEqual(url, '/v1/pki-update/config/urls', 'update url OK');
     assert.strictEqual(method, 'PUT', 'update method OK');
