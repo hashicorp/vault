@@ -35,14 +35,15 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
 
   async getIssuerMetadata(store, type, query, response) {
     const { backend } = query;
-    const newKeyInfo = await all(
+
+    const keyInfoArray = await all(
       response.data.keys.map((id) => {
         const keyInfo = response.data.key_info[id];
         return this.queryRecord(store, type, { id, backend })
-          .then(async (resp) => {
-            const { certificate } = resp.data;
-            const isRoot = await verifyCertificates(certificate, certificate);
-            return { ...keyInfo, ...resp.data, isRoot };
+          .then(async (issuerRecord) => {
+            const { data } = issuerRecord;
+            const isRoot = await verifyCertificates(data.certificate, data.certificate);
+            return { ...keyInfo, ...data, isRoot };
           })
           .catch(() => {
             return { ...keyInfo };
@@ -52,8 +53,8 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
 
     const keyInfo = {};
 
-    newKeyInfo.forEach((newKey) => {
-      keyInfo[newKey.issuer_id] = newKey;
+    response.data.keys.forEach((issuerId) => {
+      keyInfo[issuerId] = keyInfoArray.find((newKey) => newKey.issuer_id === issuerId);
     });
 
     response.data.key_info = keyInfo;

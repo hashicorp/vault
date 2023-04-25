@@ -6,13 +6,13 @@
           <Icon @name="certificate" class="has-text-grey-light" />
           <span class="has-text-weight-semibold is-underline">
             {{pkiIssuer.issuerRef}}
+            {{#if pkiIssuer.issuerName}}
+              <span class="tag has-text-grey-dark">{{pkiIssuer.id}}</span>
+            {{/if}}
           </span>
           <div class="is-flex-row has-left-margin-l has-top-margin-xs">
             {{#if pkiIssuer.isDefault}}
               <span class="tag has-text-grey-dark" data-test-is-default={{idx}}>default issuer</span>
-            {{/if}}
-            {{#if pkiIssuer.issuerName}}
-              <span class="tag has-text-grey-dark">{{pkiIssuer.id}}</span>
             {{/if}}
             {{#if (not (eq pkiIssuer.isRoot undefined))}}
               <span class="tag has-text-grey-dark" data-test-is-root-tag={{idx}}>{{if
