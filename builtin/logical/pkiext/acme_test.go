@@ -65,19 +65,52 @@ func CheckCertBot(t *testing.T, vaultNetwork string, vaultNodeID string, directo
 		"--agree-tos",
 		"--no-verify-ssl",
 		"--standalone",
+		"--non-interactive",
 		"--server", directory,
 		"-d", hostname,
 	}
 	logCatCmd := []string{"cat", "/var/log/letsencrypt/letsencrypt.log"}
 
 	stdout, stderr, retcode, err = runner.RunCmdWithOutput(ctx, result.Container.ID, certbotCmd)
-	t.Logf("Certbot Command: %v\nstdout: %v\nstderr: %v\n", certbotCmd, string(stdout), string(stderr))
+	t.Logf("Certbot Issue Command: %v\nstdout: %v\nstderr: %v\n", certbotCmd, string(stdout), string(stderr))
 	if err != nil || retcode != 0 {
 		logsStdout, logsStderr, _, _ := runner.RunCmdWithOutput(ctx, result.Container.ID, logCatCmd)
 		t.Logf("Certbot logs\nstdout: %v\nstderr: %v\n", string(logsStdout), string(logsStderr))
 	}
-	require.NoError(t, err, "got error running command")
-	require.Equal(t, 0, retcode, "expected zero retcode")
+	require.NoError(t, err, "got error running issue command")
+	require.Equal(t, 0, retcode, "expected zero retcode issue command result")
+
+	certbotRevokeCmd := []string{
+		"certbot",
+		"revoke",
+		"--no-eff-email",
+		"--email", "certbot.client@dadgarcorp.com",
+		"--agree-tos",
+		"--no-verify-ssl",
+		"--non-interactive",
+		"--no-delete-after-revoke",
+		"--cert-name", hostname,
+	}
+
+	stdout, stderr, retcode, err = runner.RunCmdWithOutput(ctx, result.Container.ID, certbotRevokeCmd)
+	t.Logf("Certbot Revoke Command: %v\nstdout: %v\nstderr: %v\n", certbotRevokeCmd, string(stdout), string(stderr))
+	if err != nil || retcode != 0 {
+		logsStdout, logsStderr, _, _ := runner.RunCmdWithOutput(ctx, result.Container.ID, logCatCmd)
+		t.Logf("Certbot logs\nstdout: %v\nstderr: %v\n", string(logsStdout), string(logsStderr))
+	}
+	require.NoError(t, err, "got error running revoke command")
+	require.Equal(t, 0, retcode, "expected zero retcode revoke command result")
+
+	// Revoking twice should fail.
+	stdout, stderr, retcode, err = runner.RunCmdWithOutput(ctx, result.Container.ID, certbotRevokeCmd)
+	t.Logf("Certbot Double Revoke Command: %v\nstdout: %v\nstderr: %v\n", certbotRevokeCmd, string(stdout), string(stderr))
+	if err != nil || retcode == 0 {
+		logsStdout, logsStderr, _, _ := runner.RunCmdWithOutput(ctx, result.Container.ID, logCatCmd)
+		t.Logf("Certbot logs\nstdout: %v\nstderr: %v\n", string(logsStdout), string(logsStderr))
+	}
+
+	require.NoError(t, err, "got error running double revoke command")
+	require.NotEqual(t, 0, retcode, "expected non-zero retcode double revoke command result")
 
 	runner.Stop(ctx, result.Container.ID)
 }
