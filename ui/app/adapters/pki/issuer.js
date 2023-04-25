@@ -5,7 +5,7 @@
 
 import ApplicationAdapter from '../application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
-import { allSettled, all } from 'rsvp';
+import { all } from 'rsvp';
 import { verifyCertificates } from 'vault/utils/parse-pki-cert';
 
 export default class PkiIssuerAdapter extends ApplicationAdapter {
@@ -33,43 +33,33 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
     }
   }
 
-  async getIssuerMetaData(store, type, query, res) {
-    const { backend, shouldShowIssuerMetaData } = query;
+  async getIssuerMetadata(store, type, query, response) {
+    const { backend } = query;
 
-    const records = await allSettled(
-      res.data.keys.map((id) => {
-        return this.queryRecord(store, type, { id, backend });
+    const keyInfoArray = await all(
+      response.data.keys.map((id) => {
+        const keyInfo = response.data.key_info[id];
+        return this.queryRecord(store, type, { id, backend })
+          .then(async (issuerRecord) => {
+            const { data } = issuerRecord;
+            const isRoot = await verifyCertificates(data.certificate, data.certificate);
+            return { ...keyInfo, ...data, isRoot };
+          })
+          .catch(() => {
+            return { ...keyInfo };
+          });
       })
     );
 
-    const issuerInfo = records.map((record) => {
-      if (record.state === 'rejected') {
-        return {};
-      }
-      if (record.state === 'fulfilled') {
-        return record.value;
-      }
+    const keyInfo = {};
+
+    response.data.keys.forEach((issuerId) => {
+      keyInfo[issuerId] = keyInfoArray.find((newKey) => newKey.issuer_id === issuerId);
     });
 
-    // isRootRecords is a function that maps through each issuer meta data and uses the verifyCertificates function
-    // to check if a certificate is a root. This is done in the adapter instead of the serializer because verifyCertificates
-    // is an asynchronous function and we need to wait until every verifyCertificates function call is fulfilled.
-    const isRootRecords = await all(
-      issuerInfo.map((record) => {
-        const { certificate } = record.data;
-        return verifyCertificates(certificate, certificate);
-      })
-    );
+    response.data.key_info = keyInfo;
 
-    res.data.keys = issuerInfo.map((record, idx) => {
-      return {
-        ...record.data,
-        shouldShowIssuerMetaData,
-        isRoot: isRootRecords[idx],
-      };
-    });
-
-    return res;
+    return response;
   }
 
   updateRecord(store, type, snapshot) {
@@ -81,15 +71,14 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
   }
 
   query(store, type, query) {
-    const { backend, shouldShowIssuerMetaData } = query;
+    const { backend, isListView } = query;
     const url = this.urlForQuery(backend);
 
     return this.ajax(url, 'GET', this.optionsForQuery()).then(async (res) => {
-      // To show issuer meta data tags, we have a flag called shouldShowIssuerMetaData and only want to
+      // To show issuer meta data tags, we have a flag called isListView and only want to
       // grab each issuer data only if there are less than 10 issuers to avoid making too many requests
-      if (shouldShowIssuerMetaData && res.data.keys.length <= 10) {
-        const issuerMetaData = this.getIssuerMetaData(store, type, query, res);
-        res = issuerMetaData;
+      if (isListView && res.data.keys.length <= 10) {
+        return await this.getIssuerMetadata(store, type, query, res);
       }
 
       return res;
@@ -99,7 +88,7 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
   queryRecord(store, type, query) {
     const { backend, id } = query;
 
-    return this.ajax(`${this.urlForQuery(backend, id)}`, 'GET', this.optionsForQuery(id));
+    return this.ajax(this.urlForQuery(backend, id), 'GET', this.optionsForQuery(id));
   }
 
   deleteAllIssuers(backend) {
