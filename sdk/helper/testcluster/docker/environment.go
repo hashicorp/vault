@@ -74,6 +74,7 @@ type DockerCluster struct {
 	dockerAPI *docker.Client
 	ID        string
 	Logger    log.Logger
+	builtTags map[string]struct{}
 }
 
 func (dc *DockerCluster) NamedLogger(s string) log.Logger {
@@ -429,45 +430,12 @@ func NewDockerCluster(ctx context.Context, opts *DockerClusterOptions) (*DockerC
 		opts.Logger = log.NewNullLogger()
 	}
 
-	if opts.VaultBinary != "" {
-		f, err := os.Open(opts.VaultBinary)
-		if err != nil {
-			return nil, err
-		}
-		data, err := io.ReadAll(f)
-		if err != nil {
-			return nil, err
-		}
-		bCtx := dockhelper.NewBuildContext()
-		bCtx["vault"] = &dockhelper.FileContents{
-			Data: data,
-			Mode: 0o755,
-		}
-
-		containerFile := fmt.Sprintf(`
-	FROM %s:%s
-	COPY vault /bin/vault
-`, opts.ImageRepo, opts.ImageTag)
-
-		// TODO would be nice to use current SHA as tag
-		newTag := opts.ImageTag + "-testing"
-		_, err = dockhelper.BuildImage(ctx, api, containerFile, bCtx,
-			dockhelper.BuildRemove(true), dockhelper.BuildForceRemove(true),
-			dockhelper.BuildPullParent(true),
-			dockhelper.BuildTags([]string{opts.ImageRepo + ":" + newTag}))
-		if err != nil {
-			return nil, err
-		}
-		newOpts := *opts
-		newOpts.ImageTag = newTag
-		opts = &newOpts
-	}
-
 	dc := &DockerCluster{
 		dockerAPI:   api,
 		RaftStorage: true,
 		ClusterName: opts.ClusterName,
 		Logger:      opts.Logger,
+		builtTags:   map[string]struct{}{},
 	}
 
 	if err := dc.setupDockerCluster(ctx, opts); err != nil {
@@ -501,6 +469,8 @@ type DockerClusterNode struct {
 	RealAPIAddr          string
 	ContainerNetworkName string
 	ContainerIPAddress   string
+	ImageRepo            string
+	ImageTag             string
 }
 
 func (n *DockerClusterNode) TLSConfig() *tls.Config {
@@ -661,15 +631,6 @@ func (n *DockerClusterNode) start(ctx context.Context, caDir string, opts *Docke
 		caDir:     "/usr/local/share/ca-certificates/",
 	}
 
-	repo := opts.ImageRepo
-	if repo == "" {
-		repo = "vault"
-	}
-	tag := opts.ImageTag
-	if tag == "" {
-		tag = "latest"
-	}
-
 	var wg sync.WaitGroup
 	wg.Add(1)
 	var seenLogs uberAtomic.Bool
@@ -687,8 +648,8 @@ func (n *DockerClusterNode) start(ctx context.Context, caDir string, opts *Docke
 		testcluster.JSONLogNoTimestamp(n.Logger, s)
 	}}
 	r, err := dockhelper.NewServiceRunner(dockhelper.RunOptions{
-		ImageRepo: repo,
-		ImageTag:  tag,
+		ImageRepo: n.ImageRepo,
+		ImageTag:  n.ImageTag,
 		// We don't need to run update-ca-certificates in the container, because
 		// we're providing the CA in the raft join call, and otherwise Vault
 		// servers don't talk to one another on the API port.
@@ -698,6 +659,7 @@ func (n *DockerClusterNode) start(ctx context.Context, caDir string, opts *Docke
 			// anyway, and because it prevents us using external plugins.
 			"SKIP_SETCAP=true",
 			"VAULT_LOG_FORMAT=json",
+			"VAULT_LICENSE=" + opts.VaultLicense,
 		},
 		Ports:           []string{"8200/tcp", "8201/tcp"},
 		ContainerName:   n.Name(),
@@ -893,6 +855,10 @@ func (dc *DockerCluster) AddNode(ctx context.Context, opts *DockerClusterOptions
 }
 
 func (dc *DockerCluster) addNode(ctx context.Context, opts *DockerClusterOptions) error {
+	tag, err := dc.setupImage(ctx, opts)
+	if err != nil {
+		return err
+	}
 	i := len(dc.ClusterNodes)
 	nodeID := fmt.Sprintf("core-%d", i)
 	node := &DockerClusterNode{
@@ -901,6 +867,8 @@ func (dc *DockerCluster) addNode(ctx context.Context, opts *DockerClusterOptions
 		Cluster:   dc,
 		WorkDir:   filepath.Join(dc.tmpDir, nodeID),
 		Logger:    dc.Logger.Named(nodeID),
+		ImageRepo: opts.ImageRepo,
+		ImageTag:  tag,
 	}
 	dc.ClusterNodes = append(dc.ClusterNodes, node)
 	if err := os.MkdirAll(node.WorkDir, 0o755); err != nil {
@@ -945,6 +913,58 @@ func (dc *DockerCluster) joinNode(ctx context.Context, nodeIdx int, leaderIdx in
 	}
 
 	return testcluster.UnsealNode(ctx, dc, nodeIdx)
+}
+
+func (dc *DockerCluster) setupImage(ctx context.Context, opts *DockerClusterOptions) (string, error) {
+	if opts == nil {
+		opts = &DockerClusterOptions{}
+	}
+	sourceTag := opts.ImageTag
+	if sourceTag == "" {
+		sourceTag = "latest"
+	}
+
+	if opts.VaultBinary == "" {
+		return sourceTag, nil
+	}
+
+	suffix := "testing"
+	if sha := os.Getenv("COMMIT_SHA"); sha != "" {
+		suffix = sha
+	}
+	tag := sourceTag + "-" + suffix
+	if _, ok := dc.builtTags[tag]; ok {
+		return tag, nil
+	}
+
+	f, err := os.Open(opts.VaultBinary)
+	if err != nil {
+		return "", err
+	}
+	data, err := io.ReadAll(f)
+	if err != nil {
+		return "", err
+	}
+	bCtx := dockhelper.NewBuildContext()
+	bCtx["vault"] = &dockhelper.FileContents{
+		Data: data,
+		Mode: 0o755,
+	}
+
+	containerFile := fmt.Sprintf(`
+FROM %s:%s
+COPY vault /bin/vault
+`, opts.ImageRepo, sourceTag)
+
+	_, err = dockhelper.BuildImage(ctx, dc.dockerAPI, containerFile, bCtx,
+		dockhelper.BuildRemove(true), dockhelper.BuildForceRemove(true),
+		dockhelper.BuildPullParent(true),
+		dockhelper.BuildTags([]string{opts.ImageRepo + ":" + tag}))
+	if err != nil {
+		return "", err
+	}
+	dc.builtTags[tag] = struct{}{}
+	return tag, nil
 }
 
 /* Notes on testing the non-bridge network case:

@@ -213,6 +213,8 @@ jobs:
       - id: run-go-tests
         name: Run Go tests
         timeout-minutes: ${{ fromJSON(env.TIMEOUT_IN_MINUTES) }}
+        env:
+          COMMIT_SHA: ${{ github.sha }}
         run: |
           set -exo pipefail
 

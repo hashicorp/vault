@@ -94,4 +94,5 @@ type ClusterOptions struct {
 	TmpDir             string
 	Logger             hclog.Logger
 	VaultNodeConfig    *VaultNodeConfig
+	VaultLicense       string
 }

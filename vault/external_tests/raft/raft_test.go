@@ -468,6 +468,7 @@ func TestRaft_Configuration_Docker(t *testing.T) {
 				//	"performance_multiplier": "1",
 				//},
 			},
+			VaultLicense: os.Getenv(testhelpers.VAULT_LICENSE_CI_ENV),
 		},
 	}
 	cluster := docker.NewTestDockerCluster(t, opts)
