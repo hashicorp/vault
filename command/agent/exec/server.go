@@ -60,6 +60,14 @@ type Server struct {
 	exitCh chan int
 }
 
+type ProcessExitError struct {
+	ExitCode int
+}
+
+func (e *ProcessExitError) Error() string {
+	return fmt.Sprintf("process exited with %d", e.ExitCode)
+}
+
 func NewServer(cfg *ServerConfig) *Server {
 	server := Server{
 		stopped:      atomic.NewBool(false),
@@ -70,11 +78,6 @@ func NewServer(cfg *ServerConfig) *Server {
 	}
 
 	return &server
-}
-
-// ExitCh fires if the process dies on its own
-func (s *Server) ExitCh() <-chan int {
-	return s.exitCh
 }
 
 func (s *Server) Run(ctx context.Context, envTmpls map[string]*config.EnvTemplateConfig, execCfg *config.ExecConfig) error {
@@ -153,8 +156,7 @@ func (s *Server) Run(ctx context.Context, envTmpls map[string]*config.EnvTemplat
 			s.runner.Stop()
 			s.childLock.Lock()
 			if s.child != nil {
-				// TODO: use kill to immediately kill or gracefully?
-				s.child.Kill()
+				s.child.Stop()
 			}
 			s.childLock.Unlock()
 			return nil
@@ -205,6 +207,9 @@ func (s *Server) Run(ctx context.Context, envTmpls map[string]*config.EnvTemplat
 					return fmt.Errorf("unable to bounce command: %w", err)
 				}
 			}
+		case exitCode := <-s.exitCh:
+			// process exited on its own
+			return &ProcessExitError{ExitCode: exitCode}
 		}
 	}
 
