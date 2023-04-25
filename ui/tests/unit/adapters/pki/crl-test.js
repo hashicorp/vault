@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 
-module('Unit | Adapter | pki/urls', function (hooks) {
+module('Unit | Adapter | pki/crl', function (hooks) {
   setupTest(hooks);
   setupMirage(hooks);
 
@@ -19,27 +19,27 @@ module('Unit | Adapter | pki/urls', function (hooks) {
   test('it should make request to correct endpoint on update', async function (assert) {
     assert.expect(1);
 
-    this.server.post(`/${this.backend}/config/urls`, () => {
+    this.server.post(`/${this.backend}/config/crl`, () => {
       assert.ok(true, 'request made to correct endpoint on update');
     });
 
-    this.store.pushPayload('pki/urls', {
-      modelName: 'pki/urls',
+    this.store.pushPayload('pki/crl', {
+      modelName: 'pki/crl',
       id: this.backend,
     });
 
-    const model = this.store.peekRecord('pki/urls', this.backend);
+    const model = this.store.peekRecord('pki/crl', this.backend);
     await model.save();
   });
 
   test('it should make request to correct endpoint on find', async function (assert) {
     assert.expect(1);
 
-    this.server.get(`/${this.backend}/config/urls`, () => {
+    this.server.get(`/${this.backend}/config/crl`, () => {
       assert.ok(true, 'request is made to correct endpoint on find');
       return { data: { id: this.backend } };
     });
 
-    this.store.findRecord('pki/urls', this.backend);
+    this.store.findRecord('pki/crl', this.backend);
   });
 });
