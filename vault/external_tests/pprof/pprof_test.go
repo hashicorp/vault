@@ -15,6 +15,7 @@ import (
 
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/testhelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/testcluster"
@@ -50,7 +51,8 @@ func TestSysPprof_Exec(t *testing.T) {
 	}
 	cluster := testcluster.NewTestExecDevCluster(t, &testcluster.ExecDevClusterOptions{
 		ClusterOptions: testcluster.ClusterOptions{
-			NumCores: 1,
+			NumCores:     1,
+			VaultLicense: os.Getenv(testhelpers.VAULT_LICENSE_CI_ENV),
 		},
 		BinaryPath:        binary,
 		BaseListenAddress: "127.0.0.1:8208",
@@ -246,6 +248,7 @@ func TestSysPprof_Standby_Exec(t *testing.T) {
 			VaultNodeConfig: &testcluster.VaultNodeConfig{
 				DisablePerformanceStandby: true,
 			},
+			VaultLicense: os.Getenv(testhelpers.VAULT_LICENSE_CI_ENV),
 		},
 		BinaryPath:        binary,
 		BaseListenAddress: "127.0.0.1:8210",
