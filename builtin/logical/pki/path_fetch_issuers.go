@@ -286,6 +286,11 @@ to be set on all PR secondary clusters.`,
 					Description: `OSCP Servers`,
 					Required:    false,
 				},
+				"enable_aia_url_templating": {
+					Type:        framework.TypeBool,
+					Description: `Whether or not templating is enabled for AIA fields`,
+					Required:    false,
+				},
 			},
 		}},
 	}
@@ -458,6 +463,7 @@ func respondReadIssuer(issuer *issuerEntry) (*logical.Response, error) {
 		data["issuing_certificates"] = issuer.AIAURIs.IssuingCertificates
 		data["crl_distribution_points"] = issuer.AIAURIs.CRLDistributionPoints
 		data["ocsp_servers"] = issuer.AIAURIs.OCSPServers
+		data["enable_aia_url_templating"] = issuer.AIAURIs.EnableTemplating
 	}
 
 	response := &logical.Response{
