@@ -384,19 +384,22 @@ func setupAcmeBackend(t *testing.T) (*vault.TestCluster, *api.Client, string) {
 	// Allow certain headers to pass through for ACME support
 	_, err = client.Logical().WriteWithContext(context.Background(), "sys/mounts/pki/tune", map[string]interface{}{
 		"allowed_response_headers": []string{"Last-Modified", "Replay-Nonce", "Link", "Location"},
+		"max_lease_ttl":            "920000h",
 	})
 	require.NoError(t, err, "failed tuning mount response headers")
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "/pki/issuers/generate/root/internal", map[string]interface{}{
-		"issuer_name": "root-ca",
-		"key_name":    "root-key",
-		"key_type":    "ec",
-		"common_name": "root.com",
-		"ttl":         "10h",
-	})
+	resp, err := client.Logical().WriteWithContext(context.Background(), "/pki/issuers/generate/root/internal",
+		map[string]interface{}{
+			"issuer_name": "root-ca",
+			"key_name":    "root-key",
+			"key_type":    "ec",
+			"common_name": "root.com",
+			"ttl":         "7200h",
+			"max_ttl":     "920000h",
+		})
 	require.NoError(t, err, "failed creating root CA")
 
-	resp, err := client.Logical().WriteWithContext(context.Background(), "/pki/issuers/generate/intermediate/internal",
+	resp, err = client.Logical().WriteWithContext(context.Background(), "/pki/issuers/generate/intermediate/internal",
 		map[string]interface{}{
 			"key_name":    "int-key",
 			"key_type":    "ec",
@@ -407,8 +410,9 @@ func setupAcmeBackend(t *testing.T) (*vault.TestCluster, *api.Client, string) {
 
 	// Sign the intermediate CSR using /pki
 	resp, err = client.Logical().Write("pki/issuer/root-ca/sign-intermediate", map[string]interface{}{
-		"csr": intermediateCSR,
-		"ttl": "5h",
+		"csr":     intermediateCSR,
+		"ttl":     "720h",
+		"max_ttl": "7200h",
 	})
 	require.NoError(t, err, "failed signing intermediary CSR")
 	intermediateCertPEM := resp.Data["certificate"].(string)
@@ -425,10 +429,26 @@ func setupAcmeBackend(t *testing.T) (*vault.TestCluster, *api.Client, string) {
 	_, err = client.Logical().Write("/pki/issuer/"+intCaUuid, map[string]interface{}{
 		"issuer_name": "int-ca",
 	})
+	require.NoError(t, err, "failed updating issuer name")
 
 	_, err = client.Logical().Write("/pki/config/issuers", map[string]interface{}{
 		"default": "int-ca",
 	})
+	require.NoError(t, err, "failed updating default issuer")
+
+	_, err = client.Logical().Write("/pki/roles/test-role", map[string]interface{}{
+		"ttl_duration":     "365h",
+		"max_ttl_duration": "720h",
+		"key_type":         "any",
+	})
+	require.NoError(t, err, "failed creating role test-role")
+
+	_, err = client.Logical().Write("/pki/roles/acme", map[string]interface{}{
+		"ttl_duration":     "365h",
+		"max_ttl_duration": "720h",
+		"key_type":         "any",
+	})
+	require.NoError(t, err, "failed creating role acme")
 
 	return cluster, client, pathConfig
 }

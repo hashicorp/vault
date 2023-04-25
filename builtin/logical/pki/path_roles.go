@@ -1014,6 +1014,8 @@ func (b *backend) getRole(ctx context.Context, s logical.Storage, n string) (*ro
 		}
 	}
 
+	result.Name = n
+
 	return &result, nil
 }
 
@@ -1105,6 +1107,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		NotBeforeDuration:             time.Duration(data.Get("not_before_duration").(int)) * time.Second,
 		NotAfter:                      data.Get("not_after").(string),
 		Issuer:                        data.Get("issuer_ref").(string),
+		Name:                          name,
 	}
 
 	allowedOtherSANs := data.Get("allowed_other_sans").([]string)
@@ -1510,6 +1513,8 @@ type roleEntry struct {
 	NotBeforeDuration             time.Duration `json:"not_before_duration"`
 	NotAfter                      string        `json:"not_after"`
 	Issuer                        string        `json:"issuer"`
+	// Name is only set when the role has been stored, on the fly roles have a blank name
+	Name string `json:"-"`
 }
 
 func (r *roleEntry) ToResponseData() map[string]interface{} {
