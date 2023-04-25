@@ -519,6 +519,54 @@ func (a *acmeState) ListOrderIds(ac *acmeContext, accountId string) ([]string, e
 	return orderIds, nil
 }
 
+type acmeCertEntry struct {
+	Serial  string `json:"-"`
+	Account string `json:"-"`
+	Order   string `json:"order"`
+}
+
+func (a *acmeState) TrackIssuedCert(ac *acmeContext, accountId string, serial string, orderId string) error {
+	path := acmeAccountPrefix + accountId + "/certs/" + normalizeSerial(serial)
+	entry := acmeCertEntry{
+		Order: orderId,
+	}
+
+	json, err := logical.StorageEntryJSON(path, &entry)
+	if err != nil {
+		return fmt.Errorf("error serializing acme cert entry: %w", err)
+	}
+
+	if err = ac.sc.Storage.Put(ac.sc.Context, json); err != nil {
+		return fmt.Errorf("error writing acme cert entry: %w", err)
+	}
+
+	return nil
+}
+
+func (a *acmeState) GetIssuedCert(ac *acmeContext, accountId string, serial string) (*acmeCertEntry, error) {
+	path := acmeAccountPrefix + accountId + "/certs/" + normalizeSerial(serial)
+
+	entry, err := ac.sc.Storage.Get(ac.sc.Context, path)
+	if err != nil {
+		return nil, fmt.Errorf("error loading acme cert entry: %w", err)
+	}
+
+	if entry == nil {
+		return nil, fmt.Errorf("no certificate with this serial was issued for this account")
+	}
+
+	var cert acmeCertEntry
+	err = entry.DecodeJSON(&cert)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding acme cert entry: %w", err)
+	}
+
+	cert.Serial = denormalizeSerial(serial)
+	cert.Account = accountId
+
+	return &cert, nil
+}
+
 func getAuthorizationPath(accountId string, authId string) string {
 	return acmeAccountPrefix + accountId + "/authorizations/" + authId
 }

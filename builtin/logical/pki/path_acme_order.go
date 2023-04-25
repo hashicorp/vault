@@ -268,6 +268,11 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, _ *logical.Request, 
 		return nil, err
 	}
 
+	if err := b.acmeState.TrackIssuedCert(ac, order.AccountId, hyphenSerialNumber, order.OrderId); err != nil {
+		b.Logger().Warn("orphaned generated ACME certificate due to error saving account->cert->order reference", "serial_number", hyphenSerialNumber, "error", err)
+		return nil, err
+	}
+
 	order.Status = ACMEOrderValid
 	order.CertificateSerialNumber = hyphenSerialNumber
 	order.CertificateExpiry = signedCertBundle.Certificate.NotAfter
