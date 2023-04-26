@@ -1788,6 +1788,11 @@ ECONFIG_LOOP:
 		if err != nil {
 			return nil, fmt.Errorf("failed to find the MFAEnforcementConfig namespace")
 		}
+
+		if eConfigNS == nil {
+			continue
+		}
+
 		if eConfig == nil || (eConfigNS.ID != ns.ID && !ns.HasParent(eConfigNS)) {
 			continue
 		}
