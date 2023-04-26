@@ -286,6 +286,7 @@ jobs:
             export DATADOG_API_KEY=${{ secrets.DATADOG_API_KEY }}
           fi
           datadog-ci junit upload --service "$GITHUB_REPOSITORY" test-results/go-test/results.xml
+        if: always()
       - name: Archive test results
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce
         with:
