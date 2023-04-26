@@ -32,10 +32,6 @@ on:
         description: A comma-separated list of additional build tags to consider satisfied during the build.
         required: false
         type: string
-      build-binary:
-        description: If true, build a vault binary and set VAULT_BINARY and run binary-needing test packages
-        required: false
-        type: bool
 
 env: ${{ fromJSON(inputs.env-vars) }}
 
@@ -79,11 +75,11 @@ jobs:
         go-version-file: ./.go-version
         cache: true
     - name: Authenticate to Vault
-      if: inputs.total-runners > 16
       id: vault-auth
+      if: inputs.total-runners > 16 && github.repository == 'hashicorp/vault-enterprise'
       run: vault-auth
     - name: Fetch Secrets
-      if: inputs.total-runners > 16
+      if: inputs.total-runners > 16 && github.repository == 'hashicorp/vault-enterprise'
       id: secrets
       uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e
       with:
