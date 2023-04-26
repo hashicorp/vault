@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -53,9 +55,8 @@ func (b *backend) acmeWrapper(op acmeOperation) framework.OperationFunc {
 	return acmeErrorWrapper(func(ctx context.Context, r *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		sc := b.makeStorageContext(ctx, r.Storage)
 
-		if false {
-			// TODO sclark: Check if ACME is enable here
-			return nil, fmt.Errorf("ACME is disabled in configuration: %w", ErrServerInternal)
+		if isAcmeDisabled(sc) {
+			return nil, ErrAcmeDisabled
 		}
 
 		if b.useLegacyBundleCaStorage() {
@@ -322,4 +323,23 @@ func getRequestedAcmeIssuerFromPath(data *framework.FieldData) string {
 		requestedIssuer = requestedIssuerRaw.(string)
 	}
 	return requestedIssuer
+}
+
+func isAcmeDisabled(sc *storageContext) bool {
+	if disableAcmeRaw := os.Getenv("VAULT_DISABLE_PUBLIC_ACME"); disableAcmeRaw != "" {
+		disableAcme, err := strconv.ParseBool(disableAcmeRaw)
+		if err != nil {
+			sc.Backend.Logger().Warn("could not parse env var VAULT_DISABLE_PUBLIC_ACME", "error", err)
+			disableAcme = false
+		}
+
+		// The OS environment if true will override any configuration option.
+		if disableAcme {
+			return true
+		}
+	}
+
+	// TODO: Implement configuration based check here.
+
+	return false
 }

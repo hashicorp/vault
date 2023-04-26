@@ -396,6 +396,27 @@ func TestAcmeAccountsCrossingDirectoryPath(t *testing.T) {
 	// swallows the error we are sending back to a no account error
 }
 
+// TestAcmeDisabledWithEnvVar verifies if VAULT_DISABLE_PUBLIC_ACME is set that we completely
+// disable the ACME service
+func TestAcmeDisabledWithEnvVar(t *testing.T) {
+	t.Setenv("VAULT_DISABLE_PUBLIC_ACME", "true")
+
+	cluster, client, _ := setupAcmeBackend(t)
+	defer cluster.Cleanup()
+
+	for _, method := range []string{http.MethodHead, http.MethodGet} {
+		t.Run(fmt.Sprintf("%s", method), func(t *testing.T) {
+			req := client.NewRequest(method, "/v1/pki/acme/new-nonce")
+			_, err := client.RawRequestWithContext(ctx, req)
+			require.Error(t, err, "should have received an error as ACME should have been disabled")
+
+			if apiError, ok := err.(*api.ResponseError); ok {
+				require.Equal(t, 404, apiError.StatusCode)
+			}
+		})
+	}
+}
+
 func setupAcmeBackend(t *testing.T) (*vault.TestCluster, *api.Client, string) {
 	cluster, client := setupTestPkiCluster(t)
 
