@@ -190,7 +190,6 @@
     "pvutils": "^1.0.17",
     "qunit": "^2.19.1",
     "qunit-dom": "^2.0.0",
-    "route-recognizer": "^0.3.4",
     "sass-svg-uri": "^1.0.0",
     "shell-quote": "^1.6.1",
     "string.prototype.endswith": "^0.2.0",
