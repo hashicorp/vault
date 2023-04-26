@@ -140,12 +140,51 @@ func genResponseFromAcmeConfig(config *acmeConfigEntry) *logical.Response {
 	return response
 }
 
-func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	sc := b.makeStorageContext(ctx, req.Storage)
 	config, err := sc.getAcmeConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	return genResponseFromAcmeConfig(config), nil
+	enabled := config.Enabled
+	if enabledRaw, ok := d.GetOk("enabled"); ok {
+		enabled = enabledRaw.(bool)
+	}
+
+	allowAnyDomain := config.AllowAnyDomain
+	if allowAnyDomainRaw, ok := d.GetOk("allow_any_domain"); ok {
+		allowAnyDomain = allowAnyDomainRaw.(bool)
+	}
+
+	allowedRoles := config.AllowedRoles
+	if allowedRolesRaw, ok := d.GetOk("allowed_roles"); ok {
+		allowedRoles = allowedRolesRaw.([]string)
+	}
+
+	defaultRole := config.DefaultRole
+	if defaultRoleRaw, ok := d.GetOk("default_role"); ok {
+		defaultRole = defaultRoleRaw.(string)
+	}
+
+	allowNoAllowedDomains := config.AllowNoAllowedDomains
+	if allowNoAllowedDomainsRaw, ok := d.GetOk("allow_no_allowed_domains"); ok {
+		allowNoAllowedDomains = allowNoAllowedDomainsRaw.(bool)
+	}
+
+	allowedIssuers := config.AllowedIssuers
+	if allowedIssuersRaw, ok := d.GetOk("allowed_issuers"); ok {
+		allowedIssuers = allowedIssuersRaw.([]string) // TODO
+	}
+
+	newConfig := &acmeConfigEntry{
+		Enabled:               enabled,
+		AllowAnyDomain:        allowAnyDomain,
+		AllowedRoles:          allowedRoles,
+		DefaultRole:           defaultRole,
+		AllowNoAllowedDomains: allowNoAllowedDomains,
+		AllowedIssuers:        allowedIssuers,
+	}
+
+	return genResponseFromAcmeConfig(newConfig), nil
 }
