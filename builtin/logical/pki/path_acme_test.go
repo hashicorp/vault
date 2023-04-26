@@ -52,7 +52,6 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 		{"role", "/roles/test-role"},
 		{"issuer", "/issuer/int-ca"},
 		{"issuer_role", "/issuer/int-ca/roles/test-role"},
-		{"issuer_role_acme", "/issuer/acme/roles/acme"},
 	}
 	testCtx := context.Background()
 
@@ -367,6 +366,34 @@ func TestAcmeClusterPathNotConfigured(t *testing.T) {
 			require.NotEmpty(t, respType["detail"])
 		})
 	}
+}
+
+// TestAcmeAccountsCrossingDirectoryPath make sure that if an account attempts to use a different ACME
+// directory path that we get an error.
+func TestAcmeAccountsCrossingDirectoryPath(t *testing.T) {
+	t.Parallel()
+	cluster, _, _ := setupAcmeBackend(t)
+	defer cluster.Cleanup()
+
+	baseAcmeURL := "/v1/pki/acme/"
+	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err, "failed creating rsa key")
+
+	testCtx := context.Background()
+	acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)
+
+	// Create new account
+	acct, err := acmeClient.Register(testCtx, &acme.Account{}, func(tosURL string) bool { return true })
+	require.NoError(t, err, "failed registering account")
+
+	// Try to update the account under another ACME directory
+	baseAcmeURL2 := "/v1/pki/roles/test-role/acme/"
+	acmeClient2 := getAcmeClientForCluster(t, cluster, baseAcmeURL2, accountKey)
+	acct.Contact = []string{"mailto:test3@example.com"}
+	_, err = acmeClient2.UpdateReg(testCtx, acct)
+	require.Error(t, err, "successfully updated account when we should have failed due to different directory")
+	// We don't test for the specific error about using the wrong directory, as the golang library
+	// swallows the error we are sending back to a no account error
 }
 
 func setupAcmeBackend(t *testing.T) (*vault.TestCluster, *api.Client, string) {

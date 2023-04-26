@@ -22,6 +22,9 @@ type acmeContext struct {
 	sc         *storageContext
 	role       *roleEntry
 	issuer     *issuerEntry
+	// acmeDirectory is a string that can distinguish the various acme directories we have configured
+	// if something needs to remain locked into a directory path structure.
+	acmeDirectory string
 }
 
 type (
@@ -30,6 +33,7 @@ type (
 	acmeAccountRequiredOperation func(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}, acct *acmeAccount) (*logical.Response, error)
 )
 
+// acmeErrorWrapper the lowest level wrapper that will translate errors into proper ACME error responses
 func acmeErrorWrapper(op framework.OperationFunc) framework.OperationFunc {
 	return func(ctx context.Context, r *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		resp, err := op(ctx, r, data)
@@ -41,6 +45,10 @@ func acmeErrorWrapper(op framework.OperationFunc) framework.OperationFunc {
 	}
 }
 
+// acmeWrapper a basic wrapper that all ACME handlers should leverage as the basis.
+// This will create a basic ACME context, validate basic ACME configuration is setup
+// for operations. This pulls in acmeErrorWrapper to translate error messages for users,
+// but does not enforce any sort of ACME authentication.
 func (b *backend) acmeWrapper(op acmeOperation) framework.OperationFunc {
 	return acmeErrorWrapper(func(ctx context.Context, r *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		sc := b.makeStorageContext(ctx, r.Storage)
@@ -64,86 +72,25 @@ func (b *backend) acmeWrapper(op acmeOperation) framework.OperationFunc {
 			return nil, err
 		}
 
+		acmeDirectory := getAcmeDirectory(data)
+
 		acmeCtx := &acmeContext{
-			baseUrl:    acmeBaseUrl,
-			clusterUrl: clusterBase,
-			sc:         sc,
-			role:       role,
-			issuer:     issuer,
+			baseUrl:       acmeBaseUrl,
+			clusterUrl:    clusterBase,
+			sc:            sc,
+			role:          role,
+			issuer:        issuer,
+			acmeDirectory: acmeDirectory,
 		}
 
 		return op(acmeCtx, r, data)
 	})
 }
 
-func getAcmeIssuer(sc *storageContext, issuerName string) (*issuerEntry, error) {
-	issuerId, err := sc.resolveIssuerReference(issuerName)
-	if err != nil {
-		return nil, fmt.Errorf("%w: issuer does not exist", ErrMalformed)
-	}
-
-	issuer, err := sc.fetchIssuerById(issuerId)
-	if err != nil {
-		return nil, fmt.Errorf("issuer failed to load: %w", err)
-	}
-
-	if issuer.Usage.HasUsage(IssuanceUsage) && len(issuer.KeyID) > 0 {
-		return issuer, nil
-	}
-
-	return nil, fmt.Errorf("%w: issuer missing proper issuance usage or key", ErrServerInternal)
-}
-
-func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData) (*roleEntry, *issuerEntry, error) {
-	requestedIssuer := defaultRef
-	requestedIssuerRaw, present := data.GetOk("issuer")
-	if present {
-		requestedIssuer = requestedIssuerRaw.(string)
-	}
-
-	var role *roleEntry
-	roleNameRaw, present := data.GetOk("role")
-	if present {
-		roleName := roleNameRaw.(string)
-		if len(roleName) > 0 {
-			var err error
-			role, err = sc.Backend.getRole(sc.Context, sc.Storage, roleName)
-			if err != nil {
-				return nil, nil, fmt.Errorf("%w: err loading role", ErrServerInternal)
-			}
-
-			if role == nil {
-				return nil, nil, fmt.Errorf("%w: role does not exist", ErrMalformed)
-			}
-
-			if role.NoStore {
-				return nil, nil, fmt.Errorf("%w: role can not be used as NoStore is set to true", ErrServerInternal)
-			}
-
-			if len(role.Issuer) > 0 {
-				requestedIssuer = role.Issuer
-			}
-		}
-	} else {
-		role = buildSignVerbatimRoleWithNoData(&roleEntry{
-			Issuer:  requestedIssuer,
-			NoStore: false,
-			Name:    "",
-		})
-	}
-
-	issuer, err := getAcmeIssuer(sc, requestedIssuer)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	role.Issuer = requestedIssuer
-
-	// TODO: Need additional configuration validation here, for allowed roles/issuers.
-
-	return role, issuer, nil
-}
-
+// acmeParsedWrapper is an ACME wrapper that will parse out the ACME request parameters, validate
+// that we have a proper signature and pass to the operation a decoded map of arguments received.
+// This wrapper builds on top of acmeWrapper. Note that this does perform signature verification
+// it does not enforce the account being in a valid state nor existing.
 func (b *backend) acmeParsedWrapper(op acmeParsedOperation) framework.OperationFunc {
 	return b.acmeWrapper(func(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData) (*logical.Response, error) {
 		user, data, err := b.acmeState.ParseRequestParams(acmeCtx, r, fields)
@@ -217,6 +164,10 @@ func (b *backend) acmeParsedWrapper(op acmeParsedOperation) framework.OperationF
 	})
 }
 
+// acmeAccountRequiredWrapper builds on top of acmeParsedWrapper, enforcing the
+// request has a proper signature for an existing account, and that account is
+// in a valid status. It passes to the operation a decoded form of the request
+// parameters as well as the ACME account the request is for.
 func (b *backend) acmeAccountRequiredWrapper(op acmeAccountRequiredOperation) framework.OperationFunc {
 	return b.acmeParsedWrapper(func(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, uc *jwsCtx, data map[string]interface{}) (*logical.Response, error) {
 		if !uc.Existing {
@@ -280,4 +231,95 @@ func getAcmeBaseUrl(sc *storageContext, path string) (*url.URL, *url.URL, error)
 	}
 
 	return baseUrl.JoinPath(directoryPrefix, "/acme/"), baseUrl, nil
+}
+
+func getAcmeIssuer(sc *storageContext, issuerName string) (*issuerEntry, error) {
+	if issuerName == "" {
+		issuerName = defaultRef
+	}
+	issuerId, err := sc.resolveIssuerReference(issuerName)
+	if err != nil {
+		return nil, fmt.Errorf("%w: issuer does not exist", ErrMalformed)
+	}
+
+	issuer, err := sc.fetchIssuerById(issuerId)
+	if err != nil {
+		return nil, fmt.Errorf("issuer failed to load: %w", err)
+	}
+
+	if issuer.Usage.HasUsage(IssuanceUsage) && len(issuer.KeyID) > 0 {
+		return issuer, nil
+	}
+
+	return nil, fmt.Errorf("%w: issuer missing proper issuance usage or key", ErrServerInternal)
+}
+
+func getAcmeDirectory(data *framework.FieldData) string {
+	requestedIssuer := getRequestedAcmeIssuerFromPath(data)
+	requestedRole := getRequestedAcmeRoleFromPath(data)
+
+	return fmt.Sprintf("issuer-%s::role-%s", requestedIssuer, requestedRole)
+}
+
+func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData) (*roleEntry, *issuerEntry, error) {
+	requestedIssuer := getRequestedAcmeIssuerFromPath(data)
+	requestedRole := getRequestedAcmeRoleFromPath(data)
+	issuerToLoad := requestedIssuer
+
+	var role *roleEntry
+
+	if len(requestedRole) > 0 {
+		var err error
+		role, err = sc.Backend.getRole(sc.Context, sc.Storage, requestedRole)
+		if err != nil {
+			return nil, nil, fmt.Errorf("%w: err loading role", ErrServerInternal)
+		}
+
+		if role == nil {
+			return nil, nil, fmt.Errorf("%w: role does not exist", ErrMalformed)
+		}
+
+		if role.NoStore {
+			return nil, nil, fmt.Errorf("%w: role can not be used as NoStore is set to true", ErrServerInternal)
+		}
+
+		// If we haven't loaded an issuer directly from our path and the specified
+		// role does specify an issuer prefer the role's issuer rather than the default issuer.
+		if len(role.Issuer) > 0 && len(requestedIssuer) == 0 {
+			issuerToLoad = role.Issuer
+		}
+	} else {
+		role = buildSignVerbatimRoleWithNoData(&roleEntry{
+			Issuer:  requestedIssuer,
+			NoStore: false,
+			Name:    requestedRole,
+		})
+	}
+
+	issuer, err := getAcmeIssuer(sc, issuerToLoad)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// TODO: Need additional configuration validation here, for allowed roles/issuers.
+
+	return role, issuer, nil
+}
+
+func getRequestedAcmeRoleFromPath(data *framework.FieldData) string {
+	requestedRole := ""
+	roleNameRaw, present := data.GetOk("role")
+	if present {
+		requestedRole = roleNameRaw.(string)
+	}
+	return requestedRole
+}
+
+func getRequestedAcmeIssuerFromPath(data *framework.FieldData) string {
+	requestedIssuer := ""
+	requestedIssuerRaw, present := data.GetOk(issuerRefParam)
+	if present {
+		requestedIssuer = requestedIssuerRaw.(string)
+	}
+	return requestedIssuer
 }
