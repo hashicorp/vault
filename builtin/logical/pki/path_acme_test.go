@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"path"
 	"strings"
 	"testing"
@@ -394,6 +395,29 @@ func TestAcmeAccountsCrossingDirectoryPath(t *testing.T) {
 	require.Error(t, err, "successfully updated account when we should have failed due to different directory")
 	// We don't test for the specific error about using the wrong directory, as the golang library
 	// swallows the error we are sending back to a no account error
+}
+
+// TestAcmeDisabledWithEnvVar verifies if VAULT_DISABLE_PUBLIC_ACME is set that we completely
+// disable the ACME service
+func TestAcmeDisabledWithEnvVar(t *testing.T) {
+	os.Setenv("VAULT_DISABLE_PUBLIC_ACME", "true")
+	defer os.Unsetenv("VAULT_DISABLE_PUBLIC_ACME")
+
+	t.Parallel()
+	cluster, client, _ := setupAcmeBackend(t)
+	defer cluster.Cleanup()
+
+	for _, method := range []string{http.MethodHead, http.MethodGet} {
+		t.Run(fmt.Sprintf("%s", method), func(t *testing.T) {
+			req := client.NewRequest(method, "/v1/pki/acme/new-nonce")
+			_, err := client.RawRequestWithContext(ctx, req)
+			require.Error(t, err, "should have received an error as ACME should have been disabled")
+
+			if apiError, ok := err.(*api.ResponseError); ok {
+				require.Equal(t, 404, apiError.StatusCode)
+			}
+		})
+	}
 }
 
 func setupAcmeBackend(t *testing.T) (*vault.TestCluster, *api.Client, string) {
