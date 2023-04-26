@@ -32,6 +32,10 @@ on:
         description: A comma-separated list of additional build tags to consider satisfied during the build.
         required: false
         type: string
+      build-binary:
+        description: If true, build a vault binary and set VAULT_BINARY and run binary-needing test packages
+        required: false
+        type: bool
 
 env: ${{ fromJSON(inputs.env-vars) }}
 
@@ -68,25 +72,19 @@ jobs:
     name: Build Vault dev binary
     steps:
     - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
-      if: |
-        ! contains(inputs.extra-flags, '-race') &&
-        ! contains(inputs.go-build-tags, 'fips') &&
-        github.repository != 'hashicorp/vault-enterprise'
+      if: inputs.total-runners > 16
     - uses: actions/setup-go@d0a58c1c4d2b25278816e339b944508c875f3613
-      if: |
-        ! contains(inputs.extra-flags, '-race') &&
-        ! contains(inputs.go-build-tags, 'fips') &&
-        github.repository != 'hashicorp/vault-enterprise'
+      if: inputs.total-runners > 16
       with:
         go-version-file: ./.go-version
         cache: true
     - name: Authenticate to Vault
+      if: inputs.total-runners > 16
       id: vault-auth
-      if: github.repository == 'hashicorp/vault-enterprise'
       run: vault-auth
     - name: Fetch Secrets
+      if: inputs.total-runners > 16
       id: secrets
-      if: github.repository == 'hashicorp/vault-enterprise'
       uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e
       with:
         url: ${{ steps.vault-auth.outputs.addr }}
@@ -113,26 +111,17 @@ jobs:
       run: |
         git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
     - id: go-mod-download
-      if: |
-        ! contains(inputs.extra-flags, '-race') &&
-        ! contains(inputs.go-build-tags, 'fips') &&
-        github.repository != 'hashicorp/vault-enterprise'
+      if: inputs.total-runners > 16
       env:
         GOPRIVATE: github.com/hashicorp/*
       run: time go mod download -x
     - id: build
-      if: |
-        ! contains(inputs.extra-flags, '-race') &&
-        ! contains(inputs.go-build-tags, 'fips') &&
-        github.repository != 'hashicorp/vault-enterprise'
+      if: inputs.total-runners > 16
       env:
         GOPRIVATE: github.com/hashicorp/*
       run: time make ci-bootstrap dev
     - name: Save dev binary
-      if: |
-        ! contains(inputs.extra-flags, '-race') &&
-        ! contains(inputs.go-build-tags, 'fips') &&
-        github.repository != 'hashicorp/vault-enterprise'
+      if: inputs.total-runners > 16
       uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce
       with:
         name: vault-dev
@@ -196,19 +185,13 @@ jobs:
         run: |
           git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
       - name: Retrieve vault dev binary
-        if: |
-          ! contains(inputs.extra-flags, '-race') &&
-          ! contains(inputs.go-build-tags, 'fips') &&
-          github.repository != 'hashicorp/vault-enterprise'
+        if: inputs.total-runners > 16
         uses: actions/download-artifact@e9ef242655d12993efdcda9058dee2db83a2cb9b
         with:
           name: vault-dev
           path: bin
       - name: Make vault dev binary executable
-        if: |
-          ! contains(inputs.extra-flags, '-race') &&
-          ! contains(inputs.go-build-tags, 'fips') &&
-          github.repository != 'hashicorp/vault-enterprise'
+        if: inputs.total-runners > 16
         run: chmod a+x bin/vault
       - id: run-go-tests
         name: Run Go tests

@@ -124,7 +124,10 @@ jobs:
       !startsWith(github.head_ref, 'backport/docs/')
     uses: ./.github/workflows/test-go.yml
     with:
-      total-runners: 16
+      # The regular Go tests use an extra runner to execute the
+      # binary-dependent tests. We isolate them there so that the
+      # other tests aren't slowed down waiting for a binary build.
+      total-runners: 17
       go-arch: amd64
       go-build-tags: '${{ needs.setup.outputs.go-build-tags }},deadlock'
       runs-on: ${{ needs.setup.outputs.compute-larger }}
