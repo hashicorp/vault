@@ -60,68 +60,6 @@ jobs:
         INDEX_LIST="$(seq 1 ${{ inputs.total-runners }})"
         INDEX_JSON="$(jq --null-input --compact-output '. |= [inputs]' <<< "${INDEX_LIST}")"
         echo "indexes=${INDEX_JSON}" >> "${GITHUB_OUTPUT}"
-  build-vault:
-    permissions:
-      id-token: write  # Note: this permission is explicitly required for Vault auth
-      contents: read
-    runs-on: ${{ fromJSON(inputs.runs-on) }}
-    name: Build Vault dev binary
-    steps:
-    - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
-      if: inputs.total-runners > 16
-    - uses: actions/setup-go@d0a58c1c4d2b25278816e339b944508c875f3613
-      if: inputs.total-runners > 16
-      with:
-        go-version-file: ./.go-version
-        cache: true
-    - name: Authenticate to Vault
-      id: vault-auth
-      if: inputs.total-runners > 16 && github.repository == 'hashicorp/vault-enterprise'
-      run: vault-auth
-    - name: Fetch Secrets
-      if: inputs.total-runners > 16 && github.repository == 'hashicorp/vault-enterprise'
-      id: secrets
-      uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e
-      with:
-        url: ${{ steps.vault-auth.outputs.addr }}
-        caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
-        token: ${{ steps.vault-auth.outputs.token }}
-        secrets: |
-          kv/data/github/${{ github.repository }}/datadog-ci DATADOG_API_KEY;
-          kv/data/github/${{ github.repository }}/github-token username-and-token | github-token;
-          kv/data/github/${{ github.repository }}/license license_1 | VAULT_LICENSE_CI;
-          kv/data/github/${{ github.repository }}/license license_2 | VAULT_LICENSE_2;
-          kv/data/github/${{ github.repository }}/hcp-link HCP_API_ADDRESS;
-          kv/data/github/${{ github.repository }}/hcp-link HCP_AUTH_URL;
-          kv/data/github/${{ github.repository }}/hcp-link HCP_CLIENT_ID;
-          kv/data/github/${{ github.repository }}/hcp-link HCP_CLIENT_SECRET;
-          kv/data/github/${{ github.repository }}/hcp-link HCP_RESOURCE_ID;
-    - id: setup-git-private
-      name: Setup Git configuration (private)
-      if: github.repository == 'hashicorp/vault-enterprise'
-      run: |
-        git config --global url."https://${{ steps.secrets.outputs.github-token }}@github.com".insteadOf https://github.com
-    - id: setup-git-public
-      name: Setup Git configuration (public)
-      if: github.repository != 'hashicorp/vault-enterprise'
-      run: |
-        git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
-    - id: go-mod-download
-      if: inputs.total-runners > 16
-      env:
-        GOPRIVATE: github.com/hashicorp/*
-      run: time go mod download -x
-    - id: build
-      if: inputs.total-runners > 16
-      env:
-        GOPRIVATE: github.com/hashicorp/*
-      run: time make ci-bootstrap dev
-    - name: Save dev binary
-      if: inputs.total-runners > 16
-      uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce
-      with:
-        name: vault-dev
-        path: bin/vault
   test-go:
     permissions:
       id-token: write  # Note: this permission is explicitly required for Vault auth
@@ -180,15 +118,16 @@ jobs:
         if: github.repository != 'hashicorp/vault-enterprise'
         run: |
           git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
-      - name: Retrieve vault dev binary
-        if: inputs.total-runners > 16
-        uses: actions/download-artifact@e9ef242655d12993efdcda9058dee2db83a2cb9b
-        with:
-          name: vault-dev
-          path: bin
-      - name: Make vault dev binary executable
-        if: inputs.total-runners > 16
-        run: chmod a+x bin/vault
+      - id: go-mod-download
+        if: matrix.runner-index > 16
+        env:
+          GOPRIVATE: github.com/hashicorp/*
+        run: time go mod download -x
+      - id: build
+        if: matrix.runner-index > 16
+        env:
+          GOPRIVATE: github.com/hashicorp/*
+        run: time make ci-bootstrap dev
       - id: run-go-tests
         name: Run Go tests
         timeout-minutes: ${{ fromJSON(env.TIMEOUT_IN_MINUTES) }}
