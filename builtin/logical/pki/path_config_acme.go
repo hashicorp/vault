@@ -11,7 +11,7 @@ import (
 
 const (
 	storageAcmeConfig      = "config/acme"
-	pathConfigAcmeHelpSyn  = ""
+	pathConfigAcmeHelpSyn  = "Configuration of ACME Endpoints"
 	pathConfigAcmeHelpDesc = "Here we configure:\n\nenabled=false, whether ACME is enabled, defaults to false meaning that clusters will by default not get ACME support,\nallowed_issuers=\"default\", which issuers are allowed for use with ACME; by default, this will only be the primary (default) issuer,\nallowed_roles=\"*\", which roles are allowed for use with ACME; by default these will be all roles matching our selection criteria,\ndefault_role=\"\", if not empty, the role to be used for non-role-qualified ACME requests; by default this will be empty, meaning ACME issuance will be equivalent to sign-verbatim,\nallow_no_allowed_domains=false, whether ACME will allow the use of roles without any explicit list of allowed domains, and\nallow_any_domain=false, whether ACME will allow the use of roles with allow_any_name=true set."
 )
 
@@ -64,12 +64,12 @@ func pathAcmeConfig(b *backend) *framework.Path {
 				Default:     false,
 			},
 			"allowed_issuers": {
-				Type:        framework.TypeString,
+				Type:        framework.TypeCommaStringSlice,
 				Description: `which issuers are allowed for use with ACME; by default, this will only be the primary (default) issuer`,
 				Default:     "default",
 			},
 			"allowed_roles": {
-				Type:        framework.TypeString,
+				Type:        framework.TypeCommaStringSlice,
 				Description: `which roles are allowed for use with ACME; by default these will be all roles matching our selection criteria`,
 				Default:     "*",
 			},
@@ -174,7 +174,7 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 
 	allowedIssuers := config.AllowedIssuers
 	if allowedIssuersRaw, ok := d.GetOk("allowed_issuers"); ok {
-		allowedIssuers = allowedIssuersRaw.([]string) // TODO
+		allowedIssuers = allowedIssuersRaw.([]string)
 	}
 
 	newConfig := &acmeConfigEntry{
@@ -184,6 +184,11 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 		DefaultRole:           defaultRole,
 		AllowNoAllowedDomains: allowNoAllowedDomains,
 		AllowedIssuers:        allowedIssuers,
+	}
+
+	err = sc.setAcmeConfig(newConfig)
+	if err != nil {
+		return nil, err
 	}
 
 	return genResponseFromAcmeConfig(newConfig), nil
