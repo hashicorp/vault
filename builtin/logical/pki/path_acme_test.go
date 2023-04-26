@@ -16,7 +16,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"path"
 	"strings"
 	"testing"
@@ -400,10 +399,8 @@ func TestAcmeAccountsCrossingDirectoryPath(t *testing.T) {
 // TestAcmeDisabledWithEnvVar verifies if VAULT_DISABLE_PUBLIC_ACME is set that we completely
 // disable the ACME service
 func TestAcmeDisabledWithEnvVar(t *testing.T) {
-	os.Setenv("VAULT_DISABLE_PUBLIC_ACME", "true")
-	defer os.Unsetenv("VAULT_DISABLE_PUBLIC_ACME")
+	t.Setenv("VAULT_DISABLE_PUBLIC_ACME", "true")
 
-	t.Parallel()
 	cluster, client, _ := setupAcmeBackend(t)
 	defer cluster.Cleanup()
 
