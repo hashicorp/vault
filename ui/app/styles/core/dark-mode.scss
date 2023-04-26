@@ -1,0 +1,150 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+
+
+//  TODO: update dropdowns, input text to dark colors
+//  TODO: refactor classes and variables to achieve a more uniform coding
+
+// Define color variables for dark mode
+$background-color: $ui-gray-900;
+$text-color: $ui-gray-050;
+
+// Define styles for dark mode
+body {
+  background-color: $background-color;
+  color: $text-color;
+}
+
+.toolbar{
+    background-color: #0A0A0A;
+    border: 1px solid $ui-gray-800;
+    border-bottom-color: $ui-gray-800;
+    border-top-color: $ui-gray-800;
+    color: $text-color;
+
+    &::after {
+        background: linear-gradient(to left, $ui-gray-900, rgba($ui-gray-010, 0));
+        bottom: 0;
+        content: '';
+        position: absolute;
+        right: 0;
+        top: 0;
+        width: $spacing-xxs;
+        z-index: 1;
+      }
+}
+
+// .field {
+//     background-color: $red;
+// }
+
+.has-text-black {
+    color: $text-color !important;
+}
+
+a.has-text-black:hover {
+    color: $white !important;
+}
+
+.has-text-grey, .has-text-grey-dark {
+    color: $ui-gray-200 !important;
+}
+
+.toolbar-link, .alert-banner-message-body{
+    color: $text-color;
+}
+
+.toolbar-link:hover:not(.disabled) {
+    background-color: $ui-gray-800;
+}
+
+.linked-block {
+    background-color: $background-color;
+}
+
+.list-item-row{
+    background-color: $background-color;
+}
+
+.is-label {
+    color: $text-color;
+}
+
+.box {
+    background-color: $background-color;
+    color: $text-color
+}
+
+.empty-state {
+    background-color: #0A0A0A;
+}
+
+.breadcrumb li.is-active a{
+    color: $text-color;
+}
+
+.column .menu-list a{
+    color: $text-color;
+}
+
+.title {
+    color: $text-color;
+}
+
+.tabs a:hover, .tabs .tab:hover{
+    background-color: #0A0A0A;
+    color: $text-color;
+}
+
+.info-table-row {
+    background-color: $background-color;
+}
+
+.input, .box-radio{
+    background-color: $ui-gray-700 !important;
+    border: 1px solid $ui-gray-800;
+    color: $text-color;
+}
+
+.button, .button.is-outlined.is-primary{
+    background-color: #0A0A0A;
+    color: $text-color;
+    border: 1px solid $ui-gray-800;
+    &:hover{
+        color: $ui-gray-200;
+        background-color: $ui-gray-800;
+    }
+}
+.has-text-grey.masked-input-toggle.button{
+    background-color: #0A0A0A !important;
+}
+
+.button.is-ghost:hover {
+    background-color: #0A0A0A;
+}
+
+.masked-value.display-only.is-word-break{
+    color: $text-color;
+}
+
+.message, .confirm-action-options {
+    background-color: #0A0A0A !important;
+}
+
+.popup-menu-content button.link {
+    background-color: #0A0A0A;
+    color: $text-color;
+    border: 1px solid $ui-gray-800;
+    border-radius: 2px;
+    &:hover{
+        color: $ui-gray-200;
+        background-color: $ui-gray-800;
+    }
+}
+
+.modal-card-custom.has-padding-btm-left {
+    background-color: $background-color;
+}
