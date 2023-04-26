@@ -933,6 +933,69 @@ func (c *ServerCommand) InitListeners(config *server.Config, disableClustering b
 	return 0, lns, clusterAddrs, nil
 }
 
+func configureDevTLS(c *ServerCommand) (func(), *server.Config, string, error) {
+	var devStorageType string
+
+	switch {
+	case c.flagDevConsul:
+		devStorageType = "consul"
+	case c.flagDevHA && c.flagDevTransactional:
+		devStorageType = "inmem_transactional_ha"
+	case !c.flagDevHA && c.flagDevTransactional:
+		devStorageType = "inmem_transactional"
+	case c.flagDevHA && !c.flagDevTransactional:
+		devStorageType = "inmem_ha"
+	default:
+		devStorageType = "inmem"
+	}
+
+	var certDir string
+	var err error
+	var config *server.Config
+	var f func()
+
+	if c.flagDevTLS {
+		if c.flagDevTLSCertDir != "" {
+			if _, err = os.Stat(c.flagDevTLSCertDir); err != nil {
+				return nil, nil, "", err
+			}
+
+			certDir = c.flagDevTLSCertDir
+		} else {
+			if certDir, err = os.MkdirTemp("", "vault-tls"); err != nil {
+				return nil, nil, certDir, err
+			}
+		}
+		config, err = server.DevTLSConfig(devStorageType, certDir)
+
+		f = func() {
+			if err := os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultDevCAFilename)); err != nil {
+				c.UI.Error(err.Error())
+			}
+
+			if err := os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultDevCertFilename)); err != nil {
+				c.UI.Error(err.Error())
+			}
+
+			if err := os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultDevKeyFilename)); err != nil {
+				c.UI.Error(err.Error())
+			}
+
+			// Only delete temp directories we made.
+			if c.flagDevTLSCertDir == "" {
+				if err := os.Remove(certDir); err != nil {
+					c.UI.Error(err.Error())
+				}
+			}
+		}
+
+	} else {
+		config, err = server.DevConfig(devStorageType)
+	}
+
+	return f, config, certDir, err
+}
+
 func (c *ServerCommand) Run(args []string) int {
 	f := c.Flags()
 
@@ -973,74 +1036,20 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Load the configuration
 	var config *server.Config
-	var err error
 	var certDir string
 	if c.flagDev {
-		var devStorageType string
-		switch {
-		case c.flagDevConsul:
-			devStorageType = "consul"
-		case c.flagDevHA && c.flagDevTransactional:
-			devStorageType = "inmem_transactional_ha"
-		case !c.flagDevHA && c.flagDevTransactional:
-			devStorageType = "inmem_transactional"
-		case c.flagDevHA && !c.flagDevTransactional:
-			devStorageType = "inmem_ha"
-		default:
-			devStorageType = "inmem"
-		}
-
-		if c.flagDevTLS {
-			if c.flagDevTLSCertDir != "" {
-				_, err := os.Stat(c.flagDevTLSCertDir)
-				if err != nil {
-					c.UI.Error(err.Error())
-					return 1
-				}
-
-				certDir = c.flagDevTLSCertDir
-			} else {
-				certDir, err = os.MkdirTemp("", "vault-tls")
-				if err != nil {
-					c.UI.Error(err.Error())
-					return 1
-				}
-			}
-			config, err = server.DevTLSConfig(devStorageType, certDir)
-
-			defer func() {
-				err := os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultDevCAFilename))
-				if err != nil {
-					c.UI.Error(err.Error())
-				}
-
-				err = os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultDevCertFilename))
-				if err != nil {
-					c.UI.Error(err.Error())
-				}
-
-				err = os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultDevKeyFilename))
-				if err != nil {
-					c.UI.Error(err.Error())
-				}
-
-				// Only delete temp directories we made.
-				if c.flagDevTLSCertDir == "" {
-					err = os.Remove(certDir)
-					if err != nil {
-						c.UI.Error(err.Error())
-					}
-				}
-			}()
-
-		} else {
-			config, err = server.DevConfig(devStorageType)
+		df, cfg, dir, err := configureDevTLS(c)
+		if df != nil {
+			defer df()
 		}
 
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 1
 		}
+
+		config = cfg
+		certDir = dir
 
 		if c.flagDevListenAddr != "" {
 			config.Listeners[0].Address = c.flagDevListenAddr
