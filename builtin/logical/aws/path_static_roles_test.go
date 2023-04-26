@@ -2,8 +2,9 @@ package aws
 
 import (
 	"context"
+	"errors"
 	"testing"
-	
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
@@ -32,74 +33,91 @@ func TestStaticRolesValidation(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
-	mockIAM, err := awsutil.NewMockIAM(
-		awsutil.WithGetUserOutput(&iam.GetUserOutput{User: &iam.User{UserName: aws.String("jane-doe")}}),
-		awsutil.WithCreateAccessKeyOutput(&iam.CreateAccessKeyOutput{
-			AccessKey: &iam.AccessKey{
-				AccessKeyId:     aws.String("abcdefghijklmnopqrstuvwxyz"),
-				SecretAccessKey: aws.String("zyxwvutsrqponmlkjihgfedcba"),
-				UserName:        aws.String("jane-doe"),
+	cases := []struct {
+		name          string
+		opts          []awsutil.MockIAMOption
+		listAccessOut *iam.ListAccessKeysOutput
+		listAccessErr error
+		requestData   map[string]interface{}
+		isError       bool
+	}{
+		{
+			name: "all good",
+			opts: []awsutil.MockIAMOption{
+				awsutil.WithGetUserOutput(&iam.GetUserOutput{User: &iam.User{UserName: aws.String("jane-doe")}}),
+				awsutil.WithCreateAccessKeyOutput(&iam.CreateAccessKeyOutput{
+					AccessKey: &iam.AccessKey{
+						AccessKeyId:     aws.String("abcdefghijklmnopqrstuvwxyz"),
+						SecretAccessKey: aws.String("zyxwvutsrqponmlkjihgfedcba"),
+						UserName:        aws.String("jane-doe"),
+					},
+				}),
 			},
-		}),
-	)(nil)
-
-	goodUser := &extendedMockIAM{
-		IAMAPI: mockIAM,
-		ListAccessKeysOutput: &iam.ListAccessKeysOutput{
-			AccessKeyMetadata: []*iam.AccessKeyMetadata{},
-			IsTruncated:       aws.Bool(false),
+			listAccessOut: &iam.ListAccessKeysOutput{
+				AccessKeyMetadata: []*iam.AccessKeyMetadata{},
+				IsTruncated:       aws.Bool(false),
+			},
+			requestData: map[string]interface{}{
+				"name":            "test",
+				"username":        "jane-doe",
+				"rotation_period": 24601,
+			},
+		},
+		{
+			name: "bad user",
+			opts: []awsutil.MockIAMOption{
+				awsutil.WithGetUserError(errors.New("oh no")),
+			},
+			requestData: map[string]interface{}{
+				"name":            "test",
+				"username":        "jane-doe",
+				"rotation_period": 24601,
+			},
+			isError: true,
+		},
+		{
+			name: "bad rotation period",
+			opts: []awsutil.MockIAMOption{
+				awsutil.WithGetUserOutput(&iam.GetUserOutput{User: &iam.User{UserName: aws.String("jane-doe")}}),
+			},
+			requestData: map[string]interface{}{
+				"name":            "test",
+				"username":        "jane-doe",
+				"rotation_period": 0,
+			},
+			isError: true,
 		},
 	}
 
-	//_ = &extendedMockIAM{
-	//	MockIAM: awsutil.MockIAM{
-	//		GetUserError: errors.New("oh no"),
-	//	},
-	//}
-
-	b := Backend()
-	b.iamClient = goodUser
-	if err := b.Setup(context.Background(), config); err != nil {
-		t.Fatal(err)
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			b := Backend()
+			miam, err := awsutil.NewMockIAM(c.opts...)(nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			b.iamClient = &extendedMockIAM{
+				IAMAPI:               miam,
+				ListAccessKeysOutput: c.listAccessOut,
+				ListAccessKeysError:  c.listAccessErr,
+			}
+			if err := b.Setup(context.Background(), config); err != nil {
+				t.Fatal(err)
+			}
+			req := &logical.Request{
+				Operation: logical.UpdateOperation,
+				Storage:   config.StorageView,
+				Data:      c.requestData,
+				Path:      "static-roles/test",
+			}
+			_, err = b.pathStaticRolesWrite(context.Background(), req, staticRoleFieldData(req.Data))
+			if c.isError && err == nil {
+				t.Fatal("expected an error but didn't get one")
+			} else if !c.isError && err != nil {
+				t.Fatalf("got an unexpected error: %s", err)
+			}
+		})
 	}
-
-	roleData := map[string]interface{}{
-		"name":            "test",
-		"username":        "jane-doe",
-		"rotation_period": 24601,
-	}
-
-	roleReq := &logical.Request{
-		Operation: logical.UpdateOperation,
-		Storage:   config.StorageView,
-		Data:      roleData,
-		Path:      "static-roles/test",
-	}
-
-	// everything good
-	//err := b.validateIAMUserExists(context.Background(), roleReq, "jane-doe")
-	//if err != nil {
-	//	t.Fatalf("couldn't validate user: %s", err)
-	//}
-	resp, err := b.pathStaticRolesWrite(context.Background(), roleReq, staticRoleFieldData(roleData))
-	if err != nil {
-		t.Fatalf("couldn't validate an expected good request: %s", err)
-	}
-	if resp == nil {
-		t.Fatalf("didn't get a response from an expected good request")
-	}
-	//// bad user
-	//b.iamClient = badUser
-	//err = b.validateIAMUserExists(context.Background(), roleReq, "jane-doe")
-	//if err == nil {
-	//	t.Fatalf("expected an IAM get user error but didn't get one")
-	//}
-	//
-	//// bad duration
-	//err = b.validateRotationPeriod(time.Duration(0))
-	//if err == nil {
-	//	t.Fatalf("expected duration to be invalid but it was accepted")
-	//}
 }
 
 func staticRoleFieldData(data map[string]interface{}) *framework.FieldData {
