@@ -1,7 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package pkiext
+package pkiext_binary
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/builtin/logical/pkiext"
 	hDocker "github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/helper/testcluster"
 	tcDocker "github.com/hashicorp/vault/sdk/helper/testcluster/docker"
@@ -21,8 +22,8 @@ func CheckCertBot(t *testing.T, vaultNetwork string, vaultNodeID string, directo
 		t.Logf(s)
 	}
 
-	logStdout := &LogConsumerWriter{logConsumer}
-	logStderr := &LogConsumerWriter{logConsumer}
+	logStdout := &pkiext.LogConsumerWriter{logConsumer}
+	logStderr := &pkiext.LogConsumerWriter{logConsumer}
 
 	t.Logf("creating on network: %v", vaultNetwork)
 	runner, err := hDocker.NewServiceRunner(hDocker.RunOptions{
