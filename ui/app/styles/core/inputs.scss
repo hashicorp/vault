@@ -44,10 +44,6 @@
   &::placeholder {
     opacity: 0.5;
   }
-
-  &:read-only {
-    box-shadow: none;
-  }
 }
 
 .input[disabled],

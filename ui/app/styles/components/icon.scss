@@ -10,6 +10,10 @@
   justify-content: center;
   vertical-align: middle;
   width: $size-4;
+  // override the display if .button.icon to .button's default display: inline-block. See manage namespaces icon button in the namespace picker
+  &.button {
+    display: inline-block;
+  }
 }
 
 .icon-blue {

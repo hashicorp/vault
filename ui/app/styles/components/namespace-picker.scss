@@ -76,14 +76,14 @@
   @include from($mobile) {
     width: $drawer-width;
   }
+}
 
-  &.level-left {
-    max-width: 210px;
-    overflow-wrap: break-word;
-    word-wrap: break-word;
-    word-break: break-all;
-    word-break: break-word;
-  }
+.namespace-picker-content .level-left {
+  max-width: 210px;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-all;
+  word-break: break-word;
 }
 
 .namespace-header-bar {

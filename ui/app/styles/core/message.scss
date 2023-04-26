@@ -53,8 +53,8 @@
   .message-body.pre {
     white-space: pre-wrap;
   }
-
-  p {
+  // was p selector only, but padding was getting overridden by the message-body above
+  p.message-body {
     font-size: $size-8;
     border: 0;
     padding: 0;
