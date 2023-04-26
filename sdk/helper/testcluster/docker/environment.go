@@ -406,6 +406,9 @@ func NewTestDockerCluster(t *testing.T, opts *DockerClusterOptions) *DockerClust
 	if opts.NetworkName == "" {
 		opts.NetworkName = os.Getenv("TEST_DOCKER_NETWORK_NAME")
 	}
+	if opts.VaultLicense == "" {
+		opts.VaultLicense = os.Getenv(testcluster.EnvVaultLicenseCI)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	t.Cleanup(cancel)
