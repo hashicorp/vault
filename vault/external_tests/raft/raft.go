@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
-
 	"github.com/hashicorp/vault/sdk/helper/testcluster"
 )
 
