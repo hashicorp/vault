@@ -1,3 +1,56 @@
+## 1.13.2
+### April 26, 2023
+
+CHANGES:
+
+* core: Bump Go version to 1.20.3.
+
+IMPROVEMENTS:
+
+* Add debug symbols back to builds to fix Dynatrace support [[GH-20294](https://github.com/hashicorp/vault/pull/20294)]
+* cli/namespace: Add detailed flag to output additional namespace information 
+such as namespace IDs and custom metadata. [[GH-20243](https://github.com/hashicorp/vault/pull/20243)]
+* core/activity: add an endpoint to write test activity log data, guarded by a build flag [[GH-20019](https://github.com/hashicorp/vault/pull/20019)]
+* core: Add a `raft` sub-field to the `storage` and `ha_storage` details provided by the
+`/sys/config/state/sanitized` endpoint in order to include the `max_entry_size`. [[GH-20044](https://github.com/hashicorp/vault/pull/20044)]
+* core: include reason for ErrReadOnly on PBPWF writing failures
+* sdk/ldaputil: added `connection_timeout` to tune connection timeout duration 
+for all LDAP plugins. [[GH-20144](https://github.com/hashicorp/vault/pull/20144)]
+* secrets/pki: Decrease size and improve compatibility of OCSP responses by removing issuer certificate. [[GH-20201](https://github.com/hashicorp/vault/pull/20201)]
+* sys/wrapping: Add example how to unwrap without authentication in Vault [[GH-20109](https://github.com/hashicorp/vault/pull/20109)]
+* ui: Allows license-banners to be dismissed. Saves preferences in localStorage. [[GH-19116](https://github.com/hashicorp/vault/pull/19116)]
+
+BUG FIXES:
+
+* auth/ldap: Add max_page_size configurable to LDAP configuration [[GH-19032](https://github.com/hashicorp/vault/pull/19032)]
+* command/server: Fix incorrect paths in generated config for `-dev-tls` flag on Windows [[GH-20257](https://github.com/hashicorp/vault/pull/20257)]
+* core (enterprise): Fix intermittent issue with token entries sometimes not being found when using a newly created token in a request to a secondary, even when SSCT `new_token` forwarding is set. When this occurred, this would result in the following error to the client: `error performing token check: no lease entry found for token that ought to have one, possible eventual consistency issue`.
+* core (enterprise): Fix read on perf standbys failing with 412 after leadership change, unseal, restores or restarts when no writes occur
+* core/seal: Fix handling of HMACing of seal-wrapped storage entries from HSMs using CKM_AES_CBC or CKM_AES_CBC_PAD.
+* core/ssct (enterprise): Fixed race condition where a newly promoted DR may revert `sscGenCounter` 
+resulting in 412 errors.
+* core: Fix regression breaking non-raft clusters whose nodes share the same cluster_addr/api_addr. [[GH-19721](https://github.com/hashicorp/vault/pull/19721)]
+* helper/random: Fix race condition in string generator helper [[GH-19875](https://github.com/hashicorp/vault/pull/19875)]
+* kmip (enterprise): Fix a problem decrypting with keys that have no Process Start Date attribute.
+* pki: Fix automatically turning off CRL signing on upgrade to Vault >= 1.12, if CA Key Usage disallows it [[GH-20220](https://github.com/hashicorp/vault/pull/20220)]
+* replication (enterprise): Fix a caching issue when replicating filtered data to
+a performance secondary. This resulted in the data being set to nil in the cache
+and a "invalid value" error being returned from the API.
+* replication (enterprise): Fix replication status for Primary clusters showing its primary cluster's information (in case of DR) in secondaries field when known_secondaries field is nil
+* sdk/helper/ocsp: Workaround bug in Go's ocsp.ParseResponse(...), causing validation to fail with embedded CA certificates.
+auth/cert: Fix OCSP validation against Vault's PKI engine. [[GH-20181](https://github.com/hashicorp/vault/pull/20181)]
+* secrets/aws: Revert changes that removed the lease on STS credentials, while leaving the new ttl field in place. [[GH-20034](https://github.com/hashicorp/vault/pull/20034)]
+* secrets/pki: Ensure cross-cluster delta WAL write failure only logs to avoid unattended forwarding. [[GH-20057](https://github.com/hashicorp/vault/pull/20057)]
+* secrets/pki: Fix building of unified delta CRLs and recovery during unified delta WAL write failures. [[GH-20058](https://github.com/hashicorp/vault/pull/20058)]
+* secrets/pki: Fix patching of leaf_not_after_behavior on issuers. [[GH-20341](https://github.com/hashicorp/vault/pull/20341)]
+* secrets/transform (enterprise): Address SQL connection leak when cleaning expired tokens
+* ui: Fix OIDC provider logo showing when domain doesn't match [[GH-20263](https://github.com/hashicorp/vault/pull/20263)]
+* ui: Fix bad link to namespace when namespace name includes `.` [[GH-19799](https://github.com/hashicorp/vault/pull/19799)]
+* ui: fixes browser console formatting for help command output [[GH-20064](https://github.com/hashicorp/vault/pull/20064)]
+* ui: fixes remaining doc links to include /vault in path [[GH-20070](https://github.com/hashicorp/vault/pull/20070)]
+* ui: remove use of htmlSafe except when first sanitized [[GH-20235](https://github.com/hashicorp/vault/pull/20235)]
+* website/docs: Fix Kubernetes Auth Code Example to use the correct whitespace in import. [[GH-20216](https://github.com/hashicorp/vault/pull/20216)]
+
 ## 1.13.1
 ### March 29, 2023
 
@@ -339,6 +392,48 @@ non-voter.  In some scenarios this resulted in loss of quorum. [[GH-18263](https
 * ui: fixes reliance on secure context (https) by removing methods using the Crypto interface [[GH-19403](https://github.com/hashicorp/vault/pull/19403)]
 * ui: show Get credentials button for static roles detail page when a user has the proper permissions. [[GH-19190](https://github.com/hashicorp/vault/pull/19190)]
 
+## 1.12.6
+### April 26, 2023
+
+CHANGES:
+
+* core: Bump Go version to 1.19.8.
+
+IMPROVEMENTS:
+
+* cli/namespace: Add detailed flag to output additional namespace information 
+such as namespace IDs and custom metadata. [[GH-20243](https://github.com/hashicorp/vault/pull/20243)]
+* core/activity: add an endpoint to write test activity log data, guarded by a build flag [[GH-20019](https://github.com/hashicorp/vault/pull/20019)]
+* core: Add a `raft` sub-field to the `storage` and `ha_storage` details provided by the
+`/sys/config/state/sanitized` endpoint in order to include the `max_entry_size`. [[GH-20044](https://github.com/hashicorp/vault/pull/20044)]
+* sdk/ldaputil: added `connection_timeout` to tune connection timeout duration 
+for all LDAP plugins. [[GH-20144](https://github.com/hashicorp/vault/pull/20144)]
+* secrets/pki: Decrease size and improve compatibility of OCSP responses by removing issuer certificate. [[GH-20201](https://github.com/hashicorp/vault/pull/20201)]
+
+BUG FIXES:
+
+* auth/ldap: Add max_page_size configurable to LDAP configuration [[GH-19032](https://github.com/hashicorp/vault/pull/19032)]
+* command/server: Fix incorrect paths in generated config for `-dev-tls` flag on Windows [[GH-20257](https://github.com/hashicorp/vault/pull/20257)]
+* core (enterprise): Fix intermittent issue with token entries sometimes not being found when using a newly created token in a request to a secondary, even when SSCT `new_token` forwarding is set. When this occurred, this would result in the following error to the client: `error performing token check: no lease entry found for token that ought to have one, possible eventual consistency issue`.
+* core (enterprise): Fix read on perf standbys failing with 412 after leadership change, unseal, restores or restarts when no writes occur
+* core/ssct (enterprise): Fixed race condition where a newly promoted DR may revert `sscGenCounter` 
+resulting in 412 errors.
+* core: Fix regression breaking non-raft clusters whose nodes share the same cluster_addr/api_addr. [[GH-19721](https://github.com/hashicorp/vault/pull/19721)]
+* helper/random: Fix race condition in string generator helper [[GH-19875](https://github.com/hashicorp/vault/pull/19875)]
+* kmip (enterprise): Fix a problem decrypting with keys that have no Process Start Date attribute.
+* openapi: Fix many incorrect details in generated API spec, by using better techniques to parse path regexps [[GH-18554](https://github.com/hashicorp/vault/pull/18554)]
+* pki: Fix automatically turning off CRL signing on upgrade to Vault >= 1.12, if CA Key Usage disallows it [[GH-20220](https://github.com/hashicorp/vault/pull/20220)]
+* replication (enterprise): Fix a caching issue when replicating filtered data to
+a performance secondary. This resulted in the data being set to nil in the cache
+and a "invalid value" error being returned from the API.
+* replication (enterprise): Fix replication status for Primary clusters showing its primary cluster's information (in case of DR) in secondaries field when known_secondaries field is nil
+* secrets/pki: Fix patching of leaf_not_after_behavior on issuers. [[GH-20341](https://github.com/hashicorp/vault/pull/20341)]
+* secrets/transform (enterprise): Address SQL connection leak when cleaning expired tokens
+* ui: Fix OIDC provider logo showing when domain doesn't match [[GH-20263](https://github.com/hashicorp/vault/pull/20263)]
+* ui: Fix bad link to namespace when namespace name includes `.` [[GH-19799](https://github.com/hashicorp/vault/pull/19799)]
+* ui: fixes browser console formatting for help command output [[GH-20064](https://github.com/hashicorp/vault/pull/20064)]
+* ui: remove use of htmlSafe except when first sanitized [[GH-20235](https://github.com/hashicorp/vault/pull/20235)]
+                                                                       
 ## 1.12.5
 ### March 29, 2023
 
@@ -746,6 +841,41 @@ BUG FIXES:
 * ui: OIDC login type uses localStorage instead of sessionStorage [[GH-16170](https://github.com/hashicorp/vault/pull/16170)]
 * vault: Fix a bug where duplicate policies could be added to an identity group. [[GH-15638](https://github.com/hashicorp/vault/pull/15638)]
 
+## 1.11.10
+### April 26, 2023
+
+CHANGES:
+
+* core: Bump Go version to 1.19.8.
+
+IMPROVEMENTS:
+
+* cli/namespace: Add detailed flag to output additional namespace information 
+such as namespace IDs and custom metadata. [[GH-20243](https://github.com/hashicorp/vault/pull/20243)]
+* core/activity: add an endpoint to write test activity log data, guarded by a build flag [[GH-20019](https://github.com/hashicorp/vault/pull/20019)]
+* core: Add a `raft` sub-field to the `storage` and `ha_storage` details provided by the
+`/sys/config/state/sanitized` endpoint in order to include the `max_entry_size`. [[GH-20044](https://github.com/hashicorp/vault/pull/20044)]
+* sdk/ldaputil: added `connection_timeout` to tune connection timeout duration 
+for all LDAP plugins. [[GH-20144](https://github.com/hashicorp/vault/pull/20144)]
+
+BUG FIXES:
+
+* auth/ldap: Add max_page_size configurable to LDAP configuration [[GH-19032](https://github.com/hashicorp/vault/pull/19032)]
+* core (enterprise): Fix intermittent issue with token entries sometimes not being found when using a newly created token in a request to a secondary, even when SSCT `new_token` forwarding is set. When this occurred, this would result in the following error to the client: `error performing token check: no lease entry found for token that ought to have one, possible eventual consistency issue`.
+* core (enterprise): Fix read on perf standbys failing with 412 after leadership change, unseal, restores or restarts when no writes occur
+* core/ssct (enterprise): Fixed race condition where a newly promoted DR may revert `sscGenCounter` 
+resulting in 412 errors.
+* core: Fix regression breaking non-raft clusters whose nodes share the same cluster_addr/api_addr. [[GH-19721](https://github.com/hashicorp/vault/pull/19721)]
+* helper/random: Fix race condition in string generator helper [[GH-19875](https://github.com/hashicorp/vault/pull/19875)]
+* openapi: Fix many incorrect details in generated API spec, by using better techniques to parse path regexps [[GH-18554](https://github.com/hashicorp/vault/pull/18554)]
+* replication (enterprise): Fix replication status for Primary clusters showing its primary cluster's information (in case of DR) in secondaries field when known_secondaries field is nil
+* secrets/pki: Fix patching of leaf_not_after_behavior on issuers. [[GH-20341](https://github.com/hashicorp/vault/pull/20341)]
+* secrets/transform (enterprise): Address SQL connection leak when cleaning expired tokens
+* ui: Fix OIDC provider logo showing when domain doesn't match [[GH-20263](https://github.com/hashicorp/vault/pull/20263)]
+* ui: Fix bad link to namespace when namespace name includes `.` [[GH-19799](https://github.com/hashicorp/vault/pull/19799)]
+* ui: fixes browser console formatting for help command output [[GH-20064](https://github.com/hashicorp/vault/pull/20064)]
+* ui: remove use of htmlSafe except when first sanitized [[GH-20235](https://github.com/hashicorp/vault/pull/20235)]
+  
 ## 1.11.9
 ### March 29, 2023
 
