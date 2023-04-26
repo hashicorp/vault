@@ -1,0 +1,3 @@
+```release-note:bug
+core: prevent panic on login after namespace is deleted that had mfa enforcement
+```
