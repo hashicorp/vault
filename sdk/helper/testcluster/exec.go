@@ -59,6 +59,9 @@ func NewTestExecDevCluster(t *testing.T, opts *ExecDevClusterOptions) *ExecDevCl
 	if opts.Logger == nil {
 		opts.Logger = logging.NewVaultLogger(log.Trace).Named(t.Name()) // .Named("container")
 	}
+	if opts.VaultLicense == "" {
+		opts.VaultLicense = os.Getenv(EnvVaultLicenseCI)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	t.Cleanup(cancel)
