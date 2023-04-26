@@ -160,6 +160,7 @@ type acmeAccount struct {
 	Contact              []string          `json:"contact"`
 	TermsOfServiceAgreed bool              `json:"termsOfServiceAgreed"`
 	Jwk                  []byte            `json:"jwk"`
+	AcmeDirectory        string            `json:"acme-directory"`
 }
 
 type acmeOrder struct {
@@ -171,7 +172,8 @@ type acmeOrder struct {
 	AuthorizationIds        []string            `json:"authorization-ids"`
 	CertificateSerialNumber string              `json:"cert-serial-number"`
 	CertificateExpiry       time.Time           `json:"cert-expiry"`
-	IssuerId                issuerID            `json:"issuer-id"`
+	// The actual issuer UUID that issued the certificate, blank if an order exists but no certificate was issued.
+	IssuerId issuerID `json:"issuer-id"`
 }
 
 func (o acmeOrder) getIdentifierDNSValues() []string {
@@ -229,6 +231,7 @@ func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, contact []string, 
 		TermsOfServiceAgreed: termsOfServiceAgreed,
 		Jwk:                  c.Jwk,
 		Status:               StatusValid,
+		AcmeDirectory:        ac.acmeDirectory,
 	}
 	json, err := logical.StorageEntryJSON(acmeAccountPrefix+c.Kid, acct)
 	if err != nil {
@@ -270,6 +273,10 @@ func (a *acmeState) LoadAccount(ac *acmeContext, keyId string) (*acmeAccount, er
 	err = entry.DecodeJSON(&acct)
 	if err != nil {
 		return nil, fmt.Errorf("error decoding account: %w", err)
+	}
+
+	if acct.AcmeDirectory != ac.acmeDirectory {
+		return nil, fmt.Errorf("%w: account part of different ACME directory path", ErrMalformed)
 	}
 
 	acct.KeyId = keyId
