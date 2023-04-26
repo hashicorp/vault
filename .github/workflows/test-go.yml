@@ -67,7 +67,6 @@ jobs:
     name: "${{ matrix.runner-index }}"
     needs:
     - runner-indexes
-    - build-vault
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     strategy:
       fail-fast: false
