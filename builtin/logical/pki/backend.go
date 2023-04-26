@@ -216,7 +216,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathResignCrls(&b),
 			pathSignRevocationList(&b),
 
-			// ACME APIs see below
+			// ACME
+			pathAcmeConfig(&b),
 		},
 
 		Secrets: []*framework.Secret{

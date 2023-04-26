@@ -6717,6 +6717,7 @@ func TestProperAuthing(t *testing.T) {
 		"certs/revoked":                          shouldBeAuthed,
 		"certs/revocation-queue":                 shouldBeAuthed,
 		"certs/unified-revoked":                  shouldBeAuthed,
+		"config/acme":                            shouldBeAuthed,
 		"config/auto-tidy":                       shouldBeAuthed,
 		"config/ca":                              shouldBeAuthed,
 		"config/cluster":                         shouldBeAuthed,
