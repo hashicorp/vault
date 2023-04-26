@@ -52,7 +52,6 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 		{"role", "/roles/test-role"},
 		{"issuer", "/issuer/int-ca"},
 		{"issuer_role", "/issuer/int-ca/roles/test-role"},
-		{"issuer_role_acme", "/issuer/acme/roles/acme"},
 	}
 	testCtx := context.Background()
 
