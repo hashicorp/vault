@@ -36,6 +36,8 @@ const (
 	GenerateRecovery
 )
 
+const VAULT_LICENSE_CI_ENV = "VAULT_LICENSE_CI"
+
 // GenerateRoot generates a root token on the target cluster.
 func GenerateRoot(t testing.T, cluster *vault.TestCluster, kind GenerateRootKind) string {
 	t.Helper()

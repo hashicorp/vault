@@ -1107,7 +1107,7 @@ func (c *Core) setupActivityLog(ctx context.Context, wg *sync.WaitGroup) error {
 		}(manager.retentionMonths)
 
 		manager.CensusReportDone = make(chan bool)
-		go c.activityLog.CensusReport(ctx, c.censusAgent)
+		go c.activityLog.CensusReport(ctx, c.censusAgent, c.billingStart)
 	}
 
 	return nil

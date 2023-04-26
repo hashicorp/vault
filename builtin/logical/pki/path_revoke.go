@@ -5,6 +5,7 @@ package pki
 
 import (
 	"context"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
@@ -446,13 +447,16 @@ func (b *backend) pathRevokeWriteHandleKey(req *logical.Request, certReference *
 		return fmt.Errorf("failed to parse provided private key: %w", err)
 	}
 
+	return validatePrivateKeyMatchesCert(signer, certReference)
+}
+
+func validatePrivateKeyMatchesCert(signer crypto.Signer, certReference *x509.Certificate) error {
 	// Finally, verify if the cert and key match. This code has been
 	// cribbed from the Go TLS config code, with minor modifications.
 	//
 	// In particular, we validate against the derived public key
 	// components and ensure we validate exponent and curve information
 	// as well.
-	//
 	//
 	// See: https://github.com/golang/go/blob/c6a2dada0df8c2d75cf3ae599d7caed77d416fa2/src/crypto/tls/tls.go#L304-L331
 	switch certPub := certReference.PublicKey.(type) {

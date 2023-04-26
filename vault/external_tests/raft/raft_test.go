@@ -12,12 +12,14 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
@@ -31,6 +33,8 @@ import (
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/physical/raft"
+	"github.com/hashicorp/vault/sdk/helper/testcluster"
+	"github.com/hashicorp/vault/sdk/helper/testcluster/docker"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
@@ -438,27 +442,53 @@ func TestRaft_Configuration(t *testing.T) {
 	t.Parallel()
 	cluster, _ := raftCluster(t, nil)
 	defer cluster.Cleanup()
+	testRaft_Configuration(t, cluster)
+}
 
-	for i, c := range cluster.Cores {
-		if c.Core.Sealed() {
-			t.Fatalf("failed to unseal core %d", i)
-		}
+// TestRaft_Configuration_Docker is a variant of TestRaft_Configuration that
+// uses docker containers for the vault nodes.
+func TestRaft_Configuration_Docker(t *testing.T) {
+	t.Parallel()
+	binary := os.Getenv("VAULT_BINARY")
+	if binary == "" {
+		t.Skip("only running docker test when $VAULT_BINARY present")
 	}
+	opts := &docker.DockerClusterOptions{
+		ImageRepo: "hashicorp/vault",
+		// We're replacing the binary anyway, so we're not too particular about
+		// the docker image version tag.
+		ImageTag:    "latest",
+		VaultBinary: binary,
+		ClusterOptions: testcluster.ClusterOptions{
+			VaultNodeConfig: &testcluster.VaultNodeConfig{
+				LogLevel: "TRACE",
+				// If you want the test to run faster locally, you could
+				// uncomment this performance_multiplier change.
+				//StorageOptions: map[string]string{
+				//	"performance_multiplier": "1",
+				//},
+			},
+			VaultLicense: os.Getenv(testhelpers.VAULT_LICENSE_CI_ENV),
+		},
+	}
+	cluster := docker.NewTestDockerCluster(t, opts)
+	defer cluster.Cleanup()
+	testRaft_Configuration(t, cluster)
 
-	client := cluster.Cores[0].Client
+	if err := cluster.AddNode(context.TODO(), opts); err != nil {
+		t.Fatal(err)
+	}
+	testRaft_Configuration(t, cluster)
+}
+
+func testRaft_Configuration(t *testing.T, cluster testcluster.VaultCluster) {
+	client := cluster.Nodes()[0].APIClient()
 	secret, err := client.Logical().Read("sys/storage/raft/configuration")
 	if err != nil {
 		t.Fatal(err)
 	}
 	servers := secret.Data["config"].(map[string]interface{})["servers"].([]interface{})
-	expected := map[string]bool{
-		"core-0": true,
-		"core-1": true,
-		"core-2": true,
-	}
-	if len(servers) != 3 {
-		t.Fatalf("incorrect number of servers in the configuration")
-	}
+	found := make(map[string]struct{})
 	for _, s := range servers {
 		server := s.(map[string]interface{})
 		nodeID := server["node_id"].(string)
@@ -474,10 +504,14 @@ func TestRaft_Configuration(t *testing.T) {
 			}
 		}
 
-		delete(expected, nodeID)
+		found[nodeID] = struct{}{}
 	}
-	if len(expected) != 0 {
-		t.Fatalf("failed to read configuration successfully")
+	expected := map[string]struct{}{}
+	for i := range cluster.Nodes() {
+		expected[fmt.Sprintf("core-%d", i)] = struct{}{}
+	}
+	if diff := deep.Equal(expected, found); len(diff) > 0 {
+		t.Fatalf("configuration mismatch, diff: %v", diff)
 	}
 }
 
