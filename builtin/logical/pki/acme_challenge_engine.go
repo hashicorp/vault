@@ -281,7 +281,7 @@ func (ace *ACMEChallengeEngine) AcceptChallenge(sc *storageContext, account stri
 
 func (ace *ACMEChallengeEngine) VerifyChallenge(runnerSc *storageContext, id string, finished chan bool) {
 	sc, _ /* cancel func */ := runnerSc.WithFreshTimeout(MaxChallengeTimeout)
-	runnerSc.Backend.Logger().Debug("Starting verification of challenge: %v", id)
+	runnerSc.Backend.Logger().Debug("Starting verification of challenge", "id", id)
 
 	if retry, retryAfter, err := ace._verifyChallenge(sc, id); err != nil {
 		// Because verification of this challenge failed, we need to retry
