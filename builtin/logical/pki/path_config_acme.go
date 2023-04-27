@@ -26,29 +26,47 @@ type acmeConfigEntry struct {
 	DNSResolver           string   `json:"dns_resolver"`
 }
 
+var defaultAcmeConfig = acmeConfigEntry{
+	Enabled:               false,
+	AllowedIssuers:        []string{"*"},
+	AllowedRoles:          []string{"*"},
+	DefaultRole:           "",
+	AllowNoAllowedDomains: false,
+	AllowAnyDomain:        false,
+	DNSResolver:           "",
+}
+
 func (sc *storageContext) getAcmeConfig() (*acmeConfigEntry, error) {
 	entry, err := sc.Storage.Get(sc.Context, storageAcmeConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	mapping := &acmeConfigEntry{}
-	if entry != nil {
-		if err := entry.DecodeJSON(mapping); err != nil {
-			return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode ACME configuration: %v", err)}
-		}
+	var mapping acmeConfigEntry
+	if entry == nil {
+		mapping = defaultAcmeConfig
+		return &mapping, nil
 	}
 
-	return mapping, nil
+	if err := entry.DecodeJSON(&mapping); err != nil {
+		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode ACME configuration: %v", err)}
+	}
+
+	return &mapping, nil
 }
 
 func (sc *storageContext) setAcmeConfig(entry *acmeConfigEntry) error {
 	json, err := logical.StorageEntryJSON(storageAcmeConfig, entry)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed creating storage entry: %w", err)
 	}
 
-	return sc.Storage.Put(sc.Context, json)
+	if err := sc.Storage.Put(sc.Context, json); err != nil {
+		return fmt.Errorf("failed writing storage entry: %w", err)
+	}
+
+	sc.Backend.acmeState.markConfigDirty()
+	return nil
 }
 
 func pathAcmeConfig(b *backend) *framework.Path {
@@ -68,7 +86,7 @@ func pathAcmeConfig(b *backend) *framework.Path {
 			"allowed_issuers": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: `which issuers are allowed for use with ACME; by default, this will only be the primary (default) issuer`,
-				Default:     "default",
+				Default:     "*",
 			},
 			"allowed_roles": {
 				Type:        framework.TypeCommaStringSlice,
@@ -92,6 +110,7 @@ func pathAcmeConfig(b *backend) *framework.Path {
 			"dns_resolver": {
 				Type:        framework.TypeString,
 				Description: `DNS resolver to use for domain resolution on this mount. Defaults to using the default system resolver. Must be in the format <host>:<port>, with both parts mandatory.`,
+				Default: "",
 			},
 		},
 
