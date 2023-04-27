@@ -241,6 +241,20 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 		}
 	}
 
+	allowAnyIssuer := len(config.AllowedIssuers) == 1 && config.AllowedIssuers[0] == "*"
+	if !allowAnyIssuer {
+		for index, name := range config.AllowedIssuers {
+			if name == "*" {
+				return nil, fmt.Errorf("cannot use '*' as issuer name at index %d", index)
+			}
+
+			_, err := sc.resolveIssuerReference(name)
+			if err != nil {
+				return nil, fmt.Errorf("failed validating allowed_issuers: unable to fetch issuer: %v: %w", name, err)
+			}
+		}
+	}
+
 	err = sc.setAcmeConfig(config)
 	if err != nil {
 		return nil, err

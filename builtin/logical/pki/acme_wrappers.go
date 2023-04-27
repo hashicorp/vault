@@ -309,7 +309,6 @@ func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData, config 
 	}
 
 	allowAnyRole := len(config.AllowedRoles) == 1 && config.AllowedRoles[0] == "*"
-
 	if !allowAnyRole {
 		if wasVerbatim {
 			return nil, nil, fmt.Errorf("%w: using the default directory without specifying a role is not supported by this configuration; specify 'default_role' in the acme config to the default directories", ErrServerInternal)
@@ -333,7 +332,25 @@ func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData, config 
 		return nil, nil, err
 	}
 
-	// TODO: Need additional configuration validation here, for allowed roles/issuers.
+	allowAnyIssuer := len(config.AllowedIssuers) == 1 && config.AllowedIssuers[0] == "*"
+	if !allowAnyIssuer {
+		var foundIssuer bool
+		for index, name := range config.AllowedIssuers {
+			candidateId, err := sc.resolveIssuerReference(name)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to resolve reference for allowed_issuer entry %d: %w", index, err)
+			}
+
+			if candidateId == issuer.ID {
+				foundIssuer = true
+				break
+			}
+		}
+
+		if !foundIssuer {
+			return nil, nil, fmt.Errorf("%w: specified issuer not allowed by ACME policy", ErrServerInternal)
+		}
+	}
 
 	return role, issuer, nil
 }
