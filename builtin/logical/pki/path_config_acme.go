@@ -184,6 +184,9 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 
 	if allowedRolesRaw, ok := d.GetOk("allowed_roles"); ok {
 		config.AllowedRoles = allowedRolesRaw.([]string)
+		if len(config.AllowedRoles) == 0 {
+			return nil, fmt.Errorf("allowed_roles must take a non-zero length value; specify '*' as the value to allow anything or specify enabled=false to disable ACME entirely")
+		}
 	}
 
 	if defaultRoleRaw, ok := d.GetOk("default_role"); ok {
@@ -196,6 +199,9 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 
 	if allowedIssuersRaw, ok := d.GetOk("allowed_issuers"); ok {
 		config.AllowedIssuers = allowedIssuersRaw.([]string)
+		if len(config.AllowedIssuers) == 0 {
+			return nil, fmt.Errorf("allowed_issuers must take a non-zero length value; specify '*' as the value to allow anything or specify enabled=false to disable ACME entirely")
+		}
 	}
 
 	if dnsResolverRaw, ok := d.GetOk("dns_resolver"); ok {
