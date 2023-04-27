@@ -11,7 +11,7 @@ jobs:
     - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c #v3.3.0 as of 2023-01-18
     - id: setup-go
       name: Setup go
-      uses: actions/setup-go@d0a58c1c4d2b25278816e339b944508c875f3613 #v3.4.0 as of 2022-12-07
+      uses: actions/setup-go@v4 #v3.4.0 as of 2022-12-07
       with:
         go-version-file: ./.go-version
         cache: true

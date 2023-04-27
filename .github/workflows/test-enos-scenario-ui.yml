@@ -69,7 +69,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Set Up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
           go-version-file: ./.go-version
       - uses: hashicorp/action-setup-enos@v1

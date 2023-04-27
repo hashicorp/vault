@@ -15,7 +15,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Set Up Go
-        uses: actions/setup-go@d0a58c1c4d2b25278816e339b944508c875f3613
+        uses: actions/setup-go@v4
         with:
           cache: true
           go-version-file: ./.go-version

@@ -41,7 +41,7 @@ jobs:
     name: Vault ${{ inputs.goos }} ${{ inputs.goarch }} v${{ inputs.vault-version }}
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v4
         with:
           go-version: ${{ inputs.go-version }}
       - name: Set up node and yarn
