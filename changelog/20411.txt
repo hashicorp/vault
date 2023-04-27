@@ -1,0 +1,3 @@
+```release-note:improvement
+audit: pipes the existing "Request.MountPoint" into audit logs
+```
