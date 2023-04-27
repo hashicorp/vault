@@ -13,7 +13,7 @@ import (
 const (
 	storageAcmeConfig      = "config/acme"
 	pathConfigAcmeHelpSyn  = "Configuration of ACME Endpoints"
-	pathConfigAcmeHelpDesc = "Here we configure:\n\nenabled=false, whether ACME is enabled, defaults to false meaning that clusters will by default not get ACME support,\nallowed_issuers=\"default\", which issuers are allowed for use with ACME; by default, this will only be the primary (default) issuer,\nallowed_roles=\"*\", which roles are allowed for use with ACME; by default these will be all roles matching our selection criteria,\ndefault_role=\"\", if not empty, the role to be used for non-role-qualified ACME requests; by default this will be empty, meaning ACME issuance will be equivalent to sign-verbatim,\nallow_no_allowed_domains=false, whether ACME will allow the use of roles without any explicit list of allowed domains, and\nallow_any_domain=false, whether ACME will allow the use of roles with allow_any_name=true set."
+	pathConfigAcmeHelpDesc = "Here we configure:\n\nenabled=false, whether ACME is enabled, defaults to false meaning that clusters will by default not get ACME support,\nallowed_issuers=\"default\", which issuers are allowed for use with ACME; by default, this will only be the primary (default) issuer,\nallowed_roles=\"*\", which roles are allowed for use with ACME; by default these will be all roles matching our selection criteria,\ndefault_role=\"\", if not empty, the role to be used for non-role-qualified ACME requests; by default this will be empty, meaning ACME issuance will be equivalent to sign-verbatim.,\ndns_resolver=\"\", which specifies a custom DNS resolver to use for all ACME-related DNS lookups"
 )
 
 type acmeConfigEntry struct {
@@ -21,8 +21,6 @@ type acmeConfigEntry struct {
 	AllowedIssuers        []string `json:"allowed_issuers="`
 	AllowedRoles          []string `json:"allowed_roles"`
 	DefaultRole           string   `json:"default_role"`
-	AllowNoAllowedDomains bool     `json:"allow_no_allowed_domains"`
-	AllowAnyDomain        bool     `json:"allow_any_domain"`
 	DNSResolver           string   `json:"dns_resolver"`
 }
 
@@ -31,8 +29,6 @@ var defaultAcmeConfig = acmeConfigEntry{
 	AllowedIssuers:        []string{"*"},
 	AllowedRoles:          []string{"*"},
 	DefaultRole:           "",
-	AllowNoAllowedDomains: false,
-	AllowAnyDomain:        false,
 	DNSResolver:           "",
 }
 
@@ -98,15 +94,6 @@ func pathAcmeConfig(b *backend) *framework.Path {
 				Description: `if not empty, the role to be used for non-role-qualified ACME requests; by default this will be empty, meaning ACME issuance will be equivalent to sign-verbatim; must be specified in allowed_roles if non-empty`,
 				Default:     "",
 			},
-			"allow_no_allowed_domains": {
-				Type:        framework.TypeBool,
-				Description: `whether ACME will allow the use of roles without any explicit list of allowed domains`,
-				Default:     false,
-			},
-			"allow_any_domain": {
-				Type:        framework.TypeBool,
-				Description: `whether ACME will allow the use of roles with allow_any_name=true set.`,
-			},
 			"dns_resolver": {
 				Type:        framework.TypeString,
 				Description: `DNS resolver to use for domain resolution on this mount. Defaults to using the default system resolver. Must be in the format <host>:<port>, with both parts mandatory.`,
@@ -151,9 +138,7 @@ func (b *backend) pathAcmeRead(ctx context.Context, req *logical.Request, _ *fra
 func genResponseFromAcmeConfig(config *acmeConfigEntry) *logical.Response {
 	response := &logical.Response{
 		Data: map[string]interface{}{
-			"allow_any_domain":         config.AllowAnyDomain,
 			"allowed_roles":            config.AllowedRoles,
-			"allow_no_allowed_domains": config.AllowNoAllowedDomains,
 			"allowed_issuers":          config.AllowedIssuers,
 			"default_role":             config.DefaultRole,
 			"enabled":                  config.Enabled,
@@ -178,10 +163,6 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 		config.Enabled = enabledRaw.(bool)
 	}
 
-	if allowAnyDomainRaw, ok := d.GetOk("allow_any_domain"); ok {
-		config.AllowAnyDomain = allowAnyDomainRaw.(bool)
-	}
-
 	if allowedRolesRaw, ok := d.GetOk("allowed_roles"); ok {
 		config.AllowedRoles = allowedRolesRaw.([]string)
 		if len(config.AllowedRoles) == 0 {
@@ -191,10 +172,6 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 
 	if defaultRoleRaw, ok := d.GetOk("default_role"); ok {
 		config.DefaultRole = defaultRoleRaw.(string)
-	}
-
-	if allowNoAllowedDomainsRaw, ok := d.GetOk("allow_no_allowed_domains"); ok {
-		config.AllowNoAllowedDomains = allowNoAllowedDomainsRaw.(bool)
 	}
 
 	if allowedIssuersRaw, ok := d.GetOk("allowed_issuers"); ok {
