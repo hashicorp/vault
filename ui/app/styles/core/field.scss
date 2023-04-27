@@ -5,10 +5,6 @@
 
 // This file defines the styles for .field, .field-body, .form-fieldset
 
-.field-body .field {
-  margin-bottom: 0;
-}
-
 .field {
   // cannot use :read-only selector because tag used for other purposes
   &.is-readOnly {
@@ -19,6 +15,10 @@
   &:not(:last-child) {
     margin-bottom: $size-4;
   }
+}
+// must come after field due to overriding the margin-bottom of not last-child
+.field-body .field {
+  margin-bottom: 0;
 }
 
 .field.has-addons {
