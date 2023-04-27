@@ -3,31 +3,67 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
+.modal {
+  align-items: center;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  top: 0;
+  display: none;
+  justify-content: center;
+  overflow: hidden;
+  position: fixed;
+  z-index: 20;
+
+  &.is-active {
+    display: flex;
+  }
+}
+
 .modal-background {
-  background: rgba(235, 238, 242, 0.9);
+  background: $ui-gray-100;
+  bottom: 0;
+  left: 0;
+  opacity: 0.9;
+  position: absolute;
+  right: 0;
+  top: 0;
 }
 
 .modal-card {
   box-shadow: $box-shadow-highest;
   border: 1px solid $grey-light;
+  display: flex;
+  flex-direction: column;
   max-height: calc(100vh - 70px);
   margin-top: 60px;
   min-width: calc(100vw * 0.3);
+  overflow: hidden;
+  position: relative;
 
   &-head {
     border-radius: 0;
     background-color: $grey-lightest;
     border-bottom: 1px solid $grey-light;
+    display: flex;
+    justify-content: flex-start;
+    padding: 20px;
   }
 
   &-foot {
     border-radius: 0;
     border: 0;
     background-color: $white;
+    padding: 20px;
+
+    .button:not(:last-child) {
+      margin-right: 10px;
+    }
   }
 
   &-title.title {
     margin: 0;
+    flex-grow: 1;
   }
 
   .copy-text {
@@ -52,6 +88,14 @@
   align-items: center;
 }
 
+.modal-card-body {
+  background-color: $white;
+  flex-grow: 1;
+  flex-shrink: 1;
+  overflow: auto;
+  padding: 20px;
+}
+
 pre {
   background-color: inherit;
 }
@@ -66,21 +110,13 @@ pre {
   }
 }
 
-.modal-confirm-section .is-help {
-  color: $grey;
-  margin: $spacing-xxs 0;
-  strong {
-    color: inherit;
-  }
-}
-
 .modal-confirm-section {
   margin: $spacing-xl 0 $spacing-m;
 }
 
 .modal-card-foot-outlined {
-  background: #f7f8fa;
-  border-top: 1px solid #bac1cc;
+  background: $ui-gray-050;
+  border-top: $base-border;
 }
 
 .modal-radio-button {
@@ -111,5 +147,15 @@ pre {
   &.has-padding-btm-left {
     padding-bottom: $spacing-m;
     padding-left: $spacing-m;
+  }
+}
+
+// responsive css
+@media screen and (min-width: 769px), print {
+  .modal-card,
+  .modal-content {
+    margin: 0 auto;
+    max-height: calc(100vh - 40px);
+    width: 640px;
   }
 }
