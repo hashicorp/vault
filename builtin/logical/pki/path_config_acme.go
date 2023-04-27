@@ -17,19 +17,19 @@ const (
 )
 
 type acmeConfigEntry struct {
-	Enabled               bool     `json:"enabled"`
-	AllowedIssuers        []string `json:"allowed_issuers="`
-	AllowedRoles          []string `json:"allowed_roles"`
-	DefaultRole           string   `json:"default_role"`
-	DNSResolver           string   `json:"dns_resolver"`
+	Enabled        bool     `json:"enabled"`
+	AllowedIssuers []string `json:"allowed_issuers="`
+	AllowedRoles   []string `json:"allowed_roles"`
+	DefaultRole    string   `json:"default_role"`
+	DNSResolver    string   `json:"dns_resolver"`
 }
 
 var defaultAcmeConfig = acmeConfigEntry{
-	Enabled:               false,
-	AllowedIssuers:        []string{"*"},
-	AllowedRoles:          []string{"*"},
-	DefaultRole:           "",
-	DNSResolver:           "",
+	Enabled:        false,
+	AllowedIssuers: []string{"*"},
+	AllowedRoles:   []string{"*"},
+	DefaultRole:    "",
+	DNSResolver:    "",
 }
 
 func (sc *storageContext) getAcmeConfig() (*acmeConfigEntry, error) {
@@ -138,11 +138,11 @@ func (b *backend) pathAcmeRead(ctx context.Context, req *logical.Request, _ *fra
 func genResponseFromAcmeConfig(config *acmeConfigEntry) *logical.Response {
 	response := &logical.Response{
 		Data: map[string]interface{}{
-			"allowed_roles":            config.AllowedRoles,
-			"allowed_issuers":          config.AllowedIssuers,
-			"default_role":             config.DefaultRole,
-			"enabled":                  config.Enabled,
-			"dns_resolver":             config.DNSResolver,
+			"allowed_roles":   config.AllowedRoles,
+			"allowed_issuers": config.AllowedIssuers,
+			"default_role":    config.DefaultRole,
+			"enabled":         config.Enabled,
+			"dns_resolver":    config.DNSResolver,
 		},
 	}
 
