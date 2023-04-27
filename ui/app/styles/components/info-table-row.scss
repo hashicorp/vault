@@ -1,6 +1,15 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 .info-table-row {
   box-shadow: 0 1px 0 $grey-light;
   margin: 0;
+
+  &.has-no-shadow {
+    box-shadow: none;
+  }
 
   @include from($tablet) {
     display: flex;
@@ -9,7 +18,7 @@
   &.thead {
     box-shadow: 0 1px 0 $grey-light, 0 -1px 0 $grey-light;
     margin: 0;
-    padding: 0 $size-6;
+    padding: 0 $size-6 0 0;
 
     .column {
       padding: 0.5rem 0.75rem;
@@ -17,6 +26,9 @@
   }
 
   .column {
+    align-self: center;
+    padding: $spacing-m;
+
     &.info-table-row-edit {
       padding-bottom: 0.3rem;
       padding-top: 0.3rem;
@@ -25,10 +37,28 @@
     textarea {
       min-height: 35px;
     }
+
+    .helper-text {
+      font-weight: normal;
+    }
+    &.justify-right {
+      display: flex;
+      justify-content: right;
+    }
   }
 
-  .icon {
+  .hs-icon {
     margin-right: 0.25rem;
+  }
+  .icon-true {
+    color: $green-500;
+  }
+  .icon-false {
+    color: $ui-gray-300;
+  }
+
+  a {
+    text-decoration: none;
   }
 }
 
@@ -62,5 +92,19 @@
   }
   .info-table-row:not(.is-mobile) .column:last-child {
     padding-left: 0;
+  }
+}
+
+.label-overflow {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  // inline display necessary for nested elements so ellipsis shows
+  > div {
+    display: inline;
+  }
+  > div > span {
+    display: inline;
   }
 }

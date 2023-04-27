@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 .is-sidebar {
   border-right: $base-border;
   display: flex;
@@ -76,12 +81,21 @@
       padding-top: $size-4;
     }
 
+    li {
+      a {
+        &.active {
+          border-right: 4px solid $blue;
+          color: $blue;
+        }
+      }
+    }
+
     a {
       color: $grey-dark;
       padding-left: $size-5;
       transition: 250ms border-width;
 
-      &.is-active {
+      &.active {
         border-right: 4px solid $blue;
       }
     }

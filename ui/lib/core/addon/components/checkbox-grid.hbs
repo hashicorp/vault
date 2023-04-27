@@ -1,0 +1,23 @@
+<div data-test-checkbox-grid ...attributes>
+  <FormFieldLabel for={{@name}} @label={{@label}} @subText={{@subText}} />
+  <div class="is-grid is-grid-3-columns is-medium-height">
+    {{#each this.checkboxes as |checkbox|}}
+      <div class="field">
+        <div class="b-checkbox">
+          <Input
+            @type="checkbox"
+            id={{checkbox.key}}
+            name={{checkbox.key}}
+            class="styled"
+            @checked={{checkbox.value}}
+            {{on "change" this.checkboxChange}}
+            data-test-checkbox={{checkbox.key}}
+          />
+          <label for={{checkbox.key}} class="is-label">
+            {{checkbox.label}}
+          </label>
+        </div>
+      </div>
+    {{/each}}
+  </div>
+</div>

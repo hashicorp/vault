@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/database/cassandra: Fixed issue where hostnames were not being validated when using TLS
+```

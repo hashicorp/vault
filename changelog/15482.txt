@@ -1,0 +1,3 @@
+```release-note:bug
+auth: Prevent deleting a valid MFA method ID using the endpoint for a different MFA method type
+```

@@ -1,6 +1,10 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 
@@ -36,7 +40,7 @@ func TestPluginListCommand_Run(t *testing.T) {
 		{
 			"lists",
 			nil,
-			"Plugins",
+			"Name\\s+Type\\s+Version",
 			0,
 		},
 	}
@@ -62,7 +66,8 @@ func TestPluginListCommand_Run(t *testing.T) {
 				}
 
 				combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
-				if !strings.Contains(combined, tc.out) {
+				matcher := regexp.MustCompile(tc.out)
+				if !matcher.MatchString(combined) {
 					t.Errorf("expected %q to contain %q", combined, tc.out)
 				}
 			})

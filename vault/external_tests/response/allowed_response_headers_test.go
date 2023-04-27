@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package identity
 
 import (
@@ -6,8 +9,8 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/kr/pretty"
 )
@@ -26,7 +29,7 @@ func TestIdentityStore_EntityDisabled(t *testing.T) {
 					logical.ReadOperation: func(context.Context, *logical.Request, *framework.FieldData) (*logical.Response, error) {
 						return &logical.Response{
 							Headers: map[string][]string{
-								"www-authenticate": []string{"Negotiate"},
+								"www-authenticate": {"Negotiate"},
 							},
 						}, logical.CodedError(401, "authentication required")
 					},
@@ -39,7 +42,7 @@ func TestIdentityStore_EntityDisabled(t *testing.T) {
 						return &logical.Response{
 							Auth: &logical.Auth{},
 							Headers: map[string][]string{
-								"www-authenticate": []string{"Negotiate"},
+								"www-authenticate": {"Negotiate"},
 							},
 						}, nil
 					},
@@ -79,7 +82,7 @@ func TestIdentityStore_EntityDisabled(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Here, should suceed but we should not see the header since it's
+	// Here, should succeed but we should not see the header since it's
 	// not in the allowed list
 	req := client.NewRequest("GET", "/v1/auth/headtest/loginnoerror")
 	resp, err := client.RawRequest(req)

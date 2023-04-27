@@ -1,21 +1,24 @@
-import { computed } from '@ember/object';
-import DS from 'ember-data';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
 
-const { attr } = DS;
-import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
+import Model, { attr } from '@ember-data/model';
+import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
 
-export default DS.Model.extend({
-  path: attr('string', {
+@withExpandedAttributes()
+export default class NamespaceModel extends Model {
+  @attr('string', {
     validationAttr: 'pathIsValid',
     invalidMessage: 'You have entered and invalid path please only include letters, numbers, -, ., and _.',
-  }),
-  pathIsValid: computed('path', function() {
-    return this.get('path') && this.get('path').match(/^[\w\d-.]+$/g);
-  }),
-  description: attr('string', {
-    editType: 'textarea',
-  }),
-  fields: computed(function() {
-    return expandAttributeMeta(this, ['path']);
-  }),
-});
+  })
+  path;
+
+  get pathIsValid() {
+    return this.path && this.path.match(/^[\w\d-.]+$/g);
+  }
+
+  get fields() {
+    return ['path'].map((f) => this.allByKey[f]);
+  }
+}

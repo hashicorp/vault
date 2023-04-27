@@ -1,15 +1,18 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"sync/atomic"
 
-	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -53,11 +56,11 @@ func (c *Core) saveCORSConfig(ctx context.Context) error {
 
 	entry, err := logical.StorageEntryJSON("cors", localConfig)
 	if err != nil {
-		return errwrap.Wrapf("failed to create CORS config entry: {{err}}", err)
+		return fmt.Errorf("failed to create CORS config entry: %w", err)
 	}
 
 	if err := view.Put(ctx, entry); err != nil {
-		return errwrap.Wrapf("failed to save CORS config: {{err}}", err)
+		return fmt.Errorf("failed to save CORS config: %w", err)
 	}
 
 	return nil
@@ -70,7 +73,7 @@ func (c *Core) loadCORSConfig(ctx context.Context) error {
 	// Load the config in
 	out, err := view.Get(ctx, "cors")
 	if err != nil {
-		return errwrap.Wrapf("failed to read CORS config: {{err}}", err)
+		return fmt.Errorf("failed to read CORS config: %w", err)
 	}
 	if out == nil {
 		return nil

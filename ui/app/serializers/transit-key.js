@@ -1,27 +1,45 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+import RESTSerializer from '@ember-data/serializer/rest';
 import { assign } from '@ember/polyfills';
 import { decamelize } from '@ember/string';
-import DS from 'ember-data';
 
-export default DS.RESTSerializer.extend({
+export default RESTSerializer.extend({
   primaryKey: 'name',
 
-  keyForAttribute: function(attr) {
+  keyForAttribute: function (attr) {
     return decamelize(attr);
   },
 
   normalizeSecrets(payload) {
     if (payload.data.keys && Array.isArray(payload.data.keys)) {
-      const secrets = payload.data.keys.map(secret => ({ name: secret }));
+      const secrets = payload.data.keys.map((secret) => ({ name: secret, backend: payload.backend }));
       return secrets;
     }
     assign(payload, payload.data);
     delete payload.data;
+    // timestamps for these two are in seconds...
+    if (
+      payload.type === 'aes256-gcm96' ||
+      payload.type === 'chacha20-poly1305' ||
+      payload.type === 'aes128-gcm96'
+    ) {
+      for (const version in payload.keys) {
+        payload.keys[version] = payload.keys[version] * 1000;
+      }
+    }
+    payload.id = payload.name;
     return [payload];
   },
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     const nullResponses = ['updateRecord', 'createRecord', 'deleteRecord'];
-    const secrets = nullResponses.includes(requestType) ? { name: id } : this.normalizeSecrets(payload);
+    const secrets = nullResponses.includes(requestType)
+      ? { name: id, backend: payload.backend }
+      : this.normalizeSecrets(payload);
     const { modelName } = primaryModelClass;
     let transformedPayload = { [modelName]: secrets };
     // just return the single object because ember is picky
@@ -37,13 +55,16 @@ export default DS.RESTSerializer.extend({
       const min_decryption_version = snapshot.attr('minDecryptionVersion');
       const min_encryption_version = snapshot.attr('minEncryptionVersion');
       const deletion_allowed = snapshot.attr('deletionAllowed');
+      const auto_rotate_period = snapshot.attr('autoRotatePeriod');
       return {
         min_decryption_version,
         min_encryption_version,
         deletion_allowed,
+        auto_rotate_period,
       };
     } else {
-      return this._super(...arguments);
+      snapshot.id = snapshot.attr('name');
+      return this._super(snapshot, requestType);
     }
   },
 });

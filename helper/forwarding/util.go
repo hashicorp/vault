@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package forwarding
 
 import (
@@ -12,8 +15,8 @@ import (
 	"os"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/hashicorp/vault/helper/compressutil"
-	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/compressutil"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
 
 type bufCloser struct {
@@ -192,7 +195,7 @@ func NewRPCResponseWriter() *RPCResponseWriter {
 		body:       new(bytes.Buffer),
 		statusCode: 200,
 	}
-	//w.header.Set("Content-Type", "application/octet-stream")
+	// w.header.Set("Content-Type", "application/octet-stream")
 	return w
 }
 

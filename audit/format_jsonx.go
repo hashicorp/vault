@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package audit
 
 import (
@@ -6,7 +9,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/hashicorp/vault/helper/salt"
+	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/jefferai/jsonx"
 )
 

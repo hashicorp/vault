@@ -1,15 +1,21 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+import AdapterError from '@ember-data/adapter/error';
+import RESTAdapter from '@ember-data/adapter/rest';
 import { inject as service } from '@ember/service';
 import { assign } from '@ember/polyfills';
 import { set } from '@ember/object';
 import RSVP from 'rsvp';
-import DS from 'ember-data';
-import fetch from 'fetch';
 import config from '../config/environment';
+import fetch from 'fetch';
 
 const { APP } = config;
 const { POLLING_URLS, NAMESPACE_ROOT_URLS } = APP;
 
-export default DS.RESTAdapter.extend({
+export default RESTAdapter.extend({
   auth: service(),
   namespaceService: service('namespace'),
   controlGroup: service(),
@@ -31,17 +37,17 @@ export default DS.RESTAdapter.extend({
   },
 
   addHeaders(url, options) {
-    let token = options.clientToken || this.get('auth.currentToken');
-    let headers = {};
+    const token = options.clientToken || this.auth.currentToken;
+    const headers = {};
     if (token && !options.unauthenticated) {
       headers['X-Vault-Token'] = token;
     }
     if (options.wrapTTL) {
       headers['X-Vault-Wrap-TTL'] = options.wrapTTL;
     }
-    let namespace =
-      typeof options.namespace === 'undefined' ? this.get('namespaceService.path') : options.namespace;
-    if (namespace && !NAMESPACE_ROOT_URLS.some(str => url.includes(str))) {
+    const namespace =
+      typeof options.namespace === 'undefined' ? this.namespaceService.path : options.namespace;
+    if (namespace && !NAMESPACE_ROOT_URLS.some((str) => url.includes(str))) {
       headers['X-Vault-Namespace'] = namespace;
     }
     options.headers = assign(options.headers || {}, headers);
@@ -49,7 +55,7 @@ export default DS.RESTAdapter.extend({
 
   _preRequest(url, options) {
     this.addHeaders(url, options);
-    const isPolling = POLLING_URLS.some(str => url.includes(str));
+    const isPolling = POLLING_URLS.some((str) => url.includes(str));
     if (!isPolling) {
       this.auth.setLastFetch(Date.now());
     }
@@ -61,9 +67,9 @@ export default DS.RESTAdapter.extend({
     let url = intendedUrl;
     let type = method;
     let options = passedOptions;
-    let controlGroup = this.get('controlGroup');
-    let controlGroupToken = controlGroup.tokenForUrl(url);
-    // if we have a control group token that matches the intendedUrl,
+    const controlGroup = this.controlGroup;
+    const controlGroupToken = controlGroup.tokenForUrl(url);
+    // if we have a Control Group token that matches the intendedUrl,
     // then we want to unwrap it and return the unwrapped response as
     // if it were the initial request
     // To do this, we rewrite the function args
@@ -77,7 +83,7 @@ export default DS.RESTAdapter.extend({
         },
       };
     }
-    let opts = this._preRequest(url, options);
+    const opts = this._preRequest(url, options);
 
     return this._super(url, type, opts).then((...args) => {
       if (controlGroupToken) {
@@ -85,8 +91,8 @@ export default DS.RESTAdapter.extend({
       }
       const [resp] = args;
       if (resp && resp.warnings) {
-        let flash = this.get('flashMessages');
-        resp.warnings.forEach(message => {
+        const flash = this.flashMessages;
+        resp.warnings.forEach((message) => {
           flash.info(message);
         });
       }
@@ -96,15 +102,17 @@ export default DS.RESTAdapter.extend({
 
   // for use on endpoints that don't return JSON responses
   rawRequest(url, type, options = {}) {
-    let opts = this._preRequest(url, options);
+    const opts = this._preRequest(url, options);
     return fetch(url, {
       method: type || 'GET',
       headers: opts.headers || {},
-    }).then(response => {
+      body: opts.body,
+      signal: opts.signal,
+    }).then((response) => {
       if (response.status >= 200 && response.status < 300) {
         return RSVP.resolve(response);
       } else {
-        return RSVP.reject();
+        return RSVP.reject(response);
       }
     });
   },
@@ -112,7 +120,7 @@ export default DS.RESTAdapter.extend({
   handleResponse(status, headers, payload, requestData) {
     const returnVal = this._super(...arguments);
     // ember data errors don't have the status code, so we add it here
-    if (returnVal instanceof DS.AdapterError) {
+    if (returnVal instanceof AdapterError) {
       set(returnVal, 'httpStatus', status);
       set(returnVal, 'path', requestData.url);
     }

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -8,11 +11,12 @@ import (
 	"strings"
 	"testing"
 
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	credGithub "github.com/hashicorp/vault/builtin/credential/github"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestIdentityStore_EntityDeleteGroupMembershipUpdate(t *testing.T) {
@@ -407,6 +411,58 @@ func TestIdentityStore_EntityCreateUpdate(t *testing.T) {
 	}
 }
 
+func TestIdentityStore_BatchDelete(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	is, _, _ := testIdentityStoreWithGithubAuth(ctx, t)
+
+	ids := make([]string, 10000)
+	for i := 0; i < 10000; i++ {
+		entityData := map[string]interface{}{
+			"name": fmt.Sprintf("entity-%d", i),
+		}
+
+		entityReq := &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "entity",
+			Data:      entityData,
+		}
+
+		// Create the entity
+		resp, err := is.HandleRequest(ctx, entityReq)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%v resp:%#v", err, resp)
+		}
+		ids[i] = resp.Data["id"].(string)
+	}
+
+	deleteReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "entity/batch-delete",
+		Data: map[string]interface{}{
+			"entity_ids": ids,
+		},
+	}
+
+	resp, err := is.HandleRequest(ctx, deleteReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	for _, entityID := range ids {
+		// Read the entity
+		resp, err := is.HandleRequest(ctx, &logical.Request{
+			Operation: logical.ReadOperation,
+			Path:      "entity/id/" + entityID,
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%v resp:%#v", err, resp)
+		}
+		if resp != nil {
+			t.Fatal(resp)
+		}
+	}
+}
+
 func TestIdentityStore_CloneImmutability(t *testing.T) {
 	alias := &identity.Alias{
 		ID:                     "testaliasid",
@@ -451,7 +507,7 @@ func TestIdentityStore_MemDBImmutability(t *testing.T) {
 	ctx := namespace.RootContext(nil)
 	is, githubAccessor, _ := testIdentityStoreWithGithubAuth(ctx, t)
 
-	validateMountResp := is.core.router.validateMountByAccessor(githubAccessor)
+	validateMountResp := is.router.ValidateMountByAccessor(githubAccessor)
 	if validateMountResp == nil {
 		t.Fatal("failed to validate github auth mount")
 	}
@@ -479,7 +535,7 @@ func TestIdentityStore_MemDBImmutability(t *testing.T) {
 		},
 	}
 
-	entity.BucketKeyHash = is.entityPacker.BucketKeyHashByItemID(entity.ID)
+	entity.BucketKey = is.entityPacker.BucketKey(entity.ID)
 
 	txn := is.db.Txn(true)
 	defer txn.Abort()
@@ -506,6 +562,42 @@ func TestIdentityStore_MemDBImmutability(t *testing.T) {
 
 	if entityFetched.Aliases[0].ID == "invalidaliasid" {
 		t.Fatal("memdb item is mutable outside of transaction")
+	}
+}
+
+func TestIdentityStore_ContextCancel(t *testing.T) {
+	var err error
+	var resp *logical.Response
+
+	ctx, cancelFunc := context.WithCancel(namespace.RootContext(nil))
+	is, _, _ := testIdentityStoreWithGithubAuth(ctx, t)
+
+	entityReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "entity",
+	}
+
+	expected := []string{}
+	for i := 0; i < 10; i++ {
+		resp, err = is.HandleRequest(ctx, entityReq)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%v resp:%#v", err, resp)
+		}
+		expected = append(expected, resp.Data["id"].(string))
+	}
+
+	listReq := &logical.Request{
+		Operation: logical.ListOperation,
+		Path:      "entity/id",
+	}
+
+	cancelFunc()
+	resp, err = is.HandleRequest(ctx, listReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if resp.Warnings == nil || len(resp.Warnings) == 0 {
+		t.Fatalf("expected warning for cancelled context. resp:%#v", resp)
 	}
 }
 
@@ -599,7 +691,7 @@ func TestIdentityStore_LoadingEntities(t *testing.T) {
 	ghSysview := c.mountEntrySysView(meGH)
 
 	// Create new github auth credential backend
-	ghAuth, err := c.newCredentialBackend(context.Background(), meGH, ghSysview, ghView)
+	ghAuth, _, err := c.newCredentialBackend(context.Background(), meGH, ghSysview, ghView)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -692,7 +784,7 @@ func TestIdentityStore_MemDBEntityIndexes(t *testing.T) {
 	ctx := namespace.RootContext(nil)
 	is, githubAccessor, _ := testIdentityStoreWithGithubAuth(ctx, t)
 
-	validateMountResp := is.core.router.validateMountByAccessor(githubAccessor)
+	validateMountResp := is.router.ValidateMountByAccessor(githubAccessor)
 	if validateMountResp == nil {
 		t.Fatal("failed to validate github auth mount")
 	}
@@ -733,7 +825,7 @@ func TestIdentityStore_MemDBEntityIndexes(t *testing.T) {
 		},
 	}
 
-	entity.BucketKeyHash = is.entityPacker.BucketKeyHashByItemID(entity.ID)
+	entity.BucketKey = is.entityPacker.BucketKey(entity.ID)
 
 	txn := is.db.Txn(true)
 	defer txn.Abort()
@@ -764,7 +856,7 @@ func TestIdentityStore_MemDBEntityIndexes(t *testing.T) {
 	}
 
 	txn = is.db.Txn(false)
-	entitiesFetched, err := is.MemDBEntitiesByBucketEntryKeyHashInTxn(txn, entity.BucketKeyHash)
+	entitiesFetched, err := is.MemDBEntitiesByBucketKeyInTxn(txn, entity.BucketKey)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -795,7 +887,6 @@ func TestIdentityStore_MemDBEntityIndexes(t *testing.T) {
 	if entityFetched != nil {
 		t.Fatalf("bad: entity; expected: nil, actual: %#v\n", entityFetched)
 	}
-
 }
 
 func TestIdentityStore_EntityCRUD(t *testing.T) {
@@ -808,7 +899,7 @@ func TestIdentityStore_EntityCRUD(t *testing.T) {
 	registerData := map[string]interface{}{
 		"name":     "testentityname",
 		"metadata": []string{"someusefulkey=someusefulvalue"},
-		"policies": []string{"testpolicy1", "testpolicy2"},
+		"policies": []string{"testpolicy1", "testpolicy1", "testpolicy2", "testpolicy2"},
 	}
 
 	registerReq := &logical.Request{
@@ -844,7 +935,7 @@ func TestIdentityStore_EntityCRUD(t *testing.T) {
 
 	if resp.Data["id"] != id ||
 		resp.Data["name"] != registerData["name"] ||
-		!reflect.DeepEqual(resp.Data["policies"], registerData["policies"]) {
+		!reflect.DeepEqual(resp.Data["policies"], strutil.RemoveDuplicates(registerData["policies"].([]string), false)) {
 		t.Fatalf("bad: entity response")
 	}
 
@@ -900,7 +991,7 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 	var resp *logical.Response
 
 	ctx := namespace.RootContext(nil)
-	is, githubAccessor, _ := testIdentityStoreWithGithubAuth(ctx, t)
+	is, githubAccessor, upAccessor, _ := testIdentityStoreWithGithubUserpassAuth(ctx, t)
 
 	registerData := map[string]interface{}{
 		"name":     "testentityname2",
@@ -920,19 +1011,7 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 
 	aliasRegisterData2 := map[string]interface{}{
 		"name":           "testaliasname2",
-		"mount_accessor": githubAccessor,
-		"metadata":       []string{"organization=hashicorp", "team=vault"},
-	}
-
-	aliasRegisterData3 := map[string]interface{}{
-		"name":           "testaliasname3",
-		"mount_accessor": githubAccessor,
-		"metadata":       []string{"organization=hashicorp", "team=vault"},
-	}
-
-	aliasRegisterData4 := map[string]interface{}{
-		"name":           "testaliasname4",
-		"mount_accessor": githubAccessor,
+		"mount_accessor": upAccessor,
 		"metadata":       []string{"organization=hashicorp", "team=vault"},
 	}
 
@@ -952,7 +1031,6 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 
 	// Set entity ID in alias registration data and register alias
 	aliasRegisterData1["entity_id"] = entityID1
-	aliasRegisterData2["entity_id"] = entityID1
 
 	aliasReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -966,13 +1044,6 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	// Register the alias
-	aliasReq.Data = aliasRegisterData2
-	resp, err = is.HandleRequest(ctx, aliasReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
 	entity1, err := is.MemDBEntityByID(entityID1, false)
 	if err != nil {
 		t.Fatal(err)
@@ -980,9 +1051,22 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 	if entity1 == nil {
 		t.Fatalf("failed to create entity: %v", err)
 	}
-	if len(entity1.Aliases) != 2 {
-		t.Fatalf("bad: number of aliases in entity; expected: 2, actual: %d", len(entity1.Aliases))
+	if len(entity1.Aliases) != 1 {
+		t.Fatalf("bad: number of aliases in entity; expected: 1, actual: %d", len(entity1.Aliases))
 	}
+
+	entity1GroupReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "group",
+		Data: map[string]interface{}{
+			"member_entity_ids": entityID1,
+		},
+	}
+	resp, err = is.HandleRequest(ctx, entity1GroupReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	entity1GroupID := resp.Data["id"].(string)
 
 	registerReq.Data = registerData2
 	// Register another entity
@@ -992,29 +1076,16 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 	}
 
 	entityID2 := resp.Data["id"].(string)
-	// Set entity ID in alias registration data and register alias
-	aliasRegisterData3["entity_id"] = entityID2
-	aliasRegisterData4["entity_id"] = entityID2
 
-	aliasReq = &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "alias",
-		Data:      aliasRegisterData3,
-	}
+	aliasRegisterData2["entity_id"] = entityID2
+
+	aliasReq.Data = aliasRegisterData2
 
 	// Register the alias
 	resp, err = is.HandleRequest(ctx, aliasReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
-
-	// Register the alias
-	aliasReq.Data = aliasRegisterData4
-	resp, err = is.HandleRequest(ctx, aliasReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
 	entity2, err := is.MemDBEntityByID(entityID2, false)
 	if err != nil {
 		t.Fatal(err)
@@ -1023,9 +1094,22 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 		t.Fatalf("failed to create entity: %v", err)
 	}
 
-	if len(entity2.Aliases) != 2 {
-		t.Fatalf("bad: number of aliases in entity; expected: 2, actual: %d", len(entity2.Aliases))
+	if len(entity2.Aliases) != 1 {
+		t.Fatalf("bad: number of aliases in entity; expected: 1, actual: %d", len(entity2.Aliases))
 	}
+
+	entity2GroupReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "group",
+		Data: map[string]interface{}{
+			"member_entity_ids": entityID2,
+		},
+	}
+	resp, err = is.HandleRequest(ctx, entity2GroupReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	entity2GroupID := resp.Data["id"].(string)
 
 	mergeData := map[string]interface{}{
 		"to_entity_id":    entityID1,
@@ -1060,12 +1144,13 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	entity2Aliases := resp.Data["aliases"].([]interface{})
-	if len(entity2Aliases) != 4 {
-		t.Fatalf("bad: number of aliases in entity; expected: 4, actual: %d", len(entity2Aliases))
+	entity1Aliases := resp.Data["aliases"].([]interface{})
+	if len(entity1Aliases) != 2 {
+		t.Fatalf("bad: number of aliases in entity; expected: 2, actual: %d", len(entity1Aliases))
 	}
 
-	for _, aliasRaw := range entity2Aliases {
+	githubAliases := 0
+	for _, aliasRaw := range entity1Aliases {
 		alias := aliasRaw.(map[string]interface{})
 		aliasLookedUp, err := is.MemDBAliasByID(alias["id"].(string), false, false)
 		if err != nil {
@@ -1074,5 +1159,155 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 		if aliasLookedUp == nil {
 			t.Fatalf("index for alias id %q is not updated", alias["id"].(string))
 		}
+		if aliasLookedUp.MountAccessor == githubAccessor {
+			githubAliases += 1
+		}
+	}
+
+	// Test that only 1 alias for the githubAccessor is present in the merged entity,
+	// as the github alias on entity2 should've been skipped in the merge
+	if githubAliases != 1 {
+		t.Fatalf("Unexcepted number of github aliases in merged entity; expected: 1, actual: %d", githubAliases)
+	}
+
+	entity1Groups := resp.Data["direct_group_ids"].([]string)
+	if len(entity1Groups) != 2 {
+		t.Fatalf("bad: number of groups in entity; expected: 2, actual: %d", len(entity1Groups))
+	}
+
+	for _, group := range []string{entity1GroupID, entity2GroupID} {
+		if !strutil.StrListContains(entity1Groups, group) {
+			t.Fatalf("group id %q not found in merged entity direct groups %q", group, entity1Groups)
+		}
+
+		groupLookedUp, err := is.MemDBGroupByID(group, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		expectedEntityIDs := []string{entity1.ID}
+		if !strutil.EquivalentSlices(groupLookedUp.MemberEntityIDs, expectedEntityIDs) {
+			t.Fatalf("group id %q should contain %q but contains %q", group, expectedEntityIDs, groupLookedUp.MemberEntityIDs)
+		}
+	}
+}
+
+func TestIdentityStore_MergeEntitiesByID_DuplicateFromEntityIDs(t *testing.T) {
+	var err error
+	var resp *logical.Response
+
+	ctx := namespace.RootContext(nil)
+	is, githubAccessor, _ := testIdentityStoreWithGithubAuth(ctx, t)
+
+	// Register the entity
+	registerReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "entity",
+		Data: map[string]interface{}{
+			"name":     "testentityname2",
+			"metadata": []string{"someusefulkey=someusefulvalue"},
+			"policies": []string{"testPolicy1", "testPolicy1", "testPolicy2"},
+		},
+	}
+
+	resp, err = is.HandleRequest(ctx, registerReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	entityID1 := resp.Data["id"].(string)
+	entity1, err := is.MemDBEntityByID(entityID1, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entity1 == nil {
+		t.Fatalf("failed to create entity: %v", err)
+	}
+
+	// Register another entity
+	registerReq.Data = map[string]interface{}{
+		"name":     "testentityname",
+		"metadata": []string{"someusefulkey=someusefulvalue"},
+	}
+
+	resp, err = is.HandleRequest(ctx, registerReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	entityID2 := resp.Data["id"].(string)
+
+	aliasReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "alias",
+		Data: map[string]interface{}{
+			"name":           "testaliasname1",
+			"mount_accessor": githubAccessor,
+			"metadata":       []string{"organization=hashicorp", "team=vault"},
+			"entity_id":      entityID2,
+			"policies":       []string{"testPolicy1", "testPolicy1", "testPolicy2"},
+		},
+	}
+
+	// Register the alias
+	resp, err = is.HandleRequest(ctx, aliasReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	entity2, err := is.MemDBEntityByID(entityID2, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entity2 == nil {
+		t.Fatalf("failed to create entity: %v", err)
+	}
+	if len(entity2.Aliases) != 1 {
+		t.Fatalf("bad: number of aliases in entity; expected: 1, actual: %d", len(entity2.Aliases))
+	}
+
+	mergeReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "entity/merge",
+		Data: map[string]interface{}{
+			"to_entity_id":    entityID1,
+			"from_entity_ids": []string{entityID2, entityID2},
+		},
+	}
+
+	resp, err = is.HandleRequest(ctx, mergeReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	entityReq := &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "entity/id/" + entityID2,
+	}
+	resp, err = is.HandleRequest(ctx, entityReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if resp != nil {
+		t.Fatalf("entity should have been deleted")
+	}
+
+	entityReq.Path = "entity/id/" + entityID1
+	resp, err = is.HandleRequest(ctx, entityReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	entity1Lookup, err := is.MemDBEntityByID(entityID1, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entity1Lookup == nil {
+		t.Fatalf("failed to create entity: %v", err)
+	}
+
+	if len(entity1Lookup.Aliases) != 1 {
+		t.Fatalf("bad: number of aliases in entity; expected: 1, actual: %d", len(entity1Lookup.Aliases))
+	}
+
+	if len(entity1Lookup.Policies) != 2 {
+		t.Fatalf("invalid number of entity policies; expected: 2, actualL: %d", len(entity1Lookup.Policies))
 	}
 }

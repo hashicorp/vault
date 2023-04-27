@@ -1,17 +1,14 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Route from '@ember/routing/route';
 
 export default Route.extend({
-  renderTemplate() {
-    let { targetName } = this.router.currentState.routerJs.activeTransition;
-    let isCallback =
-      targetName === 'vault.cluster.oidc-callback' || targetName === 'vault.cluster.oidc-callback-namespace';
-    if (isCallback) {
-      this.render('vault/cluster/oidc-callback', {
-        into: 'application',
-        outlet: 'main',
-      });
-    } else {
-      this._super(...arguments);
-    }
+  setupController(controller) {
+    this._super(...arguments);
+    const targetRoute = location.pathname || '';
+    controller.set('isCallback', targetRoute.includes('oidc/callback'));
   },
 });

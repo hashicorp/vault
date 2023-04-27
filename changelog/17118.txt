@@ -1,0 +1,4 @@
+```release-note:improvement
+secrets/transit: Added a parameter to encrypt/decrypt batch operations to allow the caller to
+override the HTTP response code in case of partial user-input failures.
+```

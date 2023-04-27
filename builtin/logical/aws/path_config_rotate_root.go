@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package aws
 
 import (
@@ -6,16 +9,26 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathConfigRotateRoot(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/rotate-root",
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathConfigRotateRootUpdate,
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "root-iam-credentials",
+			OperationVerb:   "rotate",
+		},
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback:                    b.pathConfigRotateRootUpdate,
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
 		},
 
 		HelpSynopsis:    pathConfigRotateRootHelpSyn,
@@ -45,7 +58,7 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 	}
 	var config rootConfig
 	if err := rawRootConfig.DecodeJSON(&config); err != nil {
-		return nil, errwrap.Wrapf("error reading root configuration: {{err}}", err)
+		return nil, fmt.Errorf("error reading root configuration: %w", err)
 	}
 
 	if config.AccessKey == "" || config.SecretKey == "" {
@@ -53,9 +66,9 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 	}
 
 	var getUserInput iam.GetUserInput // empty input means get current user
-	getUserRes, err := client.GetUser(&getUserInput)
+	getUserRes, err := client.GetUserWithContext(ctx, &getUserInput)
 	if err != nil {
-		return nil, errwrap.Wrapf("error calling GetUser: {{err}}", err)
+		return nil, fmt.Errorf("error calling GetUser: %w", err)
 	}
 	if getUserRes == nil {
 		return nil, fmt.Errorf("nil response from GetUser")
@@ -70,9 +83,9 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 	createAccessKeyInput := iam.CreateAccessKeyInput{
 		UserName: getUserRes.User.UserName,
 	}
-	createAccessKeyRes, err := client.CreateAccessKey(&createAccessKeyInput)
+	createAccessKeyRes, err := client.CreateAccessKeyWithContext(ctx, &createAccessKeyInput)
 	if err != nil {
-		return nil, errwrap.Wrapf("error calling CreateAccessKey: {{err}}", err)
+		return nil, fmt.Errorf("error calling CreateAccessKey: %w", err)
 	}
 	if createAccessKeyRes.AccessKey == nil {
 		return nil, fmt.Errorf("nil response from CreateAccessKey")
@@ -88,10 +101,10 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 
 	newEntry, err := logical.StorageEntryJSON("config/root", config)
 	if err != nil {
-		return nil, errwrap.Wrapf("error generating new config/root JSON: {{err}}", err)
+		return nil, fmt.Errorf("error generating new config/root JSON: %w", err)
 	}
 	if err := req.Storage.Put(ctx, newEntry); err != nil {
-		return nil, errwrap.Wrapf("error saving new config/root: {{err}}", err)
+		return nil, fmt.Errorf("error saving new config/root: %w", err)
 	}
 
 	b.iamClient = nil
@@ -101,9 +114,9 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 		AccessKeyId: aws.String(oldAccessKey),
 		UserName:    getUserRes.User.UserName,
 	}
-	_, err = client.DeleteAccessKey(&deleteAccessKeyInput)
+	_, err = client.DeleteAccessKeyWithContext(ctx, &deleteAccessKeyInput)
 	if err != nil {
-		return nil, errwrap.Wrapf("error deleting old access key: {{err}}", err)
+		return nil, fmt.Errorf("error deleting old access key: %w", err)
 	}
 
 	return &logical.Response{

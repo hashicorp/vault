@@ -1,26 +1,28 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+import Model, { attr } from '@ember-data/model';
 import { alias } from '@ember/object/computed';
 import { computed } from '@ember/object';
-import DS from 'ember-data';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
-let { attr } = DS;
-
-export default DS.Model.extend({
+export default Model.extend({
   name: attr('string'),
   policy: attr('string'),
-  policyType: computed(function() {
+  policyType: computed('constructor.modelName', function () {
     return this.constructor.modelName.split('/')[1];
   }),
-
   updatePath: lazyCapabilities(apiPath`sys/policies/${'policyType'}/${'id'}`, 'id', 'policyType'),
   canDelete: alias('updatePath.canDelete'),
   canEdit: alias('updatePath.canUpdate'),
   canRead: alias('updatePath.canRead'),
-  format: computed('policy', function() {
-    let policy = this.get('policy');
+  format: computed('policy', function () {
+    const policy = this.policy;
     let isJSON;
     try {
-      let parsed = JSON.parse(policy);
+      const parsed = JSON.parse(policy);
       if (parsed) {
         isJSON = true;
       }

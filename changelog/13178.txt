@@ -1,0 +1,3 @@
+```release-note:improvement
+storage/raft: Set InitialMmapSize to 100GB on 64bit architectures
+```

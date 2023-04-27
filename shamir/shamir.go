@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package shamir
 
 import (
@@ -6,8 +9,6 @@ import (
 	"fmt"
 	mathrand "math/rand"
 	"time"
-
-	"github.com/hashicorp/errwrap"
 )
 
 const (
@@ -88,57 +89,40 @@ func div(a, b uint8) uint8 {
 		panic("divide by zero")
 	}
 
-	var goodVal, zero uint8
-	log_a := logTable[a]
-	log_b := logTable[b]
-	diff := (int(log_a) - int(log_b)) % 255
-	if diff < 0 {
-		diff += 255
-	}
-
-	ret := expTable[diff]
+	ret := int(mult(a, inverse(b)))
 
 	// Ensure we return zero if a is zero but aren't subject to timing attacks
-	goodVal = ret
+	ret = subtle.ConstantTimeSelect(subtle.ConstantTimeByteEq(a, 0), 0, ret)
+	return uint8(ret)
+}
 
-	if subtle.ConstantTimeByteEq(a, 0) == 1 {
-		ret = zero
-	} else {
-		ret = goodVal
-	}
+// inverse calculates the inverse of a number in GF(2^8)
+func inverse(a uint8) uint8 {
+	b := mult(a, a)
+	c := mult(a, b)
+	b = mult(c, c)
+	b = mult(b, b)
+	c = mult(b, c)
+	b = mult(b, b)
+	b = mult(b, b)
+	b = mult(b, c)
+	b = mult(b, b)
+	b = mult(a, b)
 
-	return ret
+	return mult(b, b)
 }
 
 // mult multiplies two numbers in GF(2^8)
 func mult(a, b uint8) (out uint8) {
-	var goodVal, zero uint8
-	log_a := logTable[a]
-	log_b := logTable[b]
-	sum := (int(log_a) + int(log_b)) % 255
+	var r uint8 = 0
+	var i uint8 = 8
 
-	ret := expTable[sum]
-
-	// Ensure we return zero if either a or b are zero but aren't subject to
-	// timing attacks
-	goodVal = ret
-
-	if subtle.ConstantTimeByteEq(a, 0) == 1 {
-		ret = zero
-	} else {
-		ret = goodVal
+	for i > 0 {
+		i--
+		r = (-(b >> i & 1) & a) ^ (-(r >> 7) & 0x1B) ^ (r + r)
 	}
 
-	if subtle.ConstantTimeByteEq(b, 0) == 1 {
-		ret = zero
-	} else {
-		// This operation does not do anything logically useful. It
-		// only ensures a constant number of assignments to thwart
-		// timing attacks.
-		goodVal = zero
-	}
-
-	return ret
+	return r
 }
 
 // add combines two numbers in GF(2^8)
@@ -190,7 +174,7 @@ func Split(secret []byte, parts, threshold int) ([][]byte, error) {
 	for idx, val := range secret {
 		p, err := makePolynomial(val, uint8(threshold-1))
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to generate polynomial: {{err}}", err)
+			return nil, fmt.Errorf("failed to generate polynomial: %w", err)
 		}
 
 		// Generate a `parts` number of (x,y) pairs

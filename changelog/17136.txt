@@ -1,0 +1,5 @@
+```release-note:improvement
+auth/cert: Operators can now specify a CRL distribution point URL, in which
+case the cert auth engine will fetch and use the CRL from that location
+rather than needing to push CRLs directly to auth/cert.
+```

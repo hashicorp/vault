@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix OIDC callback to accept namespace flag in different formats
+```

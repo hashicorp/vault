@@ -1,0 +1,3 @@
+```release-note:improvement
+agent/cache: tolerate partial restore failure from persistent cache
+```

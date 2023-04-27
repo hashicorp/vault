@@ -1,0 +1,3 @@
+```release-note:bug
+secret/pki: Do not fail validation with a legacy key_bits default value and key_type=any when signing CSRs
+```

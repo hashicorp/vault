@@ -1,0 +1,117 @@
+<PageHeader as |p|>
+  <p.top>
+    <KeyValueHeader
+      @baseKey={{hash display=this.model.id id=this.model.idForNav}}
+      @path="vault.cluster.secrets.backend.list"
+      @mode={{this.mode}}
+      @root={{this.root}}
+      @showCurrent={{true}}
+    />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-secret-header="true">
+      {{#if (eq this.mode "create")}}
+        Create Role
+      {{else if (eq this.mode "edit")}}
+        Edit Role
+      {{else}}
+        Role
+        <code>{{this.model.id}}</code>
+      {{/if}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+{{#if (eq this.mode "show")}}
+  <Toolbar>
+    <ToolbarActions>
+      {{#if this.capabilities.canDelete}}
+        <ConfirmAction
+          @buttonClasses="toolbar-link"
+          @onConfirmAction={{action "delete"}}
+          @confirmTitle="Are you sure?"
+          @confirmMessage="Deleting this role means that you’ll need to recreate it and reassign any existing transformations to use it again."
+          @confirmButtonText="Delete"
+          data-test-transformation-role-delete
+        >
+          Delete role
+        </ConfirmAction>
+        <div class="toolbar-separator"></div>
+      {{/if}}
+      {{#if this.capabilities.canUpdate}}
+        <ToolbarSecretLink
+          @secret={{concat this.model.idPrefix this.model.id}}
+          @mode="edit"
+          data-test-edit-link={{true}}
+          @replace={{true}}
+        >
+          Edit role
+        </ToolbarSecretLink>
+      {{/if}}
+    </ToolbarActions>
+  </Toolbar>
+{{/if}}
+
+{{#if (or (eq this.mode "edit") (eq this.mode "create"))}}
+  <form onsubmit={{action "createOrUpdate" this.mode}}>
+    <div class="box is-sideless is-fullwidth is-marginless">
+      <MessageError @model={{this.model}} />
+      <NamespaceReminder @mode={{this.mode}} @noun="Transform role" />
+      {{#each this.model.attrs as |attr|}}
+        {{#if (and (eq this.mode "edit") attr.options.readOnly)}}
+          <ReadonlyFormField @attr={{attr}} @value={{get this.model attr.name}} />
+        {{else}}
+          <FormField data-test-field @attr={{attr}} @model={{this.model}} />
+        {{/if}}
+      {{/each}}
+    </div>
+    <div class="field is-grouped-split box is-fullwidth is-bottomless">
+      <div class="control">
+        <button
+          type="submit"
+          disabled={{this.buttonDisabled}}
+          class="button is-primary"
+          data-test-role-transform-create={{true}}
+        >
+          {{#if (eq this.mode "create")}}
+            Create role
+          {{else if (eq this.mode "edit")}}
+            Save
+          {{/if}}
+        </button>
+        {{#if (eq this.mode "create")}}
+          <LinkTo @route={{"vault.cluster.secrets.backend.list-root"}} @query={{hash tab="role"}} class="button">
+            Cancel
+          </LinkTo>
+        {{else if (eq this.mode "edit")}}
+          <LinkTo @route="vault.cluster.secrets.backend.show" @model={{concat "role/" this.model.id}} class="button">
+            Cancel
+          </LinkTo>
+        {{/if}}
+      </div>
+    </div>
+  </form>
+{{else}}
+  <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+    {{#each this.model.attrs as |attr|}}
+      {{#if (eq attr.type "object")}}
+        <InfoTableRow
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{stringify (get this.model attr.name)}}
+        />
+      {{else if (eq attr.type "array")}}
+        <InfoTableRow
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{get this.model attr.name}}
+          @type={{attr.type}}
+          @isLink={{eq attr.name "transformations"}}
+        />
+      {{else}}
+        <InfoTableRow
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{get this.model attr.name}}
+        />
+      {{/if}}
+    {{/each}}
+  </div>
+{{/if}}

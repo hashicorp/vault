@@ -1,10 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+import Model, { hasMany, belongsTo, attr } from '@ember-data/model';
 import { alias } from '@ember/object/computed';
-import DS from 'ember-data';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
-const { attr, belongsTo, hasMany } = DS;
-
-export default DS.Model.extend({
+export default Model.extend({
   approved: attr('boolean'),
   requestPath: attr('string'),
   requestEntity: belongsTo('identity/entity', { async: false }),

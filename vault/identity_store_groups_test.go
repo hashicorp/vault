@@ -1,6 +1,10 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
+	"fmt"
 	"reflect"
 	"sort"
 	"strings"
@@ -9,8 +13,127 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
+
+func TestIdentityStore_Groups_AddByNameEntityUpdate(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+
+	// Create an entity and get its ID
+	entityRegisterReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "entity",
+	}
+	resp, err := c.identityStore.HandleRequest(ctx, entityRegisterReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v, err: %v", resp, err)
+	}
+	entityID := resp.Data["id"].(string)
+
+	// Create a group containing the entity
+	groupName := "group-name"
+	expectedMemberEntityIDs := []string{entityID}
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name":              groupName,
+			"member_entity_ids": expectedMemberEntityIDs,
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	// Remove the entity from the group
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name":              groupName,
+			"member_entity_ids": []string{},
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	// Make sure the member no longer thinks it's in the group
+	entityIDReq := &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "entity/id/" + entityID,
+	}
+	resp, err = c.identityStore.HandleRequest(ctx, entityIDReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v, err: %v", resp, err)
+	}
+	expectedGroupIDs := []string{}
+	actualGroupIDs := resp.Data["direct_group_ids"]
+	if !reflect.DeepEqual(expectedGroupIDs, actualGroupIDs) {
+		t.Fatalf("bad: direct_group_ids:\nexpected: %#v\nactual: %#v", expectedGroupIDs, actualGroupIDs)
+	}
+}
+
+func TestIdentityStore_FixOverwrittenMemberGroupIDs(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+
+	// Create a group
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name": "group1",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	groupID := resp.Data["id"].(string)
+
+	expectedMemberGroupIDs := []string{groupID}
+
+	// Create another group and add the above created group as its member
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name":             "group2",
+			"policies":         "default",
+			"member_group_ids": expectedMemberGroupIDs,
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	// Create another group and add the above created group as its member
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "group/name/group2",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"policies": "default,another-policy",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	// Read the group and check if the member_group_ids is intact
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "group/name/group2",
+		Operation: logical.ReadOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	if !reflect.DeepEqual(resp.Data["member_group_ids"], expectedMemberGroupIDs) {
+		t.Fatalf("bad: member_group_ids; expected: %#v\n, actual: %#v", expectedMemberGroupIDs, resp.Data["member_group_ids"])
+	}
+}
 
 func TestIdentityStore_GroupEntityMembershipUpgrade(t *testing.T) {
 	c, keys, rootToken := TestCoreUnsealed(t)
@@ -40,8 +163,10 @@ func TestIdentityStore_GroupEntityMembershipUpgrade(t *testing.T) {
 	// Manually add an invalid entity as the group's member
 	group.MemberEntityIDs = []string{"invalidentityid"}
 
+	ctx := namespace.RootContext(nil)
+
 	// Persist the group
-	err = c.identityStore.UpsertGroupInTxn(txn, group, true)
+	err = c.identityStore.UpsertGroupInTxn(ctx, txn, group, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -436,7 +561,7 @@ func TestIdentityStore_MemDBGroupIndexes(t *testing.T) {
 		ParentGroupIDs:  []string{"testparentgroupid1", "testparentgroupid2"},
 		MemberEntityIDs: []string{"testentityid1", "testentityid2"},
 		Policies:        []string{"testpolicy1", "testpolicy2"},
-		BucketKeyHash:   i.groupPacker.BucketKeyHashByItemID("testgroupid"),
+		BucketKey:       i.groupPacker.BucketKey("testgroupid"),
 	}
 
 	// Insert it into memdb
@@ -459,7 +584,7 @@ func TestIdentityStore_MemDBGroupIndexes(t *testing.T) {
 		ParentGroupIDs:  []string{"testparentgroupid2", "testparentgroupid3"},
 		MemberEntityIDs: []string{"testentityid2", "testentityid3"},
 		Policies:        []string{"testpolicy2", "testpolicy3"},
-		BucketKeyHash:   i.groupPacker.BucketKeyHashByItemID("testgroupid2"),
+		BucketKey:       i.groupPacker.BucketKey("testgroupid2"),
 	}
 
 	// Insert it into memdb
@@ -556,7 +681,7 @@ func TestIdentityStore_GroupsCreateUpdate(t *testing.T) {
 
 	// Create a group with the above created 2 entities as its members
 	groupData := map[string]interface{}{
-		"policies":          "testpolicy1,testpolicy2",
+		"policies":          "testpolicy1,testPolicy1 , testpolicy2",
 		"metadata":          []string{"testkey1=testvalue1", "testkey2=testvalue2"},
 		"member_entity_ids": []string{entityID1, entityID2},
 	}
@@ -616,6 +741,7 @@ func TestIdentityStore_GroupsCreateUpdate(t *testing.T) {
 	expectedData["last_update_time"] = resp.Data["last_update_time"]
 	expectedData["modify_index"] = resp.Data["modify_index"]
 	expectedData["alias"] = resp.Data["alias"]
+	expectedData["namespace_id"] = "root"
 
 	if diff := deep.Equal(expectedData, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -645,6 +771,94 @@ func TestIdentityStore_GroupsCreateUpdate(t *testing.T) {
 	expectedData["metadata"] = map[string]string{
 		"updatedkey": "updatedvalue",
 	}
+	expectedData["last_update_time"] = resp.Data["last_update_time"]
+	expectedData["modify_index"] = resp.Data["modify_index"]
+	if !reflect.DeepEqual(expectedData, resp.Data) {
+		t.Fatalf("bad: group data; expected: %#v\n actual: %#v\n", expectedData, resp.Data)
+	}
+}
+
+func TestIdentityStore_GroupsCreateUpdateDuplicatePolicy(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	ctx := namespace.RootContext(nil)
+	is, _, _ := testIdentityStoreWithGithubAuth(ctx, t)
+
+	// Create a group with the above created 2 entities as its members
+	groupData := map[string]interface{}{
+		"policies": []string{"testpolicy1", "testpolicy2"},
+		"metadata": []string{"testkey1=testvalue1", "testkey2=testvalue2"},
+	}
+
+	// Create a group and get its ID
+	groupReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "group",
+		Data:      groupData,
+	}
+
+	// Create a group with the above 2 groups as its members
+	resp, err = is.HandleRequest(ctx, groupReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v, err: %v", resp, err)
+	}
+	groupID := resp.Data["id"].(string)
+
+	// Read the group using its iD and check if all the fields are properly
+	// set
+	groupReq = &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "group/id/" + groupID,
+	}
+	resp, err = is.HandleRequest(ctx, groupReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v, err: %v", resp, err)
+	}
+
+	expectedData := map[string]interface{}{
+		"policies": []string{"testpolicy1", "testpolicy2"},
+		"metadata": map[string]string{
+			"testkey1": "testvalue1",
+			"testkey2": "testvalue2",
+		},
+		"parent_group_ids": []string(nil),
+	}
+	expectedData["id"] = resp.Data["id"]
+	expectedData["type"] = resp.Data["type"]
+	expectedData["name"] = resp.Data["name"]
+	expectedData["creation_time"] = resp.Data["creation_time"]
+	expectedData["last_update_time"] = resp.Data["last_update_time"]
+	expectedData["modify_index"] = resp.Data["modify_index"]
+	expectedData["alias"] = resp.Data["alias"]
+	expectedData["namespace_id"] = "root"
+	expectedData["member_group_ids"] = resp.Data["member_group_ids"]
+	expectedData["member_entity_ids"] = resp.Data["member_entity_ids"]
+
+	if diff := deep.Equal(expectedData, resp.Data); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Update the policies and metadata in the group
+	groupReq.Operation = logical.UpdateOperation
+	groupReq.Data = groupData
+
+	// Update by setting ID in the param
+	groupData["id"] = groupID
+	groupData["policies"] = []string{"updatedpolicy1", "updatedpolicy2", "updatedpolicy2"}
+	resp, err = is.HandleRequest(ctx, groupReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v, err: %v", resp, err)
+	}
+
+	// Check if updates are reflected
+	groupReq.Operation = logical.ReadOperation
+	resp, err = is.HandleRequest(ctx, groupReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v, err: %v", resp, err)
+	}
+
+	expectedData["policies"] = []string{"updatedpolicy1", "updatedpolicy2"}
 	expectedData["last_update_time"] = resp.Data["last_update_time"]
 	expectedData["modify_index"] = resp.Data["modify_index"]
 	if !reflect.DeepEqual(expectedData, resp.Data) {
@@ -738,6 +952,7 @@ func TestIdentityStore_GroupsCRUD_ByID(t *testing.T) {
 	expectedData["last_update_time"] = resp.Data["last_update_time"]
 	expectedData["modify_index"] = resp.Data["modify_index"]
 	expectedData["alias"] = resp.Data["alias"]
+	expectedData["namespace_id"] = "root"
 
 	if diff := deep.Equal(expectedData, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -871,11 +1086,12 @@ func TestIdentityStore_GroupMultiCase(t *testing.T) {
 
 /*
 Test groups hierarchy:
-                ------- eng(entityID3) -------
-                |                            |
-         ----- vault -----        -- ops(entityID2) --
-         |               |        |                  |
-   kube(entityID1)    identity    build            deploy
+
+	             ------- eng(entityID3) -------
+	             |                            |
+	      ----- vault -----        -- ops(entityID2) --
+	      |               |        |                  |
+	kube(entityID1)    identity    build            deploy
 */
 func TestIdentityStore_GroupHierarchyCases(t *testing.T) {
 	var resp *logical.Response
@@ -1041,7 +1257,7 @@ func TestIdentityStore_GroupHierarchyCases(t *testing.T) {
 	groupUpdateReq.Data = kubeGroupData
 	kubeGroupData["member_group_ids"] = []string{engGroupID}
 	resp, err = is.HandleRequest(ctx, groupUpdateReq)
-	if err == nil {
+	if err != nil || resp == nil || !resp.IsError() {
 		t.Fatalf("expected an error response")
 	}
 
@@ -1178,5 +1394,93 @@ func TestIdentityStore_GroupHierarchyCases(t *testing.T) {
 	}
 	if len(inheritedGroups) != 0 {
 		t.Fatalf("bad: length of inheritedGroups; expected: 0, actual: %d", len(inheritedGroups))
+	}
+}
+
+func TestIdentityStore_GroupCycleDetection(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+
+	group1Name := "group1"
+	group2Name := "group2"
+	group3Name := "group3"
+
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name": group1Name,
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("failed to create group %q, err: %v, resp: %#v", group1Name, err, resp)
+	}
+
+	group1Id := resp.Data["id"].(string)
+
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name": group2Name,
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("failed to create group %q, err: %v, resp: %#v", group2Name, err, resp)
+	}
+
+	group2Id := resp.Data["id"].(string)
+
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name": group3Name,
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("failed to create group %q, err: %v, resp: %#v", group3Name, err, resp)
+	}
+
+	group3Id := resp.Data["id"].(string)
+
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name":             group1Name,
+			"member_group_ids": []string{},
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("failed to update group %q, err: %v, resp: %#v", group1Name, err, resp)
+	}
+
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name":             group2Name,
+			"member_group_ids": []string{group3Id},
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("failed to update group %q, err: %v, resp: %#v", group2Name, err, resp)
+	}
+
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name":             group3Name,
+			"member_group_ids": []string{group1Id, group2Id},
+		},
+	})
+
+	if err != nil || resp == nil {
+		t.Fatalf("unexpected group update error for group %q, err: %v, resp: %#v", group3Name, err, resp)
+	}
+	if !resp.IsError() || resp.Error().Error() != fmt.Sprintf("%s %q", errCycleDetectedPrefix, group2Id) {
+		t.Fatalf("expected update to group %q to fail due to cycle, resp: %#v", group3Id, resp)
 	}
 }

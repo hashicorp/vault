@@ -1,3 +1,63 @@
 <form onsubmit={{action "doSubmit"}}>
-  {{partial (concat "partials/tools/" selectedAction)}}
+  {{#if (eq this.selectedAction "hash")}}
+    {{! template-lint-disable no-passed-in-event-handlers }}
+    <ToolHash
+      @onClear={{action "onClear"}}
+      @sum={{this.sum}}
+      @algorithm={{this.algorithm}}
+      @errors={{this.errors}}
+      @format={{this.format}}
+      @input={{this.input}}
+    />
+    {{! template-lint-enable no-passed-in-event-handlers }}
+  {{else if (eq this.selectedAction "random")}}
+    <ToolRandom
+      @onClear={{action "onClear"}}
+      @random_bytes={{this.random_bytes}}
+      @errors={{this.errors}}
+      @format={{this.format}}
+      @bytes={{this.bytes}}
+    />
+  {{else if (eq this.selectedAction "rewrap")}}
+    <ToolRewrap
+      @onClear={{action "onClear"}}
+      @rewrap_token={{this.rewrap_token}}
+      @selectedAction={{this.selectedAction}}
+      @errors={{this.errors}}
+      @token={{this.token}}
+      @bytes={{this.bytes}}
+    />
+  {{else if (eq this.selectedAction "unwrap")}}
+    <ToolUnwrap
+      @onClear={{action "onClear"}}
+      @unwrap_data={{this.unwrap_data}}
+      @unwrapActiveTab={{this.unwrapActiveTab}}
+      @details={{this.details}}
+      @errors={{this.errors}}
+      @token={{this.token}}
+    />
+  {{else if (eq this.selectedAction "lookup")}}
+    <ToolLookup
+      @creation_time={{this.creation_time}}
+      @creation_ttl={{this.creation_ttl}}
+      @creation_path={{this.creation_path}}
+      @expirationDate={{this.expirationDate}}
+      @selectedAction={{this.selectedAction}}
+      @token={{this.token}}
+      @onClear={{action "onClear"}}
+      @errors={{this.errors}}
+    />
+  {{else if (eq this.selectedAction "wrap")}}
+    <ToolWrap
+      @token={{this.token}}
+      @selectedAction={{this.selectedAction}}
+      @onClear={{action "onClear"}}
+      @codemirrorUpdated={{action "codemirrorUpdated"}}
+      @updateTtl={{action "updateTtl"}}
+      @buttonDisabled={{this.buttonDisabled}}
+      @errors={{this.errors}}
+    />
+  {{else}}
+    <EmptyState @title="Tool not available" />
+  {{/if}}
 </form>

@@ -1,8 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import pathToTree from 'vault/lib/path-to-tree';
 
-module('Unit | Lib | path to tree', function() {
-  let tests = [
+module('Unit | Lib | path to tree', function () {
+  const tests = [
     [
       'basic',
       ['one', 'one/two', 'one/two/three/four/five'],
@@ -49,11 +54,59 @@ module('Unit | Lib | path to tree', function() {
         },
       },
     ],
+    [
+      'leaves with nested number and shared prefix',
+      ['ns1', 'ns1a', 'ns1a/99999/five9s', 'ns1a/999/ns3', 'ns1a/9999/ns3'],
+      {
+        ns1: null,
+        ns1a: {
+          999: {
+            ns3: null,
+          },
+          9999: {
+            ns3: null,
+          },
+          99999: {
+            five9s: null,
+          },
+        },
+      },
+    ],
+    [
+      'sorting lexicographically',
+      [
+        '99',
+        'bat',
+        'bat/bird',
+        'animal/flying/birds',
+        'animal/walking/dogs',
+        'animal/walking/cats',
+        '1/thing',
+      ],
+      {
+        1: {
+          thing: null,
+        },
+        99: null,
+        animal: {
+          flying: {
+            birds: null,
+          },
+          walking: {
+            cats: null,
+            dogs: null,
+          },
+        },
+        bat: {
+          bird: null,
+        },
+      },
+    ],
   ];
 
-  tests.forEach(function([name, input, expected]) {
-    test(`pathToTree: ${name}`, function(assert) {
-      let output = pathToTree(input);
+  tests.forEach(function ([name, input, expected]) {
+    test(`pathToTree: ${name}`, function (assert) {
+      const output = pathToTree(input);
       assert.deepEqual(output, expected, 'has expected data');
     });
   });

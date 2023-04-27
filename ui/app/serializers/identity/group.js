@@ -1,7 +1,12 @@
-import DS from 'ember-data';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+import { EmbeddedRecordsMixin } from '@ember-data/serializer/rest';
 import IdentitySerializer from './_base';
 
-export default IdentitySerializer.extend(DS.EmbeddedRecordsMixin, {
+export default IdentitySerializer.extend(EmbeddedRecordsMixin, {
   attrs: {
     alias: { embedded: 'always' },
   },
@@ -14,7 +19,7 @@ export default IdentitySerializer.extend(DS.EmbeddedRecordsMixin, {
   },
 
   serialize() {
-    let json = this._super(...arguments);
+    const json = this._super(...arguments);
     delete json.alias;
     if (json.type === 'external') {
       delete json.member_entity_ids;

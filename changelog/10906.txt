@@ -1,0 +1,3 @@
+```release-note:feature
+secrets/database/cassandra: Add ability to customize dynamic usernames
+```

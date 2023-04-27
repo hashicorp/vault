@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 
@@ -5,8 +10,8 @@ export default Component.extend({
   threshold: null,
   progress: null,
   classNames: ['shamir-progress'],
-  progressDecimal: computed('threshold', 'progress', function() {
-    const { threshold, progress } = this.getProperties('threshold', 'progress');
+  progressDecimal: computed('threshold', 'progress', function () {
+    const { threshold, progress } = this;
     if (threshold && progress) {
       return progress / threshold;
     }

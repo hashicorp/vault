@@ -1,4 +1,11 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { helper as buildHelper } from '@ember/component/helper';
+import { pluralize } from 'ember-inflector';
+import { capitalize } from '@ember/string';
 
 const TABS_FOR_SETTINGS = {
   aws: [
@@ -7,12 +14,12 @@ const TABS_FOR_SETTINGS = {
       routeParams: ['vault.cluster.settings.auth.configure.section', 'client'],
     },
     {
-      label: 'Identity Whitelist Tidy',
-      routeParams: ['vault.cluster.settings.auth.configure.section', 'identity-whitelist'],
+      label: 'Identity Allow List Tidy',
+      routeParams: ['vault.cluster.settings.auth.configure.section', 'identity-accesslist'],
     },
     {
-      label: 'Role Tag Blacklist Tidy',
-      routeParams: ['vault.cluster.settings.auth.configure.section', 'roletag-blacklist'],
+      label: 'Role Tag Deny List Tidy',
+      routeParams: ['vault.cluster.settings.auth.configure.section', 'roletag-denylist'],
     },
   ],
   azure: [
@@ -34,6 +41,12 @@ const TABS_FOR_SETTINGS = {
     },
   ],
   jwt: [
+    {
+      label: 'Configuration',
+      routeParams: ['vault.cluster.settings.auth.configure.section', 'configuration'],
+    },
+  ],
+  oidc: [
     {
       label: 'Configuration',
       routeParams: ['vault.cluster.settings.auth.configure.section', 'configuration'],
@@ -67,19 +80,32 @@ const TABS_FOR_SETTINGS = {
 
 const TABS_FOR_SHOW = {};
 
-export function tabsForAuthSection([methodType, sectionType = 'authSettings']) {
+export function tabsForAuthSection([model, sectionType = 'authSettings', paths]) {
   let tabs;
-
   if (sectionType === 'authSettings') {
-    tabs = (TABS_FOR_SETTINGS[methodType] || []).slice();
+    tabs = (TABS_FOR_SETTINGS[model.type] || []).slice();
     tabs.push({
       label: 'Method Options',
       routeParams: ['vault.cluster.settings.auth.configure.section', 'options'],
     });
     return tabs;
   }
+  if (paths || model.paths) {
+    if (model.paths) {
+      paths = model.paths.paths.filter((path) => path.navigation);
+    }
 
-  tabs = (TABS_FOR_SHOW[methodType] || []).slice();
+    // TODO: we're unsure if we actually need compact here
+    // but are leaving it just in case OpenAPI ever returns an empty thing
+    tabs = paths.compact().map((path) => {
+      return {
+        label: capitalize(pluralize(path.itemName)),
+        routeParams: ['vault.cluster.access.method.item.list', path.itemType],
+      };
+    });
+  } else {
+    tabs = (TABS_FOR_SHOW[model.type] || []).slice();
+  }
   tabs.push({
     label: 'Configuration',
     routeParams: ['vault.cluster.access.method.section', 'configuration'],

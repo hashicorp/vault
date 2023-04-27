@@ -1,11 +1,11 @@
 <div class="progress-container">
-  {{#each progressBar as |bar|}}
+  {{#each @progressBar as |bar|}}
     <div class="feature-progress-container">
       <span class="progress-bar">
-        <span class="feature-progress" style={{bar.style}} {{! template-lint-disable }}></span>
+        <span class="feature-progress" style={{sanitized-html bar.style}}></span>
       </span>
       {{#if bar.showIcon}}
-        <ICon class="feature-check {{if bar.completed 'completed-check' 'incomplete-check'}}" @glyph="check-circle-fill" @size="16" @excludeIconClass={{true}}/>
+        <Icon @name="check-circle-fill" class="feature-check {{if bar.completed 'completed-check' 'incomplete-check'}}" />
       {{/if}}
     </div>
   {{/each}}

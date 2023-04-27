@@ -1,19 +1,30 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import keys from 'vault/lib/keycodes';
-import argTokenizer from 'yargs-parser/lib/tokenize-arg-string.js';
+import argTokenizer from './arg-tokenizer';
+import { parse } from 'shell-quote';
 
 const supportedCommands = ['read', 'write', 'list', 'delete'];
-const uiCommands = ['clearall', 'clear', 'fullscreen', 'refresh'];
+const uiCommands = ['api', 'clearall', 'clear', 'fullscreen', 'refresh'];
 
-export function extractDataAndFlags(data, flags) {
+export function extractDataAndFlags(method, data, flags) {
   return data.concat(flags).reduce(
     (accumulator, val) => {
       // will be "key=value" or "-flag=value" or "foo=bar=baz"
       // split on the first =
-      let [item, value] = val.split(/=(.+)/);
+      // default to value of empty string
+      const [item, value = ''] = val.split(/=(.+)?/);
       if (item.startsWith('-')) {
         let flagName = item.replace(/^-/, '');
         if (flagName === 'wrap-ttl') {
           flagName = 'wrapTTL';
+        } else if (method === 'write') {
+          if (flagName === 'f' || flagName === '-force') {
+            flagName = 'force';
+          }
         }
         accumulator.flags[flagName] = value || true;
         return accumulator;
@@ -25,53 +36,49 @@ export function extractDataAndFlags(data, flags) {
         return accumulator;
       }
       accumulator.data[item] = value;
-
       return accumulator;
     },
     { data: {}, flags: {} }
   );
 }
 
-export function executeUICommand(command, logAndOutput, clearLog, toggleFullscreen, refreshFn) {
-  const isUICommand = uiCommands.includes(command);
+export function executeUICommand(command, logAndOutput, commandFns) {
+  const cmd = command.startsWith('api') ? 'api' : command;
+  const isUICommand = uiCommands.includes(cmd);
   if (isUICommand) {
     logAndOutput(command);
   }
-  switch (command) {
-    case 'clearall':
-      clearLog(true);
-      break;
-    case 'clear':
-      clearLog();
-      break;
-    case 'fullscreen':
-      toggleFullscreen();
-      break;
-    case 'refresh':
-      refreshFn();
-      break;
+  if (typeof commandFns[cmd] === 'function') {
+    commandFns[cmd]();
   }
-
   return isUICommand;
 }
 
 export function parseCommand(command, shouldThrow) {
-  let args = argTokenizer(command);
+  const args = argTokenizer(parse(command));
   if (args[0] === 'vault') {
     args.shift();
   }
 
-  let [method, ...rest] = args;
+  const [method, ...rest] = args;
   let path;
-  let flags = [];
-  let data = [];
+  const flags = [];
+  const data = [];
 
-  rest.forEach(arg => {
+  rest.forEach((arg) => {
     if (arg.startsWith('-')) {
       flags.push(arg);
     } else {
       if (path) {
-        data.push(arg);
+        const strippedArg = arg
+          // we'll have arg=something or arg="lol I need spaces", so need to split on the first =
+          .split(/=(.+)/)
+          // if there were quotes, there's an empty string as the last member in the array that we don't want,
+          // so filter it out
+          .filter((str) => str !== '')
+          // glue the data back together
+          .join('=');
+        data.push(strippedArg);
       } else {
         path = arg;
       }
@@ -88,7 +95,7 @@ export function parseCommand(command, shouldThrow) {
 }
 
 export function logFromResponse(response, path, method, flags) {
-  let { format, field } = flags;
+  const { format, field } = flags;
   let secret = response && (response.auth || response.data || response.wrap_info);
   if (!secret) {
     if (method === 'write') {
@@ -101,7 +108,7 @@ export function logFromResponse(response, path, method, flags) {
   }
 
   if (field) {
-    let fieldValue = secret[field];
+    const fieldValue = secret[field];
     let response;
     if (fieldValue) {
       if (format && format === 'json') {
@@ -138,8 +145,8 @@ export function logFromResponse(response, path, method, flags) {
 
 export function logFromError(error, vaultPath, method) {
   let content;
-  let { httpStatus, path } = error;
-  let verbClause = {
+  const { httpStatus, path } = error;
+  const verbClause = {
     read: 'reading from',
     write: 'writing to',
     list: 'listing',
@@ -157,7 +164,7 @@ export function logFromError(error, vaultPath, method) {
 
 export function shiftCommandIndex(keyCode, history, index) {
   let newInputValue;
-  let commandHistoryLength = history.length;
+  const commandHistoryLength = history.length;
 
   if (!commandHistoryLength) {
     return [];

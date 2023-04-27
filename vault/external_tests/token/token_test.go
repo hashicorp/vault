@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package token
 
 import (
@@ -12,11 +15,34 @@ import (
 	"github.com/hashicorp/vault/api"
 	credLdap "github.com/hashicorp/vault/builtin/credential/ldap"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
-	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/helper/testhelpers/ldap"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
+
+func TestTokenStore_CreateOrphanResponse(t *testing.T) {
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	core := cluster.Cores[0].Core
+	vault.TestWaitActive(t, core)
+	client := cluster.Cores[0].Client
+
+	secret, err := client.Auth().Token().CreateOrphan(&api.TokenCreateRequest{
+		Policies: []string{"default"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !secret.Auth.Orphan {
+		t.Fatalf("failed to set orphan as true, got: %#v", secret.Auth)
+	}
+}
 
 func TestTokenStore_TokenInvalidEntityID(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
@@ -105,13 +131,18 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	defer cleanup()
+
 	// Configure LDAP auth
 	_, err = client.Logical().Write("auth/ldap/config", map[string]interface{}{
-		"url":      "ldap://ldap.forumsys.com",
-		"userattr": "uid",
-		"userdn":   "dc=example,dc=com",
-		"groupdn":  "dc=example,dc=com",
-		"binddn":   "cn=read-only-admin,dc=example,dc=com",
+		"url":       cfg.Url,
+		"userattr":  cfg.UserAttr,
+		"userdn":    cfg.UserDN,
+		"groupdn":   cfg.GroupDN,
+		"groupattr": cfg.GroupAttr,
+		"binddn":    cfg.BindDN,
+		"bindpass":  cfg.BindPassword,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -127,7 +158,7 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 
 	// Create user in LDAP auth. We add two groups, but we should filter out
 	// the ones that don't match aliases later (we will check for this)
-	_, err = client.Logical().Write("auth/ldap/users/tesla", map[string]interface{}{
+	_, err = client.Logical().Write("auth/ldap/users/hermes conrad", map[string]interface{}{
 		"policies": "default",
 		"groups":   "testgroup1,testgroup2",
 	})
@@ -136,8 +167,8 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 	}
 
 	// Login using LDAP
-	secret, err := client.Logical().Write("auth/ldap/login/tesla", map[string]interface{}{
-		"password": "password",
+	secret, err := client.Logical().Write("auth/ldap/login/hermes conrad", map[string]interface{}{
+		"password": "hermes",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -305,8 +336,8 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 
 	// Log in and get a new token, then renew it. See issue #4829. The logic is
 	// continued after the next block.
-	secret, err = client.Logical().Write("auth/ldap/login/tesla", map[string]interface{}{
-		"password": "password",
+	secret, err = client.Logical().Write("auth/ldap/login/hermes conrad", map[string]interface{}{
+		"password": "hermes",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -316,16 +347,16 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 	// Check that the lease for the token contains only the single group; this
 	// should be true for both as one was fresh and the other was a renew
 	// (which is why we do the renew check on the 4839 token after this block)
-	secret, err = client.Logical().List("sys/raw/sys/expire/id/auth/ldap/login/tesla/")
+	secret, err = client.Logical().List("sys/raw/sys/expire/id/auth/ldap/login/hermes conrad/")
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, key := range secret.Data["keys"].([]interface{}) {
-		secret, err := client.Logical().Read("sys/raw/sys/expire/id/auth/ldap/login/tesla/" + key.(string))
+		secret, err := client.Logical().Read("sys/raw/sys/expire/id/auth/ldap/login/hermes conrad/" + key.(string))
 		if err != nil {
 			t.Fatal(err)
 		}
-		//t.Logf("%#v", *secret)
+		// t.Logf("%#v", *secret)
 		var resp logical.Response
 		if err := jsonutil.DecodeJSON([]byte(secret.Data["value"].(string)), &resp); err != nil {
 			t.Fatal(err)
@@ -557,6 +588,9 @@ func TestTokenStore_RevocationOnStartup(t *testing.T) {
 	// Fake times in the past
 	for _, lease := range leases {
 		secret, err = client.Logical().Read(leasePath + lease.(string))
+		if err != nil {
+			t.Fatal(err)
+		}
 		var entry leaseEntry
 		if err := jsonutil.DecodeJSON([]byte(secret.Data["value"].(string)), &entry); err != nil {
 			t.Fatal(err)

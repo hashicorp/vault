@@ -1,0 +1,3 @@
+```release-note:bug
+storage/raft: Fix a panic when trying to store a key > 32KB in a transaction.
+```

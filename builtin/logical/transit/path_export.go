@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package transit
 
 import (
@@ -13,9 +16,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hashicorp/vault/helper/keysutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/keysutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -27,16 +30,23 @@ const (
 func (b *backend) pathExportKeys() *framework.Path {
 	return &framework.Path{
 		Pattern: "export/" + framework.GenericNameRegex("type") + "/" + framework.GenericNameRegex("name") + framework.OptionalParamRegex("version"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "export",
+			OperationSuffix: "key|key-version",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
-			"type": &framework.FieldSchema{
+			"type": {
 				Type:        framework.TypeString,
 				Description: "Type of key to export (encryption-key, signing-key, hmac-key)",
 			},
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the key",
 			},
-			"version": &framework.FieldSchema{
+			"version": {
 				Type:        framework.TypeString,
 				Description: "Version of the key",
 			},
@@ -64,10 +74,10 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse(fmt.Sprintf("invalid export type: %s", exportType)), logical.ErrInvalidRequest
 	}
 
-	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
+	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
-	})
+	}, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}
@@ -155,17 +165,26 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 
 	case exportTypeEncryptionKey:
 		switch policy.Type {
-		case keysutil.KeyType_AES256_GCM96, keysutil.KeyType_ChaCha20_Poly1305:
+		case keysutil.KeyType_AES128_GCM96, keysutil.KeyType_AES256_GCM96, keysutil.KeyType_ChaCha20_Poly1305:
 			return strings.TrimSpace(base64.StdEncoding.EncodeToString(key.Key)), nil
 
-		case keysutil.KeyType_RSA2048, keysutil.KeyType_RSA4096:
+		case keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096:
 			return encodeRSAPrivateKey(key.RSAKey), nil
 		}
 
 	case exportTypeSigningKey:
 		switch policy.Type {
-		case keysutil.KeyType_ECDSA_P256:
-			ecKey, err := keyEntryToECPrivateKey(key, elliptic.P256())
+		case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521:
+			var curve elliptic.Curve
+			switch policy.Type {
+			case keysutil.KeyType_ECDSA_P384:
+				curve = elliptic.P384()
+			case keysutil.KeyType_ECDSA_P521:
+				curve = elliptic.P521()
+			default:
+				curve = elliptic.P256()
+			}
+			ecKey, err := keyEntryToECPrivateKey(key, curve)
 			if err != nil {
 				return "", err
 			}
@@ -174,7 +193,7 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 		case keysutil.KeyType_ED25519:
 			return strings.TrimSpace(base64.StdEncoding.EncodeToString(key.Key)), nil
 
-		case keysutil.KeyType_RSA2048, keysutil.KeyType_RSA4096:
+		case keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096:
 			return encodeRSAPrivateKey(key.RSAKey), nil
 		}
 	}

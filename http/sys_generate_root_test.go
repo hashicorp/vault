@@ -1,19 +1,30 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package http
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"reflect"
 	"testing"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pgpkeys"
-	"github.com/hashicorp/vault/helper/xor"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/sdk/helper/xor"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
+
+var tokenLength string = fmt.Sprintf("%d", vault.TokenLength+vault.TokenPrefixLength)
 
 func TestSysGenerateRootAttempt_Status(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
@@ -36,7 +47,7 @@ func TestSysGenerateRootAttempt_Status(t *testing.T) {
 		"encoded_root_token": "",
 		"pgp_fingerprint":    "",
 		"nonce":              "",
-		"otp_length":         json.Number("26"),
+		"otp_length":         json.Number(tokenLength),
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -64,7 +75,7 @@ func TestSysGenerateRootAttempt_Setup_OTP(t *testing.T) {
 		"encoded_token":      "",
 		"encoded_root_token": "",
 		"pgp_fingerprint":    "",
-		"otp_length":         json.Number("26"),
+		"otp_length":         json.Number(tokenLength),
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -89,7 +100,7 @@ func TestSysGenerateRootAttempt_Setup_OTP(t *testing.T) {
 		"encoded_root_token": "",
 		"pgp_fingerprint":    "",
 		"otp":                "",
-		"otp_length":         json.Number("26"),
+		"otp_length":         json.Number(tokenLength),
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -125,7 +136,7 @@ func TestSysGenerateRootAttempt_Setup_PGP(t *testing.T) {
 		"encoded_root_token": "",
 		"pgp_fingerprint":    "816938b8a29146fbe245dd29e7cbaf8e011db793",
 		"otp":                "",
-		"otp_length":         json.Number("26"),
+		"otp_length":         json.Number(tokenLength),
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -155,7 +166,7 @@ func TestSysGenerateRootAttempt_Cancel(t *testing.T) {
 		"encoded_token":      "",
 		"encoded_root_token": "",
 		"pgp_fingerprint":    "",
-		"otp_length":         json.Number("26"),
+		"otp_length":         json.Number(tokenLength),
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -187,7 +198,7 @@ func TestSysGenerateRootAttempt_Cancel(t *testing.T) {
 		"pgp_fingerprint":    "",
 		"nonce":              "",
 		"otp":                "",
-		"otp_length":         json.Number("26"),
+		"otp_length":         json.Number(tokenLength),
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -196,16 +207,60 @@ func TestSysGenerateRootAttempt_Cancel(t *testing.T) {
 	}
 }
 
-func TestSysGenerateRoot_badKey(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
+func enableNoopAudit(t *testing.T, token string, core *vault.Core) {
+	t.Helper()
+	auditReq := &logical.Request{
+		Operation:   logical.UpdateOperation,
+		ClientToken: token,
+		Path:        "sys/audit/noop",
+		Data: map[string]interface{}{
+			"type": "noop",
+		},
+	}
+	resp, err := core.HandleRequest(namespace.RootContext(context.Background()), auditReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.IsError() {
+		t.Fatal(err)
+	}
+}
+
+func testCoreUnsealedWithAudit(t *testing.T, records **[][]byte) (*vault.Core, [][]byte, string) {
+	conf := &vault.CoreConfig{
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
+		AuditBackends: map[string]audit.Factory{
+			"noop": corehelpers.NoopAuditFactory(records),
+		},
+	}
+	core, keys, token := vault.TestCoreUnsealedWithConfig(t, conf)
+	return core, keys, token
+}
+
+func testServerWithAudit(t *testing.T, records **[][]byte) (net.Listener, string, string, [][]byte) {
+	core, keys, token := testCoreUnsealedWithAudit(t, records)
 	ln, addr := TestServer(t, core)
-	defer ln.Close()
 	TestServerAuth(t, addr, token)
+	enableNoopAudit(t, token, core)
+	return ln, addr, token, keys
+}
+
+func TestSysGenerateRoot_badKey(t *testing.T) {
+	var records *[][]byte
+	ln, addr, token, _ := testServerWithAudit(t, &records)
+	defer ln.Close()
 
 	resp := testHttpPut(t, token, addr+"/v1/sys/generate-root/update", map[string]interface{}{
 		"key": "0123",
 	})
 	testResponseStatus(t, resp, 400)
+
+	if len(*records) < 3 {
+		// One record for enabling the noop audit device, two for generate root attempt
+		t.Fatalf("expected at least 3 audit records, got %d", len(*records))
+	}
+	t.Log(string((*records)[2]))
 }
 
 func TestSysGenerateRoot_ReAttemptUpdate(t *testing.T) {
@@ -228,10 +283,9 @@ func TestSysGenerateRoot_ReAttemptUpdate(t *testing.T) {
 }
 
 func TestSysGenerateRoot_Update_OTP(t *testing.T) {
-	core, keys, token := vault.TestCoreUnsealed(t)
-	ln, addr := TestServer(t, core)
+	var records *[][]byte
+	ln, addr, token, keys := testServerWithAudit(t, &records)
 	defer ln.Close()
-	TestServerAuth(t, addr, token)
 
 	resp := testHttpPut(t, token, addr+"/v1/sys/generate-root/attempt", map[string]interface{}{})
 	var rootGenerationStatus map[string]interface{}
@@ -316,6 +370,10 @@ func TestSysGenerateRoot_Update_OTP(t *testing.T) {
 
 	if !reflect.DeepEqual(actual["data"], expected) {
 		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual["data"])
+	}
+
+	for _, r := range *records {
+		t.Log(string(r))
 	}
 }
 

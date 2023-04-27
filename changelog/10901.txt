@@ -1,0 +1,3 @@
+```release-note:bug
+serviceregistration: Fix race during shutdown of Consul service registration.
+```

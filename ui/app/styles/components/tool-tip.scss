@@ -1,7 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 .tool-tip {
   font-size: $size-7;
   text-transform: none;
   margin: 8px 0px 0 -4px;
+
   .box {
     position: relative;
     color: $white;
@@ -10,6 +16,11 @@
     padding: 0.5rem;
     line-height: 1.4;
   }
+
+  .fit-content {
+    max-width: fit-content;
+  }
+
   @include css-top-arrow(8px, $grey, 1px, $grey-dark, 20px);
   &.ember-basic-dropdown-content--below.ember-basic-dropdown--transitioning-in {
     animation: drop-fade-above 0.15s;
@@ -22,6 +33,9 @@
   }
   &.ember-basic-dropdown-content--above.ember-basic-dropdown--transitioning-out {
     animation: drop-fade-below 0.15s reverse;
+  }
+  &.smaller-font {
+    font-size: $size-8;
   }
 }
 
@@ -44,23 +58,12 @@
 .ember-basic-dropdown-content--below.ember-basic-dropdown-content--right.tool-tip {
   @include css-top-arrow(8px, $grey, 1px, $grey-dark, calc(100% - 20px));
 }
+.ember-basic-dropdown-content--above.tool-tip {
+  @include css-bottom-arrow(8px, $grey, 1px, $grey-dark);
+  margin-top: -8px;
+}
 .ember-basic-dropdown-content--above.ember-basic-dropdown-content--right.tool-tip {
   @include css-bottom-arrow(8px, $grey, 1px, $grey-dark, calc(100% - 20px));
-}
-.ember-basic-dropdown-content--above.tool-tip {
-  margin-top: -2px;
-}
-.tool-tip-trigger {
-  border: none;
-  border-radius: 20px;
-  height: 18px;
-  width: 18px;
-  outline: none;
-  box-shadow: none;
-  cursor: pointer;
-  padding: 0;
-  color: $grey-dark;
-  margin-left: 8px;
 }
 
 .b-checkbox .tool-tip-trigger {

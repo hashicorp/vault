@@ -1,22 +1,30 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package ssh
 
 import (
 	"context"
 
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathFetchPublicKey(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `public_key`,
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixSSH,
+			OperationSuffix: "public-key",
+		},
+
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation: b.pathFetchPublicKey,
 		},
 
 		HelpSynopsis:    `Retrieve the public key.`,
-		HelpDescription: `This allows the public key, that this backend has been configured with, to be fetched.`,
+		HelpDescription: `This allows the public key of the SSH CA certificate that this backend has been configured with to be fetched. This is a raw response endpoint without JSON encoding; use -format=raw or an external tool (e.g., curl) to fetch this value.`,
 	}
 }
 

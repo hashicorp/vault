@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -6,14 +9,16 @@ import (
 	"os"
 	"strings"
 
+	"github.com/hashicorp/go-secure-stdlib/password"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/password"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*OperatorUnsealCommand)(nil)
-var _ cli.CommandAutocomplete = (*OperatorUnsealCommand)(nil)
+var (
+	_ cli.Command             = (*OperatorUnsealCommand)(nil)
+	_ cli.CommandAutocomplete = (*OperatorUnsealCommand)(nil)
+)
 
 type OperatorUnsealCommand struct {
 	*BaseCommand
@@ -32,9 +37,9 @@ func (c *OperatorUnsealCommand) Help() string {
 	helpText := `
 Usage: vault operator unseal [options] [KEY]
 
-  Provide a portion of the master key to unseal a Vault server. Vault starts
+  Provide a portion of the root key to unseal a Vault server. Vault starts
   in a sealed state. It cannot perform operations until it is unsealed. This
-  command accepts a portion of the master key (an "unseal key").
+  command accepts a portion of the root key (an "unseal key").
 
   The unseal key can be supplied as an argument to the command, but this is
   not recommended as the unseal key will be available in your history:
@@ -100,7 +105,7 @@ func (c *OperatorUnsealCommand) Run(args []string) int {
 	args = f.Args()
 	switch len(args) {
 	case 0:
-		// We will prompt for the unsealKey later
+		// We will prompt for the unseal key later
 	case 1:
 		unsealKey = strings.TrimSpace(args[0])
 	default:
@@ -139,8 +144,8 @@ func (c *OperatorUnsealCommand) Run(args []string) int {
 				"usually this is because you attempted to pipe a value into the "+
 				"unseal command or you are executing outside of a terminal (tty). "+
 				"You should run the unseal command from a terminal for maximum "+
-				"security. If this is not an option, the unseal can be provided as "+
-				"the first argument to the unseal command. The raw error "+
+				"security. If this is not an option, the unseal key can be provided "+
+				"as the first argument to the unseal command. The raw error "+
 				"was:\n\n%s", err)))
 			return 1
 		}

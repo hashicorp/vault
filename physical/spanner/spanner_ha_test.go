@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package spanner
 
 import (
@@ -7,8 +10,8 @@ import (
 
 	"cloud.google.com/go/spanner"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 func TestHABackend(t *testing.T) {

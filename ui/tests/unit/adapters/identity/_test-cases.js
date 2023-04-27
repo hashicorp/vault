@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 export const storeMVP = {
   serializerFor() {
     return {
@@ -6,7 +11,7 @@ export const storeMVP = {
   },
 };
 
-export default function(modelName) {
+export default function (modelName) {
   return [
     {
       adapterMethod: 'findRecord',
@@ -23,13 +28,13 @@ export default function(modelName) {
     },
     {
       adapterMethod: 'updateRecord',
-      args: [storeMVP, { modelName }, { id: 'foo' }],
+      args: [storeMVP, { modelName }, { id: 'foo', modelName }],
       url: `/v1/${modelName}/id/foo`,
       method: 'PUT',
     },
     {
       adapterMethod: 'deleteRecord',
-      args: [storeMVP, { modelName }, { id: 'foo' }],
+      args: [storeMVP, { modelName }, { id: 'foo', modelName }],
       url: `/v1/${modelName}/id/foo`,
       method: 'DELETE',
     },

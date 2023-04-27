@@ -1,0 +1,3 @@
+```release-note:bug
+ui: fix issue where select-one option was not showing in secrets database role creation
+```

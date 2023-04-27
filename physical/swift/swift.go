@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package swift
 
 import (
@@ -12,10 +15,9 @@ import (
 	log "github.com/hashicorp/go-hclog"
 
 	metrics "github.com/armon/go-metrics"
-	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/ncw/swift"
 )
 
@@ -128,7 +130,7 @@ func NewSwiftBackend(conf map[string]string, logger log.Logger) (physical.Backen
 
 	_, _, err = c.Container(container)
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("Unable to access container %q: {{err}}", container), err)
+		return nil, fmt.Errorf("Unable to access container %q: %w", container, err)
 	}
 
 	maxParStr, ok := conf["max_parallel"]
@@ -136,7 +138,7 @@ func NewSwiftBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	if ok {
 		maxParInt, err = strconv.Atoi(maxParStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
+			return nil, fmt.Errorf("failed parsing max_parallel parameter: %w", err)
 		}
 		if logger.IsDebug() {
 			logger.Debug("max_parallel set", "max_parallel", maxParInt)
@@ -160,7 +162,6 @@ func (s *SwiftBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer s.permitPool.Release()
 
 	err := s.client.ObjectPutBytes(s.container, entry.Key, entry.Value, "")
-
 	if err != nil {
 		return err
 	}
@@ -175,9 +176,9 @@ func (s *SwiftBackend) Get(ctx context.Context, key string) (*physical.Entry, er
 	s.permitPool.Acquire()
 	defer s.permitPool.Release()
 
-	//Do a list of names with the key first since eventual consistency means
-	//it might be deleted, but a node might return a read of bytes which fails
-	//the physical test
+	// Do a list of names with the key first since eventual consistency means
+	// it might be deleted, but a node might return a read of bytes which fails
+	// the physical test
 	list, err := s.client.ObjectNames(s.container, &swift.ObjectsOpts{Prefix: key})
 	if err != nil {
 		return nil, err

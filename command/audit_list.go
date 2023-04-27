@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -10,8 +13,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*AuditListCommand)(nil)
-var _ cli.CommandAutocomplete = (*AuditListCommand)(nil)
+var (
+	_ cli.Command             = (*AuditListCommand)(nil)
+	_ cli.CommandAutocomplete = (*AuditListCommand)(nil)
+)
 
 type AuditListCommand struct {
 	*BaseCommand
@@ -94,13 +99,13 @@ func (c *AuditListCommand) Run(args []string) int {
 		return 2
 	}
 
-	if len(audits) == 0 {
-		c.UI.Output(fmt.Sprintf("No audit devices are enabled."))
-		return 0
-	}
-
 	switch Format(c.UI) {
 	case "table":
+		if len(audits) == 0 {
+			c.UI.Output("No audit devices are enabled.")
+			return 2
+		}
+
 		if c.flagDetailed {
 			c.UI.Output(tableOutput(c.detailedAudits(audits), nil))
 			return 0
@@ -114,7 +119,7 @@ func (c *AuditListCommand) Run(args []string) int {
 
 func (c *AuditListCommand) simpleAudits(audits map[string]*api.Audit) []string {
 	paths := make([]string, 0, len(audits))
-	for path, _ := range audits {
+	for path := range audits {
 		paths = append(paths, path)
 	}
 	sort.Strings(paths)
@@ -134,7 +139,7 @@ func (c *AuditListCommand) simpleAudits(audits map[string]*api.Audit) []string {
 
 func (c *AuditListCommand) detailedAudits(audits map[string]*api.Audit) []string {
 	paths := make([]string, 0, len(audits))
-	for path, _ := range audits {
+	for path := range audits {
 		paths = append(paths, path)
 	}
 	sort.Strings(paths)

@@ -1,0 +1,8 @@
+## Okta auth with > 200 groups
+
+In 1.4.0 Vault started using the official Okta Go client library. Unlike
+the previous Okta library it used, the official library doesn't automatically
+handle pagination when there are more than 200 groups listed. If a user
+associated with more than 200 Okta groups logs in, only 200 of them will be
+seen by Vault. The fix is [#9580](https://github.com/hashicorp/vault/pull/9580)
+and will eventually appear in 1.4.x and 1.5.x point releases.

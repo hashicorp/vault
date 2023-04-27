@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import ApplicationAdapter from '../application';
 
 export default ApplicationAdapter.extend({
@@ -6,7 +11,7 @@ export default ApplicationAdapter.extend({
   pathForType(modelType) {
     // we want the last part of the path
     const type = modelType.split('/').pop();
-    if (type === 'identity-whitelist' || type === 'roletag-blacklist') {
+    if (type === 'identity-accesslist' || type === 'roletag-denylist') {
       return `tidy/${type}`;
     }
     return type;
@@ -14,7 +19,7 @@ export default ApplicationAdapter.extend({
 
   buildURL(modelName, id, snapshot) {
     const backendId = id ? id : snapshot.belongsTo('backend').id;
-    let url = `${this.get('namespace')}/${backendId}/config`;
+    let url = `${this.namespace}/${backendId}/config`;
     // aws has a lot more config endpoints
     if (modelName.includes('aws')) {
       url = `${url}/${this.pathForType(modelName)}`;

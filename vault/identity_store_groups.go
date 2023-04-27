@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -6,12 +9,11 @@ import (
 	"strings"
 
 	"github.com/golang/protobuf/ptypes"
-	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -60,7 +62,13 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "group$",
-			Fields:  groupPathFields(),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "group",
+				OperationVerb:   "create",
+			},
+
+			Fields: groupPathFields(),
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: i.pathGroupRegister(),
 			},
@@ -70,11 +78,33 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "group/id/" + framework.GenericNameRegex("id"),
-			Fields:  groupPathFields(),
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathGroupIDUpdate(),
-				logical.ReadOperation:   i.pathGroupIDRead(),
-				logical.DeleteOperation: i.pathGroupIDDelete(),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "group",
+				OperationSuffix: "by-id",
+			},
+
+			Fields: groupPathFields(),
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.pathGroupIDUpdate(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "update",
+					},
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: i.pathGroupIDRead(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "read",
+					},
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: i.pathGroupIDDelete(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "delete",
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(groupHelp["group-by-id"][0]),
@@ -82,6 +112,12 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "group/id/?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "group",
+				OperationSuffix: "by-id",
+			},
+
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: i.pathGroupIDList(),
 			},
@@ -90,12 +126,34 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 			HelpDescription: strings.TrimSpace(groupHelp["group-id-list"][1]),
 		},
 		{
-			Pattern: "group/name/" + framework.GenericNameRegex("name"),
-			Fields:  groupPathFields(),
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathGroupNameUpdate(),
-				logical.ReadOperation:   i.pathGroupNameRead(),
-				logical.DeleteOperation: i.pathGroupNameDelete(),
+			Pattern: "group/name/(?P<name>.+)",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "group",
+				OperationSuffix: "by-name",
+			},
+
+			Fields: groupPathFields(),
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.pathGroupNameUpdate(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "update",
+					},
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: i.pathGroupNameRead(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "read",
+					},
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: i.pathGroupNameDelete(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "delete",
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(groupHelp["group-by-name"][0]),
@@ -103,6 +161,12 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "group/name/?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "group",
+				OperationSuffix: "by-name",
+			},
+
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: i.pathGroupNameList(),
 			},
@@ -118,6 +182,11 @@ func (i *IdentityStore) pathGroupRegister() framework.OperationFunc {
 		_, ok := d.GetOk("id")
 		if ok {
 			return i.pathGroupIDUpdate()(ctx, req, d)
+		}
+
+		_, ok = d.GetOk("name")
+		if ok {
+			return i.pathGroupNameUpdate()(ctx, req, d)
 		}
 
 		i.groupLock.Lock()
@@ -177,7 +246,7 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 	// Update the policies if supplied
 	policiesRaw, ok := d.GetOk("policies")
 	if ok {
-		group.Policies = policiesRaw.([]string)
+		group.Policies = strutil.RemoveDuplicatesStable(policiesRaw.([]string), true)
 	}
 
 	if strutil.StrListContains(group.Policies, "root") {
@@ -212,16 +281,13 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 			return nil, err
 		}
 
-		// If this is a new group and if there already exists a group by this
-		// name, error out. If the name of an existing group is about to be
-		// modified into something which is already tied to a different group,
-		// error out.
+		// If no existing group has this name, go ahead with the creation or rename.
+		// If there is a group, it must match the group passed in; groupByName
+		// should not be modified as it's in memdb.
 		switch {
 		case groupByName == nil:
 			// Allowed
-		case group.ID == "":
-			group = groupByName
-		case group.ID != "" && groupByName.ID != group.ID:
+		case groupByName.ID != group.ID:
 			return logical.ErrorResponse("group name is already in use"), nil
 		}
 		group.Name = groupName
@@ -241,9 +307,6 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 			return logical.ErrorResponse("member entities can't be set manually for external groups"), nil
 		}
 		group.MemberEntityIDs = memberEntityIDsRaw.([]string)
-		if len(group.MemberEntityIDs) > 512 {
-			return logical.ErrorResponse("member entity IDs exceeding the limit of 512"), nil
-		}
 	}
 
 	memberGroupIDsRaw, ok := d.GetOk("member_group_ids")
@@ -255,8 +318,12 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 		memberGroupIDs = memberGroupIDsRaw.([]string)
 	}
 
-	err = i.sanitizeAndUpsertGroup(ctx, group, memberGroupIDs)
+	err = i.sanitizeAndUpsertGroup(ctx, group, nil, memberGroupIDs)
 	if err != nil {
+		if errStr := err.Error(); strings.HasPrefix(errStr, errCycleDetectedPrefix) {
+			return logical.ErrorResponse(errStr), nil
+		}
+
 		return nil, err
 	}
 
@@ -321,7 +388,7 @@ func (i *IdentityStore) handleGroupReadCommon(ctx context.Context, group *identi
 		return nil, err
 	}
 	if ns.ID != group.NamespaceID {
-		return nil, nil
+		return logical.ErrorResponse("request namespace is not the same as the group namespace"), logical.ErrPermissionDenied
 	}
 
 	respData := map[string]interface{}{}
@@ -335,6 +402,7 @@ func (i *IdentityStore) handleGroupReadCommon(ctx context.Context, group *identi
 	respData["last_update_time"] = ptypes.TimestampString(group.LastUpdateTime)
 	respData["modify_index"] = group.ModifyIndex
 	respData["type"] = group.Type
+	respData["namespace_id"] = group.NamespaceID
 
 	aliasMap := map[string]interface{}{}
 	if group.Alias != nil {
@@ -347,7 +415,7 @@ func (i *IdentityStore) handleGroupReadCommon(ctx context.Context, group *identi
 		aliasMap["creation_time"] = ptypes.TimestampString(group.Alias.CreationTime)
 		aliasMap["last_update_time"] = ptypes.TimestampString(group.Alias.LastUpdateTime)
 
-		if mountValidationResp := i.core.router.validateMountByAccessor(group.Alias.MountAccessor); mountValidationResp != nil {
+		if mountValidationResp := i.router.ValidateMountByAccessor(group.Alias.MountAccessor); mountValidationResp != nil {
 			aliasMap["mount_path"] = mountValidationResp.MountPath
 			aliasMap["mount_type"] = mountValidationResp.MountType
 		}
@@ -425,7 +493,7 @@ func (i *IdentityStore) handleGroupDeleteCommon(ctx context.Context, key string,
 		return nil, err
 	}
 	if group.NamespaceID != ns.ID {
-		return nil, nil
+		return logical.ErrorResponse("request namespace is not the same as the group namespace"), logical.ErrPermissionDenied
 	}
 
 	// Delete group alias from memdb
@@ -443,7 +511,7 @@ func (i *IdentityStore) handleGroupDeleteCommon(ctx context.Context, key string,
 	}
 
 	// Delete the group from storage
-	err = i.groupPacker.DeleteItem(group.ID)
+	err = i.groupPacker.DeleteItem(ctx, group.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -478,7 +546,7 @@ func (i *IdentityStore) handleGroupListCommon(ctx context.Context, byID bool) (*
 
 	iter, err := txn.Get(groupsTable, "namespace_id", ns.ID)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to lookup groups using namespace ID: {{err}}", err)
+		return nil, fmt.Errorf("failed to lookup groups using namespace ID: %w", err)
 	}
 
 	var keys []string
@@ -517,7 +585,7 @@ func (i *IdentityStore) handleGroupListCommon(ctx context.Context, byID bool) (*
 				entry["mount_path"] = mi.MountPath
 			} else {
 				mi = mountInfo{}
-				if mountValidationResp := i.core.router.validateMountByAccessor(group.Alias.MountAccessor); mountValidationResp != nil {
+				if mountValidationResp := i.router.ValidateMountByAccessor(group.Alias.MountAccessor); mountValidationResp != nil {
 					mi.MountType = mountValidationResp.MountType
 					mi.MountPath = mountValidationResp.MountPath
 					entry["mount_type"] = mi.MountType

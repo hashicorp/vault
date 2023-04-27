@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -8,8 +11,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*NamespaceDeleteCommand)(nil)
-var _ cli.CommandAutocomplete = (*NamespaceDeleteCommand)(nil)
+var (
+	_ cli.Command             = (*NamespaceDeleteCommand)(nil)
+	_ cli.CommandAutocomplete = (*NamespaceDeleteCommand)(nil)
+)
 
 type NamespaceDeleteCommand struct {
 	*BaseCommand
@@ -33,7 +38,7 @@ Usage: vault namespace delete [options] PATH
 
   Delete a namespace namespace from a parent namespace (e.g. ns1/ns2/):
 
-      $ vault namespace create -namespace=ns1 ns2
+      $ vault namespace delete -namespace=ns1 ns2
 
 ` + c.Flags().Help()
 
@@ -45,7 +50,7 @@ func (c *NamespaceDeleteCommand) Flags() *FlagSets {
 }
 
 func (c *NamespaceDeleteCommand) AutocompleteArgs() complete.Predictor {
-	return c.PredictVaultFolders()
+	return c.PredictVaultNamespaces()
 }
 
 func (c *NamespaceDeleteCommand) AutocompleteFlags() complete.Flags {

@@ -1,0 +1,79 @@
+{{#if this.model.replicationAttrs.isPrimary}}
+  <Toolbar>
+    <ToolbarActions>
+      {{#if this.model.replicationAttrs.knownSecondaries.length}}
+        {{#if this.model.canRevokeSecondary}}
+          <ToolbarLink @route="mode.secondaries.revoke" @model={{this.replicationMode}}>
+            Revoke secondary
+          </ToolbarLink>
+        {{/if}}
+      {{/if}}
+      {{#if this.model.canAddSecondary}}
+        <ToolbarLink @route="mode.secondaries.add" @model={{this.replicationMode}} @type="add" data-test-secondary-add>
+          Add secondary
+        </ToolbarLink>
+      {{/if}}
+    </ToolbarActions>
+  </Toolbar>
+  {{#if this.model.replicationAttrs.knownSecondaries.length}}
+    {{#each this.model.replicationAttrs.knownSecondaries as |secondary|}}
+      <div class="list-item-row" data-test-secondary-name={{secondary}}>
+        <div class="columns is-mobile">
+          <div class="column is-10">
+            {{secondary}}
+          </div>
+          <div class="column has-text-right">
+            {{#if (or (eq this.replicationMode "performance") this.model.canRevokeSecondary)}}
+              <PopupMenu @name="secondary-details">
+                <nav class="menu">
+                  <ul class="menu-list">
+                    {{#if (eq this.replicationMode "performance")}}
+                      <li class="action">
+                        <LinkTo
+                          @route="mode.secondaries.config-show"
+                          @models={{array this.replicationMode secondary}}
+                          data-test-replication-path-filter-link={{true}}
+                        >
+                          Path filter config
+                        </LinkTo>
+                      </li>
+                    {{/if}}
+                    {{#if this.model.canRevokeSecondary}}
+                      <li class="action">
+                        <ConfirmAction
+                          @buttonClasses="button link is-destroy"
+                          @confirmTitle="Revoke token?"
+                          @confirmMessage="This will revoke this secondary token."
+                          @confirmButtonText="Revoke"
+                          @horizontalPosition="auto-left"
+                          @onConfirmAction={{action "onSubmit" "revoke-secondary" "primary" (hash id=secondary)}}
+                        >
+                          Revoke
+                        </ConfirmAction>
+                      </li>
+                    {{/if}}
+                  </ul>
+                </nav>
+              </PopupMenu>
+            {{/if}}
+          </div>
+        </div>
+      </div>
+      <hr class="is-marginless" />
+    {{/each}}
+  {{else}}
+    <EmptyState
+      @title="No known {{this.performanceMode}} secondary clusters associated with this cluster"
+      @message="Associated secondary clusters will be listed here. Add your first secondary cluster to get started."
+    >
+      {{#if this.model.canAddSecondary}}
+        <LinkTo @route="mode.secondaries.add" @model={{this.replicationMode}} class="link">
+          Add secondary
+        </LinkTo>
+      {{/if}}
+      <DocLink @path="/vault/docs/internals/replication">
+        Learn more
+      </DocLink>
+    </EmptyState>
+  {{/if}}
+{{/if}}

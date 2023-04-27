@@ -1,0 +1,95 @@
+<h4 class="title is-5">
+  Filtered paths
+</h4>
+<div class="radio-card-selector">
+  <label for="no-filtering" class="radio-card {{unless this.config.mode ' is-selected'}}">
+    <div class="radio-card-row">
+      <Icon @name="file-text" @size="24" class="radio-card-icon" />
+      <div class="radio-card-message">
+        <h5 class="radio-card-message-title">
+          Include everything
+        </h5>
+        <p class="radio-card-message-body">
+          All namespaces and mounts in this cluster will be replicated
+        </p>
+      </div>
+    </div>
+    <div class="radio-card-radio-row">
+      <RadioButton
+        id="no-filtering"
+        name="config-mode"
+        class="radio"
+        @value={{null}}
+        @groupValue={{this.config.mode}}
+        @onChange={{fn (mut this.config.mode)}}
+      />
+      <label for="no-filtering"></label>
+    </div>
+  </label>
+  <label for="allow" class="radio-card {{if (eq this.config.mode 'allow') ' is-selected'}}">
+    <div class="radio-card-row">
+      <Icon @name="file-check" @size="24" class="radio-card-icon" />
+      <div class="radio-card-message">
+        <h5 class="radio-card-message-title">
+          Allow
+        </h5>
+        <p class="radio-card-message-body">
+          Only include the selected namespaces and mounts
+        </p>
+      </div>
+    </div>
+    <div class="radio-card-radio-row">
+      <RadioButton
+        id="allow"
+        name="config-mode"
+        class="radio"
+        @value="allow"
+        @groupValue={{this.config.mode}}
+        @onChange={{fn (mut this.config.mode)}}
+      />
+      <label for="allow"></label>
+    </div>
+  </label>
+  <label for="deny" class="radio-card {{if (eq this.config.mode 'deny') ' is-selected'}}">
+    <div class="radio-card-row">
+      <Icon @name="file-x" @size="24" class="radio-card-icon" />
+      <div class="radio-card-message">
+        <h5 class="radio-card-message-title">
+          Deny
+        </h5>
+        <p class="radio-card-message-body">
+          Do not include the selected namespaces and mounts
+        </p>
+      </div>
+    </div>
+    <div class="radio-card-radio-row">
+      <RadioButton
+        id="deny"
+        name="config-mode"
+        class="radio"
+        @value="deny"
+        @groupValue={{this.config.mode}}
+        @onChange={{fn (mut this.config.mode)}}
+      />
+      <label for="deny"></label>
+    </div>
+  </label>
+</div>
+{{#if (or (eq this.config.mode "allow") (eq this.config.mode "deny"))}}
+  <SearchSelect
+    @id="paths"
+    @labelClass="title is-7"
+    @onChange={{action "pathsChanged"}}
+    @inputValue={{this.config.paths}}
+    @label="Paths in this {{this.config.mode}}"
+    @options={{this.autoCompleteOptions}}
+    @search={{perform this.setAutoCompleteOptions}}
+  />
+{{/if}}
+{{#if (and (not this.config.mode) this.startedWithMode)}}
+  <AlertInline
+    data-test-remove-warning
+    @type="warning"
+    @message="Saving with 'Include everything' will remove any existing filter configuration"
+  />
+{{/if}}

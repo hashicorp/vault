@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 .navbar-brand .splash-page-logo {
   padding: $spacing-xs $spacing-s $spacing-xs $spacing-l;
 
@@ -21,5 +26,5 @@
 }
 
 .splash-page-header {
-  padding: $size-6 $size-5;
+  padding: $size-6 0;
 }

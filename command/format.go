@@ -1,12 +1,17 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/ghodss/yaml"
 	"github.com/hashicorp/vault/api"
@@ -29,9 +34,9 @@ func OutputSecret(ui cli.Ui, secret *api.Secret) int {
 }
 
 func OutputList(ui cli.Ui, data interface{}) int {
-	switch data.(type) {
+	switch data := data.(type) {
 	case *api.Secret:
-		secret := data.(*api.Secret)
+		secret := data
 		return outputWithFormat(ui, secret, secret.Data["keys"])
 	default:
 		return outputWithFormat(ui, nil, data)
@@ -63,16 +68,18 @@ type Formatter interface {
 }
 
 var Formatters = map[string]Formatter{
-	"json":  JsonFormatter{},
-	"table": TableFormatter{},
-	"yaml":  YamlFormatter{},
-	"yml":   YamlFormatter{},
+	"json":   JsonFormatter{},
+	"table":  TableFormatter{},
+	"yaml":   YamlFormatter{},
+	"yml":    YamlFormatter{},
+	"pretty": PrettyFormatter{},
+	"raw":    RawFormatter{},
 }
 
 func Format(ui cli.Ui) string {
-	switch ui.(type) {
+	switch ui := ui.(type) {
 	case *VaultUI:
-		return ui.(*VaultUI).format
+		return ui.format
 	}
 
 	format := os.Getenv(EnvVaultFormat)
@@ -81,6 +88,15 @@ func Format(ui cli.Ui) string {
 	}
 
 	return format
+}
+
+func Detailed(ui cli.Ui) bool {
+	switch ui := ui.(type) {
+	case *VaultUI:
+		return ui.detailed
+	}
+
+	return false
 }
 
 // An output formatter for json output of an object
@@ -92,6 +108,41 @@ func (j JsonFormatter) Format(data interface{}) ([]byte, error) {
 
 func (j JsonFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
 	b, err := j.Format(data)
+	if err != nil {
+		return err
+	}
+
+	if secret != nil {
+		shouldListWithInfo := Detailed(ui)
+
+		// Show the raw JSON of the LIST call, rather than only the
+		// list of keys.
+		if shouldListWithInfo {
+			b, err = j.Format(secret)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	ui.Output(string(b))
+	return nil
+}
+
+// An output formatter for raw output of the original request object
+type RawFormatter struct{}
+
+func (r RawFormatter) Format(data interface{}) ([]byte, error) {
+	byte_data, ok := data.([]byte)
+	if !ok {
+		return nil, fmt.Errorf("This command does not support the -format=raw option; only `vault read` does.")
+	}
+
+	return byte_data, nil
+}
+
+func (r RawFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
+	b, err := r.Format(data)
 	if err != nil {
 		return err
 	}
@@ -114,16 +165,149 @@ func (y YamlFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) e
 	return err
 }
 
+type PrettyFormatter struct{}
+
+func (p PrettyFormatter) Format(data interface{}) ([]byte, error) {
+	return nil, nil
+}
+
+func (p PrettyFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
+	switch data.(type) {
+	case *api.AutopilotState:
+		p.OutputAutopilotState(ui, data)
+	default:
+		return errors.New("cannot use the pretty formatter for this type")
+	}
+	return nil
+}
+
+func outputStringSlice(buffer *bytes.Buffer, indent string, values []string) {
+	for _, val := range values {
+		buffer.WriteString(fmt.Sprintf("%s%s\n", indent, val))
+	}
+}
+
+type mapOutput struct {
+	key   string
+	value string
+}
+
+func formatServer(srv *api.AutopilotServer) string {
+	var buffer bytes.Buffer
+
+	buffer.WriteString(fmt.Sprintf("   %s\n", srv.ID))
+	buffer.WriteString(fmt.Sprintf("      Name:              %s\n", srv.Name))
+	buffer.WriteString(fmt.Sprintf("      Address:           %s\n", srv.Address))
+	buffer.WriteString(fmt.Sprintf("      Status:            %s\n", srv.Status))
+	buffer.WriteString(fmt.Sprintf("      Node Status:       %s\n", srv.NodeStatus))
+	buffer.WriteString(fmt.Sprintf("      Healthy:           %t\n", srv.Healthy))
+	buffer.WriteString(fmt.Sprintf("      Last Contact:      %s\n", srv.LastContact))
+	buffer.WriteString(fmt.Sprintf("      Last Term:         %d\n", srv.LastTerm))
+	buffer.WriteString(fmt.Sprintf("      Last Index:        %d\n", srv.LastIndex))
+	buffer.WriteString(fmt.Sprintf("      Version:           %s\n", srv.Version))
+
+	if srv.UpgradeVersion != "" {
+		buffer.WriteString(fmt.Sprintf("      Upgrade Version:   %s\n", srv.UpgradeVersion))
+	}
+	if srv.RedundancyZone != "" {
+		buffer.WriteString(fmt.Sprintf("      Redundancy Zone:   %s\n", srv.RedundancyZone))
+	}
+	if srv.NodeType != "" {
+		buffer.WriteString(fmt.Sprintf("      Node Type:         %s\n", srv.NodeType))
+	}
+
+	return buffer.String()
+}
+
+func (p PrettyFormatter) OutputAutopilotState(ui cli.Ui, data interface{}) {
+	state := data.(*api.AutopilotState)
+
+	var buffer bytes.Buffer
+	buffer.WriteString(fmt.Sprintf("Healthy:                         %t\n", state.Healthy))
+	buffer.WriteString(fmt.Sprintf("Failure Tolerance:               %d\n", state.FailureTolerance))
+	buffer.WriteString(fmt.Sprintf("Leader:                          %s\n", state.Leader))
+	buffer.WriteString("Voters:\n")
+	outputStringSlice(&buffer, "   ", state.Voters)
+
+	if len(state.NonVoters) > 0 {
+		buffer.WriteString("Non Voters:\n")
+		outputStringSlice(&buffer, "   ", state.NonVoters)
+	}
+
+	if state.OptimisticFailureTolerance > 0 {
+		buffer.WriteString(fmt.Sprintf("Optimistic Failure Tolerance:    %d\n", state.OptimisticFailureTolerance))
+	}
+
+	// Servers
+	buffer.WriteString("Servers:\n")
+	var outputs []mapOutput
+	for id, srv := range state.Servers {
+		outputs = append(outputs, mapOutput{key: id, value: formatServer(srv)})
+	}
+	sort.Slice(outputs, func(i, j int) bool {
+		return outputs[i].key < outputs[j].key
+	})
+	for _, output := range outputs {
+		buffer.WriteString(output.value)
+	}
+
+	// Redundancy Zones
+	if len(state.RedundancyZones) > 0 {
+		buffer.WriteString("Redundancy Zones:\n")
+		zoneList := make([]string, 0, len(state.RedundancyZones))
+		for z := range state.RedundancyZones {
+			zoneList = append(zoneList, z)
+		}
+		sort.Strings(zoneList)
+		for _, zoneName := range zoneList {
+			zone := state.RedundancyZones[zoneName]
+			servers := zone.Servers
+			voters := zone.Voters
+			sort.Strings(servers)
+			sort.Strings(voters)
+			buffer.WriteString(fmt.Sprintf("   %s\n", zoneName))
+			buffer.WriteString(fmt.Sprintf("      Servers: %s\n", strings.Join(servers, ", ")))
+			buffer.WriteString(fmt.Sprintf("      Voters: %s\n", strings.Join(voters, ", ")))
+			buffer.WriteString(fmt.Sprintf("      Failure Tolerance: %d\n", zone.FailureTolerance))
+		}
+	}
+
+	// Upgrade Info
+	if state.Upgrade != nil {
+		buffer.WriteString("Upgrade Info:\n")
+		buffer.WriteString(fmt.Sprintf("   Status: %s\n", state.Upgrade.Status))
+		buffer.WriteString(fmt.Sprintf("   Target Version: %s\n", state.Upgrade.TargetVersion))
+		buffer.WriteString(fmt.Sprintf("   Target Version Voters: %s\n", strings.Join(state.Upgrade.TargetVersionVoters, ", ")))
+		buffer.WriteString(fmt.Sprintf("   Target Version Non-Voters: %s\n", strings.Join(state.Upgrade.TargetVersionNonVoters, ", ")))
+		buffer.WriteString(fmt.Sprintf("   Other Version Voters: %s\n", strings.Join(state.Upgrade.OtherVersionVoters, ", ")))
+		buffer.WriteString(fmt.Sprintf("   Other Version Non-Voters: %s\n", strings.Join(state.Upgrade.OtherVersionNonVoters, ", ")))
+
+		if len(state.Upgrade.RedundancyZones) > 0 {
+			buffer.WriteString("   Redundancy Zones:\n")
+			for zoneName, zoneVersion := range state.Upgrade.RedundancyZones {
+				buffer.WriteString(fmt.Sprintf("      %s\n", zoneName))
+				buffer.WriteString(fmt.Sprintf("         Target Version Voters: %s\n", strings.Join(zoneVersion.TargetVersionVoters, ", ")))
+				buffer.WriteString(fmt.Sprintf("         Target Version Non-Voters: %s\n", strings.Join(zoneVersion.TargetVersionNonVoters, ", ")))
+				buffer.WriteString(fmt.Sprintf("         Other Version Voters: %s\n", strings.Join(zoneVersion.OtherVersionVoters, ", ")))
+				buffer.WriteString(fmt.Sprintf("         Other Version Non-Voters: %s\n", strings.Join(zoneVersion.OtherVersionNonVoters, ", ")))
+			}
+		}
+	}
+
+	ui.Output(buffer.String())
+}
+
 // An output formatter for table output of an object
 type TableFormatter struct{}
 
-// We don't use this
+// We don't use this due to the TableFormatter introducing a bug when the -field flag is supplied:
+// https://github.com/hashicorp/vault/commit/b24cf9a8af2190e96c614205b8cdf06d8c4b6718 .
 func (t TableFormatter) Format(data interface{}) ([]byte, error) {
 	return nil, nil
 }
 
 func (t TableFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
-	switch data.(type) {
+	switch data := data.(type) {
 	case *api.Secret:
 		return t.OutputSecret(ui, secret)
 	case []interface{}:
@@ -131,19 +315,122 @@ func (t TableFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) 
 	case []string:
 		return t.OutputList(ui, nil, data)
 	case map[string]interface{}:
-		return t.OutputMap(ui, data.(map[string]interface{}))
+		return t.OutputMap(ui, data)
+	case SealStatusOutput:
+		return t.OutputSealStatusStruct(ui, nil, data)
 	default:
 		return errors.New("cannot use the table formatter for this type")
 	}
 }
 
+func (t TableFormatter) OutputSealStatusStruct(ui cli.Ui, secret *api.Secret, data interface{}) error {
+	var status SealStatusOutput = data.(SealStatusOutput)
+	var sealPrefix string
+	if status.RecoverySeal {
+		sealPrefix = "Recovery "
+	}
+
+	out := []string{}
+	out = append(out, "Key | Value")
+	out = append(out, fmt.Sprintf("%sSeal Type | %s", sealPrefix, status.Type))
+	out = append(out, fmt.Sprintf("Initialized | %t", status.Initialized))
+	out = append(out, fmt.Sprintf("Sealed | %t", status.Sealed))
+	out = append(out, fmt.Sprintf("Total %sShares | %d", sealPrefix, status.N))
+	out = append(out, fmt.Sprintf("Threshold | %d", status.T))
+
+	if status.Sealed {
+		out = append(out, fmt.Sprintf("Unseal Progress | %d/%d", status.Progress, status.T))
+		out = append(out, fmt.Sprintf("Unseal Nonce | %s", status.Nonce))
+	}
+
+	if status.Migration {
+		out = append(out, fmt.Sprintf("Seal Migration in Progress | %t", status.Migration))
+	}
+
+	out = append(out, fmt.Sprintf("Version | %s", status.Version))
+	out = append(out, fmt.Sprintf("Build Date | %s", status.BuildDate))
+	out = append(out, fmt.Sprintf("Storage Type | %s", status.StorageType))
+
+	if status.ClusterName != "" && status.ClusterID != "" {
+		out = append(out, fmt.Sprintf("Cluster Name | %s", status.ClusterName))
+		out = append(out, fmt.Sprintf("Cluster ID | %s", status.ClusterID))
+	}
+
+	// Output if HCP link is configured
+	if status.HCPLinkStatus != "" {
+		out = append(out, fmt.Sprintf("HCP Link Status | %s", status.HCPLinkStatus))
+		out = append(out, fmt.Sprintf("HCP Link Resource ID | %s", status.HCPLinkResourceID))
+	}
+
+	// Output if HA is enabled
+	out = append(out, fmt.Sprintf("HA Enabled | %t", status.HAEnabled))
+
+	if status.HAEnabled {
+		mode := "sealed"
+		if !status.Sealed {
+			out = append(out, fmt.Sprintf("HA Cluster | %s", status.LeaderClusterAddress))
+			mode = "standby"
+			showLeaderAddr := false
+			if status.IsSelf {
+				mode = "active"
+			} else {
+				if status.LeaderAddress == "" {
+					status.LeaderAddress = "<none>"
+				}
+				showLeaderAddr = true
+			}
+			out = append(out, fmt.Sprintf("HA Mode | %s", mode))
+
+			if status.IsSelf && !status.ActiveTime.IsZero() {
+				out = append(out, fmt.Sprintf("Active Since | %s", status.ActiveTime.Format(time.RFC3339Nano)))
+			}
+			// This is down here just to keep ordering consistent
+			if showLeaderAddr {
+				out = append(out, fmt.Sprintf("Active Node Address | %s", status.LeaderAddress))
+			}
+
+			if status.PerfStandby {
+				out = append(out, fmt.Sprintf("Performance Standby Node | %t", status.PerfStandby))
+				out = append(out, fmt.Sprintf("Performance Standby Last Remote WAL | %d", status.PerfStandbyLastRemoteWAL))
+			}
+		}
+	}
+
+	if status.RaftCommittedIndex > 0 {
+		out = append(out, fmt.Sprintf("Raft Committed Index | %d", status.RaftCommittedIndex))
+	}
+	if status.RaftAppliedIndex > 0 {
+		out = append(out, fmt.Sprintf("Raft Applied Index | %d", status.RaftAppliedIndex))
+	}
+	if status.LastWAL != 0 {
+		out = append(out, fmt.Sprintf("Last WAL | %d", status.LastWAL))
+	}
+	if len(status.Warnings) > 0 {
+		out = append(out, fmt.Sprintf("Warnings | %v", status.Warnings))
+	}
+
+	ui.Output(tableOutput(out, &columnize.Config{
+		Delim: "|",
+	}))
+	return nil
+}
+
 func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, data interface{}) error {
 	t.printWarnings(ui, secret)
 
-	switch data.(type) {
+	// Determine if we have additional information from a ListResponseWithInfo endpoint.
+	var additionalInfo map[string]interface{}
+	if secret != nil {
+		shouldListWithInfo := Detailed(ui)
+		if additional, ok := secret.Data["key_info"]; shouldListWithInfo && ok && len(additional.(map[string]interface{})) > 0 {
+			additionalInfo = additional.(map[string]interface{})
+		}
+	}
+
+	switch data := data.(type) {
 	case []interface{}:
 	case []string:
-		ui.Output(tableOutput(data.([]string), nil))
+		ui.Output(tableOutput(data, nil))
 		return nil
 	default:
 		return errors.New("error: table formatter cannot output list for this data type")
@@ -162,10 +449,71 @@ func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, data interface
 		}
 		sort.Strings(keys)
 
-		// Prepend the header
-		keys = append([]string{"Keys"}, keys...)
+		// If we have a ListResponseWithInfo endpoint, we'll need to show
+		// additional headers. To satisfy the table outputter, we'll need
+		// to concat them with the deliminator.
+		var headers []string
+		header := "Keys"
+		if len(additionalInfo) > 0 {
+			seenHeaders := make(map[string]bool)
+			for key, rawValues := range additionalInfo {
+				// Most endpoints use the well-behaved ListResponseWithInfo.
+				// However, some use a hand-rolled equivalent, where the
+				// returned "keys" doesn't match the key of the "key_info"
+				// member (namely, /sys/policies/egp). We seek to exclude
+				// headers only visible from "non-visitable" key_info rows,
+				// to make table output less confusing. These non-visitable
+				// rows will still be visible in the JSON output.
+				index := sort.SearchStrings(keys, key)
+				if index < len(keys) && keys[index] != key {
+					continue
+				}
 
-		ui.Output(tableOutput(keys, &columnize.Config{
+				values := rawValues.(map[string]interface{})
+				for key := range values {
+					seenHeaders[key] = true
+				}
+			}
+
+			for key := range seenHeaders {
+				headers = append(headers, key)
+			}
+			sort.Strings(headers)
+
+			header = header + hopeDelim + strings.Join(headers, hopeDelim)
+		}
+
+		// Finally, if we have a ListResponseWithInfo, we'll need to update
+		// the returned rows to not just have the keys (in the sorted order),
+		// but also have the values for each header (in their sorted order).
+		rows := keys
+		if len(additionalInfo) > 0 && len(headers) > 0 {
+			for index, row := range rows {
+				formatted := []string{row}
+				if rawValues, ok := additionalInfo[row]; ok {
+					values := rawValues.(map[string]interface{})
+					for _, header := range headers {
+						if rawValue, ok := values[header]; ok {
+							if looksLikeDuration(header) {
+								rawValue = humanDurationInt(rawValue)
+							}
+
+							formatted = append(formatted, fmt.Sprintf("%v", rawValue))
+						} else {
+							// Show a default empty n/a when this field is
+							// missing from the additional information.
+							formatted = append(formatted, "n/a")
+						}
+					}
+				}
+
+				rows[index] = strings.Join(formatted, hopeDelim)
+			}
+		}
+
+		// Prepend the header to the formatted rows.
+		output := append([]string{header}, rows...)
+		ui.Output(tableOutput(output, &columnize.Config{
 			Delim: hopeDelim,
 		}))
 	}
@@ -205,21 +553,35 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
 	}
 
 	if secret.Auth != nil {
-		out = append(out, fmt.Sprintf("token %s %s", hopeDelim, secret.Auth.ClientToken))
-		out = append(out, fmt.Sprintf("token_accessor %s %s", hopeDelim, secret.Auth.Accessor))
-		// If the lease duration is 0, it's likely a root token, so output the
-		// duration as "infinity" to clear things up.
-		if secret.Auth.LeaseDuration == 0 {
-			out = append(out, fmt.Sprintf("token_duration %s %s", hopeDelim, "∞"))
-		} else {
-			out = append(out, fmt.Sprintf("token_duration %s %v", hopeDelim, humanDurationInt(secret.Auth.LeaseDuration)))
-		}
-		out = append(out, fmt.Sprintf("token_renewable %s %t", hopeDelim, secret.Auth.Renewable))
-		out = append(out, fmt.Sprintf("token_policies %s %q", hopeDelim, secret.Auth.TokenPolicies))
-		out = append(out, fmt.Sprintf("identity_policies %s %q", hopeDelim, secret.Auth.IdentityPolicies))
-		out = append(out, fmt.Sprintf("policies %s %q", hopeDelim, secret.Auth.Policies))
-		for k, v := range secret.Auth.Metadata {
-			out = append(out, fmt.Sprintf("token_meta_%s %s %v", k, hopeDelim, v))
+		if secret.Auth.MFARequirement != nil {
+			out = append(out, fmt.Sprintf("mfa_request_id %s %s", hopeDelim, secret.Auth.MFARequirement.MFARequestID))
+
+			for k, constraintSet := range secret.Auth.MFARequirement.MFAConstraints {
+				for _, constraint := range constraintSet.Any {
+					out = append(out, fmt.Sprintf("mfa_constraint_%s_%s_id %s %s", k, constraint.Type, hopeDelim, constraint.ID))
+					out = append(out, fmt.Sprintf("mfa_constraint_%s_%s_uses_passcode %s %t", k, constraint.Type, hopeDelim, constraint.UsesPasscode))
+					if constraint.Name != "" {
+						out = append(out, fmt.Sprintf("mfa_constraint_%s_%s_name %s %s", k, constraint.Type, hopeDelim, constraint.Name))
+					}
+				}
+			}
+		} else { // Token information only makes sense if no further MFA requirement (i.e. if we actually have a token)
+			out = append(out, fmt.Sprintf("token %s %s", hopeDelim, secret.Auth.ClientToken))
+			out = append(out, fmt.Sprintf("token_accessor %s %s", hopeDelim, secret.Auth.Accessor))
+			// If the lease duration is 0, it's likely a root token, so output the
+			// duration as "infinity" to clear things up.
+			if secret.Auth.LeaseDuration == 0 {
+				out = append(out, fmt.Sprintf("token_duration %s %s", hopeDelim, "∞"))
+			} else {
+				out = append(out, fmt.Sprintf("token_duration %s %v", hopeDelim, humanDurationInt(secret.Auth.LeaseDuration)))
+			}
+			out = append(out, fmt.Sprintf("token_renewable %s %t", hopeDelim, secret.Auth.Renewable))
+			out = append(out, fmt.Sprintf("token_policies %s %q", hopeDelim, secret.Auth.TokenPolicies))
+			out = append(out, fmt.Sprintf("identity_policies %s %q", hopeDelim, secret.Auth.IdentityPolicies))
+			out = append(out, fmt.Sprintf("policies %s %q", hopeDelim, secret.Auth.Policies))
+			for k, v := range secret.Auth.Metadata {
+				out = append(out, fmt.Sprintf("token_meta_%s %s %v", k, hopeDelim, v))
+			}
 		}
 	}
 
@@ -306,40 +668,7 @@ func (t TableFormatter) OutputMap(ui cli.Ui, data map[string]interface{}) error 
 
 // OutputSealStatus will print *api.SealStatusResponse in the CLI according to the format provided
 func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusResponse) int {
-	switch Format(ui) {
-	case "table":
-	default:
-		return OutputData(ui, status)
-	}
-
-	var sealPrefix string
-	if status.RecoverySeal {
-		sealPrefix = "Recovery "
-	}
-
-	out := []string{}
-	out = append(out, "Key | Value")
-	out = append(out, fmt.Sprintf("%sSeal Type | %s", sealPrefix, status.Type))
-	out = append(out, fmt.Sprintf("Initialized | %t", status.Initialized))
-	out = append(out, fmt.Sprintf("Sealed | %t", status.Sealed))
-	out = append(out, fmt.Sprintf("Total %sShares | %d", sealPrefix, status.N))
-	out = append(out, fmt.Sprintf("Threshold | %d", status.T))
-
-	if status.Sealed {
-		out = append(out, fmt.Sprintf("Unseal Progress | %d/%d", status.Progress, status.T))
-		out = append(out, fmt.Sprintf("Unseal Nonce | %s", status.Nonce))
-	}
-
-	if status.Migration {
-		out = append(out, fmt.Sprintf("Seal Migration in Progress | %t", status.Migration))
-	}
-
-	out = append(out, fmt.Sprintf("Version | %s", status.Version))
-
-	if status.ClusterName != "" && status.ClusterID != "" {
-		out = append(out, fmt.Sprintf("Cluster Name | %s", status.ClusterName))
-		out = append(out, fmt.Sprintf("Cluster ID | %s", status.ClusterID))
-	}
+	sealStatusOutput := SealStatusOutput{SealStatusResponse: *status}
 
 	// Mask the 'Vault is sealed' error, since this means HA is enabled, but that
 	// we cannot query for the leader since we are sealed.
@@ -353,41 +682,18 @@ func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusRespo
 		return 1
 	}
 
-	// Output if HA is enabled
-	out = append(out, fmt.Sprintf("HA Enabled | %t", leaderStatus.HAEnabled))
-	if leaderStatus.HAEnabled {
-		mode := "sealed"
-		if !status.Sealed {
-			out = append(out, fmt.Sprintf("HA Cluster | %s", leaderStatus.LeaderClusterAddress))
-			mode = "standby"
-			showLeaderAddr := false
-			if leaderStatus.IsSelf {
-				mode = "active"
-			} else {
-				if leaderStatus.LeaderAddress == "" {
-					leaderStatus.LeaderAddress = "<none>"
-				}
-				showLeaderAddr = true
-			}
-			out = append(out, fmt.Sprintf("HA Mode | %s", mode))
-
-			// This is down here just to keep ordering consistent
-			if showLeaderAddr {
-				out = append(out, fmt.Sprintf("Active Node Address | %s", leaderStatus.LeaderAddress))
-			}
-
-			if leaderStatus.PerfStandby {
-				out = append(out, fmt.Sprintf("Performance Standby Node | %t", leaderStatus.PerfStandby))
-				out = append(out, fmt.Sprintf("Performance Standby Last Remote WAL | %d", leaderStatus.PerfStandbyLastRemoteWAL))
-			}
-		}
-	}
-
-	if leaderStatus.LastWAL != 0 {
-		out = append(out, fmt.Sprintf("Last WAL | %d", leaderStatus.LastWAL))
-	}
-
-	ui.Output(tableOutput(out, nil))
+	// copy leaderStatus fields into sealStatusOutput for display later
+	sealStatusOutput.HAEnabled = leaderStatus.HAEnabled
+	sealStatusOutput.IsSelf = leaderStatus.IsSelf
+	sealStatusOutput.ActiveTime = leaderStatus.ActiveTime
+	sealStatusOutput.LeaderAddress = leaderStatus.LeaderAddress
+	sealStatusOutput.LeaderClusterAddress = leaderStatus.LeaderClusterAddress
+	sealStatusOutput.PerfStandby = leaderStatus.PerfStandby
+	sealStatusOutput.PerfStandbyLastRemoteWAL = leaderStatus.PerfStandbyLastRemoteWAL
+	sealStatusOutput.LastWAL = leaderStatus.LastWAL
+	sealStatusOutput.RaftCommittedIndex = leaderStatus.RaftCommittedIndex
+	sealStatusOutput.RaftAppliedIndex = leaderStatus.RaftAppliedIndex
+	OutputData(ui, sealStatusOutput)
 	return 0
 }
 
@@ -399,4 +705,21 @@ func looksLikeDuration(k string) bool {
 		k == "ttl" || strings.HasSuffix(k, "_ttl") ||
 		k == "duration" || strings.HasSuffix(k, "_duration") ||
 		k == "lease_max" || k == "ttl_max"
+}
+
+// This struct is responsible for capturing all the fields to be output by a
+// vault status command, including fields that do not come from the status API.
+// Currently we are adding the fields from api.LeaderResponse
+type SealStatusOutput struct {
+	api.SealStatusResponse
+	HAEnabled                bool      `json:"ha_enabled"`
+	IsSelf                   bool      `json:"is_self,omitempty"`
+	ActiveTime               time.Time `json:"active_time,omitempty"`
+	LeaderAddress            string    `json:"leader_address,omitempty"`
+	LeaderClusterAddress     string    `json:"leader_cluster_address,omitempty"`
+	PerfStandby              bool      `json:"performance_standby,omitempty"`
+	PerfStandbyLastRemoteWAL uint64    `json:"performance_standby_last_remote_wal,omitempty"`
+	LastWAL                  uint64    `json:"last_wal,omitempty"`
+	RaftCommittedIndex       uint64    `json:"raft_committed_index,omitempty"`
+	RaftAppliedIndex         uint64    `json:"raft_applied_index,omitempty"`
 }

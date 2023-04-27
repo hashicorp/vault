@@ -1,10 +1,15 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { capitalize } from '@ember/string';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import columnify from 'columnify';
 
 export function stringifyObjectValues(data) {
-  Object.keys(data).forEach(item => {
+  Object.keys(data).forEach((item) => {
     let val = data[item];
     if (typeof val !== 'string') {
       val = JSON.stringify(val);
@@ -15,13 +20,13 @@ export function stringifyObjectValues(data) {
 
 export default Component.extend({
   content: null,
-  columns: computed('content', function() {
-    let data = this.get('content');
+  columns: computed('content', function () {
+    const data = this.content;
     stringifyObjectValues(data);
 
     return columnify(data, {
       preserveNewLines: true,
-      headingTransform: function(heading) {
+      headingTransform: function (heading) {
         return capitalize(heading);
       },
     });

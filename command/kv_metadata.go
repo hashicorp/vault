@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -24,18 +27,24 @@ Usage: vault kv metadata <subcommand> [options] [args]
   Vault's key-value store. Here are some simple examples, and more detailed
   examples are available in the subcommands or the documentation.
 
-  Create or update a metadata entry for a key: 
+  Create or update a metadata entry for a key:
 
-      $ vault kv metadata put -max-versions=5 secret/foo
+      $ vault kv metadata put -mount=secret -max-versions=5 -delete-version-after=3h25m19s foo
 
   Get the metadata for a key, this provides information about each existing
   version:
 
-      $ vault kv metadata get secret/foo
+      $ vault kv metadata get -mount=secret foo
 
   Delete a key and all existing versions:
 
-      $ vault kv metadata delete secret/foo
+      $ vault kv metadata delete -mount=secret foo
+
+  The deprecated path-like syntax can also be used, but this should be avoided 
+  for KV v2, as the fact that it is not actually the full API path to 
+  the secret (secret/metadata/foo) can cause confusion: 
+  
+      $ vault kv metadata get secret/foo
 
   Please see the individual subcommand help for detailed usage information.
 `

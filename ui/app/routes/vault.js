@@ -1,15 +1,24 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { later } from '@ember/runloop';
 import { Promise } from 'rsvp';
 import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
 import Ember from 'ember';
+/* eslint-disable ember/no-ember-testing-in-module-scope */
 const SPLASH_DELAY = Ember.testing ? 0 : 300;
 
 export default Route.extend({
+  store: service(),
   version: service(),
+
   beforeModel() {
-    return this.get('version').fetchVersion();
+    return this.version.fetchVersion();
   },
+
   model() {
     // hardcode single cluster
     const fixture = {
@@ -22,7 +31,7 @@ export default Route.extend({
       },
     };
     this.store.push(fixture);
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       later(() => {
         resolve(this.store.peekAll('cluster'));
       }, SPLASH_DELAY);

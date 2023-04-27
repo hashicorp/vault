@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -6,7 +9,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestBarrierView_impl(t *testing.T) {
@@ -182,12 +185,12 @@ func TestBarrierView_Scan(t *testing.T) {
 
 	expect := []string{}
 	ent := []*logical.StorageEntry{
-		&logical.StorageEntry{Key: "foo", Value: []byte("test")},
-		&logical.StorageEntry{Key: "zip", Value: []byte("test")},
-		&logical.StorageEntry{Key: "foo/bar", Value: []byte("test")},
-		&logical.StorageEntry{Key: "foo/zap", Value: []byte("test")},
-		&logical.StorageEntry{Key: "foo/bar/baz", Value: []byte("test")},
-		&logical.StorageEntry{Key: "foo/bar/zoo", Value: []byte("test")},
+		{Key: "foo", Value: []byte("test")},
+		{Key: "zip", Value: []byte("test")},
+		{Key: "foo/bar", Value: []byte("test")},
+		{Key: "foo/zap", Value: []byte("test")},
+		{Key: "foo/bar/baz", Value: []byte("test")},
+		{Key: "foo/bar/zoo", Value: []byte("test")},
 	}
 
 	for _, e := range ent {
@@ -220,12 +223,12 @@ func TestBarrierView_CollectKeys(t *testing.T) {
 
 	expect := []string{}
 	ent := []*logical.StorageEntry{
-		&logical.StorageEntry{Key: "foo", Value: []byte("test")},
-		&logical.StorageEntry{Key: "zip", Value: []byte("test")},
-		&logical.StorageEntry{Key: "foo/bar", Value: []byte("test")},
-		&logical.StorageEntry{Key: "foo/zap", Value: []byte("test")},
-		&logical.StorageEntry{Key: "foo/bar/baz", Value: []byte("test")},
-		&logical.StorageEntry{Key: "foo/bar/zoo", Value: []byte("test")},
+		{Key: "foo", Value: []byte("test")},
+		{Key: "zip", Value: []byte("test")},
+		{Key: "foo/bar", Value: []byte("test")},
+		{Key: "foo/zap", Value: []byte("test")},
+		{Key: "foo/bar/baz", Value: []byte("test")},
+		{Key: "foo/bar/zoo", Value: []byte("test")},
 	}
 
 	for _, e := range ent {
@@ -254,12 +257,12 @@ func TestBarrierView_ClearView(t *testing.T) {
 
 	expect := []string{}
 	ent := []*logical.StorageEntry{
-		&logical.StorageEntry{Key: "foo", Value: []byte("test")},
-		&logical.StorageEntry{Key: "zip", Value: []byte("test")},
-		&logical.StorageEntry{Key: "foo/bar", Value: []byte("test")},
-		&logical.StorageEntry{Key: "foo/zap", Value: []byte("test")},
-		&logical.StorageEntry{Key: "foo/bar/baz", Value: []byte("test")},
-		&logical.StorageEntry{Key: "foo/bar/zoo", Value: []byte("test")},
+		{Key: "foo", Value: []byte("test")},
+		{Key: "zip", Value: []byte("test")},
+		{Key: "foo/bar", Value: []byte("test")},
+		{Key: "foo/zap", Value: []byte("test")},
+		{Key: "foo/bar/baz", Value: []byte("test")},
+		{Key: "foo/bar/zoo", Value: []byte("test")},
 	}
 
 	for _, e := range ent {

@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Remove stored license references
+```

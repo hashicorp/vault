@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -26,7 +29,7 @@ func TestParseSSHCommand(t *testing.T) {
 	t.Parallel()
 
 	_, cmd := testSSHCommand(t)
-	var tests = []struct {
+	tests := []struct {
 		name     string
 		args     []string
 		hostname string
@@ -122,7 +125,7 @@ func TestParseSSHCommand(t *testing.T) {
 			nil,
 		},
 		{
-			"Flags after the ssh command are not pased because they are part of the command",
+			"Flags after the ssh command are not passed because they are part of the command",
 			[]string{
 				"username@hostname",
 				"command",
@@ -162,7 +165,6 @@ func TestParseSSHCommand(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-
 			hostname, username, port, err := cmd.parseSSHCommand(test.args)
 			if err != test.err {
 				t.Errorf("got error: %q want %q", err, test.err)
@@ -184,7 +186,7 @@ func TestIsSingleSSHArg(t *testing.T) {
 	t.Parallel()
 
 	_, cmd := testSSHCommand(t)
-	var tests = []struct {
+	tests := []struct {
 		name string
 		arg  string
 		want bool

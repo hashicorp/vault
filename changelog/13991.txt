@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/ssh: Allow specifying multiple approved key lengths for a single algorithm
+```

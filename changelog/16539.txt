@@ -1,0 +1,3 @@
+```release-note:change
+core/entities: Fixed stranding of aliases upon entity merge, and require explicit selection of which aliases should be kept when some must be deleted
+```

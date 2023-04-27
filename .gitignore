@@ -28,6 +28,10 @@ _testmain.go
 /bin/
 /pkg/
 
+# Generated Web UI goes here
+/http/web_ui/*.*
+/http/web_ui/**/*.*
+
 # Vault-specific
 example.hcl
 example.vault.d
@@ -47,10 +51,26 @@ Vagrantfile
 
 # Configs
 *.hcl
-!command/agent/config/test-fixtures/config.hcl
-!command/agent/config/test-fixtures/config-cache.hcl
-!command/agent/config/test-fixtures/config-embedded-type.hcl
-!command/agent/config/test-fixtures/config-cache-embedded-type.hcl
+!.copywrite.hcl
+!.release/ci.hcl
+!.release/security-scan.hcl
+!.release/linux/package/etc/vault.d/vault.hcl
+!command/agent/config/test-fixtures/*.hcl
+!command/server/test-fixtures/**/*.hcl
+!enos/**/*.hcl
+
+# Enos
+enos/.enos
+enos/support
+# Enos local Terraform files
+enos/.terraform/*
+enos/.terraform.lock.hcl
+enos/*.tfstate
+enos/*.tfstate.*
+enos/**/.terraform/*
+enos/**/.terraform.lock.hcl
+enos/**/*.tfstate
+enos/**/*.tfstate.*
 
 .DS_Store
 .idea
@@ -58,7 +78,8 @@ Vagrantfile
 
 dist/*
 
-tags
+# ignore ctags
+./tags
 
 # Editor backups
 *~
@@ -73,7 +94,6 @@ tags
 ui/dist
 ui/tmp
 ui/root
-http/bindata_assetfs.go
 
 # dependencies
 ui/node_modules
@@ -86,6 +106,7 @@ ui/connect.lock
 ui/coverage/*
 ui/libpeerconnection.log
 ui/npm-debug.log
+ui/test-reports/*
 ui/testem.log
 
 # used for JS acceptance tests
@@ -94,7 +115,6 @@ ui/vault-ui-integration-server.pid
 
 # for building static assets
 node_modules
-package-lock.json
 
 # Website
 website/.bundle
@@ -106,3 +126,9 @@ website/.cache
 website/assets/node_modules
 website/assets/public
 website/components/node_modules
+
+.buildcache/
+.releaser/
+*.log
+
+tools/godoctests/.bin

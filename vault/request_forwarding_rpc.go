@@ -1,24 +1,31 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
 	"context"
 	"net/http"
-	"runtime"
+	"os"
+	"runtime/debug"
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/vault/helper/consts"
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/forwarding"
+	"github.com/hashicorp/vault/physical/raft"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault/replication"
-	cache "github.com/patrickmn/go-cache"
 )
 
 type forwardedRequestRPCServer struct {
+	UnimplementedRequestForwardingServer
+
 	core                  *Core
 	handler               http.Handler
 	perfStandbySlots      chan struct{}
 	perfStandbyRepCluster *replication.Cluster
-	perfStandbyCache      *cache.Cache
+	raftFollowerStates    *raft.FollowerStates
 }
 
 func (s *forwardedRequestRPCServer) ForwardRequest(ctx context.Context, freq *forwarding.Request) (*forwarding.Response, error) {
@@ -37,12 +44,8 @@ func (s *forwardedRequestRPCServer) ForwardRequest(ctx context.Context, freq *fo
 
 	runRequest := func() {
 		defer func() {
-			// Logic here comes mostly from the Go source code
 			if err := recover(); err != nil {
-				const size = 64 << 10
-				buf := make([]byte, size)
-				buf = buf[:runtime.Stack(buf, false)]
-				s.core.logger.Error("panic serving forwarded request", "path", req.URL.Path, "error", err, "stacktrace", string(buf))
+				s.core.logger.Error("panic serving forwarded request", "path", req.URL.Path, "error", err, "stacktrace", string(debug.Stack()))
 			}
 		}()
 		s.handler.ServeHTTP(w, req)
@@ -62,27 +65,60 @@ func (s *forwardedRequestRPCServer) ForwardRequest(ctx context.Context, freq *fo
 	}
 
 	// Performance standby nodes will use this value to do wait for WALs to ship
-	// in order to do a best-effort read after write gurantee
+	// in order to do a best-effort read after write guarantee
 	resp.LastRemoteWal = LastWAL(s.core)
 
 	return resp, nil
 }
 
+type nodeHAConnectionInfo struct {
+	nodeInfo       *NodeInformation
+	lastHeartbeat  time.Time
+	version        string
+	upgradeVersion string
+	redundancyZone string
+}
+
 func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (*EchoReply, error) {
-	if in.ClusterAddr != "" {
-		s.core.clusterPeerClusterAddrsCache.Set(in.ClusterAddr, nil, 0)
+	incomingNodeConnectionInfo := nodeHAConnectionInfo{
+		nodeInfo:       in.NodeInfo,
+		lastHeartbeat:  time.Now(),
+		version:        in.SdkVersion,
+		upgradeVersion: in.RaftUpgradeVersion,
+		redundancyZone: in.RaftRedundancyZone,
 	}
-	return &EchoReply{
+	if in.ClusterAddr != "" {
+		s.core.clusterPeerClusterAddrsCache.Set(in.ClusterAddr, incomingNodeConnectionInfo, 0)
+	}
+
+	if in.RaftAppliedIndex > 0 && len(in.RaftNodeID) > 0 && s.raftFollowerStates != nil {
+		s.raftFollowerStates.Update(&raft.EchoRequestUpdate{
+			NodeID:          in.RaftNodeID,
+			AppliedIndex:    in.RaftAppliedIndex,
+			Term:            in.RaftTerm,
+			DesiredSuffrage: in.RaftDesiredSuffrage,
+			SDKVersion:      in.SdkVersion,
+			UpgradeVersion:  in.RaftUpgradeVersion,
+			RedundancyZone:  in.RaftRedundancyZone,
+		})
+	}
+
+	reply := &EchoReply{
 		Message:          "pong",
 		ReplicationState: uint32(s.core.ReplicationState()),
-	}, nil
+	}
+
+	if raftBackend := s.core.getRaftBackend(); raftBackend != nil {
+		reply.RaftAppliedIndex = raftBackend.AppliedIndex()
+		reply.RaftNodeID = raftBackend.NodeID()
+	}
+
+	return reply, nil
 }
 
 type forwardingClient struct {
 	RequestForwardingClient
-
-	core *Core
-
+	core        *Core
 	echoTicker  *time.Ticker
 	echoContext context.Context
 }
@@ -91,18 +127,39 @@ type forwardingClient struct {
 // with these requests it's useful to keep this as well
 func (c *forwardingClient) startHeartbeat() {
 	go func() {
+		clusterAddr := c.core.ClusterAddr()
+		hostname, _ := os.Hostname()
+		ni := NodeInformation{
+			ApiAddr:  c.core.redirectAddr,
+			Hostname: hostname,
+			Mode:     "standby",
+		}
 		tick := func() {
-			c.core.stateLock.RLock()
-			clusterAddr := c.core.clusterAddr
-			c.core.stateLock.RUnlock()
+			labels := make([]metrics.Label, 0, 1)
+			defer metrics.MeasureSinceWithLabels([]string{"ha", "rpc", "client", "echo"}, time.Now(), labels)
 
-			ctx, cancel := context.WithTimeout(c.echoContext, 2*time.Second)
-			resp, err := c.RequestForwardingClient.Echo(ctx, &EchoRequest{
+			req := &EchoRequest{
 				Message:     "ping",
 				ClusterAddr: clusterAddr,
-			})
+				NodeInfo:    &ni,
+				SdkVersion:  c.core.effectiveSDKVersion,
+			}
+
+			if raftBackend := c.core.getRaftBackend(); raftBackend != nil {
+				req.RaftAppliedIndex = raftBackend.AppliedIndex()
+				req.RaftNodeID = raftBackend.NodeID()
+				req.RaftTerm = raftBackend.Term()
+				req.RaftDesiredSuffrage = raftBackend.DesiredSuffrage()
+				req.RaftRedundancyZone = raftBackend.RedundancyZone()
+				req.RaftUpgradeVersion = raftBackend.EffectiveVersion()
+				labels = append(labels, metrics.Label{Name: "peer_id", Value: raftBackend.NodeID()})
+			}
+
+			ctx, cancel := context.WithTimeout(c.echoContext, 2*time.Second)
+			resp, err := c.RequestForwardingClient.Echo(ctx, req)
 			cancel()
 			if err != nil {
+				metrics.IncrCounter([]string{"ha", "rpc", "client", "echo", "errors"}, 1)
 				c.core.logger.Debug("forwarding: error sending echo request to active node", "error", err)
 				return
 			}

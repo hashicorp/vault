@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/database/cassandra: Updated default statement for password rotation to allow for special characters. This applies to root and static credentials.
+```

@@ -1,11 +1,14 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package nomad
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const configAccessKey = "config/access"
@@ -13,28 +16,72 @@ const configAccessKey = "config/access"
 func pathConfigAccess(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/access",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixNomad,
+		},
+
 		Fields: map[string]*framework.FieldSchema{
-			"address": &framework.FieldSchema{
+			"address": {
 				Type:        framework.TypeString,
 				Description: "Nomad server address",
 			},
 
-			"token": &framework.FieldSchema{
+			"token": {
 				Type:        framework.TypeString,
 				Description: "Token for API calls",
 			},
 
-			"max_token_name_length": &framework.FieldSchema{
+			"max_token_name_length": {
 				Type:        framework.TypeInt,
 				Description: "Max length for name of generated Nomad tokens",
 			},
+			"ca_cert": {
+				Type: framework.TypeString,
+				Description: `CA certificate to use when verifying Nomad server certificate,
+must be x509 PEM encoded.`,
+			},
+			"client_cert": {
+				Type: framework.TypeString,
+				Description: `Client certificate used for Nomad's TLS communication,
+must be x509 PEM encoded and if this is set you need to also set client_key.`,
+			},
+			"client_key": {
+				Type: framework.TypeString,
+				Description: `Client key used for Nomad's TLS communication,
+must be x509 PEM encoded and if this is set you need to also set client_cert.`,
+			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathConfigAccessRead,
-			logical.CreateOperation: b.pathConfigAccessWrite,
-			logical.UpdateOperation: b.pathConfigAccessWrite,
-			logical.DeleteOperation: b.pathConfigAccessDelete,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathConfigAccessRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "read",
+					OperationSuffix: "access-configuration",
+				},
+			},
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.pathConfigAccessWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "access",
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathConfigAccessWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "access",
+				},
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathConfigAccessDelete,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "delete",
+					OperationSuffix: "access-configuration",
+				},
+			},
 		},
 
 		ExistenceCheck: b.configExistenceCheck,
@@ -61,7 +108,7 @@ func (b *backend) readConfigAccess(ctx context.Context, storage logical.Storage)
 
 	conf := &accessConfig{}
 	if err := entry.DecodeJSON(conf); err != nil {
-		return nil, errwrap.Wrapf("error reading nomad access configuration: {{err}}", err)
+		return nil, fmt.Errorf("error reading nomad access configuration: %w", err)
 	}
 
 	return conf, nil
@@ -80,6 +127,8 @@ func (b *backend) pathConfigAccessRead(ctx context.Context, req *logical.Request
 		Data: map[string]interface{}{
 			"address":               conf.Address,
 			"max_token_name_length": conf.MaxTokenNameLength,
+			"ca_cert":               conf.CACert,
+			"client_cert":           conf.ClientCert,
 		},
 	}, nil
 }
@@ -100,6 +149,30 @@ func (b *backend) pathConfigAccessWrite(ctx context.Context, req *logical.Reques
 	token, ok := data.GetOk("token")
 	if ok {
 		conf.Token = token.(string)
+	}
+	caCert, ok := data.GetOk("ca_cert")
+	if ok {
+		conf.CACert = caCert.(string)
+	}
+	clientCert, ok := data.GetOk("client_cert")
+	if ok {
+		conf.ClientCert = clientCert.(string)
+	}
+	clientKey, ok := data.GetOk("client_key")
+	if ok {
+		conf.ClientKey = clientKey.(string)
+	}
+
+	if conf.Token == "" {
+		client, err := clientFromConfig(conf)
+		if err != nil {
+			return logical.ErrorResponse("Token not provided and failed to constuct client"), err
+		}
+		token, _, err := client.ACLTokens().Bootstrap(nil)
+		if err != nil {
+			return logical.ErrorResponse("Token not provided and failed to bootstrap ACLs"), err
+		}
+		conf.Token = token.SecretID
 	}
 
 	conf.MaxTokenNameLength = data.Get("max_token_name_length").(int)
@@ -126,4 +199,7 @@ type accessConfig struct {
 	Address            string `json:"address"`
 	Token              string `json:"token"`
 	MaxTokenNameLength int    `json:"max_token_name_length"`
+	CACert             string `json:"ca_cert"`
+	ClientCert         string `json:"client_cert"`
+	ClientKey          string `json:"client_key"`
 }

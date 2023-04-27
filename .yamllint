@@ -1,0 +1,10 @@
+---
+
+extends: relaxed 
+
+rules:
+  comments: disable
+  comments-indentation: disable
+  line-length: disable
+  commas:
+  	max-spaces-after: -1

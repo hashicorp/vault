@@ -1,0 +1,3 @@
+```release-note:bug
+api: Fixes bug where OutputCurlString field was unintentionally being copied over during client cloning
+```

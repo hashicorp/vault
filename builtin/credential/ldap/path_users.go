@@ -1,18 +1,28 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package ldap
 
 import (
 	"context"
 	"strings"
 
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathUsersList(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "users/?$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixLDAP,
+			OperationSuffix: "users",
+			Navigation:      true,
+			ItemType:        "User",
+		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.pathUserList,
@@ -26,20 +36,34 @@ func pathUsersList(b *backend) *framework.Path {
 func pathUsers(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `users/(?P<name>.+)`,
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixLDAP,
+			OperationSuffix: "user",
+			Action:          "Create",
+			ItemType:        "User",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the LDAP user.",
 			},
 
-			"groups": &framework.FieldSchema{
-				Type:        framework.TypeString,
+			"groups": {
+				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-separated list of additional groups associated with the user.",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Description: "A list of additional groups associated with the user.",
+				},
 			},
 
-			"policies": &framework.FieldSchema{
+			"policies": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-separated list of policies associated with the user.",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Description: "A list of policies associated with the user.",
+				},
 			},
 		},
 
@@ -126,7 +150,7 @@ func (b *backend) pathUserWrite(ctx context.Context, req *logical.Request, d *fr
 		lowercaseGroups = true
 	}
 
-	groups := strutil.RemoveDuplicates(strutil.ParseStringSlice(d.Get("groups").(string), ","), lowercaseGroups)
+	groups := strutil.RemoveDuplicates(d.Get("groups").([]string), lowercaseGroups)
 	policies := policyutil.ParsePolicies(d.Get("policies"))
 	for i, g := range groups {
 		groups[i] = strings.TrimSpace(g)
@@ -148,18 +172,14 @@ func (b *backend) pathUserWrite(ctx context.Context, req *logical.Request, d *fr
 }
 
 func (b *backend) pathUserList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	keys, err := logical.CollectKeys(ctx, req.Storage)
+	keys, err := logical.CollectKeysWithPrefix(ctx, req.Storage, "user/")
 	if err != nil {
 		return nil, err
 	}
-	retKeys := make([]string, 0)
-	for _, key := range keys {
-		if strings.HasPrefix(key, "user/") && !strings.HasPrefix(key, "/") {
-			retKeys = append(retKeys, strings.TrimPrefix(key, "user/"))
-		}
+	for i := range keys {
+		keys[i] = strings.TrimPrefix(keys[i], "user/")
 	}
-	return logical.ListResponse(retKeys), nil
-
+	return logical.ListResponse(keys), nil
 }
 
 type UserEntry struct {
@@ -168,7 +188,7 @@ type UserEntry struct {
 }
 
 const pathUserHelpSyn = `
-Manage additional groups for users allowed to authenticate.
+Manage users allowed to authenticate.
 `
 
 const pathUserHelpDesc = `

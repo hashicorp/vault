@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fixes issue with SearchSelect component not holding focus
+```

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package rabbitmq
 
 import (
@@ -5,29 +8,46 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathConfigLease(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/lease",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixRabbitMQ,
+		},
+
 		Fields: map[string]*framework.FieldSchema{
-			"ttl": &framework.FieldSchema{
+			"ttl": {
 				Type:        framework.TypeDurationSecond,
 				Default:     0,
 				Description: "Duration before which the issued credentials needs renewal",
 			},
-			"max_ttl": &framework.FieldSchema{
+			"max_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Default:     0,
 				Description: `Duration after which the issued credentials should not be allowed to be renewed`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathLeaseRead,
-			logical.UpdateOperation: b.pathLeaseUpdate,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathLeaseRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "read",
+					OperationSuffix: "lease-configuration",
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathLeaseUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "lease",
+				},
+			},
 		},
 
 		HelpSynopsis:    pathConfigLeaseHelpSyn,

@@ -1,0 +1,5 @@
+```release-note: improvement
+storage/raft (enterprise): Listing of peers is now allowed on DR secondary
+cluster nodes, as an update operation that takes in DR operation token for
+authenticating the request.
+```

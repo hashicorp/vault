@@ -1,8 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
 	"context"
 	"fmt"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -10,6 +14,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 type backendEntry struct {
@@ -86,16 +91,25 @@ func (a *AuditBroker) GetHash(ctx context.Context, name string, input string) (s
 
 // LogRequest is used to ensure all the audit backends have an opportunity to
 // log the given request and that *at least one* succeeds.
-func (a *AuditBroker) LogRequest(ctx context.Context, in *audit.LogInput, headersConfig *AuditedHeadersConfig) (ret error) {
+func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, headersConfig *AuditedHeadersConfig) (ret error) {
 	defer metrics.MeasureSince([]string{"audit", "log_request"}, time.Now())
 	a.RLock()
 	defer a.RUnlock()
+	if in.Request.InboundSSCToken != "" {
+		if in.Auth != nil {
+			reqAuthToken := in.Auth.ClientToken
+			in.Auth.ClientToken = in.Request.InboundSSCToken
+			defer func() {
+				in.Auth.ClientToken = reqAuthToken
+			}()
+		}
+	}
 
 	var retErr *multierror.Error
 
 	defer func() {
 		if r := recover(); r != nil {
-			a.logger.Error("panic during logging", "request_path", in.Request.Path, "error", r)
+			a.logger.Error("panic during logging", "request_path", in.Request.Path, "error", r, "stacktrace", string(debug.Stack()))
 			retErr = multierror.Append(retErr, fmt.Errorf("panic generating audit log"))
 		}
 
@@ -148,16 +162,25 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *audit.LogInput, header
 
 // LogResponse is used to ensure all the audit backends have an opportunity to
 // log the given response and that *at least one* succeeds.
-func (a *AuditBroker) LogResponse(ctx context.Context, in *audit.LogInput, headersConfig *AuditedHeadersConfig) (ret error) {
+func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput, headersConfig *AuditedHeadersConfig) (ret error) {
 	defer metrics.MeasureSince([]string{"audit", "log_response"}, time.Now())
 	a.RLock()
 	defer a.RUnlock()
+	if in.Request.InboundSSCToken != "" {
+		if in.Auth != nil {
+			reqAuthToken := in.Auth.ClientToken
+			in.Auth.ClientToken = in.Request.InboundSSCToken
+			defer func() {
+				in.Auth.ClientToken = reqAuthToken
+			}()
+		}
+	}
 
 	var retErr *multierror.Error
 
 	defer func() {
 		if r := recover(); r != nil {
-			a.logger.Error("panic during logging", "request_path", in.Request.Path, "error", r)
+			a.logger.Error("panic during logging", "request_path", in.Request.Path, "error", r, "stacktrace", string(debug.Stack()))
 			retErr = multierror.Append(retErr, fmt.Errorf("panic generating audit log"))
 		}
 

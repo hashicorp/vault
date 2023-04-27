@@ -1,0 +1,6 @@
+```release-note:change
+api: Exclusively use `GET /sys/plugins/catalog` endpoint for listing plugins, and add `details` field to list responses.
+```
+```release-note:improvement
+cli: `vault plugin list` now has a `details` field in JSON format, and version and type information in table format.
+```

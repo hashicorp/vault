@@ -1,26 +1,36 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package cert
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
-	"github.com/hashicorp/go-sockaddr"
-	"net/http"
-
-	"golang.org/x/net/http2"
-
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"math/big"
+	mathrand "math/rand"
 	"net"
+	"net/http"
+	"net/url"
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/go-test/deep"
+	"github.com/hashicorp/go-sockaddr"
+
+	"golang.org/x/net/http2"
 
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
@@ -29,10 +39,11 @@ import (
 
 	rootcerts "github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/vault/builtin/logical/pki"
-	"github.com/hashicorp/vault/helper/certutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
-	logicaltest "github.com/hashicorp/vault/logical/testing"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/tokenutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
 )
@@ -52,6 +63,91 @@ const (
 	testRootCAKeyPath2  = "test-fixtures/testcakey2.pem"
 	testRootCertCRL     = "test-fixtures/cacert2crl"
 )
+
+func generateTestCertAndConnState(t *testing.T, template *x509.Certificate) (string, tls.ConnectionState, error) {
+	t.Helper()
+	tempDir, err := ioutil.TempDir("", "vault-cert-auth-test-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("test %s, temp dir %s", t.Name(), tempDir)
+	caCertTemplate := &x509.Certificate{
+		Subject: pkix.Name{
+			CommonName: "localhost",
+		},
+		DNSNames:              []string{"localhost"},
+		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1")},
+		KeyUsage:              x509.KeyUsage(x509.KeyUsageCertSign | x509.KeyUsageCRLSign),
+		SerialNumber:          big.NewInt(mathrand.Int63()),
+		NotBefore:             time.Now().Add(-30 * time.Second),
+		NotAfter:              time.Now().Add(262980 * time.Hour),
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+	caKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	caBytes, err := x509.CreateCertificate(rand.Reader, caCertTemplate, caCertTemplate, caKey.Public(), caKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	caCert, err := x509.ParseCertificate(caBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	caCertPEMBlock := &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: caBytes,
+	}
+	err = ioutil.WriteFile(filepath.Join(tempDir, "ca_cert.pem"), pem.EncodeToMemory(caCertPEMBlock), 0o755)
+	if err != nil {
+		t.Fatal(err)
+	}
+	marshaledCAKey, err := x509.MarshalECPrivateKey(caKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	caKeyPEMBlock := &pem.Block{
+		Type:  "EC PRIVATE KEY",
+		Bytes: marshaledCAKey,
+	}
+	err = ioutil.WriteFile(filepath.Join(tempDir, "ca_key.pem"), pem.EncodeToMemory(caKeyPEMBlock), 0o755)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	certBytes, err := x509.CreateCertificate(rand.Reader, template, caCert, key.Public(), caKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	certPEMBlock := &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: certBytes,
+	}
+	err = ioutil.WriteFile(filepath.Join(tempDir, "cert.pem"), pem.EncodeToMemory(certPEMBlock), 0o755)
+	if err != nil {
+		t.Fatal(err)
+	}
+	marshaledKey, err := x509.MarshalECPrivateKey(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	keyPEMBlock := &pem.Block{
+		Type:  "EC PRIVATE KEY",
+		Bytes: marshaledKey,
+	}
+	err = ioutil.WriteFile(filepath.Join(tempDir, "key.pem"), pem.EncodeToMemory(keyPEMBlock), 0o755)
+	if err != nil {
+		t.Fatal(err)
+	}
+	connInfo, err := testConnState(filepath.Join(tempDir, "cert.pem"), filepath.Join(tempDir, "key.pem"), filepath.Join(tempDir, "ca_cert.pem"))
+	return tempDir, connInfo, err
+}
 
 // Unlike testConnState, this method does not use the same 'tls.Config' objects for
 // both dialing and listening. Instead, it runs the server without specifying its CA.
@@ -352,7 +448,7 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	}
 
 	// Create a new api client with the desired TLS configuration
-	newClient := getAPIClient(cores[0].Listeners[0].Address.Port, cores[0].TLSConfig)
+	newClient := getAPIClient(cores[0].Listeners[0].Address.Port, cores[0].TLSConfig())
 
 	secret, err = newClient.Logical().Write("auth/cert/login", map[string]interface{}{
 		"name": "myvault-dot-com",
@@ -362,6 +458,181 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	}
 	if secret.Auth == nil || secret.Auth.ClientToken == "" {
 		t.Fatalf("expected a successful authentication")
+	}
+
+	// testing pathLoginRenew for cert auth
+	oldAccessor := secret.Auth.Accessor
+	newClient.SetToken(client.Token())
+	secret, err = newClient.Logical().Write("auth/token/renew-accessor", map[string]interface{}{
+		"accessor":  secret.Auth.Accessor,
+		"increment": 3600,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if secret.Auth == nil || secret.Auth.ClientToken != "" || secret.Auth.LeaseDuration != 3600 || secret.Auth.Accessor != oldAccessor {
+		t.Fatalf("unexpected accessor renewal")
+	}
+}
+
+func TestBackend_MetadataBasedACLPolicy(t *testing.T) {
+	// Start cluster with cert auth method enabled
+	coreConfig := &vault.CoreConfig{
+		DisableMlock: true,
+		DisableCache: true,
+		Logger:       log.NewNullLogger(),
+		CredentialBackends: map[string]logical.Factory{
+			"cert": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	cores := cluster.Cores
+	vault.TestWaitActive(t, cores[0].Core)
+	client := cores[0].Client
+
+	var err error
+
+	// Enable the cert auth method
+	err = client.Sys().EnableAuthWithOptions("cert", &api.EnableAuthOptions{
+		Type: "cert",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Enable metadata in aliases
+	_, err = client.Logical().Write("auth/cert/config", map[string]interface{}{
+		"enable_identity_alias_metadata": true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Retrieve its accessor id
+	auths, err := client.Sys().ListAuth()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var accessor string
+
+	for _, auth := range auths {
+		if auth.Type == "cert" {
+			accessor = auth.Accessor
+		}
+	}
+
+	if accessor == "" {
+		t.Fatal("failed to find cert auth accessor")
+	}
+
+	// Write ACL policy
+	err = client.Sys().PutPolicy("metadata-based", fmt.Sprintf(`
+path "kv/cn/{{identity.entity.aliases.%s.metadata.common_name}}" {
+	capabilities = ["read"]
+}
+path "kv/ext/{{identity.entity.aliases.%s.metadata.2-1-1-1}}" {
+	capabilities = ["read"]
+}
+`, accessor, accessor))
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	ca, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Set the trusted certificate in the backend
+	_, err = client.Logical().Write("auth/cert/certs/test", map[string]interface{}{
+		"display_name":                "test",
+		"policies":                    "metadata-based",
+		"certificate":                 string(ca),
+		"allowed_metadata_extensions": "2.1.1.1,1.2.3.45",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// This function is a copy-paste from the NewTestCluster, with the
+	// modification to reconfigure the TLS on the api client with a
+	// specific client certificate.
+	getAPIClient := func(port int, tlsConfig *tls.Config) *api.Client {
+		transport := cleanhttp.DefaultPooledTransport()
+		transport.TLSClientConfig = tlsConfig.Clone()
+		if err := http2.ConfigureTransport(transport); err != nil {
+			t.Fatal(err)
+		}
+		client := &http.Client{
+			Transport: transport,
+			CheckRedirect: func(*http.Request, []*http.Request) error {
+				// This can of course be overridden per-test by using its own client
+				return fmt.Errorf("redirects not allowed in these tests")
+			},
+		}
+		config := api.DefaultConfig()
+		if config.Error != nil {
+			t.Fatal(config.Error)
+		}
+		config.Address = fmt.Sprintf("https://127.0.0.1:%d", port)
+		config.HttpClient = client
+
+		// Set the client certificates
+		config.ConfigureTLS(&api.TLSConfig{
+			CACertBytes: cluster.CACertPEM,
+			ClientCert:  "test-fixtures/root/rootcawextcert.pem",
+			ClientKey:   "test-fixtures/root/rootcawextkey.pem",
+		})
+
+		apiClient, err := api.NewClient(config)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return apiClient
+	}
+
+	// Create a new api client with the desired TLS configuration
+	newClient := getAPIClient(cores[0].Listeners[0].Address.Port, cores[0].TLSConfig())
+
+	var secret *api.Secret
+
+	secret, err = newClient.Logical().Write("auth/cert/login", map[string]interface{}{
+		"name": "test",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if secret.Auth == nil || secret.Auth.ClientToken == "" {
+		t.Fatalf("expected a successful authentication")
+	}
+
+	// Check paths guarded by ACL policy
+	newClient.SetToken(secret.Auth.ClientToken)
+
+	_, err = newClient.Logical().Read("kv/cn/example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = newClient.Logical().Read("kv/cn/not.example.com")
+	if err == nil {
+		t.Fatal("expected access denied")
+	}
+
+	_, err = newClient.Logical().Read("kv/ext/A UTF8String Extension")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = newClient.Logical().Read("kv/ext/bar")
+	if err == nil {
+		t.Fatal("expected access denied")
 	}
 }
 
@@ -657,6 +928,21 @@ func TestBackend_RegisteredNonCA_CRL(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
+	// Ensure the CRL shows up on a list.
+	listReq := &logical.Request{
+		Operation: logical.ListOperation,
+		Storage:   storage,
+		Path:      "crls",
+		Data:      map[string]interface{}{},
+	}
+	resp, err = b.HandleRequest(context.Background(), listReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if len(resp.Data) != 1 || len(resp.Data["keys"].([]string)) != 1 || resp.Data["keys"].([]string)[0] != "issuedcrl" {
+		t.Fatalf("bad listing: resp:%v", resp)
+	}
+
 	// Attempt login with the same connection state but with the CRL registered
 	resp, err = b.HandleRequest(context.Background(), loginReq)
 	if err != nil {
@@ -809,14 +1095,20 @@ func TestBackend_CRLs(t *testing.T) {
 }
 
 func testFactory(t *testing.T) logical.Backend {
+	storage := &logical.InmemStorage{}
 	b, err := Factory(context.Background(), &logical.BackendConfig{
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: 1000 * time.Second,
 			MaxLeaseTTLVal:     1800 * time.Second,
 		},
-		StorageView: &logical.InmemStorage{},
+		StorageView: storage,
 	})
 	if err != nil {
+		t.Fatalf("error: %s", err)
+	}
+	if err := b.Initialize(context.Background(), &logical.InitializationRequest{
+		Storage: storage,
+	}); err != nil {
 		t.Fatalf("error: %s", err)
 	}
 	return b
@@ -1014,24 +1306,51 @@ func TestBackend_ext_singleCert(t *testing.T) {
 			testAccStepLoginInvalid(t, connState),
 			testAccStepCert(t, "web", ca, "foo", allowed{names: "invalid", ext: "2.1.1.1:*,2.1.1.2:The Wrong Value"}, false),
 			testAccStepLoginInvalid(t, connState),
+			testAccStepReadConfig(t, config{EnableIdentityAliasMetadata: false}, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{metadata_ext: "2.1.1.1,1.2.3.45"}, false),
+			testAccStepLoginWithMetadata(t, connState, "web", map[string]string{"2-1-1-1": "A UTF8String Extension"}, false),
+			testAccStepCert(t, "web", ca, "foo", allowed{metadata_ext: "1.2.3.45"}, false),
+			testAccStepLoginWithMetadata(t, connState, "web", map[string]string{}, false),
+			testAccStepSetConfig(t, config{EnableIdentityAliasMetadata: true}, connState),
+			testAccStepReadConfig(t, config{EnableIdentityAliasMetadata: true}, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{metadata_ext: "2.1.1.1,1.2.3.45"}, false),
+			testAccStepLoginWithMetadata(t, connState, "web", map[string]string{"2-1-1-1": "A UTF8String Extension"}, true),
+			testAccStepCert(t, "web", ca, "foo", allowed{metadata_ext: "1.2.3.45"}, false),
+			testAccStepLoginWithMetadata(t, connState, "web", map[string]string{}, true),
 		},
 	})
 }
 
 // Test a self-signed client with URI alt names (root CA) that is trusted
 func TestBackend_dns_singleCert(t *testing.T) {
-	connState, err := testConnState(
-		"test-fixtures/root/rootcawdnscert.pem",
-		"test-fixtures/root/rootcawdnskey.pem",
-		"test-fixtures/root/rootcacert.pem",
-	)
+	certTemplate := &x509.Certificate{
+		Subject: pkix.Name{
+			CommonName: "example.com",
+		},
+		DNSNames:    []string{"example.com"},
+		IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
+		ExtKeyUsage: []x509.ExtKeyUsage{
+			x509.ExtKeyUsageServerAuth,
+			x509.ExtKeyUsageClientAuth,
+		},
+		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement,
+		SerialNumber: big.NewInt(mathrand.Int63()),
+		NotBefore:    time.Now().Add(-30 * time.Second),
+		NotAfter:     time.Now().Add(262980 * time.Hour),
+	}
+
+	tempDir, connState, err := generateTestCertAndConnState(t, certTemplate)
+	if tempDir != "" {
+		defer os.RemoveAll(tempDir)
+	}
 	if err != nil {
 		t.Fatalf("error testing connection state: %v", err)
 	}
-	ca, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
+	ca, err := ioutil.ReadFile(filepath.Join(tempDir, "ca_cert.pem"))
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
 	logicaltest.Test(t, logicaltest.TestCase{
 		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
@@ -1051,18 +1370,34 @@ func TestBackend_dns_singleCert(t *testing.T) {
 
 // Test a self-signed client with URI alt names (root CA) that is trusted
 func TestBackend_email_singleCert(t *testing.T) {
-	connState, err := testConnState(
-		"test-fixtures/root/rootcawemailcert.pem",
-		"test-fixtures/root/rootcawemailkey.pem",
-		"test-fixtures/root/rootcacert.pem",
-	)
+	certTemplate := &x509.Certificate{
+		Subject: pkix.Name{
+			CommonName: "example.com",
+		},
+		EmailAddresses: []string{"valid@example.com"},
+		IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
+		ExtKeyUsage: []x509.ExtKeyUsage{
+			x509.ExtKeyUsageServerAuth,
+			x509.ExtKeyUsageClientAuth,
+		},
+		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement,
+		SerialNumber: big.NewInt(mathrand.Int63()),
+		NotBefore:    time.Now().Add(-30 * time.Second),
+		NotAfter:     time.Now().Add(262980 * time.Hour),
+	}
+
+	tempDir, connState, err := generateTestCertAndConnState(t, certTemplate)
+	if tempDir != "" {
+		defer os.RemoveAll(tempDir)
+	}
 	if err != nil {
 		t.Fatalf("error testing connection state: %v", err)
 	}
-	ca, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
+	ca, err := ioutil.ReadFile(filepath.Join(tempDir, "ca_cert.pem"))
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
 	logicaltest.Test(t, logicaltest.TestCase{
 		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
@@ -1111,15 +1446,35 @@ func TestBackend_organizationalUnit_singleCert(t *testing.T) {
 
 // Test a self-signed client with URI alt names (root CA) that is trusted
 func TestBackend_uri_singleCert(t *testing.T) {
-	connState, err := testConnState(
-		"test-fixtures/root/rootcawuricert.pem",
-		"test-fixtures/root/rootcawurikey.pem",
-		"test-fixtures/root/rootcacert.pem",
-	)
+	u, err := url.Parse("spiffe://example.com/host")
+	if err != nil {
+		t.Fatal(err)
+	}
+	certTemplate := &x509.Certificate{
+		Subject: pkix.Name{
+			CommonName: "example.com",
+		},
+		DNSNames:    []string{"example.com"},
+		IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
+		URIs:        []*url.URL{u},
+		ExtKeyUsage: []x509.ExtKeyUsage{
+			x509.ExtKeyUsageServerAuth,
+			x509.ExtKeyUsageClientAuth,
+		},
+		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement,
+		SerialNumber: big.NewInt(mathrand.Int63()),
+		NotBefore:    time.Now().Add(-30 * time.Second),
+		NotAfter:     time.Now().Add(262980 * time.Hour),
+	}
+
+	tempDir, connState, err := generateTestCertAndConnState(t, certTemplate)
+	if tempDir != "" {
+		defer os.RemoveAll(tempDir)
+	}
 	if err != nil {
 		t.Fatalf("error testing connection state: %v", err)
 	}
-	ca, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
+	ca, err := ioutil.ReadFile(filepath.Join(tempDir, "ca_cert.pem"))
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1232,6 +1587,9 @@ func TestBackend_validCIDR(t *testing.T) {
 	}
 
 	readResult, err := b.HandleRequest(context.Background(), readCertReq)
+	if err != nil {
+		t.Fatal(err)
+	}
 	cidrsResult := readResult.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)
 
 	if cidrsResult[0].String() != boundCIDRs[0] ||
@@ -1363,6 +1721,42 @@ func testAccStepDeleteCRL(t *testing.T, connState tls.ConnectionState) logicalte
 	}
 }
 
+func testAccStepSetConfig(t *testing.T, conf config, connState tls.ConnectionState) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "config",
+		ConnState: &connState,
+		Data: map[string]interface{}{
+			"enable_identity_alias_metadata": conf.EnableIdentityAliasMetadata,
+		},
+	}
+}
+
+func testAccStepReadConfig(t *testing.T, conf config, connState tls.ConnectionState) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "config",
+		ConnState: &connState,
+		Check: func(resp *logical.Response) error {
+			value, ok := resp.Data["enable_identity_alias_metadata"]
+			if !ok {
+				t.Fatalf("enable_identity_alias_metadata not found in response")
+			}
+
+			b, ok := value.(bool)
+			if !ok {
+				t.Fatalf("bad: expected enable_identity_alias_metadata to be a bool")
+			}
+
+			if b != conf.EnableIdentityAliasMetadata {
+				t.Fatalf("bad: expected enable_identity_alias_metadata to be %t, got %t", conf.EnableIdentityAliasMetadata, b)
+			}
+
+			return nil
+		},
+	}
+}
+
 func testAccStepLogin(t *testing.T, connState tls.ConnectionState) logicaltest.TestStep {
 	return testAccStepLoginWithName(t, connState, "")
 }
@@ -1408,6 +1802,55 @@ func testAccStepLoginDefaultLease(t *testing.T, connState tls.ConnectionState) l
 	}
 }
 
+func testAccStepLoginWithMetadata(t *testing.T, connState tls.ConnectionState, certName string, metadata map[string]string, expectAliasMetadata bool) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation:       logical.UpdateOperation,
+		Path:            "login",
+		Unauthenticated: true,
+		ConnState:       &connState,
+		Check: func(resp *logical.Response) error {
+			// Check for fixed metadata too
+			metadata["cert_name"] = certName
+			metadata["common_name"] = connState.PeerCertificates[0].Subject.CommonName
+			metadata["serial_number"] = connState.PeerCertificates[0].SerialNumber.String()
+			metadata["subject_key_id"] = certutil.GetHexFormatted(connState.PeerCertificates[0].SubjectKeyId, ":")
+			metadata["authority_key_id"] = certutil.GetHexFormatted(connState.PeerCertificates[0].AuthorityKeyId, ":")
+
+			for key, expected := range metadata {
+				value, ok := resp.Auth.Metadata[key]
+				if !ok {
+					t.Fatalf("missing metadata key: %s", key)
+				}
+
+				if value != expected {
+					t.Fatalf("expected metadata key %s to equal %s, but got: %s", key, expected, value)
+				}
+
+				if expectAliasMetadata {
+					value, ok = resp.Auth.Alias.Metadata[key]
+					if !ok {
+						t.Fatalf("missing alias metadata key: %s", key)
+					}
+
+					if value != expected {
+						t.Fatalf("expected metadata key %s to equal %s, but got: %s", key, expected, value)
+					}
+				} else {
+					if len(resp.Auth.Alias.Metadata) > 0 {
+						t.Fatal("found alias metadata keys, but should not have any")
+					}
+				}
+			}
+
+			fn := logicaltest.TestCheckAuth([]string{"default", "foo"})
+			return fn(resp)
+		},
+		Data: map[string]interface{}{
+			"metadata": metadata,
+		},
+	}
+}
+
 func testAccStepLoginInvalid(t *testing.T, connState tls.ConnectionState) logicaltest.TestStep {
 	return testAccStepLoginWithNameInvalid(t, connState, "")
 }
@@ -1432,9 +1875,10 @@ func testAccStepLoginWithNameInvalid(t *testing.T, connState tls.ConnectionState
 }
 
 func testAccStepListCerts(
-	t *testing.T, certs []string) []logicaltest.TestStep {
+	t *testing.T, certs []string,
+) []logicaltest.TestStep {
 	return []logicaltest.TestStep{
-		logicaltest.TestStep{
+		{
 			Operation: logical.ListOperation,
 			Path:      "certs",
 			Check: func(resp *logical.Response) error {
@@ -1453,7 +1897,7 @@ func testAccStepListCerts(
 				}
 				return nil
 			},
-		}, logicaltest.TestStep{
+		}, {
 			Operation: logical.ListOperation,
 			Path:      "certs/",
 			Check: func(resp *logical.Response) error {
@@ -1485,29 +1929,38 @@ type allowed struct {
 	uris                 string // allowed uris in SAN extension of the certificate
 	organizational_units string // allowed OUs in the certificate
 	ext                  string // required extensions in the certificate
+	metadata_ext         string // allowed metadata extensions to add to identity alias
 	sbjDnOids            string // required subject dn entries
 }
 
-func testAccStepCert(
-	t *testing.T, name string, cert []byte, policies string, testData allowed, expectError bool) logicaltest.TestStep {
+func testAccStepCert(t *testing.T, name string, cert []byte, policies string, testData allowed, expectError bool) logicaltest.TestStep {
+	return testAccStepCertWithExtraParams(t, name, cert, policies, testData, expectError, nil)
+}
+
+func testAccStepCertWithExtraParams(t *testing.T, name string, cert []byte, policies string, testData allowed, expectError bool, extraParams map[string]interface{}) logicaltest.TestStep {
+	data := map[string]interface{}{
+		"certificate":                  string(cert),
+		"policies":                     policies,
+		"display_name":                 name,
+		"allowed_names":                testData.names,
+		"allowed_common_names":         testData.common_names,
+		"allowed_dns_sans":             testData.dns,
+		"allowed_email_sans":           testData.emails,
+		"allowed_uri_sans":             testData.uris,
+		"allowed_organizational_units": testData.organizational_units,
+		"required_extensions":          testData.ext,
+		"allowed_metadata_extensions":  testData.metadata_ext,
+		"lease":                        1000,
+		"required_subject_oids":        testData.sbjDnOids,
+	}
+	for k, v := range extraParams {
+		data[k] = v
+	}
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "certs/" + name,
 		ErrorOk:   expectError,
-		Data: map[string]interface{}{
-			"certificate":                  string(cert),
-			"policies":                     policies,
-			"display_name":                 name,
-			"allowed_names":                testData.names,
-			"allowed_common_names":         testData.common_names,
-			"allowed_dns_sans":             testData.dns,
-			"allowed_email_sans":           testData.emails,
-			"allowed_uri_sans":             testData.uris,
-			"allowed_organizational_units": testData.organizational_units,
-			"required_extensions":          testData.ext,
-			"required_subject_oids":        testData.sbjDnOids,
-			"lease":                        1000,
-		},
+		Data:      data,
 		Check: func(resp *logical.Response) error {
 			if resp == nil && expectError {
 				return fmt.Errorf("expected error but received nil")
@@ -1517,8 +1970,30 @@ func testAccStepCert(
 	}
 }
 
+func testAccStepReadCertPolicy(t *testing.T, name string, expectError bool, expected map[string]interface{}) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "certs/" + name,
+		ErrorOk:   expectError,
+		Data:      nil,
+		Check: func(resp *logical.Response) error {
+			if (resp == nil || len(resp.Data) == 0) && expectError {
+				return fmt.Errorf("expected error but received nil")
+			}
+			for key, expectedValue := range expected {
+				actualValue := resp.Data[key]
+				if expectedValue != actualValue {
+					return fmt.Errorf("Expected to get [%v]=[%v] but read [%v]=[%v] from server for certs/%v: %v", key, expectedValue, key, actualValue, name, resp)
+				}
+			}
+			return nil
+		},
+	}
+}
+
 func testAccStepCertLease(
-	t *testing.T, name string, cert []byte, policies string) logicaltest.TestStep {
+	t *testing.T, name string, cert []byte, policies string,
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "certs/" + name,
@@ -1532,7 +2007,8 @@ func testAccStepCertLease(
 }
 
 func testAccStepCertTTL(
-	t *testing.T, name string, cert []byte, policies string) logicaltest.TestStep {
+	t *testing.T, name string, cert []byte, policies string,
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "certs/" + name,
@@ -1546,7 +2022,8 @@ func testAccStepCertTTL(
 }
 
 func testAccStepCertMaxTTL(
-	t *testing.T, name string, cert []byte, policies string) logicaltest.TestStep {
+	t *testing.T, name string, cert []byte, policies string,
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "certs/" + name,
@@ -1561,7 +2038,8 @@ func testAccStepCertMaxTTL(
 }
 
 func testAccStepCertNoLease(
-	t *testing.T, name string, cert []byte, policies string) logicaltest.TestStep {
+	t *testing.T, name string, cert []byte, policies string,
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "certs/" + name,
@@ -1805,6 +2283,63 @@ func Test_Renew(t *testing.T) {
 	}
 	if !resp.IsError() {
 		t.Fatal("expected error")
+	}
+}
+
+func TestBackend_CertUpgrade(t *testing.T) {
+	s := &logical.InmemStorage{}
+
+	config := logical.TestBackendConfig()
+	config.StorageView = s
+
+	ctx := context.Background()
+
+	b := Backend()
+	if b == nil {
+		t.Fatalf("failed to create backend")
+	}
+	if err := b.Setup(ctx, config); err != nil {
+		t.Fatal(err)
+	}
+
+	foo := &CertEntry{
+		Policies:   []string{"foo"},
+		Period:     time.Second,
+		TTL:        time.Second,
+		MaxTTL:     time.Second,
+		BoundCIDRs: []*sockaddr.SockAddrMarshaler{{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
+	}
+
+	entry, err := logical.StorageEntryJSON("cert/foo", foo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = s.Put(ctx, entry)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	certEntry, err := b.Cert(ctx, s, "foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	exp := &CertEntry{
+		Policies:   []string{"foo"},
+		Period:     time.Second,
+		TTL:        time.Second,
+		MaxTTL:     time.Second,
+		BoundCIDRs: []*sockaddr.SockAddrMarshaler{{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
+		TokenParams: tokenutil.TokenParams{
+			TokenPolicies:   []string{"foo"},
+			TokenPeriod:     time.Second,
+			TokenTTL:        time.Second,
+			TokenMaxTTL:     time.Second,
+			TokenBoundCIDRs: []*sockaddr.SockAddrMarshaler{{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
+		},
+	}
+	if diff := deep.Equal(certEntry, exp); diff != nil {
+		t.Fatal(diff)
 	}
 }
 

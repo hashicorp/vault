@@ -1,14 +1,17 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package identity
 
 import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/approle"
-	"github.com/hashicorp/vault/helper/strutil"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -375,5 +378,4 @@ func TestIdentityStore_EntityPoliciesInInitialAuth(t *testing.T) {
 	if !strutil.EquivalentSlices(policies, []string{"foo", "bar"}) {
 		t.Fatalf("policy mismatch, got policies: %v", policies)
 	}
-
 }

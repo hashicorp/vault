@@ -1,62 +1,18 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package awsauth
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/awsutil"
 )
 
 type CLIHandler struct{}
-
-// Generates the necessary data to send to the Vault server for generating a token
-// This is useful for other API clients to use
-func GenerateLoginData(creds *credentials.Credentials, headerValue string) (map[string]interface{}, error) {
-	loginData := make(map[string]interface{})
-
-	// Use the credentials we've found to construct an STS session
-	stsSession, err := session.NewSessionWithOptions(session.Options{
-		Config: aws.Config{Credentials: creds},
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	var params *sts.GetCallerIdentityInput
-	svc := sts.New(stsSession)
-	stsRequest, _ := svc.GetCallerIdentityRequest(params)
-
-	// Inject the required auth header value, if supplied, and then sign the request including that header
-	if headerValue != "" {
-		stsRequest.HTTPRequest.Header.Add(iamServerIdHeader, headerValue)
-	}
-	stsRequest.Sign()
-
-	// Now extract out the relevant parts of the request
-	headersJson, err := json.Marshal(stsRequest.HTTPRequest.Header)
-	if err != nil {
-		return nil, err
-	}
-	requestBody, err := ioutil.ReadAll(stsRequest.HTTPRequest.Body)
-	if err != nil {
-		return nil, err
-	}
-	loginData["iam_http_request_method"] = stsRequest.HTTPRequest.Method
-	loginData["iam_request_url"] = base64.StdEncoding.EncodeToString([]byte(stsRequest.HTTPRequest.URL.String()))
-	loginData["iam_request_headers"] = base64.StdEncoding.EncodeToString(headersJson)
-	loginData["iam_request_body"] = base64.StdEncoding.EncodeToString(requestBody)
-
-	return loginData, nil
-}
 
 func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, error) {
 	mount, ok := m["mount"]
@@ -74,12 +30,34 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		headerValue = ""
 	}
 
-	creds, err := RetrieveCreds(m["aws_access_key_id"], m["aws_secret_access_key"], m["aws_security_token"])
+	logVal, ok := m["log_level"]
+	if !ok {
+		logVal = "info"
+	}
+	level := hclog.LevelFromString(logVal)
+	if level == hclog.NoLevel {
+		return nil, fmt.Errorf("failed to parse 'log_level' value: %q", logVal)
+	}
+	hlogger := hclog.Default()
+	hlogger.SetLevel(level)
+
+	creds, err := awsutil.RetrieveCreds(m["aws_access_key_id"], m["aws_secret_access_key"], m["aws_security_token"], hlogger)
 	if err != nil {
 		return nil, err
 	}
 
-	loginData, err := GenerateLoginData(creds, headerValue)
+	region := m["region"]
+	switch region {
+	case "":
+		// The CLI has always defaulted to "us-east-1" if a region is not provided.
+		region = awsutil.DefaultRegion
+	case "auto":
+		// Beginning in 1.10 we also accept the "auto" value, which uses the region detection logic in
+		// awsutil.GetRegion() to determine the region. That behavior is triggered when region = "".
+		region = ""
+	}
+
+	loginData, err := awsutil.GenerateLoginData(creds, headerValue, region, hlogger)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +67,6 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	loginData["role"] = role
 	path := fmt.Sprintf("auth/%s/login", mount)
 	secret, err := c.Logical().Write(path, loginData)
-
 	if err != nil {
 		return nil, err
 	}
@@ -100,34 +77,13 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	return secret, nil
 }
 
-func RetrieveCreds(accessKey, secretKey, sessionToken string) (*credentials.Credentials, error) {
-	credConfig := &awsutil.CredentialsConfig{
-		AccessKey:    accessKey,
-		SecretKey:    secretKey,
-		SessionToken: sessionToken,
-	}
-	creds, err := credConfig.GenerateCredentialChain()
-	if err != nil {
-		return nil, err
-	}
-	if creds == nil {
-		return nil, fmt.Errorf("could not compile valid credential providers from static config, environment, shared, or instance metadata")
-	}
-
-	_, err = creds.Get()
-	if err != nil {
-		return nil, errwrap.Wrapf("failed to retrieve credentials from credential chain: {{err}}", err)
-	}
-	return creds, nil
-}
-
 func (h *CLIHandler) Help() string {
 	help := `
 Usage: vault login -method=aws [CONFIG K=V...]
 
   The AWS auth method allows users to authenticate with AWS IAM
-  credentials. The AWS IAM credentials may be specified in a number of ways,
-  listed in order of precedence below:
+  credentials. The AWS IAM credentials, and optionally the AWS region, may be 
+  specified in a number of ways, listed in order of precedence below:
 
     1. Explicitly via the command line (not recommended)
 
@@ -165,8 +121,17 @@ Configuration:
       here as well. If specified here, it takes precedence over the value for
       -path. The default value is "aws".
 
+  region=<string>
+      Explicit AWS region to reach out to for authentication request signing. A value
+      of "auto" enables auto-detection of region based on the precedence described above.
+      Defaults to "us-east-1" if not specified.
+
   role=<string>
       Name of the role to request a token against
+
+  log_level=<string>
+      Set logging level during AWS credential acquisition. Valid levels are
+      trace, debug, info, warn, error. Defaults to info.
 `
 
 	return strings.TrimSpace(help)

@@ -1,0 +1,10 @@
+## PKI Certificate Generation Forwarding Regression
+
+A bug introduced in Vault 1.8 causes certificate generation requests to the PKI secrets engine made on a performance
+secondary node to be forwarded to the cluster's primary node. The resulting certificates are stored on the primary node, 
+and thus visible to list and read certificate requests only on the primary node rather than the secondary node as 
+intended.  Furthermore, if a certificate is subsequently revoked on a performance secondary node, the secondary's 
+certificate revocation list is updated, rather than the primary's where the certificate is stored.  This bug is fixed 
+in Vault 1.8.8 and 1.9.3.  
+Certificates issued after the fix are correctly stored locally to the performance secondary.
+

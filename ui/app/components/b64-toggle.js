@@ -1,14 +1,19 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { equal } from '@ember/object/computed';
 import { isBlank } from '@ember/utils';
 import Component from '@ember/component';
-import { set, get, computed } from '@ember/object';
+import { set, computed } from '@ember/object';
 import { encodeString, decodeString } from 'vault/utils/b64';
 
 const B64 = 'base64';
 const UTF8 = 'utf-8';
 export default Component.extend({
   tagName: 'button',
-  attributeBindings: ['type'],
+  attributeBindings: ['type', 'data-test-transit-b64-toggle'],
   type: 'button',
   classNames: ['button', 'b64-toggle'],
   classNameBindings: ['isInput:is-input:is-textarea'],
@@ -82,45 +87,46 @@ export default Component.extend({
    * @private
    * @type boolean
    */
-  valuesMatch: computed('value', '_value', function() {
-    const { value, _value } = this.getProperties('value', '_value');
+  valuesMatch: computed('value', '_value', function () {
+    const { value, _value } = this;
     const anyBlank = isBlank(value) || isBlank(_value);
     return !anyBlank && value === _value;
   }),
 
   init() {
     this._super(...arguments);
-    const initial = get(this, 'initialEncoding');
+    const initial = this.initialEncoding;
     set(this, 'currentEncoding', initial);
     if (initial === B64) {
-      set(this, '_value', get(this, 'value'));
+      set(this, '_value', this.value);
       set(this, 'lastEncoding', B64);
     }
   },
 
   didReceiveAttrs() {
+    this._super();
     // if there's no value, reset encoding
-    if (get(this, 'value') === '') {
+    if (this.value === '') {
       set(this, 'currentEncoding', UTF8);
       return;
     }
     // the value has changed after we transformed it so we reset currentEncoding
-    if (get(this, 'isBase64') && !get(this, 'valuesMatch')) {
+    if (this.isBase64 && !this.valuesMatch) {
       set(this, 'currentEncoding', UTF8);
     }
     // the value changed back to one we previously had transformed
-    if (get(this, 'lastEncoding') === B64 && get(this, 'valuesMatch')) {
+    if (this.lastEncoding === B64 && this.valuesMatch) {
       set(this, 'currentEncoding', B64);
     }
   },
 
   click() {
-    let val = get(this, 'value');
-    const isUTF8 = get(this, 'currentEncoding') === UTF8;
+    const val = this.value;
+    const isUTF8 = this.currentEncoding === UTF8;
     if (!val) {
       return;
     }
-    let newVal = isUTF8 ? encodeString(val) : decodeString(val);
+    const newVal = isUTF8 ? encodeString(val) : decodeString(val);
     const encoding = isUTF8 ? B64 : UTF8;
     set(this, 'value', newVal);
     set(this, '_value', newVal);

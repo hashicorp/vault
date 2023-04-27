@@ -1,24 +1,30 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+import AdapterError from '@ember-data/adapter/error';
 import { inject as service } from '@ember/service';
 import { set } from '@ember/object';
 import Route from '@ember/routing/route';
 import RSVP from 'rsvp';
-import DS from 'ember-data';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
-import { getOwner } from '@ember/application';
 
 export default Route.extend(UnloadModelRoute, {
   modelPath: 'model.model',
   pathHelp: service('path-help'),
+  store: service(),
 
   modelType(backendType, section) {
     const MODELS = {
       'aws-client': 'auth-config/aws/client',
-      'aws-identity-whitelist': 'auth-config/aws/identity-whitelist',
-      'aws-roletag-blacklist': 'auth-config/aws/roletag-blacklist',
+      'aws-identity-accesslist': 'auth-config/aws/identity-accesslist',
+      'aws-roletag-denylist': 'auth-config/aws/roletag-denylist',
       'azure-configuration': 'auth-config/azure',
       'github-configuration': 'auth-config/github',
       'gcp-configuration': 'auth-config/gcp',
       'jwt-configuration': 'auth-config/jwt',
+      'oidc-configuration': 'auth-config/oidc',
       'kubernetes-configuration': 'auth-config/kubernetes',
       'ldap-configuration': 'auth-config/ldap',
       'okta-configuration': 'auth-config/okta',
@@ -35,8 +41,7 @@ export default Route.extend(UnloadModelRoute, {
     const { method } = this.paramsFor('vault.cluster.settings.auth.configure');
     const backend = this.modelFor('vault.cluster.settings.auth.configure');
     const modelType = this.modelType(backend.type, section_name);
-    let owner = getOwner(this);
-    return this.pathHelp.getNewModel(modelType, owner, method);
+    return this.pathHelp.getNewModel(modelType, method, backend.apiPath);
   },
 
   model(params) {
@@ -50,7 +55,7 @@ export default Route.extend(UnloadModelRoute, {
     }
     const modelType = this.modelType(backend.get('type'), section);
     if (!modelType) {
-      const error = new DS.AdapterError();
+      const error = new AdapterError();
       set(error, 'httpStatus', 404);
       throw error;
     }
@@ -63,14 +68,14 @@ export default Route.extend(UnloadModelRoute, {
     }
     return this.store
       .findRecord(modelType, backend.id)
-      .then(config => {
+      .then((config) => {
         config.set('backend', backend);
         return RSVP.hash({
           model: config,
           section,
         });
       })
-      .catch(e => {
+      .catch((e) => {
         let config;
         // if you haven't saved a config, the API 404s, so create one here to edit and return it
         if (e.httpStatus === 404) {

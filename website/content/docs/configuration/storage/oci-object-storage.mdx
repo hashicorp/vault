@@ -1,0 +1,85 @@
+---
+layout: docs
+page_title: OCI Object Storage - Storage Backends - Configuration
+description: >-
+  The OCI Object Storage backend is used to persist Vault's data in OCI Object
+  Storage.
+---
+
+# OCI Object Storage Storage Backend
+
+The OCI Object Storage backend is used to persist Vault's data in OCI Object Storage.
+
+- **High Availability** – the OCI Object Storage backend supports high availability.
+
+- **Community Supported** – the OCI Object Storage backend is supported by the community. While it has undergone review by HashiCorp employees, they may not be as knowledgeable about the technology. If you encounter problems with them, you may be referred to the original author.
+
+```hcl
+storage "oci" {
+   region = "<oci_region>"
+   namespace_name = "<object_storage_namespace_name>"
+   bucket_name = "<vault_data_bucket_name>"
+   ha_enabled = "<boolean true/false>"
+   lock_bucket_name = "<leader_lock_bucket_name>"
+   auth_type_api_key = "<boolean setting for using api-key instead of instance principals>"
+}
+```
+
+For more information on OCI Object Storage, please see the Oracle's [OCI Object Storage documentation][ocios-docs].
+
+## `oci` Setup
+
+To use the OCI Object Storage Vault storage backend, you must have a OCI account. Either using the API or web interface, create the data bucket and lock bucket if enabling high availability.
+
+The OCI Object Storage backend does not support creating the buckets automatically at this time.
+
+## `oci` Authentication
+
+The OCI Object Storage Vault storage backend uses the official OCI Golang SDK. This means it supports the common ways of providing credentials to OCI.
+
+For more information on service accounts, please see the [OCI Identity documentation][oci-identity].
+
+## `oci` Parameters
+
+- `region` `(string: <optional>)` - Specifies the OCI region where Vault should look for object storage buckets. If not specified the OCI Storage Backend will use the region specified in your OCI credentials configuration.
+
+- `namespace_name` `(string: <required>)` – Specifies the name of the OCI Object Storage namespaces containing the data bucket and the lock bucket.
+
+- `bucket_name` `(string: <required>)` - Specifies the name of the bucket that will be used to store the Vault data.
+
+### High Availability Parameters
+
+- `ha_enabled` `(string: "<required>")` - Specifies if high availability mode is
+  enabled. This is a boolean value, but it is specified as a string like "true"
+  or "false".
+
+- `lock_bucket_name` `(string: "<required>")` - Specifies the name of the bucket that will be used to store the node lease data.
+
+## `oci` Examples
+
+### Standalone Vault instance
+
+This example shows configuring OCI Object Storage as a standalone instance.
+
+```hcl
+storage "oci" {
+    namespace_name = "MyNamespace"
+    bucket_name = "DataBucket"
+}
+```
+
+### High Availability
+
+This example shows configuring OCI Object Storage with high availability enabled.
+
+```hcl
+storage "oci" {
+   namespace_name = "MyNamespace"
+   bucket_name = "DataBucket"
+   ha_enabled = "true"
+   lock_bucket_name = "LockBucket"
+}
+```
+
+[oci-identity]: https://docs.cloud.oracle.com/iaas/Content/Identity/Concepts/overview.htm
+[ocios-docs]: https://docs.cloud.oracle.com/iaas/Content/Object/Concepts/objectstorageoverview.htm

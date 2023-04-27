@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -8,8 +11,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*SecretsDisableCommand)(nil)
-var _ cli.CommandAutocomplete = (*SecretsDisableCommand)(nil)
+var (
+	_ cli.Command             = (*SecretsDisableCommand)(nil)
+	_ cli.CommandAutocomplete = (*SecretsDisableCommand)(nil)
+)
 
 type SecretsDisableCommand struct {
 	*BaseCommand

@@ -1,12 +1,14 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package cachememdb
 
-import "context"
-
-type ContextInfo struct {
-	Ctx        context.Context
-	CancelFunc context.CancelFunc
-	DoneCh     chan struct{}
-}
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"time"
+)
 
 // Index holds the response to be cached along with multiple other values that
 // serve as pointers to refer back to this index.
@@ -54,6 +56,21 @@ type Index struct {
 	// goroutine that manages the renewal of the secret belonging to the
 	// response in this index.
 	RenewCtxInfo *ContextInfo
+
+	// RequestMethod is the HTTP method of the request
+	RequestMethod string
+
+	// RequestToken is the token used in the request
+	RequestToken string
+
+	// RequestHeader is the header used in the request
+	RequestHeader http.Header
+
+	// LastRenewed is the timestamp of last renewal
+	LastRenewed time.Time
+
+	// Type is the index type (token, auth-lease, secret-lease)
+	Type string
 }
 
 type IndexName uint32
@@ -94,4 +111,43 @@ func validIndexName(indexName string) bool {
 		return false
 	}
 	return true
+}
+
+type ContextInfo struct {
+	Ctx        context.Context
+	CancelFunc context.CancelFunc
+	DoneCh     chan struct{}
+}
+
+func NewContextInfo(ctx context.Context) *ContextInfo {
+	if ctx == nil {
+		return nil
+	}
+
+	ctxInfo := new(ContextInfo)
+	ctxInfo.Ctx, ctxInfo.CancelFunc = context.WithCancel(ctx)
+	ctxInfo.DoneCh = make(chan struct{})
+	return ctxInfo
+}
+
+// Serialize returns a json marshal'ed Index object, without the RenewCtxInfo
+func (i Index) Serialize() ([]byte, error) {
+	i.RenewCtxInfo = nil
+
+	indexBytes, err := json.Marshal(i)
+	if err != nil {
+		return nil, err
+	}
+
+	return indexBytes, nil
+}
+
+// Deserialize converts json bytes to an Index object
+// Note: RenewCtxInfo will need to be reconstructed elsewhere.
+func Deserialize(indexBytes []byte) (*Index, error) {
+	index := new(Index)
+	if err := json.Unmarshal(indexBytes, index); err != nil {
+		return nil, err
+	}
+	return index, nil
 }

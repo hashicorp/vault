@@ -1,0 +1,18 @@
+<Input
+  id={{this.safeId}}
+  name={{this.name}}
+  @type="checkbox"
+  @checked={{this.checked}}
+  {{on "change" this.handleChange}}
+  class={{this.inputClasses}}
+  disabled={{this.disabled}}
+  data-test-toggle-input={{this.name}}
+  ...attributes
+/>
+<label data-test-toggle-label={{this.name}} for={{this.safeId}} class="toggle-label {{if this.hideLabel 'sr-only'}}">
+  {{#if (has-block)}}
+    {{yield}}
+  {{else}}
+    {{this.name}}
+  {{/if}}
+</label>

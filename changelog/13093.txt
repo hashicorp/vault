@@ -1,0 +1,3 @@
+```release-note:bug
+core/identity: Address a data race condition between local updates to aliases and invalidations
+```

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -8,8 +11,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*ListCommand)(nil)
-var _ cli.CommandAutocomplete = (*ListCommand)(nil)
+var (
+	_ cli.Command             = (*ListCommand)(nil)
+	_ cli.CommandAutocomplete = (*ListCommand)(nil)
+)
 
 type ListCommand struct {
 	*BaseCommand
@@ -40,7 +45,8 @@ Usage: vault list [options] PATH
 }
 
 func (c *ListCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat | FlagSetOutputDetailed)
+	return set
 }
 
 func (c *ListCommand) AutocompleteArgs() complete.Predictor {
@@ -75,13 +81,26 @@ func (c *ListCommand) Run(args []string) int {
 		return 2
 	}
 
-	path := ensureTrailingSlash(sanitizePath(args[0]))
-
+	path := sanitizePath(args[0])
 	secret, err := client.Logical().List(path)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error listing %s: %s", path, err))
 		return 2
 	}
+
+	// If the secret is wrapped, return the wrapped response.
+	if secret != nil && secret.WrapInfo != nil && secret.WrapInfo.TTL != 0 {
+		return OutputSecret(c.UI, secret)
+	}
+
+	_, ok := extractListData(secret)
+	if Format(c.UI) != "table" {
+		if secret == nil || secret.Data == nil || !ok {
+			OutputData(c.UI, map[string]interface{}{})
+			return 2
+		}
+	}
+
 	if secret == nil {
 		c.UI.Error(fmt.Sprintf("No value found at %s", path))
 		return 2
@@ -92,12 +111,7 @@ func (c *ListCommand) Run(args []string) int {
 		return OutputSecret(c.UI, secret)
 	}
 
-	// If the secret is wrapped, return the wrapped response.
-	if secret.WrapInfo != nil && secret.WrapInfo.TTL != 0 {
-		return OutputSecret(c.UI, secret)
-	}
-
-	if _, ok := extractListData(secret); !ok {
+	if !ok {
 		c.UI.Error(fmt.Sprintf("No entries found at %s", path))
 		return 2
 	}

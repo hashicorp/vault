@@ -1,0 +1,3 @@
+```release-note:bug
+storage/raft: Detect incomplete raft snapshots in api.RaftSnapshot(), and thereby in `vault operator raft snapshot save`.
+```

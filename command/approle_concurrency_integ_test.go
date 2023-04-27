@@ -1,14 +1,19 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
+	"context"
 	"sync"
 	"testing"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
+	auth "github.com/hashicorp/vault/api/auth/approle"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -69,15 +74,19 @@ func TestAppRole_Integ_ConcurrentLogins(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			secret, err := client.Logical().Write("auth/approle/login", map[string]interface{}{
-				"role_id":   roleID,
-				"secret_id": secretID,
-			})
+			appRoleAuth, err := auth.NewAppRoleAuth(roleID, &auth.SecretID{FromString: secretID})
 			if err != nil {
-				t.Fatal(err)
+				t.Error(err)
+				return
+			}
+			secret, err := client.Auth().Login(context.TODO(), appRoleAuth)
+			if err != nil {
+				t.Error(err)
+				return
 			}
 			if secret.Auth.ClientToken == "" {
-				t.Fatalf("expected a successful login")
+				t.Error("expected a successful login")
+				return
 			}
 		}()
 

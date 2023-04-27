@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package dbplugin_test
 
 import (
@@ -8,19 +11,21 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/pluginutil"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/plugins"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
 type mockPlugin struct {
 	users map[string][]string
 }
+
+var _ dbplugin.Database = &mockPlugin{}
 
 func (m *mockPlugin) Type() (string, error) { return "mock", nil }
 func (m *mockPlugin) CreateUser(_ context.Context, statements dbplugin.Statements, usernameConf dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
@@ -37,6 +42,7 @@ func (m *mockPlugin) CreateUser(_ context.Context, statements dbplugin.Statement
 
 	return usernameConf.DisplayName, "test", nil
 }
+
 func (m *mockPlugin) RenewUser(_ context.Context, statements dbplugin.Statements, username string, expiration time.Time) error {
 	err := errors.New("err")
 	if username == "" || expiration.IsZero() {
@@ -49,6 +55,7 @@ func (m *mockPlugin) RenewUser(_ context.Context, statements dbplugin.Statements
 
 	return nil
 }
+
 func (m *mockPlugin) RevokeUser(_ context.Context, statements dbplugin.Statements, username string) error {
 	err := errors.New("err")
 	if username == "" {
@@ -62,9 +69,11 @@ func (m *mockPlugin) RevokeUser(_ context.Context, statements dbplugin.Statement
 	delete(m.users, username)
 	return nil
 }
+
 func (m *mockPlugin) RotateRootCredentials(_ context.Context, statements []string) (map[string]interface{}, error) {
 	return nil, nil
 }
+
 func (m *mockPlugin) Init(_ context.Context, conf map[string]interface{}, _ bool) (map[string]interface{}, error) {
 	err := errors.New("err")
 	if len(conf) != 1 {
@@ -73,6 +82,7 @@ func (m *mockPlugin) Init(_ context.Context, conf map[string]interface{}, _ bool
 
 	return conf, nil
 }
+
 func (m *mockPlugin) Initialize(_ context.Context, conf map[string]interface{}, _ bool) error {
 	err := errors.New("err")
 	if len(conf) != 1 {
@@ -81,9 +91,18 @@ func (m *mockPlugin) Initialize(_ context.Context, conf map[string]interface{}, 
 
 	return nil
 }
+
 func (m *mockPlugin) Close() error {
 	m.users = nil
 	return nil
+}
+
+func (m *mockPlugin) GenerateCredentials(ctx context.Context) (password string, err error) {
+	return password, err
+}
+
+func (m *mockPlugin) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticConfig dbplugin.StaticUserConfig) (username string, password string, err error) {
+	return username, password, err
 }
 
 func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
@@ -93,8 +112,8 @@ func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 	cluster.Start()
 	cores := cluster.Cores
 
-	sys := vault.TestDynamicSystemView(cores[0].Core)
-	vault.TestAddTestPlugin(t, cores[0].Core, "test-plugin", consts.PluginTypeDatabase, "TestPlugin_GRPC_Main", []string{}, "")
+	sys := vault.TestDynamicSystemView(cores[0].Core, nil)
+	vault.TestAddTestPlugin(t, cores[0].Core, "test-plugin", consts.PluginTypeDatabase, "", "TestPlugin_GRPC_Main", []string{}, "")
 
 	return cluster, sys
 }
@@ -102,7 +121,7 @@ func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 // This is not an actual test case, it's a helper function that will be executed
 // by the go-plugin client via an exec call.
 func TestPlugin_GRPC_Main(t *testing.T) {
-	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
+	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" && os.Getenv(pluginutil.PluginMetadataModeEnv) != "true" {
 		return
 	}
 
@@ -112,18 +131,18 @@ func TestPlugin_GRPC_Main(t *testing.T) {
 
 	args := []string{"--tls-skip-verify=true"}
 
-	apiClientMeta := &pluginutil.APIClientMeta{}
+	apiClientMeta := &api.PluginAPIClientMeta{}
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(args)
 
-	plugins.Serve(plugin, apiClientMeta.GetTLSConfig())
+	dbplugin.Serve(plugin, api.VaultPluginTLSProvider(apiClientMeta.GetTLSConfig()))
 }
 
 func TestPlugin_Init(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
-	dbRaw, err := dbplugin.PluginFactory(namespace.RootContext(nil), "test-plugin", sys, log.NewNullLogger())
+	dbRaw, err := dbplugin.PluginFactoryVersion(namespace.RootContext(nil), "test-plugin", "", sys, log.NewNullLogger())
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -147,7 +166,7 @@ func TestPlugin_CreateUser(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
-	db, err := dbplugin.PluginFactory(namespace.RootContext(nil), "test-plugin", sys, log.NewNullLogger())
+	db, err := dbplugin.PluginFactoryVersion(namespace.RootContext(nil), "test-plugin", "", sys, log.NewNullLogger())
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -187,7 +206,7 @@ func TestPlugin_RenewUser(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
-	db, err := dbplugin.PluginFactory(namespace.RootContext(nil), "test-plugin", sys, log.NewNullLogger())
+	db, err := dbplugin.PluginFactoryVersion(namespace.RootContext(nil), "test-plugin", "", sys, log.NewNullLogger())
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -221,7 +240,7 @@ func TestPlugin_RevokeUser(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
-	db, err := dbplugin.PluginFactory(namespace.RootContext(nil), "test-plugin", sys, log.NewNullLogger())
+	db, err := dbplugin.PluginFactoryVersion(namespace.RootContext(nil), "test-plugin", "", sys, log.NewNullLogger())
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

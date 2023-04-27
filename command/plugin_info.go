@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -5,16 +8,19 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/consts"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*PluginInfoCommand)(nil)
-var _ cli.CommandAutocomplete = (*PluginInfoCommand)(nil)
+var (
+	_ cli.Command             = (*PluginInfoCommand)(nil)
+	_ cli.CommandAutocomplete = (*PluginInfoCommand)(nil)
+)
 
 type PluginInfoCommand struct {
 	*BaseCommand
+
+	flagVersion string
 }
 
 func (c *PluginInfoCommand) Synopsis() string {
@@ -39,11 +45,22 @@ Usage: vault plugin info [options] TYPE NAME
 }
 
 func (c *PluginInfoCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+
+	f := set.NewFlagSet("Command Options")
+
+	f.StringVar(&StringVar{
+		Name:       "version",
+		Target:     &c.flagVersion,
+		Completion: complete.PredictAnything,
+		Usage:      "Semantic version of the plugin. Optional.",
+	})
+
+	return set
 }
 
 func (c *PluginInfoCommand) AutocompleteArgs() complete.Predictor {
-	return c.PredictVaultPlugins(consts.PluginTypeUnknown)
+	return c.PredictVaultPlugins(api.PluginTypeUnknown)
 }
 
 func (c *PluginInfoCommand) AutocompleteFlags() complete.Flags {
@@ -83,7 +100,7 @@ func (c *PluginInfoCommand) Run(args []string) int {
 		return 2
 	}
 
-	pluginType, err := consts.ParsePluginType(strings.TrimSpace(pluginTypeRaw))
+	pluginType, err := api.ParsePluginType(strings.TrimSpace(pluginTypeRaw))
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
@@ -91,8 +108,9 @@ func (c *PluginInfoCommand) Run(args []string) int {
 	pluginName := strings.TrimSpace(pluginNameRaw)
 
 	resp, err := client.Sys().GetPlugin(&api.GetPluginInput{
-		Name: pluginName,
-		Type: pluginType,
+		Name:    pluginName,
+		Type:    pluginType,
+		Version: c.flagVersion,
 	})
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error reading plugin named %s: %s", pluginName, err))
@@ -105,11 +123,13 @@ func (c *PluginInfoCommand) Run(args []string) int {
 	}
 
 	data := map[string]interface{}{
-		"args":    resp.Args,
-		"builtin": resp.Builtin,
-		"command": resp.Command,
-		"name":    resp.Name,
-		"sha256":  resp.SHA256,
+		"args":               resp.Args,
+		"builtin":            resp.Builtin,
+		"command":            resp.Command,
+		"name":               resp.Name,
+		"sha256":             resp.SHA256,
+		"deprecation_status": resp.DeprecationStatus,
+		"version":            resp.Version,
 	}
 
 	if c.flagField != "" {

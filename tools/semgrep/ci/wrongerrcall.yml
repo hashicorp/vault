@@ -1,0 +1,19 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
+rules:
+  - id: maybe-wrong-err
+    patterns:
+        - pattern-either:
+              - pattern: |
+                      if $F.Err() != nil {
+                              return ..., <... err ...>
+                      }
+              - pattern: |
+                      if $F.Err() != nil {
+                              return <... err ...>
+                      }
+
+    message: "maybe returning wrong error"
+    languages: [go]
+    severity: WARNING

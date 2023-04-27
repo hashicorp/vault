@@ -1,4 +1,7 @@
-// +build memprofiler
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
+//go:build memprofiler
 
 package command
 
@@ -16,7 +19,7 @@ func init() {
 
 func (c *ServerCommand) startMemProfiler() {
 	profileDir := filepath.Join(os.TempDir(), "vaultprof")
-	if err := os.MkdirAll(profileDir, 0700); err != nil {
+	if err := os.MkdirAll(profileDir, 0o700); err != nil {
 		c.logger.Debug("could not create profile directory", "error", err)
 		return
 	}

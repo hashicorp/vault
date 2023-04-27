@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { inject as service } from '@ember/service';
 import { alias } from '@ember/object/computed';
 import Component from '@ember/component';
@@ -11,23 +16,36 @@ export default Component.extend({
   //public api
   targetNamespace: null,
   showLastSegment: false,
+  // set to true if targetNamespace is passed in unmodified
+  // otherwise, this assumes it is parsed as in namespace-picker
+  unparsed: false,
 
-  normalizedNamespace: computed('targetNamespace', function() {
-    let ns = this.get('targetNamespace');
-    return (ns || '').replace(/\.+/g, '/').replace('☃', '.');
+  normalizedNamespace: computed('targetNamespace', 'unparsed', function () {
+    const ns = this.targetNamespace || '';
+    return this.unparsed ? ns : ns.replace(/\.+/g, '/').replace(/☃/g, '.');
   }),
 
-  namespaceDisplay: computed('normalizedNamespace', 'showLastSegment', function() {
-    let ns = this.get('normalizedNamespace');
-    let showLastSegment = this.get('showLastSegment');
-    let parts = ns.split('/');
-    if (ns === '') {
-      return 'root';
-    }
+  namespaceDisplay: computed('normalizedNamespace', 'showLastSegment', function () {
+    const ns = this.normalizedNamespace;
+    if (!ns) return 'root';
+    const showLastSegment = this.showLastSegment;
+    const parts = ns?.split('/');
     return showLastSegment ? parts[parts.length - 1] : ns;
   }),
 
-  isCurrentNamespace: computed('targetNamespace', 'currentNamespace', function() {
-    return this.get('currentNamespace') === this.get('targetNamespace');
+  isCurrentNamespace: computed('targetNamespace', 'currentNamespace', function () {
+    return this.currentNamespace === this.targetNamespace;
   }),
+
+  get namespaceLink() {
+    const origin =
+      window.location.protocol +
+      '//' +
+      window.location.hostname +
+      (window.location.port ? ':' + window.location.port : '');
+
+    if (!this.normalizedNamespace) return `${origin}/ui/vault/secrets`;
+    // The full URL/origin is required so that the page is reloaded.
+    return `${origin}/ui/vault/secrets?namespace=${encodeURIComponent(this.normalizedNamespace)}`;
+  },
 });

@@ -1,5 +1,11 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { isEmpty } from '@ember/utils';
 import ApplicationAdapter from './application';
+import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export default ApplicationAdapter.extend({
   namespace: 'v1',
@@ -8,8 +14,11 @@ export default ApplicationAdapter.extend({
     const serializer = store.serializerFor(type.modelName);
     const data = serializer.serialize(snapshot);
     const { id } = snapshot;
-
-    return this.ajax(this.urlForSecret(snapshot.attr('backend'), id), 'POST', { data });
+    const path = snapshot.record.path;
+    return this.ajax(this.urlForSecret(snapshot.attr('backend'), path || id), 'POST', { data }).then(() => {
+      data.id = path || id;
+      return data;
+    });
   },
 
   createRecord() {
@@ -26,9 +35,9 @@ export default ApplicationAdapter.extend({
   },
 
   urlForSecret(backend, id) {
-    let url = `${this.buildURL()}/${backend}/`;
+    let url = `${this.buildURL()}/${encodePath(backend)}/`;
     if (!isEmpty(id)) {
-      url = url + id;
+      url = url + encodePath(id);
     }
 
     return url;
@@ -39,7 +48,7 @@ export default ApplicationAdapter.extend({
   },
 
   optionsForQuery(id, action, wrapTTL) {
-    let data = {};
+    const data = {};
     if (action === 'query') {
       data.list = true;
     }
@@ -52,7 +61,7 @@ export default ApplicationAdapter.extend({
   fetchByQuery(query, action) {
     const { id, backend, wrapTTL } = query;
     return this.ajax(this.urlForSecret(backend, id), 'GET', this.optionsForQuery(id, action, wrapTTL)).then(
-      resp => {
+      (resp) => {
         if (wrapTTL) {
           return resp;
         }

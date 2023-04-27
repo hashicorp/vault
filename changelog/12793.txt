@@ -1,0 +1,3 @@
+```release-note: improvement
+auth: reading `sys/auth/:path` now returns the configuration for the auth engine mounted at the given path
+```

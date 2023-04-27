@@ -1,0 +1,3 @@
+```release-note:change
+secret/pki: Remove unused signature_bits parameter from intermediate CSR generation; this parameter doesn't control the final certificate's signature algorithm selection as that is up to the signing CA
+```

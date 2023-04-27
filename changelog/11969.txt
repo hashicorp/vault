@@ -1,0 +1,3 @@
+```release-note:improvement
+agent: JWT auto auth now supports a `remove_jwt_after_reading` config option which defaults to true.
+```

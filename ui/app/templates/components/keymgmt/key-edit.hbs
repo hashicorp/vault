@@ -1,0 +1,267 @@
+<PageHeader as |p|>
+  <p.top>
+    <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{this.mode}} @root={{@root}} @showCurrent={{true}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-secret-header="true">
+      {{#if this.isDistributing}}
+        Distribute key
+      {{else if (eq @mode "create")}}
+        Create key
+      {{else if (eq @mode "edit")}}
+        Edit key
+      {{else}}
+        {{@model.id}}
+      {{/if}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+{{#if this.isDistributing}}
+  <Keymgmt::Distribute @backend={{@model.backend}} @key={{@model.id}} @onClose={{fn (mut this.isDistributing) false}} />
+{{else}}
+  {{#if (eq this.mode "show")}}
+    <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless" data-test-keymgmt-key-toolbar>
+      <nav class="tabs">
+        <ul>
+          <li class={{if (not-eq @tab "versions") "active"}}>
+            <LinkTo
+              @route="vault.cluster.secrets.backend.show"
+              @model={{@model.id}}
+              @query={{hash tab=""}}
+              data-test-tab="Details"
+            >
+              Details
+            </LinkTo>
+          </li>
+          <li class={{if (eq @tab "versions") "active"}}>
+            <LinkTo
+              @route="vault.cluster.secrets.backend.show"
+              @model={{@model.id}}
+              @query={{hash tab="versions"}}
+              data-test-tab="Versions"
+            >
+              Versions
+            </LinkTo>
+          </li>
+        </ul>
+      </nav>
+    </div>
+    <Toolbar>
+      <ToolbarActions>
+        {{#unless @model.distribution}}
+          <button
+            type="button"
+            class="toolbar-link"
+            {{on "click" (fn (mut this.isDistributing) true)}}
+            data-test-keymgmt-key-distribute
+          >
+            Distribute key
+          </button>
+        {{/unless}}
+        {{#if @model.canDelete}}
+          <button
+            type="button"
+            class="toolbar-link"
+            disabled={{not @model.deletionAllowed}}
+            {{on "click" (fn (mut this.isDeleteModalOpen) true)}}
+            data-test-keymgmt-key-destroy
+          >
+            Destroy key
+          </button>
+        {{/if}}
+        {{#if @model.provider}}
+          <ConfirmAction
+            @buttonClasses="toolbar-link"
+            @onConfirmAction={{perform this.removeKey}}
+            @confirmTitle="Remove this key?"
+            @confirmMessage="This will remove all versions of the key from the KMS provider. The key will stay in Vault."
+            @confirmButtonText="Remove"
+            @isRunning={{this.removeKey.isRunning}}
+            data-test-keymgmt-key-remove
+          >
+            Remove key
+          </ConfirmAction>
+        {{/if}}
+        {{#if (or @model.canDelete @model.provider)}}
+          <div class="toolbar-separator"></div>
+        {{/if}}
+        <ConfirmAction
+          @buttonClasses="toolbar-link"
+          @onConfirmAction={{perform this.rotateKey}}
+          @confirmTitle="Rotate this key?"
+          @confirmMessage="After rotation, all key actions will default to using the newest version of the key."
+          @confirmButtonText="Rotate"
+          @isRunning={{this.rotateKey.isRunning}}
+          data-test-keymgmt-key-rotate
+        >
+          Rotate key
+        </ConfirmAction>
+        {{#if @model.canEdit}}
+          <ToolbarSecretLink
+            @secret={{@model.id}}
+            @mode="edit"
+            @replace={{true}}
+            @queryParams={{hash itemType="key"}}
+            @data-test-edit-link={{true}}
+          >
+            Edit key
+          </ToolbarSecretLink>
+        {{/if}}
+      </ToolbarActions>
+    </Toolbar>
+  {{/if}}
+
+  {{#if this.isMutable}}
+    <form {{on "submit" (perform this.saveKey)}}>
+      <div class="box is-sideless is-fullwidth is-marginless">
+        {{#let (if (eq @mode "create") "createFields" "updateFields") as |fieldsKey|}}
+          {{#each (get @model fieldsKey) as |attr|}}
+            <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
+          {{/each}}
+          <div class="field is-grouped box is-fullwidth is-bottomless">
+            <div class="control">
+              <button
+                type="submit"
+                disabled={{this.saveTask.isRunning}}
+                class="button is-primary {{if this.saveTask.isRunning 'is-loading'}}"
+                data-test-keymgmt-key-submit
+              >
+                {{if this.isCreating "Create key" "Update"}}
+              </button>
+            </div>
+            <div class="control">
+              <LinkTo
+                @route={{if this.isCreating @root.path "vault.cluster.secrets.backend.show"}}
+                @model={{if this.isCreating @root.model @model.id}}
+                @query={{unless this.isCreating (hash itemType="key") (hash itemType="")}}
+                @disabled={{this.savekey.isRunning}}
+                class="button"
+                data-test-keymgmt-key-cancel
+              >
+                Cancel
+              </LinkTo>
+            </div>
+          </div>
+        {{/let}}
+      </div>
+    </form>
+  {{else if (eq @tab "versions")}}
+    {{#each @model.versions as |version|}}
+      <div class="list-item-row" data-test-keymgmt-key-version>
+        <div class="columns is-mobile">
+          <div class="column is-3 has-text-weight-bold">
+            <Icon @name="history" class="has-text-grey-light" />
+            <span>Version {{version.id}}</span>
+          </div>
+          <div class="column is-3 has-text-grey">
+            {{date-from-now version.creation_time addSuffix=true}}
+          </div>
+          <div class="column is-6 is-flex-center">
+            {{#if (eq @model.minEnabledVersion version.id)}}
+              <Icon @name="check-circle-fill" class="has-text-success" />
+              <span data-test-keymgmt-key-current-min>Current mininum enabled version</span>
+            {{/if}}
+          </div>
+        </div>
+      </div>
+    {{/each}}
+  {{else}}
+    <div class="has-top-margin-xl has-bottom-margin-s">
+      <h2 class="title is-5 has-border-bottom-light">Key Details</h2>
+      {{#each @model.showFields as |attr|}}
+        <InfoTableRow
+          @alwaysRender={{true}}
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{get @model attr.name}}
+          @defaultShown={{attr.options.defaultShown}}
+          @formatDate={{if (eq attr.type "date") "MMM d yyyy, h:mm:ss aaa"}}
+        />
+      {{/each}}
+    </div>
+    <div class="has-top-margin-xl has-bottom-margin-s">
+      <h2 class="title is-5 {{if @model.distribution 'has-border-bottom-light' 'is-borderless'}}">
+        Distribution Details
+      </h2>
+      {{#if @model.provider.permissionsError}}
+        <EmptyState
+          @title="You are not authorized"
+          @subTitle="Error 403"
+          @message={{concat
+            "You must be granted permissions to see whether this key is distributed. Ask your administrator if you think you should have access to LIST /"
+            @model.backend
+            "/key/"
+            @model.name
+            "/kms."
+          }}
+          @icon="minus-circle"
+        />
+      {{else if (is-empty-value @model.provider)}}
+        <EmptyState
+          @title="Key not distributed"
+          @message="When this key is distributed to a destination, those details will appear here."
+          data-test-keymgmt-dist-empty-state
+        >
+          {{#if @model.canListProviders}}
+            <button type="button" class="link" {{on "click" (fn (mut this.isDistributing) true)}}>
+              Distribute key
+              <Icon @name="chevron-right" />
+            </button>
+          {{/if}}
+        </EmptyState>
+      {{else}}
+        <InfoTableRow @label="Distributed" @value={{@model.provider}}>
+          <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@model.provider}} @query={{hash itemType="provider"}}>
+            <Icon @name="check-circle-fill" class="has-text-success" />{{@model.provider}}
+          </LinkTo>
+        </InfoTableRow>
+        {{#if @model.distribution}}
+          {{#each @model.distFields as |attr|}}
+            <InfoTableRow
+              @alwaysRender={{true}}
+              @label={{capitalize (or attr.label (humanize (dasherize attr.name)))}}
+              @value={{if
+                (eq attr.name "protection")
+                (uppercase (get @model.distribution attr.name))
+                (get @model.distribution attr.name)
+              }}
+              @defaultShown={{attr.defaultShown}}
+              @helperText={{attr.subText}}
+              @formatDate={{if (eq attr.type "date") "MMM d yyyy, h:mm:ss aaa"}}
+            />
+          {{/each}}
+        {{else}}
+          <EmptyState
+            @title="You are not authorized"
+            @subTitle="Error 403"
+            @message={{concat
+              "You must be granted permissions to view distribution details for this key. Ask your administrator if you think you should have access to GET /"
+              @model.backend
+              "/key/"
+              @model.name
+              "/kms."
+            }}
+            @icon="minus-circle"
+          />
+        {{/if}}
+      {{/if}}
+    </div>
+  {{/if}}
+{{/if}}
+
+<ConfirmationModal
+  @title="Destroy key?"
+  @onClose={{fn (mut this.isDeleteModalOpen) false}}
+  @isActive={{this.isDeleteModalOpen}}
+  @confirmText={{@model.name}}
+  @toConfirmMsg="deleting the key"
+  @onConfirm={{fn this.deleteKey @model.id}}
+>
+  <p>
+    Destroying the
+    <strong>{{@model.name}}</strong>
+    key means that the underlying data will be lost and the key will become unusable for cryptographic operations. It is
+    unrecoverable.
+  </p>
+  <MessageError @model={{this.model}} @errorMessage={{this.error}} />
+</ConfirmationModal>

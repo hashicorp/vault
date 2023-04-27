@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package http
 
 import (
@@ -11,13 +14,14 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	bplugin "github.com/hashicorp/vault/builtin/plugin"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/pluginutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/plugin"
-	"github.com/hashicorp/vault/logical/plugin/mock"
-	"github.com/hashicorp/vault/physical"
-	"github.com/hashicorp/vault/physical/inmem"
+	"github.com/hashicorp/vault/helper/benchhelpers"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/sdk/physical/inmem"
+	"github.com/hashicorp/vault/sdk/plugin"
+	"github.com/hashicorp/vault/sdk/plugin/mock"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -39,7 +43,7 @@ func getPluginClusterAndCore(t testing.TB, logger log.Logger) (*vault.TestCluste
 		},
 	}
 
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+	cluster := vault.NewTestCluster(benchhelpers.TBtoT(t), coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
 		Logger:      logger.Named("testclusteroptions"),
 	})
@@ -50,8 +54,8 @@ func getPluginClusterAndCore(t testing.TB, logger log.Logger) (*vault.TestCluste
 
 	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
-	vault.TestWaitActive(t, core.Core)
-	vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeSecrets, "TestPlugin_PluginMain", []string{}, "")
+	vault.TestWaitActive(benchhelpers.TBtoT(t), core.Core)
+	vault.TestAddTestPlugin(benchhelpers.TBtoT(t), core.Core, "mock-plugin", consts.PluginTypeSecrets, "", "TestPlugin_PluginMain", []string{}, "")
 
 	// Mount the mock plugin
 	err = core.Client.Sys().Mount("mock", &api.MountInput{
@@ -76,18 +80,14 @@ func TestPlugin_PluginMain(t *testing.T) {
 
 	args := []string{"--ca-cert=" + caPEM}
 
-	apiClientMeta := &pluginutil.APIClientMeta{}
+	apiClientMeta := &api.PluginAPIClientMeta{}
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(args)
-
-	tlsConfig := apiClientMeta.GetTLSConfig()
-	tlsProviderFunc := pluginutil.VaultPluginTLSProvider(tlsConfig)
 
 	factoryFunc := mock.FactoryType(logical.TypeLogical)
 
 	err := plugin.Serve(&plugin.ServeOpts{
 		BackendFactoryFunc: factoryFunc,
-		TLSProviderFunc:    tlsProviderFunc,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -156,7 +156,6 @@ func TestPlugin_MockRawResponse(t *testing.T) {
 	if resp.StatusCode != 200 {
 		t.Fatal("bad status")
 	}
-
 }
 
 func TestPlugin_GetParams(t *testing.T) {

@@ -1,0 +1,2 @@
+```release-note:bug
+storage/raft: Fix error writing raft TLS keyring during follower joins

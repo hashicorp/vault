@@ -1,0 +1,52 @@
+---
+layout: docs
+page_title: 1.6.0
+description: |-
+  This page contains release notes for Vault 1.6.0.
+---
+
+# Vault 1.6.0
+
+## Vault 1.6 Release Highlights
+
+**Transform: Tokenization Tech Preview (Enterprise ADP Module Only)**: Vault 1.6 introduces a new transformation method
+for tokenizing sensitive data stored in un-trusted/semi-trusted systems. Tokenization is available as part of the
+“Advanced Data Protection” module in Vault Enterprise. Tokenization provides non-reversible data protection pursuant to
+requirements for data irreversibility (PCI-DSS, GDPR, etc.). This feature is being released in a Tech Preview.
+
+**Integrated Storage Enhancements**: Continuing with the enhancements made to Vault’s Integrated storage, we are adding
+the following new features:
+
+- **Cloud auto-join** provides support for Vault nodes to automatically discover and join a cluster via specified cloud
+  metadata. This is particularly useful when IP addresses are not static.
+- **Automated snapshots** provides built-in Vault functionality for automated snapshots that takes snapshots of the
+  state of the Vault servers and saves them locally, or pushes them to an optional remote storage service.
+
+**UI improvements**
+
+- **New UI for Transform secrets engine (Enterprise ADP Module Only)**
+  - To configure FPE and Masking transformations, including custom alphabets and patterns for FPE.
+  - To create and manage roles and patterns for templated use in current and future FPE and masking transformations.
+- **Improvements to Vault Usage UI** to show new metrics for “active clients”, “unique entities” and “active direct
+  tokens” that help with understanding Vault usage
+
+**Support for seal migration** for all use cases to migrate from any to any unseal interface (including auto-unseal to auto-unseal of the same type)
+
+**Key Management Secrets Engine in Tech Preview (Enterprise ADP Module Only)** - A new Key Management Secrets Engine to
+help manage and securely distribute keys to various cloud KMS services. This feature is being released in Tech Preview
+to be used in conjunction with Microsoft’s Azure Key Vault.
+
+**Database secrets engine improvements**:
+
+- Extending the newly released Password Policy to the combined Database Secrets Engine to support for all databases
+- Add Couchbase support to the combined Database Secrets Engine to manage static and dynamic credentials for Couchbase
+- Add static credential rotation to Cassandra, InfluxDB and Elasticsearch
+- Add MongoDB Atlas root credential rotation
+- Added support for root credential & static credential rotation for HanaDB
+
+## What’s Changed
+
+- Vault 1.6 will use Go 1.15, which has dropped support for 32-bit binaries for [Darwin](https://golang.org/doc/go1.15#darwin),
+  so we will no longer be issuing `darwin_386` builds of Vault.
+
+For more detailed information, please refer to the [Changelog](https://github.com/hashicorp/vault/blob/main/CHANGELOG.md#160).

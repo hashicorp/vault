@@ -1,0 +1,47 @@
+<div class="chart-wrapper single-chart-grid" data-test-monthly-usage>
+  <div class="chart-header has-bottom-margin-xl">
+    <h2 class="chart-title">Vault usage</h2>
+    <p class="chart-description">
+      This data can be used to understand how many total clients are using Vault each month for this date range.
+    </p>
+  </div>
+
+  <div class={{concat (unless @verticalBarChartData "chart-empty-state ") "chart-container-wide"}}>
+    <Clients::VerticalBarChart @dataset={{@verticalBarChartData}} @chartLegend={{@chartLegend}} />
+  </div>
+
+  <div class="chart-subTitle">
+    <h2 class="chart-title">Total monthly clients</h2>
+    <p class="chart-subtext">
+      Each client is counted once per month. This can help with capacity planning.
+    </p>
+  </div>
+
+  <div class="data-details-top" data-test-monthly-usage-average-total>
+    <h3 class="data-details">Average total clients per month</h3>
+    <p class="data-details">
+      {{format-number this.averageTotalClients}}
+    </p>
+  </div>
+
+  <div class="data-details-bottom" data-test-monthly-usage-average-new>
+    <h3 class="data-details">Average new clients per month</h3>
+    <p class="data-details">
+      {{format-number this.averageNewClients}}
+    </p>
+  </div>
+
+  <div data-test-monthly-usage-timestamp class="timestamp">
+    {{#if @responseTimestamp}}
+      Updated
+      {{date-format @responseTimestamp "MMM d yyyy, h:mm:ss aaa" withTimeZone=true}}
+    {{/if}}
+  </div>
+
+  {{#if @verticalBarChartData}}
+    <div data-test-monthly-usage-legend class="legend-right">
+      <span class="light-dot"></span><span class="legend-label">{{capitalize @chartLegend.0.label}}</span>
+      <span class="dark-dot"></span><span class="legend-label">{{capitalize @chartLegend.1.label}}</span>
+    </div>
+  {{/if}}
+</div>

@@ -1,19 +1,25 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Controller, { inject as controller } from '@ember/controller';
 import BackendCrumbMixin from 'vault/mixins/backend-crumb';
 
 export default Controller.extend(BackendCrumbMixin, {
   backendController: controller('vault.cluster.secrets.backend'),
-  queryParams: ['initialKey'],
+  queryParams: ['initialKey', 'itemType'],
 
   initialKey: '',
+  itemType: '',
 
   actions: {
-    refresh: function() {
+    refresh: function () {
       this.send('refreshModel');
     },
     toggleAdvancedEdit(bool) {
       this.set('preferAdvancedEdit', bool);
-      this.get('backendController').set('preferAdvancedEdit', bool);
+      this.backendController.set('preferAdvancedEdit', bool);
     },
   },
 });

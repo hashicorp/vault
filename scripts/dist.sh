@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 set -e
 
 # Get the version from the command line
@@ -28,7 +31,7 @@ DIR="$( cd -P "$( dirname "$SOURCE" )/.." && pwd )"
 cd $DIR
 
 if [ -z $RELBRANCH ]; then
-  RELBRANCH=master
+  RELBRANCH=main
 fi
 
 # Tag, unless told not to

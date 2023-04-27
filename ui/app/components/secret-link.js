@@ -1,33 +1,31 @@
-import { computed } from '@ember/object';
-import Component from '@ember/component';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
 
-export function linkParams({ mode, secret, queryParams }) {
-  let params;
-  const route = `vault.cluster.secrets.backend.${mode}`;
+import Component from '@glimmer/component';
+import { action } from '@ember/object';
+import { encodePath } from 'vault/utils/path-encoding-helpers';
 
-  if (!secret || secret === ' ') {
-    params = [route + '-root'];
-  } else {
-    params = [route, secret];
+export default class SecretLink extends Component {
+  get link() {
+    const { mode, secret } = this.args;
+    const route = `vault.cluster.secrets.backend.${mode}`;
+    if ((mode !== 'versions' && !secret) || secret === ' ') {
+      return { route: `${route}-root`, models: [] };
+    } else {
+      return { route, models: [encodePath(secret)] };
+    }
+  }
+  get query() {
+    const qp = this.args.queryParams || {};
+    return qp.isQueryParams ? qp.values : qp;
   }
 
-  if (queryParams) {
-    params.push(queryParams);
+  @action
+  onLinkClick() {
+    if (this.args.onLinkClick) {
+      this.args.onLinkClick(...arguments);
+    }
   }
-
-  return params;
 }
-
-export default Component.extend({
-  tagName: '',
-  mode: 'list',
-
-  secret: null,
-  queryParams: null,
-  ariaLabel: null,
-
-  linkParams: computed('mode', 'secret', 'queryParams', function() {
-    let data = this.getProperties('mode', 'secret', 'queryParams');
-    return linkParams(data);
-  }),
-});

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -5,33 +8,9 @@ import (
 	"reflect"
 	"testing"
 
-	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
-
-func mockPolicyStore(t *testing.T) *PolicyStore {
-	_, barrier, _ := mockBarrier(t)
-	view := NewBarrierView(barrier, "foo/")
-	p, err := NewPolicyStore(context.Background(), nil, view, logical.TestSystemView(), logging.NewVaultLogger(log.Trace))
-	if err != nil {
-		t.Fatal(err)
-	}
-	return p
-}
-
-func mockPolicyStoreNoCache(t *testing.T) *PolicyStore {
-	sysView := logical.TestSystemView()
-	sysView.CachingDisabledVal = true
-	_, barrier, _ := mockBarrier(t)
-	view := NewBarrierView(barrier, "foo/")
-	p, err := NewPolicyStore(context.Background(), nil, view, sysView, logging.NewVaultLogger(log.Trace))
-	if err != nil {
-		t.Fatal(err)
-	}
-	return p
-}
 
 func mockPolicyWithCore(t *testing.T, disableCache bool) (*Core, *PolicyStore) {
 	conf := &CoreConfig{
@@ -293,9 +272,50 @@ func testPolicyStoreACL(t *testing.T, ps *PolicyStore, ns *namespace.Namespace) 
 	}
 
 	ctx = namespace.ContextWithNamespace(context.Background(), ns)
-	acl, err := ps.ACL(ctx, nil, map[string][]string{ns.ID: []string{"dev", "ops"}})
+	acl, err := ps.ACL(ctx, nil, map[string][]string{ns.ID: {"dev", "ops"}})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	testLayeredACL(t, acl, ns)
+}
+
+func TestDefaultPolicy(t *testing.T) {
+	ctx := namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
+
+	policy, err := ParseACLPolicy(namespace.RootNamespace, defaultPolicy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	acl, err := NewACL(ctx, []*Policy{policy})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for name, tc := range map[string]struct {
+		op            logical.Operation
+		path          string
+		expectAllowed bool
+	}{
+		"lookup self":            {logical.ReadOperation, "auth/token/lookup-self", true},
+		"renew self":             {logical.UpdateOperation, "auth/token/renew-self", true},
+		"revoke self":            {logical.UpdateOperation, "auth/token/revoke-self", true},
+		"check own capabilities": {logical.UpdateOperation, "sys/capabilities-self", true},
+
+		"read arbitrary path":     {logical.ReadOperation, "foo/bar", false},
+		"login at arbitrary path": {logical.UpdateOperation, "auth/foo", false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			request := new(logical.Request)
+			request.Operation = tc.op
+			request.Path = tc.path
+
+			result := acl.AllowOperation(ctx, request, false)
+			if result.RootPrivs {
+				t.Fatal("unexpected root")
+			}
+			if tc.expectAllowed != result.Allowed {
+				t.Fatalf("Expected %v, got %v", tc.expectAllowed, result.Allowed)
+			}
+		})
+	}
 }

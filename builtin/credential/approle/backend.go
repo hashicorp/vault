@@ -1,23 +1,29 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package approle
 
 import (
 	"context"
 	"sync"
-	"time"
 
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/locksutil"
-	"github.com/hashicorp/vault/helper/salt"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
+	"github.com/hashicorp/vault/sdk/helper/salt"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
+	operationPrefixAppRole      = "app-role"
 	secretIDPrefix              = "secret_id/"
 	secretIDLocalPrefix         = "secret_id_local/"
 	secretIDAccessorPrefix      = "accessor/"
 	secretIDAccessorLocalPrefix = "accessor_local/"
 )
+
+// ReportedVersion is used to report a specific version to Vault.
+var ReportedVersion = ""
 
 type backend struct {
 	*framework.Backend
@@ -57,8 +63,6 @@ type backend struct {
 	// secretIDListingLock is a dedicated lock for listing SecretIDAccessors
 	// for all the SecretIDs issued against an approle
 	secretIDListingLock sync.RWMutex
-
-	testTidyDelay time.Duration
 }
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
@@ -114,8 +118,9 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 				pathTidySecretID(b),
 			},
 		),
-		Invalidate:  b.invalidate,
-		BackendType: logical.TypeCredential,
+		Invalidate:     b.invalidate,
+		BackendType:    logical.TypeCredential,
+		RunningVersion: ReportedVersion,
 	}
 	return b, nil
 }

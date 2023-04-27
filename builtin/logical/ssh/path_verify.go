@@ -1,18 +1,26 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package ssh
 
 import (
 	"context"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathVerify(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "verify",
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixSSH,
+			OperationVerb:   "verify",
+			OperationSuffix: "otp",
+		},
 		Fields: map[string]*framework.FieldSchema{
-			"otp": &framework.FieldSchema{
+			"otp": {
 				Type:        framework.TypeString,
 				Description: "[Required] One-Time-Key that needs to be validated",
 			},

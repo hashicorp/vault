@@ -1,30 +1,35 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { inject as service } from '@ember/service';
-import { next } from '@ember/runloop';
 import Route from '@ember/routing/route';
 import ControlGroupError from 'vault/lib/control-group-error';
 
 export default Route.extend({
   controlGroup: service(),
   routing: service('router'),
-  wizard: service(),
   namespaceService: service('namespace'),
+  featureFlagService: service('featureFlag'),
 
   actions: {
     willTransition() {
       window.scrollTo(0, 0);
     },
     error(error, transition) {
-      let controlGroup = this.get('controlGroup');
+      const controlGroup = this.controlGroup;
       if (error instanceof ControlGroupError) {
-        return controlGroup.handleError(error, transition);
+        return controlGroup.handleError(error);
       }
       if (error.path === '/v1/sys/wrapping/unwrap') {
         controlGroup.unmarkTokenForUnwrap();
       }
 
-      let router = this.get('routing');
+      const router = this.routing;
+      //FIXME transition.intent likely needs to be replaced
       let errorURL = transition.intent.url;
-      let { name, contexts, queryParams } = transition.intent;
+      const { name, contexts, queryParams } = transition.intent;
 
       // If the transition is internal to Ember, we need to generate the URL
       // from the route parameters ourselves
@@ -46,6 +51,7 @@ export default Route.extend({
 
       // if we have queryParams, update the namespace so that the observer can fire on the controller
       if (queryParams) {
+        /* eslint-disable-next-line ember/no-controller-access-in-routes */
         this.controllerFor('vault.cluster').set('namespaceQueryParam', queryParams.namespace || '');
       }
 
@@ -57,27 +63,16 @@ export default Route.extend({
 
       return true;
     },
-    didTransition() {
-      let wizard = this.get('wizard');
+  },
 
-      if (wizard.get('currentState') !== 'active.feature') {
-        return true;
-      }
-      next(() => {
-        let applicationURL = this.get('routing.currentURL');
-        let activeRoute = this.get('routing.currentRouteName');
-
-        if (this.get('wizard.setURLAfterTransition')) {
-          this.set('wizard.setURLAfterTransition', false);
-          this.set('wizard.expectedURL', applicationURL);
-          this.set('wizard.expectedRouteName', activeRoute);
-        }
-        let expectedRouteName = this.get('wizard.expectedRouteName');
-        if (this.get('routing').isActive(expectedRouteName) === false) {
-          wizard.transitionTutorialMachine(wizard.get('currentState'), 'PAUSE');
-        }
-      });
-      return true;
-    },
+  async beforeModel() {
+    const result = await fetch('/v1/sys/internal/ui/feature-flags', {
+      method: 'GET',
+    });
+    if (result.status === 200) {
+      const body = await result.json();
+      const flags = body.feature_flags || [];
+      this.featureFlagService.setFeatureFlags(flags);
+    }
   },
 });

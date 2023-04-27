@@ -1,0 +1,3 @@
+```release-note:feature
+**MySQL Database UI**: The UI now supports adding and editing MySQL connections in the database secret engine
+```

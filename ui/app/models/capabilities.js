@@ -1,11 +1,15 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 // This model represents the capabilities on a given `path`
 // `path` is also the primaryId
 // https://www.vaultproject.io/docs/concepts/policies.html#capabilities
 
-import { computed } from '@ember/object';
-import DS from 'ember-data';
+import Model, { attr } from '@ember-data/model';
 
-const { attr } = DS;
+import { computed } from '@ember/object';
 
 const SUDO_PATHS = [
   'sys/seal',
@@ -19,10 +23,10 @@ const SUDO_PATH_PREFIXES = ['sys/leases/revoke-prefix', 'sys/leases/revoke-force
 
 export { SUDO_PATHS, SUDO_PATH_PREFIXES };
 
-const computedCapability = function(capability) {
-  return computed('path', 'capabilities', 'capabilities.[]', function() {
-    const capabilities = this.get('capabilities');
-    const path = this.get('path');
+const computedCapability = function (capability) {
+  return computed('path', 'capabilities', 'capabilities.[]', function () {
+    const capabilities = this.capabilities;
+    const path = this.path;
     if (!capabilities) {
       return false;
     }
@@ -33,14 +37,14 @@ const computedCapability = function(capability) {
       return false;
     }
     // if the path is sudo protected, they'll need sudo + the appropriate capability
-    if (SUDO_PATHS.includes(path) || SUDO_PATH_PREFIXES.find(item => path.startsWith(item))) {
+    if (SUDO_PATHS.includes(path) || SUDO_PATH_PREFIXES.find((item) => path.startsWith(item))) {
       return capabilities.includes('sudo') && capabilities.includes(capability);
     }
     return capabilities.includes(capability);
   });
 };
 
-export default DS.Model.extend({
+export default Model.extend({
   path: attr('string'),
   capabilities: attr('array'),
   canSudo: computedCapability('sudo'),

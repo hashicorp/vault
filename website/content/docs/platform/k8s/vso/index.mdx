@@ -1,0 +1,182 @@
+---
+layout: docs
+page_title: Vault Secrets Operator
+description: >-
+  The Vault Secrets Operator allows Pods to consume Vault secrets natively from Kubernetes Secrets.
+---
+
+@include 'vso-beta-note.mdx'
+
+# Vault Secrets Operator
+
+The Vault Secrets Operator (VSO) allows Pods to consume Vault secrets natively from Kubernetes Secrets.
+
+## Overview
+
+The Vault Secrets Operator operates by watching for changes to its supported set of Custom Resource Definitions (CRD).
+Each CRD provides the specification required to allow the Operator to synchronize a Vault Secrets to a Kubernetes Secret.
+The Operator writes the *source* Vault secret data directly to the *destination* Kubernetes Secret, ensuring that any
+changes made to the *source* are replicated to the *destination* over its lifetime. In this way, an application only needs
+to have access to the *destination* secret in order to make use of the secret data contained within.
+
+### Features
+
+The following features are supported by the Vault Secrets Operator:
+
+- All Vault secret engines supported.
+- TLS/mTLS communications with Vault.
+- Authentication using the requesting `Pod`'s `ServiceAccount` via the [Kubernetes Auth Method](/vault/docs/auth/kubernetes).
+- Syncing Vault Secrets to Kubernetes Secrets.
+- Secret rotation for `Deployment`, `ReplicaSet`, `StatefulSet` Kubernetes resource types.
+- Prometheus instrumentation for monitoring the Operator
+- Supported installation methods: `Helm`, `Kustomize`<br />
+*see the [installation](/vault/docs/platform/k8s/vso/installation) docs for more details*
+
+## Vault Access and Custom Resource Definitions
+
+~> **Note:** Currently, the Operator only supports the [Kubernetes Auth Method](/vault/docs/auth/kubernetes).
+Over time, we will be adding support for more Vault Auth methods.
+
+The Vault connection and authentication configuration is provided by the `VaultConnection` and `VaultAuth` CRDs. These can be considered as
+foundational Custom Resources that all secret replication type resources will reference.
+
+### VaultConnection Custom Resource
+
+Provides the configuration necessary for the Operator to connect to a single Vault server instance.
+
+```yaml
+---
+apiVersion: secrets.hashicorp.com/v1alpha1
+kind: VaultConnection
+metadata:
+  namespace: vso-example
+  name: example
+spec:
+  # required configuration
+  # address to the Vault server.
+  address: http://vault.vault.svc.cluster.local:8200
+
+  # optional configuration
+  # HTTP headers to be included in all Vault requests.
+  # headers: []
+  # TLS server name to use as the SNI host for TLS connections.
+  # tlsServerName: ""
+  # skip TLS verification for TLS connections to Vault.
+  # skipTLSVerify: false
+  # the trusted PEM encoded CA certificate chain stored in a Kubernetes Secret
+  # caCertSecretRef: ""
+```
+
+### VaultAuth Custom Resource
+
+Provide the configuration necessary for the Operator to authenticate to a single Vault server instance as
+specified in a `VaultConnection` Custom Resource.
+
+```yaml
+---
+apiVersion: secrets.hashicorp.com/v1alpha1
+kind: VaultAuth
+metadata:
+  namespace: vso-example
+  name: example
+spec:
+  # required configuration
+  # VaultConnectionRef of the corresponding VaultConnection CustomResource.
+  # If no value is specified the Operator will default to the `default` VaultConnection,
+  # configured in its own Kubernetes namespace.
+  vaultConnectionRef: example
+  # Method to use when authenticating to Vault.
+  method: kubernetes
+  # Mount to use when authenticating to auth method.
+  mount: kubernetes
+  # Kubernetes specific auth configuration, requires that the Method be set to kubernetes.
+  kubernetes:
+    # role to use when authenticating to Vault
+    role: example
+    # ServiceAccount to use when authenticating to Vault
+    # it is recommended to always provide a unique serviceAccount per Pod/application
+    serviceAccount: default
+
+  # optional configuration
+  # Vault namespace where the auth backend is mounted (requires Vault Enterprise)
+  # namespace: ""
+  # Params to use when authenticating to Vault
+  # params: []
+  # HTTP headers to be included in all Vault authentication requests.
+  # headers: []
+```
+
+## Vault Secret Custom Resource Definitions
+
+Provide the configuration necessary for the Operator to replicate a single Vault Secret to a single Kubernetes Secret.
+Each supported CRD is specialized to a *class* of Vault secret, documented below.
+
+### VaultStaticSecret Custom Resource
+
+Provides the configuration necessary for the Operator to synchronize a single Vault *static* Secret to a single Kubernetes Secret.<br />
+Supported secrets engines: [kv-v2](/vault/docs/secrets/kv/kv-v2), [kv-v1](/vault/docs/secrets/kv/kv-v1)
+
+```yaml
+---
+apiVersion: secrets.hashicorp.com/v1alpha1
+kind: VaultStaticSecret
+metadata:
+  namespace: vso-example
+  name: example
+spec:
+  vaultAuthRef: example
+  mount: kvv2
+  type: kv-v2
+  name: secret
+  refreshAfter: 60s
+  destination:
+    create: true
+    name: static-secret1
+```
+
+### VaultPKISecret Custom Resource
+Provides the configuration necessary for the Operator to synchronize a single Vault *PKI* Secret to a single Kubernetes Secret.<br />
+Supported secrets engines: [pki](/vault/docs/secrets/pki)
+
+```yaml
+---
+apiVersion: secrets.hashicorp.com/v1alpha1
+kind: VaultPKISecret
+metadata:
+  namespace: vso-example
+  name: example
+spec:
+  vaultAuthRef: example
+  mount: pki
+  name: default
+  commonName: example.com
+  format: pem
+  expiryOffset: 1s
+  ttl: 60s
+  namespace: tenant-1
+  destination:
+    create: true
+    name: pki1
+```
+
+### VaultDynamicSecret Custom Resource
+
+Provides the configuration necessary for the Operator to synchronize a single Vault *dynamic* Secret to a single Kubernetes Secret.<br />
+Supported secrets engines *non-exhaustive*: [databases](/vault/docs/secrets/databases), [aws](/vault/docs/secrets/aws),
+[azure](/vault/docs/secrets/azure), [gcp](/vault/docs/secrets/gcp), ...
+
+```yaml
+---
+apiVersion: secrets.hashicorp.com/v1alpha1
+kind: VaultDynamicSecret
+metadata:
+  namespace: vso-example
+  name: example
+spec:
+  vaultAuthRef: example
+  mount: db
+  role: postgres
+  destination:
+    create: true
+    name: dynamic1
+```

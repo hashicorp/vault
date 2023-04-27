@@ -1,0 +1,3 @@
+```release-note:bug
+core: fixed systemd reloading notification
+```

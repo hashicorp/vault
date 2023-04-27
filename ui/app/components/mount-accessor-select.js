@@ -1,31 +1,57 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
-import Component from '@ember/component';
 import { task } from 'ember-concurrency';
+import { action } from '@ember/object';
 
-export default Component.extend({
-  store: service(),
+/**
+ * @module MountAccessorSelect
+ * The MountAccessorSelect component is used to selectDrop down mount options.
+ *
+ * @example
+ * ```js
+ * <MountAccessorSelect @value={this.aliasMountAccessor} @onChange={this.onChange} />
+ * ```
+ * @param {string} value - the selected value.
+ * @param {function} onChange - the parent function that handles when a new value is selected.
+ * @param {boolean} [showAccessor] - whether or not you should show the value or the more detailed accessor off the class.
+ * @param {boolean} [noDefault] - whether or not there is a default value.
+ * @param {boolean} [filterToken] - whether or not you should filter out type "token".
+ * @param {string} [name] - name on the label.
+ * @param {string} [label] - label above the select input.
+ * @param {string} [helpText] - text shown in tooltip.
+ */
 
-  // Public API
-  //value for the external mount selector
-  value: null,
-  onChange: () => {},
+export default class MountAccessorSelect extends Component {
+  @service store;
 
-  init() {
-    this._super(...arguments);
-    this.get('authMethods').perform();
-  },
+  get filterToken() {
+    return this.args.filterToken || false;
+  }
 
-  authMethods: task(function*() {
-    let methods = yield this.get('store').findAll('auth-method');
-    if (!this.get('value')) {
-      this.set('value', methods.get('firstObject.accessor'));
+  get noDefault() {
+    return this.args.noDefault || false;
+  }
+
+  constructor() {
+    super(...arguments);
+    this.authMethods.perform();
+  }
+
+  @task *authMethods() {
+    const methods = yield this.store.findAll('auth-method');
+    if (!this.args.value && !this.args.noDefault) {
+      const getValue = methods.get('firstObject.accessor');
+      this.args.onChange(getValue);
     }
     return methods;
-  }).drop(),
+  }
 
-  actions: {
-    change(value) {
-      this.get('onChange')(value);
-    },
-  },
-});
+  @action change(event) {
+    this.args.onChange(event.target.value);
+  }
+}

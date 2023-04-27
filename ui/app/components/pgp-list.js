@@ -1,23 +1,58 @@
-import { computed } from '@ember/object';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@ember/component';
 
 export default Component.extend({
   onDataUpdate: () => {},
-  listData: computed('listLength', function() {
-    let num = this.get('listLength');
+  listLength: 0,
+  listData: null,
+
+  init() {
+    this._super(...arguments);
+    let num = this.listLength;
     if (num) {
       num = parseInt(num, 10);
     }
-    return Array(num || 0)
+    const list = this.newList(num);
+    this.set('listData', list);
+  },
+
+  didReceiveAttrs() {
+    this._super(...arguments);
+    let list;
+    if (!this.listLength) {
+      this.set('listData', []);
+      return;
+    }
+    // no update needed
+    if (this.listData.length === this.listLength) {
+      return;
+    }
+    if (this.listLength < this.listData.length) {
+      // shorten the current list
+      list = this.listData.slice(0, this.listLength);
+    } else if (this.listLength > this.listData.length) {
+      // add to the current list by creating a new list and copying over existing list
+      list = [...this.listData, ...this.newList(this.listLength - this.listData.length)];
+    }
+    this.set('listData', list || this.listData);
+    this.onDataUpdate((list || this.listData).compact().map((k) => k.value));
+  },
+
+  newList(length) {
+    return Array(length || 0)
       .fill(null)
       .map(() => ({ value: '' }));
-  }),
-  listLength: 0,
+  },
+
   actions: {
     setKey(index, key) {
-      let listData = this.get('listData');
-      listData.replace(index, 1, key);
-      this.get('onDataUpdate')(listData.compact().map(k => k.value));
+      const { listData } = this;
+      listData.splice(index, 1, key);
+      this.onDataUpdate(listData.compact().map((k) => k.value));
     },
   },
 });

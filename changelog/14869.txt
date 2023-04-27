@@ -1,0 +1,4 @@
+```release-note:change
+auth: Remove support for legacy MFA
+(https://www.vaultproject.io/docs/v1.10.x/auth/mfa)
+```

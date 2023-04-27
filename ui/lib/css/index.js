@@ -1,4 +1,10 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 /* eslint-env node */
+/* eslint-disable node/no-extraneous-require */
 'use strict';
 
 var path = require('path');
@@ -12,7 +18,7 @@ module.exports = {
     return true;
   },
 
-  included: function(app) {
+  included: function (app) {
     this._super.included.apply(this, arguments);
 
     // see: https://github.com/ember-cli/ember-cli/issues/3718
@@ -27,7 +33,7 @@ module.exports = {
     return app;
   },
 
-  treeForStyles: function() {
+  treeForStyles: function () {
     var bulma = new Funnel(this.bulmaPath, {
       srcDir: '/',
       destDir: 'app/styles/bulma',

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package http
 
 import (
@@ -49,8 +52,8 @@ func TestSysMountConfig(t *testing.T) {
 			expectedMaxTTL, mountConfig.MaxLeaseTTL)
 	}
 
-	if mountConfig.ForceNoCache == true {
-		t.Fatalf("did not expect force cache")
+	if mountConfig.ForceNoCache {
+		t.Fatal("did not expect force cache")
 	}
 }
 

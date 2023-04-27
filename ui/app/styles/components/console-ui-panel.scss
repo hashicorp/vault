@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 .console-ui-panel {
   background: linear-gradient(to right, #191a1c, #1b212d);
   height: 0;
@@ -106,7 +111,7 @@
   margin-left: calc(#{$console-spacing} - 0.33rem);
   position: relative;
 
-  .icon {
+  svg {
     position: absolute;
     left: 0;
     top: 0;

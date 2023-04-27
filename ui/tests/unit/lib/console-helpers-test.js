@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import {
   parseCommand,
@@ -7,7 +12,7 @@ import {
   logErrorFromInput,
 } from 'vault/lib/console-helpers';
 
-module('Unit | Lib | console helpers', function() {
+module('Unit | Lib | console helpers', function () {
   const testCommands = [
     {
       name: 'write with data',
@@ -27,23 +32,92 @@ module('Unit | Lib | console helpers', function() {
       ],
     },
     {
+      name: 'write with space in a value',
+      command: `vault write \
+      auth/ldap/config \
+      url=ldap://ldap.example.com:3268 \
+      binddn="CN=ServiceViewDev,OU=Service Accounts,DC=example,DC=com" \
+      bindpass="xxxxxxxxxxxxxxxxxxxxxxxxxx" \
+      userdn="DC=example,DC=com" \
+      groupdn="DC=example,DC=com" \
+      insecure_tls=true \
+      starttls=false
+      `,
+      expected: [
+        'write',
+        [],
+        'auth/ldap/config',
+        [
+          'url=ldap://ldap.example.com:3268',
+          'binddn=CN=ServiceViewDev,OU=Service Accounts,DC=example,DC=com',
+          'bindpass=xxxxxxxxxxxxxxxxxxxxxxxxxx',
+          'userdn=DC=example,DC=com',
+          'groupdn=DC=example,DC=com',
+          'insecure_tls=true',
+          'starttls=false',
+        ],
+      ],
+    },
+    {
+      name: 'write with double quotes',
+      command: `vault write \
+      auth/token/create \
+      policies="foo"
+      `,
+      expected: ['write', [], 'auth/token/create', ['policies=foo']],
+    },
+    {
+      name: 'write with single quotes',
+      command: `vault write \
+      auth/token/create \
+      policies='foo'
+      `,
+      expected: ['write', [], 'auth/token/create', ['policies=foo']],
+    },
+    {
+      name: 'write with unmatched quotes',
+      command: `vault write \
+      auth/token/create \
+      policies="'foo"
+      `,
+      expected: ['write', [], 'auth/token/create', ["policies='foo"]],
+    },
+    {
+      name: 'write with shell characters',
+      /* eslint-disable no-useless-escape */
+      command: `vault write  database/roles/api-prod db_name=apiprod creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";" default_ttl=1h max_ttl=24h
+      `,
+      expected: [
+        'write',
+        [],
+        'database/roles/api-prod',
+        [
+          'db_name=apiprod',
+          `creation_statements=CREATE ROLE {{name}} WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; GRANT SELECT ON ALL TABLES IN SCHEMA public TO {{name}};`,
+          'default_ttl=1h',
+          'max_ttl=24h',
+        ],
+      ],
+    },
+
+    {
       name: 'read with field',
       command: `vault read -field=access_key aws/creds/my-role`,
       expected: ['read', ['-field=access_key'], 'aws/creds/my-role', []],
     },
   ];
 
-  testCommands.forEach(function(testCase) {
-    test(`#parseCommand: ${testCase.name}`, function(assert) {
-      let result = parseCommand(testCase.command);
+  testCommands.forEach(function (testCase) {
+    test(`#parseCommand: ${testCase.name}`, function (assert) {
+      const result = parseCommand(testCase.command);
       assert.deepEqual(result, testCase.expected);
     });
   });
 
-  test('#parseCommand: invalid commands', function(assert) {
-    let command = 'vault kv get foo';
-    let result = parseCommand(command);
-    assert.equal(result, false, 'parseCommand returns false by default');
+  test('#parseCommand: invalid commands', function (assert) {
+    const command = 'vault kv get foo';
+    const result = parseCommand(command);
+    assert.false(result, 'parseCommand returns false by default');
 
     assert.throws(
       () => {
@@ -56,6 +130,7 @@ module('Unit | Lib | console helpers', function() {
 
   const testExtractCases = [
     {
+      method: 'read',
       name: 'data fields',
       input: [
         [
@@ -75,6 +150,7 @@ module('Unit | Lib | console helpers', function() {
       },
     },
     {
+      method: 'read',
       name: 'repeated data and a flag',
       input: [['allowed_domains=example.com', 'allowed_domains=foo.example.com'], ['-wrap-ttl=2h']],
       expected: {
@@ -87,6 +163,7 @@ module('Unit | Lib | console helpers', function() {
       },
     },
     {
+      method: 'read',
       name: 'data with more than one equals sign',
       input: [['foo=bar=baz', 'foo=baz=bop', 'some=value=val'], []],
       expected: {
@@ -97,17 +174,62 @@ module('Unit | Lib | console helpers', function() {
         flags: {},
       },
     },
+    {
+      method: 'read',
+      name: 'data with empty values',
+      input: [[`foo=`, 'some=thing'], []],
+      expected: {
+        data: {
+          foo: '',
+          some: 'thing',
+        },
+        flags: {},
+      },
+    },
+    {
+      method: 'write',
+      name: 'write with force flag',
+      input: [[], ['-force']],
+      expected: {
+        data: {},
+        flags: {
+          force: true,
+        },
+      },
+    },
+    {
+      method: 'write',
+      name: 'write with force short flag',
+      input: [[], ['-f']],
+      expected: {
+        data: {},
+        flags: {
+          force: true,
+        },
+      },
+    },
+    {
+      method: 'write',
+      name: 'write with GNU style force flag',
+      input: [[], ['--force']],
+      expected: {
+        data: {},
+        flags: {
+          force: true,
+        },
+      },
+    },
   ];
 
-  testExtractCases.forEach(function(testCase) {
-    test(`#extractDataAndFlags: ${testCase.name}`, function(assert) {
-      let { data, flags } = extractDataAndFlags(...testCase.input);
+  testExtractCases.forEach(function (testCase) {
+    test(`#extractDataAndFlags: ${testCase.name}`, function (assert) {
+      const { data, flags } = extractDataAndFlags(testCase.method, ...testCase.input);
       assert.deepEqual(data, testCase.expected.data, 'has expected data');
       assert.deepEqual(flags, testCase.expected.flags, 'has expected flags');
     });
   });
 
-  let testResponseCases = [
+  const testResponseCases = [
     {
       name: 'write response, no content',
       args: [null, 'foo/bar', 'write', {}],
@@ -277,14 +399,14 @@ module('Unit | Lib | console helpers', function() {
     },
   ];
 
-  testResponseCases.forEach(function(testCase) {
-    test(`#logFromResponse: ${testCase.name}`, function(assert) {
-      let data = logFromResponse(...testCase.args);
+  testResponseCases.forEach(function (testCase) {
+    test(`#logFromResponse: ${testCase.name}`, function (assert) {
+      const data = logFromResponse(...testCase.args);
       assert.deepEqual(data, testCase.expectedData);
     });
   });
 
-  let testErrorCases = [
+  const testErrorCases = [
     {
       name: 'AdapterError write',
       args: [{ httpStatus: 404, path: 'v1/sys/foo', errors: [{}] }, 'sys/foo', 'write'],
@@ -322,9 +444,9 @@ module('Unit | Lib | console helpers', function() {
     },
   ];
 
-  testErrorCases.forEach(function(testCase) {
-    test(`#logFromError: ${testCase.name}`, function(assert) {
-      let data = logFromError(...testCase.args);
+  testErrorCases.forEach(function (testCase) {
+    test(`#logFromError: ${testCase.name}`, function (assert) {
+      const data = logFromError(...testCase.args);
       assert.deepEqual(
         data,
         { type: 'error', content: testCase.expectedContent },
@@ -346,9 +468,9 @@ module('Unit | Lib | console helpers', function() {
     },
   ];
 
-  testCommandCases.forEach(function(testCase) {
-    test(`#logErrorFromInput: ${testCase.name}`, function(assert) {
-      let data = logErrorFromInput(...testCase.args);
+  testCommandCases.forEach(function (testCase) {
+    test(`#logErrorFromInput: ${testCase.name}`, function (assert) {
+      const data = logErrorFromInput(...testCase.args);
 
       assert.deepEqual(
         data,

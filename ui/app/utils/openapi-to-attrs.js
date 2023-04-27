@@ -1,57 +1,102 @@
-import DS from 'ember-data';
-const { attr } = DS;
-import { assign } from '@ember/polyfills';
-import { isEmpty } from '@ember/utils';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
 
-export const expandOpenApiProps = function(props) {
-  let attrs = {};
+import { attr } from '@ember-data/model';
+import { assign } from '@ember/polyfills';
+import { camelize, capitalize } from '@ember/string';
+
+export const expandOpenApiProps = function (props) {
+  const attrs = {};
   // expand all attributes
-  for (let prop in props) {
-    let details = props[prop];
-    if (details.deprecated === true) {
+  for (const propName in props) {
+    const prop = props[propName];
+    let { description, items, type, format, isId, deprecated } = prop;
+    if (deprecated === true) {
       continue;
     }
-    if (details.type === 'integer') {
-      details.type = 'number';
+    let {
+      name,
+      value,
+      group,
+      sensitive,
+      editType,
+      description: displayDescription,
+    } = prop['x-vault-displayAttrs'] || {};
+
+    if (type === 'integer') {
+      type = 'number';
     }
-    let editType = details.type;
-    if (details.format === 'seconds') {
+
+    if (displayDescription) {
+      description = displayDescription;
+    }
+
+    editType = editType || type;
+
+    if (format === 'seconds') {
       editType = 'ttl';
-    } else if (details.items) {
-      editType = details.items.type + details.type.capitalize();
+    } else if (items) {
+      editType = items.type + capitalize(type);
     }
-    attrs[prop.camelize()] = {
-      editType: editType,
-      type: details.type,
+
+    const attrDefn = {
+      editType,
+      helpText: description,
+      possibleValues: prop['enum'],
+      fieldValue: isId ? 'mutableId' : null,
+      fieldGroup: group || 'default',
+      readOnly: isId,
+      defaultValue: value || null,
     };
-    if (details['x-vault-displayName']) {
-      attrs[prop.camelize()].label = details['x-vault-displayName'];
+
+    if (type === 'object' && !!value) {
+      attrDefn.defaultValue = () => {
+        return value;
+      };
     }
-    if (details['enum']) {
-      attrs[prop.camelize()].possibleValues = details['enum'];
+
+    if (sensitive) {
+      attrDefn.sensitive = true;
     }
-    if (details['x-vault-displayValue']) {
-      attrs[prop.camelize()].defaultValue = details['x-vault-displayValue'];
-    } else {
-      if (!isEmpty(details['default'])) {
-        attrs[prop.camelize()].defaultValue = details['default'];
+
+    // only set a label if we have one from OpenAPI
+    // otherwise the propName will be humanized by the form-field component
+    if (name) {
+      attrDefn.label = name;
+    }
+
+    // ttls write as a string and read as a number
+    // so setting type on them runs the wrong transform
+    if (editType !== 'ttl' && type !== 'array') {
+      attrDefn.type = type;
+    }
+
+    // loop to remove empty vals
+    for (const attrProp in attrDefn) {
+      if (attrDefn[attrProp] == null) {
+        delete attrDefn[attrProp];
       }
     }
+    attrs[camelize(propName)] = attrDefn;
   }
   return attrs;
 };
 
-export const combineAttributes = function(oldAttrs, newProps) {
-  let newAttrs = {};
-  let newFields = [];
-  oldAttrs.forEach(function(value, name) {
-    if (newProps[name]) {
-      newAttrs[name] = attr(newProps[name].type, assign({}, newProps[name], value.options));
-    } else {
-      newAttrs[name] = attr(value.type, value.options);
-    }
-  });
-  for (let prop in newProps) {
+export const combineAttributes = function (oldAttrs, newProps) {
+  const newAttrs = {};
+  const newFields = [];
+  if (oldAttrs) {
+    oldAttrs.forEach(function (value, name) {
+      if (newProps[name]) {
+        newAttrs[name] = attr(newProps[name].type, assign({}, newProps[name], value.options));
+      } else {
+        newAttrs[name] = attr(value.type, value.options);
+      }
+    });
+  }
+  for (const prop in newProps) {
     if (newAttrs[prop]) {
       continue;
     } else {
@@ -62,8 +107,8 @@ export const combineAttributes = function(oldAttrs, newProps) {
   return { attrs: newAttrs, newFields };
 };
 
-export const combineFields = function(currentFields, newFields, excludedFields) {
-  let otherFields = newFields.filter(field => {
+export const combineFields = function (currentFields, newFields, excludedFields) {
+  const otherFields = newFields.filter((field) => {
     return !currentFields.includes(field) && !excludedFields.includes(field);
   });
   if (otherFields.length) {
@@ -72,13 +117,13 @@ export const combineFields = function(currentFields, newFields, excludedFields) 
   return currentFields;
 };
 
-export const combineFieldGroups = function(currentGroups, newFields, excludedFields) {
+export const combineFieldGroups = function (currentGroups, newFields, excludedFields) {
   let allFields = [];
-  for (let group of currentGroups) {
-    let fieldName = Object.keys(group)[0];
+  for (const group of currentGroups) {
+    const fieldName = Object.keys(group)[0];
     allFields = allFields.concat(group[fieldName]);
   }
-  let otherFields = newFields.filter(field => {
+  const otherFields = newFields.filter((field) => {
     return !allFields.includes(field) && !excludedFields.includes(field);
   });
   if (otherFields.length) {

@@ -1,5 +1,10 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { isBlank } from '@ember/utils';
-import { set, get } from '@ember/object';
+import { set } from '@ember/object';
 import RoleEdit from './role-edit';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
@@ -8,14 +13,14 @@ export default RoleEdit.extend({
     createOrUpdate(type, event) {
       event.preventDefault();
 
-      const modelId = this.get('model.id');
+      // all of the attributes with fieldValue:'id' are called `name`
+      const modelId = this.model.id || this.model.name;
       // prevent from submitting if there's no key
       // maybe do something fancier later
       if (type === 'create' && isBlank(modelId)) {
         return;
       }
-
-      var credential_type = get(this, 'model.credential_type');
+      var credential_type = this.model.credential_type;
       if (credential_type == 'iam_user') {
         set(this, 'model.role_arns', []);
       }
@@ -27,7 +32,7 @@ export default RoleEdit.extend({
         set(this, 'model.policy_arns', []);
       }
 
-      var policy_document = get(this, 'model.policy_document');
+      var policy_document = this.model.policy_document;
       if (policy_document == '{}') {
         set(this, 'model.policy_document', '');
       }
@@ -43,7 +48,7 @@ export default RoleEdit.extend({
       const hasErrors = codemirror.state.lint.marked.length > 0;
 
       if (!hasErrors) {
-        set(this.get('model'), attr, val);
+        set(this.model, attr, val);
       }
     },
   },

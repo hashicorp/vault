@@ -1,8 +1,12 @@
-import { alias, and, equal } from '@ember/object/computed';
-import DS from 'ember-data';
-const { attr } = DS;
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
 
-export default DS.Model.extend({
+import Model, { attr } from '@ember-data/model';
+import { alias, and, equal } from '@ember/object/computed';
+
+export default Model.extend({
   name: attr('string'),
   //https://www.vaultproject.io/docs/http/sys-health.html
   initialized: attr('boolean'),
@@ -24,6 +28,8 @@ export default DS.Model.extend({
   sealNumShares: alias('n'),
   version: attr('string'),
   type: attr('string'),
+  storageType: attr('string'),
+  hcpLinkStatus: attr('string'),
 
   //https://www.vaultproject.io/docs/http/sys-leader.html
   haEnabled: attr('boolean'),

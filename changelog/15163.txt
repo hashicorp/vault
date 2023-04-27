@@ -1,0 +1,3 @@
+```release-note:bug
+sdk: Fix OpenApi spec generator to remove duplicate sha_256 parameter
+```

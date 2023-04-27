@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -7,8 +10,8 @@ import (
 
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/builtin/plugin"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/cli"
 
@@ -25,8 +28,11 @@ import (
 
 	credAliCloud "github.com/hashicorp/vault-plugin-auth-alicloud"
 	credCentrify "github.com/hashicorp/vault-plugin-auth-centrify"
+	credCF "github.com/hashicorp/vault-plugin-auth-cf"
 	credGcp "github.com/hashicorp/vault-plugin-auth-gcp/plugin"
 	credOIDC "github.com/hashicorp/vault-plugin-auth-jwt"
+	credKerb "github.com/hashicorp/vault-plugin-auth-kerberos"
+	credOCI "github.com/hashicorp/vault-plugin-auth-oci"
 	credAws "github.com/hashicorp/vault/builtin/credential/aws"
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
 	credGitHub "github.com/hashicorp/vault/builtin/credential/github"
@@ -38,6 +44,7 @@ import (
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
 
+	physAerospike "github.com/hashicorp/vault/physical/aerospike"
 	physAliCloudOSS "github.com/hashicorp/vault/physical/alicloudoss"
 	physAzure "github.com/hashicorp/vault/physical/azure"
 	physCassandra "github.com/hashicorp/vault/physical/cassandra"
@@ -46,18 +53,24 @@ import (
 	physCouchDB "github.com/hashicorp/vault/physical/couchdb"
 	physDynamoDB "github.com/hashicorp/vault/physical/dynamodb"
 	physEtcd "github.com/hashicorp/vault/physical/etcd"
-	physFile "github.com/hashicorp/vault/physical/file"
 	physFoundationDB "github.com/hashicorp/vault/physical/foundationdb"
 	physGCS "github.com/hashicorp/vault/physical/gcs"
-	physInmem "github.com/hashicorp/vault/physical/inmem"
 	physManta "github.com/hashicorp/vault/physical/manta"
 	physMSSQL "github.com/hashicorp/vault/physical/mssql"
 	physMySQL "github.com/hashicorp/vault/physical/mysql"
+	physOCI "github.com/hashicorp/vault/physical/oci"
 	physPostgreSQL "github.com/hashicorp/vault/physical/postgresql"
+	physRaft "github.com/hashicorp/vault/physical/raft"
 	physS3 "github.com/hashicorp/vault/physical/s3"
 	physSpanner "github.com/hashicorp/vault/physical/spanner"
 	physSwift "github.com/hashicorp/vault/physical/swift"
 	physZooKeeper "github.com/hashicorp/vault/physical/zookeeper"
+	physFile "github.com/hashicorp/vault/sdk/physical/file"
+	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
+
+	sr "github.com/hashicorp/vault/serviceregistration"
+	csr "github.com/hashicorp/vault/serviceregistration/consul"
+	ksr "github.com/hashicorp/vault/serviceregistration/kubernetes"
 )
 
 const (
@@ -65,7 +78,50 @@ const (
 	EnvVaultCLINoColor = `VAULT_CLI_NO_COLOR`
 	// EnvVaultFormat is the output format
 	EnvVaultFormat = `VAULT_FORMAT`
+	// EnvVaultLicense is an env var used in Vault Enterprise to provide a license blob
+	EnvVaultLicense = "VAULT_LICENSE"
+	// EnvVaultLicensePath is an env var used in Vault Enterprise to provide a
+	// path to a license file on disk
+	EnvVaultLicensePath = "VAULT_LICENSE_PATH"
+	// EnvVaultDetailed is to output detailed information (e.g., ListResponseWithInfo).
+	EnvVaultDetailed = `VAULT_DETAILED`
+	// EnvVaultLogFormat is used to specify the log format. Supported values are "standard" and "json"
+	EnvVaultLogFormat = "VAULT_LOG_FORMAT"
+	// EnvVaultLogLevel is used to specify the log level applied to logging
+	// Supported log levels: Trace, Debug, Error, Warn, Info
+	EnvVaultLogLevel = "VAULT_LOG_LEVEL"
+	// EnvVaultExperiments defines the experiments to enable for a server as a
+	// comma separated list. See experiments.ValidExperiments() for the list of
+	// valid experiments. Not mutable or persisted in storage, only read and
+	// logged at startup _per node_. This was initially introduced for the events
+	// system being developed over multiple release cycles.
+	EnvVaultExperiments = "VAULT_EXPERIMENTS"
 
+	// DisableSSCTokens is an env var used to disable index bearing
+	// token functionality
+	DisableSSCTokens = "VAULT_DISABLE_SERVER_SIDE_CONSISTENT_TOKENS"
+
+	// flagNameAddress is the flag used in the base command to read in the
+	// address of the Vault server.
+	flagNameAddress = "address"
+	// flagnameCACert is the flag used in the base command to read in the CA
+	// cert.
+	flagNameCACert = "ca-cert"
+	// flagnameCAPath is the flag used in the base command to read in the CA
+	// cert path.
+	flagNameCAPath = "ca-path"
+	// flagNameClientCert is the flag used in the base command to read in the
+	// client key
+	flagNameClientKey = "client-key"
+	// flagNameClientCert is the flag used in the base command to read in the
+	// client cert
+	flagNameClientCert = "client-cert"
+	// flagNameTLSSkipVerify is the flag used in the base command to read in
+	// the option to ignore TLS certificate verification.
+	flagNameTLSSkipVerify = "tls-skip-verify"
+	// flagTLSServerName is the flag used in the base command to read in
+	// the TLS server name.
+	flagTLSServerName = "tls-server-name"
 	// flagNameAuditNonHMACRequestKeys is the flag name used for auth/secrets enable
 	flagNameAuditNonHMACRequestKeys = "audit-non-hmac-request-keys"
 	// flagNameAuditNonHMACResponseKeys is the flag name used for auth/secrets enable
@@ -80,6 +136,35 @@ const (
 	flagNameAllowedResponseHeaders = "allowed-response-headers"
 	// flagNameTokenType is the flag name used to force a specific token type
 	flagNameTokenType = "token-type"
+	// flagNameAllowedManagedKeys is the flag name used for auth/secrets enable
+	flagNameAllowedManagedKeys = "allowed-managed-keys"
+	// flagNamePluginVersion selects what version of a plugin should be used.
+	flagNamePluginVersion = "plugin-version"
+	// flagNameUserLockoutThreshold is the flag name used for tuning the auth mount lockout threshold parameter
+	flagNameUserLockoutThreshold = "user-lockout-threshold"
+	// flagNameUserLockoutDuration is the flag name used for tuning the auth mount lockout duration parameter
+	flagNameUserLockoutDuration = "user-lockout-duration"
+	// flagNameUserLockoutCounterResetDuration is the flag name used for tuning the auth mount lockout counter reset parameter
+	flagNameUserLockoutCounterResetDuration = "user-lockout-counter-reset-duration"
+	// flagNameUserLockoutDisable is the flag name used for tuning the auth mount disable lockout parameter
+	flagNameUserLockoutDisable = "user-lockout-disable"
+	// flagNameDisableRedirects is used to prevent the client from honoring a single redirect as a response to a request
+	flagNameDisableRedirects = "disable-redirects"
+	// flagNameCombineLogs is used to specify whether log output should be combined and sent to stdout
+	flagNameCombineLogs = "combine-logs"
+	// flagNameLogFile is used to specify the path to the log file that Vault should use for logging
+	flagNameLogFile = "log-file"
+	// flagNameLogRotateBytes is the flag used to specify the number of bytes a log file should be before it is rotated.
+	flagNameLogRotateBytes = "log-rotate-bytes"
+	// flagNameLogRotateDuration is the flag used to specify the duration after which a log file should be rotated.
+	flagNameLogRotateDuration = "log-rotate-duration"
+	// flagNameLogRotateMaxFiles is the flag used to specify the maximum number of older/archived log files to keep.
+	flagNameLogRotateMaxFiles = "log-rotate-max-files"
+	// flagNameLogFormat is the flag used to specify the log format. Supported values are "standard" and "json"
+	flagNameLogFormat = "log-format"
+	// flagNameLogLevel is used to specify the log level applied to logging
+	// Supported log levels: Trace, Debug, Error, Warn, Info
+	flagNameLogLevel = "log-level"
 )
 
 var (
@@ -102,6 +187,7 @@ var (
 	}
 
 	physicalBackends = map[string]physical.Factory{
+		"aerospike":              physAerospike.NewAerospikeBackend,
 		"alicloudoss":            physAliCloudOSS.NewAliCloudOSSBackend,
 		"azure":                  physAzure.NewAzureBackend,
 		"cassandra":              physCassandra.NewCassandraBackend,
@@ -122,28 +208,38 @@ var (
 		"manta":                  physManta.NewMantaBackend,
 		"mssql":                  physMSSQL.NewMSSQLBackend,
 		"mysql":                  physMySQL.NewMySQLBackend,
+		"oci":                    physOCI.NewBackend,
 		"postgresql":             physPostgreSQL.NewPostgreSQLBackend,
 		"s3":                     physS3.NewS3Backend,
 		"spanner":                physSpanner.NewBackend,
 		"swift":                  physSwift.NewSwiftBackend,
+		"raft":                   physRaft.NewRaftBackend,
 		"zookeeper":              physZooKeeper.NewZooKeeperBackend,
 	}
+
+	serviceRegistrations = map[string]sr.Factory{
+		"consul":     csr.NewServiceRegistration,
+		"kubernetes": ksr.NewServiceRegistration,
+	}
+
+	initCommandsEnt = func(ui, serverCmdUi cli.Ui, runOpts *RunOptions, commands map[string]cli.CommandFactory) {}
 )
 
-// Commands is the mapping of all the available commands.
-var Commands map[string]cli.CommandFactory
-
-func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
+func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.CommandFactory {
 	loginHandlers := map[string]LoginHandler{
 		"alicloud": &credAliCloud.CLIHandler{},
 		"aws":      &credAws.CLIHandler{},
 		"centrify": &credCentrify.CLIHandler{},
 		"cert":     &credCert.CLIHandler{},
+		"cf":       &credCF.CLIHandler{},
 		"gcp":      &credGcp.CLIHandler{},
 		"github":   &credGitHub.CLIHandler{},
+		"kerberos": &credKerb.CLIHandler{},
 		"ldap":     &credLdap.CLIHandler{},
+		"oci":      &credOCI.CLIHandler{},
 		"oidc":     &credOIDC.CLIHandler{},
 		"okta":     &credOkta.CLIHandler{},
+		"pcf":      &credCF.CLIHandler{}, // Deprecated.
 		"radius": &credUserpass.CLIHandler{
 			DefaultMount: "radius",
 		},
@@ -162,13 +258,14 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		}
 	}
 
-	Commands = map[string]cli.CommandFactory{
+	commands := map[string]cli.CommandFactory{
 		"agent": func() (cli.Command, error) {
 			return &AgentCommand{
 				BaseCommand: &BaseCommand{
 					UI: serverCmdUi,
 				},
 				ShutdownCh: MakeShutdownCh(),
+				SighupCh:   MakeSighupCh(),
 			}, nil
 		},
 		"audit": func() (cli.Command, error) {
@@ -222,8 +319,24 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"auth move": func() (cli.Command, error) {
+			return &AuthMoveCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"debug": func() (cli.Command, error) {
+			return &DebugCommand{
+				BaseCommand: getBaseCommand(),
+				ShutdownCh:  MakeShutdownCh(),
+			}, nil
+		},
 		"delete": func() (cli.Command, error) {
 			return &DeleteCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"events subscribe": func() (cli.Command, error) {
+			return &EventsSubscribeCommands{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -234,6 +347,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"lease renew": func() (cli.Command, error) {
 			return &LeaseRenewCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"lease lookup": func() (cli.Command, error) {
+			return &LeaseLookupCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -273,13 +391,33 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"namespace patch": func() (cli.Command, error) {
+			return &NamespacePatchCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"namespace delete": func() (cli.Command, error) {
 			return &NamespaceDeleteCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"namespace lock": func() (cli.Command, error) {
+			return &NamespaceAPILockCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"namespace unlock": func() (cli.Command, error) {
+			return &NamespaceAPIUnlockCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"operator": func() (cli.Command, error) {
 			return &OperatorCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator diagnose": func() (cli.Command, error) {
+			return &OperatorDiagnoseCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -305,6 +443,56 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				ShutdownCh:       MakeShutdownCh(),
 			}, nil
 		},
+		"operator raft": func() (cli.Command, error) {
+			return &OperatorRaftCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft autopilot get-config": func() (cli.Command, error) {
+			return &OperatorRaftAutopilotGetConfigCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft autopilot set-config": func() (cli.Command, error) {
+			return &OperatorRaftAutopilotSetConfigCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft autopilot state": func() (cli.Command, error) {
+			return &OperatorRaftAutopilotStateCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft list-peers": func() (cli.Command, error) {
+			return &OperatorRaftListPeersCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft join": func() (cli.Command, error) {
+			return &OperatorRaftJoinCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft remove-peer": func() (cli.Command, error) {
+			return &OperatorRaftRemovePeerCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft snapshot": func() (cli.Command, error) {
+			return &OperatorRaftSnapshotCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft snapshot restore": func() (cli.Command, error) {
+			return &OperatorRaftSnapshotRestoreCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft snapshot save": func() (cli.Command, error) {
+			return &OperatorRaftSnapshotSaveCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"operator rekey": func() (cli.Command, error) {
 			return &OperatorRekeyCommand{
 				BaseCommand: getBaseCommand(),
@@ -325,13 +513,58 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"operator usage": func() (cli.Command, error) {
+			return &OperatorUsageCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"operator unseal": func() (cli.Command, error) {
 			return &OperatorUnsealCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"operator members": func() (cli.Command, error) {
+			return &OperatorMembersCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"patch": func() (cli.Command, error) {
+			return &PatchCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"path-help": func() (cli.Command, error) {
 			return &PathHelpCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"pki": func() (cli.Command, error) {
+			return &PKICommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"pki health-check": func() (cli.Command, error) {
+			return &PKIHealthCheckCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"pki issue": func() (cli.Command, error) {
+			return &PKIIssueCACommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"pki list-intermediates": func() (cli.Command, error) {
+			return &PKIListIntermediateCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"pki reissue": func() (cli.Command, error) {
+			return &PKIReIssueCACommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"pki verify-sign": func() (cli.Command, error) {
+			return &PKIVerifySignCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -357,6 +590,16 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"plugin register": func() (cli.Command, error) {
 			return &PluginRegisterCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"plugin reload": func() (cli.Command, error) {
+			return &PluginReloadCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"plugin reload-status": func() (cli.Command, error) {
+			return &PluginReloadStatusCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -446,8 +689,12 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				CredentialBackends: credentialBackends,
 				LogicalBackends:    logicalBackends,
 				PhysicalBackends:   physicalBackends,
-				ShutdownCh:         MakeShutdownCh(),
-				SighupCh:           MakeSighupCh(),
+
+				ServiceRegistrations: serviceRegistrations,
+
+				ShutdownCh: MakeShutdownCh(),
+				SighupCh:   MakeSighupCh(),
+				SigUSR2Ch:  MakeSigUSR2Ch(),
 			}, nil
 		},
 		"ssh": func() (cli.Command, error) {
@@ -457,6 +704,21 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"status": func() (cli.Command, error) {
 			return &StatusCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"transit": func() (cli.Command, error) {
+			return &TransitCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"transit import": func() (cli.Command, error) {
+			return &TransitImportCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"transit import-version": func() (cli.Command, error) {
+			return &TransitImportVersionCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -498,6 +760,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		"version": func() (cli.Command, error) {
 			return &VersionCommand{
 				VersionInfo: version.GetVersion(),
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"version-history": func() (cli.Command, error) {
+			return &VersionHistoryCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -566,6 +833,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"kv metadata patch": func() (cli.Command, error) {
+			return &KVMetadataPatchCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"kv metadata get": func() (cli.Command, error) {
 			return &KVMetadataGetCommand{
 				BaseCommand: getBaseCommand(),
@@ -576,7 +848,16 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"monitor": func() (cli.Command, error) {
+			return &MonitorCommand{
+				BaseCommand: getBaseCommand(),
+				ShutdownCh:  MakeShutdownCh(),
+			}, nil
+		},
 	}
+
+	initCommandsEnt(ui, serverCmdUi, runOpts, commands)
+	return commands
 }
 
 // MakeShutdownCh returns a channel that can be used for shutdown

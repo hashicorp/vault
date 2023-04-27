@@ -1,21 +1,28 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package http
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
-	"github.com/go-test/deep"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/textproto"
+	"net/url"
 	"reflect"
 	"strings"
 	"testing"
 
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/vault/helper/consts"
+	"github.com/go-test/deep"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/helper/versions"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -187,6 +194,72 @@ func TestHandler_cors(t *testing.T) {
 	}
 }
 
+func TestHandler_HostnameHeader(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		description   string
+		config        *vault.CoreConfig
+		headerPresent bool
+	}{
+		{
+			description:   "with no header configured",
+			config:        nil,
+			headerPresent: false,
+		},
+		{
+			description: "with header configured",
+			config: &vault.CoreConfig{
+				EnableResponseHeaderHostname: true,
+			},
+			headerPresent: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			var core *vault.Core
+
+			if tc.config == nil {
+				core, _, _ = vault.TestCoreUnsealed(t)
+			} else {
+				core, _, _ = vault.TestCoreUnsealedWithConfig(t, tc.config)
+			}
+
+			ln, addr := TestServer(t, core)
+			defer ln.Close()
+
+			req, err := http.NewRequest("GET", addr+"/v1/sys/seal-status", nil)
+			if err != nil {
+				t.Fatalf("err: %s", err)
+			}
+
+			client := cleanhttp.DefaultClient()
+			resp, err := client.Do(req)
+			if err != nil {
+				t.Fatalf("err: %s", err)
+			}
+
+			if resp == nil {
+				t.Fatal("nil response")
+			}
+
+			hnHeader := resp.Header.Get("X-Vault-Hostname")
+			if tc.headerPresent && hnHeader == "" {
+				t.Logf("header configured = %t", core.HostnameHeaderEnabled())
+				t.Fatal("missing 'X-Vault-Hostname' header entry in response")
+			}
+			if !tc.headerPresent && hnHeader != "" {
+				t.Fatal("didn't expect 'X-Vault-Hostname' header but it was present anyway")
+			}
+
+			rniHeader := resp.Header.Get("X-Vault-Raft-Node-ID")
+			if rniHeader != "" {
+				t.Fatalf("no raft node ID header was expected, since we're not running a raft cluster. instead, got %s", rniHeader)
+			}
+		})
+	}
+}
+
 func TestHandler_CacheControlNoStore(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
@@ -217,6 +290,71 @@ func TestHandler_CacheControlNoStore(t *testing.T) {
 
 	if actual != "no-store" {
 		t.Fatalf("bad: Cache-Control. Expected: 'no-store', Actual: %q", actual)
+	}
+}
+
+func TestHandler_InFlightRequest(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	req, err := http.NewRequest("GET", addr+"/v1/sys/in-flight-req", nil)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	req.Header.Set(consts.AuthHeaderName, token)
+
+	client := cleanhttp.DefaultClient()
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if resp == nil {
+		t.Fatalf("nil response")
+	}
+
+	var actual map[string]interface{}
+	testResponseStatus(t, resp, 200)
+	testResponseBody(t, resp, &actual)
+	if actual == nil || len(actual) == 0 {
+		t.Fatal("expected to get at least one in-flight request, got nil or zero length map")
+	}
+	for _, v := range actual {
+		reqInfo, ok := v.(map[string]interface{})
+		if !ok {
+			t.Fatal("failed to read in-flight request")
+		}
+		if reqInfo["request_path"] != "/v1/sys/in-flight-req" {
+			t.Fatalf("expected /v1/sys/in-flight-req in-flight request path, got %s", actual["request_path"])
+		}
+	}
+}
+
+// TestHandler_MissingToken tests the response / error code if a request comes
+// in with a missing client token. See
+// https://github.com/hashicorp/vault/issues/8377
+func TestHandler_MissingToken(t *testing.T) {
+	// core, _, token := vault.TestCoreUnsealed(t)
+	core, _, _ := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	req, err := http.NewRequest("GET", addr+"/v1/sys/internal/ui/mounts/cubbyhole", nil)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	req.Header.Set(WrapTTLHeaderName, "60s")
+
+	client := cleanhttp.DefaultClient()
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != 403 {
+		t.Fatalf("expected code 403, got: %d", resp.StatusCode)
 	}
 }
 
@@ -268,103 +406,137 @@ func TestSysMounts_headerAuth(t *testing.T) {
 		"auth":           nil,
 		"data": map[string]interface{}{
 			"secret/": map[string]interface{}{
-				"description": "key/value secret storage",
-				"type":        "kv",
+				"description":             "key/value secret storage",
+				"type":                    "kv",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 					"force_no_cache":    false,
 				},
-				"local":     false,
-				"seal_wrap": false,
-				"options":   map[string]interface{}{"version": "1"},
+				"local":                  false,
+				"seal_wrap":              false,
+				"options":                map[string]interface{}{"version": "1"},
+				"plugin_version":         "",
+				"running_sha256":         "",
+				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 			},
 			"sys/": map[string]interface{}{
-				"description": "system endpoints used for control, policy and debugging",
-				"type":        "system",
+				"description":             "system endpoints used for control, policy and debugging",
+				"type":                    "system",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl":           json.Number("0"),
 					"max_lease_ttl":               json.Number("0"),
 					"force_no_cache":              false,
 					"passthrough_request_headers": []interface{}{"Accept"},
 				},
-				"local":     false,
-				"seal_wrap": false,
-				"options":   interface{}(nil),
+				"local":                  false,
+				"seal_wrap":              true,
+				"options":                interface{}(nil),
+				"plugin_version":         "",
+				"running_sha256":         "",
+				"running_plugin_version": versions.DefaultBuiltinVersion,
 			},
 			"cubbyhole/": map[string]interface{}{
-				"description": "per-token private secret storage",
-				"type":        "cubbyhole",
+				"description":             "per-token private secret storage",
+				"type":                    "cubbyhole",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 					"force_no_cache":    false,
 				},
-				"local":     true,
-				"seal_wrap": false,
-				"options":   interface{}(nil),
+				"local":                  true,
+				"seal_wrap":              false,
+				"options":                interface{}(nil),
+				"plugin_version":         "",
+				"running_sha256":         "",
+				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
 			},
 			"identity/": map[string]interface{}{
-				"description": "identity store",
-				"type":        "identity",
+				"description":             "identity store",
+				"type":                    "identity",
+				"external_entropy_access": false,
 				"config": map[string]interface{}{
-					"default_lease_ttl": json.Number("0"),
-					"max_lease_ttl":     json.Number("0"),
-					"force_no_cache":    false,
+					"default_lease_ttl":           json.Number("0"),
+					"max_lease_ttl":               json.Number("0"),
+					"force_no_cache":              false,
+					"passthrough_request_headers": []interface{}{"Authorization"},
 				},
-				"local":     false,
-				"seal_wrap": false,
-				"options":   interface{}(nil),
+				"local":                  false,
+				"seal_wrap":              false,
+				"options":                interface{}(nil),
+				"plugin_version":         "",
+				"running_sha256":         "",
+				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 			},
 		},
 		"secret/": map[string]interface{}{
-			"description": "key/value secret storage",
-			"type":        "kv",
+			"description":             "key/value secret storage",
+			"type":                    "kv",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 				"force_no_cache":    false,
 			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   map[string]interface{}{"version": "1"},
+			"local":                  false,
+			"seal_wrap":              false,
+			"options":                map[string]interface{}{"version": "1"},
+			"plugin_version":         "",
+			"running_sha256":         "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 		},
 		"sys/": map[string]interface{}{
-			"description": "system endpoints used for control, policy and debugging",
-			"type":        "system",
+			"description":             "system endpoints used for control, policy and debugging",
+			"type":                    "system",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl":           json.Number("0"),
 				"max_lease_ttl":               json.Number("0"),
 				"force_no_cache":              false,
 				"passthrough_request_headers": []interface{}{"Accept"},
 			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   interface{}(nil),
+			"local":                  false,
+			"seal_wrap":              true,
+			"options":                interface{}(nil),
+			"plugin_version":         "",
+			"running_sha256":         "",
+			"running_plugin_version": versions.DefaultBuiltinVersion,
 		},
 		"cubbyhole/": map[string]interface{}{
-			"description": "per-token private secret storage",
-			"type":        "cubbyhole",
+			"description":             "per-token private secret storage",
+			"type":                    "cubbyhole",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 				"force_no_cache":    false,
 			},
-			"local":     true,
-			"seal_wrap": false,
-			"options":   interface{}(nil),
+			"local":                  true,
+			"seal_wrap":              false,
+			"options":                interface{}(nil),
+			"plugin_version":         "",
+			"running_sha256":         "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
 		},
 		"identity/": map[string]interface{}{
-			"description": "identity store",
-			"type":        "identity",
+			"description":             "identity store",
+			"type":                    "identity",
+			"external_entropy_access": false,
 			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
+				"default_lease_ttl":           json.Number("0"),
+				"max_lease_ttl":               json.Number("0"),
+				"force_no_cache":              false,
+				"passthrough_request_headers": []interface{}{"Authorization"},
 			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   interface{}(nil),
+			"local":                  false,
+			"seal_wrap":              false,
+			"options":                interface{}(nil),
+			"plugin_version":         "",
+			"running_sha256":         "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -375,8 +547,14 @@ func TestSysMounts_headerAuth(t *testing.T) {
 		if v.(map[string]interface{})["accessor"] == "" {
 			t.Fatalf("no accessor from %s", k)
 		}
+		if v.(map[string]interface{})["uuid"] == "" {
+			t.Fatalf("no uuid from %s", k)
+		}
+
 		expected[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+		expected[k].(map[string]interface{})["uuid"] = v.(map[string]interface{})["uuid"]
 		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+		expected["data"].(map[string]interface{})[k].(map[string]interface{})["uuid"] = v.(map[string]interface{})["uuid"]
 	}
 
 	if diff := deep.Equal(actual, expected); len(diff) > 0 {
@@ -522,7 +700,6 @@ func TestHandler_requestAuth(t *testing.T) {
 
 	rootCtx := namespace.RootContext(nil)
 	te, err := core.LookupToken(rootCtx, token)
-
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -542,7 +719,8 @@ func TestHandler_requestAuth(t *testing.T) {
 	for _, r := range []*http.Request{rWithVault, rWithAuthorization} {
 		req := logical.TestRequest(t, logical.ReadOperation, "test/path")
 		r = r.WithContext(rootCtx)
-		req, err = requestAuth(core, r, req)
+		requestAuth(r, req)
+		err = core.PopulateTokenEntry(rootCtx, req)
 		if err != nil {
 			t.Fatalf("err: %s", err)
 		}
@@ -567,26 +745,14 @@ func TestHandler_requestAuth(t *testing.T) {
 	}
 	req := logical.TestRequest(t, logical.ReadOperation, "test/path")
 
-	req, err = requestAuth(core, rNothing, req)
+	requestAuth(rNothing, req)
+	err = core.PopulateTokenEntry(rootCtx, req)
 	if err != nil {
 		t.Fatalf("expected no error, got %s", err)
 	}
 	if req.ClientToken != "" {
 		t.Fatalf("client token should not be filled, got %s", req.ClientToken)
 	}
-
-	rFragmentedHeader, err := http.NewRequest("GET", "v1/test/path", nil)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	rFragmentedHeader.Header.Set("Authorization", "Bearer something somewhat")
-	req = logical.TestRequest(t, logical.ReadOperation, "test/path")
-
-	_, err = requestAuth(core, rFragmentedHeader, req)
-	if err == nil {
-		t.Fatalf("expected an error, got none")
-	}
-
 }
 
 func TestHandler_getTokenFromReq(t *testing.T) {
@@ -637,7 +803,6 @@ func testNonPrintable(t *testing.T, disable bool) {
 	ln, addr := TestListener(t)
 	props := &vault.HandlerProperties{
 		Core:                  core,
-		MaxRequestSize:        DefaultMaxRequestSize,
 		DisablePrintableCheck: disable,
 	}
 	TestServerWithListenerAndProperties(t, ln, addr, core, props)
@@ -659,5 +824,66 @@ func testNonPrintable(t *testing.T, disable bool) {
 		testResponseStatus(t, resp, 204)
 	} else {
 		testResponseStatus(t, resp, 400)
+	}
+}
+
+func TestHandler_Parse_Form(t *testing.T) {
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{}, &vault.TestClusterOptions{
+		HandlerFunc: Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	cores := cluster.Cores
+
+	core := cores[0].Core
+	vault.TestWaitActive(t, core)
+
+	c := cleanhttp.DefaultClient()
+	c.Transport = &http.Transport{
+		TLSClientConfig: &tls.Config{
+			RootCAs: cluster.RootCAs,
+		},
+	}
+
+	values := url.Values{
+		"zip":   []string{"zap"},
+		"abc":   []string{"xyz"},
+		"multi": []string{"first", "second"},
+		"empty": []string{},
+	}
+	req, err := http.NewRequest("POST", cores[0].Client.Address()+"/v1/secret/foo", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Body = ioutil.NopCloser(strings.NewReader(values.Encode()))
+	req.Header.Set("x-vault-token", cluster.RootToken)
+	req.Header.Set("content-type", "application/x-www-form-urlencoded")
+	resp, err := c.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.StatusCode != 204 {
+		t.Fatalf("bad response: %#v\nrequest was: %#v\nurl was: %#v", *resp, *req, req.URL)
+	}
+
+	client := cores[0].Client
+	client.SetToken(cluster.RootToken)
+
+	apiResp, err := client.Logical().Read("secret/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if apiResp == nil {
+		t.Fatal("api resp is nil")
+	}
+	expected := map[string]interface{}{
+		"zip":   "zap",
+		"abc":   "xyz",
+		"multi": "first,second",
+	}
+	if diff := deep.Equal(expected, apiResp.Data); diff != nil {
+		t.Fatal(diff)
 	}
 }

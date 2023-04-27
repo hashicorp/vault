@@ -1,10 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+import { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
-import DS from 'ember-data';
 import AuthConfig from '../auth-config';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { combineFieldGroups } from 'vault/utils/openapi-to-attrs';
-
-const { attr } = DS;
 
 export default AuthConfig.extend({
   useOpenAPI: true,
@@ -13,7 +16,7 @@ export default AuthConfig.extend({
     label: 'Base URL',
   }),
 
-  fieldGroups: computed(function() {
+  fieldGroups: computed('newFields', function () {
     let groups = [
       { default: ['organization'] },
       {

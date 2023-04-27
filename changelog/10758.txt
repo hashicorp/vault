@@ -1,0 +1,3 @@
+```release-note:security
+replication (enterprise): On DR secondaries, use DR operation token to authenticate raft remove-peer.
+```

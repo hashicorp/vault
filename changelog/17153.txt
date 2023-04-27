@@ -1,0 +1,2 @@
+```release-note:improvement
+ui: add 'disable' param to pki crl configuration

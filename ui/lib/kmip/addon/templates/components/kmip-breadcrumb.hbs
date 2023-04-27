@@ -1,0 +1,28 @@
+<nav class="key-value-header breadcrumb">
+  <ul>
+    <li>
+      <span class="sep">&#x0002f;</span>
+      <LinkToExternal @route="secrets">Secrets</LinkToExternal>
+    </li>
+    {{#if this.shouldShowPath}}
+      <li>
+        <span class="sep">&#x0002f;</span>
+        <LinkTo @route="scopes.index">
+          {{this.secretMountPath.currentPath}}
+        </LinkTo>
+      </li>
+    {{/if}}
+    {{#if @scope}}
+      <li>
+        <span class="sep">&#x0002f;</span>
+        <LinkTo @route="scope.roles" @model={{@scope}}>{{@scope}}</LinkTo>
+      </li>
+    {{/if}}
+    {{#if @role}}
+      <li>
+        <span class="sep">&#x0002f;</span>
+        <LinkTo @route="credentials.index" @models={{array @scope @role}}>{{@role}}</LinkTo>
+      </li>
+    {{/if}}
+  </ul>
+</nav>

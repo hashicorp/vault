@@ -1,19 +1,15 @@
-{{#each (if model.alias.id (array model.alias) model.aliases) as |item|}}
-  {{#linked-block
-    "vault.cluster.access.identity.aliases.show"
-    item.id
-    "details"
-    class="list-item-row"
-  }}
+{{#each (if @model.alias.id (array @model.alias) @model.aliases) as |item|}}
+  <LinkedBlock @params={{array "vault.cluster.access.identity.aliases.show" item.id "details"}} class="list-item-row">
     <div class="columns is-mobile">
       <div class="column is-10">
-        {{#link-to "vault.cluster.access.identity.aliases.show" item.id "details"
+        <LinkTo
+          @route="vault.cluster.access.identity.aliases.show"
+          @models={{array item.id "details"}}
           class="has-text-black has-text-weight-semibold"
-          }}{{i-con
-            glyph='role'
-            size=14
-            class="has-text-grey-light"
-            }}<span class="has-text-weight-semibold">{{item.name}}</span>{{/link-to}}
+        >
+          <Icon @name="user" class="has-text-grey-light" />
+          <span class="has-text-weight-semibold">{{item.name}}</span>
+        </LinkTo>
         <div class="has-text-grey">
           {{item.id}}
         </div>
@@ -23,12 +19,10 @@
         </span>
       </div>
       <div class="column has-text-right">
-        {{identity/popup-alias params=(array item)}}
+        <Identity::PopupAlias @params={{array item}} />
       </div>
     </div>
-  {{/linked-block}}
+  </LinkedBlock>
 {{else}}
-  <EmptyState
-    @title="No {{model.identityType}} aliases for {{model.name}} yet"
-  />
+  <EmptyState @title="No {{@model.identityType}} aliases for {{@model.name}} yet" />
 {{/each}}

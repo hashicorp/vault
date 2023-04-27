@@ -1,0 +1,5 @@
+```release-note:change
+secrets/pki: existing Generate Root (pki/root/generate/:type),
+Set Signed Intermediate (/pki/intermediate/set-signed) APIs will
+add new issuers/keys to a mount instead of warning that an existing CA exists
+```

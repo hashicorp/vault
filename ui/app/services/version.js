@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { readOnly, match, not } from '@ember/object/computed';
 import Service, { inject as service } from '@ember/service';
 import { computed } from '@ember/object';
@@ -10,8 +15,8 @@ const hasFeatureMethod = (context, featureKey) => {
   }
   return features.includes(featureKey);
 };
-const hasFeature = featureKey => {
-  return computed('features', 'features.[]', function() {
+const hasFeature = (featureKey) => {
+  return computed('features', 'features.[]', function () {
     return hasFeatureMethod(this, featureKey);
   });
 };
@@ -47,25 +52,21 @@ export default Service.extend({
     this.set('_features', resp.features);
   },
 
-  getVersion: task(function*() {
-    if (this.get('version')) {
+  getVersion: task(function* () {
+    if (this.version) {
       return;
     }
-    let response = yield this.get('store')
-      .adapterFor('cluster')
-      .health();
+    const response = yield this.store.adapterFor('cluster').health();
     this.setVersion(response);
     return;
   }),
 
-  getFeatures: task(function*() {
-    if (this.get('features.length') || this.get('isOSS')) {
+  getFeatures: task(function* () {
+    if (this.features?.length || this.isOSS) {
       return;
     }
     try {
-      let response = yield this.get('store')
-        .adapterFor('cluster')
-        .features();
+      const response = yield this.store.adapterFor('cluster').features();
       this.setFeatures(response);
       return;
     } catch (err) {
@@ -73,10 +74,10 @@ export default Service.extend({
     }
   }).keepLatest(),
 
-  fetchVersion: function() {
-    return this.get('getVersion').perform();
+  fetchVersion: function () {
+    return this.getVersion.perform();
   },
-  fetchFeatures: function() {
-    return this.get('getFeatures').perform();
+  fetchFeatures: function () {
+    return this.getFeatures.perform();
   },
 });

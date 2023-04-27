@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Check audit device with a test message before adding it. 
+```

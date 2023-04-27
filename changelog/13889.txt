@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Add count and duration metrics to PKI issue and revoke calls.
+```

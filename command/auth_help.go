@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -8,8 +11,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*AuthHelpCommand)(nil)
-var _ cli.CommandAutocomplete = (*AuthHelpCommand)(nil)
+var (
+	_ cli.Command             = (*AuthHelpCommand)(nil)
+	_ cli.CommandAutocomplete = (*AuthHelpCommand)(nil)
+)
 
 type AuthHelpCommand struct {
 	*BaseCommand

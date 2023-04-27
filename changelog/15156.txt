@@ -1,0 +1,3 @@
+```release-note:bug
+rafft: fix Raft TLS key rotation panic that occurs if active key is more than 24 hours old
+```

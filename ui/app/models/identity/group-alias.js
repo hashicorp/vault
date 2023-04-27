@@ -1,14 +1,17 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+import { belongsTo, attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import IdentityModel from './_base';
-import DS from 'ember-data';
 import identityCapabilities from 'vault/macros/identity-capabilities';
-
-const { attr, belongsTo } = DS;
 
 export default IdentityModel.extend({
   parentType: 'group',
-  formFields: computed(function() {
+  formFields: computed(function () {
     return ['name', 'mountAccessor'];
   }),
   group: belongsTo('identity/group', { readOnly: true, async: false }),

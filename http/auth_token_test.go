@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package http
 
 import (
@@ -114,7 +117,6 @@ func TestAuthTokenLookup(t *testing.T) {
 	if secret.Data["id"] != secret2.Auth.ClientToken {
 		t.Errorf("Did not get back details about our provided token, id returned=%s", secret.Data["id"])
 	}
-
 }
 
 func TestAuthTokenLookupSelf(t *testing.T) {
@@ -143,7 +145,6 @@ func TestAuthTokenLookupSelf(t *testing.T) {
 	if secret.Data["display_name"] != "root" {
 		t.Errorf("Did not get back details about our own (self) token, display_name returned=%s", secret.Data["display_name"])
 	}
-
 }
 
 func TestAuthTokenRenew(t *testing.T) {

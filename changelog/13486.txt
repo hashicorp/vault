@@ -1,0 +1,3 @@
+```release-note:bug
+api/client: Fixes an issue where the `replicateStateStore` was being set to `nil` upon consecutive calls to `client.SetReadYourWrites(true)`.
+```

@@ -1,25 +1,30 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package main
 
 import (
 	"os"
 
 	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/totp"
-	"github.com/hashicorp/vault/helper/pluginutil"
-	"github.com/hashicorp/vault/logical/plugin"
+	"github.com/hashicorp/vault/sdk/plugin"
 )
 
 func main() {
-	apiClientMeta := &pluginutil.APIClientMeta{}
+	apiClientMeta := &api.PluginAPIClientMeta{}
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(os.Args[1:])
 
 	tlsConfig := apiClientMeta.GetTLSConfig()
-	tlsProviderFunc := pluginutil.VaultPluginTLSProvider(tlsConfig)
+	tlsProviderFunc := api.VaultPluginTLSProvider(tlsConfig)
 
-	if err := plugin.Serve(&plugin.ServeOpts{
+	if err := plugin.ServeMultiplex(&plugin.ServeOpts{
 		BackendFactoryFunc: totp.Factory,
-		TLSProviderFunc:    tlsProviderFunc,
+		// set the TLSProviderFunc so that the plugin maintains backwards
+		// compatibility with Vault versions that don’t support plugin AutoMTLS
+		TLSProviderFunc: tlsProviderFunc,
 	}); err != nil {
 		logger := hclog.New(&hclog.LoggerOptions{})
 

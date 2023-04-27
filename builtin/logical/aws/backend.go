@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package aws
 
 import (
@@ -8,8 +11,15 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
+)
+
+const (
+	rootConfigPath        = "config/root"
+	minAwsUserRollbackAge = 5 * time.Minute
+	operationPrefixAWS    = "aws"
+	operationPrefixAWSASD = "aws-config"
 )
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
@@ -47,6 +57,7 @@ func Backend() *backend {
 			secretAccessKeys(&b),
 		},
 
+		Invalidate:        b.invalidate,
 		WALRollback:       b.walRollback,
 		WALRollbackMinAge: minAwsUserRollbackAge,
 		BackendType:       logical.TypeLogical,
@@ -80,6 +91,21 @@ be configured with the "root" path and policies must be written using
 the "roles/" endpoints before any access keys can be generated.
 `
 
+func (b *backend) invalidate(ctx context.Context, key string) {
+	switch {
+	case key == rootConfigPath:
+		b.clearClients()
+	}
+}
+
+// clearClients clears the backend's IAM and STS clients
+func (b *backend) clearClients() {
+	b.clientMutex.Lock()
+	defer b.clientMutex.Unlock()
+	b.iamClient = nil
+	b.stsClient = nil
+}
+
 // clientIAM returns the configured IAM client. If nil, it constructs a new one
 // and returns it, setting it the internal variable
 func (b *backend) clientIAM(ctx context.Context, s logical.Storage) (iamiface.IAMAPI, error) {
@@ -100,7 +126,7 @@ func (b *backend) clientIAM(ctx context.Context, s logical.Storage) (iamiface.IA
 		return b.iamClient, nil
 	}
 
-	iamClient, err := nonCachedClientIAM(ctx, s)
+	iamClient, err := nonCachedClientIAM(ctx, s, b.Logger())
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +153,7 @@ func (b *backend) clientSTS(ctx context.Context, s logical.Storage) (stsiface.ST
 		return b.stsClient, nil
 	}
 
-	stsClient, err := nonCachedClientSTS(ctx, s)
+	stsClient, err := nonCachedClientSTS(ctx, s, b.Logger())
 	if err != nil {
 		return nil, err
 	}
@@ -135,5 +161,3 @@ func (b *backend) clientSTS(ctx context.Context, s logical.Storage) (stsiface.ST
 
 	return b.stsClient, nil
 }
-
-const minAwsUserRollbackAge = 5 * time.Minute

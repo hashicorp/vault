@@ -1,0 +1,9 @@
+## AWS IAM Authentication Fixed
+
+The security updates added in Vault 1.5.1, 1.4.4, 1.3.8, and 1.2.5 included additional header
+checking during AWS IAM authentication that caused issues for some users. A workaround was
+subsequently provided by setting `allowed_sts_header_values`.
+
+The underlying issue has been corrected in 1.5.3, 1.4.6, 1.3.10 and 1.2.7, and setting
+`allowed_sts_header_values` is no longer needed. If that parameter has been set, it will not conflict
+with the fixed versions. It may be unset when convenient, or simply left as is.

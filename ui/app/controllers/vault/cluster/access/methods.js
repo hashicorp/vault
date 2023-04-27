@@ -1,7 +1,15 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Controller from '@ember/controller';
 import { task } from 'ember-concurrency';
+import { inject as service } from '@ember/service';
 
 export default Controller.extend({
+  flashMessages: service(),
+
   queryParams: {
     page: 'page',
     pageFilter: 'pageFilter',
@@ -11,14 +19,14 @@ export default Controller.extend({
   pageFilter: null,
   filter: null,
 
-  disableMethod: task(function*(method) {
-    const { type, path } = method.getProperties('type', 'path');
+  disableMethod: task(function* (method) {
+    const { type, path } = method;
     try {
       yield method.destroyRecord();
-      this.get('flashMessages').success(`The ${type} auth method at ${path} has been disabled.`);
+      this.flashMessages.success(`The ${type} Auth Method at ${path} has been disabled.`);
     } catch (err) {
-      this.get('flashMessages').danger(
-        `There was an error disabling auth method at ${path}: ${err.errors.join(' ')}.`
+      this.flashMessages.danger(
+        `There was an error disabling Auth Method at ${path}: ${err.errors.join(' ')}.`
       );
     }
   }).drop(),

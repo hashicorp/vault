@@ -1,8 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { Machine } from 'xstate';
 import TutorialMachineConfig from 'vault/machines/tutorial-machine';
 
-module('Unit | Machine | tutorial-machine', function() {
+module('Unit | Machine | tutorial-machine', function () {
   const tutorialMachine = Machine(TutorialMachineConfig);
 
   const testCases = [
@@ -236,11 +241,9 @@ module('Unit | Machine | tutorial-machine', function() {
     },
   ];
 
-  testCases.forEach(testCase => {
-    test(`transition: ${testCase.event} for currentState ${testCase.currentState} and componentState ${
-      testCase.params
-    }`, function(assert) {
-      let result = tutorialMachine.transition(testCase.currentState, testCase.event, testCase.params);
+  testCases.forEach((testCase) => {
+    test(`transition: ${testCase.event} for currentState ${testCase.currentState} and componentState ${testCase.params}`, function (assert) {
+      const result = tutorialMachine.transition(testCase.currentState, testCase.event, testCase.params);
       assert.deepEqual(result.value, testCase.expectedResults.value);
       assert.deepEqual(result.actions, testCase.expectedResults.actions);
     });

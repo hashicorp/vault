@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Upgrade Storybook from 5.3.19 to 6.1.17.
+```

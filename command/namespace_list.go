@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -8,8 +11,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*NamespaceListCommand)(nil)
-var _ cli.CommandAutocomplete = (*NamespaceListCommand)(nil)
+var (
+	_ cli.Command             = (*NamespaceListCommand)(nil)
+	_ cli.CommandAutocomplete = (*NamespaceListCommand)(nil)
+)
 
 type NamespaceListCommand struct {
 	*BaseCommand
@@ -21,13 +26,13 @@ func (c *NamespaceListCommand) Synopsis() string {
 
 func (c *NamespaceListCommand) Help() string {
 	helpText := `
-Usage: vault namespaces list [options]
+Usage: vault namespace list [options]
 
   Lists the enabled child namespaces.
 
   List all enabled child namespaces:
 
-      $ vault namespaces list
+      $ vault namespace list
 
 ` + c.Flags().Help()
 
@@ -35,11 +40,22 @@ Usage: vault namespaces list [options]
 }
 
 func (c *NamespaceListCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+
+	f := set.NewFlagSet("Command Options")
+
+	f.BoolVar(&BoolVar{
+		Name:    "detailed",
+		Target:  &c.flagDetailed,
+		Default: false,
+		Usage:   "Print detailed information such as namespace ID.",
+	})
+
+	return set
 }
 
 func (c *NamespaceListCommand) AutocompleteArgs() complete.Predictor {
-	return c.PredictVaultFolders()
+	return complete.PredictNothing
 }
 
 func (c *NamespaceListCommand) AutocompleteFlags() complete.Flags {
@@ -71,8 +87,17 @@ func (c *NamespaceListCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("Error listing namespaces: %s", err))
 		return 2
 	}
+
+	_, ok := extractListData(secret)
+	if Format(c.UI) != "table" {
+		if secret == nil || secret.Data == nil || !ok {
+			OutputData(c.UI, map[string]interface{}{})
+			return 2
+		}
+	}
+
 	if secret == nil {
-		c.UI.Error(fmt.Sprintf("No namespaces found"))
+		c.UI.Error("No namespaces found")
 		return 2
 	}
 
@@ -85,9 +110,13 @@ func (c *NamespaceListCommand) Run(args []string) int {
 		return OutputSecret(c.UI, secret)
 	}
 
-	if _, ok := extractListData(secret); !ok {
-		c.UI.Error(fmt.Sprintf("No entries found"))
+	if !ok {
+		c.UI.Error("No entries found")
 		return 2
+	}
+
+	if c.flagDetailed && Format(c.UI) != "table" {
+		return OutputData(c.UI, secret.Data["key_info"])
 	}
 
 	return OutputList(c.UI, secret)

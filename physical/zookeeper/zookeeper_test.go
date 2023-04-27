@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package zookeeper
 
 import (
@@ -6,11 +9,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-zookeeper/zk"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/physical"
-
-	"github.com/samuel/go-zookeeper/zk"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 func TestZooKeeperBackend(t *testing.T) {
@@ -20,7 +22,6 @@ func TestZooKeeperBackend(t *testing.T) {
 	}
 
 	client, _, err := zk.Connect([]string{addr}, time.Second)
-
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -65,7 +66,6 @@ func TestZooKeeperHABackend(t *testing.T) {
 	}
 
 	client, _, err := zk.Connect([]string{addr}, time.Second)
-
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

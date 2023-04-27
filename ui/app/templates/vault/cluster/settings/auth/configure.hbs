@@ -1,33 +1,23 @@
 <PageHeader as |p|>
   <p.top>
-    {{key-value-header
-      baseKey=model
-      path="vault.cluster.access.method"
-      root=root
-      showCurrent=true
-    }}
+    <KeyValueHeader @baseKey={{this.model}} @path="vault.cluster.access.method" @root={{this.root}} @showCurrent={{true}} />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
-      Configure {{get (find-by "type" model.type (mountable-auth-methods)) "displayName"}}
+      Configure
+      {{get (find-by "type" this.model.type (mountable-auth-methods)) "displayName"}}
     </h1>
   </p.levelLeft>
-  <p.levelRight>
-    <div class="field is-grouped">
-      <div class="control">
-        {{#link-to
-          "vault.cluster.access.method"
-          model.id
-          class="button is-ghost has-icon-right is-compact"
-          data-test-backend-view-link=true
-        }}
-          View method
-          {{i-con glyph="chevron-right" size=11}}
-        {{/link-to}}
-      </div>
-    </div>
-  </p.levelRight>
 </PageHeader>
 
-{{section-tabs model}}
+{{section-tabs this.model}}
+
+<Toolbar>
+  <ToolbarActions>
+    <ToolbarLink @route="vault.cluster.access.method" @model={{this.model.id}} data-test-backend-view-link>
+      View method
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar>
+
 {{outlet}}

@@ -1,8 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { inject as service } from '@ember/service';
-import { alias } from '@ember/object/computed';
+import { alias, equal } from '@ember/object/computed';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
-import { engines } from 'vault/helpers/mountable-secret-engines';
+import { mountableEngines } from 'vault/helpers/mountable-secret-engines';
 import { methods } from 'vault/helpers/mountable-auth-methods';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 const supportedSecrets = supportedSecretBackends();
@@ -17,35 +22,34 @@ export default Component.extend({
   mountSubtype: alias('wizard.componentState'),
   fullNextStep: alias('wizard.nextStep'),
   nextFeature: alias('wizard.nextFeature'),
-  nextStep: computed('fullNextStep', function() {
-    return this.get('fullNextStep').split('.').lastObject;
+  nextStep: computed('fullNextStep', function () {
+    return this.fullNextStep.split('.').lastObject;
   }),
-  needsEncryption: computed('mountSubtype', function() {
-    return this.get('mountSubtype') === 'transit';
-  }),
+  needsConnection: equal('mountSubtype', 'database'),
+  needsEncryption: equal('mountSubtype', 'transit'),
   stepComponent: alias('wizard.stepComponent'),
-  detailsComponent: computed('mountSubtype', function() {
-    let suffix = this.get('currentMachine') === 'secrets' ? 'engine' : 'method';
-    return this.get('mountSubtype') ? `wizard/${this.get('mountSubtype')}-${suffix}` : null;
+  detailsComponent: computed('currentMachine', 'mountSubtype', function () {
+    const suffix = this.currentMachine === 'secrets' ? 'engine' : 'method';
+    return this.mountSubtype ? `wizard/${this.mountSubtype}-${suffix}` : null;
   }),
-  isSupported: computed('mountSubtype', function() {
-    if (this.get('currentMachine') === 'secrets') {
-      return supportedSecrets.includes(this.get('mountSubtype'));
+  isSupported: computed('currentMachine', 'mountSubtype', function () {
+    if (this.currentMachine === 'secrets') {
+      return supportedSecrets.includes(this.mountSubtype);
     } else {
-      return supportedAuth.includes(this.get('mountSubtype'));
+      return supportedAuth.includes(this.mountSubtype);
     }
   }),
-  mountName: computed('mountSubtype', function() {
-    if (this.get('currentMachine') === 'secrets') {
-      var secret = engines().find(engine => {
-        return engine.type === this.get('mountSubtype');
+  mountName: computed('currentMachine', 'mountSubtype', function () {
+    if (this.currentMachine === 'secrets') {
+      const secret = mountableEngines().find((engine) => {
+        return engine.type === this.mountSubtype;
       });
       if (secret) {
         return secret.displayName;
       }
     } else {
-      var auth = methods().find(method => {
-        return method.type === this.get('mountSubtype');
+      var auth = methods().find((method) => {
+        return method.type === this.mountSubtype;
       });
       if (auth) {
         return auth.displayName;
@@ -53,14 +57,14 @@ export default Component.extend({
     }
     return null;
   }),
-  actionText: computed('mountSubtype', function() {
-    switch (this.get('mountSubtype')) {
+  actionText: computed('mountSubtype', function () {
+    switch (this.mountSubtype) {
       case 'aws':
-        return 'Generate Credential';
+        return 'Generate credential';
       case 'ssh':
-        return 'Sign Keys';
+        return 'Sign keys';
       case 'pki':
-        return 'Generate Certificate';
+        return 'Generate certificate';
       default:
         return null;
     }

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package transit
 
 import (
@@ -9,20 +12,29 @@ import (
 	"fmt"
 	"hash"
 
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"golang.org/x/crypto/sha3"
+
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func (b *backend) pathHash() *framework.Path {
 	return &framework.Path{
 		Pattern: "hash" + framework.OptionalParamRegex("urlalgorithm"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "hash",
+			OperationSuffix: "|with-algorithm",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
-			"input": &framework.FieldSchema{
+			"input": {
 				Type:        framework.TypeString,
 				Description: "The base64-encoded input data",
 			},
 
-			"algorithm": &framework.FieldSchema{
+			"algorithm": {
 				Type:    framework.TypeString,
 				Default: "sha2-256",
 				Description: `Algorithm to use (POST body parameter). Valid values are:
@@ -31,16 +43,20 @@ func (b *backend) pathHash() *framework.Path {
 * sha2-256
 * sha2-384
 * sha2-512
+* sha3-224
+* sha3-256
+* sha3-384
+* sha3-512
 
 Defaults to "sha2-256".`,
 			},
 
-			"urlalgorithm": &framework.FieldSchema{
+			"urlalgorithm": {
 				Type:        framework.TypeString,
 				Description: `Algorithm to use (POST URL parameter)`,
 			},
 
-			"format": &framework.FieldSchema{
+			"format": {
 				Type:        framework.TypeString,
 				Default:     "hex",
 				Description: `Encoding format to use. Can be "hex" or "base64". Defaults to "hex".`,
@@ -57,7 +73,15 @@ Defaults to "sha2-256".`,
 }
 
 func (b *backend) pathHashWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	inputB64 := d.Get("input").(string)
+	rawInput, ok, err := d.GetOkErr("input")
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return logical.ErrorResponse("input missing"), logical.ErrInvalidRequest
+	}
+
+	inputB64 := rawInput.(string)
 	format := d.Get("format").(string)
 	algorithm := d.Get("urlalgorithm").(string)
 	if algorithm == "" {
@@ -86,6 +110,14 @@ func (b *backend) pathHashWrite(ctx context.Context, req *logical.Request, d *fr
 		hf = sha512.New384()
 	case "sha2-512":
 		hf = sha512.New()
+	case "sha3-224":
+		hf = sha3.New224()
+	case "sha3-256":
+		hf = sha3.New256()
+	case "sha3-384":
+		hf = sha3.New384()
+	case "sha3-512":
+		hf = sha3.New512()
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unsupported algorithm %s", algorithm)), nil
 	}

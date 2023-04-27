@@ -1,0 +1,22 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
+rules:
+  - id: use-hmac-equal
+    patterns:
+        - pattern-either:
+              - pattern: |
+                      $MAC = hmac.New(...)
+                      ...
+                      $H = $MAC.Sum(...)
+                      ...
+                      bytes.Equal($H, ...)
+              - pattern: |
+                      $MAC = hmac.New(...)
+                      ...
+                      $H = $MAC.Sum(...)
+                      ...
+                      bytes.Equal(..., $H)
+    message: "Comparing a MAC with bytes.Equal()"
+    languages: [go]
+    severity: ERROR

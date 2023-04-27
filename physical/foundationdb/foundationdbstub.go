@@ -1,4 +1,7 @@
-// +build !foundationdb
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
+//go:build !foundationdb
 
 package foundationdb
 
@@ -7,7 +10,7 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 func NewFDBBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {

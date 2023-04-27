@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { schedule } from '@ember/runloop';
 import { on } from '@ember/object/evented';
 import Mixin from '@ember/object/mixin';
@@ -10,19 +15,19 @@ export default Mixin.create({
 
   // uses Ember.on so that we don't have to worry about calling _super if
   // didInsertElement is overridden
-  focusOnInsert: on('didInsertElement', function() {
+  focusOnInsert: on('didInsertElement', function () {
     schedule('afterRender', this, 'focusOnInsertFocus');
   }),
 
   focusOnInsertFocus() {
-    if (this.get('shouldFocus') === false) {
+    if (this.shouldFocus === false) {
       return;
     }
     this.forceFocus();
   },
 
   forceFocus() {
-    var $targ = this.element.querySelectorAll(this.get('focusOnInsertSelector') || 'input[type="text"]')[0];
+    var $targ = this.element.querySelectorAll(this.focusOnInsertSelector || 'input[type="text"]')[0];
     if ($targ && $targ !== document.activeElement) {
       $targ.focus();
     }

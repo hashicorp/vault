@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -11,8 +14,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*AuditEnableCommand)(nil)
-var _ cli.CommandAutocomplete = (*AuditEnableCommand)(nil)
+var (
+	_ cli.Command             = (*AuditEnableCommand)(nil)
+	_ cli.CommandAutocomplete = (*AuditEnableCommand)(nil)
+)
 
 type AuditEnableCommand struct {
 	*BaseCommand
@@ -108,7 +113,7 @@ func (c *AuditEnableCommand) Run(args []string) int {
 
 	args = f.Args()
 	if len(args) < 1 {
-		c.UI.Error("Missing TYPE!")
+		c.UI.Error("Error enabling audit device: audit type missing. Valid types include 'file', 'socket' and 'syslog'.")
 		return 1
 	}
 

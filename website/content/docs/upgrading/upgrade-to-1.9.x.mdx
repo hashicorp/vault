@@ -1,0 +1,117 @@
+---
+layout: docs
+page_title: Upgrading to Vault 1.9.x - Guides
+description: |-
+  This page contains the list of deprecations and important or breaking changes
+  for Vault 1.9.x. Please read it carefully.
+---
+
+# Overview
+
+This page contains the list of deprecations and important or breaking changes
+for Vault 1.9.x compared to 1.8. Please read it carefully.
+
+## OIDC Provider
+
+Vault 1.9.0 introduced the ability for Vault to be an OpenID Connect (OIDC) identity
+provider. To support the feature, Vault's [default policy](/vault/docs/concepts/policies#default-policy)
+was modified to include an ACL rule for its Authorization Endpoint. Due to the handling
+of Vault's default policy during upgrades, existing deployments of Vault that are upgraded
+to 1.9.0 will not have this required ACL rule.
+
+If you're upgrading to 1.9.0 and want to use the new OIDC provider feature, the following
+ACL rule must be added to the default policy **or** a policy associated with the Vault
+[Auth Method](/vault/docs/auth) used to authenticate end-users during
+the OIDC flow.
+
+```hcl
+# Allow a token to make requests to the Authorization Endpoint for OIDC providers.
+path "identity/oidc/provider/+/authorize" {
+  capabilities = ["read", "update"]
+}
+```
+
+## Identity Tokens
+
+The Identity secrets engine has changed the procedure for creating Identity
+token roles. When creating a role, the key parameter is required and the key
+must exist. Previously, it was possible to create a role and assign it a named
+key that did not yet exist despite the documentation stating otherwise.
+
+All calls to [create or update a role](/vault/api-docs/secret/identity/tokens#create-or-update-a-role)
+must be checked to ensure that roles are not being created or updated with
+non-existent keys.
+
+## SSH Role Parameter `allowed_extensions` Behavior Change
+
+Prior versions of Vault allowed clients to specify any extension when requesting
+SSH certificate [signing requests](/vault/api-docs/secret/ssh#sign-ssh-key)
+if their role had an `allowed_extensions` set to `""` or was missing.
+
+Now, Vault will reject a client request that specifies extensions if the role
+parameter `allowed_extensions` is empty or missing from the role they are
+associated with.
+
+To re-enable the old behavior, update the roles with a value
+of `"*"` to the `allowed_extensions` parameter allowing any/all extensions to be
+specified by clients.
+
+@include 'entity-alias-mapping.mdx'
+
+## Deprecations
+
+### HTTP Request Counter Deprecation
+
+In Vault 1.9, the internal HTTP Request count
+[API](/vault/api-docs/v1.8.x/system/internal-counters#http-requests)
+will be removed from the product. Calls to the endpoint will result in a 404
+error with a message stating that `functionality on this path has been removed`.
+
+Vault does not make backwards compatible guarantees on internal APIs (those
+prefaced with `sys/internal`). They are subject to change and may disappear
+without notice.
+
+### Etcd v2
+
+Support for Etcd v2 will be removed from Vault in Vault 1.10 (not this Vault
+release, but the next one). The Etcd v2 API
+was deprecated with the release of [Etcd
+v3.5](https://etcd.io/blog/2021/announcing-etcd-3.5/), and will be
+decommissioned in the Etcd v3.6 release.
+
+Users upgrading to Vault 1.9 and planning to eventually upgrade to Vault 1.10
+should prepare to [migrate](/vault/docs/commands/operator/migrate) Vault storage to
+an Etcd v3 cluster prior to upgrading to Vault 1.10. All storage migrations
+should have [backups](/vault/docs/concepts/storage#backing-up-vault-s-persisted-data)
+taken prior to migration.
+
+## TLS Cipher Suites Changes
+
+In Vault 1.9, due to changes in Go 1.17, the `tls_prefer_server_cipher_suites`
+TCP configuration parameter has been deprecated and its value will be ignored.
+
+Additionally, Go has begun doing automated cipher suite ordering and no longer
+respects the order of suites given in `tls_cipher_suites`.
+
+See [this blog post](https://go.dev/blog/tls-cipher-suites) for more information.
+
+@include 'pki-forwarding-bug.mdx'
+
+
+## Known Issues
+
+@include 'raft-panic-old-tls-key.mdx'
+
+### Identity Token Backend Key Rotations
+
+Existing Vault installations that use the [Identity Token
+backend](/vault/api-docs/secret/identity/tokens) and have [named
+keys](/vault/api-docs/secret/identity/tokens#create-a-named-key) generated will
+encounter a panic when any of those existing keys pass their
+`rotation_period`. This issue affects Vault 1.9.0, and is fixed in Vault 1.9.1.
+Users should upgrade directly to 1.9.1 or above in order to avoid this panic.
+
+If a panic is encountered after an upgrade to Vault 1.9.0, the named key will be
+corrupted on storage and become unusable. In this case, the key will need to be
+deleted and re-created. A fix to fully mitigate this panic will be addressed on
+Vault 1.9.3.

@@ -1,0 +1,3 @@
+```release-note:bug
+identity: When the identity/group endpoint is used to modify a group by name, correctly update its policy and member entities.
+```

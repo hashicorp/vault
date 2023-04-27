@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -8,8 +11,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*UnwrapCommand)(nil)
-var _ cli.CommandAutocomplete = (*UnwrapCommand)(nil)
+var (
+	_ cli.Command             = (*UnwrapCommand)(nil)
+	_ cli.CommandAutocomplete = (*UnwrapCommand)(nil)
+)
 
 // UnwrapCommand is a Command that behaves like ReadCommand but specifically for
 // unwrapping cubbyhole-wrapped secrets
@@ -89,8 +94,10 @@ func (c *UnwrapCommand) Run(args []string) int {
 		return 2
 	}
 	if secret == nil {
-		c.UI.Error("Could not find wrapped response")
-		return 2
+		if Format(c.UI) == "table" {
+			c.UI.Info("Successfully unwrapped. There was no data in the wrapped secret.")
+		}
+		return 0
 	}
 
 	// Handle single field output

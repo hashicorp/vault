@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package config
 
 import (
@@ -5,6 +8,7 @@ import (
 )
 
 // DefaultTokenHelper returns the token helper that is configured for Vault.
+// This helper should only be used for non-server CLI commands.
 func DefaultTokenHelper() (token.TokenHelper, error) {
 	config, err := LoadConfig("")
 	if err != nil {
@@ -13,7 +17,7 @@ func DefaultTokenHelper() (token.TokenHelper, error) {
 
 	path := config.TokenHelper
 	if path == "" {
-		return &token.InternalTokenHelper{}, nil
+		return token.NewInternalTokenHelper()
 	}
 
 	path, err = token.ExternalTokenHelperPath(path)

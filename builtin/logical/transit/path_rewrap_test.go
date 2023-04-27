@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package transit
 
 import (
@@ -5,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // Check the normal flow of rewrap
@@ -37,6 +40,11 @@ func TestTransit_BatchRewrapCase1(t *testing.T) {
 	ciphertext := resp.Data["ciphertext"]
 	if !strings.HasPrefix(ciphertext.(string), "vault:v1") {
 		t.Fatalf("bad: ciphertext version: expected: 'vault:v1', actual: %s", ciphertext)
+	}
+
+	keyVersion := resp.Data["key_version"].(int)
+	if keyVersion != 1 {
+		t.Fatalf("unexpected key version; got: %d, expected: %d", keyVersion, 1)
 	}
 
 	rewrapData := map[string]interface{}{
@@ -99,6 +107,11 @@ func TestTransit_BatchRewrapCase1(t *testing.T) {
 	if !strings.HasPrefix(resp.Data["ciphertext"].(string), "vault:v2") {
 		t.Fatalf("bad: ciphertext version: expected: 'vault:v2', actual: %s", resp.Data["ciphertext"].(string))
 	}
+
+	keyVersion = resp.Data["key_version"].(int)
+	if keyVersion != 2 {
+		t.Fatalf("unexpected key version; got: %d, expected: %d", keyVersion, 2)
+	}
 }
 
 // Check the normal flow of rewrap with upserted key
@@ -131,6 +144,11 @@ func TestTransit_BatchRewrapCase2(t *testing.T) {
 	ciphertext := resp.Data["ciphertext"]
 	if !strings.HasPrefix(ciphertext.(string), "vault:v1") {
 		t.Fatalf("bad: ciphertext version: expected: 'vault:v1', actual: %s", ciphertext)
+	}
+
+	keyVersion := resp.Data["key_version"].(int)
+	if keyVersion != 1 {
+		t.Fatalf("unexpected key version; got: %d, expected: %d", keyVersion, 1)
 	}
 
 	rewrapData := map[string]interface{}{
@@ -194,6 +212,11 @@ func TestTransit_BatchRewrapCase2(t *testing.T) {
 	if !strings.HasPrefix(resp.Data["ciphertext"].(string), "vault:v2") {
 		t.Fatalf("bad: ciphertext version: expected: 'vault:v2', actual: %s", resp.Data["ciphertext"].(string))
 	}
+
+	keyVersion = resp.Data["key_version"].(int)
+	if keyVersion != 2 {
+		t.Fatalf("unexpected key version; got: %d, expected: %d", keyVersion, 2)
+	}
 }
 
 // Batch encrypt plaintexts, rotate the keys and rewrap all the ciphertexts
@@ -204,8 +227,8 @@ func TestTransit_BatchRewrapCase3(t *testing.T) {
 	b, s := createBackendWithStorage(t)
 
 	batchEncryptionInput := []interface{}{
-		map[string]interface{}{"plaintext": "dmlzaGFsCg=="},
-		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
+		map[string]interface{}{"plaintext": "dmlzaGFsCg==", "reference": "ek"},
+		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==", "reference": "do"},
 	}
 	batchEncryptionData := map[string]interface{}{
 		"batch_input": batchEncryptionInput,
@@ -221,11 +244,11 @@ func TestTransit_BatchRewrapCase3(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	batchEncryptionResponseItems := resp.Data["batch_results"].([]BatchResponseItem)
+	batchEncryptionResponseItems := resp.Data["batch_results"].([]EncryptBatchResponseItem)
 
 	batchRewrapInput := make([]interface{}, len(batchEncryptionResponseItems))
 	for i, item := range batchEncryptionResponseItems {
-		batchRewrapInput[i] = map[string]interface{}{"ciphertext": item.Ciphertext}
+		batchRewrapInput[i] = map[string]interface{}{"ciphertext": item.Ciphertext, "reference": item.Reference}
 	}
 
 	batchRewrapData := map[string]interface{}{
@@ -254,7 +277,7 @@ func TestTransit_BatchRewrapCase3(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	batchRewrapResponseItems := resp.Data["batch_results"].([]BatchResponseItem)
+	batchRewrapResponseItems := resp.Data["batch_results"].([]EncryptBatchResponseItem)
 
 	if len(batchRewrapResponseItems) != len(batchEncryptionResponseItems) {
 		t.Fatalf("bad: length of input and output or rewrap are not matching; expected: %d, actual: %d", len(batchEncryptionResponseItems), len(batchRewrapResponseItems))
@@ -269,12 +292,21 @@ func TestTransit_BatchRewrapCase3(t *testing.T) {
 	for i, eItem := range batchEncryptionResponseItems {
 		rItem := batchRewrapResponseItems[i]
 
+		inputRef := batchEncryptionInput[i].(map[string]interface{})["reference"]
+		if eItem.Reference != inputRef {
+			t.Fatalf("bad: reference mismatch. Expected %s, Actual: %s", inputRef, eItem.Reference)
+		}
+
 		if eItem.Ciphertext == rItem.Ciphertext {
 			t.Fatalf("bad: rewrap input and output are the same")
 		}
 
 		if !strings.HasPrefix(rItem.Ciphertext, "vault:v2") {
 			t.Fatalf("bad: invalid version of ciphertext in rewrap response; expected: 'vault:v2', actual: %s", rItem.Ciphertext)
+		}
+
+		if rItem.KeyVersion != 2 {
+			t.Fatalf("unexpected key version; got: %d, expected: %d", rItem.KeyVersion, 2)
 		}
 
 		decReq.Data = map[string]interface{}{
@@ -291,5 +323,6 @@ func TestTransit_BatchRewrapCase3(t *testing.T) {
 		if resp.Data["plaintext"] != plaintext1 && resp.Data["plaintext"] != plaintext2 {
 			t.Fatalf("bad: plaintext. Expected: %q or %q, Actual: %q", plaintext1, plaintext2, resp.Data["plaintext"])
 		}
+
 	}
 }

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -55,12 +58,12 @@ Usage: vault login [options] [AUTH K=V...]
       $ vault login -method=userpass username=my-username
 
   For more information about the list of configuration parameters available for
-  a given auth method, use the "vault auth help TYPE". You can also use "vault
-  auth list" to see the list of enabled auth methods.
+  a given auth method, use the "vault auth help TYPE" command. You can also use
+  "vault auth list" to see the list of enabled auth methods.
 
   If an auth method is enabled at a non-standard path, the -method flag still
   refers to the canonical type, but the -path flag refers to the enabled path.
-  If a github auth method was enabled at "github-ent", authenticate like this:
+  If a github auth method was enabled at "github-prod", authenticate like this:
 
       $ vault login -method=github -path=github-prod
 
@@ -215,11 +218,41 @@ func (c *LoginCommand) Run(args []string) int {
 		return 2
 	}
 
+	// Evolving token formats across Vault versions have caused issues during CLI logins. Unless
+	// token auth is being used, omit any token picked up from TokenHelper.
+	if authMethod != "token" {
+		client.SetToken("")
+	}
+
 	// Authenticate delegation to the auth handler
 	secret, err := authHandler.Auth(client, config)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error authenticating: %s", err))
 		return 2
+	}
+
+	// If there is only one MFA method configured and c.NonInteractive flag is
+	// unset, the login request is validated interactively.
+	//
+	// interactiveMethodInfo here means that `validateMFA` will complete the MFA
+	// by prompting for a password or directing you to a push notification. In
+	// this scenario, no external validation is needed.
+	interactiveMethodInfo := c.getInteractiveMFAMethodInfo(secret)
+	if interactiveMethodInfo != nil {
+		c.UI.Warn("Initiating Interactive MFA Validation...")
+		secret, err = c.validateMFA(secret.Auth.MFARequirement.MFARequestID, *interactiveMethodInfo)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 2
+		}
+	} else if c.getMFAValidationRequired(secret) {
+		// Warn about existing login token, but return here, since the secret
+		// won't have any token information if further validation is required.
+		c.checkForAndWarnAboutLoginToken()
+		c.UI.Warn(wrapAtLength("A login request was issued that is subject to "+
+			"MFA validation. Please make sure to validate the login by sending another "+
+			"request to sys/mfa/validate endpoint.") + "\n")
+		return OutputSecret(c.UI, secret)
 	}
 
 	// Unset any previous token wrapping functionality. If the original request
@@ -282,15 +315,7 @@ func (c *LoginCommand) Run(args []string) int {
 			return 2
 		}
 
-		// Warn if the VAULT_TOKEN environment variable is set, as that will take
-		// precedence. We output as a warning, so piping should still work since it
-		// will be on a different stream.
-		if os.Getenv("VAULT_TOKEN") != "" {
-			c.UI.Warn(wrapAtLength("WARNING! The VAULT_TOKEN environment variable "+
-				"is set! This takes precedence over the value set by this command. To "+
-				"use the value set by this command, unset the VAULT_TOKEN environment "+
-				"variable or set it to the token displayed below.") + "\n")
-		}
+		c.checkForAndWarnAboutLoginToken()
 	} else if !c.flagTokenOnly {
 		// If token-only the user knows it won't be stored, so don't warn
 		c.UI.Warn(wrapAtLength(
@@ -350,5 +375,16 @@ func (c *LoginCommand) extractToken(client *api.Client, secret *api.Secret, unwr
 
 	default:
 		return nil, false, fmt.Errorf("no auth or wrapping info in response")
+	}
+}
+
+// Warn if the VAULT_TOKEN environment variable is set, as that will take
+// precedence. We output as a warning, so piping should still work since it
+// will be on a different stream.
+func (c *LoginCommand) checkForAndWarnAboutLoginToken() {
+	if os.Getenv("VAULT_TOKEN") != "" {
+		c.UI.Warn(wrapAtLength("WARNING! The VAULT_TOKEN environment variable "+
+			"is set! The value of this variable will take precedence; if this is unwanted "+
+			"please unset VAULT_TOKEN or update its value accordingly.") + "\n")
 	}
 }

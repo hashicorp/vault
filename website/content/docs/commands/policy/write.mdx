@@ -1,0 +1,36 @@
+---
+layout: docs
+page_title: policy write - Command
+description: |-
+  The "policy write" command uploads a policy with name NAME from the contents
+  of a local file PATH or stdin. If PATH is "-", the policy is read from stdin.
+  Otherwise, it is loaded from the file at the given path on the local disk.
+---
+
+# policy write
+
+The `policy write` command uploads a policy with name NAME from the contents of
+a local file PATH or stdin. If PATH is "-", the policy is read from stdin.
+Otherwise, it is loaded from the file at the given path on the local disk.
+
+For details on the policy syntax, please see the [policy
+documentation](/vault/docs/concepts/policies).
+
+## Examples
+
+Upload a policy named "my-policy" from "/tmp/policy.hcl" on the local disk:
+
+```shell-session
+$ vault policy write my-policy /tmp/policy.hcl
+```
+
+Upload a policy from stdin:
+
+```shell-session
+$ cat my-policy.hcl | vault policy write my-policy -
+```
+
+## Usage
+
+There are no flags beyond the [standard set of flags](/vault/docs/commands)
+included on all commands.

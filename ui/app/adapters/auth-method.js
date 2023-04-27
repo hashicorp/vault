@@ -1,27 +1,33 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+import AdapterError from '@ember-data/adapter/error';
 import { assign } from '@ember/polyfills';
-import { get, set } from '@ember/object';
+import { set } from '@ember/object';
 import ApplicationAdapter from './application';
-import DS from 'ember-data';
+import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export default ApplicationAdapter.extend({
   url(path) {
     const url = `${this.buildURL()}/auth`;
-    return path ? url + '/' + path : url;
+    return path ? url + '/' + encodePath(path) : url;
   },
 
-  // used in updateRecord on the model#tune action
+  // used in updateRecord
   pathForType() {
     return 'mounts/auth';
   },
 
   findAll(store, type, sinceToken, snapshotRecordArray) {
-    let isUnauthenticated = get(snapshotRecordArray || {}, 'adapterOptions.unauthenticated');
+    const isUnauthenticated = snapshotRecordArray?.adapterOptions?.unauthenticated;
     if (isUnauthenticated) {
-      let url = `/${this.urlPrefix()}/internal/ui/mounts`;
+      const url = `/${this.urlPrefix()}/internal/ui/mounts`;
       return this.ajax(url, 'GET', {
         unauthenticated: true,
       })
-        .then(result => {
+        .then((result) => {
           return {
             data: result.data.auth,
           };
@@ -32,8 +38,8 @@ export default ApplicationAdapter.extend({
           };
         });
     }
-    return this.ajax(this.url(), 'GET').catch(e => {
-      if (e instanceof DS.AdapterError) {
+    return this.ajax(this.url(), 'GET').catch((e) => {
+      if (e instanceof AdapterError) {
         set(e, 'policyPath', 'sys/auth');
       }
       throw e;
@@ -47,6 +53,7 @@ export default ApplicationAdapter.extend({
 
     return this.ajax(this.url(path), 'POST', { data }).then(() => {
       // ember data doesn't like 204s if it's not a DELETE
+      data.config.id = path; // config relationship needs an id so use path for now
       return {
         data: assign({}, data, { path: path + '/', id: path }),
       };
@@ -58,6 +65,11 @@ export default ApplicationAdapter.extend({
   },
 
   exchangeOIDC(path, state, code) {
-    return this.ajax(`/v1/auth/${path}/oidc/callback`, 'GET', { data: { state, code } });
+    return this.ajax(`/v1/auth/${encodePath(path)}/oidc/callback`, 'GET', { data: { state, code } });
+  },
+
+  tune(path, data) {
+    const url = `${this.buildURL()}/${this.pathForType()}/${encodePath(path)}tune`;
+    return this.ajax(url, 'POST', { data });
   },
 });

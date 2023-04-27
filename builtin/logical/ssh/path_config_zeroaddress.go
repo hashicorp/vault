@@ -1,11 +1,16 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package ssh
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
+
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // Structure to hold roles that are allowed to accept any IP address.
@@ -16,18 +21,40 @@ type zeroAddressRoles struct {
 func pathConfigZeroAddress(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/zeroaddress",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixSSH,
+		},
+
 		Fields: map[string]*framework.FieldSchema{
-			"roles": &framework.FieldSchema{
+			"roles": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `[Required] Comma separated list of role names which
 				allows credentials to be requested for any IP address. CIDR blocks
 				previously registered under these roles will be ignored.`,
 			},
 		},
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathConfigZeroAddressWrite,
-			logical.ReadOperation:   b.pathConfigZeroAddressRead,
-			logical.DeleteOperation: b.pathConfigZeroAddressDelete,
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathConfigZeroAddressWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "zero-address",
+				},
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathConfigZeroAddressRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "zero-address-configuration",
+				},
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathConfigZeroAddressDelete,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "zero-address-configuration",
+				},
+			},
 		},
 		HelpSynopsis:    pathConfigZeroAddressSyn,
 		HelpDescription: pathConfigZeroAddressDesc,
@@ -125,42 +152,9 @@ func (b *backend) removeZeroAddressRole(ctx context.Context, s logical.Storage, 
 		return nil
 	}
 
-	err = zeroAddressEntry.remove(roleName)
-	if err != nil {
-		return err
-	}
+	zeroAddressEntry.Roles = strutil.StrListDelete(zeroAddressEntry.Roles, roleName)
 
 	return b.putZeroAddressRoles(ctx, s, zeroAddressEntry.Roles)
-}
-
-// Removes a given role from the comma separated string
-func (r *zeroAddressRoles) remove(roleName string) error {
-	var index int
-	for i, role := range r.Roles {
-		if role == roleName {
-			index = i
-			break
-		}
-	}
-	length := len(r.Roles)
-	if index >= length || index < 0 {
-		return fmt.Errorf("invalid index %d", index)
-	}
-	// If slice has zero or one item, remove the item by setting slice to nil.
-	if length < 2 {
-		r.Roles = nil
-		return nil
-	}
-
-	// Last item to be deleted
-	if length-1 == index {
-		r.Roles = r.Roles[:length-1]
-		return nil
-	}
-
-	// Delete the item by appending all items except the one at index
-	r.Roles = append(r.Roles[:index], r.Roles[index+1:]...)
-	return nil
 }
 
 const pathConfigZeroAddressSyn = `

@@ -1,9 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
 	"reflect"
 	"testing"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/api"
 	"github.com/posener/complete"
 )
@@ -28,6 +32,12 @@ func TestPredictVaultPaths(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := client.Logical().Write("secret/zip/twoot", data); err != nil {
+		t.Fatal(err)
+	}
+	if err := client.Sys().Mount("level1a/level2a/level3a", &api.MountInput{Type: "kv"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := client.Sys().Mount("level1a/level2a/level3b", &api.MountInput{Type: "kv"}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -181,6 +191,18 @@ func TestPredictVaultPaths(t *testing.T) {
 			false,
 			[]string{"secret/zip/t"},
 		},
+		{
+			"multi_nested",
+			complete.Args{
+				All:  []string{"read", "level1a/level2a"},
+				Last: "level1a/level2a",
+			},
+			false,
+			[]string{
+				"level1a/level2a/level3a/",
+				"level1a/level2a/level3b/",
+			},
+		},
 	}
 
 	t.Run("group", func(t *testing.T) {
@@ -324,43 +346,54 @@ func TestPredict_Plugins(t *testing.T) {
 			[]string{
 				"ad",
 				"alicloud",
-				"app-id",
 				"approle",
 				"aws",
 				"azure",
-				"cassandra",
 				"cassandra-database-plugin",
 				"centrify",
 				"cert",
+				"cf",
 				"consul",
+				"couchbase-database-plugin",
+				"elasticsearch-database-plugin",
 				"gcp",
 				"gcpkms",
 				"github",
 				"hana-database-plugin",
 				"influxdb-database-plugin",
 				"jwt",
+				"kerberos",
+				"keymgmt",
+				"kmip",
 				"kubernetes",
 				"kv",
 				"ldap",
-				"mongodb",
 				"mongodb-database-plugin",
-				"mssql",
+				"mongodbatlas",
+				"mongodbatlas-database-plugin",
 				"mssql-database-plugin",
-				"mysql",
 				"mysql-aurora-database-plugin",
 				"mysql-database-plugin",
 				"mysql-legacy-database-plugin",
 				"mysql-rds-database-plugin",
 				"nomad",
+				"oci",
 				"oidc",
 				"okta",
+				"openldap",
+				"pcf", // Deprecated.
 				"pki",
-				"postgresql",
 				"postgresql-database-plugin",
 				"rabbitmq",
 				"radius",
+				"redis-database-plugin",
+				"redis-elasticache-database-plugin",
+				"redshift-database-plugin",
+				"snowflake-database-plugin",
 				"ssh",
+				"terraform",
 				"totp",
+				"transform",
 				"transit",
 				"userpass",
 			},
@@ -377,8 +410,33 @@ func TestPredict_Plugins(t *testing.T) {
 				p.client = tc.client
 
 				act := p.plugins()
+
+				if !strutil.StrListContains(act, "keymgmt") {
+					for i, v := range tc.exp {
+						if v == "keymgmt" {
+							tc.exp = append(tc.exp[:i], tc.exp[i+1:]...)
+							break
+						}
+					}
+				}
+				if !strutil.StrListContains(act, "kmip") {
+					for i, v := range tc.exp {
+						if v == "kmip" {
+							tc.exp = append(tc.exp[:i], tc.exp[i+1:]...)
+							break
+						}
+					}
+				}
+				if !strutil.StrListContains(act, "transform") {
+					for i, v := range tc.exp {
+						if v == "transform" {
+							tc.exp = append(tc.exp[:i], tc.exp[i+1:]...)
+							break
+						}
+					}
+				}
 				if !reflect.DeepEqual(act, tc.exp) {
-					t.Errorf("expected %q to be %q", act, tc.exp)
+					t.Errorf("expected: %q, got: %q, diff: %v", tc.exp, act, strutil.Difference(act, tc.exp, true))
 				}
 			})
 		}
@@ -493,7 +551,80 @@ func TestPredict_Paths(t *testing.T) {
 				p := NewPredict()
 				p.client = client
 
-				act := p.paths(tc.path, tc.includeFiles)
+				act := p.paths("kv", "1", tc.path, tc.includeFiles)
+				if !reflect.DeepEqual(act, tc.exp) {
+					t.Errorf("expected %q to be %q", act, tc.exp)
+				}
+			})
+		}
+	})
+}
+
+func TestPredict_PathsKVv2(t *testing.T) {
+	t.Parallel()
+
+	client, closer := testVaultServerWithKVVersion(t, "2")
+	defer closer()
+
+	data := map[string]interface{}{"data": map[string]interface{}{"a": "b"}}
+	if _, err := client.Logical().Write("secret/data/bar", data); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := client.Logical().Write("secret/data/foo", data); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := client.Logical().Write("secret/data/zip/zap", data); err != nil {
+		t.Fatal(err)
+	}
+
+	cases := []struct {
+		name         string
+		path         string
+		includeFiles bool
+		exp          []string
+	}{
+		{
+			"bad_path",
+			"nope/not/a/real/path/ever",
+			true,
+			[]string{"nope/not/a/real/path/ever"},
+		},
+		{
+			"good_path",
+			"secret/",
+			true,
+			[]string{"secret/bar", "secret/foo", "secret/zip/"},
+		},
+		{
+			"good_path_no_files",
+			"secret/",
+			false,
+			[]string{"secret/zip/"},
+		},
+		{
+			"partial_match",
+			"secret/z",
+			true,
+			[]string{"secret/zip/"},
+		},
+		{
+			"partial_match_no_files",
+			"secret/z",
+			false,
+			[]string{"secret/zip/"},
+		},
+	}
+
+	t.Run("group", func(t *testing.T) {
+		for _, tc := range cases {
+			tc := tc
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+
+				p := NewPredict()
+				p.client = client
+
+				act := p.paths("kv", "2", tc.path, tc.includeFiles)
 				if !reflect.DeepEqual(act, tc.exp) {
 					t.Errorf("expected %q to be %q", act, tc.exp)
 				}

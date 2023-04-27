@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Renamed labels under Tools for wrap, lookup, rewrap and unwrap with description.
+```

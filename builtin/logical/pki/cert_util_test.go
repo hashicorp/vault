@@ -1,17 +1,23 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"strings"
 	"testing"
 
-	"strings"
-
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestPki_FetchCertBySerial(t *testing.T) {
-	storage := &logical.InmemStorage{}
+	t.Parallel()
+	b, storage := CreateBackendWithStorage(t)
+	sc := b.makeStorageContext(ctx, storage)
 
 	cases := map[string]struct {
 		Req    *logical.Request
@@ -45,7 +51,7 @@ func TestPki_FetchCertBySerial(t *testing.T) {
 			t.Fatalf("error writing to storage on %s colon-based storage path: %s", name, err)
 		}
 
-		certEntry, err := fetchCertBySerial(context.Background(), tc.Req, tc.Prefix, tc.Serial)
+		certEntry, err := fetchCertBySerial(sc, tc.Prefix, tc.Serial)
 		if err != nil {
 			t.Fatalf("error on %s for colon-based storage path: %s", name, err)
 		}
@@ -80,46 +86,152 @@ func TestPki_FetchCertBySerial(t *testing.T) {
 			t.Fatalf("error writing to storage on %s hyphen-based storage path: %s", name, err)
 		}
 
-		certEntry, err := fetchCertBySerial(context.Background(), tc.Req, tc.Prefix, tc.Serial)
+		certEntry, err := fetchCertBySerial(sc, tc.Prefix, tc.Serial)
 		if err != nil || certEntry == nil {
 			t.Fatalf("error on %s for hyphen-based storage path: err: %v, entry: %v", name, err, certEntry)
 		}
 	}
+}
 
-	noConvCases := map[string]struct {
-		Req    *logical.Request
-		Prefix string
-		Serial string
-	}{
-		"ca": {
-			&logical.Request{
-				Storage: storage,
-			},
-			"",
-			"ca",
+// Demonstrate that multiple OUs in the name are handled in an
+// order-preserving way.
+func TestPki_MultipleOUs(t *testing.T) {
+	t.Parallel()
+	var b backend
+	fields := addCACommonFields(map[string]*framework.FieldSchema{})
+
+	apiData := &framework.FieldData{
+		Schema: fields,
+		Raw: map[string]interface{}{
+			"cn":  "example.com",
+			"ttl": 3600,
 		},
-		"crl": {
-			&logical.Request{
-				Storage: storage,
+	}
+	input := &inputBundle{
+		apiData: apiData,
+		role: &roleEntry{
+			MaxTTL: 3600,
+			OU:     []string{"Z", "E", "V"},
+		},
+	}
+	cb, _, err := generateCreationBundle(&b, input, nil, nil)
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
+
+	expected := []string{"Z", "E", "V"}
+	actual := cb.Params.Subject.OrganizationalUnit
+
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("Expected %v, got %v", expected, actual)
+	}
+}
+
+func TestPki_PermitFQDNs(t *testing.T) {
+	t.Parallel()
+	var b backend
+	fields := addCACommonFields(map[string]*framework.FieldSchema{})
+
+	cases := map[string]struct {
+		input            *inputBundle
+		expectedDnsNames []string
+		expectedEmails   []string
+	}{
+		"base valid case": {
+			input: &inputBundle{
+				apiData: &framework.FieldData{
+					Schema: fields,
+					Raw: map[string]interface{}{
+						"common_name": "example.com.",
+						"ttl":         3600,
+					},
+				},
+				role: &roleEntry{
+					AllowAnyName:     true,
+					MaxTTL:           3600,
+					EnforceHostnames: true,
+				},
 			},
-			"",
-			"crl",
+			expectedDnsNames: []string{"example.com."},
+			expectedEmails:   []string{},
+		},
+		"case insensitivity validation": {
+			input: &inputBundle{
+				apiData: &framework.FieldData{
+					Schema: fields,
+					Raw: map[string]interface{}{
+						"common_name": "Example.Net",
+						"alt_names":   "eXaMPLe.COM",
+						"ttl":         3600,
+					},
+				},
+				role: &roleEntry{
+					AllowedDomains:   []string{"example.net", "EXAMPLE.COM"},
+					AllowBareDomains: true,
+					MaxTTL:           3600,
+				},
+			},
+			expectedDnsNames: []string{"Example.Net", "eXaMPLe.COM"},
+			expectedEmails:   []string{},
+		},
+		"case email as AllowedDomain with bare domains": {
+			input: &inputBundle{
+				apiData: &framework.FieldData{
+					Schema: fields,
+					Raw: map[string]interface{}{
+						"common_name": "test@testemail.com",
+						"ttl":         3600,
+					},
+				},
+				role: &roleEntry{
+					AllowedDomains:   []string{"test@testemail.com"},
+					AllowBareDomains: true,
+					MaxTTL:           3600,
+				},
+			},
+			expectedDnsNames: []string{},
+			expectedEmails:   []string{"test@testemail.com"},
+		},
+		"case email common name with bare domains": {
+			input: &inputBundle{
+				apiData: &framework.FieldData{
+					Schema: fields,
+					Raw: map[string]interface{}{
+						"common_name": "test@testemail.com",
+						"ttl":         3600,
+					},
+				},
+				role: &roleEntry{
+					AllowedDomains:   []string{"testemail.com"},
+					AllowBareDomains: true,
+					MaxTTL:           3600,
+				},
+			},
+			expectedDnsNames: []string{},
+			expectedEmails:   []string{"test@testemail.com"},
 		},
 	}
 
-	// Test for ca and crl case
-	for name, tc := range noConvCases {
-		err := storage.Put(context.Background(), &logical.StorageEntry{
-			Key:   tc.Serial,
-			Value: []byte("some data"),
-		})
-		if err != nil {
-			t.Fatalf("error writing to storage on %s: %s", name, err)
-		}
+	for name, testCase := range cases {
+		name := name
+		testCase := testCase
+		t.Run(name, func(t *testing.T) {
+			cb, _, err := generateCreationBundle(&b, testCase.input, nil, nil)
+			if err != nil {
+				t.Fatalf("Error: %v", err)
+			}
 
-		certEntry, err := fetchCertBySerial(context.Background(), tc.Req, tc.Prefix, tc.Serial)
-		if err != nil || certEntry == nil {
-			t.Fatalf("error on %s: err: %v, entry: %v", name, err, certEntry)
-		}
+			actualDnsNames := cb.Params.DNSNames
+
+			if !reflect.DeepEqual(testCase.expectedDnsNames, actualDnsNames) {
+				t.Fatalf("Expected dns names %v, got %v", testCase.expectedDnsNames, actualDnsNames)
+			}
+
+			actualEmails := cb.Params.EmailAddresses
+
+			if !reflect.DeepEqual(testCase.expectedEmails, actualEmails) {
+				t.Fatalf("Expected email addresses %v, got %v", testCase.expectedEmails, actualEmails)
+			}
+		})
 	}
 }

@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+/* eslint-disable ember/no-observers */
 import { inject as service } from '@ember/service';
 import { alias } from '@ember/object/computed';
 import Controller from '@ember/controller';
@@ -9,6 +15,7 @@ export default Controller.extend({
   router: service(),
   permissions: service(),
   namespaceService: service('namespace'),
+  flashMessages: service(),
 
   vaultVersion: service('version'),
   console: service(),
@@ -24,18 +31,18 @@ export default Controller.extend({
 
   namespaceQueryParam: '',
 
-  onQPChange: observer('namespaceQueryParam', function() {
-    this.get('namespaceService').setNamespace(this.get('namespaceQueryParam'));
+  onQPChange: observer('namespaceQueryParam', function () {
+    this.namespaceService.setNamespace(this.namespaceQueryParam);
   }),
 
   consoleOpen: alias('console.isOpen'),
 
-  activeCluster: computed('auth.activeCluster', function() {
-    return this.get('store').peekRecord('cluster', this.get('auth.activeCluster'));
+  activeCluster: computed('auth.activeCluster', function () {
+    return this.store.peekRecord('cluster', this.auth.activeCluster);
   }),
 
-  activeClusterName: computed('activeCluster', function() {
-    const activeCluster = this.get('activeCluster');
+  activeClusterName: computed('activeCluster', function () {
+    const activeCluster = this.activeCluster;
     return activeCluster ? activeCluster.get('name') : null;
   }),
 
@@ -44,12 +51,8 @@ export default Controller.extend({
     'activeClusterName',
     'auth.currentToken',
     'activeCluster.{dr.isSecondary,needsInit,sealed}',
-    function() {
-      if (
-        this.get('activeCluster.dr.isSecondary') ||
-        this.get('activeCluster.needsInit') ||
-        this.get('activeCluster.sealed')
-      ) {
+    function () {
+      if (this.activeCluster.dr?.isSecondary || this.activeCluster.needsInit || this.activeCluster.sealed) {
         return false;
       }
       if (
@@ -59,6 +62,7 @@ export default Controller.extend({
       ) {
         return true;
       }
+      return;
     }
   ),
 

@@ -1,0 +1,4 @@
+```release-note:improvement
+auth/approle: SecretIDs can now be generated with an per-request specified TTL and num_uses.
+When either the ttl and num_uses fields are not specified, the role's configuration is used.
+```

@@ -1,0 +1,3 @@
+```release-note:improvement
+api: Support VAULT_DISABLE_REDIRECTS environment variable (and --disable-redirects flag) to disable default client behavior and prevent the client following any redirection responses. 
+```

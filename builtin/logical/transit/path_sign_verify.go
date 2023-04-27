@@ -1,19 +1,90 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package transit
 
 import (
 	"context"
+	"crypto/rsa"
 	"encoding/base64"
+	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 
-	"github.com/hashicorp/vault/helper/errutil"
-	"github.com/hashicorp/vault/helper/keysutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
+	"github.com/hashicorp/vault/sdk/helper/keysutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/mitchellh/mapstructure"
 )
+
+// BatchRequestSignItem represents a request item for batch processing.
+// A map type allows us to distinguish between empty and missing values.
+type batchRequestSignItem map[string]string
+
+// BatchResponseSignItem represents a response item for batch processing
+type batchResponseSignItem struct {
+	// signature for the input present in the corresponding batch
+	// request item
+	Signature string `json:"signature,omitempty" mapstructure:"signature"`
+
+	// The key version to be used for encryption
+	KeyVersion int `json:"key_version" mapstructure:"key_version"`
+
+	PublicKey []byte `json:"publickey,omitempty" mapstructure:"publickey"`
+
+	// Error, if set represents a failure encountered while encrypting a
+	// corresponding batch request item
+	Error string `json:"error,omitempty" mapstructure:"error"`
+
+	// The return paths through WriteSign in some cases are (nil, err) and others
+	// (logical.ErrorResponse(..),nil), and others (logical.ErrorResponse(..),err).
+	// For batch processing to successfully mimic previous handling for simple 'input',
+	// both output values are needed - though 'err' should never be serialized.
+	err error
+
+	// Reference is an arbitrary caller supplied string value that will be placed on the
+	// batch response to ease correlation between inputs and outputs
+	Reference string `json:"reference" mapstructure:"reference"`
+}
+
+// BatchRequestVerifyItem represents a request item for batch processing.
+// A map type allows us to distinguish between empty and missing values.
+type batchRequestVerifyItem map[string]string
+
+// BatchResponseVerifyItem represents a response item for batch processing
+type batchResponseVerifyItem struct {
+	// Valid indicates whether signature matches the signature derived from the input string
+	Valid bool `json:"valid" mapstructure:"valid"`
+
+	// Error, if set represents a failure encountered while encrypting a
+	// corresponding batch request item
+	Error string `json:"error,omitempty" mapstructure:"error"`
+
+	// The return paths through WriteSign in some cases are (nil, err) and others
+	// (logical.ErrorResponse(..),nil), and others (logical.ErrorResponse(..),err).
+	// For batch processing to successfully mimic previous handling for simple 'input',
+	// both output values are needed - though 'err' should never be serialized.
+	err error
+
+	// Reference is an arbitrary caller supplied string value that will be placed on the
+	// batch response to ease correlation between inputs and outputs
+	Reference string `json:"reference" mapstructure:"reference"`
+}
+
+const defaultHashAlgorithm = "sha2-256"
 
 func (b *backend) pathSign() *framework.Path {
 	return &framework.Path{
 		Pattern: "sign/" + framework.GenericNameRegex("name") + framework.OptionalParamRegex("urlalgorithm"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "sign",
+			OperationSuffix: "|with-algorithm",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -33,7 +104,7 @@ derivation is enabled; currently only available with ed25519 keys.`,
 
 			"hash_algorithm": {
 				Type:    framework.TypeString,
-				Default: "sha2-256",
+				Default: defaultHashAlgorithm,
 				Description: `Hash algorithm to use (POST body parameter). Valid values are:
 
 * sha1
@@ -41,14 +112,21 @@ derivation is enabled; currently only available with ed25519 keys.`,
 * sha2-256
 * sha2-384
 * sha2-512
+* sha3-224
+* sha3-256
+* sha3-384
+* sha3-512
+* none
 
 Defaults to "sha2-256". Not valid for all key types,
-including ed25519.`,
+including ed25519. Using none requires setting prehashed=true and
+signature_algorithm=pkcs1v15, yielding a PKCSv1_5_NoOID instead of
+the usual PKCSv1_5_DERnull signature.`,
 			},
 
 			"algorithm": {
 				Type:        framework.TypeString,
-				Default:     "sha2-256",
+				Default:     defaultHashAlgorithm,
 				Description: `Deprecated: use "hash_algorithm" instead.`,
 			},
 
@@ -66,7 +144,7 @@ to the min_encryption_version configured on the key.`,
 
 			"prehashed": {
 				Type:        framework.TypeBool,
-				Description: `Set to 'true' when the input is already hashed. If the key type is 'rsa-2048' or 'rsa-4096', then the algorithm used to hash the input should be indicated by the 'algorithm' parameter.`,
+				Description: `Set to 'true' when the input is already hashed. If the key type is 'rsa-2048', 'rsa-3072' or 'rsa-4096', then the algorithm used to hash the input should be indicated by the 'algorithm' parameter.`,
 			},
 
 			"signature_algorithm": {
@@ -79,6 +157,21 @@ Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 				Type:        framework.TypeString,
 				Default:     "asn1",
 				Description: `The method by which to marshal the signature. The default is 'asn1' which is used by openssl and X.509. It can also be set to 'jws' which is used for JWT signatures; setting it to this will also cause the encoding of the signature to be url-safe base64 instead of using standard base64 encoding. Currently only valid for ECDSA P-256 key types".`,
+			},
+
+			"salt_length": {
+				Type:    framework.TypeString,
+				Default: "auto",
+				Description: `The salt length used to sign. Currently only applies to the RSA PSS signature scheme.
+Options are 'auto' (the default used by Golang, causing the salt to be as large as possible when signing), 'hash' (causes the salt length to equal the length of the hash used in the signature), or an integer between the minimum and the maximum permissible salt lengths for the given RSA key size. Defaults to 'auto'.`,
+			},
+
+			"batch_input": {
+				Type: framework.TypeSlice,
+				Description: `Specifies a list of items for processing. When this parameter is set,
+any supplied 'input' or 'context' parameters will be ignored. Responses are returned in the
+'batch_results' array component of the 'data' element of the response. Any batch output will
+preserve the order of the batch input`,
 			},
 		},
 
@@ -94,8 +187,15 @@ Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 func (b *backend) pathVerify() *framework.Path {
 	return &framework.Path{
 		Pattern: "verify/" + framework.GenericNameRegex("name") + framework.OptionalParamRegex("urlalgorithm"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "verify",
+			OperationSuffix: "|with-algorithm",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "The key to use",
 			},
@@ -128,7 +228,7 @@ derivation is enabled; currently only available with ed25519 keys.`,
 
 			"hash_algorithm": {
 				Type:    framework.TypeString,
-				Default: "sha2-256",
+				Default: defaultHashAlgorithm,
 				Description: `Hash algorithm to use (POST body parameter). Valid values are:
 
 * sha1
@@ -136,19 +236,25 @@ derivation is enabled; currently only available with ed25519 keys.`,
 * sha2-256
 * sha2-384
 * sha2-512
+* sha3-224
+* sha3-256
+* sha3-384
+* sha3-512
+* none
 
-Defaults to "sha2-256". Not valid for all key types.`,
+Defaults to "sha2-256". Not valid for all key types. See note about
+none on signing path.`,
 			},
 
 			"algorithm": {
 				Type:        framework.TypeString,
-				Default:     "sha2-256",
+				Default:     defaultHashAlgorithm,
 				Description: `Deprecated: use "hash_algorithm" instead.`,
 			},
 
 			"prehashed": {
 				Type:        framework.TypeBool,
-				Description: `Set to 'true' when the input is already hashed. If the key type is 'rsa-2048' or 'rsa-4096', then the algorithm used to hash the input should be indicated by the 'algorithm' parameter.`,
+				Description: `Set to 'true' when the input is already hashed. If the key type is 'rsa-2048', 'rsa-3072' or 'rsa-4096', then the algorithm used to hash the input should be indicated by the 'algorithm' parameter.`,
 			},
 
 			"signature_algorithm": {
@@ -162,6 +268,21 @@ Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 				Default:     "asn1",
 				Description: `The method by which to unmarshal the signature when verifying. The default is 'asn1' which is used by openssl and X.509; can also be set to 'jws' which is used for JWT signatures in which case the signature is also expected to be url-safe base64 encoding instead of standard base64 encoding. Currently only valid for ECDSA P-256 key types".`,
 			},
+
+			"salt_length": {
+				Type:    framework.TypeString,
+				Default: "auto",
+				Description: `The salt length used to sign. Currently only applies to the RSA PSS signature scheme.
+Options are 'auto' (the default used by Golang, causing the salt to be as large as possible when signing), 'hash' (causes the salt length to equal the length of the hash used in the signature), or an integer between the minimum and the maximum permissible salt lengths for the given RSA key size. Defaults to 'auto'.`,
+			},
+
+			"batch_input": {
+				Type: framework.TypeSlice,
+				Description: `Specifies a list of items for processing. When this parameter is set,
+any supplied  'input', 'hmac' or 'signature' parameters will be ignored. Responses are returned in the
+'batch_results' array component of the 'data' element of the response. Any batch output will
+preserve the order of the batch input`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -173,15 +294,44 @@ Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 	}
 }
 
+func (b *backend) getSaltLength(d *framework.FieldData) (int, error) {
+	rawSaltLength, ok := d.GetOk("salt_length")
+	// This should only happen when something is wrong with the schema,
+	// so this is a reasonable default.
+	if !ok {
+		return rsa.PSSSaltLengthAuto, nil
+	}
+
+	rawSaltLengthStr := rawSaltLength.(string)
+	lowerSaltLengthStr := strings.ToLower(rawSaltLengthStr)
+	switch lowerSaltLengthStr {
+	case "auto":
+		return rsa.PSSSaltLengthAuto, nil
+	case "hash":
+		return rsa.PSSSaltLengthEqualsHash, nil
+	default:
+		saltLengthInt, err := strconv.Atoi(lowerSaltLengthStr)
+		if err != nil {
+			return rsa.PSSSaltLengthEqualsHash - 1, fmt.Errorf("salt length neither 'auto', 'hash', nor an int: %s", rawSaltLength)
+		}
+		if saltLengthInt < rsa.PSSSaltLengthEqualsHash {
+			return rsa.PSSSaltLengthEqualsHash - 1, fmt.Errorf("salt length is invalid: %d", saltLengthInt)
+		}
+		return saltLengthInt, nil
+	}
+}
+
 func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	ver := d.Get("key_version").(int)
-	inputB64 := d.Get("input").(string)
 	hashAlgorithmStr := d.Get("urlalgorithm").(string)
 	if hashAlgorithmStr == "" {
 		hashAlgorithmStr = d.Get("hash_algorithm").(string)
 		if hashAlgorithmStr == "" {
 			hashAlgorithmStr = d.Get("algorithm").(string)
+			if hashAlgorithmStr == "" {
+				hashAlgorithmStr = defaultHashAlgorithm
+			}
 		}
 	}
 
@@ -198,17 +348,20 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 
 	prehashed := d.Get("prehashed").(bool)
 	sigAlgorithm := d.Get("signature_algorithm").(string)
-
-	input, err := base64.StdEncoding.DecodeString(inputB64)
+	saltLength, err := b.getSaltLength(d)
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("unable to decode input as base64: %s", err)), logical.ErrInvalidRequest
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+
+	if hashAlgorithm == keysutil.HashTypeNone && (!prehashed || sigAlgorithm != "pkcs1v15") {
+		return logical.ErrorResponse("hash_algorithm=none requires both prehashed=true and signature_algorithm=pkcs1v15"), logical.ErrInvalidRequest
 	}
 
 	// Get the policy
-	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
+	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
-	})
+	}, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}
@@ -224,41 +377,131 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		return logical.ErrorResponse(fmt.Sprintf("key type %v does not support signing", p.Type)), logical.ErrInvalidRequest
 	}
 
-	contextRaw := d.Get("context").(string)
-	var context []byte
-	if len(contextRaw) != 0 {
-		context, err = base64.StdEncoding.DecodeString(contextRaw)
+	batchInputRaw := d.Raw["batch_input"]
+	var batchInputItems []batchRequestSignItem
+	if batchInputRaw != nil {
+		err = mapstructure.Decode(batchInputRaw, &batchInputItems)
 		if err != nil {
 			p.Unlock()
-			return logical.ErrorResponse("failed to base64-decode context"), logical.ErrInvalidRequest
+			return nil, fmt.Errorf("failed to parse batch input: %w", err)
+		}
+
+		if len(batchInputItems) == 0 {
+			p.Unlock()
+			return logical.ErrorResponse("missing batch input to process"), logical.ErrInvalidRequest
+		}
+	} else {
+		// use empty string if input is missing - not an error
+		batchInputItems = make([]batchRequestSignItem, 1)
+		batchInputItems[0] = batchRequestSignItem{
+			"input":   d.Get("input").(string),
+			"context": d.Get("context").(string),
 		}
 	}
 
-	if p.Type.HashSignatureInput() && !prehashed {
-		hf := keysutil.HashFuncMap[hashAlgorithm]()
-		hf.Write(input)
-		input = hf.Sum(nil)
-	}
+	response := make([]batchResponseSignItem, len(batchInputItems))
 
-	sig, err := p.Sign(ver, context, input, hashAlgorithm, sigAlgorithm, marshaling)
-	if err != nil {
-		p.Unlock()
-		return nil, err
-	}
-	if sig == nil {
-		p.Unlock()
-		return nil, fmt.Errorf("signature could not be computed")
+	for i, item := range batchInputItems {
+
+		rawInput, ok := item["input"]
+		if !ok {
+			response[i].Error = "missing input"
+			response[i].err = logical.ErrInvalidRequest
+			continue
+		}
+
+		input, err := base64.StdEncoding.DecodeString(rawInput)
+		if err != nil {
+			response[i].Error = fmt.Sprintf("unable to decode input as base64: %s", err)
+			response[i].err = logical.ErrInvalidRequest
+			continue
+		}
+
+		if p.Type.HashSignatureInput() && !prehashed {
+			hf := keysutil.HashFuncMap[hashAlgorithm]()
+			hf.Write(input)
+			input = hf.Sum(nil)
+		}
+
+		contextRaw := item["context"]
+		var context []byte
+		if len(contextRaw) != 0 {
+			context, err = base64.StdEncoding.DecodeString(contextRaw)
+			if err != nil {
+				response[i].Error = "failed to base64-decode context"
+				response[i].err = logical.ErrInvalidRequest
+				continue
+			}
+		}
+
+		var managedKeyParameters keysutil.ManagedKeyParameters
+		if p.Type == keysutil.KeyType_MANAGED_KEY {
+			managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
+			if !ok {
+				return nil, errors.New("unsupported system view")
+			}
+
+			managedKeyParameters = keysutil.ManagedKeyParameters{
+				ManagedKeySystemView: managedKeySystemView,
+				BackendUUID:          b.backendUUID,
+				Context:              ctx,
+			}
+		}
+
+		sig, err := p.SignWithOptions(ver, context, input, &keysutil.SigningOptions{
+			HashAlgorithm:    hashAlgorithm,
+			Marshaling:       marshaling,
+			SaltLength:       saltLength,
+			SigAlgorithm:     sigAlgorithm,
+			ManagedKeyParams: managedKeyParameters,
+		})
+		if err != nil {
+			if batchInputRaw != nil {
+				response[i].Error = err.Error()
+			}
+			response[i].err = err
+		} else if sig == nil {
+			response[i].err = fmt.Errorf("signature could not be computed")
+		} else {
+			keyVersion := ver
+			if keyVersion == 0 {
+				keyVersion = p.LatestVersion
+			}
+
+			response[i].Signature = sig.Signature
+			response[i].PublicKey = sig.PublicKey
+			response[i].KeyVersion = keyVersion
+		}
 	}
 
 	// Generate the response
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			"signature": sig.Signature,
-		},
-	}
+	resp := &logical.Response{}
+	if batchInputRaw != nil {
+		// Copy the references
+		for i := range batchInputItems {
+			response[i].Reference = batchInputItems[i]["reference"]
+		}
+		resp.Data = map[string]interface{}{
+			"batch_results": response,
+		}
+	} else {
+		if response[0].Error != "" || response[0].err != nil {
+			p.Unlock()
+			if response[0].Error != "" {
+				return logical.ErrorResponse(response[0].Error), response[0].err
+			}
 
-	if len(sig.PublicKey) > 0 {
-		resp.Data["public_key"] = sig.PublicKey
+			return nil, response[0].err
+		}
+
+		resp.Data = map[string]interface{}{
+			"signature":   response[0].Signature,
+			"key_version": response[0].KeyVersion,
+		}
+
+		if len(response[0].PublicKey) > 0 {
+			resp.Data["public_key"] = response[0].PublicKey
+		}
 	}
 
 	p.Unlock()
@@ -266,26 +509,82 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 }
 
 func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	sig := d.Get("signature").(string)
-	hmac := d.Get("hmac").(string)
+	batchInputRaw := d.Raw["batch_input"]
+	var batchInputItems []batchRequestVerifyItem
+	if batchInputRaw != nil {
+		err := mapstructure.Decode(batchInputRaw, &batchInputItems)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse batch input: %w", err)
+		}
+
+		if len(batchInputItems) == 0 {
+			return logical.ErrorResponse("missing batch input to process"), logical.ErrInvalidRequest
+		}
+	} else {
+		// use empty string if input is missing - not an error
+		inputB64 := d.Get("input").(string)
+
+		batchInputItems = make([]batchRequestVerifyItem, 1)
+		batchInputItems[0] = batchRequestVerifyItem{
+			"input": inputB64,
+		}
+		if sig, ok := d.GetOk("signature"); ok {
+			batchInputItems[0]["signature"] = sig.(string)
+		}
+		if hmac, ok := d.GetOk("hmac"); ok {
+			batchInputItems[0]["hmac"] = hmac.(string)
+		}
+		batchInputItems[0]["context"] = d.Get("context").(string)
+	}
+
+	// For simplicity, 'signature' and 'hmac' cannot be mixed across batch_input elements.
+	// If one batch_input item is 'signature', they all must be 'signature'.
+	// If one batch_input item is 'hmac', they all must be 'hmac'.
+	sigFound := false
+	hmacFound := false
+	missing := false
+	for _, v := range batchInputItems {
+		if _, ok := v["signature"]; ok {
+			sigFound = true
+		} else if _, ok := v["hmac"]; ok {
+			hmacFound = true
+		} else {
+			missing = true
+		}
+	}
+
 	switch {
-	case sig != "" && hmac != "":
+	case batchInputRaw == nil && sigFound && hmacFound:
 		return logical.ErrorResponse("provide one of 'signature' or 'hmac'"), logical.ErrInvalidRequest
 
-	case sig == "" && hmac == "":
+	case batchInputRaw == nil && !sigFound && !hmacFound:
 		return logical.ErrorResponse("neither a 'signature' nor an 'hmac' were given to verify"), logical.ErrInvalidRequest
 
-	case hmac != "":
-		return b.pathHMACVerify(ctx, req, d, hmac)
+	case sigFound && hmacFound:
+		return logical.ErrorResponse("elements of batch_input must all provide 'signature' or all provide 'hmac'"), logical.ErrInvalidRequest
+
+	case missing && sigFound:
+		return logical.ErrorResponse("some elements of batch_input are missing 'signature'"), logical.ErrInvalidRequest
+
+	case missing && hmacFound:
+		return logical.ErrorResponse("some elements of batch_input are missing 'hmac'"), logical.ErrInvalidRequest
+
+	case missing:
+		return logical.ErrorResponse("no batch_input elements have 'signature' or 'hmac'"), logical.ErrInvalidRequest
+
+	case hmacFound:
+		return b.pathHMACVerify(ctx, req, d)
 	}
 
 	name := d.Get("name").(string)
-	inputB64 := d.Get("input").(string)
 	hashAlgorithmStr := d.Get("urlalgorithm").(string)
 	if hashAlgorithmStr == "" {
 		hashAlgorithmStr = d.Get("hash_algorithm").(string)
 		if hashAlgorithmStr == "" {
 			hashAlgorithmStr = d.Get("algorithm").(string)
+			if hashAlgorithmStr == "" {
+				hashAlgorithmStr = defaultHashAlgorithm
+			}
 		}
 	}
 
@@ -302,17 +601,20 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 
 	prehashed := d.Get("prehashed").(bool)
 	sigAlgorithm := d.Get("signature_algorithm").(string)
-
-	input, err := base64.StdEncoding.DecodeString(inputB64)
+	saltLength, err := b.getSaltLength(d)
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("unable to decode input as base64: %s", err)), logical.ErrInvalidRequest
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+
+	if hashAlgorithm == keysutil.HashTypeNone && (!prehashed || sigAlgorithm != "pkcs1v15") {
+		return logical.ErrorResponse("hash_algorithm=none requires both prehashed=true and signature_algorithm=pkcs1v15"), logical.ErrInvalidRequest
 	}
 
 	// Get the policy
-	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
+	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
-	})
+	}, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}
@@ -328,42 +630,107 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 		return logical.ErrorResponse(fmt.Sprintf("key type %v does not support verification", p.Type)), logical.ErrInvalidRequest
 	}
 
-	contextRaw := d.Get("context").(string)
-	var context []byte
-	if len(contextRaw) != 0 {
-		context, err = base64.StdEncoding.DecodeString(contextRaw)
-		if err != nil {
-			p.Unlock()
-			return logical.ErrorResponse("failed to base64-decode context"), logical.ErrInvalidRequest
+	response := make([]batchResponseVerifyItem, len(batchInputItems))
+
+	for i, item := range batchInputItems {
+
+		rawInput, ok := item["input"]
+		if !ok {
+			response[i].Error = "missing input"
+			response[i].err = logical.ErrInvalidRequest
+			continue
 		}
-	}
 
-	if p.Type.HashSignatureInput() && !prehashed {
-		hf := keysutil.HashFuncMap[hashAlgorithm]()
-		hf.Write(input)
-		input = hf.Sum(nil)
-	}
+		input, err := base64.StdEncoding.DecodeString(rawInput)
+		if err != nil {
+			response[i].Error = fmt.Sprintf("unable to decode input as base64: %s", err)
+			response[i].err = logical.ErrInvalidRequest
+			continue
+		}
 
-	valid, err := p.VerifySignature(context, input, hashAlgorithm, sigAlgorithm, marshaling, sig)
-	if err != nil {
-		switch err.(type) {
-		case errutil.UserError:
-			p.Unlock()
-			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-		case errutil.InternalError:
-			p.Unlock()
-			return nil, err
-		default:
-			p.Unlock()
-			return nil, err
+		sig, ok := item["signature"]
+		if !ok {
+			response[i].Error = "missing signature"
+			response[i].err = logical.ErrInvalidRequest
+			continue
+		}
+
+		if p.Type.HashSignatureInput() && !prehashed {
+			hf := keysutil.HashFuncMap[hashAlgorithm]()
+			hf.Write(input)
+			input = hf.Sum(nil)
+		}
+
+		contextRaw := item["context"]
+		var context []byte
+		if len(contextRaw) != 0 {
+			context, err = base64.StdEncoding.DecodeString(contextRaw)
+			if err != nil {
+				response[i].Error = "failed to base64-decode context"
+				response[i].err = logical.ErrInvalidRequest
+				continue
+			}
+		}
+		var managedKeyParameters keysutil.ManagedKeyParameters
+		if p.Type == keysutil.KeyType_MANAGED_KEY {
+			managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
+			if !ok {
+				return nil, errors.New("unsupported system view")
+			}
+
+			managedKeyParameters = keysutil.ManagedKeyParameters{
+				ManagedKeySystemView: managedKeySystemView,
+				BackendUUID:          b.backendUUID,
+				Context:              ctx,
+			}
+		}
+
+		signingOptions := &keysutil.SigningOptions{
+			HashAlgorithm:    hashAlgorithm,
+			Marshaling:       marshaling,
+			SaltLength:       saltLength,
+			SigAlgorithm:     sigAlgorithm,
+			ManagedKeyParams: managedKeyParameters,
+		}
+
+		valid, err := p.VerifySignatureWithOptions(context, input, sig, signingOptions)
+		if err != nil {
+			switch err.(type) {
+			case errutil.UserError:
+				response[i].Error = err.Error()
+				response[i].err = logical.ErrInvalidRequest
+			default:
+				if batchInputRaw != nil {
+					response[i].Error = err.Error()
+				}
+				response[i].err = err
+			}
+		} else {
+			response[i].Valid = valid
 		}
 	}
 
 	// Generate the response
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			"valid": valid,
-		},
+	resp := &logical.Response{}
+	if batchInputRaw != nil {
+		// Copy the references
+		for i := range batchInputItems {
+			response[i].Reference = batchInputItems[i]["reference"]
+		}
+		resp.Data = map[string]interface{}{
+			"batch_results": response,
+		}
+	} else {
+		if response[0].Error != "" || response[0].err != nil {
+			p.Unlock()
+			if response[0].Error != "" {
+				return logical.ErrorResponse(response[0].Error), response[0].err
+			}
+			return nil, response[0].err
+		}
+		resp.Data = map[string]interface{}{
+			"valid": response[0].Valid,
+		}
 	}
 
 	p.Unlock()

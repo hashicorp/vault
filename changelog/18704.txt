@@ -1,0 +1,3 @@
+```release-note:bug
+storage/raft: Fix race with follower heartbeat tracker during teardown.
+```

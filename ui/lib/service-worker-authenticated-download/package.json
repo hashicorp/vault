@@ -1,0 +1,21 @@
+{
+  "name": "service-worker-authenticated-download",
+  "keywords": [
+    "ember-addon",
+    "ember-service-worker-plugin"
+  ],
+  "ember-addon": {
+    "before": [
+      "serve-files-middleware",
+      "broccoli-serve-files",
+      "history-support-middleware",
+      "proxy-server-middleware"
+    ]
+  },
+  "dependencies": {
+    "ember-cli-babel": "*",
+    "ember-auto-import": "*",
+    "ember-source": "*",
+    "ember-service-worker": "*"
+  }
+}

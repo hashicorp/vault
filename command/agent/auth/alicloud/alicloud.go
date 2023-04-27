@@ -1,9 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package alicloud
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"reflect"
 	"sync"
 	"time"
@@ -17,13 +21,11 @@ import (
 )
 
 /*
-
-	Creds can be inferred from instance metadata, and those creds
-	expire every 60 minutes, so we're going to need to poll for new
-	creds. Since we're polling anyways, let's poll once a minute so
-	all changes can be picked up rather quickly. This is configurable,
-	however.
-
+Creds can be inferred from instance metadata, and those creds
+expire every 60 minutes, so we're going to need to poll for new
+creds. Since we're polling anyways, let's poll once a minute so
+all changes can be picked up rather quickly. This is configurable,
+however.
 */
 const defaultCredCheckFreqSeconds = 60
 
@@ -174,16 +176,16 @@ type alicloudMethod struct {
 	stopCh chan struct{}
 }
 
-func (a *alicloudMethod) Authenticate(context.Context, *api.Client) (string, map[string]interface{}, error) {
+func (a *alicloudMethod) Authenticate(context.Context, *api.Client) (string, http.Header, map[string]interface{}, error) {
 	a.credLock.Lock()
 	defer a.credLock.Unlock()
 
 	a.logger.Trace("beginning authentication")
 	data, err := tools.GenerateLoginData(a.role, a.lastCreds, a.region)
 	if err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
-	return fmt.Sprintf("%s/login", a.mountPath), data, nil
+	return fmt.Sprintf("%s/login", a.mountPath), nil, data, nil
 }
 
 func (a *alicloudMethod) NewCreds() chan struct{} {
@@ -207,7 +209,7 @@ func (a *alicloudMethod) pollForCreds(credProvider providers.Provider, frequency
 			return
 		case <-ticker.C:
 			if err := a.checkCreds(credProvider); err != nil {
-				a.logger.Warn("unable to retrieve current creds, retaining last creds", err)
+				a.logger.Warn("unable to retrieve current creds, retaining last creds", "error", err)
 			}
 		}
 	}

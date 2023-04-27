@@ -1,0 +1,8 @@
+```release-note:bug
+auth/ldap: The logic for setting the entity alias when `username_as_alias` is set
+has been fixed. The previous behavior would make a request to the LDAP server to
+get `user_attr` before discarding it and using the username instead. This would
+make it impossible for a user to connect if this attribute was missing or had
+multiple values, even though it would not be used anyway. This has been fixed
+and the username is now used without making superfluous LDAP searches.
+```

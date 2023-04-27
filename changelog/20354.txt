@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: Include per-issuer enable_aia_url_templating in issuer read endpoint.
+```

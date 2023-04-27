@@ -1,0 +1,43 @@
+<Toolbar>
+  <ToolbarActions>
+    {{#if this.model.config.mode}}
+      <ToolbarLink
+        @route="mode.secondaries.config-edit"
+        @model={{this.model.config.id}}
+        data-test-replication-link="edit-mount-config"
+      >
+        Edit config
+      </ToolbarLink>
+    {{else}}
+      <ToolbarLink
+        @route="mode.secondaries.config-create"
+        @params={{this.model.config.id}}
+        data-test-replication-link="create-mount-config"
+      >
+        Create config
+      </ToolbarLink>
+    {{/if}}
+  </ToolbarActions>
+</Toolbar>
+<div class="box is-fullwidth is-shadowless is-marginless">
+  <h4 class="title is-5 is-marginless">
+    Mount filter config for
+    <code>{{this.model.config.id}}</code>
+  </h4>
+</div>
+{{#if this.model.config.mode}}
+  <div class="box is-fullwidth is-shadowless">
+    <InfoTableRow @label="Mode" @value={{this.model.config.mode}} data-test-mount-config-mode={{true}} />
+    <InfoTableRow @label="Paths" @value={{this.model.config.paths}}>
+      <ul class="list--comma" data-test-mount-config-paths={{true}}>
+        {{#each this.model.config.paths as |path|}}
+          <li>
+            <code class="has-text-black">{{path}}</code>
+          </li>
+        {{/each}}
+      </ul>
+    </InfoTableRow>
+  </div>
+{{else}}
+  <EmptyState @title="No config yet" @message="Performance Mount Filtering is not configured for this secondary" />
+{{/if}}

@@ -1,11 +1,14 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package transit
 
 import (
 	"testing"
 
-	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/keysutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestTransit_Trim(t *testing.T) {
@@ -36,10 +39,10 @@ func TestTransit_Trim(t *testing.T) {
 	doReq(t, req)
 
 	// Get the policy and check that the archive has correct number of keys
-	p, _, err := b.lm.GetPolicy(namespace.RootContext(nil), keysutil.PolicyRequest{
+	p, _, err := b.GetPolicy(namespace.RootContext(nil), keysutil.PolicyRequest{
 		Storage: storage,
 		Name:    "aes",
-	})
+	}, b.GetRandomReader())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,6 +79,20 @@ func TestTransit_Trim(t *testing.T) {
 	req.Path = "keys/aes/trim"
 	req.Data = map[string]interface{}{
 		"min_available_version": 1,
+	}
+	doErrReq(t, req)
+
+	// Set min_encryption_version to 0
+	req.Path = "keys/aes/config"
+	req.Data = map[string]interface{}{
+		"min_encryption_version": 0,
+	}
+	doReq(t, req)
+
+	// Min available version should not be converted to 0 for nil values
+	req.Path = "keys/aes/trim"
+	req.Data = map[string]interface{}{
+		"min_available_version": nil,
 	}
 	doErrReq(t, req)
 

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package aws
 
 import (
@@ -9,35 +12,54 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 )
 
 func pathUser(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "(creds|sts)/" + framework.GenericNameRegex("name"),
+		Pattern: "(creds|sts)/" + framework.GenericNameWithAtRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationVerb:   "generate",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the role",
 			},
-			"role_arn": &framework.FieldSchema{
+			"role_arn": {
 				Type:        framework.TypeString,
 				Description: "ARN of role to assume when credential_type is " + assumedRoleCred,
 			},
-			"ttl": &framework.FieldSchema{
+			"ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: "Lifetime of the returned credentials in seconds",
 				Default:     3600,
 			},
+			"role_session_name": {
+				Type:        framework.TypeString,
+				Description: "Session name to use when assuming role. Max chars: 64",
+			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathCredsRead,
-			logical.UpdateOperation: b.pathCredsRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathCredsRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "credentials|sts-credentials",
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathCredsRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "credentials2|sts-credentials2",
+				},
+			},
 		},
 
 		HelpSynopsis:    pathUserHelpSyn,
@@ -51,11 +73,11 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	// Read the policy
 	role, err := b.roleRead(ctx, req.Storage, roleName, true)
 	if err != nil {
-		return nil, errwrap.Wrapf("error retrieving role: {{err}}", err)
+		return nil, fmt.Errorf("error retrieving role: %w", err)
 	}
 	if role == nil {
 		return logical.ErrorResponse(fmt.Sprintf(
-			"Role '%s' not found", roleName)), nil
+			"Role %q not found", roleName)), nil
 	}
 
 	var ttl int64
@@ -81,6 +103,7 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	roleArn := d.Get("role_arn").(string)
+	roleSessionName := d.Get("role_session_name").(string)
 
 	var credentialType string
 	switch {
@@ -126,9 +149,9 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 		case !strutil.StrListContains(role.RoleArns, roleArn):
 			return logical.ErrorResponse(fmt.Sprintf("role_arn %q not in allowed role arns for Vault role %q", roleArn, roleName)), nil
 		}
-		return b.assumeRole(ctx, req.Storage, req.DisplayName, roleName, roleArn, role.PolicyDocument, ttl)
+		return b.assumeRole(ctx, req.Storage, req.DisplayName, roleName, roleArn, role.PolicyDocument, role.PolicyArns, role.IAMGroups, ttl, roleSessionName)
 	case federationTokenCred:
-		return b.secretTokenCreate(ctx, req.Storage, req.DisplayName, roleName, role.PolicyDocument, ttl)
+		return b.getFederationToken(ctx, req.Storage, req.DisplayName, roleName, role.PolicyDocument, role.PolicyArns, role.IAMGroups, ttl)
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unknown credential_type: %q", credentialType)), nil
 	}
@@ -148,7 +171,7 @@ func (b *backend) pathUserRollback(ctx context.Context, req *logical.Request, _k
 	}
 
 	// Get information about this user
-	groupsResp, err := client.ListGroupsForUser(&iam.ListGroupsForUserInput{
+	groupsResp, err := client.ListGroupsForUserWithContext(ctx, &iam.ListGroupsForUserInput{
 		UserName: aws.String(username),
 		MaxItems: aws.Int64(1000),
 	})
@@ -187,7 +210,7 @@ func (b *backend) pathUserRollback(ctx context.Context, req *logical.Request, _k
 	groups := groupsResp.Groups
 
 	// Inline (user) policies
-	policiesResp, err := client.ListUserPolicies(&iam.ListUserPoliciesInput{
+	policiesResp, err := client.ListUserPoliciesWithContext(ctx, &iam.ListUserPoliciesInput{
 		UserName: aws.String(username),
 		MaxItems: aws.Int64(1000),
 	})
@@ -197,7 +220,7 @@ func (b *backend) pathUserRollback(ctx context.Context, req *logical.Request, _k
 	policies := policiesResp.PolicyNames
 
 	// Attached managed policies
-	manPoliciesResp, err := client.ListAttachedUserPolicies(&iam.ListAttachedUserPoliciesInput{
+	manPoliciesResp, err := client.ListAttachedUserPoliciesWithContext(ctx, &iam.ListAttachedUserPoliciesInput{
 		UserName: aws.String(username),
 		MaxItems: aws.Int64(1000),
 	})
@@ -206,7 +229,7 @@ func (b *backend) pathUserRollback(ctx context.Context, req *logical.Request, _k
 	}
 	manPolicies := manPoliciesResp.AttachedPolicies
 
-	keysResp, err := client.ListAccessKeys(&iam.ListAccessKeysInput{
+	keysResp, err := client.ListAccessKeysWithContext(ctx, &iam.ListAccessKeysInput{
 		UserName: aws.String(username),
 		MaxItems: aws.Int64(1000),
 	})
@@ -217,7 +240,7 @@ func (b *backend) pathUserRollback(ctx context.Context, req *logical.Request, _k
 
 	// Revoke all keys
 	for _, k := range keys {
-		_, err = client.DeleteAccessKey(&iam.DeleteAccessKeyInput{
+		_, err = client.DeleteAccessKeyWithContext(ctx, &iam.DeleteAccessKeyInput{
 			AccessKeyId: k.AccessKeyId,
 			UserName:    aws.String(username),
 		})
@@ -228,7 +251,7 @@ func (b *backend) pathUserRollback(ctx context.Context, req *logical.Request, _k
 
 	// Detach managed policies
 	for _, p := range manPolicies {
-		_, err = client.DetachUserPolicy(&iam.DetachUserPolicyInput{
+		_, err = client.DetachUserPolicyWithContext(ctx, &iam.DetachUserPolicyInput{
 			UserName:  aws.String(username),
 			PolicyArn: p.PolicyArn,
 		})
@@ -239,7 +262,7 @@ func (b *backend) pathUserRollback(ctx context.Context, req *logical.Request, _k
 
 	// Delete any inline (user) policies
 	for _, p := range policies {
-		_, err = client.DeleteUserPolicy(&iam.DeleteUserPolicyInput{
+		_, err = client.DeleteUserPolicyWithContext(ctx, &iam.DeleteUserPolicyInput{
 			UserName:   aws.String(username),
 			PolicyName: p,
 		})
@@ -250,7 +273,7 @@ func (b *backend) pathUserRollback(ctx context.Context, req *logical.Request, _k
 
 	// Remove the user from all their groups
 	for _, g := range groups {
-		_, err = client.RemoveUserFromGroup(&iam.RemoveUserFromGroupInput{
+		_, err = client.RemoveUserFromGroupWithContext(ctx, &iam.RemoveUserFromGroupInput{
 			GroupName: g.GroupName,
 			UserName:  aws.String(username),
 		})
@@ -260,7 +283,7 @@ func (b *backend) pathUserRollback(ctx context.Context, req *logical.Request, _k
 	}
 
 	// Delete the user
-	_, err = client.DeleteUser(&iam.DeleteUserInput{
+	_, err = client.DeleteUserWithContext(ctx, &iam.DeleteUserInput{
 		UserName: aws.String(username),
 	})
 	if err != nil {

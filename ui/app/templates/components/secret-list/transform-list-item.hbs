@@ -1,0 +1,70 @@
+{{#if (and @item.updatePath.canRead (not this.isBuiltin))}}
+  <LinkedBlock
+    @params={{array "vault.cluster.secrets.backend.show" @itemPath}}
+    class="list-item-row"
+    data-test-secret-link={{@itemPath}}
+    @encode={{true}}
+    @queryParams={{secret-query-params @backendType}}
+  >
+    <div class="columns is-mobile">
+      <div class="column is-10">
+        <SecretLink
+          @mode="show"
+          @secret={{@itemPath}}
+          @queryParams={{hash type=@modelType}}
+          class="has-text-black has-text-weight-semibold"
+        >
+          <Icon @name="file" class="has-text-grey-light" />
+          {{if (eq @item.id " ") "(self)" (or @item.keyWithoutParent @item.id)}}
+        </SecretLink>
+      </div>
+      <div class="column has-text-right">
+        {{#if (or @item.updatePath.canRead @item.updatePath.canUpdate)}}
+          <PopupMenu name="secret-menu">
+            <nav class="menu">
+              <ul class="menu-list">
+                {{#if @item.updatePath.canRead}}
+                  <li class="action">
+                    <SecretLink @mode="show" @secret={{@itemPath}} class="has-text-black has-text-weight-semibold">
+                      Details
+                    </SecretLink>
+                  </li>
+                {{/if}}
+                {{#if @item.updatePath.canUpdate}}
+                  <li class="action">
+                    <SecretLink @mode="edit" @secret={{@itemPath}} class="has-text-black has-text-weight-semibold">
+                      Edit
+                    </SecretLink>
+                  </li>
+                {{/if}}
+              </ul>
+            </nav>
+          </PopupMenu>
+        {{/if}}
+      </div>
+    </div>
+  </LinkedBlock>
+{{else}}
+  <div class="list-item-row" data-test-view-only-list-item>
+    <div class="columns is-mobile">
+      <div class="column is-12 has-text-grey has-text-weight-semibold">
+        <Icon @name="file" class="has-text-grey-light" />
+        {{#if this.isBuiltin}}
+          <ToolTip @verticalPosition="above" @horizontalPosition="left" as |T|>
+            <T.Trigger @tabindex={{false}}>
+              {{@item.id}}
+            </T.Trigger>
+            <T.Content @defaultClass="tool-tip">
+              <div class="box">
+                This is a built-in HashiCorp
+                {{@itemType}}. It can't be viewed or edited.
+              </div>
+            </T.Content>
+          </ToolTip>
+        {{else}}
+          {{@item.id}}
+        {{/if}}
+      </div>
+    </div>
+  </div>
+{{/if}}

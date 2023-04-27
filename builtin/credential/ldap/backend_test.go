@@ -1,4 +1,5 @@
-// +build !travis
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
 
 package ldap
 
@@ -10,10 +11,17 @@ import (
 	"testing"
 	"time"
 
+	goldap "github.com/go-ldap/ldap/v3"
+	"github.com/go-test/deep"
+	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/logical"
-	logicaltest "github.com/hashicorp/vault/logical/testing"
+	"github.com/hashicorp/vault/helper/testhelpers/ldap"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/helper/ldaputil"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/helper/tokenutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -199,7 +207,7 @@ func TestLdapAuthBackend_CaseSensitivity(t *testing.T) {
 				"groups":   "EngineerS",
 				"policies": "userpolicy",
 			},
-			Path:    "users/teSlA",
+			Path:    "users/hermeS conRad",
 			Storage: storage,
 		}
 		resp, err = b.HandleRequest(ctx, userReq)
@@ -212,11 +220,11 @@ func TestLdapAuthBackend_CaseSensitivity(t *testing.T) {
 		}
 		switch caseSensitive {
 		case true:
-			if keys[0] != "teSlA" {
+			if keys[0] != "hermeS conRad" {
 				t.Fatalf("bad: %s", keys[0])
 			}
 		default:
-			if keys[0] != "tesla" {
+			if keys[0] != "hermes conrad" {
 				t.Fatalf("bad: %s", keys[0])
 			}
 		}
@@ -230,8 +238,9 @@ func TestLdapAuthBackend_CaseSensitivity(t *testing.T) {
 					"groups":   "EngineerS",
 					"policies": "userpolicy",
 				},
-				Path:    "users/tesla",
-				Storage: storage,
+				Path:       "users/Hermes Conrad",
+				Storage:    storage,
+				Connection: &logical.Connection{},
 			}
 			resp, err = b.HandleRequest(ctx, userReq)
 			if err != nil || (resp != nil && resp.IsError()) {
@@ -241,11 +250,12 @@ func TestLdapAuthBackend_CaseSensitivity(t *testing.T) {
 
 		loginReq := &logical.Request{
 			Operation: logical.UpdateOperation,
-			Path:      "login/tesla",
+			Path:      "login/Hermes Conrad",
 			Data: map[string]interface{}{
-				"password": "password",
+				"password": "hermes",
 			},
-			Storage: storage,
+			Storage:    storage,
+			Connection: &logical.Connection{},
 		}
 		resp, err = b.HandleRequest(ctx, loginReq)
 		if err != nil || (resp != nil && resp.IsError()) {
@@ -257,17 +267,19 @@ func TestLdapAuthBackend_CaseSensitivity(t *testing.T) {
 		}
 	}
 
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	defer cleanup()
 	configReq := &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "config",
 		Data: map[string]interface{}{
-			// Online LDAP test server
-			// http://www.forumsys.com/tutorials/integration-how-to/ldap/online-ldap-test-server/
-			"url":      "ldap://ldap.forumsys.com",
-			"userattr": "uid",
-			"userdn":   "dc=example,dc=com",
-			"groupdn":  "dc=example,dc=com",
-			"binddn":   "cn=read-only-admin,dc=example,dc=com",
+			"url":       cfg.Url,
+			"userattr":  cfg.UserAttr,
+			"userdn":    cfg.UserDN,
+			"groupdn":   cfg.GroupDN,
+			"groupattr": cfg.GroupAttr,
+			"binddn":    cfg.BindDN,
+			"bindpass":  cfg.BindPassword,
 		},
 		Storage: storage,
 	}
@@ -301,17 +313,19 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 	var err error
 	b, storage := createBackendWithStorage(t)
 
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	defer cleanup()
 	configReq := &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "config",
 		Data: map[string]interface{}{
-			// Online LDAP test server
-			// http://www.forumsys.com/tutorials/integration-how-to/ldap/online-ldap-test-server/
-			"url":      "ldap://ldap.forumsys.com",
-			"userattr": "uid",
-			"userdn":   "dc=example,dc=com",
-			"groupdn":  "dc=example,dc=com",
-			"binddn":   "cn=read-only-admin,dc=example,dc=com",
+			"url":          cfg.Url,
+			"userattr":     cfg.UserAttr,
+			"userdn":       cfg.UserDN,
+			"groupdn":      cfg.GroupDN,
+			"groupattr":    cfg.GroupAttr,
+			"binddn":       cfg.BindDN,
+			"bindpassword": cfg.BindPassword,
 		},
 		Storage: storage,
 	}
@@ -325,8 +339,9 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 		Data: map[string]interface{}{
 			"policies": "grouppolicy",
 		},
-		Path:    "groups/engineers",
-		Storage: storage,
+		Path:       "groups/engineers",
+		Storage:    storage,
+		Connection: &logical.Connection{},
 	}
 	resp, err = b.HandleRequest(context.Background(), groupReq)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -339,8 +354,9 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 			"groups":   "engineers",
 			"policies": "userpolicy",
 		},
-		Path:    "users/tesla",
-		Storage: storage,
+		Path:       "users/hermes conrad",
+		Storage:    storage,
+		Connection: &logical.Connection{},
 	}
 
 	resp, err = b.HandleRequest(context.Background(), userReq)
@@ -350,11 +366,12 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 
 	loginReq := &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "login/tesla",
+		Path:      "login/hermes conrad",
 		Data: map[string]interface{}{
-			"password": "password",
+			"password": "hermes",
 		},
-		Storage: storage,
+		Storage:    storage,
+		Connection: &logical.Connection{},
 	}
 
 	resp, err = b.HandleRequest(context.Background(), loginReq)
@@ -368,25 +385,28 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 }
 
 /*
- * Acceptance test for LDAP Auth Method
- *
- * The tests here rely on a public LDAP server:
- * [http://www.forumsys.com/tutorials/integration-how-to/ldap/online-ldap-test-server/]
- *
- * ...as well as existence of a person object, `uid=tesla,dc=example,dc=com`,
- *    which is a member of a group, `ou=scientists,dc=example,dc=com`
- *
- * Querying the server from the command line:
- *   $ ldapsearch -x -H ldap://ldap.forumsys.com -b dc=example,dc=com -s sub \
- *       '(&(objectClass=groupOfUniqueNames)(uniqueMember=uid=tesla,dc=example,dc=com))'
- *
- *   $ ldapsearch -x -H ldap://ldap.forumsys.com -b dc=example,dc=com -s sub uid=tesla
- */
+* Acceptance test for LDAP Auth Method
+*
+* The tests here rely on a docker LDAP server:
+* [https://github.com/rroemhild/docker-test-openldap]
+*
+* ...as well as existence of a person object, `cn=Hermes Conrad,dc=example,dc=com`,
+*    which is a member of a group, `cn=admin_staff,ou=people,dc=example,dc=com`
+*
+  - Querying the server from the command line:
+  - $ docker run --privileged -d -p 389:389 --name ldap --rm rroemhild/test-openldap
+  - $ ldapsearch -x -H ldap://localhost -b dc=planetexpress,dc=com -s sub uid=hermes
+  - $ ldapsearch -x -H ldap://localhost -b dc=planetexpress,dc=com -s sub \
+    'member=cn=Hermes Conrad,ou=people,dc=planetexpress,dc=com'
+*/
 func factory(t *testing.T) logical.Backend {
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 32
 	b, err := Factory(context.Background(), &logical.BackendConfig{
-		Logger: nil,
+		Logger: hclog.New(&hclog.LoggerOptions{
+			Name:  "FactoryLogger",
+			Level: hclog.Debug,
+		}),
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: defaultLeaseTTLVal,
 			MaxLeaseTTLVal:     maxLeaseTTLVal,
@@ -400,59 +420,67 @@ func factory(t *testing.T) logical.Backend {
 
 func TestBackend_basic(t *testing.T) {
 	b := factory(t)
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfigUrl(t),
-			// Map Scientists group (from LDAP server) with foo policy
-			testAccStepGroup(t, "Scientists", "foo"),
+			testAccStepConfigUrl(t, cfg),
+			// Map Admin_staff group (from LDAP server) with foo policy
+			testAccStepGroup(t, "admin_staff", "foo"),
 
 			// Map engineers group (local) with bar policy
 			testAccStepGroup(t, "engineers", "bar"),
 
-			// Map tesla user with local engineers group
-			testAccStepUser(t, "tesla", "engineers"),
+			// Map hermes conrad user with local engineers group
+			testAccStepUser(t, "hermes conrad", "engineers"),
 
 			// Authenticate
-			testAccStepLogin(t, "tesla", "password"),
+			testAccStepLogin(t, "hermes conrad", "hermes"),
 
 			// Verify both groups mappings can be listed back
-			testAccStepGroupList(t, []string{"engineers", "Scientists"}),
+			testAccStepGroupList(t, []string{"engineers", "admin_staff"}),
 
 			// Verify user mapping can be listed back
-			testAccStepUserList(t, []string{"tesla"}),
+			testAccStepUserList(t, []string{"hermes conrad"}),
 		},
 	})
 }
 
 func TestBackend_basic_noPolicies(t *testing.T) {
 	b := factory(t)
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	defer cleanup()
+
 	logicaltest.Test(t, logicaltest.TestCase{
 		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfigUrl(t),
+			testAccStepConfigUrl(t, cfg),
 			// Create LDAP user
-			testAccStepUser(t, "tesla", ""),
+			testAccStepUser(t, "hermes conrad", ""),
 			// Authenticate
-			testAccStepLoginNoAttachedPolicies(t, "tesla", "password"),
-			testAccStepUserList(t, []string{"tesla"}),
+			testAccStepLoginNoAttachedPolicies(t, "hermes conrad", "hermes"),
+			testAccStepUserList(t, []string{"hermes conrad"}),
 		},
 	})
 }
 
 func TestBackend_basic_group_noPolicies(t *testing.T) {
 	b := factory(t)
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	defer cleanup()
+
 	logicaltest.Test(t, logicaltest.TestCase{
 		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfigUrl(t),
+			testAccStepConfigUrl(t, cfg),
 			// Create engineers group with no policies
 			testAccStepGroup(t, "engineers", ""),
-			// Map tesla user with local engineers group
-			testAccStepUser(t, "tesla", "engineers"),
+			// Map hermes conrad user with local engineers group
+			testAccStepUser(t, "hermes conrad", "engineers"),
 			// Authenticate
-			testAccStepLoginNoAttachedPolicies(t, "tesla", "password"),
+			testAccStepLoginNoAttachedPolicies(t, "hermes conrad", "hermes"),
 			// Verify group mapping can be listed back
 			testAccStepGroupList(t, []string{"engineers"}),
 		},
@@ -461,45 +489,259 @@ func TestBackend_basic_group_noPolicies(t *testing.T) {
 
 func TestBackend_basic_authbind(t *testing.T) {
 	b := factory(t)
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfigUrlWithAuthBind(t),
-			testAccStepGroup(t, "Scientists", "foo"),
+			testAccStepConfigUrlWithAuthBind(t, cfg),
+			testAccStepGroup(t, "admin_staff", "foo"),
 			testAccStepGroup(t, "engineers", "bar"),
-			testAccStepUser(t, "tesla", "engineers"),
-			testAccStepLogin(t, "tesla", "password"),
+			testAccStepUser(t, "hermes conrad", "engineers"),
+			testAccStepLogin(t, "hermes conrad", "hermes"),
 		},
 	})
 }
 
-func TestBackend_basic_discover(t *testing.T) {
+func TestBackend_basic_authbind_userfilter(t *testing.T) {
 	b := factory(t)
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	defer cleanup()
+
+	// userattr not used in the userfilter should result in a warning in the response
+	cfg.UserFilter = "((mail={{.Username}}))"
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrlWarningCheck(t, cfg, logical.UpdateOperation, []string{userFilterWarning}),
+			testAccStepConfigUrlWarningCheck(t, cfg, logical.ReadOperation, []string{userFilterWarning}),
+		},
+	})
+
+	// If both upndomain and userfilter is set, ensure that a warning is still
+	// returned if userattr is not considered
+	cfg.UPNDomain = "planetexpress.com"
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfigUrlWithDiscover(t),
-			testAccStepGroup(t, "Scientists", "foo"),
+			testAccStepConfigUrlWarningCheck(t, cfg, logical.UpdateOperation, []string{userFilterWarning}),
+			testAccStepConfigUrlWarningCheck(t, cfg, logical.ReadOperation, []string{userFilterWarning}),
+		},
+	})
+
+	cfg.UPNDomain = ""
+
+	// Add a liberal user filter, allowing to log in with either cn or email
+	cfg.UserFilter = "(|({{.UserAttr}}={{.Username}})(mail={{.Username}}))"
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrl(t, cfg),
+			// Create engineers group with no policies
+			testAccStepGroup(t, "engineers", ""),
+			// Map hermes conrad user with local engineers group
+			testAccStepUser(t, "hermes conrad", "engineers"),
+			// Authenticate with cn attribute
+			testAccStepLoginNoAttachedPolicies(t, "hermes conrad", "hermes"),
+			// Authenticate with mail attribute
+			testAccStepLoginNoAttachedPolicies(t, "hermes@planetexpress.com", "hermes"),
+		},
+	})
+
+	// A filter giving the same DN makes the entity_id the same
+	entity_id := ""
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrl(t, cfg),
+			// Create engineers group with no policies
+			testAccStepGroup(t, "engineers", ""),
+			// Map hermes conrad user with local engineers group
+			testAccStepUser(t, "hermes conrad", "engineers"),
+			// Authenticate with cn attribute
+			testAccStepLoginReturnsSameEntity(t, "hermes conrad", "hermes", &entity_id),
+			// Authenticate with mail attribute
+			testAccStepLoginReturnsSameEntity(t, "hermes@planetexpress.com", "hermes", &entity_id),
+		},
+	})
+
+	// Missing entity alias attribute means access denied
+	cfg.UserAttr = "inexistent"
+	cfg.UserFilter = "(|({{.UserAttr}}={{.Username}})(mail={{.Username}}))"
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrl(t, cfg),
+			// Authenticate with mail attribute will find DN but missing attribute means access denied
+			testAccStepLoginFailure(t, "hermes@planetexpress.com", "hermes"),
+		},
+	})
+	cfg.UserAttr = "cn"
+
+	// UPNDomain has precedence over userfilter, for backward compatibility
+	cfg.UPNDomain = "planetexpress.com"
+
+	addUPNAttributeToLDAPSchemaAndUser(t, cfg, "cn=Hubert J. Farnsworth,ou=people,dc=planetexpress,dc=com", "professor@planetexpress.com")
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrlWithAuthBind(t, cfg),
+			testAccStepLoginNoAttachedPolicies(t, "professor", "professor"),
+		},
+	})
+
+	cfg.UPNDomain = ""
+
+	// Add a strict user filter, rejecting login of bureaucrats
+	cfg.UserFilter = "(&({{.UserAttr}}={{.Username}})(!(employeeType=Bureaucrat)))"
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrl(t, cfg),
+			// Authenticate with cn attribute
+			testAccStepLoginFailure(t, "hermes conrad", "hermes"),
+		},
+	})
+
+	// Login fails when multiple user match search filter (using an incorrect filter on purporse)
+	cfg.UserFilter = "(objectClass=*)"
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			// testAccStepConfigUrl(t, cfg),
+			testAccStepConfigUrlWithAuthBind(t, cfg),
+			// Authenticate with cn attribute
+			testAccStepLoginFailure(t, "hermes conrad", "hermes"),
+		},
+	})
+
+	// If UserAttr returns multiple attributes that can be used as alias then
+	// we return an error...
+	cfg.UserAttr = "employeeType"
+	cfg.UserFilter = "(cn={{.Username}})"
+	cfg.UsernameAsAlias = false
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrl(t, cfg),
+			testAccStepLoginFailure(t, "hermes conrad", "hermes"),
+		},
+	})
+
+	// ...unless username_as_alias has been set in which case we don't care
+	// about the alias returned by the LDAP server and always use the username
+	cfg.UsernameAsAlias = true
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrl(t, cfg),
+			testAccStepLoginNoAttachedPolicies(t, "hermes conrad", "hermes"),
+		},
+	})
+}
+
+func TestBackend_basic_authbind_metadata_name(t *testing.T) {
+	b := factory(t)
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	defer cleanup()
+
+	cfg.UserAttr = "cn"
+	cfg.UPNDomain = "planetexpress.com"
+
+	addUPNAttributeToLDAPSchemaAndUser(t, cfg, "cn=Hubert J. Farnsworth,ou=people,dc=planetexpress,dc=com", "professor@planetexpress.com")
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrlWithAuthBind(t, cfg),
+			testAccStepLoginAliasMetadataName(t, "professor", "professor"),
+		},
+	})
+}
+
+func addUPNAttributeToLDAPSchemaAndUser(t *testing.T, cfg *ldaputil.ConfigEntry, testUserDN string, testUserUPN string) {
+	// Setup connection
+	client := &ldaputil.Client{
+		Logger: hclog.New(&hclog.LoggerOptions{
+			Name:  "LDAPAuthTest",
+			Level: hclog.Debug,
+		}),
+		LDAP: ldaputil.NewLDAP(),
+	}
+	conn, err := client.DialLDAP(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	if err := conn.Bind("cn=admin,cn=config", cfg.BindPassword); err != nil {
+		t.Fatal(err)
+	}
+
+	// Add userPrincipalName attribute type
+	userPrincipleNameTypeReq := goldap.NewModifyRequest("cn={0}core,cn=schema,cn=config", nil)
+	userPrincipleNameTypeReq.Add("olcAttributetypes", []string{"( 2.25.247072656268950430024439664556757516066 NAME ( 'userPrincipalName' ) SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 EQUALITY caseIgnoreMatch SINGLE-VALUE )"})
+	if err := conn.Modify(userPrincipleNameTypeReq); err != nil {
+		t.Fatal(err)
+	}
+
+	// Add new object class
+	userPrincipleNameObjClassReq := goldap.NewModifyRequest("cn={0}core,cn=schema,cn=config", nil)
+	userPrincipleNameObjClassReq.Add("olcObjectClasses", []string{"( 1.2.840.113556.6.2.6 NAME 'PrincipalNameClass' AUXILIARY MAY ( userPrincipalName ) )"})
+	if err := conn.Modify(userPrincipleNameObjClassReq); err != nil {
+		t.Fatal(err)
+	}
+
+	// Re-authenticate with the binddn user
+	if err := conn.Bind(cfg.BindDN, cfg.BindPassword); err != nil {
+		t.Fatal(err)
+	}
+
+	// Modify professor user and add userPrincipalName attribute
+	modifyUserReq := goldap.NewModifyRequest(testUserDN, nil)
+	modifyUserReq.Add("objectClass", []string{"PrincipalNameClass"})
+	modifyUserReq.Add("userPrincipalName", []string{testUserUPN})
+	if err := conn.Modify(modifyUserReq); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestBackend_basic_discover(t *testing.T) {
+	b := factory(t)
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	defer cleanup()
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrlWithDiscover(t, cfg),
+			testAccStepGroup(t, "admin_staff", "foo"),
 			testAccStepGroup(t, "engineers", "bar"),
-			testAccStepUser(t, "tesla", "engineers"),
-			testAccStepLogin(t, "tesla", "password"),
+			testAccStepUser(t, "hermes conrad", "engineers"),
+			testAccStepLogin(t, "hermes conrad", "hermes"),
 		},
 	})
 }
 
 func TestBackend_basic_nogroupdn(t *testing.T) {
 	b := factory(t)
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfigUrlNoGroupDN(t),
-			testAccStepGroup(t, "Scientists", "foo"),
+			testAccStepConfigUrlNoGroupDN(t, cfg),
+			testAccStepGroup(t, "admin_staff", "foo"),
 			testAccStepGroup(t, "engineers", "bar"),
-			testAccStepUser(t, "tesla", "engineers"),
-			testAccStepLoginNoGroupDN(t, "tesla", "password"),
+			testAccStepUser(t, "hermes conrad", "engineers"),
+			testAccStepLoginNoGroupDN(t, "hermes conrad", "hermes"),
 		},
 	})
 }
@@ -527,12 +769,12 @@ func TestBackend_configDefaultsAfterUpdate(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
-			logicaltest.TestStep{
+			{
 				Operation: logical.UpdateOperation,
 				Path:      "config",
 				Data:      map[string]interface{}{},
 			},
-			logicaltest.TestStep{
+			{
 				Operation: logical.ReadOperation,
 				Path:      "config",
 				Check: func(resp *logical.Response) error {
@@ -544,22 +786,27 @@ func TestBackend_configDefaultsAfterUpdate(t *testing.T) {
 					cfg := resp.Data
 					defaultGroupFilter := "(|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))"
 					if cfg["groupfilter"] != defaultGroupFilter {
-						t.Errorf("Default mismatch: groupfilter. Expected: '%s', received :'%s'", defaultGroupFilter, cfg["groupfilter"])
+						t.Errorf("Default mismatch: groupfilter. Expected: %q, received :%q", defaultGroupFilter, cfg["groupfilter"])
 					}
 
 					defaultGroupAttr := "cn"
 					if cfg["groupattr"] != defaultGroupAttr {
-						t.Errorf("Default mismatch: groupattr. Expected: '%s', received :'%s'", defaultGroupAttr, cfg["groupattr"])
+						t.Errorf("Default mismatch: groupattr. Expected: %q, received :%q", defaultGroupAttr, cfg["groupattr"])
 					}
 
 					defaultUserAttr := "cn"
 					if cfg["userattr"] != defaultUserAttr {
-						t.Errorf("Default mismatch: userattr. Expected: '%s', received :'%s'", defaultUserAttr, cfg["userattr"])
+						t.Errorf("Default mismatch: userattr. Expected: %q, received :%q", defaultUserAttr, cfg["userattr"])
+					}
+
+					defaultUserFilter := "({{.UserAttr}}={{.Username}})"
+					if cfg["userfilter"] != defaultUserFilter {
+						t.Errorf("Default mismatch: userfilter. Expected: %q, received :%q", defaultUserFilter, cfg["userfilter"])
 					}
 
 					defaultDenyNullBind := true
 					if cfg["deny_null_bind"] != defaultDenyNullBind {
-						t.Errorf("Default mismatch: deny_null_bind. Expected: '%t', received :'%s'", defaultDenyNullBind, cfg["deny_null_bind"])
+						t.Errorf("Default mismatch: deny_null_bind. Expected: '%t', received :%q", defaultDenyNullBind, cfg["deny_null_bind"])
 					}
 
 					return nil
@@ -569,70 +816,116 @@ func TestBackend_configDefaultsAfterUpdate(t *testing.T) {
 	})
 }
 
-func testAccStepConfigUrl(t *testing.T) logicaltest.TestStep {
+func testAccStepConfigUrl(t *testing.T, cfg *ldaputil.ConfigEntry) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config",
 		Data: map[string]interface{}{
-			// Online LDAP test server
-			// http://www.forumsys.com/tutorials/integration-how-to/ldap/online-ldap-test-server/
-			"url":                  "ldap://ldap.forumsys.com",
-			"userattr":             "uid",
-			"userdn":               "dc=example,dc=com",
-			"groupdn":              "dc=example,dc=com",
+			"url":                  cfg.Url,
+			"userattr":             cfg.UserAttr,
+			"userdn":               cfg.UserDN,
+			"userfilter":           cfg.UserFilter,
+			"groupdn":              cfg.GroupDN,
+			"groupattr":            cfg.GroupAttr,
+			"binddn":               cfg.BindDN,
+			"bindpass":             cfg.BindPassword,
 			"case_sensitive_names": true,
+			"token_policies":       "abc,xyz",
+			"request_timeout":      cfg.RequestTimeout,
+			"connection_timeout":   cfg.ConnectionTimeout,
+			"username_as_alias":    cfg.UsernameAsAlias,
 		},
 	}
 }
 
-func testAccStepConfigUrlWithAuthBind(t *testing.T) logicaltest.TestStep {
+func testAccStepConfigUrlWithAuthBind(t *testing.T, cfg *ldaputil.ConfigEntry) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config",
 		Data: map[string]interface{}{
-			// Online LDAP test server
-			// http://www.forumsys.com/tutorials/integration-how-to/ldap/online-ldap-test-server/
 			// In this test we also exercise multiple URL support
-			"url":                  "foobar://ldap.example.com,ldap://ldap.forumsys.com",
-			"userattr":             "uid",
-			"userdn":               "dc=example,dc=com",
-			"groupdn":              "dc=example,dc=com",
-			"binddn":               "cn=read-only-admin,dc=example,dc=com",
-			"bindpass":             "password",
+			"url":                  "foobar://ldap.example.com," + cfg.Url,
+			"userattr":             cfg.UserAttr,
+			"userdn":               cfg.UserDN,
+			"groupdn":              cfg.GroupDN,
+			"groupattr":            cfg.GroupAttr,
+			"binddn":               cfg.BindDN,
+			"bindpass":             cfg.BindPassword,
+			"upndomain":            cfg.UPNDomain,
 			"case_sensitive_names": true,
+			"token_policies":       "abc,xyz",
+			"request_timeout":      cfg.RequestTimeout,
+			"connection_timeout":   cfg.ConnectionTimeout,
 		},
 	}
 }
 
-func testAccStepConfigUrlWithDiscover(t *testing.T) logicaltest.TestStep {
+func testAccStepConfigUrlWithDiscover(t *testing.T, cfg *ldaputil.ConfigEntry) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config",
 		Data: map[string]interface{}{
-			// Online LDAP test server
-			// http://www.forumsys.com/tutorials/integration-how-to/ldap/online-ldap-test-server/
-			"url":                  "ldap://ldap.forumsys.com",
-			"userattr":             "uid",
-			"userdn":               "dc=example,dc=com",
-			"groupdn":              "dc=example,dc=com",
+			"url":                  cfg.Url,
+			"userattr":             cfg.UserAttr,
+			"userdn":               cfg.UserDN,
+			"groupdn":              cfg.GroupDN,
+			"groupattr":            cfg.GroupAttr,
+			"binddn":               cfg.BindDN,
+			"bindpass":             cfg.BindPassword,
 			"discoverdn":           true,
 			"case_sensitive_names": true,
+			"token_policies":       "abc,xyz",
+			"request_timeout":      cfg.RequestTimeout,
+			"connection_timeout":   cfg.ConnectionTimeout,
 		},
 	}
 }
 
-func testAccStepConfigUrlNoGroupDN(t *testing.T) logicaltest.TestStep {
+func testAccStepConfigUrlNoGroupDN(t *testing.T, cfg *ldaputil.ConfigEntry) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config",
 		Data: map[string]interface{}{
-			// Online LDAP test server
-			// http://www.forumsys.com/tutorials/integration-how-to/ldap/online-ldap-test-server/
-			"url":                  "ldap://ldap.forumsys.com",
-			"userattr":             "uid",
-			"userdn":               "dc=example,dc=com",
+			"url":                  cfg.Url,
+			"userattr":             cfg.UserAttr,
+			"userdn":               cfg.UserDN,
+			"binddn":               cfg.BindDN,
+			"bindpass":             cfg.BindPassword,
 			"discoverdn":           true,
 			"case_sensitive_names": true,
+			"request_timeout":      cfg.RequestTimeout,
+			"connection_timeout":   cfg.ConnectionTimeout,
+		},
+	}
+}
+
+func testAccStepConfigUrlWarningCheck(t *testing.T, cfg *ldaputil.ConfigEntry, operation logical.Operation, warnings []string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: operation,
+		Path:      "config",
+		Data: map[string]interface{}{
+			"url":                  cfg.Url,
+			"userattr":             cfg.UserAttr,
+			"userdn":               cfg.UserDN,
+			"userfilter":           cfg.UserFilter,
+			"groupdn":              cfg.GroupDN,
+			"groupattr":            cfg.GroupAttr,
+			"binddn":               cfg.BindDN,
+			"bindpass":             cfg.BindPassword,
+			"case_sensitive_names": true,
+			"token_policies":       "abc,xyz",
+			"request_timeout":      cfg.RequestTimeout,
+			"connection_timeout":   cfg.ConnectionTimeout,
+		},
+		Check: func(response *logical.Response) error {
+			if len(response.Warnings) == 0 {
+				return fmt.Errorf("expected warnings, got none")
+			}
+
+			if !strutil.StrListSubset(response.Warnings, warnings) {
+				return fmt.Errorf("expected response to contain the following warnings:\n%s\ngot:\n%s", warnings, response.Warnings)
+			}
+			return nil
 		},
 	}
 }
@@ -751,8 +1044,22 @@ func testAccStepLogin(t *testing.T, user string, pass string) logicaltest.TestSt
 		},
 		Unauthenticated: true,
 
-		// Verifies user tesla maps to groups via local group (engineers) as well as remote group (Scientists)
-		Check: logicaltest.TestCheckAuth([]string{"bar", "default", "foo"}),
+		// Verifies user hermes conrad maps to groups via local group (engineers) as well as remote group (Scientists)
+		Check: logicaltest.TestCheckAuth([]string{"abc", "bar", "default", "foo", "xyz"}),
+	}
+}
+
+func testAccStepLoginReturnsSameEntity(t *testing.T, user string, pass string, entity_id *string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "login/" + user,
+		Data: map[string]interface{}{
+			"password": pass,
+		},
+		Unauthenticated: true,
+
+		// Verifies user hermes conrad maps to groups via local group (engineers) as well as remote group (Scientists)
+		Check: logicaltest.TestCheckAuthEntityId(entity_id),
 	}
 }
 
@@ -765,8 +1072,34 @@ func testAccStepLoginNoAttachedPolicies(t *testing.T, user string, pass string) 
 		},
 		Unauthenticated: true,
 
-		// Verifies user tesla maps to groups via local group (engineers) as well as remote group (Scientists)
-		Check: logicaltest.TestCheckAuth([]string{"default"}),
+		// Verifies user hermes conrad maps to groups via local group (engineers) as well as remote group (Scientists)
+		Check: logicaltest.TestCheckAuth([]string{"abc", "default", "xyz"}),
+	}
+}
+
+func testAccStepLoginAliasMetadataName(t *testing.T, user string, pass string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "login/" + user,
+		Data: map[string]interface{}{
+			"password": pass,
+		},
+		Unauthenticated: true,
+
+		Check: logicaltest.TestCheckAuthEntityAliasMetadataName("name", user),
+	}
+}
+
+func testAccStepLoginFailure(t *testing.T, user string, pass string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "login/" + user,
+		Data: map[string]interface{}{
+			"password": pass,
+		},
+		Unauthenticated: true,
+
+		ErrorOk: true,
 	}
 }
 
@@ -837,5 +1170,108 @@ func testAccStepUserList(t *testing.T, users []string) logicaltest.TestStep {
 			}
 			return nil
 		},
+	}
+}
+
+func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
+	var resp *logical.Response
+	var err error
+	b, storage := createBackendWithStorage(t)
+
+	ctx := context.Background()
+
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	defer cleanup()
+	configReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config",
+		Data: map[string]interface{}{
+			"url":                    cfg.Url,
+			"userattr":               cfg.UserAttr,
+			"userdn":                 cfg.UserDN,
+			"userfilter":             cfg.UserFilter,
+			"groupdn":                cfg.GroupDN,
+			"groupattr":              cfg.GroupAttr,
+			"binddn":                 cfg.BindDN,
+			"bindpass":               cfg.BindPassword,
+			"token_period":           "5m",
+			"token_explicit_max_ttl": "24h",
+			"request_timeout":        cfg.RequestTimeout,
+			"max_page_size":          cfg.MaximumPageSize,
+			"connection_timeout":     cfg.ConnectionTimeout,
+		},
+		Storage:    storage,
+		Connection: &logical.Connection{},
+	}
+	resp, err = b.HandleRequest(ctx, configReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	fd, err := b.getConfigFieldData()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defParams, err := ldaputil.NewConfigEntry(nil, fd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	falseBool := new(bool)
+	*falseBool = false
+
+	exp := &ldapConfigEntry{
+		TokenParams: tokenutil.TokenParams{
+			TokenPeriod:         5 * time.Minute,
+			TokenExplicitMaxTTL: 24 * time.Hour,
+		},
+		ConfigEntry: &ldaputil.ConfigEntry{
+			Url:                      cfg.Url,
+			UserAttr:                 cfg.UserAttr,
+			UserFilter:               cfg.UserFilter,
+			UserDN:                   cfg.UserDN,
+			GroupDN:                  cfg.GroupDN,
+			GroupAttr:                cfg.GroupAttr,
+			BindDN:                   cfg.BindDN,
+			BindPassword:             cfg.BindPassword,
+			GroupFilter:              defParams.GroupFilter,
+			DenyNullBind:             defParams.DenyNullBind,
+			TLSMinVersion:            defParams.TLSMinVersion,
+			TLSMaxVersion:            defParams.TLSMaxVersion,
+			CaseSensitiveNames:       falseBool,
+			UsePre111GroupCNBehavior: new(bool),
+			RequestTimeout:           cfg.RequestTimeout,
+			ConnectionTimeout:        cfg.ConnectionTimeout,
+			UsernameAsAlias:          false,
+			DerefAliases:             "never",
+			MaximumPageSize:          1000,
+		},
+	}
+
+	configEntry, err := b.Config(ctx, configReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := deep.Equal(exp, configEntry); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Store just the config entry portion, for upgrade testing
+	entry, err := logical.StorageEntryJSON("config", configEntry.ConfigEntry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = configReq.Storage.Put(ctx, entry)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	configEntry, err = b.Config(ctx, configReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// We won't have token params anymore so nil those out
+	exp.TokenParams = tokenutil.TokenParams{}
+	if diff := deep.Equal(exp, configEntry); diff != nil {
+		t.Fatal(diff)
 	}
 }

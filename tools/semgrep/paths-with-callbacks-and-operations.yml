@@ -1,0 +1,16 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
+rules:
+  - id: path-has-both-callbacks-and-operations
+    patterns:
+      - pattern-either:
+          - pattern: |
+              []*framework.Path{..., {..., Pattern: $PATTERN, ..., Callbacks:$CALL, ..., Operations:$OP, ... }, ...}
+          - pattern: |
+              []*framework.Path{..., {..., Pattern: $PATTERN, ..., Operations:$OP, ..., Callbacks:$CALL, ... }, ...}
+             
+    message: "Path has both Callbacks and Operations for pattern $PATTERN"
+    languages: [go]
+    severity: ERROR
+    

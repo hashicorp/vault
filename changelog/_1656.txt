@@ -1,0 +1,5 @@
+```release-note:bug
+storage/raft (enterprise): The parameter aws_s3_server_kms_key was misnamed and
+didn't work.  Renamed to aws_s3_kms_key, and make it work so that when provided
+the given key will be used to encrypt the snapshot using AWS KMS.
+```

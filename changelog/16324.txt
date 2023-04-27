@@ -1,0 +1,3 @@
+```release-note:bug
+storage/raft (enterprise): Prevent unauthenticated voter status change with rejoin
+```

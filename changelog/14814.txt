@@ -1,0 +1,3 @@
+```release-note:bug
+core: time.After() used in a select statement can lead to memory leak
+```

@@ -1,5 +1,10 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 export function initialize(appInstance) {
-  let service = appInstance.lookup('service:csp-event');
+  const service = appInstance.lookup('service:csp-event');
   service.attach();
 }
 

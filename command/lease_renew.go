@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -9,8 +12,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*LeaseRenewCommand)(nil)
-var _ cli.CommandAutocomplete = (*LeaseRenewCommand)(nil)
+var (
+	_ cli.Command             = (*LeaseRenewCommand)(nil)
+	_ cli.CommandAutocomplete = (*LeaseRenewCommand)(nil)
+)
 
 type LeaseRenewCommand struct {
 	*BaseCommand

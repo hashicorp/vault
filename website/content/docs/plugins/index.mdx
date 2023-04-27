@@ -1,0 +1,86 @@
+---
+layout: docs
+page_title: Plugin System
+description: Learn about Vault's plugin system.
+---
+
+
+# Plugin System
+
+Vault supports 3 types of plugins; auth methods, secret engines, and database
+plugins. This concept allows both built-in and external plugins to be treated
+like building blocks. Any plugin can exist at multiple different mount paths.
+Different versions of a plugin may be at each location, with each version differing
+from Vault's version.
+
+A plugin is uniquely identified by its type (one of `secret`, `auth`, or
+`database`), name (e.g. `aws`), and version (e.g `v1.0.0`). An empty version
+implies either the built-in plugin or the single unversioned plugin that can
+be registered.
+
+See [Plugin Upgrade Procedure](/vault/docs/upgrading/plugins#plugin-upgrade-procedure)
+for details on how to upgrade a built-in plugin in-place.
+
+## Built-In Plugins
+
+Built-in plugins are shipped with Vault, often for commonly used integrations,
+and can be used without any prerequisite steps.
+
+## External Plugins
+
+External plugins are not shipped with Vault and require additional operator
+intervention to run.
+
+To run an external plugin, a binary of the plugin is required. Plugin
+binaries can be obtained from [releases.hashicorp.com](https://releases.hashicorp.com/)
+or they can be [built from source](/vault/docs/plugins/plugin-development#building-a-plugin-from-source).
+
+Vault's external plugins are completely separate, standalone applications that
+Vault executes and communicates with over RPC. Each time a Vault secret engine,
+auth method, or database plugin is mounted, a new process is spawned. However,
+plugins can be made to implement [plugin multiplexing](/vault/docs/plugins/plugin-architecture#plugin-multiplexing)
+to improve performance. Plugin multiplexing allows plugin processes to be
+reused across all mounts of a given type.
+
+-> **NOTE:** See the [Vault Integrations](/vault/integrations) page to find a
+curated collection of official, partner, and community Vault plugins. 
+
+## Plugin Versioning
+
+Vault supports managing, running and upgrading plugins using semantic version
+information.
+
+The plugin catalog optionally supports specifying a semantic version when
+registering an external plugin. Multiple versions of a plugin can be registered
+in the catalog simultaneously, and a version can be selected when mounting a
+plugin or tuning an existing mount in-place.
+
+If no version is specified when creating a new mount, the following precedence is used
+for any available plugins whose type and name match:
+
+* The plugin registered with no version
+* The plugin with the most recent semantic version among any registered versions
+* The plugin built into Vault
+
+### Built-In Versions
+
+Vault will report a version for built-in plugins to indicate what version of the
+plugin code got built into Vault as a dependency. For example:
+
+```shell-session
+$ vault plugin list secret
+Name                Version
+----                -------
+ad                  v0.14.0+builtin
+alicloud            v0.13.0+builtin
+aws                 v1.12.0+builtin.vault
+# ...
+```
+
+Here, Vault has a dependency on `v0.14.0` of the [hashicorp/vault-plugin-secrets-ad](https://github.com/hashicorp/vault-plugin-secrets-ad)
+repo, and the `vault` metadata identifier for `aws` indicates that plugin's code was
+within the Vault repo. For plugins within the Vault repo, Vault's own major, minor,
+and patch versions are used to form the plugin version.
+
+The `builtin` metadata identifier is reserved and cannot be used when registering
+external plugins.

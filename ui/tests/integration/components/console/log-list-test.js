@@ -1,20 +1,25 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
-module('Integration | Component | console/log list', function(hooks) {
+module('Integration | Component | console/log list', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     // Set any properties with this.set('myProperty', 'value');
     // Handle any actions with this.on('myAction', function(val) { ... });
     const listContent = { keys: ['one', 'two'] };
-    const expectedText = 'Keys\none\ntwo';
+    const expectedText = 'Keys one two';
 
     this.set('content', listContent);
 
-    await render(hbs`{{console/log-list content=content}}`);
+    await render(hbs`{{console/log-list content=this.content}}`);
 
     assert.dom('pre').includesText(`${expectedText}`);
   });

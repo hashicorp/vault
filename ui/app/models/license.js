@@ -1,18 +1,36 @@
-import DS from 'ember-data';
-const { attr } = DS;
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+import Model, { attr } from '@ember-data/model';
 
 /* sample response
 {
   "data": {
-    "expiration_time": "2017-11-14T16:34:36.546753-05:00",
-    "features": [
-      "UI",
-      "HSM",
-      "Performance Replication",
-      "DR Replication"
-    ],
-    "license_id": "temporary",
-    "start_time": "2017-11-14T16:04:36.546753-05:00"
+    "autoloading_used": true,
+    "autoloaded": {
+      "expiration_time": "2017-11-14T16:34:36.546753-05:00",
+      "license_id": "some-id",
+      "start_time": "2017-11-14T16:04:36.546753-05:00"
+      "features": [
+        "UI",
+        "HSM",
+        "Performance Replication",
+        "DR Replication"
+      ],
+    },
+    "stored": {
+      "expiration_time": "2017-11-14T16:34:36.546753-05:00",
+      "license_id": "some-id",
+      "start_time": "2017-11-14T16:04:36.546753-05:00"
+      "features": [
+        "UI",
+        "HSM",
+        "Performance Replication",
+        "DR Replication"
+      ],
+    }
   },
   "warnings": [
     "time left on license is 29m33s"
@@ -20,11 +38,11 @@ const { attr } = DS;
 }
 */
 
-export default DS.Model.extend({
+export default Model.extend({
   expirationTime: attr('string'),
   features: attr('array'),
   licenseId: attr('string'),
   startTime: attr('string'),
-  text: attr('string'),
   performanceStandbyCount: attr('number'),
+  autoloaded: attr('boolean'),
 });

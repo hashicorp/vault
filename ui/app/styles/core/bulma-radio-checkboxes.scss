@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 @import '../sass-svg-uri/svg-uri';
 
 .b-checkbox input[type='checkbox']:checked + label::before {
@@ -16,4 +21,10 @@
 .b-checkbox.no-label input[type='checkbox'] + label {
   position: absolute;
   top: 0;
+}
+
+.checkbox-help-text {
+  font-size: $size-7;
+  color: $ui-gray-700;
+  padding-left: 28px;
 }

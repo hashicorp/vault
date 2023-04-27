@@ -1,4 +1,10 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { Base } from '../show';
+import { settled } from '@ember/test-helpers';
 import { create, clickable, collection, text, isPresent } from 'ember-cli-page-object';
 
 export default create({
@@ -7,9 +13,13 @@ export default create({
   certificate: text('[data-test-row-value="Certificate"]'),
   hasCert: isPresent('[data-test-row-value="Certificate"]'),
   edit: clickable('[data-test-edit-link]'),
-  editIsPresent: isPresent('[data-test-edit-link]'),
   generateCert: clickable('[data-test-credentials-link]'),
-  generateCertIsPresent: isPresent('[data-test-credentials-link]'),
-  signCert: clickable('[data-test-sign-link]'),
-  signCertIsPresent: isPresent('[data-test-sign-link]'),
+  deleteBtn: clickable('[data-test-role-delete] button'),
+  confirmBtn: clickable('[data-test-confirm-button]'),
+  async deleteRole() {
+    await this.deleteBtn();
+    await settled();
+    await this.confirmBtn();
+    await settled();
+  },
 });

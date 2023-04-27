@@ -1,0 +1,4 @@
+```release-note:improvement
+audit: Add a policy_results block into the audit log that contains the set of
+policies that granted this request access.
+```

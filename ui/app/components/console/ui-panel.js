@@ -1,8 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { inject as service } from '@ember/service';
 import { alias, or } from '@ember/object/computed';
 import Component from '@ember/component';
 import { getOwner } from '@ember/application';
-import { run } from '@ember/runloop';
+import { schedule } from '@ember/runloop';
 import { task } from 'ember-concurrency';
 import ControlGroupError from 'vault/lib/control-group-error';
 import {
@@ -20,12 +25,13 @@ export default Component.extend({
   controlGroup: service(),
   store: service(),
   'data-test-component': 'console/ui-panel',
+  attributeBindings: ['data-test-component'],
 
   classNames: 'console-ui-panel',
   classNameBindings: ['isFullscreen:fullscreen'],
   isFullscreen: false,
   inputValue: null,
-  log: alias('console.log'),
+  cliLog: alias('console.log'),
 
   didRender() {
     this._super(...arguments);
@@ -33,25 +39,25 @@ export default Component.extend({
   },
 
   logAndOutput(command, logContent) {
-    this.get('console').logAndOutput(command, logContent);
-    run.schedule('afterRender', () => this.scrollToBottom());
+    this.console.logAndOutput(command, logContent);
+    schedule('afterRender', () => this.scrollToBottom());
   },
 
   isRunning: or('executeCommand.isRunning', 'refreshRoute.isRunning'),
 
-  executeCommand: task(function*(command, shouldThrow = false) {
+  executeCommand: task(function* (command, shouldThrow = false) {
     this.set('inputValue', '');
-    let service = this.get('console');
+    const service = this.console;
     let serviceArgs;
 
     if (
-      executeUICommand(
-        command,
-        args => this.logAndOutput(args),
-        args => service.clearLog(args),
-        () => this.toggleProperty('isFullscreen'),
-        () => this.get('refreshRoute').perform()
-      )
+      executeUICommand(command, (args) => this.logAndOutput(args), {
+        api: () => this.routeToExplore.perform(command),
+        clearall: () => service.clearLog(true),
+        clear: () => service.clearLog(),
+        fullscreen: () => this.toggleProperty('isFullscreen'),
+        refresh: () => this.refreshRoute.perform(),
+      })
     ) {
       return;
     }
@@ -68,44 +74,73 @@ export default Component.extend({
       return;
     }
 
-    let [method, flagArray, path, dataArray] = serviceArgs;
+    const [method, flagArray, path, dataArray] = serviceArgs;
 
     if (dataArray || flagArray) {
-      var { data, flags } = extractDataAndFlags(dataArray, flagArray);
+      var { data, flags } = extractDataAndFlags(method, dataArray, flagArray);
     }
 
-    let inputError = logErrorFromInput(path, method, flags, dataArray);
+    const inputError = logErrorFromInput(path, method, flags, dataArray);
     if (inputError) {
       this.logAndOutput(command, inputError);
       return;
     }
     try {
-      let resp = yield service[method].call(service, path, data, flags.wrapTTL);
+      const resp = yield service[method].call(service, path, data, flags.wrapTTL);
       this.logAndOutput(command, logFromResponse(resp, path, method, flags));
     } catch (error) {
       if (error instanceof ControlGroupError) {
-        return this.logAndOutput(command, this.get('controlGroup').logFromError(error));
+        return this.logAndOutput(command, this.controlGroup.logFromError(error));
       }
       this.logAndOutput(command, logFromError(error, path, method));
     }
   }),
 
-  refreshRoute: task(function*() {
-    let owner = getOwner(this);
-    let routeName = this.get('router.currentRouteName');
-    let route = owner.lookup(`route:${routeName}`);
+  refreshRoute: task(function* () {
+    const owner = getOwner(this);
+    const currentRoute = owner.lookup(`router:main`).get('currentRouteName');
 
     try {
-      this.get('store').clearAllDatasets();
-      yield route.refresh();
+      this.store.clearAllDatasets();
+      yield this.router.transitionTo(currentRoute);
       this.logAndOutput(null, { type: 'success', content: 'The current screen has been refreshed!' });
     } catch (error) {
       this.logAndOutput(null, { type: 'error', content: 'The was a problem refreshing the current screen.' });
     }
   }),
 
+  routeToExplore: task(function* (command) {
+    const filter = command.replace('api', '').trim();
+    let content =
+      'Welcome to the Vault API explorer! \nYou can search for endpoints, see what parameters they accept, and even execute requests with your current token.';
+    if (filter) {
+      content = `Welcome to the Vault API explorer! \nWe've filtered the list of endpoints for '${filter}'.`;
+    }
+    try {
+      yield this.router.transitionTo('vault.cluster.open-api-explorer.index', {
+        queryParams: { filter },
+      });
+      this.logAndOutput(null, {
+        type: 'success',
+        content,
+      });
+    } catch (error) {
+      if (error.message === 'TransitionAborted') {
+        this.logAndOutput(null, {
+          type: 'success',
+          content,
+        });
+      } else {
+        this.logAndOutput(null, {
+          type: 'error',
+          content: 'There was a problem navigating to the api explorer.',
+        });
+      }
+    }
+  }),
+
   shiftCommandIndex(keyCode) {
-    this.get('console').shiftCommandIndex(keyCode, val => {
+    this.console.shiftCommandIndex(keyCode, (val) => {
       this.set('inputValue', val);
     });
   },
@@ -122,7 +157,7 @@ export default Component.extend({
       this.toggleProperty('isFullscreen');
     },
     executeCommand(val) {
-      this.get('executeCommand').perform(val, true);
+      this.executeCommand.perform(val, true);
     },
     shiftCommandIndex(direction) {
       this.shiftCommandIndex(direction);

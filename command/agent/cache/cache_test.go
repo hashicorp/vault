@@ -1,176 +1,33 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package cache
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math/rand"
 	"net"
 	"net/http"
-	"os"
-	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/go-test/deep"
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/command/agent/cache/cachememdb"
 	"github.com/hashicorp/vault/command/agent/sink/mock"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/namespace"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
-
-const policyAdmin = `
-path "*" {
-	capabilities = ["sudo", "create", "read", "update", "delete", "list"]
-}
-`
-
-// setupClusterAndAgent is a helper func used to set up a test cluster and
-// caching agent. It returns a cleanup func that should be deferred immediately
-// along with two clients, one for direct cluster communication and another to
-// talk to the caching agent.
-func setupClusterAndAgent(ctx context.Context, t *testing.T, coreConfig *vault.CoreConfig) (func(), *api.Client, *api.Client, *LeaseCache) {
-	t.Helper()
-
-	if ctx == nil {
-		ctx = context.Background()
-	}
-
-	// Handle sane defaults
-	if coreConfig == nil {
-		coreConfig = &vault.CoreConfig{
-			DisableMlock: true,
-			DisableCache: true,
-			Logger:       logging.NewVaultLogger(hclog.Trace),
-			CredentialBackends: map[string]logical.Factory{
-				"userpass": userpass.Factory,
-			},
-		}
-	}
-
-	if coreConfig.CredentialBackends == nil {
-		coreConfig.CredentialBackends = map[string]logical.Factory{
-			"userpass": userpass.Factory,
-		}
-	}
-
-	// Init new test cluster
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-
-	cores := cluster.Cores
-	vault.TestWaitActive(t, cores[0].Core)
-
-	// clusterClient is the client that is used to talk directly to the cluster.
-	clusterClient := cores[0].Client
-
-	// Add an admin policy
-	if err := clusterClient.Sys().PutPolicy("admin", policyAdmin); err != nil {
-		t.Fatal(err)
-	}
-
-	// Set up the userpass auth backend and an admin user. Used for getting a token
-	// for the agent later down in this func.
-	clusterClient.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
-		Type: "userpass",
-	})
-
-	_, err := clusterClient.Logical().Write("auth/userpass/users/foo", map[string]interface{}{
-		"password": "bar",
-		"policies": []string{"admin"},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Set up env vars for agent consumption
-	origEnvVaultAddress := os.Getenv(api.EnvVaultAddress)
-	os.Setenv(api.EnvVaultAddress, clusterClient.Address())
-
-	origEnvVaultCACert := os.Getenv(api.EnvVaultCACert)
-	os.Setenv(api.EnvVaultCACert, fmt.Sprintf("%s/ca_cert.pem", cluster.TempDir))
-
-	cacheLogger := logging.NewVaultLogger(hclog.Trace).Named("cache")
-
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Create the API proxier
-	apiProxy, err := NewAPIProxy(&APIProxyConfig{
-		Client: clusterClient,
-		Logger: cacheLogger.Named("apiproxy"),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Create the lease cache proxier and set its underlying proxier to
-	// the API proxier.
-	leaseCache, err := NewLeaseCache(&LeaseCacheConfig{
-		Client:      clusterClient,
-		BaseContext: ctx,
-		Proxier:     apiProxy,
-		Logger:      cacheLogger.Named("leasecache"),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Create a muxer and add paths relevant for the lease cache layer
-	mux := http.NewServeMux()
-	mux.Handle("/agent/v1/cache-clear", leaseCache.HandleCacheClear(ctx))
-
-	mux.Handle("/", Handler(ctx, cacheLogger, leaseCache, nil))
-	server := &http.Server{
-		Handler:           mux,
-		ReadHeaderTimeout: 10 * time.Second,
-		ReadTimeout:       30 * time.Second,
-		IdleTimeout:       5 * time.Minute,
-		ErrorLog:          cacheLogger.StandardLogger(nil),
-	}
-	go server.Serve(listener)
-
-	// testClient is the client that is used to talk to the agent for proxying/caching behavior.
-	testClient, err := clusterClient.Clone()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err := testClient.SetAddress("http://" + listener.Addr().String()); err != nil {
-		t.Fatal(err)
-	}
-
-	// Login via userpass method to derive a managed token. Set that token as the
-	// testClient's token
-	resp, err := testClient.Logical().Write("auth/userpass/login/foo", map[string]interface{}{
-		"password": "bar",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	testClient.SetToken(resp.Auth.ClientToken)
-
-	cleanup := func() {
-		cluster.Cleanup()
-		os.Setenv(api.EnvVaultAddress, origEnvVaultAddress)
-		os.Setenv(api.EnvVaultCACert, origEnvVaultCACert)
-		listener.Close()
-	}
-
-	return cleanup, clusterClient, testClient, leaseCache
-}
 
 func tokenRevocationValidation(t *testing.T, sampleSpace map[string]string, expected map[string]string, leaseCache *LeaseCache) {
 	t.Helper()
@@ -191,26 +48,15 @@ func tokenRevocationValidation(t *testing.T, sampleSpace map[string]string, expe
 func TestCache_AutoAuthTokenStripping(t *testing.T) {
 	response1 := `{"data": {"id": "testid", "accessor": "testaccessor", "request": "lookup-self"}}`
 	response2 := `{"data": {"id": "testid", "accessor": "testaccessor", "request": "lookup"}}`
+	response3 := `{"auth": {"client_token": "testid", "accessor": "testaccessor"}}`
+	response4 := `{"auth": {"client_token": "testid", "accessor": "testaccessor"}}`
 	responses := []*SendResponse{
-		&SendResponse{
-			Response: &api.Response{
-				Response: &http.Response{
-					StatusCode: http.StatusOK,
-					Body:       ioutil.NopCloser(strings.NewReader(response1)),
-				},
-			},
-			ResponseBody: []byte(response1),
-		},
-		&SendResponse{
-			Response: &api.Response{
-				Response: &http.Response{
-					StatusCode: http.StatusOK,
-					Body:       ioutil.NopCloser(strings.NewReader(response2)),
-				},
-			},
-			ResponseBody: []byte(response2),
-		},
+		newTestSendResponse(http.StatusOK, response1),
+		newTestSendResponse(http.StatusOK, response2),
+		newTestSendResponse(http.StatusOK, response3),
+		newTestSendResponse(http.StatusOK, response4),
 	}
+
 	leaseCache := testNewLeaseCache(t, responses)
 
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
@@ -235,7 +81,7 @@ func TestCache_AutoAuthTokenStripping(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
 
-	mux.Handle("/", Handler(ctx, cacheLogger, leaseCache, mock.NewSink("testid")))
+	mux.Handle("/", ProxyHandler(ctx, cacheLogger, leaseCache, mock.NewSink("testid"), true))
 	server := &http.Server{
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
@@ -270,6 +116,87 @@ func TestCache_AutoAuthTokenStripping(t *testing.T) {
 	}
 	if secret.Data["id"] != nil || secret.Data["accessor"] != nil || secret.Data["request"].(string) != "lookup" {
 		t.Fatalf("failed to strip off auto-auth token on lookup")
+	}
+
+	secret, err = testClient.Auth().Token().RenewSelf(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if secret.Auth == nil {
+		secretJson, _ := json.Marshal(secret)
+		t.Fatalf("Expected secret to have Auth but was %s", secretJson)
+	}
+	if secret.Auth.ClientToken != "" || secret.Auth.Accessor != "" {
+		t.Fatalf("failed to strip off auto-auth token on renew-self")
+	}
+
+	secret, err = testClient.Auth().Token().Renew("testid", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if secret.Auth == nil {
+		secretJson, _ := json.Marshal(secret)
+		t.Fatalf("Expected secret to have Auth but was %s", secretJson)
+	}
+	if secret.Auth.ClientToken != "" || secret.Auth.Accessor != "" {
+		t.Fatalf("failed to strip off auto-auth token on renew")
+	}
+}
+
+func TestCache_AutoAuthClientTokenProxyStripping(t *testing.T) {
+	leaseCache := &mockTokenVerifierProxier{}
+	dummyToken := "DUMMY"
+	realToken := "testid"
+
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	cores := cluster.Cores
+	vault.TestWaitActive(t, cores[0].Core)
+	client := cores[0].Client
+
+	cacheLogger := logging.NewVaultLogger(hclog.Trace).Named("cache")
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := namespace.RootContext(nil)
+
+	// Create a muxer and add paths relevant for the lease cache layer
+	mux := http.NewServeMux()
+	// mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
+
+	mux.Handle("/", ProxyHandler(ctx, cacheLogger, leaseCache, mock.NewSink(realToken), false))
+	server := &http.Server{
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		IdleTimeout:       5 * time.Minute,
+		ErrorLog:          cacheLogger.StandardLogger(nil),
+	}
+	go server.Serve(listener)
+
+	testClient, err := client.Clone()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := testClient.SetAddress("http://" + listener.Addr().String()); err != nil {
+		t.Fatal(err)
+	}
+
+	// Empty the token in the client. Auto-auth token should be put to use.
+	testClient.SetToken(dummyToken)
+	_, err = testClient.Auth().Token().LookupSelf()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if leaseCache.currentToken != realToken {
+		t.Fatalf("failed to use real token from auto-auth")
 	}
 }
 
@@ -933,9 +860,25 @@ func TestCache_NonCacheable(t *testing.T) {
 		t.Logf("response #2: %#v", newMounts)
 		t.Fatal("expected requests to be not cached")
 	}
+
+	// Query a non-existing mount, expect an error from api.Response
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	r := testClient.NewRequest("GET", "/v1/kv-invalid")
+
+	apiResp, err := testClient.RawRequestWithContext(ctx, r)
+	if apiResp != nil {
+		defer apiResp.Body.Close()
+	}
+	if apiResp.Error() == nil || (apiResp != nil && apiResp.StatusCode != 404) {
+		t.Fatalf("expected an error response and a 404 from requesting an invalid path, got: %#v", apiResp)
+	}
+	if err == nil {
+		t.Fatal("expected an error from requesting an invalid path")
+	}
 }
 
-func TestCache_AuthResponse(t *testing.T) {
+func TestCache_Caching_AuthResponse(t *testing.T) {
 	cleanup, _, testClient, _ := setupClusterAndAgent(namespace.RootContext(nil), t, nil)
 	defer cleanup()
 
@@ -985,7 +928,7 @@ func TestCache_AuthResponse(t *testing.T) {
 	}
 }
 
-func TestCache_LeaseResponse(t *testing.T) {
+func TestCache_Caching_LeaseResponse(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		DisableMlock: true,
 		DisableCache: true,
@@ -1063,4 +1006,237 @@ func TestCache_LeaseResponse(t *testing.T) {
 			t.Fatal(diff)
 		}
 	}
+}
+
+func TestCache_Caching_CacheClear(t *testing.T) {
+	t.Run("request_path", func(t *testing.T) {
+		testCachingCacheClearCommon(t, "request_path")
+	})
+
+	t.Run("lease", func(t *testing.T) {
+		testCachingCacheClearCommon(t, "lease")
+	})
+
+	t.Run("token", func(t *testing.T) {
+		testCachingCacheClearCommon(t, "token")
+	})
+
+	t.Run("token_accessor", func(t *testing.T) {
+		testCachingCacheClearCommon(t, "token_accessor")
+	})
+
+	t.Run("all", func(t *testing.T) {
+		testCachingCacheClearCommon(t, "all")
+	})
+}
+
+func testCachingCacheClearCommon(t *testing.T, clearType string) {
+	coreConfig := &vault.CoreConfig{
+		DisableMlock: true,
+		DisableCache: true,
+		Logger:       hclog.NewNullLogger(),
+		LogicalBackends: map[string]logical.Factory{
+			"kv": vault.LeasedPassthroughBackendFactory,
+		},
+	}
+
+	cleanup, client, testClient, leaseCache := setupClusterAndAgent(namespace.RootContext(nil), t, coreConfig)
+	defer cleanup()
+
+	err := client.Sys().Mount("kv", &api.MountInput{
+		Type: "kv",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Write data to the lease-kv backend
+	_, err = testClient.Logical().Write("kv/foo", map[string]interface{}{
+		"value": "bar",
+		"ttl":   "1h",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Proxy this request, agent should cache the response
+	resp, err := testClient.Logical().Read("kv/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	gotLeaseID := resp.LeaseID
+
+	// Verify the entry exists
+	idx, err := leaseCache.db.Get(cachememdb.IndexNameLease, gotLeaseID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if idx == nil {
+		t.Fatalf("expected cached entry, got: %v", idx)
+	}
+
+	data := map[string]interface{}{
+		"type": clearType,
+	}
+
+	// We need to set the value here depending on what we're trying to test.
+	// Some values are be static, but others are dynamically generated at runtime.
+	switch clearType {
+	case "request_path":
+		data["value"] = "/v1/kv/foo"
+	case "lease":
+		data["value"] = resp.LeaseID
+	case "token":
+		data["value"] = testClient.Token()
+	case "token_accessor":
+		lookupResp, err := client.Auth().Token().Lookup(testClient.Token())
+		if err != nil {
+			t.Fatal(err)
+		}
+		data["value"] = lookupResp.Data["accessor"]
+	case "all":
+	default:
+		t.Fatalf("invalid type provided: %v", clearType)
+	}
+
+	r := testClient.NewRequest("PUT", consts.AgentPathCacheClear)
+	if err := r.SetJSONBody(data); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	apiResp, err := testClient.RawRequestWithContext(ctx, r)
+	if apiResp != nil {
+		defer apiResp.Body.Close()
+	}
+	if apiResp != nil && apiResp.StatusCode == 404 {
+		_, parseErr := api.ParseSecret(apiResp.Body)
+		switch parseErr {
+		case nil:
+		case io.EOF:
+		default:
+			t.Fatal(err)
+		}
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	// Verify the entry is cleared
+	idx, err = leaseCache.db.Get(cachememdb.IndexNameLease, gotLeaseID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if idx != nil {
+		t.Fatalf("expected entry to be nil, got: %v", idx)
+	}
+}
+
+func TestCache_AuthTokenCreateOrphan(t *testing.T) {
+	t.Run("create", func(t *testing.T) {
+		t.Run("managed", func(t *testing.T) {
+			cleanup, _, testClient, leaseCache := setupClusterAndAgent(namespace.RootContext(nil), t, nil)
+			defer cleanup()
+
+			reqOpts := &api.TokenCreateRequest{
+				Policies: []string{"default"},
+				NoParent: true,
+			}
+			resp, err := testClient.Auth().Token().Create(reqOpts)
+			if err != nil {
+				t.Fatal(err)
+			}
+			token := resp.Auth.ClientToken
+
+			idx, err := leaseCache.db.Get(cachememdb.IndexNameToken, token)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if idx == nil {
+				t.Fatalf("expected entry to be non-nil, got: %#v", idx)
+			}
+		})
+
+		t.Run("non-managed", func(t *testing.T) {
+			cleanup, clusterClient, testClient, leaseCache := setupClusterAndAgent(namespace.RootContext(nil), t, nil)
+			defer cleanup()
+
+			reqOpts := &api.TokenCreateRequest{
+				Policies: []string{"default"},
+				NoParent: true,
+			}
+
+			// Use the test client but set the token to one that's not managed by agent
+			testClient.SetToken(clusterClient.Token())
+
+			resp, err := testClient.Auth().Token().Create(reqOpts)
+			if err != nil {
+				t.Fatal(err)
+			}
+			token := resp.Auth.ClientToken
+
+			idx, err := leaseCache.db.Get(cachememdb.IndexNameToken, token)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if idx == nil {
+				t.Fatalf("expected entry to be non-nil, got: %#v", idx)
+			}
+		})
+	})
+
+	t.Run("create-orphan", func(t *testing.T) {
+		t.Run("managed", func(t *testing.T) {
+			cleanup, _, testClient, leaseCache := setupClusterAndAgent(namespace.RootContext(nil), t, nil)
+			defer cleanup()
+
+			reqOpts := &api.TokenCreateRequest{
+				Policies: []string{"default"},
+			}
+			resp, err := testClient.Auth().Token().CreateOrphan(reqOpts)
+			if err != nil {
+				t.Fatal(err)
+			}
+			token := resp.Auth.ClientToken
+
+			idx, err := leaseCache.db.Get(cachememdb.IndexNameToken, token)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if idx == nil {
+				t.Fatalf("expected entry to be non-nil, got: %#v", idx)
+			}
+		})
+
+		t.Run("non-managed", func(t *testing.T) {
+			cleanup, clusterClient, testClient, leaseCache := setupClusterAndAgent(namespace.RootContext(nil), t, nil)
+			defer cleanup()
+
+			reqOpts := &api.TokenCreateRequest{
+				Policies: []string{"default"},
+			}
+
+			// Use the test client but set the token to one that's not managed by agent
+			testClient.SetToken(clusterClient.Token())
+
+			resp, err := testClient.Auth().Token().CreateOrphan(reqOpts)
+			if err != nil {
+				t.Fatal(err)
+			}
+			token := resp.Auth.ClientToken
+
+			idx, err := leaseCache.db.Get(cachememdb.IndexNameToken, token)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if idx == nil {
+				t.Fatalf("expected entry to be non-nil, got: %#v", idx)
+			}
+		})
+	})
 }

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -5,13 +8,14 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/consts"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*PluginRegisterCommand)(nil)
-var _ cli.CommandAutocomplete = (*PluginRegisterCommand)(nil)
+var (
+	_ cli.Command             = (*PluginRegisterCommand)(nil)
+	_ cli.CommandAutocomplete = (*PluginRegisterCommand)(nil)
+)
 
 type PluginRegisterCommand struct {
 	*BaseCommand
@@ -19,6 +23,7 @@ type PluginRegisterCommand struct {
 	flagArgs    []string
 	flagCommand string
 	flagSHA256  string
+	flagVersion string
 }
 
 func (c *PluginRegisterCommand) Synopsis() string {
@@ -35,12 +40,13 @@ Usage: vault plugin register [options] TYPE NAME
 
   Register the plugin named my-custom-plugin:
 
-      $ vault plugin register -sha256=d3f0a8b... auth my-custom-plugin
+      $ vault plugin register -sha256=d3f0a8b... -version=v1.0.0 auth my-custom-plugin
 
   Register a plugin with custom arguments:
 
       $ vault plugin register \
           -sha256=d3f0a8b... \
+          -version=v1.0.0 \
           -args=--with-glibc,--with-cgo \
           auth my-custom-plugin
 
@@ -77,11 +83,18 @@ func (c *PluginRegisterCommand) Flags() *FlagSets {
 		Usage:      "SHA256 of the plugin binary. This is required for all plugins.",
 	})
 
+	f.StringVar(&StringVar{
+		Name:       "version",
+		Target:     &c.flagVersion,
+		Completion: complete.PredictAnything,
+		Usage:      "Semantic version of the plugin. Optional.",
+	})
+
 	return set
 }
 
 func (c *PluginRegisterCommand) AutocompleteArgs() complete.Predictor {
-	return c.PredictVaultPlugins(consts.PluginTypeUnknown)
+	return c.PredictVaultPlugins(api.PluginTypeUnknown)
 }
 
 func (c *PluginRegisterCommand) AutocompleteFlags() complete.Flags {
@@ -124,7 +137,7 @@ func (c *PluginRegisterCommand) Run(args []string) int {
 		return 2
 	}
 
-	pluginType, err := consts.ParsePluginType(strings.TrimSpace(pluginTypeRaw))
+	pluginType, err := api.ParsePluginType(strings.TrimSpace(pluginTypeRaw))
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
@@ -142,6 +155,7 @@ func (c *PluginRegisterCommand) Run(args []string) int {
 		Args:    c.flagArgs,
 		Command: command,
 		SHA256:  c.flagSHA256,
+		Version: c.flagVersion,
 	}); err != nil {
 		c.UI.Error(fmt.Sprintf("Error registering plugin %s: %s", pluginName, err))
 		return 2

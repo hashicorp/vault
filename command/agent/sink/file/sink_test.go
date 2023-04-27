@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package file
 
 import (
@@ -13,7 +16,7 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/command/agent/sink"
-	"github.com/hashicorp/vault/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 )
 
 func TestSinkServer(t *testing.T) {
@@ -33,17 +36,26 @@ func TestSinkServer(t *testing.T) {
 	uuidStr, _ := uuid.GenerateUUID()
 	in := make(chan string)
 	sinks := []*sink.SinkConfig{fs1, fs2}
-	go ss.Run(ctx, in, sinks)
+	errCh := make(chan error)
+	go func() {
+		errCh <- ss.Run(ctx, in, sinks)
+	}()
 
 	// Seed a token
 	in <- uuidStr
 
-	// Give it time to finish writing
-	time.Sleep(1 * time.Second)
-
 	// Tell it to shut down and give it time to do so
-	cancelFunc()
-	<-ss.DoneCh
+	timer := time.AfterFunc(3*time.Second, func() {
+		cancelFunc()
+	})
+	defer timer.Stop()
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 
 	for _, path := range []string{path1, path2} {
 		fileBytes, err := ioutil.ReadFile(fmt.Sprintf("%s/token", path))
@@ -90,8 +102,11 @@ func TestSinkServerRetry(t *testing.T) {
 	})
 
 	in := make(chan string)
-	sinks := []*sink.SinkConfig{&sink.SinkConfig{Sink: b1}, &sink.SinkConfig{Sink: b2}}
-	go ss.Run(ctx, in, sinks)
+	sinks := []*sink.SinkConfig{{Sink: b1}, {Sink: b2}}
+	errCh := make(chan error)
+	go func() {
+		errCh <- ss.Run(ctx, in, sinks)
+	}()
 
 	// Seed a token
 	in <- "bad"
@@ -117,5 +132,10 @@ func TestSinkServerRetry(t *testing.T) {
 
 	// Tell it to shut down and give it time to do so
 	cancelFunc()
-	<-ss.DoneCh
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 }

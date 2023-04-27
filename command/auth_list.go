@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -11,8 +14,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*AuthListCommand)(nil)
-var _ cli.CommandAutocomplete = (*AuthListCommand)(nil)
+var (
+	_ cli.Command             = (*AuthListCommand)(nil)
+	_ cli.CommandAutocomplete = (*AuthListCommand)(nil)
+)
 
 type AuthListCommand struct {
 	*BaseCommand
@@ -116,10 +121,10 @@ func (c *AuthListCommand) simpleMounts(auths map[string]*api.AuthMount) []string
 	}
 	sort.Strings(paths)
 
-	out := []string{"Path | Type | Accessor | Description"}
+	out := []string{"Path | Type | Accessor | Description | Version"}
 	for _, path := range paths {
 		mount := auths[path]
-		out = append(out, fmt.Sprintf("%s | %s | %s | %s", path, mount.Type, mount.Accessor, mount.Description))
+		out = append(out, fmt.Sprintf("%s | %s | %s | %s | %s", path, mount.Type, mount.Accessor, mount.Description, mount.PluginVersion))
 	}
 
 	return out
@@ -143,7 +148,7 @@ func (c *AuthListCommand) detailedMounts(auths map[string]*api.AuthMount) []stri
 		}
 	}
 
-	out := []string{"Path | Plugin | Accessor | Default TTL | Max TTL | Token Type | Replication | Seal Wrap | Options | Description"}
+	out := []string{"Path | Plugin | Accessor | Default TTL | Max TTL | Token Type | Replication | Seal Wrap | External Entropy Access | Options | Description | UUID | Version | Running Version | Running SHA256 | Deprecation Status"}
 	for _, path := range paths {
 		mount := auths[path]
 
@@ -160,7 +165,7 @@ func (c *AuthListCommand) detailedMounts(auths map[string]*api.AuthMount) []stri
 			pluginName = mount.Config.PluginName
 		}
 
-		out = append(out, fmt.Sprintf("%s | %s | %s | %s | %s | %s | %s | %t | %v | %s",
+		out = append(out, fmt.Sprintf("%s | %s | %s | %s | %s | %s | %s | %t | %v | %s | %s | %s | %s | %s | %s | %s",
 			path,
 			pluginName,
 			mount.Accessor,
@@ -169,8 +174,14 @@ func (c *AuthListCommand) detailedMounts(auths map[string]*api.AuthMount) []stri
 			mount.Config.TokenType,
 			replication,
 			mount.SealWrap,
+			mount.ExternalEntropyAccess,
 			mount.Options,
 			mount.Description,
+			mount.UUID,
+			mount.PluginVersion,
+			mount.RunningVersion,
+			mount.RunningSha256,
+			mount.DeprecationStatus,
 		))
 	}
 

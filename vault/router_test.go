@@ -1,115 +1,17 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
-	"context"
-	"fmt"
 	"reflect"
 	"strings"
-	"sync"
 	"testing"
-	"time"
 
-	log "github.com/hashicorp/go-hclog"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
-
-type HandlerFunc func(context.Context, *logical.Request) (*logical.Response, error)
-
-type NoopBackend struct {
-	sync.Mutex
-
-	Root            []string
-	Login           []string
-	Paths           []string
-	Requests        []*logical.Request
-	Response        *logical.Response
-	RequestHandler  HandlerFunc
-	Invalidations   []string
-	DefaultLeaseTTL time.Duration
-	MaxLeaseTTL     time.Duration
-	BackendType     logical.BackendType
-}
-
-func (n *NoopBackend) HandleRequest(ctx context.Context, req *logical.Request) (*logical.Response, error) {
-	if req.TokenEntry() != nil {
-		panic("got a non-nil TokenEntry")
-	}
-
-	var err error
-	resp := n.Response
-	if n.RequestHandler != nil {
-		resp, err = n.RequestHandler(ctx, req)
-	}
-
-	n.Lock()
-	defer n.Unlock()
-
-	requestCopy := *req
-	n.Paths = append(n.Paths, req.Path)
-	n.Requests = append(n.Requests, &requestCopy)
-	if req.Storage == nil {
-		return nil, fmt.Errorf("missing view")
-	}
-
-	return resp, err
-}
-
-func (n *NoopBackend) HandleExistenceCheck(ctx context.Context, req *logical.Request) (bool, bool, error) {
-	return false, false, nil
-}
-
-func (n *NoopBackend) SpecialPaths() *logical.Paths {
-	return &logical.Paths{
-		Root:            n.Root,
-		Unauthenticated: n.Login,
-	}
-}
-
-func (n *NoopBackend) System() logical.SystemView {
-	defaultLeaseTTLVal := time.Hour * 24
-	maxLeaseTTLVal := time.Hour * 24 * 32
-	if n.DefaultLeaseTTL > 0 {
-		defaultLeaseTTLVal = n.DefaultLeaseTTL
-	}
-
-	if n.MaxLeaseTTL > 0 {
-		maxLeaseTTLVal = n.MaxLeaseTTL
-	}
-
-	return logical.StaticSystemView{
-		DefaultLeaseTTLVal: defaultLeaseTTLVal,
-		MaxLeaseTTLVal:     maxLeaseTTLVal,
-	}
-}
-
-func (n *NoopBackend) Cleanup(ctx context.Context) {
-	// noop
-}
-
-func (n *NoopBackend) InvalidateKey(ctx context.Context, k string) {
-	n.Invalidations = append(n.Invalidations, k)
-}
-
-func (n *NoopBackend) Setup(ctx context.Context, config *logical.BackendConfig) error {
-	return nil
-}
-
-func (n *NoopBackend) Logger() log.Logger {
-	return log.NewNullLogger()
-}
-
-func (n *NoopBackend) Initialize(ctx context.Context) error {
-	return nil
-}
-
-func (n *NoopBackend) Type() logical.BackendType {
-	if n.BackendType == logical.TypeUnknown {
-		return logical.TypeLogical
-	}
-	return n.BackendType
-}
 
 func TestRouter_Mount(t *testing.T) {
 	r := NewRouter()
@@ -449,6 +351,15 @@ func TestRouter_LoginPath(t *testing.T) {
 		Login: []string{
 			"login",
 			"oauth/*",
+			"glob1*",
+			"+/wildcard/glob2*",
+			"end1/+",
+			"end2/+/",
+			"end3/+/*",
+			"middle1/+/bar",
+			"middle2/+/+/bar",
+			"+/begin",
+			"+/around/+/",
 		},
 	}
 	err = r.Mount(n, "auth/foo/", &MountEntry{UUID: meUUID, Accessor: "authfooaccessor", NamespaceID: namespace.RootNamespaceID, namespace: namespace.RootNamespace}, view)
@@ -464,8 +375,71 @@ func TestRouter_LoginPath(t *testing.T) {
 		{"random", false},
 		{"auth/foo/bar", false},
 		{"auth/foo/login", true},
+		{"auth/foo/login/", false},
+		{"auth/invalid/login", false},
 		{"auth/foo/oauth", false},
+		{"auth/foo/oauth/", true},
 		{"auth/foo/oauth/redirect", true},
+		{"auth/foo/oauth/redirect/", true},
+		{"auth/foo/oauth/redirect/bar", true},
+		{"auth/foo/glob1", true},
+		{"auth/foo/glob1/", true},
+		{"auth/foo/glob1/redirect", true},
+
+		// Wildcard cases
+
+		// "+/wildcard/glob2*"
+		{"auth/foo/bar/wildcard/glo", false},
+		{"auth/foo/bar/wildcard/glob2", true},
+		{"auth/foo/bar/wildcard/glob2222", true},
+		{"auth/foo/bar/wildcard/glob2/", true},
+		{"auth/foo/bar/wildcard/glob2/baz", true},
+
+		// "end1/+"
+		{"auth/foo/end1", false},
+		{"auth/foo/end1/", true},
+		{"auth/foo/end1/bar", true},
+		{"auth/foo/end1/bar/", false},
+		{"auth/foo/end1/bar/baz", false},
+		// "end2/+/"
+		{"auth/foo/end2", false},
+		{"auth/foo/end2/", false},
+		{"auth/foo/end2/bar", false},
+		{"auth/foo/end2/bar/", true},
+		{"auth/foo/end2/bar/baz", false},
+		// "end3/+/*"
+		{"auth/foo/end3", false},
+		{"auth/foo/end3/", false},
+		{"auth/foo/end3/bar", false},
+		{"auth/foo/end3/bar/", true},
+		{"auth/foo/end3/bar/baz", true},
+		{"auth/foo/end3/bar/baz/", true},
+		{"auth/foo/end3/bar/baz/qux", true},
+		{"auth/foo/end3/bar/baz/qux/qoo", true},
+		{"auth/foo/end3/bar/baz/qux/qoo/qaa", true},
+		// "middle1/+/bar",
+		{"auth/foo/middle1/bar", false},
+		{"auth/foo/middle1/bar/", false},
+		{"auth/foo/middle1/bar/qux", false},
+		{"auth/foo/middle1/bar/bar", true},
+		{"auth/foo/middle1/bar/bar/", false},
+		// "middle2/+/+/bar",
+		{"auth/foo/middle2/bar", false},
+		{"auth/foo/middle2/bar/", false},
+		{"auth/foo/middle2/bar/baz", false},
+		{"auth/foo/middle2/bar/baz/", false},
+		{"auth/foo/middle2/bar/baz/bar", true},
+		{"auth/foo/middle2/bar/baz/bar/", false},
+		// "+/begin"
+		{"auth/foo/bar/begin", true},
+		{"auth/foo/bar/begin/", false},
+		{"auth/foo/begin", false},
+		// "+/around/+/"
+		{"auth/foo/bar/around", false},
+		{"auth/foo/bar/around/", false},
+		{"auth/foo/bar/around/baz", false},
+		{"auth/foo/bar/around/baz/", true},
+		{"auth/foo/bar/around/baz/qux", false},
 	}
 
 	for _, tc := range tcases {
@@ -576,5 +550,84 @@ func TestPathsToRadix(t *testing.T) {
 	raw, ok = r.Get("sub/bar")
 	if !ok || raw.(bool) != true {
 		t.Fatalf("bad: %v (sub/bar)", raw)
+	}
+}
+
+func TestParseUnauthenticatedPaths(t *testing.T) {
+	// inputs
+	paths := []string{
+		"foo",
+		"foo/*",
+		"sub/bar*",
+	}
+	wildcardPaths := []string{
+		"end/+",
+		"+/begin/*",
+		"middle/+/bar*",
+	}
+	allPaths := append(paths, wildcardPaths...)
+
+	p, err := parseUnauthenticatedPaths(allPaths)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// outputs
+	wildcardPathsEntry := []wildcardPath{
+		{segments: []string{"end", "+"}, isPrefix: false},
+		{segments: []string{"+", "begin", ""}, isPrefix: true},
+		{segments: []string{"middle", "+", "bar"}, isPrefix: true},
+	}
+	expected := &loginPathsEntry{
+		paths:         pathsToRadix(paths),
+		wildcardPaths: wildcardPathsEntry,
+	}
+
+	if !reflect.DeepEqual(expected, p) {
+		t.Fatalf("expected: %#v\n actual: %#v\n", expected, p)
+	}
+}
+
+func TestParseUnauthenticatedPaths_Error(t *testing.T) {
+	type tcase struct {
+		paths []string
+		err   string
+	}
+	tcases := []tcase{
+		{
+			[]string{"/foo/+*"},
+			"path \"/foo/+*\": invalid use of wildcards ('+*' is forbidden)",
+		},
+		{
+			[]string{"/foo/*/*"},
+			"path \"/foo/*/*\": invalid use of wildcards (multiple '*' is forbidden)",
+		},
+		{
+			[]string{"*/foo/*"},
+			"path \"*/foo/*\": invalid use of wildcards (multiple '*' is forbidden)",
+		},
+		{
+			[]string{"*/foo/"},
+			"path \"*/foo/\": invalid use of wildcards ('*' is only allowed at the end of a path)",
+		},
+		{
+			[]string{"/foo+"},
+			"path \"/foo+\": invalid use of wildcards ('+' is not allowed next to a non-slash)",
+		},
+		{
+			[]string{"/+foo"},
+			"path \"/+foo\": invalid use of wildcards ('+' is not allowed next to a non-slash)",
+		},
+		{
+			[]string{"/++"},
+			"path \"/++\": invalid use of wildcards ('+' is not allowed next to a non-slash)",
+		},
+	}
+
+	for _, tc := range tcases {
+		_, err := parseUnauthenticatedPaths(tc.paths)
+		if err == nil || err != nil && !strings.Contains(err.Error(), tc.err) {
+			t.Fatalf("bad: path: %s expect: %v got %v", tc.paths, tc.err, err)
+		}
 	}
 }

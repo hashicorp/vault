@@ -1,0 +1,16 @@
+### Primary Cluster Address Change
+
+In Vault 1.4.0-1.4.3, a secondary cluster with a single `primary_cluster_addr`
+configured will obtain the address of the active node in the primary cluster
+via replication heartbeats from the primary cluster.
+
+If the `api_addr` and `cluster_addr` in the heartbeats from the primary
+cluster are not reachable from the secondary cluster, replication will not
+work. This situation can arise if, for example, `primary_cluster_addr`
+corresponds to a load balancer accessible from the secondary cluster, but the
+`api_addr` and `cluster_addr` on the primary cluster are only accessible
+from the primary cluster.
+
+In Vault 1.4.4, we will use the `primary_cluster_addr` if it has been set,
+instead of relying on the heartbeat information, but it's possible to
+encounter this issue in Vault 1.4.0-1.4.3.

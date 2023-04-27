@@ -1,12 +1,18 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Service, { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 
 const API_PATHS = {
-  secrets: { engine: 'cubbyhole/' },
   access: {
     methods: 'sys/auth',
-    entities: 'identity/entities',
-    groups: 'identity/groups',
+    mfa: 'identity/mfa/method',
+    oidc: 'identity/oidc/client',
+    entities: 'identity/entity/id',
+    groups: 'identity/group/id',
     leases: 'sys/leases/lookup',
     namespaces: 'sys/namespaces',
     'control-groups': 'sys/control-group/',
@@ -28,24 +34,32 @@ const API_PATHS = {
     replication: 'sys/replication',
     license: 'sys/license',
     seal: 'sys/seal',
+    raft: 'sys/storage/raft/configuration',
+  },
+  clients: {
+    activity: 'sys/internal/counters/activity',
+    config: 'sys/internal/counters/config',
   },
 };
 
 const API_PATHS_TO_ROUTE_PARAMS = {
-  'sys/auth': ['vault.cluster.access.methods'],
-  'identity/entities': ['vault.cluster.access.identity', 'entities'],
-  'identity/groups': ['vault.cluster.access.identity', 'groups'],
-  'sys/leases/lookup': ['vault.cluster.access.leases'],
-  'sys/namespaces': ['vault.cluster.access.namespaces'],
-  'sys/control-group/': ['vault.cluster.access.control-groups'],
+  'sys/auth': { route: 'vault.cluster.access.methods', models: [] },
+  'identity/entity/id': { route: 'vault.cluster.access.identity', models: ['entities'] },
+  'identity/group/id': { route: 'vault.cluster.access.identity', models: ['groups'] },
+  'sys/leases/lookup': { route: 'vault.cluster.access.leases', models: [] },
+  'sys/namespaces': { route: 'vault.cluster.access.namespaces', models: [] },
+  'sys/control-group/': { route: 'vault.cluster.access.control-groups', models: [] },
+  'identity/mfa/method': { route: 'vault.cluster.access.mfa', models: [] },
+  'identity/oidc/client': { route: 'vault.cluster.access.oidc', models: [] },
 };
 
 /*
-  The Permissions service is used to gate top navigation and sidebar items. It fetches
-  a users' policy from the resultant-acl endpoint and stores their allowed exact and glob
-  paths as state. It also has methods for checking whether a user has permission for a given
-  path.
+  The Permissions service is used to gate top navigation and sidebar items.
+  It fetches a users' policy from the resultant-acl endpoint and stores their
+  allowed exact and glob paths as state. It also has methods for checking whether
+  a user has permission for a given path.
 */
+
 export default Service.extend({
   exactPaths: null,
   globPaths: null,
@@ -54,15 +68,13 @@ export default Service.extend({
   auth: service(),
   namespace: service(),
 
-  getPaths: task(function*() {
+  getPaths: task(function* () {
     if (this.paths) {
       return;
     }
 
     try {
-      let resp = yield this.get('store')
-        .adapterFor('permissions')
-        .query();
+      const resp = yield this.store.adapterFor('permissions').query();
       this.setPaths(resp);
       return;
     } catch (err) {
@@ -85,22 +97,25 @@ export default Service.extend({
 
   hasNavPermission(navItem, routeParams) {
     if (routeParams) {
-      return this.hasPermission(API_PATHS[navItem][routeParams]);
+      // viewing the entity and groups pages require the list capability, while the others require the default, which is anything other than deny
+      const capability = routeParams === 'entities' || routeParams === 'groups' ? ['list'] : [null];
+
+      return this.hasPermission(API_PATHS[navItem][routeParams], capability);
     }
-    return Object.values(API_PATHS[navItem]).some(path => this.hasPermission(path));
+    return Object.values(API_PATHS[navItem]).some((path) => this.hasPermission(path));
   },
 
   navPathParams(navItem) {
-    const path = Object.values(API_PATHS[navItem]).find(path => this.hasPermission(path));
+    const path = Object.values(API_PATHS[navItem]).find((path) => this.hasPermission(path));
     if (['policies', 'tools'].includes(navItem)) {
-      return path.split('/').lastObject;
+      return { models: [path.split('/').lastObject] };
     }
 
     return API_PATHS_TO_ROUTE_PARAMS[path];
   },
 
   pathNameWithNamespace(pathName) {
-    const namespace = this.get('namespace').path;
+    const namespace = this.namespace.path;
     if (namespace) {
       return `${namespace}/${pathName}`;
     } else {
@@ -116,14 +131,15 @@ export default Service.extend({
     }
 
     return capabilities.every(
-      capability => this.hasMatchingExactPath(path, capability) || this.hasMatchingGlobPath(path, capability)
+      (capability) =>
+        this.hasMatchingExactPath(path, capability) || this.hasMatchingGlobPath(path, capability)
     );
   },
 
   hasMatchingExactPath(pathName, capability) {
-    const exactPaths = this.get('exactPaths');
+    const exactPaths = this.exactPaths;
     if (exactPaths) {
-      const prefix = Object.keys(exactPaths).find(path => path.startsWith(pathName));
+      const prefix = Object.keys(exactPaths).find((path) => path.startsWith(pathName));
       const hasMatchingPath = prefix && !this.isDenied(exactPaths[prefix]);
 
       if (prefix && capability) {
@@ -136,11 +152,14 @@ export default Service.extend({
   },
 
   hasMatchingGlobPath(pathName, capability) {
-    const globPaths = this.get('globPaths');
+    const globPaths = this.globPaths;
     if (globPaths) {
-      const matchingPath = Object.keys(globPaths).find(k => pathName.includes(k));
+      const matchingPath = Object.keys(globPaths).find((k) => {
+        return pathName.includes(k) || pathName.includes(k.replace(/\/$/, ''));
+      });
       const hasMatchingPath =
-        (matchingPath && !this.isDenied(globPaths[matchingPath])) || globPaths.hasOwnProperty('');
+        (matchingPath && !this.isDenied(globPaths[matchingPath])) ||
+        Object.prototype.hasOwnProperty.call(globPaths, '');
 
       if (matchingPath && capability) {
         return this.hasCapability(globPaths[matchingPath], capability) && hasMatchingPath;

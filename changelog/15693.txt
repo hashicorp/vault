@@ -1,0 +1,3 @@
+```release-note:bug
+core: Prevent metrics generation from causing deadlocks.
+```

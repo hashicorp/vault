@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 .footer {
   background-color: transparent;
   border-top: $base-border;
@@ -7,5 +12,9 @@
   span:not(:first-child) {
     display: inline-block;
     padding: 0 0.5rem;
+
+    @include until($mobile) {
+      display: none;
+    }
   }
 }

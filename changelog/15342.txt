@@ -1,0 +1,3 @@
+```release-note:improvement
+audit: Include mount_accessor in audit request and response logs
+```

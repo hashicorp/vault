@@ -1,0 +1,3 @@
+```release-note:feature
+**Customize dynamic usernames in MongoDB Atlas**: Adds the ability to customize username generation for dynamic users in MongoDB Atlas.
+```

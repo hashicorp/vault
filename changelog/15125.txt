@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Upgrade github.org/x/crypto/ssh
+```

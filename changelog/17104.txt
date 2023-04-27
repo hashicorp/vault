@@ -1,0 +1,4 @@
+```release-note:change
+auth: Returns invalid credentials for ldap, userpass and approle when wrong credentials are provided for existent users.
+This will only be used internally for implementing user lockout. 
+```

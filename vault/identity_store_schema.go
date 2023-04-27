@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -11,6 +14,7 @@ const (
 	entityAliasesTable = "entity_aliases"
 	groupsTable        = "groups"
 	groupAliasesTable  = "group_aliases"
+	oidcClientsTable   = "oidc_clients"
 )
 
 func identityStoreSchema(lowerCaseName bool) *memdb.DBSchema {
@@ -23,6 +27,7 @@ func identityStoreSchema(lowerCaseName bool) *memdb.DBSchema {
 		aliasesTableSchema,
 		groupsTableSchema,
 		groupAliasesTableSchema,
+		oidcClientsTableSchema,
 	}
 
 	for _, schemaFunc := range schemas {
@@ -40,14 +45,14 @@ func aliasesTableSchema(lowerCaseName bool) *memdb.TableSchema {
 	return &memdb.TableSchema{
 		Name: entityAliasesTable,
 		Indexes: map[string]*memdb.IndexSchema{
-			"id": &memdb.IndexSchema{
+			"id": {
 				Name:   "id",
 				Unique: true,
 				Indexer: &memdb.StringFieldIndex{
 					Field: "ID",
 				},
 			},
-			"factors": &memdb.IndexSchema{
+			"factors": {
 				Name:   "factors",
 				Unique: true,
 				Indexer: &memdb.CompoundIndex{
@@ -62,10 +67,17 @@ func aliasesTableSchema(lowerCaseName bool) *memdb.TableSchema {
 					},
 				},
 			},
-			"namespace_id": &memdb.IndexSchema{
+			"namespace_id": {
 				Name: "namespace_id",
 				Indexer: &memdb.StringFieldIndex{
 					Field: "NamespaceID",
+				},
+			},
+			"local_bucket_key": {
+				Name:         "local_bucket_key",
+				AllowMissing: true,
+				Indexer: &memdb.StringFieldIndex{
+					Field: "LocalBucketKey",
 				},
 			},
 		},
@@ -76,14 +88,14 @@ func entitiesTableSchema(lowerCaseName bool) *memdb.TableSchema {
 	return &memdb.TableSchema{
 		Name: entitiesTable,
 		Indexes: map[string]*memdb.IndexSchema{
-			"id": &memdb.IndexSchema{
+			"id": {
 				Name:   "id",
 				Unique: true,
 				Indexer: &memdb.StringFieldIndex{
 					Field: "ID",
 				},
 			},
-			"name": &memdb.IndexSchema{
+			"name": {
 				Name:   "name",
 				Unique: true,
 				Indexer: &memdb.CompoundIndex{
@@ -98,7 +110,7 @@ func entitiesTableSchema(lowerCaseName bool) *memdb.TableSchema {
 					},
 				},
 			},
-			"merged_entity_ids": &memdb.IndexSchema{
+			"merged_entity_ids": {
 				Name:         "merged_entity_ids",
 				Unique:       true,
 				AllowMissing: true,
@@ -106,13 +118,13 @@ func entitiesTableSchema(lowerCaseName bool) *memdb.TableSchema {
 					Field: "MergedEntityIDs",
 				},
 			},
-			"bucket_key_hash": &memdb.IndexSchema{
-				Name: "bucket_key_hash",
+			"bucket_key": {
+				Name: "bucket_key",
 				Indexer: &memdb.StringFieldIndex{
-					Field: "BucketKeyHash",
+					Field: "BucketKey",
 				},
 			},
-			"namespace_id": &memdb.IndexSchema{
+			"namespace_id": {
 				Name: "namespace_id",
 				Indexer: &memdb.StringFieldIndex{
 					Field: "NamespaceID",
@@ -162,13 +174,13 @@ func groupsTableSchema(lowerCaseName bool) *memdb.TableSchema {
 					Field: "ParentGroupIDs",
 				},
 			},
-			"bucket_key_hash": &memdb.IndexSchema{
-				Name: "bucket_key_hash",
+			"bucket_key": {
+				Name: "bucket_key",
 				Indexer: &memdb.StringFieldIndex{
-					Field: "BucketKeyHash",
+					Field: "BucketKey",
 				},
 			},
-			"namespace_id": &memdb.IndexSchema{
+			"namespace_id": {
 				Name: "namespace_id",
 				Indexer: &memdb.StringFieldIndex{
 					Field: "NamespaceID",
@@ -182,14 +194,14 @@ func groupAliasesTableSchema(lowerCaseName bool) *memdb.TableSchema {
 	return &memdb.TableSchema{
 		Name: groupAliasesTable,
 		Indexes: map[string]*memdb.IndexSchema{
-			"id": &memdb.IndexSchema{
+			"id": {
 				Name:   "id",
 				Unique: true,
 				Indexer: &memdb.StringFieldIndex{
 					Field: "ID",
 				},
 			},
-			"factors": &memdb.IndexSchema{
+			"factors": {
 				Name:   "factors",
 				Unique: true,
 				Indexer: &memdb.CompoundIndex{
@@ -204,7 +216,42 @@ func groupAliasesTableSchema(lowerCaseName bool) *memdb.TableSchema {
 					},
 				},
 			},
-			"namespace_id": &memdb.IndexSchema{
+			"namespace_id": {
+				Name: "namespace_id",
+				Indexer: &memdb.StringFieldIndex{
+					Field: "NamespaceID",
+				},
+			},
+		},
+	}
+}
+
+func oidcClientsTableSchema(_ bool) *memdb.TableSchema {
+	return &memdb.TableSchema{
+		Name: oidcClientsTable,
+		Indexes: map[string]*memdb.IndexSchema{
+			"id": {
+				Name:   "id",
+				Unique: true,
+				Indexer: &memdb.StringFieldIndex{
+					Field: "ClientID",
+				},
+			},
+			"name": {
+				Name:   "name",
+				Unique: true,
+				Indexer: &memdb.CompoundIndex{
+					Indexes: []memdb.Indexer{
+						&memdb.StringFieldIndex{
+							Field: "NamespaceID",
+						},
+						&memdb.StringFieldIndex{
+							Field: "Name",
+						},
+					},
+				},
+			},
+			"namespace_id": {
 				Name: "namespace_id",
 				Indexer: &memdb.StringFieldIndex{
 					Field: "NamespaceID",

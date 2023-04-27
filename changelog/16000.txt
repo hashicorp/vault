@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Limit activity log client count usage by namespaces
+```

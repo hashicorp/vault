@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package consul
 
 import (
@@ -5,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/consul/api"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func (b *backend) client(ctx context.Context, s logical.Storage) (*api.Client, error, error) {
@@ -20,11 +23,7 @@ func (b *backend) client(ctx context.Context, s logical.Storage) (*api.Client, e
 		return nil, nil, fmt.Errorf("no error received but no configuration found")
 	}
 
-	consulConf := api.DefaultNonPooledConfig()
-	consulConf.Address = conf.Address
-	consulConf.Scheme = conf.Scheme
-	consulConf.Token = conf.Token
-
+	consulConf := conf.NewConfig()
 	client, err := api.NewClient(consulConf)
 	return client, nil, err
 }

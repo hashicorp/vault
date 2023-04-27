@@ -1,0 +1,9 @@
+```release-note:change
+agent: Errors in the template engine will no longer cause agent to exit unless
+explicitly defined to do so. A new configuration parameter,
+`exit_on_retry_failure`, within the new top-level stanza, `template_config`, can
+be set to `true` in order to cause agent to exit. Note that for agent to exit if
+`template.error_on_missing_key` is set to `true`, `exit_on_retry_failure` must
+be also set to `true`. Otherwise, the template engine will log an error but then
+restart its internal runner.
+```

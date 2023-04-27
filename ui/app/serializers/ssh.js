@@ -1,10 +1,15 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+import RESTSerializer from '@ember-data/serializer/rest';
 import { isNone, isBlank } from '@ember/utils';
 import { assign } from '@ember/polyfills';
 import { decamelize } from '@ember/string';
-import DS from 'ember-data';
 
-export default DS.RESTSerializer.extend({
-  keyForAttribute: function(attr) {
+export default RESTSerializer.extend({
+  keyForAttribute: function (attr) {
     return decamelize(attr);
   },
 
@@ -28,8 +33,8 @@ export default DS.RESTSerializer.extend({
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     const responseJSON = this.normalizeItems(payload);
     const { modelName } = primaryModelClass;
-    let transformedPayload = { [modelName]: responseJSON };
-    let ret = this._super(store, primaryModelClass, transformedPayload, id, requestType);
+    const transformedPayload = { [modelName]: responseJSON };
+    const ret = this._super(store, primaryModelClass, transformedPayload, id, requestType);
     return ret;
   },
 

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package http
 
 import (
@@ -74,5 +77,4 @@ func TestSysConfigCors(t *testing.T) {
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: expected: %#v\nactual: %#v", expected, actual)
 	}
-
 }

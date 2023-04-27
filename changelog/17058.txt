@@ -1,0 +1,6 @@
+```release-note:change
+auth: `POST /sys/auth/:type` endpoint response contains a warning for `Deprecated` auth methods.
+```
+```release-note:change
+secrets: `POST /sys/mounts/:type` endpoint response contains a warning for `Deprecated` secrets engines.
+```

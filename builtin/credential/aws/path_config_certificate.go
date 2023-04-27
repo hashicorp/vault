@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package awsauth
 
 import (
@@ -6,77 +9,27 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
-	"math/big"
 	"strings"
 
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
-
-// dsaSignature represents the contents of the signature of a signed
-// content using digital signature algorithm.
-type dsaSignature struct {
-	R, S *big.Int
-}
-
-// This certificate is used to verify the PKCS#7 signature of the instance
-// identity document. As per AWS documentation, this public key is valid for
-// US East (N. Virginia), US West (Oregon), US West (N. California), EU
-// (Ireland), EU (Frankfurt), Asia Pacific (Tokyo), Asia Pacific (Seoul), Asia
-// Pacific (Singapore), Asia Pacific (Sydney), and South America (Sao Paulo).
-//
-// It's also the same certificate, but for some reason listed separately, for
-// GovCloud (US)
-const genericAWSPublicCertificatePkcs7 = `-----BEGIN CERTIFICATE-----
-MIIC7TCCAq0CCQCWukjZ5V4aZzAJBgcqhkjOOAQDMFwxCzAJBgNVBAYTAlVTMRkw
-FwYDVQQIExBXYXNoaW5ndG9uIFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYD
-VQQKExdBbWF6b24gV2ViIFNlcnZpY2VzIExMQzAeFw0xMjAxMDUxMjU2MTJaFw0z
-ODAxMDUxMjU2MTJaMFwxCzAJBgNVBAYTAlVTMRkwFwYDVQQIExBXYXNoaW5ndG9u
-IFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYDVQQKExdBbWF6b24gV2ViIFNl
-cnZpY2VzIExMQzCCAbcwggEsBgcqhkjOOAQBMIIBHwKBgQCjkvcS2bb1VQ4yt/5e
-ih5OO6kK/n1Lzllr7D8ZwtQP8fOEpp5E2ng+D6Ud1Z1gYipr58Kj3nssSNpI6bX3
-VyIQzK7wLclnd/YozqNNmgIyZecN7EglK9ITHJLP+x8FtUpt3QbyYXJdmVMegN6P
-hviYt5JH/nYl4hh3Pa1HJdskgQIVALVJ3ER11+Ko4tP6nwvHwh6+ERYRAoGBAI1j
-k+tkqMVHuAFcvAGKocTgsjJem6/5qomzJuKDmbJNu9Qxw3rAotXau8Qe+MBcJl/U
-hhy1KHVpCGl9fueQ2s6IL0CaO/buycU1CiYQk40KNHCcHfNiZbdlx1E9rpUp7bnF
-lRa2v1ntMX3caRVDdbtPEWmdxSCYsYFDk4mZrOLBA4GEAAKBgEbmeve5f8LIE/Gf
-MNmP9CM5eovQOGx5ho8WqD+aTebs+k2tn92BBPqeZqpWRa5P/+jrdKml1qx4llHW
-MXrs3IgIb6+hUIB+S8dz8/mmO0bpr76RoZVCXYab2CZedFut7qc3WUH9+EUAH5mw
-vSeDCOUMYQR7R9LINYwouHIziqQYMAkGByqGSM44BAMDLwAwLAIUWXBlk40xTwSw
-7HX32MxXYruse9ACFBNGmdX2ZBrVNGrN9N2f6ROk0k9K
------END CERTIFICATE-----
-`
-
-// This certificate is used to verify the instance identity document using the
-// RSA digest of the same
-const genericAWSPublicCertificateIdentity = `-----BEGIN CERTIFICATE-----
-MIIDIjCCAougAwIBAgIJAKnL4UEDMN/FMA0GCSqGSIb3DQEBBQUAMGoxCzAJBgNV
-BAYTAlVTMRMwEQYDVQQIEwpXYXNoaW5ndG9uMRAwDgYDVQQHEwdTZWF0dGxlMRgw
-FgYDVQQKEw9BbWF6b24uY29tIEluYy4xGjAYBgNVBAMTEWVjMi5hbWF6b25hd3Mu
-Y29tMB4XDTE0MDYwNTE0MjgwMloXDTI0MDYwNTE0MjgwMlowajELMAkGA1UEBhMC
-VVMxEzARBgNVBAgTCldhc2hpbmd0b24xEDAOBgNVBAcTB1NlYXR0bGUxGDAWBgNV
-BAoTD0FtYXpvbi5jb20gSW5jLjEaMBgGA1UEAxMRZWMyLmFtYXpvbmF3cy5jb20w
-gZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBAIe9GN//SRK2knbjySG0ho3yqQM3
-e2TDhWO8D2e8+XZqck754gFSo99AbT2RmXClambI7xsYHZFapbELC4H91ycihvrD
-jbST1ZjkLQgga0NE1q43eS68ZeTDccScXQSNivSlzJZS8HJZjgqzBlXjZftjtdJL
-XeE4hwvo0sD4f3j9AgMBAAGjgc8wgcwwHQYDVR0OBBYEFCXWzAgVyrbwnFncFFIs
-77VBdlE4MIGcBgNVHSMEgZQwgZGAFCXWzAgVyrbwnFncFFIs77VBdlE4oW6kbDBq
-MQswCQYDVQQGEwJVUzETMBEGA1UECBMKV2FzaGluZ3RvbjEQMA4GA1UEBxMHU2Vh
-dHRsZTEYMBYGA1UEChMPQW1hem9uLmNvbSBJbmMuMRowGAYDVQQDExFlYzIuYW1h
-em9uYXdzLmNvbYIJAKnL4UEDMN/FMAwGA1UdEwQFMAMBAf8wDQYJKoZIhvcNAQEF
-BQADgYEAFYcz1OgEhQBXIwIdsgCOS8vEtiJYF+j9uO6jz7VOmJqO+pRlAbRlvY8T
-C1haGgSI/A1uZUKs/Zfnph0oEI0/hu1IIJ/SKBDtN5lvmZ/IzbOPIJWirlsllQIQ
-7zvWbGd9c9+Rm3p04oTvhup99la7kZqevJK0QRdD/6NpCKsqP/0=
------END CERTIFICATE-----`
 
 // pathListCertificates creates a path that enables listing of all
 // the AWS public certificates registered with Vault.
-func pathListCertificates(b *backend) *framework.Path {
+func (b *backend) pathListCertificates() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/certificates/?",
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ListOperation: b.pathCertificatesList,
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "certificate-configurations",
+		},
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathCertificatesList,
+			},
 		},
 
 		HelpSynopsis:    pathListCertificatesHelpSyn,
@@ -84,9 +37,14 @@ func pathListCertificates(b *backend) *framework.Path {
 	}
 }
 
-func pathConfigCertificate(b *backend) *framework.Path {
+func (b *backend) pathConfigCertificate() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/certificate/" + framework.GenericNameRegex("cert_name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"cert_name": {
 				Type:        framework.TypeString,
@@ -110,11 +68,33 @@ vary. Defaults to "pkcs7".`,
 
 		ExistenceCheck: b.pathConfigCertificateExistenceCheck,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.CreateOperation: b.pathConfigCertificateCreateUpdate,
-			logical.UpdateOperation: b.pathConfigCertificateCreateUpdate,
-			logical.ReadOperation:   b.pathConfigCertificateRead,
-			logical.DeleteOperation: b.pathConfigCertificateDelete,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.pathConfigCertificateCreateUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "certificate",
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathConfigCertificateCreateUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "certificate",
+				},
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathConfigCertificateRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "certificate-configuration",
+				},
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathConfigCertificateDelete,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "certificate-configuration",
+				},
+			},
 		},
 
 		HelpSynopsis:    pathConfigCertificateSyn,
@@ -149,7 +129,7 @@ func (b *backend) pathCertificatesList(ctx context.Context, req *logical.Request
 	return logical.ListResponse(certs), nil
 }
 
-// Decodes the PEM encoded certiticate and parses it into a x509 cert
+// Decodes the PEM encoded certificate and parses it into a x509 cert
 func decodePEMAndParseCertificate(certificate string) (*x509.Certificate, error) {
 	// Decode the PEM block and error out if a block is not detected in the first attempt
 	decodedPublicCert, rest := pem.Decode([]byte(certificate))
@@ -169,29 +149,18 @@ func decodePEMAndParseCertificate(certificate string) (*x509.Certificate, error)
 }
 
 // awsPublicCertificates returns a slice of all the parsed AWS public
-// certificates, which are used to verify either the SHA256 RSA signature, or
-// the PKCS7 signatures of the instance identity documents. This method will
+// certificates, which are used to verify either the identity, RSA 2048
+// or the PKCS7 signatures of the instance identity documents. This method will
 // append the certificates registered using `config/certificate/<cert_name>`
-// endpoint, along with the default certificate in the backend.
+// endpoint, along with the default certificates in the backend.
 func (b *backend) awsPublicCertificates(ctx context.Context, s logical.Storage, isPkcs bool) ([]*x509.Certificate, error) {
 	// Lock at beginning and use internal method so that we are consistent as
 	// we iterate through
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
 
-	var certs []*x509.Certificate
-
-	defaultCert := genericAWSPublicCertificateIdentity
-	if isPkcs {
-		defaultCert = genericAWSPublicCertificatePkcs7
-	}
-
-	// Append the generic certificate provided in the AWS EC2 instance metadata documentation
-	decodedCert, err := decodePEMAndParseCertificate(defaultCert)
-	if err != nil {
-		return nil, err
-	}
-	certs = append(certs, decodedCert)
+	certs := make([]*x509.Certificate, len(defaultCertificates))
+	copy(certs, defaultCertificates)
 
 	// Get the list of all the registered certificates
 	registeredCerts, err := s.List(ctx, "config/certificate/")
@@ -439,9 +408,11 @@ corresponding regions should be registered using this endpoint. PKCS#7 is verifi
 using a collection of certificates containing the default certificate and all the
 certificates that are registered using this endpoint.
 `
+
 const pathListCertificatesHelpSyn = `
 Lists all the AWS public certificates that are registered with the backend.
 `
+
 const pathListCertificatesHelpDesc = `
 Certificates will be listed by their respective names that were used during registration.
 `

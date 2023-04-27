@@ -1,13 +1,17 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package http
 
 import (
 	"encoding/json"
+	"errors"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -146,6 +150,9 @@ func TestHTTP_Wrapping(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if secret.Warnings != nil {
+		t.Fatalf("Warnings found: %v", secret.Warnings)
+	}
 	if secret == nil || secret.Data == nil {
 		t.Fatal("secret or secret data is nil")
 	}
@@ -222,6 +229,9 @@ func TestHTTP_Wrapping(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if secret.Warnings != nil {
+		t.Fatalf("Warnings found: %v", secret.Warnings)
+	}
 	ret4 := secret
 	// Should be expired and fail
 	_, err = client.Logical().Unwrap(wrapInfo.Token)
@@ -286,9 +296,15 @@ func TestHTTP_Wrapping(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if secret.Warnings != nil {
+		t.Fatalf("Warnings found: %v", secret.Warnings)
+	}
 	secret, err = client.Logical().Unwrap(secret.WrapInfo.Token)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if secret.Warnings != nil {
+		t.Fatalf("Warnings found: %v", secret.Warnings)
 	}
 	if !reflect.DeepEqual(data, secret.Data) {
 		t.Fatalf("custom wrap did not match expected: %#v", secret.Data)
@@ -320,6 +336,9 @@ func TestHTTP_Wrapping(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if secret.Warnings != nil {
+		t.Fatalf("Warnings found: %v", secret.Warnings)
+	}
 
 	// Check for correct Creation path after rewrap
 	if wrapInfo.CreationPath != "secret/foo" {
@@ -350,5 +369,21 @@ func TestHTTP_Wrapping(t *testing.T) {
 		"zip": "zap",
 	}) {
 		t.Fatalf("secret data did not match expected: %#v", secret.Data)
+	}
+
+	// Ensure that wrapping lookup without a client token responds correctly
+	client.ClearToken()
+	secret, err = client.Logical().Read("sys/wrapping/lookup")
+	if secret != nil {
+		t.Fatalf("expected no response: %#v", secret)
+	}
+
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	var respError *api.ResponseError
+	if errors.As(err, &respError); respError.StatusCode != 403 {
+		t.Fatalf("expected 403 response, actual: %d", respError.StatusCode)
 	}
 }

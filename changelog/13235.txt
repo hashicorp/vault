@@ -1,0 +1,3 @@
+```release-note:bug
+auth/approle: Fix regression where unset cidrlist is returned as nil instead of zero-length array.
+```

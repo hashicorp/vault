@@ -1,0 +1,3 @@
+```release-note:improvement
+api: KV helper methods to simplify the common use case of reading and writing KV secrets
+```

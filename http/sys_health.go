@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package http
 
 import (
@@ -8,7 +11,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/version"
 )
@@ -43,7 +47,7 @@ func handleSysHealthGet(core *vault.Core, w http.ResponseWriter, r *http.Request
 	code, body, err := getSysHealth(core, r)
 	if err != nil {
 		core.Logger().Error("error checking health", "error", err)
-		respondError(w, http.StatusInternalServerError, nil)
+		respondError(w, code, nil)
 		return
 	}
 
@@ -61,10 +65,7 @@ func handleSysHealthGet(core *vault.Core, w http.ResponseWriter, r *http.Request
 }
 
 func handleSysHealthHead(core *vault.Core, w http.ResponseWriter, r *http.Request) {
-	code, body, err := getSysHealth(core, r)
-	if err != nil {
-		code = http.StatusInternalServerError
-	}
+	code, body, _ := getSysHealth(core, r)
 
 	if body != nil {
 		w.Header().Set("Content-Type", "application/json")
@@ -73,9 +74,23 @@ func handleSysHealthHead(core *vault.Core, w http.ResponseWriter, r *http.Reques
 }
 
 func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, error) {
+	var err error
+
 	// Check if being a standby is allowed for the purpose of a 200 OK
-	_, standbyOK := r.URL.Query()["standbyok"]
-	_, perfStandbyOK := r.URL.Query()["perfstandbyok"]
+	standbyOKStr, standbyOK := r.URL.Query()["standbyok"]
+	if standbyOK {
+		standbyOK, err = parseutil.ParseBool(standbyOKStr[0])
+		if err != nil {
+			return http.StatusBadRequest, nil, fmt.Errorf("bad value for standbyok parameter: %w", err)
+		}
+	}
+	perfStandbyOKStr, perfStandbyOK := r.URL.Query()["perfstandbyok"]
+	if perfStandbyOK {
+		perfStandbyOK, err = parseutil.ParseBool(perfStandbyOKStr[0])
+		if err != nil {
+			return http.StatusBadRequest, nil, fmt.Errorf("bad value for perfstandbyok parameter: %w", err)
+		}
+	}
 
 	uninitCode := http.StatusNotImplemented
 	if code, found, ok := fetchStatusCode(r, "uninitcode"); !ok {
@@ -123,8 +138,7 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 
 	// Check system status
 	sealed := core.Sealed()
-	standby, _ := core.Standby()
-	perfStandby := core.PerfStandby()
+	standby, perfStandby := core.StandbyStates()
 	var replicationState consts.ReplicationState
 	if standby {
 		replicationState = core.ActiveNodeReplicationState()
@@ -146,10 +160,14 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		code = sealedCode
 	case replicationState.HasState(consts.ReplicationDRSecondary):
 		code = drSecondaryCode
-	case !perfStandbyOK && perfStandby:
-		code = perfStandbyCode
-	case !standbyOK && standby:
-		code = standbyCode
+	case perfStandby:
+		if !perfStandbyOK {
+			code = perfStandbyCode
+		}
+	case standby:
+		if !standbyOK {
+			code = standbyCode
+		}
 	}
 
 	// Fetch the local cluster name and identifier
@@ -180,6 +198,21 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		ClusterID:                  clusterID,
 	}
 
+	licenseState, err := vault.LicenseSummary(core)
+	if err != nil {
+		return http.StatusInternalServerError, nil, err
+	}
+
+	if licenseState != nil {
+		body.License = &HealthResponseLicense{
+			State:      licenseState.State,
+			Terminated: licenseState.Terminated,
+		}
+		if !licenseState.ExpiryTime.IsZero() {
+			body.License.ExpiryTime = licenseState.ExpiryTime.Format(time.RFC3339)
+		}
+	}
+
 	if init && !sealed && !standby {
 		body.LastWAL = vault.LastWAL(core)
 	}
@@ -187,16 +220,23 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 	return code, body, nil
 }
 
+type HealthResponseLicense struct {
+	State      string `json:"state"`
+	ExpiryTime string `json:"expiry_time"`
+	Terminated bool   `json:"terminated"`
+}
+
 type HealthResponse struct {
-	Initialized                bool   `json:"initialized"`
-	Sealed                     bool   `json:"sealed"`
-	Standby                    bool   `json:"standby"`
-	PerformanceStandby         bool   `json:"performance_standby"`
-	ReplicationPerformanceMode string `json:"replication_performance_mode"`
-	ReplicationDRMode          string `json:"replication_dr_mode"`
-	ServerTimeUTC              int64  `json:"server_time_utc"`
-	Version                    string `json:"version"`
-	ClusterName                string `json:"cluster_name,omitempty"`
-	ClusterID                  string `json:"cluster_id,omitempty"`
-	LastWAL                    uint64 `json:"last_wal,omitempty"`
+	Initialized                bool                   `json:"initialized"`
+	Sealed                     bool                   `json:"sealed"`
+	Standby                    bool                   `json:"standby"`
+	PerformanceStandby         bool                   `json:"performance_standby"`
+	ReplicationPerformanceMode string                 `json:"replication_performance_mode"`
+	ReplicationDRMode          string                 `json:"replication_dr_mode"`
+	ServerTimeUTC              int64                  `json:"server_time_utc"`
+	Version                    string                 `json:"version"`
+	ClusterName                string                 `json:"cluster_name,omitempty"`
+	ClusterID                  string                 `json:"cluster_id,omitempty"`
+	LastWAL                    uint64                 `json:"last_wal,omitempty"`
+	License                    *HealthResponseLicense `json:"license,omitempty"`
 }

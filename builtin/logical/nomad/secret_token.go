@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package nomad
 
 import (
@@ -5,8 +8,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -17,7 +20,7 @@ func secretToken(b *backend) *framework.Secret {
 	return &framework.Secret{
 		Type: SecretTokenType,
 		Fields: map[string]*framework.FieldSchema{
-			"token": &framework.FieldSchema{
+			"token": {
 				Type:        framework.TypeString,
 				Description: "Request token",
 			},

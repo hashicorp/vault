@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package swift
 
 import (
@@ -9,8 +12,8 @@ import (
 	log "github.com/hashicorp/go-hclog"
 
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/ncw/swift"
 )
 
@@ -50,7 +53,7 @@ func TestSwiftBackend(t *testing.T) {
 
 	err = cleaner.ContainerCreate(container, nil)
 	if nil != err {
-		t.Fatalf("Unable to create test container '%s': %v", container, err)
+		t.Fatalf("Unable to create test container %q: %v", container, err)
 	}
 	defer func() {
 		newObjects, err := cleaner.ObjectNamesAll(container, nil)

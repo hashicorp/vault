@@ -1,6 +1,10 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -10,8 +14,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*ReadCommand)(nil)
-var _ cli.CommandAutocomplete = (*ReadCommand)(nil)
+var (
+	_ cli.Command             = (*ReadCommand)(nil)
+	_ cli.CommandAutocomplete = (*ReadCommand)(nil)
+)
 
 type ReadCommand struct {
 	*BaseCommand
@@ -57,7 +63,7 @@ func (c *ReadCommand) AutocompleteFlags() complete.Flags {
 func (c *ReadCommand) Run(args []string) int {
 	f := c.Flags()
 
-	if err := f.Parse(args); err != nil {
+	if err := f.Parse(args, ParseOptionAllowRawFormat(true)); err != nil {
 		c.UI.Error(err.Error())
 		return 1
 	}
@@ -75,6 +81,10 @@ func (c *ReadCommand) Run(args []string) int {
 		return 2
 	}
 
+	// client.ReadRaw* methods require a manual timeout override
+	ctx, cancel := context.WithTimeout(context.Background(), client.ClientTimeout())
+	defer cancel()
+
 	// Pull our fake stdin if needed
 	stdin := (io.Reader)(os.Stdin)
 	if c.testStdin != nil {
@@ -89,19 +99,40 @@ func (c *ReadCommand) Run(args []string) int {
 		return 1
 	}
 
-	secret, err := client.Logical().ReadWithData(path, data)
+	if Format(c.UI) != "raw" {
+		secret, err := client.Logical().ReadWithDataWithContext(ctx, path, data)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error reading %s: %s", path, err))
+			return 2
+		}
+		if secret == nil {
+			c.UI.Error(fmt.Sprintf("No value found at %s", path))
+			return 2
+		}
+
+		if c.flagField != "" {
+			return PrintRawField(c.UI, secret, c.flagField)
+		}
+
+		return OutputSecret(c.UI, secret)
+	}
+
+	resp, err := client.Logical().ReadRawWithDataWithContext(ctx, path, data)
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error reading %s: %s", path, err))
+		c.UI.Error(fmt.Sprintf("Error reading: %s: %s", path, err))
 		return 2
 	}
-	if secret == nil {
+	if resp == nil || resp.Body == nil {
 		c.UI.Error(fmt.Sprintf("No value found at %s", path))
 		return 2
 	}
+	defer resp.Body.Close()
 
-	if c.flagField != "" {
-		return PrintRawField(c.UI, secret, c.flagField)
+	contents, err := io.ReadAll(resp.Body)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error reading: %s: %s", path, err))
+		return 2
 	}
 
-	return OutputSecret(c.UI, secret)
+	return OutputData(c.UI, contents)
 }

@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/okta: Adds support for Okta Verify TOTP MFA.
+```

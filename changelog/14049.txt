@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Adds multi-factor authentication support
+```

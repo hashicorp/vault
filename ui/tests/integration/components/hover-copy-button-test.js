@@ -1,42 +1,42 @@
-import { module, test, skip } from 'qunit';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render } from '@ember/test-helpers';
+import { render, settled } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import hbs from 'htmlbars-inline-precompile';
 import copyButton from 'vault/tests/pages/components/hover-copy-button';
 const component = create(copyButton);
 
-module('Integration | Component | hover copy button', function(hooks) {
+module('Integration | Component | hover copy button', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
-    component.setContext(this);
-  });
-
-  hooks.afterEach(function() {
-    component.removeContext();
-  });
-
   // ember-cli-clipboard helpers don't like the new style
-  skip('it shows success message in tooltip', async function(assert) {
-    this.set('copyValue', 'foo');
-    await render(
-      hbs`<div class="has-copy-button" tabindex="-1">
-      <HoverCopyButton @copyValue={{copyValue}} />
-      </div>`
-    );
-
+  test('it shows success message in tooltip', async function (assert) {
+    await render(hbs`
+    <div class="has-copy-button" tabindex="-1">
+      <HoverCopyButton @copyValue="foo" />
+      </div>
+  `);
     await component.focusContainer();
+    await settled();
     assert.ok(component.buttonIsVisible);
     await component.mouseEnter();
-    assert.equal(component.tooltipText, 'Copy', 'shows copy');
-    await component.click();
-    assert.equal(component.tooltipText, 'Copied!', 'shows success message');
+    await settled();
+    assert.strictEqual(component.tooltipText, 'Copy', 'shows copy');
   });
 
-  test('it has the correct class when alwaysShow is true', async function(assert) {
-    this.set('copyValue', 'foo');
-    await render(hbs`{{hover-copy-button alwaysShow=true copyValue=copyValue}}`);
+  test('it has the correct class when alwaysShow is true', async function (assert) {
+    await render(hbs`
+    <HoverCopyButton
+      @copyValue="foo"
+      @alwaysShow={{true}}
+    />
+  `);
+    await render(hbs`{{hover-copy-button alwaysShow=true copyValue=this.copyValue}}`);
     assert.ok(component.buttonIsVisible);
     assert.ok(component.wrapperClass.includes('hover-copy-button-static'));
   });

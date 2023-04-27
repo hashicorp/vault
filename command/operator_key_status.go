@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -8,8 +11,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*OperatorKeyStatusCommand)(nil)
-var _ cli.CommandAutocomplete = (*OperatorKeyStatusCommand)(nil)
+var (
+	_ cli.Command             = (*OperatorKeyStatusCommand)(nil)
+	_ cli.CommandAutocomplete = (*OperatorKeyStatusCommand)(nil)
+)
 
 type OperatorKeyStatusCommand struct {
 	*BaseCommand

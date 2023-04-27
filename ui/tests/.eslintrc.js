@@ -1,9 +1,14 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+/* eslint-disable no-undef */
 module.exports = {
   env: {
     embertest: true,
   },
   globals: {
-    faker: true,
     server: true,
     $: true,
     authLogout: false,

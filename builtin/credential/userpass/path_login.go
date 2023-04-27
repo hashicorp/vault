@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package userpass
 
 import (
@@ -6,23 +9,29 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/vault/helper/cidrutil"
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/cidrutil"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/crypto/bcrypt"
 )
 
 func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login/" + framework.GenericNameRegex("username"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixUserpass,
+			OperationVerb:   "login",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
-			"username": &framework.FieldSchema{
+			"username": {
 				Type:        framework.TypeString,
 				Description: "Username of the user.",
 			},
 
-			"password": &framework.FieldSchema{
+			"password": {
 				Type:        framework.TypeString,
 				Description: "Password for this user.",
 			},
@@ -39,7 +48,7 @@ func pathLogin(b *backend) *framework.Path {
 }
 
 func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	username := strings.ToLower(d.Get("username").(string))
+	username := d.Get("username").(string)
 	if username == "" {
 		return nil, fmt.Errorf("missing username")
 	}
@@ -86,14 +95,26 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 	// Check for a password match. Check for a hash collision for Vault 0.2+,
 	// but handle the older legacy passwords with a constant time comparison.
 	passwordBytes := []byte(password)
-	if !legacyPassword {
+	switch {
+	case !legacyPassword:
 		if err := bcrypt.CompareHashAndPassword(userPassword, passwordBytes); err != nil {
-			return logical.ErrorResponse("invalid username or password"), nil
+			// The failed login info of existing users alone are tracked as only
+			// existing user's failed login information is stored in storage for optimization
+			if user == nil || userError != nil {
+				return logical.ErrorResponse("invalid username or password"), nil
+			}
+			return logical.ErrorResponse("invalid username or password"), logical.ErrInvalidCredentials
 		}
-	} else {
+	default:
 		if subtle.ConstantTimeCompare(userPassword, passwordBytes) != 1 {
-			return logical.ErrorResponse("invalid username or password"), nil
+			// The failed login info of existing users alone are tracked as only
+			// existing user's failed login information is stored in storage for optimization
+			if user == nil || userError != nil {
+				return logical.ErrorResponse("invalid username or password"), nil
+			}
+			return logical.ErrorResponse("invalid username or password"), logical.ErrInvalidCredentials
 		}
+
 	}
 
 	if userError != nil {
@@ -104,27 +125,29 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 	}
 
 	// Check for a CIDR match.
-	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, user.BoundCIDRs) {
-		return logical.ErrorResponse("login request originated from invalid CIDR"), nil
+	if len(user.TokenBoundCIDRs) > 0 {
+		if req.Connection == nil {
+			b.Logger().Warn("token bound CIDRs found but no connection information available for validation")
+			return nil, logical.ErrPermissionDenied
+		}
+		if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, user.TokenBoundCIDRs) {
+			return nil, logical.ErrPermissionDenied
+		}
 	}
 
-	return &logical.Response{
-		Auth: &logical.Auth{
-			Policies: user.Policies,
-			Metadata: map[string]string{
-				"username": username,
-			},
-			DisplayName: username,
-			LeaseOptions: logical.LeaseOptions{
-				TTL:       user.TTL,
-				MaxTTL:    user.MaxTTL,
-				Renewable: true,
-			},
-			Alias: &logical.Alias{
-				Name: username,
-			},
-			BoundCIDRs: user.BoundCIDRs,
+	auth := &logical.Auth{
+		Metadata: map[string]string{
+			"username": username,
 		},
+		DisplayName: username,
+		Alias: &logical.Alias{
+			Name: username,
+		},
+	}
+	user.PopulateTokenAuth(auth)
+
+	return &logical.Response{
+		Auth: auth,
 	}, nil
 }
 
@@ -139,13 +162,14 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		return nil, nil
 	}
 
-	if !policyutil.EquivalentPolicies(user.Policies, req.Auth.TokenPolicies) {
+	if !policyutil.EquivalentPolicies(user.TokenPolicies, req.Auth.TokenPolicies) {
 		return nil, fmt.Errorf("policies have changed, not renewing")
 	}
 
 	resp := &logical.Response{Auth: req.Auth}
-	resp.Auth.TTL = user.TTL
-	resp.Auth.MaxTTL = user.MaxTTL
+	resp.Auth.Period = user.TokenPeriod
+	resp.Auth.TTL = user.TokenTTL
+	resp.Auth.MaxTTL = user.TokenMaxTTL
 	return resp, nil
 }
 

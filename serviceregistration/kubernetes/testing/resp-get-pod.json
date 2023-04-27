@@ -1,0 +1,120 @@
+{
+  "kind": "Pod",
+  "apiVersion": "v1",
+  "metadata": {
+    "name": "shell-demo",
+    "labels": {"fizz": "buzz"},
+    "namespace": "default",
+    "selfLink": "/api/v1/namespaces/default/pods/shell-demo",
+    "uid": "7ecb93ff-aa64-426d-b330-2c0b2c0957a2",
+    "resourceVersion": "87798",
+    "creationTimestamp": "2020-01-10T19:22:40Z",
+    "annotations": {
+      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"v1\",\"kind\":\"Pod\",\"metadata\":{\"annotations\":{},\"name\":\"shell-demo\",\"namespace\":\"default\"},\"spec\":{\"containers\":[{\"image\":\"nginx\",\"name\":\"nginx\",\"volumeMounts\":[{\"mountPath\":\"/usr/share/nginx/html\",\"name\":\"shared-data\"}]}],\"dnsPolicy\":\"Default\",\"hostNetwork\":true,\"volumes\":[{\"emptyDir\":{},\"name\":\"shared-data\"}]}}\n"
+    }
+  },
+  "spec": {
+    "volumes": [{
+      "name": "shared-data",
+      "emptyDir": {}
+    }, {
+      "name": "default-token-5fjt9",
+      "secret": {
+        "secretName": "default-token-5fjt9",
+        "defaultMode": 420
+      }
+    }],
+    "containers": [{
+      "name": "nginx",
+      "image": "nginx",
+      "resources": {},
+      "volumeMounts": [{
+        "name": "shared-data",
+        "mountPath": "/usr/share/nginx/html"
+      }, {
+        "name": "default-token-5fjt9",
+        "readOnly": true,
+        "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount"
+      }],
+      "terminationMessagePath": "/dev/termination-log",
+      "terminationMessagePolicy": "File",
+      "imagePullPolicy": "Always"
+    }],
+    "restartPolicy": "Always",
+    "terminationGracePeriodSeconds": 30,
+    "dnsPolicy": "Default",
+    "serviceAccountName": "default",
+    "serviceAccount": "default",
+    "nodeName": "minikube",
+    "hostNetwork": true,
+    "securityContext": {},
+    "schedulerName": "default-scheduler",
+    "tolerations": [{
+      "key": "node.kubernetes.io/not-ready",
+      "operator": "Exists",
+      "effect": "NoExecute",
+      "tolerationSeconds": 300
+    }, {
+      "key": "node.kubernetes.io/unreachable",
+      "operator": "Exists",
+      "effect": "NoExecute",
+      "tolerationSeconds": 300
+    }],
+    "priority": 0,
+    "enableServiceLinks": true
+  },
+  "status": {
+    "phase": "Running",
+    "conditions": [{
+      "type": "Initialized",
+      "status": "True",
+      "lastProbeTime": null,
+      "lastTransitionTime": "2020-01-10T19:22:40Z"
+    }, {
+      "type": "Ready",
+      "status": "True",
+      "lastProbeTime": null,
+      "lastTransitionTime": "2020-01-10T20:20:55Z"
+    }, {
+      "type": "ContainersReady",
+      "status": "True",
+      "lastProbeTime": null,
+      "lastTransitionTime": "2020-01-10T20:20:55Z"
+    }, {
+      "type": "PodScheduled",
+      "status": "True",
+      "lastProbeTime": null,
+      "lastTransitionTime": "2020-01-10T19:22:40Z"
+    }],
+    "hostIP": "192.168.99.100",
+    "podIP": "192.168.99.100",
+    "podIPs": [{
+      "ip": "192.168.99.100"
+    }],
+    "startTime": "2020-01-10T19:22:40Z",
+    "containerStatuses": [{
+      "name": "nginx",
+      "state": {
+        "running": {
+          "startedAt": "2020-01-10T20:20:55Z"
+        }
+      },
+      "lastState": {
+        "terminated": {
+          "exitCode": 0,
+          "reason": "Completed",
+          "startedAt": "2020-01-10T19:22:53Z",
+          "finishedAt": "2020-01-10T20:12:03Z",
+          "containerID": "docker://ed8bc068cd313ea5adb72780e8015ab09ecb61ea077e39304b4a3fe581f471c4"
+        }
+      },
+      "ready": true,
+      "restartCount": 1,
+      "image": "nginx:latest",
+      "imageID": "docker-pullable://nginx@sha256:8aa7f6a9585d908a63e5e418dc5d14ae7467d2e36e1ab4f0d8f9d059a3d071ce",
+      "containerID": "docker://a8ee34466791bc6f082f271f40cdfc43625cea81831b1029b1e90b4f6949f6df",
+      "started": true
+    }],
+    "qosClass": "BestEffort"
+  }
+}

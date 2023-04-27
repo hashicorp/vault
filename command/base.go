@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -15,6 +18,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/token"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/mattn/go-isatty"
 	"github.com/mitchellh/cli"
 	"github.com/pkg/errors"
 	"github.com/posener/complete"
@@ -38,24 +42,31 @@ type BaseCommand struct {
 	flags     *FlagSets
 	flagsOnce sync.Once
 
-	flagAddress        string
-	flagAgentAddress   string
-	flagCACert         string
-	flagCAPath         string
-	flagClientCert     string
-	flagClientKey      string
-	flagNamespace      string
-	flagNS             string
-	flagPolicyOverride bool
-	flagTLSServerName  string
-	flagTLSSkipVerify  bool
-	flagWrapTTL        time.Duration
+	flagAddress          string
+	flagAgentAddress     string
+	flagCACert           string
+	flagCAPath           string
+	flagClientCert       string
+	flagClientKey        string
+	flagNamespace        string
+	flagNS               string
+	flagPolicyOverride   bool
+	flagTLSServerName    string
+	flagTLSSkipVerify    bool
+	flagDisableRedirects bool
+	flagWrapTTL          time.Duration
+	flagUnlockKey        string
 
 	flagFormat           string
 	flagField            string
+	flagDetailed         bool
 	flagOutputCurlString bool
+	flagOutputPolicy     bool
+	flagNonInteractive   bool
 
 	flagMFA []string
+
+	flagHeader map[string]string
 
 	tokenHelper token.TokenHelper
 
@@ -86,6 +97,9 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 	if c.flagOutputCurlString {
 		config.OutputCurlString = c.flagOutputCurlString
 	}
+	if c.flagOutputPolicy {
+		config.OutputPolicy = c.flagOutputPolicy
+	}
 
 	// If we need custom TLS configuration, then set it
 	if c.flagCACert != "" || c.flagCAPath != "" || c.flagClientCert != "" ||
@@ -98,7 +112,11 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 			TLSServerName: c.flagTLSServerName,
 			Insecure:      c.flagTLSSkipVerify,
 		}
-		config.ConfigureTLS(t)
+
+		// Setup TLS config
+		if err := config.ConfigureTLS(t); err != nil {
+			return nil, errors.Wrap(err, "failed to setup TLS config")
+		}
 	}
 
 	// Build the client
@@ -149,6 +167,23 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 		client.SetPolicyOverride(c.flagPolicyOverride)
 	}
 
+	if c.flagHeader != nil {
+
+		var forbiddenHeaders []string
+		for key, val := range c.flagHeader {
+
+			if strings.HasPrefix(key, "X-Vault-") {
+				forbiddenHeaders = append(forbiddenHeaders, key)
+				continue
+			}
+			client.AddHeader(key, val)
+		}
+
+		if len(forbiddenHeaders) > 0 {
+			return nil, fmt.Errorf("failed to setup Headers[%s]: Header starting by 'X-Vault-' are for internal usage only", strings.Join(forbiddenHeaders, ", "))
+		}
+	}
+
 	c.client = client
 
 	return client, nil
@@ -187,6 +222,74 @@ func (c *BaseCommand) DefaultWrappingLookupFunc(operation, path string) string {
 	return api.DefaultWrappingLookupFunc(operation, path)
 }
 
+// getValidationRequired checks to see if the secret exists and has an MFA
+// requirement. If MFA is required and the number of constraints is greater than
+// 1, we can assert that interactive validation is not required.
+func (c *BaseCommand) getMFAValidationRequired(secret *api.Secret) bool {
+	if secret != nil && secret.Auth != nil && secret.Auth.MFARequirement != nil {
+		if c.flagMFA == nil && len(secret.Auth.MFARequirement.MFAConstraints) == 1 {
+			return true
+		} else if len(secret.Auth.MFARequirement.MFAConstraints) > 1 {
+			return true
+		}
+	}
+
+	return false
+}
+
+// getInteractiveMFAMethodInfo returns MFA method information only if operating
+// in interactive mode and one MFA method is configured.
+func (c *BaseCommand) getInteractiveMFAMethodInfo(secret *api.Secret) *MFAMethodInfo {
+	if secret == nil || secret.Auth == nil || secret.Auth.MFARequirement == nil {
+		return nil
+	}
+
+	mfaConstraints := secret.Auth.MFARequirement.MFAConstraints
+	if c.flagNonInteractive || len(mfaConstraints) != 1 || !isatty.IsTerminal(os.Stdin.Fd()) {
+		return nil
+	}
+
+	for _, mfaConstraint := range mfaConstraints {
+		if len(mfaConstraint.Any) != 1 {
+			return nil
+		}
+
+		return &MFAMethodInfo{
+			methodType:  mfaConstraint.Any[0].Type,
+			methodID:    mfaConstraint.Any[0].ID,
+			usePasscode: mfaConstraint.Any[0].UsesPasscode,
+		}
+	}
+
+	return nil
+}
+
+func (c *BaseCommand) validateMFA(reqID string, methodInfo MFAMethodInfo) (*api.Secret, error) {
+	var passcode string
+	var err error
+	if methodInfo.usePasscode {
+		passcode, err = c.UI.AskSecret(fmt.Sprintf("Enter the passphrase for methodID %q of type %q:", methodInfo.methodID, methodInfo.methodType))
+		if err != nil {
+			return nil, fmt.Errorf("failed to read passphrase: %w. please validate the login by sending a request to sys/mfa/validate", err)
+		}
+	} else {
+		c.UI.Warn("Asking Vault to perform MFA validation with upstream service. " +
+			"You should receive a push notification in your authenticator app shortly")
+	}
+
+	// passcode could be an empty string
+	mfaPayload := map[string]interface{}{
+		methodInfo.methodID: []string{passcode},
+	}
+
+	client, err := c.Client()
+	if err != nil {
+		return nil, err
+	}
+
+	return client.Sys().MFAValidate(reqID, mfaPayload)
+}
+
 type FlagSetBit uint
 
 const (
@@ -194,6 +297,7 @@ const (
 	FlagSetHTTP
 	FlagSetOutputField
 	FlagSetOutputFormat
+	FlagSetOutputDetailed
 )
 
 // flagSet creates the flags for this command. The result is cached on the
@@ -211,9 +315,9 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			f := set.NewFlagSet("HTTP Options")
 
 			addrStringVar := &StringVar{
-				Name:       "address",
+				Name:       flagNameAddress,
 				Target:     &c.flagAddress,
-				EnvVar:     "VAULT_ADDR",
+				EnvVar:     api.EnvVaultAddress,
 				Completion: complete.PredictAnything,
 				Usage:      "Address of the Vault server.",
 			}
@@ -227,17 +331,17 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			agentAddrStringVar := &StringVar{
 				Name:       "agent-address",
 				Target:     &c.flagAgentAddress,
-				EnvVar:     "VAULT_AGENT_ADDR",
+				EnvVar:     api.EnvVaultAgentAddr,
 				Completion: complete.PredictAnything,
 				Usage:      "Address of the Agent.",
 			}
 			f.StringVar(agentAddrStringVar)
 
 			f.StringVar(&StringVar{
-				Name:       "ca-cert",
+				Name:       flagNameCACert,
 				Target:     &c.flagCACert,
 				Default:    "",
-				EnvVar:     "VAULT_CACERT",
+				EnvVar:     api.EnvVaultCACert,
 				Completion: complete.PredictFiles("*"),
 				Usage: "Path on the local disk to a single PEM-encoded CA " +
 					"certificate to verify the Vault server's SSL certificate. This " +
@@ -245,20 +349,20 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			})
 
 			f.StringVar(&StringVar{
-				Name:       "ca-path",
+				Name:       flagNameCAPath,
 				Target:     &c.flagCAPath,
 				Default:    "",
-				EnvVar:     "VAULT_CAPATH",
+				EnvVar:     api.EnvVaultCAPath,
 				Completion: complete.PredictDirs("*"),
 				Usage: "Path on the local disk to a directory of PEM-encoded CA " +
 					"certificates to verify the Vault server's SSL certificate.",
 			})
 
 			f.StringVar(&StringVar{
-				Name:       "client-cert",
+				Name:       flagNameClientCert,
 				Target:     &c.flagClientCert,
 				Default:    "",
-				EnvVar:     "VAULT_CLIENT_CERT",
+				EnvVar:     api.EnvVaultClientCert,
 				Completion: complete.PredictFiles("*"),
 				Usage: "Path on the local disk to a single PEM-encoded CA " +
 					"certificate to use for TLS authentication to the Vault server. If " +
@@ -266,10 +370,10 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			})
 
 			f.StringVar(&StringVar{
-				Name:       "client-key",
+				Name:       flagNameClientKey,
 				Target:     &c.flagClientKey,
 				Default:    "",
-				EnvVar:     "VAULT_CLIENT_KEY",
+				EnvVar:     api.EnvVaultClientKey,
 				Completion: complete.PredictFiles("*"),
 				Usage: "Path on the local disk to a single PEM-encoded private key " +
 					"matching the client certificate from -client-cert.",
@@ -279,7 +383,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Name:       "namespace",
 				Target:     &c.flagNamespace,
 				Default:    notSetValue, // this can never be a real value
-				EnvVar:     "VAULT_NAMESPACE",
+				EnvVar:     api.EnvVaultNamespace,
 				Completion: complete.PredictAnything,
 				Usage: "The namespace to use for the command. Setting this is not " +
 					"necessary but allows using relative paths. -ns can be used as " +
@@ -296,23 +400,32 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			})
 
 			f.StringVar(&StringVar{
-				Name:       "tls-server-name",
+				Name:       flagTLSServerName,
 				Target:     &c.flagTLSServerName,
 				Default:    "",
-				EnvVar:     "VAULT_TLS_SERVER_NAME",
+				EnvVar:     api.EnvVaultTLSServerName,
 				Completion: complete.PredictAnything,
 				Usage: "Name to use as the SNI host when connecting to the Vault " +
 					"server via TLS.",
 			})
 
 			f.BoolVar(&BoolVar{
-				Name:    "tls-skip-verify",
+				Name:    flagNameTLSSkipVerify,
 				Target:  &c.flagTLSSkipVerify,
 				Default: false,
-				EnvVar:  "VAULT_SKIP_VERIFY",
+				EnvVar:  api.EnvVaultSkipVerify,
 				Usage: "Disable verification of TLS certificates. Using this option " +
-					"is highly discouraged and decreases the security of data " +
+					"is highly discouraged as it decreases the security of data " +
 					"transmissions to and from the Vault server.",
+			})
+
+			f.BoolVar(&BoolVar{
+				Name:    flagNameDisableRedirects,
+				Target:  &c.flagDisableRedirects,
+				Default: false,
+				EnvVar:  api.EnvVaultDisableRedirects,
+				Usage: "Disable the default client behavior, which honors a single " +
+					"redirect response from a request",
 			})
 
 			f.BoolVar(&BoolVar{
@@ -327,7 +440,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Name:       "wrap-ttl",
 				Target:     &c.flagWrapTTL,
 				Default:    0,
-				EnvVar:     "VAULT_WRAP_TTL",
+				EnvVar:     api.EnvVaultWrapTTL,
 				Completion: complete.PredictAnything,
 				Usage: "Wraps the response in a cubbyhole token with the requested " +
 					"TTL. The response is available via the \"vault unwrap\" command. " +
@@ -352,13 +465,45 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 					"command string and exit.",
 			})
 
+			f.BoolVar(&BoolVar{
+				Name:    "output-policy",
+				Target:  &c.flagOutputPolicy,
+				Default: false,
+				Usage: "Instead of executing the request, print an example HCL " +
+					"policy that would be required to run this command, and exit.",
+			})
+
+			f.StringVar(&StringVar{
+				Name:       "unlock-key",
+				Target:     &c.flagUnlockKey,
+				Default:    notSetValue,
+				Completion: complete.PredictNothing,
+				Usage:      "Key to unlock a namespace API lock.",
+			})
+
+			f.StringMapVar(&StringMapVar{
+				Name:       "header",
+				Target:     &c.flagHeader,
+				Completion: complete.PredictAnything,
+				Usage: "Key-value pair provided as key=value to provide http header added to any request done by the CLI." +
+					"Trying to add headers starting with 'X-Vault-' is forbidden and will make the command fail " +
+					"This can be specified multiple times.",
+			})
+
+			f.BoolVar(&BoolVar{
+				Name:    "non-interactive",
+				Target:  &c.flagNonInteractive,
+				Default: false,
+				Usage:   "When set true, prevents asking the user for input via the terminal.",
+			})
+
 		}
 
-		if bit&(FlagSetOutputField|FlagSetOutputFormat) != 0 {
-			f := set.NewFlagSet("Output Options")
+		if bit&(FlagSetOutputField|FlagSetOutputFormat|FlagSetOutputDetailed) != 0 {
+			outputSet := set.NewFlagSet("Output Options")
 
 			if bit&FlagSetOutputField != 0 {
-				f.StringVar(&StringVar{
+				outputSet.StringVar(&StringVar{
 					Name:       "field",
 					Target:     &c.flagField,
 					Default:    "",
@@ -371,14 +516,25 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			}
 
 			if bit&FlagSetOutputFormat != 0 {
-				f.StringVar(&StringVar{
+				outputSet.StringVar(&StringVar{
 					Name:       "format",
 					Target:     &c.flagFormat,
 					Default:    "table",
 					EnvVar:     EnvVaultFormat,
-					Completion: complete.PredictSet("table", "json", "yaml"),
-					Usage: "Print the output in the given format. Valid formats " +
-						"are \"table\", \"json\", or \"yaml\".",
+					Completion: complete.PredictSet("table", "json", "yaml", "pretty", "raw"),
+					Usage: `Print the output in the given format. Valid formats
+						are "table", "json", "yaml", or "pretty". "raw" is allowed
+						for 'vault read' operations only.`,
+				})
+			}
+
+			if bit&FlagSetOutputDetailed != 0 {
+				outputSet.BoolVar(&BoolVar{
+					Name:    "detailed",
+					Target:  &c.flagDetailed,
+					Default: false,
+					EnvVar:  EnvVaultDetailed,
+					Usage:   "Enables additional metadata during some operations",
 				})
 			}
 		}
@@ -395,6 +551,7 @@ type FlagSets struct {
 	mainSet     *flag.FlagSet
 	hiddens     map[string]struct{}
 	completions complete.Flags
+	ui          cli.Ui
 }
 
 // NewFlagSets creates a new flag sets.
@@ -410,6 +567,7 @@ func NewFlagSets(ui cli.Ui) *FlagSets {
 		mainSet:     mainSet,
 		hiddens:     make(map[string]struct{}),
 		completions: complete.Flags{},
+		ui:          ui,
 	}
 }
 
@@ -427,9 +585,27 @@ func (f *FlagSets) Completions() complete.Flags {
 	return f.completions
 }
 
+type (
+	ParseOptions              interface{}
+	ParseOptionAllowRawFormat bool
+)
+
 // Parse parses the given flags, returning any errors.
-func (f *FlagSets) Parse(args []string) error {
-	return f.mainSet.Parse(args)
+// Warnings, if any, regarding the arguments format are sent to stdout
+func (f *FlagSets) Parse(args []string, opts ...ParseOptions) error {
+	err := f.mainSet.Parse(args)
+
+	warnings := generateFlagWarnings(f.Args())
+	if warnings != "" && Format(f.ui) == "table" {
+		f.ui.Warn(warnings)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	// Now surface any other errors.
+	return generateFlagErrors(f, opts...)
 }
 
 // Parsed reports whether the command-line flags have been parsed.
@@ -449,10 +625,10 @@ func (f *FlagSets) Visit(fn func(*flag.Flag)) {
 }
 
 // Help builds custom help for this command, grouping by flag set.
-func (fs *FlagSets) Help() string {
+func (f *FlagSets) Help() string {
 	var out bytes.Buffer
 
-	for _, set := range fs.flagSets {
+	for _, set := range f.flagSets {
 		printFlagTitle(&out, set.name+":")
 		set.VisitAll(func(f *flag.Flag) {
 			// Skip any hidden flags

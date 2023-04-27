@@ -1,0 +1,3 @@
+```release-note:improvement
+**Redis ElastiCache DB Engine**: Renamed configuration parameters for disambiguation; old parameters still supported for compatibility.
+```

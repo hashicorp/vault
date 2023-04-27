@@ -1,12 +1,16 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package userpass
 
 import (
 	"context"
 
-	"github.com/hashicorp/vault/helper/mfa"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
+
+const operationPrefixUserpass = "userpass"
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
@@ -22,21 +26,18 @@ func Backend() *backend {
 		Help: backendHelp,
 
 		PathsSpecial: &logical.Paths{
-			Root: mfa.MFARootPaths(),
-
 			Unauthenticated: []string{
 				"login/*",
 			},
 		},
 
-		Paths: append([]*framework.Path{
+		Paths: []*framework.Path{
 			pathUsers(&b),
 			pathUsersList(&b),
 			pathUserPolicies(&b),
 			pathUserPassword(&b),
+			pathLogin(&b),
 		},
-			mfa.MFAPaths(b.Backend, pathLogin(&b))...,
-		),
 
 		AuthRenew:   b.pathLoginRenew,
 		BackendType: logical.TypeCredential,

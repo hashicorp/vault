@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import TutorialMachineConfig from 'vault/machines/tutorial-machine';
 import SecretsMachineConfig from 'vault/machines/secrets-machine';
 import PoliciesMachineConfig from 'vault/machines/policies-machine';
@@ -48,6 +53,7 @@ export const FEATURE_MACHINE_STEPS = {
       secret: 5,
     },
     role: 7,
+    provider: 8,
   },
   policies: 5,
   replication: 2,

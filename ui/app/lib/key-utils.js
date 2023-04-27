@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 function keyIsFolder(key) {
   return key ? !!key.match(/\/$/) : false;
 }
@@ -35,7 +40,7 @@ function ancestorKeysForKey(key) {
     parentKey = parentKeyForKey(parentKey);
   }
 
-  return ancestors.length ? ancestors : null;
+  return ancestors;
 }
 
 export default {

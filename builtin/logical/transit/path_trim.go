@@ -1,22 +1,32 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package transit
 
 import (
 	"context"
 
-	"github.com/hashicorp/vault/helper/keysutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/keysutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func (b *backend) pathTrim() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/" + framework.GenericNameRegex("name") + "/trim",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "trim",
+			OperationSuffix: "key",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the key",
 			},
-			"min_available_version": &framework.FieldSchema{
+			"min_available_version": {
 				Type: framework.TypeInt,
 				Description: `
 The minimum available version for the key ring. All versions before this
@@ -40,10 +50,10 @@ func (b *backend) pathTrimUpdate() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (resp *logical.Response, retErr error) {
 		name := d.Get("name").(string)
 
-		p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
+		p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 			Storage: req.Storage,
 			Name:    name,
-		})
+		}, b.GetRandomReader())
 		if err != nil {
 			return nil, err
 		}
@@ -55,7 +65,10 @@ func (b *backend) pathTrimUpdate() framework.OperationFunc {
 		}
 		defer p.Unlock()
 
-		minAvailableVersionRaw, ok := d.GetOk("min_available_version")
+		minAvailableVersionRaw, ok, err := d.GetOkErr("min_available_version")
+		if err != nil {
+			return nil, err
+		}
 		if !ok {
 			return logical.ErrorResponse("missing min_available_version"), nil
 		}

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package ssh
 
 import (
@@ -5,22 +8,31 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathLookup(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "lookup",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixSSH,
+			OperationVerb:   "list",
+			OperationSuffix: "roles-by-ip",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
-			"ip": &framework.FieldSchema{
+			"ip": {
 				Type:        framework.TypeString,
 				Description: "[Required] IP address of remote host",
 			},
 		},
+
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathLookupWrite,
 		},
+
 		HelpSynopsis:    pathLookupSyn,
 		HelpDescription: pathLookupDesc,
 	}

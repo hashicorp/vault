@@ -1,19 +1,28 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { assign } from '@ember/polyfills';
 import { resolve, allSettled } from 'rsvp';
 import ApplicationAdapter from './application';
+import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export default ApplicationAdapter.extend({
   namespace: 'v1',
 
-  defaultSerializer: 'role',
-
   createOrUpdate(store, type, snapshot, requestType) {
+    const { name, backend } = snapshot.record;
     const serializer = store.serializerFor(type.modelName);
     const data = serializer.serialize(snapshot, requestType);
-    const { id } = snapshot;
-    let url = this.urlForRole(snapshot.record.get('backend'), id);
+    const url = this.urlForRole(backend, name);
 
-    return this.ajax(url, 'POST', { data });
+    return this.ajax(url, 'POST', { data }).then((resp) => {
+      // Ember data doesn't like 204 responses except for DELETE method
+      const response = resp || { data: {} };
+      response.data.name = name;
+      return response;
+    });
   },
 
   createRecord() {
@@ -34,15 +43,15 @@ export default ApplicationAdapter.extend({
   },
 
   urlForRole(backend, id) {
-    let url = `${this.buildURL()}/${backend}/roles`;
+    let url = `${this.buildURL()}/${encodePath(backend)}/roles`;
     if (id) {
-      url = url + '/' + id;
+      url = url + '/' + encodePath(id);
     }
     return url;
   },
 
   optionsForQuery(id) {
-    let data = {};
+    const data = {};
     if (!id) {
       data['list'] = true;
     }
@@ -57,19 +66,19 @@ export default ApplicationAdapter.extend({
       zeroAddressAjax = this.findAllZeroAddress(store, query);
     }
 
-    return allSettled([queryAjax, zeroAddressAjax]).then(results => {
+    return allSettled([queryAjax, zeroAddressAjax]).then((results) => {
       // query result 404d, so throw the adapterError
       if (!results[0].value) {
         throw results[0].reason;
       }
-      let resp = {
+      const resp = {
         id,
         name: id,
         backend,
         data: {},
       };
 
-      results.forEach(result => {
+      results.forEach((result) => {
         if (result.value) {
           if (result.value.data.roles) {
             resp.data = assign({}, resp.data, { zero_address_roles: result.value.data.roles });
@@ -84,7 +93,7 @@ export default ApplicationAdapter.extend({
 
   findAllZeroAddress(store, query) {
     const { backend } = query;
-    const url = `/v1/${backend}/config/zeroaddress`;
+    const url = `/v1/${encodePath(backend)}/config/zeroaddress`;
     return this.ajax(url, 'GET');
   },
 

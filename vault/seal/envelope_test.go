@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package seal
 
 import (
@@ -7,12 +10,12 @@ import (
 
 func TestEnvelope(t *testing.T) {
 	input := []byte("test")
-	env, err := NewEnvelope().Encrypt(input)
+	env, err := NewEnvelope().Encrypt(input, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	output, err := NewEnvelope().Decrypt(env)
+	output, err := NewEnvelope().Decrypt(env, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

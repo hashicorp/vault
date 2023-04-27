@@ -1,0 +1,219 @@
+<PageHeader as |p|>
+  <p.top>
+    <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{@mode}} @root={{@root}} @showCurrent={{true}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-kms-provider-header>
+      {{#if this.isDistributing}}
+        Destribute key to provider
+      {{else if this.isShowing}}
+        Provider
+        <span class="has-font-weight-normal">{{@model.id}}</span>
+      {{else}}
+        {{if this.isCreating "Create provider" "Update credentials"}}
+      {{/if}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+{{#if this.isDistributing}}
+  <Keymgmt::Distribute @backend={{@model.backend}} @provider={{@model.id}} @onClose={{fn (mut this.isDistributing) false}} />
+{{else}}
+  {{#if this.isShowing}}
+    <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
+      <nav class="tabs">
+        <ul>
+          <li class={{unless this.viewingKeys "active"}} data-test-kms-provider-tab="details">
+            <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@model.id}} @query={{hash tab=""}}>
+              Details
+            </LinkTo>
+          </li>
+          {{#if @model.canListKeys}}
+            <li class={{if this.viewingKeys "active"}} data-test-kms-provider-tab="keys">
+              <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@model.id}} @query={{hash tab="keys"}}>
+                Keys
+              </LinkTo>
+            </li>
+          {{/if}}
+        </ul>
+      </nav>
+    </div>
+    {{#unless this.viewingKeys}}
+      <Toolbar data-test-kms-provider-details-actions>
+        <ToolbarActions>
+          {{#if @model.canDelete}}
+            <ToolTip @verticalPosition="above" @horizontalPosition="center" as |T|>
+              <T.Trigger data-test-tooltip-trigger>
+                <ConfirmAction
+                  @buttonClasses="toolbar-link"
+                  @onConfirmAction={{this.onDelete}}
+                  @disabled={{@model.keys.length}}
+                  data-test-kms-provider-delete={{true}}
+                >
+                  Delete provider
+                </ConfirmAction>
+              </T.Trigger>
+              {{#if @model.keys.length}}
+                <T.Content class="tool-tip">
+                  <div class="box" data-test-kms-provider-delete-tooltip>
+                    This provider cannot be deleted until all
+                    {{@model.keys.length}}
+                    key(s) distributed to it are revoked. This can be done from the Keys tab.
+                  </div>
+                </T.Content>
+              {{/if}}
+            </ToolTip>
+          {{/if}}
+          {{#if (and @model.canDelete (or @model.canListKeys @model.canEdit))}}
+            <div class="toolbar-separator"></div>
+          {{/if}}
+          {{#if (or @model.canListKeys @model.canCreateKeys)}}
+            <button
+              type="button"
+              class="toolbar-link"
+              {{on "click" (fn (mut this.isDistributing) true)}}
+              data-test-distribute-key
+            >
+              Distribute key
+              <Icon @name="chevron-right" />
+            </button>
+          {{/if}}
+          {{#if @model.canEdit}}
+            <ToolbarSecretLink
+              @secret={{@model.id}}
+              @mode="edit"
+              @replace={{true}}
+              @queryParams={{hash itemType="provider"}}
+              disabled={{(not @model.canEdit)}}
+            >
+              Update credentials
+            </ToolbarSecretLink>
+          {{/if}}
+        </ToolbarActions>
+      </Toolbar>
+    {{/unless}}
+  {{else}}
+    <form aria-label="update credentials" {{on "submit" this.onSave}}>
+      <div class="box is-sideless is-fullwidth is-marginless">
+        {{#if this.isCreating}}
+          {{#each @model.createFields as |attr index|}}
+            {{#if (eq index 2)}}
+              <div class="has-border-top-light">
+                <h2 class="title is-5 has-top-margin-l has-bottom-margin-m" data-test-kms-provider-config-title>
+                  Provider configuration
+                </h2>
+              </div>
+              {{#if @model.provider}}
+                {{! Only show last field if provider selected }}
+                <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
+              {{else}}
+                <EmptyState @title="No provider selected" @message="Select a provider in order to configure it." />
+              {{/if}}
+            {{else}}
+              <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
+            {{/if}}
+          {{/each}}
+        {{/if}}
+        {{#unless this.isCreating}}
+          <h2 class="title is-5" data-test-kms-provider-creds-title>
+            New credentials
+          </h2>
+          <p class="sub-text has-bottom-margin-m">
+            Old credentials cannot be read and will be lost as soon as new ones are added. Do this carefully.
+          </p>
+        {{/unless}}
+        {{#each @model.credentialFields as |cred|}}
+          <FormField @attr={{cred}} @model={{@model}} @modelValidations={{this.modelValidations}} />
+        {{/each}}
+      </div>
+      <div class="field is-grouped box is-fullwidth is-bottomless">
+        <div class="control">
+          <button
+            type="submit"
+            disabled={{this.saveTask.isRunning}}
+            class="button is-primary {{if this.saveTask.isRunning 'is-loading'}}"
+            data-test-kms-provider-submit
+          >
+            {{if this.isCreating "Create provider" "Update"}}
+          </button>
+        </div>
+        <div class="control">
+          <LinkTo
+            @route={{if this.isCreating @root.path "vault.cluster.secrets.backend.show"}}
+            @model={{if this.isCreating @root.model @model.id}}
+            @query={{if this.isCreating (hash tab="provider") (hash itemType="provider")}}
+            @disabled={{this.saveTask.isRunning}}
+            class="button"
+            data-test-kms-provider-cancel
+          >
+            Cancel
+          </LinkTo>
+        </div>
+      </div>
+    </form>
+  {{/if}}
+
+  {{#if this.isShowing}}
+    <div class="has-bottom-margin-s">
+      {{#if this.viewingKeys}}
+        {{#let (options-for-backend "keymgmt" "key") as |options|}}
+          {{#if @model.keys.meta.total}}
+            {{#each @model.keys as |key|}}
+              <SecretList::Item
+                @item={{key}}
+                @backendModel={{@root}}
+                @backendType="keymgmt"
+                @delete={{fn this.onDeleteKey key}}
+                @itemPath={{concat options.modelPrefix key.id}}
+                @itemType={{options.item}}
+                @modelType={{@modelType}}
+                @options={{options}}
+              />
+            {{/each}}
+            {{#if (gt @model.keys.meta.lastPage 1)}}
+              <PaginationControls
+                @total={{@model.keys.meta.total}}
+                @onChange={{perform this.fetchKeys}}
+                class="has-top-margin-xl has-bottom-margin-l"
+              />
+            {{/if}}
+          {{else}}
+            <EmptyState
+              @title="No keys for this provider"
+              @message="Keys for this provider will be listed here. Add a key to get started."
+            >
+              <SecretLink @mode="create" @secret="" @queryParams={{hash itemType="key"}} class="link">
+                Create key
+              </SecretLink>
+            </EmptyState>
+          {{/if}}
+        {{/let}}
+      {{else}}
+        {{#each @model.showFields as |attr|}}
+          {{#if attr.hasBlock}}
+            <InfoTableRow @label={{attr.label}} @value={{attr.value}} data-test-kms-provider-field={{attr.name}}>
+              {{#if attr.icon}}
+                <Icon @name={{attr.icon}} class="icon" />
+              {{/if}}
+              {{#if attr.isLink}}
+                <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@model.id}} @query={{hash tab="keys"}}>
+                  {{attr.value}}
+                </LinkTo>
+              {{else}}
+                {{attr.value}}
+              {{/if}}
+            </InfoTableRow>
+          {{else}}
+            <InfoTableRow
+              @alwaysRender={{true}}
+              @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+              @value={{get @model attr.name}}
+              @defaultShown={{attr.options.defaultShown}}
+              @formatDate={{if (eq attr.type "date") "MMM d yyyy, h:mm:ss aaa"}}
+            />
+          {{/if}}
+        {{/each}}
+      {{/if}}
+    </div>
+  {{/if}}
+{{/if}}

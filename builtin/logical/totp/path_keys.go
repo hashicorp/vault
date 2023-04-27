@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package totp
 
 import (
@@ -11,9 +14,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 	otplib "github.com/pquerna/otp"
 	totplib "github.com/pquerna/otp/totp"
 )
@@ -21,6 +23,11 @@ import (
 func pathListKeys(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/?$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTOTP,
+			OperationSuffix: "keys",
+		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.pathKeyList,
@@ -34,6 +41,12 @@ func pathListKeys(b *backend) *framework.Path {
 func pathKeys(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/" + framework.GenericNameWithAtRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTOTP,
+			OperationSuffix: "key",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -109,10 +122,25 @@ func pathKeys(b *backend) *framework.Path {
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathKeyRead,
-			logical.UpdateOperation: b.pathKeyCreate,
-			logical.DeleteOperation: b.pathKeyDelete,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathKeyRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "read",
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathKeyCreate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "create",
+				},
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathKeyDelete,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "delete",
+				},
+			},
 		},
 
 		HelpSynopsis:    pathKeyHelpSyn,
@@ -205,18 +233,18 @@ func (b *backend) pathKeyCreate(ctx context.Context, req *logical.Request, data 
 
 	// Read parameters from url if given
 	if inputURL != "" {
-		//Parse url
+		// Parse url
 		urlObject, err := url.Parse(inputURL)
 		if err != nil {
-			return logical.ErrorResponse("an error occured while parsing url string"), err
+			return logical.ErrorResponse("an error occurred while parsing url string"), err
 		}
 
-		//Set up query object
+		// Set up query object
 		urlQuery := urlObject.Query()
 		path := strings.TrimPrefix(urlObject.Path, "/")
 		index := strings.Index(path, ":")
 
-		//Read issuer
+		// Read issuer
 		urlIssuer := urlQuery.Get("issuer")
 		if urlIssuer != "" {
 			issuer = urlIssuer
@@ -226,37 +254,37 @@ func (b *backend) pathKeyCreate(ctx context.Context, req *logical.Request, data 
 			}
 		}
 
-		//Read account name
+		// Read account name
 		if index == -1 {
 			accountName = path
 		} else {
 			accountName = path[index+1:]
 		}
 
-		//Read key string
+		// Read key string
 		keyString = urlQuery.Get("secret")
 
-		//Read period
+		// Read period
 		periodQuery := urlQuery.Get("period")
 		if periodQuery != "" {
 			periodInt, err := strconv.Atoi(periodQuery)
 			if err != nil {
-				return logical.ErrorResponse("an error occured while parsing period value in url"), err
+				return logical.ErrorResponse("an error occurred while parsing period value in url"), err
 			}
 			period = periodInt
 		}
 
-		//Read digits
+		// Read digits
 		digitsQuery := urlQuery.Get("digits")
 		if digitsQuery != "" {
 			digitsInt, err := strconv.Atoi(digitsQuery)
 			if err != nil {
-				return logical.ErrorResponse("an error occured while parsing digits value in url"), err
+				return logical.ErrorResponse("an error occurred while parsing digits value in url"), err
 			}
 			digits = digitsInt
 		}
 
-		//Read algorithm
+		// Read algorithm
 		algorithmQuery := urlQuery.Get("algorithm")
 		if algorithmQuery != "" {
 			algorithm = algorithmQuery
@@ -333,9 +361,10 @@ func (b *backend) pathKeyCreate(ctx context.Context, req *logical.Request, data 
 			Digits:      keyDigits,
 			Algorithm:   keyAlgorithm,
 			SecretSize:  uintKeySize,
+			Rand:        b.GetRandomReader(),
 		})
 		if err != nil {
-			return logical.ErrorResponse("an error occured while generating a key"), err
+			return logical.ErrorResponse("an error occurred while generating a key"), err
 		}
 
 		// Get key string value
@@ -356,7 +385,7 @@ func (b *backend) pathKeyCreate(ctx context.Context, req *logical.Request, data 
 			} else {
 				barcode, err := keyObject.Image(qrSize, qrSize)
 				if err != nil {
-					return nil, errwrap.Wrapf("failed to generate QR code image: {{err}}", err)
+					return nil, fmt.Errorf("failed to generate QR code image: %w", err)
 				}
 
 				var buff bytes.Buffer
@@ -375,7 +404,11 @@ func (b *backend) pathKeyCreate(ctx context.Context, req *logical.Request, data 
 			return logical.ErrorResponse("the key value is required"), nil
 		}
 
-		_, err := base32.StdEncoding.DecodeString(keyString)
+		if i := len(keyString) % 8; i != 0 {
+			keyString += strings.Repeat("=", 8-i)
+		}
+
+		_, err := base32.StdEncoding.DecodeString(strings.ToUpper(keyString))
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
 				"invalid key value: %s", err)), nil

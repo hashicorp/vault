@@ -1,0 +1,3 @@
+```release-note:bug
+ui: fix control group access for database credential
+```

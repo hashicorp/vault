@@ -1,5 +1,9 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { computed } from '@ember/object';
-import { inject as service } from '@ember/service';
 import Controller from '@ember/controller';
 
 const DEFAULTS = {
@@ -12,8 +16,6 @@ const DEFAULTS = {
 };
 
 export default Controller.extend(DEFAULTS, {
-  wizard: service(),
-
   reset() {
     this.setProperties(DEFAULTS);
   },
@@ -22,8 +24,6 @@ export default Controller.extend(DEFAULTS, {
     this.set('loading', false);
     this.set('keyData', resp);
     this.model.reload();
-    this.get('wizard').set('initEvent', 'SAVE');
-    this.get('wizard').transitionTutorialMachine(this.get('wizard.currentState'), 'TOSAVE');
   },
 
   initError(e) {
@@ -35,15 +35,15 @@ export default Controller.extend(DEFAULTS, {
     }
   },
 
-  keyFilename: computed('model.name', function() {
-    return `vault-cluster-${this.get('model.name')}`;
+  keyFilename: computed('model.name', function () {
+    return `vault-cluster-${this.model.name}`;
   }),
 
   actions: {
     initCluster(data) {
-      let isCloudSeal = !!this.model.sealType && this.model.sealType !== 'shamir';
+      const isCloudSeal = !!this.model.sealType && this.model.sealType !== 'shamir';
       if (data.secret_shares) {
-        let shares = parseInt(data.secret_shares, 10);
+        const shares = parseInt(data.secret_shares, 10);
         data.secret_shares = shares;
         if (isCloudSeal) {
           data.stored_shares = 1;
@@ -51,7 +51,7 @@ export default Controller.extend(DEFAULTS, {
         }
       }
       if (data.secret_threshold) {
-        let threshold = parseInt(data.secret_threshold, 10);
+        const threshold = parseInt(data.secret_threshold, 10);
         data.secret_threshold = threshold;
         if (isCloudSeal) {
           data.recovery_threshold = threshold;
@@ -78,7 +78,10 @@ export default Controller.extend(DEFAULTS, {
       store
         .adapterFor('cluster')
         .initCluster(data)
-        .then(resp => this.initSuccess(resp), (...errArgs) => this.initError(...errArgs));
+        .then(
+          (resp) => this.initSuccess(resp),
+          (...errArgs) => this.initError(...errArgs)
+        );
     },
 
     setKeys(data) {

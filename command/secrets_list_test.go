@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -42,7 +45,7 @@ func TestSecretsListCommand_Run(t *testing.T) {
 		{
 			"detailed",
 			[]string{"-detailed"},
-			"Default TTL",
+			"Deprecation Status",
 			0,
 		},
 	}

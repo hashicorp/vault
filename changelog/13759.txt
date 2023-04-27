@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: Fix regression causing performance secondaries to forward certificate generation to the primary.
+```

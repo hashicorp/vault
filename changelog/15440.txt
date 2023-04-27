@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/ssh: Add connection timeout of 1 minute for outbound SSH connection in deprecated Dynamic SSH Keys mode.
+```

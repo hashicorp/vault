@@ -1,0 +1,3 @@
+```release-note:improvement
+identity/token: Only return keys from the `.well-known/keys` endpoint that are being used by roles to sign/verify tokens.
+```

@@ -1,0 +1,6 @@
+```release-note:improvement
+auth/gcp: Vault CLI now infers the service account email when running on Google Cloud 
+```
+```release-note:improvement
+auth/gcp: Enable the Google service endpoints used by the underlying client to be customized 
+```

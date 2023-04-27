@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package http
 
 import (
@@ -5,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/hashicorp/vault/helper/strutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/vault"
 )
 

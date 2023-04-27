@@ -1,11 +1,16 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+import Transform from '@ember-data/serializer/transform';
 import { isArray, A } from '@ember/array';
-import DS from 'ember-data';
 /*
   This should go inside a globally available place for all apps
 
   DS.attr('array')
 */
-export default DS.Transform.extend({
+export default Transform.extend({
   deserialize(value) {
     if (isArray(value)) {
       return A(value);

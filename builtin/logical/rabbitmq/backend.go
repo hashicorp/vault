@@ -1,16 +1,20 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package rabbitmq
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"sync"
 
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
-	rabbithole "github.com/michaelklishin/rabbit-hole"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
+	rabbithole "github.com/michaelklishin/rabbit-hole/v2"
 )
+
+const operationPrefixRabbitMQ = "rabbit-mq"
 
 // Factory creates and configures the backend
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
@@ -73,16 +77,8 @@ func (b *backend) Client(ctx context.Context, s logical.Storage) (*rabbithole.Cl
 	b.lock.RUnlock()
 
 	// Otherwise, attempt to make connection
-	entry, err := s.Get(ctx, "config/connection")
+	connConfig, err := readConfig(ctx, s)
 	if err != nil {
-		return nil, err
-	}
-	if entry == nil {
-		return nil, fmt.Errorf("configure the client connection with config/connection first")
-	}
-
-	var connConfig connectionConfig
-	if err := entry.DecodeJSON(&connConfig); err != nil {
 		return nil, err
 	}
 
