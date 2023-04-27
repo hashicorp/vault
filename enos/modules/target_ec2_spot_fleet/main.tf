@@ -4,7 +4,7 @@ terraform {
     # to the public registry
     enos = {
       source  = "app.terraform.io/hashicorp-qti/enos"
-      version = ">= 0.3.2"
+      version = ">= 0.3.24"
     }
   }
 }
@@ -209,10 +209,10 @@ resource "aws_security_group" "target" {
     from_port = 22
     to_port   = 22
     protocol  = "tcp"
-    cidr_blocks = [
-      "${data.enos_environment.localhost.public_ip_address}/32",
+    cidr_blocks = flatten([
+      formatlist("%s/32", data.enos_environment.localhost.public_ip_addresses),
       join(",", data.aws_vpc.vpc.cidr_block_associations.*.cidr_block),
-    ]
+    ])
   }
 
   # Vault traffic
@@ -221,7 +221,7 @@ resource "aws_security_group" "target" {
     to_port   = 8201
     protocol  = "tcp"
     cidr_blocks = flatten([
-      "${data.enos_environment.localhost.public_ip_address}/32",
+      formatlist("%s/32", data.enos_environment.localhost.public_ip_addresses),
       join(",", data.aws_vpc.vpc.cidr_block_associations.*.cidr_block),
       formatlist("%s/32", var.ssh_allow_ips)
     ])
@@ -232,20 +232,20 @@ resource "aws_security_group" "target" {
     from_port = 8301
     to_port   = 8301
     protocol  = "tcp"
-    cidr_blocks = [
-      "${data.enos_environment.localhost.public_ip_address}/32",
+    cidr_blocks = flatten([
+      formatlist("%s/32", data.enos_environment.localhost.public_ip_addresses),
       join(",", data.aws_vpc.vpc.cidr_block_associations.*.cidr_block),
-    ]
+    ])
   }
 
   ingress {
     from_port = 8301
     to_port   = 8301
     protocol  = "udp"
-    cidr_blocks = [
-      "${data.enos_environment.localhost.public_ip_address}/32",
+    cidr_blocks = flatten([
+      formatlist("%s/32", data.enos_environment.localhost.public_ip_addresses),
       join(",", data.aws_vpc.vpc.cidr_block_associations.*.cidr_block),
-    ]
+    ])
   }
 
   # Internal traffic

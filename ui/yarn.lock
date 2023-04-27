@@ -11517,6 +11517,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"dompurify@npm:^3.0.2":
+  version: 3.0.2
+  resolution: "dompurify@npm:3.0.2"
+  checksum: 768c3bb2f139ce1e1a53faf81aae6abe03e24d0b043e2fda0b70e91ef15bb1df854a35e82d8c519adfe5b81c24bfdad3e0b1085534bfbf427137cb742406c47f
+  languageName: node
+  linkType: hard
+
 "domutils@npm:^1.7.0":
   version: 1.7.0
   resolution: "domutils@npm:1.7.0"
@@ -24263,6 +24270,7 @@ __metadata:
     date-fns-tz: ^1.2.2
     deepmerge: ^4.0.0
     doctoc: ^2.2.0
+    dompurify: ^3.0.2
     ember-auto-import: 2.4.2
     ember-basic-dropdown: 6.0.1
     ember-cli: ~4.4.0

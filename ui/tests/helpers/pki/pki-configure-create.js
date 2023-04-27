@@ -14,6 +14,7 @@ export const SELECTORS = {
   cancelButton: '[data-test-pki-config-cancel]',
   saveButton: '[data-test-pki-config-save]',
   doneButton: '[data-test-done]',
+  configureButton: '[data-test-configure-pki-button]',
   // pki-generate-root
   ...GENERATE_ROOT,
   generateRootOption: '[data-test-pki-config-option="generate-root"]',

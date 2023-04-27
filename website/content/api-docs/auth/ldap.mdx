@@ -97,6 +97,12 @@ This endpoint configures the LDAP auth method.
 - `dereference_aliases` `(string: never)` - When aliases should be dereferenced
   on search operations. Accepted values are 'never', 'finding', 'searching',
   'always'. Defaults to 'never'.
+- `max_page_size` `(int: math.MaxInt32)` - If set to a value greater than 0, the LDAP
+  backend will use the LDAP server's paged search control to request pages of
+  up to the given size. This can be used to avoid hitting the LDAP server's
+  maximum result size limit. A value of 0 will be interpreted by the LDAP
+  server as unlimited. If set to -1, the LDAP backend will not use the
+  paged search control.
 
 @include 'tokenfields.mdx'
 
@@ -129,7 +135,8 @@ $ curl \
   "url": "ldaps://ldap.myorg.com:636",
   "username_as_alias": false,
   "userattr": "samaccountname",
-  "userdn": "ou=Users,dc=example,dc=com"
+  "userdn": "ou=Users,dc=example,dc=com",
+  "max_page_size": 1000
 }
 ```
 

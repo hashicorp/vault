@@ -1002,6 +1002,10 @@
       {
         "title": "Windows service",
         "path": "agent/winsvc"
+      },
+      {
+        "title": "Version compatibility",
+        "path": "agent/versions"
       }
     ]
   },
@@ -1411,6 +1415,10 @@
               {
                 "title": "SecureAuth",
                 "path": "auth/jwt/oidc-providers/secureauth"
+              },
+              {
+                "title": "IBM ISAM",
+                "path": "auth/jwt/oidc-providers/ibmisam"
               }
             ]
           }

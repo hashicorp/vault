@@ -421,6 +421,8 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 	b.crlBuilder.markConfigDirty()
 	b.crlBuilder.reloadConfigIfRequired(sc)
 
+	resp := genResponseFromCrlConfig(config)
+
 	// Note this only affects/happens on the main cluster node, if you need to
 	// notify something based on a configuration change on all server types
 	// have a look at crlBuilder::reloadConfigIfRequired
@@ -429,7 +431,7 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		// auto-rebuild and we aren't now or equivalently, we changed our
 		// mind about delta CRLs and need a new complete one or equivalently,
 		// we changed our mind about unified CRLs), rotate the CRLs.
-		crlErr := b.crlBuilder.rebuild(sc, true)
+		warnings, crlErr := b.crlBuilder.rebuild(sc, true)
 		if crlErr != nil {
 			switch crlErr.(type) {
 			case errutil.UserError:
@@ -438,9 +440,12 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 				return nil, fmt.Errorf("error encountered during CRL building: %w", crlErr)
 			}
 		}
+		for index, warning := range warnings {
+			resp.AddWarning(fmt.Sprintf("Warning %d during CRL rebuild: %v", index+1, warning))
+		}
 	}
 
-	return genResponseFromCrlConfig(config), nil
+	return resp, nil
 }
 
 func genResponseFromCrlConfig(config *crlConfig) *logical.Response {

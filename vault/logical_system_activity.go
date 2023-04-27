@@ -309,7 +309,7 @@ func (b *SystemBackend) handleActivityConfigRead(ctx context.Context, req *logic
 			"enabled":                  config.Enabled,
 			"queries_available":        qa,
 			"reporting_enabled":        b.Core.censusLicensingEnabled,
-			"billing_start_timestamp":  b.Core.GetBillingStart(),
+			"billing_start_timestamp":  b.Core.billingStart,
 			"minimum_retention_months": a.configOverrides.MinimumRetentionMonths,
 		},
 	}, nil

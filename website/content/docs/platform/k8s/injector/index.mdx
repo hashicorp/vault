@@ -139,7 +139,7 @@ vault.hashicorp.com/agent-inject-template-<unique-name>: |
 For example, consider the following:
 
 ```yaml
-vault.hashicorp.com/agent-inject-secret-foo: 'database/roles/app'
+vault.hashicorp.com/agent-inject-secret-foo: 'database/creds/db-app'
 vault.hashicorp.com/agent-inject-template-foo: |
   {{- with secret "database/creds/db-app" -}}
   postgres://{{ .Data.username }}:{{ .Data.password }}@postgres:5432/mydb?sslmode=disable

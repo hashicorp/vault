@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -7,22 +10,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func pathAcmeRootAuthorization(b *backend) *framework.Path {
-	return patternAcmeAuthorization(b, "acme/authorization/"+framework.MatchAllRegex("auth_id"))
-}
-
-func pathAcmeRoleAuthorization(b *backend) *framework.Path {
-	return patternAcmeAuthorization(b, "roles/"+framework.GenericNameRegex("role")+"/acme/authorization/"+framework.MatchAllRegex("auth_id"))
-}
-
-func pathAcmeIssuerAuthorization(b *backend) *framework.Path {
-	return patternAcmeAuthorization(b, "issuer/"+framework.GenericNameRegex(issuerRefParam)+"/acme/authorization/"+framework.MatchAllRegex("auth_id"))
-}
-
-func pathAcmeIssuerAndRoleAuthorization(b *backend) *framework.Path {
-	return patternAcmeAuthorization(b,
-		"issuer/"+framework.GenericNameRegex(issuerRefParam)+
-			"/roles/"+framework.GenericNameRegex("role")+"/acme/authorization/"+framework.MatchAllRegex("auth_id"))
+func pathAcmeAuthorization(b *backend) []*framework.Path {
+	return buildAcmeFrameworkPaths(b, patternAcmeAuthorization, "/authorization/"+framework.MatchAllRegex("auth_id"))
 }
 
 func addFieldsForACMEAuthorization(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
@@ -46,7 +35,7 @@ func patternAcmeAuthorization(b *backend, pattern string) *framework.Path {
 		Fields:  fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.acmeParsedWrapper(b.acmeAuthorizationHandler),
+				Callback:                    b.acmeAccountRequiredWrapper(b.acmeAuthorizationHandler),
 				ForwardPerformanceSecondary: false,
 				ForwardPerformanceStandby:   true,
 			},
@@ -57,7 +46,7 @@ func patternAcmeAuthorization(b *backend, pattern string) *framework.Path {
 	}
 }
 
-func (b *backend) acmeAuthorizationHandler(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}) (*logical.Response, error) {
+func (b *backend) acmeAuthorizationHandler(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}, _ *acmeAccount) (*logical.Response, error) {
 	authId := fields.Get("auth_id").(string)
 	authz, err := b.acmeState.LoadAuthorization(acmeCtx, userCtx, authId)
 	if err != nil {
@@ -87,7 +76,7 @@ func (b *backend) acmeAuthorizationHandler(acmeCtx *acmeContext, r *logical.Requ
 
 func (b *backend) acmeAuthorizationFetchHandler(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}, authz *ACMEAuthorization) (*logical.Response, error) {
 	return &logical.Response{
-		Data: authz.NetworkMarshal(),
+		Data: authz.NetworkMarshal(acmeCtx),
 	}, nil
 }
 
@@ -106,6 +95,6 @@ func (b *backend) acmeAuthorizationDeactivateHandler(acmeCtx *acmeContext, r *lo
 	}
 
 	return &logical.Response{
-		Data: authz.NetworkMarshal(),
+		Data: authz.NetworkMarshal(acmeCtx),
 	}, nil
 }

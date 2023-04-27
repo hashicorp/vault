@@ -88,6 +88,11 @@ func getFormat(data *framework.FieldData) string {
 // loading using the legacyBundleShimID and should be used with care. This should be called only once
 // within the request path otherwise you run the risk of a race condition with the issuer migration on perf-secondaries.
 func (sc *storageContext) fetchCAInfo(issuerRef string, usage issuerUsage) (*certutil.CAInfoBundle, error) {
+	bundle, _, err := sc.fetchCAInfoWithIssuer(issuerRef, usage)
+	return bundle, err
+}
+
+func (sc *storageContext) fetchCAInfoWithIssuer(issuerRef string, usage issuerUsage) (*certutil.CAInfoBundle, issuerID, error) {
 	var issuerId issuerID
 
 	if sc.Backend.useLegacyBundleCaStorage() {
@@ -99,11 +104,16 @@ func (sc *storageContext) fetchCAInfo(issuerRef string, usage issuerUsage) (*cer
 		issuerId, err = sc.resolveIssuerReference(issuerRef)
 		if err != nil {
 			// Usually a bad label from the user or mis-configured default.
-			return nil, errutil.UserError{Err: err.Error()}
+			return nil, IssuerRefNotFound, errutil.UserError{Err: err.Error()}
 		}
 	}
 
-	return sc.fetchCAInfoByIssuerId(issuerId, usage)
+	bundle, err := sc.fetchCAInfoByIssuerId(issuerId, usage)
+	if err != nil {
+		return nil, IssuerRefNotFound, err
+	}
+
+	return bundle, issuerId, nil
 }
 
 // fetchCAInfoByIssuerId will fetch the CA info, will return an error if no ca info exists for the given issuerId.
@@ -177,8 +187,16 @@ func fetchCertBySerial(sc *storageContext, prefix, serial string) (*logical.Stor
 		legacyPath = "revoked/" + colonSerial
 		path = "revoked/" + hyphenSerial
 	case serial == legacyCRLPath || serial == deltaCRLPath || serial == unifiedCRLPath || serial == unifiedDeltaCRLPath:
-		if err = sc.Backend.crlBuilder.rebuildIfForced(sc); err != nil {
+		warnings, err := sc.Backend.crlBuilder.rebuildIfForced(sc)
+		if err != nil {
 			return nil, err
+		}
+		if len(warnings) > 0 {
+			msg := "During rebuild of CRL for cert fetch, got the following warnings:"
+			for index, warning := range warnings {
+				msg = fmt.Sprintf("%v\n %d. %v", msg, index+1, warning)
+			}
+			sc.Backend.Logger().Warn(msg)
 		}
 
 		unified := serial == unifiedCRLPath || serial == unifiedDeltaCRLPath
@@ -318,6 +336,71 @@ func validateCommonName(b *backend, data *inputBundle, name string) string {
 	return ""
 }
 
+func isWildcardDomain(name string) bool {
+	// Per RFC 6125 Section 6.4.3, and explicitly contradicting the earlier
+	// RFC 2818 which no modern client will validate against, there are two
+	// main types of wildcards, each with a single wildcard specifier (`*`,
+	// functionally different from the `*` used as a glob from the
+	// AllowGlobDomains parsing path) in the left-most label:
+	//
+	//  1. Entire label is a single wildcard character (most common and
+	//     well-supported),
+	//  2. Part of the label contains a single wildcard character (e.g. per
+	//     RFC 6125: baz*.example.net, *baz.example.net, or b*z.example.net).
+	//
+	// We permit issuance of both but not the older RFC 2818 style under
+	// the new AllowWildcardCertificates option. However, anything with a
+	// glob character is technically a wildcard, though not a valid one.
+
+	return strings.Contains(name, "*")
+}
+
+func validateWildcardDomain(name string) (string, string, error) {
+	// See note in isWildcardDomain(...) about the definition of a wildcard
+	// domain.
+	var wildcardLabel string
+	var reducedName string
+
+	if strings.Count(name, "*") > 1 {
+		// As mentioned above, only one wildcard character is permitted
+		// under RFC 6125 semantics.
+		return wildcardLabel, reducedName, fmt.Errorf("expected only one wildcard identifier in the given domain name")
+	}
+
+	// Split the Common Name into two parts: a left-most label and the
+	// remaining segments (if present).
+	splitLabels := strings.SplitN(name, ".", 2)
+	if len(splitLabels) != 2 {
+		// We've been given a single-part domain name that consists
+		// entirely of a wildcard. This is a little tricky to handle,
+		// but EnforceHostnames validates both the wildcard-containing
+		// label and the reduced name, but _only_ the latter if it is
+		// non-empty. This allows us to still validate the only label
+		// component matches hostname expectations still.
+		wildcardLabel = splitLabels[0]
+		reducedName = ""
+	} else {
+		// We have a (at least) two label domain name. But before we can
+		// update our names, we need to validate the wildcard ended up
+		// in the segment we expected it to. While this is (kinda)
+		// validated under EnforceHostnames's leftWildLabelRegex, we
+		// still need to validate it in the non-enforced mode.
+		//
+		// By validated assumption above, we know there's strictly one
+		// wildcard in this domain so we only need to check the wildcard
+		// label or the reduced name (as one is equivalent to the other).
+		// Because we later assume reducedName _lacks_ wildcard segments,
+		// we validate that.
+		wildcardLabel = splitLabels[0]
+		reducedName = splitLabels[1]
+		if strings.Contains(reducedName, "*") {
+			return wildcardLabel, reducedName, fmt.Errorf("expected wildcard to only be present in left-most domain label")
+		}
+	}
+
+	return wildcardLabel, reducedName, nil
+}
+
 // Given a set of requested names for a certificate, verifies that all of them
 // match the various toggles set in the role for controlling issuance.
 // If one does not pass, it is returned in the string argument.
@@ -352,21 +435,7 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 			isEmail = true
 		}
 
-		// Per RFC 6125 Section 6.4.3, and explicitly contradicting the earlier
-		// RFC 2818 which no modern client will validate against, there are two
-		// main types of wildcards, each with a single wildcard specifier (`*`,
-		// functionally different from the `*` used as a glob from the
-		// AllowGlobDomains parsing path) in the left-most label:
-		//
-		//  1. Entire label is a single wildcard character (most common and
-		//     well-supported),
-		//  2. Part of the label contains a single wildcard character (e.g. per
-		///    RFC 6125: baz*.example.net, *baz.example.net, or b*z.example.net).
-		//
-		// We permit issuance of both but not the older RFC 2818 style under
-		// the new AllowWildcardCertificates option. However, anything with a
-		// glob character is technically a wildcard.
-		if strings.Contains(reducedName, "*") {
+		if isWildcardDomain(reducedName) {
 			// Regardless of later rejections below, this common name contains
 			// a wildcard character and is thus technically a wildcard name.
 			isWildcard = true
@@ -381,41 +450,11 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 				return name
 			}
 
-			if strings.Count(reducedName, "*") > 1 {
-				// As mentioned above, only one wildcard character is permitted
-				// under RFC 6125 semantics.
+			// Check that this domain is well-formatted per RFC 6125.
+			var err error
+			wildcardLabel, reducedName, err = validateWildcardDomain(reducedName)
+			if err != nil {
 				return name
-			}
-
-			// Split the Common Name into two parts: a left-most label and the
-			// remaining segments (if present).
-			splitLabels := strings.SplitN(reducedName, ".", 2)
-			if len(splitLabels) != 2 {
-				// We've been given a single-part domain name that consists
-				// entirely of a wildcard. This is a little tricky to handle,
-				// but EnforceHostnames validates both the wildcard-containing
-				// label and the reduced name, but _only_ the latter if it is
-				// non-empty. This allows us to still validate the only label
-				// component matches hostname expectations still.
-				wildcardLabel = splitLabels[0]
-				reducedName = ""
-			} else {
-				// We have a (at least) two label domain name. But before we can
-				// update our names, we need to validate the wildcard ended up
-				// in the segment we expected it to. While this is (kinda)
-				// validated under EnforceHostnames's leftWildLabelRegex, we
-				// still need to validate it in the non-enforced mode.
-				//
-				// By validated assumption above, we know there's strictly one
-				// wildcard in this domain so we only need to check the wildcard
-				// label or the reduced name (as one is equivalent to the other).
-				// Because we later assume reducedName _lacks_ wildcard segments,
-				// we validate that.
-				wildcardLabel = splitLabels[0]
-				reducedName = splitLabels[1]
-				if strings.Contains(reducedName, "*") {
-					return name
-				}
 			}
 		}
 

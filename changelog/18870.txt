@@ -1,0 +1,3 @@
+```release-note:improvement
+core:provide more descriptive error message when calling enterprise feature paths in open-source
+```
