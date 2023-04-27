@@ -111,7 +111,7 @@ func (b *backend) pathStaticRolesRead(ctx context.Context, req *logical.Request,
 
 	var config staticRoleConfig
 	if err := entry.DecodeJSON(&config); err != nil {
-		return nil, fmt.Errorf("failed to decode configuration for static role '%q': %w", roleName, err)
+		return nil, fmt.Errorf("failed to decode configuration for static role %q: %w", roleName, err)
 	}
 
 	return &logical.Response{
@@ -214,7 +214,7 @@ func (b *backend) validateRoleName(name string) error {
 func (b *backend) validateIAMUserExists(ctx context.Context, req *logical.Request, username string) error {
 	c, err := b.clientIAM(ctx, req.Storage)
 	if err != nil {
-		return fmt.Errorf("unable to validate username '%s': %w", username, err)
+		return fmt.Errorf("unable to validate username %q: %w", username, err)
 	}
 
 	// we don't really care about the content of the result, just that it's not an error
@@ -222,7 +222,7 @@ func (b *backend) validateIAMUserExists(ctx context.Context, req *logical.Reques
 		UserName: aws.String(username),
 	})
 	if err != nil || out.User == nil || *out.User.UserName != username {
-		return fmt.Errorf("unable to validate username '%s': %w", username, err)
+		return fmt.Errorf("unable to validate username %q: %w", username, err)
 	}
 	return nil
 }
