@@ -41,6 +41,10 @@ type acmeState struct {
 	nextExpiry *atomic.Int64
 	nonces     *sync.Map // map[string]time.Time
 	validator  *ACMEChallengeEngine
+
+	configDirty *atomic.Bool
+	_config     sync.RWMutex
+	config      acmeConfigEntry
 }
 
 type acmeThumbprint struct {
@@ -49,21 +53,73 @@ type acmeThumbprint struct {
 }
 
 func NewACMEState() *acmeState {
-	return &acmeState{
-		nextExpiry: new(atomic.Int64),
-		nonces:     new(sync.Map),
-		validator:  NewACMEChallengeEngine(),
+	state := &acmeState{
+		nextExpiry:  new(atomic.Int64),
+		nonces:      new(sync.Map),
+		validator:   NewACMEChallengeEngine(),
+		configDirty: new(atomic.Bool),
 	}
+	// Config hasn't been loaded yet; mark dirty.
+	state.configDirty.Store(true)
+
+	return state
 }
 
 func (a *acmeState) Initialize(b *backend, sc *storageContext) error {
-	if err := a.validator.Initialize(b, sc); err != nil {
+	// Load the ACME config.
+	_, err := a.getConfigWithUpdate(sc)
+	if err != nil {
 		return fmt.Errorf("error initializing ACME engine: %w", err)
 	}
 
-	go a.validator.Run(b)
+	// Kick off our ACME challenge validation engine.
+	if err := a.validator.Initialize(b, sc); err != nil {
+		return fmt.Errorf("error initializing ACME engine: %w", err)
+	}
+	go a.validator.Run(b, a)
 
 	return nil
+}
+
+func (a *acmeState) markConfigDirty() {
+	a.configDirty.Store(true)
+}
+
+func (a *acmeState) reloadConfigIfRequired(sc *storageContext) error {
+	if !a.configDirty.Load() {
+		return nil
+	}
+
+	a._config.Lock()
+	defer a._config.Unlock()
+
+	if !a.configDirty.Load() {
+		// Someone beat us to grabbing the above write lock and already
+		// updated the config.
+		return nil
+	}
+
+	config, err := sc.getAcmeConfig()
+	if err != nil {
+		return fmt.Errorf("failed reading config: %w", err)
+	}
+
+	a.config = *config
+	a.configDirty.Store(false)
+
+	return nil
+}
+
+func (a *acmeState) getConfigWithUpdate(sc *storageContext) (*acmeConfigEntry, error) {
+	if err := a.reloadConfigIfRequired(sc); err != nil {
+		return nil, err
+	}
+
+	a._config.RLock()
+	defer a._config.RUnlock()
+
+	configCopy := a.config
+	return &configCopy, nil
 }
 
 func generateNonce() (string, error) {

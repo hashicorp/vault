@@ -3,6 +3,7 @@ package pki
 import (
 	"context"
 	"fmt"
+	"net"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -22,6 +23,7 @@ type acmeConfigEntry struct {
 	DefaultRole           string   `json:"default_role"`
 	AllowNoAllowedDomains bool     `json:"allow_no_allowed_domains"`
 	AllowAnyDomain        bool     `json:"allow_any_domain"`
+	DNSResolver           string   `json:"dns_resolver"`
 }
 
 func (sc *storageContext) getAcmeConfig() (*acmeConfigEntry, error) {
@@ -87,6 +89,10 @@ func pathAcmeConfig(b *backend) *framework.Path {
 				Type:        framework.TypeBool,
 				Description: `whether ACME will allow the use of roles with allow_any_name=true set.`,
 			},
+			"dns_resolver": {
+				Type:        framework.TypeString,
+				Description: `DNS resolver to use for domain resolution on this mount. Defaults to using the default system resolver. Must be in the format <host>:<port>, with both parts mandatory.`,
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -132,6 +138,7 @@ func genResponseFromAcmeConfig(config *acmeConfigEntry) *logical.Response {
 			"allowed_issuers":          config.AllowedIssuers,
 			"default_role":             config.DefaultRole,
 			"enabled":                  config.Enabled,
+			"dns_resolver":             config.DNSResolver,
 		},
 	}
 
@@ -142,54 +149,56 @@ func genResponseFromAcmeConfig(config *acmeConfigEntry) *logical.Response {
 
 func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	sc := b.makeStorageContext(ctx, req.Storage)
+
 	config, err := sc.getAcmeConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	enabled := config.Enabled
 	if enabledRaw, ok := d.GetOk("enabled"); ok {
-		enabled = enabledRaw.(bool)
+		config.Enabled = enabledRaw.(bool)
 	}
 
-	allowAnyDomain := config.AllowAnyDomain
 	if allowAnyDomainRaw, ok := d.GetOk("allow_any_domain"); ok {
-		allowAnyDomain = allowAnyDomainRaw.(bool)
+		config.AllowAnyDomain = allowAnyDomainRaw.(bool)
 	}
 
-	allowedRoles := config.AllowedRoles
 	if allowedRolesRaw, ok := d.GetOk("allowed_roles"); ok {
-		allowedRoles = allowedRolesRaw.([]string)
+		config.AllowedRoles = allowedRolesRaw.([]string)
 	}
 
-	defaultRole := config.DefaultRole
 	if defaultRoleRaw, ok := d.GetOk("default_role"); ok {
-		defaultRole = defaultRoleRaw.(string)
+		config.DefaultRole = defaultRoleRaw.(string)
 	}
 
-	allowNoAllowedDomains := config.AllowNoAllowedDomains
 	if allowNoAllowedDomainsRaw, ok := d.GetOk("allow_no_allowed_domains"); ok {
-		allowNoAllowedDomains = allowNoAllowedDomainsRaw.(bool)
+		config.AllowNoAllowedDomains = allowNoAllowedDomainsRaw.(bool)
 	}
 
-	allowedIssuers := config.AllowedIssuers
 	if allowedIssuersRaw, ok := d.GetOk("allowed_issuers"); ok {
-		allowedIssuers = allowedIssuersRaw.([]string)
+		config.AllowedIssuers = allowedIssuersRaw.([]string)
 	}
 
-	newConfig := &acmeConfigEntry{
-		Enabled:               enabled,
-		AllowAnyDomain:        allowAnyDomain,
-		AllowedRoles:          allowedRoles,
-		DefaultRole:           defaultRole,
-		AllowNoAllowedDomains: allowNoAllowedDomains,
-		AllowedIssuers:        allowedIssuers,
+	if dnsResolverRaw, ok := d.GetOk("dns_resolver"); ok {
+		config.DNSResolver = dnsResolverRaw.(string)
+		if config.DNSResolver != "" {
+			addr, _, err := net.SplitHostPort(config.DNSResolver)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse DNS resolver address: %w", err)
+			}
+			if addr != "" {
+				return nil, fmt.Errorf("failed to parse DNS resolver address: got empty address")
+			}
+			if net.ParseIP(addr) != nil {
+				return nil, fmt.Errorf("failed to parse DNS resolver address: expected IPv4/IPv6 address, likely got hostname")
+			}
+		}
 	}
 
-	err = sc.setAcmeConfig(newConfig)
+	err = sc.setAcmeConfig(config)
 	if err != nil {
 		return nil, err
 	}
 
-	return genResponseFromAcmeConfig(newConfig), nil
+	return genResponseFromAcmeConfig(config), nil
 }
