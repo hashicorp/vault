@@ -136,6 +136,8 @@ is not, and has never been, a supported way to use the Vault project. We aren't
 likely to fix bugs relating to failure to import `github.com/hashicorp/vault` 
 into your project.
 
+See also the section "Docker-based tests" below.
+
 ### Acceptance Tests
 
 Vault has comprehensive [acceptance tests](https://en.wikipedia.org/wiki/Acceptance_testing)
@@ -169,3 +171,54 @@ things such as access keys. The test itself should error early and tell
 you what to set, so it is not documented here.
 
 For more information on Vault Enterprise features, visit the [Vault Enterprise site](https://www.hashicorp.com/products/vault/?utm_source=github&utm_medium=referral&utm_campaign=github-vault-enterprise).
+
+### Docker-based Tests
+
+We have created an experimental new testing mechanism inspired by NewTestCluster.
+A minimalist example of how to use it:
+
+```go
+import (
+  "testing"
+  "github.com/hashicorp/vault/sdk/helper/testcluster/docker"
+)
+
+func TestRaft_Configuration_Docker(t *testing.T) {
+  opts := &docker.DockerClusterOptions{
+    ImageRepo: "hashicorp/vault",
+    ImageTag:    "latest",
+  }
+  cluster := docker.NewTestDockerCluster(t, opts)
+  defer cluster.Cleanup()
+}
+```
+
+A more realistic example follows.  In this case, the test should be run
+with VAULT_BINARY pointing at a local Linux amd64 vault binary on disk
+that you wish to run inside the docker containers.  If it's an Enterprise
+binary, you'll also need to set VAULT_LICENSE. Optionally you can set
+COMMIT_SHA, which will be appended to the image name we build as a 
+debugging convenience.
+
+```go
+func TestRaft_Configuration_Docker(t *testing.T) {
+  binary := os.Getenv("VAULT_BINARY")
+  if binary == "" {
+    t.Skip("only running docker test when $VAULT_BINARY present")
+  }
+  opts := &docker.DockerClusterOptions{
+    ImageRepo: "hashicorp/vault",
+    // We're replacing the binary anyway, so we're not too particular about
+    // the docker image version tag.
+    ImageTag:    "latest",
+    VaultBinary: binary,
+    ClusterOptions: testcluster.ClusterOptions{
+      VaultNodeConfig: &testcluster.VaultNodeConfig{
+        LogLevel: "TRACE",
+      },
+    },
+  }
+  cluster := docker.NewTestDockerCluster(t, opts)
+  defer cluster.Cleanup()
+}
+```
