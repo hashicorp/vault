@@ -35,8 +35,8 @@ func CheckCertBot(t *testing.T, vaultNetwork string, vaultNodeID string, directo
 		t.Logf(s)
 	}
 
-	logStdout := &pkiext.LogConsumerWriter{Consumer: logConsumer}
-	logStderr := &pkiext.LogConsumerWriter{Consumer: logConsumer}
+	logStdout := &pkiext.LogConsumerWriter{logConsumer}
+	logStderr := &pkiext.LogConsumerWriter{logConsumer}
 
 	t.Logf("creating on network: %v", vaultNetwork)
 	runner, err := hDocker.NewServiceRunner(hDocker.RunOptions{
@@ -139,8 +139,7 @@ func RunACMERootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS boo
 	CheckCertBot(t, vaultNetwork, vaultNodeID, directory)
 }
 
-func setupAcme(t *testing.T, cluster *tcDocker.DockerCluster, vaultAddr string, vaultPort string, caKeyType string,
-	caKeyBits int, caUsePSS bool, roleKeyType string, roleKeyBits int, roleUsePSS bool,
+func setupAcme(t *testing.T, cluster *tcDocker.DockerCluster, vaultAddr string, vaultPort string, caKeyType string, caKeyBits int, caUsePSS bool, roleKeyType string, roleKeyBits int, roleUsePSS bool,
 ) {
 	testSuffix := fmt.Sprintf(" - %v %v %v - %v %v %v", caKeyType, caKeyType, caUsePSS, roleKeyType, roleKeyBits, roleUsePSS)
 
@@ -330,8 +329,8 @@ func Test_ACMEIPSans(t *testing.T) {
 		t.Logf(s)
 	}
 
-	logStdout := &pkiext.LogConsumerWriter{Consumer: logConsumer}
-	logStderr := &pkiext.LogConsumerWriter{Consumer: logConsumer}
+	logStdout := &pkiext.LogConsumerWriter{logConsumer}
+	logStderr := &pkiext.LogConsumerWriter{logConsumer}
 
 	// Setup an nginx container that we can have respond the queries for ips
 	runner, err := hDocker.NewServiceRunner(hDocker.RunOptions{
