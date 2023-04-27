@@ -80,7 +80,7 @@ func (s *Server) ExitCh() <-chan int {
 func (s *Server) Run(ctx context.Context, envTmpls map[string]*config.EnvTemplateConfig, execCfg *config.ExecConfig) error {
 	s.logger.Info("starting exec server")
 	defer func() {
-		s.logger.Info("template server stopped")
+		s.logger.Info("exec server stopped")
 	}()
 
 	if len(envTmpls) == 0 || execCfg == nil {
