@@ -36,6 +36,10 @@ type ExecDevCluster struct {
 	Logger             log.Logger
 }
 
+func (dc *ExecDevCluster) SetRootToken(token string) {
+	dc.rootToken = token
+}
+
 func (dc *ExecDevCluster) NamedLogger(s string) log.Logger {
 	return dc.Logger.Named(s)
 }
