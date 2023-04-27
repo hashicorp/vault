@@ -1,0 +1,3 @@
+```release-note:feature
+auth/cert: Verify individual Subject DN entries of a presented client certificate during authentication.
+```
