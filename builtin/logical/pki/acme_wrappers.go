@@ -55,7 +55,12 @@ func (b *backend) acmeWrapper(op acmeOperation) framework.OperationFunc {
 	return acmeErrorWrapper(func(ctx context.Context, r *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		sc := b.makeStorageContext(ctx, r.Storage)
 
-		if isAcmeDisabled(sc) {
+		config, err := sc.Backend.acmeState.getConfigWithUpdate(sc)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch ACME configuration: %w", err)
+		}
+
+		if isAcmeDisabled(sc, config) {
 			return nil, ErrAcmeDisabled
 		}
 
@@ -325,7 +330,11 @@ func getRequestedAcmeIssuerFromPath(data *framework.FieldData) string {
 	return requestedIssuer
 }
 
-func isAcmeDisabled(sc *storageContext) bool {
+func isAcmeDisabled(sc *storageContext, config *acmeConfigEntry) bool {
+	if !config.Enabled {
+		return true
+	}
+
 	if disableAcmeRaw := os.Getenv("VAULT_DISABLE_PUBLIC_ACME"); disableAcmeRaw != "" {
 		disableAcme, err := strconv.ParseBool(disableAcmeRaw)
 		if err != nil {
@@ -335,11 +344,11 @@ func isAcmeDisabled(sc *storageContext) bool {
 
 		// The OS environment if true will override any configuration option.
 		if disableAcme {
+			// TODO: If EAB is enforced in the configuration, don't mark
+			// ACME as disabled.
 			return true
 		}
 	}
-
-	// TODO: Implement configuration based check here.
 
 	return false
 }

@@ -175,6 +175,11 @@ func RunACMERootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS boo
 	})
 	require.NoError(t, err)
 
+	_, err = client.Logical().Write("pki/config/acme", map[string]interface{}{
+		"enabled": true,
+	})
+	require.NoError(t, err)
+
 	// Setup root+intermediate CA hierarchy within this mount.
 	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
 		"common_name":  "Root X1" + testSuffix,

@@ -24,6 +24,11 @@ func TestACMEIssuerRoleLoading(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	_, err = CBWrite(b, s, "config/acme", map[string]interface{}{
+		"enabled": true,
+	})
+	require.NoError(t, err)
+
 	_, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
 		"common_name": "myvault1.com",
 		"issuer_name": "issuer-1",
