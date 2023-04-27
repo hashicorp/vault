@@ -33,33 +33,16 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
     }
   }
 
-  async getIssuerMetadata(store, type, query, response) {
-    const { backend } = query;
-
-    const keyInfoArray = await all(
-      response.data.keys.map((id) => {
-        const keyInfo = response.data.key_info[id];
-        return this.queryRecord(store, type, { id, backend })
-          .then(async (issuerRecord) => {
-            const { data } = issuerRecord;
-            const isRoot = await verifyCertificates(data.certificate, data.certificate);
-            return { ...keyInfo, ...data, isRoot };
-          })
-          .catch(() => {
-            return { ...keyInfo };
-          });
-      })
-    );
-
-    const keyInfo = {};
-
-    response.data.keys.forEach((issuerId) => {
-      keyInfo[issuerId] = keyInfoArray.find((newKey) => newKey.issuer_id === issuerId);
-    });
-
-    response.data.key_info = keyInfo;
-
-    return response;
+  async getIssuerMetadata(store, type, query, response, id) {
+    const keyInfo = response.data.key_info[id];
+    try {
+      const issuerRecord = await this.queryRecord(store, type, { id, backend: query.backend });
+      const { data } = issuerRecord;
+      const isRoot = await verifyCertificates(data.certificate, data.certificate);
+      return { ...keyInfo, ...data, isRoot };
+    } catch (e) {
+      return { ...keyInfo, issuer_id: id };
+    }
   }
 
   updateRecord(store, type, snapshot) {
@@ -78,7 +61,20 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
       // To show issuer meta data tags, we have a flag called isListView and only want to
       // grab each issuer data only if there are less than 10 issuers to avoid making too many requests
       if (isListView && res.data.keys.length <= 10) {
-        return await this.getIssuerMetadata(store, type, query, res);
+        const keyInfoArray = await all(
+          res.data.keys.map((id) => {
+            return this.getIssuerMetadata(store, type, query, res, id);
+          })
+        );
+        const keyInfo = {};
+
+        res.data.keys.forEach((issuerId) => {
+          keyInfo[issuerId] = keyInfoArray.find((newKey) => newKey.issuer_id === issuerId);
+        });
+
+        res.data.key_info = keyInfo;
+
+        return res;
       }
 
       return res;
