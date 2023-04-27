@@ -346,7 +346,7 @@ module('Acceptance | pki workflow', function (hooks) {
       await logout.visit();
     });
     test('lists the correct issuer metadata info', async function (assert) {
-      assert.expect(4);
+      assert.expect(6);
       await authPage.login(this.pkiAdminToken);
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       assert.dom(SELECTORS.issuersTab).exists('Issuers tab is present');
@@ -354,9 +354,11 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/issuers`);
       assert.dom('.linked-block').exists({ count: 1 }, 'One issuer is in list');
       assert.dom('[data-test-is-root-tag="0"]').hasText('root');
+      assert.dom('[data-test-serial-number="0"]').exists({ count: 1 }, 'displays serial number tag');
+      assert.dom('[data-test-key-id="0"]').exists({ count: 1 }, 'displays key id tag');
     });
     test('lists the correct issuer metadata info when user has only read permission', async function (assert) {
-      assert.expect(4);
+      assert.expect(2);
       await authPage.login();
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await click(SELECTORS.issuersTab);
@@ -377,6 +379,7 @@ module('Acceptance | pki workflow', function (hooks) {
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await click(SELECTORS.issuersTab);
       assert.dom('[data-test-serial-number="0"]').exists({ count: 1 }, 'displays serial number tag');
+      assert.dom('[data-test-key-id="0"]').exists({ count: 1 }, 'displays key id tag');
     });
 
     test('details view renders correct number of info items', async function (assert) {
