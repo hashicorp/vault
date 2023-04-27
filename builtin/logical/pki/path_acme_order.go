@@ -356,6 +356,31 @@ func validateCsrMatchesOrder(csr *x509.CertificateRequest, order *acmeOrder) err
 	return nil
 }
 
+func (b *backend) validateIdentifiersAgainstRole(role *roleEntry, identifiers []*ACMEIdentifier) error {
+	for index, identifier := range identifiers {
+		switch identifier.Type {
+		case ACMEDNSIdentifier:
+			data := &inputBundle{
+				role:    role,
+				req:     &logical.Request{},
+				apiData: nil,
+			}
+
+			if validateNames(b, data, []string{identifier.OriginalValue}) != "" {
+				return fmt.Errorf("[%d] will not issue certificate for %v under this role", index, identifier.OriginalValue)
+			}
+		case ACMEIPIdentifier:
+			if !role.AllowIPSANs {
+				return fmt.Errorf("[%d] role does not allow IP sans, so cannot issue certificate for %v", index, identifier.OriginalValue)
+			}
+		default:
+			return fmt.Errorf("[%d] unknown type of identifier: %v for %v", index, identifier.Type, identifier.OriginalValue)
+		}
+	}
+
+	return nil
+}
+
 func getIdentifiersFromCSR(csr *x509.CertificateRequest) ([]string, []net.IP) {
 	dnsIdentifiers := append([]string(nil), csr.DNSNames...)
 	ipIdentifiers := append([]net.IP(nil), csr.IPAddresses...)
@@ -568,7 +593,10 @@ func (b *backend) acmeNewOrderHandler(ac *acmeContext, _ *logical.Request, _ *fr
 		return nil, err
 	}
 
-	// TODO: Implement checks against role here.
+	err = b.validateIdentifiersAgainstRole(ac.role, identifiers)
+	if err != nil {
+		return nil, err
+	}
 
 	// Per RFC 8555 -> 7.1.3. Order Objects
 	// For pending orders, the authorizations that the client needs to complete before the
