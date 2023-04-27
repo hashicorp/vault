@@ -7,39 +7,20 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
-
-type extendedMockIAM struct {
-	iamiface.IAMAPI
-
-	ListAccessKeysOutput *iam.ListAccessKeysOutput
-	ListAccessKeysError  error
-}
-
-// Hang a new mock function off of a temporary test struct until the mock dependency we're using gets updated
-func (e *extendedMockIAM) ListAccessKeys(*iam.ListAccessKeysInput) (*iam.ListAccessKeysOutput, error) {
-	if e.ListAccessKeysError != nil {
-		return nil, e.ListAccessKeysError
-	}
-
-	return e.ListAccessKeysOutput, nil
-}
 
 func TestStaticRolesValidation(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
 	cases := []struct {
-		name          string
-		opts          []awsutil.MockIAMOption
-		listAccessOut *iam.ListAccessKeysOutput
-		listAccessErr error
-		requestData   map[string]interface{}
-		isError       bool
+		name        string
+		opts        []awsutil.MockIAMOption
+		requestData map[string]interface{}
+		isError     bool
 	}{
 		{
 			name: "all good",
@@ -52,10 +33,10 @@ func TestStaticRolesValidation(t *testing.T) {
 						UserName:        aws.String("jane-doe"),
 					},
 				}),
-			},
-			listAccessOut: &iam.ListAccessKeysOutput{
-				AccessKeyMetadata: []*iam.AccessKeyMetadata{},
-				IsTruncated:       aws.Bool(false),
+				awsutil.WithListAccessKeysOutput(&iam.ListAccessKeysOutput{
+					AccessKeyMetadata: []*iam.AccessKeyMetadata{},
+					IsTruncated:       aws.Bool(false),
+				}),
 			},
 			requestData: map[string]interface{}{
 				"name":            "test",
@@ -96,11 +77,7 @@ func TestStaticRolesValidation(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			b.iamClient = &extendedMockIAM{
-				IAMAPI:               miam,
-				ListAccessKeysOutput: c.listAccessOut,
-				ListAccessKeysError:  c.listAccessErr,
-			}
+			b.iamClient = miam
 			if err := b.Setup(context.Background(), config); err != nil {
 				t.Fatal(err)
 			}
