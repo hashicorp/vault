@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/volume"
 	docker "github.com/docker/docker/client"
 	"github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
@@ -474,6 +475,8 @@ type DockerClusterNode struct {
 	ContainerIPAddress   string
 	ImageRepo            string
 	ImageTag             string
+	DataVolumeName       string
+	cleanupVolume        func()
 }
 
 func (n *DockerClusterNode) TLSConfig() *tls.Config {
@@ -539,9 +542,14 @@ func (n *DockerClusterNode) newAPIClient() (*api.Client, error) {
 	return client, nil
 }
 
-// Cleanup kills the container of the node
+// Cleanup kills the container of the node and deletes its data volume
 func (n *DockerClusterNode) Cleanup() {
 	n.cleanup()
+}
+
+// Stop kills the container of the node
+func (n *DockerClusterNode) Stop() {
+	n.cleanupContainer()
 }
 
 func (n *DockerClusterNode) cleanup() error {
@@ -549,10 +557,21 @@ func (n *DockerClusterNode) cleanup() error {
 		return nil
 	}
 	n.cleanupContainer()
+	n.cleanupVolume()
 	return nil
 }
 
 func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOptions) error {
+	if n.DataVolumeName == "" {
+		vol, err := n.dockerAPI.VolumeCreate(ctx, volume.CreateOptions{})
+		if err != nil {
+			return err
+		}
+		n.DataVolumeName = vol.Name
+		n.cleanupVolume = func() {
+			_ = n.dockerAPI.VolumeRemove(ctx, vol.Name, false)
+		}
+	}
 	vaultCfg := map[string]interface{}{}
 	vaultCfg["listener"] = map[string]interface{}{
 		"tcp": map[string]interface{}{
@@ -688,12 +707,22 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 		},
 		Capabilities:      []string{"NET_ADMIN"},
 		OmitLogTimestamps: true,
+		VolumeNameToMountPoint: map[string]string{
+			n.DataVolumeName: "/vault/file",
+		},
 	})
 	if err != nil {
 		return err
 	}
 	n.runner = r
 
+	probe := opts.StartProbe
+	if probe == nil {
+		probe = func(c *api.Client) error {
+			_, err = c.Sys().SealStatus()
+			return err
+		}
+	}
 	svc, _, err := r.StartNewService(ctx, false, false, func(ctx context.Context, host string, port int) (dockhelper.ServiceConfig, error) {
 		config, err := n.apiConfig()
 		if err != nil {
@@ -704,10 +733,11 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 		if err != nil {
 			return nil, err
 		}
-		_, err = client.Sys().SealStatus()
+		err = probe(client)
 		if err != nil {
 			return nil, err
 		}
+
 		return dockhelper.NewServiceHostPort(host, port), nil
 	})
 	if err != nil {
@@ -732,6 +762,12 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 	n.RealAPIAddr = "https://" + n.ContainerIPAddress + ":8200"
 	n.cleanupContainer = svc.Cleanup
 
+	client, err := n.newAPIClient()
+	if err != nil {
+		return err
+	}
+	client.SetToken(n.Cluster.rootToken)
+	n.client = client
 	return nil
 }
 
@@ -761,6 +797,7 @@ type DockerClusterOptions struct {
 	CloneCA     *DockerCluster
 	VaultBinary string
 	Args        []string
+	StartProbe  func(*api.Client) error
 }
 
 func ensureLeaderMatches(ctx context.Context, client *api.Client, ready func(response *api.LeaderResponse) error) error {
@@ -883,12 +920,6 @@ func (dc *DockerCluster) addNode(ctx context.Context, opts *DockerClusterOptions
 	if err := node.Start(ctx, opts); err != nil {
 		return err
 	}
-	client, err := node.newAPIClient()
-	if err != nil {
-		return err
-	}
-	client.SetToken(dc.rootToken)
-	node.client = client
 	return nil
 }
 

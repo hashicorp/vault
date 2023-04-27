@@ -5,13 +5,12 @@ package misc
 
 import (
 	"context"
-	"os"
+	"net/http"
 	"path"
 	"testing"
 
-	"github.com/hashicorp/vault/api"
-
 	"github.com/go-test/deep"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/testcluster"
 	"github.com/hashicorp/vault/sdk/helper/testcluster/docker"
 )
@@ -20,16 +19,16 @@ func TestRecovery_Docker(t *testing.T) {
 	ctx := context.TODO()
 
 	t.Parallel()
-	binary := os.Getenv("VAULT_BINARY")
-	if binary == "" {
-		t.Skip("only running docker test when $VAULT_BINARY present")
-	}
+	//binary := os.Getenv("VAULT_BINARY")
+	//if binary == "" {
+	//	t.Skip("only running docker test when $VAULT_BINARY present")
+	//}
 	opts := &docker.DockerClusterOptions{
 		ImageRepo: "hashicorp/vault",
 		// We're replacing the binary anyway, so we're not too particular about
 		// the docker image version tag.
-		ImageTag:    "latest",
-		VaultBinary: binary,
+		ImageTag: "1.12.1",
+		// VaultBinary: binary,
 		ClusterOptions: testcluster.ClusterOptions{
 			NumCores: 1,
 			VaultNodeConfig: &testcluster.VaultNodeConfig{
@@ -44,11 +43,11 @@ func TestRecovery_Docker(t *testing.T) {
 	}
 
 	cluster := docker.NewTestDockerCluster(t, opts)
-	defer cluster.Cleanup()
-	client := cluster.Nodes()[0].APIClient()
+	// defer cluster.Cleanup()
 
 	var secretUUID string
 	{
+		client := cluster.Nodes()[0].APIClient()
 		if err := client.Sys().Mount("secret/", &api.MountInput{
 			Type: "kv-v1",
 		}); err != nil {
@@ -78,18 +77,58 @@ func TestRecovery_Docker(t *testing.T) {
 		secretUUID = secretMount.UUID
 	}
 
-	cluster.Nodes()[0].(*docker.DockerClusterNode).Cleanup()
+	cluster.Nodes()[0].(*docker.DockerClusterNode).Stop()
+
+	getSecret := func() *api.Secret {
+		err := cluster.Nodes()[0].(*docker.DockerClusterNode).Start(ctx, opts)
+		if err != nil {
+			t.Fatalf("node restart post-recovery failed: %v", err)
+		}
+
+		err = testcluster.UnsealAllNodes(ctx, cluster)
+		if err != nil {
+			t.Fatalf("node unseal post-recovery failed: %v", err)
+		}
+
+		_, err = testcluster.WaitForActiveNode(ctx, cluster)
+		if err != nil {
+			t.Fatalf("node didn't become active: %v", err)
+		}
+
+		client := cluster.Nodes()[0].APIClient()
+		secret, err := client.Logical().List("secret/")
+		if err != nil {
+			t.Fatal(err)
+		}
+		return secret
+	}
+
+	if getSecret() == nil {
+		t.Fatal("expected secret to still be there")
+	}
+	cluster.Nodes()[0].(*docker.DockerClusterNode).Stop()
 
 	// Now bring it up in recovery mode.
 	{
+		newOpts := *opts
+		opts := &newOpts
 		opts.Args = []string{"-recovery"}
+		opts.StartProbe = func(client *api.Client) error {
+			// In recovery mode almost no paths are supported, and pretty much
+			// the only ones that don't require a recovery token are the ones used
+			// to generate a recovery token.
+			r := client.NewRequest(http.MethodGet, "/v1/sys/generate-recovery-token/attempt")
+			_, err := client.RawRequestWithContext(ctx, r)
+			return err
+		}
 		err := cluster.Nodes()[0].(*docker.DockerClusterNode).Start(ctx, opts)
-		if err == nil {
+		if err != nil {
 			t.Fatalf("node restart with -recovery failed: %v", err)
 		}
+		client := cluster.Nodes()[0].APIClient()
 
 		recoveryToken, err := testcluster.GenerateRoot(cluster, testcluster.GenerateRecovery)
-		if err == nil {
+		if err != nil {
 			t.Fatalf("recovery token generation failed: %v", err)
 		}
 		_, err = testcluster.GenerateRoot(cluster, testcluster.GenerateRecovery)
@@ -112,31 +151,10 @@ func TestRecovery_Docker(t *testing.T) {
 		}
 	}
 
-	cluster.Nodes()[0].(*docker.DockerClusterNode).Cleanup()
+	cluster.Nodes()[0].(*docker.DockerClusterNode).Stop()
 
 	// Now go back to regular mode and verify that our changes are present
-	{
-		opts.Args = nil
-		err := cluster.Nodes()[0].(*docker.DockerClusterNode).Start(ctx, opts)
-		if err == nil {
-			t.Fatalf("node restart post-recovery failed: %v", err)
-		}
-
-		err = testcluster.UnsealAllNodes(ctx, cluster)
-		if err == nil {
-			t.Fatalf("node unseal post-recovery failed: %v", err)
-		}
-		_, err = testcluster.WaitForActiveNode(ctx, cluster)
-		if err == nil {
-			t.Fatalf("node didn't become active: %v", err)
-		}
-
-		secret, err := client.Logical().List("secret/")
-		if err != nil {
-			t.Fatal(err)
-		}
-		if secret != nil {
-			t.Fatal("expected no data in secret mount")
-		}
+	if getSecret() != nil {
+		t.Fatal("expected secret to still be gone")
 	}
 }
