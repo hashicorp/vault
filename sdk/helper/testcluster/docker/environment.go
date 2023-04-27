@@ -552,7 +552,7 @@ func (n *DockerClusterNode) cleanup() error {
 	return nil
 }
 
-func (n *DockerClusterNode) start(ctx context.Context, caDir string, opts *DockerClusterOptions) error {
+func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOptions) error {
 	vaultCfg := map[string]interface{}{}
 	vaultCfg["listener"] = map[string]interface{}{
 		"tcp": map[string]interface{}{
@@ -628,6 +628,8 @@ func (n *DockerClusterNode) start(ctx context.Context, caDir string, opts *Docke
 		return err
 	}
 
+	caDir := filepath.Join(n.Cluster.tmpDir, "ca")
+
 	// setup plugin bin copy if needed
 	copyFromTo := map[string]string{
 		n.WorkDir: "/vault/config",
@@ -656,7 +658,7 @@ func (n *DockerClusterNode) start(ctx context.Context, caDir string, opts *Docke
 		// We don't need to run update-ca-certificates in the container, because
 		// we're providing the CA in the raft join call, and otherwise Vault
 		// servers don't talk to one another on the API port.
-		Cmd: []string{"server"},
+		Cmd: append([]string{"server"}, opts.Args...),
 		Env: []string{
 			// For now we're using disable_mlock, because this is for testing
 			// anyway, and because it prevents us using external plugins.
@@ -758,6 +760,7 @@ type DockerClusterOptions struct {
 	ImageTag    string
 	CloneCA     *DockerCluster
 	VaultBinary string
+	Args        []string
 }
 
 func ensureLeaderMatches(ctx context.Context, client *api.Client, ready func(response *api.LeaderResponse) error) error {
@@ -877,7 +880,7 @@ func (dc *DockerCluster) addNode(ctx context.Context, opts *DockerClusterOptions
 	if err := os.MkdirAll(node.WorkDir, 0o755); err != nil {
 		return err
 	}
-	if err := node.start(ctx, filepath.Join(dc.tmpDir, "ca"), opts); err != nil {
+	if err := node.Start(ctx, opts); err != nil {
 		return err
 	}
 	client, err := node.newAPIClient()
