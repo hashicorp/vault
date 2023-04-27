@@ -136,7 +136,7 @@ func (c *KVListCommand) Run(args []string) int {
 	// Add /metadata to v2 paths only
 	var fullPath string
 	if v2 {
-		fullPath = addPrefixToKVPath(partialPath, mountPath, "metadata", false)
+		fullPath = addPrefixToKVPath(partialPath, mountPath, "metadata")
 	} else {
 		// v1
 		if mountFlagSyntax {

@@ -150,7 +150,7 @@ func (c *KVUndeleteCommand) Run(args []string) int {
 		return 1
 	}
 
-	undeletePath := addPrefixToKVPath(partialPath, mountPath, "undelete", false)
+	undeletePath := addPrefixToKVPath(partialPath, mountPath, "undelete")
 	data := map[string]interface{}{
 		"versions": kvParseVersionsFlags(c.flagVersions),
 	}

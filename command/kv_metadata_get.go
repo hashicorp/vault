@@ -140,7 +140,7 @@ func (c *KVMetadataGetCommand) Run(args []string) int {
 		return 1
 	}
 
-	fullPath := addPrefixToKVPath(partialPath, mountPath, "metadata", false)
+	fullPath := addPrefixToKVPath(partialPath, mountPath, "metadata")
 	secret, err := client.Logical().Read(fullPath)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error reading %s: %s", fullPath, err))
