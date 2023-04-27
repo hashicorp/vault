@@ -2343,7 +2343,7 @@ func TestBackend_CertUpgrade(t *testing.T) {
 	}
 }
 
-// Test a self-signed client containing subject DN entries that is trusted by root CA.
+// TestBackend_subjectoids_singleCert tests a self-signed client cert containing subject DN entries that is trusted by root CA.
 func TestBackend_subjectoids_singleCert(t *testing.T) {
 	connState, err := testConnState(
 		"test-fixtures/root/rootcawsubjoidscert.pem",
