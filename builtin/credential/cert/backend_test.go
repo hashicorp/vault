@@ -2384,7 +2384,7 @@ func TestBackend_subjectoids_singleCert(t *testing.T) {
 			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "2.5.4.3:example.com,2.5.4.6:US,2.5.4.8:CA,2.5.4.7:Sunnyvale,2.5.4.10:ExampleOrg,2.5.4.11:ExampleDivision1,2.5.4.11:Example*2,2.5.4.11:ExampleDivision3,0.9.2342.19200300.100.1.25:ExampleDC,2.5.4.4:ExampleSN"}, false),
 			testAccStepLogin(t, connState),
 
-			//This Second set of test cases check for all available fields in the Subject DN for globbed pattern(s)
+			// This Second set of test cases check for all available fields in the Subject DN for globbed pattern(s)
 			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "0.9.2342.19200300.100.1.1:*UID"}, false),
 			testAccStepLogin(t, connState),
 			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "0.9.2342.19200300.100.1.1:*UID,2.5.4.3:example*"}, false),

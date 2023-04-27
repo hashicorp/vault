@@ -218,7 +218,7 @@ certificate.`,
 				Description: tokenutil.DeprecationText("token_bound_cidrs"),
 				Deprecated:  true,
 			},
-			"required_subject_oids": &framework.FieldSchema{
+			"required_subject_oids": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated string or array of subject name entries
 formatted as "oid:value". Expects the oid value to be some type of ASN1 encoded string.
