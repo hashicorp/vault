@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { inject as service } from '@ember/service';
 import { computed } from '@ember/object';
 import { reject } from 'rsvp';
@@ -131,7 +136,8 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
       return true;
     },
     loading(transition) {
-      if (transition.queryParamsOnly || Ember.testing) {
+      const isSameRoute = transition.from?.name === transition.to?.name;
+      if (isSameRoute || Ember.testing) {
         return;
       }
       // eslint-disable-next-line ember/no-controller-access-in-routes

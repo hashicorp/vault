@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package shamir
 
 import (
@@ -86,31 +89,40 @@ func div(a, b uint8) uint8 {
 		panic("divide by zero")
 	}
 
-	log_a := logTable[a]
-	log_b := logTable[b]
-	diff := ((int(log_a) - int(log_b)) + 255) % 255
-
-	ret := int(expTable[diff])
+	ret := int(mult(a, inverse(b)))
 
 	// Ensure we return zero if a is zero but aren't subject to timing attacks
 	ret = subtle.ConstantTimeSelect(subtle.ConstantTimeByteEq(a, 0), 0, ret)
 	return uint8(ret)
 }
 
+// inverse calculates the inverse of a number in GF(2^8)
+func inverse(a uint8) uint8 {
+	b := mult(a, a)
+	c := mult(a, b)
+	b = mult(c, c)
+	b = mult(b, b)
+	c = mult(b, c)
+	b = mult(b, b)
+	b = mult(b, b)
+	b = mult(b, c)
+	b = mult(b, b)
+	b = mult(a, b)
+
+	return mult(b, b)
+}
+
 // mult multiplies two numbers in GF(2^8)
 func mult(a, b uint8) (out uint8) {
-	log_a := logTable[a]
-	log_b := logTable[b]
-	sum := (int(log_a) + int(log_b)) % 255
+	var r uint8 = 0
+	var i uint8 = 8
 
-	ret := int(expTable[sum])
+	for i > 0 {
+		i--
+		r = (-(b >> i & 1) & a) ^ (-(r >> 7) & 0x1B) ^ (r + r)
+	}
 
-	// Ensure we return zero if either a or b are zero but aren't subject to
-	// timing attacks
-	ret = subtle.ConstantTimeSelect(subtle.ConstantTimeByteEq(a, 0), 0, ret)
-	ret = subtle.ConstantTimeSelect(subtle.ConstantTimeByteEq(b, 0), 0, ret)
-
-	return uint8(ret)
+	return r
 }
 
 // add combines two numbers in GF(2^8)

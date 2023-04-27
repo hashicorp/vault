@@ -39,20 +39,31 @@ The following Azure [role assignments](https://learn.microsoft.com/en-us/azure/r
 must be granted to the Azure AD application in order for the auth method to access Azure
 APIs during authentication.
 
+### Role Assignments
+
 ~> **Note:** The role assignments are only required when the
-[`vm_name`](/api-docs/auth/azure#vm_name), [`vmss_name`](/api-docs/auth/azure#vmss_name),
-or [`resource_id`](/api-docs/auth/azure#resource_id) parameters are used on login.
+[`vm_name`](/vault/api-docs/auth/azure#vm_name), [`vmss_name`](/vault/api-docs/auth/azure#vmss_name),
+or [`resource_id`](/vault/api-docs/auth/azure#resource_id) parameters are used on login.
 
 | Azure Environment | Login Parameter | Azure API Permission |
 | ----------- | --------------- | -------------------- |
-| Virtual Machine | [`vm_name`](/api-docs/auth/azure#vm_name) | `Microsoft.Compute/virtualMachines/*/read` |
-| Virtual Machine Scale Set ([Uniform Orchestration][vmss-uniform]) | [`vmss_name`](/api-docs/auth/azure#vmss_name) | `Microsoft.Compute/virtualMachineScaleSets/*/read` |
-| Virtual Machine Scale Set ([Flexible Orchestration][vmss-flex]) | [`vmss_name`](/api-docs/auth/azure#vmss_name) | `Microsoft.Compute/virtualMachineScaleSets/*/read` `Microsoft.ManagedIdentity/userAssignedIdentities/*/read` |
-| Services that ([support managed identities][managed-identities]) for Azure resources | [`resource_id`](/api-docs/auth/azure#resource_id) | `read` on the resource used to obtain the JWT |
+| Virtual Machine | [`vm_name`](/vault/api-docs/auth/azure#vm_name) | `Microsoft.Compute/virtualMachines/*/read` |
+| Virtual Machine Scale Set ([Uniform Orchestration][vmss-uniform]) | [`vmss_name`](/vault/api-docs/auth/azure#vmss_name) | `Microsoft.Compute/virtualMachineScaleSets/*/read` |
+| Virtual Machine Scale Set ([Flexible Orchestration][vmss-flex]) | [`vmss_name`](/vault/api-docs/auth/azure#vmss_name) | `Microsoft.Compute/virtualMachineScaleSets/*/read` `Microsoft.ManagedIdentity/userAssignedIdentities/*/read` |
+| Services that ([support managed identities][managed-identities]) for Azure resources | [`resource_id`](/vault/api-docs/auth/azure#resource_id) | `read` on the resource used to obtain the JWT |
 
 [vmss-uniform]: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-orchestration-modes#scale-sets-with-uniform-orchestration
 [vmss-flex]: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-orchestration-modes#scale-sets-with-flexible-orchestration
 [managed-identities]: https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/managed-identities-status
+
+### API Permissions
+
+The following [API permissions](https://learn.microsoft.com/en-us/azure/active-directory/develop/permissions-consent-overview#types-of-permissions)
+must be assigned to the service principal provided to Vault for managing the root rotation in Azure:
+
+| Permission Name               | Type        |
+| ----------------------------- | ----------- |
+| Application.ReadWrite.All     | Application |
 
 ## Authentication
 
@@ -154,7 +165,7 @@ tool.
    authentication type, as well as overall constraints and configuration for
    the generated auth tokens.
 
-   For the complete list of role options, please see the [API documentation](/api-docs/auth/azure).
+   For the complete list of role options, please see the [API documentation](/vault/api-docs/auth/azure).
 
 ### Via the API
 
@@ -220,7 +231,7 @@ AZURE_GO_SDK_LOG_LEVEL=DEBUG
 
 ## API
 
-The Azure Auth Plugin has a full HTTP API. Please see the [API documentation](/api-docs/auth/azure) for more details.
+The Azure Auth Plugin has a full HTTP API. Please see the [API documentation](/vault/api-docs/auth/azure) for more details.
 
 ## Code Example
 

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { click, fillIn, findAll, currentURL, find, visit, settled, waitUntil } from '@ember/test-helpers';
 import { module, test } from 'qunit';

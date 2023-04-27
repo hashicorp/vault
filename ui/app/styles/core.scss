@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 // Start with Structure & Bulma variables as a foundation
 @import './utils/colors';
 @import './utils/spacing';
@@ -88,7 +93,6 @@
 @import './components/read-more';
 @import './components/regex-validator';
 @import './components/replication-dashboard';
-@import './components/replication-doc-link';
 @import './components/replication-header';
 @import './components/replication-mode-summary';
 @import './components/replication-page';

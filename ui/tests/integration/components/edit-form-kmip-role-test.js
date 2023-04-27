@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { later, run, _cancelTimers as cancelTimers } from '@ember/runloop';
 import { resolve } from 'rsvp';
 import EmberObject, { computed } from '@ember/object';
@@ -68,35 +73,81 @@ module('Integration | Component | edit form kmip role', function (hooks) {
   });
 
   test('it renders: new model', async function (assert) {
+    assert.expect(3);
     const model = createModel({ isNew: true });
     this.set('model', model);
-    await render(hbs`<EditFormKmipRole @model={{this.model}} />`, this.context);
+    this.onSave = ({ model }) => {
+      assert.false(model.operationNone, 'callback fires with operationNone as false');
+      assert.true(model.operationAll, 'callback fires with operationAll as true');
+    };
+    await render(hbs`<EditFormKmipRole @model={{this.model}} @onSave={{this.onSave}} />`, this.context);
 
     assert.dom('[data-test-input="operationAll"]').isChecked('sets operationAll');
+    await click('[data-test-edit-form-submit]');
   });
 
   test('it renders: operationAll', async function (assert) {
+    assert.expect(3);
     const model = createModel({ operationAll: true });
     this.set('model', model);
-    await render(hbs`<EditFormKmipRole @model={{this.model}} />`, this.context);
+    this.onSave = ({ model }) => {
+      assert.false(model.operationNone, 'callback fires with operationNone as false');
+      assert.true(model.operationAll, 'callback fires with operationAll as true');
+    };
+    await render(hbs`<EditFormKmipRole @model={{this.model}} @onSave={{this.onSave}} />`, this.context);
     assert.dom('[data-test-input="operationAll"]').isChecked('sets operationAll');
+    await click('[data-test-edit-form-submit]');
   });
 
   test('it renders: operationNone', async function (assert) {
-    const model = createModel({ operationNone: true });
+    assert.expect(2);
+    const model = createModel({ operationNone: true, operationAll: undefined });
     this.set('model', model);
-    await render(hbs`<EditFormKmipRole @model={{this.model}} />`, this.context);
 
+    this.onSave = ({ model }) => {
+      assert.true(model.operationNone, 'callback fires with operationNone as true');
+    };
+    await render(hbs`<EditFormKmipRole @model={{this.model}} @onSave={{this.onSave}} />`, this.context);
     assert.dom('[data-test-input="operationNone"]').isNotChecked('sets operationNone');
+    await click('[data-test-edit-form-submit]');
   });
 
   test('it renders: choose operations', async function (assert) {
+    assert.expect(3);
     const model = createModel({ operationGet: true });
     this.set('model', model);
-    await render(hbs`<EditFormKmipRole @model={{this.model}} />`, this.context);
+    this.onSave = ({ model }) => {
+      assert.false(model.operationNone, 'callback fires with operationNone as false');
+    };
+    await render(hbs`<EditFormKmipRole @model={{this.model}} @onSave={{this.onSave}} />`, this.context);
 
     assert.dom('[data-test-input="operationNone"]').isChecked('sets operationNone');
     assert.dom('[data-test-input="operationAll"]').isNotChecked('sets operationAll');
+    await click('[data-test-edit-form-submit]');
+  });
+
+  test('it saves operationNone=true when unchecking operationAll box', async function (assert) {
+    assert.expect(15);
+    const model = createModel({ isNew: true });
+    this.set('model', model);
+    this.onSave = ({ model }) => {
+      assert.true(model.operationNone, 'callback fires with operationNone as true');
+      assert.false(model.operationAll, 'callback fires with operationAll as false');
+    };
+
+    await render(hbs`<EditFormKmipRole @model={{this.model}} @onSave={{this.onSave}} />`, this.context);
+    await click('[data-test-input="operationAll"]');
+    for (const field of model.fields) {
+      const { name } = field;
+      if (name === 'operationNone') continue;
+      assert.dom(`[data-test-input="${name}"]`).isNotChecked(`${name} is unchecked`);
+    }
+
+    assert.dom('[data-test-input="operationAll"]').isNotChecked('sets operationAll');
+    assert
+      .dom('[data-test-input="operationNone"]')
+      .isChecked('operationNone toggle is true which means allow operations');
+    await click('[data-test-edit-form-submit]');
   });
 
   const savingTests = [

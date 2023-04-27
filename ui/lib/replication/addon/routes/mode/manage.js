@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { camelize } from '@ember/string';
 import { all } from 'rsvp';
 import { inject as service } from '@ember/service';

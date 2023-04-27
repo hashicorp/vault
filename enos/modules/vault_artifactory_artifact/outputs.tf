@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 
 output "url" {
   value       = data.enos_artifactory_item.vault.results[0].url

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { allSettled } from 'rsvp';
 import ApplicationAdapter from '../application';
 import ControlGroupError from 'vault/lib/control-group-error';

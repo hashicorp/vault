@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package syslog
 
 import (
@@ -63,6 +66,15 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 		logRaw = b
 	}
 
+	elideListResponses := false
+	if elideListResponsesRaw, ok := conf.Config["elide_list_responses"]; ok {
+		value, err := strconv.ParseBool(elideListResponsesRaw)
+		if err != nil {
+			return nil, err
+		}
+		elideListResponses = value
+	}
+
 	// Get the logger
 	logger, err := gsyslog.NewLogger(gsyslog.LOG_INFO, facility, tag)
 	if err != nil {
@@ -74,8 +86,9 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 		saltConfig: conf.SaltConfig,
 		saltView:   conf.SaltView,
 		formatConfig: audit.FormatterConfig{
-			Raw:          logRaw,
-			HMACAccessor: hmacAccessor,
+			Raw:                logRaw,
+			HMACAccessor:       hmacAccessor,
+			ElideListResponses: elideListResponses,
 		},
 	}
 

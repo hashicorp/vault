@@ -87,7 +87,7 @@ node completes the request anyway, returning a warning in the response.
 
 This mitigation option still exists in Vault 1.7, though now there is a
 configuration option to adjust the wait time:
-[best_effort_wal_wait_duration](/docs/configuration/replication).
+[best_effort_wal_wait_duration](/vault/docs/configuration/replication).
 
 ## Vault 1.7 Mitigations
 
@@ -103,7 +103,7 @@ The remainder of this document describes the tradeoffs of these mitigations and
 how to use them.
 
 Note that any headers requesting forwarding are disabled by default, and must
-be enabled using [allow_forwarding_via_header](/docs/configuration/replication).
+be enabled using [allow_forwarding_via_header](/vault/docs/configuration/replication).
 
 ### Unconditional Forwarding (Performance standbys only)
 
@@ -175,7 +175,7 @@ to build equivalent functionality into their client library.
 
 ### Vault Agent and consistency headers
 
-When configured, the [Vault Agent API Proxy](/docs/agent/apiproxy) will proxy incoming requests to Vault. There is
+When configured, the [Vault Agent API Proxy](/vault/docs/agent/apiproxy) will proxy incoming requests to Vault. There is
 Agent configuration available in the `api_proxy` stanza that allows making use
 of some of the above mitigations without modifying clients.
 
@@ -202,11 +202,11 @@ a 412 status code. The Vault Go API automatically retries when receiving 412s, s
 unless there is a considerable replication delay, users will experience
 read-after-write consistency.
 
-The replication option [allow_forwarding_via_token](/docs/configuration/replication)
+The replication option [allow_forwarding_via_token](/vault/docs/configuration/replication)
 can be used to enforce requests that would have returned 412s in the
 aforementioned way will be forwarded instead to the active node.
 
-Refer to the [Server Side Consistent Token FAQ](/docs/faq/ssct) for details.
+Refer to the [Server Side Consistent Token FAQ](/vault/docs/faq/ssct) for details.
 
 ## Client API helpers
 

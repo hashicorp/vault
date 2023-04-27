@@ -348,7 +348,7 @@ are needed.
   `sts:AssumeRole` statement).
 - The `ManageOwnAccessKeys` stanza is necessary when you have configured Vault
   with static credentials, and wish to rotate these credentials with the
-  [Rotate Root Credentials](https://www.vaultproject.io/api-docs/auth/aws#rotate-root-credentials)
+  [Rotate Root Credentials](/vault/api-docs/auth/aws#rotate-root-credentials)
   API call.
 
 ## Client Nonce
@@ -442,7 +442,7 @@ not specify the policy component, the client will inherit the allowed policies s
 on the role. If the role tag creation specifies the policy component but it contains
 no policies, the token will contain only the `default` policy; by default, this policy
 allows only manipulation (revocation, renewal, lookup) of the existing token, plus
-access to its [cubbyhole](/docs/secrets/cubbyhole).
+access to its [cubbyhole](/vault/docs/secrets/cubbyhole).
 This can be useful to allow instances access to a secure "scratch space" for
 storing data (via the token's cubbyhole) but without granting any access to
 other resources provided by or resident in Vault.
@@ -758,7 +758,7 @@ The response will be in JSON. For example:
 ## API
 
 The AWS auth method has a full HTTP API. Please see the
-[AWS Auth API](/api-docs/auth/aws) for more
+[AWS Auth API](/vault/api-docs/auth/aws) for more
 details.
 
 ## Code Example

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Model, { hasMany, belongsTo, attr } from '@ember-data/model';
 import { alias } from '@ember/object/computed';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';

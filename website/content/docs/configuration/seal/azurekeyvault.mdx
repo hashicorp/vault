@@ -10,7 +10,7 @@ description: >-
 
 # `azurekeyvault` Seal
 
--> **Note:** The Seal Wrap functionality is enabled by default. For this reason, the KMS service must be available throughout Vault's runtime and not just during the unseal process. Refer to the [Seal Wrap](/docs/enterprise/sealwrap) documenation for more information.
+-> **Note:** The Seal Wrap functionality is enabled by default. For this reason, the KMS service must be available throughout Vault's runtime and not just during the unseal process. Refer to the [Seal Wrap](/vault/docs/enterprise/sealwrap) documenation for more information.
 
 The Azure Key Vault seal configures Vault to use Azure Key Vault as the seal
 wrapping mechanism. The Azure Key Vault seal is activated by one of the following:
@@ -65,7 +65,7 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 
 - `disabled` `(string: "")`: Set this to `true` if Vault is migrating from an auto seal configuration. Otherwise, set to `false`.
 
-Refer to the [Seal Migration](/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
+Refer to the [Seal Migration](/vault/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
 
 
 ## Authentication
@@ -88,7 +88,7 @@ and secret. MSI must be
 on the VMs hosting Vault, and it is the preferred configuration since MSI
 prevents your Azure credentials from being stored as clear text. Refer to the
 [Production
-Hardening](https://learn.hashicorp.com/vault/day-one/production-hardening) tutorial
+Hardening](/vault/tutorials/operations/production-hardening) tutorial
 for more best practices.
 
 -> **Note:** If you are using a Managed HSM KeyVault, `AZURE_AD_RESOURCE` or the `resource`
@@ -113,5 +113,5 @@ using Azure Automation Account and Vault will recognize newly rotated keys.
 
 ## Tutorial
 
-Refer to the [Auto-unseal using Azure Key Vault](https://learn.hashicorp.com/vault/operations/autounseal-azure-keyvault)
+Refer to the [Auto-unseal using Azure Key Vault](/vault/tutorials/auto-unseal/autounseal-azure-keyvault)
 tutorial to learn how to use the Azure Key Vault to auto-unseal a Vault server.

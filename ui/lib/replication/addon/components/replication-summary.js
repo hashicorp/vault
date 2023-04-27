@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { inject as service } from '@ember/service';
 import { alias } from '@ember/object/computed';
 import { computed } from '@ember/object';
@@ -21,7 +26,6 @@ const DEFAULTS = {
 export default Component.extend(ReplicationActions, DEFAULTS, {
   replicationMode: 'dr',
   mode: 'primary',
-  wizard: service(),
   version: service(),
   didReceiveAttrs() {
     this._super(...arguments);

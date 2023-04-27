@@ -1,0 +1,14 @@
+Plugins can optionally self-report their own semantic version. For plugins that
+do so, Vault will automatically populate the plugin's version in the catalog
+without requiring the user to provide it. If users do provide a version during
+registration, Vault will error if the version provided does not match what the
+plugin reports. Plugins that report a non-empty version _must_ report a valid
+[Semantic Version](https://semver.org/) with a leading 'v' added or registration
+will fail, e.g. `v1.0.0` or `v2.3.2-beta`.
+
+Plugins that want to opt into this behavior can implement the version interface.
+However, it is not a prerequisite; users can still provide a version during
+registration if the plugin does not implement the version interface.
+
+To implement the version interface, plugins should first upgrade the Vault SDK
+package to at least v0.6.0.

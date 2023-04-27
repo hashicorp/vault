@@ -1,0 +1,252 @@
+---
+layout: docs
+page_title: Vault Secrets Operator Helm Chart Configuration
+description: >-
+  Configuration for the Vault Secrets Operator Helm chart.
+---
+
+@include 'vso-beta-note.mdx'
+
+# Vault Secrets Operator Helm Chart
+
+The chart is customizable using
+[Helm configuration values](https://helm.sh/docs/intro/using_helm/#customizing-the-chart-before-installing).
+
+<!-- DO NOT EDIT. The docs below are generated automatically. To change, edit
+                  the vault-secrets-operator repo's values.yaml: file commit=7236932478761438b62db3f21634308b3baaf891 -->
+<!-- codegen: start -->
+
+## Top-Level Stanzas
+
+Use these links to navigate to a particular top-level stanza.
+
+- [`controller`](#h-controller)
+- [`metricsService`](#h-metricsservice)
+- [`defaultVaultConnection`](#h-defaultvaultconnection)
+- [`defaultAuthMethod`](#h-defaultauthmethod)
+- [`tests`](#h-tests)
+
+## All Values
+
+### controller ((#h-controller))
+
+- `controller` ((#v-controller)) - Top level configuration for the vault secrets operator deployment.
+  This is comprised of a controller and a kube rbac proxy container.
+
+  - `replicas` ((#v-controller-replicas)) (`integer: 1`) - Set the number of replicas for the operator.
+
+  - `kubeRbacProxy` ((#v-controller-kuberbacproxy)) - Settings related to the kubeRbacProxy container. This container is an HTTP proxy for the
+    controller manager which performs RBAC authorization against the Kubernetes API using SubjectAccessReviews.
+
+    - `image` ((#v-controller-kuberbacproxy-image)) - Image sets the repo and tag of the kube-rbac-proxy image to use for the controller.
+
+      - `repository` ((#v-controller-kuberbacproxy-image-repository)) (`string: gcr.io/kubebuilder/kube-rbac-proxy`)
+
+      - `tag` ((#v-controller-kuberbacproxy-image-tag)) (`string: v0.11.0`)
+
+    - `resources` ((#v-controller-kuberbacproxy-resources)) (`map`) - Configures the default resources for the kube rbac proxy container.
+      For more information on configuring resources, see the K8s documentation:
+      https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+
+      - `limits` ((#v-controller-kuberbacproxy-resources-limits))
+
+        - `cpu` ((#v-controller-kuberbacproxy-resources-limits-cpu)) (`string: 500m`)
+
+        - `memory` ((#v-controller-kuberbacproxy-resources-limits-memory)) (`string: 128Mi`)
+
+      - `requests` ((#v-controller-kuberbacproxy-resources-requests))
+
+        - `cpu` ((#v-controller-kuberbacproxy-resources-requests-cpu)) (`string: 5m`)
+
+        - `memory` ((#v-controller-kuberbacproxy-resources-requests-memory)) (`string: 64Mi`)
+
+  - `manager` ((#v-controller-manager)) - Settings related to the vault-secrets-operator container.
+
+    - `image` ((#v-controller-manager-image)) - Image sets the repo and tag of the vault-secrets-operator image to use for the controller.
+
+      - `repository` ((#v-controller-manager-image-repository)) (`string: hashicorp/vault-secrets-operator`)
+
+      - `tag` ((#v-controller-manager-image-tag)) (`string: 0.1.0-beta`)
+
+    - `clientCache` ((#v-controller-manager-clientcache)) - Configures the client cache which is used by the controller to cache (and potentially persist) vault tokens that
+      are the result of using the VaultAuthMethod. This enables re-use of Vault Tokens around their TTLs as well as the
+      ability to renew.
+
+      - `persistenceModel` ((#v-controller-manager-clientcache-persistencemodel)) (`string: ""`) - Defines the `-client-cache-persistence-model` which caches+persists vault tokens.
+        Valid values are:
+        "none" - in-memory client cache is used, no tokens are persisted.
+        "direct-unencrypted" - in-memory client cache is persisted, unencrypted. This is NOT recommended for any production workload.
+        "direct-encrypted" - in-memory client cache is persisted encrypted using the Vault Transit engine.
+
+        default: "none"
+
+      - `cacheSize` ((#v-controller-manager-clientcache-cachesize)) (`integer: ""`) - Defines the size of the in-memory LRU cache *in entries*, that is used by the client cache controller.
+        Larger numbers will increase memory usage by the controller, lower numbers will cause more frequent evictions
+        of the client cache which can result in additional Vault client counts.
+
+        default: 10000
+
+    - `maxConcurrentReconciles` ((#v-controller-manager-maxconcurrentreconciles)) (`integer: ""`) - Defines the maximum number of concurrent reconciles by the controller.
+      NOTE: Currently this is only used by the reconciliation logic of dynamic secrets.
+
+      default: 100
+
+    - `resources` ((#v-controller-manager-resources)) (`map`) - Configures the default resources for the vault-secrets-operator container.
+      For more information on configuring resources, see the K8s documentation:
+      https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+
+      - `limits` ((#v-controller-manager-resources-limits))
+
+        - `cpu` ((#v-controller-manager-resources-limits-cpu)) (`string: 500m`)
+
+        - `memory` ((#v-controller-manager-resources-limits-memory)) (`string: 128Mi`)
+
+      - `requests` ((#v-controller-manager-resources-requests))
+
+        - `cpu` ((#v-controller-manager-resources-requests-cpu)) (`string: 10m`)
+
+        - `memory` ((#v-controller-manager-resources-requests-memory)) (`string: 64Mi`)
+
+  - `controllerConfigMapYaml` ((#v-controller-controllerconfigmapyaml)) (`map`) - Sets the configuration settings used by the controller. Any custom changes will be reflected in the
+    data field of the configmap.
+    For more information on configuring resources, see the K8s documentation:
+    https://kubernetes.io/docs/concepts/configuration/configmap/
+
+    - `health` ((#v-controller-controllerconfigmapyaml-health))
+
+      - `healthProbeBindAddress` ((#v-controller-controllerconfigmapyaml-health-healthprobebindaddress)) (`string: :8081`)
+
+    - `leaderElection` ((#v-controller-controllerconfigmapyaml-leaderelection))
+
+      - `leaderElect` ((#v-controller-controllerconfigmapyaml-leaderelection-leaderelect)) (`boolean: true`)
+
+      - `resourceName` ((#v-controller-controllerconfigmapyaml-leaderelection-resourcename)) (`string: b0d477c0.hashicorp.com`)
+
+    - `metrics` ((#v-controller-controllerconfigmapyaml-metrics))
+
+      - `bindAddress` ((#v-controller-controllerconfigmapyaml-metrics-bindaddress)) (`string: 127.0.0.1:8080`)
+
+    - `webhook` ((#v-controller-controllerconfigmapyaml-webhook))
+
+      - `port` ((#v-controller-controllerconfigmapyaml-webhook-port)) (`integer: 9443`)
+
+  - `kubernetesClusterDomain` ((#v-controller-kubernetesclusterdomain)) (`string: cluster.local`) - Configures the environment variable KUBERNETES_CLUSTER_DOMAIN used by KubeDNS.
+
+### metricsService ((#h-metricsservice))
+
+- `metricsService` ((#v-metricsservice)) (`map`) - Configure the metrics service ports used by the metrics service.
+  Set the configuration fo the metricsService port.
+
+  - `ports` ((#v-metricsservice-ports)) (`map`) - Set the port settings for the metrics service.
+    For more information on configuring resources, see the K8s documentation:
+    https://kubernetes.io/docs/concepts/services-networking/service/
+
+  - `name` ((#v-metricsservice-ports-name)) (`string: https`)
+
+  - `port` ((#v-metricsservice-ports-port)) (`integer: 8443`)
+
+  - `protocol` ((#v-metricsservice-ports-protocol)) (`string: TCP`)
+
+  - `targetPort` ((#v-metricsservice-ports-targetport)) (`string: https`)
+
+  - `type` ((#v-metricsservice-type)) (`string: ClusterIP`)
+
+### defaultVaultConnection ((#h-defaultvaultconnection))
+
+- `defaultVaultConnection` ((#v-defaultvaultconnection)) - Configures the default VaultConnection CR which will be used by resources
+  if they do not specify a VaultConnection reference. The name is 'default' and will
+  always be installed in the same namespace as the operator.
+  NOTE:
+  * It is strongly recommended to deploy the vault secrets operator in a secure Vault environment
+    which includes a configuration utilizing TLS and installing Vault into its own restricted namespace.
+
+  - `enabled` ((#v-defaultvaultconnection-enabled)) (`boolean: false`) - toggles the deployment of the VaultAuthMethod CR
+
+  - `address` ((#v-defaultvaultconnection-address)) (`string: ""`) - Address of the Vault Server
+    Example: http://vault.default.svc.cluster.local:8200
+
+  - `caCertSecret` ((#v-defaultvaultconnection-cacertsecret)) (`string: ""`) - CACertSecret containing the trusted PEM encoded CA certificate chain.
+    Note: This secret must exist prior to deploying the CR.
+
+  - `tlsServerName` ((#v-defaultvaultconnection-tlsservername)) (`string: ""`) - TLSServerName to use as the SNI host for TLS connections.
+
+  - `skipTLSVerify` ((#v-defaultvaultconnection-skiptlsverify)) (`boolean: false`) - SkipTLSVerify for TLS connections.
+
+  - `headers` ((#v-defaultvaultconnection-headers)) (`string: ""`) - Headers to be included in all Vault requests.
+    headers: |
+      "vault-something1": "foo"
+      "vault-something2": "bar"
+      "vault-something3": "baz"
+
+### defaultAuthMethod ((#h-defaultauthmethod))
+
+- `defaultAuthMethod` ((#v-defaultauthmethod)) - Configures and deploys the default VaultAuthMethod CR which will be used by resources
+  if they do not specify a VaultAuthMethod reference. The name is 'default' and will
+  always be installed in the same namespace as the operator.
+  NOTE:
+  * It is strongly recommended to deploy the vault secrets operator in a secure Vault environment
+    which includes a configuration utilizing TLS and installing Vault into its own restricted namespace.
+
+  - `enabled` ((#v-defaultauthmethod-enabled)) (`boolean: false`) - toggles the deployment of the VaultAuthMethod CR
+
+  - `namespace` ((#v-defaultauthmethod-namespace)) (`string: ""`) - Vault namespace for the VaultAuthMethod CR
+
+  - `method` ((#v-defaultauthmethod-method)) (`string: kubernetes`) - Vault Auth method to be used with the VaultAuthMethod CR
+
+  - `mount` ((#v-defaultauthmethod-mount)) (`string: kubernetes`) - Mount path for the Vault Auth Method.
+
+  - `kubernetes` ((#v-defaultauthmethod-kubernetes)) - Vault Kubernetes auth method specific configuration
+
+    - `role` ((#v-defaultauthmethod-kubernetes-role)) (`string: ""`) - Vault Auth Role to use
+      This is a required field and must be setup in Vault prior to deploying the helm chart
+      if `defaultAuthMethod.enabled=true`
+
+    - `serviceAccount` ((#v-defaultauthmethod-kubernetes-serviceaccount)) (`string: default`) - Kubernetes ServiceAccount associated with the default Vault Auth Role
+
+    - `tokenAudiences` ((#v-defaultauthmethod-kubernetes-tokenaudiences)) (`array<string>: []`) - Token Audience is required and should match whatever the audience
+      of the vault kubernetes auth role has set.
+
+  - `params` ((#v-defaultauthmethod-params)) (`string: ""`) - Params to use when authenticating to Vault
+    params: |
+      "vault-something1": "foo"
+      "vault-something2": "bar"
+      "vault-something3": "baz"
+
+  - `headers` ((#v-defaultauthmethod-headers)) (`string: ""`) - Headers to be included in all Vault requests.
+    headers: |
+      "vault-something1": "foo"
+      "vault-something2": "bar"
+      "vault-something3": "baz"
+
+### tests ((#h-tests))
+
+- `tests` ((#v-tests)) - # Used by unit tests, and will not be rendered except when using `helm template`, this can be safely ignored.
+
+  - `enabled` ((#v-tests-enabled)) (`boolean: true`)
+
+  <!-- codegen: end -->
+
+## Helm Chart Examples
+
+The below `config.yaml` results in a single replica installation of the Vault Secrets Operator
+with a default vault connection and auth method custom resource deployed.
+It expects a local Vault installation within the kubernetes cluster
+accessible via `http://vault.default.svc.cluster.local:8200` with TLS disabled,
+and a [Vault Auth Method](/vault/docs/auth/kubernetes) to be setup against the `default` ServiceAccount.
+
+
+```yaml
+# config.yaml
+
+defaultVaultConnection:
+  enabled: true
+defaultAuthMethod:
+  enabled: true
+
+```
+
+## Customizing the Helm Chart
+
+If you need to extend the Helm chart with additional options, we recommend using a third-party tool,
+such as [kustomize](https://github.com/kubernetes-sigs/kustomize) using the project repo `config/` path
+in the [vault-secrets-operator](https://github.com/hashicorp/vault-secrets-operator) project.

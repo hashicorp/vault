@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 export const SELECTORS = {
   issuerLabel: '[data-test-row-label="Issuer"]',
   noStoreValue: '[data-test-value-div="Store in storage backend"]',

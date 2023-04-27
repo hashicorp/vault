@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
@@ -9,17 +14,10 @@ const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 export default class DatabaseRoleEdit extends Component {
   @service router;
   @service flashMessages;
-  @service wizard;
   @service store;
 
   constructor() {
     super(...arguments);
-    if (
-      this.wizard.featureState === 'displayConnection' ||
-      this.wizard.featureState === 'displayRoleDatabase'
-    ) {
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', 'database');
-    }
     if (this.args.initialKey) {
       this.args.model.database = [this.args.initialKey];
     }

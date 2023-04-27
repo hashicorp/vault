@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package awsauth
 
 import (
@@ -119,7 +122,7 @@ func (b *backend) getClientConfig(ctx context.Context, s logical.Storage, region
 				return nil, fmt.Errorf("could not obtain sts client: %w", err)
 			}
 			inputParams := &sts.GetCallerIdentityInput{}
-			identity, err := client.GetCallerIdentity(inputParams)
+			identity, err := client.GetCallerIdentityWithContext(ctx, inputParams)
 			if err != nil {
 				return nil, fmt.Errorf("unable to fetch current caller: %w", err)
 			}

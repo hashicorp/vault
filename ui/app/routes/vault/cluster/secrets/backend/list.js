@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { set } from '@ember/object';
 import { hash, all } from 'rsvp';
 import Route from '@ember/routing/route';
@@ -5,6 +10,7 @@ import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends
 import { allEngines } from 'vault/helpers/mountable-secret-engines';
 import { inject as service } from '@ember/service';
 import { normalizePath } from 'vault/utils/path-encoding-helpers';
+import { assert } from '@ember/debug';
 
 const SUPPORTED_BACKENDS = supportedSecretBackends();
 
@@ -63,7 +69,8 @@ export default Route.extend({
     const backend = this.enginePathParam();
     const { tab } = this.paramsFor('vault.cluster.secrets.backend.list-root');
     const secretEngine = this.store.peekRecord('secret-engine', backend);
-    const type = secretEngine && secretEngine.get('engineType');
+    const type = secretEngine?.engineType;
+    assert('secretEngine.engineType is not defined', !!type);
     const engineRoute = allEngines().findBy('type', type)?.engineRoute;
 
     if (!type || !SUPPORTED_BACKENDS.includes(type)) {
@@ -83,7 +90,7 @@ export default Route.extend({
 
   getModelType(backend, tab) {
     const secretEngine = this.store.peekRecord('secret-engine', backend);
-    const type = secretEngine.get('engineType');
+    const type = secretEngine.engineType;
     const types = {
       database: tab === 'role' ? 'database/role' : 'database/connection',
       transit: 'transit-key',
@@ -93,9 +100,9 @@ export default Route.extend({
       pki: `pki/${tab || 'pki-role'}`,
       // secret or secret-v2
       cubbyhole: 'secret',
-      kv: secretEngine.get('modelTypeForKV'),
+      kv: secretEngine.modelTypeForKV,
       keymgmt: `keymgmt/${tab || 'key'}`,
-      generic: secretEngine.get('modelTypeForKV'),
+      generic: secretEngine.modelTypeForKV,
     };
     return types[type];
   },

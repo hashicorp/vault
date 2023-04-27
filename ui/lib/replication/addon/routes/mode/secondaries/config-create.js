@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { hash } from 'rsvp';
 import { inject as service } from '@ember/service';
 import Base from '../../replication-base';

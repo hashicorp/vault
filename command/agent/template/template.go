@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 // Package template is responsible for rendering user supplied templates to
 // disk. The Server type accepts configuration to communicate to a Vault server
 // and a Vault token for authentication. Internally, the Server creates a Consul
@@ -19,6 +22,7 @@ import (
 	"github.com/hashicorp/consul-template/manager"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/agent/config"
+	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
 
@@ -157,7 +161,8 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 				*latestToken = token
 				ctv := ctconfig.Config{
 					Vault: &ctconfig.VaultConfig{
-						Token: latestToken,
+						Token:           latestToken,
+						ClientUserAgent: pointerutil.StringPtr(useragent.AgentTemplatingString()),
 					},
 				}
 
@@ -236,6 +241,7 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 	conf.Vault.RenewToken = pointerutil.BoolPtr(false)
 	conf.Vault.Token = pointerutil.StringPtr("")
 	conf.Vault.Address = &sc.AgentConfig.Vault.Address
+	conf.Vault.ClientUserAgent = pointerutil.StringPtr(useragent.AgentTemplatingString())
 
 	if sc.Namespace != "" {
 		conf.Vault.Namespace = &sc.Namespace
@@ -264,9 +270,9 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 		ServerName: pointerutil.StringPtr(""),
 	}
 
-	// We need to assign something to Vault.Retry or it will use its default of 12 retries.
+	// If Vault.Retry isn't specified, use the default of 12 retries.
 	// This retry value will be respected regardless of if we use the cache.
-	var attempts int
+	attempts := ctconfig.DefaultRetryAttempts
 	if sc.AgentConfig.Vault != nil && sc.AgentConfig.Vault.Retry != nil {
 		attempts = sc.AgentConfig.Vault.Retry.NumRetries
 	}

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package etcd
 
 import (
@@ -8,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 

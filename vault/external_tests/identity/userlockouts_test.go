@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package identity
 
 import (
@@ -327,7 +330,7 @@ func TestIdentityStore_LockoutCounterResetTest(t *testing.T) {
 
 // TestIdentityStore_UnlockUserTest tests the user is
 // unlocked if locked  using
-// sys/lockedusers/[mount_accessor]/unlock/[alias-identifier]
+// sys/locked-users/[mount_accessor]/unlock/[alias-identifier]
 func TestIdentityStore_UnlockUserTest(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{
@@ -374,6 +377,13 @@ func TestIdentityStore_UnlockUserTest(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// create another user for userpass with a different case
+	if _, err = standby.Logical().Write("auth/userpass/users/bSmith", map[string]interface{}{
+		"password": "training",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
 	// login failure count 1
 	standby.Logical().Write("auth/userpass/login/bsmith", map[string]interface{}{
 		"password": "wrongPassword",
@@ -393,7 +403,7 @@ func TestIdentityStore_UnlockUserTest(t *testing.T) {
 	}
 
 	// unlock user
-	if _, err = standby.Logical().Write("sys/lockedusers/"+mountAccessor+"/unlock/bsmith", nil); err != nil {
+	if _, err = standby.Logical().Write("sys/locked-users/"+mountAccessor+"/unlock/bsmith", nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -404,8 +414,38 @@ func TestIdentityStore_UnlockUserTest(t *testing.T) {
 		t.Fatal("expected login to succeed as user is unlocked")
 	}
 
+	// login failure count 1 for user bSmith
+	standby.Logical().Write("auth/userpass/login/bSmith", map[string]interface{}{
+		"password": "wrongPassword",
+	})
+	// login failure count 2 for user bSmith
+	standby.Logical().Write("auth/userpass/login/bSmith", map[string]interface{}{
+		"password": "wrongPassword",
+	})
+	// login : permission denied as user locked out for user bSmith
+	if _, err = standby.Logical().Write("auth/userpass/login/bSmith", map[string]interface{}{
+		"password": "training",
+	}); err == nil {
+		t.Fatal("expected login to fail as user locked out")
+	}
+	if !strings.Contains(err.Error(), logical.ErrPermissionDenied.Error()) {
+		t.Fatalf("expected to see permission denied error as user locked out, got %v", err)
+	}
+
+	// unlock user bSmith
+	if _, err = standby.Logical().Write("sys/locked-users/"+mountAccessor+"/unlock/bSmith", nil); err != nil {
+		t.Fatal(err)
+	}
+
+	// login: should be successful as user bSmith unlocked
+	if _, err = standby.Logical().Write("auth/userpass/login/bSmith", map[string]interface{}{
+		"password": "training",
+	}); err != nil {
+		t.Fatal("expected login to succeed as user is unlocked")
+	}
+
 	// unlock unlocked user
-	if _, err = active.Logical().Write("sys/lockedusers/mountAccessor/unlock/bsmith", nil); err != nil {
+	if _, err = active.Logical().Write("sys/locked-users/mountAccessor/unlock/bsmith", nil); err != nil {
 		t.Fatal(err)
 	}
 }

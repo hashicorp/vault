@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package rabbitmq
 
 import (
@@ -18,6 +21,13 @@ const (
 func pathCreds(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "creds/" + framework.GenericNameRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixRabbitMQ,
+			OperationVerb:   "request",
+			OperationSuffix: "credentials",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,

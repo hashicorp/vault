@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -11,7 +16,6 @@ module('Integration | Component | console/log command', function (hooks) {
     this.set('content', commandText);
 
     await render(hbs`{{console/log-command content=this.content}}`);
-
-    assert.dom('pre').includesText(commandText);
+    assert.dom('p').includesText(commandText);
   });
 });

@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+/**
  * These utils are used for managing Duration type values
  * (eg. '30m', '365d'). Most often used in the context of TTLs
  */

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { apiPath } from 'vault/macros/lazy-capabilities';
@@ -16,7 +21,6 @@ const ModelExport = Model.extend({
   name: attr('string', {
     // TODO: make this required for making a transformation
     label: 'Name',
-    fieldValue: 'id',
     readOnly: true,
     subText: 'The name for your role. This cannot be edited later.',
   }),

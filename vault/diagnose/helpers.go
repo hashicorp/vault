@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package diagnose
 
 import (
@@ -93,7 +96,7 @@ func (s *Session) Finalize(ctx context.Context) *Result {
 }
 
 // StartSpan starts a "diagnose" span, which is really just an OpenTelemetry Tracing span.
-func StartSpan(ctx context.Context, spanName string, options ...trace.SpanOption) (context.Context, trace.Span) {
+func StartSpan(ctx context.Context, spanName string, options ...trace.SpanStartOption) (context.Context, trace.Span) {
 	session := CurrentSession(ctx)
 	if session != nil {
 		return session.tracer.Start(ctx, spanName, options...)
@@ -201,7 +204,7 @@ func SpotCheck(ctx context.Context, checkName string, f func() error) error {
 
 // Test creates a new named span, and executes the provided function within it.  If the function returns an error,
 // the span is considered to have failed.
-func Test(ctx context.Context, spanName string, function testFunction, options ...trace.SpanOption) error {
+func Test(ctx context.Context, spanName string, function testFunction, options ...trace.SpanStartOption) error {
 	ctx, span := StartSpan(ctx, spanName, options...)
 	defer span.End()
 	sess := CurrentSession(ctx)

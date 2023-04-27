@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { readOnly, match, not } from '@ember/object/computed';
 import Service, { inject as service } from '@ember/service';
 import { computed } from '@ember/object';

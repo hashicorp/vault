@@ -8,7 +8,7 @@ description: |-
 
 # `pkcs11` Seal
 
--> **Note:** The Seal Wrap functionality is enabled by default. For this reason, HSM must be available throughout Vault's runtime and not just during the unseal process. Refer to the [Seal Wrap](/docs/enterprise/sealwrap) documentation for more information.
+-> **Note:** The Seal Wrap functionality is enabled by default. For this reason, HSM must be available throughout Vault's runtime and not just during the unseal process. Refer to the [Seal Wrap](/vault/docs/enterprise/sealwrap) documentation for more information.
 
 The PKCS11 seal configures Vault to use an HSM with PKCS11 as the seal wrapping
 mechanism. Vault Enterprise's HSM PKCS11 support is activated by one of the
@@ -154,7 +154,7 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 
 - `disabled` `(string: "")`: Set this to `true` if Vault is migrating from an auto seal configuration. Otherwise, set to `false`.
 
-Refer to the [Seal Migration](/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
+Refer to the [Seal Migration](/vault/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
   
 ### Mechanism Specific Flags
 
@@ -275,5 +275,5 @@ rotation is desired for data that was seal wrapped prior to this version must al
 
 ## Tutorial
 
-Refer to the [HSM Integration - Seal Wrap](https://learn.hashicorp.com/vault/operations/ops-seal-wrap)
+Refer to the [HSM Integration - Seal Wrap](/vault/tutorials/auto-unseal/seal-wrap)
 tutorial to learn how to enable the Seal Wrap feature to protect your data.

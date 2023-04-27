@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -719,7 +722,9 @@ func (c *Core) performPolicyChecks(ctx context.Context, acl *ACL, te *logical.To
 		if !ret.ACLResults.Allowed {
 			return ret
 		}
-		if !ret.RootPrivs && opts.RootPrivsRequired {
+		// Since HelpOperation was fast-pathed inside AllowOperation, RootPrivs will not have been populated in this
+		// case, so we need to special-case that here as well, or we'll block HelpOperation on all sudo-protected paths.
+		if !ret.RootPrivs && opts.RootPrivsRequired && req.Operation != logical.HelpOperation {
 			return ret
 		}
 	}

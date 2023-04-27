@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -327,7 +330,8 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 	c.clusterListener.Store(cluster.NewListener(networkLayer,
 		c.clusterCipherSuites,
 		listenerLogger,
-		5*c.clusterHeartbeatInterval))
+		5*c.clusterHeartbeatInterval,
+		c.grpcMinConnectTimeout))
 
 	c.AddLogger(listenerLogger)
 
@@ -387,4 +391,8 @@ func (c *Core) SetClusterListenerAddrs(addrs []*net.TCPAddr) {
 
 func (c *Core) SetClusterHandler(handler http.Handler) {
 	c.clusterHandler = handler
+}
+
+func (c *Core) ClusterID() string {
+	return c.clusterID.Load()
 }

@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+/**
  * @module Toggle
  * Toggle components are used to indicate boolean values which can be toggled on or off.
  * They are a stylistic alternative to checkboxes, but still use the input[type="checkbox"] under the hood.

@@ -1,7 +1,12 @@
+{{yield}}
 {{#each @fields as |attr|}}
   {{#if (eq attr.name "keyBits")}}
-    <div class="field">
-      <FormFieldLabel for={{attr.name}} @label={{attr.options.label}} @subText={{attr.options.subText}} />
+    <div class="field" data-test-field="keyBits">
+      <FormFieldLabel
+        for={{attr.name}}
+        @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+        @subText={{attr.options.subText}}
+      />
       <div class="control is-expanded">
         <ToolTip @verticalPosition="above" @horizontalPosition="center" as |T|>
           <T.Trigger tabindex="-1">

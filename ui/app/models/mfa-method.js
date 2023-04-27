@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { capitalize } from '@ember/string';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';

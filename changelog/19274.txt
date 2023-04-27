@@ -1,0 +1,3 @@
+```release-note:bug
+cli/pki: Fix path for role health-check warning messages
+```

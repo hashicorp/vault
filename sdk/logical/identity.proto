@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 syntax = "proto3";
 
 option go_package = "github.com/hashicorp/vault/sdk/logical";
@@ -79,6 +82,7 @@ message MFAMethodID {
 	string type = 1;
 	string id = 2;
 	bool uses_passcode = 3;
+	string name = 4;
 }
 
 message MFAConstraintAny {

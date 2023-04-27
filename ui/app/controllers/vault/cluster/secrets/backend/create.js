@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Controller, { inject as controller } from '@ember/controller';
 import BackendCrumbMixin from 'vault/mixins/backend-crumb';
 

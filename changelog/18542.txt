@@ -1,0 +1,3 @@
+```release-note:improvement
+openapi: add openapi response definitions to /sys/internal endpoints
+```

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Engine from 'ember-engines/engine';
 import loadInitializers from 'ember-load-initializers';
 import Resolver from './resolver';
@@ -9,16 +14,7 @@ const Eng = Engine.extend({
   modulePrefix,
   Resolver,
   dependencies: {
-    services: [
-      'auth',
-      'flash-messages',
-      'namespace',
-      'replication-mode',
-      'router',
-      'store',
-      'version',
-      'wizard',
-    ],
+    services: ['auth', 'flash-messages', 'namespace', 'replication-mode', 'router', 'store', 'version'],
     externalRoutes: ['replication'],
   },
 });
