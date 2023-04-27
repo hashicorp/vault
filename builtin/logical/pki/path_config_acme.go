@@ -90,12 +90,12 @@ func pathAcmeConfig(b *backend) *framework.Path {
 			},
 			"allowed_roles": {
 				Type:        framework.TypeCommaStringSlice,
-				Description: `which roles are allowed for use with ACME; by default these will be all roles matching our selection criteria`,
+				Description: `which roles are allowed for use with ACME; by default via '*', these will be all roles including sign-verbatim; when concrete role names are specified, sign-verbatim is not allowed and a default_role must be specified in order to allow usage of the default acme directories under /pki/acme/directory and /pki/issuer/:issuer_id/acme/directory.`,
 				Default:     "*",
 			},
 			"default_role": {
 				Type:        framework.TypeString,
-				Description: `if not empty, the role to be used for non-role-qualified ACME requests; by default this will be empty, meaning ACME issuance will be equivalent to sign-verbatim,`,
+				Description: `if not empty, the role to be used for non-role-qualified ACME requests; by default this will be empty, meaning ACME issuance will be equivalent to sign-verbatim; must be specified in allowed_roles if non-empty`,
 				Default:     "",
 			},
 			"allow_no_allowed_domains": {
@@ -110,7 +110,7 @@ func pathAcmeConfig(b *backend) *framework.Path {
 			"dns_resolver": {
 				Type:        framework.TypeString,
 				Description: `DNS resolver to use for domain resolution on this mount. Defaults to using the default system resolver. Must be in the format <host>:<port>, with both parts mandatory.`,
-				Default: "",
+				Default:     "",
 			},
 		},
 
@@ -211,6 +211,33 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 			if net.ParseIP(addr) != nil {
 				return nil, fmt.Errorf("failed to parse DNS resolver address: expected IPv4/IPv6 address, likely got hostname")
 			}
+		}
+	}
+
+	allowAnyRole := len(config.AllowedRoles) == 1 && config.AllowedRoles[0] == "*"
+	if !allowAnyRole {
+		foundDefault := len(config.DefaultRole) == 0
+		for index, name := range config.AllowedRoles {
+			if name == "*" {
+				return nil, fmt.Errorf("cannot use '*' as role name at index %d", index)
+			}
+
+			role, err := sc.Backend.getRole(sc.Context, sc.Storage, name)
+			if err != nil {
+				return nil, fmt.Errorf("failed validating allowed_roles: unable to fetch role: %v: %w", name, err)
+			}
+
+			if role == nil {
+				return nil, fmt.Errorf("role %v specified in allowed_roles does not exist", name)
+			}
+
+			if name == config.DefaultRole {
+				foundDefault = true
+			}
+		}
+
+		if !foundDefault {
+			return nil, fmt.Errorf("default role %v was not specified in allowed_roles: %v", config.DefaultRole, config.AllowedRoles)
 		}
 	}
 

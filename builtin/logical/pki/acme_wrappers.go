@@ -73,7 +73,7 @@ func (b *backend) acmeWrapper(op acmeOperation) framework.OperationFunc {
 			return nil, err
 		}
 
-		role, issuer, err := getAcmeRoleAndIssuer(sc, data)
+		role, issuer, err := getAcmeRoleAndIssuer(sc, data, config)
 		if err != nil {
 			return nil, err
 		}
@@ -267,14 +267,19 @@ func getAcmeDirectory(data *framework.FieldData) string {
 	return fmt.Sprintf("issuer-%s::role-%s", requestedIssuer, requestedRole)
 }
 
-func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData) (*roleEntry, *issuerEntry, error) {
+func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData, config *acmeConfigEntry) (*roleEntry, *issuerEntry, error) {
 	requestedIssuer := getRequestedAcmeIssuerFromPath(data)
 	requestedRole := getRequestedAcmeRoleFromPath(data)
 	issuerToLoad := requestedIssuer
 
+	var wasVerbatim bool
 	var role *roleEntry
 
-	if len(requestedRole) > 0 {
+	if len(requestedRole) > 0 || len(config.DefaultRole) > 0 {
+		if len(requestedRole) == 0 {
+			requestedRole = config.DefaultRole
+		}
+
 		var err error
 		role, err = sc.Backend.getRole(sc.Context, sc.Storage, requestedRole)
 		if err != nil {
@@ -300,6 +305,27 @@ func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData) (*roleE
 			NoStore: false,
 			Name:    requestedRole,
 		})
+		wasVerbatim = true
+	}
+
+	allowAnyRole := len(config.AllowedRoles) == 1 && config.AllowedRoles[0] == "*"
+
+	if !allowAnyRole {
+		if wasVerbatim {
+			return nil, nil, fmt.Errorf("%w: using the default directory without specifying a role is not supported by this configuration; specify 'default_role' in the acme config to the default directories", ErrServerInternal)
+		}
+
+		var foundRole bool
+		for _, name := range config.AllowedRoles {
+			if name == role.Name {
+				foundRole = true
+				break
+			}
+		}
+
+		if !foundRole {
+			return nil, nil, fmt.Errorf("%w: specified role not allowed by ACME policy", ErrServerInternal)
+		}
 	}
 
 	issuer, err := getAcmeIssuer(sc, issuerToLoad)
