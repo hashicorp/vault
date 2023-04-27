@@ -26,26 +26,26 @@ func Test_AuditBroker_ForwardingHeaders(t *testing.T) {
 		},
 		"from": {
 			headers: map[string][]string{
-				HTTPHeaderVaultForwardFrom: {"juan.808"},
+				HTTPHeaderVaultForwardFrom: {"juan:8080"},
 			},
 			wantNil:  false,
-			wantFrom: "juan.808",
+			wantFrom: "juan:8080",
 		},
 		"to": {
 			headers: map[string][]string{
-				HTTPHeaderVaultForwardTo: {"john.000"},
+				HTTPHeaderVaultForwardTo: {"john:8000"},
 			},
 			wantNil: false,
-			wantTo:  "john.000",
+			wantTo:  "john:8000",
 		},
 		"from-and-to": {
 			headers: map[string][]string{
-				HTTPHeaderVaultForwardFrom: {"juan.808"},
-				HTTPHeaderVaultForwardTo:   {"john.000"},
+				HTTPHeaderVaultForwardFrom: {"juan:8080"},
+				HTTPHeaderVaultForwardTo:   {"john:8000"},
 			},
 			wantNil:  false,
-			wantFrom: "juan.808",
-			wantTo:   "john.000",
+			wantFrom: "juan:8080",
+			wantTo:   "john:8000",
 		},
 	}
 
