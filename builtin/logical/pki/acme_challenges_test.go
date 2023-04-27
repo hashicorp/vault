@@ -1,11 +1,15 @@
 package pki
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/builtin/logical/pki/dnstest"
 )
 
 type keyAuthorizationTestCase struct {
@@ -128,7 +132,7 @@ func TestAcmeValidateHTTP01Challenge(t *testing.T) {
 				host := ts.URL[7:]
 				isValid, err := ValidateHTTP01Challenge(host, tc.token, tc.thumbprint, &acmeConfigEntry{})
 				if !isValid && err == nil {
-					t.Fatalf("[tc=%d/handler=%d] expected failure to give reason via err (%v / %v)", handlerIndex, index, isValid, err)
+					t.Fatalf("[tc=%d/handler=%d] expected failure to give reason via err (%v / %v)", index, handlerIndex, isValid, err)
 				}
 
 				expectedValid := !tc.shouldFail
@@ -180,5 +184,38 @@ func TestAcmeValidateHTTP01Challenge(t *testing.T) {
 				t.Fatalf("[handler=%d] expected failure validating challenge (%v / %v)", handlerIndex, isValid, err)
 			}
 		}()
+	}
+}
+
+func TestAcmeValidateDNS01Challenge(t *testing.T) {
+	t.Parallel()
+
+	host := "alsdkjfasldkj.com"
+	resolver := dnstest.SetupResolver(t, host)
+	defer resolver.Cleanup()
+
+	t.Logf("DNS Server Address: %v", resolver.GetLocalAddr())
+
+	config := &acmeConfigEntry{
+		DNSResolver: resolver.GetLocalAddr(),
+	}
+
+	for index, tc := range keyAuthorizationTestCases {
+		checksum := sha256.Sum256([]byte(tc.keyAuthz))
+		authz := base64.RawURLEncoding.EncodeToString(checksum[:])
+		resolver.AddRecord(DNSChallengePrefix+host, "TXT", authz)
+		resolver.PushConfig()
+
+		isValid, err := ValidateDNS01Challenge(host, tc.token, tc.thumbprint, config)
+		if !isValid && err == nil {
+			t.Fatalf("[tc=%d] expected failure to give reason via err (%v / %v)", index, isValid, err)
+		}
+
+		expectedValid := !tc.shouldFail
+		if expectedValid != isValid {
+			t.Fatalf("[tc=%d] got ret=%v (err=%v), expected ret=%v (shouldFail=%v)", index, isValid, err, expectedValid, tc.shouldFail)
+		}
+
+		resolver.RemoveAllRecords()
 	}
 }
