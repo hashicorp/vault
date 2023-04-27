@@ -62,9 +62,7 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
       // grab each issuer data only if there are less than 10 issuers to avoid making too many requests
       if (isListView && res.data.keys.length <= 10) {
         const keyInfoArray = await all(
-          res.data.keys.map((id) => {
-            return this.getIssuerMetadata(store, type, query, res, id);
-          })
+          res.data.keys.map((id) => this.getIssuerMetadata(store, type, query, res, id))
         );
         const keyInfo = {};
 
