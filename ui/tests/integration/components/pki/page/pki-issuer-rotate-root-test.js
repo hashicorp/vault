@@ -98,7 +98,7 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
     assert.dom(SELECTORS.input('issuerName')).exists('renders issuer name input');
     assert.strictEqual(findAll('[data-test-row-label]').length, 0, 'it hides the old root info table rows');
     await click(SELECTORS.toggle);
-    assert.strictEqual(findAll('[data-test-row-label]').length, 11, 'it shows the old root info table rows');
+    assert.strictEqual(findAll('[data-test-row-label]').length, 19, 'it shows the old root info table rows');
     assert
       .dom(SELECTORS.infoRowValue('Issuer name'))
       .hasText(this.oldRoot.issuerName, 'renders correct issuer data');

@@ -72,6 +72,12 @@ func (b *SystemBackend) loginMFAPaths() []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "mfa/validate",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "mfa",
+				OperationVerb:   "validate",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"mfa_request_id": {
 					Type:        framework.TypeString,

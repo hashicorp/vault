@@ -3,9 +3,13 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-import PkiKeysIndexRoute from './index';
+import Route from '@ember/routing/route';
+import { inject as service } from '@ember/service';
 
-export default class PkiKeyRoute extends PkiKeysIndexRoute {
+export default class PkiKeyRoute extends Route {
+  @service secretMountPath;
+  @service store;
+
   model() {
     const { key_id } = this.paramsFor('keys/key');
     return this.store.queryRecord('pki/key', {
