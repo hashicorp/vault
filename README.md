@@ -183,7 +183,7 @@ import (
   "github.com/hashicorp/vault/sdk/helper/testcluster/docker"
 )
 
-func TestRaft_Configuration_Docker(t *testing.T) {
+func Test_Something_With_Docker(t *testing.T) {
   opts := &docker.DockerClusterOptions{
     ImageRepo: "hashicorp/vault",
     ImageTag:    "latest",
@@ -201,7 +201,7 @@ COMMIT_SHA, which will be appended to the image name we build as a
 debugging convenience.
 
 ```go
-func TestRaft_Configuration_Docker(t *testing.T) {
+func Test_Custom_Build_With_Docker(t *testing.T) {
   binary := os.Getenv("VAULT_BINARY")
   if binary == "" {
     t.Skip("only running docker test when $VAULT_BINARY present")
