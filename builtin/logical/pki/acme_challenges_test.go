@@ -126,7 +126,7 @@ func TestAcmeValidateHTTP01Challenge(t *testing.T) {
 				defer ts.Close()
 
 				host := ts.URL[7:]
-				isValid, err := ValidateHTTP01Challenge(host, tc.token, tc.thumbprint)
+				isValid, err := ValidateHTTP01Challenge(host, tc.token, tc.thumbprint, &acmeConfigEntry{})
 				if !isValid && err == nil {
 					t.Fatalf("[tc=%d/handler=%d] expected failure to give reason via err (%v / %v)", handlerIndex, index, isValid, err)
 				}
@@ -159,7 +159,7 @@ func TestAcmeValidateHTTP01Challenge(t *testing.T) {
 	}
 	tooLarge := func(w http.ResponseWriter, r *http.Request) {
 		for i := 0; i < 512; i++ {
-			w.Write([]byte("my-token.my-thumbprint"))
+			w.Write([]byte("my-token.my-thumbprint\n"))
 		}
 	}
 
@@ -175,7 +175,7 @@ func TestAcmeValidateHTTP01Challenge(t *testing.T) {
 			defer ts.Close()
 
 			host := ts.URL[7:]
-			isValid, err := ValidateHTTP01Challenge(host, "my-token", "my-thumbprint")
+			isValid, err := ValidateHTTP01Challenge(host, "my-token", "my-thumbprint", &acmeConfigEntry{})
 			if isValid || err == nil {
 				t.Fatalf("[handler=%d] expected failure validating challenge (%v / %v)", handlerIndex, isValid, err)
 			}

@@ -76,7 +76,7 @@ func (a *acmeState) Initialize(b *backend, sc *storageContext) error {
 	if err := a.validator.Initialize(b, sc); err != nil {
 		return fmt.Errorf("error initializing ACME engine: %w", err)
 	}
-	go a.validator.Run(b)
+	go a.validator.Run(b, a)
 
 	return nil
 }
