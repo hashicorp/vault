@@ -57,6 +57,18 @@ func TestStaticRolesValidation(t *testing.T) {
 			isError: true,
 		},
 		{
+			name: "user mismatch",
+			opts: []awsutil.MockIAMOption{
+				awsutil.WithGetUserOutput(&iam.GetUserOutput{User: &iam.User{UserName: aws.String("ms-impostor")}}),
+			},
+			requestData: map[string]interface{}{
+				"name":            "test",
+				"username":        "jane-doe",
+				"rotation_period": 24601,
+			},
+			isError: true,
+		},
+		{
 			name: "bad rotation period",
 			opts: []awsutil.MockIAMOption{
 				awsutil.WithGetUserOutput(&iam.GetUserOutput{User: &iam.User{UserName: aws.String("jane-doe")}}),

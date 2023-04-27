@@ -221,8 +221,11 @@ func (b *backend) validateIAMUserExists(ctx context.Context, req *logical.Reques
 	out, err := c.GetUser(&iam.GetUserInput{
 		UserName: aws.String(username),
 	})
-	if err != nil || out.User == nil || *out.User.UserName != username {
+	if err != nil || out.User == nil {
 		return fmt.Errorf("unable to validate username %q: %w", username, err)
+	}
+	if *out.User.UserName != username {
+		return fmt.Errorf("AWS GetUser returned a username, but it didn't match: %q was requested, but %q was returned", username, *out.User.UserName)
 	}
 	return nil
 }
