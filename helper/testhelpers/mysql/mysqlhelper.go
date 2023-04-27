@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package mysqlhelper
 
 import (
@@ -8,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 )
 
 type Config struct {

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import { withFormFields } from 'vault/decorators/model-form-fields';
@@ -18,6 +23,11 @@ const createClass = (propertyNames, groups) => {
       subText: 'Maybe a checkbox',
     })
     bar;
+    @attr('number', {
+      label: 'Baz',
+      subText: 'A number field',
+    })
+    baz;
   }
   return new Foo();
 };
@@ -37,6 +47,11 @@ module('Unit | Decorators | ModelFormFields', function (hooks) {
       options: { label: 'Bar', subText: 'Maybe a checkbox' },
       type: 'boolean',
     };
+    this.bazField = {
+      name: 'baz',
+      options: { label: 'Baz', subText: 'A number field' },
+      type: 'number',
+    };
   });
   hooks.afterEach(function () {
     this.spy.restore();
@@ -50,15 +65,14 @@ module('Unit | Decorators | ModelFormFields', function (hooks) {
     assert.ok(this.spy.calledWith(message), 'Error is printed to console');
   });
 
-  test('it should throw error when arguments are not provided', function (assert) {
+  test('it return allFields when arguments not provided', function (assert) {
     assert.expect(1);
-    try {
-      createClass();
-    } catch (error) {
-      const message =
-        'Array of property names and/or array of field groups are required when using withFormFields model decorator';
-      assert.strictEqual(error.message, message);
-    }
+    const model = createClass();
+    assert.deepEqual(
+      [this.fooField, this.barField, this.bazField],
+      model.allFields,
+      'allFields set on Model class'
+    );
   });
 
   test('it should set formFields prop on Model class', function (assert) {

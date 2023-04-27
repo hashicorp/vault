@@ -1,16 +1,27 @@
-import Component from '@ember/component';
-import layout from '../templates/components/info-tooltip';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
 
-export default Component.extend({
-  layout,
-  'data-test-component': 'info-tooltip',
-  attributeBindings: ['data-test-component'],
-  tagName: 'span',
-  classNames: ['is-inline-block'],
+import Component from '@glimmer/component';
+import { action } from '@ember/object';
 
-  actions: {
-    preventSubmit(e) {
-      e.preventDefault();
-    },
-  },
-});
+/**
+ * @module JsonEditor
+ *
+ * @example
+ * ```js
+ * <JsonEditor @title="Policy" @value={{codemirror.string}} @valueUpdated={{ action "codemirrorUpdate"}} />
+ * ```
+ *
+ * @param {string} [verticalPosition] - vertical position specification (above, below)
+ * @param {string} [horizontalPosition] - horizontal position specification (center, auto-right)
+
+ */
+
+export default class InfoTooltip extends Component {
+  @action
+  preventSubmit(e) {
+    e.preventDefault();
+  }
+}

@@ -15,14 +15,14 @@ for Vault 1.8.x compared to 1.7. Please read it carefully.
 
 Licenses and EULA enhancements have been introduced in the Vault 1.8 release.
 These changes are important for Enterprise customers to review. They do not affect
-OSS users. Please see the [License](/docs/enterprise/license) documentation for more details.
+OSS users. Please see the [License](/vault/docs/enterprise/license) documentation for more details.
 
 ## Deprecations
 
 The following API endpoints have been deprecated and will be removed in a future release:
 
 * `sys/license` to manage licenses in storage; it is recommended to use
-   [License Autoloading](/docs/enterprise/license/autoloading) instead.
+   [License Autoloading](/vault/docs/enterprise/license/autoloading) instead.
 
 * `/gcp/token/:roleset` and `/gcp/key/:roleset` paths for generating secrets for rolesets
   in GCP Secrets. Use `/gcp/roleset/:roleset/token` and `/gcp/roleset/:roleset/key` instead.
@@ -59,7 +59,7 @@ Vault Enterprise binaries for `arm64` architectures will crash immediately when 
 
 ### AWS auth
 
-AWS Auth using the [EC2 method](https://www.vaultproject.io/docs/auth/aws#ec2-auth-method) fails with the error `failed to verify the signature`. This effects 1.8.0 and 1.8.1 and there is not a workaround. The issue was fixed in Vault 1.8.2.
+AWS Auth using the [EC2 method](/vault/docs/auth/aws#ec2-auth-method) fails with the error `failed to verify the signature`. This effects 1.8.0 and 1.8.1 and there is not a workaround. The issue was fixed in Vault 1.8.2.
 
 ### Configuration files in RedHat packages
 
@@ -68,4 +68,4 @@ the defaults when a new package was installed. This [issue](https://github.com/h
 
 ### Introduction of rolesets
 
-The introduction of `/gcp/roleset/:roleset/token` and `/gcp/roleset/:roleset/key` could inadvertently give users the ability to generate tokens and key if globs are used in policies. To avoid issues like this, globs should be avoided in policies to help adhere to the principle of least privilege. See the [roleset documentation](/docs/secrets/gcp#rolesets) for more information.
+The introduction of `/gcp/roleset/:roleset/token` and `/gcp/roleset/:roleset/key` could inadvertently give users the ability to generate tokens and key if globs are used in policies. To avoid issues like this, globs should be avoided in policies to help adhere to the principle of least privilege. See the [roleset documentation](/vault/docs/secrets/gcp#rolesets) for more information.

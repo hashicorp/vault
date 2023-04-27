@@ -28,25 +28,14 @@ $ vault audit enable socket address=127.0.0.1:9090 socket_type=tcp
 
 ## Configuration
 
+The `socket` audit device supports the common configuration options documented on
+the [main Audit Devices page](/vault/docs/audit#common-configuration-options), and
+these device-specific options:
+
 - `address` `(string: "")` - The socket server address to use. Example
   `127.0.0.1:9090` or `/tmp/audit.sock`.
 
 - `socket_type` `(string: "tcp")` - The socket type to use, any type compatible
   with <a href="https://golang.org/pkg/net/#Dial">net.Dial</a> is acceptable. It's
   important to note if TCP is used and the destination socket becomes unavailable
-  Vault may become unresponsive per [Blocked Audit Devices](docs/audit/#blocked-audit-devices).
-
-- `log_raw` `(bool: false)` - If enabled, logs the security sensitive
-  information without hashing, in the raw format.
-
-- `hmac_accessor` `(bool: true)` - If enabled, enables the hashing of token
-  accessor.
-
-- `mode` `(string: "0600")` - A string containing an octal number representing
-  the bit pattern for the file mode, similar to `chmod`.
-
-- `format` `(string: "json")` - Allows selecting the output format. Valid values
-  are `"json"` and `"jsonx"`, which formats the normal log entries as XML.
-
-- `prefix` `(string: "")` - A customizable string prefix to write before the
-  actual log line.
+  Vault may become unresponsive per [Blocked Audit Devices](/vault/docs/audit/#blocked-audit-devices).

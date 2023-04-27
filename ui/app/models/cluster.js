@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Model, { attr, belongsTo, hasMany } from '@ember-data/model';
 import { inject as service } from '@ember/service';
 import { alias, and, equal, gte, not, or } from '@ember/object/computed';

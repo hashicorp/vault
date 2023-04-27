@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package mssqlhelper
 
 import (
@@ -8,7 +11,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 )
 
 const mssqlPassword = "yourStrong(!)Password"

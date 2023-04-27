@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 const invariant = (truthy, error) => {
   if (!truthy) throw new Error(error);
 };

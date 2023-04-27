@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -36,6 +39,7 @@ import (
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/constants"
+	"github.com/hashicorp/vault/helper/experiments"
 	loghelper "github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -46,6 +50,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/testcluster"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	sr "github.com/hashicorp/vault/serviceregistration"
@@ -116,6 +121,7 @@ type ServerCommand struct {
 
 	flagConfigs            []string
 	flagRecovery           bool
+	flagExperiments        []string
 	flagDev                bool
 	flagDevTLS             bool
 	flagDevTLSCertDir      string
@@ -134,6 +140,7 @@ type ServerCommand struct {
 	flagDevFourCluster     bool
 	flagDevTransactional   bool
 	flagDevAutoSeal        bool
+	flagDevClusterJson     string
 	flagTestVerifyOnly     bool
 	flagTestServerConfig   bool
 	flagDevConsul          bool
@@ -202,6 +209,17 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Target: &c.flagRecovery,
 		Usage: "Enable recovery mode. In this mode, Vault is used to perform recovery actions." +
 			"Using a recovery operation token, \"sys/raw\" API can be used to manipulate the storage.",
+	})
+
+	f.StringSliceVar(&StringSliceVar{
+		Name:       "experiment",
+		Target:     &c.flagExperiments,
+		Completion: complete.PredictSet(experiments.ValidExperiments()...),
+		Usage: "Name of an experiment to enable. Experiments should NOT be used in production, and " +
+			"the associated APIs may have backwards incompatible changes between releases. This " +
+			"flag can be specified multiple times to specify multiple experiments. This can also be " +
+			fmt.Sprintf("specified via the %s environment variable as a comma-separated list. ", EnvVaultExperiments) +
+			"Valid experiments are: " + strings.Join(experiments.ValidExperiments(), ", "),
 	})
 
 	f = set.NewFlagSet("Dev Options")
@@ -354,6 +372,12 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Hidden:  true,
 	})
 
+	f.StringVar(&StringVar{
+		Name:   "dev-cluster-json",
+		Target: &c.flagDevClusterJson,
+		Usage:  "File to write cluster definition to",
+	})
+
 	// TODO: should the below flags be public?
 	f.BoolVar(&BoolVar{
 		Name:    "test-verify-only",
@@ -433,7 +457,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}
 
 	// Update the 'log' related aspects of shared config based on config/env var/cli
-	c.Flags().updateLogConfig(config.SharedConfig)
+	c.Flags().applyLogConfigOverrides(config.SharedConfig)
 	l, err := c.configureLogging(config)
 	if err != nil {
 		c.UI.Error(err.Error())
@@ -1039,7 +1063,7 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	f.updateLogConfig(config.SharedConfig)
+	f.applyLogConfigOverrides(config.SharedConfig)
 
 	// Set 'trace' log level for the following 'dev' clusters
 	if c.flagDevThreeNode || c.flagDevFourCluster {
@@ -1105,6 +1129,11 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
+	if err := server.ExperimentsFromEnvAndCLI(config, EnvVaultExperiments, c.flagExperiments); err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
 	// If mlockall(2) isn't supported, show a warning. We disable this in dev
 	// because it is quite scary to see when first using Vault. We also disable
 	// this if the user has explicitly disabled mlock in configuration.
@@ -1132,16 +1161,18 @@ func (c *ServerCommand) Run(args []string) int {
 	metricsHelper := metricsutil.NewMetricsHelper(inmemMetrics, prometheusEnabled)
 
 	// Initialize the storage backend
-	backend, err := c.setupStorage(config)
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 1
-	}
-
-	// Prevent server startup if migration is active
-	// TODO: Use OpenTelemetry to integrate this into Diagnose
-	if c.storageMigrationActive(backend) {
-		return 1
+	var backend physical.Backend
+	if !c.flagDev || config.Storage != nil {
+		backend, err = c.setupStorage(config)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 1
+		}
+		// Prevent server startup if migration is active
+		// TODO: Use OpenTelemetry to integrate this into Diagnose
+		if c.storageMigrationActive(backend) {
+			return 1
+		}
 	}
 
 	// Initialize the Service Discovery, if there is one
@@ -1172,6 +1203,12 @@ func (c *ServerCommand) Run(args []string) int {
 	key := "environment variables"
 	info[key] = strings.Join(envVarKeys, ", ")
 	infoKeys = append(infoKeys, key)
+
+	if len(config.Experiments) != 0 {
+		expKey := "experiments"
+		info[expKey] = strings.Join(config.Experiments, ", ")
+		infoKeys = append(infoKeys, expKey)
+	}
 
 	barrierSeal, barrierWrapper, unwrapSeal, seals, sealConfigError, err := setSeal(c, config, infoKeys, info)
 	// Check error here
@@ -1444,7 +1481,8 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// If we're in Dev mode, then initialize the core
-	err = initDevCore(c, &coreConfig, config, core, certDir)
+	clusterJson := &testcluster.ClusterJson{}
+	err = initDevCore(c, &coreConfig, config, core, certDir, clusterJson)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
@@ -1503,6 +1541,34 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Notify systemd that the server is ready (if applicable)
 	c.notifySystemd(systemd.SdNotifyReady)
+
+	if c.flagDev {
+		protocol := "http://"
+		if c.flagDevTLS {
+			protocol = "https://"
+		}
+		clusterJson.Nodes = []testcluster.ClusterNode{
+			{
+				APIAddress: protocol + config.Listeners[0].Address,
+			},
+		}
+		if c.flagDevTLS {
+			clusterJson.CACertPath = fmt.Sprintf("%s/%s", certDir, server.VaultDevCAFilename)
+		}
+
+		if c.flagDevClusterJson != "" && !c.flagDevThreeNode {
+			b, err := jsonutil.EncodeJSON(clusterJson)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error encoding cluster.json: %s", err))
+				return 1
+			}
+			err = os.WriteFile(c.flagDevClusterJson, b, 0o600)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error writing cluster.json %q: %s", c.flagDevClusterJson, err))
+				return 1
+			}
+		}
+	}
 
 	defer func() {
 		if err := c.removePidFile(config.PidFile); err != nil {
@@ -1696,24 +1762,13 @@ func (c *ServerCommand) configureLogging(config *server.Config) (hclog.Intercept
 		return nil, err
 	}
 
-	logRotateBytes, err := parseutil.ParseInt(config.LogRotateBytes)
-	if err != nil {
-		return nil, err
-	}
-
-	logRotateMaxFiles, err := parseutil.ParseInt(config.LogRotateMaxFiles)
-	if err != nil {
-		return nil, err
-	}
-
 	logCfg := &loghelper.LogConfig{
-		Name:              "vault",
 		LogLevel:          logLevel,
 		LogFormat:         logFormat,
 		LogFilePath:       config.LogFile,
 		LogRotateDuration: logRotateDuration,
-		LogRotateBytes:    int(logRotateBytes),
-		LogRotateMaxFiles: int(logRotateMaxFiles),
+		LogRotateBytes:    config.LogRotateBytes,
+		LogRotateMaxFiles: config.LogRotateMaxFiles,
 	}
 
 	return loghelper.Setup(logCfg, c.logWriter)
@@ -1909,6 +1964,16 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 		BaseListenAddress: c.flagDevListenAddr,
 		Logger:            c.logger,
 		TempDir:           tempDir,
+		DefaultHandlerProperties: vault.HandlerProperties{
+			ListenerConfig: &configutil.Listener{
+				Profiling: configutil.ListenerProfiling{
+					UnauthenticatedPProfAccess: true,
+				},
+				Telemetry: configutil.ListenerTelemetry{
+					UnauthenticatedMetricsAccess: true,
+				},
+			},
+		},
 	})
 	defer c.cleanupGuard.Do(testCluster.Cleanup)
 
@@ -2051,6 +2116,29 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 		testCluster.Cores[0].Client.Address(),
 		testCluster.TempDir,
 	))
+
+	if c.flagDevClusterJson != "" {
+		clusterJson := testcluster.ClusterJson{
+			Nodes:      []testcluster.ClusterNode{},
+			CACertPath: filepath.Join(testCluster.TempDir, "ca_cert.pem"),
+			RootToken:  testCluster.RootToken,
+		}
+		for _, core := range testCluster.Cores {
+			clusterJson.Nodes = append(clusterJson.Nodes, testcluster.ClusterNode{
+				APIAddress: core.Client.Address(),
+			})
+		}
+		b, err := jsonutil.EncodeJSON(clusterJson)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error encoding cluster.json: %s", err))
+			return 1
+		}
+		err = os.WriteFile(c.flagDevClusterJson, b, 0o600)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error writing cluster.json %q: %s", c.flagDevClusterJson, err))
+			return 1
+		}
+	}
 
 	// Output the header that the server has started
 	c.UI.Output("==> Vault server started! Log data will stream in below:\n")
@@ -2305,9 +2393,11 @@ func (c *ServerCommand) storageMigrationActive(backend physical.Backend) bool {
 		}
 		c.logger.Warn("storage migration check error", "error", err.Error())
 
+		timer := time.NewTimer(2 * time.Second)
 		select {
-		case <-time.After(2 * time.Second):
+		case <-timer.C:
 		case <-c.ShutdownCh:
+			timer.Stop()
 			return true
 		}
 	}
@@ -2595,10 +2685,12 @@ func runUnseal(c *ServerCommand, core *vault.Core, ctx context.Context) {
 		}
 		c.logger.Warn("failed to unseal core", "error", err)
 
+		timer := time.NewTimer(5 * time.Second)
 		select {
 		case <-c.ShutdownCh:
+			timer.Stop()
 			return
-		case <-time.After(5 * time.Second):
+		case <-timer.C:
 		}
 	}
 }
@@ -2619,6 +2711,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		CredentialBackends:             c.CredentialBackends,
 		LogicalBackends:                c.LogicalBackends,
 		Logger:                         c.logger,
+		DetectDeadlocks:                config.DetectDeadlocks,
 		DisableSentinelTrace:           config.DisableSentinelTrace,
 		DisableCache:                   config.DisableCache,
 		DisableMlock:                   config.DisableMlock,
@@ -2646,6 +2739,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		License:                        config.License,
 		LicensePath:                    config.LicensePath,
 		DisableSSCTokens:               config.DisableSSCTokens,
+		Experiments:                    config.Experiments,
 	}
 
 	if c.flagDev {
@@ -2679,12 +2773,16 @@ func runListeners(c *ServerCommand, coreConfig *vault.CoreConfig, config *server
 	return nil
 }
 
-func initDevCore(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.Config, core *vault.Core, certDir string) error {
+func initDevCore(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.Config, core *vault.Core, certDir string, clusterJSON *testcluster.ClusterJson) error {
 	if c.flagDev && !c.flagDevSkipInit {
 
 		init, err := c.enableDev(core, coreConfig)
 		if err != nil {
 			return fmt.Errorf("Error initializing Dev mode: %s", err)
+		}
+
+		if clusterJSON != nil {
+			clusterJSON.RootToken = init.RootToken
 		}
 
 		var plugins, pluginsNotLoaded []string

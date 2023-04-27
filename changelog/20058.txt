@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: Fix building of unified delta CRLs and recovery during unified delta WAL write failures.
+```

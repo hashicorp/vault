@@ -209,13 +209,11 @@
     <StringList
       data-test-input={{@attr.name}}
       @label={{this.labelString}}
-      @warning={{@attr.options.warning}}
       @helpText={{if this.showHelpText @attr.options.helpText}}
       @inputValue={{get @model this.valuePath}}
       @onChange={{this.setAndBroadcast}}
       @attrName={{@attr.name}}
-      @subText={{@attr.options.subText}}
-      @hideFormSection={{@attr.options.hideFormSection}}
+      @subText="{{@attr.options.subText}} Add one item per row."
     />
   {{else if (eq @attr.options.sensitive true)}}
     {{! Masked Input }}
@@ -238,8 +236,11 @@
           id={{@attr.name}}
           value={{or (get @model this.valuePath) @attr.options.defaultValue}}
           oninput={{this.onChangeWithEvent}}
-          class="textarea"
+          class="textarea {{if this.validationError 'has-error-border'}}"
         ></textarea>
+        {{#if this.validationError}}
+          <AlertInline @type="danger" @message={{this.validationError}} @paddingTop={{true}} />
+        {{/if}}
       {{else if (eq @attr.options.editType "password")}}
         <Input
           data-test-input={{@attr.name}}
@@ -302,9 +303,10 @@
           autocomplete="off"
           spellcheck="false"
           value={{or (get @model this.valuePath) @attr.options.defaultValue}}
-          onchange={{this.onChangeWithEvent}}
-          onkeyup={{this.handleKeyUp}}
-          class="input {{if this.validationError 'has-error-border'}} has-bottom-margin-m"
+          {{on "input" this.onChangeWithEvent}}
+          {{on "change" this.onChangeWithEvent}}
+          {{on "keyup" this.handleKeyUp}}
+          class="input {{if this.validationError 'has-error-border'}}"
           maxLength={{@attr.options.characterLimit}}
         />
         {{#if @attr.options.validationAttr}}
@@ -314,6 +316,14 @@
         {{/if}}
         {{#if this.validationError}}
           <AlertInline @type="danger" @message={{this.validationError}} @paddingTop={{true}} />
+        {{/if}}
+        {{#if this.validationWarning}}
+          <AlertInline
+            @type="warning"
+            @message={{this.validationWarning}}
+            @paddingTop={{true}}
+            data-test-validation-warning
+          />
         {{/if}}
       {{/if}}
     </div>

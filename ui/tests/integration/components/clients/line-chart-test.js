@@ -1,12 +1,22 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
+import sinon from 'sinon';
 import { setupRenderingTest } from 'ember-qunit';
 import { find, render, findAll, triggerEvent } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { format, formatRFC3339, subMonths } from 'date-fns';
 import { formatChartDate } from 'core/utils/date-formatters';
+import timestamp from 'core/utils/timestamp';
+
 module('Integration | Component | clients/line-chart', function (hooks) {
   setupRenderingTest(hooks);
-  const CURRENT_DATE = new Date();
+  hooks.before(function () {
+    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
+  });
   hooks.beforeEach(function () {
     this.set('xKey', 'foo');
     this.set('yKey', 'bar');
@@ -28,6 +38,9 @@ module('Integration | Component | clients/line-chart', function (hooks) {
         bar: 10,
       },
     ]);
+  });
+  hooks.after(function () {
+    timestamp.now.restore();
   });
 
   test('it renders', async function (assert) {
@@ -51,21 +64,22 @@ module('Integration | Component | clients/line-chart', function (hooks) {
   });
 
   test('it renders upgrade data', async function (assert) {
+    const now = timestamp.now();
     this.set('dataset', [
       {
-        foo: format(subMonths(CURRENT_DATE, 4), 'M/yy'),
+        foo: format(subMonths(now, 4), 'M/yy'),
         bar: 4,
       },
       {
-        foo: format(subMonths(CURRENT_DATE, 3), 'M/yy'),
+        foo: format(subMonths(now, 3), 'M/yy'),
         bar: 8,
       },
       {
-        foo: format(subMonths(CURRENT_DATE, 2), 'M/yy'),
+        foo: format(subMonths(now, 2), 'M/yy'),
         bar: 14,
       },
       {
-        foo: format(subMonths(CURRENT_DATE, 1), 'M/yy'),
+        foo: format(subMonths(now, 1), 'M/yy'),
         bar: 10,
       },
     ]);
@@ -73,16 +87,16 @@ module('Integration | Component | clients/line-chart', function (hooks) {
       {
         id: '1.10.1',
         previousVersion: '1.9.2',
-        timestampInstalled: formatRFC3339(subMonths(CURRENT_DATE, 2)),
+        timestampInstalled: formatRFC3339(subMonths(now, 2)),
       },
     ]);
     await render(hbs`
     <div class="chart-container-wide">
-      <Clients::LineChart 
-        @dataset={{this.dataset}} 
-        @upgradeData={{this.upgradeData}} 
-        @xKey={{this.xKey}} 
-        @yKey={{this.yKey}} 
+      <Clients::LineChart
+        @dataset={{this.dataset}}
+        @upgradeData={{this.upgradeData}}
+        @xKey={{this.xKey}}
+        @yKey={{this.yKey}}
       />
     </div>
     `);
@@ -96,30 +110,31 @@ module('Integration | Component | clients/line-chart', function (hooks) {
   });
 
   test('it renders tooltip', async function (assert) {
+    const now = timestamp.now();
     const tooltipData = [
       {
-        month: format(subMonths(CURRENT_DATE, 4), 'M/yy'),
+        month: format(subMonths(now, 4), 'M/yy'),
         clients: 4,
         new_clients: {
           clients: 0,
         },
       },
       {
-        month: format(subMonths(CURRENT_DATE, 3), 'M/yy'),
+        month: format(subMonths(now, 3), 'M/yy'),
         clients: 8,
         new_clients: {
           clients: 4,
         },
       },
       {
-        month: format(subMonths(CURRENT_DATE, 2), 'M/yy'),
+        month: format(subMonths(now, 2), 'M/yy'),
         clients: 14,
         new_clients: {
           clients: 6,
         },
       },
       {
-        month: format(subMonths(CURRENT_DATE, 1), 'M/yy'),
+        month: format(subMonths(now, 1), 'M/yy'),
         clients: 20,
         new_clients: {
           clients: 4,
@@ -131,13 +146,13 @@ module('Integration | Component | clients/line-chart', function (hooks) {
       {
         id: '1.10.1',
         previousVersion: '1.9.2',
-        timestampInstalled: formatRFC3339(subMonths(CURRENT_DATE, 2)),
+        timestampInstalled: formatRFC3339(subMonths(now, 2)),
       },
     ]);
     await render(hbs`
     <div class="chart-container-wide">
-      <Clients::LineChart 
-        @dataset={{this.dataset}} 
+      <Clients::LineChart
+        @dataset={{this.dataset}}
         @upgradeData={{this.upgradeData}}
       />
     </div>
@@ -161,11 +176,11 @@ module('Integration | Component | clients/line-chart', function (hooks) {
     this.set('upgradeData', { some: 'object' });
     await render(hbs`
     <div class="chart-container-wide">
-    <Clients::LineChart 
-    @dataset={{this.dataset}} 
-    @upgradeData={{this.upgradeData}} 
-    @xKey={{this.xKey}} 
-    @yKey={{this.yKey}} 
+    <Clients::LineChart
+    @dataset={{this.dataset}}
+    @upgradeData={{this.upgradeData}}
+    @xKey={{this.xKey}}
+    @yKey={{this.yKey}}
     />
     </div>
     `);
@@ -179,11 +194,11 @@ module('Integration | Component | clients/line-chart', function (hooks) {
     this.set('upgradeData', [{ incorrect: 'key names' }]);
     await render(hbs`
     <div class="chart-container-wide">
-    <Clients::LineChart 
-    @dataset={{this.dataset}} 
-    @upgradeData={{this.upgradeData}} 
-    @xKey={{this.xKey}} 
-    @yKey={{this.yKey}} 
+    <Clients::LineChart
+    @dataset={{this.dataset}}
+    @upgradeData={{this.upgradeData}}
+    @xKey={{this.xKey}}
+    @yKey={{this.yKey}}
     />
     </div>
     `);

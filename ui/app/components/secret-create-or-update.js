@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+/**
  * @module SecretCreateOrUpdate
  * SecretCreateOrUpdate component displays either the form for creating a new secret or creating a new version of the secret
  *
@@ -48,7 +53,6 @@ export default class SecretCreateOrUpdate extends Component {
   @service controlGroup;
   @service router;
   @service store;
-  @service wizard;
 
   @action
   setup(elem, [secretData, model, mode]) {
@@ -164,9 +168,6 @@ export default class SecretCreateOrUpdate extends Component {
       });
   }
   saveComplete(callback, key) {
-    if (this.wizard.featureState === 'secret') {
-      this.wizard.transitionFeatureMachine('secret', 'CONTINUE');
-    }
     callback(key);
   }
   transitionToRoute() {

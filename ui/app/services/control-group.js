@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Service, { inject as service } from '@ember/service';
 import RSVP from 'rsvp';
 import ControlGroupError from 'vault/lib/control-group-error';

@@ -1,5 +1,9 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@glimmer/component';
-import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
@@ -12,7 +16,7 @@ import { waitFor } from '@ember/test-waiters';
  *
  * @example
  * ```js
- * <PkiKeyForm @model={{this.model}}/>
+ * <PkiKeyForm @model={{this.model}} @onCancel={{transition-to "vault.cluster"}} @onSave={{transition-to "vault.cluster"}} />
  * ```
  *
  * @param {Object} model - pki/key model.
@@ -40,18 +44,13 @@ export default class PkiKeyForm extends Component {
       }
       if (!isValid && isNew) return;
       yield this.args.model.save({ adapterOptions: { import: false } });
-      this.flashMessages.success(`Successfully ${isNew ? 'generated' : 'updated'} the key ${keyName}.`);
+      this.flashMessages.success(
+        `Successfully ${isNew ? 'generated' : 'updated'} key${keyName ? ` ${keyName}.` : '.'}`
+      );
       this.args.onSave();
     } catch (error) {
       this.errorBanner = errorMessage(error);
       this.invalidFormAlert = 'There was an error submitting this form.';
     }
-  }
-
-  @action
-  cancel() {
-    const method = this.args.model.isNew ? 'unloadRecord' : 'rollbackAttributes';
-    this.args.model[method]();
-    this.args.onCancel();
   }
 }

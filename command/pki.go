@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -13,7 +16,7 @@ type PKICommand struct {
 }
 
 func (c *PKICommand) Synopsis() string {
-	return "Interact with Vault's Key-Value storage"
+	return "Interact with Vault's PKI Secrets Engine"
 }
 
 func (c *PKICommand) Help() string {

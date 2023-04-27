@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 
@@ -15,8 +20,8 @@ import { action } from '@ember/object';
 
 // first value in array is the default bits for that key type
 const KEY_BITS_OPTIONS = {
-  rsa: ['2048', '3072', '4096'],
-  ec: ['256', '224', '384', '521'],
+  rsa: ['2048', '3072', '4096', '0'],
+  ec: ['256', '224', '384', '521', '0'],
   ed25519: ['0'],
   any: ['0'],
 };

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { helper as buildHelper } from '@ember/component/helper';
 
 const ENTERPRISE_SECRET_ENGINES = [
@@ -82,6 +87,7 @@ const MOUNTABLE_SECRET_ENGINES = [
   {
     displayName: 'PKI Certificates',
     type: 'pki',
+    engineRoute: 'pki.overview',
     category: 'generic',
   },
   {
@@ -103,6 +109,14 @@ const MOUNTABLE_SECRET_ENGINES = [
     displayName: 'TOTP',
     type: 'totp',
     category: 'generic',
+  },
+  {
+    displayName: 'Kubernetes',
+    value: 'kubernetes',
+    type: 'kubernetes',
+    engineRoute: 'kubernetes.overview',
+    category: 'generic',
+    glyph: 'kubernetes-color',
   },
 ];
 

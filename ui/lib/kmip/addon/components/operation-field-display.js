@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+/**
  * @module OperationFieldDisplay
  * OperationFieldDisplay components are used on KMIP role show pages to display the allowed operations on that model
  *

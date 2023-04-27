@@ -94,8 +94,8 @@ These metrics represent operational aspects of the running Vault instance.
 | `vault.core.in_flight_requests`                     | Number of in-flight requests.                                                                                                                                                                                                                                                                                                                                                                                                               | requests     | gauge   |
 | `vault.core.leadership_setup_failed`                | Duration of time taken by cluster leadership setup failures which have occurred in a highly available Vault cluster. This should be monitored and alerted on for overall cluster leadership status.                                                                                                                                                                                                                                         | ms           | summary |
 | `vault.core.leadership_lost`                        | The total duration that a HA cluster node maintained leadership as reported at the last time of loss. If metric is present and has a count greater than zero, that means a leadership change has occurred. Continuing changes or reports of low value could be a cause for monitoring alerts as they would typically imply ongoing flapping of leadership that may rotate between nodes.                                                    | ms           | summary |
-
 | `vault.core.license.expiration_time_epoch`          | Time as epoch (seconds since Jan 1 1970) at which license will expire.                                                                                                                                                                                                                                                                                                                                                                      | seconds      | gauge   |
+| `vault.core.locked_users`                           | Number of locked users in Vault. This measurement is performed every 15 minutes.                                                                                                                                                                                                                                                                                                                                                            | locked users | gauge   |
 | `vault.core.mount_table.num_entries`                | Number of mounts in a particular mount table. This metric is labeled by table type (auth or logical) and whether or not the table is replicated (local or not)                                                                                                                                                                                                                                                                              | objects      | gauge   |
 | `vault.core.mount_table.size`                       | Size of a particular mount table. This metric is labeled by table type (auth or logical) and whether or not the table is replicated (local or not)                                                                                                                                                                                                                                                                                          | bytes        | gauge   |
 | `vault.core.post_unseal`                            | Duration of time taken by post-unseal operations handled by Vault core                                                                                                                                                                                                                                                                                                                                                                      | ms           | summary |
@@ -232,7 +232,7 @@ These metrics are emitted on standbys when talking to the active node, and in so
 
 ## Replication Metrics
 
-These metrics relate to [Vault Enterprise Replication](/docs/enterprise/replication). The following metrics are not available in telemetry unless replication is in an unhealthy state: `replication.fetchRemoteKeys`, `replication.merkleDiff`, and `replication.merkleSync`.
+These metrics relate to [Vault Enterprise Replication](/vault/docs/enterprise/replication). The following metrics are not available in telemetry unless replication is in an unhealthy state: `replication.fetchRemoteKeys`, `replication.merkleDiff`, and `replication.merkleSync`.
 
 | Metric                                                        | Description                                                                                                                                | Unit            | Type    |
 | :------------------------------------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------- | :-------------- | :------ |
@@ -509,7 +509,7 @@ indicate flapping leadership.
 
 ## Integrated Storage (Raft) Automated Snapshots
 
-These metrics related to the Enterprise feature [Raft Automated Snapshots](/docs/enterprise/automated-integrated-storage-snapshots).
+These metrics related to the Enterprise feature [Raft Automated Snapshots](/vault/docs/enterprise/automated-integrated-storage-snapshots).
 
 | Metric                                      | Description                                                                                   | Unit       | Type    |
 | :------------------------------------------ | :-------------------------------------------------------------------------------------------- | :--------- | :------ |
@@ -538,48 +538,48 @@ These metrics related to the Enterprise feature [Raft Automated Snapshots](/docs
 | `node_id`              | Unique identifier of a raft peer, same as peer_id.                                                                                                                                                                                                    | `node-1`                |
 | `snapshot_config_name` | For automated snapshots, the name of the configuration                                                                                                                                                                                                | `config1`               |
 
-[secrets-engines]: /docs/secrets
+[secrets-engines]: /vault/docs/secrets
 
-[storage-backends]: /docs/configuration/storage
+[storage-backends]: /vault/docs/configuration/storage
 
-[telemetry-stanza]: /docs/configuration/telemetry
+[telemetry-stanza]: /vault/docs/configuration/telemetry
 
-[cubbyhole-secrets-engine]: /docs/secrets/cubbyhole
+[cubbyhole-secrets-engine]: /vault/docs/secrets/cubbyhole
 
-[kv-secrets-engine]: /docs/secrets/kv
+[kv-secrets-engine]: /vault/docs/secrets/kv
 
-[ldap-auth-backend]: /docs/auth/ldap
+[ldap-auth-backend]: /vault/docs/auth/ldap
 
-[token-auth-backend]: /docs/auth/token
+[token-auth-backend]: /vault/docs/auth/token
 
-[azure-storage-backend]: /docs/configuration/storage/azure
+[azure-storage-backend]: /vault/docs/configuration/storage/azure
 
-[cassandra-storage-backend]: /docs/configuration/storage/cassandra
+[cassandra-storage-backend]: /vault/docs/configuration/storage/cassandra
 
-[cockroachdb-storage-backend]: /docs/configuration/storage/cockroachdb
+[cockroachdb-storage-backend]: /vault/docs/configuration/storage/cockroachdb
 
-[consul-storage-backend]: /docs/configuration/storage/consul
+[consul-storage-backend]: /vault/docs/configuration/storage/consul
 
-[couchdb-storage-backend]: /docs/configuration/storage/couchdb
+[couchdb-storage-backend]: /vault/docs/configuration/storage/couchdb
 
-[dynamodb-storage-backend]: /docs/configuration/storage/dynamodb
+[dynamodb-storage-backend]: /vault/docs/configuration/storage/dynamodb
 
-[etcd-storage-backend]: /docs/configuration/storage/etcd
+[etcd-storage-backend]: /vault/docs/configuration/storage/etcd
 
-[gcs-storage-backend]: /docs/configuration/storage/google-cloud-storage
+[gcs-storage-backend]: /vault/docs/configuration/storage/google-cloud-storage
 
-[spanner-storage-backend]: /docs/configuration/storage/google-cloud-spanner
+[spanner-storage-backend]: /vault/docs/configuration/storage/google-cloud-spanner
 
-[mssql-storage-backend]: /docs/configuration/storage/mssql
+[mssql-storage-backend]: /vault/docs/configuration/storage/mssql
 
-[mysql-storage-backend]: /docs/configuration/storage/mysql
+[mysql-storage-backend]: /vault/docs/configuration/storage/mysql
 
-[postgresql-storage-backend]: /docs/configuration/storage/postgresql
+[postgresql-storage-backend]: /vault/docs/configuration/storage/postgresql
 
-[s3-storage-backend]: /docs/configuration/storage/s3
+[s3-storage-backend]: /vault/docs/configuration/storage/s3
 
-[swift-storage-backend]: /docs/configuration/storage/swift
+[swift-storage-backend]: /vault/docs/configuration/storage/swift
 
-[zookeeper-storage-backend]: /docs/configuration/storage/zookeeper
+[zookeeper-storage-backend]: /vault/docs/configuration/storage/zookeeper
 
-[integrated-storage]: /docs/configuration/storage/raft
+[integrated-storage]: /vault/docs/configuration/storage/raft

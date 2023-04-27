@@ -24,6 +24,8 @@ type HCPLinkMetaClient interface {
 	ListMounts(ctx context.Context, in *ListMountsRequest, opts ...grpc.CallOption) (*ListMountsResponse, error)
 	// ListAuths will be used to recursively list all auths in all namespaces
 	ListAuths(ctx context.Context, in *ListAuthsRequest, opts ...grpc.CallOption) (*ListAuthResponse, error)
+	// GetClusterStatus will provide various cluster-level information
+	GetClusterStatus(ctx context.Context, in *GetClusterStatusRequest, opts ...grpc.CallOption) (*GetClusterStatusResponse, error)
 }
 
 type hCPLinkMetaClient struct {
@@ -61,6 +63,15 @@ func (c *hCPLinkMetaClient) ListAuths(ctx context.Context, in *ListAuthsRequest,
 	return out, nil
 }
 
+func (c *hCPLinkMetaClient) GetClusterStatus(ctx context.Context, in *GetClusterStatusRequest, opts ...grpc.CallOption) (*GetClusterStatusResponse, error) {
+	out := new(GetClusterStatusResponse)
+	err := c.cc.Invoke(ctx, "/meta.HCPLinkMeta/GetClusterStatus", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // HCPLinkMetaServer is the server API for HCPLinkMeta service.
 // All implementations must embed UnimplementedHCPLinkMetaServer
 // for forward compatibility
@@ -71,6 +82,8 @@ type HCPLinkMetaServer interface {
 	ListMounts(context.Context, *ListMountsRequest) (*ListMountsResponse, error)
 	// ListAuths will be used to recursively list all auths in all namespaces
 	ListAuths(context.Context, *ListAuthsRequest) (*ListAuthResponse, error)
+	// GetClusterStatus will provide various cluster-level information
+	GetClusterStatus(context.Context, *GetClusterStatusRequest) (*GetClusterStatusResponse, error)
 	mustEmbedUnimplementedHCPLinkMetaServer()
 }
 
@@ -86,6 +99,9 @@ func (UnimplementedHCPLinkMetaServer) ListMounts(context.Context, *ListMountsReq
 }
 func (UnimplementedHCPLinkMetaServer) ListAuths(context.Context, *ListAuthsRequest) (*ListAuthResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListAuths not implemented")
+}
+func (UnimplementedHCPLinkMetaServer) GetClusterStatus(context.Context, *GetClusterStatusRequest) (*GetClusterStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetClusterStatus not implemented")
 }
 func (UnimplementedHCPLinkMetaServer) mustEmbedUnimplementedHCPLinkMetaServer() {}
 
@@ -154,6 +170,24 @@ func _HCPLinkMeta_ListAuths_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _HCPLinkMeta_GetClusterStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetClusterStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HCPLinkMetaServer).GetClusterStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/meta.HCPLinkMeta/GetClusterStatus",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HCPLinkMetaServer).GetClusterStatus(ctx, req.(*GetClusterStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // HCPLinkMeta_ServiceDesc is the grpc.ServiceDesc for HCPLinkMeta service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -172,6 +206,10 @@ var HCPLinkMeta_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListAuths",
 			Handler:    _HCPLinkMeta_ListAuths_Handler,
+		},
+		{
+			MethodName: "GetClusterStatus",
+			Handler:    _HCPLinkMeta_GetClusterStatus_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

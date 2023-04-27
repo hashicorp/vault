@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { settled, waitUntil } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
@@ -21,15 +26,23 @@ module('Acceptance | console', function (hooks) {
     const numEngines = enginesPage.rows.length;
     await consoleComponent.toggle();
     await settled();
-    const now = Date.now();
     for (const num of [1, 2, 3]) {
-      const inputString = `write sys/mounts/${now + num} type=kv`;
+      const inputString = `write sys/mounts/console-route-${num} type=kv`;
       await consoleComponent.runCommands(inputString);
       await settled();
     }
     await consoleComponent.runCommands('refresh');
     await settled();
     assert.strictEqual(enginesPage.rows.length, numEngines + 3, 'new engines were added to the page');
+    // Clean up
+    for (const num of [1, 2, 3]) {
+      const inputString = `delete sys/mounts/console-route-${num}`;
+      await consoleComponent.runCommands(inputString);
+      await settled();
+    }
+    await consoleComponent.runCommands('refresh');
+    await settled();
+    assert.strictEqual(enginesPage.rows.length, numEngines, 'engines were removed from the page');
   });
 
   test('fullscreen command expands the cli panel', async function (assert) {

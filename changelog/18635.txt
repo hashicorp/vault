@@ -1,0 +1,3 @@
+```release-note:improvement
+sdk: Add response schema validation method framework/FieldData.ValidateStrict and two test helpers (ValidateResponse, ValidateResponseData)
+```

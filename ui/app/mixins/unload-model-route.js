@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Mixin from '@ember/object/mixin';
 import removeRecord from 'vault/utils/remove-record';
 

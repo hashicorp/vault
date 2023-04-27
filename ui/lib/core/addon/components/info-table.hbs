@@ -1,0 +1,23 @@
+<div class="vlt-table info-table sticky-header" data-test-info-table>
+  <table class="is-fullwidth">
+    <caption class="is-collapsed">
+      {{this.title}}
+    </caption>
+    <thead class="has-text-weight-semibold">
+      <tr>
+        <th scope="col">
+          {{@header}}
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each @items as |item|}}
+        <tr>
+          <td>
+            <InfoTableRow @value={{item}} />
+          </td>
+        </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>

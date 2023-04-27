@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 variable "artifact_path" {
   type        = string
   description = "The local path for dev artifact to test"
@@ -139,6 +142,12 @@ variable "vault_local_build_tags" {
   default     = null
 }
 
+variable "vault_log_level" {
+  description = "The server log level for Vault logs. Supported values (in order of detail) are trace, debug, info, warn, and err."
+  type        = string
+  default     = "info"
+}
+
 variable "vault_build_date" {
   description = "The build date for Vault artifact"
   type        = string
@@ -164,4 +173,30 @@ variable "vault_upgrade_initial_release" {
     // Vault 1.10.5 has a known issue with retry_join.
     version = "1.10.4"
   }
+}
+
+variable "operator_instance" {
+  type        = string
+  description = "The ip address of the operator (Voter) node"
+}
+
+variable "remove_vault_instances" {
+  type = map(object({
+    private_ip = string
+    public_ip  = string
+  }))
+  description = "The old vault nodes to be removed"
+}
+
+
+variable "ui_test_filter" {
+  type        = string
+  description = "A test filter to limit the ui tests to execute. Will be appended to the ember test command as '-f=\"<filter>\"'"
+  default     = null
+}
+
+variable "ui_run_tests" {
+  type        = bool
+  description = "Whether to run the UI tests or not. If set to false a cluster will be created but no tests will be run"
+  default     = true
 }

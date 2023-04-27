@@ -1,0 +1,5 @@
+```release-note:feature
+**Secrets/Auth Plugin Multiplexing**: The plugin will be multiplexed when run
+as an external plugin by vault versions that support secrets/auth plugin
+multiplexing (> 1.12)
+```

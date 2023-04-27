@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { hash } from 'rsvp';
 import Route from '@ember/routing/route';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
@@ -5,13 +10,6 @@ import { inject as service } from '@ember/service';
 
 export default Route.extend(UnloadModelRoute, {
   store: service(),
-  wizard: service(),
-
-  activate() {
-    if (this.wizard.featureState === 'create') {
-      this.wizard.transitionFeatureMachine('create', 'CONTINUE', this.policyType());
-    }
-  },
 
   beforeModel() {
     const params = this.paramsFor(this.routeName);

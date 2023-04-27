@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package awsauth
 
 import (
@@ -18,6 +21,11 @@ func (b *backend) pathListCertificates() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/certificates/?",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "certificate-configurations",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathCertificatesList,
@@ -32,6 +40,11 @@ func (b *backend) pathListCertificates() *framework.Path {
 func (b *backend) pathConfigCertificate() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/certificate/" + framework.GenericNameRegex("cert_name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"cert_name": {
 				Type:        framework.TypeString,
@@ -58,15 +71,29 @@ vary. Defaults to "pkcs7".`,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.CreateOperation: &framework.PathOperation{
 				Callback: b.pathConfigCertificateCreateUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "certificate",
+				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathConfigCertificateCreateUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "certificate",
+				},
 			},
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathConfigCertificateRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "certificate-configuration",
+				},
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathConfigCertificateDelete,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "certificate-configuration",
+				},
 			},
 		},
 

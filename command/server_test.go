@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 //go:build !race && !hsm && !fips_140_3
 
 // NOTE: we can't use this with HSM. We can't set testing mode on and it's not
@@ -21,6 +24,7 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/mitchellh/cli"
+	"github.com/stretchr/testify/require"
 )
 
 func init() {
@@ -313,4 +317,14 @@ func TestServer(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestServer_DevTLS verifies that a vault server starts up correctly with the -dev-tls flag
+func TestServer_DevTLS(t *testing.T) {
+	ui, cmd := testServerCommand(t)
+	args := []string{"-dev-tls", "-dev-listen-address=127.0.0.1:0", "-test-server-config"}
+	retCode := cmd.Run(args)
+	output := ui.ErrorWriter.String() + ui.OutputWriter.String()
+	require.Equal(t, 0, retCode, output)
+	require.Contains(t, output, `tls: "enabled"`)
 }

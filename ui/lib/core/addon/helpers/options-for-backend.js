@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { helper as buildHelper } from '@ember/component/helper';
 import { capitalize } from '@ember/string';
 
@@ -26,12 +31,12 @@ const PKI_ENGINE_BACKEND = {
       link: 'issuers',
     },
     {
-      label: 'Certificates',
-      link: 'certificates',
-    },
-    {
       label: 'Keys',
       link: 'keys',
+    },
+    {
+      label: 'Certificates',
+      link: 'certificates',
     },
     {
       label: 'Configuration',
@@ -48,32 +53,6 @@ const SECRET_BACKENDS = {
     navigateTree: false,
     editComponent: 'role-aws-edit',
     listItemPartial: 'secret-list/aws-role-item',
-  },
-  pki: {
-    displayName: 'PKI',
-    navigateTree: false,
-    listItemPartial: 'secret-list/pki-role-item',
-    tabs: [
-      {
-        name: 'roles',
-        label: 'Roles',
-        searchPlaceholder: 'Filter roles',
-        item: 'role',
-        create: 'Create role',
-        editComponent: 'pki/role-pki-edit',
-      },
-      {
-        name: 'cert',
-        modelPrefix: 'cert/',
-        label: 'Certificates',
-        searchPlaceholder: 'Filter certificates',
-        item: 'certificates',
-        create: 'Create role',
-        tab: 'cert',
-        listItemPartial: 'secret-list/pki-cert-item',
-        editComponent: 'pki/pki-cert-show',
-      },
-    ],
   },
   ssh: {
     displayName: 'SSH',
@@ -141,7 +120,7 @@ const SECRET_BACKENDS = {
     displayName: 'Transformation',
     navigateTree: false,
     listItemPartial: 'secret-list/transform-list-item',
-    firstStep: 'create a transformation and a role',
+    firstStep: `To use transform, you'll need to create a transformation and a role.`,
     tabs: [
       {
         name: 'transformations',
@@ -191,7 +170,7 @@ const SECRET_BACKENDS = {
     navigateTree: false,
     editComponent: 'transit-edit',
     listItemPartial: 'secret-list/item',
-    firstStep: 'create an encryption key',
+    firstStep: `To use transit, you'll need to create an encryption key`,
   },
 };
 

@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 api_proxy {
 	enforce_consistency = "always"
 	when_inconsistent = "retry"

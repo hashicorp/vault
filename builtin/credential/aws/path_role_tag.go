@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package awsauth
 
 import (
@@ -23,6 +26,12 @@ const roleTagVersion = "v1"
 func (b *backend) pathRoleTag() *framework.Path {
 	return &framework.Path{
 		Pattern: "role/" + framework.GenericNameRegex("role") + "/tag$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "role-tag",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"role": {
 				Type:        framework.TypeString,

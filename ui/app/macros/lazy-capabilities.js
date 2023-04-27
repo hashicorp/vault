@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 // usage:
 //
 // import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';

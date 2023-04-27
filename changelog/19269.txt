@@ -1,0 +1,3 @@
+```release-note:improvement
+cli/pki: Change the pki health-check --list default config output to JSON so it's a usable configuration file
+```

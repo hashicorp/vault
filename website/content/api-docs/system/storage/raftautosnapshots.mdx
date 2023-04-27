@@ -56,7 +56,8 @@ environment variables or files on disk in predefined locations.
 #### storage_type=local
 
 - `local_max_space` `(integer: <required>)` - For `storage_type=local`, the maximum
-  space, in bytes, to use for snapshots. Snapshot attempts will fail if there is not enough
+  space, in bytes, to use for all snapshots with the given `file_prefix` in the `path_prefix` directory. 
+  Snapshot attempts will fail if there is not enough
   space left in this allowance.
 
 #### storage_type=aws-s3

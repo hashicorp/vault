@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Mixin from '@ember/object/mixin';
 
 // this mixin relies on `unload-model-route` also being used

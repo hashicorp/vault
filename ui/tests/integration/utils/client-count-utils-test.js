@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import {
@@ -663,6 +668,7 @@ module('Integration | Util | client count utils', function (hooks) {
         new_clients: {
           month: '6/21',
           namespaces: [],
+          timestamp: '2021-06-01T00:00:00Z',
         },
         timestamp: '2021-06-01T00:00:00Z',
       },
@@ -674,6 +680,7 @@ module('Integration | Util | client count utils', function (hooks) {
         new_clients: {
           month: '7/21',
           namespaces: [],
+          timestamp: '2021-07-01T00:00:00Z',
         },
         timestamp: '2021-07-01T00:00:00Z',
       },

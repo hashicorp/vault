@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { create, clickable, fillable, visitable, selectable } from 'ember-cli-page-object';
 import ListView from 'vault/tests/pages/components/list-view';
 

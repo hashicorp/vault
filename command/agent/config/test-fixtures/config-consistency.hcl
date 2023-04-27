@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 cache {
 	enforce_consistency = "always"
 	when_inconsistent = "retry"
