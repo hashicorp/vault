@@ -75,9 +75,19 @@ var (
 					}
 				}
 
+				// There is now a correctness check that verifies there is an ExistenceFunc for all paths that have
+				// a CreateOperation, so we must define a stub one to pass that check.
+				var existenceCheck framework.ExistenceFunc
+				if _, hasCreateOperation := operationsMap[logical.CreateOperation]; hasCreateOperation {
+					existenceCheck = func(context.Context, *logical.Request, *framework.FieldData) (bool, error) {
+						return false, nil
+					}
+				}
+
 				results = append(results, &framework.Path{
-					Pattern:    pattern,
-					Operations: operationsMap,
+					Pattern:        pattern,
+					Operations:     operationsMap,
+					ExistenceCheck: existenceCheck,
 				})
 			}
 
