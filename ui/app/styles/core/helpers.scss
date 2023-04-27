@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 .is-invisible {
   visibility: hidden;
 }
@@ -12,6 +17,9 @@
 }
 .is-bottomless {
   box-shadow: 0 -1px 0 0 $grey-light;
+}
+.has-only-top-shadow {
+  box-shadow: 0 -1px 0 -1px $grey-light, 0 -2px 0 -1px $grey-light;
 }
 .has-bottom-shadow {
   box-shadow: $box-shadow !important;
@@ -70,6 +78,9 @@
 }
 .is-flex-1 {
   flex-grow: 1;
+  &.basis-0 {
+    flex-basis: 0;
+  }
 }
 .is-flex-wrap {
   flex-flow: row wrap;
@@ -147,6 +158,15 @@
 .has-padding-m {
   padding: $spacing-m;
 }
+.has-bottom-padding-s {
+  padding-bottom: $spacing-s;
+}
+.has-padding-xs {
+  padding: $spacing-xs;
+}
+.has-padding-xxs {
+  padding: $spacing-xxs;
+}
 .has-top-bottom-margin {
   margin: 1.25rem 0rem;
 }
@@ -202,6 +222,9 @@
 .has-background-gray-200 {
   background-color: $ui-gray-200;
 }
+.has-background-gray-100 {
+  background-color: $ui-gray-100;
+}
 @each $name, $pair in $colors {
   $color: nth($pair, 1);
   .has-background-#{$name} {
@@ -213,11 +236,17 @@
   font-size: $size-8;
   text-transform: lowercase;
 }
+.has-top-padding-xxs {
+  padding-top: $spacing-xxs;
+}
 .has-top-padding-s {
   padding-top: $spacing-s;
 }
 .has-top-padding-l {
   padding-top: $spacing-l;
+}
+.has-left-padding-l {
+  padding-left: $spacing-l;
 }
 .has-top-padding-xxl {
   padding-top: $spacing-xxl;

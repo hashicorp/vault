@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package plugin
 
 import (
@@ -124,10 +127,11 @@ func (b *backendGRPCPluginClient) SpecialPaths() *logical.Paths {
 	}
 
 	return &logical.Paths{
-		Root:            reply.Paths.Root,
-		Unauthenticated: reply.Paths.Unauthenticated,
-		LocalStorage:    reply.Paths.LocalStorage,
-		SealWrapStorage: reply.Paths.SealWrapStorage,
+		Root:                  reply.Paths.Root,
+		Unauthenticated:       reply.Paths.Unauthenticated,
+		LocalStorage:          reply.Paths.LocalStorage,
+		SealWrapStorage:       reply.Paths.SealWrapStorage,
+		WriteForwardedStorage: reply.Paths.WriteForwardedStorage,
 	}
 }
 
@@ -227,6 +231,10 @@ func (b *backendGRPCPluginClient) Setup(ctx context.Context, config *logical.Bac
 		impl: sysViewImpl,
 	}
 
+	events := &GRPCEventsServer{
+		impl: config.EventsSender,
+	}
+
 	// Register the server in this closure.
 	serverFunc := func(opts []grpc.ServerOption) *grpc.Server {
 		opts = append(opts, grpc.MaxRecvMsgSize(math.MaxInt32))
@@ -235,6 +243,7 @@ func (b *backendGRPCPluginClient) Setup(ctx context.Context, config *logical.Bac
 		s := grpc.NewServer(opts...)
 		pb.RegisterSystemViewServer(s, sysView)
 		pb.RegisterStorageServer(s, storage)
+		pb.RegisterEventsServer(s, events)
 		b.server.Store(s)
 		close(b.cleanupCh)
 		return s

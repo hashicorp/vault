@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -16,6 +19,8 @@ import (
 )
 
 func TestPKIHC_AllGood(t *testing.T) {
+	t.Parallel()
+
 	client, closer := testVaultServer(t)
 	defer closer()
 
@@ -70,6 +75,8 @@ func TestPKIHC_AllGood(t *testing.T) {
 }
 
 func TestPKIHC_AllBad(t *testing.T) {
+	t.Parallel()
+
 	client, closer := testVaultServer(t)
 	defer closer()
 
@@ -130,6 +137,8 @@ func TestPKIHC_AllBad(t *testing.T) {
 }
 
 func TestPKIHC_OnlyIssuer(t *testing.T) {
+	t.Parallel()
+
 	client, closer := testVaultServer(t)
 	defer closer()
 
@@ -152,6 +161,8 @@ func TestPKIHC_OnlyIssuer(t *testing.T) {
 }
 
 func TestPKIHC_NoMount(t *testing.T) {
+	t.Parallel()
+
 	client, closer := testVaultServer(t)
 	defer closer()
 
@@ -166,6 +177,8 @@ func TestPKIHC_NoMount(t *testing.T) {
 }
 
 func TestPKIHC_ExpectedEmptyMount(t *testing.T) {
+	t.Parallel()
+
 	client, closer := testVaultServer(t)
 	defer closer()
 
@@ -186,6 +199,8 @@ func TestPKIHC_ExpectedEmptyMount(t *testing.T) {
 }
 
 func TestPKIHC_NoPerm(t *testing.T) {
+	t.Parallel()
+
 	client, closer := testVaultServer(t)
 	defer closer()
 
@@ -259,6 +274,8 @@ func testPKIHealthCheckCommand(tb testing.TB) (*cli.MockUi, *PKIHealthCheckComma
 }
 
 func execPKIHC(t *testing.T, client *api.Client, ok bool) (int, string, map[string][]map[string]interface{}) {
+	t.Helper()
+
 	stdout := bytes.NewBuffer(nil)
 	stderr := bytes.NewBuffer(nil)
 	runOpts := &RunOptions{
@@ -283,6 +300,8 @@ func execPKIHC(t *testing.T, client *api.Client, ok bool) (int, string, map[stri
 }
 
 func validateExpectedPKIHC(t *testing.T, expected, results map[string][]map[string]interface{}) {
+	t.Helper()
+
 	for test, subtest := range expected {
 		actual, ok := results[test]
 		require.True(t, ok, fmt.Sprintf("expected top-level test %v to be present", test))
@@ -603,7 +622,7 @@ var expectedNoPerm = map[string][]map[string]interface{}{
 	},
 	"root_issued_leaves": {
 		{
-			"status": "ok",
+			"status": "insufficient_permissions",
 		},
 	},
 	"tidy_last_run": {
@@ -613,7 +632,7 @@ var expectedNoPerm = map[string][]map[string]interface{}{
 	},
 	"too_many_certs": {
 		{
-			"status": "ok",
+			"status": "insufficient_permissions",
 		},
 	},
 }

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package logical
 
 import (
@@ -17,7 +20,7 @@ import (
 func RespondErrorCommon(req *Request, resp *Response, err error) (int, error) {
 	if err == nil && (resp == nil || !resp.IsError()) {
 		switch {
-		case req.Operation == ReadOperation:
+		case req.Operation == ReadOperation || req.Operation == HeaderOperation:
 			if resp == nil {
 				return http.StatusNotFound, nil
 			}

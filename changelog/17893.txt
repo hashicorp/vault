@@ -1,3 +1,3 @@
 ```release-note:feature
-ui: Adds Kubernetes secrets engine
+**Kubernetes Secrets Engine UI**: Kubernetes is now available in the UI as a supported secrets engine.
 ```

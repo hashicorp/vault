@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 listener "tcp" {
   address = "127.0.0.1:443"
 }

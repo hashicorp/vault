@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package builtinplugins
 
 import (
@@ -146,7 +149,10 @@ func newRegistry() *registry {
 			"snowflake-database-plugin":         {Factory: dbSnowflake.New},
 		},
 		logicalBackends: map[string]logicalBackend{
-			"ad":       {Factory: logicalAd.Factory},
+			"ad": {
+				Factory:           logicalAd.Factory,
+				DeprecationStatus: consts.Deprecated,
+			},
 			"alicloud": {Factory: logicalAlicloud.Factory},
 			"aws":      {Factory: logicalAws.Factory},
 			"azure":    {Factory: logicalAzure.Factory},

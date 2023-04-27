@@ -1,8 +1,18 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import ApplicationAdapter from '../application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export default class PkiIssuerAdapter extends ApplicationAdapter {
   namespace = 'v1';
+
+  _getBackend(snapshot) {
+    const { record, adapterOptions } = snapshot;
+    return adapterOptions?.mount || record.backend;
+  }
 
   optionsForQuery(id) {
     const data = {};
@@ -21,24 +31,9 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
     }
   }
 
-  createRecord(store, type, snapshot) {
-    const { record, adapterOptions } = snapshot;
-    let url = this.urlForQuery(record.backend);
-    if (adapterOptions.import) {
-      url = `${url}/import/bundle`;
-    } else {
-      // TODO WIP generate root or intermediate CSR actions from issuers index page
-      // certType = 'root' || 'intermediate',   // record.type is internal or exported
-      // url = ` ${url}/generate/${certType}/${record.type}`;
-      throw new Error('createRecord method in adapters/pki/issuer.js is incomplete.');
-    }
-    return this.ajax(url, 'POST', { data: this.serialize(snapshot) }).then((resp) => {
-      return resp;
-    });
-  }
-
   updateRecord(store, type, snapshot) {
-    const { backend, issuerId } = snapshot.record;
+    const { issuerId } = snapshot.record;
+    const backend = this._getBackend(snapshot);
     const data = this.serialize(snapshot);
     const url = this.urlForQuery(backend, issuerId);
     return this.ajax(url, 'POST', { data });
@@ -51,5 +46,11 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
   queryRecord(store, type, query) {
     const { backend, id } = query;
     return this.ajax(this.urlForQuery(backend, id), 'GET', this.optionsForQuery(id));
+  }
+
+  deleteAllIssuers(backend) {
+    const deleteAllIssuersAndKeysUrl = `${this.buildURL()}/${encodePath(backend)}/root`;
+
+    return this.ajax(deleteAllIssuersAndKeysUrl, 'DELETE');
   }
 }

@@ -133,6 +133,10 @@ There are two alternate methods of resolving the user object used to authenticat
 
 @include 'ldap-auth-userfilter-warning.mdx'
 
+#### Alias Dereferencing
+
+- `dereference_aliases` (string, optional) - Control how aliases are dereferenced when performing the search. Possible values are: `never`, `finding`, `searching`, and `always`. `finding` will only dereference aliases during name resolution of the base. `searching` will dereference aliases after name resolution.
+
 #### Binding - User Principal Name (AD)
 
 - `upndomain` (string, optional) - userPrincipalDomain used to construct the UPN string for the authenticating user. The constructed UPN will appear as `[username]@UPNDomain`. Example: `example.com`, which will cause vault to bind as `username@example.com`.
@@ -152,7 +156,7 @@ Use `vault path-help` for more details.
 ### Other
 
 - `username_as_alias` (bool, optional) - If set to true, forces the auth method to use the username passed by the user as the alias name.
-
+- `max_page_size` (int, optional) - The maximum number of results to return for a single LDAP query. This is useful for preventing large queries from being run against the LDAP server. The default is the maximum value for an int32.
 
 ## Examples:
 
@@ -269,5 +273,5 @@ It should be noted that user -> policy mapping happens at token creation time. A
 ## API
 
 The LDAP auth method has a full HTTP API. Please see the
-[LDAP auth method API](/api-docs/auth/ldap) for more
+[LDAP auth method API](/vault/api-docs/auth/ldap) for more
 details.

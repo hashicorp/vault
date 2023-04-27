@@ -46,6 +46,8 @@
   <button
     onclick={{action "toggleMask"}}
     type="button"
+    aria-label={{if this.showValue "mask value" "show value"}}
+    title={{if this.showValue "mask value" "show value"}}
     class="{{if (eq this.value '') 'has-text-grey'}} masked-input-toggle button"
     data-test-button="toggle-masked"
   >

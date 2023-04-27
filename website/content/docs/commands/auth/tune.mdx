@@ -70,7 +70,7 @@ user_lockout_threshold                 10
 ## Usage
 
 The following flags are available in addition to the [standard set of
-flags](/docs/commands) included on all commands.
+flags](/vault/docs/commands) included on all commands.
 
 - `-allowed-response-headers` `(string: "")` - response header values that the auth
   method will be allowed to set.
@@ -97,7 +97,7 @@ flags](/docs/commands) included on all commands.
 
 - `-max-lease-ttl` `(duration: "")` - The maximum lease TTL for this auth
   method. If unspecified, this defaults to the Vault server's globally
-  configured [maximum lease TTL](/docs/configuration#max_lease_ttl), or a
+  configured [maximum lease TTL](/vault/docs/configuration#max_lease_ttl), or a
   previously configured value for the auth method. This value is allowed to
   override the server's global max TTL; it can be longer or shorter.
 
@@ -110,7 +110,7 @@ flags](/docs/commands) included on all commands.
 
 - `-plugin-version` `(string: "")` - Configures the semantic version of the plugin
   to use. The new version will not start running until the mount is
-  [reloaded](/docs/commands/plugin/reload).
+  [reloaded](/vault/docs/commands/plugin/reload).
 
 - `-user-lockout-threshold` `(string: "")` - Specifies the number of failed login attempts 
   after which the user is locked out. User lockout feature was added in Vault 1.13. 

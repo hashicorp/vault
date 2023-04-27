@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package configutil
 
 func (c *SharedConfig) Merge(c2 *SharedConfig) *SharedConfig {

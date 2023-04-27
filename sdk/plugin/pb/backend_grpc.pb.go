@@ -642,6 +642,8 @@ type SystemViewClient interface {
 	GroupsForEntity(ctx context.Context, in *EntityInfoArgs, opts ...grpc.CallOption) (*GroupsForEntityReply, error)
 	// GeneratePasswordFromPolicy generates a password from an existing password policy
 	GeneratePasswordFromPolicy(ctx context.Context, in *GeneratePasswordFromPolicyRequest, opts ...grpc.CallOption) (*GeneratePasswordFromPolicyReply, error)
+	// ClusterInfo returns the ClusterID information; may be reused if ClusterName is also exposed.
+	ClusterInfo(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ClusterInfoReply, error)
 }
 
 type systemViewClient struct {
@@ -760,6 +762,15 @@ func (c *systemViewClient) GeneratePasswordFromPolicy(ctx context.Context, in *G
 	return out, nil
 }
 
+func (c *systemViewClient) ClusterInfo(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ClusterInfoReply, error) {
+	out := new(ClusterInfoReply)
+	err := c.cc.Invoke(ctx, "/pb.SystemView/ClusterInfo", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SystemViewServer is the server API for SystemView service.
 // All implementations must embed UnimplementedSystemViewServer
 // for forward compatibility
@@ -802,6 +813,8 @@ type SystemViewServer interface {
 	GroupsForEntity(context.Context, *EntityInfoArgs) (*GroupsForEntityReply, error)
 	// GeneratePasswordFromPolicy generates a password from an existing password policy
 	GeneratePasswordFromPolicy(context.Context, *GeneratePasswordFromPolicyRequest) (*GeneratePasswordFromPolicyReply, error)
+	// ClusterInfo returns the ClusterID information; may be reused if ClusterName is also exposed.
+	ClusterInfo(context.Context, *Empty) (*ClusterInfoReply, error)
 	mustEmbedUnimplementedSystemViewServer()
 }
 
@@ -844,6 +857,9 @@ func (UnimplementedSystemViewServer) GroupsForEntity(context.Context, *EntityInf
 }
 func (UnimplementedSystemViewServer) GeneratePasswordFromPolicy(context.Context, *GeneratePasswordFromPolicyRequest) (*GeneratePasswordFromPolicyReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GeneratePasswordFromPolicy not implemented")
+}
+func (UnimplementedSystemViewServer) ClusterInfo(context.Context, *Empty) (*ClusterInfoReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ClusterInfo not implemented")
 }
 func (UnimplementedSystemViewServer) mustEmbedUnimplementedSystemViewServer() {}
 
@@ -1074,6 +1090,24 @@ func _SystemView_GeneratePasswordFromPolicy_Handler(srv interface{}, ctx context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SystemView_ClusterInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemViewServer).ClusterInfo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/pb.SystemView/ClusterInfo",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemViewServer).ClusterInfo(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SystemView_ServiceDesc is the grpc.ServiceDesc for SystemView service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1128,6 +1162,96 @@ var SystemView_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GeneratePasswordFromPolicy",
 			Handler:    _SystemView_GeneratePasswordFromPolicy_Handler,
+		},
+		{
+			MethodName: "ClusterInfo",
+			Handler:    _SystemView_ClusterInfo_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "sdk/plugin/pb/backend.proto",
+}
+
+// EventsClient is the client API for Events service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type EventsClient interface {
+	SendEvent(ctx context.Context, in *SendEventRequest, opts ...grpc.CallOption) (*Empty, error)
+}
+
+type eventsClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewEventsClient(cc grpc.ClientConnInterface) EventsClient {
+	return &eventsClient{cc}
+}
+
+func (c *eventsClient) SendEvent(ctx context.Context, in *SendEventRequest, opts ...grpc.CallOption) (*Empty, error) {
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, "/pb.Events/SendEvent", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// EventsServer is the server API for Events service.
+// All implementations must embed UnimplementedEventsServer
+// for forward compatibility
+type EventsServer interface {
+	SendEvent(context.Context, *SendEventRequest) (*Empty, error)
+	mustEmbedUnimplementedEventsServer()
+}
+
+// UnimplementedEventsServer must be embedded to have forward compatible implementations.
+type UnimplementedEventsServer struct {
+}
+
+func (UnimplementedEventsServer) SendEvent(context.Context, *SendEventRequest) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendEvent not implemented")
+}
+func (UnimplementedEventsServer) mustEmbedUnimplementedEventsServer() {}
+
+// UnsafeEventsServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to EventsServer will
+// result in compilation errors.
+type UnsafeEventsServer interface {
+	mustEmbedUnimplementedEventsServer()
+}
+
+func RegisterEventsServer(s grpc.ServiceRegistrar, srv EventsServer) {
+	s.RegisterService(&Events_ServiceDesc, srv)
+}
+
+func _Events_SendEvent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendEventRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EventsServer).SendEvent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/pb.Events/SendEvent",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EventsServer).SendEvent(ctx, req.(*SendEventRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Events_ServiceDesc is the grpc.ServiceDesc for Events service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Events_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "pb.Events",
+	HandlerType: (*EventsServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "SendEvent",
+			Handler:    _Events_SendEvent_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

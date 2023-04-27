@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+/**
  * @module TransformListItem
  * TransformListItem components are used for the list items for the Transform Secret Engines for all but Transformations.
  * This component automatically handles read-only list items if capabilities are not granted or the item is internal only.

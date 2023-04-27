@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { apiPath } from 'vault/macros/lazy-capabilities';
@@ -12,7 +17,6 @@ const M = Model.extend({
   }),
 
   name: attr('string', {
-    fieldValue: 'id',
     readOnly: true,
     subText:
       'Templates allow Vault to determine what and how to capture the value to be transformed. This cannot be edited later.',

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -5,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -92,7 +94,7 @@ func (c *PluginRegisterCommand) Flags() *FlagSets {
 }
 
 func (c *PluginRegisterCommand) AutocompleteArgs() complete.Predictor {
-	return c.PredictVaultPlugins(consts.PluginTypeUnknown)
+	return c.PredictVaultPlugins(api.PluginTypeUnknown)
 }
 
 func (c *PluginRegisterCommand) AutocompleteFlags() complete.Flags {
@@ -135,7 +137,7 @@ func (c *PluginRegisterCommand) Run(args []string) int {
 		return 2
 	}
 
-	pluginType, err := consts.ParsePluginType(strings.TrimSpace(pluginTypeRaw))
+	pluginType, err := api.ParsePluginType(strings.TrimSpace(pluginTypeRaw))
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2

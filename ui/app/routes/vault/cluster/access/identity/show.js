@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import AdapterError from '@ember-data/adapter/error';
 import { next } from '@ember/runloop';
 import { hash } from 'rsvp';

@@ -1,11 +1,22 @@
-import { hash } from 'rsvp';
-import FetchConfigRoute from './fetch-config';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
 
-export default class KubernetesOverviewRoute extends FetchConfigRoute {
+import Route from '@ember/routing/route';
+import { inject as service } from '@ember/service';
+import { withConfig } from 'kubernetes/decorators/fetch-config';
+import { hash } from 'rsvp';
+
+@withConfig()
+export default class KubernetesOverviewRoute extends Route {
+  @service store;
+  @service secretMountPath;
+
   async model() {
     const backend = this.secretMountPath.get();
     return hash({
-      config: this.configModel,
+      promptConfig: this.promptConfig,
       backend: this.modelFor('application'),
       roles: this.store.query('kubernetes/role', { backend }).catch(() => []),
     });

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package ldap
 
 import (
@@ -6,7 +9,7 @@ import (
 	"testing"
 
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 )
 
@@ -33,6 +36,7 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 	cfg.GroupDN = "ou=people,dc=planetexpress,dc=com"
 	cfg.GroupAttr = "cn"
 	cfg.RequestTimeout = 60
+	cfg.MaximumPageSize = 1000
 
 	svc, err := runner.StartService(context.Background(), func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
 		connURL := fmt.Sprintf("ldap://%s:%d", host, port)

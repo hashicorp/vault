@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 
@@ -11,10 +16,9 @@ export default class PkiCertificateDetailsRoute extends Route {
   }
   setupController(controller, model) {
     super.setupController(controller, model);
-    const backend = this.secretMountPath.currentPath || 'pki';
     controller.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: backend, route: 'overview' },
+      { label: this.secretMountPath.currentPath, route: 'overview' },
       { label: 'certificates', route: 'certificates.index' },
       { label: model.id },
     ];

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package cassandra
 
 import (
@@ -10,7 +13,7 @@ import (
 	"time"
 
 	"github.com/gocql/gocql"
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 )
 
 type containerConfig struct {

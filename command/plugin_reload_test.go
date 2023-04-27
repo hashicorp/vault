@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -5,8 +8,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/mitchellh/cli"
 )
 
@@ -83,21 +85,21 @@ func TestPluginReloadCommand_Run(t *testing.T) {
 	t.Run("integration", func(t *testing.T) {
 		t.Parallel()
 
-		pluginDir, cleanup := vault.MakeTestPluginDir(t)
+		pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
 		defer cleanup(t)
 
 		client, _, closer := testVaultServerPluginDir(t, pluginDir)
 		defer closer()
 
 		pluginName := "my-plugin"
-		_, sha256Sum := testPluginCreateAndRegister(t, client, pluginDir, pluginName, consts.PluginTypeCredential, "")
+		_, sha256Sum := testPluginCreateAndRegister(t, client, pluginDir, pluginName, api.PluginTypeCredential, "")
 
 		ui, cmd := testPluginReloadCommand(t)
 		cmd.client = client
 
 		if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
 			Name:    pluginName,
-			Type:    consts.PluginTypeCredential,
+			Type:    api.PluginTypeCredential,
 			Command: pluginName,
 			SHA256:  sha256Sum,
 		}); err != nil {

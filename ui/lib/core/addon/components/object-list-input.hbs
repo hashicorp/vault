@@ -1,49 +1,59 @@
 {{yield}}
 {{#each this.inputList as |row index|}}
-  <div class="field is-grouped">
-    {{#each-in row as |inputKey value|}}
-      {{#let (find-by "key" inputKey @objectKeys) as |field|}}
-        <div class="control is-expanded">
-          {{#if (eq index 0)}}
-            <h2 data-test-object-list-label={{inputKey}}>{{field.label}}</h2>
-          {{/if}}
-          <Input
-            data-test-object-list-input="{{field.key}}-{{index}}"
-            aria-label={{if field.placeholder "{{field.placeholder}} for {{index}}" "{{field.label}} for {{index}}"}}
-            class="input"
-            placeholder={{or field.placeholder ""}}
-            @type="text"
-            @value={{value}}
-            name={{field.key}}
-            id="{{field.key}}-{{index}}"
-            {{on "input" (fn this.handleInput index)}}
-          />
-        </div>
-      {{/let}}
-    {{/each-in}}
-    <div class="control is-align-end">
-      {{#if (eq (inc index) this.inputList.length)}}
-        <button
-          data-test-object-list-add-button
-          type="button"
-          class="button is-outlined is-primary"
-          disabled={{this.disableAdd}}
-          aria-label="add"
-          {{on "click" this.addRow}}
-        >
-          Add
-        </button>
-      {{else}}
-        <button
-          data-test-object-list-delete-button={{index}}
-          type="button"
-          class="button is-icon"
-          aria-label="remove"
-          {{on "click" (fn this.removeRow index)}}
-        >
-          <Icon @name="trash" />
-        </button>
-      {{/if}}
+  {{#let (get @validationErrors index) as |rowValidations|}}
+    <div class="field is-grouped">
+      {{#each-in row as |inputKey value|}}
+        {{#let (find-by "key" inputKey @objectKeys) as |field|}}
+          <div class="control is-expanded">
+            {{#if (eq index 0)}}
+              <h2 data-test-object-list-label={{inputKey}}>{{field.label}}</h2>
+            {{/if}}
+            {{#let (get rowValidations field.key) as |inputError|}}
+              <Input
+                data-test-object-list-input="{{field.key}}-{{index}}"
+                aria-label="{{or field.placeholder field.label}} input for row index {{index}}"
+                class="input {{if (and (not inputError.isValid) inputError.errors) 'has-error-border'}}"
+                placeholder={{or field.placeholder ""}}
+                @type="text"
+                @value={{value}}
+                name={{field.key}}
+                id="{{field.key}}-{{index}}"
+                {{on "input" (fn this.handleInput index)}}
+              />
+              {{#if (and (not inputError.isValid) inputError.errors)}}
+                <AlertInline @type="danger" @message={{inputError.errors}} @paddingTop={{true}} />
+              {{/if}}
+            {{/let}}
+          </div>
+        {{/let}}
+      {{/each-in}}
+      <div class="control {{if (includes false (map-by 'isValid' rowValidations)) '' 'is-align-end'}}">
+        {{#if (eq index 0)}}
+          <br />
+        {{/if}}
+        {{#if (eq (inc index) this.inputList.length)}}
+          <button
+            data-test-object-list-add-button
+            type="button"
+            class="button is-outlined is-primary"
+            disabled={{this.disableAdd}}
+            aria-label="add"
+            {{on "click" this.addRow}}
+          >
+            Add
+          </button>
+        {{else}}
+          <button
+            data-test-object-list-delete-button={{index}}
+            type="button"
+            class="button is-icon"
+            aria-label="remove"
+            {{on "click" (fn this.removeRow index)}}
+          >
+            <Icon @name="trash" />
+          </button>
+        {{/if}}
+      </div>
     </div>
-  </div>
+  {{/let}}
 {{/each}}

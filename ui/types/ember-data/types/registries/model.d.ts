@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Model from '@ember-data/model';
 import PkiActionModel from 'vault/models/pki/action';
 import PkiCertificateGenerateModel from 'vault/models/pki/certificate/generate';

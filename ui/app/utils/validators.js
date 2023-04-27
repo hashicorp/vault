@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { isPresent } from '@ember/utils';
 
 export const presence = (value) => isPresent(value);

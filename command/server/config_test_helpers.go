@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package server
 
 import (
@@ -500,8 +503,8 @@ func testUnknownFieldValidation(t *testing.T) {
 			Problem: "unknown or unsupported field bad_value found in configuration",
 			Position: token.Pos{
 				Filename: "./test-fixtures/config.hcl",
-				Offset:   583,
-				Line:     34,
+				Offset:   651,
+				Line:     37,
 				Column:   5,
 			},
 		},
@@ -1097,6 +1100,7 @@ func testParseSeals(t *testing.T) {
 			},
 		},
 	}
+	addExpectedDefaultEntConfig(expected)
 	config.Prune()
 	require.Equal(t, config, expected)
 }

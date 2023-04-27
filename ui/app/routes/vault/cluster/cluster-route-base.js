@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 // this is the base route for
 // all of the CLUSTER_ROUTES that are states before you can use vault
 //

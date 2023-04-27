@@ -36,7 +36,7 @@ either the `X-Vault-Token` HTTP Header or as `Authorization` HTTP Header using
 the `Bearer <token>` scheme.
 
 Otherwise, a client token can be retrieved using an [authentication
-engine](/docs/auth).
+engine](/vault/docs/auth).
 
 Each auth method has one or more unauthenticated login endpoints. These
 endpoints can be reached without any authentication, and are used for
@@ -54,7 +54,7 @@ in periods. Otherwise, Vault will return a 404 unsupported path error.
 
 ## Namespaces
 
-When using [Namespaces](/docs/enterprise/namespaces) the final path of the API 
+When using [Namespaces](/vault/docs/enterprise/namespaces) the final path of the API 
 request is relative to the `X-Vault-Namespace` header. For instance, if a 
 request URI is `secret/foo` with the `X-Vault-Namespace` header set as `ns1/ns2/`, 
 then the resulting request path to Vault will be `ns1/ns2/secret/foo`.
@@ -89,8 +89,8 @@ Typically the request data, body and response data to and from Vault is in JSON.
 Vault sets the `Content-Type` header appropriately with its response and does 
 not require it from the clients request.
 
-The demonstration below uses the [`KVv1` secrets engine](/api/secret/kv/kv-v1), which is a 
-simple Key/Value store. Please read [the API documentation of KV secret engines](/api/secret/kv) 
+The demonstration below uses the [`KVv1` secrets engine](/vault/api-docs/secret/kv/kv-v1), which is a 
+simple Key/Value store. Please read [the API documentation of KV secret engines](/vault/api-docs/secret/kv) 
 for details of `KVv1` compared to `KVv2` and how they differ in their URI paths 
 as well as the features available in version 2 of the KV secrets engine.
 
@@ -163,7 +163,7 @@ discover whether an operation is actually a create or update operation based on
 the data already stored within Vault. This makes permission management via ACLs
 more flexible.
 
-A [KVv2 example](api/secret/kv/kv-v2#sample-request-3) for the engine path of `secret` requires that URI is 
+A [KVv2 example](/vault/api-docs/secret/kv/kv-v2#sample-request-3) for the engine path of `secret` requires that URI is 
 appended with ***`data/`***  prior to the secret name (`baz`) such as:
 
 ```shell-session
@@ -204,7 +204,7 @@ methods, etc. then append `?help=1` to any URL. If you have valid permission to
 access the path, then the help text will be returned as a markdown-formatted block 
 in the `help` attribute of the response.
 
-Additionally, with the [OpenAPI generation](/api/system/internal-specs-openapi) in Vault, you will get back a small
+Additionally, with the [OpenAPI generation](/vault/api-docs/system/internal-specs-openapi) in Vault, you will get back a small
 OpenAPI document in the `openapi` attribute. This document is relevant for the 
 path you're looking up and any paths under it - also note paths in the OpenAPI 
 document are relative to the initial path queried.
@@ -297,7 +297,7 @@ warnings are generated during the operation.
 - `412` - Precondition failed.  Returned on Enterprise when a request can't be
   processed yet due to some missing eventually consistent data.  Should be retried,
   perhaps with a little backoff.
-  See [Vault Eventual Consistency](/docs/enterprise/consistency).
+  See [Vault Eventual Consistency](/vault/docs/enterprise/consistency).
 - `429` - Default return code for health status of standby nodes. This will
   likely change in the future.
 - `473` - Default return code for health status of performance standby nodes.
@@ -314,4 +314,4 @@ A maximum request size of 32MB is imposed to prevent a denial of service attack
 with arbitrarily large requests; this can be tuned per `listener` block in
 Vault's server configuration file.
 
-[agent]: /docs/agent#listener-stanza
+[agent]: /vault/docs/agent#listener-stanza

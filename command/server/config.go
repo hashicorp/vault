@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package server
 
 import (
@@ -5,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 	"os"
 	"path/filepath"
@@ -22,6 +24,8 @@ import (
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/testcluster"
+	"github.com/mitchellh/mapstructure"
 )
 
 const (
@@ -194,7 +198,10 @@ func DevTLSConfig(storageType, certDir string) (*Config, error) {
 	if err := os.WriteFile(fmt.Sprintf("%s/%s", certDir, VaultDevKeyFilename), []byte(key), 0o400); err != nil {
 		return nil, err
 	}
+	return parseDevTLSConfig(storageType, certDir)
+}
 
+func parseDevTLSConfig(storageType, certDir string) (*Config, error) {
 	hclStr := `
 disable_mlock = true
 
@@ -217,8 +224,8 @@ storage "%s" {
 
 ui = true
 `
-
-	hclStr = fmt.Sprintf(hclStr, certDir, certDir, storageType)
+	certDirEscaped := strings.Replace(certDir, "\\", "\\\\", -1)
+	hclStr = fmt.Sprintf(hclStr, certDirEscaped, certDirEscaped, storageType)
 	parsed, err := ParseConfig(hclStr, "")
 	if err != nil {
 		return nil, err
@@ -465,9 +472,14 @@ func LoadConfig(path string) (*Config, error) {
 				return nil, errors.New("Error parsing the environment variable VAULT_ENABLE_FILE_PERMISSIONS_CHECK")
 			}
 		}
+		f, err := os.Open(path)
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
 
 		if enableFilePermissionsCheck {
-			err = osutil.OwnerPermissionsMatch(path, 0, 0)
+			err = osutil.OwnerPermissionsMatchFile(f, 0, 0)
 			if err != nil {
 				return nil, err
 			}
@@ -496,8 +508,14 @@ func CheckConfig(c *Config, e error) (*Config, error) {
 
 // LoadConfigFile loads the configuration from the given file.
 func LoadConfigFile(path string) (*Config, error) {
+	// Open the file
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
 	// Read the file
-	d, err := ioutil.ReadFile(path)
+	d, err := io.ReadAll(f)
 	if err != nil {
 		return nil, err
 	}
@@ -518,7 +536,7 @@ func LoadConfigFile(path string) (*Config, error) {
 
 	if enableFilePermissionsCheck {
 		// check permissions of the config file
-		err = osutil.OwnerPermissionsMatch(path, 0, 0)
+		err = osutil.OwnerPermissionsMatchFile(f, 0, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -1120,23 +1138,39 @@ func (c *Config) Sanitized() map[string]interface{} {
 
 	// Sanitize storage stanza
 	if c.Storage != nil {
+		storageType := c.Storage.Type
 		sanitizedStorage := map[string]interface{}{
-			"type":               c.Storage.Type,
+			"type":               storageType,
 			"redirect_addr":      c.Storage.RedirectAddr,
 			"cluster_addr":       c.Storage.ClusterAddr,
 			"disable_clustering": c.Storage.DisableClustering,
 		}
+
+		if storageType == "raft" {
+			sanitizedStorage["raft"] = map[string]interface{}{
+				"max_entry_size": c.Storage.Config["max_entry_size"],
+			}
+		}
+
 		result["storage"] = sanitizedStorage
 	}
 
 	// Sanitize HA storage stanza
 	if c.HAStorage != nil {
+		haStorageType := c.HAStorage.Type
 		sanitizedHAStorage := map[string]interface{}{
-			"type":               c.HAStorage.Type,
+			"type":               haStorageType,
 			"redirect_addr":      c.HAStorage.RedirectAddr,
 			"cluster_addr":       c.HAStorage.ClusterAddr,
 			"disable_clustering": c.HAStorage.DisableClustering,
 		}
+
+		if haStorageType == "raft" {
+			sanitizedHAStorage["raft"] = map[string]interface{}{
+				"max_entry_size": c.HAStorage.Config["max_entry_size"],
+			}
+		}
+
 		result["ha_storage"] = sanitizedHAStorage
 	}
 
@@ -1174,4 +1208,13 @@ func (c *Config) Prune() {
 func (c *Config) found(s, k string) {
 	delete(c.UnusedKeys, s)
 	c.FoundKeys = append(c.FoundKeys, k)
+}
+
+func (c *Config) ToVaultNodeConfig() (*testcluster.VaultNodeConfig, error) {
+	var vnc testcluster.VaultNodeConfig
+	err := mapstructure.Decode(c, &vnc)
+	if err != nil {
+		return nil, err
+	}
+	return &vnc, nil
 }

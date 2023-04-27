@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package healthcheck
 
 import (
@@ -10,14 +13,16 @@ import (
 type RoleAllowsGlobWildcards struct {
 	Enabled            bool
 	UnsupportedVersion bool
-	NoPerms            bool
 
-	RoleEntryMap map[string]map[string]interface{}
+	RoleListFetchIssue *PathFetch
+	RoleFetchIssues    map[string]*PathFetch
+	RoleEntryMap       map[string]map[string]interface{}
 }
 
 func NewRoleAllowsGlobWildcardsCheck() Check {
 	return &RoleAllowsGlobWildcards{
-		RoleEntryMap: make(map[string]map[string]interface{}),
+		RoleFetchIssues: make(map[string]*PathFetch),
+		RoleEntryMap:    make(map[string]map[string]interface{}),
 	}
 }
 
@@ -49,7 +54,7 @@ func (h *RoleAllowsGlobWildcards) FetchResources(e *Executor) error {
 	})
 	if exit || err != nil {
 		if f != nil && f.IsSecretPermissionsError() {
-			h.NoPerms = true
+			h.RoleListFetchIssue = f
 		}
 		return err
 	}
@@ -60,7 +65,7 @@ func (h *RoleAllowsGlobWildcards) FetchResources(e *Executor) error {
 		})
 		if skip || err != nil || entry == nil {
 			if f != nil && f.IsSecretPermissionsError() {
-				h.NoPerms = true
+				h.RoleFetchIssues[role] = f
 			}
 			if err != nil {
 				return err
@@ -84,18 +89,37 @@ func (h *RoleAllowsGlobWildcards) Evaluate(e *Executor) (results []*Result, err 
 		}
 		return []*Result{&ret}, nil
 	}
-	if h.NoPerms {
+	if h.RoleListFetchIssue != nil && h.RoleListFetchIssue.IsSecretPermissionsError() {
 		ret := Result{
 			Status:   ResultInsufficientPermissions,
-			Endpoint: "/{{mount}}/roles",
-			Message:  "lacks permission either to list the roles or to read a specific role. This may restrict the ability to fully execute this health check.",
+			Endpoint: h.RoleListFetchIssue.Path,
+			Message:  "lacks permission either to list the roles. This restricts the ability to fully execute this health check.",
 		}
 		if e.Client.Token() == "" {
 			ret.Message = "No token available and so this health check " + ret.Message
 		} else {
 			ret.Message = "This token " + ret.Message
 		}
-		results = append(results, &ret)
+		return []*Result{&ret}, nil
+	}
+
+	for role, fetchPath := range h.RoleFetchIssues {
+		if fetchPath != nil && fetchPath.IsSecretPermissionsError() {
+			delete(h.RoleEntryMap, role)
+			ret := Result{
+				Status:   ResultInsufficientPermissions,
+				Endpoint: fetchPath.Path,
+				Message:  "Without this information, this health check is unable to function.",
+			}
+
+			if e.Client.Token() == "" {
+				ret.Message = "No token available so unable for the endpoint for this mount. " + ret.Message
+			} else {
+				ret.Message = "This token lacks permission the endpoint for this mount. " + ret.Message
+			}
+
+			results = append(results, &ret)
+		}
 	}
 
 	for role, entry := range h.RoleEntryMap {
@@ -141,7 +165,7 @@ func (h *RoleAllowsGlobWildcards) Evaluate(e *Executor) (results []*Result, err 
 
 		ret := Result{
 			Status:   ResultWarning,
-			Endpoint: "/{{mount}}/role/" + role,
+			Endpoint: "/{{mount}}/roles/" + role,
 			Message:  fmt.Sprintf("Role currently allows wildcard issuance while allowing globs in allowed_domains (%v). Because globs can expand to one or more wildcard character, including wildcards under additional subdomains, these options are dangerous to enable together. If glob domains are required to be enabled, it is suggested to either disable wildcard issuance if not desired, or create two separate roles -- one with wildcard issuance for specified domains and one with glob matching enabled for concrete domain identifiers.", allowedDomains),
 		}
 

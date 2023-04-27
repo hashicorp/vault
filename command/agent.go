@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -15,6 +18,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	token_file "github.com/hashicorp/vault/command/agent/auth/token-file"
 
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/go-multierror"
@@ -38,6 +43,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/auth/jwt"
 	"github.com/hashicorp/vault/command/agent/auth/kerberos"
 	"github.com/hashicorp/vault/command/agent/auth/kubernetes"
+	"github.com/hashicorp/vault/command/agent/auth/oci"
 	"github.com/hashicorp/vault/command/agent/cache"
 	"github.com/hashicorp/vault/command/agent/cache/cacheboltdb"
 	"github.com/hashicorp/vault/command/agent/cache/cachememdb"
@@ -284,7 +290,7 @@ func (c *AgentCommand) Run(args []string) int {
 		Ui:          c.UI,
 		ServiceName: "vault",
 		DisplayName: "Vault",
-		UserAgent:   useragent.String(),
+		UserAgent:   useragent.AgentString(),
 		ClusterName: config.ClusterName,
 	})
 	if err != nil {
@@ -368,6 +374,10 @@ func (c *AgentCommand) Run(args []string) int {
 			method, err = kubernetes.NewKubernetesAuthMethod(authConfig)
 		case "approle":
 			method, err = approle.NewApproleAuthMethod(authConfig)
+		case "oci":
+			method, err = oci.NewOCIAuthMethod(authConfig, config.Vault.Address)
+		case "token_file":
+			method, err = token_file.NewTokenFileAuthMethod(authConfig)
 		case "pcf": // Deprecated.
 			method, err = cf.NewCFAuthMethod(authConfig)
 		default:
@@ -725,7 +735,12 @@ func (c *AgentCommand) Run(args []string) int {
 			proxyVaultToken = !config.APIProxy.ForceAutoAuthToken
 		}
 
-		muxHandler := cache.ProxyHandler(ctx, apiProxyLogger, apiProxy, inmemSink, proxyVaultToken)
+		var muxHandler http.Handler
+		if leaseCache != nil {
+			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, leaseCache, inmemSink, proxyVaultToken)
+		} else {
+			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, apiProxy, inmemSink, proxyVaultToken)
+		}
 
 		// Parse 'require_request_header' listener config option, and wrap
 		// the request handler if necessary
@@ -1244,7 +1259,7 @@ func (c *AgentCommand) newLogger() (log.InterceptLogger, error) {
 	}
 
 	logCfg := &logging.LogConfig{
-		Name:              "vault-agent",
+		Name:              "agent",
 		LogLevel:          logLevel,
 		LogFormat:         logFormat,
 		LogFilePath:       c.config.LogFile,
@@ -1350,9 +1365,12 @@ func (c *AgentCommand) reloadCerts() error {
 	defer c.tlsReloadFuncsLock.RUnlock()
 
 	for _, reloadFunc := range c.tlsReloadFuncs {
-		err := reloadFunc()
-		if err != nil {
-			errors = multierror.Append(errors, err)
+		// Non-TLS listeners will have a nil reload func.
+		if reloadFunc != nil {
+			err := reloadFunc()
+			if err != nil {
+				errors = multierror.Append(errors, err)
+			}
 		}
 	}
 

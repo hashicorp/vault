@@ -29,7 +29,7 @@ $ vault audit enable socket address=127.0.0.1:9090 socket_type=tcp
 ## Configuration
 
 The `socket` audit device supports the common configuration options documented on
-the [main Audit Devices page](/docs/audit#common-configuration-options), and
+the [main Audit Devices page](/vault/docs/audit#common-configuration-options), and
 these device-specific options:
 
 - `address` `(string: "")` - The socket server address to use. Example
@@ -38,4 +38,4 @@ these device-specific options:
 - `socket_type` `(string: "tcp")` - The socket type to use, any type compatible
   with <a href="https://golang.org/pkg/net/#Dial">net.Dial</a> is acceptable. It's
   important to note if TCP is used and the destination socket becomes unavailable
-  Vault may become unresponsive per [Blocked Audit Devices](docs/audit/#blocked-audit-devices).
+  Vault may become unresponsive per [Blocked Audit Devices](/vault/docs/audit/#blocked-audit-devices).

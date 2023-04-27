@@ -1,10 +1,14 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package logical
 
 import (
 	"context"
 	"crypto"
-	"crypto/cipher"
 	"io"
+
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 )
 
 type KeyUsage int
@@ -16,6 +20,7 @@ const (
 	KeyUsageVerify
 	KeyUsageWrap
 	KeyUsageUnwrap
+	KeyUsageGenerateRandom
 )
 
 type ManagedKey interface {
@@ -101,7 +106,8 @@ type ManagedSigningKey interface {
 
 type ManagedEncryptingKey interface {
 	ManagedKey
-	GetAEAD(iv []byte) (cipher.AEAD, error)
+	Encrypt(ctx context.Context, plaintext []byte, options ...wrapping.Option) ([]byte, error)
+	Decrypt(ctx context.Context, ciphertext []byte, options ...wrapping.Option) ([]byte, error)
 }
 
 type ManagedMACKey interface {
@@ -115,5 +121,5 @@ type ManagedKeyRandomSource interface {
 	ManagedKey
 
 	// GetRandomBytes returns a number (specified by the count parameter) of random bytes sourced from the target managed key.
-	GetRandomBytes(ctx context.Context, count int) ([]byte, error)
+	GetRandomBytes(count int) ([]byte, error)
 }

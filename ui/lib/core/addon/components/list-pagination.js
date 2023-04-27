@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { gt } from '@ember/object/computed';
 import Component from '@ember/component';
 import { computed } from '@ember/object';

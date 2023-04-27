@@ -5,7 +5,7 @@
         @title={{concat "Re-indexing in progress" this.reindexingStage}}
         @type="info"
         @progressBar={{this.progressBar}}
-        @message={{this.reindexMessage}}
+        @message={{sanitized-html this.reindexMessage}}
         data-test-isReindexing
       />
     </div>
@@ -53,7 +53,7 @@
       <AlertBanner
         @title="Syncing in progress"
         @type="info"
-        @secondIconType="loading"
+        @showLoading={{true}}
         @message="The cluster is syncing. This happens when the secondary is too far behind the primary to use the normal stream-wals state for catching up."
         data-test-isSyncing
       />

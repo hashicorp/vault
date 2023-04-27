@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
@@ -22,16 +27,14 @@ export default class PkiOverview extends Component<Args> {
   @tracked certificateValue = '';
 
   @action
-  transitionToViewCertificates(event: Event) {
-    event.preventDefault();
+  transitionToViewCertificates() {
     this.router.transitionTo(
       'vault.cluster.secrets.backend.pki.certificates.certificate.details',
       this.certificateValue
     );
   }
   @action
-  transitionToIssueCertificates(event: Event) {
-    event.preventDefault();
+  transitionToIssueCertificates() {
     this.router.transitionTo('vault.cluster.secrets.backend.pki.roles.role.generate', this.rolesValue);
   }
 

@@ -1,7 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package http
 
 import (
 	"encoding/json"
+	"errors"
 	"reflect"
 	"testing"
 	"time"
@@ -365,5 +369,21 @@ func TestHTTP_Wrapping(t *testing.T) {
 		"zip": "zap",
 	}) {
 		t.Fatalf("secret data did not match expected: %#v", secret.Data)
+	}
+
+	// Ensure that wrapping lookup without a client token responds correctly
+	client.ClearToken()
+	secret, err = client.Logical().Read("sys/wrapping/lookup")
+	if secret != nil {
+		t.Fatalf("expected no response: %#v", secret)
+	}
+
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	var respError *api.ResponseError
+	if errors.As(err, &respError); respError.StatusCode != 403 {
+		t.Fatalf("expected 403 response, actual: %d", respError.StatusCode)
 	}
 }

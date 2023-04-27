@@ -1,17 +1,17 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { action } from '@ember/object';
 import Component from '@glimmer/component';
 import RouterService from '@ember/routing/router-service';
 import FlashMessageService from 'vault/services/flash-messages';
 import { inject as service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
+import PkiKeyModel from 'vault/models/pki/key';
 interface Args {
-  key: {
-    rollbackAttributes: () => void;
-    destroyRecord: () => void;
-    backend: string;
-    keyName: string;
-    keyId: string;
-  };
+  key: PkiKeyModel;
 }
 
 export default class PkiKeyDetails extends Component<Args> {

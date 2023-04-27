@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 
 # The ci-helper is used to determine build metadata, build Vault binaries,
 # package those binaries into artifacts, and execute tests with those artifacts.
@@ -156,9 +159,10 @@ function build() {
   # Build our ldflags
   msg="--> Building Vault v$version, revision $revision, built $build_date"
 
-  # Strip the symbol and dwarf information by default
+  # Keep the symbol and dwarf information by default
+  # TODO: maybe add REMOVE_SYMBOLS?
   if [ -n "$KEEP_SYMBOLS" ]; then
-    ldflags=""
+    ldflags="-s -w "
   else
     ldflags="-s -w "
   fi

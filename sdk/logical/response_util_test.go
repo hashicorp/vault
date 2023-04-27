@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package logical
 
 import (
@@ -35,6 +38,14 @@ func TestResponseUtil_RespondErrorCommon_basic(t *testing.T) {
 			title: "Read not found",
 			req: &Request{
 				Operation: ReadOperation,
+			},
+			respErr:        nil,
+			expectedStatus: 404,
+		},
+		{
+			title: "Header not found",
+			req: &Request{
+				Operation: HeaderOperation,
 			},
 			respErr:        nil,
 			expectedStatus: 404,

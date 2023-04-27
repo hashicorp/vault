@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 module.exports = function (environment) {
   return {
     delivery: ['header', 'meta'],

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -433,8 +436,9 @@ func (c *Core) raftTLSRotateDirect(ctx context.Context, logger hclog.Logger, sto
 				backoff = false
 			}
 
+			timer := time.NewTimer(time.Until(nextRotationTime))
 			select {
-			case <-time.After(time.Until(nextRotationTime)):
+			case <-timer.C:
 				// It's time to rotate the keys
 				next, err := rotateKeyring()
 				if err != nil {
@@ -446,6 +450,7 @@ func (c *Core) raftTLSRotateDirect(ctx context.Context, logger hclog.Logger, sto
 				nextRotationTime = next
 
 			case <-stopCh:
+				timer.Stop()
 				return
 			}
 		}
@@ -1232,6 +1237,11 @@ func (c *Core) raftLeaderInfo(leaderInfo *raft.LeaderJoinInfo, disco *discover.D
 		return nil, errors.New("must provide leader address or auto-join metadata")
 	}
 	return ret, nil
+}
+
+// NewDelegateForCore creates a raft.Delegate for the specified core using its backend.
+func NewDelegateForCore(c *Core) *raft.Delegate {
+	return raft.NewDelegate(c.getRaftBackend())
 }
 
 // getRaftBackend returns the RaftBackend from the HA or physical backend,

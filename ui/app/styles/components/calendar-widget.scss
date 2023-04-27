@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 $dark-gray: #535f73;
 
 .calendar-content {
@@ -80,12 +85,6 @@ $dark-gray: #535f73;
     &.is-readOnly {
       background-color: $ui-gray-100;
       color: lighten($dark-gray, 30%);
-      pointer-events: none;
-    }
-    &.is-selected-month {
-      background-color: lighten($dark-gray, 30%);
-      color: white;
-      text-align: center;
       pointer-events: none;
     }
   }

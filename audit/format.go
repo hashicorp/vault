@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package audit
 
 import (
@@ -109,13 +112,17 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 		},
 
 		Request: &AuditRequest{
-			ID:                  req.ID,
-			ClientID:            req.ClientID,
-			ClientToken:         req.ClientToken,
-			ClientTokenAccessor: req.ClientTokenAccessor,
-			Operation:           req.Operation,
-			MountType:           req.MountType,
-			MountAccessor:       req.MountAccessor,
+			ID:                    req.ID,
+			ClientID:              req.ClientID,
+			ClientToken:           req.ClientToken,
+			ClientTokenAccessor:   req.ClientTokenAccessor,
+			Operation:             req.Operation,
+			MountType:             req.MountType,
+			MountAccessor:         req.MountAccessor,
+			MountRunningVersion:   req.MountRunningVersion(),
+			MountRunningSha256:    req.MountRunningSha256(),
+			MountIsExternalPlugin: req.MountIsExternalPlugin(),
+			MountClass:            req.MountClass(),
 			Namespace: &AuditNamespace{
 				ID:   ns.ID,
 				Path: ns.Path,
@@ -308,13 +315,17 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 		},
 
 		Request: &AuditRequest{
-			ID:                  req.ID,
-			ClientToken:         req.ClientToken,
-			ClientTokenAccessor: req.ClientTokenAccessor,
-			ClientID:            req.ClientID,
-			Operation:           req.Operation,
-			MountType:           req.MountType,
-			MountAccessor:       req.MountAccessor,
+			ID:                    req.ID,
+			ClientToken:           req.ClientToken,
+			ClientTokenAccessor:   req.ClientTokenAccessor,
+			ClientID:              req.ClientID,
+			Operation:             req.Operation,
+			MountType:             req.MountType,
+			MountAccessor:         req.MountAccessor,
+			MountRunningVersion:   req.MountRunningVersion(),
+			MountRunningSha256:    req.MountRunningSha256(),
+			MountIsExternalPlugin: req.MountIsExternalPlugin(),
+			MountClass:            req.MountClass(),
 			Namespace: &AuditNamespace{
 				ID:   ns.ID,
 				Path: ns.Path,
@@ -330,15 +341,19 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 		},
 
 		Response: &AuditResponse{
-			MountType:     req.MountType,
-			MountAccessor: req.MountAccessor,
-			Auth:          respAuth,
-			Secret:        respSecret,
-			Data:          respData,
-			Warnings:      resp.Warnings,
-			Redirect:      resp.Redirect,
-			WrapInfo:      respWrapInfo,
-			Headers:       resp.Headers,
+			MountType:             req.MountType,
+			MountAccessor:         req.MountAccessor,
+			MountRunningVersion:   req.MountRunningVersion(),
+			MountRunningSha256:    req.MountRunningSha256(),
+			MountIsExternalPlugin: req.MountIsExternalPlugin(),
+			MountClass:            req.MountClass(),
+			Auth:                  respAuth,
+			Secret:                respSecret,
+			Data:                  respData,
+			Warnings:              resp.Warnings,
+			Redirect:              resp.Redirect,
+			WrapInfo:              respWrapInfo,
+			Headers:               resp.Headers,
 		},
 	}
 
@@ -396,6 +411,10 @@ type AuditRequest struct {
 	Operation                     logical.Operation      `json:"operation,omitempty"`
 	MountType                     string                 `json:"mount_type,omitempty"`
 	MountAccessor                 string                 `json:"mount_accessor,omitempty"`
+	MountRunningVersion           string                 `json:"mount_running_version,omitempty"`
+	MountRunningSha256            string                 `json:"mount_running_sha256,omitempty"`
+	MountClass                    string                 `json:"mount_class,omitempty"`
+	MountIsExternalPlugin         bool                   `json:"mount_is_external_plugin,omitempty"`
 	ClientToken                   string                 `json:"client_token,omitempty"`
 	ClientTokenAccessor           string                 `json:"client_token_accessor,omitempty"`
 	Namespace                     *AuditNamespace        `json:"namespace,omitempty"`
@@ -410,15 +429,19 @@ type AuditRequest struct {
 }
 
 type AuditResponse struct {
-	Auth          *AuditAuth             `json:"auth,omitempty"`
-	MountType     string                 `json:"mount_type,omitempty"`
-	MountAccessor string                 `json:"mount_accessor,omitempty"`
-	Secret        *AuditSecret           `json:"secret,omitempty"`
-	Data          map[string]interface{} `json:"data,omitempty"`
-	Warnings      []string               `json:"warnings,omitempty"`
-	Redirect      string                 `json:"redirect,omitempty"`
-	WrapInfo      *AuditResponseWrapInfo `json:"wrap_info,omitempty"`
-	Headers       map[string][]string    `json:"headers,omitempty"`
+	Auth                  *AuditAuth             `json:"auth,omitempty"`
+	MountType             string                 `json:"mount_type,omitempty"`
+	MountAccessor         string                 `json:"mount_accessor,omitempty"`
+	MountRunningVersion   string                 `json:"mount_running_plugin_version,omitempty"`
+	MountRunningSha256    string                 `json:"mount_running_sha256,omitempty"`
+	MountClass            string                 `json:"mount_class,omitempty"`
+	MountIsExternalPlugin bool                   `json:"mount_is_external_plugin,omitempty"`
+	Secret                *AuditSecret           `json:"secret,omitempty"`
+	Data                  map[string]interface{} `json:"data,omitempty"`
+	Warnings              []string               `json:"warnings,omitempty"`
+	Redirect              string                 `json:"redirect,omitempty"`
+	WrapInfo              *AuditResponseWrapInfo `json:"wrap_info,omitempty"`
+	Headers               map[string][]string    `json:"headers,omitempty"`
 }
 
 type AuditAuth struct {

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package internal
 
 import (
@@ -47,7 +50,7 @@ type WrappedCoreMeta interface {
 	GetRaftConfiguration(ctx context.Context) (*raft.RaftConfigurationResponse, error)
 	GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState, error)
 	StorageType() string
-	ClusterID() string
+	Cluster(ctx context.Context) (*vault.Cluster, error)
 }
 
 var _ WrappedCoreMeta = &vault.Core{}

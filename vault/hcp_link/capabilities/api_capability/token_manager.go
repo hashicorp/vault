@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api_capability
 
 import (
@@ -88,10 +91,6 @@ func (t *HCPLinkTokenManager) fetchPolicy() (string, error) {
 		return "", fmt.Errorf("error creating HTTP request: %w", err)
 	}
 
-	query := req.URL.Query()
-	query.Add("cluster_id", t.scadaConfig.Resource.ID)
-	req.URL.RawQuery = query.Encode()
-
 	retryableReq, err := retryablehttp.FromRequest(req)
 	if err != nil {
 		return "", fmt.Errorf("error adding HTTP request retry wrapping: %w", err)
@@ -165,10 +164,11 @@ func (t *HCPLinkTokenManager) updateInLinePolicy() {
 func NewHCPLinkTokenManager(scadaConfig *scada.Config, core *vault.Core, logger hclog.Logger) (*HCPLinkTokenManager, error) {
 	tokenLogger := logger.Named("token_manager")
 
-	policyURL := fmt.Sprintf("https://%s/vault/2020-11-25/organizations/%s/projects/%s/link/policy",
+	policyURL := fmt.Sprintf("https://%s/vault-link/2022-11-07/organizations/%s/projects/%s/link/policy/%s",
 		scadaConfig.HCPConfig.APIAddress(),
 		scadaConfig.Resource.Location.OrganizationID,
 		scadaConfig.Resource.Location.ProjectID,
+		scadaConfig.Resource.ID,
 	)
 
 	m := &HCPLinkTokenManager{

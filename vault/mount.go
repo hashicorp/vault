@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -15,6 +18,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/plugin"
+	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/versions"
@@ -418,6 +422,25 @@ func (e *MountEntry) Clone() (*MountEntry, error) {
 	return cp.(*MountEntry), nil
 }
 
+// IsExternalPlugin returns whether the plugin is running externally
+// if the RunningSha256 is non-empty, the builtin is external. Otherwise, it's builtin
+func (e *MountEntry) IsExternalPlugin() bool {
+	return e.RunningSha256 != ""
+}
+
+// MountClass returns the mount class based on Accessor and Path
+func (e *MountEntry) MountClass() string {
+	if e.Accessor == "" || strings.HasPrefix(e.Path, fmt.Sprintf("%s/", systemMountPath)) {
+		return ""
+	}
+
+	if e.Table == credentialTableType {
+		return consts.PluginTypeCredential.String()
+	}
+
+	return consts.PluginTypeSecrets.String()
+}
+
 // Namespace returns the namespace for the mount entry
 func (e *MountEntry) Namespace() *namespace.Namespace {
 	return e.namespace
@@ -621,8 +644,16 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	// Sync values to the cache
 	entry.SyncCache()
 
+	// Resolution to absolute storage paths (versus uuid-relative) needs
+	// to happen prior to calling into the forwarded writer. Thus we
+	// intercept writes just before they hit barrier storage.
+	forwarded, err := c.NewForwardedWriter(ctx, c.barrier, entry.Local)
+	if err != nil {
+		return fmt.Errorf("error creating forwarded writer: %v", err)
+	}
+
 	viewPath := entry.ViewPath()
-	view := NewBarrierView(c.barrier, viewPath)
+	view := NewBarrierView(forwarded, viewPath)
 
 	// Singleton mounts cannot be filtered manually on a per-secondary basis
 	// from replication.
@@ -667,7 +698,7 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	entry.RunningVersion = entry.Version
 	if entry.RunningVersion == "" {
 		// don't set the running version to a builtin if it is running as an external plugin
-		if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
+		if entry.RunningSha256 == "" {
 			entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeSecrets, entry.Type)
 		}
 	}
@@ -1424,8 +1455,16 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		// Initialize the backend, special casing for system
 		barrierPath := entry.ViewPath()
 
-		// Create a barrier view using the UUID
-		view := NewBarrierView(c.barrier, barrierPath)
+		// Resolution to absolute storage paths (versus uuid-relative) needs
+		// to happen prior to calling into the forwarded writer. Thus we
+		// intercept writes just before they hit barrier storage.
+		forwarded, err := c.NewForwardedWriter(ctx, c.barrier, entry.Local)
+		if err != nil {
+			return fmt.Errorf("error creating forwarded writer: %v", err)
+		}
+
+		// Create a barrier storage view using the UUID
+		view := NewBarrierView(forwarded, barrierPath)
 
 		// Singleton mounts cannot be filtered manually on a per-secondary basis
 		// from replication
@@ -1473,7 +1512,7 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		entry.RunningVersion = entry.Version
 		if entry.RunningVersion == "" {
 			// don't set the running version to a builtin if it is running as an external plugin
-			if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
+			if entry.RunningSha256 == "" {
 				entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeSecrets, entry.Type)
 			}
 		}
@@ -1632,12 +1671,26 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 
 	backendLogger := c.baseLogger.Named(fmt.Sprintf("secrets.%s.%s", t, entry.Accessor))
 	c.AddLogger(backendLogger)
+	pluginEventSender, err := c.events.WithPlugin(entry.namespace, &logical.EventPluginInfo{
+		MountClass:    consts.PluginTypeSecrets.String(),
+		MountAccessor: entry.Accessor,
+		MountPath:     entry.Path,
+		Plugin:        entry.Type,
+		PluginVersion: entry.RunningVersion,
+		Version:       entry.Version,
+	})
+	if err != nil {
+		return nil, "", err
+	}
 	config := &logical.BackendConfig{
 		StorageView: view,
 		Logger:      backendLogger,
 		Config:      conf,
 		System:      sysView,
 		BackendUUID: entry.BackendAwareUUID,
+	}
+	if c.IsExperimentEnabled(experiments.VaultExperimentEventsAlpha1) {
+		config.EventsSender = pluginEventSender
 	}
 
 	ctx = context.WithValue(ctx, "core_number", c.coreNumber)

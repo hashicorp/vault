@@ -45,6 +45,7 @@
     <InfoTableRow
       @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
       @value={{get @key attr.name}}
+      @addCopyButton={{eq attr.name "keyId"}}
     />
   {{/each}}
   {{#if @key.privateKey}}

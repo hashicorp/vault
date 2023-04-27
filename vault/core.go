@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -49,6 +52,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/pathmanager"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	sr "github.com/hashicorp/vault/serviceregistration"
@@ -513,12 +517,6 @@ type Core struct {
 	// CORS Information
 	corsConfig *CORSConfig
 
-	// The active set of upstream cluster addresses; stored via the Echo
-	// mechanism, loaded by the balancer
-	atomicPrimaryClusterAddrs *atomic.Value
-
-	atomicPrimaryFailoverAddrs *atomic.Value
-
 	// replicationState keeps the current replication state cached for quick
 	// lookup; activeNodeReplicationState stores the active value on standbys
 	replicationState           *uint32
@@ -637,6 +635,15 @@ type Core struct {
 
 	activityLogConfig ActivityLogCoreConfig
 
+	// censusAgent is the mechanism used for reporting Vault's billing data.
+	censusAgent CensusReporter
+
+	// censusLicensingEnabled records whether Vault is exporting census metrics
+	censusLicensingEnabled bool
+
+	// billingStart keeps track of the billing start time for exporting census metrics
+	billingStart time.Time
+
 	// activeTime is set on active nodes indicating the time at which this node
 	// became active.
 	activeTime time.Time
@@ -681,8 +688,22 @@ type Core struct {
 	expirationRevokeRetryBase   time.Duration
 
 	events *eventbus.EventBus
+
+	// writeForwardedPaths are a set of storage paths which are GRPC forwarded
+	// to the active node of the primary cluster, when present. This PathManager
+	// contains absolute paths that we intend to forward (and template) when
+	// we're on a secondary cluster.
+	writeForwardedPaths *pathmanager.PathManager
+
+	// if populated, the callback is called for every request
+	// for testing purposes
+	requestResponseCallback func(logical.Backend, *logical.Request, *logical.Response)
+
+	// if populated, override the default gRPC min connect timeout (currently 20s in grpc 1.51)
+	grpcMinConnectTimeout time.Duration
 }
 
+// c.stateLock needs to be held in read mode before calling this function.
 func (c *Core) HAState() consts.HAState {
 	switch {
 	case c.perfStandby:
@@ -792,6 +813,9 @@ type CoreConfig struct {
 	License         string
 	LicensePath     string
 	LicensingConfig *LicensingConfig
+
+	// Configured Census Agent
+	CensusAgent CensusReporter
 
 	DisablePerformanceStandby bool
 	DisableIndexing           bool
@@ -963,8 +987,6 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		introspectionEnabled:           conf.EnableIntrospection,
 		shutdownDoneCh:                 new(atomic.Value),
 		replicationState:               new(uint32),
-		atomicPrimaryClusterAddrs:      new(atomic.Value),
-		atomicPrimaryFailoverAddrs:     new(atomic.Value),
 		localClusterPrivateKey:         new(atomic.Value),
 		localClusterCert:               new(atomic.Value),
 		localClusterParsedCert:         new(atomic.Value),
@@ -1068,6 +1090,10 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		Enabled: new(uint32),
 	}
 
+	// Load write-forwarded path manager.
+	c.writeForwardedPaths = pathmanager.New()
+
+	// Load seal information.
 	if c.seal == nil {
 		wrapper := aeadwrapper.NewShamirWrapper()
 		wrapper.SetConfig(context.Background(), awskms.WithLogger(c.logger.Named("shamir")))
@@ -1257,8 +1283,18 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, err
 	}
 	c.events = events
-	if c.isExperimentEnabled(experiments.VaultExperimentEventsBeta1) {
+	if c.IsExperimentEnabled(experiments.VaultExperimentEventsAlpha1) {
 		c.events.Start()
+	}
+
+	minConnectTimeoutRaw := os.Getenv("VAULT_GRPC_MIN_CONNECT_TIMEOUT")
+	if minConnectTimeoutRaw != "" {
+		dur, err := time.ParseDuration(minConnectTimeoutRaw)
+		if err != nil {
+			c.logger.Warn("VAULT_GRPC_MIN_CONNECT_TIMEOUT contains non-duration value, ignoring")
+		} else if dur != 0 {
+			c.grpcMinConnectTimeout = dur
+		}
 	}
 
 	return c, nil
@@ -2329,6 +2365,11 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.setupAuditedHeadersConfig(ctx); err != nil {
 			return err
 		}
+
+		if err := c.setupCensusAgent(); err != nil {
+			c.logger.Error("skipping reporting for nil agent", "error", err)
+		}
+
 		// not waiting on wg to avoid changing existing behavior
 		var wg sync.WaitGroup
 		if err := c.setupActivityLog(ctx, &wg); err != nil {
@@ -3804,6 +3845,10 @@ func (c *Core) aliasNameFromLoginRequest(ctx context.Context, req *logical.Reque
 
 // ListMounts will provide a slice containing a deep copy each mount entry
 func (c *Core) ListMounts() ([]*MountEntry, error) {
+	if c.Sealed() {
+		return nil, fmt.Errorf("vault is sealed")
+	}
+
 	c.mountsLock.RLock()
 	defer c.mountsLock.RUnlock()
 
@@ -3823,6 +3868,10 @@ func (c *Core) ListMounts() ([]*MountEntry, error) {
 
 // ListAuths will provide a slice containing a deep copy each auth entry
 func (c *Core) ListAuths() ([]*MountEntry, error) {
+	if c.Sealed() {
+		return nil, fmt.Errorf("vault is sealed")
+	}
+
 	c.mountsLock.RLock()
 	defer c.mountsLock.RUnlock()
 
@@ -3901,7 +3950,8 @@ func (c *Core) GetHCPLinkStatus() (string, string) {
 	return status, resourceID
 }
 
-func (c *Core) isExperimentEnabled(experiment string) bool {
+// IsExperimentEnabled is true if the experiment is enabled in the core.
+func (c *Core) IsExperimentEnabled(experiment string) bool {
 	return strutil.StrListContains(c.experiments, experiment)
 }
 
@@ -3961,6 +4011,7 @@ func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState,
 	return raftBackend.GetAutopilotServerState(ctx)
 }
 
+// Events returns a reference to the common event bus for sending and subscribint to events.
 func (c *Core) Events() *eventbus.EventBus {
 	return c.events
 }

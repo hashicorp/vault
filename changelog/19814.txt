@@ -1,0 +1,3 @@
+```release-note:feature
+audit: add plugin metadata, including plugin name, type, version, sha256, and whether plugin is external, to audit logging
+```

@@ -7,16 +7,16 @@
       <NamespaceReminder @mode="create" @noun="certificate" />
       {{#let (get @model.formFieldGroups "0") as |defaultGroup|}}
         {{#each defaultGroup.default as |attr|}}
-          <FormField @model={{@model}} @attr={{attr}}>
+          <FormField @model={{@model}} @attr={{attr}} @modelValidations={{this.modelValidations}}>
             <PkiNotValidAfterForm @attr={{attr}} @model={{@model}} />
           </FormField>
         {{/each}}
       {{/let}}
       <FormFieldGroups
         @model={{@model}}
-        @mode="create"
         @renderGroup="Subject Alternative Name (SAN) Options"
         @groupName="formFieldGroups"
+        @showHelpText={{false}}
       />
     </div>
     <div class="field is-grouped box is-fullwidth is-bottomless">
@@ -39,6 +39,11 @@
           Cancel
         </button>
       </div>
+      {{#if this.invalidFormAlert}}
+        <div class="control" data-test-alert>
+          <AlertInline @type="danger" @paddingTop={{true}} @message={{this.invalidFormAlert}} @mimicRefresh={{true}} />
+        </div>
+      {{/if}}
     </div>
   </form>
 {{/if}}

@@ -6,7 +6,7 @@ description: The Vault Agent Sidecar Injector can be installed using Vault Helm.
 
 # Installing the Agent Injector
 
-The [Vault Helm chart](/docs/platform/k8s/helm) is the recommended way to
+The [Vault Helm chart](/vault/docs/platform/k8s/helm) is the recommended way to
 install and configure the Agent Injector in Kubernetes.
 
 ~> The Vault Agent Injector requires Vault 1.3.1 or greater.
@@ -28,7 +28,7 @@ always run Helm with `--dry-run` before any install or upgrade to verify
 changes.
 
 You can see all the available values settings by running `helm inspect values hashicorp/vault` or by reading the [Vault Helm Configuration
-Docs](/docs/platform/k8s/helm/configuration). Commonly used values in the Helm
+Docs](/vault/docs/platform/k8s/helm/configuration). Commonly used values in the Helm
 chart include limiting the namespaces the injector runs in, TLS options and
 more.
 
@@ -47,7 +47,7 @@ the following environment variables:
 ~> **Warning**: TLS 1.1 and lower are generally considered insecure.
 
 These may be set in a Helm chart deployment via the
-[injector.extraEnvironmentVars](/docs/platform/k8s/helm/configuration#extraenvironmentvars)
+[injector.extraEnvironmentVars](/vault/docs/platform/k8s/helm/configuration#extraenvironmentvars)
 option:
 
 ```bash
@@ -76,17 +76,17 @@ The following is required to configure TLS manually:
 - Server certificate/key
 - Base64 PEM encoded Certificate Authority bundle
 
-For more information on configuring manual TLS, see the [Vault Helm cert values](/docs/platform/k8s/helm/configuration#certs).
+For more information on configuring manual TLS, see the [Vault Helm cert values](/vault/docs/platform/k8s/helm/configuration#certs).
 
-This option may also be used in conjunction with [cert-manager for certificate management](/docs/platform/k8s/helm/examples/injector-tls-cert-manager).
+This option may also be used in conjunction with [cert-manager for certificate management](/vault/docs/platform/k8s/helm/examples/injector-tls-cert-manager).
 
 ## Multiple Replicas and TLS
 
 The Vault Agent Injector can be run with multiple replicas if using [Manual
-TLS](#manual-tls) or [cert-manager](/docs/platform/k8s/helm/examples/injector-tls-cert-manager), and as of v0.7.0 multiple replicas are also supported with
+TLS](#manual-tls) or [cert-manager](/vault/docs/platform/k8s/helm/examples/injector-tls-cert-manager), and as of v0.7.0 multiple replicas are also supported with
 [Auto TLS](#auto-tls). The number of replicas is controlled in the Vault Helm
 chart by the [injector.replicas
-value](/docs/platform/k8s/helm/configuration#replicas).
+value](/vault/docs/platform/k8s/helm/configuration#replicas).
 
 With Auto TLS and multiple replicas, a leader replica is determined by ownership
 of a ConfigMap named `vault-k8s-leader`. Another replica can become the leader
@@ -98,7 +98,7 @@ certificate and key needed for the webhook service listener from a Kubernetes
 Secret, which is updated by the leader when a certificate is near expiration.
 
 With Manual TLS and multiple replicas,
-[injector.leaderElector.enabled](/docs/platform/k8s/helm/configuration#enabled-2)
+[injector.leaderElector.enabled](/vault/docs/platform/k8s/helm/configuration#enabled-2)
 can be set to `false` since leader determination is not necessary in this case.
 
 ## Namespace Selector
@@ -108,6 +108,6 @@ the system namespaces `kube-system` and `kube-public`. To limit what namespaces
 the injector can work in a namespace selector can be defined to match labels attached
 to namespaces.
 
-For more information on configuring namespace selection, see the [Vault Helm namespaceSelector value](/docs/platform/k8s/helm/configuration#namespaceselector).
+For more information on configuring namespace selection, see the [Vault Helm namespaceSelector value](/vault/docs/platform/k8s/helm/configuration#namespaceselector).
 
 [tls-suites]: https://golang.org/src/crypto/tls/cipher_suites.go

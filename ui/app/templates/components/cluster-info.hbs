@@ -136,7 +136,7 @@
       {{#if (and (has-permission "clients" routeParams="activity") (not @cluster.dr.isSecondary) this.auth.currentToken)}}
         <ul class="menu-list">
           <li class="action">
-            <LinkTo @route="vault.cluster.clients.current" {{on "click" @onLinkClick}}>
+            <LinkTo @route="vault.cluster.clients.dashboard" {{on "click" @onLinkClick}}>
               <div class="level is-mobile">
                 <span class="level-left">Client count</span>
                 <Chevron class="has-text-grey-light level-right" />

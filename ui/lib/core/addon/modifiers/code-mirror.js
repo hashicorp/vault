@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { action } from '@ember/object';
 import { bind } from '@ember/runloop';
 import codemirror from 'codemirror';

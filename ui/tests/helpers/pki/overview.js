@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 export const SELECTORS = {
   issuersCardTitle: '[data-test-selectable-card-container="Issuers"] h3',
   issuersCardSubtitle: '[data-test-selectable-card-container="Issuers"] p',

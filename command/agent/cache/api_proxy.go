@@ -1,13 +1,18 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package cache
 
 import (
 	"context"
 	"fmt"
+	gohttp "net/http"
 	"sync"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/http"
 )
 
@@ -73,6 +78,20 @@ func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, 
 	// the client doesn't manually set the header. Removing any Accept-Encoding header allows the
 	// transparent compression to occur.
 	req.Request.Header.Del("Accept-Encoding")
+
+	if req.Request.Header == nil {
+		req.Request.Header = make(gohttp.Header)
+	}
+
+	// Set our User-Agent to be one indicating we are Vault Agent's API proxy.
+	// If the sending client had one, preserve it.
+	if req.Request.Header.Get("User-Agent") != "" {
+		initialUserAgent := req.Request.Header.Get("User-Agent")
+		req.Request.Header.Set("User-Agent", useragent.AgentProxyStringWithProxiedUserAgent(initialUserAgent))
+	} else {
+		req.Request.Header.Set("User-Agent", useragent.AgentProxyString())
+	}
+
 	client.SetHeaders(req.Request.Header)
 
 	fwReq := client.NewRequest(req.Request.Method, req.Request.URL.Path)

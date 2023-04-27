@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 export default function (server) {
   // ENTITY SEARCH SELECT
   server.get('/identity/entity/id', () => ({
