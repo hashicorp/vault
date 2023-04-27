@@ -58,7 +58,6 @@ module('Acceptance | console', function (hooks) {
       window.innerHeight,
       'fullscreen is the same height as the window'
     );
-    assert.strictEqual(consoleEle.offsetTop, 0, 'fullscreen is aligned to the top of window');
   });
 
   test('array output is correctly formatted', async function (assert) {

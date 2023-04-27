@@ -34,7 +34,6 @@ export default Service.extend({
   expirationCalcTS: null,
   isRenewing: false,
   mfaErrors: null,
-  activeClusterId: null,
 
   get tokenExpired() {
     const expiration = this.tokenExpirationDate;
