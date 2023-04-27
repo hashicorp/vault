@@ -24,6 +24,7 @@
   transition: background-color $speed, border-color $speed, box-shadow $speed, color $speed;
   user-select: none;
   vertical-align: middle;
+  white-space: nowrap;
 
   @keyframes spinAround {
     from {
