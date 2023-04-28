@@ -49,6 +49,7 @@ require (
 	github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
 	github.com/denisenkom/go-mssqldb v0.12.2
+	github.com/docker/go-connections v0.4.0
 	github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.13.0
@@ -116,19 +117,6 @@ require (
 	github.com/hashicorp/raft-autopilot v0.2.0
 	github.com/hashicorp/raft-boltdb/v2 v2.0.0-20210421194847-a7e34179d62c
 	github.com/hashicorp/raft-snapshot v1.0.4
-	github.com/hashicorp/vault-plugin-auth-alicloud v0.12.0
-	github.com/hashicorp/vault-plugin-auth-azure v0.10.0
-	github.com/hashicorp/vault-plugin-auth-centrify v0.11.0
-	github.com/hashicorp/vault-plugin-auth-cf v0.11.0
-	github.com/hashicorp/vault-plugin-auth-gcp v0.13.0
-	github.com/hashicorp/vault-plugin-auth-jwt v0.13.0
-	github.com/hashicorp/vault-plugin-auth-kerberos v0.6.0
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.13.0
-	github.com/hashicorp/vault-plugin-auth-oci v0.11.0
-	github.com/hashicorp/vault-plugin-database-couchbase v0.7.0
-	github.com/hashicorp/vault-plugin-database-elasticsearch v0.10.0
-	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.1.3-0.20230131204836-dc973a5e5a2e
-	github.com/hashicorp/vault-plugin-database-snowflake v0.5.0
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.14.0
 	github.com/hashicorp/vault-plugin-auth-azure v0.13.0
 	github.com/hashicorp/vault-plugin-auth-centrify v0.14.0
@@ -317,7 +305,6 @@ require (
 	github.com/docker/cli v20.10.20+incompatible // indirect
 	github.com/docker/distribution v2.8.1+incompatible // indirect
 	github.com/docker/docker v23.0.4+incompatible // indirect
-	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 // indirect
 	github.com/emicklei/go-restful/v3 v3.10.1 // indirect
