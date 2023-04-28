@@ -268,7 +268,10 @@ selected secondary. In deny mode, the mount and namespace paths are excluded.
 
 - `id` `(string: <required>)` – Specifies the unique performance secondary identifier. Note that this identifier is
   not arbitrary. This should be the secondary cluster ID as reported by the `cluster_id` field of the [replication status](/vault/api-docs/system/replication#check-status) API
-  endpoint. If this ID ever changes, this endpoint will need to be run again with the new ID.
+  endpoint. If, for example, a new performance secondary token
+  [is created](/vault/api-docs/system/replication/replication-performance#generate-performance-secondary-token), and used to call
+  [update-primary](/vault/api-docs/system/replication/replication-performance#update-performance-secondary-s-primary), then path filters will need
+  to be re-created via this API endpoint.
 
 - `mode` `(string: "allow")` – Specifies the filtering mode. Available values
   are "allow" and "deny".
