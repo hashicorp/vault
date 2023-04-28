@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, currentRouteName, fillIn, visit, waitUntil, find } from '@ember/test-helpers';
@@ -31,7 +36,7 @@ module('Acceptance | mfa-login', function (hooks) {
     await click('[data-test-auth-submit]');
   };
   const didLogin = (assert) => {
-    assert.equal(currentRouteName(), 'vault.cluster.secrets.backends', 'Route transitions after login');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backends', 'Route transitions after login');
   };
   const validate = async (multi) => {
     await fillIn('[data-test-mfa-passcode="0"]', 'test');

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { run } from '@ember/runloop';
 import Service from '@ember/service';
 import { resolve } from 'rsvp';
@@ -6,13 +11,13 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
-let response = {
+const response = {
   progress: 1,
   required: 3,
   complete: false,
 };
 
-let adapter = {
+const adapter = {
   foo() {
     return resolve(response);
   },

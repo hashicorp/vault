@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, click, fillIn } from '@ember/test-helpers';
@@ -26,7 +31,7 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
 
   test('it should render correct fields', async function (assert) {
     await render(hbs`
-      <MfaLoginEnforcementForm
+      <Mfa::MfaLoginEnforcementForm
         @model={{this.model}}
         @onClose={{fn (mut this.didClose)}}
         @onSave={{fn (mut this.didSave)}}
@@ -65,7 +70,7 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
   test('it should render inline', async function (assert) {
     this.errors = this.model.validate().state;
     await render(hbs`
-      <MfaLoginEnforcementForm
+      <Mfa::MfaLoginEnforcementForm
         @model={{this.model}}
         @isInline={{true}}
         @modelErrors={{this.errors}}
@@ -82,7 +87,7 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
 
   test('it should display field validation errors on save', async function (assert) {
     await render(hbs`
-      <MfaLoginEnforcementForm
+      <Mfa::MfaLoginEnforcementForm
         @model={{this.model}}
         @onClose={{fn (mut this.didClose)}}
         @onSave={{fn (mut this.didSave)}}
@@ -110,7 +115,7 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
     });
 
     await render(hbs`
-      <MfaLoginEnforcementForm
+      <Mfa::MfaLoginEnforcementForm
         @model={{this.model}}
         @onClose={{fn (mut this.didClose)}}
         @onSave={{fn (mut this.didSave) true}}
@@ -124,9 +129,9 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
     await click('[data-test-mlef-add-target]');
     await click('[data-test-mlef-save]');
     assert.true(this.didSave, 'onSave callback triggered');
-    assert.equal(this.model.name, 'bar', 'Name property set on model');
-    assert.equal(this.model.mfa_methods.firstObject.id, '123456', 'Mfa method added to model');
-    assert.equal(
+    assert.strictEqual(this.model.name, 'bar', 'Name property set on model');
+    assert.strictEqual(this.model.mfa_methods.firstObject.id, '123456', 'Mfa method added to model');
+    assert.strictEqual(
       this.model.auth_method_accessors.firstObject,
       'auth_userpass_1234',
       'Target saved to correct model property'
@@ -140,7 +145,7 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
     this.model.auth_method_accessors.addObject('auth_userpass_1234');
 
     await render(hbs`
-      <MfaLoginEnforcementForm
+      <Mfa::MfaLoginEnforcementForm
         @model={{this.model}}
         @onClose={{fn (mut this.didClose)}}
         @onSave={{fn (mut this.didSave) true}}
@@ -198,7 +203,7 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
     this.model.identity_groups.addObject(group);
 
     await render(hbs`
-      <MfaLoginEnforcementForm
+      <Mfa::MfaLoginEnforcementForm
         @model={{this.model}}
         @onClose={{fn (mut this.didClose)}}
         @onSave={{fn (mut this.didSave) true}}

@@ -1,5 +1,10 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@glimmer/component';
-import { calculateAverageClients } from 'vault/utils/chart-helpers';
+import { calculateAverage } from 'vault/utils/chart-helpers';
 
 /**
  * @module MonthlyUsage
@@ -9,7 +14,7 @@ import { calculateAverageClients } from 'vault/utils/chart-helpers';
  * ```js
   <Clients::MonthlyUsage 
     @chartLegend={{this.chartLegend}} 
-    @timestamp={{this.responseTimestamp}}
+    @responseTimestamp={{this.responseTimestamp}}
     @verticalBarChartData={{this.byMonthActivityData}} 
   />
  * ```
@@ -34,13 +39,13 @@ import { calculateAverageClients } from 'vault/utils/chart-helpers';
  */
 export default class MonthlyUsage extends Component {
   get averageTotalClients() {
-    return calculateAverageClients(this.args.verticalBarChartData, 'clients') || '0';
+    return calculateAverage(this.args.verticalBarChartData, 'clients') || '0';
   }
 
   get averageNewClients() {
     return (
-      calculateAverageClients(
-        this.args.verticalBarChartData.map((d) => d.new_clients),
+      calculateAverage(
+        this.args.verticalBarChartData?.map((d) => d.new_clients),
         'clients'
       ) || '0'
     );

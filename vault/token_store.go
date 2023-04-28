@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -71,8 +74,8 @@ const (
 	// any namespace information
 	TokenLength = 24
 
-	// MaxNsIdLength is the maximum namespace ID length (4 characters prepended by a ".")
-	MaxNsIdLength = 5
+	// MaxNsIdLength is the maximum namespace ID length (5 characters prepended by a ".")
+	MaxNsIdLength = 6
 
 	// TokenPrefixLength is the length of the new token prefixes ("hvs.", "hvb.",
 	// and "hvr.")
@@ -88,6 +91,10 @@ const (
 	// MaxRetrySSCTokensGenerationCounter is the maximum number of retries the TokenStore
 	// will make when attempting to get the SSCTokensGenerationCounter
 	MaxRetrySSCTokensGenerationCounter = 3
+
+	// IgnoreForBilling used for HCP Link batch tokens and inserted into the InternalMeta
+	// Tokens created for the purpose of HCP Link should bypass counting for billing purposes
+	IgnoreForBilling = "ignore_for_billing"
 )
 
 var (
@@ -131,9 +138,16 @@ var (
 )
 
 func (ts *TokenStore) paths() []*framework.Path {
+	const operationPrefixToken = "token"
+
 	p := []*framework.Path{
 		{
 			Pattern: "roles/?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationSuffix: "roles",
+			},
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: ts.tokenStoreRoleList,
@@ -146,6 +160,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 		{
 			Pattern: "accessors/$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationSuffix: "accessors",
+			},
+
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: ts.tokenStoreAccessorList,
 			},
@@ -156,6 +175,76 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 		{
 			Pattern: "create-orphan$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "create",
+				OperationSuffix: "orphan",
+			},
+
+			Fields: map[string]*framework.FieldSchema{
+				"role_name": {
+					Type:        framework.TypeString,
+					Description: "Name of the role",
+				},
+				"display_name": {
+					Type:        framework.TypeString,
+					Description: "Name to associate with this token",
+				},
+				"explicit_max_ttl": {
+					Type:        framework.TypeString,
+					Description: "Explicit Max TTL of this token",
+				},
+				"entity_alias": {
+					Type:        framework.TypeString,
+					Description: "Name of the entity alias to associate with this token",
+				},
+				"num_uses": {
+					Type:        framework.TypeInt,
+					Description: "Max number of uses for this token",
+				},
+				"period": {
+					Type:        framework.TypeString,
+					Description: "Renew period",
+				},
+				"renewable": {
+					Type:        framework.TypeBool,
+					Description: "Allow token to be renewed past its initial TTL up to system/mount maximum TTL",
+				},
+				"ttl": {
+					Type:        framework.TypeString,
+					Description: "Time to live for this token",
+				},
+				"type": {
+					Type:        framework.TypeString,
+					Description: "Token type",
+				},
+				"no_default_policy": {
+					Type:        framework.TypeBool,
+					Description: "Do not include default policy for this token",
+				},
+				"id": {
+					Type:        framework.TypeString,
+					Description: "Value for the token",
+				},
+				"metadata": {
+					Type:        framework.TypeMap,
+					Description: "Arbitrary key=value metadata to associate with the token",
+				},
+				"no_parent": {
+					Type:        framework.TypeBool,
+					Description: "Create the token with no parent",
+				},
+				"policies": {
+					Type:        framework.TypeStringSlice,
+					Description: "List of policies for the token",
+				},
+				"format": {
+					Type:        framework.TypeString,
+					Query:       true,
+					Description: "Return json formatted output",
+				},
+			},
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: ts.handleCreateOrphan,
@@ -168,10 +257,73 @@ func (ts *TokenStore) paths() []*framework.Path {
 		{
 			Pattern: "create/" + framework.GenericNameRegex("role_name"),
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "create",
+				OperationSuffix: "against-role",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role",
+				},
+				"display_name": {
+					Type:        framework.TypeString,
+					Description: "Name to associate with this token",
+				},
+				"explicit_max_ttl": {
+					Type:        framework.TypeString,
+					Description: "Explicit Max TTL of this token",
+				},
+				"entity_alias": {
+					Type:        framework.TypeString,
+					Description: "Name of the entity alias to associate with this token",
+				},
+				"num_uses": {
+					Type:        framework.TypeInt,
+					Description: "Max number of uses for this token",
+				},
+				"period": {
+					Type:        framework.TypeString,
+					Description: "Renew period",
+				},
+				"renewable": {
+					Type:        framework.TypeBool,
+					Description: "Allow token to be renewed past its initial TTL up to system/mount maximum TTL",
+				},
+				"ttl": {
+					Type:        framework.TypeString,
+					Description: "Time to live for this token",
+				},
+				"type": {
+					Type:        framework.TypeString,
+					Description: "Token type",
+				},
+				"no_default_policy": {
+					Type:        framework.TypeBool,
+					Description: "Do not include default policy for this token",
+				},
+				"id": {
+					Type:        framework.TypeString,
+					Description: "Value for the token",
+				},
+				"metadata": {
+					Type:        framework.TypeMap,
+					Description: "Arbitrary key=value metadata to associate with the token",
+				},
+				"no_parent": {
+					Type:        framework.TypeBool,
+					Description: "Create the token with no parent",
+				},
+				"policies": {
+					Type:        framework.TypeStringSlice,
+					Description: "List of policies for the token",
+				},
+				"format": {
+					Type:        framework.TypeString,
+					Query:       true,
+					Description: "Return json formatted output",
 				},
 			},
 
@@ -186,6 +338,71 @@ func (ts *TokenStore) paths() []*framework.Path {
 		{
 			Pattern: "create$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "create",
+			},
+
+			Fields: map[string]*framework.FieldSchema{
+				"display_name": {
+					Type:        framework.TypeString,
+					Description: "Name to associate with this token",
+				},
+				"explicit_max_ttl": {
+					Type:        framework.TypeString,
+					Description: "Explicit Max TTL of this token",
+				},
+				"entity_alias": {
+					Type:        framework.TypeString,
+					Description: "Name of the entity alias to associate with this token",
+				},
+				"num_uses": {
+					Type:        framework.TypeInt,
+					Description: "Max number of uses for this token",
+				},
+				"period": {
+					Type:        framework.TypeString,
+					Description: "Renew period",
+				},
+				"renewable": {
+					Type:        framework.TypeBool,
+					Description: "Allow token to be renewed past its initial TTL up to system/mount maximum TTL",
+				},
+				"ttl": {
+					Type:        framework.TypeString,
+					Description: "Time to live for this token",
+				},
+				"type": {
+					Type:        framework.TypeString,
+					Description: "Token type",
+				},
+				"no_default_policy": {
+					Type:        framework.TypeBool,
+					Description: "Do not include default policy for this token",
+				},
+				"id": {
+					Type:        framework.TypeString,
+					Description: "Value for the token",
+				},
+				"metadata": {
+					Type:        framework.TypeMap,
+					Description: "Arbitrary key=value metadata to associate with the token",
+				},
+				"no_parent": {
+					Type:        framework.TypeBool,
+					Description: "Create the token with no parent",
+				},
+				"policies": {
+					Type:        framework.TypeStringSlice,
+					Description: "List of policies for the token",
+				},
+				"format": {
+					Type:        framework.TypeString,
+					Query:       true,
+					Description: "Return json formatted output",
+				},
+			},
+
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: ts.handleCreate,
 			},
@@ -197,6 +414,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 		{
 			Pattern: "lookup",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "look-up",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
 					Type:        framework.TypeString,
@@ -204,9 +426,16 @@ func (ts *TokenStore) paths() []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation:   ts.handleLookup,
-				logical.UpdateOperation: ts.handleLookup,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: ts.handleLookup,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationSuffix: "self3", // avoid collision with lookup-self
+					},
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: ts.handleLookup,
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(tokenLookupHelp),
@@ -215,6 +444,12 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 		{
 			Pattern: "lookup-accessor",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "look-up",
+				OperationSuffix: "accessor",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"accessor": {
@@ -234,6 +469,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 		{
 			Pattern: "lookup-self$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "look-up",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
 					Type:        framework.TypeString,
@@ -241,9 +481,19 @@ func (ts *TokenStore) paths() []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: ts.handleLookupSelf,
-				logical.ReadOperation:   ts.handleLookupSelf,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: ts.handleLookupSelf,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationSuffix: "self",
+					},
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: ts.handleLookupSelf,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationSuffix: "self2",
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(tokenLookupHelp),
@@ -252,6 +502,12 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 		{
 			Pattern: "revoke-accessor",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "revoke",
+				OperationSuffix: "accessor",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"accessor": {
@@ -271,6 +527,12 @@ func (ts *TokenStore) paths() []*framework.Path {
 		{
 			Pattern: "revoke-self$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "revoke",
+				OperationSuffix: "self",
+			},
+
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: ts.handleRevokeSelf,
 			},
@@ -281,6 +543,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 		{
 			Pattern: "revoke",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "revoke",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
@@ -300,6 +567,12 @@ func (ts *TokenStore) paths() []*framework.Path {
 		{
 			Pattern: "revoke-orphan",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "revoke",
+				OperationSuffix: "orphan",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
 					Type:        framework.TypeString,
@@ -317,6 +590,12 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 		{
 			Pattern: "renew-accessor",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "renew",
+				OperationSuffix: "accessor",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"accessor": {
@@ -341,6 +620,12 @@ func (ts *TokenStore) paths() []*framework.Path {
 		{
 			Pattern: "renew-self$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "renew",
+				OperationSuffix: "self",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
 					Type:        framework.TypeString,
@@ -363,6 +648,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 		{
 			Pattern: "renew",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "renew",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
@@ -387,6 +677,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 		{
 			Pattern: "tidy$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "tidy",
+			},
+
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: ts.handleTidy,
 			},
@@ -398,6 +693,12 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 	rolesPath := &framework.Path{
 		Pattern: "roles/" + framework.GenericNameRegex("role_name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixToken,
+			OperationSuffix: "role",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"role_name": {
 				Type:        framework.TypeString,
@@ -920,7 +1221,7 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 			entry.ID = fmt.Sprintf("%s.%s", entry.ID, tokenNS.ID)
 		}
 
-		if tokenNS.ID != namespace.RootNamespaceID || strings.HasPrefix(entry.ID, consts.ServiceTokenPrefix) {
+		if tokenNS.ID != namespace.RootNamespaceID || strings.HasPrefix(entry.ID, consts.ServiceTokenPrefix) || strings.HasPrefix(entry.ID, consts.LegacyServiceTokenPrefix) {
 			if entry.CubbyholeID == "" {
 				cubbyholeID, err := base62.Random(TokenLength)
 				if err != nil {
@@ -1880,25 +2181,6 @@ func (ts *TokenStore) revokeTreeInternal(ctx context.Context, id string) error {
 	}
 
 	return nil
-}
-
-func (c *Core) IsBatchTokenCreationRequest(ctx context.Context, path string) (bool, error) {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
-
-	if c.tokenStore == nil {
-		return false, fmt.Errorf("no token store")
-	}
-
-	name := strings.TrimPrefix(path, "auth/token/create/")
-	roleEntry, err := c.tokenStore.tokenStoreRole(ctx, name)
-	if err != nil {
-		return false, err
-	}
-	if roleEntry == nil {
-		return false, fmt.Errorf("unknown role")
-	}
-	return roleEntry.TokenType == logical.TokenTypeBatch, nil
 }
 
 // handleCreateAgainstRole handles the auth/token/create path for a role
@@ -2986,9 +3268,22 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		resp.AddWarning("Supplying a custom ID for the token uses the weaker SHA1 hashing instead of the more secure SHA2-256 HMAC for token obfuscation. SHA1 hashed tokens on the wire leads to less secure lookups.")
 	}
 
-	// Create the token
-	if err := ts.create(ctx, &te); err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	// check if we are perfStandby, and if so forward the service token
+	// creation to the active node
+	var roleName string
+	if role != nil {
+		roleName = role.Name
+	}
+	if te.Type == logical.TokenTypeService && ts.core.perfStandby {
+		forwardedTokenEntry, err := forwardCreateTokenRegisterAuth(ctx, ts.core, &te, roleName, renewable, periodToUse, explicitMaxTTLToUse)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), ErrInternalError
+		}
+		te = *forwardedTokenEntry
+	} else {
+		if err := ts.create(ctx, &te); err != nil {
+			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		}
 	}
 
 	// Count the successful token creation.
@@ -3024,6 +3319,12 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		CreationPath:   te.Path,
 		TokenType:      te.Type,
 		Orphan:         te.Parent == "",
+	}
+
+	// We have registered the auth at this point if the token is of service
+	// type and core is perfStandby.
+	if te.Type == logical.TokenTypeService && ts.core.perfStandby && te.ExternalID != "" {
+		resp.Auth.ClientToken = te.ExternalID
 	}
 
 	for _, p := range te.Policies {

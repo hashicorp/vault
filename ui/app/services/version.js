@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { readOnly, match, not } from '@ember/object/computed';
 import Service, { inject as service } from '@ember/service';
 import { computed } from '@ember/object';
@@ -51,7 +56,7 @@ export default Service.extend({
     if (this.version) {
       return;
     }
-    let response = yield this.store.adapterFor('cluster').health();
+    const response = yield this.store.adapterFor('cluster').health();
     this.setVersion(response);
     return;
   }),
@@ -61,7 +66,7 @@ export default Service.extend({
       return;
     }
     try {
-      let response = yield this.store.adapterFor('cluster').features();
+      const response = yield this.store.adapterFor('cluster').features();
       this.setFeatures(response);
       return;
     } catch (err) {

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package transit
 
 import (
@@ -25,6 +28,13 @@ const EncryptedKeyBytes = 512
 func (b *backend) pathImport() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/" + framework.GenericNameRegex("name") + "/import",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "import",
+			OperationSuffix: "key",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -101,6 +111,13 @@ key.`,
 func (b *backend) pathImportVersion() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/" + framework.GenericNameRegex("name") + "/import_version",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "import",
+			OperationSuffix: "key-version",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -177,6 +194,8 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 		polReq.KeyType = keysutil.KeyType_RSA3072
 	case "rsa-4096":
 		polReq.KeyType = keysutil.KeyType_RSA4096
+	case "hmac":
+		polReq.KeyType = keysutil.KeyType_HMAC
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type: %v", keyType)), logical.ErrInvalidRequest
 	}
@@ -198,7 +217,7 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 		return nil, errors.New("the import path cannot be used with an existing key; use import-version to rotate an existing imported key")
 	}
 
-	ciphertext, err := base64.RawURLEncoding.DecodeString(ciphertextString)
+	ciphertext, err := base64.StdEncoding.DecodeString(ciphertextString)
 	if err != nil {
 		return nil, err
 	}
@@ -251,11 +270,14 @@ func (b *backend) pathImportVersionWrite(ctx context.Context, req *logical.Reque
 	}
 	defer p.Unlock()
 
-	ciphertext, err := base64.RawURLEncoding.DecodeString(ciphertextString)
+	ciphertext, err := base64.StdEncoding.DecodeString(ciphertextString)
 	if err != nil {
 		return nil, err
 	}
 	importKey, err := b.decryptImportedKey(ctx, req.Storage, ciphertext, hashFn)
+	if err != nil {
+		return nil, err
+	}
 	err = p.Import(ctx, req.Storage, importKey, b.GetRandomReader())
 	if err != nil {
 		return nil, err

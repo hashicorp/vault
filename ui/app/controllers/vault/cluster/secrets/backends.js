@@ -1,11 +1,18 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { filterBy } from '@ember/object/computed';
 import { computed } from '@ember/object';
 import Controller from '@ember/controller';
 import { task } from 'ember-concurrency';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
+import { inject as service } from '@ember/service';
 const LINKED_BACKENDS = supportedSecretBackends();
 
 export default Controller.extend({
+  flashMessages: service(),
   displayableBackends: filterBy('model', 'shouldIncludeInList'),
 
   supportedBackends: computed('displayableBackends', 'displayableBackends.[]', function () {

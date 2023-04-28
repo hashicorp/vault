@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -12,6 +17,7 @@ module('Integration | Component | nav header', function (hooks) {
 
   test('it renders', async function (assert) {
     await render(hbs`
+        <div id="modal-wormhole"></div>
         {{#nav-header as |h|}}
           {{#h.home}}
             Home!
@@ -26,8 +32,8 @@ module('Integration | Component | nav header', function (hooks) {
       `);
 
     assert.ok(component.ele, 'renders the outer element');
-    assert.equal(component.homeText.trim(), 'Home!', 'renders home content');
-    assert.equal(component.itemsText.trim(), 'Some Items', 'renders items content');
-    assert.equal(component.mainText.trim(), 'Main stuff here', 'renders items content');
+    assert.strictEqual(component.homeText.trim(), 'Home!', 'renders home content');
+    assert.strictEqual(component.itemsText.trim(), 'Some Items', 'renders items content');
+    assert.strictEqual(component.mainText.trim(), 'Main stuff here', 'renders items content');
   });
 });

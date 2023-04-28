@@ -1,9 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { or, not } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { FEATURE_MACHINE_TIME } from 'vault/helpers/wizard-constants';
-import { htmlSafe } from '@ember/template';
 
 export default Component.extend({
   wizard: service(),
@@ -16,13 +20,13 @@ export default Component.extend({
   },
 
   maybeHideFeatures() {
-    let features = this.allFeatures;
+    const features = this.allFeatures;
     features.forEach((feat) => {
       feat.disabled = this.doesNotHavePermission(feat.requiredPermissions);
     });
 
     if (this.showReplication === false) {
-      let feature = this.allFeatures.findBy('key', 'replication');
+      const feature = this.allFeatures.findBy('key', 'replication');
       feature.show = false;
     }
   },
@@ -41,7 +45,7 @@ export default Component.extend({
 
   estimatedTime: computed('selectedFeatures', function () {
     let time = 0;
-    for (let feature of Object.keys(FEATURE_MACHINE_TIME)) {
+    for (const feature of Object.keys(FEATURE_MACHINE_TIME)) {
       if (this.selectedFeatures.includes(feature)) {
         time += FEATURE_MACHINE_TIME[feature];
       }
@@ -50,10 +54,10 @@ export default Component.extend({
   }),
   selectProgress: computed('selectedFeatures', function () {
     let bar = this.selectedFeatures.map((feature) => {
-      return { style: htmlSafe('width:0%;'), completed: false, showIcon: true, feature: feature };
+      return { style: 'width:0%;', completed: false, showIcon: true, feature: feature };
     });
     if (bar.length === 0) {
-      bar = [{ style: htmlSafe('width:0%;'), showIcon: false }];
+      bar = [{ style: 'width:0%;', showIcon: false }];
     }
     return bar;
   }),
@@ -137,7 +141,7 @@ export default Component.extend({
 
   actions: {
     saveFeatures() {
-      let wizard = this.wizard;
+      const wizard = this.wizard;
       wizard.saveFeatures(this.selectedFeatures);
       wizard.transitionTutorialMachine('active.select', 'CONTINUE');
     },

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Service from '@ember/service';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
@@ -18,9 +23,9 @@ module('helper:has-feature', function (hooks) {
   });
 
   test('it asserts on unknown features', async function (assert) {
-    let promise = waitForError();
+    const promise = waitForError();
     render(hbs`{{has-feature 'New Feature'}}`);
-    let err = await promise;
+    const err = await promise;
     assert.ok(
       err.message.includes('New Feature is not one of the available values for Vault Enterprise features.'),
       'asserts when an unknown feature is passed as an arg'

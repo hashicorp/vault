@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@ember/component';
 
 export default Component.extend({
@@ -11,7 +16,7 @@ export default Component.extend({
     if (num) {
       num = parseInt(num, 10);
     }
-    let list = this.newList(num);
+    const list = this.newList(num);
     this.set('listData', list);
   },
 
@@ -45,7 +50,7 @@ export default Component.extend({
 
   actions: {
     setKey(index, key) {
-      let { listData } = this;
+      const { listData } = this;
       listData.splice(index, 1, key);
       this.onDataUpdate(listData.compact().map((k) => k.value));
     },

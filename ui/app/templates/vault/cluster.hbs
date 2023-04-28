@@ -12,10 +12,11 @@
             <NamespacePicker @class="navbar-item" @namespace={{this.namespaceQueryParam}} />
           </li>
         {{/if}}
-        <li class={{if (is-active-route "vault.cluster.secrets") "is-active"}}>
+        <li>
           <LinkTo
             @route="vault.cluster.secrets"
             @current-when="vault.cluster.secrets vault.cluster.settings.mount-secret-backend vault.cluster.settings.configure-secret-backend"
+            class={{if (is-active-route "vault.cluster.secrets") "is-active"}}
             {{on "click" Nav.closeDrawer}}
             data-test-navbar-item="secrets"
           >
@@ -23,11 +24,12 @@
           </LinkTo>
         </li>
         {{#if (has-permission "access")}}
-          <li class={{if (is-active-route "vault.cluster.access") "is-active"}}>
+          <li>
             <LinkTo
               @route={{get (route-params-for "access") "route"}}
               @models={{get (route-params-for "access") "models"}}
               @current-when="vault.cluster.access vault.cluster.settings.auth"
+              class={{if (is-active-route "vault.cluster.access") "is-active"}}
               {{on "click" Nav.closeDrawer}}
               data-test-navbar-item="access"
             >
@@ -36,11 +38,12 @@
           </li>
         {{/if}}
         {{#if (has-permission "policies")}}
-          <li class={{if (is-active-route (array "vault.cluster.policies" "vault.cluster.policy")) "is-active"}}>
+          <li>
             <LinkTo
               @route="vault.cluster.policies"
               @models={{get (route-params-for "policies") "models"}}
               @current-when="vault.cluster.policies vault.cluster.policy"
+              class={{if (is-active-route (array "vault.cluster.policies" "vault.cluster.policy")) "is-active"}}
               {{on "click" Nav.closeDrawer}}
               data-test-navbar-item="policies"
             >
@@ -49,10 +52,11 @@
           </li>
         {{/if}}
         {{#if (has-permission "tools")}}
-          <li class={{if (is-active-route "vault.cluster.tools") "is-active"}}>
+          <li>
             <LinkTo
               @route="vault.cluster.tools.tool"
               @models={{get (route-params-for "tools") "models"}}
+              class={{if (is-active-route "vault.cluster.tools") "is-active"}}
               {{on "click" Nav.closeDrawer}}
             >
               Tools
@@ -74,11 +78,7 @@
       )}}
         <div class="navbar-sections">
           <div class={{if (is-active-route "vault.cluster.clients") "is-active"}}>
-            <LinkTo
-              @route="vault.cluster.clients.history"
-              @current-when="vault.cluster.clients.history"
-              data-test-navbar-item="metrics"
-            >
+            <LinkTo @route="vault.cluster.clients.dashboard" data-test-navbar-item="metrics">
               Client count
             </LinkTo>
           </div>
@@ -132,15 +132,13 @@
   <LogoSplash />
 {{else}}
   {{#if this.showNav}}
-    <UiWizard>
-      <section class="section">
-        <div class="container is-widescreen">
-          <TokenExpireWarning @expirationDate={{this.auth.tokenExpirationDate}}>
-            {{outlet}}
-          </TokenExpireWarning>
-        </div>
-      </section>
-    </UiWizard>
+    <section class="section">
+      <div class="container is-widescreen">
+        <TokenExpireWarning @expirationDate={{this.auth.tokenExpirationDate}}>
+          {{outlet}}
+        </TokenExpireWarning>
+      </div>
+    </section>
   {{else}}
     {{outlet}}
   {{/if}}

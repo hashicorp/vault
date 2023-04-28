@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
@@ -24,38 +27,48 @@ import (
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"golang.org/x/net/http2"
 	"golang.org/x/time/rate"
-
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
-	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
-	EnvVaultAddress       = "VAULT_ADDR"
-	EnvVaultAgentAddr     = "VAULT_AGENT_ADDR"
-	EnvVaultCACert        = "VAULT_CACERT"
-	EnvVaultCACertBytes   = "VAULT_CACERT_BYTES"
-	EnvVaultCAPath        = "VAULT_CAPATH"
-	EnvVaultClientCert    = "VAULT_CLIENT_CERT"
-	EnvVaultClientKey     = "VAULT_CLIENT_KEY"
-	EnvVaultClientTimeout = "VAULT_CLIENT_TIMEOUT"
-	EnvVaultSRVLookup     = "VAULT_SRV_LOOKUP"
-	EnvVaultSkipVerify    = "VAULT_SKIP_VERIFY"
-	EnvVaultNamespace     = "VAULT_NAMESPACE"
-	EnvVaultTLSServerName = "VAULT_TLS_SERVER_NAME"
-	EnvVaultWrapTTL       = "VAULT_WRAP_TTL"
-	EnvVaultMaxRetries    = "VAULT_MAX_RETRIES"
-	EnvVaultToken         = "VAULT_TOKEN"
-	EnvVaultMFA           = "VAULT_MFA"
-	EnvRateLimit          = "VAULT_RATE_LIMIT"
-	EnvHTTPProxy          = "VAULT_HTTP_PROXY"
-	EnvVaultProxyAddr     = "VAULT_PROXY_ADDR"
-	HeaderIndex           = "X-Vault-Index"
-	HeaderForward         = "X-Vault-Forward"
-	HeaderInconsistent    = "X-Vault-Inconsistent"
-	TLSErrorString        = "This error usually means that the server is running with TLS disabled\n" +
+	EnvVaultAddress          = "VAULT_ADDR"
+	EnvVaultAgentAddr        = "VAULT_AGENT_ADDR"
+	EnvVaultCACert           = "VAULT_CACERT"
+	EnvVaultCACertBytes      = "VAULT_CACERT_BYTES"
+	EnvVaultCAPath           = "VAULT_CAPATH"
+	EnvVaultClientCert       = "VAULT_CLIENT_CERT"
+	EnvVaultClientKey        = "VAULT_CLIENT_KEY"
+	EnvVaultClientTimeout    = "VAULT_CLIENT_TIMEOUT"
+	EnvVaultSRVLookup        = "VAULT_SRV_LOOKUP"
+	EnvVaultSkipVerify       = "VAULT_SKIP_VERIFY"
+	EnvVaultNamespace        = "VAULT_NAMESPACE"
+	EnvVaultTLSServerName    = "VAULT_TLS_SERVER_NAME"
+	EnvVaultWrapTTL          = "VAULT_WRAP_TTL"
+	EnvVaultMaxRetries       = "VAULT_MAX_RETRIES"
+	EnvVaultToken            = "VAULT_TOKEN"
+	EnvVaultMFA              = "VAULT_MFA"
+	EnvRateLimit             = "VAULT_RATE_LIMIT"
+	EnvHTTPProxy             = "VAULT_HTTP_PROXY"
+	EnvVaultProxyAddr        = "VAULT_PROXY_ADDR"
+	EnvVaultDisableRedirects = "VAULT_DISABLE_REDIRECTS"
+	HeaderIndex              = "X-Vault-Index"
+	HeaderForward            = "X-Vault-Forward"
+	HeaderInconsistent       = "X-Vault-Inconsistent"
+
+	// NamespaceHeaderName is the header set to specify which namespace the
+	// request is indented for.
+	NamespaceHeaderName = "X-Vault-Namespace"
+
+	// AuthHeaderName is the name of the header containing the token.
+	AuthHeaderName = "X-Vault-Token"
+
+	// RequestHeaderName is the name of the header used by the Agent for
+	// SSRF protection.
+	RequestHeaderName = "X-Vault-Request"
+
+	TLSErrorString = "This error usually means that the server is running with TLS disabled\n" +
 		"but the client is configured to use TLS. Please either enable TLS\n" +
 		"on the server or run the client with -address set to an address\n" +
 		"that uses the http protocol:\n\n" +
@@ -113,7 +126,11 @@ type Config struct {
 	// of three tries).
 	MaxRetries int
 
-	// Timeout is for setting custom timeout parameter in the HttpClient
+	// Timeout, given a non-negative value, will apply the request timeout
+	// to each request function unless an earlier deadline is passed to the
+	// request function through context.Context. Note that this timeout is
+	// not applicable to Logical().ReadRaw* (raw response) functions.
+	// Defaults to 60 seconds.
 	Timeout time.Duration
 
 	// If there is an error when creating the configuration, this will be the
@@ -176,6 +193,17 @@ type Config struct {
 	// since there will be a performance penalty paid upon each request.
 	// This feature requires Enterprise server-side.
 	ReadYourWrites bool
+
+	// DisableRedirects when set to true, will prevent the client from
+	// automatically following a (single) redirect response to its initial
+	// request. This behavior may be desirable if using Vault CLI on the server
+	// side.
+	//
+	// Note: Disabling redirect following behavior could cause issues with
+	// commands such as 'vault operator raft snapshot' as this redirects to the
+	// primary node.
+	DisableRedirects bool
+	clientTLSConfig  *tls.Config
 }
 
 // TLSConfig contains the parameters needed to configure TLS on the HTTP client
@@ -310,8 +338,15 @@ func (c *Config) configureTLS(t *TLSConfig) error {
 	if t.TLSServerName != "" {
 		clientTLSConfig.ServerName = t.TLSServerName
 	}
+	c.clientTLSConfig = clientTLSConfig
 
 	return nil
+}
+
+func (c *Config) TLSConfig() *tls.Config {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	return c.clientTLSConfig.Clone()
 }
 
 // ConfigureTLS takes a set of TLS configurations and applies those to the
@@ -340,14 +375,13 @@ func (c *Config) ReadEnvironment() error {
 	var envSRVLookup bool
 	var limit *rate.Limiter
 	var envVaultProxy string
+	var envVaultDisableRedirects bool
 
 	// Parse the environment variables
 	if v := os.Getenv(EnvVaultAddress); v != "" {
 		envAddress = v
 	}
 	if v := os.Getenv(EnvVaultAgentAddr); v != "" {
-		envAgentAddress = v
-	} else if v := os.Getenv(EnvVaultAgentAddress); v != "" {
 		envAgentAddress = v
 	}
 	if v := os.Getenv(EnvVaultMaxRetries); v != "" {
@@ -390,13 +424,7 @@ func (c *Config) ReadEnvironment() error {
 		var err error
 		envInsecure, err = strconv.ParseBool(v)
 		if err != nil {
-			return fmt.Errorf("could not parse VAULT_SKIP_VERIFY")
-		}
-	} else if v := os.Getenv(EnvVaultInsecure); v != "" {
-		var err error
-		envInsecure, err = strconv.ParseBool(v)
-		if err != nil {
-			return fmt.Errorf("could not parse VAULT_INSECURE")
+			return fmt.Errorf("could not parse %s", EnvVaultSkipVerify)
 		}
 	}
 	if v := os.Getenv(EnvVaultSRVLookup); v != "" {
@@ -418,6 +446,16 @@ func (c *Config) ReadEnvironment() error {
 	// VAULT_PROXY_ADDR supersedes VAULT_HTTP_PROXY
 	if v := os.Getenv(EnvVaultProxyAddr); v != "" {
 		envVaultProxy = v
+	}
+
+	if v := os.Getenv(EnvVaultDisableRedirects); v != "" {
+		var err error
+		envVaultDisableRedirects, err = strconv.ParseBool(v)
+		if err != nil {
+			return fmt.Errorf("could not parse %s", EnvVaultDisableRedirects)
+		}
+
+		c.DisableRedirects = envVaultDisableRedirects
 	}
 
 	// Configure the HTTP clients TLS configuration.
@@ -468,6 +506,51 @@ func (c *Config) ReadEnvironment() error {
 	}
 
 	return nil
+}
+
+// ParseAddress transforms the provided address into a url.URL and handles
+// the case of Unix domain sockets by setting the DialContext in the
+// configuration's HttpClient.Transport. This function must be called with
+// c.modifyLock held for write access.
+func (c *Config) ParseAddress(address string) (*url.URL, error) {
+	u, err := url.Parse(address)
+	if err != nil {
+		return nil, err
+	}
+
+	c.Address = address
+
+	if strings.HasPrefix(address, "unix://") {
+		// When the address begins with unix://, always change the transport's
+		// DialContext (to match previous behaviour)
+		socket := strings.TrimPrefix(address, "unix://")
+
+		if transport, ok := c.HttpClient.Transport.(*http.Transport); ok {
+			transport.DialContext = func(context.Context, string, string) (net.Conn, error) {
+				return net.Dial("unix", socket)
+			}
+
+			// Since the address points to a unix domain socket, the scheme in the
+			// *URL would be set to `unix`. The *URL in the client is expected to
+			// be pointing to the protocol used in the application layer and not to
+			// the transport layer. Hence, setting the fields accordingly.
+			u.Scheme = "http"
+			u.Host = socket
+			u.Path = ""
+		} else {
+			return nil, fmt.Errorf("attempting to specify unix:// address with non-transport transport")
+		}
+	} else if strings.HasPrefix(c.Address, "unix://") {
+		// When the address being set does not begin with unix:// but the previous
+		// address in the Config did, change the transport's DialContext back to
+		// use the default configuration that cleanhttp uses.
+
+		if transport, ok := c.HttpClient.Transport.(*http.Transport); ok {
+			transport.DialContext = cleanhttp.DefaultPooledTransport().DialContext
+		}
+	}
+
+	return u, nil
 }
 
 func parseRateLimit(val string) (rate float64, burst int, err error) {
@@ -542,25 +625,9 @@ func NewClient(c *Config) (*Client, error) {
 		address = c.AgentAddress
 	}
 
-	u, err := url.Parse(address)
+	u, err := c.ParseAddress(address)
 	if err != nil {
 		return nil, err
-	}
-
-	if strings.HasPrefix(address, "unix://") {
-		socket := strings.TrimPrefix(address, "unix://")
-		transport := c.HttpClient.Transport.(*http.Transport)
-		transport.DialContext = func(context.Context, string, string) (net.Conn, error) {
-			return net.Dial("unix", socket)
-		}
-
-		// Since the address points to a unix domain socket, the scheme in the
-		// *URL would be set to `unix`. The *URL in the client is expected to
-		// be pointing to the protocol used in the application layer and not to
-		// the transport layer. Hence, setting the fields accordingly.
-		u.Scheme = "http"
-		u.Host = socket
-		u.Path = ""
 	}
 
 	client := &Client{
@@ -574,7 +641,7 @@ func NewClient(c *Config) (*Client, error) {
 	}
 
 	// Add the VaultRequest SSRF protection header
-	client.headers[consts.RequestHeaderName] = []string{"true"}
+	client.headers[RequestHeaderName] = []string{"true"}
 
 	if token := os.Getenv(EnvVaultToken); token != "" {
 		client.token = token
@@ -606,6 +673,7 @@ func (c *Client) CloneConfig() *Config {
 	newConfig.CloneHeaders = c.config.CloneHeaders
 	newConfig.CloneToken = c.config.CloneToken
 	newConfig.ReadYourWrites = c.config.ReadYourWrites
+	newConfig.clientTLSConfig = c.config.clientTLSConfig
 
 	// we specifically want a _copy_ of the client here, not a pointer to the original one
 	newClient := *c.config.HttpClient
@@ -621,14 +689,11 @@ func (c *Client) SetAddress(addr string) error {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
 
-	parsedAddr, err := url.Parse(addr)
+	parsedAddr, err := c.config.ParseAddress(addr)
 	if err != nil {
 		return errwrap.Wrapf("failed to set address: {{err}}", err)
 	}
 
-	c.config.modifyLock.Lock()
-	c.config.Address = addr
-	c.config.modifyLock.Unlock()
 	c.addr = parsedAddr
 	return nil
 }
@@ -718,6 +783,42 @@ func (c *Client) SetMaxRetries(retries int) {
 	defer c.config.modifyLock.Unlock()
 
 	c.config.MaxRetries = retries
+}
+
+func (c *Client) SetMaxIdleConnections(idle int) {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	c.config.HttpClient.Transport.(*http.Transport).MaxIdleConns = idle
+}
+
+func (c *Client) MaxIdleConnections() int {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	return c.config.HttpClient.Transport.(*http.Transport).MaxIdleConns
+}
+
+func (c *Client) SetDisableKeepAlives(disable bool) {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	c.config.HttpClient.Transport.(*http.Transport).DisableKeepAlives = disable
+}
+
+func (c *Client) DisableKeepAlives() bool {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
+
+	return c.config.HttpClient.Transport.(*http.Transport).DisableKeepAlives
 }
 
 func (c *Client) MaxRetries() int {
@@ -858,7 +959,7 @@ func (c *Client) setNamespace(namespace string) {
 		c.headers = make(http.Header)
 	}
 
-	c.headers.Set(consts.NamespaceHeaderName, namespace)
+	c.headers.Set(NamespaceHeaderName, namespace)
 }
 
 // ClearNamespace removes the namespace header if set.
@@ -866,7 +967,7 @@ func (c *Client) ClearNamespace() {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
 	if c.headers != nil {
-		c.headers.Del(consts.NamespaceHeaderName)
+		c.headers.Del(NamespaceHeaderName)
 	}
 }
 
@@ -878,7 +979,7 @@ func (c *Client) Namespace() string {
 	if c.headers == nil {
 		return ""
 	}
-	return c.headers.Get(consts.NamespaceHeaderName)
+	return c.headers.Get(NamespaceHeaderName)
 }
 
 // WithNamespace makes a shallow copy of Client, modifies it to use
@@ -1212,10 +1313,11 @@ func (c *Client) rawRequestWithContext(ctx context.Context, r *Request) (*Respon
 	checkRetry := c.config.CheckRetry
 	backoff := c.config.Backoff
 	httpClient := c.config.HttpClient
-	ns := c.headers.Get(consts.NamespaceHeaderName)
+	ns := c.headers.Get(NamespaceHeaderName)
 	outputCurlString := c.config.OutputCurlString
 	outputPolicy := c.config.OutputPolicy
 	logger := c.config.Logger
+	disableRedirects := c.config.DisableRedirects
 	c.config.modifyLock.RUnlock()
 
 	c.modifyLock.RUnlock()
@@ -1224,9 +1326,9 @@ func (c *Client) rawRequestWithContext(ctx context.Context, r *Request) (*Respon
 	// e.g. calls using (*Client).WithNamespace
 	switch ns {
 	case "":
-		r.Headers.Del(consts.NamespaceHeaderName)
+		r.Headers.Del(NamespaceHeaderName)
 	default:
-		r.Headers.Set(consts.NamespaceHeaderName, ns)
+		r.Headers.Set(NamespaceHeaderName, ns)
 	}
 
 	for _, cb := range c.requestCallbacks {
@@ -1272,6 +1374,7 @@ START:
 		LastOutputPolicyError = &OutputPolicyError{
 			method: req.Method,
 			path:   strings.TrimPrefix(req.URL.Path, "/v1"),
+			params: req.URL.Query(),
 		}
 		return nil, LastOutputPolicyError
 	}
@@ -1309,8 +1412,8 @@ START:
 		return result, err
 	}
 
-	// Check for a redirect, only allowing for a single redirect
-	if (resp.StatusCode == 301 || resp.StatusCode == 302 || resp.StatusCode == 307) && redirectCount == 0 {
+	// Check for a redirect, only allowing for a single redirect (if redirects aren't disabled)
+	if (resp.StatusCode == 301 || resp.StatusCode == 302 || resp.StatusCode == 307) && redirectCount == 0 && !disableRedirects {
 		// Parse the updated location
 		respLoc, err := resp.Location()
 		if err != nil {
@@ -1369,6 +1472,7 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 	httpClient := c.config.HttpClient
 	outputCurlString := c.config.OutputCurlString
 	outputPolicy := c.config.OutputPolicy
+	disableRedirects := c.config.DisableRedirects
 
 	// add headers
 	if c.headers != nil {
@@ -1378,8 +1482,8 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 			}
 		}
 		// explicitly set the namespace header to current client
-		if ns := c.headers.Get(consts.NamespaceHeaderName); ns != "" {
-			r.Headers.Set(consts.NamespaceHeaderName, ns)
+		if ns := c.headers.Get(NamespaceHeaderName); ns != "" {
+			r.Headers.Set(NamespaceHeaderName, ns)
 		}
 	}
 
@@ -1400,7 +1504,7 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 	req.Host = r.URL.Host
 
 	if len(r.ClientToken) != 0 {
-		req.Header.Set(consts.AuthHeaderName, r.ClientToken)
+		req.Header.Set(AuthHeaderName, r.ClientToken)
 	}
 
 	if len(r.WrapTTL) != 0 {
@@ -1441,8 +1545,8 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 		return result, err
 	}
 
-	// Check for a redirect, only allowing for a single redirect
-	if resp.StatusCode == 301 || resp.StatusCode == 302 || resp.StatusCode == 307 {
+	// Check for a redirect, only allowing for a single redirect, if redirects aren't disabled
+	if (resp.StatusCode == 301 || resp.StatusCode == 302 || resp.StatusCode == 307) && !disableRedirects {
 		// Parse the updated location
 		respLoc, err := resp.Location()
 		if err != nil {
@@ -1590,7 +1694,13 @@ func MergeReplicationStates(old []string, new string) []string {
 	return strutil.RemoveDuplicates(ret, false)
 }
 
-func ParseReplicationState(raw string, hmacKey []byte) (*logical.WALState, error) {
+type WALState struct {
+	ClusterID       string
+	LocalIndex      uint64
+	ReplicatedIndex uint64
+}
+
+func ParseReplicationState(raw string, hmacKey []byte) (*WALState, error) {
 	cooked, err := base64.StdEncoding.DecodeString(raw)
 	if err != nil {
 		return nil, err
@@ -1628,7 +1738,7 @@ func ParseReplicationState(raw string, hmacKey []byte) (*logical.WALState, error
 		return nil, fmt.Errorf("invalid replicated index in state header: %w", err)
 	}
 
-	return &logical.WALState{
+	return &WALState{
 		ClusterID:       pieces[1],
 		LocalIndex:      localIndex,
 		ReplicatedIndex: replicatedIndex,

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -27,6 +32,7 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
           name: 'foo-bar',
           provider: 'azurekeyvault',
           keyCollection: 'keyvault-1',
+          backend: 'keymgmt',
         },
       },
     });
@@ -42,7 +48,7 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
   });
 
   test('it should render show view', async function (assert) {
-    assert.expect(12);
+    assert.expect(16);
 
     // override capability getters
     Object.defineProperties(this.model, {
@@ -50,6 +56,7 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
       canListKeys: { value: true },
     });
 
+    this.server.post('/sys/capabilities-self', () => ({}));
     this.server.get('/keymgmt/kms/foo-bar/key', () => {
       return {
         data: {
@@ -63,8 +70,8 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
     });
     this.owner.lookup('service:router').reopen({
       transitionTo(path, model, { queryParams: { tab } }) {
-        assert.equal(path, root.path, 'Root path sent in transitionTo on delete');
-        assert.equal(model, root.model, 'Root model sent in transitionTo on delete');
+        assert.strictEqual(path, root.path, 'Root path sent in transitionTo on delete');
+        assert.strictEqual(model, root.model, 'Root model sent in transitionTo on delete');
         assert.deepEqual(tab, 'provider', 'Correct query params sent in transitionTo on delete');
       },
     });
@@ -128,8 +135,12 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
     });
     this.owner.lookup('service:router').reopen({
       transitionTo(path, model, { queryParams: { itemType } }) {
-        assert.equal(path, 'vault.cluster.secrets.backend.show', 'Show route sent in transitionTo on save');
-        assert.equal(model, 'foo', 'Model id sent in transitionTo on save');
+        assert.strictEqual(
+          path,
+          'vault.cluster.secrets.backend.show',
+          'Show route sent in transitionTo on save'
+        );
+        assert.strictEqual(model, 'foo', 'Model id sent in transitionTo on save');
         assert.deepEqual(itemType, 'provider', 'Correct query params sent in transitionTo on save');
       },
     });
@@ -188,8 +199,12 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
     });
     this.owner.lookup('service:router').reopen({
       transitionTo(path, model, { queryParams: { itemType } }) {
-        assert.equal(path, 'vault.cluster.secrets.backend.show', 'Show route sent in transitionTo on save');
-        assert.equal(model, 'foo', 'Model id sent in transitionTo on save');
+        assert.strictEqual(
+          path,
+          'vault.cluster.secrets.backend.show',
+          'Show route sent in transitionTo on save'
+        );
+        assert.strictEqual(model, 'foo', 'Model id sent in transitionTo on save');
         assert.deepEqual(itemType, 'provider', 'Correct query params sent in transitionTo on save');
       },
     });

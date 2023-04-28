@@ -29,7 +29,19 @@
         <Icon @name="minus" />
       {{/if}}
     </div>
-    <div class="column is-flex foobar" data-test-value-div={{@label}}>
+    <div class="column is-flex" data-test-value-div={{@label}}>
+      {{#if @addCopyButton}}
+        <div class="display-only">
+          <CopyButton
+            @clipboardText={{@value}}
+            @success={{action (set-flash-message "Data copied!")}}
+            class="button copy-button is-compact"
+            data-test-copy-button
+          >
+            <Icon @name="clipboard-copy" aria-hidden="Copy value" />
+          </CopyButton>
+        </div>
+      {{/if}}
       {{#if (has-block)}}
         {{yield}}
       {{else if this.valueIsBoolean}}
@@ -40,7 +52,7 @@
           <Icon @name="x-square" class="icon-false" data-test-boolean-false />
           No
         {{/if}}
-        {{! alwaysRender is still true }}
+        {{! @alwaysRender (this.isVisible) is still true }}
       {{else if this.valueIsEmpty}}
         {{#if @defaultShown}}
           <span data-test-row-value={{@label}}>{{@defaultShown}}</span>
@@ -49,17 +61,22 @@
         {{/if}}
       {{else if @formatDate}}
         {{date-format @value @formatDate}}
+      {{else if @formatTtl}}
+        {{this.formattedTtl}}
       {{else}}
         {{#if (eq @type "array")}}
           <InfoTableItemArray
+            @label={{@label}}
             @backend={{@backend}}
             @displayArray={{@value}}
             @isLink={{@isLink}}
-            @label={{@label}}
             @modelType={{@modelType}}
             @queryParam={{@queryParam}}
-            @viewAll={{@viewAll}}
             @wildcardLabel={{@wildcardLabel}}
+            @rootRoute={{@rootRoute}}
+            @itemRoute={{@itemRoute}}
+            @doNotTruncate={{@doNotTruncate}}
+            @renderItemName={{@renderItemName}}
           />
         {{else}}
           {{#if @tooltipText}}
@@ -72,7 +89,7 @@
                   @clipboardText={{@tooltipText}}
                   @success={{action (set-flash-message "Data copied!")}}
                   @tagName="div"
-                  @disabled={{not @isTooltipCopyable}}
+                  disabled={{not @isTooltipCopyable}}
                   class={{if @isTooltipCopyable "has-pointer"}}
                   data-test-tooltip-copy
                 >

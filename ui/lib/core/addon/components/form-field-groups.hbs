@@ -1,10 +1,10 @@
-{{#each @model.fieldGroups as |fieldGroup|}}
+{{#each (get @model this.fieldGroups) as |fieldGroup|}}
   {{#each-in fieldGroup as |group fields|}}
     {{#if (or (not @renderGroup) (and @renderGroup (eq group @renderGroup)))}}
       {{#if (eq group "default")}}
         {{#each fields as |attr|}}
-          {{! template-lint-configure simple-unless "warn" }}
-          {{#unless (and (not-eq @mode "create") (eq attr.name "name"))}}
+          {{! SHOW ALL FIELDS IF CREATING A NEW MODEL }}
+          {{#if (or (eq @mode "create") @model.isNew)}}
             <FormField
               data-test-field
               @attr={{attr}}
@@ -13,8 +13,25 @@
               @onChange={{@onChange}}
               @onKeyUp={{@onKeyUp}}
               @modelValidations={{@modelValidations}}
+              @showHelpText={{@showHelpText}}
             />
-          {{/unless}}
+          {{else}}
+            {{! OTHERWISE WE'RE EDITING }}
+            {{#if (or (eq attr.name "name") (attr.options.editDisabled))}}
+              <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
+            {{else}}
+              <FormField
+                data-test-field
+                @attr={{attr}}
+                @mode={{@mode}}
+                @model={{@model}}
+                @onChange={{@onChange}}
+                @onKeyUp={{@onKeyUp}}
+                @modelValidations={{@modelValidations}}
+                @showHelpText={{@showHelpText}}
+              />
+            {{/if}}
+          {{/if}}
         {{/each}}
       {{else}}
         <ToggleButton
@@ -28,7 +45,35 @@
         {{#if (eq this.showGroup group)}}
           <div class="box is-marginless">
             {{#each fields as |attr|}}
-              <FormField data-test-field @attr={{attr}} @mode={{@mode}} @model={{@model}} />
+              {{! SHOW ALL FIELDS IF CREATING A NEW MODEL }}
+              {{#if (or (eq @mode "create") @model.isNew)}}
+                <FormField
+                  data-test-field
+                  @attr={{attr}}
+                  @mode={{@mode}}
+                  @model={{@model}}
+                  @onChange={{@onChange}}
+                  @onKeyUp={{@onKeyUp}}
+                  @modelValidations={{@modelValidations}}
+                  @showHelpText={{@showHelpText}}
+                />
+              {{else}}
+                {{! OTHERWISE WE'RE EDITING }}
+                {{#if (or (eq attr.name "name") (eq attr.options.editDisabled true))}}
+                  <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
+                {{else}}
+                  <FormField
+                    data-test-field
+                    @attr={{attr}}
+                    @mode={{@mode}}
+                    @model={{@model}}
+                    @onChange={{@onChange}}
+                    @onKeyUp={{@onKeyUp}}
+                    @modelValidations={{@modelValidations}}
+                    @showHelpText={{@showHelpText}}
+                  />
+                {{/if}}
+              {{/if}}
             {{/each}}
           </div>
         {{/if}}

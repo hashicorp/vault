@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, click } from '@ember/test-helpers';
@@ -12,7 +17,7 @@ module('Integration | Component | oidc-consent-block', function (hooks) {
   test('it renders', async function (assert) {
     this.set('redirect', redirectBase);
     await render(hbs`
-      <OidcConsentBlock @redirect={{redirect}} @code="1234" />
+      <OidcConsentBlock @redirect={{this.redirect}} @code="1234" />
     `);
 
     assert.dom('[data-test-consent-title]').hasText('Consent', 'Title is correct on initial render');
@@ -32,7 +37,7 @@ module('Integration | Component | oidc-consent-block', function (hooks) {
     this.set('redirect', redirectBase);
 
     await render(hbs`
-      <OidcConsentBlock @redirect={{redirect}} @code="1234" @testRedirect={{successSpy}} @foo="make sure this doesn't get passed" />
+      <OidcConsentBlock @redirect={{this.redirect}} @code="1234" @testRedirect={{this.successSpy}} @foo="make sure this doesn't get passed" />
     `);
 
     assert.dom('[data-test-consent-title]').hasText('Consent', 'Title is correct on initial render');
@@ -53,7 +58,7 @@ module('Integration | Component | oidc-consent-block', function (hooks) {
     this.set('redirect', redirectBase);
 
     await render(hbs`
-      <OidcConsentBlock @redirect={{redirectBase}} @code="1234" @testRedirect={{successSpy}} />
+      <OidcConsentBlock @redirect={{this.redirectBase}} @code="1234" @testRedirect={{this.successSpy}} />
     `);
 
     assert.dom('[data-test-consent-title]').hasText('Consent', 'Title is correct on initial render');
@@ -79,11 +84,11 @@ module('Integration | Component | oidc-consent-block', function (hooks) {
 
     await render(hbs`
       <OidcConsentBlock
-        @redirect={{redirect}}
-        @code={{code}}
+        @redirect={{this.redirect}}
+        @code={{this.code}}
         @state="foo"
         @foo="make sure this doesn't get passed"
-        @testRedirect={{successSpy}}
+        @testRedirect={{this.successSpy}}
       />
     `);
 

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 /* eslint ember/no-computed-properties-in-native-classes: 'warn' */
 /**
  * @module SecretEdit
@@ -27,27 +32,21 @@ import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
 import { alias, or } from '@ember/object/computed';
 
 export default class SecretEdit extends Component {
-  @service wizard;
   @service store;
 
   @tracked secretData = null;
   @tracked isV2 = false;
   @tracked codemirrorString = null;
 
-  constructor() {
-    super(...arguments);
-    let secrets = this.args.model.secretData;
-    if (!secrets && this.args.model.selectedVersion) {
+  // fired on did-insert from render modifier
+  @action
+  createKvData(elem, [model]) {
+    if (!model.secretData && model.selectedVersion) {
       this.isV2 = true;
-      secrets = this.args.model.belongsTo('selectedVersion').value().secretData;
+      model.secretData = model.belongsTo('selectedVersion').value().secretData;
     }
-    const data = KVObject.create({ content: [] }).fromJSON(secrets);
-    this.secretData = data;
-    this.codemirrorString = data.toJSONString();
-    if (this.wizard.featureState === 'details' && this.args.mode === 'create') {
-      let engine = this.args.model.backend.includes('kv') ? 'kv' : this.args.model.backend;
-      this.wizard.transitionFeatureMachine('details', 'CONTINUE', engine);
-    }
+    this.secretData = KVObject.create({ content: [] }).fromJSON(model.secretData);
+    this.codemirrorString = this.secretData.toJSONString();
   }
 
   @maybeQueryRecord(
@@ -56,9 +55,9 @@ export default class SecretEdit extends Component {
       if (!context.args.model || context.args.mode === 'create') {
         return;
       }
-      let backend = context.isV2 ? context.args.model.engine.id : context.args.model.backend;
-      let id = context.args.model.id;
-      let path = context.isV2 ? `${backend}/data/${id}` : `${backend}/${id}`;
+      const backend = context.isV2 ? context.args.model.engine.id : context.args.model.backend;
+      const id = context.args.model.id;
+      const path = context.isV2 ? `${backend}/data/${id}` : `${backend}/${id}`;
       return {
         id: path,
       };
@@ -78,8 +77,9 @@ export default class SecretEdit extends Component {
       if (!context.args.model || !context.isV2) {
         return;
       }
-      let backend = context.args.model.backend;
-      let path = `${backend}/metadata/`;
+      const backend = context.args.model.backend;
+      const id = context.args.model.id;
+      const path = `${backend}/metadata/${id}`;
       return {
         id: path,
       };
@@ -98,7 +98,7 @@ export default class SecretEdit extends Component {
   @or('requestInFlight', 'model.isFolder', 'model.flagsIsInvalid') buttonDisabled;
 
   get modelForData() {
-    let { model } = this.args;
+    const { model } = this.args;
     if (!model) return null;
     return this.isV2 ? model.belongsTo('selectedVersion').value() : model;
   }

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -35,9 +40,9 @@ module('Integration | Component | replication-dashboard', function (hooks) {
 
   test('it renders', async function (assert) {
     await render(hbs`<ReplicationDashboard
-      @replicationDetails={{replicationDetails}}
-      @clusterMode={{clusterMode}}
-      @isSecondary={{isSecondary}}
+      @replicationDetails={{this.replicationDetails}}
+      @clusterMode={{this.clusterMode}}
+      @isSecondary={{this.isSecondary}}
     />`);
 
     assert.dom('[data-test-replication-dashboard]').exists();
@@ -49,9 +54,9 @@ module('Integration | Component | replication-dashboard', function (hooks) {
 
   test('it updates the dashboard when the replication mode has changed', async function (assert) {
     await render(hbs`<ReplicationDashboard
-      @replicationDetails={{replicationDetails}}
-      @clusterMode={{clusterMode}}
-      @isSecondary={{isSecondary}}
+      @replicationDetails={{this.replicationDetails}}
+      @clusterMode={{this.clusterMode}}
+      @isSecondary={{this.isSecondary}}
     />`);
 
     assert.dom('[data-test-selectable-card-container="secondary"]').exists();
@@ -68,9 +73,9 @@ module('Integration | Component | replication-dashboard', function (hooks) {
     this.set('isSecondary', false);
 
     await render(hbs`<ReplicationDashboard
-      @replicationDetails={{replicationDetails}}
-      @clusterMode={{clusterMode}}
-      @isSecondary={{isSecondary}}
+      @replicationDetails={{this.replicationDetails}}
+      @clusterMode={{this.clusterMode}}
+      @isSecondary={{this.isSecondary}}
     />`);
 
     assert.dom('[data-test-selectable-card-container="primary"]').exists();
@@ -81,9 +86,9 @@ module('Integration | Component | replication-dashboard', function (hooks) {
     this.set('replicationDetails', IS_SYNCING);
 
     await render(hbs`<ReplicationDashboard
-      @replicationDetails={{replicationDetails}}
-      @clusterMode={{clusterMode}}
-      @isSecondary={{isSecondary}}
+      @replicationDetails={{this.replicationDetails}}
+      @clusterMode={{this.clusterMode}}
+      @isSecondary={{this.isSecondary}}
       @componentToRender='replication-secondary-card'
     />`);
 
@@ -97,9 +102,9 @@ module('Integration | Component | replication-dashboard', function (hooks) {
     this.set('replicationDetails', IS_REINDEXING);
 
     await render(hbs`<ReplicationDashboard
-      @replicationDetails={{replicationDetails}}
-      @clusterMode={{clusterMode}}
-      @isSecondary={{isSecondary}}
+      @replicationDetails={{this.replicationDetails}}
+      @clusterMode={{this.clusterMode}}
+      @isSecondary={{this.isSecondary}}
       @componentToRender='replication-secondary-card'
     />`);
 
@@ -140,11 +145,11 @@ module('Integration | Component | replication-dashboard', function (hooks) {
     this.set('isSecondary', false);
 
     await render(hbs`<ReplicationDashboard
-      @replicationDetails={{replicationDetails}}
-      @replicationDetailsSummary={{replicationDetailsSummary}}
-      @isSummaryDashboard={{isSummaryDashboard}}
-      @clusterMode={{clusterMode}}
-      @isSecondary={{isSecondary}}
+      @replicationDetails={{this.replicationDetails}}
+      @replicationDetailsSummary={{this.replicationDetailsSummary}}
+      @isSummaryDashboard={{this.isSummaryDashboard}}
+      @clusterMode={{this.clusterMode}}
+      @isSecondary={{this.isSecondary}}
       @componentToRender='replication-summary-card'
     />`);
 
@@ -179,11 +184,11 @@ module('Integration | Component | replication-dashboard', function (hooks) {
     this.set('isSecondary', false);
 
     await render(hbs`<ReplicationDashboard
-      @replicationDetails={{replicationDetails}}
-      @replicationDetailsSummary={{replicationDetailsSummary}}
-      @isSummaryDashboard={{isSummaryDashboard}}
-      @clusterMode={{clusterMode}}
-      @isSecondary={{isSecondary}}
+      @replicationDetails={{this.replicationDetails}}
+      @replicationDetailsSummary={{this.replicationDetailsSummary}}
+      @isSummaryDashboard={{this.isSummaryDashboard}}
+      @clusterMode={{this.clusterMode}}
+      @isSecondary={{this.isSecondary}}
       @componentToRender='replication-summary-card'
     />`);
 

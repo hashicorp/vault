@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -92,6 +95,43 @@ func (r *Router) reset() {
 	r.storagePrefix = radix.New()
 	r.mountUUIDCache = radix.New()
 	r.mountAccessorCache = radix.New()
+}
+
+func (r *Router) GetRecords(tag string) ([]map[string]interface{}, error) {
+	r.l.RLock()
+	defer r.l.RUnlock()
+	var data []map[string]interface{}
+	var tree *radix.Tree
+	switch tag {
+	case "root":
+		tree = r.root
+	case "uuid":
+		tree = r.mountUUIDCache
+	case "accessor":
+		tree = r.mountAccessorCache
+	case "storage":
+		tree = r.storagePrefix
+	default:
+		return nil, logical.ErrUnsupportedPath
+	}
+	for _, v := range tree.ToMap() {
+		info := v.(Deserializable).Deserialize()
+		data = append(data, info)
+	}
+	return data, nil
+}
+
+func (entry *routeEntry) Deserialize() map[string]interface{} {
+	entry.l.RLock()
+	defer entry.l.RUnlock()
+	ret := map[string]interface{}{
+		"tainted":        entry.tainted,
+		"storage_prefix": entry.storagePrefix,
+	}
+	for k, v := range entry.mountEntry.Deserialize() {
+		ret[k] = v
+	}
+	return ret
 }
 
 // ValidateMountByAccessor returns the mount type and ID for a given mount
@@ -425,7 +465,12 @@ func (r *Router) MatchingBackend(ctx context.Context, path string) logical.Backe
 	if !ok {
 		return nil
 	}
-	return raw.(*routeEntry).backend
+
+	re := raw.(*routeEntry)
+	re.l.RLock()
+	defer re.l.RUnlock()
+
+	return re.backend
 }
 
 // MatchingSystemView returns the SystemView used for a path
@@ -538,7 +583,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	if !existenceCheck {
 		defer metrics.MeasureSince([]string{
 			"route", string(req.Operation),
-			strings.Replace(mount, "/", "-", -1),
+			strings.ReplaceAll(mount, "/", "-"),
 		}, time.Now())
 	}
 	re := raw.(*routeEntry)
@@ -573,6 +618,11 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	req.Path = strings.TrimPrefix(ns.Path+req.Path, mount)
 	req.MountPoint = mount
 	req.MountType = re.mountEntry.Type
+	req.SetMountRunningSha256(re.mountEntry.RunningSha256)
+	req.SetMountRunningVersion(re.mountEntry.RunningVersion)
+	req.SetMountIsExternalPlugin(re.mountEntry.IsExternalPlugin())
+	req.SetMountClass(re.mountEntry.MountClass())
+
 	if req.Path == "/" {
 		req.Path = ""
 	}
@@ -688,6 +738,11 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		req.Path = originalPath
 		req.MountPoint = mount
 		req.MountType = re.mountEntry.Type
+		req.SetMountRunningSha256(re.mountEntry.RunningSha256)
+		req.SetMountRunningVersion(re.mountEntry.RunningVersion)
+		req.SetMountIsExternalPlugin(re.mountEntry.IsExternalPlugin())
+		req.SetMountClass(re.mountEntry.MountClass())
+
 		req.Connection = originalConn
 		req.ID = originalReqID
 		req.Storage = nil

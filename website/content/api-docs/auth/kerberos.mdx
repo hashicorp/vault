@@ -6,9 +6,11 @@ description: This is the API documentation for the Vault Kerberos auth method pl
 
 # Kerberos Auth Method (API)
 
+@include 'x509-sha1-deprecation.mdx'
+
 This is the API documentation for the Vault Kerberos auth method plugin. To
 learn more about the usage and operation, see the
-[Vault Kerberos auth method](/docs/auth/kerberos).
+[Vault Kerberos auth method](/vault/docs/auth/kerberos).
 
 This documentation assumes the Kerberos auth method is mounted at the
 `auth/kerberos` path in Vault. Since it is possible to enable auth methods at
@@ -33,6 +35,12 @@ for verifying inbound SPNEGO tokens.
 - `service_account` `(string: <required>)` – The service account associated
   with both the keytab entry and an LDAP service account created for Vault. Ex.:
   `"vault_svc"`.
+- `remove_instance_name` - Removes any instance names from a Kerberos service
+  principal name when parsing the keytab file. For example when this is set to true,
+  if a keytab has the service principal name `foo/localhost@example.com`, Vault
+  will strip the service principal name to just be `foo@example.com`. 
+- `add_group_aliases` - When set to true, Vault will add any LDAP groups found for 
+  the user as group aliases.
 
 ### Sample Request
 
@@ -48,7 +56,9 @@ $ curl \
 
 ```json
 {
+  "add_group_aliases": false,
   "keytab": "BQIAAAA6AAEACk1BVFJJWC5MQU4ACXZhdWx0X3N2YwAAAAFdzZSjAgAXABDwhEyRR9nRqkpP8KTn2A83AAAAAg==",
+  "remove_instance_name": false,
   "service_account": "vault_svc"
 }
 ```
@@ -78,6 +88,8 @@ $ curl \
   "warnings": null,
   "wrap_info": null,
   "data": {
+    "add_group_aliases": false,
+    "remove_instance_name": false,
     "service_account": "vault_svc"
   },
   "lease_duration": 0,

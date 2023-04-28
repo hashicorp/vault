@@ -1,0 +1,3 @@
+```release-note:bug
+core (enterprise): Fix bug where wrapping token lookup does not work within namespaces.
+```

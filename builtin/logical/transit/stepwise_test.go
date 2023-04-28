@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package transit
 
 import (
@@ -18,7 +21,7 @@ func TestAccBackend_basic_docker(t *testing.T) {
 	decryptData := make(map[string]interface{})
 	envOptions := stepwise.MountOptions{
 		RegistryName:    "updatedtransit",
-		PluginType:      stepwise.PluginTypeSecrets,
+		PluginType:      api.PluginTypeSecrets,
 		PluginName:      "transit",
 		MountPathPrefix: "transit_temp",
 	}
@@ -162,7 +165,8 @@ func testAccStepwiseReadPolicyWithVersions(t *testing.T, name string, expectNone
 }
 
 func testAccStepwiseEncryptContext(
-	t *testing.T, name, plaintext, context string, decryptData map[string]interface{}) stepwise.Step {
+	t *testing.T, name, plaintext, context string, decryptData map[string]interface{},
+) stepwise.Step {
 	return stepwise.Step{
 		Operation: stepwise.UpdateOperation,
 		Path:      "encrypt/" + name,
@@ -188,7 +192,8 @@ func testAccStepwiseEncryptContext(
 }
 
 func testAccStepwiseDecrypt(
-	t *testing.T, name, plaintext string, decryptData map[string]interface{}) stepwise.Step {
+	t *testing.T, name, plaintext string, decryptData map[string]interface{},
+) stepwise.Step {
 	return stepwise.Step{
 		Operation: stepwise.UpdateOperation,
 		Path:      "decrypt/" + name,

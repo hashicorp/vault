@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
@@ -19,7 +22,6 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 )
 
 func init() {
@@ -69,16 +71,62 @@ func TestClientNilConfig(t *testing.T) {
 	}
 }
 
+func TestClientDefaultHttpClient_unixSocket(t *testing.T) {
+	os.Setenv("VAULT_AGENT_ADDR", "unix:///var/run/vault.sock")
+	defer os.Setenv("VAULT_AGENT_ADDR", "")
+
+	client, err := NewClient(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if client == nil {
+		t.Fatal("expected a non-nil client")
+	}
+	if client.addr.Scheme != "http" {
+		t.Fatalf("bad: %s", client.addr.Scheme)
+	}
+	if client.addr.Host != "/var/run/vault.sock" {
+		t.Fatalf("bad: %s", client.addr.Host)
+	}
+}
+
 func TestClientSetAddress(t *testing.T) {
 	client, err := NewClient(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Start with TCP address using HTTP
 	if err := client.SetAddress("http://172.168.2.1:8300"); err != nil {
 		t.Fatal(err)
 	}
 	if client.addr.Host != "172.168.2.1:8300" {
 		t.Fatalf("bad: expected: '172.168.2.1:8300' actual: %q", client.addr.Host)
+	}
+	// Test switching to Unix Socket address from TCP address
+	if err := client.SetAddress("unix:///var/run/vault.sock"); err != nil {
+		t.Fatal(err)
+	}
+	if client.addr.Scheme != "http" {
+		t.Fatalf("bad: expected: 'http' actual: %q", client.addr.Scheme)
+	}
+	if client.addr.Host != "/var/run/vault.sock" {
+		t.Fatalf("bad: expected: '/var/run/vault.sock' actual: %q", client.addr.Host)
+	}
+	if client.addr.Path != "" {
+		t.Fatalf("bad: expected '' actual: %q", client.addr.Path)
+	}
+	if client.config.HttpClient.Transport.(*http.Transport).DialContext == nil {
+		t.Fatal("bad: expected DialContext to not be nil")
+	}
+	// Test switching to TCP address from Unix Socket address
+	if err := client.SetAddress("http://172.168.2.1:8300"); err != nil {
+		t.Fatal(err)
+	}
+	if client.addr.Host != "172.168.2.1:8300" {
+		t.Fatalf("bad: expected: '172.168.2.1:8300' actual: %q", client.addr.Host)
+	}
+	if client.addr.Scheme != "http" {
+		t.Fatalf("bad: expected: 'http' actual: %q", client.addr.Scheme)
 	}
 }
 
@@ -160,6 +208,67 @@ func TestClientBadToken(t *testing.T) {
 	_, err = client.RawRequest(client.NewRequest(http.MethodPut, "/"))
 	if err == nil || !strings.Contains(err.Error(), "printable") {
 		t.Fatalf("expected error due to bad token")
+	}
+}
+
+func TestClientDisableRedirects(t *testing.T) {
+	tests := map[string]struct {
+		statusCode       int
+		expectedNumReqs  int
+		disableRedirects bool
+	}{
+		"Disabled redirects: Moved permanently":  {statusCode: 301, expectedNumReqs: 1, disableRedirects: true},
+		"Disabled redirects: Found":              {statusCode: 302, expectedNumReqs: 1, disableRedirects: true},
+		"Disabled redirects: Temporary Redirect": {statusCode: 307, expectedNumReqs: 1, disableRedirects: true},
+		"Enable redirects: Moved permanently":    {statusCode: 301, expectedNumReqs: 2, disableRedirects: false},
+	}
+
+	for name, tc := range tests {
+		test := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			numReqs := 0
+			var config *Config
+
+			respFunc := func(w http.ResponseWriter, req *http.Request) {
+				// Track how many requests the server has handled
+				numReqs++
+				// Send back the relevant status code and generate a location
+				w.Header().Set("Location", fmt.Sprintf(config.Address+"/reqs/%v", numReqs))
+				w.WriteHeader(test.statusCode)
+			}
+
+			config, ln := testHTTPServer(t, http.HandlerFunc(respFunc))
+			config.DisableRedirects = test.disableRedirects
+			defer ln.Close()
+
+			client, err := NewClient(config)
+			if err != nil {
+				t.Fatalf("%s: error %v", name, err)
+			}
+
+			req := client.NewRequest("GET", "/")
+			resp, err := client.rawRequestWithContext(context.Background(), req)
+			if err != nil {
+				t.Fatalf("%s: error %v", name, err)
+			}
+
+			if numReqs != test.expectedNumReqs {
+				t.Fatalf("%s: expected %v request(s) but got %v", name, test.expectedNumReqs, numReqs)
+			}
+
+			if resp.StatusCode != test.statusCode {
+				t.Fatalf("%s: expected status code %v got %v", name, test.statusCode, resp.StatusCode)
+			}
+
+			location, err := resp.Location()
+			if err != nil {
+				t.Fatalf("%s error %v", name, err)
+			}
+			if req.URL.String() == location.String() {
+				t.Fatalf("%s: expected request URL %v to be different from redirect URL %v", name, req.URL, resp.Request.URL)
+			}
+		})
 	}
 }
 
@@ -253,7 +362,7 @@ func TestDefaulRetryPolicy(t *testing.T) {
 				t.Fatalf("expected to retry request: '%t', but actual result was: '%t'", test.expect, retry)
 			}
 			if err != test.expectErr {
-				t.Fatalf("expected error from retry policy: '%s', but actual result was: '%s'", err, test.expectErr)
+				t.Fatalf("expected error from retry policy: %q, but actual result was: %q", err, test.expectErr)
 			}
 		})
 	}
@@ -274,6 +383,7 @@ func TestClientEnvSettings(t *testing.T) {
 	oldClientKey := os.Getenv(EnvVaultClientKey)
 	oldSkipVerify := os.Getenv(EnvVaultSkipVerify)
 	oldMaxRetries := os.Getenv(EnvVaultMaxRetries)
+	oldDisableRedirects := os.Getenv(EnvVaultDisableRedirects)
 
 	os.Setenv(EnvVaultCACert, cwd+"/test-fixtures/keys/cert.pem")
 	os.Setenv(EnvVaultCACertBytes, string(caCertBytes))
@@ -282,6 +392,7 @@ func TestClientEnvSettings(t *testing.T) {
 	os.Setenv(EnvVaultClientKey, cwd+"/test-fixtures/keys/key.pem")
 	os.Setenv(EnvVaultSkipVerify, "true")
 	os.Setenv(EnvVaultMaxRetries, "5")
+	os.Setenv(EnvVaultDisableRedirects, "true")
 
 	defer func() {
 		os.Setenv(EnvVaultCACert, oldCACert)
@@ -291,6 +402,7 @@ func TestClientEnvSettings(t *testing.T) {
 		os.Setenv(EnvVaultClientKey, oldClientKey)
 		os.Setenv(EnvVaultSkipVerify, oldSkipVerify)
 		os.Setenv(EnvVaultMaxRetries, oldMaxRetries)
+		os.Setenv(EnvVaultDisableRedirects, oldDisableRedirects)
 	}()
 
 	config := DefaultConfig()
@@ -307,6 +419,9 @@ func TestClientEnvSettings(t *testing.T) {
 	}
 	if tlsConfig.InsecureSkipVerify != true {
 		t.Fatalf("bad: %v", tlsConfig.InsecureSkipVerify)
+	}
+	if config.DisableRedirects != true {
+		t.Fatalf("bad: expected disable redirects to be true: %v", config.DisableRedirects)
 	}
 }
 
@@ -329,7 +444,7 @@ func TestClientDeprecatedEnvSettings(t *testing.T) {
 func TestClientEnvNamespace(t *testing.T) {
 	var seenNamespace string
 	handler := func(w http.ResponseWriter, req *http.Request) {
-		seenNamespace = req.Header.Get(consts.NamespaceHeaderName)
+		seenNamespace = req.Header.Get(NamespaceHeaderName)
 	}
 	config, ln := testHTTPServer(t, http.HandlerFunc(handler))
 	defer ln.Close()
@@ -423,6 +538,20 @@ func TestClientNonTransportRoundTripper(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestClientNonTransportRoundTripperUnixAddress(t *testing.T) {
+	client := &http.Client{
+		Transport: roundTripperFunc(http.DefaultTransport.RoundTrip),
+	}
+
+	_, err := NewClient(&Config{
+		HttpClient: client,
+		Address:    "unix:///var/run/vault.sock",
+	})
+	if err == nil {
+		t.Fatal("bad: expected error got nil")
 	}
 }
 
@@ -1140,7 +1269,7 @@ func TestClient_SetCloneToken(t *testing.T) {
 func TestClientWithNamespace(t *testing.T) {
 	var ns string
 	handler := func(w http.ResponseWriter, req *http.Request) {
-		ns = req.Header.Get(consts.NamespaceHeaderName)
+		ns = req.Header.Get(NamespaceHeaderName)
 	}
 	config, ln := testHTTPServer(t, http.HandlerFunc(handler))
 	defer ln.Close()
@@ -1159,7 +1288,7 @@ func TestClientWithNamespace(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 	if ns != ogNS {
-		t.Fatalf("Expected namespace: \"%s\", got \"%s\"", ogNS, ns)
+		t.Fatalf("Expected namespace: %q, got %q", ogNS, ns)
 	}
 
 	// make a call with a temporary namespace
@@ -1171,7 +1300,7 @@ func TestClientWithNamespace(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 	if ns != newNS {
-		t.Fatalf("Expected new namespace: \"%s\", got \"%s\"", newNS, ns)
+		t.Fatalf("Expected new namespace: %q, got %q", newNS, ns)
 	}
 	// ensure client has not been modified
 	_, err = client.rawRequestWithContext(
@@ -1181,7 +1310,7 @@ func TestClientWithNamespace(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 	if ns != ogNS {
-		t.Fatalf("Expected original namespace: \"%s\", got \"%s\"", ogNS, ns)
+		t.Fatalf("Expected original namespace: %q, got %q", ogNS, ns)
 	}
 
 	// make call with empty ns
@@ -1192,12 +1321,12 @@ func TestClientWithNamespace(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 	if ns != "" {
-		t.Fatalf("Expected no namespace, got \"%s\"", ns)
+		t.Fatalf("Expected no namespace, got %q", ns)
 	}
 
 	// ensure client has not been modified
 	if client.Namespace() != ogNS {
-		t.Fatalf("Expected original namespace: \"%s\", got \"%s\"", ogNS, client.Namespace())
+		t.Fatalf("Expected original namespace: %q, got %q", ogNS, client.Namespace())
 	}
 }
 
@@ -1282,5 +1411,27 @@ func TestVaultProxy(t *testing.T) {
 				t.Fatalf("Expected resolved proxy URL to be %v but was %v", tc.expectedResolvedProxyUrl, proxyUrl.String())
 			}
 		})
+	}
+}
+
+func TestParseAddressWithUnixSocket(t *testing.T) {
+	address := "unix:///var/run/vault.sock"
+	config := DefaultConfig()
+
+	u, err := config.ParseAddress(address)
+	if err != nil {
+		t.Fatal("Error not expected")
+	}
+	if u.Scheme != "http" {
+		t.Fatal("Scheme not changed to http")
+	}
+	if u.Host != "/var/run/vault.sock" {
+		t.Fatal("Host not changed to socket name")
+	}
+	if u.Path != "" {
+		t.Fatal("Path expected to be blank")
+	}
+	if config.HttpClient.Transport.(*http.Transport).DialContext == nil {
+		t.Fatal("DialContext function not set in config.HttpClient.Transport")
 	}
 }

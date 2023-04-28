@@ -1,5 +1,8 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 rules:
-  - id: return-nil
+  - id: hc-return-nil
     patterns:
       - pattern-either:
           - pattern: |

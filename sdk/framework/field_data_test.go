@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package framework
 
 import (
@@ -1157,8 +1160,118 @@ func TestFieldDataGetFirst(t *testing.T) {
 		t.Fatal("should have gotten buzz for fizz")
 	}
 
-	result, ok = data.GetFirst("cats")
+	_, ok = data.GetFirst("cats")
 	if ok {
 		t.Fatal("shouldn't have gotten anything for cats")
+	}
+}
+
+func TestValidateStrict(t *testing.T) {
+	cases := map[string]struct {
+		Schema      map[string]*FieldSchema
+		Raw         map[string]interface{}
+		ExpectError bool
+	}{
+		"string type, string value": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeString},
+			},
+			map[string]interface{}{
+				"foo": "bar",
+			},
+			false,
+		},
+
+		"string type, int value": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeString},
+			},
+			map[string]interface{}{
+				"foo": 42,
+			},
+			false,
+		},
+
+		"string type, unset value": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeString},
+			},
+			map[string]interface{}{},
+			false,
+		},
+
+		"string type, unset required value": {
+			map[string]*FieldSchema{
+				"foo": {
+					Type:     TypeString,
+					Required: true,
+				},
+			},
+			map[string]interface{}{},
+			true,
+		},
+
+		"value not in schema": {
+			map[string]*FieldSchema{
+				"foo": {
+					Type:     TypeString,
+					Required: true,
+				},
+			},
+			map[string]interface{}{
+				"foo": 42,
+				"bar": 43,
+			},
+			true,
+		},
+
+		"value not in schema, empty schema": {
+			map[string]*FieldSchema{},
+			map[string]interface{}{
+				"foo": 42,
+				"bar": 43,
+			},
+			true,
+		},
+
+		"value not in schema, nil schema": {
+			nil,
+			map[string]interface{}{
+				"foo": 42,
+				"bar": 43,
+			},
+			false,
+		},
+
+		"type time, invalid value": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeTime},
+			},
+			map[string]interface{}{
+				"foo": "2021-13-11T09:08:07+02:00",
+			},
+			true,
+		},
+	}
+
+	for name, tc := range cases {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			data := &FieldData{
+				Raw:    tc.Raw,
+				Schema: tc.Schema,
+			}
+
+			err := data.ValidateStrict()
+
+			if err == nil && tc.ExpectError == true {
+				t.Fatalf("expected an error, got nil")
+			}
+			if err != nil && tc.ExpectError == false {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
 	}
 }

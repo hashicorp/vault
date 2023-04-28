@@ -1,6 +1,6 @@
 <Toolbar>
   <ToolbarActions>
-    {{#if @model.configPath.canUpdate}}
+    {{#if @model.canEdit}}
       <LinkTo @route="vault.cluster.clients.edit" class="toolbar-link">
         Edit configuration
       </LinkTo>

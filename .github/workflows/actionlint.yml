@@ -1,0 +1,15 @@
+
+name: Lint GitHub Actions Workflows
+on:
+  push:
+  pull_request:
+    paths:
+    - '.github/**'
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
+      - name: "Check workflow files"
+        uses: docker://docker.mirror.hashicorp.services/rhysd/actionlint@sha256:93834930f56ca380be3e9a3377670d7aa5921be251b9c774891a39b3629b83b8

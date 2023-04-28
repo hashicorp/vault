@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { alias, and, equal } from '@ember/object/computed';
 
@@ -24,6 +29,7 @@ export default Model.extend({
   version: attr('string'),
   type: attr('string'),
   storageType: attr('string'),
+  hcpLinkStatus: attr('string'),
 
   //https://www.vaultproject.io/docs/http/sys-leader.html
   haEnabled: attr('boolean'),

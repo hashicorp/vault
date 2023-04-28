@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Mixin from '@ember/object/mixin';
 import utils from 'vault/lib/key-utils';
 import { task } from 'ember-concurrency';
@@ -13,12 +18,12 @@ import { task } from 'ember-concurrency';
 // the ancestors array and transitions to the root
 export default Mixin.create({
   navToNearestAncestor: task(function* (key) {
-    let ancestors = utils.ancestorKeysForKey(key);
+    const ancestors = utils.ancestorKeysForKey(key);
     let errored = false;
     let nearest = ancestors.pop();
     while (nearest) {
       try {
-        let transition = this.transitionToRoute('vault.cluster.secrets.backend.list', nearest);
+        const transition = this.transitionToRoute('vault.cluster.secrets.backend.list', nearest);
         transition.data.isDeletion = true;
         yield transition.promise;
       } catch (e) {

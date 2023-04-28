@@ -66,7 +66,7 @@
   <div class="box is-shadowless" data-test-lease-renew-picker={{true}}>
     <h2 class="title is-6">Renew Lease</h2>
     <form {{action "renewLease" this.model this.increment on="submit"}}>
-      <TtlPicker2
+      <TtlPicker
         @label="Increment"
         @helperTextEnabled="Lease will expire after"
         @helperTextDisabled="Vault will use the default lease duration"

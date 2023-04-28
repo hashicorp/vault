@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package configutil
 
 import (
@@ -8,7 +11,7 @@ import (
 	"fmt"
 	"regexp"
 
-	wrapping "github.com/hashicorp/go-kms-wrapping"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -71,7 +74,7 @@ func EncryptDecrypt(rawStr string, decrypt, strip bool, wrapper wrapping.Wrapper
 			if err != nil {
 				return "", fmt.Errorf("error decoding encrypted parameter: %w", err)
 			}
-			inBlob := new(wrapping.EncryptedBlobInfo)
+			inBlob := new(wrapping.BlobInfo)
 			if err := proto.Unmarshal(inMsg, inBlob); err != nil {
 				return "", fmt.Errorf("error unmarshaling encrypted parameter: %w", err)
 			}

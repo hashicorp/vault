@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package physical
 
 import (
@@ -29,7 +32,6 @@ var cacheExceptionsPaths = []string{
 	"sys/expire/",
 	"core/poison-pill",
 	"core/raft/tls",
-	"core/license",
 }
 
 // CacheRefreshContext returns a context with an added value denoting if the

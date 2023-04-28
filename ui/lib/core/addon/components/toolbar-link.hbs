@@ -1,22 +1,36 @@
-{{#let (component "link-to" class="toolbar-link" disabled=@disabled params=@params) as |LinkToComponent|}}
-  {{#if (and @disabled @disabledTooltip)}}
-    <ToolTip @verticalPosition="above" as |T|>
-      <T.Trigger tabindex="-1">
-        <LinkToComponent ...attributes>
-          {{yield}}
-          <Icon @name={{this.glyph}} data-test-icon={{this.glyph}} />
-        </LinkToComponent>
-      </T.Trigger>
-      <T.Content @defaultClass="tool-tip smaller-font">
-        <div class="box" data-test-disabled-tooltip>
-          {{@disabledTooltip}}
-        </div>
-      </T.Content>
-    </ToolTip>
-  {{else}}
-    <LinkToComponent ...attributes>
-      {{yield}}
-      <Icon @name={{this.glyph}} data-test-icon={{this.glyph}} />
-    </LinkToComponent>
-  {{/if}}
-{{/let}}
+{{#if (and @disabled @disabledTooltip)}}
+  <ToolTip @verticalPosition="above" as |T|>
+    <T.Trigger tabindex="-1">
+      <LinkTo
+        class="toolbar-link"
+        ...attributes
+        @route={{@route}}
+        @models={{this.models}}
+        @query={{this.query}}
+        @replace={{@replace}}
+        @disabled={{@disabled}}
+      >
+        {{yield}}
+        <Icon @name={{this.glyph}} data-test-icon={{this.glyph}} />
+      </LinkTo>
+    </T.Trigger>
+    <T.Content @defaultClass="tool-tip smaller-font">
+      <div class="box" data-test-disabled-tooltip>
+        {{@disabledTooltip}}
+      </div>
+    </T.Content>
+  </ToolTip>
+{{else}}
+  <LinkTo
+    class="toolbar-link"
+    ...attributes
+    @route={{@route}}
+    @models={{this.models}}
+    @query={{this.query}}
+    @replace={{@replace}}
+    @disabled={{@disabled}}
+  >
+    {{yield}}
+    <Icon @name={{this.glyph}} data-test-icon={{this.glyph}} />
+  </LinkTo>
+{{/if}}

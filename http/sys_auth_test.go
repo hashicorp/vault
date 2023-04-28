@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package http
 
 import (
@@ -8,6 +11,9 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/helper/versions"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -38,9 +44,12 @@ func TestSysAuth(t *testing.T) {
 					"token_type":        "default-service",
 					"force_no_cache":    false,
 				},
-				"local":     false,
-				"seal_wrap": false,
-				"options":   interface{}(nil),
+				"local":                  false,
+				"seal_wrap":              false,
+				"options":                interface{}(nil),
+				"plugin_version":         "",
+				"running_sha256":         "",
+				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 			},
 		},
 		"token/": map[string]interface{}{
@@ -53,9 +62,12 @@ func TestSysAuth(t *testing.T) {
 				"token_type":        "default-service",
 				"force_no_cache":    false,
 			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   interface{}(nil),
+			"local":                  false,
+			"seal_wrap":              false,
+			"options":                interface{}(nil),
+			"plugin_version":         "",
+			"running_sha256":         "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -88,7 +100,7 @@ func TestSysEnableAuth(t *testing.T) {
 	TestServerAuth(t, addr, token)
 
 	resp := testHttpPost(t, token, addr+"/v1/sys/auth/foo", map[string]interface{}{
-		"type":        "noop",
+		"type":        "approle",
 		"description": "foo",
 	})
 	testResponseStatus(t, resp, 204)
@@ -106,17 +118,21 @@ func TestSysEnableAuth(t *testing.T) {
 		"data": map[string]interface{}{
 			"foo/": map[string]interface{}{
 				"description":             "foo",
-				"type":                    "noop",
+				"type":                    "approle",
 				"external_entropy_access": false,
+				"deprecation_status":      "supported",
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 					"token_type":        "default-service",
 					"force_no_cache":    false,
 				},
-				"local":     false,
-				"seal_wrap": false,
-				"options":   map[string]interface{}{},
+				"local":                  false,
+				"seal_wrap":              false,
+				"options":                map[string]interface{}{},
+				"plugin_version":         "",
+				"running_sha256":         "",
+				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "approle"),
 			},
 			"token/": map[string]interface{}{
 				"description":             "token based credentials",
@@ -128,24 +144,31 @@ func TestSysEnableAuth(t *testing.T) {
 					"force_no_cache":    false,
 					"token_type":        "default-service",
 				},
-				"local":     false,
-				"seal_wrap": false,
-				"options":   interface{}(nil),
+				"local":                  false,
+				"seal_wrap":              false,
+				"options":                interface{}(nil),
+				"plugin_version":         "",
+				"running_sha256":         "",
+				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 			},
 		},
 		"foo/": map[string]interface{}{
 			"description":             "foo",
-			"type":                    "noop",
+			"type":                    "approle",
 			"external_entropy_access": false,
+			"deprecation_status":      "supported",
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 				"token_type":        "default-service",
 				"force_no_cache":    false,
 			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   map[string]interface{}{},
+			"local":                  false,
+			"seal_wrap":              false,
+			"options":                map[string]interface{}{},
+			"plugin_version":         "",
+			"running_sha256":         "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "approle"),
 		},
 		"token/": map[string]interface{}{
 			"description":             "token based credentials",
@@ -157,9 +180,12 @@ func TestSysEnableAuth(t *testing.T) {
 				"token_type":        "default-service",
 				"force_no_cache":    false,
 			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   interface{}(nil),
+			"local":                  false,
+			"seal_wrap":              false,
+			"options":                interface{}(nil),
+			"plugin_version":         "",
+			"running_sha256":         "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -224,6 +250,9 @@ func TestSysDisableAuth(t *testing.T) {
 				"local":                   false,
 				"seal_wrap":               false,
 				"options":                 interface{}(nil),
+				"plugin_version":          "",
+				"running_sha256":          "",
+				"running_plugin_version":  versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 			},
 		},
 		"token/": map[string]interface{}{
@@ -239,6 +268,9 @@ func TestSysDisableAuth(t *testing.T) {
 			"local":                   false,
 			"seal_wrap":               false,
 			"options":                 interface{}(nil),
+			"plugin_version":          "",
+			"running_sha256":          "",
+			"running_plugin_version":  versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -457,7 +489,7 @@ func TestSysRemountAuth(t *testing.T) {
 	// Poll until the remount succeeds
 	var remountResp map[string]interface{}
 	testResponseBody(t, resp, &remountResp)
-	vault.RetryUntil(t, 5*time.Second, func() error {
+	corehelpers.RetryUntil(t, 5*time.Second, func() error {
 		resp = testHttpGet(t, token, addr+"/v1/sys/remount/status/"+remountResp["migration_id"].(string))
 		testResponseStatus(t, resp, 200)
 
@@ -492,9 +524,12 @@ func TestSysRemountAuth(t *testing.T) {
 					"token_type":        "default-service",
 					"force_no_cache":    false,
 				},
-				"local":     false,
-				"seal_wrap": false,
-				"options":   map[string]interface{}{},
+				"local":                  false,
+				"seal_wrap":              false,
+				"options":                map[string]interface{}{},
+				"plugin_version":         "",
+				"running_sha256":         "",
+				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 			},
 			"token/": map[string]interface{}{
 				"description":             "token based credentials",
@@ -506,9 +541,12 @@ func TestSysRemountAuth(t *testing.T) {
 					"force_no_cache":    false,
 					"token_type":        "default-service",
 				},
-				"local":     false,
-				"seal_wrap": false,
-				"options":   interface{}(nil),
+				"local":                  false,
+				"seal_wrap":              false,
+				"options":                interface{}(nil),
+				"plugin_version":         "",
+				"running_sha256":         "",
+				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 			},
 		},
 		"bar/": map[string]interface{}{
@@ -521,9 +559,12 @@ func TestSysRemountAuth(t *testing.T) {
 				"token_type":        "default-service",
 				"force_no_cache":    false,
 			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   map[string]interface{}{},
+			"local":                  false,
+			"seal_wrap":              false,
+			"options":                map[string]interface{}{},
+			"plugin_version":         "",
+			"running_sha256":         "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 		},
 		"token/": map[string]interface{}{
 			"description":             "token based credentials",
@@ -535,9 +576,12 @@ func TestSysRemountAuth(t *testing.T) {
 				"token_type":        "default-service",
 				"force_no_cache":    false,
 			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   interface{}(nil),
+			"local":                  false,
+			"seal_wrap":              false,
+			"options":                interface{}(nil),
+			"plugin_version":         "",
+			"running_sha256":         "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 		},
 	}
 	testResponseStatus(t, resp, 200)

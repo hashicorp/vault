@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/transit: Do not warn about unrecognized parameter 'batch_input'
+```

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
@@ -60,6 +63,7 @@ func testVaultServerCoreConfig(t testing.TB, coreConfig *vault.CoreConfig) (*api
 
 	cluster := vault.NewTestCluster(benchhelpers.TBtoT(t), coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: http.Handler,
+		NumCores:    1,
 	})
 	cluster.Start()
 

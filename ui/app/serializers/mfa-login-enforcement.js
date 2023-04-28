@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import ApplicationSerializer from './application';
 
 export default class MfaLoginEnforcementSerializer extends ApplicationSerializer {
@@ -31,6 +36,10 @@ export default class MfaLoginEnforcementSerializer extends ApplicationSerializer
   }
   serialize() {
     const json = super.serialize(...arguments);
+    // empty arrays are being removed from serialized json
+    // ensure that they are sent to the server, otherwise removing items will not be persisted
+    json.auth_method_accessors = json.auth_method_accessors || [];
+    json.auth_method_types = json.auth_method_types || [];
     return this.transformHasManyKeys(json, 'server');
   }
 }

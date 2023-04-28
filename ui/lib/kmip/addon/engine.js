@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Engine from 'ember-engines/engine';
 import loadInitializers from 'ember-load-initializers';
 import Resolver from './resolver';
@@ -11,13 +16,13 @@ const Eng = Engine.extend({
   dependencies: {
     services: [
       'auth',
+      'download',
       'flash-messages',
       'namespace',
       'path-help',
       'router',
       'store',
       'version',
-      'wizard',
       'secret-mount-path',
     ],
     externalRoutes: ['secrets'],

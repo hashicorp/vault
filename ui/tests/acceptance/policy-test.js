@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { currentURL, currentRouteName, visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -17,7 +22,7 @@ module('Acceptance | policies', function (hooks) {
 
   test('it redirects to acls with unknown policy type', async function (assert) {
     await visit('/vault/policies/foo');
-    assert.equal(currentRouteName(), 'vault.cluster.policies.index');
-    assert.equal(currentURL(), '/vault/policies/acl');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.policies.index');
+    assert.strictEqual(currentURL(), '/vault/policies/acl');
   });
 });

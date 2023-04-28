@@ -28,7 +28,26 @@ $ curl \
 ### Sample Response
 
 ```json
-["ns1/", "ns2/"]
+{
+  "data": {
+    "key_info": {
+      "bar/": {
+        "custom_metadata": {},
+        "id": "HWmNL",
+        "path": "bar/"
+      },
+      "foo/": {
+        "custom_metadata": {},
+        "id": "5q39x",
+        "path": "foo/"
+      }
+    },
+    "keys": [
+      "bar/",
+      "foo/"
+    ]
+  }
+}
 ```
 
 ## Create Namespace
@@ -43,6 +62,19 @@ This endpoint creates a namespace at the given path.
 
 - `path` `(string: <required>)` – Specifies the path where the namespace
   will be created.
+- `custom_metadata` `(map<string|string>: nil)` - A map of arbitrary string to string valued user-provided metadata meant
+  to describe the namespace.
+
+### Sample Payload
+
+```json
+{
+  "custom_metadata": {
+    "foo": "abc",
+    "bar": "123"
+  }
+}
+```
 
 ### Sample Request
 
@@ -50,6 +82,43 @@ This endpoint creates a namespace at the given path.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/namespaces/ns1
+```
+
+## Patch Namespace
+
+This endpoint patches an existing namespace at the specified path.
+
+| Method   | Path                    |
+| :------- | :---------------------- |
+| `PATCH`  | `/sys/namespaces/:path` |
+
+### Parameters
+
+- `path` `(string: <required>)` – Specifies the path of the existing namespace.
+- `custom_metadata` `(map<string|string>: nil)` - A map of arbitrary string to string valued user-provided metadata meant
+  to describe the namespace.
+
+### Sample Payload
+
+```json
+{
+  "custom_metadata": {
+    "foo": "abc",
+    "bar": "123"
+  }
+}
+```
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --header "Content-Type: application/merge-patch+json"
+    --request PATCH \
+    --data @payload.json \
     http://127.0.0.1:8200/v1/sys/namespaces/ns1
 ```
 
@@ -91,7 +160,11 @@ $ curl \
 ```json
 {
   "id": "gsudj",
-  "path": "ns1/"
+  "path": "ns1/",
+  "custom_metadata": {
+    "foo": "abc",
+    "bar": "123"
+  }
 }
 ```
 
@@ -99,7 +172,7 @@ $ curl \
 
 This endpoint locks the API for the current namespace path or optional subpath.
 The behavior when interacting with Vault from a locked namespace is described in
-[API Locked Response](/docs/concepts/namespace-api-lock#api-locked-response).
+[API Locked Response](/vault/docs/concepts/namespace-api-lock#api-locked-response).
 
 | Method | Path                    |
 | :----- | :---------------------- |

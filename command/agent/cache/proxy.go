@@ -1,9 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package cache
 
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 
@@ -59,7 +62,7 @@ func NewSendResponse(apiResponse *api.Response, responseBody []byte) (*SendRespo
 	case len(responseBody) > 0:
 		resp.ResponseBody = responseBody
 	case apiResponse.Body != nil:
-		respBody, err := ioutil.ReadAll(apiResponse.Body)
+		respBody, err := io.ReadAll(apiResponse.Body)
 		if err != nil {
 			return nil, err
 		}
@@ -67,7 +70,7 @@ func NewSendResponse(apiResponse *api.Response, responseBody []byte) (*SendRespo
 		apiResponse.Body.Close()
 
 		// Re-set the response body after reading from the Reader
-		apiResponse.Body = ioutil.NopCloser(bytes.NewReader(respBody))
+		apiResponse.Body = io.NopCloser(bytes.NewReader(respBody))
 
 		resp.ResponseBody = respBody
 	}

@@ -1,13 +1,19 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 /* eslint-env node */
 'use strict';
 
 const EmberApp = require('ember-cli/lib/broccoli/ember-app');
 const config = require('./config/environment')();
+const nodeSass = require('node-sass');
 
 const environment = EmberApp.env();
 const isProd = environment === 'production';
 const isTest = environment === 'test';
-const isCI = !!process.env.CI;
+// const isCI = !!process.env.CI;
 
 const appConfig = {
   'ember-service-worker': {
@@ -21,16 +27,16 @@ const appConfig = {
     sourceDirs: ['node_modules/@hashicorp/structure-icons/dist', 'public'],
     rootURL: '/ui/',
   },
+  fingerprint: {
+    exclude: ['images/'],
+  },
   assetLoader: {
     generateURI: function (filePath) {
       return `${config.rootURL.replace(/\/$/, '')}${filePath}`;
     },
   },
   babel: {
-    plugins: ['@babel/plugin-proposal-object-rest-spread', ['inline-json-import', {}]],
-  },
-  'ember-cli-babel': {
-    includePolyfill: isTest || isProd || isCI,
+    plugins: [['inline-json-import', {}]],
   },
   hinting: isTest,
   tests: isTest,
@@ -38,6 +44,7 @@ const appConfig = {
     enabled: !isProd,
   },
   sassOptions: {
+    implementation: nodeSass,
     sourceMap: false,
     onlyIncluded: true,
   },
@@ -61,7 +68,7 @@ const appConfig = {
 };
 
 module.exports = function (defaults) {
-  let app = new EmberApp(defaults, appConfig);
+  const app = new EmberApp(defaults, appConfig);
 
   app.import('vendor/string-includes.js');
   app.import('node_modules/string.prototype.endswith/endswith.js');

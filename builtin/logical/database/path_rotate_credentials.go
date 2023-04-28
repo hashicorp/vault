@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package database
 
 import (
@@ -5,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/vault/helper/versions"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -15,6 +19,13 @@ func pathRotateRootCredentials(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "rotate-root/" + framework.GenericNameRegex("name"),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixDatabase,
+				OperationVerb:   "rotate",
+				OperationSuffix: "root-credentials",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -35,6 +46,13 @@ func pathRotateRootCredentials(b *databaseBackend) []*framework.Path {
 		},
 		{
 			Pattern: "rotate-role/" + framework.GenericNameRegex("name"),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixDatabase,
+				OperationVerb:   "rotate",
+				OperationSuffix: "static-role-credentials",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -73,27 +91,29 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 			return nil, fmt.Errorf("unable to rotate root credentials: no username in configuration")
 		}
 
+		rootPassword, ok := config.ConnectionDetails["password"].(string)
+		if !ok || rootPassword == "" {
+			return nil, fmt.Errorf("unable to rotate root credentials: no password in configuration")
+		}
+
 		dbi, err := b.GetConnection(ctx, req.Storage, name)
 		if err != nil {
 			return nil, err
 		}
 
-		// Take out the backend lock since we are swapping out the connection
-		b.Lock()
-		defer b.Unlock()
-
 		// Take the write lock on the instance
 		dbi.Lock()
-		defer dbi.Unlock()
-
+		defer func() {
+			dbi.Unlock()
+			// Even on error, still remove the connection
+			b.ClearConnectionId(name, dbi.id)
+		}()
 		defer func() {
 			// Close the plugin
 			dbi.closed = true
 			if err := dbi.database.Close(); err != nil {
 				b.Logger().Error("error closing the database plugin connection", "err", err)
 			}
-			// Even on error, still remove the connection
-			delete(b.connections, name)
 		}()
 
 		generator, err := newPasswordGenerator(nil)
@@ -140,6 +160,11 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 			config.ConnectionDetails = newConfigDetails
 		}
 
+		// 1.12.0 and 1.12.1 stored builtin plugins in storage, but 1.12.2 reverted
+		// that, so clean up any pre-existing stored builtin versions on write.
+		if versions.IsBuiltinVersion(config.PluginVersion) {
+			config.PluginVersion = ""
+		}
 		err = storeConfig(ctx, req.Storage, name, config)
 		if err != nil {
 			return nil, err

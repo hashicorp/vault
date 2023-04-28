@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
@@ -19,7 +24,7 @@ export const COMPUTEDS = {
 
   // For rendering on the create/edit pages
   defaultFields: computed('newFields', 'operationFields', 'tlsFields', function () {
-    let excludeFields = ['role'].concat(this.operationFields, this.tlsFields);
+    const excludeFields = ['role'].concat(this.operationFields, this.tlsFields);
     return this.newFields.slice().removeObjects(excludeFields);
   }),
 
@@ -42,12 +47,12 @@ const ModelExport = Model.extend(COMPUTEDS, {
     if (this.defaultFields.length) {
       groups.unshift({ default: this.defaultFields });
     }
-    let ret = fieldToAttrs(this, groups);
+    const ret = fieldToAttrs(this, groups);
     return ret;
   }),
 
   operationFormFields: computed('operationFieldsWithoutSpecial', function () {
-    let objects = [
+    const objects = [
       'operationCreate',
       'operationActivate',
       'operationGet',
@@ -57,9 +62,11 @@ const ModelExport = Model.extend(COMPUTEDS, {
       'operationDestroy',
     ];
 
-    let attributes = ['operationAddAttribute', 'operationGetAttributes'];
-    let server = ['operationDiscoverVersion'];
-    let others = this.operationFieldsWithoutSpecial.slice().removeObjects(objects.concat(attributes, server));
+    const attributes = ['operationAddAttribute', 'operationGetAttributes'];
+    const server = ['operationDiscoverVersions'];
+    const others = this.operationFieldsWithoutSpecial
+      .slice()
+      .removeObjects(objects.concat(attributes, server));
     const groups = [
       { 'Managed Cryptographic Objects': objects },
       { 'Object Attributes': attributes },

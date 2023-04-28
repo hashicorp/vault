@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 /* eslint-disable no-undef */
 
 'use strict';
@@ -13,12 +18,18 @@ module.exports = {
     },
   },
   plugins: ['ember'],
-  extends: ['eslint:recommended', 'plugin:ember/recommended', 'plugin:prettier/recommended'],
+  extends: [
+    'eslint:recommended',
+    'plugin:ember/recommended',
+    'plugin:prettier/recommended',
+    'plugin:compat/recommended',
+  ],
   env: {
     browser: true,
   },
   rules: {
-    'no-console': 'warn',
+    'no-console': 'error',
+    'prefer-const': ['error', { destructuring: 'all' }],
     'ember/no-mixins': 'warn',
     'ember/no-new-mixins': 'off', // should be warn but then every line of the mixin is green
     // need to be fully glimmerized before these rules can be turned on
@@ -58,9 +69,13 @@ module.exports = {
       },
     },
     {
-      // Test files:
+      // test files
       files: ['tests/**/*-test.{js,ts}'],
       extends: ['plugin:qunit/recommended'],
+    },
+    {
+      files: ['**/*.ts'],
+      extends: ['plugin:@typescript-eslint/recommended'],
     },
   ],
 };

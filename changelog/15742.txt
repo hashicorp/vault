@@ -1,0 +1,3 @@
+```release-note:improvement
+secret/transit: Allow importing Ed25519 keys from PKCS#8 with inner RFC 5915 ECPrivateKey blobs (NSS-wrapped keys).
+```

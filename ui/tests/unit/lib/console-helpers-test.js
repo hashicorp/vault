@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import {
   parseCommand,
@@ -104,14 +109,14 @@ module('Unit | Lib | console helpers', function () {
 
   testCommands.forEach(function (testCase) {
     test(`#parseCommand: ${testCase.name}`, function (assert) {
-      let result = parseCommand(testCase.command);
+      const result = parseCommand(testCase.command);
       assert.deepEqual(result, testCase.expected);
     });
   });
 
   test('#parseCommand: invalid commands', function (assert) {
-    let command = 'vault kv get foo';
-    let result = parseCommand(command);
+    const command = 'vault kv get foo';
+    const result = parseCommand(command);
     assert.false(result, 'parseCommand returns false by default');
 
     assert.throws(
@@ -218,13 +223,13 @@ module('Unit | Lib | console helpers', function () {
 
   testExtractCases.forEach(function (testCase) {
     test(`#extractDataAndFlags: ${testCase.name}`, function (assert) {
-      let { data, flags } = extractDataAndFlags(testCase.method, ...testCase.input);
+      const { data, flags } = extractDataAndFlags(testCase.method, ...testCase.input);
       assert.deepEqual(data, testCase.expected.data, 'has expected data');
       assert.deepEqual(flags, testCase.expected.flags, 'has expected flags');
     });
   });
 
-  let testResponseCases = [
+  const testResponseCases = [
     {
       name: 'write response, no content',
       args: [null, 'foo/bar', 'write', {}],
@@ -396,12 +401,12 @@ module('Unit | Lib | console helpers', function () {
 
   testResponseCases.forEach(function (testCase) {
     test(`#logFromResponse: ${testCase.name}`, function (assert) {
-      let data = logFromResponse(...testCase.args);
+      const data = logFromResponse(...testCase.args);
       assert.deepEqual(data, testCase.expectedData);
     });
   });
 
-  let testErrorCases = [
+  const testErrorCases = [
     {
       name: 'AdapterError write',
       args: [{ httpStatus: 404, path: 'v1/sys/foo', errors: [{}] }, 'sys/foo', 'write'],
@@ -441,7 +446,7 @@ module('Unit | Lib | console helpers', function () {
 
   testErrorCases.forEach(function (testCase) {
     test(`#logFromError: ${testCase.name}`, function (assert) {
-      let data = logFromError(...testCase.args);
+      const data = logFromError(...testCase.args);
       assert.deepEqual(
         data,
         { type: 'error', content: testCase.expectedContent },
@@ -465,7 +470,7 @@ module('Unit | Lib | console helpers', function () {
 
   testCommandCases.forEach(function (testCase) {
     test(`#logErrorFromInput: ${testCase.name}`, function (assert) {
-      let data = logErrorFromInput(...testCase.args);
+      const data = logErrorFromInput(...testCase.args);
 
       assert.deepEqual(
         data,

@@ -1,9 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
-import engineResolverFor from 'ember-engines/test-support/engine-resolver-for';
+import { setupEngine } from 'ember-engines/test-support';
 import hbs from 'htmlbars-inline-precompile';
-const resolver = engineResolverFor('replication');
 
 const CLUSTER = {
   canAddSecondary: true,
@@ -19,16 +23,19 @@ const REPLICATION_ATTRS = {
 };
 
 module('Integration | Component | replication known-secondaries-card', function (hooks) {
-  setupRenderingTest(hooks, { resolver });
+  setupRenderingTest(hooks);
+  setupEngine(hooks, 'replication');
 
   hooks.beforeEach(function () {
+    this.context = { owner: this.engine }; // this.engine set by setupEngine
     this.set('cluster', CLUSTER);
     this.set('replicationAttrs', REPLICATION_ATTRS);
   });
 
   test('it renders with a table of known secondaries', async function (assert) {
     await render(
-      hbs`<KnownSecondariesCard @cluster={{this.cluster}} @replicationAttrs={{this.replicationAttrs}} />`
+      hbs`<KnownSecondariesCard @cluster={{this.cluster}} @replicationAttrs={{this.replicationAttrs}} />`,
+      this.context
     );
 
     assert
@@ -43,7 +50,8 @@ module('Integration | Component | replication known-secondaries-card', function 
     };
     this.set('replicationAttrs', noSecondaries);
     await render(
-      hbs`<KnownSecondariesCard @cluster={{this.cluster}} @replicationAttrs={{this.replicationAttrs}} />`
+      hbs`<KnownSecondariesCard @cluster={{this.cluster}} @replicationAttrs={{this.replicationAttrs}} />`,
+      this.context
     );
 
     assert
@@ -56,7 +64,8 @@ module('Integration | Component | replication known-secondaries-card', function 
 
   test('it renders an Add secondary link if user has capabilites', async function (assert) {
     await render(
-      hbs`<KnownSecondariesCard @cluster={{this.cluster}} @replicationAttrs={{this.replicationAttrs}} />`
+      hbs`<KnownSecondariesCard @cluster={{this.cluster}} @replicationAttrs={{this.replicationAttrs}} />`,
+      this.context
     );
 
     assert.dom('.add-secondaries').exists();
@@ -68,7 +77,8 @@ module('Integration | Component | replication known-secondaries-card', function 
     };
     this.set('cluster', noCapabilities);
     await render(
-      hbs`<KnownSecondariesCard @cluster={{this.cluster}} @replicationAttrs={{this.replicationAttrs}} />`
+      hbs`<KnownSecondariesCard @cluster={{this.cluster}} @replicationAttrs={{this.replicationAttrs}} />`,
+      this.context
     );
 
     assert.dom('.add-secondaries').doesNotExist();

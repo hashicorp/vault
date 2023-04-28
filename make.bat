@@ -7,7 +7,7 @@ REM If no target is provided, default to test.
 if [%1]==[] goto test
 
 set _TARGETS=bin,bootstrap,dev,generate,test,testacc,testrace,vet
-set _EXTERNAL_TOOLS=github.com/mitchellh/gox,github.com/kardianos/govendor
+set _EXTERNAL_TOOLS=github.com/kardianos/govendor
 
 REM Run target.
 for %%a in (%_TARGETS%) do (if x%1==x%%a goto %%a)
@@ -82,7 +82,7 @@ REM any common errors.
 
 	go tool vet 2>nul
 	if %ERRORLEVEL% equ 3 go get golang.org/x/tools/cmd/vet
-	
+
 	set _vetExitCode=0
 	set _VAULT_PKG_DIRS=%TEMP%\vault-pkg-dirs.txt
 

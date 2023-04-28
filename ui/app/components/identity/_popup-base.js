@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { inject as service } from '@ember/service';
 import { assert } from '@ember/debug';
 import Component from '@ember/component';
@@ -25,8 +30,8 @@ export default Component.extend({
 
   actions: {
     performTransaction() {
-      let args = [...arguments];
-      let messageArgs = this.messageArgs(...args);
+      const args = [...arguments];
+      const messageArgs = this.messageArgs(...args);
       return this.transaction(...args)
         .then(() => {
           this.onSuccess();

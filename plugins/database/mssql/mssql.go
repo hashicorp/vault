@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package mssql
 
 import (
@@ -427,5 +430,5 @@ SET @stmt = 'IF EXISTS (SELECT name FROM [master].[sys].[server_principals] WHER
 EXEC (@stmt)`
 
 const alterLoginSQL = `
-ALTER LOGIN [{{username}}] WITH PASSWORD = '{{password}}' 
+ALTER LOGIN [{{username}}] WITH PASSWORD = '{{password}}'
 `

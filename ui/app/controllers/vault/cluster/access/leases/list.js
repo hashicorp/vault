@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { inject as service } from '@ember/service';
 import { computed } from '@ember/object';
 import Controller, { inject as controller } from '@ember/controller';
@@ -25,8 +30,8 @@ export default Controller.extend(ListController, {
   }),
 
   emptyTitle: computed('baseKey.id', 'filter', 'filterIsFolder', function () {
-    let id = this.baseKey.id;
-    let filter = this.filter;
+    const id = this.baseKey.id;
+    const filter = this.filter;
     if (id === '') {
       return 'There are currently no leases.';
     }

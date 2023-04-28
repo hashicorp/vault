@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 // a map of keyCode for use in keyboard event handlers
 export default {
   ENTER: 13,

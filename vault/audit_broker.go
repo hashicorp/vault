@@ -1,8 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
 	"context"
 	"fmt"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -105,7 +109,7 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 
 	defer func() {
 		if r := recover(); r != nil {
-			a.logger.Error("panic during logging", "request_path", in.Request.Path, "error", r)
+			a.logger.Error("panic during logging", "request_path", in.Request.Path, "error", r, "stacktrace", string(debug.Stack()))
 			retErr = multierror.Append(retErr, fmt.Errorf("panic generating audit log"))
 		}
 
@@ -176,7 +180,7 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput, hea
 
 	defer func() {
 		if r := recover(); r != nil {
-			a.logger.Error("panic during logging", "request_path", in.Request.Path, "error", r)
+			a.logger.Error("panic during logging", "request_path", in.Request.Path, "error", r, "stacktrace", string(debug.Stack()))
 			retErr = multierror.Append(retErr, fmt.Errorf("panic generating audit log"))
 		}
 

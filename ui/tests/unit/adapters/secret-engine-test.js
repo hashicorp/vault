@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
@@ -51,11 +56,15 @@ module('Unit | Adapter | secret engine', function (hooks) {
   cases.forEach((testCase) => {
     test(`secret-engine: ${testCase.description}`, function (assert) {
       assert.expect(2);
-      let adapter = this.owner.lookup('adapter:secret-engine');
+      const adapter = this.owner.lookup('adapter:secret-engine');
       adapter[testCase.adapterMethod](...testCase.args);
-      let { url, method } = this.server.handledRequests[0];
-      assert.equal(url, testCase.url, `${testCase.adapterMethod} calls the correct url: ${testCase.url}`);
-      assert.equal(
+      const { url, method } = this.server.handledRequests[0];
+      assert.strictEqual(
+        url,
+        testCase.url,
+        `${testCase.adapterMethod} calls the correct url: ${testCase.url}`
+      );
+      assert.strictEqual(
         method,
         testCase.method,
         `${testCase.adapterMethod} uses the correct http verb: ${testCase.method}`

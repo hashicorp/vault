@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package influxdb
 
 import (
@@ -11,9 +14,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 	influx "github.com/influxdata/influxdb1-client/v2"
 	"github.com/stretchr/testify/require"
 )

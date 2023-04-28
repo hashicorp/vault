@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package http
 
 import (
@@ -31,7 +34,7 @@ func TestServerWithListenerAndProperties(tb testing.TB, ln net.Listener, addr st
 	// for tests.
 	mux := http.NewServeMux()
 	mux.Handle("/_test/auth", http.HandlerFunc(testHandleAuth))
-	mux.Handle("/", Handler(props))
+	mux.Handle("/", Handler.Handler(props))
 
 	server := &http.Server{
 		Addr:     ln.Addr().String(),

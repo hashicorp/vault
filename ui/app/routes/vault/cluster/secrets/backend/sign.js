@@ -1,7 +1,14 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Route from '@ember/routing/route';
 import UnloadModel from 'vault/mixins/unload-model-route';
+import { inject as service } from '@ember/service';
 
 export default Route.extend(UnloadModel, {
+  store: service(),
   templateName: 'vault/cluster/secrets/backend/sign',
 
   backendModel() {

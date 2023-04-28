@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -6,6 +9,8 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"os"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -13,7 +18,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
-	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
+	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -86,6 +91,49 @@ func (c *Core) StandbyStates() (standby, perfStandby bool) {
 	perfStandby = c.perfStandby
 	c.stateLock.RUnlock()
 	return
+}
+
+// getHAMembers retrieves cluster membership that doesn't depend on raft. This should only ever be called by the
+// active node.
+func (c *Core) getHAMembers() ([]HAStatusNode, error) {
+	hostname, err := os.Hostname()
+	if err != nil {
+		return nil, err
+	}
+
+	leader := HAStatusNode{
+		Hostname:       hostname,
+		APIAddress:     c.redirectAddr,
+		ClusterAddress: c.ClusterAddr(),
+		ActiveNode:     true,
+		Version:        c.effectiveSDKVersion,
+	}
+
+	if rb := c.getRaftBackend(); rb != nil {
+		leader.UpgradeVersion = rb.EffectiveVersion()
+		leader.RedundancyZone = rb.RedundancyZone()
+	}
+
+	nodes := []HAStatusNode{leader}
+
+	for _, peerNode := range c.GetHAPeerNodesCached() {
+		lastEcho := peerNode.LastEcho
+		nodes = append(nodes, HAStatusNode{
+			Hostname:       peerNode.Hostname,
+			APIAddress:     peerNode.APIAddress,
+			ClusterAddress: peerNode.ClusterAddress,
+			LastEcho:       &lastEcho,
+			Version:        peerNode.Version,
+			UpgradeVersion: peerNode.UpgradeVersion,
+			RedundancyZone: peerNode.RedundancyZone,
+		})
+	}
+
+	sort.Slice(nodes, func(i, j int) bool {
+		return nodes[i].APIAddress < nodes[j].APIAddress
+	})
+
+	return nodes, nil
 }
 
 // Leader is used to get the current active leader
@@ -190,7 +238,7 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 	// to ourself, there's no point in paying any attention to it.  And by
 	// disregarding it, we can avoid a panic in raft tests using the Inmem network
 	// layer when we try to connect back to ourself.
-	if adv.ClusterAddr == c.ClusterAddr() && adv.RedirectAddr == c.redirectAddr {
+	if adv.ClusterAddr == c.ClusterAddr() && adv.RedirectAddr == c.redirectAddr && c.getRaftBackend() != nil {
 		return false, "", "", nil
 	}
 
@@ -390,6 +438,17 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 		})
 	}
 	{
+		metricsStop := make(chan struct{})
+
+		g.Add(func() error {
+			c.metricsLoop(metricsStop)
+			return nil
+		}, func(error) {
+			close(metricsStop)
+			c.logger.Debug("shutting down periodic metrics")
+		})
+	}
+	{
 		// Wait for leadership
 		leaderStopCh := make(chan struct{})
 
@@ -468,7 +527,9 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		continueCh := interruptPerfStandby(newLeaderCh, stopCh)
 
 		// Grab the statelock or stop
-		if stopped := grabLockOrStop(c.stateLock.Lock, c.stateLock.Unlock, stopCh); stopped {
+		l := newLockGrabber(c.stateLock.Lock, c.stateLock.Unlock, stopCh)
+		go l.grab()
+		if stopped := l.lockOrStop(); stopped {
 			lock.Unlock()
 			close(continueCh)
 			metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
@@ -605,16 +666,20 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 			// Spawn this in a go routine so we can cancel the context and
 			// unblock any inflight requests that are holding the statelock.
 			go func() {
+				timer := time.NewTimer(DefaultMaxRequestDuration)
 				select {
 				case <-activeCtx.Done():
-				// Attempt to drain any inflight requests
-				case <-time.After(DefaultMaxRequestDuration):
+					timer.Stop()
+					// Attempt to drain any inflight requests
+				case <-timer.C:
 					activeCtxCancel()
 				}
 			}()
 
 			// Grab lock if we are not stopped
-			stopped := grabLockOrStop(c.stateLock.Lock, c.stateLock.Unlock, stopCh)
+			l := newLockGrabber(c.stateLock.Lock, c.stateLock.Unlock, stopCh)
+			go l.grab()
+			stopped := l.lockOrStop()
 
 			// Cancel the context incase the above go routine hasn't done it
 			// yet
@@ -657,46 +722,74 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 // lock was acquired (stopped=false) then it's up to the caller to unlock. If
 // the lock was not acquired (stopped=true), the caller does not hold the lock and
 // should not call unlock.
+// It's probably better to inline the body of grabLockOrStop into your function
+// instead of calling it. If multiple functions call grabLockOrStop, when a deadlock
+// occurs, we have no way of knowing who launched the grab goroutine, complicating
+// investigation.
 func grabLockOrStop(lockFunc, unlockFunc func(), stopCh chan struct{}) (stopped bool) {
-	// lock protects these variables which are shared by parent and child.
-	var lock sync.Mutex
-	parentWaiting := true
-	locked := false
+	l := newLockGrabber(lockFunc, unlockFunc, stopCh)
+	go l.grab()
+	return l.lockOrStop()
+}
 
+type lockGrabber struct {
+	// stopCh provides a way to interrupt the grab-or-stop
+	stopCh chan struct{}
 	// doneCh is closed when the child goroutine is done.
-	doneCh := make(chan struct{})
-	go func() {
-		defer close(doneCh)
-		lockFunc()
+	doneCh     chan struct{}
+	lockFunc   func()
+	unlockFunc func()
+	// lock protects these variables which are shared by parent and child.
+	lock          sync.Mutex
+	parentWaiting bool
+	locked        bool
+}
 
-		// The parent goroutine may or may not be waiting.
-		lock.Lock()
-		defer lock.Unlock()
-		if !parentWaiting {
-			unlockFunc()
-		} else {
-			locked = true
-		}
-	}()
+func newLockGrabber(lockFunc, unlockFunc func(), stopCh chan struct{}) *lockGrabber {
+	return &lockGrabber{
+		doneCh:        make(chan struct{}),
+		lockFunc:      lockFunc,
+		unlockFunc:    unlockFunc,
+		parentWaiting: true,
+		stopCh:        stopCh,
+	}
+}
 
+// lockOrStop waits for grab to get a lock or give up, see grabLockOrStop for how to use it.
+func (l *lockGrabber) lockOrStop() (stopped bool) {
 	stop := false
 	select {
-	case <-stopCh:
+	case <-l.stopCh:
 		stop = true
-	case <-doneCh:
+	case <-l.doneCh:
 	}
 
 	// The child goroutine may not have acquired the lock yet.
-	lock.Lock()
-	defer lock.Unlock()
-	parentWaiting = false
+	l.lock.Lock()
+	defer l.lock.Unlock()
+	l.parentWaiting = false
 	if stop {
-		if locked {
-			unlockFunc()
+		if l.locked {
+			l.unlockFunc()
 		}
 		return true
 	}
 	return false
+}
+
+// grab tries to get a lock, see grabLockOrStop for how to use it.
+func (l *lockGrabber) grab() {
+	defer close(l.doneCh)
+	l.lockFunc()
+
+	// The parent goroutine may or may not be waiting.
+	l.lock.Lock()
+	defer l.lock.Unlock()
+	if !l.parentWaiting {
+		l.unlockFunc()
+	} else {
+		l.locked = true
+	}
 }
 
 // This checks the leader periodically to ensure that we switch RPC to a new
@@ -708,8 +801,9 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 
 	clusterAddr := ""
 	for {
+		timer := time.NewTimer(leaderCheckInterval)
 		select {
-		case <-time.After(leaderCheckInterval):
+		case <-timer.C:
 			count := atomic.AddInt32(opCount, 1)
 			if count > 1 {
 				atomic.AddInt32(opCount, -1)
@@ -742,6 +836,7 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 				atomic.AddInt32(lopCount, -1)
 			}()
 		case <-stopCh:
+			timer.Stop()
 			return
 		}
 	}
@@ -754,8 +849,9 @@ func (c *Core) periodicCheckKeyUpgrades(ctx context.Context, stopCh chan struct{
 
 	opCount := new(int32)
 	for {
+		timer := time.NewTimer(keyRotateCheckInterval)
 		select {
-		case <-time.After(keyRotateCheckInterval):
+		case <-timer.C:
 			count := atomic.AddInt32(opCount, 1)
 			if count > 1 {
 				atomic.AddInt32(opCount, -1)
@@ -779,7 +875,8 @@ func (c *Core) periodicCheckKeyUpgrades(ctx context.Context, stopCh chan struct{
 				// keys (e.g. from replication being activated) and we need to seal to
 				// be unsealed again.
 				entry, _ := c.barrier.Get(ctx, poisonPillPath)
-				if entry != nil && len(entry.Value) > 0 {
+				entryDR, _ := c.barrier.Get(ctx, poisonPillDRPath)
+				if (entry != nil && len(entry.Value) > 0) || (entryDR != nil && len(entryDR.Value) > 0) {
 					c.logger.Warn("encryption keys have changed out from underneath us (possibly due to replication enabling), must be unsealed again")
 					// If we are using raft storage we do not want to shut down
 					// raft during replication secondary enablement. This will
@@ -810,6 +907,7 @@ func (c *Core) periodicCheckKeyUpgrades(ctx context.Context, stopCh chan struct{
 				return
 			}()
 		case <-stopCh:
+			timer.Stop()
 			return
 		}
 	}
@@ -868,7 +966,7 @@ func (c *Core) reloadShamirKey(ctx context.Context) error {
 		}
 		shamirKey = keyring.rootKey
 	}
-	return c.seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAESGCMKeyBytes(shamirKey)
+	return c.seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAesGcmKeyBytes(shamirKey)
 }
 
 func (c *Core) performKeyUpgrades(ctx context.Context) error {
@@ -941,9 +1039,11 @@ func (c *Core) acquireLock(lock physical.Lock, stopCh <-chan struct{}) <-chan st
 
 		// Retry the acquisition
 		c.logger.Error("failed to acquire lock", "error", err)
+		timer := time.NewTimer(lockRetryInterval)
 		select {
-		case <-time.After(lockRetryInterval):
+		case <-timer.C:
 		case <-stopCh:
+			timer.Stop()
 			return nil
 		}
 	}
@@ -1010,13 +1110,15 @@ func (c *Core) cleanLeaderPrefix(ctx context.Context, uuid string, leaderLostCh 
 		return
 	}
 	for len(keys) > 0 {
+		timer := time.NewTimer(leaderPrefixCleanDelay)
 		select {
-		case <-time.After(leaderPrefixCleanDelay):
+		case <-timer.C:
 			if keys[0] != uuid {
 				c.barrier.Delete(ctx, coreLeaderPrefix+keys[0])
 			}
 			keys = keys[1:]
 		case <-leaderLostCh:
+			timer.Stop()
 			return
 		}
 	}

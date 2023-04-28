@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
@@ -35,7 +40,6 @@ export default class KeymgmtDistribute extends Component {
   @service store;
   @service flashMessages;
   @service router;
-  @service wizard;
 
   @tracked keyModel;
   @tracked isNewKey = false;
@@ -57,14 +61,6 @@ export default class KeymgmtDistribute extends Component {
       this.getKeyInfo(this.args.key);
     }
     this.formData.operations = [];
-    this.updateWizard('nextStep');
-  }
-
-  updateWizard(key) {
-    // wizard will pause unless we manually continue it -- verify that keymgmt tutorial is in progress
-    if (this.wizard[key] === 'distribute') {
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', 'keymgmt');
-    }
   }
 
   get keyTypes() {
@@ -194,8 +190,10 @@ export default class KeymgmtDistribute extends Component {
       .distribute(backend, provider, key, { purpose, protection })
       .then(() => {
         this.flashMessages.success(`Successfully distributed key ${key} to ${provider}`);
-        // move wizard forward if tutorial is in progress
-        this.updateWizard('featureState');
+        // update keys on provider model
+        this.store.clearDataset('keymgmt/key');
+        const providerModel = this.store.peekRecord('keymgmt/provider', provider);
+        providerModel.fetchKeys(providerModel.keys?.meta?.currentPage || 1);
         this.args.onClose();
       })
       .catch((e) => {

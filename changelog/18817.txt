@@ -1,0 +1,3 @@
+```release-note:improvement
+migration: allow parallelization of key migration for `vault operator migrate` in order to speed up a migration.
+```

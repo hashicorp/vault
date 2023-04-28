@@ -1,19 +1,24 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package postgresql
 
 import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-
 	"github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
+	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/helper/template"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -87,6 +92,97 @@ func TestPostgreSQL_Initialize_ConnURLWithDSNFormat(t *testing.T) {
 	if !db.Initialized {
 		t.Fatal("Database should be initialized")
 	}
+}
+
+// TestPostgreSQL_PasswordAuthentication tests that the default "password_authentication" is "none", and that
+// an error is returned if an invalid "password_authentication" is provided.
+func TestPostgreSQL_PasswordAuthentication(t *testing.T) {
+	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
+	defer cleanup()
+
+	dsnConnURL, err := dbutil.ParseURL(connURL)
+	assert.NoError(t, err)
+	db := new()
+
+	ctx := context.Background()
+
+	t.Run("invalid-password-authentication", func(t *testing.T) {
+		connectionDetails := map[string]interface{}{
+			"connection_url":          dsnConnURL,
+			"password_authentication": "invalid-password-authentication",
+		}
+
+		req := dbplugin.InitializeRequest{
+			Config:           connectionDetails,
+			VerifyConnection: true,
+		}
+
+		_, err := db.Initialize(ctx, req)
+		assert.EqualError(t, err, "'invalid-password-authentication' is not a valid password authentication type")
+	})
+
+	t.Run("default-is-none", func(t *testing.T) {
+		connectionDetails := map[string]interface{}{
+			"connection_url": dsnConnURL,
+		}
+
+		req := dbplugin.InitializeRequest{
+			Config:           connectionDetails,
+			VerifyConnection: true,
+		}
+
+		_ = dbtesting.AssertInitialize(t, db, req)
+		assert.Equal(t, passwordAuthenticationPassword, db.passwordAuthentication)
+	})
+}
+
+// TestPostgreSQL_PasswordAuthentication_SCRAMSHA256 tests that password_authentication works when set to scram-sha-256.
+// When sending an encrypted password, the raw password should still successfully authenticate the user.
+func TestPostgreSQL_PasswordAuthentication_SCRAMSHA256(t *testing.T) {
+	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
+	defer cleanup()
+
+	dsnConnURL, err := dbutil.ParseURL(connURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	connectionDetails := map[string]interface{}{
+		"connection_url":          dsnConnURL,
+		"password_authentication": string(passwordAuthenticationSCRAMSHA256),
+	}
+
+	req := dbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
+	}
+
+	db := new()
+	resp := dbtesting.AssertInitialize(t, db, req)
+	assert.Equal(t, string(passwordAuthenticationSCRAMSHA256), resp.Config["password_authentication"])
+
+	if !db.Initialized {
+		t.Fatal("Database should be initialized")
+	}
+
+	ctx := context.Background()
+	newUserRequest := dbplugin.NewUserRequest{
+		Statements: dbplugin.Statements{
+			Commands: []string{
+				`
+						CREATE ROLE "{{name}}" WITH
+						  LOGIN
+						  PASSWORD '{{password}}'
+						  VALID UNTIL '{{expiration}}';
+						GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";`,
+			},
+		},
+		Password:   "somesecurepassword",
+		Expiration: time.Now().Add(1 * time.Minute),
+	}
+	newUserResponse, err := db.NewUser(ctx, newUserRequest)
+
+	assertCredsExist(t, db.ConnectionURL, newUserResponse.Username, newUserRequest.Password)
 }
 
 func TestPostgreSQL_NewUser(t *testing.T) {
@@ -587,6 +683,19 @@ func TestDeleteUser(t *testing.T) {
 			// Wait for a short time before checking because postgres takes a moment to finish deleting the user
 			credsAssertion: assertCredsExistAfter(100 * time.Millisecond),
 		},
+		"multiline": {
+			revokeStmts: []string{`
+				DO $$ BEGIN
+					REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM "{{username}}";
+					REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM "{{username}}";
+					REVOKE USAGE ON SCHEMA public FROM "{{username}}";
+					DROP ROLE IF EXISTS "{{username}}";
+				END $$;
+				`},
+			expectErr: false,
+			// Wait for a short time before checking because postgres takes a moment to finish deleting the user
+			credsAssertion: waitUntilCredsDoNotExist(2 * time.Second),
+		},
 	}
 
 	// Shared test container for speed - there should not be any overlap between the tests
@@ -989,4 +1098,143 @@ func TestNewUser_CustomUsername(t *testing.T) {
 			require.Regexp(t, test.expectedRegex, newUserResp.Username)
 		})
 	}
+}
+
+// This is a long-running integration test which tests the functionality of Postgres's multi-host
+// connection strings. It uses two Postgres containers preconfigured with Replication Manager
+// provided by Bitnami. This test currently does not run in CI and must be run manually. This is
+// due to the test length, as it requires multiple sleep calls to ensure cluster setup and
+// primary node failover occurs before the test steps continue.
+//
+// To run the test, set the environment variable POSTGRES_MULTIHOST_NET to the value of
+// a docker network you've preconfigured, e.g.
+// 'docker network create -d bridge postgres-repmgr'
+// 'export POSTGRES_MULTIHOST_NET=postgres-repmgr'
+func TestPostgreSQL_Repmgr(t *testing.T) {
+	_, exists := os.LookupEnv("POSTGRES_MULTIHOST_NET")
+	if !exists {
+		t.Skipf("POSTGRES_MULTIHOST_NET not set, skipping test")
+	}
+
+	// Run two postgres-repmgr containers in a replication cluster
+	db0, runner0, url0, container0 := testPostgreSQL_Repmgr_Container(t, "psql-repl-node-0")
+	_, _, url1, _ := testPostgreSQL_Repmgr_Container(t, "psql-repl-node-1")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
+	defer cancel()
+
+	time.Sleep(10 * time.Second)
+
+	// Write a read role to the cluster
+	_, err := db0.NewUser(ctx, dbplugin.NewUserRequest{
+		Statements: dbplugin.Statements{
+			Commands: []string{
+				`CREATE ROLE "ro" NOINHERIT;
+				GRANT SELECT ON ALL TABLES IN SCHEMA public TO "ro";`,
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+
+	// Open a connection to both databases using the multihost connection string
+	connectionDetails := map[string]interface{}{
+		"connection_url": fmt.Sprintf("postgresql://{{username}}:{{password}}@%s,%s/postgres?target_session_attrs=read-write", getHost(url0), getHost(url1)),
+		"username":       "postgres",
+		"password":       "secret",
+	}
+	req := dbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
+	}
+
+	db := new()
+	dbtesting.AssertInitialize(t, db, req)
+	if !db.Initialized {
+		t.Fatal("Database should be initialized")
+	}
+	defer db.Close()
+
+	// Add a user to the cluster, then stop the primary container
+	if err = testPostgreSQL_Repmgr_AddUser(ctx, db); err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+	postgresql.StopContainer(t, ctx, runner0, container0)
+
+	// Try adding a new user immediately - expect failure as the database
+	// cluster is still switching primaries
+	err = testPostgreSQL_Repmgr_AddUser(ctx, db)
+	if !strings.HasSuffix(err.Error(), "ValidateConnect failed (read only connection)") {
+		t.Fatalf("expected error was not received, got: %s", err)
+	}
+
+	time.Sleep(20 * time.Second)
+
+	// Try adding a new user again which should succeed after the sleep
+	// as the primary failover should have finished. Then, restart
+	// the first container which should become a secondary DB.
+	if err = testPostgreSQL_Repmgr_AddUser(ctx, db); err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+	postgresql.RestartContainer(t, ctx, runner0, container0)
+
+	time.Sleep(10 * time.Second)
+
+	// A final new user to add, which should succeed after the secondary joins.
+	if err = testPostgreSQL_Repmgr_AddUser(ctx, db); err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+
+	if err := db.Close(); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+}
+
+func testPostgreSQL_Repmgr_Container(t *testing.T, name string) (*PostgreSQL, *docker.Runner, string, string) {
+	envVars := []string{
+		"REPMGR_NODE_NAME=" + name,
+		"REPMGR_NODE_NETWORK_NAME=" + name,
+	}
+
+	runner, cleanup, connURL, containerID := postgresql.PrepareTestContainerRepmgr(t, name, "13.4.0", envVars)
+	t.Cleanup(cleanup)
+
+	connectionDetails := map[string]interface{}{
+		"connection_url": connURL,
+	}
+	req := dbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
+	}
+	db := new()
+	dbtesting.AssertInitialize(t, db, req)
+	if !db.Initialized {
+		t.Fatal("Database should be initialized")
+	}
+
+	if err := db.Close(); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	return db, runner, connURL, containerID
+}
+
+func testPostgreSQL_Repmgr_AddUser(ctx context.Context, db *PostgreSQL) error {
+	_, err := db.NewUser(ctx, dbplugin.NewUserRequest{
+		Statements: dbplugin.Statements{
+			Commands: []string{
+				`CREATE ROLE "{{name}}" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}' INHERIT;
+				GRANT ro TO "{{name}}";`,
+			},
+		},
+	})
+
+	return err
+}
+
+func getHost(url string) string {
+	splitCreds := strings.Split(url, "@")[1]
+
+	return strings.Split(splitCreds, "/")[0]
 }

@@ -1,8 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 
@@ -14,9 +18,31 @@ func pathListKeys(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/?$",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "keys",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
-				Callback:                    b.pathListKeysHandler,
+				Callback: b.pathListKeysHandler,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"keys": {
+								Type:        framework.TypeStringSlice,
+								Description: `A list of keys`,
+								Required:    true,
+							},
+							"key_info": {
+								Type:        framework.TypeMap,
+								Description: `Key info with issuer name`,
+								Required:    false,
+							},
+						},
+					}},
+				},
 				ForwardPerformanceStandby:   false,
 				ForwardPerformanceSecondary: false,
 			},
@@ -41,18 +67,19 @@ func (b *backend) pathListKeysHandler(ctx context.Context, req *logical.Request,
 	var responseKeys []string
 	responseInfo := make(map[string]interface{})
 
-	entries, err := listKeys(ctx, req.Storage)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	entries, err := sc.listKeys()
 	if err != nil {
 		return nil, err
 	}
 
-	config, err := getKeysConfig(ctx, req.Storage)
+	config, err := sc.getKeysConfig()
 	if err != nil {
 		return nil, err
 	}
 
 	for _, identifier := range entries {
-		key, err := fetchKeyById(ctx, req.Storage, identifier)
+		key, err := sc.fetchKeyById(identifier)
 		if err != nil {
 			return nil, err
 		}
@@ -69,12 +96,19 @@ func (b *backend) pathListKeysHandler(ctx context.Context, req *logical.Request,
 
 func pathKey(b *backend) *framework.Path {
 	pattern := "key/" + framework.GenericNameRegex(keyRefParam)
-	return buildPathKey(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationSuffix: "key",
+	}
+
+	return buildPathKey(b, pattern, displayAttrs)
 }
 
-func buildPathKey(b *backend, pattern string) *framework.Path {
+func buildPathKey(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	return &framework.Path{
-		Pattern: pattern,
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
 
 		Fields: map[string]*framework.FieldSchema{
 			keyRefParam: {
@@ -90,17 +124,76 @@ func buildPathKey(b *backend, pattern string) *framework.Path {
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
-				Callback:                    b.pathGetKeyHandler,
+				Callback: b.pathGetKeyHandler,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"key_id": {
+								Type:        framework.TypeString,
+								Description: `Key Id`,
+								Required:    true,
+							},
+							"key_name": {
+								Type:        framework.TypeString,
+								Description: `Key Name`,
+								Required:    true,
+							},
+							"key_type": {
+								Type:        framework.TypeString,
+								Description: `Key Type`,
+								Required:    true,
+							},
+							"managed_key_id": {
+								Type:        framework.TypeString,
+								Description: `Managed Key Id`,
+								Required:    false,
+							},
+							"managed_key_name": {
+								Type:        framework.TypeString,
+								Description: `Managed Key Name`,
+								Required:    false,
+							},
+						},
+					}},
+				},
 				ForwardPerformanceStandby:   false,
 				ForwardPerformanceSecondary: false,
 			},
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.pathUpdateKeyHandler,
+				Callback: b.pathUpdateKeyHandler,
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"key_id": {
+								Type:        framework.TypeString,
+								Description: `Key Id`,
+								Required:    true,
+							},
+							"key_name": {
+								Type:        framework.TypeString,
+								Description: `Key Name`,
+								Required:    true,
+							},
+							"key_type": {
+								Type:        framework.TypeString,
+								Description: `Key Type`,
+								Required:    true,
+							},
+						},
+					}},
+				},
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
 			},
 			logical.DeleteOperation: &framework.PathOperation{
-				Callback:                    b.pathDeleteKeyHandler,
+				Callback: b.pathDeleteKeyHandler,
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{
+						Description: "No Content",
+					}},
+				},
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
 			},
@@ -134,7 +227,8 @@ func (b *backend) pathGetKeyHandler(ctx context.Context, req *logical.Request, d
 		return logical.ErrorResponse("missing key reference"), nil
 	}
 
-	keyId, err := resolveKeyReference(ctx, req.Storage, keyRef)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	keyId, err := sc.resolveKeyReference(keyRef)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +236,7 @@ func (b *backend) pathGetKeyHandler(ctx context.Context, req *logical.Request, d
 		return logical.ErrorResponse("unable to resolve key id for reference" + keyRef), nil
 	}
 
-	key, err := fetchKeyById(ctx, req.Storage, keyId)
+	key, err := sc.fetchKeyById(keyId)
 	if err != nil {
 		return nil, err
 	}
@@ -189,7 +283,8 @@ func (b *backend) pathUpdateKeyHandler(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("missing key reference"), nil
 	}
 
-	keyId, err := resolveKeyReference(ctx, req.Storage, keyRef)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	keyId, err := sc.resolveKeyReference(keyRef)
 	if err != nil {
 		return nil, err
 	}
@@ -197,7 +292,7 @@ func (b *backend) pathUpdateKeyHandler(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("unable to resolve key id for reference" + keyRef), nil
 	}
 
-	key, err := fetchKeyById(ctx, req.Storage, keyId)
+	key, err := sc.fetchKeyById(keyId)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +305,7 @@ func (b *backend) pathUpdateKeyHandler(ctx context.Context, req *logical.Request
 	if newName != key.Name {
 		key.Name = newName
 
-		err := writeKey(ctx, req.Storage, *key)
+		err := sc.writeKey(*key)
 		if err != nil {
 			return nil, err
 		}
@@ -246,7 +341,8 @@ func (b *backend) pathDeleteKeyHandler(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("missing key reference"), nil
 	}
 
-	keyId, err := resolveKeyReference(ctx, req.Storage, keyRef)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	keyId, err := sc.resolveKeyReference(keyRef)
 	if err != nil {
 		if keyId == KeyRefNotFound {
 			// We failed to lookup the key, we should ignore any error here and reply as if it was deleted.
@@ -255,7 +351,7 @@ func (b *backend) pathDeleteKeyHandler(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 
-	keyInUse, issuerId, err := isKeyInUse(keyId.String(), ctx, req.Storage)
+	keyInUse, issuerId, err := sc.isKeyInUse(keyId.String())
 	if err != nil {
 		return nil, err
 	}
@@ -263,7 +359,7 @@ func (b *backend) pathDeleteKeyHandler(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse(fmt.Sprintf("Failed to Delete Key.  Key in Use by Issuer: %s", issuerId)), nil
 	}
 
-	wasDefault, err := deleteKey(ctx, req.Storage, keyId)
+	wasDefault, err := sc.deleteKey(keyId)
 	if err != nil {
 		return nil, err
 	}

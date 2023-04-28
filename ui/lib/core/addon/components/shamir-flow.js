@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { inject as service } from '@ember/service';
 import { gt } from '@ember/object/computed';
 import { camelize } from '@ember/string';
@@ -66,9 +71,9 @@ export default Component.extend(DEFAULTS, {
   hasProgress: gt('progress', 0),
 
   actionSuccess(resp) {
-    let { onUpdate, isComplete, onShamirSuccess, thresholdPath } = this;
-    let threshold = get(resp, thresholdPath);
-    let props = {
+    const { onUpdate, isComplete, onShamirSuccess, thresholdPath } = this;
+    const threshold = get(resp, thresholdPath);
+    const props = {
       ...resp,
       threshold,
     };
@@ -100,7 +105,7 @@ export default Component.extend(DEFAULTS, {
   },
 
   generateStep: computed('generateWithPGP', 'haveSavedPGPKey', 'pgp_key', function () {
-    let { generateWithPGP, pgp_key, haveSavedPGPKey } = this;
+    const { generateWithPGP, pgp_key, haveSavedPGPKey } = this;
     if (!generateWithPGP && !pgp_key) {
       return 'chooseMethod';
     }

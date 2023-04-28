@@ -6,7 +6,7 @@
           <LinkTo
             @route="vault.cluster.tools.tool"
             @model={{supportedAction}}
-            class="(if (eq supportedAction selectedAction) 'is-active')"
+            class={{if (eq supportedAction this.selectedAction) "is-active"}}
             data-test-tools-action-link={{supportedAction}}
           >
             {{capitalize supportedAction}}

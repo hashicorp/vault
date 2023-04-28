@@ -125,16 +125,6 @@ func createTestCertificateByIssuer(name string, issuer *certKeyPair, sigAlg x509
 		issuerKey = *issuer.PrivateKey
 	}
 	switch sigAlg {
-	case x509.SHA1WithRSA:
-		priv = test1024Key
-		switch issuerKey.(type) {
-		case *rsa.PrivateKey:
-			template.SignatureAlgorithm = x509.SHA1WithRSA
-		case *ecdsa.PrivateKey:
-			template.SignatureAlgorithm = x509.ECDSAWithSHA1
-		case *dsa.PrivateKey:
-			template.SignatureAlgorithm = x509.DSAWithSHA1
-		}
 	case x509.SHA256WithRSA:
 		priv = test2048Key
 		switch issuerKey.(type) {
@@ -164,19 +154,6 @@ func createTestCertificateByIssuer(name string, issuer *certKeyPair, sigAlg x509
 			template.SignatureAlgorithm = x509.ECDSAWithSHA512
 		case *dsa.PrivateKey:
 			template.SignatureAlgorithm = x509.DSAWithSHA256
-		}
-	case x509.ECDSAWithSHA1:
-		priv, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-		if err != nil {
-			return nil, err
-		}
-		switch issuerKey.(type) {
-		case *rsa.PrivateKey:
-			template.SignatureAlgorithm = x509.SHA1WithRSA
-		case *ecdsa.PrivateKey:
-			template.SignatureAlgorithm = x509.ECDSAWithSHA1
-		case *dsa.PrivateKey:
-			template.SignatureAlgorithm = x509.DSAWithSHA1
 		}
 	case x509.ECDSAWithSHA256:
 		priv, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -217,26 +194,6 @@ func createTestCertificateByIssuer(name string, issuer *certKeyPair, sigAlg x509
 		case *dsa.PrivateKey:
 			template.SignatureAlgorithm = x509.DSAWithSHA256
 		}
-	case x509.DSAWithSHA1:
-		var dsaPriv dsa.PrivateKey
-		params := &dsaPriv.Parameters
-		err = dsa.GenerateParameters(params, rand.Reader, dsa.L1024N160)
-		if err != nil {
-			return nil, err
-		}
-		err = dsa.GenerateKey(&dsaPriv, rand.Reader)
-		if err != nil {
-			return nil, err
-		}
-		switch issuerKey.(type) {
-		case *rsa.PrivateKey:
-			template.SignatureAlgorithm = x509.SHA1WithRSA
-		case *ecdsa.PrivateKey:
-			template.SignatureAlgorithm = x509.ECDSAWithSHA1
-		case *dsa.PrivateKey:
-			template.SignatureAlgorithm = x509.DSAWithSHA1
-		}
-		priv = &dsaPriv
 	}
 	if isCA {
 		template.IsCA = true

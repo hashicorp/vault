@@ -1,0 +1,54 @@
+{{yield}}
+{{#each @fields as |attr|}}
+  {{#if (eq attr.name "keyBits")}}
+    <div class="field" data-test-field="keyBits">
+      <FormFieldLabel
+        for={{attr.name}}
+        @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+        @subText={{attr.options.subText}}
+      />
+      <div class="control is-expanded">
+        <ToolTip @verticalPosition="above" @horizontalPosition="center" as |T|>
+          <T.Trigger tabindex="-1">
+            <div class="select is-fullwidth">
+              <select
+                id={{attr.name}}
+                name={{attr.name}}
+                data-test-input={{attr.name}}
+                disabled={{unless @model.keyType true}}
+                {{on "change" this.onKeyBitsChange}}
+              >
+                {{#if (and attr.options.noDefault (not @model.keyType))}}
+                  <option value="">
+                    Select one
+                  </option>
+                {{/if}}
+                {{#each this.keyBitOptions as |val|}}
+                  <option selected={{eq (get @model "keyBits") val}} value={{val}}>
+                    {{val}}
+                  </option>
+                {{/each}}
+              </select>
+            </div>
+          </T.Trigger>
+          {{#unless @model.keyType}}
+            <T.Content @defaultClass="tool-tip smaller-font">
+              <div class="box">
+                Choose a key type before specifying bit length.
+              </div>
+            </T.Content>
+          {{/unless}}
+        </ToolTip>
+      </div>
+    </div>
+  {{else}}
+    <FormField
+      data-test-field={{attr}}
+      @attr={{attr}}
+      @model={{@model}}
+      @modelValidations={{@modelValidations}}
+      @showHelpText={{false}}
+      @onChange={{this.handleSelection}}
+    />
+  {{/if}}
+{{/each}}

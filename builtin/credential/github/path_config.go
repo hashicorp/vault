@@ -1,9 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package github
 
 import (
 	"context"
 	"fmt"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -16,6 +20,11 @@ import (
 func pathConfig(b *backend) *framework.Path {
 	p := &framework.Path{
 		Pattern: "config",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixGithub,
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"organization": {
 				Type:        framework.TypeString,
@@ -48,9 +57,20 @@ API-compatible authentication server.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathConfigWrite,
-			logical.ReadOperation:   b.pathConfigRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathConfigWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationPrefix: operationPrefixGithub,
+					OperationVerb:   "configure",
+				},
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathConfigRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "configuration",
+				},
+			},
 		},
 	}
 
@@ -94,7 +114,8 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 	}
 
 	if c.OrganizationID == 0 {
-		client, err := b.Client("")
+		githubToken := os.Getenv("VAULT_AUTH_CONFIG_GITHUB_TOKEN")
+		client, err := b.Client(githubToken)
 		if err != nil {
 			return nil, err
 		}

@@ -1,0 +1,24 @@
+### Cluster initialization hangs with `retry_join`
+
+The
+[`retry_join`](/vault/docs/concepts/integrated-storage/index#retry_join-configuration)
+feature no longer successfully attempts to rejoin the raft cluster every 2
+seconds following a join failure.
+
+The error occurs when attempting to initialize non-leader nodes with a
+[`retry_join` stanza](/vault/docs/configuration/storage/raft/#retry_join-stanza). This
+affects multi-node raft clusters on [impacted versions](#impacted-versions).
+
+The bug was introduced by commit
+https://github.com/hashicorp/vault/commit/cc6409222ce246ed72d067debe6ffeb8f62f9dad
+and first reported in https://github.com/hashicorp/vault/issues/16486.
+
+#### Impacted Versions
+
+Affects versions 1.11.1, 1.11.2, 1.10.5, and 1.10.6.  Versions prior to these
+are unaffected.
+
+NOTE: This error does not extend to version 1.9.8+, which is slightly different
+in this portion of the code and does not exhibit the same behavior.
+
+New releases addressing this bug are coming soon.

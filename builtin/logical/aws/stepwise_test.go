@@ -1,7 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package aws
 
 import (
 	"os"
+	"sync"
 	"testing"
 
 	stepwise "github.com/hashicorp/vault-testing-stepwise"
@@ -10,11 +14,13 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+var stepwiseSetup sync.Once
+
 func TestAccBackend_Stepwise_basic(t *testing.T) {
 	t.Parallel()
 	envOptions := &stepwise.MountOptions{
 		RegistryName:    "aws-sec",
-		PluginType:      stepwise.PluginTypeSecrets,
+		PluginType:      api.PluginTypeSecrets,
 		PluginName:      "aws",
 		MountPathPrefix: "aws-sec",
 	}
@@ -82,7 +88,7 @@ func testAccStepwiseRead(t *testing.T, path, name string, credentialTests []cred
 }
 
 func testAccStepwisePreCheck(t *testing.T) {
-	initSetup.Do(func() {
+	stepwiseSetup.Do(func() {
 		if v := os.Getenv("AWS_DEFAULT_REGION"); v == "" {
 			t.Logf("[INFO] Test: Using us-west-2 as test region")
 			os.Setenv("AWS_DEFAULT_REGION", "us-west-2")

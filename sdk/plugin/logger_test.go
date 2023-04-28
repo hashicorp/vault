@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package plugin
 
 import (
@@ -222,7 +225,6 @@ func (l *deprecatedLoggerClient) Error(msg string, args ...interface{}) error {
 
 func (l *deprecatedLoggerClient) Fatal(msg string, args ...interface{}) {
 	// NOOP since it's not actually used within vault
-	return
 }
 
 func (l *deprecatedLoggerClient) Log(level int, msg string, args []interface{}) {

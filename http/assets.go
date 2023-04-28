@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 //go:build ui
 
 package http
@@ -9,6 +12,7 @@ import (
 )
 
 // content is our static web server content.
+//
 //go:embed web_ui/*
 var content embed.FS
 

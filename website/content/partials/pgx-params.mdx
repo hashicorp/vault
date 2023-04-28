@@ -1,0 +1,5 @@
+### Postgres Library Change
+
+Vault 1.11+ uses pgx instead of lib/pq for Postgres connections. If you are
+using parameters like `fallback_application_name` that pgx does not support, you
+may need to update your `connection_url` before upgrading to Vault 1.11+.

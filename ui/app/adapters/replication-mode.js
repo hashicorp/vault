@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import ApplicationAdapter from './application';
 
 export default ApplicationAdapter.extend({
@@ -6,7 +11,7 @@ export default ApplicationAdapter.extend({
   },
 
   fetchStatus(mode) {
-    let url = this.getStatusUrl(mode);
+    const url = this.getStatusUrl(mode);
     return this.ajax(url, 'GET', { unauthenticated: true }).then((resp) => {
       return resp.data;
     });

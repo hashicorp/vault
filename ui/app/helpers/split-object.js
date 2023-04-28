@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+/**
  * @module SplitObject
  * SplitObject helper takes in a class of data as the first param and an array of keys that you want to split into another object as the second param. 
  * You will end up with an array of two objects. One no longer with the array of params, and the second with just the array of params.
@@ -15,10 +20,10 @@
 import { helper as buildHelper } from '@ember/component/helper';
 
 export function splitObject(originalObject, array) {
-  let object1 = {};
-  let object2 = {};
+  const object1 = {};
+  const object2 = {};
   // convert object to key's array
-  let keys = Object.keys(originalObject);
+  const keys = Object.keys(originalObject);
   keys.forEach((key) => {
     if (array.includes(key)) {
       object1[key] = originalObject[key];

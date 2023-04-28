@@ -1,0 +1,4 @@
+```release-note:bug
+core: fix a start up race condition where performance standbys could go into a 
+mount loop if default policies are not yet synced from the active node.
+```

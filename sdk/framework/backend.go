@@ -1,9 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package framework
 
 import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -14,10 +18,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
+
 	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-kms-wrapping/entropy"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -91,8 +96,12 @@ type Backend struct {
 	// BackendType is the logical.BackendType for the backend implementation
 	BackendType logical.BackendType
 
+	// RunningVersion is the optional version that will be self-reported
+	RunningVersion string
+
 	logger  log.Logger
 	system  logical.SystemView
+	events  logical.EventSender
 	once    sync.Once
 	pathsRe []*regexp.Regexp
 }
@@ -123,6 +132,10 @@ type InitializeFunc func(context.Context, *logical.InitializationRequest) error
 // PatchPreprocessorFunc is used by HandlePatchOperation in order to shape
 // the input as defined by request handler prior to JSON marshaling
 type PatchPreprocessorFunc func(map[string]interface{}) (map[string]interface{}, error)
+
+// ErrNoEvents is returned when attempting to send an event, but when the event
+// sender was not passed in during `backend.Setup()`.
+var ErrNoEvents = errors.New("no event sender configured")
 
 // Initialize is the logical.Backend implementation.
 func (b *Backend) Initialize(ctx context.Context, req *logical.InitializationRequest) error {
@@ -221,7 +234,7 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 	var ignored []string
 	for k, v := range req.Data {
 		raw[k] = v
-		if path.Fields[k] == nil {
+		if !path.TakesArbitraryInput && path.Fields[k] == nil {
 			ignored = append(ignored, k)
 		}
 	}
@@ -394,6 +407,7 @@ func (b *Backend) InvalidateKey(ctx context.Context, key string) {
 func (b *Backend) Setup(ctx context.Context, config *logical.BackendConfig) error {
 	b.logger = config.Logger
 	b.system = config.System
+	b.events = config.EventsSender
 	return nil
 }
 
@@ -426,6 +440,13 @@ func (b *Backend) System() logical.SystemView {
 // Type returns the backend type
 func (b *Backend) Type() logical.BackendType {
 	return b.BackendType
+}
+
+// Version returns the plugin version information
+func (b *Backend) PluginVersion() logical.PluginVersion {
+	return logical.PluginVersion{
+		Version: b.RunningVersion,
+	}
 }
 
 // Route looks up the path that would be used for a given path string.
@@ -529,7 +550,16 @@ func (b *Backend) handleRootHelp(req *logical.Request) (*logical.Response, error
 	requestResponsePrefix := req.GetString("requestResponsePrefix")
 
 	// Build OpenAPI response for the entire backend
-	doc := NewOASDocument()
+	vaultVersion := "unknown"
+	if b.System() != nil {
+		env, err := b.System().PluginEnv(context.Background())
+		if err != nil {
+			return nil, err
+		}
+		vaultVersion = env.VaultVersion
+	}
+
+	doc := NewOASDocument(vaultVersion)
 	if err := documentPaths(b, requestResponsePrefix, doc); err != nil {
 		b.Logger().Warn("error generating OpenAPI", "error", err)
 	}
@@ -662,6 +692,13 @@ func (b *Backend) handleWALRollback(ctx context.Context, req *logical.Request) (
 	return logical.ErrorResponse(merr.Error()), nil
 }
 
+func (b *Backend) SendEvent(ctx context.Context, eventType logical.EventType, event *logical.EventData) error {
+	if b.events == nil {
+		return ErrNoEvents
+	}
+	return b.events.Send(ctx, eventType, event)
+}
+
 // FieldSchema is a basic schema to describe the format of a path field.
 type FieldSchema struct {
 	Type        FieldType
@@ -718,6 +755,8 @@ func (t FieldType) Zero() interface{} {
 		return ""
 	case TypeInt:
 		return 0
+	case TypeInt64:
+		return int64(0)
 	case TypeBool:
 		return false
 	case TypeMap:

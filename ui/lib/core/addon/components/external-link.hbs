@@ -1,0 +1,9 @@
+{{#if @sameTab}}
+  <a href={{this.href}} ...attributes>
+    {{yield}}
+  </a>
+{{else}}
+  <a href={{this.href}} target="_blank" rel="noopener noreferrer" class="doc-link" ...attributes>
+    {{yield}}
+  </a>
+{{/if}}

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package cache
 
 import (
@@ -9,6 +12,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/vault/helper/useragent"
 
 	"github.com/hashicorp/vault/api"
 )
@@ -44,11 +49,13 @@ func (p *mockProxier) ResponseIndex() int {
 }
 
 func newTestSendResponse(status int, body string) *SendResponse {
+	headers := make(http.Header)
+	headers.Add("User-Agent", useragent.AgentProxyString())
 	resp := &SendResponse{
 		Response: &api.Response{
 			Response: &http.Response{
 				StatusCode: status,
-				Header:     http.Header{},
+				Header:     headers,
 			},
 		},
 	}

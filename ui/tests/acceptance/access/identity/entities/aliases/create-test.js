@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { settled } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
@@ -14,14 +19,14 @@ module('Acceptance | /access/identity/entities/aliases/add', function (hooks) {
 
   test('it allows create, list, delete of an entity alias', async function (assert) {
     assert.expect(6);
-    let name = `alias-${Date.now()}`;
+    const name = `alias-${Date.now()}`;
     await testAliasCRUD(name, 'entities', assert);
     await settled();
   });
 
   test('it allows delete from the edit form', async function (assert) {
     assert.expect(4);
-    let name = `alias-${Date.now()}`;
+    const name = `alias-${Date.now()}`;
     await testAliasDeleteFromForm(name, 'entities', assert);
     await settled();
   });

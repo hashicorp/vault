@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import layout from '../templates/components/replication-page';
@@ -107,7 +112,7 @@ export default Component.extend({
       return;
     }
     if (isSummaryDashboard) {
-      let combinedObject = {};
+      const combinedObject = {};
       combinedObject.dr = model['dr'];
       combinedObject.performance = model['performance'];
       return combinedObject;

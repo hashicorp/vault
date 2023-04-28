@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package dbplugin
 
 import (
@@ -9,17 +12,28 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 var (
-	_ Database = gRPCClient{}
+	_ Database                = gRPCClient{}
+	_ logical.PluginVersioner = gRPCClient{}
 
 	ErrPluginShutdown = errors.New("plugin shutdown")
 )
 
 type gRPCClient struct {
-	client  proto.DatabaseClient
-	doneCtx context.Context
+	client        proto.DatabaseClient
+	versionClient logical.PluginVersionClient
+	doneCtx       context.Context
+}
+
+func (c gRPCClient) PluginVersion() logical.PluginVersion {
+	version, _ := c.versionClient.Version(context.Background(), &logical.Empty{})
+	if version != nil {
+		return logical.PluginVersion{Version: version.PluginVersion}
+	}
+	return logical.EmptyPluginVersion
 }
 
 func (c gRPCClient) Initialize(ctx context.Context, req InitializeRequest) (InitializeResponse, error) {
@@ -81,8 +95,17 @@ func (c gRPCClient) NewUser(ctx context.Context, req NewUserRequest) (NewUserRes
 }
 
 func newUserReqToProto(req NewUserRequest) (*proto.NewUserRequest, error) {
-	if req.Password == "" {
-		return nil, fmt.Errorf("missing password")
+	switch req.CredentialType {
+	case CredentialTypePassword:
+		if req.Password == "" {
+			return nil, fmt.Errorf("missing password credential")
+		}
+	case CredentialTypeRSAPrivateKey:
+		if len(req.PublicKey) == 0 {
+			return nil, fmt.Errorf("missing public key credential")
+		}
+	default:
+		return nil, fmt.Errorf("unknown credential type")
 	}
 
 	expiration, err := ptypes.TimestampProto(req.Expiration)

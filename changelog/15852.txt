@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Changed the tokenBoundCidrs tooltip content to clarify that comma separated values are not accepted in this field.
+```

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package minio
 
 import (
@@ -11,7 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/defaults"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 )
 
 type Config struct {
@@ -32,7 +35,7 @@ func PrepareTestContainer(t *testing.T, version string) (func(), *Config) {
 	}
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
 		ContainerName: "minio",
-		ImageRepo:     "minio/minio",
+		ImageRepo:     "docker.mirror.hashicorp.services/minio/minio",
 		ImageTag:      version,
 		Env: []string{
 			"MINIO_ACCESS_KEY=" + accessKeyID,

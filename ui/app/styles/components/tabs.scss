@@ -1,12 +1,28 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+// This file defines the style for .tabs-container, .tabs and .tab
+
 .page-header + .tabs-container {
   box-shadow: none;
 }
 
 .tabs {
+  align-items: stretch;
   box-shadow: inset 0 -1px 0 $grey-light;
+  display: flex;
+  justify-content: space-between;
+  overflow: hidden;
+  overflow-x: auto;
+  user-select: none;
+  white-space: nowrap;
 
   ul {
-    border-color: transparent;
+    align-items: center;
+    display: flex;
+    justify-content: flex-start;
     min-height: 3rem;
 
     > a {
@@ -20,9 +36,23 @@
       }
     }
     li {
+      // solves for tools -> sub-tabs like "Unwrap data" -> "Data"
+      &.is-active {
+        border-bottom: 2px solid $blue;
+        color: $blue;
+      }
+      // solves for tabs on secret engines
       > a &.active {
-        border-color: $blue;
-        color: $blue !important;
+        border-bottom: 2px solid $blue;
+        color: $blue;
+      }
+      // solves for tabs on auth mounts
+      > a {
+        &.active {
+          color: $blue;
+          background-color: transparent;
+          border-bottom: 2px solid $blue;
+        }
       }
     }
   }
@@ -32,19 +62,27 @@
       box-shadow: none;
     }
     &.active a,
+    &.is-active a,
     &.active .tab {
       border-color: $blue;
       color: $blue;
     }
   }
+  // important for auth tabs in active state, otherwise the border-bottom will not show.
+  a {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    vertical-align: top;
+  }
 
   a,
   .tab {
+    border-bottom: 2px solid transparent;
     color: $grey;
     font-weight: $font-weight-semibold;
-    text-decoration: none;
     padding: $size-6 $size-8 $size-8;
-    border-bottom: 2px solid transparent;
+    text-decoration: none;
     transition: background-color $speed, border-color $speed;
 
     &:hover,
@@ -54,6 +92,7 @@
 
     &:hover {
       background-color: $ui-gray-050;
+      color: $grey-darkest;
     }
   }
 

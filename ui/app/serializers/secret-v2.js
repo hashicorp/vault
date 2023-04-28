@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { EmbeddedRecordsMixin } from '@ember-data/serializer/rest';
 import ApplicationSerializer from './application';
 
@@ -31,7 +36,7 @@ export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
     // transform versions to an array with composite IDs
     if (payload.data.versions) {
       payload.data.versions = Object.keys(payload.data.versions).map((version) => {
-        let body = payload.data.versions[version];
+        const body = payload.data.versions[version];
         body.version = version;
         body.path = payload.id;
         body.id = JSON.stringify([payload.backend, payload.id, version]);

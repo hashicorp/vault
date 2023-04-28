@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -44,7 +49,7 @@ module('Integration | Component | linkable-item', function (hooks) {
     await render(hbs`
       <LinkableItem @link={{hash route="vault" model="modelId"}} as |Li|>
         <Li.content
-          @title={{title}}
+          @title="A title"
           @link={{hash route="vault" model="modelId"}}
         >
           stuff here

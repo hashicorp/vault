@@ -1,8 +1,14 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
 import UnloadModel from 'vault/mixins/unload-model-route';
 
 export default Route.extend(UnloadModel, {
+  store: service(),
   version: service(),
 
   beforeModel() {
@@ -12,7 +18,7 @@ export default Route.extend(UnloadModel, {
   },
 
   model() {
-    let type = 'control-group-config';
+    const type = 'control-group-config';
     return this.version.hasFeature('Control Groups')
       ? this.store.findRecord(type, 'config').catch((e) => {
           // if you haven't saved a config, the API 404s, so create one here to edit and return it

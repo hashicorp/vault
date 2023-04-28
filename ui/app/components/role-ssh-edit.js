@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import RoleEdit from './role-edit';
 
 export default RoleEdit.extend({
@@ -9,7 +14,7 @@ export default RoleEdit.extend({
   actions: {
     updateTtl(path, val) {
       const model = this.model;
-      let valueToSet = val.enabled === true ? `${val.seconds}s` : undefined;
+      const valueToSet = val.enabled === true ? `${val.seconds}s` : undefined;
       model.set(path, valueToSet);
     },
   },

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package alicloud
 
 import (
@@ -18,13 +21,11 @@ import (
 )
 
 /*
-
-	Creds can be inferred from instance metadata, and those creds
-	expire every 60 minutes, so we're going to need to poll for new
-	creds. Since we're polling anyways, let's poll once a minute so
-	all changes can be picked up rather quickly. This is configurable,
-	however.
-
+Creds can be inferred from instance metadata, and those creds
+expire every 60 minutes, so we're going to need to poll for new
+creds. Since we're polling anyways, let's poll once a minute so
+all changes can be picked up rather quickly. This is configurable,
+however.
 */
 const defaultCredCheckFreqSeconds = 60
 

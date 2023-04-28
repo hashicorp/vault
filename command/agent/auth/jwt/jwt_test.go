@@ -1,8 +1,10 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package jwt
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"path"
 	"strings"
@@ -10,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/command/agent/auth"
 )
 
 func TestIngressToken(t *testing.T) {
@@ -21,18 +24,18 @@ func TestIngressToken(t *testing.T) {
 		symlinked = "symlinked"
 	)
 
-	rootDir, err := ioutil.TempDir("", "vault-agent-jwt-auth-test")
+	rootDir, err := os.MkdirTemp("", "vault-agent-jwt-auth-test")
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %s", err)
 	}
 	defer os.RemoveAll(rootDir)
 
 	setupTestDir := func() string {
-		testDir, err := ioutil.TempDir(rootDir, "")
+		testDir, err := os.MkdirTemp(rootDir, "")
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = ioutil.WriteFile(path.Join(testDir, file), []byte("test"), 0o644)
+		err = os.WriteFile(path.Join(testDir, file), []byte("test"), 0o644)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -102,6 +105,157 @@ func TestIngressToken(t *testing.T) {
 		} else {
 			if strings.Contains(logBuffer.String(), "[ERROR]") || strings.Contains(logBuffer.String(), "[WARN]") {
 				t.Fatal("logs contained unexpected error", logBuffer.String())
+			}
+		}
+	}
+}
+
+func TestDeleteAfterReading(t *testing.T) {
+	for _, tc := range map[string]struct {
+		configValue  string
+		shouldDelete bool
+	}{
+		"default": {
+			"",
+			true,
+		},
+		"explicit true": {
+			"true",
+			true,
+		},
+		"false": {
+			"false",
+			false,
+		},
+	} {
+		rootDir, err := os.MkdirTemp("", "vault-agent-jwt-auth-test")
+		if err != nil {
+			t.Fatalf("failed to create temp dir: %s", err)
+		}
+		defer os.RemoveAll(rootDir)
+		tokenPath := path.Join(rootDir, "token")
+		err = os.WriteFile(tokenPath, []byte("test"), 0o644)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		config := &auth.AuthConfig{
+			Config: map[string]interface{}{
+				"path": tokenPath,
+				"role": "unusedrole",
+			},
+			Logger: hclog.Default(),
+		}
+		if tc.configValue != "" {
+			config.Config["remove_jwt_after_reading"] = tc.configValue
+		}
+
+		jwtAuth, err := NewJWTAuthMethod(config)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		jwtAuth.(*jwtMethod).ingressToken()
+
+		if _, err := os.Lstat(tokenPath); tc.shouldDelete {
+			if err == nil || !os.IsNotExist(err) {
+				t.Fatal(err)
+			}
+		} else {
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+}
+
+func TestDeleteAfterReadingSymlink(t *testing.T) {
+	for _, tc := range map[string]struct {
+		configValue              string
+		shouldDelete             bool
+		removeJWTFollowsSymlinks bool
+	}{
+		"default": {
+			"",
+			true,
+			false,
+		},
+		"explicit true": {
+			"true",
+			true,
+			false,
+		},
+		"false": {
+			"false",
+			false,
+			false,
+		},
+		"default + removeJWTFollowsSymlinks": {
+			"",
+			true,
+			true,
+		},
+		"explicit true + removeJWTFollowsSymlinks": {
+			"true",
+			true,
+			true,
+		},
+		"false + removeJWTFollowsSymlinks": {
+			"false",
+			false,
+			true,
+		},
+	} {
+		rootDir, err := os.MkdirTemp("", "vault-agent-jwt-auth-test")
+		if err != nil {
+			t.Fatalf("failed to create temp dir: %s", err)
+		}
+		defer os.RemoveAll(rootDir)
+		tokenPath := path.Join(rootDir, "token")
+		err = os.WriteFile(tokenPath, []byte("test"), 0o644)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		symlink, err := os.CreateTemp("", "auth.jwt.symlink.test.")
+		if err != nil {
+			t.Fatal(err)
+		}
+		symlinkName := symlink.Name()
+		symlink.Close()
+		os.Remove(symlinkName)
+		os.Symlink(tokenPath, symlinkName)
+
+		config := &auth.AuthConfig{
+			Config: map[string]interface{}{
+				"path": symlinkName,
+				"role": "unusedrole",
+			},
+			Logger: hclog.Default(),
+		}
+		if tc.configValue != "" {
+			config.Config["remove_jwt_after_reading"] = tc.configValue
+		}
+		config.Config["remove_jwt_follows_symlinks"] = tc.removeJWTFollowsSymlinks
+
+		jwtAuth, err := NewJWTAuthMethod(config)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		jwtAuth.(*jwtMethod).ingressToken()
+
+		pathToCheck := symlinkName
+		if tc.removeJWTFollowsSymlinks {
+			pathToCheck = tokenPath
+		}
+		if _, err := os.Lstat(pathToCheck); tc.shouldDelete {
+			if err == nil || !os.IsNotExist(err) {
+				t.Fatal(err)
+			}
+		} else {
+			if err != nil {
+				t.Fatal(err)
 			}
 		}
 	}

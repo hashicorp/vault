@@ -1,0 +1,3 @@
+```release-note:bug
+debug: Fix panic when capturing debug bundle on Windows
+```

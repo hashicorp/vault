@@ -1,18 +1,33 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 export default {
   getItem(key) {
-    var item = window.sessionStorage.getItem(key);
+    var item = window.localStorage.getItem(key);
     return item && JSON.parse(item);
   },
 
   setItem(key, val) {
-    window.sessionStorage.setItem(key, JSON.stringify(val));
+    window.localStorage.setItem(key, JSON.stringify(val));
   },
 
   removeItem(key) {
-    return window.sessionStorage.removeItem(key);
+    return window.localStorage.removeItem(key);
   },
 
   keys() {
-    return Object.keys(window.sessionStorage);
+    return Object.keys(window.localStorage);
+  },
+
+  cleanUpStorage(string, keyToKeep) {
+    if (!string) return;
+    const relevantKeys = this.keys().filter((str) => str.startsWith(string));
+    relevantKeys?.forEach((key) => {
+      if (key !== keyToKeep) {
+        localStorage.removeItem(key);
+      }
+    });
   },
 };

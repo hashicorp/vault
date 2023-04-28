@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { assign } from '@ember/polyfills';
 import { resolve, allSettled } from 'rsvp';
 import ApplicationAdapter from './application';
@@ -7,12 +12,17 @@ export default ApplicationAdapter.extend({
   namespace: 'v1',
 
   createOrUpdate(store, type, snapshot, requestType) {
+    const { name, backend } = snapshot.record;
     const serializer = store.serializerFor(type.modelName);
     const data = serializer.serialize(snapshot, requestType);
-    const { id } = snapshot;
-    let url = this.urlForRole(snapshot.record.get('backend'), id);
+    const url = this.urlForRole(backend, name);
 
-    return this.ajax(url, 'POST', { data });
+    return this.ajax(url, 'POST', { data }).then((resp) => {
+      // Ember data doesn't like 204 responses except for DELETE method
+      const response = resp || { data: {} };
+      response.data.name = name;
+      return response;
+    });
   },
 
   createRecord() {
@@ -41,7 +51,7 @@ export default ApplicationAdapter.extend({
   },
 
   optionsForQuery(id) {
-    let data = {};
+    const data = {};
     if (!id) {
       data['list'] = true;
     }
@@ -61,7 +71,7 @@ export default ApplicationAdapter.extend({
       if (!results[0].value) {
         throw results[0].reason;
       }
-      let resp = {
+      const resp = {
         id,
         name: id,
         backend,

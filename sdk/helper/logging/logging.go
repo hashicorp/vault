@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package logging
 
 import (
@@ -42,9 +45,10 @@ func NewVaultLogger(level log.Level) log.Logger {
 // writer and a Vault formatter
 func NewVaultLoggerWithWriter(w io.Writer, level log.Level) log.Logger {
 	opts := &log.LoggerOptions{
-		Level:      level,
-		Output:     w,
-		JSONFormat: ParseEnvLogFormat() == JSONFormat,
+		Level:             level,
+		IndependentLevels: true,
+		Output:            w,
+		JSONFormat:        ParseEnvLogFormat() == JSONFormat,
 	}
 	return log.New(opts)
 }
@@ -59,16 +63,13 @@ func ParseLogFormat(format string) (LogFormat, error) {
 	case "json":
 		return JSONFormat, nil
 	default:
-		return UnspecifiedFormat, fmt.Errorf("Unknown log format: %s", format)
+		return UnspecifiedFormat, fmt.Errorf("unknown log format: %s", format)
 	}
 }
 
 // ParseEnvLogFormat parses the log format from an environment variable.
 func ParseEnvLogFormat() LogFormat {
 	logFormat := os.Getenv("VAULT_LOG_FORMAT")
-	if logFormat == "" {
-		logFormat = os.Getenv("LOGXI_FORMAT")
-	}
 	switch strings.ToLower(logFormat) {
 	case "json", "vault_json", "vault-json", "vaultjson":
 		return JSONFormat

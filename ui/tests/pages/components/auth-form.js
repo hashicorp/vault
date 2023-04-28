@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { collection, clickable, fillable, text, value, isPresent } from 'ember-cli-page-object';
 
 export default {
@@ -14,4 +19,7 @@ export default {
   errorMessagePresent: isPresent('[data-test-auth-error]'),
   descriptionText: text('[data-test-description]'),
   login: clickable('[data-test-auth-submit]'),
+  oidcRole: fillable('[data-test-role]'),
+  oidcMoreOptions: clickable('[data-test-yield-content] button'),
+  oidcMountPath: fillable('#custom-path'),
 };

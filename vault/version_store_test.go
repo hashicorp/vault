@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -5,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/version"
+	"github.com/hashicorp/vault/version"
 )
 
 // TestVersionStore_StoreMultipleVaultVersions writes multiple versions of 1.9.0 and verifies that only

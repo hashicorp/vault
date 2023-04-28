@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@ember/component';
 import autosize from 'autosize';
 import layout from '../templates/components/masked-input';
@@ -47,7 +52,7 @@ export default Component.extend({
       this.toggleProperty('showValue');
     },
     updateValue(e) {
-      let value = e.target.value;
+      const value = e.target.value;
       this.set('value', value);
       this.onChange(value);
     },

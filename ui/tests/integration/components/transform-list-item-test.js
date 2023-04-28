@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import EmberObject from '@ember/object';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
@@ -8,7 +13,7 @@ module('Integration | Component | transform-list-item', function (hooks) {
   setupRenderingTest(hooks);
 
   test('it renders un-clickable item if no read capability', async function (assert) {
-    let item = EmberObject.create({
+    const item = EmberObject.create({
       id: 'foo',
       updatePath: {
         canRead: false,
@@ -20,9 +25,9 @@ module('Integration | Component | transform-list-item', function (hooks) {
     this.set('itemType', 'role');
     this.set('item', item);
     await render(hbs`<SecretList::TransformListItem
-      @item={{item}}
-      @itemPath={{itemPath}}
-      @itemType={{itemType}}
+      @item={{this.item}}
+      @itemPath={{this.itemPath}}
+      @itemType={{this.itemType}}
     />`);
 
     assert.dom('[data-test-view-only-list-item]').exists('shows view only list item');
@@ -30,7 +35,7 @@ module('Integration | Component | transform-list-item', function (hooks) {
   });
 
   test('it is clickable with details menu item if read capability', async function (assert) {
-    let item = EmberObject.create({
+    const item = EmberObject.create({
       id: 'foo',
       updatePath: {
         canRead: true,
@@ -42,9 +47,9 @@ module('Integration | Component | transform-list-item', function (hooks) {
     this.set('itemType', 'template');
     this.set('item', item);
     await render(hbs`<SecretList::TransformListItem
-      @item={{item}}
-      @itemPath={{itemPath}}
-      @itemType={{itemType}}
+      @item={{this.item}}
+      @itemPath={{this.itemPath}}
+      @itemType={{this.itemType}}
     />`);
 
     assert.dom('[data-test-secret-link="template/foo"]').exists('shows clickable list item');
@@ -53,7 +58,7 @@ module('Integration | Component | transform-list-item', function (hooks) {
   });
 
   test('it has details and edit menu item if read & edit capabilities', async function (assert) {
-    let item = EmberObject.create({
+    const item = EmberObject.create({
       id: 'foo',
       updatePath: {
         canRead: true,
@@ -65,9 +70,9 @@ module('Integration | Component | transform-list-item', function (hooks) {
     this.set('itemType', 'alphabet');
     this.set('item', item);
     await render(hbs`<SecretList::TransformListItem
-      @item={{item}}
-      @itemPath={{itemPath}}
-      @itemType={{itemType}}
+      @item={{this.item}}
+      @itemPath={{this.itemPath}}
+      @itemType={{this.itemType}}
     />`);
 
     assert.dom('[data-test-secret-link="alphabet/foo"]').exists('shows clickable list item');
@@ -76,7 +81,7 @@ module('Integration | Component | transform-list-item', function (hooks) {
   });
 
   test('it is not clickable if built-in template with all capabilities', async function (assert) {
-    let item = EmberObject.create({
+    const item = EmberObject.create({
       id: 'builtin/foo',
       updatePath: {
         canRead: true,
@@ -88,9 +93,9 @@ module('Integration | Component | transform-list-item', function (hooks) {
     this.set('itemType', 'template');
     this.set('item', item);
     await render(hbs`<SecretList::TransformListItem
-      @item={{item}}
-      @itemPath={{itemPath}}
-      @itemType={{itemType}}
+      @item={{this.item}}
+      @itemPath={{this.itemPath}}
+      @itemType={{this.itemType}}
     />`);
 
     assert.dom('[data-test-view-only-list-item]').exists('shows view only list item');
@@ -98,7 +103,7 @@ module('Integration | Component | transform-list-item', function (hooks) {
   });
 
   test('it is not clickable if built-in alphabet', async function (assert) {
-    let item = EmberObject.create({
+    const item = EmberObject.create({
       id: 'builtin/foo',
       updatePath: {
         canRead: true,
@@ -110,9 +115,9 @@ module('Integration | Component | transform-list-item', function (hooks) {
     this.set('itemType', 'alphabet');
     this.set('item', item);
     await render(hbs`<SecretList::TransformListItem
-      @item={{item}}
-      @itemPath={{itemPath}}
-      @itemType={{itemType}}
+      @item={{this.item}}
+      @itemPath={{this.itemPath}}
+      @itemType={{this.itemType}}
     />`);
 
     assert.dom('[data-test-view-only-list-item]').exists('shows view only list item');

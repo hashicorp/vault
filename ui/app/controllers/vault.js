@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { inject as service } from '@ember/service';
 import Controller from '@ember/controller';
 import { computed } from '@ember/object';
@@ -16,7 +21,7 @@ export default Controller.extend({
   auth: service(),
   store: service(),
   activeCluster: computed('auth.activeCluster', function () {
-    let id = this.auth.activeCluster;
+    const id = this.auth.activeCluster;
     return id ? this.store.peekRecord('cluster', id) : null;
   }),
   activeClusterName: computed('activeCluster', function () {

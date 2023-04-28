@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import AdapterError from '@ember-data/adapter/error';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
@@ -35,8 +40,8 @@ export default Component.extend({
 
   save: task(
     waitFor(function* (model, options = { method: 'save' }) {
-      let { method } = options;
-      let messageKey = method === 'save' ? 'successMessage' : 'deleteSuccessMessage';
+      const { method } = options;
+      const messageKey = method === 'save' ? 'successMessage' : 'deleteSuccessMessage';
       try {
         yield model[method]();
       } catch (err) {
@@ -62,7 +67,7 @@ export default Component.extend({
 
   willDestroy() {
     this._super(...arguments);
-    let { model } = this;
+    const { model } = this;
     if (!model) return;
     if ((model.get('isDirty') && !model.isDestroyed) || !model.isDestroying) {
       model.rollbackAttributes();

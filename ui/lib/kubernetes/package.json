@@ -1,0 +1,19 @@
+{
+  "name": "kubernetes",
+  "keywords": [
+    "ember-addon",
+    "ember-engine"
+  ],
+  "dependencies": {
+    "ember-cli-htmlbars": "*",
+    "ember-cli-babel": "*",
+    "ember-concurrency": "*",
+    "@ember/test-waiters": "*",
+    "ember-inflector": "*"
+  },
+  "ember-addon": {
+    "paths": [
+      "../core"
+    ]
+  }
+}

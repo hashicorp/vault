@@ -1,0 +1,3 @@
+```release-note:bug
+secret/pki: fix bug with initial legacy bundle migration (from < 1.11 into 1.11+) and missing issuers from ca_chain
+```

@@ -1,4 +1,10 @@
-/* COPIED FROM BULMA/SWITCH */
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+/* COPIED FROM BULMA SWITCH */
+
 .toggle[type='checkbox'] {
   outline: 0;
   user-select: none;
@@ -49,8 +55,8 @@
   height: 1rem;
   transform: translate3d(0, 0, 0);
   border-radius: 50%;
-  background: white;
-  transition: all 0.25s ease-out;
+  background: $white;
+  transition: all 0.25s $easing;
   content: '';
 }
 .toggle[type='checkbox']:checked + label::before {

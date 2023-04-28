@@ -1,4 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
+
+import "errors"
+
+// ErrSecretNotFound is returned by KVv1 and KVv2 wrappers to indicate that the
+// secret is missing at the given location.
+var ErrSecretNotFound = errors.New("secret not found")
 
 // A KVSecret is a key-value secret returned by Vault's KV secrets engine,
 // and is the most basic type of secret stored in Vault.
@@ -30,8 +39,8 @@ type KVSecret struct {
 //
 // Learn more about the KV secrets engine here:
 // https://www.vaultproject.io/docs/secrets/kv
-func (c *Client) KVv1(mountPath string) *kvv1 {
-	return &kvv1{c: c, mountPath: mountPath}
+func (c *Client) KVv1(mountPath string) *KVv1 {
+	return &KVv1{c: c, mountPath: mountPath}
 }
 
 // KVv2 is used to return a client for reads and writes against
@@ -45,6 +54,6 @@ func (c *Client) KVv1(mountPath string) *kvv1 {
 //
 // Learn more about the KV secrets engine here:
 // https://www.vaultproject.io/docs/secrets/kv
-func (c *Client) KVv2(mountPath string) *kvv2 {
-	return &kvv2{c: c, mountPath: mountPath}
+func (c *Client) KVv2(mountPath string) *KVv2 {
+	return &KVv2{c: c, mountPath: mountPath}
 }

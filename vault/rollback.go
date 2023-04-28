@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -9,14 +12,8 @@ import (
 
 	metrics "github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
-)
-
-const (
-	// rollbackPeriod is how often we attempt rollbacks for all the backends
-	rollbackPeriod = time.Minute
 )
 
 // RollbackManager is responsible for performing rollbacks of partial
@@ -50,6 +47,7 @@ type RollbackManager struct {
 	shutdown     bool
 	shutdownCh   chan struct{}
 	shutdownLock sync.Mutex
+	stopTicker   chan struct{}
 	quitContext  context.Context
 
 	core *Core
@@ -69,10 +67,11 @@ func NewRollbackManager(ctx context.Context, logger log.Logger, backendsFunc fun
 		logger:      logger,
 		backends:    backendsFunc,
 		router:      router,
-		period:      rollbackPeriod,
+		period:      core.rollbackPeriod,
 		inflight:    make(map[string]*rollbackState),
 		doneCh:      make(chan struct{}),
 		shutdownCh:  make(chan struct{}),
+		stopTicker:  make(chan struct{}),
 		quitContext: ctx,
 		core:        core,
 	}
@@ -97,10 +96,21 @@ func (m *RollbackManager) Stop() {
 	m.inflightAll.Wait()
 }
 
+// StopTicker stops the automatic Rollback manager's ticker, causing us
+// to not do automatic rollbacks. This is useful for testing plugin's
+// periodic function's behavior, without trying to race against the
+// rollback manager proper.
+//
+// THIS SHOULD ONLY BE CALLED FROM TEST HELPERS.
+func (m *RollbackManager) StopTicker() {
+	close(m.stopTicker)
+}
+
 // run is a long running routine to periodically invoke rollback
 func (m *RollbackManager) run() {
 	m.logger.Info("starting rollback manager")
 	tick := time.NewTicker(m.period)
+	logTestStopOnce := false
 	defer tick.Stop()
 	defer close(m.doneCh)
 	for {
@@ -111,6 +121,13 @@ func (m *RollbackManager) run() {
 		case <-m.shutdownCh:
 			m.logger.Info("stopping rollback manager")
 			return
+
+		case <-m.stopTicker:
+			if !logTestStopOnce {
+				m.logger.Info("stopping rollback manager ticker for tests")
+				logTestStopOnce = true
+			}
+			tick.Stop()
 		}
 	}
 }
@@ -164,7 +181,7 @@ func (m *RollbackManager) startOrLookupRollback(ctx context.Context, fullPath st
 
 // attemptRollback invokes a RollbackOperation for the given path
 func (m *RollbackManager) attemptRollback(ctx context.Context, fullPath string, rs *rollbackState, grabStatelock bool) (err error) {
-	defer metrics.MeasureSince([]string{"rollback", "attempt", strings.Replace(fullPath, "/", "-", -1)}, time.Now())
+	defer metrics.MeasureSince([]string{"rollback", "attempt", strings.ReplaceAll(fullPath, "/", "-")}, time.Now())
 
 	defer func() {
 		rs.lastError = err
@@ -208,7 +225,9 @@ func (m *RollbackManager) attemptRollback(ctx context.Context, fullPath string, 
 		}()
 
 		// Grab the statelock or stop
-		if stopped := grabLockOrStop(m.core.stateLock.RLock, m.core.stateLock.RUnlock, stopCh); stopped {
+		l := newLockGrabber(m.core.stateLock.RLock, m.core.stateLock.RUnlock, stopCh)
+		go l.grab()
+		if stopped := l.lockOrStop(); stopped {
 			// If we stopped due to shutdown, return. Otherwise another thread
 			// is holding the lock for us, continue on.
 			select {

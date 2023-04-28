@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -249,14 +252,14 @@ func (i *intValue) Set(s string) error {
 		return err
 	}
 	if v >= math.MinInt && v <= math.MaxInt {
-		*i.target = int(v)
+		*i.target = v
 		return nil
 	}
 	return fmt.Errorf("Incorrect conversion of a 64-bit integer to a lower bit size. Value %d is not within bounds for int32", v)
 }
 
-func (i *intValue) Get() interface{} { return int(*i.target) }
-func (i *intValue) String() string   { return strconv.Itoa(int(*i.target)) }
+func (i *intValue) Get() interface{} { return *i.target }
+func (i *intValue) String() string   { return strconv.Itoa(*i.target) }
 func (i *intValue) Example() string  { return "int" }
 func (i *intValue) Hidden() bool     { return i.hidden }
 

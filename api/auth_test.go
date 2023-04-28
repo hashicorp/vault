@@ -1,10 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
 	"context"
 	"testing"
-
-	"github.com/hashicorp/vault/sdk/logical"
 )
 
 type mockAuthMethod struct {
@@ -91,7 +92,7 @@ func TestAuth_MFALoginTwoPhase(t *testing.T) {
 			m: &mockAuthMethod{
 				mockedSecret: &Secret{
 					Auth: &SecretAuth{
-						MFARequirement: &logical.MFARequirement{
+						MFARequirement: &MFARequirement{
 							MFARequestID:   "a-req-id",
 							MFAConstraints: nil,
 						},

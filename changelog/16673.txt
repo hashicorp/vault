@@ -1,0 +1,3 @@
+```release-note:bug
+plugin/secrets/auth: Fix a bug with aliased backends such as aws-ec2 or generic
+```

@@ -1,0 +1,3 @@
+```release-note:improvement
+vault/diagnose: Upgrade `go.opentelemetry.io/otel`, `go.opentelemetry.io/otel/sdk`, `go.opentelemetry.io/otel/trace` to v1.11.2
+```

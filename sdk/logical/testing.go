@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package logical
 
 import (
@@ -73,6 +76,7 @@ func TestSystemView() *StaticSystemView {
 	return &StaticSystemView{
 		DefaultLeaseTTLVal: defaultLeaseTTLVal,
 		MaxLeaseTTLVal:     maxLeaseTTLVal,
+		VersionString:      "testVersionString",
 	}
 }
 

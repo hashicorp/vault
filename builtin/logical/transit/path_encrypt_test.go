@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package transit
 
 import (
@@ -225,7 +228,7 @@ func TestTransit_BatchEncryptionCase3(t *testing.T) {
 	}
 }
 
-// Case4: Test batch encryption with an existing key
+// Case4: Test batch encryption with an existing key (and test references)
 func TestTransit_BatchEncryptionCase4(t *testing.T) {
 	var resp *logical.Response
 	var err error
@@ -243,8 +246,8 @@ func TestTransit_BatchEncryptionCase4(t *testing.T) {
 	}
 
 	batchInput := []interface{}{
-		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
-		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
+		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==", "reference": "b"},
+		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==", "reference": "a"},
 	}
 
 	batchData := map[string]interface{}{
@@ -271,7 +274,7 @@ func TestTransit_BatchEncryptionCase4(t *testing.T) {
 
 	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA=="
 
-	for _, item := range batchResponseItems {
+	for i, item := range batchResponseItems {
 		if item.KeyVersion != 1 {
 			t.Fatalf("unexpected key version; got: %d, expected: %d", item.KeyVersion, 1)
 		}
@@ -286,6 +289,10 @@ func TestTransit_BatchEncryptionCase4(t *testing.T) {
 
 		if resp.Data["plaintext"] != plaintext {
 			t.Fatalf("bad: plaintext. Expected: %q, Actual: %q", plaintext, resp.Data["plaintext"])
+		}
+		inputItem := batchInput[i].(map[string]interface{})
+		if item.Reference != inputItem["reference"] {
+			t.Fatalf("reference mismatch.  Expected %s, Actual: %s", inputItem["reference"], item.Reference)
 		}
 	}
 }

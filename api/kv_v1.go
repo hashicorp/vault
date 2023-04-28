@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
@@ -5,13 +8,13 @@ import (
 	"fmt"
 )
 
-type kvv1 struct {
+type KVv1 struct {
 	c         *Client
 	mountPath string
 }
 
 // Get returns a secret from the KV v1 secrets engine.
-func (kv *kvv1) Get(ctx context.Context, secretPath string) (*KVSecret, error) {
+func (kv *KVv1) Get(ctx context.Context, secretPath string) (*KVSecret, error) {
 	pathToRead := fmt.Sprintf("%s/%s", kv.mountPath, secretPath)
 
 	secret, err := kv.c.Logical().ReadWithContext(ctx, pathToRead)
@@ -19,7 +22,7 @@ func (kv *kvv1) Get(ctx context.Context, secretPath string) (*KVSecret, error) {
 		return nil, fmt.Errorf("error encountered while reading secret at %s: %w", pathToRead, err)
 	}
 	if secret == nil {
-		return nil, fmt.Errorf("no secret found at %s", pathToRead)
+		return nil, fmt.Errorf("%w: at %s", ErrSecretNotFound, pathToRead)
 	}
 
 	return &KVSecret{
@@ -33,7 +36,7 @@ func (kv *kvv1) Get(ctx context.Context, secretPath string) (*KVSecret, error) {
 // KV v1 secrets engine.
 //
 // If the secret already exists, it will be overwritten.
-func (kv *kvv1) Put(ctx context.Context, secretPath string, data map[string]interface{}) error {
+func (kv *KVv1) Put(ctx context.Context, secretPath string, data map[string]interface{}) error {
 	pathToWriteTo := fmt.Sprintf("%s/%s", kv.mountPath, secretPath)
 
 	_, err := kv.c.Logical().WriteWithContext(ctx, pathToWriteTo, data)
@@ -45,7 +48,7 @@ func (kv *kvv1) Put(ctx context.Context, secretPath string, data map[string]inte
 }
 
 // Delete deletes a secret from the KV v1 secrets engine.
-func (kv *kvv1) Delete(ctx context.Context, secretPath string) error {
+func (kv *KVv1) Delete(ctx context.Context, secretPath string) error {
 	pathToDelete := fmt.Sprintf("%s/%s", kv.mountPath, secretPath)
 
 	_, err := kv.c.Logical().DeleteWithContext(ctx, pathToDelete)

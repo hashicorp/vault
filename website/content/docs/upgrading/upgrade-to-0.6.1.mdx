@@ -15,7 +15,7 @@ carefully.
 
 Once an active node is running 0.6.1, only standby nodes running 0.6.1+ will be
 able to form an HA cluster. If following our [general upgrade
-instructions](/docs/upgrading) this will
+instructions](/vault/docs/upgrading) this will
 not be an issue.
 
 ## Health Endpoint Status Code Changes
@@ -38,7 +38,7 @@ each status code (including `500`).
 
 Root tokens (tokens with the `root` policy) can no longer be created except by
 another root token or the
-[`generate-root`](/api-docs/system/generate-root)
+[`generate-root`](/vault/api-docs/system/generate-root)
 endpoint or CLI command.
 
 ## PKI Backend Certificates Will Contain Default Key Usages
@@ -49,14 +49,14 @@ compatibility with some software that requires strict adherence to RFCs, such
 as OpenVPN.
 
 This behavior is fully adjustable; see the [PKI backend
-documentation](/docs/secrets/pki) for
+documentation](/vault/docs/secrets/pki) for
 details.
 
 ## DynamoDB Does Not Support HA By Default
 
 If using DynamoDB and want to use HA support, you will need to explicitly
 enable it in Vault's configuration; see the
-[documentation](/docs/configuration#ha_storage)
+[documentation](/vault/docs/configuration#ha_storage)
 for details.
 
 If you are already using DynamoDB in an HA fashion and wish to keep doing so,
@@ -82,7 +82,7 @@ unfortunately has the side effect that `memberOf` is no longer searched for by
 default, which is a breaking change for many existing setups.
 
 `Scenario 2` in the [updated
-documentation](/docs/auth/ldap) shows an
+documentation](/vault/docs/auth/ldap) shows an
 example of configuring the backend to query `memberOf`. It is recommended that
 a test Vault server be set up and that successful authentication can be
 performed using the new configuration before upgrading a primary or production
@@ -96,7 +96,7 @@ configuration can be specified successfully.
 ## App-ID is Deprecated
 
 With the addition of the new [AppRole
-backend](/docs/auth/approle), App-ID is
+backend](/vault/docs/auth/approle), App-ID is
 deprecated. There are no current plans to remove it, but we encourage using
 AppRole whenever possible, as it offers enhanced functionality and can
 accommodate many more types of authentication paradigms. App-ID will receive

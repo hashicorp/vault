@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { Factory } from 'ember-cli-mirage';
 
 export default Factory.extend({
@@ -8,4 +13,5 @@ export default Factory.extend({
   org_alias: 'foobarbaz',
   type: 'pingid',
   username_template: '',
+  namespace_id: 'root',
 });

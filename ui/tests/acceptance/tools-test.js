@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { click, fillIn, find, findAll, currentURL, visit, settled, waitUntil } from '@ember/test-helpers';
 import Pretender from 'pretender';
 import { module, test } from 'qunit';
@@ -42,7 +47,7 @@ module('Acceptance | tools', function (hooks) {
     var tokenStore = createTokenStore();
     await visit('/vault/tools');
 
-    assert.equal(currentURL(), '/vault/tools/wrap', 'forwards to the first action');
+    assert.strictEqual(currentURL(), '/vault/tools/wrap', 'forwards to the first action');
     TOOLS_ACTIONS.forEach((action) => {
       assert.dom(`[data-test-tools-action-link="${action}"]`).exists(`${action} link renders`);
     });

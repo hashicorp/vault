@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 .list-item-row {
   @extend .box;
   @extend .is-sideless;
@@ -22,6 +27,10 @@
     margin-left: auto;
     margin-right: auto;
   }
+
+  &.is-disabled {
+    opacity: 0.5;
+  }
 }
 
 a.list-item-row,
@@ -32,10 +41,10 @@ a.list-item-row,
   &:hover,
   &:focus,
   &:active {
-    margin-left: #{-$column-gap} !important;
-    margin-right: #{-$column-gap} !important;
-    padding-left: $column-gap;
-    padding-right: $column-gap;
+    margin-left: #{-$size-9} !important;
+    margin-right: #{-$size-9} !important;
+    padding-left: $size-9;
+    padding-right: $size-9;
     position: relative;
     box-shadow: 0 2px 0 -1px $grey-light, 0 -2px 0 -1px $grey-light, $box-link-hover-shadow,
       $box-shadow-middle;

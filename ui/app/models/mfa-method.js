@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { capitalize } from '@ember/string';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
@@ -121,7 +126,9 @@ export default class MfaMethod extends Model {
   @attr({
     label: 'Period',
     editType: 'ttl',
-    subText: 'How long each generated TOTP is valid.',
+    helperTextEnabled: 'How long each generated TOTP is valid.',
+    hideToggle: true,
+    defaultValue: 30, // API accepts both an integer as seconds and sting with unit e.g 30 || '30s'
   })
   period;
   @attr('number', {
@@ -136,18 +143,21 @@ export default class MfaMethod extends Model {
   qr_size;
   @attr('string', {
     label: 'Algorithm',
+    editType: 'radio',
     possibleValues: ['SHA1', 'SHA256', 'SHA512'],
     subText: 'The hashing algorithm used to generate the TOTP code.',
   })
   algorithm;
   @attr('number', {
     label: 'Digits',
+    editType: 'radio',
     possibleValues: [6, 8],
     subText: 'The number digits in the generated TOTP code.',
   })
   digits;
   @attr('number', {
     label: 'Skew',
+    editType: 'radio',
     possibleValues: [0, 1],
     subText: 'The number of delay periods allowed when validating a TOTP token.',
   })

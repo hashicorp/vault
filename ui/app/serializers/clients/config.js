@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import ApplicationSerializer from '../application';
 
 export default ApplicationSerializer.extend({
@@ -17,7 +22,7 @@ export default ApplicationSerializer.extend({
   },
 
   serialize() {
-    let json = this._super(...arguments);
+    const json = this._super(...arguments);
     if (json.enabled === 'On' || json.enabled === 'Off') {
       const oldEnabled = json.enabled;
       json.enabled = oldEnabled === 'On' ? 'enable' : 'disable';

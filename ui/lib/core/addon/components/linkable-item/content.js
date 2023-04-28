@@ -1,4 +1,13 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+import Component from '@glimmer/component';
+import layout from '../../templates/components/linkable-item/content';
+import { setComponentTemplate } from '@ember/component';
+
+/**
  * @module Content
  * Content components are contextual components of LinkableItem, used to display content on the left side of a LinkableItem component.
  *
@@ -21,9 +30,6 @@
  * @param {string} title=null - if @link object is passed in then title will link to @link.route
  */
 
-import Component from '@glimmer/component';
-import layout from '../../templates/components/linkable-item/content';
-import { setComponentTemplate } from '@ember/component';
 /* eslint ember/no-empty-glimmer-component-classes: 'warn' */
 class ContentComponent extends Component {}
 

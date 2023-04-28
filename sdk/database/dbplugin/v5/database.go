@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package dbplugin
 
 import (
@@ -79,7 +82,7 @@ const SupportedCredentialTypesKey = "supported_credential_types"
 // supported by the database plugin. It can be used by database plugins
 // to communicate what CredentialType values it supports managing.
 func (ir InitializeResponse) SetSupportedCredentialTypes(credTypes []CredentialType) {
-	sct := make([]string, 0, len(credTypes))
+	sct := make([]interface{}, 0, len(credTypes))
 	for _, t := range credTypes {
 		sct = append(sct, t.String())
 	}

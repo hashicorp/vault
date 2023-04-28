@@ -45,12 +45,12 @@
 </PageHeader>
 
 {{#if this.showTabs}}
-  <div class="tabs-container box is-bottomless is-fullwidth is-paddingless" data-test-tabs>
+  <div class="tabs-container box is-bottomless is-fullwidth is-paddingless has-bottom-margin-l" data-test-tabs>
     <nav class="tabs">
       {{#if this.isSummaryDashboard}}
         <ul>
           <li class="is-active">
-            {{link-to-external "Summary" "replication"}}
+            <LinkToExternal @route="replication">Summary</LinkToExternal>
           </li>
         </ul>
       {{else}}

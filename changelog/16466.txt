@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix issue logging in with JWT auth method
+```

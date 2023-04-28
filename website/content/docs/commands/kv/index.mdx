@@ -9,8 +9,22 @@ description: |-
 # kv
 
 The `kv` command groups subcommands for interacting with Vault's key/value
-secrets engine (both [K/V Version 1](/docs/secrets/kv/kv-v1) and [K/V
-Version 2](/docs/secrets/kv/kv-v2).
+secrets engine (both [K/V Version 1](/vault/docs/secrets/kv/kv-v1) and [K/V
+Version 2](/vault/docs/secrets/kv/kv-v2).
+
+## Syntax
+
+Option flags for a given subcommand are provided after the subcommand, but before the arguments.
+
+The path to where the secrets engine is mounted can be indicated with the `-mount` flag, such as `vault kv get -mount=secret creds`.
+
+The deprecated path-like syntax can also be used (e.g. `vault kv get secret/creds`), but this should be avoided
+for KV v2, because it is not actually the full API path to the secret 
+(secret/data/foo) and may cause confusion.
+
+~> A `flag provided but not defined: -mount` error means you are using an older version of Vault before the 
+mount flag syntax was introduced. Upgrade to at least Vault 1.11, or refer to previous versions of the docs 
+which only use the old syntax to refer to the mount path.
 
 ## Examples
 
@@ -18,26 +32,35 @@ Create or update the key named "creds" in the K/V Version 2 enabled at "secret"
 with the value "passcode=my-long-passcode":
 
 ```shell-session
-$ vault kv put secret/creds passcode=my-long-passcode
-Key              Value
----              -----
-created_time     2019-06-28T15:53:30.395814Z
-deletion_time    n/a
-destroyed        false
-version          1
+$ vault kv put -mount=secret creds passcode=my-long-passcode
+== Secret Path ==
+secret/data/creds
+
+======= Metadata =======
+Key                Value
+---                -----
+created_time       2022-06-15T20:14:17.107852Z
+custom_metadata    <nil>
+deletion_time      n/a
+destroyed          false
+version            1
 ```
 
 Read this value back:
 
 ```shell-session
-$ vault kv get secret/creds
-====== Metadata ======
-Key              Value
----              -----
-created_time     2019-06-28T15:53:30.395814Z
-deletion_time    n/a
-destroyed        false
-version          1
+$ vault kv get -mount=secret creds
+== Secret Path ==
+secret/data/creds
+
+======= Metadata =======
+Key                Value
+---                -----
+created_time       2022-06-15T20:14:17.107852Z
+custom_metadata    <nil>
+deletion_time      n/a
+destroyed          false
+version            1
 
 ====== Data ======
 Key         Value
@@ -48,22 +71,26 @@ passcode    my-long-passcode
 Get metadata for the key named "creds":
 
 ```shell-session
-$ vault kv metadata get secret/creds
+$ vault kv metadata get -mount=secret creds
+=== Metadata Path ===
+secret/metadata/creds
+
 ========== Metadata ==========
 Key                     Value
 ---                     -----
 cas_required            false
-created_time            2019-06-28T15:53:30.395814Z
+created_time            2022-06-15T20:14:17.107852Z
 current_version         1
+custom_metadata         <nil>
 delete_version_after    0s
 max_versions            0
 oldest_version          0
-updated_time            2019-06-28T15:53:30.395814Z
+updated_time            2022-06-15T20:14:17.107852Z
 
 ====== Version 1 ======
 Key              Value
 ---              -----
-created_time     2019-06-28T15:53:30.395814Z
+created_time     2022-06-15T20:14:17.107852Z
 deletion_time    n/a
 destroyed        false
 ```
@@ -71,14 +98,18 @@ destroyed        false
 Get a specific version of the key named "creds":
 
 ```shell-session
-$ vault kv get -version=1 secret/creds
-====== Metadata ======
-Key              Value
----              -----
-created_time     2019-06-28T15:53:30.395814Z
-deletion_time    n/a
-destroyed        false
-version          1
+$ vault kv get -mount=secret -version=1 creds
+== Secret Path ==
+secret/data/creds
+
+======= Metadata =======
+Key                Value
+---                -----
+created_time       2022-06-15T20:14:17.107852Z
+custom_metadata    <nil>
+deletion_time      n/a
+destroyed          false
+version            1
 
 ====== Data ======
 Key         Value

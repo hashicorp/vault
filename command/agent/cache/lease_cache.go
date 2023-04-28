@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package cache
 
 import (
@@ -24,6 +27,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/cache/cachememdb"
 	"github.com/hashicorp/vault/helper/namespace"
 	nshelper "github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/useragent"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
@@ -274,7 +278,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		return cachedResp, nil
 	}
 
-	c.logger.Debug("forwarding request", "method", req.Request.Method, "path", req.Request.URL.Path)
+	c.logger.Debug("forwarding request from cache", "method", req.Request.Method, "path", req.Request.URL.Path)
 
 	// Pass the request down and get a response
 	resp, err := c.proxier.Send(ctx, req)
@@ -474,7 +478,18 @@ func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index,
 		return
 	}
 	client.SetToken(req.Token)
-	client.SetHeaders(req.Request.Header)
+
+	headers := client.Headers()
+	if headers == nil {
+		headers = make(http.Header)
+	}
+
+	// We do not preserve the initial User-Agent here (i.e. use
+	// AgentProxyStringWithProxiedUserAgent) since these requests are from
+	// the proxy subsystem, but are made by Agent's lifetime watcher,
+	// not triggered by a specific request.
+	headers.Set("User-Agent", useragent.AgentProxyString())
+	client.SetHeaders(headers)
 
 	watcher, err := client.NewLifetimeWatcher(&api.LifetimeWatcherInput{
 		Secret: secret,
@@ -568,6 +583,11 @@ func computeIndexID(req *SendRequest) (string, error) {
 // HandleCacheClear returns a handlerFunc that can perform cache clearing operations.
 func (c *LeaseCache) HandleCacheClear(ctx context.Context) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// If the cache is not enabled, return a 200
+		if c == nil {
+			return
+		}
+
 		// Only handle POST/PUT requests
 		switch r.Method {
 		case http.MethodPost:

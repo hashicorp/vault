@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test, skip } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -24,8 +29,8 @@ module('Integration | Component | shamir-modal-flow', function (hooks) {
         @fetchOnInit=true
         @generateAction=true
         @buttonText="My CTA"
-        @onClose={{onClose}}
-        @isActive={{isActive}}
+        @onClose={{this.onClose}}
+        @isActive={{this.isActive}}
       >
         <p>Inner content goes here</p>
       </ShamirModalFlow>
@@ -47,13 +52,13 @@ module('Integration | Component | shamir-modal-flow', function (hooks) {
         @fetchOnInit=true
         @generateAction=true
         @buttonText="Crazy CTA"
-        @onClose={{onClose}}
-        @isActive={{isActive}}
+        @onClose={{this.onClose}}
+        @isActive={{this.isActive}}
       >
         <p>Inner content goes here</p>
       </ShamirModalFlow>
     `);
-    assert.dom('[data-test-shamir-input]').exists('Asks for Master Key Portion');
+    assert.dom('[data-test-shamir-input]').exists('Asks for root key Portion');
     assert.dom('[data-test-shamir-modal-cancel-button]').hasText('Cancel', 'Shows cancel button');
   });
 
@@ -67,8 +72,8 @@ module('Integration | Component | shamir-modal-flow', function (hooks) {
         @fetchOnInit=true
         @generateAction=true
         @buttonText="Crazy CTA"
-        @onClose={{onClose}}
-        @isActive={{isActive}}
+        @onClose={{this.onClose}}
+        @isActive={{this.isActive}}
       >
         <p>Inner content goes here</p>
       </ShamirModalFlow>

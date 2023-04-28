@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@glimmer/component';
 import layout from '../templates/components/message-error';
 import { setComponentTemplate } from '@ember/component';
@@ -19,7 +24,7 @@ import { setComponentTemplate } from '@ember/component';
 
 class MessageError extends Component {
   get displayErrors() {
-    let { errorMessage, errors, model } = this.args;
+    const { errorMessage, errors, model } = this.args;
     if (errorMessage) {
       return [errorMessage];
     }
@@ -29,7 +34,7 @@ class MessageError extends Component {
     }
 
     if (model?.isError) {
-      let adapterError = model?.adapterError;
+      const adapterError = model?.adapterError;
       if (!adapterError) {
         return null;
       }

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 .masked-font {
   color: $ui-gray-300;
 }
@@ -19,7 +24,7 @@
 // need to be the same font and small
 .masked-input.masked .masked-value {
   font-size: 9px;
-  font-family: $family-primary;
+  font-family: $family-sans;
   line-height: 2.5;
 }
 
@@ -75,7 +80,6 @@
     &:active,
     &.is-active,
     &:focus,
-    &.is-focused,
     &:hover,
     &:focus:not(:active) {
       color: $blue;

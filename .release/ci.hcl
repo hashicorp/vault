@@ -1,19 +1,19 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 schema = "1"
 
 project "vault" {
   team = "vault"
   slack {
-    notification_channel = "CRF6FFKEW" // #vault-releases
+    notification_channel = "C03RXFX5M4L" // #feed-vault-releases
   }
   github {
     organization = "hashicorp"
     repository = "vault"
     release_branches = [
       "main",
-      "release/1.8.x",
-      "release/1.9.x",
-      "release/1.10.x",
-      "release/1.11.x",
+      "release/**",
     ]
   }
 }
@@ -178,6 +178,19 @@ event "verify" {
   }
 }
 
+event "enos-release-testing-oss" {
+  depends = ["verify"]
+  action "enos-release-testing-oss" {
+    organization = "hashicorp"
+    repository = "vault"
+    workflow = "enos-release-testing-oss"
+  }
+
+  notification {
+    on = "fail"
+  }
+}
+
 ## These events are publish and post-publish events and should be added to the end of the file
 ## after the verify event stanza.
 
@@ -254,5 +267,33 @@ event "promote-production-packaging" {
 
   notification {
     on = "always"
+  }
+}
+
+# The post-publish-website event should not be merged into the enterprise repo.
+# It is for OSS use only.
+event "post-publish-website" {
+  depends = ["promote-production-packaging"]
+  action "post-publish-website" {
+    organization = "hashicorp"
+    repository = "crt-workflows-common"
+    workflow = "post-publish-website"
+  }
+
+  notification {
+    on = "always"
+  }
+}
+
+event "update-ironbank" {
+  depends = ["post-publish-website"]
+  action "update-ironbank" {
+    organization = "hashicorp"
+    repository = "crt-workflows-common"
+    workflow = "update-ironbank"
+  }
+
+  notification {
+    on = "fail"
   }
 }

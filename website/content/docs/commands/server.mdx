@@ -17,13 +17,13 @@ API before the server can respond to requests.
 
 For more information, please see:
 
-- [`operator init` command](/docs/commands/operator/init) for information
+- [`operator init` command](/vault/docs/commands/operator/init) for information
   on initializing a Vault server.
 
-- [`operator unseal` command](/docs/commands/operator/unseal) for
+- [`operator unseal` command](/vault/docs/commands/operator/unseal) for
   information on providing unseal keys.
 
-- [Vault configuration](/docs/configuration) for the syntax and
+- [Vault configuration](/vault/docs/configuration) for the syntax and
   various configuration options for a Vault server.
 
 ## Examples
@@ -43,7 +43,7 @@ $ vault server -dev -dev-root-token-id="root"
 ## Usage
 
 The following flags are available in addition to the [standard set of
-flags](/docs/commands) included on all commands.
+flags](/vault/docs/commands) included on all commands.
 
 ### Command Options
 
@@ -52,19 +52,61 @@ flags](/docs/commands) included on all commands.
   multiple configurations. If the path is a directory, all files which end in
   .hcl or .json are loaded.
 
-- `-log-level` `(string: "info")` - Log verbosity level. Supported values (in
-  order of detail) are "trace", "debug", "info", "warn", and "err". This can
-  also be specified via the VAULT_LOG_LEVEL environment variable.
+- `-log-level` ((#\_log_level)) `(string: "info")` - Log verbosity level. Supported values (in
+  order of descending detail) are `trace`, `debug`, `info`, `warn`, and `error`. This can
+  also be specified via the `VAULT_LOG_LEVEL` environment variable.
 
-- `-log-format` `(string: "standard")` - Log format. Supported values
-  are "standard" and "json". This can also be specified via the
-  VAULT_LOG_FORMAT environment variable.
+- `-log-format` ((#\_log_format)) `(string: "standard")` - Log format. Supported values
+  are `standard` and `json`. This can also be specified via the
+  `VAULT_LOG_FORMAT` environment variable.
+
+- `-log-file` ((#\_log_file)) - writes all the Vault log messages
+  to a file. This value is used as a prefix for the log file name. The current timestamp
+  is appended to the file name. If the value ends in a path separator, `vault`
+  will be appended to the value. If the file name is missing an extension, `.log`
+  is appended. For example, setting `log-file` to `/var/log/` would result in a log
+  file path of `/var/log/vault-{timestamp}.log`. `log-file` can be combined with
+  [`-log-rotate-bytes`](#_log_rotate_bytes) and [`-log-rotate-duration`](#_log_rotate_duration)
+  for a fine-grained log rotation experience.
+
+- `-log-rotate-bytes` ((#\_log_rotate_bytes)) - to specify the number of
+  bytes that should be written to a log before it needs to be rotated. Unless specified,
+  there is no limit to the number of bytes that can be written to a log file.
+
+- `-log-rotate-duration` ((#\_log_rotate_duration)) - to specify the maximum
+  duration a log should be written to before it needs to be rotated. Must be a duration
+  value such as 30s. Defaults to 24h.
+
+- `-log-rotate-max-files` ((#\_log_rotate_max_files)) - to specify the maximum
+  number of older log file archives to keep. Defaults to 0 (no files are ever deleted).
+  Set to -1 to discard old log files when a new one is created.
+
+- `-experiment` `(string array: [])` - The name of an experiment to enable for this node.
+  This flag can be specified multiple times to enable multiple experiments. Experiments
+  should NOT be used in production, and the associated APIs may have backwards incompatible
+  changes between releases. Additional experiments can also be specified via the
+  `VAULT_EXPERIMENTS` environment variable as a comma-separated list, or via the
+  [`experiments`](/vault/docs/configuration#experiments) config key.
+
+- `VAULT_ALLOW_PENDING_REMOVAL_MOUNTS` `(bool: false)` - (environment variable)
+  Allow Vault to be started with builtin engines which have the `Pending Removal`
+  deprecation state. This is a temporary stopgap in place in order to perform an
+  upgrade and disable these engines. Once these engines are marked `Removed` (in
+  the next major release of Vault), the environment variable will no longer work
+  and a downgrade must be performed in order to remove the offending engines. For
+  more information, see the [deprecation faq](/vault/docs/deprecation/faq/#q-what-are-the-phases-of-deprecation).
 
 ### Dev Options
 
 - `-dev` `(bool: false)` - Enable development mode. In this mode, Vault runs
   in-memory and starts unsealed. As the name implies, do not run "dev" mode in
   production.
+
+- `-dev-tls` `(bool: false)` - Enable TLS development mode. In this mode, Vault runs
+  in-memory and starts unsealed with a generated TLS CA, certificate and key.
+  As the name implies, do not run "dev" mode in production.
+
+- `-dev-tls-cert-dir` `(string: "")` - Directory where generated TLS files are created if `-dev-tls` is specified. If left unset, files are generated in a temporary directory.
 
 - `-dev-listen-address` `(string: "127.0.0.1:8200")` - Address to bind to in
   "dev" mode. This can also be specified via the `VAULT_DEV_LISTEN_ADDRESS`

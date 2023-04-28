@@ -1,15 +1,15 @@
+**Table of Contents**
+
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-**Table of Contents**
-
 - [Vault UI](#vault-ui)
+  - [Ember CLI Version Matrix](#ember-cli-version-matrix)
   - [Prerequisites](#prerequisites)
+  - [Running a Vault Server](#running-a-vault-server)
   - [Running / Development](#running--development)
     - [Code Generators](#code-generators)
     - [Running Tests](#running-tests)
-      - [Automated Cross-Browser Testing](#automated-cross-browser-testing)
-        - [Running Browserstack Locally](#running-browserstack-locally)
     - [Linting](#linting)
     - [Building Vault UI into a Vault Binary](#building-vault-ui-into-a-vault-binary)
   - [Further Reading / Useful Links](#further-reading--useful-links)
@@ -24,6 +24,7 @@ This README outlines the details of collaborating on this Ember application.
 
 | Vault Version | Ember Version |
 | ------------- | ------------- |
+| 1.13.x        | 4.4.0         |
 | 1.10.x        | 3.28.5        |
 | 1.9.x         | 3.22.0        |
 | 1.8.x         | 3.22.0        |
@@ -33,10 +34,11 @@ This README outlines the details of collaborating on this Ember application.
 
 You will need the following things properly installed on your computer.
 
-- [Node.js](https://nodejs.org/) (with NPM)
-- [Yarn](https://yarnpkg.com/en/)
-- [Git](https://git-scm.com/)
-- [Ember CLI](https://ember-cli.com/)
+* [Git](https://git-scm.com/)
+* [Node.js](https://nodejs.org/)
+* [Yarn](https://yarnpkg.com/)
+* [Ember CLI](https://cli.emberjs.com/release/)
+* [Google Chrome](https://google.com/chrome/)
 - [lint-staged\*](https://www.npmjs.com/package/lint-staged)
 
 \* lint-staged is an optional dependency - running `yarn` will install it.
@@ -106,17 +108,6 @@ acceptance tests then run, proxing requests back to that server.
 - `yarn run test:oss -s` to keep the test server running after the initial run.
 - `yarn run test -f="policies"` to filter the tests that are run. `-f` gets passed into
   [QUnit's `filter` config](https://api.qunitjs.com/config/QUnit.config#qunitconfigfilter-string--default-undefined)
-- `yarn run test:browserstack` to run the kv acceptance tests in Browserstack
-
-#### Automated Cross-Browser Testing
-
-Vault uses [Browserstack Automate](https://automate.browserstack.com/) to run all the kv acceptance tests on various browsers. You can view the list of browsers we test by viewing `testem.browserstack.js`.
-
-##### Running Browserstack Locally
-
-To run the Browserstack tests locally you will need to add your `BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESS_KEY` to your environment. Then run `yarn run test:browserstack`. You can view the currently running tests at `localhost:7357` or log in to [Browserstack Automate](https://automate.browserstack.com/) to view a previous build.
-
-To run the tests locally in a browser other than IE11, swap out `launch_in_ci: ['BS_IE_11']` inside `testem.browserstack.js`.
 
 ### Linting
 
@@ -138,9 +129,8 @@ setting `VAULT_UI` environment variable.
 
 ## Further Reading / Useful Links
 
-- [ember.js](http://emberjs.com/)
-- [ember-cli](https://ember-cli.com/)
-- Development Browser Extensions
-  - [ember inspector for chrome](https://chrome.google.com/webstore/detail/ember-inspector/bmdblncegkenkacieihfhpjfppoconhi)
-  - [ember inspector for firefox](https://addons.mozilla.org/en-US/firefox/addon/ember-inspector/)
-- [Browserstack Automate](https://automate.browserstack.com/)
+* [ember.js](https://emberjs.com/)
+* [ember-cli](https://cli.emberjs.com/release/)
+* Development Browser Extensions
+  * [ember inspector for chrome](https://chrome.google.com/webstore/detail/ember-inspector/bmdblncegkenkacieihfhpjfppoconhi)
+  * [ember inspector for firefox](https://addons.mozilla.org/en-US/firefox/addon/ember-inspector/)

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 .page-header {
   padding-bottom: $size-10;
   padding-top: $size-4;
@@ -10,12 +15,12 @@
     flex-grow: 1;
     flex-shrink: 1;
 
-    @include until($tablet) {
+    @include until($mobile) {
       margin-top: 0.5rem;
     }
   }
   .level-right {
-    @include from($tablet) {
+    @include from($mobile) {
       justify-content: flex-end;
     }
   }

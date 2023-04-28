@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 //go:build !race && !hsm && !fips_140_3
 
 // NOTE: we can't use this with HSM. We can't set testing mode on and it's not
@@ -21,6 +24,7 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/mitchellh/cli"
+	"github.com/stretchr/testify/require"
 )
 
 func init() {
@@ -77,6 +81,13 @@ listener "tcp" {
   tls_key_file  = "TMPDIR/reload_key.pem"
 }
 `
+	cloudHCL = `
+cloud {
+      resource_id = "organization/bc58b3d0-2eab-4ab8-abf4-f61d3c9975ff/project/1c78e888-2142-4000-8918-f933bbbc7690/hashicorp.example.resource/example"
+    client_id = "J2TtcSYOyPUkPV2z0mSyDtvitxLVjJmu"
+    client_secret = "N9JtHZyOnHrIvJZs82pqa54vd4jnkyU3xCcqhFXuQKJZZuxqxxbP1xCfBZVB82vY"
+}
+`
 )
 
 func testServerCommand(tb testing.TB) (*cli.MockUi, *ServerCommand) {
@@ -121,7 +132,7 @@ func TestServer_ReloadListener(t *testing.T) {
 	inBytes, _ = ioutil.ReadFile(wd + "reload_foo.key")
 	ioutil.WriteFile(td+"/reload_key.pem", inBytes, 0o777)
 
-	relhcl := strings.Replace(reloadHCL, "TMPDIR", td, -1)
+	relhcl := strings.ReplaceAll(reloadHCL, "TMPDIR", td)
 	ioutil.WriteFile(td+"/reload.hcl", []byte(relhcl), 0o777)
 
 	inBytes, _ = ioutil.ReadFile(wd + "reload_ca.pem")
@@ -172,7 +183,7 @@ func TestServer_ReloadListener(t *testing.T) {
 		t.Fatalf("certificate name didn't check out: %s", err)
 	}
 
-	relhcl = strings.Replace(reloadHCL, "TMPDIR", td, -1)
+	relhcl = strings.ReplaceAll(reloadHCL, "TMPDIR", td)
 	inBytes, _ = ioutil.ReadFile(wd + "reload_bar.pem")
 	ioutil.WriteFile(td+"/reload_cert.pem", inBytes, 0o777)
 	inBytes, _ = ioutil.ReadFile(wd + "reload_bar.key")
@@ -203,63 +214,84 @@ func TestServer(t *testing.T) {
 		contents string
 		exp      string
 		code     int
-		flag     string
+		args     []string
 	}{
 		{
 			"common_ha",
 			testBaseHCL(t, "") + inmemHCL,
 			"(HA available)",
 			0,
-			"-test-verify-only",
+			[]string{"-test-verify-only"},
 		},
 		{
 			"separate_ha",
 			testBaseHCL(t, "") + inmemHCL + haInmemHCL,
 			"HA Storage:",
 			0,
-			"-test-verify-only",
+			[]string{"-test-verify-only"},
 		},
 		{
 			"bad_separate_ha",
 			testBaseHCL(t, "") + inmemHCL + badHAInmemHCL,
 			"Specified HA storage does not support HA",
 			1,
-			"-test-verify-only",
+			[]string{"-test-verify-only"},
 		},
 		{
 			"good_listener_timeout_config",
 			testBaseHCL(t, goodListenerTimeouts) + inmemHCL,
 			"",
 			0,
-			"-test-server-config",
+			[]string{"-test-server-config"},
 		},
 		{
 			"bad_listener_read_header_timeout_config",
 			testBaseHCL(t, badListenerReadHeaderTimeout) + inmemHCL,
 			"unknown unit \"km\" in duration \"12km\"",
 			1,
-			"-test-server-config",
+			[]string{"-test-server-config"},
 		},
 		{
 			"bad_listener_read_timeout_config",
 			testBaseHCL(t, badListenerReadTimeout) + inmemHCL,
 			"unknown unit \"\\xe6\\x97\\xa5\" in duration",
 			1,
-			"-test-server-config",
+			[]string{"-test-server-config"},
 		},
 		{
 			"bad_listener_write_timeout_config",
 			testBaseHCL(t, badListenerWriteTimeout) + inmemHCL,
 			"unknown unit \"lbs\" in duration \"56lbs\"",
 			1,
-			"-test-server-config",
+			[]string{"-test-server-config"},
 		},
 		{
 			"bad_listener_idle_timeout_config",
 			testBaseHCL(t, badListenerIdleTimeout) + inmemHCL,
 			"unknown unit \"gophers\" in duration \"78gophers\"",
 			1,
-			"-test-server-config",
+			[]string{"-test-server-config"},
+		},
+		{
+			"environment_variables_logged",
+			testBaseHCL(t, "") + inmemHCL,
+			"Environment Variables",
+			0,
+			[]string{"-test-verify-only"},
+		},
+		{
+			"cloud_config",
+			testBaseHCL(t, "") + inmemHCL + cloudHCL,
+			"HCP Organization: bc58b3d0-2eab-4ab8-abf4-f61d3c9975ff",
+			0,
+			[]string{"-test-verify-only"},
+		},
+		{
+			"recovery_mode",
+			testBaseHCL(t, "") + inmemHCL,
+			"",
+			0,
+			[]string{"-test-verify-only", "-recovery"},
 		},
 	}
 
@@ -270,26 +302,31 @@ func TestServer(t *testing.T) {
 			t.Parallel()
 
 			ui, cmd := testServerCommand(t)
-			f, err := ioutil.TempFile("", "")
-			if err != nil {
-				t.Fatalf("error creating temp dir: %v", err)
-			}
-			f.WriteString(tc.contents)
-			f.Close()
-			defer os.Remove(f.Name())
 
-			code := cmd.Run([]string{
-				"-config", f.Name(),
-				tc.flag,
-			})
+			f, err := os.CreateTemp(t.TempDir(), "")
+			require.NoErrorf(t, err, "error creating temp dir: %v", err)
+
+			_, err = f.WriteString(tc.contents)
+			require.NoErrorf(t, err, "cannot write temp file contents")
+
+			err = f.Close()
+			require.NoErrorf(t, err, "unable to close temp file")
+
+			args := append(tc.args, "-config", f.Name())
+			code := cmd.Run(args)
 			output := ui.ErrorWriter.String() + ui.OutputWriter.String()
-			if code != tc.code {
-				t.Errorf("expected %d to be %d: %s", code, tc.code, output)
-			}
-
-			if !strings.Contains(output, tc.exp) {
-				t.Fatalf("expected %q to contain %q", output, tc.exp)
-			}
+			require.Equal(t, tc.code, code, "expected %d to be %d: %s", code, tc.code, output)
+			require.Contains(t, output, tc.exp, "expected %q to contain %q", output, tc.exp)
 		})
 	}
+}
+
+// TestServer_DevTLS verifies that a vault server starts up correctly with the -dev-tls flag
+func TestServer_DevTLS(t *testing.T) {
+	ui, cmd := testServerCommand(t)
+	args := []string{"-dev-tls", "-dev-listen-address=127.0.0.1:0", "-test-server-config"}
+	retCode := cmd.Run(args)
+	output := ui.ErrorWriter.String() + ui.OutputWriter.String()
+	require.Equal(t, 0, retCode, output)
+	require.Contains(t, output, `tls: "enabled"`)
 }

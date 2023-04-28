@@ -1,9 +1,14 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
 	"context"
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -11,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -18,9 +24,26 @@ func pathListRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/?$",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "roles",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathRoleList,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"keys": {
+								Type:        framework.TypeMap,
+								Description: `List of keys`,
+								Required:    false,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -30,8 +53,360 @@ func pathListRoles(b *backend) *framework.Path {
 }
 
 func pathRoles(b *backend) *framework.Path {
+	pathRolesResponse := map[string]*framework.FieldSchema{
+		"ttl": {
+			Type:     framework.TypeDurationSecond,
+			Required: true,
+			Description: `The lease duration (validity period of the
+certificate) if no specific lease duration is requested.
+The lease duration controls the expiration of certificates
+issued by this backend. Defaults to the system default
+value or the value of max_ttl, whichever is shorter.`,
+		},
+
+		"max_ttl": {
+			Type:     framework.TypeDurationSecond,
+			Required: true,
+			Description: `The maximum allowed lease duration. If not
+set, defaults to the system maximum lease TTL.`,
+		},
+		"allow_token_displayname": {
+			Type:     framework.TypeBool,
+			Required: true,
+			Description: `Whether to allow "localhost" and "localdomain"
+as a valid common name in a request, independent of allowed_domains value.`,
+		},
+
+		"allow_localhost": {
+			Type:     framework.TypeBool,
+			Required: true,
+			Description: `Whether to allow "localhost" and "localdomain"
+as a valid common name in a request, independent of allowed_domains value.`,
+		},
+
+		"allowed_domains": {
+			Type:     framework.TypeCommaStringSlice,
+			Required: true,
+			Description: `Specifies the domains this role is allowed
+to issue certificates for. This is used with the allow_bare_domains,
+allow_subdomains, and allow_glob_domains to determine matches for the
+common name, DNS-typed SAN entries, and Email-typed SAN entries of
+certificates. See the documentation for more information. This parameter
+accepts a comma-separated string or list of domains.`,
+		},
+		"allowed_domains_template": {
+			Type:     framework.TypeBool,
+			Required: true,
+			Description: `If set, Allowed domains can be specified using identity template policies.
+				Non-templated domains are also permitted.`,
+		},
+		"allow_bare_domains": {
+			Type:     framework.TypeBool,
+			Required: true,
+			Description: `If set, clients can request certificates
+for the base domains themselves, e.g. "example.com" of domains listed
+in allowed_domains. This is a separate option as in some cases this can
+be considered a security threat. See the documentation for more
+information.`,
+		},
+
+		"allow_subdomains": {
+			Type:     framework.TypeBool,
+			Required: true,
+			Description: `If set, clients can request certificates for
+subdomains of domains listed in allowed_domains, including wildcard
+subdomains. See the documentation for more information.`,
+		},
+
+		"allow_glob_domains": {
+			Type:     framework.TypeBool,
+			Required: true,
+			Description: `If set, domains specified in allowed_domains
+can include shell-style glob patterns, e.g. "ftp*.example.com".
+See the documentation for more information.`,
+		},
+
+		"allow_wildcard_certificates": {
+			Type:     framework.TypeBool,
+			Required: true,
+			Description: `If set, allows certificates with wildcards in
+the common name to be issued, conforming to RFC 6125's Section 6.4.3; e.g.,
+"*.example.net" or "b*z.example.net". See the documentation for more
+information.`,
+		},
+
+		"allow_any_name": {
+			Type:     framework.TypeBool,
+			Required: true,
+			Description: `If set, clients can request certificates for
+any domain, regardless of allowed_domains restrictions.
+See the documentation for more information.`,
+		},
+
+		"enforce_hostnames": {
+			Type:     framework.TypeBool,
+			Required: true,
+			Description: `If set, only valid host names are allowed for
+CN and DNS SANs, and the host part of email addresses. Defaults to true.`,
+		},
+
+		"allow_ip_sans": {
+			Type:     framework.TypeBool,
+			Required: true,
+			Description: `If set, IP Subject Alternative Names are allowed.
+Any valid IP is accepted and No authorization checking is performed.`,
+		},
+
+		"allowed_uri_sans": {
+			Type:     framework.TypeCommaStringSlice,
+			Required: true,
+			Description: `If set, an array of allowed URIs for URI Subject Alternative Names.
+Any valid URI is accepted, these values support globbing.`,
+		},
+
+		"allowed_uri_sans_template": {
+			Type:     framework.TypeBool,
+			Required: true,
+			Description: `If set, Allowed URI SANs can be specified using identity template policies.
+				Non-templated URI SANs are also permitted.`,
+		},
+
+		"allowed_other_sans": {
+			Type:        framework.TypeCommaStringSlice,
+			Required:    true,
+			Description: `If set, an array of allowed other names to put in SANs. These values support globbing and must be in the format <oid>;<type>:<value>. Currently only "utf8" is a valid type. All values, including globbing values, must use this syntax, with the exception being a single "*" which allows any OID and any value (but type must still be utf8).`,
+		},
+
+		"allowed_serial_numbers": {
+			Type:        framework.TypeCommaStringSlice,
+			Required:    true,
+			Description: `If set, an array of allowed serial numbers to put in Subject. These values support globbing.`,
+		},
+		"allowed_user_ids": {
+			Type:        framework.TypeCommaStringSlice,
+			Description: `If set, an array of allowed user-ids to put in user system login name specified here: https://www.rfc-editor.org/rfc/rfc1274#section-9.3.1`,
+		},
+		"server_flag": {
+			Type:    framework.TypeBool,
+			Default: true,
+			Description: `If set, certificates are flagged for server auth use.
+Defaults to true. See also RFC 5280 Section 4.2.1.12.`,
+		},
+
+		"client_flag": {
+			Type:     framework.TypeBool,
+			Required: true,
+			Description: `If set, certificates are flagged for client auth use.
+Defaults to true. See also RFC 5280 Section 4.2.1.12.`,
+		},
+
+		"code_signing_flag": {
+			Type:     framework.TypeBool,
+			Required: true,
+			Description: `If set, certificates are flagged for code signing
+use. Defaults to false. See also RFC 5280 Section 4.2.1.12.`,
+		},
+
+		"email_protection_flag": {
+			Type:     framework.TypeBool,
+			Required: true,
+			Description: `If set, certificates are flagged for email
+protection use. Defaults to false. See also RFC 5280 Section 4.2.1.12.`,
+		},
+
+		"key_type": {
+			Type:     framework.TypeString,
+			Required: true,
+			Description: `The type of key to use; defaults to RSA. "rsa"
+"ec", "ed25519" and "any" are the only valid values.`,
+		},
+
+		"key_bits": {
+			Type:     framework.TypeInt,
+			Required: true,
+			Description: `The number of bits to use. Allowed values are
+0 (universal default); with rsa key_type: 2048 (default), 3072, or
+4096; with ec key_type: 224, 256 (default), 384, or 521; ignored with
+ed25519.`,
+		},
+		"signature_bits": {
+			Type:     framework.TypeInt,
+			Required: true,
+			Description: `The number of bits to use in the signature
+algorithm; accepts 256 for SHA-2-256, 384 for SHA-2-384, and 512 for
+SHA-2-512. Defaults to 0 to automatically detect based on key length
+(SHA-2-256 for RSA keys, and matching the curve size for NIST P-Curves).`,
+		},
+		"use_pss": {
+			Type:     framework.TypeBool,
+			Required: false,
+			Description: `Whether or not to use PSS signatures when using a
+RSA key-type issuer. Defaults to false.`,
+		},
+		"key_usage": {
+			Type:     framework.TypeCommaStringSlice,
+			Required: true,
+			Description: `A comma-separated string or list of key usages (not extended
+key usages). Valid values can be found at
+https://golang.org/pkg/crypto/x509/#KeyUsage
+-- simply drop the "KeyUsage" part of the name.
+To remove all key usages from being set, set
+this value to an empty list. See also RFC 5280
+Section 4.2.1.3.`,
+		},
+
+		"ext_key_usage": {
+			Type:     framework.TypeCommaStringSlice,
+			Required: true,
+			Description: `A comma-separated string or list of extended key usages. Valid values can be found at
+https://golang.org/pkg/crypto/x509/#ExtKeyUsage
+-- simply drop the "ExtKeyUsage" part of the name.
+To remove all key usages from being set, set
+this value to an empty list. See also RFC 5280
+Section 4.2.1.12.`,
+		},
+
+		"ext_key_usage_oids": {
+			Type:        framework.TypeCommaStringSlice,
+			Required:    true,
+			Description: `A comma-separated string or list of extended key usage oids.`,
+		},
+
+		"use_csr_common_name": {
+			Type:     framework.TypeBool,
+			Required: true,
+			Description: `If set, when used with a signing profile,
+the common name in the CSR will be used. This
+does *not* include any requested Subject Alternative
+Names; use use_csr_sans for that. Defaults to true.`,
+		},
+
+		"use_csr_sans": {
+			Type:     framework.TypeBool,
+			Required: true,
+			Description: `If set, when used with a signing profile,
+the SANs in the CSR will be used. This does *not*
+include the Common Name (cn); use use_csr_common_name
+for that. Defaults to true.`,
+		},
+
+		"ou": {
+			Type: framework.TypeCommaStringSlice,
+			Description: `If set, OU (OrganizationalUnit) will be set to
+this value in certificates issued by this role.`,
+		},
+
+		"organization": {
+			Type: framework.TypeCommaStringSlice,
+			Description: `If set, O (Organization) will be set to
+this value in certificates issued by this role.`,
+		},
+
+		"country": {
+			Type: framework.TypeCommaStringSlice,
+			Description: `If set, Country will be set to
+this value in certificates issued by this role.`,
+		},
+
+		"locality": {
+			Type: framework.TypeCommaStringSlice,
+			Description: `If set, Locality will be set to
+this value in certificates issued by this role.`,
+		},
+
+		"province": {
+			Type: framework.TypeCommaStringSlice,
+			Description: `If set, Province will be set to
+this value in certificates issued by this role.`,
+		},
+
+		"street_address": {
+			Type: framework.TypeCommaStringSlice,
+			Description: `If set, Street Address will be set to
+this value in certificates issued by this role.`,
+		},
+
+		"postal_code": {
+			Type: framework.TypeCommaStringSlice,
+			Description: `If set, Postal Code will be set to
+this value in certificates issued by this role.`,
+		},
+
+		"generate_lease": {
+			Type: framework.TypeBool,
+			Description: `
+If set, certificates issued/signed against this role will have Vault leases
+attached to them. Defaults to "false". Certificates can be added to the CRL by
+"vault revoke <lease_id>" when certificates are associated with leases.  It can
+also be done using the "pki/revoke" endpoint. However, when lease generation is
+disabled, invoking "pki/revoke" would be the only way to add the certificates
+to the CRL.  When large number of certificates are generated with long
+lifetimes, it is recommended that lease generation be disabled, as large amount of
+leases adversely affect the startup time of Vault.`,
+		},
+
+		"no_store": {
+			Type: framework.TypeBool,
+			Description: `
+If set, certificates issued/signed against this role will not be stored in the
+storage backend. This can improve performance when issuing large numbers of 
+certificates. However, certificates issued in this way cannot be enumerated
+or revoked, so this option is recommended only for certificates that are
+non-sensitive, or extremely short-lived. This option implies a value of "false"
+for "generate_lease".`,
+		},
+
+		"require_cn": {
+			Type:        framework.TypeBool,
+			Description: `If set to false, makes the 'common_name' field optional while generating a certificate.`,
+		},
+
+		"cn_validations": {
+			Type: framework.TypeCommaStringSlice,
+			Description: `List of allowed validations to run against the
+Common Name field. Values can include 'email' to validate the CN is a email
+address, 'hostname' to validate the CN is a valid hostname (potentially
+including wildcards). When multiple validations are specified, these take
+OR semantics (either email OR hostname are allowed). The special value
+'disabled' allows disabling all CN name validations, allowing for arbitrary
+non-Hostname, non-Email address CNs.`,
+		},
+
+		"policy_identifiers": {
+			Type: framework.TypeCommaStringSlice,
+			Description: `A comma-separated string or list of policy OIDs, or a JSON list of qualified policy
+information, which must include an oid, and may include a notice and/or cps url, using the form 
+[{"oid"="1.3.6.1.4.1.7.8","notice"="I am a user Notice"}, {"oid"="1.3.6.1.4.1.44947.1.2.4 ","cps"="https://example.com"}].`,
+		},
+
+		"basic_constraints_valid_for_non_ca": {
+			Type:        framework.TypeBool,
+			Description: `Mark Basic Constraints valid when issuing non-CA certificates.`,
+		},
+		"not_before_duration": {
+			Type:        framework.TypeDurationSecond,
+			Description: `The duration before now which the certificate needs to be backdated by.`,
+		},
+		"not_after": {
+			Type: framework.TypeString,
+			Description: `Set the not after field of the certificate with specified date value.
+The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ.`,
+		},
+		"issuer_ref": {
+			Type: framework.TypeString,
+			Description: `Reference to the issuer used to sign requests
+serviced by this role.`,
+		},
+	}
+
 	return &framework.Path{
 		Pattern: "roles/" + framework.GenericNameRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "role",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"backend": {
 				Type:        framework.TypeString,
@@ -178,6 +553,11 @@ Any valid URI is accepted, these values support globbing.`,
 				Description: `If set, an array of allowed serial numbers to put in Subject. These values support globbing.`,
 			},
 
+			"allowed_user_ids": {
+				Type:        framework.TypeCommaStringSlice,
+				Description: `If set, an array of allowed user-ids to put in user system login name specified here: https://www.rfc-editor.org/rfc/rfc1274#section-9.3.1`,
+			},
+
 			"server_flag": {
 				Type:    framework.TypeBool,
 				Default: true,
@@ -234,6 +614,13 @@ ed25519.`,
 algorithm; accepts 256 for SHA-2-256, 384 for SHA-2-384, and 512 for
 SHA-2-512. Defaults to 0 to automatically detect based on key length
 (SHA-2-256 for RSA keys, and matching the curve size for NIST P-Curves).`,
+			},
+
+			"use_pss": {
+				Type:    framework.TypeBool,
+				Default: false,
+				Description: `Whether or not to use PSS signatures when using a
+RSA key-type issuer. Defaults to false.`,
 			},
 
 			"key_usage": {
@@ -383,9 +770,26 @@ for "generate_lease".`,
 				},
 			},
 
+			"cn_validations": {
+				Type:    framework.TypeCommaStringSlice,
+				Default: []string{"email", "hostname"},
+				Description: `List of allowed validations to run against the
+Common Name field. Values can include 'email' to validate the CN is a email
+address, 'hostname' to validate the CN is a valid hostname (potentially
+including wildcards). When multiple validations are specified, these take
+OR semantics (either email OR hostname are allowed). The special value
+'disabled' allows disabling all CN name validations, allowing for arbitrary
+non-Hostname, non-Email address CNs.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Common Name Validations",
+				},
+			},
+
 			"policy_identifiers": {
-				Type:        framework.TypeCommaStringSlice,
-				Description: `A comma-separated string or list of policy OIDs.`,
+				Type: framework.TypeCommaStringSlice,
+				Description: `A comma-separated string or list of policy OIDs, or a JSON list of qualified policy
+information, which must include an oid, and may include a notice and/or cps url, using the form 
+[{"oid"="1.3.6.1.4.1.7.8","notice"="I am a user Notice"}, {"oid"="1.3.6.1.4.1.44947.1.2.4 ","cps"="https://example.com"}].`,
 			},
 
 			"basic_constraints_valid_for_non_ca": {
@@ -419,21 +823,44 @@ serviced by this role.`,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathRoleRead,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields:      pathRolesResponse,
+					}},
+				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathRoleCreate,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields:      pathRolesResponse,
+					}},
+				},
 				// Read more about why these flags are set in backend.go.
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathRoleDelete,
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{
+						Description: "No Content",
+					}},
+				},
 				// Read more about why these flags are set in backend.go.
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
 			},
 			logical.PatchOperation: &framework.PathOperation{
 				Callback: b.pathRolePatch,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields:      pathRolesResponse,
+					}},
+				},
 				// Read more about why these flags are set in backend.go.
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
@@ -562,6 +989,18 @@ func (b *backend) getRole(ctx context.Context, s logical.Storage, n string) (*ro
 		modified = true
 	}
 
+	// Update CN Validations to be the present default, "email,hostname"
+	if len(result.CNValidations) == 0 {
+		result.CNValidations = []string{"email", "hostname"}
+		modified = true
+	}
+
+	// Ensure the role is valid after updating.
+	_, err = validateRole(b, &result, ctx, s)
+	if err != nil {
+		return nil, err
+	}
+
 	if modified && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
 		jsonEntry, err := logical.StorageEntryJSON("role/"+n, &result)
 		if err != nil {
@@ -574,6 +1013,8 @@ func (b *backend) getRole(ctx context.Context, s logical.Storage, n string) (*ro
 			}
 		}
 	}
+
+	result.Name = n
 
 	return &result, nil
 }
@@ -642,6 +1083,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		KeyType:                       data.Get("key_type").(string),
 		KeyBits:                       data.Get("key_bits").(int),
 		SignatureBits:                 data.Get("signature_bits").(int),
+		UsePSS:                        data.Get("use_pss").(bool),
 		UseCSRCommonName:              data.Get("use_csr_common_name").(bool),
 		UseCSRSANs:                    data.Get("use_csr_sans").(bool),
 		KeyUsage:                      data.Get("key_usage").([]string),
@@ -657,12 +1099,15 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		GenerateLease:                 new(bool),
 		NoStore:                       data.Get("no_store").(bool),
 		RequireCN:                     data.Get("require_cn").(bool),
+		CNValidations:                 data.Get("cn_validations").([]string),
 		AllowedSerialNumbers:          data.Get("allowed_serial_numbers").([]string),
-		PolicyIdentifiers:             data.Get("policy_identifiers").([]string),
+		AllowedUserIDs:                data.Get("allowed_user_ids").([]string),
+		PolicyIdentifiers:             getPolicyIdentifier(data, nil),
 		BasicConstraintsValidForNonCA: data.Get("basic_constraints_valid_for_non_ca").(bool),
 		NotBeforeDuration:             time.Duration(data.Get("not_before_duration").(int)) * time.Second,
 		NotAfter:                      data.Get("not_after").(string),
 		Issuer:                        data.Get("issuer_ref").(string),
+		Name:                          name,
 	}
 
 	allowedOtherSANs := data.Get("allowed_other_sans").([]string)
@@ -695,6 +1140,9 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		}
 	} else {
 		*entry.GenerateLease = data.Get("generate_lease").(bool)
+		if *entry.GenerateLease {
+			warning = "it is encouraged to disable generate_lease and rely on PKI's native capabilities when possible; this option can cause Vault-wide issues with large numbers of issued certificates"
+		}
 	}
 
 	resp, err := validateRole(b, entry, ctx, req.Storage)
@@ -702,9 +1150,6 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		return nil, err
 	}
 	if warning != "" {
-		if resp == nil {
-			resp = &logical.Response{}
-		}
 		resp.AddWarning(warning)
 	}
 	if resp.IsError() {
@@ -724,7 +1169,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 }
 
 func validateRole(b *backend, entry *roleEntry, ctx context.Context, s logical.Storage) (*logical.Response, error) {
-	var resp *logical.Response
+	resp := &logical.Response{}
 	var err error
 
 	if entry.MaxTTL > 0 && entry.TTL > entry.MaxTTL {
@@ -747,11 +1192,9 @@ func validateRole(b *backend, entry *roleEntry, ctx context.Context, s logical.S
 	}
 
 	if len(entry.PolicyIdentifiers) > 0 {
-		for _, oidstr := range entry.PolicyIdentifiers {
-			_, err := certutil.StringToOid(oidstr)
-			if err != nil {
-				return logical.ErrorResponse(fmt.Sprintf("%q could not be parsed as a valid oid for a policy identifier", oidstr)), nil
-			}
+		_, err := certutil.CreatePolicyInformationExtensionFromStorageStrings(entry.PolicyIdentifiers)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -764,7 +1207,8 @@ func validateRole(b *backend, entry *roleEntry, ctx context.Context, s logical.S
 	}
 	// Check that the issuers reference set resolves to something
 	if !b.useLegacyBundleCaStorage() {
-		issuerId, err := resolveIssuerReference(ctx, s, entry.Issuer)
+		sc := b.makeStorageContext(ctx, s)
+		issuerId, err := sc.resolveIssuerReference(entry.Issuer)
 		if err != nil {
 			if issuerId == IssuerRefNotFound {
 				resp = &logical.Response{}
@@ -780,6 +1224,13 @@ func validateRole(b *backend, entry *roleEntry, ctx context.Context, s logical.S
 
 	}
 
+	// Ensures CNValidations are alright
+	entry.CNValidations, err = checkCNValidations(entry.CNValidations)
+	if err != nil {
+		return nil, errutil.UserError{Err: err.Error()}
+	}
+
+	resp.Data = entry.ToResponseData()
 	return resp, nil
 }
 
@@ -832,6 +1283,7 @@ func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data 
 		KeyType:                       getWithExplicitDefault(data, "key_type", oldEntry.KeyType).(string),
 		KeyBits:                       getWithExplicitDefault(data, "key_bits", oldEntry.KeyBits).(int),
 		SignatureBits:                 getWithExplicitDefault(data, "signature_bits", oldEntry.SignatureBits).(int),
+		UsePSS:                        getWithExplicitDefault(data, "use_pss", oldEntry.UsePSS).(bool),
 		UseCSRCommonName:              getWithExplicitDefault(data, "use_csr_common_name", oldEntry.UseCSRCommonName).(bool),
 		UseCSRSANs:                    getWithExplicitDefault(data, "use_csr_sans", oldEntry.UseCSRSANs).(bool),
 		KeyUsage:                      getWithExplicitDefault(data, "key_usage", oldEntry.KeyUsage).([]string),
@@ -847,8 +1299,10 @@ func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data 
 		GenerateLease:                 new(bool),
 		NoStore:                       getWithExplicitDefault(data, "no_store", oldEntry.NoStore).(bool),
 		RequireCN:                     getWithExplicitDefault(data, "require_cn", oldEntry.RequireCN).(bool),
+		CNValidations:                 getWithExplicitDefault(data, "cn_validations", oldEntry.CNValidations).([]string),
 		AllowedSerialNumbers:          getWithExplicitDefault(data, "allowed_serial_numbers", oldEntry.AllowedSerialNumbers).([]string),
-		PolicyIdentifiers:             getWithExplicitDefault(data, "policy_identifiers", oldEntry.PolicyIdentifiers).([]string),
+		AllowedUserIDs:                getWithExplicitDefault(data, "allowed_user_ids", oldEntry.AllowedUserIDs).([]string),
+		PolicyIdentifiers:             getPolicyIdentifier(data, &oldEntry.PolicyIdentifiers),
 		BasicConstraintsValidForNonCA: getWithExplicitDefault(data, "basic_constraints_valid_for_non_ca", oldEntry.BasicConstraintsValidForNonCA).(bool),
 		NotBeforeDuration:             getTimeWithExplicitDefault(data, "not_before_duration", oldEntry.NotBeforeDuration),
 		NotAfter:                      getWithExplicitDefault(data, "not_after", oldEntry.NotAfter).(string),
@@ -883,7 +1337,7 @@ func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data 
 	// no_store implies generate_lease := false
 	if entry.NoStore {
 		*entry.GenerateLease = false
-		if ok && generateLease.(bool) || !ok && (*oldEntry.GenerateLease == true) {
+		if ok && generateLease.(bool) || !ok && *oldEntry.GenerateLease {
 			warning = "mutually exclusive values no_store=true and generate_lease=true were both specified; no_store=true takes priority"
 		}
 	} else {
@@ -891,6 +1345,10 @@ func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data 
 			*entry.GenerateLease = data.Get("generate_lease").(bool)
 		} else {
 			entry.GenerateLease = oldEntry.GenerateLease
+		}
+
+		if *entry.GenerateLease {
+			warning = "it is encouraged to disable generate_lease and rely on PKI's native capabilities when possible; this option can cause Vault-wide issues with large numbers of issued certificates"
 		}
 	}
 
@@ -999,59 +1457,64 @@ func parseExtKeyUsages(role *roleEntry) certutil.CertExtKeyUsage {
 type roleEntry struct {
 	LeaseMax                      string        `json:"lease_max"`
 	Lease                         string        `json:"lease"`
-	DeprecatedMaxTTL              string        `json:"max_ttl" mapstructure:"max_ttl"`
-	DeprecatedTTL                 string        `json:"ttl" mapstructure:"ttl"`
-	TTL                           time.Duration `json:"ttl_duration" mapstructure:"ttl_duration"`
-	MaxTTL                        time.Duration `json:"max_ttl_duration" mapstructure:"max_ttl_duration"`
-	AllowLocalhost                bool          `json:"allow_localhost" mapstructure:"allow_localhost"`
-	AllowedBaseDomain             string        `json:"allowed_base_domain" mapstructure:"allowed_base_domain"`
+	DeprecatedMaxTTL              string        `json:"max_ttl"`
+	DeprecatedTTL                 string        `json:"ttl"`
+	TTL                           time.Duration `json:"ttl_duration"`
+	MaxTTL                        time.Duration `json:"max_ttl_duration"`
+	AllowLocalhost                bool          `json:"allow_localhost"`
+	AllowedBaseDomain             string        `json:"allowed_base_domain"`
 	AllowedDomainsOld             string        `json:"allowed_domains,omitempty"`
-	AllowedDomains                []string      `json:"allowed_domains_list" mapstructure:"allowed_domains"`
+	AllowedDomains                []string      `json:"allowed_domains_list"`
 	AllowedDomainsTemplate        bool          `json:"allowed_domains_template"`
 	AllowBaseDomain               bool          `json:"allow_base_domain"`
-	AllowBareDomains              bool          `json:"allow_bare_domains" mapstructure:"allow_bare_domains"`
-	AllowTokenDisplayName         bool          `json:"allow_token_displayname" mapstructure:"allow_token_displayname"`
-	AllowSubdomains               bool          `json:"allow_subdomains" mapstructure:"allow_subdomains"`
-	AllowGlobDomains              bool          `json:"allow_glob_domains" mapstructure:"allow_glob_domains"`
-	AllowWildcardCertificates     *bool         `json:"allow_wildcard_certificates,omitempty" mapstructure:"allow_wildcard_certificates"`
-	AllowAnyName                  bool          `json:"allow_any_name" mapstructure:"allow_any_name"`
-	EnforceHostnames              bool          `json:"enforce_hostnames" mapstructure:"enforce_hostnames"`
-	AllowIPSANs                   bool          `json:"allow_ip_sans" mapstructure:"allow_ip_sans"`
-	ServerFlag                    bool          `json:"server_flag" mapstructure:"server_flag"`
-	ClientFlag                    bool          `json:"client_flag" mapstructure:"client_flag"`
-	CodeSigningFlag               bool          `json:"code_signing_flag" mapstructure:"code_signing_flag"`
-	EmailProtectionFlag           bool          `json:"email_protection_flag" mapstructure:"email_protection_flag"`
-	UseCSRCommonName              bool          `json:"use_csr_common_name" mapstructure:"use_csr_common_name"`
-	UseCSRSANs                    bool          `json:"use_csr_sans" mapstructure:"use_csr_sans"`
-	KeyType                       string        `json:"key_type" mapstructure:"key_type"`
-	KeyBits                       int           `json:"key_bits" mapstructure:"key_bits"`
-	SignatureBits                 int           `json:"signature_bits" mapstructure:"signature_bits"`
-	MaxPathLength                 *int          `json:",omitempty" mapstructure:"max_path_length"`
+	AllowBareDomains              bool          `json:"allow_bare_domains"`
+	AllowTokenDisplayName         bool          `json:"allow_token_displayname"`
+	AllowSubdomains               bool          `json:"allow_subdomains"`
+	AllowGlobDomains              bool          `json:"allow_glob_domains"`
+	AllowWildcardCertificates     *bool         `json:"allow_wildcard_certificates,omitempty"`
+	AllowAnyName                  bool          `json:"allow_any_name"`
+	EnforceHostnames              bool          `json:"enforce_hostnames"`
+	AllowIPSANs                   bool          `json:"allow_ip_sans"`
+	ServerFlag                    bool          `json:"server_flag"`
+	ClientFlag                    bool          `json:"client_flag"`
+	CodeSigningFlag               bool          `json:"code_signing_flag"`
+	EmailProtectionFlag           bool          `json:"email_protection_flag"`
+	UseCSRCommonName              bool          `json:"use_csr_common_name"`
+	UseCSRSANs                    bool          `json:"use_csr_sans"`
+	KeyType                       string        `json:"key_type"`
+	KeyBits                       int           `json:"key_bits"`
+	UsePSS                        bool          `json:"use_pss"`
+	SignatureBits                 int           `json:"signature_bits"`
+	MaxPathLength                 *int          `json:",omitempty"`
 	KeyUsageOld                   string        `json:"key_usage,omitempty"`
-	KeyUsage                      []string      `json:"key_usage_list" mapstructure:"key_usage"`
-	ExtKeyUsage                   []string      `json:"extended_key_usage_list" mapstructure:"extended_key_usage"`
+	KeyUsage                      []string      `json:"key_usage_list"`
+	ExtKeyUsage                   []string      `json:"extended_key_usage_list"`
 	OUOld                         string        `json:"ou,omitempty"`
-	OU                            []string      `json:"ou_list" mapstructure:"ou"`
+	OU                            []string      `json:"ou_list"`
 	OrganizationOld               string        `json:"organization,omitempty"`
-	Organization                  []string      `json:"organization_list" mapstructure:"organization"`
-	Country                       []string      `json:"country" mapstructure:"country"`
-	Locality                      []string      `json:"locality" mapstructure:"locality"`
-	Province                      []string      `json:"province" mapstructure:"province"`
-	StreetAddress                 []string      `json:"street_address" mapstructure:"street_address"`
-	PostalCode                    []string      `json:"postal_code" mapstructure:"postal_code"`
+	Organization                  []string      `json:"organization_list"`
+	Country                       []string      `json:"country"`
+	Locality                      []string      `json:"locality"`
+	Province                      []string      `json:"province"`
+	StreetAddress                 []string      `json:"street_address"`
+	PostalCode                    []string      `json:"postal_code"`
 	GenerateLease                 *bool         `json:"generate_lease,omitempty"`
-	NoStore                       bool          `json:"no_store" mapstructure:"no_store"`
-	RequireCN                     bool          `json:"require_cn" mapstructure:"require_cn"`
-	AllowedOtherSANs              []string      `json:"allowed_other_sans" mapstructure:"allowed_other_sans"`
-	AllowedSerialNumbers          []string      `json:"allowed_serial_numbers" mapstructure:"allowed_serial_numbers"`
-	AllowedURISANs                []string      `json:"allowed_uri_sans" mapstructure:"allowed_uri_sans"`
+	NoStore                       bool          `json:"no_store"`
+	RequireCN                     bool          `json:"require_cn"`
+	CNValidations                 []string      `json:"cn_validations"`
+	AllowedOtherSANs              []string      `json:"allowed_other_sans"`
+	AllowedSerialNumbers          []string      `json:"allowed_serial_numbers"`
+	AllowedUserIDs                []string      `json:"allowed_user_ids"`
+	AllowedURISANs                []string      `json:"allowed_uri_sans"`
 	AllowedURISANsTemplate        bool          `json:"allowed_uri_sans_template"`
-	PolicyIdentifiers             []string      `json:"policy_identifiers" mapstructure:"policy_identifiers"`
-	ExtKeyUsageOIDs               []string      `json:"ext_key_usage_oids" mapstructure:"ext_key_usage_oids"`
-	BasicConstraintsValidForNonCA bool          `json:"basic_constraints_valid_for_non_ca" mapstructure:"basic_constraints_valid_for_non_ca"`
-	NotBeforeDuration             time.Duration `json:"not_before_duration" mapstructure:"not_before_duration"`
-	NotAfter                      string        `json:"not_after" mapstructure:"not_after"`
-	Issuer                        string        `json:"issuer" mapstructure:"issuer"`
+	PolicyIdentifiers             []string      `json:"policy_identifiers"`
+	ExtKeyUsageOIDs               []string      `json:"ext_key_usage_oids"`
+	BasicConstraintsValidForNonCA bool          `json:"basic_constraints_valid_for_non_ca"`
+	NotBeforeDuration             time.Duration `json:"not_before_duration"`
+	NotAfter                      string        `json:"not_after"`
+	Issuer                        string        `json:"issuer"`
+	// Name is only set when the role has been stored, on the fly roles have a blank name
+	Name string `json:"-"`
 }
 
 func (r *roleEntry) ToResponseData() map[string]interface{} {
@@ -1079,6 +1542,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"key_type":                           r.KeyType,
 		"key_bits":                           r.KeyBits,
 		"signature_bits":                     r.SignatureBits,
+		"use_pss":                            r.UsePSS,
 		"key_usage":                          r.KeyUsage,
 		"ext_key_usage":                      r.ExtKeyUsage,
 		"ext_key_usage_oids":                 r.ExtKeyUsageOIDs,
@@ -1092,8 +1556,10 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"no_store":                           r.NoStore,
 		"allowed_other_sans":                 r.AllowedOtherSANs,
 		"allowed_serial_numbers":             r.AllowedSerialNumbers,
+		"allowed_user_ids":                   r.AllowedUserIDs,
 		"allowed_uri_sans":                   r.AllowedURISANs,
 		"require_cn":                         r.RequireCN,
+		"cn_validations":                     r.CNValidations,
 		"policy_identifiers":                 r.PolicyIdentifiers,
 		"basic_constraints_valid_for_non_ca": r.BasicConstraintsValidForNonCA,
 		"not_before_duration":                int64(r.NotBeforeDuration.Seconds()),
@@ -1109,6 +1575,52 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 	return responseData
 }
 
+func checkCNValidations(validations []string) ([]string, error) {
+	var haveDisabled bool
+	var haveEmail bool
+	var haveHostname bool
+
+	var result []string
+
+	if len(validations) == 0 {
+		return []string{"email", "hostname"}, nil
+	}
+
+	for _, validation := range validations {
+		switch strings.ToLower(validation) {
+		case "disabled":
+			if haveDisabled {
+				return nil, fmt.Errorf("cn_validations value incorrect: `disabled` specified multiple times")
+			}
+			haveDisabled = true
+		case "email":
+			if haveEmail {
+				return nil, fmt.Errorf("cn_validations value incorrect: `email` specified multiple times")
+			}
+			haveEmail = true
+		case "hostname":
+			if haveHostname {
+				return nil, fmt.Errorf("cn_validations value incorrect: `hostname` specified multiple times")
+			}
+			haveHostname = true
+		default:
+			return nil, fmt.Errorf("cn_validations value incorrect: unknown type: `%s`", validation)
+		}
+
+		result = append(result, strings.ToLower(validation))
+	}
+
+	if !haveDisabled && !haveEmail && !haveHostname {
+		return nil, fmt.Errorf("cn_validations value incorrect: must specify a value (`email` and/or `hostname`) or `disabled`")
+	}
+
+	if haveDisabled && (haveEmail || haveHostname) {
+		return nil, fmt.Errorf("cn_validations value incorrect: cannot specify `disabled` along with `email` or `hostname`")
+	}
+
+	return result, nil
+}
+
 const pathListRolesHelpSyn = `List the existing roles in this backend`
 
 const pathListRolesHelpDesc = `Roles will be listed by the role name.`
@@ -1116,3 +1628,45 @@ const pathListRolesHelpDesc = `Roles will be listed by the role name.`
 const pathRoleHelpSyn = `Manage the roles that can be created with this backend.`
 
 const pathRoleHelpDesc = `This path lets you manage the roles that can be created with this backend.`
+
+const policyIdentifiersParam = "policy_identifiers"
+
+func getPolicyIdentifier(data *framework.FieldData, defaultIdentifiers *[]string) []string {
+	policyIdentifierEntry, ok := data.GetOk(policyIdentifiersParam)
+	if !ok {
+		// No Entry for policy_identifiers
+		if defaultIdentifiers != nil {
+			return *defaultIdentifiers
+		}
+		return data.Get(policyIdentifiersParam).([]string)
+	}
+	// Could Be A JSON Entry
+	policyIdentifierJsonEntry := data.Raw[policyIdentifiersParam]
+	policyIdentifierJsonString, ok := policyIdentifierJsonEntry.(string)
+	if ok {
+		policyIdentifiers, err := parsePolicyIdentifiersFromJson(policyIdentifierJsonString)
+		if err == nil {
+			return policyIdentifiers
+		}
+	}
+	// Else could Just Be A List of OIDs
+	return policyIdentifierEntry.([]string)
+}
+
+func parsePolicyIdentifiersFromJson(policyIdentifiers string) ([]string, error) {
+	var entries []certutil.PolicyIdentifierWithQualifierEntry
+	var policyIdentifierList []string
+	err := json.Unmarshal([]byte(policyIdentifiers), &entries)
+	if err != nil {
+		return policyIdentifierList, err
+	}
+	policyIdentifierList = make([]string, 0, len(entries))
+	for _, entry := range entries {
+		policyString, err := json.Marshal(entry)
+		if err != nil {
+			return policyIdentifierList, err
+		}
+		policyIdentifierList = append(policyIdentifierList, string(policyString))
+	}
+	return policyIdentifierList, nil
+}

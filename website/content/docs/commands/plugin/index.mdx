@@ -13,35 +13,40 @@ the plugin catalog
 
 ## Examples
 
-List all available plugins in the catalog:
+List all available secret plugins in the catalog:
 
 ```shell-session
-$ vault plugin list
+$ vault plugin list secret
 
-Plugins
--------
-my-custom-plugin
-# ...
+Name            Version
+----            -------
+ad              v0.14.0+builtin
+alicloud        v0.13.0+builtin
+...
 ```
 
-Register a new plugin to the catalog:
+Register a new secret plugin to the catalog:
 
 ```shell-session
 $ vault plugin register \
   -sha256=d3f0a8be02f6c074cf38c9c99d4d04c9c6466249 \
-  my-custom-plugin
+  secret my-custom-plugin
 Success! Registered plugin: my-custom-plugin
 ```
 
 Get information about a plugin in the catalog:
 
 ```shell-session
-$ vault plugin info my-custom-plugin
-Key        Value
----        -----
-command    my-custom-plugin
-name       my-custom-plugin
-sha256     d3f0a8be02f6c074cf38c9c99d4d04c9c6466249
+$ vault plugin info secret my-custom-plugin
+Key                   Value
+---                   -----
+args                  []
+builtin               false
+command               my-custom-plugin
+deprecation_status    n/a
+name                  my-custom-plugin
+sha256                33e72f3d30ff2acdbf3cf3c8fa1c8945b60dab876c4226ab25617a63c9f16cc5
+version               n/a
 ```
 
 ## Usage
@@ -52,11 +57,12 @@ Usage: vault plugin <subcommand> [options] [args]
   # ...
 
 Subcommands:
-    deregister    Deregister an existing plugin in the catalog
-    info          Read information about a plugin in the catalog
-    list          Lists available plugins
-    register      Registers a new plugin in the catalog
-    reload        Reload mounted plugin backend
+    deregister       Deregister an existing plugin in the catalog
+    info             Read information about a plugin in the catalog
+    list             Lists available plugins
+    register         Registers a new plugin in the catalog
+    reload           Reload mounted plugin backend
+    reload-status    Get the status of an active or recently completed global plugin reload
 ```
 
 For more information, examples, and usage about a subcommand, click on the name

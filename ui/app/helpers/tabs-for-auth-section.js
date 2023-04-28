@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { helper as buildHelper } from '@ember/component/helper';
 import { pluralize } from 'ember-inflector';
 import { capitalize } from '@ember/string';
@@ -10,11 +15,11 @@ const TABS_FOR_SETTINGS = {
     },
     {
       label: 'Identity Allow List Tidy',
-      routeParams: ['vault.cluster.settings.auth.configure.section', 'identity-whitelist'], // TODO: Update endpoint from PR#10997
+      routeParams: ['vault.cluster.settings.auth.configure.section', 'identity-accesslist'],
     },
     {
       label: 'Role Tag Deny List Tidy',
-      routeParams: ['vault.cluster.settings.auth.configure.section', 'roletag-blacklist'], // TODO: Update endpoints from PR#10997
+      routeParams: ['vault.cluster.settings.auth.configure.section', 'roletag-denylist'],
     },
   ],
   azure: [

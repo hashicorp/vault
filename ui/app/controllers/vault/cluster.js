@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 /* eslint-disable ember/no-observers */
 import { inject as service } from '@ember/service';
 import { alias } from '@ember/object/computed';
@@ -10,6 +15,7 @@ export default Controller.extend({
   router: service(),
   permissions: service(),
   namespaceService: service('namespace'),
+  flashMessages: service(),
 
   vaultVersion: service('version'),
   console: service(),

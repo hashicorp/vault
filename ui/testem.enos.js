@@ -1,9 +1,14 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 /* eslint-env node */
 
 'use strict';
 
 const vault_addr = process.env.VAULT_ADDR;
-console.log('VAULT_ADDR=' + vault_addr);
+console.log('VAULT_ADDR=' + vault_addr); // eslint-disable-line
 
 module.exports = {
   test_page: 'tests/index.html?hidepassed',

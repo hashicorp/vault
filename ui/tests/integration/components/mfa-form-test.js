@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -5,7 +10,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { fillIn, click, waitUntil } from '@ember/test-helpers';
 import { _cancelTimers as cancelTimers, later } from '@ember/runloop';
-import { TOTP_VALIDATION_ERROR } from 'vault/components/mfa-form';
+import { TOTP_VALIDATION_ERROR } from 'vault/components/mfa/mfa-form';
 
 module('Integration | Component | mfa-form', function (hooks) {
   setupRenderingTest(hooks);
@@ -39,7 +44,7 @@ module('Integration | Component | mfa-form', function (hooks) {
     }).mfa_requirement;
 
     await render(
-      hbs`<MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} @onError={{fn (mut this.error)}} />`
+      hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} @onError={{fn (mut this.error)}} />`
     );
     assert
       .dom('[data-test-mfa-description]')
@@ -54,7 +59,7 @@ module('Integration | Component | mfa-form', function (hooks) {
     }).mfa_requirement;
 
     await render(
-      hbs`<MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} @onError={{fn (mut this.error)}} />`
+      hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} @onError={{fn (mut this.error)}} />`
     );
     assert
       .dom('[data-test-mfa-description]')
@@ -69,7 +74,7 @@ module('Integration | Component | mfa-form', function (hooks) {
     }).mfa_requirement;
 
     await render(
-      hbs`<MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} @onError={{fn (mut this.error)}} />`
+      hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} @onError={{fn (mut this.error)}} />`
     );
     assert
       .dom('[data-test-mfa-description]')
@@ -101,7 +106,7 @@ module('Integration | Component | mfa-form', function (hooks) {
       const json = JSON.parse(req.requestBody);
       const payload = {
         mfa_request_id: 'test-mfa-id',
-        mfa_payload: { [oktaConstraint.id]: [], [duoConstraint.id]: ['test-code'] },
+        mfa_payload: { [oktaConstraint.id]: [], [duoConstraint.id]: ['passcode=test-code'] },
       };
       assert.deepEqual(json, payload, 'Correct mfa payload passed to validate endpoint');
       return {};
@@ -116,10 +121,10 @@ module('Integration | Component | mfa-form', function (hooks) {
     });
 
     this.onSuccess = (resp) =>
-      assert.equal(resp, 'test response', 'Response is returned in onSuccess callback');
+      assert.strictEqual(resp, 'test response', 'Response is returned in onSuccess callback');
 
     await render(hbs`
-      <MfaForm
+      <Mfa::MfaForm
         @clusterId={{this.clusterId}}
         @authData={{this.mfaAuthData}}
         @onSuccess={{this.onSuccess}}
@@ -157,10 +162,10 @@ module('Integration | Component | mfa-form', function (hooks) {
     });
 
     this.onSuccess = (resp) =>
-      assert.equal(resp, 'test response', 'Response is returned in onSuccess callback');
+      assert.strictEqual(resp, 'test response', 'Response is returned in onSuccess callback');
 
     await render(hbs`
-      <MfaForm
+      <Mfa::MfaForm
         @clusterId={{this.clusterId}}
         @authData={{this.mfaAuthData}}
         @onSuccess={{this.onSuccess}}
@@ -177,14 +182,14 @@ module('Integration | Component | mfa-form', function (hooks) {
         'maximum TOTP validation attempts 4 exceeded the allowed attempts 3. Please try again in 15 seconds',
     };
     const codes = ['used', 'limit'];
-    for (let code of codes) {
+    for (const code of codes) {
       this.owner.lookup('service:auth').reopen({
         totpValidate() {
           throw { errors: [messages[code]] };
         },
       });
       await render(hbs`
-        <MfaForm
+        <Mfa::MfaForm
           @clusterId={{this.clusterId}}
           @authData={{this.mfaAuthData}}
         />
@@ -193,12 +198,10 @@ module('Integration | Component | mfa-form', function (hooks) {
       await fillIn('[data-test-mfa-passcode]', code);
       later(() => cancelTimers(), 50);
       await click('[data-test-mfa-validate]');
+      const expectedTime = code === 'used' ? '45' : '15';
       assert
         .dom('[data-test-mfa-countdown]')
-        .hasText(
-          code === 'used' ? '45' : '15',
-          'countdown renders with correct initial value from error response'
-        );
+        .includesText(expectedTime, 'countdown renders with correct initial value from error response');
       assert.dom('[data-test-mfa-validate]').isDisabled('Button is disabled during countdown');
       assert.dom('[data-test-mfa-passcode]').isDisabled('Input is disabled during countdown');
       assert.dom('[data-test-inline-error-message]').exists('Alert message renders');
@@ -212,7 +215,7 @@ module('Integration | Component | mfa-form', function (hooks) {
       },
     });
     await render(hbs`
-      <MfaForm
+      <Mfa::MfaForm
         @clusterId={{this.clusterId}}
         @authData={{this.mfaAuthData}}
       />
