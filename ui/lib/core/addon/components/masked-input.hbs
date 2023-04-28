@@ -33,6 +33,17 @@
       <Icon @name="clipboard-copy" aria-hidden="Copy value" />
     </CopyButton>
   {{/if}}
+  {{#if @allowDownload}}
+    <DownloadButton
+      class="button download-button"
+      @filename={{or @name "secret-value"}}
+      @data={{@value}}
+      @stringify={{true}}
+      aria-label="Download secret value"
+    >
+      <Icon @name="download" />
+    </DownloadButton>
+  {{/if}}
   <button
     onclick={{this.toggleMask}}
     type="button"
