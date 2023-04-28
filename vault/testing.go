@@ -966,6 +966,10 @@ func (c *TestClusterCore) Seal(t testing.T) {
 	}
 }
 
+func (c *TestClusterCore) LogicalStorage() logical.Storage {
+	return c.barrier
+}
+
 func (c *TestClusterCore) stop() error {
 	c.Logger().Info("stopping vault test core")
 
@@ -1018,6 +1022,10 @@ func (c *TestClusterCore) TriggerRollbacks() {
 
 func (c *TestClusterCore) TLSConfig() *tls.Config {
 	return c.tlsConfig.Clone()
+}
+
+func (c *TestClusterCore) ClusterListener() *cluster.Listener {
+	return c.getClusterListener()
 }
 
 func (c *TestCluster) Cleanup() {
