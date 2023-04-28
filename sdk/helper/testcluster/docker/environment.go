@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/volume"
 	docker "github.com/docker/docker/client"
 	"github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
@@ -474,6 +475,8 @@ type DockerClusterNode struct {
 	ContainerIPAddress   string
 	ImageRepo            string
 	ImageTag             string
+	DataVolumeName       string
+	cleanupVolume        func()
 }
 
 func (n *DockerClusterNode) TLSConfig() *tls.Config {
@@ -539,9 +542,14 @@ func (n *DockerClusterNode) newAPIClient() (*api.Client, error) {
 	return client, nil
 }
 
-// Cleanup kills the container of the node
+// Cleanup kills the container of the node and deletes its data volume
 func (n *DockerClusterNode) Cleanup() {
 	n.cleanup()
+}
+
+// Stop kills the container of the node
+func (n *DockerClusterNode) Stop() {
+	n.cleanupContainer()
 }
 
 func (n *DockerClusterNode) cleanup() error {
@@ -549,10 +557,21 @@ func (n *DockerClusterNode) cleanup() error {
 		return nil
 	}
 	n.cleanupContainer()
+	n.cleanupVolume()
 	return nil
 }
 
-func (n *DockerClusterNode) start(ctx context.Context, caDir string, opts *DockerClusterOptions) error {
+func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOptions) error {
+	if n.DataVolumeName == "" {
+		vol, err := n.dockerAPI.VolumeCreate(ctx, volume.CreateOptions{})
+		if err != nil {
+			return err
+		}
+		n.DataVolumeName = vol.Name
+		n.cleanupVolume = func() {
+			_ = n.dockerAPI.VolumeRemove(ctx, vol.Name, false)
+		}
+	}
 	vaultCfg := map[string]interface{}{}
 	vaultCfg["listener"] = map[string]interface{}{
 		"tcp": map[string]interface{}{
@@ -628,6 +647,8 @@ func (n *DockerClusterNode) start(ctx context.Context, caDir string, opts *Docke
 		return err
 	}
 
+	caDir := filepath.Join(n.Cluster.tmpDir, "ca")
+
 	// setup plugin bin copy if needed
 	copyFromTo := map[string]string{
 		n.WorkDir: "/vault/config",
@@ -656,7 +677,7 @@ func (n *DockerClusterNode) start(ctx context.Context, caDir string, opts *Docke
 		// We don't need to run update-ca-certificates in the container, because
 		// we're providing the CA in the raft join call, and otherwise Vault
 		// servers don't talk to one another on the API port.
-		Cmd: []string{"server"},
+		Cmd: append([]string{"server"}, opts.Args...),
 		Env: []string{
 			// For now we're using disable_mlock, because this is for testing
 			// anyway, and because it prevents us using external plugins.
@@ -686,12 +707,22 @@ func (n *DockerClusterNode) start(ctx context.Context, caDir string, opts *Docke
 		},
 		Capabilities:      []string{"NET_ADMIN"},
 		OmitLogTimestamps: true,
+		VolumeNameToMountPoint: map[string]string{
+			n.DataVolumeName: "/vault/file",
+		},
 	})
 	if err != nil {
 		return err
 	}
 	n.runner = r
 
+	probe := opts.StartProbe
+	if probe == nil {
+		probe = func(c *api.Client) error {
+			_, err = c.Sys().SealStatus()
+			return err
+		}
+	}
 	svc, _, err := r.StartNewService(ctx, false, false, func(ctx context.Context, host string, port int) (dockhelper.ServiceConfig, error) {
 		config, err := n.apiConfig()
 		if err != nil {
@@ -702,10 +733,11 @@ func (n *DockerClusterNode) start(ctx context.Context, caDir string, opts *Docke
 		if err != nil {
 			return nil, err
 		}
-		_, err = client.Sys().SealStatus()
+		err = probe(client)
 		if err != nil {
 			return nil, err
 		}
+
 		return dockhelper.NewServiceHostPort(host, port), nil
 	})
 	if err != nil {
@@ -730,6 +762,12 @@ func (n *DockerClusterNode) start(ctx context.Context, caDir string, opts *Docke
 	n.RealAPIAddr = "https://" + n.ContainerIPAddress + ":8200"
 	n.cleanupContainer = svc.Cleanup
 
+	client, err := n.newAPIClient()
+	if err != nil {
+		return err
+	}
+	client.SetToken(n.Cluster.rootToken)
+	n.client = client
 	return nil
 }
 
@@ -758,6 +796,8 @@ type DockerClusterOptions struct {
 	ImageTag    string
 	CloneCA     *DockerCluster
 	VaultBinary string
+	Args        []string
+	StartProbe  func(*api.Client) error
 }
 
 func ensureLeaderMatches(ctx context.Context, client *api.Client, ready func(response *api.LeaderResponse) error) error {
@@ -877,15 +917,9 @@ func (dc *DockerCluster) addNode(ctx context.Context, opts *DockerClusterOptions
 	if err := os.MkdirAll(node.WorkDir, 0o755); err != nil {
 		return err
 	}
-	if err := node.start(ctx, filepath.Join(dc.tmpDir, "ca"), opts); err != nil {
+	if err := node.Start(ctx, opts); err != nil {
 		return err
 	}
-	client, err := node.newAPIClient()
-	if err != nil {
-		return err
-	}
-	client.SetToken(dc.rootToken)
-	node.client = client
 	return nil
 }
 
