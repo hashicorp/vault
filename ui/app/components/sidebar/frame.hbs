@@ -31,7 +31,10 @@
 
       <:footer>
         {{#if (has-feature "Namespaces")}}
-          <NamespacePicker @namespace={{this.clusterController.namespaceQueryParam}} />
+          <NamespacePicker
+            @namespace={{this.clusterController.namespaceQueryParam}}
+            class="hds-side-nav-hide-when-minimized"
+          />
         {{/if}}
       </:footer>
     </Hds::SideNav>
