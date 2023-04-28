@@ -40,6 +40,10 @@
       &.is-active {
         border-bottom: 2px solid $blue;
         color: $blue;
+
+        > button {
+          color: $blue;
+        }
       }
       // solves for tabs on auth mounts & secrets engines
       > a {
