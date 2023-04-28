@@ -114,6 +114,7 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 			ClientToken:         req.ClientToken,
 			ClientTokenAccessor: req.ClientTokenAccessor,
 			Operation:           req.Operation,
+			MountPoint:          req.MountPoint,
 			MountType:           req.MountType,
 			MountAccessor:       req.MountAccessor,
 			Namespace: &AuditNamespace{
@@ -313,6 +314,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			ClientTokenAccessor: req.ClientTokenAccessor,
 			ClientID:            req.ClientID,
 			Operation:           req.Operation,
+			MountPoint:          req.MountPoint,
 			MountType:           req.MountType,
 			MountAccessor:       req.MountAccessor,
 			Namespace: &AuditNamespace{
@@ -330,6 +332,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 		},
 
 		Response: &AuditResponse{
+			MountPoint:    req.MountPoint,
 			MountType:     req.MountType,
 			MountAccessor: req.MountAccessor,
 			Auth:          respAuth,
@@ -394,6 +397,7 @@ type AuditRequest struct {
 	ClientID                      string                 `json:"client_id,omitempty"`
 	ReplicationCluster            string                 `json:"replication_cluster,omitempty"`
 	Operation                     logical.Operation      `json:"operation,omitempty"`
+	MountPoint                    string                 `json:"mount_point,omitempty"`
 	MountType                     string                 `json:"mount_type,omitempty"`
 	MountAccessor                 string                 `json:"mount_accessor,omitempty"`
 	ClientToken                   string                 `json:"client_token,omitempty"`
@@ -411,6 +415,7 @@ type AuditRequest struct {
 
 type AuditResponse struct {
 	Auth          *AuditAuth             `json:"auth,omitempty"`
+	MountPoint    string                 `json:"mount_point,omitempty"`
 	MountType     string                 `json:"mount_type,omitempty"`
 	MountAccessor string                 `json:"mount_accessor,omitempty"`
 	Secret        *AuditSecret           `json:"secret,omitempty"`
