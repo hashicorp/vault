@@ -5,9 +5,10 @@ package pkiext_binary
 
 import (
 	"fmt"
-	"github.com/hashicorp/vault/sdk/helper/testcluster"
 	"os"
 	"testing"
+
+	"github.com/hashicorp/vault/sdk/helper/testcluster"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/testcluster/docker"
@@ -78,7 +79,6 @@ func (vpc *VaultPkiCluster) CreateMount(name string) (*VaultPkiMount, error) {
 			},
 		},
 	})
-
 	if err != nil {
 		return nil, err
 	}

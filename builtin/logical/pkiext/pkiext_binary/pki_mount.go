@@ -5,6 +5,7 @@ package pkiext_binary
 
 import (
 	"context"
+
 	"github.com/hashicorp/vault/api"
 )
 
