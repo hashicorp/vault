@@ -6,6 +6,7 @@ package replication_binary
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/helper/testcluster/docker"
@@ -25,7 +26,9 @@ func TestStandardPerfReplication_Docker(t *testing.T) {
 	}
 	defer r.Cleanup()
 
-	err = r.StandardPerfReplication(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	err = r.StandardPerfReplication(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
