@@ -144,7 +144,7 @@ func SubTestACMEIPSans(t *testing.T, cluster *VaultPkiCluster) {
 	pki, err := cluster.CreateAcmeMount("pki-ip-sans")
 	require.NoError(t, err, "failed setting up acme mount")
 
-	basePath := fmt.Sprintf("https://127.0.0.1:%s/v1/%s", pki.GetActiveContainerExposedPort(), pki.mount)
+	basePath := fmt.Sprintf("https://%s/v1/%s", pki.GetActiveContainerHostPort(), pki.mount)
 	err = pki.UpdateClusterConfig(map[string]interface{}{"path": basePath})
 	require.NoError(t, err, "failed updating cluster config")
 

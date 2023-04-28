@@ -47,8 +47,8 @@ func (vpc *VaultPkiCluster) Cleanup() {
 	vpc.cluster.Cleanup()
 }
 
-func (vpc *VaultPkiCluster) GetActiveContainerExposedPort() string {
-	return vpc.cluster.ClusterNodes[0].ExposedHostPort
+func (vpc *VaultPkiCluster) GetActiveContainerHostPort() string {
+	return vpc.cluster.ClusterNodes[0].HostPort
 }
 
 func (vpc *VaultPkiCluster) GetContainerNetworkName() string {
@@ -60,7 +60,7 @@ func (vpc *VaultPkiCluster) GetActiveContainerIP() string {
 }
 
 func (vpc *VaultPkiCluster) GetActiveContainerID() string {
-	return vpc.cluster.ClusterNodes[0].ContainerID
+	return vpc.cluster.ClusterNodes[0].Container.ID
 }
 
 func (vpc *VaultPkiCluster) GetActiveNode() *api.Client {

@@ -470,12 +470,10 @@ type DockerClusterNode struct {
 	Logger               log.Logger
 	cleanupContainer     func()
 	RealAPIAddr          string
-	ContainerID          string
 	ContainerNetworkName string
 	ContainerIPAddress   string
 	ImageRepo            string
 	ImageTag             string
-	ExposedHostPort      string
 }
 
 func (n *DockerClusterNode) TLSConfig() *tls.Config {
@@ -728,9 +726,7 @@ func (n *DockerClusterNode) start(ctx context.Context, caDir string, opts *Docke
 		}
 	}
 	n.ContainerNetworkName = netName
-	n.ContainerID = svc.Container.ID
 	n.ContainerIPAddress = svc.Container.NetworkSettings.Networks[netName].IPAddress
-	n.ExposedHostPort = svc.Container.NetworkSettings.Ports["8200/tcp"][0].HostPort
 	n.RealAPIAddr = "https://" + n.ContainerIPAddress + ":8200"
 	n.cleanupContainer = svc.Cleanup
 
