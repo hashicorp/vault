@@ -149,6 +149,7 @@ func (dc *DockerCluster) RootToken() string {
 }
 
 func (dc *DockerCluster) SetRootToken(s string) {
+	dc.Logger.Trace("cluster root token changed", "helpful_env", fmt.Sprintf("VAULT_TOKEN=%s VAULT_CACERT=/vault/config/ca.pem", dc.RootToken()))
 	dc.rootToken = s
 }
 
@@ -414,6 +415,7 @@ func NewTestDockerCluster(t *testing.T, opts *DockerClusterOptions) *DockerClust
 	if err != nil {
 		t.Fatal(err)
 	}
+	dc.Logger.Trace("cluster started", "helpful_env", fmt.Sprintf("VAULT_TOKEN=%s VAULT_CACERT=/vault/config/ca.pem", dc.RootToken()))
 	return dc
 }
 

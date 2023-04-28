@@ -44,7 +44,6 @@ func NewReplicationSetDocker(t *testing.T) (*testcluster.ReplicationSet, error) 
 			},
 			CA: r.CA,
 		})
-		t.Logf("Cluster %s started: VAULT_TOKEN=%s VAULT_CACERT=/vault/config/ca.pem", name, cluster.RootToken())
 		return cluster, nil
 	}
 
