@@ -5,11 +5,11 @@
 
 
 
-//  TODO: update dropdowns, input text to dark colors
 //  TODO: refactor classes and variables to achieve a more uniform coding
 
 // Define color variables for dark mode
-$background-color: $ui-gray-900;
+$background-color: #151515;
+$foreground-color: $ui-gray-900;
 $text-color: $ui-gray-050;
 
 // Define styles for dark mode
@@ -19,7 +19,7 @@ body {
 }
 
 .toolbar{
-    background-color: #0A0A0A;
+    background-color: $foreground-color;
     border: 1px solid $ui-gray-800;
     border-bottom-color: $ui-gray-800;
     border-top-color: $ui-gray-800;
@@ -45,8 +45,8 @@ body {
     color: $text-color !important;
 }
 
-a.has-text-black:hover {
-    color: $white !important;
+.has-text-black:hover {
+    color: $ui-gray-800 !important;
 }
 
 .has-text-grey, .has-text-grey-dark {
@@ -57,11 +57,15 @@ a.has-text-black:hover {
     color: $text-color;
 }
 
+.toolbar-link {
+    border: 0 !important;
+}
+
 .toolbar-link:hover:not(.disabled) {
     background-color: $ui-gray-800;
 }
 
-.linked-block {
+.linked-block, .has-background-white-bis{
     background-color: $background-color;
 }
 
@@ -73,44 +77,81 @@ a.has-text-black:hover {
     color: $text-color;
 }
 
-.box {
+.box{
     background-color: $background-color;
-    color: $text-color
-}
-
-.empty-state {
-    background-color: #0A0A0A;
-}
-
-.breadcrumb li.is-active a{
     color: $text-color;
 }
 
-.column .menu-list a{
+.empty-state, .chart-wrapper{
+    background-color: $foreground-color;
+}
+
+.breadcrumb li.is-active a {
     color: $text-color;
 }
 
-.title {
+.column .menu-list a {
     color: $text-color;
 }
 
-.tabs a:hover, .tabs .tab:hover{
-    background-color: #0A0A0A;
+.title, .title > a {
     color: $text-color;
 }
 
-.info-table-row {
+.tabs a:hover, .tabs .tab:hover {
+    background-color: $foreground-color;
+    color: $text-color;
+}
+
+.info-table-row, .action {
     background-color: $background-color;
+    color: $text-color;
 }
 
-.input, .box-radio{
-    background-color: $ui-gray-700 !important;
+.action > a.ember-view{
+    background-color: $background-color;
+    color: $text-color;
+    &:hover{
+        color: $ui-gray-200;
+        background-color: $ui-gray-800;
+    }
+}
+
+a.ember-view.is-destroy {
+    background-color: $background-color;
+    color: $red;
+}
+
+a.ember-view.toolbar-link {
+    background-color: $foreground-color;
+    border: 0;
+}
+
+input, textarea, .box-radio, .select select, .control {
+    background-color: $foreground-color !important;
     border: 1px solid $ui-gray-800;
-    color: $text-color;
+    color: $text-color !important;
+    border-radius: 2px;
 }
 
-.button, .button.is-outlined.is-primary{
-    background-color: #0A0A0A;
+.radio-card-row, .radio-card-container{
+    background-color: $foreground-color;
+}
+
+.radio-card-radio-row {
+    background-color: $ui-gray-800;
+}
+
+.is-selected .radio-card-radio-row {
+    background-color: $ui-gray-700;
+}
+
+.is-selected .radio-card-container, .is-selected .radio-card-row {
+    background-color: $ui-gray-800;
+}
+
+.button, .button.is-outlined.is-primary {
+    background-color: $foreground-color;
     color: $text-color;
     border: 1px solid $ui-gray-800;
     &:hover{
@@ -118,24 +159,34 @@ a.has-text-black:hover {
         background-color: $ui-gray-800;
     }
 }
-.has-text-grey.masked-input-toggle.button{
-    background-color: #0A0A0A !important;
+.has-text-grey.masked-input-toggle.button {
+    background-color: $foreground-color !important;
 }
 
 .button.is-ghost:hover {
-    background-color: #0A0A0A;
+    background-color: $foreground-color;
 }
 
-.masked-value.display-only.is-word-break{
+.action > .copy-btn.link{
+    background-color: $background-color;
+    border: 0px;
+}
+
+.masked-value.display-only.is-word-break {
     color: $text-color;
 }
 
 .message, .confirm-action-options {
-    background-color: #0A0A0A !important;
+    background-color: $foreground-color !important;
+    color: $text-color !important;
+}
+
+.message-body {
+    color: $text-color !important;
 }
 
 .popup-menu-content button.link {
-    background-color: #0A0A0A;
+    background-color: $foreground-color;
     color: $text-color;
     border: 1px solid $ui-gray-800;
     border-radius: 2px;
@@ -147,4 +198,12 @@ a.has-text-black:hover {
 
 .modal-card-custom.has-padding-btm-left {
     background-color: $background-color;
+}
+
+.modal-card, .modal-card-head, .modal-card-body, .modal-card-foot {
+    background-color: $foreground-color !important;
+    border-color: $ui-gray-800;
+}
+.modal-background {
+    background-color: $foreground-color;
 }
