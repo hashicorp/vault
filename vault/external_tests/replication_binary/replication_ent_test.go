@@ -10,8 +10,10 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/testcluster/docker"
 )
 
+// TestStandardPerfReplication_Docker tests that we can create two 3-node
+// clusters of docker containers and connect them using perf replication.
 func TestStandardPerfReplication_Docker(t *testing.T) {
-	// Disable for now since this needs an ent binary to work
+	// Disable for now since this needs an ent binary (or docker image) to work
 	t.Skip()
 
 	r, err := docker.NewReplicationSetDocker(t)
