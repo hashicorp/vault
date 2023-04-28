@@ -3,23 +3,6 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-// Colors that will eventually be in Structure package
-
-// Vault Gray
-$vault-gray-010: #fdfdfe;
-$vault-gray-050: #f7fafc;
-$vault-gray-100: #ebeef5;
-$vault-gray-200: #d3dbe6;
-$vault-gray-300: #b4bdcc;
-$vault-gray-400: #949fb0;
-$vault-gray-500: #7c8797;
-$vault-gray-600: #5a6370;
-$vault-gray-700: #3c434d;
-$vault-gray-800: #1d2126;
-$vault-gray-900: #060708;
-$vault-gray: $vault-gray-500;
-$vault-gray-dark: $vault-gray-700;
-
 // UI Gray
 $ui-gray-010: #fbfbfc;
 $ui-gray-050: #f7f8fa;
@@ -37,6 +20,12 @@ $grey-light: $ui-gray-300;
 $grey: $ui-gray-500;
 $grey-dark: $ui-gray-700;
 $grey-darkest: $ui-gray-900;
+
+// Black
+$black: hsl(0, 0%, 4%); // in hex: #0a0a0a
+
+// White
+$white: hsl(0, 0%, 100%);
 
 // Blue
 $blue-010: #fbfcff;

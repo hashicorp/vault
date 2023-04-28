@@ -9322,20 +9322,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"bulma-switch@npm:^0.0.1":
-  version: 0.0.1
-  resolution: "bulma-switch@npm:0.0.1"
-  checksum: c08e045071984a3f0aca04a3d248c5cb8ac41172f629c603fe0fd87a3af4e9ce776315834bdcaaf9f802ede4e97b7919ea67b3d422deaa80e1b4eab74495a8ff
-  languageName: node
-  linkType: hard
-
-"bulma@npm:^0.5.2":
-  version: 0.5.3
-  resolution: "bulma@npm:0.5.3"
-  checksum: e2d267989edd0ac9cc9baaff3db1d2404db69fe05a862bc612c604f6cf31e1e465f1f5d6f3e007bf43e4a6e209da0e0ea465b1a59c35456ea13c8da43ddcea5c
-  languageName: node
-  linkType: hard
-
 "bytes@npm:1":
   version: 1.0.0
   resolution: "bytes@npm:1.0.0"
@@ -10315,13 +10301,6 @@ __metadata:
   version: 0.4.1
   resolution: "cookie@npm:0.4.1"
   checksum: bd7c47f5d94ab70ccdfe8210cde7d725880d2fcda06d8e375afbdd82de0c8d3b73541996e9ce57d35f67f672c4ee6d60208adec06b3c5fc94cebb85196084cf8
-  languageName: node
-  linkType: hard
-
-"cool-checkboxes-for-bulma.io@npm:^1.1.0":
-  version: 1.1.0
-  resolution: "cool-checkboxes-for-bulma.io@npm:1.1.0"
-  checksum: d6ba673b075c2a075a790a35991310f9dec0fe04fdb98ec0741647c39dac34d62b786ff39df5aea29ad4391007f58c4c7bed927b5a93a77297c04b4a9db5cf69
   languageName: node
   linkType: hard
 
@@ -24254,11 +24233,8 @@ __metadata:
     base64-js: ^1.3.1
     broccoli-asset-rev: ^3.0.0
     broccoli-sri-hash: "meirish/broccoli-sri-hash#rooturl"
-    bulma: ^0.5.2
-    bulma-switch: ^0.0.1
     codemirror: ^5.58.2
     columnify: ^1.5.4
-    cool-checkboxes-for-bulma.io: ^1.1.0
     d3-axis: ^1.0.8
     d3-ease: ^1.0.5
     d3-scale: ^1.0.7

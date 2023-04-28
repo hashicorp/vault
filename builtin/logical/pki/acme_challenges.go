@@ -1,6 +1,7 @@
 package pki
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
@@ -10,6 +11,8 @@ import (
 	"strings"
 	"time"
 )
+
+const DNSChallengePrefix = "_acme-challenge."
 
 // ValidateKeyAuthorization validates that the given keyAuthz from a challenge
 // matches our expectation, returning (true, nil) if so, or (false, err) if
@@ -47,12 +50,33 @@ func ValidateSHA256KeyAuthorization(keyAuthz string, token string, thumbprint st
 	return true, nil
 }
 
+func buildResolver(config *acmeConfigEntry) (*net.Resolver, error) {
+	if len(config.DNSResolver) == 0 {
+		return net.DefaultResolver, nil
+	}
+
+	return &net.Resolver{
+		PreferGo:     true,
+		StrictErrors: false,
+		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+			d := net.Dialer{
+				Timeout: 10 * time.Second,
+			}
+			return d.DialContext(ctx, network, config.DNSResolver)
+		},
+	}, nil
+}
+
 // Validates a given ACME http-01 challenge against the specified domain,
 // per RFC 8555.
 //
 // We attempt to be defensive here against timeouts, extra redirects, &c.
-func ValidateHTTP01Challenge(domain string, token string, thumbprint string) (bool, error) {
+func ValidateHTTP01Challenge(domain string, token string, thumbprint string, config *acmeConfigEntry) (bool, error) {
 	path := "http://" + domain + "/.well-known/acme-challenge/" + token
+	resolver, err := buildResolver(config)
+	if err != nil {
+		return false, fmt.Errorf("failed to build resolver: %w", err)
+	}
 
 	transport := &http.Transport{
 		// Only a single request is sent to this server as we do not do any
@@ -69,6 +93,7 @@ func ValidateHTTP01Challenge(domain string, token string, thumbprint string) (bo
 		DialContext: (&net.Dialer{
 			Timeout:   10 * time.Second,
 			KeepAlive: -1 * time.Second,
+			Resolver:  resolver,
 		}).DialContext,
 		ResponseHeaderTimeout: 10 * time.Second,
 	}
@@ -129,7 +154,7 @@ func ValidateHTTP01Challenge(domain string, token string, thumbprint string) (bo
 	return ValidateKeyAuthorization(keyAuthz, token, thumbprint)
 }
 
-func ValidateDNS01Challenge(domain string, token string, thumbprint string) (bool, error) {
+func ValidateDNS01Challenge(domain string, token string, thumbprint string, config *acmeConfigEntry) (bool, error) {
 	// Here, domain is the value from the post-wildcard-processed identifier.
 	// Per RFC 8555, no difference in validation occurs if a wildcard entry
 	// is requested or if a non-wildcard entry is requested.
@@ -140,10 +165,18 @@ func ValidateDNS01Challenge(domain string, token string, thumbprint string) (boo
 	//
 	// 1. To control the actual resolver via ACME configuration,
 	// 2. To use a context to set stricter timeout limits.
-	name := "_acme-challenge." + domain
-	results, err := net.LookupTXT(name)
+	resolver, err := buildResolver(config)
 	if err != nil {
-		return false, fmt.Errorf("dns-01: failed to lookup TXT records for domain (%v): %w", name, err)
+		return false, fmt.Errorf("failed to build resolver: %w", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	name := DNSChallengePrefix + domain
+	results, err := resolver.LookupTXT(ctx, name)
+	if err != nil {
+		return false, fmt.Errorf("dns-01: failed to lookup TXT records for domain (%v) via resolver %v: %w", name, config.DNSResolver, err)
 	}
 
 	for _, keyAuthz := range results {
