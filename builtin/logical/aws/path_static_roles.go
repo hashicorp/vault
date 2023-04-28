@@ -2,10 +2,13 @@ package aws
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -108,7 +111,7 @@ func (b *backend) pathStaticRolesRead(ctx context.Context, req *logical.Request,
 
 	var config staticRoleConfig
 	if err := entry.DecodeJSON(&config); err != nil {
-		return nil, fmt.Errorf("failed to decode configuration for tatic role '%q': %w", roleName, err)
+		return nil, fmt.Errorf("failed to decode configuration for static role %q: %w", roleName, err)
 	}
 
 	return &logical.Response{
@@ -202,14 +205,39 @@ func (b *backend) pathStaticRolesDelete(ctx context.Context, req *logical.Reques
 }
 
 func (b *backend) validateRoleName(name string) error {
+	if name == "" {
+		return errors.New("empty role name attribute given")
+	}
 	return nil
 }
 
 func (b *backend) validateIAMUserExists(ctx context.Context, req *logical.Request, username string) error {
+	c, err := b.clientIAM(ctx, req.Storage)
+	if err != nil {
+		return fmt.Errorf("unable to validate username %q: %w", username, err)
+	}
+
+	// we don't really care about the content of the result, just that it's not an error
+	out, err := c.GetUser(&iam.GetUserInput{
+		UserName: aws.String(username),
+	})
+	if err != nil || out.User == nil {
+		return fmt.Errorf("unable to validate username %q: %w", username, err)
+	}
+	if *out.User.UserName != username {
+		return fmt.Errorf("AWS GetUser returned a username, but it didn't match: %q was requested, but %q was returned", username, *out.User.UserName)
+	}
 	return nil
 }
 
+const (
+	minAllowableRotationPeriod = 1 * time.Minute
+)
+
 func (b *backend) validateRotationPeriod(period time.Duration) error {
+	if period < minAllowableRotationPeriod {
+		return fmt.Errorf("role rotation period out of range: must be greater than %.2f seconds", minAllowableRotationPeriod.Seconds())
+	}
 	return nil
 }
 
@@ -225,13 +253,15 @@ func formatRoleStoragePath(roleName string) string {
 }
 
 const pathStaticRolesHelpSyn = `
+Manage static roles for AWS.
 `
 
 const pathStaticRolesHelpDesc = `
+This path lets you manage static roles (users) for the AWS secret backend.
 `
 
 const (
-	descRoleName       = ""
-	descUsername       = ""
-	descRotationPeriod = ""
+	descRoleName       = "The name of this role."
+	descUsername       = "The user to adopt as a static role."
+	descRotationPeriod = "Period by which to rotate the backing credential of the adopted user."
 )
