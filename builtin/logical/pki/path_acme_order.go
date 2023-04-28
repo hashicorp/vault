@@ -357,24 +357,26 @@ func validateCsrMatchesOrder(csr *x509.CertificateRequest, order *acmeOrder) err
 }
 
 func (b *backend) validateIdentifiersAgainstRole(role *roleEntry, identifiers []*ACMEIdentifier) error {
-	for index, identifier := range identifiers {
+	for _, identifier := range identifiers {
 		switch identifier.Type {
 		case ACMEDNSIdentifier:
 			data := &inputBundle{
 				role:    role,
 				req:     &logical.Request{},
-				apiData: nil,
+				apiData: &framework.FieldData{},
 			}
 
 			if validateNames(b, data, []string{identifier.OriginalValue}) != "" {
-				return fmt.Errorf("[%d] will not issue certificate for %v under this role", index, identifier.OriginalValue)
+				return fmt.Errorf("%w: role (%s) will not issue certificate for name %v",
+					ErrRejectedIdentifier, role.Name, identifier.OriginalValue)
 			}
 		case ACMEIPIdentifier:
 			if !role.AllowIPSANs {
-				return fmt.Errorf("[%d] role does not allow IP sans, so cannot issue certificate for %v", index, identifier.OriginalValue)
+				return fmt.Errorf("%w: role (%s) does not allow IP sans, so cannot issue certificate for %v",
+					ErrRejectedIdentifier, role.Name, identifier.OriginalValue)
 			}
 		default:
-			return fmt.Errorf("[%d] unknown type of identifier: %v for %v", index, identifier.Type, identifier.OriginalValue)
+			return fmt.Errorf("unknown type of identifier: %v for %v", identifier.Type, identifier.OriginalValue)
 		}
 	}
 
