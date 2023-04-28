@@ -6,8 +6,11 @@ package misc
 import (
 	"context"
 	"net/http"
+	"os"
 	"path"
 	"testing"
+
+	"github.com/mitchellh/mapstructure"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/api"
@@ -15,35 +18,41 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/testcluster/docker"
 )
 
+// TestRecovery_Docker exercises recovery mode.  It starts a single node raft
+// cluster, writes some data, then restarts it and makes sure that we can read
+// the data (that's mostly to make sure that our framework is properly handling
+// a volume that persists across runs.)  It then starts the node in recovery mode
+// and deletes the data via sys/raw, and finally restarts it in normal mode and
+// makes sure the data has been deleted.
 func TestRecovery_Docker(t *testing.T) {
 	ctx := context.TODO()
 
 	t.Parallel()
-	//binary := os.Getenv("VAULT_BINARY")
-	//if binary == "" {
-	//	t.Skip("only running docker test when $VAULT_BINARY present")
-	//}
+	binary := os.Getenv("VAULT_BINARY")
+	if binary == "" {
+		t.Skip("only running docker test when $VAULT_BINARY present")
+	}
 	opts := &docker.DockerClusterOptions{
 		ImageRepo: "hashicorp/vault",
 		// We're replacing the binary anyway, so we're not too particular about
 		// the docker image version tag.
-		ImageTag: "1.12.1",
-		// VaultBinary: binary,
+		ImageTag:    "latest",
+		VaultBinary: binary,
 		ClusterOptions: testcluster.ClusterOptions{
 			NumCores: 1,
 			VaultNodeConfig: &testcluster.VaultNodeConfig{
 				LogLevel: "TRACE",
 				// If you want the test to run faster locally, you could
 				// uncomment this performance_multiplier change.
-				StorageOptions: map[string]string{
-					"performance_multiplier": "1",
-				},
+				//StorageOptions: map[string]string{
+				//	"performance_multiplier": "1",
+				//},
 			},
 		},
 	}
 
 	cluster := docker.NewTestDockerCluster(t, opts)
-	// defer cluster.Cleanup()
+	defer cluster.Cleanup()
 
 	var secretUUID string
 	{
@@ -77,9 +86,23 @@ func TestRecovery_Docker(t *testing.T) {
 		secretUUID = secretMount.UUID
 	}
 
-	cluster.Nodes()[0].(*docker.DockerClusterNode).Stop()
+	listSecrets := func() []string {
+		client := cluster.Nodes()[0].APIClient()
+		secret, err := client.Logical().List("secret/")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if secret == nil {
+			return nil
+		}
+		var result []string
+		err = mapstructure.Decode(secret.Data["keys"], &result)
+		return result
+	}
 
-	getSecret := func() *api.Secret {
+	restart := func() {
+		cluster.Nodes()[0].(*docker.DockerClusterNode).Stop()
+
 		err := cluster.Nodes()[0].(*docker.DockerClusterNode).Start(ctx, opts)
 		if err != nil {
 			t.Fatalf("node restart post-recovery failed: %v", err)
@@ -94,22 +117,17 @@ func TestRecovery_Docker(t *testing.T) {
 		if err != nil {
 			t.Fatalf("node didn't become active: %v", err)
 		}
-
-		client := cluster.Nodes()[0].APIClient()
-		secret, err := client.Logical().List("secret/")
-		if err != nil {
-			t.Fatal(err)
-		}
-		return secret
 	}
 
-	if getSecret() == nil {
+	restart()
+	if len(listSecrets()) == 0 {
 		t.Fatal("expected secret to still be there")
 	}
-	cluster.Nodes()[0].(*docker.DockerClusterNode).Stop()
 
 	// Now bring it up in recovery mode.
 	{
+		cluster.Nodes()[0].(*docker.DockerClusterNode).Stop()
+
 		newOpts := *opts
 		opts := &newOpts
 		opts.Args = []string{"-recovery"}
@@ -151,10 +169,9 @@ func TestRecovery_Docker(t *testing.T) {
 		}
 	}
 
-	cluster.Nodes()[0].(*docker.DockerClusterNode).Stop()
-
 	// Now go back to regular mode and verify that our changes are present
-	if getSecret() != nil {
+	restart()
+	if len(listSecrets()) != 0 {
 		t.Fatal("expected secret to still be gone")
 	}
 }

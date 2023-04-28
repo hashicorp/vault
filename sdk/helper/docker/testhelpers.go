@@ -20,12 +20,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/docker/docker/api/types/mount"
-
 	"github.com/cenkalti/backoff/v3"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/docker/client"
