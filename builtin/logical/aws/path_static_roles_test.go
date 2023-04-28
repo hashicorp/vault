@@ -41,7 +41,7 @@ func TestStaticRolesValidation(t *testing.T) {
 			requestData: map[string]interface{}{
 				"name":            "test",
 				"username":        "jane-doe",
-				"rotation_period": 24601,
+				"rotation_period": "1d",
 			},
 		},
 		{
@@ -52,7 +52,7 @@ func TestStaticRolesValidation(t *testing.T) {
 			requestData: map[string]interface{}{
 				"name":            "test",
 				"username":        "jane-doe",
-				"rotation_period": 24601,
+				"rotation_period": "24h",
 			},
 			isError: true,
 		},
@@ -64,7 +64,7 @@ func TestStaticRolesValidation(t *testing.T) {
 			requestData: map[string]interface{}{
 				"name":            "test",
 				"username":        "jane-doe",
-				"rotation_period": 24601,
+				"rotation_period": "1d2h",
 			},
 			isError: true,
 		},
@@ -76,7 +76,7 @@ func TestStaticRolesValidation(t *testing.T) {
 			requestData: map[string]interface{}{
 				"name":            "test",
 				"username":        "jane-doe",
-				"rotation_period": 0,
+				"rotation_period": "45s",
 			},
 			isError: true,
 		},

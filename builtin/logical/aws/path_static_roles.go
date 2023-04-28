@@ -231,13 +231,13 @@ func (b *backend) validateIAMUserExists(ctx context.Context, req *logical.Reques
 }
 
 const (
-	minAllowableSeconds = 1
+	minAllowableRotationPeriod = 1 * time.Minute
 )
 
 func (b *backend) validateRotationPeriod(period time.Duration) error {
-	secs := period.Seconds()
-	if secs < minAllowableSeconds {
-		return fmt.Errorf("role rotation period out of range: must be greater than %d seconds", minAllowableSeconds)
+
+	if period < minAllowableRotationPeriod {
+		return fmt.Errorf("role rotation period out of range: must be greater than %.2f seconds", minAllowableRotationPeriod.Seconds())
 	}
 	return nil
 }
