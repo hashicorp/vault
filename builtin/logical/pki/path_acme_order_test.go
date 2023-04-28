@@ -12,9 +12,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Verify the ACME order creation function verifies somewhat the identifiers
-// that were provided have a descent chance of being allowed by the selected
-// role.
+// TestACME_ValidateIdentifiersAgainstRole Verify the ACME order creation
+// function verifies somewhat the identifiers that were provided have a
+// descent chance of being allowed by the selected role.
 func TestACME_ValidateIdentifiersAgainstRole(t *testing.T) {
 	b, _ := CreateBackendWithStorage(t)
 
