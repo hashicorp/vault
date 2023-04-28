@@ -3,23 +3,21 @@
 
 package replication_binary
 
+/*
+Example of how to use docker.NewReplicationSetDocker(t), assuming
+you point VAULT_BINARY to an Enterprise Vault binary:
+
 import (
 	"context"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/helper/testcluster/docker"
 )
 
 // TestStandardPerfReplication_Docker tests that we can create two 3-node
 // clusters of docker containers and connect them using perf replication.
 func TestStandardPerfReplication_Docker(t *testing.T) {
-	if !constants.IsEnterprise {
-		// Disable on OSS since this needs an ent binary (or docker image) to work
-		t.Skip()
-	}
-
 	r, err := docker.NewReplicationSetDocker(t)
 	if err != nil {
 		t.Fatal(err)
@@ -33,3 +31,5 @@ func TestStandardPerfReplication_Docker(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+*/
