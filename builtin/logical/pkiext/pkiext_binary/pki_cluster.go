@@ -4,9 +4,13 @@
 package pkiext_binary
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"os"
 	"testing"
+
+	dockhelper "github.com/hashicorp/vault/sdk/helper/docker"
 
 	"github.com/hashicorp/vault/sdk/helper/testcluster"
 
@@ -65,6 +69,39 @@ func (vpc *VaultPkiCluster) GetActiveContainerID() string {
 
 func (vpc *VaultPkiCluster) GetActiveNode() *api.Client {
 	return vpc.cluster.Nodes()[0].APIClient()
+}
+
+func (vpc *VaultPkiCluster) AddNameToHostsFile(ip, hostname string, logConsumer func(string), logStdout, logStderr io.Writer) error {
+	updateHostsCmd := []string{
+		"sh", "-c",
+		"echo '" + ip + " " + hostname + "' >> /etc/hosts",
+	}
+	for _, node := range vpc.cluster.ClusterNodes {
+		containerID := node.Container.ID
+		runner, err := dockhelper.NewServiceRunner(dockhelper.RunOptions{
+			ImageRepo:     node.ImageRepo,
+			ImageTag:      node.ImageTag,
+			ContainerName: containerID,
+			NetworkName:   node.ContainerNetworkName,
+			LogConsumer:   logConsumer,
+			LogStdout:     logStdout,
+			LogStderr:     logStderr,
+		})
+		if err != nil {
+			return err
+		}
+
+		_, _, retcode, err := runner.RunCmdWithOutput(context.Background(), containerID, updateHostsCmd)
+		if err != nil {
+			return fmt.Errorf("failed updating container %s host file: %w", containerID, err)
+		}
+
+		if retcode != 0 {
+			return fmt.Errorf("expected zero retcode from updating vault host file in container %s got: %d", containerID, retcode)
+		}
+	}
+
+	return nil
 }
 
 func (vpc *VaultPkiCluster) CreateMount(name string) (*VaultPkiMount, error) {
@@ -163,19 +200,19 @@ func (vpc *VaultPkiCluster) CreateAcmeMount(mountName string) (*VaultPkiMount, e
 		return nil, fmt.Errorf("failed importing signed cert: nil or empty response but no error")
 	}
 
-	_, err = pki.UpdateDefaultIssuer(resp.Data["imported_issuers"].([]interface{})[0].(string), nil)
+	err = pki.UpdateDefaultIssuer(resp.Data["imported_issuers"].([]interface{})[0].(string), nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to set intermediate as default: %w", err)
 	}
 
-	resp, err = pki.UpdateIssuer("default", map[string]interface{}{
+	err = pki.UpdateIssuer("default", map[string]interface{}{
 		"leaf_not_after_behavior": "truncate",
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update intermediate ttl behavior: %w", err)
 	}
 
-	_, err = pki.UpdateIssuer("root", map[string]interface{}{
+	err = pki.UpdateIssuer("root", map[string]interface{}{
 		"leaf_not_after_behavior": "truncate",
 	})
 	if err != nil {

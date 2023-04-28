@@ -77,20 +77,33 @@ func (vpm *VaultPkiMount) ImportBundle(pemBundle interface{}, props map[string]i
 		vpm.mount+"/issuers/import/bundle", mergeWithDefaults(props, defaults))
 }
 
-func (vpm *VaultPkiMount) UpdateDefaultIssuer(issuerId string, props map[string]interface{}) (*api.Secret, error) {
+func (vpm *VaultPkiMount) UpdateDefaultIssuer(issuerId string, props map[string]interface{}) error {
 	defaults := map[string]interface{}{
 		"default": issuerId,
 	}
 
-	return vpm.GetActiveNode().Logical().WriteWithContext(context.Background(),
+	_, err := vpm.GetActiveNode().Logical().WriteWithContext(context.Background(),
 		vpm.mount+"/config/issuers", mergeWithDefaults(props, defaults))
+
+	return err
 }
 
-func (vpm *VaultPkiMount) UpdateIssuer(issuerRef string, props map[string]interface{}) (*api.Secret, error) {
+func (vpm *VaultPkiMount) UpdateIssuer(issuerRef string, props map[string]interface{}) error {
 	defaults := map[string]interface{}{}
 
-	return vpm.GetActiveNode().Logical().JSONMergePatch(context.Background(),
+	_, err := vpm.GetActiveNode().Logical().JSONMergePatch(context.Background(),
 		vpm.mount+"/issuer/"+issuerRef, mergeWithDefaults(props, defaults))
+
+	return err
+}
+
+func (vpm *VaultPkiMount) UpdateRole(roleName string, config map[string]interface{}) error {
+	defaults := map[string]interface{}{}
+
+	_, err := vpm.GetActiveNode().Logical().WriteWithContext(context.Background(),
+		vpm.mount+"/roles/"+roleName, mergeWithDefaults(config, defaults))
+
+	return err
 }
 
 func mergeWithDefaults(config map[string]interface{}, defaults map[string]interface{}) map[string]interface{} {
