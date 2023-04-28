@@ -731,6 +731,33 @@ func (n *DockerClusterNode) start(ctx context.Context, caDir string, opts *Docke
 	return nil
 }
 
+func (n *DockerClusterNode) Pause(ctx context.Context) error {
+	return n.dockerAPI.ContainerPause(ctx, n.Container.ID)
+}
+
+func (n *DockerClusterNode) AddNetworkDelay(ctx context.Context, delay time.Duration, targetIP string) error {
+	stdout, stderr, exitCode, err := n.runner.RunCmdWithOutput(ctx, n.Container.ID, []string{
+		"/bin/sh",
+		"-xc", strings.Join([]string{
+			"echo isolating node",
+			"apk add iproute2",
+			"tc qdisc add dev eth0 root handle 1: prio",
+			fmt.Sprintf("tc filter add dev eth0 parent 1:0 protocol ip pref 55 handle ::55 u32 match ip dst %s flowid 2:1", targetIP),
+			fmt.Sprintf("tc qdisc add dev eth0 parent 1:1 handle 2: netem delay %dms", delay/time.Millisecond),
+		}, " && "),
+	})
+	if err != nil {
+		return err
+	}
+
+	n.Logger.Trace(string(stdout))
+	n.Logger.Trace(string(stderr))
+	if exitCode != 0 {
+		return fmt.Errorf("got nonzero exit code from iptables: %d", exitCode)
+	}
+	return nil
+}
+
 type LogConsumerWriter struct {
 	consumer func(string)
 }

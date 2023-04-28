@@ -190,7 +190,16 @@ func WaitForPerformanceSecondary(ctx context.Context, pri, sec VaultCluster, ski
 }
 
 func WaitForPerfReplicationWorking(ctx context.Context, pri, sec VaultCluster) error {
-	priClient, secClient := pri.Nodes()[0].APIClient(), sec.Nodes()[0].APIClient()
+	priActiveIdx, err := WaitForActiveNode(ctx, pri)
+	if err != nil {
+		return err
+	}
+	secActiveIdx, err := WaitForActiveNode(ctx, sec)
+	if err != nil {
+		return err
+	}
+
+	priClient, secClient := pri.Nodes()[priActiveIdx].APIClient(), sec.Nodes()[secActiveIdx].APIClient()
 	mountPoint, err := uuid.GenerateUUID()
 	if err != nil {
 		return err
@@ -294,4 +303,34 @@ func (r *ReplicationSet) Cleanup() {
 	for _, cluster := range r.Clusters {
 		cluster.Cleanup()
 	}
+}
+
+func WaitForPerfReplicationConnectionStatus(ctx context.Context, client *api.Client) error {
+	return WaitForPerfReplicationStatus(ctx, client, func(m map[string]interface{}) error {
+		perfSecondaries := m["primaries"].([]interface{})
+		if len(perfSecondaries) == 0 {
+			return fmt.Errorf("secondaries is zero")
+		}
+		for _, v := range perfSecondaries {
+			if v.(map[string]interface{})["connection_status"] == "connected" {
+				return nil
+			}
+		}
+		return fmt.Errorf("no secondaries connected")
+	})
+}
+
+func WaitForPerfReplicationStatus(ctx context.Context, client *api.Client, accept func(map[string]interface{}) error) error {
+	var err error
+	var secret *api.Secret
+	for ctx.Err() == nil {
+		secret, err = client.Logical().Read("sys/replication/performance/status")
+		if err == nil && secret != nil && secret.Data != nil {
+			if err = accept(secret.Data); err == nil {
+				return nil
+			}
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	return fmt.Errorf("unable to get acceptable replication status within allotted time: error=%v secret=%#v", err, secret)
 }
