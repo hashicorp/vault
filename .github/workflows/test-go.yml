@@ -132,6 +132,7 @@ jobs:
         timeout-minutes: ${{ fromJSON(env.TIMEOUT_IN_MINUTES) }}
         env:
           COMMIT_SHA: ${{ github.sha }}
+          DOCKER_HOST: docker.mirror.hashicorp.services
         run: |
           set -exo pipefail
 
