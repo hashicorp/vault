@@ -41,12 +41,7 @@
         border-bottom: 2px solid $blue;
         color: $blue;
       }
-      // solves for tabs on secret engines
-      > a &.active {
-        border-bottom: 2px solid $blue;
-        color: $blue;
-      }
-      // solves for tabs on auth mounts
+      // solves for tabs on auth mounts & secrets engines
       > a {
         &.active {
           color: $blue;

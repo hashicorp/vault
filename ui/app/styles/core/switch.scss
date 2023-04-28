@@ -95,7 +95,7 @@
       content: '';
       height: $size-8;
       position: absolute;
-      top: $size-8/ 5;
+      top: calc($size-8 / 5);
       width: $size-8 * 2;
     }
     &::after {
@@ -106,7 +106,7 @@
       height: $size-8 * 0.8;
       left: 0;
       position: absolute;
-      top: $size-8/ 4;
+      top: calc($size-8 / 4);
       transform: translateX(0.15rem);
       transition: all 0.25s ease-out;
       width: $size-8 * 0.8;
