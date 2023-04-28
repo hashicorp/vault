@@ -235,7 +235,6 @@ const (
 )
 
 func (b *backend) validateRotationPeriod(period time.Duration) error {
-
 	if period < minAllowableRotationPeriod {
 		return fmt.Errorf("role rotation period out of range: must be greater than %.2f seconds", minAllowableRotationPeriod.Seconds())
 	}
