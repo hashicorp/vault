@@ -5,7 +5,6 @@ package misc
 
 import (
 	"context"
-	"net/http"
 	"os"
 	"path"
 	"testing"
@@ -135,8 +134,7 @@ func TestRecovery_Docker(t *testing.T) {
 			// In recovery mode almost no paths are supported, and pretty much
 			// the only ones that don't require a recovery token are the ones used
 			// to generate a recovery token.
-			r := client.NewRequest(http.MethodGet, "/v1/sys/generate-recovery-token/attempt")
-			_, err := client.RawRequestWithContext(ctx, r)
+			_, err := client.Sys().GenerateRecoveryOperationTokenStatusWithContext(ctx)
 			return err
 		}
 		err := cluster.Nodes()[0].(*docker.DockerClusterNode).Start(ctx, opts)
