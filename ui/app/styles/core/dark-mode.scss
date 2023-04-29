@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
+
+.dark-theme {
 // Define color variables for dark mode
 $background-color: #151515;
 
@@ -49,7 +51,6 @@ body {
 
 .box,
 .is-label,
-.toolbar-link,
 .title, .title > a,
 .column .menu-list a,
 .alert-banner-message-body,
@@ -58,8 +59,12 @@ body {
     color: $text-color;
 }
 
+// not working unless !important
 .toolbar-link {
     border: 0 !important;
+    &:hover {
+        color: $blue-500 !important;
+    }
 }
 
 .toolbar-link:hover:not(.disabled) {
@@ -99,9 +104,9 @@ body {
         background-color: $foreground-color-light;
     }
 }
-a.ember-view.is-destroy {
+.is-destroy {
     background-color: $background-color;
-    color: $red;
+    color: $red !important;
 }
 a.ember-view.toolbar-link {
     background-color: $foreground-color;
@@ -126,7 +131,12 @@ textarea,
     color: $text-color !important;
     border-radius: 2px;
 }
-
+.console-ui-input {
+    input {
+      background-color: rgba($black, 0.5);
+      border: 0;
+    }
+}
 .control.columns {
     background-color: transparent !important;
     border: 0;
@@ -146,8 +156,12 @@ textarea,
     background-color: $foreground-color-lightest;
 }
 
-.button,
-.button.is-outlined.is-primary {
+// buttons
+.button.has-top-margin-s,
+.button.has-left-margin-xs,
+.ember-view.button,
+.button.has-text-grey,
+.is-outlined {
     background-color: $foreground-color;
     color: $text-color;
     border: 1px solid $foreground-color-light;
@@ -156,9 +170,24 @@ textarea,
         background-color: $foreground-color-light;
     }
 }
+.is-transparent{
+    background-color: transparent !important;
+    border: 0 !important;
+}
+// hide/show buttons on editing and viewing pages
+.masked-input.display-only .masked-input-toggle.button {
+    background-color: $background-color;
+    border: 0;
+}
+.masked-input-toggle.button {
+    background-color: $foreground-color;
+    color: $text-color;
+    border: 1px solid $foreground-color-light;
+}
 .has-text-grey.masked-input-toggle.button {
     background-color: $foreground-color !important;
 }
+
 
 .button.is-ghost:hover {
     background-color: $foreground-color;
@@ -206,4 +235,5 @@ textarea,
 }
 .modal-background {
     background-color: $foreground-color;
+}
 }
