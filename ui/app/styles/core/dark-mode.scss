@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-
-
-//  TODO: refactor classes and variables to achieve a more uniform coding
-
 // Define color variables for dark mode
 $background-color: #151515;
+
 $foreground-color: $ui-gray-900;
+$foreground-color-light: $ui-gray-800;
+$foreground-color-lightest: $ui-gray-700;
+
 $text-color: $ui-gray-050;
 
 // Define styles for dark mode
@@ -20,13 +20,13 @@ body {
 
 .toolbar{
     background-color: $foreground-color;
-    border: 1px solid $ui-gray-800;
-    border-bottom-color: $ui-gray-800;
-    border-top-color: $ui-gray-800;
+    border: 1px solid $foreground-color-light;
+    border-bottom-color: $foreground-color-light;
+    border-top-color: $foreground-color-light;
     color: $text-color;
 
     &::after {
-        background: linear-gradient(to left, $ui-gray-900, rgba($ui-gray-010, 0));
+        background: linear-gradient(to left, $foreground-color, rgba($ui-gray-010, 0));
         bottom: 0;
         content: '';
         position: absolute;
@@ -37,23 +37,24 @@ body {
       }
 }
 
-// .field {
-//     background-color: $red;
-// }
+// Text color
+.has-text-grey,
+.has-text-grey-dark {
+    color: $ui-gray-200 !important;
+}
 
 .has-text-black {
     color: $text-color !important;
 }
 
-.has-text-black:hover {
-    color: $ui-gray-800 !important;
-}
-
-.has-text-grey, .has-text-grey-dark {
-    color: $ui-gray-200 !important;
-}
-
-.toolbar-link, .alert-banner-message-body{
+.box,
+.is-label,
+.toolbar-link,
+.title, .title > a,
+.column .menu-list a,
+.alert-banner-message-body,
+.breadcrumb li.is-active a,
+.masked-value.display-only.is-word-break {
     color: $text-color;
 }
 
@@ -62,78 +63,66 @@ body {
 }
 
 .toolbar-link:hover:not(.disabled) {
-    background-color: $ui-gray-800;
+    background-color: $foreground-color-light;
 }
 
-.linked-block, .has-background-white-bis{
+.box,
+.linked-block,
+.list-item-row,
+.has-background-white-bis {
     background-color: $background-color;
 }
 
-.list-item-row{
-    background-color: $background-color;
-}
-
-.is-label {
-    color: $text-color;
-}
-
-.box{
-    background-color: $background-color;
-    color: $text-color;
-}
-
-.empty-state, .chart-wrapper{
+.empty-state,
+.chart-wrapper {
     background-color: $foreground-color;
 }
 
-.breadcrumb li.is-active a {
-    color: $text-color;
-}
-
-.column .menu-list a {
-    color: $text-color;
-}
-
-.title, .title > a {
-    color: $text-color;
-}
-
-.tabs a:hover, .tabs .tab:hover {
+.tabs a:hover,
+.tabs .tab:hover {
     background-color: $foreground-color;
     color: $text-color;
 }
 
-.info-table-row, .action {
+.info-table-row,
+.action {
     background-color: $background-color;
     color: $text-color;
 }
 
-.action > a.ember-view{
+// ember views
+.action > a.ember-view {
     background-color: $background-color;
     color: $text-color;
     &:hover{
         color: $ui-gray-200;
-        background-color: $ui-gray-800;
+        background-color: $foreground-color-light;
     }
 }
-
 a.ember-view.is-destroy {
     background-color: $background-color;
     color: $red;
 }
-
 a.ember-view.toolbar-link {
     background-color: $foreground-color;
     border: 0;
 }
-
 .ember-view.has-text-black {
     color: $text-color !important;
 }
 
-input, textarea, .box-radio, .select select, .control {
+.has-text-black:hover {
+    color: $foreground-color-light !important;
+}
+
+// text inputs and drop-downs
+input,
+textarea,
+.box-radio,
+.select select,
+.control {
     background-color: $foreground-color !important;
-    border: 1px solid $ui-gray-800;
+    border: 1px solid $foreground-color-light;
     color: $text-color !important;
     border-radius: 2px;
 }
@@ -143,29 +132,28 @@ input, textarea, .box-radio, .select select, .control {
     border: 0;
 }
 
-.radio-card-row, .radio-card-container{
+// radio cards
+.radio-card-row,
+.radio-card-container{
     background-color: $foreground-color;
 }
-
-.radio-card-radio-row {
-    background-color: $ui-gray-800;
+.radio-card-radio-row,
+.is-selected .radio-card-container,
+.is-selected .radio-card-row {
+    background-color: $foreground-color-light;
 }
-
 .is-selected .radio-card-radio-row {
-    background-color: $ui-gray-700;
+    background-color: $foreground-color-lightest;
 }
 
-.is-selected .radio-card-container, .is-selected .radio-card-row {
-    background-color: $ui-gray-800;
-}
-
-.button, .button.is-outlined.is-primary {
+.button,
+.button.is-outlined.is-primary {
     background-color: $foreground-color;
     color: $text-color;
-    border: 1px solid $ui-gray-800;
+    border: 1px solid $foreground-color-light;
     &:hover{
         color: $ui-gray-200;
-        background-color: $ui-gray-800;
+        background-color: $foreground-color-light;
     }
 }
 .has-text-grey.masked-input-toggle.button {
@@ -176,42 +164,42 @@ input, textarea, .box-radio, .select select, .control {
     background-color: $foreground-color;
 }
 
-.action > .copy-btn.link{
+.action > .copy-btn.link {
     background-color: $background-color;
     border: 0px;
 }
 
-.masked-value.display-only.is-word-break {
-    color: $text-color;
-}
-
+// messages
 .message, .confirm-action-options {
     background-color: $foreground-color !important;
     color: $text-color !important;
 }
-
 .message-body {
     color: $text-color !important;
 }
 
+// popups
 .popup-menu-content button.link {
     background-color: $foreground-color;
     color: $text-color;
-    border: 1px solid $ui-gray-800;
+    border: 1px solid $foreground-color-light;
     border-radius: 2px;
     &:hover{
         color: $ui-gray-200;
-        background-color: $ui-gray-800;
+        background-color: $foreground-color-light;
     }
 }
 
+// modal cards
 .modal-card-custom.has-padding-btm-left {
     background-color: $background-color;
 }
-
-.modal-card, .modal-card-head, .modal-card-body, .modal-card-foot {
+.modal-card,
+.modal-card-head,
+.modal-card-body,
+.modal-card-foot {
     background-color: $foreground-color !important;
-    border-color: $ui-gray-800;
+    border-color: $foreground-color-light;
 }
 .modal-card-body strong{
     color: $text-color;
