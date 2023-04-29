@@ -138,6 +138,11 @@ input, textarea, .box-radio, .select select, .control {
     border-radius: 2px;
 }
 
+.control.columns {
+    background-color: transparent !important;
+    border: 0;
+}
+
 .radio-card-row, .radio-card-container{
     background-color: $foreground-color;
 }
