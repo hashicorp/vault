@@ -399,6 +399,9 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 	if allowedMetadataExtensionsRaw, ok := d.GetOk("allowed_metadata_extensions"); ok {
 		cert.AllowedMetadataExtensions = allowedMetadataExtensionsRaw.([]string)
 	}
+	if requiredSubjectOidsRaw, ok := d.GetOk("required_subject_oids"); ok {
+		cert.RequiredSubjectOids = requiredSubjectOidsRaw.([]string)
+	}
 
 	// Get tokenutil fields
 	if err := cert.ParseTokenFields(req, d); err != nil {
