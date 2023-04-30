@@ -86,6 +86,11 @@
       {{/if}}
       {{! template-lint-enable block-indentation }}
       <div class="navbar-item">
+        <button type="button" class="button is-transparent" {{action "toggleDark"}}>
+          <Icon @name="transit" />
+        </button>
+      </div>
+      <div class="navbar-item">
         <button
           type="button"
           class="button is-transparent nav-console-button{{if this.consoleOpen ' popup-open'}}"

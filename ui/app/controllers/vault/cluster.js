@@ -65,10 +65,18 @@ export default Controller.extend({
       return;
     }
   ),
-
+  
   actions: {
     toggleConsole() {
       this.toggleProperty('consoleOpen');
+    },
+    toggleDark() { // function to toggle between light and dark theme
+      document.documentElement.classList.toggle("dark-theme");
+      if (document.documentElement.classList.contains("dark-theme")){
+        localStorage.setItem("theme", "dark");
+      } else {
+        localStorage.setItem("theme", "light");
+      }
     },
   },
 });
