@@ -35,8 +35,10 @@ const (
 
 type tidyStatus struct {
 	// Parameters used to initiate the operation
-	safetyBuffer          int
-	issuerSafetyBuffer    int
+	safetyBuffer         int
+	issuerSafetyBuffer   int
+	revQueueSafetyBuffer int
+
 	tidyCertStore         bool
 	tidyRevokedCerts      bool
 	tidyRevokedAssocs     bool
@@ -151,6 +153,11 @@ func pathTidyCancel(b *backend) *framework.Path {
 								Type:        framework.TypeInt,
 								Description: `Issuer safety buffer`,
 								Required:    false,
+							},
+							"revocation_queue_safety_buffer": {
+								Type:        framework.TypeInt,
+								Description: `Revocation queue safety buffer`,
+								Required:    true,
 							},
 							"tidy_cert_store": {
 								Type:        framework.TypeBool,
@@ -286,6 +293,11 @@ func pathTidyStatus(b *backend) *framework.Path {
 							"issuer_safety_buffer": {
 								Type:        framework.TypeInt,
 								Description: `Issuer safety buffer`,
+								Required:    true,
+							},
+							"revocation_queue_safety_buffer": {
+								Type:        framework.TypeInt,
+								Description: `Revocation queue safety buffer`,
 								Required:    true,
 							},
 							"tidy_cert_store": {
@@ -1449,6 +1461,7 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 	resp.Data["missing_issuer_cert_count"] = b.tidyStatus.missingIssuerCertCount
 	resp.Data["revocation_queue_deleted_count"] = b.tidyStatus.revQueueDeletedCount
 	resp.Data["cross_revoked_cert_deleted_count"] = b.tidyStatus.crossRevokedDeletedCount
+	resp.Data["revocation_queue_safety_buffer"] = b.tidyStatus.revQueueSafetyBuffer
 
 	switch b.tidyStatus.state {
 	case tidyStatusStarted:
@@ -1624,6 +1637,7 @@ func (b *backend) tidyStatusStart(config *tidyConfig) {
 	b.tidyStatus = &tidyStatus{
 		safetyBuffer:          int(config.SafetyBuffer / time.Second),
 		issuerSafetyBuffer:    int(config.IssuerSafetyBuffer / time.Second),
+		revQueueSafetyBuffer:  int(config.QueueSafetyBuffer / time.Second),
 		tidyCertStore:         config.CertStore,
 		tidyRevokedCerts:      config.RevokedCerts,
 		tidyRevokedAssocs:     config.IssuerAssocs,
@@ -1780,6 +1794,7 @@ The result includes the following fields:
 * 'revocation_queue_deleted_count': the number of revocation queue entries deleted
 * 'tidy_cross_cluster_revoked_certs': the value of this parameter when initiating the tidy operation
 * 'cross_revoked_cert_deleted_count': the number of cross-cluster revoked certificate entries deleted
+* 'revocation_queue_safety_buffer': the value of this parameter when initiating the tidy operation
 `
 
 const pathConfigAutoTidySyn = `
