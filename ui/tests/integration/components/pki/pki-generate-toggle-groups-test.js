@@ -66,7 +66,7 @@ module('Integration | Component | PkiGenerateToggleGroups', function (hooks) {
 
     await click(selectors.sanOptions);
 
-    const fields = ['excludeCnFromSans', 'serialNumber', 'altNames', 'ipSans', 'uriSans', 'otherSans'];
+    const fields = ['excludeCnFromSans', 'subjectSerialNumber', 'altNames', 'ipSans', 'uriSans', 'otherSans'];
     assert.dom('[data-test-field]').exists({ count: 6 }, `Correct number of fields render`);
     fields.forEach((key) => {
       assert.dom(`[data-test-input="${key}"]`).exists(`${key} input renders for generate-root actionType`);

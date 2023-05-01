@@ -290,7 +290,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await editPage.createSecret(secretPath, 'foo', 'bar');
     await click('[data-test-popup-menu-trigger="version"]');
 
-    assert.dom('[ data-test-created-time]').includesText('Version created ', 'shows version created time');
+    assert.dom('[data-test-created-time]').includesText('Version created ', 'shows version created time');
 
     await click('[data-test-version-history]');
 
@@ -513,6 +513,37 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     // perform encode function that should be done by the encodePath
     const encodedSecretPath = secretPath.replace(/ /g, '%20');
     assert.strictEqual(currentURL(), `/vault/secrets/${enginePath}/show/${encodedSecretPath}?version=1`);
+  });
+
+  test('UI handles secret with % in path correctly', async function (assert) {
+    const enginePath = `kv-engine-${this.uid}`;
+    const secretPath = 'per%cent/%fu ll';
+    const [firstPath, secondPath] = secretPath.split('/');
+    const commands = [`write sys/mounts/${enginePath} type=kv`, `write '${enginePath}/${secretPath}' 3=4`];
+    await consoleComponent.runCommands(commands);
+    await listPage.visitRoot({ backend: enginePath });
+    assert.dom(`[data-test-secret-link="${firstPath}/"]`).exists('First section item exists');
+    await click(`[data-test-secret-link="${firstPath}/"]`);
+
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${enginePath}/list/${encodeURIComponent(firstPath)}/`,
+      'First part of path is encoded in URL'
+    );
+    assert.dom(`[data-test-secret-link="${secretPath}"]`).exists('Link to secret exists');
+    await click(`[data-test-secret-link="${secretPath}"]`);
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${enginePath}/show/${encodeURIComponent(firstPath)}/${encodeURIComponent(secondPath)}`,
+      'secret path is encoded in URL'
+    );
+    assert.dom('h1').hasText(secretPath, 'Path renders correctly on show page');
+    await click(`[data-test-secret-breadcrumb="${firstPath}"]`);
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${enginePath}/list/${encodeURIComponent(firstPath)}/`,
+      'Breadcrumb link encodes correctly'
+    );
   });
 
   // the web cli does not handle a quote as part of a path, so we test it here via the UI

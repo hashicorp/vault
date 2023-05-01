@@ -517,12 +517,6 @@ type Core struct {
 	// CORS Information
 	corsConfig *CORSConfig
 
-	// The active set of upstream cluster addresses; stored via the Echo
-	// mechanism, loaded by the balancer
-	atomicPrimaryClusterAddrs *atomic.Value
-
-	atomicPrimaryFailoverAddrs *atomic.Value
-
 	// replicationState keeps the current replication state cached for quick
 	// lookup; activeNodeReplicationState stores the active value on standbys
 	replicationState           *uint32
@@ -642,7 +636,13 @@ type Core struct {
 	activityLogConfig ActivityLogCoreConfig
 
 	// censusAgent is the mechanism used for reporting Vault's billing data.
-	censusAgent *CensusAgent
+	censusAgent CensusReporter
+
+	// censusLicensingEnabled records whether Vault is exporting census metrics
+	censusLicensingEnabled bool
+
+	// billingStart keeps track of the billing start time for exporting census metrics
+	billingStart time.Time
 
 	// activeTime is set on active nodes indicating the time at which this node
 	// became active.
@@ -815,7 +815,7 @@ type CoreConfig struct {
 	LicensingConfig *LicensingConfig
 
 	// Configured Census Agent
-	censusAgent *CensusAgent
+	CensusAgent CensusReporter
 
 	DisablePerformanceStandby bool
 	DisableIndexing           bool
@@ -987,8 +987,6 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		introspectionEnabled:           conf.EnableIntrospection,
 		shutdownDoneCh:                 new(atomic.Value),
 		replicationState:               new(uint32),
-		atomicPrimaryClusterAddrs:      new(atomic.Value),
-		atomicPrimaryFailoverAddrs:     new(atomic.Value),
 		localClusterPrivateKey:         new(atomic.Value),
 		localClusterCert:               new(atomic.Value),
 		localClusterParsedCert:         new(atomic.Value),
@@ -2367,6 +2365,11 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.setupAuditedHeadersConfig(ctx); err != nil {
 			return err
 		}
+
+		if err := c.setupCensusAgent(); err != nil {
+			c.logger.Error("skipping reporting for nil agent", "error", err)
+		}
+
 		// not waiting on wg to avoid changing existing behavior
 		var wg sync.WaitGroup
 		if err := c.setupActivityLog(ctx, &wg); err != nil {

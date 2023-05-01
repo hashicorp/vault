@@ -209,12 +209,11 @@
     <StringList
       data-test-input={{@attr.name}}
       @label={{this.labelString}}
-      @warning={{@attr.options.warning}}
       @helpText={{if this.showHelpText @attr.options.helpText}}
       @inputValue={{get @model this.valuePath}}
       @onChange={{this.setAndBroadcast}}
       @attrName={{@attr.name}}
-      @subText={{@attr.options.subText}}
+      @subText="{{@attr.options.subText}} Add one item per row."
     />
   {{else if (eq @attr.options.sensitive true)}}
     {{! Masked Input }}
@@ -317,6 +316,14 @@
         {{/if}}
         {{#if this.validationError}}
           <AlertInline @type="danger" @message={{this.validationError}} @paddingTop={{true}} />
+        {{/if}}
+        {{#if this.validationWarning}}
+          <AlertInline
+            @type="warning"
+            @message={{this.validationWarning}}
+            @paddingTop={{true}}
+            data-test-validation-warning
+          />
         {{/if}}
       {{/if}}
     </div>

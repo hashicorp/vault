@@ -4,16 +4,7 @@
  */
 
 /* eslint qunit/no-conditional-assertions: "warn" */
-import {
-  click,
-  fillIn,
-  settled,
-  visit,
-  triggerEvent,
-  triggerKeyEvent,
-  find,
-  waitUntil,
-} from '@ember/test-helpers';
+import { click, fillIn, settled, visit, triggerKeyEvent, find, waitUntil } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -80,17 +71,6 @@ module('Acceptance | auth backend list', function (hooks) {
     await triggerKeyEvent('[data-test-input="username"]', 'keyup', 65);
     await fillIn('[data-test-textarea]', user2);
     await triggerKeyEvent('[data-test-textarea]', 'keyup', 65);
-    // test for modified helpText on generated token policies
-    await click('[data-test-toggle-group="Tokens"]');
-    const policyFormField = document.querySelector('[data-test-input="tokenPolicies"]');
-    const tooltipTrigger = policyFormField.querySelector('[data-test-tool-tip-trigger]');
-    await triggerEvent(tooltipTrigger, 'mouseenter');
-    assert
-      .dom('[data-test-info-tooltip-content]')
-      .hasText(
-        'Add policies that will apply to the generated token for this user. One policy per row.',
-        'Overwritten tooltip text displays in token form field.'
-      );
 
     await click('[data-test-save-config="true"]');
 

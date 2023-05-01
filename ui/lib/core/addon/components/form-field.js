@@ -117,6 +117,11 @@ export default class FormFieldComponent extends Component {
     const state = validations[this.valuePath];
     return state && !state.isValid ? state.errors.join(' ') : null;
   }
+  get validationWarning() {
+    const validations = this.args.modelValidations || {};
+    const state = validations[this.valuePath];
+    return state?.warnings?.length ? state.warnings.join(' ') : null;
+  }
 
   onChange() {
     if (this.args.onChange) {

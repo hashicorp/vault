@@ -23,7 +23,7 @@
 
   &.connected {
     background-color: $ui-gray-800;
-    color: #c2c5cb;
+    color: $ui-gray-300;
 
     a {
       color: #c2c5cb;
@@ -42,25 +42,29 @@
 .navbar-actions {
   background-color: $black;
   display: flex;
-  height: $header-height;
+  height: 4rem;
   justify-content: flex-start;
   padding: $spacing-xs $spacing-s $spacing-xs 0;
 }
 
 .navbar-brand {
-  background: $vault-gray;
+  align-items: stretch;
+  background: $grey;
   border-radius: 0 $radius-large $radius-large 0;
+  display: flex;
   margin-right: $spacing-s;
   min-height: auto;
   position: relative;
   z-index: 203;
 
   .navbar-item {
+    align-items: center;
     background-color: transparent;
+    display: flex;
     padding: $spacing-xs $spacing-l;
 
     &:hover,
-    .is-active {
+    &.is-active {
       background-color: transparent;
     }
   }
@@ -68,7 +72,7 @@
 
 .navbar-drawer-toggle {
   font-size: $size-6;
-  color: $vault-gray;
+  color: $grey;
   cursor: pointer;
   font-weight: $font-weight-semibold;
   margin-left: -$spacing-s;
@@ -133,7 +137,7 @@
     }
 
     &.is-active {
-      background-color: $vault-gray-700;
+      background-color: $ui-gray-800;
       color: $white;
     }
 
@@ -256,6 +260,7 @@
 .nav-user-button .icon {
   position: relative;
 }
+
 .nav-user-button.may-expire .icon:first-of-type::after {
   content: '';
   position: absolute;
@@ -266,6 +271,7 @@
   border-radius: 50%;
   background: $yellow;
 }
+
 .navbar-drawer-scroll {
   overflow: auto;
   height: 100%;
@@ -278,7 +284,7 @@
     left: 0;
     position: absolute;
     right: 0;
-    top: $header-height;
+    top: 4rem;
     z-index: 1;
 
     @include from($mobile) {
@@ -290,5 +296,14 @@
 .navbar-drawer .ember-basic-dropdown-content {
   @include until($mobile) {
     position: relative;
+  }
+}
+
+// responsive css
+@media screen and (min-width: 1024px) {
+  .navbar-item,
+  .navbar-link {
+    align-items: center;
+    display: flex;
   }
 }

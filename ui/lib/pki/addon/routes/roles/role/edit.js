@@ -6,23 +6,31 @@
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 import { withConfirmLeave } from 'core/decorators/confirm-leave';
+import { hash } from 'rsvp';
 
-@withConfirmLeave()
+@withConfirmLeave('model.role', ['model.issuers'])
 export default class PkiRoleEditRoute extends Route {
   @service store;
   @service secretMountPath;
 
   model() {
     const { role } = this.paramsFor('roles/role');
-    return this.store.queryRecord('pki/role', {
-      backend: this.secretMountPath.currentPath,
-      id: role,
+    const backend = this.secretMountPath.currentPath;
+
+    return hash({
+      role: this.store.queryRecord('pki/role', {
+        backend,
+        id: role,
+      }),
+      issuers: this.store.query('pki/issuer', { backend }),
     });
   }
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-    const { id } = resolvedModel;
+    const {
+      role: { id },
+    } = resolvedModel;
     controller.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview' },

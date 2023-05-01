@@ -37,8 +37,10 @@
         }
       ],
       "get": {
-        "operationId": "getFooId",
-        "tags": ["secrets"],
+        "operationId": "kv-read-foo-id",
+        "tags": [
+          "secrets"
+        ],
         "summary": "My Summary",
         "description": "My Description",
         "responses": {
@@ -58,8 +60,10 @@
         ]
       },
       "post": {
-        "operationId": "postFooId",
-        "tags": ["secrets"],
+        "operationId": "kv-write-foo-id",
+        "tags": [
+          "secrets"
+        ],
         "summary": "Update Summary",
         "description": "Update Description",
         "requestBody": {
@@ -67,7 +71,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/KvFooRequest"
+                "$ref": "#/components/schemas/KvWriteFooIdRequest"
               }
             }
           }
@@ -82,9 +86,11 @@
   },
   "components": {
     "schemas": {
-      "KvFooRequest": {
+      "KvWriteFooIdRequest": {
         "type": "object",
-        "required": ["age"],
+        "required": [
+          "age"
+        ],
         "properties": {
           "flavors": {
             "type": "array",
@@ -96,7 +102,11 @@
           "age": {
             "type": "integer",
             "description": "the age",
-            "enum": [1, 2, 3],
+            "enum": [
+              1,
+              2,
+              3
+            ],
             "x-vault-displayAttrs": {
               "name": "Age",
               "sensitive": true,
@@ -113,9 +123,13 @@
           "x-abc-token": {
             "type": "string",
             "description": "a header value",
-            "enum": ["a", "b", "c"]
+            "enum": [
+              "a",
+              "b",
+              "c"
+            ]
           },
-          "maximum" : {
+          "maximum": {
             "type": "integer",
             "description": "a maximum value",
             "format": "int64"
