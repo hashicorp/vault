@@ -17,6 +17,9 @@ export default create({
   usernameInput: fillable('[data-test-username]'),
   passwordInput: fillable('[data-test-password]'),
   namespaceInput: fillable('[data-test-auth-form-ns-input]'),
+  optionsToggle: clickable('[data-test-auth-form-options-toggle]'),
+  mountPath: fillable('[data-test-auth-form-mount-path]'),
+
   login: async function (token = rootToken) {
     // make sure we're always logged out and logged back in
     await this.logout();
@@ -27,17 +30,20 @@ export default create({
     await settled();
     return this.tokenInput(token).submit();
   },
-  loginUsername: async function (username, password) {
+  loginUsername: async function (username, password, path) {
     // make sure we're always logged out and logged back in
     await this.logout();
     await settled();
     // clear local storage to ensure we have a clean state
     window.localStorage.clear();
-    await this.visit({ with: 'username' });
+    await this.visit({ with: 'userpass' });
     await settled();
+    if (path) {
+      await this.optionsToggle();
+      await this.mountPath(path);
+    }
     await this.usernameInput(username);
-    await this.passwordInput(password).submit();
-    return;
+    return this.passwordInput(password).submit();
   },
   loginNs: async function (ns) {
     // make sure we're always logged out and logged back in
