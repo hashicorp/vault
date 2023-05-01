@@ -4000,6 +4000,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			"error":                                 nil,
 			"time_started":                          nil,
 			"time_finished":                         nil,
+			"last_auto_tidy_finished":               nil,
 			"message":                               nil,
 			"cert_store_deleted_count":              json.Number("1"),
 			"revoked_cert_deleted_count":            json.Number("1"),
@@ -4021,6 +4022,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			t.Fatal("Expected tidy status response to include a value for time_finished")
 		}
 		expectedData["time_finished"] = timeFinished
+		expectedData["last_auto_tidy_finished"] = tidyStatus.Data["last_auto_tidy_finished"]
 
 		if diff := deep.Equal(expectedData, tidyStatus.Data); diff != nil {
 			t.Fatal(diff)

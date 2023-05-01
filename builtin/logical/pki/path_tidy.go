@@ -204,6 +204,11 @@ func pathTidyCancel(b *backend) *framework.Path {
 								Description: `Time the operation finished`,
 								Required:    false,
 							},
+							"last_auto_tidy_finished": {
+								Type:        framework.TypeString,
+								Description: `Time the last auto-tidy operation finished`,
+								Required:    true,
+							},
 							"message": {
 								Type:        framework.TypeString,
 								Description: `Message of the operation`,
@@ -348,6 +353,11 @@ func pathTidyStatus(b *backend) *framework.Path {
 							"time_finished": {
 								Type:        framework.TypeString,
 								Description: `Time the operation finished`,
+								Required:    false,
+							},
+							"last_auto_tidy_finished": {
+								Type:        framework.TypeString,
+								Description: `Time the last auto-tidy operation finished`,
 								Required:    true,
 							},
 							"message": {
@@ -1462,6 +1472,7 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 	resp.Data["revocation_queue_deleted_count"] = b.tidyStatus.revQueueDeletedCount
 	resp.Data["cross_revoked_cert_deleted_count"] = b.tidyStatus.crossRevokedDeletedCount
 	resp.Data["revocation_queue_safety_buffer"] = b.tidyStatus.revQueueSafetyBuffer
+	resp.Data["last_auto_tidy_finished"] = b.lastTidy
 
 	switch b.tidyStatus.state {
 	case tidyStatusStarted:
