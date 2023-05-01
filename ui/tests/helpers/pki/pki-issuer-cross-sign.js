@@ -15,4 +15,5 @@ export const SELECTORS = {
   signedIssuerCol: (attr) => `[data-test-info-table-column="${attr}"]`,
   // for cross signing acceptance tests
   ...CONFIGURE,
+  rowValue: (attr) => `[data-test-row-value="${attr}"]`,
 };
