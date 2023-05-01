@@ -64,15 +64,9 @@ func WaitForPerfReplicationState(ctx context.Context, cluster VaultCluster, stat
 
 func EnablePerformanceSecondaryNoWait(ctx context.Context, perfToken string, pri, sec VaultCluster, updatePrimary bool) error {
 	postData := map[string]interface{}{
-		"token": perfToken,
-		//"ca_file": pri.GetCACertPEMFile(),
+		"token":   perfToken,
 		"ca_file": "/vault/config/ca.pem",
 	}
-	//if pri.ClientAuthRequired {
-	//	p := pri.Cores[0]
-	//	postData["client_cert_pem"] = string(p.ServerCertPEM)
-	//	postData["client_key_pem"] = string(p.ServerKeyPEM)
-	//}
 	path := "sys/replication/performance/secondary/enable"
 	if updatePrimary {
 		path = "sys/replication/performance/secondary/update-primary"
@@ -291,6 +285,8 @@ func (r *ReplicationSet) StandardPerfReplication(ctx context.Context) error {
 		}
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
 	err := SetupTwoClusterPerfReplication(ctx, r.Clusters["A"], r.Clusters["C"])
 	if err != nil {
 		return err

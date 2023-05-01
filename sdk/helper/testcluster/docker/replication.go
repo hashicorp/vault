@@ -37,14 +37,13 @@ func NewReplicationSetDocker(t *testing.T) (*testcluster.ReplicationSet, error) 
 					LogLevel: "TRACE",
 					// If you want the test to run faster locally, you could
 					// uncomment this performance_multiplier change.
-					StorageOptions: map[string]string{
-						"performance_multiplier": "1",
-					},
+					//StorageOptions: map[string]string{
+					//	"performance_multiplier": "1",
+					//},
 				},
 			},
 			CA: r.CA,
 		})
-		t.Logf("Cluster %s started: VAULT_TOKEN=%s VAULT_CACERT=/vault/config/ca.pem", name, cluster.RootToken())
 		return cluster, nil
 	}
 

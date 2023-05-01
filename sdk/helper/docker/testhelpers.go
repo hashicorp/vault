@@ -24,6 +24,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/docker/client"
@@ -41,26 +42,27 @@ type Runner struct {
 }
 
 type RunOptions struct {
-	ImageRepo         string
-	ImageTag          string
-	ContainerName     string
-	Cmd               []string
-	Entrypoint        []string
-	Env               []string
-	NetworkName       string
-	NetworkID         string
-	CopyFromTo        map[string]string
-	Ports             []string
-	DoNotAutoRemove   bool
-	AuthUsername      string
-	AuthPassword      string
-	OmitLogTimestamps bool
-	LogConsumer       func(string)
-	Capabilities      []string
-	PreDelete         bool
-	PostStart         func(string, string) error
-	LogStderr         io.Writer
-	LogStdout         io.Writer
+	ImageRepo              string
+	ImageTag               string
+	ContainerName          string
+	Cmd                    []string
+	Entrypoint             []string
+	Env                    []string
+	NetworkName            string
+	NetworkID              string
+	CopyFromTo             map[string]string
+	Ports                  []string
+	DoNotAutoRemove        bool
+	AuthUsername           string
+	AuthPassword           string
+	OmitLogTimestamps      bool
+	LogConsumer            func(string)
+	Capabilities           []string
+	PreDelete              bool
+	PostStart              func(string, string) error
+	LogStderr              io.Writer
+	LogStdout              io.Writer
+	VolumeNameToMountPoint map[string]string
 }
 
 func NewDockerAPI() (*client.Client, error) {
@@ -276,7 +278,7 @@ func (d *Runner) StartNewService(ctx context.Context, addSuffix, forceLocalAddr 
 	wg.Wait()
 
 	if d.RunOptions.PostStart != nil {
-		if err := d.RunOptions.PostStart(result.Container.ID, result.realIP); err != nil {
+		if err := d.RunOptions.PostStart(result.Container.ID, result.RealIP); err != nil {
 			return nil, "", fmt.Errorf("poststart failed: %w", err)
 		}
 	}
@@ -295,7 +297,7 @@ func (d *Runner) StartNewService(ctx context.Context, addSuffix, forceLocalAddr 
 	bo.MaxInterval = time.Second * 5
 	bo.MaxElapsedTime = 2 * time.Minute
 
-	pieces := strings.Split(result.addrs[0], ":")
+	pieces := strings.Split(result.Addrs[0], ":")
 	portInt, err := strconv.Atoi(pieces[1])
 	if err != nil {
 		return nil, "", err
@@ -327,25 +329,27 @@ func (d *Runner) StartNewService(ctx context.Context, addSuffix, forceLocalAddr 
 	}
 
 	return &Service{
-		Config:    config,
-		Cleanup:   cleanup,
-		Container: result.Container,
+		Config:      config,
+		Cleanup:     cleanup,
+		Container:   result.Container,
+		StartResult: result,
 	}, result.Container.ID, nil
 }
 
 type Service struct {
-	Config    ServiceConfig
-	Cleanup   func()
-	Container *types.ContainerJSON
+	Config      ServiceConfig
+	Cleanup     func()
+	Container   *types.ContainerJSON
+	StartResult *StartResult
 }
 
-type startResult struct {
+type StartResult struct {
 	Container *types.ContainerJSON
-	addrs     []string
-	realIP    string
+	Addrs     []string
+	RealIP    string
 }
 
-func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*startResult, error) {
+func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*StartResult, error) {
 	name := d.RunOptions.ContainerName
 	if addSuffix {
 		suffix, err := uuid.GenerateUUID()
@@ -404,6 +408,15 @@ func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*st
 		_, _ = ioutil.ReadAll(resp)
 	}
 
+	for vol, mtpt := range d.RunOptions.VolumeNameToMountPoint {
+		hostConfig.Mounts = append(hostConfig.Mounts, mount.Mount{
+			Type:     "volume",
+			Source:   vol,
+			Target:   mtpt,
+			ReadOnly: false,
+		})
+	}
+
 	c, err := d.DockerAPI.ContainerCreate(ctx, cfg, hostConfig, netConfig, nil, cfg.Hostname)
 	if err != nil {
 		return nil, fmt.Errorf("container create failed: %v", err)
@@ -458,10 +471,10 @@ func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*st
 		realIP = inspect.NetworkSettings.Networks[d.RunOptions.NetworkName].IPAddress
 	}
 
-	return &startResult{
+	return &StartResult{
 		Container: &inspect,
-		addrs:     addrs,
-		realIP:    realIP,
+		Addrs:     addrs,
+		RealIP:    realIP,
 	}, nil
 }
 
@@ -619,6 +632,8 @@ func (d *Runner) RunCmdInBackground(ctx context.Context, container string, cmd [
 type PathContents interface {
 	UpdateHeader(header *tar.Header) error
 	Get() ([]byte, error)
+	SetMode(mode int64)
+	SetOwners(uid int, gid int)
 }
 
 type FileContents struct {
@@ -639,8 +654,17 @@ func (b FileContents) Get() ([]byte, error) {
 	return b.Data, nil
 }
 
+func (b *FileContents) SetMode(mode int64) {
+	b.Mode = mode
+}
+
+func (b *FileContents) SetOwners(uid int, gid int) {
+	b.UID = uid
+	b.GID = gid
+}
+
 func PathContentsFromBytes(data []byte) PathContents {
-	return FileContents{
+	return &FileContents{
 		Data: data,
 		Mode: 0o644,
 	}
@@ -680,7 +704,7 @@ func BuildContextFromTarball(reader io.Reader) (BuildContext, error) {
 			return nil, fmt.Errorf("unexpectedly short read on tarball: %v of %v", read, header.Size)
 		}
 
-		bCtx[header.Name] = FileContents{
+		bCtx[header.Name] = &FileContents{
 			Data: data,
 			Mode: header.Mode,
 			UID:  header.Uid,
@@ -697,8 +721,14 @@ func (bCtx *BuildContext) ToTarball() (io.Reader, error) {
 	tarBuilder := tar.NewWriter(buffer)
 	defer tarBuilder.Close()
 
+	now := time.Now()
 	for filepath, contents := range *bCtx {
-		fileHeader := &tar.Header{Name: filepath}
+		fileHeader := &tar.Header{
+			Name:       filepath,
+			ModTime:    now,
+			AccessTime: now,
+			ChangeTime: now,
+		}
 		if contents == nil && !strings.HasSuffix(filepath, "/") {
 			return nil, fmt.Errorf("expected file path (%v) to have trailing / due to nil contents, indicating directory", filepath)
 		}

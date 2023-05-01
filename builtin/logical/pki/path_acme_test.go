@@ -334,6 +334,12 @@ func TestAcmeClusterPathNotConfigured(t *testing.T) {
 	cluster, client := setupTestPkiCluster(t)
 	defer cluster.Cleanup()
 
+	// Enable ACME but don't set a path.
+	_, err := client.Logical().WriteWithContext(context.Background(), "pki/config/acme", map[string]interface{}{
+		"enabled": true,
+	})
+	require.NoError(t, err)
+
 	// Do not fill in the path option within the local cluster configuration
 	cases := []struct {
 		name         string
@@ -426,6 +432,11 @@ func setupAcmeBackend(t *testing.T) (*vault.TestCluster, *api.Client, string) {
 	_, err := client.Logical().WriteWithContext(context.Background(), "pki/config/cluster", map[string]interface{}{
 		"path":     pathConfig,
 		"aia_path": "http://localhost:8200/cdn/pki",
+	})
+	require.NoError(t, err)
+
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/config/acme", map[string]interface{}{
+		"enabled": true,
 	})
 	require.NoError(t, err)
 
