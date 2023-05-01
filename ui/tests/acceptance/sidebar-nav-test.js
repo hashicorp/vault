@@ -17,19 +17,19 @@ module('Acceptance | sidebar navigation', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  test('it should link to correct routes at the cluster level', async function (assert) {
-    assert.expect(10);
-
+  hooks.beforeEach(function () {
     // set storage_type to raft to test link
     this.server.get('/sys/seal-status', (schema, req) => {
       return modifyPassthroughResponse(req, { storage_type: 'raft' });
     });
     this.server.get('/sys/storage/raft/configuration', () => this.server.create('configuration', 'withRaft'));
-    this.server.get('/sys/internal/ui/resultant-acl', () =>
-      this.server.create('configuration', { data: { root: true } })
-    );
 
-    await authPage.login();
+    return authPage.login();
+  });
+
+  test('it should link to correct routes at the cluster level', async function (assert) {
+    assert.expect(10);
+
     assert.dom(panel('Cluster')).exists('Cluster nav panel renders');
 
     const subNavs = [
@@ -61,7 +61,6 @@ module('Acceptance | sidebar navigation', function (hooks) {
   test('it should link to correct routes at the access level', async function (assert) {
     assert.expect(7);
 
-    await authPage.login();
     await click(link('Access'));
     assert.dom(panel('Access')).exists('Access nav panel renders');
 
@@ -83,7 +82,6 @@ module('Acceptance | sidebar navigation', function (hooks) {
   test('it should link to correct routes at the policies level', async function (assert) {
     assert.expect(4);
 
-    await authPage.login();
     await click(link('Policies'));
     assert.dom(panel('Policies')).exists('Access nav panel renders');
 
@@ -102,7 +100,6 @@ module('Acceptance | sidebar navigation', function (hooks) {
   test('it should link to correct routes at the tools level', async function (assert) {
     assert.expect(7);
 
-    await authPage.login();
     await click(link('Tools'));
     assert.dom(panel('Tools')).exists('Access nav panel renders');
 
