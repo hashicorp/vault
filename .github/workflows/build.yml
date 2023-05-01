@@ -13,6 +13,7 @@ on:
 jobs:
   # verify-changes determines if the changes are only for docs (website)
   verify-changes:
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     outputs:
       is_docs_change: ${{ steps.get-changeddir.outputs.is_docs_change }}
