@@ -66,7 +66,7 @@ func SubtestACMECertbot(t *testing.T, cluster *VaultPkiCluster) {
 	require.NoError(t, err, "could not start container")
 	require.NotNil(t, result, "could not start container")
 
-	defer ignoreError(runner.Stop(context.Background(), result.Container.ID))
+	defer runner.Stop(context.Background(), result.Container.ID)
 
 	networks, err := runner.GetNetworkAndAddresses(result.Container.ID)
 	require.NoError(t, err, "could not read container's IP address")
@@ -134,8 +134,6 @@ func SubtestACMECertbot(t *testing.T, cluster *VaultPkiCluster) {
 	require.NotEqual(t, 0, retcode, "expected non-zero retcode double revoke command result")
 }
 
-func ignoreError(_ error) {}
-
 func SubTestACMEIPAndDNS(t *testing.T, cluster *VaultPkiCluster) {
 	pki, err := cluster.CreateAcmeMount("pki-ip-dns-sans")
 	require.NoError(t, err, "failed setting up acme mount")
@@ -167,7 +165,7 @@ func SubTestACMEIPAndDNS(t *testing.T, cluster *VaultPkiCluster) {
 	require.NotNil(t, result, "could not start container")
 
 	nginxContainerId := result.Container.ID
-	defer ignoreError(runner.Stop(context.Background(), nginxContainerId))
+	defer runner.Stop(context.Background(), nginxContainerId)
 	networks, err := runner.GetNetworkAndAddresses(nginxContainerId)
 
 	challengeFolder := "/usr/share/nginx/html/.well-known/acme-challenge/"
