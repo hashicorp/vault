@@ -30,13 +30,29 @@ import (
 // a bunch of sub-tests against that cluster. It is up to each sub-test to run/configure
 // a new pki mount within the cluster to not interfere with each other.
 func Test_ACME(t *testing.T) {
-	t.Parallel()
-
 	cluster := NewVaultPkiCluster(t)
 	defer cluster.Cleanup()
 
-	t.Run("certbot", func(st *testing.T) { SubtestACMECertbot(st, cluster) })
-	t.Run("acme ip sans", func(st *testing.T) { SubTestACMEIPAndDNS(st, cluster) })
+	tc := map[string]func(t *testing.T, cluster *VaultPkiCluster){
+		"certbot":      SubtestACMECertbot,
+		"acme ip sans": SubTestACMEIPAndDNS,
+	}
+
+	// Wrap the tests within an outer group, so that we run all tests
+	// in parallel, but still wait for all tests to finish before completing
+	// and running the cleanup of the Vault cluster.
+	t.Run("group", func(gt *testing.T) {
+		for testName := range tc {
+			// Trap the function to be embedded later in the run so it
+			// doesn't get clobbered on the next for iteration
+			testFunc := tc[testName]
+
+			gt.Run(testName, func(st *testing.T) {
+				st.Parallel()
+				testFunc(st, cluster)
+			})
+		}
+	})
 }
 
 func SubtestACMECertbot(t *testing.T, cluster *VaultPkiCluster) {
