@@ -5,9 +5,10 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, focus, triggerKeyEvent } from '@ember/test-helpers';
+import { render, focus, triggerKeyEvent, typeIn, fillIn } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import hbs from 'htmlbars-inline-precompile';
+import sinon from 'sinon';
 import maskedInput from 'vault/tests/pages/components/masked-input';
 
 const component = create(maskedInput);
@@ -64,6 +65,27 @@ module('Integration | Component | masked input', function (hooks) {
     assert.dom('.masked-value').hasClass('masked-font');
     await focus('.masked-value');
     assert.dom('.masked-value').hasClass('masked-font');
+  });
+
+  test('it calls onChange events with the correct values', async function (assert) {
+    const changeSpy = sinon.spy();
+    this.set('value', 'before');
+    this.set('onChange', changeSpy);
+    await render(hbs`<MaskedInput @value={{this.value}} @onChange={{this.onChange}} />`);
+    await fillIn('[data-test-textarea]', 'after');
+    assert.true(changeSpy.calledWith('after'));
+  });
+
+  test('it calls onKeyUp events with the correct values', async function (assert) {
+    const keyupSpy = sinon.spy();
+    this.set('value', '');
+    this.set('onKeyUp', keyupSpy);
+    await render(hbs`<MaskedInput @name="foo" @value={{this.value}} @onKeyUp={{this.onKeyUp}} />`);
+    await typeIn('[data-test-textarea]', 'baz');
+    assert.true(keyupSpy.calledThrice, 'calls for each letter of typing');
+    assert.true(keyupSpy.firstCall.calledWithExactly('foo', 'b'));
+    assert.true(keyupSpy.secondCall.calledWithExactly('foo', 'ba'));
+    assert.true(keyupSpy.thirdCall.calledWithExactly('foo', 'baz'));
   });
 
   test('it does not remove value on tab', async function (assert) {
