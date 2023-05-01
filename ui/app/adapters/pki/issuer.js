@@ -5,6 +5,8 @@
 
 import ApplicationAdapter from '../application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
+import { all } from 'rsvp';
+import { verifyCertificates } from 'vault/utils/parse-pki-cert';
 
 export default class PkiIssuerAdapter extends ApplicationAdapter {
   namespace = 'v1';
@@ -31,6 +33,18 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
     }
   }
 
+  async getIssuerMetadata(store, type, query, response, id) {
+    const keyInfo = response.data.key_info[id];
+    try {
+      const issuerRecord = await this.queryRecord(store, type, { id, backend: query.backend });
+      const { data } = issuerRecord;
+      const isRoot = await verifyCertificates(data.certificate, data.certificate);
+      return { ...keyInfo, ...data, isRoot };
+    } catch (e) {
+      return { ...keyInfo, issuer_id: id };
+    }
+  }
+
   updateRecord(store, type, snapshot) {
     const { issuerId } = snapshot.record;
     const backend = this._getBackend(snapshot);
@@ -40,11 +54,34 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
   }
 
   query(store, type, query) {
-    return this.ajax(this.urlForQuery(query.backend), 'GET', this.optionsForQuery());
+    const { backend, isListView } = query;
+    const url = this.urlForQuery(backend);
+
+    return this.ajax(url, 'GET', this.optionsForQuery()).then(async (res) => {
+      // To show issuer meta data tags, we have a flag called isListView and only want to
+      // grab each issuer data only if there are less than 10 issuers to avoid making too many requests
+      if (isListView && res.data.keys.length <= 10) {
+        const keyInfoArray = await all(
+          res.data.keys.map((id) => this.getIssuerMetadata(store, type, query, res, id))
+        );
+        const keyInfo = {};
+
+        res.data.keys.forEach((issuerId) => {
+          keyInfo[issuerId] = keyInfoArray.find((newKey) => newKey.issuer_id === issuerId);
+        });
+
+        res.data.key_info = keyInfo;
+
+        return res;
+      }
+
+      return res;
+    });
   }
 
   queryRecord(store, type, query) {
     const { backend, id } = query;
+
     return this.ajax(this.urlForQuery(backend, id), 'GET', this.optionsForQuery(id));
   }
 

@@ -2438,13 +2438,27 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotNil(t, resp, "expected ca info")
+	firstMapping := resp.Data["mapping"].(map[string]string)
 	firstImportedKeys := resp.Data["imported_keys"].([]string)
 	firstImportedIssuers := resp.Data["imported_issuers"].([]string)
+	firstExistingKeys := resp.Data["existing_keys"].([]string)
+	firstExistingIssuers := resp.Data["existing_issuers"].([]string)
 
 	require.NotContains(t, firstImportedKeys, keyId1)
 	require.NotContains(t, firstImportedKeys, keyId2)
 	require.NotContains(t, firstImportedIssuers, issuerId1)
 	require.NotContains(t, firstImportedIssuers, issuerId2)
+	require.Empty(t, firstExistingKeys)
+	require.Empty(t, firstExistingIssuers)
+	require.NotEmpty(t, firstMapping)
+	require.Equal(t, 1, len(firstMapping))
+
+	var issuerId3 string
+	var keyId3 string
+	for i, k := range firstMapping {
+		issuerId3 = i
+		keyId3 = k
+	}
 
 	// Performing this again should result in no key/issuer ids being imported/generated.
 	resp, err = CBWrite(b, s, "config/ca", map[string]interface{}{
@@ -2452,11 +2466,17 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp, "expected ca info")
+	secondMapping := resp.Data["mapping"].(map[string]string)
 	secondImportedKeys := resp.Data["imported_keys"]
 	secondImportedIssuers := resp.Data["imported_issuers"]
+	secondExistingKeys := resp.Data["existing_keys"]
+	secondExistingIssuers := resp.Data["existing_issuers"]
 
-	require.Nil(t, secondImportedKeys)
-	require.Nil(t, secondImportedIssuers)
+	require.Empty(t, secondImportedKeys)
+	require.Empty(t, secondImportedIssuers)
+	require.Contains(t, secondExistingKeys, keyId3)
+	require.Contains(t, secondExistingIssuers, issuerId3)
+	require.Equal(t, 1, len(secondMapping))
 
 	resp, err = CBDelete(b, s, "root")
 	require.NoError(t, err)
@@ -3987,6 +4007,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 		expectedData := map[string]interface{}{
 			"safety_buffer":                         json.Number("1"),
 			"issuer_safety_buffer":                  json.Number("31536000"),
+			"revocation_queue_safety_buffer":        json.Number("172800"),
 			"tidy_cert_store":                       true,
 			"tidy_revoked_certs":                    true,
 			"tidy_revoked_cert_issuer_associations": false,
@@ -3999,6 +4020,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			"error":                                 nil,
 			"time_started":                          nil,
 			"time_finished":                         nil,
+			"last_auto_tidy_finished":               nil,
 			"message":                               nil,
 			"cert_store_deleted_count":              json.Number("1"),
 			"revoked_cert_deleted_count":            json.Number("1"),
@@ -4020,6 +4042,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			t.Fatal("Expected tidy status response to include a value for time_finished")
 		}
 		expectedData["time_finished"] = timeFinished
+		expectedData["last_auto_tidy_finished"] = tidyStatus.Data["last_auto_tidy_finished"]
 
 		if diff := deep.Equal(expectedData, tidyStatus.Data); diff != nil {
 			t.Fatal(diff)

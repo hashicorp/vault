@@ -21671,7 +21671,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"route-recognizer@npm:^0.3.3, route-recognizer@npm:^0.3.4":
+"route-recognizer@npm:^0.3.3":
   version: 0.3.4
   resolution: "route-recognizer@npm:0.3.4"
   checksum: 9586704491b26716eba1bdbb4a386893ecaab80c6dbf34e394957063b941ebf336ca09222f0892c9d118c609fa9b972d6e73e454abd4382acdc34dbb878e87f2
@@ -24339,7 +24339,6 @@ __metadata:
     pvutils: ^1.0.17
     qunit: ^2.19.1
     qunit-dom: ^2.0.0
-    route-recognizer: ^0.3.4
     sass: ^1.58.3
     sass-svg-uri: ^1.0.0
     shell-quote: ^1.6.1

@@ -24,6 +24,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/docker/client"
@@ -41,26 +42,27 @@ type Runner struct {
 }
 
 type RunOptions struct {
-	ImageRepo         string
-	ImageTag          string
-	ContainerName     string
-	Cmd               []string
-	Entrypoint        []string
-	Env               []string
-	NetworkName       string
-	NetworkID         string
-	CopyFromTo        map[string]string
-	Ports             []string
-	DoNotAutoRemove   bool
-	AuthUsername      string
-	AuthPassword      string
-	OmitLogTimestamps bool
-	LogConsumer       func(string)
-	Capabilities      []string
-	PreDelete         bool
-	PostStart         func(string, string) error
-	LogStderr         io.Writer
-	LogStdout         io.Writer
+	ImageRepo              string
+	ImageTag               string
+	ContainerName          string
+	Cmd                    []string
+	Entrypoint             []string
+	Env                    []string
+	NetworkName            string
+	NetworkID              string
+	CopyFromTo             map[string]string
+	Ports                  []string
+	DoNotAutoRemove        bool
+	AuthUsername           string
+	AuthPassword           string
+	OmitLogTimestamps      bool
+	LogConsumer            func(string)
+	Capabilities           []string
+	PreDelete              bool
+	PostStart              func(string, string) error
+	LogStderr              io.Writer
+	LogStdout              io.Writer
+	VolumeNameToMountPoint map[string]string
 }
 
 func NewDockerAPI() (*client.Client, error) {
@@ -404,6 +406,15 @@ func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*St
 	resp, _ := d.DockerAPI.ImageCreate(ctx, cfg.Image, opts)
 	if resp != nil {
 		_, _ = ioutil.ReadAll(resp)
+	}
+
+	for vol, mtpt := range d.RunOptions.VolumeNameToMountPoint {
+		hostConfig.Mounts = append(hostConfig.Mounts, mount.Mount{
+			Type:     "volume",
+			Source:   vol,
+			Target:   mtpt,
+			ReadOnly: false,
+		})
 	}
 
 	c, err := d.DockerAPI.ContainerCreate(ctx, cfg, hostConfig, netConfig, nil, cfg.Hostname)

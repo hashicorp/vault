@@ -801,6 +801,10 @@ type TestCluster struct {
 	opts              *TestClusterOptions
 }
 
+func (c *TestCluster) SetRootToken(token string) {
+	c.RootToken = token
+}
+
 func (c *TestCluster) Start() {
 }
 

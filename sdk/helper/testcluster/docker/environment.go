@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/volume"
 	docker "github.com/docker/docker/client"
 	"github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
@@ -56,13 +57,8 @@ type DockerCluster struct {
 	ClusterNodes []*DockerClusterNode
 
 	// Certificate fields
-	CACert        *x509.Certificate
-	CACertBytes   []byte
-	CACertPEM     []byte
-	CACertPEMFile string
-	CAKey         *ecdsa.PrivateKey
-	CAKeyPEM      []byte
-	RootCAs       *x509.CertPool
+	*testcluster.CA
+	RootCAs *x509.CertPool
 
 	barrierKeys  [][]byte
 	recoveryKeys [][]byte
@@ -153,6 +149,11 @@ func (dc *DockerCluster) RootToken() string {
 	return dc.rootToken
 }
 
+func (dc *DockerCluster) SetRootToken(s string) {
+	dc.Logger.Trace("cluster root token changed", "helpful_env", fmt.Sprintf("VAULT_TOKEN=%s VAULT_CACERT=/vault/config/ca.pem", dc.RootToken()))
+	dc.rootToken = s
+}
+
 func (n *DockerClusterNode) Name() string {
 	return n.Cluster.ClusterName + "-" + n.NodeID
 }
@@ -240,17 +241,16 @@ func (dc *DockerCluster) clusterReady(ctx context.Context) error {
 
 func (dc *DockerCluster) setupCA(opts *DockerClusterOptions) error {
 	var err error
+	var ca testcluster.CA
 
-	var caKey *ecdsa.PrivateKey
 	if opts != nil && opts.CAKey != nil {
-		caKey = opts.CAKey
+		ca.CAKey = opts.CAKey
 	} else {
-		caKey, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		ca.CAKey, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		if err != nil {
 			return err
 		}
 	}
-	dc.CAKey = caKey
 
 	var caBytes []byte
 	if opts != nil && len(opts.CACert) > 0 {
@@ -268,7 +268,7 @@ func (dc *DockerCluster) setupCA(opts *DockerClusterOptions) error {
 			BasicConstraintsValid: true,
 			IsCA:                  true,
 		}
-		caBytes, err = x509.CreateCertificate(rand.Reader, CACertTemplate, CACertTemplate, caKey.Public(), caKey)
+		caBytes, err = x509.CreateCertificate(rand.Reader, CACertTemplate, CACertTemplate, ca.CAKey.Public(), ca.CAKey)
 		if err != nil {
 			return err
 		}
@@ -277,25 +277,22 @@ func (dc *DockerCluster) setupCA(opts *DockerClusterOptions) error {
 	if err != nil {
 		return err
 	}
-	dc.CACert = CACert
-	dc.CACertBytes = caBytes
-
-	dc.RootCAs = x509.NewCertPool()
-	dc.RootCAs.AddCert(CACert)
+	ca.CACert = CACert
+	ca.CACertBytes = caBytes
 
 	CACertPEMBlock := &pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: caBytes,
 	}
-	dc.CACertPEM = pem.EncodeToMemory(CACertPEMBlock)
+	ca.CACertPEM = pem.EncodeToMemory(CACertPEMBlock)
 
-	dc.CACertPEMFile = filepath.Join(dc.tmpDir, "ca", "ca.pem")
-	err = os.WriteFile(dc.CACertPEMFile, dc.CACertPEM, 0o755)
+	ca.CACertPEMFile = filepath.Join(dc.tmpDir, "ca", "ca.pem")
+	err = os.WriteFile(ca.CACertPEMFile, ca.CACertPEM, 0o755)
 	if err != nil {
 		return err
 	}
 
-	marshaledCAKey, err := x509.MarshalECPrivateKey(caKey)
+	marshaledCAKey, err := x509.MarshalECPrivateKey(ca.CAKey)
 	if err != nil {
 		return err
 	}
@@ -303,7 +300,9 @@ func (dc *DockerCluster) setupCA(opts *DockerClusterOptions) error {
 		Type:  "EC PRIVATE KEY",
 		Bytes: marshaledCAKey,
 	}
-	dc.CAKeyPEM = pem.EncodeToMemory(CAKeyPEMBlock)
+	ca.CAKeyPEM = pem.EncodeToMemory(CAKeyPEMBlock)
+
+	dc.CA = &ca
 
 	return nil
 }
@@ -417,6 +416,7 @@ func NewTestDockerCluster(t *testing.T, opts *DockerClusterOptions) *DockerClust
 	if err != nil {
 		t.Fatal(err)
 	}
+	dc.Logger.Trace("cluster started", "helpful_env", fmt.Sprintf("VAULT_TOKEN=%s VAULT_CACERT=/vault/config/ca.pem", dc.RootToken()))
 	return dc
 }
 
@@ -439,6 +439,7 @@ func NewDockerCluster(ctx context.Context, opts *DockerClusterOptions) (*DockerC
 		ClusterName: opts.ClusterName,
 		Logger:      opts.Logger,
 		builtTags:   map[string]struct{}{},
+		CA:          opts.CA,
 	}
 
 	if err := dc.setupDockerCluster(ctx, opts); err != nil {
@@ -474,6 +475,8 @@ type DockerClusterNode struct {
 	ContainerIPAddress   string
 	ImageRepo            string
 	ImageTag             string
+	DataVolumeName       string
+	cleanupVolume        func()
 }
 
 func (n *DockerClusterNode) TLSConfig() *tls.Config {
@@ -497,7 +500,7 @@ func (n *DockerClusterNode) APIClient() *api.Client {
 		// bug in CloneConfig?
 		panic(fmt.Sprintf("NewClient error on cloned config: %v", err))
 	}
-	client.SetToken(n.client.Token())
+	client.SetToken(n.Cluster.rootToken)
 	return client
 }
 
@@ -539,9 +542,14 @@ func (n *DockerClusterNode) newAPIClient() (*api.Client, error) {
 	return client, nil
 }
 
-// Cleanup kills the container of the node
+// Cleanup kills the container of the node and deletes its data volume
 func (n *DockerClusterNode) Cleanup() {
 	n.cleanup()
+}
+
+// Stop kills the container of the node
+func (n *DockerClusterNode) Stop() {
+	n.cleanupContainer()
 }
 
 func (n *DockerClusterNode) cleanup() error {
@@ -549,10 +557,21 @@ func (n *DockerClusterNode) cleanup() error {
 		return nil
 	}
 	n.cleanupContainer()
+	n.cleanupVolume()
 	return nil
 }
 
-func (n *DockerClusterNode) start(ctx context.Context, caDir string, opts *DockerClusterOptions) error {
+func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOptions) error {
+	if n.DataVolumeName == "" {
+		vol, err := n.dockerAPI.VolumeCreate(ctx, volume.CreateOptions{})
+		if err != nil {
+			return err
+		}
+		n.DataVolumeName = vol.Name
+		n.cleanupVolume = func() {
+			_ = n.dockerAPI.VolumeRemove(ctx, vol.Name, false)
+		}
+	}
 	vaultCfg := map[string]interface{}{}
 	vaultCfg["listener"] = map[string]interface{}{
 		"tcp": map[string]interface{}{
@@ -628,6 +647,8 @@ func (n *DockerClusterNode) start(ctx context.Context, caDir string, opts *Docke
 		return err
 	}
 
+	caDir := filepath.Join(n.Cluster.tmpDir, "ca")
+
 	// setup plugin bin copy if needed
 	copyFromTo := map[string]string{
 		n.WorkDir: "/vault/config",
@@ -656,7 +677,7 @@ func (n *DockerClusterNode) start(ctx context.Context, caDir string, opts *Docke
 		// We don't need to run update-ca-certificates in the container, because
 		// we're providing the CA in the raft join call, and otherwise Vault
 		// servers don't talk to one another on the API port.
-		Cmd: []string{"server"},
+		Cmd: append([]string{"server"}, opts.Args...),
 		Env: []string{
 			// For now we're using disable_mlock, because this is for testing
 			// anyway, and because it prevents us using external plugins.
@@ -686,12 +707,22 @@ func (n *DockerClusterNode) start(ctx context.Context, caDir string, opts *Docke
 		},
 		Capabilities:      []string{"NET_ADMIN"},
 		OmitLogTimestamps: true,
+		VolumeNameToMountPoint: map[string]string{
+			n.DataVolumeName: "/vault/file",
+		},
 	})
 	if err != nil {
 		return err
 	}
 	n.runner = r
 
+	probe := opts.StartProbe
+	if probe == nil {
+		probe = func(c *api.Client) error {
+			_, err = c.Sys().SealStatus()
+			return err
+		}
+	}
 	svc, _, err := r.StartNewService(ctx, false, false, func(ctx context.Context, host string, port int) (dockhelper.ServiceConfig, error) {
 		config, err := n.apiConfig()
 		if err != nil {
@@ -702,10 +733,11 @@ func (n *DockerClusterNode) start(ctx context.Context, caDir string, opts *Docke
 		if err != nil {
 			return nil, err
 		}
-		_, err = client.Sys().SealStatus()
+		err = probe(client)
 		if err != nil {
 			return nil, err
 		}
+
 		return dockhelper.NewServiceHostPort(host, port), nil
 	})
 	if err != nil {
@@ -730,6 +762,12 @@ func (n *DockerClusterNode) start(ctx context.Context, caDir string, opts *Docke
 	n.RealAPIAddr = "https://" + n.ContainerIPAddress + ":8200"
 	n.cleanupContainer = svc.Cleanup
 
+	client, err := n.newAPIClient()
+	if err != nil {
+		return err
+	}
+	client.SetToken(n.Cluster.rootToken)
+	n.client = client
 	return nil
 }
 
@@ -756,8 +794,10 @@ type DockerClusterOptions struct {
 	NetworkName string
 	ImageRepo   string
 	ImageTag    string
-	CloneCA     *DockerCluster
+	CA          *testcluster.CA
 	VaultBinary string
+	Args        []string
+	StartProbe  func(*api.Client) error
 }
 
 func ensureLeaderMatches(ctx context.Context, client *api.Client, ready func(response *api.LeaderResponse) error) error {
@@ -810,19 +850,13 @@ func (dc *DockerCluster) setupDockerCluster(ctx context.Context, opts *DockerClu
 		numCores = opts.NumCores
 	}
 
-	if opts.CloneCA != nil {
-		dc.CACert = opts.CloneCA.CACert
-		dc.CACertBytes = opts.CloneCA.CACertBytes
-		dc.CACertPEM = opts.CloneCA.CACertPEM
-		dc.CACertPEMFile = opts.CloneCA.CACertPEMFile
-		dc.CAKey = opts.CloneCA.CAKey
-		dc.CAKeyPEM = opts.CloneCA.CAKeyPEM
-		dc.RootCAs = opts.CloneCA.RootCAs
-	} else {
+	if dc.CA == nil {
 		if err := dc.setupCA(opts); err != nil {
 			return err
 		}
 	}
+	dc.RootCAs = x509.NewCertPool()
+	dc.RootCAs.AddCert(dc.CA.CACert)
 
 	for i := 0; i < numCores; i++ {
 		if err := dc.addNode(ctx, opts); err != nil {
@@ -877,15 +911,9 @@ func (dc *DockerCluster) addNode(ctx context.Context, opts *DockerClusterOptions
 	if err := os.MkdirAll(node.WorkDir, 0o755); err != nil {
 		return err
 	}
-	if err := node.start(ctx, filepath.Join(dc.tmpDir, "ca"), opts); err != nil {
+	if err := node.Start(ctx, opts); err != nil {
 		return err
 	}
-	client, err := node.newAPIClient()
-	if err != nil {
-		return err
-	}
-	client.SetToken(dc.rootToken)
-	node.client = client
 	return nil
 }
 
