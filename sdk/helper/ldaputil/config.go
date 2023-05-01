@@ -433,7 +433,8 @@ func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry
 	}
 
 	if _, ok := d.Raw["max_page_size"]; ok || !hadExisting {
-		cfg.MaximumPageSize = d.Get("max_page_size").(int)
+		cfg.MaximumPageSize = new(int)
+		*cfg.MaximumPageSize = d.Get("max_page_size").(int)
 	}
 
 	return cfg, nil
@@ -464,7 +465,7 @@ type ConfigEntry struct {
 	RequestTimeout           int    `json:"request_timeout"`
 	ConnectionTimeout        int    `json:"connection_timeout"`
 	DerefAliases             string `json:"dereference_aliases"`
-	MaximumPageSize          int    `json:"max_page_size"`
+	MaximumPageSize          *int   `json:"max_page_size"`
 
 	// These json tags deviate from snake case because there was a past issue
 	// where the tag was being ignored, causing it to be jsonified as "CaseSensitiveNames", etc.

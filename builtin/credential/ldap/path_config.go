@@ -5,6 +5,7 @@ package ldap
 
 import (
 	"context"
+	"math"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -101,6 +102,12 @@ func (b *backend) Config(ctx context.Context, req *logical.Request) (*ldapConfig
 	if result.UsePre111GroupCNBehavior == nil {
 		result.UsePre111GroupCNBehavior = new(bool)
 		*result.UsePre111GroupCNBehavior = true
+		persistNeeded = true
+	}
+
+	if result.MaximumPageSize == nil {
+		result.MaximumPageSize = new(int)
+		*result.MaximumPageSize = math.MaxInt32
 		persistNeeded = true
 	}
 
