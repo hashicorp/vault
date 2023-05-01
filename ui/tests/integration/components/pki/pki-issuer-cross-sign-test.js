@@ -18,16 +18,8 @@ import {
   parentIssuerCert,
   unsupportedOids,
 } from 'vault/tests/helpers/pki/values';
+import { SELECTORS } from 'vault/tests/helpers/pki/pki-issuer-cross-sign';
 
-const SELECTORS = {
-  input: (key, row = 0) => `[data-test-object-list-input="${key}-${row}"]`,
-  addRow: '[data-test-object-list-add-button',
-  submitButton: '[data-test-cross-sign-submit]',
-  cancelButton: '[data-test-cross-sign-cancel]',
-  statusCount: '[data-test-cross-sign-status-count]',
-  signedIssuerRow: (row = 0) => `[data-test-info-table-row="${row}"]`,
-  signedIssuerCol: (attr) => `[data-test-info-table-column="${attr}"]`,
-};
 const FIELDS = [
   {
     label: 'Mount path',
