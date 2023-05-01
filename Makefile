@@ -173,7 +173,7 @@ static-assets-dir:
 
 install-ui-dependencies:
 	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn --ignore-optional
+	@cd ui && yarn
 
 test-ember: install-ui-dependencies
 	@echo "--> Running ember tests"
