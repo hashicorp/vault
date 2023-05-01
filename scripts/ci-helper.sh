@@ -134,7 +134,7 @@ function build_ui() {
   pushd "$repo_root/ui"
   yarn install
   npm rebuild node-sass
-  yarn --verbose run build
+  yarn run build
   popd
 }
 
