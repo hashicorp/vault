@@ -3,7 +3,8 @@ on:
   pull_request:
   push:
     branches:
-      - "main"
+      - main
+      - release/**
   workflow_dispatch:
 
 jobs:
