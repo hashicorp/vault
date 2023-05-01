@@ -44,8 +44,3 @@
     }
   }
 }
-
-// hds override to prevent scrollbar from showing when panel is minimized
-.hds-side-nav__wrapper-body {
-  overflow-x: hidden;
-}

@@ -4567,12 +4567,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hashicorp/design-system-components@npm:2.2.0":
-  version: 2.2.0
-  resolution: "@hashicorp/design-system-components@npm:2.2.0"
+"@hashicorp/design-system-components@npm:2.3.1":
+  version: 2.3.1
+  resolution: "@hashicorp/design-system-components@npm:2.3.1"
   dependencies:
     "@ember/render-modifiers": ^2.0.5
-    "@hashicorp/design-system-tokens": ^1.4.2
+    "@hashicorp/design-system-tokens": ^1.5.0
     "@hashicorp/ember-flight-icons": ^3.0.2
     dialog-polyfill: ^0.5.6
     ember-a11y-refocus: ^3.0.2
@@ -4589,14 +4589,15 @@ __metadata:
     ember-style-modifier: ^0.8.0
     ember-truth-helpers: ^3.0.0
     sass: ^1.58.3
-  checksum: 82a0a0539db8d0348fb729a9654d0b656c9589c32b9cd9e8f64138231ad97a6ac46589b79b7d6f3f97e883063bead463a67b90117cf92b54e1268ae6c1f7f5e6
+    tippy.js: ^6.3.7
+  checksum: 07d2ac71f8d345cde731c15ff5ef83a57a2f8ab3b56fd71bec122d50db8a8b10968c4b0344055b6314a85350b6ca1fda6dc290d31da61086c25d6d131dcc7c9b
   languageName: node
   linkType: hard
 
-"@hashicorp/design-system-tokens@npm:^1.4.2":
-  version: 1.4.2
-  resolution: "@hashicorp/design-system-tokens@npm:1.4.2"
-  checksum: 12a45d6869a79a9e0699731e69be053a6c485875dd780e6ac03d85cc83827b0d362f03c996646830f4a6d1ab86b5a1af0c0984a84edbcaddcf3843c0405b7bee
+"@hashicorp/design-system-tokens@npm:^1.5.0":
+  version: 1.5.0
+  resolution: "@hashicorp/design-system-tokens@npm:1.5.0"
+  checksum: 79b8f823953f1de7a715203291b96d0c74d9ab10ad38c1f4664cfd7c1ed014ef2f7534a8e9dc20778d1c9a29b8c9a340e2fb84070639c91f637f5348f8f694f2
   languageName: node
   linkType: hard
 
@@ -4902,6 +4903,13 @@ __metadata:
     mkdirp: ^1.0.4
     rimraf: ^3.0.2
   checksum: 52dc02259d98da517fae4cb3a0a3850227bdae4939dda1980b788a7670636ca2b4a01b58df03dd5f65c1e3cb70c50fa8ce5762b582b3f499ec30ee5ce1fd9380
+  languageName: node
+  linkType: hard
+
+"@popperjs/core@npm:^2.9.0":
+  version: 2.11.7
+  resolution: "@popperjs/core@npm:2.11.7"
+  checksum: 5b6553747899683452a1d28898c1b39173a4efd780e74360bfcda8eb42f1c5e819602769c81a10920fc68c881d07fb40429604517d499567eac079cfa6470f19
   languageName: node
   linkType: hard
 
@@ -23399,6 +23407,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"tippy.js@npm:^6.3.7":
+  version: 6.3.7
+  resolution: "tippy.js@npm:6.3.7"
+  dependencies:
+    "@popperjs/core": ^2.9.0
+  checksum: cac955318a65288e8d2dca05059878b003c6e66f92c94f7810f5bc5448eb6646abdf7dacc9bd00020e2611592598d0aae3a28ec9a45349a159603c3fdddce5fb
+  languageName: node
+  linkType: hard
+
 "tmp@npm:0.0.28":
   version: 0.0.28
   resolution: "tmp@npm:0.0.28"
@@ -24190,7 +24207,7 @@ __metadata:
     "@ember/test-waiters": ^3.0.0
     "@glimmer/component": ^1.1.2
     "@glimmer/tracking": ^1.1.2
-    "@hashicorp/design-system-components": 2.2.0
+    "@hashicorp/design-system-components": 2.3.1
     "@hashicorp/ember-flight-icons": ^3.0.2
     "@hashicorp/structure-icons": ^1.3.0
     "@icholy/duration": ^5.1.0
