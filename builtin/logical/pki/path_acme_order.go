@@ -512,6 +512,13 @@ func (b *backend) acmeGetOrderHandler(ac *acmeContext, _ *logical.Request, field
 		return nil, err
 	}
 
+	if order.Status == ACMEOrderPending {
+		// Lets see if we can update our order status to ready if all the authorizations have been completed.
+		if requiredAuthorizationsCompleted(b, ac, uc, order) {
+			order.Status = ACMEOrderReady
+		}
+	}
+
 	// Per RFC 8555 -> 7.1.3.  Order Objects
 	// For final orders (in the "valid" or "invalid" state), the authorizations that were completed.
 	//

@@ -276,7 +276,7 @@ func doAcmeValidationWithGoLibrary(t *testing.T, directoryUrl string, acmeOrderI
 		func(tosURL string) bool { return true })
 	require.NoError(t, err, "failed registering account")
 
-	// Create an ACME order that
+	// Create an ACME order
 	order, err := acmeClient.AuthorizeOrder(testCtx, acmeOrderIdentifiers)
 	require.NoError(t, err, "failed creating ACME order")
 
@@ -323,6 +323,10 @@ func doAcmeValidationWithGoLibrary(t *testing.T, directoryUrl string, acmeOrderI
 		_, err = acmeClient.Accept(testCtx, challenge)
 		require.NoError(t, err, "failed to accept challenge: %v", challenge)
 	}
+
+	// Wait for the order/challenges to be validated.
+	_, err = acmeClient.WaitOrder(testCtx, order.URI)
+	require.NoError(t, err, "failed waiting for order to be ready")
 
 	// Create/sign the CSR and ask ACME server to sign it returning us the final certificate
 	csrKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
