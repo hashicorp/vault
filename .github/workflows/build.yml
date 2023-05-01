@@ -4,6 +4,9 @@ name: build
 on:
   workflow_dispatch:
   pull_request:
+    # ready_for_review is not included in the default types for pull_request, and since we're skipping
+    # building in draft mode, we want that so that when a draft pr is marked ready, we run everything
+    types: [ opened, synchronize, reopened, ready_for_review ]
   push:
     branches:
       - main
