@@ -80,21 +80,13 @@ module('Acceptance | sidebar navigation', function (hooks) {
   });
 
   test('it should link to correct routes at the policies level', async function (assert) {
-    assert.expect(4);
+    assert.expect(2);
 
     await click(link('Policies'));
     assert.dom(panel('Policies')).exists('Access nav panel renders');
 
-    const links = [
-      { label: 'ACL Policies', route: '/vault/policies/acl' },
-      { label: 'Role-Governing Policies', route: '/vault/policies/rgp' },
-      { label: 'Endpoint Governing Policies', route: '/vault/policies/egp' },
-    ];
-
-    for (const l of links) {
-      await click(link(l.label));
-      assert.strictEqual(currentURL(), l.route, `${l.label} route renders`);
-    }
+    await click(link('ACL Policies'));
+    assert.strictEqual(currentURL(), '/vault/policies/acl', 'ACL Policies route renders');
   });
 
   test('it should link to correct routes at the tools level', async function (assert) {

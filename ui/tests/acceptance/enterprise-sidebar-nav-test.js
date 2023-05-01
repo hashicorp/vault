@@ -55,5 +55,13 @@ module('Acceptance | Enterprise | sidebar navigation', function (hooks) {
 
     await click(link('Namespaces'));
     assert.strictEqual(currentURL(), '/vault/access/namespaces?page=1', 'Replication route renders');
+
+    await click(link('Back to main navigation'));
+    await click(link('Policies'));
+    await click(link('Role-Governing Policies'));
+    assert.strictEqual(currentURL(), '/vault/policies/rgp', 'Role-Governing Policies route renders');
+
+    await click(link('Endpoint Governing Policies'));
+    assert.strictEqual(currentURL(), '/vault/policies/egp', 'Endpoint Governing Policies route renders');
   });
 });
