@@ -25,24 +25,10 @@ const tokenWithPolicy = async function (name, policy) {
   return consoleComponent.lastLogOutput;
 };
 
-const USER = 'end-user';
-const PASSWORD = 'mypassword';
-
-const authAccessor = async function (path) {
-  await enablePage.enable('userpass', path);
-  await consoleComponent.runCommands([`write auth/${path}/users/end-user password="${PASSWORD}"`]);
-};
-
-const setupUser = async function (uid) {
-  const authMethodPath = `cluster-userpass-${uid}`;
-  await authAccessor(authMethodPath);
-};
-
 module('Acceptance | cluster', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
-    this.uid = uuidv4();
     await logout.visit();
     return authPage.login();
   });
@@ -64,11 +50,16 @@ module('Acceptance | cluster', function (hooks) {
   });
 
   test('it hides mfa setup if user has not entityId (ex: is a root user)', async function (assert) {
-    await setupUser(this.uid);
+    const user = 'end-user';
+    const password = 'mypassword';
+    const path = `cluster-userpass-${uuidv4()}`;
+
+    await enablePage.enable('userpass', path);
+    await consoleComponent.runCommands([`write auth/${path}/users/end-user password="${password}"`]);
 
     await logout.visit();
     await settled();
-    await authPage.loginUsername(USER, PASSWORD);
+    await authPage.loginUsername(user, password, path);
     await click('[data-test-user-menu-trigger]');
     assert.dom('[data-test-user-menu-item="mfa"]').exists();
     await logout.visit();
