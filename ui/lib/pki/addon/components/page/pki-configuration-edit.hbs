@@ -23,19 +23,14 @@
     </fieldset>
 
     <fieldset class="box is-shadowless is-marginless is-borderless is-fullwidth" data-test-crl-edit-section>
-      <h2 class="title is-size-5 has-border-bottom-light page-header">
-        Certificate Revocation List (CRL)
-      </h2>
       {{#if @crl.canSet}}
         {{#each @crl.formFieldGroups as |fieldGroup|}}
           {{#each-in fieldGroup as |group fields|}}
+            <h2 class="title is-size-5 has-border-bottom-light page-header">
+              {{group}}
+            </h2>
             {{#each fields as |attr|}}
-              {{#if (eq group "default")}}
-                {{#if (eq attr.name "ocspExpiry")}}
-                  <h2 class="title is-size-5 has-border-bottom-light page-header">
-                    Online Certificate Status Protocol (OCSP)
-                  </h2>
-                {{/if}}
+              {{#if (eq attr.options.editType "ttl")}}
                 {{#if (or (includes attr.name this.alwaysRender) (not @crl.disable))}}
                   {{#let (get @crl attr.options.mapToBoolean) as |booleanValue|}}
                     <div class="field">
@@ -52,13 +47,10 @@
                     </div>
                   {{/let}}
                 {{/if}}
-              {{/if}}
-              {{! ENTERPRISE ONLY PARAMS }}
-              {{#if (and this.isEnterprise (eq group "Unified Revocation"))}}
-                <h2 class="title is-size-5 has-border-bottom-light page-header">
-                  Unified Revocation
-                </h2>
-                <FormField @attr={{attr}} @model={{@crl}} />
+              {{else}}
+                {{#if this.isEnterprise}}
+                  <FormField @attr={{attr}} @model={{@crl}} />
+                {{/if}}
               {{/if}}
             {{/each}}
           {{/each-in}}
