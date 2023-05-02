@@ -1524,8 +1524,8 @@ func TestPadEqualSigns(t *testing.T) {
 	}
 }
 
-// TestListRecursive tests the listRecursive helper function
-func TestListRecursive(t *testing.T) {
+// TestListSecretsRecursive tests the listSecretsRecursive helper function
+func TestListSecretsRecursive(t *testing.T) {
 	// test setup
 	client, closer := testVaultServer(t)
 	defer closer()
@@ -1710,7 +1710,7 @@ func TestListRecursive(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual, err := listRecursive(ctx, client, tc.path, tc.includeDirectories)
+			actual, err := listSecretsRecursive(ctx, client, tc.path, tc.includeDirectories)
 
 			if tc.expectedError {
 				if err == nil {

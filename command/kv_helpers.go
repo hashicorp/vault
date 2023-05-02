@@ -200,11 +200,11 @@ func padEqualSigns(header string, totalLen int) string {
 	return fmt.Sprintf("%s %s %s", strings.Repeat("=", equalSigns/2), header, strings.Repeat("=", equalSigns/2))
 }
 
-// listRecursive dfs-traverses the secrets tree rooted at the given path and
-// returns a list of the leaf paths. Note: for kv-v2, a "metadata" path is
+// listSecretsRecursive dfs-traverses the secrets tree rooted at the given path
+// and returns a list of the leaf paths. Note: for kv-v2, a "metadata" path is
 // expected and "metadata" paths will be returned. If includeDirectories is
 // specified, the output will include non-leaf nodes with "/" suffixes.
-func listRecursive(ctx context.Context, client *api.Client, path string, includeDirectories bool) ([]string, error) {
+func listSecretsRecursive(ctx context.Context, client *api.Client, path string, includeDirectories bool) ([]string, error) {
 	var descendants []string
 
 	resp, err := client.Logical().ListWithContext(ctx, path)
@@ -250,7 +250,7 @@ func listRecursive(ctx context.Context, client *api.Client, path string, include
 			}
 
 			// this is not a leaf node: we need to go deeper...
-			d, err := listRecursive(ctx, client, child, includeDirectories)
+			d, err := listSecretsRecursive(ctx, client, child, includeDirectories)
 			if err != nil {
 				return nil, err
 			}
