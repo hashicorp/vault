@@ -16,4 +16,6 @@ export const SELECTORS = {
   cancelButton: '[data-test-configuration-edit-cancel]',
   validationAlert: '[data-test-configuration-edit-validation-alert]',
   deleteButton: (attr) => `[data-test-input="${attr}"] [data-test-string-list-button="delete"]`,
+  groupHeader: (group) => `[data-test-crl-header="${group}"]`,
+  checkboxInput: (attr) => `[data-test-input="${attr}"]`,
 };
