@@ -23,9 +23,12 @@ func NewTestSeal(opts *TestSealOpts) *Access {
 		opts = new(TestSealOpts)
 	}
 
+	w := &ToggleableWrapper{Wrapper: wrapping.NewTestWrapper(opts.Secret)}
+	if opts.Name != "" {
+		w.wrapperType = &opts.Name
+	}
 	return &Access{
-		Wrapper:     wrapping.NewTestWrapper(opts.Secret),
-		WrapperType: opts.Name,
+		Wrapper: w,
 	}
 }
 
@@ -36,15 +39,15 @@ func NewToggleableTestSeal(opts *TestSealOpts) (*Access, func(error)) {
 
 	w := &ToggleableWrapper{Wrapper: wrapping.NewTestWrapper(opts.Secret)}
 	return &Access{
-		Wrapper:     w,
-		WrapperType: opts.Name,
+		Wrapper: w,
 	}, w.SetError
 }
 
 type ToggleableWrapper struct {
 	wrapping.Wrapper
-	error error
-	l     sync.RWMutex
+	wrapperType *wrapping.WrapperType
+	error       error
+	l           sync.RWMutex
 }
 
 func (t *ToggleableWrapper) Encrypt(ctx context.Context, bytes []byte, opts ...wrapping.Option) (*wrapping.BlobInfo, error) {
@@ -69,6 +72,13 @@ func (t *ToggleableWrapper) SetError(err error) {
 	t.l.Lock()
 	defer t.l.Unlock()
 	t.error = err
+}
+
+func (t *ToggleableWrapper) Type(ctx context.Context) (wrapping.WrapperType, error) {
+	if t.wrapperType != nil {
+		return *t.wrapperType, nil
+	}
+	return t.Wrapper.Type(ctx)
 }
 
 var _ wrapping.Wrapper = &ToggleableWrapper{}

@@ -38,6 +38,7 @@ var (
 type autoSeal struct {
 	*seal.Access
 
+	barrierType    wrapping.WrapperType
 	barrierConfig  atomic.Value
 	recoveryConfig atomic.Value
 	core           *Core
@@ -57,11 +58,14 @@ func NewAutoSeal(lowLevel *seal.Access) (*autoSeal, error) {
 	ret.barrierConfig.Store((*SealConfig)(nil))
 	ret.recoveryConfig.Store((*SealConfig)(nil))
 
+	// Having the wrapper type in a field is just a convenience since Seal.BarrierType()
+	// does not return an error.
 	var err error
-	ret.WrapperType, err = ret.Type(context.Background())
+	ret.barrierType, err = ret.Type(context.Background())
 	if err != nil {
 		return nil, err
 	}
+
 	return ret, nil
 }
 
@@ -97,7 +101,7 @@ func (d *autoSeal) Finalize(ctx context.Context) error {
 }
 
 func (d *autoSeal) BarrierType() wrapping.WrapperType {
-	return d.WrapperType
+	return d.barrierType
 }
 
 func (d *autoSeal) StoredKeysSupported() seal.StoredKeysSupport {

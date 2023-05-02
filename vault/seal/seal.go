@@ -38,7 +38,6 @@ func (s StoredKeysSupport) String() string {
 // specific to encrypting and decrypting data, or in this case keys.
 type Access struct {
 	wrapping.Wrapper
-	WrapperType wrapping.WrapperType
 }
 
 func (a *Access) Init(ctx context.Context) error {
@@ -48,14 +47,7 @@ func (a *Access) Init(ctx context.Context) error {
 	return nil
 }
 
-func (a *Access) SetType(t wrapping.WrapperType) {
-	a.WrapperType = t
-}
-
 func (a *Access) Type(ctx context.Context) (wrapping.WrapperType, error) {
-	if a != nil && a.WrapperType != "" {
-		return a.WrapperType, nil
-	}
 	return a.Wrapper.Type(ctx)
 }
 
