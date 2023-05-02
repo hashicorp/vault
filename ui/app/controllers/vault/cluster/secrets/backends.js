@@ -21,12 +21,32 @@ export default class VaultClusterSecretsBackendController extends Controller {
   @tracked selectedEngineType = null;
   @tracked selectedEngineName = null;
 
+  // ARG TODO cleaner way to write this??
+  filterByEngineType(getSupportedBackends = true) {
+    // 1. Need to confirm if the selected engineType is a supported engine type or unsupported
+    const isSupported = LINKED_BACKENDS.includes(this.selectedEngineType);
+    if (isSupported) {
+      // 2. if the filtered engineType is supported return a value only if the call is coming from get supportedBackends
+      return getSupportedBackends
+        ? this.displayableBackends
+            .filter((backend) => this.selectedEngineType === backend.get('engineType'))
+            .sortBy('id')
+        : [];
+    } else {
+      // 3. if the filtered engineType is unsupported return nothing if the call is coming from the get supportedBackend but return if call is from  get unsupportedBackends
+      return getSupportedBackends
+        ? []
+        : this.displayableBackends
+            // exact same as supportedBackends but negated
+            .filter((backend) => this.selectedEngineType === backend.get('engineType'))
+            .sortBy('id');
+    }
+  }
+
   get supportedBackends() {
     // if list has been filtered by engineType
     if (this.selectedEngineType) {
-      return (this.displayableBackends || [])
-        .filter((backend) => this.selectedEngineType === backend.get('engineType'))
-        .sortBy('id');
+      return this.filterByEngineType();
     }
     return (this.displayableBackends || [])
       .filter((backend) => LINKED_BACKENDS.includes(backend.get('engineType')))
@@ -34,6 +54,10 @@ export default class VaultClusterSecretsBackendController extends Controller {
   }
 
   get unsupportedBackends() {
+    // if list has been filtered by engineType
+    if (this.selectedEngineType) {
+      return this.filterByEngineType(false);
+    }
     return (
       (this.displayableBackends || [])
         // exact same as supportedBackends but negated
