@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -1517,6 +1518,163 @@ func TestPadEqualSigns(t *testing.T) {
 				count := strings.Count(sign, "=")
 				if count != tc.expectedCount {
 					t.Fatalf("expected %d equal signs but there were %d", tc.expectedCount, count)
+				}
+			}
+		})
+	}
+}
+
+func TestListRecursive(t *testing.T) {
+	// test setup
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	// enable kv-v1 backend
+	if err := client.Sys().Mount("kv-v1/", &api.MountInput{
+		Type: "kv-v1",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(time.Second)
+
+	// enable kv-v2 backend
+	if err := client.Sys().Mount("kv-v2/", &api.MountInput{
+		Type: "kv-v2",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(time.Second)
+
+	ctx, cancelContextFunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelContextFunc()
+
+	// populate secrets
+	for _, path := range []string{
+		"foo",
+		"app-1/foo",
+		"app-1/bar",
+		"app-1/nested/x/y/z",
+		"app-1/nested/x/y",
+		"app-1/nested/bar",
+	} {
+		if err := client.KVv1("kv-v1").Put(ctx, path, map[string]interface{}{
+			"password": "Hashi123",
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := client.KVv2("kv-v2").Put(ctx, path, map[string]interface{}{
+			"password": "Hashi123",
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	cases := []struct {
+		name          string
+		path          string
+		expected      []string
+		expectedError bool
+	}{
+		{
+			name:          "kv-v1-simple",
+			path:          "kv-v1/app-1/nested/x/y",
+			expected:      []string{"kv-v1/app-1/nested/x/y/z"},
+			expectedError: false,
+		},
+		{
+			name:          "kv-v2-simple",
+			path:          "kv-v2/metadata/app-1/nested/x/y",
+			expected:      []string{"kv-v2/metadata/app-1/nested/x/y/z"},
+			expectedError: false,
+		},
+		{
+			name: "kv-v1-nested",
+			path: "kv-v1/app-1/nested/",
+			expected: []string{
+				"kv-v1/app-1/nested/bar",
+				"kv-v1/app-1/nested/x/y",
+				"kv-v1/app-1/nested/x/y/z",
+			},
+			expectedError: false,
+		},
+		{
+			name: "kv-v2-nested",
+			path: "kv-v2/metadata/app-1/nested/",
+			expected: []string{
+				"kv-v2/metadata/app-1/nested/bar",
+				"kv-v2/metadata/app-1/nested/x/y",
+				"kv-v2/metadata/app-1/nested/x/y/z",
+			},
+			expectedError: false,
+		},
+		{
+			name: "kv-v1-all",
+			path: "kv-v1",
+			expected: []string{
+				"kv-v1/app-1/bar",
+				"kv-v1/app-1/foo",
+				"kv-v1/app-1/nested/bar",
+				"kv-v1/app-1/nested/x/y",
+				"kv-v1/app-1/nested/x/y/z",
+				"kv-v1/foo",
+			},
+			expectedError: false,
+		},
+		{
+			name: "kv-v2-all",
+			path: "kv-v2/metadata",
+			expected: []string{
+				"kv-v2/metadata/app-1/bar",
+				"kv-v2/metadata/app-1/foo",
+				"kv-v2/metadata/app-1/nested/bar",
+				"kv-v2/metadata/app-1/nested/x/y",
+				"kv-v2/metadata/app-1/nested/x/y/z",
+				"kv-v2/metadata/foo",
+			},
+			expectedError: false,
+		},
+		{
+			name:          "kv-v1-not-found",
+			path:          "kv-v1/does/not/exist",
+			expected:      nil,
+			expectedError: true,
+		},
+		{
+			name:          "kv-v2-not-found",
+			path:          "kv-v2/metadata/does/not/exist",
+			expected:      nil,
+			expectedError: true,
+		},
+		{
+			name:          "kv-v1-not-listable-leaf-node",
+			path:          "kv-v1/foo",
+			expected:      nil,
+			expectedError: true,
+		},
+		{
+			name:          "kv-v2-not-listable-leaf-node",
+			path:          "kv-v2/metadata/foo",
+			expected:      nil,
+			expectedError: true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual, err := listRecursive(ctx, client, tc.path)
+
+			if tc.expectedError {
+				if err == nil {
+					t.Fatal("an error was expected but the test succeeded")
+				}
+			} else {
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if !reflect.DeepEqual(tc.expected, actual) {
+					t.Fatalf("unexpected list output; want: %v, got: %v", tc.expected, actual)
 				}
 			}
 		})
