@@ -356,6 +356,12 @@ func (c *Config) ValidateConfig() error {
 		return fmt.Errorf("no auto_auth, cache, or listener block found in config")
 	}
 
+	if c.Exec != nil {
+		if c.Exec.RestartKillSignal == nil {
+			c.Exec.RestartKillSignal = os.Interrupt
+		}
+	}
+
 	return nil
 }
 
