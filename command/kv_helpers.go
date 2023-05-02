@@ -4,10 +4,12 @@
 package command
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
-	"path"
+	paths "path"
+	"sort"
 	"strings"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
@@ -128,7 +130,7 @@ func isKVv2(path string, client *api.Client) (string, bool, error) {
 
 func addPrefixToKVPath(p, mountPath, apiPrefix string) string {
 	if p == mountPath || p == strings.TrimSuffix(mountPath, "/") {
-		return path.Join(mountPath, apiPrefix)
+		return paths.Join(mountPath, apiPrefix)
 	}
 
 	tp := strings.TrimPrefix(p, mountPath)
@@ -148,7 +150,7 @@ func addPrefixToKVPath(p, mountPath, apiPrefix string) string {
 		tp = strings.TrimPrefix(tp, mountPath)
 	}
 
-	return path.Join(mountPath, apiPrefix, tp)
+	return paths.Join(mountPath, apiPrefix, tp)
 }
 
 func getHeaderForMap(header string, data map[string]interface{}) string {
@@ -196,4 +198,66 @@ func padEqualSigns(header string, totalLen int) string {
 	}
 
 	return fmt.Sprintf("%s %s %s", strings.Repeat("=", equalSigns/2), header, strings.Repeat("=", equalSigns/2))
+}
+
+// walkSecretsTree dfs-traverses the secrets tree rooted at the given path
+// and calls the `visit` functor for each of the directory and leaf paths.
+// Note: for kv-v2, a "metadata" path is expected and "metadata" paths will be
+// returned in the visit functor.
+func walkSecretsTree(ctx context.Context, client *api.Client, path string, visit func(path string, directory bool) error) error {
+	resp, err := client.Logical().ListWithContext(ctx, path)
+	if err != nil {
+		return fmt.Errorf("could not list %q path: %w", path, err)
+	}
+
+	if resp == nil || resp.Data == nil {
+		return fmt.Errorf("no value found at %q: %w", path, err)
+	}
+
+	keysRaw, ok := resp.Data["keys"]
+	if !ok {
+		return fmt.Errorf("unexpected list response at %q", path)
+	}
+
+	keysRawSlice, ok := keysRaw.([]interface{})
+	if !ok {
+		return fmt.Errorf("unexpected list response type %T at %q", keysRaw, path)
+	}
+
+	keys := make([]string, 0, len(keysRawSlice))
+
+	for _, keyRaw := range keysRawSlice {
+		key, ok := keyRaw.(string)
+		if !ok {
+			return fmt.Errorf("unexpected key type %T at %q", keyRaw, path)
+		}
+		keys = append(keys, key)
+	}
+
+	// sort the keys for a deterministic output
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		// the keys are relative to the current path: combine them
+		child := paths.Join(path, key)
+
+		if strings.HasSuffix(key, "/") {
+			// visit the directory
+			if err := visit(child, true); err != nil {
+				return err
+			}
+
+			// this is not a leaf node: we need to go deeper...
+			if err := walkSecretsTree(ctx, client, child, visit); err != nil {
+				return err
+			}
+		} else {
+			// this is a leaf node: add it to the list
+			if err := visit(child, false); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
