@@ -30,11 +30,14 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     });
   });
 
-  test('it should hide links user does not have access too', async function (assert) {
+  test('it should hide links and headings user does not have access too', async function (assert) {
     await renderComponent();
     assert
       .dom('[data-test-sidebar-nav-link]')
       .exists({ count: 1 }, 'Nav links are hidden other than secrets');
+    assert
+      .dom('[data-test-sidebar-nav-heading]')
+      .exists({ count: 1 }, 'Headings are hidden other than Vault');
   });
 
   test('it should render nav links', async function (assert) {

@@ -57,8 +57,14 @@
     {{/if}}
   {{/if}}
 
-  <Nav.Title data-test-sidebar-nav-heading="Monitoring">Monitoring</Nav.Title>
-
+  {{#if
+    (or
+      (has-permission "status" routeParams=(array "replication" "raft" "license" "seal"))
+      (has-permission "clients" routeParams="activity")
+    )
+  }}
+    <Nav.Title data-test-sidebar-nav-heading="Monitoring">Monitoring</Nav.Title>
+  {{/if}}
   {{#if (and this.version.isEnterprise (has-permission "status" routeParams="replication"))}}
     <Nav.Link @route="vault.cluster.replication.index" @text="Replication" data-test-sidebar-nav-link="Replication" />
   {{/if}}
