@@ -13,19 +13,23 @@ export default class VersionService extends Service {
   @tracked version = null;
 
   get hasPerfReplication() {
-    return this.hasFeature('Performance Replication');
+    return this.features.includes('Performance Replication');
   }
 
   get hasDRReplication() {
-    return this.hasFeature('DR Replication');
+    return this.features.includes('DR Replication');
   }
 
   get hasSentinel() {
-    return this.hasFeature('Sentinel');
+    return this.features.includes('Sentinel');
   }
 
   get hasNamespaces() {
-    return this.hasFeature('Namespaces');
+    return this.features.includes('Namespaces');
+  }
+
+  get hasControlGroups() {
+    return this.features.includes('Control Groups');
   }
 
   get isEnterprise() {
@@ -35,11 +39,6 @@ export default class VersionService extends Service {
 
   get isOSS() {
     return !this.isEnterprise;
-  }
-
-  hasFeature(feature) {
-    if (!this.features) return false;
-    return this.features.includes(feature);
   }
 
   @task
