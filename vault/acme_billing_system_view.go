@@ -12,25 +12,30 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 type acmeBillingSystemViewImpl struct {
 	extendedSystemView
 	logical.ManagedKeySystemView
-	core *Core
+
+	core  *Core
+	entry *MountEntry
 }
 
 var _ logical.ACMEBillingSystemView = (*acmeBillingSystemViewImpl)(nil)
 
 func (c *Core) NewAcmeBillingSystemView(sysView interface{}) *acmeBillingSystemViewImpl {
-	es := sysView.(extendedSystemView)
+	es := sysView.(extendedSystemViewImpl)
+	des := es.dynamicSystemView
+
 	managed, ok := sysView.(logical.ManagedKeySystemView)
+
 	if !ok {
 		return &acmeBillingSystemViewImpl{
 			extendedSystemView: es,
 			core:               c,
+			entry:              des.mountEntry,
 		}
 	}
 
@@ -38,6 +43,7 @@ func (c *Core) NewAcmeBillingSystemView(sysView interface{}) *acmeBillingSystemV
 		extendedSystemView:   es,
 		ManagedKeySystemView: managed,
 		core:                 c,
+		entry:                des.mountEntry,
 	}
 }
 
@@ -52,8 +58,9 @@ func (a *acmeBillingSystemViewImpl) CreateActivityCountEventForIdentifiers(ctx c
 	fakeToken := base64.RawURLEncoding.EncodeToString(identifiersHash[:])
 	prefix := "acme."
 	clientID = prefix + fakeToken
-	te.NamespaceID = namespace.RootNamespaceID
+	te.NamespaceID = a.entry.NamespaceID
 	te.CreationTime = time.Now().Unix()
+	te.Path = a.entry.Path
 
 	// Log so users can correlate ACME requests to client count tokens.
 	a.core.activityLog.logger.Debug(fmt.Sprintf("Handling ACME client count event for [%v] -> %v", identifiers, clientID))
