@@ -1524,8 +1524,8 @@ func TestPadEqualSigns(t *testing.T) {
 	}
 }
 
-// TestListSecretsRecursive tests the listSecretsRecursive helper function
-func TestListSecretsRecursive(t *testing.T) {
+// TestWalkSecretsTree  the walkSecretsTree helper function
+func TestWalkSecretsTree(t *testing.T) {
 	// test setup
 	client, closer := testVaultServer(t)
 	defer closer()
@@ -1571,146 +1571,128 @@ func TestListSecretsRecursive(t *testing.T) {
 		}
 	}
 
+	type treePath struct {
+		path      string
+		directory bool
+	}
+
 	cases := []struct {
-		name               string
-		path               string
-		includeDirectories bool
-		expected           []string
-		expectedError      bool
+		name          string
+		path          string
+		expected      []treePath
+		expectedError bool
 	}{
 		{
-			name:               "kv-v1-simple",
-			path:               "kv-v1/app-1/nested/x/y",
-			includeDirectories: false,
-			expected:           []string{"kv-v1/app-1/nested/x/y/z"},
-			expectedError:      false,
-		},
-		{
-			name:               "kv-v2-simple",
-			path:               "kv-v2/metadata/app-1/nested/x/y",
-			includeDirectories: false,
-			expected:           []string{"kv-v2/metadata/app-1/nested/x/y/z"},
-			expectedError:      false,
-		},
-		{
-			name:               "kv-v1-nested",
-			path:               "kv-v1/app-1/nested/",
-			includeDirectories: false,
-			expected: []string{
-				"kv-v1/app-1/nested/bar",
-				"kv-v1/app-1/nested/x/y",
-				"kv-v1/app-1/nested/x/y/z",
+			name: "kv-v1-simple",
+			path: "kv-v1/app-1/nested/x/y",
+			expected: []treePath{
+				{path: "kv-v1/app-1/nested/x/y/z", directory: false},
 			},
 			expectedError: false,
 		},
 		{
-			name:               "kv-v2-nested",
-			path:               "kv-v2/metadata/app-1/nested/",
-			includeDirectories: false,
-			expected: []string{
-				"kv-v2/metadata/app-1/nested/bar",
-				"kv-v2/metadata/app-1/nested/x/y",
-				"kv-v2/metadata/app-1/nested/x/y/z",
+			name: "kv-v2-simple",
+			path: "kv-v2/metadata/app-1/nested/x/y",
+			expected: []treePath{
+				{path: "kv-v2/metadata/app-1/nested/x/y/z", directory: false},
 			},
 			expectedError: false,
 		},
 		{
-			name:               "kv-v1-all",
-			path:               "kv-v1",
-			includeDirectories: false,
-			expected: []string{
-				"kv-v1/app-1/bar",
-				"kv-v1/app-1/foo",
-				"kv-v1/app-1/nested/bar",
-				"kv-v1/app-1/nested/x/y",
-				"kv-v1/app-1/nested/x/y/z",
-				"kv-v1/foo",
+			name: "kv-v1-nested",
+			path: "kv-v1/app-1/nested/",
+			expected: []treePath{
+				{path: "kv-v1/app-1/nested/bar", directory: false},
+				{path: "kv-v1/app-1/nested/x", directory: true},
+				{path: "kv-v1/app-1/nested/x/y", directory: false},
+				{path: "kv-v1/app-1/nested/x/y", directory: true},
+				{path: "kv-v1/app-1/nested/x/y/z", directory: false},
 			},
 			expectedError: false,
 		},
 		{
-			name:               "kv-v2-all",
-			path:               "kv-v2/metadata",
-			includeDirectories: false,
-			expected: []string{
-				"kv-v2/metadata/app-1/bar",
-				"kv-v2/metadata/app-1/foo",
-				"kv-v2/metadata/app-1/nested/bar",
-				"kv-v2/metadata/app-1/nested/x/y",
-				"kv-v2/metadata/app-1/nested/x/y/z",
-				"kv-v2/metadata/foo",
+			name: "kv-v2-nested",
+			path: "kv-v2/metadata/app-1/nested/",
+			expected: []treePath{
+				{path: "kv-v2/metadata/app-1/nested/bar", directory: false},
+				{path: "kv-v2/metadata/app-1/nested/x", directory: true},
+				{path: "kv-v2/metadata/app-1/nested/x/y", directory: false},
+				{path: "kv-v2/metadata/app-1/nested/x/y", directory: true},
+				{path: "kv-v2/metadata/app-1/nested/x/y/z", directory: false},
 			},
 			expectedError: false,
 		},
 		{
-			name:               "kv-v1-all-include-directories",
-			path:               "kv-v1",
-			includeDirectories: true,
-			expected: []string{
-				"kv-v1/app-1/",
-				"kv-v1/app-1/bar",
-				"kv-v1/app-1/foo",
-				"kv-v1/app-1/nested/",
-				"kv-v1/app-1/nested/bar",
-				"kv-v1/app-1/nested/x/",
-				"kv-v1/app-1/nested/x/y",
-				"kv-v1/app-1/nested/x/y/",
-				"kv-v1/app-1/nested/x/y/z",
-				"kv-v1/foo",
+			name: "kv-v1-all",
+			path: "kv-v1",
+			expected: []treePath{
+				{path: "kv-v1/app-1", directory: true},
+				{path: "kv-v1/app-1/bar", directory: false},
+				{path: "kv-v1/app-1/foo", directory: false},
+				{path: "kv-v1/app-1/nested", directory: true},
+				{path: "kv-v1/app-1/nested/bar", directory: false},
+				{path: "kv-v1/app-1/nested/x", directory: true},
+				{path: "kv-v1/app-1/nested/x/y", directory: false},
+				{path: "kv-v1/app-1/nested/x/y", directory: true},
+				{path: "kv-v1/app-1/nested/x/y/z", directory: false},
+				{path: "kv-v1/foo", directory: false},
 			},
 			expectedError: false,
 		},
 		{
-			name:               "kv-v2-all-include-directories",
-			path:               "kv-v2/metadata",
-			includeDirectories: true,
-			expected: []string{
-				"kv-v2/metadata/app-1/",
-				"kv-v2/metadata/app-1/bar",
-				"kv-v2/metadata/app-1/foo",
-				"kv-v2/metadata/app-1/nested/",
-				"kv-v2/metadata/app-1/nested/bar",
-				"kv-v2/metadata/app-1/nested/x/",
-				"kv-v2/metadata/app-1/nested/x/y",
-				"kv-v2/metadata/app-1/nested/x/y/",
-				"kv-v2/metadata/app-1/nested/x/y/z",
-				"kv-v2/metadata/foo",
+			name: "kv-v2-all",
+			path: "kv-v2/metadata",
+			expected: []treePath{
+				{path: "kv-v2/metadata/app-1", directory: true},
+				{path: "kv-v2/metadata/app-1/bar", directory: false},
+				{path: "kv-v2/metadata/app-1/foo", directory: false},
+				{path: "kv-v2/metadata/app-1/nested", directory: true},
+				{path: "kv-v2/metadata/app-1/nested/bar", directory: false},
+				{path: "kv-v2/metadata/app-1/nested/x", directory: true},
+				{path: "kv-v2/metadata/app-1/nested/x/y", directory: false},
+				{path: "kv-v2/metadata/app-1/nested/x/y", directory: true},
+				{path: "kv-v2/metadata/app-1/nested/x/y/z", directory: false},
+				{path: "kv-v2/metadata/foo", directory: false},
 			},
 			expectedError: false,
 		},
 		{
-			name:               "kv-v1-not-found",
-			path:               "kv-v1/does/not/exist",
-			includeDirectories: false,
-			expected:           nil,
-			expectedError:      true,
+			name:          "kv-v1-not-found",
+			path:          "kv-v1/does/not/exist",
+			expected:      nil,
+			expectedError: true,
 		},
 		{
-			name:               "kv-v2-not-found",
-			path:               "kv-v2/metadata/does/not/exist",
-			includeDirectories: false,
-			expected:           nil,
-			expectedError:      true,
+			name:          "kv-v2-not-found",
+			path:          "kv-v2/metadata/does/not/exist",
+			expected:      nil,
+			expectedError: true,
 		},
 		{
-			name:               "kv-v1-not-listable-leaf-node",
-			path:               "kv-v1/foo",
-			includeDirectories: false,
-			expected:           nil,
-			expectedError:      true,
+			name:          "kv-v1-not-listable-leaf-node",
+			path:          "kv-v1/foo",
+			expected:      nil,
+			expectedError: true,
 		},
 		{
-			name:               "kv-v2-not-listable-leaf-node",
-			path:               "kv-v2/metadata/foo",
-			includeDirectories: false,
-			expected:           nil,
-			expectedError:      true,
+			name:          "kv-v2-not-listable-leaf-node",
+			path:          "kv-v2/metadata/foo",
+			expected:      nil,
+			expectedError: true,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual, err := listSecretsRecursive(ctx, client, tc.path, tc.includeDirectories)
+			var descendants []treePath
+
+			err := walkSecretsTree(ctx, client, tc.path, func(path string, directory bool) error {
+				descendants = append(descendants, treePath{
+					path:      path,
+					directory: directory,
+				})
+				return nil
+			})
 
 			if tc.expectedError {
 				if err == nil {
@@ -1721,8 +1703,8 @@ func TestListSecretsRecursive(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				if !reflect.DeepEqual(tc.expected, actual) {
-					t.Fatalf("unexpected list output; want: %v, got: %v", tc.expected, actual)
+				if !reflect.DeepEqual(tc.expected, descendants) {
+					t.Fatalf("unexpected list output; want: %v, got: %v", tc.expected, descendants)
 				}
 			}
 		})

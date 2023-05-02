@@ -200,30 +200,28 @@ func padEqualSigns(header string, totalLen int) string {
 	return fmt.Sprintf("%s %s %s", strings.Repeat("=", equalSigns/2), header, strings.Repeat("=", equalSigns/2))
 }
 
-// listSecretsRecursive dfs-traverses the secrets tree rooted at the given path
-// and returns a list of the leaf paths. Note: for kv-v2, a "metadata" path is
-// expected and "metadata" paths will be returned. If includeDirectories is
-// specified, the output will include non-leaf nodes with "/" suffixes.
-func listSecretsRecursive(ctx context.Context, client *api.Client, path string, includeDirectories bool) ([]string, error) {
-	var descendants []string
-
+// walkSecretsTree dfs-traverses the secrets tree rooted at the given path
+// and calls the `visit` functor for each of the directory and leaf paths.
+// Note: for kv-v2, a "metadata" path is expected and "metadata" paths will be
+// returned in the visit functor.
+func walkSecretsTree(ctx context.Context, client *api.Client, path string, visit func(path string, directory bool) error) error {
 	resp, err := client.Logical().ListWithContext(ctx, path)
 	if err != nil {
-		return nil, fmt.Errorf("could not list %q path: %w", path, err)
+		return fmt.Errorf("could not list %q path: %w", path, err)
 	}
 
 	if resp == nil || resp.Data == nil {
-		return nil, fmt.Errorf("no value found at %q: %w", path, err)
+		return fmt.Errorf("no value found at %q: %w", path, err)
 	}
 
 	keysRaw, ok := resp.Data["keys"]
 	if !ok {
-		return nil, fmt.Errorf("unexpected list response at %q", path)
+		return fmt.Errorf("unexpected list response at %q", path)
 	}
 
 	keysRawSlice, ok := keysRaw.([]interface{})
 	if !ok {
-		return nil, fmt.Errorf("unexpected list response type %T at %q", keysRaw, path)
+		return fmt.Errorf("unexpected list response type %T at %q", keysRaw, path)
 	}
 
 	keys := make([]string, 0, len(keysRawSlice))
@@ -231,7 +229,7 @@ func listSecretsRecursive(ctx context.Context, client *api.Client, path string, 
 	for _, keyRaw := range keysRawSlice {
 		key, ok := keyRaw.(string)
 		if !ok {
-			return nil, fmt.Errorf("unexpected key type %T at %q", keyRaw, path)
+			return fmt.Errorf("unexpected key type %T at %q", keyRaw, path)
 		}
 		keys = append(keys, key)
 	}
@@ -244,22 +242,22 @@ func listSecretsRecursive(ctx context.Context, client *api.Client, path string, 
 		child := paths.Join(path, key)
 
 		if strings.HasSuffix(key, "/") {
-			// if requested, include the directory suffixed with "/"
-			if includeDirectories {
-				descendants = append(descendants, child+"/")
+			// visit the directory
+			if err := visit(child, true); err != nil {
+				return err
 			}
 
 			// this is not a leaf node: we need to go deeper...
-			d, err := listSecretsRecursive(ctx, client, child, includeDirectories)
-			if err != nil {
-				return nil, err
+			if err := walkSecretsTree(ctx, client, child, visit); err != nil {
+				return err
 			}
-			descendants = append(descendants, d...)
 		} else {
 			// this is a leaf node: add it to the list
-			descendants = append(descendants, child)
+			if err := visit(child, false); err != nil {
+				return err
+			}
 		}
 	}
 
-	return descendants, nil
+	return nil
 }
