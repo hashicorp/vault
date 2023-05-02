@@ -33,14 +33,14 @@ module('Unit | Service | version', function (hooks) {
   test('hasPerfReplication', function (assert) {
     const service = this.owner.lookup('service:version');
     assert.false(service.get('hasPerfReplication'));
-    service.set('_features', ['Performance Replication']);
+    service.set('features', ['Performance Replication']);
     assert.true(service.get('hasPerfReplication'));
   });
 
   test('hasDRReplication', function (assert) {
     const service = this.owner.lookup('service:version');
     assert.false(service.get('hasDRReplication'));
-    service.set('_features', ['DR Replication']);
+    service.set('features', ['DR Replication']);
     assert.true(service.get('hasDRReplication'));
   });
 });
