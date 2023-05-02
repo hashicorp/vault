@@ -22,7 +22,13 @@ export default class PkiRoleEditRoute extends Route {
         backend,
         id: role,
       }),
-      issuers: this.store.query('pki/issuer', { backend }),
+      issuers: this.store.query('pki/issuer', { backend }).catch((err) => {
+        if (err.httpStatus === 404) {
+          return [];
+        } else {
+          throw err;
+        }
+      }),
     });
   }
 
