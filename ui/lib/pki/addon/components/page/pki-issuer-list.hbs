@@ -27,11 +27,11 @@
               </InfoTooltip>
               <span class="tag is-transparent" data-test-serial-number={{idx}}>{{pkiIssuer.serialNumber}}</span>
             {{/if}}
-            {{#if pkiIssuer.keyId}}
+            {{#if pkiIssuer.parsedCertificate.common_name}}
               <InfoTooltip>
-                Key ID
+                Common name
               </InfoTooltip>
-              <span class="tag is-transparent" data-test-key-id={{idx}}>{{pkiIssuer.keyId}}</span>
+              <span class="tag is-transparent" data-test-key-id={{idx}}>{{pkiIssuer.parsedCertificate.common_name}}</span>
             {{/if}}
           </div>
         </div>
