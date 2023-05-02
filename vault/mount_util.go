@@ -56,11 +56,13 @@ func verifyNamespace(*Core, *namespace.Namespace, *MountEntry) error { return ni
 // mount-specific entries; because this should be called when setting
 // up a mountEntry, it doesn't check to ensure that me is not nil
 func (c *Core) mountEntrySysView(entry *MountEntry) extendedSystemView {
-	return extendedSystemViewImpl{
+	esi := extendedSystemViewImpl{
 		dynamicSystemView{
 			core:        c,
 			mountEntry:  entry,
 			perfStandby: c.perfStandby,
 		},
 	}
+
+	return c.NewAcmeBillingSystemView(esi)
 }
