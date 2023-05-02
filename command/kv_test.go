@@ -1524,6 +1524,7 @@ func TestPadEqualSigns(t *testing.T) {
 	}
 }
 
+// TestListRecursive tests the listRecursive helper function
 func TestListRecursive(t *testing.T) {
 	// test setup
 	client, closer := testVaultServer(t)
