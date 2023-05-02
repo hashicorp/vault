@@ -24,6 +24,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
 
 // Config is the configuration for Vault Agent.
@@ -179,10 +180,10 @@ type EnvTemplateConfig struct {
 }
 
 type ExecConfig struct {
-	Command            string   `hcl:"command,attr" mapstructure:"command"`
-	Args               []string `hcl:"args,optional" mapstructure:"args"`
-	RestartOnNewSecret string   `hcl:"restart_on_new_secret,optional" mapstructure:"restart_on_new_secret"`
-	// RestartKillSignal  os.Signal `hcl:"restart_kill_signal,optional" mapstructure:"restart_kill_signal"`
+	Command            string    `hcl:"command,attr" mapstructure:"command"`
+	Args               []string  `hcl:"args,optional" mapstructure:"args"`
+	RestartOnNewSecret string    `hcl:"restart_on_new_secret,optional" mapstructure:"restart_on_new_secret"`
+	RestartKillSignal  os.Signal `hcl:"-" mapstructure:"restart_kill_signal"`
 }
 
 func NewConfig() *Config {
@@ -1128,9 +1129,7 @@ func parseEnvTemplates(result *Config, list *ast.ObjectList) error {
 		// hcl parses this with extra quotes if quoted in config file
 		name := strings.Trim(item.Keys[0].Token.Text, `"`)
 
-		// added EnvVar after Name, will probably keep one
-		et.Name = name
-		et.EnvVar = &name
+		et.EnvVar = pointerutil.StringPtr(name)
 
 		// TODO: add validation, should not have duplicate keys
 		envTemplates[name] = &et
