@@ -18,14 +18,14 @@ module('Unit | Service | version', function (hooks) {
 
   test('setting version computes isEnterprise properly', function (assert) {
     const service = this.owner.lookup('service:version');
-    service.set('version', '0.9.5+prem');
+    service.set('version', '0.9.5+ent');
     assert.false(service.get('isOSS'));
     assert.true(service.get('isEnterprise'));
   });
 
   test('setting version with hsm ending computes isEnterprise properly', function (assert) {
     const service = this.owner.lookup('service:version');
-    service.set('version', '0.9.5+prem.hsm');
+    service.set('version', '0.9.5+ent.hsm');
     assert.false(service.get('isOSS'));
     assert.true(service.get('isEnterprise'));
   });
