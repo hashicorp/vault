@@ -1219,6 +1219,9 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 	falseBool := new(bool)
 	*falseBool = false
 
+	maxPageInt := new(int)
+	*maxPageInt = 1000
+
 	exp := &ldapConfigEntry{
 		TokenParams: tokenutil.TokenParams{
 			TokenPeriod:         5 * time.Minute,
@@ -1243,7 +1246,7 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 			ConnectionTimeout:        cfg.ConnectionTimeout,
 			UsernameAsAlias:          false,
 			DerefAliases:             "never",
-			MaximumPageSize:          1000,
+			MaximumPageSize:          maxPageInt,
 		},
 	}
 
