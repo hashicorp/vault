@@ -54,10 +54,10 @@ type Server struct {
 
 	child        *child.Child
 	childInput   *child.NewInput
-	childStarted *atomic.Bool
+	childStarted bool
 	childLock    sync.Mutex
 
-	exitCh chan int
+	exitCh <-chan int
 }
 
 type ProcessExitError struct {
@@ -73,7 +73,7 @@ func NewServer(cfg *ServerConfig) *Server {
 		stopped:      atomic.NewBool(false),
 		logger:       cfg.Logger,
 		config:       cfg,
-		childStarted: atomic.NewBool(false),
+		childStarted: false,
 		exitCh:       make(chan int),
 	}
 
@@ -218,7 +218,7 @@ func (s *Server) Run(ctx context.Context, envTmpls map[string]*config.EnvTemplat
 func (s *Server) bounceCmd(newEnvVars map[string]string) error {
 	s.childLock.Lock()
 	defer s.childLock.Unlock()
-	if s.childStarted.Load() && s.child != nil {
+	if s.childStarted && s.child != nil {
 		// process is running, need to kill it first
 		s.child.Stop()
 	}
@@ -229,19 +229,12 @@ func (s *Server) bounceCmd(newEnvVars map[string]string) error {
 		return err
 	}
 
-	// TODO: would this leak?
-	// forward process exits to server chan
-	go func() {
-		select {
-		case exitCode := <-s.child.ExitCh():
-			s.exitCh <- exitCode
-		}
-	}()
+	s.exitCh = s.child.ExitCh()
 
 	if err := s.child.Start(); err != nil {
 		return fmt.Errorf("error starting child process: %w", err)
 	}
-	s.childStarted.Store(true)
+	s.childStarted = true
 	return nil
 }
 
