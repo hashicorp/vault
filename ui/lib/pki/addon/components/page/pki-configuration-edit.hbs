@@ -50,6 +50,18 @@
             {{/let}}
           {{/if}}
         {{/each}}
+        {{#each @crl.formFieldGroups as |fieldGroup|}}
+          {{#each-in fieldGroup as |group fields|}}
+            {{#if (and this.isEnterprise (eq group "Unified Revocation"))}}
+              <h2 class="title is-size-5 has-border-bottom-light page-header">
+                Unified Revocation
+              </h2>
+              {{#each fields as |enterpriseAttr|}}
+                <FormField @attr={{enterpriseAttr}} @model={{@crl}} />
+              {{/each}}
+            {{/if}}
+          {{/each-in}}
+        {{/each}}
       {{else}}
         <EmptyState
           class="is-box-shadowless"

@@ -7,7 +7,11 @@ import Model, { attr } from '@ember-data/model';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
-@withFormFields(['expiry', 'autoRebuildGracePeriod', 'deltaRebuildInterval', 'ocspExpiry'])
+const formFieldGroups = [
+  { default: ['expiry', 'autoRebuildGracePeriod', 'deltaRebuildInterval', 'ocspExpiry'] },
+  { 'Unified Revocation': ['crossClusterRevocation', 'unifiedCrl', 'unifiedCrlOnExistingPaths'] },
+];
+@withFormFields(['expiry', 'autoRebuildGracePeriod', 'deltaRebuildInterval', 'ocspExpiry'], formFieldGroups)
 export default class PkiCrlModel extends Model {
   // This model uses the backend value as the model ID
 
@@ -55,12 +59,10 @@ export default class PkiCrlModel extends Model {
   })
   ocspExpiry;
 
-  // TODO follow-on ticket to add enterprise only attributes:
-  /*
+  // enterprise only params
   @attr('boolean') crossClusterRevocation;
   @attr('boolean') unifiedCrl;
   @attr('boolean') unifiedCrlOnExistingPaths;
-  */
 
   @lazyCapabilities(apiPath`${'id'}/config/crl`, 'id') crlPath;
 

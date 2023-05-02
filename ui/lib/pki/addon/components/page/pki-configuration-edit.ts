@@ -11,6 +11,7 @@ import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import RouterService from '@ember/routing/router-service';
 import FlashMessageService from 'vault/services/flash-messages';
+import VersionService from 'vault/services/version';
 import { FormField, TtlEvent } from 'vault/app-types';
 import PkiCrlModel from 'vault/models/pki/crl';
 import PkiUrlsModel from 'vault/models/pki/urls';
@@ -35,12 +36,17 @@ interface PkiCrlBooleans {
 export default class PkiConfigurationEditComponent extends Component<Args> {
   @service declare readonly router: RouterService;
   @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly version: VersionService;
 
   @tracked invalidFormAlert = '';
   @tracked errorBanner = '';
 
   get alwaysRender() {
     return ['expiry', 'ocspExpiry'];
+  }
+
+  get isEnterprise() {
+    return this.version.isEnterprise;
   }
 
   @task
