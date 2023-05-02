@@ -27,39 +27,40 @@
         Certificate Revocation List (CRL)
       </h2>
       {{#if @crl.canSet}}
-        {{#each @crl.formFields as |attr|}}
-          {{#if (eq attr.name "ocspExpiry")}}
-            <h2 class="title is-size-5 has-border-bottom-light page-header">
-              Online Certificate Status Protocol (OCSP)
-            </h2>
-          {{/if}}
-          {{#if (or (includes attr.name this.alwaysRender) (not @crl.disable))}}
-            {{#let (get @crl attr.options.mapToBoolean) as |booleanValue|}}
-              <div class="field">
-                <TtlPicker
-                  data-test-input={{attr.name}}
-                  @onChange={{fn this.handleTtl attr}}
-                  @label={{attr.options.label}}
-                  @labelDisabled={{attr.options.labelDisabled}}
-                  @helperTextDisabled={{attr.options.helperTextDisabled}}
-                  @helperTextEnabled={{attr.options.helperTextEnabled}}
-                  @initialEnabled={{if attr.options.isOppositeValue (not booleanValue) booleanValue}}
-                  @initialValue={{get @crl attr.name}}
-                />
-              </div>
-            {{/let}}
-          {{/if}}
-        {{/each}}
         {{#each @crl.formFieldGroups as |fieldGroup|}}
           {{#each-in fieldGroup as |group fields|}}
-            {{#if (and this.isEnterprise (eq group "Unified Revocation"))}}
-              <h2 class="title is-size-5 has-border-bottom-light page-header">
-                Unified Revocation
-              </h2>
-              {{#each fields as |enterpriseAttr|}}
-                <FormField @attr={{enterpriseAttr}} @model={{@crl}} />
-              {{/each}}
-            {{/if}}
+            {{#each fields as |attr|}}
+              {{#if (eq group "default")}}
+                {{#if (eq attr.name "ocspExpiry")}}
+                  <h2 class="title is-size-5 has-border-bottom-light page-header">
+                    Online Certificate Status Protocol (OCSP)
+                  </h2>
+                {{/if}}
+                {{#if (or (includes attr.name this.alwaysRender) (not @crl.disable))}}
+                  {{#let (get @crl attr.options.mapToBoolean) as |booleanValue|}}
+                    <div class="field">
+                      <TtlPicker
+                        data-test-input={{attr.name}}
+                        @onChange={{fn this.handleTtl attr}}
+                        @label={{attr.options.label}}
+                        @labelDisabled={{attr.options.labelDisabled}}
+                        @helperTextDisabled={{attr.options.helperTextDisabled}}
+                        @helperTextEnabled={{attr.options.helperTextEnabled}}
+                        @initialEnabled={{if attr.options.isOppositeValue (not booleanValue) booleanValue}}
+                        @initialValue={{get @crl attr.name}}
+                      />
+                    </div>
+                  {{/let}}
+                {{/if}}
+              {{/if}}
+              {{! ENTERPRISE ONLY PARAMS }}
+              {{#if (and this.isEnterprise (eq group "Unified Revocation"))}}
+                <h2 class="title is-size-5 has-border-bottom-light page-header">
+                  Unified Revocation
+                </h2>
+                <FormField @attr={{attr}} @model={{@crl}} />
+              {{/if}}
+            {{/each}}
           {{/each-in}}
         {{/each}}
       {{else}}

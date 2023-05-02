@@ -11,7 +11,7 @@ const formFieldGroups = [
   { default: ['expiry', 'autoRebuildGracePeriod', 'deltaRebuildInterval', 'ocspExpiry'] },
   { 'Unified Revocation': ['crossClusterRevocation', 'unifiedCrl', 'unifiedCrlOnExistingPaths'] },
 ];
-@withFormFields(['expiry', 'autoRebuildGracePeriod', 'deltaRebuildInterval', 'ocspExpiry'], formFieldGroups)
+@withFormFields(null, formFieldGroups)
 export default class PkiCrlModel extends Model {
   // This model uses the backend value as the model ID
 
