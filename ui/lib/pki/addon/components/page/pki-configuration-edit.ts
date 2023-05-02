@@ -41,10 +41,6 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
   @tracked invalidFormAlert = '';
   @tracked errorBanner = '';
 
-  get alwaysRender() {
-    return ['expiry', 'ocspExpiry'];
-  }
-
   get isEnterprise() {
     return this.version.isEnterprise;
   }
