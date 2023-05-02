@@ -225,6 +225,7 @@ func TestClientDisableRedirects(t *testing.T) {
 
 	for name, tc := range tests {
 		test := tc
+		name := name
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			numReqs := 0
