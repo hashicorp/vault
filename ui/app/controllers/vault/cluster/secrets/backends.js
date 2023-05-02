@@ -18,15 +18,28 @@ export default class VaultClusterSecretsBackendController extends Controller {
   @filterBy('model', 'shouldIncludeInList') displayableBackends;
 
   @tracked secretEngineOptions = [];
+  @tracked selectedEngineType = null;
+  @tracked selectedEngineName = null;
 
   get supportedBackends() {
+    // if list has been filtered by engineType
+    if (this.selectedEngineType) {
+      return (this.displayableBackends || [])
+        .filter((backend) => this.selectedEngineType === backend.get('engineType'))
+        .sortBy('id');
+    }
     return (this.displayableBackends || [])
       .filter((backend) => LINKED_BACKENDS.includes(backend.get('engineType')))
       .sortBy('id');
   }
 
   get unsupportedBackends() {
-    return (this.displayableBackends || []).slice().removeObjects(this.supportedBackends).sortBy('id');
+    return (
+      (this.displayableBackends || [])
+        // exact same as supportedBackends but negated
+        .filter((backend) => !LINKED_BACKENDS.includes(backend.get('engineType')))
+        .sortBy('id')
+    );
   }
 
   @task
@@ -43,20 +56,17 @@ export default class VaultClusterSecretsBackendController extends Controller {
     }
   }
 
+  get secretEngineArray() {
+    // if list has not been filtered by name or engineType
+    return this.displayableBackends.map((modelObject) => ({
+      name: modelObject.engineType,
+      id: modelObject.engineType,
+    }));
+  }
+
   @action
   selectEngineType([engine]) {
-    this.engineType = engine;
-    if (!engine) {
-      this.secretEngineOptions = [];
-      // // on clear, also make sure auth method is cleared
-      // this.selectedAuthMethod = null;
-    } else {
-      // Side effect: set auth namespaces
-      // const mounts = this.filteredActivityByNamespace.mounts?.map((mount) => ({
-      //   id: mount.label,
-      //   name: mount.label,
-      // }));
-      this.secretEngineOptions = ['Test', 'test'];
-    }
+    this.selectedEngineType = engine;
+    // filter the list
   }
 }
