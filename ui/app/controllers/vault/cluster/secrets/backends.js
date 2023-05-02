@@ -21,7 +21,48 @@ export default class VaultClusterSecretsBackendController extends Controller {
   @tracked selectedEngineType = null;
   @tracked selectedEngineName = null;
 
-  // ARG TODO cleaner way to write this??
+  get supportedBackends() {
+    if (this.selectedEngineType) {
+      return this.filterByEngineType();
+    }
+    if (this.selectedEngineName) {
+      return this.filterByEngineName();
+    }
+    return (this.displayableBackends || [])
+      .filter((backend) => LINKED_BACKENDS.includes(backend.get('engineType')))
+      .sortBy('id');
+  }
+
+  get unsupportedBackends() {
+    if (this.selectedEngineType) {
+      return this.filterByEngineType(false);
+    }
+    if (this.selectedEngineType) {
+      return this.filterByEngineName(false);
+    }
+    return (
+      (this.displayableBackends || [])
+        // exact same as supportedBackends but negated
+        .filter((backend) => !LINKED_BACKENDS.includes(backend.get('engineType')))
+        .sortBy('id')
+    );
+  }
+
+  // FOR FILTER LISTS
+  get secretEngineArrayByType() {
+    return this.displayableBackends.map((modelObject) => ({
+      name: modelObject.engineType,
+      id: modelObject.engineType,
+    }));
+  }
+
+  get secretEngineArrayByName() {
+    return this.displayableBackends.map((modelObject) => ({
+      name: modelObject.id,
+      id: modelObject.id,
+    }));
+  }
+
   filterByEngineType(getSupportedBackends = true) {
     // 1. Need to confirm if the selected engineType is a supported engine type or unsupported
     const isSupported = LINKED_BACKENDS.includes(this.selectedEngineType);
@@ -43,27 +84,35 @@ export default class VaultClusterSecretsBackendController extends Controller {
     }
   }
 
-  get supportedBackends() {
-    // if list has been filtered by engineType
-    if (this.selectedEngineType) {
-      return this.filterByEngineType();
+  filterByEngineName(getSupportedBackends = true) {
+    // 1. check if the engine is supported. We only have the name so we need to return the engineType.
+    const engineObject = this.displayableBackends.find(
+      (modelObject) => modelObject.id === this.selectedEngineName
+    );
+    const engineType = engineObject.engineType;
+    const isSupported = LINKED_BACKENDS.includes(engineObject.engineType);
+    if (isSupported) {
+      return getSupportedBackends
+        ? this.displayableBackends.filter((backend) => engineType === backend.get('engineType')).sortBy('id')
+        : [];
+    } else {
+      return getSupportedBackends
+        ? []
+        : this.displayableBackends
+            // exact same as supportedBackends but negated
+            .filter((backend) => engineType === backend.get('engineType'))
+            .sortBy('id');
     }
-    return (this.displayableBackends || [])
-      .filter((backend) => LINKED_BACKENDS.includes(backend.get('engineType')))
-      .sortBy('id');
   }
 
-  get unsupportedBackends() {
-    // if list has been filtered by engineType
-    if (this.selectedEngineType) {
-      return this.filterByEngineType(false);
-    }
-    return (
-      (this.displayableBackends || [])
-        // exact same as supportedBackends but negated
-        .filter((backend) => !LINKED_BACKENDS.includes(backend.get('engineType')))
-        .sortBy('id')
-    );
+  @action
+  filterEngineType([type]) {
+    this.selectedEngineType = type;
+  }
+
+  @action
+  filterEngineName([name]) {
+    this.selectedEngineName = name;
   }
 
   @task
@@ -78,19 +127,5 @@ export default class VaultClusterSecretsBackendController extends Controller {
         `There was an error disabling the ${engineType} Secrets Engine at ${path}: ${err.errors.join(' ')}.`
       );
     }
-  }
-
-  get secretEngineArray() {
-    // if list has not been filtered by name or engineType
-    return this.displayableBackends.map((modelObject) => ({
-      name: modelObject.engineType,
-      id: modelObject.engineType,
-    }));
-  }
-
-  @action
-  selectEngineType([engine]) {
-    this.selectedEngineType = engine;
-    // filter the list
   }
 }
