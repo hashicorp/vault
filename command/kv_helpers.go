@@ -202,9 +202,10 @@ func padEqualSigns(header string, totalLen int) string {
 
 // listRecursive dfs-traverses the secrets tree rooted at the given path and
 // returns a list of the leaf paths. Note: for kv-v2, a "metadata" path is
-// expected and "metadata" paths will be returned.
-func listRecursive(ctx context.Context, client *api.Client, path string) ([]string, error) {
-	var children []string
+// expected and "metadata" paths will be returned. If includeDirectories is
+// specified, the output will include non-leaf nodes with "/" suffixes.
+func listRecursive(ctx context.Context, client *api.Client, path string, includeDirectories bool) ([]string, error) {
+	var descendants []string
 
 	resp, err := client.Logical().ListWithContext(ctx, path)
 	if err != nil {
@@ -239,18 +240,26 @@ func listRecursive(ctx context.Context, client *api.Client, path string) ([]stri
 	sort.Strings(keys)
 
 	for _, key := range keys {
+		// the keys are relative to the current path: combine them
+		child := paths.Join(path, key)
+
 		if strings.HasSuffix(key, "/") {
-			// This is not a leaf node: we need to go deeper...
-			c, err := listRecursive(ctx, client, paths.Join(path, key))
+			// if requested, include the directory suffixed with "/"
+			if includeDirectories {
+				descendants = append(descendants, child+"/")
+			}
+
+			// this is not a leaf node: we need to go deeper...
+			d, err := listRecursive(ctx, client, child, includeDirectories)
 			if err != nil {
 				return nil, err
 			}
-			children = append(children, c...)
+			descendants = append(descendants, d...)
 		} else {
-			// This is a leaf node: add it to the list
-			children = append(children, paths.Join(path, key))
+			// this is a leaf node: add it to the list
+			descendants = append(descendants, child)
 		}
 	}
 
-	return children, nil
+	return descendants, nil
 }

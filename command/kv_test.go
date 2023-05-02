@@ -1571,26 +1571,30 @@ func TestListRecursive(t *testing.T) {
 	}
 
 	cases := []struct {
-		name          string
-		path          string
-		expected      []string
-		expectedError bool
+		name               string
+		path               string
+		includeDirectories bool
+		expected           []string
+		expectedError      bool
 	}{
 		{
-			name:          "kv-v1-simple",
-			path:          "kv-v1/app-1/nested/x/y",
-			expected:      []string{"kv-v1/app-1/nested/x/y/z"},
-			expectedError: false,
+			name:               "kv-v1-simple",
+			path:               "kv-v1/app-1/nested/x/y",
+			includeDirectories: false,
+			expected:           []string{"kv-v1/app-1/nested/x/y/z"},
+			expectedError:      false,
 		},
 		{
-			name:          "kv-v2-simple",
-			path:          "kv-v2/metadata/app-1/nested/x/y",
-			expected:      []string{"kv-v2/metadata/app-1/nested/x/y/z"},
-			expectedError: false,
+			name:               "kv-v2-simple",
+			path:               "kv-v2/metadata/app-1/nested/x/y",
+			includeDirectories: false,
+			expected:           []string{"kv-v2/metadata/app-1/nested/x/y/z"},
+			expectedError:      false,
 		},
 		{
-			name: "kv-v1-nested",
-			path: "kv-v1/app-1/nested/",
+			name:               "kv-v1-nested",
+			path:               "kv-v1/app-1/nested/",
+			includeDirectories: false,
 			expected: []string{
 				"kv-v1/app-1/nested/bar",
 				"kv-v1/app-1/nested/x/y",
@@ -1599,8 +1603,9 @@ func TestListRecursive(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name: "kv-v2-nested",
-			path: "kv-v2/metadata/app-1/nested/",
+			name:               "kv-v2-nested",
+			path:               "kv-v2/metadata/app-1/nested/",
+			includeDirectories: false,
 			expected: []string{
 				"kv-v2/metadata/app-1/nested/bar",
 				"kv-v2/metadata/app-1/nested/x/y",
@@ -1609,8 +1614,9 @@ func TestListRecursive(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name: "kv-v1-all",
-			path: "kv-v1",
+			name:               "kv-v1-all",
+			path:               "kv-v1",
+			includeDirectories: false,
 			expected: []string{
 				"kv-v1/app-1/bar",
 				"kv-v1/app-1/foo",
@@ -1622,8 +1628,9 @@ func TestListRecursive(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name: "kv-v2-all",
-			path: "kv-v2/metadata",
+			name:               "kv-v2-all",
+			path:               "kv-v2/metadata",
+			includeDirectories: false,
 			expected: []string{
 				"kv-v2/metadata/app-1/bar",
 				"kv-v2/metadata/app-1/foo",
@@ -1635,34 +1642,74 @@ func TestListRecursive(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name:          "kv-v1-not-found",
-			path:          "kv-v1/does/not/exist",
-			expected:      nil,
-			expectedError: true,
+			name:               "kv-v1-all-include-directories",
+			path:               "kv-v1",
+			includeDirectories: true,
+			expected: []string{
+				"kv-v1/app-1/",
+				"kv-v1/app-1/bar",
+				"kv-v1/app-1/foo",
+				"kv-v1/app-1/nested/",
+				"kv-v1/app-1/nested/bar",
+				"kv-v1/app-1/nested/x/",
+				"kv-v1/app-1/nested/x/y",
+				"kv-v1/app-1/nested/x/y/",
+				"kv-v1/app-1/nested/x/y/z",
+				"kv-v1/foo",
+			},
+			expectedError: false,
 		},
 		{
-			name:          "kv-v2-not-found",
-			path:          "kv-v2/metadata/does/not/exist",
-			expected:      nil,
-			expectedError: true,
+			name:               "kv-v2-all-include-directories",
+			path:               "kv-v2/metadata",
+			includeDirectories: true,
+			expected: []string{
+				"kv-v2/metadata/app-1/",
+				"kv-v2/metadata/app-1/bar",
+				"kv-v2/metadata/app-1/foo",
+				"kv-v2/metadata/app-1/nested/",
+				"kv-v2/metadata/app-1/nested/bar",
+				"kv-v2/metadata/app-1/nested/x/",
+				"kv-v2/metadata/app-1/nested/x/y",
+				"kv-v2/metadata/app-1/nested/x/y/",
+				"kv-v2/metadata/app-1/nested/x/y/z",
+				"kv-v2/metadata/foo",
+			},
+			expectedError: false,
 		},
 		{
-			name:          "kv-v1-not-listable-leaf-node",
-			path:          "kv-v1/foo",
-			expected:      nil,
-			expectedError: true,
+			name:               "kv-v1-not-found",
+			path:               "kv-v1/does/not/exist",
+			includeDirectories: false,
+			expected:           nil,
+			expectedError:      true,
 		},
 		{
-			name:          "kv-v2-not-listable-leaf-node",
-			path:          "kv-v2/metadata/foo",
-			expected:      nil,
-			expectedError: true,
+			name:               "kv-v2-not-found",
+			path:               "kv-v2/metadata/does/not/exist",
+			includeDirectories: false,
+			expected:           nil,
+			expectedError:      true,
+		},
+		{
+			name:               "kv-v1-not-listable-leaf-node",
+			path:               "kv-v1/foo",
+			includeDirectories: false,
+			expected:           nil,
+			expectedError:      true,
+		},
+		{
+			name:               "kv-v2-not-listable-leaf-node",
+			path:               "kv-v2/metadata/foo",
+			includeDirectories: false,
+			expected:           nil,
+			expectedError:      true,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual, err := listRecursive(ctx, client, tc.path)
+			actual, err := listRecursive(ctx, client, tc.path, tc.includeDirectories)
 
 			if tc.expectedError {
 				if err == nil {
