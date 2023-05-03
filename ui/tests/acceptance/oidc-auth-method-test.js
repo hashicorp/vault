@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, fillIn, find, waitUntil } from '@ember/test-helpers';
+import { click, currentURL, fillIn, find, waitUntil } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { fakeWindow, buildMessage } from '../helpers/oidc-window-stub';
@@ -97,6 +97,7 @@ module('Acceptance | oidc auth method', function (hooks) {
       cancelTimers();
     }, 50);
     await click('[data-test-auth-submit]');
+    assert.strictEqual(currentURL(), '/vault/secrets');
     await click('[data-test-user-menu-trigger]');
     await click('#logout');
     assert

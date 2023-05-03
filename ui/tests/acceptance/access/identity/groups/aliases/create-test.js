@@ -12,8 +12,9 @@ import authPage from 'vault/tests/pages/auth';
 module('Acceptance | /access/identity/groups/aliases/add', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function () {
-    return authPage.login();
+  hooks.beforeEach(async function () {
+    await authPage.login();
+    return;
   });
 
   test('it allows create, list, delete of an entity alias', async function (assert) {

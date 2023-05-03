@@ -13,8 +13,9 @@ module('Acceptance | /access/identity/entities/aliases/add', function (hooks) {
   // TODO come back and figure out why this is failing.  Seems to be a race condition
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function () {
-    return authPage.login();
+  hooks.beforeEach(async function () {
+    await authPage.login();
+    return;
   });
 
   test('it allows create, list, delete of an entity alias', async function (assert) {
