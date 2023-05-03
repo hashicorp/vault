@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"path"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -35,6 +36,7 @@ const (
 	acmeAccountPrefix    = acmePathPrefix + "accounts/"
 	acmeThumbprintPrefix = acmePathPrefix + "account-thumbprints/"
 	acmeValidationPrefix = acmePathPrefix + "validations/"
+	acmeEabPrefix        = acmePathPrefix + "eab/"
 )
 
 type acmeState struct {
@@ -631,6 +633,65 @@ func (a *acmeState) GetIssuedCert(ac *acmeContext, accountId string, serial stri
 	cert.Account = accountId
 
 	return &cert, nil
+}
+
+func (a *acmeState) SaveEab(sc *storageContext, eab *eabType) error {
+	json, err := logical.StorageEntryJSON(path.Join(acmeEabPrefix, eab.KeyID), eab)
+	if err != nil {
+		return err
+	}
+	return sc.Storage.Put(sc.Context, json)
+}
+
+func (a *acmeState) LoadEab(sc *storageContext, eabKid string) (*eabType, error) {
+	rawEntry, err := sc.Storage.Get(sc.Context, path.Join(acmeEabPrefix, eabKid))
+	if err != nil {
+		return nil, err
+	}
+	if rawEntry == nil {
+		return nil, fmt.Errorf("no eab found for kid %s", eabKid)
+	}
+
+	var eab eabType
+	err = rawEntry.DecodeJSON(&eab)
+	if err != nil {
+		return nil, err
+	}
+
+	eab.KeyID = eabKid
+	return &eab, nil
+}
+
+func (a *acmeState) DeleteEab(sc *storageContext, eabKid string) (bool, error) {
+	rawEntry, err := sc.Storage.Get(sc.Context, path.Join(acmeEabPrefix, eabKid))
+	if err != nil {
+		return false, err
+	}
+	if rawEntry == nil {
+		return false, nil
+	}
+
+	err = sc.Storage.Delete(sc.Context, path.Join(acmeEabPrefix, eabKid))
+	if err != nil {
+		return false, nil
+	}
+	return true, nil
+}
+
+func (a *acmeState) ListEabIds(sc *storageContext) ([]string, error) {
+	entries, err := sc.Storage.List(sc.Context, acmeEabPrefix)
+	if err != nil {
+		return nil, err
+	}
+	var ids []string
+	for _, entry := range entries {
+		if strings.HasSuffix(entry, "/") {
+			continue
+		}
+		ids = append(ids, entry)
+	}
+
+	return ids, nil
 }
 
 func getAuthorizationPath(accountId string, authId string) string {

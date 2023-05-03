@@ -48,6 +48,7 @@ func (b *backend) acmeDirectoryHandler(acmeCtx *acmeContext, r *logical.Request,
 		"newOrder":   acmeCtx.baseUrl.JoinPath("new-order").String(),
 		"revokeCert": acmeCtx.baseUrl.JoinPath("revoke-cert").String(),
 		"keyChange":  acmeCtx.baseUrl.JoinPath("key-change").String(),
+		// This is purposefully missing newAuthz as we don't support pre-authorization
 		"meta": map[string]interface{}{
 			"externalAccountRequired": false,
 		},
