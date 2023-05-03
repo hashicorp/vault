@@ -23,7 +23,7 @@ export default class VaultClusterSecretsBackendController extends Controller {
   // ARG TMRW: solve for when both filters are set
 
   get sortedDisplayableBackends() {
-    // show supported SE first and organize those groups by id.
+    // show supported secret engines first and then organize those by id.
     const sortedDisplayableBackends = this.displayableBackends.sort(
       (a, b) => b.isSupportedBackend - a.isSupportedBackend || a.id - b.id
     );
@@ -46,16 +46,15 @@ export default class VaultClusterSecretsBackendController extends Controller {
     return sortedDisplayableBackends;
   }
 
-  // FOR FILTER LISTS
   get secretEngineArrayByType() {
-    return this.displayableBackends.map((modelObject) => ({
+    return this.sortedDisplayableBackends.map((modelObject) => ({
       name: modelObject.engineType,
       id: modelObject.engineType,
     }));
   }
 
   get secretEngineArrayByName() {
-    return this.displayableBackends.map((modelObject) => ({
+    return this.sortedDisplayableBackends.map((modelObject) => ({
       name: modelObject.id,
       id: modelObject.id,
     }));
