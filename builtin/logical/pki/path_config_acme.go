@@ -22,6 +22,7 @@ type acmeConfigEntry struct {
 	AllowedRoles   []string `json:"allowed_roles"`
 	DefaultRole    string   `json:"default_role"`
 	DNSResolver    string   `json:"dns_resolver"`
+	RequireEAB     bool     `json:"require_eab"`
 }
 
 var defaultAcmeConfig = acmeConfigEntry{
@@ -30,6 +31,7 @@ var defaultAcmeConfig = acmeConfigEntry{
 	AllowedRoles:   []string{"*"},
 	DefaultRole:    "",
 	DNSResolver:    "",
+	RequireEAB:     true,
 }
 
 func (sc *storageContext) getAcmeConfig() (*acmeConfigEntry, error) {
@@ -99,6 +101,11 @@ func pathAcmeConfig(b *backend) *framework.Path {
 				Description: `DNS resolver to use for domain resolution on this mount. Defaults to using the default system resolver. Must be in the format <host>:<port>, with both parts mandatory.`,
 				Default:     "",
 			},
+			"require_eab": {
+				Type:        framework.TypeBool,
+				Description: `require an external binding account key for new ACME account creations.`,
+				Default:     true,
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -143,6 +150,7 @@ func genResponseFromAcmeConfig(config *acmeConfigEntry) *logical.Response {
 			"default_role":    config.DefaultRole,
 			"enabled":         config.Enabled,
 			"dns_resolver":    config.DNSResolver,
+			"require_eab":     config.RequireEAB,
 		},
 	}
 
@@ -195,6 +203,10 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 				return nil, fmt.Errorf("failed to parse DNS resolver address: expected IPv4/IPv6 address, likely got hostname")
 			}
 		}
+	}
+
+	if requireEabRaw, ok := d.GetOk("require_eab"); ok {
+		config.RequireEAB = requireEabRaw.(bool)
 	}
 
 	allowAnyRole := len(config.AllowedRoles) == 1 && config.AllowedRoles[0] == "*"
