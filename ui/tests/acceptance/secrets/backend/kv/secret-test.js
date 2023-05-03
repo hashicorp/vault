@@ -79,11 +79,9 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
 
   test('it creates a secret and redirects', async function (assert) {
     assert.expect(5);
-    const backend = 'secret';
     const secretPath = `kv-path-${this.uid}`;
-    await mountSecrets.visit();
-    await mountSecrets.enable('kv', backend);
-    await listPage.visitRoot({ backend });
+    await consoleComponent.runCommands(['vault write sys/mounts/secret type=kv']);
+    await listPage.visitRoot({ backend: 'secret' });
     await settled();
     assert.strictEqual(
       currentRouteName(),
@@ -104,7 +102,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       'redirects to the show page'
     );
     assert.ok(showPage.editIsPresent, 'shows the edit button');
-    await deleteEngine(backend, assert);
+    await deleteEngine('secret', assert);
   });
 
   test('it can create a secret when check-and-set is required', async function (assert) {
