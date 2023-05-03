@@ -37,7 +37,7 @@ func TestAddPrefixToKVPath(t *testing.T) {
 
 		"skip-if-exists-true": {
 			path:         "kv-v2/data/foo",
-			mountPath:    "kv-v2",
+			mountPath:    "kv-v2/",
 			apiPrefix:    "data",
 			skipIfExists: true,
 			expected:     "kv-v2/data/foo",

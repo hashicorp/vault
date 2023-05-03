@@ -150,8 +150,10 @@ func addPrefixToKVPath(path, mountPath, apiPrefix string, skipIfExists bool) str
 		pathSuffix = strings.TrimPrefix(pathSuffix, mountPath)
 	}
 
-	if skipIfExists && strings.HasPrefix(pathSuffix, apiPrefix) {
-		return paths.Join(mountPath, pathSuffix)
+	if skipIfExists {
+		if strings.HasPrefix(pathSuffix, apiPrefix) || strings.HasPrefix(pathSuffix, "/"+apiPrefix) {
+			return paths.Join(mountPath, pathSuffix)
+		}
 	}
 
 	return paths.Join(mountPath, apiPrefix, pathSuffix)
