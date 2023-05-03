@@ -5,6 +5,7 @@ package pkiext_binary
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/vault/api"
 )
@@ -24,6 +25,13 @@ func (vpm *VaultPkiMount) UpdateClusterConfig(config map[string]interface{}) err
 	_, err := vpm.GetActiveNode().Logical().WriteWithContext(context.Background(),
 		vpm.mount+"/config/cluster", mergeWithDefaults(config, defaults))
 	return err
+}
+
+func (vpm *VaultPkiMount) UpdateClusterConfigLocalAddr() (string, error) {
+	basePath := fmt.Sprintf("https://%s/v1/%s", vpm.GetActiveContainerHostPort(), vpm.mount)
+	return basePath, vpm.UpdateClusterConfig(map[string]interface{}{
+		"path": basePath,
+	})
 }
 
 func (vpm *VaultPkiMount) UpdateAcmeConfig(enable bool, config map[string]interface{}) error {
