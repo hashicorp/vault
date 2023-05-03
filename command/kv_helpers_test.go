@@ -70,6 +70,8 @@ func TestAddPrefixToKVPath(t *testing.T) {
 	for name, tc := range cases {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
 			actual := addPrefixToKVPath(
 				tc.path,
 				tc.mountPath,
@@ -241,7 +243,6 @@ func TestWalkSecretsTree(t *testing.T) {
 	}
 
 	for name, tc := range cases {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			var descendants []treePath
 
