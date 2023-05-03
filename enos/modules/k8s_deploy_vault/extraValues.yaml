@@ -1,0 +1,6 @@
+server:
+  serviceAccount:
+    annotations:
+      "azure.workload.identity/client-id": "2a63b175-565b-408d-b6f5-4b642c0b5ac2"
+  extraLabels:
+    "azure.workload.identity/use": "true"

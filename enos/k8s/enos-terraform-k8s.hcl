@@ -1,7 +1,7 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: MPL-2.0
 
-terraform "k8s" {
+terraform "kind" {
   required_version = ">= 1.2.0"
   required_providers {
     enos = {
@@ -9,7 +9,25 @@ terraform "k8s" {
     }
 
     helm = {
-      source  = "hashicorp/helm"
+      source = "hashicorp/helm"
+    }
+  }
+}
+
+terraform "azure" {
+  required_version = ">= 1.2.0"
+  required_providers {
+    enos = {
+      source = "app.terraform.io/hashicorp-qti/enos"
+    }
+    helm = {
+      source = "hashicorp/helm"
+    }
+    azurerm = {
+      source = "hashicorp/azurerm"
+    }
+    azuread = {
+      source = "hashicorp/azuread"
     }
   }
 }

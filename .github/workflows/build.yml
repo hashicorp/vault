@@ -160,6 +160,9 @@ jobs:
           tags: |
             docker.io/hashicorp/${{ github.event.repository.name }}:${{ needs.product-metadata.outputs.vault-version }}
             public.ecr.aws/hashicorp/${{ github.event.repository.name }}:${{ needs.product-metadata.outputs.vault-version }}
+          dev_tags: |
+            docker.io/hashicorppreview/${{ env.repo }}:${{ env.dev_tag }}
+            docker.io/hashicorppreview/${{ env.repo }}:${{ env.dev_tag }}-${{ github.sha }}
 
   build-ubi:
     name: UBI image

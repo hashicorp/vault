@@ -53,3 +53,32 @@ variable "vault_build_date" {
   type        = string
   default     = ""
 }
+
+variable "cluster_node_count" {
+  description = "The number of nodes to create for the kubernetes cluster"
+  type        = number
+  default     = 1
+}
+
+variable "vault_license_path" {
+  description = "The path to a valid Vault enterprise edition license. This is only required for non-oss editions"
+  type        = string
+  default     = null
+}
+
+variable "kubeconfig_path" {
+  description = "The path to the kubeconfig file that will be created."
+  type        = string
+}
+
+variable "vault_agent_image_name" {
+  description = "The name of the docker image to run for the vault agent, e.g. hashicorp/vault"
+  type        = string
+  default     = "hashicorp/vault"
+}
+
+variable "vault_agent_image_tag" {
+  description = "The tag of the docker image to run for the vault agent, e.g. 1.13.1"
+  type        = string
+  default     = "1.13.1"
+}

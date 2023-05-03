@@ -5,6 +5,13 @@ module "create_kind_cluster" {
   source = "../modules/local_kind_cluster"
 }
 
+module "create_aks_cluster" {
+  source = "../modules/azure_aks_cluster"
+
+  node_count      = 3
+  kubeconfig_path = var.kubeconfig_path
+}
+
 module "load_docker_image" {
   source = "../modules/load_docker_image"
 }
@@ -44,9 +51,29 @@ module "k8s_verify_version" {
 module "k8s_verify_write_data" {
   source = "../modules/k8s_vault_verify_write_data"
 
-  vault_instance_count   = var.vault_instance_count
+  vault_instance_count = var.vault_instance_count
 }
 
 module "read_license" {
   source = "../modules/read_license"
+}
+
+module "setup_azure_auth_backend" {
+  source = "../modules/setup_azure_auth_backend"
+}
+
+module "k8s_azure_wif_extra_chart_values" {
+  source = "../modules/k8s_azure_wif_extra_chart_values"
+}
+
+module "setup_azure_auth_method" {
+  source = "../modules/vault_setup_azure_auth_method"
+}
+
+module "format_transport_block" {
+  source = "../modules/format_transport_block"
+}
+
+module "deploy_vault_agent" {
+  source = "../modules/k8s_deploy_vault_agent"
 }

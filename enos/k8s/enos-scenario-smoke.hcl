@@ -1,13 +1,13 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: MPL-2.0
 
-scenario "k8s" {
+scenario "smoke" {
   matrix {
     edition = ["oss", "ent"]
   }
 
   terraform_cli = terraform_cli.default
-  terraform     = terraform.k8s
+  terraform     = terraform.kind
 
   providers = [
     provider.enos.default,
@@ -18,7 +18,7 @@ scenario "k8s" {
     image_path = abspath(var.vault_docker_image_archive)
 
     image_repo = var.vault_image_repository != null ? var.vault_image_repository : matrix.edition == "oss" ? "hashicorp/vault" : "hashicorp/vault-enterprise"
-    image_tag = replace(var.vault_product_version, "+ent", "-ent")
+    image_tag  = replace(var.vault_product_version, "+ent", "-ent")
 
     // The additional '-0' is required in the constraint since without it, the semver function will
     // only compare the non-pre-release parts (Major.Minor.Patch) of the version and the constraint,
@@ -36,7 +36,7 @@ scenario "k8s" {
   }
 
   step "create_kind_cluster" {
-    module = module.create_kind_cluster
+    module = module.create_kind_cluster # TODO: update to use a variant so we can test against other cluster types, i.e. aks
 
     variables {
       kubeconfig_path = abspath(joinpath(path.root, "kubeconfig"))
@@ -74,7 +74,7 @@ scenario "k8s" {
 
   step "verify_build_date" {
     skip_step = !local.version_includes_build_date
-    module = module.k8s_verify_build_date
+    module    = module.k8s_verify_build_date
 
     variables {
       vault_pods        = step.deploy_vault.vault_pods
@@ -100,7 +100,7 @@ scenario "k8s" {
   }
 
   step "verify_ui" {
-    module = module.k8s_verify_ui
+    module    = module.k8s_verify_ui
     skip_step = matrix.edition == "oss"
 
     variables {

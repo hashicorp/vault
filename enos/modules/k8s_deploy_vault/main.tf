@@ -10,31 +10,33 @@ terraform {
     }
 
     helm = {
-      source  = "hashicorp/helm"
-      version = "2.6.0"
+      source = "hashicorp/helm"
     }
   }
 }
 
 locals {
-  helm_chart_settings = {
+  default_helm_chart_settings = {
+    "server.dataStorage.size"       = "100m"
     "server.ha.enabled"             = "true"
     "server.ha.replicas"            = var.vault_instance_count
     "server.ha.raft.enabled"        = "true"
-    "server.affinity"               = ""
+    "server.ha.raft.config"         = file("${abspath(path.module)}/raft-config.hcl")
     "server.image.repository"       = var.image_repository
     "server.image.tag"              = var.image_tag
-    "server.image.pullPolicy"       = "Never" # Forces local image use
-    "server.resources.requests.cpu" = "50m"
-    "server.limits.memory"          = "200m"
+    "server.image.pullPolicy"       = var.image_pull_policy
     "server.limits.cpu"             = "200m"
-    "server.ha.raft.config"         = file("${abspath(path.module)}/raft-config.hcl")
-    "server.dataStorage.size"       = "100m"
+    "server.limits.memory"          = "200m"
     "server.logLevel"               = var.vault_log_level
+    "server.resources.requests.cpu" = "50m"
   }
-  all_helm_chart_settings = var.ent_license == null ? local.helm_chart_settings : merge(local.helm_chart_settings, {
+  helm_chart_settings_with_license = var.ent_license == null ? local.default_helm_chart_settings : merge(local.default_helm_chart_settings, {
     "server.extraEnvironmentVars.VAULT_LICENSE" = var.ent_license
   })
+  helm_chart_settings = var.node_count < var.vault_instance_count ? merge(local.helm_chart_settings_with_license, {
+    "server.affinity" = ""
+  }) : local.helm_chart_settings_with_license
+
 
   vault_address = "http://127.0.0.1:8200"
 
@@ -42,6 +44,8 @@ locals {
 
   leader_idx    = local.instance_indexes[0]
   followers_idx = toset(slice(local.instance_indexes, 1, var.vault_instance_count))
+
+  extra_chart_values = var.extra_helm_release_values != null ? [yamlencode(var.extra_helm_release_values)] : []
 }
 
 resource "helm_release" "vault" {
@@ -51,13 +55,15 @@ resource "helm_release" "vault" {
   chart      = "vault"
 
   dynamic "set" {
-    for_each = local.all_helm_chart_settings
+    for_each = local.helm_chart_settings
 
     content {
       name  = set.key
       value = set.value
     }
   }
+
+  values = local.extra_chart_values
 }
 
 data "enos_kubernetes_pods" "vault_pods" {
@@ -68,6 +74,7 @@ data "enos_kubernetes_pods" "vault_pods" {
     "app.kubernetes.io/name=vault",
     "component=server"
   ]
+  wait_timeout = "2m"
 
   depends_on = [helm_release.vault]
 }
@@ -162,4 +169,8 @@ output "vault_root_token" {
 
 output "vault_pods" {
   value = data.enos_kubernetes_pods.vault_pods.pods
+}
+
+output "transports" {
+  value = data.enos_kubernetes_pods.vault_pods.transports
 }
