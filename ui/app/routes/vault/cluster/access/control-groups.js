@@ -18,6 +18,6 @@ export default Route.extend(UnloadModel, {
   },
 
   model() {
-    return this.version.hasFeature('Control Groups') ? this.store.createRecord('control-group') : null;
+    return this.version.hasControlGroups ? this.store.createRecord('control-group') : null;
   },
 });
