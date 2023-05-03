@@ -35,6 +35,9 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
       deltaRebuildInterval: '15m',
       ocspExpiry: '77h',
       ocspDisable: false,
+      crossClusterRevocation: true,
+      unifiedCrl: true,
+      unifiedCrlOnExistingPaths: true,
     });
     this.mountConfig = {
       id: 'pki-test',
@@ -140,6 +143,33 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
     assert.dom(SELECTORS.rowValue('Auto-rebuild grace period')).doesNotExist();
     assert.dom(SELECTORS.rowValue('Delta CRL building')).doesNotExist();
     assert.dom(SELECTORS.rowValue('Delta rebuild interval')).doesNotExist();
+  });
+
+  test('it renders enterprise params in crl section', async function (assert) {
+    this.version = this.owner.lookup('service:version');
+    this.version.version = '1.13.1+ent';
+    await render(
+      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @mountConfig={{this.mountConfig}} @hasConfig={{true}} />,`,
+      { owner: this.engine }
+    );
+    assert.dom(SELECTORS.rowValue('Cross-cluster revocation')).hasText('Yes');
+    assert.dom(SELECTORS.rowIcon('Cross-cluster revocation', 'check-circle'));
+    assert.dom(SELECTORS.rowValue('Unified CRL')).hasText('Yes');
+    assert.dom(SELECTORS.rowIcon('Unified CRL', 'check-circle'));
+    assert.dom(SELECTORS.rowValue('Unified CRL on existing paths')).hasText('Yes');
+    assert.dom(SELECTORS.rowIcon('Unified CRL on existing paths', 'check-circle'));
+  });
+
+  test('it does not render enterprise params in crl section', async function (assert) {
+    this.version = this.owner.lookup('service:version');
+    this.version.version = '1.13.1';
+    await render(
+      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @mountConfig={{this.mountConfig}} @hasConfig={{true}} />,`,
+      { owner: this.engine }
+    );
+    assert.dom(SELECTORS.rowValue('Cross-cluster revocation')).doesNotExist();
+    assert.dom(SELECTORS.rowValue('Unified CRL')).doesNotExist();
+    assert.dom(SELECTORS.rowValue('Unified CRL on existing paths')).doesNotExist();
   });
 
   test('shows the correct information on mount configuration section', async function (assert) {

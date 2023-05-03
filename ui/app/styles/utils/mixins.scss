@@ -84,6 +84,6 @@
 
 @mixin vault-block {
   &:not(:last-child) {
-    margin-bottom: (5/14) + 0rem;
+    margin-bottom: calc(5 / 14) + 0rem;
   }
 }

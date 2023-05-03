@@ -53,3 +53,8 @@ export interface TtlEvent {
   timeString: string;
   goSafeTimeString: string;
 }
+
+// Generic interfaces
+export interface StringMap {
+  [key: string]: string;
+}
