@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -21,6 +22,7 @@ type TestServer struct {
 	network string
 	startup *docker.Service
 
+	lock       sync.Mutex
 	serial     int
 	forwarders []string
 	domains    []string
@@ -170,6 +172,9 @@ func (ts *TestServer) buildZoneFile(target string) string {
 }
 
 func (ts *TestServer) PushConfig() {
+	ts.lock.Lock()
+	defer ts.lock.Unlock()
+
 	contents := docker.NewBuildContext()
 	cfgPath := "/etc/bind/named.conf.options"
 	namedCfg := ts.buildNamedConf()
@@ -248,6 +253,9 @@ func (ts *TestServer) GetRemoteAddr() string {
 }
 
 func (ts *TestServer) AddDomain(domain string) {
+	ts.lock.Lock()
+	defer ts.lock.Unlock()
+
 	for _, existing := range ts.domains {
 		if existing == domain {
 			return
@@ -258,6 +266,9 @@ func (ts *TestServer) AddDomain(domain string) {
 }
 
 func (ts *TestServer) AddRecord(domain string, record string, value string) {
+	ts.lock.Lock()
+	defer ts.lock.Unlock()
+
 	foundDomain := false
 	for _, existing := range ts.domains {
 		if strings.HasSuffix(domain, existing) {
@@ -286,6 +297,9 @@ func (ts *TestServer) AddRecord(domain string, record string, value string) {
 }
 
 func (ts *TestServer) RemoveAllRecords() {
+	ts.lock.Lock()
+	defer ts.lock.Unlock()
+
 	ts.records = map[string]map[string][]string{}
 }
 
