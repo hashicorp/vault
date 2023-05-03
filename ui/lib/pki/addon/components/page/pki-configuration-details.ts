@@ -13,6 +13,7 @@ import { tracked } from '@glimmer/tracking';
 import RouterService from '@ember/routing/router-service';
 import FlashMessageService from 'vault/services/flash-messages';
 import Store from '@ember-data/store';
+import VersionService from 'vault/services/version';
 
 interface Args {
   currentPath: string;
@@ -22,8 +23,12 @@ export default class PkiConfigurationDetails extends Component<Args> {
   @service declare readonly store: Store;
   @service declare readonly router: RouterService;
   @service declare readonly flashMessages: FlashMessageService;
-
+  @service declare readonly version: VersionService;
   @tracked showDeleteAllIssuers = false;
+
+  get isEnterprise() {
+    return this.version.isEnterprise;
+  }
 
   @action
   async deleteAllIssuers() {
