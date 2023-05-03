@@ -8,6 +8,9 @@ import { computed } from '@ember/object'; // eslint-disable-line
 import { equal } from '@ember/object/computed'; // eslint-disable-line
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
+import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
+
+const LINKED_BACKENDS = supportedSecretBackends();
 
 // identity will be managed separately and the inclusion
 // of the system backend is an implementation detail
@@ -141,6 +144,10 @@ export default class SecretEngineModel extends Model {
 
   get shouldIncludeInList() {
     return !LIST_EXCLUDED_BACKENDS.includes(this.engineType);
+  }
+
+  get isSupportedBackend() {
+    return LINKED_BACKENDS.includes(this.engineType);
   }
 
   get localDisplay() {
