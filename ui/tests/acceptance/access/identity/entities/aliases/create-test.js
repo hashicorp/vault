@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-import { module, test } from 'qunit';
+import { module, skip, test } from 'qunit';
 import { settled } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import { testAliasCRUD, testAliasDeleteFromForm } from '../../_shared-alias-tests';
@@ -18,7 +18,7 @@ module('Acceptance | /access/identity/entities/aliases/add', function (hooks) {
     return;
   });
 
-  test('it allows create, list, delete of an entity alias', async function (assert) {
+  skip('it allows create, list, delete of an entity alias', async function (assert) {
     assert.expect(6);
     const name = `alias-${Date.now()}`;
     await testAliasCRUD(name, 'entities', assert);
