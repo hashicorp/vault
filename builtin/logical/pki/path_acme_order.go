@@ -685,11 +685,16 @@ func formatOrderResponse(acmeCtx *acmeContext, order *acmeOrder) *logical.Respon
 		authorizationUrls = append(authorizationUrls, buildAuthorizationUrl(acmeCtx, authId))
 	}
 
+	var identifiers []map[string]interface{}
+	for _, identifier := range order.Identifiers {
+		identifiers = append(identifiers, identifier.NetworkMarshal( /* use original value */ true))
+	}
+
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"status":         order.Status,
 			"expires":        order.Expires.Format(time.RFC3339),
-			"identifiers":    order.Identifiers,
+			"identifiers":    identifiers,
 			"authorizations": authorizationUrls,
 			"finalize":       baseOrderUrl + "/finalize",
 		},
