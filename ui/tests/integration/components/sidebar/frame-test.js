@@ -55,7 +55,7 @@ module('Integration | Component | sidebar-frame', function (hooks) {
 
   test('it should render namespace picker in sidebar footer', async function (assert) {
     const version = this.owner.lookup('service:version');
-    version.setFeatures({ features: ['Namespaces'] });
+    version.features = ['Namespaces'];
     const auth = this.owner.lookup('service:auth');
     sinon.stub(auth, 'authData').value({});
 
