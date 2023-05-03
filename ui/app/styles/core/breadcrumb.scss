@@ -15,12 +15,6 @@
     margin: 0;
   }
 
-  .is-sidebar + .column & {
-    @include until($mobile) {
-      margin-left: $size-2;
-    }
-  }
-
   ul,
   ol {
     align-items: center;
