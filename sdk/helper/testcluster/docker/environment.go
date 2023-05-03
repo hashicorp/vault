@@ -67,7 +67,7 @@ type DockerCluster struct {
 	// rootToken is the initial root token created when the Vault cluster is
 	// created.
 	rootToken string
-	dockerAPI *docker.Client
+	DockerAPI *docker.Client
 	ID        string
 	Logger    log.Logger
 	builtTags map[string]struct{}
@@ -434,7 +434,7 @@ func NewDockerCluster(ctx context.Context, opts *DockerClusterOptions) (*DockerC
 	}
 
 	dc := &DockerCluster{
-		dockerAPI:   api,
+		DockerAPI:   api,
 		RaftStorage: true,
 		ClusterName: opts.ClusterName,
 		Logger:      opts.Logger,
@@ -466,7 +466,7 @@ type DockerClusterNode struct {
 	WorkDir              string
 	Cluster              *DockerCluster
 	Container            *types.ContainerJSON
-	dockerAPI            *docker.Client
+	DockerAPI            *docker.Client
 	runner               *dockhelper.Runner
 	Logger               log.Logger
 	cleanupContainer     func()
@@ -563,13 +563,13 @@ func (n *DockerClusterNode) cleanup() error {
 
 func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOptions) error {
 	if n.DataVolumeName == "" {
-		vol, err := n.dockerAPI.VolumeCreate(ctx, volume.CreateOptions{})
+		vol, err := n.DockerAPI.VolumeCreate(ctx, volume.CreateOptions{})
 		if err != nil {
 			return err
 		}
 		n.DataVolumeName = vol.Name
 		n.cleanupVolume = func() {
-			_ = n.dockerAPI.VolumeRemove(ctx, vol.Name, false)
+			_ = n.DockerAPI.VolumeRemove(ctx, vol.Name, false)
 		}
 	}
 	vaultCfg := map[string]interface{}{}
@@ -899,7 +899,7 @@ func (dc *DockerCluster) addNode(ctx context.Context, opts *DockerClusterOptions
 	i := len(dc.ClusterNodes)
 	nodeID := fmt.Sprintf("core-%d", i)
 	node := &DockerClusterNode{
-		dockerAPI: dc.dockerAPI,
+		DockerAPI: dc.DockerAPI,
 		NodeID:    nodeID,
 		Cluster:   dc,
 		WorkDir:   filepath.Join(dc.tmpDir, nodeID),
@@ -987,7 +987,7 @@ FROM %s:%s
 COPY vault /bin/vault
 `, opts.ImageRepo, sourceTag)
 
-	_, err = dockhelper.BuildImage(ctx, dc.dockerAPI, containerFile, bCtx,
+	_, err = dockhelper.BuildImage(ctx, dc.DockerAPI, containerFile, bCtx,
 		dockhelper.BuildRemove(true), dockhelper.BuildForceRemove(true),
 		dockhelper.BuildPullParent(true),
 		dockhelper.BuildTags([]string{opts.ImageRepo + ":" + tag}))
