@@ -22,16 +22,20 @@
                 }}</span>
             {{/if}}
             {{#if pkiIssuer.serialNumber}}
-              <InfoTooltip>
-                Serial number
-              </InfoTooltip>
-              <span class="tag is-transparent" data-test-serial-number={{idx}}>{{pkiIssuer.serialNumber}}</span>
+              <span class="tag is-transparent has-right-margin-none" data-test-serial-number={{idx}}>
+                <InfoTooltip>
+                  Serial number
+                </InfoTooltip>
+                {{pkiIssuer.serialNumber}}
+              </span>
             {{/if}}
             {{#if pkiIssuer.parsedCertificate.common_name}}
-              <InfoTooltip>
-                Common name
-              </InfoTooltip>
-              <span class="tag is-transparent" data-test-key-id={{idx}}>{{pkiIssuer.parsedCertificate.common_name}}</span>
+              <span class="tag is-transparent has-left-margin-none" data-test-serial-number={{idx}}>
+                <InfoTooltip>
+                  Common name
+                </InfoTooltip>
+                {{pkiIssuer.parsedCertificate.common_name}}
+              </span>
             {{/if}}
           </div>
         </div>
