@@ -97,7 +97,7 @@ func (s *Server) Run(ctx context.Context, envTmpls map[string]*config.EnvTemplat
 
 	for envName, envTmpl := range envTmpls {
 		tmpl := envTmpl.TemplateConfig
-		tmpl.EnvVar = pointerutil.StringPtr(envName)
+		tmpl.MapToEnvironmentVariable = pointerutil.StringPtr(envName)
 		templates = append(templates, &tmpl)
 	}
 
@@ -196,7 +196,7 @@ func (s *Server) Run(ctx context.Context, envTmpls map[string]*config.EnvTemplat
 				} else {
 					// TODO: check for duplicates?
 					for _, tcfg := range event.TemplateConfigs {
-						envVarToContents[*tcfg.EnvVar] = string(event.Contents)
+						envVarToContents[*tcfg.MapToEnvironmentVariable] = string(event.Contents)
 					}
 				}
 			}

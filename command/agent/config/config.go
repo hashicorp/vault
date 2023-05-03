@@ -1135,7 +1135,7 @@ func parseEnvTemplates(result *Config, list *ast.ObjectList) error {
 		// hcl parses this with extra quotes if quoted in config file
 		name := strings.Trim(item.Keys[0].Token.Text, `"`)
 
-		et.EnvVar = pointerutil.StringPtr(name)
+		et.MapToEnvironmentVariable = pointerutil.StringPtr(name)
 
 		// TODO: add validation, should not have duplicate keys
 		envTemplates[name] = &et
