@@ -99,6 +99,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       'redirects to the show page'
     );
     assert.ok(showPage.editIsPresent, 'shows the edit button');
+    await this.delete;
   });
 
   test('it can create a secret when check-and-set is required', async function (assert) {
@@ -409,7 +410,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
   });
 
   test('it redirects to the path ending in / for list pages', async function (assert) {
-    const secretPath = `foo/bar/kv-path-${this.uid}`;
+    const secretPath = `foo/bar/kv-list-${this.uid}`;
     await listPage.visitRoot({ backend: 'secret' });
     await listPage.create();
     await editPage.createSecret(secretPath, 'foo', 'bar');
@@ -422,7 +423,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
 
   test('it can edit via the JSON input', async function (assert) {
     const content = JSON.stringify({ foo: 'fa', bar: 'boo' });
-    const secretPath = `kv-path-${this.uid}`;
+    const secretPath = `kv-json-${this.uid}`;
     await listPage.visitRoot({ backend: 'secret' });
     await listPage.create();
     await editPage.path(secretPath).toggleJSON();
@@ -445,7 +446,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
   });
 
   test('paths are properly encoded', async function (assert) {
-    const backend = 'kv';
+    const backend = `kv-encoding-${this.uid}`;
     const paths = [
       '(',
       ')',
@@ -468,10 +469,10 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       '^',
       '_',
     ].map((char) => `${char}some`);
-    assert.expect(paths.length * 2);
+    assert.expect(paths.length * 2 + 1);
     const secretPath = '2';
     const commands = paths.map((path) => `write '${backend}/${path}/${secretPath}' 3=4`);
-    await consoleComponent.runCommands(['write sys/mounts/kv type=kv', ...commands]);
+    await consoleComponent.runCommands([`write sys/mounts/${backend} type=kv`, ...commands]);
     for (const path of paths) {
       await listPage.visit({ backend, id: path });
       assert.ok(listPage.secrets.filterBy('text', '2')[0], `${path}: secret is displayed properly`);
@@ -482,9 +483,11 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
         `${path}: show page renders correctly`
       );
     }
+    await deleteEngine(backend, assert);
   });
 
   test('create secret with space shows version data and shows space warning', async function (assert) {
+    assert.expect(4);
     const enginePath = `kv-engine-${this.uid}`;
     const secretPath = 'space space';
     // mount version 2
@@ -513,9 +516,11 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     // perform encode function that should be done by the encodePath
     const encodedSecretPath = secretPath.replace(/ /g, '%20');
     assert.strictEqual(currentURL(), `/vault/secrets/${enginePath}/show/${encodedSecretPath}?version=1`);
+    await deleteEngine(enginePath, assert);
   });
 
   test('UI handles secret with % in path correctly', async function (assert) {
+    assert.expect(7);
     const enginePath = `kv-engine-${this.uid}`;
     const secretPath = 'per%cent/%fu ll';
     const [firstPath, secondPath] = secretPath.split('/');
@@ -544,18 +549,20 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       `/vault/secrets/${enginePath}/list/${encodeURIComponent(firstPath)}/`,
       'Breadcrumb link encodes correctly'
     );
+    await deleteEngine(enginePath, assert);
   });
 
   // the web cli does not handle a quote as part of a path, so we test it here via the UI
   test('creating a secret with a single or double quote works properly', async function (assert) {
-    assert.expect(4);
-    await consoleComponent.runCommands('write sys/mounts/kv type=kv');
+    assert.expect(5);
+    const backend = `kv-quotes-${this.uid}`;
+    await consoleComponent.runCommands(`write sys/mounts/${backend} type=kv`);
     const paths = ["'some", '"some'];
     for (const path of paths) {
-      await listPage.visitRoot({ backend: 'kv' });
+      await listPage.visitRoot({ backend });
       await listPage.create();
       await editPage.createSecret(`${path}/2`, 'foo', 'bar');
-      await listPage.visit({ backend: 'kv', id: path });
+      await listPage.visit({ backend, id: path });
       assert.ok(listPage.secrets.filterBy('text', '2')[0], `${path}: secret is displayed properly`);
       await listPage.secrets.filterBy('text', '2')[0].click();
       assert.strictEqual(
@@ -564,9 +571,12 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
         `${path}: show page renders correctly`
       );
     }
+    await deleteEngine(backend, assert);
   });
 
   test('filter clears on nav', async function (assert) {
+    assert.expect(5);
+    const backend = 'test';
     await consoleComponent.runCommands([
       'vault write sys/mounts/test type=kv',
       'refresh',
@@ -574,7 +584,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       'vault write test/filter/foo1 keys=a keys=b',
       'vault write test/filter/foo2 keys=a keys=b',
     ]);
-    await listPage.visit({ backend: 'test', id: 'filter' });
+    await listPage.visit({ backend, id: 'filter' });
     assert.strictEqual(listPage.secrets.length, 3, 'renders three secrets');
     await listPage.filterInput('filter/foo1');
     assert.strictEqual(listPage.secrets.length, 1, 'renders only one secret');
@@ -582,10 +592,12 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await showPage.breadcrumbs.filterBy('text', 'filter')[0].click();
     assert.strictEqual(listPage.secrets.length, 3, 'renders three secrets');
     assert.strictEqual(listPage.filterInputValue, 'filter/', 'pageFilter has been reset');
+    await deleteEngine(backend, assert);
   });
 
   // All policy tests below this line
   test('version 2 with restricted policy still allows creation and does not show metadata tab', async function (assert) {
+    assert.expect(4);
     const enginePath = 'dont-show-metadata-tab';
     const secretPath = 'dont-show-metadata-tab-secret-path';
     const V2_POLICY = `
@@ -609,6 +621,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     assert.ok(showPage.editIsPresent, 'shows the edit button');
     //check for metadata tab which should not show because you don't have read capabilities
     assert.dom('[data-test-secret-metadata-tab]').doesNotExist('does not show metadata tab');
+    await deleteEngine(enginePath, assert);
   });
 
   test('version 2 with no access to data but access to metadata shows metadata tab', async function (assert) {
@@ -638,6 +651,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
   });
 
   test('version 2: with metadata no read or list but with delete access and full access to the data endpoint', async function (assert) {
+    assert.expect(12);
     const enginePath = 'no-metadata-read';
     const secretPath = 'no-metadata-read-secret-name';
     const V2_POLICY_NO_LIST = `
@@ -651,7 +665,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     const userToken = await mountEngineGeneratePolicyToken(enginePath, secretPath, V2_POLICY_NO_LIST);
     await listPage.visitRoot({ backend: enginePath });
     // confirm they see an empty state and not the get-credentials card
-    await assert.dom('[data-test-empty-state-title]').hasText('No secrets in this backend');
+    assert.dom('[data-test-empty-state-title]').hasText('No secrets in this backend');
     await settled();
     await listPage.create();
     await settled();
@@ -663,7 +677,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await settled();
     // test if metadata tab there with no read access message and no ability to edit.
     await click(`[data-test-auth-backend-link=${enginePath}]`);
-    await assert
+    assert
       .dom('[data-test-get-credentials]')
       .exists(
         'They do not have list access so when logged in under the restricted policy they see the get-credentials-card'
@@ -671,7 +685,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
 
     await visit(`/vault/secrets/${enginePath}/show/${secretPath}`);
 
-    await assert
+    assert
       .dom('[data-test-value-div="secret-key"]')
       .exists('secret view page and info table row with secret-key value');
 
@@ -715,10 +729,12 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await visit(`/vault/secrets/${enginePath}/show/${secretPath}`);
 
     assert.dom('[data-test-secret-not-found]').exists('secret no longer found');
+    await deleteEngine(enginePath, assert);
   });
 
   // KV delete operations testing
   test('version 2 with policy with destroy capabilities shows modal', async function (assert) {
+    assert.expect(5);
     const enginePath = 'kv-v2-destroy-capabilities';
     const secretPath = 'kv-v2-destroy-capabilities-secret-path';
     const V2_POLICY = `
@@ -756,9 +772,11 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     assert
       .dom('[data-test-empty-state-title]')
       .includesText('Version 1 of this secret has been permanently destroyed');
+    await deleteEngine(enginePath, assert);
   });
 
   test('version 2 with policy with only delete option does not show modal and undelete is an option', async function (assert) {
+    assert.expect(5);
     const enginePath = 'kv-v2-only-delete';
     const secretPath = 'kv-v2-only-delete-secret-path';
     const V2_POLICY = `
@@ -790,9 +808,11 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await settled(); // eslint-disable-line
     assert.dom('[data-test-component="empty-state"]').exists('secret has been deleted');
     assert.dom('[data-test-secret-undelete]').exists('undelete button shows');
+    await deleteEngine(enginePath, assert);
   });
 
   test('version 2: policy includes "delete" capability for secret path but does not have "update" to /delete endpoint', async function (assert) {
+    assert.expect(4);
     const enginePath = 'kv-v2-soft-delete-only';
     const secretPath = 'kv-v2-delete-capability-not-path';
     const policy = `
@@ -827,9 +847,11 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       );
     await visit(`/vault/secrets/${enginePath}/show/${secretPath}?version=1`);
     assert.dom('[data-test-delete-open-modal]').hasText('Delete', 'version 1 has not been deleted');
+    await deleteEngine(enginePath, assert);
   });
 
   test('version 2: policy has "update" to /delete endpoint but not "delete" capability for secret path', async function (assert) {
+    assert.expect(5);
     const enginePath = 'kv-v2-can-delete-version';
     const secretPath = 'kv-v2-delete-path-not-capability';
     const policy = `
@@ -868,9 +890,11 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
         'Version 1 of this secret has been deleted',
         'empty state renders oldest version (1) has been deleted'
       );
+    await deleteEngine(enginePath, assert);
   });
 
   test('version 2 with path forward slash will show delete button', async function (assert) {
+    assert.expect(2);
     const enginePath = 'kv-v2-forward-slash';
     const secretPath = 'forward/slash';
     const V2_POLICY = `
@@ -889,9 +913,11 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await authPage.login(userToken);
     await writeSecret(enginePath, secretPath, 'foo', 'bar');
     assert.dom('[data-test-secret-v2-delete="true"]').exists('drop down delete shows');
+    await deleteEngine(enginePath, assert);
   });
 
   test('version 2 with engine with forward slash will show delete button', async function (assert) {
+    assert.expect(2);
     const enginePath = 'forward/slash';
     const secretPath = 'secret-name';
     const V2_POLICY = `
@@ -910,8 +936,8 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await authPage.login(userToken);
     await writeSecret(enginePath, secretPath, 'foo', 'bar');
     assert.dom('[data-test-secret-v2-delete="true"]').exists('drop down delete shows');
+    await deleteEngine(enginePath, assert);
   });
-  // end of KV delete operation testing
 
   const setupNoRead = async function (backend, canReadMeta = false) {
     const V2_WRITE_ONLY_POLICY = `
@@ -953,6 +979,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     return await mountEngineGeneratePolicyToken(backend, 'nonexistent-secret', policy, version);
   };
   test('write without read: version 2', async function (assert) {
+    assert.expect(5);
     const backend = 'kv-v2';
     const userToken = await setupNoRead(backend);
     await writeSecret(backend, 'secret', 'foo', 'bar');
@@ -972,9 +999,11 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       'vault.cluster.secrets.backend.show',
       'redirects to the show page'
     );
+    await deleteEngine(backend, assert);
   });
 
   test('write without read: version 2 with metadata read', async function (assert) {
+    assert.expect(5);
     const backend = 'kv-v2';
     const userToken = await setupNoRead(backend, true);
     await writeSecret(backend, 'secret', 'foo', 'bar');
@@ -996,9 +1025,11 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       'vault.cluster.secrets.backend.show',
       'redirects to the show page'
     );
+    await deleteEngine(backend, assert);
   });
 
   test('write without read: version 1', async function (assert) {
+    assert.expect(4);
     const backend = 'kv-v1';
     const userToken = await setupNoRead(backend);
     await writeSecret(backend, 'secret', 'foo', 'bar');
@@ -1016,5 +1047,6 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       'vault.cluster.secrets.backend.show',
       'redirects to the show page'
     );
+    await deleteEngine(backend, assert);
   });
 });
