@@ -39,8 +39,13 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
       const issuerRecord = await this.queryRecord(store, type, { id, backend: query.backend });
       const { data } = issuerRecord;
       const isRoot = await verifyCertificates(data.certificate, data.certificate);
-      const parsedCertificate = await parseCertificate(data.certificate);
-      return { ...keyInfo, ...data, isRoot, parsedCertificate };
+      const parsedCertificate = parseCertificate(data.certificate);
+      return {
+        ...keyInfo,
+        ...data,
+        isRoot,
+        parsedCertificate: { common_name: parsedCertificate.common_name },
+      };
     } catch (e) {
       return { ...keyInfo, issuer_id: id };
     }
