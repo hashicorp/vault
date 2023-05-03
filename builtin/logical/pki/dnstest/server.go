@@ -18,6 +18,7 @@ type TestServer struct {
 	ctx context.Context
 
 	runner  *docker.Runner
+	network string
 	startup *docker.Service
 
 	serial     int
@@ -38,9 +39,10 @@ func SetupResolverOnNetwork(t *testing.T, domain string, network string) *TestSe
 	ts.ctx = context.Background()
 	ts.domains = []string{domain}
 	ts.records = map[string]map[string][]string{}
+	ts.network = network
 
 	ts.setupRunner(domain, network)
-	ts.startContainer()
+	ts.startContainer(network)
 	ts.PushConfig()
 
 	return &ts
@@ -61,7 +63,7 @@ func (ts *TestServer) setupRunner(domain string, network string) {
 	require.NoError(ts.t, err)
 }
 
-func (ts *TestServer) startContainer() {
+func (ts *TestServer) startContainer(network string) {
 	connUpFunc := func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
 		// Perform a simple connection to this resolver, even though the
 		// default configuration doesn't do anything useful.
@@ -85,9 +87,26 @@ func (ts *TestServer) startContainer() {
 		return docker.NewServiceHostPort(host, port), nil
 	}
 
-	result, err := ts.runner.StartService(ts.ctx, connUpFunc)
+	result, _, err := ts.runner.StartNewService(ts.ctx, true, true, connUpFunc)
 	require.NoError(ts.t, err, "failed to start dns resolver for "+ts.domains[0])
 	ts.startup = result
+
+	if ts.startup.StartResult.RealIP == "" {
+		mapping, err := ts.runner.GetNetworkAndAddresses(ts.startup.Container.ID)
+		require.NoError(ts.t, err, "failed to fetch network addresses to correct missing real IP address")
+		if len(network) == 0 {
+			require.Equal(ts.t, 1, len(mapping), "expected exactly one network address")
+			for network = range mapping {
+				// Because mapping is a map of network name->ip, we need
+				// to use the above range's assignment to get the name,
+				// as there is no other way of getting the keys of a map.
+			}
+		}
+		require.Contains(ts.t, mapping, network, "expected network to be part of the mapping")
+		ts.startup.StartResult.RealIP = mapping[network]
+	}
+
+	ts.t.Logf("[dnsserv] Addresses of DNS resolver: local=%v / container=%v", ts.GetLocalAddr(), ts.GetRemoteAddr())
 }
 
 func (ts *TestServer) buildNamedConf() string {
