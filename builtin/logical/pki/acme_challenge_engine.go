@@ -58,31 +58,69 @@ func NewACMEChallengeEngine() *ACMEChallengeEngine {
 	return ace
 }
 
-func (ace *ACMEChallengeEngine) Initialize(b *backend, sc *storageContext) error {
-	if err := ace.LoadFromStorage(b, sc); err != nil {
-		return fmt.Errorf("failed loading initial in-progress validations: %w", err)
-	}
-
-	return nil
-}
-
-func (ace *ACMEChallengeEngine) LoadFromStorage(b *backend, sc *storageContext) error {
+func (ace *ACMEChallengeEngine) LoadFromStorage(sc *storageContext) error {
 	items, err := sc.Storage.List(sc.Context, acmeValidationPrefix)
 	if err != nil {
 		return fmt.Errorf("failed loading list of validations from disk: %w", err)
 	}
 
+	if len(items) == 0 {
+		return nil
+	}
+
 	ace.ValidationLock.Lock()
 	defer ace.ValidationLock.Unlock()
 
+	// Ensure we don't add any duplicate items to the queue.
+	existingItems := map[string]struct{}{}
+	element := ace.Validations.Front()
+	for element != nil {
+		value := element.Value.(*ChallengeQueueEntry)
+		existingItems[value.Identifier] = struct{}{}
+		element = element.Next()
+	}
+
 	// Add them to our queue of validations to work through later.
 	for _, item := range items {
+		if _, present := existingItems[item]; present {
+			continue
+		}
+
 		ace.Validations.PushBack(&ChallengeQueueEntry{
 			Identifier: item,
 		})
 	}
 
+	// Notify the running queue that there's new work to do.
+	select {
+	case ace.NewValidation <- items[0]:
+	default:
+	}
+
 	return nil
+}
+
+func (ace *ACMEChallengeEngine) DrainQueue() {
+	// All queue validation entries should be persisted to storage. This is
+	// called when we want to disable ACME, keeping the validation engine
+	// itself running, but stopping any new work items.
+	ace.ValidationLock.Lock()
+	defer ace.ValidationLock.Unlock()
+
+	element := ace.Validations.Front()
+	for element != nil {
+		ace.Validations.Remove(element)
+		element = ace.Validations.Front()
+	}
+
+	// We notify the queue, so it knows there's no new work and that it
+	// was drained. It will continue waiting on existing items, but won't
+	// otherwise make progress on the queue. This helps when we have pending
+	// workers in progress.
+	select {
+	case ace.NewValidation <- "drained":
+	default:
+	}
 }
 
 func (ace *ACMEChallengeEngine) Run(b *backend, state *acmeState) {

@@ -59,6 +59,7 @@ func NewACMEState() *acmeState {
 		validator:   NewACMEChallengeEngine(),
 		configDirty: new(atomic.Bool),
 	}
+
 	// Config hasn't been loaded yet; mark dirty.
 	state.configDirty.Store(true)
 
@@ -67,16 +68,20 @@ func NewACMEState() *acmeState {
 
 func (a *acmeState) Initialize(b *backend, sc *storageContext) error {
 	// Load the ACME config.
-	_, err := a.getConfigWithUpdate(sc)
+	cfg, err := a.getConfigWithUpdate(sc)
 	if err != nil {
 		return fmt.Errorf("error initializing ACME engine: %w", err)
 	}
 
-	// Kick off our ACME challenge validation engine.
-	if err := a.validator.Initialize(b, sc); err != nil {
-		return fmt.Errorf("error initializing ACME engine: %w", err)
-	}
 	go a.validator.Run(b, a)
+
+	if cfg.Enabled {
+		// Kick off our ACME challenge validation engine with any existing
+		// validations which need to run.
+		if err := a.validator.LoadFromStorage(sc); err != nil {
+			return fmt.Errorf("error initializing ACME engine with queue entries from storage: %w", err)
+		}
+	}
 
 	return nil
 }
@@ -99,6 +104,8 @@ func (a *acmeState) reloadConfigIfRequired(sc *storageContext) error {
 		return nil
 	}
 
+	wasEnabled := a.config.Enabled
+
 	config, err := sc.getAcmeConfig()
 	if err != nil {
 		return fmt.Errorf("failed reading config: %w", err)
@@ -106,6 +113,16 @@ func (a *acmeState) reloadConfigIfRequired(sc *storageContext) error {
 
 	a.config = *config
 	a.configDirty.Store(false)
+
+	if !wasEnabled && a.config.Enabled {
+		// Kick off our ACME challenge validation engine with any existing
+		// validations which need to run.
+		if err := a.validator.LoadFromStorage(sc); err != nil {
+			return fmt.Errorf("error loading ACME engine validations from storage: %w", err)
+		}
+	} else if wasEnabled && !a.config.Enabled {
+		a.validator.DrainQueue()
+	}
 
 	return nil
 }
