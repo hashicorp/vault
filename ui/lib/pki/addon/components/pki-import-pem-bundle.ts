@@ -48,13 +48,13 @@ export default class PkiImportPemBundle extends Component<Args> {
 
   get importedResponse() {
     const { mapping, importedIssuers, importedKeys } = this.args.model;
+    // Even if there are no imported items, mapping will be an empty object from API response
     if (undefined === mapping) return null;
 
-    const importList =
-      (importedIssuers || []).map((issuer: string) => {
-        const key = mapping[issuer];
-        return { issuer, key };
-      }) || [];
+    const importList = (importedIssuers || []).map((issuer: string) => {
+      const key = mapping[issuer];
+      return { issuer, key };
+    });
 
     // Check each imported key and make sure it's in the list
     (importedKeys || []).forEach((key) => {
