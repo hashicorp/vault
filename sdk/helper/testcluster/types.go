@@ -30,6 +30,7 @@ type VaultCluster interface {
 	ClusterID() string
 	NamedLogger(string) hclog.Logger
 	SetRootToken(token string)
+	GetRootToken() string
 }
 
 type VaultNodeConfig struct {

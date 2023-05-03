@@ -30,7 +30,7 @@ import (
 // a bunch of sub-tests against that cluster. It is up to each sub-test to run/configure
 // a new pki mount within the cluster to not interfere with each other.
 func Test_ACME(t *testing.T) {
-	cluster := NewVaultPkiCluster(t)
+	cluster := NewVaultPkiClusterWithDNS(t)
 	defer cluster.Cleanup()
 
 	tc := map[string]func(t *testing.T, cluster *VaultPkiCluster){
@@ -91,7 +91,7 @@ func SubtestACMECertbot(t *testing.T, cluster *VaultPkiCluster) {
 	ipAddr := networks[vaultNetwork]
 	hostname := "acme-client.dadgarcorp.com"
 
-	err = pki.AddNameToHostsFile(ipAddr, hostname, logConsumer, logStdout, logStderr)
+	err = pki.AddHostname(hostname, ipAddr)
 	require.NoError(t, err, "failed to update vault host files")
 
 	certbotCmd := []string{
@@ -197,7 +197,7 @@ func SubTestACMEIPAndDNS(t *testing.T, cluster *VaultPkiCluster) {
 	ipAddr := networks[pki.GetContainerNetworkName()]
 	hostname := "go-lang-acme-client.dadgarcorp.com"
 
-	err = pki.AddNameToHostsFile(ipAddr, hostname, logConsumer, logStdout, logStderr)
+	err = pki.AddHostname(hostname, ipAddr)
 	require.NoError(t, err, "failed to update vault host files")
 
 	// Perform an ACME lifecycle with an order that contains both an IP and a DNS name identifier
@@ -276,7 +276,7 @@ func doAcmeValidationWithGoLibrary(t *testing.T, directoryUrl string, acmeOrderI
 		func(tosURL string) bool { return true })
 	require.NoError(t, err, "failed registering account")
 
-	// Create an ACME order that
+	// Create an ACME order
 	order, err := acmeClient.AuthorizeOrder(testCtx, acmeOrderIdentifiers)
 	require.NoError(t, err, "failed creating ACME order")
 
@@ -323,6 +323,10 @@ func doAcmeValidationWithGoLibrary(t *testing.T, directoryUrl string, acmeOrderI
 		_, err = acmeClient.Accept(testCtx, challenge)
 		require.NoError(t, err, "failed to accept challenge: %v", challenge)
 	}
+
+	// Wait for the order/challenges to be validated.
+	_, err = acmeClient.WaitOrder(testCtx, order.URI)
+	require.NoError(t, err, "failed waiting for order to be ready")
 
 	// Create/sign the CSR and ask ACME server to sign it returning us the final certificate
 	csrKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)

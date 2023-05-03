@@ -22,6 +22,11 @@
         <LogoEdition aria-label="Sign in with Hashicorp Vault" />
       </div>
     {{else}}
+      <div class="is-flex-v-centered has-bottom-margin-xxl">
+        <div class="brand-icon-large">
+          <Icon @name="vault" @size="24" @stretched={{true}} />
+        </div>
+      </div>
       <div class="is-flex-row">
         {{#if this.mfaAuthData}}
           <button type="button" class="icon-button" {{on "click" (fn (mut this.mfaAuthData) null)}}>

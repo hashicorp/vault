@@ -318,7 +318,7 @@ func (dc *ExecDevCluster) Cleanup() {
 	dc.stop()
 }
 
-// RootToken returns the root token of the cluster, if set
-func (dc *ExecDevCluster) RootToken() string {
+// GetRootToken returns the root token of the cluster, if set
+func (dc *ExecDevCluster) GetRootToken() string {
 	return dc.rootToken
 }

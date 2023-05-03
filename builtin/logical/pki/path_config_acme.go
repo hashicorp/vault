@@ -188,10 +188,10 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse DNS resolver address: %w", err)
 			}
-			if addr != "" {
+			if addr == "" {
 				return nil, fmt.Errorf("failed to parse DNS resolver address: got empty address")
 			}
-			if net.ParseIP(addr) != nil {
+			if net.ParseIP(addr) == nil {
 				return nil, fmt.Errorf("failed to parse DNS resolver address: expected IPv4/IPv6 address, likely got hostname")
 			}
 		}

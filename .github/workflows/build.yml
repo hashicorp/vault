@@ -4,6 +4,11 @@ name: build
 on:
   workflow_dispatch:
   pull_request:
+    # The default types for pull_request are [ opened, synchronize, reopened ].
+    # This is insufficient for our needs, since we're skipping stuff on PRs in
+    # draft mode.  By adding the ready_for_review type, when a draft pr is marked
+    # ready, we run everything, including the stuff we'd have skipped up until now.
+    types: [ opened, synchronize, reopened, ready_for_review ]
   push:
     branches:
       - main
@@ -12,6 +17,7 @@ on:
 jobs:
   # verify-changes determines if the changes are only for docs (website)
   verify-changes:
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     outputs:
       is_docs_change: ${{ steps.get-changeddir.outputs.is_docs_change }}

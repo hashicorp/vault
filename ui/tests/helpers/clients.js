@@ -28,7 +28,7 @@ export const SELECTORS = {
   dateDisplay: '[data-test-date-display]',
   attributionBlock: '[data-test-clients-attribution]',
   filterBar: '[data-test-clients-filter-bar]',
-  rangeDropdown: '[data-test-popup-menu-trigger]',
+  rangeDropdown: '[data-test-calendar-widget-trigger]',
   monthDropdown: '[data-test-popup-menu-trigger="month"]',
   yearDropdown: '[data-test-popup-menu-trigger="year"]',
   dateDropdownSubmit: '[data-test-date-dropdown-submit]',
