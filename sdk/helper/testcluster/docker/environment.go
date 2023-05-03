@@ -49,6 +49,8 @@ var (
 	_ testcluster.VaultClusterNode = &DockerClusterNode{}
 )
 
+const MaxClusterNameLength = 52
+
 // DockerCluster is used to managing the lifecycle of the test Vault cluster
 type DockerCluster struct {
 	ClusterName string
@@ -144,13 +146,13 @@ func (dc *DockerCluster) cleanup() error {
 	return result.ErrorOrNil()
 }
 
-// RootToken returns the root token of the cluster, if set
-func (dc *DockerCluster) RootToken() string {
+// GetRootToken returns the root token of the cluster, if set
+func (dc *DockerCluster) GetRootToken() string {
 	return dc.rootToken
 }
 
 func (dc *DockerCluster) SetRootToken(s string) {
-	dc.Logger.Trace("cluster root token changed", "helpful_env", fmt.Sprintf("VAULT_TOKEN=%s VAULT_CACERT=/vault/config/ca.pem", dc.RootToken()))
+	dc.Logger.Trace("cluster root token changed", "helpful_env", fmt.Sprintf("VAULT_TOKEN=%s VAULT_CACERT=/vault/config/ca.pem", s))
 	dc.rootToken = s
 }
 
@@ -416,7 +418,7 @@ func NewTestDockerCluster(t *testing.T, opts *DockerClusterOptions) *DockerClust
 	if err != nil {
 		t.Fatal(err)
 	}
-	dc.Logger.Trace("cluster started", "helpful_env", fmt.Sprintf("VAULT_TOKEN=%s VAULT_CACERT=/vault/config/ca.pem", dc.RootToken()))
+	dc.Logger.Trace("cluster started", "helpful_env", fmt.Sprintf("VAULT_TOKEN=%s VAULT_CACERT=/vault/config/ca.pem", dc.GetRootToken()))
 	return dc
 }
 
@@ -538,7 +540,7 @@ func (n *DockerClusterNode) newAPIClient() (*api.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	client.SetToken(n.Cluster.RootToken())
+	client.SetToken(n.Cluster.GetRootToken())
 	return client, nil
 }
 

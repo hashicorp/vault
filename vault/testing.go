@@ -2263,6 +2263,10 @@ func (c *TestCluster) NamedLogger(name string) log.Logger {
 	return c.Logger.Named(name)
 }
 
+func (c *TestCluster) GetRootToken() string {
+	return c.RootToken
+}
+
 func (c *TestClusterCore) Name() string {
 	return c.NodeID
 }
