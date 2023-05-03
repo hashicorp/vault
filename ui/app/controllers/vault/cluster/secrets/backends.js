@@ -21,6 +21,7 @@ export default class VaultClusterSecretsBackendController extends Controller {
   // ARG TODO: check multiple types of same secret Engine
   // check pagination.
   // ARG TMRW: solve for when both filters are set
+  // test with hundreds of mounts
 
   get sortedDisplayableBackends() {
     // show supported secret engines first and then organize those by id.
@@ -47,9 +48,13 @@ export default class VaultClusterSecretsBackendController extends Controller {
   }
 
   get secretEngineArrayByType() {
-    return this.sortedDisplayableBackends.map((modelObject) => ({
-      name: modelObject.engineType,
-      id: modelObject.engineType,
+    const arrayOfAllEngineTypes = this.sortedDisplayableBackends.map((modelObject) => modelObject.engineType);
+    // filter out repeated engineTypes (e.g. [secret, secret] => [secret])
+    const arrayOfUniqueEngineTypes = [...new Set(arrayOfAllEngineTypes)];
+
+    return arrayOfUniqueEngineTypes.map((engineType) => ({
+      name: engineType,
+      id: engineType,
     }));
   }
 
