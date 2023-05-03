@@ -4,9 +4,11 @@
  */
 
 import { SELECTORS as CONFIGURE } from './pki-configure-create';
+import { SELECTORS as DETAILS } from './pki-issuer-details';
 
 export const SELECTORS = {
-  input: (key, row = 0) => `[data-test-object-list-input="${key}-${row}"]`,
+  objectListInput: (key, row = 0) => `[data-test-object-list-input="${key}-${row}"]`,
+  inputByName: (name) => `[data-test-input="${name}"]`,
   addRow: '[data-test-object-list-add-button',
   submitButton: '[data-test-cross-sign-submit]',
   cancelButton: '[data-test-cross-sign-cancel]',
@@ -14,6 +16,8 @@ export const SELECTORS = {
   signedIssuerRow: (row = 0) => `[data-test-info-table-row="${row}"]`,
   signedIssuerCol: (attr) => `[data-test-info-table-column="${attr}"]`,
   // for cross signing acceptance tests
-  ...CONFIGURE,
+  configure: { ...CONFIGURE },
+  details: { ...DETAILS },
   rowValue: (attr) => `[data-test-row-value="${attr}"]`,
+  copyButton: (attr) => `[data-test-value-div="${attr}"] [data-test-copy-button]`,
 };
