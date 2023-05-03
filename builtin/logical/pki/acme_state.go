@@ -217,6 +217,8 @@ type acmeAccount struct {
 	TermsOfServiceAgreed bool              `json:"termsOfServiceAgreed"`
 	Jwk                  []byte            `json:"jwk"`
 	AcmeDirectory        string            `json:"acme-directory"`
+	AccountCreatedDate   time.Time         `json:"account_created_date"`
+	AccountRevokedDate   time.Time         `json:"account_revoked_date"`
 }
 
 type acmeOrder struct {

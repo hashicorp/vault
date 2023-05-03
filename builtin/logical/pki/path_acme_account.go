@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 
@@ -293,4 +294,85 @@ func (b *backend) acmeNewAccountUpdateHandler(acmeCtx *acmeContext, userCtx *jws
 
 	resp := formatAccountResponse(acmeCtx, account)
 	return resp, nil
+}
+
+func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, keyThumbprint string, certTidyBuffer, accountTidyBuffer time.Duration) error {
+	thumbprintEntry, err := ac.sc.Storage.Get(ac.sc.Context, acmeThumbprintPrefix+keyThumbprint)
+	if err != nil {
+		return fmt.Errorf("error retrieving thumbprint entry %v, unable to find corresponding account entry: %w", keyThumbprint, err)
+	}
+	if thumbprintEntry == nil {
+		return fmt.Errorf("empty thumbprint entry %v, unable to find corresponding account entry", keyThumbprint)
+	}
+
+	var thumbprint acmeThumbprint
+	err = thumbprintEntry.DecodeJSON(&thumbprint)
+	if err != nil {
+		return fmt.Errorf("unable to decode thumbprint entry %v to find account entry: %w", keyThumbprint, err)
+	}
+
+	if len(thumbprint.Kid) == 0 {
+		return fmt.Errorf("unable to find account entry: empty kid within thumbprint entry: %s", keyThumbprint)
+	}
+
+	// Now Get the Account:
+	accountEntry, err := ac.sc.Storage.Get(ac.sc.Context, acmeAccountPrefix+thumbprint.Kid)
+	if err != nil {
+		return err
+	}
+	if accountEntry == nil {
+		// We delete the Thumbprint Associated with the Account, and we are done
+		err = ac.sc.Storage.Delete(ac.sc.Context, acmeThumbprintPrefix+keyThumbprint)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	var account acmeAccount
+	err = accountEntry.DecodeJSON(&account)
+	if err != nil {
+		return err
+	}
+
+	// Tidy Orders On the Account
+	orderIds, err := as.ListOrderIds(ac, thumbprint.Kid)
+	if err != nil {
+		return err
+	}
+	allOrdersTidied := true
+	for orderId, _ := range orderIds {
+		wasTidied, err := b.acmeTidyOrder(ac, thumbprint.Kid, acmeAccountPrefix+thumbprint.Kid+"/orders/"+string(orderId), ac.sc, certTidyBuffer)
+		if err != nil {
+			return err
+		}
+		if !wasTidied {
+			allOrdersTidied = false
+		}
+	}
+
+	if allOrdersTidied && time.Now().After(account.AccountCreatedDate.Add(accountTidyBuffer)) {
+		// Tidy this account
+		// If it is Revoked or Deactivated:
+		if (account.Status == StatusRevoked || account.Status == StatusDeactivated) && time.Now().After(account.AccountRevokedDate.Add(accountTidyBuffer)) {
+			// We Delete the Account Associated with this Thumbprint:
+			err = ac.sc.Storage.Delete(ac.sc.Context, acmeAccountPrefix+thumbprint.Kid)
+			if err != nil {
+				return err
+			}
+
+			// Now we delete the Thumbprint Associated with the Account:
+			err = ac.sc.Storage.Delete(ac.sc.Context, acmeThumbprintPrefix+keyThumbprint)
+			if err != nil {
+				return err
+			}
+		} else if account.Status == StatusValid {
+			// Revoke This Account
+			account.AccountRevokedDate = time.Now()
+			account.Status = StatusRevoked
+			as.UpdateAccount(ac, &account)
+		}
+	}
+
+	return nil
 }
