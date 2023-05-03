@@ -120,6 +120,33 @@ func (vpc *VaultPkiCluster) AddDNSRecord(hostname, recordType, ip string) error 
 	return nil
 }
 
+func (vpc *VaultPkiCluster) RemoveDNSRecord(domain string, record string, value string) error {
+	if vpc.Dns == nil {
+		return fmt.Errorf("no DNS server was provisioned on this cluster group; unable to remove specific record")
+	}
+
+	vpc.Dns.RemoveRecord(domain, record, value)
+	return nil
+}
+
+func (vpc *VaultPkiCluster) RemoveDNSRecordsOfTypeForDomain(domain string, record string) error {
+	if vpc.Dns == nil {
+		return fmt.Errorf("no DNS server was provisioned on this cluster group; unable to remove all records of type")
+	}
+
+	vpc.Dns.RemoveRecordsOfTypeForDomain(domain, record)
+	return nil
+}
+
+func (vpc *VaultPkiCluster) RemoveDNSRecordsForDomain(domain string) error {
+	if vpc.Dns == nil {
+		return fmt.Errorf("no DNS server was provisioned on this cluster group; unable to remove records for domain")
+	}
+
+	vpc.Dns.RemoveRecordsForDomain(domain)
+	return nil
+}
+
 func (vpc *VaultPkiCluster) RemoveAllDNSRecords() error {
 	if vpc.Dns == nil {
 		return fmt.Errorf("no DNS server was provisioned on this cluster group; unable to remove all records")

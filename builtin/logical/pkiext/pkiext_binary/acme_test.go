@@ -12,7 +12,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"fmt"
 	"net"
 	"net/http"
 	"path"
@@ -34,8 +33,9 @@ func Test_ACME(t *testing.T) {
 	defer cluster.Cleanup()
 
 	tc := map[string]func(t *testing.T, cluster *VaultPkiCluster){
-		"certbot":      SubtestACMECertbot,
-		"acme ip sans": SubTestACMEIPAndDNS,
+		"certbot":       SubtestACMECertbot,
+		"acme ip sans":  SubtestACMEIPAndDNS,
+		"acme wildcard": SubtestACMEWildcardDNS,
 	}
 
 	// Wrap the tests within an outer group, so that we run all tests
@@ -89,7 +89,7 @@ func SubtestACMECertbot(t *testing.T, cluster *VaultPkiCluster) {
 	require.Contains(t, networks, vaultNetwork, "expected to contain vault network")
 
 	ipAddr := networks[vaultNetwork]
-	hostname := "acme-client.dadgarcorp.com"
+	hostname := "certbot-acme-client.dadgarcorp.com"
 
 	err = pki.AddHostname(hostname, ipAddr)
 	require.NoError(t, err, "failed to update vault host files")
@@ -150,15 +150,14 @@ func SubtestACMECertbot(t *testing.T, cluster *VaultPkiCluster) {
 	require.NotEqual(t, 0, retcode, "expected non-zero retcode double revoke command result")
 }
 
-func SubTestACMEIPAndDNS(t *testing.T, cluster *VaultPkiCluster) {
+func SubtestACMEIPAndDNS(t *testing.T, cluster *VaultPkiCluster) {
 	pki, err := cluster.CreateAcmeMount("pki-ip-dns-sans")
 	require.NoError(t, err, "failed setting up acme mount")
 
 	// Since we interact with ACME from outside the container network the ACME
 	// configuration needs to be updated to use the host port and not the internal
 	// docker ip.
-	basePath := fmt.Sprintf("https://%s/v1/%s", pki.GetActiveContainerHostPort(), pki.mount)
-	err = pki.UpdateClusterConfig(map[string]interface{}{"path": basePath})
+	basePath, err := pki.UpdateClusterConfigLocalAddr()
 	require.NoError(t, err, "failed updating cluster config")
 
 	logConsumer, logStdout, logStderr := getDockerLog(t)
@@ -220,7 +219,43 @@ func SubTestACMEIPAndDNS(t *testing.T, cluster *VaultPkiCluster) {
 		IPAddresses: []net.IP{net.ParseIP(ipAddr)},
 	}
 
-	acmeCert := doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, runner, nginxContainerId, challengeFolder, cr)
+	provisioningFunc := func(acmeClient *acme.Client, auths []*acme.Authorization) []*acme.Challenge {
+		// For each http-01 challenge, generate the file to place underneath the nginx challenge folder
+		acmeCtx := hDocker.NewBuildContext()
+		var challengesToAccept []*acme.Challenge
+		for _, auth := range auths {
+			for _, challenge := range auth.Challenges {
+				if challenge.Status != acme.StatusPending {
+					t.Logf("ignoring challenge not in status pending: %v", challenge)
+					continue
+				}
+
+				if challenge.Type == "http-01" {
+					challengeBody, err := acmeClient.HTTP01ChallengeResponse(challenge.Token)
+					require.NoError(t, err, "failed generating challenge response")
+
+					challengePath := acmeClient.HTTP01ChallengePath(challenge.Token)
+					require.NoError(t, err, "failed generating challenge path")
+
+					challengeFile := path.Base(challengePath)
+
+					acmeCtx[challengeFile] = hDocker.PathContentsFromString(challengeBody)
+
+					challengesToAccept = append(challengesToAccept, challenge)
+				}
+			}
+		}
+
+		require.GreaterOrEqual(t, len(challengesToAccept), 1, "Need at least one challenge, got none")
+
+		// Copy all challenges within the nginx container
+		err = runner.CopyTo(nginxContainerId, challengeFolder, acmeCtx)
+		require.NoError(t, err, "failed copying challenges to container")
+
+		return challengesToAccept
+	}
+
+	acmeCert := doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, cr, provisioningFunc)
 
 	require.Len(t, acmeCert.IPAddresses, 1, "expected only a single ip address in cert")
 	require.Equal(t, ipAddr, acmeCert.IPAddresses[0].String())
@@ -243,7 +278,7 @@ func SubTestACMEIPAndDNS(t *testing.T, cluster *VaultPkiCluster) {
 		IPAddresses: []net.IP{net.ParseIP(ipAddr)},
 	}
 
-	acmeCert = doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, runner, nginxContainerId, challengeFolder, cr)
+	acmeCert = doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, cr, provisioningFunc)
 
 	require.Len(t, acmeCert.IPAddresses, 1, "expected only a single ip address in cert")
 	require.Equal(t, ipAddr, acmeCert.IPAddresses[0].String())
@@ -251,7 +286,9 @@ func SubTestACMEIPAndDNS(t *testing.T, cluster *VaultPkiCluster) {
 	require.Equal(t, "", acmeCert.Subject.CommonName)
 }
 
-func doAcmeValidationWithGoLibrary(t *testing.T, directoryUrl string, acmeOrderIdentifiers []acme.AuthzID, runner *hDocker.Runner, nginxContainerId string, challengeFolder string, cr *x509.CertificateRequest) *x509.Certificate {
+type acmeGoValidatorProvisionerFunc func(acmeClient *acme.Client, auths []*acme.Authorization) []*acme.Challenge
+
+func doAcmeValidationWithGoLibrary(t *testing.T, directoryUrl string, acmeOrderIdentifiers []acme.AuthzID, cr *x509.CertificateRequest, provisioningFunc acmeGoValidatorProvisionerFunc) *x509.Certificate {
 	// Since we are contacting Vault through the host ip/port, the certificate will not validate properly
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -287,36 +324,9 @@ func doAcmeValidationWithGoLibrary(t *testing.T, directoryUrl string, acmeOrderI
 		auths = append(auths, authorization)
 	}
 
-	// For each http-01 challenge, generate the file to place underneath the nginx challenge folder
-	acmeCtx := hDocker.NewBuildContext()
-	var challengesToAccept []*acme.Challenge
-	for _, auth := range auths {
-		for _, challenge := range auth.Challenges {
-			if challenge.Status != acme.StatusPending {
-				t.Logf("ignoring challenge not in status pending: %v", challenge)
-				continue
-			}
-			if challenge.Type == "http-01" {
-				challengeBody, err := acmeClient.HTTP01ChallengeResponse(challenge.Token)
-				require.NoError(t, err, "failed generating challenge response")
-
-				challengePath := acmeClient.HTTP01ChallengePath(challenge.Token)
-				require.NoError(t, err, "failed generating challenge path")
-
-				challengeFile := path.Base(challengePath)
-
-				acmeCtx[challengeFile] = hDocker.PathContentsFromString(challengeBody)
-
-				challengesToAccept = append(challengesToAccept, challenge)
-			}
-		}
-	}
-
-	require.GreaterOrEqual(t, len(challengesToAccept), 1, "Need at least one challenge, got none")
-
-	// Copy all challenges within the nginx container
-	err = runner.CopyTo(nginxContainerId, challengeFolder, acmeCtx)
-	require.NoError(t, err, "failed copying challenges to container")
+	// Handle the validation using the external validation mechanism.
+	challengesToAccept := provisioningFunc(acmeClient, auths)
+	require.NotEmpty(t, challengesToAccept, "provisioning function failed to return any challenges to accept")
 
 	// Tell the ACME server, that they can now validate those challenges.
 	for _, challenge := range challengesToAccept {
@@ -340,6 +350,80 @@ func doAcmeValidationWithGoLibrary(t *testing.T, directoryUrl string, acmeOrderI
 	require.NoError(t, err, "failed parsing acme cert bytes")
 
 	return acmeCert
+}
+
+func SubtestACMEWildcardDNS(t *testing.T, cluster *VaultPkiCluster) {
+	pki, err := cluster.CreateAcmeMount("pki-dns-wildcards")
+	require.NoError(t, err, "failed setting up acme mount")
+
+	// Since we interact with ACME from outside the container network the ACME
+	// configuration needs to be updated to use the host port and not the internal
+	// docker ip.
+	basePath, err := pki.UpdateClusterConfigLocalAddr()
+	require.NoError(t, err, "failed updating cluster config")
+
+	hostname := "go-lang-wildcard-client.dadgarcorp.com"
+	wildcard := "*." + hostname
+
+	// Do validation without a role first.
+	directoryUrl := basePath + "/acme/directory"
+	acmeOrderIdentifiers := []acme.AuthzID{
+		{Type: "dns", Value: hostname},
+		{Type: "dns", Value: wildcard},
+	}
+	cr := &x509.CertificateRequest{
+		Subject:  pkix.Name{CommonName: wildcard},
+		DNSNames: []string{hostname, wildcard},
+	}
+
+	provisioningFunc := func(acmeClient *acme.Client, auths []*acme.Authorization) []*acme.Challenge {
+		// For each dns-01 challenge, place the record in the associated DNS resolver.
+		var challengesToAccept []*acme.Challenge
+		for _, auth := range auths {
+			for _, challenge := range auth.Challenges {
+				if challenge.Status != acme.StatusPending {
+					t.Logf("ignoring challenge not in status pending: %v", challenge)
+					continue
+				}
+
+				if challenge.Type == "dns-01" {
+					challengeBody, err := acmeClient.DNS01ChallengeRecord(challenge.Token)
+					require.NoError(t, err, "failed generating challenge response")
+
+					err = pki.AddDNSRecord("_acme-challenge."+auth.Identifier.Value, "TXT", challengeBody)
+					require.NoError(t, err, "failed setting DNS record")
+
+					challengesToAccept = append(challengesToAccept, challenge)
+				}
+			}
+		}
+
+		require.GreaterOrEqual(t, len(challengesToAccept), 1, "Need at least one challenge, got none")
+		return challengesToAccept
+	}
+
+	acmeCert := doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, cr, provisioningFunc)
+	require.Contains(t, acmeCert.DNSNames, hostname)
+	require.Contains(t, acmeCert.DNSNames, wildcard)
+	require.Equal(t, wildcard, acmeCert.Subject.CommonName)
+	pki.RemoveDNSRecordsForDomain(hostname)
+
+	// Redo validation with a role this time.
+	err = pki.UpdateRole("wildcard", map[string]interface{}{
+		"key_type":                    "any",
+		"allowed_domains":             "go-lang-wildcard-client.dadgarcorp.com",
+		"allow_subdomains":            true,
+		"allow_bare_domains":          true,
+		"allow_wildcard_certificates": true,
+	})
+	require.NoError(t, err, "failed creating role wildcard")
+	directoryUrl = basePath + "/roles/wildcard/acme/directory"
+
+	acmeCert = doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, cr, provisioningFunc)
+	require.Contains(t, acmeCert.DNSNames, hostname)
+	require.Contains(t, acmeCert.DNSNames, wildcard)
+	require.Equal(t, wildcard, acmeCert.Subject.CommonName)
+	pki.RemoveDNSRecordsForDomain(hostname)
 }
 
 func getDockerLog(t *testing.T) (func(s string), *pkiext.LogConsumerWriter, *pkiext.LogConsumerWriter) {
