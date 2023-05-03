@@ -6,20 +6,19 @@ package pkiext_binary
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"testing"
 
-	dockhelper "github.com/hashicorp/vault/sdk/helper/docker"
-
-	"github.com/hashicorp/vault/sdk/helper/testcluster"
-
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/builtin/logical/pki/dnstest"
+	dockhelper "github.com/hashicorp/vault/sdk/helper/docker"
+	"github.com/hashicorp/vault/sdk/helper/testcluster"
 	"github.com/hashicorp/vault/sdk/helper/testcluster/docker"
 )
 
 type VaultPkiCluster struct {
 	cluster *docker.DockerCluster
+	Dns     *dnstest.TestServer
 }
 
 func NewVaultPkiCluster(t *testing.T) *VaultPkiCluster {
@@ -47,8 +46,18 @@ func NewVaultPkiCluster(t *testing.T) *VaultPkiCluster {
 	return &VaultPkiCluster{cluster: cluster}
 }
 
+func NewVaultPkiClusterWithDNS(t *testing.T) *VaultPkiCluster {
+	cluster := NewVaultPkiCluster(t)
+	dns := dnstest.SetupResolverOnNetwork(t, "dadgarcorp.com", cluster.GetContainerNetworkName())
+	cluster.Dns = dns
+	return cluster
+}
+
 func (vpc *VaultPkiCluster) Cleanup() {
 	vpc.cluster.Cleanup()
+	if vpc.Dns != nil {
+		vpc.Dns.Cleanup()
+	}
 }
 
 func (vpc *VaultPkiCluster) GetActiveContainerHostPort() string {
@@ -71,27 +80,24 @@ func (vpc *VaultPkiCluster) GetActiveNode() *api.Client {
 	return vpc.cluster.Nodes()[0].APIClient()
 }
 
-func (vpc *VaultPkiCluster) AddNameToHostsFile(ip, hostname string, logConsumer func(string), logStdout, logStderr io.Writer) error {
+func (vpc *VaultPkiCluster) AddHostname(hostname, ip string) error {
+	if vpc.Dns != nil {
+		vpc.Dns.AddRecord(hostname, "A", ip)
+		vpc.Dns.PushConfig()
+		return nil
+	} else {
+		return vpc.AddNameToHostFiles(hostname, ip)
+	}
+}
+
+func (vpc *VaultPkiCluster) AddNameToHostFiles(hostname, ip string) error {
 	updateHostsCmd := []string{
 		"sh", "-c",
 		"echo '" + ip + " " + hostname + "' >> /etc/hosts",
 	}
 	for _, node := range vpc.cluster.ClusterNodes {
 		containerID := node.Container.ID
-		runner, err := dockhelper.NewServiceRunner(dockhelper.RunOptions{
-			ImageRepo:     node.ImageRepo,
-			ImageTag:      node.ImageTag,
-			ContainerName: containerID,
-			NetworkName:   node.ContainerNetworkName,
-			LogConsumer:   logConsumer,
-			LogStdout:     logStdout,
-			LogStderr:     logStderr,
-		})
-		if err != nil {
-			return err
-		}
-
-		_, _, retcode, err := runner.RunCmdWithOutput(context.Background(), containerID, updateHostsCmd)
+		_, _, retcode, err := dockhelper.RunCmdWithOutput(vpc.cluster.DockerAPI, context.Background(), containerID, updateHostsCmd)
 		if err != nil {
 			return fmt.Errorf("failed updating container %s host file: %w", containerID, err)
 		}
@@ -101,6 +107,16 @@ func (vpc *VaultPkiCluster) AddNameToHostsFile(ip, hostname string, logConsumer 
 		}
 	}
 
+	return nil
+}
+
+func (vpc *VaultPkiCluster) AddDNSRecord(hostname, recordType, ip string) error {
+	if vpc.Dns == nil {
+		return fmt.Errorf("no DNS server was provisioned on this cluster group; unable to provision custom records")
+	}
+
+	vpc.Dns.AddRecord(hostname, "A", ip)
+	vpc.Dns.PushConfig()
 	return nil
 }
 
@@ -137,7 +153,12 @@ func (vpc *VaultPkiCluster) CreateAcmeMount(mountName string) (*VaultPkiMount, e
 		return nil, fmt.Errorf("failed updating cluster config: %w", err)
 	}
 
-	err = pki.UpdateAcmeConfig(true, nil)
+	cfg := map[string]interface{}{}
+	if vpc.Dns != nil {
+		cfg["dns_resolver"] = vpc.Dns.GetRemoteAddr()
+	}
+
+	err = pki.UpdateAcmeConfig(true, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed updating acme config: %w", err)
 	}
