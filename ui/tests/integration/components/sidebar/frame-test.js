@@ -22,7 +22,7 @@ module('Integration | Component | sidebar-frame', function (hooks) {
     const currentCluster = this.owner.lookup('service:currentCluster');
     currentCluster.setCluster({ hcpLinkStatus: 'connected' });
     const version = this.owner.lookup('service:version');
-    version.setVersion({ version: '1.13.0-dev1+ent' });
+    version.version = '1.13.0-dev1+ent';
 
     await render(hbs`
       <Sidebar::Frame @showSidebar={{true}}>
