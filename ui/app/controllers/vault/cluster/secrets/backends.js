@@ -36,12 +36,10 @@ export default class VaultClusterSecretsBackendController extends Controller {
     }
     // filter list by engine name, ex: 'secret'
     if (this.selectedEngineName) {
-      const engineObject = sortedDisplayableBackends.find(
-        (modelObject) => modelObject.id === this.selectedEngineName
-      );
-      return sortedDisplayableBackends.filter(
-        (backend) => engineObject.engineType === backend.get('engineType')
-      );
+      // const engineObject = sortedDisplayableBackends.find(
+      //   (modelObject) => modelObject.id === this.selectedEngineName
+      // );
+      return sortedDisplayableBackends.filter((backend) => this.selectedEngineName === backend.get('id'));
     }
     // if no filter, return full sorted list
     return sortedDisplayableBackends;
