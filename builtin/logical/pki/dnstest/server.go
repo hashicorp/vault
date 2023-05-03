@@ -288,12 +288,95 @@ func (ts *TestServer) AddRecord(domain string, record string, value string) {
 	if values, present := ts.records[domain][record]; present {
 		for _, candidate := range values {
 			if candidate == value {
-				break
+				// Already present; skip adding.
+				return
 			}
 		}
 	}
 
 	ts.records[domain][record] = append(ts.records[domain][record], value)
+}
+
+func (ts *TestServer) RemoveRecord(domain string, record string, value string) {
+	ts.lock.Lock()
+	defer ts.lock.Unlock()
+
+	foundDomain := false
+	for _, existing := range ts.domains {
+		if strings.HasSuffix(domain, existing) {
+			foundDomain = true
+			break
+		}
+	}
+	if !foundDomain {
+		// Not found.
+		return
+	}
+
+	value = strings.TrimSpace(value)
+	if _, present := ts.records[domain]; !present {
+		// Not found.
+		return
+	}
+
+	var remaining []string
+	if values, present := ts.records[domain][record]; present {
+		for _, candidate := range values {
+			if candidate != value {
+				remaining = append(remaining, candidate)
+			}
+		}
+	}
+
+	ts.records[domain][record] = remaining
+}
+
+func (ts *TestServer) RemoveRecordsOfTypeForDomain(domain string, record string) {
+	ts.lock.Lock()
+	defer ts.lock.Unlock()
+
+	foundDomain := false
+	for _, existing := range ts.domains {
+		if strings.HasSuffix(domain, existing) {
+			foundDomain = true
+			break
+		}
+	}
+	if !foundDomain {
+		// Not found.
+		return
+	}
+
+	if _, present := ts.records[domain]; !present {
+		// Not found.
+		return
+	}
+
+	delete(ts.records[domain], record)
+}
+
+func (ts *TestServer) RemoveRecordsForDomain(domain string) {
+	ts.lock.Lock()
+	defer ts.lock.Unlock()
+
+	foundDomain := false
+	for _, existing := range ts.domains {
+		if strings.HasSuffix(domain, existing) {
+			foundDomain = true
+			break
+		}
+	}
+	if !foundDomain {
+		// Not found.
+		return
+	}
+
+	if _, present := ts.records[domain]; !present {
+		// Not found.
+		return
+	}
+
+	ts.records[domain] = map[string][]string{}
 }
 
 func (ts *TestServer) RemoveAllRecords() {

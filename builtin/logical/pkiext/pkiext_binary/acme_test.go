@@ -406,7 +406,7 @@ func SubtestACMEWildcardDNS(t *testing.T, cluster *VaultPkiCluster) {
 	require.Contains(t, acmeCert.DNSNames, hostname)
 	require.Contains(t, acmeCert.DNSNames, wildcard)
 	require.Equal(t, wildcard, acmeCert.Subject.CommonName)
-	pki.RemoveAllDNSRecords()
+	pki.RemoveDNSRecordsForDomain(hostname)
 
 	// Redo validation with a role this time.
 	err = pki.UpdateRole("wildcard", map[string]interface{}{
@@ -423,7 +423,7 @@ func SubtestACMEWildcardDNS(t *testing.T, cluster *VaultPkiCluster) {
 	require.Contains(t, acmeCert.DNSNames, hostname)
 	require.Contains(t, acmeCert.DNSNames, wildcard)
 	require.Equal(t, wildcard, acmeCert.Subject.CommonName)
-	pki.RemoveAllDNSRecords()
+	pki.RemoveDNSRecordsForDomain(hostname)
 }
 
 func getDockerLog(t *testing.T) (func(s string), *pkiext.LogConsumerWriter, *pkiext.LogConsumerWriter) {
