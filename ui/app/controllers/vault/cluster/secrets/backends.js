@@ -8,7 +8,7 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { filterBy } from '@ember/object/computed';
-import { dropTask, task } from 'ember-concurrency';
+import { dropTask } from 'ember-concurrency';
 
 export default class VaultClusterSecretsBackendController extends Controller {
   @service flashMessages;
@@ -18,9 +18,7 @@ export default class VaultClusterSecretsBackendController extends Controller {
   @tracked selectedEngineType = null;
   @tracked selectedEngineName = null;
 
-  // ARG TODO: check multiple types of same secret Engine
   // check pagination.
-  // ARG TMRW: solve for when both filters are set
   // test with hundreds of mounts
 
   get sortedDisplayableBackends() {
@@ -28,21 +26,31 @@ export default class VaultClusterSecretsBackendController extends Controller {
     const sortedDisplayableBackends = this.displayableBackends.sort(
       (a, b) => b.isSupportedBackend - a.isSupportedBackend || a.id - b.id
     );
+
     // filter list by engine type, ex: 'kv'
     if (this.selectedEngineType) {
-      return sortedDisplayableBackends.filter(
-        (backend) => this.selectedEngineType === backend.get('engineType')
-      );
+      // check first if the user has also filtered by name.
+      if (this.selectedEngineName) {
+        return this.filterByName(sortedDisplayableBackends);
+      }
+      // otherwise filter by engine type
+      return this.filterByEngineType(sortedDisplayableBackends);
     }
+
     // filter list by engine name, ex: 'secret'
     if (this.selectedEngineName) {
-      // const engineObject = sortedDisplayableBackends.find(
-      //   (modelObject) => modelObject.id === this.selectedEngineName
-      // );
-      return sortedDisplayableBackends.filter((backend) => this.selectedEngineName === backend.get('id'));
+      return this.filterByName(sortedDisplayableBackends);
     }
-    // if no filter, return full sorted list
+    // no filters, return full sorted list.
     return sortedDisplayableBackends;
+  }
+
+  filterByName(backendList) {
+    return backendList.filter((backend) => this.selectedEngineName === backend.get('id'));
+  }
+
+  filterByEngineType(backendList) {
+    return backendList.filter((backend) => this.selectedEngineType === backend.get('engineType'));
   }
 
   get secretEngineArrayByType() {
@@ -73,7 +81,6 @@ export default class VaultClusterSecretsBackendController extends Controller {
     this.selectedEngineName = name;
   }
 
-  @task
   @dropTask
   *disableEngine(engine) {
     const { engineType, path } = engine;
