@@ -21,20 +21,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-
-	"github.com/go-test/deep"
-
-	"github.com/hashicorp/go-cleanhttp"
 	"golang.org/x/crypto/acme"
 	"golang.org/x/net/http2"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/constants"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 
-	"github.com/hashicorp/vault/sdk/logical"
-
+	"github.com/go-test/deep"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/square/go-jose.v2/json"
 )
@@ -572,28 +570,64 @@ func TestAcmeConfigChecksPublicAcmeEnv(t *testing.T) {
 func setupAcmeBackend(t *testing.T) (*vault.TestCluster, *api.Client, string) {
 	cluster, client := setupTestPkiCluster(t)
 
-	// Setting templated AIAs should succeed.
-	pathConfig := client.Address() + "/v1/pki"
+	return setupAcmeBackendOnClusterAtPath(t, cluster, client, "pki")
+}
 
-	_, err := client.Logical().WriteWithContext(context.Background(), "pki/config/cluster", map[string]interface{}{
+func setupAcmeBackendOnClusterAtPath(t *testing.T, cluster *vault.TestCluster, client *api.Client, mount string) (*vault.TestCluster, *api.Client, string) {
+	mount = strings.Trim(mount, "/")
+
+	// Setting templated AIAs should succeed.
+	pathConfig := client.Address() + "/v1/" + mount
+
+	namespace := ""
+	if mount != "pki" {
+		if strings.Contains(mount, "/") && constants.IsEnterprise {
+			ns_pieces := strings.Split(mount, "/")
+			c := len(ns_pieces)
+			// mount is c-1
+			ns_name := ns_pieces[c-2]
+			if len(ns_pieces) > 2 {
+				// Parent's namespaces
+				parent := strings.Join(ns_pieces[0:c-3], "/")
+				_, err := client.WithNamespace(parent).Logical().Write("/sys/namespaces/"+ns_name, nil)
+				require.NoError(t, err, "failed to create nested namespaces "+parent+" -> "+ns_name)
+			} else {
+				_, err := client.Logical().Write("/sys/namespaces/"+ns_name, nil)
+				require.NoError(t, err, "failed to create nested namespace "+ns_name)
+			}
+			namespace = strings.Join(ns_pieces[0:c-2], "/")
+		}
+
+		err := client.WithNamespace(namespace).Sys().Mount(mount, &api.MountInput{
+			Type: "pki",
+			Config: api.MountConfigInput{
+				DefaultLeaseTTL: "16h",
+				MaxLeaseTTL:     "60h",
+			},
+		})
+		require.NoError(t, err, "failed to mount new PKI instance at "+mount)
+	}
+
+	_, err := client.Logical().WriteWithContext(context.Background(), mount+"/config/cluster", map[string]interface{}{
 		"path":     pathConfig,
-		"aia_path": "http://localhost:8200/cdn/pki",
+		"aia_path": "http://localhost:8200/cdn/" + mount,
 	})
 	require.NoError(t, err)
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "pki/config/acme", map[string]interface{}{
-		"enabled": true,
+	_, err = client.Logical().WriteWithContext(context.Background(), mount+"/config/acme", map[string]interface{}{
+		"enabled":    true,
+		"eab_policy": "not-required",
 	})
 	require.NoError(t, err)
 
 	// Allow certain headers to pass through for ACME support
-	_, err = client.Logical().WriteWithContext(context.Background(), "sys/mounts/pki/tune", map[string]interface{}{
+	_, err = client.WithNamespace(namespace).Logical().WriteWithContext(context.Background(), "sys/mounts/"+mount+"/tune", map[string]interface{}{
 		"allowed_response_headers": []string{"Last-Modified", "Replay-Nonce", "Link", "Location"},
 		"max_lease_ttl":            "920000h",
 	})
 	require.NoError(t, err, "failed tuning mount response headers")
 
-	resp, err := client.Logical().WriteWithContext(context.Background(), "/pki/issuers/generate/root/internal",
+	resp, err := client.Logical().WriteWithContext(context.Background(), mount+"/issuers/generate/root/internal",
 		map[string]interface{}{
 			"issuer_name": "root-ca",
 			"key_name":    "root-key",
@@ -604,7 +638,7 @@ func setupAcmeBackend(t *testing.T) (*vault.TestCluster, *api.Client, string) {
 		})
 	require.NoError(t, err, "failed creating root CA")
 
-	resp, err = client.Logical().WriteWithContext(context.Background(), "/pki/issuers/generate/intermediate/internal",
+	resp, err = client.Logical().WriteWithContext(context.Background(), mount+"/issuers/generate/intermediate/internal",
 		map[string]interface{}{
 			"key_name":    "int-key",
 			"key_type":    "ec",
@@ -614,7 +648,7 @@ func setupAcmeBackend(t *testing.T) (*vault.TestCluster, *api.Client, string) {
 	intermediateCSR := resp.Data["csr"].(string)
 
 	// Sign the intermediate CSR using /pki
-	resp, err = client.Logical().Write("pki/issuer/root-ca/sign-intermediate", map[string]interface{}{
+	resp, err = client.Logical().Write(mount+"/issuer/root-ca/sign-intermediate", map[string]interface{}{
 		"csr":     intermediateCSR,
 		"ttl":     "720h",
 		"max_ttl": "7200h",
@@ -623,7 +657,7 @@ func setupAcmeBackend(t *testing.T) (*vault.TestCluster, *api.Client, string) {
 	intermediateCertPEM := resp.Data["certificate"].(string)
 
 	// Configure the intermediate cert as the CA in /pki2
-	resp, err = client.Logical().Write("/pki/issuers/import/cert", map[string]interface{}{
+	resp, err = client.Logical().Write(mount+"/issuers/import/cert", map[string]interface{}{
 		"pem_bundle": intermediateCertPEM,
 	})
 	require.NoError(t, err, "failed importing intermediary cert")
@@ -631,17 +665,17 @@ func setupAcmeBackend(t *testing.T) (*vault.TestCluster, *api.Client, string) {
 	require.Len(t, importedIssuersRaw, 1)
 	intCaUuid := importedIssuersRaw[0].(string)
 
-	_, err = client.Logical().Write("/pki/issuer/"+intCaUuid, map[string]interface{}{
+	_, err = client.Logical().Write(mount+"/issuer/"+intCaUuid, map[string]interface{}{
 		"issuer_name": "int-ca",
 	})
 	require.NoError(t, err, "failed updating issuer name")
 
-	_, err = client.Logical().Write("/pki/config/issuers", map[string]interface{}{
+	_, err = client.Logical().Write(mount+"/config/issuers", map[string]interface{}{
 		"default": "int-ca",
 	})
 	require.NoError(t, err, "failed updating default issuer")
 
-	_, err = client.Logical().Write("/pki/roles/test-role", map[string]interface{}{
+	_, err = client.Logical().Write(mount+"/roles/test-role", map[string]interface{}{
 		"ttl_duration":                "365h",
 		"max_ttl_duration":            "720h",
 		"key_type":                    "any",
@@ -651,7 +685,7 @@ func setupAcmeBackend(t *testing.T) (*vault.TestCluster, *api.Client, string) {
 	})
 	require.NoError(t, err, "failed creating role test-role")
 
-	_, err = client.Logical().Write("/pki/roles/acme", map[string]interface{}{
+	_, err = client.Logical().Write(mount+"/roles/acme", map[string]interface{}{
 		"ttl_duration":     "365h",
 		"max_ttl_duration": "720h",
 		"key_type":         "any",
