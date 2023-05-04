@@ -3,7 +3,6 @@ package aws
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
@@ -269,54 +268,77 @@ func TestStaticRoleRead(t *testing.T) {
 }
 
 func TestStaticRoleDelete(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
 
-	staticRole := staticRoleConfig{
-		Name:           "test",
-		Username:       "jane-doe",
-		RotationPeriod: 24 * time.Hour,
-	}
-	entry, err := logical.StorageEntryJSON(formatRoleStoragePath(staticRole.Name), staticRole)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = config.StorageView.Put(context.Background(), entry)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	l, err := config.StorageView.List(context.Background(), "")
-	if err != nil || len(l) != 1 {
-		t.Fatalf("couldn't add an entry to storage during test setup: %s", err)
-	}
-	fmt.Println(len(l))
-
-	req := &logical.Request{
-		Operation: logical.ReadOperation,
-		Storage:   config.StorageView,
-		Data: map[string]interface{}{
-			"name": "test",
+	// test cases are run against an inmem storage holding a role called "test" attached to an IAM user called "jane-doe"
+	cases := []struct {
+		name  string
+		role  string
+		found bool
+	}{
+		{
+			name:  "role found",
+			role:  "test",
+			found: true,
 		},
-		Path: "static-roles/test",
+		{
+			name:  "role not found",
+			role:  "tossed",
+			found: false,
+		},
 	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			config := logical.TestBackendConfig()
+			config.StorageView = &logical.InmemStorage{}
 
-	b := Backend()
+			staticRole := staticRoleConfig{
+				Name:           "test",
+				Username:       "jane-doe",
+				RotationPeriod: 24 * time.Hour,
+			}
+			entry, err := logical.StorageEntryJSON(formatRoleStoragePath(staticRole.Name), staticRole)
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = config.StorageView.Put(context.Background(), entry)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-	r, err := b.pathStaticRolesDelete(context.Background(), req, staticRoleFieldData(req.Data))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if r != nil {
-		t.Fatal("response wasn't nil, but it should have been")
-	}
+			l, err := config.StorageView.List(context.Background(), "")
+			if err != nil || len(l) != 1 {
+				t.Fatalf("couldn't add an entry to storage during test setup: %s", err)
+			}
 
-	l, err = config.StorageView.List(context.Background(), "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(l) != 0 {
-		t.Fatal("size of role storage is non zero after delete")
+			req := &logical.Request{
+				Operation: logical.ReadOperation,
+				Storage:   config.StorageView,
+				Data: map[string]interface{}{
+					"name": c.role,
+				},
+				Path: formatRoleStoragePath(c.role),
+			}
+
+			b := Backend()
+
+			r, err := b.pathStaticRolesDelete(context.Background(), req, staticRoleFieldData(req.Data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if r != nil {
+				t.Fatal("response wasn't nil, but it should have been")
+			}
+
+			l, err = config.StorageView.List(context.Background(), "")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if c.found && len(l) != 0 {
+				t.Fatal("size of role storage is non zero after delete")
+			} else if !c.found && len(l) != 1 {
+				t.Fatal("size of role storage changed after what should have been no deletion")
+			}
+		})
 	}
 }
 
