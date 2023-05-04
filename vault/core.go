@@ -1542,7 +1542,10 @@ func (c *Core) unsealWithRaft(combinedKey []byte) error {
 	if c.seal.BarrierType() == wrapping.WrapperTypeShamir {
 		// If this is a legacy shamir seal this serves no purpose but it
 		// doesn't hurt.
-		err := c.seal.GetAccess().GetWrapper().(*aeadwrapper.ShamirWrapper).SetAesGcmKeyBytes(combinedKey)
+		shamirWrapper, err := c.seal.GetShamirWrapper()
+		if err == nil {
+			err = shamirWrapper.SetAesGcmKeyBytes(combinedKey)
+		}
 		if err != nil {
 			return err
 		}
@@ -1793,7 +1796,11 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 		}
 
 		// We have recovery keys; we're going to use them as the new shamir KeK.
-		err = c.seal.GetAccess().GetWrapper().(*aeadwrapper.ShamirWrapper).SetAesGcmKeyBytes(recoveryKey)
+		shamirWrapper, err := c.seal.GetShamirWrapper()
+		if err != nil {
+			return err
+		}
+		err = shamirWrapper.SetAesGcmKeyBytes(recoveryKey)
 		if err != nil {
 			return fmt.Errorf("failed to set master key in seal: %w", err)
 		}
@@ -2964,7 +2971,11 @@ func (c *Core) unsealKeyToMasterKey(ctx context.Context, seal Seal, combinedKey 
 			seal = testseal
 		}
 
-		err := seal.GetAccess().GetWrapper().(*aeadwrapper.ShamirWrapper).SetAesGcmKeyBytes(combinedKey)
+		shamirWrapper, err := seal.GetShamirWrapper()
+		if err != nil {
+			return nil, err
+		}
+		err = shamirWrapper.SetAesGcmKeyBytes(combinedKey)
 		if err != nil {
 			return nil, &ErrInvalidKey{fmt.Sprintf("failed to setup unseal key: %v", err)}
 		}

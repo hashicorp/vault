@@ -18,7 +18,7 @@ type TestSealOpts struct {
 	Name       wrapping.WrapperType
 }
 
-func NewTestSeal(opts *TestSealOpts) Access {
+func NewTestSeal(opts *TestSealOpts) (Access, *ToggleableWrapper) {
 	if opts == nil {
 		opts = new(TestSealOpts)
 	}
@@ -27,7 +27,7 @@ func NewTestSeal(opts *TestSealOpts) Access {
 	if opts.Name != "" {
 		w.wrapperType = &opts.Name
 	}
-	return NewAccess(w)
+	return NewAccess(w), w
 }
 
 func NewToggleableTestSeal(opts *TestSealOpts) (Access, func(error)) {

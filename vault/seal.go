@@ -13,6 +13,8 @@ import (
 	"strings"
 	"sync/atomic"
 
+	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
+
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
 
@@ -76,6 +78,7 @@ type Seal interface {
 	SetRecoveryKey(context.Context, []byte) error
 	VerifyRecoveryKey(context.Context, []byte) error // SealAccess
 	GetAccess() seal.Access                          // SealAccess
+	GetShamirWrapper() (*aeadwrapper.ShamirWrapper, error)
 }
 
 type defaultSeal struct {
@@ -288,6 +291,16 @@ func (d *defaultSeal) VerifyRecoveryKey(ctx context.Context, key []byte) error {
 
 func (d *defaultSeal) SetRecoveryKey(ctx context.Context, key []byte) error {
 	return fmt.Errorf("recovery not supported")
+}
+
+func (d *defaultSeal) GetShamirWrapper() (*aeadwrapper.ShamirWrapper, error) {
+	// defaultSeal is meant to be for Shamir seals, so it should always have a ShamirWrapper.
+	// Nonetheless, NewDefaultSeal does not check, so let's play it safe.
+	w, ok := d.GetAccess().GetWrapper().(*aeadwrapper.ShamirWrapper)
+	if !ok {
+		return nil, fmt.Errorf("expected defaultSeal to have a ShamirWrapper, but found a %T instead", d.GetAccess().GetWrapper())
+	}
+	return w, nil
 }
 
 // SealConfig is used to describe the seal configuration

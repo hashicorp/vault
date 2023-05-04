@@ -2438,7 +2438,8 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	var barrierWrapper wrapping.Wrapper
 	if c.flagDevAutoSeal {
 		var err error
-		barrierSeal, err = vault.NewAutoSeal(vaultseal.NewTestSeal(nil))
+		access, _ := vaultseal.NewTestSeal(nil)
+		barrierSeal, err = vault.NewAutoSeal(access)
 		if err != nil {
 			return nil, nil, nil, nil, nil, err
 		}

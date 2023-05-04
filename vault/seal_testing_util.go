@@ -39,7 +39,8 @@ func NewTestSeal(t testing.T, opts *seal.TestSealOpts) Seal {
 		})
 		return newSeal
 	default:
-		seal, err := NewAutoSeal(seal.NewTestSeal(opts))
+		access, _ := seal.NewTestSeal(opts)
+		seal, err := NewAutoSeal(access)
 		if err != nil {
 			t.Fatal(err)
 		}

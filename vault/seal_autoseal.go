@@ -14,6 +14,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
+
 	proto "github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
@@ -102,6 +104,10 @@ func (d *autoSeal) Finalize(ctx context.Context) error {
 
 func (d *autoSeal) BarrierType() wrapping.WrapperType {
 	return d.barrierType
+}
+
+func (d *autoSeal) GetShamirWrapper() (*aeadwrapper.ShamirWrapper, error) {
+	return nil, fmt.Errorf("autoSeal does not use a ShamirWrapper")
 }
 
 func (d *autoSeal) StoredKeysSupported() seal.StoredKeysSupport {
