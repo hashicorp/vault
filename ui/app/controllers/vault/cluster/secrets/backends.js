@@ -18,12 +18,9 @@ export default class VaultClusterSecretsBackendController extends Controller {
   @tracked selectedEngineType = null;
   @tracked selectedEngineName = null;
 
-  // check pagination.
-  // test with hundreds of mounts
-
   get sortedDisplayableBackends() {
     // show supported secret engines first and then organize those by id.
-    const sortedDisplayableBackends = this.displayableBackends.sort(
+    const sortedBackends = this.displayableBackends.sort(
       (a, b) => b.isSupportedBackend - a.isSupportedBackend || a.id - b.id
     );
 
@@ -31,18 +28,18 @@ export default class VaultClusterSecretsBackendController extends Controller {
     if (this.selectedEngineType) {
       // check first if the user has also filtered by name.
       if (this.selectedEngineName) {
-        return this.filterByName(sortedDisplayableBackends);
+        return this.filterByName(sortedBackends);
       }
       // otherwise filter by engine type
-      return this.filterByEngineType(sortedDisplayableBackends);
+      return this.filterByEngineType(sortedBackends);
     }
 
     // filter list by engine name, ex: 'secret'
     if (this.selectedEngineName) {
-      return this.filterByName(sortedDisplayableBackends);
+      return this.filterByName(sortedBackends);
     }
     // no filters, return full sorted list.
-    return sortedDisplayableBackends;
+    return sortedBackends;
   }
 
   filterByName(backendList) {
