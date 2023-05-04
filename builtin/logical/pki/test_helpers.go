@@ -151,6 +151,13 @@ func getParsedCrl(t *testing.T, client *api.Client, mountPoint string) *pkix.Cer
 func getParsedCrlAtPath(t *testing.T, client *api.Client, path string) *pkix.CertificateList {
 	t.Helper()
 
+	if !strings.Contains(path, "v1/") {
+		if path[0] != '/' {
+			path = "/" + path
+		}
+		path = "/v1" + path
+	}
+
 	req := client.NewRequest("GET", path)
 	resp, err := client.RawRequest(req)
 	if err != nil {
