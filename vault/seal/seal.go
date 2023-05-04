@@ -40,9 +40,9 @@ type Access struct {
 	wrapping.Wrapper
 }
 
-func (a *Access) Init(ctx context.Context) error {
+func (a *Access) Init(ctx context.Context, options ...wrapping.Option) error {
 	if initWrapper, ok := a.Wrapper.(wrapping.InitFinalizer); ok {
-		return initWrapper.Init(ctx)
+		return initWrapper.Init(ctx, options...)
 	}
 	return nil
 }
@@ -52,7 +52,7 @@ func (a *Access) Type(ctx context.Context) (wrapping.WrapperType, error) {
 }
 
 // Encrypt uses the underlying seal to encrypt the plaintext and returns it.
-func (a *Access) Encrypt(ctx context.Context, plaintext, aad []byte) (blob *wrapping.BlobInfo, err error) {
+func (a *Access) Encrypt(ctx context.Context, plaintext []byte, options ...wrapping.Option) (blob *wrapping.BlobInfo, err error) {
 	wTyp, err := a.Wrapper.Type(ctx)
 	if err != nil {
 		return nil, err
@@ -71,13 +71,13 @@ func (a *Access) Encrypt(ctx context.Context, plaintext, aad []byte) (blob *wrap
 	metrics.IncrCounter([]string{"seal", "encrypt"}, 1)
 	metrics.IncrCounter([]string{"seal", wTyp.String(), "encrypt"}, 1)
 
-	return a.Wrapper.Encrypt(ctx, plaintext, wrapping.WithAad(aad))
+	return a.Wrapper.Encrypt(ctx, plaintext, options...)
 }
 
 // Decrypt uses the underlying seal to decrypt the cryptotext and returns it.
 // Note that it is possible depending on the wrapper used that both pt and err
 // are populated.
-func (a *Access) Decrypt(ctx context.Context, data *wrapping.BlobInfo, aad []byte) (pt []byte, err error) {
+func (a *Access) Decrypt(ctx context.Context, data *wrapping.BlobInfo, options ...wrapping.Option) (pt []byte, err error) {
 	wTyp, err := a.Wrapper.Type(ctx)
 	defer func(now time.Time) {
 		metrics.MeasureSince([]string{"seal", "decrypt", "time"}, now)
@@ -92,12 +92,12 @@ func (a *Access) Decrypt(ctx context.Context, data *wrapping.BlobInfo, aad []byt
 	metrics.IncrCounter([]string{"seal", "decrypt"}, 1)
 	metrics.IncrCounter([]string{"seal", wTyp.String(), "decrypt"}, 1)
 
-	return a.Wrapper.Decrypt(ctx, data, wrapping.WithAad(aad))
+	return a.Wrapper.Decrypt(ctx, data, options...)
 }
 
-func (a *Access) Finalize(ctx context.Context) error {
+func (a *Access) Finalize(ctx context.Context, options ...wrapping.Option) error {
 	if finalizeWrapper, ok := a.Wrapper.(wrapping.InitFinalizer); ok {
-		return finalizeWrapper.Finalize(ctx)
+		return finalizeWrapper.Finalize(ctx, options...)
 	}
 	return nil
 }
