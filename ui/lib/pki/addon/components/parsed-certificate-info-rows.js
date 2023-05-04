@@ -38,4 +38,11 @@ export default class ParsedCertificateInfoRowsComponent extends Component {
       };
     });
   }
+
+  get parsingErrors() {
+    if (this.args.model.parsing_errors && this.args.model.parsing_errors.length > 0) {
+      return this.args.model.parsing_errors.map((e) => e.message).join(', ');
+    }
+    return '';
+  }
 }
