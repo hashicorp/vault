@@ -491,6 +491,23 @@ this removes ALL issuers within the mount (and is thus not desirable
 in most operational scenarios).`,
 	}
 
+	fields["tidy_acme"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `Set to true to enable tidying ACME accounts,
+orders and authorizations.  ACME orders are tidied (deleted) 
+safety_buffer after the certificate associated with them expires,
+or after the order and relevant authorizations have expired if no 
+certificate was produced.  Authorizations are tidied with the 
+corresponding order.
+
+When a valid ACME Account is at least acme_account_safety_buffer
+old, and has no remaining orders associated with it, the account is
+marked as revoked.  After another acme_account_safety_buffer has 
+passed from the revocation or deactivation date, a revoked or 
+deactivated ACME account is deleted.`,
+		Default: false,
+	}
+
 	fields["safety_buffer"] = &framework.FieldSchema{
 		Type: framework.TypeDurationSecond,
 		Description: `The amount of extra time that must have passed
@@ -507,6 +524,18 @@ beyond issuer's expiration before it is removed
 from the backend storage.
 Defaults to 8760 hours (1 year).`,
 		Default: int(defaultTidyConfig.IssuerSafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
+	}
+
+	fields["acme_account_safety_buffer"] = &framework.FieldSchema{
+		Type:        framework.TypeDurationSecond,
+		Description: ``,
+		Default:     int(defaultTidyConfig.AcmeAccountSafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
+	}
+
+	fields["acme_order_safety_buffer"] = &framework.FieldSchema{
+		Type:        framework.TypeDurationSecond,
+		Description: ``,
+		Default:     int(defaultTidyConfig.AcmeOrderSafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
 	}
 
 	fields["pause_duration"] = &framework.FieldSchema{

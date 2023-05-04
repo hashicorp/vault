@@ -35,9 +35,11 @@ const (
 
 type tidyStatus struct {
 	// Parameters used to initiate the operation
-	safetyBuffer         int
-	issuerSafetyBuffer   int
-	revQueueSafetyBuffer int
+	safetyBuffer            int
+	issuerSafetyBuffer      int
+	revQueueSafetyBuffer    int
+	acmeAccountSafetyBuffer int
+	acmeOrderSafetyBuffer   int
 
 	tidyCertStore         bool
 	tidyRevokedCerts      bool
@@ -46,6 +48,7 @@ type tidyStatus struct {
 	tidyBackupBundle      bool
 	tidyRevocationQueue   bool
 	tidyCrossRevokedCerts bool
+	tidyAcme              bool
 	pauseDuration         string
 
 	// Status
@@ -62,42 +65,54 @@ type tidyStatus struct {
 	missingIssuerCertCount   uint
 	revQueueDeletedCount     uint
 	crossRevokedDeletedCount uint
+
+	acmeAccountsCount        uint
+	acmeAccountsRevokedCount uint
+	acmeAccountsDeletedCount uint
+	acmeOrdersCount          uint
+	acmeOrdersDeletedCount   uint
 }
 
 type tidyConfig struct {
-	Enabled            bool          `json:"enabled"`
-	Interval           time.Duration `json:"interval_duration"`
-	CertStore          bool          `json:"tidy_cert_store"`
-	RevokedCerts       bool          `json:"tidy_revoked_certs"`
-	IssuerAssocs       bool          `json:"tidy_revoked_cert_issuer_associations"`
-	ExpiredIssuers     bool          `json:"tidy_expired_issuers"`
-	BackupBundle       bool          `json:"tidy_move_legacy_ca_bundle"`
-	SafetyBuffer       time.Duration `json:"safety_buffer"`
-	IssuerSafetyBuffer time.Duration `json:"issuer_safety_buffer"`
-	PauseDuration      time.Duration `json:"pause_duration"`
-	MaintainCount      bool          `json:"maintain_stored_certificate_counts"`
-	PublishMetrics     bool          `json:"publish_stored_certificate_count_metrics"`
-	RevocationQueue    bool          `json:"tidy_revocation_queue"`
-	QueueSafetyBuffer  time.Duration `json:"revocation_queue_safety_buffer"`
-	CrossRevokedCerts  bool          `json:"tidy_cross_cluster_revoked_certs"`
+	Enabled                 bool          `json:"enabled"`
+	Interval                time.Duration `json:"interval_duration"`
+	CertStore               bool          `json:"tidy_cert_store"`
+	RevokedCerts            bool          `json:"tidy_revoked_certs"`
+	IssuerAssocs            bool          `json:"tidy_revoked_cert_issuer_associations"`
+	ExpiredIssuers          bool          `json:"tidy_expired_issuers"`
+	BackupBundle            bool          `json:"tidy_move_legacy_ca_bundle"`
+	TidyAcme                bool          `json:"tidy_acme"`
+	SafetyBuffer            time.Duration `json:"safety_buffer"`
+	IssuerSafetyBuffer      time.Duration `json:"issuer_safety_buffer"`
+	AcmeAccountSafetyBuffer time.Duration `json:"acme_account_safety_buffer"`
+	AcmeOrderSafetyBuffer   time.Duration `json:"acme_order_safety_buffer"`
+	PauseDuration           time.Duration `json:"pause_duration"`
+	MaintainCount           bool          `json:"maintain_stored_certificate_counts"`
+	PublishMetrics          bool          `json:"publish_stored_certificate_count_metrics"`
+	RevocationQueue         bool          `json:"tidy_revocation_queue"`
+	QueueSafetyBuffer       time.Duration `json:"revocation_queue_safety_buffer"`
+	CrossRevokedCerts       bool          `json:"tidy_cross_cluster_revoked_certs"`
 }
 
 var defaultTidyConfig = tidyConfig{
-	Enabled:            false,
-	Interval:           12 * time.Hour,
-	CertStore:          false,
-	RevokedCerts:       false,
-	IssuerAssocs:       false,
-	ExpiredIssuers:     false,
-	BackupBundle:       false,
-	SafetyBuffer:       72 * time.Hour,
-	IssuerSafetyBuffer: 365 * 24 * time.Hour,
-	PauseDuration:      0 * time.Second,
-	MaintainCount:      false,
-	PublishMetrics:     false,
-	RevocationQueue:    false,
-	QueueSafetyBuffer:  48 * time.Hour,
-	CrossRevokedCerts:  false,
+	Enabled:                 false,
+	Interval:                12 * time.Hour,
+	CertStore:               false,
+	RevokedCerts:            false,
+	IssuerAssocs:            false,
+	ExpiredIssuers:          false,
+	BackupBundle:            false,
+	TidyAcme:                false,
+	SafetyBuffer:            72 * time.Hour,
+	IssuerSafetyBuffer:      365 * 24 * time.Hour,
+	AcmeAccountSafetyBuffer: 48 * time.Hour,
+	AcmeOrderSafetyBuffer:   48 * time.Hour,
+	PauseDuration:           0 * time.Second,
+	MaintainCount:           false,
+	PublishMetrics:          false,
+	RevocationQueue:         false,
+	QueueSafetyBuffer:       48 * time.Hour,
+	CrossRevokedCerts:       false,
 }
 
 func pathTidy(b *backend) *framework.Path {
@@ -1419,6 +1434,7 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 			"tidy_move_legacy_ca_bundle":            nil,
 			"tidy_revocation_queue":                 nil,
 			"tidy_cross_cluster_revoked_certs":      nil,
+			"tidy_acme":                             nil,
 			"pause_duration":                        nil,
 			"state":                                 "Inactive",
 			"error":                                 nil,
@@ -1463,6 +1479,7 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 	resp.Data["tidy_move_legacy_ca_bundle"] = b.tidyStatus.tidyBackupBundle
 	resp.Data["tidy_revocation_queue"] = b.tidyStatus.tidyRevocationQueue
 	resp.Data["tidy_cross_cluster_revoked_certs"] = b.tidyStatus.tidyCrossRevokedCerts
+	resp.Data["tidy_acme"] = b.tidyStatus.tidyAcme
 	resp.Data["pause_duration"] = b.tidyStatus.pauseDuration
 	resp.Data["time_started"] = b.tidyStatus.timeStarted
 	resp.Data["message"] = b.tidyStatus.message

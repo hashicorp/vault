@@ -341,7 +341,7 @@ func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, ke
 		return err
 	}
 	allOrdersTidied := true
-	for orderId, _ := range orderIds {
+	for orderId := range orderIds {
 		wasTidied, err := b.acmeTidyOrder(ac, thumbprint.Kid, acmeAccountPrefix+thumbprint.Kid+"/orders/"+string(orderId), ac.sc, certTidyBuffer)
 		if err != nil {
 			return err
@@ -370,7 +370,10 @@ func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, ke
 			// Revoke This Account
 			account.AccountRevokedDate = time.Now()
 			account.Status = StatusRevoked
-			as.UpdateAccount(ac, &account)
+			err := as.UpdateAccount(ac, &account)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
