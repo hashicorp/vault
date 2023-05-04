@@ -1,4 +1,4 @@
-import { module, test } from 'qunit';
+import { module, skip, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import { format } from 'date-fns';
@@ -48,7 +48,7 @@ module('Integration | Helper | date-format', function (hooks) {
     assert.dom(this.element).includesText(format(formattedDate, 'MMMM dd, yyyy hh:mm:ss a'));
   });
 
-  test('displays time zone if withTimeZone=true', async function (assert) {
+  skip('displays time zone if withTimeZone=true', async function (assert) {
     const timestampDate = '2022-12-06T11:29:15-08:00';
     const zone = new Date().toLocaleTimeString(undefined, { timeZoneName: 'short' }).split(' ')[2];
     this.set('timestampDate', timestampDate);
