@@ -555,12 +555,6 @@ func (a *acmeState) verifyEabPayload(ac *acmeContext, outer *jwsCtx, expectedPat
 		return nil, fmt.Errorf("nonce should not be provided in eab 'protected': %w", ErrMalformed)
 	}
 
-	// Load the EAB
-	eabEntry, err := a.LoadEab(ac.sc, eabJws.Kid)
-	if err != nil {
-		return nil, fmt.Errorf("%w: failed to verify eab", ErrUnauthorized)
-	}
-
 	rawPayloadBase64, ok := payload["payload"]
 	if !ok {
 		return nil, fmt.Errorf("missing required field eab 'payload': %w", ErrMalformed)
@@ -604,6 +598,12 @@ func (a *acmeState) verifyEabPayload(ac *acmeContext, outer *jwsCtx, expectedPat
 		//
 		// > The JWS Unprotected Header [RFC7515] MUST NOT be used
 		return nil, fmt.Errorf("eab had unprotected headers: %w", ErrMalformed)
+	}
+
+	// Load the EAB to validate the signature against
+	eabEntry, err := a.LoadEab(ac.sc, eabJws.Kid)
+	if err != nil {
+		return nil, fmt.Errorf("%w: failed to verify eab", ErrUnauthorized)
 	}
 
 	_, err = sig.Verify(eabEntry.MacKey)
