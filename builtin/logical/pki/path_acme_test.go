@@ -580,6 +580,7 @@ func setupAcmeBackendOnClusterAtPath(t *testing.T, cluster *vault.TestCluster, c
 	pathConfig := client.Address() + "/v1/" + mount
 
 	namespace := ""
+	mountName := mount
 	if mount != "pki" {
 		if strings.Contains(mount, "/") && constants.IsEnterprise {
 			ns_pieces := strings.Split(mount, "/")
@@ -588,17 +589,18 @@ func setupAcmeBackendOnClusterAtPath(t *testing.T, cluster *vault.TestCluster, c
 			ns_name := ns_pieces[c-2]
 			if len(ns_pieces) > 2 {
 				// Parent's namespaces
-				parent := strings.Join(ns_pieces[0:c-3], "/")
+				parent := strings.Join(ns_pieces[0:c-2], "/")
 				_, err := client.WithNamespace(parent).Logical().Write("/sys/namespaces/"+ns_name, nil)
 				require.NoError(t, err, "failed to create nested namespaces "+parent+" -> "+ns_name)
 			} else {
 				_, err := client.Logical().Write("/sys/namespaces/"+ns_name, nil)
 				require.NoError(t, err, "failed to create nested namespace "+ns_name)
 			}
-			namespace = strings.Join(ns_pieces[0:c-2], "/")
+			namespace = strings.Join(ns_pieces[0:c-1], "/")
+			mountName = ns_pieces[c-1]
 		}
 
-		err := client.WithNamespace(namespace).Sys().Mount(mount, &api.MountInput{
+		err := client.WithNamespace(namespace).Sys().Mount(mountName, &api.MountInput{
 			Type: "pki",
 			Config: api.MountConfigInput{
 				DefaultLeaseTTL: "16h",
@@ -621,7 +623,7 @@ func setupAcmeBackendOnClusterAtPath(t *testing.T, cluster *vault.TestCluster, c
 	require.NoError(t, err)
 
 	// Allow certain headers to pass through for ACME support
-	_, err = client.WithNamespace(namespace).Logical().WriteWithContext(context.Background(), "sys/mounts/"+mount+"/tune", map[string]interface{}{
+	_, err = client.WithNamespace(namespace).Logical().WriteWithContext(context.Background(), "sys/mounts/"+mountName+"/tune", map[string]interface{}{
 		"allowed_response_headers": []string{"Last-Modified", "Replay-Nonce", "Link", "Location"},
 		"max_lease_ttl":            "920000h",
 	})
