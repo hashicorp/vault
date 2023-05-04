@@ -1013,7 +1013,10 @@ func (c *TestClusterCore) stop() error {
 }
 
 func (c *TestClusterCore) StopAutomaticRollbacks() {
-	c.rollback.StopTicker()
+	if !c.rollback.tickerIsStopped {
+		c.rollback.StopTicker()
+		c.rollback.tickerIsStopped = true
+	}
 }
 
 func (c *TestClusterCore) GrabRollbackLock() {

@@ -43,12 +43,13 @@ type RollbackManager struct {
 	inflight     map[string]*rollbackState
 	inflightLock sync.RWMutex
 
-	doneCh       chan struct{}
-	shutdown     bool
-	shutdownCh   chan struct{}
-	shutdownLock sync.Mutex
-	stopTicker   chan struct{}
-	quitContext  context.Context
+	doneCh          chan struct{}
+	shutdown        bool
+	shutdownCh      chan struct{}
+	shutdownLock    sync.Mutex
+	stopTicker      chan struct{}
+	tickerIsStopped bool
+	quitContext     context.Context
 
 	core *Core
 }
