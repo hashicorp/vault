@@ -205,6 +205,24 @@ func TestStaticRoleRead(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
+	// test cases are run against an inmem storage holding a role called "test" attached to an IAM user called "jane-doe"
+	cases := []struct {
+		name     string
+		roleName string
+		found    bool
+	}{
+		{
+			name:     "role name exists",
+			roleName: "test",
+			found:    true,
+		},
+		{
+			name:     "role name not found",
+			roleName: "toast",
+			found:    false, // implied, but set for clarity
+		},
+	}
+
 	staticRole := staticRoleConfig{
 		Name:           "test",
 		Username:       "jane-doe",
@@ -219,23 +237,34 @@ func TestStaticRoleRead(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	req := &logical.Request{
-		Operation: logical.ReadOperation,
-		Storage:   config.StorageView,
-		Data: map[string]interface{}{
-			"name": "test",
-		},
-		Path: "static-roles/test",
-	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			req := &logical.Request{
+				Operation: logical.ReadOperation,
+				Storage:   config.StorageView,
+				Data: map[string]interface{}{
+					"name": c.roleName,
+				},
+				Path: formatRoleStoragePath(c.roleName),
+			}
 
-	b := Backend()
+			b := Backend()
 
-	r, err := b.pathStaticRolesRead(context.Background(), req, staticRoleFieldData(req.Data))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if r == nil {
-		t.Fatal("response was nil, but it shouldn't have been")
+			r, err := b.pathStaticRolesRead(context.Background(), req, staticRoleFieldData(req.Data))
+
+			if err != nil {
+				t.Fatal(err)
+			}
+			if c.found {
+				if r == nil {
+					t.Fatal("response was nil, but it shouldn't have been")
+				}
+			} else {
+				if r != nil {
+					t.Fatal("response should have been nil on a non-existent role")
+				}
+			}
+		})
 	}
 }
 
