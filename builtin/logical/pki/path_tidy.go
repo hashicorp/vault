@@ -194,6 +194,16 @@ func pathTidyCancel(b *backend) *framework.Path {
 								Description: `Tidy Unused Acme Accounts, and Orders`,
 								Required:    false,
 							},
+							"acme_order_safety_buffer": {
+								Type:        framework.TypeInt,
+								Description: `Safety buffer after which expired orders are removed`,
+								Required:    false,
+							},
+							"acme_account_safety_buffer": {
+								Type:        framework.TypeInt,
+								Description: `Safety buffer after creation after which accounts lacking orders are revoked`,
+								Required:    false,
+							},
 							"tidy_expired_issuers": {
 								Type:        framework.TypeBool,
 								Description: `Tidy expired issuers`,
@@ -344,6 +354,16 @@ func pathTidyStatus(b *backend) *framework.Path {
 								Type:        framework.TypeInt,
 								Description: `Revocation queue safety buffer`,
 								Required:    true,
+							},
+							"acme_order_safety_buffer": {
+								Type:        framework.TypeInt,
+								Description: `Safety buffer after which expired orders are removed`,
+								Required:    false,
+							},
+							"acme_account_safety_buffer": {
+								Type:        framework.TypeInt,
+								Description: `Safety buffer after creation after which accounts lacking orders are revoked`,
+								Required:    false,
 							},
 							"tidy_cert_store": {
 								Type:        framework.TypeBool,
@@ -557,6 +577,16 @@ func pathConfigAutoTidy(b *backend) *framework.Path {
 								Type:        framework.TypeInt,
 								Description: `Issuer safety buffer`,
 								Required:    true,
+							},
+							"acme_order_safety_buffer": {
+								Type:        framework.TypeInt,
+								Description: `Safety buffer after which expired orders are removed`,
+								Required:    false,
+							},
+							"acme_account_safety_buffer": {
+								Type:        framework.TypeInt,
+								Description: `Safety buffer after creation after which accounts lacking orders are revoked`,
+								Required:    false,
 							},
 							"pause_duration": {
 								Type:        framework.TypeString,
