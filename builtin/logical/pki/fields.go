@@ -527,9 +527,11 @@ Defaults to 8760 hours (1 year).`,
 	}
 
 	fields["acme_account_safety_buffer"] = &framework.FieldSchema{
-		Type:        framework.TypeDurationSecond,
-		Description: ``,
-		Default:     int(defaultTidyConfig.AcmeAccountSafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
+		Type: framework.TypeDurationSecond,
+		Description: `The amount of time that must pass after creation
+that an account with no orders is marked revoked, and the amount of time
+after being marked revoked or dea`,
+		Default: int(defaultTidyConfig.AcmeAccountSafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
 	}
 
 	fields["acme_order_safety_buffer"] = &framework.FieldSchema{

@@ -290,6 +290,7 @@ func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, contact []string, 
 		Jwk:                  c.Jwk,
 		Status:               StatusValid,
 		AcmeDirectory:        ac.acmeDirectory,
+		AccountCreatedDate:   time.Now(),
 	}
 	json, err := logical.StorageEntryJSON(acmeAccountPrefix+c.Kid, acct)
 	if err != nil {

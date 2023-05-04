@@ -189,6 +189,11 @@ func pathTidyCancel(b *backend) *framework.Path {
 								Description: `Tidy revoked certificate issuer associations`,
 								Required:    false,
 							},
+							"tidy_acme": {
+								Type:        framework.TypeBool,
+								Description: `Tidy Unused Acme Accounts, and Orders`,
+								Required:    false,
+							},
 							"tidy_expired_issuers": {
 								Type:        framework.TypeBool,
 								Description: `Tidy expired issuers`,
@@ -276,6 +281,26 @@ func pathTidyCancel(b *backend) *framework.Path {
 							"internal_backend_uuid": {
 								Type:     framework.TypeString,
 								Required: false,
+							},
+							"total_acme_account_count": {
+								Type:        framework.TypeInt,
+								Description: `Total number of acme accounts iterated over`,
+								Required:    false,
+							},
+							"acme_account_deleted_count": {
+								Type:        framework.TypeInt,
+								Description: `The number of revoked acme accounts removed`,
+								Required:    false,
+							},
+							"acme_account_revoked_count": {
+								Type:        framework.TypeInt,
+								Description: `The number of unused acme accounts revoked`,
+								Required:    false,
+							},
+							"acme_orders_deleted_count": {
+								Type:        framework.TypeInt,
+								Description: `The number of expired, unused acme orders removed`,
+								Required:    false,
 							},
 						},
 					}},
@@ -345,6 +370,11 @@ func pathTidyStatus(b *backend) *framework.Path {
 								Description: ``,
 								Required:    false,
 							},
+							"tidy_acme": {
+								Type:        framework.TypeBool,
+								Description: `Tidy Unused Acme Accounts, and Orders`,
+								Required:    true,
+							},
 							"pause_duration": {
 								Type:        framework.TypeString,
 								Description: `Duration to pause between tidying certificates`,
@@ -425,6 +455,26 @@ func pathTidyStatus(b *backend) *framework.Path {
 								Type:     framework.TypeString,
 								Required: true,
 							},
+							"total_acme_account_count": {
+								Type:        framework.TypeInt,
+								Description: `Total number of acme accounts iterated over`,
+								Required:    false,
+							},
+							"acme_account_deleted_count": {
+								Type:        framework.TypeInt,
+								Description: `The number of revoked acme accounts removed`,
+								Required:    false,
+							},
+							"acme_account_revoked_count": {
+								Type:        framework.TypeInt,
+								Description: `The number of unused acme accounts revoked`,
+								Required:    false,
+							},
+							"acme_orders_deleted_count": {
+								Type:        framework.TypeInt,
+								Description: `The number of expired, unused acme orders removed`,
+								Required:    false,
+							},
 						},
 					}},
 				},
@@ -491,6 +541,11 @@ func pathConfigAutoTidy(b *backend) *framework.Path {
 							"tidy_expired_issuers": {
 								Type:        framework.TypeBool,
 								Description: `Specifies whether tidy expired issuers`,
+								Required:    true,
+							},
+							"tidy_acme": {
+								Type:        framework.TypeBool,
+								Description: `Tidy Unused Acme Accounts, and Orders`,
 								Required:    true,
 							},
 							"safety_buffer": {
@@ -574,6 +629,11 @@ func pathConfigAutoTidy(b *backend) *framework.Path {
 							"tidy_expired_issuers": {
 								Type:        framework.TypeBool,
 								Description: `Specifies whether tidy expired issuers`,
+								Required:    true,
+							},
+							"tidy_acme": {
+								Type:        framework.TypeBool,
+								Description: `Tidy Unused Acme Accounts, and Orders`,
 								Required:    true,
 							},
 							"safety_buffer": {

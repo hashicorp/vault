@@ -283,6 +283,7 @@ func (b *backend) acmeNewAccountUpdateHandler(acmeCtx *acmeContext, userCtx *jws
 		// TODO: This should cancel any ongoing operations (do not revoke certs),
 		//       perhaps we should delete this account here?
 		account.Status = StatusDeactivated
+		account.AccountRevokedDate = time.Now()
 	}
 
 	if shouldUpdate {
@@ -326,7 +327,7 @@ func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, ke
 		if err != nil {
 			return err
 		}
-		b.tidyStatusIncDeletedAcmeAcountCount()
+		b.tidyStatusIncDeletedAcmeAccountCount()
 		return nil
 	}
 
@@ -367,7 +368,7 @@ func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, ke
 			if err != nil {
 				return err
 			}
-			b.tidyStatusIncDeletedAcmeAcountCount()
+			b.tidyStatusIncDeletedAcmeAccountCount()
 		} else if account.Status == StatusValid {
 			// Revoke This Account
 			account.AccountRevokedDate = time.Now()
