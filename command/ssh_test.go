@@ -4,6 +4,7 @@
 package command
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/mitchellh/cli"
@@ -215,5 +216,21 @@ func TestIsSingleSSHArg(t *testing.T) {
 				t.Errorf("arg %q got %v want %v", test.arg, got, test.want)
 			}
 		})
+	}
+}
+
+func TestSSHCommandOmitFlagWarning(t *testing.T) {
+	t.Parallel()
+
+	ui, cmd := testSSHCommand(t)
+
+	code := cmd.Run([]string{"-mode", "ca", "-role", "otp_key_role", "user@1.2.3.4", "-extraFlag", "bug"})
+	if code != 2 {
+		t.Fatalf("expected %d to be %d", code, 2)
+	}
+
+	combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+	if strings.Contains(combined, "Command flags must be provided before positional arguments. The following arguments will not be parsed as flags") {
+		t.Fatalf("ssh command displayed flag warnings")
 	}
 }
