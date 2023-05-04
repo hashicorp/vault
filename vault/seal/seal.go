@@ -36,23 +36,42 @@ func (s StoredKeysSupport) String() string {
 
 // Access is the embedded implementation of autoSeal that contains logic
 // specific to encrypting and decrypting data, or in this case keys.
-type Access struct {
+type Access interface {
+	wrapping.Wrapper
+	wrapping.InitFinalizer
+
+	GetWrapper() wrapping.Wrapper
+}
+
+type access struct {
 	wrapping.Wrapper
 }
 
-func (a *Access) Init(ctx context.Context, options ...wrapping.Option) error {
+var _ Access = (*access)(nil)
+
+func NewAccess(w wrapping.Wrapper) Access {
+	return &access{
+		Wrapper: w,
+	}
+}
+
+func (a *access) GetWrapper() wrapping.Wrapper {
+	return a.Wrapper
+}
+
+func (a *access) Init(ctx context.Context, options ...wrapping.Option) error {
 	if initWrapper, ok := a.Wrapper.(wrapping.InitFinalizer); ok {
 		return initWrapper.Init(ctx, options...)
 	}
 	return nil
 }
 
-func (a *Access) Type(ctx context.Context) (wrapping.WrapperType, error) {
+func (a *access) Type(ctx context.Context) (wrapping.WrapperType, error) {
 	return a.Wrapper.Type(ctx)
 }
 
 // Encrypt uses the underlying seal to encrypt the plaintext and returns it.
-func (a *Access) Encrypt(ctx context.Context, plaintext []byte, options ...wrapping.Option) (blob *wrapping.BlobInfo, err error) {
+func (a *access) Encrypt(ctx context.Context, plaintext []byte, options ...wrapping.Option) (blob *wrapping.BlobInfo, err error) {
 	wTyp, err := a.Wrapper.Type(ctx)
 	if err != nil {
 		return nil, err
@@ -77,7 +96,7 @@ func (a *Access) Encrypt(ctx context.Context, plaintext []byte, options ...wrapp
 // Decrypt uses the underlying seal to decrypt the cryptotext and returns it.
 // Note that it is possible depending on the wrapper used that both pt and err
 // are populated.
-func (a *Access) Decrypt(ctx context.Context, data *wrapping.BlobInfo, options ...wrapping.Option) (pt []byte, err error) {
+func (a *access) Decrypt(ctx context.Context, data *wrapping.BlobInfo, options ...wrapping.Option) (pt []byte, err error) {
 	wTyp, err := a.Wrapper.Type(ctx)
 	defer func(now time.Time) {
 		metrics.MeasureSince([]string{"seal", "decrypt", "time"}, now)
@@ -95,7 +114,7 @@ func (a *Access) Decrypt(ctx context.Context, data *wrapping.BlobInfo, options .
 	return a.Wrapper.Decrypt(ctx, data, options...)
 }
 
-func (a *Access) Finalize(ctx context.Context, options ...wrapping.Option) error {
+func (a *access) Finalize(ctx context.Context, options ...wrapping.Option) error {
 	if finalizeWrapper, ok := a.Wrapper.(wrapping.InitFinalizer); ok {
 		return finalizeWrapper.Finalize(ctx, options...)
 	}

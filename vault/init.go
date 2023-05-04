@@ -328,7 +328,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	switch c.seal.StoredKeysSupported() {
 	case seal.StoredKeysSupportedShamirRoot:
 		keysToStore := [][]byte{barrierKey}
-		if err := c.seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAesGcmKeyBytes(sealKey); err != nil {
+		if err := c.seal.GetAccess().GetWrapper().(*aeadwrapper.ShamirWrapper).SetAesGcmKeyBytes(sealKey); err != nil {
 			c.logger.Error("failed to set seal key", "error", err)
 			return nil, fmt.Errorf("failed to set seal key: %w", err)
 		}

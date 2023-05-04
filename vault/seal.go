@@ -59,32 +59,34 @@ type Seal interface {
 	SetCore(*Core)
 	Init(context.Context) error
 	Finalize(context.Context) error
-	StoredKeysSupported() seal.StoredKeysSupport
+	StoredKeysSupported() seal.StoredKeysSupport // SealAccess
 	SealWrapable() bool
 	SetStoredKeys(context.Context, [][]byte) error
 	GetStoredKeys(context.Context) ([][]byte, error)
-	BarrierType() wrapping.WrapperType
-	BarrierConfig(context.Context) (*SealConfig, error)
+	BarrierType() wrapping.WrapperType                  // SealAccess
+	BarrierConfig(context.Context) (*SealConfig, error) // SealAccess
 	SetBarrierConfig(context.Context, *SealConfig) error
 	SetCachedBarrierConfig(*SealConfig)
-	RecoveryKeySupported() bool
+	RecoveryKeySupported() bool // SealAccess
 	RecoveryType() string
-	RecoveryConfig(context.Context) (*SealConfig, error)
+	RecoveryConfig(context.Context) (*SealConfig, error) // SealAccess
 	RecoveryKey(context.Context) ([]byte, error)
 	SetRecoveryConfig(context.Context, *SealConfig) error
 	SetCachedRecoveryConfig(*SealConfig)
 	SetRecoveryKey(context.Context, []byte) error
-	VerifyRecoveryKey(context.Context, []byte) error
-	GetAccess() *seal.Access
+	VerifyRecoveryKey(context.Context, []byte) error // SealAccess
+	GetAccess() seal.Access                          // SealAccess
 }
 
 type defaultSeal struct {
-	access *seal.Access
+	access seal.Access
 	config atomic.Value
 	core   *Core
 }
 
-func NewDefaultSeal(lowLevel *seal.Access) Seal {
+var _ Seal = (*defaultSeal)(nil)
+
+func NewDefaultSeal(lowLevel seal.Access) Seal {
 	ret := &defaultSeal{
 		access: lowLevel,
 	}
@@ -103,11 +105,11 @@ func (d *defaultSeal) checkCore() error {
 	return nil
 }
 
-func (d *defaultSeal) GetAccess() *seal.Access {
+func (d *defaultSeal) GetAccess() seal.Access {
 	return d.access
 }
 
-func (d *defaultSeal) SetAccess(access *seal.Access) {
+func (d *defaultSeal) SetAccess(access seal.Access) {
 	d.access = access
 }
 
@@ -432,7 +434,7 @@ func (e *ErrDecrypt) Is(target error) bool {
 	return ok || errors.Is(e.Err, target)
 }
 
-func writeStoredKeys(ctx context.Context, storage physical.Backend, encryptor *seal.Access, keys [][]byte) error {
+func writeStoredKeys(ctx context.Context, storage physical.Backend, encryptor seal.Access, keys [][]byte) error {
 	if keys == nil {
 		return fmt.Errorf("keys were nil")
 	}
@@ -458,7 +460,7 @@ func writeStoredKeys(ctx context.Context, storage physical.Backend, encryptor *s
 
 	// Store the seal configuration.
 	pe := &physical.Entry{
-		Key:   StoredBarrierKeysPath,
+		Key:   StoredBarrierKeysPath, // TODO(SEALHA): will we need to store more than one set of keys?
 		Value: value,
 	}
 
@@ -469,7 +471,7 @@ func writeStoredKeys(ctx context.Context, storage physical.Backend, encryptor *s
 	return nil
 }
 
-func readStoredKeys(ctx context.Context, storage physical.Backend, encryptor *seal.Access) ([][]byte, error) {
+func readStoredKeys(ctx context.Context, storage physical.Backend, encryptor seal.Access) ([][]byte, error) {
 	pe, err := storage.Get(ctx, StoredBarrierKeysPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch stored keys: %w", err)

@@ -36,7 +36,7 @@ var (
 // decrypting stored keys via an underlying AutoSealAccess implementation, as
 // well as logic related to recovery keys and barrier config.
 type autoSeal struct {
-	*seal.Access
+	seal.Access
 
 	barrierType    wrapping.WrapperType
 	barrierConfig  atomic.Value
@@ -51,7 +51,7 @@ type autoSeal struct {
 // Ensure we are implementing the Seal interface
 var _ Seal = (*autoSeal)(nil)
 
-func NewAutoSeal(lowLevel *seal.Access) (*autoSeal, error) {
+func NewAutoSeal(lowLevel seal.Access) (*autoSeal, error) {
 	ret := &autoSeal{
 		Access: lowLevel,
 	}
@@ -73,7 +73,7 @@ func (d *autoSeal) SealWrapable() bool {
 	return true
 }
 
-func (d *autoSeal) GetAccess() *seal.Access {
+func (d *autoSeal) GetAccess() seal.Access {
 	return d.Access
 }
 

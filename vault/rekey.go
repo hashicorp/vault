@@ -401,11 +401,9 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 		}
 	case c.seal.BarrierType() == wrapping.WrapperTypeShamir:
 		if c.seal.StoredKeysSupported() == seal.StoredKeysSupportedShamirRoot {
-			testseal := NewDefaultSeal(&seal.Access{
-				Wrapper: aeadwrapper.NewShamirWrapper(),
-			})
+			testseal := NewDefaultSeal(seal.NewAccess(aeadwrapper.NewShamirWrapper()))
 			testseal.SetCore(c)
-			err = testseal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAesGcmKeyBytes(recoveredKey)
+			err = testseal.GetAccess().GetWrapper().(*aeadwrapper.ShamirWrapper).SetAesGcmKeyBytes(recoveredKey)
 			if err != nil {
 				return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to setup unseal key: %w", err).Error())
 			}
@@ -533,7 +531,7 @@ func (c *Core) performBarrierRekey(ctx context.Context, newSealKey []byte) logic
 	}
 
 	if c.seal.StoredKeysSupported() != seal.StoredKeysSupportedGeneric {
-		err := c.seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAesGcmKeyBytes(newSealKey)
+		err := c.seal.GetAccess().GetWrapper().(*aeadwrapper.ShamirWrapper).SetAesGcmKeyBytes(newSealKey)
 		if err != nil {
 			return logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to update barrier seal key: %w", err).Error())
 		}
