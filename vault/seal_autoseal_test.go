@@ -69,12 +69,12 @@ func (p *phy) Len() int {
 
 func TestAutoSeal_UpgradeKeys(t *testing.T) {
 	core, _, _ := TestCoreUnsealed(t)
-	testSeal := seal.NewTestSeal(nil)
+	testSeal, toggleableWrapper := seal.NewTestSeal(nil)
 
 	var encKeys []string
 	changeKey := func(key string) {
 		encKeys = append(encKeys, key)
-		testSeal.Wrapper.(*wrapping.TestWrapper).SetKeyId(key)
+		toggleableWrapper.Wrapper.(*wrapping.TestWrapper).SetKeyId(key)
 	}
 
 	// Set initial encryption key.
