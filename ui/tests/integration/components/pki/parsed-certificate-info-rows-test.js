@@ -38,7 +38,9 @@ module('Integration | Component | parsed-certificate-info-rows', function (hooks
     assert.dom('[data-test-row-value="Subject Alternative Names (SANs)"]').hasText('something,here');
     assert.dom('[data-test-value-div="Use PSS"]').hasText('No', 'Booleans are rendered');
     assert.dom('[data-test-value-div="ttl"]').doesNotExist('ttl is not rendered because value undefined');
-    assert.dom('[data-test-alert-banner="alert"]').doesNotExist('does not render parsing error info banner');
+    assert
+      .dom('[data-test-parsing-error-alert-banner]')
+      .doesNotExist('does not render parsing error info banner');
   });
 
   test('it renders info banner when parsing fails and no parsing errors', async function (assert) {
@@ -50,9 +52,9 @@ module('Integration | Component | parsed-certificate-info-rows', function (hooks
     });
 
     assert
-      .dom('[data-test-alert-banner="alert"]')
+      .dom('[data-test-parsing-error-alert-banner]')
       .hasText(
-        `There was an error parsing certificate metadata Vault cannot display unparsed values, but this will not interfere with the certificate's functionality.`
+        "There was an error parsing certificate metadata Vault cannot display unparsed values, but this will not interfere with the certificate's functionality."
       );
   });
 
@@ -66,9 +68,9 @@ module('Integration | Component | parsed-certificate-info-rows', function (hooks
     });
 
     assert
-      .dom('[data-test-alert-banner="alert"]')
+      .dom('[data-test-parsing-error-alert-banner]')
       .hasText(
-        `There was an error parsing certificate metadata Vault cannot display unparsed values, but this will not interfere with the certificate's functionality. Parsing error(s): some parsing error`
+        "There was an error parsing certificate metadata Vault cannot display unparsed values, but this will not interfere with the certificate's functionality. Parsing error(s): some parsing error"
       );
   });
 
@@ -83,9 +85,9 @@ module('Integration | Component | parsed-certificate-info-rows', function (hooks
     });
 
     assert
-      .dom('[data-test-alert-banner="alert"]')
+      .dom('[data-test-parsing-error-alert-banner]')
       .hasText(
-        `There was an error parsing certificate metadata Vault cannot display unparsed values, but this will not interfere with the certificate's functionality. Parsing error(s): certificate contains unsupported subject OIDs: 1.2.840.113549.1.9.1, certificate contains unsupported extension OIDs: 2.5.29.37`
+        "There was an error parsing certificate metadata Vault cannot display unparsed values, but this will not interfere with the certificate's functionality. Parsing error(s): certificate contains unsupported subject OIDs: 1.2.840.113549.1.9.1, certificate contains unsupported extension OIDs: 2.5.29.37"
       );
   });
 });
