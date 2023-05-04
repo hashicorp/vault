@@ -345,7 +345,9 @@ type backend struct {
 	issuersLock sync.RWMutex
 
 	// Context around ACME operations
-	acmeState *acmeState
+	acmeState       *acmeState
+	acmeAccountLock sync.RWMutex // (Write) Locked on Account Creation and Tidy
+	// TODO: Do we want a read lock anywhere else (stress test this) - eg. creating an order while an account is being revoked
 }
 
 type roleOperation func(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error)

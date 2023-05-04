@@ -1514,6 +1514,46 @@ func (b *backend) doTidyCrossRevocationStore(ctx context.Context, req *logical.R
 }
 
 func (b *backend) doTidyAcme(ctx context.Context, req *logical.Request, logger hclog.Logger, config *tidyConfig) error {
+	b.acmeAccountLock.Lock()
+	defer b.acmeAccountLock.Unlock()
+
+	sc := b.makeStorageContext(ctx, req.Storage)
+	list, err := sc.Storage.List(ctx, acmeThumbprintPrefix)
+	if err != nil {
+		return err
+	}
+
+	b.tidyStatusLock.Lock()
+	b.tidyStatus.acmeAccountsCount = uint(len(list))
+	b.tidyStatusLock.Unlock()
+
+	baseUrl, _, err := getAcmeBaseUrl(sc, req.Path)
+	if err != nil {
+		return err
+	}
+
+	acmeCtx := &acmeContext{
+		baseUrl: baseUrl,
+		sc:      sc,
+	}
+
+	for _, thumbprint := range list {
+		b.tidyAcmeAccountByThumbprint(b.acmeState, acmeCtx, thumbprint, config.SafetyBuffer, config.AcmeAccountSafetyBuffer)
+
+		// Check for cancel before continuing.
+		if atomic.CompareAndSwapUint32(b.tidyCancelCAS, 1, 0) {
+			return tidyCancelledError
+		}
+
+		// Check for pause duration to reduce resource consumption.
+		if config.PauseDuration > (0 * time.Second) {
+			b.acmeAccountLock.Unlock() // Correct the Lock
+			time.Sleep(config.PauseDuration)
+			b.acmeAccountLock.Lock()
+		}
+
+	}
+
 	return nil
 }
 
