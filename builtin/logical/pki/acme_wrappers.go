@@ -27,6 +27,7 @@ type acmeContext struct {
 	// acmeDirectory is a string that can distinguish the various acme directories we have configured
 	// if something needs to remain locked into a directory path structure.
 	acmeDirectory string
+	requireEab    bool
 }
 
 type (
@@ -87,6 +88,7 @@ func (b *backend) acmeWrapper(op acmeOperation) framework.OperationFunc {
 			role:          role,
 			issuer:        issuer,
 			acmeDirectory: acmeDirectory,
+			requireEab:    config.RequireEAB,
 		}
 
 		return op(acmeCtx, r, data)

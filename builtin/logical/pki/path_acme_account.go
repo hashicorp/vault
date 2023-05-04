@@ -152,8 +152,6 @@ func (b *backend) acmeNewAccountHandler(acmeCtx *acmeContext, r *logical.Request
 		}
 	}
 
-	// We ignore the EAB parameter as it is currently not supported.
-
 	// We have two paths here: search or create.
 	if onlyReturnExisting {
 		return b.acmeNewAccountSearchHandler(acmeCtx, userCtx)
@@ -162,10 +160,24 @@ func (b *backend) acmeNewAccountHandler(acmeCtx *acmeContext, r *logical.Request
 	// Pass through the /new-account API calls to this specific handler as its requirements are different
 	// from the account update handler.
 	if strings.HasSuffix(r.Path, "/new-account") {
-		return b.acmeNewAccountCreateHandler(acmeCtx, userCtx, contacts, termsOfServiceAgreed)
+		return b.acmeNewAccountCreateHandler(acmeCtx, userCtx, contacts, termsOfServiceAgreed, r, data)
 	}
 
 	return b.acmeNewAccountUpdateHandler(acmeCtx, userCtx, contacts, status)
+}
+
+func formatNewAccountResponse(acmeCtx *acmeContext, acct *acmeAccount, eabData map[string]interface{}) *logical.Response {
+	resp := formatAccountResponse(acmeCtx, acct)
+
+	// Per RFC 8555 Section 7.1.2.  Account Objects
+	// Including this field in a newAccount request indicates approval by
+	// the holder of an existing non-ACME account to bind that account to
+	// this ACME account
+	if acct.Eab != nil && len(eabData) != 0 {
+		resp.Data["externalAccountBinding"] = eabData
+	}
+
+	return resp
 }
 
 func formatAccountResponse(acmeCtx *acmeContext, acct *acmeAccount) *logical.Response {
@@ -211,7 +223,7 @@ func (b *backend) acmeNewAccountSearchHandler(acmeCtx *acmeContext, userCtx *jws
 	return nil, fmt.Errorf("An account with this key does not exist: %w", ErrAccountDoesNotExist)
 }
 
-func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, userCtx *jwsCtx, contact []string, termsOfServiceAgreed bool) (*logical.Response, error) {
+func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, userCtx *jwsCtx, contact []string, termsOfServiceAgreed bool, r *logical.Request, data map[string]interface{}) (*logical.Response, error) {
 	if userCtx.Existing {
 		return nil, fmt.Errorf("cannot submit to newAccount with 'kid': %w", ErrMalformed)
 	}
@@ -231,20 +243,57 @@ func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, userCtx *jws
 		return formatAccountResponse(acmeCtx, accountByKey), nil
 	}
 
+	var eab *eabType
+	var eabData map[string]interface{}
+	if acmeCtx.requireEab {
+		eabDataRaw, ok := data["externalAccountBinding"]
+		if !ok {
+			return nil, fmt.Errorf("%w: externalAccountBinding missing from payload", ErrExternalAccountRequired)
+		}
+		eabData, ok = eabDataRaw.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("%w: externalAccountBinding field was unparseable", ErrMalformed)
+		}
+
+		eab, err = b.acmeState.verifyEabPayload(acmeCtx, userCtx, r.Path, eabData)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load account by thumbprint: %w", err)
+		}
+	}
+
 	// TODO: Limit this only when ToS are required or set by the operator, since we don't have a
 	//       ToS URL in the directory at the moment, we can not enforce this.
 	//if !termsOfServiceAgreed {
 	//	return nil, fmt.Errorf("terms of service not agreed to: %w", ErrUserActionRequired)
 	//}
 
+	if eab != nil {
+		// We delete the EAB to prevent future re-use after associating it with an account, worst
+		// case if we fail creating the account we simply nuked the EAB which they can create another
+		// and retry
+		wasDeleted, err := b.acmeState.DeleteEab(acmeCtx.sc, eab.KeyID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to delete eab reference: %w", err)
+		}
+
+		if !wasDeleted {
+			// Something consumed our EAB before we did bail...
+			return nil, fmt.Errorf("eab was already used: %w", ErrUnauthorized)
+		}
+	}
+
 	b.acmeAccountLock.RLock() // Prevents Account Creation and Tidy Interfering
 	defer b.acmeAccountLock.RUnlock()
-	accountByKid, err := b.acmeState.CreateAccount(acmeCtx, userCtx, contact, termsOfServiceAgreed)
+
+	accountByKid, err := b.acmeState.CreateAccount(acmeCtx, userCtx, contact, termsOfServiceAgreed, eab)
 	if err != nil {
+		if eab != nil {
+			return nil, fmt.Errorf("failed to create account, EAB key that was used is no longer available: %w", err)
+		}
 		return nil, fmt.Errorf("failed to create account: %w", err)
 	}
 
-	resp := formatAccountResponse(acmeCtx, accountByKid)
+	resp := formatNewAccountResponse(acmeCtx, accountByKid, eabData)
 
 	// Per RFC 8555 Section 7.3. Account Management:
 	//

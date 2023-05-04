@@ -26,6 +26,12 @@ var AllowedOuterJWSTypes = map[string]interface{}{
 	"EdDSA2": true,
 }
 
+var AllowedEabJWSTypes = map[string]interface{}{
+	"HS256": true,
+	"HS384": true,
+	"HS512": true,
+}
+
 // This wraps a JWS message structure.
 type jwsCtx struct {
 	Algo     string          `json:"alg"`
@@ -45,7 +51,25 @@ func (c *jwsCtx) GetKeyThumbprint() (string, error) {
 	return base64.RawURLEncoding.EncodeToString(keyThumbprint), nil
 }
 
-func (c *jwsCtx) UnmarshalJSON(a *acmeState, ac *acmeContext, jws []byte) error {
+func UnmarshalEabJwsJson(eabBytes []byte) (*jwsCtx, error) {
+	var eabJws jwsCtx
+	var err error
+	if err = json.Unmarshal(eabBytes, &eabJws); err != nil {
+		return nil, err
+	}
+
+	if eabJws.Kid == "" {
+		return nil, fmt.Errorf("invalid header: got missing required field 'kid': %w", ErrMalformed)
+	}
+
+	if _, present := AllowedEabJWSTypes[eabJws.Algo]; !present {
+		return nil, fmt.Errorf("invalid header: unexpected value for 'algo': %w", ErrMalformed)
+	}
+
+	return &eabJws, nil
+}
+
+func (c *jwsCtx) UnmarshalOuterJwsJson(a *acmeState, ac *acmeContext, jws []byte) error {
 	var err error
 	if err = json.Unmarshal(jws, c); err != nil {
 		return err
