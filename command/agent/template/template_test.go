@@ -16,15 +16,25 @@ import (
 
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/go-hclog"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/test/bufconn"
+
 	"github.com/hashicorp/vault/command/agent/config"
+	"github.com/hashicorp/vault/command/agent/internal/ctmanager"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc/test/bufconn"
 )
+
+func newRunnerConfig(s *ServerConfig, configs ctconfig.TemplateConfigs) (*ctconfig.Config, error) {
+	managerCfg := ctmanager.ManagerConfig{
+		AgentConfig: s.AgentConfig,
+	}
+	cfg, err := ctmanager.NewManagerConfig(managerCfg, configs)
+	return cfg, err
+}
 
 // TestNewServer is a simple test to make sure NewServer returns a Server and
 // channel
