@@ -534,12 +534,6 @@ after being marked revoked or dea`,
 		Default: int(defaultTidyConfig.AcmeAccountSafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
 	}
 
-	fields["acme_order_safety_buffer"] = &framework.FieldSchema{
-		Type:        framework.TypeDurationSecond,
-		Description: ``,
-		Default:     int(defaultTidyConfig.AcmeOrderSafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
-	}
-
 	fields["pause_duration"] = &framework.FieldSchema{
 		Type: framework.TypeString,
 		Description: `The amount of time to wait between processing

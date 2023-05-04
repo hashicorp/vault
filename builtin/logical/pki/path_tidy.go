@@ -85,7 +85,6 @@ type tidyConfig struct {
 	SafetyBuffer            time.Duration `json:"safety_buffer"`
 	IssuerSafetyBuffer      time.Duration `json:"issuer_safety_buffer"`
 	AcmeAccountSafetyBuffer time.Duration `json:"acme_account_safety_buffer"`
-	AcmeOrderSafetyBuffer   time.Duration `json:"acme_order_safety_buffer"`
 	PauseDuration           time.Duration `json:"pause_duration"`
 	MaintainCount           bool          `json:"maintain_stored_certificate_counts"`
 	PublishMetrics          bool          `json:"publish_stored_certificate_count_metrics"`
@@ -192,11 +191,6 @@ func pathTidyCancel(b *backend) *framework.Path {
 							"tidy_acme": {
 								Type:        framework.TypeBool,
 								Description: `Tidy Unused Acme Accounts, and Orders`,
-								Required:    false,
-							},
-							"acme_order_safety_buffer": {
-								Type:        framework.TypeInt,
-								Description: `Safety buffer after which expired orders are removed`,
 								Required:    false,
 							},
 							"acme_account_safety_buffer": {
@@ -354,11 +348,6 @@ func pathTidyStatus(b *backend) *framework.Path {
 								Type:        framework.TypeInt,
 								Description: `Revocation queue safety buffer`,
 								Required:    true,
-							},
-							"acme_order_safety_buffer": {
-								Type:        framework.TypeInt,
-								Description: `Safety buffer after which expired orders are removed`,
-								Required:    false,
 							},
 							"acme_account_safety_buffer": {
 								Type:        framework.TypeInt,
@@ -578,11 +567,6 @@ func pathConfigAutoTidy(b *backend) *framework.Path {
 								Description: `Issuer safety buffer`,
 								Required:    true,
 							},
-							"acme_order_safety_buffer": {
-								Type:        framework.TypeInt,
-								Description: `Safety buffer after which expired orders are removed`,
-								Required:    false,
-							},
 							"acme_account_safety_buffer": {
 								Type:        framework.TypeInt,
 								Description: `Safety buffer after creation after which accounts lacking orders are revoked`,
@@ -725,7 +709,6 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	tidyCrossRevokedCerts := d.Get("tidy_cross_cluster_revoked_certs").(bool)
 	tidyAcme := d.Get("tidy_acme").(bool)
 	acmeAccountSafetyBuffer := d.Get("acme_account_safety_buffer").(int)
-	acmeOrderSafetyBuffer := d.Get("acme_order_safety_buffer").(int)
 
 	if safetyBuffer < 1 {
 		return logical.ErrorResponse("safety_buffer must be greater than zero"), nil
@@ -741,10 +724,6 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 
 	if acmeAccountSafetyBuffer < 1 {
 		return logical.ErrorResponse("acme_account_safety_buffer must be greater than zero"), nil
-	}
-
-	if acmeOrderSafetyBuffer < 1 {
-		return logical.ErrorResponse("acme_order_safety_buffer must be greater than zero"), nil
 	}
 
 	if pauseDurationStr != "" {
@@ -763,7 +742,6 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	issuerBufferDuration := time.Duration(issuerSafetyBuffer) * time.Second
 	queueSafetyBufferDuration := time.Duration(queueSafetyBuffer) * time.Second
 	acmeAccountSafetyBufferDuration := time.Duration(acmeAccountSafetyBuffer) * time.Second
-	acmeOrderSafetyBufferDuration := time.Duration(acmeOrderSafetyBuffer) * time.Second
 
 	// Manual run with constructed configuration.
 	config := &tidyConfig{
