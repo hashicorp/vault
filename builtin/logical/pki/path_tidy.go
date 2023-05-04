@@ -105,7 +105,6 @@ var defaultTidyConfig = tidyConfig{
 	SafetyBuffer:            72 * time.Hour,
 	IssuerSafetyBuffer:      365 * 24 * time.Hour,
 	AcmeAccountSafetyBuffer: 48 * time.Hour,
-	AcmeOrderSafetyBuffer:   48 * time.Hour,
 	PauseDuration:           0 * time.Second,
 	MaintainCount:           false,
 	PublishMetrics:          false,
@@ -759,7 +758,6 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 		QueueSafetyBuffer:       queueSafetyBufferDuration,
 		CrossRevokedCerts:       tidyCrossRevokedCerts,
 		TidyAcme:                tidyAcme,
-		AcmeOrderSafetyBuffer:   acmeOrderSafetyBufferDuration,
 		AcmeAccountSafetyBuffer: acmeAccountSafetyBufferDuration,
 	}
 
