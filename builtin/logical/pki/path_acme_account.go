@@ -237,6 +237,8 @@ func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, userCtx *jws
 	//	return nil, fmt.Errorf("terms of service not agreed to: %w", ErrUserActionRequired)
 	//}
 
+	b.acmeAccountLock.RLock() // Prevents Account Creation and Tidy Interfering
+	defer b.acmeAccountLock.RUnlock()
 	accountByKid, err := b.acmeState.CreateAccount(acmeCtx, userCtx, contact, termsOfServiceAgreed)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create account: %w", err)
