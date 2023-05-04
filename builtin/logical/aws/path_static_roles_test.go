@@ -250,7 +250,6 @@ func TestStaticRoleRead(t *testing.T) {
 			b := Backend()
 
 			r, err := b.pathStaticRolesRead(context.Background(), req, staticRoleFieldData(req.Data))
-
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -268,7 +267,6 @@ func TestStaticRoleRead(t *testing.T) {
 }
 
 func TestStaticRoleDelete(t *testing.T) {
-
 	// test cases are run against an inmem storage holding a role called "test" attached to an IAM user called "jane-doe"
 	cases := []struct {
 		name  string

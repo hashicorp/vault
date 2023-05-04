@@ -22,7 +22,7 @@ func TestRotation(t *testing.T) {
 	}
 
 	miam, err := awsutil.NewMockIAM(
-		//awsutil.WithGetUserOutput(),
+		// awsutil.WithGetUserOutput(),
 		awsutil.WithListAccessKeysOutput(&iam.ListAccessKeysOutput{
 			AccessKeyMetadata: []*iam.AccessKeyMetadata{
 				{},
@@ -101,5 +101,4 @@ func TestRotation(t *testing.T) {
 	if out.SecretAccessKey != "biggersecret" {
 		t.Fatal("mismatched secret")
 	}
-
 }
