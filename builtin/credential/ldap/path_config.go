@@ -5,7 +5,6 @@ package ldap
 
 import (
 	"context"
-	"math"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -107,7 +106,7 @@ func (b *backend) Config(ctx context.Context, req *logical.Request) (*ldapConfig
 
 	if result.MaximumPageSize == nil {
 		result.MaximumPageSize = new(int)
-		*result.MaximumPageSize = math.MaxInt32
+		*result.MaximumPageSize = -1
 		persistNeeded = true
 	}
 
