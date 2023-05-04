@@ -78,6 +78,12 @@ const (
 	// all fragments and segments no longer storing token counts in the directtokens
 	// storage path.
 	trackedTWESegmentPeriod = 35 * 24
+
+	// Known types of activity events; there's presently two internal event
+	// types (tokens/clients with and without entities), but we're beginning
+	// to support additional buckets for e.g., ACME requests.
+	nonEntityTokenEventType = "non-entity-token"
+	entityEventType         = "entity"
 )
 
 type segmentInfo struct {
@@ -1401,11 +1407,35 @@ func (a *ActivityLog) AddEntityToFragment(entityID string, namespaceID string, t
 
 // AddClientToFragment checks a client ID for uniqueness and
 // if not already present, adds it to the current fragment.
-// The timestamp is a Unix timestamp *without* nanoseconds, as that
-// is what token.CreationTime uses.
+//
+// See note below about AddEventToFragment.
 func (a *ActivityLog) AddClientToFragment(clientID string, namespaceID string, timestamp int64, isTWE bool, mountAccessor string) {
+	// TWE == token without entity
+	if isTWE {
+		a.AddEventToFragment(clientID, namespaceID, timestamp, nonEntityTokenEventType, mountAccessor)
+		return
+	}
+
+	a.AddEventToFragment(clientID, namespaceID, timestamp, entityEventType, mountAccessor)
+}
+
+// AddEventToFragment adds a client count event of any type to
+// add to the current fragment. ClientIDs must be unique across
+// all types; if not already present, we will add it to the current
+// fragment. The timestamp is a Unix timestamp *without* nanoseconds,
+// as that is what token.CreationTime uses.
+func (a *ActivityLog) AddEventToFragment(clientID string, namespaceID string, timestamp int64, activityType string, mountAccessor string) {
 	// Check whether entity ID already recorded
 	var present bool
+
+	// TODO: This hack enables separate tracking of events without handling
+	// separate storage buckets for counting these event types. Consider
+	// removing if the event type is otherwise clear; notably though, this
+	// does help ensure clientID uniqueness across different types of tokens,
+	// assuming it does not break any other downstream systems.
+	if activityType != nonEntityTokenEventType && activityType != entityEventType {
+		clientID = activityType + "." + clientID
+	}
 
 	a.fragmentLock.RLock()
 	if a.enabled {
@@ -1440,7 +1470,10 @@ func (a *ActivityLog) AddClientToFragment(clientID string, namespaceID string, t
 	// Track whether the clientID corresponds to a token without an entity or not.
 	// This field is backward compatible, as the default is 0, so records created
 	// from pre-1.9 activityLog code will automatically be marked as having an entity.
-	if isTWE {
+	if activityType != entityEventType {
+		// TODO: This part needs to be modified potentially for separate
+		// storage buckets of custom event types. Consider setting the above
+		// condition to activityType == nonEntityTokenEventType in the future.
 		clientRecord.NonEntity = true
 	}
 

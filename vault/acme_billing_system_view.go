@@ -48,24 +48,20 @@ func (c *Core) NewAcmeBillingSystemView(sysView interface{}) *acmeBillingSystemV
 }
 
 func (a *acmeBillingSystemViewImpl) CreateActivityCountEventForIdentifiers(ctx context.Context, identifiers []string) error {
-	var te logical.TokenEntry
-	var clientID string
-
-	// Fake our clientID from the identifiers, but ensure it is independent of ordering.
+	// Fake our clientID from the identifiers, but ensure it is
+	// independent of ordering.
+	//
+	// TODO: Because of prefixing currently handled by AddEventToFragment,
+	// we do not need to ensure it is globally unique.
 	sort.Strings(identifiers)
 	joinedIdentifiers := strings.Join(identifiers, ".")
 	identifiersHash := sha256.Sum256([]byte(joinedIdentifiers))
-	fakeToken := base64.RawURLEncoding.EncodeToString(identifiersHash[:])
-	prefix := "acme."
-	clientID = prefix + fakeToken
-	te.NamespaceID = a.entry.NamespaceID
-	te.CreationTime = time.Now().Unix()
-	te.Path = a.entry.Path
+	clientID := base64.RawURLEncoding.EncodeToString(identifiersHash[:])
 
 	// Log so users can correlate ACME requests to client count tokens.
+	activityType := "acme"
 	a.core.activityLog.logger.Debug(fmt.Sprintf("Handling ACME client count event for [%v] -> %v", identifiers, clientID))
-
-	a.core.activityLog.HandleTokenUsage(ctx, &te, clientID, true /* isTWE */)
+	a.core.activityLog.AddEventToFragment(clientID, a.entry.NamespaceID, time.Now().Unix(), activityType, a.entry.Path)
 
 	return nil
 }
