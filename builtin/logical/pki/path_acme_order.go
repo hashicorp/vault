@@ -951,7 +951,7 @@ func (b *backend) acmeTidyOrder(ac *acmeContext, accountId string, orderPath str
 			return false, err
 		}
 		if time.Now().Before(expires) {
-			return false, fmt.Errorf("error tidying authorization %v on order %v, authorization still valid, expires %t", authorizationId, orderPath, expires)
+			return false, fmt.Errorf("error tidying authorization %v on order %v, authorization still valid, expires %v", authorizationId, orderPath, expires)
 		}
 
 		// Delete the Authorization
