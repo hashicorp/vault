@@ -723,6 +723,9 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	tidyRevocationQueue := d.Get("tidy_revocation_queue").(bool)
 	queueSafetyBuffer := d.Get("revocation_queue_safety_buffer").(int)
 	tidyCrossRevokedCerts := d.Get("tidy_cross_cluster_revoked_certs").(bool)
+	tidyAcme := d.Get("tidy_acme").(bool)
+	acmeAccountSafetyBuffer := d.Get("acme_account_safety_buffer").(int)
+	acmeOrderSafetyBuffer := d.Get("acme_order_safety_buffer").(int)
 
 	if safetyBuffer < 1 {
 		return logical.ErrorResponse("safety_buffer must be greater than zero"), nil
@@ -734,6 +737,14 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 
 	if queueSafetyBuffer < 1 {
 		return logical.ErrorResponse("revocation_queue_safety_buffer must be greater than zero"), nil
+	}
+
+	if acmeAccountSafetyBuffer < 1 {
+		return logical.ErrorResponse("acme_account_safety_buffer must be greater than zero"), nil
+	}
+
+	if acmeOrderSafetyBuffer < 1 {
+		return logical.ErrorResponse("acme_order_safety_buffer must be greater than zero"), nil
 	}
 
 	if pauseDurationStr != "" {
@@ -751,22 +762,27 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	bufferDuration := time.Duration(safetyBuffer) * time.Second
 	issuerBufferDuration := time.Duration(issuerSafetyBuffer) * time.Second
 	queueSafetyBufferDuration := time.Duration(queueSafetyBuffer) * time.Second
+	acmeAccountSafetyBufferDuration := time.Duration(acmeAccountSafetyBuffer) * time.Second
+	acmeOrderSafetyBufferDuration := time.Duration(acmeOrderSafetyBuffer) * time.Second
 
 	// Manual run with constructed configuration.
 	config := &tidyConfig{
-		Enabled:            true,
-		Interval:           0 * time.Second,
-		CertStore:          tidyCertStore,
-		RevokedCerts:       tidyRevokedCerts,
-		IssuerAssocs:       tidyRevokedAssocs,
-		ExpiredIssuers:     tidyExpiredIssuers,
-		BackupBundle:       tidyBackupBundle,
-		SafetyBuffer:       bufferDuration,
-		IssuerSafetyBuffer: issuerBufferDuration,
-		PauseDuration:      pauseDuration,
-		RevocationQueue:    tidyRevocationQueue,
-		QueueSafetyBuffer:  queueSafetyBufferDuration,
-		CrossRevokedCerts:  tidyCrossRevokedCerts,
+		Enabled:                 true,
+		Interval:                0 * time.Second,
+		CertStore:               tidyCertStore,
+		RevokedCerts:            tidyRevokedCerts,
+		IssuerAssocs:            tidyRevokedAssocs,
+		ExpiredIssuers:          tidyExpiredIssuers,
+		BackupBundle:            tidyBackupBundle,
+		SafetyBuffer:            bufferDuration,
+		IssuerSafetyBuffer:      issuerBufferDuration,
+		PauseDuration:           pauseDuration,
+		RevocationQueue:         tidyRevocationQueue,
+		QueueSafetyBuffer:       queueSafetyBufferDuration,
+		CrossRevokedCerts:       tidyCrossRevokedCerts,
+		TidyAcme:                tidyAcme,
+		AcmeOrderSafetyBuffer:   acmeOrderSafetyBufferDuration,
+		AcmeAccountSafetyBuffer: acmeAccountSafetyBufferDuration,
 	}
 
 	if !atomic.CompareAndSwapUint32(b.tidyCASGuard, 0, 1) {
@@ -878,6 +894,17 @@ func (b *backend) startTidyOperation(req *logical.Request, config *tidyConfig) {
 
 			if config.CrossRevokedCerts {
 				if err := b.doTidyCrossRevocationStore(ctx, req, logger, config); err != nil {
+					return err
+				}
+			}
+
+			// Check for cancel before continuing.
+			if atomic.CompareAndSwapUint32(b.tidyCancelCAS, 1, 0) {
+				return tidyCancelledError
+			}
+
+			if config.TidyAcme {
+				if err := b.doTidyAcme(ctx, req, logger, config); err != nil {
 					return err
 				}
 			}
@@ -1483,6 +1510,10 @@ func (b *backend) doTidyCrossRevocationStore(ctx context.Context, req *logical.R
 		}
 	}
 
+	return nil
+}
+
+func (b *backend) doTidyAcme(ctx context.Context, req *logical.Request, logger hclog.Logger, config *tidyConfig) error {
 	return nil
 }
 
