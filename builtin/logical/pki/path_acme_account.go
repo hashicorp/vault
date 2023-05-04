@@ -345,8 +345,8 @@ func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, ke
 		return err
 	}
 	allOrdersTidied := true
-	for orderId := range orderIds {
-		wasTidied, err := b.acmeTidyOrder(ac, thumbprint.Kid, acmeAccountPrefix+thumbprint.Kid+"/orders/"+fmt.Sprint(orderId), ac.sc, certTidyBuffer)
+	for _, orderId := range orderIds {
+		wasTidied, err := b.acmeTidyOrder(ac, thumbprint.Kid, acmeAccountPrefix+thumbprint.Kid+"/orders/"+orderId, ac.sc, certTidyBuffer)
 		if err != nil {
 			return err
 		}
