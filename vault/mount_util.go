@@ -64,5 +64,5 @@ func (c *Core) mountEntrySysView(entry *MountEntry) extendedSystemView {
 		},
 	}
 
-	return c.NewAcmeBillingSystemView(esi)
+	return c.NewAcmeBillingSystemView(esi, nil /* managed keys system view */)
 }

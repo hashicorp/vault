@@ -25,19 +25,9 @@ type acmeBillingSystemViewImpl struct {
 
 var _ logical.ACMEBillingSystemView = (*acmeBillingSystemViewImpl)(nil)
 
-func (c *Core) NewAcmeBillingSystemView(sysView interface{}) *acmeBillingSystemViewImpl {
+func (c *Core) NewAcmeBillingSystemView(sysView interface{}, managed logical.ManagedKeySystemView) *acmeBillingSystemViewImpl {
 	es := sysView.(extendedSystemViewImpl)
 	des := es.dynamicSystemView
-
-	managed, ok := sysView.(logical.ManagedKeySystemView)
-
-	if !ok {
-		return &acmeBillingSystemViewImpl{
-			extendedSystemView: es,
-			core:               c,
-			entry:              des.mountEntry,
-		}
-	}
 
 	return &acmeBillingSystemViewImpl{
 		extendedSystemView:   es,
