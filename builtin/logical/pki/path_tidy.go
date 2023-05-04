@@ -1754,6 +1754,27 @@ func (b *backend) tidyStatusIncCrossRevCertCount() {
 	b.tidyStatus.crossRevokedDeletedCount++
 }
 
+func (b *backend) tidyStatusIncRevAcmeAccountCount() {
+	b.tidyStatusLock.Lock()
+	defer b.tidyStatusLock.Unlock()
+
+	b.tidyStatus.acmeAccountsRevokedCount++
+}
+
+func (b *backend) tidyStatusIncDeletedAcmeAccountCount() {
+	b.tidyStatusLock.Lock()
+	defer b.tidyStatusLock.Unlock()
+
+	b.tidyStatus.acmeAccountsDeletedCount++
+}
+
+func (b *backend) tidyStatusIncDelAcmeOrderCount() {
+	b.tidyStatusLock.Lock()
+	defer b.tidyStatusLock.Unlock()
+
+	b.tidyStatus.acmeOrdersDeletedCount++
+}
+
 const pathTidyHelpSyn = `
 Tidy up the backend by removing expired certificates, revocation information,
 or both.

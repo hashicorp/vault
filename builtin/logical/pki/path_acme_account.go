@@ -326,6 +326,7 @@ func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, ke
 		if err != nil {
 			return err
 		}
+		b.tidyStatusIncDeletedAcmeAcountCount()
 		return nil
 	}
 
@@ -366,6 +367,7 @@ func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, ke
 			if err != nil {
 				return err
 			}
+			b.tidyStatusIncDeletedAcmeAcountCount()
 		} else if account.Status == StatusValid {
 			// Revoke This Account
 			account.AccountRevokedDate = time.Now()
@@ -374,6 +376,7 @@ func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, ke
 			if err != nil {
 				return err
 			}
+			b.tidyStatusIncRevAcmeAccountCount()
 		}
 	}
 

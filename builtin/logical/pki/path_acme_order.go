@@ -968,6 +968,7 @@ func (b *backend) acmeTidyOrder(ac *acmeContext, accountId string, orderPath str
 	if err != nil {
 		return false, err
 	}
+	b.tidyStatusIncDelAcmeOrderCount()
 
 	return true, nil
 }
