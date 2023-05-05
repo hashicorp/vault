@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
+import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
-import Component from '@glimmer/component';
 // TYPES
 import Store from '@ember-data/store';
 import RouterService from '@ember/routing/router-service';

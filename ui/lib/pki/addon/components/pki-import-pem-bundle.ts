@@ -3,14 +3,15 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-import { action } from '@ember/object';
 import Component from '@glimmer/component';
-import FlashMessageService from 'vault/services/flash-messages';
+import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
 import { waitFor } from '@ember/test-waiters';
 import errorMessage from 'vault/utils/error-message';
+// TYPES
+import FlashMessageService from 'vault/services/flash-messages';
 import PkiActionModel from 'vault/models/pki/action';
 
 /**

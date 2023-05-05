@@ -4,12 +4,11 @@
  */
 
 import Component from '@glimmer/component';
-import errorMessage from 'vault/utils/error-message';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
 import { waitFor } from '@ember/test-waiters';
-
+import errorMessage from 'vault/utils/error-message';
 // TYPES
 import FlashMessageService from 'vault/services/flash-messages';
 import PkiKeyModel from 'vault/models/pki/key';

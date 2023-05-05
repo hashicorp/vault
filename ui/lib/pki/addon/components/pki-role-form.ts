@@ -4,11 +4,11 @@
  */
 
 import Component from '@glimmer/component';
-import errorMessage from 'vault/utils/error-message';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
+import errorMessage from 'vault/utils/error-message';
 // TYPES
 import Store from '@ember-data/store';
 import FlashMessageService from 'vault/services/flash-messages';

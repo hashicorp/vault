@@ -4,11 +4,10 @@
  */
 
 import Component from '@glimmer/component';
-import errorMessage from 'vault/utils/error-message';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-
+import errorMessage from 'vault/utils/error-message';
 //TYPES
 import RouterService from '@ember/routing/router-service';
 import FlashMessageService from 'vault/services/flash-messages';

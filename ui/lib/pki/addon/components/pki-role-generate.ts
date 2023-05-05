@@ -7,10 +7,11 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { service } from '@ember/service';
-import Router from '@ember/routing/router';
-import Store from '@ember-data/store';
 import { tracked } from '@glimmer/tracking';
 import errorMessage from 'vault/utils/error-message';
+// TYPES
+import Router from '@ember/routing/router';
+import Store from '@ember-data/store';
 import FlashMessageService from 'vault/services/flash-messages';
 import DownloadService from 'vault/services/download';
 import PkiCertificateGenerateModel from 'vault/models/pki/certificate/generate';

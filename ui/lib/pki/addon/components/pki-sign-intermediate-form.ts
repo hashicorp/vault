@@ -3,15 +3,16 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
+import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { waitFor } from '@ember/test-waiters';
-import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
+import errorMessage from 'vault/utils/error-message';
+// TYPES
 import PkiCertificateSignIntermediate from 'vault/models/pki/certificate/sign-intermediate';
 import FlashMessageService from 'vault/services/flash-messages';
-import errorMessage from 'vault/utils/error-message';
 import { ValidationMap } from 'vault/vault/app-types';
 
 interface Args {

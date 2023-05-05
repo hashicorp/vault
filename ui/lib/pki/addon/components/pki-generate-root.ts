@@ -3,17 +3,18 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
+import Component from '@glimmer/component';
 import { action } from '@ember/object';
-import RouterService from '@ember/routing/router-service';
 import { service } from '@ember/service';
 import { waitFor } from '@ember/test-waiters';
-import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
+import errorMessage from 'vault/utils/error-message';
+// TYPES
 import PkiActionModel from 'vault/models/pki/action';
 import PkiUrlsModel from 'vault/models/pki/urls';
 import FlashMessageService from 'vault/services/flash-messages';
-import errorMessage from 'vault/utils/error-message';
+import RouterService from '@ember/routing/router-service';
 import { ValidationMap } from 'vault/vault/app-types';
 
 interface AdapterOptions {
