@@ -359,7 +359,7 @@ type generatedConfig struct {
 }
 
 type generatedConfigTemplateConfig struct {
-	StaticSecretRendereInterval string `hcl:"static_secret_render_interval"`
+	StaticSecretRenderInterval string `hcl:"static_secret_render_interval"`
 	ExitOnRetryFailure          bool   `hcl:"exit_on_retry_failure"`
 }
 
