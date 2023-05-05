@@ -17,12 +17,12 @@ const (
 )
 
 type acmeConfigEntry struct {
-	Enabled        bool     `json:"enabled"`
-	AllowedIssuers []string `json:"allowed_issuers="`
-	AllowedRoles   []string `json:"allowed_roles"`
-	DefaultRole    string   `json:"default_role"`
-	DNSResolver    string   `json:"dns_resolver"`
-	RequireEAB     bool     `json:"require_eab"`
+	Enabled        bool          `json:"enabled"`
+	AllowedIssuers []string      `json:"allowed_issuers="`
+	AllowedRoles   []string      `json:"allowed_roles"`
+	DefaultRole    string        `json:"default_role"`
+	DNSResolver    string        `json:"dns_resolver"`
+	EabPolicyName  EabPolicyName `json:"eab_policy_name"`
 }
 
 var defaultAcmeConfig = acmeConfigEntry{
@@ -31,7 +31,7 @@ var defaultAcmeConfig = acmeConfigEntry{
 	AllowedRoles:   []string{"*"},
 	DefaultRole:    "",
 	DNSResolver:    "",
-	RequireEAB:     true,
+	EabPolicyName:  eabPolicyAlwaysRequired,
 }
 
 func (sc *storageContext) getAcmeConfig() (*acmeConfigEntry, error) {
@@ -101,10 +101,10 @@ func pathAcmeConfig(b *backend) *framework.Path {
 				Description: `DNS resolver to use for domain resolution on this mount. Defaults to using the default system resolver. Must be in the format <host>:<port>, with both parts mandatory.`,
 				Default:     "",
 			},
-			"require_eab": {
-				Type:        framework.TypeBool,
-				Description: `require an external binding account key for new ACME account creations.`,
-				Default:     true,
+			"eab_policy": {
+				Type:        framework.TypeString,
+				Description: `Specify the policy to use for external account binding behaviour, 'not-required', 'new-account-required' or 'always-required'`,
+				Default:     "always-required",
 			},
 		},
 
@@ -150,7 +150,7 @@ func genResponseFromAcmeConfig(config *acmeConfigEntry) *logical.Response {
 			"default_role":    config.DefaultRole,
 			"enabled":         config.Enabled,
 			"dns_resolver":    config.DNSResolver,
-			"require_eab":     config.RequireEAB,
+			"eab_policy":      config.EabPolicyName,
 		},
 	}
 
@@ -205,8 +205,12 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 		}
 	}
 
-	if requireEabRaw, ok := d.GetOk("require_eab"); ok {
-		config.RequireEAB = requireEabRaw.(bool)
+	if eabPolicyRaw, ok := d.GetOk("eab_policy"); ok {
+		eabPolicy, err := getEabPolicyByString(eabPolicyRaw.(string))
+		if err != nil {
+			return nil, fmt.Errorf("invalid eab policy name provided")
+		}
+		config.EabPolicyName = eabPolicy.Name
 	}
 
 	allowAnyRole := len(config.AllowedRoles) == 1 && config.AllowedRoles[0] == "*"

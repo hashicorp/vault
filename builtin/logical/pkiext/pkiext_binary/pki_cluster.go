@@ -190,7 +190,7 @@ func (vpc *VaultPkiCluster) CreateAcmeMount(mountName string) (*VaultPkiMount, e
 	}
 
 	cfg := map[string]interface{}{
-		"require_eab": false,
+		"eab_policy": "not-required",
 	}
 	if vpc.Dns != nil {
 		cfg["dns_resolver"] = vpc.Dns.GetRemoteAddr()

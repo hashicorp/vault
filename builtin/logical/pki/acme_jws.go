@@ -4,6 +4,7 @@
 package pki
 
 import (
+	"bytes"
 	"crypto"
 	"encoding/base64"
 	"encoding/json"
@@ -264,8 +265,7 @@ func verifyEabPayload(acmeState *acmeState, ac *acmeContext, outer *jwsCtx, expe
 	}
 
 	// Make sure how eab payload matches the outer JWK key value
-	base64OuterJwk := base64.RawURLEncoding.EncodeToString(outer.Jwk)
-	if base64OuterJwk != string(verifiedPayload) {
+	if !bytes.Equal(outer.Jwk, verifiedPayload) {
 		return nil, fmt.Errorf("eab payload does not match outer JWK key: %w", ErrMalformed)
 	}
 

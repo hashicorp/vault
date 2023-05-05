@@ -319,8 +319,8 @@ func TestAcmeBasicWorkflowWithEab(t *testing.T) {
 
 	// Enable EAB
 	_, err := client.Logical().WriteWithContext(context.Background(), "pki/config/acme", map[string]interface{}{
-		"enabled":     true,
-		"require_eab": true,
+		"enabled":    true,
+		"eab_policy": "always-required",
 	})
 	require.NoError(t, err)
 
@@ -546,8 +546,8 @@ func setupAcmeBackend(t *testing.T) (*vault.TestCluster, *api.Client, string) {
 	require.NoError(t, err)
 
 	_, err = client.Logical().WriteWithContext(context.Background(), "pki/config/acme", map[string]interface{}{
-		"enabled":     true,
-		"require_eab": false,
+		"enabled":    true,
+		"eab_policy": "not-required",
 	})
 	require.NoError(t, err)
 

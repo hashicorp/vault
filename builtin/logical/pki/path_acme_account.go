@@ -109,6 +109,7 @@ func (b *backend) acmeNewAccountHandler(acmeCtx *acmeContext, r *logical.Request
 	var contacts []string
 	var termsOfServiceAgreed bool
 	var status string
+	var eabData map[string]interface{}
 
 	rawContact, present := data["contact"]
 	if present {
@@ -152,18 +153,25 @@ func (b *backend) acmeNewAccountHandler(acmeCtx *acmeContext, r *logical.Request
 		}
 	}
 
+	if eabDataRaw, ok := data["externalAccountBinding"]; ok {
+		eabData, ok = eabDataRaw.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("%w: externalAccountBinding field was unparseable", ErrMalformed)
+		}
+	}
+
 	// We have two paths here: search or create.
 	if onlyReturnExisting {
-		return b.acmeNewAccountSearchHandler(acmeCtx, userCtx)
+		return b.acmeAccountSearchHandler(acmeCtx, userCtx)
 	}
 
 	// Pass through the /new-account API calls to this specific handler as its requirements are different
 	// from the account update handler.
 	if strings.HasSuffix(r.Path, "/new-account") {
-		return b.acmeNewAccountCreateHandler(acmeCtx, userCtx, contacts, termsOfServiceAgreed, r, data)
+		return b.acmeNewAccountCreateHandler(acmeCtx, userCtx, contacts, termsOfServiceAgreed, r, eabData)
 	}
 
-	return b.acmeNewAccountUpdateHandler(acmeCtx, userCtx, contacts, status)
+	return b.acmeNewAccountUpdateHandler(acmeCtx, userCtx, contacts, status, eabData)
 }
 
 func formatNewAccountResponse(acmeCtx *acmeContext, acct *acmeAccount, eabData map[string]interface{}) *logical.Response {
@@ -200,7 +208,7 @@ func formatAccountResponse(acmeCtx *acmeContext, acct *acmeAccount) *logical.Res
 	return resp
 }
 
-func (b *backend) acmeNewAccountSearchHandler(acmeCtx *acmeContext, userCtx *jwsCtx) (*logical.Response, error) {
+func (b *backend) acmeAccountSearchHandler(acmeCtx *acmeContext, userCtx *jwsCtx) (*logical.Response, error) {
 	thumbprint, err := userCtx.GetKeyThumbprint()
 	if err != nil {
 		return nil, fmt.Errorf("failed generating thumbprint for key: %w", err)
@@ -212,6 +220,9 @@ func (b *backend) acmeNewAccountSearchHandler(acmeCtx *acmeContext, userCtx *jws
 	}
 
 	if account != nil {
+		if err = acmeCtx.eabPolicy.EnforceForExistingAccount(account); err != nil {
+			return nil, err
+		}
 		return formatAccountResponse(acmeCtx, account), nil
 	}
 
@@ -223,7 +234,7 @@ func (b *backend) acmeNewAccountSearchHandler(acmeCtx *acmeContext, userCtx *jws
 	return nil, fmt.Errorf("An account with this key does not exist: %w", ErrAccountDoesNotExist)
 }
 
-func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, userCtx *jwsCtx, contact []string, termsOfServiceAgreed bool, r *logical.Request, data map[string]interface{}) (*logical.Response, error) {
+func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, userCtx *jwsCtx, contact []string, termsOfServiceAgreed bool, r *logical.Request, eabData map[string]interface{}) (*logical.Response, error) {
 	if userCtx.Existing {
 		return nil, fmt.Errorf("cannot submit to newAccount with 'kid': %w", ErrMalformed)
 	}
@@ -240,25 +251,23 @@ func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, userCtx *jws
 	}
 
 	if accountByKey != nil {
+		if err = acmeCtx.eabPolicy.EnforceForExistingAccount(accountByKey); err != nil {
+			return nil, err
+		}
 		return formatAccountResponse(acmeCtx, accountByKey), nil
 	}
 
 	var eab *eabType
-	var eabData map[string]interface{}
-	if acmeCtx.requireEab {
-		eabDataRaw, ok := data["externalAccountBinding"]
-		if !ok {
-			return nil, fmt.Errorf("%w: externalAccountBinding missing from payload", ErrExternalAccountRequired)
-		}
-		eabData, ok = eabDataRaw.(map[string]interface{})
-		if !ok {
-			return nil, fmt.Errorf("%w: externalAccountBinding field was unparseable", ErrMalformed)
-		}
-
+	if len(eabData) != 0 {
 		eab, err = verifyEabPayload(b.acmeState, acmeCtx, userCtx, r.Path, eabData)
 		if err != nil {
-			return nil, fmt.Errorf("failed to load account by thumbprint: %w", err)
+			return nil, err
 		}
+	}
+
+	// Verify against our EAB policy
+	if err = acmeCtx.eabPolicy.EnforceForNewAccount(eab); err != nil {
+		return nil, err
 	}
 
 	// TODO: Limit this only when ToS are required or set by the operator, since we don't have a
@@ -303,14 +312,22 @@ func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, userCtx *jws
 	return resp, nil
 }
 
-func (b *backend) acmeNewAccountUpdateHandler(acmeCtx *acmeContext, userCtx *jwsCtx, contact []string, status string) (*logical.Response, error) {
+func (b *backend) acmeNewAccountUpdateHandler(acmeCtx *acmeContext, userCtx *jwsCtx, contact []string, status string, eabData map[string]interface{}) (*logical.Response, error) {
 	if !userCtx.Existing {
 		return nil, fmt.Errorf("cannot submit to account updates without a 'kid': %w", ErrMalformed)
+	}
+
+	if len(eabData) != 0 {
+		return nil, fmt.Errorf("%w: not allowed to update EAB data in accounts", ErrMalformed)
 	}
 
 	account, err := b.acmeState.LoadAccount(acmeCtx, userCtx.Kid)
 	if err != nil {
 		return nil, fmt.Errorf("error loading account: %w", err)
+	}
+
+	if err = acmeCtx.eabPolicy.EnforceForExistingAccount(account); err != nil {
+		return nil, err
 	}
 
 	// Per RFC 8555 7.3.6 Account deactivation, if we were previously deactivated, we should return
