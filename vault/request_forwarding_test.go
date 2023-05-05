@@ -39,7 +39,7 @@ func Test_RequestForwarding_ForwardingHeaders_To(t *testing.T) {
 	require.Equal(t, standbyURL.Host, from)
 }
 
-// Test_RequestForwarding_ForwardingHeaders exercises the functionality which adds metadata to a forwarded
+// Test_RequestForwarding_ForwardingHeaders_From exercises the functionality which adds metadata to a forwarded
 // response received by a standby node, this would happen after we've forwarded it to the primary node.
 func Test_RequestForwarding_ForwardingHeaders_From(t *testing.T) {
 	cluster := NewTestCluster(t, nil, nil)
