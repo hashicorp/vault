@@ -24,7 +24,7 @@ export default class VaultClusterSecretsBackendController extends Controller {
       (a, b) => b.isSupportedBackend - a.isSupportedBackend || a.id - b.id
     );
 
-    // filter list by engine type, ex: 'kv'
+    // return an options list to filter by engine type, ex: 'kv'
     if (this.selectedEngineType) {
       // check first if the user has also filtered by name.
       if (this.selectedEngineName) {
@@ -34,7 +34,7 @@ export default class VaultClusterSecretsBackendController extends Controller {
       return this.filterByEngineType(sortedBackends);
     }
 
-    // filter list by engine name, ex: 'secret'
+    // return an options list to filter by engine name, ex: 'secret'
     if (this.selectedEngineName) {
       return this.filterByName(sortedBackends);
     }
@@ -52,7 +52,7 @@ export default class VaultClusterSecretsBackendController extends Controller {
 
   get secretEngineArrayByType() {
     const arrayOfAllEngineTypes = this.sortedDisplayableBackends.map((modelObject) => modelObject.engineType);
-    // filter out repeated engineTypes (e.g. [secret, secret] => [secret])
+    // filter out repeated engineTypes (e.g. [kv, kv] => [kv])
     const arrayOfUniqueEngineTypes = [...new Set(arrayOfAllEngineTypes)];
 
     return arrayOfUniqueEngineTypes.map((engineType) => ({
