@@ -164,7 +164,11 @@ func TestConstructTemplates(t *testing.T) {
 	}
 
 	for name, tc := range cases {
+		name, tc := name, tc
+
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
 			templates, err := constructTemplates(ctx, client, tc.paths)
 
 			if tc.expectedError {
