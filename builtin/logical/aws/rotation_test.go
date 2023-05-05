@@ -17,6 +17,7 @@ func TestRotation(t *testing.T) {
 
 	type credToInsert struct {
 		config  staticRoleConfig
+		age     time.Duration
 		changed bool
 	}
 
@@ -37,6 +38,7 @@ func TestRotation(t *testing.T) {
 						Username:       "jane-doe",
 						RotationPeriod: 2 * time.Second,
 					},
+					age:     5 * time.Second,
 					changed: true,
 				},
 			},
@@ -50,6 +52,7 @@ func TestRotation(t *testing.T) {
 						Username:       "jane-doe",
 						RotationPeriod: 1 * time.Minute,
 					},
+					age:     5 * time.Second,
 					changed: false,
 				},
 			},
@@ -63,6 +66,7 @@ func TestRotation(t *testing.T) {
 						Username:       "jane-doe",
 						RotationPeriod: 1 * time.Minute,
 					},
+					age:     5 * time.Second,
 					changed: false,
 				},
 				{
@@ -71,6 +75,7 @@ func TestRotation(t *testing.T) {
 						Username:       "john-doe",
 						RotationPeriod: 1 * time.Second,
 					},
+					age:     5 * time.Second,
 					changed: true,
 				},
 			},
@@ -125,15 +130,13 @@ func TestRotation(t *testing.T) {
 				item := &queue.Item{
 					Key:      cred.config.Name,
 					Value:    cred.config,
-					Priority: time.Now().Add(cred.config.RotationPeriod).Unix(),
+					Priority: time.Now().Add(-1 * cred.age).Add(cred.config.RotationPeriod).Unix(),
 				}
 				err = b.credRotationQueue.Push(item)
 				if err != nil {
 					t.Fatalf("couldn't push item onto queue: %s", err)
 				}
 			}
-
-			time.Sleep(5 * time.Second)
 
 			// update aws responses, same argument for why it's okay every cred will be the same
 			miam, err = awsutil.NewMockIAM(
