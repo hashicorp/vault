@@ -243,6 +243,16 @@ secret-key (optional) and certificates.`,
 								Description: "Net-new issuers imported as a part of this request",
 								Required:    true,
 							},
+							"existing_keys": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "Existing keys specified as part of the import bundle of this request",
+								Required:    true,
+							},
+							"existing_issuers": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "Existing issuers specified as part of the import bundle of this request",
+								Required:    true,
+							},
 						},
 					}},
 				},
@@ -308,6 +318,8 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 
 	var createdKeys []string
 	var createdIssuers []string
+	var existingKeys []string
+	var existingIssuers []string
 	issuerKeyMap := make(map[string]string)
 
 	// Rather than using certutil.ParsePEMBundle (which restricts the
@@ -364,6 +376,8 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 
 		if !existing {
 			createdKeys = append(createdKeys, key.ID.String())
+		} else {
+			existingKeys = append(existingKeys, key.ID.String())
 		}
 	}
 
@@ -376,6 +390,8 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 		issuerKeyMap[cert.ID.String()] = cert.KeyID.String()
 		if !existing {
 			createdIssuers = append(createdIssuers, cert.ID.String())
+		} else {
+			existingIssuers = append(existingIssuers, cert.ID.String())
 		}
 	}
 
@@ -384,6 +400,8 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 			"mapping":          issuerKeyMap,
 			"imported_keys":    createdKeys,
 			"imported_issuers": createdIssuers,
+			"existing_keys":    existingKeys,
+			"existing_issuers": existingIssuers,
 		},
 	}
 

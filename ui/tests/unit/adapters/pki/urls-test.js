@@ -4,50 +4,42 @@
  */
 
 import { module, test } from 'qunit';
-import { resolve } from 'rsvp';
 import { setupTest } from 'vault/tests/helpers';
-
-const storeStub = {
-  pushPayload() {},
-  serializerFor() {
-    return {
-      serializeIntoHash() {},
-    };
-  },
-};
-const makeSnapshot = (obj) => {
-  const snapshot = {
-    id: obj.id,
-    record: {
-      ...obj,
-    },
-  };
-  snapshot.attr = (attr) => snapshot[attr];
-  return snapshot;
-};
+import { setupMirage } from 'ember-cli-mirage/test-support';
 
 module('Unit | Adapter | pki/urls', function (hooks) {
   setupTest(hooks);
+  setupMirage(hooks);
 
-  test('pki url endpoints', function (assert) {
-    let url, method;
-    const adapter = this.owner.factoryFor('adapter:pki/urls').create({
-      ajax: (...args) => {
-        [url, method] = args;
-        return resolve({});
-      },
+  hooks.beforeEach(function () {
+    this.store = this.owner.lookup('service:store');
+    this.backend = 'pki-engine';
+  });
+
+  test('it should make request to correct endpoint on update', async function (assert) {
+    assert.expect(1);
+
+    this.server.post(`/${this.backend}/config/urls`, () => {
+      assert.ok(true, 'request made to correct endpoint on update');
     });
 
-    adapter.createRecord(storeStub, 'pki/urls', makeSnapshot({ id: 'pki-create' }));
-    assert.strictEqual(url, '/v1/pki-create/config/urls', 'create url OK');
-    assert.strictEqual(method, 'POST', 'create method OK');
+    this.store.pushPayload('pki/urls', {
+      modelName: 'pki/urls',
+      id: this.backend,
+    });
 
-    adapter.updateRecord(storeStub, 'pki/urls', makeSnapshot({ id: 'pki-update' }));
-    assert.strictEqual(url, '/v1/pki-update/config/urls', 'update url OK');
-    assert.strictEqual(method, 'PUT', 'update method OK');
+    const model = this.store.peekRecord('pki/urls', this.backend);
+    await model.save();
+  });
 
-    adapter.findRecord(null, 'capabilities', 'pki-find');
-    assert.strictEqual(url, '/v1/pki-find/config/urls', 'find url OK');
-    assert.strictEqual(method, 'GET', 'find method OK');
+  test('it should make request to correct endpoint on find', async function (assert) {
+    assert.expect(1);
+
+    this.server.get(`/${this.backend}/config/urls`, () => {
+      assert.ok(true, 'request is made to correct endpoint on find');
+      return { data: { id: this.backend } };
+    });
+
+    this.store.findRecord('pki/urls', this.backend);
   });
 });

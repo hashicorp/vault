@@ -12,17 +12,18 @@ if [[ "$event_type" == "pull_request" ]]; then
   git fetch --no-tags --prune origin $head_ref
   git fetch --no-tags --prune origin $base_ref
   head_commit="origin/$head_ref"
-  prev_commit="origin/$base_ref"
+  base_commit="origin/$base_ref"
 else
   git fetch --no-tags --prune origin $ref_name
   head_commit=$(git log origin/$ref_name --oneline | head -1 | awk '{print $1}')
-  prev_commit=$(git log origin/$ref_name --oneline | head -2 | awk 'NR==2 {print $1}')
+  base_commit=$(git log origin/$ref_name --oneline | head -2 | awk 'NR==2 {print $1}')
 fi
 
-change_count=$(git diff $head_commit..$prev_commit --name-only | awk -F"/" '{ print $1}' | uniq | wc -l)
+# git diff with ... shows the differences count between base_commit and head_commit starting at the last common commit
+change_count=$(git diff $base_commit...$head_commit --name-only | awk -F"/" '{ print $1}' | uniq | wc -l)
 
 if [[ $change_count -eq 1 ]]; then
-  changed_dir=$(git diff $head_commit..$prev_commit --name-only | awk -F"/" '{ print $1}' | uniq)
+  changed_dir=$(git diff $base_commit...$head_commit --name-only | awk -F"/" '{ print $1}' | uniq)
 fi
 
 if [[ "$changed_dir" == "website" ]]; then

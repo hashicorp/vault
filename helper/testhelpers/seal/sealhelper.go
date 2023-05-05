@@ -74,7 +74,5 @@ func (tss *TransitSealServer) MakeSeal(t testing.T, key string) (vault.Seal, err
 		t.Fatalf("error setting wrapper config: %v", err)
 	}
 
-	return vault.NewAutoSeal(&seal.Access{
-		Wrapper: transitSeal,
-	})
+	return vault.NewAutoSeal(seal.NewAccess(transitSeal))
 }

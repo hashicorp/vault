@@ -15,18 +15,18 @@
     flex-grow: 1;
     flex-shrink: 1;
 
-    @include until($tablet) {
+    @include until($mobile) {
       margin-top: 0.5rem;
     }
   }
   .level-right {
-    @include from($tablet) {
+    @include from($mobile) {
       justify-content: flex-end;
     }
   }
 
   .title {
-    margin-top: $size-1;
+    margin-top: $size-2;
   }
 
   .title-with-icon {

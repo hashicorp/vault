@@ -216,7 +216,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathResignCrls(&b),
 			pathSignRevocationList(&b),
 
-			// ACME APIs see below
+			// ACME
+			pathAcmeConfig(&b),
 		},
 
 		Secrets: []*framework.Secret{
@@ -243,6 +244,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 	acmePaths = append(acmePaths, pathAcmeFetchOrderCert(&b)...)
 	acmePaths = append(acmePaths, pathAcmeChallenge(&b)...)
 	acmePaths = append(acmePaths, pathAcmeAuthorization(&b)...)
+	acmePaths = append(acmePaths, pathAcmeRevoke(&b)...)
 
 	for _, acmePath := range acmePaths {
 		b.Backend.Paths = append(b.Backend.Paths, acmePath)
@@ -540,6 +542,8 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 	case key == "config/crl":
 		// We may need to reload our OCSP status flag
 		b.crlBuilder.markConfigDirty()
+	case key == storageAcmeConfig:
+		b.acmeState.markConfigDirty()
 	case key == storageIssuerConfig:
 		b.crlBuilder.invalidateCRLBuildTime()
 	case strings.HasPrefix(key, crossRevocationPrefix):

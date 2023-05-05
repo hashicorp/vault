@@ -41,6 +41,10 @@ type acmeState struct {
 	nextExpiry *atomic.Int64
 	nonces     *sync.Map // map[string]time.Time
 	validator  *ACMEChallengeEngine
+
+	configDirty *atomic.Bool
+	_config     sync.RWMutex
+	config      acmeConfigEntry
 }
 
 type acmeThumbprint struct {
@@ -49,21 +53,73 @@ type acmeThumbprint struct {
 }
 
 func NewACMEState() *acmeState {
-	return &acmeState{
-		nextExpiry: new(atomic.Int64),
-		nonces:     new(sync.Map),
-		validator:  NewACMEChallengeEngine(),
+	state := &acmeState{
+		nextExpiry:  new(atomic.Int64),
+		nonces:      new(sync.Map),
+		validator:   NewACMEChallengeEngine(),
+		configDirty: new(atomic.Bool),
 	}
+	// Config hasn't been loaded yet; mark dirty.
+	state.configDirty.Store(true)
+
+	return state
 }
 
 func (a *acmeState) Initialize(b *backend, sc *storageContext) error {
-	if err := a.validator.Initialize(b, sc); err != nil {
+	// Load the ACME config.
+	_, err := a.getConfigWithUpdate(sc)
+	if err != nil {
 		return fmt.Errorf("error initializing ACME engine: %w", err)
 	}
 
-	go a.validator.Run(b)
+	// Kick off our ACME challenge validation engine.
+	if err := a.validator.Initialize(b, sc); err != nil {
+		return fmt.Errorf("error initializing ACME engine: %w", err)
+	}
+	go a.validator.Run(b, a)
 
 	return nil
+}
+
+func (a *acmeState) markConfigDirty() {
+	a.configDirty.Store(true)
+}
+
+func (a *acmeState) reloadConfigIfRequired(sc *storageContext) error {
+	if !a.configDirty.Load() {
+		return nil
+	}
+
+	a._config.Lock()
+	defer a._config.Unlock()
+
+	if !a.configDirty.Load() {
+		// Someone beat us to grabbing the above write lock and already
+		// updated the config.
+		return nil
+	}
+
+	config, err := sc.getAcmeConfig()
+	if err != nil {
+		return fmt.Errorf("failed reading config: %w", err)
+	}
+
+	a.config = *config
+	a.configDirty.Store(false)
+
+	return nil
+}
+
+func (a *acmeState) getConfigWithUpdate(sc *storageContext) (*acmeConfigEntry, error) {
+	if err := a.reloadConfigIfRequired(sc); err != nil {
+		return nil, err
+	}
+
+	a._config.RLock()
+	defer a._config.RUnlock()
+
+	configCopy := a.config
+	return &configCopy, nil
 }
 
 func generateNonce() (string, error) {
@@ -160,6 +216,7 @@ type acmeAccount struct {
 	Contact              []string          `json:"contact"`
 	TermsOfServiceAgreed bool              `json:"termsOfServiceAgreed"`
 	Jwk                  []byte            `json:"jwk"`
+	AcmeDirectory        string            `json:"acme-directory"`
 }
 
 type acmeOrder struct {
@@ -171,7 +228,8 @@ type acmeOrder struct {
 	AuthorizationIds        []string            `json:"authorization-ids"`
 	CertificateSerialNumber string              `json:"cert-serial-number"`
 	CertificateExpiry       time.Time           `json:"cert-expiry"`
-	IssuerId                issuerID            `json:"issuer-id"`
+	// The actual issuer UUID that issued the certificate, blank if an order exists but no certificate was issued.
+	IssuerId issuerID `json:"issuer-id"`
 }
 
 func (o acmeOrder) getIdentifierDNSValues() []string {
@@ -229,6 +287,7 @@ func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, contact []string, 
 		TermsOfServiceAgreed: termsOfServiceAgreed,
 		Jwk:                  c.Jwk,
 		Status:               StatusValid,
+		AcmeDirectory:        ac.acmeDirectory,
 	}
 	json, err := logical.StorageEntryJSON(acmeAccountPrefix+c.Kid, acct)
 	if err != nil {
@@ -270,6 +329,10 @@ func (a *acmeState) LoadAccount(ac *acmeContext, keyId string) (*acmeAccount, er
 	err = entry.DecodeJSON(&acct)
 	if err != nil {
 		return nil, fmt.Errorf("error decoding account: %w", err)
+	}
+
+	if acct.AcmeDirectory != ac.acmeDirectory {
+		return nil, fmt.Errorf("%w: account part of different ACME directory path", ErrMalformed)
 	}
 
 	acct.KeyId = keyId
@@ -389,7 +452,7 @@ func saveAuthorizationAtPath(sc *storageContext, path string, authz *ACMEAuthori
 	return nil
 }
 
-func (a *acmeState) ParseRequestParams(ac *acmeContext, data *framework.FieldData) (*jwsCtx, map[string]interface{}, error) {
+func (a *acmeState) ParseRequestParams(ac *acmeContext, req *logical.Request, data *framework.FieldData) (*jwsCtx, map[string]interface{}, error) {
 	var c jwsCtx
 	var m map[string]interface{}
 
@@ -413,6 +476,22 @@ func (a *acmeState) ParseRequestParams(ac *acmeContext, data *framework.FieldDat
 	// work if it is invalid.
 	if !a.RedeemNonce(c.Nonce) {
 		return nil, nil, fmt.Errorf("invalid or reused nonce: %w", ErrBadNonce)
+	}
+
+	// If the path is incorrect, reject the request.
+	//
+	// See RFC 8555 Section 6.4. Request URL Integrity:
+	//
+	// > As noted in Section 6.2, all ACME request objects carry a "url"
+	// > header parameter in their protected header. ... On receiving such
+	// > an object in an HTTP request, the server MUST compare the "url"
+	// > header parameter to the request URL.  If the two do not match,
+	// > then the server MUST reject the request as unauthorized.
+	if len(c.Url) == 0 {
+		return nil, nil, fmt.Errorf("missing required parameter 'url' in 'protected': %w", ErrMalformed)
+	}
+	if ac.clusterUrl.JoinPath(req.Path).String() != c.Url {
+		return nil, nil, fmt.Errorf("invalid value for 'url' in 'protected': got '%v' expected '%v': %w", c.Url, ac.clusterUrl.JoinPath(req.Path).String(), ErrUnauthorized)
 	}
 
 	rawPayloadBase64, ok := data.GetOk("payload")
@@ -501,6 +580,54 @@ func (a *acmeState) ListOrderIds(ac *acmeContext, accountId string) ([]string, e
 		orderIds = append(orderIds, order)
 	}
 	return orderIds, nil
+}
+
+type acmeCertEntry struct {
+	Serial  string `json:"-"`
+	Account string `json:"-"`
+	Order   string `json:"order"`
+}
+
+func (a *acmeState) TrackIssuedCert(ac *acmeContext, accountId string, serial string, orderId string) error {
+	path := acmeAccountPrefix + accountId + "/certs/" + normalizeSerial(serial)
+	entry := acmeCertEntry{
+		Order: orderId,
+	}
+
+	json, err := logical.StorageEntryJSON(path, &entry)
+	if err != nil {
+		return fmt.Errorf("error serializing acme cert entry: %w", err)
+	}
+
+	if err = ac.sc.Storage.Put(ac.sc.Context, json); err != nil {
+		return fmt.Errorf("error writing acme cert entry: %w", err)
+	}
+
+	return nil
+}
+
+func (a *acmeState) GetIssuedCert(ac *acmeContext, accountId string, serial string) (*acmeCertEntry, error) {
+	path := acmeAccountPrefix + accountId + "/certs/" + normalizeSerial(serial)
+
+	entry, err := ac.sc.Storage.Get(ac.sc.Context, path)
+	if err != nil {
+		return nil, fmt.Errorf("error loading acme cert entry: %w", err)
+	}
+
+	if entry == nil {
+		return nil, fmt.Errorf("no certificate with this serial was issued for this account")
+	}
+
+	var cert acmeCertEntry
+	err = entry.DecodeJSON(&cert)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding acme cert entry: %w", err)
+	}
+
+	cert.Serial = denormalizeSerial(serial)
+	cert.Account = accountId
+
+	return &cert, nil
 }
 
 func getAuthorizationPath(accountId string, authId string) string {

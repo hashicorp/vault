@@ -340,9 +340,48 @@ module('Acceptance | pki workflow', function (hooks) {
     hooks.beforeEach(async function () {
       await authPage.login();
       // Configure engine with a default issuer
-      await runCommands([`write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test"`]);
+      await runCommands([
+        `write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test" name="Hashicorp Test"`,
+      ]);
       await logout.visit();
     });
+    test('lists the correct issuer metadata info', async function (assert) {
+      assert.expect(6);
+      await authPage.login(this.pkiAdminToken);
+      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      assert.dom(SELECTORS.issuersTab).exists('Issuers tab is present');
+      await click(SELECTORS.issuersTab);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/issuers`);
+      assert.dom('.linked-block').exists({ count: 1 }, 'One issuer is in list');
+      assert.dom('[data-test-is-root-tag="0"]').hasText('root');
+      assert.dom('[data-test-serial-number="0"]').exists({ count: 1 }, 'displays serial number tag');
+      assert.dom('[data-test-common-name="0"]').exists({ count: 1 }, 'displays cert common name tag');
+    });
+    test('lists the correct issuer metadata info when user has only read permission', async function (assert) {
+      assert.expect(2);
+      await authPage.login();
+      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      await click(SELECTORS.issuersTab);
+      await click(SELECTORS.issuerPopupMenu);
+      await click(SELECTORS.issuerPopupDetails);
+      const issuerId = find(SELECTORS.issuerDetails.valueByName('Issuer ID')).innerText;
+      const pki_issuer_denied_policy = `
+      path "${this.mountPath}/*" {
+        capabilities = ["create", "read", "update", "delete", "list"]
+      },
+      path "${this.mountPath}/issuer/${issuerId}" {
+        capabilities = ["deny"]
+      }
+      `;
+      this.token = await tokenWithPolicy('pki-issuer-denied-policy', pki_issuer_denied_policy);
+      await logout.visit();
+      await authPage.login(this.token);
+      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      await click(SELECTORS.issuersTab);
+      assert.dom('[data-test-serial-number="0"]').exists({ count: 1 }, 'displays serial number tag');
+      assert.dom('[data-test-common-name="0"]').exists({ count: 1 }, 'displays cert common name tag');
+    });
+
     test('details view renders correct number of info items', async function (assert) {
       assert.expect(13);
       await authPage.login(this.pkiAdminToken);

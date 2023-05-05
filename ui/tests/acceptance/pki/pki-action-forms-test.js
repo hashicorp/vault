@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-import { module, skip, test } from 'qunit';
+import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, currentURL, fillIn, typeIn, visit } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -76,8 +76,7 @@ module('Acceptance | pki action forms test', function (hooks) {
         'redirects to overview when done'
       );
     });
-    skip('with many imports', async function (assert) {
-      // TODO VAULT-14791
+    test('with many imports', async function (assert) {
       this.server.post(`${this.mountPath}/config/ca`, () => {
         return {
           request_id: 'some-config-id',
@@ -94,6 +93,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       await authPage.login(this.pkiAdminToken);
       await visit(`/vault/secrets/${this.mountPath}/pki/configuration/create`);
       await click(S.configuration.optionByKey('import'));
+      assert.dom(S.configuration.importForm).exists('import form is shown save');
       await click('[data-test-text-toggle]');
       await fillIn('[data-test-text-file-textarea]', this.pemBundle);
       await click('[data-test-pki-import-pem-bundle]');
@@ -115,8 +115,7 @@ module('Acceptance | pki action forms test', function (hooks) {
         'redirects to overview when done'
       );
     });
-    skip('shows imported items when keys is empty', async function (assert) {
-      // TODO VAULT-14791
+    test('shows imported items when keys is empty', async function (assert) {
       this.server.post(`${this.mountPath}/config/ca`, () => {
         return {
           request_id: 'some-config-id',
@@ -133,6 +132,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       await authPage.login(this.pkiAdminToken);
       await visit(`/vault/secrets/${this.mountPath}/pki/configuration/create`);
       await click(S.configuration.optionByKey('import'));
+      assert.dom(S.configuration.importForm).exists('import form is shown save');
       await click('[data-test-text-toggle]');
       await fillIn('[data-test-text-file-textarea]', this.pemBundle);
       await click('[data-test-pki-import-pem-bundle]');
@@ -140,7 +140,31 @@ module('Acceptance | pki action forms test', function (hooks) {
       assert.dom(S.configuration.importForm).doesNotExist('import form is hidden after save');
       assert.dom(S.configuration.importMapping).exists('import mapping is shown after save');
       assert.dom(S.configuration.importedIssuer).hasText('my-imported-issuer', 'Issuer value is displayed');
-      assert.dom(S.configuration.importedKey).hasText('my-imported-key', 'Key value is displayed');
+      assert.dom(S.configuration.importedKey).hasText('None', 'Shows placeholder value for key');
+    });
+    test('shows None for imported items if nothing new imported', async function (assert) {
+      this.server.post(`${this.mountPath}/config/ca`, () => {
+        return {
+          request_id: 'some-config-id',
+          data: {
+            imported_issuers: null,
+            imported_keys: null,
+            mapping: {},
+          },
+        };
+      });
+      await authPage.login(this.pkiAdminToken);
+      await visit(`/vault/secrets/${this.mountPath}/pki/configuration/create`);
+      await click(S.configuration.optionByKey('import'));
+      assert.dom(S.configuration.importForm).exists('import form is shown save');
+      await click('[data-test-text-toggle]');
+      await fillIn('[data-test-text-file-textarea]', this.pemBundle);
+      await click('[data-test-pki-import-pem-bundle]');
+
+      assert.dom(S.configuration.importForm).doesNotExist('import form is hidden after save');
+      assert.dom(S.configuration.importMapping).exists('import mapping is shown after save');
+      assert.dom(S.configuration.importedIssuer).hasText('None', 'Shows placeholder value for issuer');
+      assert.dom(S.configuration.importedKey).hasText('None', 'Shows placeholder value for key');
     });
   });
 

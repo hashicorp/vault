@@ -117,6 +117,7 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 			ClientToken:           req.ClientToken,
 			ClientTokenAccessor:   req.ClientTokenAccessor,
 			Operation:             req.Operation,
+			MountPoint:            req.MountPoint,
 			MountType:             req.MountType,
 			MountAccessor:         req.MountAccessor,
 			MountRunningVersion:   req.MountRunningVersion(),
@@ -150,9 +151,10 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 
 		for _, p := range auth.PolicyResults.GrantingPolicies {
 			reqEntry.Auth.PolicyResults.GrantingPolicies = append(reqEntry.Auth.PolicyResults.GrantingPolicies, PolicyInfo{
-				Name:        p.Name,
-				NamespaceId: p.NamespaceId,
-				Type:        p.Type,
+				Name:          p.Name,
+				NamespaceId:   p.NamespaceId,
+				NamespacePath: p.NamespacePath,
+				Type:          p.Type,
 			})
 		}
 	}
@@ -334,6 +336,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			ClientTokenAccessor:   req.ClientTokenAccessor,
 			ClientID:              req.ClientID,
 			Operation:             req.Operation,
+			MountPoint:            req.MountPoint,
 			MountType:             req.MountType,
 			MountAccessor:         req.MountAccessor,
 			MountRunningVersion:   req.MountRunningVersion(),
@@ -356,6 +359,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 		},
 
 		Response: &AuditResponse{
+			MountPoint:            req.MountPoint,
 			MountType:             req.MountType,
 			MountAccessor:         req.MountAccessor,
 			MountRunningVersion:   req.MountRunningVersion(),
@@ -379,9 +383,10 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 
 		for _, p := range auth.PolicyResults.GrantingPolicies {
 			respEntry.Auth.PolicyResults.GrantingPolicies = append(respEntry.Auth.PolicyResults.GrantingPolicies, PolicyInfo{
-				Name:        p.Name,
-				NamespaceId: p.NamespaceId,
-				Type:        p.Type,
+				Name:          p.Name,
+				NamespaceId:   p.NamespaceId,
+				NamespacePath: p.NamespacePath,
+				Type:          p.Type,
 			})
 		}
 	}
@@ -424,6 +429,7 @@ type AuditRequest struct {
 	ClientID                      string                 `json:"client_id,omitempty"`
 	ReplicationCluster            string                 `json:"replication_cluster,omitempty"`
 	Operation                     logical.Operation      `json:"operation,omitempty"`
+	MountPoint                    string                 `json:"mount_point,omitempty"`
 	MountType                     string                 `json:"mount_type,omitempty"`
 	MountAccessor                 string                 `json:"mount_accessor,omitempty"`
 	MountRunningVersion           string                 `json:"mount_running_version,omitempty"`
@@ -446,6 +452,7 @@ type AuditRequest struct {
 
 type AuditResponse struct {
 	Auth                  *AuditAuth             `json:"auth,omitempty"`
+	MountPoint            string                 `json:"mount_point,omitempty"`
 	MountType             string                 `json:"mount_type,omitempty"`
 	MountAccessor         string                 `json:"mount_accessor,omitempty"`
 	MountRunningVersion   string                 `json:"mount_running_plugin_version,omitempty"`
@@ -486,9 +493,10 @@ type AuditPolicyResults struct {
 }
 
 type PolicyInfo struct {
-	Name        string `json:"name,omitempty"`
-	NamespaceId string `json:"namespace_id,omitempty"`
-	Type        string `json:"type"`
+	Name          string `json:"name,omitempty"`
+	NamespaceId   string `json:"namespace_id,omitempty"`
+	NamespacePath string `json:"namespace_path,omitempty"`
+	Type          string `json:"type"`
 }
 
 type AuditSecret struct {

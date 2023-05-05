@@ -268,6 +268,11 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, _ *logical.Request, 
 		return nil, err
 	}
 
+	if err := b.acmeState.TrackIssuedCert(ac, order.AccountId, hyphenSerialNumber, order.OrderId); err != nil {
+		b.Logger().Warn("orphaned generated ACME certificate due to error saving account->cert->order reference", "serial_number", hyphenSerialNumber, "error", err)
+		return nil, err
+	}
+
 	order.Status = ACMEOrderValid
 	order.CertificateSerialNumber = hyphenSerialNumber
 	order.CertificateExpiry = signedCertBundle.Certificate.NotAfter
@@ -351,6 +356,33 @@ func validateCsrMatchesOrder(csr *x509.CertificateRequest, order *acmeOrder) err
 	return nil
 }
 
+func (b *backend) validateIdentifiersAgainstRole(role *roleEntry, identifiers []*ACMEIdentifier) error {
+	for _, identifier := range identifiers {
+		switch identifier.Type {
+		case ACMEDNSIdentifier:
+			data := &inputBundle{
+				role:    role,
+				req:     &logical.Request{},
+				apiData: &framework.FieldData{},
+			}
+
+			if validateNames(b, data, []string{identifier.OriginalValue}) != "" {
+				return fmt.Errorf("%w: role (%s) will not issue certificate for name %v",
+					ErrRejectedIdentifier, role.Name, identifier.OriginalValue)
+			}
+		case ACMEIPIdentifier:
+			if !role.AllowIPSANs {
+				return fmt.Errorf("%w: role (%s) does not allow IP sans, so cannot issue certificate for %v",
+					ErrRejectedIdentifier, role.Name, identifier.OriginalValue)
+			}
+		default:
+			return fmt.Errorf("unknown type of identifier: %v for %v", identifier.Type, identifier.OriginalValue)
+		}
+	}
+
+	return nil
+}
+
 func getIdentifiersFromCSR(csr *x509.CertificateRequest) ([]string, []net.IP) {
 	dnsIdentifiers := append([]string(nil), csr.DNSNames...)
 	ipIdentifiers := append([]net.IP(nil), csr.IPAddresses...)
@@ -404,31 +436,6 @@ func storeCertificate(sc *storageContext, signedCertBundle *certutil.ParsedCertB
 }
 
 func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.ParsedCertBundle, issuerID, error) {
-	entry := &roleEntry{
-		AllowLocalhost:            true,
-		AllowAnyName:              true,
-		AllowIPSANs:               true,
-		AllowWildcardCertificates: new(bool),
-		EnforceHostnames:          false,
-		KeyType:                   "any",
-		UseCSRCommonName:          true,
-		UseCSRSANs:                true,
-		AllowedOtherSANs:          []string{"*"},
-		AllowedSerialNumbers:      []string{"*"},
-		AllowedURISANs:            []string{"*"},
-		AllowedUserIDs:            []string{"*"},
-		CNValidations:             []string{"disabled"},
-		GenerateLease:             new(bool),
-		KeyUsage:                  []string{},
-		ExtKeyUsage:               []string{},
-		ExtKeyUsageOIDs:           []string{},
-		SignatureBits:             0,
-		UsePSS:                    false,
-		Issuer:                    defaultRef,
-	}
-	*entry.AllowWildcardCertificates = true
-	*entry.GenerateLease = false
-
 	pemBlock := &pem.Block{
 		Type:    "CERTIFICATE REQUEST",
 		Headers: nil,
@@ -436,27 +443,22 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 	}
 	pemCsr := string(pem.EncodeToMemory(pemBlock))
 
-	signingBundle, issuerId, err := ac.sc.fetchCAInfoWithIssuer(entry.Issuer, IssuanceUsage)
+	data := &framework.FieldData{
+		Raw: map[string]interface{}{
+			"csr": pemCsr,
+		},
+		Schema: getCsrSignVerbatimSchemaFields(),
+	}
+
+	signingBundle, issuerId, err := ac.sc.fetchCAInfoWithIssuer(ac.issuer.ID.String(), IssuanceUsage)
 	if err != nil {
-		return nil, "", fmt.Errorf("failed loading CA %s: %w", entry.Issuer, err)
+		return nil, "", fmt.Errorf("failed loading CA %s: %w", ac.issuer.ID.String(), err)
 	}
 
 	input := &inputBundle{
-		req: &logical.Request{},
-		apiData: &framework.FieldData{
-			Raw: map[string]interface{}{
-				"csr": pemCsr,
-				"ttl": "1h",
-			},
-			Schema: map[string]*framework.FieldSchema{
-				"csr":                  {Type: framework.TypeString},
-				"serial_number":        {Type: framework.TypeString},
-				"exclude_cn_from_sans": {Type: framework.TypeBool},
-				"other_sans":           {Type: framework.TypeCommaStringSlice},
-				"ttl":                  {Type: framework.TypeDurationSecond},
-			},
-		},
-		role: entry,
+		req:     &logical.Request{},
+		apiData: data,
+		role:    ac.role,
 	}
 
 	if csr.PublicKeyAlgorithm == x509.UnknownPublicKeyAlgorithm || csr.PublicKey == nil {
@@ -508,6 +510,13 @@ func (b *backend) acmeGetOrderHandler(ac *acmeContext, _ *logical.Request, field
 	order, err := b.acmeState.LoadOrder(ac, uc, orderId)
 	if err != nil {
 		return nil, err
+	}
+
+	if order.Status == ACMEOrderPending {
+		// Lets see if we can update our order status to ready if all the authorizations have been completed.
+		if requiredAuthorizationsCompleted(b, ac, uc, order) {
+			order.Status = ACMEOrderReady
+		}
 	}
 
 	// Per RFC 8555 -> 7.1.3.  Order Objects
@@ -593,7 +602,10 @@ func (b *backend) acmeNewOrderHandler(ac *acmeContext, _ *logical.Request, _ *fr
 		return nil, err
 	}
 
-	// TODO: Implement checks against role here.
+	err = b.validateIdentifiersAgainstRole(ac.role, identifiers)
+	if err != nil {
+		return nil, err
+	}
 
 	// Per RFC 8555 -> 7.1.3. Order Objects
 	// For pending orders, the authorizations that the client needs to complete before the
@@ -673,11 +685,16 @@ func formatOrderResponse(acmeCtx *acmeContext, order *acmeOrder) *logical.Respon
 		authorizationUrls = append(authorizationUrls, buildAuthorizationUrl(acmeCtx, authId))
 	}
 
+	var identifiers []map[string]interface{}
+	for _, identifier := range order.Identifiers {
+		identifiers = append(identifiers, identifier.NetworkMarshal( /* use original value */ true))
+	}
+
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"status":         order.Status,
 			"expires":        order.Expires.Format(time.RFC3339),
-			"identifiers":    order.Identifiers,
+			"identifiers":    identifiers,
 			"authorizations": authorizationUrls,
 			"finalize":       baseOrderUrl + "/finalize",
 		},

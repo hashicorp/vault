@@ -224,7 +224,7 @@ module('Acceptance | mfa-method', function (hooks) {
     );
     await click('[data-test-tab="enforcements"]');
     assert.dom('[data-test-list-item]').hasText('bar', 'Enforcement is listed in method view');
-    await click('[data-test-link="mfa"]');
+    await click('[data-test-sidebar-nav-link="Multi-factor authentication"]');
     await click('[data-test-tab="enforcements"]');
     assert.dom('[data-test-list-item="bar"]').hasText('bar', 'Enforcement is listed in enforcements view');
     await click('[data-test-list-item="bar"]');

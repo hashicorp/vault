@@ -1002,6 +1002,10 @@
       {
         "title": "Windows service",
         "path": "agent/winsvc"
+      },
+      {
+        "title": "Version compatibility",
+        "path": "agent/versions"
       }
     ]
   },
@@ -1814,6 +1818,10 @@
         "title": "Overview",
         "path": "upgrading"
       },
+      {
+         "title": "Upgrade Vault HA installations",
+         "path": "upgrading/vault-ha-upgrade"
+      }, 
       {
         "title": "Upgrade Plugins",
         "path": "upgrading/plugins"
