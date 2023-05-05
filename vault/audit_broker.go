@@ -122,19 +122,19 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 	}()
 
 	// All logged requests must have an identifier
-	//if req.ID == "" {
+	// if req.ID == "" {
 	//	a.logger.Error("missing identifier in request object", "request_path", req.Path)
 	//	retErr = multierror.Append(retErr, fmt.Errorf("missing identifier in request object: %s", req.Path))
 	//	return
-	//}
+	// }
 
 	headers := in.Request.Headers
 	defer func() {
 		in.Request.Headers = headers
 	}()
 
-	// extract/move any forwarding headers from the input to explicit fields
-	extractForwardingHeaders(in)
+	// extract any forwarding headers from the input to explicit fields
+	in.ConfigureForwardingInfo(HTTPHeaderVaultForwardFrom, HTTPHeaderVaultForwardTo)
 
 	// Ensure at least one backend logs
 	anyLogged := false
@@ -161,33 +161,6 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 	}
 
 	return retErr.ErrorOrNil()
-}
-
-// extractForwardingHeaders attempts to move request forwarding metadata transported
-// in the request headers to explicit fields within the audit LogInput.
-func extractForwardingHeaders(logInput *logical.LogInput) {
-	if logInput == nil || logInput.Request == nil || logInput.Request.Headers == nil {
-		return
-	}
-
-	headers := logInput.Request.Headers
-	forwarding := &logical.ForwardingInfo{}
-
-	from, ok := headers[HTTPHeaderVaultForwardFrom]
-	if ok && from != nil && len(from) > 0 {
-		delete(headers, HTTPHeaderVaultForwardFrom)
-		forwarding.From = from[0]
-	}
-
-	to, ok := headers[HTTPHeaderVaultForwardTo]
-	if ok && to != nil && len(to) > 0 {
-		delete(headers, HTTPHeaderVaultForwardTo)
-		forwarding.To = to[0]
-	}
-
-	if forwarding.IsPresent() {
-		logInput.Forwarding = forwarding
-	}
 }
 
 // LogResponse is used to ensure all the audit backends have an opportunity to
@@ -227,6 +200,9 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput, hea
 	defer func() {
 		in.Request.Headers = headers
 	}()
+
+	// extract any forwarding headers from the input to explicit fields
+	in.ConfigureForwardingInfo(HTTPHeaderVaultForwardFrom, HTTPHeaderVaultForwardTo)
 
 	// Ensure at least one backend logs
 	anyLogged := false

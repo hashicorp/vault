@@ -370,7 +370,7 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 
 	req.URL.Path = req.Context().Value("original_request_path").(string)
 
-	err := c.addForwardingHeaders(req)
+	err := c.addForwardedFrom(req)
 	if err != nil {
 		c.logger.Error("error adding forwarding headers to request", err)
 	}
@@ -391,12 +391,13 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 		return 0, nil, nil, fmt.Errorf("error during forwarding RPC request")
 	}
 
-	var header http.Header
-	if resp.HeaderEntries != nil {
-		header = make(http.Header)
-		for k, v := range resp.HeaderEntries {
-			header[k] = v.Values
-		}
+	err = c.addForwardedTo(resp)
+	if err != nil {
+		c.logger.Error("error adding forwarding headers to response", err)
+	}
+	header := make(http.Header)
+	for k, v := range resp.HeaderEntries {
+		header[k] = v.Values
 	}
 
 	// If we are a perf standby and the request was forwarded to the active node
@@ -409,36 +410,51 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 	return int(resp.StatusCode), header, resp.Body, nil
 }
 
-// addForwardingHeaders attempts to add two additional headers to provide metadata.
-// They describe which host the request is being 'forwarded from' and which host it is being 'forwarded to'.
-// Existing headers should be removed in case of failure, we should only set the headers in this method.
-// An error indicates that the headers have not been added.
-func (c *Core) addForwardingHeaders(req *http.Request) error {
-	if req.Header != nil {
-		// Sanity check by clearing existing headers, we don't expect them to exist.
-		delete(req.Header, HTTPHeaderVaultForwardFrom)
-		delete(req.Header, HTTPHeaderVaultForwardTo)
-	} else {
+// addForwardedTo attempts to add a header to the response in order to provide metadata.
+// It describes which host the initial request was being 'forwarded to'.
+// An error indicates that the header has not been added.
+func (c *Core) addForwardedTo(resp *forwarding.Response) error {
+	if resp == nil {
+		return errors.New("unable to add forwarding info for primary node (to) address, response is nil")
+	}
+
+	if resp.HeaderEntries == nil {
+		resp.HeaderEntries = make(map[string]*forwarding.HeaderEntry)
+	}
+
+	leaderParams := c.clusterLeaderParams.Load().(*ClusterLeaderParams)
+	if leaderParams == nil {
+		return errors.New("unable to add forwarding info for primary node (to) address, cannot load cluster leader data")
+	}
+
+	to, err := url.Parse(leaderParams.LeaderRedirectAddr)
+	if err != nil {
+		return fmt.Errorf("unable to add forwarding info for primary node (to) address: %w", err)
+	}
+
+	resp.HeaderEntries[HTTPHeaderVaultForwardTo] = &forwarding.HeaderEntry{Values: []string{to.Host}}
+
+	return nil
+}
+
+// addForwardedFrom attempts to add a header to the request in order to provide metadata.
+// It describes which host the initial request was being 'forwarded from'.
+// An error indicates that the header has not been added.
+func (c *Core) addForwardedFrom(req *http.Request) error {
+	if req == nil {
+		return errors.New("unable to add forwarding info for current standby node (from) address, request is nil")
+	}
+
+	if req.Header == nil {
 		req.Header = http.Header{}
 	}
 
 	from, err := url.Parse(c.redirectAddr)
 	if err != nil {
-		return fmt.Errorf("unable to add current standby node (from) address: %w", err)
-	}
-
-	leaderParams := c.clusterLeaderParams.Load().(*ClusterLeaderParams)
-	if leaderParams == nil {
-		return errors.New("unable to add primary node (to) address, cannot load cluster leader data")
-	}
-
-	to, err := url.Parse(leaderParams.LeaderRedirectAddr)
-	if err != nil {
-		return fmt.Errorf("unable to add primary node (to) address: %w", err)
+		return fmt.Errorf("unable to add forwarding info for current standby node (from) address: %w", err)
 	}
 
 	req.Header.Add(HTTPHeaderVaultForwardFrom, from.Host)
-	req.Header.Add(HTTPHeaderVaultForwardTo, to.Host)
 
 	return nil
 }

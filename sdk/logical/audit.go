@@ -32,3 +32,28 @@ type OptMarshaler interface {
 func (f *ForwardingInfo) IsPresent() bool {
 	return len(f.From) > 0 || len(f.To) > 0
 }
+
+// ConfigureForwardingInfo attempts to copy request forwarding metadata transported
+// in the request headers to explicit fields within the audit LogInput.
+func (logInput *LogInput) ConfigureForwardingInfo(fromHeader, toHeader string) {
+	if logInput == nil || logInput.Request == nil || logInput.Request.Headers == nil {
+		return
+	}
+
+	headers := logInput.Request.Headers
+	forwarding := &ForwardingInfo{}
+
+	from, ok := headers[fromHeader]
+	if ok && from != nil && len(from) > 0 {
+		forwarding.From = from[0]
+	}
+
+	to, ok := headers[toHeader]
+	if ok && to != nil && len(to) > 0 {
+		forwarding.To = to[0]
+	}
+
+	if forwarding.IsPresent() {
+		logInput.Forwarding = forwarding
+	}
+}
