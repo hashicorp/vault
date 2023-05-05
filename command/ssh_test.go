@@ -219,6 +219,8 @@ func TestIsSingleSSHArg(t *testing.T) {
 	}
 }
 
+// TestSSHCommandOmitFlagWarning checks if flags warning messages are printed
+// in the output of the CLI command or not. If so, it will fail.
 func TestSSHCommandOmitFlagWarning(t *testing.T) {
 	t.Parallel()
 
