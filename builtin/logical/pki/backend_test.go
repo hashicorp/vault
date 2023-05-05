@@ -4031,7 +4031,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			"cross_revoked_cert_deleted_count":      json.Number("0"),
 			"internal_backend_uuid":                 backendUUID,
 			"tidy_acme":                             false,
-			"acme_account_safety_buffer":            json.Number("172800"),
+			"acme_account_safety_buffer":            json.Number("2592000"),
 			"acme_orders_deleted_count":             json.Number("0"),
 			"acme_account_revoked_count":            json.Number("0"),
 			"acme_account_deleted_count":            json.Number("0"),
