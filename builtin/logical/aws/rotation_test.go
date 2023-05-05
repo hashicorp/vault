@@ -145,7 +145,7 @@ func TestRotation(t *testing.T) {
 						},
 					},
 				}),
-				// new key - one char longer, so we guarantee it _changes_
+				// new key
 				awsutil.WithCreateAccessKeyOutput(&iam.CreateAccessKeyOutput{
 					AccessKey: &iam.AccessKey{
 						AccessKeyId:     aws.String(ak),
