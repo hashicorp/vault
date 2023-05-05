@@ -9,6 +9,9 @@ import { task } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
 import errorMessage from 'vault/utils/error-message';
 import { waitFor } from '@ember/test-waiters';
+import FlashMessageService from 'vault/services/flash-messages';
+import { ValidationMap } from 'vault/app-types';
+import PkiKeyModel from 'vault/models/pki/key';
 
 /**
  * @module PkiKeyForm
@@ -24,16 +27,20 @@ import { waitFor } from '@ember/test-waiters';
  * @callback onSave - Callback triggered on save success.
  */
 
-export default class PkiKeyForm extends Component {
-  @service flashMessages;
+interface Args {
+  model: PkiKeyModel;
+  onSave(): CallableFunction;
+}
 
-  @tracked errorBanner;
-  @tracked invalidFormAlert;
-  @tracked modelValidations;
+export default class PkiKeyForm extends Component<Args> {
+  @service declare readonly flashMessages: FlashMessageService;
+  @tracked errorBanner = '';
+  @tracked invalidFormAlert = '';
+  @tracked modelValidations: ValidationMap | null = null;
 
   @task
   @waitFor
-  *save(event) {
+  *save(event: Event) {
     event.preventDefault();
     try {
       const { isNew, keyName } = this.args.model;
