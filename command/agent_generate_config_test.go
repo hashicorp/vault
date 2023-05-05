@@ -24,7 +24,6 @@ func TestConstructTemplates(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(time.Second)
 
 	// enable kv-v2 backend
 	if err := client.Sys().Mount("kv-v2/", &api.MountInput{
