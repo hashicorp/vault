@@ -657,6 +657,11 @@ func pathConfigAutoTidy(b *backend) *framework.Path {
 								Description: `Issuer safety buffer`,
 								Required:    true,
 							},
+							"acme_account_safety_buffer": {
+								Type:        framework.TypeInt,
+								Description: `Safety buffer after creation after which accounts lacking orders are revoked`,
+								Required:    true,
+							},
 							"pause_duration": {
 								Type:        framework.TypeString,
 								Description: `Duration to pause between tidying certificates`,
@@ -676,6 +681,14 @@ func pathConfigAutoTidy(b *backend) *framework.Path {
 							},
 							"revocation_queue_safety_buffer": {
 								Type:     framework.TypeDurationSecond,
+								Required: true,
+							},
+							"publish_stored_certificate_count_metrics": {
+								Type:     framework.TypeBool,
+								Required: true,
+							},
+							"maintain_stored_certificate_counts": {
+								Type:     framework.TypeBool,
 								Required: true,
 							},
 						},
@@ -1789,7 +1802,7 @@ func (b *backend) tidyStatusStart(config *tidyConfig) {
 		tidyBackupBundle:        config.BackupBundle,
 		tidyRevocationQueue:     config.RevocationQueue,
 		tidyCrossRevokedCerts:   config.CrossRevokedCerts,
-		tidyAcme:                config.Enabled,
+		tidyAcme:                config.TidyAcme,
 		pauseDuration:           config.PauseDuration.String(),
 
 		state:       tidyStatusStarted,
@@ -1961,6 +1974,12 @@ The result includes the following fields:
 * 'tidy_cross_cluster_revoked_certs': the value of this parameter when initiating the tidy operation
 * 'cross_revoked_cert_deleted_count': the number of cross-cluster revoked certificate entries deleted
 * 'revocation_queue_safety_buffer': the value of this parameter when initiating the tidy operation
+* 'tidy_acme': the value of this parameter when initiating the tidy operation
+* 'acme_account_safety_buffer': the value of this parameter when initiating the tidy operation
+* 'total_acme_account_count': the total number of acme accounts in the list to be iterated over
+* 'acme_account_deleted_count': the number of revoked acme accounts deleted during the operation
+* 'acme_account_revoked_count': the number of acme accounts revoked during the operation
+* 'acme_orders_deleted_count': the number of acme orders deleted during the operation
 `
 
 const pathConfigAutoTidySyn = `

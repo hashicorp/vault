@@ -4030,6 +4030,12 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			"revocation_queue_deleted_count":        json.Number("0"),
 			"cross_revoked_cert_deleted_count":      json.Number("0"),
 			"internal_backend_uuid":                 backendUUID,
+			"tidy_acme":                             false,
+			"acme_account_safety_buffer":            json.Number("172800"),
+			"acme_orders_deleted_count":             json.Number("0"),
+			"acme_account_revoked_count":            json.Number("0"),
+			"acme_account_deleted_count":            json.Number("0"),
+			"total_acme_account_count":              json.Number("0"),
 		}
 		// Let's copy the times from the response so that we can use deep.Equal()
 		timeStarted, ok := tidyStatus.Data["time_started"]
