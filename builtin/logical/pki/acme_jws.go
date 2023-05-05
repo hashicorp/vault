@@ -182,3 +182,92 @@ func (c *jwsCtx) VerifyJWS(signature string) (map[string]interface{}, error) {
 
 	return m, nil
 }
+
+func verifyEabPayload(acmeState *acmeState, ac *acmeContext, outer *jwsCtx, expectedPath string, payload map[string]interface{}) (*eabType, error) {
+	// Parse the key out.
+	rawProtectedBase64, ok := payload["protected"]
+	if !ok {
+		return nil, fmt.Errorf("missing required field 'protected': %w", ErrMalformed)
+	}
+	jwkBase64 := rawProtectedBase64.(string)
+
+	jwkBytes, err := base64.RawURLEncoding.DecodeString(jwkBase64)
+	if err != nil {
+		return nil, fmt.Errorf("failed to base64 parse eab 'protected': %s: %w", err, ErrMalformed)
+	}
+
+	eabJws, err := UnmarshalEabJwsJson(jwkBytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to json unmarshal eab 'protected': %w", err)
+	}
+
+	if len(eabJws.Url) == 0 {
+		return nil, fmt.Errorf("missing required parameter 'url' in eab 'protected': %w", ErrMalformed)
+	}
+	expectedUrl := ac.clusterUrl.JoinPath(expectedPath).String()
+	if expectedUrl != eabJws.Url {
+		return nil, fmt.Errorf("invalid value for 'url' in eab 'protected': got '%v' expected '%v': %w", eabJws.Url, expectedUrl, ErrUnauthorized)
+	}
+
+	if len(eabJws.Nonce) != 0 {
+		return nil, fmt.Errorf("nonce should not be provided in eab 'protected': %w", ErrMalformed)
+	}
+
+	rawPayloadBase64, ok := payload["payload"]
+	if !ok {
+		return nil, fmt.Errorf("missing required field eab 'payload': %w", ErrMalformed)
+	}
+	payloadBase64, ok := rawPayloadBase64.(string)
+	if !ok {
+		return nil, fmt.Errorf("failed to parse 'payload' field: %w", ErrMalformed)
+	}
+
+	// Make sure how eab payload matches the outer JWK key value
+	base64OuterJwk := base64.RawURLEncoding.EncodeToString(outer.Jwk)
+	if base64OuterJwk != payloadBase64 {
+		return nil, fmt.Errorf("eab payload does not match outer JWK key: %w", ErrMalformed)
+	}
+
+	rawSignatureBase64, ok := payload["signature"]
+	if !ok {
+		return nil, fmt.Errorf("missing required field 'signature': %w", ErrMalformed)
+	}
+	signatureBase64, ok := rawSignatureBase64.(string)
+	if !ok {
+		return nil, fmt.Errorf("failed to parse 'signature' field: %w", ErrMalformed)
+	}
+
+	// go-jose only seems to support compact signature encodings.
+	compactSig := fmt.Sprintf("%v.%v.%v", jwkBase64, payloadBase64, signatureBase64)
+	sig, err := jose.ParseSigned(compactSig)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing eab signature: %s: %w", err, ErrMalformed)
+	}
+
+	if len(sig.Signatures) > 1 {
+		// See RFC 8555 Section 6.2. Request Authentication:
+		//
+		// > The JWS MUST NOT have multiple signatures
+		return nil, fmt.Errorf("eab had multiple signatures: %w", ErrMalformed)
+	}
+
+	if hasValues(sig.Signatures[0].Unprotected) {
+		// See RFC 8555 Section 6.2. Request Authentication:
+		//
+		// > The JWS Unprotected Header [RFC7515] MUST NOT be used
+		return nil, fmt.Errorf("eab had unprotected headers: %w", ErrMalformed)
+	}
+
+	// Load the EAB to validate the signature against
+	eabEntry, err := acmeState.LoadEab(ac.sc, eabJws.Kid)
+	if err != nil {
+		return nil, fmt.Errorf("%w: failed to verify eab", ErrUnauthorized)
+	}
+
+	_, err = sig.Verify(eabEntry.MacKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return eabEntry, nil
+}

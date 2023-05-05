@@ -255,7 +255,7 @@ func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, userCtx *jws
 			return nil, fmt.Errorf("%w: externalAccountBinding field was unparseable", ErrMalformed)
 		}
 
-		eab, err = b.acmeState.verifyEabPayload(acmeCtx, userCtx, r.Path, eabData)
+		eab, err = verifyEabPayload(b.acmeState, acmeCtx, userCtx, r.Path, eabData)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load account by thumbprint: %w", err)
 		}
@@ -288,7 +288,7 @@ func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, userCtx *jws
 	accountByKid, err := b.acmeState.CreateAccount(acmeCtx, userCtx, contact, termsOfServiceAgreed, eab)
 	if err != nil {
 		if eab != nil {
-			return nil, fmt.Errorf("failed to create account, EAB key that was used is no longer available: %w", err)
+			return nil, fmt.Errorf("failed to create account: %w; the EAB key used for this request has been deleted as a result of this operation; fetch a new EAB key before retrying", err)
 		}
 		return nil, fmt.Errorf("failed to create account: %w", err)
 	}
