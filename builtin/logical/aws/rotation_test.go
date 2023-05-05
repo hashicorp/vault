@@ -5,8 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
@@ -79,15 +77,9 @@ func TestRotation(t *testing.T) {
 		},
 	}
 
-	// wrap our cred generating function so we don't have to handle the error _every time_.
-	// we pass in the T so that we have the correct subtest T for each call.
-	randStr := func(len int, t *testing.T) *string {
-		str, err := credsutil.RandomAlphaNumeric(len, false)
-		if err != nil {
-			t.Fatalf("couldn't generate a random string for a key: %s", err)
-		}
-		return aws.String(str)
-	}
+	ak := "long-access-key-id"
+	oldSecret := "abcdefghijklmnopqrstuvwxyz"
+	newSecret := "zyxwvutsrqponmlkjihgfedcba"
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -112,8 +104,8 @@ func TestRotation(t *testing.T) {
 				// initial key to store
 				awsutil.WithCreateAccessKeyOutput(&iam.CreateAccessKeyOutput{
 					AccessKey: &iam.AccessKey{
-						AccessKeyId:     randStr(16, t),
-						SecretAccessKey: randStr(16, t),
+						AccessKeyId:     aws.String(ak),
+						SecretAccessKey: aws.String(oldSecret),
 					},
 				}),
 			)(nil)
@@ -149,15 +141,15 @@ func TestRotation(t *testing.T) {
 				awsutil.WithListAccessKeysOutput(&iam.ListAccessKeysOutput{
 					AccessKeyMetadata: []*iam.AccessKeyMetadata{
 						{
-							AccessKeyId: randStr(16, t),
+							AccessKeyId: aws.String(ak),
 						},
 					},
 				}),
 				// new key - one char longer, so we guarantee it _changes_
 				awsutil.WithCreateAccessKeyOutput(&iam.CreateAccessKeyOutput{
 					AccessKey: &iam.AccessKey{
-						AccessKeyId:     randStr(17, t),
-						SecretAccessKey: randStr(17, t),
+						AccessKeyId:     aws.String(ak),
+						SecretAccessKey: aws.String(newSecret),
 					},
 				}),
 			)(nil)
@@ -186,9 +178,9 @@ func TestRotation(t *testing.T) {
 					t.Fatalf("could not unmarshal storage view entry for cred %d to an aws credential: %s", i, err)
 				}
 
-				if cred.changed && len(out.SecretAccessKey) != 17 {
+				if cred.changed && out.SecretAccessKey != newSecret {
 					t.Fatalf("expected the key for cred %d to have changed, but it hasn't", i)
-				} else if !cred.changed && len(out.SecretAccessKey) != 16 {
+				} else if !cred.changed && out.SecretAccessKey != oldSecret {
 					t.Fatalf("expected the key for cred %d to have stayed the same, but it changed", i)
 				}
 			}
