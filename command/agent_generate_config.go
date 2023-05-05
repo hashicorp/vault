@@ -259,7 +259,6 @@ func constructTemplatesFromTree(ctx context.Context, client *api.Client, path, m
 
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
