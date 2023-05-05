@@ -16,14 +16,13 @@ func TestRotation(t *testing.T) {
 	bgCTX := context.Background()
 
 	type credToInsert struct {
-		config  staticRoleConfig
-		age     time.Duration
-		changed bool
-	}
+		config staticRoleConfig // role configuration from a normal createRole request
+		age    time.Duration    // how old the cred should be - if this is longer than the config.RotationPeriod,
+		// the cred is 'pre-expired'
 
-	// the case will insert all listed credentials, wait 5 seconds,
-	// and then check each credential to see if it changed.
-	// The case code itself handles secret generation.
+		changed bool // whether we expect the cred to change - this is technically redundant to a comparison between
+		// rotationPeriod and age.
+	}
 
 	cases := []struct {
 		name  string
