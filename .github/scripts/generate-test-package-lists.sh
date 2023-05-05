@@ -8,6 +8,8 @@
 # solution. It distributes the entire set of test packages into 16 sublists,
 # which should roughly take an equal amount of time to complete.
 
+set -e
+
 test_packages=()
 
 base="github.com/hashicorp/vault"
@@ -282,3 +284,9 @@ if [ "${ENTERPRISE:+x}" == "x" ] ; then
     test_packages[16]+=" $base/vault/external_tests/replicationext"
     test_packages[16]+=" $base/vault/external_tests/sealext"
 fi
+
+for i in $(cd $(git rev-parse --show-toplevel) && go list -test -json ./... |
+  jq -r '.ForTest | select(.!=null) | select(.|test("_binary$"))');
+do
+  test_packages[17]+=" $i"
+done

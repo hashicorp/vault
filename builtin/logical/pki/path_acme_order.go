@@ -356,6 +356,33 @@ func validateCsrMatchesOrder(csr *x509.CertificateRequest, order *acmeOrder) err
 	return nil
 }
 
+func (b *backend) validateIdentifiersAgainstRole(role *roleEntry, identifiers []*ACMEIdentifier) error {
+	for _, identifier := range identifiers {
+		switch identifier.Type {
+		case ACMEDNSIdentifier:
+			data := &inputBundle{
+				role:    role,
+				req:     &logical.Request{},
+				apiData: &framework.FieldData{},
+			}
+
+			if validateNames(b, data, []string{identifier.OriginalValue}) != "" {
+				return fmt.Errorf("%w: role (%s) will not issue certificate for name %v",
+					ErrRejectedIdentifier, role.Name, identifier.OriginalValue)
+			}
+		case ACMEIPIdentifier:
+			if !role.AllowIPSANs {
+				return fmt.Errorf("%w: role (%s) does not allow IP sans, so cannot issue certificate for %v",
+					ErrRejectedIdentifier, role.Name, identifier.OriginalValue)
+			}
+		default:
+			return fmt.Errorf("unknown type of identifier: %v for %v", identifier.Type, identifier.OriginalValue)
+		}
+	}
+
+	return nil
+}
+
 func getIdentifiersFromCSR(csr *x509.CertificateRequest) ([]string, []net.IP) {
 	dnsIdentifiers := append([]string(nil), csr.DNSNames...)
 	ipIdentifiers := append([]net.IP(nil), csr.IPAddresses...)
@@ -485,6 +512,13 @@ func (b *backend) acmeGetOrderHandler(ac *acmeContext, _ *logical.Request, field
 		return nil, err
 	}
 
+	if order.Status == ACMEOrderPending {
+		// Lets see if we can update our order status to ready if all the authorizations have been completed.
+		if requiredAuthorizationsCompleted(b, ac, uc, order) {
+			order.Status = ACMEOrderReady
+		}
+	}
+
 	// Per RFC 8555 -> 7.1.3.  Order Objects
 	// For final orders (in the "valid" or "invalid" state), the authorizations that were completed.
 	//
@@ -568,7 +602,10 @@ func (b *backend) acmeNewOrderHandler(ac *acmeContext, _ *logical.Request, _ *fr
 		return nil, err
 	}
 
-	// TODO: Implement checks against role here.
+	err = b.validateIdentifiersAgainstRole(ac.role, identifiers)
+	if err != nil {
+		return nil, err
+	}
 
 	// Per RFC 8555 -> 7.1.3. Order Objects
 	// For pending orders, the authorizations that the client needs to complete before the
@@ -648,11 +685,16 @@ func formatOrderResponse(acmeCtx *acmeContext, order *acmeOrder) *logical.Respon
 		authorizationUrls = append(authorizationUrls, buildAuthorizationUrl(acmeCtx, authId))
 	}
 
+	var identifiers []map[string]interface{}
+	for _, identifier := range order.Identifiers {
+		identifiers = append(identifiers, identifier.NetworkMarshal( /* use original value */ true))
+	}
+
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"status":         order.Status,
 			"expires":        order.Expires.Format(time.RFC3339),
-			"identifiers":    order.Identifiers,
+			"identifiers":    identifiers,
 			"authorizations": authorizationUrls,
 			"finalize":       baseOrderUrl + "/finalize",
 		},

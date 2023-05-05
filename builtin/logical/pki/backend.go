@@ -542,6 +542,8 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 	case key == "config/crl":
 		// We may need to reload our OCSP status flag
 		b.crlBuilder.markConfigDirty()
+	case key == storageAcmeConfig:
+		b.acmeState.markConfigDirty()
 	case key == storageIssuerConfig:
 		b.crlBuilder.invalidateCRLBuildTime()
 	case strings.HasPrefix(key, crossRevocationPrefix):

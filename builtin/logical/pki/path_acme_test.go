@@ -126,7 +126,7 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 
 			// Create an order
 			t.Logf("Testing Authorize Order on %s", baseAcmeURL)
-			identifiers := []string{"localhost", "*.localhost"}
+			identifiers := []string{"localhost.localdomain", "*.localdomain"}
 			createOrder, err := acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{
 				{Type: "dns", Value: identifiers[0]},
 				{Type: "dns", Value: identifiers[1]},
@@ -146,27 +146,68 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 				t.Fatalf("Differences exist between create and get order: \n%v", strings.Join(diffs, "\n"))
 			}
 
-			// Load authorization
-			auth, err := acmeClient.GetAuthorization(testCtx, getOrder.AuthzURLs[0])
-			require.NoError(t, err, "failed fetching authorization")
-			require.Equal(t, acme.StatusPending, auth.Status)
-			require.Equal(t, "dns", auth.Identifier.Type)
-			require.Equal(t, "localhost", auth.Identifier.Value)
-			require.False(t, auth.Wildcard, "should not be a wildcard")
-			require.True(t, auth.Expires.IsZero(), "authorization should only have expiry set on valid status")
+			// Make sure the identifiers returned in the order contain the original values
+			var ids []string
+			for _, id := range getOrder.Identifiers {
+				require.Equal(t, "dns", id.Type)
+				ids = append(ids, id.Value)
+			}
+			require.ElementsMatch(t, identifiers, ids, "order responses should have all original identifiers")
 
-			require.Len(t, auth.Challenges, 2, "expected two challenges")
-			require.Equal(t, acme.StatusPending, auth.Challenges[0].Status)
-			require.True(t, auth.Challenges[0].Validated.IsZero(), "validated time should be 0 on challenge")
-			require.Equal(t, "http-01", auth.Challenges[0].Type)
-			require.NotEmpty(t, auth.Challenges[0].Token, "missing challenge token")
-			require.Equal(t, acme.StatusPending, auth.Challenges[1].Status)
-			require.True(t, auth.Challenges[1].Validated.IsZero(), "validated time should be 0 on challenge")
-			require.Equal(t, "dns-01", auth.Challenges[1].Type)
-			require.NotEmpty(t, auth.Challenges[1].Token, "missing challenge token")
+			// Load authorizations
+			var authorizations []*acme.Authorization
+			for _, authUrl := range getOrder.AuthzURLs {
+				auth, err := acmeClient.GetAuthorization(testCtx, authUrl)
+				require.NoError(t, err, "failed fetching authorization: %s", authUrl)
+
+				authorizations = append(authorizations, auth)
+			}
+
+			// We should have 2 separate auth challenges as we have two separate identifier
+			require.Len(t, authorizations, 2, "expected 2 authorizations in order")
+
+			var wildcardAuth *acme.Authorization
+			var domainAuth *acme.Authorization
+			for _, auth := range authorizations {
+				if auth.Wildcard {
+					wildcardAuth = auth
+				} else {
+					domainAuth = auth
+				}
+			}
+
+			// Test the values for the domain authentication
+			require.Equal(t, acme.StatusPending, domainAuth.Status)
+			require.Equal(t, "dns", domainAuth.Identifier.Type)
+			require.Equal(t, "localhost.localdomain", domainAuth.Identifier.Value)
+			require.False(t, domainAuth.Wildcard, "should not be a wildcard")
+			require.True(t, domainAuth.Expires.IsZero(), "authorization should only have expiry set on valid status")
+
+			require.Len(t, domainAuth.Challenges, 2, "expected two challenges")
+			require.Equal(t, acme.StatusPending, domainAuth.Challenges[0].Status)
+			require.True(t, domainAuth.Challenges[0].Validated.IsZero(), "validated time should be 0 on challenge")
+			require.Equal(t, "http-01", domainAuth.Challenges[0].Type)
+			require.NotEmpty(t, domainAuth.Challenges[0].Token, "missing challenge token")
+			require.Equal(t, acme.StatusPending, domainAuth.Challenges[1].Status)
+			require.True(t, domainAuth.Challenges[1].Validated.IsZero(), "validated time should be 0 on challenge")
+			require.Equal(t, "dns-01", domainAuth.Challenges[1].Type)
+			require.NotEmpty(t, domainAuth.Challenges[1].Token, "missing challenge token")
+
+			// Test the values for the wilcard authentication
+			require.Equal(t, acme.StatusPending, wildcardAuth.Status)
+			require.Equal(t, "dns", wildcardAuth.Identifier.Type)
+			require.Equal(t, "localdomain", wildcardAuth.Identifier.Value) // Make sure we strip the *. in auth responses
+			require.True(t, wildcardAuth.Wildcard, "should be a wildcard")
+			require.True(t, wildcardAuth.Expires.IsZero(), "authorization should only have expiry set on valid status")
+
+			require.Len(t, wildcardAuth.Challenges, 1, "expected two challenges")
+			require.Equal(t, acme.StatusPending, domainAuth.Challenges[0].Status)
+			require.True(t, wildcardAuth.Challenges[0].Validated.IsZero(), "validated time should be 0 on challenge")
+			require.Equal(t, "dns-01", wildcardAuth.Challenges[0].Type)
+			require.NotEmpty(t, domainAuth.Challenges[0].Token, "missing challenge token")
 
 			// Load a challenge directly; this triggers validation to start.
-			challenge, err := acmeClient.GetChallenge(testCtx, auth.Challenges[0].URI)
+			challenge, err := acmeClient.GetChallenge(testCtx, domainAuth.Challenges[0].URI)
 			require.NoError(t, err, "failed to load challenge")
 			require.Equal(t, acme.StatusProcessing, challenge.Status)
 			require.True(t, challenge.Validated.IsZero(), "validated time should be 0 on challenge")
@@ -334,6 +375,12 @@ func TestAcmeClusterPathNotConfigured(t *testing.T) {
 	cluster, client := setupTestPkiCluster(t)
 	defer cluster.Cleanup()
 
+	// Enable ACME but don't set a path.
+	_, err := client.Logical().WriteWithContext(context.Background(), "pki/config/acme", map[string]interface{}{
+		"enabled": true,
+	})
+	require.NoError(t, err)
+
 	// Do not fill in the path option within the local cluster configuration
 	cases := []struct {
 		name         string
@@ -429,6 +476,11 @@ func setupAcmeBackend(t *testing.T) (*vault.TestCluster, *api.Client, string) {
 	})
 	require.NoError(t, err)
 
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/config/acme", map[string]interface{}{
+		"enabled": true,
+	})
+	require.NoError(t, err)
+
 	// Allow certain headers to pass through for ACME support
 	_, err = client.Logical().WriteWithContext(context.Background(), "sys/mounts/pki/tune", map[string]interface{}{
 		"allowed_response_headers": []string{"Last-Modified", "Replay-Nonce", "Link", "Location"},
@@ -485,9 +537,12 @@ func setupAcmeBackend(t *testing.T) (*vault.TestCluster, *api.Client, string) {
 	require.NoError(t, err, "failed updating default issuer")
 
 	_, err = client.Logical().Write("/pki/roles/test-role", map[string]interface{}{
-		"ttl_duration":     "365h",
-		"max_ttl_duration": "720h",
-		"key_type":         "any",
+		"ttl_duration":                "365h",
+		"max_ttl_duration":            "720h",
+		"key_type":                    "any",
+		"allowed_domains":             "localdomain",
+		"allow_subdomains":            "true",
+		"allow_wildcard_certificates": "true",
 	})
 	require.NoError(t, err, "failed creating role test-role")
 

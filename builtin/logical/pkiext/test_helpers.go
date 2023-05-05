@@ -70,7 +70,7 @@ func parseKey(t *testing.T, pemKey string) crypto.Signer {
 }
 
 type LogConsumerWriter struct {
-	consumer func(string)
+	Consumer func(string)
 }
 
 func (l LogConsumerWriter) Write(p []byte) (n int, err error) {
@@ -80,7 +80,7 @@ func (l LogConsumerWriter) Write(p []byte) (n int, err error) {
 	scanner := bufio.NewScanner(bytes.NewReader(p))
 	scanner.Buffer(make([]byte, 64*1024), bufio.MaxScanTokenSize)
 	for scanner.Scan() {
-		l.consumer(scanner.Text())
+		l.Consumer(scanner.Text())
 	}
 	return len(p), nil
 }

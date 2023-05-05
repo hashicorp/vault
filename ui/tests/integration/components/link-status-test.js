@@ -26,7 +26,7 @@ module('Integration | Component | link-status', function (hooks) {
       <LinkStatus @status={{undefined}} />
     `);
 
-    assert.dom('.navbar-status').doesNotExist('Banner is hidden for missing status message');
+    assert.dom('.link-status').doesNotExist('Banner is hidden for missing status message');
   });
 
   test('it does not render banner in oss version', async function (assert) {
@@ -37,7 +37,7 @@ module('Integration | Component | link-status', function (hooks) {
       <LinkStatus @status={{get this.statuses 0}} />
     `);
 
-    assert.dom('.navbar-status').doesNotExist('Banner is hidden in oss');
+    assert.dom('.link-status').doesNotExist('Banner is hidden in oss');
   });
 
   test('it renders connected status', async function (assert) {
@@ -46,7 +46,7 @@ module('Integration | Component | link-status', function (hooks) {
       <LinkStatus @status={{get this.statuses 0}} />
     `);
 
-    assert.dom('.navbar-status').hasClass('connected', 'Correct banner class renders for connected state');
+    assert.dom('.link-status').hasClass('connected', 'Correct banner class renders for connected state');
     assert
       .dom('[data-test-link-status]')
       .hasText('This self-managed Vault is linked to HCP.', 'Banner copy renders for connected state');
@@ -62,7 +62,7 @@ module('Integration | Component | link-status', function (hooks) {
       <LinkStatus @status={{get this.statuses 1}} />
     `);
 
-    assert.dom('.navbar-status').hasClass('warning', 'Correct banner class renders for error state');
+    assert.dom('.link-status').hasClass('warning', 'Correct banner class renders for error state');
     assert
       .dom('[data-test-link-status]')
       .hasText(

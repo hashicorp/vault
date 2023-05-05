@@ -55,7 +55,12 @@ func (b *backend) acmeWrapper(op acmeOperation) framework.OperationFunc {
 	return acmeErrorWrapper(func(ctx context.Context, r *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		sc := b.makeStorageContext(ctx, r.Storage)
 
-		if isAcmeDisabled(sc) {
+		config, err := sc.Backend.acmeState.getConfigWithUpdate(sc)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch ACME configuration: %w", err)
+		}
+
+		if isAcmeDisabled(sc, config) {
 			return nil, ErrAcmeDisabled
 		}
 
@@ -68,7 +73,7 @@ func (b *backend) acmeWrapper(op acmeOperation) framework.OperationFunc {
 			return nil, err
 		}
 
-		role, issuer, err := getAcmeRoleAndIssuer(sc, data)
+		role, issuer, err := getAcmeRoleAndIssuer(sc, data, config)
 		if err != nil {
 			return nil, err
 		}
@@ -262,14 +267,19 @@ func getAcmeDirectory(data *framework.FieldData) string {
 	return fmt.Sprintf("issuer-%s::role-%s", requestedIssuer, requestedRole)
 }
 
-func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData) (*roleEntry, *issuerEntry, error) {
+func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData, config *acmeConfigEntry) (*roleEntry, *issuerEntry, error) {
 	requestedIssuer := getRequestedAcmeIssuerFromPath(data)
 	requestedRole := getRequestedAcmeRoleFromPath(data)
 	issuerToLoad := requestedIssuer
 
+	var wasVerbatim bool
 	var role *roleEntry
 
-	if len(requestedRole) > 0 {
+	if len(requestedRole) > 0 || len(config.DefaultRole) > 0 {
+		if len(requestedRole) == 0 {
+			requestedRole = config.DefaultRole
+		}
+
 		var err error
 		role, err = sc.Backend.getRole(sc.Context, sc.Storage, requestedRole)
 		if err != nil {
@@ -295,6 +305,26 @@ func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData) (*roleE
 			NoStore: false,
 			Name:    requestedRole,
 		})
+		wasVerbatim = true
+	}
+
+	allowAnyRole := len(config.AllowedRoles) == 1 && config.AllowedRoles[0] == "*"
+	if !allowAnyRole {
+		if wasVerbatim {
+			return nil, nil, fmt.Errorf("%w: using the default directory without specifying a role is not supported by this configuration; specify 'default_role' in the acme config to the default directories", ErrServerInternal)
+		}
+
+		var foundRole bool
+		for _, name := range config.AllowedRoles {
+			if name == role.Name {
+				foundRole = true
+				break
+			}
+		}
+
+		if !foundRole {
+			return nil, nil, fmt.Errorf("%w: specified role not allowed by ACME policy", ErrServerInternal)
+		}
 	}
 
 	issuer, err := getAcmeIssuer(sc, issuerToLoad)
@@ -302,7 +332,25 @@ func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData) (*roleE
 		return nil, nil, err
 	}
 
-	// TODO: Need additional configuration validation here, for allowed roles/issuers.
+	allowAnyIssuer := len(config.AllowedIssuers) == 1 && config.AllowedIssuers[0] == "*"
+	if !allowAnyIssuer {
+		var foundIssuer bool
+		for index, name := range config.AllowedIssuers {
+			candidateId, err := sc.resolveIssuerReference(name)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to resolve reference for allowed_issuer entry %d: %w", index, err)
+			}
+
+			if candidateId == issuer.ID {
+				foundIssuer = true
+				break
+			}
+		}
+
+		if !foundIssuer {
+			return nil, nil, fmt.Errorf("%w: specified issuer not allowed by ACME policy", ErrServerInternal)
+		}
+	}
 
 	return role, issuer, nil
 }
@@ -325,7 +373,11 @@ func getRequestedAcmeIssuerFromPath(data *framework.FieldData) string {
 	return requestedIssuer
 }
 
-func isAcmeDisabled(sc *storageContext) bool {
+func isAcmeDisabled(sc *storageContext, config *acmeConfigEntry) bool {
+	if !config.Enabled {
+		return true
+	}
+
 	if disableAcmeRaw := os.Getenv("VAULT_DISABLE_PUBLIC_ACME"); disableAcmeRaw != "" {
 		disableAcme, err := strconv.ParseBool(disableAcmeRaw)
 		if err != nil {
@@ -335,11 +387,11 @@ func isAcmeDisabled(sc *storageContext) bool {
 
 		// The OS environment if true will override any configuration option.
 		if disableAcme {
+			// TODO: If EAB is enforced in the configuration, don't mark
+			// ACME as disabled.
 			return true
 		}
 	}
-
-	// TODO: Implement configuration based check here.
 
 	return false
 }

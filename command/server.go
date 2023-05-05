@@ -457,7 +457,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}
 
 	// Update the 'log' related aspects of shared config based on config/env var/cli
-	c.Flags().applyLogConfigOverrides(config.SharedConfig)
+	c.flags.applyLogConfigOverrides(config.SharedConfig)
 	l, err := c.configureLogging(config)
 	if err != nil {
 		c.UI.Error(err.Error())
@@ -547,9 +547,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	info["Seal Type"] = sealType
 
 	var seal vault.Seal
-	defaultSeal := vault.NewDefaultSeal(&vaultseal.Access{
-		Wrapper: aeadwrapper.NewShamirWrapper(),
-	})
+	defaultSeal := vault.NewDefaultSeal(vaultseal.NewAccess(aeadwrapper.NewShamirWrapper()))
 	sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal.%s", sealType))
 	wrapper, sealConfigError = configutil.ConfigureWrapper(configSeal, &infoKeys, &info, sealLogger)
 	if sealConfigError != nil {
@@ -562,9 +560,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	if wrapper == nil {
 		seal = defaultSeal
 	} else {
-		seal, err = vault.NewAutoSeal(&vaultseal.Access{
-			Wrapper: wrapper,
-		})
+		seal, err = vault.NewAutoSeal(vaultseal.NewAccess(wrapper))
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("error creating auto seal: %v", err))
 		}
@@ -671,6 +667,12 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}
 
 	c.UI.Output("")
+
+	// Tests might not want to start a vault server and just want to verify
+	// the configuration.
+	if c.flagTestVerifyOnly {
+		return 0
+	}
 
 	for _, ln := range lns {
 		handler := vaulthttp.Handler.Handler(&vault.HandlerProperties{
@@ -2436,7 +2438,8 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	var barrierWrapper wrapping.Wrapper
 	if c.flagDevAutoSeal {
 		var err error
-		barrierSeal, err = vault.NewAutoSeal(vaultseal.NewTestSeal(nil))
+		access, _ := vaultseal.NewTestSeal(nil)
+		barrierSeal, err = vault.NewAutoSeal(access)
 		if err != nil {
 			return nil, nil, nil, nil, nil, err
 		}
@@ -2467,9 +2470,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		var seal vault.Seal
 		sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal.%s", sealType))
 		c.allLoggers = append(c.allLoggers, sealLogger)
-		defaultSeal := vault.NewDefaultSeal(&vaultseal.Access{
-			Wrapper: aeadwrapper.NewShamirWrapper(),
-		})
+		defaultSeal := vault.NewDefaultSeal(vaultseal.NewAccess(aeadwrapper.NewShamirWrapper()))
 		var sealInfoKeys []string
 		sealInfoMap := map[string]string{}
 		wrapper, sealConfigError = configutil.ConfigureWrapper(configSeal, &sealInfoKeys, &sealInfoMap, sealLogger)
@@ -2483,9 +2484,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 			seal = defaultSeal
 		} else {
 			var err error
-			seal, err = vault.NewAutoSeal(&vaultseal.Access{
-				Wrapper: wrapper,
-			})
+			seal, err = vault.NewAutoSeal(vaultseal.NewAccess(wrapper))
 			if err != nil {
 				return nil, nil, nil, nil, nil, err
 			}

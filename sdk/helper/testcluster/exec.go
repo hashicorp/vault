@@ -36,6 +36,10 @@ type ExecDevCluster struct {
 	Logger             log.Logger
 }
 
+func (dc *ExecDevCluster) SetRootToken(token string) {
+	dc.rootToken = token
+}
+
 func (dc *ExecDevCluster) NamedLogger(s string) log.Logger {
 	return dc.Logger.Named(s)
 }
@@ -314,7 +318,7 @@ func (dc *ExecDevCluster) Cleanup() {
 	dc.stop()
 }
 
-// RootToken returns the root token of the cluster, if set
-func (dc *ExecDevCluster) RootToken() string {
+// GetRootToken returns the root token of the cluster, if set
+func (dc *ExecDevCluster) GetRootToken() string {
 	return dc.rootToken
 }

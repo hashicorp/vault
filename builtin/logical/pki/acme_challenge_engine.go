@@ -85,11 +85,11 @@ func (ace *ACMEChallengeEngine) LoadFromStorage(b *backend, sc *storageContext) 
 	return nil
 }
 
-func (ace *ACMEChallengeEngine) Run(b *backend) {
+func (ace *ACMEChallengeEngine) Run(b *backend, state *acmeState) {
 	for true {
 		// err == nil on shutdown.
 		b.Logger().Debug("Starting ACME challenge validation engine")
-		err := ace._run(b)
+		err := ace._run(b, state)
 		if err != nil {
 			b.Logger().Error("Got unexpected error from ACME challenge validation engine", "err", err)
 			time.Sleep(1 * time.Second)
@@ -99,7 +99,7 @@ func (ace *ACMEChallengeEngine) Run(b *backend) {
 	}
 }
 
-func (ace *ACMEChallengeEngine) _run(b *backend) error {
+func (ace *ACMEChallengeEngine) _run(b *backend, state *acmeState) error {
 	// This runner uses a background context for storage operations: we don't
 	// want to tie it to a inbound request and we don't want to set a time
 	// limit, so create a fresh background context.
@@ -177,6 +177,11 @@ func (ace *ACMEChallengeEngine) _run(b *backend) error {
 				continue
 			}
 
+			config, err := state.getConfigWithUpdate(runnerSC)
+			if err != nil {
+				return fmt.Errorf("failed fetching ACME configuration: %w", err)
+			}
+
 			// Since this work item was valid, we won't expect to see it in
 			// the validation queue again until it is executed. Here, we
 			// want to avoid infinite looping above (if we removed the one
@@ -190,7 +195,7 @@ func (ace *ACMEChallengeEngine) _run(b *backend) error {
 			// could have a RetryAfter date we're not aware of (e.g., if the
 			// cluster restarted as we do not read the entries there).
 			channel := make(chan bool, 1)
-			go ace.VerifyChallenge(runnerSC, task.Identifier, channel)
+			go ace.VerifyChallenge(runnerSC, task.Identifier, channel, config)
 			finishedWorkersChannels = append(finishedWorkersChannels, channel)
 			startedWork = true
 		}
@@ -279,11 +284,11 @@ func (ace *ACMEChallengeEngine) AcceptChallenge(sc *storageContext, account stri
 	return nil
 }
 
-func (ace *ACMEChallengeEngine) VerifyChallenge(runnerSc *storageContext, id string, finished chan bool) {
+func (ace *ACMEChallengeEngine) VerifyChallenge(runnerSc *storageContext, id string, finished chan bool, config *acmeConfigEntry) {
 	sc, _ /* cancel func */ := runnerSc.WithFreshTimeout(MaxChallengeTimeout)
-	runnerSc.Backend.Logger().Debug("Starting verification of challenge: %v", id)
+	runnerSc.Backend.Logger().Debug("Starting verification of challenge", "id", id)
 
-	if retry, retryAfter, err := ace._verifyChallenge(sc, id); err != nil {
+	if retry, retryAfter, err := ace._verifyChallenge(sc, id, config); err != nil {
 		// Because verification of this challenge failed, we need to retry
 		// it in the future. Log the error and re-add the item to the queue
 		// to try again later.
@@ -315,7 +320,7 @@ func (ace *ACMEChallengeEngine) VerifyChallenge(runnerSc *storageContext, id str
 	finished <- false
 }
 
-func (ace *ACMEChallengeEngine) _verifyChallenge(sc *storageContext, id string) (bool, time.Time, error) {
+func (ace *ACMEChallengeEngine) _verifyChallenge(sc *storageContext, id string, config *acmeConfigEntry) (bool, time.Time, error) {
 	now := time.Now()
 	path := acmeValidationPrefix + id
 	challengeEntry, err := sc.Storage.Get(sc.Context, path)
@@ -384,7 +389,7 @@ func (ace *ACMEChallengeEngine) _verifyChallenge(sc *storageContext, id string) 
 			return ace._verifyChallengeCleanup(sc, err, id)
 		}
 
-		valid, err = ValidateHTTP01Challenge(authz.Identifier.Value, cv.Token, cv.Thumbprint)
+		valid, err = ValidateHTTP01Challenge(authz.Identifier.Value, cv.Token, cv.Thumbprint, config)
 		if err != nil {
 			err = fmt.Errorf("error validating http-01 challenge %v: %w", id, err)
 			return ace._verifyChallengeRetry(sc, cv, authz, err, id)
@@ -395,7 +400,7 @@ func (ace *ACMEChallengeEngine) _verifyChallenge(sc *storageContext, id string) 
 			return ace._verifyChallengeCleanup(sc, err, id)
 		}
 
-		valid, err = ValidateDNS01Challenge(authz.Identifier.Value, cv.Token, cv.Thumbprint)
+		valid, err = ValidateDNS01Challenge(authz.Identifier.Value, cv.Token, cv.Thumbprint, config)
 		if err != nil {
 			err = fmt.Errorf("error validating dns-01 challenge %v: %w", id, err)
 			return ace._verifyChallengeRetry(sc, cv, authz, err, id)

@@ -64,6 +64,7 @@ jobs:
 
   save-metadata:
     runs-on: linux
+    if: always()
     needs: test
     steps:
       - name: Persist metadata
