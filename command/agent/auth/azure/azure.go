@@ -10,9 +10,9 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/hashicorp/vault/helper/useragent"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	az "github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	hclog "github.com/hashicorp/go-hclog"
@@ -34,10 +34,12 @@ type azureMethod struct {
 	logger    hclog.Logger
 	mountPath string
 
-	role     string
-	resource string
-	objectID string
-	clientID string
+	authenticateFromEnvironment bool
+	role                        string
+	scope                       string
+	resource                    string
+	objectID                    string
+	clientID                    string
 }
 
 func NewAzureAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
@@ -87,6 +89,25 @@ func NewAzureAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		}
 	}
 
+	scopeRaw, ok := conf.Config["scope"]
+	if ok {
+		a.scope, ok = scopeRaw.(string)
+		if !ok {
+			return nil, errors.New("could not convert 'scope' config value to string")
+		}
+	}
+	if a.scope == "" {
+		a.scope = fmt.Sprintf("%s/.default", a.resource)
+	}
+
+	authenticateFromEnvironmentRaw, ok := conf.Config["authenticate_from_environment"]
+	if ok {
+		a.authenticateFromEnvironment, ok = authenticateFromEnvironmentRaw.(bool)
+		if !ok {
+			return nil, errors.New("could not convert 'authenticate_from_environment' config value to bool")
+		}
+	}
+
 	switch {
 	case a.role == "":
 		return nil, errors.New("'role' value is empty")
@@ -109,6 +130,7 @@ func (a *azureMethod) Authenticate(ctx context.Context, client *api.Client) (ret
 			ResourceGroupName string
 			SubscriptionID    string
 			VMScaleSetName    string
+			ResourceID        string
 		}
 	}
 
@@ -124,10 +146,19 @@ func (a *azureMethod) Authenticate(ctx context.Context, client *api.Client) (ret
 		return
 	}
 
-	token, err := getManagedIdentityCredentialToken(ctx, a.resource, a.objectID, a.clientID)
-	if err != nil {
-		retErr = err
-		return
+	token := ""
+	if a.authenticateFromEnvironment {
+		token, err = getAzureTokenFromEnvironment(ctx, a.scope)
+		if err != nil {
+			retErr = err
+			return
+		}
+	} else {
+		token, err = getTokenFromIdentityEndpoint(ctx, a.resource, a.objectID, a.clientID)
+		if err != nil {
+			retErr = err
+			return
+		}
 	}
 
 	// Attempt login
@@ -153,20 +184,19 @@ func (a *azureMethod) CredSuccess() {
 func (a *azureMethod) Shutdown() {
 }
 
-func getManagedIdentityCredentialToken(ctx context.Context, resource, objectID, clientID string) (string, error) {
-	opts := &az.ManagedIdentityCredentialOptions{}
-	if objectID != "" {
-		opts.ID = az.ResourceID(objectID)
-	}
-	if clientID != "" {
-		opts.ID = az.ClientID(clientID)
-	}
-
-	cred, err := az.NewManagedIdentityCredential(opts)
+// getAzureTokenFromEnvironment Is Azure's preferred way for authentication, and takes values
+// from environment variables to form a credential.
+// It uses a DefaultAzureCredential:
+// https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/azidentity#readme-defaultazurecredential
+// Environment variables are taken into account in the following order:
+// https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/azidentity#readme-environment-variables
+func getAzureTokenFromEnvironment(ctx context.Context, scope string) (string, error) {
+	cred, err := az.NewDefaultAzureCredential(nil)
 	if err != nil {
 		return "", err
 	}
-	tokenOpts := policy.TokenRequestOptions{Scopes: []string{resource}}
+
+	tokenOpts := policy.TokenRequestOptions{Scopes: []string{scope}}
 	tk, err := cred.GetToken(ctx, tokenOpts)
 	if err != nil {
 		return "", err
@@ -175,7 +205,30 @@ func getManagedIdentityCredentialToken(ctx context.Context, resource, objectID, 
 }
 
 func getInstanceMetadataInfo(ctx context.Context) ([]byte, error) {
-	endpoint := instanceEndpoint
+	return getMetadataInfo(ctx, instanceEndpoint, "", "", "")
+}
+
+// getTokenFromIdentityEndpoint is kept for backwards compatibility purposes. Using the
+// newer APIs and the Azure SDK should be preferred over this mechanism.
+func getTokenFromIdentityEndpoint(ctx context.Context, resource, objectID, clientID string) (string, error) {
+	var identity struct {
+		AccessToken string `json:"access_token"`
+	}
+
+	body, err := getMetadataInfo(ctx, identityEndpoint, resource, objectID, clientID)
+	if err != nil {
+		return "", err
+	}
+
+	err = jsonutil.DecodeJSON(body, &identity)
+	if err != nil {
+		return "", fmt.Errorf("error parsing identity metadata response: %w", err)
+	}
+
+	return identity.AccessToken, nil
+}
+
+func getMetadataInfo(ctx context.Context, endpoint, resource, objectID, clientID string) ([]byte, error) {
 	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
 		return nil, err
@@ -183,9 +236,18 @@ func getInstanceMetadataInfo(ctx context.Context) ([]byte, error) {
 
 	q := req.URL.Query()
 	q.Add("api-version", apiVersion)
+	if resource != "" {
+		q.Add("resource", resource)
+	}
+	if objectID != "" {
+		q.Add("object_id", objectID)
+	}
+	if clientID != "" {
+		q.Add("client_id", clientID)
+	}
 	req.URL.RawQuery = q.Encode()
 	req.Header.Set("Metadata", "true")
-	req.Header.Set("User-Agent", useragent.AgentString())
+	req.Header.Set("User-Agent", useragent.String())
 	req = req.WithContext(ctx)
 
 	client := cleanhttp.DefaultClient()
