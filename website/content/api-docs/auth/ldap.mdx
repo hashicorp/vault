@@ -97,7 +97,7 @@ This endpoint configures the LDAP auth method.
 - `dereference_aliases` `(string: never)` - When aliases should be dereferenced
   on search operations. Accepted values are 'never', 'finding', 'searching',
   'always'. Defaults to 'never'.
-- `max_page_size` `(int: 2147483647)` - If set to a value greater than 0, the LDAP
+- `max_page_size` `(int: -1)` - If set to a value greater than 0, the LDAP
   backend will use the LDAP server's paged search control to request pages of
   up to the given size. This can be used to avoid hitting the LDAP server's
   maximum result size limit. A value of 0 will be interpreted by the LDAP
