@@ -311,6 +311,7 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 	}
 }
 
+// TestAcmeBasicWorkflowWithEab verify that new accounts require EAB's if enforced by configuration.
 func TestAcmeBasicWorkflowWithEab(t *testing.T) {
 	t.Parallel()
 	cluster, client, _ := setupAcmeBackend(t)

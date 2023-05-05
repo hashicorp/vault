@@ -13,6 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestACME_EabVaultAPIs verify the various Vault auth'd APIs for EAB work as expected,
+// with creation, listing and deletions.
 func TestACME_EabVaultAPIs(t *testing.T) {
 	b, s := CreateBackendWithStorage(t)
 
