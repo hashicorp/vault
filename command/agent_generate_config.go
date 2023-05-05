@@ -148,8 +148,8 @@ func (c *AgentGenerateConfigCommand) Run(args []string) int {
 			},
 		},
 		TemplateConfig: generatedConfigTemplateConfig{
-			StaticSecretRendereInterval: "5m",
-			ExitOnRetryFailure:          true,
+			StaticSecretRenderInterval: "5m",
+			ExitOnRetryFailure:         true,
 		},
 		Vault: generatedConfigVault{
 			Address: client.Address(),
@@ -360,7 +360,7 @@ type generatedConfig struct {
 
 type generatedConfigTemplateConfig struct {
 	StaticSecretRenderInterval string `hcl:"static_secret_render_interval"`
-	ExitOnRetryFailure          bool   `hcl:"exit_on_retry_failure"`
+	ExitOnRetryFailure         bool   `hcl:"exit_on_retry_failure"`
 }
 
 type generatedConfigExec struct {
