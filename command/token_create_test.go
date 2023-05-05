@@ -71,6 +71,12 @@ func TestTokenCreateCommand_Run(t *testing.T) {
 			"not present in secret",
 			1,
 		},
+		{
+			"ttl",
+			[]string{"-ttl", "1d", "-explicit-max-ttl", "2d"},
+			"token",
+			0,
+		},
 	}
 
 	t.Run("validations", func(t *testing.T) {

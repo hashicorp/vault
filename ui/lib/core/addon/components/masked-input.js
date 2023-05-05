@@ -53,10 +53,11 @@ export default class MaskedInputComponent extends Component {
     }
   }
 
-  @action handleKeyUp(name, value) {
+  @action handleKeyUp(name, evt) {
     this.updateSize();
-    if (this.onKeyUp) {
-      this.onKeyUp(name, value);
+    const { value } = evt.target;
+    if (this.args.onKeyUp) {
+      this.args.onKeyUp(name, value);
     }
   }
   @action toggleMask() {
