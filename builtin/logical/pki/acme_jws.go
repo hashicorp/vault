@@ -222,12 +222,6 @@ func verifyEabPayload(acmeState *acmeState, ac *acmeContext, outer *jwsCtx, expe
 		return nil, fmt.Errorf("failed to parse 'payload' field: %w", ErrMalformed)
 	}
 
-	// Make sure how eab payload matches the outer JWK key value
-	base64OuterJwk := base64.RawURLEncoding.EncodeToString(outer.Jwk)
-	if base64OuterJwk != payloadBase64 {
-		return nil, fmt.Errorf("eab payload does not match outer JWK key: %w", ErrMalformed)
-	}
-
 	rawSignatureBase64, ok := payload["signature"]
 	if !ok {
 		return nil, fmt.Errorf("missing required field 'signature': %w", ErrMalformed)
@@ -264,9 +258,15 @@ func verifyEabPayload(acmeState *acmeState, ac *acmeContext, outer *jwsCtx, expe
 		return nil, fmt.Errorf("%w: failed to verify eab", ErrUnauthorized)
 	}
 
-	_, err = sig.Verify(eabEntry.MacKey)
+	verifiedPayload, err := sig.Verify(eabEntry.MacKey)
 	if err != nil {
 		return nil, err
+	}
+
+	// Make sure how eab payload matches the outer JWK key value
+	base64OuterJwk := base64.RawURLEncoding.EncodeToString(outer.Jwk)
+	if base64OuterJwk != string(verifiedPayload) {
+		return nil, fmt.Errorf("eab payload does not match outer JWK key: %w", ErrMalformed)
 	}
 
 	return eabEntry, nil

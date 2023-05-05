@@ -41,7 +41,9 @@ func pathAcmeEabCreateList(b *backend) *framework.Path {
 				Callback: b.pathAcmeListEab,
 			},
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback: b.pathAcmeCreateEab,
+				Callback:                    b.pathAcmeCreateEab,
+				ForwardPerformanceSecondary: false,
+				ForwardPerformanceStandby:   true,
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationVerb:   "configure",
 					OperationSuffix: "acme",
@@ -75,7 +77,9 @@ func pathAcmeEabDelete(b *backend) *framework.Path {
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationSuffix: "acme-configuration",
 				},
-				Callback: b.pathAcmeDeleteEab,
+				Callback:                    b.pathAcmeDeleteEab,
+				ForwardPerformanceSecondary: false,
+				ForwardPerformanceStandby:   true,
 			},
 		},
 
