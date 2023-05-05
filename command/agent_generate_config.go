@@ -7,9 +7,10 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"regexp"
+	paths "path"
 	"sort"
 	"strings"
+	"unicode"
 
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/hashicorp/hcl/v2/hclwrite"
@@ -27,9 +28,9 @@ var (
 type AgentGenerateConfigCommand struct {
 	*BaseCommand
 
-	flagType    string
-	flagSecrets []string
-	flagExec    string
+	flagType  string
+	flagPaths []string
+	flagExec  string
 }
 
 func (c *AgentGenerateConfigCommand) Synopsis() string {
@@ -62,8 +63,8 @@ func (c *AgentGenerateConfigCommand) Flags() *FlagSets {
 	})
 
 	f.StringSliceVar(&StringSliceVar{
-		Name:       "secret",
-		Target:     &c.flagSecrets,
+		Name:       "path",
+		Target:     &c.flagPaths,
 		Usage:      "Path to a kv-v1 or kv-v2 secret (e.g. secret/data/foo, kv-v2/prefix/*); multiple secrets and tail '*' wildcards are allowed.",
 		Completion: c.PredictVaultFolders(),
 	})
@@ -109,7 +110,7 @@ func (c *AgentGenerateConfigCommand) Run(args []string) int {
 		return 2
 	}
 
-	templates, err := fetchTemplates(ctx, client, c.flagSecrets)
+	templates, err := constructTemplates(ctx, client, c.flagPaths)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error generating templates: %v", err))
 		return 2
@@ -129,21 +130,25 @@ func (c *AgentGenerateConfigCommand) Run(args []string) int {
 	}
 
 	config := generatedConfig{
-		Vault: &generatedConfigVault{
-			Address: client.Address(),
-		},
-		AutoAuth: &generatedConfigAutoAuth{
-			Method: &generatedConfigAutoAuthMethod{
+		AutoAuth: generatedConfigAutoAuth{
+			Method: generatedConfigAutoAuthMethod{
 				Type: "token_file",
 				Config: generatedConfigAutoAuthMethodConfig{
 					TokenFilePath: tokenPath,
 				},
 			},
 		},
+		TemplateConfig: generatedConfigTemplateConfig{
+			StaticSecretRendereInterval: "30s",
+			ExitOnRetryFailure:          true,
+		},
+		Vault: generatedConfigVault{
+			Address: client.Address(),
+		},
 		EnvTemplates: templates,
-		Exec: &generatedConfigExec{
+		Exec: generatedConfigExec{
 			Command:                execCommand,
-			RestartOnSecretChanges: true,
+			RestartOnSecretChanges: "always",
 			RestartKillSignal:      "SIGTERM",
 		},
 	}
@@ -180,10 +185,10 @@ func (c *AgentGenerateConfigCommand) Run(args []string) int {
 	return 0
 }
 
-func fetchTemplates(ctx context.Context, client *api.Client, secretPaths []string) ([]generatedConfigEnvTemplate, error) {
+func constructTemplates(ctx context.Context, client *api.Client, paths []string) ([]generatedConfigEnvTemplate, error) {
 	var templates []generatedConfigEnvTemplate
 
-	for _, path := range secretPaths {
+	for _, path := range paths {
 		path = sanitizePath(path)
 
 		mountPath, v2, err := isKVv2(path, client)
@@ -192,21 +197,21 @@ func fetchTemplates(ctx context.Context, client *api.Client, secretPaths []strin
 		}
 
 		switch {
-		// this path contains a tail wildcard, attempt to walk the tree
 		case strings.HasSuffix(path, "/*"):
-			t, err := fetchTemplatesFromTree(ctx, client, path[:len(path)-2], mountPath, v2)
+			// this path contains a tail wildcard, attempt to walk the tree
+			t, err := constructTemplatesFromTree(ctx, client, path[:len(path)-2], mountPath, v2)
 			if err != nil {
 				return nil, fmt.Errorf("could not traverse sercet at %q: %w", path, err)
 			}
 			templates = append(templates, t...)
 
-		// don't allow any other wildcards
 		case strings.Contains(path, "*"):
+			// don't allow any other wildcards
 			return nil, fmt.Errorf("the path %q cannot contain '*' wildcard characters except as the last element of the path", path)
 
-		// regular secret path
 		default:
-			t, err := fetchTemplatesFromSecret(ctx, client, path, mountPath, v2)
+			// regular secret path
+			t, err := constructTemplatesFromSecret(ctx, client, path, mountPath, v2)
 			if err != nil {
 				return nil, fmt.Errorf("could not read secret at %q: %v", path, err)
 			}
@@ -217,11 +222,21 @@ func fetchTemplates(ctx context.Context, client *api.Client, secretPaths []strin
 	return templates, nil
 }
 
-func fetchTemplatesFromTree(ctx context.Context, client *api.Client, path, mountPath string, v2 bool) ([]generatedConfigEnvTemplate, error) {
+func constructTemplatesFromTree(ctx context.Context, client *api.Client, path, mountPath string, v2 bool) ([]generatedConfigEnvTemplate, error) {
 	var templates []generatedConfigEnvTemplate
 
 	if v2 {
-		path = addPrefixToKVPath(path, mountPath, "metadata", true)
+		metadataPath := strings.Replace(
+			path,
+			paths.Join(mountPath, "data"),
+			paths.Join(mountPath, "metadata"),
+			1,
+		)
+		if path != metadataPath {
+			path = metadataPath
+		} else {
+			path = addPrefixToKVPath(path, mountPath, "metadata", true)
+		}
 	}
 
 	err := walkSecretsTree(ctx, client, path, func(child string, directory bool) error {
@@ -229,7 +244,14 @@ func fetchTemplatesFromTree(ctx context.Context, client *api.Client, path, mount
 			return nil
 		}
 
-		t, err := fetchTemplatesFromSecret(ctx, client, child, mountPath, v2)
+		dataPath := strings.Replace(
+			child,
+			paths.Join(mountPath, "metadata"),
+			paths.Join(mountPath, "data"),
+			1,
+		)
+
+		t, err := constructTemplatesFromSecret(ctx, client, dataPath, mountPath, v2)
 		if err != nil {
 			return err
 		}
@@ -245,7 +267,7 @@ func fetchTemplatesFromTree(ctx context.Context, client *api.Client, path, mount
 	return templates, nil
 }
 
-func fetchTemplatesFromSecret(ctx context.Context, client *api.Client, path, mountPath string, v2 bool) ([]generatedConfigEnvTemplate, error) {
+func constructTemplatesFromSecret(ctx context.Context, client *api.Client, path, mountPath string, v2 bool) ([]generatedConfigEnvTemplate, error) {
 	var templates []generatedConfigEnvTemplate
 
 	if v2 {
@@ -302,10 +324,12 @@ func constructDefaultEnvironmentKey(path string, field string) string {
 	pathParts := strings.Split(path, "/")
 	pathPartsLast := pathParts[len(pathParts)-1]
 
-	nonWordRegex := regexp.MustCompile(`[^\w]+`) // match a sequence of non-word characters
+	notLetterOrNumber := func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsNumber(r)
+	}
 
-	p1 := nonWordRegex.Split(pathPartsLast, -1)
-	p2 := nonWordRegex.Split(field, -1)
+	p1 := strings.FieldsFunc(pathPartsLast, notLetterOrNumber)
+	p2 := strings.FieldsFunc(field, notLetterOrNumber)
 
 	keyParts := append(p1, p2...)
 
@@ -316,24 +340,31 @@ func constructDefaultEnvironmentKey(path string, field string) string {
 // defined under command/agent/config. Using these structures we can tailor the
 // output of the generated config, while using the original structures would
 // have produced an HCL document with many empty fields. The structures below
-// should not be used for anything other than config generation.
+// should not be used for anything other than generation.
+
 type generatedConfig struct {
-	AutoAuth     *generatedConfigAutoAuth     `hcl:"auto_auth,block"`
-	Vault        *generatedConfigVault        `hcl:"vault,block"`
-	EnvTemplates []generatedConfigEnvTemplate `hcl:"env_template,block"`
-	Exec         *generatedConfigExec         `hcl:"exec,block"`
+	AutoAuth       generatedConfigAutoAuth       `hcl:"auto_auth,block"`
+	TemplateConfig generatedConfigTemplateConfig `hcl:"template_config,block"`
+	Vault          generatedConfigVault          `hcl:"vault,block"`
+	EnvTemplates   []generatedConfigEnvTemplate  `hcl:"env_template,block"`
+	Exec           generatedConfigExec           `hcl:"exec,block"`
+}
+
+type generatedConfigTemplateConfig struct {
+	StaticSecretRendereInterval string `hcl:"static_secret_render_interval"`
+	ExitOnRetryFailure          bool   `hcl:"exit_on_retry_failure"`
 }
 
 type generatedConfigExec struct {
 	Command                []string `hcl:"command"`
-	RestartOnSecretChanges bool     `hcp:"restart_on_secret_changes"`
-	RestartKillSignal      string   `hcp:"restart_kill_signal"`
+	RestartOnSecretChanges string   `hcl:"restart_on_secret_changes"`
+	RestartKillSignal      string   `hcl:"restart_kill_signal"`
 }
 
 type generatedConfigEnvTemplate struct {
 	Name              string `hcl:"name,label"`
 	Contents          string `hcl:"contents,attr"`
-	ErrorOnMissingKey bool   `hcl:"error_on_missing_key,optional"`
+	ErrorOnMissingKey bool   `hcl:"error_on_missing_key"`
 }
 
 type generatedConfigVault struct {
@@ -341,7 +372,7 @@ type generatedConfigVault struct {
 }
 
 type generatedConfigAutoAuth struct {
-	Method *generatedConfigAutoAuthMethod `hcl:"method,block"`
+	Method generatedConfigAutoAuthMethod `hcl:"method,block"`
 }
 
 type generatedConfigAutoAuthMethod struct {
