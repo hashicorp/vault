@@ -7,16 +7,13 @@ import (
 	"context"
 	"fmt"
 	"os"
-	paths "path"
 	"regexp"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/mitchellh/cli"
 	"github.com/mitchellh/go-homedir"
 	"github.com/posener/complete"
@@ -75,7 +72,7 @@ func (c *AgentGenerateConfigCommand) Flags() *FlagSets {
 		Name:    "exec",
 		Target:  &c.flagExec,
 		Default: "env",
-		Usage:   "The command to execute for in env-template mode.",
+		Usage:   "The command to execute in env-template mode.",
 	})
 
 	return set
@@ -112,38 +109,17 @@ func (c *AgentGenerateConfigCommand) Run(args []string) int {
 		return 2
 	}
 
-	var templates []*config.EnvTemplateGen
-
-	for _, path := range c.flagSecrets {
-		pathSanitized := sanitizePath(path)
-		pathMount, v2, err := isKVv2(pathSanitized, client)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Could not validate secret path %q: %v", path, err))
-			return 2
-		}
-
-		if strings.HasSuffix(pathSanitized, "/*") {
-			t, err := traverseSecrets(ctx, client, pathSanitized[:len(pathSanitized)-2], pathMount, v2)
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Could not traverse secret at %q: %v", pathSanitized[:len(pathSanitized)-2], err))
-				return 2
-			}
-			templates = append(templates, t...)
-		} else {
-			t, err := readSecret(ctx, client, pathSanitized, pathMount, v2)
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Could not read secret at %q: %v", pathSanitized, err))
-				return 2
-			}
-			templates = append(templates, t...)
-		}
+	templates, err := fetchTemplates(ctx, client, c.flagSecrets)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error generating templates: %v", err))
+		return 2
 	}
 
-	var execCommand string
+	var execCommand []string
 	if c.flagExec != "" {
-		execCommand = c.flagExec
+		execCommand = strings.Split(c.flagExec, " ")
 	} else {
-		execCommand = "env"
+		execCommand = []string{"env"}
 	}
 
 	tokenPath, err := homedir.Expand("~/.vault-token")
@@ -152,24 +128,23 @@ func (c *AgentGenerateConfigCommand) Run(args []string) int {
 		return 2
 	}
 
-	agentConfig := config.ConfigGen{
-		Vault: &config.VaultGen{
+	config := generatedConfig{
+		Vault: &generatedConfigVault{
 			Address: client.Address(),
 		},
-		AutoAuth: &config.AutoAuthGen{
-			Method: &config.AutoAuthMethodGen{
+		AutoAuth: &generatedConfigAutoAuth{
+			Method: &generatedConfigAutoAuthMethod{
 				Type: "token_file",
-				Config: config.AutoAuthMethodConfigGen{
+				Config: generatedConfigAutoAuthMethodConfig{
 					TokenFilePath: tokenPath,
 				},
 			},
 		},
 		EnvTemplates: templates,
-		Exec: &config.ExecConfig{
-			Command:            execCommand,
-			Args:               []string{},
-			RestartOnNewSecret: "always",
-			RestartKillSignal:  "SIGTERM",
+		Exec: &generatedConfigExec{
+			Command:                execCommand,
+			RestartOnSecretChanges: true,
+			RestartKillSignal:      "SIGTERM",
 		},
 	}
 
@@ -182,7 +157,7 @@ func (c *AgentGenerateConfigCommand) Run(args []string) int {
 
 	contents := hclwrite.NewEmptyFile()
 
-	gohcl.EncodeIntoBody(&agentConfig, contents.Body())
+	gohcl.EncodeIntoBody(&config, contents.Body())
 
 	f, err := os.Create(configPath)
 	if err != nil {
@@ -205,52 +180,76 @@ func (c *AgentGenerateConfigCommand) Run(args []string) int {
 	return 0
 }
 
-func traverseSecrets(ctx context.Context, client *api.Client, path, pathMount string, v2 bool) ([]*config.EnvTemplateGen, error) {
-	var templates []*config.EnvTemplateGen
+func fetchTemplates(ctx context.Context, client *api.Client, secretPaths []string) ([]generatedConfigEnvTemplate, error) {
+	var templates []generatedConfigEnvTemplate
 
-	if v2 {
-		path = addPrefixToKVPath(path, pathMount, "metadata", true)
-	}
+	for _, path := range secretPaths {
+		path = sanitizePath(path)
 
-	resp, err := client.Logical().ListWithContext(ctx, path)
-	if err != nil {
-		return nil, fmt.Errorf("error querying: %w", err)
-	}
-
-	if resp != nil {
-		k, ok := resp.Data["keys"]
-		if !ok {
-			return nil, fmt.Errorf("unexpected list response: %v", resp.Data)
+		mountPath, v2, err := isKVv2(path, client)
+		if err != nil {
+			return nil, fmt.Errorf("could not validate secret path %q: %w", path, err)
 		}
 
-		keys, ok := k.([]interface{})
-		if !ok {
-			return nil, fmt.Errorf("unexpected list response type %T", k)
-		}
-
-		for _, key := range keys {
-			t, err := traverseSecrets(ctx, client, paths.Join(path, key.(string)), pathMount, v2)
+		switch {
+		// this path contains a tail wildcard, attempt to walk the tree
+		case strings.HasSuffix(path, "/*"):
+			t, err := fetchTemplatesFromTree(ctx, client, path[:len(path)-2], mountPath, v2)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("could not traverse sercet at %q: %w", path, err)
+			}
+			templates = append(templates, t...)
+
+		// don't allow any other wildcards
+		case strings.Contains(path, "*"):
+			return nil, fmt.Errorf("the path %q cannot contain '*' wildcard characters except as the last element of the path", path)
+
+		// regular secret path
+		default:
+			t, err := fetchTemplatesFromSecret(ctx, client, path, mountPath, v2)
+			if err != nil {
+				return nil, fmt.Errorf("could not read secret at %q: %v", path, err)
 			}
 			templates = append(templates, t...)
 		}
-	} else {
-		t, err := readSecret(ctx, client, path, pathMount, v2)
-		if err != nil {
-			return nil, err
-		}
-		templates = append(templates, t...)
 	}
 
 	return templates, nil
 }
 
-func readSecret(ctx context.Context, client *api.Client, path, pathMount string, v2 bool) ([]*config.EnvTemplateGen, error) {
-	var templates []*config.EnvTemplateGen
+func fetchTemplatesFromTree(ctx context.Context, client *api.Client, path, mountPath string, v2 bool) ([]generatedConfigEnvTemplate, error) {
+	var templates []generatedConfigEnvTemplate
 
 	if v2 {
-		path = addPrefixToKVPath(path, pathMount, "data", true)
+		path = addPrefixToKVPath(path, mountPath, "metadata", true)
+	}
+
+	err := walkSecretsTree(ctx, client, path, func(child string, directory bool) error {
+		if directory {
+			return nil
+		}
+
+		t, err := fetchTemplatesFromSecret(ctx, client, child, mountPath, v2)
+		if err != nil {
+			return err
+		}
+		templates = append(templates, t...)
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return templates, nil
+}
+
+func fetchTemplatesFromSecret(ctx context.Context, client *api.Client, path, mountPath string, v2 bool) ([]generatedConfigEnvTemplate, error) {
+	var templates []generatedConfigEnvTemplate
+
+	if v2 {
+		path = addPrefixToKVPath(path, mountPath, "data", true)
 	}
 
 	resp, err := client.Logical().ReadWithContext(ctx, path)
@@ -261,31 +260,37 @@ func readSecret(ctx context.Context, client *api.Client, path, pathMount string,
 		return nil, fmt.Errorf("secret not found")
 	}
 
-	data := resp.Data
+	var data map[string]interface{}
 	if v2 {
 		internal, ok := resp.Data["data"]
 		if !ok {
 			return nil, fmt.Errorf("secret.Data not found")
 		}
 		data = internal.(map[string]interface{})
+	} else {
+		data = resp.Data
 	}
 
-	var fields []string
+	fields := make([]string, 0, len(data))
 
 	for field := range data {
 		fields = append(fields, field)
 	}
 
+	// sort for a deterministic output
 	sort.Strings(fields)
 
+	var dataContents string
+	if v2 {
+		dataContents = ".Data.data"
+	} else {
+		dataContents = ".Data"
+	}
+
 	for _, field := range fields {
-		v2AdjustedField := field
-		if v2 {
-			v2AdjustedField = "data." + field
-		}
-		templates = append(templates, &config.EnvTemplateGen{
+		templates = append(templates, generatedConfigEnvTemplate{
 			Name:              constructDefaultEnvironmentKey(path, field),
-			Contents:          fmt.Sprintf(`{{ with secret "%s" }}{{ .Data.%s }}{{ end }}`, path, v2AdjustedField),
+			Contents:          fmt.Sprintf(`{{ with secret "%s" }}{{ %s.%s }}{{ end }}`, path, dataContents, field),
 			ErrorOnMissingKey: true,
 		})
 	}
@@ -305,5 +310,45 @@ func constructDefaultEnvironmentKey(path string, field string) string {
 	keyParts := append(p1, p2...)
 
 	return strings.ToUpper(strings.Join(keyParts, "_"))
+}
 
+// Below, we are redefining a subset of the configuration-related structures
+// defined under command/agent/config. Using these structures we can tailor the
+// output of the generated config, while using the original structures would
+// have produced an HCL document with many empty fields. The structures below
+// should not be used for anything other than config generation.
+type generatedConfig struct {
+	AutoAuth     *generatedConfigAutoAuth     `hcl:"auto_auth,block"`
+	Vault        *generatedConfigVault        `hcl:"vault,block"`
+	EnvTemplates []generatedConfigEnvTemplate `hcl:"env_template,block"`
+	Exec         *generatedConfigExec         `hcl:"exec,block"`
+}
+
+type generatedConfigExec struct {
+	Command                []string `hcl:"command"`
+	RestartOnSecretChanges bool     `hcp:"restart_on_secret_changes"`
+	RestartKillSignal      string   `hcp:"restart_kill_signal"`
+}
+
+type generatedConfigEnvTemplate struct {
+	Name              string `hcl:"name,label"`
+	Contents          string `hcl:"contents,attr"`
+	ErrorOnMissingKey bool   `hcl:"error_on_missing_key,optional"`
+}
+
+type generatedConfigVault struct {
+	Address string `hcl:"address"`
+}
+
+type generatedConfigAutoAuth struct {
+	Method *generatedConfigAutoAuthMethod `hcl:"method,block"`
+}
+
+type generatedConfigAutoAuthMethod struct {
+	Type   string                              `hcl:"type"`
+	Config generatedConfigAutoAuthMethodConfig `hcl:"config,block"`
+}
+
+type generatedConfigAutoAuthMethodConfig struct {
+	TokenFilePath string `hcl:"token_file_path"`
 }
