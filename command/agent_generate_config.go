@@ -148,7 +148,7 @@ func (c *AgentGenerateConfigCommand) Run(args []string) int {
 			},
 		},
 		TemplateConfig: generatedConfigTemplateConfig{
-			StaticSecretRendereInterval: "30s",
+			StaticSecretRendereInterval: "5m",
 			ExitOnRetryFailure:          true,
 		},
 		Vault: generatedConfigVault{
