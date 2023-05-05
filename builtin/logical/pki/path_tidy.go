@@ -39,7 +39,6 @@ type tidyStatus struct {
 	issuerSafetyBuffer      int
 	revQueueSafetyBuffer    int
 	acmeAccountSafetyBuffer int
-	acmeOrderSafetyBuffer   int
 
 	tidyCertStore         bool
 	tidyRevokedCerts      bool
@@ -69,7 +68,6 @@ type tidyStatus struct {
 	acmeAccountsCount        uint
 	acmeAccountsRevokedCount uint
 	acmeAccountsDeletedCount uint
-	acmeOrdersCount          uint
 	acmeOrdersDeletedCount   uint
 }
 
@@ -1586,6 +1584,11 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 			"internal_backend_uuid":                 nil,
 			"revocation_queue_deleted_count":        nil,
 			"cross_revoked_cert_deleted_count":      nil,
+			"total_acme_account_count":              nil,
+			"acme_account_deleted_count":            nil,
+			"acme_account_revoked_count":            nil,
+			"acme_orders_deleted_count":             nil,
+			"acme_account_safety_buffer":            nil,
 		},
 	}
 
@@ -1627,6 +1630,11 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 	resp.Data["cross_revoked_cert_deleted_count"] = b.tidyStatus.crossRevokedDeletedCount
 	resp.Data["revocation_queue_safety_buffer"] = b.tidyStatus.revQueueSafetyBuffer
 	resp.Data["last_auto_tidy_finished"] = b.lastTidy
+	resp.Data["total_acme_account_count"] = b.tidyStatus.acmeAccountsCount
+	resp.Data["acme_account_deleted_count"] = b.tidyStatus.acmeAccountsDeletedCount
+	resp.Data["acme_account_revoked_count"] = b.tidyStatus.acmeAccountsRevokedCount
+	resp.Data["acme_orders_deleted_count"] = b.tidyStatus.acmeOrdersDeletedCount
+	resp.Data["acme_account_safety_buffer"] = b.tidyStatus.acmeAccountSafetyBuffer
 
 	switch b.tidyStatus.state {
 	case tidyStatusStarted:
