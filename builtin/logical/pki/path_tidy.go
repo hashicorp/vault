@@ -1667,25 +1667,7 @@ func (b *backend) pathConfigAutoTidyRead(ctx context.Context, req *logical.Reque
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
-			"enabled":                                  config.Enabled,
-			"interval_duration":                        int(config.Interval / time.Second),
-			"tidy_cert_store":                          config.CertStore,
-			"tidy_revoked_certs":                       config.RevokedCerts,
-			"tidy_revoked_cert_issuer_associations":    config.IssuerAssocs,
-			"tidy_expired_issuers":                     config.ExpiredIssuers,
-			"tidy_acme":                                config.TidyAcme,
-			"safety_buffer":                            int(config.SafetyBuffer / time.Second),
-			"issuer_safety_buffer":                     int(config.IssuerSafetyBuffer / time.Second),
-			"pause_duration":                           config.PauseDuration.String(),
-			"publish_stored_certificate_count_metrics": config.PublishMetrics,
-			"maintain_stored_certificate_counts":       config.MaintainCount,
-			"tidy_move_legacy_ca_bundle":               config.BackupBundle,
-			"tidy_revocation_queue":                    config.RevocationQueue,
-			"revocation_queue_safety_buffer":           int(config.QueueSafetyBuffer / time.Second),
-			"tidy_cross_cluster_revoked_certs":         config.CrossRevokedCerts,
-			"acme_account_safety_buffer":               config.AcmeAccountSafetyBuffer,
-		},
+		Data: getTidyConfigData(*config),
 	}, nil
 }
 
@@ -1787,23 +1769,7 @@ func (b *backend) pathConfigAutoTidyWrite(ctx context.Context, req *logical.Requ
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
-			"enabled":                               config.Enabled,
-			"interval_duration":                     int(config.Interval / time.Second),
-			"tidy_cert_store":                       config.CertStore,
-			"tidy_revoked_certs":                    config.RevokedCerts,
-			"tidy_revoked_cert_issuer_associations": config.IssuerAssocs,
-			"tidy_expired_issuers":                  config.ExpiredIssuers,
-			"tidy_move_legacy_ca_bundle":            config.BackupBundle,
-			"tidy_acme":                             config.TidyAcme,
-			"safety_buffer":                         int(config.SafetyBuffer / time.Second),
-			"issuer_safety_buffer":                  int(config.IssuerSafetyBuffer / time.Second),
-			"pause_duration":                        config.PauseDuration.String(),
-			"tidy_revocation_queue":                 config.RevocationQueue,
-			"revocation_queue_safety_buffer":        int(config.QueueSafetyBuffer / time.Second),
-			"tidy_cross_cluster_revoked_certs":      config.CrossRevokedCerts,
-			"acme_account_safety_buffer":            int(config.AcmeAccountSafetyBuffer / time.Second),
-		},
+		Data: getTidyConfigData(*config),
 	}, nil
 }
 
@@ -2010,3 +1976,26 @@ controls the frequency of auto-tidy execution).
 Once enabled, a tidy operation will be kicked off automatically, as if it
 were executed with the posted configuration.
 `
+
+func getTidyConfigData(config tidyConfig) map[string]interface{} {
+	return map[string]interface{}{
+		// This map is in the same order as tidyConfig to ensure that all fields are accounted for
+		"enabled":                                  config.Enabled,
+		"interval_duration":                        int(config.Interval / time.Second),
+		"tidy_cert_store":                          config.CertStore,
+		"tidy_revoked_certs":                       config.RevokedCerts,
+		"tidy_revoked_cert_issuer_associations":    config.IssuerAssocs,
+		"tidy_expired_issuers":                     config.ExpiredIssuers,
+		"tidy_move_legacy_ca_bundle":               config.BackupBundle,
+		"tidy_acme":                                config.TidyAcme,
+		"safety_buffer":                            int(config.SafetyBuffer / time.Second),
+		"issuer_safety_buffer":                     int(config.IssuerSafetyBuffer / time.Second),
+		"acme_account_safety_buffer":               int(config.AcmeAccountSafetyBuffer / time.Second),
+		"pause_duration":                           config.PauseDuration.String(),
+		"publish_stored_certificate_count_metrics": config.PublishMetrics,
+		"maintain_stored_certificate_counts":       config.MaintainCount,
+		"tidy_revocation_queue":                    config.RevocationQueue,
+		"revocation_queue_safety_buffer":           int(config.QueueSafetyBuffer / time.Second),
+		"tidy_cross_cluster_revoked_certs":         config.CrossRevokedCerts,
+	}
+}
