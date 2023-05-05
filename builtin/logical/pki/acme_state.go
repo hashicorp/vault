@@ -216,11 +216,12 @@ type acmeAccount struct {
 	KeyId                string            `json:"-"`
 	Status               ACMEAccountStatus `json:"status"`
 	Contact              []string          `json:"contact"`
-	TermsOfServiceAgreed bool              `json:"termsOfServiceAgreed"`
+	TermsOfServiceAgreed bool              `json:"terms-of-service-agreed"`
 	Jwk                  []byte            `json:"jwk"`
 	AcmeDirectory        string            `json:"acme-directory"`
-	AccountCreatedDate   time.Time         `json:"account_created_date"`
-	AccountRevokedDate   time.Time         `json:"account_revoked_date"`
+	AccountCreatedDate   time.Time         `json:"account-created-date"`
+	MaxCertExpiry        time.Time         `json:"account-max-cert-expiry"`
+	AccountRevokedDate   time.Time         `json:"account-revoked-date"`
 	Eab                  *eabType          `json:"eab"`
 }
 
@@ -596,7 +597,7 @@ type acmeCertEntry struct {
 }
 
 func (a *acmeState) TrackIssuedCert(ac *acmeContext, accountId string, serial string, orderId string) error {
-	path := acmeAccountPrefix + accountId + "/certs/" + normalizeSerial(serial)
+	path := getAcmeSerialToAccountTrackerPath(accountId, serial)
 	entry := acmeCertEntry{
 		Order: orderId,
 	}
@@ -694,6 +695,10 @@ func (a *acmeState) ListEabIds(sc *storageContext) ([]string, error) {
 	}
 
 	return ids, nil
+}
+
+func getAcmeSerialToAccountTrackerPath(accountId string, serial string) string {
+	return acmeAccountPrefix + accountId + "/certs/" + normalizeSerial(serial)
 }
 
 func getAuthorizationPath(accountId string, authId string) string {

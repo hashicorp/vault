@@ -6,6 +6,7 @@ package pki
 import (
 	"fmt"
 	"net/http"
+	"path"
 	"strings"
 	"time"
 
@@ -366,7 +367,7 @@ func (b *backend) acmeNewAccountUpdateHandler(acmeCtx *acmeContext, userCtx *jws
 }
 
 func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, keyThumbprint string, certTidyBuffer, accountTidyBuffer time.Duration) error {
-	thumbprintEntry, err := ac.sc.Storage.Get(ac.sc.Context, acmeThumbprintPrefix+keyThumbprint)
+	thumbprintEntry, err := ac.sc.Storage.Get(ac.sc.Context, path.Join(acmeThumbprintPrefix, keyThumbprint))
 	if err != nil {
 		return fmt.Errorf("error retrieving thumbprint entry %v, unable to find corresponding account entry: %w", keyThumbprint, err)
 	}
@@ -391,7 +392,7 @@ func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, ke
 	}
 	if accountEntry == nil {
 		// We delete the Thumbprint Associated with the Account, and we are done
-		err = ac.sc.Storage.Delete(ac.sc.Context, acmeThumbprintPrefix+keyThumbprint)
+		err = ac.sc.Storage.Delete(ac.sc.Context, path.Join(acmeThumbprintPrefix, keyThumbprint))
 		if err != nil {
 			return err
 		}
@@ -412,7 +413,7 @@ func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, ke
 	}
 	allOrdersTidied := true
 	for _, orderId := range orderIds {
-		wasTidied, err := b.acmeTidyOrder(ac, thumbprint.Kid, acmeAccountPrefix+thumbprint.Kid+"/orders/"+orderId, ac.sc, certTidyBuffer)
+		wasTidied, err := b.acmeTidyOrder(ac, thumbprint.Kid, getOrderPath(thumbprint.Kid, orderId), certTidyBuffer)
 		if err != nil {
 			return err
 		}
@@ -421,25 +422,28 @@ func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, ke
 		}
 	}
 
-	if allOrdersTidied && time.Now().After(account.AccountCreatedDate.Add(accountTidyBuffer)) {
+	now := time.Now()
+	if allOrdersTidied &&
+		now.After(account.AccountCreatedDate.Add(accountTidyBuffer)) &&
+		now.After(account.MaxCertExpiry.Add(accountTidyBuffer)) {
 		// Tidy this account
 		// If it is Revoked or Deactivated:
-		if (account.Status == StatusRevoked || account.Status == StatusDeactivated) && time.Now().After(account.AccountRevokedDate.Add(accountTidyBuffer)) {
+		if (account.Status == StatusRevoked || account.Status == StatusDeactivated) && now.After(account.AccountRevokedDate.Add(accountTidyBuffer)) {
 			// We Delete the Account Associated with this Thumbprint:
-			err = ac.sc.Storage.Delete(ac.sc.Context, acmeAccountPrefix+thumbprint.Kid)
+			err = ac.sc.Storage.Delete(ac.sc.Context, path.Join(acmeAccountPrefix, thumbprint.Kid))
 			if err != nil {
 				return err
 			}
 
 			// Now we delete the Thumbprint Associated with the Account:
-			err = ac.sc.Storage.Delete(ac.sc.Context, acmeThumbprintPrefix+keyThumbprint)
+			err = ac.sc.Storage.Delete(ac.sc.Context, path.Join(acmeThumbprintPrefix, keyThumbprint))
 			if err != nil {
 				return err
 			}
 			b.tidyStatusIncDeletedAcmeAccountCount()
 		} else if account.Status == StatusValid {
 			// Revoke This Account
-			account.AccountRevokedDate = time.Now()
+			account.AccountRevokedDate = now
 			account.Status = StatusRevoked
 			err := as.UpdateAccount(ac, &account)
 			if err != nil {
