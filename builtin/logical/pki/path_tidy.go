@@ -102,7 +102,7 @@ var defaultTidyConfig = tidyConfig{
 	TidyAcme:                false,
 	SafetyBuffer:            72 * time.Hour,
 	IssuerSafetyBuffer:      365 * 24 * time.Hour,
-	AcmeAccountSafetyBuffer: 48 * time.Hour,
+	AcmeAccountSafetyBuffer: 30 * 24 * time.Hour,
 	PauseDuration:           0 * time.Second,
 	MaintainCount:           false,
 	PublishMetrics:          false,
@@ -1525,7 +1525,10 @@ func (b *backend) doTidyAcme(ctx context.Context, req *logical.Request, logger h
 	}
 
 	for _, thumbprint := range list {
-		b.tidyAcmeAccountByThumbprint(b.acmeState, acmeCtx, thumbprint, config.SafetyBuffer, config.AcmeAccountSafetyBuffer)
+		err := b.tidyAcmeAccountByThumbprint(b.acmeState, acmeCtx, thumbprint, config.SafetyBuffer, config.AcmeAccountSafetyBuffer)
+		if err != nil {
+			logger.Warn("error tidying account %v: %v", thumbprint, err.Error())
+		}
 
 		// Check for cancel before continuing.
 		if atomic.CompareAndSwapUint32(b.tidyCancelCAS, 1, 0) {

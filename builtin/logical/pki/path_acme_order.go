@@ -928,33 +928,6 @@ func (b *backend) acmeTidyOrder(ac *acmeContext, accountId string, orderPath str
 
 	// First Authorizations
 	for _, authorizationId := range order.AuthorizationIds {
-		authorizationEntry, err := sc.Storage.Get(ac.sc.Context, getAuthorizationPath(accountId, authorizationId))
-		if err != nil {
-			// If we continue here, we could fail to delete an authorization, but delete the order
-			// That would leave it dangling forever more, so we need to return
-			return false, err
-		}
-		if authorizationEntry == nil {
-			// If there was a storage error (above) in a previous run, it's possible that we've already tidied this
-			// In this case, don't fail, but do log that this shouldn't happen:
-			b.Logger().Warn("Encountered Missing Authorization Entry During Tidy: %v referred to Auth %v , but that authorization was not found", orderPath, authorizationId)
-		}
-
-		// Check Authorization Has Expired
-		var authorization ACMEAuthorization
-		err = authorizationEntry.DecodeJSON(&authorization)
-		if err != nil {
-			return false, err
-		}
-		expires, err := authorization.GetExpires()
-		if err != nil {
-			return false, err
-		}
-		if time.Now().Before(expires) {
-			return false, fmt.Errorf("error tidying authorization %v on order %v, authorization still valid, expires %v", authorizationId, orderPath, expires)
-		}
-
-		// Delete the Authorization
 		err = ac.sc.Storage.Delete(ac.sc.Context, getAuthorizationPath(accountId, authorizationId))
 		if err != nil {
 			return false, err
