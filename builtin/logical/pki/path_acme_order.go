@@ -884,3 +884,64 @@ func parseOrderIdentifiers(data map[string]interface{}) ([]*ACMEIdentifier, erro
 
 	return identifiers, nil
 }
+
+func (b *backend) acmeTidyOrder(ac *acmeContext, accountId string, orderPath string, sc *storageContext, certTidyBuffer time.Duration) (wasTidied bool, err error) {
+	// First we get the order; note that the orderPath includes the account
+	// It's only accessed at acme/orders/<order_id> with the account context
+	// It's saved at acme/<account_id>/orders/<orderId>
+	entry, err := ac.sc.Storage.Get(ac.sc.Context, orderPath)
+	if err != nil {
+		return false, fmt.Errorf("error loading order: %w", err)
+	}
+	if entry == nil {
+		return false, fmt.Errorf("order does not exist: %w", ErrMalformed)
+	}
+	var order acmeOrder
+	err = entry.DecodeJSON(&order)
+	if err != nil {
+		return false, fmt.Errorf("error decoding order: %w", err)
+	}
+
+	// Determine whether we should tidy this order
+	shouldTidy := false
+	// It is faster to check certificate information on the order entry rather than fetch the cert entry to parse:
+	if !order.CertificateExpiry.IsZero() {
+		// This implies that a certificate exists
+		// When a certificate exists, we want to expire and tidy the order when we tidy the certificate:
+		if time.Now().After(order.CertificateExpiry.Add(certTidyBuffer)) { // It's time to clean
+			shouldTidy = true
+		}
+	} else {
+		// This implies that no certificate exists
+		// In this case, we want to expire the order after it has expired (+ some safety buffer)
+		if time.Now().After(order.Expires) {
+			shouldTidy = true
+		}
+	}
+	if shouldTidy == false {
+		return shouldTidy, nil
+	}
+
+	// Tidy this Order
+	// That includes any certificate acme/<account_id>/orders/orderPath/cert
+	// That also includes any related authorizations: acme/<account_id>/authorizations/<auth_id>
+
+	// First Authorizations
+	for _, authorizationId := range order.AuthorizationIds {
+		err = ac.sc.Storage.Delete(ac.sc.Context, getAuthorizationPath(accountId, authorizationId))
+		if err != nil {
+			return false, err
+		}
+	}
+
+	// Normal Tidy will Take Care of the Certificate
+
+	// And Finally, the order:
+	err = ac.sc.Storage.Delete(ac.sc.Context, orderPath)
+	if err != nil {
+		return false, err
+	}
+	b.tidyStatusIncDelAcmeOrderCount()
+
+	return true, nil
+}
