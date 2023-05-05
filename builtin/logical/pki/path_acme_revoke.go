@@ -136,14 +136,14 @@ func (b *backend) acmeRevocationHandler(acmeCtx *acmeContext, _ *logical.Request
 func (b *backend) acmeRevocationByPoP(acmeCtx *acmeContext, userCtx *jwsCtx, cert *x509.Certificate, config *crlConfig) (*logical.Response, error) {
 	// Since this account does not exist, ensure we've gotten a private key
 	// matching the certificate's public key.
-	signer, ok := userCtx.Key.Key.(crypto.Signer)
+	public, ok := userCtx.Key.Key.(crypto.PublicKey)
 	if !ok {
 		return nil, fmt.Errorf("unable to revoke certificate: unable to parse JWS key of type (%T): %w", userCtx.Key.Key, ErrMalformed)
 	}
 
 	// Ensure that our PoP is indeed valid.
-	if err := validatePrivateKeyMatchesCert(signer, cert); err != nil {
-		return nil, fmt.Errorf("unable to revoke certificate: unable to verify proof of possession: %v: %w", err, ErrMalformed)
+	if err := validatePublicKeyMatchesCert(public, cert); err != nil {
+		return nil, fmt.Errorf("unable to revoke certificate: unable to verify proof of possession: %v (%v != %v): %w", err, cert.PublicKey, public, ErrMalformed)
 	}
 
 	// Now it is safe to revoke.
