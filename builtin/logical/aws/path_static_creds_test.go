@@ -2,7 +2,10 @@ package aws
 
 import (
 	"context"
+	"reflect"
 	"testing"
+
+	"github.com/fatih/structs"
 
 	"github.com/hashicorp/vault/sdk/framework"
 
@@ -13,6 +16,7 @@ func TestStaticCredsRead(t *testing.T) {
 	// setup
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
+	bgCTX := context.Background() // for brevity later
 
 	// insert a cred to get
 	creds := &awsCredentials{
@@ -23,22 +27,24 @@ func TestStaticCredsRead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = config.StorageView.Put(context.Background(), entry)
+	err = config.StorageView.Put(bgCTX, entry)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// cases
 	cases := []struct {
-		name           string
-		roleName       string
-		expectError    bool
-		expectResponse bool
+		name             string
+		roleName         string
+		expectedError    error
+		expectedResponse *logical.Response
 	}{
 		{
-			name:           "get existing creds",
-			roleName:       "test",
-			expectResponse: true,
+			name:     "get existing creds",
+			roleName: "test",
+			expectedResponse: &logical.Response{
+				Data: structs.New(creds).Map(),
+			},
 		},
 		{
 			name:     "get non-existent creds",
@@ -57,12 +63,13 @@ func TestStaticCredsRead(t *testing.T) {
 					"name": c.roleName,
 				},
 			}
-			resp, err := b.pathStaticCredsRead(context.Background(), req, staticCredsFieldData(req.Data))
-			if (c.expectError && (err == nil)) || (!c.expectError && (err != nil)) {
-				t.Fatal(err)
+			resp, err := b.pathStaticCredsRead(bgCTX, req, staticCredsFieldData(req.Data))
+
+			if err != c.expectedError {
+				t.Fatalf("got error %q, but expected %q", err, c.expectedError)
 			}
-			if (c.expectResponse && (resp == nil)) || (!c.expectResponse && (resp != nil)) {
-				t.Fatal("expected a non-nil response, but it was nil")
+			if !reflect.DeepEqual(resp, c.expectedResponse) {
+				t.Fatalf("got response %v, but expected %v", resp, c.expectedResponse)
 			}
 		})
 	}

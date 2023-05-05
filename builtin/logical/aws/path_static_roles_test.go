@@ -16,6 +16,7 @@ import (
 func TestStaticRolesValidation(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
+	bgCTX := context.Background() // for brevity
 
 	cases := []struct {
 		name        string
@@ -91,7 +92,7 @@ func TestStaticRolesValidation(t *testing.T) {
 				t.Fatal(err)
 			}
 			b.iamClient = miam
-			if err := b.Setup(context.Background(), config); err != nil {
+			if err := b.Setup(bgCTX, config); err != nil {
 				t.Fatal(err)
 			}
 			req := &logical.Request{
@@ -100,7 +101,7 @@ func TestStaticRolesValidation(t *testing.T) {
 				Data:      c.requestData,
 				Path:      "static-roles/test",
 			}
-			_, err = b.pathStaticRolesWrite(context.Background(), req, staticRoleFieldData(req.Data))
+			_, err = b.pathStaticRolesWrite(bgCTX, req, staticRoleFieldData(req.Data))
 			if c.isError && err == nil {
 				t.Fatal("expected an error but didn't get one")
 			} else if !c.isError && err != nil {
@@ -113,6 +114,7 @@ func TestStaticRolesValidation(t *testing.T) {
 func TestStaticRolesWrite(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
+	bgCTX := context.Background()
 
 	cases := []struct {
 		name          string
@@ -173,7 +175,7 @@ func TestStaticRolesWrite(t *testing.T) {
 
 			b := Backend()
 			b.iamClient = miam
-			if err := b.Setup(context.Background(), config); err != nil {
+			if err := b.Setup(bgCTX, config); err != nil {
 				t.Fatal(err)
 			}
 
@@ -184,7 +186,7 @@ func TestStaticRolesWrite(t *testing.T) {
 				Path:      "static-roles/test",
 			}
 
-			r, err := b.pathStaticRolesWrite(context.Background(), req, staticRoleFieldData(req.Data))
+			r, err := b.pathStaticRolesWrite(bgCTX, req, staticRoleFieldData(req.Data))
 			if c.expectedError && err == nil {
 				t.Fatal(err)
 			}
@@ -192,7 +194,7 @@ func TestStaticRolesWrite(t *testing.T) {
 				t.Fatal("response was nil, but it shouldn't have been")
 			}
 
-			role, err := config.StorageView.Get(context.Background(), req.Path)
+			role, err := config.StorageView.Get(bgCTX, req.Path)
 			if c.findUser && (err != nil || role == nil) {
 				t.Fatalf("couldn't find the role we should have stored: %s", err)
 			}
@@ -203,6 +205,7 @@ func TestStaticRolesWrite(t *testing.T) {
 func TestStaticRoleRead(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
+	bgCTX := context.Background()
 
 	// test cases are run against an inmem storage holding a role called "test" attached to an IAM user called "jane-doe"
 	cases := []struct {
@@ -231,7 +234,7 @@ func TestStaticRoleRead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = config.StorageView.Put(context.Background(), entry)
+	err = config.StorageView.Put(bgCTX, entry)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -249,7 +252,7 @@ func TestStaticRoleRead(t *testing.T) {
 
 			b := Backend()
 
-			r, err := b.pathStaticRolesRead(context.Background(), req, staticRoleFieldData(req.Data))
+			r, err := b.pathStaticRolesRead(bgCTX, req, staticRoleFieldData(req.Data))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -267,6 +270,8 @@ func TestStaticRoleRead(t *testing.T) {
 }
 
 func TestStaticRoleDelete(t *testing.T) {
+	bgCTX := context.Background()
+
 	// test cases are run against an inmem storage holding a role called "test" attached to an IAM user called "jane-doe"
 	cases := []struct {
 		name  string
@@ -298,12 +303,12 @@ func TestStaticRoleDelete(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = config.StorageView.Put(context.Background(), entry)
+			err = config.StorageView.Put(bgCTX, entry)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			l, err := config.StorageView.List(context.Background(), "")
+			l, err := config.StorageView.List(bgCTX, "")
 			if err != nil || len(l) != 1 {
 				t.Fatalf("couldn't add an entry to storage during test setup: %s", err)
 			}
@@ -319,7 +324,7 @@ func TestStaticRoleDelete(t *testing.T) {
 
 			b := Backend()
 
-			r, err := b.pathStaticRolesDelete(context.Background(), req, staticRoleFieldData(req.Data))
+			r, err := b.pathStaticRolesDelete(bgCTX, req, staticRoleFieldData(req.Data))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -327,7 +332,7 @@ func TestStaticRoleDelete(t *testing.T) {
 				t.Fatal("response wasn't nil, but it should have been")
 			}
 
-			l, err = config.StorageView.List(context.Background(), "")
+			l, err = config.StorageView.List(bgCTX, "")
 			if err != nil {
 				t.Fatal(err)
 			}

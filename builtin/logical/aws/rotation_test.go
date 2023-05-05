@@ -15,6 +15,8 @@ import (
 )
 
 func TestRotation(t *testing.T) {
+	bgCTX := context.Background()
+
 	type credToInsert struct {
 		config  staticRoleConfig
 		changed bool
@@ -93,7 +95,7 @@ func TestRotation(t *testing.T) {
 			config.StorageView = &logical.InmemStorage{}
 
 			b := Backend()
-			err := b.initQueue(context.Background(), nil)
+			err := b.initQueue(bgCTX, nil)
 			if err != nil {
 				t.Fatalf("couldn't initialize queue: %s", err)
 			}
@@ -123,7 +125,7 @@ func TestRotation(t *testing.T) {
 			for i, cred := range c.creds {
 				b.iamClient = miam
 
-				err = b.createCredential(context.Background(), config.StorageView, cred.config)
+				err = b.createCredential(bgCTX, config.StorageView, cred.config)
 				if err != nil {
 					t.Fatalf("couldn't insert credential %d: %s", i, err)
 				}
@@ -167,14 +169,14 @@ func TestRotation(t *testing.T) {
 			req := &logical.Request{
 				Storage: config.StorageView,
 			}
-			err = b.rotateExpiredStaticCreds(context.Background(), req)
+			err = b.rotateExpiredStaticCreds(bgCTX, req)
 			if err != nil {
 				t.Fatalf("got an error rotating credentials: %s", err)
 			}
 
 			// check our credentials
 			for i, cred := range c.creds {
-				entry, err := config.StorageView.Get(context.Background(), formatCredsStoragePath(cred.config.Name))
+				entry, err := config.StorageView.Get(bgCTX, formatCredsStoragePath(cred.config.Name))
 				if err != nil {
 					t.Fatalf("got an error retrieving credentials %d", i)
 				}
