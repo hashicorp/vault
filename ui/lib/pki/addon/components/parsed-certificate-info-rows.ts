@@ -1,5 +1,6 @@
 import Component from '@glimmer/component';
 import { parsedParameterKeys } from 'vault/utils/parse-pki-cert-oids';
+import { ParsedCertificateData } from 'vault/vault/utils/parse-pki-cert';
 
 /**
  * @module ParsedCertificateInfoRowsComponent
@@ -14,33 +15,22 @@ import { parsedParameterKeys } from 'vault/utils/parse-pki-cert-oids';
  * @param {object} model - object of parsed attributes from parse-pki-cert util
  */
 
-interface AttrsByKeys {
-  other_sans: { label: string };
-  alt_names: { label: string };
-  uri_sans: { label: string };
-  ip_sans: { label: string };
-  permitted_dns_domains: { label: string };
-  exclude_cn_from_sans: { label: string };
-  use_pss: { label: string };
-  ttl: { label: string };
-  ou: { label: string };
-  not_valid_after: { formatDate: string };
-  not_valid_before: { formatDate: string };
+interface AttrOptions {
+  [key: string]: {
+    label?: string;
+    formatDate?: string;
+  };
 }
 
 interface Args {
-  model: {
-    parsing_errors: {
-      message: string;
-    }[];
-  };
+  model: ParsedCertificateData;
 }
 
 export default class ParsedCertificateInfoRowsComponent extends Component<Args> {
   get possibleFields() {
     // We show common name elsewhere on the details view, so no need to render it here
     const fieldKeys = parsedParameterKeys.filter((k) => k !== 'common_name');
-    const attrsByKey = {
+    const attrsByKey: AttrOptions = {
       other_sans: { label: 'Other SANs' },
       alt_names: { label: 'Subject Alternative Names (SANs)' },
       uri_sans: { label: 'URI SANs' },
@@ -57,7 +47,7 @@ export default class ParsedCertificateInfoRowsComponent extends Component<Args> 
     return fieldKeys.map((key) => {
       return {
         key,
-        ...attrsByKey[key as keyof AttrsByKeys],
+        ...attrsByKey[key],
       };
     });
   }
