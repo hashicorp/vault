@@ -19,3 +19,14 @@ variable "docker_image_tag" {
   type        = string
   default     = "1.13.1"
 }
+
+variable "kubernetes_context" {
+  description = "The name of the kubernetes context"
+  type        = string
+}
+
+variable "kubeconfig_base64" {
+  description = "The base 64 encoded kubeconfig for the cluster."
+  type        = string
+}
+

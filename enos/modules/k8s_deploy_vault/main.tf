@@ -74,7 +74,7 @@ data "enos_kubernetes_pods" "vault_pods" {
     "app.kubernetes.io/name=vault",
     "component=server"
   ]
-  wait_timeout = "2m"
+  wait_timeout = "3m"
 
   depends_on = [helm_release.vault]
 }

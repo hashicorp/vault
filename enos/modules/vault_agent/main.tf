@@ -52,6 +52,11 @@ locals {
       private_ip = values(var.vault_instances)[idx].private_ip
     }
   }
+  transport = {
+    ssh = {
+      host = local.vault_instances[0].public_ip
+    }
+  }
 }
 
 resource "enos_remote_exec" "set_up_approle_auth_and_agent" {
@@ -62,9 +67,10 @@ resource "enos_remote_exec" "set_up_approle_auth_and_agent" {
     vault_agent_template_contents    = var.vault_agent_template_contents
   })
 
-  transport = {
-    ssh = {
-      host = local.vault_instances[0].public_ip
-    }
-  }
+  transport = local.transport
+}
+
+output "transport" {
+  description = "The transport configuration used when starting the vault agent"
+  value       = local.transport
 }

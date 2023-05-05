@@ -172,11 +172,21 @@ scenario "agent" {
     }
   }
 
+  step "format_transport" {
+    module = module.format_transport_block
+
+    variables {
+      type          = "ssh"
+      configuration = step.start_vault_agent.transport
+    }
+  }
+
   step "verify_vault_agent_output" {
     module = module.vault_verify_agent_output
     depends_on = [
       step.create_vault_cluster,
       step.start_vault_agent,
+      step.format_transport,
     ]
 
     providers = {
@@ -184,7 +194,7 @@ scenario "agent" {
     }
 
     variables {
-      vault_instances                  = step.create_vault_cluster_targets.hosts
+      transport                        = step.format_transport.transport_config
       vault_agent_template_destination = "/tmp/agent_output.txt"
       vault_agent_expected_output      = "orphan=true display_name=approle"
     }

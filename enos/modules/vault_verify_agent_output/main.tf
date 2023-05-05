@@ -19,38 +19,16 @@ variable "vault_agent_expected_output" {
   description = "The output that's expected in the rendered template at vault_agent_template_destination"
 }
 
-variable "vault_instance_count" {
-  type        = number
-  description = "How many vault instances are in the cluster"
-}
-
-variable "vault_instances" {
-  type = map(object({
-    private_ip = string
-    public_ip  = string
-  }))
-  description = "The vault cluster instances that were created"
-}
-
-locals {
-  vault_instances = {
-    for idx in range(var.vault_instance_count) : idx => {
-      public_ip  = values(var.vault_instances)[idx].public_ip
-      private_ip = values(var.vault_instances)[idx].private_ip
-    }
-  }
+variable "transport" {
+  description = "The transport configuration to use when setting up the auth method. Must include the name and config, i.e. ssh = { host = ??, user = ?? }"
+  type        = any # Cannot use object (even with optional properties) since it blows up.
 }
 
 resource "enos_remote_exec" "verify_vault_agent_output" {
   content = templatefile("${path.module}/templates/verify-vault-agent-output.sh", {
     vault_agent_template_destination = var.vault_agent_template_destination
     vault_agent_expected_output      = var.vault_agent_expected_output
-    vault_instances                  = jsonencode(local.vault_instances)
   })
 
-  transport = {
-    ssh = {
-      host = local.vault_instances[0].public_ip
-    }
-  }
+  transport = var.transport
 }

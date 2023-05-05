@@ -124,11 +124,27 @@ scenario "auth" {
       service_account_name = "vault-agent"
       docker_image_name    = var.vault_agent_image_name
       docker_image_tag     = var.vault_agent_image_tag
+      kubernetes_context   = step.create_cluster.cluster_name
+      kubeconfig_base64    = step.create_cluster.kubeconfig_base64
     }
 
     depends_on = [
       step.create_cluster,
       step.setup_auth_method,
+    ]
+  }
+
+  step "verify_vault_agent_output" {
+    module = module.vault_verify_agent_output
+
+    variables {
+      transport                        = step.deploy_vault_agent.transport
+      vault_agent_template_destination = "/tmp/agent/render-content.txt"
+      vault_agent_expected_output      = "orphan=true display_name=dev-role"
+    }
+
+    depends_on = [
+      step.deploy_vault_agent,
     ]
   }
 

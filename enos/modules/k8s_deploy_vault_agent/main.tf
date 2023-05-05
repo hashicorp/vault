@@ -1,6 +1,9 @@
 terraform {
   required_version = ">= 1.2.0"
   required_providers {
+    enos = {
+      source = "app.terraform.io/hashicorp-qti/enos"
+    }
     kubernetes = {
       source = "hashicorp/kubernetes"
     }
@@ -37,6 +40,7 @@ resource "kubernetes_pod_v1" "agent" {
     name = "vault-agent"
     labels = {
       "azure.workload.identity/use" : "true"
+      "app.kubernetes.io/name" : "vault-agent"
     }
   }
   spec {
@@ -56,6 +60,15 @@ resource "kubernetes_pod_v1" "agent" {
         name       = local.config_volume
         mount_path = "/etc/config"
       }
+      startup_probe {
+        exec {
+          command = [
+            "/bin/sh",
+            "-c",
+            "ps -ef | grep vault | grep -v grep"
+          ]
+        }
+      }
     }
     volume {
       name = local.config_volume
@@ -69,4 +82,17 @@ resource "kubernetes_pod_v1" "agent" {
     kubernetes_config_map_v1.agent-config,
     kubernetes_service_account_v1.vault_agent_service,
   ]
+}
+
+data "enos_kubernetes_pods" "vault_agent_pods" {
+  kubeconfig_base64 = var.kubeconfig_base64
+  context_name      = var.kubernetes_context
+  namespace         = "default"
+  label_selectors = [
+    "app.kubernetes.io/name=vault-agent",
+  ]
+  wait_timeout       = "2m"
+  expected_pod_count = 1
+
+  depends_on = [kubernetes_pod_v1.agent]
 }

@@ -77,3 +77,7 @@ module "format_transport_block" {
 module "deploy_vault_agent" {
   source = "../modules/k8s_deploy_vault_agent"
 }
+
+module "vault_verify_agent_output" {
+  source = "../modules/vault_verify_agent_output"
+}

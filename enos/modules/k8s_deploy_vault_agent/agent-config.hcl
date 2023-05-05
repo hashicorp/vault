@@ -9,7 +9,7 @@ vault {
 
 template {
   destination  = "/tmp/agent/render-content.txt"
-  contents     = "{{ with secret \"auth/token/lookup-self\" }}{{ .Data.id }}{{ end }}"
+  contents     = "{{ with secret \"auth/token/lookup-self\" }}orphan={{ .Data.orphan }} display_name={{ .Data.display_name }}{{ end }}"
 }
 
 auto_auth {

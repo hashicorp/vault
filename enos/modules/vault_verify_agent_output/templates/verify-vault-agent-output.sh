@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: MPL-2.0
 
@@ -10,7 +10,7 @@ fail() {
   return 1
 }
 
-actual_output=$(cat ${vault_agent_template_destination})
-if [[ "$actual_output" != "${vault_agent_expected_output}" ]]; then
+actual_output=$(cat "${vault_agent_template_destination}")
+if [ "$actual_output" != "${vault_agent_expected_output}" ]; then
   fail "expected '${vault_agent_expected_output}' to be the Agent output, but got: '$actual_output'"
 fi
