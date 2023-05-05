@@ -53,10 +53,9 @@ func (c *AgentGenerateConfigCommand) Flags() *FlagSets {
 	f := set.NewFlagSet("Command Options")
 
 	f.StringVar(&StringVar{
-		Name:    "type",
-		Target:  &c.flagType,
-		Default: "env-template",
-		Usage:   "Type of configuration file to generate; currently, only 'env-template' is supported.",
+		Name:   "type",
+		Target: &c.flagType,
+		Usage:  "Type of configuration file to generate; currently, only 'env-template' is supported.",
 		Completion: complete.PredictSet(
 			"env-template",
 		),
@@ -101,6 +100,16 @@ func (c *AgentGenerateConfigCommand) Run(args []string) int {
 
 	if len(args) > 1 {
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected at most 1, got %d)", len(args)))
+		return 1
+	}
+
+	if c.flagType == "" {
+		c.UI.Error(`Please specify a -type flag; currently only -type="env-template" is supported.`)
+		return 1
+	}
+
+	if c.flagType != "env-template" {
+		c.UI.Error(fmt.Sprintf(`%q is not a supported configuration type; currently only -type="env-template" is supported.`, c.flagType))
 		return 1
 	}
 
