@@ -10,6 +10,8 @@ import (
 	"github.com/hashicorp/vault/internalshared/configutil"
 )
 
+// TestLoadConfigFile_ProxyCache tests loading a config file containing a cache
+// as well as a valid proxy config.
 func TestLoadConfigFile_ProxyCache(t *testing.T) {
 	config, err := LoadConfigFile("./test-fixtures/config-cache.hcl")
 	if err != nil {

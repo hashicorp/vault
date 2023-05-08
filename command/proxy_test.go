@@ -40,6 +40,8 @@ func testProxyCommand(tb testing.TB, logger hclog.Logger) (*cli.MockUi, *ProxyCo
 	}
 }
 
+// TestProxy_ExitAfterAuth tests the exit_after_auth flag, provided both
+// as config and via -exit-after-auth.
 func TestProxy_ExitAfterAuth(t *testing.T) {
 	t.Run("via_config", func(t *testing.T) {
 		testProxyExitAfterAuth(t, false)
@@ -565,6 +567,8 @@ vault {
 	wg.Wait()
 }
 
+// TestProxy_Cache_DynamicSecret Tests that the cache successfully caches a dynamic secret
+// going through the Proxy,
 func TestProxy_Cache_DynamicSecret(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
