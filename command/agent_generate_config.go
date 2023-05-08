@@ -6,6 +6,7 @@ package command
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	paths "path"
 	"sort"
@@ -87,8 +88,6 @@ func (c *AgentGenerateConfigCommand) AutocompleteFlags() complete.Flags {
 }
 
 func (c *AgentGenerateConfigCommand) Run(args []string) int {
-	ctx := context.Background()
-
 	flags := c.Flags()
 
 	if err := flags.Parse(args); err != nil {
@@ -119,23 +118,56 @@ func (c *AgentGenerateConfigCommand) Run(args []string) int {
 		return 2
 	}
 
-	templates, err := constructTemplates(ctx, client, c.flagPaths)
+	config, err := generateConfiguration(context.Background(), client, c.flagExec, c.flagPaths)
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error generating templates: %v", err))
+		c.UI.Error(fmt.Sprintf("Error: %v", err))
 		return 2
 	}
 
+	var configPath string
+	if len(args) == 1 {
+		configPath = args[0]
+	} else {
+		configPath = "agent.hcl"
+	}
+
+	f, err := os.Create(configPath)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Could not create configuration file %q: %v", configPath, err))
+		return 3
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			c.UI.Error(fmt.Sprintf("Could not close configuration file %q: %v", configPath, err))
+		}
+	}()
+
+	if _, err := config.WriteTo(f); err != nil {
+		c.UI.Error(fmt.Sprintf("Could not write to configuration file %q: %v", configPath, err))
+		return 3
+	}
+
+	c.UI.Info(fmt.Sprintf("Successfully generated %q configuration file!", configPath))
+
+	return 0
+}
+
+func generateConfiguration(ctx context.Context, client *api.Client, flagExec string, flagPaths []string) (io.WriterTo, error) {
 	var execCommand []string
-	if c.flagExec != "" {
-		execCommand = strings.Split(c.flagExec, " ")
+	if flagExec != "" {
+		execCommand = strings.Split(flagExec, " ")
 	} else {
 		execCommand = []string{"env"}
 	}
 
 	tokenPath, err := homedir.Expand("~/.vault-token")
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Could not expand home directory: %v", err))
-		return 2
+		return nil, fmt.Errorf("could not expand home directory: %w", err)
+	}
+
+	templates, err := constructTemplates(ctx, client, flagPaths)
+	if err != nil {
+		return nil, fmt.Errorf("could not generate templates: %w", err)
 	}
 
 	config := generatedConfig{
@@ -154,44 +186,19 @@ func (c *AgentGenerateConfigCommand) Run(args []string) int {
 		Vault: generatedConfigVault{
 			Address: client.Address(),
 		},
-		EnvTemplates: templates,
 		Exec: generatedConfigExec{
 			Command:                execCommand,
 			RestartOnSecretChanges: "always",
 			RestartKillSignal:      "SIGTERM",
 		},
-	}
-
-	var configPath string
-	if len(args) == 1 {
-		configPath = args[0]
-	} else {
-		configPath = "agent.hcl"
+		EnvTemplates: templates,
 	}
 
 	contents := hclwrite.NewEmptyFile()
 
 	gohcl.EncodeIntoBody(&config, contents.Body())
 
-	f, err := os.Create(configPath)
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("Could not create configuration file %q: %v", configPath, err))
-		return 1
-	}
-	defer func() {
-		if err := f.Close(); err != nil {
-			c.UI.Error(fmt.Sprintf("Could not close configuration file %q: %v", configPath, err))
-		}
-	}()
-
-	if _, err := contents.WriteTo(f); err != nil {
-		c.UI.Error(fmt.Sprintf("Could not write to configuration file %q: %v", configPath, err))
-		return 1
-	}
-
-	c.UI.Info(fmt.Sprintf("Successfully generated %q configuration file!", configPath))
-
-	return 0
+	return contents, nil
 }
 
 func constructTemplates(ctx context.Context, client *api.Client, paths []string) ([]generatedConfigEnvTemplate, error) {
