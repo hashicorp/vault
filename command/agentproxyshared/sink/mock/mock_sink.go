@@ -4,7 +4,7 @@
 package mock
 
 import (
-	"github.com/hashicorp/vault/command/agent/sink"
+	"github.com/hashicorp/vault/command/agentproxyshared/sink"
 )
 
 type mockSink struct {
