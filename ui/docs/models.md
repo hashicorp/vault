@@ -10,20 +10,18 @@
 
 ## Decorators and how to use them:
 
-### [@withFormFields()](../app/decorators/model-form-fields.js)
+### \* [@withFormFields()](../app/decorators/model-form-fields.js)
 
 - Sets `allFields`, `formFields` and/or `formFieldGroups` properties on a model class
 - `allFields` includes every model attribute (regardless of args passed to decorator)
-- `formFields` and `formFieldGroups` only exist if their relative args are passed to the decorator
+- `formFields` and `formFieldGroups` only exist if the relevant arg is passed to the decorator
 
 ```js
 const formFieldAttrs = ['attrName', 'anotherAttr'];
 const formGroupObjects = [
-  // If using the FormFieldGroups template, these keys should be named
-  // based on how they're expected to render
-  // 'default' attributes render first, above any toggle groups
-  //  additional attributes render inside toggle groups labeled with their key name
-
+  // In form-field-groups.hbs form toggle group names are determined by key names
+  // 'default' attribute fields render before any toggle groups
+  //  additional attribute fields render inside toggle groups
   { default: ['someAttribute'] },
   { 'Additional options': ['anotherAttr'] },
 ];
