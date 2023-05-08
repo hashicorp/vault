@@ -31,23 +31,23 @@ import (
 type Config struct {
 	*configutil.SharedConfig `hcl:"-"`
 
-	AutoAuth                    *AutoAuth                     `hcl:"auto_auth"`
-	ExitAfterAuth               bool                          `hcl:"exit_after_auth"`
-	Cache                       *Cache                        `hcl:"cache"`
-	APIProxy                    *APIProxy                     `hcl:"api_proxy""`
-	Vault                       *Vault                        `hcl:"vault"`
-	TemplateConfig              *TemplateConfig               `hcl:"template_config"`
-	Templates                   []*ctconfig.TemplateConfig    `hcl:"templates"`
-	DisableIdleConns            []string                      `hcl:"disable_idle_connections"`
-	DisableIdleConnsAPIProxy    bool                          `hcl:"-"`
-	DisableIdleConnsTemplating  bool                          `hcl:"-"`
-	DisableIdleConnsAutoAuth    bool                          `hcl:"-"`
-	DisableKeepAlives           []string                      `hcl:"disable_keep_alives"`
-	DisableKeepAlivesAPIProxy   bool                          `hcl:"-"`
-	DisableKeepAlivesTemplating bool                          `hcl:"-"`
-	DisableKeepAlivesAutoAuth   bool                          `hcl:"-"`
-	Exec                        *ExecConfig                   `hcl:"exec,optional"`
-	EnvTemplates                map[string]*EnvTemplateConfig `hcl:"env_template,optional"`
+	AutoAuth                    *AutoAuth                           `hcl:"auto_auth"`
+	ExitAfterAuth               bool                                `hcl:"exit_after_auth"`
+	Cache                       *Cache                              `hcl:"cache"`
+	APIProxy                    *APIProxy                           `hcl:"api_proxy""`
+	Vault                       *Vault                              `hcl:"vault"`
+	TemplateConfig              *TemplateConfig                     `hcl:"template_config"`
+	Templates                   []*ctconfig.TemplateConfig          `hcl:"templates"`
+	DisableIdleConns            []string                            `hcl:"disable_idle_connections"`
+	DisableIdleConnsAPIProxy    bool                                `hcl:"-"`
+	DisableIdleConnsTemplating  bool                                `hcl:"-"`
+	DisableIdleConnsAutoAuth    bool                                `hcl:"-"`
+	DisableKeepAlives           []string                            `hcl:"disable_keep_alives"`
+	DisableKeepAlivesAPIProxy   bool                                `hcl:"-"`
+	DisableKeepAlivesTemplating bool                                `hcl:"-"`
+	DisableKeepAlivesAutoAuth   bool                                `hcl:"-"`
+	Exec                        *ExecConfig                         `hcl:"exec,optional"`
+	EnvTemplates                map[string]*ctconfig.TemplateConfig `hcl:"env_template,optional"`
 }
 
 const (
@@ -173,12 +173,6 @@ type TemplateConfig struct {
 	StaticSecretRenderInt    time.Duration `hcl:"-"`
 }
 
-type EnvTemplateConfig struct {
-	ctconfig.TemplateConfig `mapstructure:",squash"`
-	Name                    string `hcl:"name,label"`
-	Group                   string `hcl:"group,optional"`
-}
-
 type ExecConfig struct {
 	Command            string    `hcl:"command,attr" mapstructure:"command"`
 	Args               []string  `hcl:"args,optional" mapstructure:"args"`
@@ -189,7 +183,7 @@ type ExecConfig struct {
 func NewConfig() *Config {
 	return &Config{
 		SharedConfig: new(configutil.SharedConfig),
-		EnvTemplates: map[string]*EnvTemplateConfig{},
+		EnvTemplates: map[string]*ctconfig.TemplateConfig{},
 	}
 }
 
@@ -1144,7 +1138,7 @@ func parseEnvTemplates(result *Config, list *ast.ObjectList) error {
 		return nil
 	}
 
-	envTemplates := make(map[string]*EnvTemplateConfig)
+	envTemplates := make(map[string]*ctconfig.TemplateConfig)
 
 	for _, item := range envTemplateList.Items {
 		var shadow interface{}
@@ -1158,7 +1152,7 @@ func parseEnvTemplates(result *Config, list *ast.ObjectList) error {
 			return errors.New("error converting config")
 		}
 
-		var et EnvTemplateConfig
+		var et ctconfig.TemplateConfig
 		var md mapstructure.Metadata
 		decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
