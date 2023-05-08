@@ -9,7 +9,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -27,8 +26,6 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	"github.com/hashicorp/vault/api"
-	agentConfig "github.com/hashicorp/vault/command/agent/config"
-	"github.com/hashicorp/vault/command/agent/template"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth/alicloud"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth/approle"
@@ -50,6 +47,7 @@ import (
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/inmem"
 	"github.com/hashicorp/vault/command/agentproxyshared/winsvc"
+	proxyConfig "github.com/hashicorp/vault/command/proxy/config"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/useragent"
@@ -66,21 +64,21 @@ import (
 )
 
 var (
-	_ cli.Command             = (*AgentCommand)(nil)
-	_ cli.CommandAutocomplete = (*AgentCommand)(nil)
+	_ cli.Command             = (*ProxyCommand)(nil)
+	_ cli.CommandAutocomplete = (*ProxyCommand)(nil)
 )
 
 const (
-	// flagNameAgentExitAfterAuth is used as an Agent specific flag to indicate
-	// that agent should exit after a single successful auth
-	flagNameAgentExitAfterAuth = "exit-after-auth"
+	// flagNameProxyExitAfterAuth is used as a Proxy specific flag to indicate
+	// that proxy should exit after a single successful auth
+	flagNameProxyExitAfterAuth = "exit-after-auth"
 )
 
-type AgentCommand struct {
+type ProxyCommand struct {
 	*BaseCommand
 	logFlags logFlags
 
-	config *agentConfig.Config
+	config *proxyConfig.Config
 
 	ShutdownCh chan struct{}
 	SighupCh   chan struct{}
@@ -105,20 +103,20 @@ type AgentCommand struct {
 	flagTestVerifyOnly bool
 }
 
-func (c *AgentCommand) Synopsis() string {
-	return "Start a Vault agent"
+func (c *ProxyCommand) Synopsis() string {
+	return "Start a Vault Proxy"
 }
 
-func (c *AgentCommand) Help() string {
+func (c *ProxyCommand) Help() string {
 	helpText := `
-Usage: vault agent [options]
+Usage: vault proxy [options]
 
-  This command starts a Vault Agent that can perform automatic authentication
+  This command starts a Vault Proxy that can perform automatic authentication
   in certain environments.
 
-  Start an agent with a configuration file:
+  Start a proxy with a configuration file:
 
-      $ vault agent -config=/etc/vault/config.hcl
+      $ vault proxy -config=/etc/vault/config.hcl
 
   For a full list of examples, please see the documentation.
 
@@ -126,7 +124,7 @@ Usage: vault agent [options]
 	return strings.TrimSpace(helpText)
 }
 
-func (c *AgentCommand) Flags() *FlagSets {
+func (c *ProxyCommand) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP)
 
 	f := set.NewFlagSet("Command Options")
@@ -142,14 +140,14 @@ func (c *AgentCommand) Flags() *FlagSets {
 			complete.PredictFiles("*.json"),
 		),
 		Usage: "Path to a configuration file. This configuration file should " +
-			"contain only agent directives.",
+			"contain only proxy directives.",
 	})
 
 	f.BoolVar(&BoolVar{
-		Name:    flagNameAgentExitAfterAuth,
+		Name:    flagNameProxyExitAfterAuth,
 		Target:  &c.flagExitAfterAuth,
 		Default: false,
-		Usage: "If set to true, the agent will exit with code 0 after a single " +
+		Usage: "If set to true, the proxy will exit with code 0 after a single " +
 			"successful auth, where success means that a token was retrieved and " +
 			"all sinks successfully wrote it",
 	})
@@ -173,15 +171,15 @@ func (c *AgentCommand) Flags() *FlagSets {
 	return set
 }
 
-func (c *AgentCommand) AutocompleteArgs() complete.Predictor {
+func (c *ProxyCommand) AutocompleteArgs() complete.Predictor {
 	return complete.PredictNothing
 }
 
-func (c *AgentCommand) AutocompleteFlags() complete.Flags {
+func (c *ProxyCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
 }
 
-func (c *AgentCommand) Run(args []string) int {
+func (c *ProxyCommand) Run(args []string) int {
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {
@@ -253,8 +251,8 @@ func (c *AgentCommand) Run(args []string) int {
 		return 0
 	}
 
-	// Ignore any setting of Agent's address. This client is used by the Agent
-	// to reach out to Vault. This should never loop back to agent.
+	// Ignore any setting of Agent/Proxy's address. This client is used by the Proxy
+	// to reach out to Vault. This should never loop back to the proxy.
 	c.flagAgentProxyAddress = ""
 	client, err := c.Client()
 	if err != nil {
@@ -266,12 +264,12 @@ func (c *AgentCommand) Run(args []string) int {
 
 	serverHealth, err := client.Sys().Health()
 	if err == nil {
-		// We don't exit on error here, as this is not worth stopping Agent over
+		// We don't exit on error here, as this is not worth stopping Proxy over
 		serverVersion := serverHealth.Version
-		agentVersion := version.GetVersion().VersionNumber()
-		if serverVersion != agentVersion {
-			c.UI.Info("==> Note: Vault Agent version does not match Vault server version. " +
-				fmt.Sprintf("Vault Agent version: %s, Vault server version: %s", agentVersion, serverVersion))
+		proxyVersion := version.GetVersion().VersionNumber()
+		if serverVersion != proxyVersion {
+			c.UI.Info("==> Note: Vault Proxy version does not match Vault server version. " +
+				fmt.Sprintf("Vault Proxy version: %s, Vault server version: %s", proxyVersion, serverVersion))
 		}
 	}
 
@@ -287,7 +285,7 @@ func (c *AgentCommand) Run(args []string) int {
 		Ui:          c.UI,
 		ServiceName: "vault",
 		DisplayName: "Vault",
-		UserAgent:   useragent.AgentString(),
+		UserAgent:   useragent.ProxyString(),
 		ClusterName: config.ClusterName,
 	})
 	if err != nil {
@@ -298,12 +296,10 @@ func (c *AgentCommand) Run(args []string) int {
 
 	var method auth.AuthMethod
 	var sinks []*sink.SinkConfig
-	var templateNamespace string
 	if config.AutoAuth != nil {
 		if client.Headers().Get(consts.NamespaceHeaderName) == "" && config.AutoAuth.Method.Namespace != "" {
 			client.SetNamespace(config.AutoAuth.Method.Namespace)
 		}
-		templateNamespace = client.Headers().Get(consts.NamespaceHeaderName)
 
 		sinkClient, err := client.CloneWithHeaders()
 		if err != nil {
@@ -422,43 +418,6 @@ func (c *AgentCommand) Run(args []string) int {
 			return 1
 		}
 	}
-	// Keep Cache configuration for legacy reasons, but error if defined alongside API Proxy
-	if config.Cache != nil {
-		switch config.Cache.EnforceConsistency {
-		case "always":
-			if enforceConsistency != cache.EnforceConsistencyNever {
-				c.UI.Error("enforce_consistency configured in both api_proxy and cache blocks. Please remove this configuration from the cache block.")
-				return 1
-			} else {
-				enforceConsistency = cache.EnforceConsistencyAlways
-			}
-		case "never", "":
-		default:
-			c.UI.Error(fmt.Sprintf("Unknown cache setting for enforce_consistency: %q", config.Cache.EnforceConsistency))
-			return 1
-		}
-
-		switch config.Cache.WhenInconsistent {
-		case "retry":
-			if whenInconsistent != cache.WhenInconsistentFail {
-				c.UI.Error("when_inconsistent configured in both api_proxy and cache blocks. Please remove this configuration from the cache block.")
-				return 1
-			} else {
-				whenInconsistent = cache.WhenInconsistentRetry
-			}
-		case "forward":
-			if whenInconsistent != cache.WhenInconsistentFail {
-				c.UI.Error("when_inconsistent configured in both api_proxy and cache blocks. Please remove this configuration from the cache block.")
-				return 1
-			} else {
-				whenInconsistent = cache.WhenInconsistentForward
-			}
-		case "fail", "":
-		default:
-			c.UI.Error(fmt.Sprintf("Unknown cache setting for when_inconsistent: %q", config.Cache.WhenInconsistent))
-			return 1
-		}
-	}
 
 	// Warn if cache _and_ cert auto-auth is enabled but certificates were not
 	// provided in the auto_auth.method["cert"].config stanza.
@@ -466,7 +425,7 @@ func (c *AgentCommand) Run(args []string) int {
 		_, okCertFile := config.AutoAuth.Method.Config["client_cert"]
 		_, okCertKey := config.AutoAuth.Method.Config["client_key"]
 
-		// If neither of these exists in the cert stanza, agent will use the
+		// If neither of these exists in the cert stanza, proxy will use the
 		// certs from the vault stanza.
 		if !okCertFile && !okCertKey {
 			c.UI.Warn(wrapAtLength("WARNING! Cache is enabled and using the same certificates " +
@@ -476,9 +435,9 @@ func (c *AgentCommand) Run(args []string) int {
 
 	}
 
-	// Output the header that the agent has started
+	// Output the header that the proxy has started
 	if !c.logFlags.flagCombineLogs {
-		c.UI.Output("==> Vault Agent started! Log data will stream in below:\n")
+		c.UI.Output("==> Vault Proxy started! Log data will stream in below:\n")
 	}
 
 	var leaseCache *cache.LeaseCache
@@ -506,15 +465,15 @@ func (c *AgentCommand) Run(args []string) int {
 		Logger:                  apiProxyLogger,
 		EnforceConsistency:      enforceConsistency,
 		WhenInconsistentAction:  whenInconsistent,
-		UserAgentStringFunction: useragent.AgentProxyStringWithProxiedUserAgent,
-		UserAgentString:         useragent.AgentProxyString(),
+		UserAgentStringFunction: useragent.ProxyStringWithProxiedUserAgent,
+		UserAgentString:         useragent.ProxyString(),
 	})
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error creating API proxy: %v", err))
 		return 1
 	}
 
-	// Parse agent cache configurations
+	// Parse proxy cache configurations
 	if config.Cache != nil {
 		cacheLogger := c.logger.Named("cache")
 
@@ -680,11 +639,6 @@ func (c *AgentCommand) Run(args []string) int {
 
 	var listeners []net.Listener
 
-	// If there are templates, add an in-process listener
-	if len(config.Templates) > 0 {
-		config.Listeners = append(config.Listeners, &configutil.Listener{Type: listenerutil.BufConnType})
-	}
-
 	// Ensure we've added all the reload funcs for TLS before anyone triggers a reload.
 	c.tlsReloadFuncsLock.Lock()
 
@@ -749,12 +703,12 @@ func (c *AgentCommand) Run(args []string) int {
 
 		// Create a muxer and add paths relevant for the lease cache layer
 		mux := http.NewServeMux()
-		quitEnabled := lnConfig.AgentAPI != nil && lnConfig.AgentAPI.EnableQuit
+		quitEnabled := lnConfig.ProxyAPI != nil && lnConfig.ProxyAPI.EnableQuit
 
-		mux.Handle(consts.AgentPathMetrics, c.handleMetrics())
+		mux.Handle(consts.ProxyPathMetrics, c.handleMetrics())
 		if "metrics_only" != lnConfig.Role {
-			mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
-			mux.Handle(consts.AgentPathQuit, c.handleQuit(quitEnabled))
+			mux.Handle(consts.ProxyPathCacheClear, leaseCache.HandleCacheClear(ctx))
+			mux.Handle(consts.ProxyPathQuit, c.handleQuit(quitEnabled))
 			mux.Handle("/", muxHandler)
 		}
 
@@ -804,7 +758,7 @@ func (c *AgentCommand) Run(args []string) int {
 		for {
 			select {
 			case <-c.SighupCh:
-				c.UI.Output("==> Vault Agent config reload triggered")
+				c.UI.Output("==> Vault Proxy config reload triggered")
 				err := c.reloadConfig(c.flagConfigs)
 				if err != nil {
 					c.outputErrors(err)
@@ -827,7 +781,7 @@ func (c *AgentCommand) Run(args []string) int {
 		for {
 			select {
 			case <-c.ShutdownCh:
-				c.UI.Output("==> Vault Agent shutdown triggered")
+				c.UI.Output("==> Vault Proxy shutdown triggered")
 				// Notify systemd that the server is shutting down
 				// Let the lease cache know this is a shutdown; no need to evict everything
 				if leaseCache != nil {
@@ -844,8 +798,6 @@ func (c *AgentCommand) Run(args []string) int {
 
 	// Start auto-auth and sink servers
 	if method != nil {
-		enableTokenCh := len(config.Templates) > 0
-
 		// Auth Handler is going to set its own retry values, so we want to
 		// work on a copy of the client to not affect other subsystems.
 		ahClient, err := c.client.CloneWithHeaders()
@@ -869,25 +821,15 @@ func (c *AgentCommand) Run(args []string) int {
 			MinBackoff:                   config.AutoAuth.Method.MinBackoff,
 			MaxBackoff:                   config.AutoAuth.Method.MaxBackoff,
 			EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
-			EnableTemplateTokenCh:        enableTokenCh,
 			Token:                        previousToken,
 			ExitOnError:                  config.AutoAuth.Method.ExitOnError,
-			UserAgent:                    useragent.AgentAutoAuthString(),
-			MetricsSignifier:             "agent",
+			UserAgent:                    useragent.ProxyAutoAuthString(),
+			MetricsSignifier:             "proxy",
 		})
 
 		ss := sink.NewSinkServer(&sink.SinkServerConfig{
 			Logger:        c.logger.Named("sink.server"),
 			Client:        ahClient,
-			ExitAfterAuth: config.ExitAfterAuth,
-		})
-
-		ts := template.NewServer(&template.ServerConfig{
-			Logger:        c.logger.Named("template.server"),
-			LogLevel:      c.logger.GetLevel(),
-			LogWriter:     c.logWriter,
-			AgentConfig:   c.config,
-			Namespace:     templateNamespace,
 			ExitAfterAuth: config.ExitAfterAuth,
 		})
 
@@ -918,11 +860,6 @@ func (c *AgentCommand) Run(args []string) int {
 				}
 			}()
 
-			// Wait until templates are rendered
-			if len(config.Templates) > 0 {
-				<-ts.DoneCh
-			}
-
 			return err
 		}, func(error) {
 			// Let the lease cache know this is a shutdown; no need to evict
@@ -932,25 +869,12 @@ func (c *AgentCommand) Run(args []string) int {
 			}
 			cancelFunc()
 		})
-
-		g.Add(func() error {
-			return ts.Run(ctx, ah.TemplateTokenCh, config.Templates)
-		}, func(error) {
-			// Let the lease cache know this is a shutdown; no need to evict
-			// everything
-			if leaseCache != nil {
-				leaseCache.SetShuttingDown(true)
-			}
-			cancelFunc()
-			ts.Stop()
-		})
-
 	}
 
 	// Server configuration output
 	padding := 24
 	sort.Strings(infoKeys)
-	c.UI.Output("==> Vault Agent configuration:\n")
+	c.UI.Output("==> Vault Proxy configuration:\n")
 	for _, k := range infoKeys {
 		c.UI.Output(fmt.Sprintf(
 			"%s%s: %s",
@@ -992,15 +916,15 @@ func (c *AgentCommand) Run(args []string) int {
 // settings as configured by the user. It applies the relevant config setting based
 // on the precedence (env var overrides file config, cli overrides env var).
 // It mutates the config object supplied.
-func (c *AgentCommand) applyConfigOverrides(f *FlagSets, config *agentConfig.Config) {
+func (c *ProxyCommand) applyConfigOverrides(f *FlagSets, config *proxyConfig.Config) {
 	if config.Vault == nil {
-		config.Vault = &agentConfig.Vault{}
+		config.Vault = &proxyConfig.Vault{}
 	}
 
 	f.applyLogConfigOverrides(config.SharedConfig)
 
 	f.Visit(func(fl *flag.Flag) {
-		if fl.Name == flagNameAgentExitAfterAuth {
+		if fl.Name == flagNameProxyExitAfterAuth {
 			config.ExitAfterAuth = c.flagExitAfterAuth
 		}
 	})
@@ -1056,22 +980,7 @@ func (c *AgentCommand) applyConfigOverrides(f *FlagSets, config *agentConfig.Con
 	config.Vault.TLSServerName = c.flagTLSServerName
 }
 
-// verifyRequestHeader wraps an http.Handler inside a Handler that checks for
-// the request header that is used for SSRF protection.
-func verifyRequestHeader(handler http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if val, ok := r.Header[consts.RequestHeaderName]; !ok || len(val) != 1 || val[0] != "true" {
-			logical.RespondError(w,
-				http.StatusPreconditionFailed,
-				fmt.Errorf("missing %q header", consts.RequestHeaderName))
-			return
-		}
-
-		handler.ServeHTTP(w, r)
-	})
-}
-
-func (c *AgentCommand) notifySystemd(status string) {
+func (c *ProxyCommand) notifySystemd(status string) {
 	sent, err := systemd.SdNotify(false, status)
 	if err != nil {
 		c.logger.Error("error notifying systemd", "error", err)
@@ -1084,7 +993,7 @@ func (c *AgentCommand) notifySystemd(status string) {
 	}
 }
 
-func (c *AgentCommand) setStringFlag(f *FlagSets, configVal string, fVar *StringVar) {
+func (c *ProxyCommand) setStringFlag(f *FlagSets, configVal string, fVar *StringVar) {
 	var isFlagSet bool
 	f.Visit(func(f *flag.Flag) {
 		if f.Name == fVar.Name {
@@ -1108,7 +1017,7 @@ func (c *AgentCommand) setStringFlag(f *FlagSets, configVal string, fVar *String
 	}
 }
 
-func (c *AgentCommand) setBoolFlag(f *FlagSets, configVal bool, fVar *BoolVar) {
+func (c *ProxyCommand) setBoolFlag(f *FlagSets, configVal bool, fVar *BoolVar) {
 	var isFlagSet bool
 	f.Visit(func(f *flag.Flag) {
 		if f.Name == fVar.Name {
@@ -1133,7 +1042,7 @@ func (c *AgentCommand) setBoolFlag(f *FlagSets, configVal bool, fVar *BoolVar) {
 }
 
 // storePidFile is used to write out our PID to a file if necessary
-func (c *AgentCommand) storePidFile(pidPath string) error {
+func (c *ProxyCommand) storePidFile(pidPath string) error {
 	// Quit fast if no pidfile
 	if pidPath == "" {
 		return nil
@@ -1156,27 +1065,14 @@ func (c *AgentCommand) storePidFile(pidPath string) error {
 }
 
 // removePidFile is used to cleanup the PID file if necessary
-func (c *AgentCommand) removePidFile(pidPath string) error {
+func (c *ProxyCommand) removePidFile(pidPath string) error {
 	if pidPath == "" {
 		return nil
 	}
 	return os.Remove(pidPath)
 }
 
-// GetServiceAccountJWT reads the service account jwt from `tokenFile`. Default is
-// the default service account file path in kubernetes.
-func getServiceAccountJWT(tokenFile string) (string, error) {
-	if len(tokenFile) == 0 {
-		tokenFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
-	}
-	token, err := ioutil.ReadFile(tokenFile)
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(string(token)), nil
-}
-
-func (c *AgentCommand) handleMetrics() http.Handler {
+func (c *ProxyCommand) handleMetrics() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			logical.RespondError(w, http.StatusMethodNotAllowed, nil)
@@ -1212,7 +1108,7 @@ func (c *AgentCommand) handleMetrics() http.Handler {
 	})
 }
 
-func (c *AgentCommand) handleQuit(enabled bool) http.Handler {
+func (c *ProxyCommand) handleQuit(enabled bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !enabled {
 			w.WriteHeader(http.StatusNotFound)
@@ -1231,8 +1127,8 @@ func (c *AgentCommand) handleQuit(enabled bool) http.Handler {
 	})
 }
 
-// newLogger creates a logger based on parsed config field on the Agent Command struct.
-func (c *AgentCommand) newLogger() (log.InterceptLogger, error) {
+// newLogger creates a logger based on parsed config field on the Proxy Command struct.
+func (c *ProxyCommand) newLogger() (log.InterceptLogger, error) {
 	if c.config == nil {
 		return nil, fmt.Errorf("cannot create logger, no config")
 	}
@@ -1260,7 +1156,7 @@ func (c *AgentCommand) newLogger() (log.InterceptLogger, error) {
 	}
 
 	logCfg := &logging.LogConfig{
-		Name:              "agent",
+		Name:              "proxy",
 		LogLevel:          logLevel,
 		LogFormat:         logFormat,
 		LogFilePath:       c.config.LogFile,
@@ -1277,13 +1173,13 @@ func (c *AgentCommand) newLogger() (log.InterceptLogger, error) {
 	return l, nil
 }
 
-// loadConfig attempts to generate an Agent config from the file(s) specified.
-func (c *AgentCommand) loadConfig(paths []string) (*agentConfig.Config, error) {
+// loadConfig attempts to generate a Proxy config from the file(s) specified.
+func (c *ProxyCommand) loadConfig(paths []string) (*proxyConfig.Config, error) {
 	var errors error
-	cfg := agentConfig.NewConfig()
+	cfg := proxyConfig.NewConfig()
 
 	for _, configPath := range paths {
-		configFromPath, err := agentConfig.LoadConfig(configPath)
+		configFromPath, err := proxyConfig.LoadConfig(configPath)
 		if err != nil {
 			errors = multierror.Append(errors, fmt.Errorf("error loading configuration from %s: %w", configPath, err))
 		} else {
@@ -1303,15 +1199,15 @@ func (c *AgentCommand) loadConfig(paths []string) (*agentConfig.Config, error) {
 }
 
 // reloadConfig will attempt to reload the config from file(s) and adjust certain
-// config values without requiring a restart of the Vault Agent.
-// If config is retrieved without error it is stored in the config field of the AgentCommand.
+// config values without requiring a restart of the Vault Proxy.
+// If config is retrieved without error it is stored in the config field of the ProxyCommand.
 // This operation is not atomic and could result in updated config but partially applied config settings.
 // The error returned from this func may be a multierror.
-// This function will most likely be called due to Vault Agent receiving a SIGHUP signal.
+// This function will most likely be called due to Vault Proxy receiving a SIGHUP signal.
 // Currently only reloading the following are supported:
 // * log level
 // * TLS certs for listeners
-func (c *AgentCommand) reloadConfig(paths []string) error {
+func (c *ProxyCommand) reloadConfig(paths []string) error {
 	// Notify systemd that the server is reloading
 	c.notifySystemd(systemd.SdNotifyReloading)
 	defer c.notifySystemd(systemd.SdNotifyReady)
@@ -1342,8 +1238,8 @@ func (c *AgentCommand) reloadConfig(paths []string) error {
 }
 
 // reloadLogLevel will attempt to update the log level for the logger attached
-// to the AgentComment struct using the value currently set in config.
-func (c *AgentCommand) reloadLogLevel() error {
+// to the ProxyCommand struct using the value currently set in config.
+func (c *ProxyCommand) reloadLogLevel() error {
 	logLevel, err := logging.ParseLogLevel(c.config.LogLevel)
 	if err != nil {
 		return err
@@ -1356,10 +1252,10 @@ func (c *AgentCommand) reloadLogLevel() error {
 
 // reloadCerts will attempt to reload certificates using a reload func which
 // was provided when the listeners were configured, only funcs that were appended
-// to the AgentCommand slice will be invoked.
+// to the ProxyCommand slice will be invoked.
 // This function returns a multierror type so that every func can report an error
 // if it encounters one.
-func (c *AgentCommand) reloadCerts() error {
+func (c *ProxyCommand) reloadCerts() error {
 	var errors error
 
 	c.tlsReloadFuncsLock.RLock()
@@ -1379,7 +1275,7 @@ func (c *AgentCommand) reloadCerts() error {
 }
 
 // outputErrors will take an error or multierror and handle outputting each to the UI
-func (c *AgentCommand) outputErrors(err error) {
+func (c *ProxyCommand) outputErrors(err error) {
 	if err != nil {
 		if me, ok := err.(*multierror.Error); ok {
 			for _, err := range me.Errors {
