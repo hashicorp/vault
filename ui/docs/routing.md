@@ -62,7 +62,7 @@ Instead of extending route classes to share this `isConfigured` state, consider 
 
 ## Decorators
 
-### - [@withConfirmLeave()](../lib/core/addon/decorators/confirm-leave.js)
+### [@withConfirmLeave()](../lib/core/addon/decorators/confirm-leave.js)
 
 - Renders `window.confirm()` alert that a user has unsaved changes if navigaing away from route with the decorator
 - Unloads or rolls back Ember data model record
