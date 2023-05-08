@@ -60,6 +60,8 @@ import (
 	"github.com/mitchellh/cli"
 	"github.com/oklog/run"
 	"github.com/posener/complete"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"google.golang.org/grpc/test/bufconn"
 )
 
@@ -874,12 +876,13 @@ func (c *ProxyCommand) Run(args []string) int {
 	// Server configuration output
 	padding := 24
 	sort.Strings(infoKeys)
+	caser := cases.Title(language.English)
 	c.UI.Output("==> Vault Proxy configuration:\n")
 	for _, k := range infoKeys {
 		c.UI.Output(fmt.Sprintf(
 			"%s%s: %s",
 			strings.Repeat(" ", padding-len(k)),
-			strings.Title(k),
+			caser.String(k),
 			info[k]))
 	}
 	c.UI.Output("")
