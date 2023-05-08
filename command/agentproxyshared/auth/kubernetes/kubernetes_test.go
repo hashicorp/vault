@@ -12,7 +12,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/command/agent/auth"
+	"github.com/hashicorp/vault/command/agentproxyshared/auth"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 )
 
