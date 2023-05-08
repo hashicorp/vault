@@ -12,12 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/builtin/logical/pki"
-
 	hclog "github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/vault/api"
 	vaultcert "github.com/hashicorp/vault/builtin/credential/cert"
+	"github.com/hashicorp/vault/builtin/logical/pki"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
 	agentcert "github.com/hashicorp/vault/command/agentproxyshared/auth/cert"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
