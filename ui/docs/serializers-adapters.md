@@ -1,3 +1,13 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+**Table of Contents** _generated with [DocToc](https://github.com/thlorenz/doctoc)_
+
+- [Guidelines](#guidelines)
+- [Gotchas](#gotchas)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Guidelines
 
 - Prepend internal functions with an underscore to differentiate from Ember methods `_getUrl`
@@ -12,7 +22,7 @@ export default class SomeSerializer extends ApplicationSerializer {
 }
 ```
 
-> Note: this will remove the attribute when calling `snapshot.serialize()` method regardless of any custom serializer logic.
+> Note: this will remove the attribute when calling `snapshot.serialize()` even if the method is called within the serialize method where custom logic may be written
 
 ## Gotchas
 
