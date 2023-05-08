@@ -19,13 +19,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/vault/command/agentproxyshared/cache/cacheboltdb"
-	cachememdb2 "github.com/hashicorp/vault/command/agentproxyshared/cache/cachememdb"
-
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/command/agentproxyshared/cache/cacheboltdb"
+	"github.com/hashicorp/vault/command/agentproxyshared/cache/cachememdb"
 	"github.com/hashicorp/vault/helper/namespace"
 	nshelper "github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/useragent"
@@ -83,8 +82,8 @@ type LeaseCache struct {
 	client      *api.Client
 	proxier     Proxier
 	logger      hclog.Logger
-	db          *cachememdb2.CacheMemDB
-	baseCtxInfo *cachememdb2.ContextInfo
+	db          *cachememdb.CacheMemDB
+	baseCtxInfo *cachememdb.ContextInfo
 	l           *sync.RWMutex
 
 	// idLocks is used during cache lookup to ensure that identical requests made
@@ -143,13 +142,13 @@ func NewLeaseCache(conf *LeaseCacheConfig) (*LeaseCache, error) {
 		return nil, fmt.Errorf("nil API client")
 	}
 
-	db, err := cachememdb2.New()
+	db, err := cachememdb.New()
 	if err != nil {
 		return nil, err
 	}
 
 	// Create a base context for the lease cache layer
-	baseCtxInfo := cachememdb2.NewContextInfo(conf.BaseContext)
+	baseCtxInfo := cachememdb.NewContextInfo(conf.BaseContext)
 
 	return &LeaseCache{
 		client:        conf.Client,
@@ -178,7 +177,7 @@ func (c *LeaseCache) SetPersistentStorage(storageIn *cacheboltdb.BoltStorage) {
 // checkCacheForRequest checks the cache for a particular request based on its
 // computed ID. It returns a non-nil *SendResponse  if an entry is found.
 func (c *LeaseCache) checkCacheForRequest(id string) (*SendResponse, error) {
-	index, err := c.db.Get(cachememdb2.IndexNameID, id)
+	index, err := c.db.Get(cachememdb.IndexNameID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -302,7 +301,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	}
 
 	// Build the index to cache based on the response received
-	index := &cachememdb2.Index{
+	index := &cachememdb.Index{
 		ID:          id,
 		Namespace:   namespace,
 		RequestPath: req.Request.URL.Path,
@@ -343,11 +342,11 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		return resp, nil
 	}
 
-	var renewCtxInfo *cachememdb2.ContextInfo
+	var renewCtxInfo *cachememdb.ContextInfo
 	switch {
 	case secret.LeaseID != "":
 		c.logger.Debug("processing lease response", "method", req.Request.Method, "path", req.Request.URL.Path)
-		entry, err := c.db.Get(cachememdb2.IndexNameToken, req.Token)
+		entry, err := c.db.Get(cachememdb.IndexNameToken, req.Token)
 		if err != nil {
 			return nil, err
 		}
@@ -359,7 +358,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		}
 
 		// Derive a context for renewal using the token's context
-		renewCtxInfo = cachememdb2.NewContextInfo(entry.RenewCtxInfo.Ctx)
+		renewCtxInfo = cachememdb.NewContextInfo(entry.RenewCtxInfo.Ctx)
 
 		index.Lease = secret.LeaseID
 		index.LeaseToken = req.Token
@@ -373,7 +372,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		// correctly set the parentCtx to the request's token context.
 		var parentCtx context.Context
 		if !secret.Auth.Orphan {
-			entry, err := c.db.Get(cachememdb2.IndexNameToken, req.Token)
+			entry, err := c.db.Get(cachememdb.IndexNameToken, req.Token)
 			if err != nil {
 				return nil, err
 			}
@@ -424,7 +423,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	renewCtx := context.WithValue(renewCtxInfo.Ctx, contextIndexID, index.ID)
 
 	// Store the lifetime watcher context in the index
-	index.RenewCtxInfo = &cachememdb2.ContextInfo{
+	index.RenewCtxInfo = &cachememdb.ContextInfo{
 		Ctx:        renewCtx,
 		CancelFunc: renewCtxInfo.CancelFunc,
 		DoneCh:     renewCtxInfo.DoneCh,
@@ -449,16 +448,16 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	return resp, nil
 }
 
-func (c *LeaseCache) createCtxInfo(ctx context.Context) *cachememdb2.ContextInfo {
+func (c *LeaseCache) createCtxInfo(ctx context.Context) *cachememdb.ContextInfo {
 	if ctx == nil {
 		c.l.RLock()
 		ctx = c.baseCtxInfo.Ctx
 		c.l.RUnlock()
 	}
-	return cachememdb2.NewContextInfo(ctx)
+	return cachememdb.NewContextInfo(ctx)
 }
 
-func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb2.Index, req *SendRequest, secret *api.Secret) {
+func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index, req *SendRequest, secret *api.Secret) {
 	defer func() {
 		id := ctx.Value(contextIndexID).(string)
 		if c.shuttingDown.Load() {
@@ -538,12 +537,12 @@ func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb2.Index
 	}
 }
 
-func (c *LeaseCache) updateLastRenewed(ctx context.Context, index *cachememdb2.Index, t time.Time) error {
+func (c *LeaseCache) updateLastRenewed(ctx context.Context, index *cachememdb.Index, t time.Time) error {
 	idLock := locksutil.LockForKey(c.idLocks, index.ID)
 	idLock.Lock()
 	defer idLock.Unlock()
 
-	getIndex, err := c.db.Get(cachememdb2.IndexNameID, index.ID)
+	getIndex, err := c.db.Get(cachememdb.IndexNameID, index.ID)
 	if err != nil {
 		return err
 	}
@@ -652,7 +651,7 @@ func (c *LeaseCache) handleCacheClear(ctx context.Context, in *cacheClearInput) 
 
 		// Find all the cached entries which has the given request path and
 		// cancel the contexts of all the respective lifetime watchers
-		indexes, err := c.db.GetByPrefix(cachememdb2.IndexNameRequestPath, in.Namespace, in.RequestPath)
+		indexes, err := c.db.GetByPrefix(cachememdb.IndexNameRequestPath, in.Namespace, in.RequestPath)
 		if err != nil {
 			return err
 		}
@@ -666,7 +665,7 @@ func (c *LeaseCache) handleCacheClear(ctx context.Context, in *cacheClearInput) 
 		}
 
 		// Get the context for the given token and cancel its context
-		index, err := c.db.Get(cachememdb2.IndexNameToken, in.Token)
+		index, err := c.db.Get(cachememdb.IndexNameToken, in.Token)
 		if err != nil {
 			return err
 		}
@@ -685,7 +684,7 @@ func (c *LeaseCache) handleCacheClear(ctx context.Context, in *cacheClearInput) 
 
 		// Get the cached index and cancel the corresponding lifetime watcher
 		// context
-		index, err := c.db.Get(cachememdb2.IndexNameTokenAccessor, in.TokenAccessor)
+		index, err := c.db.Get(cachememdb.IndexNameTokenAccessor, in.TokenAccessor)
 		if err != nil {
 			return err
 		}
@@ -704,7 +703,7 @@ func (c *LeaseCache) handleCacheClear(ctx context.Context, in *cacheClearInput) 
 
 		// Get the cached index and cancel the corresponding lifetime watcher
 		// context
-		index, err := c.db.Get(cachememdb2.IndexNameLease, in.Lease)
+		index, err := c.db.Get(cachememdb.IndexNameLease, in.Lease)
 		if err != nil {
 			return err
 		}
@@ -724,7 +723,7 @@ func (c *LeaseCache) handleCacheClear(ctx context.Context, in *cacheClearInput) 
 		c.baseCtxInfo.CancelFunc()
 		// Reset the base context
 		baseCtx, baseCancel := context.WithCancel(ctx)
-		c.baseCtxInfo = &cachememdb2.ContextInfo{
+		c.baseCtxInfo = &cachememdb.ContextInfo{
 			Ctx:        baseCtx,
 			CancelFunc: baseCancel,
 		}
@@ -831,7 +830,7 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 
 		// Kill the lifetime watchers of all the leases attached to the revoked
 		// token
-		indexes, err := c.db.GetByPrefix(cachememdb2.IndexNameLeaseToken, token)
+		indexes, err := c.db.GetByPrefix(cachememdb.IndexNameLeaseToken, token)
 		if err != nil {
 			return false, err
 		}
@@ -840,7 +839,7 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 		}
 
 		// Kill the lifetime watchers of the revoked token
-		index, err := c.db.Get(cachememdb2.IndexNameToken, token)
+		index, err := c.db.Get(cachememdb.IndexNameToken, token)
 		if err != nil {
 			return false, err
 		}
@@ -855,7 +854,7 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 
 		// Clear the parent references of the revoked token in the entries
 		// belonging to the child tokens of the revoked token.
-		indexes, err = c.db.GetByPrefix(cachememdb2.IndexNameTokenParent, token)
+		indexes, err = c.db.GetByPrefix(cachememdb.IndexNameTokenParent, token)
 		if err != nil {
 			return false, err
 		}
@@ -896,7 +895,7 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 		prefix := strings.TrimPrefix(path, vaultPathLeaseRevokeForce)
 		// Get all the cache indexes that use the request path containing the
 		// prefix and cancel the lifetime watcher context of each.
-		indexes, err := c.db.GetByPrefix(cachememdb2.IndexNameLease, prefix)
+		indexes, err := c.db.GetByPrefix(cachememdb.IndexNameLease, prefix)
 		if err != nil {
 			return false, err
 		}
@@ -915,7 +914,7 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 		prefix := strings.TrimPrefix(path, vaultPathLeaseRevokePrefix)
 		// Get all the cache indexes that use the request path containing the
 		// prefix and cancel the lifetime watcher context of each.
-		indexes, err := c.db.GetByPrefix(cachememdb2.IndexNameLease, prefix)
+		indexes, err := c.db.GetByPrefix(cachememdb.IndexNameLease, prefix)
 		if err != nil {
 			return false, err
 		}
@@ -940,7 +939,7 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 
 // Set stores the index in the cachememdb, and also stores it in the persistent
 // cache (if enabled)
-func (c *LeaseCache) Set(ctx context.Context, index *cachememdb2.Index) error {
+func (c *LeaseCache) Set(ctx context.Context, index *cachememdb.Index) error {
 	if err := c.db.Set(index); err != nil {
 		return err
 	}
@@ -962,8 +961,8 @@ func (c *LeaseCache) Set(ctx context.Context, index *cachememdb2.Index) error {
 
 // Evict removes an Index from the cachememdb, and also removes it from the
 // persistent cache (if enabled)
-func (c *LeaseCache) Evict(index *cachememdb2.Index) error {
-	if err := c.db.Evict(cachememdb2.IndexNameID, index.ID); err != nil {
+func (c *LeaseCache) Evict(index *cachememdb.Index) error {
+	if err := c.db.Evict(cachememdb.IndexNameID, index.ID); err != nil {
 		return err
 	}
 
@@ -1013,7 +1012,7 @@ func (c *LeaseCache) Restore(ctx context.Context, storage *cacheboltdb.BoltStora
 		errs = multierror.Append(errs, err)
 	} else {
 		for _, lease := range leases {
-			newIndex, err := cachememdb2.Deserialize(lease)
+			newIndex, err := cachememdb.Deserialize(lease)
 			if err != nil {
 				errs = multierror.Append(errs, err)
 				continue
@@ -1049,7 +1048,7 @@ func (c *LeaseCache) restoreTokens(tokens [][]byte) error {
 	var errors *multierror.Error
 
 	for _, token := range tokens {
-		newIndex, err := cachememdb2.Deserialize(token)
+		newIndex, err := cachememdb.Deserialize(token)
 		if err != nil {
 			errors = multierror.Append(errors, err)
 			continue
@@ -1067,7 +1066,7 @@ func (c *LeaseCache) restoreTokens(tokens [][]byte) error {
 
 // restoreLeaseRenewCtx re-creates a RenewCtx for an index object and starts
 // the watcher go routine
-func (c *LeaseCache) restoreLeaseRenewCtx(index *cachememdb2.Index) error {
+func (c *LeaseCache) restoreLeaseRenewCtx(index *cachememdb.Index) error {
 	if index.Response == nil {
 		return fmt.Errorf("cached response was nil for %s", index.ID)
 	}
@@ -1085,10 +1084,10 @@ func (c *LeaseCache) restoreLeaseRenewCtx(index *cachememdb2.Index) error {
 		return err
 	}
 
-	var renewCtxInfo *cachememdb2.ContextInfo
+	var renewCtxInfo *cachememdb.ContextInfo
 	switch {
 	case secret.LeaseID != "":
-		entry, err := c.db.Get(cachememdb2.IndexNameToken, index.RequestToken)
+		entry, err := c.db.Get(cachememdb.IndexNameToken, index.RequestToken)
 		if err != nil {
 			return err
 		}
@@ -1098,12 +1097,12 @@ func (c *LeaseCache) restoreLeaseRenewCtx(index *cachememdb2.Index) error {
 		}
 
 		// Derive a context for renewal using the token's context
-		renewCtxInfo = cachememdb2.NewContextInfo(entry.RenewCtxInfo.Ctx)
+		renewCtxInfo = cachememdb.NewContextInfo(entry.RenewCtxInfo.Ctx)
 
 	case secret.Auth != nil:
 		var parentCtx context.Context
 		if !secret.Auth.Orphan {
-			entry, err := c.db.Get(cachememdb2.IndexNameToken, index.RequestToken)
+			entry, err := c.db.Get(cachememdb.IndexNameToken, index.RequestToken)
 			if err != nil {
 				return err
 			}
@@ -1122,7 +1121,7 @@ func (c *LeaseCache) restoreLeaseRenewCtx(index *cachememdb2.Index) error {
 	}
 
 	renewCtx := context.WithValue(renewCtxInfo.Ctx, contextIndexID, index.ID)
-	index.RenewCtxInfo = &cachememdb2.ContextInfo{
+	index.RenewCtxInfo = &cachememdb.ContextInfo{
 		Ctx:        renewCtx,
 		CancelFunc: renewCtxInfo.CancelFunc,
 		DoneCh:     renewCtxInfo.DoneCh,
@@ -1200,7 +1199,7 @@ func deriveNamespaceAndRevocationPath(req *SendRequest) (string, string) {
 // within a sink's WriteToken func.
 func (c *LeaseCache) RegisterAutoAuthToken(token string) error {
 	// Get the token from the cache
-	oldIndex, err := c.db.Get(cachememdb2.IndexNameToken, token)
+	oldIndex, err := c.db.Get(cachememdb.IndexNameToken, token)
 	if err != nil {
 		return err
 	}
@@ -1228,7 +1227,7 @@ func (c *LeaseCache) RegisterAutoAuthToken(token string) error {
 		return err
 	}
 
-	index := &cachememdb2.Index{
+	index := &cachememdb.Index{
 		ID:          id,
 		Token:       token,
 		Namespace:   namespace,
@@ -1239,7 +1238,7 @@ func (c *LeaseCache) RegisterAutoAuthToken(token string) error {
 	// Derive a context off of the lease cache's base context
 	ctxInfo := c.createCtxInfo(nil)
 
-	index.RenewCtxInfo = &cachememdb2.ContextInfo{
+	index.RenewCtxInfo = &cachememdb.ContextInfo{
 		Ctx:        ctxInfo.Ctx,
 		CancelFunc: ctxInfo.CancelFunc,
 		DoneCh:     ctxInfo.DoneCh,
@@ -1294,7 +1293,7 @@ func parseCacheClearInput(req *cacheClearRequest) (*cacheClearInput, error) {
 	return in, nil
 }
 
-func (c *LeaseCache) hasExpired(currentTime time.Time, index *cachememdb2.Index) (bool, error) {
+func (c *LeaseCache) hasExpired(currentTime time.Time, index *cachememdb.Index) (bool, error) {
 	reader := bufio.NewReader(bytes.NewReader(index.Response))
 	resp, err := http.ReadResponse(reader, nil)
 	if err != nil {

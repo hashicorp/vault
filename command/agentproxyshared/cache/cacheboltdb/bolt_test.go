@@ -14,19 +14,18 @@ import (
 	"testing"
 	"time"
 
-	keymanager2 "github.com/hashicorp/vault/command/agentproxyshared/cache/keymanager"
-
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/command/agentproxyshared/cache/keymanager"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	bolt "go.etcd.io/bbolt"
 )
 
-func getTestKeyManager(t *testing.T) keymanager2.KeyManager {
+func getTestKeyManager(t *testing.T) keymanager.KeyManager {
 	t.Helper()
 
-	km, err := keymanager2.NewPassthroughKeyManager(context.Background(), nil)
+	km, err := keymanager.NewPassthroughKeyManager(context.Background(), nil)
 	require.NoError(t, err)
 
 	return km

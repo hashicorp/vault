@@ -6,9 +6,8 @@ package inmem
 import (
 	"errors"
 
-	"github.com/hashicorp/vault/command/agentproxyshared/cache"
-
 	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/command/agentproxyshared/cache"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
 	"go.uber.org/atomic"
 )

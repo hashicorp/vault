@@ -17,16 +17,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/command/agentproxyshared/cache/cacheboltdb"
-	"github.com/hashicorp/vault/command/agentproxyshared/cache/cachememdb"
-	"github.com/hashicorp/vault/command/agentproxyshared/cache/keymanager"
-
-	"github.com/hashicorp/vault/helper/useragent"
-
 	"github.com/go-test/deep"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/command/agentproxyshared/cache/cacheboltdb"
+	"github.com/hashicorp/vault/command/agentproxyshared/cache/cachememdb"
+	"github.com/hashicorp/vault/command/agentproxyshared/cache/keymanager"
+	"github.com/hashicorp/vault/helper/useragent"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
