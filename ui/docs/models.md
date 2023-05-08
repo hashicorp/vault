@@ -10,7 +10,7 @@
 
 ## Decorators and how to use them:
 
-### \* [@withFormFields()](../app/decorators/model-form-fields.js)
+### - [@withFormFields()](../app/decorators/model-form-fields.js)
 
 - Sets `allFields`, `formFields` and/or `formFieldGroups` properties on a model class
 - `allFields` includes every model attribute (regardless of args passed to decorator)
