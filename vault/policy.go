@@ -269,9 +269,10 @@ func addGrantingPoliciesToMap(m map[uint32][]logical.PolicyInfo, policy *Policy,
 		}
 
 		m[capability] = append(m[capability], logical.PolicyInfo{
-			Name:        policy.Name,
-			NamespaceId: policy.namespace.ID,
-			Type:        "acl",
+			Name:          policy.Name,
+			NamespaceId:   policy.namespace.ID,
+			NamespacePath: policy.namespace.Path,
+			Type:          "acl",
 		})
 	}
 
