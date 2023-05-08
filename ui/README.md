@@ -15,8 +15,8 @@
       - [Code Generators](#code-generators)
       - [Running Tests](#running-tests)
       - [Linting](#linting)
-      - [Further Reading / Useful Links](#further-reading--useful-links)
-    - [Best Practices](#best-practices)
+    - [Contributing / Best Practices](#contributing--best-practices)
+    - [Further Reading / Useful Links](#further-reading--useful-links)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -141,19 +141,11 @@ acceptance tests then run, which proxy requests back to that server.
 - `yarn lint:hbs`
 - `yarn lint:fix`
 
-#### Further Reading / Useful Links
-
-- [ember.js](https://emberjs.com/)
-- [ember-cli](https://cli.emberjs.com/release/)
-- Development Browser Extensions
-  - [ember inspector for chrome](https://chrome.google.com/webstore/detail/ember-inspector/bmdblncegkenkacieihfhpjfppoconhi)
-  - [ember inspector for firefox](https://addons.mozilla.org/en-US/firefox/addon/ember-inspector/)
-
-### Best Practices
+### Contributing / Best Practices
 
 Hello and thank you for contributing to the Vault UI! Below is a list of patterns we follow on the UI team to keep in mind when contributing to the UI codebase. This is an ever-evolving process, so we welcome any comments, questions or general feedback.
 
-> remember to prefix your branch name with `ui/` so that UI tests will run
+> **Remember** prefixing your branch name with `ui/` will run UI tests. If your PR includes backend changes, _do not_ prefix your branch, instead add the `ui` label on github. This will trigger the UI test suite to run, in addition to the backend Go tests.
 
 - [routing](docs/routing.md)
 - [serializers/adapters](docs/serializers-adapters.md)
@@ -161,3 +153,11 @@ Hello and thank you for contributing to the Vault UI! Below is a list of pattern
 - [components](docs/components.md)
 - [forms](docs/forms.md)
 - [css](docs/css.md)
+
+### Further Reading / Useful Links
+
+- [ember.js](https://emberjs.com/)
+- [ember-cli](https://cli.emberjs.com/release/)
+- Development Browser Extensions
+  - [ember inspector for chrome](https://chrome.google.com/webstore/detail/ember-inspector/bmdblncegkenkacieihfhpjfppoconhi)
+  - [ember inspector for firefox](https://addons.mozilla.org/en-US/firefox/addon/ember-inspector/)
