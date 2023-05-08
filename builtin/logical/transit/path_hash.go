@@ -21,6 +21,13 @@ import (
 func (b *backend) pathHash() *framework.Path {
 	return &framework.Path{
 		Pattern: "hash" + framework.OptionalParamRegex("urlalgorithm"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "hash",
+			OperationSuffix: "|with-algorithm",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"input": {
 				Type:        framework.TypeString,

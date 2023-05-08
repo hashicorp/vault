@@ -15,8 +15,7 @@ module('Integration | Component | console/log command', function (hooks) {
     const commandText = 'list this/path';
     this.set('content', commandText);
 
-    await render(hbs`{{console/log-command content=this.content}}`);
-
-    assert.dom('pre').includesText(commandText);
+    await render(hbs`<Console::LogCommand @content={{this.content}} />`);
+    assert.dom('.console-ui-command').includesText(commandText);
   });
 });

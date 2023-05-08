@@ -138,21 +138,44 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "oidc/config/?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"issuer": {
 					Type:        framework.TypeString,
 					Description: "Issuer URL to be used in the iss claim of the token. If not set, Vault's app_addr will be used.",
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation:   i.pathOIDCReadConfig,
-				logical.UpdateOperation: i.pathOIDCUpdateConfig,
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: i.pathOIDCReadConfig,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationSuffix: "configuration",
+					},
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.pathOIDCUpdateConfig,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "configure",
+					},
+				},
 			},
+
 			HelpSynopsis:    "OIDC configuration",
 			HelpDescription: "Update OIDC configuration in the identity backend",
 		},
 		{
 			Pattern: "oidc/key/" + framework.GenericNameRegex("name"),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationSuffix: "key",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -194,6 +217,11 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/key/" + framework.GenericNameRegex("name") + "/rotate/?$",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationVerb:   "rotate",
+				OperationSuffix: "key",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -212,6 +240,10 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/key/?$",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationSuffix: "keys",
+			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: i.pathOIDCListKey,
 			},
@@ -220,6 +252,10 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/\\.well-known/openid-configuration/?$",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationSuffix: "open-id-configuration",
+			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation: i.pathOIDCDiscovery,
 			},
@@ -228,6 +264,10 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/\\.well-known/keys/?$",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationSuffix: "public-keys",
+			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation: i.pathOIDCReadPublicKeys,
 			},
@@ -236,6 +276,11 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/token/" + framework.GenericNameRegex("name"),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationVerb:   "generate",
+				OperationSuffix: "token",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -250,6 +295,10 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/role/" + framework.GenericNameRegex("name"),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationSuffix: "role",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -286,6 +335,10 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/role/?$",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationSuffix: "roles",
+			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: i.pathOIDCListRole,
 			},
@@ -294,6 +347,10 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/introspect/?$",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationVerb:   "introspect",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
 					Type:        framework.TypeString,

@@ -21,6 +21,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+const operationPrefixCert = "cert"
+
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
 	if err := b.Setup(ctx, conf); err != nil {

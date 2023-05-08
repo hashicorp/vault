@@ -35,8 +35,10 @@ const (
 
 type tidyStatus struct {
 	// Parameters used to initiate the operation
-	safetyBuffer          int
-	issuerSafetyBuffer    int
+	safetyBuffer         int
+	issuerSafetyBuffer   int
+	revQueueSafetyBuffer int
+
 	tidyCertStore         bool
 	tidyRevokedCerts      bool
 	tidyRevokedAssocs     bool
@@ -101,7 +103,13 @@ var defaultTidyConfig = tidyConfig{
 func pathTidy(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "tidy$",
-		Fields:  addTidyFields(map[string]*framework.FieldSchema{}),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "tidy",
+		},
+
+		Fields: addTidyFields(map[string]*framework.FieldSchema{}),
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathTidyWrite,
@@ -122,6 +130,13 @@ func pathTidy(b *backend) *framework.Path {
 func pathTidyCancel(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "tidy-cancel$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "tidy",
+			OperationSuffix: "cancel",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathTidyCancelWrite,
@@ -138,6 +153,11 @@ func pathTidyCancel(b *backend) *framework.Path {
 								Type:        framework.TypeInt,
 								Description: `Issuer safety buffer`,
 								Required:    false,
+							},
+							"revocation_queue_safety_buffer": {
+								Type:        framework.TypeInt,
+								Description: `Revocation queue safety buffer`,
+								Required:    true,
 							},
 							"tidy_cert_store": {
 								Type:        framework.TypeBool,
@@ -183,6 +203,11 @@ func pathTidyCancel(b *backend) *framework.Path {
 								Type:        framework.TypeString,
 								Description: `Time the operation finished`,
 								Required:    false,
+							},
+							"last_auto_tidy_finished": {
+								Type:        framework.TypeString,
+								Description: `Time the last auto-tidy operation finished`,
+								Required:    true,
 							},
 							"message": {
 								Type:        framework.TypeString,
@@ -251,6 +276,13 @@ func pathTidyCancel(b *backend) *framework.Path {
 func pathTidyStatus(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "tidy-status$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "tidy",
+			OperationSuffix: "status",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathTidyStatusRead,
@@ -266,6 +298,11 @@ func pathTidyStatus(b *backend) *framework.Path {
 							"issuer_safety_buffer": {
 								Type:        framework.TypeInt,
 								Description: `Issuer safety buffer`,
+								Required:    true,
+							},
+							"revocation_queue_safety_buffer": {
+								Type:        framework.TypeInt,
+								Description: `Revocation queue safety buffer`,
 								Required:    true,
 							},
 							"tidy_cert_store": {
@@ -316,6 +353,11 @@ func pathTidyStatus(b *backend) *framework.Path {
 							"time_finished": {
 								Type:        framework.TypeString,
 								Description: `Time the operation finished`,
+								Required:    false,
+							},
+							"last_auto_tidy_finished": {
+								Type:        framework.TypeString,
+								Description: `Time the last auto-tidy operation finished`,
 								Required:    true,
 							},
 							"message": {
@@ -382,6 +424,9 @@ func pathTidyStatus(b *backend) *framework.Path {
 func pathConfigAutoTidy(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/auto-tidy",
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+		},
 		Fields: addTidyFields(map[string]*framework.FieldSchema{
 			"enabled": {
 				Type:        framework.TypeBool,
@@ -396,6 +441,9 @@ func pathConfigAutoTidy(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathConfigAutoTidyRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "auto-tidy-configuration",
+				},
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
@@ -475,6 +523,10 @@ func pathConfigAutoTidy(b *backend) *framework.Path {
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathConfigAutoTidyWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "auto-tidy",
+				},
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
@@ -947,8 +999,16 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 		}
 
 		if !config.AutoRebuild {
-			if err := b.crlBuilder.rebuild(sc, false); err != nil {
+			warnings, err := b.crlBuilder.rebuild(sc, false)
+			if err != nil {
 				return err
+			}
+			if len(warnings) > 0 {
+				msg := "During rebuild of CRL for tidy, got the following warnings:"
+				for index, warning := range warnings {
+					msg = fmt.Sprintf("%v\n %d. %v", msg, index+1, warning)
+				}
+				b.Logger().Warn(msg)
 			}
 		}
 	}
@@ -1051,8 +1111,16 @@ func (b *backend) doTidyExpiredIssuers(ctx context.Context, req *logical.Request
 		b.revokeStorageLock.Lock()
 		defer b.revokeStorageLock.Unlock()
 
-		if err := b.crlBuilder.rebuild(sc, false); err != nil {
+		warnings, err := b.crlBuilder.rebuild(sc, false)
+		if err != nil {
 			return err
+		}
+		if len(warnings) > 0 {
+			msg := "During rebuild of CRL for tidy, got the following warnings:"
+			for index, warning := range warnings {
+				msg = fmt.Sprintf("%v\n %d. %v", msg, index+1, warning)
+			}
+			b.Logger().Warn(msg)
 		}
 	}
 
@@ -1403,6 +1471,8 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 	resp.Data["missing_issuer_cert_count"] = b.tidyStatus.missingIssuerCertCount
 	resp.Data["revocation_queue_deleted_count"] = b.tidyStatus.revQueueDeletedCount
 	resp.Data["cross_revoked_cert_deleted_count"] = b.tidyStatus.crossRevokedDeletedCount
+	resp.Data["revocation_queue_safety_buffer"] = b.tidyStatus.revQueueSafetyBuffer
+	resp.Data["last_auto_tidy_finished"] = b.lastTidy
 
 	switch b.tidyStatus.state {
 	case tidyStatusStarted:
@@ -1578,6 +1648,7 @@ func (b *backend) tidyStatusStart(config *tidyConfig) {
 	b.tidyStatus = &tidyStatus{
 		safetyBuffer:          int(config.SafetyBuffer / time.Second),
 		issuerSafetyBuffer:    int(config.IssuerSafetyBuffer / time.Second),
+		revQueueSafetyBuffer:  int(config.QueueSafetyBuffer / time.Second),
 		tidyCertStore:         config.CertStore,
 		tidyRevokedCerts:      config.RevokedCerts,
 		tidyRevokedAssocs:     config.IssuerAssocs,
@@ -1734,6 +1805,7 @@ The result includes the following fields:
 * 'revocation_queue_deleted_count': the number of revocation queue entries deleted
 * 'tidy_cross_cluster_revoked_certs': the value of this parameter when initiating the tidy operation
 * 'cross_revoked_cert_deleted_count': the number of cross-cluster revoked certificate entries deleted
+* 'revocation_queue_safety_buffer': the value of this parameter when initiating the tidy operation
 `
 
 const pathConfigAutoTidySyn = `

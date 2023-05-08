@@ -33,6 +33,7 @@ export default buildRoutes(function () {
       this.route('edit');
       this.route('sign');
       this.route('cross-sign');
+      this.route('rotate-root');
     });
   });
   this.route('certificates', function () {

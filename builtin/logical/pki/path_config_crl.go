@@ -52,6 +52,11 @@ var defaultCrlConfig = crlConfig{
 func pathConfigCRL(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/crl",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"expiry": {
 				Type: framework.TypeString,
@@ -113,6 +118,9 @@ existing CRL and OCSP paths will return the unified CRL instead of a response ba
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "crl-configuration",
+				},
 				Callback: b.pathCRLRead,
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
@@ -185,6 +193,10 @@ existing CRL and OCSP paths will return the unified CRL instead of a response ba
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathCRLWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "crl",
+				},
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
@@ -409,6 +421,8 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 	b.crlBuilder.markConfigDirty()
 	b.crlBuilder.reloadConfigIfRequired(sc)
 
+	resp := genResponseFromCrlConfig(config)
+
 	// Note this only affects/happens on the main cluster node, if you need to
 	// notify something based on a configuration change on all server types
 	// have a look at crlBuilder::reloadConfigIfRequired
@@ -417,7 +431,7 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		// auto-rebuild and we aren't now or equivalently, we changed our
 		// mind about delta CRLs and need a new complete one or equivalently,
 		// we changed our mind about unified CRLs), rotate the CRLs.
-		crlErr := b.crlBuilder.rebuild(sc, true)
+		warnings, crlErr := b.crlBuilder.rebuild(sc, true)
 		if crlErr != nil {
 			switch crlErr.(type) {
 			case errutil.UserError:
@@ -426,9 +440,12 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 				return nil, fmt.Errorf("error encountered during CRL building: %w", crlErr)
 			}
 		}
+		for index, warning := range warnings {
+			resp.AddWarning(fmt.Sprintf("Warning %d during CRL rebuild: %v", index+1, warning))
+		}
 	}
 
-	return genResponseFromCrlConfig(config), nil
+	return resp, nil
 }
 
 func genResponseFromCrlConfig(config *crlConfig) *logical.Response {

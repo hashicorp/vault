@@ -564,66 +564,6 @@ func TestOpenAPI_Paths(t *testing.T) {
 	})
 }
 
-func TestOpenAPI_OperationID(t *testing.T) {
-	path1 := &Path{
-		Pattern: "foo/" + GenericNameRegex("id"),
-		Fields: map[string]*FieldSchema{
-			"id": {Type: TypeString},
-		},
-		Operations: map[logical.Operation]OperationHandler{
-			logical.ReadOperation:   &PathOperation{},
-			logical.UpdateOperation: &PathOperation{},
-			logical.DeleteOperation: &PathOperation{},
-		},
-	}
-
-	path2 := &Path{
-		Pattern: "Foo/" + GenericNameRegex("id"),
-		Fields: map[string]*FieldSchema{
-			"id": {Type: TypeString},
-		},
-		Operations: map[logical.Operation]OperationHandler{
-			logical.ReadOperation: &PathOperation{},
-		},
-	}
-
-	for _, context := range []string{"", "bar"} {
-		doc := NewOASDocument("version")
-		err := documentPath(path1, nil, "kv", logical.TypeLogical, doc)
-		if err != nil {
-			t.Fatal(err)
-		}
-		err = documentPath(path2, nil, "kv", logical.TypeLogical, doc)
-		if err != nil {
-			t.Fatal(err)
-		}
-		doc.CreateOperationIDs(context)
-
-		tests := []struct {
-			path string
-			op   string
-			opID string
-		}{
-			{"/Foo/{id}", "get", "getFooId"},
-			{"/foo/{id}", "get", "getFooId_2"},
-			{"/foo/{id}", "post", "postFooId"},
-			{"/foo/{id}", "delete", "deleteFooId"},
-		}
-
-		for _, test := range tests {
-			actual := getPathOp(doc.Paths[test.path], test.op).OperationID
-			expected := test.opID
-			if context != "" {
-				expected += "_" + context
-			}
-
-			if actual != expected {
-				t.Fatalf("expected %v, got %v", expected, actual)
-			}
-		}
-	}
-}
-
 func TestOpenAPI_CustomDecoder(t *testing.T) {
 	p := &Path{
 		Pattern:      "foo",
@@ -709,6 +649,216 @@ func TestOpenAPI_CleanResponse(t *testing.T) {
 
 	if diff := deep.Equal(origJSON, cleanJSON); diff != nil {
 		t.Fatal(diff)
+	}
+}
+
+func TestOpenAPI_constructOperationID(t *testing.T) {
+	tests := map[string]struct {
+		path                string
+		pathIndex           int
+		pathAttributes      *DisplayAttributes
+		operation           logical.Operation
+		operationAttributes *DisplayAttributes
+		defaultPrefix       string
+		expected            string
+	}{
+		"empty": {
+			path:                "",
+			pathIndex:           0,
+			pathAttributes:      nil,
+			operation:           logical.Operation(""),
+			operationAttributes: nil,
+			defaultPrefix:       "",
+			expected:            "",
+		},
+		"simple-read": {
+			path:                "path/to/thing",
+			pathIndex:           0,
+			pathAttributes:      nil,
+			operation:           logical.ReadOperation,
+			operationAttributes: nil,
+			defaultPrefix:       "test",
+			expected:            "test-read-path-to-thing",
+		},
+		"simple-write": {
+			path:                "path/to/thing",
+			pathIndex:           0,
+			pathAttributes:      nil,
+			operation:           logical.UpdateOperation,
+			operationAttributes: nil,
+			defaultPrefix:       "test",
+			expected:            "test-write-path-to-thing",
+		},
+		"operation-verb": {
+			path:                "path/to/thing",
+			pathIndex:           0,
+			pathAttributes:      &DisplayAttributes{OperationVerb: "do-something"},
+			operation:           logical.UpdateOperation,
+			operationAttributes: nil,
+			defaultPrefix:       "test",
+			expected:            "do-something",
+		},
+		"operation-verb-override": {
+			path:                "path/to/thing",
+			pathIndex:           0,
+			pathAttributes:      &DisplayAttributes{OperationVerb: "do-something"},
+			operation:           logical.UpdateOperation,
+			operationAttributes: &DisplayAttributes{OperationVerb: "do-something-else"},
+			defaultPrefix:       "test",
+			expected:            "do-something-else",
+		},
+		"operation-prefix": {
+			path:                "path/to/thing",
+			pathIndex:           0,
+			pathAttributes:      &DisplayAttributes{OperationPrefix: "my-prefix"},
+			operation:           logical.UpdateOperation,
+			operationAttributes: nil,
+			defaultPrefix:       "test",
+			expected:            "my-prefix-write-path-to-thing",
+		},
+		"operation-prefix-override": {
+			path:                "path/to/thing",
+			pathIndex:           0,
+			pathAttributes:      &DisplayAttributes{OperationPrefix: "my-prefix"},
+			operation:           logical.UpdateOperation,
+			operationAttributes: &DisplayAttributes{OperationPrefix: "better-prefix"},
+			defaultPrefix:       "test",
+			expected:            "better-prefix-write-path-to-thing",
+		},
+		"operation-prefix-and-suffix": {
+			path:                "path/to/thing",
+			pathIndex:           0,
+			pathAttributes:      &DisplayAttributes{OperationPrefix: "my-prefix", OperationSuffix: "my-suffix"},
+			operation:           logical.UpdateOperation,
+			operationAttributes: nil,
+			defaultPrefix:       "test",
+			expected:            "my-prefix-write-my-suffix",
+		},
+		"operation-prefix-and-suffix-override": {
+			path:                "path/to/thing",
+			pathIndex:           0,
+			pathAttributes:      &DisplayAttributes{OperationPrefix: "my-prefix", OperationSuffix: "my-suffix"},
+			operation:           logical.UpdateOperation,
+			operationAttributes: &DisplayAttributes{OperationPrefix: "better-prefix", OperationSuffix: "better-suffix"},
+			defaultPrefix:       "test",
+			expected:            "better-prefix-write-better-suffix",
+		},
+		"operation-prefix-verb-suffix": {
+			path:                "path/to/thing",
+			pathIndex:           0,
+			pathAttributes:      &DisplayAttributes{OperationPrefix: "my-prefix", OperationSuffix: "my-suffix", OperationVerb: "Create"},
+			operation:           logical.UpdateOperation,
+			operationAttributes: &DisplayAttributes{OperationPrefix: "better-prefix", OperationSuffix: "better-suffix"},
+			defaultPrefix:       "test",
+			expected:            "better-prefix-create-better-suffix",
+		},
+		"operation-prefix-verb-suffix-override": {
+			path:                "path/to/thing",
+			pathIndex:           0,
+			pathAttributes:      &DisplayAttributes{OperationPrefix: "my-prefix", OperationSuffix: "my-suffix", OperationVerb: "Create"},
+			operation:           logical.UpdateOperation,
+			operationAttributes: &DisplayAttributes{OperationPrefix: "better-prefix", OperationSuffix: "better-suffix", OperationVerb: "Login"},
+			defaultPrefix:       "test",
+			expected:            "better-prefix-login-better-suffix",
+		},
+		"operation-prefix-verb": {
+			path:                "path/to/thing",
+			pathIndex:           0,
+			pathAttributes:      nil,
+			operation:           logical.UpdateOperation,
+			operationAttributes: &DisplayAttributes{OperationPrefix: "better-prefix", OperationVerb: "Login"},
+			defaultPrefix:       "test",
+			expected:            "better-prefix-login",
+		},
+		"operation-verb-suffix": {
+			path:                "path/to/thing",
+			pathIndex:           0,
+			pathAttributes:      nil,
+			operation:           logical.UpdateOperation,
+			operationAttributes: &DisplayAttributes{OperationVerb: "Login", OperationSuffix: "better-suffix"},
+			defaultPrefix:       "test",
+			expected:            "login-better-suffix",
+		},
+		"pipe-delimited-suffix-0": {
+			path:                "path/to/thing",
+			pathIndex:           0,
+			pathAttributes:      nil,
+			operation:           logical.UpdateOperation,
+			operationAttributes: &DisplayAttributes{OperationPrefix: "better-prefix", OperationSuffix: "suffix0|suffix1"},
+			defaultPrefix:       "test",
+			expected:            "better-prefix-write-suffix0",
+		},
+		"pipe-delimited-suffix-1": {
+			path:                "path/to/thing",
+			pathIndex:           1,
+			pathAttributes:      nil,
+			operation:           logical.UpdateOperation,
+			operationAttributes: &DisplayAttributes{OperationPrefix: "better-prefix", OperationSuffix: "suffix0|suffix1"},
+			defaultPrefix:       "test",
+			expected:            "better-prefix-write-suffix1",
+		},
+		"pipe-delimited-suffix-2-fallback": {
+			path:                "path/to/thing",
+			pathIndex:           2,
+			pathAttributes:      nil,
+			operation:           logical.UpdateOperation,
+			operationAttributes: &DisplayAttributes{OperationPrefix: "better-prefix", OperationSuffix: "suffix0|suffix1"},
+			defaultPrefix:       "test",
+			expected:            "better-prefix-write-path-to-thing",
+		},
+	}
+
+	for name, test := range tests {
+		name, test := name, test
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			actual := constructOperationID(
+				test.path,
+				test.pathIndex,
+				test.pathAttributes,
+				test.operation,
+				test.operationAttributes,
+				test.defaultPrefix,
+			)
+			if actual != test.expected {
+				t.Fatalf("expected: %s; got: %s", test.expected, actual)
+			}
+		})
+	}
+}
+
+func TestOpenAPI_hyphenatedToTitleCase(t *testing.T) {
+	tests := map[string]struct {
+		in       string
+		expected string
+	}{
+		"simple": {
+			in:       "test",
+			expected: "Test",
+		},
+		"two-words": {
+			in:       "two-words",
+			expected: "TwoWords",
+		},
+		"three-words": {
+			in:       "one-two-three",
+			expected: "OneTwoThree",
+		},
+		"not-hyphenated": {
+			in:       "something_like_this",
+			expected: "Something_like_this",
+		},
+	}
+
+	for name, test := range tests {
+		name, test := name, test
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			actual := hyphenatedToTitleCase(test.in)
+			if actual != test.expected {
+				t.Fatalf("expected: %s; got: %s", test.expected, actual)
+			}
+		})
 	}
 }
 

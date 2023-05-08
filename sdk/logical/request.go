@@ -156,6 +156,22 @@ type Request struct {
 	// backends can be tied to the mount it belongs to.
 	MountAccessor string `json:"mount_accessor" structs:"mount_accessor" mapstructure:"mount_accessor" sentinel:""`
 
+	// mountRunningVersion is used internally to propagate the semantic version
+	// of the mounted plugin as reported by its vault.MountEntry to audit logging
+	mountRunningVersion string
+
+	// mountRunningSha256 is used internally to propagate the encoded sha256
+	// of the mounted plugin as reported its vault.MountEntry to audit logging
+	mountRunningSha256 string
+
+	// mountIsExternalPlugin is used internally to propagate whether
+	// the backend of the mounted plugin is running externally (i.e., over GRPC)
+	// to audit logging
+	mountIsExternalPlugin bool
+
+	// mountClass is used internally to propagate the mount class of the mounted plugin to audit logging
+	mountClass string
+
 	// WrapInfo contains requested response wrapping parameters
 	WrapInfo *RequestWrapInfo `json:"wrap_info" structs:"wrap_info" mapstructure:"wrap_info" sentinel:""`
 
@@ -281,6 +297,38 @@ func (r *Request) SentinelKeys() []string {
 		"wrapping",
 		"wrap_info",
 	}
+}
+
+func (r *Request) MountRunningVersion() string {
+	return r.mountRunningVersion
+}
+
+func (r *Request) SetMountRunningVersion(mountRunningVersion string) {
+	r.mountRunningVersion = mountRunningVersion
+}
+
+func (r *Request) MountRunningSha256() string {
+	return r.mountRunningSha256
+}
+
+func (r *Request) SetMountRunningSha256(mountRunningSha256 string) {
+	r.mountRunningSha256 = mountRunningSha256
+}
+
+func (r *Request) MountIsExternalPlugin() bool {
+	return r.mountIsExternalPlugin
+}
+
+func (r *Request) SetMountIsExternalPlugin(mountIsExternalPlugin bool) {
+	r.mountIsExternalPlugin = mountIsExternalPlugin
+}
+
+func (r *Request) MountClass() string {
+	return r.mountClass
+}
+
+func (r *Request) SetMountClass(mountClass string) {
+	r.mountClass = mountClass
 }
 
 func (r *Request) LastRemoteWAL() uint64 {

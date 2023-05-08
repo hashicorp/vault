@@ -9,6 +9,9 @@
   </p.levelLeft>
 </PageHeader>
 
+{{#if @model.id}}
+  <Toolbar />
+{{/if}}
 <PkiImportPemBundle
   @model={{@model}}
   @onCancel={{transition-to "vault.cluster.secrets.backend.pki.issuers.index"}}

@@ -23,17 +23,32 @@ import (
 
 func pathIssue(b *backend) *framework.Path {
 	pattern := "issue/" + framework.GenericNameRegex("role")
-	return buildPathIssue(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationVerb:   "issue",
+		OperationSuffix: "with-role",
+	}
+
+	return buildPathIssue(b, pattern, displayAttrs)
 }
 
 func pathIssuerIssue(b *backend) *framework.Path {
 	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/issue/" + framework.GenericNameRegex("role")
-	return buildPathIssue(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKIIssuer,
+		OperationVerb:   "issue",
+		OperationSuffix: "with-role",
+	}
+
+	return buildPathIssue(b, pattern, displayAttrs)
 }
 
-func buildPathIssue(b *backend, pattern string) *framework.Path {
+func buildPathIssue(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	ret := &framework.Path{
-		Pattern: pattern,
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
@@ -93,17 +108,32 @@ func buildPathIssue(b *backend, pattern string) *framework.Path {
 
 func pathSign(b *backend) *framework.Path {
 	pattern := "sign/" + framework.GenericNameRegex("role")
-	return buildPathSign(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationVerb:   "sign",
+		OperationSuffix: "with-role",
+	}
+
+	return buildPathSign(b, pattern, displayAttrs)
 }
 
 func pathIssuerSign(b *backend) *framework.Path {
 	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/sign/" + framework.GenericNameRegex("role")
-	return buildPathSign(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKIIssuer,
+		OperationVerb:   "sign",
+		OperationSuffix: "with-role",
+	}
+
+	return buildPathSign(b, pattern, displayAttrs)
 }
 
-func buildPathSign(b *backend, pattern string) *framework.Path {
+func buildPathSign(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	ret := &framework.Path{
-		Pattern: pattern,
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
@@ -170,18 +200,33 @@ func buildPathSign(b *backend, pattern string) *framework.Path {
 
 func pathIssuerSignVerbatim(b *backend) *framework.Path {
 	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/sign-verbatim" + framework.OptionalParamRegex("role")
-	return buildPathIssuerSignVerbatim(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKIIssuer,
+		OperationVerb:   "sign",
+		OperationSuffix: "verbatim|verbatim-with-role",
+	}
+
+	return buildPathIssuerSignVerbatim(b, pattern, displayAttrs)
 }
 
 func pathSignVerbatim(b *backend) *framework.Path {
 	pattern := "sign-verbatim" + framework.OptionalParamRegex("role")
-	return buildPathIssuerSignVerbatim(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationVerb:   "sign",
+		OperationSuffix: "verbatim|verbatim-with-role",
+	}
+
+	return buildPathIssuerSignVerbatim(b, pattern, displayAttrs)
 }
 
-func buildPathIssuerSignVerbatim(b *backend, pattern string) *framework.Path {
+func buildPathIssuerSignVerbatim(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	ret := &framework.Path{
-		Pattern: pattern,
-		Fields:  map[string]*framework.FieldSchema{},
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
+		Fields:       getCsrSignVerbatimSchemaFields(),
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
@@ -235,61 +280,6 @@ func buildPathIssuerSignVerbatim(b *backend, pattern string) *framework.Path {
 		HelpDescription: pathIssuerSignVerbatimHelpDesc,
 	}
 
-	ret.Fields = addNonCACommonFields(ret.Fields)
-
-	ret.Fields["csr"] = &framework.FieldSchema{
-		Type:    framework.TypeString,
-		Default: "",
-		Description: `PEM-format CSR to be signed. Values will be
-taken verbatim from the CSR, except for
-basic constraints.`,
-	}
-
-	ret.Fields["key_usage"] = &framework.FieldSchema{
-		Type:    framework.TypeCommaStringSlice,
-		Default: []string{"DigitalSignature", "KeyAgreement", "KeyEncipherment"},
-		Description: `A comma-separated string or list of key usages (not extended
-key usages). Valid values can be found at
-https://golang.org/pkg/crypto/x509/#KeyUsage
--- simply drop the "KeyUsage" part of the name.
-To remove all key usages from being set, set
-this value to an empty list.`,
-	}
-
-	ret.Fields["ext_key_usage"] = &framework.FieldSchema{
-		Type:    framework.TypeCommaStringSlice,
-		Default: []string{},
-		Description: `A comma-separated string or list of extended key usages. Valid values can be found at
-https://golang.org/pkg/crypto/x509/#ExtKeyUsage
--- simply drop the "ExtKeyUsage" part of the name.
-To remove all key usages from being set, set
-this value to an empty list.`,
-	}
-
-	ret.Fields["ext_key_usage_oids"] = &framework.FieldSchema{
-		Type:        framework.TypeCommaStringSlice,
-		Description: `A comma-separated string or list of extended key usage oids.`,
-	}
-
-	ret.Fields["signature_bits"] = &framework.FieldSchema{
-		Type:    framework.TypeInt,
-		Default: 0,
-		Description: `The number of bits to use in the signature
-algorithm; accepts 256 for SHA-2-256, 384 for SHA-2-384, and 512 for
-SHA-2-512. Defaults to 0 to automatically detect based on key length
-(SHA-2-256 for RSA keys, and matching the curve size for NIST P-Curves).`,
-		DisplayAttrs: &framework.DisplayAttributes{
-			Value: 0,
-		},
-	}
-
-	ret.Fields["use_pss"] = &framework.FieldSchema{
-		Type:    framework.TypeBool,
-		Default: false,
-		Description: `Whether or not to use PSS signatures when using a
-RSA key-type issuer. Defaults to false.`,
-	}
-
 	return ret
 }
 
@@ -332,51 +322,7 @@ func (b *backend) pathSign(ctx context.Context, req *logical.Request, data *fram
 // pathSignVerbatim issues a certificate from a submitted CSR, *not* subject to
 // role restrictions
 func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error) {
-	entry := &roleEntry{
-		AllowLocalhost:            true,
-		AllowAnyName:              true,
-		AllowIPSANs:               true,
-		AllowWildcardCertificates: new(bool),
-		EnforceHostnames:          false,
-		KeyType:                   "any",
-		UseCSRCommonName:          true,
-		UseCSRSANs:                true,
-		AllowedOtherSANs:          []string{"*"},
-		AllowedSerialNumbers:      []string{"*"},
-		AllowedURISANs:            []string{"*"},
-		AllowedUserIDs:            []string{"*"},
-		CNValidations:             []string{"disabled"},
-		GenerateLease:             new(bool),
-		KeyUsage:                  data.Get("key_usage").([]string),
-		ExtKeyUsage:               data.Get("ext_key_usage").([]string),
-		ExtKeyUsageOIDs:           data.Get("ext_key_usage_oids").([]string),
-		SignatureBits:             data.Get("signature_bits").(int),
-		UsePSS:                    data.Get("use_pss").(bool),
-	}
-	*entry.AllowWildcardCertificates = true
-
-	*entry.GenerateLease = false
-
-	if role != nil {
-		if role.TTL > 0 {
-			entry.TTL = role.TTL
-		}
-		if role.MaxTTL > 0 {
-			entry.MaxTTL = role.MaxTTL
-		}
-		if role.GenerateLease != nil {
-			*entry.GenerateLease = *role.GenerateLease
-		}
-		if role.NotBeforeDuration > 0 {
-			entry.NotBeforeDuration = role.NotBeforeDuration
-		}
-		entry.NoStore = role.NoStore
-		entry.Issuer = role.Issuer
-	}
-
-	if len(entry.Issuer) == 0 {
-		entry.Issuer = defaultRef
-	}
+	entry := buildSignVerbatimRole(data, role)
 
 	return b.pathIssueSignCert(ctx, req, data, entry, true, true)
 }
