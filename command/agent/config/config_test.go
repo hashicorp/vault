@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-test/deep"
 	ctconfig "github.com/hashicorp/consul-template/config"
+
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
@@ -2107,4 +2108,60 @@ func TestLoadConfigFile_Bad_Value_Disable_Keep_Alives(t *testing.T) {
 	if err == nil {
 		t.Fatal("should have error, it didn't")
 	}
+}
+
+func TestLoadConfigFile_EnvTemplates(t *testing.T) {
+	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-simple.hcl")
+
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	expectedKey := "MY_DATABASE_USER"
+	_, ok := cfg.EnvTemplates[expectedKey]
+	if !ok {
+		t.Fatalf("expected env var name to be populated")
+	}
+}
+
+func TestLoadConfigFile_EnvTemplateComplex(t *testing.T) {
+	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-complex.hcl")
+
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+	expectedKeys := []string{
+		"FOO_DATA_LOCK",
+		"FOO_DATA_PASSWORD",
+		"FOO_DATA_USER",
+	}
+	for _, expected := range expectedKeys {
+		_, ok := cfg.EnvTemplates[expected]
+		if !ok {
+			t.Fatalf("expected env var %s", expected)
+		}
+	}
+}
+
+func TestLoadConfigFile_ExecSimple(t *testing.T) {
+	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-simple.hcl")
+
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if cfg.Exec == nil {
+		t.Fatal("expected exec config to be parsed")
+	}
+
+	if cfg.Exec.Command != "/path/to/my/app" {
+		t.Fatal("exec.command does not have expected value")
+	}
+
+	if diff := deep.Equal(cfg.Exec.Args, []string{"arg1", "arg2"}); diff != nil {
+		t.Fatalf("exec.args does not have expected values: %v", cfg.Exec.Args)
+	}
+
+	// check defaults
+
 }

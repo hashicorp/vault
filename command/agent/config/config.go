@@ -1126,6 +1126,11 @@ func parseExec(result *Config, list *ast.ObjectList) error {
 		ec.RestartKillSignal = os.Interrupt
 	}
 
+	if ec.RestartOnNewSecret == "" {
+		// TODO: do we want to enum this?
+		ec.RestartOnNewSecret = "always"
+	}
+
 	result.Exec = &ec
 	return nil
 }
