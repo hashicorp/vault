@@ -42,12 +42,11 @@ export default class UserModel extends Model {
     name: 'someAttribute',
     type: 'string',
     options: { ...options },
-  },
+  }
 ```
 
-- the `formFields` array only includes attributes passed to the first argument
-
 ```js
+// only includes attributes passed to the first argument
 model.formFields = [
   {
     name: 'someAttribute',
@@ -55,11 +54,8 @@ model.formFields = [
     options: { ...options },
   },
 ];
-```
 
-- the `formFieldGroups` array groups the expanded attributes by key:
-
-```js
+// expanded attributes are grouped by key
 model.formFieldGroups = [
   {
     default: [
