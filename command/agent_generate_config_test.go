@@ -4,60 +4,22 @@
 package command
 
 import (
+	"bytes"
 	"context"
 	"reflect"
+	"regexp"
 	"testing"
 	"time"
-
-	"github.com/hashicorp/vault/api"
 )
 
 // TestConstructTemplates tests the construcTemplates helper function
 func TestConstructTemplates(t *testing.T) {
-	// test setup
-	client, closer := testVaultServer(t)
-	defer closer()
-
-	// enable kv-v1 backend
-	if err := client.Sys().Mount("kv-v1/", &api.MountInput{
-		Type: "kv-v1",
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	// enable kv-v2 backend
-	if err := client.Sys().Mount("kv-v2/", &api.MountInput{
-		Type: "kv-v2",
-	}); err != nil {
-		t.Fatal(err)
-	}
-
 	ctx, cancelContextFunc := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelContextFunc()
 
-	// populate secrets
-	for _, path := range []string{
-		"foo",
-		"app-1/foo",
-		"app-1/bar",
-		"app-1/nested/baz",
-	} {
-		if err := client.KVv1("kv-v1").Put(ctx, path, map[string]interface{}{
-			"user":     "test",
-			"password": "Hashi123",
-		}); err != nil {
-			t.Fatal(err)
-		}
+	client, closer := testVaultServerWithSecrets(ctx, t)
+	defer closer()
 
-		if _, err := client.KVv2("kv-v2").Put(ctx, path, map[string]interface{}{
-			"user":     "test",
-			"password": "Hashi123",
-		}); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	// tests
 	cases := map[string]struct {
 		paths         []string
 		expected      []generatedConfigEnvTemplate
@@ -167,8 +129,6 @@ func TestConstructTemplates(t *testing.T) {
 		name, tc := name, tc
 
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
 			templates, err := constructTemplates(ctx, client, tc.paths)
 
 			if tc.expectedError {
@@ -182,6 +142,137 @@ func TestConstructTemplates(t *testing.T) {
 
 				if !reflect.DeepEqual(tc.expected, templates) {
 					t.Fatalf("unexpected output; want: %v, got: %v", tc.expected, templates)
+				}
+			}
+		})
+	}
+}
+
+// TestGenerateConfiguration tests the generateConfiguration helper function
+func TestGenerateConfiguration(t *testing.T) {
+	ctx, cancelContextFunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelContextFunc()
+
+	client, closer := testVaultServerWithSecrets(ctx, t)
+	defer closer()
+
+	cases := map[string]struct {
+		flagExec      string
+		flagPaths     []string
+		expected      *regexp.Regexp
+		expectedError bool
+	}{
+		"kv-v1-simple": {
+			flagExec:  "./my-app arg1 arg2",
+			flagPaths: []string{"kv-v1/foo"},
+			expected: regexp.MustCompile(`
+auto_auth \{
+
+  method \{
+    type = "token_file"
+
+    config \{
+      token_file_path = ".*/.vault-token"
+    }
+  }
+}
+
+template_config \{
+  static_secret_render_interval = "5m"
+  exit_on_retry_failure         = true
+}
+
+vault \{
+  address = "https://127.0.0.1:[0-9]{5}"
+}
+
+env_template "FOO_PASSWORD" \{
+  contents             = "\{\{ with secret \\"kv-v1/foo\\" }}\{\{ .Data.password }}\{\{ end }}"
+  error_on_missing_key = true
+}
+env_template "FOO_USER" \{
+  contents             = "\{\{ with secret \\"kv-v1/foo\\" }}\{\{ .Data.user }}\{\{ end }}"
+  error_on_missing_key = true
+}
+
+exec \{
+  command                   = \["./my-app", "arg1", "arg2"\]
+  restart_on_secret_changes = "always"
+  restart_kill_signal       = "SIGTERM"
+}
+`),
+			expectedError: false,
+		},
+
+		"kv-v2-default-exec": {
+			flagExec:  "",
+			flagPaths: []string{"kv-v2/foo"},
+			expected: regexp.MustCompile(`
+auto_auth \{
+
+  method \{
+    type = "token_file"
+
+    config \{
+      token_file_path = ".*/.vault-token"
+    }
+  }
+}
+
+template_config \{
+  static_secret_render_interval = "5m"
+  exit_on_retry_failure         = true
+}
+
+vault \{
+  address = "https://127.0.0.1:[0-9]{5}"
+}
+
+env_template "FOO_PASSWORD" \{
+  contents             = "\{\{ with secret \\"kv-v2/data/foo\\" }}\{\{ .Data.data.password }}\{\{ end }}"
+  error_on_missing_key = true
+}
+env_template "FOO_USER" \{
+  contents             = "\{\{ with secret \\"kv-v2/data/foo\\" }}\{\{ .Data.data.user }}\{\{ end }}"
+  error_on_missing_key = true
+}
+
+exec \{
+  command                   = \["env"\]
+  restart_on_secret_changes = "always"
+  restart_kill_signal       = "SIGTERM"
+}
+`),
+			expectedError: false,
+		},
+		"kv-v2-simple": {
+			flagExec:      "./my-app arg1 arg2",
+			flagPaths:     []string{"kv-v2/foo"},
+			expected:      regexp.MustCompile(``),
+			expectedError: false,
+		},
+	}
+
+	for name, tc := range cases {
+		name, tc := name, tc
+
+		t.Run(name, func(t *testing.T) {
+			var config bytes.Buffer
+
+			c, err := generateConfiguration(ctx, client, tc.flagExec, tc.flagPaths)
+			c.WriteTo(&config)
+
+			if tc.expectedError {
+				if err == nil {
+					t.Fatal("an error was expected but the test succeeded")
+				}
+			} else {
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if !tc.expected.MatchString(config.String()) {
+					t.Fatalf("unexpected output; want: %v, got: %v", tc.expected.String(), config.String())
 				}
 			}
 		})

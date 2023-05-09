@@ -71,6 +71,50 @@ func testVaultServer(tb testing.TB) (*api.Client, func()) {
 	return client, closer
 }
 
+func testVaultServerWithSecrets(ctx context.Context, tb testing.TB) (*api.Client, func()) {
+	tb.Helper()
+
+	client, _, closer := testVaultServerUnseal(tb)
+
+	// enable kv-v1 backend
+	if err := client.Sys().Mount("kv-v1/", &api.MountInput{
+		Type: "kv-v1",
+	}); err != nil {
+		tb.Fatal(err)
+	}
+
+	// enable kv-v2 backend
+	if err := client.Sys().Mount("kv-v2/", &api.MountInput{
+		Type: "kv-v2",
+	}); err != nil {
+		tb.Fatal(err)
+	}
+
+	// populate dummy secrets
+	for _, path := range []string{
+		"foo",
+		"app-1/foo",
+		"app-1/bar",
+		"app-1/nested/baz",
+	} {
+		if err := client.KVv1("kv-v1").Put(ctx, path, map[string]interface{}{
+			"user":     "test",
+			"password": "Hashi123",
+		}); err != nil {
+			tb.Fatal(err)
+		}
+
+		if _, err := client.KVv2("kv-v2").Put(ctx, path, map[string]interface{}{
+			"user":     "test",
+			"password": "Hashi123",
+		}); err != nil {
+			tb.Fatal(err)
+		}
+	}
+
+	return client, closer
+}
+
 func testVaultServerWithKVVersion(tb testing.TB, kvVersion string) (*api.Client, func()) {
 	tb.Helper()
 
