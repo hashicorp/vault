@@ -96,7 +96,7 @@ test_packages[6]+=" $base/command/agentproxyshared/cache"
 test_packages[6]+=" $base/command/agentproxyshared/cache/cacheboltdb"
 test_packages[6]+=" $base/command/agentproxyshared/cache/cachememdb"
 test_packages[6]+=" $base/command/agentproxyshared/cache/keymanager"
-test_packages[6]+=" $base/command/agentproxyshared/config"
+test_packages[6]+=" $base/command/agent/config"
 test_packages[6]+=" $base/command/config"
 test_packages[6]+=" $base/command/token"
 if [ "${ENTERPRISE:+x}" == "x" ] ; then
