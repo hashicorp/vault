@@ -402,7 +402,7 @@ func TestProxy_APIProxyWithoutCache_UserAgent(t *testing.T) {
 		HandlerFunc: vaulthttp.HandlerFunc(
 			func(properties *vault.HandlerProperties) http.Handler {
 				h.props = properties
-				h.userAgentToCheckFor = useragent.AgentProxyStringWithProxiedUserAgent(userAgentForProxiedClient)
+				h.userAgentToCheckFor = useragent.ProxyStringWithProxiedUserAgent(userAgentForProxiedClient)
 				h.pathToCheck = "/v1/auth/token/lookup-self"
 				h.requestMethodToCheck = "GET"
 				h.t = t
