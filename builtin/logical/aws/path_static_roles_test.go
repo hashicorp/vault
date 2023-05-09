@@ -13,6 +13,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+// TestStaticRolesValidation verifies that valid requests pass validation and that invalid requests fail validation.
+// This includes the user already existing in IAM roles, and the rotation period being sufficiently long.
 func TestStaticRolesValidation(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -111,6 +113,8 @@ func TestStaticRolesValidation(t *testing.T) {
 	}
 }
 
+// TestStaticRolesWrite validates that we can write a new entry for a new static role, and that we correctly
+// do not write if the request is invalid in some way.
 func TestStaticRolesWrite(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -202,6 +206,8 @@ func TestStaticRolesWrite(t *testing.T) {
 	}
 }
 
+// TestStaticRoleRead validates that we can read a configured role and correctly do not read anything if we
+// request something that doesn't exist.
 func TestStaticRoleRead(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -269,6 +275,8 @@ func TestStaticRoleRead(t *testing.T) {
 	}
 }
 
+// TestStaticRoleDelete validates that we correctly remove a role on a delete request, and that we correctly do not
+// remove anything if a role does not exist with that name.
 func TestStaticRoleDelete(t *testing.T) {
 	bgCTX := context.Background()
 

@@ -12,6 +12,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+// TestStaticCredsRead verifies that we can correctly read a cred that exists, and correctly _not read_
+// a cred that does not exist.
 func TestStaticCredsRead(t *testing.T) {
 	// setup
 	config := logical.TestBackendConfig()

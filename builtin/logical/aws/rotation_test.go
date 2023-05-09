@@ -12,6 +12,8 @@ import (
 	"github.com/hashicorp/vault/sdk/queue"
 )
 
+// TestRotation verifies that the rotation code and priority queue correctly selects and rotates credentials
+// for static secrets.
 func TestRotation(t *testing.T) {
 	bgCTX := context.Background()
 
