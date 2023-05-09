@@ -209,7 +209,6 @@ require (
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	gopkg.in/square/go-jose.v2 v2.6.0
 	gotest.tools/gotestsum v1.9.0
-	gotest.tools/v3 v3.3.0
 	honnef.co/go/tools v0.4.3
 	k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed
 	layeh.com/radius v0.0.0-20190322222518-890bc1058917
