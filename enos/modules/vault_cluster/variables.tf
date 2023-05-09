@@ -174,3 +174,9 @@ variable "unseal_method" {
     error_message = "The unseal_method must be either awskms or shamir. No other unseal methods are supported."
   }
 }
+
+variable "enable_file_audit_device" {
+  description = "If true the file audit device will be enabled at the path /var/log/vault/vault_audit.log"
+  type        = bool
+  default     = false
+}

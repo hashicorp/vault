@@ -61,6 +61,7 @@ locals {
       path    = "vault"
     })
   ]
+  audit_device_file_path = "/var/log/vault/vault_audit.log"
 }
 
 resource "enos_remote_exec" "install_packages" {
@@ -254,6 +255,31 @@ resource "enos_vault_unseal" "leader" {
   transport = {
     ssh = {
       host = var.target_hosts[tolist(local.leader)[0]].public_ip
+    }
+  }
+}
+
+resource "enos_remote_exec" "enable_file_audit_device" {
+  depends_on = [
+    enos_vault_unseal.leader,
+  ]
+  for_each = toset([
+    for idx in local.leader : idx
+    if var.enable_file_audit_device
+  ])
+
+  environment = {
+    VAULT_TOKEN    = enos_vault_init.leader[each.key].root_token
+    VAULT_ADDR     = "http://127.0.0.1:8200"
+    VAULT_BIN_PATH = local.bin_path
+    LOG_FILE_PATH  = local.audit_device_file_path
+  }
+
+  scripts = [abspath("${path.module}/scripts/enable_audit_logging.sh")]
+
+  transport = {
+    ssh = {
+      host = var.target_hosts[each.key].public_ip
     }
   }
 }

@@ -162,8 +162,9 @@ scenario "autopilot" {
       storage_backend_addl_config = {
         autopilot_upgrade_version = var.vault_autopilot_initial_release.version
       }
-      target_hosts  = step.create_vault_cluster_targets.hosts
-      unseal_method = matrix.seal
+      target_hosts             = step.create_vault_cluster_targets.hosts
+      unseal_method            = matrix.seal
+      enable_file_audit_device = var.vault_enable_file_audit_device
     }
   }
 

@@ -143,13 +143,14 @@ scenario "agent" {
       config_env_vars = {
         VAULT_LOG_LEVEL = var.vault_log_level
       }
-      install_dir         = var.vault_install_dir
-      license             = matrix.edition != "oss" ? step.read_license.license : null
-      local_artifact_path = local.bundle_path
-      packages            = local.packages
-      storage_backend     = "raft"
-      target_hosts        = step.create_vault_cluster_targets.hosts
-      unseal_method       = "shamir"
+      install_dir              = var.vault_install_dir
+      license                  = matrix.edition != "oss" ? step.read_license.license : null
+      local_artifact_path      = local.bundle_path
+      packages                 = local.packages
+      storage_backend          = "raft"
+      target_hosts             = step.create_vault_cluster_targets.hosts
+      unseal_method            = "shamir"
+      enable_file_audit_device = var.vault_enable_file_audit_device
     }
   }
 

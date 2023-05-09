@@ -200,3 +200,9 @@ variable "ui_run_tests" {
   description = "Whether to run the UI tests or not. If set to false a cluster will be created but no tests will be run"
   default     = true
 }
+
+variable "vault_enable_file_audit_device" {
+  description = "If true the file audit device will be enabled at the path /var/log/vault/vault_audit.log"
+  type        = bool
+  default     = true
+}
