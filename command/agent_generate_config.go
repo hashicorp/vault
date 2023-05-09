@@ -149,6 +149,8 @@ func (c *AgentGenerateConfigCommand) Run(args []string) int {
 
 	c.UI.Info(fmt.Sprintf("Successfully generated %q configuration file!", configPath))
 
+	c.UI.Warn("Warning: the generated file uses 'token_file' authentication method, which is not suitable for production environments.")
+
 	return 0
 }
 
