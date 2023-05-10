@@ -14,7 +14,7 @@ import (
 	"os"
 	"regexp"
 
-	squarejwt "gopkg.in/square/go-jose.v2/jwt"
+	squarejwt "github.com/go-jose/go-jose/v3/jwt"
 
 	"github.com/hashicorp/errwrap"
 )
