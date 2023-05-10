@@ -117,7 +117,7 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 		LogLevel:    ts.config.LogLevel,
 		LogWriter:   ts.config.LogWriter,
 	}
-	runnerConfig, runnerConfigErr = ctmanager.NewManagerConfig(managerConfig, templates)
+	runnerConfig, runnerConfigErr = ctmanager.NewConfig(managerConfig, templates)
 	if runnerConfigErr != nil {
 		return fmt.Errorf("template server failed to runner generate config: %w", runnerConfigErr)
 	}

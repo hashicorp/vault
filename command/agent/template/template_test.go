@@ -32,7 +32,7 @@ func newRunnerConfig(s *ServerConfig, configs ctconfig.TemplateConfigs) (*ctconf
 	managerCfg := ctmanager.ManagerConfig{
 		AgentConfig: s.AgentConfig,
 	}
-	cfg, err := ctmanager.NewManagerConfig(managerCfg, configs)
+	cfg, err := ctmanager.NewConfig(managerCfg, configs)
 	return cfg, err
 }
 

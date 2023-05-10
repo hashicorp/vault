@@ -20,9 +20,9 @@ type ManagerConfig struct {
 	LogWriter   io.Writer
 }
 
-// NewManagerConfig returns a consul-template runner configuration, setting the
+// NewConfig returns a consul-template runner configuration, setting the
 // Vault and Consul configurations based on the clients configs.
-func NewManagerConfig(mc ManagerConfig, templates ctconfig.TemplateConfigs) (*ctconfig.Config, error) {
+func NewConfig(mc ManagerConfig, templates ctconfig.TemplateConfigs) (*ctconfig.Config, error) {
 	conf := ctconfig.DefaultConfig()
 	conf.Templates = templates.Copy()
 
