@@ -22,7 +22,7 @@ type ManagerConfig struct {
 
 // NewManagerConfig returns a consul-template runner configuration, setting the
 // Vault and Consul configurations based on the clients configs.
-func NewManagerConfig(sc ManagerConfig, templates ctconfig.TemplateConfigs) (*ctconfig.Config, error) {
+func NewManagerConfig(mc ManagerConfig, templates ctconfig.TemplateConfigs) (*ctconfig.Config, error) {
 	conf := ctconfig.DefaultConfig()
 	conf.Templates = templates.Copy()
 
@@ -30,22 +30,22 @@ func NewManagerConfig(sc ManagerConfig, templates ctconfig.TemplateConfigs) (*ct
 	// Always set these to ensure nothing is picked up from the environment
 	conf.Vault.RenewToken = pointerutil.BoolPtr(false)
 	conf.Vault.Token = pointerutil.StringPtr("")
-	conf.Vault.Address = &sc.AgentConfig.Vault.Address
+	conf.Vault.Address = &mc.AgentConfig.Vault.Address
 
-	if sc.Namespace != "" {
-		conf.Vault.Namespace = &sc.Namespace
+	if mc.Namespace != "" {
+		conf.Vault.Namespace = &mc.Namespace
 	}
 
-	if sc.AgentConfig.TemplateConfig != nil && sc.AgentConfig.TemplateConfig.StaticSecretRenderInt != 0 {
-		conf.Vault.DefaultLeaseDuration = &sc.AgentConfig.TemplateConfig.StaticSecretRenderInt
+	if mc.AgentConfig.TemplateConfig != nil && mc.AgentConfig.TemplateConfig.StaticSecretRenderInt != 0 {
+		conf.Vault.DefaultLeaseDuration = &mc.AgentConfig.TemplateConfig.StaticSecretRenderInt
 	}
 
-	if sc.AgentConfig.DisableIdleConnsTemplating {
+	if mc.AgentConfig.DisableIdleConnsTemplating {
 		idleConns := -1
 		conf.Vault.Transport.MaxIdleConns = &idleConns
 	}
 
-	if sc.AgentConfig.DisableKeepAlivesTemplating {
+	if mc.AgentConfig.DisableKeepAlivesTemplating {
 		conf.Vault.Transport.DisableKeepAlives = pointerutil.BoolPtr(true)
 	}
 
@@ -62,34 +62,34 @@ func NewManagerConfig(sc ManagerConfig, templates ctconfig.TemplateConfigs) (*ct
 	// If Vault.Retry isn't specified, use the default of 12 retries.
 	// This retry value will be respected regardless of if we use the cache.
 	attempts := ctconfig.DefaultRetryAttempts
-	if sc.AgentConfig.Vault != nil && sc.AgentConfig.Vault.Retry != nil {
-		attempts = sc.AgentConfig.Vault.Retry.NumRetries
+	if mc.AgentConfig.Vault != nil && mc.AgentConfig.Vault.Retry != nil {
+		attempts = mc.AgentConfig.Vault.Retry.NumRetries
 	}
 
 	// Use the cache if available or fallback to the Vault server values.
-	if sc.AgentConfig.Cache != nil {
-		if sc.AgentConfig.Cache.InProcDialer == nil {
+	if mc.AgentConfig.Cache != nil {
+		if mc.AgentConfig.Cache.InProcDialer == nil {
 			return nil, fmt.Errorf("missing in-process dialer configuration")
 		}
 		if conf.Vault.Transport == nil {
 			conf.Vault.Transport = &ctconfig.TransportConfig{}
 		}
-		conf.Vault.Transport.CustomDialer = sc.AgentConfig.Cache.InProcDialer
+		conf.Vault.Transport.CustomDialer = mc.AgentConfig.Cache.InProcDialer
 		// The in-process dialer ignores the address passed in, but we're still
 		// setting it here to override the setting at the top of this function,
 		// and to prevent the vault/http client from defaulting to https.
 		conf.Vault.Address = pointerutil.StringPtr("http://127.0.0.1:8200")
-	} else if strings.HasPrefix(sc.AgentConfig.Vault.Address, "https") || sc.AgentConfig.Vault.CACert != "" {
-		skipVerify := sc.AgentConfig.Vault.TLSSkipVerify
+	} else if strings.HasPrefix(mc.AgentConfig.Vault.Address, "https") || mc.AgentConfig.Vault.CACert != "" {
+		skipVerify := mc.AgentConfig.Vault.TLSSkipVerify
 		verify := !skipVerify
 		conf.Vault.SSL = &ctconfig.SSLConfig{
 			Enabled:    pointerutil.BoolPtr(true),
 			Verify:     &verify,
-			Cert:       &sc.AgentConfig.Vault.ClientCert,
-			Key:        &sc.AgentConfig.Vault.ClientKey,
-			CaCert:     &sc.AgentConfig.Vault.CACert,
-			CaPath:     &sc.AgentConfig.Vault.CAPath,
-			ServerName: &sc.AgentConfig.Vault.TLSServerName,
+			Cert:       &mc.AgentConfig.Vault.ClientCert,
+			Key:        &mc.AgentConfig.Vault.ClientKey,
+			CaCert:     &mc.AgentConfig.Vault.CACert,
+			CaPath:     &mc.AgentConfig.Vault.CAPath,
+			ServerName: &mc.AgentConfig.Vault.TLSServerName,
 		}
 	}
 	enabled := attempts > 0
@@ -101,24 +101,24 @@ func NewManagerConfig(sc ManagerConfig, templates ctconfig.TemplateConfigs) (*ct
 	// Sync Consul Template's retry with user set auto-auth initial backoff value.
 	// This is helpful if Auto Auth cannot get a new token and CT is trying to fetch
 	// secrets.
-	if sc.AgentConfig.AutoAuth != nil && sc.AgentConfig.AutoAuth.Method != nil {
-		if sc.AgentConfig.AutoAuth.Method.MinBackoff > 0 {
-			conf.Vault.Retry.Backoff = &sc.AgentConfig.AutoAuth.Method.MinBackoff
+	if mc.AgentConfig.AutoAuth != nil && mc.AgentConfig.AutoAuth.Method != nil {
+		if mc.AgentConfig.AutoAuth.Method.MinBackoff > 0 {
+			conf.Vault.Retry.Backoff = &mc.AgentConfig.AutoAuth.Method.MinBackoff
 		}
 
-		if sc.AgentConfig.AutoAuth.Method.MaxBackoff > 0 {
-			conf.Vault.Retry.MaxBackoff = &sc.AgentConfig.AutoAuth.Method.MaxBackoff
+		if mc.AgentConfig.AutoAuth.Method.MaxBackoff > 0 {
+			conf.Vault.Retry.MaxBackoff = &mc.AgentConfig.AutoAuth.Method.MaxBackoff
 		}
 	}
 
 	conf.Finalize()
 
 	// setup log level from TemplateServer config
-	conf.LogLevel = logLevelToStringPtr(sc.LogLevel)
+	conf.LogLevel = logLevelToStringPtr(mc.LogLevel)
 
 	if err := ctlogging.Setup(&ctlogging.Config{
 		Level:  *conf.LogLevel,
-		Writer: sc.LogWriter,
+		Writer: mc.LogWriter,
 	}); err != nil {
 		return nil, err
 	}
