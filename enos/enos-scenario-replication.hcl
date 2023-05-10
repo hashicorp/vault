@@ -22,6 +22,12 @@ scenario "replication" {
       edition       = ["ent.fips1402", "ent.hsm.fips1402"]
       artifact_type = ["package"]
     }
+
+    # Our local builder always creates bundles
+    exclude {
+      artifact_source = ["local"]
+      artifact_type   = ["package"]
+    }
   }
 
   terraform_cli = terraform_cli.default
@@ -39,11 +45,16 @@ scenario "replication" {
       "ent.hsm"          = ["ui", "enterprise", "cgo", "hsm", "venthsm"]
       "ent.hsm.fips1402" = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.hsm.fips1402"]
     }
-    bundle_path             = matrix.artifact_source != "artifactory" ? abspath(var.vault_bundle_path) : null
-    dependencies_to_install = ["jq"]
+    bundle_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_bundle_path) : null
+    packages    = ["jq"]
     enos_provider = {
       rhel   = provider.enos.rhel
       ubuntu = provider.enos.ubuntu
+    }
+    spot_price_max = {
+      // These prices are based on on-demand cost for t3.medium in us-east
+      "rhel"   = "0.1016"
+      "ubuntu" = "0.0416"
     }
     tags = merge({
       "Project Name" : var.project_name
@@ -134,37 +145,55 @@ scenario "replication" {
     }
   }
 
-  step "create_vault_primary_cluster" {
-    module = module.vault_cluster
-    depends_on = [
-      step.create_primary_backend_cluster,
-      step.build_vault,
-    ]
+  step "create_primary_cluster_targets" {
+    module     = module.target_ec2_spot_fleet // "target_ec2_instances" can be used for on-demand instances
+    depends_on = [step.create_vpc]
+
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
 
     variables {
-      ami_id             = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
-      common_tags        = local.tags
+      ami_id                = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
+      awskms_unseal_key_arn = step.create_vpc.kms_key_arn
+      common_tags           = local.tags
+      instance_type         = local.vault_instance_type // only used for on-demand instances
+      spot_price_max        = local.spot_price_max[matrix.distro]
+      vpc_id                = step.create_vpc.vpc_id
+    }
+  }
+
+  step "create_primary_cluster" {
+    module = module.vault_cluster
+    depends_on = [
+      step.create_primary_backend_cluster,
+      step.build_vault,
+      step.create_primary_cluster_targets
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      artifactory_release   = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
+      awskms_unseal_key_arn = step.create_vpc.kms_key_arn
+      cluster_name          = step.create_primary_cluster_targets.cluster_name
+      config_env_vars = {
+        VAULT_LOG_LEVEL = var.vault_log_level
+      }
       consul_cluster_tag = step.create_primary_backend_cluster.consul_cluster_tag
       consul_release = matrix.primary_backend == "consul" ? {
         edition = var.backend_edition
         version = matrix.consul_version
       } : null
-      dependencies_to_install   = local.dependencies_to_install
-      instance_type             = local.vault_instance_type
-      kms_key_arn               = step.create_vpc.kms_key_arn
-      storage_backend           = matrix.primary_backend
-      unseal_method             = matrix.primary_seal
-      vault_local_artifact_path = local.bundle_path
-      vault_install_dir         = local.vault_install_dir
-      vault_artifactory_release = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
-      vault_license             = step.read_license.license
-      vpc_id                    = step.create_vpc.vpc_id
-      vault_environment = {
-        VAULT_LOG_LEVEL = var.vault_log_level
-      }
+      install_dir         = local.vault_install_dir
+      license             = matrix.edition != "oss" ? step.read_license.license : null
+      local_artifact_path = local.bundle_path
+      packages            = local.packages
+      storage_backend     = matrix.primary_backend
+      target_hosts        = step.create_primary_cluster_targets.hosts
+      unseal_method       = matrix.primary_seal
     }
   }
 
@@ -189,44 +218,62 @@ scenario "replication" {
     }
   }
 
-  step "create_vault_secondary_cluster" {
-    module = module.vault_cluster
-    depends_on = [
-      step.create_secondary_backend_cluster,
-      step.build_vault,
-    ]
+  step "create_secondary_cluster_targets" {
+    module     = module.target_ec2_spot_fleet // "target_ec2_instances" can be used for on-demand instances
+    depends_on = [step.create_vpc]
+
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
 
     variables {
-      ami_id             = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
-      common_tags        = local.tags
+      ami_id                = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
+      awskms_unseal_key_arn = step.create_vpc.kms_key_arn
+      common_tags           = local.tags
+      instance_type         = local.vault_instance_type // only used for on-demand instances
+      spot_price_max        = local.spot_price_max[matrix.distro]
+      vpc_id                = step.create_vpc.vpc_id
+    }
+  }
+
+  step "create_secondary_cluster" {
+    module = module.vault_cluster
+    depends_on = [
+      step.create_secondary_backend_cluster,
+      step.build_vault,
+      step.create_secondary_cluster_targets
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      artifactory_release   = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
+      awskms_unseal_key_arn = step.create_vpc.kms_key_arn
+      cluster_name          = step.create_secondary_cluster_targets.cluster_name
+      config_env_vars = {
+        VAULT_LOG_LEVEL = var.vault_log_level
+      }
       consul_cluster_tag = step.create_secondary_backend_cluster.consul_cluster_tag
       consul_release = matrix.secondary_backend == "consul" ? {
         edition = var.backend_edition
         version = matrix.consul_version
       } : null
-      dependencies_to_install   = local.dependencies_to_install
-      instance_type             = local.vault_instance_type
-      kms_key_arn               = step.create_vpc.kms_key_arn
-      storage_backend           = matrix.secondary_backend
-      unseal_method             = matrix.secondary_seal
-      vault_local_artifact_path = local.bundle_path
-      vault_install_dir         = local.vault_install_dir
-      vault_artifactory_release = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
-      vault_license             = step.read_license.license
-      vpc_id                    = step.create_vpc.vpc_id
-      vault_environment = {
-        VAULT_LOG_LEVEL = var.vault_log_level
-      }
+      install_dir         = local.vault_install_dir
+      license             = matrix.edition != "oss" ? step.read_license.license : null
+      local_artifact_path = local.bundle_path
+      packages            = local.packages
+      storage_backend     = matrix.secondary_backend
+      target_hosts        = step.create_secondary_cluster_targets.hosts
+      unseal_method       = matrix.secondary_seal
     }
   }
 
-  step "verify_vault_primary_unsealed" {
+  step "verify_that_vault_primary_cluster_is_unsealed" {
     module = module.vault_verify_unsealed
     depends_on = [
-      step.create_vault_primary_cluster
+      step.create_primary_cluster
     ]
 
     providers = {
@@ -234,15 +281,15 @@ scenario "replication" {
     }
 
     variables {
-      vault_instances   = step.create_vault_primary_cluster.vault_instances
+      vault_instances   = step.create_primary_cluster_targets.hosts
       vault_install_dir = local.vault_install_dir
     }
   }
 
-  step "verify_vault_secondary_unsealed" {
+  step "verify_that_vault_secondary_cluster_is_unsealed" {
     module = module.vault_verify_unsealed
     depends_on = [
-      step.create_vault_secondary_cluster
+      step.create_secondary_cluster
     ]
 
     providers = {
@@ -250,42 +297,42 @@ scenario "replication" {
     }
 
     variables {
-      vault_instances   = step.create_vault_secondary_cluster.vault_instances
+      vault_instances   = step.create_secondary_cluster_targets.hosts
       vault_install_dir = local.vault_install_dir
     }
   }
 
   step "get_primary_cluster_ips" {
     module     = module.vault_get_cluster_ips
-    depends_on = [step.verify_vault_primary_unsealed]
+    depends_on = [step.verify_that_vault_primary_cluster_is_unsealed]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
 
     variables {
-      vault_instances   = step.create_vault_primary_cluster.vault_instances
+      vault_instances   = step.create_primary_cluster_targets.hosts
       vault_install_dir = local.vault_install_dir
-      vault_root_token  = step.create_vault_primary_cluster.vault_root_token
+      vault_root_token  = step.create_primary_cluster.root_token
     }
   }
 
   step "get_secondary_cluster_ips" {
     module     = module.vault_get_cluster_ips
-    depends_on = [step.verify_vault_secondary_unsealed]
+    depends_on = [step.verify_that_vault_secondary_cluster_is_unsealed]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
 
     variables {
-      vault_instances   = step.create_vault_secondary_cluster.vault_instances
+      vault_instances   = step.create_secondary_cluster_targets.hosts
       vault_install_dir = local.vault_install_dir
-      vault_root_token  = step.create_vault_secondary_cluster.vault_root_token
+      vault_root_token  = step.create_secondary_cluster.root_token
     }
   }
 
-  step "verify_vault_primary_write_data" {
+  step "write_test_data_on_primary" {
     module     = module.vault_verify_write_data
     depends_on = [step.get_primary_cluster_ips]
 
@@ -297,9 +344,9 @@ scenario "replication" {
     variables {
       leader_public_ip  = step.get_primary_cluster_ips.leader_public_ip
       leader_private_ip = step.get_primary_cluster_ips.leader_private_ip
-      vault_instances   = step.create_vault_primary_cluster.vault_instances
+      vault_instances   = step.create_primary_cluster_targets.hosts
       vault_install_dir = local.vault_install_dir
-      vault_root_token  = step.create_vault_primary_cluster.vault_root_token
+      vault_root_token  = step.create_primary_cluster.root_token
     }
   }
 
@@ -307,7 +354,7 @@ scenario "replication" {
     module = module.vault_setup_perf_primary
     depends_on = [
       step.get_primary_cluster_ips,
-      step.verify_vault_primary_write_data
+      step.write_test_data_on_primary
     ]
 
     providers = {
@@ -318,7 +365,7 @@ scenario "replication" {
       primary_leader_public_ip  = step.get_primary_cluster_ips.leader_public_ip
       primary_leader_private_ip = step.get_primary_cluster_ips.leader_private_ip
       vault_install_dir         = local.vault_install_dir
-      vault_root_token          = step.create_vault_primary_cluster.vault_root_token
+      vault_root_token          = step.create_primary_cluster.root_token
     }
   }
 
@@ -333,7 +380,7 @@ scenario "replication" {
     variables {
       primary_leader_public_ip = step.get_primary_cluster_ips.leader_public_ip
       vault_install_dir        = local.vault_install_dir
-      vault_root_token         = step.create_vault_primary_cluster.vault_root_token
+      vault_root_token         = step.create_primary_cluster.root_token
     }
   }
 
@@ -349,7 +396,7 @@ scenario "replication" {
       secondary_leader_public_ip  = step.get_secondary_cluster_ips.leader_public_ip
       secondary_leader_private_ip = step.get_secondary_cluster_ips.leader_private_ip
       vault_install_dir           = local.vault_install_dir
-      vault_root_token            = step.create_vault_secondary_cluster.vault_root_token
+      vault_root_token            = step.create_secondary_cluster.root_token
       wrapping_token              = step.generate_secondary_token.secondary_token
     }
   }
@@ -359,8 +406,8 @@ scenario "replication" {
   step "unseal_secondary_followers" {
     module = module.vault_unseal_nodes
     depends_on = [
-      step.create_vault_primary_cluster,
-      step.create_vault_secondary_cluster,
+      step.create_primary_cluster,
+      step.create_secondary_cluster,
       step.get_secondary_cluster_ips,
       step.configure_performance_replication_secondary
     ]
@@ -372,12 +419,12 @@ scenario "replication" {
     variables {
       follower_public_ips = step.get_secondary_cluster_ips.follower_public_ips
       vault_install_dir   = local.vault_install_dir
-      vault_unseal_keys   = matrix.primary_seal == "shamir" ? step.create_vault_primary_cluster.vault_unseal_keys_hex : step.create_vault_primary_cluster.vault_recovery_keys_hex
+      vault_unseal_keys   = matrix.primary_seal == "shamir" ? step.create_primary_cluster.unseal_keys_hex : step.create_primary_cluster.recovery_keys_hex
       vault_seal_type     = matrix.primary_seal == "shamir" ? matrix.primary_seal : matrix.secondary_seal
     }
   }
 
-  step "verify_vault_secondary_unsealed_after_replication" {
+  step "verify_secondary_cluster_is_unsealed_after_enabling_replication" {
     module = module.vault_verify_unsealed
     depends_on = [
       step.unseal_secondary_followers
@@ -388,14 +435,14 @@ scenario "replication" {
     }
 
     variables {
-      vault_instances   = step.create_vault_secondary_cluster.vault_instances
+      vault_instances   = step.create_secondary_cluster_targets.hosts
       vault_install_dir = local.vault_install_dir
     }
   }
 
   step "verify_performance_replication" {
     module     = module.vault_verify_performance_replication
-    depends_on = [step.verify_vault_secondary_unsealed_after_replication]
+    depends_on = [step.verify_secondary_cluster_is_unsealed_after_enabling_replication]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -415,7 +462,7 @@ scenario "replication" {
     depends_on = [
       step.verify_performance_replication,
       step.get_secondary_cluster_ips,
-      step.verify_vault_primary_write_data
+      step.write_test_data_on_primary
     ]
 
     providers = {
@@ -428,13 +475,32 @@ scenario "replication" {
     }
   }
 
-  step "add_primary_cluster_nodes" {
+  step "create_more_primary_cluster_targets" {
+    module     = module.target_ec2_spot_fleet // "target_ec2_instances" can be used for on-demand instances
+    depends_on = [step.create_vpc]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      ami_id                = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
+      awskms_unseal_key_arn = step.create_vpc.kms_key_arn
+      common_tags           = local.tags
+      instance_type         = local.vault_instance_type // only used for on-demand instances
+      spot_price_max        = local.spot_price_max[matrix.distro]
+      vpc_id                = step.create_vpc.vpc_id
+    }
+  }
+
+  step "add_more_nodes_to_primary_cluster" {
     module = module.vault_cluster
     depends_on = [
       step.create_vpc,
       step.create_primary_backend_cluster,
-      step.create_vault_primary_cluster,
-      step.verify_replicated_data
+      step.create_primary_cluster,
+      step.verify_replicated_data,
+      step.create_more_primary_cluster_targets
     ]
 
     providers = {
@@ -442,45 +508,42 @@ scenario "replication" {
     }
 
     variables {
-      ami_id             = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
-      common_tags        = local.tags
+      artifactory_release   = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
+      awskms_unseal_key_arn = step.create_vpc.kms_key_arn
+      cluster_name          = step.create_primary_cluster_targets.cluster_name
+      config_env_vars = {
+        VAULT_LOG_LEVEL = var.vault_log_level
+      }
       consul_cluster_tag = step.create_primary_backend_cluster.consul_cluster_tag
       consul_release = matrix.primary_backend == "consul" ? {
         edition = var.backend_edition
         version = matrix.consul_version
       } : null
-      dependencies_to_install   = local.dependencies_to_install
-      instance_type             = local.vault_instance_type
-      kms_key_arn               = step.create_vpc.kms_key_arn
-      storage_backend           = matrix.primary_backend
-      unseal_method             = matrix.primary_seal
-      vault_cluster_tag         = step.create_vault_primary_cluster.vault_cluster_tag
-      vault_init                = false
-      vault_license             = step.read_license.license
-      vault_local_artifact_path = local.bundle_path
-      vault_install_dir         = local.vault_install_dir
-      vault_artifactory_release = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
-      vault_node_prefix         = "newprimary_node"
-      vault_root_token          = step.create_vault_primary_cluster.vault_root_token
-      vault_unseal_when_no_init = matrix.primary_seal == "shamir"
-      vault_unseal_keys         = matrix.primary_seal == "shamir" ? step.create_vault_primary_cluster.vault_unseal_keys_hex : null
-      vpc_id                    = step.create_vpc.vpc_id
-      vault_environment = {
-        VAULT_LOG_LEVEL = var.vault_log_level
-      }
+      force_unseal        = matrix.primary_seal == "shamir"
+      initialize_cluster  = false
+      install_dir         = local.vault_install_dir
+      license             = matrix.edition != "oss" ? step.read_license.license : null
+      local_artifact_path = local.bundle_path
+      packages            = local.packages
+      root_token          = step.create_primary_cluster.root_token
+      shamir_unseal_keys  = matrix.primary_seal == "shamir" ? step.create_primary_cluster.unseal_keys_hex : null
+      storage_backend     = matrix.primary_backend
+      storage_node_prefix = "newprimary_node"
+      target_hosts        = step.create_more_primary_cluster_targets.hosts
+      unseal_method       = matrix.primary_seal
     }
   }
 
-  step "verify_add_node_unsealed" {
+  step "verify_more_primary_nodes_unsealed" {
     module     = module.vault_verify_unsealed
-    depends_on = [step.add_primary_cluster_nodes]
+    depends_on = [step.add_more_nodes_to_primary_cluster]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
 
     variables {
-      vault_instances   = step.add_primary_cluster_nodes.vault_instances
+      vault_instances   = step.create_more_primary_cluster_targets.hosts
       vault_install_dir = local.vault_install_dir
     }
   }
@@ -489,9 +552,9 @@ scenario "replication" {
     skip_step = matrix.primary_backend != "raft"
     module    = module.vault_verify_raft_auto_join_voter
     depends_on = [
-      step.add_primary_cluster_nodes,
-      step.create_vault_primary_cluster,
-      step.verify_add_node_unsealed
+      step.add_more_nodes_to_primary_cluster,
+      step.create_primary_cluster,
+      step.verify_more_primary_nodes_unsealed
     ]
 
     providers = {
@@ -499,9 +562,9 @@ scenario "replication" {
     }
 
     variables {
-      vault_instances   = step.add_primary_cluster_nodes.vault_instances
+      vault_instances   = step.create_more_primary_cluster_targets.hosts
       vault_install_dir = local.vault_install_dir
-      vault_root_token  = step.create_vault_primary_cluster.vault_root_token
+      vault_root_token  = step.create_primary_cluster.root_token
     }
   }
 
@@ -509,7 +572,7 @@ scenario "replication" {
     module = module.shutdown_node
     depends_on = [
       step.get_primary_cluster_ips,
-      step.verify_add_node_unsealed
+      step.verify_more_primary_nodes_unsealed
     ]
 
     providers = {
@@ -540,7 +603,7 @@ scenario "replication" {
   step "get_updated_primary_cluster_ips" {
     module = module.vault_get_cluster_ips
     depends_on = [
-      step.add_primary_cluster_nodes,
+      step.add_more_nodes_to_primary_cluster,
       step.remove_primary_follower_1,
       step.remove_primary_leader
     ]
@@ -550,10 +613,10 @@ scenario "replication" {
     }
 
     variables {
-      vault_instances       = step.create_vault_primary_cluster.vault_instances
+      vault_instances       = step.create_primary_cluster_targets.hosts
       vault_install_dir     = local.vault_install_dir
-      added_vault_instances = step.add_primary_cluster_nodes.vault_instances
-      vault_root_token      = step.create_vault_primary_cluster.vault_root_token
+      added_vault_instances = step.create_more_primary_cluster_targets.hosts
+      vault_root_token      = step.create_primary_cluster.root_token
       node_public_ip        = step.get_primary_cluster_ips.follower_public_ip_2
     }
   }
@@ -575,112 +638,97 @@ scenario "replication" {
     }
   }
 
-  output "vault_primary_cluster_pub_ips" {
-    description = "The Vault primary cluster public IPs"
-    value       = step.create_vault_primary_cluster.instance_public_ips
+  output "primary_cluster_hosts" {
+    description = "The Vault primary cluster target hosts"
+    value       = step.create_primary_cluster_targets.hosts
   }
 
-  output "vault_primary_cluster_priv_ips" {
-    description = "The Vault primary cluster private IPs"
-    value       = step.create_vault_primary_cluster.instance_private_ips
+  output "primary_cluster_additional_hosts" {
+    description = "The Vault added new node on primary cluster target hosts"
+    value       = step.create_more_primary_cluster_targets.hosts
   }
 
-  output "vault_primary_newnode_pub_ip" {
-    description = "The Vault added new node on primary cluster public IP"
-    value       = step.add_primary_cluster_nodes.instance_public_ips
-  }
-
-  output "vault_primary_newnode_priv_ip" {
-    description = "The Vault added new node on primary cluster private IP"
-    value       = step.add_primary_cluster_nodes.instance_private_ips
-  }
-
-  output "vault_primary_cluster_root_token" {
+  output "primary_cluster_root_token" {
     description = "The Vault primary cluster root token"
-    value       = step.create_vault_primary_cluster.vault_root_token
+    value       = step.create_primary_cluster.root_token
   }
 
-  output "vault_primary_cluster_unseal_keys_b64" {
+  output "primary_cluster_unseal_keys_b64" {
     description = "The Vault primary cluster unseal keys"
-    value       = step.create_vault_primary_cluster.vault_unseal_keys_b64
+    value       = step.create_primary_cluster.unseal_keys_b64
   }
 
-  output "vault_primary_cluster_unseal_keys_hex" {
+  output "primary_cluster_unseal_keys_hex" {
     description = "The Vault primary cluster unseal keys hex"
-    value       = step.create_vault_primary_cluster.vault_unseal_keys_hex
+    value       = step.create_primary_cluster.unseal_keys_hex
   }
 
-  output "vault_primary_cluster_recovery_key_shares" {
+  output "primary_cluster_recovery_key_shares" {
     description = "The Vault primary cluster recovery key shares"
-    value       = step.create_vault_primary_cluster.vault_recovery_key_shares
+    value       = step.create_primary_cluster.recovery_key_shares
   }
 
-  output "vault_primary_cluster_recovery_keys_b64" {
+  output "primary_cluster_recovery_keys_b64" {
     description = "The Vault primary cluster recovery keys b64"
-    value       = step.create_vault_primary_cluster.vault_recovery_keys_b64
+    value       = step.create_primary_cluster.recovery_keys_b64
   }
 
-  output "vault_primary_cluster_recovery_keys_hex" {
+  output "primary_cluster_recovery_keys_hex" {
     description = "The Vault primary cluster recovery keys hex"
-    value       = step.create_vault_primary_cluster.vault_recovery_keys_hex
+    value       = step.create_primary_cluster.recovery_keys_hex
   }
 
-  output "vault_secondary_cluster_pub_ips" {
+  output "secondary_cluster_hosts" {
     description = "The Vault secondary cluster public IPs"
-    value       = step.create_vault_secondary_cluster.instance_public_ips
+    value       = step.create_secondary_cluster_targets.hosts
   }
 
-  output "vault_secondary_cluster_priv_ips" {
-    description = "The Vault secondary cluster private IPs"
-    value       = step.create_vault_secondary_cluster.instance_private_ips
-  }
-
-  output "vault_primary_performance_replication_status" {
+  output "initial_primary_replication_status" {
     description = "The Vault primary cluster performance replication status"
     value       = step.verify_performance_replication.primary_replication_status
   }
 
-  output "vault_replication_known_primary_cluster_addrs" {
+  output "initial_known_primary_cluster_addresses" {
     description = "The Vault secondary cluster performance replication status"
     value       = step.verify_performance_replication.known_primary_cluster_addrs
   }
 
-  output "vault_secondary_performance_replication_status" {
+  output "initial_secondary_performance_replication_status" {
     description = "The Vault secondary cluster performance replication status"
     value       = step.verify_performance_replication.secondary_replication_status
   }
 
-  output "vault_primary_updated_performance_replication_status" {
-    description = "The Vault updated primary cluster performance replication status"
-    value       = step.verify_updated_performance_replication.primary_replication_status
-  }
-
-  output "vault_updated_replication_known_primary_cluster_addrs" {
-    description = "The Vault secondary cluster performance replication status"
-    value       = step.verify_updated_performance_replication.known_primary_cluster_addrs
-  }
-
-  output "verify_secondary_updated_performance_replication_status" {
-    description = "The Vault updated secondary cluster performance replication status"
-    value       = step.verify_updated_performance_replication.secondary_replication_status
-  }
-
-  output "primary_replication_data_secondaries" {
+  output "intial_primary_replication_data_secondaries" {
     description = "The Vault primary cluster secondaries connection status"
     value       = step.verify_performance_replication.primary_replication_data_secondaries
   }
 
-  output "secondary_replication_data_primaries" {
+  output "initial_secondary_replication_data_primaries" {
     description = "The Vault  secondary cluster primaries connection status"
     value       = step.verify_performance_replication.secondary_replication_data_primaries
   }
 
-  output "primary_updated_replication_data_secondaries" {
+  output "updated_primary_replication_status" {
+    description = "The Vault updated primary cluster performance replication status"
+    value       = step.verify_updated_performance_replication.primary_replication_status
+  }
+
+  output "updated_known_primary_cluster_addresses" {
+    description = "The Vault secondary cluster performance replication status"
+    value       = step.verify_updated_performance_replication.known_primary_cluster_addrs
+  }
+
+  output "updated_secondary_replication_status" {
+    description = "The Vault updated secondary cluster performance replication status"
+    value       = step.verify_updated_performance_replication.secondary_replication_status
+  }
+
+  output "updated_primary_replication_data_secondaries" {
     description = "The Vault updated primary cluster secondaries connection status"
     value       = step.verify_updated_performance_replication.primary_replication_data_secondaries
   }
 
-  output "secondary_updated_replication_data_primaries" {
+  output "updated_secondary_replication_data_primaries" {
     description = "The Vault updated secondary cluster primaries connection status"
     value       = step.verify_updated_performance_replication.secondary_replication_data_primaries
   }

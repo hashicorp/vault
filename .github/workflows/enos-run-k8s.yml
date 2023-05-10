@@ -38,16 +38,13 @@ jobs:
           # the Terraform wrapper will break Terraform execution in Enos because
           # it changes the output to text when we expect it to be JSON.
           terraform_wrapper: false
-          # Terraform 1.4.x introduced an issue that prevents some resources from
-          # planning. Pin to 1.3.x until it is resolved.
-          terraform_version: 1.3.9
       - name: Set up Enos
         uses: hashicorp/action-setup-enos@v1
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - name: Download Docker Image
         id: download
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@e9ef242655d12993efdcda9058dee2db83a2cb9b
         with:
           name: ${{ inputs.artifact-name }}
           path: ./enos/support/downloads
@@ -56,16 +53,16 @@ jobs:
           IS_ENT: ${{ startsWith(env.ARTIFACT_NAME, 'vault-enterprise' ) }}
         run: |
           mkdir -p ./enos/support/terraform-plugin-cache
-          if ${IS_ENT} == true; then
+          if [ "$IS_ENT" == true ]; then
             echo "${{ secrets.VAULT_LICENSE }}" > ./enos/support/vault.hclic || true
-            echo "edition=ent" >> $GITHUB_ENV
+            echo "edition=ent" >> "$GITHUB_ENV"
             echo "edition set to 'ent'"
-            echo "image_repo=hashicorp/vault-enterprise" >> $GITHUB_ENV
+            echo "image_repo=hashicorp/vault-enterprise" >> "$GITHUB_ENV"
             echo "image repo set to 'hashicorp/vault-enterprise'"
           else
-            echo "edition=oss" >> $GITHUB_ENV
+            echo "edition=oss" >> "$GITHUB_ENV"
             echo "edition set to 'oss'"
-            echo "image_repo=hashicorp/vault" >> $GITHUB_ENV
+            echo "image_repo=hashicorp/vault" >> "$GITHUB_ENV"
             echo "image repo set to 'hashicorp/vault'"
           fi
       - name: Run Enos scenario

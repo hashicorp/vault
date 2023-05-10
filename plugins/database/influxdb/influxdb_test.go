@@ -14,9 +14,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
-	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 	influx "github.com/influxdata/influxdb1-client/v2"
 	"github.com/stretchr/testify/require"
 )
@@ -61,8 +61,9 @@ func prepareInfluxdbTestContainer(t *testing.T) (func(), *Config) {
 	}
 
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
-		ImageRepo: "influxdb",
-		ImageTag:  "1.8-alpine",
+		ImageRepo:     "docker.mirror.hashicorp.services/influxdb",
+		ContainerName: "influxdb",
+		ImageTag:      "1.8-alpine",
 		Env: []string{
 			"INFLUXDB_DB=vault",
 			"INFLUXDB_ADMIN_USER=" + c.Username,

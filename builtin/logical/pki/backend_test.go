@@ -2438,13 +2438,27 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotNil(t, resp, "expected ca info")
+	firstMapping := resp.Data["mapping"].(map[string]string)
 	firstImportedKeys := resp.Data["imported_keys"].([]string)
 	firstImportedIssuers := resp.Data["imported_issuers"].([]string)
+	firstExistingKeys := resp.Data["existing_keys"].([]string)
+	firstExistingIssuers := resp.Data["existing_issuers"].([]string)
 
 	require.NotContains(t, firstImportedKeys, keyId1)
 	require.NotContains(t, firstImportedKeys, keyId2)
 	require.NotContains(t, firstImportedIssuers, issuerId1)
 	require.NotContains(t, firstImportedIssuers, issuerId2)
+	require.Empty(t, firstExistingKeys)
+	require.Empty(t, firstExistingIssuers)
+	require.NotEmpty(t, firstMapping)
+	require.Equal(t, 1, len(firstMapping))
+
+	var issuerId3 string
+	var keyId3 string
+	for i, k := range firstMapping {
+		issuerId3 = i
+		keyId3 = k
+	}
 
 	// Performing this again should result in no key/issuer ids being imported/generated.
 	resp, err = CBWrite(b, s, "config/ca", map[string]interface{}{
@@ -2452,11 +2466,17 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp, "expected ca info")
+	secondMapping := resp.Data["mapping"].(map[string]string)
 	secondImportedKeys := resp.Data["imported_keys"]
 	secondImportedIssuers := resp.Data["imported_issuers"]
+	secondExistingKeys := resp.Data["existing_keys"]
+	secondExistingIssuers := resp.Data["existing_issuers"]
 
-	require.Nil(t, secondImportedKeys)
-	require.Nil(t, secondImportedIssuers)
+	require.Empty(t, secondImportedKeys)
+	require.Empty(t, secondImportedIssuers)
+	require.Contains(t, secondExistingKeys, keyId3)
+	require.Contains(t, secondExistingIssuers, issuerId3)
+	require.Equal(t, 1, len(secondMapping))
 
 	resp, err = CBDelete(b, s, "root")
 	require.NoError(t, err)
@@ -3987,6 +4007,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 		expectedData := map[string]interface{}{
 			"safety_buffer":                         json.Number("1"),
 			"issuer_safety_buffer":                  json.Number("31536000"),
+			"revocation_queue_safety_buffer":        json.Number("172800"),
 			"tidy_cert_store":                       true,
 			"tidy_revoked_certs":                    true,
 			"tidy_revoked_cert_issuer_associations": false,
@@ -3999,6 +4020,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			"error":                                 nil,
 			"time_started":                          nil,
 			"time_finished":                         nil,
+			"last_auto_tidy_finished":               nil,
 			"message":                               nil,
 			"cert_store_deleted_count":              json.Number("1"),
 			"revoked_cert_deleted_count":            json.Number("1"),
@@ -4008,6 +4030,12 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			"revocation_queue_deleted_count":        json.Number("0"),
 			"cross_revoked_cert_deleted_count":      json.Number("0"),
 			"internal_backend_uuid":                 backendUUID,
+			"tidy_acme":                             false,
+			"acme_account_safety_buffer":            json.Number("2592000"),
+			"acme_orders_deleted_count":             json.Number("0"),
+			"acme_account_revoked_count":            json.Number("0"),
+			"acme_account_deleted_count":            json.Number("0"),
+			"total_acme_account_count":              json.Number("0"),
 		}
 		// Let's copy the times from the response so that we can use deep.Equal()
 		timeStarted, ok := tidyStatus.Data["time_started"]
@@ -4020,6 +4048,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			t.Fatal("Expected tidy status response to include a value for time_finished")
 		}
 		expectedData["time_finished"] = timeFinished
+		expectedData["last_auto_tidy_finished"] = tidyStatus.Data["last_auto_tidy_finished"]
 
 		if diff := deep.Equal(expectedData, tidyStatus.Data); diff != nil {
 			t.Fatal(diff)
@@ -4984,12 +5013,13 @@ func TestIssuanceTTLs(t *testing.T) {
 	})
 	require.Error(t, err, "expected issuance to fail due to longer default ttl than cert ttl")
 
-	resp, err = CBWrite(b, s, "issuer/root", map[string]interface{}{
-		"issuer_name":             "root",
+	resp, err = CBPatch(b, s, "issuer/root", map[string]interface{}{
 		"leaf_not_after_behavior": "permit",
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.Equal(t, resp.Data["leaf_not_after_behavior"], "permit")
 
 	_, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
 		"common_name": "testing",
@@ -5002,6 +5032,8 @@ func TestIssuanceTTLs(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.Equal(t, resp.Data["leaf_not_after_behavior"], "truncate")
 
 	_, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
 		"common_name": "testing",
@@ -6459,6 +6491,580 @@ func TestStandby_Operations(t *testing.T) {
 	})
 	require.NoError(t, err, "error revoking certificate: %v", err)
 	require.NotNil(t, resp, "got nil response from revoke request")
+}
+
+type pathAuthCheckerFunc func(t *testing.T, client *api.Client, path string, token string)
+
+func isPermDenied(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "permission denied")
+}
+
+func isUnsupportedPathOperation(err error) bool {
+	return err != nil && (strings.Contains(err.Error(), "unsupported path") || strings.Contains(err.Error(), "unsupported operation"))
+}
+
+func isDeniedOp(err error) bool {
+	return isPermDenied(err) || isUnsupportedPathOperation(err)
+}
+
+func pathShouldBeAuthed(t *testing.T, client *api.Client, path string, token string) {
+	client.SetToken("")
+	resp, err := client.Logical().ReadWithContext(ctx, path)
+	if err == nil || !isPermDenied(err) {
+		t.Fatalf("expected failure to read %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().ListWithContext(ctx, path)
+	if err == nil || !isPermDenied(err) {
+		t.Fatalf("expected failure to list %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().WriteWithContext(ctx, path, map[string]interface{}{})
+	if err == nil || !isPermDenied(err) {
+		t.Fatalf("expected failure to write %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().DeleteWithContext(ctx, path)
+	if err == nil || !isPermDenied(err) {
+		t.Fatalf("expected failure to delete %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().JSONMergePatch(ctx, path, map[string]interface{}{})
+	if err == nil || !isPermDenied(err) {
+		t.Fatalf("expected failure to patch %v while unauthed: %v / %v", path, err, resp)
+	}
+}
+
+func pathShouldBeUnauthedReadList(t *testing.T, client *api.Client, path string, token string) {
+	// Should be able to read both with and without a token.
+	client.SetToken("")
+	resp, err := client.Logical().ReadWithContext(ctx, path)
+	if err != nil && isPermDenied(err) {
+		// Read will sometimes return permission denied, when the handler
+		// does not support the given operation. Retry with the token.
+		client.SetToken(token)
+		resp2, err2 := client.Logical().ReadWithContext(ctx, path)
+		if err2 != nil && !isUnsupportedPathOperation(err2) {
+			t.Fatalf("unexpected failure to read %v while unauthed: %v / %v\nWhile authed: %v / %v", path, err, resp, err2, resp2)
+		}
+		client.SetToken("")
+	}
+	resp, err = client.Logical().ListWithContext(ctx, path)
+	if err != nil && isPermDenied(err) {
+		// List will sometimes return permission denied, when the handler
+		// does not support the given operation. Retry with the token.
+		client.SetToken(token)
+		resp2, err2 := client.Logical().ListWithContext(ctx, path)
+		if err2 != nil && !isUnsupportedPathOperation(err2) {
+			t.Fatalf("unexpected failure to list %v while unauthed: %v / %v\nWhile authed: %v / %v", path, err, resp, err2, resp2)
+		}
+		client.SetToken("")
+	}
+
+	// These should all be denied.
+	resp, err = client.Logical().WriteWithContext(ctx, path, map[string]interface{}{})
+	if err == nil || !isDeniedOp(err) {
+		if !strings.Contains(path, "ocsp") || !strings.Contains(err.Error(), "Code: 40") {
+			t.Fatalf("unexpected failure during write on read-only path %v while unauthed: %v / %v", path, err, resp)
+		}
+	}
+	resp, err = client.Logical().DeleteWithContext(ctx, path)
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during delete on read-only path %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().JSONMergePatch(ctx, path, map[string]interface{}{})
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during patch on read-only path %v while unauthed: %v / %v", path, err, resp)
+	}
+
+	// Retrying with token should allow read/list, but not modification still.
+	client.SetToken(token)
+	resp, err = client.Logical().ReadWithContext(ctx, path)
+	if err != nil && isPermDenied(err) {
+		t.Fatalf("unexpected failure to read %v while authed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().ListWithContext(ctx, path)
+	if err != nil && isPermDenied(err) {
+		t.Fatalf("unexpected failure to list %v while authed: %v / %v", path, err, resp)
+	}
+
+	// Should all be denied.
+	resp, err = client.Logical().WriteWithContext(ctx, path, map[string]interface{}{})
+	if err == nil || !isDeniedOp(err) {
+		if !strings.Contains(path, "ocsp") || !strings.Contains(err.Error(), "Code: 40") {
+			t.Fatalf("unexpected failure during write on read-only path %v while authed: %v / %v", path, err, resp)
+		}
+	}
+	resp, err = client.Logical().DeleteWithContext(ctx, path)
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during delete on read-only path %v while authed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().JSONMergePatch(ctx, path, map[string]interface{}{})
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during patch on read-only path %v while authed: %v / %v", path, err, resp)
+	}
+}
+
+func pathShouldBeUnauthedWriteOnly(t *testing.T, client *api.Client, path string, token string) {
+	client.SetToken("")
+	resp, err := client.Logical().WriteWithContext(ctx, path, map[string]interface{}{})
+	if err != nil && isPermDenied(err) {
+		t.Fatalf("unexpected failure to write %v while unauthed: %v / %v", path, err, resp)
+	}
+
+	// These should all be denied. However, on OSS, we might end up with
+	// a regular 404, which looks like err == resp == nil; hence we only
+	// fail when there's a non-nil response and/or a non-nil err.
+	resp, err = client.Logical().ReadWithContext(ctx, path)
+	if (err == nil && resp != nil) || (err != nil && !isDeniedOp(err)) {
+		t.Fatalf("unexpected failure during read on write-only path %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().ListWithContext(ctx, path)
+	if (err == nil && resp != nil) || (err != nil && !isDeniedOp(err)) {
+		t.Fatalf("unexpected failure during list on write-only path %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().DeleteWithContext(ctx, path)
+	if (err == nil && resp != nil) || (err != nil && !isDeniedOp(err)) {
+		t.Fatalf("unexpected failure during delete on write-only path %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().JSONMergePatch(ctx, path, map[string]interface{}{})
+	if (err == nil && resp != nil) || (err != nil && !isDeniedOp(err)) {
+		t.Fatalf("unexpected failure during patch on write-only path %v while unauthed: %v / %v", path, err, resp)
+	}
+
+	// Retrying with token should allow writing, but nothing else.
+	client.SetToken(token)
+	resp, err = client.Logical().WriteWithContext(ctx, path, map[string]interface{}{})
+	if err != nil && isPermDenied(err) {
+		t.Fatalf("unexpected failure to write %v while unauthed: %v / %v", path, err, resp)
+	}
+
+	// These should all be denied.
+	resp, err = client.Logical().ReadWithContext(ctx, path)
+	if (err == nil && resp != nil) || (err != nil && !isDeniedOp(err)) {
+		t.Fatalf("unexpected failure during read on write-only path %v while authed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().ListWithContext(ctx, path)
+	if (err == nil && resp != nil) || (err != nil && !isDeniedOp(err)) {
+		if resp != nil || err != nil {
+			t.Fatalf("unexpected failure during list on write-only path %v while authed: %v / %v", path, err, resp)
+		}
+	}
+	resp, err = client.Logical().DeleteWithContext(ctx, path)
+	if (err == nil && resp != nil) || (err != nil && !isDeniedOp(err)) {
+		t.Fatalf("unexpected failure during delete on write-only path %v while authed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().JSONMergePatch(ctx, path, map[string]interface{}{})
+	if (err == nil && resp != nil) || (err != nil && !isDeniedOp(err)) {
+		t.Fatalf("unexpected failure during patch on write-only path %v while authed: %v / %v", path, err, resp)
+	}
+}
+
+type pathAuthChecker int
+
+const (
+	shouldBeAuthed pathAuthChecker = iota
+	shouldBeUnauthedReadList
+	shouldBeUnauthedWriteOnly
+)
+
+var pathAuthChckerMap = map[pathAuthChecker]pathAuthCheckerFunc{
+	shouldBeAuthed:            pathShouldBeAuthed,
+	shouldBeUnauthedReadList:  pathShouldBeUnauthedReadList,
+	shouldBeUnauthedWriteOnly: pathShouldBeUnauthedWriteOnly,
+}
+
+func TestProperAuthing(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+	token := client.Token()
+
+	// Mount PKI.
+	err := client.Sys().MountWithContext(ctx, "pki", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "60h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Setup basic configuration.
+	_, err = client.Logical().WriteWithContext(ctx, "pki/root/generate/internal", map[string]interface{}{
+		"ttl":         "40h",
+		"common_name": "myvault.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().WriteWithContext(ctx, "pki/roles/test", map[string]interface{}{
+		"allow_localhost": true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := client.Logical().WriteWithContext(ctx, "pki/issue/test", map[string]interface{}{
+		"common_name": "localhost",
+	})
+	if err != nil || resp == nil {
+		t.Fatal(err)
+	}
+	serial := resp.Data["serial_number"].(string)
+
+	paths := map[string]pathAuthChecker{
+		"ca_chain":                               shouldBeUnauthedReadList,
+		"cert/ca_chain":                          shouldBeUnauthedReadList,
+		"ca":                                     shouldBeUnauthedReadList,
+		"ca/pem":                                 shouldBeUnauthedReadList,
+		"cert/" + serial:                         shouldBeUnauthedReadList,
+		"cert/" + serial + "/raw":                shouldBeUnauthedReadList,
+		"cert/" + serial + "/raw/pem":            shouldBeUnauthedReadList,
+		"cert/crl":                               shouldBeUnauthedReadList,
+		"cert/crl/raw":                           shouldBeUnauthedReadList,
+		"cert/crl/raw/pem":                       shouldBeUnauthedReadList,
+		"cert/delta-crl":                         shouldBeUnauthedReadList,
+		"cert/delta-crl/raw":                     shouldBeUnauthedReadList,
+		"cert/delta-crl/raw/pem":                 shouldBeUnauthedReadList,
+		"cert/unified-crl":                       shouldBeUnauthedReadList,
+		"cert/unified-crl/raw":                   shouldBeUnauthedReadList,
+		"cert/unified-crl/raw/pem":               shouldBeUnauthedReadList,
+		"cert/unified-delta-crl":                 shouldBeUnauthedReadList,
+		"cert/unified-delta-crl/raw":             shouldBeUnauthedReadList,
+		"cert/unified-delta-crl/raw/pem":         shouldBeUnauthedReadList,
+		"certs":                                  shouldBeAuthed,
+		"certs/revoked":                          shouldBeAuthed,
+		"certs/revocation-queue":                 shouldBeAuthed,
+		"certs/unified-revoked":                  shouldBeAuthed,
+		"config/acme":                            shouldBeAuthed,
+		"config/auto-tidy":                       shouldBeAuthed,
+		"config/ca":                              shouldBeAuthed,
+		"config/cluster":                         shouldBeAuthed,
+		"config/crl":                             shouldBeAuthed,
+		"config/issuers":                         shouldBeAuthed,
+		"config/keys":                            shouldBeAuthed,
+		"config/urls":                            shouldBeAuthed,
+		"crl":                                    shouldBeUnauthedReadList,
+		"crl/pem":                                shouldBeUnauthedReadList,
+		"crl/delta":                              shouldBeUnauthedReadList,
+		"crl/delta/pem":                          shouldBeUnauthedReadList,
+		"crl/rotate":                             shouldBeAuthed,
+		"crl/rotate-delta":                       shouldBeAuthed,
+		"intermediate/cross-sign":                shouldBeAuthed,
+		"intermediate/generate/exported":         shouldBeAuthed,
+		"intermediate/generate/internal":         shouldBeAuthed,
+		"intermediate/generate/existing":         shouldBeAuthed,
+		"intermediate/generate/kms":              shouldBeAuthed,
+		"intermediate/set-signed":                shouldBeAuthed,
+		"issue/test":                             shouldBeAuthed,
+		"issuer/default":                         shouldBeAuthed,
+		"issuer/default/der":                     shouldBeUnauthedReadList,
+		"issuer/default/json":                    shouldBeUnauthedReadList,
+		"issuer/default/pem":                     shouldBeUnauthedReadList,
+		"issuer/default/crl":                     shouldBeUnauthedReadList,
+		"issuer/default/crl/pem":                 shouldBeUnauthedReadList,
+		"issuer/default/crl/der":                 shouldBeUnauthedReadList,
+		"issuer/default/crl/delta":               shouldBeUnauthedReadList,
+		"issuer/default/crl/delta/der":           shouldBeUnauthedReadList,
+		"issuer/default/crl/delta/pem":           shouldBeUnauthedReadList,
+		"issuer/default/unified-crl":             shouldBeUnauthedReadList,
+		"issuer/default/unified-crl/pem":         shouldBeUnauthedReadList,
+		"issuer/default/unified-crl/der":         shouldBeUnauthedReadList,
+		"issuer/default/unified-crl/delta":       shouldBeUnauthedReadList,
+		"issuer/default/unified-crl/delta/der":   shouldBeUnauthedReadList,
+		"issuer/default/unified-crl/delta/pem":   shouldBeUnauthedReadList,
+		"issuer/default/issue/test":              shouldBeAuthed,
+		"issuer/default/resign-crls":             shouldBeAuthed,
+		"issuer/default/revoke":                  shouldBeAuthed,
+		"issuer/default/sign-intermediate":       shouldBeAuthed,
+		"issuer/default/sign-revocation-list":    shouldBeAuthed,
+		"issuer/default/sign-self-issued":        shouldBeAuthed,
+		"issuer/default/sign-verbatim":           shouldBeAuthed,
+		"issuer/default/sign-verbatim/test":      shouldBeAuthed,
+		"issuer/default/sign/test":               shouldBeAuthed,
+		"issuers":                                shouldBeUnauthedReadList,
+		"issuers/generate/intermediate/exported": shouldBeAuthed,
+		"issuers/generate/intermediate/internal": shouldBeAuthed,
+		"issuers/generate/intermediate/existing": shouldBeAuthed,
+		"issuers/generate/intermediate/kms":      shouldBeAuthed,
+		"issuers/generate/root/exported":         shouldBeAuthed,
+		"issuers/generate/root/internal":         shouldBeAuthed,
+		"issuers/generate/root/existing":         shouldBeAuthed,
+		"issuers/generate/root/kms":              shouldBeAuthed,
+		"issuers/import/cert":                    shouldBeAuthed,
+		"issuers/import/bundle":                  shouldBeAuthed,
+		"key/default":                            shouldBeAuthed,
+		"keys":                                   shouldBeAuthed,
+		"keys/generate/internal":                 shouldBeAuthed,
+		"keys/generate/exported":                 shouldBeAuthed,
+		"keys/generate/kms":                      shouldBeAuthed,
+		"keys/import":                            shouldBeAuthed,
+		"ocsp":                                   shouldBeUnauthedWriteOnly,
+		"ocsp/dGVzdAo=":                          shouldBeUnauthedReadList,
+		"revoke":                                 shouldBeAuthed,
+		"revoke-with-key":                        shouldBeAuthed,
+		"roles/test":                             shouldBeAuthed,
+		"roles":                                  shouldBeAuthed,
+		"root":                                   shouldBeAuthed,
+		"root/generate/exported":                 shouldBeAuthed,
+		"root/generate/internal":                 shouldBeAuthed,
+		"root/generate/existing":                 shouldBeAuthed,
+		"root/generate/kms":                      shouldBeAuthed,
+		"root/replace":                           shouldBeAuthed,
+		"root/rotate/internal":                   shouldBeAuthed,
+		"root/rotate/exported":                   shouldBeAuthed,
+		"root/rotate/existing":                   shouldBeAuthed,
+		"root/rotate/kms":                        shouldBeAuthed,
+		"root/sign-intermediate":                 shouldBeAuthed,
+		"root/sign-self-issued":                  shouldBeAuthed,
+		"sign-verbatim":                          shouldBeAuthed,
+		"sign-verbatim/test":                     shouldBeAuthed,
+		"sign/test":                              shouldBeAuthed,
+		"tidy":                                   shouldBeAuthed,
+		"tidy-cancel":                            shouldBeAuthed,
+		"tidy-status":                            shouldBeAuthed,
+		"unified-crl":                            shouldBeUnauthedReadList,
+		"unified-crl/pem":                        shouldBeUnauthedReadList,
+		"unified-crl/delta":                      shouldBeUnauthedReadList,
+		"unified-crl/delta/pem":                  shouldBeUnauthedReadList,
+		"unified-ocsp":                           shouldBeUnauthedWriteOnly,
+		"unified-ocsp/dGVzdAo=":                  shouldBeUnauthedReadList,
+	}
+
+	// Add ACME based paths to the test suite
+	for _, acmePrefix := range []string{"", "issuer/default/", "roles/test/", "issuer/default/roles/test/"} {
+		paths[acmePrefix+"acme/directory"] = shouldBeUnauthedReadList
+		paths[acmePrefix+"acme/new-nonce"] = shouldBeUnauthedReadList
+		paths[acmePrefix+"acme/new-account"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"acme/revoke-cert"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"acme/new-order"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"acme/orders"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"acme/account/hrKmDYTvicHoHGVN2-3uzZV_BPGdE0W_dNaqYTtYqeo="] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"acme/authorization/29da8c38-7a09-465e-b9a6-3d76802b1afd"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"acme/challenge/29da8c38-7a09-465e-b9a6-3d76802b1afd/http-01"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"acme/order/13b80844-e60d-42d2-b7e9-152a8e834b90"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"acme/order/13b80844-e60d-42d2-b7e9-152a8e834b90/finalize"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"acme/order/13b80844-e60d-42d2-b7e9-152a8e834b90/cert"] = shouldBeUnauthedWriteOnly
+	}
+
+	for path, checkerType := range paths {
+		checker := pathAuthChckerMap[checkerType]
+		checker(t, client, "pki/"+path, token)
+	}
+
+	client.SetToken(token)
+	openAPIResp, err := client.Logical().ReadWithContext(ctx, "sys/internal/specs/openapi")
+	if err != nil {
+		t.Fatalf("failed to get openapi data: %v", err)
+	}
+
+	validatedPath := false
+	for openapi_path, raw_data := range openAPIResp.Data["paths"].(map[string]interface{}) {
+		if !strings.HasPrefix(openapi_path, "/pki/") {
+			t.Logf("Skipping path: %v", openapi_path)
+			continue
+		}
+
+		t.Logf("Validating path: %v", openapi_path)
+		validatedPath = true
+		// Substitute values in from our testing map.
+		raw_path := openapi_path[5:]
+		if strings.Contains(raw_path, "roles/") && strings.Contains(raw_path, "{name}") {
+			raw_path = strings.ReplaceAll(raw_path, "{name}", "test")
+		}
+		if strings.Contains(raw_path, "{role}") {
+			raw_path = strings.ReplaceAll(raw_path, "{role}", "test")
+		}
+		if strings.Contains(raw_path, "ocsp/") && strings.Contains(raw_path, "{req}") {
+			raw_path = strings.ReplaceAll(raw_path, "{req}", "dGVzdAo=")
+		}
+		if strings.Contains(raw_path, "{issuer_ref}") {
+			raw_path = strings.ReplaceAll(raw_path, "{issuer_ref}", "default")
+		}
+		if strings.Contains(raw_path, "{key_ref}") {
+			raw_path = strings.ReplaceAll(raw_path, "{key_ref}", "default")
+		}
+		if strings.Contains(raw_path, "{exported}") {
+			raw_path = strings.ReplaceAll(raw_path, "{exported}", "internal")
+		}
+		if strings.Contains(raw_path, "{serial}") {
+			raw_path = strings.ReplaceAll(raw_path, "{serial}", serial)
+		}
+		if strings.Contains(raw_path, "acme/account/") && strings.Contains(raw_path, "{kid}") {
+			raw_path = strings.ReplaceAll(raw_path, "{kid}", "hrKmDYTvicHoHGVN2-3uzZV_BPGdE0W_dNaqYTtYqeo=")
+		}
+		if strings.Contains(raw_path, "acme/") && strings.Contains(raw_path, "{auth_id}") {
+			raw_path = strings.ReplaceAll(raw_path, "{auth_id}", "29da8c38-7a09-465e-b9a6-3d76802b1afd")
+		}
+		if strings.Contains(raw_path, "acme/") && strings.Contains(raw_path, "{challenge_type}") {
+			raw_path = strings.ReplaceAll(raw_path, "{challenge_type}", "http-01")
+		}
+		if strings.Contains(raw_path, "acme/") && strings.Contains(raw_path, "{order_id}") {
+			raw_path = strings.ReplaceAll(raw_path, "{order_id}", "13b80844-e60d-42d2-b7e9-152a8e834b90")
+		}
+
+		handler, present := paths[raw_path]
+		if !present {
+			t.Fatalf("OpenAPI reports PKI mount contains %v->%v but was not tested to be authed or authed.", openapi_path, raw_path)
+		}
+
+		openapi_data := raw_data.(map[string]interface{})
+		hasList := false
+		rawGetData, hasGet := openapi_data["get"]
+		if hasGet {
+			getData := rawGetData.(map[string]interface{})
+			getParams, paramsPresent := getData["parameters"].(map[string]interface{})
+			if getParams != nil && paramsPresent {
+				if _, hasList = getParams["list"]; hasList {
+					// LIST is exclusive from GET on the same endpoint usually.
+					hasGet = false
+				}
+			}
+		}
+		_, hasPost := openapi_data["post"]
+		_, hasDelete := openapi_data["delete"]
+
+		if handler == shouldBeUnauthedReadList {
+			if hasPost || hasDelete {
+				t.Fatalf("Unauthed read-only endpoints should not have POST/DELETE capabilities: %v->%v", openapi_path, raw_path)
+			}
+		} else if handler == shouldBeUnauthedWriteOnly {
+			if hasGet || hasList {
+				t.Fatalf("Unauthed write-only endpoints should not have GET/LIST capabilities: %v->%v", openapi_path, raw_path)
+			}
+		}
+	}
+
+	if !validatedPath {
+		t.Fatalf("Expected to have validated at least one path.")
+	}
+}
+
+func TestPatchIssuer(t *testing.T) {
+	t.Parallel()
+
+	type TestCase struct {
+		Field   string
+		Before  interface{}
+		Patched interface{}
+	}
+	testCases := []TestCase{
+		{
+			Field:   "issuer_name",
+			Before:  "root",
+			Patched: "root-new",
+		},
+		{
+			Field:   "leaf_not_after_behavior",
+			Before:  "err",
+			Patched: "permit",
+		},
+		{
+			Field:   "usage",
+			Before:  "crl-signing,issuing-certificates,ocsp-signing,read-only",
+			Patched: "issuing-certificates,read-only",
+		},
+		{
+			Field:   "revocation_signature_algorithm",
+			Before:  "ECDSAWithSHA256",
+			Patched: "ECDSAWithSHA384",
+		},
+		{
+			Field:   "issuing_certificates",
+			Before:  []string{"http://localhost/v1/pki-1/ca"},
+			Patched: []string{"http://localhost/v1/pki/ca"},
+		},
+		{
+			Field:   "crl_distribution_points",
+			Before:  []string{"http://localhost/v1/pki-1/crl"},
+			Patched: []string{"http://localhost/v1/pki/crl"},
+		},
+		{
+			Field:   "ocsp_servers",
+			Before:  []string{"http://localhost/v1/pki-1/ocsp"},
+			Patched: []string{"http://localhost/v1/pki/ocsp"},
+		},
+		{
+			Field:   "enable_aia_url_templating",
+			Before:  false,
+			Patched: true,
+		},
+		{
+			Field:   "manual_chain",
+			Before:  []string(nil),
+			Patched: []string{"self"},
+		},
+	}
+
+	for index, testCase := range testCases {
+		t.Logf("index: %v / tc: %v", index, testCase)
+
+		b, s := CreateBackendWithStorage(t)
+
+		// 1. Setup root issuer.
+		resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+			"common_name": "Vault Root CA",
+			"key_type":    "ec",
+			"ttl":         "7200h",
+			"issuer_name": "root",
+		})
+		requireSuccessNonNilResponse(t, resp, err, "failed generating root issuer")
+		id := string(resp.Data["issuer_id"].(issuerID))
+
+		// 2. Enable Cluster paths
+		resp, err = CBWrite(b, s, "config/urls", map[string]interface{}{
+			"path":     "https://localhost/v1/pki",
+			"aia_path": "http://localhost/v1/pki",
+		})
+		requireSuccessNonNilResponse(t, resp, err, "failed updating AIA config")
+
+		// 3. Add AIA information
+		resp, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+			"issuing_certificates":    "http://localhost/v1/pki-1/ca",
+			"crl_distribution_points": "http://localhost/v1/pki-1/crl",
+			"ocsp_servers":            "http://localhost/v1/pki-1/ocsp",
+		})
+		requireSuccessNonNilResponse(t, resp, err, "failed setting up issuer")
+
+		// 4. Read the issuer before.
+		resp, err = CBRead(b, s, "issuer/default")
+		requireSuccessNonNilResponse(t, resp, err, "failed reading root issuer before")
+		require.Equal(t, testCase.Before, resp.Data[testCase.Field], "bad expectations")
+
+		// 5. Perform modification.
+		resp, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+			testCase.Field: testCase.Patched,
+		})
+		requireSuccessNonNilResponse(t, resp, err, "failed patching root issuer")
+
+		if testCase.Field != "manual_chain" {
+			require.Equal(t, testCase.Patched, resp.Data[testCase.Field], "failed persisting value")
+		} else {
+			// self->id
+			require.Equal(t, []string{id}, resp.Data[testCase.Field], "failed persisting value")
+		}
+
+		// 6. Ensure it stuck
+		resp, err = CBRead(b, s, "issuer/default")
+		requireSuccessNonNilResponse(t, resp, err, "failed reading root issuer after")
+
+		if testCase.Field != "manual_chain" {
+			require.Equal(t, testCase.Patched, resp.Data[testCase.Field])
+		} else {
+			// self->id
+			require.Equal(t, []string{id}, resp.Data[testCase.Field], "failed persisting value")
+		}
+	}
 }
 
 var (

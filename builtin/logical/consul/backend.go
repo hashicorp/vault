@@ -10,6 +10,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+const operationPrefixConsul = "consul"
+
 // ReportedVersion is used to report a specific version to Vault.
 var ReportedVersion = ""
 

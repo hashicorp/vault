@@ -17,6 +17,12 @@ func lookupPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "lookup/entity$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "entity",
+				OperationVerb:   "look-up",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -48,6 +54,12 @@ func lookupPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "lookup/group$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "group",
+				OperationVerb:   "look-up",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,

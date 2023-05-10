@@ -111,9 +111,9 @@ export default Route.extend(UnloadModelRoute, {
       aws: 'role-aws',
       pki: secret && secret.startsWith('cert/') ? 'pki/cert' : 'pki/pki-role',
       cubbyhole: 'secret',
-      kv: backendModel.get('modelTypeForKV'),
+      kv: backendModel.modelTypeForKV,
       keymgmt: `keymgmt/${options.queryParams?.itemType || 'key'}`,
-      generic: backendModel.get('modelTypeForKV'),
+      generic: backendModel.modelTypeForKV,
     };
     return types[type];
   },

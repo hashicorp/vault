@@ -25,7 +25,8 @@ import PkiActionModel from 'vault/models/pki/action';
  *
  * @param {Object} model - certificate model from route
  * @callback onCancel - Callback triggered when cancel button is clicked.
- * @callback onSubmit - Callback triggered on submit success.
+ * @callback onSave - Callback triggered on submit success.
+ * @callback onComplete - Callback triggered on "done" button click.
  */
 
 interface AdapterOptions {
@@ -33,8 +34,9 @@ interface AdapterOptions {
   useIssuer: boolean | undefined;
 }
 interface Args {
-  onSave: CallableFunction;
+  onSave?: CallableFunction;
   onCancel: CallableFunction;
+  onComplete: CallableFunction;
   model: PkiActionModel;
   adapterOptions: AdapterOptions;
 }
@@ -44,14 +46,48 @@ export default class PkiImportPemBundle extends Component<Args> {
 
   @tracked errorBanner = '';
 
+  get importedResponse() {
+    const { mapping, importedIssuers, importedKeys } = this.args.model;
+    // Even if there are no imported items, mapping will be an empty object from API response
+    if (undefined === mapping) return null;
+
+    const importList = (importedIssuers || []).map((issuer: string) => {
+      const key = mapping[issuer];
+      return { issuer, key };
+    });
+
+    // Check each imported key and make sure it's in the list
+    (importedKeys || []).forEach((key) => {
+      const matchIdx = importList.findIndex((item) => item.key === key);
+      // If key isn't accounted for, add it without a matching issuer
+      if (matchIdx === -1) {
+        importList.push({ issuer: '', key });
+      }
+    });
+
+    if (importList.length === 0) {
+      // If no new items were imported but the import call was successful, the UI will show accordingly
+      return [{ issuer: '', key: '' }];
+    }
+    return importList;
+  }
+
   @task
   @waitFor
   *submitForm(event: Event) {
     event.preventDefault();
+    this.errorBanner = '';
+    if (!this.args.model.pemBundle) {
+      this.errorBanner = 'please upload your PEM bundle';
+      return;
+    }
     try {
       yield this.args.model.save({ adapterOptions: this.args.adapterOptions });
       this.flashMessages.success('Successfully imported data.');
-      this.args.onSave();
+      // This component shows the results, but call `onSave` for any side effects on parent
+      if (this.args.onSave) {
+        this.args.onSave();
+      }
     } catch (error) {
       this.errorBanner = errorMessage(error);
     }

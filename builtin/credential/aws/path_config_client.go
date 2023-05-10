@@ -19,6 +19,11 @@ import (
 func (b *backend) pathConfigClient() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/client$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"access_key": {
 				Type:        framework.TypeString,
@@ -80,15 +85,29 @@ func (b *backend) pathConfigClient() *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.CreateOperation: &framework.PathOperation{
 				Callback: b.pathConfigClientCreateUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "client",
+				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathConfigClientCreateUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "client",
+				},
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathConfigClientDelete,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "client-configuration",
+				},
 			},
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathConfigClientRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "client-configuration",
+				},
 			},
 		},
 

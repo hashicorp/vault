@@ -138,9 +138,16 @@ var (
 )
 
 func (ts *TokenStore) paths() []*framework.Path {
+	const operationPrefixToken = "token"
+
 	p := []*framework.Path{
 		{
 			Pattern: "roles/?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationSuffix: "roles",
+			},
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: ts.tokenStoreRoleList,
@@ -153,6 +160,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 		{
 			Pattern: "accessors/$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationSuffix: "accessors",
+			},
+
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: ts.tokenStoreAccessorList,
 			},
@@ -163,6 +175,12 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 		{
 			Pattern: "create-orphan$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "create",
+				OperationSuffix: "orphan",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
@@ -239,6 +257,12 @@ func (ts *TokenStore) paths() []*framework.Path {
 		{
 			Pattern: "create/" + framework.GenericNameRegex("role_name"),
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "create",
+				OperationSuffix: "against-role",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
@@ -314,6 +338,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 		{
 			Pattern: "create$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "create",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"display_name": {
 					Type:        framework.TypeString,
@@ -385,6 +414,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 		{
 			Pattern: "lookup",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "look-up",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
 					Type:        framework.TypeString,
@@ -392,9 +426,16 @@ func (ts *TokenStore) paths() []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation:   ts.handleLookup,
-				logical.UpdateOperation: ts.handleLookup,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: ts.handleLookup,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationSuffix: "self3", // avoid collision with lookup-self
+					},
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: ts.handleLookup,
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(tokenLookupHelp),
@@ -403,6 +444,12 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 		{
 			Pattern: "lookup-accessor",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "look-up",
+				OperationSuffix: "accessor",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"accessor": {
@@ -422,6 +469,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 		{
 			Pattern: "lookup-self$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "look-up",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
 					Type:        framework.TypeString,
@@ -429,9 +481,19 @@ func (ts *TokenStore) paths() []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: ts.handleLookupSelf,
-				logical.ReadOperation:   ts.handleLookupSelf,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: ts.handleLookupSelf,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationSuffix: "self",
+					},
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: ts.handleLookupSelf,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationSuffix: "self2",
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(tokenLookupHelp),
@@ -440,6 +502,12 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 		{
 			Pattern: "revoke-accessor",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "revoke",
+				OperationSuffix: "accessor",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"accessor": {
@@ -459,6 +527,12 @@ func (ts *TokenStore) paths() []*framework.Path {
 		{
 			Pattern: "revoke-self$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "revoke",
+				OperationSuffix: "self",
+			},
+
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: ts.handleRevokeSelf,
 			},
@@ -469,6 +543,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 		{
 			Pattern: "revoke",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "revoke",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
@@ -488,6 +567,12 @@ func (ts *TokenStore) paths() []*framework.Path {
 		{
 			Pattern: "revoke-orphan",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "revoke",
+				OperationSuffix: "orphan",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
 					Type:        framework.TypeString,
@@ -505,6 +590,12 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 		{
 			Pattern: "renew-accessor",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "renew",
+				OperationSuffix: "accessor",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"accessor": {
@@ -529,6 +620,12 @@ func (ts *TokenStore) paths() []*framework.Path {
 		{
 			Pattern: "renew-self$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "renew",
+				OperationSuffix: "self",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
 					Type:        framework.TypeString,
@@ -551,6 +648,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 		{
 			Pattern: "renew",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "renew",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
@@ -575,6 +677,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 		{
 			Pattern: "tidy$",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixToken,
+				OperationVerb:   "tidy",
+			},
+
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: ts.handleTidy,
 			},
@@ -586,6 +693,12 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 	rolesPath := &framework.Path{
 		Pattern: "roles/" + framework.GenericNameRegex("role_name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixToken,
+			OperationSuffix: "role",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"role_name": {
 				Type:        framework.TypeString,
@@ -1560,10 +1673,6 @@ func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tai
 		return ts.lookupBatchToken(ctx, id)
 	}
 
-	// Before we check to see if this is an SSCT, keep the old value in case
-	// we need to check the full SSCT flow later.
-	originalToken := id
-
 	// lookupInternal is called internally with tokens that oftentimes come from request
 	// parameters that we cannot really guess. Most notably, these calls come from either
 	// validateWrappedToken and/or lookupTokenTainted, used in the wrapping token logic.
@@ -1707,17 +1816,6 @@ func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tai
 	// It's any kind of expiring token with no lease, immediately delete it
 	case le == nil:
 		if ts.core.perfStandby {
-			// If we're a perf standby with a token but without the lease entry, then
-			// we have the WALs for the token but not the lease entry. We should check
-			// the SSCToken again to validate our state. We will receive a 412 if we
-			// don't have the requisite state.
-			// We set unauth to 'false' here as we want to validate the full SSCT flow
-			// and if we're at this point in the method, we have reason to need the token.
-			_, err = ts.core.CheckSSCToken(ctx, originalToken, false, ts.core.perfStandby)
-			if err != nil {
-				return nil, err
-			}
-			// If we don't have a state error, and we're still here, return a 500.
 			return nil, fmt.Errorf("no lease entry found for token that ought to have one, possible eventual consistency issue")
 		}
 

@@ -18,7 +18,6 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
-	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -238,7 +237,7 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 	// to ourself, there's no point in paying any attention to it.  And by
 	// disregarding it, we can avoid a panic in raft tests using the Inmem network
 	// layer when we try to connect back to ourself.
-	if adv.ClusterAddr == c.ClusterAddr() && adv.RedirectAddr == c.redirectAddr {
+	if adv.ClusterAddr == c.ClusterAddr() && adv.RedirectAddr == c.redirectAddr && c.getRaftBackend() != nil {
 		return false, "", "", nil
 	}
 
@@ -966,7 +965,11 @@ func (c *Core) reloadShamirKey(ctx context.Context) error {
 		}
 		shamirKey = keyring.rootKey
 	}
-	return c.seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAesGcmKeyBytes(shamirKey)
+	shamirWrapper, err := c.seal.GetShamirWrapper()
+	if err != nil {
+		return err
+	}
+	return shamirWrapper.SetAesGcmKeyBytes(shamirKey)
 }
 
 func (c *Core) performKeyUpgrades(ctx context.Context) error {

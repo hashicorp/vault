@@ -5,6 +5,7 @@ package pki
 
 import (
 	"context"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
@@ -27,6 +28,11 @@ import (
 func pathListCertsRevoked(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "certs/revoked/?$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "revoked-certs",
+		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
@@ -55,6 +61,11 @@ func pathListCertsRevocationQueue(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "certs/revocation-queue/?$",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "certs-revocation-queue",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathListRevocationQueueHandler,
@@ -69,6 +80,12 @@ func pathListCertsRevocationQueue(b *backend) *framework.Path {
 func pathRevoke(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `revoke`,
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "revoke",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"serial_number": {
 				Type: framework.TypeString,
@@ -122,6 +139,13 @@ signed by an issuer in this mount.`,
 func pathRevokeWithKey(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `revoke-with-key`,
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "revoke",
+			OperationSuffix: "with-key",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"serial_number": {
 				Type: framework.TypeString,
@@ -181,6 +205,12 @@ func pathRotateCRL(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `crl/rotate`,
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "rotate",
+			OperationSuffix: "crl",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathRotateCRLRead,
@@ -212,6 +242,12 @@ func pathRotateDeltaCRL(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `crl/rotate-delta`,
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "rotate",
+			OperationSuffix: "delta-crl",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathRotateDeltaCRLRead,
@@ -242,6 +278,11 @@ func pathRotateDeltaCRL(b *backend) *framework.Path {
 func pathListUnifiedRevoked(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "certs/unified-revoked/?$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "unified-revoked-certs",
+		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
@@ -406,13 +447,16 @@ func (b *backend) pathRevokeWriteHandleKey(req *logical.Request, certReference *
 		return fmt.Errorf("failed to parse provided private key: %w", err)
 	}
 
+	return validatePrivateKeyMatchesCert(signer, certReference)
+}
+
+func validatePrivateKeyMatchesCert(signer crypto.Signer, certReference *x509.Certificate) error {
 	// Finally, verify if the cert and key match. This code has been
 	// cribbed from the Go TLS config code, with minor modifications.
 	//
 	// In particular, we validate against the derived public key
 	// components and ensure we validate exponent and curve information
 	// as well.
-	//
 	//
 	// See: https://github.com/golang/go/blob/c6a2dada0df8c2d75cf3ae599d7caed77d416fa2/src/crypto/tls/tls.go#L304-L331
 	switch certPub := certReference.PublicKey.(type) {
@@ -611,7 +655,7 @@ func (b *backend) pathRotateCRLRead(ctx context.Context, req *logical.Request, _
 	defer b.revokeStorageLock.RUnlock()
 
 	sc := b.makeStorageContext(ctx, req.Storage)
-	crlErr := b.crlBuilder.rebuild(sc, false)
+	warnings, crlErr := b.crlBuilder.rebuild(sc, false)
 	if crlErr != nil {
 		switch crlErr.(type) {
 		case errutil.UserError:
@@ -621,11 +665,17 @@ func (b *backend) pathRotateCRLRead(ctx context.Context, req *logical.Request, _
 		}
 	}
 
-	return &logical.Response{
+	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"success": true,
 		},
-	}, nil
+	}
+
+	for index, warning := range warnings {
+		resp.AddWarning(fmt.Sprintf("Warning %d during CRL rebuild: %v", index+1, warning))
+	}
+
+	return resp, nil
 }
 
 func (b *backend) pathRotateDeltaCRLRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
@@ -638,7 +688,7 @@ func (b *backend) pathRotateDeltaCRLRead(ctx context.Context, req *logical.Reque
 
 	isEnabled := cfg.EnableDelta
 
-	crlErr := b.crlBuilder.rebuildDeltaCRLsIfForced(sc, true)
+	warnings, crlErr := b.crlBuilder.rebuildDeltaCRLsIfForced(sc, true)
 	if crlErr != nil {
 		switch crlErr.(type) {
 		case errutil.UserError:
@@ -656,6 +706,9 @@ func (b *backend) pathRotateDeltaCRLRead(ctx context.Context, req *logical.Reque
 
 	if !isEnabled {
 		resp.AddWarning("requested rebuild of delta CRL when delta CRL is not enabled; this is a no-op")
+	}
+	for index, warning := range warnings {
+		resp.AddWarning(fmt.Sprintf("Warning %d during CRL rebuild: %v", index+1, warning))
 	}
 
 	return resp, nil

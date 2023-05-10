@@ -54,6 +54,28 @@ There are several ways to try Vault with Kubernetes in different environments.
 
 - [Vault on Kubernetes Deployment Guide](/vault/tutorials/kubernetes/kubernetes-raft-deployment-guide) covers the steps required to install and configure a single HashiCorp Vault cluster as defined in the [Vault on Kubernetes Reference Architecture](/vault/tutorials/kubernetes/kubernetes-reference-architecture).
 
+### High Level Comparison of Integrations
+
+There are currently 3 different integrations to help Kubernetes workloads seamlessly consume secrets from Vault, without the need to modify the application to interact directly with Vault. Each integration addresses slightly different use-cases. The following is a brief overview of the strengths of each integration.
+
+#### Agent Injector
+
+- No durable secret storage outside Vault. All secrets written to disk are in ephemeral in-memory volumes.
+- No highly privileged service accounts required. All secrets are fetched with the pod's own service account without the need for any other service accounts to impersonate it.
+- More mature solution, with proven production record and advanced features like templating,
+  wider array of auth methods, etc.
+
+#### Vault Secrets Operator (public beta)
+
+- More native UX for app developers. Workloads can mount Kubernetes secrets without adding any Vault-specific configuration.
+- Reduced load on Vault. Secrets are synced per CRD instead of per consuming pod.
+- Better Vault secret availability. Kubernetes secrets act as a durable cluster-local cache of Vault secrets.
+
+#### Vault CSI Provider
+
+- The CSI driver that the provider is based on is vendor neutral.
+- No durable secret storage outside Vault if the secret sync feature isn't used. All secrets written to disk are in ephemeral in-memory volumes.
+
 ### Documentation
 
 - [Vault on Kubernetes Reference Architecture](/vault/tutorials/kubernetes/kubernetes-reference-architecture) provides recommended practices for running Vault on Kubernetes in production.

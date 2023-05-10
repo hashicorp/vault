@@ -207,6 +207,11 @@ type DisplayAttributes struct {
 	// Name is the name of the field suitable as a label or documentation heading.
 	Name string `json:"name,omitempty"`
 
+	// Description of the field that renders as tooltip help text beside the label (name) in the UI.
+	// This may be used to replace descriptions that reference comma separation but correspond
+	// to UI inputs where only arrays are valid. For example params with Type: framework.TypeCommaStringSlice
+	Description string `json:"description,omitempty"`
+
 	// Value is a sample value to display for this field. This may be used
 	// to indicate a default value, but it is for display only and completely separate
 	// from any Default member handling.
@@ -226,6 +231,28 @@ type DisplayAttributes struct {
 
 	// Action is the verb to use for the operation.
 	Action string `json:"action,omitempty"`
+
+	// OperationPrefix is a hyphenated lower-case string used to construct
+	// OpenAPI OperationID (prefix + verb + suffix). OperationPrefix is
+	// typically a human-readable name of the plugin or a prefix shared by
+	// multiple related endpoints.
+	OperationPrefix string `json:"operationPrefix,omitempty"`
+
+	// OperationVerb is a hyphenated lower-case string used to construct
+	// OpenAPI OperationID (prefix + verb + suffix). OperationVerb is typically
+	// an action to be performed (e.g. "generate", "sign", "login", etc.). If
+	// not specified, the verb defaults to `logical.Operation.String()`
+	// (e.g. "read", "list", "delete", "write" for Create/Update)
+	OperationVerb string `json:"operationVerb,omitempty"`
+
+	// OperationSuffix is a hyphenated lower-case string used to construct
+	// OpenAPI OperationID (prefix + verb + suffix). It is typically the name
+	// of the resource on which the action is performed (e.g. "role",
+	// "credentials", etc.). A pipe (|) separator can be used to list different
+	// suffixes for various permutations of the `Path.Pattern` regular
+	// expression. If not specified, the suffix defaults to the `Path.Pattern`
+	// split by dashes.
+	OperationSuffix string `json:"operationSuffix,omitempty"`
 
 	// EditType is the optional type of form field needed for a property
 	// This is only necessary for a "textarea" or "file"
@@ -261,6 +288,7 @@ type PathOperation struct {
 	Deprecated                  bool
 	ForwardPerformanceSecondary bool
 	ForwardPerformanceStandby   bool
+	DisplayAttrs                *DisplayAttributes
 }
 
 func (p *PathOperation) Handler() OperationFunc {
@@ -277,6 +305,7 @@ func (p *PathOperation) Properties() OperationProperties {
 		Deprecated:                  p.Deprecated,
 		ForwardPerformanceSecondary: p.ForwardPerformanceSecondary,
 		ForwardPerformanceStandby:   p.ForwardPerformanceStandby,
+		DisplayAttrs:                p.DisplayAttrs,
 	}
 }
 

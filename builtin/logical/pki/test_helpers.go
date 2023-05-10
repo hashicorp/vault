@@ -211,6 +211,10 @@ func CBReq(b *backend, s logical.Storage, operation logical.Operation, path stri
 	return resp, nil
 }
 
+func CBHeader(b *backend, s logical.Storage, path string) (*logical.Response, error) {
+	return CBReq(b, s, logical.HeaderOperation, path, make(map[string]interface{}))
+}
+
 func CBRead(b *backend, s logical.Storage, path string) (*logical.Response, error) {
 	return CBReq(b, s, logical.ReadOperation, path, make(map[string]interface{}))
 }
