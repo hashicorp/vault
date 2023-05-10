@@ -266,7 +266,12 @@ selected secondary. In deny mode, the mount and namespace paths are excluded.
 
 ### Parameters
 
-- `id` `(string: <required>)` – Specifies the unique performance secondary identifier.
+- `id` `(string: <required>)` – Specifies the unique performance secondary identifier. Note that this identifier is
+  not arbitrary. This should be the secondary cluster ID as reported by the `cluster_id` field of the [replication status](/vault/api-docs/system/replication#check-status) API
+  endpoint. If, for example, a new performance secondary token
+  [is created](/vault/api-docs/system/replication/replication-performance#generate-performance-secondary-token), and used to call
+  [update-primary](/vault/api-docs/system/replication/replication-performance#update-performance-secondary-s-primary), then path filters will need
+  to be re-created via this API endpoint.
 
 - `mode` `(string: "allow")` – Specifies the filtering mode. Available values
   are "allow" and "deny".
@@ -297,7 +302,7 @@ $ curl \
 This endpoint is used to read the mode and the mount/namespace paths that are filtered
 for a secondary.
 
-| Method | Path                                                    |
+| Method | Path                                                    | |
 | :----- | :------------------------------------------------------ | ------------------ |
 | `GET`  | `/sys/replication/performance/primary/paths-filter/:id` | `200 (empty body)` |
 
@@ -348,7 +353,7 @@ $ curl \
 This endpoint is used to read the namespace and the mount paths that are dynamically
 filtered for a secondary on the primary.
 
-| Method | Path                                                      |
+| Method | Path                                                      | |
 | :----- | :-------------------------------------------------------- | ------------------ |
 | `GET`  | `/sys/replication/performance/primary/dynamic-filter/:id` | `200 (empty body)` |
 
@@ -378,7 +383,7 @@ $ curl \
 This endpoint is used to read the namespace and the mount paths that are dynamically
 filtered for a secondary on the secondary.
 
-| Method | Path                                                        |
+| Method | Path                                                        | |
 | :----- | :---------------------------------------------------------- | ------------------ |
 | `GET`  | `/sys/replication/performance/secondary/dynamic-filter/:id` | `200 (empty body)` |
 
@@ -561,6 +566,13 @@ secondary activation token. This does not wipe all data in the cluster.
 - `ca_path` `string: ()` – Specifies the path to a CA root directory containing
   PEM-format files that the secondary can use when unwrapping the token from the
   primary. If this and ca_file are not given, defaults to system CA roots.
+
+- `update_primary_addrs` `array: []` – List of cluster addresses for potential
+  primary clusters. These addresses will be pinged in sequence, and if any of them
+  respond successfully, these will be recorded as the new primary addresses. This is
+  a lighter weight version of specifying a token and should result in less disruption
+  of replication. Note that it's invalid to specify this and `token` in the same API call.
+  They are mutually exclusive.
 
 ### Sample Payload
 

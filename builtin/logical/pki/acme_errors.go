@@ -20,9 +20,11 @@ const ErrorContentType = "application/problem+json"
 // See RFC 8555 Section 6.7. Errors.
 var ErrAccountDoesNotExist = errors.New("The request specified an account that does not exist")
 
+var ErrAcmeDisabled = errors.New("ACME feature is disabled")
+
 var (
 	ErrAlreadyRevoked          = errors.New("The request specified a certificate to be revoked that has already been revoked")
-	ErrBadCSR                  = errors.New("The CSR is unacceptable (e.g., due to a short key)")
+	ErrBadCSR                  = errors.New("The CSR is unacceptable")
 	ErrBadNonce                = errors.New("The client sent an unacceptable anti-replay nonce")
 	ErrBadPublicKey            = errors.New("The JWS was signed by a public key the server does not support")
 	ErrBadRevocationReason     = errors.New("The revocation reason provided is not allowed by the server")
@@ -145,6 +147,10 @@ func FindType(given error) (err error, id string, code int, found bool) {
 func TranslateError(given error) (*logical.Response, error) {
 	if errors.Is(given, logical.ErrReadOnly) {
 		return nil, given
+	}
+
+	if errors.Is(given, ErrAcmeDisabled) {
+		return logical.RespondWithStatusCode(nil, nil, http.StatusNotFound)
 	}
 
 	// We're multierror aware here: if we're given a list of errors, assume

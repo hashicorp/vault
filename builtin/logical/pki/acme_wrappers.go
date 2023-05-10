@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -17,8 +19,14 @@ import (
 
 type acmeContext struct {
 	// baseUrl is the combination of the configured cluster local URL and the acmePath up to /acme/
-	baseUrl *url.URL
-	sc      *storageContext
+	baseUrl    *url.URL
+	clusterUrl *url.URL
+	sc         *storageContext
+	role       *roleEntry
+	issuer     *issuerEntry
+	// acmeDirectory is a string that can distinguish the various acme directories we have configured
+	// if something needs to remain locked into a directory path structure.
+	acmeDirectory string
 }
 
 type (
@@ -27,6 +35,7 @@ type (
 	acmeAccountRequiredOperation func(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}, acct *acmeAccount) (*logical.Response, error)
 )
 
+// acmeErrorWrapper the lowest level wrapper that will translate errors into proper ACME error responses
 func acmeErrorWrapper(op framework.OperationFunc) framework.OperationFunc {
 	return func(ctx context.Context, r *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		resp, err := op(ctx, r, data)
@@ -38,32 +47,59 @@ func acmeErrorWrapper(op framework.OperationFunc) framework.OperationFunc {
 	}
 }
 
+// acmeWrapper a basic wrapper that all ACME handlers should leverage as the basis.
+// This will create a basic ACME context, validate basic ACME configuration is setup
+// for operations. This pulls in acmeErrorWrapper to translate error messages for users,
+// but does not enforce any sort of ACME authentication.
 func (b *backend) acmeWrapper(op acmeOperation) framework.OperationFunc {
 	return acmeErrorWrapper(func(ctx context.Context, r *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		sc := b.makeStorageContext(ctx, r.Storage)
 
-		if false {
-			// TODO sclark: Check if ACME is enable here
-			return nil, fmt.Errorf("ACME is disabled in configuration: %w", ErrServerInternal)
+		config, err := sc.Backend.acmeState.getConfigWithUpdate(sc)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch ACME configuration: %w", err)
 		}
 
-		acmeBaseUrl, err := getAcmeBaseUrl(sc, r.Path)
+		if isAcmeDisabled(sc, config) {
+			return nil, ErrAcmeDisabled
+		}
+
+		if b.useLegacyBundleCaStorage() {
+			return nil, fmt.Errorf("%w: Can not perform ACME operations until migration has completed", ErrServerInternal)
+		}
+
+		acmeBaseUrl, clusterBase, err := getAcmeBaseUrl(sc, r.Path)
 		if err != nil {
 			return nil, err
 		}
 
+		role, issuer, err := getAcmeRoleAndIssuer(sc, data, config)
+		if err != nil {
+			return nil, err
+		}
+
+		acmeDirectory := getAcmeDirectory(data)
+
 		acmeCtx := &acmeContext{
-			baseUrl: acmeBaseUrl,
-			sc:      sc,
+			baseUrl:       acmeBaseUrl,
+			clusterUrl:    clusterBase,
+			sc:            sc,
+			role:          role,
+			issuer:        issuer,
+			acmeDirectory: acmeDirectory,
 		}
 
 		return op(acmeCtx, r, data)
 	})
 }
 
+// acmeParsedWrapper is an ACME wrapper that will parse out the ACME request parameters, validate
+// that we have a proper signature and pass to the operation a decoded map of arguments received.
+// This wrapper builds on top of acmeWrapper. Note that this does perform signature verification
+// it does not enforce the account being in a valid state nor existing.
 func (b *backend) acmeParsedWrapper(op acmeParsedOperation) framework.OperationFunc {
 	return b.acmeWrapper(func(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData) (*logical.Response, error) {
-		user, data, err := b.acmeState.ParseRequestParams(acmeCtx, fields)
+		user, data, err := b.acmeState.ParseRequestParams(acmeCtx, r, fields)
 		if err != nil {
 			return nil, err
 		}
@@ -134,6 +170,10 @@ func (b *backend) acmeParsedWrapper(op acmeParsedOperation) framework.OperationF
 	})
 }
 
+// acmeAccountRequiredWrapper builds on top of acmeParsedWrapper, enforcing the
+// request has a proper signature for an existing account, and that account is
+// in a valid status. It passes to the operation a decoded form of the request
+// parameters as well as the ACME account the request is for.
 func (b *backend) acmeAccountRequiredWrapper(op acmeAccountRequiredOperation) framework.OperationFunc {
 	return b.acmeParsedWrapper(func(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, uc *jwsCtx, data map[string]interface{}) (*logical.Response, error) {
 		if !uc.Existing {
@@ -175,19 +215,19 @@ func buildAcmeFrameworkPaths(b *backend, patternFunc func(b *backend, pattern st
 	return patterns
 }
 
-func getAcmeBaseUrl(sc *storageContext, path string) (*url.URL, error) {
+func getAcmeBaseUrl(sc *storageContext, path string) (*url.URL, *url.URL, error) {
 	cfg, err := sc.getClusterConfig()
 	if err != nil {
-		return nil, fmt.Errorf("failed loading cluster config: %w", err)
+		return nil, nil, fmt.Errorf("failed loading cluster config: %w", err)
 	}
 
 	if cfg.Path == "" {
-		return nil, fmt.Errorf("ACME feature requires local cluster path configuration to be set: %w", ErrServerInternal)
+		return nil, nil, fmt.Errorf("ACME feature requires local cluster path configuration to be set: %w", ErrServerInternal)
 	}
 
 	baseUrl, err := url.Parse(cfg.Path)
 	if err != nil {
-		return nil, fmt.Errorf("ACME feature a proper URL configured in local cluster path: %w", ErrServerInternal)
+		return nil, nil, fmt.Errorf("ACME feature a proper URL configured in local cluster path: %w", ErrServerInternal)
 	}
 
 	directoryPrefix := ""
@@ -196,5 +236,162 @@ func getAcmeBaseUrl(sc *storageContext, path string) (*url.URL, error) {
 		directoryPrefix = path[0:lastIndex]
 	}
 
-	return baseUrl.JoinPath(directoryPrefix, "/acme/"), nil
+	return baseUrl.JoinPath(directoryPrefix, "/acme/"), baseUrl, nil
+}
+
+func getAcmeIssuer(sc *storageContext, issuerName string) (*issuerEntry, error) {
+	if issuerName == "" {
+		issuerName = defaultRef
+	}
+	issuerId, err := sc.resolveIssuerReference(issuerName)
+	if err != nil {
+		return nil, fmt.Errorf("%w: issuer does not exist", ErrMalformed)
+	}
+
+	issuer, err := sc.fetchIssuerById(issuerId)
+	if err != nil {
+		return nil, fmt.Errorf("issuer failed to load: %w", err)
+	}
+
+	if issuer.Usage.HasUsage(IssuanceUsage) && len(issuer.KeyID) > 0 {
+		return issuer, nil
+	}
+
+	return nil, fmt.Errorf("%w: issuer missing proper issuance usage or key", ErrServerInternal)
+}
+
+func getAcmeDirectory(data *framework.FieldData) string {
+	requestedIssuer := getRequestedAcmeIssuerFromPath(data)
+	requestedRole := getRequestedAcmeRoleFromPath(data)
+
+	return fmt.Sprintf("issuer-%s::role-%s", requestedIssuer, requestedRole)
+}
+
+func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData, config *acmeConfigEntry) (*roleEntry, *issuerEntry, error) {
+	requestedIssuer := getRequestedAcmeIssuerFromPath(data)
+	requestedRole := getRequestedAcmeRoleFromPath(data)
+	issuerToLoad := requestedIssuer
+
+	var wasVerbatim bool
+	var role *roleEntry
+
+	if len(requestedRole) > 0 || len(config.DefaultRole) > 0 {
+		if len(requestedRole) == 0 {
+			requestedRole = config.DefaultRole
+		}
+
+		var err error
+		role, err = sc.Backend.getRole(sc.Context, sc.Storage, requestedRole)
+		if err != nil {
+			return nil, nil, fmt.Errorf("%w: err loading role", ErrServerInternal)
+		}
+
+		if role == nil {
+			return nil, nil, fmt.Errorf("%w: role does not exist", ErrMalformed)
+		}
+
+		if role.NoStore {
+			return nil, nil, fmt.Errorf("%w: role can not be used as NoStore is set to true", ErrServerInternal)
+		}
+
+		// If we haven't loaded an issuer directly from our path and the specified
+		// role does specify an issuer prefer the role's issuer rather than the default issuer.
+		if len(role.Issuer) > 0 && len(requestedIssuer) == 0 {
+			issuerToLoad = role.Issuer
+		}
+	} else {
+		role = buildSignVerbatimRoleWithNoData(&roleEntry{
+			Issuer:  requestedIssuer,
+			NoStore: false,
+			Name:    requestedRole,
+		})
+		wasVerbatim = true
+	}
+
+	allowAnyRole := len(config.AllowedRoles) == 1 && config.AllowedRoles[0] == "*"
+	if !allowAnyRole {
+		if wasVerbatim {
+			return nil, nil, fmt.Errorf("%w: using the default directory without specifying a role is not supported by this configuration; specify 'default_role' in the acme config to the default directories", ErrServerInternal)
+		}
+
+		var foundRole bool
+		for _, name := range config.AllowedRoles {
+			if name == role.Name {
+				foundRole = true
+				break
+			}
+		}
+
+		if !foundRole {
+			return nil, nil, fmt.Errorf("%w: specified role not allowed by ACME policy", ErrServerInternal)
+		}
+	}
+
+	issuer, err := getAcmeIssuer(sc, issuerToLoad)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	allowAnyIssuer := len(config.AllowedIssuers) == 1 && config.AllowedIssuers[0] == "*"
+	if !allowAnyIssuer {
+		var foundIssuer bool
+		for index, name := range config.AllowedIssuers {
+			candidateId, err := sc.resolveIssuerReference(name)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to resolve reference for allowed_issuer entry %d: %w", index, err)
+			}
+
+			if candidateId == issuer.ID {
+				foundIssuer = true
+				break
+			}
+		}
+
+		if !foundIssuer {
+			return nil, nil, fmt.Errorf("%w: specified issuer not allowed by ACME policy", ErrServerInternal)
+		}
+	}
+
+	return role, issuer, nil
+}
+
+func getRequestedAcmeRoleFromPath(data *framework.FieldData) string {
+	requestedRole := ""
+	roleNameRaw, present := data.GetOk("role")
+	if present {
+		requestedRole = roleNameRaw.(string)
+	}
+	return requestedRole
+}
+
+func getRequestedAcmeIssuerFromPath(data *framework.FieldData) string {
+	requestedIssuer := ""
+	requestedIssuerRaw, present := data.GetOk(issuerRefParam)
+	if present {
+		requestedIssuer = requestedIssuerRaw.(string)
+	}
+	return requestedIssuer
+}
+
+func isAcmeDisabled(sc *storageContext, config *acmeConfigEntry) bool {
+	if !config.Enabled {
+		return true
+	}
+
+	if disableAcmeRaw := os.Getenv("VAULT_DISABLE_PUBLIC_ACME"); disableAcmeRaw != "" {
+		disableAcme, err := strconv.ParseBool(disableAcmeRaw)
+		if err != nil {
+			sc.Backend.Logger().Warn("could not parse env var VAULT_DISABLE_PUBLIC_ACME", "error", err)
+			disableAcme = false
+		}
+
+		// The OS environment if true will override any configuration option.
+		if disableAcme {
+			// TODO: If EAB is enforced in the configuration, don't mark
+			// ACME as disabled.
+			return true
+		}
+	}
+
+	return false
 }

@@ -34,6 +34,11 @@ type ChallengeValidation struct {
 	RetryAfter      time.Time `json:"retry_after,omitempty"`
 }
 
+type ChallengeQueueEntry struct {
+	Identifier string
+	RetryAfter time.Time
+}
+
 type ACMEChallengeEngine struct {
 	NumWorkers int
 
@@ -72,17 +77,19 @@ func (ace *ACMEChallengeEngine) LoadFromStorage(b *backend, sc *storageContext) 
 
 	// Add them to our queue of validations to work through later.
 	for _, item := range items {
-		ace.Validations.PushBack(item)
+		ace.Validations.PushBack(&ChallengeQueueEntry{
+			Identifier: item,
+		})
 	}
 
 	return nil
 }
 
-func (ace *ACMEChallengeEngine) Run(b *backend) {
+func (ace *ACMEChallengeEngine) Run(b *backend, state *acmeState) {
 	for true {
 		// err == nil on shutdown.
 		b.Logger().Debug("Starting ACME challenge validation engine")
-		err := ace._run(b)
+		err := ace._run(b, state)
 		if err != nil {
 			b.Logger().Error("Got unexpected error from ACME challenge validation engine", "err", err)
 			time.Sleep(1 * time.Second)
@@ -92,7 +99,7 @@ func (ace *ACMEChallengeEngine) Run(b *backend) {
 	}
 }
 
-func (ace *ACMEChallengeEngine) _run(b *backend) error {
+func (ace *ACMEChallengeEngine) _run(b *backend, state *acmeState) error {
 	// This runner uses a background context for storage operations: we don't
 	// want to tie it to a inbound request and we don't want to set a time
 	// limit, so create a fresh background context.
@@ -125,22 +132,81 @@ func (ace *ACMEChallengeEngine) _run(b *backend) error {
 		finishedWorkersChannels = newFinishedWorkersChannels
 
 		// If we have space to take on another work item, do so.
-		if len(finishedWorkersChannels) < ace.NumWorkers {
+		firstIdentifier := ""
+		startedWork := false
+		now := time.Now()
+		for len(finishedWorkersChannels) < ace.NumWorkers {
+			var task *ChallengeQueueEntry
+
+			// Find our next work item. We do all of these operations
+			// while holding the queue lock, hence some repeated checks
+			// afterwards. Out of this, we get a candidate task, using
+			// element == nil as a sentinel for breaking our parent
+			// loop.
 			ace.ValidationLock.Lock()
 			element := ace.Validations.Front()
 			if element != nil {
 				ace.Validations.Remove(element)
+				task = element.Value.(*ChallengeQueueEntry)
+				if !task.RetryAfter.IsZero() && now.Before(task.RetryAfter) {
+					// We cannot work on this element yet; remove it to
+					// the back of the queue. This allows us to potentially
+					// select the next item in the next iteration.
+					ace.Validations.PushBack(task)
+				}
+
+				if firstIdentifier != "" && task.Identifier == firstIdentifier {
+					// We found and rejected this element before; exit the
+					// loop by "claiming" we didn't find any work.
+					element = nil
+				} else if firstIdentifier == "" {
+					firstIdentifier = task.Identifier
+				}
 			}
 			ace.ValidationLock.Unlock()
+			if element == nil {
+				// There was no more work to do to fill up the queue; exit
+				// this loop.
+				break
+			}
+			if now.Before(task.RetryAfter) {
+				// Here, while we found an element, we didn't want to
+				// completely exit the loop (perhaps it was our first time
+				// finding a work order), so retry without modifying
+				// firstIdentifier.
+				continue
+			}
 
-			task := element.Value.(string)
+			config, err := state.getConfigWithUpdate(runnerSC)
+			if err != nil {
+				return fmt.Errorf("failed fetching ACME configuration: %w", err)
+			}
+
+			// Since this work item was valid, we won't expect to see it in
+			// the validation queue again until it is executed. Here, we
+			// want to avoid infinite looping above (if we removed the one
+			// valid item and the remainder are all not immediately
+			// actionable). At the worst, we'll spend a little more time
+			// looping through the queue until we hit a repeat.
+			firstIdentifier = ""
+
+			// Here, we got a piece of work that is ready to check; create a
+			// channel and a new go routine and run it. Note that this still
+			// could have a RetryAfter date we're not aware of (e.g., if the
+			// cluster restarted as we do not read the entries there).
 			channel := make(chan bool, 1)
-			go ace.VerifyChallenge(runnerSC, task, channel)
+			go ace.VerifyChallenge(runnerSC, task.Identifier, channel, config)
+			finishedWorkersChannels = append(finishedWorkersChannels, channel)
+			startedWork = true
 		}
 
-		// If we have no more work.
-		if len(finishedWorkersChannels) == ace.NumWorkers {
-			time.Sleep(50 * time.Millisecond)
+		// If we have no more capacity for work, we should pause a little to
+		// let the system catch up. Additionally, if we only had
+		// non-actionable work items, we should pause until some time has
+		// elapsed: not too much that we potentially starve any new incoming
+		// items from validation, but not too short that we cause a busy loop.
+		if len(finishedWorkersChannels) == ace.NumWorkers || !startedWork {
+			time.Sleep(100 * time.Millisecond)
 		}
 
 		// Lastly, if we have more work to do, re-trigger ourselves.
@@ -206,7 +272,9 @@ func (ace *ACMEChallengeEngine) AcceptChallenge(sc *storageContext, account stri
 
 	ace.ValidationLock.Lock()
 	defer ace.ValidationLock.Unlock()
-	ace.Validations.PushBack(name)
+	ace.Validations.PushBack(&ChallengeQueueEntry{
+		Identifier: name,
+	})
 
 	select {
 	case ace.NewValidation <- name:
@@ -216,11 +284,11 @@ func (ace *ACMEChallengeEngine) AcceptChallenge(sc *storageContext, account stri
 	return nil
 }
 
-func (ace *ACMEChallengeEngine) VerifyChallenge(runnerSc *storageContext, id string, finished chan bool) {
+func (ace *ACMEChallengeEngine) VerifyChallenge(runnerSc *storageContext, id string, finished chan bool, config *acmeConfigEntry) {
 	sc, _ /* cancel func */ := runnerSc.WithFreshTimeout(MaxChallengeTimeout)
-	runnerSc.Backend.Logger().Debug("Starting verification of challenge: %v", id)
+	runnerSc.Backend.Logger().Debug("Starting verification of challenge", "id", id)
 
-	if retry, err := ace._verifyChallenge(sc, id); err != nil {
+	if retry, retryAfter, err := ace._verifyChallenge(sc, id, config); err != nil {
 		// Because verification of this challenge failed, we need to retry
 		// it in the future. Log the error and re-add the item to the queue
 		// to try again later.
@@ -229,7 +297,10 @@ func (ace *ACMEChallengeEngine) VerifyChallenge(runnerSc *storageContext, id str
 		if retry {
 			ace.ValidationLock.Lock()
 			defer ace.ValidationLock.Unlock()
-			ace.Validations.PushBack(id)
+			ace.Validations.PushBack(&ChallengeQueueEntry{
+				Identifier: id,
+				RetryAfter: retryAfter,
+			})
 
 			// Let the validator know there's a pending challenge.
 			select {
@@ -249,12 +320,12 @@ func (ace *ACMEChallengeEngine) VerifyChallenge(runnerSc *storageContext, id str
 	finished <- false
 }
 
-func (ace *ACMEChallengeEngine) _verifyChallenge(sc *storageContext, id string) (bool, error) {
+func (ace *ACMEChallengeEngine) _verifyChallenge(sc *storageContext, id string, config *acmeConfigEntry) (bool, time.Time, error) {
 	now := time.Now()
 	path := acmeValidationPrefix + id
 	challengeEntry, err := sc.Storage.Get(sc.Context, path)
 	if err != nil {
-		return true, fmt.Errorf("error loading challenge %v: %w", id, err)
+		return true, now, fmt.Errorf("error loading challenge %v: %w", id, err)
 	}
 
 	if challengeEntry == nil {
@@ -267,18 +338,17 @@ func (ace *ACMEChallengeEngine) _verifyChallenge(sc *storageContext, id string) 
 
 	var cv *ChallengeValidation
 	if err := challengeEntry.DecodeJSON(&cv); err != nil {
-		return true, fmt.Errorf("error decoding challenge %v: %w", id, err)
+		return true, now, fmt.Errorf("error decoding challenge %v: %w", id, err)
 	}
 
 	if now.Before(cv.RetryAfter) {
-		time.Sleep(50 * time.Millisecond)
-		return true, fmt.Errorf("retrying challenge %v too soon", id)
+		return true, cv.RetryAfter, fmt.Errorf("retrying challenge %v too soon", id)
 	}
 
 	authzPath := getAuthorizationPath(cv.Account, cv.Authorization)
 	authz, err := loadAuthorizationAtPath(sc, authzPath)
 	if err != nil {
-		return true, fmt.Errorf("error loading authorization %v/%v for challenge %v: %w", cv.Account, cv.Authorization, id, err)
+		return true, now, fmt.Errorf("error loading authorization %v/%v for challenge %v: %w", cv.Account, cv.Authorization, id, err)
 	}
 
 	if authz.Status != ACMEAuthorizationPending {
@@ -319,9 +389,20 @@ func (ace *ACMEChallengeEngine) _verifyChallenge(sc *storageContext, id string) 
 			return ace._verifyChallengeCleanup(sc, err, id)
 		}
 
-		valid, err = ValidateHTTP01Challenge(authz.Identifier.Value, cv.Token, cv.Thumbprint)
+		valid, err = ValidateHTTP01Challenge(authz.Identifier.Value, cv.Token, cv.Thumbprint, config)
 		if err != nil {
 			err = fmt.Errorf("error validating http-01 challenge %v: %w", id, err)
+			return ace._verifyChallengeRetry(sc, cv, authz, err, id)
+		}
+	case ACMEDNSChallenge:
+		if authz.Identifier.Type != ACMEDNSIdentifier {
+			err = fmt.Errorf("unsupported identifier type for authorization %v/%v in challenge %v: %v", cv.Account, cv.Authorization, id, authz.Identifier.Type)
+			return ace._verifyChallengeCleanup(sc, err, id)
+		}
+
+		valid, err = ValidateDNS01Challenge(authz.Identifier.Value, cv.Token, cv.Thumbprint, config)
+		if err != nil {
+			err = fmt.Errorf("error validating dns-01 challenge %v: %w", id, err)
 			return ace._verifyChallengeRetry(sc, cv, authz, err, id)
 		}
 	default:
@@ -330,6 +411,7 @@ func (ace *ACMEChallengeEngine) _verifyChallenge(sc *storageContext, id string) 
 	}
 
 	if !valid {
+		err = fmt.Errorf("challenge failed with no additional information")
 		return ace._verifyChallengeRetry(sc, cv, authz, err, id)
 	}
 
@@ -349,7 +431,7 @@ func (ace *ACMEChallengeEngine) _verifyChallenge(sc *storageContext, id string) 
 	return ace._verifyChallengeCleanup(sc, nil, id)
 }
 
-func (ace *ACMEChallengeEngine) _verifyChallengeRetry(sc *storageContext, cv *ChallengeValidation, authz *ACMEAuthorization, err error, id string) (bool, error) {
+func (ace *ACMEChallengeEngine) _verifyChallengeRetry(sc *storageContext, cv *ChallengeValidation, authz *ACMEAuthorization, err error, id string) (bool, time.Time, error) {
 	now := time.Now()
 	path := acmeValidationPrefix + id
 
@@ -367,29 +449,31 @@ func (ace *ACMEChallengeEngine) _verifyChallengeRetry(sc *storageContext, cv *Ch
 
 	json, jsonErr := logical.StorageEntryJSON(path, cv)
 	if jsonErr != nil {
-		return true, fmt.Errorf("error persisting updated challenge validation queue entry (error prior to retry, if any: %v): %w", err, jsonErr)
+		return true, now, fmt.Errorf("error persisting updated challenge validation queue entry (error prior to retry, if any: %v): %w", err, jsonErr)
 	}
 
 	if putErr := sc.Storage.Put(sc.Context, json); putErr != nil {
-		return true, fmt.Errorf("error writing updated challenge validation entry (error prior to retry, if any: %v): %w", err, putErr)
+		return true, now, fmt.Errorf("error writing updated challenge validation entry (error prior to retry, if any: %v): %w", err, putErr)
 	}
 
 	if err != nil {
 		err = fmt.Errorf("retrying validation: %w", err)
 	}
 
-	return true, err
+	return true, cv.RetryAfter, err
 }
 
-func (ace *ACMEChallengeEngine) _verifyChallengeCleanup(sc *storageContext, err error, id string) (bool, error) {
+func (ace *ACMEChallengeEngine) _verifyChallengeCleanup(sc *storageContext, err error, id string) (bool, time.Time, error) {
+	now := time.Now()
+
 	// Remove our ChallengeValidation entry only.
 	if deleteErr := sc.Storage.Delete(sc.Context, acmeValidationPrefix+id); deleteErr != nil {
-		return true, fmt.Errorf("error deleting challenge %v (error prior to cleanup, if any: %v): %w", id, err, deleteErr)
+		return true, now.Add(-1 * time.Second), fmt.Errorf("error deleting challenge %v (error prior to cleanup, if any: %v): %w", id, err, deleteErr)
 	}
 
 	if err != nil {
 		err = fmt.Errorf("removing challenge validation attempt and not retrying %v; previous error: %w", id, err)
 	}
 
-	return false, err
+	return false, now, err
 }

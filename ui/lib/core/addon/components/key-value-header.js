@@ -83,7 +83,7 @@ export default class KeyValueHeader extends Component {
         label: parts[index],
         text: this.stripTrailingSlash(parts[index]),
         path: path,
-        model: ancestor,
+        model: encodePath(ancestor),
       });
     });
 

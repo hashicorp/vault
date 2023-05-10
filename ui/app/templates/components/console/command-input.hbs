@@ -5,7 +5,7 @@
     <Chevron />
   {{/if}}
   <input onkeyup={{action "handleKeyUp"}} value={{this.value}} autocomplete="off" spellcheck="false" />
-  <ToolTip @horizontalPosition="auto-right" @verticalPosition={{if this.isFullscreen "above" "below"}} as |d|>
+  <ToolTip @horizontalPosition="auto-right" @verticalPosition="above" as |d|>
     <d.Trigger>
       <button
         type="button"

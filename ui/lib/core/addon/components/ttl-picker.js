@@ -18,6 +18,7 @@
  * @param onChange {Function} - This function will be passed a TTL object, which includes enabled{bool}, seconds{number}, timeString{string}, goSafeTimeString{string}.
  * @param initialEnabled=false {Boolean} - Set this value if you want the toggle on when component is mounted
  * @param label="Time to live (TTL)" {String} - Label is the main label that lives next to the toggle. Yielded values will replace the label
+ * @param labelDisabled=Label to display when TTL is toggled off
  * @param helperTextEnabled="" {String} - This helper text is shown under the label when the toggle is switched on
  * @param helperTextDisabled="" {String} - This helper text is shown under the label when the toggle is switched off
  * @param initialValue=null {string} - InitialValue is the duration value which will be shown when the component is loaded. If it can't be parsed, will default to 0.
@@ -52,6 +53,9 @@ export default class TtlPickerComponent extends Component {
   elementId = 'ttl-' + guidFor(this);
 
   get label() {
+    if (this.args.label && this.args.labelDisabled) {
+      return this.enableTTL ? this.args.label : this.args.labelDisabled;
+    }
     return this.args.label || 'Time to live (TTL)';
   }
   get helperText() {
