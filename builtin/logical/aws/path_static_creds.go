@@ -86,13 +86,14 @@ func formatCredsStoragePath(roleName string) string {
 	return fmt.Sprintf("%s/%s", pathStaticCreds, roleName)
 }
 
-const pathStaticCredsHelpSyn = `
-`
+const pathStaticCredsHelpSyn = `Retrieve static credentials from the named role.`
 
 const pathStaticCredsHelpDesc = `
-`
+This path reads AWS credentials for a certain static role. The keys are rotated
+periodically according to their configuration, and will return the same password
+until they are rotated.`
 
 const (
-	descAccessKeyID     = ""
-	descSecretAccessKey = ""
+	descAccessKeyID     = "The access key of the AWS Credential"
+	descSecretAccessKey = "The secret key of the AWS Credential"
 )

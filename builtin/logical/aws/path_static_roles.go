@@ -258,10 +258,14 @@ Manage static roles for AWS.
 
 const pathStaticRolesHelpDesc = `
 This path lets you manage static roles (users) for the AWS secret backend.
+A static role is associated with a single IAM user, and manages the access
+keys based on a rotation period, automatically rotating the credential. I
+the IAM user has multiple access keys, the oldest one will be the one rotated.
 `
 
 const (
 	descRoleName       = "The name of this role."
-	descUsername       = "The user to adopt as a static role."
-	descRotationPeriod = "Period by which to rotate the backing credential of the adopted user."
+	descUsername       = "The IAM user to adopt as a static role."
+	descRotationPeriod = `Period by which to rotate the backing credential of the adopted user. 
+This can be a Go duration (e.g, '1m', 24h'), or an integer number of seconds.`
 )
