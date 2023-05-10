@@ -388,6 +388,11 @@ func (c *Client) performLdapFilterGroupsSearchPaging(cfg *ConfigEntry, conn Pagi
 		return make([]*ldap.Entry, 0), nil
 	}
 
+	if *cfg.MaximumPageSize < 0 {
+		c.Logger.Warn("maximumpagesize is negative, will not query server")
+		return make([]*ldap.Entry, 0), nil
+	}
+
 	// If groupfilter was defined, resolve it as a Go template and use the query for
 	// returning the user's groups
 	if c.Logger.IsDebug() {
