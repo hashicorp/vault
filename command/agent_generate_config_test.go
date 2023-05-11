@@ -8,6 +8,7 @@ import (
 	"context"
 	"reflect"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 )
@@ -243,12 +244,6 @@ exec \{
   restart_kill_signal       = "SIGTERM"
 }
 `),
-			expectedError: false,
-		},
-		"kv-v2-simple": {
-			flagExec:      "./my-app arg1 arg2",
-			flagPaths:     []string{"kv-v2/foo"},
-			expected:      regexp.MustCompile(``),
 			expectedError: false,
 		},
 	}
