@@ -74,7 +74,8 @@ to specify where the configuration is.
 
 - `cluster_name` `(string: <generated>)` – Specifies the identifier for the
   Vault cluster. If omitted, Vault will generate a value. When connecting to
-  Vault Enterprise, this value will be used in the interface.
+  Vault Enterprise, this value will be used in the interface. This can also be 
+  provided via the environment variable `VAULT_CLUSTER_NAME`.
 
 - `cache_size` `(string: "131072")` – Specifies the size of the read cache used
   by the physical storage subsystem. The value is in number of entries, so the

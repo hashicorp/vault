@@ -1106,6 +1106,15 @@ func (c *ServerCommand) Run(args []string) int {
 
 	logProxyEnvironmentVariables(c.logger)
 
+   	if clusterName := os.Getenv("VAULT_CLUSTER_NAME"); clusterName != "" {
+		var err error
+		config.ClusterName = clusterName
+		if err != nil {
+			c.UI.Output("Error parsing the environment variable VAULT_CLUSTER_NAME")
+			return 1
+		}
+	}
+
 	if envMlock := os.Getenv("VAULT_DISABLE_MLOCK"); envMlock != "" {
 		var err error
 		config.DisableMlock, err = strconv.ParseBool(envMlock)
