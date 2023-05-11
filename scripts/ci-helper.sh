@@ -154,17 +154,16 @@ function build() {
   prerelease=$(version_pre)
   build_date=$(build_date)
   : "${GO_TAGS:=""}"
-  : "${KEEP_SYMBOLS:=""}"
+  : "${REMOVE_SYMBOLS:=""}"
 
   # Build our ldflags
   msg="--> Building Vault v$version, revision $revision, built $build_date"
 
   # Keep the symbol and dwarf information by default
-  # TODO: maybe add REMOVE_SYMBOLS?
-  if [ -n "$KEEP_SYMBOLS" ]; then
+  if [ -n "$REMOVE_SYMBOLS" ]; then
     ldflags="-s -w "
   else
-    ldflags="-s -w "
+    ldflags=""
   fi
 
   ldflags="${ldflags}-X github.com/hashicorp/vault/version.Version=$version -X github.com/hashicorp/vault/version.GitCommit=$revision -X github.com/hashicorp/vault/version.BuildDate=$build_date"

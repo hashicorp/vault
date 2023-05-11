@@ -96,7 +96,7 @@ func testVaultServerAllBackends(tb testing.TB) (*api.Client, func()) {
 // testVaultServerAutoUnseal creates a test vault cluster and sets it up with auto unseal
 // the function returns a client, the recovery keys, and a closer function
 func testVaultServerAutoUnseal(tb testing.TB) (*api.Client, []string, func()) {
-	testSeal := seal.NewTestSeal(nil)
+	testSeal, _ := seal.NewTestSeal(nil)
 	autoSeal, err := vault.NewAutoSeal(testSeal)
 	if err != nil {
 		tb.Fatal("unable to create autoseal", err)

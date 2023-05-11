@@ -217,6 +217,8 @@ type acmeAccount struct {
 	TermsOfServiceAgreed bool              `json:"termsOfServiceAgreed"`
 	Jwk                  []byte            `json:"jwk"`
 	AcmeDirectory        string            `json:"acme-directory"`
+	AccountCreatedDate   time.Time         `json:"account_created_date"`
+	AccountRevokedDate   time.Time         `json:"account_revoked_date"`
 }
 
 type acmeOrder struct {
@@ -288,6 +290,7 @@ func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, contact []string, 
 		Jwk:                  c.Jwk,
 		Status:               StatusValid,
 		AcmeDirectory:        ac.acmeDirectory,
+		AccountCreatedDate:   time.Now(),
 	}
 	json, err := logical.StorageEntryJSON(acmeAccountPrefix+c.Kid, acct)
 	if err != nil {

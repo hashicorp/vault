@@ -153,12 +153,11 @@ func TestSysInit_Put_ValidateParams(t *testing.T) {
 }
 
 func TestSysInit_Put_ValidateParams_AutoUnseal(t *testing.T) {
-	testSeal := seal.NewTestSeal(nil)
+	testSeal, _ := seal.NewTestSeal(&seal.TestSealOpts{Name: "transit"})
 	autoSeal, err := vault.NewAutoSeal(testSeal)
 	if err != nil {
 		t.Fatal(err)
 	}
-	autoSeal.SetType("transit")
 
 	// Create the transit server.
 	conf := &vault.CoreConfig{
