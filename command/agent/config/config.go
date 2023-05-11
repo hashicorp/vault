@@ -174,8 +174,7 @@ type TemplateConfig struct {
 }
 
 type ExecConfig struct {
-	Command            string    `hcl:"command,attr" mapstructure:"command"`
-	Args               []string  `hcl:"args,optional" mapstructure:"args"`
+	Command            []string  `hcl:"command,attr" mapstructure:"command"`
 	RestartOnNewSecret string    `hcl:"restart_on_new_secret,optional" mapstructure:"restart_on_new_secret"`
 	RestartKillSignal  os.Signal `hcl:"-" mapstructure:"restart_kill_signal"`
 }
@@ -348,6 +347,134 @@ func (c *Config) ValidateConfig() error {
 
 	if c.AutoAuth == nil && c.Cache == nil && len(c.Listeners) == 0 {
 		return fmt.Errorf("no auto_auth, cache, or listener block found in config")
+	}
+
+	return c.validateEnvTemplateConfig()
+}
+
+func (c *Config) validateEnvTemplateConfig() error {
+	// if we are not in env-template mode, exit early
+	if c.Exec == nil && len(c.EnvTemplates) == 0 {
+		return nil
+	}
+
+	if c.Exec == nil {
+		return fmt.Errorf("'exec' element must be specified with 'env_template' entries")
+	}
+
+	if len(c.EnvTemplates) == 0 {
+		return fmt.Errorf("must specify at least one 'env_template' element with a top-level 'exec' element")
+	}
+
+	if c.ExitAfterAuth {
+		return fmt.Errorf("'exit_after_auth' cannot be specified with 'env_template' entries")
+	}
+
+	if c.APIProxy != nil {
+		return fmt.Errorf("'api_proxy' cannot be specified with 'env_template' entries")
+	}
+
+	if c.TemplateConfig != nil {
+		return fmt.Errorf("'template_config' cannot be specified with 'env_template' entries")
+	}
+
+	if len(c.Templates) > 0 {
+		return fmt.Errorf("'templates' cannot be specified with 'env_template' entries")
+	}
+
+	if c.Exec == nil || len(c.Exec.Command) == 0 {
+		return fmt.Errorf("'exec' requires non-empty 'command' field")
+	}
+
+	for key, template := range c.EnvTemplates {
+		// only two fields are currently required (name & contents)
+		if template.MapToEnvironmentVariable == nil {
+			return fmt.Errorf("env_template[%s]: an environment variable name is required", key)
+		}
+
+		if template.Contents == nil {
+			return fmt.Errorf("env_template[%s]: 'contents' is required", key)
+		}
+
+		if template.Backup != nil {
+			return fmt.Errorf("env_template[%s]: 'backup' is not allowed", key)
+		}
+
+		if template.Command != nil {
+			return fmt.Errorf("env_template[%s]: 'command' is not allowed", key)
+		}
+
+		if template.CommandTimeout != nil {
+			return fmt.Errorf("env_template[%s]: 'command_timeout' is not allowed", key)
+		}
+
+		if template.CreateDestDirs != nil {
+			return fmt.Errorf("env_template[%s]: 'create_dest_dirs' is not allowed", key)
+		}
+
+		if template.Destination != nil {
+			return fmt.Errorf("env_template[%s]: 'destination' is not allowed", key)
+		}
+
+		if template.ErrFatal != nil {
+			return fmt.Errorf("env_template[%s]: 'error_fatal' is not allowed", key)
+		}
+
+		if template.Exec != nil {
+			return fmt.Errorf("env_template[%s]: 'exec' is not allowed", key)
+		}
+
+		if template.Perms != nil {
+			return fmt.Errorf("env_template[%s]: 'perms' is not allowed", key)
+		}
+
+		if template.User != nil {
+			return fmt.Errorf("env_template[%s]: 'user' is not allowed", key)
+		}
+
+		if template.Uid != nil {
+			return fmt.Errorf("env_template[%s]: 'uid' is not allowed", key)
+		}
+
+		if template.Group != nil {
+			return fmt.Errorf("env_template[%s]: 'group' is not allowed", key)
+		}
+
+		if template.Gid != nil {
+			return fmt.Errorf("env_template[%s]: 'gid' is not allowed", key)
+		}
+
+		if template.Source != nil {
+			return fmt.Errorf("env_template[%s]: 'source' is not allowed", key)
+		}
+
+		if template.Wait != nil {
+			return fmt.Errorf("env_template[%s]: 'wait' is not allowed", key)
+		}
+
+		if template.LeftDelim != nil {
+			return fmt.Errorf("env_template[%s]: 'left_delimiter' is not allowed", key)
+		}
+
+		if template.RightDelim != nil {
+			return fmt.Errorf("env_template[%s]: 'right_delimiter' is not allowed", key)
+		}
+
+		if template.ExtFuncMap != nil {
+			return fmt.Errorf("env_template[%s]: 'right_delimiter' is not allowed", key)
+		}
+
+		if len(template.FunctionDenylist) != 0 {
+			return fmt.Errorf("env_template[%s]: 'function_denylist' is not allowed", key)
+		}
+
+		if len(template.FunctionDenylistDeprecated) != 0 {
+			return fmt.Errorf("env_template[%s]: 'function_blacklist' is not allowed", key)
+		}
+
+		if template.SandboxPath != nil {
+			return fmt.Errorf("env_template[%s]: 'sandbox_path' is not allowed", key)
+		}
 	}
 
 	return nil
