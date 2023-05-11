@@ -53,7 +53,7 @@ func Test_AuditBroker_ForwardingHeaders(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			logInput := &logical.LogInput{Request: &logical.Request{Headers: tc.headers}}
 
-			extractForwardingHeaders(logInput)
+			logInput.ConfigureForwardingInfo(HTTPHeaderVaultForwardFrom, HTTPHeaderVaultForwardTo)
 
 			if tc.wantNil {
 				require.Nil(t, logInput.Forwarding)
@@ -62,14 +62,7 @@ func Test_AuditBroker_ForwardingHeaders(t *testing.T) {
 
 			require.NotNil(t, logInput.Forwarding)
 			require.Equal(t, tc.wantFrom, logInput.Forwarding.From)
-			if tc.wantFrom != "" {
-				require.NotContains(t, logInput.Request.Headers, HTTPHeaderVaultForwardFrom)
-			}
-
 			require.Equal(t, tc.wantTo, logInput.Forwarding.To)
-			if tc.wantTo != "" {
-				require.NotContains(t, logInput.Request.Headers, HTTPHeaderVaultForwardTo)
-			}
 		})
 	}
 }
