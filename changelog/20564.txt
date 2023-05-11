@@ -1,0 +1,3 @@
+```release-note:improvement
+command/server: add VAULT_CLUSTER_NAME environment variable support
+```
