@@ -302,9 +302,9 @@ func TestAgent_RequireRequestHeader(t *testing.T) {
 		return cli
 	}
 
-	// ----------------------------------------------------
+	//----------------------------------------------------
 	// Start the server and agent
-	// ----------------------------------------------------
+	//----------------------------------------------------
 
 	// Start a vault server
 	logger := logging.NewVaultLogger(hclog.Trace)
@@ -433,9 +433,9 @@ listener "tcp" {
 		wg.Wait()
 	}()
 
-	// ----------------------------------------------------
+	//----------------------------------------------------
 	// Perform the tests
-	// ----------------------------------------------------
+	//----------------------------------------------------
 
 	// Test against a listener configuration that omits
 	// 'require_request_header', with the header missing from the request.
@@ -520,9 +520,9 @@ listener "tcp" {
 // userAgentHandler struct defined in this test package, so that Vault validates the
 // User-Agent on requests sent by Agent.
 func TestAgent_Template_UserAgent(t *testing.T) {
-	// ----------------------------------------------------
+	//----------------------------------------------------
 	// Start the server and agent
-	// ----------------------------------------------------
+	//----------------------------------------------------
 	logger := logging.NewVaultLogger(hclog.Trace)
 	var h userAgentHandler
 	cluster := vault.NewTestCluster(t,
@@ -732,9 +732,9 @@ auto_auth {
 			// early for shutdown if we do have all the files
 			// rendered
 
-			// ----------------------------------------------------
+			//----------------------------------------------------
 			// Perform the tests
-			// ----------------------------------------------------
+			//----------------------------------------------------
 
 			if numFiles := testListFiles(t, tmpDir, ".json"); numFiles != len(templatePaths) {
 				err = fmt.Errorf("expected (%d) templates, got (%d)", len(templatePaths), numFiles)
@@ -769,9 +769,9 @@ auto_auth {
 
 // TestAgent_Template tests rendering templates
 func TestAgent_Template_Basic(t *testing.T) {
-	// ----------------------------------------------------
+	//----------------------------------------------------
 	// Start the server and agent
-	// ----------------------------------------------------
+	//----------------------------------------------------
 	logger := logging.NewVaultLogger(hclog.Trace)
 	cluster := vault.NewTestCluster(t,
 		&vault.CoreConfig{
@@ -1009,9 +1009,9 @@ auto_auth {
 					// early for shutdown if we do have all the files
 					// rendered
 
-					// ----------------------------------------------------
+					//----------------------------------------------------
 					// Perform the tests
-					// ----------------------------------------------------
+					//----------------------------------------------------
 
 					if numFiles := testListFiles(t, tmpDir, ".json"); numFiles != len(templatePaths) {
 						err = fmt.Errorf("expected (%d) templates, got (%d)", len(templatePaths), numFiles)
@@ -1072,9 +1072,9 @@ func testListFiles(t *testing.T, dir, extension string) int {
 // generate a random number of secrets, but all using the same source. This test
 // reproduces https://github.com/hashicorp/vault/issues/7883
 func TestAgent_Template_ExitCounter(t *testing.T) {
-	// ----------------------------------------------------
+	//----------------------------------------------------
 	// Start the server and agent
-	// ----------------------------------------------------
+	//----------------------------------------------------
 	logger := logging.NewVaultLogger(hclog.Trace)
 	cluster := vault.NewTestCluster(t,
 		&vault.CoreConfig{
@@ -1266,9 +1266,9 @@ exit_after_auth = true
 
 	wg.Wait()
 
-	// ----------------------------------------------------
+	//----------------------------------------------------
 	// Perform the tests
-	// ----------------------------------------------------
+	//----------------------------------------------------
 
 	files, err := os.ReadDir(tmpDir)
 	if err != nil {
@@ -1428,9 +1428,9 @@ func (h *userAgentHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 // TestAgent_Template_Retry verifies that the template server retries requests
 // based on retry configuration.
 func TestAgent_Template_Retry(t *testing.T) {
-	// ----------------------------------------------------
+	//----------------------------------------------------
 	// Start the server and agent
-	// ----------------------------------------------------
+	//----------------------------------------------------
 	logger := logging.NewVaultLogger(hclog.Trace)
 	var h handler
 	cluster := vault.NewTestCluster(t,
@@ -1606,9 +1606,9 @@ template_config {
 					// early for shutdown if we do have all the files
 					// rendered
 
-					// ----------------------------------------------------
+					//----------------------------------------------------
 					// Perform the tests
-					// ----------------------------------------------------
+					//----------------------------------------------------
 
 					if numFiles := testListFiles(t, tmpDir, ".json"); numFiles != 1 {
 						err = fmt.Errorf("expected 1 template, got (%d)", numFiles)
@@ -2160,9 +2160,9 @@ vault {
 }
 
 func TestAgent_ApiProxy_Retry(t *testing.T) {
-	// ----------------------------------------------------
+	//----------------------------------------------------
 	// Start the server and agent
-	// ----------------------------------------------------
+	//----------------------------------------------------
 	logger := logging.NewVaultLogger(hclog.Trace)
 	var h handler
 	cluster := vault.NewTestCluster(t,
@@ -2313,9 +2313,9 @@ vault {
 }
 
 func TestAgent_TemplateConfig_ExitOnRetryFailure(t *testing.T) {
-	// ----------------------------------------------------
+	//----------------------------------------------------
 	// Start the server and agent
-	// ----------------------------------------------------
+	//----------------------------------------------------
 	logger := logging.NewVaultLogger(hclog.Trace)
 	cluster := vault.NewTestCluster(t,
 		&vault.CoreConfig{
@@ -2569,9 +2569,9 @@ vault {
 					// early for shutdown if we do have all the files
 					// rendered
 
-					// ----------------------------------------------------
+					//----------------------------------------------------
 					// Perform the tests
-					// ----------------------------------------------------
+					//----------------------------------------------------
 
 					if numFiles := testListFiles(t, tmpDir, ".json"); numFiles != 1 {
 						err = fmt.Errorf("expected 1 template, got (%d)", numFiles)
@@ -2617,9 +2617,9 @@ vault {
 }
 
 func TestAgent_Metrics(t *testing.T) {
-	// ----------------------------------------------------
+	//----------------------------------------------------
 	// Start the server and agent
-	// ----------------------------------------------------
+	//----------------------------------------------------
 
 	// Start a vault server
 	logger := logging.NewVaultLogger(hclog.Trace)
@@ -2700,9 +2700,9 @@ listener "tcp" {
 }
 
 func TestAgent_Quit(t *testing.T) {
-	// ----------------------------------------------------
+	//----------------------------------------------------
 	// Start the server and agent
-	// ----------------------------------------------------
+	//----------------------------------------------------
 	logger := logging.NewVaultLogger(hclog.Error)
 	cluster := vault.NewTestCluster(t,
 		&vault.CoreConfig{
