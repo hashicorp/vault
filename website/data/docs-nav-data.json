@@ -887,6 +887,10 @@
     "title": "Vault Agent and Vault Proxy",
     "routes": [
       {
+        "title": "Overview",
+        "path": "agentandproxy/index"
+      },
+      {
         "title": "Auto-Auth",
         "routes": [
           {
@@ -995,12 +999,12 @@
                     "path": "agentandproxy/proxy/caching/persistent-caches/kubernetes"
                   }
                 ]
-              },
-              {
-                "title": "Version compatibility",
-                "path": "agentandproxy/proxy/versions"
               }
             ]
+          },
+          {
+            "title": "Version compatibility",
+            "path": "agentandproxy/proxy/versions"
           }
         ]
       },
