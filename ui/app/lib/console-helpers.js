@@ -7,12 +7,13 @@ import keys from 'vault/lib/keycodes';
 import argTokenizer from './arg-tokenizer';
 import { parse } from 'shell-quote';
 
-const supportedCommands = ['read', 'write', 'list', 'delete'];
+// Add new commands to `log-help` component for visibility
+const supportedCommands = ['read', 'write', 'list', 'delete', 'kv-read'];
 const uiCommands = ['api', 'clearall', 'clear', 'fullscreen', 'refresh'];
 
-export function extractDataFromStrings(data) {
-  if (!data) return {};
-  return data.reduce((accumulator, val) => {
+export function extractDataFromStrings(dataArray) {
+  if (!dataArray) return {};
+  return dataArray.reduce((accumulator, val) => {
     // will be "key=value" or "foo=bar=baz"
     // split on the first =
     // default to value of empty string
@@ -29,9 +30,19 @@ export function extractDataFromStrings(data) {
   }, {});
 }
 
-export function extractFlagsFromStrings(flags, method) {
-  if (!flags) return {};
-  return flags.reduce((accumulator, val) => {
+/*
+TODO: make this file TS
+interface Flags {
+  wrapTTL?: string;
+  force?: boolean;
+  field?: string;
+  format?: 'json';
+  [key:string]: string | boolean;
+}
+*/
+export function extractFlagsFromStrings(flagArray, method) {
+  if (!flagArray) return {};
+  return flagArray.reduce((accumulator, val) => {
     // val will be "-flag=value" or "--force"
     // split on the first =
     // default to value or true
@@ -62,7 +73,7 @@ export function executeUICommand(command, logAndOutput, commandFns) {
   return isUICommand;
 }
 
-export function parseCommand(command, shouldThrow) {
+export function parseCommand(command) {
   const args = argTokenizer(parse(command));
   if (args[0] === 'vault') {
     args.shift();
@@ -94,12 +105,9 @@ export function parseCommand(command, shouldThrow) {
   });
 
   if (!supportedCommands.includes(method)) {
-    if (shouldThrow) {
-      throw new Error('invalid command');
-    }
-    return false;
+    throw new Error('invalid command');
   }
-  return [method, flags, path, data];
+  return { method, flagArray: flags, path, dataArray: data };
 }
 
 export function logFromResponse(response, path, method, flags) {

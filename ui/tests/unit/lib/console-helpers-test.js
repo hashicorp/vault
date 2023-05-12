@@ -122,10 +122,10 @@ module('Unit | Lib | console helpers', function () {
 
     assert.throws(
       () => {
-        parseCommand(command, true);
+        parseCommand(command);
       },
       /invalid command/,
-      'throws on invalid command when `shouldThrow` is true'
+      'throws on invalid command'
     );
   });
 

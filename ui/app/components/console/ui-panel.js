@@ -8,6 +8,7 @@ import { alias, or } from '@ember/object/computed';
 import Component from '@ember/component';
 import { getOwner } from '@ember/application';
 import { schedule } from '@ember/runloop';
+import { camelize } from '@ember/string';
 import { task } from 'ember-concurrency';
 import ControlGroupError from 'vault/lib/control-group-error';
 import {
@@ -65,17 +66,15 @@ export default Component.extend({
 
     // parse to verify it's valid
     try {
-      serviceArgs = parseCommand(command, shouldThrow);
+      serviceArgs = parseCommand(command);
     } catch (e) {
-      this.logAndOutput(command, { type: 'help' });
+      if (shouldThrow) {
+        this.logAndOutput(command, { type: 'help' });
+      }
       return;
     }
-    // we have a invalid command but don't want to throw
-    if (serviceArgs === false) {
-      return;
-    }
-    const [method, flagArray, path, dataArray] = serviceArgs;
 
+    const { method, flagArray, path, dataArray } = serviceArgs;
     const flags = extractFlagsFromStrings(flagArray, method);
     const data = extractDataFromStrings(dataArray);
 
@@ -85,7 +84,7 @@ export default Component.extend({
       return;
     }
     try {
-      const resp = yield service[method].call(service, path, data, flags.wrapTTL);
+      const resp = yield service[camelize(method)].call(service, path, data, flags);
       this.logAndOutput(command, logFromResponse(resp, path, method, flags));
     } catch (error) {
       if (error instanceof ControlGroupError) {

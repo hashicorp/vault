@@ -84,11 +84,20 @@ export default Service.extend({
     });
   },
 
-  read(path, data, wrapTTL) {
+  kvRead(path, data, flags) {
+    const { wrapTTL, metadata } = flags;
+    // Split on first / to find backend and secret path
+    const pathSegment = metadata ? 'metadata' : 'data';
+    const [backend, secretPath] = path.split(/\/(.+)?/);
+    const kvPath = `${backend}/${pathSegment}/${secretPath}`;
+    return this.ajax('read', sanitizePath(kvPath), { wrapTTL });
+  },
+
+  read(path, data, { wrapTTL }) {
     return this.ajax('read', sanitizePath(path), { wrapTTL });
   },
 
-  write(path, data, wrapTTL) {
+  write(path, data, { wrapTTL }) {
     return this.ajax('write', sanitizePath(path), { data, wrapTTL });
   },
 
