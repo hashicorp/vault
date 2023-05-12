@@ -104,6 +104,7 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 	}
 
 	config.Prune()
+	t.Log("AAAAAA", config.EnvTemplates)
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -2124,26 +2125,25 @@ func TestLoadConfigFile_EnvTemplates(t *testing.T) {
 	}
 }
 
-func TestLoadConfigFile_EnvTemplateComplex(t *testing.T) {
+func TestLoadConfigFile_EnvTemplatesComplex(t *testing.T) {
 	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-complex.hcl")
 
 	if err != nil {
 		t.Fatalf("error loading config file: %s", err)
 	}
 	expectedKeys := []string{
-		"FOO_DATA_LOCK",
-		"FOO_DATA_PASSWORD",
-		"FOO_DATA_USER",
+		"FOO_PASSWORD",
+		"FOO_USER",
 	}
 	for _, expected := range expectedKeys {
 		_, ok := cfg.EnvTemplates[expected]
 		if !ok {
-			t.Fatalf("expected env var %s", expected)
+			t.Fatalf("expected environment variable template %q", expected)
 		}
 	}
 }
 
-func TestLoadConfigFile_ExecSimple(t *testing.T) {
+func TestLoadConfigFile_EnvTemplateSimple(t *testing.T) {
 	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-simple.hcl")
 
 	if err != nil {
@@ -2154,14 +2154,7 @@ func TestLoadConfigFile_ExecSimple(t *testing.T) {
 		t.Fatal("expected exec config to be parsed")
 	}
 
-	if cfg.Exec.Command != "/path/to/my/app" {
-		t.Fatal("exec.command does not have expected value")
+	if diff := deep.Equal(cfg.Exec.Command, []string{"/path/to/my/app", "arg1", "arg2"}); diff != nil {
+		t.Fatalf("exec.Command does not have expected values: %v", diff)
 	}
-
-	if diff := deep.Equal(cfg.Exec.Args, []string{"arg1", "arg2"}); diff != nil {
-		t.Fatalf("exec.args does not have expected values: %v", cfg.Exec.Args)
-	}
-
-	// check defaults
-
 }

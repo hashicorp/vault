@@ -4,31 +4,31 @@ auto_auth {
     type = "token_file"
 
     config {
-      token_file_path = "$HOME/.vault-token"
+      token_file_path = "/Users/avean/.vault-token"
     }
   }
+}
+
+template_config {
+  static_secret_render_interval = "5m"
+  exit_on_retry_failure         = true
 }
 
 vault {
   address = "http://localhost:8200"
 }
 
-env_template "FOO_DATA_LOCK" {
-  contents             = "{{ with secret \"secret/data/foo\" }}{{ .Data.data.lock }}{{ end }}"
-  error_on_missing_key = false
-}
-env_template "FOO_DATA_PASSWORD" {
+env_template "FOO_PASSWORD" {
   contents             = "{{ with secret \"secret/data/foo\" }}{{ .Data.data.password }}{{ end }}"
   error_on_missing_key = false
 }
-env_template "FOO_DATA_USER" {
+env_template "FOO_USER" {
   contents             = "{{ with secret \"secret/data/foo\" }}{{ .Data.data.user }}{{ end }}"
   error_on_missing_key = false
 }
 
 exec {
-  command               = "env"
-  args                  = []
+  command               = ["./my-app", "arg1", "arg2"]
   restart_on_new_secret = "always"
   restart_kill_signal   = "SIGTERM"
 }
