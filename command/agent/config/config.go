@@ -183,7 +183,6 @@ type ExecConfig struct {
 func NewConfig() *Config {
 	return &Config{
 		SharedConfig: new(configutil.SharedConfig),
-		EnvTemplates: map[string]*ctconfig.TemplateConfig{},
 	}
 }
 
