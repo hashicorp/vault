@@ -276,7 +276,7 @@ spec:
         vault.hashicorp.com/agent-inject-secret-config: 'secret/data/web'
         # Environment variable export template
         vault.hashicorp.com/agent-inject-template-config: |
-          {{ with secret "secret/data/web" -}}
+          {{- with secret "secret/data/web" -}}
             export api_key="{{ .Data.data.payments_api_key }}"
           {{- end }}
     spec:
