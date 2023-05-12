@@ -1,0 +1,3 @@
+```release-note:improvement
+openapi: Add support for full response structures with "data" wrappers
+```
