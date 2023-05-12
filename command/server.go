@@ -1106,7 +1106,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	logProxyEnvironmentVariables(c.logger)
 
-   	if clusterName := os.Getenv("VAULT_CLUSTER_NAME"); clusterName != "" {
+	if clusterName := os.Getenv("VAULT_CLUSTER_NAME"); clusterName != "" {
 		var err error
 		config.ClusterName = clusterName
 		if err != nil {
