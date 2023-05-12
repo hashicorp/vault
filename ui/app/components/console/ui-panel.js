@@ -12,11 +12,12 @@ import { task } from 'ember-concurrency';
 import ControlGroupError from 'vault/lib/control-group-error';
 import {
   parseCommand,
-  extractDataAndFlags,
   logFromResponse,
   logFromError,
-  logErrorFromInput,
+  formattedErrorFromInput,
   executeUICommand,
+  extractFlagsFromStrings,
+  extractDataFromStrings,
 } from 'vault/lib/console-helpers';
 
 export default Component.extend({
@@ -73,14 +74,12 @@ export default Component.extend({
     if (serviceArgs === false) {
       return;
     }
-
     const [method, flagArray, path, dataArray] = serviceArgs;
 
-    if (dataArray || flagArray) {
-      var { data, flags } = extractDataAndFlags(method, dataArray, flagArray);
-    }
+    const flags = extractFlagsFromStrings(flagArray, method);
+    const data = extractDataFromStrings(dataArray);
 
-    const inputError = logErrorFromInput(path, method, flags, dataArray);
+    const inputError = formattedErrorFromInput(path, method, flags, dataArray);
     if (inputError) {
       this.logAndOutput(command, inputError);
       return;

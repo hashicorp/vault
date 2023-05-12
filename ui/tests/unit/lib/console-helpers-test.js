@@ -6,10 +6,11 @@
 import { module, test } from 'qunit';
 import {
   parseCommand,
-  extractDataAndFlags,
   logFromResponse,
   logFromError,
-  logErrorFromInput,
+  formattedErrorFromInput,
+  extractFlagsFromStrings,
+  extractDataFromStrings,
 } from 'vault/lib/console-helpers';
 
 module('Unit | Lib | console helpers', function () {
@@ -222,9 +223,12 @@ module('Unit | Lib | console helpers', function () {
   ];
 
   testExtractCases.forEach(function (testCase) {
-    test(`#extractDataAndFlags: ${testCase.name}`, function (assert) {
-      const { data, flags } = extractDataAndFlags(testCase.method, ...testCase.input);
+    test(`#extractDataFromStrings: ${testCase.name}`, function (assert) {
+      const data = extractDataFromStrings(testCase.method, ...testCase.input);
       assert.deepEqual(data, testCase.expected.data, 'has expected data');
+    });
+    test(`#extractFlagsFromStrings: ${testCase.name}`, function (assert) {
+      const flags = extractFlagsFromStrings(testCase.method, ...testCase.input);
       assert.deepEqual(flags, testCase.expected.flags, 'has expected flags');
     });
   });
@@ -469,8 +473,8 @@ module('Unit | Lib | console helpers', function () {
   ];
 
   testCommandCases.forEach(function (testCase) {
-    test(`#logErrorFromInput: ${testCase.name}`, function (assert) {
-      const data = logErrorFromInput(...testCase.args);
+    test(`#formattedErrorFromInput: ${testCase.name}`, function (assert) {
+      const data = formattedErrorFromInput(...testCase.args);
 
       assert.deepEqual(
         data,

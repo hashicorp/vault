@@ -10,36 +10,44 @@ import { parse } from 'shell-quote';
 const supportedCommands = ['read', 'write', 'list', 'delete'];
 const uiCommands = ['api', 'clearall', 'clear', 'fullscreen', 'refresh'];
 
-export function extractDataAndFlags(method, data, flags) {
-  return data.concat(flags).reduce(
-    (accumulator, val) => {
-      // will be "key=value" or "-flag=value" or "foo=bar=baz"
-      // split on the first =
-      // default to value of empty string
-      const [item, value = ''] = val.split(/=(.+)?/);
-      if (item.startsWith('-')) {
-        let flagName = item.replace(/^-/, '');
-        if (flagName === 'wrap-ttl') {
-          flagName = 'wrapTTL';
-        } else if (method === 'write') {
-          if (flagName === 'f' || flagName === '-force') {
-            flagName = 'force';
-          }
-        }
-        accumulator.flags[flagName] = value || true;
-        return accumulator;
-      }
-      // if it exists in data already, then we have multiple
-      // foo=bar in the list and need to make it an array
-      if (accumulator.data[item]) {
-        accumulator.data[item] = [].concat(accumulator.data[item], value);
-        return accumulator;
-      }
-      accumulator.data[item] = value;
+export function extractDataFromStrings(data) {
+  if (!data) return {};
+  return data.reduce((accumulator, val) => {
+    // will be "key=value" or "foo=bar=baz"
+    // split on the first =
+    // default to value of empty string
+    const [item, value = ''] = val.split(/=(.+)?/);
+
+    // if it exists in data already, then we have multiple
+    // foo=bar in the list and need to make it an array
+    if (accumulator[item]) {
+      accumulator[item] = [...accumulator[item], value];
       return accumulator;
-    },
-    { data: {}, flags: {} }
-  );
+    }
+    accumulator[item] = value;
+    return accumulator;
+  }, {});
+}
+
+export function extractFlagsFromStrings(flags, method) {
+  if (!flags) return {};
+  return flags.reduce((accumulator, val) => {
+    // val will be "-flag=value" or "--force"
+    // split on the first =
+    // default to value or true
+    const [item, value] = val.split(/=(.+)?/);
+
+    let flagName = item.replace(/^-/, '');
+    if (flagName === 'wrap-ttl') {
+      flagName = 'wrapTTL';
+    } else if (method === 'write') {
+      if (flagName === 'f' || flagName === '-force') {
+        flagName = 'force';
+      }
+    }
+    accumulator[flagName] = value || true;
+    return accumulator;
+  }, {});
 }
 
 export function executeUICommand(command, logAndOutput, commandFns) {
@@ -192,7 +200,7 @@ export function shiftCommandIndex(keyCode, history, index) {
   return [index, newInputValue];
 }
 
-export function logErrorFromInput(path, method, flags, dataArray) {
+export function formattedErrorFromInput(path, method, flags, dataArray) {
   if (path === undefined) {
     return { type: 'error', content: 'A path is required to make a request.' };
   }
