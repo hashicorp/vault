@@ -888,7 +888,7 @@
     "routes": [
       {
         "title": "Overview",
-        "path": "agentandproxy/index"
+        "path": "agentandproxy"
       },
       {
         "title": "Auto-Auth",
