@@ -71,9 +71,11 @@ module('Acceptance | pki workflow', function (hooks) {
 
     await click(SELECTORS.certsTab);
     assertEmptyState(assert, 'certificates');
-
     await click(SELECTORS.keysTab);
     assertEmptyState(assert, 'keys');
+
+    await click(SELECTORS.tidyTab);
+    assertEmptyState(assert, 'tidy');
   });
 
   module('roles', function (hooks) {
@@ -442,14 +444,6 @@ module('Acceptance | pki workflow', function (hooks) {
       assert
         .dom('[data-test-input="commonName"]')
         .hasValue('Hashicorp Test', 'form prefilled with parent issuer cn');
-    });
-
-    test('it navigates to the tidy page from configuration toolbar', async function (assert) {
-      await authPage.login(this.pkiAdminToken);
-      await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
-      await click(SELECTORS.configuration.tidyToolbar);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/tidy`);
     });
 
     test('it returns to the configuration page after submit', async function (assert) {

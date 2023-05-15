@@ -7,6 +7,7 @@ import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 import { withConfirmLeave } from 'core/decorators/confirm-leave';
 
+// TODO move to PkiTidyManualRoute
 @withConfirmLeave('model.tidy')
 export default class PkiConfigurationTidyRoute extends Route {
   @service store;
