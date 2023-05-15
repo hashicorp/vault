@@ -15,6 +15,9 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+// See comment in command/format.go
+const hopeDelim = "♨"
+
 type acmeBillingSystemViewImpl struct {
 	extendedSystemView
 	logical.ManagedKeySystemView
@@ -44,7 +47,7 @@ func (a *acmeBillingSystemViewImpl) CreateActivityCountEventForIdentifiers(ctx c
 	// TODO: Because of prefixing currently handled by AddEventToFragment,
 	// we do not need to ensure it is globally unique.
 	sort.Strings(identifiers)
-	joinedIdentifiers := strings.Join(identifiers, ".")
+	joinedIdentifiers := "[" + strings.Join(identifiers, "]"+hopeDelim+"[") + "]"
 	identifiersHash := sha256.Sum256([]byte(joinedIdentifiers))
 	clientID := base64.RawURLEncoding.EncodeToString(identifiersHash[:])
 
