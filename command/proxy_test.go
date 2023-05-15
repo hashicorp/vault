@@ -105,6 +105,8 @@ func testProxyExitAfterAuth(t *testing.T, viaFlag bool) {
 	}
 	in := inf.Name()
 	inf.Close()
+	// We remove these files in this test since we don't need the files, we just need
+	// a non-conflicting file name for the config.
 	os.Remove(in)
 	t.Logf("input: %s", in)
 
@@ -367,13 +369,13 @@ api_proxy {
 	// and works for LookupSelf
 	conf := api.DefaultConfig()
 	conf.Address = "http://" + listenAddr
-	agentClient, err := api.NewClient(conf)
+	proxyClient, err := api.NewClient(conf)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	agentClient.SetToken("")
-	err = agentClient.SetAddress("http://" + listenAddr)
+	proxyClient.SetToken("")
+	err = proxyClient.SetAddress("http://" + listenAddr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -381,8 +383,8 @@ api_proxy {
 	// Wait for the token to be sent to syncs and be available to be used
 	time.Sleep(5 * time.Second)
 
-	req = agentClient.NewRequest("GET", "/v1/auth/token/lookup-self")
-	body = request(t, agentClient, req, 200)
+	req = proxyClient.NewRequest("GET", "/v1/auth/token/lookup-self")
+	body = request(t, proxyClient, req, 200)
 
 	close(cmd.ShutdownCh)
 	wg.Wait()
@@ -546,19 +548,19 @@ vault {
 		t.Errorf("timeout")
 	}
 
-	agentClient, err := api.NewClient(api.DefaultConfig())
+	proxyClient, err := api.NewClient(api.DefaultConfig())
 	if err != nil {
 		t.Fatal(err)
 	}
-	agentClient.AddHeader("User-Agent", userAgentForProxiedClient)
-	agentClient.SetToken(serverClient.Token())
-	agentClient.SetMaxRetries(0)
-	err = agentClient.SetAddress("http://" + listenAddr)
+	proxyClient.AddHeader("User-Agent", userAgentForProxiedClient)
+	proxyClient.SetToken(serverClient.Token())
+	proxyClient.SetMaxRetries(0)
+	err = proxyClient.SetAddress("http://" + listenAddr)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = agentClient.Auth().Token().LookupSelf()
+	_, err = proxyClient.Auth().Token().LookupSelf()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -624,13 +626,13 @@ vault {
 		t.Errorf("timeout")
 	}
 
-	agentClient, err := api.NewClient(api.DefaultConfig())
+	proxyClient, err := api.NewClient(api.DefaultConfig())
 	if err != nil {
 		t.Fatal(err)
 	}
-	agentClient.SetToken(serverClient.Token())
-	agentClient.SetMaxRetries(0)
-	err = agentClient.SetAddress("http://" + listenAddr)
+	proxyClient.SetToken(serverClient.Token())
+	proxyClient.SetMaxRetries(0)
+	err = proxyClient.SetAddress("http://" + listenAddr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -646,7 +648,7 @@ vault {
 	// i.e. the most concise I could make the test that I can tell
 	// creating an orphan token returns Auth, is renewable, and isn't a token
 	// that's managed elsewhere (since it's an orphan)
-	secret, err := agentClient.Auth().Token().CreateOrphan(tokenCreateRequest)
+	secret, err := proxyClient.Auth().Token().CreateOrphan(tokenCreateRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -656,7 +658,7 @@ vault {
 
 	token := secret.Auth.ClientToken
 
-	secret, err = agentClient.Auth().Token().CreateOrphan(tokenCreateRequest)
+	secret, err = proxyClient.Auth().Token().CreateOrphan(tokenCreateRequest)
 	if err != nil {
 		t.Fatal(err)
 	}

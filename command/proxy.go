@@ -265,8 +265,11 @@ func (c *ProxyCommand) Run(args []string) int {
 	}
 
 	serverHealth, err := client.Sys().Health()
+	// We don't have any special behaviour if the error != nil, as this
+	// is not worth stopping the Proxy process over.
 	if err == nil {
-		// We don't exit on error here, as this is not worth stopping Proxy over
+		// Note that we don't exit if the versions don't match, as this is a valid
+		// configuration, but we should still let the user know.
 		serverVersion := serverHealth.Version
 		proxyVersion := version.GetVersion().VersionNumber()
 		if serverVersion != proxyVersion {
@@ -274,12 +277,6 @@ func (c *ProxyCommand) Run(args []string) int {
 				fmt.Sprintf("Vault Proxy version: %s, Vault server version: %s", proxyVersion, serverVersion))
 		}
 	}
-
-	// ctx and cancelFunc are passed to the AuthHandler, SinkServer, and
-	// TemplateServer that periodically listen for ctx.Done() to fire and shut
-	// down accordingly.
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
 
 	// telemetry configuration
 	inmemMetrics, _, prometheusEnabled, err := configutil.SetupTelemetry(&configutil.SetupTelemetryOpts{
@@ -474,6 +471,12 @@ func (c *ProxyCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("Error creating API proxy: %v", err))
 		return 1
 	}
+
+	// ctx and cancelFunc are passed to the AuthHandler, SinkServer,
+	// and other subsystems, so that they can listen for ctx.Done() to
+	// fire and shut down accordingly.
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
 
 	// Parse proxy cache configurations
 	if config.Cache != nil {
