@@ -208,7 +208,8 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 	if eabPolicyRaw, ok := d.GetOk("eab_policy"); ok {
 		eabPolicy, err := getEabPolicyByString(eabPolicyRaw.(string))
 		if err != nil {
-			return nil, fmt.Errorf("invalid eab policy name provided")
+			return nil, fmt.Errorf("invalid eab policy name provided, valid values are '%s', '%s', '%s'",
+				eabPolicyNotRequired, eabPolicyNewAccountRequired, eabPolicyAlwaysRequired)
 		}
 		config.EabPolicyName = eabPolicy.Name
 	}
