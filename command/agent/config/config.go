@@ -339,7 +339,8 @@ func (c *Config) ValidateConfig() error {
 	if c.AutoAuth != nil {
 		if len(c.AutoAuth.Sinks) == 0 &&
 			(c.APIProxy == nil || !c.APIProxy.UseAutoAuthToken) &&
-			len(c.Templates) == 0 {
+			len(c.Templates) == 0 &&
+			len(c.EnvTemplates) == 0 {
 			return fmt.Errorf("auto_auth requires at least one sink or at least one template or api_proxy.use_auto_auth_token=true")
 		}
 	}
@@ -371,10 +372,6 @@ func (c *Config) validateEnvTemplateConfig() error {
 
 	if c.APIProxy != nil {
 		return fmt.Errorf("'api_proxy' cannot be specified with 'env_template' entries")
-	}
-
-	if c.TemplateConfig != nil {
-		return fmt.Errorf("'template_config' cannot be specified with 'env_template' entries")
 	}
 
 	if len(c.Templates) > 0 {

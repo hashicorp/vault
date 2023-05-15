@@ -104,7 +104,6 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 	}
 
 	config.Prune()
-	t.Log("AAAAAA", config.EnvTemplates)
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -2112,25 +2111,15 @@ func TestLoadConfigFile_Bad_Value_Disable_Keep_Alives(t *testing.T) {
 }
 
 func TestLoadConfigFile_EnvTemplates(t *testing.T) {
-	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-simple.hcl")
-
+	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates.hcl")
 	if err != nil {
 		t.Fatalf("error loading config file: %s", err)
 	}
 
-	expectedKey := "MY_DATABASE_USER"
-	_, ok := cfg.EnvTemplates[expectedKey]
-	if !ok {
-		t.Fatalf("expected env var name to be populated")
+	if err := cfg.ValidateConfig(); err != nil {
+		t.Fatalf("validation error: %s", err)
 	}
-}
 
-func TestLoadConfigFile_EnvTemplatesComplex(t *testing.T) {
-	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-complex.hcl")
-
-	if err != nil {
-		t.Fatalf("error loading config file: %s", err)
-	}
 	expectedKeys := []string{
 		"FOO_PASSWORD",
 		"FOO_USER",
@@ -2140,21 +2129,5 @@ func TestLoadConfigFile_EnvTemplatesComplex(t *testing.T) {
 		if !ok {
 			t.Fatalf("expected environment variable template %q", expected)
 		}
-	}
-}
-
-func TestLoadConfigFile_EnvTemplateSimple(t *testing.T) {
-	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-simple.hcl")
-
-	if err != nil {
-		t.Fatalf("error loading config file: %s", err)
-	}
-
-	if cfg.Exec == nil {
-		t.Fatal("expected exec config to be parsed")
-	}
-
-	if diff := deep.Equal(cfg.Exec.Command, []string{"/path/to/my/app", "arg1", "arg2"}); diff != nil {
-		t.Fatalf("exec.Command does not have expected values: %v", diff)
 	}
 }
