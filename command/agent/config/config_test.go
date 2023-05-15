@@ -2111,12 +2111,12 @@ func TestLoadConfigFile_Bad_Value_Disable_Keep_Alives(t *testing.T) {
 }
 
 func TestLoadConfigFile_EnvTemplates(t *testing.T) {
-	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates.hcl")
+	config, err := LoadConfigFile("./test-fixtures/config-env-templates.hcl")
 	if err != nil {
 		t.Fatalf("error loading config file: %s", err)
 	}
 
-	if err := cfg.ValidateConfig(); err != nil {
+	if err := config.ValidateConfig(); err != nil {
 		t.Fatalf("validation error: %s", err)
 	}
 
@@ -2125,9 +2125,51 @@ func TestLoadConfigFile_EnvTemplates(t *testing.T) {
 		"FOO_USER",
 	}
 	for _, expected := range expectedKeys {
-		_, ok := cfg.EnvTemplates[expected]
+		_, ok := config.EnvTemplates[expected]
 		if !ok {
 			t.Fatalf("expected environment variable template %q", expected)
 		}
+	}
+}
+
+func TestLoadConfigFile_Bad_EnvTemplates_MissingExec(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-missing-exec.hcl")
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if err := config.ValidateConfig(); err == nil {
+		t.Fatal("expected an error from ValidateConfig: exec section is missing")
+	}
+}
+
+func TestLoadConfigFile_Bad_EnvTemplates_WithProxy(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-with-proxy.hcl")
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if err := config.ValidateConfig(); err == nil {
+		t.Fatal("expected an error from ValidateConfig: listener / api_proxy are not compatible with env_template")
+	}
+}
+func TestLoadConfigFile_Bad_EnvTemplates_WithFileTemplates(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-with-file-templates.hcl")
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if err := config.ValidateConfig(); err == nil {
+		t.Fatal("expected an error from ValidateConfig: file template stanza is not compatible with env_template")
+	}
+}
+func TestLoadConfigFile_Bad_EnvTemplates_DisalowedFields(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-disalowed-fields.hcl")
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if err := config.ValidateConfig(); err == nil {
+		t.Fatal("expected an error from ValidateConfig: disallowed fields specified in env_template")
 	}
 }
