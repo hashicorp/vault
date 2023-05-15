@@ -68,7 +68,7 @@ func getSecretWithAppRole() (string, error) {
 
 For some Vault deployments, making (and maintaining) these changes to
 applications may not be a problem, and may actually be preferred. This may be
-applied to scenarios where you have a small number of applications or you want
+applied to scenarios where you have a small number of applications, or you want
 to keep strict, customized control over how each application interacts with
 Vault. However, in other situations where you have a large number of
 applications, as in large enterprises, you may not have the resources or expertise
@@ -78,7 +78,7 @@ to add the Vault integration code.
 
 Vault Agent and Vault Proxy aim to remove this initial hurdle to adopt Vault by providing a
 more scalable and simpler way for applications to integrate with Vault. Vault Agent can
-obtain the secrets themselves and provide them to applications, and Vault Proxy can act as
+obtain secrets and provide them to applications, and Vault Proxy can act as
 a proxy between Vault and the application, optionally simplifying the authentication process
 and caching requests.
 

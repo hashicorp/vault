@@ -42,7 +42,7 @@ Vault Proxy can restore tokens and leases from a persistent cache file created
 by a previous Vault Proxy process.
 
 Refer to the [Vault Proxy Persistent
-Caching](/vault/docs/agentandproxy/agentandproxy/proxy/caching/persistent-caches) page for more information on
+Caching](/vault/docs/agentandproxy/proxy/caching/persistent-caches) page for more information on
 this functionality.
 
 ## Cache Evictions
@@ -90,7 +90,7 @@ made available via the Vault server's [Go
 API](https://godoc.org/github.com/hashicorp/vault/api#Renewer). Proxy performs
 all operations in memory and does not persist anything to storage. This means
 that when the proxy is shut down, all the renewal operations are immediately
-terminated and there is no way for ageproxynt to resume renewals after the fact.
+terminated and there is no way for the proxy to resume renewals after the fact.
 Note that shutting down the proxy does not indicate revocations of the secrets,
 instead it only means that renewal responsibility for all the valid unrevoked
 secrets are no longer performed by the Vault proxy.

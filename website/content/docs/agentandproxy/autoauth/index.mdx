@@ -18,7 +18,7 @@ that should be used in the current environment; and any number of Sinks, which
 are locations where the agent should write a token any time the current token
 value has changed.
 
-When the agent is started with Auto-Auth enabled, it will attempt to acquire a
+When Vault Agent or Vault Proxy are started with Auto-Auth enabled, it will attempt to acquire a
 Vault token using the configured Method. On failure, it will exponentially back
 off and then retry. On success, unless the auth method is configured to wrap
 the tokens, it will keep the resulting token renewed until renewal is no longer
@@ -38,21 +38,21 @@ response-wrapped, then encrypted.
 
 ### Response-Wrapping Tokens
 
-There are two ways that tokens can be response-wrapped by the agent:
+There are two ways that tokens can be response-wrapped:
 
 1. By the auth method. This allows the end client to introspect the
    `creation_path` of the token, helping prevent Man-In-The-Middle (MITM)
-   attacks. However, because the agent cannot then unwrap the token and rewrap
-   it without modifying the `creation_path`, the agent is not able to renew the
-   token; it is up to the end client to renew the token. The agent stays
-   daemonized in this mode since some auth methods allow for reauthentication
+   attacks. However, because auto-auth cannot then unwrap the token and rewrap
+   it without modifying the `creation_path`, we are not able to renew the
+   token; it is up to the end client to renew the token. Agent and Proxy both
+   stay daemonized in this mode since some auth methods allow for reauthentication
    on certain events.
 
 2. By any of the token sinks. Because more than one sink can be configured, the
    token must be wrapped after it is fetched, rather than wrapped by Vault as
    it's being returned. As a result, the `creation_path` will always be
    `sys/wrapping/wrap`, and validation of this field cannot be used as
-   protection against MITM attacks. However, this mode allows the agent to keep
+   protection against MITM attacks. However, this mode allows auto-auth to keep
    the token renewed for the end client and automatically reauthenticate when
    it expires.
 
@@ -76,17 +76,17 @@ public-key input files could attack this exchange. Using TLS to protect the
 transit of tokens is highly recommended.
 
 To help mitigate MITM attacks, additional authenticated data (AAD) can be
-provided to the agent. This data is written as part of the AES-GCM tag and must
-match on both the agent and the client. This of course means that protecting
+provided to Agent and Proxy. This data is written as part of the AES-GCM tag and must
+match on both Agent and Proxy and the client. This of course means that protecting
 this AAD becomes important, but it provides another layer for an attacker to
 have to overcome. For instance, if the attacker has access to the file system
-where the token is being written, but not to read agent configuration or read
-environment variables, this AAD can be generated and passed to the agent and
+where the token is being written, but not to read configuration or read
+environment variables, this AAD can be generated and passed to Agent or Proxy and
 the client in ways that would be difficult for the attacker to find.
 
 When using AAD, it is always a good idea for this to be as fresh as possible;
-generate a value and pass it to your client and agent on startup. Additionally,
-agent uses a Trust On First Use model; after it finds a generated public key,
+generate a value and pass it to your client and Agent or Proxy on startup. Additionally,
+Agent and Proxy a Trust On First Use model; after it finds a generated public key,
 it will reuse that public key instead of looking for new values that have been
 written.
 
@@ -106,8 +106,8 @@ The top level `auto_auth` block has two configuration entries:
 
 ### Configuration (Method)
 
-~> Auto-auth does not support using tokens with a limited number of uses. Vault
-Agent does not track the number of uses remaining, and may allow the token to
+~> Auto-auth does not support using tokens with a limited number of uses. Auto-auth
+does not track the number of uses remaining, and may allow the token to
 expire before attempting to renew it. For example, if using AppRole auto-auth,
 you must use 0 (meaning unlimited) as the value for
 [`token_num_uses`](/vault/api-docs/auth/approle#token_num_uses).
@@ -130,14 +130,14 @@ These are common configuration values that live within the `method` block:
   on the client created by auto-auth, they use the same namespace.
 
 - `wrap_ttl` `(string or integer: optional)` - If specified, the written token
-  will be response-wrapped by the agent. This is more secure than wrapping by
-  sinks, but does not allow the agent to keep the token renewed or
+  will be response-wrapped by auto-auth. This is more secure than wrapping by
+  sinks, but does not allow the auto-auth to keep the token renewed or
   automatically reauthenticate when it expires. Rather than a simple string,
   the written value will be a JSON-encoded
   [SecretWrapInfo](https://godoc.org/github.com/hashicorp/vault/api#SecretWrapInfo)
   structure. Uses [duration format strings](/vault/docs/concepts/duration-format).
 
-- `min_backoff` `(string or integer: "1s")` - The minimum backoff time Agent
+- `min_backoff` `(string or integer: "1s")` - The minimum backoff time auto-auth
   will delay before retrying after a failed auth attempt. The backoff will start
   at the configured value and double (with some randomness) after successive
   failures, capped by `max_backoff.` If Agent templating is being used, this
@@ -152,9 +152,9 @@ These are common configuration values that live within the `method` block:
   duration between retries, and **not** the duration that retries will be
   performed before giving up. Uses [duration format strings](/vault/docs/concepts/duration-format).
 
-- `exit_on_err` `(bool: false)` - When set to true, Vault Agent will exit if any
-  errors occur during authentication. This configurable only affects login attempts
-  for new tokens (either intial or expired tokens) and will not exit for errors on
+- `exit_on_err` `(bool: false)` - When set to true, Vault Agent and Vault Proxy
+  will exit if any errors occur during authentication. This configurable only affects login
+  attempts for new tokens (either initial or expired tokens) and will not exit for errors on
   valid token renewals.
 
 - `config` `(object: required)` - Configuration of the method itself. See the
@@ -169,7 +169,7 @@ These configuration values are common to all Sinks:
 
 - `wrap_ttl` `(string or integer: optional)` - If specified, the written token
   will be response-wrapped by the sink. This is less secure than wrapping by
-  the method, but allows the agent to keep the token renewed and automatically
+  the method, but allows auto-auth to keep the token renewed and automatically
   reauthenticate when it expires. Rather than a simple string, the written
   value will be a JSON-encoded
   [SecretWrapInfo](https://godoc.org/github.com/hashicorp/vault/api#SecretWrapInfo)
@@ -180,7 +180,7 @@ These configuration values are common to all Sinks:
   supported.
 
 - `dh_path` `(string: required if dh_type is set)` - The path from which the
-  agent should read the client's initial parameters (e.g. curve25519 public
+  auto-auth should read the client's initial parameters (e.g. curve25519 public
   key).
 
 - `derive_key` `(bool: false)` - If specified, the final encryption key is
@@ -278,7 +278,7 @@ auto_auth {
 The following JSON configuration illustrates the need for a `sinks: [...]` array
 wrapping any number of `sink` objects.
 
-```json
+```hcl
 {
   "auto_auth" : {
     "method" : [
@@ -309,7 +309,7 @@ wrapping any number of `sink` objects.
 Multiple sinks are defined by appending more `sink` objects within the `sinks`
 array:
 
-```json
+```hcl
 {
   "auto_auth" : {
     "method" : [
