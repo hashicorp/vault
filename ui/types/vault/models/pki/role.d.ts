@@ -8,4 +8,6 @@ export default class PkiRoleModel extends Model {
   getHelpUrl(backendPath: string): string;
   validate(): ModelValidations;
   isNew: boolean;
+  keyType: string;
+  keyBits: string | undefined;
 }
