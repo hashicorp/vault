@@ -101,7 +101,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await searchSelect.options.objectAt(1).click();
     const singleRow = document.querySelectorAll('[data-test-auth-backend-link]');
 
-    assert.dom(singleRow[0]).includesText('aws-1', 'shows the filtered by name engine');
+    assert.dom(singleRow[0]).includesText('aws-2', 'shows the filtered by name engine');
     // clear filter by engine name
     await searchSelect.deleteButtons.objectAt(1).click();
     const rowsAgain = document.querySelectorAll('[data-test-auth-backend-link]');
