@@ -11,7 +11,8 @@
     <div class="field is-marginless">
       <p class="control has-icons-left">
         <input
-          oninput={{queue (action "updateFilter") (action "proxyEvent")}}
+          oninput={{action "proxyEvent"}}
+          onchange={{action "updateFilter"}}
           value={{@initialFilter}}
           disabled={{this.swaggerLoading}}
           class="filter input"
