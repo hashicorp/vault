@@ -27,6 +27,7 @@ type acmeContext struct {
 	// acmeDirectory is a string that can distinguish the various acme directories we have configured
 	// if something needs to remain locked into a directory path structure.
 	acmeDirectory string
+	eabPolicy     EabPolicy
 }
 
 type (
@@ -60,7 +61,13 @@ func (b *backend) acmeWrapper(op acmeOperation) framework.OperationFunc {
 			return nil, fmt.Errorf("failed to fetch ACME configuration: %w", err)
 		}
 
-		if isAcmeDisabled(sc, config) {
+		// use string form in case someone messes up our config from raw storage.
+		eabPolicy, err := getEabPolicyByString(string(config.EabPolicyName))
+		if err != nil {
+			return nil, err
+		}
+
+		if isAcmeDisabled(sc, config, eabPolicy) {
 			return nil, ErrAcmeDisabled
 		}
 
@@ -87,6 +94,7 @@ func (b *backend) acmeWrapper(op acmeOperation) framework.OperationFunc {
 			role:          role,
 			issuer:        issuer,
 			acmeDirectory: acmeDirectory,
+			eabPolicy:     eabPolicy,
 		}
 
 		return op(acmeCtx, r, data)
@@ -185,7 +193,11 @@ func (b *backend) acmeAccountRequiredWrapper(op acmeAccountRequiredOperation) fr
 			return nil, fmt.Errorf("error loading account: %w", err)
 		}
 
-		if account.Status != StatusValid {
+		if err = acmeCtx.eabPolicy.EnforceForExistingAccount(account); err != nil {
+			return nil, err
+		}
+
+		if account.Status != AccountStatusValid {
 			// Treating "revoked" and "deactivated" as the same here.
 			return nil, fmt.Errorf("%w: account in status: %s", ErrUnauthorized, account.Status)
 		}
@@ -373,7 +385,7 @@ func getRequestedAcmeIssuerFromPath(data *framework.FieldData) string {
 	return requestedIssuer
 }
 
-func isAcmeDisabled(sc *storageContext, config *acmeConfigEntry) bool {
+func isAcmeDisabled(sc *storageContext, config *acmeConfigEntry, policy EabPolicy) bool {
 	if !config.Enabled {
 		return true
 	}
@@ -387,8 +399,9 @@ func isAcmeDisabled(sc *storageContext, config *acmeConfigEntry) bool {
 
 		// The OS environment if true will override any configuration option.
 		if disableAcme {
-			// TODO: If EAB is enforced in the configuration, don't mark
-			// ACME as disabled.
+			if policy.OverrideEnvDisablingPublicAcme() {
+				return false
+			}
 			return true
 		}
 	}
