@@ -54,7 +54,7 @@ func (a *acmeBillingSystemViewImpl) CreateActivityCountEventForIdentifiers(ctx c
 	// Log so users can correlate ACME requests to client count tokens.
 	activityType := "acme"
 	a.core.activityLog.logger.Debug(fmt.Sprintf("Handling ACME client count event for [%v] -> %v", identifiers, clientID))
-	a.core.activityLog.AddEventToFragment(clientID, a.entry.NamespaceID, time.Now().Unix(), activityType, a.entry.Path)
+	a.core.activityLog.AddEventToFragment(clientID, a.entry.NamespaceID, time.Now().Unix(), activityType, a.entry.Accessor)
 
 	return nil
 }
