@@ -28,26 +28,18 @@ export default class VaultClusterSecretsBackendController extends Controller {
     if (this.selectedEngineType) {
       // check first if the user has also filtered by name.
       if (this.selectedEngineName) {
-        return this.filterByName(sortedBackends);
+        return sortedBackends.filter((backend) => this.selectedEngineName === backend.get('id'));
       }
       // otherwise filter by engine type
-      return this.filterByEngineType(sortedBackends);
+      return sortedBackends.filter((backend) => this.selectedEngineType === backend.get('engineType'));
     }
 
     // return an options list to filter by engine name, ex: 'secret'
     if (this.selectedEngineName) {
-      return this.filterByName(sortedBackends);
+      return sortedBackends.filter((backend) => this.selectedEngineName === backend.get('id'));
     }
     // no filters, return full sorted list.
     return sortedBackends;
-  }
-
-  filterByName(backendList) {
-    return backendList.filter((backend) => this.selectedEngineName === backend.get('id'));
-  }
-
-  filterByEngineType(backendList) {
-    return backendList.filter((backend) => this.selectedEngineType === backend.get('engineType'));
   }
 
   get secretEngineArrayByType() {
