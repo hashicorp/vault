@@ -333,7 +333,7 @@ func (b *backend) acmeNewAccountUpdateHandler(acmeCtx *acmeContext, userCtx *jws
 
 	// Per RFC 8555 7.3.6 Account deactivation, if we were previously deactivated, we should return
 	// unauthorized. There is no way to reactivate any accounts per ACME RFC.
-	if account.Status != StatusValid {
+	if account.Status != AccountStatusValid {
 		// Treating "revoked" and "deactivated" as the same here.
 		return nil, ErrUnauthorized
 	}
@@ -347,11 +347,11 @@ func (b *backend) acmeNewAccountUpdateHandler(acmeCtx *acmeContext, userCtx *jws
 
 	// Check to process account de-activation status was requested.
 	// 7.3.6. Account Deactivation
-	if string(StatusDeactivated) == status {
+	if string(AccountStatusDeactivated) == status {
 		shouldUpdate = true
 		// TODO: This should cancel any ongoing operations (do not revoke certs),
 		//       perhaps we should delete this account here?
-		account.Status = StatusDeactivated
+		account.Status = AccountStatusDeactivated
 		account.AccountRevokedDate = time.Now()
 	}
 
@@ -434,7 +434,7 @@ func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, ke
 		now.After(account.MaxCertExpiry.Add(accountTidyBuffer)) {
 		// Tidy this account
 		// If it is Revoked or Deactivated:
-		if (account.Status == StatusRevoked || account.Status == StatusDeactivated) && now.After(account.AccountRevokedDate.Add(accountTidyBuffer)) {
+		if (account.Status == AccountStatusRevoked || account.Status == AccountStatusDeactivated) && now.After(account.AccountRevokedDate.Add(accountTidyBuffer)) {
 			// We Delete the Account Associated with this Thumbprint:
 			err = ac.sc.Storage.Delete(ac.sc.Context, path.Join(acmeAccountPrefix, thumbprint.Kid))
 			if err != nil {
@@ -447,10 +447,10 @@ func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, ke
 				return err
 			}
 			b.tidyStatusIncDeletedAcmeAccountCount()
-		} else if account.Status == StatusValid {
+		} else if account.Status == AccountStatusValid {
 			// Revoke This Account
 			account.AccountRevokedDate = now
-			account.Status = StatusRevoked
+			account.Status = AccountStatusRevoked
 			err := as.UpdateAccount(ac, &account)
 			if err != nil {
 				return err
@@ -462,7 +462,7 @@ func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, ke
 	// Only update the account if we modified the max cert expiry values and the account is still valid,
 	// to prevent us from adding back a deleted account or not re-writing the revoked account that was
 	// already written above.
-	if maxCertExpiryUpdated && account.Status == StatusValid {
+	if maxCertExpiryUpdated && account.Status == AccountStatusValid {
 		// Update our expiry time we previously setup.
 		err := as.UpdateAccount(ac, &account)
 		if err != nil {

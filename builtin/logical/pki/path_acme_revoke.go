@@ -160,7 +160,7 @@ func (b *backend) acmeRevocationByAccount(acmeCtx *acmeContext, r *logical.Reque
 	if err != nil {
 		return nil, fmt.Errorf("failed to lookup account: %w", err)
 	}
-	if account.Status != StatusValid {
+	if account.Status != AccountStatusValid {
 		return nil, fmt.Errorf("account isn't presently valid: %w", ErrUnauthorized)
 	}
 

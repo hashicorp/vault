@@ -207,9 +207,9 @@ func (aas ACMEAccountStatus) String() string {
 }
 
 const (
-	StatusValid       ACMEAccountStatus = "valid"
-	StatusDeactivated ACMEAccountStatus = "deactivated"
-	StatusRevoked     ACMEAccountStatus = "revoked"
+	AccountStatusValid       ACMEAccountStatus = "valid"
+	AccountStatusDeactivated ACMEAccountStatus = "deactivated"
+	AccountStatusRevoked     ACMEAccountStatus = "revoked"
 )
 
 type acmeAccount struct {
@@ -292,7 +292,7 @@ func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, contact []string, 
 		Contact:              contact,
 		TermsOfServiceAgreed: termsOfServiceAgreed,
 		Jwk:                  c.Jwk,
-		Status:               StatusValid,
+		Status:               AccountStatusValid,
 		AcmeDirectory:        ac.acmeDirectory,
 		AccountCreatedDate:   time.Now(),
 		Eab:                  eab,
