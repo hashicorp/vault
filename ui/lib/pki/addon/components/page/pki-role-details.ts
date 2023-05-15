@@ -6,10 +6,10 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
+import errorMessage from 'vault/utils/error-message';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type RouterService from '@ember/routing/router-service';
-import type errorMessage from 'vault/utils/error-message';
 import type PkiRoleModel from 'vault/models/pki/role';
 
 interface Args {
