@@ -1,0 +1,3 @@
+```release-note:improvement
+Add note about a possible issue that might occur when using Kubernetes and Vault with `cluster_name` undeclared. VAULT-15467
+```
