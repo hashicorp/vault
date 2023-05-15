@@ -73,6 +73,7 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			require.Equal(t, discoveryBaseUrl+"new-order", discovery.OrderURL)
 			require.Equal(t, discoveryBaseUrl+"revoke-cert", discovery.RevokeURL)
 			require.Equal(t, discoveryBaseUrl+"key-change", discovery.KeyChangeURL)
+			require.False(t, discovery.ExternalAccountRequired, "bad value for external account required in directory")
 
 			// Attempt to update prior to creating an account
 			t.Logf("Testing updates with no proper account fail on %s", baseAcmeURL)
@@ -310,6 +311,75 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 	}
 }
 
+// TestAcmeBasicWorkflowWithEab verify that new accounts require EAB's if enforced by configuration.
+func TestAcmeBasicWorkflowWithEab(t *testing.T) {
+	t.Parallel()
+	cluster, client, _ := setupAcmeBackend(t)
+	defer cluster.Cleanup()
+	testCtx := context.Background()
+
+	// Enable EAB
+	_, err := client.Logical().WriteWithContext(context.Background(), "pki/config/acme", map[string]interface{}{
+		"enabled":    true,
+		"eab_policy": "always-required",
+	})
+	require.NoError(t, err)
+
+	baseAcmeURL := "/v1/pki/acme/"
+	accountKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err, "failed creating ec key")
+
+	acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)
+
+	t.Logf("Testing discover on %s", baseAcmeURL)
+	discovery, err := acmeClient.Discover(testCtx)
+	require.NoError(t, err, "failed acme discovery call")
+	require.True(t, discovery.ExternalAccountRequired, "bad value for external account required in directory")
+
+	// Create new account without EAB, should fail
+	t.Logf("Testing register on %s", baseAcmeURL)
+	_, err = acmeClient.Register(testCtx, &acme.Account{}, func(tosURL string) bool { return true })
+	require.ErrorContains(t, err, "urn:ietf:params:acme:error:externalAccountRequired",
+		"expected failure creating an account without eab")
+
+	kid, eabKeyBytes := getEABKey(t, client)
+	acct := &acme.Account{
+		ExternalAccountBinding: &acme.ExternalAccountBinding{
+			KID: kid,
+			Key: eabKeyBytes,
+		},
+	}
+
+	// Create new account with EAB
+	t.Logf("Testing register on %s", baseAcmeURL)
+	_, err = acmeClient.Register(testCtx, acct, func(tosURL string) bool { return true })
+	require.NoError(t, err, "failed registering new account with eab")
+
+	// Make sure our EAB is no longer available
+	resp, err := client.Logical().ListWithContext(context.Background(), "pki/acme/eab")
+	require.NoError(t, err, "failed to list eab tokens")
+	require.Nil(t, resp, "list response for eab tokens should have been nil due to empty list")
+
+	// Attempt to create another account with the same EAB as before -- should fail
+	accountKey2, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err, "failed creating ec key")
+
+	acmeClient2 := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey2)
+	acct2 := &acme.Account{
+		ExternalAccountBinding: &acme.ExternalAccountBinding{
+			KID: kid,
+			Key: eabKeyBytes,
+		},
+	}
+
+	_, err = acmeClient2.Register(testCtx, acct2, func(tosURL string) bool { return true })
+	require.ErrorContains(t, err, "urn:ietf:params:acme:error:unauthorized", "should fail due to EAB re-use")
+
+	// We can lookup/find an existing account without EAB if we have the account key
+	_, err = acmeClient.GetReg(testCtx /* unused url */, "")
+	require.NoError(t, err, "expected to lookup existing account without eab")
+}
+
 // TestAcmeNonce a basic test that will validate we get back a nonce with the proper status codes
 // based on the
 func TestAcmeNonce(t *testing.T) {
@@ -477,7 +547,8 @@ func setupAcmeBackend(t *testing.T) (*vault.TestCluster, *api.Client, string) {
 	require.NoError(t, err)
 
 	_, err = client.Logical().WriteWithContext(context.Background(), "pki/config/acme", map[string]interface{}{
-		"enabled": true,
+		"enabled":    true,
+		"eab_policy": "not-required",
 	})
 	require.NoError(t, err)
 
@@ -620,4 +691,19 @@ func getAcmeClientForCluster(t *testing.T, cluster *vault.TestCluster, baseUrl s
 		HTTPClient:   httpClient,
 		DirectoryURL: baseAcmeURL + "directory",
 	}
+}
+
+func getEABKey(t *testing.T, client *api.Client) (string, []byte) {
+	resp, err := client.Logical().WriteWithContext(ctx, "pki/acme/eab", map[string]interface{}{})
+	require.NoError(t, err, "failed getting eab key")
+	require.NotNil(t, resp, "eab key returned nil response")
+	require.NotEmpty(t, resp.Data["id"], "eab key response missing id field")
+	kid := resp.Data["id"].(string)
+
+	require.NotEmpty(t, resp.Data["private_key"], "eab key response missing private_key field")
+	base64Key := resp.Data["private_key"].(string)
+	privateKeyBytes, err := base64.RawURLEncoding.DecodeString(base64Key)
+	require.NoError(t, err, "failed base 64 decoding eab key response")
+
+	return kid, privateKeyBytes
 }

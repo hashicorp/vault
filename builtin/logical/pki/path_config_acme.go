@@ -17,11 +17,12 @@ const (
 )
 
 type acmeConfigEntry struct {
-	Enabled        bool     `json:"enabled"`
-	AllowedIssuers []string `json:"allowed_issuers="`
-	AllowedRoles   []string `json:"allowed_roles"`
-	DefaultRole    string   `json:"default_role"`
-	DNSResolver    string   `json:"dns_resolver"`
+	Enabled        bool          `json:"enabled"`
+	AllowedIssuers []string      `json:"allowed_issuers="`
+	AllowedRoles   []string      `json:"allowed_roles"`
+	DefaultRole    string        `json:"default_role"`
+	DNSResolver    string        `json:"dns_resolver"`
+	EabPolicyName  EabPolicyName `json:"eab_policy_name"`
 }
 
 var defaultAcmeConfig = acmeConfigEntry{
@@ -30,6 +31,7 @@ var defaultAcmeConfig = acmeConfigEntry{
 	AllowedRoles:   []string{"*"},
 	DefaultRole:    "",
 	DNSResolver:    "",
+	EabPolicyName:  eabPolicyAlwaysRequired,
 }
 
 func (sc *storageContext) getAcmeConfig() (*acmeConfigEntry, error) {
@@ -99,6 +101,11 @@ func pathAcmeConfig(b *backend) *framework.Path {
 				Description: `DNS resolver to use for domain resolution on this mount. Defaults to using the default system resolver. Must be in the format <host>:<port>, with both parts mandatory.`,
 				Default:     "",
 			},
+			"eab_policy": {
+				Type:        framework.TypeString,
+				Description: `Specify the policy to use for external account binding behaviour, 'not-required', 'new-account-required' or 'always-required'`,
+				Default:     "always-required",
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -143,6 +150,7 @@ func genResponseFromAcmeConfig(config *acmeConfigEntry) *logical.Response {
 			"default_role":    config.DefaultRole,
 			"enabled":         config.Enabled,
 			"dns_resolver":    config.DNSResolver,
+			"eab_policy":      config.EabPolicyName,
 		},
 	}
 
@@ -195,6 +203,15 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 				return nil, fmt.Errorf("failed to parse DNS resolver address: expected IPv4/IPv6 address, likely got hostname")
 			}
 		}
+	}
+
+	if eabPolicyRaw, ok := d.GetOk("eab_policy"); ok {
+		eabPolicy, err := getEabPolicyByString(eabPolicyRaw.(string))
+		if err != nil {
+			return nil, fmt.Errorf("invalid eab policy name provided, valid values are '%s', '%s', '%s'",
+				eabPolicyNotRequired, eabPolicyNewAccountRequired, eabPolicyAlwaysRequired)
+		}
+		config.EabPolicyName = eabPolicy.Name
 	}
 
 	allowAnyRole := len(config.AllowedRoles) == 1 && config.AllowedRoles[0] == "*"
