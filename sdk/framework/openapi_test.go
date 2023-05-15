@@ -22,6 +22,8 @@ import (
 
 func TestOpenAPI_Regex(t *testing.T) {
 	t.Run("Path fields", func(t *testing.T) {
+		t.Fatal("OH NO, IT FAILED")
+
 		input := `/foo/bar/{inner}/baz/{outer}`
 
 		matches := pathFieldsRe.FindAllStringSubmatch(input, -1)
