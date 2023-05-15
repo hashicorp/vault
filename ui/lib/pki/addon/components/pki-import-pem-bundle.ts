@@ -10,9 +10,8 @@ import { task } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
 import { waitFor } from '@ember/test-waiters';
 import errorMessage from 'vault/utils/error-message';
-// TYPES
-import FlashMessageService from 'vault/services/flash-messages';
-import PkiActionModel from 'vault/models/pki/action';
+import type FlashMessageService from 'vault/services/flash-messages';
+import type PkiActionModel from 'vault/models/pki/action';
 
 /**
  * @module PkiImportPemBundle

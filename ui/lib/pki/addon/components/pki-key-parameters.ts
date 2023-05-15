@@ -5,10 +5,10 @@
 
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
-import PkiRoleModel from 'vault/models/pki/role';
-import PkiKeyModel from 'vault/models/pki/key';
-import PkiActionModel from 'vault/models/pki/action';
-import { HTMLElementEvent } from 'forms';
+import type PkiRoleModel from 'vault/models/pki/role';
+import type PkiKeyModel from 'vault/models/pki/key';
+import type PkiActionModel from 'vault/models/pki/action';
+import type { HTMLElementEvent } from 'forms';
 /**
  * @module PkiKeyParameters
  * PkiKeyParameters components are used to display a list of key bit options depending on the selected key type. The key bits field is disabled until a key type is selected.

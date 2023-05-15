@@ -11,9 +11,8 @@ import { waitFor } from '@ember/test-waiters';
 import { inject as service } from '@ember/service';
 import trimRight from 'vault/utils/trim-right';
 import errorMessage from 'vault/utils/error-message';
-// TYPES
-import PkiKeyModel from 'vault/models/pki/key';
-import FlashMessageService from 'vault/services/flash-messages';
+import type PkiKeyModel from 'vault/models/pki/key';
+import type FlashMessageService from 'vault/services/flash-messages';
 
 /**
  * @module PkiKeyImport
@@ -30,8 +29,8 @@ import FlashMessageService from 'vault/services/flash-messages';
  */
 interface Args {
   model: PkiKeyModel;
-  onSave(): CallableFunction;
-  onCancel(): CallableFunction;
+  onSave: CallableFunction;
+  onCancel: CallableFunction;
 }
 
 export default class PkiKeyImport extends Component<Args> {

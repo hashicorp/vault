@@ -9,13 +9,12 @@ import { task } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import errorMessage from 'vault/utils/error-message';
-// TYPES
-import Store from '@ember-data/store';
-import FlashMessageService from 'vault/services/flash-messages';
-import SecretMountPathService from 'vault/services/secret-mount-path';
-import PkiRoleModel from 'vault/models/pki/role';
-import PkiIssuerModel from 'vault/models/pki/issuer';
-import { ValidationMap } from 'vault/app-types';
+import type Store from '@ember-data/store';
+import type FlashMessageService from 'vault/services/flash-messages';
+import type SecretMountPathService from 'vault/services/secret-mount-path';
+import type PkiRoleModel from 'vault/models/pki/role';
+import type PkiIssuerModel from 'vault/models/pki/issuer';
+import type { ValidationMap } from 'vault/app-types';
 
 /**
  * @module PkiRoleForm
@@ -36,7 +35,7 @@ import { ValidationMap } from 'vault/app-types';
 interface Args {
   role: PkiRoleModel;
   issuers: PkiIssuerModel[];
-  onSave(): CallableFunction;
+  onSave: CallableFunction;
 }
 
 export default class PkiRoleForm extends Component<Args> {

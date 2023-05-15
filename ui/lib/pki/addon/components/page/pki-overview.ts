@@ -7,11 +7,10 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
-// TYPES
-import Store from '@ember-data/store';
-import RouterService from '@ember/routing/router-service';
-import PkiIssuerModel from 'vault/models/pki/issuer';
-import PkiRoleModel from 'vault/models/pki/role';
+import type Store from '@ember-data/store';
+import type RouterService from '@ember/routing/router-service';
+import type PkiIssuerModel from 'vault/models/pki/issuer';
+import type PkiRoleModel from 'vault/models/pki/role';
 
 interface Args {
   issuers: PkiIssuerModel | number;

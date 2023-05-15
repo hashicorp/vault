@@ -10,12 +10,11 @@ import { waitFor } from '@ember/test-waiters';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import errorMessage from 'vault/utils/error-message';
-// TYPES
-import PkiActionModel from 'vault/models/pki/action';
-import PkiUrlsModel from 'vault/models/pki/urls';
-import FlashMessageService from 'vault/services/flash-messages';
-import RouterService from '@ember/routing/router-service';
-import { ValidationMap } from 'vault/vault/app-types';
+import type PkiActionModel from 'vault/models/pki/action';
+import type PkiUrlsModel from 'vault/models/pki/urls';
+import type FlashMessageService from 'vault/services/flash-messages';
+import type RouterService from '@ember/routing/router-service';
+import type { ValidationMap } from 'vault/vault/app-types';
 
 interface AdapterOptions {
   actionType: string;

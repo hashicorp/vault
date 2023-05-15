@@ -9,13 +9,12 @@ import { task } from 'ember-concurrency';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import errorMessage from 'vault/utils/error-message';
-// TYPES
-import Router from '@ember/routing/router';
-import Store from '@ember-data/store';
-import FlashMessageService from 'vault/services/flash-messages';
-import DownloadService from 'vault/services/download';
-import PkiCertificateGenerateModel from 'vault/models/pki/certificate/generate';
-import PkiCertificateSignModel from 'vault/models/pki/certificate/sign';
+import type Router from '@ember/routing/router';
+import type Store from '@ember-data/store';
+import type FlashMessageService from 'vault/services/flash-messages';
+import type DownloadService from 'vault/services/download';
+import type PkiCertificateGenerateModel from 'vault/models/pki/certificate/generate';
+import type PkiCertificateSignModel from 'vault/models/pki/certificate/sign';
 
 interface Args {
   onSuccess: CallableFunction;

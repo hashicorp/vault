@@ -10,13 +10,12 @@ import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import errorMessage from 'vault/utils/error-message';
-// TYPES
-import RouterService from '@ember/routing/router-service';
-import FlashMessageService from 'vault/services/flash-messages';
-import VersionService from 'vault/services/version';
-import PkiCrlModel from 'vault/models/pki/crl';
-import PkiUrlsModel from 'vault/models/pki/urls';
-import { FormField, TtlEvent } from 'vault/app-types';
+import type RouterService from '@ember/routing/router-service';
+import type FlashMessageService from 'vault/services/flash-messages';
+import type VersionService from 'vault/services/version';
+import type PkiCrlModel from 'vault/models/pki/crl';
+import type PkiUrlsModel from 'vault/models/pki/urls';
+import type { FormField, TtlEvent } from 'vault/app-types';
 
 interface Args {
   crl: PkiCrlModel;

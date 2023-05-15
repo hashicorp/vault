@@ -7,10 +7,9 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
-// TYPES
-import RouterService from '@ember/routing/router-service';
-import FlashMessageService from 'vault/services/flash-messages';
-import PkiKeyModel from 'vault/models/pki/key';
+import type RouterService from '@ember/routing/router-service';
+import type FlashMessageService from 'vault/services/flash-messages';
+import type PkiKeyModel from 'vault/models/pki/key';
 interface Args {
   key: PkiKeyModel;
 }

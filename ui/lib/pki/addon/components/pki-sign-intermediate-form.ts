@@ -10,10 +10,9 @@ import { waitFor } from '@ember/test-waiters';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import errorMessage from 'vault/utils/error-message';
-// TYPES
-import PkiCertificateSignIntermediate from 'vault/models/pki/certificate/sign-intermediate';
-import FlashMessageService from 'vault/services/flash-messages';
-import { ValidationMap } from 'vault/vault/app-types';
+import type PkiCertificateSignIntermediate from 'vault/models/pki/certificate/sign-intermediate';
+import type FlashMessageService from 'vault/services/flash-messages';
+import type { ValidationMap } from 'vault/vault/app-types';
 
 interface Args {
   onCancel: CallableFunction;

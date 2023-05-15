@@ -8,11 +8,10 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import errorMessage from 'vault/utils/error-message';
-//TYPES
-import RouterService from '@ember/routing/router-service';
-import FlashMessageService from 'vault/services/flash-messages';
-import Store from '@ember-data/store';
-import VersionService from 'vault/services/version';
+import type RouterService from '@ember/routing/router-service';
+import type FlashMessageService from 'vault/services/flash-messages';
+import type Store from '@ember-data/store';
+import type VersionService from 'vault/services/version';
 
 interface Args {
   currentPath: string;
