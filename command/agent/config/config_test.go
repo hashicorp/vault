@@ -2153,6 +2153,7 @@ func TestLoadConfigFile_Bad_EnvTemplates_WithProxy(t *testing.T) {
 		t.Fatal("expected an error from ValidateConfig: listener / api_proxy are not compatible with env_template")
 	}
 }
+
 func TestLoadConfigFile_Bad_EnvTemplates_WithFileTemplates(t *testing.T) {
 	config, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-with-file-templates.hcl")
 	if err != nil {
@@ -2163,6 +2164,7 @@ func TestLoadConfigFile_Bad_EnvTemplates_WithFileTemplates(t *testing.T) {
 		t.Fatal("expected an error from ValidateConfig: file template stanza is not compatible with env_template")
 	}
 }
+
 func TestLoadConfigFile_Bad_EnvTemplates_DisalowedFields(t *testing.T) {
 	config, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-disalowed-fields.hcl")
 	if err != nil {

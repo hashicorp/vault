@@ -375,7 +375,7 @@ func (c *Config) validateEnvTemplateConfig() error {
 	}
 
 	if len(c.Templates) > 0 {
-		return fmt.Errorf("'templates' cannot be specified with 'env_template' entries")
+		return fmt.Errorf("'template' cannot be specified with 'env_template' entries")
 	}
 
 	if c.Exec == nil || len(c.Exec.Command) == 0 {
