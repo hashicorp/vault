@@ -285,6 +285,11 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, _ *logical.Request, 
 		return nil, fmt.Errorf("failed saving updated order: %w", err)
 	}
 
+	if err := b.doTrackBilling(ac.sc.Context, order.Identifiers); err != nil {
+		b.Logger().Error("failed to track billing for order", "order", orderId, "error", err)
+		err = nil
+	}
+
 	return formatOrderResponse(ac, order), nil
 }
 
