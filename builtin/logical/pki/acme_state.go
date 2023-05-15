@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"path"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -35,6 +36,7 @@ const (
 	acmeAccountPrefix    = acmePathPrefix + "accounts/"
 	acmeThumbprintPrefix = acmePathPrefix + "account-thumbprints/"
 	acmeValidationPrefix = acmePathPrefix + "validations/"
+	acmeEabPrefix        = acmePathPrefix + "eab/"
 )
 
 type acmeState struct {
@@ -219,6 +221,7 @@ type acmeAccount struct {
 	AcmeDirectory        string            `json:"acme-directory"`
 	AccountCreatedDate   time.Time         `json:"account_created_date"`
 	AccountRevokedDate   time.Time         `json:"account_revoked_date"`
+	Eab                  *eabType          `json:"eab"`
 }
 
 type acmeOrder struct {
@@ -257,7 +260,7 @@ func (o acmeOrder) getIdentifierIPValues() []net.IP {
 	return identifiers
 }
 
-func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, contact []string, termsOfServiceAgreed bool) (*acmeAccount, error) {
+func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, contact []string, termsOfServiceAgreed bool, eab *eabType) (*acmeAccount, error) {
 	// Write out the thumbprint value/entry out first, if we get an error mid-way through
 	// this is easier to recover from. The new kid with the same existing public key
 	// will rewrite the thumbprint entry. This goes in hand with LoadAccountByKey that
@@ -291,6 +294,7 @@ func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, contact []string, 
 		Status:               StatusValid,
 		AcmeDirectory:        ac.acmeDirectory,
 		AccountCreatedDate:   time.Now(),
+		Eab:                  eab,
 	}
 	json, err := logical.StorageEntryJSON(acmeAccountPrefix+c.Kid, acct)
 	if err != nil {
@@ -470,7 +474,7 @@ func (a *acmeState) ParseRequestParams(ac *acmeContext, req *logical.Request, da
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to base64 parse 'protected': %s: %w", err, ErrMalformed)
 	}
-	if err = c.UnmarshalJSON(a, ac, jwkBytes); err != nil {
+	if err = c.UnmarshalOuterJwsJson(a, ac, jwkBytes); err != nil {
 		return nil, nil, fmt.Errorf("failed to json unmarshal 'protected': %w", err)
 	}
 
@@ -631,6 +635,65 @@ func (a *acmeState) GetIssuedCert(ac *acmeContext, accountId string, serial stri
 	cert.Account = accountId
 
 	return &cert, nil
+}
+
+func (a *acmeState) SaveEab(sc *storageContext, eab *eabType) error {
+	json, err := logical.StorageEntryJSON(path.Join(acmeEabPrefix, eab.KeyID), eab)
+	if err != nil {
+		return err
+	}
+	return sc.Storage.Put(sc.Context, json)
+}
+
+func (a *acmeState) LoadEab(sc *storageContext, eabKid string) (*eabType, error) {
+	rawEntry, err := sc.Storage.Get(sc.Context, path.Join(acmeEabPrefix, eabKid))
+	if err != nil {
+		return nil, err
+	}
+	if rawEntry == nil {
+		return nil, fmt.Errorf("no eab found for kid %s", eabKid)
+	}
+
+	var eab eabType
+	err = rawEntry.DecodeJSON(&eab)
+	if err != nil {
+		return nil, err
+	}
+
+	eab.KeyID = eabKid
+	return &eab, nil
+}
+
+func (a *acmeState) DeleteEab(sc *storageContext, eabKid string) (bool, error) {
+	rawEntry, err := sc.Storage.Get(sc.Context, path.Join(acmeEabPrefix, eabKid))
+	if err != nil {
+		return false, err
+	}
+	if rawEntry == nil {
+		return false, nil
+	}
+
+	err = sc.Storage.Delete(sc.Context, path.Join(acmeEabPrefix, eabKid))
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func (a *acmeState) ListEabIds(sc *storageContext) ([]string, error) {
+	entries, err := sc.Storage.List(sc.Context, acmeEabPrefix)
+	if err != nil {
+		return nil, err
+	}
+	var ids []string
+	for _, entry := range entries {
+		if strings.HasSuffix(entry, "/") {
+			continue
+		}
+		ids = append(ids, entry)
+	}
+
+	return ids, nil
 }
 
 func getAuthorizationPath(accountId string, authId string) string {
