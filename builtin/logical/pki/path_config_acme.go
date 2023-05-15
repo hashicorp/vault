@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
+	"strconv"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -14,6 +16,7 @@ const (
 	storageAcmeConfig      = "config/acme"
 	pathConfigAcmeHelpSyn  = "Configuration of ACME Endpoints"
 	pathConfigAcmeHelpDesc = "Here we configure:\n\nenabled=false, whether ACME is enabled, defaults to false meaning that clusters will by default not get ACME support,\nallowed_issuers=\"default\", which issuers are allowed for use with ACME; by default, this will only be the primary (default) issuer,\nallowed_roles=\"*\", which roles are allowed for use with ACME; by default these will be all roles matching our selection criteria,\ndefault_role=\"\", if not empty, the role to be used for non-role-qualified ACME requests; by default this will be empty, meaning ACME issuance will be equivalent to sign-verbatim.,\ndns_resolver=\"\", which specifies a custom DNS resolver to use for all ACME-related DNS lookups"
+	disableAcmeEnvVar      = "VAULT_DISABLE_PUBLIC_ACME"
 )
 
 type acmeConfigEntry struct {
@@ -31,7 +34,7 @@ var defaultAcmeConfig = acmeConfigEntry{
 	AllowedRoles:   []string{"*"},
 	DefaultRole:    "",
 	DNSResolver:    "",
-	EabPolicyName:  eabPolicyAlwaysRequired,
+	EabPolicyName:  eabPolicyNotRequired,
 }
 
 func (sc *storageContext) getAcmeConfig() (*acmeConfigEntry, error) {
@@ -255,10 +258,34 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 		}
 	}
 
+	// Lastly lets verify that the configuration is honored/invalidated by the public ACME env var.
+	isPublicAcmeDisabledByEnv := isPublicACMEDisabledByEnv()
+	if isPublicAcmeDisabledByEnv && config.Enabled {
+		eabPolicy := getEabPolicyByName(config.EabPolicyName)
+		if !eabPolicy.OverrideEnvDisablingPublicAcme() {
+			return nil, fmt.Errorf("%s env var is enabled, ACME EAB policy needs to be '%s' with ACME enabled",
+				disableAcmeEnvVar, eabPolicyAlwaysRequired)
+		}
+	}
+
 	err = sc.setAcmeConfig(config)
 	if err != nil {
 		return nil, err
 	}
 
 	return genResponseFromAcmeConfig(config), nil
+}
+
+func isPublicACMEDisabledByEnv() bool {
+	disableAcmeRaw, ok := os.LookupEnv(disableAcmeEnvVar)
+	if !ok {
+		return false
+	}
+
+	disableAcme, err := strconv.ParseBool(disableAcmeRaw)
+	if err != nil {
+		return false
+	}
+
+	return disableAcme
 }

@@ -390,7 +390,7 @@ func isAcmeDisabled(sc *storageContext, config *acmeConfigEntry, policy EabPolic
 		return true
 	}
 
-	if disableAcmeRaw := os.Getenv("VAULT_DISABLE_PUBLIC_ACME"); disableAcmeRaw != "" {
+	if disableAcmeRaw := os.Getenv(disableAcmeEnvVar); disableAcmeRaw != "" {
 		disableAcme, err := strconv.ParseBool(disableAcmeRaw)
 		if err != nil {
 			sc.Backend.Logger().Warn("could not parse env var VAULT_DISABLE_PUBLIC_ACME", "error", err)
