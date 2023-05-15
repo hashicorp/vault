@@ -846,7 +846,7 @@ func Test_RSA_PSS(t *testing.T) {
 		}
 		cryptoHash := CryptoHashMap[hashType]
 		minSaltLength := p.minRSAPSSSaltLength()
-		maxSaltLength := p.maxRSAPSSSaltLength(rsaKey, cryptoHash)
+		maxSaltLength := p.maxRSAPSSSaltLength(rsaKey.N.BitLen(), cryptoHash)
 		hash := cryptoHash.New()
 		hash.Write(input)
 		input = hash.Sum(nil)

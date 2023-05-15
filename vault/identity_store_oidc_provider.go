@@ -527,7 +527,8 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: i.pathOIDCAuthorize,
 					DisplayAttrs: &framework.DisplayAttributes{
-						OperationVerb: "authorize2",
+						OperationVerb:   "authorize",
+						OperationSuffix: "with-parameters",
 					},
 					ForwardPerformanceStandby:   true,
 					ForwardPerformanceSecondary: false,
