@@ -285,18 +285,6 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, _ *logical.Request, 
 		return nil, fmt.Errorf("failed saving updated order: %w", err)
 	}
 
-	if account.MaxCertExpiry.Before(order.CertificateExpiry) {
-		b.acmeAccountLock.RLock() // Prevents Account Updates and Tidy Interfering
-		defer b.acmeAccountLock.RUnlock()
-
-		account.MaxCertExpiry = order.CertificateExpiry
-		if ignoreErr := b.acmeState.UpdateAccount(ac, account); ignoreErr != nil {
-			// we shouldn't fail everything if we simply fail to update the timestamp
-			// on the account, it's not a huge deal if we lose this update.
-			b.Logger().Debug("failed updating account last issued date", "error", ignoreErr.Error())
-		}
-	}
-
 	return formatOrderResponse(ac, order), nil
 }
 
@@ -898,25 +886,30 @@ func parseOrderIdentifiers(data map[string]interface{}) ([]*ACMEIdentifier, erro
 	return identifiers, nil
 }
 
-func (b *backend) acmeTidyOrder(ac *acmeContext, accountId string, orderPath string, certTidyBuffer time.Duration) (bool, error) {
+func (b *backend) acmeTidyOrder(ac *acmeContext, accountId string, orderPath string, certTidyBuffer time.Duration) (bool, time.Time, error) {
 	// First we get the order; note that the orderPath includes the account
 	// It's only accessed at acme/orders/<order_id> with the account context
 	// It's saved at acme/<account_id>/orders/<orderId>
 	entry, err := ac.sc.Storage.Get(ac.sc.Context, orderPath)
 	if err != nil {
-		return false, fmt.Errorf("error loading order: %w", err)
+		return false, time.Time{}, fmt.Errorf("error loading order: %w", err)
 	}
 	if entry == nil {
-		return false, fmt.Errorf("order does not exist: %w", ErrMalformed)
+		return false, time.Time{}, fmt.Errorf("order does not exist: %w", ErrMalformed)
 	}
 	var order acmeOrder
 	err = entry.DecodeJSON(&order)
 	if err != nil {
-		return false, fmt.Errorf("error decoding order: %w", err)
+		return false, time.Time{}, fmt.Errorf("error decoding order: %w", err)
 	}
 
 	// Determine whether we should tidy this order
 	shouldTidy := false
+
+	// Track either the order expiry or certificate expiry to return to the caller, this
+	// can be used to influence the account's expiry
+	orderExpiry := order.CertificateExpiry
+
 	// It is faster to check certificate information on the order entry rather than fetch the cert entry to parse:
 	if !order.CertificateExpiry.IsZero() {
 		// This implies that a certificate exists
@@ -930,9 +923,10 @@ func (b *backend) acmeTidyOrder(ac *acmeContext, accountId string, orderPath str
 		if time.Now().After(order.Expires) {
 			shouldTidy = true
 		}
+		orderExpiry = order.Expires
 	}
 	if shouldTidy == false {
-		return shouldTidy, nil
+		return shouldTidy, orderExpiry, nil
 	}
 
 	// Tidy this Order
@@ -943,22 +937,22 @@ func (b *backend) acmeTidyOrder(ac *acmeContext, accountId string, orderPath str
 	for _, authorizationId := range order.AuthorizationIds {
 		err = ac.sc.Storage.Delete(ac.sc.Context, getAuthorizationPath(accountId, authorizationId))
 		if err != nil {
-			return false, err
+			return false, orderExpiry, err
 		}
 	}
 
 	// Normal Tidy will Take Care of the Certificate, we need to clean up the certificate to account tracker though
 	err = ac.sc.Storage.Delete(ac.sc.Context, getAcmeSerialToAccountTrackerPath(accountId, order.CertificateSerialNumber))
 	if err != nil {
-		return false, err
+		return false, orderExpiry, err
 	}
 
 	// And Finally, the order:
 	err = ac.sc.Storage.Delete(ac.sc.Context, orderPath)
 	if err != nil {
-		return false, err
+		return false, orderExpiry, err
 	}
 	b.tidyStatusIncDelAcmeOrderCount()
 
-	return true, nil
+	return true, orderExpiry, nil
 }

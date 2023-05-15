@@ -412,13 +412,19 @@ func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, ke
 		return err
 	}
 	allOrdersTidied := true
+	maxCertExpiryUpdated := false
 	for _, orderId := range orderIds {
-		wasTidied, err := b.acmeTidyOrder(ac, thumbprint.Kid, getOrderPath(thumbprint.Kid, orderId), certTidyBuffer)
+		wasTidied, orderExpiry, err := b.acmeTidyOrder(ac, thumbprint.Kid, getOrderPath(thumbprint.Kid, orderId), certTidyBuffer)
 		if err != nil {
 			return err
 		}
 		if !wasTidied {
 			allOrdersTidied = false
+		}
+
+		if !orderExpiry.IsZero() && account.MaxCertExpiry.Before(orderExpiry) {
+			account.MaxCertExpiry = orderExpiry
+			maxCertExpiryUpdated = true
 		}
 	}
 
@@ -450,6 +456,17 @@ func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, ke
 				return err
 			}
 			b.tidyStatusIncRevAcmeAccountCount()
+		}
+	}
+
+	// Only update the account if we modified the max cert expiry values and the account is still valid,
+	// to prevent us from adding back a deleted account or not re-writing the revoked account that was
+	// already written above.
+	if maxCertExpiryUpdated && account.Status == StatusValid {
+		// Update our expiry time we previously setup.
+		err := as.UpdateAccount(ac, &account)
+		if err != nil {
+			return err
 		}
 	}
 
