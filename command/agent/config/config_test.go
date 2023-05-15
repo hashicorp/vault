@@ -2163,5 +2163,11 @@ func TestLoadConfigFile_ExecSimple(t *testing.T) {
 	}
 
 	// check defaults
+	if cfg.Exec.RestartOnNewSecret != "always" {
+		t.Fatalf("expected cfg.Exec.RestartOnNewSecret to be 'always', got '%s'", cfg.Exec.RestartOnNewSecret)
+	}
 
+	if cfg.Exec.RestartKillSignal != os.Interrupt {
+		t.Fatalf("expected cfg.Exec.RestartKillSignal to be 'os.Interrupt', got '%s'", cfg.Exec.RestartKillSignal)
+	}
 }
