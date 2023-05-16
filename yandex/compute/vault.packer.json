@@ -1,0 +1,39 @@
+{
+  "variables": {
+    "token": "{{env `TOKEN`}}",
+    "folder_id": "{{env `FOLDER_ID`}}"
+  },
+  "builders": [
+    {
+      "type": "yandex",
+      "token": "{{user `token`}}",
+      "folder_id": "{{user `folder_id`}}",
+      "disk_type": "network-hdd",
+      "disk_size_gb": 25,
+      "use_ipv4_nat": true,
+      "source_image_family": "ubuntu-1804-lts",
+      "ssh_username": "ubuntu",
+      "image_name": "vault-{{timestamp}}",
+      "image_family": "vault",
+      "image_description": "HashiCorp Vault"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "inline": [
+        "while [ ! -f /var/lib/cloud/instance/boot-finished ]; do echo 'Waiting for cloud-init...'; sleep 5; done"
+      ]
+    },
+    {
+      "type": "shell",
+      "execute_command": "sudo {{ .Vars }} bash '{{ .Path }}'",
+      "pause_before": "5s",
+      "environment_vars": ["CLEANUP_PAUSE=5"],
+      "scripts": [
+        "install.sh",
+        "cleanup.sh"
+      ]
+    }
+  ]
+}
