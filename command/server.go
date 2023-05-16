@@ -1740,53 +1740,19 @@ func (c *ServerCommand) Run(args []string) int {
 					}
 				}
 
-				fGoRoutine, err := os.Create(filepath.Join(dir, "goroutines"))
-				if err != nil {
-					c.logger.Error("Could not create goroutines file", "error", err)
-					continue
-				}
+				dumps := []string{"goroutine", "heap", "allocs", "threadcreate"}
+				for _, dump := range dumps {
+					pFile, err := os.Create(filepath.Join(dir, dump))
+					if err != nil {
+						c.logger.Error("error creating pprof file", "name", dump, "error", err)
+						continue
+					}
 
-				err = pprof.Lookup("goroutine").WriteTo(fGoRoutine, 0)
-				if err != nil {
-					c.logger.Error("Could not write to goroutines file", "error", err)
-					continue
-				}
-
-				fHeap, err := os.Create(filepath.Join(dir, "heap"))
-				if err != nil {
-					c.logger.Error("Could not create heap file", "error", err)
-					c.logger.Error(err.Error())
-					continue
-				}
-
-				err = pprof.Lookup("heap").WriteTo(fHeap, 0)
-				if err != nil {
-					c.logger.Error("Could not write to heap file", "error", err)
-					continue
-				}
-
-				fAllocs, err := os.Create(filepath.Join(dir, "allocs"))
-				if err != nil {
-					c.logger.Error("Could not create allocs file", "error", err)
-					continue
-				}
-
-				err = pprof.Lookup("allocs").WriteTo(fAllocs, 0)
-				if err != nil {
-					c.logger.Error("Could not write to allocs file", "error", err)
-					continue
-				}
-
-				fThread, err := os.Create(filepath.Join(dir, "threadcreate"))
-				if err != nil {
-					c.logger.Error("Could not create threadcreate file", "error", err)
-					continue
-				}
-
-				err = pprof.Lookup("threadcreate").WriteTo(fThread, 0)
-				if err != nil {
-					c.logger.Error("Could not write to threadcreate file", "error", err)
-					continue
+					err = pprof.Lookup(dump).WriteTo(pFile, 0)
+					if err != nil {
+						c.logger.Error("error generating pprof data", "name", dump, "error", err)
+						continue
+					}
 				}
 
 				c.logger.Info(fmt.Sprintf("Wrote pprof files to: %s", dir))
