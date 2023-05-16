@@ -5,6 +5,6 @@
 
 import ApplicationSerializer from '../application';
 
-export default class PkiIssuerSerializer extends ApplicationSerializer {
+export default class PkiTidySerializer extends ApplicationSerializer {
   primaryKey = 'tidyType';
 }
