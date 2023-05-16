@@ -1745,13 +1745,13 @@ func (c *ServerCommand) Run(args []string) int {
 					pFile, err := os.Create(filepath.Join(dir, dump))
 					if err != nil {
 						c.logger.Error("error creating pprof file", "name", dump, "error", err)
-						continue
+						break
 					}
 
 					err = pprof.Lookup(dump).WriteTo(pFile, 0)
 					if err != nil {
 						c.logger.Error("error generating pprof data", "name", dump, "error", err)
-						continue
+						break
 					}
 				}
 
