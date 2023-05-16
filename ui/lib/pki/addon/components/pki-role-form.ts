@@ -8,6 +8,13 @@ import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
+import errorMessage from 'vault/utils/error-message';
+import type Store from '@ember-data/store';
+import type FlashMessageService from 'vault/services/flash-messages';
+import type SecretMountPathService from 'vault/services/secret-mount-path';
+import type PkiRoleModel from 'vault/models/pki/role';
+import type PkiIssuerModel from 'vault/models/pki/issuer';
+import type { ValidationMap } from 'vault/app-types';
 
 /**
  * @module PkiRoleForm
@@ -25,18 +32,24 @@ import { action } from '@ember/object';
  * @param {onSave} onSave - Callback triggered on save success.
  */
 
-export default class PkiRoleForm extends Component {
-  @service store;
-  @service flashMessages;
-  @service secretMountPath;
+interface Args {
+  role: PkiRoleModel;
+  issuers: PkiIssuerModel[];
+  onSave: CallableFunction;
+}
 
-  @tracked errorBanner;
-  @tracked invalidFormAlert;
-  @tracked modelValidations;
+export default class PkiRoleForm extends Component<Args> {
+  @service declare readonly store: Store;
+  @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly secretMountPath: SecretMountPathService;
+
+  @tracked errorBanner = '';
+  @tracked invalidFormAlert = '';
+  @tracked modelValidations: ValidationMap | null = null;
   @tracked showDefaultIssuer = true;
 
-  constructor() {
-    super(...arguments);
+  constructor(owner: unknown, args: Args) {
+    super(owner, args);
 
     this.showDefaultIssuer = this.args.role.issuerRef === 'default';
   }
@@ -47,20 +60,8 @@ export default class PkiRoleForm extends Component {
     });
   }
 
-  get breadcrumbs() {
-    const crumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: this.secretMountPath.currentPath, route: 'overview' },
-      { label: 'roles', route: 'roles.index' },
-    ];
-    if (!this.args.role.isNew) {
-      crumbs.push({ label: this.args.role.id, route: 'roles.role.details' }, { label: 'edit' });
-    }
-    return crumbs;
-  }
-
   @task
-  *save(event) {
+  *save(event: Event) {
     event.preventDefault();
     try {
       const { isValid, state, invalidFormMessage } = this.args.role.validate();
@@ -73,8 +74,7 @@ export default class PkiRoleForm extends Component {
         this.args.onSave();
       }
     } catch (error) {
-      const message = error.errors ? error.errors.join('. ') : error.message;
-      this.errorBanner = message;
+      this.errorBanner = errorMessage(error);
       this.invalidFormAlert = 'There was an error submitting this form.';
     }
   }

@@ -3,14 +3,16 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-import { action } from '@ember/object';
 import Component from '@glimmer/component';
+import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
-import { inject as service } from '@ember/service';
-import errorMessage from 'vault/utils/error-message';
-import trimRight from 'vault/utils/trim-right';
 import { waitFor } from '@ember/test-waiters';
+import { inject as service } from '@ember/service';
+import trimRight from 'vault/utils/trim-right';
+import errorMessage from 'vault/utils/error-message';
+import type PkiKeyModel from 'vault/models/pki/key';
+import type FlashMessageService from 'vault/services/flash-messages';
 
 /**
  * @module PkiKeyImport
@@ -25,16 +27,21 @@ import { waitFor } from '@ember/test-waiters';
  * @callback onCancel - Callback triggered when cancel button is clicked.
  * @callback onSubmit - Callback triggered on submit success.
  */
+interface Args {
+  model: PkiKeyModel;
+  onSave: CallableFunction;
+  onCancel: CallableFunction;
+}
 
-export default class PkiKeyImport extends Component {
-  @service flashMessages;
+export default class PkiKeyImport extends Component<Args> {
+  @service declare readonly flashMessages: FlashMessageService;
 
-  @tracked errorBanner;
-  @tracked invalidFormAlert;
+  @tracked errorBanner = '';
+  @tracked invalidFormAlert = '';
 
   @task
   @waitFor
-  *submitForm(event) {
+  *submitForm(event: Event) {
     event.preventDefault();
     try {
       const { keyName } = this.args.model;
@@ -48,7 +55,7 @@ export default class PkiKeyImport extends Component {
   }
 
   @action
-  onFileUploaded({ value, filename }) {
+  onFileUploaded({ value, filename }: { value: string; filename: string }) {
     this.args.model.pemBundle = value;
     if (!this.args.model.keyName) {
       const trimmedFileName = trimRight(filename, ['.json', '.pem']);
