@@ -1,5 +1,6 @@
 import Component from '@glimmer/component';
 import { parsedParameterKeys } from 'vault/utils/parse-pki-cert-oids';
+import { ParsedCertificateData } from 'vault/vault/utils/parse-pki-cert';
 
 /**
  * @module ParsedCertificateInfoRowsComponent
@@ -13,11 +14,23 @@ import { parsedParameterKeys } from 'vault/utils/parse-pki-cert-oids';
  *
  * @param {object} model - object of parsed attributes from parse-pki-cert util
  */
-export default class ParsedCertificateInfoRowsComponent extends Component {
+
+interface AttrOptions {
+  [key: string]: {
+    label?: string;
+    formatDate?: string;
+  };
+}
+
+interface Args {
+  model: ParsedCertificateData;
+}
+
+export default class ParsedCertificateInfoRowsComponent extends Component<Args> {
   get possibleFields() {
     // We show common name elsewhere on the details view, so no need to render it here
     const fieldKeys = parsedParameterKeys.filter((k) => k !== 'common_name');
-    const attrsByKey = {
+    const attrsByKey: AttrOptions = {
       other_sans: { label: 'Other SANs' },
       alt_names: { label: 'Subject Alternative Names (SANs)' },
       uri_sans: { label: 'URI SANs' },

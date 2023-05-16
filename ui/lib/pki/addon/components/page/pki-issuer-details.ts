@@ -5,7 +5,12 @@
 
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
+import type PkiIssuerModel from 'vault/models/pki/issuer';
 
-export default class PkiIssuerDetailsComponent extends Component {
+interface Args {
+  issuer: PkiIssuerModel;
+}
+
+export default class PkiIssuerDetailsComponent extends Component<Args> {
   @tracked showRotationModal = false;
 }

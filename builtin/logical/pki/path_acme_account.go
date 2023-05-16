@@ -6,6 +6,7 @@ package pki
 import (
 	"fmt"
 	"net/http"
+	"path"
 	"strings"
 	"time"
 
@@ -69,7 +70,7 @@ func addFieldsForACMERequest(fields map[string]*framework.FieldSchema) map[strin
 }
 
 func addFieldsForACMEKidRequest(fields map[string]*framework.FieldSchema, pattern string) map[string]*framework.FieldSchema {
-	if strings.Contains(pattern, framework.GenericNameRegex("kid")) {
+	if strings.Contains(pattern, uuidNameRegex("kid")) {
 		fields["kid"] = &framework.FieldSchema{
 			Type:        framework.TypeString,
 			Description: `The key identifier provided by the CA`,
@@ -109,6 +110,7 @@ func (b *backend) acmeNewAccountHandler(acmeCtx *acmeContext, r *logical.Request
 	var contacts []string
 	var termsOfServiceAgreed bool
 	var status string
+	var eabData map[string]interface{}
 
 	rawContact, present := data["contact"]
 	if present {
@@ -152,20 +154,39 @@ func (b *backend) acmeNewAccountHandler(acmeCtx *acmeContext, r *logical.Request
 		}
 	}
 
-	// We ignore the EAB parameter as it is currently not supported.
+	if eabDataRaw, ok := data["externalAccountBinding"]; ok {
+		eabData, ok = eabDataRaw.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("%w: externalAccountBinding field was unparseable", ErrMalformed)
+		}
+	}
 
 	// We have two paths here: search or create.
 	if onlyReturnExisting {
-		return b.acmeNewAccountSearchHandler(acmeCtx, userCtx)
+		return b.acmeAccountSearchHandler(acmeCtx, userCtx)
 	}
 
 	// Pass through the /new-account API calls to this specific handler as its requirements are different
 	// from the account update handler.
 	if strings.HasSuffix(r.Path, "/new-account") {
-		return b.acmeNewAccountCreateHandler(acmeCtx, userCtx, contacts, termsOfServiceAgreed)
+		return b.acmeNewAccountCreateHandler(acmeCtx, userCtx, contacts, termsOfServiceAgreed, r, eabData)
 	}
 
-	return b.acmeNewAccountUpdateHandler(acmeCtx, userCtx, contacts, status)
+	return b.acmeNewAccountUpdateHandler(acmeCtx, userCtx, contacts, status, eabData)
+}
+
+func formatNewAccountResponse(acmeCtx *acmeContext, acct *acmeAccount, eabData map[string]interface{}) *logical.Response {
+	resp := formatAccountResponse(acmeCtx, acct)
+
+	// Per RFC 8555 Section 7.1.2.  Account Objects
+	// Including this field in a newAccount request indicates approval by
+	// the holder of an existing non-ACME account to bind that account to
+	// this ACME account
+	if acct.Eab != nil && len(eabData) != 0 {
+		resp.Data["externalAccountBinding"] = eabData
+	}
+
+	return resp
 }
 
 func formatAccountResponse(acmeCtx *acmeContext, acct *acmeAccount) *logical.Response {
@@ -188,7 +209,7 @@ func formatAccountResponse(acmeCtx *acmeContext, acct *acmeAccount) *logical.Res
 	return resp
 }
 
-func (b *backend) acmeNewAccountSearchHandler(acmeCtx *acmeContext, userCtx *jwsCtx) (*logical.Response, error) {
+func (b *backend) acmeAccountSearchHandler(acmeCtx *acmeContext, userCtx *jwsCtx) (*logical.Response, error) {
 	thumbprint, err := userCtx.GetKeyThumbprint()
 	if err != nil {
 		return nil, fmt.Errorf("failed generating thumbprint for key: %w", err)
@@ -200,6 +221,9 @@ func (b *backend) acmeNewAccountSearchHandler(acmeCtx *acmeContext, userCtx *jws
 	}
 
 	if account != nil {
+		if err = acmeCtx.eabPolicy.EnforceForExistingAccount(account); err != nil {
+			return nil, err
+		}
 		return formatAccountResponse(acmeCtx, account), nil
 	}
 
@@ -211,7 +235,7 @@ func (b *backend) acmeNewAccountSearchHandler(acmeCtx *acmeContext, userCtx *jws
 	return nil, fmt.Errorf("An account with this key does not exist: %w", ErrAccountDoesNotExist)
 }
 
-func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, userCtx *jwsCtx, contact []string, termsOfServiceAgreed bool) (*logical.Response, error) {
+func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, userCtx *jwsCtx, contact []string, termsOfServiceAgreed bool, r *logical.Request, eabData map[string]interface{}) (*logical.Response, error) {
 	if userCtx.Existing {
 		return nil, fmt.Errorf("cannot submit to newAccount with 'kid': %w", ErrMalformed)
 	}
@@ -228,7 +252,23 @@ func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, userCtx *jws
 	}
 
 	if accountByKey != nil {
+		if err = acmeCtx.eabPolicy.EnforceForExistingAccount(accountByKey); err != nil {
+			return nil, err
+		}
 		return formatAccountResponse(acmeCtx, accountByKey), nil
+	}
+
+	var eab *eabType
+	if len(eabData) != 0 {
+		eab, err = verifyEabPayload(b.acmeState, acmeCtx, userCtx, r.Path, eabData)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Verify against our EAB policy
+	if err = acmeCtx.eabPolicy.EnforceForNewAccount(eab); err != nil {
+		return nil, err
 	}
 
 	// TODO: Limit this only when ToS are required or set by the operator, since we don't have a
@@ -237,14 +277,33 @@ func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, userCtx *jws
 	//	return nil, fmt.Errorf("terms of service not agreed to: %w", ErrUserActionRequired)
 	//}
 
+	if eab != nil {
+		// We delete the EAB to prevent future re-use after associating it with an account, worst
+		// case if we fail creating the account we simply nuked the EAB which they can create another
+		// and retry
+		wasDeleted, err := b.acmeState.DeleteEab(acmeCtx.sc, eab.KeyID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to delete eab reference: %w", err)
+		}
+
+		if !wasDeleted {
+			// Something consumed our EAB before we did bail...
+			return nil, fmt.Errorf("eab was already used: %w", ErrUnauthorized)
+		}
+	}
+
 	b.acmeAccountLock.RLock() // Prevents Account Creation and Tidy Interfering
 	defer b.acmeAccountLock.RUnlock()
-	accountByKid, err := b.acmeState.CreateAccount(acmeCtx, userCtx, contact, termsOfServiceAgreed)
+
+	accountByKid, err := b.acmeState.CreateAccount(acmeCtx, userCtx, contact, termsOfServiceAgreed, eab)
 	if err != nil {
+		if eab != nil {
+			return nil, fmt.Errorf("failed to create account: %w; the EAB key used for this request has been deleted as a result of this operation; fetch a new EAB key before retrying", err)
+		}
 		return nil, fmt.Errorf("failed to create account: %w", err)
 	}
 
-	resp := formatAccountResponse(acmeCtx, accountByKid)
+	resp := formatNewAccountResponse(acmeCtx, accountByKid, eabData)
 
 	// Per RFC 8555 Section 7.3. Account Management:
 	//
@@ -254,9 +313,13 @@ func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, userCtx *jws
 	return resp, nil
 }
 
-func (b *backend) acmeNewAccountUpdateHandler(acmeCtx *acmeContext, userCtx *jwsCtx, contact []string, status string) (*logical.Response, error) {
+func (b *backend) acmeNewAccountUpdateHandler(acmeCtx *acmeContext, userCtx *jwsCtx, contact []string, status string, eabData map[string]interface{}) (*logical.Response, error) {
 	if !userCtx.Existing {
 		return nil, fmt.Errorf("cannot submit to account updates without a 'kid': %w", ErrMalformed)
+	}
+
+	if len(eabData) != 0 {
+		return nil, fmt.Errorf("%w: not allowed to update EAB data in accounts", ErrMalformed)
 	}
 
 	account, err := b.acmeState.LoadAccount(acmeCtx, userCtx.Kid)
@@ -264,9 +327,13 @@ func (b *backend) acmeNewAccountUpdateHandler(acmeCtx *acmeContext, userCtx *jws
 		return nil, fmt.Errorf("error loading account: %w", err)
 	}
 
+	if err = acmeCtx.eabPolicy.EnforceForExistingAccount(account); err != nil {
+		return nil, err
+	}
+
 	// Per RFC 8555 7.3.6 Account deactivation, if we were previously deactivated, we should return
 	// unauthorized. There is no way to reactivate any accounts per ACME RFC.
-	if account.Status != StatusValid {
+	if account.Status != AccountStatusValid {
 		// Treating "revoked" and "deactivated" as the same here.
 		return nil, ErrUnauthorized
 	}
@@ -280,11 +347,11 @@ func (b *backend) acmeNewAccountUpdateHandler(acmeCtx *acmeContext, userCtx *jws
 
 	// Check to process account de-activation status was requested.
 	// 7.3.6. Account Deactivation
-	if string(StatusDeactivated) == status {
+	if string(AccountStatusDeactivated) == status {
 		shouldUpdate = true
 		// TODO: This should cancel any ongoing operations (do not revoke certs),
 		//       perhaps we should delete this account here?
-		account.Status = StatusDeactivated
+		account.Status = AccountStatusDeactivated
 		account.AccountRevokedDate = time.Now()
 	}
 
@@ -300,7 +367,7 @@ func (b *backend) acmeNewAccountUpdateHandler(acmeCtx *acmeContext, userCtx *jws
 }
 
 func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, keyThumbprint string, certTidyBuffer, accountTidyBuffer time.Duration) error {
-	thumbprintEntry, err := ac.sc.Storage.Get(ac.sc.Context, acmeThumbprintPrefix+keyThumbprint)
+	thumbprintEntry, err := ac.sc.Storage.Get(ac.sc.Context, path.Join(acmeThumbprintPrefix, keyThumbprint))
 	if err != nil {
 		return fmt.Errorf("error retrieving thumbprint entry %v, unable to find corresponding account entry: %w", keyThumbprint, err)
 	}
@@ -325,7 +392,7 @@ func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, ke
 	}
 	if accountEntry == nil {
 		// We delete the Thumbprint Associated with the Account, and we are done
-		err = ac.sc.Storage.Delete(ac.sc.Context, acmeThumbprintPrefix+keyThumbprint)
+		err = ac.sc.Storage.Delete(ac.sc.Context, path.Join(acmeThumbprintPrefix, keyThumbprint))
 		if err != nil {
 			return err
 		}
@@ -345,41 +412,61 @@ func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, ke
 		return err
 	}
 	allOrdersTidied := true
+	maxCertExpiryUpdated := false
 	for _, orderId := range orderIds {
-		wasTidied, err := b.acmeTidyOrder(ac, thumbprint.Kid, acmeAccountPrefix+thumbprint.Kid+"/orders/"+orderId, ac.sc, certTidyBuffer)
+		wasTidied, orderExpiry, err := b.acmeTidyOrder(ac, thumbprint.Kid, getOrderPath(thumbprint.Kid, orderId), certTidyBuffer)
 		if err != nil {
 			return err
 		}
 		if !wasTidied {
 			allOrdersTidied = false
 		}
+
+		if !orderExpiry.IsZero() && account.MaxCertExpiry.Before(orderExpiry) {
+			account.MaxCertExpiry = orderExpiry
+			maxCertExpiryUpdated = true
+		}
 	}
 
-	if allOrdersTidied && time.Now().After(account.AccountCreatedDate.Add(accountTidyBuffer)) {
+	now := time.Now()
+	if allOrdersTidied &&
+		now.After(account.AccountCreatedDate.Add(accountTidyBuffer)) &&
+		now.After(account.MaxCertExpiry.Add(accountTidyBuffer)) {
 		// Tidy this account
 		// If it is Revoked or Deactivated:
-		if (account.Status == StatusRevoked || account.Status == StatusDeactivated) && time.Now().After(account.AccountRevokedDate.Add(accountTidyBuffer)) {
+		if (account.Status == AccountStatusRevoked || account.Status == AccountStatusDeactivated) && now.After(account.AccountRevokedDate.Add(accountTidyBuffer)) {
 			// We Delete the Account Associated with this Thumbprint:
-			err = ac.sc.Storage.Delete(ac.sc.Context, acmeAccountPrefix+thumbprint.Kid)
+			err = ac.sc.Storage.Delete(ac.sc.Context, path.Join(acmeAccountPrefix, thumbprint.Kid))
 			if err != nil {
 				return err
 			}
 
 			// Now we delete the Thumbprint Associated with the Account:
-			err = ac.sc.Storage.Delete(ac.sc.Context, acmeThumbprintPrefix+keyThumbprint)
+			err = ac.sc.Storage.Delete(ac.sc.Context, path.Join(acmeThumbprintPrefix, keyThumbprint))
 			if err != nil {
 				return err
 			}
 			b.tidyStatusIncDeletedAcmeAccountCount()
-		} else if account.Status == StatusValid {
+		} else if account.Status == AccountStatusValid {
 			// Revoke This Account
-			account.AccountRevokedDate = time.Now()
-			account.Status = StatusRevoked
+			account.AccountRevokedDate = now
+			account.Status = AccountStatusRevoked
 			err := as.UpdateAccount(ac, &account)
 			if err != nil {
 				return err
 			}
 			b.tidyStatusIncRevAcmeAccountCount()
+		}
+	}
+
+	// Only update the account if we modified the max cert expiry values and the account is still valid,
+	// to prevent us from adding back a deleted account or not re-writing the revoked account that was
+	// already written above.
+	if maxCertExpiryUpdated && account.Status == AccountStatusValid {
+		// Update our expiry time we previously setup.
+		err := as.UpdateAccount(ac, &account)
+		if err != nil {
+			return err
 		}
 	}
 
