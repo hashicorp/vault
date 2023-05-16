@@ -48,9 +48,8 @@ export default buildRoutes(function () {
   });
   this.route('tidy', function () {
     this.route('index', { path: '/' });
-    this.route('manage');
     this.route('auto', function () {
-      this.route('edit');
+      this.route('configure');
     });
     this.route('manual');
   });
