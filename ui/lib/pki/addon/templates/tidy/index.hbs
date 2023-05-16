@@ -10,7 +10,7 @@
 />
 
 {{#if this.model.hasConfig}}
-  <Page::PkiTidyStatus />
+  <Page::PkiTidyStatus @autoTidyConfig={{this.model.autoTidyConfig}} />
 {{else}}
   <Toolbar />
   <EmptyState @title="PKI not configured" @message={{this.notConfiguredMessage}}>

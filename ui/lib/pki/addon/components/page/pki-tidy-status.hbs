@@ -20,14 +20,13 @@
       Tidy
       <Icon @name="chevron-right" />
     </button>
-    {{! unless auto tidy disabled }}
-    <ToolbarLink @route="tidy.auto" data-test-pki-auto-tidy-config>
-      Auto-tidy configuration
-    </ToolbarLink>
-    {{! /unless }}
+    {{#if @autoTidyConfig.enabled}}
+      <ToolbarLink @route="tidy.auto" data-test-pki-auto-tidy-config>
+        Auto-tidy configuration
+      </ToolbarLink>
+    {{/if}}
   </ToolbarActions>
 </Toolbar>
-
 {{! TIDY OPTIONS MODAL }}
 <Modal
   @type="info"
