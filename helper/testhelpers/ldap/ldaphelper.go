@@ -38,7 +38,7 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 	cfg.RequestTimeout = 60
 
 	maxPageSize := 1000
-	cfg.MaximumPageSize = &maxPageSize
+	cfg.MaximumPageSize = maxPageSize
 
 	svc, err := runner.StartService(context.Background(), func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
 		connURL := fmt.Sprintf("ldap://%s:%d", host, port)

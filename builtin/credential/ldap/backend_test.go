@@ -1219,8 +1219,7 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 	falseBool := new(bool)
 	*falseBool = false
 
-	maxPageInt := new(int)
-	*maxPageInt = 1000
+	maxPageInt := 1000
 
 	exp := &ldapConfigEntry{
 		TokenParams: tokenutil.TokenParams{

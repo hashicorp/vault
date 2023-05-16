@@ -104,12 +104,6 @@ func (b *backend) Config(ctx context.Context, req *logical.Request) (*ldapConfig
 		persistNeeded = true
 	}
 
-	if result.MaximumPageSize == nil {
-		result.MaximumPageSize = new(int)
-		*result.MaximumPageSize = -1
-		persistNeeded = true
-	}
-
 	if persistNeeded && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby)) {
 		entry, err := logical.StorageEntryJSON("config", result)
 		if err != nil {

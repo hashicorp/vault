@@ -388,11 +388,6 @@ func (c *Client) performLdapFilterGroupsSearchPaging(cfg *ConfigEntry, conn Pagi
 		return make([]*ldap.Entry, 0), nil
 	}
 
-	if *cfg.MaximumPageSize < 0 {
-		c.Logger.Warn("maximumpagesize is negative, will not query server")
-		return make([]*ldap.Entry, 0), nil
-	}
-
 	// If groupfilter was defined, resolve it as a Go template and use the query for
 	// returning the user's groups
 	if c.Logger.IsDebug() {
@@ -437,7 +432,7 @@ func (c *Client) performLdapFilterGroupsSearchPaging(cfg *ConfigEntry, conn Pagi
 			cfg.GroupAttr,
 		},
 		SizeLimit: math.MaxInt32,
-	}, uint32(*cfg.MaximumPageSize))
+	}, uint32(cfg.MaximumPageSize))
 	if err != nil {
 		return nil, fmt.Errorf("LDAP search failed: %w", err)
 	}
@@ -558,7 +553,7 @@ func (c *Client) GetLdapGroups(cfg *ConfigEntry, conn Connection, userDN string,
 	if cfg.UseTokenGroups {
 		entries, err = c.performLdapTokenGroupsSearch(cfg, conn, userDN)
 	} else {
-		if paging, ok := conn.(PagingConnection); ok && *cfg.MaximumPageSize >= 0 {
+		if paging, ok := conn.(PagingConnection); ok && cfg.MaximumPageSize > 0 {
 			entries, err = c.performLdapFilterGroupsSearchPaging(cfg, paging, userDN, username)
 		} else {
 			entries, err = c.performLdapFilterGroupsSearch(cfg, conn, userDN, username)
