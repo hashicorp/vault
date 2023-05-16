@@ -41,4 +41,13 @@ export default class PkiTidyAdapter extends ApplicationAdapter {
       return resp.data;
     });
   }
+
+  queryRecord(store, type, query) {
+    const { backend, tidyType } = query;
+    // only auto-tidy will ever be read, no need to pass the type here
+    return this.ajax(`${this._baseUrl(backend)}/config/auto-tidy`, 'GET').then((resp) => {
+      // tidyType is the primary key and sets the id for the ember data model
+      return { tidyType, ...resp.data };
+    });
+  }
 }
