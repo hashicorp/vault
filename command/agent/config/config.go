@@ -176,7 +176,7 @@ type TemplateConfig struct {
 type ExecConfig struct {
 	Command            string    `hcl:"command,attr" mapstructure:"command"`
 	Args               []string  `hcl:"args,optional" mapstructure:"args"`
-	RestartOnNewSecret string    `hcl:"restart_on_new_secret,optional" mapstructure:"restart_on_new_secret"`
+	RestartOnSecretChanges  string  `hcl:"restart_on_secret_changes,optional" mapstructure:"restart_on_new_secret"`
 	RestartKillSignal  os.Signal `hcl:"-" mapstructure:"restart_kill_signal"`
 }
 
@@ -1183,7 +1183,7 @@ func parseEnvTemplates(result *Config, list *ast.ObjectList) error {
 		et.MapToEnvironmentVariable = pointerutil.StringPtr(name)
 
 		if _, exists := envTemplates[name]; exists {
-			return fmt.Errorf("duplicate environment '%s' variable detected", name)
+			return fmt.Errorf("duplicate environment variable %q detected", name)
 		}
 
 		envTemplates[name] = &et
