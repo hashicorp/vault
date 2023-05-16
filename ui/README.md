@@ -4,17 +4,17 @@
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 - [Vault UI](#vault-ui)
-  - [Ember CLI Version Matrix](#ember-cli-version-matrix)
+  - [Ember CLI Version Upgrade Matrix](#ember-cli-version-upgrade-matrix)
   - [Prerequisites](#prerequisites)
   - [Running a Vault Server](#running-a-vault-server)
   - [Running the UI locally](#running-the-ui-locally)
     - [Mirage](#mirage)
-    - [Building Vault UI into a Vault Binary](#building-vault-ui-into-a-vault-binary)
+  - [Building Vault UI into a Vault Binary](#building-vault-ui-into-a-vault-binary)
   - [Development](#development)
     - [Quick commands](#quick-commands)
-      - [Code Generators](#code-generators)
-      - [Running Tests](#running-tests)
-      - [Linting](#linting)
+    - [Code Generators](#code-generators)
+    - [Running Tests](#running-tests)
+    - [Linting](#linting)
     - [Contributing / Best Practices](#contributing--best-practices)
     - [Further Reading / Useful Links](#further-reading--useful-links)
 
@@ -24,7 +24,7 @@
 
 This README outlines the details of collaborating on this Ember application.
 
-## Ember CLI Version Matrix
+## Ember CLI Version Upgrade Matrix
 
 | Vault Version | Ember Version |
 | ------------- | ------------- |
@@ -88,7 +88,7 @@ Run yarn with mirage: `yarn start:mirage handlername`
 
 Where `handlername` is one of the options exported in [mirage/handlers/index](mirage/handlers/index.js)
 
-### Building Vault UI into a Vault Binary
+## Building Vault UI into a Vault Binary
 
 We use the [embed](https://golang.org/pkg/embed/) package from Go >1.20 to build
 the static assets of the Ember application into a Vault binary.
@@ -105,26 +105,28 @@ setting `VAULT_UI` environment variable.
 
 ### Quick commands
 
-| Command                                                                                  | Description                                                         |
-| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `yarn start`                                                                             | start the app with live reloading                                   |
-| `yarn start:mirage <handler>`                                                            | start the app with the mocked mirage backend, with handler provided |
-| `make static-dist && make dev-ui`                                                        | build a Vault binary with UI assets, by default runs on port :8200  |
-| `ember g component foo --in lib/core`                                                    | generate a component in the /addon engine                           |
-| `echo "export { default } from 'core/components/foo';" > lib/core/app/components/foo.js` | export component from addon engine to main app                      |
-| `yarn test:quick -f='<test name>'` -s                                                    | run tests in the browser, filtering by test name                    |
-| `yarn lint:js`                                                                           | lint javascript files                                               |
+| Command                               | Description                                                             |
+| ------------------------------------- | ----------------------------------------------------------------------- |
+| `yarn start`                          | start the app with live reloading                                       |
+| `yarn start:mirage <handler>`         | start the app with the mocked mirage backend, with handler provided     |
+| `make static-dist && make dev-ui`     | build a Vault binary with UI assets (run from root directory not `/ui`) |
+| `ember g component foo -ir core`      | generate a component in the /addon engine                               |
+| `yarn test:quick -f='<test name>'` -s | run tests in the browser, filtering by test name                        |
+| `yarn lint:js`                        | lint javascript files                                                   |
 
-#### Code Generators
+### Code Generators
 
 Make use of the many generators for code, try `ember help generate` for more details. If you're using a component that can be widely-used, consider making it an `addon` component instead (see [this PR](https://github.com/hashicorp/vault/pull/6629) for more details)
 
 eg. a reusable component named foo that you'd like in the core engine (read more about Ember engines [here](https://ember-engines.com/docs)).
 
-- `ember g component foo --in lib/core`
-- `echo "export { default } from 'core/components/foo';" > lib/core/app/components/foo.js`
+- `ember g component foo -ir core`
 
-#### Running Tests
+The above command creates a template-only component by default. If you'd like to add a backing class, add the `-gc` flag:
+
+- `ember g component foo -gc -ir core`
+
+### Running Tests
 
 Running tests will spin up a Vault dev server on port :9200 via a
 pretest script that testem (the test runner) executes. All of the
@@ -135,7 +137,7 @@ acceptance tests then run, which proxy requests back to that server.
 - `yarn run test -f="policies"` to filter the tests that are run. `-f` gets passed into
   [QUnit's `filter` config](https://api.qunitjs.com/config/QUnit.config#qunitconfigfilter-string--default-undefined)
 
-#### Linting
+### Linting
 
 - `yarn lint:js`
 - `yarn lint:hbs`
@@ -145,7 +147,7 @@ acceptance tests then run, which proxy requests back to that server.
 
 Hello and thank you for contributing to the Vault UI! Below is a list of patterns we follow on the UI team to keep in mind when contributing to the UI codebase. This is an ever-evolving process, so we welcome any comments, questions or general feedback.
 
-> **Remember** prefixing your branch name with `ui/` will run UI tests. If your PR includes backend changes, _do not_ prefix your branch, instead add the `ui` label on github. This will trigger the UI test suite to run, in addition to the backend Go tests.
+> **Remember** prefixing your branch name with `ui/` will run UI tests and skip the go tests. If your PR includes backend changes, _do not_ prefix your branch, instead add the `ui` label on github. This will trigger the UI test suite to run, in addition to the backend Go tests.
 
 - [routing](docs/routing.md)
 - [serializers/adapters](docs/serializers-adapters.md)
@@ -154,7 +156,7 @@ Hello and thank you for contributing to the Vault UI! Below is a list of pattern
 - [forms](docs/forms.md)
 - [css](docs/css.md)
 
-### Further Reading / Useful Links
+## Further Reading / Useful Links
 
 - [ember.js](https://emberjs.com/)
 - [ember-cli](https://cli.emberjs.com/release/)
