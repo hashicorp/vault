@@ -2062,7 +2062,7 @@ func (a *ActivityLog) handleEntitySegment(l *activity.EntityActivityLog, segment
 		// present. If it is, delete it. This is because the client should only
 		// be reported as new in the earliest month that it was seen
 		finalMonth := timeutil.StartOfMonth(opts.activePeriodEnd).UTC()
-		for currMonth := timeutil.StartOfMonth(segmentTime).UTC(); currMonth.After(finalMonth); currMonth = timeutil.StartOfNextMonth(currMonth).UTC() {
+		for currMonth := timeutil.StartOfMonth(segmentTime).UTC(); currMonth.Before(finalMonth); currMonth = timeutil.StartOfNextMonth(currMonth).UTC() {
 			// Invalidate the client from being a new client in the next month
 			next := timeutil.StartOfNextMonth(currMonth).UTC().Unix()
 			if _, present := opts.byMonth[next]; present {

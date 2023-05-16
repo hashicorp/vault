@@ -4365,7 +4365,7 @@ func (s summaryByMonth) firstSeen(t *testing.T, client *activity.EntityRecord) t
 		present := data.NewClients.Counts.contains(client)
 		if present {
 			if seen != 0 {
-				require.Fail(t, "client seen more than once", client, s)
+				require.Fail(t, "client seen more than once", client.ClientID, s)
 			}
 			seen = month
 		}
