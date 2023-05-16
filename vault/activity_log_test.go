@@ -4534,8 +4534,8 @@ func TestActivityLog_handleEntitySegment(t *testing.T) {
 	})
 }
 
-// TestActivityLog_handleTokenSegment verifies that tokens are correctly added to a map that tracks counts per namespace
-func TestActivityLog_handleTokenSegment(t *testing.T) {
+// TestActivityLog_breakdownTokenSegment verifies that tokens are correctly added to a map that tracks counts per namespace
+func TestActivityLog_breakdownTokenSegment(t *testing.T) {
 	toAdd := map[string]uint64{
 		"a": 1,
 		"b": 2,
@@ -4588,7 +4588,7 @@ func TestActivityLog_handleTokenSegment(t *testing.T) {
 				byNamespace[k] = newByNamespace()
 				byNamespace[k].Counts.Tokens = v
 			}
-			a.handleTokenSegment(&activity.TokenCount{CountByNamespaceID: toAdd}, byNamespace)
+			a.breakdownTokenSegment(&activity.TokenCount{CountByNamespaceID: toAdd}, byNamespace)
 			got := make(map[string]uint64)
 			for k, v := range byNamespace {
 				got[k] = v.Counts.Tokens

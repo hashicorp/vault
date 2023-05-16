@@ -2046,50 +2046,38 @@ func processClientRecord(e *activity.EntityRecord, byNamespace summaryByNamespac
 	byMonth.add(e, startTime)
 }
 
-// handleEntitySegment processes the record and adds it to the correct month/namespace breakdown maps, as well as to the hyperloglog
+// handleEntitySegment processes the record and adds it to the correct month/
+// namespace breakdown maps, as well as to the hyperloglog for the month. New
+// clients are deduplicated in opts.byMonth so that clients will only appear in
+// the first month in which they are seen.
+// This method must be called in reverse chronological order of the months (with
+// the most recent month being called before previous months)
 func (a *ActivityLog) handleEntitySegment(l *activity.EntityActivityLog, segmentTime time.Time, hll *hyperloglog.Sketch, opts pqOptions) error {
 	for _, e := range l.Clients {
 
 		processClientRecord(e, opts.byNamespace, opts.byMonth, segmentTime)
-
-		// We maintain an hyperloglog for each month
-		// hyperloglog is a sketch (hyperloglog data-structure) containing client ID's in a given month
-		// hyperloglog is used in activity log to get the approximate number new clients in the current billing month
-		// by counting the number of distinct clients in all the months including current month
-		// (this can be done by merging the hyperloglog all months with current month hyperloglog)
-		// and subtracting the number of distinct clients in the current month
-		// NOTE: current month here is not the month of startTime but the time period from the start of the current month,
-		// up until the time that this request was made.
 		hll.Insert([]byte(e.ClientID))
 
-		// The byMonth map will be filled in the reverse order of time. For
-		// example, if the billing period is from Jan to June, the byMonth
-		// will be filled for June first, May next and so on till Jan. When
-		// processing a client for the current month, it has been added as a
-		// new client above. Now, we check if that client is also used in
-		// the subsequent months (on any given month, byMonth map has
-		// already been processed for all the subsequent months due to the
-		// reverse ordering). If yes, we remove those references. This way a
-		// client is considered new only in the earliest month of its use in
-		// the billing period.
-		for currMonth := timeutil.StartOfMonth(segmentTime).UTC(); currMonth != timeutil.StartOfMonth(opts.activePeriodEnd).UTC(); currMonth = timeutil.StartOfNextMonth(currMonth).UTC() {
+		// step forward in time through the months to check if the client is
+		// present. If it is, delete it. This is because the client should only
+		// be reported as new in the earliest month that it was seen
+		finalMonth := timeutil.StartOfMonth(opts.activePeriodEnd).UTC()
+		for currMonth := timeutil.StartOfMonth(segmentTime).UTC(); currMonth.After(finalMonth); currMonth = timeutil.StartOfNextMonth(currMonth).UTC() {
 			// Invalidate the client from being a new client in the next month
 			next := timeutil.StartOfNextMonth(currMonth).UTC().Unix()
-			if _, present := opts.byMonth[next]; !present {
-				continue
+			if _, present := opts.byMonth[next]; present {
+				// delete from the new clients map for the next month
+				// this will handle deleting from the per-namespace and per-mount maps of NewClients
+				opts.byMonth[next].NewClients.delete(e)
 			}
-
-			// delete from the new clients map for the next month
-			// this will handle deleting from the per-namespace and per-mount maps of NewClients
-			opts.byMonth[next].NewClients.delete(e)
 		}
 	}
 
 	return nil
 }
 
-// handleTokenSegment handles a TokenCount record, adding it to the namespace breakdown
-func (a *ActivityLog) handleTokenSegment(l *activity.TokenCount, byNamespace map[string]*processByNamespace) {
+// breakdownTokenSegment handles a TokenCount record, adding it to the namespace breakdown
+func (a *ActivityLog) breakdownTokenSegment(l *activity.TokenCount, byNamespace map[string]*processByNamespace) {
 	for nsID, v := range l.CountByNamespaceID {
 		if _, present := byNamespace[nsID]; !present {
 			byNamespace[nsID] = newByNamespace()
@@ -2105,6 +2093,7 @@ func (a *ActivityLog) writePrecomputedQuery(ctx context.Context, segmentTime tim
 		Namespaces: make([]*activity.NamespaceRecord, 0, len(opts.byNamespace)),
 		Months:     make([]*activity.MonthRecord, 0, len(opts.byMonth)),
 	}
+	// this will transform the byMonth map into the correctly formatted protobuf
 	pq.Months = a.transformMonthBreakdowns(opts.byMonth)
 
 	for nsID, entry := range opts.byNamespace {
@@ -2191,7 +2180,7 @@ func (a *ActivityLog) segmentToPrecomputedQuery(ctx context.Context, segmentTime
 			a.logger.Warn("failed to load token counts", "error", err)
 			return err
 		}
-		a.handleTokenSegment(token, opts.byNamespace)
+		a.breakdownTokenSegment(token, opts.byNamespace)
 	}
 
 	// write metrics
@@ -2329,7 +2318,6 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context) error {
 	}
 	// "times" is already in reverse order, start building the per-namespace maps
 	// from the last month backward
-
 	for _, startTime := range times {
 		// Do not work back further than the current retention window,
 		// which will just get deleted anyway.
@@ -2449,6 +2437,8 @@ func (a *ActivityLog) populateNamespaceAndMonthlyBreakdowns() (map[int64]*proces
 	return byMonth, byNamespace
 }
 
+// transformMonthBreakdowns converts a map of unix timestamp -> processMonth to
+// a slice of MonthRecord
 func (a *ActivityLog) transformMonthBreakdowns(byMonth map[int64]*processMonth) []*activity.MonthRecord {
 	monthly := make([]*activity.MonthRecord, 0)
 	processByNamespaces := func(nsMap map[string]*processByNamespace) []*activity.MonthlyNamespaceRecord {
