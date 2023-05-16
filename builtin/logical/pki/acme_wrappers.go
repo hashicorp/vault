@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
-	"strconv"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -390,20 +388,14 @@ func isAcmeDisabled(sc *storageContext, config *acmeConfigEntry, policy EabPolic
 		return true
 	}
 
-	if disableAcmeRaw := os.Getenv(disableAcmeEnvVar); disableAcmeRaw != "" {
-		disableAcme, err := strconv.ParseBool(disableAcmeRaw)
-		if err != nil {
-			sc.Backend.Logger().Warn("could not parse env var VAULT_DISABLE_PUBLIC_ACME", "error", err)
-			disableAcme = false
-		}
+	disableAcme := isPublicACMEDisabledByEnv(sc.Backend.Logger())
 
-		// The OS environment if true will override any configuration option.
-		if disableAcme {
-			if policy.OverrideEnvDisablingPublicAcme() {
-				return false
-			}
-			return true
+	// The OS environment if true will override any configuration option.
+	if disableAcme {
+		if policy.OverrideEnvDisablingPublicAcme() {
+			return false
 		}
+		return true
 	}
 
 	return false

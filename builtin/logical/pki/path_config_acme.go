@@ -7,6 +7,8 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/hashicorp/go-hclog"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -259,7 +261,7 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	// Lastly lets verify that the configuration is honored/invalidated by the public ACME env var.
-	isPublicAcmeDisabledByEnv := isPublicACMEDisabledByEnv()
+	isPublicAcmeDisabledByEnv := isPublicACMEDisabledByEnv(sc.Backend.Logger())
 	if isPublicAcmeDisabledByEnv && config.Enabled {
 		eabPolicy := getEabPolicyByName(config.EabPolicyName)
 		if !eabPolicy.OverrideEnvDisablingPublicAcme() {
@@ -276,7 +278,7 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 	return genResponseFromAcmeConfig(config), nil
 }
 
-func isPublicACMEDisabledByEnv() bool {
+func isPublicACMEDisabledByEnv(log hclog.Logger) bool {
 	disableAcmeRaw, ok := os.LookupEnv(disableAcmeEnvVar)
 	if !ok {
 		return false
@@ -284,6 +286,7 @@ func isPublicACMEDisabledByEnv() bool {
 
 	disableAcme, err := strconv.ParseBool(disableAcmeRaw)
 	if err != nil {
+		log.Warn("could not parse env var VAULT_DISABLE_PUBLIC_ACME", "error", err)
 		return false
 	}
 
