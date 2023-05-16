@@ -70,7 +70,7 @@ func addFieldsForACMERequest(fields map[string]*framework.FieldSchema) map[strin
 }
 
 func addFieldsForACMEKidRequest(fields map[string]*framework.FieldSchema, pattern string) map[string]*framework.FieldSchema {
-	if strings.Contains(pattern, framework.GenericNameRegex("kid")) {
+	if strings.Contains(pattern, uuidNameRegex("kid")) {
 		fields["kid"] = &framework.FieldSchema{
 			Type:        framework.TypeString,
 			Description: `The key identifier provided by the CA`,

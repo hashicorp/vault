@@ -87,12 +87,12 @@ func pathAcmeConfig(b *backend) *framework.Path {
 			"allowed_issuers": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: `which issuers are allowed for use with ACME; by default, this will only be the primary (default) issuer`,
-				Default:     "*",
+				Default:     []string{"*"},
 			},
 			"allowed_roles": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: `which roles are allowed for use with ACME; by default via '*', these will be all roles including sign-verbatim; when concrete role names are specified, sign-verbatim is not allowed and a default_role must be specified in order to allow usage of the default acme directories under /pki/acme/directory and /pki/issuer/:issuer_id/acme/directory.`,
-				Default:     "*",
+				Default:     []string{"*"},
 			},
 			"default_role": {
 				Type:        framework.TypeString,
