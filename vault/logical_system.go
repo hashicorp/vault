@@ -3037,7 +3037,7 @@ func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logica
 
 	for i := len(testPassword); i < policy.Length; i++ {
 		for _, rule := range policy.Rules {
-			if i >= policy.Length {
+			if len(testPassword) >= policy.Length {
 				break
 			}
 			charsetRule, ok := rule.(random.CharsetRule)
