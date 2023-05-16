@@ -3,24 +3,28 @@
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-- [Capabilities](#capabilities)
-- [Decorators](#decorators)
-  - [@withFormFields()](#withformfields)
-  - [@withModelValidations()](#withmodelvalidations)
+- [Models](#models)
+  - [Capabilities](#capabilities)
+  - [Decorators](#decorators)
+    - [@withFormFields()](#withformfields)
+    - [@withModelValidations()](#withmodelvalidations)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## Capabilities
 
 - The API will prevent users from performing disallowed actions, adding capabilities is purely to improve UX
-- Always test the capability works as expected (never assume the API path :smiling_face ), the extra string interpolation can lead to sneaky typos and incorrect returns from the getters
+- Always test the capability works as expected (never assume the API path 🙂), the extra string interpolation can lead to sneaky typos and incorrect returns from the getters
 
 ```js
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 export default class FooModel extends Model {
+  @attr backend;
+  @attr('string') fooId;
+
   // use string interpolation for dynamic parts of API path
-  // the first arg is the apiPath, and the rest are the model attributes for those values
+  // the first arg is the apiPath, and the rest are the model attribute paths for those values
   @lazyCapabilities(apiPath`${'backend'}/foo/${'fooId'}`, 'backend', 'fooId') fooPath;
 
   // explicitly check for false because default behavior is showing the thing (i.e. the capability hasn't loaded yet and is undefined)
