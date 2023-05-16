@@ -71,7 +71,9 @@ var (
 			var results []*framework.Path
 			for pattern, pathSpec := range paths {
 				path := &framework.Path{
-					Pattern: pattern,
+					Pattern:    pattern,
+					Operations: make(map[logical.Operation]framework.OperationHandler),
+					Fields:     make(map[string]*framework.FieldSchema),
 				}
 
 				for _, parameter := range pathSpec.parameters {
