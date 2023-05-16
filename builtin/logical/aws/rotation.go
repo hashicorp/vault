@@ -38,8 +38,12 @@ func (b *backend) rotateExpiredStaticCreds(ctx context.Context, req *logical.Req
 func (b *backend) rotateCredential(ctx context.Context, storage logical.Storage) (rotated bool, err error) {
 	// If queue is empty or first item does not need a rotation (priority is next rotation timestamp) there is nothing to do
 	item, err := b.credRotationQueue.Pop()
-	if err != nil && err == queue.ErrEmpty {
-		return false, nil
+	if err != nil {
+		// the queue is just empty, which is fine.
+		if err == queue.ErrEmpty {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to pop from queue for role %q: %w", item.Key, err)
 	}
 	if item.Priority > time.Now().Unix() {
 		// no rotation required
