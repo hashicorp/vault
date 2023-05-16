@@ -81,6 +81,10 @@ func TestRotation(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:  "no creds to rotate",
+			creds: []credToInsert{},
+		},
 	}
 
 	ak := "long-access-key-id"
