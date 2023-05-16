@@ -65,7 +65,6 @@ func Backend() *backend {
 		Invalidate:        b.invalidate,
 		WALRollback:       b.walRollback,
 		WALRollbackMinAge: minAwsUserRollbackAge,
-		InitializeFunc:    b.initQueue,
 		PeriodicFunc:      b.rotateExpiredStaticCreds,
 		BackendType:       logical.TypeLogical,
 	}

@@ -12,10 +12,6 @@ import (
 	"github.com/hashicorp/vault/sdk/queue"
 )
 
-func (b *backend) initQueue(_ context.Context, _ *logical.InitializationRequest) error {
-	return nil
-}
-
 func (b *backend) rotateExpiredStaticCreds(ctx context.Context, req *logical.Request) error {
 	var errs *multierror.Error
 

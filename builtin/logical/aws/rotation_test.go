@@ -93,10 +93,6 @@ func TestRotation(t *testing.T) {
 			config.StorageView = &logical.InmemStorage{}
 
 			b := Backend()
-			err := b.initQueue(bgCTX, nil)
-			if err != nil {
-				t.Fatalf("couldn't initialize queue: %s", err)
-			}
 
 			// this means the creds will be the same for every user, but that's okay
 			// since what we care about is whether they changed on a single-user basis.
