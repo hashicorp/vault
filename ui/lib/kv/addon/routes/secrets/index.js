@@ -9,7 +9,7 @@ import { withConfig } from 'kubernetes/decorators/fetch-config';
 import { hash } from 'rsvp';
 
 @withConfig()
-export default class KVSecretsRoute extends Route {
+export default class KvSecretsRoute extends Route {
   @service store;
   @service secretMountPath;
 
