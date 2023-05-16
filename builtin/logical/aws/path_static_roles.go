@@ -150,7 +150,7 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 			return nil, err
 		}
 	} else {
-		return nil, fmt.Errorf("missing '%s' parameter", paramRotationPeriod)
+		return nil, fmt.Errorf("missing %q parameter", paramRotationPeriod)
 	}
 
 	// Upsert role config
@@ -167,12 +167,12 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 	// so we need to boostrap new roles with a new initial set of keys to be able to serve valid credentials to Vault clients.
 	existingCreds, err := req.Storage.Get(ctx, formatCredsStoragePath(config.Name))
 	if err != nil {
-		return nil, fmt.Errorf("unable to verify if credentials already exist for role '%q': %w", config.Name, err)
+		return nil, fmt.Errorf("unable to verify if credentials already exist for role %q: %w", config.Name, err)
 	}
 	if existingCreds == nil {
 		err := b.createCredential(ctx, req.Storage, config)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create new credentials for role '%q': %w", config.Name, err)
+			return nil, fmt.Errorf("failed to create new credentials for role %q: %w", config.Name, err)
 		}
 
 		err = b.credRotationQueue.Push(&queue.Item{
@@ -181,7 +181,7 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 			Priority: time.Now().Add(config.RotationPeriod).Unix(),
 		})
 		if err != nil {
-			return nil, fmt.Errorf("failed to add item into the rotation queue for role '%q': %w", config.Name, err)
+			return nil, fmt.Errorf("failed to add item into the rotation queue for role %q: %w", config.Name, err)
 		}
 	}
 
@@ -198,7 +198,7 @@ func (b *backend) pathStaticRolesDelete(ctx context.Context, req *logical.Reques
 
 	err := b.deleteCredential(ctx, req.Storage, roleName.(string))
 	if err != nil {
-		return nil, fmt.Errorf("failed to clean credentials while deleting role '%q': %w", roleName.(string), err)
+		return nil, fmt.Errorf("failed to clean credentials while deleting role %q: %w", roleName.(string), err)
 	}
 
 	return nil, req.Storage.Delete(ctx, formatRoleStoragePath(roleName.(string)))
