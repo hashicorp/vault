@@ -516,11 +516,18 @@ func TestAcmeAccountsCrossingDirectoryPath(t *testing.T) {
 // TestAcmeDisabledWithEnvVar verifies if VAULT_DISABLE_PUBLIC_ACME is set that we completely
 // disable the ACME service
 func TestAcmeDisabledWithEnvVar(t *testing.T) {
-	t.Setenv("VAULT_DISABLE_PUBLIC_ACME", "true")
-
+	// Setup a cluster with the configuration set to not-required, initially as the
+	// configuration will validate if the environment var is set
 	cluster, client, _ := setupAcmeBackend(t)
 	defer cluster.Cleanup()
 
+	// Seal setup the environment variable, and unseal which now means we have a cluster
+	// with ACME configuration saying it is enabled with a bad EAB policy.
+	cluster.EnsureCoresSealed(t)
+	t.Setenv("VAULT_DISABLE_PUBLIC_ACME", "true")
+	cluster.UnsealCores(t)
+
+	// Make sure that ACME is disabled now.
 	for _, method := range []string{http.MethodHead, http.MethodGet} {
 		t.Run(fmt.Sprintf("%s", method), func(t *testing.T) {
 			req := client.NewRequest(method, "/v1/pki/acme/new-nonce")
@@ -532,6 +539,34 @@ func TestAcmeDisabledWithEnvVar(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestAcmeConfigChecksPublicAcmeEnv verifies certain EAB policy values can not be set if ENV var is enabled
+func TestAcmeConfigChecksPublicAcmeEnv(t *testing.T) {
+	t.Setenv("VAULT_DISABLE_PUBLIC_ACME", "true")
+	cluster, client := setupTestPkiCluster(t)
+	defer cluster.Cleanup()
+
+	_, err := client.Logical().WriteWithContext(context.Background(), "pki/config/acme", map[string]interface{}{
+		"enabled":    true,
+		"eab_policy": string(eabPolicyAlwaysRequired),
+	})
+	require.NoError(t, err)
+
+	for _, policyName := range []EabPolicyName{eabPolicyNewAccountRequired, eabPolicyNotRequired} {
+		_, err = client.Logical().WriteWithContext(context.Background(), "pki/config/acme", map[string]interface{}{
+			"enabled":    true,
+			"eab_policy": string(policyName),
+		})
+		require.Error(t, err, "eab policy %s should have not been allowed to be set")
+	}
+
+	// Make sure we can disable ACME and the eab policy is not checked
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/config/acme", map[string]interface{}{
+		"enabled":    false,
+		"eab_policy": string(eabPolicyNotRequired),
+	})
+	require.NoError(t, err)
 }
 
 func setupAcmeBackend(t *testing.T) (*vault.TestCluster, *api.Client, string) {
@@ -547,8 +582,7 @@ func setupAcmeBackend(t *testing.T) (*vault.TestCluster, *api.Client, string) {
 	require.NoError(t, err)
 
 	_, err = client.Logical().WriteWithContext(context.Background(), "pki/config/acme", map[string]interface{}{
-		"enabled":    true,
-		"eab_policy": "not-required",
+		"enabled": true,
 	})
 	require.NoError(t, err)
 
