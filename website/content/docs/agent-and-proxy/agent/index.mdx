@@ -45,7 +45,7 @@ the Auto-Auth token for these requests. Please see the [API Proxy docs][apiproxy
 for more information.
 
 API Proxy functionality takes place within a defined `listener`, and its behaviour can be configured with an
-[`api_proxy` stanza](/vault/docs/agentandproxy/agent/apiproxy#configuration-api_proxy).
+[`api_proxy` stanza](/vault/docs/agent-and-proxy/agent/apiproxy#configuration-api_proxy).
 
 ## Caching
 
@@ -67,7 +67,7 @@ to only enable this on trusted interfaces, as it does not require any authorizat
 
 ### Cache
 
-See the [caching](/vault/docs/agentandproxy/agent/caching#api) page for details on the cache API.
+See the [caching](/vault/docs/agent-and-proxy/agent/caching#api) page for details on the cache API.
 
 ## Configuration
 
@@ -141,7 +141,7 @@ These are the currently-available general configuration options:
 - `template_config` <code>([template_config][template-config]: <optional\>)</code> - Specifies templating engine behavior.
 
 - `telemetry` <code>([telemetry][telemetry]: <optional\>)</code> – Specifies the telemetry
-  reporting system. See the [telemetry Stanza](/vault/docs/agentandproxy/agent#telemetry-stanza) section below
+  reporting system. See the [telemetry Stanza](/vault/docs/agent-and-proxy/agent#telemetry-stanza) section below
   for a list of metrics specific to Agent.
 
 - `log_level` - Equivalent to the [`-log-level` command-line flag](#_log_level).
@@ -256,7 +256,7 @@ listener configuration, an Agent's listener configuration also supports the foll
 
 #### agent_api Stanza
 
-- `enable_quit` `(bool: false)` - If set to `true`, the agent will enable the [quit](/vault/docs/agentandproxy/agent#quit) API.
+- `enable_quit` `(bool: false)` - If set to `true`, the agent will enable the [quit](/vault/docs/agent-and-proxy/agent#quit) API.
 
 ### telemetry Stanza
 
@@ -376,15 +376,15 @@ template {
 }
 ```
 
-[vault]: /vault/docs/agentandproxy/agent#vault-stanza
-[autoauth]: /vault/docs/agentandproxy/agent/autoauth
-[caching]: /vault/docs/agentandproxy/agent/caching
-[apiproxy]: /vault/docs/agentandproxy/agent/apiproxy
-[persistent-cache]: /vault/docs/agentandproxy/agent/caching/persistent-caches
-[template]: /vault/docs/agentandproxy/agent/template
-[template-config]: /vault/docs/agentandproxy/agent/template#template-configurations
-[agent-api]: /vault/docs/agentandproxy/agent/#agent_api-stanza
-[listener]: /vault/docs/agentandproxy/agent#listener-stanza
+[vault]: /vault/docs/agent-and-proxy/agent#vault-stanza
+[autoauth]: /vault/docs/agent-and-proxy/agent/autoauth
+[caching]: /vault/docs/agent-and-proxy/agent/caching
+[apiproxy]: /vault/docs/agent-and-proxy/agent/apiproxy
+[persistent-cache]: /vault/docs/agent-and-proxy/agent/caching/persistent-caches
+[template]: /vault/docs/agent-and-proxy/agent/template
+[template-config]: /vault/docs/agent-and-proxy/agent/template#template-configurations
+[agent-api]: /vault/docs/agent-and-proxy/agent/#agent_api-stanza
+[listener]: /vault/docs/agent-and-proxy/agent#listener-stanza
 [listener_main]: /vault/docs/configuration/listener/tcp
-[winsvc]: /vault/docs/agentandproxy/agent/winsvc
+[winsvc]: /vault/docs/agent-and-proxy/agent/winsvc
 [telemetry]: /vault/docs/configuration/telemetry
