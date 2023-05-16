@@ -12,6 +12,9 @@ import (
 	"github.com/hashicorp/vault/sdk/queue"
 )
 
+// rotateExpiredStaticCreds will pop expired credentials (credentials whose priority
+// represents a time before the present), rotate the associated credential, and push
+// them back onto the queue with the new priority.
 func (b *backend) rotateExpiredStaticCreds(ctx context.Context, req *logical.Request) error {
 	var errs *multierror.Error
 
@@ -30,7 +33,9 @@ func (b *backend) rotateExpiredStaticCreds(ctx context.Context, req *logical.Req
 	}
 }
 
-func (b *backend) rotateCredential(ctx context.Context, storage logical.Storage) (bool, error) {
+// rotateCredential pops an element from the priority queue, and if it is expired, rotate and re-push.
+// If a cred was rotated, it returns true, otherwise false.
+func (b *backend) rotateCredential(ctx context.Context, storage logical.Storage) (rotated bool, err error) {
 	// If queue is empty or first item does not need a rotation (priority is next rotation timestamp) there is nothing to do
 	item, err := b.credRotationQueue.Pop()
 	if err != nil && err == queue.ErrEmpty {
