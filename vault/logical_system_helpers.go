@@ -76,7 +76,7 @@ var (
 
 				for _, parameter := range pathSpec.parameters {
 					path.Fields[parameter] = &framework.FieldSchema{
-						Type: framework.TypeString,
+						Type:     framework.TypeString,
 						Required: true,
 					}
 				}
