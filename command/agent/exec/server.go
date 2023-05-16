@@ -92,8 +92,7 @@ func (s *Server) Run(ctx context.Context, envTmpls map[string]*config.EnvTemplat
 		return nil
 	}
 
-	// templates := make([]*ctconfig.TemplateConfig, len(envTmpls))
-	var templates []*ctconfig.TemplateConfig
+	templates := make([]*ctconfig.TemplateConfig, 0, len(envTmpls))
 
 	for envName, envTmpl := range envTmpls {
 		tmpl := envTmpl.TemplateConfig
