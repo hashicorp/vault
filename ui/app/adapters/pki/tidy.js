@@ -35,13 +35,6 @@ export default class PkiTidyAdapter extends ApplicationAdapter {
     return this.ajax(url, 'POST', { data: this.serialize(snapshot) });
   }
 
-  findRecord(store, type, backend) {
-    // only auto-tidy will ever be read, no need to pass the type here
-    return this.ajax(`${this._baseUrl(backend)}/config/auto-tidy`, 'GET').then((resp) => {
-      return resp.data;
-    });
-  }
-
   queryRecord(store, type, query) {
     const { backend, tidyType } = query;
     // only auto-tidy will ever be read, no need to pass the type here
