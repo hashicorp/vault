@@ -1719,6 +1719,77 @@ func (c *ServerCommand) Run(args []string) int {
 				c.logger.Info(fmt.Sprintf("Wrote stacktrace to: %s", f.Name()))
 				f.Close()
 			}
+
+			// We can only get pprof outputs via the API but sometimes Vault can get
+			// into a state where it cannot process requests so we can get pprof outputs
+			// via SIGUSR2.
+			if os.Getenv("VAULT_PPROF_WRITE_TO_FILE") != "" {
+				dir := ""
+				path := os.Getenv("VAULT_PPROF_FILE_PATH")
+				if path != "" {
+					if _, err := os.Stat(path); err != nil {
+						c.logger.Error("Checking pprof path failed", "error", err)
+						continue
+					}
+					dir = path
+				} else {
+					dir, err = os.MkdirTemp("", "vault-pprof")
+					if err != nil {
+						c.logger.Error("Could not create temporary directory for pprof", "error", err)
+						continue
+					}
+				}
+
+				fGoRoutine, err := os.Create(filepath.Join("%s/goroutines", dir))
+				if err != nil {
+					c.UI.Error(err.Error())
+					continue
+				}
+
+				err = pprof.Lookup("goroutine").WriteTo(fGoRoutine, 0)
+				if err != nil {
+					c.UI.Error(err.Error())
+					continue
+				}
+
+				fHeap, err := os.Create(filepath.Join("%s/heap", dir))
+				if err != nil {
+					c.UI.Error(err.Error())
+					continue
+				}
+
+				err = pprof.Lookup("heap").WriteTo(fHeap, 0)
+				if err != nil {
+					c.UI.Error(err.Error())
+					continue
+				}
+
+				fAllocs, err := os.Create(filepath.Join("%s/allocs", dir))
+				if err != nil {
+					c.UI.Error(err.Error())
+					continue
+				}
+
+				err = pprof.Lookup("allocs").WriteTo(fAllocs, 0)
+				if err != nil {
+					c.UI.Error(err.Error())
+					continue
+				}
+
+				fThread, err := os.Create(filepath.Join("%s/threadcreate", dir))
+				if err != nil {
+					c.UI.Error(err.Error())
+					continue
+				}
+
+				err = pprof.Lookup("threadcreate").WriteTo(fThread, 0)
+				if err != nil {
+					c.UI.Error(err.Error())
+					continue
+				}
+
+				c.logger.Info(fmt.Sprintf("Wrote pprof files to: %s", dir))
+			}
 		}
 	}
 	// Notify systemd that the server is shutting down
