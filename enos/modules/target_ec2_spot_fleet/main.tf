@@ -161,10 +161,11 @@ resource "random_string" "unique_id" {
 }
 
 locals {
-  instances    = toset([for idx in range(var.instance_count) : tostring(idx)])
-  cluster_name = coalesce(var.cluster_name, random_string.cluster_name.result)
-  name_prefix  = "${var.project_name}-${local.cluster_name}-${random_string.unique_id.result}"
-  fleet_tag    = "${local.name_prefix}-spot-fleet-target"
+  allocation_strategy = "lowestPrice"
+  instances           = toset([for idx in range(var.instance_count) : tostring(idx)])
+  cluster_name        = coalesce(var.cluster_name, random_string.cluster_name.result)
+  name_prefix         = "${var.project_name}-${local.cluster_name}-${random_string.unique_id.result}"
+  fleet_tag           = "${local.name_prefix}-spot-fleet-target"
   fleet_tags = {
     Name      = "${local.name_prefix}-target"
     Type      = local.cluster_name
@@ -314,11 +315,14 @@ resource "aws_launch_template" "target" {
 # Unless we see capacity issues or instances being shut down then we ought to
 # stick with that strategy.
 resource "aws_spot_fleet_request" "targets" {
-  allocation_strategy = "lowestPrice"
+  allocation_strategy = local.allocation_strategy
   fleet_type          = "request"
   iam_fleet_role      = aws_iam_role.fleet.arn
-  // Set this to zero so re-runs don't plan for replacement
-  instance_pools_to_use_count   = 0
+  // The instance_pools_to_use_count is only valid for the allocation_strategy
+  // lowestPrice. When we are using that strategy we'll want to always set it
+  // to 1 to avoid rebuilding the fleet on a re-run. For any other strategy
+  // set it to zero to avoid rebuilding the fleet on a re-run.
+  instance_pools_to_use_count   = local.allocation_strategy == "lowestPrice" ? 1 : 0
   target_capacity               = var.instance_count
   terminate_instances_on_delete = true
   wait_for_fulfillment          = true
