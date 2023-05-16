@@ -31,6 +31,7 @@ func NewReplicationSetDocker(t *testing.T) (*testcluster.ReplicationSet, error) 
 			ImageTag:    "latest",
 			VaultBinary: os.Getenv("VAULT_BINARY"),
 			ClusterOptions: testcluster.ClusterOptions{
+				NumCores:    5,
 				ClusterName: strings.ReplaceAll(t.Name()+"-"+name, "/", "-"),
 				Logger:      baseLogger.Named(name),
 				VaultNodeConfig: &testcluster.VaultNodeConfig{

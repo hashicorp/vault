@@ -226,7 +226,10 @@ func WaitForPerfReplicationWorking(ctx context.Context, pri, sec VaultCluster) e
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	return fmt.Errorf("unable to read replicated KV on secondary", "path", path, "err", err)
+	if err == nil {
+		err = ctx.Err()
+	}
+	return fmt.Errorf("unable to read replicated KV on secondary, path=%s, err=%v", path, err)
 }
 
 func SetupTwoClusterPerfReplication(ctx context.Context, pri, sec VaultCluster) error {

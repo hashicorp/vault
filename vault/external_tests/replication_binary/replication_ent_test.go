@@ -57,13 +57,13 @@ func TestReplication_FailoverPrimaryActive(t *testing.T) {
 	defer cancel()
 
 	a, c := r.Clusters["A"], r.Clusters["C"]
-	a0, c0 := a.Nodes()[0], c.Nodes()[0]
+	c0 := c.Nodes()[0]
 	err = testcluster.WaitForPerfReplicationStatus(ctx, c0.APIClient(), func(data map[string]interface{}) error {
 		found := data["known_primary_cluster_addrs"]
-		if len(found.([]interface{})) == 3 {
+		if len(found.([]interface{})) == len(a.Nodes()) {
 			return nil
 		}
-		return fmt.Errorf("expected 3 known_primary_cluster_addrs, got: %#v", found)
+		return fmt.Errorf("expected %d known_primary_cluster_addrs, got: %#v", len(a.Nodes()), found)
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -74,28 +74,37 @@ func TestReplication_FailoverPrimaryActive(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	priAPIAddrRaw := a0.(*docker.DockerClusterNode).RealAPIAddr
-	priAPIAddr, err := url.Parse(priAPIAddrRaw)
-	if err != nil {
-		t.Fatalf("bad api addr %q: %v", priAPIAddrRaw, err)
-	}
-	err = c0.(*docker.DockerClusterNode).AddNetworkDelay(ctx, 10*time.Second, strings.Split(priAPIAddr.Host, ":")[0])
-	if err != nil {
-		t.Fatal(fmt.Sprintf("delaying sec node 0 traffic to pri node 0: %s", err))
-	}
-	err = a0.(*docker.DockerClusterNode).Pause(ctx)
-	if err != nil {
-		t.Fatal(fmt.Sprintf("pausing node 0: %s", err))
-	}
-	time.Sleep(5 * time.Second)
+	for i := 0; i < 2; i++ {
+		idx, err := testcluster.LeaderNode(ctx, a)
+		if err != nil {
+			t.Fatal(err)
+		}
+		leader := a.Nodes()[idx]
 
-	err = testcluster.WaitForPerfReplicationWorking(ctx, a, c)
-	if err != nil {
-		t.Fatal(err)
-	}
+		priAPIAddrRaw := leader.(*docker.DockerClusterNode).RealAPIAddr
+		priAPIAddr, err := url.Parse(priAPIAddrRaw)
+		if err != nil {
+			t.Fatalf("bad api addr %q: %v", priAPIAddrRaw, err)
+		}
+		err = c0.(*docker.DockerClusterNode).AddNetworkDelay(ctx, 10*time.Second, strings.Split(priAPIAddr.Host, ":")[0])
+		if err != nil {
+			t.Fatal(fmt.Sprintf("delaying sec node 0 traffic to pri node 0: %s", err))
+		}
+		err = leader.(*docker.DockerClusterNode).Pause(ctx)
+		if err != nil {
+			t.Fatal(fmt.Sprintf("pausing node 0: %s", err))
+		}
+		time.Sleep(5 * time.Second)
 
-	err = testcluster.WaitForPerfReplicationConnectionStatus(ctx, c0.APIClient())
-	if err != nil {
-		t.Fatal(err)
+		err = testcluster.WaitForPerfReplicationWorking(ctx, a, c)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		err = testcluster.WaitForPerfReplicationConnectionStatus(ctx, c0.APIClient())
+		if err != nil {
+			t.Fatal(err)
+		}
+
 	}
 }
