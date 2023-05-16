@@ -2096,6 +2096,7 @@ func (a *ActivityLog) writePrecomputedQuery(ctx context.Context, segmentTime tim
 	// this will transform the byMonth map into the correctly formatted protobuf
 	pq.Months = a.transformMonthBreakdowns(opts.byMonth)
 
+	// the byNamespace map also needs to be transformed into a protobuf
 	for nsID, entry := range opts.byNamespace {
 		mountRecord := make([]*activity.MountRecord, 0, len(entry.Mounts))
 		for mountAccessor, mountData := range entry.Mounts {
