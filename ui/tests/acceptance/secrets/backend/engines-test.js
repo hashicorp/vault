@@ -80,7 +80,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
   });
 
   test('it filters by name and engine type', async function (assert) {
-    assert.expect(3);
+    assert.expect(4);
     const enginePath1 = `aws-1-${this.uid}`;
     const enginePath2 = `aws-2-${this.uid}`;
 
@@ -98,10 +98,10 @@ module('Acceptance | secret-engine list view', function (hooks) {
     assert.strictEqual(rows.length, rowsAws.length, 'all rows returned are aws');
     // filter by name
     await clickTrigger('#filter-by-engine-name');
-    await searchSelect.options.objectAt(1).click();
+    await searchSelect.options.objectAt(0).click();
     const singleRow = document.querySelectorAll('[data-test-auth-backend-link]');
-
-    assert.dom(singleRow[0]).includesText('aws-2', 'shows the filtered by name engine');
+    assert.strictEqual(singleRow.length, 1, 'returns only one row');
+    assert.dom(singleRow[0]).includesText('aws', 'shows the filtered by name engine');
     // clear filter by engine name
     await searchSelect.deleteButtons.objectAt(1).click();
     const rowsAgain = document.querySelectorAll('[data-test-auth-backend-link]');
