@@ -7,8 +7,6 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -144,10 +142,10 @@ func (b *backend) pathAcmeRead(ctx context.Context, req *logical.Request, _ *fra
 		return nil, err
 	}
 
-	return genResponseFromAcmeConfig(config), nil
+	return genResponseFromAcmeConfig(config, nil), nil
 }
 
-func genResponseFromAcmeConfig(config *acmeConfigEntry) *logical.Response {
+func genResponseFromAcmeConfig(config *acmeConfigEntry, warnings []string) *logical.Response {
 	response := &logical.Response{
 		Data: map[string]interface{}{
 			"allowed_roles":   config.AllowedRoles,
@@ -157,6 +155,7 @@ func genResponseFromAcmeConfig(config *acmeConfigEntry) *logical.Response {
 			"dns_resolver":    config.DNSResolver,
 			"eab_policy":      config.EabPolicyName,
 		},
+		Warnings: warnings,
 	}
 
 	// TODO: Add some nice warning if we are on a replication cluster and path isn't set
@@ -260,13 +259,19 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 		}
 	}
 
+	var warnings []string
 	// Lastly lets verify that the configuration is honored/invalidated by the public ACME env var.
-	isPublicAcmeDisabledByEnv := isPublicACMEDisabledByEnv(sc.Backend.Logger())
+	isPublicAcmeDisabledByEnv, err := isPublicACMEDisabledByEnv()
+	if err != nil {
+		warnings = append(warnings, err.Error())
+	}
 	if isPublicAcmeDisabledByEnv && config.Enabled {
 		eabPolicy := getEabPolicyByName(config.EabPolicyName)
 		if !eabPolicy.OverrideEnvDisablingPublicAcme() {
-			return nil, fmt.Errorf("%s env var is enabled, ACME EAB policy needs to be '%s' with ACME enabled",
+			resp := logical.ErrorResponse("%s env var is enabled, ACME EAB policy needs to be '%s' with ACME enabled",
 				disableAcmeEnvVar, eabPolicyAlwaysRequired)
+			resp.Warnings = warnings
+			return resp, nil
 		}
 	}
 
@@ -275,20 +280,21 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 		return nil, err
 	}
 
-	return genResponseFromAcmeConfig(config), nil
+	return genResponseFromAcmeConfig(config, warnings), nil
 }
 
-func isPublicACMEDisabledByEnv(log hclog.Logger) bool {
+func isPublicACMEDisabledByEnv() (bool, error) {
 	disableAcmeRaw, ok := os.LookupEnv(disableAcmeEnvVar)
 	if !ok {
-		return false
+		return false, nil
 	}
 
 	disableAcme, err := strconv.ParseBool(disableAcmeRaw)
 	if err != nil {
-		log.Warn("could not parse env var VAULT_DISABLE_PUBLIC_ACME", "error", err)
-		return false
+		// So the environment variable was set but we couldn't parse the value as a string, assume
+		// the operator wanted public ACME disabled.
+		return true, fmt.Errorf("failed parsing environment variable %s: %w", disableAcmeEnvVar, err)
 	}
 
-	return disableAcme
+	return disableAcme, nil
 }

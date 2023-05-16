@@ -388,7 +388,10 @@ func isAcmeDisabled(sc *storageContext, config *acmeConfigEntry, policy EabPolic
 		return true
 	}
 
-	disableAcme := isPublicACMEDisabledByEnv(sc.Backend.Logger())
+	disableAcme, nonFatalErr := isPublicACMEDisabledByEnv()
+	if nonFatalErr != nil {
+		sc.Backend.Logger().Warn(fmt.Sprintf("could not parse env var '%s'", disableAcmeEnvVar), "error", nonFatalErr)
+	}
 
 	// The OS environment if true will override any configuration option.
 	if disableAcme {
