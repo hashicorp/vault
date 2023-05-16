@@ -1740,7 +1740,7 @@ func (c *ServerCommand) Run(args []string) int {
 					}
 				}
 
-				fGoRoutine, err := os.Create(filepath.Join("%s/goroutines", dir))
+				fGoRoutine, err := os.Create(filepath.Join(dir, "goroutines"))
 				if err != nil {
 					c.UI.Error(err.Error())
 					continue
@@ -1752,7 +1752,7 @@ func (c *ServerCommand) Run(args []string) int {
 					continue
 				}
 
-				fHeap, err := os.Create(filepath.Join("%s/heap", dir))
+				fHeap, err := os.Create(filepath.Join(dir, "heap"))
 				if err != nil {
 					c.UI.Error(err.Error())
 					continue
@@ -1764,7 +1764,7 @@ func (c *ServerCommand) Run(args []string) int {
 					continue
 				}
 
-				fAllocs, err := os.Create(filepath.Join("%s/allocs", dir))
+				fAllocs, err := os.Create(filepath.Join(dir, "allocs"))
 				if err != nil {
 					c.UI.Error(err.Error())
 					continue
@@ -1776,7 +1776,7 @@ func (c *ServerCommand) Run(args []string) int {
 					continue
 				}
 
-				fThread, err := os.Create(filepath.Join("%s/threadcreate", dir))
+				fThread, err := os.Create(filepath.Join(dir, "threadcreate"))
 				if err != nil {
 					c.UI.Error(err.Error())
 					continue
