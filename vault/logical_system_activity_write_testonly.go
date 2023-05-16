@@ -60,16 +60,13 @@ func (b *SystemBackend) handleActivityWriteData(ctx context.Context, request *lo
 // singleMonthActivityClients holds a single month's client IDs, in the order they were seen
 type singleMonthActivityClients struct {
 	// clients are indexed by ID
-	clients []string
-	// allClients contains all clients from all months
-	allClients map[string]*activity.EntityRecord
+	clients []*activity.EntityRecord
 }
 
 // multipleMonthsActivityClients holds multiple month's data
 type multipleMonthsActivityClients struct {
 	// months are in order, with month 0 being the current month and index 1 being 1 month ago
-	months     []*singleMonthActivityClients
-	allClients map[string]*activity.EntityRecord
+	months []*singleMonthActivityClients
 }
 
 // addNewClients generates clients according to the given parameters, and adds them to the month
@@ -93,17 +90,7 @@ func (s *singleMonthActivityClients) addNewClients(c *generation.Client, mountAc
 				return err
 			}
 		}
-		if record.NamespaceID == "" {
-			record.NamespaceID = namespace.RootNamespaceID
-		}
-		s.allClients[record.ClientID] = record
-		seen := 1
-		if c.TimesSeen > 1 {
-			seen = int(c.TimesSeen)
-		}
-		for j := 0; j < seen; j++ {
-			s.clients = append(s.clients, record.ClientID)
-		}
+		s.clients = append(s.clients, record)
 	}
 	return nil
 }
@@ -119,10 +106,10 @@ func (m *multipleMonthsActivityClients) processMonth(ctx context.Context, core *
 	if err != nil {
 		return err
 	}
-	defaultMountAccessor := ""
+	defaultMountAccessorRootNS := ""
 	for _, mount := range mounts {
 		if mount.NamespaceID == namespace.RootNamespaceID {
-			defaultMountAccessor = mount.Accessor
+			defaultMountAccessorRootNS = mount.Accessor
 			break
 		}
 	}
@@ -133,37 +120,41 @@ func (m *multipleMonthsActivityClients) processMonth(ctx context.Context, core *
 			return errors.New("repeated clients are not yet supported")
 		}
 
-		mountAccessor := defaultMountAccessor
-		if clients.Namespace != "" {
-			mountAccessor = ""
-			// verify that the namespace exists, if the input data has specified one
-			ns, err := core.NamespaceByID(ctx, clients.Namespace)
-			if err != nil {
-				return err
-			}
-			if clients.Mount != "" {
-				// verify the mount exists, if the input data has specified one
-				nctx := namespace.ContextWithNamespace(ctx, ns)
-				mountEntry := core.router.MatchingMountEntry(nctx, clients.Mount)
-				if mountEntry != nil {
-					mountAccessor = mountEntry.Accessor
-				}
-			} else if clients.Namespace != namespace.RootNamespaceID {
-				// if we're not using the root namespace, find a mount on the namespace that we are using
-				for _, mount := range mounts {
-					if mount.NamespaceID == clients.Namespace {
-						mountAccessor = mount.Accessor
-						break
-					}
-				}
-			} else {
-				mountAccessor = defaultMountAccessor
-			}
-			if mountAccessor == "" {
+		if clients.Namespace == "" {
+			clients.Namespace = namespace.RootNamespaceID
+		}
+
+		// verify that the namespace exists
+		ns, err := core.NamespaceByID(ctx, clients.Namespace)
+		if err != nil {
+			return err
+		}
+
+		// verify that the mount exists
+		if clients.Mount != "" {
+			nctx := namespace.ContextWithNamespace(ctx, ns)
+			mountEntry := core.router.MatchingMountEntry(nctx, clients.Mount)
+			if mountEntry == nil {
 				return fmt.Errorf("unable to find matching mount in namespace %s", clients.Namespace)
 			}
 		}
-		err := addingTo.addNewClients(clients, mountAccessor)
+
+		mountAccessor := defaultMountAccessorRootNS
+		if clients.Namespace != namespace.RootNamespaceID && clients.Mount == "" {
+			// if we're not using the root namespace, find a mount on the namespace that we are using
+			found := false
+			for _, mount := range mounts {
+				if mount.NamespaceID == clients.Namespace {
+					mountAccessor = mount.Accessor
+					found = true
+					break
+				}
+			}
+			if !found {
+				return fmt.Errorf("unable to find matching mount in namespace %s", clients.Namespace)
+			}
+		}
+		err = addingTo.addNewClients(clients, mountAccessor)
 		if err != nil {
 			return err
 		}
@@ -173,11 +164,10 @@ func (m *multipleMonthsActivityClients) processMonth(ctx context.Context, core *
 
 func newMultipleMonthsActivityClients(numberOfMonths int) *multipleMonthsActivityClients {
 	m := &multipleMonthsActivityClients{
-		months:     make([]*singleMonthActivityClients, numberOfMonths),
-		allClients: make(map[string]*activity.EntityRecord),
+		months: make([]*singleMonthActivityClients, numberOfMonths),
 	}
 	for i := 0; i < numberOfMonths; i++ {
-		m.months[i] = &singleMonthActivityClients{allClients: m.allClients}
+		m.months[i] = new(singleMonthActivityClients)
 	}
 	return m
 }

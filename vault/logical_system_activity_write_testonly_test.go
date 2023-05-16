@@ -11,7 +11,6 @@ import (
 
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/vault/activity"
 	"github.com/hashicorp/vault/vault/activity/generation"
 	"github.com/stretchr/testify/require"
 )
@@ -100,11 +99,10 @@ func Test_singleMonthActivityClients_addNewClients(t *testing.T) {
 		wantID        string
 	}{
 		{
-			name:          "default mount and namespace are used",
-			mount:         "default_mount",
-			wantNamespace: namespace.RootNamespaceID,
-			wantMount:     "default_mount",
-			clients:       &generation.Client{},
+			name:      "default mount is used",
+			mount:     "default_mount",
+			wantMount: "default_mount",
+			clients:   &generation.Client{},
 		},
 		{
 			name:          "record namespace is used, default mount is used",
@@ -124,22 +122,9 @@ func Test_singleMonthActivityClients_addNewClients(t *testing.T) {
 			wantID: "client_id",
 		},
 		{
-			name: "non zero times seen",
-			clients: &generation.Client{
-				TimesSeen: 5,
-			},
-		},
-		{
 			name: "non zero count",
 			clients: &generation.Client{
 				Count: 5,
-			},
-		},
-		{
-			name: "non zero times seen and count",
-			clients: &generation.Client{
-				Count:     5,
-				TimesSeen: 3,
 			},
 		},
 		{
@@ -151,23 +136,15 @@ func Test_singleMonthActivityClients_addNewClients(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := &singleMonthActivityClients{
-				allClients: make(map[string]*activity.EntityRecord),
-			}
+			m := &singleMonthActivityClients{}
 			err := m.addNewClients(tt.clients, tt.mount)
 			require.NoError(t, err)
 			numNew := tt.clients.Count
 			if numNew == 0 {
 				numNew = 1
 			}
-			numSeen := tt.clients.TimesSeen
-			if numSeen == 0 {
-				numSeen = 1
-			}
-			require.Len(t, m.allClients, int(numNew))
-			require.Len(t, m.clients, int(numNew*numSeen))
-			for _, c := range m.clients {
-				rec := m.allClients[c]
+			require.Len(t, m.clients, int(numNew))
+			for _, rec := range m.clients {
 				require.NotNil(t, rec)
 				require.Equal(t, tt.wantNamespace, rec.NamespaceID)
 				require.Equal(t, tt.wantMount, rec.MountAccessor)
@@ -256,11 +233,12 @@ func Test_multipleMonthsActivityClients_processMonth(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				require.Len(t, m.allClients, len(tt.clients.GetAll().Clients))
 				require.Len(t, m.months[tt.clients.GetMonthsAgo()].clients, len(tt.clients.GetAll().Clients))
-				for _, c := range m.allClients {
-					require.NotEmpty(t, c.NamespaceID)
-					require.NotEmpty(t, c.MountAccessor)
+				for _, month := range m.months {
+					for _, c := range month.clients {
+						require.NotEmpty(t, c.NamespaceID)
+						require.NotEmpty(t, c.MountAccessor)
+					}
 				}
 			}
 		})
