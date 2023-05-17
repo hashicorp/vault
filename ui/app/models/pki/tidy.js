@@ -47,47 +47,6 @@ export default class PkiTidyModel extends Model {
   })
   intervalDuration; // auto-tidy only
 
-  @attr('boolean', { label: 'Tidy the certificate store' })
-  tidyCertStore;
-
-  @attr('boolean', {
-    label: 'Tidy cross-cluster revocation requests',
-  })
-  tidyRevocationQueue; // enterprise only
-
-  @attr('string', {
-    editType: 'ttl',
-    helperTextEnabled:
-      'For a certificate to be expunged, the time must be after the expiration time of the certificate (according to the local clock) plus the safety buffer. Defaults to 72 hours.',
-    hideToggle: true,
-  })
-  safetyBuffer;
-
-  @attr('boolean', {
-    label: 'Tidy revoked certificates',
-    subText: 'Remove all invalid and expired certificates from storage.',
-  })
-  tidyRevokedCerts;
-
-  @attr('boolean', {
-    label: 'Tidy revoked certificate issuer associations',
-    subText:
-      'Check to associate revoked certificates with their corresponding issuers; this improves the performance of OCSP and CRL building, by shifting work to a tidy operation instead. It is suggested to run this tidy when removing or importing new issuers and on the first upgrade to a post-1.11 Vault version, but otherwise not to run it during automatic tidy operations.',
-  })
-  tidyRevokedCertIssuerAssociations;
-
-  @attr('boolean', {
-    subText: 'Automatically remove expired issuers after the issuer safety buffer duration has elapsed.',
-  })
-  tidyExpiredIssuers;
-
-  @attr('boolean', {
-    label: 'Tidy legacy CA bundle',
-    subText:
-      'Backup any legacy CA/issuers bundle (from Vault versions earlier than 1.11) to config/ca_bundle.bak. Migration will only occur after issuer safety buffer has passed.',
-  })
-  tidyMoveLegacyCaBundle;
-
   @attr('string', {
     editType: 'ttl',
     helperTextEnabled:
@@ -112,11 +71,52 @@ export default class PkiTidyModel extends Model {
   })
   revocationQueueSafetyBuffer; // enterprise only
 
+  @attr('string', {
+    editType: 'ttl',
+    helperTextEnabled:
+      'For a certificate to be expunged, the time must be after the expiration time of the certificate (according to the local clock) plus the safety buffer. Defaults to 72 hours.',
+    hideToggle: true,
+  })
+  safetyBuffer;
+
+  @attr('boolean', { label: 'Tidy the certificate store' })
+  tidyCertStore;
+
   @attr('boolean', {
     label: 'Tidy cross-cluster revoked certificates',
     subText: 'Remove expired, cross-cluster revocation entries.',
   })
   tidyCrossClusterRevokedCerts; // enterprise only
+
+  @attr('boolean', {
+    subText: 'Automatically remove expired issuers after the issuer safety buffer duration has elapsed.',
+  })
+  tidyExpiredIssuers;
+
+  @attr('boolean', {
+    label: 'Tidy legacy CA bundle',
+    subText:
+      'Backup any legacy CA/issuers bundle (from Vault versions earlier than 1.11) to config/ca_bundle.bak. Migration will only occur after issuer safety buffer has passed.',
+  })
+  tidyMoveLegacyCaBundle;
+
+  @attr('boolean', {
+    label: 'Tidy cross-cluster revocation requests',
+  })
+  tidyRevocationQueue; // enterprise only
+
+  @attr('boolean', {
+    label: 'Tidy revoked certificate issuer associations',
+    subText:
+      'Check to associate revoked certificates with their corresponding issuers; this improves the performance of OCSP and CRL building, by shifting work to a tidy operation instead. It is suggested to run this tidy when removing or importing new issuers and on the first upgrade to a post-1.11 Vault version, but otherwise not to run it during automatic tidy operations.',
+  })
+  tidyRevokedCertIssuerAssociations;
+
+  @attr('boolean', {
+    label: 'Tidy revoked certificates',
+    subText: 'Remove all invalid and expired certificates from storage.',
+  })
+  tidyRevokedCerts;
 
   /* 
   NOT IN DOCS - check with crypto
