@@ -356,6 +356,8 @@ func doAcmeValidationWithGoLibrary(t *testing.T, directoryUrl string, acmeOrderI
 		}
 
 		require.NoError(t, err, "failed to get a certificate back from ACME")
+	} else if expectedFailure != "" {
+		t.Fatalf("expected failure containing: %s got none", expectedFailure)
 	}
 
 	acmeCert, err := x509.ParseCertificate(certs[0])
