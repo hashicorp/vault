@@ -78,26 +78,39 @@ func (b *backend) createCredential(ctx context.Context, storage logical.Storage,
 		return fmt.Errorf("unable to get the AWS IAM client: %w", err)
 	}
 
-	// IAM users can have at most 2 set of keys at a time. If 2 sets already exists we must delete the oldest one to be
-	// able to create a new set of credentials.
+	// IAM users can have a most 2 sets of keys at a time.
+	// (https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_iam-quotas.html)
+	// Ideally we would get this value through an api check, but I'm not sure one exists.
+	const maxAllowedKeys = 2
+
 	accessKeys, err := iamClient.ListAccessKeys(&iam.ListAccessKeysInput{
 		UserName: aws.String(cfg.Username),
 	})
 	if err != nil {
 		return fmt.Errorf("unable to list existing access keys for IAM user '%s': %w", cfg.Username, err)
 	}
-	if len(accessKeys.AccessKeyMetadata) >= 2 {
-		oldestKey := accessKeys.AccessKeyMetadata[0]
-		if accessKeys.AccessKeyMetadata[1].CreateDate.Before(*accessKeys.AccessKeyMetadata[0].CreateDate) {
-			oldestKey = accessKeys.AccessKeyMetadata[1]
-		}
 
-		_, err := iamClient.DeleteAccessKey(&iam.DeleteAccessKeyInput{
-			AccessKeyId: oldestKey.AccessKeyId,
-			UserName:    oldestKey.UserName,
-		})
-		if err != nil {
-			return fmt.Errorf("unable to delete oldest access keys for user '%s': %w", cfg.Username, err)
+	// If we have the maximum number of keys, we have to delete one to make another (so we can get the credentials).
+	// We'll delete the oldest one.
+	//
+	// Since this check relies on a pre-coded maximum, it's a bit fragile. If the number goes up, we risk deleting
+	// a key when we didn't need to. If this number goes down, we'll start throwing errors because we think we're
+	// allowed to create a key and aren't. In either case, adjusting the constant should be sufficient to fix things.
+	if len(accessKeys.AccessKeyMetadata) >= maxAllowedKeys {
+		oldestKey := accessKeys.AccessKeyMetadata[0]
+
+		for i := 1; i < len(accessKeys.AccessKeyMetadata); i++ {
+			if accessKeys.AccessKeyMetadata[i].CreateDate.Before(*oldestKey.CreateDate) {
+				oldestKey = accessKeys.AccessKeyMetadata[1]
+			}
+
+			_, err := iamClient.DeleteAccessKey(&iam.DeleteAccessKeyInput{
+				AccessKeyId: oldestKey.AccessKeyId,
+				UserName:    oldestKey.UserName,
+			})
+			if err != nil {
+				return fmt.Errorf("unable to delete oldest access keys for user '%s': %w", cfg.Username, err)
+			}
 		}
 	}
 
