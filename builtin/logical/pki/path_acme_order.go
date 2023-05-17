@@ -58,8 +58,8 @@ func patternAcmeNewOrder(b *backend, pattern string) *framework.Path {
 			},
 		},
 
-		HelpSynopsis:    "",
-		HelpDescription: "",
+		HelpSynopsis:    pathAcmeHelpSync,
+		HelpDescription: pathAcmeHelpDesc,
 	}
 }
 
@@ -79,8 +79,8 @@ func patternAcmeListOrders(b *backend, pattern string) *framework.Path {
 			},
 		},
 
-		HelpSynopsis:    "",
-		HelpDescription: "",
+		HelpSynopsis:    pathAcmeHelpSync,
+		HelpDescription: pathAcmeHelpDesc,
 	}
 }
 
@@ -101,8 +101,8 @@ func patternAcmeGetOrder(b *backend, pattern string) *framework.Path {
 			},
 		},
 
-		HelpSynopsis:    "",
-		HelpDescription: "",
+		HelpSynopsis:    pathAcmeHelpSync,
+		HelpDescription: pathAcmeHelpDesc,
 	}
 }
 
@@ -123,8 +123,8 @@ func patternAcmeFinalizeOrder(b *backend, pattern string) *framework.Path {
 			},
 		},
 
-		HelpSynopsis:    "",
-		HelpDescription: "",
+		HelpSynopsis:    pathAcmeHelpSync,
+		HelpDescription: pathAcmeHelpDesc,
 	}
 }
 
@@ -145,8 +145,8 @@ func patternAcmeFetchOrderCert(b *backend, pattern string) *framework.Path {
 			},
 		},
 
-		HelpSynopsis:    "",
-		HelpDescription: "",
+		HelpSynopsis:    pathAcmeHelpSync,
+		HelpDescription: pathAcmeHelpDesc,
 	}
 }
 
