@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/command/agentproxyshared"
+
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
@@ -105,13 +107,13 @@ type APIProxy struct {
 
 // Cache contains any configuration needed for Cache mode
 type Cache struct {
-	UseAutoAuthTokenRaw interface{}     `hcl:"use_auto_auth_token"`
-	UseAutoAuthToken    bool            `hcl:"-"`
-	ForceAutoAuthToken  bool            `hcl:"-"`
-	EnforceConsistency  string          `hcl:"enforce_consistency"`
-	WhenInconsistent    string          `hcl:"when_inconsistent"`
-	Persist             *Persist        `hcl:"persist"`
-	InProcDialer        transportDialer `hcl:"-"`
+	UseAutoAuthTokenRaw interface{}                     `hcl:"use_auto_auth_token"`
+	UseAutoAuthToken    bool                            `hcl:"-"`
+	ForceAutoAuthToken  bool                            `hcl:"-"`
+	EnforceConsistency  string                          `hcl:"enforce_consistency"`
+	WhenInconsistent    string                          `hcl:"when_inconsistent"`
+	Persist             *agentproxyshared.PersistConfig `hcl:"persist"`
+	InProcDialer        transportDialer                 `hcl:"-"`
 }
 
 // Persist contains configuration needed for persistent caching
@@ -266,6 +268,17 @@ func (c *Config) Merge(c2 *Config) *Config {
 	}
 
 	return result
+}
+
+// DefaultListerDefined returns true if a default listener has been defined
+// in this config
+func (c *Config) DefaultListerDefined() bool {
+	for _, l := range c.Listeners {
+		if l.Role != "metrics_only" {
+			return true
+		}
+	}
+	return false
 }
 
 // ValidateConfig validates an Agent configuration after it has been fully merged together, to
@@ -737,7 +750,7 @@ func parsePersist(result *Config, list *ast.ObjectList) error {
 
 	item := persistList.Items[0]
 
-	var p Persist
+	var p agentproxyshared.PersistConfig
 	err := hcl.DecodeObject(&p, item.Val)
 	if err != nil {
 		return err

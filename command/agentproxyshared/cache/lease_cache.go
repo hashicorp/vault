@@ -174,6 +174,12 @@ func (c *LeaseCache) SetPersistentStorage(storageIn *cacheboltdb.BoltStorage) {
 	c.ps = storageIn
 }
 
+// GetPersistentStorage is a setter for the persistent storage field in
+// LeaseCache
+func (c *LeaseCache) GetPersistentStorage() *cacheboltdb.BoltStorage {
+	return c.ps
+}
+
 // checkCacheForRequest checks the cache for a particular request based on its
 // computed ID. It returns a non-nil *SendResponse  if an entry is found.
 func (c *LeaseCache) checkCacheForRequest(id string) (*SendResponse, error) {
