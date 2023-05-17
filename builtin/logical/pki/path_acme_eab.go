@@ -51,8 +51,9 @@ func pathAcmeEabCreateList(b *backend) *framework.Path {
 			},
 		},
 
-		HelpSynopsis:    "",
-		HelpDescription: "",
+		HelpSynopsis: "Generate or list external account bindings to be used for ACME",
+		HelpDescription: `Generate single use id/key pairs to be used for ACME EAB or list 
+identifiers that have been generated but yet to be used.`,
 	}
 }
 
@@ -83,8 +84,11 @@ func pathAcmeEabDelete(b *backend) *framework.Path {
 			},
 		},
 
-		HelpSynopsis:    "",
-		HelpDescription: "",
+		HelpSynopsis: "Delete an external account binding id prior to its use within an ACME account",
+		HelpDescription: `Allows an operator to delete an external account binding,
+before its bound to a new ACME account. If the identifier provided does not exist or 
+was already consumed by an ACME account a successful response is returned along with 
+a warning that it did not exist.`,
 	}
 }
 

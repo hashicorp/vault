@@ -13,8 +13,11 @@ import (
 )
 
 const (
-	pathAcmeDirectoryHelpSync = `Read the proper URLs for various ACME operations`
-	pathAcmeDirectoryHelpDesc = `Provide an ACME directory response that contains URLS for various ACME operations.`
+	pathAcmeHelpSync = `An endpoint implementing the standard ACME protocol`
+	pathAcmeHelpDesc = `This API endpoint implementing a subset of the ACME protocol
+ defined in RFC 8555, with its own authentication and argument syntax that
+ does not follow conventional Vault operations. An ACME client tool or library
+ should be used to interact with these endpoints.`
 )
 
 func pathAcmeDirectory(b *backend) []*framework.Path {
@@ -36,8 +39,8 @@ func patternAcmeDirectory(b *backend, pattern string) *framework.Path {
 			},
 		},
 
-		HelpSynopsis:    pathAcmeDirectoryHelpSync,
-		HelpDescription: pathAcmeDirectoryHelpDesc,
+		HelpSynopsis:    pathAcmeHelpSync,
+		HelpDescription: pathAcmeHelpDesc,
 	}
 }
 

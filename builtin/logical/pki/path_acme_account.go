@@ -98,8 +98,8 @@ func patternAcmeNewAccount(b *backend, pattern string) *framework.Path {
 			},
 		},
 
-		HelpSynopsis:    pathOcspHelpSyn,
-		HelpDescription: pathOcspHelpDesc,
+		HelpSynopsis:    pathAcmeHelpSync,
+		HelpDescription: pathAcmeHelpDesc,
 	}
 }
 

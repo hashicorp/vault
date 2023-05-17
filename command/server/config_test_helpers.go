@@ -851,6 +851,9 @@ listener "tcp" {
   agent_api {
     enable_quit = true
   }
+  proxy_api {
+    enable_quit = true
+  }
 }`))
 
 	config := Config{
@@ -889,6 +892,9 @@ listener "tcp" {
 						UnauthenticatedPProfAccess: true,
 					},
 					AgentAPI: &configutil.AgentAPI{
+						EnableQuit: true,
+					},
+					ProxyAPI: &configutil.ProxyAPI{
 						EnableQuit: true,
 					},
 					CustomResponseHeaders: DefaultCustomHeaders,

@@ -603,6 +603,15 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"proxy": func() (cli.Command, error) {
+			return &ProxyCommand{
+				BaseCommand: &BaseCommand{
+					UI: serverCmdUi,
+				},
+				ShutdownCh: MakeShutdownCh(),
+				SighupCh:   MakeSighupCh(),
+			}, nil
+		},
 		"policy": func() (cli.Command, error) {
 			return &PolicyCommand{
 				BaseCommand: getBaseCommand(),
