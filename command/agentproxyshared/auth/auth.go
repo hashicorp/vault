@@ -53,7 +53,7 @@ type AuthHandler struct {
 	OutputCh                     chan string
 	TemplateTokenCh              chan string
 	token                        string
-	useragent                    string
+	userAgent                    string
 	metricsSignifier             string
 	logger                       hclog.Logger
 	client                       *api.Client
@@ -73,8 +73,8 @@ type AuthHandlerConfig struct {
 	MaxBackoff time.Duration
 	MinBackoff time.Duration
 	Token      string
-	// UserAgent is the UserAgent auto-auth will use when communicating
-	// with Vault.
+	// UserAgent is the HTTP UserAgent header auto-auth will use when
+	// communicating with Vault.
 	UserAgent string
 	// MetricsSignifier is the first argument we will give to
 	// metrics.IncrCounter, signifying what the name of the application is
@@ -100,7 +100,7 @@ func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 		enableReauthOnNewCredentials: conf.EnableReauthOnNewCredentials,
 		enableTemplateTokenCh:        conf.EnableTemplateTokenCh,
 		exitOnError:                  conf.ExitOnError,
-		useragent:                    conf.UserAgent,
+		userAgent:                    conf.UserAgent,
 		metricsSignifier:             conf.MetricsSignifier,
 	}
 
@@ -171,7 +171,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		if headers == nil {
 			headers = make(http.Header)
 		}
-		headers.Set("User-Agent", ah.useragent)
+		headers.Set("User-Agent", ah.userAgent)
 		ah.client.SetHeaders(headers)
 	}
 

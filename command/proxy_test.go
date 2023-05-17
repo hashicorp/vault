@@ -99,7 +99,8 @@ func testProxyExitAfterAuth(t *testing.T, viaFlag bool) {
 		t.Fatal(err)
 	}
 
-	inf, err := os.CreateTemp("", "auth.jwt.test.")
+	dir := t.TempDir()
+	inf, err := os.CreateTemp(dir, "auth.jwt.test.")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +111,7 @@ func testProxyExitAfterAuth(t *testing.T, viaFlag bool) {
 	os.Remove(in)
 	t.Logf("input: %s", in)
 
-	sink1f, err := os.CreateTemp("", "sink1.jwt.test.")
+	sink1f, err := os.CreateTemp(dir, "sink1.jwt.test.")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,7 +120,7 @@ func testProxyExitAfterAuth(t *testing.T, viaFlag bool) {
 	os.Remove(sink1)
 	t.Logf("sink1: %s", sink1)
 
-	sink2f, err := os.CreateTemp("", "sink2.jwt.test.")
+	sink2f, err := os.CreateTemp(dir, "sink2.jwt.test.")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +129,7 @@ func testProxyExitAfterAuth(t *testing.T, viaFlag bool) {
 	os.Remove(sink2)
 	t.Logf("sink2: %s", sink2)
 
-	conff, err := os.CreateTemp("", "conf.jwt.test.")
+	conff, err := os.CreateTemp(dir, "conf.jwt.test.")
 	if err != nil {
 		t.Fatal(err)
 	}
