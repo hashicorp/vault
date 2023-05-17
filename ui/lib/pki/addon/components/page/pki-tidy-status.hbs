@@ -27,6 +27,43 @@
     {{/if}}
   </ToolbarActions>
 </Toolbar>
+{{! <Hds::Alert >
+    </Hds::Alert> }}
+<AlertBanner @type="loading" class="has-top-margin-m" @title="Tidy in progress">
+  Tidying revoked certificates: checking certificate 100 of 320
+</AlertBanner>
+<InfoTableRow @label="Time started" @value={{date-format this.tidyStatus.time_started "MMM dd, yyyy hh:mm:ss a"}} />
+<InfoTableRow @label="Time finished" @value={{date-format this.tidyStatus.time_finished "MMM dd, yyyy hh:mm:ss a"}} />
+{{! todo Last auto-tidy finished duration }}
+<InfoTableRow @label="Last auto-tidy finished" />
+<InfoTableRow @label="Certificate storage entries deleted" @value={{this.tidyStatus.cert_store_deleted_count}} />
+<InfoTableRow @label="Revoked certificates deleted" @value={{this.tidyStatus.revoked_cert_deleted_count}} />
+<InfoTableRow
+  @label="Cross-cluster revoked certificates deleted"
+  @value={{this.tidyStatus.cross_revoked_cert_deleted_count}}
+/>
+<InfoTableRow @label="Missing issuer certificates" @value={{this.tidyStatus.missing_issuer_cert_count}} />
+<InfoTableRow @label="Revocation queue deleted" @value={{this.tidyStatus.revocation_queue_deleted_count}} />
+<h2 class="title is-4 has-bottom-margin-xs has-top-margin-m has-border-bottom-light has-bottom-padding-s">
+  Universal operations
+</h2>
+<InfoTableRow @label="Tidy the certificate store" @value={{this.tidyStatus.revocation_queue_deleted_count}} />
+<InfoTableRow @label="Tidy the revocation list (CRL)" @value={{this.tidyStatus.revocation_queue_deleted_count}} />
+<InfoTableRow @label="Tidy cross cluster revoked certificates" @value={{this.tidyStatus.revocation_queue_deleted_count}} />
+<InfoTableRow @label="Safety buffer" @value={{this.tidyStatus.safety_buffer}} />
+{{! todo pause duration }}
+<InfoTableRow @label="Pause duration" />
+<h2 class="title is-4 has-bottom-margin-xs has-top-margin-m has-border-bottom-light has-bottom-padding-s">
+  Issuers operations
+</h2>
+<InfoTableRow @label="Tidy expired issuers" @value={{this.tidyStatus.tidy_expired_issuers}} />
+<InfoTableRow @label="Tidy legacy CA bundle" @value={{this.tidyStatus.tidy_move_legacy_ca_bundle}} />
+<InfoTableRow @label="Issuer safety buffer" @value={{this.tidyStatus.issuer_safety_buffer}} />
+<h2 class="title is-4 has-bottom-margin-xs has-top-margin-m has-border-bottom-light has-bottom-padding-s">
+  Cross-cluster operation
+</h2>
+<InfoTableRow @label="Tidy revocation queue" @value={{this.tidyStatus.tidy_revocation_queue}} />
+<InfoTableRow @label="Revocation queue safety buffer" @value={{this.tidyStatus.tidy_revocation_queue}} />
 
 {{! TIDY OPTIONS MODAL }}
 <Modal

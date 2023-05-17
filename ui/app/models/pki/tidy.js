@@ -10,4 +10,7 @@ export default class PkiTidyModel extends Model {
   @attr('boolean', { defaultValue: false }) tidyCertStore;
   @attr('boolean', { defaultValue: false }) tidyRevocationQueue;
   @attr('string', { defaultValue: '72h' }) safetyBuffer;
+  @attr('string') timeStarted;
+  @attr('string') timeFinished;
+  @attr('boolean') state;
 }
