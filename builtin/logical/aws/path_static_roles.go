@@ -23,7 +23,7 @@ const (
 	paramRotationPeriod = "rotation_period"
 )
 
-type staticRoleConfig struct {
+type staticRoleEntry struct {
 	Name           string        `json:"name" structs:"name" mapstructure:"name"`
 	Username       string        `json:"username" structs:"username" mapstructure:"username"`
 	RotationPeriod time.Duration `json:"rotation_period" structs:"rotation_period" mapstructure:"rotation_period"`
@@ -109,7 +109,7 @@ func (b *backend) pathStaticRolesRead(ctx context.Context, req *logical.Request,
 		return nil, nil
 	}
 
-	var config staticRoleConfig
+	var config staticRoleEntry
 	if err := entry.DecodeJSON(&config); err != nil {
 		return nil, fmt.Errorf("failed to decode configuration for static role %q: %w", roleName, err)
 	}
@@ -121,7 +121,7 @@ func (b *backend) pathStaticRolesRead(ctx context.Context, req *logical.Request,
 
 func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Create & validate config from request parameters
-	config := staticRoleConfig{}
+	config := staticRoleEntry{}
 
 	if rawRoleName, ok := data.GetOk(paramRoleName); ok {
 		config.Name = rawRoleName.(string)
@@ -241,7 +241,7 @@ func (b *backend) validateRotationPeriod(period time.Duration) error {
 	return nil
 }
 
-func formatResponse(cfg staticRoleConfig) map[string]interface{} {
+func formatResponse(cfg staticRoleEntry) map[string]interface{} {
 	response := structs.New(cfg).Map()
 	response[paramRotationPeriod] = int64(cfg.RotationPeriod.Seconds())
 

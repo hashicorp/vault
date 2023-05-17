@@ -231,7 +231,7 @@ func TestStaticRoleRead(t *testing.T) {
 		},
 	}
 
-	staticRole := staticRoleConfig{
+	staticRole := staticRoleEntry{
 		Name:           "test",
 		Username:       "jane-doe",
 		RotationPeriod: 24 * time.Hour,
@@ -302,7 +302,7 @@ func TestStaticRoleDelete(t *testing.T) {
 			config := logical.TestBackendConfig()
 			config.StorageView = &logical.InmemStorage{}
 
-			staticRole := staticRoleConfig{
+			staticRole := staticRoleEntry{
 				Name:           "test",
 				Username:       "jane-doe",
 				RotationPeriod: 24 * time.Hour,

@@ -55,7 +55,7 @@ func (b *backend) rotateCredential(ctx context.Context, storage logical.Storage)
 		return false, nil
 	}
 
-	cfg := item.Value.(staticRoleConfig)
+	cfg := item.Value.(staticRoleEntry)
 
 	err = b.createCredential(ctx, storage, cfg)
 	if err != nil {
@@ -72,7 +72,7 @@ func (b *backend) rotateCredential(ctx context.Context, storage logical.Storage)
 	return true, nil
 }
 
-func (b *backend) createCredential(ctx context.Context, storage logical.Storage, cfg staticRoleConfig) error {
+func (b *backend) createCredential(ctx context.Context, storage logical.Storage, cfg staticRoleEntry) error {
 	iamClient, err := b.clientIAM(ctx, storage)
 	if err != nil {
 		return fmt.Errorf("unable to get the AWS IAM client: %w", err)

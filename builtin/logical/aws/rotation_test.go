@@ -18,8 +18,8 @@ func TestRotation(t *testing.T) {
 	bgCTX := context.Background()
 
 	type credToInsert struct {
-		config staticRoleConfig // role configuration from a normal createRole request
-		age    time.Duration    // how old the cred should be - if this is longer than the config.RotationPeriod,
+		config staticRoleEntry // role configuration from a normal createRole request
+		age    time.Duration   // how old the cred should be - if this is longer than the config.RotationPeriod,
 		// the cred is 'pre-expired'
 
 		changed bool // whether we expect the cred to change - this is technically redundant to a comparison between
@@ -34,7 +34,7 @@ func TestRotation(t *testing.T) {
 			name: "refresh one",
 			creds: []credToInsert{
 				{
-					config: staticRoleConfig{
+					config: staticRoleEntry{
 						Name:           "test",
 						Username:       "jane-doe",
 						RotationPeriod: 2 * time.Second,
@@ -48,7 +48,7 @@ func TestRotation(t *testing.T) {
 			name: "refresh none",
 			creds: []credToInsert{
 				{
-					config: staticRoleConfig{
+					config: staticRoleEntry{
 						Name:           "test",
 						Username:       "jane-doe",
 						RotationPeriod: 1 * time.Minute,
@@ -62,7 +62,7 @@ func TestRotation(t *testing.T) {
 			name: "refresh one of two",
 			creds: []credToInsert{
 				{
-					config: staticRoleConfig{
+					config: staticRoleEntry{
 						Name:           "test",
 						Username:       "jane-doe",
 						RotationPeriod: 1 * time.Minute,
@@ -71,7 +71,7 @@ func TestRotation(t *testing.T) {
 					changed: false,
 				},
 				{
-					config: staticRoleConfig{
+					config: staticRoleEntry{
 						Name:           "toast",
 						Username:       "john-doe",
 						RotationPeriod: 1 * time.Second,
