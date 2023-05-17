@@ -4,35 +4,17 @@
  */
 
 import Model, { attr } from '@ember-data/model';
-import { withFormFields } from 'vault/decorators/model-form-fields';
+import { service } from '@ember/service';
+import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
 
-const sharedFormFields = [
-  { autoTidy: ['intervalDuration'] },
-  {
-    'Universal operations': ['tidyCertStore', 'tidyRevokedCerts', 'safetyBuffer', 'pauseDuration'],
-  },
-  {
-    'Issuer operations': [
-      'tidyExpiredIssuers',
-      'tidyMoveLegacyCaBundle',
-      'tidyRevokedCertIssuerAssociations',
-      'issuerSafetyBuffer',
-    ],
-  },
-  // enterprise only
-  {
-    'Cross-cluster operations': [
-      'tidyRevocationQueue',
-      'tidyCrossClusterRevokedCerts',
-      'revocationQueueSafetyBuffer',
-    ],
-  },
-];
-@withFormFields(null, sharedFormFields)
+@withExpandedAttributes()
 export default class PkiTidyModel extends Model {
+  @service version;
+
   @attr('boolean', {
     label: 'Automatic tidy enabled',
     labelDisabled: 'Automatic tidy disabled',
+    detailsLabel: 'Automatic tidy',
     defaultValue: false,
   })
   enabled; // auto-tidy only
@@ -44,6 +26,8 @@ export default class PkiTidyModel extends Model {
     helperTextEnabled:
       'Sets the interval_duration between automatic tidy operations; note that this is from the end of one operation to the start of the next.',
     helperTextDisabled: 'Automatic tidy operations will not run.',
+    detailsLabel: 'Automatic tidy duration',
+    formatTtl: true,
   })
   intervalDuration; // auto-tidy only
 
@@ -52,6 +36,7 @@ export default class PkiTidyModel extends Model {
     helperTextEnabled:
       'Specifies a duration that issuers should be kept for, past their NotAfter validity period. Defaults to 365 days (8760 hours).',
     hideToggle: true,
+    formatTtl: true,
   })
   issuerSafetyBuffer;
 
@@ -60,6 +45,7 @@ export default class PkiTidyModel extends Model {
     helperTextEnabled:
       'Specifies the duration to pause between tidying individual certificates. This releases the revocation lock and allows other operations to continue while tidy is running.',
     hideToggle: true,
+    formatTtl: true,
   })
   pauseDuration;
 
@@ -68,6 +54,7 @@ export default class PkiTidyModel extends Model {
     helperTextEnabled:
       'Specifies a duration after which cross-cluster revocation requests will be removed as expired.',
     hideToggle: true,
+    formatTtl: true,
   })
   revocationQueueSafetyBuffer; // enterprise only
 
@@ -76,6 +63,7 @@ export default class PkiTidyModel extends Model {
     helperTextEnabled:
       'For a certificate to be expunged, the time must be after the expiration time of the certificate (according to the local clock) plus the safety buffer. Defaults to 72 hours.',
     hideToggle: true,
+    formatTtl: true,
   })
   safetyBuffer;
 
@@ -118,11 +106,76 @@ export default class PkiTidyModel extends Model {
   })
   tidyRevokedCerts;
 
-  /* 
+  /*
   NOT IN DOCS - check with crypto
   @attr('string') acme_account_safety_buffer;
   @attr('boolean', { defaultValue: false }) maintain_stored_certificate_counts;
   @attr('boolean', { defaultValue: false }) publish_stored_certificate_count_metrics;
   @attr('boolean', { defaultValue: false }) tidy_acme;
   */
+
+  get useOpenAPI() {
+    return true;
+  }
+  getHelpUrl(backend) {
+    return `/v1/${backend}/config/auto-tidy?help=1`;
+  }
+
+  get displayGroups() {
+    const groups = [
+      { default: ['enabled', 'intervalDuration'] },
+      {
+        'Universal operations': ['tidyCertStore', 'tidyRevokedCerts', 'safetyBuffer', 'pauseDuration'],
+      },
+      {
+        'Issuer operations': [
+          'tidyExpiredIssuers',
+          'tidyMoveLegacyCaBundle',
+          'tidyRevokedCertIssuerAssociations',
+          'issuerSafetyBuffer',
+        ],
+      },
+    ];
+    if (this.version.isEnterprise) {
+      groups.push({
+        'Cross-cluster operations': [
+          'tidyRevocationQueue',
+          'tidyCrossClusterRevokedCerts',
+          'revocationQueueSafetyBuffer',
+        ],
+      });
+    }
+    return this._expandGroups(groups);
+  }
+
+  get sharedFields() {
+    const groups = [
+      { autoTidy: ['intervalDuration'] },
+      {
+        'Universal operations': ['tidyCertStore', 'tidyRevokedCerts', 'safetyBuffer', 'pauseDuration'],
+      },
+      {
+        'Issuer operations': [
+          'tidyExpiredIssuers',
+          'tidyMoveLegacyCaBundle',
+          'tidyRevokedCertIssuerAssociations',
+          'issuerSafetyBuffer',
+        ],
+      },
+    ];
+    if (this.version.isEnterprise) {
+      groups.push({
+        'Cross-cluster operations': [
+          'tidyRevocationQueue',
+          'tidyCrossClusterRevokedCerts',
+          'revocationQueueSafetyBuffer',
+        ],
+      });
+    }
+    return groups;
+  }
+
+  get formFieldGroups() {
+    return this._expandGroups(this.sharedFields);
+  }
 }

@@ -23,6 +23,7 @@ export default class PkiRoute extends Route {
       signCsr: this.pathHelp.getNewModel('pki/sign-intermediate', mountPath),
       certGenerate: this.pathHelp.getNewModel('pki/certificate/generate', mountPath),
       certSign: this.pathHelp.getNewModel('pki/certificate/sign', mountPath),
+      tidy: this.pathHelp.getNewModel('pki/tidy', mountPath),
     });
   }
 }
