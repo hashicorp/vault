@@ -44,7 +44,7 @@ func (a *acmeBillingSystemViewImpl) CreateActivityCountEventForIdentifiers(ctx c
 	// Fake our clientID from the identifiers, but ensure it is
 	// independent of ordering.
 	//
-	// TODO: Because of prefixing currently handled by AddEventToFragment,
+	// TODO: Because of prefixing currently handled by AddActivityToFragment,
 	// we do not need to ensure it is globally unique.
 	sort.Strings(identifiers)
 	joinedIdentifiers := "[" + strings.Join(identifiers, "]"+hopeDelim+"[") + "]"
@@ -54,7 +54,7 @@ func (a *acmeBillingSystemViewImpl) CreateActivityCountEventForIdentifiers(ctx c
 	// Log so users can correlate ACME requests to client count tokens.
 	activityType := "acme"
 	a.core.activityLog.logger.Debug(fmt.Sprintf("Handling ACME client count event for [%v] -> %v", identifiers, clientID))
-	a.core.activityLog.AddEventToFragment(clientID, a.entry.NamespaceID, time.Now().Unix(), activityType, a.entry.Accessor)
+	a.core.activityLog.AddActivityToFragment(clientID, a.entry.NamespaceID, time.Now().Unix(), activityType, a.entry.Accessor)
 
 	return nil
 }
