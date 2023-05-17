@@ -4179,7 +4179,6 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 	authMounts := make(map[string]interface{})
 	resp.Data["secret"] = secretMounts
 	resp.Data["auth"] = authMounts
-	resp.Data["xyzzy"] = "xyzzy"
 
 	var acl *ACL
 	var isAuthed bool
