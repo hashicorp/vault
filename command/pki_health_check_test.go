@@ -30,7 +30,7 @@ func TestPKIHC_AllGood(t *testing.T) {
 			AuditNonHMACRequestKeys:   healthcheck.VisibleReqParams,
 			AuditNonHMACResponseKeys:  healthcheck.VisibleRespParams,
 			PassthroughRequestHeaders: []string{"If-Modified-Since"},
-			AllowedResponseHeaders:    []string{"Last-Modified"},
+			AllowedResponseHeaders:    []string{"Last-Modified", "Replay-Nonce", "Link", "Location"},
 			MaxLeaseTTL:               "36500d",
 		},
 	}); err != nil {
@@ -65,6 +65,12 @@ func TestPKIHC_AllGood(t *testing.T) {
 
 	if _, err := client.Logical().Write("pki/tidy", map[string]interface{}{
 		"tidy_cert_store": true,
+	}); err != nil {
+		t.Fatalf("failed to run tidy: %v", err)
+	}
+
+	if _, err := client.Logical().Write("pki/config/cluster", map[string]interface{}{
+		"path": "https://dadgarcorp.com/v1/pki/",
 	}); err != nil {
 		t.Fatalf("failed to run tidy: %v", err)
 	}
@@ -390,6 +396,14 @@ var expectedAllGood = map[string][]map[string]interface{}{
 			"status": "ok",
 		},
 	},
+	"verify_acme_basics": {
+		{
+			"status": "ok",
+		},
+		{
+			"status": "ok",
+		},
+	},
 }
 
 var expectedAllBad = map[string][]map[string]interface{}{
@@ -538,6 +552,14 @@ var expectedAllBad = map[string][]map[string]interface{}{
 			"status": "ok",
 		},
 	},
+	"verify_acme_basics": {
+		{
+			"status": "informational",
+		},
+		{
+			"status": "informational",
+		},
+	},
 }
 
 var expectedEmptyWithIssuer = map[string][]map[string]interface{}{
@@ -577,6 +599,14 @@ var expectedEmptyWithIssuer = map[string][]map[string]interface{}{
 	"too_many_certs": {
 		{
 			"status": "ok",
+		},
+	},
+	"verify_acme_basics": {
+		{
+			"status": "informational",
+		},
+		{
+			"status": "informational",
 		},
 	},
 }
@@ -631,6 +661,14 @@ var expectedNoPerm = map[string][]map[string]interface{}{
 		},
 	},
 	"too_many_certs": {
+		{
+			"status": "insufficient_permissions",
+		},
+	},
+	"verify_acme_basics": {
+		{
+			"status": "insufficient_permissions",
+		},
 		{
 			"status": "insufficient_permissions",
 		},
