@@ -42,20 +42,20 @@ type BaseCommand struct {
 	flags     *FlagSets
 	flagsOnce sync.Once
 
-	flagAddress          string
-	flagAgentAddress     string
-	flagCACert           string
-	flagCAPath           string
-	flagClientCert       string
-	flagClientKey        string
-	flagNamespace        string
-	flagNS               string
-	flagPolicyOverride   bool
-	flagTLSServerName    string
-	flagTLSSkipVerify    bool
-	flagDisableRedirects bool
-	flagWrapTTL          time.Duration
-	flagUnlockKey        string
+	flagAddress           string
+	flagAgentProxyAddress string
+	flagCACert            string
+	flagCAPath            string
+	flagClientCert        string
+	flagClientKey         string
+	flagNamespace         string
+	flagNS                string
+	flagPolicyOverride    bool
+	flagTLSServerName     string
+	flagTLSSkipVerify     bool
+	flagDisableRedirects  bool
+	flagWrapTTL           time.Duration
+	flagUnlockKey         string
 
 	flagFormat           string
 	flagField            string
@@ -90,8 +90,8 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 	if c.flagAddress != "" {
 		config.Address = c.flagAddress
 	}
-	if c.flagAgentAddress != "" {
-		config.Address = c.flagAgentAddress
+	if c.flagAgentProxyAddress != "" {
+		config.Address = c.flagAgentProxyAddress
 	}
 
 	if c.flagOutputCurlString {
@@ -330,7 +330,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 
 			agentAddrStringVar := &StringVar{
 				Name:       "agent-address",
-				Target:     &c.flagAgentAddress,
+				Target:     &c.flagAgentProxyAddress,
 				EnvVar:     api.EnvVaultAgentAddr,
 				Completion: complete.PredictAnything,
 				Usage:      "Address of the Agent.",
@@ -588,6 +588,7 @@ func (f *FlagSets) Completions() complete.Flags {
 type (
 	ParseOptions              interface{}
 	ParseOptionAllowRawFormat bool
+	DisableDisplayFlagWarning bool
 )
 
 // Parse parses the given flags, returning any errors.
@@ -595,9 +596,17 @@ type (
 func (f *FlagSets) Parse(args []string, opts ...ParseOptions) error {
 	err := f.mainSet.Parse(args)
 
-	warnings := generateFlagWarnings(f.Args())
-	if warnings != "" && Format(f.ui) == "table" {
-		f.ui.Warn(warnings)
+	displayFlagWarningsDisabled := false
+	for _, opt := range opts {
+		if value, ok := opt.(DisableDisplayFlagWarning); ok {
+			displayFlagWarningsDisabled = bool(value)
+		}
+	}
+	if !displayFlagWarningsDisabled {
+		warnings := generateFlagWarnings(f.Args())
+		if warnings != "" && Format(f.ui) == "table" {
+			f.ui.Warn(warnings)
+		}
 	}
 
 	if err != nil {

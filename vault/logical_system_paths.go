@@ -2214,7 +2214,7 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.pathInternalOpenAPI,
 					DisplayAttrs: &framework.DisplayAttributes{
-						OperationSuffix: "open-api-document2",
+						OperationSuffix: "open-api-document-with-parameters",
 					},
 				},
 			},

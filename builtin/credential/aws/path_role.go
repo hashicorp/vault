@@ -233,7 +233,7 @@ func (b *backend) pathListRoles() *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixAWS,
-			OperationSuffix: "roles2",
+			OperationSuffix: "auth-roles2",
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{

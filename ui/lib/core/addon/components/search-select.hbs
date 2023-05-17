@@ -39,6 +39,7 @@
         @onChange={{this.selectOrCreate}}
         @placeholderComponent={{component "search-select-placeholder"}}
         @verticalPosition="below"
+        @disabled={{@disabled}}
         as |option|
       >
         {{#if this.shouldRenderName}}
