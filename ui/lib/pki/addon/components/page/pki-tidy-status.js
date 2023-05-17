@@ -17,19 +17,35 @@ export default class PkiTidyStatusComponent extends Component {
 
   @tracked tidyOptionsModal = false;
   @tracked confirmCancelTidy = false;
-  @tracked tidyStatus = null;
 
-  constructor(owner, args) {
-    super(owner, args);
-
-    const adapter = this.store.adapterFor('application');
-    adapter
-      .ajax(`/v1/${this.secretMountPath.currentPath}/tidy-status`, 'GET')
-      .then(({ data }) => (this.tidyStatus = data));
+  get generalSectionFields() {
+    return [
+      'time_started',
+      'time_finished',
+      'last_auto_tidy_finished',
+      'cert_store_deleted_count',
+      'missing_issuer_cert_count',
+      'revocation_queue_deleted_count',
+    ];
+  }
+  get universalSectionFields() {
+    return [
+      'tidy_cert_store',
+      'tidy_revocation_queue',
+      'tidy_cross_cluster_revoked_certs',
+      'safety_buffer',
+      'pause_duration',
+    ];
+  }
+  get issuersSectionFields() {
+    return ['tidy_expired_issuers', 'tidy_move_legacy_ca_bundle', 'issuer_safety_buffer'];
+  }
+  get crossClusterOperation() {
+    return ['tidy_revocation_queue', 'revocation_queue_safety_buffer'];
   }
 
   get tidyStateAlertBanner() {
-    let tidyState = this.tidyStatus?.state;
+    let tidyState = this.args.tidyStatus?.state;
 
     if (this.cancelTidy.isRunning) {
       tidyState = 'Cancelling';
@@ -41,23 +57,23 @@ export default class PkiTidyStatusComponent extends Component {
       Inactive: {
         color: 'highlight',
         title: 'Tidy is inactive',
-        message: this.tidyStatus?.message,
+        message: this.args.tidyStatus?.message,
       },
       Running: {
         color: 'highlight',
         title: 'Tidy in progress',
-        message: this.tidyStatus?.message,
+        message: this.args.tidyStatus?.message,
         shouldShowCancelTidy: true,
       },
       Finished: {
         color: 'success',
         title: 'Tidy operation finished',
-        message: this.tidyStatus?.message,
+        message: this.args.tidyStatus?.message,
       },
       Error: {
         color: 'warning',
         title: 'Tidy operation failed',
-        message: this.tidyStatus?.message,
+        message: this.args.tidyStatus?.message,
       },
       Cancelling: {
         color: 'warning',
@@ -77,9 +93,11 @@ export default class PkiTidyStatusComponent extends Component {
   @task
   @waitFor
   *cancelTidy() {
+    // TODO: make this a custom adapter method when Claire merges her form work!
     try {
       const adapter = this.store.adapterFor('application');
       yield adapter.ajax(`/v1/${this.secretMountPath.currentPath}/tidy-cancel`, 'POST');
+      this.confirmCancelTidy = false;
     } catch (e) {
       this.flashMessages.danger(e.errors.join(' '));
     }

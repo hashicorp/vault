@@ -36,38 +36,48 @@
   {{/if}}
 </Hds::Alert>
 
-<InfoTableRow @label="Time started" @value={{date-format this.tidyStatus.time_started "MMM dd, yyyy hh:mm:ss a"}} />
-<InfoTableRow @label="Time finished" @value={{date-format this.tidyStatus.time_finished "MMM dd, yyyy hh:mm:ss a"}} />
-{{! todo Last auto-tidy finished duration }}
-<InfoTableRow @label="Last auto-tidy finished" />
-<InfoTableRow @label="Certificate storage entries deleted" @value={{this.tidyStatus.cert_store_deleted_count}} />
-<InfoTableRow @label="Revoked certificates deleted" @value={{this.tidyStatus.revoked_cert_deleted_count}} />
-<InfoTableRow
-  @label="Cross-cluster revoked certificates deleted"
-  @value={{this.tidyStatus.cross_revoked_cert_deleted_count}}
-/>
-<InfoTableRow @label="Missing issuer certificates" @value={{this.tidyStatus.missing_issuer_cert_count}} />
-<InfoTableRow @label="Revocation queue deleted" @value={{this.tidyStatus.revocation_queue_deleted_count}} />
+{{#each this.generalSectionFields as |attr|}}
+  {{#if (or (eq attr "time_started") (eq attr "time_finished") (eq attr "last_auto_tidy_finished"))}}
+    <InfoTableRow
+      @label={{humanize (dasherize attr)}}
+      @value={{date-format (get @tidyStatus attr) "MMM dd, yyyy hh:mm:ss a"}}
+    />
+  {{else}}
+    <InfoTableRow @label={{humanize (dasherize attr)}} @value={{(get @tidyStatus attr)}} />
+  {{/if}}
+{{/each}}
+
 <h2 class="title is-4 has-bottom-margin-xs has-top-margin-m has-border-bottom-light has-bottom-padding-s">
   Universal operations
 </h2>
-<InfoTableRow @label="Tidy the certificate store" @value={{this.tidyStatus.revocation_queue_deleted_count}} />
-<InfoTableRow @label="Tidy the revocation list (CRL)" @value={{this.tidyStatus.revocation_queue_deleted_count}} />
-<InfoTableRow @label="Tidy cross cluster revoked certificates" @value={{this.tidyStatus.revocation_queue_deleted_count}} />
-<InfoTableRow @label="Safety buffer" @value={{this.tidyStatus.safety_buffer}} />
-{{! todo pause duration }}
-<InfoTableRow @label="Pause duration" />
+{{#each this.universalSectionFields as |attr|}}
+  {{#if (eq attr "safety_buffer")}}
+    <InfoTableRow @label={{humanize (dasherize attr)}} @value={{format-duration (get @tidyStatus attr)}} />
+  {{else}}
+    <InfoTableRow @label={{humanize (dasherize attr)}} @value={{(get @tidyStatus attr)}} />
+  {{/if}}
+{{/each}}
+
 <h2 class="title is-4 has-bottom-margin-xs has-top-margin-m has-border-bottom-light has-bottom-padding-s">
   Issuers operations
 </h2>
-<InfoTableRow @label="Tidy expired issuers" @value={{this.tidyStatus.tidy_expired_issuers}} />
-<InfoTableRow @label="Tidy legacy CA bundle" @value={{this.tidyStatus.tidy_move_legacy_ca_bundle}} />
-<InfoTableRow @label="Issuer safety buffer" @value={{this.tidyStatus.issuer_safety_buffer}} />
+{{#each this.issuersSectionFields as |attr|}}
+  {{#if (eq attr "issuer_safety_buffer")}}
+    <InfoTableRow @label={{humanize (dasherize attr)}} @value={{format-duration (get @tidyStatus attr)}} />
+  {{else}}
+    <InfoTableRow @label={{humanize (dasherize attr)}} @value={{(get @tidyStatus attr)}} />
+  {{/if}}
+{{/each}}
+
 <h2 class="title is-4 has-bottom-margin-xs has-top-margin-m has-border-bottom-light has-bottom-padding-s">
-  Cross-cluster operation
+  Cross-cluster operations
 </h2>
-<InfoTableRow @label="Tidy revocation queue" @value={{this.tidyStatus.tidy_revocation_queue}} />
-<InfoTableRow @label="Revocation queue safety buffer" @value={{this.tidyStatus.tidy_revocation_queue}} />
+{{#each this.crossClusterOperation as |attr|}}
+  {{#if (eq attr "revocation_queue_safety_buffer")}}
+    <InfoTableRow @label={{humanize (dasherize attr)}} @value={{format-duration (get @tidyStatus attr)}} />
+  {{else}}
+    <InfoTableRow @label={{humanize (dasherize attr)}} @value={{(get @tidyStatus attr)}} />
+  {{/if}}{{/each}}
 
 {{! TIDY OPTIONS MODAL }}
 <Modal
