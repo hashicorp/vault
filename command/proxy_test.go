@@ -16,25 +16,21 @@ import (
 	"testing"
 	"time"
 
-	proxyConfig "github.com/hashicorp/vault/command/proxy/config"
-
-	"github.com/stretchr/testify/assert"
-
-	"github.com/stretchr/testify/require"
-
-	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
-
 	"github.com/hashicorp/go-hclog"
 	vaultjwt "github.com/hashicorp/vault-plugin-auth-jwt"
+	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	"github.com/hashicorp/vault/command/agent"
+	proxyConfig "github.com/hashicorp/vault/command/proxy/config"
 	"github.com/hashicorp/vault/helper/useragent"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func testProxyCommand(tb testing.TB, logger hclog.Logger) (*cli.MockUi, *ProxyCommand) {
