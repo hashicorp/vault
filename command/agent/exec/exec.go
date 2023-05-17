@@ -199,8 +199,7 @@ func (s *Server) bounceCmd(newEnvVars map[string]string) error {
 	s.procLock.Lock()
 	defer s.procLock.Unlock()
 
-	// TODO: replace w/enum?
-	switch s.config.AgentConfig.Exec.RestartOnNewSecret {
+	switch s.config.AgentConfig.Exec.RestartOnSecretChanges {
 	case "always":
 		if s.procStarted {
 			// process is running, need to kill it first
@@ -214,19 +213,24 @@ func (s *Server) bounceCmd(newEnvVars map[string]string) error {
 		}
 	}
 
+	args, subshell, err := child.CommandPrep(s.config.AgentConfig.Exec.Command)
+	if err != nil {
+		return fmt.Errorf("unable to parse command: %w", err)
+	}
+
 	childInput := &child.NewInput{
 		Stdin:        os.Stdin,
 		Stdout:       os.Stdout,
 		Stderr:       os.Stderr,
-		Command:      s.config.AgentConfig.Exec.Command,
-		Args:         s.config.AgentConfig.Exec.Args,
-		Timeout:      0,
+		Command:      args[0],
+		Args:         args[1:],
+		Timeout:      0, // let it run forever
 		Env:          append(os.Environ(), envsToList(newEnvVars)...),
-		ReloadSignal: nil,
+		ReloadSignal: nil, // can't reload w/ new env vars
 		KillSignal:   s.config.AgentConfig.Exec.RestartKillSignal,
 		KillTimeout:  30 * time.Second,
 		Splay:        0,
-		Setpgid:      true,
+		Setpgid:      subshell,
 		Logger:       s.logger.StandardLogger(nil),
 	}
 
