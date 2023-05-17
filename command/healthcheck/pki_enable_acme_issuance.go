@@ -1,0 +1,162 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
+package healthcheck
+
+import (
+	"fmt"
+	"net/url"
+
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/vault/sdk/logical"
+)
+
+type EnableAcmeIssuance struct {
+	Enabled            bool
+	UnsupportedVersion bool
+
+	AcmeConfigFetcher    *PathFetch
+	ClusterConfigFetcher *PathFetch
+}
+
+func NewEnableAcmeIssuance() Check {
+	return &EnableAcmeIssuance{}
+}
+
+func (h *EnableAcmeIssuance) Name() string {
+	return "enable_acme_issuance"
+}
+
+func (h *EnableAcmeIssuance) IsEnabled() bool {
+	return h.Enabled
+}
+
+func (h *EnableAcmeIssuance) DefaultConfig() map[string]interface{} {
+	return map[string]interface{}{}
+}
+
+func (h *EnableAcmeIssuance) LoadConfig(config map[string]interface{}) error {
+	enabled, err := parseutil.ParseBool(config["enabled"])
+	if err != nil {
+		return fmt.Errorf("error parsing %v.enabled: %w", h.Name(), err)
+	}
+	h.Enabled = enabled
+
+	return nil
+}
+
+func (h *EnableAcmeIssuance) FetchResources(e *Executor) error {
+	var err error
+	h.AcmeConfigFetcher, err = e.FetchIfNotFetched(logical.ReadOperation, "/{{mount}}/config/acme")
+	if err != nil {
+		return err
+	}
+
+	if h.AcmeConfigFetcher.IsUnsupportedPathError() {
+		h.UnsupportedVersion = true
+	}
+
+	h.ClusterConfigFetcher, err = e.FetchIfNotFetched(logical.ReadOperation, "/{{mount}}/config/cluster")
+	if err != nil {
+		return err
+	}
+
+	if h.ClusterConfigFetcher.IsUnsupportedPathError() {
+		h.UnsupportedVersion = true
+	}
+
+	return nil
+}
+
+func isAcmeEnabled(fetcher *PathFetch) (bool, error) {
+	isEnabledRaw, ok := fetcher.Secret.Data["enabled"]
+	if !ok {
+		return false, fmt.Errorf("enabled configuration field missing from acme config")
+	}
+
+	parseBool, err := parseutil.ParseBool(isEnabledRaw)
+	if err != nil {
+		return false, fmt.Errorf("failed parsing 'enabled' field from ACME config: %w", err)
+	}
+
+	return parseBool, nil
+}
+
+func verifyLocalPathUrl(h *EnableAcmeIssuance) error {
+	localPathRaw, ok := h.ClusterConfigFetcher.Secret.Data["path"]
+	if !ok {
+		return fmt.Errorf("'path' field missing from config")
+	}
+
+	localPath, err := parseutil.ParseString(localPathRaw)
+	if err != nil {
+		return fmt.Errorf("failed converting 'path' field from local config: %w", err)
+	}
+
+	if localPath == "" {
+		return fmt.Errorf("'path' field not configured within /{{mount}}/config/cluster")
+	}
+
+	parsedUrl, err := url.Parse(localPath)
+	if err != nil {
+		return fmt.Errorf("failed to parse URL from path config: %v: %w", localPathRaw, err)
+	}
+
+	if parsedUrl.Scheme != "https" {
+		return fmt.Errorf("the configured 'path' field in /{{mount}}/config/cluster was not using an https scheme")
+	}
+	return nil
+}
+
+func (h *EnableAcmeIssuance) Evaluate(e *Executor) (results []*Result, err error) {
+	if h.UnsupportedVersion {
+		ret := Result{
+			Status:   ResultInvalidVersion,
+			Endpoint: h.AcmeConfigFetcher.Path,
+			Message:  "This health check requires Vault 1.14+ but an earlier version of Vault Server was contacted, preventing this health check from running.",
+		}
+		return []*Result{&ret}, nil
+	}
+
+	if h.AcmeConfigFetcher.IsSecretPermissionsError() {
+		msg := "Without this information, this health check is unable to function."
+		return craftInsufficientPermissionResult(e, h.AcmeConfigFetcher.Path, msg), nil
+	}
+
+	acmeEnabled, err := isAcmeEnabled(h.AcmeConfigFetcher)
+	if err != nil {
+		return nil, err
+	}
+
+	if !acmeEnabled {
+		ret := Result{
+			Status:   ResultInformational,
+			Endpoint: h.AcmeConfigFetcher.Path,
+			Message:  "Consider enabling ACME support to support a self-rotating PKI infrastructure.",
+		}
+		return []*Result{&ret}, nil
+	}
+
+	if h.ClusterConfigFetcher.IsSecretPermissionsError() {
+		msg := "Without this information, this health check is unable to function."
+		return craftInsufficientPermissionResult(e, h.ClusterConfigFetcher.Path, msg), nil
+	}
+
+	localPathIssue := verifyLocalPathUrl(h)
+
+	if localPathIssue != nil {
+		ret := Result{
+			Status:   ResultWarning,
+			Endpoint: h.ClusterConfigFetcher.Path,
+			Message:  "ACME enabled in config but not functional: " + localPathIssue.Error(),
+		}
+		return []*Result{&ret}, nil
+	}
+
+	ret := Result{
+		Status:   ResultOK,
+		Endpoint: h.ClusterConfigFetcher.Path,
+		Message:  "ACME enabled and the local cluster config 'path' argument has an https URL.",
+	}
+	return []*Result{&ret}, nil
+}

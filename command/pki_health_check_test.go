@@ -72,7 +72,13 @@ func TestPKIHC_AllGood(t *testing.T) {
 	if _, err := client.Logical().Write("pki/config/cluster", map[string]interface{}{
 		"path": "https://dadgarcorp.com/v1/pki/",
 	}); err != nil {
-		t.Fatalf("failed to run tidy: %v", err)
+		t.Fatalf("failed to update local cluster: %v", err)
+	}
+
+	if _, err := client.Logical().Write("pki/config/acme", map[string]interface{}{
+		"enabled": "true",
+	}); err != nil {
+		t.Fatalf("failed to update acme config: %v", err)
 	}
 
 	_, _, results := execPKIHC(t, client, true)
@@ -351,12 +357,22 @@ var expectedAllGood = map[string][]map[string]interface{}{
 			"status": "ok",
 		},
 	},
+	"allow_acme_headers": {
+		{
+			"status": "ok",
+		},
+	},
 	"allow_if_modified_since": {
 		{
 			"status": "ok",
 		},
 	},
 	"audit_visibility": {
+		{
+			"status": "ok",
+		},
+	},
+	"enable_acme_issuance": {
 		{
 			"status": "ok",
 		},
@@ -392,14 +408,6 @@ var expectedAllGood = map[string][]map[string]interface{}{
 		},
 	},
 	"too_many_certs": {
-		{
-			"status": "ok",
-		},
-	},
-	"verify_acme_basics": {
-		{
-			"status": "ok",
-		},
 		{
 			"status": "ok",
 		},
@@ -420,6 +428,11 @@ var expectedAllBad = map[string][]map[string]interface{}{
 			"status": "critical",
 		},
 	},
+	"allow_acme_headers": {
+		{
+			"status": "not_applicable",
+		},
+	},
 	"allow_if_modified_since": {
 		{
 			"status": "informational",
@@ -517,6 +530,11 @@ var expectedAllBad = map[string][]map[string]interface{}{
 			"status": "informational",
 		},
 	},
+	"enable_acme_issuance": {
+		{
+			"status": "informational",
+		},
+	},
 	"enable_auto_tidy": {
 		{
 			"status": "informational",
@@ -552,14 +570,6 @@ var expectedAllBad = map[string][]map[string]interface{}{
 			"status": "ok",
 		},
 	},
-	"verify_acme_basics": {
-		{
-			"status": "informational",
-		},
-		{
-			"status": "informational",
-		},
-	},
 }
 
 var expectedEmptyWithIssuer = map[string][]map[string]interface{}{
@@ -576,8 +586,18 @@ var expectedEmptyWithIssuer = map[string][]map[string]interface{}{
 			"status": "ok",
 		},
 	},
+	"allow_acme_headers": {
+		{
+			"status": "not_applicable",
+		},
+	},
 	"allow_if_modified_since": nil,
 	"audit_visibility":        nil,
+	"enable_acme_issuance": {
+		{
+			"status": "informational",
+		},
+	},
 	"enable_auto_tidy": {
 		{
 			"status": "informational",
@@ -601,14 +621,6 @@ var expectedEmptyWithIssuer = map[string][]map[string]interface{}{
 			"status": "ok",
 		},
 	},
-	"verify_acme_basics": {
-		{
-			"status": "informational",
-		},
-		{
-			"status": "informational",
-		},
-	},
 }
 
 var expectedNoPerm = map[string][]map[string]interface{}{
@@ -628,8 +640,18 @@ var expectedNoPerm = map[string][]map[string]interface{}{
 			"status": "critical",
 		},
 	},
+	"allow_acme_headers": {
+		{
+			"status": "insufficient_permissions",
+		},
+	},
 	"allow_if_modified_since": nil,
 	"audit_visibility":        nil,
+	"enable_acme_issuance": {
+		{
+			"status": "insufficient_permissions",
+		},
+	},
 	"enable_auto_tidy": {
 		{
 			"status": "insufficient_permissions",
@@ -661,14 +683,6 @@ var expectedNoPerm = map[string][]map[string]interface{}{
 		},
 	},
 	"too_many_certs": {
-		{
-			"status": "insufficient_permissions",
-		},
-	},
-	"verify_acme_basics": {
-		{
-			"status": "insufficient_permissions",
-		},
 		{
 			"status": "insufficient_permissions",
 		},
