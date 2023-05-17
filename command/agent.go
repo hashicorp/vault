@@ -19,40 +19,37 @@ import (
 	"sync"
 	"time"
 
-	token_file "github.com/hashicorp/vault/command/agent/auth/token-file"
-
-	ctconfig "github.com/hashicorp/consul-template/config"
-	"github.com/hashicorp/go-multierror"
-
-	"github.com/hashicorp/vault/command/agent/sink/inmem"
-
 	systemd "github.com/coreos/go-systemd/daemon"
+	ctconfig "github.com/hashicorp/consul-template/config"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/command/agent/auth"
-	"github.com/hashicorp/vault/command/agent/auth/alicloud"
-	"github.com/hashicorp/vault/command/agent/auth/approle"
-	"github.com/hashicorp/vault/command/agent/auth/aws"
-	"github.com/hashicorp/vault/command/agent/auth/azure"
-	"github.com/hashicorp/vault/command/agent/auth/cert"
-	"github.com/hashicorp/vault/command/agent/auth/cf"
-	"github.com/hashicorp/vault/command/agent/auth/gcp"
-	"github.com/hashicorp/vault/command/agent/auth/jwt"
-	"github.com/hashicorp/vault/command/agent/auth/kerberos"
-	"github.com/hashicorp/vault/command/agent/auth/kubernetes"
-	"github.com/hashicorp/vault/command/agent/auth/oci"
-	"github.com/hashicorp/vault/command/agent/cache"
-	"github.com/hashicorp/vault/command/agent/cache/cacheboltdb"
-	"github.com/hashicorp/vault/command/agent/cache/cachememdb"
-	"github.com/hashicorp/vault/command/agent/cache/keymanager"
 	agentConfig "github.com/hashicorp/vault/command/agent/config"
-	"github.com/hashicorp/vault/command/agent/sink"
-	"github.com/hashicorp/vault/command/agent/sink/file"
 	"github.com/hashicorp/vault/command/agent/template"
-	"github.com/hashicorp/vault/command/agent/winsvc"
+	"github.com/hashicorp/vault/command/agentproxyshared/auth"
+	"github.com/hashicorp/vault/command/agentproxyshared/auth/alicloud"
+	"github.com/hashicorp/vault/command/agentproxyshared/auth/approle"
+	"github.com/hashicorp/vault/command/agentproxyshared/auth/aws"
+	"github.com/hashicorp/vault/command/agentproxyshared/auth/azure"
+	"github.com/hashicorp/vault/command/agentproxyshared/auth/cert"
+	"github.com/hashicorp/vault/command/agentproxyshared/auth/cf"
+	"github.com/hashicorp/vault/command/agentproxyshared/auth/gcp"
+	"github.com/hashicorp/vault/command/agentproxyshared/auth/jwt"
+	"github.com/hashicorp/vault/command/agentproxyshared/auth/kerberos"
+	"github.com/hashicorp/vault/command/agentproxyshared/auth/kubernetes"
+	"github.com/hashicorp/vault/command/agentproxyshared/auth/oci"
+	token_file "github.com/hashicorp/vault/command/agentproxyshared/auth/token-file"
+	cache "github.com/hashicorp/vault/command/agentproxyshared/cache"
+	"github.com/hashicorp/vault/command/agentproxyshared/cache/cacheboltdb"
+	"github.com/hashicorp/vault/command/agentproxyshared/cache/cachememdb"
+	"github.com/hashicorp/vault/command/agentproxyshared/cache/keymanager"
+	"github.com/hashicorp/vault/command/agentproxyshared/sink"
+	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
+	"github.com/hashicorp/vault/command/agentproxyshared/sink/inmem"
+	"github.com/hashicorp/vault/command/agentproxyshared/winsvc"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/useragent"
@@ -65,6 +62,8 @@ import (
 	"github.com/mitchellh/cli"
 	"github.com/oklog/run"
 	"github.com/posener/complete"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"google.golang.org/grpc/test/bufconn"
 )
 
@@ -258,7 +257,7 @@ func (c *AgentCommand) Run(args []string) int {
 
 	// Ignore any setting of Agent's address. This client is used by the Agent
 	// to reach out to Vault. This should never loop back to agent.
-	c.flagAgentAddress = ""
+	c.flagAgentProxyAddress = ""
 	client, err := c.Client()
 	if err != nil {
 		c.UI.Error(fmt.Sprintf(
@@ -505,10 +504,12 @@ func (c *AgentCommand) Run(args []string) int {
 
 	// The API proxy to be used, if listeners are configured
 	apiProxy, err := cache.NewAPIProxy(&cache.APIProxyConfig{
-		Client:                 proxyClient,
-		Logger:                 apiProxyLogger,
-		EnforceConsistency:     enforceConsistency,
-		WhenInconsistentAction: whenInconsistent,
+		Client:                  proxyClient,
+		Logger:                  apiProxyLogger,
+		EnforceConsistency:      enforceConsistency,
+		WhenInconsistentAction:  whenInconsistent,
+		UserAgentStringFunction: useragent.AgentProxyStringWithProxiedUserAgent,
+		UserAgentString:         useragent.AgentProxyString(),
 	})
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error creating API proxy: %v", err))
@@ -873,6 +874,8 @@ func (c *AgentCommand) Run(args []string) int {
 			EnableTemplateTokenCh:        enableTokenCh,
 			Token:                        previousToken,
 			ExitOnError:                  config.AutoAuth.Method.ExitOnError,
+			UserAgent:                    useragent.AgentAutoAuthString(),
+			MetricsSignifier:             "agent",
 		})
 
 		ss := sink.NewSinkServer(&sink.SinkServerConfig{
@@ -949,12 +952,13 @@ func (c *AgentCommand) Run(args []string) int {
 	// Server configuration output
 	padding := 24
 	sort.Strings(infoKeys)
+	caser := cases.Title(language.English)
 	c.UI.Output("==> Vault Agent configuration:\n")
 	for _, k := range infoKeys {
 		c.UI.Output(fmt.Sprintf(
 			"%s%s: %s",
 			strings.Repeat(" ", padding-len(k)),
-			strings.Title(k),
+			caser.String(k),
 			info[k]))
 	}
 	c.UI.Output("")
@@ -1200,7 +1204,7 @@ func (c *AgentCommand) handleMetrics() http.Handler {
 		w.Header().Set("Content-Type", resp.Data[logical.HTTPContentType].(string))
 		switch v := resp.Data[logical.HTTPRawBody].(type) {
 		case string:
-			w.WriteHeader((status))
+			w.WriteHeader(status)
 			w.Write([]byte(v))
 		case []byte:
 			w.WriteHeader(status)
