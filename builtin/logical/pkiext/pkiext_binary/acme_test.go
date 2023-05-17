@@ -12,8 +12,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/asn1"
-	"encoding/hex"
 	"net"
 	"net/http"
 	"path"
@@ -23,8 +21,8 @@ import (
 	"golang.org/x/crypto/acme"
 
 	"github.com/hashicorp/vault/builtin/logical/pkiext"
-	hDocker "github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	hDocker "github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/stretchr/testify/require"
 )
 
