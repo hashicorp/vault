@@ -93,11 +93,13 @@ export default Service.extend({
     return this.ajax('read', sanitizePath(kvPath), { wrapTTL });
   },
 
-  read(path, data, { wrapTTL }) {
+  read(path, data, flags) {
+    const wrapTTL = flags?.wrapTTL;
     return this.ajax('read', sanitizePath(path), { wrapTTL });
   },
 
-  write(path, data, { wrapTTL }) {
+  write(path, data, flags) {
+    const wrapTTL = flags?.wrapTTL;
     return this.ajax('write', sanitizePath(path), { data, wrapTTL });
   },
 
@@ -105,7 +107,8 @@ export default Service.extend({
     return this.ajax('delete', sanitizePath(path));
   },
 
-  list(path, data, wrapTTL) {
+  list(path, data, flags) {
+    const wrapTTL = flags?.wrapTTL;
     const listPath = ensureTrailingSlash(sanitizePath(path));
     return this.ajax('list', listPath, {
       data: {

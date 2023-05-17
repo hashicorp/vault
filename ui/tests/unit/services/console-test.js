@@ -38,7 +38,7 @@ module('Unit | Service | console', function (hooks) {
 
     {
       method: 'read',
-      args: ['/secrets/foo/bar', {}, '30m'],
+      args: ['/secrets/foo/bar', {}, { wrapTTL: '30m' }],
       expectedURL: 'secrets/foo/bar',
       expectedVerb: 'GET',
       expectedOptions: { data: undefined, wrapTTL: '30m' },
@@ -65,7 +65,7 @@ module('Unit | Service | console', function (hooks) {
 
     {
       method: 'list',
-      args: ['secret/mounts', {}, '1h'],
+      args: ['secret/mounts', {}, { wrapTTL: '1h' }],
       expectedURL: 'secret/mounts/',
       expectedVerb: 'GET',
       expectedOptions: { data: { list: true }, wrapTTL: '1h' },

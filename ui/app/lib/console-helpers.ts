@@ -26,10 +26,12 @@ export function extractDataFromStrings(dataArray: string[]): DataObj {
     // default to value of empty string
     const [item = '', value = ''] = val.split(/=(.+)?/);
     if (!item) return accumulator;
+
     // if it exists in data already, then we have multiple
     // foo=bar in the list and need to make it an array
-    if (accumulator[item]) {
-      accumulator[item] = [...accumulator[item], value];
+    const existingValue = accumulator[item];
+    if (existingValue) {
+      accumulator[item] = Array.isArray(existingValue) ? [...existingValue, value] : [existingValue, value];
       return accumulator;
     }
     accumulator[item] = value;
@@ -95,6 +97,7 @@ interface ParsedCommand {
 }
 export function parseCommand(command: string): ParsedCommand {
   const args: string[] = argTokenizer(parse(command));
+  console.log({ args });
   if (args[0] === 'vault') {
     args.shift();
   }
@@ -125,6 +128,7 @@ export function parseCommand(command: string): ParsedCommand {
   });
 
   if (!supportedCommands.includes(method)) {
+    console.log({ method, supportedCommands });
     throw new Error('invalid command');
   }
   return { method, flagArray: flags, path, dataArray: data };
