@@ -41,9 +41,10 @@
     <InfoTableRow
       @label={{humanize (dasherize attr)}}
       @value={{date-format (get @tidyStatus attr) "MMM dd, yyyy hh:mm:ss a"}}
+      @alwaysRender={{true}}
     />
   {{else}}
-    <InfoTableRow @label={{humanize (dasherize attr)}} @value={{(get @tidyStatus attr)}} />
+    <InfoTableRow @label={{humanize (dasherize attr)}} @value={{(get @tidyStatus attr)}} @alwaysRender={{true}} />
   {{/if}}
 {{/each}}
 
@@ -52,9 +53,13 @@
 </h2>
 {{#each this.universalSectionFields as |attr|}}
   {{#if (eq attr "safety_buffer")}}
-    <InfoTableRow @label={{humanize (dasherize attr)}} @value={{format-duration (get @tidyStatus attr)}} />
+    <InfoTableRow
+      @label={{humanize (dasherize attr)}}
+      @value={{format-duration (get @tidyStatus attr)}}
+      @alwaysRender={{true}}
+    />
   {{else}}
-    <InfoTableRow @label={{humanize (dasherize attr)}} @value={{(get @tidyStatus attr)}} />
+    <InfoTableRow @label={{humanize (dasherize attr)}} @value={{(get @tidyStatus attr)}} @alwaysRender={{true}} />
   {{/if}}
 {{/each}}
 
@@ -63,9 +68,13 @@
 </h2>
 {{#each this.issuersSectionFields as |attr|}}
   {{#if (eq attr "issuer_safety_buffer")}}
-    <InfoTableRow @label={{humanize (dasherize attr)}} @value={{format-duration (get @tidyStatus attr)}} />
+    <InfoTableRow
+      @label={{humanize (dasherize attr)}}
+      @value={{format-duration (get @tidyStatus attr)}}
+      @alwaysRender={{true}}
+    />
   {{else}}
-    <InfoTableRow @label={{humanize (dasherize attr)}} @value={{(get @tidyStatus attr)}} />
+    <InfoTableRow @label={{humanize (dasherize attr)}} @value={{(get @tidyStatus attr)}} @alwaysRender={{true}} />
   {{/if}}
 {{/each}}
 
@@ -74,9 +83,13 @@
 </h2>
 {{#each this.crossClusterOperation as |attr|}}
   {{#if (eq attr "revocation_queue_safety_buffer")}}
-    <InfoTableRow @label={{humanize (dasherize attr)}} @value={{format-duration (get @tidyStatus attr)}} />
+    <InfoTableRow
+      @label={{humanize (dasherize attr)}}
+      @value={{format-duration (get @tidyStatus attr)}}
+      @alwaysRender={{true}}
+    />
   {{else}}
-    <InfoTableRow @label={{humanize (dasherize attr)}} @value={{(get @tidyStatus attr)}} />
+    <InfoTableRow @label={{humanize (dasherize attr)}} @value={{(get @tidyStatus attr)}} @alwaysRender={{true}} />
   {{/if}}{{/each}}
 
 {{! TIDY OPTIONS MODAL }}
