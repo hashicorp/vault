@@ -788,7 +788,7 @@ func (n *DockerClusterNode) AddNetworkDelay(ctx context.Context, delay time.Dura
 	stdout, stderr, exitCode, err := n.runner.RunCmdWithOutput(ctx, n.Container.ID, []string{
 		"/bin/sh",
 		"-xec", strings.Join([]string{
-			"echo isolating node",
+			fmt.Sprintf("echo isolating node %s", targetIP),
 			"apk add iproute2",
 			// If we're running this script a second time on the same node,
 			// the add dev will fail; since we only want to run the netem
