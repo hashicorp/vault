@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-test/deep"
 	ctconfig "github.com/hashicorp/consul-template/config"
+	"golang.org/x/exp/slices"
 
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
@@ -2168,17 +2169,14 @@ func TestLoadConfigFile_ExecSimple(t *testing.T) {
 		t.Fatal("expected exec config to be parsed")
 	}
 
-	if cfg.Exec.Command != "/path/to/my/app" {
+	expectedCmd := []string{"/path/to/my/app", "arg1", "arg2"}
+	if !slices.Equal(cfg.Exec.Command, expectedCmd) {
 		t.Fatal("exec.command does not have expected value")
 	}
 
-	if diff := deep.Equal(cfg.Exec.Args, []string{"arg1", "arg2"}); diff != nil {
-		t.Fatalf("exec.args does not have expected values: %v", cfg.Exec.Args)
-	}
-
 	// check defaults
-	if cfg.Exec.RestartOnNewSecret != "always" {
-		t.Fatalf("expected cfg.Exec.RestartOnNewSecret to be 'always', got '%s'", cfg.Exec.RestartOnNewSecret)
+	if cfg.Exec.RestartOnSecretChanges != "always" {
+		t.Fatalf("expected cfg.Exec.RestartOnSecretChanges to be 'always', got '%s'", cfg.Exec.RestartOnSecretChanges)
 	}
 
 	if cfg.Exec.RestartKillSignal != os.Interrupt {

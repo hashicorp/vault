@@ -27,8 +27,7 @@ env_template "FOO_DATA_USER" {
 }
 
 exec {
-  command               = "env"
-  args                  = []
-  restart_on_new_secret = "always"
-  restart_kill_signal   = "SIGTERM"
+  command                   = ["env"]
+  restart_on_secret_changes = "always"
+  restart_kill_signal       = "SIGTERM"
 }
