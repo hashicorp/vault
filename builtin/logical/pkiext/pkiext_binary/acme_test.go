@@ -24,6 +24,7 @@ import (
 
 	"github.com/hashicorp/vault/builtin/logical/pkiext"
 	hDocker "github.com/hashicorp/vault/sdk/helper/docker"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/stretchr/testify/require"
 )
 
