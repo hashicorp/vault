@@ -97,7 +97,6 @@ interface ParsedCommand {
 }
 export function parseCommand(command: string): ParsedCommand {
   const args: string[] = argTokenizer(parse(command));
-  console.log({ args });
   if (args[0] === 'vault') {
     args.shift();
   }
@@ -128,7 +127,6 @@ export function parseCommand(command: string): ParsedCommand {
   });
 
   if (!supportedCommands.includes(method)) {
-    console.log({ method, supportedCommands });
     throw new Error('invalid command');
   }
   return { method, flagArray: flags, path, dataArray: data };
