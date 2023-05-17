@@ -103,7 +103,7 @@ func (b *backend) pathStaticRolesRead(ctx context.Context, req *logical.Request,
 
 	entry, err := req.Storage.Get(ctx, formatRoleStoragePath(roleName.(string)))
 	if err != nil {
-		return nil, fmt.Errorf("failed to read configuration for static role '%q': %w", roleName, err)
+		return nil, fmt.Errorf("failed to read configuration for static role %q: %w", roleName, err)
 	}
 	if entry == nil {
 		return nil, nil
