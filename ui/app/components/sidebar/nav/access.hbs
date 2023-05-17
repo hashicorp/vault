@@ -27,7 +27,7 @@
     />
   {{/if}}
   {{#if (has-permission "access" routeParams="oidc")}}
-    <Nav.Link @route="vault.cluster.access.oidc" @text="OIDC provider" data-test-sidebar-nav-link="OIDC" />
+    <Nav.Link @route="vault.cluster.access.oidc" @text="OIDC provider" data-test-sidebar-nav-link="OIDC provider" />
   {{/if}}
 
   {{#if (and (has-feature "Control Groups") (has-permission "access" routeParams="control-groups"))}}
