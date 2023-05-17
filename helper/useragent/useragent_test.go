@@ -99,7 +99,7 @@ func TestUserAgent_VaultProxy(t *testing.T) {
 	require.Equal(t, exp, act)
 }
 
-// TestUserAgent_VaultAgentProxy tests the ProxyAPIProxyString() function works
+// TestUserAgent_VaultProxyAPIProxy tests the ProxyAPIProxyString() function works
 // as expected
 func TestUserAgent_VaultProxyAPIProxy(t *testing.T) {
 	projectURL = "https://vault-test.com"
