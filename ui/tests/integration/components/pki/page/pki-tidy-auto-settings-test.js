@@ -10,11 +10,10 @@ module('Integration | Component | page/pki-tidy-auto-settings', function (hooks)
 
   hooks.beforeEach(function () {
     const backend = 'pki-auto-tidy';
+    this.backend = backend;
+
     this.context = { owner: this.engine };
     this.store = this.owner.lookup('service:store');
-
-    this.secretMountPath = this.owner.lookup('service:secret-mount-path');
-    this.secretMountPath.currentPath = backend;
 
     this.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
