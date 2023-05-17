@@ -520,6 +520,13 @@ func parseCsrFromFinalize(data map[string]interface{}) (*x509.CertificateRequest
 	if csr.PublicKey == nil || csr.PublicKeyAlgorithm == x509.UnknownPublicKeyAlgorithm {
 		return nil, fmt.Errorf("%w: failed to parse csr no public key info or unknown key algorithm used", ErrBadCSR)
 	}
+
+	for _, ext := range csr.Extensions {
+		if ext.Id.Equal(certutil.ExtensionBasicConstraintsOID) {
+			return nil, fmt.Errorf("%w: refusing to accept CSR with Basic Constraints extension", ErrBadCSR)
+		}
+	}
+
 	return csr, nil
 }
 

@@ -1042,8 +1042,8 @@ func selectSignatureAlgorithmForECDSA(pub crypto.PublicKey, signatureBits int) x
 }
 
 var (
-	oidExtensionBasicConstraints = []int{2, 5, 29, 19}
-	oidExtensionSubjectAltName   = []int{2, 5, 29, 17}
+	ExtensionBasicConstraintsOID = []int{2, 5, 29, 19}
+	ExtensionSubjectAltNameOID   = []int{2, 5, 29, 17}
 )
 
 // CreateCSR creates a CSR with the default rand.Reader to
@@ -1098,7 +1098,7 @@ func createCSR(data *CreationBundle, addBasicConstraints bool, randReader io.Rea
 			return nil, errutil.InternalError{Err: errwrap.Wrapf("error marshaling basic constraints: {{err}}", err).Error()}
 		}
 		ext := pkix.Extension{
-			Id:       oidExtensionBasicConstraints,
+			Id:       ExtensionBasicConstraintsOID,
 			Value:    val,
 			Critical: true,
 		}
@@ -1219,7 +1219,7 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		certTemplate.URIs = data.CSR.URIs
 
 		for _, name := range data.CSR.Extensions {
-			if !name.Id.Equal(oidExtensionBasicConstraints) && !(len(data.Params.OtherSANs) > 0 && name.Id.Equal(oidExtensionSubjectAltName)) {
+			if !name.Id.Equal(ExtensionBasicConstraintsOID) && !(len(data.Params.OtherSANs) > 0 && name.Id.Equal(ExtensionSubjectAltNameOID)) {
 				certTemplate.ExtraExtensions = append(certTemplate.ExtraExtensions, name)
 			}
 		}
