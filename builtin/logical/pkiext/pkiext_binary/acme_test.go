@@ -463,7 +463,7 @@ func SubtestACMEPreventsICADNS(t *testing.T, cluster *VaultPkiCluster) {
 		ExtraExtensions: []pkix.Extension{
 			// Basic Constraint with IsCA asserted to true.
 			{
-				Id:       asn1.ObjectIdentifier{2, 5, 29, 19},
+				Id:       certutil.ExtensionBasicConstraintsOID,
 				Critical: true,
 				Value:    []byte{0x30, 0x03, 0x01, 0x01, 0xFF},
 			},
