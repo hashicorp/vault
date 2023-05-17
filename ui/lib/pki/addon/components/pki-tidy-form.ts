@@ -11,12 +11,22 @@ import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { tracked } from '@glimmer/tracking';
 
-import PkiTidyModel from 'vault/models/pki/tidy';
 import RouterService from '@ember/routing/router-service';
+import type PkiTidyModel from 'vault/models/pki/tidy';
+import type { FormField, TtlEvent } from 'vault/app-types';
 
 interface Args {
   tidy: PkiTidyModel;
-  adapterOptions: object;
+  tidyType: string;
+  onSave: CallableFunction;
+  onCancel: CallableFunction;
+}
+
+interface PkiTidyTtls {
+  intervalDuration: string;
+}
+interface PkiTidyBooleans {
+  enabled: boolean;
 }
 
 export default class PkiTidyForm extends Component<Args> {
@@ -24,10 +34,6 @@ export default class PkiTidyForm extends Component<Args> {
 
   @tracked errorBanner = '';
   @tracked invalidFormAlert = '';
-
-  returnToConfiguration() {
-    this.router.transitionTo('vault.cluster.secrets.backend.pki.configuration.index');
-  }
 
   @action
   updateSafetyBuffer({ goSafeTimeString }: { goSafeTimeString: string }) {
@@ -39,8 +45,8 @@ export default class PkiTidyForm extends Component<Args> {
   *save(event: Event) {
     event.preventDefault();
     try {
-      yield this.args.tidy.save({ adapterOptions: this.args.adapterOptions });
-      this.returnToConfiguration();
+      yield this.args.tidy.save({ adapterOptions: { tidyType: this.args.tidyType } });
+      this.args.onSave();
     } catch (e) {
       this.errorBanner = errorMessage(e);
       this.invalidFormAlert = 'There was an error submitting this form.';
@@ -48,7 +54,12 @@ export default class PkiTidyForm extends Component<Args> {
   }
 
   @action
-  cancel() {
-    this.returnToConfiguration();
+  handleTtl(attr: FormField, e: TtlEvent) {
+    const { enabled, goSafeTimeString } = e;
+    const ttlAttr = attr.name;
+    this.args.tidy[ttlAttr as keyof PkiTidyTtls] = goSafeTimeString;
+    // expiry and ocspExpiry both correspond to 'disable' booleans
+    // so when ttl is enabled, the booleans are set to false
+    this.args.tidy[attr.options.mapToBoolean as keyof PkiTidyBooleans] = enabled;
   }
 }
