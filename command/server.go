@@ -43,6 +43,7 @@ import (
 	loghelper "github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	"github.com/hashicorp/vault/helper/useragent"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
@@ -1999,7 +2000,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 }
 
 func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info map[string]string, infoKeys []string, devListenAddress, tempDir string) int {
-	testCluster := vault.NewTestCluster(&testing.RuntimeT{}, base, &vault.TestClusterOptions{
+	conf, opts := teststorage.ClusterSetup(base, &vault.TestClusterOptions{
 		HandlerFunc:       vaulthttp.Handler,
 		BaseListenAddress: c.flagDevListenAddr,
 		Logger:            c.logger,
@@ -2014,8 +2015,17 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 				},
 			},
 		},
-	})
+	}, nil)
+	testCluster := vault.NewTestCluster(&testing.RuntimeT{}, conf, opts)
 	defer c.cleanupGuard.Do(testCluster.Cleanup)
+
+	if constants.IsEnterprise {
+		err := testcluster.WaitForActiveNodeAndPerfStandbys(context.Background(), testCluster)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("perf standbys didn't become ready: %v", err))
+			return 1
+		}
+	}
 
 	info["cluster parameters path"] = testCluster.TempDir
 	infoKeys = append(infoKeys, "cluster parameters path")
