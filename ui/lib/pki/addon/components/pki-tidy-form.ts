@@ -35,11 +35,6 @@ export default class PkiTidyForm extends Component<Args> {
   @tracked errorBanner = '';
   @tracked invalidFormAlert = '';
 
-  @action
-  updateSafetyBuffer({ goSafeTimeString }: { goSafeTimeString: string }) {
-    this.args.tidy.safetyBuffer = goSafeTimeString;
-  }
-
   @task
   @waitFor
   *save(event: Event) {
@@ -58,8 +53,6 @@ export default class PkiTidyForm extends Component<Args> {
     const { enabled, goSafeTimeString } = e;
     const ttlAttr = attr.name;
     this.args.tidy[ttlAttr as keyof PkiTidyTtls] = goSafeTimeString;
-    // expiry and ocspExpiry both correspond to 'disable' booleans
-    // so when ttl is enabled, the booleans are set to false
     this.args.tidy[attr.options.mapToBoolean as keyof PkiTidyBooleans] = enabled;
   }
 }

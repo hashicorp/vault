@@ -25,6 +25,8 @@ const sharedFormFields = [
 ];
 @withFormFields(null, sharedFormFields)
 export default class PkiTidyModel extends Model {
+  // the backend mount is the model id, only one pki/tidy model will ever persist (the auto-tidy config)
+
   @attr('boolean', {
     label: 'Automatic tidy enabled',
     labelDisabled: 'Automatic tidy disabled',
