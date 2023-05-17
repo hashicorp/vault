@@ -2159,6 +2159,13 @@ func TestLoadConfigFile_EnvTemplateComplex(t *testing.T) {
 	}
 }
 
+func TestLoadConfigFile_EnvTemplateNoName(t *testing.T) {
+	_, err := LoadConfigFile("./test-fixtures/config-env-templates-no-name.hcl")
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+}
+
 func TestLoadConfigFile_ExecSimple(t *testing.T) {
 	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-simple.hcl")
 
