@@ -5,11 +5,16 @@ package healthcheck
 
 import (
 	"bytes"
+	"context"
+	"crypto/tls"
 	"fmt"
+	"net/http"
 	"net/url"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/logical"
+
+	"golang.org/x/crypto/acme"
 )
 
 type EnableAcmeIssuance struct {
@@ -142,6 +147,21 @@ func verifyLocalPathUrl(h *EnableAcmeIssuance) error {
 	if parsedUrl.Scheme != "https" {
 		return fmt.Errorf("the configured 'path' field in /{{mount}}/config/cluster was not using an https scheme")
 	}
+
+	// Avoid issues with SSL certificates for this check, we just want to validate that we would
+	// hit an ACME server with the path they specified in configuration
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+	acmeDirectoryUrl := parsedUrl.JoinPath("/acme/", "directory")
+	acmeClient := acme.Client{HTTPClient: client, DirectoryURL: acmeDirectoryUrl.String()}
+	_, err = acmeClient.Discover(context.Background())
+	if err != nil {
+		return fmt.Errorf("using configured 'path' field ('%s') in /{{mount}}/config/cluster failed to reach the ACME"+
+			" directory: %s: %w", parsedUrl.String(), acmeDirectoryUrl.String(), err)
+	}
+
 	return nil
 }
 
@@ -211,7 +231,7 @@ func (h *EnableAcmeIssuance) Evaluate(e *Executor) (results []*Result, err error
 	ret := Result{
 		Status:   ResultOK,
 		Endpoint: h.ClusterConfigFetcher.Path,
-		Message:  "ACME enabled and the local cluster config 'path' argument has an https URL.",
+		Message:  "ACME enabled and successfully connected to the ACME directory.",
 	}
 	return []*Result{&ret}, nil
 }
