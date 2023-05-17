@@ -199,7 +199,7 @@ func (c *KVMetadataPutCommand) Run(args []string) int {
 		return 1
 	}
 
-	fullPath := addPrefixToKVPath(partialPath, mountPath, "metadata")
+	fullPath := addPrefixToKVPath(partialPath, mountPath, "metadata", false)
 	data := map[string]interface{}{}
 
 	if c.flagMaxVersions >= 0 {

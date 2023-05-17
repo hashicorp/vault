@@ -11,10 +11,9 @@
 }
 
 .page-container {
-  min-height: calc(100vh - 4rem);
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  margin-top: 4rem;
   justify-content: flex-end;
 }
 
@@ -39,30 +38,7 @@
 .container {
   flex-grow: 1;
   margin: 0 auto;
+  max-width: 1024px;
   position: relative;
   width: auto;
-}
-
-@media screen and (min-width: 1024px) {
-  .container {
-    max-width: 960px;
-  }
-}
-
-@media screen and (max-width: 1215px) {
-  .container.is-widescreen:not(.is-max-desktop) {
-    max-width: 1152px;
-  }
-}
-
-@media screen and (min-width: 1216px) {
-  .container:not(.is-max-desktop) {
-    max-width: 1152px;
-  }
-}
-
-@media screen and (min-width: 1408px) {
-  .container:not(.is-max-desktop):not(.is-max-widescreen) {
-    max-width: 1344px;
-  }
 }

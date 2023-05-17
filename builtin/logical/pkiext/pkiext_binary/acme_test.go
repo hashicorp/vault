@@ -11,32 +11,58 @@ import (
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
-	"fmt"
+	"crypto/x509/pkix"
 	"net"
 	"net/http"
-	"os"
 	"path"
 	"testing"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	"golang.org/x/crypto/acme"
 
-	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/pkiext"
 	hDocker "github.com/hashicorp/vault/sdk/helper/docker"
-	"github.com/hashicorp/vault/sdk/helper/testcluster"
-	tcDocker "github.com/hashicorp/vault/sdk/helper/testcluster/docker"
 	"github.com/stretchr/testify/require"
 )
 
-func CheckCertBot(t *testing.T, vaultNetwork string, vaultNodeID string, directory string) {
-	logConsumer := func(s string) {
-		t.Logf(s)
+// Test_ACME will start a Vault cluster using the docker based binary, and execute
+// a bunch of sub-tests against that cluster. It is up to each sub-test to run/configure
+// a new pki mount within the cluster to not interfere with each other.
+func Test_ACME(t *testing.T) {
+	cluster := NewVaultPkiClusterWithDNS(t)
+	defer cluster.Cleanup()
+
+	tc := map[string]func(t *testing.T, cluster *VaultPkiCluster){
+		"certbot":       SubtestACMECertbot,
+		"acme ip sans":  SubtestACMEIPAndDNS,
+		"acme wildcard": SubtestACMEWildcardDNS,
 	}
 
-	logStdout := &pkiext.LogConsumerWriter{logConsumer}
-	logStderr := &pkiext.LogConsumerWriter{logConsumer}
+	// Wrap the tests within an outer group, so that we run all tests
+	// in parallel, but still wait for all tests to finish before completing
+	// and running the cleanup of the Vault cluster.
+	t.Run("group", func(gt *testing.T) {
+		for testName := range tc {
+			// Trap the function to be embedded later in the run so it
+			// doesn't get clobbered on the next for iteration
+			testFunc := tc[testName]
+
+			gt.Run(testName, func(st *testing.T) {
+				st.Parallel()
+				testFunc(st, cluster)
+			})
+		}
+	})
+}
+
+func SubtestACMECertbot(t *testing.T, cluster *VaultPkiCluster) {
+	pki, err := cluster.CreateAcmeMount("pki")
+	require.NoError(t, err, "failed setting up acme mount")
+
+	directory := "https://" + pki.GetActiveContainerIP() + ":8200/v1/pki/acme/directory"
+	vaultNetwork := pki.GetContainerNetworkName()
+
+	logConsumer, logStdout, logStderr := getDockerLog(t)
 
 	t.Logf("creating on network: %v", vaultNetwork)
 	runner, err := hDocker.NewServiceRunner(hDocker.RunOptions{
@@ -49,6 +75,7 @@ func CheckCertBot(t *testing.T, vaultNetwork string, vaultNodeID string, directo
 		LogStdout:     logStdout,
 		LogStderr:     logStderr,
 	})
+	require.NoError(t, err, "failed creating service runner")
 
 	ctx := context.Background()
 	result, err := runner.Start(ctx, true, false)
@@ -62,16 +89,10 @@ func CheckCertBot(t *testing.T, vaultNetwork string, vaultNodeID string, directo
 	require.Contains(t, networks, vaultNetwork, "expected to contain vault network")
 
 	ipAddr := networks[vaultNetwork]
-	hostname := "acme-client.dadgarcorp.com"
+	hostname := "certbot-acme-client.dadgarcorp.com"
 
-	updateHostsCmd := []string{
-		"sh", "-c",
-		"echo '" + ipAddr + " " + hostname + "' >> /etc/hosts",
-	}
-	stdout, stderr, retcode, err := runner.RunCmdWithOutput(ctx, vaultNodeID, updateHostsCmd)
-	require.NoError(t, err, "failed to update vault host file")
-	t.Logf("Update host file command: %v\nstdout: %v\nstderr: %v", updateHostsCmd, string(stdout), string(stderr))
-	require.Equal(t, 0, retcode, "expected zero retcode from updating vault host file")
+	err = pki.AddHostname(hostname, ipAddr)
+	require.NoError(t, err, "failed to update vault host files")
 
 	certbotCmd := []string{
 		"certbot",
@@ -87,7 +108,7 @@ func CheckCertBot(t *testing.T, vaultNetwork string, vaultNodeID string, directo
 	}
 	logCatCmd := []string{"cat", "/var/log/letsencrypt/letsencrypt.log"}
 
-	stdout, stderr, retcode, err = runner.RunCmdWithOutput(ctx, result.Container.ID, certbotCmd)
+	stdout, stderr, retcode, err := runner.RunCmdWithOutput(ctx, result.Container.ID, certbotCmd)
 	t.Logf("Certbot Issue Command: %v\nstdout: %v\nstderr: %v\n", certbotCmd, string(stdout), string(stderr))
 	if err != nil || retcode != 0 {
 		logsStdout, logsStderr, _, _ := runner.RunCmdWithOutput(ctx, result.Container.ID, logCatCmd)
@@ -129,224 +150,29 @@ func CheckCertBot(t *testing.T, vaultNetwork string, vaultNodeID string, directo
 	require.NotEqual(t, 0, retcode, "expected non-zero retcode double revoke command result")
 }
 
-func RunACMERootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bool, roleKeyType string, roleKeyBits int, roleUsePSS bool) {
-	cluster, vaultNetwork, vaultAddr, vaultNodeID, _ := setupVaultDocker(t)
-	defer cluster.Cleanup()
+func SubtestACMEIPAndDNS(t *testing.T, cluster *VaultPkiCluster) {
+	pki, err := cluster.CreateAcmeMount("pki-ip-dns-sans")
+	require.NoError(t, err, "failed setting up acme mount")
 
-	setupAcme(t, cluster, vaultAddr, "8200", caKeyType, caKeyBits, caUsePSS, roleKeyType, roleKeyBits, roleUsePSS)
+	// Since we interact with ACME from outside the container network the ACME
+	// configuration needs to be updated to use the host port and not the internal
+	// docker ip.
+	basePath, err := pki.UpdateClusterConfigLocalAddr()
+	require.NoError(t, err, "failed updating cluster config")
 
-	directory := "https://" + vaultAddr + ":8200/v1/pki/acme/directory"
-	CheckCertBot(t, vaultNetwork, vaultNodeID, directory)
-}
-
-func setupAcme(t *testing.T, cluster *tcDocker.DockerCluster, vaultAddr string, vaultPort string, caKeyType string, caKeyBits int, caUsePSS bool, roleKeyType string, roleKeyBits int, roleUsePSS bool,
-) {
-	testSuffix := fmt.Sprintf(" - %v %v %v - %v %v %v", caKeyType, caKeyType, caUsePSS, roleKeyType, roleKeyBits, roleUsePSS)
-
-	client := cluster.Nodes()[0].APIClient()
-	err := client.Sys().Mount("pki", &api.MountInput{
-		Type: "pki",
-		Config: api.MountConfigInput{
-			DefaultLeaseTTL: "16h",
-			MaxLeaseTTL:     "32h",
-			AllowedResponseHeaders: []string{
-				"Last-Modified", "Replay-Nonce",
-				"Link", "Location",
-			},
-		},
-	})
-	require.NoError(t, err, "failed mounting pki endpoint")
-
-	// Set URLs pointing to the issuer.
-	_, err = client.Logical().Write("pki/config/cluster", map[string]interface{}{
-		"path":     "https://" + vaultAddr + ":" + vaultPort + "/v1/pki",
-		"aia_path": "http://" + vaultAddr + ":" + vaultPort + "/v1/pki",
-	})
-	require.NoError(t, err)
-
-	_, err = client.Logical().Write("pki/config/acme", map[string]interface{}{
-		"enabled": true,
-	})
-	require.NoError(t, err)
-
-	// Setup root+intermediate CA hierarchy within this mount.
-	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
-		"common_name":  "Root X1" + testSuffix,
-		"country":      "US",
-		"organization": "Dadgarcorp",
-		"ou":           "QA",
-		"key_type":     caKeyType,
-		"key_bits":     caKeyBits,
-		"use_pss":      caUsePSS,
-		"issuer_name":  "root",
-	})
-	require.NoError(t, err, "failed to create root cert")
-	require.NotNil(t, resp, "failed to create root cert")
-	require.NotEmpty(t, resp.Data, "failed to create root cert")
-	// rootCert := resp.Data["certificate"].(string)
-	resp, err = client.Logical().Write("pki/intermediate/generate/internal", map[string]interface{}{
-		"common_name":  "Intermediate I1" + testSuffix,
-		"country":      "US",
-		"organization": "Dadgarcorp",
-		"ou":           "QA",
-		"key_type":     caKeyType,
-		"key_bits":     caKeyBits,
-		"use_pss":      caUsePSS,
-	})
-	require.NoError(t, err, "failed to create int csr")
-	require.NotNil(t, resp, "failed to create int csr")
-	require.NotEmpty(t, resp.Data, "failed to create int csr")
-	resp, err = client.Logical().Write("pki/issuer/default/sign-intermediate", map[string]interface{}{
-		"common_name":  "Intermediate I1",
-		"country":      "US",
-		"organization": "Dadgarcorp",
-		"ou":           "QA",
-		"key_type":     caKeyType,
-		"csr":          resp.Data["csr"],
-	})
-	require.NoError(t, err, "failed to create sign int")
-	require.NotNil(t, resp, "failed to create sign int")
-	require.NotEmpty(t, resp.Data, "failed to create sign int")
-	intCert := resp.Data["certificate"].(string)
-	resp, err = client.Logical().Write("pki/issuers/import/bundle", map[string]interface{}{
-		"pem_bundle": intCert,
-	})
-	require.NoError(t, err, "failed to create import int")
-	require.NotNil(t, resp, "failed to create import int")
-	require.NotEmpty(t, resp.Data, "failed to create import int")
-	_, err = client.Logical().Write("pki/config/issuers", map[string]interface{}{
-		"default": resp.Data["imported_issuers"].([]interface{})[0],
-	})
-	require.NoError(t, err, "failed to set intermediate as default")
-	resp, err = client.Logical().JSONMergePatch(context.Background(), "pki/issuer/default", map[string]interface{}{
-		"leaf_not_after_behavior": "truncate",
-	})
-	require.NoError(t, err, "failed to update intermediate ttl behavior")
-	t.Logf("got response from updating int issuer: %v", resp)
-	_, err = client.Logical().JSONMergePatch(context.Background(), "pki/issuer/root", map[string]interface{}{
-		"leaf_not_after_behavior": "truncate",
-	})
-	require.NoError(t, err, "failed to update root ttl behavior")
-	t.Logf("got response from updating root issuer: %v", resp)
-}
-
-func setupVaultDocker(t *testing.T) (*tcDocker.DockerCluster, string, string, string, nat.PortBinding) {
-	binary := os.Getenv("VAULT_BINARY")
-	if binary == "" {
-		t.Skip("only running docker test when $VAULT_BINARY present")
-	}
-	opts := &tcDocker.DockerClusterOptions{
-		ImageRepo: "docker.mirror.hashicorp.services/hashicorp/vault",
-		// We're replacing the binary anyway, so we're not too particular about
-		// the docker image version tag.
-		ImageTag:    "latest",
-		VaultBinary: binary,
-		ClusterOptions: testcluster.ClusterOptions{
-			VaultNodeConfig: &testcluster.VaultNodeConfig{
-				LogLevel: "TRACE",
-			},
-			NumCores: 1,
-		},
-	}
-
-	cluster := tcDocker.NewTestDockerCluster(t, opts)
-
-	var vaultNetwork string
-	var vaultAddr string
-	var vaultNodeID string
-	var vaultBindedPort nat.PortBinding
-	for index, rawNode := range cluster.Nodes() {
-		node, ok := rawNode.(*tcDocker.DockerClusterNode)
-		require.True(t, ok, "failed to cast NewTestDockerCluster's Node to DockerClusterNode")
-		t.Logf("[%d] Cluster Node %v - %v / %v", index, node.Name(), node.ContainerNetworkName, node.ContainerIPAddress)
-		if index == 0 {
-			vaultNodeID = node.Container.ID
-			vaultNetwork = node.ContainerNetworkName
-			vaultAddr = node.ContainerIPAddress
-			vaultBindedPort = node.Container.NetworkSettings.Ports["8200/tcp"][0]
-		}
-	}
-	return cluster, vaultNetwork, vaultAddr, vaultNodeID, vaultBindedPort
-}
-
-func Test_ACMERSAPure(t *testing.T) {
-	t.Parallel()
-
-	RunACMERootTest(t, "rsa", 2048, false, "rsa", 2048, false)
-}
-
-func Test_ACMERSAPurePSS(t *testing.T) {
-	t.Parallel()
-
-	RunACMERootTest(t, "rsa", 2048, false, "rsa", 2048, true)
-}
-
-func Test_ACMERSAPSSPure(t *testing.T) {
-	t.Parallel()
-
-	RunACMERootTest(t, "rsa", 2048, true, "rsa", 2048, false)
-}
-
-func Test_ACMERSAPSSPurePSS(t *testing.T) {
-	t.Parallel()
-
-	RunACMERootTest(t, "rsa", 2048, true, "rsa", 2048, true)
-}
-
-func Test_ACMEECDSA256Pure(t *testing.T) {
-	t.Parallel()
-
-	RunACMERootTest(t, "ec", 256, false, "ec", 256, false)
-}
-
-func Test_ACMEECDSAHybrid(t *testing.T) {
-	t.Parallel()
-
-	RunACMERootTest(t, "ec", 256, false, "rsa", 2048, false)
-}
-
-func Test_ACMEECDSAHybridPSS(t *testing.T) {
-	t.Parallel()
-
-	RunACMERootTest(t, "ec", 256, false, "rsa", 2048, true)
-}
-
-func Test_ACMERSAHybrid(t *testing.T) {
-	t.Parallel()
-
-	RunACMERootTest(t, "rsa", 2048, false, "ec", 256, false)
-}
-
-func Test_ACMERSAPSSHybrid(t *testing.T) {
-	t.Parallel()
-
-	RunACMERootTest(t, "rsa", 2048, true, "ec", 256, false)
-}
-
-// Test_ACMEIPSans verify that we can perform ACME validations on IP and DNS identifiers using the Golang ACME library.
-func Test_ACMEIPSans(t *testing.T) {
-	cluster, vaultNetwork, _, vaultNodeID, vaultBindedPort := setupVaultDocker(t)
-	defer cluster.Cleanup()
-
-	setupAcme(t, cluster, "127.0.0.1", vaultBindedPort.HostPort, "rsa", 2048, true, "ec", 256, false)
-
-	logConsumer := func(s string) {
-		t.Logf(s)
-	}
-
-	logStdout := &pkiext.LogConsumerWriter{logConsumer}
-	logStderr := &pkiext.LogConsumerWriter{logConsumer}
+	logConsumer, logStdout, logStderr := getDockerLog(t)
 
 	// Setup an nginx container that we can have respond the queries for ips
 	runner, err := hDocker.NewServiceRunner(hDocker.RunOptions{
 		ImageRepo:     "docker.mirror.hashicorp.services/nginx",
 		ImageTag:      "latest",
 		ContainerName: "vault_pki_ipsans_test",
-		NetworkName:   vaultNetwork,
+		NetworkName:   pki.GetContainerNetworkName(),
 		LogConsumer:   logConsumer,
 		LogStdout:     logStdout,
 		LogStderr:     logStderr,
 	})
+	require.NoError(t, err, "failed creating service runner")
 
 	ctx := context.Background()
 	result, err := runner.Start(ctx, true, false)
@@ -355,44 +181,124 @@ func Test_ACMEIPSans(t *testing.T) {
 
 	nginxContainerId := result.Container.ID
 	defer runner.Stop(context.Background(), nginxContainerId)
-
 	networks, err := runner.GetNetworkAndAddresses(nginxContainerId)
-	require.NoError(t, err, "could not read container's IP address")
-	require.Contains(t, networks, vaultNetwork, "expected to contain vault network")
 
+	challengeFolder := "/usr/share/nginx/html/.well-known/acme-challenge/"
 	createChallengeFolderCmd := []string{
 		"sh", "-c",
-		"mkdir -p '/usr/share/nginx/html/.well-known/acme-challenge/'",
+		"mkdir -p '" + challengeFolder + "'",
 	}
 	stdout, stderr, retcode, err := runner.RunCmdWithOutput(ctx, nginxContainerId, createChallengeFolderCmd)
 	require.NoError(t, err, "failed to create folder in nginx container")
 	t.Logf("Update host file command: %v\nstdout: %v\nstderr: %v", createChallengeFolderCmd, string(stdout), string(stderr))
 	require.Equal(t, 0, retcode, "expected zero retcode from mkdir in nginx container")
 
-	ipAddr := networks[vaultNetwork]
+	ipAddr := networks[pki.GetContainerNetworkName()]
 	hostname := "go-lang-acme-client.dadgarcorp.com"
 
-	updateHostsCmd := []string{
-		"sh", "-c",
-		"echo '" + ipAddr + " " + hostname + "' >> /etc/hosts",
+	err = pki.AddHostname(hostname, ipAddr)
+	require.NoError(t, err, "failed to update vault host files")
+
+	// Perform an ACME lifecycle with an order that contains both an IP and a DNS name identifier
+	err = pki.UpdateRole("ip-dns-sans", map[string]interface{}{
+		"key_type":                    "any",
+		"allowed_domains":             "dadgarcorp.com",
+		"allow_subdomains":            "true",
+		"allow_wildcard_certificates": "false",
+	})
+	require.NoError(t, err, "failed creating role ip-dns-sans")
+
+	directoryUrl := basePath + "/roles/ip-dns-sans/acme/directory"
+	acmeOrderIdentifiers := []acme.AuthzID{
+		{Type: "ip", Value: ipAddr},
+		{Type: "dns", Value: hostname},
 	}
-	stdout, stderr, retcode, err = runner.RunCmdWithOutput(ctx, vaultNodeID, updateHostsCmd)
-	require.NoError(t, err, "failed to update vault host file")
-	t.Logf("Update host file command: %v\nstdout: %v\nstderr: %v", updateHostsCmd, string(stdout), string(stderr))
-	require.Equal(t, 0, retcode, "expected zero retcode from updating vault host file")
+	cr := &x509.CertificateRequest{
+		Subject:     pkix.Name{CommonName: hostname},
+		DNSNames:    []string{hostname},
+		IPAddresses: []net.IP{net.ParseIP(ipAddr)},
+	}
 
-	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	require.NoError(t, err, "failed creating rsa key")
+	provisioningFunc := func(acmeClient *acme.Client, auths []*acme.Authorization) []*acme.Challenge {
+		// For each http-01 challenge, generate the file to place underneath the nginx challenge folder
+		acmeCtx := hDocker.NewBuildContext()
+		var challengesToAccept []*acme.Challenge
+		for _, auth := range auths {
+			for _, challenge := range auth.Challenges {
+				if challenge.Status != acme.StatusPending {
+					t.Logf("ignoring challenge not in status pending: %v", challenge)
+					continue
+				}
 
+				if challenge.Type == "http-01" {
+					challengeBody, err := acmeClient.HTTP01ChallengeResponse(challenge.Token)
+					require.NoError(t, err, "failed generating challenge response")
+
+					challengePath := acmeClient.HTTP01ChallengePath(challenge.Token)
+					require.NoError(t, err, "failed generating challenge path")
+
+					challengeFile := path.Base(challengePath)
+
+					acmeCtx[challengeFile] = hDocker.PathContentsFromString(challengeBody)
+
+					challengesToAccept = append(challengesToAccept, challenge)
+				}
+			}
+		}
+
+		require.GreaterOrEqual(t, len(challengesToAccept), 1, "Need at least one challenge, got none")
+
+		// Copy all challenges within the nginx container
+		err = runner.CopyTo(nginxContainerId, challengeFolder, acmeCtx)
+		require.NoError(t, err, "failed copying challenges to container")
+
+		return challengesToAccept
+	}
+
+	acmeCert := doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, cr, provisioningFunc)
+
+	require.Len(t, acmeCert.IPAddresses, 1, "expected only a single ip address in cert")
+	require.Equal(t, ipAddr, acmeCert.IPAddresses[0].String())
+	require.Equal(t, []string{hostname}, acmeCert.DNSNames)
+	require.Equal(t, hostname, acmeCert.Subject.CommonName)
+
+	// Perform an ACME lifecycle with an order that contains just an IP identifier
+	err = pki.UpdateRole("ip-sans", map[string]interface{}{
+		"key_type":            "any",
+		"use_csr_common_name": "false",
+		"require_cn":          "false",
+	})
+	require.NoError(t, err, "failed creating role ip-sans")
+
+	directoryUrl = basePath + "/roles/ip-sans/acme/directory"
+	acmeOrderIdentifiers = []acme.AuthzID{
+		{Type: "ip", Value: ipAddr},
+	}
+	cr = &x509.CertificateRequest{
+		IPAddresses: []net.IP{net.ParseIP(ipAddr)},
+	}
+
+	acmeCert = doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, cr, provisioningFunc)
+
+	require.Len(t, acmeCert.IPAddresses, 1, "expected only a single ip address in cert")
+	require.Equal(t, ipAddr, acmeCert.IPAddresses[0].String())
+	require.Empty(t, acmeCert.DNSNames, "acme cert dns name field should have been empty")
+	require.Equal(t, "", acmeCert.Subject.CommonName)
+}
+
+type acmeGoValidatorProvisionerFunc func(acmeClient *acme.Client, auths []*acme.Authorization) []*acme.Challenge
+
+func doAcmeValidationWithGoLibrary(t *testing.T, directoryUrl string, acmeOrderIdentifiers []acme.AuthzID, cr *x509.CertificateRequest, provisioningFunc acmeGoValidatorProvisionerFunc) *x509.Certificate {
 	// Since we are contacting Vault through the host ip/port, the certificate will not validate properly
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	httpClient := &http.Client{Transport: tr}
 
-	directoryUrl := fmt.Sprintf("https://%s:%s/%s", vaultBindedPort.HostIP, vaultBindedPort.HostPort, "v1/pki/acme/directory")
-	t.Logf("Using the following url for the ACME directory: %s", directoryUrl)
+	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err, "failed creating rsa account key")
 
+	t.Logf("Using the following url for the ACME directory: %s", directoryUrl)
 	acmeClient := &acme.Client{
 		Key:          accountKey,
 		HTTPClient:   httpClient,
@@ -407,12 +313,9 @@ func Test_ACMEIPSans(t *testing.T) {
 		func(tosURL string) bool { return true })
 	require.NoError(t, err, "failed registering account")
 
-	order, err := acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{
-		{Type: "ip", Value: ipAddr},
-		{Type: "dns", Value: hostname},
-	})
+	// Create an ACME order
+	order, err := acmeClient.AuthorizeOrder(testCtx, acmeOrderIdentifiers)
 	require.NoError(t, err, "failed creating ACME order")
-	require.Len(t, order.AuthzURLs, 2)
 
 	var auths []*acme.Authorization
 	for _, authUrl := range order.AuthzURLs {
@@ -421,71 +324,114 @@ func Test_ACMEIPSans(t *testing.T) {
 		auths = append(auths, authorization)
 	}
 
-	acmeCtx := hDocker.NewBuildContext()
-	containerPathForChallenges := ""
-	var challengesToAccept []*acme.Challenge
-	for _, auth := range auths {
-		var types []string
-		for _, challenge := range auth.Challenges {
-			types = append(types, challenge.Type)
-		}
-		require.Contains(t, types, "http-01")
+	// Handle the validation using the external validation mechanism.
+	challengesToAccept := provisioningFunc(acmeClient, auths)
+	require.NotEmpty(t, challengesToAccept, "provisioning function failed to return any challenges to accept")
 
-		if auth.Identifier.Type == "ip" {
-			require.Len(t, auth.Challenges, 1, "expected only a single challenge type for ip identifier: %v", auth.Challenges)
-		} else {
-			require.Len(t, auth.Challenges, 2, "expected multiple challenges for dns name: %v", auth.Challenges)
-			require.Contains(t, types, "dns-01")
-		}
-
-		for _, challenge := range auth.Challenges {
-			if challenge.Status != acme.StatusPending {
-				t.Logf("ignoring challenge not in status pending: %v", challenge)
-				continue
-			}
-			if challenge.Type == "http-01" {
-				t.Logf("Performing challenge in nginx: %v", challenge)
-
-				challengeBody, err := acmeClient.HTTP01ChallengeResponse(challenge.Token)
-				require.NoError(t, err, "failed generating challenge response")
-
-				challengePath := acmeClient.HTTP01ChallengePath(challenge.Token)
-				require.NoError(t, err, "failed generating challenge path")
-
-				containerPath := path.Join("/usr/share/nginx/html/", challengePath)
-				challengeFile := path.Base(containerPath)
-				containerPathForChallenges = path.Dir(containerPath)
-
-				acmeCtx[challengeFile] = hDocker.PathContentsFromString(challengeBody)
-
-				challengesToAccept = append(challengesToAccept, challenge)
-			}
-		}
-	}
-	err = runner.CopyTo(nginxContainerId, containerPathForChallenges, acmeCtx)
-	require.NoError(t, err, "failed copying challenges to container")
-
+	// Tell the ACME server, that they can now validate those challenges.
 	for _, challenge := range challengesToAccept {
 		_, err = acmeClient.Accept(testCtx, challenge)
 		require.NoError(t, err, "failed to accept challenge: %v", challenge)
 	}
 
-	cr := &x509.CertificateRequest{
-		DNSNames:    []string{hostname},
-		IPAddresses: []net.IP{net.ParseIP(ipAddr)},
-	}
+	// Wait for the order/challenges to be validated.
+	_, err = acmeClient.WaitOrder(testCtx, order.URI)
+	require.NoError(t, err, "failed waiting for order to be ready")
+
+	// Create/sign the CSR and ask ACME server to sign it returning us the final certificate
 	csrKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	csr, err := x509.CreateCertificateRequest(rand.Reader, cr, csrKey)
 	require.NoError(t, err, "failed generating csr")
 
-	certs, _, err := acmeClient.CreateOrderCert(testCtx, order.FinalizeURL, csr, true)
+	certs, _, err := acmeClient.CreateOrderCert(testCtx, order.FinalizeURL, csr, false)
 	require.NoError(t, err, "failed to get a certificate back from ACME")
 
 	acmeCert, err := x509.ParseCertificate(certs[0])
 	require.NoError(t, err, "failed parsing acme cert bytes")
 
-	require.Len(t, acmeCert.IPAddresses, 1, "expected only a single ip address in cert")
-	require.Equal(t, ipAddr, acmeCert.IPAddresses[0].String())
-	require.Equal(t, []string{hostname}, acmeCert.DNSNames)
-	require.Equal(t, "", acmeCert.Subject.CommonName)
+	return acmeCert
+}
+
+func SubtestACMEWildcardDNS(t *testing.T, cluster *VaultPkiCluster) {
+	pki, err := cluster.CreateAcmeMount("pki-dns-wildcards")
+	require.NoError(t, err, "failed setting up acme mount")
+
+	// Since we interact with ACME from outside the container network the ACME
+	// configuration needs to be updated to use the host port and not the internal
+	// docker ip.
+	basePath, err := pki.UpdateClusterConfigLocalAddr()
+	require.NoError(t, err, "failed updating cluster config")
+
+	hostname := "go-lang-wildcard-client.dadgarcorp.com"
+	wildcard := "*." + hostname
+
+	// Do validation without a role first.
+	directoryUrl := basePath + "/acme/directory"
+	acmeOrderIdentifiers := []acme.AuthzID{
+		{Type: "dns", Value: hostname},
+		{Type: "dns", Value: wildcard},
+	}
+	cr := &x509.CertificateRequest{
+		Subject:  pkix.Name{CommonName: wildcard},
+		DNSNames: []string{hostname, wildcard},
+	}
+
+	provisioningFunc := func(acmeClient *acme.Client, auths []*acme.Authorization) []*acme.Challenge {
+		// For each dns-01 challenge, place the record in the associated DNS resolver.
+		var challengesToAccept []*acme.Challenge
+		for _, auth := range auths {
+			for _, challenge := range auth.Challenges {
+				if challenge.Status != acme.StatusPending {
+					t.Logf("ignoring challenge not in status pending: %v", challenge)
+					continue
+				}
+
+				if challenge.Type == "dns-01" {
+					challengeBody, err := acmeClient.DNS01ChallengeRecord(challenge.Token)
+					require.NoError(t, err, "failed generating challenge response")
+
+					err = pki.AddDNSRecord("_acme-challenge."+auth.Identifier.Value, "TXT", challengeBody)
+					require.NoError(t, err, "failed setting DNS record")
+
+					challengesToAccept = append(challengesToAccept, challenge)
+				}
+			}
+		}
+
+		require.GreaterOrEqual(t, len(challengesToAccept), 1, "Need at least one challenge, got none")
+		return challengesToAccept
+	}
+
+	acmeCert := doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, cr, provisioningFunc)
+	require.Contains(t, acmeCert.DNSNames, hostname)
+	require.Contains(t, acmeCert.DNSNames, wildcard)
+	require.Equal(t, wildcard, acmeCert.Subject.CommonName)
+	pki.RemoveDNSRecordsForDomain(hostname)
+
+	// Redo validation with a role this time.
+	err = pki.UpdateRole("wildcard", map[string]interface{}{
+		"key_type":                    "any",
+		"allowed_domains":             "go-lang-wildcard-client.dadgarcorp.com",
+		"allow_subdomains":            true,
+		"allow_bare_domains":          true,
+		"allow_wildcard_certificates": true,
+	})
+	require.NoError(t, err, "failed creating role wildcard")
+	directoryUrl = basePath + "/roles/wildcard/acme/directory"
+
+	acmeCert = doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, cr, provisioningFunc)
+	require.Contains(t, acmeCert.DNSNames, hostname)
+	require.Contains(t, acmeCert.DNSNames, wildcard)
+	require.Equal(t, wildcard, acmeCert.Subject.CommonName)
+	pki.RemoveDNSRecordsForDomain(hostname)
+}
+
+func getDockerLog(t *testing.T) (func(s string), *pkiext.LogConsumerWriter, *pkiext.LogConsumerWriter) {
+	logConsumer := func(s string) {
+		t.Logf(s)
+	}
+
+	logStdout := &pkiext.LogConsumerWriter{logConsumer}
+	logStderr := &pkiext.LogConsumerWriter{logConsumer}
+	return logConsumer, logStdout, logStderr
 }

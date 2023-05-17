@@ -39,12 +39,6 @@ You will need the following things properly installed on your computer.
 * [Yarn](https://yarnpkg.com/)
 * [Ember CLI](https://cli.emberjs.com/release/)
 * [Google Chrome](https://google.com/chrome/)
-- [lint-staged\*](https://www.npmjs.com/package/lint-staged)
-
-\* lint-staged is an optional dependency - running `yarn` will install it.
-If don't want optional dependencies installed you can run `yarn --ignore-optional`. If you've ignored the optional deps
-previously and want to install them, you have to tell yarn to refetch all deps by
-running `yarn --force`.
 
 In order to enforce the same version of `yarn` across installs, the `yarn` binary is included in the repo
 in the `.yarn/releases` folder. To update to a different version of `yarn`, use the `yarn policies set-version VERSION` command. For more information on this, see the [documentation](https://yarnpkg.com/en/docs/cli/policies).

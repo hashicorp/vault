@@ -12,7 +12,7 @@
 var walkSync = require('walk-sync');
 var templates = walkSync('app', { globs: ['**/*.hbs'] });
 
-templates = templates.map(path => {
+templates = templates.map((path) => {
   // we want the relative path w/o the extension:
   // 'app/templates/path/to/file/filename'
   return `app/${path.replace(/\.hbs$/, '')}`;

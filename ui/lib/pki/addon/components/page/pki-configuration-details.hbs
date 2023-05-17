@@ -69,6 +69,15 @@
     {{#unless @crl.ocspDisable}}
       <InfoTableRow @label="Interval" @value={{@crl.ocspExpiry}} />
     {{/unless}}
+
+    {{#if this.isEnterprise}}
+      <h2 class="title is-4 has-bottom-margin-xs has-top-margin-xl has-border-bottom-light has-bottom-padding-s">
+        Unified Revocation
+      </h2>
+      <InfoTableRow @label="Cross-cluster revocation" @value={{@crl.crossClusterRevocation}} />
+      <InfoTableRow @label="Unified CRL" @value={{@crl.unifiedCrl}} />
+      <InfoTableRow @label="Unified CRL on existing paths" @value={{@crl.unifiedCrlOnExistingPaths}} />
+    {{/if}}
   {{/if}}
 {{else}}
   <Toolbar>

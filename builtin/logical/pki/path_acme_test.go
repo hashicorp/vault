@@ -73,6 +73,7 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			require.Equal(t, discoveryBaseUrl+"new-order", discovery.OrderURL)
 			require.Equal(t, discoveryBaseUrl+"revoke-cert", discovery.RevokeURL)
 			require.Equal(t, discoveryBaseUrl+"key-change", discovery.KeyChangeURL)
+			require.False(t, discovery.ExternalAccountRequired, "bad value for external account required in directory")
 
 			// Attempt to update prior to creating an account
 			t.Logf("Testing updates with no proper account fail on %s", baseAcmeURL)
@@ -126,7 +127,7 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 
 			// Create an order
 			t.Logf("Testing Authorize Order on %s", baseAcmeURL)
-			identifiers := []string{"localhost", "*.localhost"}
+			identifiers := []string{"localhost.localdomain", "*.localdomain"}
 			createOrder, err := acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{
 				{Type: "dns", Value: identifiers[0]},
 				{Type: "dns", Value: identifiers[1]},
@@ -146,27 +147,68 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 				t.Fatalf("Differences exist between create and get order: \n%v", strings.Join(diffs, "\n"))
 			}
 
-			// Load authorization
-			auth, err := acmeClient.GetAuthorization(testCtx, getOrder.AuthzURLs[0])
-			require.NoError(t, err, "failed fetching authorization")
-			require.Equal(t, acme.StatusPending, auth.Status)
-			require.Equal(t, "dns", auth.Identifier.Type)
-			require.Equal(t, "localhost", auth.Identifier.Value)
-			require.False(t, auth.Wildcard, "should not be a wildcard")
-			require.True(t, auth.Expires.IsZero(), "authorization should only have expiry set on valid status")
+			// Make sure the identifiers returned in the order contain the original values
+			var ids []string
+			for _, id := range getOrder.Identifiers {
+				require.Equal(t, "dns", id.Type)
+				ids = append(ids, id.Value)
+			}
+			require.ElementsMatch(t, identifiers, ids, "order responses should have all original identifiers")
 
-			require.Len(t, auth.Challenges, 2, "expected two challenges")
-			require.Equal(t, acme.StatusPending, auth.Challenges[0].Status)
-			require.True(t, auth.Challenges[0].Validated.IsZero(), "validated time should be 0 on challenge")
-			require.Equal(t, "http-01", auth.Challenges[0].Type)
-			require.NotEmpty(t, auth.Challenges[0].Token, "missing challenge token")
-			require.Equal(t, acme.StatusPending, auth.Challenges[1].Status)
-			require.True(t, auth.Challenges[1].Validated.IsZero(), "validated time should be 0 on challenge")
-			require.Equal(t, "dns-01", auth.Challenges[1].Type)
-			require.NotEmpty(t, auth.Challenges[1].Token, "missing challenge token")
+			// Load authorizations
+			var authorizations []*acme.Authorization
+			for _, authUrl := range getOrder.AuthzURLs {
+				auth, err := acmeClient.GetAuthorization(testCtx, authUrl)
+				require.NoError(t, err, "failed fetching authorization: %s", authUrl)
+
+				authorizations = append(authorizations, auth)
+			}
+
+			// We should have 2 separate auth challenges as we have two separate identifier
+			require.Len(t, authorizations, 2, "expected 2 authorizations in order")
+
+			var wildcardAuth *acme.Authorization
+			var domainAuth *acme.Authorization
+			for _, auth := range authorizations {
+				if auth.Wildcard {
+					wildcardAuth = auth
+				} else {
+					domainAuth = auth
+				}
+			}
+
+			// Test the values for the domain authentication
+			require.Equal(t, acme.StatusPending, domainAuth.Status)
+			require.Equal(t, "dns", domainAuth.Identifier.Type)
+			require.Equal(t, "localhost.localdomain", domainAuth.Identifier.Value)
+			require.False(t, domainAuth.Wildcard, "should not be a wildcard")
+			require.True(t, domainAuth.Expires.IsZero(), "authorization should only have expiry set on valid status")
+
+			require.Len(t, domainAuth.Challenges, 2, "expected two challenges")
+			require.Equal(t, acme.StatusPending, domainAuth.Challenges[0].Status)
+			require.True(t, domainAuth.Challenges[0].Validated.IsZero(), "validated time should be 0 on challenge")
+			require.Equal(t, "http-01", domainAuth.Challenges[0].Type)
+			require.NotEmpty(t, domainAuth.Challenges[0].Token, "missing challenge token")
+			require.Equal(t, acme.StatusPending, domainAuth.Challenges[1].Status)
+			require.True(t, domainAuth.Challenges[1].Validated.IsZero(), "validated time should be 0 on challenge")
+			require.Equal(t, "dns-01", domainAuth.Challenges[1].Type)
+			require.NotEmpty(t, domainAuth.Challenges[1].Token, "missing challenge token")
+
+			// Test the values for the wilcard authentication
+			require.Equal(t, acme.StatusPending, wildcardAuth.Status)
+			require.Equal(t, "dns", wildcardAuth.Identifier.Type)
+			require.Equal(t, "localdomain", wildcardAuth.Identifier.Value) // Make sure we strip the *. in auth responses
+			require.True(t, wildcardAuth.Wildcard, "should be a wildcard")
+			require.True(t, wildcardAuth.Expires.IsZero(), "authorization should only have expiry set on valid status")
+
+			require.Len(t, wildcardAuth.Challenges, 1, "expected two challenges")
+			require.Equal(t, acme.StatusPending, domainAuth.Challenges[0].Status)
+			require.True(t, wildcardAuth.Challenges[0].Validated.IsZero(), "validated time should be 0 on challenge")
+			require.Equal(t, "dns-01", wildcardAuth.Challenges[0].Type)
+			require.NotEmpty(t, domainAuth.Challenges[0].Token, "missing challenge token")
 
 			// Load a challenge directly; this triggers validation to start.
-			challenge, err := acmeClient.GetChallenge(testCtx, auth.Challenges[0].URI)
+			challenge, err := acmeClient.GetChallenge(testCtx, domainAuth.Challenges[0].URI)
 			require.NoError(t, err, "failed to load challenge")
 			require.Equal(t, acme.StatusProcessing, challenge.Status)
 			require.True(t, challenge.Validated.IsZero(), "validated time should be 0 on challenge")
@@ -267,6 +309,75 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			require.Equal(t, "urn:ietf:params:acme:error:unauthorized", acmeErr.ProblemType)
 		})
 	}
+}
+
+// TestAcmeBasicWorkflowWithEab verify that new accounts require EAB's if enforced by configuration.
+func TestAcmeBasicWorkflowWithEab(t *testing.T) {
+	t.Parallel()
+	cluster, client, _ := setupAcmeBackend(t)
+	defer cluster.Cleanup()
+	testCtx := context.Background()
+
+	// Enable EAB
+	_, err := client.Logical().WriteWithContext(context.Background(), "pki/config/acme", map[string]interface{}{
+		"enabled":    true,
+		"eab_policy": "always-required",
+	})
+	require.NoError(t, err)
+
+	baseAcmeURL := "/v1/pki/acme/"
+	accountKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err, "failed creating ec key")
+
+	acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)
+
+	t.Logf("Testing discover on %s", baseAcmeURL)
+	discovery, err := acmeClient.Discover(testCtx)
+	require.NoError(t, err, "failed acme discovery call")
+	require.True(t, discovery.ExternalAccountRequired, "bad value for external account required in directory")
+
+	// Create new account without EAB, should fail
+	t.Logf("Testing register on %s", baseAcmeURL)
+	_, err = acmeClient.Register(testCtx, &acme.Account{}, func(tosURL string) bool { return true })
+	require.ErrorContains(t, err, "urn:ietf:params:acme:error:externalAccountRequired",
+		"expected failure creating an account without eab")
+
+	kid, eabKeyBytes := getEABKey(t, client)
+	acct := &acme.Account{
+		ExternalAccountBinding: &acme.ExternalAccountBinding{
+			KID: kid,
+			Key: eabKeyBytes,
+		},
+	}
+
+	// Create new account with EAB
+	t.Logf("Testing register on %s", baseAcmeURL)
+	_, err = acmeClient.Register(testCtx, acct, func(tosURL string) bool { return true })
+	require.NoError(t, err, "failed registering new account with eab")
+
+	// Make sure our EAB is no longer available
+	resp, err := client.Logical().ListWithContext(context.Background(), "pki/acme/eab")
+	require.NoError(t, err, "failed to list eab tokens")
+	require.Nil(t, resp, "list response for eab tokens should have been nil due to empty list")
+
+	// Attempt to create another account with the same EAB as before -- should fail
+	accountKey2, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err, "failed creating ec key")
+
+	acmeClient2 := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey2)
+	acct2 := &acme.Account{
+		ExternalAccountBinding: &acme.ExternalAccountBinding{
+			KID: kid,
+			Key: eabKeyBytes,
+		},
+	}
+
+	_, err = acmeClient2.Register(testCtx, acct2, func(tosURL string) bool { return true })
+	require.ErrorContains(t, err, "urn:ietf:params:acme:error:unauthorized", "should fail due to EAB re-use")
+
+	// We can lookup/find an existing account without EAB if we have the account key
+	_, err = acmeClient.GetReg(testCtx /* unused url */, "")
+	require.NoError(t, err, "expected to lookup existing account without eab")
 }
 
 // TestAcmeNonce a basic test that will validate we get back a nonce with the proper status codes
@@ -405,11 +516,18 @@ func TestAcmeAccountsCrossingDirectoryPath(t *testing.T) {
 // TestAcmeDisabledWithEnvVar verifies if VAULT_DISABLE_PUBLIC_ACME is set that we completely
 // disable the ACME service
 func TestAcmeDisabledWithEnvVar(t *testing.T) {
-	t.Setenv("VAULT_DISABLE_PUBLIC_ACME", "true")
-
+	// Setup a cluster with the configuration set to not-required, initially as the
+	// configuration will validate if the environment var is set
 	cluster, client, _ := setupAcmeBackend(t)
 	defer cluster.Cleanup()
 
+	// Seal setup the environment variable, and unseal which now means we have a cluster
+	// with ACME configuration saying it is enabled with a bad EAB policy.
+	cluster.EnsureCoresSealed(t)
+	t.Setenv("VAULT_DISABLE_PUBLIC_ACME", "true")
+	cluster.UnsealCores(t)
+
+	// Make sure that ACME is disabled now.
 	for _, method := range []string{http.MethodHead, http.MethodGet} {
 		t.Run(fmt.Sprintf("%s", method), func(t *testing.T) {
 			req := client.NewRequest(method, "/v1/pki/acme/new-nonce")
@@ -421,6 +539,34 @@ func TestAcmeDisabledWithEnvVar(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestAcmeConfigChecksPublicAcmeEnv verifies certain EAB policy values can not be set if ENV var is enabled
+func TestAcmeConfigChecksPublicAcmeEnv(t *testing.T) {
+	t.Setenv("VAULT_DISABLE_PUBLIC_ACME", "true")
+	cluster, client := setupTestPkiCluster(t)
+	defer cluster.Cleanup()
+
+	_, err := client.Logical().WriteWithContext(context.Background(), "pki/config/acme", map[string]interface{}{
+		"enabled":    true,
+		"eab_policy": string(eabPolicyAlwaysRequired),
+	})
+	require.NoError(t, err)
+
+	for _, policyName := range []EabPolicyName{eabPolicyNewAccountRequired, eabPolicyNotRequired} {
+		_, err = client.Logical().WriteWithContext(context.Background(), "pki/config/acme", map[string]interface{}{
+			"enabled":    true,
+			"eab_policy": string(policyName),
+		})
+		require.Error(t, err, "eab policy %s should have not been allowed to be set")
+	}
+
+	// Make sure we can disable ACME and the eab policy is not checked
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/config/acme", map[string]interface{}{
+		"enabled":    false,
+		"eab_policy": string(eabPolicyNotRequired),
+	})
+	require.NoError(t, err)
 }
 
 func setupAcmeBackend(t *testing.T) (*vault.TestCluster, *api.Client, string) {
@@ -496,9 +642,12 @@ func setupAcmeBackend(t *testing.T) (*vault.TestCluster, *api.Client, string) {
 	require.NoError(t, err, "failed updating default issuer")
 
 	_, err = client.Logical().Write("/pki/roles/test-role", map[string]interface{}{
-		"ttl_duration":     "365h",
-		"max_ttl_duration": "720h",
-		"key_type":         "any",
+		"ttl_duration":                "365h",
+		"max_ttl_duration":            "720h",
+		"key_type":                    "any",
+		"allowed_domains":             "localdomain",
+		"allow_subdomains":            "true",
+		"allow_wildcard_certificates": "true",
 	})
 	require.NoError(t, err, "failed creating role test-role")
 
@@ -576,4 +725,19 @@ func getAcmeClientForCluster(t *testing.T, cluster *vault.TestCluster, baseUrl s
 		HTTPClient:   httpClient,
 		DirectoryURL: baseAcmeURL + "directory",
 	}
+}
+
+func getEABKey(t *testing.T, client *api.Client) (string, []byte) {
+	resp, err := client.Logical().WriteWithContext(ctx, "pki/acme/eab", map[string]interface{}{})
+	require.NoError(t, err, "failed getting eab key")
+	require.NotNil(t, resp, "eab key returned nil response")
+	require.NotEmpty(t, resp.Data["id"], "eab key response missing id field")
+	kid := resp.Data["id"].(string)
+
+	require.NotEmpty(t, resp.Data["private_key"], "eab key response missing private_key field")
+	base64Key := resp.Data["private_key"].(string)
+	privateKeyBytes, err := base64.RawURLEncoding.DecodeString(base64Key)
+	require.NoError(t, err, "failed base 64 decoding eab key response")
+
+	return kid, privateKeyBytes
 }

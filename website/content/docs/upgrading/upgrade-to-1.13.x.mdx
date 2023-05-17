@@ -116,3 +116,24 @@ occurs when upgrading Vault with a instance that has an existing LDAP Auth confi
 #### Impacted Versions
 
 Affects Vault 1.13.2.
+
+### PKI Cross-Cluster Revocation Requests and Unified CRL/OCSP
+
+When revoking certificates on a cluster that doesn't own the
+certificate, writing the revocation request will fail with
+a message like `error persisting cross-cluster revocation request`.
+Similar errors will appear in the log for failure to write
+unified CRL and unified delta CRL WAL entries.
+
+As a workaround, submit revocation requests to the cluster which
+issued the certificate, or use BYOC revocation. Use cluster-local
+OCSP and CRLs until this is resolved.
+
+#### Impacted Versions
+
+Affects Vault 1.13.0 to 1.13.2. Fixed in 1.13.3.
+
+On upgrade, all local revocations will be synchronized between
+clusters; revocation requests are not persisted when failing to
+write cross-cluster.
+
