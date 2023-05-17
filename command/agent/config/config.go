@@ -282,13 +282,12 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.Exec = c2.Exec
 	}
 
-	for key, val := range c.EnvTemplates {
-		result.EnvTemplates[key] = val
+	for _, envTmpl := range c.EnvTemplates {
+		result.EnvTemplates = append(result.EnvTemplates, envTmpl)
 	}
 
-	for key, val := range c2.EnvTemplates {
-		// TODO: add test to make sure this overrides
-		result.EnvTemplates[key] = val
+	for _, envTmpl := range c2.EnvTemplates {
+		result.EnvTemplates = append(result.EnvTemplates, envTmpl)
 	}
 
 	return result
