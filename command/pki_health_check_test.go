@@ -532,7 +532,7 @@ var expectedAllBad = map[string][]map[string]interface{}{
 	},
 	"enable_acme_issuance": {
 		{
-			"status": "informational",
+			"status": "not_applicable",
 		},
 	},
 	"enable_auto_tidy": {
@@ -595,7 +595,7 @@ var expectedEmptyWithIssuer = map[string][]map[string]interface{}{
 	"audit_visibility":        nil,
 	"enable_acme_issuance": {
 		{
-			"status": "informational",
+			"status": "not_applicable",
 		},
 	},
 	"enable_auto_tidy": {

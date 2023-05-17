@@ -4,6 +4,7 @@
 package healthcheck
 
 import (
+	"bytes"
 	"fmt"
 	"net/url"
 
@@ -17,6 +18,8 @@ type EnableAcmeIssuance struct {
 
 	AcmeConfigFetcher    *PathFetch
 	ClusterConfigFetcher *PathFetch
+	TotalIssuers         int
+	RootIssuers          int
 }
 
 func NewEnableAcmeIssuance() Check {
@@ -65,7 +68,41 @@ func (h *EnableAcmeIssuance) FetchResources(e *Executor) error {
 		h.UnsupportedVersion = true
 	}
 
+	h.TotalIssuers, h.RootIssuers, err = doesMountContainOnlyRootIssuers(e)
+
 	return nil
+}
+
+func doesMountContainOnlyRootIssuers(e *Executor) (int, int, error) {
+	exit, _, issuers, err := pkiFetchIssuersList(e, func() {})
+	if exit || err != nil {
+		return 0, 0, err
+	}
+
+	totalIssuers := 0
+	rootIssuers := 0
+
+	for _, issuer := range issuers {
+		skip, _, cert, err := pkiFetchIssuer(e, issuer, func() {})
+
+		if skip || err != nil {
+			if err != nil {
+				return 0, 0, err
+			}
+			continue
+		}
+		totalIssuers++
+
+		if !bytes.Equal(cert.RawSubject, cert.RawIssuer) {
+			continue
+		}
+		if err := cert.CheckSignatureFrom(cert); err != nil {
+			continue
+		}
+		rootIssuers++
+	}
+
+	return totalIssuers, rootIssuers, nil
 }
 
 func isAcmeEnabled(fetcher *PathFetch) (bool, error) {
@@ -129,6 +166,24 @@ func (h *EnableAcmeIssuance) Evaluate(e *Executor) (results []*Result, err error
 	}
 
 	if !acmeEnabled {
+		if h.TotalIssuers == 0 {
+			ret := Result{
+				Status:   ResultNotApplicable,
+				Endpoint: h.AcmeConfigFetcher.Path,
+				Message:  "No issuers in mount, ACME is not required.",
+			}
+			return []*Result{&ret}, nil
+		}
+
+		if h.TotalIssuers == h.RootIssuers {
+			ret := Result{
+				Status:   ResultNotApplicable,
+				Endpoint: h.AcmeConfigFetcher.Path,
+				Message:  "Mount contains only root issuers, ACME is not required.",
+			}
+			return []*Result{&ret}, nil
+		}
+
 		ret := Result{
 			Status:   ResultInformational,
 			Endpoint: h.AcmeConfigFetcher.Path,
