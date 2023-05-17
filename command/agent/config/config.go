@@ -174,8 +174,7 @@ type TemplateConfig struct {
 }
 
 type ExecConfig struct {
-	Command            string    `hcl:"command,attr" mapstructure:"command"`
-	Args               []string  `hcl:"args,optional" mapstructure:"args"`
+	Command            []string  `hcl:"command,attr" mapstructure:"command"`
 	RestartOnSecretChanges  string  `hcl:"restart_on_secret_changes,optional" mapstructure:"restart_on_new_secret"`
 	RestartKillSignal  os.Signal `hcl:"-" mapstructure:"restart_kill_signal"`
 }
@@ -1173,8 +1172,8 @@ func parseEnvTemplates(result *Config, list *ast.ObjectList) error {
 		}
 
 		// parse the keys in the item for the env var name
-		if nkeys := len(item.Keys); nkeys != 1 {
-			return fmt.Errorf("expected one and only one env var name, got %d", nkeys)
+		if numberOfKeys := len(item.Keys); numberOfKeys != 1 {
+			return fmt.Errorf("expected one and only one environment variable name, got %d", numberOfKeys)
 		}
 
 		// hcl parses this with extra quotes if quoted in config file
