@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -144,6 +145,11 @@ func buildPathKey(b *backend, pattern string, displayAttrs *framework.DisplayAtt
 								Description: `Key Type`,
 								Required:    true,
 							},
+							"subject_key_id": {
+								Type:        framework.TypeString,
+								Description: `Subject key identifier`,
+								Required:    false,
+							},
 							"managed_key_id": {
 								Type:        framework.TypeString,
 								Description: `Managed Key Id`,
@@ -241,10 +247,20 @@ func (b *backend) pathGetKeyHandler(ctx context.Context, req *logical.Request, d
 		return nil, err
 	}
 
+	pkForSkid, err := getPublicKeyFromBytes([]byte(key.PrivateKey))
+	if err != nil {
+		return nil, err
+	}
+	skid, err := certutil.GetSubjectKeyID(pkForSkid)
+	if err != nil {
+		return nil, err
+	}
+
 	respData := map[string]interface{}{
 		keyIdParam:   key.ID,
 		keyNameParam: key.Name,
 		keyTypeParam: string(key.PrivateKeyType),
+		skidParam:    certutil.GetHexFormatted([]byte(skid), ":"),
 	}
 
 	if key.isManagedPrivateKey() {
@@ -257,6 +273,16 @@ func (b *backend) pathGetKeyHandler(ctx context.Context, req *logical.Request, d
 		if err != nil {
 			return nil, errutil.InternalError{Err: fmt.Sprintf("failed fetching managed key info from key id %s (%s): %v", key.ID, key.Name, err)}
 		}
+
+		pk, err := getManagedKeyPublicKey(sc.Context, sc.Backend, managedKeyUUID)
+		if err != nil {
+			return nil, err
+		}
+		skid, err := certutil.GetSubjectKeyID(pk)
+		if err != nil {
+			return nil, err
+		}
+		respData[skidParam] = skid
 
 		// To remain consistent across the api responses (mainly generate root/intermediate calls), return the actual
 		// type of key, not that it is a managed key.
