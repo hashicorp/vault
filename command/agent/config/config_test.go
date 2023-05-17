@@ -2118,8 +2118,13 @@ func TestLoadConfigFile_EnvTemplates(t *testing.T) {
 	}
 
 	expectedKey := "MY_DATABASE_USER"
-	_, ok := cfg.EnvTemplates[expectedKey]
-	if !ok {
+	found := false
+	for _, envTemplate := range cfg.EnvTemplates {
+		if *envTemplate.MapToEnvironmentVariable == expectedKey {
+			found = true
+		}
+	}
+	if !found {
 		t.Fatalf("expected env var name to be populated")
 	}
 }
@@ -2135,9 +2140,18 @@ func TestLoadConfigFile_EnvTemplateComplex(t *testing.T) {
 		"FOO_DATA_PASSWORD",
 		"FOO_DATA_USER",
 	}
+
+	envExists := func(key string) bool {
+		for _, envTmpl := range cfg.EnvTemplates {
+			if *envTmpl.MapToEnvironmentVariable == key {
+				return true
+			}
+		}
+		return false
+	}
+
 	for _, expected := range expectedKeys {
-		_, ok := cfg.EnvTemplates[expected]
-		if !ok {
+		if !envExists(expected) {
 			t.Fatalf("expected env var %s", expected)
 		}
 	}

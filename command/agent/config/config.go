@@ -31,23 +31,23 @@ import (
 type Config struct {
 	*configutil.SharedConfig `hcl:"-"`
 
-	AutoAuth                    *AutoAuth                           `hcl:"auto_auth"`
-	ExitAfterAuth               bool                                `hcl:"exit_after_auth"`
-	Cache                       *Cache                              `hcl:"cache"`
-	APIProxy                    *APIProxy                           `hcl:"api_proxy""`
-	Vault                       *Vault                              `hcl:"vault"`
-	TemplateConfig              *TemplateConfig                     `hcl:"template_config"`
-	Templates                   []*ctconfig.TemplateConfig          `hcl:"templates"`
-	DisableIdleConns            []string                            `hcl:"disable_idle_connections"`
-	DisableIdleConnsAPIProxy    bool                                `hcl:"-"`
-	DisableIdleConnsTemplating  bool                                `hcl:"-"`
-	DisableIdleConnsAutoAuth    bool                                `hcl:"-"`
-	DisableKeepAlives           []string                            `hcl:"disable_keep_alives"`
-	DisableKeepAlivesAPIProxy   bool                                `hcl:"-"`
-	DisableKeepAlivesTemplating bool                                `hcl:"-"`
-	DisableKeepAlivesAutoAuth   bool                                `hcl:"-"`
-	Exec                        *ExecConfig                         `hcl:"exec,optional"`
-	EnvTemplates                map[string]*ctconfig.TemplateConfig `hcl:"env_template,optional"`
+	AutoAuth                    *AutoAuth                  `hcl:"auto_auth"`
+	ExitAfterAuth               bool                       `hcl:"exit_after_auth"`
+	Cache                       *Cache                     `hcl:"cache"`
+	APIProxy                    *APIProxy                  `hcl:"api_proxy""`
+	Vault                       *Vault                     `hcl:"vault"`
+	TemplateConfig              *TemplateConfig            `hcl:"template_config"`
+	Templates                   []*ctconfig.TemplateConfig `hcl:"templates"`
+	DisableIdleConns            []string                   `hcl:"disable_idle_connections"`
+	DisableIdleConnsAPIProxy    bool                       `hcl:"-"`
+	DisableIdleConnsTemplating  bool                       `hcl:"-"`
+	DisableIdleConnsAutoAuth    bool                       `hcl:"-"`
+	DisableKeepAlives           []string                   `hcl:"disable_keep_alives"`
+	DisableKeepAlivesAPIProxy   bool                       `hcl:"-"`
+	DisableKeepAlivesTemplating bool                       `hcl:"-"`
+	DisableKeepAlivesAutoAuth   bool                       `hcl:"-"`
+	Exec                        *ExecConfig                `hcl:"exec,optional"`
+	EnvTemplates                []*ctconfig.TemplateConfig `hcl:"env_template,optional"`
 }
 
 const (
@@ -1137,7 +1137,8 @@ func parseEnvTemplates(result *Config, list *ast.ObjectList) error {
 		return nil
 	}
 
-	envTemplates := make(map[string]*ctconfig.TemplateConfig)
+	envTemplates := make([]*ctconfig.TemplateConfig, 0, len(envTemplateList.Items))
+	envKeys := make(map[string]struct{})
 
 	for _, item := range envTemplateList.Items {
 		var shadow interface{}
@@ -1146,7 +1147,7 @@ func parseEnvTemplates(result *Config, list *ast.ObjectList) error {
 		}
 
 		// Convert to a map and flatten the keys we want to flatten
-		parsed, ok := shadow.(map[string]interface{})
+		parsed, ok := shadow.(map[string]any)
 		if !ok {
 			return errors.New("error converting config")
 		}
@@ -1178,15 +1179,16 @@ func parseEnvTemplates(result *Config, list *ast.ObjectList) error {
 		}
 
 		// hcl parses this with extra quotes if quoted in config file
-		name := strings.Trim(item.Keys[0].Token.Text, `"`)
+		envName := strings.Trim(item.Keys[0].Token.Text, `"`)
 
-		et.MapToEnvironmentVariable = pointerutil.StringPtr(name)
+		et.MapToEnvironmentVariable = pointerutil.StringPtr(envName)
 
-		if _, exists := envTemplates[name]; exists {
+		if _, exists := envKeys[envName]; exists {
 			return fmt.Errorf("duplicate environment '%s' variable detected", name)
 		}
 
-		envTemplates[name] = &et
+		envTemplates = append(envTemplates, &et)
+		envKeys[envName] = struct{}{}
 	}
 
 	result.EnvTemplates = envTemplates
