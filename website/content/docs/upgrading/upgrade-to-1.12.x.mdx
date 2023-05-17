@@ -152,7 +152,7 @@ It will produce errors in Vault Server's logs such as:
   error=
   | 1 error occurred:
   | 	* panic generating audit log
-  | 
+  |
 ```
 
 As a workaround, [listing plugins by type](/vault/api-docs/system/plugins-catalog#list-plugins-1)
@@ -184,3 +184,13 @@ Affects version 1.12.3. A fix will be released in 1.12.4.
 @include 'tokenization-rotation-persistence.mdx'
 
 @include 'ocsp-redirect.mdx'
+
+### LDAP Pagination Issue
+
+There was a regression introduced in 1.12.6 relating to LDAP maximum page sizes, resulting in
+an error `no LDAP groups found in groupDN [...] only policies from locally-defined groups available`.  The issue
+occurs when upgrading Vault with a instance that has an existing LDAP Auth configuration.
+
+#### Impacted Versions
+
+Affects Vault 1.12.6.
