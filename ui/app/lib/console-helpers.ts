@@ -4,66 +4,107 @@
  */
 
 import keys from 'vault/lib/keycodes';
-import argTokenizer from './arg-tokenizer';
+import AdapterError from '@ember-data/adapter/error';
 import { parse } from 'shell-quote';
 
-const supportedCommands = ['read', 'write', 'list', 'delete'];
+import argTokenizer from './arg-tokenizer';
+import { StringMap } from 'vault/vault/app-types';
+
+// Add new commands to `log-help` component for visibility
+const supportedCommands = ['read', 'write', 'list', 'delete', 'kv-get'];
 const uiCommands = ['api', 'clearall', 'clear', 'fullscreen', 'refresh'];
 
-export function extractDataAndFlags(method, data, flags) {
-  return data.concat(flags).reduce(
-    (accumulator, val) => {
-      // will be "key=value" or "-flag=value" or "foo=bar=baz"
-      // split on the first =
-      // default to value of empty string
-      const [item, value = ''] = val.split(/=(.+)?/);
-      if (item.startsWith('-')) {
-        let flagName = item.replace(/^-/, '');
-        if (flagName === 'wrap-ttl') {
-          flagName = 'wrapTTL';
-        } else if (method === 'write') {
-          if (flagName === 'f' || flagName === '-force') {
-            flagName = 'force';
-          }
-        }
-        accumulator.flags[flagName] = value || true;
-        return accumulator;
-      }
-      // if it exists in data already, then we have multiple
-      // foo=bar in the list and need to make it an array
-      if (accumulator.data[item]) {
-        accumulator.data[item] = [].concat(accumulator.data[item], value);
-        return accumulator;
-      }
-      accumulator.data[item] = value;
-      return accumulator;
-    },
-    { data: {}, flags: {} }
-  );
+interface DataObj {
+  [key: string]: string | string[];
 }
 
-export function executeUICommand(command, logAndOutput, commandFns) {
+export function extractDataFromStrings(dataArray: string[]): DataObj {
+  if (!dataArray) return {};
+  return dataArray.reduce((accumulator: DataObj, val: string) => {
+    // will be "key=value" or "foo=bar=baz"
+    // split on the first =
+    // default to value of empty string
+    const [item = '', value = ''] = val.split(/=(.+)?/);
+    if (!item) return accumulator;
+
+    // if it exists in data already, then we have multiple
+    // foo=bar in the list and need to make it an array
+    const existingValue = accumulator[item];
+    if (existingValue) {
+      accumulator[item] = Array.isArray(existingValue) ? [...existingValue, value] : [existingValue, value];
+      return accumulator;
+    }
+    accumulator[item] = value;
+    return accumulator;
+  }, {});
+}
+
+interface Flags {
+  field?: string;
+  format?: string;
+  force?: boolean;
+  wrapTTL?: boolean;
+  [key: string]: string | boolean | undefined;
+}
+export function extractFlagsFromStrings(flagArray: string[], method: string): Flags {
+  if (!flagArray) return {};
+  return flagArray.reduce((accumulator: Flags, val: string) => {
+    // val will be "-flag=value" or "--force"
+    // split on the first =
+    // default to value or true
+    const [item, value] = val.split(/=(.+)?/);
+    if (!item) return accumulator;
+
+    let flagName = item.replace(/^-/, '');
+    if (flagName === 'wrap-ttl') {
+      flagName = 'wrapTTL';
+    } else if (method === 'write') {
+      if (flagName === 'f' || flagName === '-force') {
+        flagName = 'force';
+      }
+    }
+    accumulator[flagName] = value || true;
+    return accumulator;
+  }, {});
+}
+
+interface CommandFns {
+  [key: string]: CallableFunction;
+}
+
+export function executeUICommand(
+  command: string,
+  logAndOutput: CallableFunction,
+  commandFns: CommandFns
+): boolean {
   const cmd = command.startsWith('api') ? 'api' : command;
   const isUICommand = uiCommands.includes(cmd);
   if (isUICommand) {
     logAndOutput(command);
   }
-  if (typeof commandFns[cmd] === 'function') {
-    commandFns[cmd]();
+  const execCommand = commandFns[cmd];
+  if (execCommand && typeof execCommand === 'function') {
+    execCommand();
   }
   return isUICommand;
 }
 
-export function parseCommand(command, shouldThrow) {
-  const args = argTokenizer(parse(command));
+interface ParsedCommand {
+  method: string;
+  path: string;
+  flagArray: string[];
+  dataArray: string[];
+}
+export function parseCommand(command: string): ParsedCommand {
+  const args: string[] = argTokenizer(parse(command));
   if (args[0] === 'vault') {
     args.shift();
   }
 
-  const [method, ...rest] = args;
-  let path;
-  const flags = [];
-  const data = [];
+  const [method = '', ...rest] = args;
+  let path = '';
+  const flags: string[] = [];
+  const data: string[] = [];
 
   rest.forEach((arg) => {
     if (arg.startsWith('-')) {
@@ -86,24 +127,28 @@ export function parseCommand(command, shouldThrow) {
   });
 
   if (!supportedCommands.includes(method)) {
-    if (shouldThrow) {
-      throw new Error('invalid command');
-    }
-    return false;
+    throw new Error('invalid command');
   }
-  return [method, flags, path, data];
+  return { method, flagArray: flags, path, dataArray: data };
 }
 
-export function logFromResponse(response, path, method, flags) {
+interface LogResponse {
+  auth?: StringMap;
+  data?: StringMap;
+  wrap_info?: StringMap;
+  [key: string]: unknown;
+}
+
+export function logFromResponse(response: LogResponse, path: string, method: string, flags: Flags) {
   const { format, field } = flags;
-  let secret = response && (response.auth || response.data || response.wrap_info);
-  if (!secret) {
+  const respData: StringMap | undefined = response && (response.auth || response.data || response.wrap_info);
+  const secret: StringMap | LogResponse = respData || response;
+
+  if (!respData) {
     if (method === 'write') {
       return { type: 'success', content: `Success! Data written to: ${path}` };
     } else if (method === 'delete') {
       return { type: 'success', content: `Success! Data deleted (if it existed) at: ${path}` };
-    } else {
-      secret = response;
     }
   }
 
@@ -143,11 +188,17 @@ export function logFromResponse(response, path, method, flags) {
   return { type: 'object', content: secret };
 }
 
-export function logFromError(error, vaultPath, method) {
+interface CustomError extends AdapterError {
+  httpStatus: number;
+  path: string;
+  errors: string[];
+}
+export function logFromError(error: CustomError, vaultPath: string, method: string) {
   let content;
   const { httpStatus, path } = error;
   const verbClause = {
     read: 'reading from',
+    'kv-get': 'reading secret',
     write: 'writing to',
     list: 'listing',
     delete: 'deleting at',
@@ -162,7 +213,11 @@ export function logFromError(error, vaultPath, method) {
   return { type: 'error', content };
 }
 
-export function shiftCommandIndex(keyCode, history, index) {
+interface CommandLog {
+  type: string;
+  content?: string;
+}
+export function shiftCommandIndex(keyCode: number, history: CommandLog[], index: number) {
   let newInputValue;
   const commandHistoryLength = history.length;
 
@@ -186,17 +241,18 @@ export function shiftCommandIndex(keyCode, history, index) {
   }
 
   if (newInputValue !== '') {
-    newInputValue = history.objectAt(index).content;
+    newInputValue = history.objectAt(index)?.content;
   }
 
   return [index, newInputValue];
 }
 
-export function logErrorFromInput(path, method, flags, dataArray) {
+export function formattedErrorFromInput(path: string, method: string, flags: Flags, dataArray: string[]) {
   if (path === undefined) {
     return { type: 'error', content: 'A path is required to make a request.' };
   }
   if (method === 'write' && !flags.force && dataArray.length === 0) {
     return { type: 'error', content: 'Must supply data or use -force' };
   }
+  return;
 }
