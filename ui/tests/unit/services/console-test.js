@@ -102,4 +102,58 @@ module('Unit | Service | console', function (hooks) {
       assert.deepEqual(options, testCase.expectedOptions, `${testCase.method}: uses the correct options`);
     });
   });
+
+  const kvTestCases = [
+    {
+      method: 'kvGet',
+      args: ['kv/foo'],
+      expectedURL: 'kv/data/foo',
+      expectedVerb: 'GET',
+      expectedOptions: { data: undefined, wrapTTL: undefined },
+    },
+    {
+      method: 'kvGet',
+      args: ['kv/foo', {}, { metadata: true }],
+      expectedURL: 'kv/metadata/foo',
+      expectedVerb: 'GET',
+      expectedOptions: { data: undefined, wrapTTL: undefined },
+    },
+    {
+      method: 'kvGet',
+      args: ['kv/foo', {}, { wrapTTL: '10m' }],
+      expectedURL: 'kv/data/foo',
+      expectedVerb: 'GET',
+      expectedOptions: { data: undefined, wrapTTL: '10m' },
+    },
+    {
+      method: 'kvGet',
+      args: ['kv/foo', {}, { metadata: true, wrapTTL: '10m' }],
+      expectedURL: 'kv/metadata/foo',
+      expectedVerb: 'GET',
+      expectedOptions: { data: undefined, wrapTTL: '10m' },
+    },
+  ];
+
+  test('it reads kv secret and metadata', function (assert) {
+    assert.expect(12);
+    const ajax = sinon.stub();
+    const uiConsole = this.owner.factoryFor('service:console').create({
+      adapter() {
+        return {
+          buildURL(url) {
+            return url;
+          },
+          ajax,
+        };
+      },
+    });
+
+    kvTestCases.forEach((testCase) => {
+      uiConsole[testCase.method](...testCase.args);
+      const [url, verb, options] = ajax.lastCall.args;
+      assert.strictEqual(url, testCase.expectedURL, `${testCase.method}: uses correct url`);
+      assert.strictEqual(verb, testCase.expectedVerb, `${testCase.method}: uses the correct verb`);
+      assert.deepEqual(options, testCase.expectedOptions, `${testCase.method}: uses the correct options`);
+    });
+  });
 });

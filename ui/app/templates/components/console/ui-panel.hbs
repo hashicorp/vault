@@ -15,8 +15,8 @@
     <p class="has-text-grey is-font-mono">→ Read a kv v1 secret: read &lt;mount&gt;/my-secret</p>
     <p class="has-text-grey is-font-mono">→ Mount a kv v2 secret engine: write sys/mounts/&lt;mount&gt; type=kv
       options=version=2</p>
-    <p class="has-text-grey is-font-mono">→ Read a kv v2 secret: kv-read &lt;mount&gt;/secret-path</p>
-    <p class="has-text-grey is-font-mono">→ Read a kv v2 secret's metadata: kv-read &lt;mount&gt;/secret-path -metadata</p>
+    <p class="has-text-grey is-font-mono">→ Read a kv v2 secret: kv-get &lt;mount&gt;/secret-path</p>
+    <p class="has-text-grey is-font-mono">→ Read a kv v2 secret's metadata: kv-get &lt;mount&gt;/secret-path -metadata</p>
   </div>
   <Console::OutputLog @outputLog={{this.cliLog}} />
   <Console::CommandInput

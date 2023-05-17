@@ -11,7 +11,7 @@ import argTokenizer from './arg-tokenizer';
 import { StringMap } from 'vault/vault/app-types';
 
 // Add new commands to `log-help` component for visibility
-const supportedCommands = ['read', 'write', 'list', 'delete', 'kv-read'];
+const supportedCommands = ['read', 'write', 'list', 'delete', 'kv-get'];
 const uiCommands = ['api', 'clearall', 'clear', 'fullscreen', 'refresh'];
 
 interface DataObj {
@@ -200,7 +200,7 @@ export function logFromError(error: CustomError, vaultPath: string, method: stri
   const { httpStatus, path } = error;
   const verbClause = {
     read: 'reading from',
-    'kv-read': 'reading secret',
+    'kv-get': 'reading secret',
     write: 'writing to',
     list: 'listing',
     delete: 'deleting at',

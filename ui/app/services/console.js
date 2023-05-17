@@ -84,7 +84,7 @@ export default Service.extend({
     });
   },
 
-  kvRead(path, data, flags) {
+  kvGet(path, data, flags = {}) {
     const { wrapTTL, metadata } = flags;
     // Split on first / to find backend and secret path
     const pathSegment = metadata ? 'metadata' : 'data';
