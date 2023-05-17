@@ -45,6 +45,9 @@ export default class PkiTidyStatusComponent extends Component {
   }
 
   get tidyStateAlertBanner() {
+    // TODO: fix the transition between different states. we need to re-fetch the api every time the
+    // the state changes or after an X amount of time. for instance, when the user is in a "Running" state
+    // and leaves this page open the page will show that it is still "Running" when it is "Finished".
     let tidyState = this.args.tidyStatus?.state;
 
     if (this.cancelTidy.isRunning) {
@@ -95,7 +98,6 @@ export default class PkiTidyStatusComponent extends Component {
   @waitFor
   *cancelTidy() {
     // TODO: make a custom adapter method when Claire merges her form work!
-    // TODO: fix the transition from cancelling to cancelled state.
     try {
       const adapter = this.store.adapterFor('application');
       yield adapter.ajax(`/v1/${this.secretMountPath.currentPath}/tidy-cancel`, 'POST');
