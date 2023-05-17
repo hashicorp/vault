@@ -2113,20 +2113,14 @@ func TestLoadConfigFile_Bad_Value_Disable_Keep_Alives(t *testing.T) {
 }
 
 func TestLoadConfigFile_EnvTemplates(t *testing.T) {
-	config, err := LoadConfigFile("./test-fixtures/config-env-templates.hcl")
+	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-simple.hcl")
 	if err != nil {
 		t.Fatalf("error loading config file: %s", err)
 	}
-
-<<<<<<< HEAD
-	if err := config.ValidateConfig(); err != nil {
+	if err := cfg.ValidateConfig(); err != nil {
 		t.Fatalf("validation error: %s", err)
-||||||| ef2f4c0473
-	expectedKey := "MY_DATABASE_USER"
-	_, ok := cfg.EnvTemplates[expectedKey]
-	if !ok {
-		t.Fatalf("expected env var name to be populated")
-=======
+	}
+
 	expectedKey := "MY_DATABASE_USER"
 	found := false
 	for _, envTemplate := range cfg.EnvTemplates {
@@ -2136,12 +2130,19 @@ func TestLoadConfigFile_EnvTemplates(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("expected env var name to be populated")
->>>>>>> agent-runner-env-var-config
 	}
+}
 
+func TestLoadConfigFile_EnvTemplateComplex(t *testing.T) {
+	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-complex.hcl")
+
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
 	expectedKeys := []string{
-		"FOO_PASSWORD",
-		"FOO_USER",
+		"FOO_DATA_LOCK",
+		"FOO_DATA_PASSWORD",
+		"FOO_DATA_USER",
 	}
 
 	envExists := func(key string) bool {
@@ -2154,30 +2155,12 @@ func TestLoadConfigFile_EnvTemplates(t *testing.T) {
 	}
 
 	for _, expected := range expectedKeys {
-<<<<<<< HEAD
-		_, ok := config.EnvTemplates[expected]
-		if !ok {
-			t.Fatalf("expected environment variable template %q", expected)
-||||||| ef2f4c0473
-		_, ok := cfg.EnvTemplates[expected]
-		if !ok {
-			t.Fatalf("expected env var %s", expected)
-=======
 		if !envExists(expected) {
 			t.Fatalf("expected env var %s", expected)
->>>>>>> agent-runner-env-var-config
 		}
 	}
 }
 
-<<<<<<< HEAD
-func TestLoadConfigFile_Bad_EnvTemplates_MissingExec(t *testing.T) {
-	config, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-missing-exec.hcl")
-||||||| ef2f4c0473
-func TestLoadConfigFile_ExecSimple(t *testing.T) {
-	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-simple.hcl")
-
-=======
 func TestLoadConfigFile_EnvTemplateNoName(t *testing.T) {
 	_, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-no-name.hcl")
 	if err == nil {
@@ -2195,7 +2178,51 @@ func TestLoadConfigFile_ExecNoSignal(t *testing.T) {
 func TestLoadConfigFile_ExecSimple(t *testing.T) {
 	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-simple.hcl")
 
->>>>>>> agent-runner-env-var-config
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if cfg.Exec == nil {
+		t.Fatal("expected exec config to be parsed")
+	}
+
+	expectedCmd := []string{"/path/to/my/app", "arg1", "arg2"}
+	if !slices.Equal(cfg.Exec.Command, expectedCmd) {
+		t.Fatal("exec.command does not have expected value")
+	}
+
+	// check defaults
+	if cfg.Exec.RestartOnSecretChanges != "always" {
+		t.Fatalf("expected cfg.Exec.RestartOnSecretChanges to be 'always', got '%s'", cfg.Exec.RestartOnSecretChanges)
+	}
+
+	if cfg.Exec.RestartKillSignal != os.Interrupt {
+		t.Fatalf("expected cfg.Exec.RestartKillSignal to be 'os.Interrupt', got '%s'", cfg.Exec.RestartKillSignal)
+	}
+}
+
+func TestLoadConfigFile_ExecComplex(t *testing.T) {
+	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-complex.hcl")
+
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if !slices.Equal(cfg.Exec.Command, []string{"env"}) {
+		t.Fatal("exec.command does not have expected value")
+	}
+
+	if cfg.Exec.RestartOnSecretChanges != "never" {
+		t.Fatalf("expected cfg.Exec.RestartOnSecretChanges to be 'never', got %q", cfg.Exec.RestartOnSecretChanges)
+	}
+
+	if cfg.Exec.RestartKillSignal != syscall.SIGTERM {
+		t.Fatalf("expected cfg.Exec.RestartKillSignal to be 'SIGTERM', got %q", cfg.Exec.RestartKillSignal)
+	}
+}
+
+func TestLoadConfigFile_Bad_EnvTemplates_MissingExec(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-missing-exec.hcl")
 	if err != nil {
 		t.Fatalf("error loading config file: %s", err)
 	}
@@ -2236,53 +2263,4 @@ func TestLoadConfigFile_Bad_EnvTemplates_DisalowedFields(t *testing.T) {
 	if err := config.ValidateConfig(); err == nil {
 		t.Fatal("expected an error from ValidateConfig: disallowed fields specified in env_template")
 	}
-<<<<<<< HEAD
-||||||| ef2f4c0473
-
-	if cfg.Exec.Command != "/path/to/my/app" {
-		t.Fatal("exec.command does not have expected value")
-	}
-
-	if diff := deep.Equal(cfg.Exec.Args, []string{"arg1", "arg2"}); diff != nil {
-		t.Fatalf("exec.args does not have expected values: %v", cfg.Exec.Args)
-	}
-
-	// check defaults
-
-=======
-
-	expectedCmd := []string{"/path/to/my/app", "arg1", "arg2"}
-	if !slices.Equal(cfg.Exec.Command, expectedCmd) {
-		t.Fatal("exec.command does not have expected value")
-	}
-
-	// check defaults
-	if cfg.Exec.RestartOnSecretChanges != "always" {
-		t.Fatalf("expected cfg.Exec.RestartOnSecretChanges to be 'always', got '%s'", cfg.Exec.RestartOnSecretChanges)
-	}
-
-	if cfg.Exec.RestartKillSignal != os.Interrupt {
-		t.Fatalf("expected cfg.Exec.RestartKillSignal to be 'os.Interrupt', got '%s'", cfg.Exec.RestartKillSignal)
-	}
-}
-
-func TestLoadConfigFile_ExecComplex(t *testing.T) {
-	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-complex.hcl")
-
-	if err != nil {
-		t.Fatalf("error loading config file: %s", err)
-	}
-
-	if !slices.Equal(cfg.Exec.Command, []string{"env"}) {
-		t.Fatal("exec.command does not have expected value")
-	}
-
-	if cfg.Exec.RestartOnSecretChanges != "never" {
-		t.Fatalf("expected cfg.Exec.RestartOnSecretChanges to be 'never', got %q", cfg.Exec.RestartOnSecretChanges)
-	}
-
-	if cfg.Exec.RestartKillSignal != syscall.SIGTERM {
-		t.Fatalf("expected cfg.Exec.RestartKillSignal to be 'SIGTERM', got %q", cfg.Exec.RestartKillSignal)
-	}
->>>>>>> agent-runner-env-var-config
 }
