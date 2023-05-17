@@ -25,7 +25,7 @@ There can be many different types of clients that authenticate and communicate w
 2. **Applications or Microservices:** 2-Factor Authentication methods such as AppRole, or by LDAP, Active Directory, or based on the platform’s identity, such as credentials from AWS, Azure, GCP, AliCloud, OCI, Kubernetes, Cloud Foundry, etc.
 3. **[Servers and Platforms](/vault/tutorials/recommended-patterns/pattern-centralized-secrets#machine-programmatic-authentication):** VMs, Containers, Pods (Identified by LDAP, Active Directory service accounts, AWS, Azure, GCP, AliCloud, OCI, Kubernetes, TLS Certs
 4. **Orchestrators:** Nomad, Terraform, Ansible, or Continuous Integration Continuous Delivery (CI/CD) Pipelines where each pipeline usually identified by 2FA
-5. **[Vault Agents and Vault Proxies](/vault/docs/agentandproxy/autoauth):** acting on behalf of a app/microservice, typically identified by App role, Cloud credentials, Kubernetes, TLS Certs
+5. **[Vault Agents and Vault Proxies](/vault/docs/agent-and-proxy/autoauth):** acting on behalf of a app/microservice, typically identified by App role, Cloud credentials, Kubernetes, TLS Certs
 6. **Tokens**: which are not tied to any identities at all. **_These should be used sparingly._**
    Hashicorp recommends always associating tokens to an entity alias and token role.
 

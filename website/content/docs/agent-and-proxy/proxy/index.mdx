@@ -6,16 +6,14 @@ description: |-
   functionality automatically, and act as a proxy for Vault's APIs.
 ---
 
-# Vault Proxy
+# What is Vault Proxy?
 
 Vault Proxy aims to remove the initial hurdle to adopt Vault by providing a
 more scalable and simpler way for applications to integrate with Vault.
 Vault Proxy acts as an [API Proxy][apiproxy] for Vault, and can optionally allow
 or force interacting clients to use its [automatically authenticated token][autoauth].
 
-## What is Vault Proxy?
-
-Vault Agent is a client daemon that provides the following features:
+Vault Proxy is a client daemon that provides the following features:
 
 - [Auto-Auth][autoauth] - Automatically authenticate to Vault and manage the
 token renewal process for locally-retrieved dynamic secrets.
@@ -41,7 +39,7 @@ the Auto-Auth token for these requests. Please see the [API Proxy docs][apiproxy
 for more information.
 
 API Proxy functionality takes place within a defined `listener`, and its behaviour can be configured with an
-[`api_proxy` stanza](/vault/docs/agentandproxy/proxy/apiproxy#configuration-api_proxy).
+[`api_proxy` stanza](/vault/docs/agent-and-proxy/proxy/apiproxy#configuration-api_proxy).
 
 ## Caching
 
@@ -63,7 +61,7 @@ to only enable this on trusted interfaces, as it does not require any authorizat
 
 ### Cache
 
-See the [caching](/vault/docs/agentandproxy/proxy/caching#api) page for details on the cache API.
+See the [caching](/vault/docs/agent-and-proxy/proxy/caching#api) page for details on the cache API.
 
 ## Configuration
 
@@ -135,7 +133,7 @@ environment variable as a comma separated string. This environment variable will
 - `template_config` <code>([template_config][template-config]: <optional\>)</code> - Specifies templating engine behavior.
 
 - `telemetry` <code>([telemetry][telemetry]: <optional\>)</code> – Specifies the telemetry
-reporting system. See the [telemetry Stanza](/vault/docs/agentandproxy/proxy#telemetry-stanza) section below
+reporting system. See the [telemetry Stanza](/vault/docs/agent-and-proxy/proxy#telemetry-stanza) section below
 for a list of metrics specific to Proxy.
 
 - `log_level` - Equivalent to the [`-log-level` command-line flag](#_log_level).
@@ -233,7 +231,7 @@ to `metrics_only` listeners.
 
 #### proxy_api Stanza
 
-- `enable_quit` `(bool: false)` - If set to `true`, the Proxy will enable the [quit](/vault/docs/agentandproxy/proxy#quit) API.
+- `enable_quit` `(bool: false)` - If set to `true`, the Proxy will enable the [quit](/vault/docs/agent-and-proxy/proxy#quit) API.
 
 ### telemetry Stanza
 
@@ -343,14 +341,14 @@ listener "tcp" {
 }
 ```
 
-[vault]: /vault/docs/agentandproxy/proxy#vault-stanza
-[autoauth]: /vault/docs/agentandproxy/proxy/autoauth
-[caching]: /vault/docs/agentandproxy/proxy/caching
-[apiproxy]: /vault/docs/agentandproxy/proxy/apiproxy
-[persistent-cache]: /vault/docs/agentandproxy/proxy/caching/persistent-caches
-[template]: /vault/docs/agentandproxy/proxy/template
-[template-config]: /vault/docs/agentandproxy/proxy/template#template-configurations
-[proxy-api]: /vault/docs/agentandproxy/proxy/#proxy_api-stanza
-[listener]: /vault/docs/agentandproxy/proxy#listener-stanza
+[vault]: /vault/docs/agent-and-proxy/proxy#vault-stanza
+[autoauth]: /vault/docs/agent-and-proxy/proxy/autoauth
+[caching]: /vault/docs/agent-and-proxy/proxy/caching
+[apiproxy]: /vault/docs/agent-and-proxy/proxy/apiproxy
+[persistent-cache]: /vault/docs/agent-and-proxy/proxy/caching/persistent-caches
+[template]: /vault/docs/agent-and-proxy/proxy/template
+[template-config]: /vault/docs/agent-and-proxy/proxy/template#template-configurations
+[proxy-api]: /vault/docs/agent-and-proxy/proxy/#proxy_api-stanza
+[listener]: /vault/docs/agent-and-proxy/proxy#listener-stanza
 [listener_main]: /vault/docs/configuration/listener/tcp
 [telemetry]: /vault/docs/configuration/telemetry
