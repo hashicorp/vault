@@ -5,6 +5,7 @@ package config
 
 import (
 	"os"
+	"syscall"
 	"testing"
 	"time"
 
@@ -2181,5 +2182,25 @@ func TestLoadConfigFile_ExecSimple(t *testing.T) {
 
 	if cfg.Exec.RestartKillSignal != os.Interrupt {
 		t.Fatalf("expected cfg.Exec.RestartKillSignal to be 'os.Interrupt', got '%s'", cfg.Exec.RestartKillSignal)
+	}
+}
+
+func TestLoadConfigFile_ExecComplex(t *testing.T) {
+	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-complex.hcl")
+
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if !slices.Equal(cfg.Exec.Command, []string{"env"}) {
+		t.Fatal("exec.command does not have expected value")
+	}
+
+	if cfg.Exec.RestartOnSecretChanges != "never" {
+		t.Fatalf("expected cfg.Exec.RestartOnSecretChanges to be 'never', got %q", cfg.Exec.RestartOnSecretChanges)
+	}
+
+	if cfg.Exec.RestartKillSignal != syscall.SIGTERM {
+		t.Fatalf("expected cfg.Exec.RestartKillSignal to be 'SIGTERM', got %q", cfg.Exec.RestartKillSignal)
 	}
 }
