@@ -8,12 +8,12 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-// import errorMessage from 'vault/utils/error-message';
 
 export default class PkiTidyStatusComponent extends Component {
   @service store;
   @service secretMountPath;
   @service flashMessages;
+  @service router;
 
   @tracked tidyOptionsModal = false;
   @tracked confirmCancelTidy = false;
@@ -78,6 +78,7 @@ export default class PkiTidyStatusComponent extends Component {
       Cancelling: {
         color: 'warning',
         title: 'Tidy operation cancelling',
+        icon: 'loading',
       },
       Cancelled: {
         color: 'warning',
@@ -93,11 +94,12 @@ export default class PkiTidyStatusComponent extends Component {
   @task
   @waitFor
   *cancelTidy() {
-    // TODO: make this a custom adapter method when Claire merges her form work!
+    // TODO: make a custom adapter method when Claire merges her form work!
+    // TODO: fix the transition from cancelling to cancelled state.
     try {
       const adapter = this.store.adapterFor('application');
       yield adapter.ajax(`/v1/${this.secretMountPath.currentPath}/tidy-cancel`, 'POST');
-      this.confirmCancelTidy = false;
+      this.router.transitionTo('vault.cluster.secrets.backend.pki.tidy.index');
     } catch (e) {
       this.flashMessages.danger(e.errors.join(' '));
     }

@@ -1,15 +1,5 @@
 <Toolbar>
   <ToolbarActions>
-    {{! TODO remove action here in favor of cancel action in status banner }}
-    <button
-      type="button"
-      class="toolbar-link"
-      {{on "click" (fn (mut this.confirmCancelTidy) true)}}
-      data-test-confirm-cancel-tidy
-    >
-      Cancel tidy
-      <Icon @name="chevron-right" />
-    </button>
     <div class="toolbar-separator"></div>
     <button
       type="button"
@@ -28,9 +18,15 @@
   </ToolbarActions>
 </Toolbar>
 
-<Hds::Alert @type="inline" @color={{this.tidyStateAlertBanner.color}} class="has-top-margin-m" as |A|>
+<Hds::Alert
+  @type="inline"
+  @color={{this.tidyStateAlertBanner.color}}
+  class="has-top-margin-m"
+  @icon={{this.tidyStateAlertBanner.icon}}
+  as |A|
+>
   <A.Title>{{this.tidyStateAlertBanner.title}}</A.Title>
-  <A.Description>{{this.tidyStateAlertBanner.description}}</A.Description>
+  <A.Description>{{this.tidyStateAlertBanner.message}}</A.Description>
   {{#if this.tidyStateAlertBanner.shouldShowCancelTidy}}
     <A.Button @text="Cancel tidy" @color="critical" {{on "click" (perform this.cancelTidy)}} />
   {{/if}}
