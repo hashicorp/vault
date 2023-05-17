@@ -14,7 +14,6 @@ export default class PkiTidyModel extends Model {
   @attr('boolean', {
     label: 'Automatic tidy enabled',
     labelDisabled: 'Automatic tidy disabled',
-    detailsLabel: 'Automatic tidy',
     defaultValue: false,
   })
   enabled; // auto-tidy only
