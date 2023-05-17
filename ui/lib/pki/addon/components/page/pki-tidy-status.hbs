@@ -27,11 +27,15 @@
     {{/if}}
   </ToolbarActions>
 </Toolbar>
-{{! <Hds::Alert >
-    </Hds::Alert> }}
-<AlertBanner @type="loading" class="has-top-margin-m" @title="Tidy in progress">
-  Tidying revoked certificates: checking certificate 100 of 320
-</AlertBanner>
+
+<Hds::Alert @type="inline" @color={{this.tidyStateAlertBanner.color}} class="has-top-margin-m" as |A|>
+  <A.Title>{{this.tidyStateAlertBanner.title}}</A.Title>
+  <A.Description>{{this.tidyStateAlertBanner.description}}</A.Description>
+  {{#if this.tidyStateAlertBanner.shouldShowCancelTidy}}
+    <A.Button @text="Cancel tidy" @color="critical" {{on "click" (perform this.cancelTidy)}} />
+  {{/if}}
+</Hds::Alert>
+
 <InfoTableRow @label="Time started" @value={{date-format this.tidyStatus.time_started "MMM dd, yyyy hh:mm:ss a"}} />
 <InfoTableRow @label="Time finished" @value={{date-format this.tidyStatus.time_finished "MMM dd, yyyy hh:mm:ss a"}} />
 {{! todo Last auto-tidy finished duration }}
@@ -67,7 +71,6 @@
 
 {{! TIDY OPTIONS MODAL }}
 <Modal
-  @type="info"
   @title="Tidy this mount"
   @onClose={{fn (mut this.tidyOptionsModal) false}}
   @isActive={{this.tidyOptionsModal}}
@@ -89,9 +92,8 @@
         <li>Choose the parameters you wish to tidy, and run the operation</li>
       </ol>
     </p>
-    <div class="has-top-margin-l has-tall-padding">
-      {{! TODO update path with tidy diagram }}
-      <img src={{img-path "~/pki-rotate-root.png"}} alt="tidy operation diagram" />
+    <div class="has-top-margin-l has-padding">
+      <img src={{img-path "~/pki-tidy.png"}} alt="tidy operation diagram" />
     </div>
   </section>
   <footer aria-label="tidy-option-buttons" class="modal-card-foot modal-card-foot-outlined">
@@ -132,7 +134,12 @@
       <p class="has-top-margin-s">Click “Confirm” to cancel the running tidy operation.</p>
     </section>
     <footer aria-label="confirm-cancel-buttons" class="modal-card-foot modal-card-foot-outlined">
-      <button type="button" class="button is-primary" {{on "click" this.cancelTidy}} data-test-tidy-modal-auto-button>
+      <button
+        type="button"
+        class="button is-primary"
+        {{on "click" (perform this.cancelTidy)}}
+        data-test-tidy-modal-auto-button
+      >
         Confirm
       </button>
       <button type="button" class="button is-secondary" {{on "click" (fn (mut this.confirmCancelTidy) false)}}>
