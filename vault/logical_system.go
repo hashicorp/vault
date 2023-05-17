@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"hash"
+	"math/rand"
 	"net/http"
 	"path"
 	"path/filepath"
@@ -3019,28 +3020,44 @@ func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logica
 			fmt.Sprintf("passwords must be between %d and %d characters", minPasswordLength, maxPasswordLength))
 	}
 
-	// Generate some passwords to ensure that we're confident that the policy isn't impossible
-	timeout := 1 * time.Second
-	genCtx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+	// Attempt to construct a test password from the rules to ensure that the policy isn't impossible
+	var testPassword []rune
 
-	attempts := 10
-	failed := 0
-	for i := 0; i < attempts; i++ {
-		_, err = policy.Generate(genCtx, nil)
-		if err != nil {
-			failed++
+	for _, rule := range policy.Rules {
+		charsetRule, ok := rule.(random.CharsetRule)
+		if !ok {
+			return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("unexpected rule type %T", charsetRule))
+		}
+
+		for j := 0; j < charsetRule.MinLength(); j++ {
+			charIndex := rand.Intn(len(charsetRule.Chars()))
+			testPassword = append(testPassword, charsetRule.Chars()[charIndex])
 		}
 	}
 
-	if failed == attempts {
-		return nil, logical.CodedError(http.StatusBadRequest,
-			fmt.Sprintf("unable to generate password from provided policy in %s: are the rules impossible?", timeout))
+	for i := len(testPassword); i < policy.Length; i++ {
+		for _, rule := range policy.Rules {
+			if len(testPassword) >= policy.Length {
+				break
+			}
+			charsetRule, ok := rule.(random.CharsetRule)
+			if !ok {
+				return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("unexpected rule type %T", charsetRule))
+			}
+
+			charIndex := rand.Intn(len(charsetRule.Chars()))
+			testPassword = append(testPassword, charsetRule.Chars()[charIndex])
+		}
 	}
 
-	if failed > 0 {
-		return nil, logical.CodedError(http.StatusBadRequest,
-			fmt.Sprintf("failed to generate passwords %d times out of %d attempts in %s - is the policy too restrictive?", failed, attempts, timeout))
+	rand.Shuffle(policy.Length, func(i, j int) {
+		testPassword[i], testPassword[j] = testPassword[j], testPassword[i]
+	})
+
+	for _, rule := range policy.Rules {
+		if !rule.Pass(testPassword) {
+			return nil, logical.CodedError(http.StatusBadRequest, "unable to construct test password from provided policy: are the rules impossible?")
+		}
 	}
 
 	cfg := passwordPolicyConfig{
