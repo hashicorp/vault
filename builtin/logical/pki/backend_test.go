@@ -2516,7 +2516,7 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	}
 }
 
-func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
+func TestBackend_SignIntermediate_AllowedPastCAValidity(t *testing.T) {
 	t.Parallel()
 	b_root, s_root := CreateBackendWithStorage(t)
 	b_int, s_int := CreateBackendWithStorage(t)
@@ -2534,6 +2534,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 	_, err = CBWrite(b_root, s_root, "roles/test", map[string]interface{}{
 		"allow_bare_domains": true,
 		"allow_subdomains":   true,
+		"allow_any_name":     true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -2555,9 +2556,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 		"csr":         csr,
 		"ttl":         "60h",
 	})
-	if err == nil {
-		t.Fatal("expected error")
-	}
+	require.ErrorContains(t, err, "that is beyond the expiration of the CA certificate")
 
 	_, err = CBWrite(b_root, s_root, "sign-verbatim/test", map[string]interface{}{
 		"common_name": "myint.com",
@@ -2565,9 +2564,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 		"csr":         csr,
 		"ttl":         "60h",
 	})
-	if err == nil {
-		t.Fatal("expected error")
-	}
+	require.ErrorContains(t, err, "that is beyond the expiration of the CA certificate")
 
 	resp, err = CBWrite(b_root, s_root, "root/sign-intermediate", map[string]interface{}{
 		"common_name": "myint.com",
