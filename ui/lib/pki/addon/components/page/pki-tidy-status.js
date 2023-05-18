@@ -14,9 +14,14 @@ export default class PkiTidyStatusComponent extends Component {
   @service secretMountPath;
   @service flashMessages;
   @service router;
+  @service version;
 
   @tracked tidyOptionsModal = false;
   @tracked confirmCancelTidy = false;
+
+  get isEnterprise() {
+    return this.version.isEnterprise;
+  }
 
   get generalSectionFields() {
     return [
