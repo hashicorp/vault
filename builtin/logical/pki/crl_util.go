@@ -751,7 +751,7 @@ func (cb *crlBuilder) processRevocationQueue(sc *storageContext) error {
 				}
 
 				if err := sc.Storage.Put(sc.Context, confirmedEntry); err != nil {
-					return fmt.Errorf("error persisting cross-cluster revocation confirmation: %w\nThis may occur when the active node of the primary performance replication cluster is unavailable.", err)
+					return fmt.Errorf("error persisting cross-cluster revocation confirmation: %w", err)
 				}
 			} else {
 				// Since we're the active node of the primary cluster, go ahead
