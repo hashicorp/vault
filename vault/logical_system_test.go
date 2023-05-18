@@ -2420,6 +2420,8 @@ func TestSystemBackend_enableAudit(t *testing.T) {
 	}
 }
 
+// TestSystemBackend_decodeToken ensures the correct decoding of the encoded token.
+// It also ensures that the API fails if there is some payload missing.
 func TestSystemBackend_decodeToken(t *testing.T) {
 	encodedToken := "Bxg9JQQqOCNKBRICNwMIRzo2J3cWCBRi"
 	otp := "3JhHkONiyiaNYj14nnD9xZQS"
