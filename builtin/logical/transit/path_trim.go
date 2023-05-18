@@ -100,7 +100,7 @@ func (b *backend) pathTrimUpdate() framework.OperationFunc {
 			return nil, err
 		}
 
-		return nil, nil
+		return b.formatKeyPolicy(p, nil)
 	}
 }
 

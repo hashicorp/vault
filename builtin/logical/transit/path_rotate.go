@@ -79,7 +79,12 @@ func (b *backend) pathRotateWrite(ctx context.Context, req *logical.Request, d *
 	}
 
 	p.Unlock()
-	return nil, err
+
+	if err != nil {
+		return nil, err
+	}
+
+	return b.formatKeyPolicy(p, nil)
 }
 
 const pathRotateHelpSyn = `Rotate named encryption key`
