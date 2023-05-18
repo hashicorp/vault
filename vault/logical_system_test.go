@@ -2427,7 +2427,7 @@ func missingPayloadTest(path string, data map[string]interface{}) func(t *testin
 		req.Data = data
 		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 		if err == nil {
-			t.Fatalf("no error despite missing payload", err)
+			t.Fatalf("no error despite missing payload")
 		}
 		schema.ValidateResponse(
 			t,
