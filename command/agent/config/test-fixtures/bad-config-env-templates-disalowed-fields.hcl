@@ -27,7 +27,7 @@ env_template "FOO_PASSWORD" {
 }
 
 exec {
-  command               = ["./my-app", "arg1", "arg2"]
-  restart_on_new_secret = "always"
-  restart_kill_signal   = "SIGTERM"
+  command                   = ["./my-app", "arg1", "arg2"]
+  restart_on_secret_changes = "always"
+  restart_kill_signal       = "SIGTERM"
 }

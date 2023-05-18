@@ -28,16 +28,16 @@ env_template "FOO_USER" {
 }
 
 exec {
-  command               = ["./my-app", "arg1", "arg2"]
-  restart_on_new_secret = "always"
-  restart_kill_signal   = "SIGTERM"
+  command                   = ["./my-app", "arg1", "arg2"]
+  restart_on_secret_changes = "always"
+  restart_kill_signal       = "SIGTERM"
 }
 
 # Error: api_proxy is incompatible with env_template
 api_proxy {
 	use_auto_auth_token = "force"
 	enforce_consistency = "always"
-	when_inconsistent = "forward"
+	when_inconsistent   = "forward"
 }
 
 # Error: listener is incompatible with env_template

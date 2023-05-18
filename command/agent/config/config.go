@@ -381,11 +381,21 @@ func (c *Config) validateEnvTemplateConfig() error {
 		return fmt.Errorf("'exec' requires non-empty 'command' field")
 	}
 
-	for key, template := range c.EnvTemplates {
+	uniqueKeys := make(map[string]struct{})
+
+	for _, template := range c.EnvTemplates {
 		// only two fields are currently required (name & contents)
 		if template.MapToEnvironmentVariable == nil {
-			return fmt.Errorf("env_template[%s]: an environment variable name is required", key)
+			return fmt.Errorf("env_template: an environment variable name is required")
 		}
+
+		key := *template.MapToEnvironmentVariable
+
+		if _, exists := uniqueKeys[key]; exists {
+			return fmt.Errorf("env_template: duplicate environment variable name: %q", key)
+		}
+
+		uniqueKeys[key] = struct{}{}
 
 		if template.Contents == nil {
 			return fmt.Errorf("env_template[%s]: 'contents' is required", key)
