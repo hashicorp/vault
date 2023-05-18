@@ -5,6 +5,7 @@ package pki
 
 import (
 	"context"
+	"crypto"
 	"fmt"
 	"net/http"
 
@@ -247,22 +248,13 @@ func (b *backend) pathGetKeyHandler(ctx context.Context, req *logical.Request, d
 		return nil, err
 	}
 
-	pkForSkid, err := getPublicKeyFromBytes([]byte(key.PrivateKey))
-	if err != nil {
-		return nil, err
-	}
-	skid, err := certutil.GetSubjectKeyID(pkForSkid)
-	if err != nil {
-		return nil, err
-	}
-
 	respData := map[string]interface{}{
 		keyIdParam:   key.ID,
 		keyNameParam: key.Name,
 		keyTypeParam: string(key.PrivateKeyType),
-		skidParam:    certutil.GetHexFormatted([]byte(skid), ":"),
 	}
 
+	var pkForSkid crypto.PublicKey
 	if key.isManagedPrivateKey() {
 		managedKeyUUID, err := key.getManagedKeyUUID()
 		if err != nil {
@@ -274,22 +266,28 @@ func (b *backend) pathGetKeyHandler(ctx context.Context, req *logical.Request, d
 			return nil, errutil.InternalError{Err: fmt.Sprintf("failed fetching managed key info from key id %s (%s): %v", key.ID, key.Name, err)}
 		}
 
-		pk, err := getManagedKeyPublicKey(sc.Context, sc.Backend, managedKeyUUID)
+		pkForSkid, err = getManagedKeyPublicKey(sc.Context, sc.Backend, managedKeyUUID)
 		if err != nil {
 			return nil, err
 		}
-		skid, err := certutil.GetSubjectKeyID(pk)
-		if err != nil {
-			return nil, err
-		}
-		respData[skidParam] = skid
 
 		// To remain consistent across the api responses (mainly generate root/intermediate calls), return the actual
 		// type of key, not that it is a managed key.
 		respData[keyTypeParam] = string(keyInfo.keyType)
 		respData[managedKeyIdArg] = string(keyInfo.uuid)
 		respData[managedKeyNameArg] = string(keyInfo.name)
+	} else {
+		pkForSkid, err = getPublicKeyFromBytes([]byte(key.PrivateKey))
+		if err != nil {
+			return nil, err
+		}
 	}
+
+	skid, err := certutil.GetSubjectKeyID(pkForSkid)
+	if err != nil {
+		return nil, err
+	}
+	respData[skidParam] = certutil.GetHexFormatted([]byte(skid), ":")
 
 	return &logical.Response{Data: respData}, nil
 }
