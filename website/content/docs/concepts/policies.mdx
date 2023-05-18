@@ -15,7 +15,7 @@ operations in Vault. This section discusses policy workflows and syntaxes.
 Policies are **deny by default**, so an empty policy grants no permission in the
 system.
 
-## Policy-Authorization Workflow
+## Policy-authorization workflow
 
 Before a human or machine can gain access, an administrator must configure Vault
 with an [auth method](/vault/docs/concepts/auth). Authentication is
@@ -255,7 +255,7 @@ credentials _creates_ database credentials, but the HTTP request is a GET which
 corresponds to a `read` capability. Thus, to grant access to generate database
 credentials, the policy would grant `read` access on the appropriate path.
 
-## Templated Policies
+## Templated policies
 
 The policy syntax allows for doing variable replacement in some policy strings
 with values available to the token. Currently `identity` information can be
@@ -333,13 +333,13 @@ path "secret/data/{{identity.entity.aliases.auth_kubernetes_xxxx.metadata.servic
 }
 ```
 
-## Fine-Grained Control
+## Fine-grained control
 
 In addition to the standard set of capabilities, Vault offers finer-grained
 control over permissions at a given path. The capabilities associated with a
 path take precedence over permissions on parameters.
 
-### Parameter Constraints
+### Parameter constraints
 
 !> **Note:** The use of [globs](/vault/docs/concepts/policies#policy-syntax) (`*`) may result in [surprising or unexpected behavior](#parameter-constraints-limitations).
 
@@ -567,7 +567,7 @@ path "secret/foo" {
   }
 }
 ```
-### Required Response Wrapping TTLs
+### Required response wrapping TTLs
 
 These parameters can be used to set minimums/maximums on TTLs set by clients
 when requesting that a response be
@@ -643,7 +643,7 @@ $ curl \
   https://vault.hashicorp.rocks/v1/auth/token/create
 ```
 
-### Root Policy
+### Root policy
 
 The `root` policy is a built-in Vault policy that cannot be modified or removed.
 Any user associated with this policy becomes a root user. A root user can do
@@ -676,13 +676,13 @@ For more information, please read:
 - [Production Hardening](/vault/tutorials/operations/production-hardening)
 - [Generating a Root Token](/vault/tutorials/operations/generate-root)
 
-## Managing Policies
+## Managing policies
 
 Policies are authored (written) in your editor of choice. They can be authored
 in HCL or JSON, and the syntax is described in detail above. Once saved,
 policies must be uploaded to Vault before they can be used.
 
-### Listing Policies
+### Listing policies
 
 To list all registered policies in Vault:
 
@@ -702,7 +702,7 @@ $ curl \
 wrapper around reading the sys endpoint directly. It provides the same
 functionality but formats the output in a special manner.
 
-### Creating Policies
+### Creating policies
 
 Policies may be created (uploaded) via the CLI or via the API. To create a new
 policy in Vault:
@@ -725,7 +725,7 @@ In both examples, the name of the policy is "policy-name". You can think of this
 name as a pointer or symlink to the policy ACLs. Tokens are attached policies by
 name, which are then mapped to the set of rules corresponding to that name.
 
-### Updating Policies
+### Updating policies
 
 Existing policies may be updated to change permissions via the CLI or via the
 API. To update an existing policy in Vault, follow the same steps as creating a
@@ -745,7 +745,7 @@ $ curl \
   https://vault.hashicorp.rocks/v1/sys/policy/my-existing-policy
 ```
 
-### Deleting Policies
+### Deleting policies
 
 Existing policies may be deleted via the CLI or API. To delete a policy:
 
@@ -765,7 +765,7 @@ $ curl \
 This is an idempotent operation. Vault will not return an error when deleting a
 policy that does not exist.
 
-## Associating Policies
+## Associating policies
 
 Vault can automatically associate a set of policies to a token based on an
 authorization. This configuration varies significantly between authentication
