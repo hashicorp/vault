@@ -64,6 +64,7 @@ func (b *backend) pathRotateWrite(ctx context.Context, req *logical.Request, d *
 	if !b.System().CachingDisabled() {
 		p.Lock(true)
 	}
+	defer p.Unlock()
 
 	if p.Type == keysutil.KeyType_MANAGED_KEY {
 		var keyId string
@@ -77,8 +78,6 @@ func (b *backend) pathRotateWrite(ctx context.Context, req *logical.Request, d *
 		// Rotate the policy
 		err = p.Rotate(ctx, req.Storage, b.GetRandomReader())
 	}
-
-	p.Unlock()
 
 	if err != nil {
 		return nil, err
