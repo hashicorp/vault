@@ -1,16 +1,13 @@
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
-// import { withConfirmLeave } from 'core/decorators/confirm-leave';
+import { withConfirmLeave } from 'core/decorators/confirm-leave';
 
-// @withConfirmLeave()
+@withConfirmLeave()
 export default class PkiTidyAutoConfigureRoute extends Route {
   @service store;
   @service secretMountPath;
 
-  model() {
-    const { autoTidyConfig } = this.modelFor('tidy');
-    return autoTidyConfig;
-  }
+  // inherits model from tidy/auto
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
@@ -19,8 +16,8 @@ export default class PkiTidyAutoConfigureRoute extends Route {
       { label: this.secretMountPath.currentPath, route: 'overview' },
       { label: 'configuration', route: 'configuration.index' },
       { label: 'tidy', route: 'tidy' },
-      { label: 'auto-tidy configuration', route: 'tidy.auto' },
-      { label: 'configure auto-tidy' },
+      { label: 'auto', route: 'tidy.auto' },
+      { label: 'configure' },
     ];
   }
 }
