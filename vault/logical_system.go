@@ -929,7 +929,6 @@ func (b *SystemBackend) handleGenerateRootDecodeTokenUpdate(ctx context.Context,
 	otp := data.Get("otp").(string)
 
 	token, err := roottoken.DecodeToken(encodedToken, otp, len(otp))
-
 	if err != nil {
 		return nil, err
 	}
