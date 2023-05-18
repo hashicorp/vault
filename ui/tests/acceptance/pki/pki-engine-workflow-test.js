@@ -42,7 +42,7 @@ module('Acceptance | pki workflow', function (hooks) {
   });
 
   test('empty state messages are correct when PKI not configured', async function (assert) {
-    assert.expect(17);
+    assert.expect(21);
     const assertEmptyState = (assert, resource) => {
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/${resource}`);
       assert
@@ -73,7 +73,6 @@ module('Acceptance | pki workflow', function (hooks) {
     assertEmptyState(assert, 'certificates');
     await click(SELECTORS.keysTab);
     assertEmptyState(assert, 'keys');
-
     await click(SELECTORS.tidyTab);
     assertEmptyState(assert, 'tidy');
   });
@@ -449,7 +448,7 @@ module('Acceptance | pki workflow', function (hooks) {
     test('it returns to the configuration page after submit', async function (assert) {
       await authPage.login(this.pkiAdminToken);
       await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
-      await click(SELECTORS.configuration.tidyToolbar);
+      await click(SELECTORS.tidyTab);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/tidy`);
       await click(SELECTORS.configuration.tidyCertStoreCheckbox);
       await click(SELECTORS.configuration.tidyRevocationCheckbox);
