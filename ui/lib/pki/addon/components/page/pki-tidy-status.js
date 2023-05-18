@@ -53,43 +53,54 @@ export default class PkiTidyStatusComponent extends Component {
     // TODO: fix the transition between different states. we need to re-fetch the api every time the
     // the state changes or after an X amount of time. for instance, when the user is in a "Running" state
     // and leaves this page open the page will show that it is still "Running" when it is "Finished".
+    const tidyState = this.tidyState;
 
-    const tidyStateOptions = {
-      Inactive: {
-        color: 'highlight',
-        title: 'Tidy is inactive',
-        message: this.args.tidyStatus?.message,
-      },
-      Running: {
-        color: 'highlight',
-        title: 'Tidy in progress',
-        message: this.args.tidyStatus?.message,
-        shouldShowCancelTidy: true,
-      },
-      Finished: {
-        color: 'success',
-        title: 'Tidy operation finished',
-        message: this.args.tidyStatus?.message,
-      },
-      Error: {
-        color: 'warning',
-        title: 'Tidy operation failed',
-        message: this.args.tidyStatus?.message,
-      },
-      Cancelling: {
-        color: 'warning',
-        title: 'Tidy operation cancelling',
-        icon: 'loading',
-      },
-      Cancelled: {
-        color: 'warning',
-        title: 'Tidy operation cancelled',
-        message:
-          'Your tidy operation has been cancelled. If this was a mistake configure and run another tidy operation.',
-      },
-    };
-
-    return tidyStateOptions[this.tidyState] || null;
+    switch (tidyState) {
+      case 'Inactive':
+        return {
+          color: 'highlight',
+          title: 'Tidy is inactive',
+          message: this.args.tidyStatus?.message,
+        };
+      case 'Running':
+        return {
+          color: 'highlight',
+          title: 'Tidy in progress',
+          message: this.args.tidyStatus?.message,
+          shouldShowCancelTidy: true,
+        };
+      case 'Finished':
+        return {
+          color: 'success',
+          title: 'Tidy operation finished',
+          message: this.args.tidyStatus?.message,
+        };
+      case 'Error':
+        return {
+          color: 'warning',
+          title: 'Tidy operation failed',
+          message: this.args.tidyStatus?.message,
+        };
+      case 'Cancelling':
+        return {
+          color: 'warning',
+          title: 'Tidy operation cancelling',
+          icon: 'loading',
+        };
+      case 'Cancelled':
+        return {
+          color: 'warning',
+          title: 'Tidy operation cancelled',
+          message:
+            'Your tidy operation has been cancelled. If this was a mistake configure and run another tidy operation.',
+        };
+      default:
+        return {
+          color: 'warning',
+          title: 'Tidy status not found',
+          message: "The system reported no tidy status. It's recommended to perform a new tidy operation.",
+        };
+    }
   }
 
   get tidyState() {
@@ -107,7 +118,6 @@ export default class PkiTidyStatusComponent extends Component {
     try {
       const adapter = this.store.adapterFor('application');
       yield adapter.ajax(`/v1/${this.secretMountPath.currentPath}/tidy-cancel`, 'POST');
-      this.router.transitionTo('vault.cluster.secrets.backend.pki.tidy.index');
     } catch (e) {
       this.flashMessages.danger(e.errors.join(' '));
     }
