@@ -116,33 +116,12 @@ export default class PkiTidyModel extends Model {
     return `/v1/${backend}/config/auto-tidy?help=1`;
   }
 
-  get displayGroups() {
-    const groups = [
-      { default: ['enabled', 'intervalDuration'] },
-      {
-        'Universal operations': ['tidyCertStore', 'tidyRevokedCerts', 'safetyBuffer', 'pauseDuration'],
-      },
-      {
-        'Issuer operations': [
-          'tidyExpiredIssuers',
-          'tidyMoveLegacyCaBundle',
-          'tidyRevokedCertIssuerAssociations',
-          'issuerSafetyBuffer',
-        ],
-      },
-    ];
-    if (this.version.isEnterprise) {
-      groups.push({
-        'Cross-cluster operations': [
-          'tidyRevocationQueue',
-          'tidyCrossClusterRevokedCerts',
-          'revocationQueueSafetyBuffer',
-        ],
-      });
-    }
+  get allGroups() {
+    const groups = [{ autoTidy: ['enabled', 'intervalDuration'] }, ...this.sharedFields];
     return this._expandGroups(groups);
   }
 
+  // shared between auto and manual tidy operations
   get sharedFields() {
     const groups = [
       {
