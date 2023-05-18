@@ -114,8 +114,6 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 		return fmt.Errorf("template server failed to create: %w", err)
 	}
 
-	go s.runner.Start()
-
 	idMap := s.runner.TemplateConfigMapping()
 	lookupMap := make(map[string][]*ctconfig.TemplateConfig, len(idMap))
 	for id, ctmpls := range idMap {
@@ -153,7 +151,7 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 
 				runnerConfig = runnerConfig.Merge(&ctv)
 				var runnerErr error
-				s.runner, runnerErr = manager.NewRunner(runnerConfig, false)
+				s.runner, runnerErr = manager.NewRunner(runnerConfig, true)
 				if runnerErr != nil {
 					s.logger.Error("template server failed with new Vault token", "error", runnerErr)
 					continue
