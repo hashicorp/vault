@@ -2420,6 +2420,35 @@ func TestSystemBackend_enableAudit(t *testing.T) {
 	}
 }
 
+func TestSystemBackend_decodeToken(t *testing.T) {
+	_, b, _ := testCoreSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "decode-token")
+	req.Data["encoded_token"] = "Bxg9JQQqOCNKBRICNwMIRzo2J3cWCBRi"
+	req.Data["otp"] = "3JhHkONiyiaNYj14nnD9xZQS"
+
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
+	token, ok := resp.Data["token"]
+	if !ok {
+		t.Fatalf("did not get token back in response, response was %#v", resp.Data)
+	}
+
+	if token.(string) != "4RUmoevJ3lsLni9sTXcNnRE1" {
+		t.Fatalf("bad token back: %s", token.(string))
+	}
+}
+
 func TestSystemBackend_auditHash(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
 	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
