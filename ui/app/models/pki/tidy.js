@@ -90,8 +90,6 @@ export default class PkiTidyModel extends Model {
 
   @attr('boolean', {
     label: 'Tidy revoked certificate issuer associations',
-    subText:
-      'Check to associate revoked certificates with their corresponding issuers; this improves the performance of OCSP and CRL building, by shifting work to a tidy operation instead. It is suggested to run this tidy when removing or importing new issuers and on the first upgrade to a post-1.11 Vault version, but otherwise not to run it during automatic tidy operations.',
   })
   tidyRevokedCertIssuerAssociations;
 
