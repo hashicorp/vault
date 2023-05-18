@@ -30,6 +30,12 @@
   {{#if this.tidyStateAlertBanner.shouldShowCancelTidy}}
     <A.Button @text="Cancel tidy" @color="critical" {{on "click" (perform this.cancelTidy)}} />
   {{/if}}
+  {{#if @tidyStatus.responseTimestamp}}
+    <A.Description class="has-top-margin-xs">
+      Updated
+      {{date-format @tidyStatus.responseTimestamp "MMM d yyyy, h:mm:ss aaa" withTimeZone=true}}
+    </A.Description>
+  {{/if}}
 </Hds::Alert>
 
 {{#each this.generalSectionFields as |attr|}}

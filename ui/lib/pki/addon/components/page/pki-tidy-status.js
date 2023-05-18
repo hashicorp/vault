@@ -53,13 +53,6 @@ export default class PkiTidyStatusComponent extends Component {
     // TODO: fix the transition between different states. we need to re-fetch the api every time the
     // the state changes or after an X amount of time. for instance, when the user is in a "Running" state
     // and leaves this page open the page will show that it is still "Running" when it is "Finished".
-    let tidyState = this.args.tidyStatus?.state;
-
-    if (this.cancelTidy.isRunning) {
-      tidyState = 'Cancelling';
-    } else if (this.cancelTidy.isSuccessful) {
-      tidyState = 'Cancelled';
-    }
 
     const tidyStateOptions = {
       Inactive: {
@@ -96,7 +89,15 @@ export default class PkiTidyStatusComponent extends Component {
       },
     };
 
-    return tidyStateOptions[tidyState];
+    return tidyStateOptions[this.tidyState] || null;
+  }
+
+  get tidyState() {
+    if (this.cancelTidy.isRunning) {
+      return 'Cancelling';
+    }
+
+    return this.args.tidyStatus?.state;
   }
 
   @task
