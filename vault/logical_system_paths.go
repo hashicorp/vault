@@ -189,10 +189,7 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleGenerateRootDecodeTokenUpdate,
-					DisplayAttrs: &framework.DisplayAttributes{
-						OperationVerb: "decode",
-					},
-					Summary: "Decodes the encoded token with the otp.",
+					Summary:  "Decodes the encoded token with the otp.",
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{Description: "OK"}},
 					},
