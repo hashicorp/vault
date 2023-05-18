@@ -11,28 +11,27 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { SELECTORS } from 'vault/tests/helpers/pki/page/pki-tidy-form';
 
-module('Integration | Component | pki | Page::PkiTidyForm', function (hooks) {
+module('Integration | Component | pki tidy form', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'pki');
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
-    this.secretMountPath = this.owner.lookup('service:secret-mount-path');
-    this.secretMountPath.currentPath = 'pki-test';
+    this.version = this.owner.lookup('service:version');
+    this.server.post('/sys/capabilities-self', () => {});
 
-    this.tidy = this.store.createRecord('pki/tidy', { backend: 'pki-test' });
-
-    this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: 'pki-test', route: 'overview' },
-      { label: 'configuration', route: 'configuration.index' },
-      { label: 'tidy' },
-    ];
+    this.manualTidy = this.store.createRecord('pki/tidy', { backend: 'pki-manual-tidy' });
+    this.store.pushPayload('pki/tidy', {
+      modelName: 'pki/tidy',
+      id: 'pki-auto-tidy',
+    });
+    this.autoTidy = this.store.peekRecord('pki/tidy', 'pki-auto-tidy');
   });
 
   test('it should render tidy fields', async function (assert) {
-    await render(hbs`<Page::PkiTidyForm @tidy={{this.tidy}} @breadcrumbs={{this.breadcrumbs}} />`, {
+    this.version.version = '1.14.1+ent';
+    await render(hbs`<PkiTidyForm @tidy={{this.tidy}} @breadcrumbs={{this.breadcrumbs}} />`, {
       owner: this.engine,
     });
     assert.dom(SELECTORS.tidyCertStoreLabel).hasText('Tidy the certificate store');
@@ -43,7 +42,7 @@ module('Integration | Component | pki | Page::PkiTidyForm', function (hooks) {
   });
 
   test('it should change the attributes on the model', async function (assert) {
-    await render(hbs`<Page::PkiTidyForm @tidy={{this.tidy}} @breadcrumbs={{this.breadcrumbs}} />`, {
+    await render(hbs`<PkiTidyForm @tidy={{this.tidy}} @breadcrumbs={{this.breadcrumbs}} />`, {
       owner: this.engine,
     });
     await click(SELECTORS.tidyCertStoreCheckbox);
@@ -54,5 +53,56 @@ module('Integration | Component | pki | Page::PkiTidyForm', function (hooks) {
     assert.dom(SELECTORS.safetyBufferInput).hasValue('5');
     assert.dom('[data-test-select="ttl-unit"]').hasValue('d');
     assert.strictEqual(this.tidy.safetyBuffer, '120h');
+  });
+
+  test('it updates auto-tidy config', async function (assert) {
+    assert.expect(4);
+    this.server.post('/pki-auto-tidy/config/auto-tidy', (schema, req) => {
+      assert.ok(true, 'Request made to update auto-tidy');
+      assert.propEqual(JSON.parse(req.requestBody), { enabled: false }, 'response contains auto-tidy params');
+    });
+    this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
+    this.onCancel = () => assert.ok(true, 'onCancel callback fires on save success');
+
+    await render(
+      hbs`
+      <PkiTidyForm
+        @tidy={{this.autoTidy}}
+        @tidyType="auto"
+        @onSave={{this.onSave}}
+        @onCancel={{this.onCancel}}
+      />
+    `,
+      { owner: this.engine }
+    );
+
+    await click(SELECTORS.tidySave);
+    await click(SELECTORS.tidyCancel);
+  });
+
+  test('it saves and performs manual tidy', async function (assert) {
+    assert.expect(4);
+
+    this.server.post('/pki-manual-tidy/tidy', (schema, req) => {
+      assert.ok(true, 'Request made to perform manual tidy');
+      assert.propEqual(JSON.parse(req.requestBody), {}, 'response contains manual tidy params');
+    });
+    this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
+    this.onCancel = () => assert.ok(true, 'onCancel callback fires on save success');
+
+    await render(
+      hbs`
+      <PkiTidyForm
+        @tidy={{this.manualTidy}}
+        @tidyType="manual"
+        @onSave={{this.onSave}}
+        @onCancel={{this.onCancel}}
+      />
+    `,
+      { owner: this.engine }
+    );
+
+    await click(SELECTORS.tidySave);
+    await click(SELECTORS.tidyCancel);
   });
 });
