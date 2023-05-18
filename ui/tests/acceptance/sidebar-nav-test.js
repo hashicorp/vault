@@ -109,4 +109,14 @@ module('Acceptance | sidebar navigation', function (hooks) {
       assert.strictEqual(currentURL(), l.route, `${l.label} route renders`);
     }
   });
+
+  test('it should display access nav when mounting and configuring auth methods', async function (assert) {
+    await click(link('Access'));
+    await click('[data-test-auth-enable]');
+    assert.dom('[data-test-sidebar-nav-panel="Access"]').exists('Access nav panel renders');
+    await click(link('Authentication methods'));
+    await click('[data-test-auth-backend-link="token"]');
+    await click('[data-test-configure-link]');
+    assert.dom('[data-test-sidebar-nav-panel="Access"]').exists('Access nav panel renders');
+  });
 });
