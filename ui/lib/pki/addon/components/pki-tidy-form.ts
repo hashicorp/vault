@@ -11,7 +11,7 @@ import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { tracked } from '@glimmer/tracking';
 
-import RouterService from '@ember/routing/router-service';
+import type RouterService from '@ember/routing/router-service';
 import type PkiTidyModel from 'vault/models/pki/tidy';
 import type { FormField, TtlEvent } from 'vault/app-types';
 
@@ -34,6 +34,11 @@ export default class PkiTidyForm extends Component<Args> {
 
   @tracked errorBanner = '';
   @tracked invalidFormAlert = '';
+
+  get intervalDurationAttr() {
+    const { autoTidy } = this.args.tidy.allGroups.findBy('autoTidy');
+    return autoTidy.findBy('name', 'intervalDuration');
+  }
 
   @task
   @waitFor

@@ -8,30 +8,30 @@
 <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
 
 <form class="has-bottom-margin-s" {{on "submit" (perform this.save)}}>
+  {{#if (eq @tidyType "auto")}}
+    {{#let this.intervalDurationAttr as |attr|}}
+      <TtlPicker
+        data-test-input={{attr.name}}
+        @onChange={{fn this.handleTtl attr}}
+        @label={{attr.options.label}}
+        @labelDisabled={{attr.options.labelDisabled}}
+        @helperTextDisabled={{attr.options.helperTextDisabled}}
+        @helperTextEnabled={{attr.options.helperTextEnabled}}
+        @initialEnabled={{get @tidy attr.options.mapToBoolean}}
+        @initialValue={{get @tidy attr.name}}
+      />
+    {{/let}}
+  {{/if}}
   {{#each @tidy.formFieldGroups as |fieldGroup|}}
     {{#each-in fieldGroup as |group fields|}}
-      {{#if (and (not-eq group "autoTidy") (or (eq @tidyType "manual") @tidy.enabled))}}
+      {{#if (or (eq @tidyType "manual") @tidy.enabled)}}
         <h2 class="title is-size-5 has-border-bottom-light page-header" data-test-tidy-header={{group}}>
           {{group}}
         </h2>
-      {{/if}}
-      {{#each fields as |attr|}}
-        {{#if (and (eq group "autoTidy") (eq @tidyType "auto"))}}
-          <TtlPicker
-            data-test-input={{attr.name}}
-            @onChange={{fn this.handleTtl attr}}
-            @label={{attr.options.label}}
-            @labelDisabled={{attr.options.labelDisabled}}
-            @helperTextDisabled={{attr.options.helperTextDisabled}}
-            @helperTextEnabled={{attr.options.helperTextEnabled}}
-            @initialEnabled={{get @tidy attr.options.mapToBoolean}}
-            @initialValue={{get @tidy attr.name}}
-          />
-        {{/if}}
-        {{#if (and (not-eq group "autoTidy") (or (eq @tidyType "manual") @tidy.enabled))}}
+        {{#each fields as |attr|}}
           <FormField @attr={{attr}} @model={{@tidy}} />
-        {{/if}}
-      {{/each}}
+        {{/each}}
+      {{/if}}
     {{/each-in}}
   {{/each}}
 

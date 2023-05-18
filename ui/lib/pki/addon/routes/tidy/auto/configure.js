@@ -8,8 +8,8 @@ export default class PkiTidyAutoConfigureRoute extends Route {
   @service secretMountPath;
 
   model() {
-    const tidyRouteModel = this.modelFor('tidy');
-    return tidyRouteModel.autoTidyConfig;
+    const { autoTidyConfig } = this.modelFor('tidy');
+    return autoTidyConfig;
   }
 
   setupController(controller, resolvedModel) {

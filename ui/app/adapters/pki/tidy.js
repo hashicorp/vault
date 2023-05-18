@@ -20,7 +20,7 @@ export default class PkiTidyAdapter extends ApplicationAdapter {
       throw new Error('Auto-tidy tidy type models are never new, please use findRecord');
 
     const url = `${this._baseUrl(backend)}/tidy`;
-    return this.ajax(url, 'POST', { data: this.serialize(snapshot) });
+    return this.ajax(url, 'POST', { data: this.serialize(snapshot, tidyType) });
   }
 
   // saving auto-tidy config POST requests will always update
@@ -31,7 +31,7 @@ export default class PkiTidyAdapter extends ApplicationAdapter {
       throw new Error('Manual tidy type models are always new, please use createRecord');
 
     const url = `${this._baseUrl(backend)}/config/auto-tidy`;
-    return this.ajax(url, 'POST', { data: this.serialize(snapshot) });
+    return this.ajax(url, 'POST', { data: this.serialize(snapshot, tidyType) });
   }
 
   findRecord(store, type, backend) {
