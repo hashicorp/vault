@@ -167,7 +167,7 @@ func (b *backend) pathGetKeyHandler(ctx context.Context, req *logical.Request, d
 			return nil, errutil.InternalError{Err: fmt.Sprintf("failed fetching managed key info from key id %s (%s): %v", key.ID, key.Name, err)}
 		}
 
-		pkForSkid, err = getManagedKeyPublicKey(sc.Context, sc.Backend, managedKeyUUID)
+		pkForSkid, err = getManagedKeyPublicKey(ctx, b, managedKeyUUID)
 		if err != nil {
 			return nil, err
 		}
