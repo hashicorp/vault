@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -69,8 +70,11 @@ func TestPKIHC_AllGood(t *testing.T) {
 		t.Fatalf("failed to run tidy: %v", err)
 	}
 
+	path, err := url.Parse(client.Address())
+	require.NoError(t, err, "failed parsing client address")
+
 	if _, err := client.Logical().Write("pki/config/cluster", map[string]interface{}{
-		"path": "https://dadgarcorp.com/v1/pki/",
+		"path": path.JoinPath("/v1/", "pki/").String(),
 	}); err != nil {
 		t.Fatalf("failed to update local cluster: %v", err)
 	}
