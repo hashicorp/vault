@@ -101,10 +101,6 @@ export default class PkiTidyStatusComponent extends Component {
   }
 
   get tidyState() {
-    if (this.cancelTidy.isRunning) {
-      return 'Cancelling';
-    }
-
     return this.args.tidyStatus?.state;
   }
 
