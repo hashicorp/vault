@@ -449,7 +449,7 @@ module('Acceptance | pki workflow', function (hooks) {
       await authPage.login(this.pkiAdminToken);
       await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
       await click(SELECTORS.tidyTab);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/tidy`);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/tidy`);
       await click(SELECTORS.configuration.tidyCertStoreCheckbox);
       await click(SELECTORS.configuration.tidyRevocationCheckbox);
       await fillIn(SELECTORS.configuration.safetyBufferInput, '100');

@@ -50,9 +50,6 @@ export default class PkiTidyStatusComponent extends Component {
   }
 
   get tidyStateAlertBanner() {
-    // TODO: fix the transition between different states. we need to re-fetch the api every time the
-    // the state changes or after an X amount of time. for instance, when the user is in a "Running" state
-    // and leaves this page open the page will show that it is still "Running" when it is "Finished".
     const tidyState = this.tidyState;
 
     switch (tidyState) {
