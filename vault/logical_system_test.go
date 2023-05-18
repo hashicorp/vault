@@ -2420,33 +2420,60 @@ func TestSystemBackend_enableAudit(t *testing.T) {
 	}
 }
 
+func missingPayloadTest(path string, data map[string]interface{}) func(t *testing.T) {
+	return func(t *testing.T) {
+		_, b, _ := testCoreSystemBackend(t)
+		req := logical.TestRequest(t, logical.UpdateOperation, path)
+		req.Data = data
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err == nil {
+			t.Fatalf("err: %v", err)
+		}
+		schema.ValidateResponse(
+			t,
+			schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+			resp,
+			true,
+		)
+	}
+}
+
 func TestSystemBackend_decodeToken(t *testing.T) {
-	_, b, _ := testCoreSystemBackend(t)
+	encodedToken := "Bxg9JQQqOCNKBRICNwMIRzo2J3cWCBRi"
+	otp := "3JhHkONiyiaNYj14nnD9xZQS"
+	tokenExpected := "4RUmoevJ3lsLni9sTXcNnRE1"
 
-	req := logical.TestRequest(t, logical.UpdateOperation, "decode-token")
-	req.Data["encoded_token"] = "Bxg9JQQqOCNKBRICNwMIRzo2J3cWCBRi"
-	req.Data["otp"] = "3JhHkONiyiaNYj14nnD9xZQS"
+	t.Run("basic", func(t *testing.T) {
+		_, b, _ := testCoreSystemBackend(t)
 
-	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
+		req := logical.TestRequest(t, logical.UpdateOperation, "decode-token")
+		req.Data["encoded_token"] = encodedToken
+		req.Data["otp"] = otp
 
-	schema.ValidateResponse(
-		t,
-		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
-		resp,
-		true,
-	)
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
 
-	token, ok := resp.Data["token"]
-	if !ok {
-		t.Fatalf("did not get token back in response, response was %#v", resp.Data)
-	}
+		schema.ValidateResponse(
+			t,
+			schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+			resp,
+			true,
+		)
 
-	if token.(string) != "4RUmoevJ3lsLni9sTXcNnRE1" {
-		t.Fatalf("bad token back: %s", token.(string))
-	}
+		token, ok := resp.Data["token"]
+		if !ok {
+			t.Fatalf("did not get token back in response, response was %#v", resp.Data)
+		}
+
+		if token.(string) != tokenExpected {
+			t.Fatalf("bad token back: %s", token.(string))
+		}
+	})
+	t.Run("missing payload", missingPayloadTest("decode-token", nil))
+	t.Run("missing otp", missingPayloadTest("decode-token", map[string]interface{}{"encoded_token": encodedToken}))
+	t.Run("missing encoded_token", missingPayloadTest("decode-token", map[string]interface{}{"otp": otp}))
 }
 
 func TestSystemBackend_auditHash(t *testing.T) {
