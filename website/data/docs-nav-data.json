@@ -1821,10 +1821,14 @@
       {
          "title": "Upgrade Vault HA installations",
          "path": "upgrading/vault-ha-upgrade"
-      }, 
+      },
       {
         "title": "Upgrade Plugins",
         "path": "upgrading/plugins"
+      },
+      {
+        "title": "Upgrade to 1.14.x",
+        "path": "upgrading/upgrade-to-1.14.x"
       },
       {
         "title": "Upgrade to 1.13.x",
@@ -2069,6 +2073,10 @@
       {
         "title": "Overview",
         "path": "release-notes"
+      },
+      {
+         "title": "1.14.0",
+         "path": "release-notes/1.14.0"
       },
       {
          "title": "1.13.0",
