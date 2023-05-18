@@ -348,7 +348,7 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 		method, err = agentproxyshared.GetAutoAuthMethodFromConfig(config.AutoAuth.Method.Type, authConfig, config.Vault.Address)
 		if err != nil {
-			c.UI.Error(fmt.Errorf("error creating %s auth method: %w", config.AutoAuth.Method.Type, err).Error())
+			c.UI.Error(fmt.Sprintf("Error creating %s auth method: %v", config.AutoAuth.Method.Type, err))
 			return 1
 		}
 	}
@@ -505,7 +505,9 @@ func (c *AgentCommand) Run(args []string) int {
 				return 1
 			}
 			previousToken = oldToken
-			defer deferFunc()
+			if deferFunc != nil {
+				defer deferFunc()
+			}
 		}
 	}
 

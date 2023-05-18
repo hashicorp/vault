@@ -61,7 +61,7 @@ func GetAutoAuthMethodFromConfig(autoAuthMethodType string, authConfig *auth.Aut
 	case "pcf": // Deprecated.
 		return cf.NewCFAuthMethod(authConfig)
 	default:
-		return nil, errors.New(fmt.Sprintf("Unknown auth method %q", autoAuthMethodType))
+		return nil, errors.New(fmt.Sprintf("unknown auth method %q", autoAuthMethodType))
 	}
 }
 
@@ -181,7 +181,7 @@ func AddPersistentStorageToLeaseCache(leaseCache *cache.LeaseCache, UI cli.Ui, p
 					return nil, "", fmt.Errorf("exiting with error as exit_on_err is set to true")
 				}
 			}
-			return func() error { return nil }, previousToken, nil
+			return nil, previousToken, nil
 		}
 	} else {
 		km, err := keymanager.NewPassthroughKeyManager(ctx, nil)
