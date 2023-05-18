@@ -11,10 +11,11 @@ export default buildRoutes(function () {
     this.route('secret', { path: '/:name' }, function () {
       this.route('details');
       this.route('edit');
-      this.route('paths');
+      this.route('metadata');
+      this.route('metadata-edit');
+      this.route('diff');
+      this.route('versions');
     });
   });
-  this.route('metadata');
-  this.route('configure');
   this.route('configuration');
 });
