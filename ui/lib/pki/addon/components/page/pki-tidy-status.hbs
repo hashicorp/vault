@@ -44,7 +44,7 @@
   {{/if}}
 {{/each}}
 
-<h2 class="title is-4 has-bottom-margin-xs has-top-margin-m has-border-bottom-light has-bottom-padding-s">
+<h2 class="title is-4 has-bottom-margin-xs has-top-margin-l has-border-bottom-light has-bottom-padding-s">
   Universal operations
 </h2>
 {{#each this.universalSectionFields as |attr|}}
@@ -59,7 +59,7 @@
   {{/if}}
 {{/each}}
 
-<h2 class="title is-4 has-bottom-margin-xs has-top-margin-m has-border-bottom-light has-bottom-padding-s">
+<h2 class="title is-4 has-bottom-margin-xs has-top-margin-l has-border-bottom-light has-bottom-padding-s">
   Issuers operations
 </h2>
 {{#each this.issuersSectionFields as |attr|}}
@@ -74,20 +74,22 @@
   {{/if}}
 {{/each}}
 
-<h2 class="title is-4 has-bottom-margin-xs has-top-margin-m has-border-bottom-light has-bottom-padding-s">
-  Cross-cluster operations
-</h2>
-{{#each this.crossClusterOperation as |attr|}}
-  {{#if (eq attr "revocation_queue_safety_buffer")}}
-    <InfoTableRow
-      @label={{humanize (dasherize attr)}}
-      @value={{format-duration (get @tidyStatus attr)}}
-      @alwaysRender={{true}}
-    />
-  {{else}}
-    <InfoTableRow @label={{humanize (dasherize attr)}} @value={{(get @tidyStatus attr)}} @alwaysRender={{true}} />
-  {{/if}}{{/each}}
-
+{{#if this.isEnterprise}}
+  <h2 class="title is-4 has-bottom-margin-xs has-top-margin-l has-border-bottom-light has-bottom-padding-s">
+    Cross-cluster operations
+  </h2>
+  {{#each this.crossClusterOperation as |attr|}}
+    {{#if (eq attr "revocation_queue_safety_buffer")}}
+      <InfoTableRow
+        @label={{humanize (dasherize attr)}}
+        @value={{format-duration (get @tidyStatus attr)}}
+        @alwaysRender={{true}}
+      />
+    {{else}}
+      <InfoTableRow @label={{humanize (dasherize attr)}} @value={{(get @tidyStatus attr)}} @alwaysRender={{true}} />
+    {{/if}}
+  {{/each}}
+{{/if}}
 {{! TIDY OPTIONS MODAL }}
 <Modal
   @title="Tidy this mount"
