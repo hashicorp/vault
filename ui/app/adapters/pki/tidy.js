@@ -12,7 +12,7 @@ export default class PkiTidyAdapter extends ApplicationAdapter {
     return `${this.buildURL()}/${encodePath(backend)}`;
   }
 
-  // single tidy operations (manual)) are always a new record
+  // single tidy operations (manual) are always a new record
   createRecord(store, type, snapshot) {
     const { backend } = snapshot.record;
     const { tidyType } = snapshot.adapterOptions;
