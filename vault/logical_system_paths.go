@@ -530,7 +530,7 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.UpdateOperation: &framework.PathOperation{
+				logical.ReadOperation: &framework.PathOperation{
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb:   "read",
 						OperationSuffix: "health-status",
