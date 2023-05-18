@@ -17,7 +17,7 @@ export default class PkiTidyAdapter extends ApplicationAdapter {
     const { backend } = snapshot.record;
     const { tidyType } = snapshot.adapterOptions;
     if (tidyType === 'auto')
-      throw new Error('Auto-tidy tidy type models are never new, please use findRecord');
+      throw new Error('Auto tidy type models are never new, please use findRecord');
 
     const url = `${this._baseUrl(backend)}/tidy`;
     return this.ajax(url, 'POST', { data: this.serialize(snapshot, tidyType) });
