@@ -937,7 +937,7 @@ func (b *SystemBackend) handleGenerateRootDecodeTokenUpdate(ctx context.Context,
 	// Generate the response
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"token": token + "red",
+			"token": token,
 		},
 	}
 	return resp, nil
