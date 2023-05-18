@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { service } from '@ember/service';
 import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
@@ -7,9 +12,26 @@ export default class PkiTidyModel extends Model {
   // the backend mount is the model id, only one pki/tidy model will ever persist (the auto-tidy config)
   @service version;
 
+  @attr({
+    label: 'Tidy ACME enabled',
+    labelDisabled: 'Tidy ACME disabled',
+    mapToBoolean: 'tidyAcme',
+    helperTextDisabled: 'Tidying of ACME accounts,  orders and authorizations is disabled',
+    helperTextEnabled:
+      'The amount of time that must pass after creation that an account with no orders is marked revoked, and the amount of time after being marked revoked or deactivated.',
+    detailsLabel: 'ACME account safety buffer',
+    formatTtl: true,
+  })
+  acmeAccountSafetyBuffer;
+
+  @attr('boolean', {
+    label: 'Tidy ACME',
+    defaultValue: false,
+  })
+  tidyAcme;
+
   @attr('boolean', {
     label: 'Automatic tidy enabled',
-    labelDisabled: 'Automatic tidy disabled',
     defaultValue: false,
   })
   enabled; // auto-tidy only
@@ -99,14 +121,6 @@ export default class PkiTidyModel extends Model {
   })
   tidyRevokedCerts;
 
-  /*
-  NOT IN DOCS - check with crypto
-  @attr('string') acme_account_safety_buffer;
-  @attr('boolean', { defaultValue: false }) maintain_stored_certificate_counts;
-  @attr('boolean', { defaultValue: false }) publish_stored_certificate_count_metrics;
-  @attr('boolean', { defaultValue: false }) tidy_acme;
-  */
-
   get useOpenAPI() {
     return true;
   }
@@ -124,6 +138,9 @@ export default class PkiTidyModel extends Model {
     const groups = [
       {
         'Universal operations': ['tidyCertStore', 'tidyRevokedCerts', 'safetyBuffer', 'pauseDuration'],
+      },
+      {
+        'ACME operations': ['tidyAcme', 'acmeAccountSafetyBuffer'],
       },
       {
         'Issuer operations': [

@@ -29,7 +29,23 @@
           {{group}}
         </h2>
         {{#each fields as |attr|}}
-          <FormField @attr={{attr}} @model={{@tidy}} />
+          {{#if (eq attr.name "acmeAccountSafetyBuffer")}}
+            <TtlPicker
+              data-test-input={{attr.name}}
+              @onChange={{fn this.handleTtl attr}}
+              @label={{attr.options.label}}
+              @labelDisabled={{attr.options.labelDisabled}}
+              @helperTextDisabled={{attr.options.helperTextDisabled}}
+              @helperTextEnabled={{attr.options.helperTextEnabled}}
+              @initialEnabled={{get @tidy attr.options.mapToBoolean}}
+              @initialValue={{get @tidy attr.name}}
+            />
+          {{else}}
+            {{! tidyAcme is handled by the ttl above }}
+            {{#if (not-eq attr.name "tidyAcme")}}
+              <FormField @attr={{attr}} @model={{@tidy}} />
+            {{/if}}
+          {{/if}}
         {{/each}}
       {{/if}}
     {{/each-in}}

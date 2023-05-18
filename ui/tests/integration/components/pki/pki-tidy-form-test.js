@@ -32,8 +32,15 @@ module('Integration | Component | pki tidy form', function (hooks) {
   });
 
   test('it hides or shows fields depending on auto-tidy toggle', async function (assert) {
-    assert.expect(26);
+    assert.expect(37);
     this.version.version = '1.14.1+ent';
+    const sectionHeaders = [
+      'Universal operations',
+      'ACME operations',
+      'Issuer operations',
+      'Cross-cluster operations',
+    ];
+
     await render(
       hbs`
       <PkiTidyForm
@@ -53,20 +60,31 @@ module('Integration | Component | pki tidy form', function (hooks) {
       assert.dom(SELECTORS.inputByAttr(attr)).doesNotExist(`does not render ${attr} when auto tidy disabled`);
     });
 
+    sectionHeaders.forEach((group) => {
+      assert.dom(SELECTORS.tidySectionHeader(group)).doesNotExist(`does not render ${group} header`);
+    });
+
+    // ENABLE AUTO TIDY
     await click(SELECTORS.toggleInput('intervalDuration'));
     assert.dom(SELECTORS.toggleInput('intervalDuration')).isChecked('Automatic tidy is enabled');
     assert.dom(`[data-test-ttl-form-label="Automatic tidy enabled"]`).exists('renders enabled text');
 
     this.autoTidy.eachAttribute((attr) => {
-      if (attr === 'enabled' || attr === 'intervalDuration') return;
+      const skipFields = ['enabled', 'tidyAcme', 'intervalDuration'];
+      if (skipFields.includes(attr)) return; // combined with duration ttl or asserted elsewhere
       assert.dom(SELECTORS.inputByAttr(attr)).exists(`renders ${attr} when auto tidy enabled`);
+    });
+
+    sectionHeaders.forEach((group) => {
+      assert.dom(SELECTORS.tidySectionHeader(group)).exists(`renders ${group} header`);
     });
   });
 
   test('it renders all attribute fields, including enterprise', async function (assert) {
-    assert.expect(23);
+    assert.expect(25);
     this.version.version = '1.14.1+ent';
     this.autoTidy.enabled = true;
+    const skipFields = ['enabled', 'tidyAcme', 'intervalDuration']; // combined with duration ttl or asserted separately
     await render(
       hbs`
       <PkiTidyForm
@@ -80,7 +98,7 @@ module('Integration | Component | pki tidy form', function (hooks) {
     );
 
     this.autoTidy.eachAttribute((attr) => {
-      if (attr === 'enabled' || attr === 'intervalDuration') return;
+      if (skipFields.includes(attr)) return;
       assert.dom(SELECTORS.inputByAttr(attr)).exists(`renders ${attr} for auto tidyType`);
     });
 
@@ -98,13 +116,13 @@ module('Integration | Component | pki tidy form', function (hooks) {
     assert.dom(SELECTORS.toggleInput('intervalDuration')).doesNotExist('hides automatic tidy toggle');
 
     this.manualTidy.eachAttribute((attr) => {
-      if (attr === 'enabled' || attr === 'intervalDuration') return;
+      if (skipFields.includes(attr)) return;
       assert.dom(SELECTORS.inputByAttr(attr)).exists(`renders ${attr} for manual tidyType`);
     });
   });
 
   test('it hides enterprise fields for OSS', async function (assert) {
-    assert.expect(6);
+    assert.expect(7);
     this.version.version = '1.14.1';
     this.autoTidy.enabled = true;
 
@@ -126,6 +144,10 @@ module('Integration | Component | pki tidy form', function (hooks) {
     `,
       { owner: this.engine }
     );
+
+    assert
+      .dom(SELECTORS.tidySectionHeader('Cross-cluster operations'))
+      .doesNotExist(`does not render ent header`);
 
     enterpriseFields.forEach((entAttr) => {
       assert.dom(SELECTORS.inputByAttr(entAttr)).doesNotExist(`does not render ${entAttr} for auto tidyType`);
@@ -152,17 +174,19 @@ module('Integration | Component | pki tidy form', function (hooks) {
   });
 
   test('it should change the attributes on the model', async function (assert) {
-    assert.expect(4);
+    assert.expect(12);
     this.server.post('/pki-auto-tidy/config/auto-tidy', (schema, req) => {
       assert.propEqual(
         JSON.parse(req.requestBody),
         {
+          acme_account_safety_buffer: '60s',
           enabled: true,
           interval_duration: '10s',
           issuer_safety_buffer: '20s',
           pause_duration: '30s',
           revocation_queue_safety_buffer: '40s',
           safety_buffer: '50s',
+          tidy_acme: true,
           tidy_cert_store: true,
           tidy_cross_cluster_revoked_certs: true,
           tidy_expired_issuers: true,
@@ -187,12 +211,24 @@ module('Integration | Component | pki tidy form', function (hooks) {
     );
 
     assert.dom(SELECTORS.toggleInput('intervalDuration')).isNotChecked('Automatic tidy is disabled');
+    assert.dom(SELECTORS.toggleLabel('Automatic tidy disabled')).exists('auto tidy has disabled label');
     assert.false(this.autoTidy.enabled, 'enabled is false on model');
 
+    // enable auto-tidy
     await click(SELECTORS.toggleInput('intervalDuration'));
-    assert.dom(SELECTORS.toggleInput('intervalDuration')).isChecked('toggle enabled auto-tidy');
-
     await fillIn(SELECTORS.intervalDuration, 10);
+
+    assert.dom(SELECTORS.toggleInput('intervalDuration')).isChecked('toggle enabled auto tidy');
+    assert.dom(SELECTORS.toggleLabel('Automatic tidy enabled')).exists('auto tidy has enabled label');
+
+    assert.dom(SELECTORS.toggleInput('acmeAccountSafetyBuffer')).isNotChecked('ACME tidy is disabled');
+    assert.dom(SELECTORS.toggleLabel('Tidy ACME disabled')).exists('ACME label has correct disabled text');
+    assert.false(this.autoTidy.tidyAcme, 'tidyAcme is false on model');
+
+    await click(SELECTORS.toggleInput('acmeAccountSafetyBuffer'));
+    await fillIn(SELECTORS.acmeAccountSafetyBuffer, 60);
+    assert.true(this.autoTidy.tidyAcme, 'tidyAcme toggles to true');
+
     const fillInValues = {
       issuerSafetyBuffer: 20,
       pauseDuration: 30,
@@ -200,7 +236,8 @@ module('Integration | Component | pki tidy form', function (hooks) {
       safetyBuffer: 50,
     };
     this.autoTidy.eachAttribute(async (attr, { type }) => {
-      if (attr === 'enabled' || attr === 'intervalDuration') return;
+      const skipFields = ['enabled', 'tidyAcme', 'intervalDuration', 'acmeAccountSafetyBuffer']; // combined with duration ttl or asserted separately
+      if (skipFields.includes(attr)) return;
       if (type === 'boolean') {
         await click(SELECTORS.inputByAttr(attr));
       }
@@ -209,6 +246,8 @@ module('Integration | Component | pki tidy form', function (hooks) {
       }
     });
 
+    assert.dom(SELECTORS.toggleInput('acmeAccountSafetyBuffer')).isChecked('ACME tidy is enabled');
+    assert.dom(SELECTORS.toggleLabel('Tidy ACME enabled')).exists('ACME label has correct enabled text');
     await click(SELECTORS.tidySave);
   });
 
@@ -216,7 +255,14 @@ module('Integration | Component | pki tidy form', function (hooks) {
     assert.expect(4);
     this.server.post('/pki-auto-tidy/config/auto-tidy', (schema, req) => {
       assert.ok(true, 'Request made to update auto-tidy');
-      assert.propEqual(JSON.parse(req.requestBody), { enabled: false }, 'response contains auto-tidy params');
+      assert.propEqual(
+        JSON.parse(req.requestBody),
+        {
+          enabled: false,
+          tidy_acme: false,
+        },
+        'response contains auto-tidy params'
+      );
     });
     this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
     this.onCancel = () => assert.ok(true, 'onCancel callback fires on save success');
@@ -242,7 +288,11 @@ module('Integration | Component | pki tidy form', function (hooks) {
 
     this.server.post('/pki-manual-tidy/tidy', (schema, req) => {
       assert.ok(true, 'Request made to perform manual tidy');
-      assert.propEqual(JSON.parse(req.requestBody), {}, 'response contains manual tidy params');
+      assert.propEqual(
+        JSON.parse(req.requestBody),
+        { tidy_acme: false },
+        'response contains manual tidy params'
+      );
     });
     this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
     this.onCancel = () => assert.ok(true, 'onCancel callback fires on save success');
