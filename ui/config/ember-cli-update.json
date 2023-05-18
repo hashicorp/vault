@@ -3,7 +3,7 @@
   "packages": [
     {
       "name": "ember-cli",
-      "version": "4.4.0",
+      "version": "4.8.0",
       "blueprints": [
         {
           "name": "app",
