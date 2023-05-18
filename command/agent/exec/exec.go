@@ -16,6 +16,8 @@ import (
 
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/internal/ctmanager"
+	"github.com/hashicorp/vault/helper/useragent"
+	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
 
 type ServerConfig struct {
@@ -79,7 +81,8 @@ func NewServer(cfg *ServerConfig) *Server {
 	return &server
 }
 
-func (s *Server) Run(ctx context.Context) error {
+func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error {
+	latestToken := new(string)
 	s.logger.Info("starting exec server")
 	defer func() {
 		s.logger.Info("exec server stopped")
@@ -91,12 +94,6 @@ func (s *Server) Run(ctx context.Context) error {
 		return nil
 	}
 
-	templates := make([]*ctconfig.TemplateConfig, 0, len(s.config.AgentConfig.EnvTemplates))
-
-	for _, envTmpl := range s.config.AgentConfig.EnvTemplates {
-		templates = append(templates, envTmpl)
-	}
-
 	managerConfig := ctmanager.ManagerConfig{
 		AgentConfig: s.config.AgentConfig,
 		Namespace:   s.config.Namespace,
@@ -104,7 +101,7 @@ func (s *Server) Run(ctx context.Context) error {
 		LogWriter:   s.config.LogWriter,
 	}
 
-	runnerConfig, runnerConfigErr := ctmanager.NewConfig(managerConfig, templates)
+	runnerConfig, runnerConfigErr := ctmanager.NewConfig(managerConfig, s.config.AgentConfig.EnvTemplates)
 	if runnerConfigErr != nil {
 		return fmt.Errorf("template server failed to runner generate config: %w", runnerConfigErr)
 	}
@@ -141,6 +138,29 @@ func (s *Server) Run(ctx context.Context) error {
 			s.procStarted = false
 			s.proc.Unlock()
 			return nil
+		case token := <-incomingVaultToken:
+			if token != *latestToken {
+				s.logger.Info("exec server received new token")
+
+				s.runner.Stop()
+				*latestToken = token
+				ctv := ctconfig.Config{
+					Vault: &ctconfig.VaultConfig{
+						Token:           latestToken,
+						ClientUserAgent: pointerutil.StringPtr(useragent.AgentTemplatingString()),
+					},
+				}
+
+				runnerConfig = runnerConfig.Merge(&ctv)
+				var runnerErr error
+				s.runner, runnerErr = manager.NewRunner(runnerConfig, false)
+				if runnerErr != nil {
+					s.logger.Error("template server failed with new Vault token", "error", runnerErr)
+					continue
+				}
+				go s.runner.Start()
+			}
+
 		case err := <-s.runner.ErrCh:
 			s.logger.Error("template server error", "error", err.Error())
 			s.runner.StopImmediately()
