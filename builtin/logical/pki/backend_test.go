@@ -2404,7 +2404,7 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	certSkid := certutil.GetHexFormatted(cert.SubjectKeyId, ":")
 
 	//  -> Validate the SKID matches between the root cert and the key
-	resp, err = CBRead(b, s, "key/" + keyId1.(keyID).String())
+	resp, err = CBRead(b, s, "key/"+keyId1.(keyID).String())
 	require.NoError(t, err)
 	require.NotNil(t, resp, "expected a response")
 	require.Equal(t, resp.Data["subject_key_id"], certSkid)
@@ -2426,7 +2426,7 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	certSkid = certutil.GetHexFormatted(cert.SubjectKeyId, ":")
 
 	//  -> Validate the SKID matches between the root cert and the key
-	resp, err = CBRead(b, s, "key/" + keyId2.(keyID).String())
+	resp, err = CBRead(b, s, "key/"+keyId2.(keyID).String())
 	require.NoError(t, err)
 	require.NotNil(t, resp, "expected a response")
 	require.Equal(t, resp.Data["subject_key_id"], certSkid)
@@ -2563,7 +2563,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 	intKeyId := resp.Data["key_id"].(keyID)
 	csr := resp.Data["csr"]
 
-	resp, err = CBRead(b_int, s_int, "key/" + intKeyId.String())
+	resp, err = CBRead(b_int, s_int, "key/"+intKeyId.String())
 	require.NoError(t, err)
 	require.NotNil(t, resp, "expected a response")
 	intSkid := resp.Data["subject_key_id"].(string)
