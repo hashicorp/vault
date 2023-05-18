@@ -2420,10 +2420,44 @@ func TestSystemBackend_enableAudit(t *testing.T) {
 	}
 }
 
-func missingPayloadTest(path string, data map[string]interface{}) func(t *testing.T) {
-	return func(t *testing.T) {
-		_, b, _ := testCoreSystemBackend(t)
-		req := logical.TestRequest(t, logical.UpdateOperation, path)
+func TestSystemBackend_decodeToken(t *testing.T) {
+	encodedToken := "Bxg9JQQqOCNKBRICNwMIRzo2J3cWCBRi"
+	otp := "3JhHkONiyiaNYj14nnD9xZQS"
+	tokenExpected := "4RUmoevJ3lsLni9sTXcNnRE1"
+
+	_, b, _ := testCoreSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "decode-token")
+	req.Data["encoded_token"] = encodedToken
+	req.Data["otp"] = otp
+
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
+	token, ok := resp.Data["token"]
+	if !ok {
+		t.Fatalf("did not get token back in response, response was %#v", resp.Data)
+	}
+
+	if token.(string) != tokenExpected {
+		t.Fatalf("bad token back: %s", token.(string))
+	}
+
+	datas := []map[string]interface{}{
+		nil,
+		{"encoded_token": encodedToken},
+		{"otp": otp},
+	}
+	for _, data := range datas {
 		req.Data = data
 		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 		if err == nil {
@@ -2436,44 +2470,6 @@ func missingPayloadTest(path string, data map[string]interface{}) func(t *testin
 			true,
 		)
 	}
-}
-
-func TestSystemBackend_decodeToken(t *testing.T) {
-	encodedToken := "Bxg9JQQqOCNKBRICNwMIRzo2J3cWCBRi"
-	otp := "3JhHkONiyiaNYj14nnD9xZQS"
-	tokenExpected := "4RUmoevJ3lsLni9sTXcNnRE1"
-
-	t.Run("basic", func(t *testing.T) {
-		_, b, _ := testCoreSystemBackend(t)
-
-		req := logical.TestRequest(t, logical.UpdateOperation, "decode-token")
-		req.Data["encoded_token"] = encodedToken
-		req.Data["otp"] = otp
-
-		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
-		if err != nil {
-			t.Fatalf("err: %v", err)
-		}
-
-		schema.ValidateResponse(
-			t,
-			schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
-			resp,
-			true,
-		)
-
-		token, ok := resp.Data["token"]
-		if !ok {
-			t.Fatalf("did not get token back in response, response was %#v", resp.Data)
-		}
-
-		if token.(string) != tokenExpected {
-			t.Fatalf("bad token back: %s", token.(string))
-		}
-	})
-	t.Run("missing payload", missingPayloadTest("decode-token", nil))
-	t.Run("missing otp", missingPayloadTest("decode-token", map[string]interface{}{"encoded_token": encodedToken}))
-	t.Run("missing encoded_token", missingPayloadTest("decode-token", map[string]interface{}{"otp": otp}))
 }
 
 func TestSystemBackend_auditHash(t *testing.T) {
