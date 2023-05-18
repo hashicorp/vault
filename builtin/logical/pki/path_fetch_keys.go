@@ -147,7 +147,7 @@ func buildPathKey(b *backend, pattern string, displayAttrs *framework.DisplayAtt
 							},
 							"subject_key_id": {
 								Type:        framework.TypeString,
-								Description: `Subject key identifier`,
+								Description: `RFC 5280 Subject Key Identifier of the public counterpart`,
 								Required:    false,
 							},
 							"managed_key_id": {
