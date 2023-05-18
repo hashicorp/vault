@@ -175,6 +175,32 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			HelpDescription: strings.TrimSpace(sysHelp["generate-root"][1]),
 		},
 		{
+			Pattern: "decode-token$",
+			Fields: map[string]*framework.FieldSchema{
+				"encoded_token": {
+					Type:        framework.TypeString,
+					Description: "Specifies the encoded token (result from generate-root).",
+				},
+				"otp": {
+					Type:        framework.TypeString,
+					Description: "Specifies the otp code for decode.",
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleGenerateRootDecodeTokenUpdate,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "decode",
+					},
+					Summary: "Decodes the encoded token with the otp.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{Description: "OK"}},
+					},
+				},
+			},
+		},
+
+		{
 			Pattern: "health$",
 			Fields: map[string]*framework.FieldSchema{
 				"standbyok": {
