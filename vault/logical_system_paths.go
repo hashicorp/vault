@@ -482,8 +482,7 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleGenerateRootDecodeTokenUpdate,
 					DisplayAttrs: &framework.DisplayAttributes{
-						OperationVerb:   "decode",
-						OperationSuffix: "encoded-token",
+						OperationVerb: "decode",
 					},
 					Summary: "Decodes the encoded token with the otp.",
 					Responses: map[int][]framework.Response{
