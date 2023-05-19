@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/internalshared/configutil"
 )
 
@@ -78,7 +79,7 @@ func TestLoadConfigFile_ProxyCache(t *testing.T) {
 			ForceAutoAuthToken:  false,
 		},
 		Cache: &Cache{
-			Persist: &Persist{
+			Persist: &agentproxyshared.PersistConfig{
 				Type:                    "kubernetes",
 				Path:                    "/vault/agent-cache/",
 				KeepAfterImport:         true,

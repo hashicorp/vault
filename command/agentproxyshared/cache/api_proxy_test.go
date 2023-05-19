@@ -40,7 +40,7 @@ func TestAPIProxy(t *testing.T) {
 		Client:                  client,
 		Logger:                  logging.NewVaultLogger(hclog.Trace),
 		UserAgentStringFunction: useragent.ProxyStringWithProxiedUserAgent,
-		UserAgentString:         useragent.ProxyString(),
+		UserAgentString:         useragent.ProxyAPIProxyString(),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -78,7 +78,7 @@ func TestAPIProxyNoCache(t *testing.T) {
 		Client:                  client,
 		Logger:                  logging.NewVaultLogger(hclog.Trace),
 		UserAgentStringFunction: useragent.ProxyStringWithProxiedUserAgent,
-		UserAgentString:         useragent.ProxyString(),
+		UserAgentString:         useragent.ProxyAPIProxyString(),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -118,7 +118,7 @@ func TestAPIProxy_queryParams(t *testing.T) {
 		Client:                  client,
 		Logger:                  logging.NewVaultLogger(hclog.Trace),
 		UserAgentStringFunction: useragent.ProxyStringWithProxiedUserAgent,
-		UserAgentString:         useragent.ProxyString(),
+		UserAgentString:         useragent.ProxyAPIProxyString(),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -264,7 +264,7 @@ func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *v
 		Client:                  clienToUse,
 		Logger:                  apiProxyLogger,
 		UserAgentStringFunction: useragent.ProxyStringWithProxiedUserAgent,
-		UserAgentString:         useragent.ProxyString(),
+		UserAgentString:         useragent.ProxyAPIProxyString(),
 	})
 	if err != nil {
 		t.Fatal(err)

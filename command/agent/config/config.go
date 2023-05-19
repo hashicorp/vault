@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/mitchellh/mapstructure"
@@ -105,22 +106,13 @@ type APIProxy struct {
 
 // Cache contains any configuration needed for Cache mode
 type Cache struct {
-	UseAutoAuthTokenRaw interface{}     `hcl:"use_auto_auth_token"`
-	UseAutoAuthToken    bool            `hcl:"-"`
-	ForceAutoAuthToken  bool            `hcl:"-"`
-	EnforceConsistency  string          `hcl:"enforce_consistency"`
-	WhenInconsistent    string          `hcl:"when_inconsistent"`
-	Persist             *Persist        `hcl:"persist"`
-	InProcDialer        transportDialer `hcl:"-"`
-}
-
-// Persist contains configuration needed for persistent caching
-type Persist struct {
-	Type                    string
-	Path                    string `hcl:"path"`
-	KeepAfterImport         bool   `hcl:"keep_after_import"`
-	ExitOnErr               bool   `hcl:"exit_on_err"`
-	ServiceAccountTokenFile string `hcl:"service_account_token_file"`
+	UseAutoAuthTokenRaw interface{}                     `hcl:"use_auto_auth_token"`
+	UseAutoAuthToken    bool                            `hcl:"-"`
+	ForceAutoAuthToken  bool                            `hcl:"-"`
+	EnforceConsistency  string                          `hcl:"enforce_consistency"`
+	WhenInconsistent    string                          `hcl:"when_inconsistent"`
+	Persist             *agentproxyshared.PersistConfig `hcl:"persist"`
+	InProcDialer        transportDialer                 `hcl:"-"`
 }
 
 // AutoAuth is the configured authentication method and sinks
@@ -266,6 +258,17 @@ func (c *Config) Merge(c2 *Config) *Config {
 	}
 
 	return result
+}
+
+// IsDefaultListerDefined returns true if a default listener has been defined
+// in this config
+func (c *Config) IsDefaultListerDefined() bool {
+	for _, l := range c.Listeners {
+		if l.Role != "metrics_only" {
+			return true
+		}
+	}
+	return false
 }
 
 // ValidateConfig validates an Agent configuration after it has been fully merged together, to
@@ -737,7 +740,7 @@ func parsePersist(result *Config, list *ast.ObjectList) error {
 
 	item := persistList.Items[0]
 
-	var p Persist
+	var p agentproxyshared.PersistConfig
 	err := hcl.DecodeObject(&p, item.Val)
 	if err != nil {
 		return err
