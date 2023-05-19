@@ -261,7 +261,7 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 	}
 
-	if config.DefaultListerDefined() {
+	if config.IsDefaultListerDefined() {
 		// Notably, we cannot know for sure if they are using the API proxy functionality unless
 		// we log on each API proxy call, which would be too noisy.
 		// A customer could have a listener defined but only be using e.g. the cache-clear API,
@@ -499,7 +499,7 @@ func (c *AgentCommand) Run(args []string) int {
 
 		// Configure persistent storage and add to LeaseCache
 		if config.Cache.Persist != nil {
-			deferFunc, oldToken, err := agentproxyshared.AddPersistentStorageToLeaseCache(leaseCache, c.UI, config.Cache.Persist, ctx, cacheLogger)
+			deferFunc, oldToken, err := agentproxyshared.AddPersistentStorageToLeaseCache(ctx, leaseCache, config.Cache.Persist, cacheLogger)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Error creating persistent cache: %v", err))
 				return 1

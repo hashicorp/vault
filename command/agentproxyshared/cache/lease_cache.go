@@ -174,9 +174,9 @@ func (c *LeaseCache) SetPersistentStorage(storageIn *cacheboltdb.BoltStorage) {
 	c.ps = storageIn
 }
 
-// GetPersistentStorage is a getter for the persistent storage field in
+// PersistentStorage is a getter for the persistent storage field in
 // LeaseCache
-func (c *LeaseCache) GetPersistentStorage() *cacheboltdb.BoltStorage {
+func (c *LeaseCache) PersistentStorage() *cacheboltdb.BoltStorage {
 	return c.ps
 }
 

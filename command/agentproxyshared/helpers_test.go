@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agentproxyshared/cache"
 	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/mitchellh/cli"
 )
 
 func testNewLeaseCache(t *testing.T, responses []*cache.SendResponse) *cache.LeaseCache {
@@ -70,17 +69,16 @@ func Test_AddPersistentStorageToLeaseCache(t *testing.T) {
 	}
 
 	leaseCache := testNewLeaseCache(t, nil)
-	if leaseCache.GetPersistentStorage() != nil {
+	if leaseCache.PersistentStorage() != nil {
 		t.Fatal("persistent storage was available before ours was added")
 	}
 
-	ui := cli.NewMockUi()
-	deferFunc, token, err := AddPersistentStorageToLeaseCache(leaseCache, ui, persistConfig, context.Background(), logging.NewVaultLogger(hclog.Info))
+	deferFunc, token, err := AddPersistentStorageToLeaseCache(context.Background(), leaseCache, persistConfig, logging.NewVaultLogger(hclog.Info))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if leaseCache.GetPersistentStorage() == nil {
+	if leaseCache.PersistentStorage() == nil {
 		t.Fatal("persistent storage was not added")
 	}
 

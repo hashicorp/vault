@@ -29,9 +29,11 @@ import (
 	"github.com/hashicorp/vault/command/agentproxyshared/cache/cacheboltdb"
 	"github.com/hashicorp/vault/command/agentproxyshared/cache/cachememdb"
 	"github.com/hashicorp/vault/command/agentproxyshared/cache/keymanager"
-	"github.com/mitchellh/cli"
 )
 
+// GetAutoAuthMethodFromConfig Calls the appropriate NewAutoAuthMethod function, initializing
+// the auto-auth method, based on the auto-auth method type. Returns an error if one happens or
+// the method type is invalid.
 func GetAutoAuthMethodFromConfig(autoAuthMethodType string, authConfig *auth.AuthConfig, vaultAddress string) (auth.AuthMethod, error) {
 	switch autoAuthMethodType {
 	case "alicloud":
@@ -76,7 +78,11 @@ type PersistConfig struct {
 
 // AddPersistentStorageToLeaseCache adds persistence to a lease cache, based on a given PersistConfig
 // Returns a close function to be deferred and the old token, if found, or an error
-func AddPersistentStorageToLeaseCache(leaseCache *cache.LeaseCache, UI cli.Ui, persistConfig *PersistConfig, ctx context.Context, logger log.Logger) (func() error, string, error) {
+func AddPersistentStorageToLeaseCache(ctx context.Context, leaseCache *cache.LeaseCache, persistConfig *PersistConfig, logger log.Logger) (func() error, string, error) {
+	if persistConfig == nil {
+		return nil, "", errors.New("persist config was nil")
+	}
+
 	if persistConfig.Path == "" {
 		return nil, "", errors.New("must specify persistent cache path")
 	}
@@ -88,7 +94,11 @@ func AddPersistentStorageToLeaseCache(leaseCache *cache.LeaseCache, UI cli.Ui, p
 	case "kubernetes":
 		aad, err = getServiceAccountJWT(persistConfig.ServiceAccountTokenFile)
 		if err != nil {
-			return nil, "", fmt.Errorf("failed to read service account token from %s: %s", persistConfig.ServiceAccountTokenFile, err)
+			tokenFileName := persistConfig.ServiceAccountTokenFile
+			if len(tokenFileName) == 0 {
+				tokenFileName = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+			}
+			return nil, "", fmt.Errorf("failed to read service account token from %s: %w", tokenFileName, err)
 		}
 	default:
 		return nil, "", fmt.Errorf("persistent key protection type %q not supported", persistConfig.Type)
@@ -97,7 +107,7 @@ func AddPersistentStorageToLeaseCache(leaseCache *cache.LeaseCache, UI cli.Ui, p
 	// Check if bolt file exists already
 	dbFileExists, err := cacheboltdb.DBFileExists(persistConfig.Path)
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to check if bolt file exists at path %s: %s", persistConfig.Path, err)
+		return nil, "", fmt.Errorf("failed to check if bolt file exists at path %s: %w", persistConfig.Path, err)
 	}
 	if dbFileExists {
 		// Open the bolt file, but wait to setup Encryption
@@ -113,16 +123,16 @@ func AddPersistentStorageToLeaseCache(leaseCache *cache.LeaseCache, UI cli.Ui, p
 		// then setup encryption so that restore is possible
 		token, err := ps.GetRetrievalToken()
 		if err != nil {
-			return nil, "", fmt.Errorf("error getting retrieval token from persistent cache: %v", err)
+			return nil, "", fmt.Errorf("error getting retrieval token from persistent cache: %w", err)
 		}
 
 		if err := ps.Close(); err != nil {
-			return nil, "", fmt.Errorf("failed to close persistent cache file after getting retrieval token: %v", err)
+			return nil, "", fmt.Errorf("failed to close persistent cache file after getting retrieval token: %w", err)
 		}
 
 		km, err := keymanager.NewPassthroughKeyManager(ctx, token)
 		if err != nil {
-			return nil, "", fmt.Errorf("failed to configure persistence encryption for cache: %v", err)
+			return nil, "", fmt.Errorf("failed to configure persistence encryption for cache: %w", err)
 		}
 
 		// Open the bolt file with the wrapper provided
@@ -133,12 +143,12 @@ func AddPersistentStorageToLeaseCache(leaseCache *cache.LeaseCache, UI cli.Ui, p
 			AAD:     aad,
 		})
 		if err != nil {
-			return nil, "", fmt.Errorf("error opening persistent cache with wrapper: %v", err)
+			return nil, "", fmt.Errorf("error opening persistent cache with wrapper: %w", err)
 		}
 
 		// Restore anything in the persistent cache to the memory cache
 		if err := leaseCache.Restore(ctx, ps); err != nil {
-			UI.Error(fmt.Sprintf("error restoring in-memory cache from persisted file: %v", err))
+			logger.Error(fmt.Sprintf("error restoring in-memory cache from persisted file: %v", err))
 			if persistConfig.ExitOnErr {
 				return nil, "", fmt.Errorf("exiting with error as exit_on_err is set to true")
 			}
@@ -148,7 +158,7 @@ func AddPersistentStorageToLeaseCache(leaseCache *cache.LeaseCache, UI cli.Ui, p
 		// Check for previous auto-auth token
 		oldTokenBytes, err := ps.GetAutoAuthToken(ctx)
 		if err != nil {
-			UI.Error(fmt.Sprintf("error in fetching previous auto-auth token: %v", err))
+			logger.Error(fmt.Sprintf("error in fetching previous auto-auth token: %v", err))
 			if persistConfig.ExitOnErr {
 				return nil, "", fmt.Errorf("exiting with error as exit_on_err is set to true")
 			}
@@ -157,7 +167,7 @@ func AddPersistentStorageToLeaseCache(leaseCache *cache.LeaseCache, UI cli.Ui, p
 		if len(oldTokenBytes) > 0 {
 			oldToken, err := cachememdb.Deserialize(oldTokenBytes)
 			if err != nil {
-				UI.Error(fmt.Sprintf("error in deserializing previous auto-auth token cache entryn: %v", err))
+				logger.Error(fmt.Sprintf("error in deserializing previous auto-auth token cache entryn: %v", err))
 				if persistConfig.ExitOnErr {
 					return nil, "", fmt.Errorf("exiting with error as exit_on_err is set to true")
 				}
@@ -172,11 +182,11 @@ func AddPersistentStorageToLeaseCache(leaseCache *cache.LeaseCache, UI cli.Ui, p
 			return ps.Close, previousToken, nil
 		} else {
 			if err := ps.Close(); err != nil {
-				UI.Warn(fmt.Sprintf("failed to close persistent cache file: %s", err))
+				logger.Warn(fmt.Sprintf("failed to close persistent cache file: %s", err))
 			}
 			dbFile := filepath.Join(persistConfig.Path, cacheboltdb.DatabaseFileName)
 			if err := os.Remove(dbFile); err != nil {
-				UI.Error(fmt.Sprintf("failed to remove persistent storage file %s: %s", dbFile, err))
+				logger.Error(fmt.Sprintf("failed to remove persistent storage file %s: %v", dbFile, err))
 				if persistConfig.ExitOnErr {
 					return nil, "", fmt.Errorf("exiting with error as exit_on_err is set to true")
 				}
@@ -186,7 +196,7 @@ func AddPersistentStorageToLeaseCache(leaseCache *cache.LeaseCache, UI cli.Ui, p
 	} else {
 		km, err := keymanager.NewPassthroughKeyManager(ctx, nil)
 		if err != nil {
-			return nil, "", fmt.Errorf("failed to configure persistence encryption for cache: %v", err)
+			return nil, "", fmt.Errorf("failed to configure persistence encryption for cache: %w", err)
 		}
 		ps, err := cacheboltdb.NewBoltStorage(&cacheboltdb.BoltStorageConfig{
 			Path:    persistConfig.Path,
@@ -195,17 +205,17 @@ func AddPersistentStorageToLeaseCache(leaseCache *cache.LeaseCache, UI cli.Ui, p
 			AAD:     aad,
 		})
 		if err != nil {
-			return nil, "", fmt.Errorf("error creating persistent cache: %v", err)
+			return nil, "", fmt.Errorf("error creating persistent cache: %w", err)
 		}
 		logger.Info("configured persistent storage", "path", persistConfig.Path)
 
 		// Stash the key material in bolt
 		token, err := km.RetrievalToken(ctx)
 		if err != nil {
-			return nil, "", fmt.Errorf("error getting persistence key: %v", err)
+			return nil, "", fmt.Errorf("error getting persistence key: %w", err)
 		}
 		if err := ps.StoreRetrievalToken(token); err != nil {
-			return nil, "", fmt.Errorf("error setting key in persistent cache: %v", err)
+			return nil, "", fmt.Errorf("error setting key in persistent cache: %w", err)
 		}
 
 		leaseCache.SetPersistentStorage(ps)
@@ -213,8 +223,8 @@ func AddPersistentStorageToLeaseCache(leaseCache *cache.LeaseCache, UI cli.Ui, p
 	}
 }
 
-// GetServiceAccountJWT reads the service account jwt from `tokenFile`. Default is
-// the default service account file path in kubernetes.
+// getServiceAccountJWT attempts to read the service account JWT from the specified token file path.
+// Defaults to using the Kubernetes default service account file path if token file path is empty.
 func getServiceAccountJWT(tokenFile string) (string, error) {
 	if len(tokenFile) == 0 {
 		tokenFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"

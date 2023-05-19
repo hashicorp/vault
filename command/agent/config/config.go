@@ -260,9 +260,9 @@ func (c *Config) Merge(c2 *Config) *Config {
 	return result
 }
 
-// DefaultListerDefined returns true if a default listener has been defined
+// IsDefaultListerDefined returns true if a default listener has been defined
 // in this config
-func (c *Config) DefaultListerDefined() bool {
+func (c *Config) IsDefaultListerDefined() bool {
 	for _, l := range c.Listeners {
 		if l.Role != "metrics_only" {
 			return true
