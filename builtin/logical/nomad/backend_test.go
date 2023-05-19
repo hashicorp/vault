@@ -14,7 +14,7 @@ import (
 
 	nomadapi "github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/vault/helper/testhelpers"
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 )
@@ -47,7 +47,7 @@ func prepareTestContainer(t *testing.T, bootstrap bool) (func(), *Config) {
 	}
 
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
-		ImageRepo:     "multani/nomad",
+		ImageRepo:     "docker.mirror.hashicorp.services/multani/nomad",
 		ImageTag:      "1.1.6",
 		ContainerName: "nomad",
 		Ports:         []string{"4646/tcp"},

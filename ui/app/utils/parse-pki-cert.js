@@ -29,13 +29,17 @@ import {
  This means we cannot cross-sign in the UI and prompt the user to do so manually using the CLI.
  */
 
+export function jsonToCertObject(jsonString) {
+  const cert_base64 = jsonString.replace(/(-----(BEGIN|END) CERTIFICATE-----|\n)/g, '');
+  const cert_der = fromBase64(cert_base64);
+  const cert_asn1 = asn1js.fromBER(stringToArrayBuffer(cert_der));
+  return new Certificate({ schema: cert_asn1.result });
+}
+
 export function parseCertificate(certificateContent) {
   let cert;
   try {
-    const cert_base64 = certificateContent.replace(/(-----(BEGIN|END) CERTIFICATE-----|\n)/g, '');
-    const cert_der = fromBase64(cert_base64);
-    const cert_asn1 = asn1js.fromBER(stringToArrayBuffer(cert_der));
-    cert = new Certificate({ schema: cert_asn1.result });
+    cert = jsonToCertObject(certificateContent);
   } catch (error) {
     console.debug('DEBUG: Converting Certificate', error); // eslint-disable-line
     return { can_parse: false };
@@ -60,8 +64,6 @@ export function parseCertificate(certificateContent) {
   return {
     ...parsedCertificateValues,
     can_parse: true,
-    expiry_date: expiryDate, // remove along with old PKI work
-    issue_date: issueDate, // remove along with old PKI work
     not_valid_after: getUnixTime(expiryDate),
     not_valid_before: getUnixTime(issueDate),
     ttl,
@@ -99,6 +101,45 @@ export function formatValues(subject, extension) {
     parsing_errors,
     exclude_cn_from_sans,
   };
+}
+
+/*
+Explanation of cross-signing and how to use the verify function: 
+(See setup script here: https://github.com/hashicorp/vault-tools/blob/main/vault-ui/pki/pki-cross-sign-config.sh)
+1. A trust chain exists between "old-parent-issuer-name" -> "old-intermediate"
+2. We create a new root, "my-parent-issuer-name" to phase out the old one
+
+* cross-signing step performed in the UI * 
+3. Cross-sign "old-intermediate" against new root "my-parent-issuer-name" which generates a new intermediate issuer, 
+"newly-cross-signed-int-name", to phase out the old intermediate
+
+* validate cross-signing accurately copied the old intermediate issuer *
+4. Generate a leaf certificate from "newly-cross-signed-int-name", let's call it "baby-leaf"
+5. Verify that "baby-leaf" validates against both chains: 
+"old-parent-issuer-name" -> "old-intermediate" -> "baby-leaf"
+"my-parent-issuer-name" -> "newly-cross-signed-int-name" -> "baby-leaf"
+
+We're just concerned with the link between the leaf and both intermediates
+to confirm the UI performed the cross-sign correctly
+(which already assumes the link between each parent and intermediate is valid)
+
+verifyCertificates(oldIntermediate, crossSignedCert, leaf)
+
+*/
+export async function verifyCertificates(certA, certB, leaf) {
+  const parsedCertA = jsonToCertObject(certA);
+  const parsedCertB = jsonToCertObject(certB);
+  if (leaf) {
+    const parsedLeaf = jsonToCertObject(leaf);
+    const chainA = await parsedLeaf.verify(parsedCertA);
+    const chainB = await parsedLeaf.verify(parsedCertB);
+    // the leaf's issuer should be equal to the subject data of the intermediate certs
+    const isEqualA = parsedLeaf.issuer.isEqual(parsedCertA.subject);
+    const isEqualB = parsedLeaf.issuer.isEqual(parsedCertB.subject);
+    return chainA && chainB && isEqualA && isEqualB;
+  }
+  // can be used to validate if a certificate is self-signed (i.e. a root cert), by passing it as both certA and B
+  return (await parsedCertA.verify(parsedCertB)) && parsedCertA.issuer.isEqual(parsedCertB.subject);
 }
 
 //* PARSING HELPERS

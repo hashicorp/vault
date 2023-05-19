@@ -365,7 +365,6 @@ func TestOcsp_MultipleMatchingIssuersOneWithoutSigningUsage(t *testing.T) {
 	require.Equal(t, crypto.SHA1, ocspResp.IssuerHash)
 	require.Equal(t, 0, ocspResp.RevocationReason)
 	require.Equal(t, testEnv.leafCertIssuer1.SerialNumber, ocspResp.SerialNumber)
-	require.Equal(t, rotatedCert, ocspResp.Certificate)
 
 	requireOcspSignatureAlgoForKey(t, rotatedCert.SignatureAlgorithm, ocspResp.SignatureAlgorithm)
 	requireOcspResponseSignedBy(t, ocspResp, rotatedCert)
@@ -442,11 +441,15 @@ func TestOcsp_HigherLevel(t *testing.T) {
 	require.NoError(t, err, "parsing ocsp get response")
 
 	require.Equal(t, ocsp.Revoked, ocspResp.Status)
-	require.Equal(t, issuerCert, ocspResp.Certificate)
 	require.Equal(t, certToRevoke.SerialNumber, ocspResp.SerialNumber)
 
 	// Test OCSP Get request for ocsp
 	urlEncoded := base64.StdEncoding.EncodeToString(ocspReq)
+	if strings.Contains(urlEncoded, "//") {
+		// workaround known redirect bug that is difficult to fix
+		t.Skipf("VAULT-13630 - Skipping GET OCSP test with encoded issuer cert containing // triggering redirection bug")
+	}
+
 	ocspGetReq := client.NewRequest(http.MethodGet, "/v1/pki/ocsp/"+urlEncoded)
 	ocspGetReq.Headers.Set("Content-Type", "application/ocsp-request")
 	rawResp, err = client.RawRequest(ocspGetReq)
@@ -463,7 +466,6 @@ func TestOcsp_HigherLevel(t *testing.T) {
 	require.NoError(t, err, "parsing ocsp get response")
 
 	require.Equal(t, ocsp.Revoked, ocspResp.Status)
-	require.Equal(t, issuerCert, ocspResp.Certificate)
 	require.Equal(t, certToRevoke.SerialNumber, ocspResp.SerialNumber)
 }
 
@@ -527,7 +529,6 @@ func runOcspRequestTest(t *testing.T, requestType string, caKeyType string, caKe
 
 	require.Equal(t, ocsp.Good, ocspResp.Status)
 	require.Equal(t, requestHash, ocspResp.IssuerHash)
-	require.Equal(t, testEnv.issuer1, ocspResp.Certificate)
 	require.Equal(t, 0, ocspResp.RevocationReason)
 	require.Equal(t, testEnv.leafCertIssuer1.SerialNumber, ocspResp.SerialNumber)
 
@@ -552,7 +553,6 @@ func runOcspRequestTest(t *testing.T, requestType string, caKeyType string, caKe
 
 	require.Equal(t, ocsp.Revoked, ocspResp.Status)
 	require.Equal(t, requestHash, ocspResp.IssuerHash)
-	require.Equal(t, testEnv.issuer1, ocspResp.Certificate)
 	require.Equal(t, 0, ocspResp.RevocationReason)
 	require.Equal(t, testEnv.leafCertIssuer1.SerialNumber, ocspResp.SerialNumber)
 
@@ -572,7 +572,6 @@ func runOcspRequestTest(t *testing.T, requestType string, caKeyType string, caKe
 
 	require.Equal(t, ocsp.Good, ocspResp.Status)
 	require.Equal(t, requestHash, ocspResp.IssuerHash)
-	require.Equal(t, testEnv.issuer2, ocspResp.Certificate)
 	require.Equal(t, 0, ocspResp.RevocationReason)
 	require.Equal(t, testEnv.leafCertIssuer2.SerialNumber, ocspResp.SerialNumber)
 

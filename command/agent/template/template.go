@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/consul-template/manager"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/agent/config"
+	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
 
@@ -160,7 +161,8 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 				*latestToken = token
 				ctv := ctconfig.Config{
 					Vault: &ctconfig.VaultConfig{
-						Token: latestToken,
+						Token:           latestToken,
+						ClientUserAgent: pointerutil.StringPtr(useragent.AgentTemplatingString()),
 					},
 				}
 
@@ -239,6 +241,7 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 	conf.Vault.RenewToken = pointerutil.BoolPtr(false)
 	conf.Vault.Token = pointerutil.StringPtr("")
 	conf.Vault.Address = &sc.AgentConfig.Vault.Address
+	conf.Vault.ClientUserAgent = pointerutil.StringPtr(useragent.AgentTemplatingString())
 
 	if sc.Namespace != "" {
 		conf.Vault.Namespace = &sc.Namespace

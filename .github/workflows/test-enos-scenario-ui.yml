@@ -32,8 +32,6 @@ jobs:
     name: Get metadata
     runs-on: ubuntu-latest
     outputs:
-      go-version: ${{ steps.get-metadata.outputs.go-version }}
-      node-version: ${{ steps.get-metadata.outputs.node-version }}
       runs-on: ${{ steps.get-metadata.outputs.runs-on }}
       vault_edition: ${{ steps.get-metadata.outputs.vault_edition }}
     steps:
@@ -42,8 +40,6 @@ jobs:
         env:
           IS_ENT: ${{ startsWith(github.event.repository.name, 'vault-enterprise' ) }}
         run: |
-          echo "go-version=$(cat ./.go-version)" >> "$GITHUB_OUTPUT"
-          echo "node-version=$(cat ./ui/.nvmrc)" >> "$GITHUB_OUTPUT"
           if [ "$IS_ENT" == true ]; then
             echo "detected vault_edition=ent"
             echo "runs-on=['self-hosted', 'ondemand', 'os=linux', 'type=m5d.4xlarge']" >> "$GITHUB_OUTPUT"
@@ -75,7 +71,7 @@ jobs:
       - name: Set Up Go
         uses: actions/setup-go@v3
         with:
-          go-version: ${{ needs.get-metadata.outputs.go-version }}
+          go-version-file: ./.go-version
       - uses: hashicorp/action-setup-enos@v1
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
@@ -84,7 +80,7 @@ jobs:
       - name: Set Up Node
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ needs.get-metadata.outputs.node-version }}
+          node-version-file: './ui/package.json'
       - name: Set Up Terraform
         uses: hashicorp/setup-terraform@v2
         with:

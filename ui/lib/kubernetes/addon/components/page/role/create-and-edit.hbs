@@ -109,7 +109,7 @@
             @value={{template.rules}}
             @mode="ruby"
             @valueUpdated={{fn (mut template.rules)}}
-            @helpText={{this.roleRulesHelpText}}
+            @helpText={{sanitized-html this.roleRulesHelpText}}
           >
             <button type="button" class="toolbar-link" {{on "click" this.resetRoleRules}} data-test-restore-example>
               Restore example

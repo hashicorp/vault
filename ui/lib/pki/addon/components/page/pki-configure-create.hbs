@@ -9,7 +9,9 @@
   </p.levelLeft>
 </PageHeader>
 
-{{#unless @config.id}}
+{{#if @config.id}}
+  <Toolbar />
+{{else}}
   <div class="box is-bottomless is-fullwidth is-marginless">
     <div class="columns">
       {{#each this.configTypes as |option|}}
@@ -40,7 +42,7 @@
       {{/each}}
     </div>
   </div>
-{{/unless}}
+{{/if}}
 {{#if (eq @config.actionType "import")}}
   <PkiImportPemBundle
     @model={{@config}}
@@ -50,6 +52,15 @@
     @adapterOptions={{hash actionType=@config.actionType useIssuer=@config.canImportBundle}}
   />
 {{else if (eq @config.actionType "generate-root")}}
+  {{#if @config.privateKey}}
+    <div class="has-top-margin-m">
+      <AlertBanner
+        @title="Next steps"
+        @type="warning"
+        @message="The private_key is only available once. Make sure you copy and save it now."
+      />
+    </div>
+  {{/if}}
   <PkiGenerateRoot
     @model={{@config}}
     @urls={{@urls}}

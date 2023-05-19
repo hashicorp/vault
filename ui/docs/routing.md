@@ -6,6 +6,8 @@
 - [Guidelines](#guidelines)
 - [File structure](#file-structure)
 - [Shared functionality](#shared-functionality)
+- [Decorators](#decorators)
+  - [@withConfirmLeave()](#withconfirmleave)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -57,3 +59,34 @@ Below, `details.js` and `edit.js` will automatically receive the model returned 
 To guide users, we sometimes have a call to action that depends on a resource's state. For example, if a secret engine hasn't been configured routing to the first step to do so, and otherwise navigating to its overview page.
 
 Instead of extending route classes to share this `isConfigured` state, consider a decorator! [withConfig()](../../ui/lib/kubernetes/addon/decorators/fetch-config.js) is a great example.
+
+## Decorators
+
+### [@withConfirmLeave()](../lib/core/addon/decorators/confirm-leave.js)
+
+- Renders `window.confirm()` alert that a user has unsaved changes if navigaing away from route with the decorator
+- Unloads or rolls back Ember data model record
+
+<!-- TODO add withConfig() if we refactor for more general use -->
+
+<!-- ### [withConfig()](../../ui/lib/kubernetes/addon/decorators/fetch-config.js)
+
+We sometimes have a call to action guiding users that depends on a resource's state. For example, if a secret engine hasn't been configured the UI renders an empty state linking to the first configuration step. Otherwise, it routes to the overview page of that engine.
+
+Sample use:
+
+```js
+import { withConfig } from '../decorators/fetch-config';
+@withConfig()
+export default class SomeRouter extends Route {
+  model() {
+    // in case of any error other than 404 we want to display that to the user
+    if (this.configError) {
+      throw this.configError;
+    }
+    return {
+      config: this.configModel, // configuration data to determine UI state
+    };
+  }
+}
+``` -->

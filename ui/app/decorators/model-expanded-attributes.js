@@ -73,7 +73,14 @@ export function withExpandedAttributes() {
             });
             const expanded = expandAttributeMeta(rModel, rAttrNames);
             expanded.forEach((attr) => {
-              byKey[`${name}.${attr.name}`] = attr;
+              byKey[`${name}.${attr.name}`] = {
+                ...attr,
+                options: {
+                  ...attr.options,
+                  // This ensures the correct path is updated in FormField
+                  fieldValue: `${name}.${attr.fieldValue || attr.name}`,
+                },
+              };
             });
           }, this);
           this._allByKey = byKey;

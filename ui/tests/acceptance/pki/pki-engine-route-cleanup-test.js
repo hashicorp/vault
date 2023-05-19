@@ -142,7 +142,8 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
 
       // Edit role
       await click(SELECTORS.editRoleLink);
-      await fillIn(SELECTORS.roleForm.issuerRef, 'foobar');
+      await click(SELECTORS.roleForm.issuerRefToggle);
+      await fillIn(SELECTORS.roleForm.issuerRefSelect, 'foobar');
       role = this.store.peekRecord('pki/role', roleId);
       assert.true(role.hasDirtyAttributes, 'Role has dirty attrs');
       // Exit page via cancel button
@@ -153,7 +154,8 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
 
       // Edit again
       await click(SELECTORS.editRoleLink);
-      await fillIn(SELECTORS.roleForm.issuerRef, 'foobar2');
+      await click(SELECTORS.roleForm.issuerRefToggle);
+      await fillIn(SELECTORS.roleForm.issuerRefSelect, 'foobar2');
       role = this.store.peekRecord('pki/role', roleId);
       assert.true(role.hasDirtyAttributes, 'Role has dirty attrs');
       // Exit page via breadcrumbs
@@ -297,9 +299,10 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
       await click(SELECTORS.configuration.generateRootSave);
       // Go to list view so we fetch all the issuers
       await visit(`/vault/secrets/${this.mountPath}/pki/issuers`);
+
       issuers = this.store.peekAll('pki/issuer');
       const issuerId = issuers.objectAt(0).id;
-      assert.strictEqual(issuers.length, 1, 'Issuer exists on model');
+      assert.strictEqual(issuers.length, 1, 'Issuer exists on model in list');
       await visit(`/vault/secrets/${this.mountPath}/pki/issuers/${issuerId}/details`);
       await click(SELECTORS.issuerDetails.configure);
       issuer = this.store.peekRecord('pki/issuer', issuerId);
@@ -308,7 +311,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
       assert.true(issuer.hasDirtyAttributes, 'Model is dirty');
       await click(SELECTORS.overviewBreadcrumb);
       issuers = this.store.peekAll('pki/issuer');
-      assert.strictEqual(issuers.length, 1, 'Issuer exists on model');
+      assert.strictEqual(issuers.length, 1, 'Issuer exists on model in overview');
       issuer = this.store.peekRecord('pki/issuer', issuerId);
       assert.false(issuer.hasDirtyAttributes, 'Dirty attrs were rolled back');
     });
