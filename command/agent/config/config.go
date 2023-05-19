@@ -21,11 +21,12 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/mitchellh/mapstructure"
+
 	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
-	"github.com/mitchellh/mapstructure"
 )
 
 // Config is the configuration for Vault Agent.
@@ -35,7 +36,7 @@ type Config struct {
 	AutoAuth                    *AutoAuth                  `hcl:"auto_auth"`
 	ExitAfterAuth               bool                       `hcl:"exit_after_auth"`
 	Cache                       *Cache                     `hcl:"cache"`
-	APIProxy                    *APIProxy                  `hcl:"api_proxy""`
+	APIProxy                    *APIProxy                  `hcl:"api_proxy"`
 	Vault                       *Vault                     `hcl:"vault"`
 	TemplateConfig              *TemplateConfig            `hcl:"template_config"`
 	Templates                   []*ctconfig.TemplateConfig `hcl:"templates"`
@@ -1211,7 +1212,7 @@ func parseExec(result *Config, list *ast.ObjectList) error {
 		return errors.New("error converting config")
 	}
 
-	var ec ExecConfig
+	var execConfig ExecConfig
 	var md mapstructure.Metadata
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 		DecodeHook: mapstructure.ComposeDecodeHookFunc(
@@ -1223,7 +1224,7 @@ func parseExec(result *Config, list *ast.ObjectList) error {
 		),
 		ErrorUnused: true,
 		Metadata:    &md,
-		Result:      &ec,
+		Result:      &execConfig,
 	})
 	if err != nil {
 		return errors.New("mapstructure decoder creation failed")
@@ -1233,15 +1234,15 @@ func parseExec(result *Config, list *ast.ObjectList) error {
 	}
 
 	// if the user does not specify a restart signal, default to SIGTERM
-	if ec.RestartStopSignal == nil {
-		ec.RestartStopSignal = syscall.SIGTERM
+	if execConfig.RestartStopSignal == nil {
+		execConfig.RestartStopSignal = syscall.SIGTERM
 	}
 
-	if ec.RestartOnSecretChanges == "" {
-		ec.RestartOnSecretChanges = "always"
+	if execConfig.RestartOnSecretChanges == "" {
+		execConfig.RestartOnSecretChanges = "always"
 	}
 
-	result.Exec = &ec
+	result.Exec = &execConfig
 	return nil
 }
 
@@ -1268,7 +1269,7 @@ func parseEnvTemplates(result *Config, list *ast.ObjectList) error {
 			return errors.New("error converting config")
 		}
 
-		var et ctconfig.TemplateConfig
+		var templateConfig ctconfig.TemplateConfig
 		var md mapstructure.Metadata
 		decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
@@ -1280,7 +1281,7 @@ func parseEnvTemplates(result *Config, list *ast.ObjectList) error {
 			),
 			ErrorUnused: true,
 			Metadata:    &md,
-			Result:      &et,
+			Result:      &templateConfig,
 		})
 		if err != nil {
 			return errors.New("mapstructure decoder creation failed")
@@ -1297,9 +1298,9 @@ func parseEnvTemplates(result *Config, list *ast.ObjectList) error {
 		// hcl parses this with extra quotes if quoted in config file
 		environmentVariableName := strings.Trim(item.Keys[0].Token.Text, `"`)
 
-		et.MapToEnvironmentVariable = pointerutil.StringPtr(environmentVariableName)
+		templateConfig.MapToEnvironmentVariable = pointerutil.StringPtr(environmentVariableName)
 
-		envTemplates = append(envTemplates, &et)
+		envTemplates = append(envTemplates, &templateConfig)
 	}
 
 	result.EnvTemplates = envTemplates

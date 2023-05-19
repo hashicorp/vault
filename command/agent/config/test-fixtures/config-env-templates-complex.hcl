@@ -4,7 +4,7 @@ auto_auth {
     type = "token_file"
 
     config {
-      token_file_path = "/Users/avean/.vault-token"
+      token_file_path = "/home/username/.vault-token"
     }
   }
 }
