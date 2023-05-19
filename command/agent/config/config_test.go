@@ -13,6 +13,7 @@ import (
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"golang.org/x/exp/slices"
 
+	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
@@ -83,7 +84,7 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 			UseAutoAuthToken:    true,
 			UseAutoAuthTokenRaw: true,
 			ForceAutoAuthToken:  false,
-			Persist: &Persist{
+			Persist: &agentproxyshared.PersistConfig{
 				Type:                    "kubernetes",
 				Path:                    "/vault/agent-cache/",
 				KeepAfterImport:         true,
@@ -188,7 +189,7 @@ func TestLoadConfigDir_AgentCache(t *testing.T) {
 			UseAutoAuthToken:    true,
 			UseAutoAuthTokenRaw: true,
 			ForceAutoAuthToken:  false,
-			Persist: &Persist{
+			Persist: &agentproxyshared.PersistConfig{
 				Type:                    "kubernetes",
 				Path:                    "/vault/agent-cache/",
 				KeepAfterImport:         true,
@@ -388,7 +389,7 @@ func TestLoadConfigFile_AgentCache_NoListeners(t *testing.T) {
 			UseAutoAuthToken:    true,
 			UseAutoAuthTokenRaw: true,
 			ForceAutoAuthToken:  false,
-			Persist: &Persist{
+			Persist: &agentproxyshared.PersistConfig{
 				Type:                    "kubernetes",
 				Path:                    "/vault/agent-cache/",
 				KeepAfterImport:         true,
@@ -960,7 +961,7 @@ func TestLoadConfigFile_AgentCache_Persist(t *testing.T) {
 	expected := &Config{
 		APIProxy: &APIProxy{},
 		Cache: &Cache{
-			Persist: &Persist{
+			Persist: &agentproxyshared.PersistConfig{
 				Type:                    "kubernetes",
 				Path:                    "/vault/agent-cache/",
 				KeepAfterImport:         false,
