@@ -8,7 +8,7 @@
 <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
 
 <form class="has-bottom-margin-s" {{on "submit" (perform this.save)}}>
-  {{#if (eq @tidyType "auto")}}
+  {{#if (and (eq @tidyType "auto") this.intervalDurationAttr)}}
     {{#let this.intervalDurationAttr as |attr|}}
       <TtlPicker
         data-test-input={{attr.name}}

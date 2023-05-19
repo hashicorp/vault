@@ -38,7 +38,7 @@ export default class PkiTidyForm extends Component<Args> {
   @tracked invalidFormAlert = '';
 
   get intervalDurationAttr() {
-    return this.args.tidy._allByKey.intervalDuration;
+    return this.args.tidy?.allByKey.intervalDuration;
   }
 
   @task

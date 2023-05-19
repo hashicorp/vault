@@ -20,7 +20,7 @@ export default class PkiTidyModel extends Model {
   tidyRevokedCerts: boolean;
   get useOpenAPI(): boolean;
   getHelpUrl(backend: string): string;
-  _allByKey: {
+  allByKey: {
     intervalDuration: FormField[];
   };
   get allGroups(): FormFieldGroups[];
