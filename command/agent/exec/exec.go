@@ -101,9 +101,9 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 		LogWriter:   s.config.LogWriter,
 	}
 
-	runnerConfig, runnerConfigErr := ctmanager.NewConfig(managerConfig, s.config.AgentConfig.EnvTemplates)
-	if runnerConfigErr != nil {
-		return fmt.Errorf("template server failed to runner generate config: %w", runnerConfigErr)
+	runnerConfig, err := ctmanager.NewConfig(managerConfig, s.config.AgentConfig.EnvTemplates)
+	if err != nil {
+		return fmt.Errorf("template server failed to generate runner config: %w", err)
 	}
 
 	// We leave this in "dry" mode, as there are no files to render;
