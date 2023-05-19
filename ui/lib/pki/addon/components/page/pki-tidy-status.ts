@@ -8,13 +8,43 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
+import errorMessage from 'vault/utils/error-message';
+import type Store from '@ember-data/store';
+import type SecretMountPath from 'vault/services/secret-mount-path';
+import type FlashMessageService from 'vault/services/flash-messages';
+import type VersionService from 'vault/services/version';
+import type PkiTidyModel from 'vault/models/pki/tidy';
 
-export default class PkiTidyStatusComponent extends Component {
-  @service store;
-  @service secretMountPath;
-  @service flashMessages;
-  @service router;
-  @service version;
+interface Args {
+  autoTidyConfig: PkiTidyModel;
+  tidyStatus: {
+    safety_buffer: number;
+    tidy_cert_store: boolean;
+    tidy_revoked_certs: boolean;
+    state: string;
+    error: string;
+    time_started: string | null;
+    time_finished: string | null;
+    message: string;
+    cert_store_deleted_count: number;
+    revoked_cert_deleted_count: number;
+    missing_issuer_cert_count: number;
+    tidy_expired_issuers: boolean;
+    issuer_safety_buffer: string;
+    tidy_move_legacy_ca_bundle: boolean;
+    tidy_revocation_queue: boolean;
+    revocation_queue_deleted_count: number;
+    tidy_cross_cluster_revoked_certs: boolean;
+    cross_revoked_cert_deleted_count: number;
+    revocation_queue_safety_buffer: string;
+  };
+}
+
+export default class PkiTidyStatusComponent extends Component<Args> {
+  @service declare readonly store: Store;
+  @service declare readonly secretMountPath: SecretMountPath;
+  @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly version: VersionService;
 
   @tracked tidyOptionsModal = false;
   @tracked confirmCancelTidy = false;
@@ -111,8 +141,8 @@ export default class PkiTidyStatusComponent extends Component {
     try {
       const adapter = this.store.adapterFor('application');
       yield adapter.ajax(`/v1/${this.secretMountPath.currentPath}/tidy-cancel`, 'POST');
-    } catch (e) {
-      this.flashMessages.danger(e.errors.join(' '));
+    } catch (error) {
+      this.flashMessages.danger(errorMessage(error));
     }
   }
 }
