@@ -22,7 +22,7 @@
 > 2. **Variable naming** The UI does not have a consistent pattern to variable naming. We use a mix of numbers and words (ex: `ui-gray-050` is the same as `ui-gray-lightest`).
 > 3. **Random variables** We have dieing but not dead variables. For example, we have some variables that define box-shadows and we have some variables to define animations, but we are missing many box-shadow definitions and we do not consistently use the animation variables.
 > 4. **Missing variables** The UI does not have a variable for all commonly occurring sizes and colors. For example, we do not have a variable that covers the `14px` though it is a commonly used size.
-> 5. **!Important** `!important` is sprinkled throughout helper, core and component files. Ideally, the cascading and order of styles would eliminate the need of this key-word. However, because `!important` exist randomly in many of our files, we now have cascading issues inside helper files and core files. In all known cases where these issues exist a comment has been left as to why the order of classes in that particular area matters.
+> 5. **!Important** `!important` is sprinkled throughout helper, core and component files. Ideally, the cascading and order of styles would eliminate the need of this keyword. However, because `!important` exist randomly in many of our files, we now have cascading issues inside helper files and core files. In all known cases where these issues exist a comment has been left as to why the order of classes in that particular area matters.
 
 ### Helper classes
 
