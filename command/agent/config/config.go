@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	ctconfig "github.com/hashicorp/consul-template/config"
@@ -1112,9 +1113,9 @@ func parseExec(result *Config, list *ast.ObjectList) error {
 		return err
 	}
 
-	// if user does not specify a restart signal, use a default
+	// if the user does not specify a restart signal, default to SIGTERM
 	if ec.RestartStopSignal == nil {
-		ec.RestartStopSignal = os.Interrupt
+		ec.RestartStopSignal = syscall.SIGTERM
 	}
 
 	if ec.RestartOnSecretChanges == "" {
@@ -1135,7 +1136,6 @@ func parseEnvTemplates(result *Config, list *ast.ObjectList) error {
 	}
 
 	envTemplates := make([]*ctconfig.TemplateConfig, 0, len(envTemplateList.Items))
-	envKeys := make(map[string]struct{})
 
 	for _, item := range envTemplateList.Items {
 		var shadow interface{}
@@ -1176,16 +1176,11 @@ func parseEnvTemplates(result *Config, list *ast.ObjectList) error {
 		}
 
 		// hcl parses this with extra quotes if quoted in config file
-		envName := strings.Trim(item.Keys[0].Token.Text, `"`)
+		environmentVariableName := strings.Trim(item.Keys[0].Token.Text, `"`)
 
-		et.MapToEnvironmentVariable = pointerutil.StringPtr(envName)
-
-		if _, exists := envKeys[envName]; exists {
-			return fmt.Errorf("duplicate environment %q variable detected", envName)
-		}
+		et.MapToEnvironmentVariable = pointerutil.StringPtr(environmentVariableName)
 
 		envTemplates = append(envTemplates, &et)
-		envKeys[envName] = struct{}{}
 	}
 
 	result.EnvTemplates = envTemplates

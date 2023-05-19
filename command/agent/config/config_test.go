@@ -2196,8 +2196,8 @@ func TestLoadConfigFile_ExecSimple(t *testing.T) {
 		t.Fatalf("expected cfg.Exec.RestartOnSecretChanges to be 'always', got '%s'", cfg.Exec.RestartOnSecretChanges)
 	}
 
-	if cfg.Exec.RestartStopSignal != os.Interrupt {
-		t.Fatalf("expected cfg.Exec.RestartStopSignal to be 'os.Interrupt', got '%s'", cfg.Exec.RestartStopSignal)
+	if cfg.Exec.RestartStopSignal != syscall.SIGTERM {
+		t.Fatalf("expected cfg.Exec.RestartStopSignal to be 'syscall.SIGTERM', got '%s'", cfg.Exec.RestartStopSignal)
 	}
 }
 
@@ -2216,7 +2216,7 @@ func TestLoadConfigFile_ExecComplex(t *testing.T) {
 		t.Fatalf("expected cfg.Exec.RestartOnSecretChanges to be 'never', got %q", cfg.Exec.RestartOnSecretChanges)
 	}
 
-	if cfg.Exec.RestartStopSignal != syscall.SIGTERM {
-		t.Fatalf("expected cfg.Exec.RestartStopSignal to be 'SIGTERM', got %q", cfg.Exec.RestartStopSignal)
+	if cfg.Exec.RestartStopSignal != syscall.SIGINT {
+		t.Fatalf("expected cfg.Exec.RestartStopSignal to be 'syscall.SIGINT', got %q", cfg.Exec.RestartStopSignal)
 	}
 }
