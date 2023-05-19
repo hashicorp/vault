@@ -12,7 +12,7 @@ import (
 func TestAcmeNonces(t *testing.T) {
 	t.Parallel()
 
-	a := NewACMEState()
+	a, _ := NewACMEState(nil)
 
 	// Simple operation should succeed.
 	nonce, _, err := a.GetNonce()
