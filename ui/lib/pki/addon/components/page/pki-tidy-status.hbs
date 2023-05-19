@@ -18,90 +18,78 @@
   </ToolbarActions>
 </Toolbar>
 
-<Hds::Alert
-  @type="inline"
-  @color={{this.tidyStateAlertBanner.color}}
-  @icon={{this.tidyStateAlertBanner.icon}}
-  class="has-top-margin-m"
-  data-test-hds-alert
-  as |A|
->
-  <A.Title data-test-hds-alert-title>{{this.tidyStateAlertBanner.title}}</A.Title>
-  <A.Description data-test-hds-alert-description>{{this.tidyStateAlertBanner.message}}</A.Description>
-  {{#if this.tidyStateAlertBanner.shouldShowCancelTidy}}
-    <A.Button
-      @text="Cancel tidy"
-      @color="critical"
-      @icon={{if this.cancelTidy.isRunning "loading"}}
-      {{on "click" (fn (mut this.confirmCancelTidy) true)}}
-      data-test-cancel-tidy-action
-    />
-  {{/if}}
-  {{#if @tidyStatus.responseTimestamp}}
-    <A.Description class="has-top-margin-xs" data-test-hds-alert-updated-at>
-      Updated
-      {{date-format @tidyStatus.responseTimestamp "MMM d yyyy, h:mm:ss aaa" withTimeZone=true}}
-    </A.Description>
-  {{/if}}
-</Hds::Alert>
+{{#if this.hasTidyConfig}}
+  <Hds::Alert
+    @type="inline"
+    @color={{this.tidyStateAlertBanner.color}}
+    @icon={{this.tidyStateAlertBanner.icon}}
+    class="has-top-margin-m"
+    data-test-hds-alert
+    as |A|
+  >
+    <A.Title data-test-hds-alert-title>{{this.tidyStateAlertBanner.title}}</A.Title>
+    <A.Description data-test-hds-alert-description>{{this.tidyStateAlertBanner.message}}</A.Description>
+    {{#if this.tidyStateAlertBanner.shouldShowCancelTidy}}
+      <A.Button
+        @text="Cancel tidy"
+        @color="critical"
+        @icon={{if this.cancelTidy.isRunning "loading"}}
+        {{on "click" (fn (mut this.confirmCancelTidy) true)}}
+        data-test-cancel-tidy-action
+      />
+    {{/if}}
+    {{#if @tidyStatus.responseTimestamp}}
+      <A.Description class="has-top-margin-xs" data-test-hds-alert-updated-at>
+        Updated
+        {{date-format @tidyStatus.responseTimestamp "MMM d yyyy, h:mm:ss aaa" withTimeZone=true}}
+      </A.Description>
+    {{/if}}
+  </Hds::Alert>
 
-{{#each this.generalSectionFields as |attr|}}
-  <InfoTableRow
-    @label={{humanize (dasherize attr)}}
-    @formatDate={{if
-      (includes attr (array "time_started" "time_finished" "last_auto_tidy_finished"))
-      "MMM dd, yyyy hh:mm:ss a"
-    }}
-    @value={{get @tidyStatus attr}}
-    @alwaysRender={{true}}
-  />
-{{/each}}
-
-<h2 class="title is-4 has-bottom-margin-xs has-top-margin-l has-border-bottom-light has-bottom-padding-s">
-  Universal operations
-</h2>
-{{#each this.universalSectionFields as |attr|}}
-  {{#if (eq attr "safety_buffer")}}
+  {{#each this.tidyStatusGeneralFields as |attr|}}
     <InfoTableRow
       @label={{humanize (dasherize attr)}}
-      @value={{format-duration (get @tidyStatus attr)}}
+      @formatDate={{if
+        (includes attr (array "time_started" "time_finished" "last_auto_tidy_finished"))
+        "MMM dd, yyyy hh:mm:ss a"
+      }}
+      @value={{get @tidyStatus attr}}
       @alwaysRender={{true}}
     />
-  {{else}}
-    <InfoTableRow @label={{humanize (dasherize attr)}} @value={{get @tidyStatus attr}} @alwaysRender={{true}} />
-  {{/if}}
-{{/each}}
+  {{/each}}
 
-<h2 class="title is-4 has-bottom-margin-xs has-top-margin-l has-border-bottom-light has-bottom-padding-s">
-  Issuers operations
-</h2>
-{{#each this.issuersSectionFields as |attr|}}
-  {{#if (eq attr "issuer_safety_buffer")}}
-    <InfoTableRow
-      @label={{humanize (dasherize attr)}}
-      @value={{format-duration (get @tidyStatus attr)}}
-      @alwaysRender={{true}}
-    />
-  {{else}}
-    <InfoTableRow @label={{humanize (dasherize attr)}} @value={{get @tidyStatus attr}} @alwaysRender={{true}} />
-  {{/if}}
-{{/each}}
-
-{{#if this.isEnterprise}}
   <h2 class="title is-4 has-bottom-margin-xs has-top-margin-l has-border-bottom-light has-bottom-padding-s">
-    Cross-cluster operations
+    {{if (eq this.tidyState "Running") "Current" "Last"}}
+    tidy settings
   </h2>
-  {{#each this.crossClusterOperation as |attr|}}
-    {{#if (eq attr "revocation_queue_safety_buffer")}}
+  {{#each this.tidyStatusConfigFields as |attr|}}
+    <InfoTableRow
+      @label={{humanize (dasherize attr)}}
+      @value={{get @tidyStatus attr}}
+      @formatTtl={{includes attr (array "safety_buffer" "issuer_safety_buffer")}}
+      @alwaysRender={{true}}
+    />
+  {{/each}}
+
+  {{#if this.isEnterprise}}
+    {{#each this.crossClusterOperation as |attr|}}
       <InfoTableRow
         @label={{humanize (dasherize attr)}}
-        @value={{format-duration (get @tidyStatus attr)}}
+        @value={{get @tidyStatus attr}}
+        @formatTtl={{eq attr "revocation_queue_safety_buffer"}}
         @alwaysRender={{true}}
       />
-    {{else}}
-      <InfoTableRow @label={{humanize (dasherize attr)}} @value={{get @tidyStatus attr}} @alwaysRender={{true}} />
-    {{/if}}
-  {{/each}}
+    {{/each}}
+  {{/if}}
+{{else}}
+  <EmptyState
+    @title="Tidy status unavailable"
+    @message="After an initial tidy operation has been performed, information about the current or most recent tidy operation will display here."
+  >
+    <button type="button" class="link" {{on "click" (fn (mut this.tidyOptionsModal) true)}}>
+      Tidy
+    </button>
+  </EmptyState>
 {{/if}}
 
 {{! TIDY OPTIONS MODAL }}
@@ -112,19 +100,25 @@
   @showCloseButton={{true}}
 >
   <section aria-label="tidy-options-modal-content" class="modal-card-body">
-    <h3 class="title is-5">Tidy operation</h3>
+    <h3 class="title is-5">How tidying will work</h3>
     <p class="has-text-grey has-bottom-padding-s">
       Tidying cleans up the storage backend and/or CRL by removing certificates that have expired and are past a certain
       buffer period beyond their expiration time.
       <DocLink @path="/vault/docs/secrets/pki/considerations#automate-crl-building-and-tidying">
-        Learn more.
+        Documentation.
       </DocLink>
     </p>
     <p class="has-text-grey">
       <ol class="has-left-margin-m has-bottom-margin-s">
-        <li>Select a manual tidy or an automatic tidy operation. Manual tidy runs the tidy operation once, and automatic tidy
-          runs the tidy operation periodically.</li>
-        <li>Choose the parameters you wish to tidy, and run the operation</li>
+        <li>Select a tidy operation:</li>
+        <ul class="bullet has-bottom-margin-xs">
+          <li><strong>Automatic tidy</strong>
+            periodically runs a tidy operation with saved configuration settings after waiting the specified interval
+            duration between tidies
+          </li>
+          <li><strong>Manual tidy</strong> runs a tidy operation once</li>
+        </ul>
+        <li>Configure the parameters that determine how to tidy, and run the operation</li>
       </ol>
     </p>
     <div class="has-top-margin-l has-padding">

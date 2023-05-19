@@ -14,5 +14,5 @@
   @tidy={{@model}}
   @tidyType="auto"
   @onSave={{transition-to "vault.cluster.secrets.backend.pki.tidy.auto"}}
-  @onCancel={{transition-to "vault.cluster.secrets.backend.pki.tidy.auto"}}
+  @onCancel={{transition-to (concat "vault.cluster.secrets.backend.pki.tidy" (if @model.enabled ".auto" ""))}}
 />

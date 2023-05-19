@@ -17,29 +17,30 @@ import type PkiTidyModel from 'vault/models/pki/tidy';
 
 interface Args {
   autoTidyConfig: PkiTidyModel;
-  tidyStatus: {
-    safety_buffer: number;
-    tidy_cert_store: boolean;
-    tidy_revoked_certs: boolean;
-    state: string;
-    error: string;
-    time_started: string | null;
-    time_finished: string | null;
-    message: string;
-    cert_store_deleted_count: number;
-    revoked_cert_deleted_count: number;
-    missing_issuer_cert_count: number;
-    tidy_expired_issuers: boolean;
-    issuer_safety_buffer: string;
-    tidy_move_legacy_ca_bundle: boolean;
-    tidy_revocation_queue: boolean;
-    revocation_queue_deleted_count: number;
-    tidy_cross_cluster_revoked_certs: boolean;
-    cross_revoked_cert_deleted_count: number;
-    revocation_queue_safety_buffer: string;
-  };
+  tidyStatus: TidyStatusParams;
 }
 
+interface TidyStatusParams {
+  safety_buffer: number;
+  tidy_cert_store: boolean;
+  tidy_revoked_certs: boolean;
+  state: string;
+  error: string;
+  time_started: string | null;
+  time_finished: string | null;
+  message: string;
+  cert_store_deleted_count: number;
+  revoked_cert_deleted_count: number;
+  missing_issuer_cert_count: number;
+  tidy_expired_issuers: boolean;
+  issuer_safety_buffer: string;
+  tidy_move_legacy_ca_bundle: boolean;
+  tidy_revocation_queue: boolean;
+  revocation_queue_deleted_count: number;
+  tidy_cross_cluster_revoked_certs: boolean;
+  cross_revoked_cert_deleted_count: number;
+  revocation_queue_safety_buffer: string;
+}
 export default class PkiTidyStatusComponent extends Component<Args> {
   @service declare readonly store: Store;
   @service declare readonly secretMountPath: SecretMountPath;
@@ -49,6 +50,28 @@ export default class PkiTidyStatusComponent extends Component<Args> {
   @tracked tidyOptionsModal = false;
   @tracked confirmCancelTidy = false;
 
+  tidyStatusGeneralFields = [
+    'time_started',
+    'time_finished',
+    'last_auto_tidy_finished',
+    'cert_store_deleted_count',
+    'missing_issuer_cert_count',
+    'revocation_queue_deleted_count',
+  ];
+
+  tidyStatusConfigFields = [
+    'tidy_cert_store',
+    'tidy_revocation_queue',
+    'tidy_cross_cluster_revoked_certs',
+    'safety_buffer',
+    'pause_duration',
+    'tidy_expired_issuers',
+    'tidy_move_legacy_ca_bundle',
+    'issuer_safety_buffer',
+  ];
+
+  crossClusterOperation = ['tidy_revocation_queue', 'revocation_queue_safety_buffer'];
+
   get isEnterprise() {
     return this.version.isEnterprise;
   }
@@ -57,30 +80,10 @@ export default class PkiTidyStatusComponent extends Component<Args> {
     return this.args.tidyStatus?.state;
   }
 
-  get generalSectionFields() {
-    return [
-      'time_started',
-      'time_finished',
-      'last_auto_tidy_finished',
-      'cert_store_deleted_count',
-      'missing_issuer_cert_count',
-      'revocation_queue_deleted_count',
-    ];
-  }
-  get universalSectionFields() {
-    return [
-      'tidy_cert_store',
-      'tidy_revocation_queue',
-      'tidy_cross_cluster_revoked_certs',
-      'safety_buffer',
-      'pause_duration',
-    ];
-  }
-  get issuersSectionFields() {
-    return ['tidy_expired_issuers', 'tidy_move_legacy_ca_bundle', 'issuer_safety_buffer'];
-  }
-  get crossClusterOperation() {
-    return ['tidy_revocation_queue', 'revocation_queue_safety_buffer'];
+  get hasTidyConfig() {
+    return !this.tidyStatusConfigFields.every(
+      (attr) => this.args.tidyStatus[attr as keyof TidyStatusParams] === null
+    );
   }
 
   get tidyStateAlertBanner() {
