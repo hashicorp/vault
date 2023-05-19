@@ -57,7 +57,7 @@ func (b *backend) rotateCredential(ctx context.Context, storage logical.Storage)
 
 	cfg := item.Value.(staticRoleEntry)
 
-	err = b.createCredential(ctx, storage, cfg)
+	err = b.createCredential(ctx, storage, cfg, true)
 	if err != nil {
 		return false, err
 	}
@@ -72,7 +72,7 @@ func (b *backend) rotateCredential(ctx context.Context, storage logical.Storage)
 	return true, nil
 }
 
-func (b *backend) createCredential(ctx context.Context, storage logical.Storage, cfg staticRoleEntry) error {
+func (b *backend) createCredential(ctx context.Context, storage logical.Storage, cfg staticRoleEntry, shouldLockStorage bool) error {
 	iamClient, err := b.clientIAM(ctx, storage)
 	if err != nil {
 		return fmt.Errorf("unable to get the AWS IAM client: %w", err)
@@ -130,6 +130,10 @@ func (b *backend) createCredential(ctx context.Context, storage logical.Storage,
 	if err != nil {
 		return fmt.Errorf("failed to marshal object to JSON: %w", err)
 	}
+	if shouldLockStorage {
+		b.roleMutex.Lock()
+		defer b.roleMutex.Unlock()
+	}
 	err = storage.Put(ctx, entry)
 	if err != nil {
 		return fmt.Errorf("failed to save object in storage: %w", err)
@@ -138,6 +142,12 @@ func (b *backend) createCredential(ctx context.Context, storage logical.Storage,
 	return nil
 }
 
-func (b *backend) deleteCredential(ctx context.Context, storage logical.Storage, name string) error {
+func (b *backend) deleteCredential(ctx context.Context, storage logical.Storage, name string, shouldLockStorage bool) error {
+	// synchronize storage access if we didn't in the caller.
+	if shouldLockStorage {
+		b.roleMutex.Lock()
+		defer b.roleMutex.Unlock()
+	}
+
 	return storage.Delete(ctx, formatCredsStoragePath(name))
 }

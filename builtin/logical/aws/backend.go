@@ -86,6 +86,8 @@ type backend struct {
 	iamClient iamiface.IAMAPI
 	stsClient stsiface.STSAPI
 
+	// the age of a static role's credential is tracked by a priority queue and handled
+	// by the PeriodicFunc
 	credRotationQueue *queue.PriorityQueue
 }
 

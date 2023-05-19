@@ -123,7 +123,7 @@ func TestRotation(t *testing.T) {
 			for i, cred := range c.creds {
 				b.iamClient = miam
 
-				err = b.createCredential(bgCTX, config.StorageView, cred.config)
+				err = b.createCredential(bgCTX, config.StorageView, cred.config, true)
 				if err != nil {
 					t.Fatalf("couldn't insert credential %d: %s", i, err)
 				}

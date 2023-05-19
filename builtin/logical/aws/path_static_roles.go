@@ -96,10 +96,14 @@ func pathStaticRoles(b *backend) *framework.Path {
 }
 
 func (b *backend) pathStaticRolesRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+
 	roleName, ok := data.GetOk(paramRoleName)
 	if !ok {
 		return nil, fmt.Errorf("missing '%s' parameter", paramRoleName)
 	}
+
+	b.roleMutex.RLock()
+	defer b.roleMutex.RUnlock()
 
 	entry, err := req.Storage.Get(ctx, formatRoleStoragePath(roleName.(string)))
 	if err != nil {
@@ -153,6 +157,9 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 		return nil, fmt.Errorf("missing %q parameter", paramRotationPeriod)
 	}
 
+	b.roleMutex.Lock()
+	defer b.roleMutex.Unlock()
+
 	// Upsert role config
 	newRole, err := logical.StorageEntryJSON(formatRoleStoragePath(config.Name), config)
 	if err != nil {
@@ -170,7 +177,7 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 		return nil, fmt.Errorf("unable to verify if credentials already exist for role %q: %w", config.Name, err)
 	}
 	if existingCreds == nil {
-		err := b.createCredential(ctx, req.Storage, config)
+		err := b.createCredential(ctx, req.Storage, config, false)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create new credentials for role %q: %w", config.Name, err)
 		}
@@ -196,7 +203,7 @@ func (b *backend) pathStaticRolesDelete(ctx context.Context, req *logical.Reques
 		return nil, fmt.Errorf("missing '%s' parameter", paramRoleName)
 	}
 
-	err := b.deleteCredential(ctx, req.Storage, roleName.(string))
+	err := b.deleteCredential(ctx, req.Storage, roleName.(string), true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to clean credentials while deleting role %q: %w", roleName.(string), err)
 	}
