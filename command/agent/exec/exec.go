@@ -206,7 +206,7 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 					return fmt.Errorf("unable to bounce command: %w", err)
 				}
 			}
-		case exitCode := <-s.exitCh:
+		case exitCode := <-s.procExitCh:
 			// process exited on its own
 			return &ProcessExitError{ExitCode: exitCode}
 		}
@@ -257,7 +257,7 @@ func (s *Server) bounceCmd(newEnvVars map[string]string) error {
 		return err
 	}
 	s.proc = proc
-	s.exitCh = s.proc.ExitCh()
+	s.procExitCh = s.proc.ExitCh()
 
 	if err := s.proc.Start(); err != nil {
 		return fmt.Errorf("error starting child process: %w", err)
