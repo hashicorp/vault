@@ -27,18 +27,18 @@
   as |A|
 >
   <A.Title data-test-hds-alert-title>{{this.tidyStateAlertBanner.title}}</A.Title>
-  <A.Description>{{this.tidyStateAlertBanner.message}}</A.Description>
+  <A.Description data-test-hds-alert-description>{{this.tidyStateAlertBanner.message}}</A.Description>
   {{#if this.tidyStateAlertBanner.shouldShowCancelTidy}}
     <A.Button
       @text="Cancel tidy"
       @color="critical"
       @icon={{if this.cancelTidy.isRunning "loading"}}
-      {{on "click" (perform this.cancelTidy)}}
+      {{on "click" (fn (mut this.confirmCancelTidy) true)}}
       data-test-hds-alert-action
     />
   {{/if}}
   {{#if @tidyStatus.responseTimestamp}}
-    <A.Description class="has-top-margin-xs" data-test-hds-alert-description>
+    <A.Description class="has-top-margin-xs" data-test-hds-alert-updated-at>
       Updated
       {{date-format @tidyStatus.responseTimestamp "MMM d yyyy, h:mm:ss aaa" withTimeZone=true}}
     </A.Description>
