@@ -140,9 +140,10 @@ export default class PkiTidyStatusComponent extends Component<Args> {
     try {
       const tidyAdapter = this.store.adapterFor('pki/tidy');
       yield tidyAdapter.cancelTidy(this.secretMountPath.currentPath);
-      this.confirmCancelTidy = false;
     } catch (error) {
       this.flashMessages.danger(errorMessage(error));
+    } finally {
+      this.confirmCancelTidy = false;
     }
   }
 }
