@@ -2112,6 +2112,7 @@ func TestLoadConfigFile_Bad_Value_Disable_Keep_Alives(t *testing.T) {
 	}
 }
 
+// TestLoadConfigFile_EnvTemplates loads and validates an env_template config
 func TestLoadConfigFile_EnvTemplates(t *testing.T) {
 	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-simple.hcl")
 	if err != nil {
@@ -2130,6 +2131,7 @@ func TestLoadConfigFile_EnvTemplates(t *testing.T) {
 	}
 }
 
+// TestLoadConfigFile_EnvTemplateComplex loads and validates an env_template config
 func TestLoadConfigFile_EnvTemplateComplex(t *testing.T) {
 	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-complex.hcl")
 	if err != nil {
@@ -2157,6 +2159,7 @@ func TestLoadConfigFile_EnvTemplateComplex(t *testing.T) {
 	}
 }
 
+// TestLoadConfigFile_EnvTemplateNoName ensures that env_template with no name triggers an error
 func TestLoadConfigFile_EnvTemplateNoName(t *testing.T) {
 	_, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-no-name.hcl")
 	if err == nil {
@@ -2164,13 +2167,15 @@ func TestLoadConfigFile_EnvTemplateNoName(t *testing.T) {
 	}
 }
 
-func TestLoadConfigFile_ExecNoSignal(t *testing.T) {
+// TestLoadConfigFile_ExecInvalidSignal ensures that an invalid signal triggers an error
+func TestLoadConfigFile_ExecInvalidSignal(t *testing.T) {
 	_, err := LoadConfigFile("./test-fixtures/bad-config-exec-signal-does-not-exist.hcl")
 	if err == nil {
 		t.Fatalf("expected error")
 	}
 }
 
+// TestLoadConfigFile_ExecSimple validates the exec section with default parameters
 func TestLoadConfigFile_ExecSimple(t *testing.T) {
 	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-simple.hcl")
 	if err != nil {
@@ -2196,6 +2201,7 @@ func TestLoadConfigFile_ExecSimple(t *testing.T) {
 	}
 }
 
+// TestLoadConfigFile_ExecComplex validates the exec section with non-default parameters
 func TestLoadConfigFile_ExecComplex(t *testing.T) {
 	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-complex.hcl")
 	if err != nil {
