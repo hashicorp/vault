@@ -176,7 +176,7 @@ type TemplateConfig struct {
 type ExecConfig struct {
 	Command                []string  `hcl:"command,attr" mapstructure:"command"`
 	RestartOnSecretChanges string    `hcl:"restart_on_secret_changes,optional" mapstructure:"restart_on_secret_changes"`
-	RestartKillSignal      os.Signal `hcl:"-" mapstructure:"restart_kill_signal"`
+	RestartStopSignal      os.Signal `hcl:"-" mapstructure:"restart_stop_signal"`
 }
 
 func NewConfig() *Config {
