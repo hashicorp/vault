@@ -46,7 +46,7 @@
     {{/if}}
   </Hds::Alert>
 
-  {{#each this.generalSectionFields as |attr|}}
+  {{#each this.tidyStatusGeneralFields as |attr|}}
     <InfoTableRow
       @label={{humanize (dasherize attr)}}
       @formatDate={{if
@@ -62,16 +62,13 @@
     {{if (eq this.tidyState "Running") "Current" "Last"}}
     tidy configuration
   </h2>
-  {{#each this.tidyConfigDetails as |attr|}}
-    {{#if (includes attr (array "safety_buffer" "issuer_safety_buffer"))}}
-      <InfoTableRow
-        @label={{humanize (dasherize attr)}}
-        @value={{format-duration (get @tidyStatus attr)}}
-        @alwaysRender={{true}}
-      />
-    {{else}}
-      <InfoTableRow @label={{humanize (dasherize attr)}} @value={{get @tidyStatus attr}} @alwaysRender={{true}} />
-    {{/if}}
+  {{#each this.tidyStatusConfigFields as |attr|}}
+    <InfoTableRow
+      @label={{humanize (dasherize attr)}}
+      @value={{get @tidyStatus attr}}
+      @formatTtl={{includes attr (array "safety_buffer" "issuer_safety_buffer")}}
+      @alwaysRender={{true}}
+    />
   {{/each}}
 
   {{#if this.isEnterprise}}

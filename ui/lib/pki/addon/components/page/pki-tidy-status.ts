@@ -50,7 +50,7 @@ export default class PkiTidyStatusComponent extends Component<Args> {
   @tracked tidyOptionsModal = false;
   @tracked confirmCancelTidy = false;
 
-  generalSectionFields = [
+  tidyStatusGeneralFields = [
     'time_started',
     'time_finished',
     'last_auto_tidy_finished',
@@ -59,7 +59,7 @@ export default class PkiTidyStatusComponent extends Component<Args> {
     'revocation_queue_deleted_count',
   ];
 
-  tidyConfigDetails = [
+  tidyStatusConfigFields = [
     'tidy_cert_store',
     'tidy_revocation_queue',
     'tidy_cross_cluster_revoked_certs',
@@ -81,7 +81,7 @@ export default class PkiTidyStatusComponent extends Component<Args> {
   }
 
   get hasTidyConfig() {
-    return !this.tidyConfigDetails.every(
+    return !this.tidyStatusConfigFields.every(
       (attr) => this.args.tidyStatus[attr as keyof TidyStatusParams] === null
     );
   }
