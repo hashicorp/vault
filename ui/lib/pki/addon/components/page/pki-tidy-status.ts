@@ -110,7 +110,7 @@ export default class PkiTidyStatusComponent extends Component<Args> {
         return {
           color: 'warning',
           title: 'Tidy operation failed',
-          message: this.args.tidyStatus?.message,
+          message: this.args.tidyStatus?.error,
         };
       case 'Cancelling':
         return {
