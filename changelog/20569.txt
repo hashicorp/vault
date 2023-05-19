@@ -1,0 +1,3 @@
+```release-note:improvement
+agent: Add logic to validate env_template entries in configuration
+```
