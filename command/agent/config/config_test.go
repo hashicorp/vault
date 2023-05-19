@@ -2114,7 +2114,6 @@ func TestLoadConfigFile_Bad_Value_Disable_Keep_Alives(t *testing.T) {
 
 func TestLoadConfigFile_EnvTemplates(t *testing.T) {
 	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-simple.hcl")
-
 	if err != nil {
 		t.Fatalf("error loading config file: %s", err)
 	}
@@ -2133,7 +2132,6 @@ func TestLoadConfigFile_EnvTemplates(t *testing.T) {
 
 func TestLoadConfigFile_EnvTemplateComplex(t *testing.T) {
 	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-complex.hcl")
-
 	if err != nil {
 		t.Fatalf("error loading config file: %s", err)
 	}
@@ -2175,7 +2173,6 @@ func TestLoadConfigFile_ExecNoSignal(t *testing.T) {
 
 func TestLoadConfigFile_ExecSimple(t *testing.T) {
 	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-simple.hcl")
-
 	if err != nil {
 		t.Fatalf("error loading config file: %s", err)
 	}
@@ -2201,7 +2198,6 @@ func TestLoadConfigFile_ExecSimple(t *testing.T) {
 
 func TestLoadConfigFile_ExecComplex(t *testing.T) {
 	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-complex.hcl")
-
 	if err != nil {
 		t.Fatalf("error loading config file: %s", err)
 	}
