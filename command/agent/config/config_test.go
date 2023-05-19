@@ -2217,6 +2217,10 @@ func TestLoadConfigFile_ExecComplex(t *testing.T) {
 		t.Fatalf("error loading config file: %s", err)
 	}
 
+	if err := cfg.ValidateConfig(); err != nil {
+		t.Fatalf("validation error: %s", err)
+	}
+
 	if !slices.Equal(cfg.Exec.Command, []string{"env"}) {
 		t.Fatal("exec.command does not have expected value")
 	}
@@ -2230,6 +2234,8 @@ func TestLoadConfigFile_ExecComplex(t *testing.T) {
 	}
 }
 
+// TestLoadConfigFile_Bad_EnvTemplates_MissingExec ensures that ValidateConfig
+// errors when "env_template" stanza(s) are specified but "exec" is missing
 func TestLoadConfigFile_Bad_EnvTemplates_MissingExec(t *testing.T) {
 	config, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-missing-exec.hcl")
 	if err != nil {
@@ -2241,6 +2247,8 @@ func TestLoadConfigFile_Bad_EnvTemplates_MissingExec(t *testing.T) {
 	}
 }
 
+// TestLoadConfigFile_Bad_EnvTemplates_WithProxy ensures that ValidateConfig
+// errors when both env_template and api_proxy stanzas are present
 func TestLoadConfigFile_Bad_EnvTemplates_WithProxy(t *testing.T) {
 	config, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-with-proxy.hcl")
 	if err != nil {
@@ -2252,6 +2260,8 @@ func TestLoadConfigFile_Bad_EnvTemplates_WithProxy(t *testing.T) {
 	}
 }
 
+// TestLoadConfigFile_Bad_EnvTemplates_WithFileTemplates ensures that
+// ValidateConfig errors when both env_template and template stanzas are present
 func TestLoadConfigFile_Bad_EnvTemplates_WithFileTemplates(t *testing.T) {
 	config, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-with-file-templates.hcl")
 	if err != nil {
@@ -2263,6 +2273,8 @@ func TestLoadConfigFile_Bad_EnvTemplates_WithFileTemplates(t *testing.T) {
 	}
 }
 
+// TestLoadConfigFile_Bad_EnvTemplates_DisalowedFields ensure that
+// ValidateConfig errors for disalowed env_template fields
 func TestLoadConfigFile_Bad_EnvTemplates_DisalowedFields(t *testing.T) {
 	config, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-disalowed-fields.hcl")
 	if err != nil {
