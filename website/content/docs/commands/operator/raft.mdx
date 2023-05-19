@@ -144,6 +144,10 @@ Usage: vault operator raft remove-peer <server_id>
 	  $ vault operator raft remove-peer node1
 ```
 
+<Note>
+  Once a node is removed, its Raft data needs to be deleted before it may be joined back into an existing cluster. This requires shutting down the Vault process, deleting the data, then restarting the Vault process on the removed node.
+</Note>
+
 ## snapshot
 
 This command groups subcommands for operators interacting with the snapshot
