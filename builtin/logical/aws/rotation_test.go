@@ -2,6 +2,7 @@ package aws
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -187,6 +188,90 @@ func TestRotation(t *testing.T) {
 				} else if !cred.changed && out.SecretAccessKey != oldSecret {
 					t.Fatalf("expected the key for cred %d to have stayed the same, but it changed", i)
 				}
+			}
+		})
+	}
+}
+
+func TestCreateCredential(t *testing.T) {
+	cases := []struct {
+		name     string
+		username string
+		opts     []awsutil.MockIAMOption
+	}{
+		{
+			name:     "zero keys",
+			username: "jane-doe",
+			opts: []awsutil.MockIAMOption{
+				awsutil.WithListAccessKeysOutput(&iam.ListAccessKeysOutput{
+					AccessKeyMetadata: []*iam.AccessKeyMetadata{},
+				}),
+				// delete should _not_ be called
+				awsutil.WithDeleteAccessKeyError(errors.New("should not have been called")),
+				awsutil.WithCreateAccessKeyOutput(&iam.CreateAccessKeyOutput{
+					AccessKey: &iam.AccessKey{
+						AccessKeyId:     aws.String("key"),
+						SecretAccessKey: aws.String("itsasecret"),
+					},
+				}),
+			},
+		},
+		{
+			name:     "one key",
+			username: "jane-doe",
+			opts: []awsutil.MockIAMOption{
+				awsutil.WithListAccessKeysOutput(&iam.ListAccessKeysOutput{
+					AccessKeyMetadata: []*iam.AccessKeyMetadata{
+						{AccessKeyId: aws.String("foo"), CreateDate: aws.Time(time.Now())},
+					},
+				}),
+				// delete should _not_ be called
+				awsutil.WithDeleteAccessKeyError(errors.New("should not have been called")),
+				awsutil.WithCreateAccessKeyOutput(&iam.CreateAccessKeyOutput{
+					AccessKey: &iam.AccessKey{
+						AccessKeyId:     aws.String("key"),
+						SecretAccessKey: aws.String("itsasecret"),
+					},
+				}),
+			},
+		},
+		{
+			name:     "two keys",
+			username: "jane-doe",
+			opts: []awsutil.MockIAMOption{
+				awsutil.WithListAccessKeysOutput(&iam.ListAccessKeysOutput{
+					AccessKeyMetadata: []*iam.AccessKeyMetadata{
+						{AccessKeyId: aws.String("foo"), CreateDate: aws.Time(time.Now())},
+					},
+				}),
+				awsutil.WithCreateAccessKeyOutput(&iam.CreateAccessKeyOutput{
+					AccessKey: &iam.AccessKey{
+						AccessKeyId:     aws.String("key"),
+						SecretAccessKey: aws.String("itsasecret"),
+					},
+				}),
+			},
+		},
+	}
+
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			miam, err := awsutil.NewMockIAM(
+				c.opts...,
+			)(nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			b := Backend()
+			b.iamClient = miam
+
+			err = b.createCredential(context.Background(), config.StorageView, staticRoleEntry{Username: c.username}, true)
+			if err != nil {
+				t.Fatalf("got an error we didn't expect: %q", err)
 			}
 		})
 	}
