@@ -411,6 +411,10 @@ func (c *Config) validateEnvTemplateConfig() error {
 			return fmt.Errorf("env_template[%s]: either 'contents' or 'source' must be specified", key)
 		}
 
+		if template.Contents != nil && template.Source != nil {
+			return fmt.Errorf("env_template[%s]: 'contents' and 'source' cannot be specified together", key)
+		}
+
 		if template.Backup != nil {
 			return fmt.Errorf("env_template[%s]: 'backup' is not allowed", key)
 		}
