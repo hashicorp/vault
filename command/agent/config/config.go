@@ -21,12 +21,11 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
-	"github.com/mitchellh/mapstructure"
-
 	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
+	"github.com/mitchellh/mapstructure"
 )
 
 // Config is the configuration for Vault Agent.
