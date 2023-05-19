@@ -8,7 +8,7 @@ import { task, timeout } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 
-const POLL_INTERVAL_MS = 2000;
+const POLL_INTERVAL_MS = 5000;
 
 export default class PkiTidyIndexController extends Controller {
   @service store;
