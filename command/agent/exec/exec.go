@@ -58,7 +58,7 @@ type Server struct {
 	procLock    sync.Mutex
 
 	// exit channel of the child process
-	exitCh <-chan int
+	procExitCh <-chan int
 }
 
 type ProcessExitError struct {
@@ -106,8 +106,8 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 		return fmt.Errorf("template server failed to runner generate config: %w", runnerConfigErr)
 	}
 
-	// we leave in "dry" mode, as there's no files
-	// we will get the env var rendered contents from incoming events
+	// We leave this in "dry" mode, as there are no files to render;
+	// we will get the environment variables rendered contents from the incoming events
 	var err error
 	s.runner, err = manager.NewRunner(runnerConfig, true)
 	if err != nil {
@@ -150,10 +150,9 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 				}
 
 				runnerConfig = runnerConfig.Merge(&ctv)
-				var runnerErr error
-				s.runner, runnerErr = manager.NewRunner(runnerConfig, true)
-				if runnerErr != nil {
-					s.logger.Error("template server failed with new Vault token", "error", runnerErr)
+				s.runner, err = manager.NewRunner(runnerConfig, true)
+				if err != nil {
+					s.logger.Error("template server failed with new Vault token", "error", err)
 					continue
 				}
 				go s.runner.Start()
@@ -192,6 +191,7 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 				// This template hasn't been rendered
 				if event.LastWouldRender.IsZero() {
 					doneRendering = false
+					break
 				} else {
 					// TODO: check for duplicates?
 					for _, tcfg := range event.TemplateConfigs {
