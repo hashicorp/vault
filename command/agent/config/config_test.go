@@ -5,6 +5,7 @@ package config
 
 import (
 	"os"
+	"syscall"
 	"testing"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
+	"golang.org/x/exp/slices"
 )
 
 func TestLoadConfigFile_AgentCache(t *testing.T) {
@@ -2107,5 +2109,114 @@ func TestLoadConfigFile_Bad_Value_Disable_Keep_Alives(t *testing.T) {
 	_, err := LoadConfigFile("./test-fixtures/bad-config-disable-keep-alives.hcl")
 	if err == nil {
 		t.Fatal("should have error, it didn't")
+	}
+}
+
+// TestLoadConfigFile_EnvTemplates loads and validates an env_template config
+func TestLoadConfigFile_EnvTemplates(t *testing.T) {
+	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-simple.hcl")
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	expectedKey := "MY_DATABASE_USER"
+	found := false
+	for _, envTemplate := range cfg.EnvTemplates {
+		if *envTemplate.MapToEnvironmentVariable == expectedKey {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected environment variable name to be populated")
+	}
+}
+
+// TestLoadConfigFile_EnvTemplateComplex loads and validates an env_template config
+func TestLoadConfigFile_EnvTemplateComplex(t *testing.T) {
+	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-complex.hcl")
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+	expectedKeys := []string{
+		"FOO_DATA_LOCK",
+		"FOO_DATA_PASSWORD",
+		"FOO_DATA_USER",
+	}
+
+	envExists := func(key string) bool {
+		for _, envTmpl := range cfg.EnvTemplates {
+			if *envTmpl.MapToEnvironmentVariable == key {
+				return true
+			}
+		}
+		return false
+	}
+
+	for _, expected := range expectedKeys {
+		if !envExists(expected) {
+			t.Fatalf("expected environment variable %s", expected)
+		}
+	}
+}
+
+// TestLoadConfigFile_EnvTemplateNoName ensures that env_template with no name triggers an error
+func TestLoadConfigFile_EnvTemplateNoName(t *testing.T) {
+	_, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-no-name.hcl")
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+}
+
+// TestLoadConfigFile_ExecInvalidSignal ensures that an invalid signal triggers an error
+func TestLoadConfigFile_ExecInvalidSignal(t *testing.T) {
+	_, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-invalid-signal.hcl")
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+}
+
+// TestLoadConfigFile_ExecSimple validates the exec section with default parameters
+func TestLoadConfigFile_ExecSimple(t *testing.T) {
+	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-simple.hcl")
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if cfg.Exec == nil {
+		t.Fatal("expected exec config to be parsed")
+	}
+
+	expectedCmd := []string{"/path/to/my/app", "arg1", "arg2"}
+	if !slices.Equal(cfg.Exec.Command, expectedCmd) {
+		t.Fatal("exec.command does not have expected value")
+	}
+
+	// check defaults
+	if cfg.Exec.RestartOnSecretChanges != "always" {
+		t.Fatalf("expected cfg.Exec.RestartOnSecretChanges to be 'always', got '%s'", cfg.Exec.RestartOnSecretChanges)
+	}
+
+	if cfg.Exec.RestartStopSignal != syscall.SIGTERM {
+		t.Fatalf("expected cfg.Exec.RestartStopSignal to be 'syscall.SIGTERM', got '%s'", cfg.Exec.RestartStopSignal)
+	}
+}
+
+// TestLoadConfigFile_ExecComplex validates the exec section with non-default parameters
+func TestLoadConfigFile_ExecComplex(t *testing.T) {
+	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-complex.hcl")
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if !slices.Equal(cfg.Exec.Command, []string{"env"}) {
+		t.Fatal("exec.command does not have expected value")
+	}
+
+	if cfg.Exec.RestartOnSecretChanges != "never" {
+		t.Fatalf("expected cfg.Exec.RestartOnSecretChanges to be 'never', got %q", cfg.Exec.RestartOnSecretChanges)
+	}
+
+	if cfg.Exec.RestartStopSignal != syscall.SIGINT {
+		t.Fatalf("expected cfg.Exec.RestartStopSignal to be 'syscall.SIGINT', got %q", cfg.Exec.RestartStopSignal)
 	}
 }
