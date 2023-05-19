@@ -2127,7 +2127,7 @@ func TestLoadConfigFile_EnvTemplates(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatalf("expected env var name to be populated")
+		t.Fatalf("expected environment variable name to be populated")
 	}
 }
 
@@ -2154,7 +2154,7 @@ func TestLoadConfigFile_EnvTemplateComplex(t *testing.T) {
 
 	for _, expected := range expectedKeys {
 		if !envExists(expected) {
-			t.Fatalf("expected env var %s", expected)
+			t.Fatalf("expected environment variable %s", expected)
 		}
 	}
 }

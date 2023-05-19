@@ -1170,9 +1170,9 @@ func parseEnvTemplates(result *Config, list *ast.ObjectList) error {
 			return err
 		}
 
-		// parse the keys in the item for the env var name
+		// parse the keys in the item for the environment variable name
 		if numberOfKeys := len(item.Keys); numberOfKeys != 1 {
-			return fmt.Errorf("expected one and only one env var name, got %d", numberOfKeys)
+			return fmt.Errorf("expected one and only one environment variable name, got %d", numberOfKeys)
 		}
 
 		// hcl parses this with extra quotes if quoted in config file
