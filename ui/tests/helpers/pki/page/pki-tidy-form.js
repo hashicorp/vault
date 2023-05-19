@@ -4,13 +4,12 @@
  */
 
 export const SELECTORS = {
-  tidyCertStoreLabel: '[data-test-tidy-cert-store-label]',
-  tidyRevocationList: '[data-test-tidy-revocation-queue-label]',
-  safetyBufferTTL: '[data-test-ttl-inputs]',
-  tidyCertStoreCheckbox: '[data-test-tidy-cert-store-checkbox]',
-  tidyRevocationCheckbox: '[data-test-tidy-revocation-queue-checkbox]',
-  safetyBufferInput: '[data-test-ttl-value="Safety buffer"]',
-  safetyBufferInputDropdown: '[data-test-select="ttl-unit"]',
+  inputByAttr: (attr) => `[data-test-input="${attr}"]`,
+  toggleInput: (attr) => `[data-test-input="${attr}"] input`,
+  intervalDuration: '[data-test-ttl-value="Automatic tidy enabled"]',
+  acmeAccountSafetyBuffer: '[data-test-ttl-value="Tidy ACME enabled"]',
+  toggleLabel: (label) => `[data-test-toggle-label="${label}"]`,
+  tidySectionHeader: (header) => `[data-test-tidy-header="${header}"]`,
   tidySave: '[data-test-pki-tidy-button]',
   tidyCancel: '[data-test-pki-tidy-cancel]',
 };

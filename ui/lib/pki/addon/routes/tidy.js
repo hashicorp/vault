@@ -12,7 +12,7 @@ export default class PkiTidyRoute extends Route {
     return hash({
       hasConfig: this.shouldPromptConfig,
       engine,
-      autoTidyConfig: this.store.queryRecord('pki/tidy', { backend: engine.id, tidyType: 'auto' }),
+      autoTidyConfig: this.store.findRecord('pki/tidy', engine.id),
     });
   }
 }

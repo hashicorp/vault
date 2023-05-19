@@ -2,9 +2,8 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: MPL-2.0
  */
-import { assert } from '@ember/debug';
-import { encodePath } from 'vault/utils/path-encoding-helpers';
 import ApplicationAdapter from '../application';
+import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export default class PkiTidyAdapter extends ApplicationAdapter {
   namespace = 'v1';
@@ -13,34 +12,32 @@ export default class PkiTidyAdapter extends ApplicationAdapter {
     return `${this.buildURL()}/${encodePath(backend)}`;
   }
 
-  urlForCreateRecord(snapshot) {
+  // single tidy operations (manual) are always a new record
+  createRecord(store, type, snapshot) {
     const { backend } = snapshot.record;
     const { tidyType } = snapshot.adapterOptions;
+    if (tidyType === 'auto')
+      throw new Error('Auto tidy type models are never new, please use findRecord');
 
-    if (!backend) {
-      throw new Error('Backend missing');
-    }
-    switch (tidyType) {
-      case 'manual-tidy':
-        return `${this._baseUrl(backend)}/tidy`;
-      case 'auto-tidy':
-        return `${this._baseUrl(backend)}/config/auto-tidy`;
-      default:
-        assert('type must be one of manual-tidy, auto-tidy');
-    }
+    const url = `${this._baseUrl(backend)}/tidy`;
+    return this.ajax(url, 'POST', { data: this.serialize(snapshot, tidyType) });
   }
 
-  createRecord(store, type, snapshot) {
-    const url = this.urlForCreateRecord(snapshot);
-    return this.ajax(url, 'POST', { data: this.serialize(snapshot) });
+  // saving auto-tidy config POST requests will always update
+  updateRecord(store, type, snapshot) {
+    const backend = snapshot.record.id;
+    const { tidyType } = snapshot.adapterOptions;
+    if (tidyType === 'manual')
+      throw new Error('Manual tidy type models are always new, please use createRecord');
+
+    const url = `${this._baseUrl(backend)}/config/auto-tidy`;
+    return this.ajax(url, 'POST', { data: this.serialize(snapshot, tidyType) });
   }
 
-  queryRecord(store, type, query) {
-    const { backend, tidyType } = query;
+  findRecord(store, type, backend) {
     // only auto-tidy will ever be read, no need to pass the type here
     return this.ajax(`${this._baseUrl(backend)}/config/auto-tidy`, 'GET').then((resp) => {
-      // tidyType is the primary key and sets the id for the ember data model
-      return { tidyType, ...resp.data };
+      return resp.data;
     });
   }
 }

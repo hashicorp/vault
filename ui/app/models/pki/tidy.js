@@ -9,11 +9,29 @@ import { withExpandedAttributes } from 'vault/decorators/model-expanded-attribut
 
 @withExpandedAttributes()
 export default class PkiTidyModel extends Model {
+  // the backend mount is the model id, only one pki/tidy model will ever persist (the auto-tidy config)
   @service version;
+
+  @attr({
+    label: 'Tidy ACME enabled',
+    labelDisabled: 'Tidy ACME disabled',
+    mapToBoolean: 'tidyAcme',
+    helperTextDisabled: 'Tidying of ACME accounts,  orders and authorizations is disabled',
+    helperTextEnabled:
+      'The amount of time that must pass after creation that an account with no orders is marked revoked, and the amount of time after being marked revoked or deactivated.',
+    detailsLabel: 'ACME account safety buffer',
+    formatTtl: true,
+  })
+  acmeAccountSafetyBuffer;
+
+  @attr('boolean', {
+    label: 'Tidy ACME',
+    defaultValue: false,
+  })
+  tidyAcme;
 
   @attr('boolean', {
     label: 'Automatic tidy enabled',
-    labelDisabled: 'Automatic tidy disabled',
     defaultValue: false,
   })
   enabled; // auto-tidy only
@@ -94,8 +112,6 @@ export default class PkiTidyModel extends Model {
 
   @attr('boolean', {
     label: 'Tidy revoked certificate issuer associations',
-    subText:
-      'Check to associate revoked certificates with their corresponding issuers; this improves the performance of OCSP and CRL building, by shifting work to a tidy operation instead. It is suggested to run this tidy when removing or importing new issuers and on the first upgrade to a post-1.11 Vault version, but otherwise not to run it during automatic tidy operations.',
   })
   tidyRevokedCertIssuerAssociations;
 
@@ -105,14 +121,6 @@ export default class PkiTidyModel extends Model {
   })
   tidyRevokedCerts;
 
-  /*
-  NOT IN DOCS - check with crypto
-  @attr('string') acme_account_safety_buffer;
-  @attr('boolean', { defaultValue: false }) maintain_stored_certificate_counts;
-  @attr('boolean', { defaultValue: false }) publish_stored_certificate_count_metrics;
-  @attr('boolean', { defaultValue: false }) tidy_acme;
-  */
-
   get useOpenAPI() {
     return true;
   }
@@ -120,38 +128,19 @@ export default class PkiTidyModel extends Model {
     return `/v1/${backend}/config/auto-tidy?help=1`;
   }
 
-  get displayGroups() {
-    const groups = [
-      { default: ['enabled', 'intervalDuration'] },
-      {
-        'Universal operations': ['tidyCertStore', 'tidyRevokedCerts', 'safetyBuffer', 'pauseDuration'],
-      },
-      {
-        'Issuer operations': [
-          'tidyExpiredIssuers',
-          'tidyMoveLegacyCaBundle',
-          'tidyRevokedCertIssuerAssociations',
-          'issuerSafetyBuffer',
-        ],
-      },
-    ];
-    if (this.version.isEnterprise) {
-      groups.push({
-        'Cross-cluster operations': [
-          'tidyRevocationQueue',
-          'tidyCrossClusterRevokedCerts',
-          'revocationQueueSafetyBuffer',
-        ],
-      });
-    }
+  get allGroups() {
+    const groups = [{ autoTidy: ['enabled', 'intervalDuration'] }, ...this.sharedFields];
     return this._expandGroups(groups);
   }
 
+  // shared between auto and manual tidy operations
   get sharedFields() {
     const groups = [
-      { autoTidy: ['intervalDuration'] },
       {
         'Universal operations': ['tidyCertStore', 'tidyRevokedCerts', 'safetyBuffer', 'pauseDuration'],
+      },
+      {
+        'ACME operations': ['tidyAcme', 'acmeAccountSafetyBuffer'],
       },
       {
         'Issuer operations': [

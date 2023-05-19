@@ -19,9 +19,9 @@
 </Toolbar>
 
 <main>
-  {{#each @model.displayGroups as |group|}}
+  {{#each @model.allGroups as |group|}}
     {{#each-in group as |label fields|}}
-      {{#if (not-eq label "default")}}
+      {{#if (not-eq label "autoTidy")}}
         <h2 class="title is-5 has-top-margin-l has-bottom-margin-xs" data-test-group-title={{label}}>
           {{label}}
         </h2>
