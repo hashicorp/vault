@@ -42,4 +42,9 @@ export default class PkiTidyAdapter extends ApplicationAdapter {
       return resp.data;
     });
   }
+
+  cancelTidy(backend) {
+    const url = `${this._baseUrl(backend)}`;
+    return this.ajax(`${url}/tidy-cancel`, 'POST');
+  }
 }

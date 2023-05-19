@@ -9,14 +9,7 @@ import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-
-const SELECTORS = {
-  hdsAlertTitle: '[data-test-hds-alert-title]',
-  hdsAlertActions: '[data-test-hds-alert-action]',
-  hdsAlertButtonText: '[data-test-hds-alert-action] .hds-button__text',
-  timeStartedRow: '[data-test-value-div="Time started"]',
-  timeFinishedRow: '[data-test-value-div="Time finished"]',
-};
+import { SELECTORS } from 'vault/tests/helpers/pki/page/pki-tidy-status';
 
 module('Integration | Component | Page::PkiTidyStatus', function (hooks) {
   setupRenderingTest(hooks);
@@ -70,7 +63,7 @@ module('Integration | Component | Page::PkiTidyStatus', function (hooks) {
     );
     // running state
     assert.dom(SELECTORS.hdsAlertTitle).hasText('Tidy in progress');
-    assert.dom(SELECTORS.hdsAlertActions).exists();
+    assert.dom(SELECTORS.cancelTidyAction).exists();
     assert.dom(SELECTORS.hdsAlertButtonText).hasText('Cancel tidy');
     // inactive state
     this.tidyStatus.state = 'Inactive';

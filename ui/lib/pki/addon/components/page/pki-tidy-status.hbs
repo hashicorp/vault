@@ -28,18 +28,24 @@
     as |A|
   >
     <A.Title data-test-hds-alert-title>{{this.tidyStateAlertBanner.title}}</A.Title>
-    <A.Description>{{this.tidyStateAlertBanner.message}}</A.Description>
+    <A.Description data-test-hds-alert-description>{{this.tidyStateAlertBanner.message}}</A.Description>
     {{#if this.tidyStateAlertBanner.shouldShowCancelTidy}}
-      <A.Button @text="Cancel tidy" @color="critical" {{on "click" (perform this.cancelTidy)}} data-test-hds-alert-action />
+      <A.Button
+        @text="Cancel tidy"
+        @color="critical"
+        @icon={{if this.cancelTidy.isRunning "loading"}}
+        {{on "click" (fn (mut this.confirmCancelTidy) true)}}
+        data-test-cancel-tidy-action
+      />
     {{/if}}
     {{#if @tidyStatus.responseTimestamp}}
-      <A.Description class="has-top-margin-xs">
+      <A.Description class="has-top-margin-xs" data-test-hds-alert-updated-at>
         Updated
         {{date-format @tidyStatus.responseTimestamp "MMM d yyyy, h:mm:ss aaa" withTimeZone=true}}
       </A.Description>
     {{/if}}
-
   </Hds::Alert>
+
   {{#each this.generalSectionFields as |attr|}}
     <InfoTableRow
       @label={{humanize (dasherize attr)}}
@@ -165,7 +171,7 @@
         type="button"
         class="button is-primary"
         {{on "click" (perform this.cancelTidy)}}
-        data-test-tidy-modal-auto-button
+        data-test-tidy-modal-cancel-button
       >
         Confirm
       </button>
