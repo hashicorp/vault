@@ -35,8 +35,8 @@ func patternAcmeRevoke(b *backend, pattern string) *framework.Path {
 			},
 		},
 
-		HelpSynopsis:    "",
-		HelpDescription: "",
+		HelpSynopsis:    pathAcmeHelpSync,
+		HelpDescription: pathAcmeHelpDesc,
 	}
 }
 

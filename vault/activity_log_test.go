@@ -838,8 +838,8 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 			"retention_months":         24,
 			"enabled":                  activityLogEnabledDefaultValue,
 			"queries_available":        false,
-			"reporting_enabled":        core.censusLicensingEnabled,
-			"billing_start_timestamp":  core.billingStart,
+			"reporting_enabled":        core.CensusLicensingEnabled(),
+			"billing_start_timestamp":  core.BillingStart(),
 			"minimum_retention_months": core.activityLog.configOverrides.MinimumRetentionMonths,
 		}
 
@@ -922,8 +922,8 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 			"retention_months":         2,
 			"enabled":                  "enable",
 			"queries_available":        false,
-			"reporting_enabled":        core.censusLicensingEnabled,
-			"billing_start_timestamp":  core.billingStart,
+			"reporting_enabled":        core.CensusLicensingEnabled(),
+			"billing_start_timestamp":  core.BillingStart(),
 			"minimum_retention_months": core.activityLog.configOverrides.MinimumRetentionMonths,
 		}
 
@@ -961,8 +961,8 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 			"retention_months":         24,
 			"enabled":                  activityLogEnabledDefaultValue,
 			"queries_available":        false,
-			"reporting_enabled":        core.censusLicensingEnabled,
-			"billing_start_timestamp":  core.billingStart,
+			"reporting_enabled":        core.CensusLicensingEnabled(),
+			"billing_start_timestamp":  core.BillingStart(),
 			"minimum_retention_months": core.activityLog.configOverrides.MinimumRetentionMonths,
 		}
 
@@ -4243,6 +4243,50 @@ func TestActivityLog_partialMonthClientCountWithMultipleMountPaths(t *testing.T)
 	}
 }
 
+// TestActivityLog_processNewClients_delete ensures that the correct clients are deleted from a processNewClients struct
+func TestActivityLog_processNewClients_delete(t *testing.T) {
+	mount := "mount"
+	namespace := "namespace"
+	clientID := "client-id"
+	run := func(t *testing.T, isNonEntity bool) {
+		t.Helper()
+		record := &activity.EntityRecord{
+			MountAccessor: mount,
+			NamespaceID:   namespace,
+			ClientID:      clientID,
+			NonEntity:     isNonEntity,
+		}
+		newClients := newProcessNewClients()
+		newClients.add(record)
+
+		require.True(t, newClients.Counts.contains(record))
+		require.True(t, newClients.Namespaces[namespace].Counts.contains(record))
+		require.True(t, newClients.Namespaces[namespace].Mounts[mount].Counts.contains(record))
+
+		newClients.delete(record)
+
+		byNS := newClients.Namespaces
+		counts := newClients.Counts
+		require.NotContains(t, counts.NonEntities, clientID)
+		require.NotContains(t, counts.Entities, clientID)
+
+		require.NotContains(t, counts.NonEntities, clientID)
+		require.NotContains(t, counts.Entities, clientID)
+
+		require.NotContains(t, byNS[namespace].Mounts[mount].Counts.NonEntities, clientID)
+		require.NotContains(t, byNS[namespace].Counts.NonEntities, clientID)
+
+		require.NotContains(t, byNS[namespace].Mounts[mount].Counts.Entities, clientID)
+		require.NotContains(t, byNS[namespace].Counts.Entities, clientID)
+	}
+	t.Run("entity", func(t *testing.T) {
+		run(t, false)
+	})
+	t.Run("non-entity", func(t *testing.T) {
+		run(t, true)
+	})
+}
+
 // TestActivityLog_processClientRecord calls processClientRecord for an entity and a non-entity record and verifies that
 // the record is present in the namespace and month maps
 func TestActivityLog_processClientRecord(t *testing.T) {
@@ -4300,4 +4344,338 @@ func TestActivityLog_processClientRecord(t *testing.T) {
 	t.Run("entity", func(t *testing.T) {
 		run(t, false)
 	})
+}
+
+func verifyByNamespaceContains(t *testing.T, s summaryByNamespace, clients ...*activity.EntityRecord) {
+	t.Helper()
+	for _, c := range clients {
+		require.Contains(t, s, c.NamespaceID)
+		counts := s[c.NamespaceID].Counts
+		require.True(t, counts.contains(c))
+		mounts := s[c.NamespaceID].Mounts
+		require.Contains(t, mounts, c.MountAccessor)
+		require.True(t, mounts[c.MountAccessor].Counts.contains(c))
+	}
+}
+
+func (s summaryByMonth) firstSeen(t *testing.T, client *activity.EntityRecord) time.Time {
+	t.Helper()
+	var seen int64
+	for month, data := range s {
+		present := data.NewClients.Counts.contains(client)
+		if present {
+			if seen != 0 {
+				require.Fail(t, "client seen more than once", client.ClientID, s)
+			}
+			seen = month
+		}
+	}
+	return time.Unix(seen, 0).UTC()
+}
+
+// TestActivityLog_handleEntitySegment verifies that the by namespace and by month summaries are correctly filled in a
+// variety of scenarios
+func TestActivityLog_handleEntitySegment(t *testing.T) {
+	finalTime := timeutil.StartOfMonth(time.Date(2022, 12, 1, 0, 0, 0, 0, time.UTC))
+	addMonths := func(i int) time.Time {
+		return timeutil.StartOfMonth(finalTime.AddDate(0, i, 0))
+	}
+	currentSegmentClients := make([]*activity.EntityRecord, 0, 3)
+	for i := 0; i < 3; i++ {
+		currentSegmentClients = append(currentSegmentClients, &activity.EntityRecord{
+			ClientID:      fmt.Sprintf("id-%d", i),
+			NamespaceID:   fmt.Sprintf("ns-%d", i),
+			MountAccessor: fmt.Sprintf("mnt-%d", i),
+			NonEntity:     i == 0,
+		})
+	}
+	a := &ActivityLog{}
+	t.Run("older segment empty", func(t *testing.T) {
+		hll := hyperloglog.New()
+		byNS := make(summaryByNamespace)
+		byMonth := make(summaryByMonth)
+		segmentTime := addMonths(-3)
+		// our 3 clients were seen 3 months ago, with no other clients having been seen
+		err := a.handleEntitySegment(&activity.EntityActivityLog{Clients: currentSegmentClients}, segmentTime, hll, pqOptions{
+			byNamespace:       byNS,
+			byMonth:           byMonth,
+			endTime:           timeutil.EndOfMonth(segmentTime),
+			activePeriodStart: addMonths(-12),
+			activePeriodEnd:   addMonths(12),
+		})
+		require.NoError(t, err)
+		require.Len(t, byNS, 3)
+		verifyByNamespaceContains(t, byNS, currentSegmentClients...)
+		require.Len(t, byMonth, 1)
+		// they should all be registered as having first been seen 3 months ago
+		require.Equal(t, byMonth.firstSeen(t, currentSegmentClients[0]), segmentTime)
+		require.Equal(t, byMonth.firstSeen(t, currentSegmentClients[1]), segmentTime)
+		require.Equal(t, byMonth.firstSeen(t, currentSegmentClients[2]), segmentTime)
+		// and all 3 should be in the hyperloglog
+		require.Equal(t, hll.Estimate(), uint64(3))
+	})
+	t.Run("older segment clients seen earlier", func(t *testing.T) {
+		hll := hyperloglog.New()
+		byNS := make(summaryByNamespace)
+		byNS.add(currentSegmentClients[0])
+		byNS.add(currentSegmentClients[1])
+		byMonth := make(summaryByMonth)
+		segmentTime := addMonths(-3)
+		seenBefore2Months := addMonths(-2)
+		seenBefore1Month := addMonths(-1)
+
+		// client 0 was seen 2 months ago
+		byMonth.add(currentSegmentClients[0], seenBefore2Months)
+		// client 1 was seen 1 month ago
+		byMonth.add(currentSegmentClients[1], seenBefore1Month)
+
+		// handle clients 0, 1, and 2 as having been seen 3 months ago
+		err := a.handleEntitySegment(&activity.EntityActivityLog{Clients: currentSegmentClients}, segmentTime, hll, pqOptions{
+			byNamespace:       byNS,
+			byMonth:           byMonth,
+			endTime:           timeutil.EndOfMonth(segmentTime),
+			activePeriodStart: addMonths(-12),
+			activePeriodEnd:   addMonths(12),
+		})
+		require.NoError(t, err)
+		require.Len(t, byNS, 3)
+		verifyByNamespaceContains(t, byNS, currentSegmentClients...)
+		// we expect that they will only be registered as new 3 months ago, because that's when they were first seen
+		require.Equal(t, byMonth.firstSeen(t, currentSegmentClients[0]), segmentTime)
+		require.Equal(t, byMonth.firstSeen(t, currentSegmentClients[1]), segmentTime)
+		require.Equal(t, byMonth.firstSeen(t, currentSegmentClients[2]), segmentTime)
+
+		require.Equal(t, hll.Estimate(), uint64(3))
+	})
+	t.Run("disjoint set of clients", func(t *testing.T) {
+		hll := hyperloglog.New()
+		byNS := make(summaryByNamespace)
+		byNS.add(currentSegmentClients[0])
+		byNS.add(currentSegmentClients[1])
+		byMonth := make(summaryByMonth)
+		segmentTime := addMonths(-3)
+		seenBefore2Months := addMonths(-2)
+		seenBefore1Month := addMonths(-1)
+
+		// client 0 was seen 2 months ago
+		byMonth.add(currentSegmentClients[0], seenBefore2Months)
+		// client 1 was seen 1 month ago
+		byMonth.add(currentSegmentClients[1], seenBefore1Month)
+
+		// handle client 2 as having been seen 3 months ago
+		err := a.handleEntitySegment(&activity.EntityActivityLog{Clients: currentSegmentClients[2:]}, segmentTime, hll, pqOptions{
+			byNamespace:       byNS,
+			byMonth:           byMonth,
+			endTime:           timeutil.EndOfMonth(segmentTime),
+			activePeriodStart: addMonths(-12),
+			activePeriodEnd:   addMonths(12),
+		})
+		require.NoError(t, err)
+		require.Len(t, byNS, 3)
+		verifyByNamespaceContains(t, byNS, currentSegmentClients...)
+		// client 2 should be added to the map, and the other clients should stay where they were
+		require.Equal(t, byMonth.firstSeen(t, currentSegmentClients[0]), seenBefore2Months)
+		require.Equal(t, byMonth.firstSeen(t, currentSegmentClients[1]), seenBefore1Month)
+		require.Equal(t, byMonth.firstSeen(t, currentSegmentClients[2]), segmentTime)
+		// the hyperloglog will have 1 element, because there was only 1 client in the segment
+		require.Equal(t, hll.Estimate(), uint64(1))
+	})
+	t.Run("new clients same namespaces", func(t *testing.T) {
+		hll := hyperloglog.New()
+		byNS := make(summaryByNamespace)
+		byNS.add(currentSegmentClients[0])
+		byNS.add(currentSegmentClients[1])
+		byNS.add(currentSegmentClients[2])
+		byMonth := make(summaryByMonth)
+		segmentTime := addMonths(-3)
+		seenBefore2Months := addMonths(-2)
+		seenBefore1Month := addMonths(-1)
+
+		// client 0 and 2 were seen 2 months ago
+		byMonth.add(currentSegmentClients[0], seenBefore2Months)
+		byMonth.add(currentSegmentClients[2], seenBefore2Months)
+		// client 1 was seen 1 month ago
+		byMonth.add(currentSegmentClients[1], seenBefore1Month)
+
+		// create 3 additional clients
+		// these have ns-1, ns-2, ns-3 and mnt-1, mnt-2, mnt-3
+		moreSegmentClients := make([]*activity.EntityRecord, 0, 3)
+		for i := 0; i < 3; i++ {
+			moreSegmentClients = append(moreSegmentClients, &activity.EntityRecord{
+				ClientID:      fmt.Sprintf("id-%d", i+3),
+				NamespaceID:   fmt.Sprintf("ns-%d", i),
+				MountAccessor: fmt.Sprintf("ns-%d", i),
+				NonEntity:     i == 1,
+			})
+		}
+		// 3 new clients have been seen 3 months ago
+		err := a.handleEntitySegment(&activity.EntityActivityLog{Clients: moreSegmentClients}, segmentTime, hll, pqOptions{
+			byNamespace:       byNS,
+			byMonth:           byMonth,
+			endTime:           timeutil.EndOfMonth(segmentTime),
+			activePeriodStart: addMonths(-12),
+			activePeriodEnd:   addMonths(12),
+		})
+		require.NoError(t, err)
+		// there are only 3 namespaces, since both currentSegmentClients and moreSegmentClients use the same namespaces
+		require.Len(t, byNS, 3)
+		verifyByNamespaceContains(t, byNS, currentSegmentClients...)
+		verifyByNamespaceContains(t, byNS, moreSegmentClients...)
+		// The segment clients that have already been seen have their same first seen dates
+		require.Equal(t, byMonth.firstSeen(t, currentSegmentClients[0]), seenBefore2Months)
+		require.Equal(t, byMonth.firstSeen(t, currentSegmentClients[1]), seenBefore1Month)
+		require.Equal(t, byMonth.firstSeen(t, currentSegmentClients[2]), seenBefore2Months)
+		// and the new clients should be first seen at segmentTime
+		require.Equal(t, byMonth.firstSeen(t, moreSegmentClients[0]), segmentTime)
+		require.Equal(t, byMonth.firstSeen(t, moreSegmentClients[1]), segmentTime)
+		require.Equal(t, byMonth.firstSeen(t, moreSegmentClients[2]), segmentTime)
+		// the hyperloglog will have 3 elements, because there were the 3 new elements in moreSegmentClients seen
+		require.Equal(t, hll.Estimate(), uint64(3))
+	})
+}
+
+// TestActivityLog_breakdownTokenSegment verifies that tokens are correctly added to a map that tracks counts per namespace
+func TestActivityLog_breakdownTokenSegment(t *testing.T) {
+	toAdd := map[string]uint64{
+		"a": 1,
+		"b": 2,
+		"c": 3,
+	}
+	a := &ActivityLog{}
+	testCases := []struct {
+		name                    string
+		existingNamespaceCounts map[string]uint64
+		wantCounts              map[string]uint64
+	}{
+		{
+			name:       "empty",
+			wantCounts: toAdd,
+		},
+		{
+			name: "some overlap",
+			existingNamespaceCounts: map[string]uint64{
+				"a": 2,
+				"z": 1,
+			},
+			wantCounts: map[string]uint64{
+				"a": 3,
+				"b": 2,
+				"c": 3,
+				"z": 1,
+			},
+		},
+		{
+			name: "disjoint sets",
+			existingNamespaceCounts: map[string]uint64{
+				"z": 5,
+				"y": 3,
+				"x": 2,
+			},
+			wantCounts: map[string]uint64{
+				"a": 1,
+				"b": 2,
+				"c": 3,
+				"z": 5,
+				"y": 3,
+				"x": 2,
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			byNamespace := make(map[string]*processByNamespace)
+			for k, v := range tc.existingNamespaceCounts {
+				byNamespace[k] = newByNamespace()
+				byNamespace[k].Counts.Tokens = v
+			}
+			a.breakdownTokenSegment(&activity.TokenCount{CountByNamespaceID: toAdd}, byNamespace)
+			got := make(map[string]uint64)
+			for k, v := range byNamespace {
+				got[k] = v.Counts.Tokens
+			}
+			require.Equal(t, tc.wantCounts, got)
+		})
+	}
+}
+
+// TestActivityLog_writePrecomputedQuery calls writePrecomputedQuery for a segment with 1 non entity and 1 entity client,
+// which have different namespaces and mounts. The precomputed query is then retrieved from storage and we verify that
+// the data structure is filled correctly
+func TestActivityLog_writePrecomputedQuery(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+
+	a := core.activityLog
+	a.SetEnable(true)
+
+	byMonth := make(summaryByMonth)
+	byNS := make(summaryByNamespace)
+	clientEntity := &activity.EntityRecord{
+		ClientID:      "id-1",
+		NamespaceID:   "ns-1",
+		MountAccessor: "mnt-1",
+	}
+	clientNonEntity := &activity.EntityRecord{
+		ClientID:      "id-2",
+		NamespaceID:   "ns-2",
+		MountAccessor: "mnt-2",
+		NonEntity:     true,
+	}
+	now := time.Now()
+
+	// add the 2 clients to the namespace and month summaries
+	processClientRecord(clientEntity, byNS, byMonth, now)
+	processClientRecord(clientNonEntity, byNS, byMonth, now)
+
+	endTime := timeutil.EndOfMonth(now)
+	opts := pqOptions{
+		byNamespace: byNS,
+		byMonth:     byMonth,
+		endTime:     endTime,
+	}
+
+	err := a.writePrecomputedQuery(context.Background(), now, opts)
+	require.NoError(t, err)
+
+	// read the query back from storage
+	val, err := a.queryStore.Get(context.Background(), now, endTime)
+	require.NoError(t, err)
+	require.Equal(t, now.UTC().Unix(), val.StartTime.UTC().Unix())
+	require.Equal(t, endTime.UTC().Unix(), val.EndTime.UTC().Unix())
+
+	// ns-1 and ns-2 should both be present in the results
+	require.Len(t, val.Namespaces, 2)
+	require.Len(t, val.Months, 1)
+	resultByNS := make(map[string]*activity.NamespaceRecord)
+	for _, ns := range val.Namespaces {
+		resultByNS[ns.NamespaceID] = ns
+	}
+	ns1 := resultByNS["ns-1"]
+	ns2 := resultByNS["ns-2"]
+
+	require.Equal(t, ns1.Entities, uint64(1))
+	require.Equal(t, ns1.NonEntityTokens, uint64(0))
+	require.Equal(t, ns2.Entities, uint64(0))
+	require.Equal(t, ns2.NonEntityTokens, uint64(1))
+
+	require.Len(t, ns1.Mounts, 1)
+	require.Len(t, ns2.Mounts, 1)
+	// ns-1 needs to have mnt-1
+	require.Contains(t, ns1.Mounts[0].MountPath, "mnt-1")
+	// ns-2 needs to have mnt-2
+	require.Contains(t, ns2.Mounts[0].MountPath, "mnt-2")
+
+	require.Equal(t, 1, ns1.Mounts[0].Counts.EntityClients)
+	require.Equal(t, 0, ns1.Mounts[0].Counts.NonEntityClients)
+	require.Equal(t, 0, ns2.Mounts[0].Counts.EntityClients)
+	require.Equal(t, 1, ns2.Mounts[0].Counts.NonEntityClients)
+
+	monthRecord := val.Months[0]
+	// there should only be one month present, since the clients were added with the same timestamp
+	require.Equal(t, monthRecord.Timestamp, timeutil.StartOfMonth(now).UTC().Unix())
+	require.Equal(t, 1, monthRecord.Counts.NonEntityClients)
+	require.Equal(t, 1, monthRecord.Counts.EntityClients)
+	require.Len(t, monthRecord.Namespaces, 2)
+	require.Len(t, monthRecord.NewClients.Namespaces, 2)
+	require.Equal(t, 1, monthRecord.NewClients.Counts.EntityClients)
+	require.Equal(t, 1, monthRecord.NewClients.Counts.NonEntityClients)
 }

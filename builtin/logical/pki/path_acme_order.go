@@ -58,8 +58,8 @@ func patternAcmeNewOrder(b *backend, pattern string) *framework.Path {
 			},
 		},
 
-		HelpSynopsis:    "",
-		HelpDescription: "",
+		HelpSynopsis:    pathAcmeHelpSync,
+		HelpDescription: pathAcmeHelpDesc,
 	}
 }
 
@@ -79,8 +79,8 @@ func patternAcmeListOrders(b *backend, pattern string) *framework.Path {
 			},
 		},
 
-		HelpSynopsis:    "",
-		HelpDescription: "",
+		HelpSynopsis:    pathAcmeHelpSync,
+		HelpDescription: pathAcmeHelpDesc,
 	}
 }
 
@@ -101,8 +101,8 @@ func patternAcmeGetOrder(b *backend, pattern string) *framework.Path {
 			},
 		},
 
-		HelpSynopsis:    "",
-		HelpDescription: "",
+		HelpSynopsis:    pathAcmeHelpSync,
+		HelpDescription: pathAcmeHelpDesc,
 	}
 }
 
@@ -123,8 +123,8 @@ func patternAcmeFinalizeOrder(b *backend, pattern string) *framework.Path {
 			},
 		},
 
-		HelpSynopsis:    "",
-		HelpDescription: "",
+		HelpSynopsis:    pathAcmeHelpSync,
+		HelpDescription: pathAcmeHelpDesc,
 	}
 }
 
@@ -145,8 +145,8 @@ func patternAcmeFetchOrderCert(b *backend, pattern string) *framework.Path {
 			},
 		},
 
-		HelpSynopsis:    "",
-		HelpDescription: "",
+		HelpSynopsis:    pathAcmeHelpSync,
+		HelpDescription: pathAcmeHelpDesc,
 	}
 }
 
@@ -283,6 +283,11 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, _ *logical.Request, 
 	if err != nil {
 		b.Logger().Warn("orphaned generated ACME certificate due to error saving order", "serial_number", hyphenSerialNumber, "error", err)
 		return nil, fmt.Errorf("failed saving updated order: %w", err)
+	}
+
+	if err := b.doTrackBilling(ac.sc.Context, order.Identifiers); err != nil {
+		b.Logger().Error("failed to track billing for order", "order", orderId, "error", err)
+		err = nil
 	}
 
 	return formatOrderResponse(ac, order), nil
@@ -466,7 +471,20 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 		return nil, "", fmt.Errorf("%w: Refusing to sign CSR with empty PublicKey", ErrBadCSR)
 	}
 
-	parsedBundle, _, err := signCert(ac.sc.Backend, input, signingBundle, false, true)
+	// UseCSRValues as defined in certutil/helpers.go accepts the following
+	// fields off of the CSR:
+	//
+	// 1. Subject fields,
+	// 2. SANs,
+	// 3. Extensions (except for a BasicConstraint extension)
+	//
+	// Because we have stricter validation of subject parameters, and no way
+	// to validate or allow extensions, we do not wish to use the CSR's
+	// parameters for these values. If a CSR sets, e.g., an organizational
+	// unit, we have no way of validating this (via ACME here, without perhaps
+	// an external policy engine), and thus should not be setting it on our
+	// final issued certificate.
+	parsedBundle, _, err := signCert(ac.sc.Backend, input, signingBundle, false /* is_ca=false */, false /* use_csr_values */)
 	if err != nil {
 		return nil, "", fmt.Errorf("%w: refusing to sign CSR: %s", ErrBadCSR, err.Error())
 	}
@@ -502,6 +520,13 @@ func parseCsrFromFinalize(data map[string]interface{}) (*x509.CertificateRequest
 	if csr.PublicKey == nil || csr.PublicKeyAlgorithm == x509.UnknownPublicKeyAlgorithm {
 		return nil, fmt.Errorf("%w: failed to parse csr no public key info or unknown key algorithm used", ErrBadCSR)
 	}
+
+	for _, ext := range csr.Extensions {
+		if ext.Id.Equal(certutil.ExtensionBasicConstraintsOID) {
+			return nil, fmt.Errorf("%w: refusing to accept CSR with Basic Constraints extension", ErrBadCSR)
+		}
+	}
+
 	return csr, nil
 }
 

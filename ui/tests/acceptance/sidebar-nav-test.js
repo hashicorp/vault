@@ -66,7 +66,7 @@ module('Acceptance | sidebar navigation', function (hooks) {
 
     const links = [
       { label: 'Multi-factor authentication', route: '/vault/access/mfa' },
-      { label: 'OIDC', route: '/vault/access/oidc' },
+      { label: 'OIDC provider', route: '/vault/access/oidc' },
       { label: 'Groups', route: '/vault/access/identity/groups' },
       { label: 'Entities', route: '/vault/access/identity/entities' },
       { label: 'Leases', route: '/vault/access/leases/list' },

@@ -43,6 +43,7 @@ import (
 	loghelper "github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	"github.com/hashicorp/vault/helper/useragent"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
@@ -1669,6 +1670,9 @@ func (c *ServerCommand) Run(args []string) int {
 				c.UI.Error(err.Error())
 			}
 
+			if err := core.ReloadCensus(); err != nil {
+				c.UI.Error(err.Error())
+			}
 			select {
 			case c.licenseReloadedCh <- err:
 			default:
@@ -1718,6 +1722,44 @@ func (c *ServerCommand) Run(args []string) int {
 
 				c.logger.Info(fmt.Sprintf("Wrote stacktrace to: %s", f.Name()))
 				f.Close()
+			}
+
+			// We can only get pprof outputs via the API but sometimes Vault can get
+			// into a state where it cannot process requests so we can get pprof outputs
+			// via SIGUSR2.
+			if os.Getenv("VAULT_PPROF_WRITE_TO_FILE") != "" {
+				dir := ""
+				path := os.Getenv("VAULT_PPROF_FILE_PATH")
+				if path != "" {
+					if _, err := os.Stat(path); err != nil {
+						c.logger.Error("Checking pprof path failed", "error", err)
+						continue
+					}
+					dir = path
+				} else {
+					dir, err = os.MkdirTemp("", "vault-pprof")
+					if err != nil {
+						c.logger.Error("Could not create temporary directory for pprof", "error", err)
+						continue
+					}
+				}
+
+				dumps := []string{"goroutine", "heap", "allocs", "threadcreate"}
+				for _, dump := range dumps {
+					pFile, err := os.Create(filepath.Join(dir, dump))
+					if err != nil {
+						c.logger.Error("error creating pprof file", "name", dump, "error", err)
+						break
+					}
+
+					err = pprof.Lookup(dump).WriteTo(pFile, 0)
+					if err != nil {
+						c.logger.Error("error generating pprof data", "name", dump, "error", err)
+						break
+					}
+				}
+
+				c.logger.Info(fmt.Sprintf("Wrote pprof files to: %s", dir))
 			}
 		}
 	}
@@ -1961,7 +2003,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 }
 
 func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info map[string]string, infoKeys []string, devListenAddress, tempDir string) int {
-	testCluster := vault.NewTestCluster(&testing.RuntimeT{}, base, &vault.TestClusterOptions{
+	conf, opts := teststorage.ClusterSetup(base, &vault.TestClusterOptions{
 		HandlerFunc:       vaulthttp.Handler,
 		BaseListenAddress: c.flagDevListenAddr,
 		Logger:            c.logger,
@@ -1976,8 +2018,17 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 				},
 			},
 		},
-	})
+	}, nil)
+	testCluster := vault.NewTestCluster(&testing.RuntimeT{}, conf, opts)
 	defer c.cleanupGuard.Do(testCluster.Cleanup)
+
+	if constants.IsEnterprise {
+		err := testcluster.WaitForActiveNodeAndPerfStandbys(context.Background(), testCluster)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("perf standbys didn't become ready: %v", err))
+			return 1
+		}
+	}
 
 	info["cluster parameters path"] = testCluster.TempDir
 	infoKeys = append(infoKeys, "cluster parameters path")

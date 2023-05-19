@@ -508,6 +508,21 @@ func pathConfigAutoTidy(b *backend) *framework.Path {
 				Description: `Interval at which to run an auto-tidy operation. This is the time between tidy invocations (after one finishes to the start of the next). Running a manual tidy will reset this duration.`,
 				Default:     int(defaultTidyConfig.Interval / time.Second), // TypeDurationSecond currently requires the default to be an int.
 			},
+			"maintain_stored_certificate_counts": {
+				Type: framework.TypeBool,
+				Description: `This configures whether stored certificates
+are counted upon initialization of the backend, and whether during
+normal operation, a running count of certificates stored is maintained.`,
+				Default: false,
+			},
+			"publish_stored_certificate_count_metrics": {
+				Type: framework.TypeBool,
+				Description: `This configures whether the stored certificate
+count is published to the metrics consumer.  It does not affect if the
+stored certificate count is maintained, and if maintained, it will be
+available on the tidy-status endpoint.`,
+				Default: false,
+			},
 		}),
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
@@ -1774,10 +1789,11 @@ func (b *backend) pathConfigAutoTidyWrite(ctx context.Context, req *logical.Requ
 	}
 
 	if runningStorageMetricsEnabledRaw, ok := d.GetOk("publish_stored_certificate_count_metrics"); ok {
-		if config.MaintainCount == false {
-			return logical.ErrorResponse("Can not publish a running storage metrics count to metrics without first maintaining that count.  Enable `maintain_stored_certificate_counts` to enable `publish_stored_certificate_count_metrics."), nil
-		}
 		config.PublishMetrics = runningStorageMetricsEnabledRaw.(bool)
+	}
+
+	if config.PublishMetrics && !config.MaintainCount {
+		return logical.ErrorResponse("Can not publish a running storage metrics count to metrics without first maintaining that count.  Enable `maintain_stored_certificate_counts` to enable `publish_stored_certificate_count_metrics`."), nil
 	}
 
 	if err := sc.writeAutoTidyConfig(config); err != nil {
