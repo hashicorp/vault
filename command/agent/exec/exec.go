@@ -105,7 +105,6 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 
 	// We leave this in "dry" mode, as there are no files to render;
 	// we will get the environment variables rendered contents from the incoming events
-	var err error
 	s.runner, err = manager.NewRunner(runnerConfig, true)
 	if err != nil {
 		return fmt.Errorf("template server failed to create: %w", err)
