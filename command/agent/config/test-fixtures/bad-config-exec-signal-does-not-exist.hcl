@@ -22,5 +22,5 @@ env_template "FOO" {
 exec {
   command                   = ["env"]
   restart_on_secret_changes = "never"
-  restart_kill_signal       = "notasignal"
+  restart_stop_signal       = "notasignal"
 }

@@ -22,5 +22,5 @@ env_template {
 exec {
   command                   = ["env"]
   restart_on_secret_changes = "never"
-  restart_kill_signal       = "SIGTERM"
+  restart_stop_signal       = "SIGTERM"
 }
