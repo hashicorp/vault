@@ -531,7 +531,7 @@ Defaults to 8760 hours (1 year).`,
 		Type: framework.TypeDurationSecond,
 		Description: `The amount of time that must pass after creation
 that an account with no orders is marked revoked, and the amount of time
-after being marked revoked or dea`,
+after being marked revoked or deactivated.`,
 		Default: int(defaultTidyConfig.AcmeAccountSafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
 	}
 
