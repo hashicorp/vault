@@ -64,5 +64,10 @@ func (c *Core) mountEntrySysView(entry *MountEntry) extendedSystemView {
 		},
 	}
 
-	return c.NewAcmeBillingSystemView(esi, nil /* managed keys system view */)
+	// Due to complexity in the ACME interface, only return it when we
+	// are a PKI plugin that needs it.
+	if entry.Type != "pki" {
+		return esi
+	}
+	return c.NewAcmeBillingSystemView(esi)
 }
