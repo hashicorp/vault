@@ -34,7 +34,7 @@
       @color="critical"
       @icon={{if this.cancelTidy.isRunning "loading"}}
       {{on "click" (fn (mut this.confirmCancelTidy) true)}}
-      data-test-hds-alert-action
+      data-test-cancel-tidy-action
     />
   {{/if}}
   {{#if @tidyStatus.responseTimestamp}}
@@ -173,7 +173,7 @@
         type="button"
         class="button is-primary"
         {{on "click" (perform this.cancelTidy)}}
-        data-test-tidy-modal-auto-button
+        data-test-tidy-modal-cancel-button
       >
         Confirm
       </button>

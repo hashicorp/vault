@@ -63,7 +63,7 @@ module('Integration | Component | Page::PkiTidyStatus', function (hooks) {
     );
     // running state
     assert.dom(SELECTORS.hdsAlertTitle).hasText('Tidy in progress');
-    assert.dom(SELECTORS.hdsAlertActions).exists();
+    assert.dom(SELECTORS.cancelTidyAction).exists();
     assert.dom(SELECTORS.hdsAlertButtonText).hasText('Cancel tidy');
     // inactive state
     this.tidyStatus.state = 'Inactive';
