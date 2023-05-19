@@ -85,10 +85,10 @@ func TestSystemBackend_handleActivityWriteData(t *testing.T) {
 	}
 }
 
-// Test_singleMonthActivityClients_addNewClients verifies that new clients are created correctly, adhering to the
-// requested parameters. The clients should have the correct namespace and mount, replaced with the default if the input
-// values are empty. The clients should have a generated ID if one is not supplied. The new client should be added to
-// the month's `clients` slice and `allClients` map the correct number of times
+// Test_singleMonthActivityClients_addNewClients verifies that new clients are
+// created correctly, adhering to the requested parameters. The clients should
+// use the inputted mount and a generated ID if one is not supplied. The new
+// client should be added to the month's `clients` slice
 func Test_singleMonthActivityClients_addNewClients(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -159,8 +159,9 @@ func Test_singleMonthActivityClients_addNewClients(t *testing.T) {
 	}
 }
 
-// Test_multipleMonthsActivityClients_processMonth verifies that a month of data is added correctly. The test checks
-// that default values are handled correctly for mounts and namespaces.
+// Test_multipleMonthsActivityClients_processMonth verifies that a month of data
+// is added correctly. The test checks that default values are handled correctly
+// for mounts and namespaces.
 func Test_multipleMonthsActivityClients_processMonth(t *testing.T) {
 	core, _, _ := TestCoreUnsealed(t)
 	tests := []struct {
