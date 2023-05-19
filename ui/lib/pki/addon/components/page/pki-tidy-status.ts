@@ -137,10 +137,9 @@ export default class PkiTidyStatusComponent extends Component<Args> {
   @task
   @waitFor
   *cancelTidy() {
-    // TODO: make a custom adapter method when Claire merges her form work!
     try {
-      const adapter = this.store.adapterFor('application');
-      yield adapter.ajax(`/v1/${this.secretMountPath.currentPath}/tidy-cancel`, 'POST');
+      const tidyAdapter = this.store.adapterFor('pki/tidy');
+      yield tidyAdapter.cancelTidy(this.secretMountPath.currentPath);
     } catch (error) {
       this.flashMessages.danger(errorMessage(error));
     }
