@@ -1,0 +1,3 @@
+```release-note:improvement
+core (enterprise): support reloading configuration for automated reporting via SIGHUP
+```
