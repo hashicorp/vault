@@ -53,9 +53,9 @@ func pathRoles(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
-				Description: "Name of the policy",
+				Description: "Name of the role",
 				DisplayAttrs: &framework.DisplayAttributes{
-					Name: "Policy Name",
+					Name: "Role Name",
 				},
 			},
 
