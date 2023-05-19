@@ -2119,6 +2119,7 @@ func TestLoadConfigFile_EnvTemplates(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error loading config file: %s", err)
 	}
+
 	if err := cfg.ValidateConfig(); err != nil {
 		t.Fatalf("validation error: %s", err)
 	}
@@ -2140,6 +2141,10 @@ func TestLoadConfigFile_EnvTemplateComplex(t *testing.T) {
 	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-complex.hcl")
 	if err != nil {
 		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if err := cfg.ValidateConfig(); err != nil {
+		t.Fatalf("validation error: %s", err)
 	}
 
 	expectedKeys := []string{
@@ -2186,8 +2191,8 @@ func TestLoadConfigFile_ExecSimple(t *testing.T) {
 		t.Fatalf("error loading config file: %s", err)
 	}
 
-	if cfg.Exec == nil {
-		t.Fatal("expected exec config to be parsed")
+	if err := cfg.ValidateConfig(); err != nil {
+		t.Fatalf("validation error: %s", err)
 	}
 
 	expectedCmd := []string{"/path/to/my/app", "arg1", "arg2"}
