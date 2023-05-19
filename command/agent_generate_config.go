@@ -191,7 +191,7 @@ func generateConfiguration(ctx context.Context, client *api.Client, flagExec str
 		Exec: generatedConfigExec{
 			Command:                execCommand,
 			RestartOnSecretChanges: "always",
-			RestartKillSignal:      "SIGTERM",
+			RestartStopSignal:      "SIGTERM",
 		},
 		EnvTemplates: templates,
 	}
@@ -375,7 +375,7 @@ type generatedConfigTemplateConfig struct {
 type generatedConfigExec struct {
 	Command                []string `hcl:"command"`
 	RestartOnSecretChanges string   `hcl:"restart_on_secret_changes"`
-	RestartKillSignal      string   `hcl:"restart_kill_signal"`
+	RestartStopSignal      string   `hcl:"restart_stop_signal"`
 }
 
 type generatedConfigEnvTemplate struct {

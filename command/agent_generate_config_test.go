@@ -198,7 +198,7 @@ env_template "FOO_USER" \{
 exec \{
   command                   = \["./my-app", "arg1", "arg2"\]
   restart_on_secret_changes = "always"
-  restart_kill_signal       = "SIGTERM"
+  restart_stop_signal       = "SIGTERM"
 }
 `),
 			expectedError: false,
