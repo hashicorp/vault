@@ -17,15 +17,16 @@ type syncMapNonceService struct {
 }
 var _ NonceService = &syncMapNonceService{}
 
-func newSyncMapNonceService(validity time.Duration) (*syncMapNonceService, error) {
+func newSyncMapNonceService(validity time.Duration) *syncMapNonceService {
 	return &syncMapNonceService{
 		validity:   validity,
 		issued:     new(atomic.Uint64),
 		nextExpiry: new(atomic.Int64),
 		nonces:     new(sync.Map),
-	}, nil
+	}
 }
 
+func (a *syncMapNonceService) Initialize() error { return nil }
 func (a *syncMapNonceService) IsStrict() bool { return true }
 func (a *syncMapNonceService) IsCrossNode() bool { return false }
 

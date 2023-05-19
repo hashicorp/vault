@@ -44,28 +44,9 @@ type encryptedNonceService struct {
 	redeemedTokens map[ensTimestamp]map[ensCounter]struct{}
 }
 
-func newEncryptedNonceService(validity time.Duration) (*encryptedNonceService, error) {
-	// On startup, create a new AES key. This avoids having issues with the
-	// number of encryptions we can do under this service.
-	key := make([]byte, 32)
-	if _, err := io.ReadFull(rand.Reader, key); err != nil {
-		return nil, fmt.Errorf("failed to initialize AES key: %w", err)
-	}
-
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize AES cipher: %w", err)
-	}
-
-	aead, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize AES-GCM: %w", err)
-	}
-
+func newEncryptedNonceService(validity time.Duration) *encryptedNonceService {
 	return &encryptedNonceService{
 		validity: validity,
-		crypt:    aead,
-
 		// nextCounter.Add(1) returns the _new_ value; by initializing to
 		// zero, we guarantee that nextCounter = minCounter + 1 on the first
 		// read; if it is redeemed right away, we then hold that invariant.
@@ -75,7 +56,29 @@ func newEncryptedNonceService(validity time.Duration) (*encryptedNonceService, e
 		maxIssued:      make(map[ensTimestamp]ensCounter, validity/time.Second),
 		minCounter:     new(atomic.Uint64),
 		redeemedTokens: make(map[ensTimestamp]map[ensCounter]struct{}, validity/time.Second),
-	}, nil
+	}
+}
+
+func (ens *encryptedNonceService) Initialize() error {
+	// On initialization, create a new AES key. This avoids having issues
+	// with the number of encryptions we can do under this service.
+	key := make([]byte, 32)
+	if _, err := io.ReadFull(rand.Reader, key); err != nil {
+		return fmt.Errorf("failed to initialize AES key: %w", err)
+	}
+
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return fmt.Errorf("failed to initialize AES cipher: %w", err)
+	}
+
+	aead, err := cipher.NewGCM(block)
+	if err != nil {
+		return fmt.Errorf("failed to initialize AES-GCM: %w", err)
+	}
+
+	ens.crypt = aead
+	return nil
 }
 
 func (ens *encryptedNonceService) IsStrict() bool    { return true }

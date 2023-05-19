@@ -16,6 +16,10 @@ import (
 // Notably, nonces are not guaranteed to be stored or persisted; nonces
 // from one startup will not necessarily be valid from another.
 type NonceService interface {
+	// Before using a nonce service, it must be initialized. Failure to
+	// initialize might result in panics or other unexpected results.
+	Initialize() error
+
 	// Get a nonce; returns three values:
 	//
 	// 1. The nonce itself, a base64-url-no-padding opaque value.
@@ -45,14 +49,14 @@ type NonceService interface {
 	IsCrossNode() bool
 }
 
-func NewNonceService() (NonceService, error) {
+func NewNonceService() NonceService {
 	// By default, we create an encrypted nonce service that is strict but not
 	// cross node, using a default window of 90 seconds (equal to the default
 	// context request timeout window).
 	return NewNonceServiceWithValidity(90 * time.Second)
 }
 
-func NewNonceServiceWithValidity(validity time.Duration) (NonceService, error) {
+func NewNonceServiceWithValidity(validity time.Duration) NonceService {
 	return newEncryptedNonceService(validity)
 }
 

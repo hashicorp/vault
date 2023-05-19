@@ -9,7 +9,8 @@ import (
 func TestNonceService(t *testing.T) {
 	t.Parallel()
 
-	s, err := NewNonceService()
+	s := NewNonceService()
+	err := s.Initialize()
 	require.NoError(t, err)
 
 	nonce, _, err := s.Get()

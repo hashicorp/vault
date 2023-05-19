@@ -12,6 +12,9 @@ const benchValidity = 5*time.Second
 const logMemStats = true
 
 func benchWrapper(helper func(*testing.B, NonceService), b *testing.B, s NonceService) {
+	err := s.Initialize()
+	require.NoError(b, err)
+
 	var m1, m2 runtime.MemStats
 	runtime.GC()
 	runtime.ReadMemStats(&m1)
@@ -28,14 +31,12 @@ func benchWrapper(helper func(*testing.B, NonceService), b *testing.B, s NonceSe
 }
 
 func BenchmarkEncryptedNonceServiceGet(b *testing.B) {
-	s, err := newEncryptedNonceService(benchValidity)
-    require.NoError(b, err)
+	s := newEncryptedNonceService(benchValidity)
 	benchWrapper(benchGet, b, s)
 }
 
 func BenchmarkSyncMapNonceServiceGet(b *testing.B) {
-    s, err := newSyncMapNonceService(benchValidity)
-    require.NoError(b, err)
+    s := newSyncMapNonceService(benchValidity)
 	benchWrapper(benchGet, b, s)
 }
 
@@ -49,14 +50,12 @@ func benchGet(b *testing.B, s NonceService) {
 }
 
 func BenchmarkEncryptedNonceServiceGetRedeem(b *testing.B) {
-	s, err := newEncryptedNonceService(benchValidity)
-    require.NoError(b, err)
+	s := newEncryptedNonceService(benchValidity)
 	benchWrapper(benchGetRedeem, b, s)
 }
 
 func BenchmarkSyncMapNonceServiceGetRedeem(b *testing.B) {
-    s, err := newSyncMapNonceService(benchValidity)
-    require.NoError(b, err)
+    s := newSyncMapNonceService(benchValidity)
 	benchWrapper(benchGetRedeem, b, s)
 }
 
@@ -74,14 +73,12 @@ func benchGetRedeem(b *testing.B, s NonceService) {
 }
 
 func BenchmarkEncryptedNonceServiceGetRedeemTidy(b *testing.B) {
-	s, err := newEncryptedNonceService(benchValidity)
-    require.NoError(b, err)
+	s := newEncryptedNonceService(benchValidity)
 	benchWrapper(benchGetRedeemTidy, b, s)
 }
 
 func BenchmarkSyncMapNonceServiceGetRedeemTidy(b *testing.B) {
-    s, err := newSyncMapNonceService(benchValidity)
-    require.NoError(b, err)
+    s := newSyncMapNonceService(benchValidity)
 	benchWrapper(benchGetRedeemTidy, b, s)
 }
 
@@ -98,14 +95,12 @@ func benchGetRedeemTidy(b *testing.B, s NonceService) {
 }
 
 func BenchmarkEncryptedNonceServiceSequentialTidy(b *testing.B) {
-	s, err := newEncryptedNonceService(benchValidity)
-    require.NoError(b, err)
+	s := newEncryptedNonceService(benchValidity)
 	benchWrapper(benchGetRedeemSequentialTidy, b, s)
 }
 
 func BenchmarkSyncMapNonceServiceSequentialTidy(b *testing.B) {
-    s, err := newSyncMapNonceService(benchValidity)
-    require.NoError(b, err)
+    s := newSyncMapNonceService(benchValidity)
 	benchWrapper(benchGetRedeemSequentialTidy, b, s)
 }
 
@@ -124,14 +119,12 @@ func benchGetRedeemSequentialTidy(b *testing.B, s NonceService) {
 }
 
 func BenchmarkEncryptedNonceServiceRandomTidy(b *testing.B) {
-	s, err := newEncryptedNonceService(benchValidity)
-    require.NoError(b, err)
+	s := newEncryptedNonceService(benchValidity)
 	benchWrapper(benchGetRedeemRandomTidy, b, s)
 }
 
 func BenchmarkSyncMapNonceServiceRandomTidy(b *testing.B) {
-    s, err := newSyncMapNonceService(benchValidity)
-    require.NoError(b, err)
+    s := newSyncMapNonceService(benchValidity)
 	benchWrapper(benchGetRedeemRandomTidy, b, s)
 }
 
@@ -152,14 +145,12 @@ func benchGetRedeemRandomTidy(b *testing.B, s NonceService) {
 }
 
 func BenchmarkEncryptedNonceServiceParallelGet(b *testing.B) {
-    s, err := newEncryptedNonceService(benchValidity)
-    require.NoError(b, err)
+    s := newEncryptedNonceService(benchValidity)
     benchWrapper(benchGetParallelGet, b, s)
 }
 
 func BenchmarkSyncMapNonceServiceParallelGet(b *testing.B) {
-    s, err := newSyncMapNonceService(benchValidity)
-    require.NoError(b, err)
+    s := newSyncMapNonceService(benchValidity)
     benchWrapper(benchGetParallelGet, b, s)
 }
 
@@ -176,14 +167,12 @@ func benchGetParallelGet(b *testing.B, s NonceService) {
 }
 
 func BenchmarkEncryptedNonceServiceParallelGetRedeem(b *testing.B) {
-    s, err := newEncryptedNonceService(benchValidity)
-    require.NoError(b, err)
+    s := newEncryptedNonceService(benchValidity)
     benchWrapper(benchGetRedeemParallelGetRedeem, b, s)
 }
 
 func BenchmarkSyncMapNonceServiceParallelGetRedeem(b *testing.B) {
-    s, err := newSyncMapNonceService(benchValidity)
-    require.NoError(b, err)
+	s := newSyncMapNonceService(benchValidity)
     benchWrapper(benchGetRedeemParallelGetRedeem, b, s)
 }
 
@@ -202,14 +191,12 @@ func benchGetRedeemParallelGetRedeem(b *testing.B, s NonceService) {
 }
 
 func BenchmarkEncryptedNonceServiceParallelGetRedeemTidy(b *testing.B) {
-    s, err := newEncryptedNonceService(benchValidity)
-    require.NoError(b, err)
+    s := newEncryptedNonceService(benchValidity)
     benchWrapper(benchGetRedeemParallelGetRedeemTidy, b, s)
 }
 
 func BenchmarkSyncMapNonceServiceParallelGetRedeemTidy(b *testing.B) {
-    s, err := newSyncMapNonceService(benchValidity)
-    require.NoError(b, err)
+    s := newSyncMapNonceService(benchValidity)
     benchWrapper(benchGetRedeemParallelGetRedeemTidy, b, s)
 }
 
@@ -229,14 +216,12 @@ func benchGetRedeemParallelGetRedeemTidy(b *testing.B, s NonceService) {
 }
 
 func BenchmarkEncryptedNonceServiceParallelTidy(b *testing.B) {
-    s, err := newEncryptedNonceService(benchValidity)
-    require.NoError(b, err)
+    s := newEncryptedNonceService(benchValidity)
     benchWrapper(benchParallelTidy, b, s)
 }
 
 func BenchmarkSyncMapNonceServiceParallelTidy(b *testing.B) {
-    s, err := newSyncMapNonceService(benchValidity)
-    require.NoError(b, err)
+    s := newSyncMapNonceService(benchValidity)
     benchWrapper(benchParallelTidy, b, s)
 }
 
