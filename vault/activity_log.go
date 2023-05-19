@@ -1058,12 +1058,25 @@ func (a *ActivityLog) queriesAvailable(ctx context.Context) (bool, error) {
 
 // setupActivityLog hooks up the singleton ActivityLog into Core.
 func (c *Core) setupActivityLog(ctx context.Context, wg *sync.WaitGroup) error {
+	c.activityLogLock.Lock()
+	defer c.activityLogLock.Unlock()
+	return c.setupActivityLogLocked(ctx, wg)
+}
+
+// setupActivityLogLocked hooks up the singleton ActivityLog into Core.
+// this function should be called with activityLogLock.
+func (c *Core) setupActivityLogLocked(ctx context.Context, wg *sync.WaitGroup) error {
 	logger := c.baseLogger.Named("activity")
 	c.AddLogger(logger)
 
 	if os.Getenv("VAULT_DISABLE_ACTIVITY_LOG") != "" {
-		logger.Info("activity log disabled via environment variable")
-		return nil
+		if c.CensusLicensingEnabled() {
+			logger.Warn("activity log disabled via environment variable while reporting is enabled. " +
+				"Reporting will override, and the activity log will be enabled")
+		} else {
+			logger.Info("activity log disabled via environment variable")
+			return nil
+		}
 	}
 
 	view := c.systemBarrierView.SubView(activitySubPath)
@@ -1104,15 +1117,16 @@ func (c *Core) setupActivityLog(ctx context.Context, wg *sync.WaitGroup) error {
 		}(manager.retentionMonths)
 
 		manager.CensusReportDone = make(chan bool)
-		go c.activityLog.CensusReport(ctx, c.censusAgent, c.billingStart)
+		go c.activityLog.CensusReport(ctx, c.CensusAgent(), c.BillingStart())
 	}
 
 	return nil
 }
 
-// stopActivityLog removes the ActivityLog from Core
+// stopActivityLogLocked removes the ActivityLog from Core
 // and frees any resources.
-func (c *Core) stopActivityLog() {
+// this function should be called with activityLogLock
+func (c *Core) stopActivityLogLocked() {
 	// preSeal may run before startActivityLog got a chance to complete.
 	if c.activityLog != nil {
 		// Shut down background worker
@@ -1120,6 +1134,14 @@ func (c *Core) stopActivityLog() {
 	}
 
 	c.activityLog = nil
+}
+
+// stopActivityLog removes the ActivityLog from Core
+// and frees any resources.
+func (c *Core) stopActivityLog() {
+	c.activityLogLock.Lock()
+	defer c.activityLogLock.Unlock()
+	c.stopActivityLogLocked()
 }
 
 func (a *ActivityLog) StartOfNextMonth() time.Time {
