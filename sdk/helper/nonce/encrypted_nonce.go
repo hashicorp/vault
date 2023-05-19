@@ -326,36 +326,46 @@ func (ens *encryptedNonceService) tidySequentialNonces(now time.Time, minCounter
 	return minCounter
 }
 
-func (ens *encryptedNonceService) getMessage() string {
+func (ens *encryptedNonceService) getMessage(lock time.Duration, memory time.Duration, sequential time.Duration) string {
+	now := time.Now()
 	var message string
 	message += fmt.Sprintf("len(ens.maxIssued): %v\n", len(ens.maxIssued))
 	message += fmt.Sprintf("len(ens.redeemedTokens): %v\n", len(ens.redeemedTokens))
 
 	var total int
 	for timestamp, counters := range ens.redeemedTokens {
-		message += fmt.Sprintf("\tens.redeemedTokens[%v]: %v\n", timestamp, len(counters))
+		message += fmt.Sprintf("    ens.redeemedTokens[%v]: %v\n", timestamp, len(counters))
 		total += len(counters)
 	}
+	build := time.Now()
 
 	message += fmt.Sprintf("total redeemed tokens: %v\n", total)
+	message += fmt.Sprintf("time to grab lock: %v\n", lock)
+	message += fmt.Sprintf("time to tidy memory: %v\n", memory)
+	message += fmt.Sprintf("time to tidy sequential: %v\n", sequential)
+	message += fmt.Sprintf("time to build message: %v\n", build.Sub(now))
 	return message
 }
 
 func (ens *encryptedNonceService) Tidy() *NonceStatus {
+	lockStart := time.Now()
 	ens.issueLock.Lock()
 	defer ens.issueLock.Unlock()
+	lockEnd := time.Now()
 
 	minCounter := ens.minCounter.Load()
-	now := time.Now()
 
+	now := time.Now()
 	minCounter = ens.tidyMemoryHoldingLock(now, minCounter)
+	memory := time.Now()
 	minCounter = ens.tidySequentialNonces(now, minCounter)
+	sequential := time.Now()
 	ens.minCounter.Store(minCounter)
 
 	issued := ens.nextCounter.Load()
 	return &NonceStatus{
 		Issued:      issued,
 		Outstanding: issued - minCounter,
-		Message:     ens.getMessage(),
+		Message:     ens.getMessage(lockEnd.Sub(lockStart), memory.Sub(now), sequential.Sub(memory)),
 	}
 }
