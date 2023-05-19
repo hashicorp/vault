@@ -1,15 +1,5 @@
 <Toolbar>
   <ToolbarActions>
-    {{! TODO remove action here in favor of cancel action in status banner }}
-    <button
-      type="button"
-      class="toolbar-link"
-      {{on "click" (fn (mut this.confirmCancelTidy) true)}}
-      data-test-confirm-cancel-tidy
-    >
-      Cancel tidy
-      <Icon @name="chevron-right" />
-    </button>
     <div class="toolbar-separator"></div>
     <button
       type="button"
@@ -28,9 +18,88 @@
   </ToolbarActions>
 </Toolbar>
 
+<Hds::Alert
+  @type="inline"
+  @color={{this.tidyStateAlertBanner.color}}
+  @icon={{this.tidyStateAlertBanner.icon}}
+  class="has-top-margin-m"
+  data-test-hds-alert
+  as |A|
+>
+  <A.Title data-test-hds-alert-title>{{this.tidyStateAlertBanner.title}}</A.Title>
+  <A.Description>{{this.tidyStateAlertBanner.message}}</A.Description>
+  {{#if this.tidyStateAlertBanner.shouldShowCancelTidy}}
+    <A.Button @text="Cancel tidy" @color="critical" {{on "click" (perform this.cancelTidy)}} data-test-hds-alert-action />
+  {{/if}}
+  {{#if @tidyStatus.responseTimestamp}}
+    <A.Description class="has-top-margin-xs">
+      Updated
+      {{date-format @tidyStatus.responseTimestamp "MMM d yyyy, h:mm:ss aaa" withTimeZone=true}}
+    </A.Description>
+  {{/if}}
+</Hds::Alert>
+
+{{#each this.generalSectionFields as |attr|}}
+  <InfoTableRow
+    @label={{humanize (dasherize attr)}}
+    @formatDate={{if
+      (includes attr (array "time_started" "time_finished" "last_auto_tidy_finished"))
+      "MMM dd, yyyy hh:mm:ss a"
+    }}
+    @value={{get @tidyStatus attr}}
+    @alwaysRender={{true}}
+  />
+{{/each}}
+
+<h2 class="title is-4 has-bottom-margin-xs has-top-margin-l has-border-bottom-light has-bottom-padding-s">
+  Universal operations
+</h2>
+{{#each this.universalSectionFields as |attr|}}
+  {{#if (eq attr "safety_buffer")}}
+    <InfoTableRow
+      @label={{humanize (dasherize attr)}}
+      @value={{format-duration (get @tidyStatus attr)}}
+      @alwaysRender={{true}}
+    />
+  {{else}}
+    <InfoTableRow @label={{humanize (dasherize attr)}} @value={{get @tidyStatus attr}} @alwaysRender={{true}} />
+  {{/if}}
+{{/each}}
+
+<h2 class="title is-4 has-bottom-margin-xs has-top-margin-l has-border-bottom-light has-bottom-padding-s">
+  Issuers operations
+</h2>
+{{#each this.issuersSectionFields as |attr|}}
+  {{#if (eq attr "issuer_safety_buffer")}}
+    <InfoTableRow
+      @label={{humanize (dasherize attr)}}
+      @value={{format-duration (get @tidyStatus attr)}}
+      @alwaysRender={{true}}
+    />
+  {{else}}
+    <InfoTableRow @label={{humanize (dasherize attr)}} @value={{get @tidyStatus attr}} @alwaysRender={{true}} />
+  {{/if}}
+{{/each}}
+
+{{#if this.isEnterprise}}
+  <h2 class="title is-4 has-bottom-margin-xs has-top-margin-l has-border-bottom-light has-bottom-padding-s">
+    Cross-cluster operations
+  </h2>
+  {{#each this.crossClusterOperation as |attr|}}
+    {{#if (eq attr "revocation_queue_safety_buffer")}}
+      <InfoTableRow
+        @label={{humanize (dasherize attr)}}
+        @value={{format-duration (get @tidyStatus attr)}}
+        @alwaysRender={{true}}
+      />
+    {{else}}
+      <InfoTableRow @label={{humanize (dasherize attr)}} @value={{get @tidyStatus attr}} @alwaysRender={{true}} />
+    {{/if}}
+  {{/each}}
+{{/if}}
+
 {{! TIDY OPTIONS MODAL }}
 <Modal
-  @type="info"
   @title="Tidy this mount"
   @onClose={{fn (mut this.tidyOptionsModal) false}}
   @isActive={{this.tidyOptionsModal}}
@@ -52,9 +121,8 @@
         <li>Choose the parameters you wish to tidy, and run the operation</li>
       </ol>
     </p>
-    <div class="has-top-margin-l has-tall-padding">
-      {{! TODO update path with tidy diagram }}
-      <img src={{img-path "~/pki-rotate-root.png"}} alt="tidy operation diagram" />
+    <div class="has-top-margin-l has-padding">
+      <img src={{img-path "~/pki-tidy.png"}} alt="tidy operation diagram" />
     </div>
   </section>
   <footer aria-label="tidy-option-buttons" class="modal-card-foot modal-card-foot-outlined">
@@ -95,7 +163,12 @@
       <p class="has-top-margin-s">Click “Confirm” to cancel the running tidy operation.</p>
     </section>
     <footer aria-label="confirm-cancel-buttons" class="modal-card-foot modal-card-foot-outlined">
-      <button type="button" class="button is-primary" {{on "click" this.cancelTidy}} data-test-tidy-modal-auto-button>
+      <button
+        type="button"
+        class="button is-primary"
+        {{on "click" (perform this.cancelTidy)}}
+        data-test-tidy-modal-auto-button
+      >
         Confirm
       </button>
       <button type="button" class="button is-secondary" {{on "click" (fn (mut this.confirmCancelTidy) false)}}>
