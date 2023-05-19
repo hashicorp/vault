@@ -1113,12 +1113,11 @@ func parseExec(result *Config, list *ast.ObjectList) error {
 	}
 
 	// if user does not specify a restart signal, use a default
-	if ec.RestartKillSignal == nil {
-		ec.RestartKillSignal = os.Interrupt
+	if ec.RestartStopSignal == nil {
+		ec.RestartStopSignal = os.Interrupt
 	}
 
 	if ec.RestartOnSecretChanges == "" {
-		// TODO: do we want to enum this?
 		ec.RestartOnSecretChanges = "always"
 	}
 
