@@ -2,8 +2,10 @@ package pki
 
 import (
 	"context"
+	"crypto"
 	"fmt"
 
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -153,6 +155,7 @@ func (b *backend) pathGetKeyHandler(ctx context.Context, req *logical.Request, d
 		keyTypeParam: string(key.PrivateKeyType),
 	}
 
+	var pkForSkid crypto.PublicKey
 	if key.isManagedPrivateKey() {
 		managedKeyUUID, err := key.getManagedKeyUUID()
 		if err != nil {
@@ -164,12 +167,28 @@ func (b *backend) pathGetKeyHandler(ctx context.Context, req *logical.Request, d
 			return nil, errutil.InternalError{Err: fmt.Sprintf("failed fetching managed key info from key id %s (%s): %v", key.ID, key.Name, err)}
 		}
 
+		pkForSkid, err = getManagedKeyPublicKey(ctx, b, managedKeyUUID)
+		if err != nil {
+			return nil, err
+		}
+
 		// To remain consistent across the api responses (mainly generate root/intermediate calls), return the actual
 		// type of key, not that it is a managed key.
 		respData[keyTypeParam] = string(keyInfo.keyType)
 		respData[managedKeyIdArg] = string(keyInfo.uuid)
 		respData[managedKeyNameArg] = string(keyInfo.name)
+	} else {
+		pkForSkid, err = getPublicKeyFromBytes([]byte(key.PrivateKey))
+		if err != nil {
+			return nil, err
+		}
 	}
+
+	skid, err := certutil.GetSubjectKeyID(pkForSkid)
+	if err != nil {
+		return nil, err
+	}
+	respData[skidParam] = certutil.GetHexFormatted([]byte(skid), ":")
 
 	return &logical.Response{Data: respData}, nil
 }
