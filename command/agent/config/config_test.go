@@ -13,6 +13,7 @@ import (
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"golang.org/x/exp/slices"
 
+	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
@@ -83,7 +84,7 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 			UseAutoAuthToken:    true,
 			UseAutoAuthTokenRaw: true,
 			ForceAutoAuthToken:  false,
-			Persist: &Persist{
+			Persist: &agentproxyshared.PersistConfig{
 				Type:                    "kubernetes",
 				Path:                    "/vault/agent-cache/",
 				KeepAfterImport:         true,
@@ -188,7 +189,7 @@ func TestLoadConfigDir_AgentCache(t *testing.T) {
 			UseAutoAuthToken:    true,
 			UseAutoAuthTokenRaw: true,
 			ForceAutoAuthToken:  false,
-			Persist: &Persist{
+			Persist: &agentproxyshared.PersistConfig{
 				Type:                    "kubernetes",
 				Path:                    "/vault/agent-cache/",
 				KeepAfterImport:         true,
@@ -388,7 +389,7 @@ func TestLoadConfigFile_AgentCache_NoListeners(t *testing.T) {
 			UseAutoAuthToken:    true,
 			UseAutoAuthTokenRaw: true,
 			ForceAutoAuthToken:  false,
-			Persist: &Persist{
+			Persist: &agentproxyshared.PersistConfig{
 				Type:                    "kubernetes",
 				Path:                    "/vault/agent-cache/",
 				KeepAfterImport:         true,
@@ -960,7 +961,7 @@ func TestLoadConfigFile_AgentCache_Persist(t *testing.T) {
 	expected := &Config{
 		APIProxy: &APIProxy{},
 		Cache: &Cache{
-			Persist: &Persist{
+			Persist: &agentproxyshared.PersistConfig{
 				Type:                    "kubernetes",
 				Path:                    "/vault/agent-cache/",
 				KeepAfterImport:         false,
@@ -2112,6 +2113,7 @@ func TestLoadConfigFile_Bad_Value_Disable_Keep_Alives(t *testing.T) {
 	}
 }
 
+// TestLoadConfigFile_EnvTemplates loads and validates an env_template config
 func TestLoadConfigFile_EnvTemplates(t *testing.T) {
 	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-simple.hcl")
 	if err != nil {
@@ -2129,10 +2131,11 @@ func TestLoadConfigFile_EnvTemplates(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatalf("expected env var name to be populated")
+		t.Fatalf("expected environment variable name to be populated")
 	}
 }
 
+// TestLoadConfigFile_EnvTemplateComplex loads and validates an env_template config
 func TestLoadConfigFile_EnvTemplateComplex(t *testing.T) {
 	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-complex.hcl")
 	if err != nil {
@@ -2155,11 +2158,12 @@ func TestLoadConfigFile_EnvTemplateComplex(t *testing.T) {
 
 	for _, expected := range expectedKeys {
 		if !envExists(expected) {
-			t.Fatalf("expected env var %s", expected)
+			t.Fatalf("expected environment variable %s", expected)
 		}
 	}
 }
 
+// TestLoadConfigFile_EnvTemplateNoName ensures that env_template with no name triggers an error
 func TestLoadConfigFile_EnvTemplateNoName(t *testing.T) {
 	_, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-no-name.hcl")
 	if err == nil {
@@ -2167,16 +2171,17 @@ func TestLoadConfigFile_EnvTemplateNoName(t *testing.T) {
 	}
 }
 
-func TestLoadConfigFile_ExecNoSignal(t *testing.T) {
-	_, err := LoadConfigFile("./test-fixtures/bad-config-exec-signal-does-not-exist.hcl")
+// TestLoadConfigFile_ExecInvalidSignal ensures that an invalid signal triggers an error
+func TestLoadConfigFile_ExecInvalidSignal(t *testing.T) {
+	_, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-invalid-signal.hcl")
 	if err == nil {
 		t.Fatalf("expected error")
 	}
 }
 
+// TestLoadConfigFile_ExecSimple validates the exec section with default parameters
 func TestLoadConfigFile_ExecSimple(t *testing.T) {
 	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-simple.hcl")
-
 	if err != nil {
 		t.Fatalf("error loading config file: %s", err)
 	}
@@ -2195,14 +2200,14 @@ func TestLoadConfigFile_ExecSimple(t *testing.T) {
 		t.Fatalf("expected cfg.Exec.RestartOnSecretChanges to be 'always', got '%s'", cfg.Exec.RestartOnSecretChanges)
 	}
 
-	if cfg.Exec.RestartKillSignal != os.Interrupt {
-		t.Fatalf("expected cfg.Exec.RestartKillSignal to be 'os.Interrupt', got '%s'", cfg.Exec.RestartKillSignal)
+	if cfg.Exec.RestartStopSignal != syscall.SIGTERM {
+		t.Fatalf("expected cfg.Exec.RestartStopSignal to be 'syscall.SIGTERM', got '%s'", cfg.Exec.RestartStopSignal)
 	}
 }
 
+// TestLoadConfigFile_ExecComplex validates the exec section with non-default parameters
 func TestLoadConfigFile_ExecComplex(t *testing.T) {
 	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-complex.hcl")
-
 	if err != nil {
 		t.Fatalf("error loading config file: %s", err)
 	}
@@ -2215,8 +2220,8 @@ func TestLoadConfigFile_ExecComplex(t *testing.T) {
 		t.Fatalf("expected cfg.Exec.RestartOnSecretChanges to be 'never', got %q", cfg.Exec.RestartOnSecretChanges)
 	}
 
-	if cfg.Exec.RestartKillSignal != syscall.SIGTERM {
-		t.Fatalf("expected cfg.Exec.RestartKillSignal to be 'SIGTERM', got %q", cfg.Exec.RestartKillSignal)
+	if cfg.Exec.RestartStopSignal != syscall.SIGINT {
+		t.Fatalf("expected cfg.Exec.RestartStopSignal to be 'syscall.SIGINT', got %q", cfg.Exec.RestartStopSignal)
 	}
 }
 

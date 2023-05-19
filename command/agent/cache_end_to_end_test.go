@@ -170,7 +170,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 		Client:                  client,
 		Logger:                  cacheLogger.Named("apiproxy"),
 		UserAgentStringFunction: useragent.ProxyStringWithProxiedUserAgent,
-		UserAgentString:         useragent.ProxyString(),
+		UserAgentString:         useragent.ProxyAPIProxyString(),
 	})
 	if err != nil {
 		t.Fatal(err)

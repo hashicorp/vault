@@ -1,7 +1,4 @@
-<div
-  class="selectable-card-container has-grid has-top-margin-l has-two-col-grid
-    {{if (eq @roles 403) 'has-three-col-grid' 'has-two-col-grid'}}"
->
+<div class="selectable-card-container has-grid has-top-margin-l has-two-col-grid">
   <OverviewCard
     @cardTitle="Issuers"
     @subText="The total number of issuers in this PKI mount. Includes both root and intermediate certificates."
@@ -64,6 +61,33 @@
         disabled={{unless this.certificateValue true}}
         {{on "click" this.transitionToViewCertificates}}
         data-test-view-certificate-button
+      >
+        View
+      </button>
+    </div>
+  </OverviewCard>
+
+  <OverviewCard @cardTitle="View issuer" @subText="Choose or type an issuer name or ID to view its details">
+    <div class="has-top-margin-m is-flex">
+      <SearchSelect
+        class="is-flex-1"
+        @selectLimit="1"
+        @models={{array "pki/issuer"}}
+        @backend={{@engine.id}}
+        @placeholder="Type to find an issuer..."
+        @disallowNewItems={{true}}
+        @onChange={{this.handleIssuerSearch}}
+        @fallbackComponent="input-search"
+        @shouldRenderName={{true}}
+        @nameKey={{"issuerName"}}
+        data-test-issue-issuer-input
+      />
+      <button
+        type="submit"
+        class="button is-secondary has-left-margin-s"
+        disabled={{unless this.issuerValue true}}
+        {{on "click" this.transitionToIssuerDetails}}
+        data-test-view-issuer-button
       >
         View
       </button>

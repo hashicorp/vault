@@ -43,7 +43,7 @@ func testNewLeaseCache(t *testing.T, responses []*SendResponse) *LeaseCache {
 	lc, err := NewLeaseCache(&LeaseCacheConfig{
 		Client:      client,
 		BaseContext: context.Background(),
-		Proxier:     newMockProxier(responses),
+		Proxier:     NewMockProxier(responses),
 		Logger:      logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
 	})
 	if err != nil {
@@ -82,7 +82,7 @@ func testNewLeaseCacheWithPersistence(t *testing.T, responses []*SendResponse, s
 	lc, err := NewLeaseCache(&LeaseCacheConfig{
 		Client:      client,
 		BaseContext: context.Background(),
-		Proxier:     newMockProxier(responses),
+		Proxier:     NewMockProxier(responses),
 		Logger:      logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
 		Storage:     storage,
 	})

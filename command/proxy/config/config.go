@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
 )
@@ -100,17 +101,8 @@ type APIProxy struct {
 
 // Cache contains any configuration needed for Cache mode
 type Cache struct {
-	Persist      *Persist        `hcl:"persist"`
-	InProcDialer transportDialer `hcl:"-"`
-}
-
-// Persist contains configuration needed for persistent caching
-type Persist struct {
-	Type                    string
-	Path                    string `hcl:"path"`
-	KeepAfterImport         bool   `hcl:"keep_after_import"`
-	ExitOnErr               bool   `hcl:"exit_on_err"`
-	ServiceAccountTokenFile string `hcl:"service_account_token_file"`
+	Persist      *agentproxyshared.PersistConfig `hcl:"persist"`
+	InProcDialer transportDialer                 `hcl:"-"`
 }
 
 // AutoAuth is the configured authentication method and sinks
@@ -640,7 +632,7 @@ func parsePersist(result *Config, list *ast.ObjectList) error {
 
 	item := persistList.Items[0]
 
-	var p Persist
+	var p agentproxyshared.PersistConfig
 	err := hcl.DecodeObject(&p, item.Val)
 	if err != nil {
 		return err
