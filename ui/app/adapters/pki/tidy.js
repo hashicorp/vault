@@ -16,8 +16,9 @@ export default class PkiTidyAdapter extends ApplicationAdapter {
   createRecord(store, type, snapshot) {
     const { backend } = snapshot.record;
     const { tidyType } = snapshot.adapterOptions;
-    if (tidyType === 'auto')
+    if (tidyType === 'auto') {
       throw new Error('Auto tidy type models are never new, please use findRecord');
+    }
 
     const url = `${this._baseUrl(backend)}/tidy`;
     return this.ajax(url, 'POST', { data: this.serialize(snapshot, tidyType) });
@@ -27,8 +28,9 @@ export default class PkiTidyAdapter extends ApplicationAdapter {
   updateRecord(store, type, snapshot) {
     const backend = snapshot.record.id;
     const { tidyType } = snapshot.adapterOptions;
-    if (tidyType === 'manual')
+    if (tidyType === 'manual') {
       throw new Error('Manual tidy type models are always new, please use createRecord');
+    }
 
     const url = `${this._baseUrl(backend)}/config/auto-tidy`;
     return this.ajax(url, 'POST', { data: this.serialize(snapshot, tidyType) });
