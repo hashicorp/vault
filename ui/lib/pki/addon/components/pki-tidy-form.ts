@@ -38,8 +38,7 @@ export default class PkiTidyForm extends Component<Args> {
   @tracked invalidFormAlert = '';
 
   get intervalDurationAttr() {
-    const { autoTidy } = this.args.tidy.allGroups.findBy('autoTidy');
-    return autoTidy.findBy('name', 'intervalDuration');
+    return this.args.tidy._allByKey.intervalDuration;
   }
 
   @task
