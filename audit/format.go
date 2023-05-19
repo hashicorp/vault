@@ -136,6 +136,7 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 			ReplicationCluster:            req.ReplicationCluster,
 			Headers:                       req.Headers,
 			ClientCertificateSerialNumber: getClientCertificateSerialNumber(connState),
+			Forwarded:                     requestForwardingInfo(in),
 		},
 	}
 
@@ -167,6 +168,19 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 	}
 
 	return f.AuditFormatWriter.WriteRequest(w, reqEntry)
+}
+
+// requestForwardingInfo maps request forwarding data from within a logical.LogInput
+// to its own type for output as an entry in audit logs.
+func requestForwardingInfo(in *logical.LogInput) *RequestForwardingInfo {
+	if in.Forwarding == nil || !in.Forwarding.IsPresent() {
+		return nil
+	}
+
+	return &RequestForwardingInfo{
+		From: in.Forwarding.From,
+		To:   in.Forwarding.To,
+	}
 }
 
 func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config FormatterConfig, in *logical.LogInput) error {
@@ -341,6 +355,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			ClientCertificateSerialNumber: getClientCertificateSerialNumber(connState),
 			ReplicationCluster:            req.ReplicationCluster,
 			Headers:                       req.Headers,
+			Forwarded:                     requestForwardingInfo(in),
 		},
 
 		Response: &AuditResponse{
@@ -432,6 +447,7 @@ type AuditRequest struct {
 	WrapTTL                       int                    `json:"wrap_ttl,omitempty"`
 	Headers                       map[string][]string    `json:"headers,omitempty"`
 	ClientCertificateSerialNumber string                 `json:"client_certificate_serial_number,omitempty"`
+	Forwarded                     *RequestForwardingInfo `json:"forwarded,omitempty"`
 }
 
 type AuditResponse struct {
@@ -499,6 +515,13 @@ type AuditResponseWrapInfo struct {
 type AuditNamespace struct {
 	ID   string `json:"id,omitempty"`
 	Path string `json:"path,omitempty"`
+}
+
+// RequestForwardingInfo should be present and contain request forwarding metadata
+// when a request has been forwarded from a standby to a primary node.
+type RequestForwardingInfo struct {
+	From string `json:"from,omitempty"`
+	To   string `json:"to,omitempty"`
 }
 
 // getRemoteAddr safely gets the remote address avoiding a nil pointer

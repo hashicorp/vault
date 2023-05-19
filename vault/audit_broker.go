@@ -121,17 +121,13 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 		metrics.IncrCounter([]string{"audit", "log_request_failure"}, failure)
 	}()
 
-	// All logged requests must have an identifier
-	//if req.ID == "" {
-	//	a.logger.Error("missing identifier in request object", "request_path", req.Path)
-	//	retErr = multierror.Append(retErr, fmt.Errorf("missing identifier in request object: %s", req.Path))
-	//	return
-	//}
-
 	headers := in.Request.Headers
 	defer func() {
 		in.Request.Headers = headers
 	}()
+
+	// extract any forwarding headers from the input to explicit fields
+	in.ConfigureForwardingInfo(HTTPHeaderVaultForwardFrom, HTTPHeaderVaultForwardTo)
 
 	// Ensure at least one backend logs
 	anyLogged := false
@@ -197,6 +193,9 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput, hea
 	defer func() {
 		in.Request.Headers = headers
 	}()
+
+	// extract any forwarding headers from the input to explicit fields
+	in.ConfigureForwardingInfo(HTTPHeaderVaultForwardFrom, HTTPHeaderVaultForwardTo)
 
 	// Ensure at least one backend logs
 	anyLogged := false
