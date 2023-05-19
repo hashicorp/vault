@@ -101,16 +101,16 @@ func (b *backend) createCredential(ctx context.Context, storage logical.Storage,
 
 		for i := 1; i < len(accessKeys.AccessKeyMetadata); i++ {
 			if accessKeys.AccessKeyMetadata[i].CreateDate.Before(*oldestKey.CreateDate) {
-				oldestKey = accessKeys.AccessKeyMetadata[1]
+				oldestKey = accessKeys.AccessKeyMetadata[i]
 			}
+		}
 
-			_, err := iamClient.DeleteAccessKey(&iam.DeleteAccessKeyInput{
-				AccessKeyId: oldestKey.AccessKeyId,
-				UserName:    oldestKey.UserName,
-			})
-			if err != nil {
-				return fmt.Errorf("unable to delete oldest access keys for user '%s': %w", cfg.Username, err)
-			}
+		_, err := iamClient.DeleteAccessKey(&iam.DeleteAccessKeyInput{
+			AccessKeyId: oldestKey.AccessKeyId,
+			UserName:    oldestKey.UserName,
+		})
+		if err != nil {
+			return fmt.Errorf("unable to delete oldest access keys for user '%s': %w", cfg.Username, err)
 		}
 	}
 
