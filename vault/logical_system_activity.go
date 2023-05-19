@@ -167,7 +167,9 @@ func parseStartEndTimes(a *ActivityLog, d *framework.FieldData) (time.Time, time
 
 // This endpoint is not used by the UI. The UI's "export" feature is entirely client-side.
 func (b *SystemBackend) handleClientExport(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	b.Core.activityLogLock.RLock()
 	a := b.Core.activityLog
+	b.Core.activityLogLock.RUnlock()
 	if a == nil {
 		return logical.ErrorResponse("no activity log present"), nil
 	}
@@ -198,7 +200,9 @@ func (b *SystemBackend) handleClientExport(ctx context.Context, req *logical.Req
 }
 
 func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	b.Core.activityLogLock.RLock()
 	a := b.Core.activityLog
+	b.Core.activityLogLock.RUnlock()
 	if a == nil {
 		return logical.ErrorResponse("no activity log present"), nil
 	}
@@ -228,7 +232,9 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 }
 
 func (b *SystemBackend) handleMonthlyActivityCount(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	b.Core.activityLogLock.RLock()
 	a := b.Core.activityLog
+	b.Core.activityLogLock.RUnlock()
 	if a == nil {
 		return logical.ErrorResponse("no activity log present"), nil
 	}
@@ -247,7 +253,9 @@ func (b *SystemBackend) handleMonthlyActivityCount(ctx context.Context, req *log
 }
 
 func (b *SystemBackend) handleActivityConfigRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	b.Core.activityLogLock.RLock()
 	a := b.Core.activityLog
+	b.Core.activityLogLock.RUnlock()
 	if a == nil {
 		return logical.ErrorResponse("no activity log present"), nil
 	}
@@ -272,15 +280,17 @@ func (b *SystemBackend) handleActivityConfigRead(ctx context.Context, req *logic
 			"retention_months":         config.RetentionMonths,
 			"enabled":                  config.Enabled,
 			"queries_available":        qa,
-			"reporting_enabled":        b.Core.censusLicensingEnabled,
-			"billing_start_timestamp":  b.Core.billingStart,
+			"reporting_enabled":        b.Core.CensusLicensingEnabled(),
+			"billing_start_timestamp":  b.Core.BillingStart(),
 			"minimum_retention_months": a.configOverrides.MinimumRetentionMonths,
 		},
 	}, nil
 }
 
 func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	b.Core.activityLogLock.RLock()
 	a := b.Core.activityLog
+	b.Core.activityLogLock.RUnlock()
 	if a == nil {
 		return logical.ErrorResponse("no activity log present"), nil
 	}
@@ -331,7 +341,7 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 				activityLogEnabledDefault && config.Enabled == "default" && enabledStr == "disable" {
 
 				// if census is enabled, the activity log cannot be disabled
-				if a.core.censusLicensingEnabled {
+				if a.core.CensusLicensingEnabled() {
 					return logical.ErrorResponse("cannot disable the activity log while Reporting is enabled"), logical.ErrInvalidRequest
 				}
 				warnings = append(warnings, "the current monthly segment will be deleted because the activity log was disabled")
@@ -346,6 +356,9 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 		}
 	}
 
+	a.core.activityLogLock.RLock()
+	minimumRetentionMonths := a.configOverrides.MinimumRetentionMonths
+	a.core.activityLogLock.RUnlock()
 	enabled := config.Enabled == "enable"
 	if !enabled && config.Enabled == "default" {
 		enabled = activityLogEnabledDefault
@@ -355,8 +368,8 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 		return logical.ErrorResponse("retention_months cannot be 0 while enabled"), logical.ErrInvalidRequest
 	}
 
-	if a.core.censusLicensingEnabled && config.RetentionMonths < a.configOverrides.MinimumRetentionMonths {
-		return logical.ErrorResponse("retention_months must be at least %d while Reporting is enabled", a.configOverrides.MinimumRetentionMonths), logical.ErrInvalidRequest
+	if a.core.CensusLicensingEnabled() && config.RetentionMonths < minimumRetentionMonths {
+		return logical.ErrorResponse("retention_months must be at least %d while Reporting is enabled", minimumRetentionMonths), logical.ErrInvalidRequest
 	}
 
 	// Store the config
