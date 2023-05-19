@@ -31,7 +31,7 @@ jobs:
         repository: hashicorp/security-scanner
         token: ${{ secrets.HASHIBOT_PRODSEC_GITHUB_TOKEN }}
         path: security-scanner
-        ref: 2526c196a28bb367b1ac6c997ff48e9ebf06834f
+        ref: 5a491479f4131d343afe0a4f18f6fcd36639f3fa
 
     - name: Install dependencies
       shell: bash
