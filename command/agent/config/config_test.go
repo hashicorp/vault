@@ -2169,7 +2169,7 @@ func TestLoadConfigFile_EnvTemplateNoName(t *testing.T) {
 
 // TestLoadConfigFile_ExecInvalidSignal ensures that an invalid signal triggers an error
 func TestLoadConfigFile_ExecInvalidSignal(t *testing.T) {
-	_, err := LoadConfigFile("./test-fixtures/bad-config-exec-signal-does-not-exist.hcl")
+	_, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-invalid-signal.hcl")
 	if err == nil {
 		t.Fatalf("expected error")
 	}
