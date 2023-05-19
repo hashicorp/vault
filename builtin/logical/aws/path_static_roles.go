@@ -96,7 +96,6 @@ func pathStaticRoles(b *backend) *framework.Path {
 }
 
 func (b *backend) pathStaticRolesRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-
 	roleName, ok := data.GetOk(paramRoleName)
 	if !ok {
 		return nil, fmt.Errorf("missing '%s' parameter", paramRoleName)
