@@ -361,15 +361,11 @@ func (c *Config) validateEnvTemplateConfig() error {
 	}
 
 	if c.Exec == nil {
-		return fmt.Errorf("'exec' element must be specified with 'env_template' entries")
+		return fmt.Errorf("a top-level 'exec' element must be specified with 'env_template' entries")
 	}
 
 	if len(c.EnvTemplates) == 0 {
 		return fmt.Errorf("must specify at least one 'env_template' element with a top-level 'exec' element")
-	}
-
-	if c.ExitAfterAuth {
-		return fmt.Errorf("'exit_after_auth' cannot be specified with 'env_template' entries")
 	}
 
 	if c.APIProxy != nil {
@@ -380,14 +376,24 @@ func (c *Config) validateEnvTemplateConfig() error {
 		return fmt.Errorf("'template' cannot be specified with 'env_template' entries")
 	}
 
-	if c.Exec == nil || len(c.Exec.Command) == 0 {
-		return fmt.Errorf("'exec' requires non-empty 'command' field")
+	if len(c.Exec.Command) == 0 {
+		return fmt.Errorf("'exec' requires a non-empty 'command' field")
 	}
 
 	uniqueKeys := make(map[string]struct{})
 
 	for _, template := range c.EnvTemplates {
-		// only two fields are currently required (name & contents)
+		// Required:
+		//   - the key (environment variable name)
+		//   - either "contents" or "source"
+		// Optional / permitted:
+		//   - error_on_missing_key
+		//   - error_fatal
+		//   - left_delimiter
+		//   - right_delimiter
+		//   - ExtFuncMap
+		//   - function_denylist / function_blacklist
+
 		if template.MapToEnvironmentVariable == nil {
 			return fmt.Errorf("env_template: an environment variable name is required")
 		}
@@ -400,8 +406,8 @@ func (c *Config) validateEnvTemplateConfig() error {
 
 		uniqueKeys[key] = struct{}{}
 
-		if template.Contents == nil {
-			return fmt.Errorf("env_template[%s]: 'contents' is required", key)
+		if template.Contents == nil && template.Source == nil {
+			return fmt.Errorf("env_template[%s]: either 'contents' or 'source' must be specified", key)
 		}
 
 		if template.Backup != nil {
@@ -422,10 +428,6 @@ func (c *Config) validateEnvTemplateConfig() error {
 
 		if template.Destination != nil {
 			return fmt.Errorf("env_template[%s]: 'destination' is not allowed", key)
-		}
-
-		if template.ErrFatal != nil {
-			return fmt.Errorf("env_template[%s]: 'error_fatal' is not allowed", key)
 		}
 
 		if template.Exec != nil {
@@ -458,26 +460,6 @@ func (c *Config) validateEnvTemplateConfig() error {
 
 		if template.Wait != nil {
 			return fmt.Errorf("env_template[%s]: 'wait' is not allowed", key)
-		}
-
-		if template.LeftDelim != nil {
-			return fmt.Errorf("env_template[%s]: 'left_delimiter' is not allowed", key)
-		}
-
-		if template.RightDelim != nil {
-			return fmt.Errorf("env_template[%s]: 'right_delimiter' is not allowed", key)
-		}
-
-		if template.ExtFuncMap != nil {
-			return fmt.Errorf("env_template[%s]: 'right_delimiter' is not allowed", key)
-		}
-
-		if len(template.FunctionDenylist) != 0 {
-			return fmt.Errorf("env_template[%s]: 'function_denylist' is not allowed", key)
-		}
-
-		if len(template.FunctionDenylistDeprecated) != 0 {
-			return fmt.Errorf("env_template[%s]: 'function_blacklist' is not allowed", key)
 		}
 
 		if template.SandboxPath != nil {
