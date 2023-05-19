@@ -11,9 +11,9 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 
 const SELECTORS = {
-  hdsAlertTitle: '.hds-alert .hds-alert__title',
-  hdsAlertActions: '.hds-alert .hds-alert__actions',
-  hdsAlertButtonText: '.hds-alert .hds-button__text',
+  hdsAlertTitle: '[data-test-hds-alert-title]',
+  hdsAlertActions: '[data-test-hds-alert-action]',
+  hdsAlertButtonText: '[data-test-hds-alert-action] .hds-button__text',
   timeStartedRow: '[data-test-value-div="Time started"]',
   timeFinishedRow: '[data-test-value-div="Time finished"]',
 };

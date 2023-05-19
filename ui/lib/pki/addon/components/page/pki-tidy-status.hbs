@@ -21,14 +21,15 @@
 <Hds::Alert
   @type="inline"
   @color={{this.tidyStateAlertBanner.color}}
-  class="has-top-margin-m"
   @icon={{this.tidyStateAlertBanner.icon}}
+  class="has-top-margin-m"
+  data-test-hds-alert
   as |A|
 >
-  <A.Title>{{this.tidyStateAlertBanner.title}}</A.Title>
+  <A.Title data-test-hds-alert-title>{{this.tidyStateAlertBanner.title}}</A.Title>
   <A.Description>{{this.tidyStateAlertBanner.message}}</A.Description>
   {{#if this.tidyStateAlertBanner.shouldShowCancelTidy}}
-    <A.Button @text="Cancel tidy" @color="critical" {{on "click" (perform this.cancelTidy)}} />
+    <A.Button @text="Cancel tidy" @color="critical" {{on "click" (perform this.cancelTidy)}} data-test-hds-alert-action />
   {{/if}}
   {{#if @tidyStatus.responseTimestamp}}
     <A.Description class="has-top-margin-xs">
@@ -39,15 +40,15 @@
 </Hds::Alert>
 
 {{#each this.generalSectionFields as |attr|}}
-  {{#if (or (eq attr "time_started") (eq attr "time_finished") (eq attr "last_auto_tidy_finished"))}}
-    <InfoTableRow
-      @label={{humanize (dasherize attr)}}
-      @value={{date-format (get @tidyStatus attr) "MMM dd, yyyy hh:mm:ss a"}}
-      @alwaysRender={{true}}
-    />
-  {{else}}
-    <InfoTableRow @label={{humanize (dasherize attr)}} @value={{(get @tidyStatus attr)}} @alwaysRender={{true}} />
-  {{/if}}
+  <InfoTableRow
+    @label={{humanize (dasherize attr)}}
+    @formatDate={{if
+      (includes attr (array "time_started" "time_finished" "last_auto_tidy_finished"))
+      "MMM dd, yyyy hh:mm:ss a"
+    }}
+    @value={{get @tidyStatus attr}}
+    @alwaysRender={{true}}
+  />
 {{/each}}
 
 <h2 class="title is-4 has-bottom-margin-xs has-top-margin-l has-border-bottom-light has-bottom-padding-s">
@@ -61,7 +62,7 @@
       @alwaysRender={{true}}
     />
   {{else}}
-    <InfoTableRow @label={{humanize (dasherize attr)}} @value={{(get @tidyStatus attr)}} @alwaysRender={{true}} />
+    <InfoTableRow @label={{humanize (dasherize attr)}} @value={{get @tidyStatus attr}} @alwaysRender={{true}} />
   {{/if}}
 {{/each}}
 
@@ -76,7 +77,7 @@
       @alwaysRender={{true}}
     />
   {{else}}
-    <InfoTableRow @label={{humanize (dasherize attr)}} @value={{(get @tidyStatus attr)}} @alwaysRender={{true}} />
+    <InfoTableRow @label={{humanize (dasherize attr)}} @value={{get @tidyStatus attr}} @alwaysRender={{true}} />
   {{/if}}
 {{/each}}
 
@@ -92,7 +93,7 @@
         @alwaysRender={{true}}
       />
     {{else}}
-      <InfoTableRow @label={{humanize (dasherize attr)}} @value={{(get @tidyStatus attr)}} @alwaysRender={{true}} />
+      <InfoTableRow @label={{humanize (dasherize attr)}} @value={{get @tidyStatus attr}} @alwaysRender={{true}} />
     {{/if}}
   {{/each}}
 {{/if}}

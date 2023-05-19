@@ -23,6 +23,10 @@ export default class PkiTidyStatusComponent extends Component {
     return this.version.isEnterprise;
   }
 
+  get tidyState() {
+    return this.args.tidyStatus?.state;
+  }
+
   get generalSectionFields() {
     return [
       'time_started',
@@ -98,10 +102,6 @@ export default class PkiTidyStatusComponent extends Component {
           message: "The system reported no tidy status. It's recommended to perform a new tidy operation.",
         };
     }
-  }
-
-  get tidyState() {
-    return this.args.tidyStatus?.state;
   }
 
   @task
