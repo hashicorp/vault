@@ -341,18 +341,18 @@ func TestConfigureDevTLS(t *testing.T) {
 		TLSDisable      bool
 		CertPathEmpty   bool
 		ErrNotNil       bool
+		TestDescription string
 	}{
-		// flagDev is false, nothing will be configured.
 		{
 			ServerCommand: &ServerCommand{
 				flagDevTLS: false,
 			},
-			ConfigNotNil:  true,
-			TLSDisable:    true,
-			CertPathEmpty: true,
-			ErrNotNil:     false,
+			ConfigNotNil:    true,
+			TLSDisable:      true,
+			CertPathEmpty:   true,
+			ErrNotNil:       false,
+			TestDescription: "flagDev is false, nothing will be configured",
 		},
-		// flagDevTLSCertDir is empty.
 		{
 			ServerCommand: &ServerCommand{
 				flagDevTLS:        true,
@@ -361,19 +361,20 @@ func TestConfigureDevTLS(t *testing.T) {
 			DeferFuncNotNil: true,
 			ConfigNotNil:    true,
 			ErrNotNil:       false,
+			TestDescription: "flagDevTLSCertDir is empty",
 		},
-		// flagDevTLSCertDir is set to something invalid
 		{
 			ServerCommand: &ServerCommand{
 				flagDevTLS:        true,
 				flagDevTLSCertDir: "@/#",
 			},
-			CertPathEmpty: true,
-			ErrNotNil:     true,
+			CertPathEmpty:   true,
+			ErrNotNil:       true,
+			TestDescription: "flagDevTLSCertDir is set to something invalid",
 		},
 	}
 
-	for i, testcase := range testcases {
+	for _, testcase := range testcases {
 		fun, cfg, certPath, err := configureDevTLS(testcase.ServerCommand)
 		if fun != nil {
 			// If a function is returned, call it right away to clean up
@@ -382,13 +383,13 @@ func TestConfigureDevTLS(t *testing.T) {
 			fun()
 		}
 
-		require.Equal(t, testcase.DeferFuncNotNil, (fun != nil), "Iteration %d", i)
-		require.Equal(t, testcase.ConfigNotNil, cfg != nil, "Iteration %d", i)
+		require.Equal(t, testcase.DeferFuncNotNil, (fun != nil), "test description %s", testcase.TestDescription)
+		require.Equal(t, testcase.ConfigNotNil, cfg != nil, "test description %s", testcase.TestDescription)
 		if testcase.ConfigNotNil {
-			require.True(t, len(cfg.Listeners) > 0, "Iteration %d", i)
-			require.Equal(t, testcase.TLSDisable, cfg.Listeners[0].TLSDisable, "Iteration %d", i)
+			require.True(t, len(cfg.Listeners) > 0, "test description %s", testcase.TestDescription)
+			require.Equal(t, testcase.TLSDisable, cfg.Listeners[0].TLSDisable, "test description %s", testcase.TestDescription)
 		}
-		require.Equal(t, testcase.CertPathEmpty, len(certPath) == 0, "Iteration %d", i)
-		require.Equal(t, testcase.ErrNotNil, (err != nil), "Iteration %d", i)
+		require.Equal(t, testcase.CertPathEmpty, len(certPath) == 0, "test description %s", testcase.TestDescription)
+		require.Equal(t, testcase.ErrNotNil, (err != nil), "test description %s", testcase.TestDescription)
 	}
 }
