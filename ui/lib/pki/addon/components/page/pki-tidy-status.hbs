@@ -100,19 +100,23 @@
   @showCloseButton={{true}}
 >
   <section aria-label="tidy-options-modal-content" class="modal-card-body">
-    <h3 class="title is-5">Tidy operation</h3>
+    <h3 class="title is-5">How tidying will work</h3>
     <p class="has-text-grey has-bottom-padding-s">
       Tidying cleans up the storage backend and/or CRL by removing certificates that have expired and are past a certain
       buffer period beyond their expiration time.
       <DocLink @path="/vault/docs/secrets/pki/considerations#automate-crl-building-and-tidying">
-        Learn more.
+        Documentation.
       </DocLink>
     </p>
     <p class="has-text-grey">
       <ol class="has-left-margin-m has-bottom-margin-s">
-        <li>Select a manual tidy or an automatic tidy operation. Manual tidy runs the tidy operation once, and automatic tidy
-          runs the tidy operation periodically.</li>
-        <li>Choose the parameters you wish to tidy, and run the operation</li>
+        <li>Select a tidy operation:</li>
+        <ul class="bullet has-bottom-margin-xs">
+          <li><strong>Automatic tidy</strong>
+            saves configuration settings to automate running a tidy operation after the specified interval duration</li>
+          <li><strong>Manual tidy</strong> runs a tidy operation once</li>
+        </ul>
+        <li>Configure the parameters that determine how to tidy, and run the operation</li>
       </ol>
     </p>
     <div class="has-top-margin-l has-padding">
