@@ -60,7 +60,7 @@
 
   <h2 class="title is-4 has-bottom-margin-xs has-top-margin-l has-border-bottom-light has-bottom-padding-s">
     {{if (eq this.tidyState "Running") "Current" "Last"}}
-    tidy configuration
+    tidy settings
   </h2>
   {{#each this.tidyStatusConfigFields as |attr|}}
     <InfoTableRow
@@ -76,7 +76,7 @@
       <InfoTableRow
         @label={{humanize (dasherize attr)}}
         @value={{get @tidyStatus attr}}
-        @formatTtl={{if (eq attr "revocation_queue_safety_buffer")}}
+        @formatTtl={{eq attr "revocation_queue_safety_buffer"}}
         @alwaysRender={{true}}
       />
     {{/each}}
