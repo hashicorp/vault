@@ -73,15 +73,12 @@
 
   {{#if this.isEnterprise}}
     {{#each this.crossClusterOperation as |attr|}}
-      {{#if (eq attr "revocation_queue_safety_buffer")}}
-        <InfoTableRow
-          @label={{humanize (dasherize attr)}}
-          @value={{format-duration (get @tidyStatus attr)}}
-          @alwaysRender={{true}}
-        />
-      {{else}}
-        <InfoTableRow @label={{humanize (dasherize attr)}} @value={{get @tidyStatus attr}} @alwaysRender={{true}} />
-      {{/if}}
+      <InfoTableRow
+        @label={{humanize (dasherize attr)}}
+        @value={{get @tidyStatus attr}}
+        @formatTtl={{if (eq attr "revocation_queue_safety_buffer")}}
+        @alwaysRender={{true}}
+      />
     {{/each}}
   {{/if}}
 {{else}}
