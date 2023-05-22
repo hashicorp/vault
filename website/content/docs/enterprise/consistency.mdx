@@ -97,7 +97,7 @@ There are now a variety of other mitigations available:
 - per-request option to conditionally forward the request to the active node
   if it would otherwise result in a stale read
 - per-request option to fail requests if they might result in a stale read
-- Vault Agent configuration to do the above for proxied requests
+- Vault Proxy configuration to do the above for proxied requests
 
 The remainder of this document describes the tradeoffs of these mitigations and
 how to use them.
@@ -173,22 +173,22 @@ methods for propagating the X-Vault-Index response header into the request
 header of subsequent requests. Those not using the Vault Go API will want
 to build equivalent functionality into their client library.
 
-### Vault Agent and consistency headers
+### Vault Proxy and consistency headers
 
-When configured, the [Vault Agent API Proxy](/vault/docs/agent/apiproxy) will proxy incoming requests to Vault. There is
-Agent configuration available in the `api_proxy` stanza that allows making use
+When configured, the [Vault API Proxy](/vault/docs/agent-and-proxy/proxy/apiproxy) will proxy incoming requests to Vault. There is
+Proxy configuration available in the `api_proxy` stanza that allows making use
 of some of the above mitigations without modifying clients.
 
-By setting `enforce_consistency="always"`, Agent will always provide
+By setting `enforce_consistency="always"`, Proxy will always provide
 the `X-Vault-Index` consistency header. The value it uses for the header
-will be based on the responses that have passed through the Agent previously.
+will be based on the responses that have passed through the Proxy previously.
 
 The option `when_inconsistent` controls how stale reads are prevented:
 
 - `"fail"` means that when a `412` response is seen, it is returned to the client
-- `"retry"` means that `412` responses will be retried automatically by Agent,
+- `"retry"` means that `412` responses will be retried automatically by Proxy,
   so the client doesn't have to deal with them
-- `"forward"` makes Agent provide the
+- `"forward"` makes Proxy provide the
   `X-Vault-Inconsistent: forward-active-node` header as described above under
   Conditional Forwarding
 

@@ -330,3 +330,66 @@ func TestServer_DevTLS(t *testing.T) {
 	require.Equal(t, 0, retCode, output)
 	require.Contains(t, output, `tls: "enabled"`)
 }
+
+// TestConfigureDevTLS verifies the various logic paths that flow through the
+// configureDevTLS function.
+func TestConfigureDevTLS(t *testing.T) {
+	testcases := []struct {
+		ServerCommand   *ServerCommand
+		DeferFuncNotNil bool
+		ConfigNotNil    bool
+		TLSDisable      bool
+		CertPathEmpty   bool
+		ErrNotNil       bool
+		TestDescription string
+	}{
+		{
+			ServerCommand: &ServerCommand{
+				flagDevTLS: false,
+			},
+			ConfigNotNil:    true,
+			TLSDisable:      true,
+			CertPathEmpty:   true,
+			ErrNotNil:       false,
+			TestDescription: "flagDev is false, nothing will be configured",
+		},
+		{
+			ServerCommand: &ServerCommand{
+				flagDevTLS:        true,
+				flagDevTLSCertDir: "",
+			},
+			DeferFuncNotNil: true,
+			ConfigNotNil:    true,
+			ErrNotNil:       false,
+			TestDescription: "flagDevTLSCertDir is empty",
+		},
+		{
+			ServerCommand: &ServerCommand{
+				flagDevTLS:        true,
+				flagDevTLSCertDir: "@/#",
+			},
+			CertPathEmpty:   true,
+			ErrNotNil:       true,
+			TestDescription: "flagDevTLSCertDir is set to something invalid",
+		},
+	}
+
+	for _, testcase := range testcases {
+		fun, cfg, certPath, err := configureDevTLS(testcase.ServerCommand)
+		if fun != nil {
+			// If a function is returned, call it right away to clean up
+			// files created in the temporary directory before anything else has
+			// a chance to fail this test.
+			fun()
+		}
+
+		require.Equal(t, testcase.DeferFuncNotNil, (fun != nil), "test description %s", testcase.TestDescription)
+		require.Equal(t, testcase.ConfigNotNil, cfg != nil, "test description %s", testcase.TestDescription)
+		if testcase.ConfigNotNil {
+			require.True(t, len(cfg.Listeners) > 0, "test description %s", testcase.TestDescription)
+			require.Equal(t, testcase.TLSDisable, cfg.Listeners[0].TLSDisable, "test description %s", testcase.TestDescription)
+		}
+		require.Equal(t, testcase.CertPathEmpty, len(certPath) == 0, "test description %s", testcase.TestDescription)
+		require.Equal(t, testcase.ErrNotNil, (err != nil), "test description %s", testcase.TestDescription)
+	}
+}

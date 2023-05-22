@@ -12,6 +12,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/hex"
 	"net"
 	"net/http"
 	"path"
@@ -21,6 +22,7 @@ import (
 	"golang.org/x/crypto/acme"
 
 	"github.com/hashicorp/vault/builtin/logical/pkiext"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	hDocker "github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/stretchr/testify/require"
 )
@@ -33,9 +35,10 @@ func Test_ACME(t *testing.T) {
 	defer cluster.Cleanup()
 
 	tc := map[string]func(t *testing.T, cluster *VaultPkiCluster){
-		"certbot":       SubtestACMECertbot,
-		"acme ip sans":  SubtestACMEIPAndDNS,
-		"acme wildcard": SubtestACMEWildcardDNS,
+		"certbot":           SubtestACMECertbot,
+		"acme ip sans":      SubtestACMEIPAndDNS,
+		"acme wildcard":     SubtestACMEWildcardDNS,
+		"acme prevents ica": SubtestACMEPreventsICADNS,
 	}
 
 	// Wrap the tests within an outer group, so that we run all tests
@@ -255,7 +258,7 @@ func SubtestACMEIPAndDNS(t *testing.T, cluster *VaultPkiCluster) {
 		return challengesToAccept
 	}
 
-	acmeCert := doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, cr, provisioningFunc)
+	acmeCert := doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, cr, provisioningFunc, "")
 
 	require.Len(t, acmeCert.IPAddresses, 1, "expected only a single ip address in cert")
 	require.Equal(t, ipAddr, acmeCert.IPAddresses[0].String())
@@ -278,7 +281,7 @@ func SubtestACMEIPAndDNS(t *testing.T, cluster *VaultPkiCluster) {
 		IPAddresses: []net.IP{net.ParseIP(ipAddr)},
 	}
 
-	acmeCert = doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, cr, provisioningFunc)
+	acmeCert = doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, cr, provisioningFunc, "")
 
 	require.Len(t, acmeCert.IPAddresses, 1, "expected only a single ip address in cert")
 	require.Equal(t, ipAddr, acmeCert.IPAddresses[0].String())
@@ -288,7 +291,7 @@ func SubtestACMEIPAndDNS(t *testing.T, cluster *VaultPkiCluster) {
 
 type acmeGoValidatorProvisionerFunc func(acmeClient *acme.Client, auths []*acme.Authorization) []*acme.Challenge
 
-func doAcmeValidationWithGoLibrary(t *testing.T, directoryUrl string, acmeOrderIdentifiers []acme.AuthzID, cr *x509.CertificateRequest, provisioningFunc acmeGoValidatorProvisionerFunc) *x509.Certificate {
+func doAcmeValidationWithGoLibrary(t *testing.T, directoryUrl string, acmeOrderIdentifiers []acme.AuthzID, cr *x509.CertificateRequest, provisioningFunc acmeGoValidatorProvisionerFunc, expectedFailure string) *x509.Certificate {
 	// Since we are contacting Vault through the host ip/port, the certificate will not validate properly
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -343,8 +346,19 @@ func doAcmeValidationWithGoLibrary(t *testing.T, directoryUrl string, acmeOrderI
 	csr, err := x509.CreateCertificateRequest(rand.Reader, cr, csrKey)
 	require.NoError(t, err, "failed generating csr")
 
+	t.Logf("[TEST-LOG] Created CSR: %v", hex.EncodeToString(csr))
+
 	certs, _, err := acmeClient.CreateOrderCert(testCtx, order.FinalizeURL, csr, false)
-	require.NoError(t, err, "failed to get a certificate back from ACME")
+	if err != nil {
+		if expectedFailure != "" {
+			require.Contains(t, err.Error(), expectedFailure, "got a unexpected failure not matching expected value")
+			return nil
+		}
+
+		require.NoError(t, err, "failed to get a certificate back from ACME")
+	} else if expectedFailure != "" {
+		t.Fatalf("expected failure containing: %s got none", expectedFailure)
+	}
 
 	acmeCert, err := x509.ParseCertificate(certs[0])
 	require.NoError(t, err, "failed parsing acme cert bytes")
@@ -402,7 +416,7 @@ func SubtestACMEWildcardDNS(t *testing.T, cluster *VaultPkiCluster) {
 		return challengesToAccept
 	}
 
-	acmeCert := doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, cr, provisioningFunc)
+	acmeCert := doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, cr, provisioningFunc, "")
 	require.Contains(t, acmeCert.DNSNames, hostname)
 	require.Contains(t, acmeCert.DNSNames, wildcard)
 	require.Equal(t, wildcard, acmeCert.Subject.CommonName)
@@ -419,10 +433,84 @@ func SubtestACMEWildcardDNS(t *testing.T, cluster *VaultPkiCluster) {
 	require.NoError(t, err, "failed creating role wildcard")
 	directoryUrl = basePath + "/roles/wildcard/acme/directory"
 
-	acmeCert = doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, cr, provisioningFunc)
+	acmeCert = doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, cr, provisioningFunc, "")
 	require.Contains(t, acmeCert.DNSNames, hostname)
 	require.Contains(t, acmeCert.DNSNames, wildcard)
 	require.Equal(t, wildcard, acmeCert.Subject.CommonName)
+	pki.RemoveDNSRecordsForDomain(hostname)
+}
+
+func SubtestACMEPreventsICADNS(t *testing.T, cluster *VaultPkiCluster) {
+	pki, err := cluster.CreateAcmeMount("pki-dns-ica")
+	require.NoError(t, err, "failed setting up acme mount")
+
+	// Since we interact with ACME from outside the container network the ACME
+	// configuration needs to be updated to use the host port and not the internal
+	// docker ip.
+	basePath, err := pki.UpdateClusterConfigLocalAddr()
+	require.NoError(t, err, "failed updating cluster config")
+
+	hostname := "go-lang-intermediate-ca-cert.dadgarcorp.com"
+
+	// Do validation without a role first.
+	directoryUrl := basePath + "/acme/directory"
+	acmeOrderIdentifiers := []acme.AuthzID{
+		{Type: "dns", Value: hostname},
+	}
+	cr := &x509.CertificateRequest{
+		Subject:  pkix.Name{CommonName: hostname},
+		DNSNames: []string{hostname},
+		ExtraExtensions: []pkix.Extension{
+			// Basic Constraint with IsCA asserted to true.
+			{
+				Id:       certutil.ExtensionBasicConstraintsOID,
+				Critical: true,
+				Value:    []byte{0x30, 0x03, 0x01, 0x01, 0xFF},
+			},
+		},
+	}
+
+	provisioningFunc := func(acmeClient *acme.Client, auths []*acme.Authorization) []*acme.Challenge {
+		// For each dns-01 challenge, place the record in the associated DNS resolver.
+		var challengesToAccept []*acme.Challenge
+		for _, auth := range auths {
+			for _, challenge := range auth.Challenges {
+				if challenge.Status != acme.StatusPending {
+					t.Logf("ignoring challenge not in status pending: %v", challenge)
+					continue
+				}
+
+				if challenge.Type == "dns-01" {
+					challengeBody, err := acmeClient.DNS01ChallengeRecord(challenge.Token)
+					require.NoError(t, err, "failed generating challenge response")
+
+					err = pki.AddDNSRecord("_acme-challenge."+auth.Identifier.Value, "TXT", challengeBody)
+					require.NoError(t, err, "failed setting DNS record")
+
+					challengesToAccept = append(challengesToAccept, challenge)
+				}
+			}
+		}
+
+		require.GreaterOrEqual(t, len(challengesToAccept), 1, "Need at least one challenge, got none")
+		return challengesToAccept
+	}
+
+	doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, cr, provisioningFunc, "refusing to accept CSR with Basic Constraints extension")
+	pki.RemoveDNSRecordsForDomain(hostname)
+
+	// Redo validation with a role this time.
+	err = pki.UpdateRole("ica", map[string]interface{}{
+		"key_type":                    "any",
+		"allowed_domains":             "go-lang-intermediate-ca-cert.dadgarcorp.com",
+		"allow_subdomains":            true,
+		"allow_bare_domains":          true,
+		"allow_wildcard_certificates": true,
+	})
+	require.NoError(t, err, "failed creating role wildcard")
+	directoryUrl = basePath + "/roles/ica/acme/directory"
+
+	doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, cr, provisioningFunc, "refusing to accept CSR with Basic Constraints extension")
 	pki.RemoveDNSRecordsForDomain(hostname)
 }
 

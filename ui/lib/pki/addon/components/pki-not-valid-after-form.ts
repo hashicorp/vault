@@ -6,8 +6,8 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import { HTMLElementEvent } from 'forms';
 import { format } from 'date-fns';
+import type { HTMLElementEvent } from 'forms';
 
 /**
  * <PkiNotValidAfterForm /> components are used to manage two mutually exclusive role options in the form.

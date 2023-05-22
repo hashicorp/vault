@@ -12,16 +12,21 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	ctconfig "github.com/hashicorp/consul-template/config"
+	ctsignals "github.com/hashicorp/consul-template/signals"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/mitchellh/mapstructure"
+
+	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/mitchellh/mapstructure"
+	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
 
 // Config is the configuration for Vault Agent.
@@ -31,7 +36,7 @@ type Config struct {
 	AutoAuth                    *AutoAuth                  `hcl:"auto_auth"`
 	ExitAfterAuth               bool                       `hcl:"exit_after_auth"`
 	Cache                       *Cache                     `hcl:"cache"`
-	APIProxy                    *APIProxy                  `hcl:"api_proxy""`
+	APIProxy                    *APIProxy                  `hcl:"api_proxy"`
 	Vault                       *Vault                     `hcl:"vault"`
 	TemplateConfig              *TemplateConfig            `hcl:"template_config"`
 	Templates                   []*ctconfig.TemplateConfig `hcl:"templates"`
@@ -43,6 +48,8 @@ type Config struct {
 	DisableKeepAlivesAPIProxy   bool                       `hcl:"-"`
 	DisableKeepAlivesTemplating bool                       `hcl:"-"`
 	DisableKeepAlivesAutoAuth   bool                       `hcl:"-"`
+	Exec                        *ExecConfig                `hcl:"exec,optional"`
+	EnvTemplates                []*ctconfig.TemplateConfig `hcl:"env_template,optional"`
 }
 
 const (
@@ -105,22 +112,13 @@ type APIProxy struct {
 
 // Cache contains any configuration needed for Cache mode
 type Cache struct {
-	UseAutoAuthTokenRaw interface{}     `hcl:"use_auto_auth_token"`
-	UseAutoAuthToken    bool            `hcl:"-"`
-	ForceAutoAuthToken  bool            `hcl:"-"`
-	EnforceConsistency  string          `hcl:"enforce_consistency"`
-	WhenInconsistent    string          `hcl:"when_inconsistent"`
-	Persist             *Persist        `hcl:"persist"`
-	InProcDialer        transportDialer `hcl:"-"`
-}
-
-// Persist contains configuration needed for persistent caching
-type Persist struct {
-	Type                    string
-	Path                    string `hcl:"path"`
-	KeepAfterImport         bool   `hcl:"keep_after_import"`
-	ExitOnErr               bool   `hcl:"exit_on_err"`
-	ServiceAccountTokenFile string `hcl:"service_account_token_file"`
+	UseAutoAuthTokenRaw interface{}                     `hcl:"use_auto_auth_token"`
+	UseAutoAuthToken    bool                            `hcl:"-"`
+	ForceAutoAuthToken  bool                            `hcl:"-"`
+	EnforceConsistency  string                          `hcl:"enforce_consistency"`
+	WhenInconsistent    string                          `hcl:"when_inconsistent"`
+	Persist             *agentproxyshared.PersistConfig `hcl:"persist"`
+	InProcDialer        transportDialer                 `hcl:"-"`
 }
 
 // AutoAuth is the configured authentication method and sinks
@@ -166,6 +164,12 @@ type TemplateConfig struct {
 	ExitOnRetryFailure       bool          `hcl:"exit_on_retry_failure"`
 	StaticSecretRenderIntRaw interface{}   `hcl:"static_secret_render_interval"`
 	StaticSecretRenderInt    time.Duration `hcl:"-"`
+}
+
+type ExecConfig struct {
+	Command                []string  `hcl:"command,attr" mapstructure:"command"`
+	RestartOnSecretChanges string    `hcl:"restart_on_secret_changes,optional" mapstructure:"restart_on_secret_changes"`
+	RestartStopSignal      os.Signal `hcl:"-" mapstructure:"restart_stop_signal"`
 }
 
 func NewConfig() *Config {
@@ -265,7 +269,31 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.PidFile = c2.PidFile
 	}
 
+	result.Exec = c.Exec
+	if c2.Exec != nil {
+		result.Exec = c2.Exec
+	}
+
+	for _, envTmpl := range c.EnvTemplates {
+		result.EnvTemplates = append(result.EnvTemplates, envTmpl)
+	}
+
+	for _, envTmpl := range c2.EnvTemplates {
+		result.EnvTemplates = append(result.EnvTemplates, envTmpl)
+	}
+
 	return result
+}
+
+// IsDefaultListerDefined returns true if a default listener has been defined
+// in this config
+func (c *Config) IsDefaultListerDefined() bool {
+	for _, l := range c.Listeners {
+		if l.Role != "metrics_only" {
+			return true
+		}
+	}
+	return false
 }
 
 // ValidateConfig validates an Agent configuration after it has been fully merged together, to
@@ -486,6 +514,14 @@ func LoadConfigFile(path string) (*Config, error) {
 
 	if err := parseTemplates(result, list); err != nil {
 		return nil, fmt.Errorf("error parsing 'template': %w", err)
+	}
+
+	if err := parseExec(result, list); err != nil {
+		return nil, fmt.Errorf("error parsing 'exec': %w", err)
+	}
+
+	if err := parseEnvTemplates(result, list); err != nil {
+		return nil, fmt.Errorf("error parsing 'env_template': %w", err)
 	}
 
 	if result.Cache != nil && result.APIProxy == nil {
@@ -737,7 +773,7 @@ func parsePersist(result *Config, list *ast.ObjectList) error {
 
 	item := persistList.Items[0]
 
-	var p Persist
+	var p agentproxyshared.PersistConfig
 	err := hcl.DecodeObject(&p, item.Val)
 	if err != nil {
 		return err
@@ -1033,5 +1069,123 @@ func parseTemplates(result *Config, list *ast.ObjectList) error {
 		tcs = append(tcs, &tc)
 	}
 	result.Templates = tcs
+	return nil
+}
+
+func parseExec(result *Config, list *ast.ObjectList) error {
+	name := "exec"
+
+	execList := list.Filter(name)
+	if len(execList.Items) == 0 {
+		return nil
+	}
+
+	if len(execList.Items) > 1 {
+		return fmt.Errorf("at most one %q block is allowed", name)
+	}
+
+	item := execList.Items[0]
+	var shadow interface{}
+	if err := hcl.DecodeObject(&shadow, item.Val); err != nil {
+		return fmt.Errorf("error decoding config: %s", err)
+	}
+
+	parsed, ok := shadow.(map[string]interface{})
+	if !ok {
+		return errors.New("error converting config")
+	}
+
+	var execConfig ExecConfig
+	var md mapstructure.Metadata
+	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		DecodeHook: mapstructure.ComposeDecodeHookFunc(
+			ctconfig.StringToFileModeFunc(),
+			ctconfig.StringToWaitDurationHookFunc(),
+			mapstructure.StringToSliceHookFunc(","),
+			mapstructure.StringToTimeDurationHookFunc(),
+			ctsignals.StringToSignalFunc(),
+		),
+		ErrorUnused: true,
+		Metadata:    &md,
+		Result:      &execConfig,
+	})
+	if err != nil {
+		return errors.New("mapstructure decoder creation failed")
+	}
+	if err := decoder.Decode(parsed); err != nil {
+		return err
+	}
+
+	// if the user does not specify a restart signal, default to SIGTERM
+	if execConfig.RestartStopSignal == nil {
+		execConfig.RestartStopSignal = syscall.SIGTERM
+	}
+
+	if execConfig.RestartOnSecretChanges == "" {
+		execConfig.RestartOnSecretChanges = "always"
+	}
+
+	result.Exec = &execConfig
+	return nil
+}
+
+func parseEnvTemplates(result *Config, list *ast.ObjectList) error {
+	name := "env_template"
+
+	envTemplateList := list.Filter(name)
+
+	if len(envTemplateList.Items) < 1 {
+		return nil
+	}
+
+	envTemplates := make([]*ctconfig.TemplateConfig, 0, len(envTemplateList.Items))
+
+	for _, item := range envTemplateList.Items {
+		var shadow interface{}
+		if err := hcl.DecodeObject(&shadow, item.Val); err != nil {
+			return fmt.Errorf("error decoding config: %s", err)
+		}
+
+		// Convert to a map and flatten the keys we want to flatten
+		parsed, ok := shadow.(map[string]any)
+		if !ok {
+			return errors.New("error converting config")
+		}
+
+		var templateConfig ctconfig.TemplateConfig
+		var md mapstructure.Metadata
+		decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+			DecodeHook: mapstructure.ComposeDecodeHookFunc(
+				ctconfig.StringToFileModeFunc(),
+				ctconfig.StringToWaitDurationHookFunc(),
+				mapstructure.StringToSliceHookFunc(","),
+				mapstructure.StringToTimeDurationHookFunc(),
+				ctsignals.StringToSignalFunc(),
+			),
+			ErrorUnused: true,
+			Metadata:    &md,
+			Result:      &templateConfig,
+		})
+		if err != nil {
+			return errors.New("mapstructure decoder creation failed")
+		}
+		if err := decoder.Decode(parsed); err != nil {
+			return err
+		}
+
+		// parse the keys in the item for the environment variable name
+		if numberOfKeys := len(item.Keys); numberOfKeys != 1 {
+			return fmt.Errorf("expected one and only one environment variable name, got %d", numberOfKeys)
+		}
+
+		// hcl parses this with extra quotes if quoted in config file
+		environmentVariableName := strings.Trim(item.Keys[0].Token.Text, `"`)
+
+		templateConfig.MapToEnvironmentVariable = pointerutil.StringPtr(environmentVariableName)
+
+		envTemplates = append(envTemplates, &templateConfig)
+	}
+
+	result.EnvTemplates = envTemplates
 	return nil
 }

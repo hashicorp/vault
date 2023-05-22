@@ -268,6 +268,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 				SighupCh:   MakeSighupCh(),
 			}, nil
 		},
+		"agent generate-config": func() (cli.Command, error) {
+			return &AgentGenerateConfigCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"audit": func() (cli.Command, error) {
 			return &AuditCommand{
 				BaseCommand: getBaseCommand(),
@@ -601,6 +606,15 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 		"plugin reload-status": func() (cli.Command, error) {
 			return &PluginReloadStatusCommand{
 				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"proxy": func() (cli.Command, error) {
+			return &ProxyCommand{
+				BaseCommand: &BaseCommand{
+					UI: serverCmdUi,
+				},
+				ShutdownCh: MakeShutdownCh(),
+				SighupCh:   MakeSighupCh(),
 			}, nil
 		},
 		"policy": func() (cli.Command, error) {
