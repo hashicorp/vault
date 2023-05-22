@@ -9,7 +9,7 @@ export const SELECTORS = {
   hdsAlertDescription: '[data-test-hds-alert-description]',
   alertUpdatedAt: '[data-test-hds-alert-updated-at]',
   cancelTidyAction: '[data-test-cancel-tidy-action]',
-  hdsAlertButtonText: '[data-test-hds-alert-action] .hds-button__text',
+  hdsAlertButtonText: '[data-test-cancel-tidy-action] .hds-button__text',
   timeStartedRow: '[data-test-value-div="Time started"]',
   timeFinishedRow: '[data-test-value-div="Time finished"]',
   cancelTidyModalBackground: '[data-test-modal-background="Cancel tidy?"]',
