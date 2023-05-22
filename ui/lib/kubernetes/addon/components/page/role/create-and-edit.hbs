@@ -44,7 +44,6 @@
     {{/if}}
 
     {{#each @model.filteredFormFields as |field|}}
-      here
       <FormField @attr={{field}} @model={{@model}} @modelValidations={{this.modelValidations}} />
     {{/each}}
 

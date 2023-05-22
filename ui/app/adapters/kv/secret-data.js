@@ -22,7 +22,7 @@ export default class KvSecretDataAdapter extends ApplicationAdapter {
   _saveRecord(store, { modelName }, snapshot) {
     const data = store.serializerFor(modelName).serialize(snapshot);
     const url = this.getURL(snapshot.attr('backend'), data.path);
-    // delete from the payload path and backend
+    // delete path and backend from the payload
     delete data.path;
     delete data.backend;
     return this.ajax(url, 'POST', { data }).then(() => data);
