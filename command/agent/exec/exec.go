@@ -248,12 +248,12 @@ func (s *Server) bounceCmd(newEnvVars []string) error {
 	s.proc = proc
 	// this seems not to work?
 	// s.procExitCh = s.proc.ExitCh()
-	go func(proc *child.Child) {
+	go func() {
 		select {
 		case exitCode := <-proc.ExitCh():
 			s.procExitCh <- exitCode
 		}
-	}(s.proc)
+	}()
 
 	if err := s.proc.Start(); err != nil {
 		return fmt.Errorf("error starting child process: %w", err)

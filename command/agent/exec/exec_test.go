@@ -3,6 +3,7 @@ package exec
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -78,7 +79,7 @@ func TestServer_Run(t *testing.T) {
 		expectedValues map[string]string
 		extraAppArgs   []string
 		expectError    bool
-		checkError     func(error)
+		checkError     func(*testing.T, error)
 		processTime    time.Duration
 		stopSignal     os.Signal
 	}{
@@ -119,6 +120,16 @@ func TestServer_Run(t *testing.T) {
 			extraAppArgs: []string{"--stop-after", "2s"},
 			expectError:  true,
 			stopSignal:   syscall.SIGTERM,
+			checkError: func(t *testing.T, err error) {
+				var processExitError *ProcessExitError
+				if errors.As(err, &processExitError) {
+					if processExitError.ExitCode != 0 {
+						t.Fatalf("expected there to be an exit code of 0, got %d", processExitError.ExitCode)
+					}
+				} else {
+					t.Fatalf("expected error of type ProcessExitError")
+				}
+			},
 		},
 	}
 
@@ -199,7 +210,7 @@ func TestServer_Run(t *testing.T) {
 				if err != nil && testCase.expectError {
 					t.Logf("received expected error: %v", err)
 					if testCase.checkError != nil {
-						testCase.checkError(err)
+						testCase.checkError(t, err)
 					}
 					return
 				}
