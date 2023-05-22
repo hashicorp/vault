@@ -1,19 +1,23 @@
 <Toolbar>
   <ToolbarActions>
     <div class="toolbar-separator"></div>
-    <button
-      type="button"
-      class="toolbar-link"
-      {{on "click" (fn (mut this.tidyOptionsModal) true)}}
-      data-test-pki-tidy-options-modal
-    >
-      Tidy
-      <Icon @name="chevron-right" />
-    </button>
     {{#if @autoTidyConfig.enabled}}
       <ToolbarLink @route="tidy.auto" data-test-pki-auto-tidy-config>
         Auto-tidy configuration
       </ToolbarLink>
+      <ToolbarLink @route="tidy.manual" data-test-pki-manual-tidy-config>
+        Perform manual tidy
+      </ToolbarLink>
+    {{else}}
+      <button
+        type="button"
+        class="toolbar-link"
+        {{on "click" (fn (mut this.tidyOptionsModal) true)}}
+        data-test-pki-tidy-options-modal
+      >
+        Tidy
+        <Icon @name="chevron-right" />
+      </button>
     {{/if}}
   </ToolbarActions>
 </Toolbar>
@@ -86,7 +90,12 @@
     @title="Tidy status unavailable"
     @message="After an initial tidy operation has been performed, information about the current or most recent tidy operation will display here."
   >
-    <button type="button" class="link" {{on "click" (fn (mut this.tidyOptionsModal) true)}}>
+    <button
+      type="button"
+      class="link"
+      {{on "click" (fn (mut this.tidyOptionsModal) true)}}
+      data-test-tidy-empty-state-configure
+    >
       Tidy
     </button>
   </EmptyState>
@@ -142,7 +151,12 @@
     >
       Manual tidy
     </button>
-    <button type="button" class="button is-secondary" {{on "click" (fn (mut this.tidyOptionsModal) false)}}>
+    <button
+      type="button"
+      class="button is-secondary"
+      {{on "click" (fn (mut this.tidyOptionsModal) false)}}
+      data-test-tidy-modal-cancel-button
+    >
       Cancel
     </button>
   </footer>
