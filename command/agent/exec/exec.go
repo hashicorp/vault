@@ -56,7 +56,7 @@ type Server struct {
 	procLock    sync.Mutex
 
 	// exit channel of the child process
-	procExitCh <-chan int
+	procExitCh chan int
 }
 
 type ProcessExitError struct {
@@ -72,7 +72,7 @@ func NewServer(cfg *ServerConfig) *Server {
 		logger:      cfg.Logger,
 		config:      cfg,
 		procStarted: false,
-		// exitCh: make(<-chan int),
+		procExitCh:  make(chan int),
 	}
 
 	return &server
@@ -246,7 +246,14 @@ func (s *Server) bounceCmd(newEnvVars []string) error {
 		return err
 	}
 	s.proc = proc
-	s.procExitCh = s.proc.ExitCh()
+	// this seems not to work?
+	// s.procExitCh = s.proc.ExitCh()
+	go func(proc *child.Child) {
+		select {
+		case exitCode := <-proc.ExitCh():
+			s.procExitCh <- exitCode
+		}
+	}(s.proc)
 
 	if err := s.proc.Start(); err != nil {
 		return fmt.Errorf("error starting child process: %w", err)
