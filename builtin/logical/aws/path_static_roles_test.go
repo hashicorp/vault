@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/queue"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
@@ -302,6 +304,8 @@ func TestStaticRoleDelete(t *testing.T) {
 			config := logical.TestBackendConfig()
 			config.StorageView = &logical.InmemStorage{}
 
+			b := Backend()
+
 			staticRole := staticRoleEntry{
 				Name:           "test",
 				Username:       "jane-doe",
@@ -321,6 +325,15 @@ func TestStaticRoleDelete(t *testing.T) {
 				t.Fatalf("couldn't add an entry to storage during test setup: %s", err)
 			}
 
+			err = b.credRotationQueue.Push(&queue.Item{
+				Key:      staticRole.Name,
+				Value:    staticRole,
+				Priority: time.Now().Add(90 * time.Hour).Unix(),
+			})
+			if err != nil {
+				t.Fatalf("couldn't add items to pq")
+			}
+
 			req := &logical.Request{
 				Operation: logical.ReadOperation,
 				Storage:   config.StorageView,
@@ -329,8 +342,6 @@ func TestStaticRoleDelete(t *testing.T) {
 				},
 				Path: formatRoleStoragePath(c.role),
 			}
-
-			b := Backend()
 
 			r, err := b.pathStaticRolesDelete(bgCTX, req, staticRoleFieldData(req.Data))
 			if err != nil {
@@ -348,6 +359,12 @@ func TestStaticRoleDelete(t *testing.T) {
 				t.Fatal("size of role storage is non zero after delete")
 			} else if !c.found && len(l) != 1 {
 				t.Fatal("size of role storage changed after what should have been no deletion")
+			}
+
+			if c.found && b.credRotationQueue.Len() != 0 {
+				t.Fatal("size of queue is non-zero after delete")
+			} else if !c.found && b.credRotationQueue.Len() != 1 {
+				t.Fatal("size of queue changed after what should have been no deletion")
 			}
 		})
 	}
