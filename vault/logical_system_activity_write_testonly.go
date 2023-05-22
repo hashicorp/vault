@@ -8,9 +8,12 @@ package vault
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
@@ -60,7 +63,7 @@ func (b *SystemBackend) handleActivityWriteData(ctx context.Context, request *lo
 			numMonths = int(month.GetMonthsAgo())
 		}
 	}
-	generated := newMultipleMonthsActivityClients(numMonths)
+	generated := newMultipleMonthsActivityClients(numMonths + 1)
 	for _, month := range input.Data {
 		err := generated.processMonth(ctx, b.Core, month)
 		if err != nil {
@@ -315,27 +318,42 @@ func (m *multipleMonthsActivityClients) addRepeatedClients(monthsAgo int32, c *g
 }
 
 func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[generation.WriteOptions]struct{}, activityLog *ActivityLog) ([]string, error) {
+	now := timeutil.StartOfMonth(time.Now().UTC())
 	paths := []string{}
-	for _, month := range m.months {
-		segments := month.populateSegments()
-		timestamp := 0
+	for i, month := range m.months {
+		var timestamp time.Time
+		if i > 0 {
+			timestamp = timeutil.StartOfMonth(timeutil.MonthsPreviousTo(i, now))
+		} else {
+			timestamp = now
+		}
+		segments, err := month.populateSegments()
+		if err != nil {
+			return nil, err
+		}
 		for segmentIndex, segment := range segments {
 			if _, ok := opts[generation.WriteOptions_WRITE_ENTITIES]; ok {
 				if segment == nil {
 					// skip the index
 					continue
 				}
-				entityPaths, err := activityLog.saveSegmentInternal(ctx, segmentInfo{
-					startTimestamp:       int64(timestamp),
+				entityPath, err := activityLog.saveSegmentEntitiesInternal(ctx, segmentInfo{
+					startTimestamp:       timestamp.Unix(),
 					currentClients:       &activity.EntityActivityLog{Clients: segment},
 					clientSequenceNumber: uint64(segmentIndex),
+					tokenCount:           &activity.TokenCount{},
 				}, true)
 				if err != nil {
 					return nil, err
 				}
-				paths = append(paths, entityPaths...)
+				paths = append(paths, entityPath)
 			}
 		}
+	}
+	wg := sync.WaitGroup{}
+	err := activityLog.refreshFromStoredLog(ctx, &wg, now)
+	if err != nil {
+		return nil, err
 	}
 	return paths, nil
 }
