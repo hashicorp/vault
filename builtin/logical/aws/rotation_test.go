@@ -205,7 +205,6 @@ func (f *fakeIAM) DeleteAccessKey(r *iam.DeleteAccessKeyInput) (*iam.DeleteAcces
 }
 
 func TestCreateCredential(t *testing.T) {
-
 	cases := []struct {
 		name       string
 		username   string
