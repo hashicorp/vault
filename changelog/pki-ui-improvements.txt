@@ -3,5 +3,7 @@
 Included in this release is:
 - Mount overview page with issuer and role counts and quick actions to issue or view a certificate from a dropdown
 - Multiple issuers can now be generated and managed in the UI
+- Added issuer metadata in the list view that includes a default issuer tag, whether it is a root or intermediate, serial number and the common name
+- Guided root rotation by either using old root settings or customizing a new root certificate
 - Perform cross-signing of multiple intermediates in a single step from a parent issuer
 - Parses and displays more certificate metadata
