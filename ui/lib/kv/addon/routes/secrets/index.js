@@ -14,7 +14,7 @@ export default class KvSecretsRoute extends Route {
   @service secretMountPath;
 
   model(params, transition) {
-    // filter roles based on pageFilter value
+    // filter secrets based on pageFilter value
     const { pageFilter } = transition.to.queryParams;
     const secrets = this.store
       .query('kv/secret', { backend: this.secretMountPath.get() })
