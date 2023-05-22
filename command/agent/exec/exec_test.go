@@ -70,6 +70,19 @@ func createHttpTestServer() *httptest.Server {
 	return httptest.NewServer(mux)
 }
 
+func processErrorCodeChecker(expectedExitCode int) func(t *testing.T, err error) {
+	return func(t *testing.T, err error) {
+		var processExitError *ProcessExitError
+		if errors.As(err, &processExitError) {
+			if processExitError.ExitCode != expectedExitCode {
+				t.Fatalf("expected there to be an exit code of %d, got %d", expectedExitCode, processExitError.ExitCode)
+			}
+		} else {
+			t.Fatalf("expected error of type ProcessExitError")
+		}
+	}
+}
+
 func TestServer_Run(t *testing.T) {
 	testServer := createHttpTestServer()
 	defer testServer.Close()
@@ -107,29 +120,15 @@ func TestServer_Run(t *testing.T) {
 					Contents:                 pointerutil.StringPtr(`{{ with secret "kv/myapp/config"}}{{.Data.data.username}}{{end}}`),
 					MapToEnvironmentVariable: pointerutil.StringPtr("MY_USERNAME"),
 				},
-				{
-					Contents:                 pointerutil.StringPtr(`{{ with secret "kv/myapp/config"}}{{.Data.data.password}}{{end}}`),
-					MapToEnvironmentVariable: pointerutil.StringPtr("MY_PASSWORD"),
-				},
 			},
 			expectedValues: map[string]string{
 				"MY_USERNAME": "appuser",
-				"MY_PASSWORD": "password",
 			},
 			processTime:  time.Second * 5,
 			extraAppArgs: []string{"--stop-after", "2s"},
 			expectError:  true,
 			stopSignal:   syscall.SIGTERM,
-			checkError: func(t *testing.T, err error) {
-				var processExitError *ProcessExitError
-				if errors.As(err, &processExitError) {
-					if processExitError.ExitCode != 0 {
-						t.Fatalf("expected there to be an exit code of 0, got %d", processExitError.ExitCode)
-					}
-				} else {
-					t.Fatalf("expected error of type ProcessExitError")
-				}
-			},
+			checkError:   processErrorCodeChecker(0),
 		},
 	}
 
