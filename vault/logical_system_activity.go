@@ -29,6 +29,10 @@ func (b *SystemBackend) activityQueryPath() *framework.Path {
 		},
 
 		Fields: map[string]*framework.FieldSchema{
+			"current_billing_period": {
+				Type:        framework.TypeBool,
+				Description: "Query utilization for configured billing period",
+			},
 			"start_time": {
 				Type:        framework.TypeTime,
 				Description: "Start of query interval",
@@ -236,6 +240,7 @@ func (b *SystemBackend) handleClientExport(ctx context.Context, req *logical.Req
 }
 
 func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	var startTime, endTime time.Time
 	b.Core.activityLogLock.RLock()
 	a := b.Core.activityLog
 	b.Core.activityLogLock.RUnlock()
@@ -243,9 +248,15 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 		return logical.ErrorResponse("no activity log present"), nil
 	}
 
-	startTime, endTime, err := parseStartEndTimes(a, d)
-	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+	if d.Get("current_billing_period").(bool) {
+		startTime = b.Core.BillingStart()
+		endTime = time.Now().UTC()
+	} else {
+		var err error
+		startTime, endTime, err = parseStartEndTimes(a, d)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
 	}
 
 	var limitNamespaces int
