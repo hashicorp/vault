@@ -135,10 +135,12 @@ module('Acceptance | pki tidy', function (hooks) {
       .exists('Auto tidy form enabled shows ACME operations field');
     await click(SELECTORS.tidyForm.inputByAttr('tidyCertStore'));
     await click(SELECTORS.tidyForm.tidySave);
-    // TODO: test a successful submission of an auto tidy operation here
-    // assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.tidy.auto.index');
-    // await click('[data-test-pki-edit-tidy-auto-link]');
-    // assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.tidy.auto.index');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.tidy.auto.index');
+    await click(SELECTORS.tidyForm.editAutoTidyButton);
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.tidy.auto.configure');
+    await click(SELECTORS.tidyForm.inputByAttr('tidyRevokedCerts'));
+    await click(SELECTORS.tidyForm.tidySave);
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.tidy.auto.index');
   });
 
   test('it opens a tidy modal when the user clicks on the tidy toolbar action', async function (assert) {
@@ -162,13 +164,18 @@ module('Acceptance | pki tidy', function (hooks) {
       .exists('Configure tidy modal options button exists');
     await click(SELECTORS.tidyConfigureModal.tidyOptionsModal);
     assert.dom(SELECTORS.tidyConfigureModal.configureTidyModal).exists('Configure tidy modal exists');
-    await click(SELECTORS.tidyConfigureModal.tidyModalCancelButton);
-    // TODO configure auto tidy and check if manual tidy + auto config button exists
-    // assert
-    //   .dom(SELECTORS.manualTidyToolbar)
-    //   .exists('Manual tidy toolbar action exists if auto tidy is configured');
-    // assert
-    //   .dom(SELECTORS.autoTidyToolbar)
-    //   .exists('Auto tidy toolbar action exists if auto tidy is configured');
+    await click(SELECTORS.tidyConfigureModal.tidyOptionsModal);
+    await click(SELECTORS.tidyConfigureModal.tidyModalAutoButton);
+    await click(SELECTORS.tidyForm.toggleLabel('Automatic tidy disabled'));
+    await click(SELECTORS.tidyForm.inputByAttr('tidyCertStore'));
+    await click(SELECTORS.tidyForm.inputByAttr('tidyRevokedCerts'));
+    await click(SELECTORS.tidyForm.tidySave);
+    await visit(`/vault/secrets/${this.mountPath}/pki/tidy`);
+    assert
+      .dom(SELECTORS.manualTidyToolbar)
+      .exists('Manual tidy toolbar action exists if auto tidy is configured');
+    assert
+      .dom(SELECTORS.autoTidyToolbar)
+      .exists('Auto tidy toolbar action exists if auto tidy is configured');
   });
 });

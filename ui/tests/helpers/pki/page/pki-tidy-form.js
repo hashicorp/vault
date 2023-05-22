@@ -14,4 +14,5 @@ export const SELECTORS = {
   tidySave: '[data-test-pki-tidy-button]',
   tidyCancel: '[data-test-pki-tidy-cancel]',
   tidyPauseDuration: '[data-test-ttl-value="Pause duration"]',
+  editAutoTidyButton: '[data-test-pki-edit-tidy-auto-link]',
 };
