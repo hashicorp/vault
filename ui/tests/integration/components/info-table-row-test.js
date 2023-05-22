@@ -277,7 +277,9 @@ module('Integration | Component | InfoTableRow', function (hooks) {
       @formatTtl={{true}}
     />`);
 
-    assert.dom('[data-test-value-div]').hasText('100m', 'Translates number value to largest unit');
+    assert
+      .dom('[data-test-value-div]')
+      .hasText('1 hour 40 minutes', 'Translates number value to largest unit with carryover of minutes');
     this.set('value', '45m');
     await settled();
     assert.dom('[data-test-value-div]').hasText('45m', 'Renders non-number values as-is');

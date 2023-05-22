@@ -11,7 +11,6 @@ export function duration([time], { nullable = false }) {
   // { years: 0, months: 0, days: 0, hours: 1, minutes: 0, seconds: 0 }
   // then formatDuration returns the filled in keys of the durationObject
   // nullable if you don't want a value to be returned instead of 0s
-
   if (nullable && (time === '0' || time === 0)) {
     return null;
   }
