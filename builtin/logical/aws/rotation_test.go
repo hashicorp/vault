@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go/service/iam/iamiface"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
@@ -98,7 +100,6 @@ func TestRotation(t *testing.T) {
 			config.StorageView = &logical.InmemStorage{}
 
 			b := Backend()
-
 			// this means the creds will be the same for every user, but that's okay
 			// since what we care about is whether they changed on a single-user basis.
 			miam, err := awsutil.NewMockIAM(
@@ -193,11 +194,23 @@ func TestRotation(t *testing.T) {
 	}
 }
 
+type fakeIAM struct {
+	iamiface.IAMAPI
+	delReqs []*iam.DeleteAccessKeyInput
+}
+
+func (f *fakeIAM) DeleteAccessKey(r *iam.DeleteAccessKeyInput) (*iam.DeleteAccessKeyOutput, error) {
+	f.delReqs = append(f.delReqs, r)
+	return f.IAMAPI.DeleteAccessKey(r)
+}
+
 func TestCreateCredential(t *testing.T) {
+
 	cases := []struct {
-		name     string
-		username string
-		opts     []awsutil.MockIAMOption
+		name       string
+		username   string
+		deletedKey string
+		opts       []awsutil.MockIAMOption
 	}{
 		{
 			name:     "zero keys",
@@ -236,12 +249,14 @@ func TestCreateCredential(t *testing.T) {
 			},
 		},
 		{
-			name:     "two keys",
-			username: "jane-doe",
+			name:       "two keys",
+			username:   "jane-doe",
+			deletedKey: "foo",
 			opts: []awsutil.MockIAMOption{
 				awsutil.WithListAccessKeysOutput(&iam.ListAccessKeysOutput{
 					AccessKeyMetadata: []*iam.AccessKeyMetadata{
-						{AccessKeyId: aws.String("foo"), CreateDate: aws.Time(time.Now())},
+						{AccessKeyId: aws.String("foo"), CreateDate: aws.Time(time.Time{})},
+						{AccessKeyId: aws.String("bar"), CreateDate: aws.Time(time.Now())},
 					},
 				}),
 				awsutil.WithCreateAccessKeyOutput(&iam.CreateAccessKeyOutput{
@@ -265,13 +280,26 @@ func TestCreateCredential(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			fiam := &fakeIAM{
+				IAMAPI: miam,
+			}
 
 			b := Backend()
-			b.iamClient = miam
+			b.iamClient = fiam
 
 			err = b.createCredential(context.Background(), config.StorageView, staticRoleEntry{Username: c.username}, true)
 			if err != nil {
 				t.Fatalf("got an error we didn't expect: %q", err)
+			}
+
+			if c.deletedKey != "" {
+				if len(fiam.delReqs) != 1 {
+					t.Fatalf("called the wrong number of deletes (called %d deletes)", len(fiam.delReqs))
+				}
+				actualKey := *fiam.delReqs[0].AccessKeyId
+				if c.deletedKey != actualKey {
+					t.Fatalf("we deleted the wrong key: %q instead of %q", actualKey, c.deletedKey)
+				}
 			}
 		})
 	}
