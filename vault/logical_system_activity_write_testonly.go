@@ -7,8 +7,8 @@ package vault
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"math"
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -54,13 +54,46 @@ func (b *SystemBackend) handleActivityWriteData(ctx context.Context, request *lo
 	if len(input.Data) == 0 {
 		return logical.ErrorResponse("Missing required \"data\" values"), logical.ErrInvalidRequest
 	}
-	return nil, nil
+
+	numMonths := 0
+	for _, month := range input.Data {
+		if int(month.GetMonthsAgo()) > numMonths {
+			numMonths = int(month.GetMonthsAgo())
+		}
+	}
+	generated := newMultipleMonthsActivityClients(numMonths)
+	for _, month := range input.Data {
+		err := generated.processMonth(ctx, b.Core, month)
+		if err != nil {
+			return logical.ErrorResponse("failed to process data for month %d", month.GetMonthsAgo()), err
+		}
+	}
+
+	opts := make(map[generation.WriteOptions]struct{}, len(input.Write))
+	for _, opt := range input.Write {
+		opts[opt] = struct{}{}
+	}
+	paths, err := generated.write(ctx, opts, b.Core.activityLog)
+	if err != nil {
+		return logical.ErrorResponse("failed to write data"), err
+	}
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"paths": paths,
+		},
+	}, nil
 }
 
 // singleMonthActivityClients holds a single month's client IDs, in the order they were seen
 type singleMonthActivityClients struct {
 	// clients are indexed by ID
 	clients []*activity.EntityRecord
+	// predefinedSegments map from the segment number to the client's index in
+	// the clients slice
+	predefinedSegments map[int][]int
+
+	// generationParameters holds the generation request
+	generationParameters *generation.Data
 }
 
 // multipleMonthsActivityClients holds multiple month's data
@@ -69,9 +102,81 @@ type multipleMonthsActivityClients struct {
 	months []*singleMonthActivityClients
 }
 
+func (s *singleMonthActivityClients) addEntityRecord(record *activity.EntityRecord, segmentIndex *int) {
+	s.clients = append(s.clients, record)
+	if segmentIndex != nil {
+		index := len(s.clients) - 1
+		s.predefinedSegments[*segmentIndex] = append(s.predefinedSegments[*segmentIndex], index)
+
+	}
+}
+
+// populateSegments converts a month of clients into a segmented map. The map's
+// keys are the segment index, and the value are the clients that were seen in
+// that index. If the value is an empty slice, then it's an empty index. If the
+// value is nil, then it's a skipped index
+func (s *singleMonthActivityClients) populateSegments() map[int][]*activity.EntityRecord {
+	segments := make(map[int][]*activity.EntityRecord)
+	ignoreIndexes := make(map[int]struct{})
+	for _, i := range s.generationParameters.SkipSegmentIndexes {
+		segments[int(i)] = nil
+		ignoreIndexes[int(i)] = struct{}{}
+	}
+	for _, i := range s.generationParameters.EmptySegmentIndexes {
+		segments[int(i)] = make([]*activity.EntityRecord, 0, 0)
+		ignoreIndexes[int(i)] = struct{}{}
+	}
+
+	// if we have predefined segments, then we can construct the map using those
+	if len(s.predefinedSegments) > 0 {
+		for segment, clientIndexes := range s.predefinedSegments {
+			clientsInSegment := make([]*activity.EntityRecord, 0, len(clientIndexes))
+			for _, idx := range clientIndexes {
+				clientsInSegment = append(clientsInSegment, s.clients[idx])
+			}
+			segments[segment] = clientsInSegment
+		}
+		return segments
+
+	}
+
+	// otherwise, we should make segments of approximately equal size
+	totalSegmentCount := 1
+	if s.generationParameters.GetNumSegments() > 0 {
+		totalSegmentCount = int(s.generationParameters.GetNumSegments())
+	}
+	usableSegmentCount := totalSegmentCount - len(s.generationParameters.SkipSegmentIndexes) - len(s.generationParameters.EmptySegmentIndexes)
+	segmentSizes := int(math.Round(math.Ceil(float64(len(s.clients)) / float64(usableSegmentCount))))
+
+	// all clients get split into batches
+	batchedClients := make([][]*activity.EntityRecord, 0, usableSegmentCount)
+	current := make([]*activity.EntityRecord, 0, segmentSizes)
+	for _, c := range s.clients {
+		current = append(current, c)
+		if len(current) == segmentSizes {
+			batchedClients = append(batchedClients, current)
+			current = make([]*activity.EntityRecord, 0, segmentSizes)
+		}
+	}
+
+	if len(current) > 0 {
+		batchedClients = append(batchedClients, current)
+	}
+	// and each batch is given a segment index
+	currentBatchIndex := 0
+	for i := 0; i < totalSegmentCount; i++ {
+		if _, ok := ignoreIndexes[i]; ok {
+			continue
+		}
+		segments[i] = batchedClients[currentBatchIndex]
+		currentBatchIndex++
+	}
+	return segments
+}
+
 // addNewClients generates clients according to the given parameters, and adds them to the month
 // the client will always have the mountAccessor as its mount accessor
-func (s *singleMonthActivityClients) addNewClients(c *generation.Client, mountAccessor string) error {
+func (s *singleMonthActivityClients) addNewClients(c *generation.Client, mountAccessor string, segmentIndex *int) error {
 	count := 1
 	if c.Count > 1 {
 		count = int(c.Count)
@@ -95,17 +200,13 @@ func (s *singleMonthActivityClients) addNewClients(c *generation.Client, mountAc
 				return err
 			}
 		}
-		s.clients = append(s.clients, record)
+		s.addEntityRecord(record, segmentIndex)
 	}
 	return nil
 }
 
 // processMonth populates a month of client data
 func (m *multipleMonthsActivityClients) processMonth(ctx context.Context, core *Core, month *generation.Data) error {
-	if month.GetAll() == nil {
-		return errors.New("segmented monthly data is not yet supported")
-	}
-
 	// default to using the root namespace and the first mount on the root namespace
 	mounts, err := core.ListMounts()
 	if err != nil {
@@ -118,53 +219,128 @@ func (m *multipleMonthsActivityClients) processMonth(ctx context.Context, core *
 			break
 		}
 	}
-	addingTo := m.months[month.GetMonthsAgo()]
+	m.months[month.GetMonthsAgo()].generationParameters = month
+	add := func(c []*generation.Client, segmentIndex *int) error {
+		for _, clients := range c {
 
-	for _, clients := range month.GetAll().Clients {
-		if clients.Repeated || clients.RepeatedFromMonth > 0 {
-			return errors.New("repeated clients are not yet supported")
-		}
-
-		if clients.Namespace == "" {
-			clients.Namespace = namespace.RootNamespaceID
-		}
-
-		// verify that the namespace exists
-		ns, err := core.NamespaceByID(ctx, clients.Namespace)
-		if err != nil {
-			return err
-		}
-
-		// verify that the mount exists
-		if clients.Mount != "" {
-			nctx := namespace.ContextWithNamespace(ctx, ns)
-			mountEntry := core.router.MatchingMountEntry(nctx, clients.Mount)
-			if mountEntry == nil {
-				return fmt.Errorf("unable to find matching mount in namespace %s", clients.Namespace)
+			if clients.Namespace == "" {
+				clients.Namespace = namespace.RootNamespaceID
 			}
-		}
 
-		mountAccessor := defaultMountAccessorRootNS
-		if clients.Namespace != namespace.RootNamespaceID && clients.Mount == "" {
-			// if we're not using the root namespace, find a mount on the namespace that we are using
-			found := false
-			for _, mount := range mounts {
-				if mount.NamespaceID == clients.Namespace {
-					mountAccessor = mount.Accessor
-					found = true
-					break
+			// verify that the namespace exists
+			ns, err := core.NamespaceByID(ctx, clients.Namespace)
+			if err != nil {
+				return err
+			}
+
+			// verify that the mount exists
+			if clients.Mount != "" {
+				nctx := namespace.ContextWithNamespace(ctx, ns)
+				mountEntry := core.router.MatchingMountEntry(nctx, clients.Mount)
+				if mountEntry == nil {
+					return fmt.Errorf("unable to find matching mount in namespace %s", clients.Namespace)
 				}
 			}
-			if !found {
-				return fmt.Errorf("unable to find matching mount in namespace %s", clients.Namespace)
+
+			mountAccessor := defaultMountAccessorRootNS
+			if clients.Namespace != namespace.RootNamespaceID && clients.Mount == "" {
+				// if we're not using the root namespace, find a mount on the namespace that we are using
+				found := false
+				for _, mount := range mounts {
+					if mount.NamespaceID == clients.Namespace {
+						mountAccessor = mount.Accessor
+						found = true
+						break
+					}
+				}
+				if !found {
+					return fmt.Errorf("unable to find matching mount in namespace %s", clients.Namespace)
+				}
+			}
+
+			err = m.addClientToMonth(month.GetMonthsAgo(), clients, mountAccessor, segmentIndex)
+			if err != nil {
+				return err
 			}
 		}
-		err = addingTo.addNewClients(clients, mountAccessor)
+		return nil
+	}
+
+	if month.GetAll() != nil {
+		return add(month.GetAll().GetClients(), nil)
+	}
+	predefinedSegments := month.GetSegments()
+	for i, segment := range predefinedSegments.GetSegments() {
+		index := i
+		if segment.SegmentIndex != nil {
+			index = int(*segment.SegmentIndex)
+		}
+		err = add(segment.GetClients().GetClients(), &index)
 		if err != nil {
 			return err
 		}
 	}
+
 	return nil
+}
+
+func (m *multipleMonthsActivityClients) addClientToMonth(monthsAgo int32, c *generation.Client, mountAccessor string, segmentIndex *int) error {
+	if c.Repeated || c.RepeatedFromMonth > 0 {
+		return m.addRepeatedClients(monthsAgo, c, mountAccessor, segmentIndex)
+	}
+	return m.months[monthsAgo].addNewClients(c, mountAccessor, segmentIndex)
+}
+
+func (m *multipleMonthsActivityClients) addRepeatedClients(monthsAgo int32, c *generation.Client, mountAccessor string, segmentIndex *int) error {
+	addingTo := m.months[monthsAgo]
+	repeatedFromMonth := monthsAgo + 1
+	if c.RepeatedFromMonth > 0 {
+		repeatedFromMonth = c.RepeatedFromMonth
+	}
+	repeatedFrom := m.months[repeatedFromMonth]
+	numClients := 1
+	if c.Count > 0 {
+		numClients = int(c.Count)
+	}
+	for _, client := range repeatedFrom.clients {
+		if c.NonEntity == client.NonEntity && mountAccessor == client.MountAccessor && c.Namespace == client.NamespaceID {
+			addingTo.addEntityRecord(client, segmentIndex)
+			numClients--
+			if numClients == 0 {
+				break
+			}
+		}
+	}
+	if numClients > 0 {
+		return fmt.Errorf("missing repeated %d clients matching given parameters", numClients)
+	}
+	return nil
+}
+
+func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[generation.WriteOptions]struct{}, activityLog *ActivityLog) ([]string, error) {
+	paths := []string{}
+	for _, month := range m.months {
+		segments := month.populateSegments()
+		timestamp := 0
+		for segmentIndex, segment := range segments {
+			if _, ok := opts[generation.WriteOptions_WRITE_ENTITIES]; ok {
+				if segment == nil {
+					// skip the index
+					continue
+				}
+				entityPaths, err := activityLog.saveSegmentInternal(ctx, segmentInfo{
+					startTimestamp:       int64(timestamp),
+					currentClients:       &activity.EntityActivityLog{Clients: segment},
+					clientSequenceNumber: uint64(segmentIndex),
+				}, true)
+				if err != nil {
+					return nil, err
+				}
+				paths = append(paths, entityPaths...)
+			}
+		}
+	}
+	return paths, nil
 }
 
 func newMultipleMonthsActivityClients(numberOfMonths int) *multipleMonthsActivityClients {
@@ -172,7 +348,9 @@ func newMultipleMonthsActivityClients(numberOfMonths int) *multipleMonthsActivit
 		months: make([]*singleMonthActivityClients, numberOfMonths),
 	}
 	for i := 0; i < numberOfMonths; i++ {
-		m.months[i] = new(singleMonthActivityClients)
+		m.months[i] = &singleMonthActivityClients{
+			predefinedSegments: make(map[int][]int),
+		}
 	}
 	return m
 }

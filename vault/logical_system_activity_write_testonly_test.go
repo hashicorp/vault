@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/activity"
 	"github.com/hashicorp/vault/vault/activity/generation"
 	"github.com/stretchr/testify/require"
 )
@@ -88,8 +89,10 @@ func TestSystemBackend_handleActivityWriteData(t *testing.T) {
 // Test_singleMonthActivityClients_addNewClients verifies that new clients are
 // created correctly, adhering to the requested parameters. The clients should
 // use the inputted mount and a generated ID if one is not supplied. The new
-// client should be added to the month's `clients` slice
+// client should be added to the month's `clients` slice and segment map, if
+// a segment index is supplied
 func Test_singleMonthActivityClients_addNewClients(t *testing.T) {
+	segmentIndex := 0
 	tests := []struct {
 		name          string
 		mount         string
@@ -97,6 +100,7 @@ func Test_singleMonthActivityClients_addNewClients(t *testing.T) {
 		wantNamespace string
 		wantMount     string
 		wantID        string
+		segmentIndex  *int
 	}{
 		{
 			name:      "default mount is used",
@@ -133,18 +137,25 @@ func Test_singleMonthActivityClients_addNewClients(t *testing.T) {
 				NonEntity: true,
 			},
 		},
+		{
+			name:         "added to segment",
+			clients:      &generation.Client{},
+			segmentIndex: &segmentIndex,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := &singleMonthActivityClients{}
-			err := m.addNewClients(tt.clients, tt.mount)
+			m := &singleMonthActivityClients{
+				predefinedSegments: make(map[int][]int),
+			}
+			err := m.addNewClients(tt.clients, tt.mount, tt.segmentIndex)
 			require.NoError(t, err)
 			numNew := tt.clients.Count
 			if numNew == 0 {
 				numNew = 1
 			}
 			require.Len(t, m.clients, int(numNew))
-			for _, rec := range m.clients {
+			for i, rec := range m.clients {
 				require.NotNil(t, rec)
 				require.Equal(t, tt.wantNamespace, rec.NamespaceID)
 				require.Equal(t, tt.wantMount, rec.MountAccessor)
@@ -153,6 +164,9 @@ func Test_singleMonthActivityClients_addNewClients(t *testing.T) {
 					require.Equal(t, tt.wantID, rec.ClientID)
 				} else {
 					require.NotEqual(t, "", rec.ClientID)
+				}
+				if tt.segmentIndex != nil {
+					require.Contains(t, m.predefinedSegments[*tt.segmentIndex], i)
 				}
 			}
 		})
@@ -242,6 +256,173 @@ func Test_multipleMonthsActivityClients_processMonth(t *testing.T) {
 					}
 				}
 			}
+		})
+	}
+}
+
+// Test_multipleMonthsActivityClients_processMonth_segmented verifies that segments
+// are filled correctly when a month is processed with segmented data. The clients
+// should be in the clients array, and should also be in the predefinedSegments map
+// at the correct segment index
+func Test_multipleMonthsActivityClients_processMonth_segmented(t *testing.T) {
+	index7 := int32(7)
+	data := &generation.Data{
+		Clients: &generation.Data_Segments{
+			Segments: &generation.Segments{
+				Segments: []*generation.Segment{
+					{
+						Clients: &generation.Clients{Clients: []*generation.Client{
+							{},
+						}},
+					},
+					{
+						Clients: &generation.Clients{Clients: []*generation.Client{{}}},
+					},
+					{
+						SegmentIndex: &index7,
+						Clients:      &generation.Clients{Clients: []*generation.Client{{}}},
+					},
+				},
+			},
+		},
+	}
+	m := newMultipleMonthsActivityClients(1)
+	core, _, _ := TestCoreUnsealed(t)
+	require.NoError(t, m.processMonth(context.Background(), core, data))
+	require.Len(t, m.months[0].predefinedSegments, 3)
+	require.Len(t, m.months[0].clients, 3)
+
+	// segment indexes are correct
+	require.Contains(t, m.months[0].predefinedSegments, 0)
+	require.Contains(t, m.months[0].predefinedSegments, 1)
+	require.Contains(t, m.months[0].predefinedSegments, 7)
+
+	// the data in each segment is correct
+	require.Contains(t, m.months[0].predefinedSegments[0], 0)
+	require.Contains(t, m.months[0].predefinedSegments[1], 1)
+	require.Contains(t, m.months[0].predefinedSegments[7], 2)
+}
+
+// Test_multipleMonthsActivityClients_addRepeatedClients adds repeated clients
+// from 1 month ago and 2 months ago, and verifies that the correct clients are
+// added based on namespace, mount, and non-entity attributes
+func Test_multipleMonthsActivityClients_addRepeatedClients(t *testing.T) {
+	m := newMultipleMonthsActivityClients(3)
+	defaultMount := "default"
+
+	require.NoError(t, m.addClientToMonth(2, &generation.Client{Count: 2}, "identity", nil))
+	require.NoError(t, m.addClientToMonth(2, &generation.Client{Count: 2, Namespace: "other_ns"}, defaultMount, nil))
+	require.NoError(t, m.addClientToMonth(1, &generation.Client{Count: 2}, defaultMount, nil))
+	require.NoError(t, m.addClientToMonth(1, &generation.Client{Count: 2, NonEntity: true}, defaultMount, nil))
+
+	month2Clients := m.months[2].clients
+	month1Clients := m.months[1].clients
+
+	thisMonth := m.months[0]
+	// this will match the first client in month 1
+	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, Repeated: true}, defaultMount, nil))
+	require.Contains(t, month1Clients, thisMonth.clients[0])
+
+	// this will match the 3rd client in month 1
+	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, Repeated: true, NonEntity: true}, defaultMount, nil))
+	require.Equal(t, month1Clients[2], thisMonth.clients[1])
+
+	// this will match the first two clients in month 1
+	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 2, Repeated: true}, defaultMount, nil))
+	require.Equal(t, month1Clients[0:2], thisMonth.clients[2:4])
+
+	// this will match the first client in month 2
+	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, RepeatedFromMonth: 2}, "identity", nil))
+	require.Equal(t, month2Clients[0], thisMonth.clients[4])
+
+	// this will match the 3rd client in month 2
+	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, RepeatedFromMonth: 2, Namespace: "other_ns"}, defaultMount, nil))
+	require.Equal(t, month2Clients[2], thisMonth.clients[5])
+
+	require.Error(t, m.addRepeatedClients(0, &generation.Client{Count: 1, RepeatedFromMonth: 2, Namespace: "other_ns"}, "other_mount", nil))
+}
+
+// Test_singleMonthActivityClients_populateSegments calls populateSegments for a
+// collection of 5 clients, segmented in various ways. The test ensures that the
+// resulting map has the correct clients for each segment index
+func Test_singleMonthActivityClients_populateSegments(t *testing.T) {
+	clients := []*activity.EntityRecord{
+		{ClientID: "a"},
+		{ClientID: "b"},
+		{ClientID: "c"},
+		{ClientID: "d"},
+		{ClientID: "e"},
+	}
+	cases := []struct {
+		name         string
+		segments     map[int][]int
+		numSegments  int
+		emptyIndexes []int32
+		skipIndexes  []int32
+		wantSegments map[int][]*activity.EntityRecord
+	}{
+		{
+			name: "segmented",
+			segments: map[int][]int{
+				0: {0, 1},
+				1: {2, 3},
+				2: {4},
+			},
+			wantSegments: map[int][]*activity.EntityRecord{
+				0: {{ClientID: "a"}, {ClientID: "b"}},
+				1: {{ClientID: "c"}, {ClientID: "d"}},
+				2: {{ClientID: "e"}},
+			},
+		},
+		{
+			name: "segmented with skip and empty",
+			segments: map[int][]int{
+				0: {0, 1},
+				2: {0, 1},
+			},
+			emptyIndexes: []int32{1, 4},
+			skipIndexes:  []int32{3},
+			wantSegments: map[int][]*activity.EntityRecord{
+				0: {{ClientID: "a"}, {ClientID: "b"}},
+				1: {},
+				2: {{ClientID: "a"}, {ClientID: "b"}},
+				3: nil,
+				4: {},
+			},
+		},
+		{
+			name:        "all clients",
+			numSegments: 0,
+			wantSegments: map[int][]*activity.EntityRecord{
+				0: {{ClientID: "a"}, {ClientID: "b"}, {ClientID: "c"}, {ClientID: "d"}, {ClientID: "e"}},
+			},
+		},
+		{
+			name:        "all clients split",
+			numSegments: 2,
+			wantSegments: map[int][]*activity.EntityRecord{
+				0: {{ClientID: "a"}, {ClientID: "b"}, {ClientID: "c"}},
+				1: {{ClientID: "d"}, {ClientID: "e"}},
+			},
+		},
+		{
+			name:         "all clients with skip and empty",
+			numSegments:  5,
+			skipIndexes:  []int32{0, 3},
+			emptyIndexes: []int32{2},
+			wantSegments: map[int][]*activity.EntityRecord{
+				0: nil,
+				1: {{ClientID: "a"}, {ClientID: "b"}, {ClientID: "c"}},
+				2: {},
+				3: nil,
+				4: {{ClientID: "d"}, {ClientID: "e"}},
+			},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			s := singleMonthActivityClients{predefinedSegments: tc.segments, clients: clients, generationParameters: &generation.Data{EmptySegmentIndexes: tc.emptyIndexes, SkipSegmentIndexes: tc.skipIndexes, NumSegments: int32(tc.numSegments)}}
+			require.Equal(t, tc.wantSegments, s.populateSegments())
 		})
 	}
 }
