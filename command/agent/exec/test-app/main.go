@@ -27,9 +27,9 @@ var (
 
 func init() {
 	flag.UintVar(&port, "port", 8000, "port to run the sample app on")
-	flag.BoolVar(&ignoreStopSig, "ignore-stop-signal", false, "dont stop the server on SIGINT")
+	flag.BoolVar(&ignoreStopSig, "ignore-stop-signal", false, "dont stop the server on SIGTERM")
 	flag.DurationVar(&ttl, "ttl", 5*time.Second, "time to wait after getting the signal before exiting (ignored if `ignore-stop-signal` is set)")
-	flag.BoolVar(&useSigusr1, "use-sigusr1", false, "use SIGUSR1 as the stop signal, instead of the default SIGINT")
+	flag.BoolVar(&useSigusr1, "use-sigusr1", false, "use SIGUSR1 as the stop signal, instead of the default SIGTERM")
 	flag.DurationVar(&stopAfter, "stop-after", 0, "stop the process after duration (overrides all other flags if set)")
 	flag.IntVar(&exitCode, "exit-code", 0, "exit code to return when this script exits")
 }
@@ -69,10 +69,12 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	flag.Parse()
+	logger := log.New(os.Stderr, "vault-agent-testing-sample-app: ", log.LstdFlags)
 
 	if stopAfter > 0 {
 		timer := time.AfterFunc(stopAfter, func() {
-			os.Exit(0)
+			logger.Println("stopping the app early")
+			os.Exit(exitCode)
 		})
 		defer timer.Stop()
 	}
@@ -88,14 +90,14 @@ func main() {
 		if useSigusr1 {
 			signal.Notify(stopSig, syscall.SIGUSR1)
 		} else {
-			signal.Notify(stopSig, syscall.SIGINT)
+			signal.Notify(stopSig, syscall.SIGTERM)
 		}
 
 		<-stopSig
 
 		if ignoreStopSig {
-			fmt.Fprintln(os.Stderr, "ignoring stop signal!")
-			fmt.Fprintf(os.Stderr, "run: `kill %d` to stop\n", os.Getpid())
+			logger.Println("ignoring stop signal!")
+			logger.Printf("run: `kill %d` to stop\n", os.Getpid())
 			return
 		}
 
@@ -108,8 +110,9 @@ func main() {
 		close(idleConnsClosed)
 	}()
 
+	logger.Printf("starting server on port %d\n", port)
 	if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
-		log.Fatalf("HTTP server ListenAndServe: %v", err)
+		logger.Fatalf("HTTP server ListenAndServe: %v", err)
 	}
 
 	<-idleConnsClosed

@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"os/exec"
+	"syscall"
 	"testing"
 	"time"
 
@@ -76,6 +78,9 @@ func TestServer_Run(t *testing.T) {
 		expectedValues map[string]string
 		extraAppArgs   []string
 		expectError    bool
+		checkError     func(error)
+		processTime    time.Duration
+		stopSignal     os.Signal
 	}{
 		"simple": {
 			envTemplates: []*ctconfig.TemplateConfig{
@@ -83,11 +88,37 @@ func TestServer_Run(t *testing.T) {
 					Contents:                 pointerutil.StringPtr(`{{ with secret "kv/myapp/config"}}{{.Data.data.username}}{{end}}`),
 					MapToEnvironmentVariable: pointerutil.StringPtr("MY_USERNAME"),
 				},
+				{
+					Contents:                 pointerutil.StringPtr(`{{ with secret "kv/myapp/config"}}{{.Data.data.password}}{{end}}`),
+					MapToEnvironmentVariable: pointerutil.StringPtr("MY_PASSWORD"),
+				},
 			},
 			expectedValues: map[string]string{
 				"MY_USERNAME": "appuser",
+				"MY_PASSWORD": "password",
 			},
 			expectError: false,
+			stopSignal:  syscall.SIGTERM,
+		},
+		"exits_early": {
+			envTemplates: []*ctconfig.TemplateConfig{
+				{
+					Contents:                 pointerutil.StringPtr(`{{ with secret "kv/myapp/config"}}{{.Data.data.username}}{{end}}`),
+					MapToEnvironmentVariable: pointerutil.StringPtr("MY_USERNAME"),
+				},
+				{
+					Contents:                 pointerutil.StringPtr(`{{ with secret "kv/myapp/config"}}{{.Data.data.password}}{{end}}`),
+					MapToEnvironmentVariable: pointerutil.StringPtr("MY_PASSWORD"),
+				},
+			},
+			expectedValues: map[string]string{
+				"MY_USERNAME": "appuser",
+				"MY_PASSWORD": "password",
+			},
+			processTime:  time.Second * 5,
+			extraAppArgs: []string{"--stop-after", "2s"},
+			expectError:  true,
+			stopSignal:   syscall.SIGTERM,
 		},
 	}
 
@@ -116,6 +147,7 @@ func TestServer_Run(t *testing.T) {
 					Exec: &config.ExecConfig{
 						RestartOnSecretChanges: "always",
 						Command:                append(baseCmdArgs, testCase.extraAppArgs...),
+						RestartKillSignal:      testCase.stopSignal,
 					},
 					EnvTemplates: testCase.envTemplates,
 				},
@@ -125,7 +157,9 @@ func TestServer_Run(t *testing.T) {
 
 			server := NewServer(serverConfig)
 
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancelTimeout := context.WithTimeout(context.Background(), 15*time.Second)
+			defer cancelTimeout()
+			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
 			templateTokenCh := make(chan string, 1)
 			errCh := make(chan error)
@@ -141,15 +175,19 @@ func TestServer_Run(t *testing.T) {
 			templateTokenCh <- "test"
 
 			// check to make sure the app is running
-			go func() {
-				time.Sleep(3 * time.Second)
-				_, err := retryablehttp.Head(exampleAppUrl)
-				if err != nil {
-					appStartErrCh <- err
-				} else {
-					appStartedCh <- struct{}{}
-				}
-			}()
+			if !testCase.expectError {
+				go func() {
+					time.Sleep(3 * time.Second)
+					_, err := retryablehttp.Head(exampleAppUrl)
+					if err != nil {
+						appStartErrCh <- err
+					} else {
+						appStartedCh <- struct{}{}
+					}
+				}()
+			}
+
+			time.Sleep(testCase.processTime)
 
 			select {
 			case <-ctx.Done():
@@ -160,13 +198,17 @@ func TestServer_Run(t *testing.T) {
 				}
 				if err != nil && testCase.expectError {
 					t.Logf("received expected error: %v", err)
+					if testCase.checkError != nil {
+						testCase.checkError(err)
+					}
 					return
 				}
 			case <-appStartedCh:
 				t.Log("app has started")
-				break
 			case <-appStartErrCh:
-				t.Fatal("app could not be started")
+				if !testCase.expectError {
+					t.Fatal("app could not be started")
+				}
 			}
 
 			// we started the server, now call it to see if
