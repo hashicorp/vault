@@ -1,19 +1,29 @@
 package exec
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os/exec"
 	"testing"
 	"time"
 
 	ctconfig "github.com/hashicorp/consul-template/config"
-	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-retryablehttp"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/command/agent/config"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 	"github.com/hashicorp/vault/vault"
+)
+
+const (
+	exampleAppUrl = "http://localhost:8000"
 )
 
 func testVaultServer(t *testing.T) (*api.Client, func()) {
@@ -22,7 +32,7 @@ func testVaultServer(t *testing.T) (*api.Client, func()) {
 	coreConfig := &vault.CoreConfig{
 		DisableMlock: true,
 		DisableCache: true,
-		Logger:       log.NewNullLogger(),
+		Logger:       hclog.NewNullLogger(),
 	}
 
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
@@ -62,21 +72,129 @@ func TestServer_Run(t *testing.T) {
 	defer testServer.Close()
 
 	testCases := map[string]struct {
-		templates []*ctconfig.TemplateConfig
+		envTemplates   []*ctconfig.TemplateConfig
+		expectedValues map[string]string
+		extraAppArgs   []string
+		expectError    bool
 	}{
 		"simple": {
-			templates: []*ctconfig.TemplateConfig{
+			envTemplates: []*ctconfig.TemplateConfig{
 				{
 					Contents:                 pointerutil.StringPtr(`{{ with secret "kv/myapp/config"}}{{.Data.data.username}}{{end}}`),
 					MapToEnvironmentVariable: pointerutil.StringPtr("MY_USERNAME"),
 				},
 			},
+			expectedValues: map[string]string{
+				"MY_USERNAME": "appuser",
+			},
+			expectError: false,
 		},
+	}
+
+	goBin, err := exec.LookPath("go")
+	if err != nil {
+		t.Fatalf("could not find go binary on path: %s", err)
+	}
+
+	baseCmdArgs := []string{
+		goBin,
+		"run",
+		"./test-app",
 	}
 
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
+			serverConfig := &ServerConfig{
+				Logger: logging.NewVaultLogger(hclog.Trace),
+				AgentConfig: &config.Config{
+					Vault: &config.Vault{
+						Address: testServer.URL,
+						Retry: &config.Retry{
+							NumRetries: 3,
+						},
+					},
+					Exec: &config.ExecConfig{
+						RestartOnSecretChanges: "always",
+						Command:                append(baseCmdArgs, testCase.extraAppArgs...),
+					},
+					EnvTemplates: testCase.envTemplates,
+				},
+				LogLevel:  hclog.Trace,
+				LogWriter: hclog.DefaultOutput,
+			}
 
+			server := NewServer(serverConfig)
+
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			templateTokenCh := make(chan string, 1)
+			errCh := make(chan error)
+			appStartedCh := make(chan struct{})
+			appStartErrCh := make(chan error)
+
+			// start the exec server
+			go func() {
+				errCh <- server.Run(ctx, templateTokenCh)
+			}()
+
+			// send a dummy value to kick off the server
+			templateTokenCh <- "test"
+
+			// check to make sure the app is running
+			go func() {
+				time.Sleep(3 * time.Second)
+				_, err := retryablehttp.Head(exampleAppUrl)
+				if err != nil {
+					appStartErrCh <- err
+				} else {
+					appStartedCh <- struct{}{}
+				}
+			}()
+
+			select {
+			case <-ctx.Done():
+				t.Fatal("timeout reached before templates were rendered")
+			case err := <-errCh:
+				if err != nil && !testCase.expectError {
+					t.Fatalf("did not expect error, got: %v", err)
+				}
+				if err != nil && testCase.expectError {
+					t.Logf("received expected error: %v", err)
+					return
+				}
+			case <-appStartedCh:
+				t.Log("app has started")
+				break
+			case <-appStartErrCh:
+				t.Fatal("app could not be started")
+			}
+
+			// we started the server, now call it to see if
+			// the environment variables are what they are supposed to be
+			res, err := http.Get(exampleAppUrl)
+			if err != nil {
+				t.Fatalf("error making request to test app: %s", err)
+			}
+			defer res.Body.Close()
+
+			decoder := json.NewDecoder(res.Body)
+			var response struct {
+				EnvVars   map[string]string `json:"env_vars"`
+				ProcessID int               `json:"process_id"`
+			}
+			if err := decoder.Decode(&response); err != nil {
+				t.Fatalf("unable to parse response from test app: %s", err)
+			}
+
+			for key, expectedValue := range testCase.expectedValues {
+				actualValue, ok := response.EnvVars[key]
+				if !ok {
+					t.Fatalf("expected the test app to return %q env var", key)
+				}
+				if expectedValue != actualValue {
+					t.Fatalf("expected env var %s to have a value of %q but it has a value of %q", key, expectedValue, actualValue)
+				}
+			}
 		})
 	}
 }

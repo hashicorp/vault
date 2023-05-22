@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -21,6 +22,7 @@ var (
 	ttl           time.Duration
 	useSigusr1    bool
 	stopAfter     time.Duration
+	exitCode      int
 )
 
 func init() {
@@ -29,30 +31,40 @@ func init() {
 	flag.DurationVar(&ttl, "ttl", 5*time.Second, "time to wait after getting the signal before exiting (ignored if `ignore-stop-signal` is set)")
 	flag.BoolVar(&useSigusr1, "use-sigusr1", false, "use SIGUSR1 as the stop signal, instead of the default SIGINT")
 	flag.DurationVar(&stopAfter, "stop-after", 0, "stop the process after duration (overrides all other flags if set)")
+	flag.IntVar(&exitCode, "exit-code", 0, "exit code to return when this script exits")
 }
 
 type Response struct {
-	EnvVars   []string `json:"env_vars"`
-	ProcessID int      `json:"process_id"`
+	EnvVars   map[string]string `json:"env_vars"`
+	ProcessID int               `json:"process_id"`
 }
 
 func newResponse() Response {
+	respEnv := make(map[string]string, len(os.Environ()))
+	for _, envVar := range os.Environ() {
+		tokens := strings.Split(envVar, "=")
+		respEnv[tokens[0]] = tokens[1]
+	}
+
 	return Response{
-		EnvVars:   os.Environ(),
+		EnvVars:   respEnv,
 		ProcessID: os.Getpid(),
 	}
 }
 
-func handler(w http.ResponseWriter, _ *http.Request) {
+func handler(w http.ResponseWriter, r *http.Request) {
 	var buf bytes.Buffer
 	encoder := json.NewEncoder(&buf)
+	if r.URL.Query().Get("pretty") == "1" {
+		encoder.SetIndent("", "  ")
+	}
 	if err := encoder.Encode(newResponse()); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(buf.Bytes())
+	_, _ = w.Write(buf.Bytes())
 }
 
 func main() {
@@ -101,4 +113,5 @@ func main() {
 	}
 
 	<-idleConnsClosed
+	os.Exit(exitCode)
 }
