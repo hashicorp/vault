@@ -202,7 +202,10 @@ func (b *backend) pathStaticRolesDelete(ctx context.Context, req *logical.Reques
 		return nil, fmt.Errorf("missing '%s' parameter", paramRoleName)
 	}
 
-	err := b.deleteCredential(ctx, req.Storage, roleName.(string), true)
+	b.roleMutex.Lock()
+	defer b.roleMutex.Unlock()
+
+	err := b.deleteCredential(ctx, req.Storage, roleName.(string), false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to clean credentials while deleting role %q: %w", roleName.(string), err)
 	}
