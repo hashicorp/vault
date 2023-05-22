@@ -16,12 +16,12 @@ If you couldn't tell from the documentation above, PKI is _complex_. As such, th
 
   This model is used to perform different `POST` requests that receive similar parameters but don't create a single item (which would be a record in Ember data). These various actions may create multiple items, each with different parameters than those submitted in the `POST` request. For example:
 
-  > - `pki/generate/root/:type` creates a new self-signed CA certificate (an issuer) and private key, which is only returned if `type = exported`.
-  > - `pki/issuer/:issuer_ref/sign-intermediate` creates a certificate, and returns issuing CA and CA chain data that is only available once
+  > - `POST pki/generate/root/:type` creates a new self-signed CA certificate (an issuer) and private key, which is only returned if `type = exported`
+  > - `POST pki/issuer/:issuer_ref/sign-intermediate` creates a certificate, and returns issuing CA and CA chain data that is only available once
 
-  The `pki/action`[adapter](../../app/adapters/pki/action.js) is used to map the desired action to the corresponding endpoint, and the `pki/action` [serializer](../../app/serializers/pki/action.js) is leveraged to only send relevant attributes. The following PKI workflows use this model:
+  The `pki/action`[adapter](../../app/adapters/pki/action.js) is used to map the desired action to the corresponding endpoint, and the `pki/action` [serializer](../../app/serializers/pki/action.js) includes logic to send the relevant attributes. The following PKI workflows use this model:
 
-  - [Root generation and rotation](https://developer.hashicorp.com/vault/api-docs/secret/pki#generate-root) generates a new self-signed CA certificate (an issuer) and private key (key data is only returned if type = `exported`)
+  - [Root generation and rotation](https://developer.hashicorp.com/vault/api-docs/secret/pki#generate-root)
   - [Import CA cert and keys](https://developer.hashicorp.com/vault/api-docs/secret/pki#import-ca-certificates-and-keys)
   - [Generate intermediate CSR](https://developer.hashicorp.com/vault/api-docs/secret/pki#generate-intermediate-csr)
   - [Sign intermediate](https://developer.hashicorp.com/vault/api-docs/secret/pki#sign-intermediate)
@@ -32,26 +32,26 @@ If you couldn't tell from the documentation above, PKI is _complex_. As such, th
 
   The `parsedCertificate` attribute is an object that houses all of the parsed certificate data returned by the [parse-pki-cert.js](../../app/utils/parse-pki-cert.js) util.
 
-> The following models more closely follow a CRUD pattern:
+> _The following models more closely follow a CRUD pattern:_
 
 - ### [pki/issuer](../../app/models/pki/issuer.js)
 
-  > Issuers are created by the `pki/action` model, by [importing a CA](https://developer.hashicorp.com/vault/api-docs/secret/pki#import-ca-certificates-and-keys) or [generating a root](https://developer.hashicorp.com/vault/api-docs/secret/pki#generate-root)
+  > _Issuers are created by the `pki/action` model by either [importing a CA](https://developer.hashicorp.com/vault/api-docs/secret/pki#import-ca-certificates-and-keys) or [generating a root](https://developer.hashicorp.com/vault/api-docs/secret/pki#generate-root)_
 
-  - [UPDATE](https://developer.hashicorp.com/vault/api-docs/secret/pki#read-issuer-certificate)
-  - [READ](https://developer.hashicorp.com/vault/api-docs/secret/pki#read-issuer-certificate)
-  - [LIST](https://developer.hashicorp.com/vault/api-docs/secret/pki#list-issuers)
+  - [update](https://developer.hashicorp.com/vault/api-docs/secret/pki#read-issuer-certificate)
+  - [read](https://developer.hashicorp.com/vault/api-docs/secret/pki#read-issuer-certificate)
+  - [list](https://developer.hashicorp.com/vault/api-docs/secret/pki#list-issuers)
 
 - ### [pki/role](../../app/models/pki/role.js)
 
-  - [CREATE/UPDATE](https://developer.hashicorp.com/vault/api-docs/secret/pki#create-update-role)
-  - [READ](https://developer.hashicorp.com/vault/api-docs/secret/pki#read-role)
-  - [LIST](https://developer.hashicorp.com/vault/api-docs/secret/pki#list-roles)
+  - [create/update](https://developer.hashicorp.com/vault/api-docs/secret/pki#create-update-role)
+  - [read](https://developer.hashicorp.com/vault/api-docs/secret/pki#read-role)
+  - [list](https://developer.hashicorp.com/vault/api-docs/secret/pki#list-roles)
 
-- ### pki/key
+- ### [pki/key](../../app/models/pki/key.js)
 
   - `CREATE` has two options:
-    - [GENERATE](https://developer.hashicorp.com/vault/api-docs/secret/pki#import-ca-certificates-and-keys)
-    - [IMPORT](https://developer.hashicorp.com/vault/api-docs/secret/pki#import-key)
-  - [READ](https://developer.hashicorp.com/vault/api-docs/secret/pki#read-key)
-  - [LIST](https://developer.hashicorp.com/vault/api-docs/secret/pki#list-keys)
+    - [generate](https://developer.hashicorp.com/vault/api-docs/secret/pki#import-ca-certificates-and-keys)
+    - [import](https://developer.hashicorp.com/vault/api-docs/secret/pki#import-key)
+  - [read](https://developer.hashicorp.com/vault/api-docs/secret/pki#read-key)
+  - [list](https://developer.hashicorp.com/vault/api-docs/secret/pki#list-keys)
