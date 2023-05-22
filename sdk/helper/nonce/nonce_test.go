@@ -2,6 +2,7 @@ package nonce
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -13,6 +14,7 @@ func TestNonceService(t *testing.T) {
 	err := s.Initialize()
 	require.NoError(t, err)
 
+	// Double redemption should fail.
 	nonce, _, err := s.Get()
 	require.NoError(t, err)
 	require.NotEmpty(t, nonce)
@@ -41,8 +43,54 @@ func TestNonceService(t *testing.T) {
 		require.False(t, s.Redeem(nonce))
 	}
 
-    status := s.Tidy()
-    require.NotNil(t, status)
-    require.Equal(t, uint64(1 + numNonces), status.Issued)
-    require.Equal(t, uint64(0), status.Outstanding)
+	status := s.Tidy()
+	require.NotNil(t, status)
+	require.Equal(t, uint64(1+numNonces), status.Issued)
+	require.Equal(t, uint64(0), status.Outstanding)
+}
+
+func TestNonceExpiry(t *testing.T) {
+	t.Parallel()
+
+	s := NewNonceServiceWithValidity(2 * time.Second)
+	err := s.Initialize()
+	require.NoError(t, err)
+
+	// Issue and redeem should succeed.
+	nonce, _, err := s.Get()
+	original := nonce
+	require.NoError(t, err)
+	require.NotEmpty(t, nonce)
+	require.True(t, s.Redeem(nonce))
+
+	// Issue and wait should fail to redeem.
+	nonce, _, err = s.Get()
+	require.NoError(t, err)
+	require.NotEmpty(t, nonce)
+	time.Sleep(3 * time.Second)
+	require.False(t, s.Redeem(nonce))
+
+	// Issue and wait+tidy should fail to redeem.
+	nonce, _, err = s.Get()
+	require.NoError(t, err)
+	require.NotEmpty(t, nonce)
+	time.Sleep(3 * time.Second)
+	s.Tidy()
+	require.False(t, s.Redeem(nonce))
+	require.False(t, s.Redeem(nonce))
+
+	nonce, _, err = s.Get()
+	require.NoError(t, err)
+	require.NotEmpty(t, nonce)
+	s.Tidy()
+	time.Sleep(3 * time.Second)
+	require.False(t, s.Redeem(nonce))
+	require.False(t, s.Redeem(nonce))
+
+	// Original nonce should fail on second use.
+	require.False(t, s.Redeem(original))
+}
+
+func TestParallelNonceRedemption(t *testing.T) {
+	t.Parallel()
 }
