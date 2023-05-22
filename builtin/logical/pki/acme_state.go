@@ -41,8 +41,6 @@ const (
 )
 
 type acmeState struct {
-	b *backend
-
 	nonces nonce.NonceService
 
 	validator *ACMEChallengeEngine
@@ -57,25 +55,24 @@ type acmeThumbprint struct {
 	Thumbprint string `json:"-"`
 }
 
-func NewACMEState(b *backend) (*acmeState, error) {
-	service, err := nonce.NewNonceServiceWithValidity(nonceExpiry)
-	if err != nil {
-		return nil, err
-	}
-
+func NewACMEState() *acmeState {
 	state := &acmeState{
-		b:           b,
-		nonces:      service,
+		nonces:      nonce.NewNonceServiceWithValidity(nonceExpiry),
 		validator:   NewACMEChallengeEngine(),
 		configDirty: new(atomic.Bool),
 	}
 	// Config hasn't been loaded yet; mark dirty.
 	state.configDirty.Store(true)
 
-	return state, nil
+	return state
 }
 
 func (a *acmeState) Initialize(b *backend, sc *storageContext) error {
+	// Initialize the nonce service.
+	if err := a.nonces.Initialize(); err != nil {
+		return fmt.Errorf("failed to initialize the ACME nonce service: %w", err)
+	}
+
 	// Load the ACME config.
 	_, err := a.getConfigWithUpdate(sc)
 	if err != nil {
@@ -88,6 +85,7 @@ func (a *acmeState) Initialize(b *backend, sc *storageContext) error {
 	}
 	go a.validator.Run(b, a)
 
+	// All good.
 	return nil
 }
 
@@ -150,7 +148,7 @@ func (a *acmeState) RedeemNonce(nonce string) bool {
 }
 
 func (a *acmeState) DoTidyNonces() {
-	a.b.Logger().Debug("nonce tidy operation", "status", a.nonces.Tidy())
+	a.nonces.Tidy()
 }
 
 type ACMEAccountStatus string

@@ -312,7 +312,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 	b.unifiedTransferStatus = newUnifiedTransferStatus()
 
-	b.acmeState, _ = NewACMEState(&b)
+	b.acmeState = NewACMEState()
 	return &b
 }
 
