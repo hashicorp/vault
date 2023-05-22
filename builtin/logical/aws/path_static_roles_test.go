@@ -304,8 +304,22 @@ func TestStaticRoleDelete(t *testing.T) {
 			config := logical.TestBackendConfig()
 			config.StorageView = &logical.InmemStorage{}
 
-			b := Backend()
+			// fake an IAM
+			var iamfunc awsutil.IAMAPIFunc
+			if !c.found {
+				iamfunc = awsutil.NewMockIAM(awsutil.WithDeleteAccessKeyError(errors.New("shouldn't have called delete")))
+			} else {
+				iamfunc = awsutil.NewMockIAM()
+			}
+			miam, err := iamfunc(nil)
+			if err != nil {
+				t.Fatalf("couldn't initialize mockiam: %s", err)
+			}
 
+			b := Backend()
+			b.iamClient = miam
+
+			// put in storage
 			staticRole := staticRoleEntry{
 				Name:           "test",
 				Username:       "jane-doe",
@@ -325,6 +339,7 @@ func TestStaticRoleDelete(t *testing.T) {
 				t.Fatalf("couldn't add an entry to storage during test setup: %s", err)
 			}
 
+			// put in queue
 			err = b.credRotationQueue.Push(&queue.Item{
 				Key:      staticRole.Name,
 				Value:    staticRole,

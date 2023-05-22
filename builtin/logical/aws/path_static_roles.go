@@ -205,9 +205,29 @@ func (b *backend) pathStaticRolesDelete(ctx context.Context, req *logical.Reques
 	b.roleMutex.Lock()
 	defer b.roleMutex.Unlock()
 
-	err := b.deleteCredential(ctx, req.Storage, roleName.(string), false)
+	entry, err := req.Storage.Get(ctx, formatRoleStoragePath(roleName.(string)))
+	if err != nil {
+		return nil, fmt.Errorf("couldn't locate role in storage due to error: %w", err)
+	}
+	// no entry in storage, but no error either, congrats, it's deleted!
+	if entry == nil {
+		return nil, nil
+	}
+	var cfg staticRoleEntry
+	err = entry.DecodeJSON(&cfg)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't convert storage entry to role config")
+	}
+
+	err = b.deleteCredential(ctx, req.Storage, cfg, false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to clean credentials while deleting role %q: %w", roleName.(string), err)
+	}
+
+	// delete from the queue
+	_, err = b.credRotationQueue.PopByKey(cfg.Name)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't delete key from queue: %w", err)
 	}
 
 	return nil, req.Storage.Delete(ctx, formatRoleStoragePath(roleName.(string)))

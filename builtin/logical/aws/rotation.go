@@ -72,6 +72,7 @@ func (b *backend) rotateCredential(ctx context.Context, storage logical.Storage)
 	return true, nil
 }
 
+// createCredential will create a new iam credential, deleting the oldest one if necessary.
 func (b *backend) createCredential(ctx context.Context, storage logical.Storage, cfg staticRoleEntry, shouldLockStorage bool) error {
 	iamClient, err := b.clientIAM(ctx, storage)
 	if err != nil {
@@ -142,18 +143,41 @@ func (b *backend) createCredential(ctx context.Context, storage logical.Storage,
 	return nil
 }
 
-func (b *backend) deleteCredential(ctx context.Context, storage logical.Storage, name string, shouldLockStorage bool) error {
+// delete credential will remove the credential associated with the role from storage.
+func (b *backend) deleteCredential(ctx context.Context, storage logical.Storage, cfg staticRoleEntry, shouldLockStorage bool) error {
 	// synchronize storage access if we didn't in the caller.
 	if shouldLockStorage {
 		b.roleMutex.Lock()
 		defer b.roleMutex.Unlock()
 	}
 
-	// delete from the queue
-	_, err := b.credRotationQueue.PopByKey(name)
+	key, err := storage.Get(ctx, formatCredsStoragePath(cfg.Name))
 	if err != nil {
-		return fmt.Errorf("couldn't delete key from queue: %w", err)
+		return fmt.Errorf("couldn't find key in storage: %w", err)
+	}
+	// no entry, so i guess we deleted it already
+	if key == nil {
+		return nil
+	}
+	var creds *awsCredentials
+	err = key.DecodeJSON(creds)
+	if err != nil {
+		return fmt.Errorf("couldn't decode storage entry to a valid credential: %w", err)
 	}
 
-	return storage.Delete(ctx, formatCredsStoragePath(name))
+	err = storage.Delete(ctx, formatCredsStoragePath(cfg.Name))
+	if err != nil {
+		return fmt.Errorf("couldn't delete from storage: %w", err)
+	}
+
+	// because we have the information, this is the one we created, so it's safe for us to delete.
+	_, err = b.iamClient.DeleteAccessKey(&iam.DeleteAccessKeyInput{
+		AccessKeyId: aws.String(creds.AccessKeyID),
+		UserName:    aws.String(cfg.Username),
+	})
+	if err != nil {
+		return fmt.Errorf("couldn't delete from IAM: %w", err)
+	}
+
+	return nil
 }
