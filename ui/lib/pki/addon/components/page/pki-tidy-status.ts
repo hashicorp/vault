@@ -14,6 +14,7 @@ import type SecretMountPath from 'vault/services/secret-mount-path';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type VersionService from 'vault/services/version';
 import type PkiTidyModel from 'vault/models/pki/tidy';
+import type RouterService from '@ember/routing/router-service';
 
 interface Args {
   autoTidyConfig: PkiTidyModel;
@@ -46,6 +47,7 @@ export default class PkiTidyStatusComponent extends Component<Args> {
   @service declare readonly secretMountPath: SecretMountPath;
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly version: VersionService;
+  @service declare readonly router: RouterService;
 
   @tracked tidyOptionsModal = false;
   @tracked confirmCancelTidy = false;
@@ -143,6 +145,7 @@ export default class PkiTidyStatusComponent extends Component<Args> {
     try {
       const tidyAdapter = this.store.adapterFor('pki/tidy');
       yield tidyAdapter.cancelTidy(this.secretMountPath.currentPath);
+      this.router.transitionTo('vault.cluster.secrets.backend.pki.tidy');
     } catch (error) {
       this.flashMessages.danger(errorMessage(error));
     } finally {

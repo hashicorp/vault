@@ -86,7 +86,12 @@
     @title="Tidy status unavailable"
     @message="After an initial tidy operation has been performed, information about the current or most recent tidy operation will display here."
   >
-    <button type="button" class="link" {{on "click" (fn (mut this.tidyOptionsModal) true)}}>
+    <button
+      type="button"
+      class="link"
+      {{on "click" (fn (mut this.tidyOptionsModal) true)}}
+      data-test-tidy-empty-state-configure
+    >
       Tidy
     </button>
   </EmptyState>
@@ -142,7 +147,12 @@
     >
       Manual tidy
     </button>
-    <button type="button" class="button is-secondary" {{on "click" (fn (mut this.tidyOptionsModal) false)}}>
+    <button
+      type="button"
+      class="button is-secondary"
+      {{on "click" (fn (mut this.tidyOptionsModal) false)}}
+      data-test-tidy-modal-cancel-button
+    >
       Cancel
     </button>
   </footer>
