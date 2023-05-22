@@ -130,6 +130,22 @@ func TestServer_Run(t *testing.T) {
 			stopSignal:   syscall.SIGTERM,
 			checkError:   processErrorCodeChecker(0),
 		},
+		"exits_early_non_zero": {
+			envTemplates: []*ctconfig.TemplateConfig{
+				{
+					Contents:                 pointerutil.StringPtr(`{{ with secret "kv/myapp/config"}}{{.Data.data.username}}{{end}}`),
+					MapToEnvironmentVariable: pointerutil.StringPtr("MY_USERNAME"),
+				},
+			},
+			expectedValues: map[string]string{
+				"MY_USERNAME": "appuser",
+			},
+			processTime:  time.Second * 5,
+			extraAppArgs: []string{"--stop-after", "2s", "--exit-code", "5"},
+			expectError:  true,
+			stopSignal:   syscall.SIGTERM,
+			checkError:   processErrorCodeChecker(5),
+		},
 	}
 
 	goBin, err := exec.LookPath("go")
@@ -247,6 +263,9 @@ func TestServer_Run(t *testing.T) {
 					t.Fatalf("expected env var %s to have a value of %q but it has a value of %q", key, expectedValue, actualValue)
 				}
 			}
+
+			// explicitly cancel
+			cancel()
 		})
 	}
 }
