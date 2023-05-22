@@ -73,7 +73,7 @@ func main() {
 
 	if stopAfter > 0 {
 		timer := time.AfterFunc(stopAfter, func() {
-			logger.Println("stopping the app early")
+			logger.Printf("stopping the app early with exit code %d", exitCode)
 			os.Exit(exitCode)
 		})
 		defer timer.Stop()
