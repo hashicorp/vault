@@ -24,6 +24,7 @@ export default class PkiOverview extends Component<Args> {
 
   @tracked rolesValue = '';
   @tracked certificateValue = '';
+  @tracked issuerValue = '';
 
   @action
   transitionToViewCertificates() {
@@ -35,6 +36,11 @@ export default class PkiOverview extends Component<Args> {
   @action
   transitionToIssueCertificates() {
     this.router.transitionTo('vault.cluster.secrets.backend.pki.roles.role.generate', this.rolesValue);
+  }
+
+  @action
+  transitionToIssuerDetails() {
+    this.router.transitionTo('vault.cluster.secrets.backend.pki.issuers.issuer.details', this.issuerValue);
   }
 
   @action
@@ -52,6 +58,15 @@ export default class PkiOverview extends Component<Args> {
       this.certificateValue = certificate[0];
     } else {
       this.certificateValue = certificate;
+    }
+  }
+
+  @action
+  handleIssuerSearch(issuers: string) {
+    if (Array.isArray(issuers)) {
+      this.issuerValue = issuers[0];
+    } else {
+      this.issuerValue = issuers;
     }
   }
 }

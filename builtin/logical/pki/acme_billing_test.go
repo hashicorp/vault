@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/pki/dnstest"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/timeutil"
+	"github.com/hashicorp/vault/vault/activity"
 
 	"github.com/stretchr/testify/require"
 )
@@ -102,6 +103,26 @@ func TestACMEBilling(t *testing.T) {
 	// same name as another namespace should increase counts as well.
 	doACMEForDomainWithDNS(t, dns, &acmeClientPKINS2, []string{"very-unique.dadgarcorp.com"})
 	expectedCount = validateClientCount(t, client, "ns2/pki", expectedCount+1, "unique identifier in a different namespace")
+
+	// Check the current fragment
+	fragment := cluster.Cores[0].Core.ResetActivityLog()[0]
+	if fragment == nil {
+		t.Fatal("no fragment created")
+	}
+	validateAcmeClientTypes(t, fragment, expectedCount)
+}
+
+func validateAcmeClientTypes(t *testing.T, fragment *activity.LogFragment, expectedCount int64) {
+	t.Helper()
+	if int64(len(fragment.Clients)) != expectedCount {
+		t.Fatalf("bad number of entities, expected %v: got %v, entities are: %v", expectedCount, len(fragment.Clients), fragment.Clients)
+	}
+
+	for _, ac := range fragment.Clients {
+		if ac.ClientType != "acme" {
+			t.Fatalf("Couldn't find expected 'acme' client_type in %v", fragment.Clients)
+		}
+	}
 }
 
 func validateClientCount(t *testing.T, client *api.Client, mount string, expected int64, message string) int64 {

@@ -1487,6 +1487,7 @@ func (a *ActivityLog) AddActivityToFragment(clientID string, namespaceID string,
 		NamespaceID:   namespaceID,
 		Timestamp:     timestamp,
 		MountAccessor: mountAccessor,
+		ClientType:    activityType,
 	}
 
 	// Track whether the clientID corresponds to a token without an entity or not.
