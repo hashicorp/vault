@@ -53,7 +53,34 @@ func (b *SystemBackend) handleActivityWriteData(ctx context.Context, request *lo
 	if len(input.Data) == 0 {
 		return logical.ErrorResponse("Missing required \"data\" values"), logical.ErrInvalidRequest
 	}
-	return nil, nil
+
+	numMonths := 0
+	for _, month := range input.Data {
+		if int(month.GetMonthsAgo()) > numMonths {
+			numMonths = int(month.GetMonthsAgo())
+		}
+	}
+	generated := newMultipleMonthsActivityClients(numMonths)
+	for _, month := range input.Data {
+		err := generated.processMonth(ctx, b.Core, month)
+		if err != nil {
+			return logical.ErrorResponse("failed to process data for month %d", month.GetMonthsAgo()), err
+		}
+	}
+
+	opts := make(map[generation.WriteOptions]struct{}, len(input.Write))
+	for _, opt := range input.Write {
+		opts[opt] = struct{}{}
+	}
+	paths, err := generated.write(ctx, opts, b.Core.activityLog)
+	if err != nil {
+		return logical.ErrorResponse("failed to write data"), err
+	}
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"paths": paths,
+		},
+	}, nil
 }
 
 // singleMonthActivityClients holds a single month's client IDs, in the order they were seen
@@ -285,6 +312,32 @@ func (m *multipleMonthsActivityClients) addRepeatedClients(monthsAgo int32, c *g
 		return fmt.Errorf("missing repeated %d clients matching given parameters", numClients)
 	}
 	return nil
+}
+
+func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[generation.WriteOptions]struct{}, activityLog *ActivityLog) ([]string, error) {
+	paths := []string{}
+	for _, month := range m.months {
+		segments := month.populateSegments()
+		timestamp := 0
+		for segmentIndex, segment := range segments {
+			if _, ok := opts[generation.WriteOptions_WRITE_ENTITIES]; ok {
+				if segment == nil {
+					// skip the index
+					continue
+				}
+				entityPaths, err := activityLog.saveSegmentInternal(ctx, segmentInfo{
+					startTimestamp:       int64(timestamp),
+					currentClients:       &activity.EntityActivityLog{Clients: segment},
+					clientSequenceNumber: uint64(segmentIndex),
+				}, true)
+				if err != nil {
+					return nil, err
+				}
+				paths = append(paths, entityPaths...)
+			}
+		}
+	}
+	return paths, nil
 }
 
 func newMultipleMonthsActivityClients(numberOfMonths int) *multipleMonthsActivityClients {
