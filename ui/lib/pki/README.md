@@ -14,7 +14,7 @@ If you couldn't tell from the documentation above, PKI is _complex_. As such, th
 
 - ### [pki/action](../../app/models/pki/action.js)
 
-  This model is used to perform different `POST` requests that don't necessarily create a single item, but use lots of similar parameters to perform a variety of actions that may create multiple items with parameters that differ from those submitted in the `POST` request. For example:
+  This model is used to perform different `POST` requests that receive similar parameters but don't create a single item (which would be a record in Ember data). These various actions may create multiple items, each with different parameters than those submitted in the `POST` request. For example:
 
   > - `pki/generate/root/:type` creates a new self-signed CA certificate (an issuer) and private key, which is only returned if `type = exported`.
   > - `pki/issuer/:issuer_ref/sign-intermediate` creates a certificate, and returns issuing CA and CA chain data that is only available once
