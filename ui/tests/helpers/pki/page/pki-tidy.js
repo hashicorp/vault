@@ -14,7 +14,8 @@ export const SELECTORS = {
   timeFinishedRow: '[data-test-value-div="Time finished"]',
   cancelTidyModalBackground: '[data-test-modal-background="Cancel tidy?"]',
   tidyEmptyStateConfigure: '[data-test-tidy-empty-state-configure]',
-  tidyToolbarActionDropdown: '[data-test-configure-tidy-dropdown]',
+  manualTidyToolbar: '[data-test-pki-manual-tidy-config]',
+  autoTidyToolbar: '[data-test-pki-auto-tidy-config]',
   tidyConfigureModal: {
     configureTidyModal: '[data-test-modal-background="Tidy this mount"]',
     tidyModalAutoButton: '[data-test-tidy-modal-auto-button]',

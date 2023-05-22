@@ -157,12 +157,18 @@ module('Acceptance | pki tidy', function (hooks) {
   test('it should show correct toolbar action depending on whether auto tidy is enabled', async function (assert) {
     await authPage.login(this.pkiAdminToken);
     await visit(`/vault/secrets/${this.mountPath}/pki/tidy`);
+    assert
+      .dom(SELECTORS.tidyConfigureModal.tidyOptionsModal)
+      .exists('Configure tidy modal options button exists');
     await click(SELECTORS.tidyConfigureModal.tidyOptionsModal);
     assert.dom(SELECTORS.tidyConfigureModal.configureTidyModal).exists('Configure tidy modal exists');
     await click(SELECTORS.tidyConfigureModal.tidyModalCancelButton);
-    // TODO configure auto tidy and check if dropdown exists
+    // TODO configure auto tidy and check if manual tidy + auto config button exists
     // assert
-    //   .dom(SELECTORS.tidyToolbarActionDropdown)
-    //   .exists('Tidy toolbar action dropdown exists if tidy is configured');
+    //   .dom(SELECTORS.manualTidyToolbar)
+    //   .exists('Manual tidy toolbar action exists if auto tidy is configured');
+    // assert
+    //   .dom(SELECTORS.autoTidyToolbar)
+    //   .exists('Auto tidy toolbar action exists if auto tidy is configured');
   });
 });

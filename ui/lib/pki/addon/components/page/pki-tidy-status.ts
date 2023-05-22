@@ -8,8 +8,6 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-import { action } from '@ember/object';
-import { next } from '@ember/runloop';
 import errorMessage from 'vault/utils/error-message';
 
 import type Store from '@ember-data/store';
@@ -44,12 +42,6 @@ interface TidyStatusParams {
   tidy_cross_cluster_revoked_certs: boolean;
   cross_revoked_cert_deleted_count: number;
   revocation_queue_safety_buffer: string;
-}
-
-interface Dropdown {
-  actions: {
-    close: CallableFunction;
-  };
 }
 
 export default class PkiTidyStatusComponent extends Component<Args> {
@@ -147,10 +139,6 @@ export default class PkiTidyStatusComponent extends Component<Args> {
           message: "The system reported no tidy status. It's recommended to perform a new tidy operation.",
         };
     }
-  }
-
-  @action onLinkClick(D: Dropdown) {
-    next(() => D.actions.close());
   }
 
   @task

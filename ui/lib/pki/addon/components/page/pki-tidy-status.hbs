@@ -2,32 +2,12 @@
   <ToolbarActions>
     <div class="toolbar-separator"></div>
     {{#if @autoTidyConfig.enabled}}
-      <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
-        <D.Trigger
-          class={{concat "toolbar-link" (if D.isOpen " is-active")}}
-          @htmlTag="button"
-          data-test-configure-tidy-dropdown
-        >
-          Tidy
-          <Chevron @direction="down" @isButton={{true}} />
-        </D.Trigger>
-        <D.Content @defaultClass="popup-menu-content">
-          <nav class="box menu" aria-label="generate options">
-            <ul class="menu-list">
-              <li class="action">
-                <LinkTo @route="tidy.manual" {{on "click" (fn this.onLinkClick D)}} data-test-tidy="manual">
-                  Manual tidy
-                </LinkTo>
-              </li>
-              <li class="action">
-                <LinkTo @route="tidy.auto.configure" {{on "click" (fn this.onLinkClick D)}} data-test-tidy="auto">
-                  Automatic tidy
-                </LinkTo>
-              </li>
-            </ul>
-          </nav>
-        </D.Content>
-      </BasicDropdown>
+      <ToolbarLink @route="tidy.auto" data-test-pki-auto-tidy-config>
+        Auto-tidy configuration
+      </ToolbarLink>
+      <ToolbarLink @route="tidy.manual" data-test-pki-manual-tidy-config>
+        Perform manual tidy
+      </ToolbarLink>
     {{else}}
       <button
         type="button"
@@ -38,11 +18,6 @@
         Tidy
         <Icon @name="chevron-right" />
       </button>
-    {{/if}}
-    {{#if @autoTidyConfig.enabled}}
-      <ToolbarLink @route="tidy.auto" data-test-pki-auto-tidy-config>
-        Auto-tidy configuration
-      </ToolbarLink>
     {{/if}}
   </ToolbarActions>
 </Toolbar>
