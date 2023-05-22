@@ -176,8 +176,6 @@ func (kg rsaKeyGenerator) configMap() (map[string]interface{}, error) {
 	return config, nil
 }
 
-// TODO: subject_template also considered, but we'd need to be
-//       able to parse it from a string -> pkix.Name.
 type ClientCertificateGenerator struct {
 	CommonNameTemplate string `mapstructure:"common_name_template,omitempty"`
 	CAPrivateKey       string `mapstructure:"ca_private_key,omitempty"`
@@ -353,7 +351,7 @@ func (cg *ClientCertificateGenerator) generate(r io.Reader, expiration time.Time
 	return cb, subject.String(), nil
 }
 
-// configMap returns the configuration of the rsaKeyGenerator
+// configMap returns the configuration of the ClientCertificateGenerator
 // as a map from string to string.
 func (cg ClientCertificateGenerator) configMap() (map[string]interface{}, error) {
 	config := make(map[string]interface{})
