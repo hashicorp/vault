@@ -9,7 +9,7 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-// import errorMessage from 'vault/utils/error-message';
+import errorMessage from 'vault/utils/error-message';
 
 /**
  * @module CreateAndEditSecretPage
@@ -36,35 +36,28 @@ export default class CreateAndEditSecretPageComponent extends Component {
   @task
   @waitFor
   *save() {
-    // try {
-    //   // set generatedRoleRoles to value of selected template
-    //   const selectedTemplate = this.roleRulesTemplates?.findBy('id', this.selectedTemplateId);
-    //   if (selectedTemplate) {
-    //     this.args.model.generatedRoleRules = selectedTemplate.rules;
-    //   }
-    //   yield this.args.model.save();
-    //   this.router.transitionTo(
-    //     'vault.cluster.secrets.backend.kubernetes.roles.role.details',
-    //     this.args.model.name
-    //   );
-    // } catch (error) {
-    //   const message = errorMessage(error, 'Error saving role. Please try again or contact support');
-    //   this.errorBanner = message;
-    //   this.invalidFormAlert = 'There was an error submitting this form.';
-    // }
+    try {
+      yield this.args.model.save();
+      this.router.transitionTo('vault.cluster.secrets.backend.kv.secrets.secret.details', this.args.model.id);
+    } catch (error) {
+      // ARG TODO error message just a copy paste.
+      const message = errorMessage(error, 'Error saving secret. Please try again or contact support');
+      this.errorBanner = message;
+      this.invalidFormAlert = 'There was an error submitting this form.';
+    }
   }
 
   @action
   async onSave(event) {
     event.preventDefault();
-    // const { isValid, state, invalidFormMessage } = await this.args.model.validate();
-    // if (isValid) {
-    //   this.modelValidations = null;
-    //   this.save.perform();
-    // } else {
-    //   this.invalidFormAlert = invalidFormMessage;
-    //   this.modelValidations = state;
-    // }
+    const { isValid, state, invalidFormMessage } = await this.args.model.validate();
+    if (isValid) {
+      this.modelValidations = null;
+      this.save.perform();
+    } else {
+      this.invalidFormAlert = invalidFormMessage;
+      this.modelValidations = state;
+    }
   }
 
   @action

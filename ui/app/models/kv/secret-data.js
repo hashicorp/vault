@@ -10,26 +10,28 @@ import { withModelValidations } from 'vault/decorators/model-validations';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 
 const validations = {
-  maxVersions: [
-    { type: 'number', message: 'Maximum versions must be a number.' },
-    { type: 'length', options: { min: 1, max: 16 }, message: 'You cannot go over 16 characters.' },
-  ],
+  // ARG TODO add must have path name, no spaces, etc.
 };
-const formFieldProps = ['path'];
+const formFieldProps = ['path', 'data'];
 
-// ARG TODO this can be different... maybe ?
+// ARG TODO: so far this is the data endpoint
 @withModelValidations(validations)
 @withFormFields(formFieldProps)
-export default class KVSecretModel extends Model {
+export default class KVSecretDataModel extends Model {
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord
   @attr('string', {
     label: 'Path',
     subText: 'The path for this secret.',
   })
   path;
-  @attr('number') version;
-  @attr('string') deletionTime;
+  @attr('object', {
+    editType: 'kv',
+  })
+  data;
+
   @attr('string') createdTime;
+  @attr('object') customMetadata;
+  @attr('string') deletionTime;
   @attr('boolean') destroyed;
-  @attr('number') currentVersion;
+  @attr('number') version;
 }

@@ -6,7 +6,7 @@
 import ApplicationAdapter from '../application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
-export default class KvSecretAdapter extends ApplicationAdapter {
+export default class KvSecretMetadataAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
   getURL(backend, name) {

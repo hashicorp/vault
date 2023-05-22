@@ -16,8 +16,9 @@ export default class KvSecretsRoute extends Route {
   model(params, transition) {
     // filter secrets based on pageFilter value
     const { pageFilter } = transition.to.queryParams;
+    // list is on the metadata endpoint
     const secrets = this.store
-      .query('kv/secret', { backend: this.secretMountPath.get() })
+      .query('kv/secret-metadata', { backend: this.secretMountPath.get() })
       .then((models) =>
         pageFilter
           ? models.filter((model) => model.name.toLowerCase().includes(pageFilter.toLowerCase()))

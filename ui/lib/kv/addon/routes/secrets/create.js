@@ -12,7 +12,7 @@ export default class KvSecretsCreateRoute extends Route {
 
   model() {
     const backend = this.secretMountPath.get();
-    return this.store.createRecord('kv/secret', { backend });
+    return this.store.createRecord('kv/secret-data', { backend });
   }
 
   setupController(controller, resolvedModel) {
