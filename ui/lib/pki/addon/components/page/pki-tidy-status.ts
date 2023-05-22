@@ -8,7 +8,10 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
+import { action } from '@ember/object';
+import { next } from '@ember/runloop';
 import errorMessage from 'vault/utils/error-message';
+
 import type Store from '@ember-data/store';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type FlashMessageService from 'vault/services/flash-messages';
@@ -42,6 +45,13 @@ interface TidyStatusParams {
   cross_revoked_cert_deleted_count: number;
   revocation_queue_safety_buffer: string;
 }
+
+interface Dropdown {
+  actions: {
+    close: CallableFunction;
+  };
+}
+
 export default class PkiTidyStatusComponent extends Component<Args> {
   @service declare readonly store: Store;
   @service declare readonly secretMountPath: SecretMountPath;
@@ -137,6 +147,10 @@ export default class PkiTidyStatusComponent extends Component<Args> {
           message: "The system reported no tidy status. It's recommended to perform a new tidy operation.",
         };
     }
+  }
+
+  @action onLinkClick(D: Dropdown) {
+    next(() => D.actions.close());
   }
 
   @task

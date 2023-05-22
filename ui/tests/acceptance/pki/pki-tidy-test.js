@@ -124,7 +124,7 @@ module('Acceptance | pki tidy', function (hooks) {
       .exists('Configure manual tidy button exists');
     await click(SELECTORS.tidyConfigureModal.tidyModalAutoButton);
     assert.dom(SELECTORS.tidyForm.tidyFormName('auto')).exists('Auto tidy form exists');
-    await click('[data-test-pki-tidy-cancel]');
+    await click(SELECTORS.tidyForm.tidyCancel);
     assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.tidy.index');
     await click(SELECTORS.tidyEmptyStateConfigure);
     await click(SELECTORS.tidyConfigureModal.tidyModalAutoButton);
@@ -152,5 +152,17 @@ module('Acceptance | pki tidy', function (hooks) {
       .exists('Configure manual tidy button exists');
     await click(SELECTORS.tidyConfigureModal.tidyModalCancelButton);
     assert.dom(SELECTORS.tidyEmptyState).exists();
+  });
+
+  test('it should show correct toolbar action depending on whether auto tidy is enabled', async function (assert) {
+    await authPage.login(this.pkiAdminToken);
+    await visit(`/vault/secrets/${this.mountPath}/pki/tidy`);
+    await click(SELECTORS.tidyConfigureModal.tidyOptionsModal);
+    assert.dom(SELECTORS.tidyConfigureModal.configureTidyModal).exists('Configure tidy modal exists');
+    await click(SELECTORS.tidyConfigureModal.tidyModalCancelButton);
+    // TODO configure auto tidy and check if dropdown exists
+    // assert
+    //   .dom(SELECTORS.tidyToolbarActionDropdown)
+    //   .exists('Tidy toolbar action dropdown exists if tidy is configured');
   });
 });
