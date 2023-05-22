@@ -204,6 +204,8 @@ func (f *fakeIAM) DeleteAccessKey(r *iam.DeleteAccessKeyInput) (*iam.DeleteAcces
 	return f.IAMAPI.DeleteAccessKey(r)
 }
 
+// TestCreateCredential verifies that credential creation firstly only deletes credentials if it needs to (i.e., two
+// or more credentials on IAM), and secondly correctly deletes the oldest one.
 func TestCreateCredential(t *testing.T) {
 	cases := []struct {
 		name       string

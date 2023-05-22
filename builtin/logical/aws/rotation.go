@@ -149,5 +149,11 @@ func (b *backend) deleteCredential(ctx context.Context, storage logical.Storage,
 		defer b.roleMutex.Unlock()
 	}
 
+	// delete from the queue
+	_, err := b.credRotationQueue.PopByKey(name)
+	if err != nil {
+		return fmt.Errorf("couldn't delete key from queue: %w", err)
+	}
+
 	return storage.Delete(ctx, formatCredsStoragePath(name))
 }
