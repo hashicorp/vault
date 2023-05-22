@@ -144,7 +144,7 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 		ver = p.LatestVersion
 	case ver == p.LatestVersion:
 		// Allowed
-	case p.MinEncryptionVersion > 0 && ver < p.MinEncryptionVersion:
+	case (p.MinEncryptionVersion > 0 && ver < p.MinEncryptionVersion) || (p.MinEncryptionVersion == 0 && ver < p.MinDecryptionVersion):
 		p.Unlock()
 		return logical.ErrorResponse("cannot generate HMAC: version is too old (disallowed by policy)"), logical.ErrInvalidRequest
 	}
