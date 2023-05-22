@@ -12,7 +12,6 @@ import (
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/consul-template/manager"
 	"github.com/hashicorp/go-hclog"
-	"go.uber.org/atomic"
 
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/internal/ctmanager"
@@ -44,12 +43,11 @@ type Server struct {
 	// runner is the consul-template runner
 	runner *manager.Runner
 
-	// lookupMap is a list of templates indexed by their consul-template ID. This
-	// is used to ensure all Vault templates have been rendered before returning
-	// from the runner in the event we're using exit after auth.
-	lookupMap map[string][]*ctconfig.TemplateConfig
-
-	stopped *atomic.Bool
+	// numberOfTemplates is the count of templates determined by consul-template,
+	// we keep the value to ensure all templates have been rendered before
+	// starting the child process
+	// NOTE: each template may have more than one TemplateConfig, so the numbers may not match up
+	numberOfTemplates int
 
 	logger hclog.Logger
 
@@ -58,7 +56,7 @@ type Server struct {
 	procLock    sync.Mutex
 
 	// exit channel of the child process
-	exitCh <-chan int
+	procExitCh <-chan int
 }
 
 type ProcessExitError struct {
@@ -71,7 +69,6 @@ func (e *ProcessExitError) Error() string {
 
 func NewServer(cfg *ServerConfig) *Server {
 	server := Server{
-		stopped:     atomic.NewBool(false),
 		logger:      cfg.Logger,
 		config:      cfg,
 		procStarted: false,
@@ -101,29 +98,19 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 		LogWriter:   s.config.LogWriter,
 	}
 
-	runnerConfig, runnerConfigErr := ctmanager.NewConfig(managerConfig, s.config.AgentConfig.EnvTemplates)
-	if runnerConfigErr != nil {
-		return fmt.Errorf("template server failed to runner generate config: %w", runnerConfigErr)
+	runnerConfig, err := ctmanager.NewConfig(managerConfig, s.config.AgentConfig.EnvTemplates)
+	if err != nil {
+		return fmt.Errorf("template server failed to generate runner config: %w", err)
 	}
 
-	// we leave in "dry" mode, as there's no files
-	// we will get the env var rendered contents from incoming events
-	var err error
+	// We leave this in "dry" mode, as there are no files to render;
+	// we will get the environment variables rendered contents from the incoming events
 	s.runner, err = manager.NewRunner(runnerConfig, true)
 	if err != nil {
 		return fmt.Errorf("template server failed to create: %w", err)
 	}
 
-	idMap := s.runner.TemplateConfigMapping()
-	lookupMap := make(map[string][]*ctconfig.TemplateConfig, len(idMap))
-	for id, ctmpls := range idMap {
-		for _, ctmpl := range ctmpls {
-			tl := lookupMap[id]
-			tl = append(tl, ctmpl)
-			lookupMap[id] = tl
-		}
-	}
-	s.lookupMap = lookupMap
+	s.numberOfTemplates = len(s.runner.TemplateConfigMapping())
 
 	for {
 		select {
@@ -150,10 +137,9 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 				}
 
 				runnerConfig = runnerConfig.Merge(&ctv)
-				var runnerErr error
-				s.runner, runnerErr = manager.NewRunner(runnerConfig, true)
-				if runnerErr != nil {
-					s.logger.Error("template server failed with new Vault token", "error", runnerErr)
+				s.runner, err = manager.NewRunner(runnerConfig, true)
+				if err != nil {
+					s.logger.Error("template server failed with new Vault token", "error", err)
 					continue
 				}
 				go s.runner.Start()
@@ -180,40 +166,41 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 
 			// events are keyed by template ID, and can be matched up to the id's from
 			// the lookupMap
-			if len(events) < len(s.lookupMap) {
+			if len(events) < s.numberOfTemplates {
 				// Not all templates have been rendered yet
 				continue
 			}
 
 			// assume the renders are finished, until we find otherwise
 			doneRendering := true
-			envVarToContents := map[string]string{}
+			var renderedEnvVars []string
 			for _, event := range events {
 				// This template hasn't been rendered
 				if event.LastWouldRender.IsZero() {
 					doneRendering = false
+					break
 				} else {
-					// TODO: check for duplicates?
 					for _, tcfg := range event.TemplateConfigs {
-						envVarToContents[*tcfg.MapToEnvironmentVariable] = string(event.Contents)
+						envVar := fmt.Sprintf("%s=%s", *tcfg.MapToEnvironmentVariable, event.Contents)
+						renderedEnvVars = append(renderedEnvVars, envVar)
 					}
 				}
 			}
 
 			if doneRendering {
 				s.logger.Debug("done rendering templates/detected change, bouncing process")
-				if err := s.bounceCmd(envVarToContents); err != nil {
+				if err := s.bounceCmd(renderedEnvVars); err != nil {
 					return fmt.Errorf("unable to bounce command: %w", err)
 				}
 			}
-		case exitCode := <-s.exitCh:
+		case exitCode := <-s.procExitCh:
 			// process exited on its own
 			return &ProcessExitError{ExitCode: exitCode}
 		}
 	}
 }
 
-func (s *Server) bounceCmd(newEnvVars map[string]string) error {
+func (s *Server) bounceCmd(newEnvVars []string) error {
 	s.procLock.Lock()
 	defer s.procLock.Unlock()
 
@@ -229,6 +216,8 @@ func (s *Server) bounceCmd(newEnvVars map[string]string) error {
 			s.logger.Info("detected update, but not restarting process", "process_id", s.proc.Pid())
 			return nil
 		}
+	default:
+		// no action
 	}
 
 	args, subshell, err := child.CommandPrep(s.config.AgentConfig.Exec.Command)
@@ -243,7 +232,7 @@ func (s *Server) bounceCmd(newEnvVars map[string]string) error {
 		Command:      args[0],
 		Args:         args[1:],
 		Timeout:      0, // let it run forever
-		Env:          append(os.Environ(), envsToList(newEnvVars)...),
+		Env:          append(os.Environ(), newEnvVars...),
 		ReloadSignal: nil, // can't reload w/ new env vars
 		KillSignal:   s.config.AgentConfig.Exec.RestartKillSignal,
 		KillTimeout:  30 * time.Second,
@@ -257,7 +246,7 @@ func (s *Server) bounceCmd(newEnvVars map[string]string) error {
 		return err
 	}
 	s.proc = proc
-	s.exitCh = s.proc.ExitCh()
+	s.procExitCh = s.proc.ExitCh()
 
 	if err := s.proc.Start(); err != nil {
 		return fmt.Errorf("error starting child process: %w", err)
@@ -265,24 +254,4 @@ func (s *Server) bounceCmd(newEnvVars map[string]string) error {
 	s.procStarted = true
 
 	return nil
-}
-
-func (s *Server) Stop() {
-	if s.stopped.CompareAndSwap(false, true) {
-		s.procLock.Lock()
-		defer s.procLock.Unlock()
-		if s.procStarted {
-			s.proc.Stop()
-		}
-		s.procStarted = false
-	}
-}
-
-func envsToList(envs map[string]string) []string {
-	out := make([]string, len(envs))
-	for key, value := range envs {
-		e := fmt.Sprintf("%s=%s", key, value)
-		out = append(out, e)
-	}
-	return out
 }
