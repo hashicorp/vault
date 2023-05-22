@@ -1,0 +1,2 @@
+```release-note:feature
+**UI PKI Workflow Improvements**: Introduces a mount overview page, multiple issuer generation and management, cross-signing multiple intermediates in single step, more certificate metadata
