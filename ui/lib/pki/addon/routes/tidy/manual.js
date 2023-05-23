@@ -5,9 +5,9 @@
 
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
-// import { withConfirmLeave } from 'core/decorators/confirm-leave';
+import { withConfirmLeave } from 'core/decorators/confirm-leave';
 
-// @withConfirmLeave()
+@withConfirmLeave()
 export default class PkiTidyManualRoute extends Route {
   @service store;
   @service secretMountPath;

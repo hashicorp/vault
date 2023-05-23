@@ -16,7 +16,7 @@ export default class PkiTidyModel extends Model {
     label: 'Tidy ACME enabled',
     labelDisabled: 'Tidy ACME disabled',
     mapToBoolean: 'tidyAcme',
-    helperTextDisabled: 'Tidying of ACME accounts,  orders and authorizations is disabled',
+    helperTextDisabled: 'Tidying of ACME accounts, orders and authorizations is disabled',
     helperTextEnabled:
       'The amount of time that must pass after creation that an account with no orders is marked revoked, and the amount of time after being marked revoked or deactivated.',
     detailsLabel: 'ACME account safety buffer',
@@ -124,6 +124,7 @@ export default class PkiTidyModel extends Model {
   get useOpenAPI() {
     return true;
   }
+  
   getHelpUrl(backend) {
     return `/v1/${backend}/config/auto-tidy?help=1`;
   }

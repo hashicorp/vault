@@ -34,7 +34,7 @@ If you couldn't tell from the documentation above, PKI is _complex_. As such, th
 
 - ### [pki/tidy](../../app/models/pki/tidy.js)
 
-  This model is used to manage [tidy](https://developer.hashicorp.com/vault/api-docs/secret/pki#tidy) operations in a few different contexts. All of the following endpoints share the same parameters _except_ `enabled` and `interval_duration` which are reserved for auto-tidy configuration settings.
+  This model is used to manage [tidy](https://developer.hashicorp.com/vault/api-docs/secret/pki#tidy) operations in a few different contexts. All of the following endpoints share the same parameters _except_ `enabled` and `interval_duration` which are reserved for auto-tidy operations only.
 
   > _`pki/tidy-status` does not use an Ember data model because it is read-only_
 
