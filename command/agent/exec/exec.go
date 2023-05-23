@@ -18,6 +18,15 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
 
+type processState uint8
+
+const (
+	processStateNotStarted processState = iota
+	processStateRunning
+	processStateRestarting
+	processStateStopped
+)
+
 type ServerConfig struct {
 	Logger      hclog.Logger
 	AgentConfig *config.Config
@@ -50,8 +59,8 @@ type Server struct {
 
 	logger hclog.Logger
 
-	proc        *child.Child
-	procStarted bool
+	proc      *child.Child
+	procState processState
 
 	// exit channel of the child process
 	procExitCh <-chan int
@@ -67,10 +76,9 @@ func (e *ProcessExitError) Error() string {
 
 func NewServer(cfg *ServerConfig) *Server {
 	server := Server{
-		logger:      cfg.Logger,
-		config:      cfg,
-		procStarted: false,
-		// exitCh: make(<-chan int),
+		logger:    cfg.Logger,
+		config:    cfg,
+		procState: processStateNotStarted,
 	}
 
 	return &server
@@ -117,7 +125,7 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 			if s.proc != nil {
 				s.proc.Stop()
 			}
-			s.procStarted = false
+			s.procState = processStateStopped
 			return nil
 		case token := <-incomingVaultToken:
 			if token != *latestToken {
@@ -200,13 +208,14 @@ func (s *Server) bounceCmd(newEnvVars []string) error {
 
 	switch s.config.AgentConfig.Exec.RestartOnSecretChanges {
 	case "always":
-		if s.procStarted {
+		if s.procState == processStateRunning {
 			// process is running, need to kill it first
 			s.logger.Info("stopping process", "process_id", s.proc.Pid())
 			s.proc.Stop()
+			s.procState = processStateRestarting
 		}
 	case "never":
-		if s.procStarted {
+		if s.procState == processStateRunning {
 			s.logger.Info("detected update, but not restarting process", "process_id", s.proc.Pid())
 			return nil
 		}
@@ -245,7 +254,7 @@ func (s *Server) bounceCmd(newEnvVars []string) error {
 	if err := s.proc.Start(); err != nil {
 		return fmt.Errorf("error starting child process: %w", err)
 	}
-	s.procStarted = true
+	s.procState = processStateRunning
 
 	return nil
 }
