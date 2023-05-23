@@ -237,7 +237,7 @@ func (s *Server) bounceCmd(newEnvVars []string) error {
 		Timeout:      0, // let it run forever
 		Env:          append(os.Environ(), newEnvVars...),
 		ReloadSignal: nil, // can't reload w/ new env vars
-		KillSignal:   s.config.AgentConfig.Exec.RestartKillSignal,
+		KillSignal:   s.config.AgentConfig.Exec.RestartStopSignal,
 		KillTimeout:  30 * time.Second,
 		Splay:        0,
 		Setpgid:      subshell,
