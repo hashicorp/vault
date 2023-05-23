@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/hashicorp/consul-template/child"
@@ -53,7 +52,6 @@ type Server struct {
 
 	proc        *child.Child
 	procStarted bool
-	procLock    sync.Mutex
 
 	// exit channel of the child process
 	procExitCh chan int
@@ -116,12 +114,10 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 		select {
 		case <-ctx.Done():
 			s.runner.Stop()
-			s.procLock.Lock()
 			if s.proc != nil {
 				s.proc.Stop()
 			}
 			s.procStarted = false
-			s.proc.Unlock()
 			return nil
 		case token := <-incomingVaultToken:
 			if token != *latestToken {
@@ -201,8 +197,6 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 }
 
 func (s *Server) bounceCmd(newEnvVars []string) error {
-	s.procLock.Lock()
-	defer s.procLock.Unlock()
 
 	switch s.config.AgentConfig.Exec.RestartOnSecretChanges {
 	case "always":
