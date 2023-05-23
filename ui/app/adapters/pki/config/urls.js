@@ -4,21 +4,12 @@
  */
 
 import { encodePath } from 'vault/utils/path-encoding-helpers';
-import ApplicationAdapter from '../../application';
+import PkiConfigAdapter from './config';
 
-export default class PkiConfigUrlsAdapter extends ApplicationAdapter {
+export default class PkiConfigUrlsAdapter extends PkiConfigAdapter {
   namespace = 'v1';
 
   _url(backend) {
     return `${this.buildURL()}/${encodePath(backend)}/config/urls`;
-  }
-
-  updateRecord(store, type, snapshot) {
-    const data = snapshot.serialize();
-    return this.ajax(this._url(snapshot.record.id), 'POST', { data });
-  }
-
-  urlForFindRecord(id) {
-    return this._url(id);
   }
 }
