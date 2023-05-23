@@ -121,15 +121,6 @@ type Cache struct {
 	InProcDialer        transportDialer                 `hcl:"-"`
 }
 
-// Persist contains configuration needed for persistent caching
-type Persist struct {
-	Type                    string
-	Path                    string `hcl:"path"`
-	KeepAfterImport         bool   `hcl:"keep_after_import"`
-	ExitOnErr               bool   `hcl:"exit_on_err"`
-	ServiceAccountTokenFile string `hcl:"service_account_token_file"`
-}
-
 // AutoAuth is the configured authentication method and sinks
 type AutoAuth struct {
 	Method *Method `hcl:"-"`
