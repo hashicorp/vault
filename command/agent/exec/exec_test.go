@@ -155,7 +155,7 @@ func TestServer_Run(t *testing.T) {
 					Exec: &config.ExecConfig{
 						RestartOnSecretChanges: "always",
 						Command:                append(baseCmdArgs, testCase.extraAppArgs...),
-						RestartKillSignal:      testCase.stopSignal,
+						RestartStopSignal:      testCase.stopSignal,
 					},
 					EnvTemplates: testCase.envTemplates,
 				},
