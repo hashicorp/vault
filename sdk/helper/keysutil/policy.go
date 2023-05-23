@@ -169,7 +169,7 @@ func (kt KeyType) AssociatedDataSupported() bool {
 
 func (kt KeyType) ImportPublicKeySupported() bool {
 	switch kt {
-	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
+	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_ED25519:
 		return true
 	}
 	return false
@@ -1361,20 +1361,30 @@ func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, o
 		return ecdsa.Verify(key, input, ecdsaSig.R, ecdsaSig.S), nil
 
 	case KeyType_ED25519:
-		var key ed25519.PrivateKey
+		var pub ed25519.PublicKey
 
 		if p.Derived {
 			// Derive the key that should be used
-			var err error
-			key, err = p.GetKey(context, ver, 32)
+			key, err := p.GetKey(context, ver, 32)
 			if err != nil {
 				return false, errutil.InternalError{Err: fmt.Sprintf("error deriving key: %v", err)}
 			}
+			pub = ed25519.PrivateKey(key).Public().(ed25519.PublicKey)
 		} else {
-			key = ed25519.PrivateKey(p.Keys[strconv.Itoa(ver)].Key)
+			keyEntry, err := p.safeGetKeyEntry(ver)
+			if err != nil {
+				return false, err
+			}
+
+			raw, err := base64.StdEncoding.DecodeString(keyEntry.FormattedPublicKey)
+			if err != nil {
+				return false, err
+			}
+
+			pub = ed25519.PublicKey(raw)
 		}
 
-		return ed25519.Verify(key.Public().(ed25519.PublicKey), input, sigBytes), nil
+		return ed25519.Verify(pub, input, sigBytes), nil
 
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
 		keyEntry, err := p.safeGetKeyEntry(ver)
@@ -1443,6 +1453,10 @@ func (p *Policy) ImportPublicOrPrivate(ctx context.Context, storage logical.Stor
 			return err
 		}
 		entry.HMACKey = hmacKey
+	}
+
+	if p.Type == KeyType_ED25519 && p.Derived && !isPrivateKey {
+		return fmt.Errorf("unable to import only public key for derived Ed25519 key: imported key should not be an Ed25519 key pair but is instead an HKDF key")
 	}
 
 	if (p.Type == KeyType_AES128_GCM96 && len(key) != 16) ||
@@ -1615,13 +1629,19 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 		entry.FormattedPublicKey = string(pemBytes)
 
 	case KeyType_ED25519:
+		// Go uses a 64-byte private key for Ed25519 keys (private+public, each
+		// 32-bytes long). When we do Key derivation, we still generate a 32-byte
+		// random value (and compute the corresponding Ed25519 public key), but
+		// use this entire 64-byte key as if it was an HKDF key. The corresponding
+		// underlying public key is never returned (which is probably good, because
+		// doing so would leak half of our HKDF key...), but means we cannot import
+		// derived-enabled Ed25519 public key components.
 		pub, pri, err := ed25519.GenerateKey(randReader)
 		if err != nil {
 			return err
 		}
 		entry.Key = pri
 		entry.FormattedPublicKey = base64.StdEncoding.EncodeToString(pub)
-
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
 		bitSize := 2048
 		if p.Type == KeyType_RSA3072 {
@@ -2195,15 +2215,20 @@ func (ke *KeyEntry) parseFromKey(PolKeyType KeyType, parsedKey any) error {
 			return fmt.Errorf("error PEM-encoding public key")
 		}
 		ke.FormattedPublicKey = string(pemBytes)
-	case ed25519.PrivateKey:
+	case ed25519.PrivateKey, ed25519.PublicKey:
 		if PolKeyType != KeyType_ED25519 {
 			return fmt.Errorf("invalid key type: expected %s, got %T", PolKeyType, parsedKey)
 		}
-		privateKey := parsedKey.(ed25519.PrivateKey)
 
-		ke.Key = privateKey
-		publicKey := privateKey.Public().(ed25519.PublicKey)
-		ke.FormattedPublicKey = base64.StdEncoding.EncodeToString(publicKey)
+		privateKey, ok := parsedKey.(ed25519.PrivateKey)
+		if ok {
+			ke.Key = privateKey
+			publicKey := privateKey.Public().(ed25519.PublicKey)
+			ke.FormattedPublicKey = base64.StdEncoding.EncodeToString(publicKey)
+		} else {
+			publicKey := parsedKey.(ed25519.PublicKey)
+			ke.FormattedPublicKey = base64.StdEncoding.EncodeToString(publicKey)
+		}
 	case *rsa.PrivateKey, *rsa.PublicKey:
 		if PolKeyType != KeyType_RSA2048 && PolKeyType != KeyType_RSA3072 && PolKeyType != KeyType_RSA4096 {
 			return fmt.Errorf("invalid key type: expected %s, got %T", PolKeyType, parsedKey)
