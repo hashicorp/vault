@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/mitchellh/mapstructure"
+	"k8s.io/utils/strings/slices"
 
 	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -379,6 +380,10 @@ func (c *Config) validateEnvTemplateConfig() error {
 
 	if len(c.Exec.Command) == 0 {
 		return fmt.Errorf("'exec' requires a non-empty 'command' field")
+	}
+
+	if !slices.Contains([]string{"always", "never"}, c.Exec.RestartOnSecretChanges) {
+		return fmt.Errorf("'exec.restart_on_secret_changes' unexpected value: %q", c.Exec.RestartOnSecretChanges)
 	}
 
 	uniqueKeys := make(map[string]struct{})
