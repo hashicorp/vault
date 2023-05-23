@@ -6,7 +6,7 @@
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import ApplicationAdapter from '../../application';
 
-export default class PkiConfigCrlAdapter extends ApplicationAdapter {
+export default class PkiConfigClusterAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
   _url(backend) {
