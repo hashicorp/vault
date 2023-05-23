@@ -459,10 +459,6 @@ func (c *Config) validateEnvTemplateConfig() error {
 			return fmt.Errorf("env_template[%s]: 'gid' is not allowed", key)
 		}
 
-		if template.Source != nil {
-			return fmt.Errorf("env_template[%s]: 'source' is not allowed", key)
-		}
-
 		if template.Wait != nil {
 			return fmt.Errorf("env_template[%s]: 'wait' is not allowed", key)
 		}

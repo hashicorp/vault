@@ -21,9 +21,9 @@ vault {
 env_template "FOO_PASSWORD" {
   contents    = "{{ with secret \"secret/data/foo\" }}{{ .Data.data.password }}{{ end }}"
 
-  # Error: source and destination are not allowed in env_template
-  source      = "/path/on/disk/to/template.ctmpl"
-  destination = "/path/on/disk/where/template/will/render.txt"
+  # Error: destination and create_dest_dirs are not allowed in env_template
+  destination      = "/path/on/disk/where/template/will/render.txt"
+  create_dest_dirs = true
 }
 
 exec {
