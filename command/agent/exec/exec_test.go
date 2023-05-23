@@ -25,7 +25,7 @@ import (
 
 func dummyVaultServer() *httptest.Server {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/v1/kv/myapp/config", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/v1/kv/my-app/creds", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, `{
                 "request_id": "8af096e9-518c-7351-eff5-5ba20554b21f",
                 "lease_id": "",
@@ -33,8 +33,8 @@ func dummyVaultServer() *httptest.Server {
                 "lease_duration": 0,
                 "data": {
                     "data": {
-                        "password": "password",
-                        "username": "appuser"
+                        "password": "s3cr3t",
+                        "user": "appuser"
                     },
                     "metadata": {
                         "created_time": "2019-10-07T22:18:44.233247Z",
@@ -66,8 +66,8 @@ func processErrorCodeChecker(expectedExitCode int) func(t *testing.T, err error)
 }
 
 func TestServer_Run(t *testing.T) {
-	testServer := dummyVaultServer()
-	defer testServer.Close()
+	vault := dummyVaultServer()
+	defer vault.Close()
 
 	testCases := map[string]struct {
 		envTemplates   []*ctconfig.TemplateConfig
@@ -84,17 +84,17 @@ func TestServer_Run(t *testing.T) {
 		"simple": {
 			envTemplates: []*ctconfig.TemplateConfig{
 				{
-					Contents:                 pointerutil.StringPtr(`{{ with secret "kv/myapp/config"}}{{.Data.data.username}}{{ end }}`),
-					MapToEnvironmentVariable: pointerutil.StringPtr("MY_USERNAME"),
+					Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
+					MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
 				},
 				{
-					Contents:                 pointerutil.StringPtr(`{{ with secret "kv/myapp/config"}}{{.Data.data.password}}{{ end }}`),
+					Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.password }}{{ end }}`),
 					MapToEnvironmentVariable: pointerutil.StringPtr("MY_PASSWORD"),
 				},
 			},
 			expectedValues: map[string]string{
-				"MY_USERNAME": "appuser",
-				"MY_PASSWORD": "password",
+				"MY_USER":     "appuser",
+				"MY_PASSWORD": "s3cr3t",
 			},
 			expectError: false,
 			stopSignal:  syscall.SIGTERM,
@@ -103,12 +103,12 @@ func TestServer_Run(t *testing.T) {
 		"exits_early": {
 			envTemplates: []*ctconfig.TemplateConfig{
 				{
-					Contents:                 pointerutil.StringPtr(`{{ with secret "kv/myapp/config"}}{{.Data.data.username}}{{ end }}`),
-					MapToEnvironmentVariable: pointerutil.StringPtr("MY_USERNAME"),
+					Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
+					MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
 				},
 			},
 			expectedValues: map[string]string{
-				"MY_USERNAME": "appuser",
+				"MY_USER": "appuser",
 			},
 			processTime:  time.Second * 5,
 			extraAppArgs: []string{"--stop-after", "2s"},
@@ -120,12 +120,12 @@ func TestServer_Run(t *testing.T) {
 		"exits_early_non_zero": {
 			envTemplates: []*ctconfig.TemplateConfig{
 				{
-					Contents:                 pointerutil.StringPtr(`{{ with secret "kv/myapp/config"}}{{.Data.data.username}}{{ end }}`),
-					MapToEnvironmentVariable: pointerutil.StringPtr("MY_USERNAME"),
+					Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
+					MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
 				},
 			},
 			expectedValues: map[string]string{
-				"MY_USERNAME": "appuser",
+				"MY_USER": "appuser",
 			},
 			processTime:  time.Second * 5,
 			extraAppArgs: []string{"--stop-after", "2s", "--exit-code", "5"},
@@ -163,7 +163,7 @@ func TestServer_Run(t *testing.T) {
 				Logger: logging.NewVaultLogger(hclog.Trace),
 				AgentConfig: &config.Config{
 					Vault: &config.Vault{
-						Address: testServer.URL,
+						Address: vault.URL,
 						Retry: &config.Retry{
 							NumRetries: 3,
 						},
