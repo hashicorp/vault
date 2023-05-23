@@ -241,6 +241,9 @@ type KeyEntry struct {
 	DeprecatedCreationTime int64 `json:"creation_time"`
 
 	ManagedKeyUUID string `json:"managed_key_id,omitempty"`
+
+	// FIXME: Add description/ Certificate or CertificateChain?
+	Certificate x509.Certificate `json:"certificate"`
 }
 
 func (ke *KeyEntry) IsPrivateKeyMissing() bool {
