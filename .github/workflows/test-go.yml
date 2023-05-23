@@ -81,7 +81,7 @@ jobs:
       TIMEOUT_IN_MINUTES: 60
     steps:
       - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
-      - uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
+      - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
         with:
           go-version-file: ./.go-version
           cache: true
@@ -211,7 +211,7 @@ jobs:
           path: test-results/
         if: always()
       - name: Create a summary of tests
-        uses: test-summary/action@62bc5c68de2a6a0d02039763b8c754569df99e3f # TSCCR: no entry for repository "test-summary/action"
+        uses: test-summary/action@62bc5c68de2a6a0d02039763b8c754569df99e3f  # TSCCR: no entry for repository "test-summary/action"
         with:
           paths: "test-results/go-test/results.xml"
           show: "fail"
