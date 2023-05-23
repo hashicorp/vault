@@ -124,7 +124,7 @@ export default class PkiTidyModel extends Model {
   get useOpenAPI() {
     return true;
   }
-  
+
   getHelpUrl(backend) {
     return `/v1/${backend}/config/auto-tidy?help=1`;
   }
