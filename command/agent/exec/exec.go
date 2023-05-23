@@ -132,14 +132,15 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 
 				s.runner.Stop()
 				*latestToken = token
-				ctv := ctconfig.Config{
+				newTokenConfig := ctconfig.Config{
 					Vault: &ctconfig.VaultConfig{
 						Token:           latestToken,
 						ClientUserAgent: pointerutil.StringPtr(useragent.AgentTemplatingString()),
 					},
 				}
 
-				runnerConfig = runnerConfig.Merge(&ctv)
+				// got a new auth token, merge it in with the existing config
+				runnerConfig = runnerConfig.Merge(&newTokenConfig)
 				s.runner, err = manager.NewRunner(runnerConfig, true)
 				if err != nil {
 					s.logger.Error("template server failed with new Vault token", "error", err)
