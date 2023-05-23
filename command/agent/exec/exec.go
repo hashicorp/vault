@@ -63,7 +63,7 @@ type Server struct {
 	childProcessState childProcessState
 
 	// exit channel of the child process
-	childProcessExitCh <-chan int
+	childProcessExitCh chan int
 }
 
 type ProcessExitError struct {
@@ -76,9 +76,10 @@ func (e *ProcessExitError) Error() string {
 
 func NewServer(cfg *ServerConfig) *Server {
 	server := Server{
-		logger:            cfg.Logger,
-		config:            cfg,
-		childProcessState: childProcessStateNotStarted,
+		logger:             cfg.Logger,
+		config:             cfg,
+		childProcessState:  childProcessStateNotStarted,
+		childProcessExitCh: make(chan int),
 	}
 
 	return &server
@@ -247,7 +248,15 @@ func (s *Server) bounceCmd(newEnvVars []string) error {
 		return err
 	}
 	s.childProcess = proc
-	s.childProcessExitCh = s.childProcess.ExitCh()
+	// did not work
+	// s.childProcessExitCh = s.childProcess.ExitCh()
+	go func() {
+		select {
+		case exitCode := <-proc.ExitCh():
+			s.childProcessExitCh <- exitCode
+			return
+		}
+	}()
 
 	if err := s.childProcess.Start(); err != nil {
 		return fmt.Errorf("error starting child process: %w", err)
