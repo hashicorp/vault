@@ -2,4 +2,4 @@ To generate a declaration file run `yarn tsc <javascript file to declare>  --dec
 
 For example, the following command generates a declaration file called base.d.ts for the pki certificate base.js model:
 
-`yarn tsc ./app/models/pki/certificate/base.js --declaration --allowJs --emitDeclarationOnly --outDir types/vault/models/pki/certificate`
+`yarn tsc ./app/models/pki/certificate/base.js  --declaration --allowJs --emitDeclarationOnly --outDir types/vault/models/pki/certificate`
