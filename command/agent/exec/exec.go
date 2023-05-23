@@ -219,7 +219,7 @@ func (s *Server) bounceCmd(newEnvVars []string) error {
 			return nil
 		}
 	default:
-		// no action
+		panic("unreachable")
 	}
 
 	args, subshell, err := child.CommandPrep(s.config.AgentConfig.Exec.Command)
