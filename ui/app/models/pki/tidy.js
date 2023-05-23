@@ -137,18 +137,19 @@ export default class PkiTidyModel extends Model {
   get sharedFields() {
     const groups = [
       {
-        'Universal operations': ['tidyCertStore', 'tidyRevokedCerts', 'safetyBuffer', 'pauseDuration'],
+        'Universal operations': [
+          'tidyCertStore',
+          'tidyRevokedCerts',
+          'tidyRevokedCertIssuerAssociations',
+          'safetyBuffer',
+          'pauseDuration',
+        ],
       },
       {
         'ACME operations': ['tidyAcme', 'acmeAccountSafetyBuffer'],
       },
       {
-        'Issuer operations': [
-          'tidyExpiredIssuers',
-          'tidyMoveLegacyCaBundle',
-          'tidyRevokedCertIssuerAssociations',
-          'issuerSafetyBuffer',
-        ],
+        'Issuer operations': ['tidyExpiredIssuers', 'tidyMoveLegacyCaBundle', 'issuerSafetyBuffer'],
       },
     ];
     if (this.version.isEnterprise) {
