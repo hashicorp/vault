@@ -90,7 +90,3 @@ func TestNonceExpiry(t *testing.T) {
 	// Original nonce should fail on second use.
 	require.False(t, s.Redeem(original))
 }
-
-func TestParallelNonceRedemption(t *testing.T) {
-	t.Parallel()
-}
