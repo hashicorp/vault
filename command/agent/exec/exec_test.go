@@ -18,49 +18,14 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-retryablehttp"
 
-	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/config"
-	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
-	"github.com/hashicorp/vault/vault"
 )
 
 const (
 	exampleAppTmpUrl = "http://localhost:%d"
 )
-
-func testVaultServer(t *testing.T) (*api.Client, func()) {
-	t.Helper()
-
-	coreConfig := &vault.CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		Logger:       hclog.NewNullLogger(),
-	}
-
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-
-	cluster.Start()
-
-	cores := cluster.Cores
-
-	vault.TestWaitActive(t, cores[0].Core)
-
-	client := cores[0].Client
-
-	// enable kv-v2 backend
-	if err := client.Sys().Mount("kv/", &api.MountInput{
-		Type: "kv-v2",
-	}); err != nil {
-		t.Fatal(err)
-	}
-	time.Sleep(time.Second)
-
-	return client, cluster.Cleanup
-}
 
 func createHttpTestServer() *httptest.Server {
 	mux := http.NewServeMux()
