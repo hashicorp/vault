@@ -1,7 +1,7 @@
 import Model from '@ember-data/model';
 import { FormField } from 'vault/app-types';
 
-export default class PkiCrlModel extends Model {
+export default class PkiConfigCrlModel extends Model {
   autoRebuild: boolean;
   autoRebuildGracePeriod: string;
   enableDelta: boolean;
