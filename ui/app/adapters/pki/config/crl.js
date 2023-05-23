@@ -4,9 +4,9 @@
  */
 
 import { encodePath } from 'vault/utils/path-encoding-helpers';
-import PkiConfigAdapter from './config';
+import PkiConfigBaseAdapter from './config';
 
-export default class PkiConfigCrlAdapter extends PkiConfigAdapter {
+export default class PkiConfigCrlAdapter extends PkiConfigBaseAdapter {
   namespace = 'v1';
 
   _url(backend) {

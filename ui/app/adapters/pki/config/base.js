@@ -5,7 +5,7 @@
 
 import ApplicationAdapter from '../../application';
 
-export default class PkiConfigAdapter extends ApplicationAdapter {
+export default class PkiConfigBaseAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
   findRecord(store, type, backend) {
