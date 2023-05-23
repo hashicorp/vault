@@ -23,14 +23,30 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
 
-const (
-	exampleAppTmpUrl = "http://localhost:%d"
-)
-
-func createHttpTestServer() *httptest.Server {
+func dummyVaultServer() *httptest.Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/v1/kv/myapp/config", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, jsonResponse)
+		fmt.Fprintln(w, `{
+                "request_id": "8af096e9-518c-7351-eff5-5ba20554b21f",
+                "lease_id": "",
+                "renewable": false,
+                "lease_duration": 0,
+                "data": {
+                    "data": {
+                        "password": "password",
+                        "username": "appuser"
+                    },
+                    "metadata": {
+                        "created_time": "2019-10-07T22:18:44.233247Z",
+                        "deletion_time": "",
+                        "destroyed": false,
+                        "version": 3
+                    }
+                },
+                "wrap_info": null,
+                "warnings": null,
+                "auth": null
+            }`)
 	})
 
 	return httptest.NewServer(mux)
@@ -50,7 +66,7 @@ func processErrorCodeChecker(expectedExitCode int) func(t *testing.T, err error)
 }
 
 func TestServer_Run(t *testing.T) {
-	testServer := createHttpTestServer()
+	testServer := dummyVaultServer()
 	defer testServer.Close()
 
 	testCases := map[string]struct {
@@ -134,7 +150,7 @@ func TestServer_Run(t *testing.T) {
 				return
 			}
 
-			exampleAppUrl := fmt.Sprintf(exampleAppTmpUrl, testCase.port)
+			exampleAppUrl := fmt.Sprintf("http://localhost:%d", testCase.port)
 			baseCmdArgs := []string{
 				goBin,
 				"run",
@@ -251,28 +267,3 @@ func TestServer_Run(t *testing.T) {
 		})
 	}
 }
-
-// copied from template_test.go
-const jsonResponse = `
-{
-  "request_id": "8af096e9-518c-7351-eff5-5ba20554b21f",
-  "lease_id": "",
-  "renewable": false,
-  "lease_duration": 0,
-  "data": {
-    "data": {
-      "password": "password",
-      "username": "appuser"
-    },
-    "metadata": {
-      "created_time": "2019-10-07T22:18:44.233247Z",
-      "deletion_time": "",
-      "destroyed": false,
-      "version": 3
-    }
-  },
-  "wrap_info": null,
-  "warnings": null,
-  "auth": null
-}
-`
