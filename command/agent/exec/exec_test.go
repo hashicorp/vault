@@ -163,7 +163,7 @@ func TestServer_Run(t *testing.T) {
 				LogWriter: hclog.DefaultOutput,
 			}
 
-			server := NewServer(serverConfig)
+			execServer := NewServer(serverConfig)
 
 			ctx, cancelTimeout := context.WithTimeout(context.Background(), 15*time.Second)
 			defer cancelTimeout()
@@ -176,11 +176,11 @@ func TestServer_Run(t *testing.T) {
 
 			// start the exec server
 			go func() {
-				errCh <- server.Run(ctx, templateTokenCh)
+				errCh <- execServer.Run(ctx, templateTokenCh)
 			}()
 
 			// send a dummy value to kick off the server
-			templateTokenCh <- "test"
+			templateTokenCh <- "my-token"
 
 			// check to make sure the app is running
 			if !testCase.expectError {
@@ -253,7 +253,7 @@ func TestServer_Run(t *testing.T) {
 }
 
 // copied from template_test.go
-var jsonResponse = `
+const jsonResponse = `
 {
   "request_id": "8af096e9-518c-7351-eff5-5ba20554b21f",
   "lease_id": "",
