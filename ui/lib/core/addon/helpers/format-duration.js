@@ -17,7 +17,10 @@ export function duration([time], { nullable = false }) {
 
   // time must be in seconds
   const duration = Number.parseInt(time, 10);
-  if (isNaN(duration)) {
+
+  // Sometimes 0 does not mean 0 seconds, but can mean to use system defaults
+  // to avoid making any assumptions, just return 0
+  if (isNaN(duration) || duration === 0) {
     return time;
   }
 

@@ -49,8 +49,8 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       .maxTTLVal(maxTTLHours)
       .submit();
     await configPage.visit({ backend: path });
-    assert.strictEqual(configPage.defaultTTL, `${defaultTTLHours}h`, 'shows the proper TTL');
-    assert.strictEqual(configPage.maxTTL, `${maxTTLHours}h`, 'shows the proper max TTL');
+    assert.strictEqual(configPage.defaultTTL, '4 days 4 hours', 'shows the proper TTL');
+    assert.strictEqual(configPage.maxTTL, '12 days 12 hours', 'shows the proper max TTL');
   });
 
   test('it sets the ttl when enabled then disabled', async function (assert) {
@@ -67,14 +67,17 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       .path(path)
       .toggleOptions()
       .enableDefaultTtl()
-      .enableDefaultTtl()
       .enableMaxTtl()
       .maxTTLUnit('h')
       .maxTTLVal(maxTTLHours)
       .submit();
     await configPage.visit({ backend: path });
-    assert.strictEqual(configPage.defaultTTL, '0s', 'shows the proper TTL');
-    assert.strictEqual(configPage.maxTTL, `${maxTTLHours}h`, 'shows the proper max TTL');
+    assert.strictEqual(
+      configPage.defaultTTL,
+      '0',
+      'shows 0 (with no seconds) which means using the system default TTL'
+    ); // https://developer.hashicorp.com/vault/api-docs/system/mounts#default_lease_ttl-1
+    assert.strictEqual(configPage.maxTTL, '12 days 12 hours', 'shows the proper max TTL');
   });
 
   test('it sets the max ttl after pki chosen, resets after', async function (assert) {

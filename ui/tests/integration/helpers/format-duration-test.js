@@ -52,4 +52,11 @@ module('Integration | Helper | format-duration', function (hooks) {
     await render(hbs`<p data-test-format-duration>Date: {{format-duration this.number nullable=true}}</p>`);
     assert.dom('[data-test-format-duration]').hasText('Date:');
   });
+
+  test('it renders 0 if nullable false', async function (assert) {
+    this.set('number', 0);
+
+    await render(hbs`<p data-test-format-duration>Date: {{format-duration this.number}}</p>`);
+    assert.dom('[data-test-format-duration]').hasText('Date: 0');
+  });
 });
