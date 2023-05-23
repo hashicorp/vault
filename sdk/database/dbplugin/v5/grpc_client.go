@@ -104,6 +104,10 @@ func newUserReqToProto(req NewUserRequest) (*proto.NewUserRequest, error) {
 		if len(req.PublicKey) == 0 {
 			return nil, fmt.Errorf("missing public key credential")
 		}
+	case CredentialTypeClientCertificate:
+		if req.Subject == "" {
+			return nil, fmt.Errorf("missing certificate subject")
+		}
 	default:
 		return nil, fmt.Errorf("unknown credential type")
 	}
