@@ -76,12 +76,17 @@ func (s *singleMonthActivityClients) addNewClients(c *generation.Client, mountAc
 	if c.Count > 1 {
 		count = int(c.Count)
 	}
+	clientType := entityActivityType
+	if c.NonEntity {
+		clientType = nonEntityTokenActivityType
+	}
 	for i := 0; i < count; i++ {
 		record := &activity.EntityRecord{
 			ClientID:      c.Id,
 			NamespaceID:   c.Namespace,
 			NonEntity:     c.NonEntity,
 			MountAccessor: mountAccessor,
+			ClientType:    clientType,
 		}
 		if record.ClientID == "" {
 			var err error
