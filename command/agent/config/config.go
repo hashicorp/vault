@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	ctconfig "github.com/hashicorp/consul-template/config"
@@ -22,6 +23,7 @@ import (
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/mitchellh/mapstructure"
 
+	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
@@ -34,7 +36,7 @@ type Config struct {
 	AutoAuth                    *AutoAuth                  `hcl:"auto_auth"`
 	ExitAfterAuth               bool                       `hcl:"exit_after_auth"`
 	Cache                       *Cache                     `hcl:"cache"`
-	APIProxy                    *APIProxy                  `hcl:"api_proxy""`
+	APIProxy                    *APIProxy                  `hcl:"api_proxy"`
 	Vault                       *Vault                     `hcl:"vault"`
 	TemplateConfig              *TemplateConfig            `hcl:"template_config"`
 	Templates                   []*ctconfig.TemplateConfig `hcl:"templates"`
@@ -110,13 +112,13 @@ type APIProxy struct {
 
 // Cache contains any configuration needed for Cache mode
 type Cache struct {
-	UseAutoAuthTokenRaw interface{}     `hcl:"use_auto_auth_token"`
-	UseAutoAuthToken    bool            `hcl:"-"`
-	ForceAutoAuthToken  bool            `hcl:"-"`
-	EnforceConsistency  string          `hcl:"enforce_consistency"`
-	WhenInconsistent    string          `hcl:"when_inconsistent"`
-	Persist             *Persist        `hcl:"persist"`
-	InProcDialer        transportDialer `hcl:"-"`
+	UseAutoAuthTokenRaw interface{}                     `hcl:"use_auto_auth_token"`
+	UseAutoAuthToken    bool                            `hcl:"-"`
+	ForceAutoAuthToken  bool                            `hcl:"-"`
+	EnforceConsistency  string                          `hcl:"enforce_consistency"`
+	WhenInconsistent    string                          `hcl:"when_inconsistent"`
+	Persist             *agentproxyshared.PersistConfig `hcl:"persist"`
+	InProcDialer        transportDialer                 `hcl:"-"`
 }
 
 // Persist contains configuration needed for persistent caching
@@ -176,7 +178,7 @@ type TemplateConfig struct {
 type ExecConfig struct {
 	Command                []string  `hcl:"command,attr" mapstructure:"command"`
 	RestartOnSecretChanges string    `hcl:"restart_on_secret_changes,optional" mapstructure:"restart_on_secret_changes"`
-	RestartKillSignal      os.Signal `hcl:"-" mapstructure:"restart_kill_signal"`
+	RestartStopSignal      os.Signal `hcl:"-" mapstructure:"restart_stop_signal"`
 }
 
 func NewConfig() *Config {
@@ -290,6 +292,17 @@ func (c *Config) Merge(c2 *Config) *Config {
 	}
 
 	return result
+}
+
+// IsDefaultListerDefined returns true if a default listener has been defined
+// in this config
+func (c *Config) IsDefaultListerDefined() bool {
+	for _, l := range c.Listeners {
+		if l.Role != "metrics_only" {
+			return true
+		}
+	}
+	return false
 }
 
 // ValidateConfig validates an Agent configuration after it has been fully merged together, to
@@ -769,7 +782,7 @@ func parsePersist(result *Config, list *ast.ObjectList) error {
 
 	item := persistList.Items[0]
 
-	var p Persist
+	var p agentproxyshared.PersistConfig
 	err := hcl.DecodeObject(&p, item.Val)
 	if err != nil {
 		return err
@@ -1091,7 +1104,7 @@ func parseExec(result *Config, list *ast.ObjectList) error {
 		return errors.New("error converting config")
 	}
 
-	var ec ExecConfig
+	var execConfig ExecConfig
 	var md mapstructure.Metadata
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 		DecodeHook: mapstructure.ComposeDecodeHookFunc(
@@ -1103,7 +1116,7 @@ func parseExec(result *Config, list *ast.ObjectList) error {
 		),
 		ErrorUnused: true,
 		Metadata:    &md,
-		Result:      &ec,
+		Result:      &execConfig,
 	})
 	if err != nil {
 		return errors.New("mapstructure decoder creation failed")
@@ -1112,17 +1125,16 @@ func parseExec(result *Config, list *ast.ObjectList) error {
 		return err
 	}
 
-	// if user does not specify a restart signal, use a default
-	if ec.RestartKillSignal == nil {
-		ec.RestartKillSignal = os.Interrupt
+	// if the user does not specify a restart signal, default to SIGTERM
+	if execConfig.RestartStopSignal == nil {
+		execConfig.RestartStopSignal = syscall.SIGTERM
 	}
 
-	if ec.RestartOnSecretChanges == "" {
-		// TODO: do we want to enum this?
-		ec.RestartOnSecretChanges = "always"
+	if execConfig.RestartOnSecretChanges == "" {
+		execConfig.RestartOnSecretChanges = "always"
 	}
 
-	result.Exec = &ec
+	result.Exec = &execConfig
 	return nil
 }
 
@@ -1136,7 +1148,6 @@ func parseEnvTemplates(result *Config, list *ast.ObjectList) error {
 	}
 
 	envTemplates := make([]*ctconfig.TemplateConfig, 0, len(envTemplateList.Items))
-	envKeys := make(map[string]struct{})
 
 	for _, item := range envTemplateList.Items {
 		var shadow interface{}
@@ -1150,7 +1161,7 @@ func parseEnvTemplates(result *Config, list *ast.ObjectList) error {
 			return errors.New("error converting config")
 		}
 
-		var et ctconfig.TemplateConfig
+		var templateConfig ctconfig.TemplateConfig
 		var md mapstructure.Metadata
 		decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
@@ -1162,7 +1173,7 @@ func parseEnvTemplates(result *Config, list *ast.ObjectList) error {
 			),
 			ErrorUnused: true,
 			Metadata:    &md,
-			Result:      &et,
+			Result:      &templateConfig,
 		})
 		if err != nil {
 			return errors.New("mapstructure decoder creation failed")
@@ -1171,22 +1182,17 @@ func parseEnvTemplates(result *Config, list *ast.ObjectList) error {
 			return err
 		}
 
-		// parse the keys in the item for the env var name
+		// parse the keys in the item for the environment variable name
 		if numberOfKeys := len(item.Keys); numberOfKeys != 1 {
-			return fmt.Errorf("expected one and only one env var name, got %d", numberOfKeys)
+			return fmt.Errorf("expected one and only one environment variable name, got %d", numberOfKeys)
 		}
 
 		// hcl parses this with extra quotes if quoted in config file
-		envName := strings.Trim(item.Keys[0].Token.Text, `"`)
+		environmentVariableName := strings.Trim(item.Keys[0].Token.Text, `"`)
 
-		et.MapToEnvironmentVariable = pointerutil.StringPtr(envName)
+		templateConfig.MapToEnvironmentVariable = pointerutil.StringPtr(environmentVariableName)
 
-		if _, exists := envKeys[envName]; exists {
-			return fmt.Errorf("duplicate environment %q variable detected", envName)
-		}
-
-		envTemplates = append(envTemplates, &et)
-		envKeys[envName] = struct{}{}
+		envTemplates = append(envTemplates, &templateConfig)
 	}
 
 	result.EnvTemplates = envTemplates

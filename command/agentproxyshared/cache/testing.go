@@ -27,7 +27,7 @@ type mockProxier struct {
 	responseIndex    int
 }
 
-func newMockProxier(responses []*SendResponse) *mockProxier {
+func NewMockProxier(responses []*SendResponse) *mockProxier {
 	return &mockProxier{
 		proxiedResponses: responses,
 	}

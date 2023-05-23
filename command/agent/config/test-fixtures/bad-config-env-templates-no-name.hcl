@@ -4,7 +4,7 @@ auto_auth {
     type = "token_file"
 
     config {
-      token_file_path = "$HOME/.vault-token"
+      token_file_path = "/home/username/.vault-token"
     }
   }
 }
@@ -22,5 +22,5 @@ env_template {
 exec {
   command                   = ["env"]
   restart_on_secret_changes = "never"
-  restart_kill_signal       = "SIGTERM"
+  restart_stop_signal       = "SIGTERM"
 }

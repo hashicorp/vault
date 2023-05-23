@@ -85,6 +85,10 @@ An audit device can be limited to only within the node's cluster with the [`loca
 When an audit device is disabled, it will stop receiving logs immediately.
 The existing logs that it did store are untouched.
 
+~> Note: Once an audit device is disabled, you will no longer be able to HMAC values
+for comparison with entries in the audit logs. This is true even if you re-enable
+the audit device at the same path, as a new salt will be created for hashing.
+
 ## Blocked Audit Devices
 
 Audit device logs are critically important and ignoring auditing failures opens an avenue for attack. Vault will not respond to requests when no enabled audit devices can record them.
