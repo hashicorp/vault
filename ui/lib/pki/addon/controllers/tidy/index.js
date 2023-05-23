@@ -16,6 +16,7 @@ export default class PkiTidyIndexController extends Controller {
 
   @tracked tidyStatus = null;
 
+  // this task is cancelled by resetController() upon leaving the pki.tidy.index route
   @task
   *pollTidyStatus() {
     while (true) {

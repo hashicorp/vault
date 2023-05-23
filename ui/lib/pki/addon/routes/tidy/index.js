@@ -38,4 +38,10 @@ export default class PkiTidyIndexRoute extends Route {
     controller.fetchTidyStatus = this.fetchTidyStatus;
     controller.pollTidyStatus.perform();
   }
+
+  resetController(controller, isExiting) {
+    if (isExiting) {
+      controller.pollTidyStatus.cancelAll();
+    }
+  }
 }
