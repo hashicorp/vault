@@ -5,7 +5,7 @@
   <form {{on "submit" (perform this.save)}}>
     <fieldset class="is-shadowless is-marginless is-borderless is-fullwidth" data-test-cluster-config-edit-section>
       <h2 class="title is-size-5 has-border-bottom-light page-header">
-        Cluster config
+        Cluster Config
       </h2>
       {{#if @cluster.canSet}}
         {{#each @cluster.allFields as |attr|}}
