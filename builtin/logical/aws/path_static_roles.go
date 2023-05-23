@@ -175,8 +175,6 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 	b.roleMutex.Lock()
 	defer b.roleMutex.Unlock()
 
-	fmt.Printf("%+v\n", config)
-
 	// Upsert role config
 	newRole, err := logical.StorageEntryJSON(formatRoleStoragePath(config.Name), config)
 	if err != nil {
