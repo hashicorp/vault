@@ -5,7 +5,7 @@
 
 export const SELECTORS = {
   errorBanner: '[data-test-error-banner]',
-  configEditSection: '[data-test-config-edit-section]',
+  configEditSection: '[data-test-cluster-config-edit-section]',
   configInput: (attr) => `[data-test-input="${attr}"]`,
   urlsEditSection: '[data-test-urls-edit-section]',
   urlFieldInput: (attr) => `[data-test-input="${attr}"] textarea`,

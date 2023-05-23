@@ -26,7 +26,7 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
     this.store = this.owner.lookup('service:store');
     this.cluster = this.store.createRecord('pki/config/cluster', {
       id: 'pki-test',
-      issuingCertificates: 'https://pr-a.vault.example.com/v1/ns1/pki-root',
+      path: 'https://pr-a.vault.example.com/v1/ns1/pki-root',
     });
     this.urls = this.store.createRecord('pki/config/urls', {
       id: 'pki-test',
