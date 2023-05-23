@@ -113,7 +113,6 @@ func (s *singleMonthActivityClients) populateSegments() (map[int][]*activity.Ent
 
 	}
 
-	// otherwise, we should make segments of approximately equal size
 	totalSegmentCount := 1
 	if s.generationParameters.GetNumSegments() > 0 {
 		totalSegmentCount = int(s.generationParameters.GetNumSegments())
