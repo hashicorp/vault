@@ -118,8 +118,6 @@ func TestStaticRolesValidation(t *testing.T) {
 // TestStaticRolesWrite validates that we can write a new entry for a new static role, and that we correctly
 // do not write if the request is invalid in some way.
 func TestStaticRolesWrite(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
 	bgCTX := context.Background()
 
 	cases := []struct {
@@ -128,6 +126,7 @@ func TestStaticRolesWrite(t *testing.T) {
 		data          map[string]interface{}
 		expectedError bool
 		findUser      bool
+		isUpdate      bool
 	}{
 		{
 			name: "happy path",
@@ -165,6 +164,29 @@ func TestStaticRolesWrite(t *testing.T) {
 			},
 			expectedError: true,
 		},
+		{
+			name: "update existing user",
+			opts: []awsutil.MockIAMOption{
+				awsutil.WithGetUserOutput(&iam.GetUserOutput{User: &iam.User{UserName: aws.String("john-doe")}}),
+				awsutil.WithListAccessKeysOutput(&iam.ListAccessKeysOutput{
+					AccessKeyMetadata: []*iam.AccessKeyMetadata{},
+					IsTruncated:       aws.Bool(false),
+				}),
+				awsutil.WithCreateAccessKeyOutput(&iam.CreateAccessKeyOutput{
+					AccessKey: &iam.AccessKey{
+						AccessKeyId:     aws.String("abcdefghijklmnopqrstuvwxyz"),
+						SecretAccessKey: aws.String("zyxwvutsrqponmlkjihgfedcba"),
+						UserName:        aws.String("john-doe"),
+					},
+				}),
+			},
+			data: map[string]interface{}{
+				"name":            "johnny",
+				"rotation_period": "19m",
+			},
+			findUser: true,
+			isUpdate: true,
+		},
 	}
 
 	// if a user exists (user doesn't exist is tested in validation)
@@ -172,6 +194,9 @@ func TestStaticRolesWrite(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
+			config := logical.TestBackendConfig()
+			config.StorageView = &logical.InmemStorage{}
+
 			miam, err := awsutil.NewMockIAM(
 				c.opts...,
 			)(nil)
@@ -185,6 +210,21 @@ func TestStaticRolesWrite(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			// put a role in storage for update tests
+			staticRole := staticRoleEntry{
+				Name:           "johnny",
+				Username:       "john-doe",
+				RotationPeriod: 24 * time.Hour,
+			}
+			entry, err := logical.StorageEntryJSON(formatRoleStoragePath(staticRole.Name), staticRole)
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = config.StorageView.Put(bgCTX, entry)
+			if err != nil {
+				t.Fatal(err)
+			}
+
 			req := &logical.Request{
 				Operation: logical.UpdateOperation,
 				Storage:   config.StorageView,
@@ -195,7 +235,14 @@ func TestStaticRolesWrite(t *testing.T) {
 			r, err := b.pathStaticRolesWrite(bgCTX, req, staticRoleFieldData(req.Data))
 			if c.expectedError && err == nil {
 				t.Fatal(err)
+			} else if c.expectedError {
+				return // save us some if statements
 			}
+
+			if err != nil {
+				t.Fatalf("got an error back unexpectedly: %s", err)
+			}
+
 			if c.findUser && r == nil {
 				t.Fatal("response was nil, but it shouldn't have been")
 			}
@@ -203,6 +250,40 @@ func TestStaticRolesWrite(t *testing.T) {
 			role, err := config.StorageView.Get(bgCTX, req.Path)
 			if c.findUser && (err != nil || role == nil) {
 				t.Fatalf("couldn't find the role we should have stored: %s", err)
+			}
+			var actualData staticRoleEntry
+			err = role.DecodeJSON(&actualData)
+			if err != nil {
+				t.Fatalf("couldn't convert storage data to role entry: %s", err)
+			}
+
+			// construct expected data
+			var expectedData staticRoleEntry
+			fieldData := staticRoleFieldData(c.data)
+			if c.isUpdate {
+				// data is johnny + c.data
+				expectedData = staticRole
+			}
+
+			if u, ok := fieldData.GetOk("username"); ok {
+				expectedData.Username = u.(string)
+			}
+			if r, ok := fieldData.GetOk("rotation_period"); ok {
+				expectedData.RotationPeriod = time.Duration(r.(int)) * time.Second
+			}
+			if n, ok := fieldData.GetOk("name"); ok {
+				expectedData.Name = n.(string)
+			}
+
+			// validate fields
+			if eu, au := expectedData.Username, actualData.Username; eu != au {
+				t.Fatalf("mismatched username, expected %q but got %q", eu, au)
+			}
+			if er, ar := expectedData.RotationPeriod, actualData.RotationPeriod; er != ar {
+				t.Fatalf("mismatched rotation period, expected %q but got %q", er, ar)
+			}
+			if en, an := expectedData.Name, actualData.Name; en != an {
+				t.Fatalf("mismatched role name, expected %q, but got %q", en, an)
 			}
 		})
 	}
