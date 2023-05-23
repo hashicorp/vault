@@ -4,7 +4,7 @@
  */
 
 import { encodePath } from 'vault/utils/path-encoding-helpers';
-import ApplicationAdapter from '../application';
+import ApplicationAdapter from '../../application';
 
 export default class PkiConfigCrlAdapter extends ApplicationAdapter {
   namespace = 'v1';
