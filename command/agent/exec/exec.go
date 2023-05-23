@@ -209,10 +209,10 @@ func (s *Server) bounceCmd(newEnvVars []string) error {
 	switch s.config.AgentConfig.Exec.RestartOnSecretChanges {
 	case "always":
 		if s.procState == processStateRunning {
-			// process is running, need to kill it first
+			// process is running, need to stop it first
 			s.logger.Info("stopping process", "process_id", s.proc.Pid())
-			s.proc.Stop()
 			s.procState = processStateRestarting
+			s.proc.Stop()
 		}
 	case "never":
 		if s.procState == processStateRunning {
@@ -220,7 +220,7 @@ func (s *Server) bounceCmd(newEnvVars []string) error {
 			return nil
 		}
 	default:
-		panic("unreachable")
+		return fmt.Errorf("invalid value for restart-on-secret-changes: %q", s.config.AgentConfig.Exec.RestartOnSecretChanges)
 	}
 
 	args, subshell, err := child.CommandPrep(s.config.AgentConfig.Exec.Command)
