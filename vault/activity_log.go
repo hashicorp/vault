@@ -1327,8 +1327,7 @@ func (a *ActivityLog) activeFragmentWorker(ctx context.Context) {
 
 			// Simpler, but ticker.Reset was introduced in go 1.15:
 			// ticker.Reset(activitySegmentInterval)
-		case <-endOfMonthChannel:
-			currentTime := a.clock.Now()
+		case currentTime := <-endOfMonthChannel:
 			err := a.HandleEndOfMonth(ctx, currentTime.UTC())
 			if err != nil {
 				a.logger.Error("failed to perform end of month rotation", "error", err)

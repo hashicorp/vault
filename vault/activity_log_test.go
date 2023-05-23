@@ -4692,16 +4692,31 @@ func newMockTimeNowClock(startAt time.Time) timeutil.Clock {
 	return &mockTimeNowClock{start: startAt, created: time.Now()}
 }
 
+// NewTimer returns a timer with a channel that will return the correct time,
+// relative to the starting time
+func (m mockTimeNowClock) NewTimer(d time.Duration) *time.Timer {
+	timerStarted := m.Now()
+	t := time.NewTimer(d)
+	readCh := t.C
+	writeCh := make(chan time.Time, 1)
+	go func() {
+		<-readCh
+		writeCh <- timerStarted.Add(d)
+	}()
+	t.C = writeCh
+	return t
+}
+
 func (m mockTimeNowClock) Now() time.Time {
 	return m.start.Add(time.Since(m.created))
 }
 
-// TestActivityLog_HandleEndOfMonth runs the activity log with a mock clock. The current
-// time is set to be 3 seconds before the end of a month. The test verifies that
-// the precomputedQueryWorker runs and writes precomputed queries with the
-// proper start and end times when the end of the month is triggered
+// TestActivityLog_HandleEndOfMonth runs the activity log with a mock clock.
+// The current time is set to be 3 seconds before the end of a month. The test
+// verifies that the precomputedQueryWorker runs and writes precomputed queries
+// with the proper start and end times when the end of the month is triggered
 func TestActivityLog_HandleEndOfMonth(t *testing.T) {
-	// 5 seconds until a new month
+	// 3 seconds until a new month
 	now := time.Date(2021, 1, 31, 23, 59, 57, 0, time.UTC)
 	core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{ActivityLogConfig: ActivityLogCoreConfig{Clock: newMockTimeNowClock(now)}})
 	done := make(chan struct{})
@@ -4714,7 +4729,11 @@ func TestActivityLog_HandleEndOfMonth(t *testing.T) {
 	core.activityLog.AddClientToFragment("id", "ns", now.Unix(), false, "mount")
 
 	// wait for the end of month to be triggered
-	<-done
+	select {
+	case <-done:
+	case <-time.After(10 * time.Second):
+		t.Fatal("timeout waiting for precomputed query")
+	}
 
 	// verify that a precomputed query was written
 	exists, err := core.activityLog.queryStore.QueriesAvailable(context.Background())

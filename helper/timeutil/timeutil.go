@@ -152,6 +152,8 @@ type Clock interface {
 
 type DefaultClock struct{}
 
+var _ Clock = (*DefaultClock)(nil)
+
 func (_ DefaultClock) Now() time.Time {
 	return time.Now()
 }
