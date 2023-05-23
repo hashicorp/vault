@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/mitchellh/mapstructure"
+	"k8s.io/utils/strings/slices"
 
 	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -342,13 +343,134 @@ func (c *Config) ValidateConfig() error {
 	if c.AutoAuth != nil {
 		if len(c.AutoAuth.Sinks) == 0 &&
 			(c.APIProxy == nil || !c.APIProxy.UseAutoAuthToken) &&
-			len(c.Templates) == 0 {
+			len(c.Templates) == 0 &&
+			len(c.EnvTemplates) == 0 {
 			return fmt.Errorf("auto_auth requires at least one sink or at least one template or api_proxy.use_auto_auth_token=true")
 		}
 	}
 
 	if c.AutoAuth == nil && c.Cache == nil && len(c.Listeners) == 0 {
 		return fmt.Errorf("no auto_auth, cache, or listener block found in config")
+	}
+
+	return c.validateEnvTemplateConfig()
+}
+
+func (c *Config) validateEnvTemplateConfig() error {
+	// if we are not in env-template mode, exit early
+	if c.Exec == nil && len(c.EnvTemplates) == 0 {
+		return nil
+	}
+
+	if c.Exec == nil {
+		return fmt.Errorf("a top-level 'exec' element must be specified with 'env_template' entries")
+	}
+
+	if len(c.EnvTemplates) == 0 {
+		return fmt.Errorf("must specify at least one 'env_template' element with a top-level 'exec' element")
+	}
+
+	if c.APIProxy != nil {
+		return fmt.Errorf("'api_proxy' cannot be specified with 'env_template' entries")
+	}
+
+	if len(c.Templates) > 0 {
+		return fmt.Errorf("'template' cannot be specified with 'env_template' entries")
+	}
+
+	if len(c.Exec.Command) == 0 {
+		return fmt.Errorf("'exec' requires a non-empty 'command' field")
+	}
+
+	if !slices.Contains([]string{"always", "never"}, c.Exec.RestartOnSecretChanges) {
+		return fmt.Errorf("'exec.restart_on_secret_changes' unexpected value: %q", c.Exec.RestartOnSecretChanges)
+	}
+
+	uniqueKeys := make(map[string]struct{})
+
+	for _, template := range c.EnvTemplates {
+		// Required:
+		//   - the key (environment variable name)
+		//   - either "contents" or "source"
+		// Optional / permitted:
+		//   - error_on_missing_key
+		//   - error_fatal
+		//   - left_delimiter
+		//   - right_delimiter
+		//   - ExtFuncMap
+		//   - function_denylist / function_blacklist
+
+		if template.MapToEnvironmentVariable == nil {
+			return fmt.Errorf("env_template: an environment variable name is required")
+		}
+
+		key := *template.MapToEnvironmentVariable
+
+		if _, exists := uniqueKeys[key]; exists {
+			return fmt.Errorf("env_template: duplicate environment variable name: %q", key)
+		}
+
+		uniqueKeys[key] = struct{}{}
+
+		if template.Contents == nil && template.Source == nil {
+			return fmt.Errorf("env_template[%s]: either 'contents' or 'source' must be specified", key)
+		}
+
+		if template.Contents != nil && template.Source != nil {
+			return fmt.Errorf("env_template[%s]: 'contents' and 'source' cannot be specified together", key)
+		}
+
+		if template.Backup != nil {
+			return fmt.Errorf("env_template[%s]: 'backup' is not allowed", key)
+		}
+
+		if template.Command != nil {
+			return fmt.Errorf("env_template[%s]: 'command' is not allowed", key)
+		}
+
+		if template.CommandTimeout != nil {
+			return fmt.Errorf("env_template[%s]: 'command_timeout' is not allowed", key)
+		}
+
+		if template.CreateDestDirs != nil {
+			return fmt.Errorf("env_template[%s]: 'create_dest_dirs' is not allowed", key)
+		}
+
+		if template.Destination != nil {
+			return fmt.Errorf("env_template[%s]: 'destination' is not allowed", key)
+		}
+
+		if template.Exec != nil {
+			return fmt.Errorf("env_template[%s]: 'exec' is not allowed", key)
+		}
+
+		if template.Perms != nil {
+			return fmt.Errorf("env_template[%s]: 'perms' is not allowed", key)
+		}
+
+		if template.User != nil {
+			return fmt.Errorf("env_template[%s]: 'user' is not allowed", key)
+		}
+
+		if template.Uid != nil {
+			return fmt.Errorf("env_template[%s]: 'uid' is not allowed", key)
+		}
+
+		if template.Group != nil {
+			return fmt.Errorf("env_template[%s]: 'group' is not allowed", key)
+		}
+
+		if template.Gid != nil {
+			return fmt.Errorf("env_template[%s]: 'gid' is not allowed", key)
+		}
+
+		if template.Wait != nil {
+			return fmt.Errorf("env_template[%s]: 'wait' is not allowed", key)
+		}
+
+		if template.SandboxPath != nil {
+			return fmt.Errorf("env_template[%s]: 'sandbox_path' is not allowed", key)
+		}
 	}
 
 	return nil
