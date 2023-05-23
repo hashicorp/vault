@@ -4,7 +4,7 @@
  */
 
 import { encodePath } from 'vault/utils/path-encoding-helpers';
-import PkiConfigBaseAdapter from './config';
+import PkiConfigBaseAdapter from './base';
 
 export default class PkiConfigClusterAdapter extends PkiConfigBaseAdapter {
   namespace = 'v1';
