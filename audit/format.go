@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	squarejwt "gopkg.in/square/go-jose.v2/jwt"
+	"github.com/go-jose/go-jose/v3/jwt"
 
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -537,12 +537,12 @@ func parseVaultTokenFromJWT(token string) *string {
 		return nil
 	}
 
-	parsedJWT, err := squarejwt.ParseSigned(token)
+	parsedJWT, err := jwt.ParseSigned(token)
 	if err != nil {
 		return nil
 	}
 
-	var claims squarejwt.Claims
+	var claims jwt.Claims
 	if err = parsedJWT.UnsafeClaimsWithoutVerification(&claims); err != nil {
 		return nil
 	}

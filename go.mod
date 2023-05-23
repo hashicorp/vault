@@ -23,8 +23,8 @@ replace github.com/hashicorp/vault/api/auth/userpass => ./api/auth/userpass
 replace github.com/hashicorp/vault/sdk => ./sdk
 
 require (
-	cloud.google.com/go/monitoring v1.12.0
-	cloud.google.com/go/spanner v1.44.0
+	cloud.google.com/go/monitoring v1.13.0
+	cloud.google.com/go/spanner v1.45.0
 	cloud.google.com/go/storage v1.28.1
 	github.com/Azure/azure-storage-blob-go v0.14.0
 	github.com/Azure/go-autorest/autorest v0.11.28
@@ -56,13 +56,14 @@ require (
 	github.com/favadi/protoc-go-inject-tag v1.3.0
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-errors/errors v1.4.2
+	github.com/go-jose/go-jose/v3 v3.0.0
 	github.com/go-ldap/ldap/v3 v3.4.4
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/go-test/deep v1.1.0
 	github.com/go-zookeeper/zk v1.0.3
 	github.com/gocql/gocql v1.0.0
 	github.com/golang-jwt/jwt/v4 v4.4.2
-	github.com/golang/protobuf v1.5.2
+	github.com/golang/protobuf v1.5.3
 	github.com/golangci/revgrep v0.0.0-20220804021717-745bb2f7c2e6
 	github.com/google/go-cmp v0.5.9
 	github.com/google/go-github v17.0.0+incompatible
@@ -122,7 +123,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-azure v0.13.0
 	github.com/hashicorp/vault-plugin-auth-centrify v0.15.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.14.0
-	github.com/hashicorp/vault-plugin-auth-gcp v0.15.0
+	github.com/hashicorp/vault-plugin-auth-gcp v0.16.0
 	github.com/hashicorp/vault-plugin-auth-jwt v0.15.0
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.9.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.15.0
@@ -190,7 +191,7 @@ require (
 	github.com/sasha-s/go-deadlock v0.2.0
 	github.com/sethvargo/go-limiter v0.7.1
 	github.com/shirou/gopsutil/v3 v3.22.6
-	github.com/stretchr/testify v1.8.2
+	github.com/stretchr/testify v1.8.3
 	go.etcd.io/bbolt v1.3.7
 	go.etcd.io/etcd/client/pkg/v3 v3.5.7
 	go.etcd.io/etcd/client/v2 v2.305.5
@@ -205,18 +206,17 @@ require (
 	golang.org/x/crypto v0.9.0
 	golang.org/x/exp v0.0.0-20230519143937-03e91628a987
 	golang.org/x/net v0.10.0
-	golang.org/x/oauth2 v0.5.0
-	golang.org/x/sync v0.1.0
+	golang.org/x/oauth2 v0.8.0
+	golang.org/x/sync v0.2.0
 	golang.org/x/sys v0.8.0
 	golang.org/x/term v0.8.0
 	golang.org/x/text v0.9.0
-	golang.org/x/tools v0.6.0
-	google.golang.org/api v0.110.0
-	google.golang.org/grpc v1.53.0
+	golang.org/x/tools v0.7.0
+	google.golang.org/api v0.124.0
+	google.golang.org/grpc v1.55.0
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0
-	google.golang.org/protobuf v1.28.1
+	google.golang.org/protobuf v1.30.0
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
-	gopkg.in/square/go-jose.v2 v2.6.0
 	gotest.tools/gotestsum v1.9.0
 	honnef.co/go/tools v0.4.3
 	k8s.io/utils v0.0.0-20230220204549-a5ecb0141aa5
@@ -227,10 +227,10 @@ require (
 
 require (
 	cloud.google.com/go v0.110.0 // indirect
-	cloud.google.com/go/compute v1.18.0 // indirect
+	cloud.google.com/go/compute v1.19.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
-	cloud.google.com/go/iam v0.12.0 // indirect
-	cloud.google.com/go/kms v1.9.0 // indirect
+	cloud.google.com/go/iam v0.13.0 // indirect
+	cloud.google.com/go/kms v1.10.1 // indirect
 	code.cloudfoundry.org/gofileutils v0.0.0-20170111115228-4d0c80011a0f // indirect
 	github.com/Azure/azure-pipeline-go v0.2.3 // indirect
 	github.com/Azure/azure-sdk-for-go v67.2.0+incompatible // indirect
@@ -291,7 +291,7 @@ require (
 	github.com/cloudflare/circl v1.1.0 // indirect
 	github.com/cloudfoundry-community/go-cfclient v0.0.0-20210823134051-721f0e559306 // indirect
 	github.com/cncf/udpa/go v0.0.0-20220112060539-c52dc94e7fbe // indirect
-	github.com/cncf/xds/go v0.0.0-20230105202645-06c439db220b // indirect
+	github.com/cncf/xds/go v0.0.0-20230310173818-32f1caf87195 // indirect
 	github.com/containerd/containerd v1.7.0 // indirect
 	github.com/containerd/continuity v0.3.0 // indirect
 	github.com/coreos/go-oidc v2.2.1+incompatible // indirect
@@ -313,8 +313,8 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 // indirect
 	github.com/emicklei/go-restful/v3 v3.10.1 // indirect
-	github.com/envoyproxy/go-control-plane v0.10.3 // indirect
-	github.com/envoyproxy/protoc-gen-validate v0.9.1 // indirect
+	github.com/envoyproxy/go-control-plane v0.11.0 // indirect
+	github.com/envoyproxy/protoc-gen-validate v0.10.0 // indirect
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
@@ -347,10 +347,11 @@ require (
 	github.com/google/gnostic v0.5.7-v3refs // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
+	github.com/google/s2a-go v0.1.4 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.2.3 // indirect
-	github.com/googleapis/gax-go/v2 v2.7.0 // indirect
+	github.com/googleapis/gax-go/v2 v2.8.0 // indirect
 	github.com/gophercloud/gophercloud v0.1.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
@@ -461,15 +462,16 @@ require (
 	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.19.1 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20221208152030-732eee02a75a // indirect
-	golang.org/x/mod v0.8.0 // indirect
+	golang.org/x/mod v0.9.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4 // indirect
+	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.66.2 // indirect
 	gopkg.in/jcmturner/goidentity.v3 v3.0.0 // indirect
 	gopkg.in/resty.v1 v1.12.0 // indirect
+	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/api v0.26.2 // indirect

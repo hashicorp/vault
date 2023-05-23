@@ -4,7 +4,7 @@ auto_auth {
     type = "token_file"
 
     config {
-      token_file_path = "/home/username/.vault-token"
+      token_file_path = "/Users/avean/.vault-token"
     }
   }
 }
@@ -18,6 +18,12 @@ vault {
   address = "http://localhost:8200"
 }
 
+# Error: template is incompatible with env_template!
+template {
+  source      = "/path/on/disk/to/template.ctmpl"
+  destination = "/path/on/disk/where/template/will/render.txt"
+}
+
 env_template "FOO_PASSWORD" {
   contents             = "{{ with secret \"secret/data/foo\" }}{{ .Data.data.password }}{{ end }}"
   error_on_missing_key = false
@@ -28,7 +34,7 @@ env_template "FOO_USER" {
 }
 
 exec {
-  command                   = ["env"]
-  restart_on_secret_changes = "never"
-  restart_stop_signal       = "SIGINT"
+  command                   = ["./my-app", "arg1", "arg2"]
+  restart_on_secret_changes = "always"
+  restart_stop_signal       = "SIGTERM"
 }

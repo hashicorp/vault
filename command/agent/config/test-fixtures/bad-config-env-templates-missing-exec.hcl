@@ -4,7 +4,7 @@ auto_auth {
     type = "token_file"
 
     config {
-      token_file_path = "/home/username/.vault-token"
+      token_file_path = "/Users/avean/.vault-token"
     }
   }
 }
@@ -27,8 +27,4 @@ env_template "FOO_USER" {
   error_on_missing_key = false
 }
 
-exec {
-  command                   = ["env"]
-  restart_on_secret_changes = "never"
-  restart_stop_signal       = "SIGINT"
-}
+# Error: missing a required "exec" section!
