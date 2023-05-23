@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/pki/dnstest"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/timeutil"
+	"github.com/hashicorp/vault/vault/activity"
 
 	"github.com/stretchr/testify/require"
 )
@@ -102,6 +103,26 @@ func TestACMEBilling(t *testing.T) {
 	// same name as another namespace should increase counts as well.
 	doACMEForDomainWithDNS(t, dns, &acmeClientPKINS2, []string{"very-unique.dadgarcorp.com"})
 	expectedCount = validateClientCount(t, client, "ns2/pki", expectedCount+1, "unique identifier in a different namespace")
+
+	// Check the current fragment
+	fragment := cluster.Cores[0].Core.ResetActivityLog()[0]
+	if fragment == nil {
+		t.Fatal("no fragment created")
+	}
+	validateAcmeClientTypes(t, fragment, expectedCount)
+}
+
+func validateAcmeClientTypes(t *testing.T, fragment *activity.LogFragment, expectedCount int64) {
+	t.Helper()
+	if int64(len(fragment.Clients)) != expectedCount {
+		t.Fatalf("bad number of entities, expected %v: got %v, entities are: %v", expectedCount, len(fragment.Clients), fragment.Clients)
+	}
+
+	for _, ac := range fragment.Clients {
+		if ac.ClientType != "acme" {
+			t.Fatalf("Couldn't find expected 'acme' client_type in %v", fragment.Clients)
+		}
+	}
 }
 
 func validateClientCount(t *testing.T, client *api.Client, mount string, expected int64, message string) int64 {
@@ -147,12 +168,12 @@ func validateClientCount(t *testing.T, client *api.Client, mount string, expecte
 	// Validate this mount's namespace is included in the namespaces list,
 	// if this is enterprise. Otherwise, if its OSS or we don't have a
 	// namespace, we default to the value root.
-	mountNamespace := "root"
+	mountNamespace := ""
 	mountPath := mount + "/"
 	if constants.IsEnterprise && strings.Contains(mount, "/") {
 		pieces := strings.Split(mount, "/")
 		require.Equal(t, 2, len(pieces), "we do not support nested namespaces in this test")
-		mountNamespace = pieces[0]
+		mountNamespace = pieces[0] + "/"
 		mountPath = pieces[1] + "/"
 	}
 
@@ -161,11 +182,11 @@ func validateClientCount(t *testing.T, client *api.Client, mount string, expecte
 	foundNamespace := false
 	for index, namespaceRaw := range monthlyNamespaces {
 		namespace := namespaceRaw.(map[string]interface{})
-		require.Contains(t, namespace, "namespace_id", "expected monthly.namespaces[%v] to contain a namespace_id key", index)
-		namespaceId := namespace["namespace_id"].(string)
+		require.Contains(t, namespace, "namespace_path", "expected monthly.namespaces[%v] to contain a namespace_path key", index)
+		namespacePath := namespace["namespace_path"].(string)
 
-		if namespaceId != mountNamespace {
-			t.Logf("skipping non-matching namespace %v: %v != %v / %v", index, namespaceId, mountNamespace, namespace)
+		if namespacePath != mountNamespace {
+			t.Logf("skipping non-matching namespace %v: %v != %v / %v", index, namespacePath, mountNamespace, namespace)
 			continue
 		}
 

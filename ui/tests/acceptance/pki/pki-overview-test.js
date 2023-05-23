@@ -114,4 +114,13 @@ module('Acceptance | pki overview', function (hooks) {
       'vault.cluster.secrets.backend.pki.certificates.certificate.details'
     );
   });
+
+  test('navigates to issuer details page for View Issuer card', async function (assert) {
+    await authPage.login(this.pkiAdminToken);
+    await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+    await click(SELECTORS.viewIssuerPowerSearch);
+    await click(SELECTORS.firstPowerSelectOption);
+    await click(SELECTORS.viewIssuerButton);
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.issuers.issuer.details');
+  });
 });

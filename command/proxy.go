@@ -12,7 +12,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -26,23 +25,9 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
-	"github.com/hashicorp/vault/command/agentproxyshared/auth/alicloud"
-	"github.com/hashicorp/vault/command/agentproxyshared/auth/approle"
-	"github.com/hashicorp/vault/command/agentproxyshared/auth/aws"
-	"github.com/hashicorp/vault/command/agentproxyshared/auth/azure"
-	"github.com/hashicorp/vault/command/agentproxyshared/auth/cert"
-	"github.com/hashicorp/vault/command/agentproxyshared/auth/cf"
-	"github.com/hashicorp/vault/command/agentproxyshared/auth/gcp"
-	"github.com/hashicorp/vault/command/agentproxyshared/auth/jwt"
-	"github.com/hashicorp/vault/command/agentproxyshared/auth/kerberos"
-	"github.com/hashicorp/vault/command/agentproxyshared/auth/kubernetes"
-	"github.com/hashicorp/vault/command/agentproxyshared/auth/oci"
-	token_file "github.com/hashicorp/vault/command/agentproxyshared/auth/token-file"
 	cache "github.com/hashicorp/vault/command/agentproxyshared/cache"
-	"github.com/hashicorp/vault/command/agentproxyshared/cache/cacheboltdb"
-	"github.com/hashicorp/vault/command/agentproxyshared/cache/cachememdb"
-	"github.com/hashicorp/vault/command/agentproxyshared/cache/keymanager"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/inmem"
@@ -345,39 +330,9 @@ func (c *ProxyCommand) Run(args []string) int {
 			MountPath: config.AutoAuth.Method.MountPath,
 			Config:    config.AutoAuth.Method.Config,
 		}
-		switch config.AutoAuth.Method.Type {
-		case "alicloud":
-			method, err = alicloud.NewAliCloudAuthMethod(authConfig)
-		case "aws":
-			method, err = aws.NewAWSAuthMethod(authConfig)
-		case "azure":
-			method, err = azure.NewAzureAuthMethod(authConfig)
-		case "cert":
-			method, err = cert.NewCertAuthMethod(authConfig)
-		case "cf":
-			method, err = cf.NewCFAuthMethod(authConfig)
-		case "gcp":
-			method, err = gcp.NewGCPAuthMethod(authConfig)
-		case "jwt":
-			method, err = jwt.NewJWTAuthMethod(authConfig)
-		case "kerberos":
-			method, err = kerberos.NewKerberosAuthMethod(authConfig)
-		case "kubernetes":
-			method, err = kubernetes.NewKubernetesAuthMethod(authConfig)
-		case "approle":
-			method, err = approle.NewApproleAuthMethod(authConfig)
-		case "oci":
-			method, err = oci.NewOCIAuthMethod(authConfig, config.Vault.Address)
-		case "token_file":
-			method, err = token_file.NewTokenFileAuthMethod(authConfig)
-		case "pcf": // Deprecated.
-			method, err = cf.NewCFAuthMethod(authConfig)
-		default:
-			c.UI.Error(fmt.Sprintf("Unknown auth method %q", config.AutoAuth.Method.Type))
-			return 1
-		}
+		method, err = agentproxyshared.GetAutoAuthMethodFromConfig(config.AutoAuth.Method.Type, authConfig, config.Vault.Address)
 		if err != nil {
-			c.UI.Error(fmt.Errorf("Error creating %s auth method: %w", config.AutoAuth.Method.Type, err).Error())
+			c.UI.Error(fmt.Sprintf("Error creating %s auth method: %v", config.AutoAuth.Method.Type, err))
 			return 1
 		}
 	}
@@ -465,7 +420,7 @@ func (c *ProxyCommand) Run(args []string) int {
 		EnforceConsistency:      enforceConsistency,
 		WhenInconsistentAction:  whenInconsistent,
 		UserAgentStringFunction: useragent.ProxyStringWithProxiedUserAgent,
-		UserAgentString:         useragent.ProxyString(),
+		UserAgentString:         useragent.ProxyAPIProxyString(),
 	})
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error creating API proxy: %v", err))
@@ -497,147 +452,14 @@ func (c *ProxyCommand) Run(args []string) int {
 
 		// Configure persistent storage and add to LeaseCache
 		if config.Cache.Persist != nil {
-			if config.Cache.Persist.Path == "" {
-				c.UI.Error("must specify persistent cache path")
-				return 1
-			}
-
-			// Set AAD based on key protection type
-			var aad string
-			switch config.Cache.Persist.Type {
-			case "kubernetes":
-				aad, err = getServiceAccountJWT(config.Cache.Persist.ServiceAccountTokenFile)
-				if err != nil {
-					c.UI.Error(fmt.Sprintf("failed to read service account token from %s: %s", config.Cache.Persist.ServiceAccountTokenFile, err))
-					return 1
-				}
-			default:
-				c.UI.Error(fmt.Sprintf("persistent key protection type %q not supported", config.Cache.Persist.Type))
-				return 1
-			}
-
-			// Check if bolt file exists already
-			dbFileExists, err := cacheboltdb.DBFileExists(config.Cache.Persist.Path)
+			deferFunc, oldToken, err := agentproxyshared.AddPersistentStorageToLeaseCache(ctx, leaseCache, config.Cache.Persist, cacheLogger)
 			if err != nil {
-				c.UI.Error(fmt.Sprintf("failed to check if bolt file exists at path %s: %s", config.Cache.Persist.Path, err))
+				c.UI.Error(fmt.Sprintf("Error creating persistent cache: %v", err))
 				return 1
 			}
-			if dbFileExists {
-				// Open the bolt file, but wait to setup Encryption
-				ps, err := cacheboltdb.NewBoltStorage(&cacheboltdb.BoltStorageConfig{
-					Path:   config.Cache.Persist.Path,
-					Logger: cacheLogger.Named("cacheboltdb"),
-				})
-				if err != nil {
-					c.UI.Error(fmt.Sprintf("Error opening persistent cache: %v", err))
-					return 1
-				}
-
-				// Get the token from bolt for retrieving the encryption key,
-				// then setup encryption so that restore is possible
-				token, err := ps.GetRetrievalToken()
-				if err != nil {
-					c.UI.Error(fmt.Sprintf("Error getting retrieval token from persistent cache: %v", err))
-				}
-
-				if err := ps.Close(); err != nil {
-					c.UI.Warn(fmt.Sprintf("Failed to close persistent cache file after getting retrieval token: %s", err))
-				}
-
-				km, err := keymanager.NewPassthroughKeyManager(ctx, token)
-				if err != nil {
-					c.UI.Error(fmt.Sprintf("failed to configure persistence encryption for cache: %s", err))
-					return 1
-				}
-
-				// Open the bolt file with the wrapper provided
-				ps, err = cacheboltdb.NewBoltStorage(&cacheboltdb.BoltStorageConfig{
-					Path:    config.Cache.Persist.Path,
-					Logger:  cacheLogger.Named("cacheboltdb"),
-					Wrapper: km.Wrapper(),
-					AAD:     aad,
-				})
-				if err != nil {
-					c.UI.Error(fmt.Sprintf("Error opening persistent cache with wrapper: %v", err))
-					return 1
-				}
-
-				// Restore anything in the persistent cache to the memory cache
-				if err := leaseCache.Restore(ctx, ps); err != nil {
-					c.UI.Error(fmt.Sprintf("Error restoring in-memory cache from persisted file: %v", err))
-					if config.Cache.Persist.ExitOnErr {
-						return 1
-					}
-				}
-				cacheLogger.Info("loaded memcache from persistent storage")
-
-				// Check for previous auto-auth token
-				oldTokenBytes, err := ps.GetAutoAuthToken(ctx)
-				if err != nil {
-					c.UI.Error(fmt.Sprintf("Error in fetching previous auto-auth token: %s", err))
-					if config.Cache.Persist.ExitOnErr {
-						return 1
-					}
-				}
-				if len(oldTokenBytes) > 0 {
-					oldToken, err := cachememdb.Deserialize(oldTokenBytes)
-					if err != nil {
-						c.UI.Error(fmt.Sprintf("Error in deserializing previous auto-auth token cache entry: %s", err))
-						if config.Cache.Persist.ExitOnErr {
-							return 1
-						}
-					}
-					previousToken = oldToken.Token
-				}
-
-				// If keep_after_import true, set persistent storage layer in
-				// leaseCache, else remove db file
-				if config.Cache.Persist.KeepAfterImport {
-					defer ps.Close()
-					leaseCache.SetPersistentStorage(ps)
-				} else {
-					if err := ps.Close(); err != nil {
-						c.UI.Warn(fmt.Sprintf("failed to close persistent cache file: %s", err))
-					}
-					dbFile := filepath.Join(config.Cache.Persist.Path, cacheboltdb.DatabaseFileName)
-					if err := os.Remove(dbFile); err != nil {
-						c.UI.Error(fmt.Sprintf("failed to remove persistent storage file %s: %s", dbFile, err))
-						if config.Cache.Persist.ExitOnErr {
-							return 1
-						}
-					}
-				}
-			} else {
-				km, err := keymanager.NewPassthroughKeyManager(ctx, nil)
-				if err != nil {
-					c.UI.Error(fmt.Sprintf("failed to configure persistence encryption for cache: %s", err))
-					return 1
-				}
-				ps, err := cacheboltdb.NewBoltStorage(&cacheboltdb.BoltStorageConfig{
-					Path:    config.Cache.Persist.Path,
-					Logger:  cacheLogger.Named("cacheboltdb"),
-					Wrapper: km.Wrapper(),
-					AAD:     aad,
-				})
-				if err != nil {
-					c.UI.Error(fmt.Sprintf("Error creating persistent cache: %v", err))
-					return 1
-				}
-				cacheLogger.Info("configured persistent storage", "path", config.Cache.Persist.Path)
-
-				// Stash the key material in bolt
-				token, err := km.RetrievalToken(ctx)
-				if err != nil {
-					c.UI.Error(fmt.Sprintf("Error getting persistent key: %s", err))
-					return 1
-				}
-				if err := ps.StoreRetrievalToken(token); err != nil {
-					c.UI.Error(fmt.Sprintf("Error setting key in persistent cache: %v", err))
-					return 1
-				}
-
-				defer ps.Close()
-				leaseCache.SetPersistentStorage(ps)
+			previousToken = oldToken
+			if deferFunc != nil {
+				defer deferFunc()
 			}
 		}
 	}

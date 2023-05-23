@@ -75,10 +75,18 @@ func AgentAutoAuthString() string {
 		versionFunc(), projectURL, rt)
 }
 
-// ProxyString returns the consistent user-agent string for Vault Proxy API Proxying.
+// ProxyString returns the consistent user-agent string for Vault Proxy.
+//
+// e.g. Vault Proxy/0.10.4 (+https://www.vaultproject.io/; go1.10.1)
+func ProxyString() string {
+	return fmt.Sprintf("Vault Proxy/%s (+%s; %s)",
+		versionFunc(), projectURL, rt)
+}
+
+// ProxyAPIProxyString returns the consistent user-agent string for Vault Proxy API Proxying.
 //
 // e.g. Vault Proxy API Proxy/0.10.4 (+https://www.vaultproject.io/; go1.10.1)
-func ProxyString() string {
+func ProxyAPIProxyString() string {
 	return fmt.Sprintf("Vault Proxy API Proxy/%s (+%s; %s)",
 		versionFunc(), projectURL, rt)
 }

@@ -18,6 +18,15 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
 
+type childProcessState uint8
+
+const (
+	childProcessStateNotStarted childProcessState = iota
+	childProcessStateRunning
+	childProcessStateRestarting
+	childProcessStateStopped
+)
+
 type ServerConfig struct {
 	Logger      hclog.Logger
 	AgentConfig *config.Config
@@ -50,11 +59,11 @@ type Server struct {
 
 	logger hclog.Logger
 
-	proc        *child.Child
-	procStarted bool
+	childProcess      *child.Child
+	childProcessState childProcessState
 
 	// exit channel of the child process
-	procExitCh chan int
+	childProcessExitCh <-chan int
 }
 
 type ProcessExitError struct {
@@ -67,10 +76,9 @@ func (e *ProcessExitError) Error() string {
 
 func NewServer(cfg *ServerConfig) *Server {
 	server := Server{
-		logger:      cfg.Logger,
-		config:      cfg,
-		procStarted: false,
-		procExitCh:  make(chan int),
+		logger:            cfg.Logger,
+		config:            cfg,
+		childProcessState: childProcessStateNotStarted,
 	}
 
 	return &server
@@ -85,7 +93,6 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 
 	if len(s.config.AgentConfig.EnvTemplates) == 0 || s.config.AgentConfig.Exec == nil {
 		s.logger.Info("no env templates or exec config, exiting")
-		<-ctx.Done()
 		return nil
 	}
 
@@ -114,10 +121,10 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 		select {
 		case <-ctx.Done():
 			s.runner.Stop()
-			if s.proc != nil {
-				s.proc.Stop()
+			if s.childProcess != nil {
+				s.childProcess.Stop()
 			}
-			s.procStarted = false
+			s.childProcessState = childProcessStateStopped
 			return nil
 		case token := <-incomingVaultToken:
 			if token != *latestToken {
@@ -125,14 +132,15 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 
 				s.runner.Stop()
 				*latestToken = token
-				ctv := ctconfig.Config{
+				newTokenConfig := ctconfig.Config{
 					Vault: &ctconfig.VaultConfig{
 						Token:           latestToken,
 						ClientUserAgent: pointerutil.StringPtr(useragent.AgentTemplatingString()),
 					},
 				}
 
-				runnerConfig = runnerConfig.Merge(&ctv)
+				// got a new auth token, merge it in with the existing config
+				runnerConfig = runnerConfig.Merge(&newTokenConfig)
 				s.runner, err = manager.NewRunner(runnerConfig, true)
 				if err != nil {
 					s.logger.Error("template server failed with new Vault token", "error", err)
@@ -160,8 +168,7 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 			s.logger.Debug("template rendered")
 			events := s.runner.RenderEvents()
 
-			// events are keyed by template ID, and can be matched up to the id's from
-			// the lookupMap
+			// should have an event for each template
 			if len(events) < s.numberOfTemplates {
 				// Not all templates have been rendered yet
 				continue
@@ -189,7 +196,7 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 					return fmt.Errorf("unable to bounce command: %w", err)
 				}
 			}
-		case exitCode := <-s.procExitCh:
+		case exitCode := <-s.childProcessExitCh:
 			// process exited on its own
 			return &ProcessExitError{ExitCode: exitCode}
 		}
@@ -197,21 +204,21 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 }
 
 func (s *Server) bounceCmd(newEnvVars []string) error {
-
 	switch s.config.AgentConfig.Exec.RestartOnSecretChanges {
 	case "always":
-		if s.procStarted {
+		if s.childProcessState == childProcessStateRunning {
 			// process is running, need to kill it first
-			s.logger.Info("stopping process", "process_id", s.proc.Pid())
-			s.proc.Stop()
+			s.logger.Info("stopping process", "process_id", s.childProcess.Pid())
+			s.childProcessState = childProcessStateRestarting
+			s.childProcess.Stop()
 		}
 	case "never":
-		if s.procStarted {
-			s.logger.Info("detected update, but not restarting process", "process_id", s.proc.Pid())
+		if s.childProcessState == childProcessStateRunning {
+			s.logger.Info("detected update, but not restarting process", "process_id", s.childProcess.Pid())
 			return nil
 		}
 	default:
-		// no action
+		return fmt.Errorf("invalid value for restart-on-secret-changes: %q", s.config.AgentConfig.Exec.RestartOnSecretChanges)
 	}
 
 	args, subshell, err := child.CommandPrep(s.config.AgentConfig.Exec.Command)
@@ -228,7 +235,7 @@ func (s *Server) bounceCmd(newEnvVars []string) error {
 		Timeout:      0, // let it run forever
 		Env:          append(os.Environ(), newEnvVars...),
 		ReloadSignal: nil, // can't reload w/ new env vars
-		KillSignal:   s.config.AgentConfig.Exec.RestartKillSignal,
+		KillSignal:   s.config.AgentConfig.Exec.RestartStopSignal,
 		KillTimeout:  30 * time.Second,
 		Splay:        0,
 		Setpgid:      subshell,
@@ -239,20 +246,13 @@ func (s *Server) bounceCmd(newEnvVars []string) error {
 	if err != nil {
 		return err
 	}
-	s.proc = proc
-	// this seems not to work?
-	// s.procExitCh = s.proc.ExitCh()
-	go func() {
-		select {
-		case exitCode := <-proc.ExitCh():
-			s.procExitCh <- exitCode
-		}
-	}()
+	s.childProcess = proc
+	s.childProcessExitCh = s.childProcess.ExitCh()
 
-	if err := s.proc.Start(); err != nil {
+	if err := s.childProcess.Start(); err != nil {
 		return fmt.Errorf("error starting child process: %w", err)
 	}
-	s.procStarted = true
+	s.childProcessState = childProcessStateRunning
 
 	return nil
 }
