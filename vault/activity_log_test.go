@@ -4698,7 +4698,8 @@ func (m mockTimeNowClock) Now() time.Time {
 
 // TestActivityLog_HandleEndOfMonth runs the activity log with a mock clock. The current
 // time is set to be 3 seconds before the end of a month. The test verifies that
-// the precomputedQueryWorker when the end of the month is triggered
+// the precomputedQueryWorker runs and writes precomputed queries with the
+// proper start and end times when the end of the month is triggered
 func TestActivityLog_HandleEndOfMonth(t *testing.T) {
 	// 5 seconds until a new month
 	now := time.Date(2021, 1, 31, 23, 59, 57, 0, time.UTC)
