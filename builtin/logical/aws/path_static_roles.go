@@ -125,6 +125,7 @@ func (b *backend) pathStaticRolesRead(ctx context.Context, req *logical.Request,
 func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Create & validate config from request parameters
 	config := staticRoleEntry{}
+	isCreate := req.Operation == logical.CreateOperation
 
 	if rawRoleName, ok := data.GetOk(paramRoleName); ok {
 		config.Name = rawRoleName.(string)
@@ -136,13 +137,28 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 		return nil, fmt.Errorf("missing '%s' parameter", paramRoleName)
 	}
 
+	// retrieve old role value
+	entry, err := req.Storage.Get(ctx, formatRoleStoragePath(config.Name))
+	if err != nil {
+		return nil, fmt.Errorf("couldn't check storage for pre-existing role: %w", err)
+	}
+
+	if entry != nil {
+		err = entry.DecodeJSON(&config)
+		if err != nil {
+			return nil, fmt.Errorf("couldn't convert existing role into config struct: %w", err)
+		}
+	}
+
+	// other params are optional if we're not Creating
+
 	if rawUsername, ok := data.GetOk(paramUsername); ok {
 		config.Username = rawUsername.(string)
 
 		if err := b.validateIAMUserExists(ctx, req, config.Username); err != nil {
 			return nil, err
 		}
-	} else {
+	} else if isCreate {
 		return nil, fmt.Errorf("missing '%s' parameter", paramUsername)
 	}
 
@@ -152,12 +168,14 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 		if err := b.validateRotationPeriod(config.RotationPeriod); err != nil {
 			return nil, err
 		}
-	} else {
+	} else if isCreate {
 		return nil, fmt.Errorf("missing %q parameter", paramRotationPeriod)
 	}
 
 	b.roleMutex.Lock()
 	defer b.roleMutex.Unlock()
+
+	fmt.Printf("%+v\n", config)
 
 	// Upsert role config
 	newRole, err := logical.StorageEntryJSON(formatRoleStoragePath(config.Name), config)

@@ -229,7 +229,7 @@ func TestStaticRolesWrite(t *testing.T) {
 				Operation: logical.UpdateOperation,
 				Storage:   config.StorageView,
 				Data:      c.data,
-				Path:      "static-roles/test",
+				Path:      "static-roles/" + c.data["name"].(string),
 			}
 
 			r, err := b.pathStaticRolesWrite(bgCTX, req, staticRoleFieldData(req.Data))
