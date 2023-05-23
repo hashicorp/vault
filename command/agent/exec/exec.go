@@ -168,7 +168,8 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 			s.logger.Debug("template rendered")
 			events := s.runner.RenderEvents()
 
-			// should have an event for each template
+			// This checks if we've finished rendering the initial set of templates,
+			// for every consecutive re-render len(events) should equal s.numberOfTemplates
 			if len(events) < s.numberOfTemplates {
 				// Not all templates have been rendered yet
 				continue
