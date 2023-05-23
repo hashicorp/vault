@@ -18,7 +18,7 @@ import (
 	"github.com/hashicorp/vault/helper/timeutil"
 )
 
-// SimulatedTime maintains a virtual Clock so the test isn't
+// SimulatedTime maintains a virtual clock so the test isn't
 // dependent upon real time.
 // Unfortunately there is no way to run these tests in parallel
 // since they rely on the same global timeNow function.
@@ -124,7 +124,7 @@ func TestGauge_Creation(t *testing.T) {
 	}
 
 	if _, ok := p.clock.(timeutil.DefaultClock); !ok {
-		t.Error("Default Clock not installed.")
+		t.Error("Default clock not installed.")
 	}
 
 	if !reflect.DeepEqual(p.key, key) {

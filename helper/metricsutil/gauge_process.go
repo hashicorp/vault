@@ -113,7 +113,7 @@ func (m *ClusterMetricSink) NewGaugeCollectionProcess(
 	)
 }
 
-// test version allows an alternative Clock implementation
+// test version allows an alternative clock implementation
 func newGaugeCollectionProcessWithClock(
 	key []string,
 	id []Label,

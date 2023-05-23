@@ -163,9 +163,3 @@ func (_ DefaultClock) NewTicker(d time.Duration) *time.Ticker {
 func (_ DefaultClock) NewTimer(d time.Duration) *time.Timer {
 	return time.NewTimer(d)
 }
-
-type Timer interface {
-	Stop()
-	C() <-chan time.Time
-	Reset(time.Duration)
-}
