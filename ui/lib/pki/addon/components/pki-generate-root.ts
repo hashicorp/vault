@@ -11,7 +11,7 @@ import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import errorMessage from 'vault/utils/error-message';
 import type PkiActionModel from 'vault/models/pki/action';
-import type PkiConfigUrlsModel from 'vault/models/pki/urls';
+import type PkiConfigUrlsModel from 'vault/models/pki/config/urls';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type RouterService from '@ember/routing/router-service';
 import type { ValidationMap } from 'vault/vault/app-types';

@@ -13,8 +13,8 @@ import errorMessage from 'vault/utils/error-message';
 import type RouterService from '@ember/routing/router-service';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type VersionService from 'vault/services/version';
-import type PkiConfigCrlModel from 'vault/models/pki/crl';
-import type PkiConfigUrlsModel from 'vault/models/pki/urls';
+import type PkiConfigCrlModel from 'vault/models/pki/config/crl';
+import type PkiConfigUrlsModel from 'vault/models/pki/config/urls';
 import type { FormField, TtlEvent } from 'vault/app-types';
 
 interface Args {
