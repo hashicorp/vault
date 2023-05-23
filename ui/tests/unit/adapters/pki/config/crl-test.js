@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 
-module('Unit | Adapter | pki/crl', function (hooks) {
+module('Unit | Adapter | pki/config/crl', function (hooks) {
   setupTest(hooks);
   setupMirage(hooks);
 
@@ -23,12 +23,12 @@ module('Unit | Adapter | pki/crl', function (hooks) {
       assert.ok(true, 'request made to correct endpoint on update');
     });
 
-    this.store.pushPayload('pki/crl', {
-      modelName: 'pki/crl',
+    this.store.pushPayload('pki/config/crl', {
+      modelName: 'pki/config/crl',
       id: this.backend,
     });
 
-    const model = this.store.peekRecord('pki/crl', this.backend);
+    const model = this.store.peekRecord('pki/config/crl', this.backend);
     await model.save();
   });
 
@@ -40,6 +40,6 @@ module('Unit | Adapter | pki/crl', function (hooks) {
       return { data: { id: this.backend } };
     });
 
-    this.store.findRecord('pki/crl', this.backend);
+    this.store.findRecord('pki/config/crl', this.backend);
   });
 });
