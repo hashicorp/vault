@@ -8,7 +8,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"math"
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -64,7 +63,6 @@ type singleMonthActivityClients struct {
 	// predefinedSegments map from the segment number to the client's index in
 	// the clients slice
 	predefinedSegments map[int][]int
-
 	// generationParameters holds the generation request
 	generationParameters *generation.Data
 }
@@ -80,7 +78,6 @@ func (s *singleMonthActivityClients) addEntityRecord(record *activity.EntityReco
 	if segmentIndex != nil {
 		index := len(s.clients) - 1
 		s.predefinedSegments[*segmentIndex] = append(s.predefinedSegments[*segmentIndex], index)
-
 	}
 }
 
@@ -88,14 +85,17 @@ func (s *singleMonthActivityClients) addEntityRecord(record *activity.EntityReco
 // keys are the segment index, and the value are the clients that were seen in
 // that index. If the value is an empty slice, then it's an empty index. If the
 // value is nil, then it's a skipped index
-func (s *singleMonthActivityClients) populateSegments() map[int][]*activity.EntityRecord {
+func (s *singleMonthActivityClients) populateSegments() (map[int][]*activity.EntityRecord, error) {
 	segments := make(map[int][]*activity.EntityRecord)
 	ignoreIndexes := make(map[int]struct{})
-	for _, i := range s.generationParameters.SkipSegmentIndexes {
+	skipIndexes := s.generationParameters.SkipSegmentIndexes
+	emptyIndexes := s.generationParameters.EmptySegmentIndexes
+
+	for _, i := range skipIndexes {
 		segments[int(i)] = nil
 		ignoreIndexes[int(i)] = struct{}{}
 	}
-	for _, i := range s.generationParameters.EmptySegmentIndexes {
+	for _, i := range emptyIndexes {
 		segments[int(i)] = make([]*activity.EntityRecord, 0, 0)
 		ignoreIndexes[int(i)] = struct{}{}
 	}
@@ -109,7 +109,7 @@ func (s *singleMonthActivityClients) populateSegments() map[int][]*activity.Enti
 			}
 			segments[segment] = clientsInSegment
 		}
-		return segments
+		return segments, nil
 
 	}
 
@@ -118,33 +118,32 @@ func (s *singleMonthActivityClients) populateSegments() map[int][]*activity.Enti
 	if s.generationParameters.GetNumSegments() > 0 {
 		totalSegmentCount = int(s.generationParameters.GetNumSegments())
 	}
-	usableSegmentCount := totalSegmentCount - len(s.generationParameters.SkipSegmentIndexes) - len(s.generationParameters.EmptySegmentIndexes)
-	segmentSizes := int(math.Round(math.Ceil(float64(len(s.clients)) / float64(usableSegmentCount))))
-
-	// all clients get split into batches
-	batchedClients := make([][]*activity.EntityRecord, 0, usableSegmentCount)
-	current := make([]*activity.EntityRecord, 0, segmentSizes)
-	for _, c := range s.clients {
-		current = append(current, c)
-		if len(current) == segmentSizes {
-			batchedClients = append(batchedClients, current)
-			current = make([]*activity.EntityRecord, 0, segmentSizes)
-		}
+	numNonUsable := len(skipIndexes) + len(emptyIndexes)
+	usableSegmentCount := totalSegmentCount - numNonUsable
+	if usableSegmentCount <= 0 {
+		return nil, fmt.Errorf("num segments %d is too low, it must be greater than %d (%d skipped indexes + %d empty indexes)", totalSegmentCount, numNonUsable, len(skipIndexes), len(emptyIndexes))
 	}
 
-	if len(current) > 0 {
-		batchedClients = append(batchedClients, current)
+	// determine how many clients should be in each segment
+	segmentSizes := len(s.clients) / usableSegmentCount
+	if len(s.clients)%usableSegmentCount != 0 {
+		segmentSizes++
 	}
-	// and each batch is given a segment index
-	currentBatchIndex := 0
+
+	clientIndex := 0
 	for i := 0; i < totalSegmentCount; i++ {
+		if clientIndex >= len(s.clients) {
+			break
+		}
 		if _, ok := ignoreIndexes[i]; ok {
 			continue
 		}
-		segments[i] = batchedClients[currentBatchIndex]
-		currentBatchIndex++
+		for len(segments[i]) < segmentSizes && clientIndex < len(s.clients) {
+			segments[i] = append(segments[i], s.clients[clientIndex])
+			clientIndex++
+		}
 	}
-	return segments
+	return segments, nil
 }
 
 // addNewClients generates clients according to the given parameters, and adds them to the month

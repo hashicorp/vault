@@ -422,7 +422,9 @@ func Test_singleMonthActivityClients_populateSegments(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			s := singleMonthActivityClients{predefinedSegments: tc.segments, clients: clients, generationParameters: &generation.Data{EmptySegmentIndexes: tc.emptyIndexes, SkipSegmentIndexes: tc.skipIndexes, NumSegments: int32(tc.numSegments)}}
-			require.Equal(t, tc.wantSegments, s.populateSegments())
+			gotSegments, err := s.populateSegments()
+			require.NoError(t, err)
+			require.Equal(t, tc.wantSegments, gotSegments)
 		})
 	}
 }
