@@ -2112,8 +2112,8 @@ func TestLoadConfigFile_Bad_Value_Disable_Keep_Alives(t *testing.T) {
 	}
 }
 
-// TestLoadConfigFile_EnvTemplates loads and validates an env_template config
-func TestLoadConfigFile_EnvTemplates(t *testing.T) {
+// TestLoadConfigFile_EnvTemplates_Simple loads and validates an env_template config
+func TestLoadConfigFile_EnvTemplates_Simple(t *testing.T) {
 	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-simple.hcl")
 	if err != nil {
 		t.Fatalf("error loading config file: %s", err)
@@ -2135,8 +2135,8 @@ func TestLoadConfigFile_EnvTemplates(t *testing.T) {
 	}
 }
 
-// TestLoadConfigFile_EnvTemplateComplex loads and validates an env_template config
-func TestLoadConfigFile_EnvTemplateComplex(t *testing.T) {
+// TestLoadConfigFile_EnvTemplates_Complex loads and validates an env_template config
+func TestLoadConfigFile_EnvTemplates_Complex(t *testing.T) {
 	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-complex.hcl")
 	if err != nil {
 		t.Fatalf("error loading config file: %s", err)
@@ -2167,24 +2167,37 @@ func TestLoadConfigFile_EnvTemplateComplex(t *testing.T) {
 	}
 }
 
-// TestLoadConfigFile_EnvTemplateNoName ensures that env_template with no name triggers an error
-func TestLoadConfigFile_EnvTemplateNoName(t *testing.T) {
+// TestLoadConfigFile_EnvTemplates_WithSource loads and validates an
+// env_template config with "source" instead of "contents"
+func TestLoadConfigFile_EnvTemplates_WithSource(t *testing.T) {
+	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-with-source.hcl")
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if err := cfg.ValidateConfig(); err != nil {
+		t.Fatalf("validation error: %s", err)
+	}
+}
+
+// TestLoadConfigFile_EnvTemplates_NoName ensures that env_template with no name triggers an error
+func TestLoadConfigFile_EnvTemplates_NoName(t *testing.T) {
 	_, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-no-name.hcl")
 	if err == nil {
 		t.Fatalf("expected error")
 	}
 }
 
-// TestLoadConfigFile_ExecInvalidSignal ensures that an invalid signal triggers an error
-func TestLoadConfigFile_ExecInvalidSignal(t *testing.T) {
+// TestLoadConfigFile_EnvTemplates_ExecInvalidSignal ensures that an invalid signal triggers an error
+func TestLoadConfigFile_EnvTemplates_ExecInvalidSignal(t *testing.T) {
 	_, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-invalid-signal.hcl")
 	if err == nil {
 		t.Fatalf("expected error")
 	}
 }
 
-// TestLoadConfigFile_ExecSimple validates the exec section with default parameters
-func TestLoadConfigFile_ExecSimple(t *testing.T) {
+// TestLoadConfigFile_EnvTemplates_ExecSimple validates the exec section with default parameters
+func TestLoadConfigFile_EnvTemplates_ExecSimple(t *testing.T) {
 	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-simple.hcl")
 	if err != nil {
 		t.Fatalf("error loading config file: %s", err)
@@ -2209,8 +2222,8 @@ func TestLoadConfigFile_ExecSimple(t *testing.T) {
 	}
 }
 
-// TestLoadConfigFile_ExecComplex validates the exec section with non-default parameters
-func TestLoadConfigFile_ExecComplex(t *testing.T) {
+// TestLoadConfigFile_EnvTemplates_ExecComplex validates the exec section with non-default parameters
+func TestLoadConfigFile_EnvTemplates_ExecComplex(t *testing.T) {
 	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-complex.hcl")
 	if err != nil {
 		t.Fatalf("error loading config file: %s", err)
