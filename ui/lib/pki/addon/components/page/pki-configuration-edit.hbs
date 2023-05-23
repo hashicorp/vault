@@ -9,7 +9,7 @@
       </h2>
       {{#if @cluster.canSet}}
         {{#each @cluster.allFields as |attr|}}
-          <FormField @attr={{attr}} @model={{@cluster}} />
+          <FormField @attr={{attr}} @model={{@cluster}} @showHelpText={{false}} />
         {{/each}}
       {{else}}
         <EmptyState
