@@ -18,13 +18,13 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
 
-type processState uint8
+type childProcessState uint8
 
 const (
-	processStateNotStarted processState = iota
-	processStateRunning
-	processStateRestarting
-	processStateStopped
+	childProcessStateNotStarted childProcessState = iota
+	childProcessStateRunning
+	childProcessStateRestarting
+	childProcessStateStopped
 )
 
 type ServerConfig struct {
@@ -59,11 +59,11 @@ type Server struct {
 
 	logger hclog.Logger
 
-	proc      *child.Child
-	procState processState
+	childProcess      *child.Child
+	childProcessState childProcessState
 
 	// exit channel of the child process
-	procExitCh <-chan int
+	childProcessExitCh <-chan int
 }
 
 type ProcessExitError struct {
@@ -76,9 +76,9 @@ func (e *ProcessExitError) Error() string {
 
 func NewServer(cfg *ServerConfig) *Server {
 	server := Server{
-		logger:    cfg.Logger,
-		config:    cfg,
-		procState: processStateNotStarted,
+		logger:            cfg.Logger,
+		config:            cfg,
+		childProcessState: childProcessStateNotStarted,
 	}
 
 	return &server
@@ -121,10 +121,10 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 		select {
 		case <-ctx.Done():
 			s.runner.Stop()
-			if s.proc != nil {
-				s.proc.Stop()
+			if s.childProcess != nil {
+				s.childProcess.Stop()
 			}
-			s.procState = processStateStopped
+			s.childProcessState = childProcessStateStopped
 			return nil
 		case token := <-incomingVaultToken:
 			if token != *latestToken {
@@ -168,8 +168,7 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 			s.logger.Debug("template rendered")
 			events := s.runner.RenderEvents()
 
-			// events are keyed by template ID, and can be matched up to the id's from
-			// the lookupMap
+			// should have an event for each template
 			if len(events) < s.numberOfTemplates {
 				// Not all templates have been rendered yet
 				continue
@@ -197,7 +196,7 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 					return fmt.Errorf("unable to bounce command: %w", err)
 				}
 			}
-		case exitCode := <-s.procExitCh:
+		case exitCode := <-s.childProcessExitCh:
 			// process exited on its own
 			return &ProcessExitError{ExitCode: exitCode}
 		}
@@ -205,18 +204,17 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 }
 
 func (s *Server) bounceCmd(newEnvVars []string) error {
-
 	switch s.config.AgentConfig.Exec.RestartOnSecretChanges {
 	case "always":
-		if s.procState == processStateRunning {
-			// process is running, need to stop it first
-			s.logger.Info("stopping process", "process_id", s.proc.Pid())
-			s.procState = processStateRestarting
-			s.proc.Stop()
+		if s.childProcessState == childProcessStateRunning {
+			// process is running, need to kill it first
+			s.logger.Info("stopping process", "process_id", s.childProcess.Pid())
+			s.childProcessState = childProcessStateRestarting
+			s.childProcess.Stop()
 		}
 	case "never":
-		if s.procState == processStateRunning {
-			s.logger.Info("detected update, but not restarting process", "process_id", s.proc.Pid())
+		if s.childProcessState == childProcessStateRunning {
+			s.logger.Info("detected update, but not restarting process", "process_id", s.childProcess.Pid())
 			return nil
 		}
 	default:
@@ -248,13 +246,13 @@ func (s *Server) bounceCmd(newEnvVars []string) error {
 	if err != nil {
 		return err
 	}
-	s.proc = proc
-	s.procExitCh = s.proc.ExitCh()
+	s.childProcess = proc
+	s.childProcessExitCh = s.childProcess.ExitCh()
 
-	if err := s.proc.Start(); err != nil {
+	if err := s.childProcess.Start(); err != nil {
 		return fmt.Errorf("error starting child process: %w", err)
 	}
-	s.procState = processStateRunning
+	s.childProcessState = childProcessStateRunning
 
 	return nil
 }
