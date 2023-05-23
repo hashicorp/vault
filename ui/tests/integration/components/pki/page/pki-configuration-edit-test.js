@@ -55,7 +55,7 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
   });
 
   test('it renders with config data and updates config', async function (assert) {
-    assert.expect(27);
+    assert.expect(28);
     this.server.post(`/${this.backend}/config/cluster`, (schema, req) => {
       assert.ok(true, 'request made to save cluster config');
       assert.propEqual(
@@ -99,6 +99,7 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
     await render(
       hbs`
       <Page::PkiConfigurationEdit
+        @cluster={{this.cluster}}
         @urls={{this.urls}}
         @crl={{this.crl}}
         @backend={{this.backend}}
@@ -118,8 +119,8 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
     assert.dom(SELECTORS.urlFieldInput('crlDistributionPoints')).hasValue('some-crl-distribution.com');
     assert.dom(SELECTORS.urlFieldInput('ocspServers')).hasValue('ocsp-stuff.com');
 
-    await fillIn(SELECTORS.urlFieldInput('path'), 'https://pr-a.vault.example.com/v1/ns1/pki-root');
-    await fillIn(SELECTORS.urlFieldInput('aiaPath'), 'http://another-path.com');
+    await fillIn(SELECTORS.configInput('path'), 'https://pr-a.vault.example.com/v1/ns1/pki-root');
+    await fillIn(SELECTORS.configInput('aiaPath'), 'http://another-path.com');
     await fillIn(SELECTORS.urlFieldInput('issuingCertificates'), 'update-hashicorp.com');
     await fillIn(SELECTORS.urlFieldInput('crlDistributionPoints'), 'test-crl.com');
     await fillIn(SELECTORS.urlFieldInput('ocspServers'), 'ocsp.com');
