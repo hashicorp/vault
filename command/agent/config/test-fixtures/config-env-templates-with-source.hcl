@@ -8,7 +8,7 @@ auto_auth {
 }
 
 env_template "MY_PASSWORD" {
-  source = "/path/to/template/file"
+  source = "/path/on/disk/to/template.ctmpl"
 }
 
 exec {
