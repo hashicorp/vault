@@ -22,9 +22,6 @@ import (
 )
 
 const (
-	// How long nonces are considered valid.
-	nonceExpiry = 15 * time.Second
-
 	// How many bytes are in a token. Per RFC 8555 Section
 	// 8.3. HTTP Challenge and Section 11.3 Token Entropy:
 	//
@@ -57,7 +54,7 @@ type acmeThumbprint struct {
 
 func NewACMEState() *acmeState {
 	state := &acmeState{
-		nonces:      nonce.NewNonceServiceWithValidity(nonceExpiry),
+		nonces:      nonce.NewNonceService(),
 		validator:   NewACMEChallengeEngine(),
 		configDirty: new(atomic.Bool),
 	}
