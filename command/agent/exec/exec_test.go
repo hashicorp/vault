@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"os/exec"
+	"strconv"
 	"syscall"
 	"testing"
 	"time"
@@ -26,7 +27,7 @@ import (
 )
 
 const (
-	exampleAppUrl = "http://localhost:8000"
+	exampleAppTmpUrl = "http://localhost:%d"
 )
 
 func testVaultServer(t *testing.T) (*api.Client, func()) {
@@ -97,6 +98,7 @@ func TestServer_Run(t *testing.T) {
 		stopSignal     os.Signal
 		skip           bool
 		skipReason     string
+		port           int // so tests dont overlap
 	}{
 		"simple": {
 			envTemplates: []*ctconfig.TemplateConfig{
@@ -115,6 +117,7 @@ func TestServer_Run(t *testing.T) {
 			},
 			expectError: false,
 			stopSignal:  syscall.SIGTERM,
+			port:        8001,
 		},
 		"exits_early": {
 			envTemplates: []*ctconfig.TemplateConfig{
@@ -131,6 +134,7 @@ func TestServer_Run(t *testing.T) {
 			expectError:  true,
 			stopSignal:   syscall.SIGTERM,
 			checkError:   processErrorCodeChecker(0),
+			port:         8002,
 		},
 		"exits_early_non_zero": {
 			envTemplates: []*ctconfig.TemplateConfig{
@@ -149,6 +153,7 @@ func TestServer_Run(t *testing.T) {
 			checkError:   processErrorCodeChecker(5),
 			skip:         true,
 			skipReason:   "consul-template/child doesn't track child exit codes",
+			port:         8003,
 		},
 	}
 
@@ -157,17 +162,20 @@ func TestServer_Run(t *testing.T) {
 		t.Fatalf("could not find go binary on path: %s", err)
 	}
 
-	baseCmdArgs := []string{
-		goBin,
-		"run",
-		"./test-app",
-	}
-
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			if testCase.skip {
 				t.Skip(testCase.skipReason)
 				return
+			}
+
+			exampleAppUrl := fmt.Sprintf(exampleAppTmpUrl, testCase.port)
+			baseCmdArgs := []string{
+				goBin,
+				"run",
+				"./test-app",
+				"--port",
+				strconv.Itoa(testCase.port),
 			}
 
 			serverConfig := &ServerConfig{
