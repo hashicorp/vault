@@ -2,6 +2,18 @@
 // the design of Let's Encrypt's Boulder nonce service here:
 //
 //   https://github.com/letsencrypt/boulder/blob/main/nonce/nonce.go
+//
+// We use an encrypted tuple of (expiry timestamp, counter value), allowing
+// us to maintain a map of only unexpired counter values that have been
+// redeemed. This means that issuing nonces involves updating counter values
+// and creating only up to a fixed-amount of memory (the size of the validity
+// period) in the maxIssued map, whereas the sync.Map potentially grows
+// indefinitely when also coupled with the fact that sync.Map never releases
+// memory back to the host when its size has shrunk.
+//
+// Redeeming a nonce thus only stores the used counter value (8 bytes)
+// and other checks for delayed or reused nonces remain as fast as parsing
+// and decrypting the token value.
 
 package nonce
 
@@ -21,9 +33,21 @@ import (
 )
 
 const (
-	nonceSentinel        = "vault0"
-	nonceLength          = 6 + 8 + 16 + 16
-	noncePlaintextLength = 16
+	// Internal, versioned sentinel to make sure our base64 data is truly
+	// a nonce-like value.
+	nonceSentinel = "vault0"
+
+	// Wire length of the nonce, excluding raw url base64 encoding:
+	//  - 6 byte sentinel (above),
+	//  - 8 byte AES-GCM IV
+	//  - 16 byte encrypted (timestamp, counter) tuple (1 AES block)
+	//  - 16 byte AES-GCM tag.
+	nonceLength = len(nonceSentinel) + 8 + 16 + 16
+
+	// Length of the decrypted plaintext underlying the nonce:
+	// - 8 byte expiry timestamp, unix seconds
+	// - 8 byte incrementing counter value (uint64)
+	noncePlaintextLength = 8 + 8
 )
 
 type (
@@ -32,12 +56,33 @@ type (
 )
 
 type encryptedNonceService struct {
+	// How long a nonce is valid for. This directly correlates to memory
+	// usage (retention of redeemed nonces).
 	validity time.Duration
 
+	// Underlying cipher for minting tokens.
 	crypt cipher.AEAD
 
+	// The next counter value to use for issuing, _after_ calling Add(1)
+	// on it.
 	nextCounter *atomic.Uint64
 
+	// The remaining fields are locked by this read-only mutex. During
+	// issuing a nonce, we update maxIssued; during redeeming we update
+	// minCounter (an atomic) and redeemedTokens, and during tidy, we
+	// potentially update update all fields.
+	//
+	// By storing maxIssued, we can (from our tidy run) update the
+	// minCounter value when nonces were not redeemed recently, to make
+	// any later redemptions fast (within a time period).
+	//
+	// The outer map in redeemedTokens and maxIssued map are of fixed size,
+	// around the size of validity (in seconds). However, the internal
+	// redeemedTokens[timestamp] maps may grow unbounded (assuming a
+	// sufficiently fast system that can mint tokens infinitely fast).
+	// However, once this timestamp expires, we can fully delete all
+	// references to that map, and thus free up a potentially significant
+	// chunk of memory.
 	issueLock      *sync.Mutex
 	maxIssued      map[ensTimestamp]ensCounter
 	minCounter     *atomic.Uint64
@@ -47,6 +92,7 @@ type encryptedNonceService struct {
 func newEncryptedNonceService(validity time.Duration) *encryptedNonceService {
 	return &encryptedNonceService{
 		validity: validity,
+
 		// nextCounter.Add(1) returns the _new_ value; by initializing to
 		// zero, we guarantee that nextCounter = minCounter + 1 on the first
 		// read; if it is redeemed right away, we then hold that invariant.
@@ -62,6 +108,8 @@ func newEncryptedNonceService(validity time.Duration) *encryptedNonceService {
 func (ens *encryptedNonceService) Initialize() error {
 	// On initialization, create a new AES key. This avoids having issues
 	// with the number of encryptions we can do under this service.
+	//
+	// Note that the nonce service will panic if this is not created.
 	key := make([]byte, 32)
 	if _, err := io.ReadFull(rand.Reader, key); err != nil {
 		return fmt.Errorf("failed to initialize AES key: %w", err)
@@ -80,6 +128,13 @@ func (ens *encryptedNonceService) Initialize() error {
 	ens.crypt = aead
 	return nil
 }
+
+// This nonce service is strict (prohibits reuse of nonces even within
+// the validity period) but is not cross-node: there would need to be
+// an external communication mechanism to map nonce->node and only
+// check for redemption there. Additionally, each initialization
+// creates new key material and thus nonces from other nodes would
+// not validate.
 
 func (ens *encryptedNonceService) IsStrict() bool    { return true }
 func (ens *encryptedNonceService) IsCrossNode() bool { return false }
@@ -130,6 +185,11 @@ func (ens *encryptedNonceService) recordCounterForTime(counter uint64, expiry ti
 
 	ens.issueLock.Lock()
 	defer ens.issueLock.Unlock()
+
+	// This allows us to update minCounter when a given timestamp expires, if
+	// we haven't seen all of that timestamp's nonces redeemed. Otherwise, we
+	// could potentially be stuck at a lower counter value, making it harder
+	// for us to check if nonces are redeemed quickly.
 
 	lastValue, ok := ens.maxIssued[timestamp]
 	if !ok || lastValue < value {
@@ -299,6 +359,15 @@ func (ens *encryptedNonceService) tidyMemoryHoldingLock(now time.Time, minCounte
 }
 
 func (ens *encryptedNonceService) tidySequentialNonces(now time.Time, minCounter uint64) uint64 {
+	// This potentially slow sequential tidy allows us to free up an
+	// incremental amount of memory when out-of-order (common) redemption
+	// occurs. The underlying map may not shrink, but it should have
+	// additional capacity to handle additional redemptions of cohort
+	// nonces without additional allocations _if_ this tidy works.
+	//
+	// This is made possible by updating the minCounter based on the
+	// earlier maxIssued map and tries to maintain the fast-case invariant
+	// described in newEncryptedNonceService(...).
 	var timestamps []ensTimestamp
 	for timestamp := range ens.redeemedTokens {
 		timestamps = append(timestamps, timestamp)
