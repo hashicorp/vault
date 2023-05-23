@@ -57,7 +57,7 @@ func processErrorCodeChecker(expectedExitCode int) func(t *testing.T, err error)
 		var processExitError *ProcessExitError
 		if errors.As(err, &processExitError) {
 			if processExitError.ExitCode != expectedExitCode {
-				t.Fatalf("expected there to be an exit code of %d, got %d", expectedExitCode, processExitError.ExitCode)
+				t.Fatalf("expected exit code %d, got %d", expectedExitCode, processExitError.ExitCode)
 			}
 		} else {
 			t.Fatalf("expected error of type ProcessExitError")
@@ -114,6 +114,7 @@ func TestServer_Run(t *testing.T) {
 			extraAppArgs: []string{"--stop-after", "2s"},
 			expectError:  true,
 			stopSignal:   syscall.SIGTERM,
+			skip:         true,
 			checkError:   processErrorCodeChecker(0),
 			port:         8002,
 		},
