@@ -3,6 +3,25 @@
     <AlertBanner @type="danger" @message={{this.errorBanner}} data-test-error-banner />
   {{/if}}
   <form {{on "submit" (perform this.save)}}>
+    <fieldset class="is-shadowless is-marginless is-borderless is-fullwidth" data-test-cluster-config-edit-section>
+      <h2 class="title is-size-5 has-border-bottom-light page-header">
+        Cluster config
+      </h2>
+      {{#if @cluster.canSet}}
+        {{#each @cluster.allFields as |attr|}}
+          <FormField @attr={{attr}} @model={{@cluster}} />
+        {{/each}}
+      {{else}}
+        <EmptyState
+          class="is-box-shadowless"
+          @title="You do not have permission to set the cluster config"
+          @message="Ask your administrator if you think you should have access to:"
+        >
+          <code>POST /{{@backend}}/config/cluster</code>
+        </EmptyState>
+      {{/if}}
+    </fieldset>
+
     <fieldset class="box is-shadowless is-marginless is-borderless is-fullwidth" data-test-urls-edit-section>
       <h2 class="title is-size-5 has-border-bottom-light page-header">
         Global URLs
