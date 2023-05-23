@@ -4693,7 +4693,9 @@ func newMockTimeNowClock(startAt time.Time) timeutil.Clock {
 }
 
 // NewTimer returns a timer with a channel that will return the correct time,
-// relative to the starting time
+// relative to the starting time. This is used when testing the
+// activeFragmentWorker, as that function uses the returned value from timer.C
+// to perform additional functionality
 func (m mockTimeNowClock) NewTimer(d time.Duration) *time.Timer {
 	timerStarted := m.Now()
 	t := time.NewTimer(d)
