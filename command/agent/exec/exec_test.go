@@ -68,11 +68,11 @@ func TestServer_Run(t *testing.T) {
 		"simple": {
 			envTemplates: []*ctconfig.TemplateConfig{
 				{
-					Contents:                 pointerutil.StringPtr(`{{ with secret "kv/myapp/config"}}{{.Data.data.username}}{{end}}`),
+					Contents:                 pointerutil.StringPtr(`{{ with secret "kv/myapp/config"}}{{.Data.data.username}}{{ end }}`),
 					MapToEnvironmentVariable: pointerutil.StringPtr("MY_USERNAME"),
 				},
 				{
-					Contents:                 pointerutil.StringPtr(`{{ with secret "kv/myapp/config"}}{{.Data.data.password}}{{end}}`),
+					Contents:                 pointerutil.StringPtr(`{{ with secret "kv/myapp/config"}}{{.Data.data.password}}{{ end }}`),
 					MapToEnvironmentVariable: pointerutil.StringPtr("MY_PASSWORD"),
 				},
 			},
@@ -87,7 +87,7 @@ func TestServer_Run(t *testing.T) {
 		"exits_early": {
 			envTemplates: []*ctconfig.TemplateConfig{
 				{
-					Contents:                 pointerutil.StringPtr(`{{ with secret "kv/myapp/config"}}{{.Data.data.username}}{{end}}`),
+					Contents:                 pointerutil.StringPtr(`{{ with secret "kv/myapp/config"}}{{.Data.data.username}}{{ end }}`),
 					MapToEnvironmentVariable: pointerutil.StringPtr("MY_USERNAME"),
 				},
 			},
@@ -104,7 +104,7 @@ func TestServer_Run(t *testing.T) {
 		"exits_early_non_zero": {
 			envTemplates: []*ctconfig.TemplateConfig{
 				{
-					Contents:                 pointerutil.StringPtr(`{{ with secret "kv/myapp/config"}}{{.Data.data.username}}{{end}}`),
+					Contents:                 pointerutil.StringPtr(`{{ with secret "kv/myapp/config"}}{{.Data.data.username}}{{ end }}`),
 					MapToEnvironmentVariable: pointerutil.StringPtr("MY_USERNAME"),
 				},
 			},
