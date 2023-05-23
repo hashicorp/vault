@@ -7,23 +7,8 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/timeutil"
 )
-
-// This interface allows unit tests to substitute in a simulated clock.
-type clock interface {
-	Now() time.Time
-	NewTicker(time.Duration) *time.Ticker
-}
-
-type defaultClock struct{}
-
-func (_ defaultClock) Now() time.Time {
-	return time.Now()
-}
-
-func (_ defaultClock) NewTicker(d time.Duration) *time.Ticker {
-	return time.NewTicker(d)
-}
 
 // GaugeLabelValues is one gauge in a set sharing a single key, that
 // are measured in a batch.
@@ -69,7 +54,7 @@ type GaugeCollectionProcess struct {
 	ticker           *time.Ticker
 
 	// time source
-	clock clock
+	clock timeutil.Clock
 }
 
 // NewGaugeCollectionProcess creates a new collection process for the callback
@@ -88,7 +73,7 @@ func (m *ClusterMetricSink) NewGaugeCollectionProcess(
 		id,
 		collector,
 		logger,
-		defaultClock{},
+		timeutil.DefaultClock{},
 	)
 }
 
@@ -98,7 +83,7 @@ func (m *ClusterMetricSink) newGaugeCollectionProcessWithClock(
 	id []Label,
 	collector GaugeCollector,
 	logger log.Logger,
-	clock clock,
+	clock timeutil.Clock,
 ) (*GaugeCollectionProcess, error) {
 	process := &GaugeCollectionProcess{
 		stop:             make(chan struct{}, 1),
