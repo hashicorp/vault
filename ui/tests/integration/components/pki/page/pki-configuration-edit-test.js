@@ -26,8 +26,8 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
     this.backend = 'pki-engine';
     // both models only use findRecord. API parameters for pki/crl
     // are set by default backend values when the engine is mounted
-    this.store.pushPayload('pki/crl', {
-      modelName: 'pki/crl',
+    this.store.pushPayload('pki/config/crl', {
+      modelName: 'pki/config/crl',
       id: this.backend,
       auto_rebuild: false,
       auto_rebuild_grace_period: '12h',
@@ -38,15 +38,15 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
       ocsp_disable: false,
       ocsp_expiry: '12h',
     });
-    this.store.pushPayload('pki/urls', {
-      modelName: 'pki/urls',
+    this.store.pushPayload('pki/config/urls', {
+      modelName: 'pki/config/urls',
       id: this.backend,
       issuing_certificates: ['hashicorp.com'],
       crl_distribution_points: ['some-crl-distribution.com'],
       ocsp_servers: ['ocsp-stuff.com'],
     });
-    this.urls = this.store.peekRecord('pki/urls', this.backend);
-    this.crl = this.store.peekRecord('pki/crl', this.backend);
+    this.urls = this.store.peekRecord('pki/config/urls', this.backend);
+    this.crl = this.store.peekRecord('pki/config/crl', this.backend);
   });
 
   test('it renders with config data and updates config', async function (assert) {

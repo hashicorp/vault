@@ -6,21 +6,19 @@
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import ApplicationAdapter from '../application';
 
-export default class PkiCrlAdapter extends ApplicationAdapter {
+export default class PkiConfigUrlsAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
   _url(backend) {
-    return `${this.buildURL()}/${encodePath(backend)}/config/crl`;
-  }
-
-  findRecord(store, type, backend) {
-    return this.ajax(this._url(backend), 'GET').then((resp) => {
-      return resp.data;
-    });
+    return `${this.buildURL()}/${encodePath(backend)}/config/urls`;
   }
 
   updateRecord(store, type, snapshot) {
     const data = snapshot.serialize();
     return this.ajax(this._url(snapshot.record.id), 'POST', { data });
+  }
+
+  urlForFindRecord(id) {
+    return this._url(id);
   }
 }

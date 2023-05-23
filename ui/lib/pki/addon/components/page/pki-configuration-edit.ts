@@ -13,21 +13,21 @@ import errorMessage from 'vault/utils/error-message';
 import type RouterService from '@ember/routing/router-service';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type VersionService from 'vault/services/version';
-import type PkiCrlModel from 'vault/models/pki/crl';
-import type PkiUrlsModel from 'vault/models/pki/urls';
+import type PkiConfigCrlModel from 'vault/models/pki/crl';
+import type PkiConfigUrlsModel from 'vault/models/pki/urls';
 import type { FormField, TtlEvent } from 'vault/app-types';
 
 interface Args {
-  crl: PkiCrlModel;
-  urls: PkiUrlsModel;
+  crl: PkiConfigCrlModel;
+  urls: PkiConfigUrlsModel;
 }
-interface PkiCrlTtls {
+interface PkiConfigCrlTtls {
   autoRebuildGracePeriod: string;
   expiry: string;
   deltaRebuildInterval: string;
   ocspExpiry: string;
 }
-interface PkiCrlBooleans {
+interface PkiConfigCrlBooleans {
   autoRebuild: boolean;
   enableDelta: boolean;
   disable: boolean;
@@ -69,10 +69,10 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
   handleTtl(attr: FormField, e: TtlEvent) {
     const { enabled, goSafeTimeString } = e;
     const ttlAttr = attr.name;
-    this.args.crl[ttlAttr as keyof PkiCrlTtls] = goSafeTimeString;
+    this.args.crl[ttlAttr as keyof PkiConfigCrlTtls] = goSafeTimeString;
     // expiry and ocspExpiry both correspond to 'disable' booleans
     // so when ttl is enabled, the booleans are set to false
-    this.args.crl[attr.options.mapToBoolean as keyof PkiCrlBooleans] = attr.options.isOppositeValue
+    this.args.crl[attr.options.mapToBoolean as keyof PkiConfigCrlBooleans] = attr.options.isOppositeValue
       ? !enabled
       : enabled;
   }

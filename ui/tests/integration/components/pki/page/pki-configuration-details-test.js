@@ -24,8 +24,11 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
     this.secretMountPath.currentPath = 'pki-test';
 
     this.store = this.owner.lookup('service:store');
-    this.urls = this.store.createRecord('pki/urls', { id: 'pki-test', issuingCertificates: 'example.com' });
-    this.crl = this.store.createRecord('pki/crl', {
+    this.urls = this.store.createRecord('pki/config/urls', {
+      id: 'pki-test',
+      issuingCertificates: 'example.com',
+    });
+    this.crl = this.store.createRecord('pki/config/crl', {
       id: 'pki-test',
       expiry: '20h',
       disable: false,
