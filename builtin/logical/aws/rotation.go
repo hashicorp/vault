@@ -88,7 +88,7 @@ func (b *backend) createCredential(ctx context.Context, storage logical.Storage,
 		UserName: aws.String(cfg.Username),
 	})
 	if err != nil {
-		return fmt.Errorf("unable to list existing access keys for IAM user '%s': %w", cfg.Username, err)
+		return fmt.Errorf("unable to list existing access keys for IAM user %q: %w", cfg.Username, err)
 	}
 
 	// If we have the maximum number of keys, we have to delete one to make another (so we can get the credentials).
@@ -111,7 +111,7 @@ func (b *backend) createCredential(ctx context.Context, storage logical.Storage,
 			UserName:    oldestKey.UserName,
 		})
 		if err != nil {
-			return fmt.Errorf("unable to delete oldest access keys for user '%s': %w", cfg.Username, err)
+			return fmt.Errorf("unable to delete oldest access keys for user %q: %w", cfg.Username, err)
 		}
 	}
 
@@ -120,7 +120,7 @@ func (b *backend) createCredential(ctx context.Context, storage logical.Storage,
 		UserName: aws.String(cfg.Username),
 	})
 	if err != nil {
-		return fmt.Errorf("unable to create new access keys for user '%s': %w", cfg.Username, err)
+		return fmt.Errorf("unable to create new access keys for user %q: %w", cfg.Username, err)
 	}
 
 	// Persist new keys

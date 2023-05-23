@@ -98,7 +98,7 @@ func pathStaticRoles(b *backend) *framework.Path {
 func (b *backend) pathStaticRolesRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName, ok := data.GetOk(paramRoleName)
 	if !ok {
-		return nil, fmt.Errorf("missing '%s' parameter", paramRoleName)
+		return nil, fmt.Errorf("missing %q parameter", paramRoleName)
 	}
 
 	b.roleMutex.RLock()
@@ -134,7 +134,7 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 			return nil, err
 		}
 	} else {
-		return nil, fmt.Errorf("missing '%s' parameter", paramRoleName)
+		return nil, fmt.Errorf("missing %q parameter", paramRoleName)
 	}
 
 	// retrieve old role value
@@ -159,7 +159,7 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 			return nil, err
 		}
 	} else if isCreate {
-		return nil, fmt.Errorf("missing '%s' parameter", paramUsername)
+		return nil, fmt.Errorf("missing %q parameter", paramUsername)
 	}
 
 	if rawRotationPeriod, ok := data.GetOk(paramRotationPeriod); ok {
@@ -215,7 +215,7 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 func (b *backend) pathStaticRolesDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName, ok := data.GetOk(paramRoleName)
 	if !ok {
-		return nil, fmt.Errorf("missing '%s' parameter", paramRoleName)
+		return nil, fmt.Errorf("missing %q parameter", paramRoleName)
 	}
 
 	b.roleMutex.Lock()
