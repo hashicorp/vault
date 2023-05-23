@@ -107,8 +107,10 @@ export default class PkiGenerateRootComponent extends Component<Args> {
     const continueSave = this.checkFormValidity();
     if (!continueSave) return;
     try {
-      yield this.setUrls();
       yield this.args.model.save({ adapterOptions: this.args.adapterOptions });
+      // root generation must occur first in case templates are used for URL fields
+      // this way an issuer_id exists for backend to interpolate into the template
+      yield this.setUrls();
       this.flashMessages.success('Successfully generated root.');
       if (this.args.onSave) {
         this.args.onSave();
