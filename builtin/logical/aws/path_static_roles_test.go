@@ -31,7 +31,7 @@ func TestStaticRolesValidation(t *testing.T) {
 		{
 			name: "all good",
 			opts: []awsutil.MockIAMOption{
-				awsutil.WithGetUserOutput(&iam.GetUserOutput{User: &iam.User{UserName: aws.String("jane-doe")}}),
+				awsutil.WithGetUserOutput(&iam.GetUserOutput{User: &iam.User{UserName: aws.String("jane-doe"), UserId: aws.String("unique-id")}}),
 				awsutil.WithCreateAccessKeyOutput(&iam.CreateAccessKeyOutput{
 					AccessKey: &iam.AccessKey{
 						AccessKeyId:     aws.String("abcdefghijklmnopqrstuvwxyz"),
@@ -65,7 +65,7 @@ func TestStaticRolesValidation(t *testing.T) {
 		{
 			name: "user mismatch",
 			opts: []awsutil.MockIAMOption{
-				awsutil.WithGetUserOutput(&iam.GetUserOutput{User: &iam.User{UserName: aws.String("ms-impostor")}}),
+				awsutil.WithGetUserOutput(&iam.GetUserOutput{User: &iam.User{UserName: aws.String("ms-impostor"), UserId: aws.String("fake-id")}}),
 			},
 			requestData: map[string]interface{}{
 				"name":            "test",
@@ -77,7 +77,7 @@ func TestStaticRolesValidation(t *testing.T) {
 		{
 			name: "bad rotation period",
 			opts: []awsutil.MockIAMOption{
-				awsutil.WithGetUserOutput(&iam.GetUserOutput{User: &iam.User{UserName: aws.String("jane-doe")}}),
+				awsutil.WithGetUserOutput(&iam.GetUserOutput{User: &iam.User{UserName: aws.String("jane-doe"), UserId: aws.String("unique-id")}}),
 			},
 			requestData: map[string]interface{}{
 				"name":            "test",
@@ -131,7 +131,7 @@ func TestStaticRolesWrite(t *testing.T) {
 		{
 			name: "happy path",
 			opts: []awsutil.MockIAMOption{
-				awsutil.WithGetUserOutput(&iam.GetUserOutput{User: &iam.User{UserName: aws.String("jane-doe")}}),
+				awsutil.WithGetUserOutput(&iam.GetUserOutput{User: &iam.User{UserName: aws.String("jane-doe"), UserId: aws.String("unique-id")}}),
 				awsutil.WithListAccessKeysOutput(&iam.ListAccessKeysOutput{
 					AccessKeyMetadata: []*iam.AccessKeyMetadata{},
 					IsTruncated:       aws.Bool(false),

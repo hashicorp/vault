@@ -25,6 +25,7 @@ const (
 
 type staticRoleEntry struct {
 	Name           string        `json:"name" structs:"name" mapstructure:"name"`
+	ID             string        `json:"id" structs:"id" mapstructure:"id"`
 	Username       string        `json:"username" structs:"username" mapstructure:"username"`
 	RotationPeriod time.Duration `json:"rotation_period" structs:"rotation_period" mapstructure:"rotation_period"`
 }
@@ -148,6 +149,9 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 		if err != nil {
 			return nil, fmt.Errorf("couldn't convert existing role into config struct: %w", err)
 		}
+	} else {
+		// if we couldn't find an entry, this is a create event
+		isCreate = true
 	}
 
 	// other params are optional if we're not Creating
@@ -155,7 +159,7 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 	if rawUsername, ok := data.GetOk(paramUsername); ok {
 		config.Username = rawUsername.(string)
 
-		if err := b.validateIAMUserExists(ctx, req, config.Username); err != nil {
+		if err := b.validateIAMUserExists(ctx, req, &config, isCreate); err != nil {
 			return nil, err
 		}
 	} else if isCreate {
@@ -256,22 +260,32 @@ func (b *backend) validateRoleName(name string) error {
 	return nil
 }
 
-func (b *backend) validateIAMUserExists(ctx context.Context, req *logical.Request, username string) error {
+// validateIAMUser checks the user information we have for the role against the information on AWS. On a create, it uses the username
+// to retrieve the user information and _sets_ the userID. On update, it validates the userID and username.
+func (b *backend) validateIAMUserExists(ctx context.Context, req *logical.Request, entry *staticRoleEntry, isCreate bool) error {
 	c, err := b.clientIAM(ctx, req.Storage)
 	if err != nil {
-		return fmt.Errorf("unable to validate username %q: %w", username, err)
+		return fmt.Errorf("unable to validate username %q: %w", entry.Username, err)
 	}
 
 	// we don't really care about the content of the result, just that it's not an error
 	out, err := c.GetUser(&iam.GetUserInput{
-		UserName: aws.String(username),
+		UserName: aws.String(entry.Username),
 	})
 	if err != nil || out.User == nil {
-		return fmt.Errorf("unable to validate username %q: %w", username, err)
+		return fmt.Errorf("unable to validate username %q: %w", entry.Username, err)
 	}
-	if *out.User.UserName != username {
-		return fmt.Errorf("AWS GetUser returned a username, but it didn't match: %q was requested, but %q was returned", username, *out.User.UserName)
+	if *out.User.UserName != entry.Username {
+		return fmt.Errorf("AWS GetUser returned a username, but it didn't match: %q was requested, but %q was returned", entry.Username, *out.User.UserName)
 	}
+
+	if !isCreate && *out.User.UserId != entry.ID {
+		return fmt.Errorf("AWS GetUser returned a user, but the ID did not match: %q was requested, but %q was returned", entry.ID, *out.User.UserId)
+	} else {
+		// set userid
+		entry.ID = *out.User.UserId
+	}
+
 	return nil
 }
 
