@@ -68,7 +68,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 		WALRollbackMinAge: minAwsUserRollbackAge,
 		PeriodicFunc: func(ctx context.Context, req *logical.Request) error {
 			repState := conf.System.ReplicationState()
-			if (conf.System.LocalMount() &&
+			if (conf.System.LocalMount() ||
 				!repState.HasState(consts.ReplicationPerformanceSecondary)) &&
 				!repState.HasState(consts.ReplicationDRSecondary) &&
 				!repState.HasState(consts.ReplicationPerformanceStandby) {
