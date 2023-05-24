@@ -17,7 +17,7 @@ const formFieldGroups = [
   { 'Unified Revocation': ['crossClusterRevocation', 'unifiedCrl', 'unifiedCrlOnExistingPaths'] },
 ];
 @withFormFields(null, formFieldGroups)
-export default class PkiCrlModel extends Model {
+export default class PkiConfigCrlModel extends Model {
   // This model uses the backend value as the model ID
 
   @attr('boolean') autoRebuild;

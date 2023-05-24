@@ -21,20 +21,19 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-jose/go-jose/v3/json"
+	"github.com/go-test/deep"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/acme"
 	"golang.org/x/net/http2"
 
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/constants"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-
-	"github.com/go-test/deep"
-	"github.com/hashicorp/go-cleanhttp"
-	"github.com/stretchr/testify/require"
-	"gopkg.in/square/go-jose.v2/json"
 )
 
 // TestAcmeBasicWorkflow a basic test that will validate a basic ACME workflow using the Golang ACME client.
