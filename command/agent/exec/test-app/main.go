@@ -68,22 +68,32 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	flag.Parse()
-	logger := log.New(os.Stderr, "vault-agent-testing-sample-app: ", log.LstdFlags)
+	logger := log.New(os.Stderr, "test-app: ", log.LstdFlags)
 
-	if stopAfter > 0 {
-		timer := time.AfterFunc(stopAfter, func() {
-			logger.Printf("stopping the app early with exit code %d", exitCode)
-			os.Exit(exitCode)
-		})
-		defer timer.Stop()
+	if err := run(logger); err != nil {
+		log.Fatalf("error: %v\n", err)
 	}
+
+	logger.Printf("exit code: %d\n", exitCode)
+
+	os.Exit(exitCode)
+}
+
+func run(logger *log.Logger) error {
+	/* */ logger.Println("run: started")
+	defer logger.Println("run: done")
+
+	ctx, cancelContextFunc := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancelContextFunc()
+
+	flag.Parse()
 
 	server := http.Server{
 		Addr:    fmt.Sprintf(":%d", port),
 		Handler: http.HandlerFunc(handler),
 	}
-	idleConnsClosed := make(chan struct{})
+
+	doneCh := make(chan struct{})
 
 	go func() {
 		stopSig := make(chan os.Signal, 1)
@@ -93,28 +103,42 @@ func main() {
 			signal.Notify(stopSig, syscall.SIGTERM)
 		}
 
-		<-stopSig
+		select {
+		case <-ctx.Done():
+			logger.Println("context done: exiting")
 
-		if ignoreStopSig {
-			logger.Println("ignoring stop signal!")
-			logger.Printf("run: `kill %d` to stop\n", os.Getpid())
-			return
+		case s := <-stopSig:
+			logger.Printf("signal %q: received\n", s)
+
+			if ignoreStopSig {
+				logger.Printf("signal %q: ignored; run `kill -9 %d` to stop\n", s, os.Getpid())
+				return
+			}
+
+			logger.Printf("signal %q: sleeping for %v simulate cleanup\n", s, ttl)
+
+			time.Sleep(ttl)
+
+		case <-time.After(stopAfter):
+			logger.Printf("stopping after: %v\n", stopAfter)
 		}
-
-		time.Sleep(ttl)
 
 		if err := server.Shutdown(context.Background()); err != nil {
-			log.Printf("HTTP server Shutdown: %v", err)
+			log.Printf("server shutdown error: %v", err)
 		}
 
-		close(idleConnsClosed)
+		close(doneCh)
 	}()
 
-	logger.Printf("starting server on port %d\n", port)
+	logger.Printf("server %s: started\n", server.Addr)
+
 	if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
-		logger.Fatalf("HTTP server ListenAndServe: %v", err)
+		return fmt.Errorf("could not start the server: %v", err)
 	}
 
-	<-idleConnsClosed
-	os.Exit(exitCode)
+	logger.Printf("server %s: done\n", server.Addr)
+
+	<-doneCh
+
+	return nil
 }

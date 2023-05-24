@@ -92,6 +92,7 @@ func TestServer_Run(t *testing.T) {
 					MapToEnvironmentVariable: pointerutil.StringPtr("MY_PASSWORD"),
 				},
 			},
+			extraAppArgs: []string{"--stop-after", "60s"},
 			expectedValues: map[string]string{
 				"MY_USER":     "appuser",
 				"MY_PASSWORD": "s3cr3t",
@@ -253,13 +254,14 @@ func TestServer_Run(t *testing.T) {
 				t.Fatalf("unable to parse response from test app: %s", err)
 			}
 
+			t.Log("RESP", response)
 			for key, expectedValue := range testCase.expectedValues {
 				actualValue, ok := response.EnvVars[key]
 				if !ok {
-					t.Fatalf("expected the test app to return %q env var", key)
+					t.Fatalf("expected the test app to return %q environment variable", key)
 				}
 				if expectedValue != actualValue {
-					t.Fatalf("expected env var %s to have a value of %q but it has a value of %q", key, expectedValue, actualValue)
+					t.Fatalf("expected environment variable %s to have a value of %q but it has a value of %q", key, expectedValue, actualValue)
 				}
 			}
 
