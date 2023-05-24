@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
+	"strconv"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -14,14 +16,16 @@ const (
 	storageAcmeConfig      = "config/acme"
 	pathConfigAcmeHelpSyn  = "Configuration of ACME Endpoints"
 	pathConfigAcmeHelpDesc = "Here we configure:\n\nenabled=false, whether ACME is enabled, defaults to false meaning that clusters will by default not get ACME support,\nallowed_issuers=\"default\", which issuers are allowed for use with ACME; by default, this will only be the primary (default) issuer,\nallowed_roles=\"*\", which roles are allowed for use with ACME; by default these will be all roles matching our selection criteria,\ndefault_role=\"\", if not empty, the role to be used for non-role-qualified ACME requests; by default this will be empty, meaning ACME issuance will be equivalent to sign-verbatim.,\ndns_resolver=\"\", which specifies a custom DNS resolver to use for all ACME-related DNS lookups"
+	disableAcmeEnvVar      = "VAULT_DISABLE_PUBLIC_ACME"
 )
 
 type acmeConfigEntry struct {
-	Enabled        bool     `json:"enabled"`
-	AllowedIssuers []string `json:"allowed_issuers="`
-	AllowedRoles   []string `json:"allowed_roles"`
-	DefaultRole    string   `json:"default_role"`
-	DNSResolver    string   `json:"dns_resolver"`
+	Enabled        bool          `json:"enabled"`
+	AllowedIssuers []string      `json:"allowed_issuers="`
+	AllowedRoles   []string      `json:"allowed_roles"`
+	DefaultRole    string        `json:"default_role"`
+	DNSResolver    string        `json:"dns_resolver"`
+	EabPolicyName  EabPolicyName `json:"eab_policy_name"`
 }
 
 var defaultAcmeConfig = acmeConfigEntry{
@@ -30,6 +34,7 @@ var defaultAcmeConfig = acmeConfigEntry{
 	AllowedRoles:   []string{"*"},
 	DefaultRole:    "",
 	DNSResolver:    "",
+	EabPolicyName:  eabPolicyNotRequired,
 }
 
 func (sc *storageContext) getAcmeConfig() (*acmeConfigEntry, error) {
@@ -82,12 +87,12 @@ func pathAcmeConfig(b *backend) *framework.Path {
 			"allowed_issuers": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: `which issuers are allowed for use with ACME; by default, this will only be the primary (default) issuer`,
-				Default:     "*",
+				Default:     []string{"*"},
 			},
 			"allowed_roles": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: `which roles are allowed for use with ACME; by default via '*', these will be all roles including sign-verbatim; when concrete role names are specified, sign-verbatim is not allowed and a default_role must be specified in order to allow usage of the default acme directories under /pki/acme/directory and /pki/issuer/:issuer_id/acme/directory.`,
-				Default:     "*",
+				Default:     []string{"*"},
 			},
 			"default_role": {
 				Type:        framework.TypeString,
@@ -98,6 +103,11 @@ func pathAcmeConfig(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: `DNS resolver to use for domain resolution on this mount. Defaults to using the default system resolver. Must be in the format <host>:<port>, with both parts mandatory.`,
 				Default:     "",
+			},
+			"eab_policy": {
+				Type:        framework.TypeString,
+				Description: `Specify the policy to use for external account binding behaviour, 'not-required', 'new-account-required' or 'always-required'`,
+				Default:     "always-required",
 			},
 		},
 
@@ -132,10 +142,10 @@ func (b *backend) pathAcmeRead(ctx context.Context, req *logical.Request, _ *fra
 		return nil, err
 	}
 
-	return genResponseFromAcmeConfig(config), nil
+	return genResponseFromAcmeConfig(config, nil), nil
 }
 
-func genResponseFromAcmeConfig(config *acmeConfigEntry) *logical.Response {
+func genResponseFromAcmeConfig(config *acmeConfigEntry, warnings []string) *logical.Response {
 	response := &logical.Response{
 		Data: map[string]interface{}{
 			"allowed_roles":   config.AllowedRoles,
@@ -143,7 +153,9 @@ func genResponseFromAcmeConfig(config *acmeConfigEntry) *logical.Response {
 			"default_role":    config.DefaultRole,
 			"enabled":         config.Enabled,
 			"dns_resolver":    config.DNSResolver,
+			"eab_policy":      config.EabPolicyName,
 		},
+		Warnings: warnings,
 	}
 
 	// TODO: Add some nice warning if we are on a replication cluster and path isn't set
@@ -197,6 +209,15 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 		}
 	}
 
+	if eabPolicyRaw, ok := d.GetOk("eab_policy"); ok {
+		eabPolicy, err := getEabPolicyByString(eabPolicyRaw.(string))
+		if err != nil {
+			return nil, fmt.Errorf("invalid eab policy name provided, valid values are '%s', '%s', '%s'",
+				eabPolicyNotRequired, eabPolicyNewAccountRequired, eabPolicyAlwaysRequired)
+		}
+		config.EabPolicyName = eabPolicy.Name
+	}
+
 	allowAnyRole := len(config.AllowedRoles) == 1 && config.AllowedRoles[0] == "*"
 	if !allowAnyRole {
 		foundDefault := len(config.DefaultRole) == 0
@@ -212,6 +233,10 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 
 			if role == nil {
 				return nil, fmt.Errorf("role %v specified in allowed_roles does not exist", name)
+			}
+
+			if role.NoStore {
+				return nil, fmt.Errorf("role %v specifies no_store=true; this prohibits usage with ACME which requires stored certificates", name)
 			}
 
 			if name == config.DefaultRole {
@@ -238,10 +263,42 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 		}
 	}
 
+	var warnings []string
+	// Lastly lets verify that the configuration is honored/invalidated by the public ACME env var.
+	isPublicAcmeDisabledByEnv, err := isPublicACMEDisabledByEnv()
+	if err != nil {
+		warnings = append(warnings, err.Error())
+	}
+	if isPublicAcmeDisabledByEnv && config.Enabled {
+		eabPolicy := getEabPolicyByName(config.EabPolicyName)
+		if !eabPolicy.OverrideEnvDisablingPublicAcme() {
+			resp := logical.ErrorResponse("%s env var is enabled, ACME EAB policy needs to be '%s' with ACME enabled",
+				disableAcmeEnvVar, eabPolicyAlwaysRequired)
+			resp.Warnings = warnings
+			return resp, nil
+		}
+	}
+
 	err = sc.setAcmeConfig(config)
 	if err != nil {
 		return nil, err
 	}
 
-	return genResponseFromAcmeConfig(config), nil
+	return genResponseFromAcmeConfig(config, warnings), nil
+}
+
+func isPublicACMEDisabledByEnv() (bool, error) {
+	disableAcmeRaw, ok := os.LookupEnv(disableAcmeEnvVar)
+	if !ok {
+		return false, nil
+	}
+
+	disableAcme, err := strconv.ParseBool(disableAcmeRaw)
+	if err != nil {
+		// So the environment variable was set but we couldn't parse the value as a string, assume
+		// the operator wanted public ACME disabled.
+		return true, fmt.Errorf("failed parsing environment variable %s: %w", disableAcmeEnvVar, err)
+	}
+
+	return disableAcme, nil
 }

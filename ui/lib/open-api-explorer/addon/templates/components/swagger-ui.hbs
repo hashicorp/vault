@@ -10,8 +10,11 @@
   <ToolbarFilters>
     <div class="field is-marginless">
       <p class="control has-icons-left">
+        <label for="swagger-result-filter" class="sr-only">Filter operations by path</label>
         <input
-          oninput={{queue (action "updateFilter") (action "proxyEvent")}}
+          id="swagger-result-filter"
+          {{on "input" (action "proxyEvent")}}
+          {{on "change" (action "updateFilter")}}
           value={{@initialFilter}}
           disabled={{this.swaggerLoading}}
           class="filter input"

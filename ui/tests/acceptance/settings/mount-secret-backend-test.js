@@ -126,7 +126,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     await page.secretList();
     await settled();
     assert
-      .dom(`[data-test-secret-backend-row=${path}]`)
+      .dom(`[data-test-auth-backend-link=${path}]`)
       .exists({ count: 1 }, 'renders only one instance of the engine');
   });
 

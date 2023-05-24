@@ -10,9 +10,9 @@ import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import errorMessage from 'vault/utils/error-message';
-import RouterService from '@ember/routing/router-service';
-import FlashMessageService from 'vault/services/flash-messages';
-import PkiIssuerModel from 'vault/models/pki/issuer';
+import type RouterService from '@ember/routing/router-service';
+import type FlashMessageService from 'vault/services/flash-messages';
+import type PkiIssuerModel from 'vault/models/pki/issuer';
 
 interface Args {
   model: PkiIssuerModel;

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	squarejwt "gopkg.in/square/go-jose.v2/jwt"
+	"github.com/go-jose/go-jose/v3/jwt"
 
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -92,9 +92,9 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 		reqType = "request"
 	}
 	reqEntry := &AuditRequestEntry{
-		Type:  reqType,
-		Error: errString,
-
+		Type:          reqType,
+		Error:         errString,
+		ForwardedFrom: req.ForwardedFrom,
 		Auth: &AuditAuth{
 			ClientToken:               auth.ClientToken,
 			Accessor:                  auth.Accessor,
@@ -297,8 +297,9 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 		respType = "response"
 	}
 	respEntry := &AuditResponseEntry{
-		Type:  respType,
-		Error: errString,
+		Type:      respType,
+		Error:     errString,
+		Forwarded: req.ForwardedFrom != "",
 		Auth: &AuditAuth{
 			ClientToken:               auth.ClientToken,
 			Accessor:                  auth.Accessor,
@@ -392,21 +393,23 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 
 // AuditRequestEntry is the structure of a request audit log entry in Audit.
 type AuditRequestEntry struct {
-	Time    string        `json:"time,omitempty"`
-	Type    string        `json:"type,omitempty"`
-	Auth    *AuditAuth    `json:"auth,omitempty"`
-	Request *AuditRequest `json:"request,omitempty"`
-	Error   string        `json:"error,omitempty"`
+	Time          string        `json:"time,omitempty"`
+	Type          string        `json:"type,omitempty"`
+	Auth          *AuditAuth    `json:"auth,omitempty"`
+	Request       *AuditRequest `json:"request,omitempty"`
+	Error         string        `json:"error,omitempty"`
+	ForwardedFrom string        `json:"forwarded_from,omitempty"` // Populated in Enterprise when a request is forwarded
 }
 
 // AuditResponseEntry is the structure of a response audit log entry in Audit.
 type AuditResponseEntry struct {
-	Time     string         `json:"time,omitempty"`
-	Type     string         `json:"type,omitempty"`
-	Auth     *AuditAuth     `json:"auth,omitempty"`
-	Request  *AuditRequest  `json:"request,omitempty"`
-	Response *AuditResponse `json:"response,omitempty"`
-	Error    string         `json:"error,omitempty"`
+	Time      string         `json:"time,omitempty"`
+	Type      string         `json:"type,omitempty"`
+	Auth      *AuditAuth     `json:"auth,omitempty"`
+	Request   *AuditRequest  `json:"request,omitempty"`
+	Response  *AuditResponse `json:"response,omitempty"`
+	Error     string         `json:"error,omitempty"`
+	Forwarded bool           `json:"forwarded,omitempty"`
 }
 
 type AuditRequest struct {
@@ -532,12 +535,12 @@ func parseVaultTokenFromJWT(token string) *string {
 		return nil
 	}
 
-	parsedJWT, err := squarejwt.ParseSigned(token)
+	parsedJWT, err := jwt.ParseSigned(token)
 	if err != nil {
 		return nil
 	}
 
-	var claims squarejwt.Claims
+	var claims jwt.Claims
 	if err = parsedJWT.UnsafeClaimsWithoutVerification(&claims); err != nil {
 		return nil
 	}

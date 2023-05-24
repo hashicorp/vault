@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
-	"strconv"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -27,6 +25,11 @@ type acmeContext struct {
 	// acmeDirectory is a string that can distinguish the various acme directories we have configured
 	// if something needs to remain locked into a directory path structure.
 	acmeDirectory string
+	eabPolicy     EabPolicy
+}
+
+func (c acmeContext) getAcmeState() *acmeState {
+	return c.sc.Backend.acmeState
 }
 
 type (
@@ -60,7 +63,13 @@ func (b *backend) acmeWrapper(op acmeOperation) framework.OperationFunc {
 			return nil, fmt.Errorf("failed to fetch ACME configuration: %w", err)
 		}
 
-		if isAcmeDisabled(sc, config) {
+		// use string form in case someone messes up our config from raw storage.
+		eabPolicy, err := getEabPolicyByString(string(config.EabPolicyName))
+		if err != nil {
+			return nil, err
+		}
+
+		if isAcmeDisabled(sc, config, eabPolicy) {
 			return nil, ErrAcmeDisabled
 		}
 
@@ -87,6 +96,7 @@ func (b *backend) acmeWrapper(op acmeOperation) framework.OperationFunc {
 			role:          role,
 			issuer:        issuer,
 			acmeDirectory: acmeDirectory,
+			eabPolicy:     eabPolicy,
 		}
 
 		return op(acmeCtx, r, data)
@@ -180,18 +190,30 @@ func (b *backend) acmeAccountRequiredWrapper(op acmeAccountRequiredOperation) fr
 			return nil, fmt.Errorf("cannot process request without a 'kid': %w", ErrMalformed)
 		}
 
-		account, err := b.acmeState.LoadAccount(acmeCtx, uc.Kid)
+		account, err := requireValidAcmeAccount(acmeCtx, uc)
 		if err != nil {
-			return nil, fmt.Errorf("error loading account: %w", err)
-		}
-
-		if account.Status != StatusValid {
-			// Treating "revoked" and "deactivated" as the same here.
-			return nil, fmt.Errorf("%w: account in status: %s", ErrUnauthorized, account.Status)
+			return nil, err
 		}
 
 		return op(acmeCtx, r, fields, uc, data, account)
 	})
+}
+
+func requireValidAcmeAccount(acmeCtx *acmeContext, uc *jwsCtx) (*acmeAccount, error) {
+	account, err := acmeCtx.getAcmeState().LoadAccount(acmeCtx, uc.Kid)
+	if err != nil {
+		return nil, fmt.Errorf("error loading account: %w", err)
+	}
+
+	if err = acmeCtx.eabPolicy.EnforceForExistingAccount(account); err != nil {
+		return nil, err
+	}
+
+	if account.Status != AccountStatusValid {
+		// Treating "revoked" and "deactivated" as the same here.
+		return nil, fmt.Errorf("%w: account in status: %s", ErrUnauthorized, account.Status)
+	}
+	return account, nil
 }
 
 // A helper function that will build up the various path patterns we want for ACME APIs.
@@ -373,24 +395,22 @@ func getRequestedAcmeIssuerFromPath(data *framework.FieldData) string {
 	return requestedIssuer
 }
 
-func isAcmeDisabled(sc *storageContext, config *acmeConfigEntry) bool {
+func isAcmeDisabled(sc *storageContext, config *acmeConfigEntry, policy EabPolicy) bool {
 	if !config.Enabled {
 		return true
 	}
 
-	if disableAcmeRaw := os.Getenv("VAULT_DISABLE_PUBLIC_ACME"); disableAcmeRaw != "" {
-		disableAcme, err := strconv.ParseBool(disableAcmeRaw)
-		if err != nil {
-			sc.Backend.Logger().Warn("could not parse env var VAULT_DISABLE_PUBLIC_ACME", "error", err)
-			disableAcme = false
-		}
+	disableAcme, nonFatalErr := isPublicACMEDisabledByEnv()
+	if nonFatalErr != nil {
+		sc.Backend.Logger().Warn(fmt.Sprintf("could not parse env var '%s'", disableAcmeEnvVar), "error", nonFatalErr)
+	}
 
-		// The OS environment if true will override any configuration option.
-		if disableAcme {
-			// TODO: If EAB is enforced in the configuration, don't mark
-			// ACME as disabled.
-			return true
+	// The OS environment if true will override any configuration option.
+	if disableAcme {
+		if policy.OverrideEnvDisablingPublicAcme() {
+			return false
 		}
+		return true
 	}
 
 	return false

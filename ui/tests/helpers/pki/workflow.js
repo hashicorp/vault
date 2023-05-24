@@ -28,6 +28,7 @@ export const SELECTORS = {
   issuersTab: '[data-test-secret-list-tab="Issuers"]',
   certsTab: '[data-test-secret-list-tab="Certificates"]',
   keysTab: '[data-test-secret-list-tab="Keys"]',
+  tidyTab: '[data-test-secret-list-tab="Tidy"]',
   configTab: '[data-test-secret-list-tab="Configuration"]',
   // ROLES
   deleteRoleButton: '[data-test-pki-role-delete]',

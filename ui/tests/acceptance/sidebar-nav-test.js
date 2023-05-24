@@ -66,7 +66,7 @@ module('Acceptance | sidebar navigation', function (hooks) {
 
     const links = [
       { label: 'Multi-factor authentication', route: '/vault/access/mfa' },
-      { label: 'OIDC', route: '/vault/access/oidc' },
+      { label: 'OIDC provider', route: '/vault/access/oidc' },
       { label: 'Groups', route: '/vault/access/identity/groups' },
       { label: 'Entities', route: '/vault/access/identity/entities' },
       { label: 'Leases', route: '/vault/access/leases/list' },
@@ -108,5 +108,15 @@ module('Acceptance | sidebar navigation', function (hooks) {
       await click(link(l.label));
       assert.strictEqual(currentURL(), l.route, `${l.label} route renders`);
     }
+  });
+
+  test('it should display access nav when mounting and configuring auth methods', async function (assert) {
+    await click(link('Access'));
+    await click('[data-test-auth-enable]');
+    assert.dom('[data-test-sidebar-nav-panel="Access"]').exists('Access nav panel renders');
+    await click(link('Authentication methods'));
+    await click('[data-test-auth-backend-link="token"]');
+    await click('[data-test-configure-link]');
+    assert.dom('[data-test-sidebar-nav-panel="Access"]').exists('Access nav panel renders');
   });
 });

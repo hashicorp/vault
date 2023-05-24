@@ -26,8 +26,12 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
     this.backend = 'pki-engine';
     // both models only use findRecord. API parameters for pki/crl
     // are set by default backend values when the engine is mounted
-    this.store.pushPayload('pki/crl', {
-      modelName: 'pki/crl',
+    this.store.pushPayload('pki/config/cluster', {
+      modelName: 'pki/config/cluster',
+      id: this.backend,
+    });
+    this.store.pushPayload('pki/config/crl', {
+      modelName: 'pki/config/crl',
       id: this.backend,
       auto_rebuild: false,
       auto_rebuild_grace_period: '12h',
@@ -38,19 +42,31 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
       ocsp_disable: false,
       ocsp_expiry: '12h',
     });
-    this.store.pushPayload('pki/urls', {
-      modelName: 'pki/urls',
+    this.store.pushPayload('pki/config/urls', {
+      modelName: 'pki/config/urls',
       id: this.backend,
       issuing_certificates: ['hashicorp.com'],
       crl_distribution_points: ['some-crl-distribution.com'],
       ocsp_servers: ['ocsp-stuff.com'],
     });
-    this.urls = this.store.peekRecord('pki/urls', this.backend);
-    this.crl = this.store.peekRecord('pki/crl', this.backend);
+    this.cluster = this.store.peekRecord('pki/config/cluster', this.backend);
+    this.crl = this.store.peekRecord('pki/config/crl', this.backend);
+    this.urls = this.store.peekRecord('pki/config/urls', this.backend);
   });
 
   test('it renders with config data and updates config', async function (assert) {
-    assert.expect(27);
+    assert.expect(28);
+    this.server.post(`/${this.backend}/config/cluster`, (schema, req) => {
+      assert.ok(true, 'request made to save cluster config');
+      assert.propEqual(
+        JSON.parse(req.requestBody),
+        {
+          path: 'https://pr-a.vault.example.com/v1/ns1/pki-root',
+          aia_path: 'http://another-path.com',
+        },
+        'it updates config model attributes'
+      );
+    });
     this.server.post(`/${this.backend}/config/crl`, (schema, req) => {
       assert.ok(true, 'request made to save crl config');
       assert.propEqual(
@@ -83,6 +99,7 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
     await render(
       hbs`
       <Page::PkiConfigurationEdit
+        @cluster={{this.cluster}}
         @urls={{this.urls}}
         @crl={{this.crl}}
         @backend={{this.backend}}
@@ -91,6 +108,7 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
       this.context
     );
 
+    assert.dom(SELECTORS.configEditSection).exists('renders config section');
     assert.dom(SELECTORS.urlsEditSection).exists('renders urls section');
     assert.dom(SELECTORS.crlEditSection).exists('renders crl section');
     assert.dom(SELECTORS.cancelButton).exists();
@@ -101,6 +119,8 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
     assert.dom(SELECTORS.urlFieldInput('crlDistributionPoints')).hasValue('some-crl-distribution.com');
     assert.dom(SELECTORS.urlFieldInput('ocspServers')).hasValue('ocsp-stuff.com');
 
+    await fillIn(SELECTORS.configInput('path'), 'https://pr-a.vault.example.com/v1/ns1/pki-root');
+    await fillIn(SELECTORS.configInput('aiaPath'), 'http://another-path.com');
     await fillIn(SELECTORS.urlFieldInput('issuingCertificates'), 'update-hashicorp.com');
     await fillIn(SELECTORS.urlFieldInput('crlDistributionPoints'), 'test-crl.com');
     await fillIn(SELECTORS.urlFieldInput('ocspServers'), 'ocsp.com');
