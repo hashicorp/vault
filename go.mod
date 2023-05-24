@@ -127,7 +127,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-jwt v0.15.0
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.9.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.15.0
-	github.com/hashicorp/vault-plugin-auth-oci v0.13.1
+	github.com/hashicorp/vault-plugin-auth-oci v0.14.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.9.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.13.1
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.9.0
@@ -141,7 +141,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.15.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.14.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.3.0
-	github.com/hashicorp/vault-plugin-secrets-kv v0.14.2
+	github.com/hashicorp/vault-plugin-secrets-kv v0.15.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.10.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.7.1-0.20230405171328-0ba92be486aa
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.1.1-0.20230321230503-ee76cdb16f93

@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/pki/dnstest"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/timeutil"
+	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/activity"
 
 	"github.com/stretchr/testify/require"
@@ -119,8 +120,8 @@ func validateAcmeClientTypes(t *testing.T, fragment *activity.LogFragment, expec
 	}
 
 	for _, ac := range fragment.Clients {
-		if ac.ClientType != "acme" {
-			t.Fatalf("Couldn't find expected 'acme' client_type in %v", fragment.Clients)
+		if ac.ClientType != vault.ACMEActivityType {
+			t.Fatalf("Couldn't find expected '%v' client_type in %v", vault.ACMEActivityType, fragment.Clients)
 		}
 	}
 }
