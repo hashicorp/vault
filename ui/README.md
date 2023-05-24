@@ -155,6 +155,7 @@ Hello and thank you for contributing to the Vault UI! Below is a list of pattern
 - [components](docs/components.md)
 - [forms](docs/forms.md)
 - [css](docs/css.md)
+- [ember engines](docs/engines.md)
 
 ## Further Reading / Useful Links
 
