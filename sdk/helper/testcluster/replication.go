@@ -853,17 +853,30 @@ func (r *ReplicationSet) Cleanup() {
 }
 
 func WaitForPerfReplicationConnectionStatus(ctx context.Context, client *api.Client) error {
+	type Primary struct {
+		APIAddress       string `mapstructure:"api_address"`
+		ConnectionStatus string `mapstructure:"connection_status"`
+		ClusterAddress   string `mapstructure:"cluster_address"`
+		LastHeartbeat    string `mapstructure:"last_heartbeat"`
+	}
+	type Status struct {
+		Primaries []Primary `mapstructure:"primaries"`
+	}
 	return WaitForPerfReplicationStatus(ctx, client, func(m map[string]interface{}) error {
-		perfSecondaries := m["primaries"].([]interface{})
-		if len(perfSecondaries) == 0 {
-			return fmt.Errorf("secondaries is zero")
+		var status Status
+		err := mapstructure.Decode(m, &status)
+		if err != nil {
+			return err
 		}
-		for _, v := range perfSecondaries {
-			if v.(map[string]interface{})["connection_status"] == "connected" {
+		if len(status.Primaries) == 0 {
+			return fmt.Errorf("primaries is zero")
+		}
+		for _, v := range status.Primaries {
+			if v.ConnectionStatus == "connected" {
 				return nil
 			}
 		}
-		return fmt.Errorf("no secondaries connected")
+		return fmt.Errorf("no primaries connected")
 	})
 }
 
