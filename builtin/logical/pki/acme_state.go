@@ -600,7 +600,7 @@ func (a *acmeState) LoadEab(sc *storageContext, eabKid string) (*eabType, error)
 		return nil, err
 	}
 	if rawEntry == nil {
-		return nil, fmt.Errorf("no eab found for kid %s", eabKid)
+		return nil, fmt.Errorf("%w: no eab found for kid %s", ErrStorageItemNotFound, eabKid)
 	}
 
 	var eab eabType
