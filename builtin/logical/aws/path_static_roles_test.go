@@ -90,7 +90,7 @@ func TestStaticRolesValidation(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			b := Backend()
+			b := Backend(config)
 			miam, err := awsutil.NewMockIAM(c.opts...)(nil)
 			if err != nil {
 				t.Fatal(err)
@@ -204,7 +204,7 @@ func TestStaticRolesWrite(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			b := Backend()
+			b := Backend(config)
 			b.iamClient = miam
 			if err := b.Setup(bgCTX, config); err != nil {
 				t.Fatal(err)
@@ -339,7 +339,7 @@ func TestStaticRoleRead(t *testing.T) {
 				Path: formatRoleStoragePath(c.roleName),
 			}
 
-			b := Backend()
+			b := Backend(config)
 
 			r, err := b.pathStaticRolesRead(bgCTX, req, staticRoleFieldData(req.Data))
 			if err != nil {
@@ -397,7 +397,7 @@ func TestStaticRoleDelete(t *testing.T) {
 				t.Fatalf("couldn't initialize mockiam: %s", err)
 			}
 
-			b := Backend()
+			b := Backend(config)
 			b.iamClient = miam
 
 			// put in storage

@@ -57,7 +57,7 @@ func TestStaticCredsRead(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			b := Backend()
+			b := Backend(config)
 
 			req := &logical.Request{
 				Storage: config.StorageView,

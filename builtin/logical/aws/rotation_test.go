@@ -99,7 +99,7 @@ func TestRotation(t *testing.T) {
 			config := logical.TestBackendConfig()
 			config.StorageView = &logical.InmemStorage{}
 
-			b := Backend()
+			b := Backend(config)
 			// this means the creds will be the same for every user, but that's okay
 			// since what we care about is whether they changed on a single-user basis.
 			miam, err := awsutil.NewMockIAM(
@@ -285,7 +285,7 @@ func TestCreateCredential(t *testing.T) {
 				IAMAPI: miam,
 			}
 
-			b := Backend()
+			b := Backend(config)
 			b.iamClient = fiam
 
 			err = b.createCredential(context.Background(), config.StorageView, staticRoleEntry{Username: c.username}, true)
