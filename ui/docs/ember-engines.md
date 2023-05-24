@@ -150,9 +150,9 @@ If you used `ember g in-repo-engine <engine-name>` to generate the engine’s bl
 
 ### Common blueprint commands:
 
-- #### Generating In-repo engines routes: `ember generate route <route-name> --in-repo <in-repo-name>` - _generates tests and route files and templates_
-- #### Remove In-repo engines routes: `ember destroy route <route-name> --in-repo <in-repo-name>` - _removes tests and route files and templates_
-- #### Generating In-repo engines components: `ember generate component <component-name> --in-repo <in-repo-name>`- _generates tests and component files and templates_
-- #### Remove In-repo engines components: `ember destroy component <component-name> --in-repo <in-repo-name>`- _removes tests and component files and templates_
+- **Generating In-repo engines routes:** `ember generate route <route-name> --in-repo <in-repo-name>` - _generates tests and route files and templates_
+- **Remove In-repo engines routes:** `ember destroy route <route-name> --in-repo <in-repo-name>` - _removes tests and route files and templates_
+- **Generating In-repo engines components:** `ember generate component <component-name> --in-repo <in-repo-name>`- _generates tests and component files and templates_
+- **Remove In-repo engines components:** `ember destroy component <component-name> --in-repo <in-repo-name>`- _removes tests and component files and templates_
 
 [^1]: https://ember-engines.com/docs/quickstart#create-as-in-repo-engine
