@@ -321,7 +321,7 @@ func (cg *ClientCertificateGenerator) generate(r io.Reader, expiration time.Time
 			KeyUsage:                      x509.KeyUsageDigitalSignature,
 			ExtKeyUsage:                   certutil.ClientAuthExtKeyUsage,
 			BasicConstraintsValidForNonCA: false,
-			NotBeforeDuration:             0,
+			NotBeforeDuration:             30 * time.Second,
 			URLs: &certutil.URLEntries{
 				IssuingCertificates:   []string{},
 				CRLDistributionPoints: []string{},
