@@ -1,6 +1,6 @@
 # [Ember Engines](https://ember-engines.com/docs)
 
-This is a quickstart guide on how to set up an ember engine in Vault!
+This is a quickstart guide inspired by [ember engine quickstart](https://ember-engines.com/docs/quickstart) on how to set up an ember engine in Vault!
 
 ## Create a new in-repo engine:
 
@@ -12,7 +12,7 @@ _This blueprint in-repo engine command will add a new folder `lib/<engine-name>`
 
 ```json
 {
-  "name": <engine-name>,
+  "name": "<engine-name>",
 
   "dependencies": {
     "ember-cli-htmlbars": "*",
@@ -20,9 +20,7 @@ _This blueprint in-repo engine command will add a new folder `lib/<engine-name>`
   },
 
   "ember-addon": {
-    "paths": [
-      "../core"
-    ]
+    "paths": ["../core"]
   }
 }
 ```
@@ -112,7 +110,7 @@ Optional step: Add some text in the engine’s `application.hbs` file (to see if
 
 ## Register your engine with our main application:
 
-In our `app/app.js` in the engines object, add your engine’s name and dependencies.
+In our `app/app.js` file in the engines object, add your engine’s name and dependencies.
 
 ```jsx
 /**
