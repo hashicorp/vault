@@ -138,7 +138,7 @@ func TestServer_Run(t *testing.T) {
 				Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
 				MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
 			}},
-			testAppArgs:                   []string{"--stop-after", "60s", "--ignore-stop-signal"},
+			testAppArgs:                   []string{"--stop-after", "60s", "--sleep-after-stop-signal", "60s"},
 			testAppStopSignal:             syscall.SIGTERM,
 			testAppPort:                   34006,
 			simulatedShutdownWaitDuration: 32 * time.Second, // the test app should be stopped immediately after 30s
