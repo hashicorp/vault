@@ -1852,8 +1852,8 @@ github.com/hashicorp/vault-plugin-secrets-kubernetes v0.3.0 h1:Joz9SBwjpEOGu+Ynv
 github.com/hashicorp/vault-plugin-secrets-kubernetes v0.3.0/go.mod h1:NJeYBRgLVqjvkrVyZEe42oaqP3+xvVNMYdJoMWVoByU=
 github.com/hashicorp/vault-plugin-secrets-kv v0.14.2 h1:13p50RIltQM/JH32uWZe9sAp16Uaj0zCLmVGPvS09qo=
 github.com/hashicorp/vault-plugin-secrets-kv v0.14.2/go.mod h1:cAxt2o3BjRT5CbNLtgXuxTReaejvrgN/qk+no+DnwJ8=
-github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.0-beta1.0.20230330173411-06ce71bfa658 h1:OJY0lgSD08G7TX0bQPl1ohMviqvMciEHaAeMl4Ekq2I=
-github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.0-beta1.0.20230330173411-06ce71bfa658/go.mod h1:kfZeW5Tw3kMSBMO8P7ETrFsDFaSwD2BRifU1tWFPvFY=
+github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.10.0 h1:FB860wKclwLBvBHkQb5nq8bGMUAsuw0khrYT1RM0NR0=
+github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.10.0/go.mod h1:6YPhFm57C3DvPueHEGdTLK94g3gZI/gdiRrSwO5Fym8=
 github.com/hashicorp/vault-plugin-secrets-openldap v0.7.1-0.20230405171328-0ba92be486aa h1:rBISa6G3uE34OrFhoPi1pHrSOPzQmobr6VG0/k1E5KQ=
 github.com/hashicorp/vault-plugin-secrets-openldap v0.7.1-0.20230405171328-0ba92be486aa/go.mod h1:f4e12Tn2l0chODLEn59Ghr8OlP1APU6OQ9Zl4pdphFE=
 github.com/hashicorp/vault-plugin-secrets-terraform v0.1.1-0.20230321230503-ee76cdb16f93 h1:mVuMTt00vQSUIO+3ucfBSJHOQ6dsHewauVuozUXl484=
@@ -2738,8 +2738,8 @@ go.etcd.io/etcd/raft/v3 v3.5.5/go.mod h1:76TA48q03g1y1VpTue92jZLr9lIHKUNcYdZOOGy
 go.etcd.io/etcd/server/v3 v3.5.0/go.mod h1:3Ah5ruV+M+7RZr0+Y/5mNLwC+eQlni+mQmOVdCRJoS4=
 go.etcd.io/etcd/server/v3 v3.5.5/go.mod h1:rZ95vDw/jrvsbj9XpTqPrTAB9/kzchVdhRirySPkUBc=
 go.etcd.io/gofail v0.1.0/go.mod h1:VZBCXYGZhHAinaBiiqYvuDynvahNsAyLFwB3kEHKz1M=
-go.mongodb.org/atlas v0.24.0 h1:n9ibqbxrtFOInLD6MhNupK9GKFmaH08rLwU5qnr4mpA=
-go.mongodb.org/atlas v0.24.0/go.mod h1:L4BKwVx/OeEhOVjCSdgo90KJm4469iv7ZLzQms/EPTg=
+go.mongodb.org/atlas v0.25.0 h1:K+b9iU8TXuRByTUnL+wEwj+wx3L0UDUgXNDX/a7B0gU=
+go.mongodb.org/atlas v0.25.0/go.mod h1:L4BKwVx/OeEhOVjCSdgo90KJm4469iv7ZLzQms/EPTg=
 go.mongodb.org/mongo-driver v1.0.3/go.mod h1:u7ryQJ+DOzQmeO7zB6MHyr8jkEQvC8vH7qLUO4lqsUM=
 go.mongodb.org/mongo-driver v1.1.1/go.mod h1:u7ryQJ+DOzQmeO7zB6MHyr8jkEQvC8vH7qLUO4lqsUM=
 go.mongodb.org/mongo-driver v1.3.0/go.mod h1:MSWZXKOynuguX+JSvwP8i+58jYCXxbia8HS3gZBapIE=

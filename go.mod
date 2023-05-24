@@ -142,7 +142,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.14.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.3.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.14.2
-	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.0-beta1.0.20230330173411-06ce71bfa658
+	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.10.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.7.1-0.20230405171328-0ba92be486aa
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.1.1-0.20230321230503-ee76cdb16f93
 	github.com/hashicorp/vault-testing-stepwise v0.1.3
@@ -196,7 +196,7 @@ require (
 	go.etcd.io/etcd/client/pkg/v3 v3.5.7
 	go.etcd.io/etcd/client/v2 v2.305.5
 	go.etcd.io/etcd/client/v3 v3.5.7
-	go.mongodb.org/atlas v0.24.0
+	go.mongodb.org/atlas v0.25.0
 	go.mongodb.org/mongo-driver v1.11.3
 	go.opentelemetry.io/otel v1.14.0
 	go.opentelemetry.io/otel/sdk v1.14.0
