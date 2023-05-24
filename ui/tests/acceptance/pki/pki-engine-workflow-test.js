@@ -42,7 +42,7 @@ module('Acceptance | pki workflow', function (hooks) {
   });
 
   test('empty state messages are correct when PKI not configured', async function (assert) {
-    assert.expect(17);
+    assert.expect(21);
     const assertEmptyState = (assert, resource) => {
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/${resource}`);
       assert
@@ -71,9 +71,10 @@ module('Acceptance | pki workflow', function (hooks) {
 
     await click(SELECTORS.certsTab);
     assertEmptyState(assert, 'certificates');
-
     await click(SELECTORS.keysTab);
     assertEmptyState(assert, 'keys');
+    await click(SELECTORS.tidyTab);
+    assertEmptyState(assert, 'tidy');
   });
 
   module('roles', function (hooks) {
@@ -442,27 +443,6 @@ module('Acceptance | pki workflow', function (hooks) {
       assert
         .dom('[data-test-input="commonName"]')
         .hasValue('Hashicorp Test', 'form prefilled with parent issuer cn');
-    });
-
-    test('it navigates to the tidy page from configuration toolbar', async function (assert) {
-      await authPage.login(this.pkiAdminToken);
-      await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
-      await click(SELECTORS.configuration.tidyToolbar);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/tidy`);
-    });
-
-    test('it returns to the configuration page after submit', async function (assert) {
-      await authPage.login(this.pkiAdminToken);
-      await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
-      await click(SELECTORS.configuration.tidyToolbar);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/tidy`);
-      await click(SELECTORS.configuration.tidyCertStoreCheckbox);
-      await click(SELECTORS.configuration.tidyRevocationCheckbox);
-      await fillIn(SELECTORS.configuration.safetyBufferInput, '100');
-      await fillIn(SELECTORS.configuration.safetyBufferInputDropdown, 'd');
-      await click(SELECTORS.configuration.tidySave);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
     });
   });
 

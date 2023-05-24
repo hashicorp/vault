@@ -8,7 +8,7 @@ import { withFormFields } from 'vault/decorators/model-form-fields';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 @withFormFields()
-export default class PkiUrlsModel extends Model {
+export default class PkiConfigUrlsModel extends Model {
   // This model uses the backend value as the model ID
   get useOpenAPI() {
     return true;

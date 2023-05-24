@@ -20,6 +20,15 @@ import (
 // See comment in command/format.go
 const hopeDelim = "♨"
 
+// Modifying this constant will result in previous activities not being
+// associated with future activities of this same type. A storage
+// migration would need to occur to fix this.
+//
+// Suggested naming precedence: <plugin name>-<client type>. Since this
+// comes from the builtin PKI plugin, and we're counting ACME certificates,
+// this becomes pki-acme.
+const ACMEActivityType = "pki-acme"
+
 // acmeBillingImpl is the (single) implementation of the actual client
 // counting interface. It needs a reference to core (as per discussions
 // with Mike, in the future the activityLog reference will no longer be
@@ -121,7 +130,6 @@ func (a *acmeBillingImpl) CreateActivityCountEventForIdentifiers(ctx context.Con
 	clientID := base64.RawURLEncoding.EncodeToString(identifiersHash[:])
 
 	// Log so users can correlate ACME requests to client count tokens.
-	activityType := "acme"
 	a.core.activityLogLock.RLock()
 	activityLog := a.core.activityLog
 	a.core.activityLogLock.RUnlock()
@@ -129,7 +137,7 @@ func (a *acmeBillingImpl) CreateActivityCountEventForIdentifiers(ctx context.Con
 		return nil
 	}
 	activityLog.logger.Debug(fmt.Sprintf("Handling ACME client count event for [%v] -> %v", identifiers, clientID))
-	activityLog.AddActivityToFragment(clientID, a.entry.NamespaceID, time.Now().Unix(), activityType, a.entry.Accessor)
+	activityLog.AddActivityToFragment(clientID, a.entry.NamespaceID, time.Now().Unix(), ACMEActivityType, a.entry.Accessor)
 
 	return nil
 }

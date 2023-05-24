@@ -1,3 +1,14 @@
+auto_auth {
+
+  method {
+    type = "token_file"
+
+    config {
+      token_file_path = "/Users/avean/.vault-token"
+    }
+  }
+}
+
 env_template "MY_DATABASE_USER" {
   contents = "{{ with secret \"secret/db-secret\" }}{{ .Data.data.user }}{{ end }}"
 }

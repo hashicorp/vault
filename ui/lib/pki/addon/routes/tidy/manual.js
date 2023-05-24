@@ -7,8 +7,8 @@ import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 import { withConfirmLeave } from 'core/decorators/confirm-leave';
 
-@withConfirmLeave('model.tidy')
-export default class PkiConfigurationTidyRoute extends Route {
+@withConfirmLeave()
+export default class PkiTidyManualRoute extends Route {
   @service store;
   @service secretMountPath;
 
@@ -22,7 +22,8 @@ export default class PkiConfigurationTidyRoute extends Route {
       { label: 'secrets', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview' },
       { label: 'configuration', route: 'configuration.index' },
-      { label: 'tidy' },
+      { label: 'tidy', route: 'tidy' },
+      { label: 'manual' },
     ];
   }
 }

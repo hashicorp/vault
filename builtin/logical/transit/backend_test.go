@@ -6,6 +6,7 @@ package transit
 import (
 	"context"
 	"crypto"
+	"crypto/ed25519"
 	cryptoRand "crypto/rand"
 	"crypto/x509"
 	"encoding/base64"
@@ -2018,6 +2019,7 @@ func TestTransitPKICSR(t *testing.T) {
 func TestTransit_ReadPublicKeyImported(t *testing.T) {
 	testTransit_ReadPublicKeyImported(t, "rsa-2048")
 	testTransit_ReadPublicKeyImported(t, "ecdsa-p256")
+	testTransit_ReadPublicKeyImported(t, "ed25519")
 }
 
 func testTransit_ReadPublicKeyImported(t *testing.T, keyType string) {
@@ -2066,6 +2068,7 @@ func testTransit_ReadPublicKeyImported(t *testing.T, keyType string) {
 func TestTransit_SignWithImportedPublicKey(t *testing.T) {
 	testTransit_SignWithImportedPublicKey(t, "rsa-2048")
 	testTransit_SignWithImportedPublicKey(t, "ecdsa-p256")
+	testTransit_SignWithImportedPublicKey(t, "ed25519")
 }
 
 func testTransit_SignWithImportedPublicKey(t *testing.T, keyType string) {
@@ -2210,6 +2213,7 @@ func TestTransit_VerifyWithImportedPublicKey(t *testing.T) {
 func TestTransit_ExportPublicKeyImported(t *testing.T) {
 	testTransit_ExportPublicKeyImported(t, "rsa-2048")
 	testTransit_ExportPublicKeyImported(t, "ecdsa-p256")
+	testTransit_ExportPublicKeyImported(t, "ed25519")
 }
 
 func testTransit_ExportPublicKeyImported(t *testing.T, keyType string) {
@@ -2227,6 +2231,8 @@ func testTransit_ExportPublicKeyImported(t *testing.T, keyType string) {
 		t.Fatalf("failed to extract the public key: %s", err)
 	}
 
+	t.Logf("generated key: %v", string(publicKeyBytes))
+
 	// Import key
 	importReq := &logical.Request{
 		Storage:   s,
@@ -2243,10 +2249,12 @@ func testTransit_ExportPublicKeyImported(t *testing.T, keyType string) {
 		t.Fatalf("failed to import public key. err: %s\nresp: %#v", err, importResp)
 	}
 
+	t.Logf("importing key: %v", importResp)
+
 	// Export key
 	exportReq := &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      fmt.Sprintf("export/signing-key/%s/latest", keyID),
+		Path:      fmt.Sprintf("export/public-key/%s/latest", keyID),
 		Storage:   s,
 	}
 
@@ -2255,16 +2263,36 @@ func testTransit_ExportPublicKeyImported(t *testing.T, keyType string) {
 		t.Fatalf("failed to export key. err: %v\nresp: %#v", err, exportResp)
 	}
 
+	t.Logf("exporting key: %v", exportResp)
+
 	responseKeys, exist := exportResp.Data["keys"]
 	if !exist {
 		t.Fatal("expected response data to hold a 'keys' field")
 	}
 
 	exportedKeyBytes := responseKeys.(map[string]string)["1"]
-	exportedKeyBlock, _ := pem.Decode([]byte(exportedKeyBytes))
-	publicKeyBlock, _ := pem.Decode(publicKeyBytes)
 
-	if !reflect.DeepEqual(publicKeyBlock.Bytes, exportedKeyBlock.Bytes) {
-		t.Fatal("exported key bytes should have matched with imported key")
+	if keyType != "ed25519" {
+		exportedKeyBlock, _ := pem.Decode([]byte(exportedKeyBytes))
+		publicKeyBlock, _ := pem.Decode(publicKeyBytes)
+
+		if !reflect.DeepEqual(publicKeyBlock.Bytes, exportedKeyBlock.Bytes) {
+			t.Fatalf("exported key bytes should have matched with imported key for key type: %v\nexported: %v\nimported: %v", keyType, exportedKeyBlock.Bytes, publicKeyBlock.Bytes)
+		}
+	} else {
+		exportedKey, err := base64.StdEncoding.DecodeString(exportedKeyBytes)
+		if err != nil {
+			t.Fatalf("error decoding exported key bytes (%v) to base64 for key type %v: %v", exportedKeyBytes, keyType, err)
+		}
+
+		publicKeyBlock, _ := pem.Decode(publicKeyBytes)
+		publicKeyParsed, err := x509.ParsePKIXPublicKey(publicKeyBlock.Bytes)
+		if err != nil {
+			t.Fatalf("error decoding source key bytes (%v) from PKIX marshaling for key type %v: %v", publicKeyBlock.Bytes, keyType, err)
+		}
+
+		if !reflect.DeepEqual([]byte(publicKeyParsed.(ed25519.PublicKey)), exportedKey) {
+			t.Fatalf("exported key bytes should have matched with imported key for key type: %v\nexported: %v\nimported: %v", keyType, exportedKey, publicKeyParsed)
+		}
 	}
 }
