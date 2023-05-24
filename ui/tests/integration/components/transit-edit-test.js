@@ -47,7 +47,35 @@ module('Integration | Component | transit-edit', function (hooks) {
     assert.strictEqual(this.model.autoRotatePeriod, '240h');
   });
 
-  test('it renders in edit mode', async function (assert) {
+  test('it renders edit form correctly when key has autoRotatePeriod=0', async function (assert) {
+    this.model.autoRotatePeriod = 0;
+    this.model.keys = {
+      1: 1684882652000,
+    };
+    await render(hbs`
+      <TransitEdit 
+        @key={{this.model}}
+        @model={{this.model}}
+        @mode="edit"
+        @root={{this.backendCrumb}}
+        @preferAdvancedEdit={{false}}
+      />`);
+
+    assert.dom(SELECTORS.editForm).exists();
+    assert.dom(SELECTORS.ttlToggle).isNotChecked();
+
+    assert.strictEqual(this.model.autoRotatePeriod, 0);
+
+    await click(SELECTORS.ttlToggle);
+    assert.dom(SELECTORS.ttlToggle).isChecked();
+    assert.dom(SELECTORS.ttlValue).hasValue('30');
+    assert.strictEqual(this.model.autoRotatePeriod, '720h', 'model value changes with toggle');
+
+    await click(SELECTORS.ttlToggle);
+    assert.strictEqual(this.model.autoRotatePeriod, 0); // reverts to original value when toggled back on
+  });
+
+  test('it renders edit form correctly when key has non-zero rotation period', async function (assert) {
     this.model.autoRotatePeriod = '5h';
     this.model.keys = {
       1: 1684882652000,
@@ -63,10 +91,10 @@ module('Integration | Component | transit-edit', function (hooks) {
 
     assert.dom(SELECTORS.editForm).exists();
     assert.dom(SELECTORS.ttlToggle).isChecked();
-    assert.dom(SELECTORS.ttlValue).hasValue('5');
 
     await click(SELECTORS.ttlToggle);
-    assert.strictEqual(this.model.autoRotatePeriod, 0); // sets to 0 when toggled off
+    assert.dom(SELECTORS.ttlToggle).isNotChecked();
+    assert.strictEqual(this.model.autoRotatePeriod, 0, 'model value changes back to 0 when toggled off');
 
     await click(SELECTORS.ttlToggle);
     assert.strictEqual(this.model.autoRotatePeriod, '5h'); // reverts to original value when toggled back on
