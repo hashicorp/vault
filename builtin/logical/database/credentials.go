@@ -330,11 +330,6 @@ func (cg *ClientCertificateGenerator) generate(r io.Reader, expiration time.Time
 		},
 		SigningBundle: &certutil.CAInfoBundle{
 			ParsedCertBundle: *cg.parsedCABundle,
-			URLs: &certutil.URLEntries{
-				IssuingCertificates:   []string{},
-				CRLDistributionPoints: []string{},
-				OCSPServers:           []string{},
-			},
 		},
 	}
 
