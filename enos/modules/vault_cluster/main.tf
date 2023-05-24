@@ -62,6 +62,7 @@ locals {
     })
   ]
   audit_device_file_path = "/var/log/vault/vault_audit.log"
+  vault_service_user     = "vault"
 }
 
 resource "enos_remote_exec" "install_packages" {
@@ -166,7 +167,7 @@ resource "enos_vault_start" "leader" {
   }
   license        = var.license
   manage_service = var.manage_service
-  username       = "vault"
+  username       = local.vault_service_user
   unit_name      = "vault"
 
   transport = {
@@ -205,7 +206,7 @@ resource "enos_vault_start" "followers" {
   }
   license        = var.license
   manage_service = var.manage_service
-  username       = "vault"
+  username       = local.vault_service_user
   unit_name      = "vault"
 
   transport = {
@@ -273,6 +274,7 @@ resource "enos_remote_exec" "enable_file_audit_device" {
     VAULT_ADDR     = "http://127.0.0.1:8200"
     VAULT_BIN_PATH = local.bin_path
     LOG_FILE_PATH  = local.audit_device_file_path
+    SERVICE_USER   = local.vault_service_user
   }
 
   scripts = [abspath("${path.module}/scripts/enable_audit_logging.sh")]
