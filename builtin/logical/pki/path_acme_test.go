@@ -780,7 +780,7 @@ func getAcmeClientForCluster(t *testing.T, cluster *vault.TestCluster, baseUrl s
 }
 
 func getEABKey(t *testing.T, client *api.Client) (string, []byte) {
-	resp, err := client.Logical().WriteWithContext(ctx, "pki/acme/eab", map[string]interface{}{})
+	resp, err := client.Logical().WriteWithContext(ctx, "pki/acme/new-eab", map[string]interface{}{})
 	require.NoError(t, err, "failed getting eab key")
 	require.NotNil(t, resp, "eab key returned nil response")
 	require.NotEmpty(t, resp.Data["id"], "eab key response missing id field")

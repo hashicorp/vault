@@ -20,7 +20,7 @@ func TestACME_EabVaultAPIs(t *testing.T) {
 	var ids []string
 
 	// Generate an EAB
-	resp, err := CBWrite(b, s, "acme/eab", map[string]interface{}{})
+	resp, err := CBWrite(b, s, "acme/new-eab", map[string]interface{}{})
 	requireSuccessNonNilResponse(t, resp, err, "Failed generating eab")
 	requireFieldsSetInResp(t, resp, "id", "key_type", "key_size", "key", "created_on")
 	require.Equal(t, "HS", resp.Data["key_type"])
@@ -34,7 +34,7 @@ func TestACME_EabVaultAPIs(t *testing.T) {
 	require.NoError(t, err, "failed parsing private key")
 
 	// Generate another EAB
-	resp, err = CBWrite(b, s, "acme/eab", map[string]interface{}{})
+	resp, err = CBWrite(b, s, "acme/new-eab", map[string]interface{}{})
 	requireSuccessNonNilResponse(t, resp, err, "Failed generating eab")
 	ids = append(ids, resp.Data["id"].(string))
 

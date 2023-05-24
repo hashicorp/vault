@@ -47,7 +47,7 @@ func pathAcmeEabList(b *backend) *framework.Path {
 
 func pathAcmeEabCreate(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "acme/eab",
+		Pattern: "acme/new-eab",
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixPKI,
