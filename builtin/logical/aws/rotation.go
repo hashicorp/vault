@@ -84,6 +84,11 @@ func (b *backend) createCredential(ctx context.Context, storage logical.Storage,
 	// Ideally we would get this value through an api check, but I'm not sure one exists.
 	const maxAllowedKeys = 2
 
+	err = b.validateIAMUserExists(ctx, storage, &cfg, false)
+	if err != nil {
+		return fmt.Errorf("iam user didn't exist, or username/userid didn't match: %w", err)
+	}
+
 	accessKeys, err := iamClient.ListAccessKeys(&iam.ListAccessKeysInput{
 		UserName: aws.String(cfg.Username),
 	})

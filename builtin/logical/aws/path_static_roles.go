@@ -159,7 +159,7 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 	if rawUsername, ok := data.GetOk(paramUsername); ok {
 		config.Username = rawUsername.(string)
 
-		if err := b.validateIAMUserExists(ctx, req, &config, isCreate); err != nil {
+		if err := b.validateIAMUserExists(ctx, req.Storage, &config, isCreate); err != nil {
 			return nil, err
 		}
 	} else if isCreate {
@@ -262,8 +262,8 @@ func (b *backend) validateRoleName(name string) error {
 
 // validateIAMUser checks the user information we have for the role against the information on AWS. On a create, it uses the username
 // to retrieve the user information and _sets_ the userID. On update, it validates the userID and username.
-func (b *backend) validateIAMUserExists(ctx context.Context, req *logical.Request, entry *staticRoleEntry, isCreate bool) error {
-	c, err := b.clientIAM(ctx, req.Storage)
+func (b *backend) validateIAMUserExists(ctx context.Context, storage logical.Storage, entry *staticRoleEntry, isCreate bool) error {
+	c, err := b.clientIAM(ctx, storage)
 	if err != nil {
 		return fmt.Errorf("unable to validate username %q: %w", entry.Username, err)
 	}

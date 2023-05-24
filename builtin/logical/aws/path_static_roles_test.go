@@ -167,7 +167,7 @@ func TestStaticRolesWrite(t *testing.T) {
 		{
 			name: "update existing user",
 			opts: []awsutil.MockIAMOption{
-				awsutil.WithGetUserOutput(&iam.GetUserOutput{User: &iam.User{UserName: aws.String("john-doe")}}),
+				awsutil.WithGetUserOutput(&iam.GetUserOutput{User: &iam.User{UserName: aws.String("john-doe"), UserId: aws.String("unique-id")}}),
 				awsutil.WithListAccessKeysOutput(&iam.ListAccessKeysOutput{
 					AccessKeyMetadata: []*iam.AccessKeyMetadata{},
 					IsTruncated:       aws.Bool(false),
@@ -214,6 +214,7 @@ func TestStaticRolesWrite(t *testing.T) {
 			staticRole := staticRoleEntry{
 				Name:           "johnny",
 				Username:       "john-doe",
+				ID:             "unique-id",
 				RotationPeriod: 24 * time.Hour,
 			}
 			entry, err := logical.StorageEntryJSON(formatRoleStoragePath(staticRole.Name), staticRole)

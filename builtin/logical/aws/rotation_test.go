@@ -29,6 +29,8 @@ func TestRotation(t *testing.T) {
 		// rotationPeriod and age.
 	}
 
+	// due to a limitation with the mockIAM implementation, any cred you want to rotate must have
+	// username jane-doe and userid unique-id, since we can only pre-can one exact response to GetUser
 	cases := []struct {
 		name  string
 		creds []credToInsert
@@ -40,6 +42,7 @@ func TestRotation(t *testing.T) {
 					config: staticRoleEntry{
 						Name:           "test",
 						Username:       "jane-doe",
+						ID:             "unique-id",
 						RotationPeriod: 2 * time.Second,
 					},
 					age:     5 * time.Second,
@@ -54,6 +57,7 @@ func TestRotation(t *testing.T) {
 					config: staticRoleEntry{
 						Name:           "test",
 						Username:       "jane-doe",
+						ID:             "unique-id",
 						RotationPeriod: 1 * time.Minute,
 					},
 					age:     5 * time.Second,
@@ -66,8 +70,9 @@ func TestRotation(t *testing.T) {
 			creds: []credToInsert{
 				{
 					config: staticRoleEntry{
-						Name:           "test",
-						Username:       "jane-doe",
+						Name:           "toast",
+						Username:       "john-doe",
+						ID:             "other-id",
 						RotationPeriod: 1 * time.Minute,
 					},
 					age:     5 * time.Second,
@@ -75,8 +80,9 @@ func TestRotation(t *testing.T) {
 				},
 				{
 					config: staticRoleEntry{
-						Name:           "toast",
-						Username:       "john-doe",
+						Name:           "test",
+						Username:       "jane-doe",
+						ID:             "unique-id",
 						RotationPeriod: 1 * time.Second,
 					},
 					age:     5 * time.Second,
@@ -100,30 +106,37 @@ func TestRotation(t *testing.T) {
 			config.StorageView = &logical.InmemStorage{}
 
 			b := Backend(config)
-			// this means the creds will be the same for every user, but that's okay
-			// since what we care about is whether they changed on a single-user basis.
-			miam, err := awsutil.NewMockIAM(
-				// blank list for existing user
-				awsutil.WithListAccessKeysOutput(&iam.ListAccessKeysOutput{
-					AccessKeyMetadata: []*iam.AccessKeyMetadata{
-						{},
-					},
-				}),
-				// initial key to store
-				awsutil.WithCreateAccessKeyOutput(&iam.CreateAccessKeyOutput{
-					AccessKey: &iam.AccessKey{
-						AccessKeyId:     aws.String(ak),
-						SecretAccessKey: aws.String(oldSecret),
-					},
-				}),
-			)(nil)
-			if err != nil {
-				t.Fatalf("couldn't initialze mock IAM handler: %s", err)
-			}
-			b.iamClient = miam
 
 			// insert all our creds
 			for i, cred := range c.creds {
+
+				// all the creds will be the same for every user, but that's okay
+				// since what we care about is whether they changed on a single-user basis.
+				miam, err := awsutil.NewMockIAM(
+					// blank list for existing user
+					awsutil.WithListAccessKeysOutput(&iam.ListAccessKeysOutput{
+						AccessKeyMetadata: []*iam.AccessKeyMetadata{
+							{},
+						},
+					}),
+					// initial key to store
+					awsutil.WithCreateAccessKeyOutput(&iam.CreateAccessKeyOutput{
+						AccessKey: &iam.AccessKey{
+							AccessKeyId:     aws.String(ak),
+							SecretAccessKey: aws.String(oldSecret),
+						},
+					}),
+					awsutil.WithGetUserOutput(&iam.GetUserOutput{
+						User: &iam.User{
+							UserId:   aws.String(cred.config.ID),
+							UserName: aws.String(cred.config.Username),
+						},
+					}),
+				)(nil)
+				if err != nil {
+					t.Fatalf("couldn't initialze mock IAM handler: %s", err)
+				}
+				b.iamClient = miam
 
 				err = b.createCredential(bgCTX, config.StorageView, cred.config, true)
 				if err != nil {
@@ -142,7 +155,7 @@ func TestRotation(t *testing.T) {
 			}
 
 			// update aws responses, same argument for why it's okay every cred will be the same
-			miam, err = awsutil.NewMockIAM(
+			miam, err := awsutil.NewMockIAM(
 				// old key
 				awsutil.WithListAccessKeysOutput(&iam.ListAccessKeysOutput{
 					AccessKeyMetadata: []*iam.AccessKeyMetadata{
@@ -156,6 +169,12 @@ func TestRotation(t *testing.T) {
 					AccessKey: &iam.AccessKey{
 						AccessKeyId:     aws.String(ak),
 						SecretAccessKey: aws.String(newSecret),
+					},
+				}),
+				awsutil.WithGetUserOutput(&iam.GetUserOutput{
+					User: &iam.User{
+						UserId:   aws.String("unique-id"),
+						UserName: aws.String("jane-doe"),
 					},
 				}),
 			)(nil)
@@ -210,12 +229,14 @@ func TestCreateCredential(t *testing.T) {
 	cases := []struct {
 		name       string
 		username   string
+		id         string
 		deletedKey string
 		opts       []awsutil.MockIAMOption
 	}{
 		{
 			name:     "zero keys",
 			username: "jane-doe",
+			id:       "unique-id",
 			opts: []awsutil.MockIAMOption{
 				awsutil.WithListAccessKeysOutput(&iam.ListAccessKeysOutput{
 					AccessKeyMetadata: []*iam.AccessKeyMetadata{},
@@ -228,11 +249,18 @@ func TestCreateCredential(t *testing.T) {
 						SecretAccessKey: aws.String("itsasecret"),
 					},
 				}),
+				awsutil.WithGetUserOutput(&iam.GetUserOutput{
+					User: &iam.User{
+						UserId:   aws.String("unique-id"),
+						UserName: aws.String("jane-doe"),
+					},
+				}),
 			},
 		},
 		{
 			name:     "one key",
 			username: "jane-doe",
+			id:       "unique-id",
 			opts: []awsutil.MockIAMOption{
 				awsutil.WithListAccessKeysOutput(&iam.ListAccessKeysOutput{
 					AccessKeyMetadata: []*iam.AccessKeyMetadata{
@@ -247,11 +275,18 @@ func TestCreateCredential(t *testing.T) {
 						SecretAccessKey: aws.String("itsasecret"),
 					},
 				}),
+				awsutil.WithGetUserOutput(&iam.GetUserOutput{
+					User: &iam.User{
+						UserId:   aws.String("unique-id"),
+						UserName: aws.String("jane-doe"),
+					},
+				}),
 			},
 		},
 		{
 			name:       "two keys",
 			username:   "jane-doe",
+			id:         "unique-id",
 			deletedKey: "foo",
 			opts: []awsutil.MockIAMOption{
 				awsutil.WithListAccessKeysOutput(&iam.ListAccessKeysOutput{
@@ -264,6 +299,12 @@ func TestCreateCredential(t *testing.T) {
 					AccessKey: &iam.AccessKey{
 						AccessKeyId:     aws.String("key"),
 						SecretAccessKey: aws.String("itsasecret"),
+					},
+				}),
+				awsutil.WithGetUserOutput(&iam.GetUserOutput{
+					User: &iam.User{
+						UserId:   aws.String("unique-id"),
+						UserName: aws.String("jane-doe"),
 					},
 				}),
 			},
@@ -288,7 +329,7 @@ func TestCreateCredential(t *testing.T) {
 			b := Backend(config)
 			b.iamClient = fiam
 
-			err = b.createCredential(context.Background(), config.StorageView, staticRoleEntry{Username: c.username}, true)
+			err = b.createCredential(context.Background(), config.StorageView, staticRoleEntry{Username: c.username, ID: c.id}, true)
 			if err != nil {
 				t.Fatalf("got an error we didn't expect: %q", err)
 			}
