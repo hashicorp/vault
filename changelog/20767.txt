@@ -1,0 +1,3 @@
+```release-note:improvement
+database/elasticsearch: Upgrade plugin version to v0.13.2
+```
