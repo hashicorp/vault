@@ -108,6 +108,8 @@ func run(logger *log.Logger) error {
 			signal.Notify(stopSignal, syscall.SIGTERM)
 		}
 
+		stopAfterCh := time.After(stopAfter)
+
 	loop:
 		for {
 			select {
@@ -126,7 +128,7 @@ func run(logger *log.Logger) error {
 					break loop
 				}
 
-			case <-time.After(stopAfter):
+			case <-stopAfterCh:
 				logger.Printf("stopping after: %v\n", stopAfter)
 				break loop
 			}
