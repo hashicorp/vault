@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"syscall"
 	"testing"
@@ -16,7 +17,6 @@ import (
 
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
@@ -51,18 +51,20 @@ func fakeVaultServer() *httptest.Server {
 	return httptest.NewServer(mux)
 }
 
+// TestServer_Run tests various scenarios of using vault agent as a process supervisor
 func TestServer_Run(t *testing.T) {
 	fakeVault := fakeVaultServer()
 	defer fakeVault.Close()
 
 	testCases := map[string]struct {
-		envTemplates         []*ctconfig.TemplateConfig
-		testAppArgs          []string
-		testAppStopSignal    os.Signal
-		testAppPort          int
-		expected             map[string]string
-		expectedTestDuration time.Duration
-		expectedError        error
+		envTemplates                  []*ctconfig.TemplateConfig
+		testAppArgs                   []string
+		testAppStopSignal             os.Signal
+		testAppPort                   int
+		simulatedShutdownWaitDuration time.Duration
+		expected                      map[string]string
+		expectedTestDuration          time.Duration
+		expectedError                 error
 	}{
 		"simple": {
 			envTemplates: []*ctconfig.TemplateConfig{{
@@ -82,7 +84,8 @@ func TestServer_Run(t *testing.T) {
 			expectedTestDuration: 15 * time.Second,
 			expectedError:        nil,
 		},
-		"exits_early_success": {
+
+		"test_app_exits_early": {
 			envTemplates: []*ctconfig.TemplateConfig{{
 				Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
 				MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
@@ -93,7 +96,8 @@ func TestServer_Run(t *testing.T) {
 			expectedTestDuration: 15 * time.Second,
 			expectedError:        &ProcessExitError{0},
 		},
-		"exits_early_non_zero": {
+
+		"test_app_exits_early_non_zero": {
 			envTemplates: []*ctconfig.TemplateConfig{{
 				Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
 				MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
@@ -102,7 +106,43 @@ func TestServer_Run(t *testing.T) {
 			testAppStopSignal:    syscall.SIGTERM,
 			testAppPort:          34003,
 			expectedTestDuration: 15 * time.Second,
-			expectedError:        &ProcessExitError{1}, // "go run" coerses error codes into "1" for all errors
+			expectedError:        &ProcessExitError{5},
+		},
+
+		"send_sigterm_expect_test_app_exit": {
+			envTemplates: []*ctconfig.TemplateConfig{{
+				Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
+				MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
+			}},
+			testAppArgs:                   []string{"--stop-after", "30s", "--sleep-after-stop-signal", "1s"},
+			testAppStopSignal:             syscall.SIGTERM,
+			testAppPort:                   34004,
+			simulatedShutdownWaitDuration: 3 * time.Second,
+			expectedTestDuration:          15 * time.Second,
+		},
+
+		"send_sigusr1_expect_test_app_exit": {
+			envTemplates: []*ctconfig.TemplateConfig{{
+				Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
+				MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
+			}},
+			testAppArgs:                   []string{"--stop-after", "30s", "--sleep-after-stop-signal", "1s", "--use-sigusr1"},
+			testAppStopSignal:             syscall.SIGUSR1,
+			testAppPort:                   34005,
+			simulatedShutdownWaitDuration: 3 * time.Second,
+			expectedTestDuration:          15 * time.Second,
+		},
+
+		"test_app_ignores_stop_signal": {
+			envTemplates: []*ctconfig.TemplateConfig{{
+				Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
+				MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
+			}},
+			testAppArgs:                   []string{"--stop-after", "60s", "--ignore-stop-signal"},
+			testAppStopSignal:             syscall.SIGTERM,
+			testAppPort:                   34006,
+			simulatedShutdownWaitDuration: 32 * time.Second, // the test app should be stopped immediately after 30s
+			expectedTestDuration:          45 * time.Second,
 		},
 	}
 
@@ -111,15 +151,25 @@ func TestServer_Run(t *testing.T) {
 		t.Fatalf("could not find go binary on path: %s", err)
 	}
 
+	// we must build a test binary since 'go run' does not propagate signals correctly
+	testAppBinary := filepath.Join(os.TempDir(), "test-app")
+
+	if err := exec.Command(goBinary, "build", "-o", testAppBinary, "./test-app").Run(); err != nil {
+		t.Fatalf("could not build the test application: %s", err)
+	}
+	defer func() {
+		if err := os.Remove(testAppBinary); err != nil {
+			t.Fatalf("could not remove %q test application: %s", testAppBinary, err)
+		}
+	}()
+
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			ctx, cancelContextFunc := context.WithTimeout(context.Background(), testCase.expectedTestDuration)
 			defer cancelContextFunc()
 
 			testAppCommand := []string{
-				goBinary,
-				"run",
-				"./test-app",
+				testAppBinary,
 				"--port",
 				strconv.Itoa(testCase.testAppPort),
 			}
@@ -159,11 +209,11 @@ func TestServer_Run(t *testing.T) {
 			testAppHealthCheckCh := make(chan error)
 			testAppAddress := fmt.Sprintf("http://localhost:%d", testCase.testAppPort)
 
-			// check to make sure the app is running
+			// check to make sure the test app is running
 			if testCase.expectedError == nil {
 				go func() {
 					time.Sleep(3 * time.Second)
-					_, err := retryablehttp.Head(testAppAddress)
+					_, err := http.Head(testAppAddress)
 					testAppHealthCheckCh <- err
 				}()
 			}
@@ -192,6 +242,20 @@ func TestServer_Run(t *testing.T) {
 				}
 
 				t.Log("test app started successfully")
+			}
+
+			// simulate a shutdown of agent, which, in turn stops the test app
+			if testCase.simulatedShutdownWaitDuration > 0 {
+				cancelContextFunc()
+
+				time.Sleep(testCase.simulatedShutdownWaitDuration)
+
+				// check if the test app is still alive
+				if _, err := http.Head(testAppAddress); err == nil {
+					t.Fatalf("the test app is still alive %v after a simulated shutdown!", testCase.simulatedShutdownWaitDuration)
+				}
+
+				return
 			}
 
 			// verify the environment variables

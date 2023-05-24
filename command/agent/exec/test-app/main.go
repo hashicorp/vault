@@ -28,7 +28,7 @@ var (
 func init() {
 	flag.UintVar(&port, "port", 34000, "port to run the test app on")
 	flag.BoolVar(&ignoreStopSignal, "ignore-stop-signal", false, "dont stop the server on SIGTERM/SIGUSR1")
-	flag.DurationVar(&sleepAfterStopSignal, "sleep-after-stop-signal", 5*time.Second, "time to sleep after getting the signal before exiting")
+	flag.DurationVar(&sleepAfterStopSignal, "sleep-after-stop-signal", 1*time.Second, "time to sleep after getting the signal before exiting")
 	flag.BoolVar(&useSigusr1StopSignal, "use-sigusr1", false, "use SIGUSR1 as the stop signal, instead of the default SIGTERM")
 	flag.DurationVar(&stopAfter, "stop-after", 0, "stop the process after duration (overrides all other flags if set)")
 	flag.IntVar(&exitCode, "exit-code", 0, "exit code to return when this script exits")
