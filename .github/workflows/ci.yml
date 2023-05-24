@@ -227,8 +227,8 @@ jobs:
         node-version-file: './ui/package.json'
         cache: yarn
         cache-dependency-path: ui/yarn.lock
-    - id: install-browser-libraries
-      run: sudo apt update && sudo apt install -y libnss3-dev libgdk-pixbuf2.0-dev libgtk-3-dev libxss-dev libasound2
+    # - id: install-browser-libraries
+    #   run: sudo apt update && sudo apt install -y libnss3-dev libgdk-pixbuf2.0-dev libgtk-3-dev libxss-dev libasound2
     - id: install-browser
       uses: browser-actions/setup-chrome@c485fa3bab6be59dce18dbc18ef6ab7cbc8ff5f1 # v1.2.0
     - id: ui-dependencies
