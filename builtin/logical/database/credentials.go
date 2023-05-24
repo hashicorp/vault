@@ -260,6 +260,9 @@ func newClientCertificateGenerator(config map[string]interface{}) (ClientCertifi
 	if !parsedBundle.Certificate.IsCA {
 		return cg, fmt.Errorf("the given certificate is not marked for CA use")
 	}
+	if !parsedBundle.Certificate.BasicConstraintsValid {
+		return cg, fmt.Errorf("the given certificate does not meet basic constraints for CA use")
+	}
 
 	certBundle, err := parsedBundle.ToCertBundle()
 	if err != nil {
