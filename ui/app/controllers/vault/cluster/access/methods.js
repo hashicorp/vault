@@ -4,7 +4,7 @@
  */
 
 import Controller from '@ember/controller';
-import { dropTask, task } from 'ember-concurrency';
+import { dropTask } from 'ember-concurrency';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
@@ -68,7 +68,6 @@ export default class VaultClusterAccessMethodsController extends Controller {
     this.selectedAuthName = name;
   }
 
-  @task
   @dropTask
   *disableMethod(method) {
     const { type, path } = method;
