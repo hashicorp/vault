@@ -22,6 +22,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"hash"
 	"io"
 	"math/big"
 	"path"
@@ -41,6 +42,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/kdf"
 	"github.com/hashicorp/vault/sdk/logical"
+
+	"github.com/google/tink/go/kwp/subtle"
 )
 
 // Careful with iota; don't put anything before it in this const block because
@@ -2260,4 +2263,89 @@ func (ke *KeyEntry) parseFromKey(PolKeyType KeyType, parsedKey any) error {
 	}
 
 	return nil
+}
+
+func (p *Policy) WrapKey(ver int, targetKey interface{}, targetKeyType KeyType, hash hash.Hash) (string, error) {
+	if !p.Type.SigningSupported() {
+		return "", fmt.Errorf("message signing not supported for key type %v", p.Type)
+	}
+
+	switch {
+	case ver == 0:
+		ver = p.LatestVersion
+	case ver < 0:
+		return "", errutil.UserError{Err: "requested version for key wrapping is negative"}
+	case ver > p.LatestVersion:
+		return "", errutil.UserError{Err: "requested version for key wrapping is higher than the latest key version"}
+	case p.MinEncryptionVersion > 0 && ver < p.MinEncryptionVersion:
+		return "", errutil.UserError{Err: "requested version for key wrapping is less than the minimum encryption key version"}
+	}
+
+	keyEntry, err := p.safeGetKeyEntry(ver)
+	if err != nil {
+		return "", err
+	}
+
+	return keyEntry.WrapKey(targetKey, targetKeyType, hash)
+}
+
+func (ke *KeyEntry) WrapKey(targetKey interface{}, targetKeyType KeyType, hash hash.Hash) (string, error) {
+	// Presently this method implements a CKM_RSA_AES_KEY_WRAP-compatible
+	// wrapping interface and only works on RSA keyEntries as a result.
+	if ke.RSAPublicKey == nil {
+		return "", fmt.Errorf("unsupported key type in use; must be a rsa key")
+	}
+
+	var preppedTargetKey []byte
+	switch targetKeyType {
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_HMAC:
+		var ok bool
+		preppedTargetKey, ok = targetKey.([]byte)
+		if !ok {
+			return "", fmt.Errorf("failed to wrap target key for import: symmetric key not provided in byte format (%T)", targetKey)
+		}
+	default:
+		var err error
+		preppedTargetKey, err = x509.MarshalPKCS8PrivateKey(targetKey)
+		if err != nil {
+			return "", fmt.Errorf("failed to wrap target key for import: %w", err)
+		}
+	}
+
+	result, err := wrapTargetPKCS8ForImport(ke.RSAPublicKey, preppedTargetKey, hash)
+	if err != nil {
+		return result, fmt.Errorf("failed to wrap target key for import: %w", err)
+	}
+
+	return result, nil
+}
+
+func wrapTargetPKCS8ForImport(wrappingKey *rsa.PublicKey, preppedTargetKey []byte, hash hash.Hash) (string, error) {
+	// Generate an ephemeral AES-256 key
+	ephKey, err := uuid.GenerateRandomBytes(32)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate an ephemeral AES wrapping key: %w", err)
+	}
+
+	// Wrap ephemeral AES key with public wrapping key
+	ephKeyWrapped, err := rsa.EncryptOAEP(hash, rand.Reader, wrappingKey, ephKey, []byte{} /* label */)
+	if err != nil {
+		return "", fmt.Errorf("failed to encrypt ephemeral wrapping key with public key: %w", err)
+	}
+
+	// Create KWP instance for wrapping target key
+	kwp, err := subtle.NewKWP(ephKey)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate new KWP from AES key: %w", err)
+	}
+
+	// Wrap target key with KWP
+	targetKeyWrapped, err := kwp.Wrap(preppedTargetKey)
+	if err != nil {
+		return "", fmt.Errorf("failed to wrap target key with KWP: %w", err)
+	}
+
+	// Combined wrapped keys into a single blob and base64 encode
+	wrappedKeys := append(ephKeyWrapped, targetKeyWrapped...)
+	return base64.StdEncoding.EncodeToString(wrappedKeys), nil
 }
