@@ -79,6 +79,7 @@ test_packages[5]+=" $base/vault/external_tests/sealmigration"
 if [ "${ENTERPRISE:+x}" == "x" ] ; then
     test_packages[5]+=" $base/vault/external_tests/transform"
 fi
+test_packages[5]+=" $base/sdk/helper/nonce"
 
 # Total time: 588
 test_packages[6]+=" $base"

@@ -457,8 +457,8 @@ func TestTransit_Import(t *testing.T) {
 				},
 			}
 			_, err = b.HandleRequest(context.Background(), req)
-			if err == nil {
-				t.Fatalf("invalid public_key import incorrectly succeeeded")
+			if err != nil {
+				t.Fatalf("failed to import ed25519 key: %v", err)
 			}
 		})
 

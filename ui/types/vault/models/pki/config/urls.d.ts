@@ -1,6 +1,6 @@
 import Model from '@ember-data/model';
 
-export default class PkiUrlsModel extends Model {
+export default class PkiConfigUrlsModel extends Model {
   get useOpenAPI(): boolean;
   getHelpUrl(backendPath: string): string;
   issuingCertificates: array;

@@ -18,11 +18,13 @@ export default class PkiRoute extends Route {
     const mountPath = this.secretMountPath.currentPath;
     return hash({
       role: this.pathHelp.getNewModel('pki/role', mountPath),
-      urls: this.pathHelp.getNewModel('pki/urls', mountPath),
+      urls: this.pathHelp.getNewModel('pki/config/urls', mountPath),
+      cluster: this.pathHelp.getNewModel('pki/config/cluster', mountPath),
       key: this.pathHelp.getNewModel('pki/key', mountPath),
       signCsr: this.pathHelp.getNewModel('pki/sign-intermediate', mountPath),
       certGenerate: this.pathHelp.getNewModel('pki/certificate/generate', mountPath),
       certSign: this.pathHelp.getNewModel('pki/certificate/sign', mountPath),
+      tidy: this.pathHelp.getNewModel('pki/tidy', mountPath),
     });
   }
 }
