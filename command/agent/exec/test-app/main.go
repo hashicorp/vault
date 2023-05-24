@@ -137,7 +137,6 @@ func run(logger *log.Logger) error {
 		if err := server.Shutdown(context.Background()); err != nil {
 			log.Printf("server shutdown error: %v", err)
 		}
-
 	}()
 
 	logger.Printf("server %s: started\n", server.Addr)
