@@ -67,7 +67,8 @@ flags](/vault/docs/commands) included on all commands.
   is appended. For example, setting `log-file` to `/var/log/` would result in a log
   file path of `/var/log/vault-{timestamp}.log`. `log-file` can be combined with
   [`-log-rotate-bytes`](#_log_rotate_bytes) and [`-log-rotate-duration`](#_log_rotate_duration)
-  for a fine-grained log rotation experience.
+  for a fine-grained log rotation experience. This output operates in addition to existing 
+  outputs, meaning logs will continue to be written to journald / stdout (where appropriate).
 
 - `-log-rotate-bytes` ((#\_log_rotate_bytes)) - to specify the number of
   bytes that should be written to a log before it needs to be rotated. Unless specified,

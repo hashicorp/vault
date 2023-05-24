@@ -9,12 +9,13 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-import RouterService from '@ember/routing/router-service';
-import FlashMessageService from 'vault/services/flash-messages';
-import { FormField, TtlEvent } from 'vault/app-types';
-import PkiCrlModel from 'vault/models/pki/crl';
-import PkiUrlsModel from 'vault/models/pki/urls';
 import errorMessage from 'vault/utils/error-message';
+import type RouterService from '@ember/routing/router-service';
+import type FlashMessageService from 'vault/services/flash-messages';
+import type VersionService from 'vault/services/version';
+import type PkiCrlModel from 'vault/models/pki/crl';
+import type PkiUrlsModel from 'vault/models/pki/urls';
+import type { FormField, TtlEvent } from 'vault/app-types';
 
 interface Args {
   crl: PkiCrlModel;
@@ -35,12 +36,13 @@ interface PkiCrlBooleans {
 export default class PkiConfigurationEditComponent extends Component<Args> {
   @service declare readonly router: RouterService;
   @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly version: VersionService;
 
   @tracked invalidFormAlert = '';
   @tracked errorBanner = '';
 
-  get alwaysRender() {
-    return ['expiry', 'ocspExpiry'];
+  get isEnterprise() {
+    return this.version.isEnterprise;
   }
 
   @task

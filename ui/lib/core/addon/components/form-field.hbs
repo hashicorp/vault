@@ -216,12 +216,11 @@
       @subText="{{@attr.options.subText}} Add one item per row."
     />
   {{else if (eq @attr.options.sensitive true)}}
-    {{! Masked Input }}
     <MaskedInput
+      @name={{@attr.name}}
       @value={{or (get @model this.valuePath) @attr.options.defaultValue}}
       @allowCopy="true"
       @onChange={{this.setAndBroadcast}}
-      @name={{@attr.name}}
       @onKeyUp={{@onKeyUp}}
     />
     {{#if this.validationError}}

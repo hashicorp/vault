@@ -7,8 +7,8 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { keyParamsByType } from 'pki/utils/action-params';
-import PkiActionModel from 'vault/models/pki/action';
-import { ModelValidations } from 'vault/vault/app-types';
+import type PkiActionModel from 'vault/models/pki/action';
+import type { ModelValidations } from 'vault/vault/app-types';
 
 interface Args {
   model: PkiActionModel;

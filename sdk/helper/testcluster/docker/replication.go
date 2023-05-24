@@ -5,6 +5,7 @@ package docker
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -39,6 +40,15 @@ func NewReplicationSetDocker(t *testing.T, opts *DockerClusterOptions) (*testclu
 		Clusters: map[string]testcluster.VaultCluster{},
 		Logger:   logging.NewVaultLogger(hclog.Trace).Named(t.Name()),
 	}
+
+	// clusterName is used for container name as well.
+	// A container name should not exceed 64 chars.
+	// There are additional chars that are added to the name as well
+	// like "-A-core0". So, setting a max limit for a cluster name.
+	if len(opts.ClusterName) > MaxClusterNameLength {
+		return nil, fmt.Errorf("cluster name length exceeded the maximum allowed length of %v", MaxClusterNameLength)
+	}
+
 
 	r.Builder = func(ctx context.Context, name string, baseLogger hclog.Logger) (testcluster.VaultCluster, error) {
 		myOpts := *opts

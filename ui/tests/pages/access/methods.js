@@ -7,11 +7,11 @@ import { create, attribute, visitable, collection, hasClass, text } from 'ember-
 
 export default create({
   visit: visitable('/vault/access/'),
-  navLinks: collection('[data-test-link]', {
+  methodsLink: {
     isActive: hasClass('active'),
     text: text(),
-    scope: '[data-test-sidebar]',
-  }),
+    scope: '[data-test-sidebar-nav-link="Authentication methods"]',
+  },
 
   backendLinks: collection('[data-test-auth-backend-link]', {
     path: text('[data-test-path]'),

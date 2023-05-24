@@ -74,7 +74,7 @@
       padding-left: $size-8 * 2.5;
       margin: 0 0.25rem;
       &::before {
-        top: $size-8 / 5;
+        top: calc($size-8 / 5);
         height: $size-8;
         width: $size-8 * 2;
       }
@@ -83,7 +83,7 @@
         height: $size-8 * 0.8;
         transform: translateX(0.15rem);
         left: 0;
-        top: $size-8/ 4;
+        top: calc($size-8 / 4);
       }
     }
     &:checked + label::after {

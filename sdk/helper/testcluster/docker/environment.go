@@ -49,6 +49,8 @@ var (
 	_ testcluster.VaultClusterNode = &DockerClusterNode{}
 )
 
+const MaxClusterNameLength = 52
+
 // DockerCluster is used to managing the lifecycle of the test Vault cluster
 type DockerCluster struct {
 	ClusterName string
@@ -67,7 +69,7 @@ type DockerCluster struct {
 	// rootToken is the initial root token created when the Vault cluster is
 	// created.
 	rootToken string
-	dockerAPI *docker.Client
+	DockerAPI *docker.Client
 	ID        string
 	Logger    log.Logger
 	builtTags map[string]struct{}
@@ -144,13 +146,13 @@ func (dc *DockerCluster) cleanup() error {
 	return result.ErrorOrNil()
 }
 
-// RootToken returns the root token of the cluster, if set
-func (dc *DockerCluster) RootToken() string {
+// GetRootToken returns the root token of the cluster, if set
+func (dc *DockerCluster) GetRootToken() string {
 	return dc.rootToken
 }
 
 func (dc *DockerCluster) SetRootToken(s string) {
-	dc.Logger.Trace("cluster root token changed", "helpful_env", fmt.Sprintf("VAULT_TOKEN=%s VAULT_CACERT=/vault/config/ca.pem", dc.RootToken()))
+	dc.Logger.Trace("cluster root token changed", "helpful_env", fmt.Sprintf("VAULT_TOKEN=%s VAULT_CACERT=/vault/config/ca.pem", s))
 	dc.rootToken = s
 }
 
@@ -416,7 +418,7 @@ func NewTestDockerCluster(t *testing.T, opts *DockerClusterOptions) *DockerClust
 	if err != nil {
 		t.Fatal(err)
 	}
-	dc.Logger.Trace("cluster started", "helpful_env", fmt.Sprintf("VAULT_TOKEN=%s VAULT_CACERT=/vault/config/ca.pem", dc.RootToken()))
+	dc.Logger.Trace("cluster started", "helpful_env", fmt.Sprintf("VAULT_TOKEN=%s VAULT_CACERT=/vault/config/ca.pem", dc.GetRootToken()))
 	return dc
 }
 
@@ -434,7 +436,7 @@ func NewDockerCluster(ctx context.Context, opts *DockerClusterOptions) (*DockerC
 	}
 
 	dc := &DockerCluster{
-		dockerAPI:   api,
+		DockerAPI:   api,
 		RaftStorage: true,
 		ClusterName: opts.ClusterName,
 		Logger:      opts.Logger,
@@ -466,7 +468,7 @@ type DockerClusterNode struct {
 	WorkDir              string
 	Cluster              *DockerCluster
 	Container            *types.ContainerJSON
-	dockerAPI            *docker.Client
+	DockerAPI            *docker.Client
 	runner               *dockhelper.Runner
 	Logger               log.Logger
 	cleanupContainer     func()
@@ -538,7 +540,7 @@ func (n *DockerClusterNode) newAPIClient() (*api.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	client.SetToken(n.Cluster.RootToken())
+	client.SetToken(n.Cluster.GetRootToken())
 	return client, nil
 }
 
@@ -563,13 +565,13 @@ func (n *DockerClusterNode) cleanup() error {
 
 func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOptions) error {
 	if n.DataVolumeName == "" {
-		vol, err := n.dockerAPI.VolumeCreate(ctx, volume.CreateOptions{})
+		vol, err := n.DockerAPI.VolumeCreate(ctx, volume.CreateOptions{})
 		if err != nil {
 			return err
 		}
 		n.DataVolumeName = vol.Name
 		n.cleanupVolume = func() {
-			_ = n.dockerAPI.VolumeRemove(ctx, vol.Name, false)
+			_ = n.DockerAPI.VolumeRemove(ctx, vol.Name, false)
 		}
 	}
 	vaultCfg := map[string]interface{}{}
@@ -941,7 +943,7 @@ func (dc *DockerCluster) addNode(ctx context.Context, opts *DockerClusterOptions
 	i := len(dc.ClusterNodes)
 	nodeID := fmt.Sprintf("core-%d", i)
 	node := &DockerClusterNode{
-		dockerAPI: dc.dockerAPI,
+		DockerAPI: dc.DockerAPI,
 		NodeID:    nodeID,
 		Cluster:   dc,
 		WorkDir:   filepath.Join(dc.tmpDir, nodeID),
@@ -1029,7 +1031,7 @@ FROM %s:%s
 COPY vault /bin/vault
 `, opts.ImageRepo, sourceTag)
 
-	_, err = dockhelper.BuildImage(ctx, dc.dockerAPI, containerFile, bCtx,
+	_, err = dockhelper.BuildImage(ctx, dc.DockerAPI, containerFile, bCtx,
 		dockhelper.BuildRemove(true), dockhelper.BuildForceRemove(true),
 		dockhelper.BuildPullParent(true),
 		dockhelper.BuildTags([]string{opts.ImageRepo + ":" + tag}))

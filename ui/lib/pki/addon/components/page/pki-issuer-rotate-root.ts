@@ -5,14 +5,13 @@ import { action } from '@ember/object';
 import { waitFor } from '@ember/test-waiters';
 import { task } from 'ember-concurrency';
 import errorMessage from 'vault/utils/error-message';
-// TYPES
-import Store from '@ember-data/store';
-import Router from '@ember/routing/router';
-import FlashMessageService from 'vault/services/flash-messages';
-import SecretMountPath from 'vault/services/secret-mount-path';
-import PkiIssuerModel from 'vault/models/pki/issuer';
-import PkiActionModel from 'vault/vault/models/pki/action';
-import { Breadcrumb, ValidationMap } from 'vault/vault/app-types';
+import type Store from '@ember-data/store';
+import type Router from '@ember/routing/router';
+import type FlashMessageService from 'vault/services/flash-messages';
+import type SecretMountPath from 'vault/services/secret-mount-path';
+import type PkiIssuerModel from 'vault/models/pki/issuer';
+import type PkiActionModel from 'vault/vault/models/pki/action';
+import type { Breadcrumb, ValidationMap } from 'vault/vault/app-types';
 
 interface Args {
   oldRoot: PkiIssuerModel;

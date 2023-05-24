@@ -14,6 +14,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
+
 	proto "github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
@@ -36,8 +38,9 @@ var (
 // decrypting stored keys via an underlying AutoSealAccess implementation, as
 // well as logic related to recovery keys and barrier config.
 type autoSeal struct {
-	*seal.Access
+	seal.Access
 
+	barrierType    wrapping.WrapperType
 	barrierConfig  atomic.Value
 	recoveryConfig atomic.Value
 	core           *Core
@@ -50,18 +53,21 @@ type autoSeal struct {
 // Ensure we are implementing the Seal interface
 var _ Seal = (*autoSeal)(nil)
 
-func NewAutoSeal(lowLevel *seal.Access) (*autoSeal, error) {
+func NewAutoSeal(lowLevel seal.Access) (*autoSeal, error) {
 	ret := &autoSeal{
 		Access: lowLevel,
 	}
 	ret.barrierConfig.Store((*SealConfig)(nil))
 	ret.recoveryConfig.Store((*SealConfig)(nil))
 
+	// Having the wrapper type in a field is just a convenience since Seal.BarrierType()
+	// does not return an error.
 	var err error
-	ret.WrapperType, err = ret.Type(context.Background())
+	ret.barrierType, err = ret.Type(context.Background())
 	if err != nil {
 		return nil, err
 	}
+
 	return ret, nil
 }
 
@@ -69,7 +75,7 @@ func (d *autoSeal) SealWrapable() bool {
 	return true
 }
 
-func (d *autoSeal) GetAccess() *seal.Access {
+func (d *autoSeal) GetAccess() seal.Access {
 	return d.Access
 }
 
@@ -97,7 +103,11 @@ func (d *autoSeal) Finalize(ctx context.Context) error {
 }
 
 func (d *autoSeal) BarrierType() wrapping.WrapperType {
-	return d.WrapperType
+	return d.barrierType
+}
+
+func (d *autoSeal) GetShamirWrapper() (*aeadwrapper.ShamirWrapper, error) {
+	return nil, fmt.Errorf("autoSeal does not use a ShamirWrapper")
 }
 
 func (d *autoSeal) StoredKeysSupported() seal.StoredKeysSupport {

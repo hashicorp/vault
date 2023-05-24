@@ -43,6 +43,7 @@ import (
 	loghelper "github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	"github.com/hashicorp/vault/helper/useragent"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
@@ -547,9 +548,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	info["Seal Type"] = sealType
 
 	var seal vault.Seal
-	defaultSeal := vault.NewDefaultSeal(&vaultseal.Access{
-		Wrapper: aeadwrapper.NewShamirWrapper(),
-	})
+	defaultSeal := vault.NewDefaultSeal(vaultseal.NewAccess(aeadwrapper.NewShamirWrapper()))
 	sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal.%s", sealType))
 	wrapper, sealConfigError = configutil.ConfigureWrapper(configSeal, &infoKeys, &info, sealLogger)
 	if sealConfigError != nil {
@@ -562,9 +561,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	if wrapper == nil {
 		seal = defaultSeal
 	} else {
-		seal, err = vault.NewAutoSeal(&vaultseal.Access{
-			Wrapper: wrapper,
-		})
+		seal, err = vault.NewAutoSeal(vaultseal.NewAccess(wrapper))
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("error creating auto seal: %v", err))
 		}
@@ -1723,6 +1720,44 @@ func (c *ServerCommand) Run(args []string) int {
 				c.logger.Info(fmt.Sprintf("Wrote stacktrace to: %s", f.Name()))
 				f.Close()
 			}
+
+			// We can only get pprof outputs via the API but sometimes Vault can get
+			// into a state where it cannot process requests so we can get pprof outputs
+			// via SIGUSR2.
+			if os.Getenv("VAULT_PPROF_WRITE_TO_FILE") != "" {
+				dir := ""
+				path := os.Getenv("VAULT_PPROF_FILE_PATH")
+				if path != "" {
+					if _, err := os.Stat(path); err != nil {
+						c.logger.Error("Checking pprof path failed", "error", err)
+						continue
+					}
+					dir = path
+				} else {
+					dir, err = os.MkdirTemp("", "vault-pprof")
+					if err != nil {
+						c.logger.Error("Could not create temporary directory for pprof", "error", err)
+						continue
+					}
+				}
+
+				dumps := []string{"goroutine", "heap", "allocs", "threadcreate"}
+				for _, dump := range dumps {
+					pFile, err := os.Create(filepath.Join(dir, dump))
+					if err != nil {
+						c.logger.Error("error creating pprof file", "name", dump, "error", err)
+						break
+					}
+
+					err = pprof.Lookup(dump).WriteTo(pFile, 0)
+					if err != nil {
+						c.logger.Error("error generating pprof data", "name", dump, "error", err)
+						break
+					}
+				}
+
+				c.logger.Info(fmt.Sprintf("Wrote pprof files to: %s", dir))
+			}
 		}
 	}
 	// Notify systemd that the server is shutting down
@@ -1965,7 +2000,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 }
 
 func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info map[string]string, infoKeys []string, devListenAddress, tempDir string) int {
-	testCluster := vault.NewTestCluster(&testing.RuntimeT{}, base, &vault.TestClusterOptions{
+	conf, opts := teststorage.ClusterSetup(base, &vault.TestClusterOptions{
 		HandlerFunc:       vaulthttp.Handler,
 		BaseListenAddress: c.flagDevListenAddr,
 		Logger:            c.logger,
@@ -1980,8 +2015,17 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 				},
 			},
 		},
-	})
+	}, nil)
+	testCluster := vault.NewTestCluster(&testing.RuntimeT{}, conf, opts)
 	defer c.cleanupGuard.Do(testCluster.Cleanup)
+
+	if constants.IsEnterprise {
+		err := testcluster.WaitForActiveNodeAndPerfStandbys(context.Background(), testCluster)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("perf standbys didn't become ready: %v", err))
+			return 1
+		}
+	}
 
 	info["cluster parameters path"] = testCluster.TempDir
 	infoKeys = append(infoKeys, "cluster parameters path")
@@ -2442,7 +2486,8 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	var barrierWrapper wrapping.Wrapper
 	if c.flagDevAutoSeal {
 		var err error
-		barrierSeal, err = vault.NewAutoSeal(vaultseal.NewTestSeal(nil))
+		access, _ := vaultseal.NewTestSeal(nil)
+		barrierSeal, err = vault.NewAutoSeal(access)
 		if err != nil {
 			return nil, nil, nil, nil, nil, err
 		}
@@ -2473,9 +2518,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		var seal vault.Seal
 		sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal.%s", sealType))
 		c.allLoggers = append(c.allLoggers, sealLogger)
-		defaultSeal := vault.NewDefaultSeal(&vaultseal.Access{
-			Wrapper: aeadwrapper.NewShamirWrapper(),
-		})
+		defaultSeal := vault.NewDefaultSeal(vaultseal.NewAccess(aeadwrapper.NewShamirWrapper()))
 		var sealInfoKeys []string
 		sealInfoMap := map[string]string{}
 		wrapper, sealConfigError = configutil.ConfigureWrapper(configSeal, &sealInfoKeys, &sealInfoMap, sealLogger)
@@ -2489,9 +2532,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 			seal = defaultSeal
 		} else {
 			var err error
-			seal, err = vault.NewAutoSeal(&vaultseal.Access{
-				Wrapper: wrapper,
-			})
+			seal, err = vault.NewAutoSeal(vaultseal.NewAccess(wrapper))
 			if err != nil {
 				return nil, nil, nil, nil, nil, err
 			}

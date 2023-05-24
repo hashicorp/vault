@@ -53,6 +53,10 @@
     border: 1px solid $grey-light;
   }
 
+  &.is-transparent {
+    background-color: transparent;
+  }
+
   &.is-small {
     height: auto;
   }
