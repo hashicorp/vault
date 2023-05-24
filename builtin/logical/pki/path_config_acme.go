@@ -235,6 +235,10 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 				return nil, fmt.Errorf("role %v specified in allowed_roles does not exist", name)
 			}
 
+			if role.NoStore {
+				return nil, fmt.Errorf("role %v specifies no_store=true; this prohibits usage with ACME which requires stored certificates", name)
+			}
+
 			if name == config.DefaultRole {
 				foundDefault = true
 			}
