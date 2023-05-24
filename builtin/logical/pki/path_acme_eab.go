@@ -111,7 +111,7 @@ a warning that it did not exist.`,
 type eabType struct {
 	KeyID        string    `json:"-"`
 	KeyType      string    `json:"key-type"`
-	KeySize      int       `json:"key-size"`
+	KeyBits      int       `json:"key-bits"`
 	PrivateBytes []byte    `json:"private-bytes"`
 	CreatedOn    time.Time `json:"created-on"`
 }
@@ -138,7 +138,7 @@ func (b *backend) pathAcmeListEab(ctx context.Context, r *logical.Request, _ *fr
 		keyIds = append(keyIds, eab.KeyID)
 		keyInfos[eab.KeyID] = map[string]interface{}{
 			"key_type":   eab.KeyType,
-			"key_size":   eab.KeySize,
+			"key_bits":   eab.KeyBits,
 			"created_on": eab.CreatedOn.Format(time.RFC3339),
 		}
 	}
@@ -160,8 +160,8 @@ func (b *backend) pathAcmeCreateEab(ctx context.Context, r *logical.Request, _ *
 
 	eab := &eabType{
 		KeyID:        kid,
-		KeyType:      "HS",
-		KeySize:      size,
+		KeyType:      "hs",
+		KeyBits:      size * 8,
 		PrivateBytes: bytes,
 		CreatedOn:    time.Now(),
 	}
@@ -178,7 +178,7 @@ func (b *backend) pathAcmeCreateEab(ctx context.Context, r *logical.Request, _ *
 		Data: map[string]interface{}{
 			"id":         eab.KeyID,
 			"key_type":   eab.KeyType,
-			"key_size":   eab.KeySize,
+			"key_bits":   eab.KeyBits,
 			"key":        encodedKey,
 			"created_on": eab.CreatedOn.Format(time.RFC3339),
 		},

@@ -360,9 +360,9 @@ func TestAcmeBasicWorkflowWithEab(t *testing.T) {
 	require.Contains(t, keyInfo, kid)
 
 	infoForKid := keyInfo[kid].(map[string]interface{})
-	keySize := infoForKid["key_size"].(json.Number)
-	require.Equal(t, "32", keySize.String())
-	require.Equal(t, "HS", infoForKid["key_type"])
+	keyBits := infoForKid["key_bits"].(json.Number)
+	require.Equal(t, "256", keyBits.String())
+	require.Equal(t, "hs", infoForKid["key_type"])
 
 	// Create new account with EAB
 	t.Logf("Testing register on %s", baseAcmeURL)

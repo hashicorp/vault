@@ -22,9 +22,9 @@ func TestACME_EabVaultAPIs(t *testing.T) {
 	// Generate an EAB
 	resp, err := CBWrite(b, s, "acme/new-eab", map[string]interface{}{})
 	requireSuccessNonNilResponse(t, resp, err, "Failed generating eab")
-	requireFieldsSetInResp(t, resp, "id", "key_type", "key_size", "key", "created_on")
-	require.Equal(t, "HS", resp.Data["key_type"])
-	require.Equal(t, 32, resp.Data["key_size"])
+	requireFieldsSetInResp(t, resp, "id", "key_type", "key_bits", "key", "created_on")
+	require.Equal(t, "hs", resp.Data["key_type"])
+	require.Equal(t, 256, resp.Data["key_bits"])
 	ids = append(ids, resp.Data["id"].(string))
 	_, err = uuid.ParseUUID(resp.Data["id"].(string))
 	require.NoError(t, err, "failed parsing id as a uuid")
@@ -45,16 +45,16 @@ func TestACME_EabVaultAPIs(t *testing.T) {
 	require.ElementsMatch(t, ids, resp.Data["keys"])
 	keyInfo := resp.Data["key_info"].(map[string]interface{})
 	id0Map := keyInfo[ids[0]].(map[string]interface{})
-	require.Equal(t, "HS", id0Map["key_type"])
-	require.Equal(t, 32, id0Map["key_size"])
+	require.Equal(t, "hs", id0Map["key_type"])
+	require.Equal(t, 256, id0Map["key_bits"])
 	require.NotEmpty(t, id0Map["created_on"])
 	_, err = time.Parse(time.RFC3339, id0Map["created_on"].(string))
 	require.NoError(t, err, "failed to parse created_on date: %s", id0Map["created_on"])
 
 	id1Map := keyInfo[ids[1]].(map[string]interface{})
 
-	require.Equal(t, "HS", id1Map["key_type"])
-	require.Equal(t, 32, id1Map["key_size"])
+	require.Equal(t, "hs", id1Map["key_type"])
+	require.Equal(t, 256, id1Map["key_bits"])
 	require.NotEmpty(t, id1Map["created_on"])
 
 	// Delete an EAB
