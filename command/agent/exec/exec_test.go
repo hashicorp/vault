@@ -34,7 +34,7 @@ func dummyVaultServer() *httptest.Server {
                 "data": {
                     "data": {
                         "password": "s3cr3t",
-                        "user": "appuser"
+                        "user": "app-user"
                     },
                     "metadata": {
                         "created_time": "2019-10-07T22:18:44.233247Z",
@@ -90,7 +90,7 @@ func TestServer_Run(t *testing.T) {
 			testAppStopSignal: syscall.SIGTERM,
 			testAppPort:       34001,
 			expected: map[string]string{
-				"MY_USER":     "appuser",
+				"MY_USER":     "app-user",
 				"MY_PASSWORD": "s3cr3t",
 			},
 			expectedExit: false,
@@ -104,7 +104,7 @@ func TestServer_Run(t *testing.T) {
 			testAppStopSignal: syscall.SIGTERM,
 			testAppPort:       34002,
 			expected: map[string]string{
-				"MY_USER": "appuser",
+				"MY_USER": "app-user",
 			},
 			expectedExit: true,
 			checkError:   processErrorCodeChecker(0),
@@ -118,7 +118,7 @@ func TestServer_Run(t *testing.T) {
 			testAppStopSignal: syscall.SIGTERM,
 			testAppPort:       34003,
 			expected: map[string]string{
-				"MY_USER": "appuser",
+				"MY_USER": "app-user",
 			},
 			expectedExit: true,
 			checkError:   processErrorCodeChecker(5),
@@ -141,7 +141,7 @@ func TestServer_Run(t *testing.T) {
 				strconv.Itoa(testCase.testAppPort),
 			}
 
-			serverConfig := &ServerConfig{
+			execServer := NewServer(&ServerConfig{
 				Logger: logging.NewVaultLogger(hclog.Trace),
 				AgentConfig: &config.Config{
 					Vault: &config.Vault{
@@ -159,9 +159,7 @@ func TestServer_Run(t *testing.T) {
 				},
 				LogLevel:  hclog.Trace,
 				LogWriter: hclog.DefaultOutput,
-			}
-
-			execServer := NewServer(serverConfig)
+			})
 
 			ctx, cancelTimeout := context.WithTimeout(context.Background(), 15*time.Second)
 			defer cancelTimeout()
