@@ -56,12 +56,13 @@ func TestServer_Run(t *testing.T) {
 	defer fakeVault.Close()
 
 	testCases := map[string]struct {
-		envTemplates      []*ctconfig.TemplateConfig
-		testAppArgs       []string
-		testAppStopSignal os.Signal
-		testAppPort       int
-		expected          map[string]string
-		expectedError     error
+		envTemplates         []*ctconfig.TemplateConfig
+		testAppArgs          []string
+		testAppStopSignal    os.Signal
+		testAppPort          int
+		expected             map[string]string
+		expectedTestDuration time.Duration
+		expectedError        error
 	}{
 		"simple": {
 			envTemplates: []*ctconfig.TemplateConfig{{
@@ -78,27 +79,30 @@ func TestServer_Run(t *testing.T) {
 				"MY_USER":     "app-user",
 				"MY_PASSWORD": "s3cr3t",
 			},
-			expectedError: nil,
+			expectedTestDuration: 15 * time.Second,
+			expectedError:        nil,
 		},
 		"exits_early_success": {
 			envTemplates: []*ctconfig.TemplateConfig{{
 				Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
 				MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
 			}},
-			testAppArgs:       []string{"--stop-after", "2s"},
-			testAppStopSignal: syscall.SIGTERM,
-			testAppPort:       34002,
-			expectedError:     &ProcessExitError{0},
+			testAppArgs:          []string{"--stop-after", "1s"},
+			testAppStopSignal:    syscall.SIGTERM,
+			testAppPort:          34002,
+			expectedTestDuration: 15 * time.Second,
+			expectedError:        &ProcessExitError{0},
 		},
 		"exits_early_non_zero": {
 			envTemplates: []*ctconfig.TemplateConfig{{
 				Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
 				MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
 			}},
-			testAppArgs:       []string{"--stop-after", "2s", "--exit-code", "5"},
-			testAppStopSignal: syscall.SIGTERM,
-			testAppPort:       34003,
-			expectedError:     &ProcessExitError{1}, // "go run" coerses error codes into "1" for all errors
+			testAppArgs:          []string{"--stop-after", "1s", "--exit-code", "5"},
+			testAppStopSignal:    syscall.SIGTERM,
+			testAppPort:          34003,
+			expectedTestDuration: 15 * time.Second,
+			expectedError:        &ProcessExitError{1}, // "go run" coerses error codes into "1" for all errors
 		},
 	}
 
@@ -109,7 +113,7 @@ func TestServer_Run(t *testing.T) {
 
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			ctx, cancelContextFunc := context.WithTimeout(context.Background(), 15*time.Second)
+			ctx, cancelContextFunc := context.WithTimeout(context.Background(), testCase.expectedTestDuration)
 			defer cancelContextFunc()
 
 			testAppCommand := []string{
