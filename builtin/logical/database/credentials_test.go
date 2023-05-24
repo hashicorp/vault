@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+// Test_newClientCertificateGenerator tests the ClientCertificateGenerator struct based on the config
 func Test_newClientCertificateGenerator(t *testing.T) {
 	type args struct {
 		config map[string]interface{}
@@ -28,9 +29,9 @@ func Test_newClientCertificateGenerator(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "newClientCertificateGenerator with empty default config",
+			name: "newClientCertificateGenerator with nil config",
 			args: args{
-				config: map[string]interface{}{},
+				config: nil,
 			},
 			want: ClientCertificateGenerator{
 				CommonNameTemplate: "",
@@ -93,7 +94,9 @@ func Test_newClientCertificateGenerator(t *testing.T) {
 				},
 			},
 			want: ClientCertificateGenerator{
-				KeyType: "rsa",
+				KeyType:       "rsa",
+				KeyBits:       2048,
+				SignatureBits: 0,
 			},
 		},
 		{
@@ -104,7 +107,9 @@ func Test_newClientCertificateGenerator(t *testing.T) {
 				},
 			},
 			want: ClientCertificateGenerator{
-				KeyType: "ec",
+				KeyType:       "ec",
+				KeyBits:       256,
+				SignatureBits: 0,
 			},
 		},
 		{
