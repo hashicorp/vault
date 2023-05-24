@@ -89,8 +89,11 @@ func run(logger *log.Logger) error {
 	flag.Parse()
 
 	server := http.Server{
-		Addr:    fmt.Sprintf(":%d", port),
-		Handler: http.HandlerFunc(handler),
+		Addr:         fmt.Sprintf(":%d", port),
+		Handler:      http.HandlerFunc(handler),
+		ReadTimeout:  20 * time.Second,
+		WriteTimeout: 20 * time.Second,
+		IdleTimeout:  20 * time.Second,
 	}
 
 	doneCh := make(chan struct{})
