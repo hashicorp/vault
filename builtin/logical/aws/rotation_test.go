@@ -120,10 +120,10 @@ func TestRotation(t *testing.T) {
 			if err != nil {
 				t.Fatalf("couldn't initialze mock IAM handler: %s", err)
 			}
+			b.iamClient = miam
 
 			// insert all our creds
 			for i, cred := range c.creds {
-				b.iamClient = miam
 
 				err = b.createCredential(bgCTX, config.StorageView, cred.config, true)
 				if err != nil {
