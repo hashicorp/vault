@@ -761,12 +761,12 @@ github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef h1:46PFijGL
 github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef/go.mod h1:WaHUgvxTVq04UNunO+XhnAqY/wQc+bxr74GqbsZ/Jqw=
 github.com/aws/aws-sdk-go v1.15.11/go.mod h1:mFuSZ37Z9YOHbQEwBWztmVzqXrEkub65tZoCYDt7FT0=
 github.com/aws/aws-sdk-go v1.25.41/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpiN924inxo=
-github.com/aws/aws-sdk-go v1.30.27/go.mod h1:5zCpMtNQVjRREroY7sYe8lOMRSxkhG6MZveU8YkpAk0=
+github.com/aws/aws-sdk-go v1.34.0/go.mod h1:5zCpMtNQVjRREroY7sYe8lOMRSxkhG6MZveU8YkpAk0=
 github.com/aws/aws-sdk-go v1.34.28/go.mod h1:H7NKnBqNVzoTJpGfLrQkkD+ytBA93eiDYi/+8rV9s48=
 github.com/aws/aws-sdk-go v1.36.29/go.mod h1:hcU610XS61/+aQV88ixoOzUoG7v3b31pl2zKMmprdro=
 github.com/aws/aws-sdk-go v1.43.16/go.mod h1:y4AeaBuwd2Lk+GepC1E9v0qOiTws0MIWAX4oIKwKHZo=
-github.com/aws/aws-sdk-go v1.44.191 h1:GnbkalCx/AgobaorDMFCa248acmk+91+aHBQOk7ljzU=
-github.com/aws/aws-sdk-go v1.44.191/go.mod h1:aVsgQcEevwlmQ7qHE9I3h+dtQgpqhFB+i8Phjh7fkwI=
+github.com/aws/aws-sdk-go v1.44.268 h1:WoK20tlAvsvQzTcE6TajoprbXmTbcud6MjhErL4P/38=
+github.com/aws/aws-sdk-go v1.44.268/go.mod h1:aVsgQcEevwlmQ7qHE9I3h+dtQgpqhFB+i8Phjh7fkwI=
 github.com/aws/aws-sdk-go-v2 v1.16.16 h1:M1fj4FE2lB4NzRb9Y0xdWsn2P0+2UHVxwKyOa4YJNjk=
 github.com/aws/aws-sdk-go-v2 v1.16.16/go.mod h1:SwiyXi/1zTUZ6KIAmLK5V5ll8SiURNUYOqTerZPaF9k=
 github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.8 h1:tcFliCWne+zOuUfKNRn8JdFBuWPDuISDH08wD2ULkhk=
@@ -1749,8 +1749,8 @@ github.com/hashicorp/go-retryablehttp v0.7.2/go.mod h1:Jy/gPYAdjqffZ/yFGCFV2doI5
 github.com/hashicorp/go-rootcerts v1.0.0/go.mod h1:K6zTfqpRlCUIjkwsN4Z+hiSfzSTQa6eBIzfwKfwNnHU=
 github.com/hashicorp/go-rootcerts v1.0.2 h1:jzhAVGtqPKbwpyCPELlgNWhE1znq+qwJtW5Oi2viEzc=
 github.com/hashicorp/go-rootcerts v1.0.2/go.mod h1:pqUvnprVnM5bf7AOirdbb01K4ccR319Vf4pU3K5EGc8=
-github.com/hashicorp/go-secure-stdlib/awsutil v0.2.0 h1:VmeslHTkAkPaolVKr9MCsZrY5i73Y7ITDgTJ4eVv+94=
-github.com/hashicorp/go-secure-stdlib/awsutil v0.2.0/go.mod h1:MpCPSPGLDILGb4JMm94/mMi3YysIqsXzGCzkEZjcjXg=
+github.com/hashicorp/go-secure-stdlib/awsutil v0.2.2 h1:kWg2vyKl7BRXrNxYziqDJ55n+vtOQ1QsGORjzoeB+uM=
+github.com/hashicorp/go-secure-stdlib/awsutil v0.2.2/go.mod h1:oKHSQs4ivIfZ3fbXGQOop1XuDfdSb8RIsWTGaAanSfg=
 github.com/hashicorp/go-secure-stdlib/base62 v0.1.1/go.mod h1:EdWO6czbmthiwZ3/PUsDV+UD1D5IRU4ActiaWGwt0Yw=
 github.com/hashicorp/go-secure-stdlib/base62 v0.1.2 h1:ET4pqyjiGmY09R5y+rSd70J2w45CtbWDNvGqWp/R3Ng=
 github.com/hashicorp/go-secure-stdlib/base62 v0.1.2/go.mod h1:EdWO6czbmthiwZ3/PUsDV+UD1D5IRU4ActiaWGwt0Yw=
@@ -1865,8 +1865,8 @@ github.com/hashicorp/vault-plugin-database-mongodbatlas v0.9.0 h1:wlWrg1z5Pyx+FT
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.9.0/go.mod h1:4Ew6RNnA1NXtpLV0ijkwpE6pJE46G+suDKnTVMm+kXA=
 github.com/hashicorp/vault-plugin-database-redis v0.2.0 h1:Fg1inevnDhj58+/y5SY1CihLftytG1D+3QqbUJbHYUM=
 github.com/hashicorp/vault-plugin-database-redis v0.2.0/go.mod h1:hPj1vvjzsJ+g9PChP7iKqEJX7ttr03oz/RDEYsq8zZY=
-github.com/hashicorp/vault-plugin-database-redis-elasticache v0.2.0 h1:dgTT7E8xj56hjktMxHNAgFpy7pchpoQ20cIhDsBcgz8=
-github.com/hashicorp/vault-plugin-database-redis-elasticache v0.2.0/go.mod h1:h7H9VAI3xdoJ3VQ+wCyFZ5AOyMIQDS7ZhdjN8LGX3OU=
+github.com/hashicorp/vault-plugin-database-redis-elasticache v0.2.1 h1:D8mdwkB6CyC37wkpdW9mgJNNrqral956bFoVj3AoQoE=
+github.com/hashicorp/vault-plugin-database-redis-elasticache v0.2.1/go.mod h1:1RdJ0uxD8Mquzx9DBfoFKkmHgeZrPTN5nZHGyDrVCuY=
 github.com/hashicorp/vault-plugin-database-snowflake v0.7.1 h1:INJou3cgXk83hTMjvigT1HnShOkiwcnKu30+TFHZtSA=
 github.com/hashicorp/vault-plugin-database-snowflake v0.7.1/go.mod h1:J2HggJNW+lsOmV5b4Sqk2UokJpw/83XPh627lfeBSWA=
 github.com/hashicorp/vault-plugin-mock v0.16.1 h1:5QQvSUHxDjEEbrd2REOeacqyJnCLPD51IQzy71hx8P0=
@@ -3222,7 +3222,6 @@ golang.org/x/sys v0.0.0-20200511232937-7e40ca221e25/go.mod h1:h1NjWce9XRLGQEsW7w
 golang.org/x/sys v0.0.0-20200515095857-1151b9dac4a9/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200519105757-fe76b779f299/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200523222454-059865788121/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
-golang.org/x/sys v0.0.0-20200602225109-6fdc65e7d980/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200615200032-f1bc736245b1/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200622214017-ed371f2e16b4/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
