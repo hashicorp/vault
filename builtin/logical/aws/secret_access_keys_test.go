@@ -120,7 +120,7 @@ func TestGenUsername(t *testing.T) {
 func TestReadConfig_DefaultTemplate(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b := Backend()
+	b := Backend(config)
 	if err := b.Setup(context.Background(), config); err != nil {
 		t.Fatal(err)
 	}
@@ -164,7 +164,7 @@ func TestReadConfig_DefaultTemplate(t *testing.T) {
 func TestReadConfig_CustomTemplate(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b := Backend()
+	b := Backend(config)
 	if err := b.Setup(context.Background(), config); err != nil {
 		t.Fatal(err)
 	}

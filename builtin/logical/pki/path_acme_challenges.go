@@ -42,7 +42,7 @@ func patternAcmeChallenge(b *backend, pattern string) *framework.Path {
 		Fields:  fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.acmeParsedWrapper(b.acmeChallengeHandler),
+				Callback:                    b.acmeAccountRequiredWrapper(b.acmeChallengeHandler),
 				ForwardPerformanceSecondary: false,
 				ForwardPerformanceStandby:   true,
 			},
@@ -53,7 +53,7 @@ func patternAcmeChallenge(b *backend, pattern string) *framework.Path {
 	}
 }
 
-func (b *backend) acmeChallengeHandler(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}) (*logical.Response, error) {
+func (b *backend) acmeChallengeHandler(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}, _ *acmeAccount) (*logical.Response, error) {
 	authId := fields.Get("auth_id").(string)
 	challengeType := fields.Get("challenge_type").(string)
 
