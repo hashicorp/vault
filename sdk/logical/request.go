@@ -246,9 +246,6 @@ type Request struct {
 
 	// When a request has been forwarded, contains information of the host the request was forwarded 'from'
 	ForwardedFrom string `json:"forwarded_from,omitempty"`
-
-	// When a request has been forwarded, contains information of the host the request was forwarded 'to'
-	ForwardedTo string `json:"forwarded_to,omitempty"`
 }
 
 // Clone returns a deep copy of the request by using copystructure
