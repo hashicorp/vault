@@ -1,5 +1,7 @@
 # [Ember Engines](https://ember-engines.com/docs)
 
+This is a quickstart guide on how to set up an ember engine in Vault!
+
 ## Create a new in-repo engine:
 
 `ember g in-repo-engine <engine-name>`
