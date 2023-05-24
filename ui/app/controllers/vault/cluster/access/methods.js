@@ -4,22 +4,21 @@
  */
 
 import Controller from '@ember/controller';
-import { task } from 'ember-concurrency';
+import { dropTask, task } from 'ember-concurrency';
 import { inject as service } from '@ember/service';
 
-export default Controller.extend({
-  flashMessages: service(),
+export default class VaultClusterAccessMethodsController extends Controller {
+  @service flashMessages;
 
-  queryParams: {
-    page: 'page',
-    pageFilter: 'pageFilter',
-  },
+  queryParams = ['page, pageFilter'];
 
-  page: 1,
-  pageFilter: null,
-  filter: null,
+  page = 1;
+  pageFilter = null;
+  filter = null;
 
-  disableMethod: task(function* (method) {
+  @task
+  @dropTask
+  *disableMethod(method) {
     const { type, path } = method;
     try {
       yield method.destroyRecord();
@@ -29,5 +28,5 @@ export default Controller.extend({
         `There was an error disabling Auth Method at ${path}: ${err.errors.join(' ')}.`
       );
     }
-  }).drop(),
-});
+  }
+}
