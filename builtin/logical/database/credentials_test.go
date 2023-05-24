@@ -9,11 +9,12 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"testing"
+
 	"github.com/hashicorp/vault/sdk/helper/base62"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"testing"
 )
 
 func Test_newClientCertificateGenerator(t *testing.T) {
@@ -200,7 +201,6 @@ func Test_newClientCertificateGenerator(t *testing.T) {
 				},
 			},
 			want: ClientCertificateGenerator{
-
 				KeyBits: 384,
 			},
 		},
