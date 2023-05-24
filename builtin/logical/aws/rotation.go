@@ -24,7 +24,7 @@ func (b *backend) rotateExpiredStaticCreds(ctx context.Context, req *logical.Req
 			errs = multierror.Append(errs, err)
 		}
 		if !keepGoing {
-			if errs != nil && len(errs.Errors) != 0 {
+			if errs.ErrorOrNil() != nil {
 				return fmt.Errorf("error(s) occurred while rotating expired static credentials: %w", errs)
 			} else {
 				return nil
