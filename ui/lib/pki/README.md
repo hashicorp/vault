@@ -32,6 +32,18 @@ If you couldn't tell from the documentation above, PKI is _complex_. As such, th
 
   The `parsedCertificate` attribute is an object that houses all of the parsed certificate data returned by the [parse-pki-cert.js](../../app/utils/parse-pki-cert.js) util.
 
+- ### [pki/tidy](../../app/models/pki/tidy.js)
+
+  This model is used to manage [tidy](https://developer.hashicorp.com/vault/api-docs/secret/pki#tidy) operations in a few different contexts. All of the following endpoints share the same parameters _except_ `enabled` and `interval_duration` which are reserved for auto-tidy operations only.
+
+  > _`pki/tidy-status` does not use an Ember data model because it is read-only_
+
+  - `POST pki/tidy` - perform a single, manual tidy operation
+  - `POST pki/config/auto-tidy` - set configuration for automating the tidy process
+  - `GET pki/config/auto-tidy` - read auto-tidy configuration settings
+
+  The auto-tidy config is the only data that persists so `findRecord` and `updateRecord` in the `pki/tidy.js` [adapter](../../app/adapters/pki/tidy.js) only interact with the `/config/auto-tidy` endpoint. For each manual tidy operation, a new record is created so on `save()` the model uses the `createRecord` method which only ever uses the `/tidy` endpoint.
+
 > _The following models more closely follow a CRUD pattern:_
 
 - ### [pki/issuer](../../app/models/pki/issuer.js)
