@@ -282,7 +282,8 @@ func (b *backend) validateIAMUserExists(ctx context.Context, req *logical.Reques
 	if !isCreate && *out.User.UserId != entry.ID {
 		return fmt.Errorf("AWS GetUser returned a user, but the ID did not match: %q was requested, but %q was returned", entry.ID, *out.User.UserId)
 	} else {
-		// set userid
+		// if this is an insert, store the userID. This is the immutable part of an IAM user, but it's not exactly user-friendly.
+		// So, we allow users to specify usernames, but on updates we'll use the ID as a verification cross-check.
 		entry.ID = *out.User.UserId
 	}
 
