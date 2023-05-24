@@ -5,14 +5,11 @@ package transit
 
 import (
 	"context"
-	"fmt"
-	"log"
-
 	// "crypto/rand"
-	// "crypto/rsa"
 	// "crypto/x509"
 	// "encoding/pem"
-	// "log"
+	"fmt"
+	"log"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
@@ -32,7 +29,7 @@ func (b *backend) pathSignCsr() *framework.Path {
 				Type:     framework.TypeInt,
 				Required: false,
 				// FIXME: Add description
-				Description: ``,
+				Description: `If not set, 'latest' is used.`,
 			},
 			"csr": {
 				Type:     framework.TypeString,
@@ -42,6 +39,7 @@ func (b *backend) pathSignCsr() *framework.Path {
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
+			// NOTE: Or logical.CreateOperation?
 			logical.UpdateOperation: b.pathSignCsrWrite,
 		},
 		// FIXME: Write synposis and description
@@ -70,6 +68,28 @@ func (b *backend) pathSignCsrWrite(ctx context.Context, req *logical.Request, d 
 		p.Lock(false) // NOTE: No lock on "read" operations?
 	}
 	defer p.Unlock()
+
+	// Check if transit key supports signing
+	if !p.Type.SigningSupported() {
+		return logical.ErrorResponse(fmt.Sprintf("key type %v does not support signing", p.Type)), logical.ErrInvalidRequest
+	}
+
+	// Create certificate template
+	// var csrBytes []bytes
+	// csr, isCsrSet := d.GetOk("csr")
+	// if isCsrSet {
+	// 	csrBlock, _ := pem.Decode(csr.([]byte))
+	// 	if csrBlock == nil {
+	// 		return logical.ErrorResponse(fmt.Sprintf("invalid csr provided")), logical.ErrInvalidRequest
+	// 	}
+	// } else {
+	// 	csrBytes, err := x509.CreateCertificateRequest(rand.Reader)
+	// }
+	//
+	// csr, err := x509.ParseCertificateRequest(csrBytes)
+	// if err != nil {
+	// 	return logical.ErrorResponse(fmt.Sprintf("failed to parse csr")), logical.ErrInvalidRequest
+	// }
 
 	signingKeyVersion := p.LatestVersion
 	if version, ok := d.GetOk("version"); ok {

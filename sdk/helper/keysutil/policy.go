@@ -2264,3 +2264,62 @@ func (ke *KeyEntry) parseFromKey(PolKeyType KeyType, parsedKey any) error {
 
 	return nil
 }
+
+// NOTE: Also have some kind of options argument?
+func (p *Policy) SigningCSR(keyVersion int, csr *x509.CertificateRequest) ([]byte, error) {
+	keyEntry, err := p.safeGetKeyEntry(keyVersion)
+	if err != nil {
+		// NOTE: err or custom error?
+		return nil, err
+	}
+
+	certTemplate := &x509.Certificate{}
+
+	var certificate []byte
+	var createCertError error
+	switch p.Type {
+	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
+		var curve elliptic.Curve
+		switch p.Type {
+		case KeyType_ECDSA_P384:
+			curve = elliptic.P384()
+		case KeyType_ECDSA_P521:
+			curve = elliptic.P521()
+		default:
+			curve = elliptic.P256()
+		}
+
+		key := &ecdsa.PrivateKey{
+			PublicKey: ecdsa.PublicKey{
+				Curve: curve,
+				X:     keyEntry.EC_X,
+				Y:     keyEntry.EC_Y,
+			},
+			D: keyEntry.EC_D,
+		}
+
+		certificate, createCertError = x509.CreateCertificate(rand.Reader, certTemplate, certTemplate, key.Public(), key)
+	case KeyType_ED25519:
+		var key ed25519.PrivateKey
+		if p.Derived {
+			// Derive the key that should be used
+			var err error
+			key, err = p.GetKey([]byte(""), keyVersion, 32) // FIXME: ?
+			if err != nil {
+				return nil, errutil.InternalError{Err: fmt.Sprintf("error deriving key: %v", err)}
+			}
+		} else {
+			key = ed25519.PrivateKey(keyEntry.Key)
+		}
+
+		certificate, createCertError = x509.CreateCertificate(rand.Reader, certTemplate, certTemplate, key.Public(), key)
+	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
+		key := keyEntry.RSAKey
+		certificate, createCertError = x509.CreateCertificate(rand.Reader, certTemplate, certTemplate, key.Public(), key)
+	}
+	if createCertError != nil {
+		return nil, err
+	}
+
+	return certificate, nil
+}
