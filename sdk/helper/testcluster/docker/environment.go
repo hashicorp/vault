@@ -774,7 +774,7 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 }
 
 func (n *DockerClusterNode) Pause(ctx context.Context) error {
-	return n.dockerAPI.ContainerPause(ctx, n.Container.ID)
+	return n.DockerAPI.ContainerPause(ctx, n.Container.ID)
 }
 
 func (n *DockerClusterNode) AddNetworkDelay(ctx context.Context, delay time.Duration, targetIP string) error {
