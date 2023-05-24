@@ -104,7 +104,7 @@ export default class <EngineName>Engine extends Engine {
 loadInitializers(<EngineName>Engine, modulePrefix);
 ```
 
-The services in the example above are common services that we often use in our engines. Any other services that are in our main app that is needed for your engine should be added in the dependencies services array.
+The services in the example above are common services that we often use in our engines. If your engine requires other services from the main application, add them to the services array.
 
 Optional step: Add some text in the engine’s `application.hbs` file (to see if your engine was set up correctly).
 
@@ -146,7 +146,7 @@ If you used `ember g in-repo-engine <engine-name>` to generate the engine’s bl
 
 - Anytime a new engine is created, you will need to **RESTART** ember server!
 - To add `package.json` **dependencies** or **devDependencies**, you can copy + paste the dependency into corresponding sections. Most of the time, we will want to use "\*" in place of the version number to ensure all the dependencies have the latest version.
-- In order to link to the other routes in the main app using the `LinkToExternal` component from your engine, you need to add the route to the `app/app.js` and your engine’s `addon/engine.js`. More information on [Linking to An External Context.](https://ember-engines.com/docs/link-to-external)
+- In order to link to the other routes in the main app using the `LinkToExternal` component from your engine, you need to add the route to the `app/app.js` and your engine’s `addon/engine.js`. More information on [Linking to An External Context.](https://ember-engines.com/docs/link-to-external).
 
 ### Common blueprint commands:
 
