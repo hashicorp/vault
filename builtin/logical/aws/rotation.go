@@ -159,8 +159,8 @@ func (b *backend) deleteCredential(ctx context.Context, storage logical.Storage,
 	if key == nil {
 		return nil
 	}
-	var creds *awsCredentials
-	err = key.DecodeJSON(creds)
+	var creds awsCredentials
+	err = key.DecodeJSON(&creds)
 	if err != nil {
 		return fmt.Errorf("couldn't decode storage entry to a valid credential: %w", err)
 	}
