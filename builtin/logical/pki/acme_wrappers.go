@@ -28,6 +28,10 @@ type acmeContext struct {
 	eabPolicy     EabPolicy
 }
 
+func (c acmeContext) getAcmeState() *acmeState {
+	return c.sc.Backend.acmeState
+}
+
 type (
 	acmeOperation                func(acmeCtx *acmeContext, r *logical.Request, _ *framework.FieldData) (*logical.Response, error)
 	acmeParsedOperation          func(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}) (*logical.Response, error)
@@ -186,22 +190,30 @@ func (b *backend) acmeAccountRequiredWrapper(op acmeAccountRequiredOperation) fr
 			return nil, fmt.Errorf("cannot process request without a 'kid': %w", ErrMalformed)
 		}
 
-		account, err := b.acmeState.LoadAccount(acmeCtx, uc.Kid)
+		account, err := requireValidAcmeAccount(acmeCtx, uc)
 		if err != nil {
-			return nil, fmt.Errorf("error loading account: %w", err)
-		}
-
-		if err = acmeCtx.eabPolicy.EnforceForExistingAccount(account); err != nil {
 			return nil, err
-		}
-
-		if account.Status != AccountStatusValid {
-			// Treating "revoked" and "deactivated" as the same here.
-			return nil, fmt.Errorf("%w: account in status: %s", ErrUnauthorized, account.Status)
 		}
 
 		return op(acmeCtx, r, fields, uc, data, account)
 	})
+}
+
+func requireValidAcmeAccount(acmeCtx *acmeContext, uc *jwsCtx) (*acmeAccount, error) {
+	account, err := acmeCtx.getAcmeState().LoadAccount(acmeCtx, uc.Kid)
+	if err != nil {
+		return nil, fmt.Errorf("error loading account: %w", err)
+	}
+
+	if err = acmeCtx.eabPolicy.EnforceForExistingAccount(account); err != nil {
+		return nil, err
+	}
+
+	if account.Status != AccountStatusValid {
+		// Treating "revoked" and "deactivated" as the same here.
+		return nil, fmt.Errorf("%w: account in status: %s", ErrUnauthorized, account.Status)
+	}
+	return account, nil
 }
 
 // A helper function that will build up the various path patterns we want for ACME APIs.
