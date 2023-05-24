@@ -135,7 +135,7 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 			return nil, err
 		}
 	} else {
-		return nil, fmt.Errorf("missing %q parameter", paramRoleName)
+		return logical.ErrorResponse("missing %q parameter", paramRoleName), nil
 	}
 
 	// retrieve old role value
@@ -163,7 +163,7 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 			return nil, err
 		}
 	} else if isCreate {
-		return nil, fmt.Errorf("missing %q parameter", paramUsername)
+		return logical.ErrorResponse("missing %q parameter", paramUsername), nil
 	}
 
 	if rawRotationPeriod, ok := data.GetOk(paramRotationPeriod); ok {
@@ -173,7 +173,7 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 			return nil, err
 		}
 	} else if isCreate {
-		return nil, fmt.Errorf("missing %q parameter", paramRotationPeriod)
+		return logical.ErrorResponse("missing %q parameter", paramRotationPeriod), nil
 	}
 
 	b.roleMutex.Lock()
