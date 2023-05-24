@@ -1191,6 +1191,7 @@ github.com/form3tech-oss/jwt-go v3.2.5+incompatible/go.mod h1:pbq4aXjuKjdthFRnoD
 github.com/fortytw2/leaktest v1.3.0/go.mod h1:jDsjWgpAGjm2CA7WthBh/CdZYEPF31XHquHwclZch5g=
 github.com/foxcpp/go-mockdns v0.0.0-20210729171921-fb145fc6f897/go.mod h1:lgRN6+KxQBawyIghpnl5CezHFGS9VLzvtVlwxvzXTQ4=
 github.com/frankban/quicktest v1.11.3/go.mod h1:wRf/ReqHper53s+kmmSZizM8NamnL3IM0I9ntUbOk+k=
+github.com/frankban/quicktest v1.13.0/go.mod h1:qLE0fzW0VuyUAJgPU19zByoIr0HtCHN/r/VLSOOIySU=
 github.com/frankban/quicktest v1.14.0/go.mod h1:NeW+ay9A/U67EYXNFA1nPE8e/tnQv/09mUdL/ijj8og=
 github.com/frankban/quicktest v1.14.4 h1:g2rn0vABPOOXmZUj+vbmUp0lPoXEMuhTpIluN0XL9UY=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
@@ -1810,8 +1811,8 @@ github.com/hashicorp/vault-plugin-auth-alicloud v0.14.0 h1:O6tNk0s/arubLUbLeCyaR
 github.com/hashicorp/vault-plugin-auth-alicloud v0.14.0/go.mod h1:We3fJplmALwK1VpjwrLuXr/4QCQHYMdnXLHmLUU6Ntg=
 github.com/hashicorp/vault-plugin-auth-azure v0.13.0 h1:1j8fPQPumYg9oZG+MCFftglu/Edd6YGOuBvEWEkK0qQ=
 github.com/hashicorp/vault-plugin-auth-azure v0.13.0/go.mod h1:Kg7oDhyyROtBEe8NNLTvpfDSnaxqgEyUvKqlNor/4I4=
-github.com/hashicorp/vault-plugin-auth-centrify v0.14.0 h1:qZKnqU1tX1WS6+11+PskGMhlXl5LnfkVrDvJO4BRY7s=
-github.com/hashicorp/vault-plugin-auth-centrify v0.14.0/go.mod h1:3fDbIVdwA/hkOVhwktKHDX5lo4DqIUUVbBdwQNNvxHw=
+github.com/hashicorp/vault-plugin-auth-centrify v0.15.0 h1:3s1HX3UopdqY224y7DXn78YnKuTYQlpH4zBz0/zGZ4w=
+github.com/hashicorp/vault-plugin-auth-centrify v0.15.0/go.mod h1:xXs4I5yLxbQ5VHcpvSxkRhShCTXd8Zyrni8qnFrfQ4Y=
 github.com/hashicorp/vault-plugin-auth-cf v0.14.0 h1:n/ojZukcH8YAOy/7JXITJn21byr1yxhujlR3DKlR3FY=
 github.com/hashicorp/vault-plugin-auth-cf v0.14.0/go.mod h1:BdvPbWtUuBhTW1HrYXj2OGoeAIzWENYsKF378RoKmw4=
 github.com/hashicorp/vault-plugin-auth-gcp v0.16.0 h1:DA/ZDLCrUsbHS/7Xqkkw7l2SgbQE9rWEHLLWYTGu8rw=
