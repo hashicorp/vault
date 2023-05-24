@@ -110,7 +110,6 @@ func (s *singleMonthActivityClients) populateSegments() (map[int][]*activity.Ent
 			segments[segment] = clientsInSegment
 		}
 		return segments, nil
-
 	}
 
 	totalSegmentCount := 1
