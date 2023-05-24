@@ -1520,13 +1520,13 @@ func (b *backend) doTidyAcme(ctx context.Context, req *logical.Request, logger h
 	defer b.acmeAccountLock.Unlock()
 
 	sc := b.makeStorageContext(ctx, req.Storage)
-	list, err := sc.Storage.List(ctx, acmeThumbprintPrefix)
+	thumbprints, err := sc.Storage.List(ctx, acmeThumbprintPrefix)
 	if err != nil {
 		return err
 	}
 
 	b.tidyStatusLock.Lock()
-	b.tidyStatus.acmeAccountsCount = uint(len(list))
+	b.tidyStatus.acmeAccountsCount = uint(len(thumbprints))
 	b.tidyStatusLock.Unlock()
 
 	baseUrl, _, err := getAcmeBaseUrl(sc, req.Path)
@@ -1539,7 +1539,7 @@ func (b *backend) doTidyAcme(ctx context.Context, req *logical.Request, logger h
 		sc:      sc,
 	}
 
-	for _, thumbprint := range list {
+	for _, thumbprint := range thumbprints {
 		err := b.tidyAcmeAccountByThumbprint(b.acmeState, acmeCtx, thumbprint, config.SafetyBuffer, config.AcmeAccountSafetyBuffer)
 		if err != nil {
 			logger.Warn("error tidying account %v: %v", thumbprint, err.Error())
@@ -1557,6 +1557,43 @@ func (b *backend) doTidyAcme(ctx context.Context, req *logical.Request, logger h
 			b.acmeAccountLock.Lock()
 		}
 
+	}
+
+	// Clean up any unused EAB
+	eabIds, err := b.acmeState.ListEabIds(sc)
+	if err != nil {
+		return fmt.Errorf("failed listing EAB ids: %w", err)
+	}
+
+	for _, eabId := range eabIds {
+		eab, err := b.acmeState.LoadEab(sc, eabId)
+		if err != nil {
+			if errors.Is(err, ErrStorageItemNotFound) {
+				// We don't need to worry about a consumed EAB
+				continue
+			}
+			return err
+		}
+
+		eabExpiration := eab.CreatedOn.Add(config.AcmeAccountSafetyBuffer)
+		if time.Now().After(eabExpiration) {
+			_, err := b.acmeState.DeleteEab(sc, eabId)
+			if err != nil {
+				return fmt.Errorf("failed to tidy eab %s: %w", eabId, err)
+			}
+		}
+
+		// Check for cancel before continuing.
+		if atomic.CompareAndSwapUint32(b.tidyCancelCAS, 1, 0) {
+			return tidyCancelledError
+		}
+
+		// Check for pause duration to reduce resource consumption.
+		if config.PauseDuration > (0 * time.Second) {
+			b.acmeAccountLock.Unlock() // Correct the Lock
+			time.Sleep(config.PauseDuration)
+			b.acmeAccountLock.Lock()
+		}
 	}
 
 	return nil
