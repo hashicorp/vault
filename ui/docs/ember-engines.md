@@ -2,15 +2,11 @@
 
 ## Create a new in-repo engine:
 
----
-
 `ember g in-repo-engine <engine-name>`
 
 _This blueprint in-repo engine command will add a new folder `lib/<engine-name>` and add the engine to our main app’s `package.json`_
 
 ## Engine’s package.json:
-
----
 
 ```json
 {
@@ -34,8 +30,6 @@ For our application, we want to include the **ember-addon** path `../core`
 By adding this **ember-addon** path, we are able to share elements between your in-repo addon and the Vault application[^1].
 
 ## Configure your Engine
-
----
 
 In the engine’s `index.js` file:
 
@@ -115,8 +109,6 @@ The services in the example above are common services that we often use in our e
 Optional step: Add some text in the engine’s `application.hbs` file (to see if your engine was set up correctly).
 
 ## Register your engine with our main application:
-
----
 
 In our `app/app.js` in the engines object, add your engine’s name and dependencies.
 
