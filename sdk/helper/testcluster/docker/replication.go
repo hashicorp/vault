@@ -49,7 +49,6 @@ func NewReplicationSetDocker(t *testing.T, opts *DockerClusterOptions) (*testclu
 		return nil, fmt.Errorf("cluster name length exceeded the maximum allowed length of %v", MaxClusterNameLength)
 	}
 
-
 	r.Builder = func(ctx context.Context, name string, baseLogger hclog.Logger) (testcluster.VaultCluster, error) {
 		myOpts := *opts
 		myOpts.Logger = baseLogger.Named(name)
