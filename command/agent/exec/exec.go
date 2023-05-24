@@ -249,8 +249,7 @@ func (s *Server) bounceCmd(newEnvVars []string) error {
 		return err
 	}
 	s.childProcess = proc
-	// did not work
-	// s.childProcessExitCh = s.childProcess.ExitCh()
+
 	go func() {
 		select {
 		case exitCode := <-proc.ExitCh():

@@ -17,13 +17,12 @@ import (
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-retryablehttp"
-
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
 
-func dummyVaultServer() *httptest.Server {
+func fakeVaultServer() *httptest.Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/v1/kv/my-app/creds", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, `{
@@ -52,22 +51,9 @@ func dummyVaultServer() *httptest.Server {
 	return httptest.NewServer(mux)
 }
 
-func processErrorCodeChecker(expectedExitCode int) func(t *testing.T, err error) {
-	return func(t *testing.T, err error) {
-		var processExitError *ProcessExitError
-		if errors.As(err, &processExitError) {
-			if processExitError.ExitCode != expectedExitCode {
-				t.Fatalf("expected exit code %d, got %d", expectedExitCode, processExitError.ExitCode)
-			}
-		} else {
-			t.Fatalf("expected error of type ProcessExitError")
-		}
-	}
-}
-
 func TestServer_Run(t *testing.T) {
-	vault := dummyVaultServer()
-	defer vault.Close()
+	fakeVault := fakeVaultServer()
+	defer fakeVault.Close()
 
 	testCases := map[string]struct {
 		envTemplates      []*ctconfig.TemplateConfig
@@ -76,7 +62,7 @@ func TestServer_Run(t *testing.T) {
 		testAppStopSignal os.Signal
 		testAppPort       int
 		expected          map[string]string
-		expectedExit      bool
+		expectedError     error
 	}{
 		"simple": {
 			envTemplates: []*ctconfig.TemplateConfig{{
@@ -93,7 +79,7 @@ func TestServer_Run(t *testing.T) {
 				"MY_USER":     "app-user",
 				"MY_PASSWORD": "s3cr3t",
 			},
-			expectedExit: false,
+			expectedError: nil,
 		},
 		"exits_early_success": {
 			envTemplates: []*ctconfig.TemplateConfig{{
@@ -103,11 +89,7 @@ func TestServer_Run(t *testing.T) {
 			testAppArgs:       []string{"--stop-after", "2s"},
 			testAppStopSignal: syscall.SIGTERM,
 			testAppPort:       34002,
-			expected: map[string]string{
-				"MY_USER": "app-user",
-			},
-			expectedExit: true,
-			checkError:   processErrorCodeChecker(0),
+			expectedError:     &ProcessExitError{0},
 		},
 		"exits_early_non_zero": {
 			envTemplates: []*ctconfig.TemplateConfig{{
@@ -117,24 +99,22 @@ func TestServer_Run(t *testing.T) {
 			testAppArgs:       []string{"--stop-after", "2s", "--exit-code", "5"},
 			testAppStopSignal: syscall.SIGTERM,
 			testAppPort:       34003,
-			expected: map[string]string{
-				"MY_USER": "app-user",
-			},
-			expectedExit: true,
-			checkError:   processErrorCodeChecker(5),
+			expectedError:     &ProcessExitError{1}, // "go run" coerses error codes into 1 for all errors
 		},
 	}
 
-	goBin, err := exec.LookPath("go")
+	goBinary, err := exec.LookPath("go")
 	if err != nil {
 		t.Fatalf("could not find go binary on path: %s", err)
 	}
 
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			exampleAppUrl := fmt.Sprintf("http://localhost:%d", testCase.testAppPort)
-			baseCmdArgs := []string{
-				goBin,
+			ctx, cancelContextFunc := context.WithTimeout(context.Background(), 15*time.Second)
+			defer cancelContextFunc()
+
+			testAppCommand := []string{
+				goBinary,
 				"run",
 				"./test-app",
 				"--port",
@@ -145,14 +125,14 @@ func TestServer_Run(t *testing.T) {
 				Logger: logging.NewVaultLogger(hclog.Trace),
 				AgentConfig: &config.Config{
 					Vault: &config.Vault{
-						Address: vault.URL,
+						Address: fakeVault.URL,
 						Retry: &config.Retry{
 							NumRetries: 3,
 						},
 					},
 					Exec: &config.ExecConfig{
 						RestartOnSecretChanges: "always",
-						Command:                append(baseCmdArgs, testCase.testAppArgs...),
+						Command:                append(testAppCommand, testCase.testAppArgs...),
 						RestartStopSignal:      testCase.testAppStopSignal,
 					},
 					EnvTemplates: testCase.envTemplates,
@@ -161,33 +141,27 @@ func TestServer_Run(t *testing.T) {
 				LogWriter: hclog.DefaultOutput,
 			})
 
-			ctx, cancelTimeout := context.WithTimeout(context.Background(), 15*time.Second)
-			defer cancelTimeout()
-			ctx, cancel := context.WithCancel(ctx)
-			defer cancel()
-			templateTokenCh := make(chan string, 1)
-			errCh := make(chan error)
-			appStartedCh := make(chan struct{})
-			appStartErrCh := make(chan error)
-
 			// start the exec server
+			var (
+				execServerErrCh   = make(chan error)
+				execServerTokenCh = make(chan string, 1)
+			)
 			go func() {
-				errCh <- execServer.Run(ctx, templateTokenCh)
+				execServerErrCh <- execServer.Run(ctx, execServerTokenCh)
 			}()
 
-			// send a dummy value to kick off the server
-			templateTokenCh <- "my-token"
+			// send a dummy token to kick off the server
+			execServerTokenCh <- "my-token"
+
+			testAppHealthCheckCh := make(chan error)
+			testAppAddress := fmt.Sprintf("http://localhost:%d", testCase.testAppPort)
 
 			// check to make sure the app is running
-			if !testCase.expectedExit {
+			if testCase.expectedError == nil {
 				go func() {
 					time.Sleep(3 * time.Second)
-					_, err := retryablehttp.Head(exampleAppUrl)
-					if err != nil {
-						appStartErrCh <- err
-					} else {
-						appStartedCh <- struct{}{}
-					}
+					_, err := retryablehttp.Head(testAppAddress)
+					testAppHealthCheckCh <- err
 				}()
 			}
 
@@ -196,36 +170,37 @@ func TestServer_Run(t *testing.T) {
 			select {
 			case <-ctx.Done():
 				t.Fatal("timeout reached before templates were rendered")
-			case err := <-errCh:
-				if err != nil && !testCase.expectedExit {
-					t.Fatalf("did not expect error, got: %v", err)
+
+			case err := <-execServerErrCh:
+				if testCase.expectedError == nil && err != nil {
+					t.Fatalf("exec server did not expect an error, got: %v", err)
 				}
-				if err != nil && testCase.expectedExit {
-					t.Logf("received expected error: %v", err)
-					if testCase.checkError != nil {
-						testCase.checkError(t, err)
-					}
-					return
+
+				if errors.Is(err, testCase.expectedError) {
+					t.Fatalf("exec server expected error %v; got %v", testCase.expectedError, err)
 				}
-			case <-appStartedCh:
-				t.Log("app has started")
-			case <-appStartErrCh:
-				if !testCase.expectedExit {
-					t.Fatal("app could not be started")
+
+				t.Log("exec server exited without an error")
+				return
+
+			case err := <-testAppHealthCheckCh:
+				if testCase.expectedError == nil && err != nil {
+					t.Fatalf("test app could not be started")
 				}
+
+				t.Log("test app started successfully")
 			}
 
-			// we started the server, now call it to see if
-			// the environment variables are what they are supposed to be
-			res, err := http.Get(exampleAppUrl)
+			// verify the environment variables
+			resp, err := http.Get(testAppAddress)
 			if err != nil {
 				t.Fatalf("error making request to test app: %s", err)
 			}
-			defer res.Body.Close()
+			defer resp.Body.Close()
 
-			decoder := json.NewDecoder(res.Body)
+			decoder := json.NewDecoder(resp.Body)
 			var response struct {
-				EnvVars   map[string]string `json:"env_vars"`
+				EnvVars   map[string]string `json:"environment_variables"`
 				ProcessID int               `json:"process_id"`
 			}
 			if err := decoder.Decode(&response); err != nil {
@@ -241,9 +216,6 @@ func TestServer_Run(t *testing.T) {
 					t.Fatalf("expected environment variable %s to have a value of %q but it has a value of %q", key, expectedValue, actualValue)
 				}
 			}
-
-			// explicitly cancel
-			cancel()
 		})
 	}
 }

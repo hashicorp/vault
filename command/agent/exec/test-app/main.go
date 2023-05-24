@@ -35,8 +35,8 @@ func init() {
 }
 
 type Response struct {
-	EnvVars   map[string]string `json:"env_vars"`
-	ProcessID int               `json:"process_id"`
+	EnvironmentVariables map[string]string `json:"environment_variables"`
+	ProcessID            int               `json:"process_id"`
 }
 
 func newResponse() Response {
@@ -47,8 +47,8 @@ func newResponse() Response {
 	}
 
 	return Response{
-		EnvVars:   respEnv,
-		ProcessID: os.Getpid(),
+		EnvironmentVariables: respEnv,
+		ProcessID:            os.Getpid(),
 	}
 }
 
