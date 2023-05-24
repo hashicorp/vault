@@ -57,7 +57,6 @@ func TestServer_Run(t *testing.T) {
 
 	testCases := map[string]struct {
 		envTemplates      []*ctconfig.TemplateConfig
-		checkError        func(*testing.T, error)
 		testAppArgs       []string
 		testAppStopSignal os.Signal
 		testAppPort       int
@@ -99,7 +98,7 @@ func TestServer_Run(t *testing.T) {
 			testAppArgs:       []string{"--stop-after", "2s", "--exit-code", "5"},
 			testAppStopSignal: syscall.SIGTERM,
 			testAppPort:       34003,
-			expectedError:     &ProcessExitError{1}, // "go run" coerses error codes into 1 for all errors
+			expectedError:     &ProcessExitError{1}, // "go run" coerses error codes into "1" for all errors
 		},
 	}
 
@@ -200,15 +199,15 @@ func TestServer_Run(t *testing.T) {
 
 			decoder := json.NewDecoder(resp.Body)
 			var response struct {
-				EnvVars   map[string]string `json:"environment_variables"`
-				ProcessID int               `json:"process_id"`
+				EnvironmentVariables map[string]string `json:"environment_variables"`
+				ProcessID            int               `json:"process_id"`
 			}
 			if err := decoder.Decode(&response); err != nil {
 				t.Fatalf("unable to parse response from test app: %s", err)
 			}
 
 			for key, expectedValue := range testCase.expected {
-				actualValue, ok := response.EnvVars[key]
+				actualValue, ok := response.EnvironmentVariables[key]
 				if !ok {
 					t.Fatalf("expected the test app to return %q environment variable", key)
 				}
