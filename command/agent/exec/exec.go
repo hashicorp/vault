@@ -63,7 +63,12 @@ type Server struct {
 	childProcessState childProcessState
 
 	// exit channel of the child process
-	childProcessExitCh <-chan int
+	childProcessExitCh chan int
+
+	// we need to start a different go-routine to watch the
+	// child process each time we restart it.
+	// this function closes the old watcher go-routine so it doesn't leak
+	childProcessExitCodeCloser func()
 }
 
 type ProcessExitError struct {
@@ -76,9 +81,10 @@ func (e *ProcessExitError) Error() string {
 
 func NewServer(cfg *ServerConfig) *Server {
 	server := Server{
-		logger:            cfg.Logger,
-		config:            cfg,
-		childProcessState: childProcessStateNotStarted,
+		logger:             cfg.Logger,
+		config:             cfg,
+		childProcessState:  childProcessStateNotStarted,
+		childProcessExitCh: make(chan int),
 	}
 
 	return &server
@@ -211,6 +217,7 @@ func (s *Server) bounceCmd(newEnvVars []string) error {
 			// process is running, need to kill it first
 			s.logger.Info("stopping process", "process_id", s.childProcess.Pid())
 			s.childProcessState = childProcessStateRestarting
+			s.childProcessExitCodeCloser()
 			s.childProcess.Stop()
 		}
 	case "never":
@@ -248,7 +255,19 @@ func (s *Server) bounceCmd(newEnvVars []string) error {
 		return err
 	}
 	s.childProcess = proc
-	s.childProcessExitCh = s.childProcess.ExitCh()
+
+	// listen if the child process exits and bubble it up to the main loop
+	go func() {
+		ctx, cancel := context.WithCancel(context.Background())
+		s.childProcessExitCodeCloser = cancel
+		select {
+		case exitCode := <-proc.ExitCh():
+			s.childProcessExitCh <- exitCode
+			return
+		case <-ctx.Done():
+			return
+		}
+	}()
 
 	if err := s.childProcess.Start(); err != nil {
 		return fmt.Errorf("error starting child process: %w", err)
