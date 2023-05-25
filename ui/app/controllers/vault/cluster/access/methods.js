@@ -26,6 +26,8 @@ export default class VaultClusterAccessMethodsController extends Controller {
     // return an options list to filter by engine type, ex: 'kv'
     if (this.selectedAuthType) {
       // check first if the user has also filtered by name.
+      // names are individualized across type so you can't have the same name for an aws auth method and userpass. 
+      // this means it's fine to filter by first type and then name or just name. 
       if (this.selectedAuthName) {
         return this.model.filter((method) => this.selectedAuthName === method.id);
       }
