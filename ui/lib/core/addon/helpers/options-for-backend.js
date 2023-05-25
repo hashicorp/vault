@@ -14,6 +14,8 @@ const DEFAULT_DISPLAY = {
   editComponent: 'secret-edit',
   listItemPartial: 'secret-list/item',
 };
+
+// TODO used for <SecretListHeader> refactor and make component similar to k8's <TabPageHeader>
 const PKI_ENGINE_BACKEND = {
   displayName: 'PKI',
   navigateTree: false,
