@@ -24,6 +24,11 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
 
   hooks.beforeEach(function () {
     this.uid = uuidv4();
+    this.calcDays = (hours) => {
+      const days = Math.floor(hours / 24);
+      const remainingHours = hours / 24;
+      return `${days} days ${remainingHours} hours`;
+    };
     return authPage.login();
   });
 
@@ -32,7 +37,6 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     const path = `mount-kv-${this.uid}`;
     const defaultTTLHours = 100;
     const maxTTLHours = 300;
-
     await page.visit();
 
     assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
@@ -49,8 +53,8 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       .maxTTLVal(maxTTLHours)
       .submit();
     await configPage.visit({ backend: path });
-    assert.strictEqual(configPage.defaultTTL, '4 days 4 hours', 'shows the proper TTL');
-    assert.strictEqual(configPage.maxTTL, '12 days 12 hours', 'shows the proper max TTL');
+    assert.strictEqual(configPage.defaultTTL, `${this.calcDays(defaultTTLHours)}`, 'shows the proper TTL');
+    assert.strictEqual(configPage.maxTTL, `${this.calcDays(maxTTLHours)}`, 'shows the proper max TTL');
   });
 
   test('it sets the ttl when enabled then disabled', async function (assert) {
@@ -77,7 +81,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       '0',
       'shows 0 (with no seconds) which means using the system default TTL'
     ); // https://developer.hashicorp.com/vault/api-docs/system/mounts#default_lease_ttl-1
-    assert.strictEqual(configPage.maxTTL, '12 days 12 hours', 'shows the proper max TTL');
+    assert.strictEqual(configPage.maxTTL, `${this.calcDays(maxTTLHours)}`, 'shows the proper max TTL');
   });
 
   test('it sets the max ttl after pki chosen, resets after', async function (assert) {
