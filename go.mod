@@ -69,7 +69,7 @@ require (
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/google/tink/go v1.6.1
-	github.com/hashicorp/cap v0.2.1-0.20220727210936-60cd1534e220
+	github.com/hashicorp/cap v0.3.0
 	github.com/hashicorp/consul-template v0.32.0
 	github.com/hashicorp/consul/api v1.20.0
 	github.com/hashicorp/errwrap v1.1.0
@@ -127,7 +127,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-gcp v0.16.0
 	github.com/hashicorp/vault-plugin-auth-jwt v0.15.0
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.10.0
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.15.0
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.16.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.14.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.9.2
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.13.2
@@ -141,7 +141,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-azure v0.16.0
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.15.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.15.0
-	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.3.0
+	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.5.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.15.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.10.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.11.0
@@ -296,7 +296,7 @@ require (
 	github.com/containerd/containerd v1.7.0 // indirect
 	github.com/containerd/continuity v0.3.0 // indirect
 	github.com/coreos/go-oidc v2.2.1+incompatible // indirect
-	github.com/coreos/go-oidc/v3 v3.1.0 // indirect
+	github.com/coreos/go-oidc/v3 v3.5.0 // indirect
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/couchbase/gocb/v2 v2.6.3 // indirect
@@ -329,13 +329,13 @@ require (
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-openapi/analysis v0.20.0 // indirect
 	github.com/go-openapi/errors v0.20.1 // indirect
-	github.com/go-openapi/jsonpointer v0.19.5 // indirect
-	github.com/go-openapi/jsonreference v0.20.0 // indirect
+	github.com/go-openapi/jsonpointer v0.19.6 // indirect
+	github.com/go-openapi/jsonreference v0.20.1 // indirect
 	github.com/go-openapi/loads v0.20.2 // indirect
 	github.com/go-openapi/runtime v0.19.24 // indirect
 	github.com/go-openapi/spec v0.20.3 // indirect
 	github.com/go-openapi/strfmt v0.20.0 // indirect
-	github.com/go-openapi/swag v0.19.14 // indirect
+	github.com/go-openapi/swag v0.22.3 // indirect
 	github.com/go-openapi/validate v0.20.2 // indirect
 	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible // indirect
 	github.com/gofrs/uuid v4.3.0+incompatible // indirect
@@ -396,7 +396,7 @@ require (
 	github.com/lib/pq v1.10.6 // indirect
 	github.com/linode/linodego v0.7.1 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
-	github.com/mailru/easyjson v0.7.6 // indirect
+	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-ieproxy v0.0.1 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/mediocregopher/radix/v4 v4.1.2 // indirect
@@ -430,7 +430,7 @@ require (
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/renier/xmlrpc v0.0.0-20170708154548-ce4a1a486c03 // indirect
-	github.com/rogpeppe/go-internal v1.9.0 // indirect
+	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966 // indirect
@@ -475,12 +475,12 @@ require (
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.26.2 // indirect
-	k8s.io/apimachinery v0.26.2 // indirect
-	k8s.io/client-go v0.26.2 // indirect
+	k8s.io/api v0.27.2 // indirect
+	k8s.io/apimachinery v0.27.2 // indirect
+	k8s.io/client-go v0.27.2 // indirect
 	k8s.io/klog/v2 v2.90.1 // indirect
-	k8s.io/kube-openapi v0.0.0-20221012153701-172d655c2280 // indirect
-	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
+	k8s.io/kube-openapi v0.0.0-20230501164219-8b0f38b5fd1f // indirect
+	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
