@@ -51,10 +51,35 @@ func fakeVaultServer() *httptest.Server {
 	return httptest.NewServer(mux)
 }
 
-// TestServer_Run tests various scenarios of using vault agent as a process supervisor
+// TestServer_Run tests various scenarios of using vault agent as a process
+// supervisor. At its core is a sample application referred to as 'test app',
+// compiled from ./test-app/main.go. Each test case verifies that the test app
+// is started and/or stopped correctly by exec.Server.Run(). There are 3
+// high-level scenarios we want to test for:
+//
+//  1. test app is started and is injected with environment variables
+//  2. test app exits early (either with zero or non-zero extit code)
+//  3. test app needs to be stopped (and restarted) by exec.Server
 func TestServer_Run(t *testing.T) {
 	fakeVault := fakeVaultServer()
 	defer fakeVault.Close()
+
+	// we must build a test-app binary since 'go run' does not propagate signals correctly
+	goBinary, err := exec.LookPath("go")
+	if err != nil {
+		t.Fatalf("could not find go binary on path: %s", err)
+	}
+
+	testAppBinary := filepath.Join(os.TempDir(), "test-app")
+
+	if err := exec.Command(goBinary, "build", "-o", testAppBinary, "./test-app").Run(); err != nil {
+		t.Fatalf("could not build the test application: %s", err)
+	}
+	defer func() {
+		if err := os.Remove(testAppBinary); err != nil {
+			t.Fatalf("could not remove %q test application: %s", testAppBinary, err)
+		}
+	}()
 
 	testCases := map[string]struct {
 		skip                          bool
@@ -68,7 +93,7 @@ func TestServer_Run(t *testing.T) {
 		expectedTestDuration          time.Duration
 		expectedError                 error
 	}{
-		"simple": {
+		"ensure_environment_variables_are_injected": {
 			envTemplates: []*ctconfig.TemplateConfig{{
 				Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
 				MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
@@ -121,6 +146,7 @@ func TestServer_Run(t *testing.T) {
 			testAppPort:                   34004,
 			simulatedShutdownWaitDuration: 3 * time.Second,
 			expectedTestDuration:          15 * time.Second,
+			expectedError:                 nil,
 		},
 
 		"send_sigusr1_expect_test_app_exit": {
@@ -133,6 +159,7 @@ func TestServer_Run(t *testing.T) {
 			testAppPort:                   34005,
 			simulatedShutdownWaitDuration: 3 * time.Second,
 			expectedTestDuration:          15 * time.Second,
+			expectedError:                 nil,
 		},
 
 		"test_app_ignores_stop_signal": {
@@ -147,25 +174,9 @@ func TestServer_Run(t *testing.T) {
 			testAppPort:                   34006,
 			simulatedShutdownWaitDuration: 32 * time.Second, // the test app should be stopped immediately after 30s
 			expectedTestDuration:          45 * time.Second,
+			expectedError:                 nil,
 		},
 	}
-
-	goBinary, err := exec.LookPath("go")
-	if err != nil {
-		t.Fatalf("could not find go binary on path: %s", err)
-	}
-
-	// we must build a test binary since 'go run' does not propagate signals correctly
-	testAppBinary := filepath.Join(os.TempDir(), "test-app")
-
-	if err := exec.Command(goBinary, "build", "-o", testAppBinary, "./test-app").Run(); err != nil {
-		t.Fatalf("could not build the test application: %s", err)
-	}
-	defer func() {
-		if err := os.Remove(testAppBinary); err != nil {
-			t.Fatalf("could not remove %q test application: %s", testAppBinary, err)
-		}
-	}()
 
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -176,6 +187,7 @@ func TestServer_Run(t *testing.T) {
 			ctx, cancelContextFunc := context.WithTimeout(context.Background(), testCase.expectedTestDuration)
 			defer cancelContextFunc()
 
+			testAppAddr := fmt.Sprintf("http://localhost:%d", testCase.testAppPort)
 			testAppCommand := []string{
 				testAppBinary,
 				"--port",
@@ -214,18 +226,6 @@ func TestServer_Run(t *testing.T) {
 			// send a dummy token to kick off the server
 			execServerTokenCh <- "my-token"
 
-			testAppHealthCheckCh := make(chan error)
-			testAppAddress := fmt.Sprintf("http://localhost:%d", testCase.testAppPort)
-
-			// check to make sure the test app is running
-			if testCase.expectedError == nil {
-				go func() {
-					time.Sleep(3 * time.Second)
-					_, err := http.Head(testAppAddress)
-					testAppHealthCheckCh <- err
-				}()
-			}
-
 			select {
 			case <-ctx.Done():
 				t.Fatal("timeout reached before templates were rendered")
@@ -240,14 +240,18 @@ func TestServer_Run(t *testing.T) {
 				}
 
 				t.Log("exec server exited without an error")
+
 				return
 
-			case err := <-testAppHealthCheckCh:
-				if testCase.expectedError == nil && err != nil {
-					t.Fatalf("test app could not be started")
+			case <-time.After(3 * time.Second):
+				// ensure the test app has started
+				if testCase.expectedError == nil {
+					if _, err := http.Head(testAppAddr); err != nil {
+						t.Fatalf("the test app could not be started")
+					} else {
+						t.Log("the test app has started successfully")
+					}
 				}
-
-				t.Log("test app started successfully")
 			}
 
 			// simulate a shutdown of agent, which, in turn stops the test app
@@ -257,7 +261,7 @@ func TestServer_Run(t *testing.T) {
 				time.Sleep(testCase.simulatedShutdownWaitDuration)
 
 				// check if the test app is still alive
-				if _, err := http.Head(testAppAddress); err == nil {
+				if _, err := http.Head(testAppAddr); err == nil {
 					t.Fatalf("the test app is still alive %v after a simulated shutdown!", testCase.simulatedShutdownWaitDuration)
 				}
 
@@ -265,9 +269,9 @@ func TestServer_Run(t *testing.T) {
 			}
 
 			// verify the environment variables
-			resp, err := http.Get(testAppAddress)
+			resp, err := http.Get(testAppAddr)
 			if err != nil {
-				t.Fatalf("error making request to test app: %s", err)
+				t.Fatalf("error making request to the test app: %s", err)
 			}
 			defer resp.Body.Close()
 
