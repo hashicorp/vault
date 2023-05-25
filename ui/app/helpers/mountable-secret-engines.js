@@ -31,11 +31,6 @@ const ENTERPRISE_SECRET_ENGINES = [
 
 const MOUNTABLE_SECRET_ENGINES = [
   {
-    displayName: 'Active Directory',
-    type: 'ad',
-    category: 'cloud',
-  },
-  {
     displayName: 'AliCloud',
     type: 'alicloud',
     category: 'cloud',
