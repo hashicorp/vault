@@ -139,7 +139,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.4-beta1.0.20230330124709-3fcfc5914a22
 	github.com/hashicorp/vault-plugin-secrets-azure v0.16.0
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.15.0
-	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.14.0
+	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.15.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.3.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.15.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.10.0
@@ -227,10 +227,10 @@ require (
 
 require (
 	cloud.google.com/go v0.110.0 // indirect
-	cloud.google.com/go/compute v1.19.0 // indirect
+	cloud.google.com/go/compute v1.19.3 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
-	cloud.google.com/go/iam v0.13.0 // indirect
-	cloud.google.com/go/kms v1.10.1 // indirect
+	cloud.google.com/go/iam v1.0.1 // indirect
+	cloud.google.com/go/kms v1.10.2 // indirect
 	code.cloudfoundry.org/gofileutils v0.0.0-20170111115228-4d0c80011a0f // indirect
 	github.com/Azure/azure-pipeline-go v0.2.3 // indirect
 	github.com/Azure/azure-sdk-for-go v67.2.0+incompatible // indirect
@@ -319,8 +319,8 @@ require (
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.3.1 // indirect
-	github.com/gammazero/deque v0.0.0-20190130191400-2afb3858e9c7 // indirect
-	github.com/gammazero/workerpool v0.0.0-20190406235159-88d534f22b56 // indirect
+	github.com/gammazero/deque v0.2.1 // indirect
+	github.com/gammazero/workerpool v1.1.3 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.5.4 // indirect
 	github.com/go-ldap/ldif v0.0.0-20200320164324-fd88d9b715b3 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
@@ -351,7 +351,7 @@ require (
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.2.3 // indirect
-	github.com/googleapis/gax-go/v2 v2.8.0 // indirect
+	github.com/googleapis/gax-go/v2 v2.9.1 // indirect
 	github.com/gophercloud/gophercloud v0.1.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
@@ -466,7 +466,7 @@ require (
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20230524185152-1884fd1fac28 // indirect
+	google.golang.org/genproto v0.0.0-20230525154841-bd750badd5c6 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.66.2 // indirect
 	gopkg.in/jcmturner/goidentity.v3 v3.0.0 // indirect
