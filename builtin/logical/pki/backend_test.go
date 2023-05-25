@@ -6863,8 +6863,8 @@ func TestProperAuthing(t *testing.T) {
 		"unified-ocsp":                           shouldBeUnauthedWriteOnly,
 		"unified-ocsp/dGVzdAo=":                  shouldBeUnauthedReadList,
 		"acme/new-eab":                           shouldBeAuthed,
-		"acme/eab":                               shouldBeAuthed,
-		"acme/eab/" + eabKid:                     shouldBeAuthed,
+		"eab":                                    shouldBeAuthed,
+		"eab/" + eabKid:                          shouldBeAuthed,
 	}
 
 	// Add ACME based paths to the test suite
@@ -6938,7 +6938,7 @@ func TestProperAuthing(t *testing.T) {
 		if strings.Contains(raw_path, "acme/") && strings.Contains(raw_path, "{order_id}") {
 			raw_path = strings.ReplaceAll(raw_path, "{order_id}", "13b80844-e60d-42d2-b7e9-152a8e834b90")
 		}
-		if strings.Contains(raw_path, "acme/eab") && strings.Contains(raw_path, "{key_id}") {
+		if strings.Contains(raw_path, "eab") && strings.Contains(raw_path, "{key_id}") {
 			raw_path = strings.ReplaceAll(raw_path, "{key_id}", eabKid)
 		}
 

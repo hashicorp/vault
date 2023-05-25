@@ -346,6 +346,25 @@ func TestAcmeBasicWorkflowWithEab(t *testing.T) {
 	require.ErrorContains(t, err, "urn:ietf:params:acme:error:externalAccountRequired",
 		"expected failure creating an account without eab")
 
+	// Test fetch, list, delete workflow
+	kid, _ := getEABKey(t, client)
+	resp, err := client.Logical().ListWithContext(context.Background(), "pki/eab")
+	require.NoError(t, err, "failed to list eab tokens")
+	require.NotNil(t, resp, "list response for eab tokens should not be nil")
+	require.Contains(t, resp.Data, "keys")
+	require.Contains(t, resp.Data, "key_info")
+	require.Len(t, resp.Data["keys"], 1)
+	require.Contains(t, resp.Data["keys"], kid)
+
+	_, err = client.Logical().DeleteWithContext(context.Background(), "pki/eab/"+kid)
+	require.NoError(t, err, "failed to delete eab")
+
+	// List eabs should return zero results
+	resp, err = client.Logical().ListWithContext(context.Background(), "pki/eab")
+	require.NoError(t, err, "failed to list eab tokens")
+	require.Nil(t, resp, "list response for eab tokens should have been nil")
+
+	// fetch a new EAB
 	kid, eabKeyBytes := getEABKey(t, client)
 	acct := &acme.Account{
 		ExternalAccountBinding: &acme.ExternalAccountBinding{
@@ -355,7 +374,7 @@ func TestAcmeBasicWorkflowWithEab(t *testing.T) {
 	}
 
 	// Make sure we can list our key
-	resp, err := client.Logical().ListWithContext(context.Background(), "pki/acme/eab")
+	resp, err = client.Logical().ListWithContext(context.Background(), "pki/eab")
 	require.NoError(t, err, "failed to list eab tokens")
 	require.NotNil(t, resp, "list response for eab tokens should not be nil")
 	require.Contains(t, resp.Data, "keys")
@@ -377,7 +396,7 @@ func TestAcmeBasicWorkflowWithEab(t *testing.T) {
 	require.NoError(t, err, "failed registering new account with eab")
 
 	// Make sure our EAB is no longer available
-	resp, err = client.Logical().ListWithContext(context.Background(), "pki/acme/eab")
+	resp, err = client.Logical().ListWithContext(context.Background(), "pki/eab")
 	require.NoError(t, err, "failed to list eab tokens")
 	require.Nil(t, resp, "list response for eab tokens should have been nil due to empty list")
 

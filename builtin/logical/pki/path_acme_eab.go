@@ -22,7 +22,7 @@ import (
  */
 func pathAcmeEabList(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "acme/eab/?$",
+		Pattern: "eab/?$",
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixPKI,
@@ -75,7 +75,7 @@ identifiers that have been generated but yet to be used.`,
 
 func pathAcmeEabDelete(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "acme/eab/" + uuidNameRegex("key_id"),
+		Pattern: "eab/" + uuidNameRegex("key_id"),
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixPKI,
