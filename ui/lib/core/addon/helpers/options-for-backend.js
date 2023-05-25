@@ -6,6 +6,9 @@
 import { helper as buildHelper } from '@ember/component/helper';
 import { capitalize } from '@ember/string';
 
+// TODO move all pki related logic to the its ember engine
+// then we can remove use of SecretListHeader there, and use self-managed component like TabPageHeader in k8
+
 const DEFAULT_DISPLAY = {
   searchPlaceholder: 'Filter secrets',
   item: 'secret',
@@ -15,7 +18,6 @@ const DEFAULT_DISPLAY = {
   listItemPartial: 'secret-list/item',
 };
 
-// TODO used for <SecretListHeader> refactor and make component similar to k8's <TabPageHeader>
 const PKI_ENGINE_BACKEND = {
   displayName: 'PKI',
   navigateTree: false,
