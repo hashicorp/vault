@@ -57,6 +57,8 @@ func TestServer_Run(t *testing.T) {
 	defer fakeVault.Close()
 
 	testCases := map[string]struct {
+		skip                          bool
+		skipReason                    string
 		envTemplates                  []*ctconfig.TemplateConfig
 		testAppArgs                   []string
 		testAppStopSignal             os.Signal
@@ -134,6 +136,8 @@ func TestServer_Run(t *testing.T) {
 		},
 
 		"test_app_ignores_stop_signal": {
+			skip:       true,
+			skipReason: "This test currently fails with 'go test -race' (see hashicorp/consul-template/issues/1753).",
 			envTemplates: []*ctconfig.TemplateConfig{{
 				Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
 				MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
@@ -165,6 +169,10 @@ func TestServer_Run(t *testing.T) {
 
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
+			if testCase.skip {
+				t.Skip(testCase.skipReason)
+			}
+
 			ctx, cancelContextFunc := context.WithTimeout(context.Background(), testCase.expectedTestDuration)
 			defer cancelContextFunc()
 
@@ -217,8 +225,6 @@ func TestServer_Run(t *testing.T) {
 					testAppHealthCheckCh <- err
 				}()
 			}
-
-			time.Sleep(5 * time.Second)
 
 			select {
 			case <-ctx.Done():
