@@ -32,10 +32,19 @@ module('Integration | Helper | format-duration', function (hooks) {
     assert.strictEqual(duration([0]), 0);
   });
 
-  test('it returns string inputs', async function (assert) {
-    this.set('number', 'arg');
-    assert.strictEqual(duration(['0']), '0');
+  test('it returns plain or non-parsable string inputs', async function (assert) {
+    assert.strictEqual(duration(['0']), '0 seconds'); // assume seconds for '0' string values only
     assert.strictEqual(duration(['arg']), 'arg');
     assert.strictEqual(duration(['1245']), '1245');
+    assert.strictEqual(duration(['11y']), '11y');
+  });
+
+  test('it formats duration string inputs', async function (assert) {
+    assert.strictEqual(duration(['0s']), '0 seconds');
+    assert.strictEqual(duration(['5s']), '5 seconds');
+    assert.strictEqual(duration(['545h']), '22 days 17 hours');
+    assert.strictEqual(duration(['8h']), '8 hours');
+    assert.strictEqual(duration(['3m']), '3 minutes');
+    assert.strictEqual(duration(['10d']), '10 days');
   });
 });

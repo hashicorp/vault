@@ -30,13 +30,13 @@ import Component from '@glimmer/component';
 import { typeOf } from '@ember/utils';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-import Duration from '@icholy/duration';
 import { guidFor } from '@ember/object/internals';
 import Ember from 'ember';
 import { restartableTask, timeout } from 'ember-concurrency';
 import {
   convertFromSeconds,
   convertToSeconds,
+  durationToSeconds,
   goSafeConvertFromSeconds,
   largestUnitFromSeconds,
 } from 'core/utils/duration-utils';
@@ -80,18 +80,8 @@ export default class TtlPickerComponent extends Component {
 
   initializeTtl() {
     const initialValue = this.args.initialValue;
-    let seconds = 0;
-    if (typeof initialValue === 'number') {
-      // if the passed value is a number, assume unit is seconds
-      seconds = initialValue;
-    } else {
-      try {
-        seconds = Duration.parse(initialValue).seconds();
-      } catch (e) {
-        // if parsing fails leave it empty
-        return;
-      }
-    }
+    const seconds = durationToSeconds({ duration: initialValue, fallback: 0 });
+
     const unit = largestUnitFromSeconds(seconds);
     this.time = convertFromSeconds(seconds, unit);
     this.unit = unit;

@@ -7,6 +7,8 @@
  * These utils are used for managing Duration type values
  * (eg. '30m', '365d'). Most often used in the context of TTLs
  */
+import Duration from '@icholy/duration';
+
 interface SecondsMap {
   s: 1;
   m: 60;
@@ -43,4 +45,20 @@ export const largestUnitFromSeconds = (seconds: number) => {
     unit = 'm';
   }
   return unit;
+};
+
+interface Args {
+  duration: string | number;
+  fallback: unknown;
+}
+// parses number or duration string ('3m') and returns seconds
+export const durationToSeconds = ({ duration, fallback }: Args) => {
+  // any number we assume is in seconds
+  if (typeof duration === 'number') return duration;
+  try {
+    return Duration.parse(duration).seconds();
+  } catch (e) {
+    // value to return if parsing fails
+    return fallback;
+  }
 };
