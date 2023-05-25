@@ -198,6 +198,9 @@ func newClientCertificateGenerator(config map[string]interface{}) (ClientCertifi
 	}
 
 	switch cg.KeyType {
+	case "":
+		cg.KeyType = "ec"
+		cg.KeyBits = 256
 	case "rsa":
 		switch cg.KeyBits {
 		case 0:
@@ -215,7 +218,7 @@ func newClientCertificateGenerator(config map[string]interface{}) (ClientCertifi
 			return cg, fmt.Errorf("invalid key_bits")
 		}
 	case "ed25519":
-		// key_bits ignored
+	// key_bits ignored
 	default:
 		return cg, fmt.Errorf("invalid key_type")
 	}
