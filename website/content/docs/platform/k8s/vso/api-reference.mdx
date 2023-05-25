@@ -9,7 +9,7 @@ description: >-
 
 <!--
   generated with crd-ref-docs --source-path api/v1alpha1 --config docs/config.yaml --renderer=markdown in the vault-secrets-operator repo.
-  commit SHA=7236932478761438b62db3f21634308b3baaf891
+  commit SHA=f3752fbce7be3bb9e73615a10d2ddeb58e2a8cb6
 -->
 # API Reference
 
@@ -52,7 +52,7 @@ _Appears in:_
 | `create` _boolean_ | Create the destination Secret. If the Secret already exists this should be set to false. |
 | `labels` _object (keys:string, values:string)_ | Labels to apply to the Secret. Requires Create to be set to true. |
 | `annotations` _object (keys:string, values:string)_ | Annotations to apply to the Secret. Requires Create to be set to true. |
-| `type` _[SecretType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#secrettype-v1-core)_ | Type of Kubernetes Secret. Requires Create to be set to true. Defaults to Opaque. |
+| `type` _[SecretType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#secrettype-v1-core)_ | Type of Kubernetes Secret. Requires Create to be set to true. Defaults to Opaque. |
 
 
 #### RolloutRestartTarget
@@ -60,7 +60,7 @@ _Appears in:_
 
 
 RolloutRestartTarget provides the configuration required to perform a rollout-restart of the supported resources upon Vault Secret rotation. The rollout-restart is triggered by patching the target resource's 'spec.template.metadata.annotations' to include 'vso.secrets.hashicorp.com/restartedAt' with a timestamp value of when the trigger was executed. E.g. vso.secrets.hashicorp.com/restartedAt: "2023-03-23T13:39:31Z"
-Supported resources: Deployment, DaemonSet, StatefulSet
+ Supported resources: Deployment, DaemonSet, StatefulSet
 
 _Appears in:_
 - [VaultDynamicSecretSpec](#vaultdynamicsecretspec)
@@ -77,7 +77,7 @@ _Appears in:_
 
 
 
-StorageEncryption provides the necessary configuration needed to encrypt the storage cache entries using Vault's Transit engine. It only supports Kubernetes Auth for now.
+StorageEncryption provides the necessary configuration need to encrypt the storage cache entries using Vault's Transit engine. It only supports Kubernetes Auth for now.
 
 _Appears in:_
 - [VaultAuthSpec](#vaultauthspec)
@@ -101,8 +101,41 @@ _Appears in:_
 | --- | --- |
 | `apiVersion` _string_ | `secrets.hashicorp.com/v1alpha1`
 | `kind` _string_ | `VaultAuth`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[VaultAuthSpec](#vaultauthspec)_ |  |
+
+
+#### VaultAuthConfigAppRole
+
+
+
+VaultAuthConfigAppRole provides VaultAuth configuration options needed for authenticating to Vault via an AppRole AuthMethod.
+
+_Appears in:_
+- [VaultAuthSpec](#vaultauthspec)
+
+| Field | Description |
+| --- | --- |
+| `roleId` _string_ | RoleID of the AppRole Role to use for authenticating to Vault. |
+| `secretRef` _string_ | SecretRef is the name of a Kubernetes secret in the consumer's (VDS/VSS/PKI) namespace which provides the AppRole Role's SecretID. The secret must have a key named `id` which holds the AppRole Role's secretID. |
+
+
+#### VaultAuthConfigJWT
+
+
+
+VaultAuthConfigJWT provides VaultAuth configuration options needed for authenticating to Vault.
+
+_Appears in:_
+- [VaultAuthSpec](#vaultauthspec)
+
+| Field | Description |
+| --- | --- |
+| `role` _string_ | Role to use for authenticating to Vault. |
+| `secretRef` _string_ | SecretRef is the name of a Kubernetes secret in the consumer's (VDS/VSS/PKI) namespace which provides the JWT token to authenticate to Vault's JWT authentication backend. The secret must have a key named `jwt` which holds the JWT token. |
+| `serviceAccount` _string_ | ServiceAccount to use when creating a ServiceAccount token to authenticate to Vault's JWT authentication backend. |
+| `audiences` _string array_ | TokenAudiences to include in the ServiceAccount token. |
+| `tokenExpirationSeconds` _integer_ | TokenExpirationSeconds to set the ServiceAccount token. |
 
 
 #### VaultAuthConfigKubernetes
@@ -134,7 +167,7 @@ VaultAuthList contains a list of VaultAuth
 | --- | --- |
 | `apiVersion` _string_ | `secrets.hashicorp.com/v1alpha1`
 | `kind` _string_ | `VaultAuthList`
-| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `items` _[VaultAuth](#vaultauth) array_ |  |
 
 
@@ -155,8 +188,10 @@ _Appears in:_
 | `mount` _string_ | Mount to use when authenticating to auth method. |
 | `params` _object (keys:string, values:string)_ | Params to use when authenticating to Vault |
 | `headers` _object (keys:string, values:string)_ | Headers to be included in all Vault requests. |
-| `kubernetes` _[VaultAuthConfigKubernetes](#vaultauthconfigkubernetes)_ | Kubernetes specific auth configuration, requires that the Method be set to kubernetes. |
-| `storageEncryption` _[StorageEncryption](#storageencryption)_ | StorageEncryption provides the necessary configuration to encrypt the client storage cache. This should only be configured when client cache persistence with encryption is enabled. This is done by passing setting the manager's commandline argument --client-cache-persistence-model=direct-encrypted Typically there should only ever be one VaultAuth configured with StorageEncryption in the Cluster, and it should have the the label: cacheStorageEncryption=true |
+| `kubernetes` _[VaultAuthConfigKubernetes](#vaultauthconfigkubernetes)_ | Kubernetes specific auth configuration, requires that the Method be set to `kubernetes`. |
+| `appRole` _[VaultAuthConfigAppRole](#vaultauthconfigapprole)_ | AppRole specific auth configuration, requires that the Method be set to `appRole`. |
+| `jwt` _[VaultAuthConfigJWT](#vaultauthconfigjwt)_ | JWT specific auth configuration, requires that the Method be set to `jwt`. |
+| `storageEncryption` _[StorageEncryption](#storageencryption)_ | StorageEncryption provides the necessary configuration to encrypt the client storage cache. This should only be configured when client cache persistence with encryption is enabled. This is done by passing setting the manager's commandline argument --client-cache-persistence-model=direct-encrypted. Typically there should only ever be one VaultAuth configured with StorageEncryption in the Cluster, and it should have the label: cacheStorageEncryption=true |
 
 
 
@@ -174,7 +209,7 @@ _Appears in:_
 | --- | --- |
 | `apiVersion` _string_ | `secrets.hashicorp.com/v1alpha1`
 | `kind` _string_ | `VaultConnection`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[VaultConnectionSpec](#vaultconnectionspec)_ |  |
 
 
@@ -190,7 +225,7 @@ VaultConnectionList contains a list of VaultConnection
 | --- | --- |
 | `apiVersion` _string_ | `secrets.hashicorp.com/v1alpha1`
 | `kind` _string_ | `VaultConnectionList`
-| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `items` _[VaultConnection](#vaultconnection) array_ |  |
 
 
@@ -227,7 +262,7 @@ _Appears in:_
 | --- | --- |
 | `apiVersion` _string_ | `secrets.hashicorp.com/v1alpha1`
 | `kind` _string_ | `VaultDynamicSecret`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[VaultDynamicSecretSpec](#vaultdynamicsecretspec)_ |  |
 
 
@@ -243,7 +278,7 @@ VaultDynamicSecretList contains a list of VaultDynamicSecret
 | --- | --- |
 | `apiVersion` _string_ | `secrets.hashicorp.com/v1alpha1`
 | `kind` _string_ | `VaultDynamicSecretList`
-| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `items` _[VaultDynamicSecret](#vaultdynamicsecret) array_ |  |
 
 
@@ -261,7 +296,11 @@ _Appears in:_
 | `vaultAuthRef` _string_ | VaultAuthRef to the VaultAuth resource If no value is specified the Operator will default to the `default` VaultAuth, configured in its own Kubernetes namespace. |
 | `namespace` _string_ | Namespace where the secrets engine is mounted in Vault. |
 | `mount` _string_ | Mount path of the secret's engine in Vault. |
-| `role` _string_ | Role in Vault to get the credentials for. |
+| `requestHTTPMethod` _string_ | RequestHTTPMethod to use when syncing Secrets from Vault. Setting a value here is not typically required. If left unset the Operator will make requests using the GET method. In the case where Params are specified the Operator will use the PUT method. Please consult https://developer.hashicorp.com/vault/docs/secrets if you are uncertain about what method to use. Of note, the Vault client treats PUT and POST as being equivalent. The underlying Vault client implementation will always use the PUT method. |
+| `path` _string_ | Path in Vault to get the credentials for, and is relative to Mount. Please consult https://developer.hashicorp.com/vault/docs/secrets if you are uncertain about what 'path' should be set to. |
+| `params` _object (keys:string, values:string)_ | Params that can be passed when requesting credentials/secrets. When Params is set the configured RequestHTTPMethod will be ignored. See RequestHTTPMethod for more details. Please consult https://developer.hashicorp.com/vault/docs/secrets if you are uncertain about what 'params' should/can be set to. |
+| `renewalPercent` _integer_ | RenewalPercent is the percent out of 100 of the lease duration when the lease is renewed. Defaults to 67 percent plus jitter. |
+| `revoke` _boolean_ | Revoke the existing lease on VDS resource deletion. |
 | `rolloutRestartTargets` _[RolloutRestartTarget](#rolloutrestarttarget) array_ | RolloutRestartTargets should be configured whenever the application(s) consuming the Vault secret does not support dynamically reloading a rotated secret. In that case one, or more RolloutRestartTarget(s) can be configured here. The Operator will trigger a "rollout-restart" for each target whenever the Vault secret changes between reconciliation events. See RolloutRestartTarget for more details. |
 | `destination` _[Destination](#destination)_ | Destination provides configuration necessary for syncing the Vault secret to Kubernetes. |
 
@@ -281,7 +320,7 @@ _Appears in:_
 | --- | --- |
 | `apiVersion` _string_ | `secrets.hashicorp.com/v1alpha1`
 | `kind` _string_ | `VaultPKISecret`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[VaultPKISecretSpec](#vaultpkisecretspec)_ |  |
 
 
@@ -297,7 +336,7 @@ VaultPKISecretList contains a list of VaultPKISecret
 | --- | --- |
 | `apiVersion` _string_ | `secrets.hashicorp.com/v1alpha1`
 | `kind` _string_ | `VaultPKISecretList`
-| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `items` _[VaultPKISecret](#vaultpkisecret) array_ |  |
 
 
@@ -326,7 +365,7 @@ _Appears in:_
 | `altNames` _string array_ | AltNames to include in the request May contain both DNS names and email addresses. |
 | `ipSans` _string array_ | IPSans to include in the request. |
 | `uriSans` _string array_ | The requested URI SANs. |
-| `otherSans` _string_ | Requested other SANs, in an array with the format oid;type:value for each entry. |
+| `otherSans` _string array_ | Requested other SANs, in an array with the format oid;type:value for each entry. |
 | `ttl` _string_ | TTL for the certificate; sets the expiration date. If not specified the Vault role's default, backend default, or system default TTL is used, in that order. Cannot be larger than the mount's max TTL. Note: this only has an effect when generating a CA cert or signing a CA cert, not when generating a CSR for an intermediate CA. Should be in duration notation e.g. 120s, 2h, etc. |
 | `format` _string_ | Format for the certificate. Choices: "pem", "der", "pem_bundle". If "pem_bundle", any private key and issuing cert will be appended to the certificate pem. If "der", the value will be base64 encoded. Default: pem |
 | `privateKeyFormat` _string_ | PrivateKeyFormat, generally the default will be controlled by the Format parameter as either base64-encoded DER or PEM-encoded DER. However, this can be set to "pkcs8" to have the returned private key contain base64-encoded pkcs8 or PEM-encoded pkcs8 instead. Default: der |
@@ -366,7 +405,7 @@ _Appears in:_
 | --- | --- |
 | `apiVersion` _string_ | `secrets.hashicorp.com/v1alpha1`
 | `kind` _string_ | `VaultStaticSecret`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[VaultStaticSecretSpec](#vaultstaticsecretspec)_ |  |
 
 
@@ -382,7 +421,7 @@ VaultStaticSecretList contains a list of VaultStaticSecret
 | --- | --- |
 | `apiVersion` _string_ | `secrets.hashicorp.com/v1alpha1`
 | `kind` _string_ | `VaultStaticSecretList`
-| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `items` _[VaultStaticSecret](#vaultstaticsecret) array_ |  |
 
 
@@ -401,6 +440,7 @@ _Appears in:_
 | `namespace` _string_ | Namespace to get the secret from in Vault |
 | `mount` _string_ | Mount for the secret in Vault |
 | `name` _string_ | Name of the secret in Vault |
+| `version` _integer_ | Version of the secret to fetch. Only valid for type kv-v2. Corresponds to version query parameter: https://developer.hashicorp.com/vault/api-docs/secret/kv/kv-v2#version |
 | `type` _string_ | Type of the Vault static secret |
 | `refreshAfter` _string_ | RefreshAfter a period of time, in duration notation |
 | `hmacSecretData` _boolean_ | HMACSecretData determines whether the Operator computes the HMAC of the Secret's data. The MAC value will be stored in the resource's Status.SecretMac field, and will be used for drift detection and during incoming Vault secret comparison. Enabling this feature is recommended to ensure that Secret's data stays consistent with Vault. |
