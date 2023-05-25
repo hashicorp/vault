@@ -296,9 +296,9 @@ _Appears in:_
 | `vaultAuthRef` _string_ | VaultAuthRef to the VaultAuth resource If no value is specified the Operator will default to the `default` VaultAuth, configured in its own Kubernetes namespace. |
 | `namespace` _string_ | Namespace where the secrets engine is mounted in Vault. |
 | `mount` _string_ | Mount path of the secret's engine in Vault. |
-| `requestHTTPMethod` _string_ | RequestHTTPMethod to use when syncing Secrets from Vault. Setting a value here is not typically required. If left unset the Operator will make requests using the GET method. In the case where Params are specified the Operator will use the PUT method. Please consult https://developer.hashicorp.com/vault/docs/secrets if you are uncertain about what method to use. Of note, the Vault client treats PUT and POST as being equivalent. The underlying Vault client implementation will always use the PUT method. |
-| `path` _string_ | Path in Vault to get the credentials for, and is relative to Mount. Please consult https://developer.hashicorp.com/vault/docs/secrets if you are uncertain about what 'path' should be set to. |
-| `params` _object (keys:string, values:string)_ | Params that can be passed when requesting credentials/secrets. When Params is set the configured RequestHTTPMethod will be ignored. See RequestHTTPMethod for more details. Please consult https://developer.hashicorp.com/vault/docs/secrets if you are uncertain about what 'params' should/can be set to. |
+| `requestHTTPMethod` _string_ | RequestHTTPMethod to use when syncing Secrets from Vault. Setting a value here is not typically required. If left unset the Operator will make requests using the GET method. In the case where Params are specified the Operator will use the PUT method. Please consult [secrets](/vault/docs/secrets) if you are uncertain about what method to use. Of note, the Vault client treats PUT and POST as being equivalent. The underlying Vault client implementation will always use the PUT method. |
+| `path` _string_ | Path in Vault to get the credentials for, and is relative to Mount. Please consult [secrets](/vault/docs/secrets) if you are uncertain about what 'path' should be set to. |
+| `params` _object (keys:string, values:string)_ | Params that can be passed when requesting credentials/secrets. When Params is set the configured RequestHTTPMethod will be ignored. See RequestHTTPMethod for more details. Please consult [secrets](/vault/docs/secrets) if you are uncertain about what 'params' should/can be set to. |
 | `renewalPercent` _integer_ | RenewalPercent is the percent out of 100 of the lease duration when the lease is renewed. Defaults to 67 percent plus jitter. |
 | `revoke` _boolean_ | Revoke the existing lease on VDS resource deletion. |
 | `rolloutRestartTargets` _[RolloutRestartTarget](#rolloutrestarttarget) array_ | RolloutRestartTargets should be configured whenever the application(s) consuming the Vault secret does not support dynamically reloading a rotated secret. In that case one, or more RolloutRestartTarget(s) can be configured here. The Operator will trigger a "rollout-restart" for each target whenever the Vault secret changes between reconciliation events. See RolloutRestartTarget for more details. |
@@ -440,7 +440,7 @@ _Appears in:_
 | `namespace` _string_ | Namespace to get the secret from in Vault |
 | `mount` _string_ | Mount for the secret in Vault |
 | `name` _string_ | Name of the secret in Vault |
-| `version` _integer_ | Version of the secret to fetch. Only valid for type kv-v2. Corresponds to version query parameter: https://developer.hashicorp.com/vault/api-docs/secret/kv/kv-v2#version |
+| `version` _integer_ | Version of the secret to fetch. Only valid for type kv-v2. Corresponds to version query parameter: [kv-v2](/vault/api-docs/secret/kv/kv-v2#version) |
 | `type` _string_ | Type of the Vault static secret |
 | `refreshAfter` _string_ | RefreshAfter a period of time, in duration notation |
 | `hmacSecretData` _boolean_ | HMACSecretData determines whether the Operator computes the HMAC of the Secret's data. The MAC value will be stored in the resource's Status.SecretMac field, and will be used for drift detection and during incoming Vault secret comparison. Enabling this feature is recommended to ensure that Secret's data stays consistent with Vault. |
