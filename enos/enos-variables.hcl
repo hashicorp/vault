@@ -202,7 +202,7 @@ variable "ui_run_tests" {
 }
 
 variable "vault_enable_file_audit_device" {
-  description = "If true the file audit device will be enabled at the path /var/log/vault/vault_audit.log"
+  description = "If true the file audit device will be enabled at the path /var/log/vault_audit.log"
   type        = bool
   default     = true
 }

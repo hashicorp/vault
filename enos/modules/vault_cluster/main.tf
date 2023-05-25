@@ -61,7 +61,7 @@ locals {
       path    = "vault"
     })
   ]
-  audit_device_file_path = "/var/log/vault/vault_audit.log"
+  audit_device_file_path = "/var/log/vault_audit.log" # do not change this, SELinux causes issues with files created in other directories
   vault_service_user     = "vault"
 }
 
