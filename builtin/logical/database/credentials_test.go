@@ -37,42 +37,9 @@ func Test_newClientCertificateGenerator(t *testing.T) {
 				CommonNameTemplate: "",
 				CAPrivateKey:       "",
 				CACert:             "",
-				KeyType:            "",
+				KeyType:            "ec",
 				KeyBits:            0,
 				SignatureBits:      0,
-			},
-		},
-		{
-			name: "newClientCertificateGenerator with common_name_template",
-			args: args{
-				config: map[string]interface{}{
-					"common_name_template": "test-template",
-				},
-			},
-			want: ClientCertificateGenerator{
-				CommonNameTemplate: "test-template",
-			},
-		},
-		{
-			name: "newClientCertificateGenerator with ca_private_key",
-			args: args{
-				config: map[string]interface{}{
-					"ca_private_key": "test-private-key",
-				},
-			},
-			want: ClientCertificateGenerator{
-				CAPrivateKey: "test-private-key",
-			},
-		},
-		{
-			name: "newClientCertificateGenerator with ca_cert",
-			args: args{
-				config: map[string]interface{}{
-					"ca_cert": "test-ca-cert",
-				},
-			},
-			want: ClientCertificateGenerator{
-				CACert: "test-ca-cert",
 			},
 		},
 		{
@@ -83,7 +50,7 @@ func Test_newClientCertificateGenerator(t *testing.T) {
 				},
 			},
 			want: ClientCertificateGenerator{
-				KeyType: "",
+				KeyType: "ec",
 			},
 		},
 		{
@@ -140,6 +107,7 @@ func Test_newClientCertificateGenerator(t *testing.T) {
 				},
 			},
 			want: ClientCertificateGenerator{
+				KeyType: "ec",
 				KeyBits: 0,
 			},
 		},
@@ -151,6 +119,7 @@ func Test_newClientCertificateGenerator(t *testing.T) {
 				},
 			},
 			want: ClientCertificateGenerator{
+				KeyType: "ec",
 				KeyBits: 2048,
 			},
 		},
@@ -162,6 +131,7 @@ func Test_newClientCertificateGenerator(t *testing.T) {
 				},
 			},
 			want: ClientCertificateGenerator{
+				KeyType: "ec",
 				KeyBits: 3072,
 			},
 		},
@@ -173,6 +143,7 @@ func Test_newClientCertificateGenerator(t *testing.T) {
 				},
 			},
 			want: ClientCertificateGenerator{
+				KeyType: "ec",
 				KeyBits: 4096,
 			},
 		},
@@ -184,6 +155,7 @@ func Test_newClientCertificateGenerator(t *testing.T) {
 				},
 			},
 			want: ClientCertificateGenerator{
+				KeyType: "ec",
 				KeyBits: 224,
 			},
 		},
@@ -195,6 +167,7 @@ func Test_newClientCertificateGenerator(t *testing.T) {
 				},
 			},
 			want: ClientCertificateGenerator{
+				KeyType: "ec",
 				KeyBits: 256,
 			},
 		},
@@ -206,6 +179,7 @@ func Test_newClientCertificateGenerator(t *testing.T) {
 				},
 			},
 			want: ClientCertificateGenerator{
+				KeyType: "ec",
 				KeyBits: 384,
 			},
 		},
@@ -217,6 +191,7 @@ func Test_newClientCertificateGenerator(t *testing.T) {
 				},
 			},
 			want: ClientCertificateGenerator{
+				KeyType: "ec",
 				KeyBits: 521,
 			},
 		},
@@ -237,6 +212,7 @@ func Test_newClientCertificateGenerator(t *testing.T) {
 				},
 			},
 			want: ClientCertificateGenerator{
+				KeyType:       "ec",
 				SignatureBits: 0,
 			},
 		},
@@ -248,6 +224,7 @@ func Test_newClientCertificateGenerator(t *testing.T) {
 				},
 			},
 			want: ClientCertificateGenerator{
+				KeyType:       "ec",
 				SignatureBits: 256,
 			},
 		},
@@ -259,6 +236,7 @@ func Test_newClientCertificateGenerator(t *testing.T) {
 				},
 			},
 			want: ClientCertificateGenerator{
+				KeyType:       "ec",
 				SignatureBits: 384,
 			},
 		},
@@ -270,6 +248,7 @@ func Test_newClientCertificateGenerator(t *testing.T) {
 				},
 			},
 			want: ClientCertificateGenerator{
+				KeyType:       "ec",
 				SignatureBits: 512,
 			},
 		},
