@@ -3,6 +3,7 @@
 set -eux
 
 LOG_DIR=$(dirname "$LOG_FILE_PATH")
+FILE_NAME=$(basename "$LOG_FILE_PATH")
 
 # setup dir
 if [ ! -d "$LOG_DIR" ]
@@ -13,7 +14,8 @@ then
 fi
 
 # create log file
-sudo touch "$LOG_FILE_PATH"
+sudo touch /tmp/"$FILE_NAME"
+sudo mv /tmp/"$FILE_NAME" "$LOG_FILE_PATH"
 sudo chmod 600 "$LOG_FILE_PATH"
 sudo chown "$SERVICE_USER":"$SERVICE_USER" "$LOG_FILE_PATH"
 

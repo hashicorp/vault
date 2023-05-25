@@ -737,6 +737,6 @@ scenario "replication" {
 
   output "vault_audit_device_file_path" {
     description = "The file path for the file audit device, if enabled"
-    value       = step.create_vault_cluster.audit_device_file_path
+    value       = step.create_primary_cluster.audit_device_file_path
   }
 }
