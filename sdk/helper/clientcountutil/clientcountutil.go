@@ -4,6 +4,7 @@ package clientcountutil
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/vault/api"
@@ -11,7 +12,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-type dataGenerationWrapper struct {
+type ActivityLogDataGenerator struct {
 	data            *generation.ActivityLogMockInput
 	addingToMonth   *generation.Data
 	addingToSegment *generation.Segment
@@ -20,53 +21,18 @@ type dataGenerationWrapper struct {
 
 // NewActivityLogData creates a new instance of an activity log data generator
 // The type returned by this function cannot be called concurrently
-func NewActivityLogData(client *api.Client) *dataGenerationWrapper {
-	return &dataGenerationWrapper{
+func NewActivityLogData(client *api.Client) *ActivityLogDataGenerator {
+	return &ActivityLogDataGenerator{
 		client: client,
 		data:   new(generation.ActivityLogMockInput),
-	}
-}
-
-// ClientOption defines additional options for the client
-// This type and the functions that return it are here for ease of use. A user
-// could also choose to create the *generation.Client themselves, without using
-// a ClientOption
-type ClientOption func(client *generation.Client)
-
-// WithClientNamespace sets the namespace for the client
-func WithClientNamespace(n string) ClientOption {
-	return func(client *generation.Client) {
-		client.Namespace = n
-	}
-}
-
-// WithClientMount sets the mount path for the client
-func WithClientMount(m string) ClientOption {
-	return func(client *generation.Client) {
-		client.Mount = m
-	}
-}
-
-// WithClientIsNonEntity sets whether the client is an entity client or a non-
-// entity token client
-func WithClientIsNonEntity() ClientOption {
-	return func(client *generation.Client) {
-		client.NonEntity = true
-	}
-}
-
-// WithClientID sets the ID for the client
-func WithClientID(id string) ClientOption {
-	return func(client *generation.Client) {
-		client.Id = id
 	}
 }
 
 // NewCurrentMonthData opens a new month of data for the current month. All
 // clients will continue to be added to this month until a new month is created
 // with NewMonthDataMonthsAgo.
-func (d *dataGenerationWrapper) NewCurrentMonthData() *dataGenerationWrapper {
-	d.newMonth(&generation.Data{Month: new(generation.Data_CurrentMonth)})
+func (d *ActivityLogDataGenerator) NewCurrentMonthData() *ActivityLogDataGenerator {
+	d.newMonth(&generation.Data{Month: &generation.Data_CurrentMonth{CurrentMonth: true}})
 	return d
 }
 
@@ -74,15 +40,15 @@ func (d *dataGenerationWrapper) NewCurrentMonthData() *dataGenerationWrapper {
 // recorded as having been seen monthsAgo months ago. All clients will continue
 // to be added to this month until a new month is created with
 // NewMonthDataMonthsAgo or NewCurrentMonthData.
-func (d *dataGenerationWrapper) NewMonthDataMonthsAgo(monthsAgo int) *dataGenerationWrapper {
-	d.newMonth(&generation.Data{Month: &generation.Data_MonthsAgo{MonthsAgo: int32(monthsAgo)}})
-	return d
+func (d *ActivityLogDataGenerator) NewMonthDataMonthsAgo(monthsAgo int) *ActivityLogDataGenerator {
+	return d.newMonth(&generation.Data{Month: &generation.Data_MonthsAgo{MonthsAgo: int32(monthsAgo)}})
 }
 
-func (d *dataGenerationWrapper) newMonth(newMonth *generation.Data) {
+func (d *ActivityLogDataGenerator) newMonth(newMonth *generation.Data) *ActivityLogDataGenerator {
 	d.data.Data = append(d.data.Data, newMonth)
 	d.addingToMonth = newMonth
 	d.addingToSegment = nil
+	return d
 }
 
 type MonthOption func(m *generation.Data)
@@ -134,17 +100,55 @@ func WithSkipSegmentIndexes(i ...int) MonthOption {
 }
 
 // SetMonthOptions can be called at any time to set options for the open month
-func (d *dataGenerationWrapper) SetMonthOptions(opts ...MonthOption) *dataGenerationWrapper {
+func (d *ActivityLogDataGenerator) SetMonthOptions(opts ...MonthOption) *ActivityLogDataGenerator {
 	for _, opt := range opts {
 		opt(d.addingToMonth)
 	}
 	return d
 }
 
+// ClientOption defines additional options for the client
+// This type and the functions that return it are here for ease of use. A user
+// could also choose to create the *generation.Client themselves, without using
+// a ClientOption
+type ClientOption func(client *generation.Client)
+
+// WithClientNamespace sets the namespace for the client
+func WithClientNamespace(n string) ClientOption {
+	return func(client *generation.Client) {
+		client.Namespace = n
+	}
+}
+
+// WithClientMount sets the mount path for the client
+func WithClientMount(m string) ClientOption {
+	return func(client *generation.Client) {
+		client.Mount = m
+	}
+}
+
+// WithClientIsNonEntity sets whether the client is an entity client or a non-
+// entity token client
+func WithClientIsNonEntity() ClientOption {
+	return func(client *generation.Client) {
+		client.NonEntity = true
+	}
+}
+
+// WithClientID sets the ID for the client
+func WithClientID(id string) ClientOption {
+	return func(client *generation.Client) {
+		client.Id = id
+	}
+}
+
 // ClientsSeen adds clients to the month that was most recently opened with
 // NewMonthDataMonthsAgo or NewCurrentMonthData.
-func (d *dataGenerationWrapper) ClientsSeen(clients ...*generation.Client) *dataGenerationWrapper {
+func (d *ActivityLogDataGenerator) ClientsSeen(clients ...*generation.Client) *ActivityLogDataGenerator {
 	if d.addingToSegment == nil {
+		if d.addingToMonth.Clients == nil {
+			d.addingToMonth.Clients = &generation.Data_All{All: &generation.Clients{}}
+		}
 		d.addingToMonth.GetAll().Clients = append(d.addingToMonth.GetAll().Clients, clients...)
 		return d
 	}
@@ -154,13 +158,13 @@ func (d *dataGenerationWrapper) ClientsSeen(clients ...*generation.Client) *data
 
 // NewClientSeen adds 1 new client with the given options to the most recently
 // opened month.
-func (d *dataGenerationWrapper) NewClientSeen(opts ...ClientOption) *dataGenerationWrapper {
+func (d *ActivityLogDataGenerator) NewClientSeen(opts ...ClientOption) *ActivityLogDataGenerator {
 	return d.NewClientsSeen(1, opts...)
 }
 
 // NewClientsSeen adds n new clients with the given options to the most recently
 // opened month.
-func (d *dataGenerationWrapper) NewClientsSeen(n int, opts ...ClientOption) *dataGenerationWrapper {
+func (d *ActivityLogDataGenerator) NewClientsSeen(n int, opts ...ClientOption) *ActivityLogDataGenerator {
 	c := new(generation.Client)
 	for _, opt := range opts {
 		opt(c)
@@ -172,14 +176,14 @@ func (d *dataGenerationWrapper) NewClientsSeen(n int, opts ...ClientOption) *dat
 // RepeatedClientSeen adds 1 client that was seen in the previous month to
 // the month that was most recently opened. This client will have the attributes
 // described by the provided options.
-func (d *dataGenerationWrapper) RepeatedClientSeen(opts ...ClientOption) *dataGenerationWrapper {
+func (d *ActivityLogDataGenerator) RepeatedClientSeen(opts ...ClientOption) *ActivityLogDataGenerator {
 	return d.RepeatedClientsSeen(1, opts...)
 }
 
 // RepeatedClientsSeen adds n clients that were seen in the previous month to
 // the month that was most recently opened. These clients will have the
 // attributes described by provided options.
-func (d *dataGenerationWrapper) RepeatedClientsSeen(n int, opts ...ClientOption) *dataGenerationWrapper {
+func (d *ActivityLogDataGenerator) RepeatedClientsSeen(n int, opts ...ClientOption) *ActivityLogDataGenerator {
 	c := new(generation.Client)
 	for _, opt := range opts {
 		opt(c)
@@ -192,14 +196,14 @@ func (d *dataGenerationWrapper) RepeatedClientsSeen(n int, opts ...ClientOption)
 // RepeatedClientSeenFromMonthsAgo adds 1 client that was seen in monthsAgo
 // month to the month that was most recently opened. This client will have the
 // attributes described by provided options.
-func (d *dataGenerationWrapper) RepeatedClientSeenFromMonthsAgo(monthsAgo int, opts ...ClientOption) *dataGenerationWrapper {
+func (d *ActivityLogDataGenerator) RepeatedClientSeenFromMonthsAgo(monthsAgo int, opts ...ClientOption) *ActivityLogDataGenerator {
 	return d.RepeatedClientsSeenFromMonthsAgo(1, monthsAgo, opts...)
 }
 
 // RepeatedClientsSeenFromMonthsAgo adds n clients that were seen in monthsAgo
 // month to the month that was most recently opened. These clients will have the
 // attributes described by provided options.
-func (d *dataGenerationWrapper) RepeatedClientsSeenFromMonthsAgo(n, monthsAgo int, opts ...ClientOption) *dataGenerationWrapper {
+func (d *ActivityLogDataGenerator) RepeatedClientsSeenFromMonthsAgo(n, monthsAgo int, opts ...ClientOption) *ActivityLogDataGenerator {
 	c := new(generation.Client)
 	for _, opt := range opts {
 		opt(c)
@@ -225,10 +229,15 @@ func WithSegmentIndex(n int) SegmentOption {
 // to this segment, until either Segment is called again to create a new open
 // segment, or NewMonthDataMonthsAgo or NewCurrentMonthData is called to open a
 // new month.
-func (d *dataGenerationWrapper) Segment(opts ...SegmentOption) *dataGenerationWrapper {
-	s := &generation.Segment{}
+func (d *ActivityLogDataGenerator) Segment(opts ...SegmentOption) *ActivityLogDataGenerator {
+	s := &generation.Segment{
+		Clients: &generation.Clients{},
+	}
 	for _, opt := range opts {
 		opt(s)
+	}
+	if d.addingToMonth.GetSegments() == nil {
+		d.addingToMonth.Clients = &generation.Data_Segments{Segments: &generation.Segments{}}
 	}
 	d.addingToMonth.GetSegments().Segments = append(d.addingToMonth.GetSegments().Segments, s)
 	d.addingToSegment = s
@@ -236,20 +245,24 @@ func (d *dataGenerationWrapper) Segment(opts ...SegmentOption) *dataGenerationWr
 }
 
 // ToJSON returns the JSON representation of the data
-func (d *dataGenerationWrapper) ToJSON() ([]byte, error) {
+func (d *ActivityLogDataGenerator) ToJSON() ([]byte, error) {
 	return protojson.Marshal(d.data)
 }
 
 // ToProto returns the ActivityLogMockInput protobuf
-func (d *dataGenerationWrapper) ToProto() *generation.ActivityLogMockInput {
+func (d *ActivityLogDataGenerator) ToProto() *generation.ActivityLogMockInput {
 	return d.data
 }
 
 // Write writes the data to the API with the given write options. The method
 // returns the new paths that have been written. Note that the API endpoint will
 // only be present when Vault has been compiled with the "testonly" flag.
-func (d *dataGenerationWrapper) Write(ctx context.Context, writeOptions ...generation.WriteOptions) ([]string, error) {
+func (d *ActivityLogDataGenerator) Write(ctx context.Context, writeOptions ...generation.WriteOptions) ([]string, error) {
 	d.data.Write = writeOptions
+	err := VerifyInput(d.data)
+	if err != nil {
+		return nil, err
+	}
 	data, err := d.ToJSON()
 	if err != nil {
 		return nil, err
@@ -259,9 +272,109 @@ func (d *dataGenerationWrapper) Write(ctx context.Context, writeOptions ...gener
 		return nil, err
 	}
 	paths := resp.Data["paths"]
-	castedPaths, ok := paths.([]string)
+	castedPaths, ok := paths.([]interface{})
 	if !ok {
 		return nil, fmt.Errorf("invalid paths data: %v", paths)
 	}
-	return castedPaths, nil
+	returnPaths := make([]string, 0, len(castedPaths))
+	for _, path := range castedPaths {
+		returnPaths = append(returnPaths, path.(string))
+	}
+	return returnPaths, nil
+}
+
+// VerifyInput checks that the input data is valid
+func VerifyInput(input *generation.ActivityLogMockInput) error {
+	// mapping from monthsAgo to the month's data
+	months := make(map[int32]*generation.Data)
+
+	// this keeps track of the index of the earliest month. We need to verify
+	// that this month doesn't have any repeated clients
+	earliestMonthsAgo := int32(0)
+
+	// this map holds a set of the month indexes for any RepeatedFromMonth
+	// values. Each element will be checked to ensure month that should be
+	// repeated from exists in the input data
+	repeatedFromMonths := make(map[int32]struct{})
+
+	for _, month := range input.Data {
+		monthsAgo := month.GetMonthsAgo()
+		if monthsAgo > earliestMonthsAgo {
+			earliestMonthsAgo = monthsAgo
+		}
+
+		// verify that no monthsAgo value is repeated
+		if _, seen := months[monthsAgo]; seen {
+			return fmt.Errorf("multiple months with monthsAgo %d", monthsAgo)
+		}
+		months[monthsAgo] = month
+
+		// the number of segments should be correct
+		if month.NumSegments > 0 && int(month.NumSegments)-len(month.GetSkipSegmentIndexes())-len(month.GetEmptySegmentIndexes()) <= 0 {
+			return fmt.Errorf("number of segments %d is too small. It must be large enough to include the empty and skipped segments", month.NumSegments)
+		}
+
+		if segments := month.GetSegments(); segments != nil {
+			if month.NumSegments > 0 {
+				return errors.New("cannot specify both number of segments and create segmented data")
+			}
+
+			segmentIndexes := make(map[int32]struct{})
+			for _, segment := range segments.Segments {
+
+				// collect any RepeatedFromMonth values
+				for _, client := range segment.GetClients().GetClients() {
+					if repeatFrom := client.RepeatedFromMonth; repeatFrom > 0 {
+						repeatedFromMonths[repeatFrom] = struct{}{}
+					}
+				}
+
+				// verify that no segment indexes are repeated
+				segmentIndex := segment.SegmentIndex
+				if segmentIndex == nil {
+					continue
+				}
+				if _, seen := segmentIndexes[*segmentIndex]; seen {
+					return fmt.Errorf("cannot have repeated segment index %d", *segmentIndex)
+				}
+				segmentIndexes[*segmentIndex] = struct{}{}
+			}
+		} else {
+			for _, client := range month.GetAll().GetClients() {
+				// collect any RepeatedFromMonth values
+				if repeatFrom := client.RepeatedFromMonth; repeatFrom > 0 {
+					repeatedFromMonths[repeatFrom] = struct{}{}
+				}
+			}
+		}
+	}
+
+	// check that the corresponding month exists for all the RepeatedFromMonth
+	// values
+	for repeated := range repeatedFromMonths {
+		if _, ok := months[repeated]; !ok {
+			return fmt.Errorf("cannot repeat from %d months ago", repeated)
+		}
+	}
+	// the earliest month can't have any repeated clients, because there are no
+	// earlier months to repeat from
+	earliestMonth := months[earliestMonthsAgo]
+	repeatedClients := false
+	if all := earliestMonth.GetAll(); all != nil {
+		for _, client := range all.GetClients() {
+			repeatedClients = client.Repeated || client.RepeatedFromMonth != 0
+		}
+	} else {
+		for _, segment := range earliestMonth.GetSegments().GetSegments() {
+			for _, client := range segment.GetClients().GetClients() {
+				repeatedClients = client.Repeated || client.RepeatedFromMonth != 0
+			}
+		}
+	}
+
+	if repeatedClients {
+		return fmt.Errorf("%d months ago cannot have repeated clients, because it is the earliest month", earliestMonthsAgo)
+	}
+
+	return nil
 }
