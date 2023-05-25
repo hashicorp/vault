@@ -75,7 +75,6 @@ func (c *TransitImportCommand) Run(args []string) int {
 func transitImportKeyPath(s string, operation string) (path string, apiPath string, err error) {
 	parts := keyPath.FindStringSubmatch(s)
 	if len(parts) != 3 {
-
 		return "", "", errors.New("expected transit path and key name in the form :path:/keys/:name:")
 	}
 	path = parts[1]
