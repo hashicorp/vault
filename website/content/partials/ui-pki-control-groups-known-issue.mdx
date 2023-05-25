@@ -1,11 +1,11 @@
-### Control groups on GET requests for PKI issuers does not resolve in UI
+### Control Groups with Issuer detail reads only accessible in UI from overview
 
-If a user is trying to access PKI issuer details from the UI and they have
-a control group for reading them, they will be caught in a loop when trying to
-access the issuer from the issuers list view.
+Given a scenario where a user can only read an Issuer's details after Control Group
+approval, they will constantly be directed to the Control Group Access page when
+attempting to link to the Issuer details page from the Issuer list page.
 
-As a workaround, users constrained by control groups can search for an issuer
-from the overview page rather than through the issuers list tab.
+As a workaround, users constrained by Control Groups can select an Issuer to view
+details for from the overview page rather than through the Issuers list page.
 
 #### Impacted Versions
 
