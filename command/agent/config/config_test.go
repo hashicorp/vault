@@ -11,10 +11,11 @@ import (
 
 	"github.com/go-test/deep"
 	ctconfig "github.com/hashicorp/consul-template/config"
+	"golang.org/x/exp/slices"
+
 	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
-	"golang.org/x/exp/slices"
 )
 
 func TestLoadConfigFile_AgentCache(t *testing.T) {
@@ -2112,11 +2113,15 @@ func TestLoadConfigFile_Bad_Value_Disable_Keep_Alives(t *testing.T) {
 	}
 }
 
-// TestLoadConfigFile_EnvTemplates loads and validates an env_template config
-func TestLoadConfigFile_EnvTemplates(t *testing.T) {
+// TestLoadConfigFile_EnvTemplates_Simple loads and validates an env_template config
+func TestLoadConfigFile_EnvTemplates_Simple(t *testing.T) {
 	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-simple.hcl")
 	if err != nil {
 		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if err := cfg.ValidateConfig(); err != nil {
+		t.Fatalf("validation error: %s", err)
 	}
 
 	expectedKey := "MY_DATABASE_USER"
@@ -2131,16 +2136,20 @@ func TestLoadConfigFile_EnvTemplates(t *testing.T) {
 	}
 }
 
-// TestLoadConfigFile_EnvTemplateComplex loads and validates an env_template config
-func TestLoadConfigFile_EnvTemplateComplex(t *testing.T) {
+// TestLoadConfigFile_EnvTemplates_Complex loads and validates an env_template config
+func TestLoadConfigFile_EnvTemplates_Complex(t *testing.T) {
 	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-complex.hcl")
 	if err != nil {
 		t.Fatalf("error loading config file: %s", err)
 	}
+
+	if err := cfg.ValidateConfig(); err != nil {
+		t.Fatalf("validation error: %s", err)
+	}
+
 	expectedKeys := []string{
-		"FOO_DATA_LOCK",
-		"FOO_DATA_PASSWORD",
-		"FOO_DATA_USER",
+		"FOO_PASSWORD",
+		"FOO_USER",
 	}
 
 	envExists := func(key string) bool {
@@ -2159,31 +2168,44 @@ func TestLoadConfigFile_EnvTemplateComplex(t *testing.T) {
 	}
 }
 
-// TestLoadConfigFile_EnvTemplateNoName ensures that env_template with no name triggers an error
-func TestLoadConfigFile_EnvTemplateNoName(t *testing.T) {
+// TestLoadConfigFile_EnvTemplates_WithSource loads and validates an
+// env_template config with "source" instead of "contents"
+func TestLoadConfigFile_EnvTemplates_WithSource(t *testing.T) {
+	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-with-source.hcl")
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if err := cfg.ValidateConfig(); err != nil {
+		t.Fatalf("validation error: %s", err)
+	}
+}
+
+// TestLoadConfigFile_EnvTemplates_NoName ensures that env_template with no name triggers an error
+func TestLoadConfigFile_EnvTemplates_NoName(t *testing.T) {
 	_, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-no-name.hcl")
 	if err == nil {
 		t.Fatalf("expected error")
 	}
 }
 
-// TestLoadConfigFile_ExecInvalidSignal ensures that an invalid signal triggers an error
-func TestLoadConfigFile_ExecInvalidSignal(t *testing.T) {
+// TestLoadConfigFile_EnvTemplates_ExecInvalidSignal ensures that an invalid signal triggers an error
+func TestLoadConfigFile_EnvTemplates_ExecInvalidSignal(t *testing.T) {
 	_, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-invalid-signal.hcl")
 	if err == nil {
 		t.Fatalf("expected error")
 	}
 }
 
-// TestLoadConfigFile_ExecSimple validates the exec section with default parameters
-func TestLoadConfigFile_ExecSimple(t *testing.T) {
+// TestLoadConfigFile_EnvTemplates_ExecSimple validates the exec section with default parameters
+func TestLoadConfigFile_EnvTemplates_ExecSimple(t *testing.T) {
 	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-simple.hcl")
 	if err != nil {
 		t.Fatalf("error loading config file: %s", err)
 	}
 
-	if cfg.Exec == nil {
-		t.Fatal("expected exec config to be parsed")
+	if err := cfg.ValidateConfig(); err != nil {
+		t.Fatalf("validation error: %s", err)
 	}
 
 	expectedCmd := []string{"/path/to/my/app", "arg1", "arg2"}
@@ -2201,11 +2223,15 @@ func TestLoadConfigFile_ExecSimple(t *testing.T) {
 	}
 }
 
-// TestLoadConfigFile_ExecComplex validates the exec section with non-default parameters
-func TestLoadConfigFile_ExecComplex(t *testing.T) {
+// TestLoadConfigFile_EnvTemplates_ExecComplex validates the exec section with non-default parameters
+func TestLoadConfigFile_EnvTemplates_ExecComplex(t *testing.T) {
 	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-complex.hcl")
 	if err != nil {
 		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if err := cfg.ValidateConfig(); err != nil {
+		t.Fatalf("validation error: %s", err)
 	}
 
 	if !slices.Equal(cfg.Exec.Command, []string{"env"}) {
@@ -2218,5 +2244,57 @@ func TestLoadConfigFile_ExecComplex(t *testing.T) {
 
 	if cfg.Exec.RestartStopSignal != syscall.SIGINT {
 		t.Fatalf("expected cfg.Exec.RestartStopSignal to be 'syscall.SIGINT', got %q", cfg.Exec.RestartStopSignal)
+	}
+}
+
+// TestLoadConfigFile_Bad_EnvTemplates_MissingExec ensures that ValidateConfig
+// errors when "env_template" stanza(s) are specified but "exec" is missing
+func TestLoadConfigFile_Bad_EnvTemplates_MissingExec(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-missing-exec.hcl")
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if err := config.ValidateConfig(); err == nil {
+		t.Fatal("expected an error from ValidateConfig: exec section is missing")
+	}
+}
+
+// TestLoadConfigFile_Bad_EnvTemplates_WithProxy ensures that ValidateConfig
+// errors when both env_template and api_proxy stanzas are present
+func TestLoadConfigFile_Bad_EnvTemplates_WithProxy(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-with-proxy.hcl")
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if err := config.ValidateConfig(); err == nil {
+		t.Fatal("expected an error from ValidateConfig: listener / api_proxy are not compatible with env_template")
+	}
+}
+
+// TestLoadConfigFile_Bad_EnvTemplates_WithFileTemplates ensures that
+// ValidateConfig errors when both env_template and template stanzas are present
+func TestLoadConfigFile_Bad_EnvTemplates_WithFileTemplates(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-with-file-templates.hcl")
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if err := config.ValidateConfig(); err == nil {
+		t.Fatal("expected an error from ValidateConfig: file template stanza is not compatible with env_template")
+	}
+}
+
+// TestLoadConfigFile_Bad_EnvTemplates_DisalowedFields ensure that
+// ValidateConfig errors for disalowed env_template fields
+func TestLoadConfigFile_Bad_EnvTemplates_DisalowedFields(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-disalowed-fields.hcl")
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if err := config.ValidateConfig(); err == nil {
+		t.Fatal("expected an error from ValidateConfig: disallowed fields specified in env_template")
 	}
 }

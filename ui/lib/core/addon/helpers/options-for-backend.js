@@ -39,6 +39,10 @@ const PKI_ENGINE_BACKEND = {
       link: 'certificates',
     },
     {
+      label: 'Tidy',
+      link: 'tidy',
+    },
+    {
       label: 'Configuration',
       link: 'configuration',
     },
