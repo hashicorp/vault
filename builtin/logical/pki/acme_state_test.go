@@ -13,7 +13,6 @@ func TestAcmeNonces(t *testing.T) {
 	t.Parallel()
 
 	a := NewACMEState()
-	a.nonces.Initialize()
 
 	// Simple operation should succeed.
 	nonce, _, err := a.GetNonce()

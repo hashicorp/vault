@@ -1002,12 +1002,6 @@ func signCert(b *backend,
 
 	if isCA {
 		creation.Params.PermittedDNSDomains = data.apiData.Get("permitted_dns_domains").([]string)
-	} else {
-		for _, ext := range csr.Extensions {
-			if ext.Id.Equal(certutil.ExtensionBasicConstraintsOID) {
-				warnings = append(warnings, "specified CSR contained a Basic Constraints extension that was ignored during issuance")
-			}
-		}
 	}
 
 	parsedBundle, err := certutil.SignCertificate(creation)

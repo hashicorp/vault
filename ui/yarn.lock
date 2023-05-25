@@ -5648,13 +5648,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/shell-quote@npm:^1.7.1":
-  version: 1.7.1
-  resolution: "@types/shell-quote@npm:1.7.1"
-  checksum: 51e58326b8c6dcb72846b94cebe3dc4c84f3514469a8e52bd29c52c601e784b427b851d7477acbeef47bfcccf25d2a5768684d27e7fc95fdd003393c1bbb7bc3
-  languageName: node
-  linkType: hard
-
 "@types/symlink-or-copy@npm:^1.2.0":
   version: 1.2.0
   resolution: "@types/symlink-or-copy@npm:1.2.0"
@@ -9506,9 +9499,9 @@ __metadata:
   linkType: hard
 
 "caniuse-lite@npm:^1.0.0, caniuse-lite@npm:^1.0.30000792, caniuse-lite@npm:^1.0.30000805, caniuse-lite@npm:^1.0.30000844, caniuse-lite@npm:^1.0.30001219, caniuse-lite@npm:^1.0.30001264, caniuse-lite@npm:^1.0.30001280, caniuse-lite@npm:^1.0.30001304, caniuse-lite@npm:^1.0.30001317, caniuse-lite@npm:^1.0.30001349":
-  version: 1.0.30001487
-  resolution: "caniuse-lite@npm:1.0.30001487"
-  checksum: b5a9e72ec165765fb3e07913cc389685ce8a30ac48967f99baec773a4353d2037fb534241e87b3c95d40a5081079be2263710b784883183bb2998b73f7202233
+  version: 1.0.30001419
+  resolution: "caniuse-lite@npm:1.0.30001419"
+  checksum: 7a4dc2794a6773574b5aebcd1c9c0d56159654821714152d8a0b04e261e1522bfd3d86589b8406ce81c7bf5b706118b73b2cb85d577ae433e303dd48ac9ff65f
   languageName: node
   linkType: hard
 
@@ -24231,7 +24224,6 @@ __metadata:
     "@types/ember__utils": ^4.0.2
     "@types/qunit": ^2.19.3
     "@types/rsvp": ^4.0.4
-    "@types/shell-quote": ^1.7.1
     "@typescript-eslint/eslint-plugin": ^5.19.0
     "@typescript-eslint/parser": ^5.19.0
     asn1js: ^2.2.0

@@ -220,8 +220,6 @@ func (c *PKIHealthCheckCommand) Run(args []string) int {
 	executor.AddCheck(healthcheck.NewEnableAutoTidyCheck())
 	executor.AddCheck(healthcheck.NewTidyLastRunCheck())
 	executor.AddCheck(healthcheck.NewTooManyCertsCheck())
-	executor.AddCheck(healthcheck.NewEnableAcmeIssuance())
-	executor.AddCheck(healthcheck.NewAllowAcmeHeaders())
 	if c.flagDefaultDisabled {
 		executor.DefaultEnabled = false
 	}

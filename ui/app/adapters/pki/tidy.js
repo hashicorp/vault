@@ -2,49 +2,35 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: MPL-2.0
  */
-import ApplicationAdapter from '../application';
+import { assert } from '@ember/debug';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
+import ApplicationAdapter from '../application';
 
 export default class PkiTidyAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
-  _baseUrl(backend) {
-    return `${this.buildURL()}/${encodePath(backend)}`;
-  }
-
-  // single tidy operations (manual) are always a new record
-  createRecord(store, type, snapshot) {
+  urlForCreateRecord(snapshot) {
     const { backend } = snapshot.record;
     const { tidyType } = snapshot.adapterOptions;
-    if (tidyType === 'auto') {
-      throw new Error('Auto tidy type models are never new, please use findRecord');
+
+    if (!backend) {
+      throw new Error('Backend missing');
     }
 
-    const url = `${this._baseUrl(backend)}/tidy`;
-    return this.ajax(url, 'POST', { data: this.serialize(snapshot, tidyType) });
-  }
+    const baseUrl = `${this.buildURL()}/${encodePath(backend)}`;
 
-  // saving auto-tidy config POST requests will always update
-  updateRecord(store, type, snapshot) {
-    const backend = snapshot.record.id;
-    const { tidyType } = snapshot.adapterOptions;
-    if (tidyType === 'manual') {
-      throw new Error('Manual tidy type models are always new, please use createRecord');
+    switch (tidyType) {
+      case 'manual-tidy':
+        return `${baseUrl}/tidy`;
+      case 'auto-tidy':
+        return `${baseUrl}/config/auto-tidy`;
+      default:
+        assert('type must be one of manual-tidy, auto-tidy');
     }
-
-    const url = `${this._baseUrl(backend)}/config/auto-tidy`;
-    return this.ajax(url, 'POST', { data: this.serialize(snapshot, tidyType) });
   }
 
-  findRecord(store, type, backend) {
-    // only auto-tidy will ever be read, no need to pass the type here
-    return this.ajax(`${this._baseUrl(backend)}/config/auto-tidy`, 'GET').then((resp) => {
-      return resp.data;
-    });
-  }
-
-  cancelTidy(backend) {
-    const url = `${this._baseUrl(backend)}`;
-    return this.ajax(`${url}/tidy-cancel`, 'POST');
+  createRecord(store, type, snapshot) {
+    const url = this.urlForCreateRecord(snapshot);
+    return this.ajax(url, 'POST', { data: this.serialize(snapshot) });
   }
 }

@@ -1,3 +1,0 @@
-```release-note:bug
-auth/ldap: Set default value for `max_page_size` properly
-```

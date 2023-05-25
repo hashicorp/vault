@@ -42,20 +42,20 @@ type BaseCommand struct {
 	flags     *FlagSets
 	flagsOnce sync.Once
 
-	flagAddress           string
-	flagAgentProxyAddress string
-	flagCACert            string
-	flagCAPath            string
-	flagClientCert        string
-	flagClientKey         string
-	flagNamespace         string
-	flagNS                string
-	flagPolicyOverride    bool
-	flagTLSServerName     string
-	flagTLSSkipVerify     bool
-	flagDisableRedirects  bool
-	flagWrapTTL           time.Duration
-	flagUnlockKey         string
+	flagAddress          string
+	flagAgentAddress     string
+	flagCACert           string
+	flagCAPath           string
+	flagClientCert       string
+	flagClientKey        string
+	flagNamespace        string
+	flagNS               string
+	flagPolicyOverride   bool
+	flagTLSServerName    string
+	flagTLSSkipVerify    bool
+	flagDisableRedirects bool
+	flagWrapTTL          time.Duration
+	flagUnlockKey        string
 
 	flagFormat           string
 	flagField            string
@@ -90,8 +90,8 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 	if c.flagAddress != "" {
 		config.Address = c.flagAddress
 	}
-	if c.flagAgentProxyAddress != "" {
-		config.Address = c.flagAgentProxyAddress
+	if c.flagAgentAddress != "" {
+		config.Address = c.flagAgentAddress
 	}
 
 	if c.flagOutputCurlString {
@@ -330,7 +330,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 
 			agentAddrStringVar := &StringVar{
 				Name:       "agent-address",
-				Target:     &c.flagAgentProxyAddress,
+				Target:     &c.flagAgentAddress,
 				EnvVar:     api.EnvVaultAgentAddr,
 				Completion: complete.PredictAnything,
 				Usage:      "Address of the Agent.",

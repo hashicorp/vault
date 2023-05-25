@@ -5,7 +5,6 @@ package transit
 
 import (
 	"context"
-	"crypto"
 	"crypto/elliptic"
 	"crypto/x509"
 	"encoding/base64"
@@ -257,14 +256,12 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		p.Unlock()
 	}
 
-	resp, err := b.formatKeyPolicy(p, nil)
-	if err != nil {
-		return nil, err
-	}
+	resp := &logical.Response{}
 	if !upserted {
 		resp.AddWarning(fmt.Sprintf("key %s already existed", name))
 	}
-	return resp, nil
+
+	return nil, nil
 }
 
 // Built-in helper type for returning asymmetric keys
@@ -292,19 +289,6 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 	}
 	defer p.Unlock()
 
-	contextRaw := d.Get("context").(string)
-	var context []byte
-	if len(contextRaw) != 0 {
-		context, err = base64.StdEncoding.DecodeString(contextRaw)
-		if err != nil {
-			return logical.ErrorResponse("failed to base64-decode context"), logical.ErrInvalidRequest
-		}
-	}
-
-	return b.formatKeyPolicy(p, context)
-}
-
-func (b *backend) formatKeyPolicy(p *keysutil.Policy, context []byte) (*logical.Response, error) {
 	// Return the response
 	resp := &logical.Response{
 		Data: map[string]interface{}{
@@ -358,6 +342,15 @@ func (b *backend) formatKeyPolicy(p *keysutil.Policy, context []byte) (*logical.
 		resp.Data["convergent_encryption"] = p.ConvergentEncryption
 		if p.ConvergentEncryption {
 			resp.Data["convergent_encryption_version"] = p.ConvergentVersion
+		}
+	}
+
+	contextRaw := d.Get("context").(string)
+	var context []byte
+	if len(contextRaw) != 0 {
+		context, err = base64.StdEncoding.DecodeString(contextRaw)
+		if err != nil {
+			return logical.ErrorResponse("failed to base64-decode context"), logical.ErrInvalidRequest
 		}
 	}
 
@@ -415,15 +408,9 @@ func (b *backend) formatKeyPolicy(p *keysutil.Policy, context []byte) (*logical.
 					key.Name = "rsa-4096"
 				}
 
-				var publicKey crypto.PublicKey
-				publicKey = v.RSAPublicKey
-				if !v.IsPrivateKeyMissing() {
-					publicKey = v.RSAKey.Public()
-				}
-
 				// Encode the RSA public key in PEM format to return over the
 				// API
-				derBytes, err := x509.MarshalPKIXPublicKey(publicKey)
+				derBytes, err := x509.MarshalPKIXPublicKey(v.RSAKey.Public())
 				if err != nil {
 					return nil, fmt.Errorf("error marshaling RSA public key: %w", err)
 				}

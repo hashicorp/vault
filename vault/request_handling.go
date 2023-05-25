@@ -434,12 +434,9 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 		auth.PolicyResults.GrantingPolicies = append(auth.PolicyResults.GrantingPolicies, authResults.SentinelResults.GrantingPolicies...)
 	}
 
-	c.activityLogLock.RLock()
-	activityLog := c.activityLog
-	c.activityLogLock.RUnlock()
 	// If it is an authenticated ( i.e with vault token ) request, increment client count
-	if !unauth && activityLog != nil {
-		activityLog.HandleTokenUsage(ctx, te, clientID, isTWE)
+	if !unauth && c.activityLog != nil {
+		c.activityLog.HandleTokenUsage(ctx, te, clientID, isTWE)
 	}
 	return auth, te, nil
 }
@@ -836,30 +833,7 @@ func (c *Core) doRouting(ctx context.Context, req *logical.Request) (*logical.Re
 	// If we're replicating and we get a read-only error from a backend, need to forward to primary
 	resp, err := c.router.Route(ctx, req)
 	if shouldForward(c, resp, err) {
-		fwdResp, fwdErr := forward(ctx, c, req)
-		if fwdErr != nil && err != logical.ErrReadOnly {
-			// When handling the request locally, we got an error that
-			// contained ErrReadOnly, but had additional information.
-			// Since we've now forwarded this request and got _another_
-			// error, we should tell the user about both errors, so
-			// they know about both.
-			//
-			// When there is no error from forwarding, the request
-			// succeeded and so no additional context is necessary. When
-			// the initial error here was only ErrReadOnly, it's likely
-			// the plugin authors intended to forward this request
-			// remotely anyway.
-			repErr, ok := fwdErr.(*logical.ReplicationCodedError)
-			if ok {
-				fwdErr = &logical.ReplicationCodedError{
-					Msg:  fmt.Sprintf("errors from both primary and secondary; primary error was %s; secondary errors follow: %s", repErr.Error(), err.Error()),
-					Code: repErr.Code,
-				}
-			} else {
-				fwdErr = multierror.Append(fwdErr, err)
-			}
-		}
-		return fwdResp, fwdErr
+		return forward(ctx, c, req)
 	}
 	return resp, err
 }

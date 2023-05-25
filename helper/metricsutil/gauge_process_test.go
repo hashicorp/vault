@@ -15,7 +15,6 @@ import (
 
 	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/timeutil"
 )
 
 // SimulatedTime maintains a virtual clock so the test isn't
@@ -25,10 +24,9 @@ import (
 type SimulatedTime struct {
 	now           time.Time
 	tickerBarrier chan *SimulatedTicker
-	timeutil.DefaultClock
 }
 
-var _ timeutil.Clock = &SimulatedTime{}
+var _ clock = &SimulatedTime{}
 
 type SimulatedTicker struct {
 	ticker   *time.Ticker
@@ -123,7 +121,7 @@ func TestGauge_Creation(t *testing.T) {
 		t.Fatalf("Error creating collection process: %v", err)
 	}
 
-	if _, ok := p.clock.(timeutil.DefaultClock); !ok {
+	if _, ok := p.clock.(defaultClock); !ok {
 		t.Error("Default clock not installed.")
 	}
 

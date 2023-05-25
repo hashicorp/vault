@@ -63,9 +63,6 @@ type PolicyRequest struct {
 	// AllowImportedKeyRotation indicates whether an imported key may be rotated by Vault
 	AllowImportedKeyRotation bool
 
-	// Indicates whether a private or public key is imported/upserted
-	IsPrivateKey bool
-
 	// The UUID of the managed key, if using one
 	ManagedKeyUUID string
 }
@@ -514,7 +511,7 @@ func (lm *LockManager) ImportPolicy(ctx context.Context, req PolicyRequest, key 
 		}
 	}
 
-	err = p.ImportPublicOrPrivate(ctx, req.Storage, key, req.IsPrivateKey, rand)
+	err = p.Import(ctx, req.Storage, key, rand)
 	if err != nil {
 		return fmt.Errorf("error importing key: %s", err)
 	}

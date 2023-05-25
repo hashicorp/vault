@@ -26,6 +26,8 @@ spec:
   provider: vault
   parameters:
     roleName: 'app'
+    vaultAddress: 'https://vault.vault:8200'
+    vaultCACertPath: '/vault/tls/ca.crt'
     objects: |
       - objectName: "dbUsername"
         secretPath: "database/creds/db-app"
@@ -103,6 +105,8 @@ spec:
           key: password
   parameters:
     roleName: 'app'
+    vaultAddress: 'https://vault.vault:8200'
+    vaultCACertPath: '/vault/tls/ca.crt'
     objects: |
       - objectName: "dbUsername"
         secretPath: "database/creds/db-app"

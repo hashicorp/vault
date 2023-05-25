@@ -56,18 +56,11 @@ func verifyNamespace(*Core, *namespace.Namespace, *MountEntry) error { return ni
 // mount-specific entries; because this should be called when setting
 // up a mountEntry, it doesn't check to ensure that me is not nil
 func (c *Core) mountEntrySysView(entry *MountEntry) extendedSystemView {
-	esi := extendedSystemViewImpl{
+	return extendedSystemViewImpl{
 		dynamicSystemView{
 			core:        c,
 			mountEntry:  entry,
 			perfStandby: c.perfStandby,
 		},
 	}
-
-	// Due to complexity in the ACME interface, only return it when we
-	// are a PKI plugin that needs it.
-	if entry.Type != "pki" {
-		return esi
-	}
-	return c.NewAcmeBillingSystemView(esi)
 }

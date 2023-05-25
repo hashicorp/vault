@@ -150,8 +150,8 @@ TOKEN_DONE:
 
 	// Identity policies
 	{
-		v, ok := s.Data["identity_policies"]
-		if !ok || v == nil {
+		_, ok := s.Data["identity_policies"]
+		if !ok {
 			goto DONE
 		}
 

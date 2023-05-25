@@ -41,8 +41,8 @@ func patternAcmeAuthorization(b *backend, pattern string) *framework.Path {
 			},
 		},
 
-		HelpSynopsis:    pathAcmeHelpSync,
-		HelpDescription: pathAcmeHelpDesc,
+		HelpSynopsis:    "",
+		HelpDescription: "",
 	}
 }
 

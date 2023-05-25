@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -31,7 +30,7 @@ func TestPKIHC_AllGood(t *testing.T) {
 			AuditNonHMACRequestKeys:   healthcheck.VisibleReqParams,
 			AuditNonHMACResponseKeys:  healthcheck.VisibleRespParams,
 			PassthroughRequestHeaders: []string{"If-Modified-Since"},
-			AllowedResponseHeaders:    []string{"Last-Modified", "Replay-Nonce", "Link", "Location"},
+			AllowedResponseHeaders:    []string{"Last-Modified"},
 			MaxLeaseTTL:               "36500d",
 		},
 	}); err != nil {
@@ -68,21 +67,6 @@ func TestPKIHC_AllGood(t *testing.T) {
 		"tidy_cert_store": true,
 	}); err != nil {
 		t.Fatalf("failed to run tidy: %v", err)
-	}
-
-	path, err := url.Parse(client.Address())
-	require.NoError(t, err, "failed parsing client address")
-
-	if _, err := client.Logical().Write("pki/config/cluster", map[string]interface{}{
-		"path": path.JoinPath("/v1/", "pki/").String(),
-	}); err != nil {
-		t.Fatalf("failed to update local cluster: %v", err)
-	}
-
-	if _, err := client.Logical().Write("pki/config/acme", map[string]interface{}{
-		"enabled": "true",
-	}); err != nil {
-		t.Fatalf("failed to update acme config: %v", err)
 	}
 
 	_, _, results := execPKIHC(t, client, true)
@@ -361,22 +345,12 @@ var expectedAllGood = map[string][]map[string]interface{}{
 			"status": "ok",
 		},
 	},
-	"allow_acme_headers": {
-		{
-			"status": "ok",
-		},
-	},
 	"allow_if_modified_since": {
 		{
 			"status": "ok",
 		},
 	},
 	"audit_visibility": {
-		{
-			"status": "ok",
-		},
-	},
-	"enable_acme_issuance": {
 		{
 			"status": "ok",
 		},
@@ -432,11 +406,6 @@ var expectedAllBad = map[string][]map[string]interface{}{
 			"status": "critical",
 		},
 	},
-	"allow_acme_headers": {
-		{
-			"status": "not_applicable",
-		},
-	},
 	"allow_if_modified_since": {
 		{
 			"status": "informational",
@@ -534,11 +503,6 @@ var expectedAllBad = map[string][]map[string]interface{}{
 			"status": "informational",
 		},
 	},
-	"enable_acme_issuance": {
-		{
-			"status": "not_applicable",
-		},
-	},
 	"enable_auto_tidy": {
 		{
 			"status": "informational",
@@ -590,18 +554,8 @@ var expectedEmptyWithIssuer = map[string][]map[string]interface{}{
 			"status": "ok",
 		},
 	},
-	"allow_acme_headers": {
-		{
-			"status": "not_applicable",
-		},
-	},
 	"allow_if_modified_since": nil,
 	"audit_visibility":        nil,
-	"enable_acme_issuance": {
-		{
-			"status": "not_applicable",
-		},
-	},
 	"enable_auto_tidy": {
 		{
 			"status": "informational",
@@ -644,18 +598,8 @@ var expectedNoPerm = map[string][]map[string]interface{}{
 			"status": "critical",
 		},
 	},
-	"allow_acme_headers": {
-		{
-			"status": "insufficient_permissions",
-		},
-	},
 	"allow_if_modified_since": nil,
 	"audit_visibility":        nil,
-	"enable_acme_issuance": {
-		{
-			"status": "insufficient_permissions",
-		},
-	},
 	"enable_auto_tidy": {
 		{
 			"status": "insufficient_permissions",

@@ -218,9 +218,6 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 			// ACME
 			pathAcmeConfig(&b),
-			pathAcmeEabCreate(&b),
-			pathAcmeEabList(&b),
-			pathAcmeEabDelete(&b),
 		},
 
 		Secrets: []*framework.Secret{
@@ -694,14 +691,9 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 		return nil
 	}
 
-	// First tidy any ACME nonces to free memory.
-	b.acmeState.DoTidyNonces()
-
-	// Then run unified transfer.
 	backgroundSc := b.makeStorageContext(context.Background(), b.storage)
 	go runUnifiedTransfer(backgroundSc)
 
-	// Then run the CRL rebuild and tidy operation.
 	crlErr := doCRL()
 	tidyErr := doAutoTidy()
 

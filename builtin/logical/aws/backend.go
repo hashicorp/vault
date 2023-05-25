@@ -12,9 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/queue"
 )
 
 const (
@@ -25,16 +23,15 @@ const (
 )
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
-	b := Backend(conf)
+	b := Backend()
 	if err := b.Setup(ctx, conf); err != nil {
 		return nil, err
 	}
 	return b, nil
 }
 
-func Backend(conf *logical.BackendConfig) *backend {
+func Backend() *backend {
 	var b backend
-	b.credRotationQueue = queue.New()
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),
 
@@ -43,8 +40,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 				framework.WALPrefix,
 			},
 			SealWrapStorage: []string{
-				rootConfigPath,
-				pathStaticCreds + "/",
+				"config/root",
 			},
 		},
 
@@ -54,8 +50,6 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathConfigLease(&b),
 			pathRoles(&b),
 			pathListRoles(&b),
-			pathStaticRoles(&b),
-			pathStaticCredentials(&b),
 			pathUser(&b),
 		},
 
@@ -66,17 +60,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 		Invalidate:        b.invalidate,
 		WALRollback:       b.walRollback,
 		WALRollbackMinAge: minAwsUserRollbackAge,
-		PeriodicFunc: func(ctx context.Context, req *logical.Request) error {
-			repState := conf.System.ReplicationState()
-			if (conf.System.LocalMount() ||
-				!repState.HasState(consts.ReplicationPerformanceSecondary)) &&
-				!repState.HasState(consts.ReplicationDRSecondary) &&
-				!repState.HasState(consts.ReplicationPerformanceStandby) {
-				return b.rotateExpiredStaticCreds(ctx, req)
-			}
-			return nil
-		},
-		BackendType: logical.TypeLogical,
+		BackendType:       logical.TypeLogical,
 	}
 
 	return &b
@@ -95,10 +79,6 @@ type backend struct {
 	// to enable mocking with AWS iface for tests
 	iamClient iamiface.IAMAPI
 	stsClient stsiface.STSAPI
-
-	// the age of a static role's credential is tracked by a priority queue and handled
-	// by the PeriodicFunc
-	credRotationQueue *queue.PriorityQueue
 }
 
 const backendHelp = `

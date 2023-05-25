@@ -10,9 +10,4 @@
   </p.levelLeft>
 </PageHeader>
 
-<Page::PkiConfigurationEdit
-  @cluster={{this.model.cluster}}
-  @urls={{this.model.urls}}
-  @crl={{this.model.crl}}
-  @backend={{this.model.engineId}}
-/>
+<Page::PkiConfigurationEdit @urls={{this.model.urls}} @crl={{this.model.crl}} @backend={{this.model.engineId}} />

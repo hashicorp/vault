@@ -228,16 +228,7 @@ func WaitForPerformanceSecondary(ctx context.Context, pri, sec VaultCluster, ski
 }
 
 func WaitForPerfReplicationWorking(ctx context.Context, pri, sec VaultCluster) error {
-	priActiveIdx, err := WaitForActiveNode(ctx, pri)
-	if err != nil {
-		return err
-	}
-	secActiveIdx, err := WaitForActiveNode(ctx, sec)
-	if err != nil {
-		return err
-	}
-
-	priClient, secClient := pri.Nodes()[priActiveIdx].APIClient(), sec.Nodes()[secActiveIdx].APIClient()
+	priClient, secClient := pri.Nodes()[0].APIClient(), sec.Nodes()[0].APIClient()
 	mountPoint, err := uuid.GenerateUUID()
 	if err != nil {
 		return err
@@ -270,10 +261,7 @@ func WaitForPerfReplicationWorking(ctx context.Context, pri, sec VaultCluster) e
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	if err == nil {
-		err = ctx.Err()
-	}
-	return fmt.Errorf("unable to read replicated KV on secondary, path=%s, err=%v", path, err)
+	return fmt.Errorf("unable to read replicated KV on secondary", "path", path, "err", err)
 }
 
 func SetupTwoClusterPerfReplication(ctx context.Context, pri, sec VaultCluster) error {
@@ -850,47 +838,4 @@ func (r *ReplicationSet) Cleanup() {
 	for _, cluster := range r.Clusters {
 		cluster.Cleanup()
 	}
-}
-
-func WaitForPerfReplicationConnectionStatus(ctx context.Context, client *api.Client) error {
-	type Primary struct {
-		APIAddress       string `mapstructure:"api_address"`
-		ConnectionStatus string `mapstructure:"connection_status"`
-		ClusterAddress   string `mapstructure:"cluster_address"`
-		LastHeartbeat    string `mapstructure:"last_heartbeat"`
-	}
-	type Status struct {
-		Primaries []Primary `mapstructure:"primaries"`
-	}
-	return WaitForPerfReplicationStatus(ctx, client, func(m map[string]interface{}) error {
-		var status Status
-		err := mapstructure.Decode(m, &status)
-		if err != nil {
-			return err
-		}
-		if len(status.Primaries) == 0 {
-			return fmt.Errorf("primaries is zero")
-		}
-		for _, v := range status.Primaries {
-			if v.ConnectionStatus == "connected" {
-				return nil
-			}
-		}
-		return fmt.Errorf("no primaries connected")
-	})
-}
-
-func WaitForPerfReplicationStatus(ctx context.Context, client *api.Client, accept func(map[string]interface{}) error) error {
-	var err error
-	var secret *api.Secret
-	for ctx.Err() == nil {
-		secret, err = client.Logical().Read("sys/replication/performance/status")
-		if err == nil && secret != nil && secret.Data != nil {
-			if err = accept(secret.Data); err == nil {
-				return nil
-			}
-		}
-		time.Sleep(500 * time.Millisecond)
-	}
-	return fmt.Errorf("unable to get acceptable replication status within allotted time: error=%v secret=%#v", err, secret)
 }

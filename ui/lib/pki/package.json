@@ -8,7 +8,6 @@
     "ember-cli-babel": "*",
     "ember-cli-htmlbars": "*",
     "ember-cli-typescript": "*",
-    "@hashicorp/design-system-components": "*",
     "@types/ember": "latest",
     "@types/ember-data": "latest",
     "@types/ember-data__adapter": "latest",

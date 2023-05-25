@@ -508,21 +508,6 @@ func pathConfigAutoTidy(b *backend) *framework.Path {
 				Description: `Interval at which to run an auto-tidy operation. This is the time between tidy invocations (after one finishes to the start of the next). Running a manual tidy will reset this duration.`,
 				Default:     int(defaultTidyConfig.Interval / time.Second), // TypeDurationSecond currently requires the default to be an int.
 			},
-			"maintain_stored_certificate_counts": {
-				Type: framework.TypeBool,
-				Description: `This configures whether stored certificates
-are counted upon initialization of the backend, and whether during
-normal operation, a running count of certificates stored is maintained.`,
-				Default: false,
-			},
-			"publish_stored_certificate_count_metrics": {
-				Type: framework.TypeBool,
-				Description: `This configures whether the stored certificate
-count is published to the metrics consumer.  It does not affect if the
-stored certificate count is maintained, and if maintained, it will be
-available on the tidy-status endpoint.`,
-				Default: false,
-			},
 		}),
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
@@ -1520,13 +1505,13 @@ func (b *backend) doTidyAcme(ctx context.Context, req *logical.Request, logger h
 	defer b.acmeAccountLock.Unlock()
 
 	sc := b.makeStorageContext(ctx, req.Storage)
-	thumbprints, err := sc.Storage.List(ctx, acmeThumbprintPrefix)
+	list, err := sc.Storage.List(ctx, acmeThumbprintPrefix)
 	if err != nil {
 		return err
 	}
 
 	b.tidyStatusLock.Lock()
-	b.tidyStatus.acmeAccountsCount = uint(len(thumbprints))
+	b.tidyStatus.acmeAccountsCount = uint(len(list))
 	b.tidyStatusLock.Unlock()
 
 	baseUrl, _, err := getAcmeBaseUrl(sc, req.Path)
@@ -1539,7 +1524,7 @@ func (b *backend) doTidyAcme(ctx context.Context, req *logical.Request, logger h
 		sc:      sc,
 	}
 
-	for _, thumbprint := range thumbprints {
+	for _, thumbprint := range list {
 		err := b.tidyAcmeAccountByThumbprint(b.acmeState, acmeCtx, thumbprint, config.SafetyBuffer, config.AcmeAccountSafetyBuffer)
 		if err != nil {
 			logger.Warn("error tidying account %v: %v", thumbprint, err.Error())
@@ -1557,43 +1542,6 @@ func (b *backend) doTidyAcme(ctx context.Context, req *logical.Request, logger h
 			b.acmeAccountLock.Lock()
 		}
 
-	}
-
-	// Clean up any unused EAB
-	eabIds, err := b.acmeState.ListEabIds(sc)
-	if err != nil {
-		return fmt.Errorf("failed listing EAB ids: %w", err)
-	}
-
-	for _, eabId := range eabIds {
-		eab, err := b.acmeState.LoadEab(sc, eabId)
-		if err != nil {
-			if errors.Is(err, ErrStorageItemNotFound) {
-				// We don't need to worry about a consumed EAB
-				continue
-			}
-			return err
-		}
-
-		eabExpiration := eab.CreatedOn.Add(config.AcmeAccountSafetyBuffer)
-		if time.Now().After(eabExpiration) {
-			_, err := b.acmeState.DeleteEab(sc, eabId)
-			if err != nil {
-				return fmt.Errorf("failed to tidy eab %s: %w", eabId, err)
-			}
-		}
-
-		// Check for cancel before continuing.
-		if atomic.CompareAndSwapUint32(b.tidyCancelCAS, 1, 0) {
-			return tidyCancelledError
-		}
-
-		// Check for pause duration to reduce resource consumption.
-		if config.PauseDuration > (0 * time.Second) {
-			b.acmeAccountLock.Unlock() // Correct the Lock
-			time.Sleep(config.PauseDuration)
-			b.acmeAccountLock.Lock()
-		}
 	}
 
 	return nil
@@ -1826,11 +1774,10 @@ func (b *backend) pathConfigAutoTidyWrite(ctx context.Context, req *logical.Requ
 	}
 
 	if runningStorageMetricsEnabledRaw, ok := d.GetOk("publish_stored_certificate_count_metrics"); ok {
+		if config.MaintainCount == false {
+			return logical.ErrorResponse("Can not publish a running storage metrics count to metrics without first maintaining that count.  Enable `maintain_stored_certificate_counts` to enable `publish_stored_certificate_count_metrics."), nil
+		}
 		config.PublishMetrics = runningStorageMetricsEnabledRaw.(bool)
-	}
-
-	if config.PublishMetrics && !config.MaintainCount {
-		return logical.ErrorResponse("Can not publish a running storage metrics count to metrics without first maintaining that count.  Enable `maintain_stored_certificate_counts` to enable `publish_stored_certificate_count_metrics`."), nil
 	}
 
 	if err := sc.writeAutoTidyConfig(config); err != nil {

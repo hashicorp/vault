@@ -1,3 +1,0 @@
-```release-note:improvement
-command/server (enterprise): -dev-three-node now creates perf standbys instead of regular standbys.
-```

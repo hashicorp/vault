@@ -46,7 +46,7 @@ module('Integration | Component | sidebar-nav-access', function (hooks) {
       'Back to main navigation',
       'Authentication methods',
       'Multi-factor authentication',
-      'OIDC provider',
+      'OIDC',
       'Control Groups',
       'Namespaces',
       'Groups',

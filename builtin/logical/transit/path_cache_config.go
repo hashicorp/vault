@@ -84,11 +84,7 @@ func (b *backend) pathCacheConfigWrite(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"size": cacheSize,
-		},
-	}, nil
+	return nil, nil
 }
 
 type configCache struct {

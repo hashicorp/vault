@@ -3,18 +3,18 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-import Component from '@glimmer/component';
 import { action } from '@ember/object';
+import RouterService from '@ember/routing/router-service';
 import { service } from '@ember/service';
 import { waitFor } from '@ember/test-waiters';
+import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
+import PkiActionModel from 'vault/models/pki/action';
+import PkiUrlsModel from 'vault/models/pki/urls';
+import FlashMessageService from 'vault/services/flash-messages';
 import errorMessage from 'vault/utils/error-message';
-import type PkiActionModel from 'vault/models/pki/action';
-import type PkiConfigUrlsModel from 'vault/models/pki/config/urls';
-import type FlashMessageService from 'vault/services/flash-messages';
-import type RouterService from '@ember/routing/router-service';
-import type { ValidationMap } from 'vault/vault/app-types';
+import { ValidationMap } from 'vault/vault/app-types';
 
 interface AdapterOptions {
   actionType: string;
@@ -22,7 +22,7 @@ interface AdapterOptions {
 }
 interface Args {
   model: PkiActionModel;
-  urls: PkiConfigUrlsModel;
+  urls: PkiUrlsModel;
   onCancel: CallableFunction;
   onComplete: CallableFunction;
   onSave?: CallableFunction;
@@ -107,10 +107,8 @@ export default class PkiGenerateRootComponent extends Component<Args> {
     const continueSave = this.checkFormValidity();
     if (!continueSave) return;
     try {
-      yield this.args.model.save({ adapterOptions: this.args.adapterOptions });
-      // root generation must occur first in case templates are used for URL fields
-      // this way an issuer_id exists for backend to interpolate into the template
       yield this.setUrls();
+      yield this.args.model.save({ adapterOptions: this.args.adapterOptions });
       this.flashMessages.success('Successfully generated root.');
       if (this.args.onSave) {
         this.args.onSave();

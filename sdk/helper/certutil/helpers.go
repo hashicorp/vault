@@ -126,7 +126,7 @@ func GetSubjKeyID(privateKey crypto.Signer) ([]byte, error) {
 	if privateKey == nil {
 		return nil, errutil.InternalError{Err: "passed-in private key is nil"}
 	}
-	return GetSubjectKeyID(privateKey.Public())
+	return getSubjectKeyID(privateKey.Public())
 }
 
 // Returns the explicit SKID when used for cross-signing, else computes a new
@@ -136,10 +136,10 @@ func getSubjectKeyIDFromBundle(data *CreationBundle) ([]byte, error) {
 		return data.Params.SKID, nil
 	}
 
-	return GetSubjectKeyID(data.CSR.PublicKey)
+	return getSubjectKeyID(data.CSR.PublicKey)
 }
 
-func GetSubjectKeyID(pub interface{}) ([]byte, error) {
+func getSubjectKeyID(pub interface{}) ([]byte, error) {
 	var publicKeyBytes []byte
 	switch pub := pub.(type) {
 	case *rsa.PublicKey:
@@ -1042,8 +1042,8 @@ func selectSignatureAlgorithmForECDSA(pub crypto.PublicKey, signatureBits int) x
 }
 
 var (
-	ExtensionBasicConstraintsOID = []int{2, 5, 29, 19}
-	ExtensionSubjectAltNameOID   = []int{2, 5, 29, 17}
+	oidExtensionBasicConstraints = []int{2, 5, 29, 19}
+	oidExtensionSubjectAltName   = []int{2, 5, 29, 17}
 )
 
 // CreateCSR creates a CSR with the default rand.Reader to
@@ -1098,7 +1098,7 @@ func createCSR(data *CreationBundle, addBasicConstraints bool, randReader io.Rea
 			return nil, errutil.InternalError{Err: errwrap.Wrapf("error marshaling basic constraints: {{err}}", err).Error()}
 		}
 		ext := pkix.Extension{
-			Id:       ExtensionBasicConstraintsOID,
+			Id:       oidExtensionBasicConstraints,
 			Value:    val,
 			Critical: true,
 		}
@@ -1219,7 +1219,7 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		certTemplate.URIs = data.CSR.URIs
 
 		for _, name := range data.CSR.Extensions {
-			if !name.Id.Equal(ExtensionBasicConstraintsOID) && !(len(data.Params.OtherSANs) > 0 && name.Id.Equal(ExtensionSubjectAltNameOID)) {
+			if !name.Id.Equal(oidExtensionBasicConstraints) && !(len(data.Params.OtherSANs) > 0 && name.Id.Equal(oidExtensionSubjectAltName)) {
 				certTemplate.ExtraExtensions = append(certTemplate.ExtraExtensions, name)
 			}
 		}

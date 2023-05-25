@@ -11,7 +11,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/xor"
@@ -93,43 +92,23 @@ func NodeSealed(ctx context.Context, cluster VaultCluster, nodeIdx int) error {
 }
 
 func WaitForNCoresSealed(ctx context.Context, cluster VaultCluster, n int) error {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	errs := make(chan error)
-	for i := range cluster.Nodes() {
-		go func(i int) {
-			var err error
-			for ctx.Err() == nil {
-				err = NodeSealed(ctx, cluster, i)
-				if err == nil {
-					errs <- nil
-					return
-				}
-				time.Sleep(100 * time.Millisecond)
+	for ctx.Err() == nil {
+		sealed := 0
+		for i := range cluster.Nodes() {
+			ctx, cancel := context.WithTimeout(ctx, 5*time.Millisecond)
+			if err := NodeSealed(ctx, cluster, i); err == nil {
+				sealed++
 			}
-			if err == nil {
-				err = ctx.Err()
-			}
-			errs <- err
-		}(i)
-	}
-
-	var merr *multierror.Error
-	var sealed int
-	for range cluster.Nodes() {
-		err := <-errs
-		if err != nil {
-			merr = multierror.Append(merr, err)
-		} else {
-			sealed++
-			if sealed == n {
-				return nil
-			}
+			cancel()
 		}
+
+		if sealed >= n {
+			return nil
+		}
+		time.Sleep(time.Second)
 	}
 
-	return fmt.Errorf("%d cores were not sealed, errs: %v", n, merr.ErrorOrNil())
+	return fmt.Errorf("%d cores were not sealed", n)
 }
 
 func NodeHealthy(ctx context.Context, cluster VaultCluster, nodeIdx int) error {

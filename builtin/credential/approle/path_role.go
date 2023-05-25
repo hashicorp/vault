@@ -1077,6 +1077,7 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id/destroy/?$",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixAppRole,
+				OperationSuffix: "secret-id",
 				OperationVerb:   "destroy",
 			},
 			Fields: map[string]*framework.FieldSchema{
@@ -1093,9 +1094,6 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback:  b.pathRoleSecretIDDestroyUpdateDelete,
 					Responses: responseNoContent,
-					DisplayAttrs: &framework.DisplayAttributes{
-						OperationSuffix: "secret-id",
-					},
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback:  b.pathRoleSecretIDDestroyUpdateDelete,
@@ -1185,6 +1183,7 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id-accessor/destroy/?$",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixAppRole,
+				OperationSuffix: "secret-id-by-accessor",
 				OperationVerb:   "destroy",
 			},
 			Fields: map[string]*framework.FieldSchema{
@@ -1201,9 +1200,6 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback:  b.pathRoleSecretIDAccessorDestroyUpdateDelete,
 					Responses: responseNoContent,
-					DisplayAttrs: &framework.DisplayAttributes{
-						OperationSuffix: "secret-id-by-accessor",
-					},
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback:  b.pathRoleSecretIDAccessorDestroyUpdateDelete,

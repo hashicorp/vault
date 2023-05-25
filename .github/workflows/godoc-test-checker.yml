@@ -11,11 +11,11 @@ jobs:
   godoc-test-check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
         with:
           fetch-depth: 0
       - name: Set Up Go
-        uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
+        uses: actions/setup-go@d0a58c1c4d2b25278816e339b944508c875f3613
         with:
           cache: true
           go-version-file: ./.go-version

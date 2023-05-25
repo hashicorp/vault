@@ -1,3 +1,0 @@
-```release-note:feature
-**AWS Static Roles**: The AWS Secrets Engine can manage static roles configured by users.
-```

@@ -884,73 +884,73 @@
     ]
   },
   {
-    "title": "Vault Agent and Vault Proxy",
+    "title": "Vault Agent",
     "routes": [
       {
         "title": "Overview",
-        "path": "agent-and-proxy"
+        "path": "agent"
       },
       {
         "title": "Auto-Auth",
         "routes": [
           {
             "title": "Overview",
-            "path": "agent-and-proxy/autoauth"
+            "path": "agent/autoauth"
           },
           {
             "title": "Methods",
             "routes": [
               {
                 "title": "Overview",
-                "path": "agent-and-proxy/autoauth/methods"
+                "path": "agent/autoauth/methods"
               },
               {
                 "title": "AliCloud",
-                "path": "agent-and-proxy/autoauth/methods/alicloud"
+                "path": "agent/autoauth/methods/alicloud"
               },
               {
                 "title": "AppRole",
-                "path": "agent-and-proxy/autoauth/methods/approle"
+                "path": "agent/autoauth/methods/approle"
               },
               {
                 "title": "AWS",
-                "path": "agent-and-proxy/autoauth/methods/aws"
+                "path": "agent/autoauth/methods/aws"
               },
               {
                 "title": "Azure",
-                "path": "agent-and-proxy/autoauth/methods/azure"
+                "path": "agent/autoauth/methods/azure"
               },
               {
                 "title": "Cert",
-                "path": "agent-and-proxy/autoauth/methods/cert"
+                "path": "agent/autoauth/methods/cert"
               },
               {
                 "title": "CF",
-                "path": "agent-and-proxy/autoauth/methods/cf"
+                "path": "agent/autoauth/methods/cf"
               },
               {
                 "title": "GCP",
-                "path": "agent-and-proxy/autoauth/methods/gcp"
+                "path": "agent/autoauth/methods/gcp"
               },
               {
                 "title": "JWT",
-                "path": "agent-and-proxy/autoauth/methods/jwt"
+                "path": "agent/autoauth/methods/jwt"
               },
               {
                 "title": "Kerberos",
-                "path": "agent-and-proxy/autoauth/methods/kerberos"
+                "path": "agent/autoauth/methods/kerberos"
               },
               {
                 "title": "Kubernetes",
-                "path": "agent-and-proxy/autoauth/methods/kubernetes"
+                "path": "agent/autoauth/methods/kubernetes"
               },
               {
                 "title": "Oracle Cloud Infrastructure",
-                "path": "agent-and-proxy/autoauth/methods/oci"
+                "path": "agent/autoauth/methods/oci"
               },
               {
                 "title": "Token File",
-                "path": "agent-and-proxy/autoauth/methods/token_file"
+                "path": "agent/autoauth/methods/token_file"
               }
             ]
           },
@@ -959,101 +959,53 @@
             "routes": [
               {
                 "title": "Overview",
-                "path": "agent-and-proxy/autoauth/sinks"
+                "path": "agent/autoauth/sinks"
               },
               {
                 "title": "File",
-                "path": "agent-and-proxy/autoauth/sinks/file"
+                "path": "agent/autoauth/sinks/file"
               }
             ]
           }
         ]
       },
       {
-        "title": "Vault Proxy",
+        "title": "API Proxy",
+        "path": "agent/apiproxy"
+      },
+      {
+        "title": "Caching",
         "routes": [
           {
             "title": "Overview",
-            "path": "agent-and-proxy/proxy"
+            "path": "agent/caching"
           },
           {
-            "title": "API Proxy",
-            "path": "agent-and-proxy/proxy/apiproxy"
-          },
-          {
-            "title": "Caching",
+            "title": "Persistent Caching",
             "routes": [
               {
                 "title": "Overview",
-                "path": "agent-and-proxy/proxy/caching"
+                "path": "agent/caching/persistent-caches"
               },
               {
-                "title": "Persistent Caching",
-                "routes": [
-                  {
-                    "title": "Overview",
-                    "path": "agent-and-proxy/proxy/caching/persistent-caches"
-                  },
-                  {
-                    "title": "Kubernetes",
-                    "path": "agent-and-proxy/proxy/caching/persistent-caches/kubernetes"
-                  }
-                ]
+                "title": "Kubernetes",
+                "path": "agent/caching/persistent-caches/kubernetes"
               }
             ]
-          },
-          {
-            "title": "Version compatibility",
-            "path": "agent-and-proxy/proxy/versions"
           }
         ]
       },
       {
-        "title": "Vault Agent",
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "agent-and-proxy/agent"
-          },
-          {
-            "title": "API Proxy",
-            "path": "agent-and-proxy/agent/apiproxy"
-          },
-          {
-            "title": "Caching",
-            "routes": [
-              {
-                "title": "Overview",
-                "path": "agent-and-proxy/agent/caching"
-              },
-              {
-                "title": "Persistent Caching",
-                "routes": [
-                  {
-                    "title": "Overview",
-                    "path": "agent-and-proxy/agent/caching/persistent-caches"
-                  },
-                  {
-                    "title": "Kubernetes",
-                    "path": "agent-and-proxy/agent/caching/persistent-caches/kubernetes"
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "title": "Templates",
-            "path": "agent-and-proxy/agent/template"
-          },
-          {
-            "title": "Windows service",
-            "path": "agent-and-proxy/agent/winsvc"
-          },
-          {
-            "title": "Version compatibility",
-            "path": "agent-and-proxy/agent/versions"
-          }
-        ]
+        "title": "Templates",
+        "path": "agent/template"
+      },
+      {
+        "title": "Windows service",
+        "path": "agent/winsvc"
+      },
+      {
+        "title": "Version compatibility",
+        "path": "agent/versions"
       }
     ]
   },
@@ -1869,7 +1821,7 @@
       {
          "title": "Upgrade Vault HA installations",
          "path": "upgrading/vault-ha-upgrade"
-      },
+      }, 
       {
         "title": "Upgrade Plugins",
         "path": "upgrading/plugins"

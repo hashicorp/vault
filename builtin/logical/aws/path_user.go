@@ -57,7 +57,7 @@ func pathUser(b *backend) *framework.Path {
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathCredsRead,
 				DisplayAttrs: &framework.DisplayAttributes{
-					OperationSuffix: "credentials-with-parameters|sts-credentials-with-parameters",
+					OperationSuffix: "credentials2|sts-credentials2",
 				},
 			},
 		},

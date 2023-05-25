@@ -17,13 +17,12 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
-	"github.com/hashicorp/vault/command/agentproxyshared/auth"
-	agentapprole "github.com/hashicorp/vault/command/agentproxyshared/auth/approle"
-	cache "github.com/hashicorp/vault/command/agentproxyshared/cache"
-	"github.com/hashicorp/vault/command/agentproxyshared/sink"
-	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
-	"github.com/hashicorp/vault/command/agentproxyshared/sink/inmem"
-	"github.com/hashicorp/vault/helper/useragent"
+	"github.com/hashicorp/vault/command/agent/auth"
+	agentapprole "github.com/hashicorp/vault/command/agent/auth/approle"
+	"github.com/hashicorp/vault/command/agent/cache"
+	"github.com/hashicorp/vault/command/agent/sink"
+	"github.com/hashicorp/vault/command/agent/sink/file"
+	"github.com/hashicorp/vault/command/agent/sink/inmem"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -167,10 +166,8 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 
 	// Create the API proxier
 	apiProxy, err := cache.NewAPIProxy(&cache.APIProxyConfig{
-		Client:                  client,
-		Logger:                  cacheLogger.Named("apiproxy"),
-		UserAgentStringFunction: useragent.ProxyStringWithProxiedUserAgent,
-		UserAgentString:         useragent.ProxyAPIProxyString(),
+		Client: client,
+		Logger: cacheLogger.Named("apiproxy"),
 	})
 	if err != nil {
 		t.Fatal(err)

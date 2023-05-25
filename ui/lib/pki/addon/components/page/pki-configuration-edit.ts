@@ -9,25 +9,25 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
+import RouterService from '@ember/routing/router-service';
+import FlashMessageService from 'vault/services/flash-messages';
+import VersionService from 'vault/services/version';
+import { FormField, TtlEvent } from 'vault/app-types';
+import PkiCrlModel from 'vault/models/pki/crl';
+import PkiUrlsModel from 'vault/models/pki/urls';
 import errorMessage from 'vault/utils/error-message';
-import type RouterService from '@ember/routing/router-service';
-import type FlashMessageService from 'vault/services/flash-messages';
-import type VersionService from 'vault/services/version';
-import type PkiConfigCrlModel from 'vault/models/pki/config/crl';
-import type PkiConfigUrlsModel from 'vault/models/pki/config/urls';
-import type { FormField, TtlEvent } from 'vault/app-types';
 
 interface Args {
-  crl: PkiConfigCrlModel;
-  urls: PkiConfigUrlsModel;
+  crl: PkiCrlModel;
+  urls: PkiUrlsModel;
 }
-interface PkiConfigCrlTtls {
+interface PkiCrlTtls {
   autoRebuildGracePeriod: string;
   expiry: string;
   deltaRebuildInterval: string;
   ocspExpiry: string;
 }
-interface PkiConfigCrlBooleans {
+interface PkiCrlBooleans {
   autoRebuild: boolean;
   enableDelta: boolean;
   disable: boolean;
@@ -69,10 +69,10 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
   handleTtl(attr: FormField, e: TtlEvent) {
     const { enabled, goSafeTimeString } = e;
     const ttlAttr = attr.name;
-    this.args.crl[ttlAttr as keyof PkiConfigCrlTtls] = goSafeTimeString;
+    this.args.crl[ttlAttr as keyof PkiCrlTtls] = goSafeTimeString;
     // expiry and ocspExpiry both correspond to 'disable' booleans
     // so when ttl is enabled, the booleans are set to false
-    this.args.crl[attr.options.mapToBoolean as keyof PkiConfigCrlBooleans] = attr.options.isOppositeValue
+    this.args.crl[attr.options.mapToBoolean as keyof PkiCrlBooleans] = attr.options.isOppositeValue
       ? !enabled
       : enabled;
   }

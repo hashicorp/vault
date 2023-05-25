@@ -1,3 +1,0 @@
-```release-note:improvement
-secrets/transit: Add support to import public keys in transit engine and allow encryption and verification of signed data
-```

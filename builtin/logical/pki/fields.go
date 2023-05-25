@@ -16,7 +16,6 @@ const (
 	keyIdParam     = "key_id"
 	keyTypeParam   = "key_type"
 	keyBitsParam   = "key_bits"
-	skidParam      = "subject_key_id"
 )
 
 // addIssueAndSignCommonFields adds fields common to both CA and non-CA issuing
@@ -531,7 +530,7 @@ Defaults to 8760 hours (1 year).`,
 		Type: framework.TypeDurationSecond,
 		Description: `The amount of time that must pass after creation
 that an account with no orders is marked revoked, and the amount of time
-after being marked revoked or deactivated.`,
+after being marked revoked or dea`,
 		Default: int(defaultTidyConfig.AcmeAccountSafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
 	}
 
@@ -545,6 +544,23 @@ stored in memory during the entire tidy operation, but resources to
 read/process/update existing entries will be spread out over a
 greater period of time. By default this is zero seconds.`,
 		Default: "0s",
+	}
+
+	fields["maintain_stored_certificate_counts"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `This configures whether stored certificates 
+are counted upon initialization of the backend, and whether during 
+normal operation, a running count of certificates stored is maintained.`,
+		Default: false,
+	}
+
+	fields["publish_stored_certificate_count_metrics"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `This configures whether the stored certificate 
+count is published to the metrics consumer.  It does not affect if the
+stored certificate count is maintained, and if maintained, it will be
+available on the tidy-status endpoint.`,
+		Default: false,
 	}
 
 	fields["tidy_revocation_queue"] = &framework.FieldSchema{

@@ -2400,14 +2400,6 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	require.NotNil(t, resp, "expected ca info")
 	keyId1 := resp.Data["key_id"]
 	issuerId1 := resp.Data["issuer_id"]
-	cert := parseCert(t, resp.Data["certificate"].(string))
-	certSkid := certutil.GetHexFormatted(cert.SubjectKeyId, ":")
-
-	//  -> Validate the SKID matches between the root cert and the key
-	resp, err = CBRead(b, s, "key/"+keyId1.(keyID).String())
-	require.NoError(t, err)
-	require.NotNil(t, resp, "expected a response")
-	require.Equal(t, resp.Data["subject_key_id"], certSkid)
 
 	resp, err = CBRead(b, s, "cert/ca_chain")
 	require.NoError(t, err, "error reading ca_chain: %v", err)
@@ -2422,14 +2414,6 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	require.NotNil(t, resp, "expected ca info")
 	keyId2 := resp.Data["key_id"]
 	issuerId2 := resp.Data["issuer_id"]
-	cert = parseCert(t, resp.Data["certificate"].(string))
-	certSkid = certutil.GetHexFormatted(cert.SubjectKeyId, ":")
-
-	//  -> Validate the SKID matches between the root cert and the key
-	resp, err = CBRead(b, s, "key/"+keyId2.(keyID).String())
-	require.NoError(t, err)
-	require.NotNil(t, resp, "expected a response")
-	require.Equal(t, resp.Data["subject_key_id"], certSkid)
 
 	// Make sure that we actually generated different issuer and key values
 	require.NotEqual(t, keyId1, keyId2)
@@ -2532,7 +2516,7 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	}
 }
 
-func TestBackend_SignIntermediate_AllowedPastCAValidity(t *testing.T) {
+func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 	t.Parallel()
 	b_root, s_root := CreateBackendWithStorage(t)
 	b_int, s_int := CreateBackendWithStorage(t)
@@ -2550,7 +2534,6 @@ func TestBackend_SignIntermediate_AllowedPastCAValidity(t *testing.T) {
 	_, err = CBWrite(b_root, s_root, "roles/test", map[string]interface{}{
 		"allow_bare_domains": true,
 		"allow_subdomains":   true,
-		"allow_any_name":     true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -2560,25 +2543,21 @@ func TestBackend_SignIntermediate_AllowedPastCAValidity(t *testing.T) {
 		"common_name": "myint.com",
 	})
 	schema.ValidateResponse(t, schema.GetResponseSchema(t, b_root.Route("intermediate/generate/internal"), logical.UpdateOperation), resp, true)
-	require.Contains(t, resp.Data, "key_id")
-	intKeyId := resp.Data["key_id"].(keyID)
-	csr := resp.Data["csr"]
-
-	resp, err = CBRead(b_int, s_int, "key/"+intKeyId.String())
-	require.NoError(t, err)
-	require.NotNil(t, resp, "expected a response")
-	intSkid := resp.Data["subject_key_id"].(string)
 
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	csr := resp.Data["csr"]
 
 	_, err = CBWrite(b_root, s_root, "sign/test", map[string]interface{}{
 		"common_name": "myint.com",
 		"csr":         csr,
 		"ttl":         "60h",
 	})
-	require.ErrorContains(t, err, "that is beyond the expiration of the CA certificate")
+	if err == nil {
+		t.Fatal("expected error")
+	}
 
 	_, err = CBWrite(b_root, s_root, "sign-verbatim/test", map[string]interface{}{
 		"common_name": "myint.com",
@@ -2586,7 +2565,9 @@ func TestBackend_SignIntermediate_AllowedPastCAValidity(t *testing.T) {
 		"csr":         csr,
 		"ttl":         "60h",
 	})
-	require.ErrorContains(t, err, "that is beyond the expiration of the CA certificate")
+	if err == nil {
+		t.Fatal("expected error")
+	}
 
 	resp, err = CBWrite(b_root, s_root, "root/sign-intermediate", map[string]interface{}{
 		"common_name": "myint.com",
@@ -2603,10 +2584,6 @@ func TestBackend_SignIntermediate_AllowedPastCAValidity(t *testing.T) {
 	if len(resp.Warnings) == 0 {
 		t.Fatalf("expected warnings, got %#v", *resp)
 	}
-
-	cert := parseCert(t, resp.Data["certificate"].(string))
-	certSkid := certutil.GetHexFormatted(cert.SubjectKeyId, ":")
-	require.Equal(t, intSkid, certSkid)
 }
 
 func TestBackend_ConsulSignLeafWithLegacyRole(t *testing.T) {
@@ -6744,7 +6721,7 @@ func TestProperAuthing(t *testing.T) {
 		t.Fatal(err)
 	}
 	serial := resp.Data["serial_number"].(string)
-	eabKid := "13b80844-e60d-42d2-b7e9-152a8e834b90"
+
 	paths := map[string]pathAuthChecker{
 		"ca_chain":                               shouldBeUnauthedReadList,
 		"cert/ca_chain":                          shouldBeUnauthedReadList,
@@ -6862,9 +6839,6 @@ func TestProperAuthing(t *testing.T) {
 		"unified-crl/delta/pem":                  shouldBeUnauthedReadList,
 		"unified-ocsp":                           shouldBeUnauthedWriteOnly,
 		"unified-ocsp/dGVzdAo=":                  shouldBeUnauthedReadList,
-		"acme/new-eab":                           shouldBeAuthed,
-		"acme/eab":                               shouldBeAuthed,
-		"acme/eab/" + eabKid:                     shouldBeAuthed,
 	}
 
 	// Add ACME based paths to the test suite
@@ -6937,9 +6911,6 @@ func TestProperAuthing(t *testing.T) {
 		}
 		if strings.Contains(raw_path, "acme/") && strings.Contains(raw_path, "{order_id}") {
 			raw_path = strings.ReplaceAll(raw_path, "{order_id}", "13b80844-e60d-42d2-b7e9-152a8e834b90")
-		}
-		if strings.Contains(raw_path, "acme/eab") && strings.Contains(raw_path, "{key_id}") {
-			raw_path = strings.ReplaceAll(raw_path, "{key_id}", eabKid)
 		}
 
 		handler, present := paths[raw_path]

@@ -35,12 +35,12 @@ func patternAcmeRevoke(b *backend, pattern string) *framework.Path {
 			},
 		},
 
-		HelpSynopsis:    pathAcmeHelpSync,
-		HelpDescription: pathAcmeHelpDesc,
+		HelpSynopsis:    "",
+		HelpDescription: "",
 	}
 }
 
-func (b *backend) acmeRevocationHandler(acmeCtx *acmeContext, _ *logical.Request, _ *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}) (*logical.Response, error) {
+func (b *backend) acmeRevocationHandler(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}) (*logical.Response, error) {
 	var cert *x509.Certificate
 
 	rawCertificate, present := data["certificate"]
@@ -127,13 +127,13 @@ func (b *backend) acmeRevocationHandler(acmeCtx *acmeContext, _ *logical.Request
 	// Finally, do the relevant permissions/authorization check as
 	// appropriate based on the type of revocation happening.
 	if !userCtx.Existing {
-		return b.acmeRevocationByPoP(acmeCtx, userCtx, cert, config)
+		return b.acmeRevocationByPoP(acmeCtx, r, fields, userCtx, data, cert, config)
 	}
 
-	return b.acmeRevocationByAccount(acmeCtx, userCtx, cert, config)
+	return b.acmeRevocationByAccount(acmeCtx, r, fields, userCtx, data, cert, config)
 }
 
-func (b *backend) acmeRevocationByPoP(acmeCtx *acmeContext, userCtx *jwsCtx, cert *x509.Certificate, config *crlConfig) (*logical.Response, error) {
+func (b *backend) acmeRevocationByPoP(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}, cert *x509.Certificate, config *crlConfig) (*logical.Response, error) {
 	// Since this account does not exist, ensure we've gotten a private key
 	// matching the certificate's public key.
 	signer, ok := userCtx.Key.Key.(crypto.Signer)
@@ -153,11 +153,15 @@ func (b *backend) acmeRevocationByPoP(acmeCtx *acmeContext, userCtx *jwsCtx, cer
 	return revokeCert(acmeCtx.sc, config, cert)
 }
 
-func (b *backend) acmeRevocationByAccount(acmeCtx *acmeContext, userCtx *jwsCtx, cert *x509.Certificate, config *crlConfig) (*logical.Response, error) {
-	// Fetch the account; disallow revocations from non-valid-status accounts.
-	_, err := requireValidAcmeAccount(acmeCtx, userCtx)
+func (b *backend) acmeRevocationByAccount(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}, cert *x509.Certificate, config *crlConfig) (*logical.Response, error) {
+	// Fetch the account; disallow revocations from non-valid-status
+	// accounts.
+	account, err := b.acmeState.LoadAccount(acmeCtx, userCtx.Kid)
 	if err != nil {
 		return nil, fmt.Errorf("failed to lookup account: %w", err)
+	}
+	if account.Status != StatusValid {
+		return nil, fmt.Errorf("account isn't presently valid: %w", ErrUnauthorized)
 	}
 
 	// We only support certificates issued by this user, we don't support

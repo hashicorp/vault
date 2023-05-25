@@ -148,7 +148,7 @@ func TestBackend_throttled(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
-	b := Backend(config)
+	b := Backend()
 	if err := b.Setup(context.Background(), config); err != nil {
 		t.Fatal(err)
 	}

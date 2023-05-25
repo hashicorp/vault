@@ -5,10 +5,6 @@ CHANGES:
 
 * core: Bump Go version to 1.20.3.
 
-SECURITY:
-
-* core/seal: Fix handling of HMACing of seal-wrapped storage entries from HSMs using CKM_AES_CBC or CKM_AES_CBC_PAD which may have allowed an attacker to conduct a padding oracle attack. This vulnerability, CVE-2023-2197, affects Vault from 1.13.0 up to 1.13.1 and was fixed in 1.13.2. [[HCSEC-2023-14](https://discuss.hashicorp.com/t/hcsec-2023-14-vault-enterprise-vulnerable-to-padding-oracle-attacks-when-using-a-cbc-based-encryption-mechanism-with-a-hsm/53322)]
-
 IMPROVEMENTS:
 
 * Add debug symbols back to builds to fix Dynatrace support [[GH-20294](https://github.com/hashicorp/vault/pull/20294)]
@@ -30,6 +26,7 @@ BUG FIXES:
 * command/server: Fix incorrect paths in generated config for `-dev-tls` flag on Windows [[GH-20257](https://github.com/hashicorp/vault/pull/20257)]
 * core (enterprise): Fix intermittent issue with token entries sometimes not being found when using a newly created token in a request to a secondary, even when SSCT `new_token` forwarding is set. When this occurred, this would result in the following error to the client: `error performing token check: no lease entry found for token that ought to have one, possible eventual consistency issue`.
 * core (enterprise): Fix read on perf standbys failing with 412 after leadership change, unseal, restores or restarts when no writes occur
+* core/seal: Fix handling of HMACing of seal-wrapped storage entries from HSMs using CKM_AES_CBC or CKM_AES_CBC_PAD.
 * core/ssct (enterprise): Fixed race condition where a newly promoted DR may revert `sscGenCounter` 
 resulting in 412 errors.
 * core: Fix regression breaking non-raft clusters whose nodes share the same cluster_addr/api_addr. [[GH-19721](https://github.com/hashicorp/vault/pull/19721)]

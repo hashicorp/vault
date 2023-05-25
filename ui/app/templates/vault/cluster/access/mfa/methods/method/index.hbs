@@ -78,7 +78,7 @@
 {{else if (eq this.tab "enforcements")}}
   <Toolbar>
     <ToolbarActions>
-      <ToolbarLink @route="vault.cluster.access.mfa.enforcements.create" @type="add" data-test-enforcement-create>
+      <ToolbarLink @type="add" @params={{array "vault.cluster.access.mfa.enforcements.create"}}>
         New enforcement
       </ToolbarLink>
     </ToolbarActions>

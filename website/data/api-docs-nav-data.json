@@ -459,10 +459,6 @@
         "path": "system/generate-root"
       },
       {
-        "title": "<code>/sys/decode-token</code>",
-        "path": "system/decode-token"
-      },
-      {
         "title": "<code>/sys/health</code>",
         "path": "system/health"
       },

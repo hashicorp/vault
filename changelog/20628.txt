@@ -1,3 +1,0 @@
-```release-note:improvement
-agent: initial implementation of a process runner for injecting secrets via environment variables via vault agent
-```
