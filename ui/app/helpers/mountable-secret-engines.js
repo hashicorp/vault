@@ -111,8 +111,14 @@ const MOUNTABLE_SECRET_ENGINES = [
     category: 'generic',
   },
   {
+    displayName: 'LDAP',
+    type: 'ldap',
+    engineRoute: 'ldap.overview',
+    category: 'generic',
+    glyph: 'folder-users',
+  },
+  {
     displayName: 'Kubernetes',
-    value: 'kubernetes',
     type: 'kubernetes',
     engineRoute: 'kubernetes.overview',
     category: 'generic',
