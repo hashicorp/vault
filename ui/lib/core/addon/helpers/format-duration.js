@@ -6,25 +6,17 @@
 import { helper } from '@ember/component/helper';
 import { formatDuration, intervalToDuration } from 'date-fns';
 
-export function duration([time], { nullable = false }) {
-  // intervalToDuration creates a durationObject that turns the seconds (ex 3600) to respective:
-  // { years: 0, months: 0, days: 0, hours: 1, minutes: 0, seconds: 0 }
-  // then formatDuration returns the filled in keys of the durationObject
-  // nullable if you don't want a value to be returned instead of 0s
-  if (nullable && (time === '0' || time === 0)) {
-    return null;
-  }
-
+export function duration([time]) {
   // time must be in seconds
-  const duration = Number.parseInt(time, 10);
-
-  // Sometimes 0 does not mean 0 seconds, but can mean to use system defaults
-  // to avoid making any assumptions, just return 0
-  if (isNaN(duration) || duration === 0) {
-    return time;
+  // 0 does not always mean 0 seconds, i.e. it can representing using system defaults
+  if (Number.isInteger(time) && time !== 0) {
+    const milliseconds = time * 1000;
+    // pass milliseconds to intervalToDuration returns a durationObject: { years: 0, months: 0, days: 0, hours: 1, minutes: 0, seconds: 6 }
+    // formatDuration converts to human-readable format: '1 hour 6 seconds'
+    return formatDuration(intervalToDuration({ start: 0, end: milliseconds }));
   }
-
-  return formatDuration(intervalToDuration({ start: 0, end: duration * 1000 }));
+  // to avoid making any assumptions return strings and 0 as-is
+  return time;
 }
 
 export default helper(duration);
