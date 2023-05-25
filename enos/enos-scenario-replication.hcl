@@ -734,4 +734,9 @@ scenario "replication" {
     description = "The Vault updated secondary cluster primaries connection status"
     value       = step.verify_updated_performance_replication.secondary_replication_data_primaries
   }
+
+  output "vault_audit_device_file_path" {
+    description = "The file path for the file audit device, if enabled"
+    value       = step.create_vault_cluster.audit_device_file_path
+  }
 }

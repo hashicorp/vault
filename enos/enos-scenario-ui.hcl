@@ -244,4 +244,9 @@ scenario "ui" {
     description = "The stdout of the ui tests that ran"
     value       = step.test_ui.ui_test_stdout
   }
+
+  output "vault_audit_device_file_path" {
+    description = "The file path for the file audit device, if enabled"
+    value       = step.create_vault_cluster.audit_device_file_path
+  }
 }

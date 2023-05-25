@@ -402,4 +402,9 @@ scenario "upgrade" {
     description = "The Vault cluster unseal keys hex"
     value       = step.create_vault_cluster.unseal_keys_hex
   }
+
+  output "vault_audit_device_file_path" {
+    description = "The file path for the file audit device, if enabled"
+    value       = step.create_vault_cluster.audit_device_file_path
+  }
 }
