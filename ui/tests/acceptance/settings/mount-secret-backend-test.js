@@ -26,8 +26,8 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     this.uid = uuidv4();
     this.calcDays = (hours) => {
       const days = Math.floor(hours / 24);
-      const remainingHours = hours % 24;
-      return `${days} days ${remainingHours} hours`;
+      const remainder = hours % 24;
+      return `${days} days ${remainder} hours`;
     };
     return authPage.login();
   });
