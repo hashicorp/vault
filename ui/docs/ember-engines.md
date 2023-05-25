@@ -33,7 +33,7 @@ By adding this **ember-addon** path, we are able to share elements between your 
 
 In the engine’s `index.js` file:
 
-```jsx
+```js
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: MPL-2.0
@@ -53,9 +53,9 @@ module.exports = buildEngine({
 });
 ```
 
-Within your Engine’s `app/config/environment.js` file:
+Within your Engine’s `config/environment.js` file:
 
-```jsx
+```js
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: MPL-2.0
@@ -77,7 +77,7 @@ module.exports = function (environment) {
 
 Within your Engine’s `addon/engine.js` file:
 
-```jsx
+```js
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: MPL-2.0
@@ -104,15 +104,33 @@ export default class <EngineName>Engine extends Engine {
 loadInitializers(<EngineName>Engine, modulePrefix);
 ```
 
+### Service Dependencies:
+
 The services in the example above are common services that we often use in our engines. If your engine requires other services from the main application, add them to the services array.
 
-Optional step: Add some text in the engine’s `application.hbs` file (to see if your engine was set up correctly).
+#### Notes:
+
+- Service dependencies are OPTIONAL. If your engine does not use any external services, you do not need to include a services dependency array.
+- Remember to include any dependencies here in the engine's dependencies in app/app.js
+
+### External Route Dependencies:
+
+The external route dependencies allow you to link to a route outside of your engine. In this example, we list 'secrets' in the externalRoute and the route is defined in the `app.js` file.
+
+#### Notes:
+
+- In order to link to the other routes in the main app using the `LinkToExternal` component from your engine, you need to add the route to the `app/app.js` and your engine’s `addon/engine.js`. More information on [Linking to An External Context.](https://ember-engines.com/docs/link-to-external).
+
+## Additional info about your engine's `application.hbs`:
+
+- Optional step: Add some text in the engine’s `application.hbs` file (to see if your engine was set up correctly).
+- **NOTE: Most of our existing engines do not keep the generated `application.hbs` template file. If nothing will be added to it and it remains as just an `{{outlet}}` it can safely be removed.**
 
 ## Register your engine with our main application:
 
 In our `app/app.js` file in the engines object, add your engine’s name and dependencies.
 
-```jsx
+```js
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: MPL-2.0
@@ -144,9 +162,8 @@ If you used `ember g in-repo-engine <engine-name>` to generate the engine’s bl
 
 ### Important Notes:
 
-- Anytime a new engine is created, you will need to **RESTART** ember server!
+- Anytime a new engine is created, you will need to `yarn install` and **RESTART** ember server!
 - To add `package.json` **dependencies** or **devDependencies**, you can copy + paste the dependency into corresponding sections. Most of the time, we will want to use "\*" in place of the version number to ensure all the dependencies have the latest version.
-- In order to link to the other routes in the main app using the `LinkToExternal` component from your engine, you need to add the route to the `app/app.js` and your engine’s `addon/engine.js`. More information on [Linking to An External Context.](https://ember-engines.com/docs/link-to-external).
 
 ### Common blueprint commands:
 
