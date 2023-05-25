@@ -708,7 +708,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await authPage.login(userToken);
     await settled();
     // test if metadata tab there with no read access message and no ability to edit.
-    await click(`[data-test-auth-backend-link=${enginePath}]`);
+    await click(`[data-test-secrets-backend-link=${enginePath}]`);
     assert
       .dom('[data-test-get-credentials]')
       .exists(
