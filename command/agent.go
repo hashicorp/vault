@@ -6,6 +6,7 @@ package command
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -24,8 +25,17 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
+	"github.com/kr/pretty"
+	"github.com/mitchellh/cli"
+	"github.com/oklog/run"
+	"github.com/posener/complete"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+	"google.golang.org/grpc/test/bufconn"
+
 	"github.com/hashicorp/vault/api"
 	agentConfig "github.com/hashicorp/vault/command/agent/config"
+	"github.com/hashicorp/vault/command/agent/exec"
 	"github.com/hashicorp/vault/command/agent/template"
 	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
@@ -42,13 +52,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/version"
-	"github.com/kr/pretty"
-	"github.com/mitchellh/cli"
-	"github.com/oklog/run"
-	"github.com/posener/complete"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
-	"google.golang.org/grpc/test/bufconn"
 )
 
 var (
@@ -271,7 +274,7 @@ func (c *AgentCommand) Run(args []string) int {
 			"functionality, plan to move to Vault Proxy instead.")
 	}
 
-	// ctx and cancelFunc are passed to the AuthHandler, SinkServer, and
+	// ctx and cancelFunc are passed to the AuthHandler, SinkServer, ExecServer and
 	// TemplateServer that periodically listen for ctx.Done() to fire and shut
 	// down accordingly.
 	ctx, cancelFunc := context.WithCancel(context.Background())
@@ -724,6 +727,14 @@ func (c *AgentCommand) Run(args []string) int {
 			ExitAfterAuth: config.ExitAfterAuth,
 		})
 
+		es := exec.NewServer(&exec.ServerConfig{
+			AgentConfig: c.config,
+			Namespace:   templateNamespace,
+			Logger:      c.logger.Named("exec.server"),
+			LogLevel:    c.logger.GetLevel(),
+			LogWriter:   c.logWriter,
+		})
+
 		g.Add(func() error {
 			return ah.Run(ctx, method)
 		}, func(error) {
@@ -778,6 +789,17 @@ func (c *AgentCommand) Run(args []string) int {
 			ts.Stop()
 		})
 
+		g.Add(func() error {
+			return es.Run(ctx, ah.ExecTokenCh)
+		}, func(err error) {
+			// Let the lease cache know this is a shutdown; no need to evict
+			// everything
+			if leaseCache != nil {
+				leaseCache.SetShuttingDown(true)
+			}
+			cancelFunc()
+		})
+
 	}
 
 	// Server configuration output
@@ -816,7 +838,12 @@ func (c *AgentCommand) Run(args []string) int {
 	if err := g.Run(); err != nil {
 		c.logger.Error("runtime error encountered", "error", err)
 		c.UI.Error("Error encountered during run, refer to logs for more details.")
-		exitCode = 1
+		var processExitError *exec.ProcessExitError
+		if errors.As(err, &processExitError) {
+			exitCode = processExitError.ExitCode
+		} else {
+			exitCode = 1
+		}
 	}
 	c.notifySystemd(systemd.SdNotifyStopping)
 	return exitCode
