@@ -69,7 +69,7 @@ require (
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/google/tink/go v1.6.1
-	github.com/hashicorp/cap v0.2.1-0.20220727210936-60cd1534e220
+	github.com/hashicorp/cap v0.3.0
 	github.com/hashicorp/consul-template v0.32.0
 	github.com/hashicorp/consul/api v1.20.0
 	github.com/hashicorp/errwrap v1.1.0
@@ -125,7 +125,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-centrify v0.15.1
 	github.com/hashicorp/vault-plugin-auth-cf v0.15.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.16.0
-	github.com/hashicorp/vault-plugin-auth-jwt v0.15.0
+	github.com/hashicorp/vault-plugin-auth-jwt v0.16.0
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.10.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.15.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.14.0
@@ -296,7 +296,7 @@ require (
 	github.com/containerd/containerd v1.7.0 // indirect
 	github.com/containerd/continuity v0.3.0 // indirect
 	github.com/coreos/go-oidc v2.2.1+incompatible // indirect
-	github.com/coreos/go-oidc/v3 v3.1.0 // indirect
+	github.com/coreos/go-oidc/v3 v3.5.0 // indirect
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/couchbase/gocb/v2 v2.6.3 // indirect
@@ -403,7 +403,7 @@ require (
 	github.com/miekg/dns v1.1.43 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/mitchellh/hashstructure v1.1.0 // indirect
-	github.com/mitchellh/pointerstructure v1.2.0 // indirect
+	github.com/mitchellh/pointerstructure v1.2.1 // indirect
 	github.com/moby/patternmatcher v0.5.0 // indirect
 	github.com/moby/sys/sequential v0.5.0 // indirect
 	github.com/moby/term v0.0.0-20221205130635-1aeaba878587 // indirect
