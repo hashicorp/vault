@@ -61,9 +61,8 @@ func Test_newClientCertificateGenerator(t *testing.T) {
 				},
 			},
 			want: ClientCertificateGenerator{
-				KeyType:       "rsa",
-				KeyBits:       2048,
-				SignatureBits: 0,
+				KeyType: "rsa",
+				KeyBits: 2048,
 			},
 		},
 		{
