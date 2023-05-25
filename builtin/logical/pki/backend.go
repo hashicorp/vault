@@ -218,7 +218,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 			// ACME
 			pathAcmeConfig(&b),
-			pathAcmeEabCreateList(&b),
+			pathAcmeEabCreate(&b),
+			pathAcmeEabList(&b),
 			pathAcmeEabDelete(&b),
 		},
 

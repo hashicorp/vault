@@ -13,6 +13,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -21,7 +22,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-jose/go-jose/v3/json"
 	"github.com/go-test/deep"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/acme"
@@ -347,13 +347,30 @@ func TestAcmeBasicWorkflowWithEab(t *testing.T) {
 		},
 	}
 
+	// Make sure we can list our key
+	resp, err := client.Logical().ListWithContext(context.Background(), "pki/acme/eab")
+	require.NoError(t, err, "failed to list eab tokens")
+	require.NotNil(t, resp, "list response for eab tokens should not be nil")
+	require.Contains(t, resp.Data, "keys")
+	require.Contains(t, resp.Data, "key_info")
+	require.Len(t, resp.Data["keys"], 1)
+	require.Contains(t, resp.Data["keys"], kid)
+
+	keyInfo := resp.Data["key_info"].(map[string]interface{})
+	require.Contains(t, keyInfo, kid)
+
+	infoForKid := keyInfo[kid].(map[string]interface{})
+	keyBits := infoForKid["key_bits"].(json.Number)
+	require.Equal(t, "256", keyBits.String())
+	require.Equal(t, "hs", infoForKid["key_type"])
+
 	// Create new account with EAB
 	t.Logf("Testing register on %s", baseAcmeURL)
 	_, err = acmeClient.Register(testCtx, acct, func(tosURL string) bool { return true })
 	require.NoError(t, err, "failed registering new account with eab")
 
 	// Make sure our EAB is no longer available
-	resp, err := client.Logical().ListWithContext(context.Background(), "pki/acme/eab")
+	resp, err = client.Logical().ListWithContext(context.Background(), "pki/acme/eab")
 	require.NoError(t, err, "failed to list eab tokens")
 	require.Nil(t, resp, "list response for eab tokens should have been nil due to empty list")
 
@@ -763,14 +780,14 @@ func getAcmeClientForCluster(t *testing.T, cluster *vault.TestCluster, baseUrl s
 }
 
 func getEABKey(t *testing.T, client *api.Client) (string, []byte) {
-	resp, err := client.Logical().WriteWithContext(ctx, "pki/acme/eab", map[string]interface{}{})
+	resp, err := client.Logical().WriteWithContext(ctx, "pki/acme/new-eab", map[string]interface{}{})
 	require.NoError(t, err, "failed getting eab key")
 	require.NotNil(t, resp, "eab key returned nil response")
 	require.NotEmpty(t, resp.Data["id"], "eab key response missing id field")
 	kid := resp.Data["id"].(string)
 
-	require.NotEmpty(t, resp.Data["private_key"], "eab key response missing private_key field")
-	base64Key := resp.Data["private_key"].(string)
+	require.NotEmpty(t, resp.Data["key"], "eab key response missing private_key field")
+	base64Key := resp.Data["key"].(string)
 	privateKeyBytes, err := base64.RawURLEncoding.DecodeString(base64Key)
 	require.NoError(t, err, "failed base 64 decoding eab key response")
 

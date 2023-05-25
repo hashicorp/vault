@@ -27,8 +27,8 @@ require (
 	cloud.google.com/go/spanner v1.45.0
 	cloud.google.com/go/storage v1.28.1
 	github.com/Azure/azure-storage-blob-go v0.14.0
-	github.com/Azure/go-autorest/autorest v0.11.28
-	github.com/Azure/go-autorest/autorest/adal v0.9.20
+	github.com/Azure/go-autorest/autorest v0.11.29
+	github.com/Azure/go-autorest/autorest/adal v0.9.22
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/ProtonMail/go-crypto v0.0.0-20220824120805-4b6e5c587895
 	github.com/SAP/go-hdb v0.14.1
@@ -40,7 +40,7 @@ require (
 	github.com/armon/go-metrics v0.4.1
 	github.com/armon/go-radix v1.0.0
 	github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef
-	github.com/aws/aws-sdk-go v1.44.191
+	github.com/aws/aws-sdk-go v1.44.268
 	github.com/aws/aws-sdk-go-v2/config v1.6.0
 	github.com/axiomhq/hyperloglog v0.0.0-20220105174342-98591331716a
 	github.com/cenkalti/backoff/v3 v3.2.2
@@ -62,7 +62,7 @@ require (
 	github.com/go-test/deep v1.1.0
 	github.com/go-zookeeper/zk v1.0.3
 	github.com/gocql/gocql v1.0.0
-	github.com/golang-jwt/jwt/v4 v4.4.2
+	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/golang/protobuf v1.5.3
 	github.com/golangci/revgrep v0.0.0-20220804021717-745bb2f7c2e6
 	github.com/google/go-cmp v0.5.9
@@ -94,7 +94,7 @@ require (
 	github.com/hashicorp/go-raftchunking v0.6.3-0.20191002164813-7e9e8525653a
 	github.com/hashicorp/go-retryablehttp v0.7.2
 	github.com/hashicorp/go-rootcerts v1.0.2
-	github.com/hashicorp/go-secure-stdlib/awsutil v0.1.6
+	github.com/hashicorp/go-secure-stdlib/awsutil v0.2.2
 	github.com/hashicorp/go-secure-stdlib/base62 v0.1.2
 	github.com/hashicorp/go-secure-stdlib/gatedwriter v0.1.1
 	github.com/hashicorp/go-secure-stdlib/kv-builder v0.1.2
@@ -121,29 +121,29 @@ require (
 	github.com/hashicorp/raft-snapshot v1.0.4
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.14.0
 	github.com/hashicorp/vault-plugin-auth-azure v0.13.0
-	github.com/hashicorp/vault-plugin-auth-centrify v0.14.0
+	github.com/hashicorp/vault-plugin-auth-centrify v0.15.1
 	github.com/hashicorp/vault-plugin-auth-cf v0.14.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.16.0
 	github.com/hashicorp/vault-plugin-auth-jwt v0.15.0
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.9.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.15.0
-	github.com/hashicorp/vault-plugin-auth-oci v0.13.1
+	github.com/hashicorp/vault-plugin-auth-oci v0.14.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.9.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.13.1
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.9.0
 	github.com/hashicorp/vault-plugin-database-redis v0.2.0
-	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.2.0
+	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.2.1
 	github.com/hashicorp/vault-plugin-database-snowflake v0.7.0
 	github.com/hashicorp/vault-plugin-mock v0.16.1
-	github.com/hashicorp/vault-plugin-secrets-ad v0.10.1-0.20230329210417-0b2cdb26cf5d
+	github.com/hashicorp/vault-plugin-secrets-ad v0.16.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.4-beta1.0.20230330124709-3fcfc5914a22
-	github.com/hashicorp/vault-plugin-secrets-azure v0.15.0
+	github.com/hashicorp/vault-plugin-secrets-azure v0.16.0
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.15.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.14.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.3.0
-	github.com/hashicorp/vault-plugin-secrets-kv v0.14.2
-	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.1.0-beta1.0.20230330173411-06ce71bfa658
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.7.1-0.20230405171328-0ba92be486aa
+	github.com/hashicorp/vault-plugin-secrets-kv v0.15.0
+	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.10.0
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.11.0
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.7.1
 	github.com/hashicorp/vault-testing-stepwise v0.1.3
 	github.com/hashicorp/vault/api v1.9.1
@@ -196,7 +196,7 @@ require (
 	go.etcd.io/etcd/client/pkg/v3 v3.5.7
 	go.etcd.io/etcd/client/v2 v2.305.5
 	go.etcd.io/etcd/client/v3 v3.5.7
-	go.mongodb.org/atlas v0.24.0
+	go.mongodb.org/atlas v0.25.0
 	go.mongodb.org/mongo-driver v1.11.3
 	go.opentelemetry.io/otel v1.14.0
 	go.opentelemetry.io/otel/sdk v1.14.0
@@ -204,7 +204,7 @@ require (
 	go.uber.org/atomic v1.10.0
 	go.uber.org/goleak v1.2.1
 	golang.org/x/crypto v0.9.0
-	golang.org/x/exp v0.0.0-20230519143937-03e91628a987
+	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1
 	golang.org/x/net v0.10.0
 	golang.org/x/oauth2 v0.8.0
 	golang.org/x/sync v0.2.0

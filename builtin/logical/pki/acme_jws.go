@@ -259,7 +259,7 @@ func verifyEabPayload(acmeState *acmeState, ac *acmeContext, outer *jwsCtx, expe
 		return nil, fmt.Errorf("%w: failed to verify eab", ErrUnauthorized)
 	}
 
-	verifiedPayload, err := sig.Verify(eabEntry.MacKey)
+	verifiedPayload, err := sig.Verify(eabEntry.PrivateBytes)
 	if err != nil {
 		return nil, err
 	}

@@ -6862,6 +6862,7 @@ func TestProperAuthing(t *testing.T) {
 		"unified-crl/delta/pem":                  shouldBeUnauthedReadList,
 		"unified-ocsp":                           shouldBeUnauthedWriteOnly,
 		"unified-ocsp/dGVzdAo=":                  shouldBeUnauthedReadList,
+		"acme/new-eab":                           shouldBeAuthed,
 		"acme/eab":                               shouldBeAuthed,
 		"acme/eab/" + eabKid:                     shouldBeAuthed,
 	}
