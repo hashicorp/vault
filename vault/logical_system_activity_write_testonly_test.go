@@ -444,10 +444,11 @@ func Test_singleMonthActivityClients_populateSegments(t *testing.T) {
 }
 
 // Test_handleActivityWriteData writes 4 months of data splitting some months
-// across segments and using empty segments and skipped segments. Entities are
-// written and then storage is queried. The test verifies that the correct
-// timestamps are present in the activity log and that the correct segment
-// numbers for each month contain the correct number of clients
+// across segments and using empty segments and skipped segments. Entities and
+// precomputed queries are written. written and then storage is queried. The
+// test verifies that the correct timestamps are present in the activity log and
+// that the correct segment numbers for each month contain the correct number of
+// clients
 func Test_handleActivityWriteData(t *testing.T) {
 	index5 := int32(5)
 	index4 := int32(4)
