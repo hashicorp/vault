@@ -6862,7 +6862,6 @@ func TestProperAuthing(t *testing.T) {
 		"unified-crl/delta/pem":                  shouldBeUnauthedReadList,
 		"unified-ocsp":                           shouldBeUnauthedWriteOnly,
 		"unified-ocsp/dGVzdAo=":                  shouldBeUnauthedReadList,
-		"acme/new-eab":                           shouldBeAuthed,
 		"eab":                                    shouldBeAuthed,
 		"eab/" + eabKid:                          shouldBeAuthed,
 	}
@@ -6881,6 +6880,9 @@ func TestProperAuthing(t *testing.T) {
 		paths[acmePrefix+"acme/order/13b80844-e60d-42d2-b7e9-152a8e834b90"] = shouldBeUnauthedWriteOnly
 		paths[acmePrefix+"acme/order/13b80844-e60d-42d2-b7e9-152a8e834b90/finalize"] = shouldBeUnauthedWriteOnly
 		paths[acmePrefix+"acme/order/13b80844-e60d-42d2-b7e9-152a8e834b90/cert"] = shouldBeUnauthedWriteOnly
+
+		// Make sure this new-eab path is auth'd
+		paths[acmePrefix+"acme/new-eab"] = shouldBeAuthed
 	}
 
 	for path, checkerType := range paths {

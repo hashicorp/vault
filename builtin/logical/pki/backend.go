@@ -218,7 +218,6 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 			// ACME
 			pathAcmeConfig(&b),
-			pathAcmeEabCreate(&b),
 			pathAcmeEabList(&b),
 			pathAcmeEabDelete(&b),
 		},
@@ -248,6 +247,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 	acmePaths = append(acmePaths, pathAcmeChallenge(&b)...)
 	acmePaths = append(acmePaths, pathAcmeAuthorization(&b)...)
 	acmePaths = append(acmePaths, pathAcmeRevoke(&b)...)
+	acmePaths = append(acmePaths, pathAcmeNewEab(&b)...) // auth'd API that lives underneath the various /acme paths
 
 	for _, acmePath := range acmePaths {
 		b.Backend.Paths = append(b.Backend.Paths, acmePath)
@@ -268,6 +268,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/order/+")
 		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/order/+/finalize")
 		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/order/+/cert")
+		// We specifically do NOT add acme/new-eab to this as it should be auth'd
 	}
 
 	if constants.IsEnterprise {

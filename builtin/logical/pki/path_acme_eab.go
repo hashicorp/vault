@@ -45,9 +45,13 @@ func pathAcmeEabList(b *backend) *framework.Path {
 	}
 }
 
-func pathAcmeEabCreate(b *backend) *framework.Path {
+func pathAcmeNewEab(b *backend) []*framework.Path {
+	return buildAcmeFrameworkPaths(b, patternAcmeNewEab, "/new-eab")
+}
+
+func patternAcmeNewEab(b *backend, pattern string) *framework.Path {
 	return &framework.Path{
-		Pattern: "acme/new-eab",
+		Pattern: pattern,
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixPKI,
@@ -67,9 +71,8 @@ func pathAcmeEabCreate(b *backend) *framework.Path {
 			},
 		},
 
-		HelpSynopsis: "Generate or list external account bindings to be used for ACME",
-		HelpDescription: `Generate single use id/key pairs to be used for ACME EAB or list 
-identifiers that have been generated but yet to be used.`,
+		HelpSynopsis:    "Generate external account bindings to be used for ACME",
+		HelpDescription: `Generate single use id/key pairs to be used for ACME EAB.`,
 	}
 }
 
