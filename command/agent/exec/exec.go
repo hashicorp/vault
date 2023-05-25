@@ -99,6 +99,7 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 
 	if len(s.config.AgentConfig.EnvTemplates) == 0 || s.config.AgentConfig.Exec == nil {
 		s.logger.Info("no env templates or exec config, exiting")
+		<-ctx.Done()
 		return nil
 	}
 
