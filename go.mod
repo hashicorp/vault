@@ -27,8 +27,8 @@ require (
 	cloud.google.com/go/spanner v1.45.0
 	cloud.google.com/go/storage v1.28.1
 	github.com/Azure/azure-storage-blob-go v0.14.0
-	github.com/Azure/go-autorest/autorest v0.11.28
-	github.com/Azure/go-autorest/autorest/adal v0.9.20
+	github.com/Azure/go-autorest/autorest v0.11.29
+	github.com/Azure/go-autorest/autorest/adal v0.9.22
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/ProtonMail/go-crypto v0.0.0-20220824120805-4b6e5c587895
 	github.com/SAP/go-hdb v0.14.1
@@ -62,7 +62,7 @@ require (
 	github.com/go-test/deep v1.1.0
 	github.com/go-zookeeper/zk v1.0.3
 	github.com/gocql/gocql v1.0.0
-	github.com/golang-jwt/jwt/v4 v4.4.2
+	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/golang/protobuf v1.5.3
 	github.com/golangci/revgrep v0.0.0-20220804021717-745bb2f7c2e6
 	github.com/google/go-cmp v0.5.9
@@ -137,7 +137,7 @@ require (
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.16.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.4-beta1.0.20230330124709-3fcfc5914a22
-	github.com/hashicorp/vault-plugin-secrets-azure v0.15.0
+	github.com/hashicorp/vault-plugin-secrets-azure v0.16.0
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.15.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.14.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.3.0
