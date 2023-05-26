@@ -54,7 +54,7 @@ export const durationToSeconds = (duration: string) => {
   try {
     return Duration.parse(duration).seconds();
   } catch (e) {
-    // return false so parent can decide how to handle parsing error
-    return false;
+    // since 0 is falsy, parent should explicitly check for null and decide how to handle parsing error
+    return null;
   }
 };
