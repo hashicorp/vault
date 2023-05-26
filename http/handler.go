@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -454,6 +455,7 @@ func WrapForwardedForHandler(h http.Handler, l *configutil.Listener) http.Handle
 	authorizedAddrs := l.XForwardedForAuthorizedAddrs
 	rejectNotAuthz := l.XForwardedForRejectNotAuthorized
 	clientCertHeader := l.XForwardedForClientCertHeader
+	clientCertHeaderDecoders := l.XForwardedForClientCertHeaderDecoders
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		headers, headersOK := r.Header[textproto.CanonicalMIMEHeaderKey("X-Forwarded-For")]
 		if !headersOK || len(headers) == 0 {
@@ -546,16 +548,37 @@ func WrapForwardedForHandler(h http.Handler, l *configutil.Listener) http.Handle
 				// Multiple certs should be comma delimetered
 				vals := strings.Split(header, ",")
 				for _, v := range vals {
-					decoded, err := url.QueryUnescape(v)
-					if err != nil {
-						respondError(w, http.StatusBadRequest, fmt.Errorf("failed to unescape the client certificate: %w", err))
+					actions := strings.Split(clientCertHeaderDecoders, ",")
+					for _,action := range actions {
+						switch action {
+							case "URL":
+								decoded, err := url.QueryUnescape(v)
+								if err != nil {
+									respondError(w, http.StatusBadRequest, fmt.Errorf("failed to url unescape the client certificate: %w", err))
+									return
+								}
+								v = decoded
+							case "BASE64":
+								decoded, err := base64.StdEncoding.DecodeString(v)
+								if err != nil {
+									respondError(w, http.StatusBadRequest, fmt.Errorf("failed to base64 decode the client certificate: %w", err))
+									return
+								}
+								v = string(decoded[:])
+							case "DER":
+								decoded, _ := pem.Decode([]byte(v))
+								if decoded == nil {
+									respondError(w, http.StatusBadRequest, fmt.Errorf("failed to convert the client certificate to DER format: %w", err))
+									return
+								}
+								v = string(decoded.Bytes[:])
+							default:
+								respondError(w, http.StatusBadRequest, fmt.Errorf("unknown decode option specified: %w", action))
+								return
+						}
 					}
-					block, err := base64.StdEncoding.DecodeString(decoded)
-					if block == nil {
-						respondError(w, http.StatusBadRequest, fmt.Errorf("failed to decode the client certificate: %w", err))
-						return
-					}
-					cert, err := x509.ParseCertificate(block)
+
+					cert, err := x509.ParseCertificate([]byte(v))
 					if err != nil {
 						respondError(w, http.StatusBadRequest, fmt.Errorf("failed to parse the client certificate: %w", err))
 						return
