@@ -47,18 +47,14 @@ export const largestUnitFromSeconds = (seconds: number) => {
   return unit;
 };
 
-interface Args {
-  duration: string | number;
-  fallback: unknown;
-}
-// parses number or duration string ('3m') and returns seconds
-export const durationToSeconds = ({ duration, fallback }: Args) => {
+// parses duration string ('3m') and returns seconds
+export const durationToSeconds = (duration: string) => {
   // any number we assume is in seconds
   if (typeof duration === 'number') return duration;
   try {
     return Duration.parse(duration).seconds();
   } catch (e) {
-    // value to return if parsing fails
-    return fallback;
+    // return false so parent can decide how to handle parsing error
+    return false;
   }
 };

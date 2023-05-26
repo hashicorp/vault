@@ -282,7 +282,7 @@ module('Integration | Component | InfoTableRow', function (hooks) {
       .hasText('1 hour 40 minutes', 'Translates number value to largest unit with carryover of minutes');
   });
 
-  test('Formats string value as-is when formatTtl present', async function (assert) {
+  test('Formats string value when formatTtl present', async function (assert) {
     this.set('value', '45m');
     await render(hbs`<InfoTableRow
       @label={{this.label}}
@@ -290,6 +290,6 @@ module('Integration | Component | InfoTableRow', function (hooks) {
       @formatTtl={{true}}
     />`);
 
-    assert.dom('[data-test-value-div]').hasText('45m', 'Renders non-number values as-is');
+    assert.dom('[data-test-value-div]').hasText('45 minutes', 'it formats string duration');
   });
 });

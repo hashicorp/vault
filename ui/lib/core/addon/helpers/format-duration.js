@@ -11,7 +11,7 @@ export function duration([time]) {
   // 0 does not necessarily mean 0 seconds, i.e. it can represent using system ttl defaults
   if (time === 0) return time;
 
-  const seconds = durationToSeconds({ duration: time, fallback: time });
+  const seconds = durationToSeconds(time);
 
   if (Number.isInteger(seconds)) {
     // intervalToDuration returns a durationObject: { years: 0, months: 0, days: 0, hours: 1, minutes: 0, seconds: 6 }

@@ -80,7 +80,17 @@ export default class TtlPickerComponent extends Component {
 
   initializeTtl() {
     const initialValue = this.args.initialValue;
-    const seconds = durationToSeconds({ duration: initialValue, fallback: 0 });
+
+    let seconds = 0;
+
+    if (typeof initialValue === 'number') {
+      // if the passed value is a number, assume unit is seconds
+      seconds = initialValue;
+    } else {
+      const parseDuration = durationToSeconds(initialValue);
+      if (!parseDuration) return;
+      seconds = parseDuration;
+    }
 
     const unit = largestUnitFromSeconds(seconds);
     this.time = convertFromSeconds(seconds, unit);
