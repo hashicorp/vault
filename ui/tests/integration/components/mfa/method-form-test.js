@@ -63,7 +63,7 @@ module('Integration | Component | mfa-method-form', function (hooks) {
     assert.expect(3);
 
     this.model.issuer = 'Vault';
-    this.model.period = '30';
+    this.model.period = '30s';
     this.model.algorithm = 'SHA512';
 
     await render(hbs`
