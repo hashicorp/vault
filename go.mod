@@ -139,7 +139,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-ad v0.16.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.15.0
 	github.com/hashicorp/vault-plugin-secrets-azure v0.16.0
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.15.0
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.16.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.15.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.5.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.15.0
