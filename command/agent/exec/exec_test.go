@@ -51,7 +51,7 @@ func fakeVaultServer() *httptest.Server {
 	return httptest.NewServer(mux)
 }
 
-// TestServer_Run tests various scenarios of using vault agent as a process
+// TestExecServer_Run tests various scenarios of using vault agent as a process
 // supervisor. At its core is a sample application referred to as 'test app',
 // compiled from ./test-app/main.go. Each test case verifies that the test app
 // is started and/or stopped correctly by exec.Server.Run(). There are 3
@@ -60,7 +60,7 @@ func fakeVaultServer() *httptest.Server {
 //  1. test app is started and is injected with environment variables
 //  2. test app exits early (either with zero or non-zero extit code)
 //  3. test app needs to be stopped (and restarted) by exec.Server
-func TestServer_Run(t *testing.T) {
+func TestExecServer_Run(t *testing.T) {
 	fakeVault := fakeVaultServer()
 	defer fakeVault.Close()
 

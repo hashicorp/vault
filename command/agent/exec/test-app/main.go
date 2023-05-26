@@ -1,5 +1,13 @@
 package main
 
+// This is a test application that is used by TestExecServer_Run to verify
+// the behavior of vault agent running as a process supervisor.
+//
+// The app will automatically exit after 1 minute or the --stop-after interval,
+// whichever comes first. It also can serve its loaded environment variables on
+// the given --port. This app will also return the given --exit-code and
+// terminate on SIGTERM unless --use-sigusr1 is specified.
+
 import (
 	"bytes"
 	"context"
