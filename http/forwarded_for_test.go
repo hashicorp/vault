@@ -268,11 +268,12 @@ func TestHandler_XForwardedFor(t *testing.T) {
 			})
 			listenerConfig := getListenerConfigForMarshalerTest(goodAddr)
 			listenerConfig.XForwardedForClientCertHeader = "X-Forwarded-Tls-Client-Cert"
+			listenerConfig.XForwardedForClientCertHeaderDecoders = "URL,BASE64"
 			return WrapForwardedForHandler(origHandler, listenerConfig)
 		}
 
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-			HandlerFunc: testHandler,
+			HandlerFunc: HandlerFunc(testHandler),
 		})
 		cluster.Start()
 		defer cluster.Cleanup()
@@ -289,7 +290,7 @@ func TestHandler_XForwardedFor(t *testing.T) {
 		defer resp.Body.Close()
 		buf := bytes.NewBuffer(nil)
 		buf.ReadFrom(resp.Body)
-		if !strings.Contains(buf.String(), "failed to parse the client certificate") {
+		if !strings.Contains(buf.String(), "failed to base64 decode the client certificate: ") {
 			t.Fatalf("bad body: %v", buf.String())
 		}
 	})
@@ -304,11 +305,12 @@ func TestHandler_XForwardedFor(t *testing.T) {
 			})
 			listenerConfig := getListenerConfigForMarshalerTest(goodAddr)
 			listenerConfig.XForwardedForClientCertHeader = "X-Forwarded-Tls-Client-Cert"
+			listenerConfig.XForwardedForClientCertHeaderDecoders = "URL,BASE64"
 			return WrapForwardedForHandler(origHandler, listenerConfig)
 		}
 
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-			HandlerFunc: testHandler,
+			HandlerFunc: HandlerFunc(testHandler),
 		})
 		cluster.Start()
 		defer cluster.Cleanup()

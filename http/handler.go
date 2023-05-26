@@ -549,32 +549,32 @@ func WrapForwardedForHandler(h http.Handler, l *configutil.Listener) http.Handle
 				vals := strings.Split(header, ",")
 				for _, v := range vals {
 					actions := strings.Split(clientCertHeaderDecoders, ",")
-					for _,action := range actions {
+					for _, action := range actions {
 						switch action {
-							case "URL":
-								decoded, err := url.QueryUnescape(v)
-								if err != nil {
-									respondError(w, http.StatusBadRequest, fmt.Errorf("failed to url unescape the client certificate: %w", err))
-									return
-								}
-								v = decoded
-							case "BASE64":
-								decoded, err := base64.StdEncoding.DecodeString(v)
-								if err != nil {
-									respondError(w, http.StatusBadRequest, fmt.Errorf("failed to base64 decode the client certificate: %w", err))
-									return
-								}
-								v = string(decoded[:])
-							case "DER":
-								decoded, _ := pem.Decode([]byte(v))
-								if decoded == nil {
-									respondError(w, http.StatusBadRequest, fmt.Errorf("failed to convert the client certificate to DER format: %w", err))
-									return
-								}
-								v = string(decoded.Bytes[:])
-							default:
-								respondError(w, http.StatusBadRequest, fmt.Errorf("unknown decode option specified: %w", action))
+						case "URL":
+							decoded, err := url.QueryUnescape(v)
+							if err != nil {
+								respondError(w, http.StatusBadRequest, fmt.Errorf("failed to url unescape the client certificate: %w", err))
 								return
+							}
+							v = decoded
+						case "BASE64":
+							decoded, err := base64.StdEncoding.DecodeString(v)
+							if err != nil {
+								respondError(w, http.StatusBadRequest, fmt.Errorf("failed to base64 decode the client certificate: %w", err))
+								return
+							}
+							v = string(decoded[:])
+						case "DER":
+							decoded, _ := pem.Decode([]byte(v))
+							if decoded == nil {
+								respondError(w, http.StatusBadRequest, fmt.Errorf("failed to convert the client certificate to DER format: %w", err))
+								return
+							}
+							v = string(decoded.Bytes[:])
+						default:
+							respondError(w, http.StatusBadRequest, fmt.Errorf("unknown decode option specified: %s", action))
+							return
 						}
 					}
 
