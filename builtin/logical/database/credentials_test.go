@@ -51,6 +51,7 @@ func Test_newClientCertificateGenerator(t *testing.T) {
 			},
 			want: ClientCertificateGenerator{
 				KeyType: "ec",
+				KeyBits: 256,
 			},
 		},
 		{

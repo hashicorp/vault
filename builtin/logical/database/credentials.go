@@ -200,6 +200,7 @@ func newClientCertificateGenerator(config map[string]interface{}) (ClientCertifi
 	switch cg.KeyType {
 	case "":
 		cg.KeyType = "ec"
+		cg.KeyBits = 256
 	case "rsa":
 		switch cg.KeyBits {
 		case 0:
@@ -223,7 +224,9 @@ func newClientCertificateGenerator(config map[string]interface{}) (ClientCertifi
 	}
 
 	switch cg.SignatureBits {
-	case 0, 256, 384, 512:
+	case 0:
+		cg.SignatureBits = 256
+	case 256, 384, 512:
 	default:
 		return cg, fmt.Errorf("invalid signature_bits")
 	}
@@ -306,7 +309,11 @@ func (cg *ClientCertificateGenerator) generate(r io.Reader, expiration time.Time
 			keyBits = 256
 		}
 		if signatureBits == 0 {
-			signatureBits = keyBits
+			if keyBits == 224 {
+				signatureBits = 256
+			} else {
+				signatureBits = keyBits
+			}
 		}
 	case "ed25519":
 		// key_bits ignored
