@@ -82,16 +82,26 @@ func TestExecServer_Run(t *testing.T) {
 	}()
 
 	testCases := map[string]struct {
-		skip                          bool
-		skipReason                    string
-		envTemplates                  []*ctconfig.TemplateConfig
-		testAppArgs                   []string
-		testAppStopSignal             os.Signal
-		testAppPort                   int
-		simulatedShutdownWaitDuration time.Duration
-		expected                      map[string]string
-		expectedTestDuration          time.Duration
-		expectedError                 error
+		// skip this test case
+		skip       bool
+		skipReason string
+
+		// inputs to the exec server
+		envTemplates []*ctconfig.TemplateConfig
+
+		// test app parameters
+		testAppArgs       []string
+		testAppStopSignal os.Signal
+		testAppPort       int
+
+		// simulate a shutdown of agent, which, in turn stops the test app
+		simulateShutdown             bool
+		simulateShutdownWaitDuration time.Duration
+
+		// expected results
+		expected             map[string]string
+		expectedTestDuration time.Duration
+		expectedError        error
 	}{
 		"ensure_environment_variables_are_injected": {
 			envTemplates: []*ctconfig.TemplateConfig{{
@@ -141,12 +151,13 @@ func TestExecServer_Run(t *testing.T) {
 				Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
 				MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
 			}},
-			testAppArgs:                   []string{"--stop-after", "30s", "--sleep-after-stop-signal", "1s"},
-			testAppStopSignal:             syscall.SIGTERM,
-			testAppPort:                   34004,
-			simulatedShutdownWaitDuration: 3 * time.Second,
-			expectedTestDuration:          15 * time.Second,
-			expectedError:                 nil,
+			testAppArgs:                  []string{"--stop-after", "30s", "--sleep-after-stop-signal", "1s"},
+			testAppStopSignal:            syscall.SIGTERM,
+			testAppPort:                  34004,
+			simulateShutdown:             true,
+			simulateShutdownWaitDuration: 3 * time.Second,
+			expectedTestDuration:         15 * time.Second,
+			expectedError:                nil,
 		},
 
 		"send_sigusr1_expect_test_app_exit": {
@@ -154,12 +165,13 @@ func TestExecServer_Run(t *testing.T) {
 				Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
 				MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
 			}},
-			testAppArgs:                   []string{"--stop-after", "30s", "--sleep-after-stop-signal", "1s", "--use-sigusr1"},
-			testAppStopSignal:             syscall.SIGUSR1,
-			testAppPort:                   34005,
-			simulatedShutdownWaitDuration: 3 * time.Second,
-			expectedTestDuration:          15 * time.Second,
-			expectedError:                 nil,
+			testAppArgs:                  []string{"--stop-after", "30s", "--sleep-after-stop-signal", "1s", "--use-sigusr1"},
+			testAppStopSignal:            syscall.SIGUSR1,
+			testAppPort:                  34005,
+			simulateShutdown:             true,
+			simulateShutdownWaitDuration: 3 * time.Second,
+			expectedTestDuration:         15 * time.Second,
+			expectedError:                nil,
 		},
 
 		"test_app_ignores_stop_signal": {
@@ -169,12 +181,13 @@ func TestExecServer_Run(t *testing.T) {
 				Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
 				MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
 			}},
-			testAppArgs:                   []string{"--stop-after", "60s", "--sleep-after-stop-signal", "60s"},
-			testAppStopSignal:             syscall.SIGTERM,
-			testAppPort:                   34006,
-			simulatedShutdownWaitDuration: 32 * time.Second, // the test app should be stopped immediately after 30s
-			expectedTestDuration:          45 * time.Second,
-			expectedError:                 nil,
+			testAppArgs:                  []string{"--stop-after", "60s", "--sleep-after-stop-signal", "60s"},
+			testAppStopSignal:            syscall.SIGTERM,
+			testAppPort:                  34006,
+			simulateShutdown:             true,
+			simulateShutdownWaitDuration: 32 * time.Second, // the test app should be stopped immediately after 30s
+			expectedTestDuration:         45 * time.Second,
+			expectedError:                nil,
 		},
 	}
 
@@ -255,14 +268,14 @@ func TestExecServer_Run(t *testing.T) {
 			}
 
 			// simulate a shutdown of agent, which, in turn stops the test app
-			if testCase.simulatedShutdownWaitDuration > 0 {
+			if testCase.simulateShutdown {
 				cancelContextFunc()
 
-				time.Sleep(testCase.simulatedShutdownWaitDuration)
+				time.Sleep(testCase.simulateShutdownWaitDuration)
 
 				// check if the test app is still alive
 				if _, err := http.Head(testAppAddr); err == nil {
-					t.Fatalf("the test app is still alive %v after a simulated shutdown!", testCase.simulatedShutdownWaitDuration)
+					t.Fatalf("the test app is still alive %v after a simulated shutdown!", testCase.simulateShutdownWaitDuration)
 				}
 
 				return
