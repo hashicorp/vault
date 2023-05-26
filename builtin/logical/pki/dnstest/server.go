@@ -196,7 +196,7 @@ func (ts *TestServer) PushConfig() {
 	require.NoError(ts.t, err, "failed pushing updated configuration to container")
 
 	// Wait until our config has taken.
-	corehelpers.RetryUntil(ts.t, 3*time.Second, func() error {
+	corehelpers.RetryUntil(ts.t, 15*time.Second, func() error {
 		// bind reloads based on file mtime, touch files before starting
 		// to make sure it has been updated more recently than when the
 		// last update was written. Then issue a new SIGHUP.
