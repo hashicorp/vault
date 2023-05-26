@@ -8,9 +8,12 @@ package vault
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
@@ -53,7 +56,34 @@ func (b *SystemBackend) handleActivityWriteData(ctx context.Context, request *lo
 	if len(input.Data) == 0 {
 		return logical.ErrorResponse("Missing required \"data\" values"), logical.ErrInvalidRequest
 	}
-	return nil, nil
+
+	numMonths := 0
+	for _, month := range input.Data {
+		if int(month.GetMonthsAgo()) > numMonths {
+			numMonths = int(month.GetMonthsAgo())
+		}
+	}
+	generated := newMultipleMonthsActivityClients(numMonths + 1)
+	for _, month := range input.Data {
+		err := generated.processMonth(ctx, b.Core, month)
+		if err != nil {
+			return logical.ErrorResponse("failed to process data for month %d", month.GetMonthsAgo()), err
+		}
+	}
+
+	opts := make(map[generation.WriteOptions]struct{}, len(input.Write))
+	for _, opt := range input.Write {
+		opts[opt] = struct{}{}
+	}
+	paths, err := generated.write(ctx, opts, b.Core.activityLog)
+	if err != nil {
+		return logical.ErrorResponse("failed to write data"), err
+	}
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"paths": paths,
+		},
+	}, nil
 }
 
 // singleMonthActivityClients holds a single month's client IDs, in the order they were seen
@@ -285,6 +315,47 @@ func (m *multipleMonthsActivityClients) addRepeatedClients(monthsAgo int32, c *g
 		return fmt.Errorf("missing repeated %d clients matching given parameters", numClients)
 	}
 	return nil
+}
+
+func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[generation.WriteOptions]struct{}, activityLog *ActivityLog) ([]string, error) {
+	now := timeutil.StartOfMonth(time.Now().UTC())
+	paths := []string{}
+	for i, month := range m.months {
+		var timestamp time.Time
+		if i > 0 {
+			timestamp = timeutil.StartOfMonth(timeutil.MonthsPreviousTo(i, now))
+		} else {
+			timestamp = now
+		}
+		segments, err := month.populateSegments()
+		if err != nil {
+			return nil, err
+		}
+		for segmentIndex, segment := range segments {
+			if _, ok := opts[generation.WriteOptions_WRITE_ENTITIES]; ok {
+				if segment == nil {
+					// skip the index
+					continue
+				}
+				entityPath, err := activityLog.saveSegmentEntitiesInternal(ctx, segmentInfo{
+					startTimestamp:       timestamp.Unix(),
+					currentClients:       &activity.EntityActivityLog{Clients: segment},
+					clientSequenceNumber: uint64(segmentIndex),
+					tokenCount:           &activity.TokenCount{},
+				}, true)
+				if err != nil {
+					return nil, err
+				}
+				paths = append(paths, entityPath)
+			}
+		}
+	}
+	wg := sync.WaitGroup{}
+	err := activityLog.refreshFromStoredLog(ctx, &wg, now)
+	if err != nil {
+		return nil, err
+	}
+	return paths, nil
 }
 
 func newMultipleMonthsActivityClients(numberOfMonths int) *multipleMonthsActivityClients {
