@@ -262,7 +262,8 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 		"agent": func() (cli.Command, error) {
 			return &AgentCommand{
 				BaseCommand: &BaseCommand{
-					UI: serverCmdUi,
+					UI:              serverCmdUi,
+					muteAddrWarning: true,
 				},
 				ShutdownCh: MakeShutdownCh(),
 				SighupCh:   MakeSighupCh(),
@@ -695,9 +696,10 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 		"server": func() (cli.Command, error) {
 			return &ServerCommand{
 				BaseCommand: &BaseCommand{
-					UI:          serverCmdUi,
-					tokenHelper: runOpts.TokenHelper,
-					flagAddress: runOpts.Address,
+					UI:              serverCmdUi,
+					tokenHelper:     runOpts.TokenHelper,
+					flagAddress:     runOpts.Address,
+					muteAddrWarning: true,
 				},
 				AuditBackends:      auditBackends,
 				CredentialBackends: credentialBackends,
@@ -789,7 +791,13 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 		"version": func() (cli.Command, error) {
 			return &VersionCommand{
 				VersionInfo: version.GetVersion(),
-				BaseCommand: getBaseCommand(),
+				BaseCommand: &BaseCommand{
+					UI:              ui,
+					tokenHelper:     runOpts.TokenHelper,
+					flagAddress:     runOpts.Address,
+					client:          runOpts.Client,
+					muteAddrWarning: true,
+				},
 			}, nil
 		},
 		"version-history": func() (cli.Command, error) {
