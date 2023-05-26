@@ -16,8 +16,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/nonceutil"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/nonce"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -38,7 +38,7 @@ const (
 )
 
 type acmeState struct {
-	nonces nonce.NonceService
+	nonces nonceutil.NonceService
 
 	validator *ACMEChallengeEngine
 
@@ -54,7 +54,7 @@ type acmeThumbprint struct {
 
 func NewACMEState() *acmeState {
 	state := &acmeState{
-		nonces:      nonce.NewNonceService(),
+		nonces:      nonceutil.NewNonceService(),
 		validator:   NewACMEChallengeEngine(),
 		configDirty: new(atomic.Bool),
 	}
@@ -600,7 +600,7 @@ func (a *acmeState) LoadEab(sc *storageContext, eabKid string) (*eabType, error)
 		return nil, err
 	}
 	if rawEntry == nil {
-		return nil, fmt.Errorf("no eab found for kid %s", eabKid)
+		return nil, fmt.Errorf("%w: no eab found for kid %s", ErrStorageItemNotFound, eabKid)
 	}
 
 	var eab eabType
