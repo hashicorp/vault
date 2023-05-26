@@ -245,7 +245,7 @@ func Test_newClientCertificateGenerator(t *testing.T) {
 			name: "newClientCertificateGenerator with invalid signature_bits",
 			args: args{
 				config: map[string]interface{}{
-					"signature_bits": "112",
+					"signature_bits": "612",
 				},
 			},
 			wantErr: true,
