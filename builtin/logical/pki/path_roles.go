@@ -37,9 +37,9 @@ func pathListRoles(b *backend) *framework.Path {
 						Description: "OK",
 						Fields: map[string]*framework.FieldSchema{
 							"keys": {
-								Type:        framework.TypeMap,
-								Description: `List of keys`,
-								Required:    false,
+								Type:        framework.TypeStringSlice,
+								Description: "List of roles",
+								Required:    true,
 							},
 						},
 					}},
@@ -53,7 +53,7 @@ func pathListRoles(b *backend) *framework.Path {
 }
 
 func pathRoles(b *backend) *framework.Path {
-	pathRolesResponse := map[string]*framework.FieldSchema{
+	pathRolesResponseFields := map[string]*framework.FieldSchema{
 		"ttl": {
 			Type:     framework.TypeDurationSecond,
 			Required: true,
@@ -826,7 +826,7 @@ serviced by this role.`,
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
-						Fields:      pathRolesResponse,
+						Fields:      pathRolesResponseFields,
 					}},
 				},
 			},
@@ -835,7 +835,7 @@ serviced by this role.`,
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
-						Fields:      pathRolesResponse,
+						Fields:      pathRolesResponseFields,
 					}},
 				},
 				// Read more about why these flags are set in backend.go.
@@ -858,7 +858,7 @@ serviced by this role.`,
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
-						Fields:      pathRolesResponse,
+						Fields:      pathRolesResponseFields,
 					}},
 				},
 				// Read more about why these flags are set in backend.go.

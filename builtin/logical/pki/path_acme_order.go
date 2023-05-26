@@ -58,8 +58,8 @@ func patternAcmeNewOrder(b *backend, pattern string) *framework.Path {
 			},
 		},
 
-		HelpSynopsis:    "",
-		HelpDescription: "",
+		HelpSynopsis:    pathAcmeHelpSync,
+		HelpDescription: pathAcmeHelpDesc,
 	}
 }
 
@@ -79,8 +79,8 @@ func patternAcmeListOrders(b *backend, pattern string) *framework.Path {
 			},
 		},
 
-		HelpSynopsis:    "",
-		HelpDescription: "",
+		HelpSynopsis:    pathAcmeHelpSync,
+		HelpDescription: pathAcmeHelpDesc,
 	}
 }
 
@@ -101,8 +101,8 @@ func patternAcmeGetOrder(b *backend, pattern string) *framework.Path {
 			},
 		},
 
-		HelpSynopsis:    "",
-		HelpDescription: "",
+		HelpSynopsis:    pathAcmeHelpSync,
+		HelpDescription: pathAcmeHelpDesc,
 	}
 }
 
@@ -123,8 +123,8 @@ func patternAcmeFinalizeOrder(b *backend, pattern string) *framework.Path {
 			},
 		},
 
-		HelpSynopsis:    "",
-		HelpDescription: "",
+		HelpSynopsis:    pathAcmeHelpSync,
+		HelpDescription: pathAcmeHelpDesc,
 	}
 }
 
@@ -145,8 +145,8 @@ func patternAcmeFetchOrderCert(b *backend, pattern string) *framework.Path {
 			},
 		},
 
-		HelpSynopsis:    "",
-		HelpDescription: "",
+		HelpSynopsis:    pathAcmeHelpSync,
+		HelpDescription: pathAcmeHelpDesc,
 	}
 }
 
@@ -245,7 +245,8 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, _ *logical.Request, 
 		return nil, fmt.Errorf("%w: order is status %s, needs to be in ready state", ErrOrderNotReady, order.Status)
 	}
 
-	if !order.Expires.IsZero() && time.Now().After(order.Expires) {
+	now := time.Now()
+	if !order.Expires.IsZero() && now.After(order.Expires) {
 		return nil, fmt.Errorf("%w: order %s is expired", ErrMalformed, orderId)
 	}
 
@@ -282,6 +283,11 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, _ *logical.Request, 
 	if err != nil {
 		b.Logger().Warn("orphaned generated ACME certificate due to error saving order", "serial_number", hyphenSerialNumber, "error", err)
 		return nil, fmt.Errorf("failed saving updated order: %w", err)
+	}
+
+	if err := b.doTrackBilling(ac.sc.Context, order.Identifiers); err != nil {
+		b.Logger().Error("failed to track billing for order", "order", orderId, "error", err)
+		err = nil
 	}
 
 	return formatOrderResponse(ac, order), nil
@@ -352,6 +358,33 @@ func validateCsrMatchesOrder(csr *x509.CertificateRequest, order *acmeOrder) err
 	}
 
 	// Since we do not support NotBefore/NotAfter dates at this time no need to validate CSR/Order match.
+
+	return nil
+}
+
+func (b *backend) validateIdentifiersAgainstRole(role *roleEntry, identifiers []*ACMEIdentifier) error {
+	for _, identifier := range identifiers {
+		switch identifier.Type {
+		case ACMEDNSIdentifier:
+			data := &inputBundle{
+				role:    role,
+				req:     &logical.Request{},
+				apiData: &framework.FieldData{},
+			}
+
+			if validateNames(b, data, []string{identifier.OriginalValue}) != "" {
+				return fmt.Errorf("%w: role (%s) will not issue certificate for name %v",
+					ErrRejectedIdentifier, role.Name, identifier.OriginalValue)
+			}
+		case ACMEIPIdentifier:
+			if !role.AllowIPSANs {
+				return fmt.Errorf("%w: role (%s) does not allow IP sans, so cannot issue certificate for %v",
+					ErrRejectedIdentifier, role.Name, identifier.OriginalValue)
+			}
+		default:
+			return fmt.Errorf("unknown type of identifier: %v for %v", identifier.Type, identifier.OriginalValue)
+		}
+	}
 
 	return nil
 }
@@ -438,7 +471,20 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 		return nil, "", fmt.Errorf("%w: Refusing to sign CSR with empty PublicKey", ErrBadCSR)
 	}
 
-	parsedBundle, _, err := signCert(ac.sc.Backend, input, signingBundle, false, true)
+	// UseCSRValues as defined in certutil/helpers.go accepts the following
+	// fields off of the CSR:
+	//
+	// 1. Subject fields,
+	// 2. SANs,
+	// 3. Extensions (except for a BasicConstraint extension)
+	//
+	// Because we have stricter validation of subject parameters, and no way
+	// to validate or allow extensions, we do not wish to use the CSR's
+	// parameters for these values. If a CSR sets, e.g., an organizational
+	// unit, we have no way of validating this (via ACME here, without perhaps
+	// an external policy engine), and thus should not be setting it on our
+	// final issued certificate.
+	parsedBundle, _, err := signCert(ac.sc.Backend, input, signingBundle, false /* is_ca=false */, false /* use_csr_values */)
 	if err != nil {
 		return nil, "", fmt.Errorf("%w: refusing to sign CSR: %s", ErrBadCSR, err.Error())
 	}
@@ -474,6 +520,13 @@ func parseCsrFromFinalize(data map[string]interface{}) (*x509.CertificateRequest
 	if csr.PublicKey == nil || csr.PublicKeyAlgorithm == x509.UnknownPublicKeyAlgorithm {
 		return nil, fmt.Errorf("%w: failed to parse csr no public key info or unknown key algorithm used", ErrBadCSR)
 	}
+
+	for _, ext := range csr.Extensions {
+		if ext.Id.Equal(certutil.ExtensionBasicConstraintsOID) {
+			return nil, fmt.Errorf("%w: refusing to accept CSR with Basic Constraints extension", ErrBadCSR)
+		}
+	}
+
 	return csr, nil
 }
 
@@ -483,6 +536,13 @@ func (b *backend) acmeGetOrderHandler(ac *acmeContext, _ *logical.Request, field
 	order, err := b.acmeState.LoadOrder(ac, uc, orderId)
 	if err != nil {
 		return nil, err
+	}
+
+	if order.Status == ACMEOrderPending {
+		// Lets see if we can update our order status to ready if all the authorizations have been completed.
+		if requiredAuthorizationsCompleted(b, ac, uc, order) {
+			order.Status = ACMEOrderReady
+		}
 	}
 
 	// Per RFC 8555 -> 7.1.3.  Order Objects
@@ -568,7 +628,10 @@ func (b *backend) acmeNewOrderHandler(ac *acmeContext, _ *logical.Request, _ *fr
 		return nil, err
 	}
 
-	// TODO: Implement checks against role here.
+	err = b.validateIdentifiersAgainstRole(ac.role, identifiers)
+	if err != nil {
+		return nil, err
+	}
 
 	// Per RFC 8555 -> 7.1.3. Order Objects
 	// For pending orders, the authorizations that the client needs to complete before the
@@ -648,11 +711,16 @@ func formatOrderResponse(acmeCtx *acmeContext, order *acmeOrder) *logical.Respon
 		authorizationUrls = append(authorizationUrls, buildAuthorizationUrl(acmeCtx, authId))
 	}
 
+	var identifiers []map[string]interface{}
+	for _, identifier := range order.Identifiers {
+		identifiers = append(identifiers, identifier.NetworkMarshal( /* use original value */ true))
+	}
+
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"status":         order.Status,
 			"expires":        order.Expires.Format(time.RFC3339),
-			"identifiers":    order.Identifiers,
+			"identifiers":    identifiers,
 			"authorizations": authorizationUrls,
 			"finalize":       baseOrderUrl + "/finalize",
 		},
@@ -841,4 +909,75 @@ func parseOrderIdentifiers(data map[string]interface{}) ([]*ACMEIdentifier, erro
 	}
 
 	return identifiers, nil
+}
+
+func (b *backend) acmeTidyOrder(ac *acmeContext, accountId string, orderPath string, certTidyBuffer time.Duration) (bool, time.Time, error) {
+	// First we get the order; note that the orderPath includes the account
+	// It's only accessed at acme/orders/<order_id> with the account context
+	// It's saved at acme/<account_id>/orders/<orderId>
+	entry, err := ac.sc.Storage.Get(ac.sc.Context, orderPath)
+	if err != nil {
+		return false, time.Time{}, fmt.Errorf("error loading order: %w", err)
+	}
+	if entry == nil {
+		return false, time.Time{}, fmt.Errorf("order does not exist: %w", ErrMalformed)
+	}
+	var order acmeOrder
+	err = entry.DecodeJSON(&order)
+	if err != nil {
+		return false, time.Time{}, fmt.Errorf("error decoding order: %w", err)
+	}
+
+	// Determine whether we should tidy this order
+	shouldTidy := false
+
+	// Track either the order expiry or certificate expiry to return to the caller, this
+	// can be used to influence the account's expiry
+	orderExpiry := order.CertificateExpiry
+
+	// It is faster to check certificate information on the order entry rather than fetch the cert entry to parse:
+	if !order.CertificateExpiry.IsZero() {
+		// This implies that a certificate exists
+		// When a certificate exists, we want to expire and tidy the order when we tidy the certificate:
+		if time.Now().After(order.CertificateExpiry.Add(certTidyBuffer)) { // It's time to clean
+			shouldTidy = true
+		}
+	} else {
+		// This implies that no certificate exists
+		// In this case, we want to expire the order after it has expired (+ some safety buffer)
+		if time.Now().After(order.Expires) {
+			shouldTidy = true
+		}
+		orderExpiry = order.Expires
+	}
+	if shouldTidy == false {
+		return shouldTidy, orderExpiry, nil
+	}
+
+	// Tidy this Order
+	// That includes any certificate acme/<account_id>/orders/orderPath/cert
+	// That also includes any related authorizations: acme/<account_id>/authorizations/<auth_id>
+
+	// First Authorizations
+	for _, authorizationId := range order.AuthorizationIds {
+		err = ac.sc.Storage.Delete(ac.sc.Context, getAuthorizationPath(accountId, authorizationId))
+		if err != nil {
+			return false, orderExpiry, err
+		}
+	}
+
+	// Normal Tidy will Take Care of the Certificate, we need to clean up the certificate to account tracker though
+	err = ac.sc.Storage.Delete(ac.sc.Context, getAcmeSerialToAccountTrackerPath(accountId, order.CertificateSerialNumber))
+	if err != nil {
+		return false, orderExpiry, err
+	}
+
+	// And Finally, the order:
+	err = ac.sc.Storage.Delete(ac.sc.Context, orderPath)
+	if err != nil {
+		return false, orderExpiry, err
+	}
+	b.tidyStatusIncDelAcmeOrderCount()
+
+	return true, orderExpiry, nil
 }

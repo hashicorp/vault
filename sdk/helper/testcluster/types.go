@@ -4,7 +4,9 @@
 package testcluster
 
 import (
+	"crypto/ecdsa"
 	"crypto/tls"
+	"crypto/x509"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -27,6 +29,8 @@ type VaultCluster interface {
 	Cleanup()
 	ClusterID() string
 	NamedLogger(string) hclog.Logger
+	SetRootToken(token string)
+	GetRootToken() string
 }
 
 type VaultNodeConfig struct {
@@ -95,4 +99,13 @@ type ClusterOptions struct {
 	Logger             hclog.Logger
 	VaultNodeConfig    *VaultNodeConfig
 	VaultLicense       string
+}
+
+type CA struct {
+	CACert        *x509.Certificate
+	CACertBytes   []byte
+	CACertPEM     []byte
+	CACertPEMFile string
+	CAKey         *ecdsa.PrivateKey
+	CAKeyPEM      []byte
 }

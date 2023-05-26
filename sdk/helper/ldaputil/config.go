@@ -9,7 +9,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"math"
 	"strings"
 	"text/template"
 
@@ -255,8 +254,8 @@ Default: ({{.UserAttr}}={{.Username}})`,
 
 		"max_page_size": {
 			Type:        framework.TypeInt,
-			Description: "The maximum number of results to return for a single paged query. If not set, the server default will be used for paged searches. A requested max_page_size of 0 is interpreted as no limit by LDAP servers. If set to a negative value, search requests will not be paged.",
-			Default:     math.MaxInt32,
+			Description: "If set to a value greater than 0, the LDAP backend will use the LDAP server's paged search control to request pages of up to the given size. This can be used to avoid hitting the LDAP server's maximum result size limit. Otherwise, the LDAP backend will not use the paged search control.",
+			Default:     0,
 		},
 	}
 }

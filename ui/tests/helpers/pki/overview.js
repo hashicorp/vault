@@ -20,5 +20,8 @@ export const SELECTORS = {
   viewCertificateInput: '[data-test-view-certificate-input]',
   viewCertificatePowerSearch: '[data-test-view-certificate-input] span',
   viewCertificateButton: '[data-test-view-certificate-button]',
+  viewIssuerInput: '[data-test-issue-issuer-input]',
+  viewIssuerPowerSearch: '[data-test-issue-issuer-input] span',
+  viewIssuerButton: '[data-test-view-issuer-button]',
   firstPowerSelectOption: '[data-option-index="0"]',
 };

@@ -16,6 +16,7 @@ export default class PkiIssuerSerializer extends ApplicationSerializer {
     keyId: { serialize: false },
     parsedCertificate: { serialize: false },
     commonName: { serialize: false },
+    isRoot: { serialize: false },
   };
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
@@ -23,7 +24,6 @@ export default class PkiIssuerSerializer extends ApplicationSerializer {
       // Parse certificate back from the API and add to payload
       const parsedCert = parseCertificate(payload.data.certificate);
       const data = {
-        issuer_ref: payload.issuer_id,
         ...payload.data,
         parsed_certificate: parsedCert,
         common_name: parsedCert.common_name,
@@ -37,10 +37,12 @@ export default class PkiIssuerSerializer extends ApplicationSerializer {
   normalizeItems(payload) {
     if (payload.data) {
       if (payload.data?.keys && Array.isArray(payload.data.keys)) {
-        return payload.data.keys.map((issuer_id) => ({
-          issuer_id,
-          ...payload.data.key_info[issuer_id],
-        }));
+        return payload.data.keys.map((key) => {
+          return {
+            issuer_id: key,
+            ...payload.data.key_info[key],
+          };
+        });
       }
       Object.assign(payload, payload.data);
       delete payload.data;

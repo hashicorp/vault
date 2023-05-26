@@ -18,16 +18,8 @@ import {
   parentIssuerCert,
   unsupportedOids,
 } from 'vault/tests/helpers/pki/values';
+import { SELECTORS } from 'vault/tests/helpers/pki/pki-issuer-cross-sign';
 
-const SELECTORS = {
-  input: (key, row = 0) => `[data-test-object-list-input="${key}-${row}"]`,
-  addRow: '[data-test-object-list-add-button',
-  submitButton: '[data-test-cross-sign-submit]',
-  cancelButton: '[data-test-cross-sign-cancel]',
-  statusCount: '[data-test-cross-sign-status-count]',
-  signedIssuerRow: (row = 0) => `[data-test-info-table-row="${row}"]`,
-  signedIssuerCol: (attr) => `[data-test-info-table-column="${attr}"]`,
-};
 const FIELDS = [
   {
     label: 'Mount path',
@@ -190,7 +182,7 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
     });
     // fill out form and submit
     for (const field of FIELDS) {
-      await fillIn(SELECTORS.input(field.key), this.testInputs[field.key]);
+      await fillIn(SELECTORS.objectListInput(field.key), this.testInputs[field.key]);
     }
     await click(SELECTORS.submitButton);
 
@@ -248,15 +240,15 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
 
     // fill out form and submit
     for (const field of FIELDS) {
-      await fillIn(SELECTORS.input(field.key), this.testInputs[field.key]);
+      await fillIn(SELECTORS.objectListInput(field.key), this.testInputs[field.key]);
     }
     await click(SELECTORS.addRow);
     for (const field of FIELDS) {
-      await fillIn(SELECTORS.input(field.key, 1), nonexistentIssuer[field.key]);
+      await fillIn(SELECTORS.objectListInput(field.key, 1), nonexistentIssuer[field.key]);
     }
     await click(SELECTORS.addRow);
     for (const field of FIELDS) {
-      await fillIn(SELECTORS.input(field.key, 2), unsupportedCert[field.key]);
+      await fillIn(SELECTORS.objectListInput(field.key, 2), unsupportedCert[field.key]);
     }
     await click(SELECTORS.submitButton);
 
@@ -296,7 +288,7 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
 
     // fill out form and submit
     for (const field of FIELDS) {
-      await fillIn(SELECTORS.input(field.key), this.testInputs[field.key]);
+      await fillIn(SELECTORS.objectListInput(field.key), this.testInputs[field.key]);
     }
     await click(SELECTORS.submitButton);
 
@@ -329,7 +321,7 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
     });
     // fill out form and submit
     for (const field of FIELDS) {
-      await fillIn(SELECTORS.input(field.key), this.testInputs[field.key]);
+      await fillIn(SELECTORS.objectListInput(field.key), this.testInputs[field.key]);
     }
     await click(SELECTORS.submitButton);
     assert.dom(SELECTORS.statusCount).hasText('Cross-signing complete (0 successful, 1 error)');

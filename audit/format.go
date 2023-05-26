@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	squarejwt "gopkg.in/square/go-jose.v2/jwt"
+	"github.com/go-jose/go-jose/v3/jwt"
 
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -92,9 +92,9 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 		reqType = "request"
 	}
 	reqEntry := &AuditRequestEntry{
-		Type:  reqType,
-		Error: errString,
-
+		Type:          reqType,
+		Error:         errString,
+		ForwardedFrom: req.ForwardedFrom,
 		Auth: &AuditAuth{
 			ClientToken:               auth.ClientToken,
 			Accessor:                  auth.Accessor,
@@ -117,6 +117,7 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 			ClientToken:           req.ClientToken,
 			ClientTokenAccessor:   req.ClientTokenAccessor,
 			Operation:             req.Operation,
+			MountPoint:            req.MountPoint,
 			MountType:             req.MountType,
 			MountAccessor:         req.MountAccessor,
 			MountRunningVersion:   req.MountRunningVersion(),
@@ -149,9 +150,10 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 
 		for _, p := range auth.PolicyResults.GrantingPolicies {
 			reqEntry.Auth.PolicyResults.GrantingPolicies = append(reqEntry.Auth.PolicyResults.GrantingPolicies, PolicyInfo{
-				Name:        p.Name,
-				NamespaceId: p.NamespaceId,
-				Type:        p.Type,
+				Name:          p.Name,
+				NamespaceId:   p.NamespaceId,
+				NamespacePath: p.NamespacePath,
+				Type:          p.Type,
 			})
 		}
 	}
@@ -295,8 +297,9 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 		respType = "response"
 	}
 	respEntry := &AuditResponseEntry{
-		Type:  respType,
-		Error: errString,
+		Type:      respType,
+		Error:     errString,
+		Forwarded: req.ForwardedFrom != "",
 		Auth: &AuditAuth{
 			ClientToken:               auth.ClientToken,
 			Accessor:                  auth.Accessor,
@@ -320,6 +323,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			ClientTokenAccessor:   req.ClientTokenAccessor,
 			ClientID:              req.ClientID,
 			Operation:             req.Operation,
+			MountPoint:            req.MountPoint,
 			MountType:             req.MountType,
 			MountAccessor:         req.MountAccessor,
 			MountRunningVersion:   req.MountRunningVersion(),
@@ -341,6 +345,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 		},
 
 		Response: &AuditResponse{
+			MountPoint:            req.MountPoint,
 			MountType:             req.MountType,
 			MountAccessor:         req.MountAccessor,
 			MountRunningVersion:   req.MountRunningVersion(),
@@ -364,9 +369,10 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 
 		for _, p := range auth.PolicyResults.GrantingPolicies {
 			respEntry.Auth.PolicyResults.GrantingPolicies = append(respEntry.Auth.PolicyResults.GrantingPolicies, PolicyInfo{
-				Name:        p.Name,
-				NamespaceId: p.NamespaceId,
-				Type:        p.Type,
+				Name:          p.Name,
+				NamespaceId:   p.NamespaceId,
+				NamespacePath: p.NamespacePath,
+				Type:          p.Type,
 			})
 		}
 	}
@@ -387,21 +393,23 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 
 // AuditRequestEntry is the structure of a request audit log entry in Audit.
 type AuditRequestEntry struct {
-	Time    string        `json:"time,omitempty"`
-	Type    string        `json:"type,omitempty"`
-	Auth    *AuditAuth    `json:"auth,omitempty"`
-	Request *AuditRequest `json:"request,omitempty"`
-	Error   string        `json:"error,omitempty"`
+	Time          string        `json:"time,omitempty"`
+	Type          string        `json:"type,omitempty"`
+	Auth          *AuditAuth    `json:"auth,omitempty"`
+	Request       *AuditRequest `json:"request,omitempty"`
+	Error         string        `json:"error,omitempty"`
+	ForwardedFrom string        `json:"forwarded_from,omitempty"` // Populated in Enterprise when a request is forwarded
 }
 
 // AuditResponseEntry is the structure of a response audit log entry in Audit.
 type AuditResponseEntry struct {
-	Time     string         `json:"time,omitempty"`
-	Type     string         `json:"type,omitempty"`
-	Auth     *AuditAuth     `json:"auth,omitempty"`
-	Request  *AuditRequest  `json:"request,omitempty"`
-	Response *AuditResponse `json:"response,omitempty"`
-	Error    string         `json:"error,omitempty"`
+	Time      string         `json:"time,omitempty"`
+	Type      string         `json:"type,omitempty"`
+	Auth      *AuditAuth     `json:"auth,omitempty"`
+	Request   *AuditRequest  `json:"request,omitempty"`
+	Response  *AuditResponse `json:"response,omitempty"`
+	Error     string         `json:"error,omitempty"`
+	Forwarded bool           `json:"forwarded,omitempty"`
 }
 
 type AuditRequest struct {
@@ -409,6 +417,7 @@ type AuditRequest struct {
 	ClientID                      string                 `json:"client_id,omitempty"`
 	ReplicationCluster            string                 `json:"replication_cluster,omitempty"`
 	Operation                     logical.Operation      `json:"operation,omitempty"`
+	MountPoint                    string                 `json:"mount_point,omitempty"`
 	MountType                     string                 `json:"mount_type,omitempty"`
 	MountAccessor                 string                 `json:"mount_accessor,omitempty"`
 	MountRunningVersion           string                 `json:"mount_running_version,omitempty"`
@@ -430,6 +439,7 @@ type AuditRequest struct {
 
 type AuditResponse struct {
 	Auth                  *AuditAuth             `json:"auth,omitempty"`
+	MountPoint            string                 `json:"mount_point,omitempty"`
 	MountType             string                 `json:"mount_type,omitempty"`
 	MountAccessor         string                 `json:"mount_accessor,omitempty"`
 	MountRunningVersion   string                 `json:"mount_running_plugin_version,omitempty"`
@@ -470,9 +480,10 @@ type AuditPolicyResults struct {
 }
 
 type PolicyInfo struct {
-	Name        string `json:"name,omitempty"`
-	NamespaceId string `json:"namespace_id,omitempty"`
-	Type        string `json:"type"`
+	Name          string `json:"name,omitempty"`
+	NamespaceId   string `json:"namespace_id,omitempty"`
+	NamespacePath string `json:"namespace_path,omitempty"`
+	Type          string `json:"type"`
 }
 
 type AuditSecret struct {
@@ -524,12 +535,12 @@ func parseVaultTokenFromJWT(token string) *string {
 		return nil
 	}
 
-	parsedJWT, err := squarejwt.ParseSigned(token)
+	parsedJWT, err := jwt.ParseSigned(token)
 	if err != nil {
 		return nil
 	}
 
-	var claims squarejwt.Claims
+	var claims jwt.Claims
 	if err = parsedJWT.UnsafeClaimsWithoutVerification(&claims); err != nil {
 		return nil
 	}

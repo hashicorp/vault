@@ -8,7 +8,7 @@
         {{! DEFAULT VIEW }}
         {{#if (eq group "default")}}
           {{#each fields as |attr|}}
-            {{#if (eq attr.name "issuerRef")}}
+            {{#if (and (eq attr.name "issuerRef") @issuers)}}
               <div class="has-top-margin-m {{unless this.showDefaultIssuer 'has-bottom-margin-xs' 'has-bottom-margin-m'}}">
                 <FormFieldLabel
                   for={{attr.name}}

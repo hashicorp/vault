@@ -1,0 +1,6 @@
+```release-note:change
+secrets/kubernetes: Update plugin to v0.5.0
+```
+```release-note:change
+auth/kubernetes: Update plugin to v0.16.0
+```

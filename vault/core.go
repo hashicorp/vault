@@ -419,6 +419,8 @@ type Core struct {
 
 	// activityLog is used to track active client count
 	activityLog *ActivityLog
+	// activityLogLock protects the activityLog and activityLogConfig
+	activityLogLock sync.RWMutex
 
 	// metricsCh is used to stop the metrics streaming
 	metricsCh chan struct{}
@@ -633,16 +635,11 @@ type Core struct {
 
 	clusterHeartbeatInterval time.Duration
 
+	// activityLogConfig contains override values for the activity log
+	// it is protected by activityLogLock
 	activityLogConfig ActivityLogCoreConfig
 
-	// censusAgent is the mechanism used for reporting Vault's billing data.
-	censusAgent CensusReporter
-
-	// censusLicensingEnabled records whether Vault is exporting census metrics
-	censusLicensingEnabled bool
-
-	// billingStart keeps track of the billing start time for exporting census metrics
-	billingStart time.Time
+	censusConfig atomic.Value
 
 	// activeTime is set on active nodes indicating the time at which this node
 	// became active.
@@ -1098,9 +1095,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		wrapper := aeadwrapper.NewShamirWrapper()
 		wrapper.SetConfig(context.Background(), awskms.WithLogger(c.logger.Named("shamir")))
 
-		c.seal = NewDefaultSeal(&vaultseal.Access{
-			Wrapper: wrapper,
-		})
+		c.seal = NewDefaultSeal(vaultseal.NewAccess(wrapper))
 	}
 	c.seal.SetCore(c)
 	return c, nil
@@ -1544,7 +1539,10 @@ func (c *Core) unsealWithRaft(combinedKey []byte) error {
 	if c.seal.BarrierType() == wrapping.WrapperTypeShamir {
 		// If this is a legacy shamir seal this serves no purpose but it
 		// doesn't hurt.
-		err := c.seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAesGcmKeyBytes(combinedKey)
+		shamirWrapper, err := c.seal.GetShamirWrapper()
+		if err == nil {
+			err = shamirWrapper.SetAesGcmKeyBytes(combinedKey)
+		}
 		if err != nil {
 			return err
 		}
@@ -1795,7 +1793,11 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 		}
 
 		// We have recovery keys; we're going to use them as the new shamir KeK.
-		err = c.seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAesGcmKeyBytes(recoveryKey)
+		shamirWrapper, err := c.seal.GetShamirWrapper()
+		if err != nil {
+			return err
+		}
+		err = shamirWrapper.SetAesGcmKeyBytes(recoveryKey)
 		if err != nil {
 			return fmt.Errorf("failed to set master key in seal: %w", err)
 		}
@@ -2570,6 +2572,10 @@ func (c *Core) preSeal() error {
 		result = multierror.Append(result, fmt.Errorf("error stopping expiration: %w", err))
 	}
 	c.stopActivityLog()
+	// Clean up the censusAgent on seal
+	if err := c.teardownCensusAgent(); err != nil {
+		result = multierror.Append(result, fmt.Errorf("error tearing down reporting agent: %w", err))
+	}
 
 	if err := c.teardownCredentials(context.Background()); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down credentials: %w", err))
@@ -2793,9 +2799,7 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 		case existBarrierSealConfig.Type == wrapping.WrapperTypeShamir.String():
 			// The configured seal is not Shamir, the stored seal config is Shamir.
 			// This is a migration away from Shamir.
-			unwrapSeal = NewDefaultSeal(&vaultseal.Access{
-				Wrapper: aeadwrapper.NewShamirWrapper(),
-			})
+			unwrapSeal = NewDefaultSeal(vaultseal.NewAccess(aeadwrapper.NewShamirWrapper()))
 		default:
 			// We know at this point that there is a configured non-Shamir seal,
 			// that it does not match the stored non-Shamir seal config, and that
@@ -2958,9 +2962,7 @@ func (c *Core) unsealKeyToMasterKey(ctx context.Context, seal Seal, combinedKey 
 
 	case vaultseal.StoredKeysSupportedShamirRoot:
 		if useTestSeal {
-			testseal := NewDefaultSeal(&vaultseal.Access{
-				Wrapper: aeadwrapper.NewShamirWrapper(),
-			})
+			testseal := NewDefaultSeal(vaultseal.NewAccess(aeadwrapper.NewShamirWrapper()))
 			testseal.SetCore(c)
 			cfg, err := seal.BarrierConfig(ctx)
 			if err != nil {
@@ -2970,7 +2972,11 @@ func (c *Core) unsealKeyToMasterKey(ctx context.Context, seal Seal, combinedKey 
 			seal = testseal
 		}
 
-		err := seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAesGcmKeyBytes(combinedKey)
+		shamirWrapper, err := seal.GetShamirWrapper()
+		if err != nil {
+			return nil, err
+		}
+		err = shamirWrapper.SetAesGcmKeyBytes(combinedKey)
 		if err != nil {
 			return nil, &ErrInvalidKey{fmt.Sprintf("failed to setup unseal key: %v", err)}
 		}

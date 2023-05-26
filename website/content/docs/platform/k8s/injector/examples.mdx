@@ -144,7 +144,7 @@ spec:
 
 The following example creates a deployment that mounts a Kubernetes ConfigMap
 containing Vault Agent configuration files. For a complete list of the Vault
-Agent configuration settings, [see the Agent documentation](/vault/docs/agent/template#vault-agent-templates).
+Agent configuration settings, [see the Agent documentation](/vault/docs/agent-and-proxy/agent/template#vault-agent-templates).
 
 ```yaml
 ---
@@ -276,7 +276,7 @@ spec:
         vault.hashicorp.com/agent-inject-secret-config: 'secret/data/web'
         # Environment variable export template
         vault.hashicorp.com/agent-inject-template-config: |
-          {{ with secret "secret/data/web" -}}
+          {{- with secret "secret/data/web" -}}
             export api_key="{{ .Data.data.payments_api_key }}"
           {{- end }}
     spec:

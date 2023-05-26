@@ -5,6 +5,7 @@ package transit
 
 import (
 	"context"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
@@ -12,6 +13,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/pem"
 	"fmt"
 	"strconv"
 	"sync"
@@ -427,6 +429,70 @@ func TestTransit_Import(t *testing.T) {
 			}
 		},
 	)
+
+	t.Run(
+		"import public key ed25519",
+		func(t *testing.T) {
+			keyType := "ed25519"
+			keyID, err := uuid.GenerateUUID()
+			if err != nil {
+				t.Fatalf("failed to generate key ID: %s", err)
+			}
+
+			// Get keys
+			privateKey := getKey(t, keyType)
+			publicKeyBytes, err := getPublicKey(privateKey, keyType)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Import key
+			req := &logical.Request{
+				Storage:   s,
+				Operation: logical.UpdateOperation,
+				Path:      fmt.Sprintf("keys/%s/import", keyID),
+				Data: map[string]interface{}{
+					"public_key": publicKeyBytes,
+					"type":       keyType,
+				},
+			}
+			_, err = b.HandleRequest(context.Background(), req)
+			if err != nil {
+				t.Fatalf("failed to import ed25519 key: %v", err)
+			}
+		})
+
+	t.Run(
+		"import public key ecdsa",
+		func(t *testing.T) {
+			keyType := "ecdsa-p256"
+			keyID, err := uuid.GenerateUUID()
+			if err != nil {
+				t.Fatalf("failed to generate key ID: %s", err)
+			}
+
+			// Get keys
+			privateKey := getKey(t, keyType)
+			publicKeyBytes, err := getPublicKey(privateKey, keyType)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Import key
+			req := &logical.Request{
+				Storage:   s,
+				Operation: logical.UpdateOperation,
+				Path:      fmt.Sprintf("keys/%s/import", keyID),
+				Data: map[string]interface{}{
+					"public_key": publicKeyBytes,
+					"type":       keyType,
+				},
+			}
+			_, err = b.HandleRequest(context.Background(), req)
+			if err != nil {
+				t.Fatalf("failed to import public key: %s", err)
+			}
+		})
 }
 
 func TestTransit_ImportVersion(t *testing.T) {
@@ -573,6 +639,53 @@ func TestTransit_ImportVersion(t *testing.T) {
 			}
 		},
 	)
+
+	t.Run(
+		"import rsa public key and update version with private counterpart",
+		func(t *testing.T) {
+			keyType := "rsa-2048"
+			keyID, err := uuid.GenerateUUID()
+			if err != nil {
+				t.Fatalf("failed to generate key ID: %s", err)
+			}
+
+			// Get keys
+			privateKey := getKey(t, keyType)
+			importBlob := wrapTargetKeyForImport(t, pubWrappingKey, privateKey, keyType, "SHA256")
+			publicKeyBytes, err := getPublicKey(privateKey, keyType)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Import RSA public key
+			req := &logical.Request{
+				Storage:   s,
+				Operation: logical.UpdateOperation,
+				Path:      fmt.Sprintf("keys/%s/import", keyID),
+				Data: map[string]interface{}{
+					"public_key": publicKeyBytes,
+					"type":       keyType,
+				},
+			}
+			_, err = b.HandleRequest(context.Background(), req)
+			if err != nil {
+				t.Fatalf("failed to import public key: %s", err)
+			}
+
+			// Update version - import RSA private key
+			req = &logical.Request{
+				Storage:   s,
+				Operation: logical.UpdateOperation,
+				Path:      fmt.Sprintf("keys/%s/import_version", keyID),
+				Data: map[string]interface{}{
+					"ciphertext": importBlob,
+				},
+			}
+			_, err = b.HandleRequest(context.Background(), req)
+			if err != nil {
+				t.Fatalf("failed to update key: %s", err)
+			}
+		})
 }
 
 func wrapTargetKeyForImport(t *testing.T, wrappingKey *rsa.PublicKey, targetKey interface{}, targetKeyType string, hashFnName string) string {
@@ -662,4 +775,41 @@ func generateKey(keyType string) (interface{}, error) {
 	default:
 		return nil, fmt.Errorf("failed to generate unsupported key type: %s", keyType)
 	}
+}
+
+func getPublicKey(privateKey crypto.PrivateKey, keyType string) ([]byte, error) {
+	var publicKey crypto.PublicKey
+	var publicKeyBytes []byte
+	switch keyType {
+	case "rsa-2048", "rsa-3072", "rsa-4096":
+		publicKey = privateKey.(*rsa.PrivateKey).Public()
+	case "ecdsa-p256", "ecdsa-p384", "ecdsa-p521":
+		publicKey = privateKey.(*ecdsa.PrivateKey).Public()
+	case "ed25519":
+		publicKey = privateKey.(ed25519.PrivateKey).Public()
+	default:
+		return publicKeyBytes, fmt.Errorf("failed to get public key from %s key", keyType)
+	}
+
+	publicKeyBytes, err := publicKeyToBytes(publicKey)
+	if err != nil {
+		return publicKeyBytes, err
+	}
+
+	return publicKeyBytes, nil
+}
+
+func publicKeyToBytes(publicKey crypto.PublicKey) ([]byte, error) {
+	var publicKeyBytesPem []byte
+	publicKeyBytes, err := x509.MarshalPKIXPublicKey(publicKey)
+	if err != nil {
+		return publicKeyBytesPem, fmt.Errorf("failed to marshal public key: %s", err)
+	}
+
+	pemBlock := &pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: publicKeyBytes,
+	}
+
+	return pem.EncodeToMemory(pemBlock), nil
 }
