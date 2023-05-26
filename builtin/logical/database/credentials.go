@@ -177,12 +177,28 @@ func (kg rsaKeyGenerator) configMap() (map[string]interface{}, error) {
 }
 
 type ClientCertificateGenerator struct {
+	// CommonNameTemplate is username template to be used for the client certificate common name.
 	CommonNameTemplate string `mapstructure:"common_name_template,omitempty"`
-	CAPrivateKey       string `mapstructure:"ca_private_key,omitempty"`
-	CACert             string `mapstructure:"ca_cert,omitempty"`
-	KeyType            string `mapstructure:"key_type,omitempty"`
-	KeyBits            int    `mapstructure:"key_bits,omitempty"`
-	SignatureBits      int    `mapstructure:"signature_bits,omitempty"`
+
+	// CAPrivateKey is the PEM-encoded private key for the given ca_cert.
+	CAPrivateKey string `mapstructure:"ca_private_key,omitempty"`
+
+	// CACert is the PEM-encoded CA certificate.
+	CACert string `mapstructure:"ca_cert,omitempty"`
+
+	// KeyType specifies the desired key type.
+	// Options include: 'rsa', 'ed25519', 'ec'.
+	KeyType string `mapstructure:"key_type,omitempty"`
+
+	// KeyBits is the number of bits to use for the generated keys.
+	// Options include: with key_type=rsa, 2048 (default), 3072, 4096;
+	// With key_type=ec, allowed values are: 224, 256 (default), 384, 521;
+	// Ignored with key_type=ed25519.
+	KeyBits int `mapstructure:"key_bits,omitempty"`
+
+	// SignatureBits is the number of bits to use in the signature algorithm.
+	// Options include: 256 (default), 384, 512.
+	SignatureBits int `mapstructure:"signature_bits,omitempty"`
 
 	parsedCABundle *certutil.ParsedCertBundle
 	cnProducer     template.StringTemplate
