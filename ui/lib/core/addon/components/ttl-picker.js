@@ -88,6 +88,7 @@ export default class TtlPickerComponent extends Component {
       seconds = initialValue;
     } else {
       const parseDuration = durationToSeconds(initialValue);
+      // if parsing fails leave it empty
       if (!parseDuration) return;
       seconds = parseDuration;
     }
