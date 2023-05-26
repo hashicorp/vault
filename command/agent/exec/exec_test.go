@@ -17,6 +17,8 @@ import (
 
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-retryablehttp"
+
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
@@ -200,7 +202,6 @@ func TestExecServer_Run(t *testing.T) {
 			ctx, cancelContextFunc := context.WithTimeout(context.Background(), testCase.expectedTestDuration)
 			defer cancelContextFunc()
 
-			testAppAddr := fmt.Sprintf("http://localhost:%d", testCase.testAppPort)
 			testAppCommand := []string{
 				testAppBinary,
 				"--port",
@@ -239,6 +240,18 @@ func TestExecServer_Run(t *testing.T) {
 			// send a dummy token to kick off the server
 			execServerTokenCh <- "my-token"
 
+			// ensure the test app is running after 3 seconds
+			var (
+				testAppAddr      = fmt.Sprintf("http://localhost:%d", testCase.testAppPort)
+				testAppStartedCh = make(chan error)
+			)
+			if testCase.expectedError == nil {
+				time.AfterFunc(3*time.Second, func() {
+					_, err := retryablehttp.Head(testAppAddr)
+					testAppStartedCh <- err
+				})
+			}
+
 			select {
 			case <-ctx.Done():
 				t.Fatal("timeout reached before templates were rendered")
@@ -256,15 +269,12 @@ func TestExecServer_Run(t *testing.T) {
 
 				return
 
-			case <-time.After(3 * time.Second):
-				// ensure the test app has started
-				if testCase.expectedError == nil {
-					if _, err := http.Head(testAppAddr); err != nil {
-						t.Fatalf("the test app could not be started")
-					} else {
-						t.Log("the test app has started successfully")
-					}
+			case err := <-testAppStartedCh:
+				if testCase.expectedError == nil && err != nil {
+					t.Fatalf("test app could not be started")
 				}
+
+				t.Log("test app started successfully")
 			}
 
 			// simulate a shutdown of agent, which, in turn stops the test app
