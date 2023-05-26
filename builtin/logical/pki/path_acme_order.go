@@ -461,6 +461,12 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 		return nil, "", fmt.Errorf("failed loading CA %s: %w", ac.issuer.ID.String(), err)
 	}
 
+	// ACME issued cert will override the TTL values to truncate to the issuer's
+	// expiration if we go beyond, no matter the setting
+	if signingBundle.LeafNotAfterBehavior == certutil.ErrNotAfterBehavior {
+		signingBundle.LeafNotAfterBehavior = certutil.TruncateNotAfterBehavior
+	}
+
 	input := &inputBundle{
 		req:     &logical.Request{},
 		apiData: data,
