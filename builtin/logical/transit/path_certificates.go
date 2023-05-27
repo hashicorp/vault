@@ -5,9 +5,9 @@ package transit
 
 import (
 	"context"
-	// "crypto/rand"
-	// "crypto/x509"
-	// "encoding/pem"
+	"crypto/x509"
+	"encoding/pem"
+	"errors"
 	"fmt"
 	"log"
 
@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+// NOTE: Or only `pathCsr`?
 func (b *backend) pathSignCsr() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/" + framework.GenericNameRegex("name") + "/csr",
@@ -74,53 +75,60 @@ func (b *backend) pathSignCsrWrite(ctx context.Context, req *logical.Request, d 
 		return logical.ErrorResponse(fmt.Sprintf("key type %v does not support signing", p.Type)), logical.ErrInvalidRequest
 	}
 
-	// Create certificate template
-	// var csrBytes []bytes
-	// csr, isCsrSet := d.GetOk("csr")
-	// if isCsrSet {
-	// 	csrBlock, _ := pem.Decode(csr.([]byte))
-	// 	if csrBlock == nil {
-	// 		return logical.ErrorResponse(fmt.Sprintf("invalid csr provided")), logical.ErrInvalidRequest
-	// 	}
-	// } else {
-	// 	csrBytes, err := x509.CreateCertificateRequest(rand.Reader)
-	// }
-	//
-	// csr, err := x509.ParseCertificateRequest(csrBytes)
-	// if err != nil {
-	// 	return logical.ErrorResponse(fmt.Sprintf("failed to parse csr")), logical.ErrInvalidRequest
-	// }
+	// Get CSR template
+	// NOTE: Use GetOk, or GetErrOk?
+	csr := d.Get("csr").(string)
+	csrTemplate, err := parseCsrParam(csr)
+	if err != nil {
+		// FIXME: What do we want to return here?
+		return nil, err
+	}
+
+	// Is this check relevant in this scenario?
+	if err = csrTemplate.CheckSignature(); err != nil {
+		// FIXME: Error returned
+		return nil, errors.New("Template CSR with invalid signature")
+	}
 
 	signingKeyVersion := p.LatestVersion
 	if version, ok := d.GetOk("version"); ok {
 		signingKeyVersion = version.(int)
 	}
+	log.Println("signingKeyVersion: ", signingKeyVersion)
 
-	log.Printf("Signing key version: %d", signingKeyVersion)
+	csrBytes, err := p.SignCsr(signingKeyVersion, csrTemplate)
+	if err != nil {
+		// FIXME: Error returned
+		return logical.ErrorResponse("Failed to create CSR"), nil
+	}
 
-	// var csrBytes []byte
-	// csr, csrSet := d.GetOk("csr")
-	// if !csrSet {
-	// 	rsaPrivKey, _ := rsa.GenerateKey(rand.Reader, 2048)
-	// 	csrBytes = []byte("")
-	// 	var err error
-	// 	csrTemplate := &x509.CertificateRequest{}
-	// 	csrBytes, err = x509.CreateCertificateRequest(rand.Reader, csrTemplate, rsaPrivKey)
-	// 	if err != nil {
-	// 		log.Printf("ERROR: Failed to create CSR: %v", err)
-	// 	}
-	//
-	// 	csrPem := pem.EncodeToMemory(
-	// 		&pem.Block{
-	// 			Type:  "CERTIFICATE REQUEST",
-	// 			Bytes: csrBytes,
-	// 		},
-	// 	)
-	// 	log.Printf("CSR PEM:\n %s\n", csrPem)
-	// } else {
-	// 	csrBytes = csr.([]byte)
-	// }
+	log.Printf("CSR:\n%s", csrBytes)
 
-	// log.Printf("Empty CSR: %s\n", csrBytes)
-	return nil, nil
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"csr": csrBytes,
+		},
+	}
+
+	// NOTE: Return key in PEM format?
+	return resp, nil
+}
+
+func parseCsrParam(csr string) (*x509.CertificateRequest, error) {
+	if csr == "" {
+		return &x509.CertificateRequest{}, nil
+	}
+
+	block, _ := pem.Decode([]byte(csr))
+	if block == nil {
+		// FIXME: Returning err for now
+		return nil, errors.New("Failed to decode CSR PEM")
+	}
+
+	csrTemplate, err := x509.ParseCertificateRequest(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return csrTemplate, nil
 }
