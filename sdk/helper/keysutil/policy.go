@@ -2269,7 +2269,6 @@ func (ke *KeyEntry) parseFromKey(PolKeyType KeyType, parsedKey any) error {
 func (p *Policy) SignCsr(keyVersion int, csrTemplate *x509.CertificateRequest) ([]byte, error) {
 	keyEntry, err := p.safeGetKeyEntry(keyVersion)
 	if err != nil {
-		// FIXME: err or custom error?
 		return nil, err
 	}
 
@@ -2314,7 +2313,7 @@ func (p *Policy) SignCsr(keyVersion int, csrTemplate *x509.CertificateRequest) (
 		if p.Derived {
 			// Derive the key that should be used
 			var err error
-			key, err = p.GetKey([]byte(""), keyVersion, 32) // FIXME: ?
+			key, err = p.GetKey(nil, keyVersion, 32) // FIXME: context?
 			if err != nil {
 				return nil, errutil.InternalError{Err: fmt.Sprintf("error deriving key: %v", err)}
 			}
@@ -2327,19 +2326,17 @@ func (p *Policy) SignCsr(keyVersion int, csrTemplate *x509.CertificateRequest) (
 		key := keyEntry.RSAKey
 		csr, createCertError = x509.CreateCertificateRequest(rand.Reader, csrTemplate, key)
 	default:
-		// FIXME: Error returned
-		return nil, errors.New("Invalid key")
+		return nil, errutil.InternalError{Err: fmt.Sprintf("provided key type '%s' does not support signing", p.Type)}
 	}
 	// FIXME: Not sure about this
 	if createCertError != nil {
 		return nil, err
 	}
 
-	// NOTE: Convert to PEM?
-	pemCsr := pem.EncodeToMemory(&pem.Block{
+	csrPem := pem.EncodeToMemory(&pem.Block{
 		Type:  "CERTIFICATE REQUEST",
 		Bytes: csr,
 	})
 
-	return pemCsr, nil
+	return csrPem, nil
 }

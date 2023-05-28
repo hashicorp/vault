@@ -40,7 +40,8 @@ func (b *backend) pathSignCsr() *framework.Path {
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			// NOTE: Or logical.CreateOperation?
+			// NOTE: Create and Update?
+			logical.CreateOperation: b.pathSignCsrWrite,
 			logical.UpdateOperation: b.pathSignCsrWrite,
 		},
 		// FIXME: Write synposis and description
@@ -62,8 +63,7 @@ func (b *backend) pathSignCsrWrite(ctx context.Context, req *logical.Request, d 
 		return nil, err
 	}
 	if p == nil {
-		// NOTE: Return custom error or err?
-		return nil, fmt.Errorf("no key found with name %s; to import a new key, use the import/ endpoint", name)
+		return logical.ErrorResponse(fmt.Sprintf("key with provided name '%s' not found", name)), logical.ErrInvalidRequest
 	}
 	if !b.System().CachingDisabled() {
 		p.Lock(false) // NOTE: No lock on "read" operations?
@@ -80,28 +80,31 @@ func (b *backend) pathSignCsrWrite(ctx context.Context, req *logical.Request, d 
 	csr := d.Get("csr").(string)
 	csrTemplate, err := parseCsrParam(csr)
 	if err != nil {
-		// FIXME: What do we want to return here?
-		return nil, err
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
 	// Is this check relevant in this scenario?
-	if err = csrTemplate.CheckSignature(); err != nil {
-		// FIXME: Error returned
-		return nil, errors.New("Template CSR with invalid signature")
-	}
+	// NOTE: It will fail for the empty template CSR
+	// if err = csrTemplate.CheckSignature(); err != nil {
+	// 	// FIXME: Error returned
+	// 	return logical.ErrorResponse("invalid signature in csr provided"), logical.ErrInvalidRequest
+	// }
 
 	signingKeyVersion := p.LatestVersion
 	if version, ok := d.GetOk("version"); ok {
 		signingKeyVersion = version.(int)
 	}
+
+	// FIXME: Remove
 	log.Println("signingKeyVersion: ", signingKeyVersion)
 
 	csrBytes, err := p.SignCsr(signingKeyVersion, csrTemplate)
 	if err != nil {
 		// FIXME: Error returned
-		return logical.ErrorResponse("Failed to create CSR"), nil
+		return nil, err
 	}
 
+	// FIXME: Remove
 	log.Printf("CSR:\n%s", csrBytes)
 
 	resp := &logical.Response{
@@ -110,7 +113,6 @@ func (b *backend) pathSignCsrWrite(ctx context.Context, req *logical.Request, d 
 		},
 	}
 
-	// NOTE: Return key in PEM format?
 	return resp, nil
 }
 
@@ -121,8 +123,7 @@ func parseCsrParam(csr string) (*x509.CertificateRequest, error) {
 
 	block, _ := pem.Decode([]byte(csr))
 	if block == nil {
-		// FIXME: Returning err for now
-		return nil, errors.New("Failed to decode CSR PEM")
+		return nil, errors.New("failed to decode CSR PEM")
 	}
 
 	csrTemplate, err := x509.ParseCertificateRequest(block.Bytes)
