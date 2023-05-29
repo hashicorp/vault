@@ -263,6 +263,14 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 		}
 	}
 
+	// Check to make sure that we have a proper value for the cluster path which ACME requires
+	if config.Enabled {
+		_, err = getBasePathFromClusterConfig(sc)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	var warnings []string
 	// Lastly lets verify that the configuration is honored/invalidated by the public ACME env var.
 	isPublicAcmeDisabledByEnv, err := isPublicACMEDisabledByEnv()
