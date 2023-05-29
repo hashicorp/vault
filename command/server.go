@@ -1131,15 +1131,6 @@ func (c *ServerCommand) Run(args []string) int {
 	if envLicense := os.Getenv(EnvVaultLicense); envLicense != "" {
 		config.License = envLicense
 	}
-	if disableSSC := os.Getenv(DisableSSCTokens); disableSSC != "" {
-		var err error
-		config.DisableSSCTokens, err = strconv.ParseBool(disableSSC)
-		if err != nil {
-			c.UI.Warn(wrapAtLength("WARNING! failed to parse " +
-				"VAULT_DISABLE_SERVER_SIDE_CONSISTENT_TOKENS env var: " +
-				"setting to default value false"))
-		}
-	}
 
 	if err := server.ExperimentsFromEnvAndCLI(config, EnvVaultExperiments, c.flagExperiments); err != nil {
 		c.UI.Error(err.Error())
