@@ -206,8 +206,9 @@ func SubtestACMEIPAndDNS(t *testing.T, cluster *VaultPkiCluster) {
 	err = pki.UpdateRole("ip-dns-sans", map[string]interface{}{
 		"key_type":                    "any",
 		"allowed_domains":             "dadgarcorp.com",
-		"allow_subdomains":            "true",
-		"allow_wildcard_certificates": "false",
+		"allow_subdomains":            true,
+		"allow_wildcard_certificates": false,
+		"client_flag":                 false,
 	})
 	require.NoError(t, err, "failed creating role ip-dns-sans")
 
@@ -268,8 +269,9 @@ func SubtestACMEIPAndDNS(t *testing.T, cluster *VaultPkiCluster) {
 	// Perform an ACME lifecycle with an order that contains just an IP identifier
 	err = pki.UpdateRole("ip-sans", map[string]interface{}{
 		"key_type":            "any",
-		"use_csr_common_name": "false",
-		"require_cn":          "false",
+		"use_csr_common_name": false,
+		"require_cn":          false,
+		"client_flag":         false,
 	})
 	require.NoError(t, err, "failed creating role ip-sans")
 
@@ -429,6 +431,7 @@ func SubtestACMEWildcardDNS(t *testing.T, cluster *VaultPkiCluster) {
 		"allow_subdomains":            true,
 		"allow_bare_domains":          true,
 		"allow_wildcard_certificates": true,
+		"client_flag":                 false,
 	})
 	require.NoError(t, err, "failed creating role wildcard")
 	directoryUrl = basePath + "/roles/wildcard/acme/directory"
@@ -506,6 +509,7 @@ func SubtestACMEPreventsICADNS(t *testing.T, cluster *VaultPkiCluster) {
 		"allow_subdomains":            true,
 		"allow_bare_domains":          true,
 		"allow_wildcard_certificates": true,
+		"client_flag":                 false,
 	})
 	require.NoError(t, err, "failed creating role wildcard")
 	directoryUrl = basePath + "/roles/ica/acme/directory"
