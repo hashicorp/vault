@@ -61,7 +61,7 @@ locals {
       path    = "vault"
     })
   ]
-  audit_device_file_path = "/var/log/vault_audit.log" # do not change this, SELinux causes issues with files created in other directories
+  audit_device_file_path = "/var/log/vault_audit.log"
   vault_service_user     = "vault"
 }
 
@@ -208,6 +208,31 @@ resource "enos_vault_start" "followers" {
   manage_service = var.manage_service
   username       = local.vault_service_user
   unit_name      = "vault"
+
+  transport = {
+    ssh = {
+      host = var.target_hosts[each.value].public_ip
+    }
+  }
+}
+
+# We need to ensure that the directory used for audit logs is present and accessible to the vault
+# user on all nodes, since logging will only happen on the leader.
+resource "enos_remote_exec" "create_audit_log_dir" {
+  depends_on = [
+    enos_vault_start.followers,
+  ]
+  for_each = toset([
+    for idx, host in toset(local.instances) : idx
+    if var.enable_file_audit_device
+  ])
+
+  environment = {
+    LOG_FILE_PATH = local.audit_device_file_path
+    SERVICE_USER  = local.vault_service_user
+  }
+
+  scripts = [abspath("${path.module}/scripts/create_audit_log_dir.sh")]
 
   transport = {
     ssh = {
