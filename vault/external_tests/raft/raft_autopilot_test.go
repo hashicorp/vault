@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	autopilot "github.com/hashicorp/raft-autopilot"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
@@ -446,6 +447,7 @@ func TestRaft_Autopilot_DeadServerCleanup(t *testing.T) {
 	config.MaxTrailingLogs = 10
 	config.LastContactThreshold = 10 * time.Second
 	config.MinQuorum = 3
+	config.DisableUpgradeMigration = true
 
 	// We can't use Client.Sys().PutRaftAutopilotConfiguration(config) in OSS as disable_upgrade_migration isn't in OSS
 	b, err := json.Marshal(&config)
@@ -453,7 +455,9 @@ func TestRaft_Autopilot_DeadServerCleanup(t *testing.T) {
 	var m map[string]interface{}
 	err = json.Unmarshal(b, &m)
 	require.NoError(t, err)
-	delete(m, "disable_upgrade_migration")
+	if !constants.IsEnterprise {
+		delete(m, "disable_upgrade_migration")
+	}
 	_, err = leader.Client.Logical().Write("sys/storage/raft/autopilot/configuration", m)
 	require.NoError(t, err)
 
