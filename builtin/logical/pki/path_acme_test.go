@@ -459,11 +459,17 @@ func TestAcmeClusterPathNotConfigured(t *testing.T) {
 	cluster, client := setupTestPkiCluster(t)
 	defer cluster.Cleanup()
 
-	// Enable ACME but don't set a path.
-	_, err := client.Logical().WriteWithContext(context.Background(), "pki/config/acme", map[string]interface{}{
-		"enabled": true,
+	// Go sneaky, sneaky and update the acme configuration through sys/raw to bypass config/cluster path checks
+	pkiMount := findStorageMountUuid(t, client, "pki")
+	rawPath := path.Join("/sys/raw/logical/", pkiMount, storageAcmeConfig)
+	_, err := client.Logical().WriteWithContext(context.Background(), rawPath, map[string]interface{}{
+		"value": "{\"enabled\": true, \"eab_policy_name\": \"not-required\"}",
 	})
-	require.NoError(t, err)
+	require.NoError(t, err, "failed updating acme config through sys/raw")
+
+	// Force reload the plugin so we read the new config we slipped in.
+	_, err = client.Sys().ReloadPluginWithContext(context.Background(), &api.ReloadPluginInput{Mounts: []string{"pki"}})
+	require.NoError(t, err, "failed reloading plugin")
 
 	// Do not fill in the path option within the local cluster configuration
 	cases := []struct {
@@ -561,7 +567,12 @@ func TestAcmeConfigChecksPublicAcmeEnv(t *testing.T) {
 	cluster, client := setupTestPkiCluster(t)
 	defer cluster.Cleanup()
 
-	_, err := client.Logical().WriteWithContext(context.Background(), "pki/config/acme", map[string]interface{}{
+	_, err := client.Logical().WriteWithContext(context.Background(), "pki/config/cluster", map[string]interface{}{
+		"path": "https://dadgarcorp.com/v1/pki",
+	})
+	require.NoError(t, err)
+
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/config/acme", map[string]interface{}{
 		"enabled":    true,
 		"eab_policy": string(eabPolicyAlwaysRequired),
 	})
