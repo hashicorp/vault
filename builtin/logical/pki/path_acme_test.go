@@ -45,16 +45,16 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 		name      string
 		prefixUrl string
 	}{
-		{"root", ""},
-		{"role", "/roles/test-role"},
-		{"issuer", "/issuer/int-ca"},
-		{"issuer_role", "/issuer/int-ca/roles/test-role"},
+		{"root", "acme/"},
+		{"role", "roles/test-role/acme/"},
+		{"issuer", "issuer/int-ca/acme/"},
+		{"issuer_role", "issuer/int-ca/roles/test-role/acme/"},
 	}
 	testCtx := context.Background()
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			baseAcmeURL := "/v1/pki" + tc.prefixUrl + "/acme/"
+			baseAcmeURL := "/v1/pki/" + tc.prefixUrl
 			accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
 			require.NoError(t, err, "failed creating rsa key")
 
@@ -191,7 +191,7 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			require.Equal(t, "dns-01", domainAuth.Challenges[1].Type)
 			require.NotEmpty(t, domainAuth.Challenges[1].Token, "missing challenge token")
 
-			// Test the values for the wilcard authentication
+			// Test the values for the wildcard authentication
 			require.Equal(t, acme.StatusPending, wildcardAuth.Status)
 			require.Equal(t, "dns", wildcardAuth.Identifier.Type)
 			require.Equal(t, "localdomain", wildcardAuth.Identifier.Value) // Make sure we strip the *. in auth responses
@@ -204,8 +204,15 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			require.Equal(t, "dns-01", wildcardAuth.Challenges[0].Type)
 			require.NotEmpty(t, domainAuth.Challenges[0].Token, "missing challenge token")
 
-			// Load a challenge directly; this triggers validation to start.
+			// Make sure that getting a challenge does not start it.
 			challenge, err := acmeClient.GetChallenge(testCtx, domainAuth.Challenges[0].URI)
+			require.NoError(t, err, "failed to load challenge")
+			require.Equal(t, acme.StatusPending, challenge.Status)
+			require.True(t, challenge.Validated.IsZero(), "validated time should be 0 on challenge")
+			require.Equal(t, "http-01", challenge.Type)
+
+			// Accept a challenge; this triggers validation to start.
+			challenge, err = acmeClient.Accept(testCtx, domainAuth.Challenges[0])
 			require.NoError(t, err, "failed to load challenge")
 			require.Equal(t, acme.StatusProcessing, challenge.Status)
 			require.True(t, challenge.Validated.IsZero(), "validated time should be 0 on challenge")
@@ -322,76 +329,110 @@ func TestAcmeBasicWorkflowWithEab(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	baseAcmeURL := "/v1/pki/acme/"
-	accountKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	require.NoError(t, err, "failed creating ec key")
-
-	acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)
-
-	t.Logf("Testing discover on %s", baseAcmeURL)
-	discovery, err := acmeClient.Discover(testCtx)
-	require.NoError(t, err, "failed acme discovery call")
-	require.True(t, discovery.ExternalAccountRequired, "bad value for external account required in directory")
-
-	// Create new account without EAB, should fail
-	t.Logf("Testing register on %s", baseAcmeURL)
-	_, err = acmeClient.Register(testCtx, &acme.Account{}, func(tosURL string) bool { return true })
-	require.ErrorContains(t, err, "urn:ietf:params:acme:error:externalAccountRequired",
-		"expected failure creating an account without eab")
-
-	kid, eabKeyBytes := getEABKey(t, client)
-	acct := &acme.Account{
-		ExternalAccountBinding: &acme.ExternalAccountBinding{
-			KID: kid,
-			Key: eabKeyBytes,
-		},
+	cases := []struct {
+		name      string
+		prefixUrl string
+	}{
+		{"root", "acme/"},
+		{"role", "roles/test-role/acme/"},
+		{"issuer", "issuer/int-ca/acme/"},
+		{"issuer_role", "issuer/int-ca/roles/test-role/acme/"},
 	}
 
-	// Make sure we can list our key
-	resp, err := client.Logical().ListWithContext(context.Background(), "pki/acme/eab")
-	require.NoError(t, err, "failed to list eab tokens")
-	require.NotNil(t, resp, "list response for eab tokens should not be nil")
-	require.Contains(t, resp.Data, "keys")
-	require.Contains(t, resp.Data, "key_info")
-	require.Len(t, resp.Data["keys"], 1)
-	require.Contains(t, resp.Data["keys"], kid)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			baseAcmeURL := "/v1/pki/" + tc.prefixUrl
+			accountKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+			require.NoError(t, err, "failed creating ec key")
 
-	keyInfo := resp.Data["key_info"].(map[string]interface{})
-	require.Contains(t, keyInfo, kid)
+			acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)
 
-	infoForKid := keyInfo[kid].(map[string]interface{})
-	keyBits := infoForKid["key_bits"].(json.Number)
-	require.Equal(t, "256", keyBits.String())
-	require.Equal(t, "hs", infoForKid["key_type"])
+			t.Logf("Testing discover on %s", baseAcmeURL)
+			discovery, err := acmeClient.Discover(testCtx)
+			require.NoError(t, err, "failed acme discovery call")
+			require.True(t, discovery.ExternalAccountRequired, "bad value for external account required in directory")
 
-	// Create new account with EAB
-	t.Logf("Testing register on %s", baseAcmeURL)
-	_, err = acmeClient.Register(testCtx, acct, func(tosURL string) bool { return true })
-	require.NoError(t, err, "failed registering new account with eab")
+			// Create new account without EAB, should fail
+			t.Logf("Testing register on %s", baseAcmeURL)
+			_, err = acmeClient.Register(testCtx, &acme.Account{}, func(tosURL string) bool { return true })
+			require.ErrorContains(t, err, "urn:ietf:params:acme:error:externalAccountRequired",
+				"expected failure creating an account without eab")
 
-	// Make sure our EAB is no longer available
-	resp, err = client.Logical().ListWithContext(context.Background(), "pki/acme/eab")
-	require.NoError(t, err, "failed to list eab tokens")
-	require.Nil(t, resp, "list response for eab tokens should have been nil due to empty list")
+			// Test fetch, list, delete workflow
+			kid, _ := getEABKey(t, client, tc.prefixUrl)
+			resp, err := client.Logical().ListWithContext(testCtx, "pki/eab")
+			require.NoError(t, err, "failed to list eab tokens")
+			require.NotNil(t, resp, "list response for eab tokens should not be nil")
+			require.Contains(t, resp.Data, "keys")
+			require.Contains(t, resp.Data, "key_info")
+			require.Len(t, resp.Data["keys"], 1)
+			require.Contains(t, resp.Data["keys"], kid)
 
-	// Attempt to create another account with the same EAB as before -- should fail
-	accountKey2, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	require.NoError(t, err, "failed creating ec key")
+			_, err = client.Logical().DeleteWithContext(testCtx, "pki/eab/"+kid)
+			require.NoError(t, err, "failed to delete eab")
 
-	acmeClient2 := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey2)
-	acct2 := &acme.Account{
-		ExternalAccountBinding: &acme.ExternalAccountBinding{
-			KID: kid,
-			Key: eabKeyBytes,
-		},
+			// List eabs should return zero results
+			resp, err = client.Logical().ListWithContext(testCtx, "pki/eab")
+			require.NoError(t, err, "failed to list eab tokens")
+			require.Nil(t, resp, "list response for eab tokens should have been nil")
+
+			// fetch a new EAB
+			kid, eabKeyBytes := getEABKey(t, client, tc.prefixUrl)
+			acct := &acme.Account{
+				ExternalAccountBinding: &acme.ExternalAccountBinding{
+					KID: kid,
+					Key: eabKeyBytes,
+				},
+			}
+
+			// Make sure we can list our key
+			resp, err = client.Logical().ListWithContext(testCtx, "pki/eab")
+			require.NoError(t, err, "failed to list eab tokens")
+			require.NotNil(t, resp, "list response for eab tokens should not be nil")
+			require.Contains(t, resp.Data, "keys")
+			require.Contains(t, resp.Data, "key_info")
+			require.Len(t, resp.Data["keys"], 1)
+			require.Contains(t, resp.Data["keys"], kid)
+
+			keyInfo := resp.Data["key_info"].(map[string]interface{})
+			require.Contains(t, keyInfo, kid)
+
+			infoForKid := keyInfo[kid].(map[string]interface{})
+			keyBits := infoForKid["key_bits"].(json.Number)
+			require.Equal(t, "256", keyBits.String())
+			require.Equal(t, "hs", infoForKid["key_type"])
+			require.Equal(t, tc.prefixUrl, infoForKid["acme_directory"])
+
+			// Create new account with EAB
+			t.Logf("Testing register on %s", baseAcmeURL)
+			_, err = acmeClient.Register(testCtx, acct, func(tosURL string) bool { return true })
+			require.NoError(t, err, "failed registering new account with eab")
+
+			// Make sure our EAB is no longer available
+			resp, err = client.Logical().ListWithContext(context.Background(), "pki/eab")
+			require.NoError(t, err, "failed to list eab tokens")
+			require.Nil(t, resp, "list response for eab tokens should have been nil due to empty list")
+
+			// Attempt to create another account with the same EAB as before -- should fail
+			accountKey2, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+			require.NoError(t, err, "failed creating ec key")
+
+			acmeClient2 := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey2)
+			acct2 := &acme.Account{
+				ExternalAccountBinding: &acme.ExternalAccountBinding{
+					KID: kid,
+					Key: eabKeyBytes,
+				},
+			}
+
+			_, err = acmeClient2.Register(testCtx, acct2, func(tosURL string) bool { return true })
+			require.ErrorContains(t, err, "urn:ietf:params:acme:error:unauthorized", "should fail due to EAB re-use")
+
+			// We can lookup/find an existing account without EAB if we have the account key
+			_, err = acmeClient.GetReg(testCtx /* unused url */, "")
+			require.NoError(t, err, "expected to lookup existing account without eab")
+		})
 	}
-
-	_, err = acmeClient2.Register(testCtx, acct2, func(tosURL string) bool { return true })
-	require.ErrorContains(t, err, "urn:ietf:params:acme:error:unauthorized", "should fail due to EAB re-use")
-
-	// We can lookup/find an existing account without EAB if we have the account key
-	_, err = acmeClient.GetReg(testCtx /* unused url */, "")
-	require.NoError(t, err, "expected to lookup existing account without eab")
 }
 
 // TestAcmeNonce a basic test that will validate we get back a nonce with the proper status codes
@@ -531,6 +572,41 @@ func TestAcmeAccountsCrossingDirectoryPath(t *testing.T) {
 	require.Error(t, err, "successfully updated account when we should have failed due to different directory")
 	// We don't test for the specific error about using the wrong directory, as the golang library
 	// swallows the error we are sending back to a no account error
+}
+
+// TestAcmeEabCrossingDirectoryPath make sure that if an account attempts to use a different ACME
+// directory path that an EAB was created within we get an error.
+func TestAcmeEabCrossingDirectoryPath(t *testing.T) {
+	t.Parallel()
+	cluster, client, _ := setupAcmeBackend(t)
+	defer cluster.Cleanup()
+
+	// Enable EAB
+	_, err := client.Logical().WriteWithContext(context.Background(), "pki/config/acme", map[string]interface{}{
+		"enabled":    true,
+		"eab_policy": "always-required",
+	})
+	require.NoError(t, err)
+
+	baseAcmeURL := "/v1/pki/acme/"
+	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err, "failed creating rsa key")
+
+	testCtx := context.Background()
+	acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)
+
+	// fetch a new EAB
+	kid, eabKeyBytes := getEABKey(t, client, "roles/test-role/acme/")
+	acct := &acme.Account{
+		ExternalAccountBinding: &acme.ExternalAccountBinding{
+			KID: kid,
+			Key: eabKeyBytes,
+		},
+	}
+
+	// Create new account
+	_, err = acmeClient.Register(testCtx, acct, func(tosURL string) bool { return true })
+	require.ErrorContains(t, err, "failed to verify eab", "should have failed as EAB is for a different directory")
 }
 
 // TestAcmeDisabledWithEnvVar verifies if VAULT_DISABLE_PUBLIC_ACME is set that we completely
@@ -1003,8 +1079,8 @@ func getAcmeClientForCluster(t *testing.T, cluster *vault.TestCluster, baseUrl s
 	}
 }
 
-func getEABKey(t *testing.T, client *api.Client) (string, []byte) {
-	resp, err := client.Logical().WriteWithContext(ctx, "pki/acme/new-eab", map[string]interface{}{})
+func getEABKey(t *testing.T, client *api.Client, baseUrl string) (string, []byte) {
+	resp, err := client.Logical().WriteWithContext(ctx, path.Join("pki/", baseUrl, "/new-eab"), map[string]interface{}{})
 	require.NoError(t, err, "failed getting eab key")
 	require.NotNil(t, resp, "eab key returned nil response")
 	require.NotEmpty(t, resp.Data["id"], "eab key response missing id field")
@@ -1014,6 +1090,13 @@ func getEABKey(t *testing.T, client *api.Client) (string, []byte) {
 	base64Key := resp.Data["key"].(string)
 	privateKeyBytes, err := base64.RawURLEncoding.DecodeString(base64Key)
 	require.NoError(t, err, "failed base 64 decoding eab key response")
+
+	require.Equal(t, "hs", resp.Data["key_type"], "eab key_type field mis-match")
+	require.Equal(t, json.Number("256"), resp.Data["key_bits"], "eab key_bits field mis-match")
+	require.Equal(t, baseUrl, resp.Data["acme_directory"], "eab acme_directory field mis-match")
+	require.NotEmpty(t, resp.Data["created_on"], "empty created_on field")
+	_, err = time.Parse(time.RFC3339, resp.Data["created_on"].(string))
+	require.NoError(t, err, "failed parsing eab created_on field")
 
 	return kid, privateKeyBytes
 }
