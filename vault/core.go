@@ -2542,37 +2542,52 @@ func (c *Core) preSeal() error {
 	}
 	var result error
 
+	c.logger.Debug("stopping forwarding")
 	c.stopForwarding()
 
+	c.logger.Debug("stopping raft active node")
 	c.stopRaftActiveNode()
 
 	c.clusterParamsLock.Lock()
+	c.logger.Debug("stopping replication")
 	if err := stopReplication(c); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error stopping replication: %w", err))
 	}
 	c.clusterParamsLock.Unlock()
 
+	c.logger.Trace("stopping audit devices")
 	if err := c.teardownAudits(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down audits: %w", err))
 	}
+	c.logger.Trace("stopping expiration manager")
 	if err := c.stopExpiration(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error stopping expiration: %w", err))
 	}
+	c.logger.Trace("stopping activity log")
 	c.stopActivityLog()
+
 	// Clean up the censusAgent on seal
+	c.logger.Trace("stopping census agent")
 	if err := c.teardownCensusAgent(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down reporting agent: %w", err))
 	}
 
+	c.logger.Trace("stopping credential backend")
 	if err := c.teardownCredentials(context.Background()); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down credentials: %w", err))
 	}
+
+	c.logger.Trace("stopping policy store")
 	if err := c.teardownPolicyStore(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down policy store: %w", err))
 	}
+
+	c.logger.Trace("stopping revocation manager")
 	if err := c.stopRollback(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error stopping rollback: %w", err))
 	}
+
+	c.logger.Trace("unloading mounts")
 	if err := c.unloadMounts(context.Background()); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error unloading mounts: %w", err))
 	}
@@ -2586,6 +2601,7 @@ func (c *Core) preSeal() error {
 		c.autoRotateCancel = nil
 	}
 
+	c.logger.Trace("stopping seal healthchecks")
 	if seal, ok := c.seal.(*autoSeal); ok {
 		seal.StopHealthCheck()
 	}
@@ -2593,10 +2609,13 @@ func (c *Core) preSeal() error {
 	if c.systemBackend != nil && c.systemBackend.mfaBackend != nil {
 		c.systemBackend.mfaBackend.usedCodes = nil
 	}
+
+	c.logger.Trace("stopping MFA")
 	if err := c.teardownLoginMFA(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down login MFA, error: %w", err))
 	}
 
+	c.logger.Trace("pre-sealing physical storage")
 	preSealPhysical(c)
 
 	c.logger.Info("pre-seal teardown complete")
