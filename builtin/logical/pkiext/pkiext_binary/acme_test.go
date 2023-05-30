@@ -208,7 +208,6 @@ func SubtestACMEIPAndDNS(t *testing.T, cluster *VaultPkiCluster) {
 		"allowed_domains":             "dadgarcorp.com",
 		"allow_subdomains":            true,
 		"allow_wildcard_certificates": false,
-		"client_flag":                 false,
 	})
 	require.NoError(t, err, "failed creating role ip-dns-sans")
 
