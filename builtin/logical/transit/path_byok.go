@@ -31,7 +31,7 @@ func (b *backend) pathBYOKExportKeys() *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"destination": {
 				Type:        framework.TypeString,
-				Description: "Destination key to export to; usually the public key of another Transit instance.",
+				Description: "Destination key to export to; usually the public wrapping key of another Transit instance.",
 			},
 			"source": {
 				Type:        framework.TypeString,
