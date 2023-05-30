@@ -122,7 +122,7 @@ require (
 	github.com/hashicorp/raft-boltdb/v2 v2.0.0-20210421194847-a7e34179d62c
 	github.com/hashicorp/raft-snapshot v1.0.4
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.15.0
-	github.com/hashicorp/vault-plugin-auth-azure v0.13.0
+	github.com/hashicorp/vault-plugin-auth-azure v0.15.0
 	github.com/hashicorp/vault-plugin-auth-centrify v0.15.1
 	github.com/hashicorp/vault-plugin-auth-cf v0.15.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.16.0
@@ -238,12 +238,12 @@ require (
 	github.com/99designs/keyring v1.2.2 // indirect
 	github.com/Azure/azure-pipeline-go v0.2.3 // indirect
 	github.com/Azure/azure-sdk-for-go v67.2.0+incompatible // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.3.1 // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.2.1 // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/internal v1.1.2 // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v4 v4.1.0 // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi v1.0.0 // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v1.0.0 // indirect
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.6.0 // indirect
+	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.3.0 // indirect
+	github.com/Azure/azure-sdk-for-go/sdk/internal v1.3.0 // indirect
+	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v4 v4.2.1 // indirect
+	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi v1.1.0 // indirect
+	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v1.1.1 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.12 // indirect
@@ -254,7 +254,7 @@ require (
 	github.com/Azure/go-autorest/logger v0.2.1 // indirect
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
 	github.com/Azure/go-ntlmssp v0.0.0-20221128193559-754e69321358 // indirect
-	github.com/AzureAD/microsoft-authentication-library-for-go v0.8.1 // indirect
+	github.com/AzureAD/microsoft-authentication-library-for-go v1.0.0 // indirect
 	github.com/BurntSushi/toml v1.2.1 // indirect
 	github.com/DataDog/datadog-go v3.2.0+incompatible // indirect
 	github.com/Jeffail/gabs v1.1.1 // indirect
@@ -422,7 +422,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/mongodb-forks/digest v1.0.4 // indirect
-	github.com/montanaflynn/stats v0.6.6 // indirect
+	github.com/montanaflynn/stats v0.7.0 // indirect
 	github.com/mtibben/percent v0.2.1 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/nicolai86/scaleway-sdk v1.10.2-0.20180628010248-798f60e20bb2 // indirect
