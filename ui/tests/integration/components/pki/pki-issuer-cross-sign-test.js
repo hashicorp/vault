@@ -343,4 +343,39 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
         .hasText(this.testInputs[field.key], `${field.key} displays correct value`);
     }
   });
+
+  test('it returns an error when attempting to self-cross-sign', async function (assert) {
+    assert.expect(7);
+    this.testInputs = {
+      intermediateMount: this.backend,
+      intermediateIssuer: this.parentIssuerData.issuer_name,
+      newCrossSignedIssuer: this.newIssuerData.issuer_name,
+    };
+    this.server.get(`/${this.backend}/issuer/${this.parentIssuerData.issuer_name}`, () => {
+      return { data: this.parentIssuerData };
+    });
+
+    await render(hbs`<PkiIssuerCrossSign @parentIssuer={{this.parentIssuerModel}} /> `, {
+      owner: this.engine,
+    });
+    // fill out form and submit
+    for (const field of FIELDS) {
+      await fillIn(SELECTORS.objectListInput(field.key), this.testInputs[field.key]);
+    }
+    await click(SELECTORS.submitButton);
+    assert.dom(SELECTORS.statusCount).hasText('Cross-signing complete (0 successful, 1 error)');
+    assert
+      .dom(`${SELECTORS.signedIssuerRow()} [data-test-icon="alert-circle-fill"]`)
+      .exists('row has failure icon');
+    assert.dom('[data-test-alert-banner="alert"] .message-title').hasText('Cross-sign failed');
+    assert
+      .dom('[data-test-alert-banner="alert"] .alert-banner-message-body')
+      .hasText('Cross-signing a root issuer with itself must be performed manually using the CLI.');
+
+    for (const field of FIELDS) {
+      assert
+        .dom(`${SELECTORS.signedIssuerCol(field.key)}`)
+        .hasText(this.testInputs[field.key], `${field.key} displays correct value`);
+    }
+  });
 });
