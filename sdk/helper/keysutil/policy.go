@@ -352,6 +352,19 @@ func LoadPolicy(ctx context.Context, s logical.Storage, path string) (*Policy, e
 		return nil, err
 	}
 
+	// Migrate RSA private keys to include their private counterpart. This lets
+	// us reference RSAPublicKey whenever we need to, without necessarily
+	// needing the private key handy, synchronizing the behavior with EC and
+	// Ed25519 key pairs.
+	switch policy.Type {
+	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
+		for _, entry := range policy.Keys {
+			if entry.RSAPublicKey == nil && entry.RSAKey != nil {
+				entry.RSAPublicKey = entry.RSAKey.Public().(*rsa.PublicKey)
+			}
+		}
+	}
+
 	policy.l = new(sync.RWMutex)
 
 	return &policy, nil
@@ -1447,6 +1460,18 @@ func (p *Policy) ImportPublicOrPrivate(ctx context.Context, storage logical.Stor
 		DeprecatedCreationTime: now.Unix(),
 	}
 
+	// Before we insert this entry, check if the latest version is incomplete
+	// and this entry matches the current version; if so, return without
+	// updating to the next version.
+	if p.LatestVersion > 0 {
+		latestKey := p.Keys[strconv.Itoa(p.LatestVersion)]
+		if latestKey.IsPrivateKeyMissing() && isPrivateKey {
+			if err := p.ImportPrivateKeyForVersion(ctx, storage, p.LatestVersion, key); err == nil {
+				return nil
+			}
+		}
+	}
+
 	if p.Type != KeyType_HMAC {
 		hmacKey, err := uuid.GenerateRandomBytesWithReader(32, randReader)
 		if err != nil {
@@ -2136,15 +2161,24 @@ func (p *Policy) ImportPrivateKeyForVersion(ctx context.Context, storage logical
 		ecdsaKey := parsedPrivateKey.(*ecdsa.PrivateKey)
 		pemBlock, _ := pem.Decode([]byte(keyEntry.FormattedPublicKey))
 		publicKey, err := x509.ParsePKIXPublicKey(pemBlock.Bytes)
-		if err != nil {
+		if err != nil || publicKey == nil {
 			return fmt.Errorf("failed to parse key entry public key: %v", err)
 		}
-		if !publicKey.(*ecdsa.PublicKey).Equal(ecdsaKey.PublicKey) {
+		if !publicKey.(*ecdsa.PublicKey).Equal(&ecdsaKey.PublicKey) {
 			return fmt.Errorf("cannot import key, key pair does not match")
 		}
 	case *rsa.PrivateKey:
 		rsaKey := parsedPrivateKey.(*rsa.PrivateKey)
 		if !rsaKey.PublicKey.Equal(keyEntry.RSAPublicKey) {
+			return fmt.Errorf("cannot import key, key pair does not match")
+		}
+	case ed25519.PrivateKey:
+		ed25519Key := parsedPrivateKey.(ed25519.PrivateKey)
+		publicKey, err := base64.StdEncoding.DecodeString(keyEntry.FormattedPublicKey)
+		if err != nil {
+			return fmt.Errorf("failed to parse key entry public key: %v", err)
+		}
+		if !ed25519.PublicKey(publicKey).Equal(ed25519Key.Public()) {
 			return fmt.Errorf("cannot import key, key pair does not match")
 		}
 	}
@@ -2247,7 +2281,7 @@ func (ke *KeyEntry) parseFromKey(PolKeyType KeyType, parsedKey any) error {
 				return fmt.Errorf("invalid key size: expected %d bytes, got %d bytes", keyBytes, rsaKey.Size())
 			}
 			ke.RSAKey = rsaKey
-			ke.RSAPublicKey = nil
+			ke.RSAPublicKey = rsaKey.Public().(*rsa.PublicKey)
 		} else {
 			rsaKey := parsedKey.(*rsa.PublicKey)
 			if rsaKey.Size() != keyBytes {
