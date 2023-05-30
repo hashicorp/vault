@@ -1,0 +1,3 @@
+```release-note:bug
+core: Fix writes to readonly storage on performance standbys when user lockout feature is enabled.
+```

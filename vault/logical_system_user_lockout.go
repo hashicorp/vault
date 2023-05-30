@@ -32,6 +32,8 @@ func unlockUser(ctx context.Context, core *Core, mountAccessor string, aliasName
 	lockedUserStoragePath := coreLockedUsersPath + ns.ID + "/" + mountAccessor + "/" + aliasName
 
 	// remove entry for locked user from storage
+	// if read only error, the error is handled by handleError in logical_system.go
+	// this will be forwarded to the active node
 	if err := core.barrier.Delete(ctx, lockedUserStoragePath); err != nil {
 		return err
 	}
@@ -41,7 +43,7 @@ func unlockUser(ctx context.Context, core *Core, mountAccessor string, aliasName
 		mountAccessor: mountAccessor,
 	}
 
-	// remove entry for locked user from userFailedLoginInfo map
+	// remove entry for locked user from userFailedLoginInfo map and storage
 	if err := updateUserFailedLoginInfo(ctx, core, loginUserInfoKey, nil, true); err != nil {
 		return err
 	}
