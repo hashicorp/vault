@@ -191,7 +191,7 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			require.Equal(t, "dns-01", domainAuth.Challenges[1].Type)
 			require.NotEmpty(t, domainAuth.Challenges[1].Token, "missing challenge token")
 
-			// Test the values for the wilcard authentication
+			// Test the values for the wildcard authentication
 			require.Equal(t, acme.StatusPending, wildcardAuth.Status)
 			require.Equal(t, "dns", wildcardAuth.Identifier.Type)
 			require.Equal(t, "localdomain", wildcardAuth.Identifier.Value) // Make sure we strip the *. in auth responses
@@ -204,8 +204,15 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			require.Equal(t, "dns-01", wildcardAuth.Challenges[0].Type)
 			require.NotEmpty(t, domainAuth.Challenges[0].Token, "missing challenge token")
 
-			// Load a challenge directly; this triggers validation to start.
+			// Make sure that getting a challenge does not start it.
 			challenge, err := acmeClient.GetChallenge(testCtx, domainAuth.Challenges[0].URI)
+			require.NoError(t, err, "failed to load challenge")
+			require.Equal(t, acme.StatusPending, challenge.Status)
+			require.True(t, challenge.Validated.IsZero(), "validated time should be 0 on challenge")
+			require.Equal(t, "http-01", challenge.Type)
+
+			// Accept a challenge; this triggers validation to start.
+			challenge, err = acmeClient.Accept(testCtx, domainAuth.Challenges[0])
 			require.NoError(t, err, "failed to load challenge")
 			require.Equal(t, acme.StatusProcessing, challenge.Status)
 			require.True(t, challenge.Validated.IsZero(), "validated time should be 0 on challenge")
