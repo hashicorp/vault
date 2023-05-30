@@ -128,13 +128,17 @@ func (e *ErrorResponse) Marshal() (*logical.Response, error) {
 }
 
 func FindType(given error) (err error, id string, code int, found bool) {
+	matchedError := false
 	for err, id = range errIdMappings {
 		if errors.Is(given, err) {
+			matchedError = true
 			break
 		}
 	}
 
-	if err == nil {
+	// If the given error was not matched from one of the standard ACME errors
+	// make this error, force ErrServerInternal
+	if !matchedError {
 		err = ErrServerInternal
 		id = errIdMappings[err]
 	}
