@@ -1529,7 +1529,7 @@ func (b *backend) doTidyAcme(ctx context.Context, req *logical.Request, logger h
 	b.tidyStatus.acmeAccountsCount = uint(len(thumbprints))
 	b.tidyStatusLock.Unlock()
 
-	baseUrl, _, err := getAcmeBaseUrl(sc, req.Path)
+	baseUrl, _, err := getAcmeBaseUrl(sc, req)
 	if err != nil {
 		return err
 	}
