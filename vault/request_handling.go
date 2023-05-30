@@ -2333,7 +2333,7 @@ func (c *Core) DecodeSSCToken(token string) (string, error) {
 	if !IsSSCToken(token) {
 		return token, nil
 	}
-	tok, err := c.DecodeSSCTokenInternal(token)
+	tok, err := DecodeSSCTokenInternal(token)
 	if err != nil {
 		return "", err
 	}
@@ -2342,7 +2342,7 @@ func (c *Core) DecodeSSCToken(token string) (string, error) {
 
 // DecodeSSCTokenInternal is a helper used to get the inner part of a SSC token without
 // checking the token signature or the WAL index.
-func (c *Core) DecodeSSCTokenInternal(token string) (*tokens.Token, error) {
+func DecodeSSCTokenInternal(token string) (*tokens.Token, error) {
 	signedToken := &tokens.SignedToken{}
 
 	// Skip batch and old style service tokens. These can have the prefix "b.",
