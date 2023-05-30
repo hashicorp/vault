@@ -69,7 +69,7 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
-	github.com/google/tink/go v1.6.1
+	github.com/google/tink/go v1.7.0
 	github.com/hashicorp/cap v0.3.0
 	github.com/hashicorp/consul-template v0.32.0
 	github.com/hashicorp/consul/api v1.20.0
