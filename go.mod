@@ -49,7 +49,6 @@ require (
 	github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
 	github.com/denisenkom/go-mssqldb v0.12.2
-	github.com/docker/go-connections v0.4.0
 	github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.15.0
@@ -132,7 +131,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-oci v0.14.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.9.2
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.13.2
-	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.9.0
+	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.10.0
 	github.com/hashicorp/vault-plugin-database-redis v0.2.1
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.2.1
 	github.com/hashicorp/vault-plugin-database-snowflake v0.8.0
@@ -151,7 +150,7 @@ require (
 	github.com/hashicorp/vault/api v1.9.2
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
-	github.com/hashicorp/vault/sdk v0.9.1
+	github.com/hashicorp/vault/sdk v0.9.2-0.20230530190758-08ee474850e0
 	github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230201201504-b741fa893d77
 	github.com/influxdata/influxdb1-client v0.0.0-20200827194710-b269163b24ab
 	github.com/jackc/pgx/v4 v4.15.0
@@ -193,13 +192,13 @@ require (
 	github.com/sasha-s/go-deadlock v0.2.0
 	github.com/sethvargo/go-limiter v0.7.1
 	github.com/shirou/gopsutil/v3 v3.22.6
-	github.com/stretchr/testify v1.8.3
+	github.com/stretchr/testify v1.8.4
 	go.etcd.io/bbolt v1.3.7
 	go.etcd.io/etcd/client/pkg/v3 v3.5.7
 	go.etcd.io/etcd/client/v2 v2.305.5
 	go.etcd.io/etcd/client/v3 v3.5.7
-	go.mongodb.org/atlas v0.25.0
-	go.mongodb.org/mongo-driver v1.11.3
+	go.mongodb.org/atlas v0.28.0
+	go.mongodb.org/mongo-driver v1.11.6
 	go.opentelemetry.io/otel v1.14.0
 	go.opentelemetry.io/otel/sdk v1.14.0
 	go.opentelemetry.io/otel/trace v1.14.0
@@ -320,6 +319,7 @@ require (
 	github.com/docker/cli v20.10.20+incompatible // indirect
 	github.com/docker/distribution v2.8.2+incompatible // indirect
 	github.com/docker/docker v23.0.4+incompatible // indirect
+	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 // indirect
 	github.com/dvsekhvalnov/jose2go v1.5.0 // indirect
