@@ -269,5 +269,10 @@ func verifyEabPayload(acmeState *acmeState, ac *acmeContext, outer *jwsCtx, expe
 		return nil, fmt.Errorf("eab payload does not match outer JWK key: %w", ErrMalformed)
 	}
 
+	if eabEntry.AcmeDirectory != ac.acmeDirectory {
+		// This EAB was not created for this specific ACME directory, reject it
+		return nil, fmt.Errorf("%w: failed to verify eab", ErrUnauthorized)
+	}
+
 	return eabEntry, nil
 }
