@@ -142,16 +142,10 @@ with the wrapping key and then concatenated with the import key, wrapped by the 
 				Description: `The hash function used as a random oracle in the OAEP wrapping of the user-generated,
 ephemeral AES key. Can be one of "SHA1", "SHA224", "SHA256" (default), "SHA384", or "SHA512"`,
 			},
-			"bump_version": {
-				Type:    framework.TypeBool,
-				Default: true,
-				Description: `By default, each operation will create a new key version.
-If set to 'false', will try to update the 'Latest' version of the key, unless changed in the "version" field.`,
-			},
 			"version": {
 				Type: framework.TypeInt,
-				Description: `Key version to be updated, if left empty 'Latest' version will be updated.
-If "bump_version" is set to 'true', this field is ignored.`,
+				Description: `Key version to be updated, if left empty, a new version will be created unless
+a private key is specified and the 'Latest' key is missing a private key.`,
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -251,7 +245,6 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 
 func (b *backend) pathImportVersionWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-	bumpVersion := d.Get("bump_version").(bool)
 
 	isCiphertextSet, err := checkKeyFieldsSet(d)
 	if err != nil {
@@ -283,26 +276,24 @@ func (b *backend) pathImportVersionWrite(ctx context.Context, req *logical.Reque
 	}
 	defer p.Unlock()
 
-	// Get param version if set else LatestVersion
-	versionToUpdate := p.LatestVersion
-	if version, ok := d.Raw["version"]; ok {
-		versionToUpdate = version.(int)
-	}
-
 	key, resp, err := b.extractKeyFromFields(ctx, req, d, p.Type, isCiphertextSet)
 	if err != nil {
 		return resp, err
 	}
 
-	if bumpVersion {
-		err = p.ImportPublicOrPrivate(ctx, req.Storage, key, isCiphertextSet, b.GetRandomReader())
-	} else {
+	// Get param version if set else import a new version.
+	if version, ok := d.GetOk("version"); ok {
+		versionToUpdate := version.(int)
+
 		// Check if given version can be updated given input
-		err := p.KeyVersionCanBeUpdated(versionToUpdate, isCiphertextSet)
+		err = p.KeyVersionCanBeUpdated(versionToUpdate, isCiphertextSet)
 		if err == nil {
 			err = p.ImportPrivateKeyForVersion(ctx, req.Storage, versionToUpdate, key)
 		}
+	} else {
+		err = p.ImportPublicOrPrivate(ctx, req.Storage, key, isCiphertextSet, b.GetRandomReader())
 	}
+
 	if err != nil {
 		return nil, err
 	}
