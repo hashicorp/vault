@@ -685,7 +685,267 @@ func TestTransit_ImportVersion(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to update key: %s", err)
 			}
-		})
+		},
+	)
+}
+
+func TestTransit_ImportVersionWithPublicKeys(t *testing.T) {
+	generateKeys(t)
+	b, s := createBackendWithStorage(t)
+
+	// Retrieve public wrapping key
+	wrappingKey, err := b.getWrappingKey(context.Background(), s)
+	if err != nil || wrappingKey == nil {
+		t.Fatalf("failed to retrieve public wrapping key: %s", err)
+	}
+	privWrappingKey := wrappingKey.Keys[strconv.Itoa(wrappingKey.LatestVersion)].RSAKey
+	pubWrappingKey := &privWrappingKey.PublicKey
+
+	// Import a public key then import private should give us one key
+	t.Run(
+		"import rsa public key and update version with private counterpart",
+		func(t *testing.T) {
+			keyType := "ecdsa-p256"
+			keyID, err := uuid.GenerateUUID()
+			if err != nil {
+				t.Fatalf("failed to generate key ID: %s", err)
+			}
+
+			// Get keys
+			privateKey := getKey(t, keyType)
+			importBlob := wrapTargetKeyForImport(t, pubWrappingKey, privateKey, keyType, "SHA256")
+			publicKeyBytes, err := getPublicKey(privateKey, keyType)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Import EC public key
+			req := &logical.Request{
+				Storage:   s,
+				Operation: logical.UpdateOperation,
+				Path:      fmt.Sprintf("keys/%s/import", keyID),
+				Data: map[string]interface{}{
+					"public_key": publicKeyBytes,
+					"type":       keyType,
+				},
+			}
+			_, err = b.HandleRequest(context.Background(), req)
+			if err != nil {
+				t.Fatalf("failed to import public key: %s", err)
+			}
+
+			// Update version - import EC private key
+			req = &logical.Request{
+				Storage:   s,
+				Operation: logical.UpdateOperation,
+				Path:      fmt.Sprintf("keys/%s/import_version", keyID),
+				Data: map[string]interface{}{
+					"ciphertext": importBlob,
+				},
+			}
+			_, err = b.HandleRequest(context.Background(), req)
+			if err != nil {
+				t.Fatalf("failed to update key: %s", err)
+			}
+
+			// We should have one key on export
+			req = &logical.Request{
+				Storage:   s,
+				Operation: logical.ReadOperation,
+				Path:      fmt.Sprintf("export/public-key/%s", keyID),
+			}
+			resp, err := b.HandleRequest(context.Background(), req)
+			if err != nil {
+				t.Fatalf("failed to export key: %s", err)
+			}
+
+			if len(resp.Data["keys"].(map[string]string)) != 1 {
+				t.Fatalf("expected 1 key but got %v: %v", len(resp.Data["keys"].(map[string]string)), resp)
+			}
+		},
+	)
+
+	// Import a private and then public should give us two keys
+	t.Run(
+		"import ec private key and then its public counterpart",
+		func(t *testing.T) {
+			keyType := "ecdsa-p256"
+			keyID, err := uuid.GenerateUUID()
+			if err != nil {
+				t.Fatalf("failed to generate key ID: %s", err)
+			}
+
+			// Get keys
+			privateKey := getKey(t, keyType)
+			importBlob := wrapTargetKeyForImport(t, pubWrappingKey, privateKey, keyType, "SHA256")
+			publicKeyBytes, err := getPublicKey(privateKey, keyType)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Import EC private key
+			req := &logical.Request{
+				Storage:   s,
+				Operation: logical.UpdateOperation,
+				Path:      fmt.Sprintf("keys/%s/import", keyID),
+				Data: map[string]interface{}{
+					"ciphertext": importBlob,
+					"type":       keyType,
+				},
+			}
+			_, err = b.HandleRequest(context.Background(), req)
+			if err != nil {
+				t.Fatalf("failed to update key: %s", err)
+			}
+
+			// Update version - Import EC public key
+			req = &logical.Request{
+				Storage:   s,
+				Operation: logical.UpdateOperation,
+				Path:      fmt.Sprintf("keys/%s/import_version", keyID),
+				Data: map[string]interface{}{
+					"public_key": publicKeyBytes,
+				},
+			}
+			_, err = b.HandleRequest(context.Background(), req)
+			if err != nil {
+				t.Fatalf("failed to import public key: %s", err)
+			}
+
+			// We should have two keys on export
+			req = &logical.Request{
+				Storage:   s,
+				Operation: logical.ReadOperation,
+				Path:      fmt.Sprintf("export/public-key/%s", keyID),
+			}
+			resp, err := b.HandleRequest(context.Background(), req)
+			if err != nil {
+				t.Fatalf("failed to export key: %s", err)
+			}
+
+			if len(resp.Data["keys"].(map[string]string)) != 2 {
+				t.Fatalf("expected 2 key but got %v: %v", len(resp.Data["keys"].(map[string]string)), resp)
+			}
+		},
+	)
+
+	// Import a public and another public should allow us to insert two private key.
+	t.Run(
+		"import two public keys and two private keys in reverse order",
+		func(t *testing.T) {
+			keyType := "ecdsa-p256"
+			keyID, err := uuid.GenerateUUID()
+			if err != nil {
+				t.Fatalf("failed to generate key ID: %s", err)
+			}
+
+			// Get keys
+			privateKey1 := getKey(t, keyType)
+			importBlob1 := wrapTargetKeyForImport(t, pubWrappingKey, privateKey1, keyType, "SHA256")
+			publicKeyBytes1, err := getPublicKey(privateKey1, keyType)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			privateKey2, err := generateKey(keyType)
+			if err != nil {
+				t.Fatal(err)
+			}
+			importBlob2 := wrapTargetKeyForImport(t, pubWrappingKey, privateKey2, keyType, "SHA256")
+			publicKeyBytes2, err := getPublicKey(privateKey2, keyType)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Import EC public key
+			req := &logical.Request{
+				Storage:   s,
+				Operation: logical.UpdateOperation,
+				Path:      fmt.Sprintf("keys/%s/import", keyID),
+				Data: map[string]interface{}{
+					"public_key": publicKeyBytes1,
+					"type":       keyType,
+				},
+			}
+			_, err = b.HandleRequest(context.Background(), req)
+			if err != nil {
+				t.Fatalf("failed to update key: %s", err)
+			}
+
+			// Update version - Import second EC public key
+			req = &logical.Request{
+				Storage:   s,
+				Operation: logical.UpdateOperation,
+				Path:      fmt.Sprintf("keys/%s/import_version", keyID),
+				Data: map[string]interface{}{
+					"public_key": publicKeyBytes2,
+				},
+			}
+			_, err = b.HandleRequest(context.Background(), req)
+			if err != nil {
+				t.Fatalf("failed to import public key: %s", err)
+			}
+
+			// We should have two keys on export
+			req = &logical.Request{
+				Storage:   s,
+				Operation: logical.ReadOperation,
+				Path:      fmt.Sprintf("export/public-key/%s", keyID),
+			}
+			resp, err := b.HandleRequest(context.Background(), req)
+			if err != nil {
+				t.Fatalf("failed to export key: %s", err)
+			}
+
+			if len(resp.Data["keys"].(map[string]string)) != 2 {
+				t.Fatalf("expected 2 key but got %v: %v", len(resp.Data["keys"].(map[string]string)), resp)
+			}
+
+			// Import second private key first, with no options.
+			req = &logical.Request{
+				Storage:   s,
+				Operation: logical.UpdateOperation,
+				Path:      fmt.Sprintf("keys/%s/import_version", keyID),
+				Data: map[string]interface{}{
+					"ciphertext": importBlob2,
+				},
+			}
+			_, err = b.HandleRequest(context.Background(), req)
+			if err != nil {
+				t.Fatalf("failed to import private key: %s", err)
+			}
+
+			// Import first private key second, with a version
+			req = &logical.Request{
+				Storage:   s,
+				Operation: logical.UpdateOperation,
+				Path:      fmt.Sprintf("keys/%s/import_version", keyID),
+				Data: map[string]interface{}{
+					"ciphertext": importBlob1,
+					"version":    1,
+				},
+			}
+			_, err = b.HandleRequest(context.Background(), req)
+			if err != nil {
+				t.Fatalf("failed to import private key: %s", err)
+			}
+
+			// We should still have two keys on export
+			req = &logical.Request{
+				Storage:   s,
+				Operation: logical.ReadOperation,
+				Path:      fmt.Sprintf("export/public-key/%s", keyID),
+			}
+			resp, err = b.HandleRequest(context.Background(), req)
+			if err != nil {
+				t.Fatalf("failed to export key: %s", err)
+			}
+
+			if len(resp.Data["keys"].(map[string]string)) != 2 {
+				t.Fatalf("expected 2 key but got %v: %v", len(resp.Data["keys"].(map[string]string)), resp)
+			}
+		},
+	)
 }
 
 func wrapTargetKeyForImport(t *testing.T, wrappingKey *rsa.PublicKey, targetKey interface{}, targetKeyType string, hashFnName string) string {
