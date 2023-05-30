@@ -11,11 +11,11 @@
 import ApplicationAdapter from 'vault/adapters/application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
-export default class KubernetesConfigAdapter extends ApplicationAdapter {
+export default class SecretsEnginePathAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
   // define path value in extending class or pass into method directly
-  getURL(backend, path) {
+  _getURL(backend, path) {
     return `${this.buildURL()}/${encodePath(backend)}/${path || this.path}`;
   }
   urlForUpdateRecord(name, modelName, snapshot) {

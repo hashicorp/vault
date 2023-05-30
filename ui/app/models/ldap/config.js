@@ -8,8 +8,8 @@ import { withFormFields } from 'vault/decorators/model-form-fields';
 import { withModelValidations } from 'vault/decorators/model-validations';
 
 const validations = {
-  binddn: [{ type: 'presence', message: 'Administrator Distinguished Name is required.' }],
-  bindpass: [{ type: 'presence', message: 'Administrator Password is required.' }],
+  binddn: [{ type: 'presence', message: 'Administrator distinguished name is required.' }],
+  bindpass: [{ type: 'presence', message: 'Administrator password is required.' }],
 };
 const formGroups = [
   { default: ['binddn', 'bindpass', 'url', 'password_policy'] },
@@ -55,7 +55,7 @@ export default class KubernetesConfigModel extends Model {
 
   @attr('boolean', {
     label: 'Start TLS',
-    subText: 'If checked, or address contains “ldaps://”, creates an encrypted connection with LDAP',
+    subText: 'If checked, or address contains “ldaps://”, creates an encrypted connection with LDAP.',
   })
   starttls;
 
@@ -107,18 +107,18 @@ export default class KubernetesConfigModel extends Model {
   @attr('number', {
     editType: 'optionalText',
     label: 'Connection timeout',
-    subText: 'Specify the connection timeout length in seconds',
-    defaultSubText: 'Vault will use the default of 30 seconds',
-    defaultShown: 'Default 30 seconds',
+    subText: 'Specify the connection timeout length in seconds.',
+    defaultSubText: 'Vault will use the default of 30 seconds.',
+    defaultShown: 'Default 30 seconds.',
   })
   connection_timeout;
 
   @attr('number', {
     editType: 'optionalText',
     label: 'Request timeout',
-    subText: 'Specify the connection timeout length in seconds',
-    defaultSubText: 'Vault will use the default of 90 seconds',
-    defaultShown: 'Default 90 seconds',
+    subText: 'Specify the connection timeout length in seconds.',
+    defaultSubText: 'Vault will use the default of 90 seconds.',
+    defaultShown: 'Default 90 seconds.',
   })
   request_timeout;
 }
