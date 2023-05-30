@@ -19,16 +19,16 @@ export default class SecretsEnginePathAdapter extends ApplicationAdapter {
     return `${this.buildURL()}/${encodePath(backend)}/${path || this.path}`;
   }
   urlForUpdateRecord(name, modelName, snapshot) {
-    return this.getURL(snapshot.attr('backend'));
+    return this._getURL(snapshot.attr('backend'));
   }
   // primaryKey must be set to backend in serializer
   urlForDeleteRecord(backend) {
-    return this.getURL(backend);
+    return this._getURL(backend);
   }
 
   queryRecord(store, type, query) {
     const { backend } = query;
-    return this.ajax(this.getURL(backend), 'GET').then((resp) => {
+    return this.ajax(this._getURL(backend), 'GET').then((resp) => {
       resp.backend = backend;
       return resp;
     });
@@ -41,7 +41,7 @@ export default class SecretsEnginePathAdapter extends ApplicationAdapter {
   }
   _saveRecord(store, { modelName }, snapshot) {
     const data = store.serializerFor(modelName).serialize(snapshot);
-    const url = this.getURL(snapshot.attr('backend'));
+    const url = this._getURL(snapshot.attr('backend'));
     return this.ajax(url, 'POST', { data }).then(() => data);
   }
 }
