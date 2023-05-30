@@ -246,7 +246,7 @@ func TestExecServer_Run(t *testing.T) {
 				testAppStartedCh = make(chan error)
 			)
 			if testCase.expectedError == nil {
-				time.AfterFunc(3*time.Second, func() {
+				time.AfterFunc(500*time.Millisecond, func() {
 					_, err := retryablehttp.Head(testAppAddr)
 					testAppStartedCh <- err
 				})
