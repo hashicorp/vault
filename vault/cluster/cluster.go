@@ -170,6 +170,7 @@ func (cl *Listener) AddHandler(alpn string, handler Handler) {
 // calls stop on the handler.
 func (cl *Listener) StopHandler(alpn string) {
 	cl.l.Lock()
+	cl.logger.Debug("stopping forwarding", "alpn", alpn)
 	handler, ok := cl.handlers[alpn]
 	delete(cl.handlers, alpn)
 	cl.l.Unlock()

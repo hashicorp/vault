@@ -2542,14 +2542,11 @@ func (c *Core) preSeal() error {
 	}
 	var result error
 
-	c.logger.Debug("stopping forwarding")
 	c.stopForwarding()
 
-	c.logger.Debug("stopping raft active node")
 	c.stopRaftActiveNode()
 
 	c.clusterParamsLock.Lock()
-	c.logger.Debug("stopping replication")
 	if err := stopReplication(c); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error stopping replication: %w", err))
 	}
@@ -2559,7 +2556,6 @@ func (c *Core) preSeal() error {
 	if err := c.teardownAudits(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down audits: %w", err))
 	}
-	c.logger.Trace("stopping expiration manager")
 	if err := c.stopExpiration(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error stopping expiration: %w", err))
 	}
