@@ -440,7 +440,7 @@ func (b *backend) initialize(ctx context.Context, _ *logical.InitializationReque
 	err = b.initializeStoredCertificateCounts(ctx)
 	if err != nil {
 		// Don't block/err initialize/startup for metrics.  Context on this call can time out due to number of certificates.
-		b.Logger().Error("Could not initialize stored certificate counts", err)
+		b.Logger().Error("Could not initialize stored certificate counts", "error", err)
 		b.certCountError = err.Error()
 	}
 
