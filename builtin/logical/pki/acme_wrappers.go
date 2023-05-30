@@ -238,18 +238,9 @@ func buildAcmeFrameworkPaths(b *backend, patternFunc func(b *backend, pattern st
 }
 
 func getAcmeBaseUrl(sc *storageContext, path string) (*url.URL, *url.URL, error) {
-	cfg, err := sc.getClusterConfig()
+	baseUrl, err := getBasePathFromClusterConfig(sc)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed loading cluster config: %w", err)
-	}
-
-	if cfg.Path == "" {
-		return nil, nil, fmt.Errorf("ACME feature requires local cluster path configuration to be set: %w", ErrServerInternal)
-	}
-
-	baseUrl, err := url.Parse(cfg.Path)
-	if err != nil {
-		return nil, nil, fmt.Errorf("ACME feature a proper URL configured in local cluster path: %w", ErrServerInternal)
+		return nil, nil, err
 	}
 
 	directoryPrefix := ""
@@ -259,6 +250,24 @@ func getAcmeBaseUrl(sc *storageContext, path string) (*url.URL, *url.URL, error)
 	}
 
 	return baseUrl.JoinPath(directoryPrefix, "/acme/"), baseUrl, nil
+}
+
+func getBasePathFromClusterConfig(sc *storageContext) (*url.URL, error) {
+	cfg, err := sc.getClusterConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed loading cluster config: %w", err)
+	}
+
+	if cfg.Path == "" {
+		return nil, fmt.Errorf("ACME feature requires local cluster 'path' field configuration to be set")
+	}
+
+	baseUrl, err := url.Parse(cfg.Path)
+	if err != nil {
+		return nil, fmt.Errorf("failed parsing URL configured in local cluster 'path' configuration: %s: %s",
+			cfg.Path, err.Error())
+	}
+	return baseUrl, nil
 }
 
 func getAcmeIssuer(sc *storageContext, issuerName string) (*issuerEntry, error) {
@@ -373,6 +382,14 @@ func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData, config 
 			return nil, nil, fmt.Errorf("%w: specified issuer not allowed by ACME policy", ErrServerInternal)
 		}
 	}
+
+	// Override ExtKeyUsage behavior to force it to only be ServerAuth within ACME issued certs
+	role.ExtKeyUsage = []string{"serverauth"}
+	role.ExtKeyUsageOIDs = []string{}
+	role.ServerFlag = true
+	role.ClientFlag = false
+	role.CodeSigningFlag = false
+	role.EmailProtectionFlag = false
 
 	return role, issuer, nil
 }
