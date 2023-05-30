@@ -142,7 +142,15 @@ func (b *backend) pathAcmeRead(ctx context.Context, req *logical.Request, _ *fra
 		return nil, err
 	}
 
-	return genResponseFromAcmeConfig(config, nil), nil
+	var warnings []string
+	if config.Enabled {
+		_, err := getBasePathFromClusterConfig(sc)
+		if err != nil {
+			warnings = append(warnings, err.Error())
+		}
+	}
+
+	return genResponseFromAcmeConfig(config, warnings), nil
 }
 
 func genResponseFromAcmeConfig(config *acmeConfigEntry, warnings []string) *logical.Response {
