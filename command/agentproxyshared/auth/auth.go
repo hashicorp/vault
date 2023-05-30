@@ -13,6 +13,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-hclog"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
@@ -52,6 +53,7 @@ type AuthConfig struct {
 type AuthHandler struct {
 	OutputCh                     chan string
 	TemplateTokenCh              chan string
+	ExecTokenCh                  chan string
 	token                        string
 	userAgent                    string
 	metricsSignifier             string
@@ -63,6 +65,7 @@ type AuthHandler struct {
 	minBackoff                   time.Duration
 	enableReauthOnNewCredentials bool
 	enableTemplateTokenCh        bool
+	enableExecTokenCh            bool
 	exitOnError                  bool
 }
 
@@ -81,6 +84,7 @@ type AuthHandlerConfig struct {
 	MetricsSignifier             string
 	EnableReauthOnNewCredentials bool
 	EnableTemplateTokenCh        bool
+	EnableExecTokenCh            bool
 	ExitOnError                  bool
 }
 
@@ -90,6 +94,7 @@ func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 		// has been shut down, during agent/proxy shutdown, we won't block
 		OutputCh:                     make(chan string, 1),
 		TemplateTokenCh:              make(chan string, 1),
+		ExecTokenCh:                  make(chan string, 1),
 		token:                        conf.Token,
 		logger:                       conf.Logger,
 		client:                       conf.Client,
@@ -99,6 +104,7 @@ func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 		maxBackoff:                   conf.MaxBackoff,
 		enableReauthOnNewCredentials: conf.EnableReauthOnNewCredentials,
 		enableTemplateTokenCh:        conf.EnableTemplateTokenCh,
+		enableExecTokenCh:            conf.EnableExecTokenCh,
 		exitOnError:                  conf.ExitOnError,
 		userAgent:                    conf.UserAgent,
 		metricsSignifier:             conf.MetricsSignifier,
@@ -143,6 +149,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		am.Shutdown()
 		close(ah.OutputCh)
 		close(ah.TemplateTokenCh)
+		close(ah.ExecTokenCh)
 		ah.logger.Info("auth handler stopped")
 	}()
 
@@ -342,6 +349,9 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			if ah.enableTemplateTokenCh {
 				ah.TemplateTokenCh <- string(wrappedResp)
 			}
+			if ah.enableExecTokenCh {
+				ah.ExecTokenCh <- string(wrappedResp)
+			}
 
 			am.CredSuccess()
 			backoffCfg.reset()
@@ -397,6 +407,9 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 				if ah.enableTemplateTokenCh {
 					ah.TemplateTokenCh <- token
 				}
+				if ah.enableExecTokenCh {
+					ah.ExecTokenCh <- token
+				}
 
 				tokenType := secret.Data["type"].(string)
 				if tokenType == "batch" {
@@ -427,6 +440,9 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 				ah.OutputCh <- secret.Auth.ClientToken
 				if ah.enableTemplateTokenCh {
 					ah.TemplateTokenCh <- secret.Auth.ClientToken
+				}
+				if ah.enableExecTokenCh {
+					ah.ExecTokenCh <- secret.Auth.ClientToken
 				}
 			}
 

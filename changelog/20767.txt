@@ -1,0 +1,3 @@
+```release-note:improvement
+database/elasticsearch: Upgrade plugin dependencies
+```
