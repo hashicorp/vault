@@ -142,7 +142,15 @@ func (b *backend) pathAcmeRead(ctx context.Context, req *logical.Request, _ *fra
 		return nil, err
 	}
 
-	return genResponseFromAcmeConfig(config, nil), nil
+	var warnings []string
+	if config.Enabled {
+		_, err := getBasePathFromClusterConfig(sc)
+		if err != nil {
+			warnings = append(warnings, err.Error())
+		}
+	}
+
+	return genResponseFromAcmeConfig(config, warnings), nil
 }
 
 func genResponseFromAcmeConfig(config *acmeConfigEntry, warnings []string) *logical.Response {
@@ -260,6 +268,14 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 			if err != nil {
 				return nil, fmt.Errorf("failed validating allowed_issuers: unable to fetch issuer: %v: %w", name, err)
 			}
+		}
+	}
+
+	// Check to make sure that we have a proper value for the cluster path which ACME requires
+	if config.Enabled {
+		_, err = getBasePathFromClusterConfig(sc)
+		if err != nil {
+			return nil, err
 		}
 	}
 
