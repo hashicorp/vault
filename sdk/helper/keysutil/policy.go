@@ -242,8 +242,8 @@ type KeyEntry struct {
 
 	ManagedKeyUUID string `json:"managed_key_id,omitempty"`
 
-	// FIXME: Add description/ Certificate or CertificateChain?
-	Certificate x509.Certificate `json:"certificate"`
+	// FIXME: Add description
+	CertificateChain []*x509.Certificate `json:"certificate_chain"`
 }
 
 func (ke *KeyEntry) IsPrivateKeyMissing() bool {
@@ -2339,4 +2339,79 @@ func (p *Policy) SignCsr(keyVersion int, csrTemplate *x509.CertificateRequest) (
 	})
 
 	return csrPem, nil
+}
+
+func (p *Policy) ValidateEndEntityCertificate(keyVersion int, certPublicKeyAlgorithm x509.PublicKeyAlgorithm, certPublicKey any) (bool, error) {
+	keyEntry, err := p.safeGetKeyEntry(keyVersion)
+	if err != nil {
+		return false, err
+	}
+
+	switch certPublicKeyAlgorithm {
+	case x509.ECDSA:
+		certPublicKey := certPublicKey.(*ecdsa.PublicKey)
+
+		var curve elliptic.Curve
+		switch p.Type {
+		case KeyType_ECDSA_P384:
+			curve = elliptic.P384()
+		case KeyType_ECDSA_P521:
+			curve = elliptic.P521()
+		default:
+			curve = elliptic.P256()
+		}
+
+		key := &ecdsa.PrivateKey{
+			PublicKey: ecdsa.PublicKey{
+				Curve: curve,
+				X:     keyEntry.EC_X,
+				Y:     keyEntry.EC_Y,
+			},
+			D: keyEntry.EC_D,
+		}
+
+		publicKey := key.PublicKey
+		if publicKey.Curve != certPublicKey.Curve {
+			return false, nil
+		}
+
+		return publicKey.Equal(certPublicKey), nil
+
+	case x509.Ed25519:
+		certPublicKey := certPublicKey.(ed25519.PublicKey)
+		var key ed25519.PrivateKey
+		if p.Derived {
+			// Derive the key that should be used
+			var err error
+			key, err = p.GetKey(nil, keyVersion, 32) // FIXME: context?
+			if err != nil {
+				return false, errutil.InternalError{Err: fmt.Sprintf("error deriving key: %v", err)}
+			}
+		} else {
+			key = ed25519.PrivateKey(keyEntry.Key)
+		}
+		publicKey := key.Public().(ed25519.PublicKey)
+		return publicKey.Equal(certPublicKey), nil
+
+	case x509.RSA:
+		certPublicKey := certPublicKey.(*rsa.PublicKey)
+		publicKey := keyEntry.RSAKey.PublicKey
+		return publicKey.Equal(certPublicKey), nil
+
+	case x509.UnknownPublicKeyAlgorithm:
+		return false, errutil.InternalError{Err: fmt.Sprint("certificate signed with an unknown algorithm")}
+	}
+
+	return false, nil
+}
+
+func (p *Policy) PersistCertificateChain(keyVersion int, certChain []*x509.Certificate, storage logical.Storage) error {
+	keyEntry, err := p.safeGetKeyEntry(keyVersion)
+	if err != nil {
+		return err
+	}
+	keyEntry.CertificateChain = certChain
+
+	p.Keys[strconv.Itoa(keyVersion)] = keyEntry
+	return p.Persist(context.TODO(), storage)
 }
