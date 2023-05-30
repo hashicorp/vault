@@ -36,6 +36,7 @@ func Test_ACME(t *testing.T) {
 
 	tc := map[string]func(t *testing.T, cluster *VaultPkiCluster){
 		"certbot":           SubtestACMECertbot,
+		"certbot eab":       SubtestACMECertbotEab,
 		"acme ip sans":      SubtestACMEIPAndDNS,
 		"acme wildcard":     SubtestACMEWildcardDNS,
 		"acme prevents ica": SubtestACMEPreventsICADNS,
@@ -102,6 +103,111 @@ func SubtestACMECertbot(t *testing.T, cluster *VaultPkiCluster) {
 		"certonly",
 		"--no-eff-email",
 		"--email", "certbot.client@dadgarcorp.com",
+		"--agree-tos",
+		"--no-verify-ssl",
+		"--standalone",
+		"--non-interactive",
+		"--server", directory,
+		"-d", hostname,
+	}
+	logCatCmd := []string{"cat", "/var/log/letsencrypt/letsencrypt.log"}
+
+	stdout, stderr, retcode, err := runner.RunCmdWithOutput(ctx, result.Container.ID, certbotCmd)
+	t.Logf("Certbot Issue Command: %v\nstdout: %v\nstderr: %v\n", certbotCmd, string(stdout), string(stderr))
+	if err != nil || retcode != 0 {
+		logsStdout, logsStderr, _, _ := runner.RunCmdWithOutput(ctx, result.Container.ID, logCatCmd)
+		t.Logf("Certbot logs\nstdout: %v\nstderr: %v\n", string(logsStdout), string(logsStderr))
+	}
+	require.NoError(t, err, "got error running issue command")
+	require.Equal(t, 0, retcode, "expected zero retcode issue command result")
+
+	certbotRevokeCmd := []string{
+		"certbot",
+		"revoke",
+		"--no-eff-email",
+		"--email", "certbot.client@dadgarcorp.com",
+		"--agree-tos",
+		"--no-verify-ssl",
+		"--non-interactive",
+		"--no-delete-after-revoke",
+		"--cert-name", hostname,
+	}
+
+	stdout, stderr, retcode, err = runner.RunCmdWithOutput(ctx, result.Container.ID, certbotRevokeCmd)
+	t.Logf("Certbot Revoke Command: %v\nstdout: %v\nstderr: %v\n", certbotRevokeCmd, string(stdout), string(stderr))
+	if err != nil || retcode != 0 {
+		logsStdout, logsStderr, _, _ := runner.RunCmdWithOutput(ctx, result.Container.ID, logCatCmd)
+		t.Logf("Certbot logs\nstdout: %v\nstderr: %v\n", string(logsStdout), string(logsStderr))
+	}
+	require.NoError(t, err, "got error running revoke command")
+	require.Equal(t, 0, retcode, "expected zero retcode revoke command result")
+
+	// Revoking twice should fail.
+	stdout, stderr, retcode, err = runner.RunCmdWithOutput(ctx, result.Container.ID, certbotRevokeCmd)
+	t.Logf("Certbot Double Revoke Command: %v\nstdout: %v\nstderr: %v\n", certbotRevokeCmd, string(stdout), string(stderr))
+	if err != nil || retcode == 0 {
+		logsStdout, logsStderr, _, _ := runner.RunCmdWithOutput(ctx, result.Container.ID, logCatCmd)
+		t.Logf("Certbot logs\nstdout: %v\nstderr: %v\n", string(logsStdout), string(logsStderr))
+	}
+
+	require.NoError(t, err, "got error running double revoke command")
+	require.NotEqual(t, 0, retcode, "expected non-zero retcode double revoke command result")
+}
+
+func SubtestACMECertbotEab(t *testing.T, cluster *VaultPkiCluster) {
+	mountName := "pki-certbot-eab"
+	pki, err := cluster.CreateAcmeMount(mountName)
+	require.NoError(t, err, "failed setting up acme mount")
+
+	err = pki.UpdateAcmeConfig(true, map[string]interface{}{
+		"eab_policy": "new-account-required",
+	})
+	require.NoError(t, err)
+
+	eabId, base64EabKey, err := pki.GetEabKey("acme/")
+
+	directory := "https://" + pki.GetActiveContainerIP() + ":8200/v1/" + mountName + "/acme/directory"
+	vaultNetwork := pki.GetContainerNetworkName()
+
+	logConsumer, logStdout, logStderr := getDockerLog(t)
+
+	t.Logf("creating on network: %v", vaultNetwork)
+	runner, err := hDocker.NewServiceRunner(hDocker.RunOptions{
+		ImageRepo:     "docker.mirror.hashicorp.services/certbot/certbot",
+		ImageTag:      "latest",
+		ContainerName: "vault_pki_certbot_eab_test",
+		NetworkName:   vaultNetwork,
+		Entrypoint:    []string{"sleep", "45"},
+		LogConsumer:   logConsumer,
+		LogStdout:     logStdout,
+		LogStderr:     logStderr,
+	})
+	require.NoError(t, err, "failed creating service runner")
+
+	ctx := context.Background()
+	result, err := runner.Start(ctx, true, false)
+	require.NoError(t, err, "could not start container")
+	require.NotNil(t, result, "could not start container")
+
+	defer runner.Stop(context.Background(), result.Container.ID)
+
+	networks, err := runner.GetNetworkAndAddresses(result.Container.ID)
+	require.NoError(t, err, "could not read container's IP address")
+	require.Contains(t, networks, vaultNetwork, "expected to contain vault network")
+
+	ipAddr := networks[vaultNetwork]
+	hostname := "certbot-eab-acme-client.dadgarcorp.com"
+
+	err = pki.AddHostname(hostname, ipAddr)
+	require.NoError(t, err, "failed to update vault host files")
+
+	certbotCmd := []string{
+		"certbot",
+		"certonly",
+		"--no-eff-email",
+		"--email", "certbot.client@dadgarcorp.com",
+		"--eab-kid", eabId,
+		"--eab-hmac-key", base64EabKey,
 		"--agree-tos",
 		"--no-verify-ssl",
 		"--standalone",
