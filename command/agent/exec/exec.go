@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"time"
 
 	"github.com/hashicorp/consul-template/child"
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/consul-template/manager"
 	"github.com/hashicorp/go-hclog"
+	"golang.org/x/exp/slices"
 
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/internal/ctmanager"
@@ -69,6 +71,10 @@ type Server struct {
 	// child process each time we restart it.
 	// this function closes the old watcher go-routine so it doesn't leak
 	childProcessExitCodeCloser func()
+
+	// lastRenderedEnvVars is the cached value of all environment variables
+	// rendered by the templating engine; it is used for detecting changes
+	lastRenderedEnvVars []string
 }
 
 type ProcessExitError struct {
@@ -179,7 +185,7 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 			go s.runner.Start()
 		case <-s.runner.TemplateRenderedCh():
 			// A template has been rendered, figure out what to do
-			s.logger.Debug("template rendered")
+			s.logger.Trace("template rendered")
 			events := s.runner.RenderEvents()
 
 			// This checks if we've finished rendering the initial set of templates,
@@ -204,13 +210,28 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 					}
 				}
 			}
-
-			if doneRendering {
-				s.logger.Debug("done rendering templates/detected change, bouncing process")
-				if err := s.bounceCmd(renderedEnvVars); err != nil {
-					return fmt.Errorf("unable to bounce command: %w", err)
-				}
+			if !doneRendering {
+				continue
 			}
+
+			// sort the environment variables for a deterministic output and easy comparison
+			sort.Strings(renderedEnvVars)
+
+			s.logger.Trace("done rendering templates")
+
+			// don't restart the process unless a change is detected
+			if slices.Equal(s.lastRenderedEnvVars, renderedEnvVars) {
+				continue
+			}
+
+			s.lastRenderedEnvVars = renderedEnvVars
+
+			s.logger.Debug("detected a change in the environment variables: restarting the child process")
+
+			if err := s.bounceCmd(renderedEnvVars); err != nil {
+				return fmt.Errorf("unable to bounce command: %w", err)
+			}
+
 		case exitCode := <-s.childProcessExitCh:
 			// process exited on its own
 			return &ProcessExitError{ExitCode: exitCode}
