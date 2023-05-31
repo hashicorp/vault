@@ -122,6 +122,9 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 		return fmt.Errorf("template server failed to create: %w", err)
 	}
 
+	// prevent the templates from being rendered to stdout in "dry" mode
+	s.runner.SetOutStream(io.Discard)
+
 	s.numberOfTemplates = len(s.runner.TemplateConfigMapping())
 
 	for {
@@ -153,6 +156,10 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 					s.logger.Error("template server failed with new Vault token", "error", err)
 					continue
 				}
+
+				// prevent the templates from being rendered to stdout in "dry" mode
+				s.runner.SetOutStream(io.Discard)
+
 				go s.runner.Start()
 			}
 

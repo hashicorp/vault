@@ -767,6 +767,10 @@ func (p *Policy) Upgrade(ctx context.Context, storage logical.Storage, randReade
 		entry.HMACKey = hmacKey
 		p.Keys[strconv.Itoa(p.LatestVersion)] = entry
 		persistNeeded = true
+
+		if p.Type == KeyType_HMAC {
+			entry.HMACKey = entry.Key
+		}
 	}
 
 	if persistNeeded {
@@ -1497,6 +1501,7 @@ func (p *Policy) ImportPublicOrPrivate(ctx context.Context, storage logical.Stor
 		entry.Key = key
 		if p.Type == KeyType_HMAC {
 			p.KeySize = len(key)
+			entry.HMACKey = key
 		}
 	} else {
 		var parsedKey any
@@ -1613,7 +1618,7 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 		if p.Type == KeyType_AES128_GCM96 {
 			numBytes = 16
 		} else if p.Type == KeyType_HMAC {
-			numBytes := p.KeySize
+			numBytes = p.KeySize
 			if numBytes < HmacMinKeySize || numBytes > HmacMaxKeySize {
 				return fmt.Errorf("invalid key size for HMAC key, must be between %d and %d bytes", HmacMinKeySize, HmacMaxKeySize)
 			}
@@ -1623,6 +1628,11 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 			return err
 		}
 		entry.Key = newKey
+
+		if p.Type == KeyType_HMAC {
+			// To avoid causing problems, ensure HMACKey = Key.
+			entry.HMACKey = newKey
+		}
 
 	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
 		var curve elliptic.Curve
