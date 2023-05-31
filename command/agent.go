@@ -838,16 +838,21 @@ func (c *AgentCommand) Run(args []string) int {
 
 	var exitCode int
 	if err := g.Run(); err != nil {
-		c.logger.Error("runtime error encountered", "error", err)
-		c.UI.Error("Error encountered during run, refer to logs for more details.")
 		var processExitError *exec.ProcessExitError
 		if errors.As(err, &processExitError) {
 			exitCode = processExitError.ExitCode
 		} else {
 			exitCode = 1
 		}
+
+		if exitCode != 0 {
+			c.logger.Error("runtime error encountered", "error", err, "exitCode", exitCode)
+			c.UI.Error("Error encountered during run, refer to logs for more details.")
+		}
 	}
+
 	c.notifySystemd(systemd.SdNotifyStopping)
+
 	return exitCode
 }
 
