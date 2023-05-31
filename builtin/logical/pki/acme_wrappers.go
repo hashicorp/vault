@@ -77,7 +77,7 @@ func (b *backend) acmeWrapper(op acmeOperation) framework.OperationFunc {
 			return nil, fmt.Errorf("%w: Can not perform ACME operations until migration has completed", ErrServerInternal)
 		}
 
-		acmeBaseUrl, clusterBase, err := getAcmeBaseUrl(sc, r.Path)
+		acmeBaseUrl, clusterBase, err := getAcmeBaseUrl(sc, r)
 		if err != nil {
 			return nil, err
 		}
@@ -87,7 +87,10 @@ func (b *backend) acmeWrapper(op acmeOperation) framework.OperationFunc {
 			return nil, err
 		}
 
-		acmeDirectory := getAcmeDirectory(data)
+		acmeDirectory, err := getAcmeDirectory(r)
+		if err != nil {
+			return nil, err
+		}
 
 		acmeCtx := &acmeContext{
 			baseUrl:       acmeBaseUrl,
@@ -237,19 +240,18 @@ func buildAcmeFrameworkPaths(b *backend, patternFunc func(b *backend, pattern st
 	return patterns
 }
 
-func getAcmeBaseUrl(sc *storageContext, path string) (*url.URL, *url.URL, error) {
+func getAcmeBaseUrl(sc *storageContext, r *logical.Request) (*url.URL, *url.URL, error) {
 	baseUrl, err := getBasePathFromClusterConfig(sc)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	directoryPrefix := ""
-	lastIndex := strings.LastIndex(path, "/acme/")
-	if lastIndex != -1 {
-		directoryPrefix = path[0:lastIndex]
+	directoryPrefix, err := getAcmeDirectory(r)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	return baseUrl.JoinPath(directoryPrefix, "/acme/"), baseUrl, nil
+	return baseUrl.JoinPath(directoryPrefix), baseUrl, nil
 }
 
 func getBasePathFromClusterConfig(sc *storageContext) (*url.URL, error) {
@@ -291,11 +293,21 @@ func getAcmeIssuer(sc *storageContext, issuerName string) (*issuerEntry, error) 
 	return nil, fmt.Errorf("%w: issuer missing proper issuance usage or key", ErrServerInternal)
 }
 
-func getAcmeDirectory(data *framework.FieldData) string {
-	requestedIssuer := getRequestedAcmeIssuerFromPath(data)
-	requestedRole := getRequestedAcmeRoleFromPath(data)
+// getAcmeDirectory return the base acme directory path, without a leading '/' and including
+// the trailing /acme/ folder which is the root of all our various directories
+func getAcmeDirectory(r *logical.Request) (string, error) {
+	acmePath := r.Path
+	if !strings.HasPrefix(acmePath, "/") {
+		acmePath = "/" + acmePath
+	}
 
-	return fmt.Sprintf("issuer-%s::role-%s", requestedIssuer, requestedRole)
+	lastIndex := strings.LastIndex(acmePath, "/acme/")
+	if lastIndex == -1 {
+		return "", fmt.Errorf("%w: unable to determine acme base folder path: %s", ErrServerInternal, acmePath)
+	}
+
+	// Skip the leading '/' and return our base path with the /acme/
+	return strings.TrimLeft(acmePath[0:lastIndex]+"/acme/", "/"), nil
 }
 
 func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData, config *acmeConfigEntry) (*roleEntry, *issuerEntry, error) {
@@ -382,6 +394,14 @@ func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData, config 
 			return nil, nil, fmt.Errorf("%w: specified issuer not allowed by ACME policy", ErrServerInternal)
 		}
 	}
+
+	// Override ExtKeyUsage behavior to force it to only be ServerAuth within ACME issued certs
+	role.ExtKeyUsage = []string{"serverauth"}
+	role.ExtKeyUsageOIDs = []string{}
+	role.ServerFlag = true
+	role.ClientFlag = false
+	role.CodeSigningFlag = false
+	role.EmailProtectionFlag = false
 
 	return role, issuer, nil
 }

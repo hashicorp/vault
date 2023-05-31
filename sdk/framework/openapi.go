@@ -383,6 +383,10 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 					s.Properties[name] = &p
 				}
 
+				// Make the ordering deterministic, so that the generated OpenAPI spec document, observed over several
+				// versions, doesn't contain spurious non-semantic changes.
+				sort.Strings(s.Required)
+
 				// If examples were given, use the first one as the sample
 				// of this schema.
 				if len(props.Examples) > 0 {

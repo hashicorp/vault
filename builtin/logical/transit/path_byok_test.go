@@ -10,39 +10,29 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func TestTransit_BackupRestore(t *testing.T) {
+func TestTransit_BYOKExportImport(t *testing.T) {
 	// Test encryption/decryption after a restore for supported keys
-	testBackupRestore(t, "aes128-gcm96", "encrypt-decrypt")
-	testBackupRestore(t, "aes256-gcm96", "encrypt-decrypt")
-	testBackupRestore(t, "chacha20-poly1305", "encrypt-decrypt")
-	testBackupRestore(t, "rsa-2048", "encrypt-decrypt")
-	testBackupRestore(t, "rsa-3072", "encrypt-decrypt")
-	testBackupRestore(t, "rsa-4096", "encrypt-decrypt")
+	testBYOKExportImport(t, "aes128-gcm96", "encrypt-decrypt")
+	testBYOKExportImport(t, "aes256-gcm96", "encrypt-decrypt")
+	testBYOKExportImport(t, "chacha20-poly1305", "encrypt-decrypt")
+	testBYOKExportImport(t, "rsa-2048", "encrypt-decrypt")
+	testBYOKExportImport(t, "rsa-3072", "encrypt-decrypt")
+	testBYOKExportImport(t, "rsa-4096", "encrypt-decrypt")
 
 	// Test signing/verification after a restore for supported keys
-	testBackupRestore(t, "ecdsa-p256", "sign-verify")
-	testBackupRestore(t, "ecdsa-p384", "sign-verify")
-	testBackupRestore(t, "ecdsa-p521", "sign-verify")
-	testBackupRestore(t, "ed25519", "sign-verify")
-	testBackupRestore(t, "rsa-2048", "sign-verify")
-	testBackupRestore(t, "rsa-3072", "sign-verify")
-	testBackupRestore(t, "rsa-4096", "sign-verify")
+	testBYOKExportImport(t, "ecdsa-p256", "sign-verify")
+	testBYOKExportImport(t, "ecdsa-p384", "sign-verify")
+	testBYOKExportImport(t, "ecdsa-p521", "sign-verify")
+	testBYOKExportImport(t, "ed25519", "sign-verify")
+	testBYOKExportImport(t, "rsa-2048", "sign-verify")
+	testBYOKExportImport(t, "rsa-3072", "sign-verify")
+	testBYOKExportImport(t, "rsa-4096", "sign-verify")
 
-	// Test HMAC/verification after a restore for all key types
-	testBackupRestore(t, "aes128-gcm96", "hmac-verify")
-	testBackupRestore(t, "aes256-gcm96", "hmac-verify")
-	testBackupRestore(t, "chacha20-poly1305", "hmac-verify")
-	testBackupRestore(t, "ecdsa-p256", "hmac-verify")
-	testBackupRestore(t, "ecdsa-p384", "hmac-verify")
-	testBackupRestore(t, "ecdsa-p521", "hmac-verify")
-	testBackupRestore(t, "ed25519", "hmac-verify")
-	testBackupRestore(t, "rsa-2048", "hmac-verify")
-	testBackupRestore(t, "rsa-3072", "hmac-verify")
-	testBackupRestore(t, "rsa-4096", "hmac-verify")
-	testBackupRestore(t, "hmac", "hmac-verify")
+	// Test HMAC sign/verify after a restore for supported keys.
+	testBYOKExportImport(t, "hmac", "hmac-verify")
 }
 
-func testBackupRestore(t *testing.T, keyType, feature string) {
+func testBYOKExportImport(t *testing.T, keyType, feature string) {
 	var resp *logical.Response
 	var err error
 
@@ -50,7 +40,7 @@ func testBackupRestore(t *testing.T, keyType, feature string) {
 
 	// Create a key
 	keyReq := &logical.Request{
-		Path:      "keys/test",
+		Path:      "keys/test-source",
 		Operation: logical.UpdateOperation,
 		Storage:   s,
 		Data: map[string]interface{}{
@@ -66,24 +56,35 @@ func testBackupRestore(t *testing.T, keyType, feature string) {
 		t.Fatalf("resp: %#v\nerr: %v", resp, err)
 	}
 
-	// Configure the key to allow its deletion
-	configReq := &logical.Request{
-		Path:      "keys/test/config",
-		Operation: logical.UpdateOperation,
+	// Read the wrapping key.
+	wrapKeyReq := &logical.Request{
+		Path:      "wrapping_key",
+		Operation: logical.ReadOperation,
 		Storage:   s,
-		Data: map[string]interface{}{
-			"deletion_allowed":       true,
-			"allow_plaintext_backup": true,
-		},
 	}
-	resp, err = b.HandleRequest(context.Background(), configReq)
+	resp, err = b.HandleRequest(context.Background(), wrapKeyReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("resp: %#v\nerr: %v", resp, err)
 	}
 
-	// Take a backup of the key
+	// Import the wrapping key.
+	wrapKeyImportReq := &logical.Request{
+		Path:      "keys/wrapper/import",
+		Operation: logical.UpdateOperation,
+		Storage:   s,
+		Data: map[string]interface{}{
+			"public_key": resp.Data["public_key"],
+			"type":       "rsa-4096",
+		},
+	}
+	resp, err = b.HandleRequest(context.Background(), wrapKeyImportReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("resp: %#v\nerr: %v", resp, err)
+	}
+
+	// Export the key
 	backupReq := &logical.Request{
-		Path:      "backup/test",
+		Path:      "byok-export/wrapper/test-source",
 		Operation: logical.ReadOperation,
 		Storage:   s,
 	}
@@ -91,35 +92,31 @@ func testBackupRestore(t *testing.T, keyType, feature string) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("resp: %#v\nerr: %v", resp, err)
 	}
-	backup := resp.Data["backup"]
+	keys := resp.Data["keys"].(map[string]string)
 
-	// Try to restore the key without deleting it. Expect error due to
-	// conflicting key names.
+	// Import the key to a new name.
 	restoreReq := &logical.Request{
-		Path:      "restore",
+		Path:      "keys/test/import",
 		Operation: logical.UpdateOperation,
 		Storage:   s,
 		Data: map[string]interface{}{
-			"backup": backup,
+			"ciphertext": keys["1"],
+			"type":       keyType,
 		},
 	}
 	resp, err = b.HandleRequest(context.Background(), restoreReq)
-	if resp != nil && resp.IsError() {
+	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("resp: %#v\nerr: %v", resp, err)
-	}
-	if err == nil {
-		t.Fatalf("expected an error")
 	}
 
 	plaintextB64 := "dGhlIHF1aWNrIGJyb3duIGZveA==" // "the quick brown fox"
-
 	// Perform encryption, signing or hmac-ing based on the set 'feature'
 	var encryptReq, signReq, hmacReq *logical.Request
 	var ciphertext, signature, hmac string
 	switch feature {
 	case "encrypt-decrypt":
 		encryptReq = &logical.Request{
-			Path:      "encrypt/test",
+			Path:      "encrypt/test-source",
 			Operation: logical.UpdateOperation,
 			Storage:   s,
 			Data: map[string]interface{}{
@@ -134,7 +131,7 @@ func testBackupRestore(t *testing.T, keyType, feature string) {
 
 	case "sign-verify":
 		signReq = &logical.Request{
-			Path:      "sign/test",
+			Path:      "sign/test-source",
 			Operation: logical.UpdateOperation,
 			Storage:   s,
 			Data: map[string]interface{}{
@@ -149,7 +146,7 @@ func testBackupRestore(t *testing.T, keyType, feature string) {
 
 	case "hmac-verify":
 		hmacReq = &logical.Request{
-			Path:      "hmac/test",
+			Path:      "hmac/test-source",
 			Operation: logical.UpdateOperation,
 			Storage:   s,
 			Data: map[string]interface{}{
@@ -161,19 +158,6 @@ func testBackupRestore(t *testing.T, keyType, feature string) {
 			t.Fatalf("resp: %#v\nerr: %v", resp, err)
 		}
 		hmac = resp.Data["hmac"].(string)
-	}
-
-	// Delete the key
-	keyReq.Operation = logical.DeleteOperation
-	resp, err = b.HandleRequest(context.Background(), keyReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("resp: %#v\nerr: %v", resp, err)
-	}
-
-	// Restore the key from the backup
-	resp, err = b.HandleRequest(context.Background(), restoreReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("resp: %#v\nerr: %v", resp, err)
 	}
 
 	// validationFunc verifies the ciphertext, signature or hmac based on the
@@ -240,19 +224,6 @@ func testBackupRestore(t *testing.T, keyType, feature string) {
 	// Ensure that the restored key is functional
 	validationFunc("test")
 
-	// Delete the key again
-	resp, err = b.HandleRequest(context.Background(), keyReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("resp: %#v\nerr: %v", resp, err)
-	}
-
-	// Restore the key under a different name
-	restoreReq.Path = "restore/test1"
-	resp, err = b.HandleRequest(context.Background(), restoreReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("resp: %#v\nerr: %v", resp, err)
-	}
-
-	// Ensure that the restored key is functional
-	validationFunc("test1")
+	// Ensure the original key is functional
+	validationFunc("test-source")
 }
