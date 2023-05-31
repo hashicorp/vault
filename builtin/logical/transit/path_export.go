@@ -90,8 +90,8 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 	}
 	defer p.Unlock()
 
-	if !p.Exportable {
-		return logical.ErrorResponse("key is not exportable"), nil
+	if !p.Exportable && exportType != exportTypePublicKey {
+		return logical.ErrorResponse("private key material is not exportable"), nil
 	}
 
 	switch exportType {
@@ -162,7 +162,11 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 
 	switch exportType {
 	case exportTypeHMACKey:
-		return strings.TrimSpace(base64.StdEncoding.EncodeToString(key.HMACKey)), nil
+		src := key.HMACKey
+		if policy.Type == keysutil.KeyType_HMAC {
+			src = key.Key
+		}
+		return strings.TrimSpace(base64.StdEncoding.EncodeToString(src)), nil
 
 	case exportTypeEncryptionKey:
 		switch policy.Type {
