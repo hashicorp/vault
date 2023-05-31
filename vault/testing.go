@@ -214,7 +214,6 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	conf.PluginDirectory = opts.PluginDirectory
 	conf.DetectDeadlocks = opts.DetectDeadlocks
 	conf.Experiments = []string{experiments.VaultExperimentEventsAlpha1}
-	conf.censusAgent = opts.censusAgent
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
@@ -967,6 +966,10 @@ func (c *TestClusterCore) Seal(t testing.T) {
 	}
 }
 
+func (c *TestClusterCore) LogicalStorage() logical.Storage {
+	return c.barrier
+}
+
 func (c *TestClusterCore) stop() error {
 	c.Logger().Info("stopping vault test core")
 
@@ -999,6 +1002,10 @@ func (c *TestClusterCore) stop() error {
 	return nil
 }
 
+func (c *TestClusterCore) StopAutomaticRollbacks() {
+	c.rollback.StopTicker()
+}
+
 func (c *TestClusterCore) GrabRollbackLock() {
 	// Ensure we don't hold this lock while there are in flight rollbacks.
 	c.rollback.inflightAll.Wait()
@@ -1015,6 +1022,10 @@ func (c *TestClusterCore) TriggerRollbacks() {
 
 func (c *TestClusterCore) TLSConfig() *tls.Config {
 	return c.tlsConfig.Clone()
+}
+
+func (c *TestClusterCore) ClusterListener() *cluster.Listener {
+	return c.getClusterListener()
 }
 
 func (c *TestCluster) Cleanup() {

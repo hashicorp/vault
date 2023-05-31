@@ -35,7 +35,7 @@ Then install the chart and enable the CSI feature by setting the
 $ helm install vault hashicorp/vault --set="csi.enabled=true"
 ```
 
-Upgrades may be performed with `helm upgrade` on an existing install. Please
+Upgrades may be performed with `helm upgrade` on an existing installation. Please
 always run Helm with `--dry-run` before any install or upgrade to verify
 changes.
 
@@ -116,7 +116,7 @@ users:
 EOF
 ```
 
-Add the security context constraint for the applicaiton.
+Add the security context constraint for the application.
 
 ```shell-session
 $ kubectl apply -f application-scc.yaml

@@ -7,8 +7,9 @@
 - `token_policies` `(array: [] or comma-delimited string: "")` - List of
   token policies to encode onto generated tokens. Depending on the auth method, this
   list may be supplemented by user/group/other values.
-- `policies` `(array: [] or comma-delimited string: "")` - List of token
-  policies to encode onto generated tokens. Depending on the auth method, this
-  list may be supplemented by user/group/other values.
+- `policies` `(array: [] or comma-delimited string: "")` - DEPRECATED: Please
+  use the `token_policies` parameter instead. List of token policies to encode
+  onto generated tokens. Depending on the auth method, this list may be
+  supplemented by user/group/other values.
 
 @include 'tokenstorefields.mdx'

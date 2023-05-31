@@ -75,11 +75,16 @@ their identifier and their name (if set).
 )
 
 func pathGetIssuer(b *backend) *framework.Path {
-	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "(/der|/pem|/json)?"
+	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "$"
+	return buildPathIssuer(b, pattern)
+}
+
+func pathGetUnauthedIssuer(b *backend) *framework.Path {
+	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/(json|der|pem)$"
 	return buildPathGetIssuer(b, pattern)
 }
 
-func buildPathGetIssuer(b *backend, pattern string) *framework.Path {
+func buildPathIssuer(b *backend, pattern string) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	fields = addIssuerRefNameFields(fields)
 
@@ -180,6 +185,26 @@ to be set on all PR secondary clusters.`,
 	}
 }
 
+func buildPathGetIssuer(b *backend, pattern string) *framework.Path {
+	fields := map[string]*framework.FieldSchema{}
+	fields = addIssuerRefField(fields)
+
+	return &framework.Path{
+		// Returns a JSON entry.
+		Pattern: pattern,
+		Fields:  fields,
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathGetIssuer,
+			},
+		},
+
+		HelpSynopsis:    pathGetIssuerHelpSyn,
+		HelpDescription: pathGetIssuerHelpDesc,
+	}
+}
+
 func (b *backend) pathGetIssuer(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Handle raw issuers first.
 	if strings.HasSuffix(req.Path, "/der") || strings.HasSuffix(req.Path, "/pem") || strings.HasSuffix(req.Path, "/json") {
@@ -251,6 +276,7 @@ func respondReadIssuer(issuer *issuerEntry) (*logical.Response, error) {
 		data["issuing_certificates"] = issuer.AIAURIs.IssuingCertificates
 		data["crl_distribution_points"] = issuer.AIAURIs.CRLDistributionPoints
 		data["ocsp_servers"] = issuer.AIAURIs.OCSPServers
+		data["enable_aia_url_templating"] = issuer.AIAURIs.EnableTemplating
 	}
 
 	response := &logical.Response{
@@ -576,7 +602,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 	}
 
 	// Leaf Not After Changes
-	rawLeafBehaviorData, ok := data.GetOk("leaf_not_after_behaivor")
+	rawLeafBehaviorData, ok := data.GetOk("leaf_not_after_behavior")
 	if ok {
 		rawLeafBehavior := rawLeafBehaviorData.(string)
 		var newLeafBehavior certutil.NotAfterBehavior

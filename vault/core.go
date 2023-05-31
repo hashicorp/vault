@@ -514,12 +514,6 @@ type Core struct {
 	// CORS Information
 	corsConfig *CORSConfig
 
-	// The active set of upstream cluster addresses; stored via the Echo
-	// mechanism, loaded by the balancer
-	atomicPrimaryClusterAddrs *atomic.Value
-
-	atomicPrimaryFailoverAddrs *atomic.Value
-
 	// replicationState keeps the current replication state cached for quick
 	// lookup; activeNodeReplicationState stores the active value on standbys
 	replicationState           *uint32
@@ -637,9 +631,6 @@ type Core struct {
 	clusterHeartbeatInterval time.Duration
 
 	activityLogConfig ActivityLogCoreConfig
-
-	// censusAgent is the mechanism used for reporting Vault's billing data.
-	censusAgent *CensusAgent
 
 	// activeTime is set on active nodes indicating the time at which this node
 	// became active.
@@ -803,9 +794,6 @@ type CoreConfig struct {
 	License         string
 	LicensePath     string
 	LicensingConfig *LicensingConfig
-
-	// Configured Census Agent
-	censusAgent *CensusAgent
 
 	DisablePerformanceStandby bool
 	DisableIndexing           bool
@@ -977,8 +965,6 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		introspectionEnabled:           conf.EnableIntrospection,
 		shutdownDoneCh:                 new(atomic.Value),
 		replicationState:               new(uint32),
-		atomicPrimaryClusterAddrs:      new(atomic.Value),
-		atomicPrimaryFailoverAddrs:     new(atomic.Value),
 		localClusterPrivateKey:         new(atomic.Value),
 		localClusterCert:               new(atomic.Value),
 		localClusterParsedCert:         new(atomic.Value),
@@ -3530,18 +3516,19 @@ func (c *Core) runLockedUserEntryUpdatesForMountAccessor(ctx context.Context, mo
 		lockoutDurationFromConfiguration := userLockoutConfiguration.LockoutDuration
 
 		// get the entry for the locked user from userFailedLoginInfo map
-		failedLoginInfoFromMap := c.GetUserFailedLoginInfo(ctx, loginUserInfoKey)
+		failedLoginInfoFromMap := c.LocalGetUserFailedLoginInfo(ctx, loginUserInfoKey)
 
 		// check if the storage entry for locked user is stale
 		if time.Now().After(lastFailedLoginTimeFromStorageEntry.Add(lockoutDurationFromConfiguration)) {
 			// stale entry, remove from storage
+			// leaving this as it is as this happens on the active node
+			// also handles case where namespace is deleted
 			if err := c.barrier.Delete(ctx, path+alias); err != nil {
 				return 0, err
 			}
-
 			// remove entry for this user from userFailedLoginInfo map if present as the user is not locked
 			if failedLoginInfoFromMap != nil {
-				if err = c.UpdateUserFailedLoginInfo(ctx, loginUserInfoKey, nil, true); err != nil {
+				if err = updateUserFailedLoginInfo(ctx, c, loginUserInfoKey, nil, true); err != nil {
 					return 0, err
 				}
 			}
@@ -3558,7 +3545,7 @@ func (c *Core) runLockedUserEntryUpdatesForMountAccessor(ctx context.Context, mo
 
 		if failedLoginInfoFromMap != &actualFailedLoginInfo {
 			// entry is invalid, updating the entry in userFailedLoginMap with correct information
-			if err = c.UpdateUserFailedLoginInfo(ctx, loginUserInfoKey, &actualFailedLoginInfo, false); err != nil {
+			if err = updateUserFailedLoginInfo(ctx, c, loginUserInfoKey, &actualFailedLoginInfo, false); err != nil {
 				return 0, err
 			}
 		}

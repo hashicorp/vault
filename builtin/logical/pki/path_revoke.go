@@ -374,7 +374,7 @@ func (b *backend) maybeRevokeCrossCluster(sc *storageContext, config *crlConfig,
 	}
 
 	if err := sc.Storage.Put(sc.Context, reqEntry); err != nil {
-		return nil, fmt.Errorf("error persisting cross-cluster revocation request: %w\nThis may occur when the active node of the primary performance replication cluster is unavailable.", err)
+		return nil, fmt.Errorf("error persisting cross-cluster revocation request: %w", err)
 	}
 
 	resp := &logical.Response{

@@ -178,7 +178,8 @@ identifier can later be used to revoke a DR secondary's access.
 
 - `secondary_public_key` `(string: "")` – Specifies the secondary's generated
   public key, if using encryption rather than response wrapping to protect the
-  secondary credentials. (Vault 1.3+)
+  secondary credentials. (Vault 1.3+). Use this to avoid making an API call to
+  the primary during secondary activation.
 
 ### Sample Payload
 
@@ -249,11 +250,11 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/replication/dr/primary/revoke-secondary
 ```
 
-## Fetch DR Secondary Public Key
+## Generate DR Secondary Public Key
 
 (Vault 1.3+)
 
-This endpoint allows fetching a public key that is used to encrypt the returned
+This endpoint allows generating a public key that is used to encrypt the returned
 credential information (instead of using a response wrapped token). This avoids
 needing to make an API call to the primary during activation.
 
@@ -406,6 +407,8 @@ $ curl \
 This endpoint disables DR replication entirely on the cluster. The cluster will no
 longer be able to connect to the DR primary.
 
+This endpoint requires a DR Operation Token to be provided as means of authorization. See the DR Operation Token API docs for more information.
+
 !> Re-enabling this node as a DR primary or secondary will change its cluster ID;
 in the secondary case this means a wipe of the underlying storage when connected
 to a primary, and in the primary case, secondaries connecting back to the
@@ -416,12 +419,20 @@ underlying storage.
 | :----- | :-------------------------------------- |
 | `POST` | `/sys/replication/dr/secondary/disable` |
 
+### Sample Payload
+
+```json
+{
+  "dr_operation_token": "...",
+}
+```
+
 ### Sample Request
 
 ```shell-session
 $ curl \
-    --header "X-Vault-Token: ..." \
     --request POST \
+    --data @payload.json \
     http://127.0.0.1:8200/v1/sys/replication/dr/secondary/disable
 ```
 
@@ -459,6 +470,13 @@ docs](#generate-disaster-recovery-operation-token) for more information.
 - `ca_path` `string: ()` – Specifies the path to a CA root directory containing
   PEM-format files that the secondary can use when unwrapping the token from the
   primary. If this and ca_file are not given, defaults to system CA roots.
+
+- `update_primary_addrs` `array: []` – List of cluster addresses for potential
+  primary clusters. These addresses will be pinged in sequence, and if any of them
+  respond successfully, these will be recorded as the new primary addresses. This is
+  a lighter weight version of specifying a token and should result in less disruption
+  of replication. Note that it's invalid to specify this and `token` in the same API call.
+  They are mutually exclusive.
 
 ### Sample Payload
 

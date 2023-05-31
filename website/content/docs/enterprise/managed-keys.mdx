@@ -46,6 +46,11 @@ The [PKI Secrets Engine](/vault/api-docs/secret/pki#managed-keys) has been integ
 with Managed Keys to offer certificate generation, both root and intermediary
 PKI paths, leveraging private keys from an external trusted KMS.
 
+The [Transit Secrets Engine](/vault/api-docs/secret/transit#managed-keys) allows users
+to generate and verify cryptographic signatures with Managed Keys, and in some cases encrypt
+and decrypt data, or generate MACs and HMACs. These operations are performed on the KMS or HSM
+that hosts the Managed Key material.
+
 More engines may leverage managed keys in the future.
 
 ## API

@@ -45,104 +45,122 @@ Follow the steps below to add policies to your tenancy that allow the OCI comput
 1. Add the OCID of the compute instance(s) to the dynamic group.
 1. Add the following policies to the root compartment of your tenancy that allow the dynamic group to call specific Identity APIs.
 
-```
-    allow dynamic-group VaultDynamicGroup to {AUTHENTICATION_INSPECT} in tenancy
-    allow dynamic-group VaultDynamicGroup to {GROUP_MEMBERSHIP_INSPECT} in tenancy
-```
+   ```plaintext
+   allow dynamic-group VaultDynamicGroup to {AUTHENTICATION_INSPECT} in tenancy
+   allow dynamic-group VaultDynamicGroup to {GROUP_MEMBERSHIP_INSPECT} in tenancy
+   ```
 
 ### Configure the OCI Auth method
 
-- Configure your home tenancy in the Vault, so that only users or instances from your tenancy will
-  be allowed to log into Vault through the OCI Auth method. Create a file named hometenancyid.json with
-  the below content, using the tenancy OCID. To find your tenancy OCID, see [https://docs.cloud.oracle.com/iaas/Content/General/Concepts/identifiers.htm](https://docs.cloud.oracle.com/iaas/Content/General/Concepts/identifiers.htm).
+First, enable the OCI Auth method.
 
-```json
-{ "home_tenancy_id": "your tenancy ocid here" }
+```shell-session
+$ vault auth enable oci
 ```
 
-- Configure the home_tenancy_id parameter in the Vault.
+Then, configure your home tenancy in the Vault, so that only users or instances from your tenancy will be allowed to log into Vault through the OCI Auth method. 
+  
+1. Create a file named `hometenancyid.json` with the below content using the
+   tenancy OCID. To find your tenancy OCID, see
+  the [Oracle Cloud IDs documentation](https://docs.cloud.oracle.com/iaas/Content/General/Concepts/identifiers.htm).
 
-```sh
-    curl --header "X-Vault-Token: $roottoken" --request POST \
-    --data @hometenancyid.json \
-    http://127.0.0.1:8200/v1/auth/oci/config (127.0.0.1:8200/v1/auth/oci/config)
-```
+   ```json
+   { "home_tenancy_id": "your tenancy ocid here" }
+   ```
 
-- Create a Vault administrator role in the OCI Auth method. The vaultadminrole allows the
-  administrator of Vault to log into Vault and grants them the permissions allowed in the policy.
+1. Configure the `home_tenancy_id` parameter in the Vault.
 
-Create a file named vaultadminrole.json with the below contents. Replace the ocid_list with the
+   ```shell-session
+   $ curl --header "X-Vault-Token: $roottoken" --request POST \
+      --data @hometenancyid.json \
+      http://127.0.0.1:8200/v1/auth/oci/config (127.0.0.1:8200/v1/auth/oci/config)
+   ```
+
+Continue by creating a Vault administrator role in the OCI Auth method. The `vaultadminrole` allows the administrator of Vault to log into Vault and grants them the permissions allowed in the policy.
+
+1. Create a file named `vaultadminrole.json` with the below contents. Replace the `ocid_list` with the
 Group or Dynamic Group OCIDs in your tenancy that has users or instances that you want to take the Vault admin role.
 
-- For testing in dev mode, you can add the OCID of the dynamic group previously created.
-- In production, add only the OCID of groups and dynamic groups that can take the admin role in Vault.
+   - For testing in dev mode, you can add the OCID of the dynamic group previously created.
+   - In production, add only the OCID of groups and dynamic groups that can take the admin role in Vault.
 
-```json
-{
-  "token_policies": "vaultadminpolicy",
-  "token_ttl": "1800",
-  "ocid_list": "ocid1.group.oc1..aaaaaaaaiqnblimpvmegkqh3bxilrdvjobr7qd223g275idcqhexamplefq,ocid1.dynamicgroup.oc1..aaaaaaaa5hmfyrdaxvmt52ekju5n7ffamn2pdvxaq6esb2vzzoduexamplea"
-}
+      ```json
+      {
+         "token_policies": "vaultadminpolicy",
+         "token_ttl": "1800",
+         "ocid_list": "ocid1.group.oc1..aaaaaaaaiqnblimpvmegkqh3bxilrdvjobr7qd223g275idcqhexamplefq,ocid1.dynamicgroup.oc1..aaaaaaaa5hmfyrdaxvmt52ekju5n7ffamn2pdvxaq6esb2vzzoduexamplea"
+      }
+      ```
+
+1. Create the Vault admin role:
+
+   ```shell-session
+   $ curl --header "X-Vault-Token: $roottoken" --request POST \
+      --data @vaultadminrole.json \
+      http://127.0.0.1:8200/v1/auth/oci/role/vaultadminrole (127.0.0.1:8200/v1/auth/oci/role/vaultadminrole)
+   ```
+
+### Log in to Vault using OCI Auth
+
+As a result of both methods described below, you will get a response that includes a token with the previously added policy.
+
+You can use the received token to read or write secrets, and add roles per the instructions in [/docs/secrets/kv/kv-v1](/vault/docs/secrets/kv/kv-v1).
+
+For both methods to work:
+- The VAULT_ADDR export has to be specified, as shown earlier in this page; when testing in dev mode in the same compute instance that the Vault is running on, this is [http://127.0.0.1:8200](http://127.0.0.1:8200/).
+
+#### Log in with instance principals
+
+```shell-session
+$ vault login -method=oci auth_type=instance role=vaultadminrole
 ```
 
-Create the Vault admin role:
+This assumes that the compute instance that you are logging in from should be a part of a dynamic group that was added to the Vault admin role. If logging on from a different compute instance than the one on which Vault is running on, the compute should have connectivity to the endpoint specified in VAULT_ADDR. 
 
-```sh
-    curl --header "X-Vault-Token: $roottoken" --request POST \
-    --data @vaultadminrole.json \
-    http://127.0.0.1:8200/v1/auth/oci/role/vaultadminrole (127.0.0.1:8200/v1/auth/oci/role/vaultadminrole)
+#### Log in with an API key
+
+```shell-session
+$ vault login -method=oci auth_type=apikey role=vaultadminrole
 ```
 
-1.  Log into the Vault using instance principal.
-    - This assumes that the VAULT_ADDR export has been specified, as shown earlier in this page.
-    - The compute instance that you are logging in from should be a part of a dynamic group that was added to the Vault admin role. The compute instance should also have connectivity to the endpoint specified in VAULT_ADDR.
-    - When testing in dev mode in the same compute instance that the Vault is running, this is [http://127.0.0.1:8200](http://127.0.0.1:8200/).
-      `vault login -method=oci auth_type=instance role=vaultadminrole`
+This assumes you have an OCI API key.
 
-You will see a response that includes a token with the previously added policy.
+If you don't have an API key:
 
-1.  Use the received token to read secrets, writer secrets, and add roles per the instructions in [/docs/secrets/kv/kv-v1](/vault/docs/secrets/kv/kv-v1).
-1.  Log into Vault using the user API key.
+1. [Add an API Key](https://docs.cloud.oracle.com/iaas/Content/API/Concepts/apisigningkey.htm) for a user in the console. This user should be part of a group that has previously been added to the Vault admin role.
+1. Create the config file `~/.oci/config` using the user's credentials as detailed in [https://docs.cloud.oracle.com/iaas/Content/API/Concepts/sdkconfig.htm](https://docs.cloud.oracle.com/iaas/Content/API/Concepts/sdkconfig.htm).
+1. Ensure that the region in the config matches the region of the compute instance that is running Vault.
 
-    - [Add an API Key](https://docs.cloud.oracle.com/iaas/Content/API/Concepts/apisigningkey.htm) for a user in the console. This user should be part of a group that has previously been added to the Vault admin role.
-    - Create the config file `~/.oci/config` using the user's credentials as detailed in [https://docs.cloud.oracle.com/iaas/Content/API/Concepts/sdkconfig.htm](https://docs.cloud.oracle.com/iaas/Content/API/Concepts/sdkconfig.htm).
-      Ensure that the region in the config matches the region of the compute instance that is running Vault.
-    - Log into Vault using the user API key.
-
-      `vault login -method=oci auth_type=apikey role=vaultadminrole`
-
-1.  Stop Vault and re-start it in the production environment. See [the configuration docs](/vault/docs/configuration/) for more information.
-1.  Repeat all steps in this [Configure the OCI Auth Method](#configure-the-oci-auth-method) section while in the production environment.
 
 ### Manage Roles in the OCI Auth method
 
 1.  Similar to creating the Vault administrator role, create other roles mapped to other policies. Create a file named devrole.json with the following contents. Replace ocid_list with Groups or Dynamic Groups in your tenancy.
 
-```json
-{
-  "token_policies": "devpolicy",
-  "token_ttl": "1500",
-  "ocid_list": "ocid1.group.oc1..aaaaaaaaiqnblimpvmgrouplrdvjobr7qd223g275idcqhexamplefq,ocid1.dynamicgroup.oc1..aaaaaaaa5hmfyrdaxvmdg2u5n7ffamn2pdvxaq6esb2vzzoduexamplea"
-}
-```
+   ```json
+   {
+   "token_policies": "devpolicy",
+   "token_ttl": "1500",
+   "ocid_list": "ocid1.group.oc1..aaaaaaaaiqnblimpvmgrouplrdvjobr7qd223g275idcqhexamplefq,ocid1.dynamicgroup.oc1..aaaaaaaa5hmfyrdaxvmdg2u5n7ffamn2pdvxaq6esb2vzzoduexamplea"
+   }
+   ```
 
-1.  Add the role.
+2.  Add the role.
 
-```sh
-curl --header "X-Vault-Token: $token" --request POST \
---data @devrole.json \
-http://127.0.0.1:8200/v1/auth/oci/role/devrole (127.0.0.1:8200/v1/auth/oci/role/devrole)
-```
+   ```shell-session
+   $ curl --header "X-Vault-Token: $token" --request POST \
+      --data @devrole.json \
+      http://127.0.0.1:8200/v1/auth/oci/role/devrole (127.0.0.1:8200/v1/auth/oci/role/devrole)
+   ```
 
-1.  Login to Vault assuming the devrole.
+3.  Login to Vault assuming the devrole.
 
-```sh
-vault login -method=oci auth_type=instance role=vaultadminrole`
-```
+   ```shell-session
+   $ vault login -method=oci auth_type=instance role=devrole
+   ```
 
 ## Authentication
 
-When authenticating, users can use Vault cli.
+You can authenticate with the Vault CLI or by communicating with the API directly.
 
 ### Via the CLI
 
@@ -152,7 +170,7 @@ With Compute Instance credentials:
 $ vault login -method=oci auth_type=instance role=devrole
 ```
 
-With User credentials: [SDK Config](https://docs.cloud.oracle.com/iaas/Content/API/Concepts/sdkconfig.htm)
+With User credentials ([SDK configuration](https://docs.cloud.oracle.com/iaas/Content/API/Concepts/sdkconfig.htm)):
 
 ```shell-session
 $ vault login -method=oci auth_type=apikey role=devrole
@@ -160,42 +178,56 @@ $ vault login -method=oci auth_type=apikey role=devrole
 
 ### Via the API
 
-1.  First, sign the following request with your OCI credentials and obtain the signing string and the authorization header. Replace the endpoint, scheme (http or https) & role of the URL corresponding to your vault configuration. For more information on signing, see [signing the request](https://docs.cloud.oracle.com/iaas/Content/API/Concepts/signingrequests.htm).
+1.  Sign the following request with your OCI credentials and obtain the signing string and the authorization header. Replace the endpoint, scheme (http or https) & role of the URL corresponding to your Vault configuration. For more information on signing, see [signing the request](https://docs.cloud.oracle.com/iaas/Content/API/Concepts/signingrequests.htm).
 
     http://127.0.0.1/v1/auth/oci/login/devrole
 
-1.  On signing the above request, you would get headers similar to:
+1.  On signing the above request, you will get the following headers.
 
-The signing string would look like (line breaks inserted into the (request-target) header for easier reading):
+   The signing string (line breaks inserted into the (request-target) header for easier reading):
 
-```text
-date: Fri, 22 Aug 2019 21:02:19 GMT
-(request-target): get /v1/auth/oci/login/devrole
-host: 127.0.0.1
+   <CodeBlockConfig hideClipboard>
 
-The Authorization header would look like:
+   ```text
+   date: Fri, 22 Aug 2019 21:02:19 GMT
+   (request-target): get /v1/auth/oci/login/devrole
+   host: 127.0.0.1
+   ```
 
-Signature version="1",headers="date (request-target) host",keyId="ocid1.t
-enancy.oc1..aaaaaaaaba3pv6wkcr4jqae5f15p2b2m2yt2j6rx32uzr4h25vqstifsfdsq/
-ocid1.user.oc1..aaaaaaaat5nvwcna5j6aqzjcaty5eqbb6qt2jvpkanghtgdaqedqw3ryn
-jq/73:61:a2:21:67:e0:df:be:7e:4b:93:1e:15:98:a5:b7",algorithm="rsa-sha256
-",signature="GBas7grhyrhSKHP6AVIj/h5/Vp8bd/peM79H9Wv8kjoaCivujVXlpbKLjMPe
-DUhxkFIWtTtLBj3sUzaFj34XE6YZAHc9r2DmE4pMwOAy/kiITcZxa1oHPOeRheC0jP2dqbTll
-8fmTZVwKZOKHYPtrLJIJQHJjNvxFWeHQjMaR7M="
-```
+   </CodeBlockConfig>
 
-1.  Add the signed headers to the "request_headers" field and make the actual request to vault. An example is given below:
+   The Authorization header:
 
-```sh
-POST http://127.0.0.1/v1/auth/oci/login/devrole
-   "request_headers": {
-       "date": ["Fri, 22 Aug 2019 21:02:19 GMT"],
-       "(request-target)": ["get /v1/auth/oci/login/devrole"],
-       "host": ["127.0.0.1"],
-       "content-type": ["application/json"],
-       "authorization": ["Signature algorithm=\"rsa-sha256\",headers=\"date (request-target) host\",keyId=\"ocid1.tenancy.oc1..aaaaaaaaba3pv6wkcr4jqae5f15p2b2m2yt2j6rx32uzr4h25vqstifsfdsq/ocid1.user.oc1..aaaaaaaat5nvwcna5j6aqzjcaty5eqbb6qt2jvpkanghtgdaqedqw3rynjq/73:61:a2:21:67:e0:df:be:7e:4b:93:1e:15:98:a5:b7\",signature=\"GBas7grhyrhSKHP6AVIj/h5/Vp8bd/peM79H9Wv8kjoaCivujVXlpbKLjMPeDUhxkFIWtTtLBj3sUzaFj34XE6YZAHc9r2DmE4pMwOAy/kiITcZxa1oHPOeRheC0jP2dqbTll8fmTZVwKZOKHYPtrLJIJQHJjNvxFWeHQjMaR7M=\",version=\"1\""]
-   }
-```
+   <CodeBlockConfig hideClipboard>
+
+   ```text
+   Signature version="1",headers="date (request-target) host",keyId="ocid1.t
+   enancy.oc1..aaaaaaaaba3pv6wkcr4jqae5f15p2b2m2yt2j6rx32uzr4h25vqstifsfdsq/
+   ocid1.user.oc1..aaaaaaaat5nvwcna5j6aqzjcaty5eqbb6qt2jvpkanghtgdaqedqw3ryn
+   jq/73:61:a2:21:67:e0:df:be:7e:4b:93:1e:15:98:a5:b7",algorithm="rsa-sha256
+   ",signature="GBas7grhyrhSKHP6AVIj/h5/Vp8bd/peM79H9Wv8kjoaCivujVXlpbKLjMPe
+   DUhxkFIWtTtLBj3sUzaFj34XE6YZAHc9r2DmE4pMwOAy/kiITcZxa1oHPOeRheC0jP2dqbTll
+   8fmTZVwKZOKHYPtrLJIJQHJjNvxFWeHQjMaR7M="
+   ```
+
+   </CodeBlockConfig>
+
+1.  Add the signed headers to the "request_headers" field and make the actual request to Vault. For example:
+
+   <CodeBlockConfig hideClipboard>
+
+   ```sh
+   POST http://127.0.0.1/v1/auth/oci/login/devrole
+      "request_headers": {
+         "date": ["Fri, 22 Aug 2019 21:02:19 GMT"],
+         "(request-target)": ["get /v1/auth/oci/login/devrole"],
+         "host": ["127.0.0.1"],
+         "content-type": ["application/json"],
+         "authorization": ["Signature algorithm=\"rsa-sha256\",headers=\"date (request-target) host\",keyId=\"ocid1.tenancy.oc1..aaaaaaaaba3pv6wkcr4jqae5f15p2b2m2yt2j6rx32uzr4h25vqstifsfdsq/ocid1.user.oc1..aaaaaaaat5nvwcna5j6aqzjcaty5eqbb6qt2jvpkanghtgdaqedqw3rynjq/73:61:a2:21:67:e0:df:be:7e:4b:93:1e:15:98:a5:b7\",signature=\"GBas7grhyrhSKHP6AVIj/h5/Vp8bd/peM79H9Wv8kjoaCivujVXlpbKLjMPeDUhxkFIWtTtLBj3sUzaFj34XE6YZAHc9r2DmE4pMwOAy/kiITcZxa1oHPOeRheC0jP2dqbTll8fmTZVwKZOKHYPtrLJIJQHJjNvxFWeHQjMaR7M=\",version=\"1\""]
+      }
+   ```
+
+   </CodeBlockConfig>
 
 ## API
 

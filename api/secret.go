@@ -147,8 +147,8 @@ TOKEN_DONE:
 
 	// Identity policies
 	{
-		_, ok := s.Data["identity_policies"]
-		if !ok {
+		v, ok := s.Data["identity_policies"]
+		if !ok || v == nil {
 			goto DONE
 		}
 

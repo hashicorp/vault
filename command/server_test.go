@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/mitchellh/cli"
+	"github.com/stretchr/testify/require"
 )
 
 func init() {
@@ -282,6 +283,13 @@ func TestServer(t *testing.T) {
 			0,
 			[]string{"-test-verify-only"},
 		},
+		{
+			"recovery_mode",
+			testBaseHCL(t, "") + inmemHCL,
+			"",
+			0,
+			[]string{"-test-verify-only", "-recovery"},
+		},
 	}
 
 	for _, tc := range cases {
@@ -291,26 +299,31 @@ func TestServer(t *testing.T) {
 			t.Parallel()
 
 			ui, cmd := testServerCommand(t)
-			f, err := ioutil.TempFile("", "")
-			if err != nil {
-				t.Fatalf("error creating temp dir: %v", err)
-			}
-			f.WriteString(tc.contents)
-			f.Close()
-			defer os.Remove(f.Name())
+
+			f, err := os.CreateTemp(t.TempDir(), "")
+			require.NoErrorf(t, err, "error creating temp dir: %v", err)
+
+			_, err = f.WriteString(tc.contents)
+			require.NoErrorf(t, err, "cannot write temp file contents")
+
+			err = f.Close()
+			require.NoErrorf(t, err, "unable to close temp file")
 
 			args := append(tc.args, "-config", f.Name())
-
 			code := cmd.Run(args)
 			output := ui.ErrorWriter.String() + ui.OutputWriter.String()
-
-			if code != tc.code {
-				t.Errorf("expected %d to be %d: %s", code, tc.code, output)
-			}
-
-			if !strings.Contains(output, tc.exp) {
-				t.Fatalf("expected %q to contain %q", output, tc.exp)
-			}
+			require.Equal(t, tc.code, code, "expected %d to be %d: %s", code, tc.code, output)
+			require.Contains(t, output, tc.exp, "expected %q to contain %q", output, tc.exp)
 		})
 	}
+}
+
+// TestServer_DevTLS verifies that a vault server starts up correctly with the -dev-tls flag
+func TestServer_DevTLS(t *testing.T) {
+	ui, cmd := testServerCommand(t)
+	args := []string{"-dev-tls", "-dev-listen-address=127.0.0.1:0", "-test-server-config"}
+	retCode := cmd.Run(args)
+	output := ui.ErrorWriter.String() + ui.OutputWriter.String()
+	require.Equal(t, 0, retCode, output)
+	require.Contains(t, output, `tls: "enabled"`)
 }

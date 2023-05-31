@@ -289,7 +289,7 @@ type Delegate struct {
 	emptyVersionLogs map[raft.ServerID]struct{}
 }
 
-func newDelegate(b *RaftBackend) *Delegate {
+func NewDelegate(b *RaftBackend) *Delegate {
 	return &Delegate{
 		RaftBackend:      b,
 		inflightRemovals: make(map[raft.ServerID]bool),
@@ -382,6 +382,7 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 		return nil
 	}
 
+	apServerStates := d.autopilot.GetState().Servers
 	servers := future.Configuration().Servers
 	serverIDs := make([]string, 0, len(servers))
 	for _, server := range servers {
@@ -425,6 +426,19 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 			Ext:         d.autopilotServerExt(state),
 		}
 
+		// As KnownServers is a delegate called by autopilot let's check if we already
+		// had this data in the correct format and use it. If we don't (which sounds a
+		// bit sad, unless this ISN'T a voter) then as a fail-safe, let's try what we've
+		// done elsewhere in code to check the desired suffrage and manually set NodeType
+		// based on whether that's a voter or not. If we don't  do either of these
+		// things, NodeType isn't set which means technically it's not a voter.
+		// It shouldn't be a voter and end up in this state.
+		if apServerState, found := apServerStates[raft.ServerID(id)]; found && apServerState.Server.NodeType != "" {
+			server.NodeType = apServerState.Server.NodeType
+		} else if state.DesiredSuffrage == "voter" {
+			server.NodeType = autopilot.NodeVoter
+		}
+
 		switch state.IsDead.Load() {
 		case true:
 			d.logger.Debug("informing autopilot that the node left", "id", id)
@@ -442,6 +456,7 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 		Name:        d.localID,
 		RaftVersion: raft.ProtocolVersionMax,
 		NodeStatus:  autopilot.NodeAlive,
+		NodeType:    autopilot.NodeVoter, // The leader must be a voter
 		Meta: d.meta(&FollowerState{
 			UpgradeVersion: d.EffectiveVersion(),
 			RedundancyZone: d.RedundancyZone(),
@@ -817,7 +832,7 @@ func (b *RaftBackend) SetupAutopilot(ctx context.Context, storageConfig *Autopil
 	if b.autopilotUpdateInterval != 0 {
 		options = append(options, autopilot.WithUpdateInterval(b.autopilotUpdateInterval))
 	}
-	b.autopilot = autopilot.New(b.raft, newDelegate(b), options...)
+	b.autopilot = autopilot.New(b.raft, NewDelegate(b), options...)
 	b.followerStates = followerStates
 	b.followerHeartbeatTicker = time.NewTicker(1 * time.Second)
 
