@@ -9,6 +9,6 @@ export default class KubernetesConfigAdapter extends SecretsEnginePathAdapter {
   path = 'config';
 
   checkConfigVars(backend) {
-    return this.ajax(`${this.getURL(backend, 'check')}`, 'GET');
+    return this.ajax(`${this._getURL(backend, 'check')}`, 'GET');
   }
 }
