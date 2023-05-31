@@ -87,13 +87,17 @@ func (b *backend) acmeChallengeFetchHandler(acmeCtx *acmeContext, r *logical.Req
 		return nil, fmt.Errorf("unexpected request parameters: %w", ErrMalformed)
 	}
 
-	thumbprint, err := userCtx.GetKeyThumbprint()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get thumbprint for key: %w", err)
-	}
+	// If data was nil, we got a POST-as-GET request, just return current challenge without an accept,
+	// otherwise we most likely got a "{}" payload which we should now accept the challenge.
+	if data != nil {
+		thumbprint, err := userCtx.GetKeyThumbprint()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get thumbprint for key: %w", err)
+		}
 
-	if err := b.acmeState.validator.AcceptChallenge(acmeCtx.sc, userCtx.Kid, authz, challenge, thumbprint); err != nil {
-		return nil, fmt.Errorf("error submitting challenge for validation: %w", err)
+		if err := b.acmeState.validator.AcceptChallenge(acmeCtx.sc, userCtx.Kid, authz, challenge, thumbprint); err != nil {
+			return nil, fmt.Errorf("error submitting challenge for validation: %w", err)
+		}
 	}
 
 	return &logical.Response{
