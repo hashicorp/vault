@@ -846,7 +846,7 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 
 		if exitCode != 0 {
-			c.logger.Error("runtime error encountered", "error", err)
+			c.logger.Error("runtime error encountered", "error", err, "exitCode", exitCode)
 			c.UI.Error("Error encountered during run, refer to logs for more details.")
 		}
 	}
