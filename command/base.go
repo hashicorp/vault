@@ -581,14 +581,27 @@ func (f *FlagSets) Completions() complete.Flags {
 	return f.completions
 }
 
+type (
+	ParseOptions              interface{}
+	DisableDisplayFlagWarning bool
+)
+
 // Parse parses the given flags, returning any errors.
 // Warnings, if any, regarding the arguments format are sent to stdout
-func (f *FlagSets) Parse(args []string) error {
+func (f *FlagSets) Parse(args []string, opts ...ParseOptions) error {
 	err := f.mainSet.Parse(args)
 
-	warnings := generateFlagWarnings(f.Args())
-	if warnings != "" && Format(f.ui) == "table" {
-		f.ui.Warn(warnings)
+	displayFlagWarningsDisabled := false
+	for _, opt := range opts {
+		if value, ok := opt.(DisableDisplayFlagWarning); ok {
+			displayFlagWarningsDisabled = bool(value)
+		}
+	}
+	if !displayFlagWarningsDisabled {
+		warnings := generateFlagWarnings(f.Args())
+		if warnings != "" && Format(f.ui) == "table" {
+			f.ui.Warn(warnings)
+		}
 	}
 
 	return err

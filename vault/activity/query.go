@@ -245,7 +245,7 @@ func (s *PrecomputedQueryStore) Get(ctx context.Context, startTime, endTime time
 			s.logger.Trace("updating closest times")
 		}
 	}
-	s.logger.Trace("chose start end end times", "startTime", closestStartTime, "endTime")
+	s.logger.Trace("chose start/end times", "startTime", closestStartTime, "endTime", closestEndTime)
 
 	if closestStartTime.IsZero() || closestEndTime.IsZero() {
 		s.logger.Warn("no start or end time in range", "start time", closestStartTime, "end time", closestEndTime)

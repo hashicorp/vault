@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/ad: Fix bug where config couldn't be updated unless binddn/bindpass were included in the update.
+```

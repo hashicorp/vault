@@ -50,7 +50,6 @@ export default class SecretCreateOrUpdate extends Component {
   @service controlGroup;
   @service router;
   @service store;
-  @service wizard;
 
   constructor() {
     super(...arguments);
@@ -166,9 +165,6 @@ export default class SecretCreateOrUpdate extends Component {
       });
   }
   saveComplete(callback, key) {
-    if (this.wizard.featureState === 'secret') {
-      this.wizard.transitionFeatureMachine('secret', 'CONTINUE');
-    }
     callback(key);
   }
   transitionToRoute() {

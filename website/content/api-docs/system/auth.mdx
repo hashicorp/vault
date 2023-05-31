@@ -127,10 +127,10 @@ For example, enable the "foo" auth method will make it accessible at
     in the UI-specific listing endpoint. Valid values are `"unauth"` or `"hidden"`,
     with the default `""` being equivalent to `"hidden"`.
 
-  - `passthrough_request_headers` `(array: [])` - List of headers to whitelist
+  - `passthrough_request_headers` `(array: [])` - List of headers to allow
     and pass from the request to the plugin.
 
-  - `allowed_response_headers` `(array: [])` - List of headers to whitelist,
+  - `allowed_response_headers` `(array: [])` - List of headers to allow,
     allowing a plugin to include them in the response.
 
   - `plugin_version` `(string: "")` – Specifies the semantic version of the plugin
@@ -325,10 +325,10 @@ can be achieved without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
   in the UI-specific listing endpoint. Valid values are `"unauth"` or `"hidden"`,
   with the default `""` being equivalent to `"hidden"`.
 
-- `passthrough_request_headers` `(array: [])` - List of headers to whitelist
+- `passthrough_request_headers` `(array: [])` - List of headers to allow
   and pass from the request to the plugin.
 
-- `allowed_response_headers` `(array: [])` - List of headers to whitelist,
+- `allowed_response_headers` `(array: [])` - List of headers to allow,
   allowing a plugin to include them in the response.
 
 - `token_type` `(string: "")` – Specifies the type of tokens that should be

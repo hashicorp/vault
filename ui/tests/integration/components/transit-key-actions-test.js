@@ -318,6 +318,8 @@ module('Integration | Component | transit key actions', function (hooks) {
     `);
     await fillIn('#algorithm', 'sha2-384');
     await blur('#algorithm');
+    await fillIn('[data-test-component="code-mirror-modifier"] textarea', 'plaintext');
+    await click('input[data-test-transit-input="encodedBase64"]');
     await click('button[type="submit"]');
     assert.deepEqual(
       this.storeService.callArgs,
@@ -327,6 +329,7 @@ module('Integration | Component | transit key actions', function (hooks) {
         id: 'akey',
         payload: {
           algorithm: 'sha2-384',
+          input: 'plaintext',
         },
       },
       'passes expected args to the adapter'

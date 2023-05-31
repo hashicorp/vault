@@ -1,8 +1,11 @@
 import { hash } from 'rsvp';
+import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
 
 export default Route.extend(UnloadModelRoute, {
+  store: service(),
+
   beforeModel() {
     const params = this.paramsFor(this.routeName);
     let policyType = this.policyType();

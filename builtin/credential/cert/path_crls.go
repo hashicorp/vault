@@ -49,6 +49,16 @@ using the same name as specified here.`,
 	}
 }
 
+func (b *backend) populateCrlsIfNil(ctx context.Context, storage logical.Storage) error {
+	b.crlUpdateMutex.RLock()
+	if b.crls == nil {
+		b.crlUpdateMutex.RUnlock()
+		return b.lockThenpopulateCRLs(ctx, storage)
+	}
+	b.crlUpdateMutex.RUnlock()
+	return nil
+}
+
 func (b *backend) lockThenpopulateCRLs(ctx context.Context, storage logical.Storage) error {
 	b.crlUpdateMutex.Lock()
 	defer b.crlUpdateMutex.Unlock()

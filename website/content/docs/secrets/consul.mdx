@@ -8,8 +8,6 @@ description: The Consul secrets engine for Vault generates tokens for Consul dyn
 
 @include 'x509-sha1-deprecation.mdx'
 
-@include 'consul-dataplane-compat.mdx'
-
 The Consul secrets engine generates [Consul](https://www.consul.io/) API tokens
 dynamically based on Consul ACL policies.
 

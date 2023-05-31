@@ -13,7 +13,6 @@ import (
 	"io"
 	"math/big"
 	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -216,12 +215,7 @@ func fetchDerEncodedRequest(request *logical.Request, data *framework.FieldData)
 			return nil, errors.New("request is too large")
 		}
 
-		unescapedBase64, err := url.QueryUnescape(base64Req)
-		if err != nil {
-			return nil, fmt.Errorf("failed to unescape base64 string: %w", err)
-		}
-
-		return base64.StdEncoding.DecodeString(unescapedBase64)
+		return base64.StdEncoding.DecodeString(base64Req)
 	case logical.UpdateOperation:
 		// POST bodies should contain the binary form of the DER request.
 		// NOTE: Writing an empty update request to Vault causes a nil request.HTTPRequest, and that object
@@ -423,13 +417,19 @@ func genResponse(cfg *crlConfig, caBundle *certutil.ParsedCertBundle, info *ocsp
 		revSigAlg = x509.SHA512WithRSA
 	}
 
+	// Due to a bug in Go's ocsp.ParseResponse(...), we do not provision
+	// Certificate any more on the response to help Go based OCSP clients.
+	// This was technically unnecessary, as the Certificate given here
+	// both signed the OCSP response and issued the leaf cert, and so
+	// should already be trusted by the client.
+	//
+	// See also: https://github.com/golang/go/issues/59641
 	template := ocsp.Response{
 		IssuerHash:         reqHash,
 		Status:             info.ocspStatus,
 		SerialNumber:       info.serialNumber,
 		ThisUpdate:         curTime,
 		NextUpdate:         curTime.Add(duration),
-		Certificate:        caBundle.Certificate,
 		ExtraExtensions:    []pkix.Extension{},
 		SignatureAlgorithm: revSigAlg,
 	}

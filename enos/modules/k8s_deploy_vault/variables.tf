@@ -32,3 +32,8 @@ variable "vault_instance_count" {
   type        = number
   description = "How many vault instances are in the cluster"
 }
+
+variable "vault_log_level" {
+  description = "The server log level for Vault logs. Supported values (in order of detail) are trace, debug, info, warn, and err."
+  type        = string
+}

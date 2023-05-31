@@ -4,6 +4,12 @@ variable "vault_image_repository" {
   default     = null
 }
 
+variable "vault_log_level" {
+  description = "The server log level for Vault logs. Supported values (in order of detail) are trace, debug, info, warn, and err."
+  type        = string
+  default     = "info"
+}
+
 variable "vault_product_version" {
   description = "The vault product version to test"
   type        = string

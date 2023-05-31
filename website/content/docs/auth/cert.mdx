@@ -11,7 +11,9 @@ description: >-
 @include 'x509-sha1-deprecation.mdx'
 
 The `cert` auth method allows authentication using SSL/TLS client certificates
-which are either signed by a CA or self-signed.
+which are either signed by a CA or self-signed. SSL/TLS client certificates
+are defined as having an `ExtKeyUsage` extension with the usage set to either
+`ClientAuth` or `Any`.
 
 The trusted certificates and CAs are configured directly to the auth method
 using the `certs/` path. This method cannot read trusted certificates from an

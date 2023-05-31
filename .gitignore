@@ -58,9 +58,17 @@ Vagrantfile
 !command/server/test-fixtures/**/*.hcl
 !enos/**/*.hcl
 
-# Enos
+# Enos local Terraform files
 enos/.enos
 enos/support
+enos/.terraform/*
+enos/.terraform.lock.hcl
+enos/*.tfstate
+enos/*.tfstate.*
+enos/**/.terraform/*
+enos/**/.terraform.lock.hcl
+enos/**/*.tfstate
+enos/**/*.tfstate.*
 
 .DS_Store
 .idea
@@ -119,3 +127,6 @@ website/components/node_modules
 
 .buildcache/
 .releaser/
+*.log
+
+tools/godoctests/.bin
