@@ -63,7 +63,7 @@ type BaseCommand struct {
 	flagOutputCurlString bool
 	flagOutputPolicy     bool
 	flagNonInteractive   bool
-	muteAddrWarning      bool
+	flagAddrWarning      string
 
 	flagMFA []string
 
@@ -77,9 +77,9 @@ type BaseCommand struct {
 // Client returns the HTTP API client. The client is cached on the command to
 // save performance on future calls.
 func (c *BaseCommand) Client() (*api.Client, error) {
-	if !c.muteAddrWarning && c.UI != nil {
+	if c.flagAddrWarning != "" && c.UI != nil {
 		if os.Getenv("VAULT_ADDR") == "" {
-			c.UI.Warn(wrapAtLength(fmt.Sprintf("WARNING! VAULT_ADDR and -address unset. Defaulting to %s.", c.flagAddress)))
+			c.UI.Warn(wrapAtLength(fmt.Sprintf(c.flagAddrWarning, c.flagAddress)))
 		}
 	}
 	// Read the test client if present
@@ -501,6 +501,14 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Target:  &c.flagNonInteractive,
 				Default: false,
 				Usage:   "When set true, prevents asking the user for input via the terminal.",
+			})
+
+			f.StringVar(&StringVar{
+				Name:    "addr-warning",
+				Target:  &c.flagAddrWarning,
+				Default: "WARNING! VAULT_ADDR and -address unset. Defaulting to %s.",
+				Hidden:  true,
+				Usage:   "For displaying: WARNING! VAULT_ADDR and -address unset. Defaulting to https://127.0.0.1:8200.",
 			})
 
 		}
