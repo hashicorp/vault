@@ -3,4 +3,4 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-export { default } from 'core/helpers/number-to-string';
+export { default } from 'core/helpers/loose-equal';
