@@ -24,7 +24,7 @@
                   </option>
                 {{/if}}
                 {{#each this.keyBitOptions as |val|}}
-                  <option selected={{eq (get @model "keyBits") val}} value={{val}}>
+                  <option selected={{eq (integer-to-string (get @model "keyBits")) val}} value={{val}}>
                     {{val}}
                   </option>
                 {{/each}}

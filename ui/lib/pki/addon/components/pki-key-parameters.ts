@@ -48,7 +48,6 @@ const KEY_BITS_OPTIONS: BitOptions = {
 export default class PkiKeyParameters extends Component<Args> {
   get keyBitOptions() {
     if (!this.args.model.keyType) return [];
-
     return KEY_BITS_OPTIONS[this.args.model.keyType];
   }
 
