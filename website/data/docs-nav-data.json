@@ -2243,7 +2243,7 @@
             "path": "enterprise/license/autoloading"
           },
           {
-            "title": "Automated entitlement utilization reporting",
+            "title": "Automated license utilization reporting",
             "path": "enterprise/license/utilization-reporting"
           },
           {
