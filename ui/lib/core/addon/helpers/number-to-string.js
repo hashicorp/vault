@@ -5,13 +5,14 @@
 
 import { helper } from '@ember/component/helper';
 
-// useful for select dropdowns when the API param is an integer but options are strings
-// because after selecting an option, selected values are returned as type string
-export function numberToString([number]) {
-  if (typeof number === 'number') {
-    return number.toString();
+// used when select dropdowns receive an integer from the API but options are strings
+// because after selecting an option, selected values are converted to strings
+export function numberToString([value], { options }) {
+  // only convert value type if options are a string (assumes all options the same type)
+  if (typeof value === 'number' && (!options || typeof options.firstObject === 'string')) {
+    return value.toString();
   }
-  return number;
+  return value;
 }
 
 export default helper(numberToString);

@@ -17,12 +17,22 @@ module('Integration | Helper | number-to-string', function (hooks) {
     assert.dom(this.element).hasText('4567');
   });
 
-  test('it transforms value type', async function (assert) {
-    assert.strictEqual(numberToString([0]), '0');
-    assert.strictEqual(numberToString([123]), '123');
-    assert.strictEqual(numberToString(['1,234']), '1,234');
-    assert.strictEqual(numberToString(['456']), '456', 'it returns non-integer values as-is');
-    assert.strictEqual(numberToString(['0']), '0', 'it returns string 0 as-is');
-    assert.strictEqual(numberToString(['abc']), 'abc', 'it returns string of characters as-is');
+  test('it converts numbers to string type with no options', async function (assert) {
+    assert.strictEqual(numberToString([0], {}), '0');
+    assert.strictEqual(numberToString([123], {}), '123');
+    assert.strictEqual(numberToString(['1,234'], {}), '1,234');
+    assert.strictEqual(numberToString(['456'], {}), '456', 'it returns non-integer values as-is');
+    assert.strictEqual(numberToString(['0'], {}), '0', 'it returns string 0 as-is');
+    assert.strictEqual(numberToString(['abc'], {}), 'abc', 'it returns string of characters as-is');
+  });
+
+  test('it converts to string only if options are strings', async function (assert) {
+    assert.strictEqual(numberToString([0], { options: ['0', '1', '2'] }), '0');
+    assert.strictEqual(numberToString([123], { options: ['123', '456'] }), '123');
+    assert.strictEqual(numberToString([0], { options: [0] }), 0);
+    assert.strictEqual(numberToString([123], { options: [123] }), 123);
+    assert.strictEqual(numberToString(['456'], { options: ['456'] }), '456');
+    assert.strictEqual(numberToString(['0'], { options: ['0'] }), '0');
+    assert.strictEqual(numberToString(['abc'], { options: ['abc'] }), 'abc');
   });
 });
