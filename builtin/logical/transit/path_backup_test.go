@@ -58,9 +58,9 @@ func testBackupRestore(t *testing.T, keyType, feature string) {
 			"exportable": true,
 		},
 	}
-    if keyType == "hmac" {
-        keyReq.Data["key_size"] = 32
-    }
+	if keyType == "hmac" {
+		keyReq.Data["key_size"] = 32
+	}
 	resp, err = b.HandleRequest(context.Background(), keyReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("resp: %#v\nerr: %v", resp, err)
