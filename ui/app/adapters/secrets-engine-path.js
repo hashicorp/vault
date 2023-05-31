@@ -6,6 +6,7 @@
 /**
  * General use adapter to access specified paths on secrets engines
  * For example /:backend/config is a typical use case for this adapter
+ * These types of records do not have an id and use the backend value of the secrets engine as the primaryKey in the serializer
  */
 
 import ApplicationAdapter from 'vault/adapters/application';
