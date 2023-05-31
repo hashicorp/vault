@@ -141,6 +141,8 @@ spec:
 Provides the configuration necessary for the Operator to synchronize a single Vault *PKI* Secret to a single Kubernetes Secret.<br />
 Supported secrets engines: [pki](/vault/docs/secrets/pki)
 
+In this example, the PKI secret engine is mounted at `pki` path. A Vault role named `default` is configured to map to a procedure for generating a certificate.
+
 ```yaml
 ---
 apiVersion: secrets.hashicorp.com/v1alpha1
@@ -168,6 +170,11 @@ Provides the configuration necessary for the Operator to synchronize a single Va
 Supported secrets engines *non-exhaustive*: [databases](/vault/docs/secrets/databases), [aws](/vault/docs/secrets/aws),
 [azure](/vault/docs/secrets/azure), [gcp](/vault/docs/secrets/gcp), ...
 
+##### Database secret example
+
+In this example, the database secret engine is mounted at `db` path. A Vault role named `my-postgresql-role`
+is configured to map a name in Vault to an executable database statement to create the database credential.
+
 ```yaml
 ---
 apiVersion: secrets.hashicorp.com/v1alpha1
@@ -178,7 +185,27 @@ metadata:
 spec:
   vaultAuthRef: example
   mount: db
-  role: postgres
+  path: creds/my-postgresql-role
+  destination:
+    create: true
+    name: dynamic1
+```
+
+##### AWS secret example
+
+In this example, the AWS secret engine is mounted at `aws` path. A Vault role named `my-role` is configured to map to a set of permissions in AWS as well as an AWS credential type.
+
+```yaml
+---
+apiVersion: secrets.hashicorp.com/v1alpha1
+kind: VaultDynamicSecret
+metadata:
+  namespace: vso-example
+  name: example
+spec:
+  vaultAuthRef: example
+  mount: aws
+  path: creds/my-role
   destination:
     create: true
     name: dynamic1
