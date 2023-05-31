@@ -47,7 +47,7 @@
             {{/if}}
             {{#each (path-or-array @attr.options.possibleValues @model) as |val|}}
               <option
-                selected={{eq (integer-to-string (get @model this.valuePath)) (or val.value val)}}
+                selected={{eq (number-to-string (get @model this.valuePath)) (or val.value val)}}
                 value={{or val.value val}}
               >
                 {{or val.displayName val}}

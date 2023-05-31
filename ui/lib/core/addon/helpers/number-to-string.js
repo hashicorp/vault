@@ -7,11 +7,11 @@ import { helper } from '@ember/component/helper';
 
 // useful for select dropdowns when the API param is an integer but options are strings
 // because after selecting an option, selected values are returned as type string
-export function integerToString([number]) {
+export function numberToString([number]) {
   if (typeof number === 'number') {
     return number.toString();
   }
   return number;
 }
 
-export default helper(integerToString);
+export default helper(numberToString);
