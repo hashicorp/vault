@@ -18,6 +18,8 @@ type Opt func(*StringTemplate) error
 
 func Template(rawTemplate string) Opt {
 	return func(up *StringTemplate) error {
+		// ensure input does not exceed length limit
+		// in order to prevent stack overflow errors
 		if len(rawTemplate) > maxTemplateInputLength {
 			return fmt.Errorf(
 				"template input string %s exceeds the desired length limit of %d",
