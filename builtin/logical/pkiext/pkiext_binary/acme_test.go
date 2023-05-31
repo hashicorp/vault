@@ -152,6 +152,34 @@ func SubtestACMECertbot(t *testing.T, cluster *VaultPkiCluster) {
 
 	require.NoError(t, err, "got error running double revoke command")
 	require.NotEqual(t, 0, retcode, "expected non-zero retcode double revoke command result")
+
+	// Attempt to close out our ACME account
+	certbotUnregisterCmd := []string{
+		"certbot",
+		"unregister",
+		"--no-verify-ssl",
+		"--non-interactive",
+		"--server", directory,
+	}
+
+	stdout, stderr, retcode, err = runner.RunCmdWithOutput(ctx, result.Container.ID, certbotUnregisterCmd)
+	t.Logf("Certbot Unregister Command: %v\nstdout: %v\nstderr: %v\n", certbotUnregisterCmd, string(stdout), string(stderr))
+	if err != nil || retcode != 0 {
+		logsStdout, logsStderr, _, _ := runner.RunCmdWithOutput(ctx, result.Container.ID, logCatCmd)
+		t.Logf("Certbot logs\nstdout: %v\nstderr: %v\n", string(logsStdout), string(logsStderr))
+	}
+	require.NoError(t, err, "got error running unregister command")
+	require.Equal(t, 0, retcode, "expected zero retcode unregister command result")
+
+	// Attempting to close out our ACME account twice should fail
+	stdout, stderr, retcode, err = runner.RunCmdWithOutput(ctx, result.Container.ID, certbotUnregisterCmd)
+	t.Logf("Certbot double Unregister Command: %v\nstdout: %v\nstderr: %v\n", certbotUnregisterCmd, string(stdout), string(stderr))
+	if err != nil || retcode != 0 {
+		logsStdout, logsStderr, _, _ := runner.RunCmdWithOutput(ctx, result.Container.ID, logCatCmd)
+		t.Logf("Certbot double logs\nstdout: %v\nstderr: %v\n", string(logsStdout), string(logsStderr))
+	}
+	require.NoError(t, err, "got error running double unregister command")
+	require.Equal(t, 1, retcode, "expected non-zero retcode double unregister command result")
 }
 
 func SubtestACMECertbotEab(t *testing.T, cluster *VaultPkiCluster) {
