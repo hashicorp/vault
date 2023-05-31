@@ -24,6 +24,7 @@ func (b *backend) pathSignCsr() *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
+				Required:    true,
 				Description: "The name of the key",
 			},
 			"version": {
@@ -57,6 +58,7 @@ func (b *backend) pathSetCertificate() *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
+				Required:    true,
 				Description: "The name of the key",
 			},
 			"version": {
@@ -116,13 +118,6 @@ func (b *backend) pathSignCsrWrite(ctx context.Context, req *logical.Request, d 
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
-	// Is this check relevant in this scenario?
-	// NOTE: It will fail for the empty template CSR
-	// if err = csrTemplate.CheckSignature(); err != nil {
-	// 	// FIXME: Error returned
-	// 	return logical.ErrorResponse("invalid signature in csr provided"), logical.ErrInvalidRequest
-	// }
-
 	signingKeyVersion := p.LatestVersion
 	if version, ok := d.GetOk("version"); ok {
 		signingKeyVersion = version.(int)
@@ -140,6 +135,7 @@ func (b *backend) pathSignCsrWrite(ctx context.Context, req *logical.Request, d 
 	// FIXME: Remove
 	log.Printf("CSR:\n%s", csrBytes)
 
+	// Getting response as base64, is that expected?
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"csr": csrBytes,
@@ -176,11 +172,15 @@ func (b *backend) pathSetCertificateWrite(ctx context.Context, req *logical.Requ
 	}
 
 	// Get certificate chain
-	certChainBytes := d.Get("certificate_chain").([]byte)
-	certChain, err := x509.ParseCertificates(certChainBytes)
+	// FIXME: THIS IS PEM (fix name)
+	certChainBytes := d.Get("certificate_chain").(string)
+	certChain, err := parseParamCertificateChain(certChainBytes)
 	if err != nil {
+		// FIXME: Error
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
+
+	log.Printf("For some reason we are here\nHere's the number of certificates in the chain: %d", len(certChain))
 
 	// NOTE: Is this check needed?
 	if len(certChain) == 0 {
@@ -218,7 +218,7 @@ func parseCsrParam(csr string) (*x509.CertificateRequest, error) {
 
 	block, _ := pem.Decode([]byte(csr))
 	if block == nil {
-		return nil, errors.New("failed to decode CSR PEM")
+		return nil, errors.New("failed to decode PEM Certificate Request")
 	}
 
 	csrTemplate, err := x509.ParseCertificateRequest(block.Bytes)
@@ -229,14 +229,31 @@ func parseCsrParam(csr string) (*x509.CertificateRequest, error) {
 	return csrTemplate, nil
 }
 
+// FIXME: Names
+func parseParamCertificateChain(certChain string) ([]*x509.Certificate, error) {
+	certPemBlocks, _ := pem.Decode([]byte(certChain))
+	if certPemBlocks == nil {
+		return nil, errors.New("failed to decode PEM Certificate Chain")
+	}
+
+	certificates, err := x509.ParseCertificates(certPemBlocks.Bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return certificates, nil
+}
+
 func hasSingleLeafCertificate(certChain []*x509.Certificate) bool {
 	var leafCertsCount int
 	for _, cert := range certChain {
+		log.Printf("BasicConstraintValid: %t  | IsCA: %t\n", cert.BasicConstraintsValid, cert.IsCA)
 		if cert.BasicConstraintsValid && !cert.IsCA {
 			leafCertsCount += 1
 		}
 	}
 
+	log.Printf("leafCertsCount: %d\n", leafCertsCount)
 	var hasSingleLeafCert bool
 	if leafCertsCount == 1 {
 		hasSingleLeafCert = true

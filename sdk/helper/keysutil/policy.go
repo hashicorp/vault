@@ -2274,7 +2274,10 @@ func (p *Policy) SignCsr(keyVersion int, csrTemplate *x509.CertificateRequest) (
 
 	// NOTE: We cannot use the template as it is because it carries "signatureAlgorithm"
 	// information that might not apply to the key we are going to use.
-	// Also doesn't seem to "copy" email
+	// NOTE: The x509.CertificateRequest type in Go's crypto/x509 package does
+	// not directly include a field for storing the email address. However, the
+	// email address can be included as part of the subject distinguished name
+	// (DN) field in the certificate request.
 	csrTemplate = &x509.CertificateRequest{
 		Subject:        csrTemplate.Subject,
 		DNSNames:       csrTemplate.DNSNames,
