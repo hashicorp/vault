@@ -187,13 +187,16 @@ func (b *backend) pathSetCertificateWrite(ctx context.Context, req *logical.Requ
 		return logical.ErrorResponse("no certificates provided"), logical.ErrInvalidRequest
 	}
 
+	// Validate there's only a leaf certificate in the chain
+	// NOTE: Does it have the be the first? Would make sense
+	if hasSingleLeafCert := hasSingleLeafCertificate(certChain); !hasSingleLeafCert {
+		return logical.ErrorResponse("expected a single leaf certificate in the certificate chain"), logical.ErrInvalidRequest
+	}
+
 	keyVersion := p.LatestVersion
 	if version, ok := d.GetOk("version"); ok {
 		keyVersion = version.(int)
 	}
-
-	// FIXME: Remove
-	log.Println("KeyVersion: ", keyVersion)
 
 	// FIXME: Are we expected to validate the chain of trust?
 
@@ -226,4 +229,20 @@ func parseCsrParam(csr string) (*x509.CertificateRequest, error) {
 	}
 
 	return csrTemplate, nil
+}
+
+func hasSingleLeafCertificate(certChain []*x509.Certificate) bool {
+	var leafCertsCount int
+	for _, cert := range certChain {
+		if cert.BasicConstraintsValid && !cert.IsCA {
+			leafCertsCount += 1
+		}
+	}
+
+	var hasSingleLeafCert bool
+	if leafCertsCount == 1 {
+		hasSingleLeafCert = true
+	}
+
+	return hasSingleLeafCert
 }
