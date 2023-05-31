@@ -328,23 +328,13 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Usage:      "Address of the Vault server.",
 			}
 
-			addrWarning := &StringVar{
-				Name:    "addr-warning",
-				Target:  &c.addrWarning,
-				Default: "",
-				Hidden:  true,
-				Usage:   "For displaying: WARNING! VAULT_ADDR and -address unset. Defaulting to https://127.0.0.1:8200.",
-			}
-
 			if c.flagAddress != "" {
 				addrStringVar.Default = c.flagAddress
 			} else {
 				addrStringVar.Default = "https://127.0.0.1:8200"
-				addrWarning.Default = fmt.Sprintf("WARNING! VAULT_ADDR and -address unset. Defaulting to %s.", addrStringVar.Default)
+				c.addrWarning = fmt.Sprintf("WARNING! VAULT_ADDR and -address unset. Defaulting to %s.", addrStringVar.Default)
 			}
-
 			f.StringVar(addrStringVar)
-			f.StringVar(addrWarning)
 
 			agentAddrStringVar := &StringVar{
 				Name:       "agent-address",
