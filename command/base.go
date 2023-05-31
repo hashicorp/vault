@@ -327,12 +327,24 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Completion: complete.PredictAnything,
 				Usage:      "Address of the Vault server.",
 			}
+
+			flagAddrWarning := &StringVar{
+				Name:    "addr-warning",
+				Target:  &c.flagAddrWarning,
+				Default: "",
+				Hidden:  true,
+				Usage:   "For displaying: WARNING! VAULT_ADDR and -address unset. Defaulting to https://127.0.0.1:8200.",
+			}
+
 			if c.flagAddress != "" {
 				addrStringVar.Default = c.flagAddress
 			} else {
 				addrStringVar.Default = "https://127.0.0.1:8200"
+				flagAddrWarning.Default = "WARNING! VAULT_ADDR and -address unset. Defaulting to %s."
 			}
+
 			f.StringVar(addrStringVar)
+			f.StringVar(flagAddrWarning)
 
 			agentAddrStringVar := &StringVar{
 				Name:       "agent-address",
@@ -501,14 +513,6 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Target:  &c.flagNonInteractive,
 				Default: false,
 				Usage:   "When set true, prevents asking the user for input via the terminal.",
-			})
-
-			f.StringVar(&StringVar{
-				Name:    "addr-warning",
-				Target:  &c.flagAddrWarning,
-				Default: "WARNING! VAULT_ADDR and -address unset. Defaulting to %s.",
-				Hidden:  true,
-				Usage:   "For displaying: WARNING! VAULT_ADDR and -address unset. Defaulting to https://127.0.0.1:8200.",
 			})
 
 		}
