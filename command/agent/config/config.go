@@ -311,7 +311,7 @@ func (c *Config) ValidateConfig() error {
 	}
 
 	if c.Cache != nil {
-		if len(c.Listeners) < 1 && len(c.Templates) < 1 {
+		if len(c.Listeners) < 1 && len(c.Templates) < 1 && len(c.EnvTemplates) < 1 {
 			return fmt.Errorf("enabling the cache requires at least 1 template or 1 listener to be defined")
 		}
 
