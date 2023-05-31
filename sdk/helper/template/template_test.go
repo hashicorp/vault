@@ -4,9 +4,12 @@
 package template
 
 import (
+	"context"
 	"fmt"
+	"strings"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/random"
 	"github.com/stretchr/testify/require"
 )
 
@@ -206,4 +209,57 @@ func TestBadConstructorArguments(t *testing.T) {
 		require.Error(t, err)
 		require.Equal(t, "", str)
 	})
+}
+
+func TestTemplateInputLength(t *testing.T) {
+	type testCase struct {
+		name        string
+		generator   *random.StringGenerator
+		wantErr     bool
+		expectedErr string
+	}
+
+	tests := []testCase{
+		{
+			name:      "below length limit",
+			generator: random.DefaultStringGenerator,
+			wantErr:   false,
+		},
+		{
+			name: "at length limit",
+			generator: &random.StringGenerator{
+				Length: maxTemplateInputLength,
+				Rules:  random.DefaultStringGenerator.Rules,
+			},
+			wantErr: false,
+		},
+		{
+			name: "exceeds length limit",
+			generator: &random.StringGenerator{
+				Length: maxTemplateInputLength + 1,
+				Rules:  random.DefaultStringGenerator.Rules,
+			},
+			wantErr:     true,
+			expectedErr: "exceeds the desired length limit",
+		},
+	}
+
+	ctx := context.Background()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			input, err := tt.generator.Generate(ctx, nil)
+			if err != nil {
+				t.Error(err)
+			}
+
+			_, err = NewTemplate(Template(input))
+			if tt.wantErr && err == nil {
+				t.Errorf("expected error, got nil")
+			}
+
+			if tt.wantErr && !strings.Contains(err.Error(), tt.expectedErr) {
+				t.Errorf("expected error %s, got %s", tt.expectedErr, err.Error())
+			}
+		})
+	}
 }
