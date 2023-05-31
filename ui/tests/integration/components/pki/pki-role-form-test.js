@@ -145,4 +145,58 @@ module('Integration | Component | pki-role-form', function (hooks) {
     await click(SELECTORS.roleCreateButton);
     assert.strictEqual(this.role.issuerRef, 'issuer-1', 'Issuer Ref correctly saved on create');
   });
+
+  test('it should edit a role', async function (assert) {
+    assert.expect(1);
+
+    this.server.post(`/${this.backend}/roles/test-role`, (schema, req) => {
+      assert.ok(true, 'Request made to correct endpoint to update role');
+      const request = JSON.parse(req.requestBody);
+      assert.propEqual(
+        request,
+        {
+          key_name: 'test-key',
+          key_type: 'rsa',
+          key_bits: '2048',
+        },
+        'sends role params in correct type'
+      );
+      return {};
+    });
+
+    this.store.pushPayload('pki/role', {
+      modelName: 'pki/role',
+      name: 'test-role',
+      backend: 'pki-test',
+      id: 'role-id',
+      key_type: 'rsa',
+      key_bits: 3072, // string type in dropdown, API returns as numbers
+      signature_bits: 384, // string type in dropdown, API returns as numbers
+    });
+
+    this.role = this.store.peekRecord('pki/role', 'role-id');
+
+    await render(
+      hbs`
+      <PkiRoleForm
+        @role={{this.role}}
+        @issuers={{this.issuers}}
+        @onCancel={{this.onCancel}}
+        @onSave={{this.onSave}}
+      />
+      `,
+      { owner: this.engine }
+    );
+
+    await click(SELECTORS.issuerRefToggle);
+    await fillIn(SELECTORS.issuerRefSelect, 'issuer-1');
+
+    await click(SELECTORS.keyParams);
+    assert.dom(SELECTORS.keyType).hasValue('rsa');
+    assert.dom(SELECTORS.keyBits).hasValue('3072', 'dropdown has model value, not default value (2048)');
+    assert.dom(SELECTORS.keyBits).hasValue('384', 'dropdown has model value, not default value (0)');
+
+    await click(SELECTORS.roleCreateButton);
+    assert.strictEqual(this.role.issuerRef, 'issuer-1', 'Issuer Ref correctly saved on create');
+  });
 });
