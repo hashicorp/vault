@@ -122,6 +122,9 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 		return fmt.Errorf("template server failed to create: %w", err)
 	}
 
+	// prevent the templates from being rendered to stdout in "dry" mode
+	s.runner.SetOutStream(io.Discard)
+
 	s.numberOfTemplates = len(s.runner.TemplateConfigMapping())
 
 	for {
@@ -153,6 +156,10 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 					s.logger.Error("template server failed with new Vault token", "error", err)
 					continue
 				}
+
+				// prevent the templates from being rendered to stdout in "dry" mode
+				s.runner.SetOutStream(io.Discard)
+
 				go s.runner.Start()
 			}
 
@@ -257,7 +264,16 @@ func (s *Server) bounceCmd(newEnvVars []string) error {
 	}
 	s.childProcess = proc
 
-	// listen if the child process exits and bubble it up to the main loop
+	if err := s.childProcess.Start(); err != nil {
+		return fmt.Errorf("error starting the child process: %w", err)
+	}
+
+	s.childProcessState = childProcessStateRunning
+
+	// Listen if the child process exits and bubble it up to the main loop.
+	//
+	// NOTE: this must be invoked after child.Start() to avoid a potential
+	// race condition with ExitCh not being initialized.
 	go func() {
 		ctx, cancel := context.WithCancel(context.Background())
 		s.childProcessExitCodeCloser = cancel
@@ -269,11 +285,6 @@ func (s *Server) bounceCmd(newEnvVars []string) error {
 			return
 		}
 	}()
-
-	if err := s.childProcess.Start(); err != nil {
-		return fmt.Errorf("error starting child process: %w", err)
-	}
-	s.childProcessState = childProcessStateRunning
 
 	return nil
 }

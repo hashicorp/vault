@@ -680,7 +680,8 @@ func (c *AgentCommand) Run(args []string) int {
 
 	// Start auto-auth and sink servers
 	if method != nil {
-		enableTokenCh := len(config.Templates) > 0
+		enableTemplateTokenCh := len(config.Templates) > 0
+		enableEnvTemplateTokenCh := len(config.EnvTemplates) > 0
 
 		// Auth Handler is going to set its own retry values, so we want to
 		// work on a copy of the client to not affect other subsystems.
@@ -705,7 +706,8 @@ func (c *AgentCommand) Run(args []string) int {
 			MinBackoff:                   config.AutoAuth.Method.MinBackoff,
 			MaxBackoff:                   config.AutoAuth.Method.MaxBackoff,
 			EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
-			EnableTemplateTokenCh:        enableTokenCh,
+			EnableTemplateTokenCh:        enableTemplateTokenCh,
+			EnableExecTokenCh:            enableEnvTemplateTokenCh,
 			Token:                        previousToken,
 			ExitOnError:                  config.AutoAuth.Method.ExitOnError,
 			UserAgent:                    useragent.AgentAutoAuthString(),
