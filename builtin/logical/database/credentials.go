@@ -351,9 +351,19 @@ func (cg *ClientCertificateGenerator) generate(r io.Reader, expiration time.Time
 			ExtKeyUsage:                   certutil.ClientAuthExtKeyUsage,
 			BasicConstraintsValidForNonCA: false,
 			NotBeforeDuration:             30 * time.Second,
+			URLs: &certutil.URLEntries{
+				IssuingCertificates:   []string{},
+				CRLDistributionPoints: []string{},
+				OCSPServers:           []string{},
+			},
 		},
 		SigningBundle: &certutil.CAInfoBundle{
 			ParsedCertBundle: *cg.parsedCABundle,
+			URLs: &certutil.URLEntries{
+				IssuingCertificates:   []string{},
+				CRLDistributionPoints: []string{},
+				OCSPServers:           []string{},
+			},
 		},
 	}
 
