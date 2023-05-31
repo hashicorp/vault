@@ -77,6 +77,11 @@ type BaseCommand struct {
 // Client returns the HTTP API client. The client is cached on the command to
 // save performance on future calls.
 func (c *BaseCommand) Client() (*api.Client, error) {
+	if !c.muteAddrWarning && c.UI != nil {
+		if os.Getenv("VAULT_ADDR") == "" {
+			c.UI.Warn(wrapAtLength(fmt.Sprintf("WARNING! VAULT_ADDR and -address unset. Defaulting to %s.", c.flagAddress)))
+		}
+	}
 	// Read the test client if present
 	if c.client != nil {
 		return c.client, nil
@@ -326,11 +331,6 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				addrStringVar.Default = c.flagAddress
 			} else {
 				addrStringVar.Default = "https://127.0.0.1:8200"
-				if !c.muteAddrWarning && c.UI != nil {
-					if os.Getenv("VAULT_ADDR") == "" {
-						c.UI.Warn(wrapAtLength(fmt.Sprintf("WARNING! VAULT_ADDR and -address unset. Defaulting to %s.", addrStringVar.Default)))
-					}
-				}
 			}
 			f.StringVar(addrStringVar)
 

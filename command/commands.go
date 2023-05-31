@@ -696,10 +696,9 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 		"server": func() (cli.Command, error) {
 			return &ServerCommand{
 				BaseCommand: &BaseCommand{
-					UI:              serverCmdUi,
-					tokenHelper:     runOpts.TokenHelper,
-					flagAddress:     runOpts.Address,
-					muteAddrWarning: true,
+					UI:          serverCmdUi,
+					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 				AuditBackends:      auditBackends,
 				CredentialBackends: credentialBackends,
@@ -791,13 +790,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 		"version": func() (cli.Command, error) {
 			return &VersionCommand{
 				VersionInfo: version.GetVersion(),
-				BaseCommand: &BaseCommand{
-					UI:              ui,
-					tokenHelper:     runOpts.TokenHelper,
-					flagAddress:     runOpts.Address,
-					client:          runOpts.Client,
-					muteAddrWarning: true,
-				},
+				BaseCommand: getBaseCommand(),
 			}, nil
 		},
 		"version-history": func() (cli.Command, error) {

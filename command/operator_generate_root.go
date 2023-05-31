@@ -207,12 +207,6 @@ func (c *OperatorGenerateRootCommand) AutocompleteFlags() complete.Flags {
 }
 
 func (c *OperatorGenerateRootCommand) Run(args []string) int {
-	for _, v := range args {
-		if v == "-decode" {
-			c.BaseCommand.muteAddrWarning = true
-		}
-	}
-
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {
