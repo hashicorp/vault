@@ -63,7 +63,7 @@ type BaseCommand struct {
 	flagOutputCurlString bool
 	flagOutputPolicy     bool
 	flagNonInteractive   bool
-	flagAddrWarning      string
+	addrWarning          string
 
 	flagMFA []string
 
@@ -77,9 +77,9 @@ type BaseCommand struct {
 // Client returns the HTTP API client. The client is cached on the command to
 // save performance on future calls.
 func (c *BaseCommand) Client() (*api.Client, error) {
-	if c.flagAddrWarning != "" && c.UI != nil {
+	if c.addrWarning != "" && c.UI != nil {
 		if os.Getenv("VAULT_ADDR") == "" {
-			c.UI.Warn(wrapAtLength(fmt.Sprintf(c.flagAddrWarning, c.flagAddress)))
+			c.UI.Warn(wrapAtLength(c.addrWarning))
 		}
 	}
 	// Read the test client if present
@@ -328,9 +328,9 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Usage:      "Address of the Vault server.",
 			}
 
-			flagAddrWarning := &StringVar{
+			addrWarning := &StringVar{
 				Name:    "addr-warning",
-				Target:  &c.flagAddrWarning,
+				Target:  &c.addrWarning,
 				Default: "",
 				Hidden:  true,
 				Usage:   "For displaying: WARNING! VAULT_ADDR and -address unset. Defaulting to https://127.0.0.1:8200.",
@@ -340,11 +340,11 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				addrStringVar.Default = c.flagAddress
 			} else {
 				addrStringVar.Default = "https://127.0.0.1:8200"
-				flagAddrWarning.Default = "WARNING! VAULT_ADDR and -address unset. Defaulting to %s."
+				addrWarning.Default = fmt.Sprintf("WARNING! VAULT_ADDR and -address unset. Defaulting to %s.", addrStringVar.Default)
 			}
 
 			f.StringVar(addrStringVar)
-			f.StringVar(flagAddrWarning)
+			f.StringVar(addrWarning)
 
 			agentAddrStringVar := &StringVar{
 				Name:       "agent-address",
