@@ -147,17 +147,23 @@ module('Integration | Component | pki-role-form', function (hooks) {
   });
 
   test('it should edit a role', async function (assert) {
-    assert.expect(1);
-
-    this.server.post(`/${this.backend}/roles/test-role`, (schema, req) => {
+    assert.expect(8);
+    this.server.post(`/pki-test/roles/test-role`, (schema, req) => {
       assert.ok(true, 'Request made to correct endpoint to update role');
       const request = JSON.parse(req.requestBody);
       assert.propEqual(
         request,
         {
-          key_name: 'test-key',
-          key_type: 'rsa',
-          key_bits: '2048',
+          allow_ip_sans: true,
+          issuer_ref: 'issuer-1',
+          key_bits: '224',
+          key_type: 'ec',
+          key_usage: ['DigitalSignature', 'KeyAgreement', 'KeyEncipherment'],
+          not_before_duration: '30s',
+          require_cn: true,
+          signature_bits: '384',
+          use_csr_common_name: true,
+          use_csr_sans: true,
         },
         'sends role params in correct type'
       );
@@ -171,7 +177,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
       id: 'role-id',
       key_type: 'rsa',
       key_bits: 3072, // string type in dropdown, API returns as numbers
-      signature_bits: 384, // string type in dropdown, API returns as numbers
+      signature_bits: 512, // string type in dropdown, API returns as numbers
     });
 
     this.role = this.store.peekRecord('pki/role', 'role-id');
@@ -194,7 +200,13 @@ module('Integration | Component | pki-role-form', function (hooks) {
     await click(SELECTORS.keyParams);
     assert.dom(SELECTORS.keyType).hasValue('rsa');
     assert.dom(SELECTORS.keyBits).hasValue('3072', 'dropdown has model value, not default value (2048)');
-    assert.dom(SELECTORS.keyBits).hasValue('384', 'dropdown has model value, not default value (0)');
+    assert.dom(SELECTORS.signatureBits).hasValue('512', 'dropdown has model value, not default value (0)');
+
+    await fillIn(SELECTORS.keyType, 'ec');
+    await fillIn(SELECTORS.keyBits, '224');
+    assert.dom(SELECTORS.keyBits).hasValue('224', 'dropdown has selected value, not default value (256)');
+    await fillIn(SELECTORS.signatureBits, '384');
+    assert.dom(SELECTORS.signatureBits).hasValue('384', 'dropdown has selected value, not default value (0)');
 
     await click(SELECTORS.roleCreateButton);
     assert.strictEqual(this.role.issuerRef, 'issuer-1', 'Issuer Ref correctly saved on create');
