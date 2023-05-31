@@ -2341,7 +2341,27 @@ func (p *Policy) SignCsr(keyVersion int, csrTemplate *x509.CertificateRequest) (
 	return csrPem, nil
 }
 
-func (p *Policy) ValidateEndEntityCertificate(keyVersion int, certPublicKeyAlgorithm x509.PublicKeyAlgorithm, certPublicKey any) (bool, error) {
+func (p *Policy) ValidateLeafCertKeyMatch(keyVersion int, certPublicKeyAlgorithm x509.PublicKeyAlgorithm, certPublicKey any) (bool, error) {
+	var sameKeyType bool
+	switch p.Type {
+	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
+		if certPublicKeyAlgorithm == x509.ECDSA {
+			sameKeyType = true
+		}
+	case KeyType_ED25519:
+		if certPublicKeyAlgorithm == x509.Ed25519 {
+			sameKeyType = true
+		}
+	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
+		if certPublicKeyAlgorithm == x509.RSA {
+			sameKeyType = true
+		}
+	}
+	if !sameKeyType {
+		// NOTE: Different type "names" might lead to confusion.
+		return false, errutil.UserError{Err: fmt.Sprintf("provided leaf certificate public key type %s does not match the transit key type %s", certPublicKeyAlgorithm.String(), p.Type.String())}
+	}
+
 	keyEntry, err := p.safeGetKeyEntry(keyVersion)
 	if err != nil {
 		return false, err
@@ -2350,7 +2370,6 @@ func (p *Policy) ValidateEndEntityCertificate(keyVersion int, certPublicKeyAlgor
 	switch certPublicKeyAlgorithm {
 	case x509.ECDSA:
 		certPublicKey := certPublicKey.(*ecdsa.PublicKey)
-
 		var curve elliptic.Curve
 		switch p.Type {
 		case KeyType_ECDSA_P384:

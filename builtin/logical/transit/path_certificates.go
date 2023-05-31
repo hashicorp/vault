@@ -198,10 +198,8 @@ func (b *backend) pathSetCertificateWrite(ctx context.Context, req *logical.Requ
 		keyVersion = version.(int)
 	}
 
-	// FIXME: Are we expected to validate the chain of trust?
-
-	// Validate end entity certificate, check if private key is
-	valid, err := p.ValidateEndEntityCertificate(keyVersion, certChain[0].PublicKeyAlgorithm, certChain[0].PublicKey)
+	// Validate if leaf cert key matches with transit key
+	valid, err := p.ValidateLeafCertKeyMatch(keyVersion, certChain[0].PublicKeyAlgorithm, certChain[0].PublicKey)
 	if err != nil {
 		return nil, err
 	}
