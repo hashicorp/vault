@@ -264,7 +264,16 @@ func (s *Server) bounceCmd(newEnvVars []string) error {
 	}
 	s.childProcess = proc
 
-	// listen if the child process exits and bubble it up to the main loop
+	if err := s.childProcess.Start(); err != nil {
+		return fmt.Errorf("error starting the child process: %w", err)
+	}
+
+	s.childProcessState = childProcessStateRunning
+
+	// Listen if the child process exits and bubble it up to the main loop.
+	//
+	// NOTE: this must be invoked after child.Start() to avoid a potential
+	// race condition with ExitCh not being initialized.
 	go func() {
 		ctx, cancel := context.WithCancel(context.Background())
 		s.childProcessExitCodeCloser = cancel
@@ -276,11 +285,6 @@ func (s *Server) bounceCmd(newEnvVars []string) error {
 			return
 		}
 	}()
-
-	if err := s.childProcess.Start(); err != nil {
-		return fmt.Errorf("error starting child process: %w", err)
-	}
-	s.childProcessState = childProcessStateRunning
 
 	return nil
 }
