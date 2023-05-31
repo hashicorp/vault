@@ -17,10 +17,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"path"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/helper/testhelpers"
 
 	"github.com/go-test/deep"
 	"github.com/stretchr/testify/require"
@@ -1036,6 +1039,109 @@ func testAcmeCertSignedByCa(t *testing.T, client *api.Client, derCerts [][]byte,
 
 	if diffs := deep.Equal(expectedCerts, derCerts); diffs != nil {
 		t.Fatalf("diffs were found between the acme chain returned and the expected value: \n%v", diffs)
+	}
+}
+
+// TestAcmeValidationError make sure that we properly return errors on validation errors.
+func TestAcmeValidationError(t *testing.T) {
+	cluster, _, _ := setupAcmeBackend(t)
+	defer cluster.Cleanup()
+
+	testCtx := context.Background()
+	baseAcmeURL := "/v1/pki/acme/"
+	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err, "failed creating rsa key")
+
+	acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)
+
+	// Create new account
+	t.Logf("Testing register on %s", baseAcmeURL)
+	_, err = acmeClient.Register(testCtx, &acme.Account{}, func(tosURL string) bool { return true })
+	require.NoError(t, err, "failed registering account")
+
+	// Create an order
+	t.Logf("Testing Authorize Order on %s", baseAcmeURL)
+	identifiers := []string{"www.dadgarcorp.com"}
+	order, err := acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{
+		{Type: "dns", Value: identifiers[0]},
+	})
+	require.NoError(t, err, "failed creating order")
+
+	// Load authorizations
+	var authorizations []*acme.Authorization
+	for _, authUrl := range order.AuthzURLs {
+		auth, err := acmeClient.GetAuthorization(testCtx, authUrl)
+		require.NoError(t, err, "failed fetching authorization: %s", authUrl)
+
+		authorizations = append(authorizations, auth)
+	}
+	require.Len(t, authorizations, 1, "expected a certain number of authorizations")
+	require.Len(t, authorizations[0].Challenges, 2, "expected a certain number of challenges associated with authorization")
+
+	acceptedAuth, err := acmeClient.Accept(testCtx, authorizations[0].Challenges[0])
+	require.NoError(t, err, "Should have been allowed to accept challenge 1")
+	require.Equal(t, string(ACMEChallengeProcessing), acceptedAuth.Status)
+
+	_, err = acmeClient.Accept(testCtx, authorizations[0].Challenges[1])
+	require.Error(t, err, "Should have been prevented to accept challenge 2")
+
+	// Make sure our challenge returns errors
+	testhelpers.RetryUntil(t, 30*time.Second, func() error {
+		challenge, err := acmeClient.GetChallenge(testCtx, authorizations[0].Challenges[0].URI)
+		if err != nil {
+			return err
+		}
+
+		if challenge.Error == nil {
+			return fmt.Errorf("no error set in challenge yet")
+		}
+
+		acmeError, ok := challenge.Error.(*acme.Error)
+		if !ok {
+			return fmt.Errorf("unexpected error back: %v", err)
+		}
+
+		if acmeError.ProblemType != "urn:ietf:params:acme:error:incorrectResponse" {
+			return fmt.Errorf("unexpected ACME error back: %v", acmeError)
+		}
+
+		return nil
+	})
+
+	// Make sure our challenge,auth and order status change.
+	// This takes a little too long to run in CI properly, we need the ability to influence
+	// how long the validations take before CI can go wild on this.
+	if os.Getenv("CI") == "" {
+		testhelpers.RetryUntil(t, 10*time.Minute, func() error {
+			challenge, err := acmeClient.GetChallenge(testCtx, authorizations[0].Challenges[0].URI)
+			if err != nil {
+				return fmt.Errorf("failed to load challenge: %w", err)
+			}
+
+			if challenge.Status != string(ACMEChallengeInvalid) {
+				return fmt.Errorf("challenge state was not changed to invalid: %v", challenge)
+			}
+
+			authz, err := acmeClient.GetAuthorization(testCtx, authorizations[0].URI)
+			if err != nil {
+				return fmt.Errorf("failed to load authorization: %w", err)
+			}
+
+			if authz.Status != string(ACMEAuthorizationInvalid) {
+				return fmt.Errorf("authz state was not changed to invalid: %v", authz)
+			}
+
+			myOrder, err := acmeClient.GetOrder(testCtx, order.URI)
+			if err != nil {
+				return fmt.Errorf("failed to load order: %w", err)
+			}
+
+			if myOrder.Status != string(ACMEOrderInvalid) {
+				return fmt.Errorf("order state was not changed to invalid: %v", order)
+			}
+
+			return nil
+		})
 	}
 }
 
