@@ -130,10 +130,16 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 
 	s.numberOfTemplates = len(s.runner.TemplateConfigMapping())
 
-	// if one secret can potentially change multiple environment vars
-	// this lets us wait until we get all potential changes
+	// We receive multiple events every staticSecretRenderInterval
+	// from <-s.runner.TemplateRenderedCh(), one for each secret. Only the last
+	// event in a batch will contain the latest set of all secrets and
+	// corresponding environment variables. This timer will fire after 2 seconds
+	// unless an even comes in which resets the timer back to 2 seconds
 	var debounceTimer *time.Timer
-	bounceErrCh := make(chan error, 1)
+
+	// capture the errors related to restarting the child process
+	restartChildProcessErrCh := make(chan error)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -237,14 +243,14 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 			if debounceTimer != nil {
 				debounceTimer.Stop()
 			}
-			debounceTimer = time.AfterFunc(5*time.Second, func() {
-				if err := s.bounceCmd(renderedEnvVars); err != nil {
-					bounceErrCh <- fmt.Errorf("unable to bounce command: %w", err)
+			debounceTimer = time.AfterFunc(2*time.Second, func() {
+				if err := s.restartChildProcess(renderedEnvVars); err != nil {
+					restartChildProcessErrCh <- fmt.Errorf("unable to restart the child process: %w", err)
 				}
 			})
 
-		case err := <-bounceErrCh:
-			// catch the error from bouncing
+		case err := <-restartChildProcessErrCh:
+			// catch the error from restarting
 			return err
 
 		case exitCode := <-s.childProcessExitCh:
@@ -254,7 +260,7 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 	}
 }
 
-func (s *Server) bounceCmd(newEnvVars []string) error {
+func (s *Server) restartChildProcess(newEnvVars []string) error {
 	s.childProcessLock.Lock()
 	defer s.childProcessLock.Unlock()
 
