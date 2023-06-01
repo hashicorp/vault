@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault"
 )
 
 func TestTokenStore_CreateOrphanResponse(t *testing.T) {
@@ -85,7 +86,9 @@ func TestTokenStore_TokenInvalidEntityID(t *testing.T) {
 }
 
 func TestTokenStore_IdentityPolicies(t *testing.T) {
-	cluster := minimal.NewTestSoloCluster(t, nil)
+	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
+		EnableRaw: true,
+	})
 	client := cluster.Cores[0].Client
 
 	// Enable LDAP auth
