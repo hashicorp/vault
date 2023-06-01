@@ -72,6 +72,7 @@ func ToString(in any) string {
 // StringOrDie renders its input using ToMap, and returns a string containing the
 // result.  If rendering yields an error, calls t.Fatal.
 func StringOrDie(t testing.T, in any) string {
+	t.Helper()
 	m, err := ToMap(in)
 	if err != nil {
 		t.Fatal(err)
