@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/consul-template/child"
@@ -63,6 +64,7 @@ type Server struct {
 
 	childProcess      *child.Child
 	childProcessState childProcessState
+	childProcessLock  sync.Mutex
 
 	// exit channel of the child process
 	childProcessExitCh chan int
@@ -133,15 +135,22 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 
 	s.numberOfTemplates = len(s.runner.TemplateConfigMapping())
 
+	// if one secret can potentially change multiple environment vars
+	// this lets us wait until we get all potential changes
+	var debounceTimer *time.Timer
+	bounceErrCh := make(chan error, 1)
 	for {
 		select {
 		case <-ctx.Done():
 			s.runner.Stop()
+			s.childProcessLock.Lock()
 			if s.childProcess != nil {
 				s.childProcess.Stop()
 			}
 			s.childProcessState = childProcessStateStopped
+			s.childProcessLock.Unlock()
 			return nil
+
 		case token := <-incomingVaultToken:
 			if token != *latestToken {
 				s.logger.Info("exec server received new token")
@@ -183,6 +192,7 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 				return fmt.Errorf("template server failed to create: %w", err)
 			}
 			go s.runner.Start()
+
 		case <-s.runner.TemplateRenderedCh():
 			// A template has been rendered, figure out what to do
 			s.logger.Trace("template rendered")
@@ -228,9 +238,19 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 
 			s.logger.Debug("detected a change in the environment variables: restarting the child process")
 
-			if err := s.bounceCmd(renderedEnvVars); err != nil {
-				return fmt.Errorf("unable to bounce command: %w", err)
+			// if a timer exists, stop it
+			if debounceTimer != nil {
+				debounceTimer.Stop()
 			}
+			debounceTimer = time.AfterFunc(5*time.Second, func() {
+				if err := s.bounceCmd(renderedEnvVars); err != nil {
+					bounceErrCh <- fmt.Errorf("unable to bounce command: %w", err)
+				}
+			})
+
+		case err := <-bounceErrCh:
+			// catch the error from bouncing
+			return err
 
 		case exitCode := <-s.childProcessExitCh:
 			// process exited on its own
@@ -240,6 +260,9 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 }
 
 func (s *Server) bounceCmd(newEnvVars []string) error {
+	s.childProcessLock.Lock()
+	defer s.childProcessLock.Unlock()
+
 	switch s.config.AgentConfig.Exec.RestartOnSecretChanges {
 	case "always":
 		if s.childProcessState == childProcessStateRunning {
