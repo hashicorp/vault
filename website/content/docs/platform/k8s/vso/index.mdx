@@ -141,7 +141,7 @@ spec:
 Provides the configuration necessary for the Operator to synchronize a single Vault *PKI* Secret to a single Kubernetes Secret.<br />
 Supported secrets engines: [pki](/vault/docs/secrets/pki)
 
-The PKI secrets engine's mounted path is specified under `spec.mount` of `VaultPKISecret` custom resource. Please consult [PKI Secrets Engine - Setup and Usage](vault/docs/secrets/pki/setup) for configuring PKI secrets engine.
+The PKI secrets engine's mount point is specified under `spec.mount` of `VaultPKISecret` custom resource. Please consult [PKI Secrets Engine - Setup and Usage](vault/docs/secrets/pki/setup) for configuring PKI secrets engine. The following results in a request to `http://127.0.0.1:8200/v1/pki/issue/default` to generate TLS certificates.
 
 ```yaml
 ---
@@ -172,7 +172,7 @@ Supported secrets engines *non-exhaustive*: [databases](/vault/docs/secrets/data
 
 ##### Database secret example
 
-The database secret engine's `db` mounted path is specified under `spec.mount` of `VaultDynamicSecret` custom resource. A Vault role named `my-postgresql-role` is configured to map a name in Vault to an executable database statement to create the database credential. Please consult [Database Secrets Engine - Setup](vault/docs/secrets/databases#setup) for configuring the database secrets engine.
+The database secret engine's `db` mount point is specified under `spec.mount` of `VaultDynamicSecret` custom resource. Please consult [Database Secrets Engine - Setup](vault/docs/secrets/databases#setup) for configuring the database secrets engine. The following results in a request to `http://127.0.0.1:8200/v1/db/creds/my-postgresql-role` to generate a new credential.
 
 ```yaml
 ---
@@ -192,7 +192,9 @@ spec:
 
 ##### AWS secret example
 
-The AWS secrets engine's `aws` mounted path is specified under `spec.mount` of `VaultDynamicSecret` custom resource. A Vault role named `my-role` is configured to map to a set of permissions in AWS as well as an AWS credential type. Please consult [AWS Secrets Engine - Setup](vault/docs/secrets/aws#setup) for configuring AWS secrets engine.
+The AWS secrets engine's `aws` mount point is specified under `spec.mount` of `VaultDynamicSecret` custom resource. Please consult [AWS Secrets Engine - Setup](vault/docs/secrets/aws#setup) for configuring AWS secrets engine.
+
+The following results in a request to `http://127.0.0.1:8200/v1/aws/creds/my-iam-role` to generate a new IAM credential.
 
 ```yaml
 ---
@@ -204,8 +206,26 @@ metadata:
 spec:
   vaultAuthRef: example
   mount: aws
-  path: creds/my-role
+  path: creds/my-iam-role
   destination:
     create: true
     name: dynamic1
+```
+
+The following results in a request to `http://127.0.0.1:8200/v1/aws/sts/my-sts-role` to generate a new STS credential.
+
+```yaml
+---
+apiVersion: secrets.hashicorp.com/v1alpha1
+kind: VaultDynamicSecret
+metadata:
+  namespace: vso-example
+  name: example
+spec:
+  vaultAuthRef: example
+  mount: aws
+  path: sts/my-sts-role
+  destination:
+    create: true
+    name: dynamic2
 ```
