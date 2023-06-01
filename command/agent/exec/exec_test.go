@@ -120,7 +120,6 @@ func TestExecServer_Run(t *testing.T) {
 		expectedError        error
 	}{
 		"ensure_environment_variables_are_injected": {
-			skip: true,
 			envTemplates: []*ctconfig.TemplateConfig{{
 				Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
 				MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
@@ -160,7 +159,6 @@ func TestExecServer_Run(t *testing.T) {
 		},
 
 		"test_app_exits_early": {
-			skip: true,
 			envTemplates: []*ctconfig.TemplateConfig{{
 				Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
 				MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
@@ -173,7 +171,6 @@ func TestExecServer_Run(t *testing.T) {
 		},
 
 		"test_app_exits_early_non_zero": {
-			skip: true,
 			envTemplates: []*ctconfig.TemplateConfig{{
 				Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
 				MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
@@ -186,7 +183,6 @@ func TestExecServer_Run(t *testing.T) {
 		},
 
 		"send_sigterm_expect_test_app_exit": {
-			skip: true,
 			envTemplates: []*ctconfig.TemplateConfig{{
 				Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
 				MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
@@ -201,7 +197,6 @@ func TestExecServer_Run(t *testing.T) {
 		},
 
 		"send_sigusr1_expect_test_app_exit": {
-			skip: true,
 			envTemplates: []*ctconfig.TemplateConfig{{
 				Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
 				MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
