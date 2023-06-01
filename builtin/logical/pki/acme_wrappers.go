@@ -320,6 +320,9 @@ func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData, config 
 
 	if len(requestedRole) == 0 { // Default Directory
 		policyType, err := getDefaultDirectoryPolicyType(config.DefaultDirectoryPolicy)
+		if err != nil {
+			return nil, nil, err
+		}
 		switch policyType {
 		case Forbid:
 			return nil, nil, fmt.Errorf("%w: default directory not allowed by ACME policy", ErrServerInternal)
