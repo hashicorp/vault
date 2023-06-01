@@ -92,7 +92,7 @@ func pathAcmeConfig(b *backend) *framework.Path {
 			},
 			"allowed_roles": {
 				Type:        framework.TypeCommaStringSlice,
-				Description: `which roles are allowed for use with ACME; by default via '*', these will be all roles including sign-verbatim; when concrete role names are specified, sign-verbatim is not allowed and a different default_directory_policy must be specified in order to allow usage of the default acme directories under /pki/acme/directory and /pki/issuer/:issuer_id/acme/directory.`,
+				Description: `which roles are allowed for use with ACME; by default via '*', these will be all roles including sign-verbatim; when concrete role names are specified, any default_directory_policy role must be included to allow usage of the default acme directories under /pki/acme/directory and /pki/issuer/:issuer_id/acme/directory.`,
 				Default:     []string{"*"},
 			},
 			"default_directory_policy": {
@@ -228,27 +228,32 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	// Validate Default Directory Behavior:
-	defaultDirectoryPolicyIsRole := false
-	switch {
-	case config.DefaultDirectoryPolicy == "forbid" || config.DefaultDirectoryPolicy == "sign-verbatim":
-	case strings.HasPrefix(config.DefaultDirectoryPolicy, "role:"):
-		defaultDirectoryPolicyIsRole = true
-
-		roleName := strings.TrimPrefix(config.DefaultDirectoryPolicy, "role:")
-		role, err := sc.Backend.getRole(sc.Context, sc.Storage, roleName)
+	defaultDirectoryPolicyType, err := getDefaultDirectoryPolicyType(config.DefaultDirectoryPolicy)
+	if err != nil {
+		return nil, fmt.Errorf("invalid default_directory_policy: %w", err)
+	}
+	defaultDirectoryRoleName := ""
+	switch defaultDirectoryPolicyType {
+	case Forbid:
+	case SignVerbatim:
+	case Role:
+		defaultDirectoryRoleName, err = getDefaultDirectoryPolicyRole(config.DefaultDirectoryPolicy)
 		if err != nil {
-			return nil, fmt.Errorf("failed validating default directory role: unable to fetch role: %v: %w", roleName, err)
+			return nil, fmt.Errorf("failed extracting role name from default directory policy %w", err)
+		}
+
+		role, err := sc.Backend.getRole(sc.Context, sc.Storage, defaultDirectoryRoleName)
+		if err != nil {
+			return nil, fmt.Errorf("failed validating default directory role: unable to fetch role: %v: %w", defaultDirectoryRoleName, err)
 		}
 
 		if role == nil {
-			return nil, fmt.Errorf("role %v specified as default directory policy does not exist", roleName)
+			return nil, fmt.Errorf("role %v specified as default directory policy does not exist", defaultDirectoryRoleName)
 		}
 
 		if role.NoStore {
-			return nil, fmt.Errorf("role %v specifies no_store=true; this prohibits usage with ACME which requires stored certificates", roleName)
+			return nil, fmt.Errorf("role %v specifies no_store=true; this prohibits usage with ACME which requires stored certificates", defaultDirectoryRoleName)
 		}
-	default:
-		return nil, fmt.Errorf("default_directory_policy must take a configuration of the form \"forbid\", \"sign-verbatim\", or \"role:<role_name>\"; which %v does not", config.DefaultDirectoryPolicy)
 	}
 
 	// Validate Allowed Roles
@@ -273,12 +278,12 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 				return nil, fmt.Errorf("role %v specifies no_store=true; this prohibits usage with ACME which requires stored certificates", name)
 			}
 
-			if defaultDirectoryPolicyIsRole && name == config.DefaultDirectoryPolicy[5:] {
+			if defaultDirectoryPolicyType == Role && name == defaultDirectoryRoleName {
 				foundDefault = true
 			}
 		}
 
-		if !foundDefault && defaultDirectoryPolicyIsRole {
+		if !foundDefault && defaultDirectoryPolicyType == Role {
 			return nil, fmt.Errorf("default directory policy %v was not specified in allowed_roles: %v", config.DefaultDirectoryPolicy, config.AllowedRoles)
 		}
 	}
@@ -344,3 +349,35 @@ func isPublicACMEDisabledByEnv() (bool, error) {
 
 	return disableAcme, nil
 }
+
+func getDefaultDirectoryPolicyType(defaultDirectoryPolicy string) (DefaultDirectoryPolicyType, error) {
+	switch {
+	case defaultDirectoryPolicy == "forbid":
+		return Forbid, nil
+	case defaultDirectoryPolicy == "sign-verbatim":
+		return SignVerbatim, nil
+	case strings.HasPrefix(defaultDirectoryPolicy, "role:"):
+		return Role, nil
+	default:
+		return Forbid, fmt.Errorf("string %v not a valid Default Directory Policy", defaultDirectoryPolicy)
+	}
+}
+
+func getDefaultDirectoryPolicyRole(defaultDirectoryPolicy string) (string, error) {
+	policyType, err := getDefaultDirectoryPolicyType(defaultDirectoryPolicy)
+	if err != nil {
+		return "", err
+	}
+	if policyType != Role {
+		return "", fmt.Errorf("default directory policy %v is not a role-based-policy", defaultDirectoryPolicy)
+	}
+	return defaultDirectoryPolicy[5:], nil
+}
+
+type DefaultDirectoryPolicyType int
+
+const (
+	Forbid DefaultDirectoryPolicyType = iota
+	SignVerbatim
+	Role
+)

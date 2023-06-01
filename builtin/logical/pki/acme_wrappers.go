@@ -315,61 +315,55 @@ func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData, config 
 	requestedRole := getRequestedAcmeRoleFromPath(data)
 	issuerToLoad := requestedIssuer
 
-	var wasVerbatim bool
 	var role *roleEntry
+	var err error
 
-	if len(requestedRole) > 0 || strings.HasPrefix(config.DefaultDirectoryPolicy, "role:") {
-		if len(requestedRole) == 0 {
-			requestedRole = strings.TrimPrefix(config.DefaultDirectoryPolicy, "role:")
+	if len(requestedRole) == 0 { // Default Directory
+		policyType, err := getDefaultDirectoryPolicyType(config.DefaultDirectoryPolicy)
+		switch policyType {
+		case Forbid:
+			return nil, nil, fmt.Errorf("%w: default directory not allowed by ACME policy", ErrServerInternal)
+		case SignVerbatim:
+			role = buildSignVerbatimRoleWithNoData(&roleEntry{
+				Issuer:  requestedIssuer,
+				NoStore: false,
+				Name:    requestedRole,
+			})
+		case Role:
+			role, err = getAndValidateAcmeRole(sc, requestedRole)
+			if err != nil {
+				return nil, nil, err
+			}
 		}
-
-		var err error
-		role, err = sc.Backend.getRole(sc.Context, sc.Storage, requestedRole)
+	} else { // Requested Role
+		role, err = getAndValidateAcmeRole(sc, requestedRole)
 		if err != nil {
-			return nil, nil, fmt.Errorf("%w: err loading role", ErrServerInternal)
+			return nil, nil, err
 		}
 
-		if role == nil {
-			return nil, nil, fmt.Errorf("%w: role does not exist", ErrMalformed)
-		}
+		// Check the Requested Role is Allowed
+		allowAnyRole := len(config.AllowedRoles) == 1 && config.AllowedRoles[0] == "*"
+		if !allowAnyRole {
 
-		if role.NoStore {
-			return nil, nil, fmt.Errorf("%w: role can not be used as NoStore is set to true", ErrServerInternal)
-		}
+			var foundRole bool
+			for _, name := range config.AllowedRoles {
+				if name == role.Name {
+					foundRole = true
+					break
+				}
+			}
 
-		// If we haven't loaded an issuer directly from our path and the specified
-		// role does specify an issuer prefer the role's issuer rather than the default issuer.
-		if len(role.Issuer) > 0 && len(requestedIssuer) == 0 {
-			issuerToLoad = role.Issuer
-		}
-	} else if config.DefaultDirectoryPolicy == "sign-verbatim" { // config.DefaultDirectoryPolicy = sign-verbatim
-		role = buildSignVerbatimRoleWithNoData(&roleEntry{
-			Issuer:  requestedIssuer,
-			NoStore: false,
-			Name:    requestedRole,
-		})
-		wasVerbatim = true
-	} else if (len(requestedRole) == 0) && (config.DefaultDirectoryPolicy == "forbid") {
-		return nil, nil, fmt.Errorf("%w: default directory not allowed by ACME policy", ErrServerInternal)
-	}
-
-	allowAnyRole := len(config.AllowedRoles) == 1 && config.AllowedRoles[0] == "*"
-	if !allowAnyRole {
-		if wasVerbatim { // TODO!
-			return nil, nil, fmt.Errorf("%w: using the default directory without specifying a role is not supported by this configuration; specify 'default_role' in the acme config to the default directories", ErrServerInternal)
-		}
-
-		var foundRole bool
-		for _, name := range config.AllowedRoles {
-			if name == role.Name {
-				foundRole = true
-				break
+			if !foundRole {
+				return nil, nil, fmt.Errorf("%w: specified role not allowed by ACME policy", ErrServerInternal)
 			}
 		}
 
-		if !foundRole {
-			return nil, nil, fmt.Errorf("%w: specified role not allowed by ACME policy", ErrServerInternal)
-		}
+	}
+
+	// If we haven't loaded an issuer directly from our path and the specified (or default)
+	// role does specify an issuer prefer the role's issuer rather than the default issuer.
+	if len(role.Issuer) > 0 && len(requestedIssuer) == 0 {
+		issuerToLoad = role.Issuer
 	}
 
 	issuer, err := getAcmeIssuer(sc, issuerToLoad)
@@ -406,6 +400,24 @@ func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData, config 
 	role.EmailProtectionFlag = false
 
 	return role, issuer, nil
+}
+
+func getAndValidateAcmeRole(sc *storageContext, requestedRole string) (*roleEntry, error) {
+	var err error
+	role, err := sc.Backend.getRole(sc.Context, sc.Storage, requestedRole)
+	if err != nil {
+		return nil, fmt.Errorf("%w: err loading role", ErrServerInternal)
+	}
+
+	if role == nil {
+		return nil, fmt.Errorf("%w: role does not exist", ErrMalformed)
+	}
+
+	if role.NoStore {
+		return nil, fmt.Errorf("%w: role can not be used as NoStore is set to true", ErrServerInternal)
+	}
+
+	return role, nil
 }
 
 func getRequestedAcmeRoleFromPath(data *framework.FieldData) string {
