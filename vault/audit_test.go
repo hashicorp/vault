@@ -44,7 +44,7 @@ func TestAudit_ReadOnlyViewDuringMount(t *testing.T) {
 		Path:  "foo",
 		Type:  "noop",
 	}
-	err := c.enableAudit(namespace.RootContext(nil), me, true)
+	err := c.enableAudit(namespace.RootContext(context.TODO()), me, true)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -59,7 +59,7 @@ func TestCore_EnableAudit(t *testing.T) {
 		Path:  "foo",
 		Type:  "noop",
 	}
-	err := c.enableAudit(namespace.RootContext(nil), me, true)
+	err := c.enableAudit(namespace.RootContext(context.TODO()), me, true)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -239,7 +239,7 @@ func TestCore_DisableAudit(t *testing.T) {
 	c, keys, _ := TestCoreUnsealed(t)
 	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
 
-	existed, err := c.disableAudit(namespace.RootContext(nil), "foo", true)
+	existed, err := c.disableAudit(namespace.RootContext(context.TODO()), "foo", true)
 	if existed && err != nil {
 		t.Fatalf("existed: %v; err: %v", existed, err)
 	}
@@ -249,12 +249,12 @@ func TestCore_DisableAudit(t *testing.T) {
 		Path:  "foo",
 		Type:  "noop",
 	}
-	err = c.enableAudit(namespace.RootContext(nil), me, true)
+	err = c.enableAudit(namespace.RootContext(context.TODO()), me, true)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	existed, err = c.disableAudit(namespace.RootContext(nil), "foo", true)
+	existed, err = c.disableAudit(namespace.RootContext(context.TODO()), "foo", true)
 	if !existed || err != nil {
 		t.Fatalf("existed: %v; err: %v", existed, err)
 	}
@@ -403,8 +403,8 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 		if !reflect.DeepEqual(a.Req[0], req) {
 			t.Fatalf("Bad: %#v\n wanted %#v", a.Req[0], req)
 		}
-		if !reflect.DeepEqual(a.ReqErrs[0], reqErrs) {
-			t.Fatalf("Bad: %#v", a.ReqErrs[0])
+		if a.ReqErrs[0].Error() != reqErrs.Error() {
+			t.Fatalf("expected %v, got %v", a.ReqErrs[0].Error(), reqErrs.Error())
 		}
 	}
 
@@ -504,8 +504,8 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 		if !reflect.DeepEqual(a.Resp[0], resp) {
 			t.Fatalf("Bad: %#v", a.Resp[0])
 		}
-		if !reflect.DeepEqual(a.RespErrs[0], respErr) {
-			t.Fatalf("Expected\n%v\nGot\n%#v", respErr, a.RespErrs[0])
+		if a.RespErrs[0].Error() != respErr.Error() {
+			t.Fatalf("expected %v, got %v", respErr, a.RespErrs[0])
 		}
 	}
 
