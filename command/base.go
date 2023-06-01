@@ -77,14 +77,15 @@ type BaseCommand struct {
 // Client returns the HTTP API client. The client is cached on the command to
 // save performance on future calls.
 func (c *BaseCommand) Client() (*api.Client, error) {
+	// Read the test client if present
+	if c.client != nil {
+		return c.client, nil
+	}
+
 	if c.addrWarning != "" && c.UI != nil {
 		if os.Getenv("VAULT_ADDR") == "" {
 			c.UI.Warn(wrapAtLength(c.addrWarning))
 		}
-	}
-	// Read the test client if present
-	if c.client != nil {
-		return c.client, nil
 	}
 
 	config := api.DefaultConfig()
