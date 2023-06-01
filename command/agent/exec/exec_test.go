@@ -31,15 +31,16 @@ func fakeVaultServer(t *testing.T) *httptest.Server {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/v1/kv/my-app/creds", func(w http.ResponseWriter, r *http.Request) {
-		// change the password on the second request to trigger an application restart
+		// change the password on the second request to re-render the template
 		var password string
 
 		if firstRequest {
 			password = "s3cr3t"
-			firstRequest = false
 		} else {
 			password = "s3cr3t-two"
 		}
+
+		firstRequest = false
 
 		fmt.Fprintf(w, `{
                 "request_id": "8af096e9-518c-7351-eff5-5ba20554b21f",
