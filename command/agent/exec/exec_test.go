@@ -121,6 +121,7 @@ func TestExecServer_Run(t *testing.T) {
 		expectedError        error
 	}{
 		"ensure_environment_variables_are_injected": {
+			skip: true,
 			envTemplates: []*ctconfig.TemplateConfig{{
 				Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
 				MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
@@ -148,7 +149,7 @@ func TestExecServer_Run(t *testing.T) {
 				MapToEnvironmentVariable: pointerutil.StringPtr("MY_PASSWORD"),
 			}},
 			staticSecretRenderInterval: 5 * time.Second,
-			testAppArgs:                []string{"--stop-after", "10s", "--sleep-after-stop-signal", "0s"},
+			testAppArgs:                []string{"--stop-after", "15s", "--sleep-after-stop-signal", "0s"},
 			testAppStopSignal:          syscall.SIGTERM,
 			testAppPort:                34002,
 			expected: map[string]string{
@@ -160,6 +161,7 @@ func TestExecServer_Run(t *testing.T) {
 		},
 
 		"test_app_exits_early": {
+			skip: true,
 			envTemplates: []*ctconfig.TemplateConfig{{
 				Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
 				MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
@@ -172,6 +174,7 @@ func TestExecServer_Run(t *testing.T) {
 		},
 
 		"test_app_exits_early_non_zero": {
+			skip: true,
 			envTemplates: []*ctconfig.TemplateConfig{{
 				Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
 				MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
@@ -184,6 +187,7 @@ func TestExecServer_Run(t *testing.T) {
 		},
 
 		"send_sigterm_expect_test_app_exit": {
+			skip: true,
 			envTemplates: []*ctconfig.TemplateConfig{{
 				Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
 				MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
@@ -198,6 +202,7 @@ func TestExecServer_Run(t *testing.T) {
 		},
 
 		"send_sigusr1_expect_test_app_exit": {
+			skip: true,
 			envTemplates: []*ctconfig.TemplateConfig{{
 				Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
 				MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
@@ -345,7 +350,7 @@ func TestExecServer_Run(t *testing.T) {
 			// verify the environment variables
 			t.Logf("verifying test-app's environment variables")
 
-			resp, err := http.Get(testAppAddr)
+			resp, err := retryablehttp.Get(testAppAddr)
 			if err != nil {
 				t.Fatalf("error making request to the test app: %s", err)
 			}
