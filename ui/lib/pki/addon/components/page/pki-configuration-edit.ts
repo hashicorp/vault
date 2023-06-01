@@ -13,11 +13,13 @@ import errorMessage from 'vault/utils/error-message';
 import type RouterService from '@ember/routing/router-service';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type VersionService from 'vault/services/version';
+import type PkiConfigClusterModel from 'vault/models/pki/config/cluster';
 import type PkiConfigCrlModel from 'vault/models/pki/config/crl';
 import type PkiConfigUrlsModel from 'vault/models/pki/config/urls';
 import type { FormField, TtlEvent } from 'vault/app-types';
 
 interface Args {
+  cluster: PkiConfigClusterModel;
   crl: PkiConfigCrlModel;
   urls: PkiConfigUrlsModel;
 }
@@ -50,6 +52,7 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
   *save(event: Event) {
     event.preventDefault();
     try {
+      yield this.args.cluster.save();
       yield this.args.urls.save();
       yield this.args.crl.save();
       this.flashMessages.success('Successfully updated configuration');
