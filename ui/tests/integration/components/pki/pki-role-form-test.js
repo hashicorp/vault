@@ -170,11 +170,13 @@ module('Integration | Component | pki-role-form', function (hooks) {
       backend: 'pki-test',
       id: 'role-id',
       key_type: 'rsa',
-      key_bits: 3072, // string type in dropdown, API returns as numbers
-      signature_bits: 512, // string type in dropdown, API returns as numbers
     });
-
     this.model = this.store.peekRecord('pki/role', 'role-id');
+
+    // setting these params manually because ember transforms to whatever type is defined on the model
+    // but in the 'real' app the model uses openApi and the API returns both attrs as numbers types
+    this.model.keyBits = 3072;
+    this.model.signatureBits = 512;
 
     await render(
       hbs`
