@@ -1246,7 +1246,7 @@ func TestLoadConfigFile_Template_NoSinks(t *testing.T) {
 	}
 }
 
-// TestLoadConfigFile_Template tests template definitions in Vault Agent
+// TestLoadConfigFile_Template_WithCache tests template definitions in Vault Agent
 func TestLoadConfigFile_Template_WithCache(t *testing.T) {
 	config, err := LoadConfigFile("./test-fixtures/config-template-with-cache.hcl")
 	if err != nil {
