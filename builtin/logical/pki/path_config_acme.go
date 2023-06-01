@@ -242,18 +242,11 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 			return nil, fmt.Errorf("failed extracting role name from default directory policy %w", err)
 		}
 
-		role, err := sc.Backend.getRole(sc.Context, sc.Storage, defaultDirectoryRoleName)
+		_, err := getAndValidateAcmeRole(sc, defaultDirectoryRoleName)
 		if err != nil {
-			return nil, fmt.Errorf("failed validating default directory role: unable to fetch role: %v: %w", defaultDirectoryRoleName, err)
+			return nil, fmt.Errorf("default directory policy role %v is not a valid ACME role: %w", defaultDirectoryRoleName, err)
 		}
 
-		if role == nil {
-			return nil, fmt.Errorf("role %v specified as default directory policy does not exist", defaultDirectoryRoleName)
-		}
-
-		if role.NoStore {
-			return nil, fmt.Errorf("role %v specifies no_store=true; this prohibits usage with ACME which requires stored certificates", defaultDirectoryRoleName)
-		}
 	}
 
 	// Validate Allowed Roles
@@ -265,17 +258,9 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 				return nil, fmt.Errorf("cannot use '*' as role name at index %d", index)
 			}
 
-			role, err := sc.Backend.getRole(sc.Context, sc.Storage, name)
+			_, err := getAndValidateAcmeRole(sc, name)
 			if err != nil {
-				return nil, fmt.Errorf("failed validating allowed_roles: unable to fetch role: %v: %w", name, err)
-			}
-
-			if role == nil {
-				return nil, fmt.Errorf("role %v specified in allowed_roles does not exist", name)
-			}
-
-			if role.NoStore {
-				return nil, fmt.Errorf("role %v specifies no_store=true; this prohibits usage with ACME which requires stored certificates", name)
+				return nil, fmt.Errorf("allowed_role %v is not a valid acme role: %w", name, err)
 			}
 
 			if defaultDirectoryPolicyType == Role && name == defaultDirectoryRoleName {
