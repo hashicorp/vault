@@ -333,7 +333,11 @@ func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData, config 
 				Name:    requestedRole,
 			})
 		case Role:
-			role, err = getAndValidateAcmeRole(sc, requestedRole)
+			defaultRole, err := getDefaultDirectoryPolicyRole(config.DefaultDirectoryPolicy)
+			if err != nil {
+				return nil, nil, err
+			}
+			role, err = getAndValidateAcmeRole(sc, defaultRole)
 			if err != nil {
 				return nil, nil, err
 			}
