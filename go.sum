@@ -1899,8 +1899,8 @@ github.com/hashicorp/vault-plugin-secrets-alicloud v0.15.0 h1:uVpcx2s3PwYXSOHmjA
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.15.0/go.mod h1:wMTkhPGxDa2PCdSBqd6A8SMcRrltu3NRbwX8m8W1MCU=
 github.com/hashicorp/vault-plugin-secrets-azure v0.16.0 h1:4Y2LG2P6XUy4HLlObJtHiveJBQwZ4kazs0EpxDmAal0=
 github.com/hashicorp/vault-plugin-secrets-azure v0.16.0/go.mod h1:tNzshPyCxkuOL4PLF3cybN/XaSlWgvfl6dwEbCARybY=
-github.com/hashicorp/vault-plugin-secrets-gcp v0.15.0 h1:SfYIFmgFg/8p4fgLCV8YxxkI+iQN0c4gSjMJhg9vFJw=
-github.com/hashicorp/vault-plugin-secrets-gcp v0.15.0/go.mod h1:/eOk7gJ5zvmOKgP5Ih7/5rZm5jOKDvGFpANIRqbr/Mc=
+github.com/hashicorp/vault-plugin-secrets-gcp v0.16.0 h1:5ozLtt38Bw/DLt37dbccT8j56A+2T7CWFfYecKleGl4=
+github.com/hashicorp/vault-plugin-secrets-gcp v0.16.0/go.mod h1:Ax9/ALmpzyjU8mcqHVYR9lwjcyazdmimrShDYeK9CHc=
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.15.0 h1:CueteKXEuO52qGu1nUaDc/euSTSfQD9MONkXuvWdZQw=
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.15.0/go.mod h1:a0Z2DVGd2SPPwLb8edXeHyer3CXei/Y0cb7EFkiFMfA=
 github.com/hashicorp/vault-plugin-secrets-kubernetes v0.5.0 h1:g0W1ybHjO945jDtuDEFcqTINyW/s06wxZarE/7aLumc=
