@@ -132,9 +132,9 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 
 	// We receive multiple events every staticSecretRenderInterval
 	// from <-s.runner.TemplateRenderedCh(), one for each secret. Only the last
-	// event in a batch will contain the latest set of all secrets and
+	// event in a batch will contain the latest set of all secrets and the
 	// corresponding environment variables. This timer will fire after 2 seconds
-	// unless an event comes in which resets the timer back to 2 seconds
+	// unless an event comes in which resets the timer back to 2 seconds.
 	var debounceTimer *time.Timer
 
 	// capture the errors related to restarting the child process
