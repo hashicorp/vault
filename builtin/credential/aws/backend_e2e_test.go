@@ -8,11 +8,8 @@ import (
 	"testing"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
-	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -104,27 +101,10 @@ func TestBackend_E2E_Initialize(t *testing.T) {
 
 func setupAwsTestCluster(t *testing.T, _ context.Context) *vault.TestCluster {
 	// create a cluster with the aws auth backend built-in
-	logger := logging.NewVaultLogger(hclog.Trace)
-	coreConfig := &vault.CoreConfig{
-		Logger: logger,
-		CredentialBackends: map[string]logical.Factory{
-			"aws": Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		NumCores:    1,
-		HandlerFunc: vaulthttp.Handler,
-	})
-
-	cluster.Start()
-	if len(cluster.Cores) != 1 {
-		t.Fatalf("expected exactly one core")
-	}
-	core := cluster.Cores[0]
-	vault.TestWaitActive(t, core.Core)
+	cluster := minimal.NewTestSoloCluster(t, nil)
 
 	// load the auth plugin
-	if err := core.Client.Sys().EnableAuthWithOptions("aws", &api.EnableAuthOptions{
+	if err := cluster.Cores[0].Client.Sys().EnableAuthWithOptions("aws", &api.EnableAuthOptions{
 		Type: "aws",
 	}); err != nil {
 		t.Fatal(err)

@@ -9,6 +9,7 @@ import (
 	auditSyslog "github.com/hashicorp/vault/builtin/audit/syslog"
 	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
 	"github.com/hashicorp/vault/builtin/plugin"
+	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -66,8 +67,11 @@ func NewTestSoloCluster(t testing.T, config *vault.CoreConfig) *vault.TestCluste
 			"syslog": auditSyslog.Factory,
 		}
 	}
+	if mycfg.BuiltinRegistry == nil {
+		mycfg.BuiltinRegistry = builtinplugins.Registry
+	}
 
-	cluster := vault.NewTestCluster(t, config, &vault.TestClusterOptions{
+	cluster := vault.NewTestCluster(t, mycfg, &vault.TestClusterOptions{
 		NumCores:    1,
 		HandlerFunc: http.Handler,
 		Logger:      logger,

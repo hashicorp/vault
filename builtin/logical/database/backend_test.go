@@ -18,10 +18,9 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-hclog"
 	mongodbatlas "github.com/hashicorp/vault-plugin-database-mongodbatlas"
-	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
-	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/plugins/database/mongodb"
 	"github.com/hashicorp/vault/plugins/database/postgresql"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
@@ -37,19 +36,8 @@ import (
 )
 
 func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"database": Factory,
-		},
-		BuiltinRegistry: builtinplugins.Registry,
-	}
-
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	cores := cluster.Cores
-	vault.TestWaitActive(t, cores[0].Core)
 
 	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
