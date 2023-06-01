@@ -51,9 +51,9 @@ releases include:
 ### 3. Check logs
 
 Automatic license utilization reporting will start sending data within 24 hours.
-Check the product logs for records that the data sent successfully.
+Check the server logs for records that the data sent successfully.
 
-Instructions on how to check logs. 
+You will find log entries similar to the following:
 
 <CodeBlockConfig hideClipboard>
 
@@ -131,9 +131,9 @@ reporting {
 
 <Warning>
 
-When you have a cluster, each node must have the reporting stanza defined in its
-configuration file to be consistent. In the event of leadership change, nodes
-will use their server configuration to determine whether or not to opt-out the
+When you have a cluster, each node must have the reporting stanza in its
+configuration to be consistent. In the event of leadership change, nodes will
+use its server configuration to determine whether or not to opt-out the
 automated reporting. Inconsistent configuration between nodes will change the
 reporting status upon active unseal.
 
