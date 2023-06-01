@@ -246,7 +246,8 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 		if err != nil {
 			return nil, fmt.Errorf("default directory policy role %v is not a valid ACME role: %w", defaultDirectoryRoleName, err)
 		}
-
+	default:
+		return nil, fmt.Errorf("validation for the type of policy defined by %v is undefined", config.DefaultDirectoryPolicy)
 	}
 
 	// Validate Allowed Roles
