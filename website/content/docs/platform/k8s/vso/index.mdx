@@ -141,7 +141,7 @@ spec:
 Provides the configuration necessary for the Operator to synchronize a single Vault *PKI* Secret to a single Kubernetes Secret.<br />
 Supported secrets engines: [pki](/vault/docs/secrets/pki)
 
-In this example, the PKI secret engine is mounted at `pki` path. A Vault role named `default` is configured to map to a procedure for generating a certificate.
+The PKI secrets engine's mounted path is specified under `spec.mount` of `VaultPKISecret` custom resource. Please consult [PKI Secrets Engine - Setup and Usage](vault/docs/secrets/pki/setup) for configuring PKI secrets engine.
 
 ```yaml
 ---
@@ -153,7 +153,7 @@ metadata:
 spec:
   vaultAuthRef: example
   mount: pki
-  name: default
+  role: default
   commonName: example.com
   format: pem
   expiryOffset: 1s
@@ -172,8 +172,7 @@ Supported secrets engines *non-exhaustive*: [databases](/vault/docs/secrets/data
 
 ##### Database secret example
 
-In this example, the database secret engine is mounted at `db` path. A Vault role named `my-postgresql-role`
-is configured to map a name in Vault to an executable database statement to create the database credential.
+The database secret engine's `db` mounted path is specified under `spec.mount` of `VaultDynamicSecret` custom resource. A Vault role named `my-postgresql-role` is configured to map a name in Vault to an executable database statement to create the database credential. Please consult [Database Secrets Engine - Setup](vault/docs/secrets/databases#setup) for configuring the database secrets engine.
 
 ```yaml
 ---
@@ -193,7 +192,7 @@ spec:
 
 ##### AWS secret example
 
-In this example, the AWS secret engine is mounted at `aws` path. A Vault role named `my-role` is configured to map to a set of permissions in AWS as well as an AWS credential type.
+The AWS secrets engine's `aws` mounted path is specified under `spec.mount` of `VaultDynamicSecret` custom resource. A Vault role named `my-role` is configured to map to a set of permissions in AWS as well as an AWS credential type. Please consult [AWS Secrets Engine - Setup](vault/docs/secrets/aws#setup) for configuring AWS secrets engine.
 
 ```yaml
 ---

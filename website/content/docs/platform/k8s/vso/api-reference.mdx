@@ -354,7 +354,7 @@ _Appears in:_
 | `vaultAuthRef` _string_ | VaultAuthRef of the VaultAuth resource If no value is specified the Operator will default to the `default` VaultAuth, configured in its own Kubernetes namespace. |
 | `namespace` _string_ | Namespace to get the secret from in Vault |
 | `mount` _string_ | Mount for the secret in Vault |
-| `name` _string_ | Name of the secret in Vault |
+| `role` _string_ | Role in Vault to use when issuing TLS certificates |
 | `revoke` _boolean_ | Revoke the certificate when the resource is deleted. |
 | `clear` _boolean_ | Clear the Kubernetes secret when the resource is deleted. |
 | `expiryOffset` _string_ | ExpiryOffset to use for computing when the certificate should be renewed. The rotation time will be difference between the expiration and the offset. Should be in duration notation e.g. 30s, 120s, etc. Set to empty string "" to prevent certificate rotation. |
