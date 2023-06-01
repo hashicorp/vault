@@ -69,11 +69,6 @@ type Server struct {
 	// exit channel of the child process
 	childProcessExitCh chan int
 
-	// we need to start a different go-routine to watch the
-	// child process each time we restart it.
-	// this function closes the old watcher go-routine so it doesn't leak
-	childProcessExitCodeCloser func()
-
 	// lastRenderedEnvVars is the cached value of all environment variables
 	// rendered by the templating engine; it is used for detecting changes
 	lastRenderedEnvVars []string
@@ -269,7 +264,6 @@ func (s *Server) bounceCmd(newEnvVars []string) error {
 			// process is running, need to kill it first
 			s.logger.Info("stopping process", "process_id", s.childProcess.Pid())
 			s.childProcessState = childProcessStateRestarting
-			s.childProcessExitCodeCloser()
 			s.childProcess.Stop()
 		}
 	case "never":
@@ -319,14 +313,9 @@ func (s *Server) bounceCmd(newEnvVars []string) error {
 	// NOTE: this must be invoked after child.Start() to avoid a potential
 	// race condition with ExitCh not being initialized.
 	go func() {
-		ctx, cancel := context.WithCancel(context.Background())
-		s.childProcessExitCodeCloser = cancel
 		select {
 		case exitCode := <-proc.ExitCh():
 			s.childProcessExitCh <- exitCode
-			return
-		case <-ctx.Done():
-			return
 		}
 	}()
 
