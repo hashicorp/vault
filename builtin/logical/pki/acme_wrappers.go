@@ -318,9 +318,9 @@ func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData, config 
 	var wasVerbatim bool
 	var role *roleEntry
 
-	if len(requestedRole) > 0 || len(config.DefaultRole) > 0 {
+	if len(requestedRole) > 0 || strings.HasPrefix(config.DefaultDirectoryPolicy, "role:") {
 		if len(requestedRole) == 0 {
-			requestedRole = config.DefaultRole
+			requestedRole = strings.TrimPrefix(config.DefaultDirectoryPolicy, "role:")
 		}
 
 		var err error
@@ -342,18 +342,20 @@ func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData, config 
 		if len(role.Issuer) > 0 && len(requestedIssuer) == 0 {
 			issuerToLoad = role.Issuer
 		}
-	} else {
+	} else if config.DefaultDirectoryPolicy == "sign-verbatim" { // config.DefaultDirectoryPolicy = sign-verbatim
 		role = buildSignVerbatimRoleWithNoData(&roleEntry{
 			Issuer:  requestedIssuer,
 			NoStore: false,
 			Name:    requestedRole,
 		})
 		wasVerbatim = true
+	} else if (len(requestedRole) == 0) && (config.DefaultDirectoryPolicy == "forbid") {
+		return nil, nil, fmt.Errorf("%w: default directory not allowed by ACME policy", ErrServerInternal)
 	}
 
 	allowAnyRole := len(config.AllowedRoles) == 1 && config.AllowedRoles[0] == "*"
 	if !allowAnyRole {
-		if wasVerbatim {
+		if wasVerbatim { // TODO!
 			return nil, nil, fmt.Errorf("%w: using the default directory without specifying a role is not supported by this configuration; specify 'default_role' in the acme config to the default directories", ErrServerInternal)
 		}
 

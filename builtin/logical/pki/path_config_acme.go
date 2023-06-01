@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -15,26 +16,26 @@ import (
 const (
 	storageAcmeConfig      = "config/acme"
 	pathConfigAcmeHelpSyn  = "Configuration of ACME Endpoints"
-	pathConfigAcmeHelpDesc = "Here we configure:\n\nenabled=false, whether ACME is enabled, defaults to false meaning that clusters will by default not get ACME support,\nallowed_issuers=\"default\", which issuers are allowed for use with ACME; by default, this will only be the primary (default) issuer,\nallowed_roles=\"*\", which roles are allowed for use with ACME; by default these will be all roles matching our selection criteria,\ndefault_role=\"\", if not empty, the role to be used for non-role-qualified ACME requests; by default this will be empty, meaning ACME issuance will be equivalent to sign-verbatim.,\ndns_resolver=\"\", which specifies a custom DNS resolver to use for all ACME-related DNS lookups"
+	pathConfigAcmeHelpDesc = "Here we configure:\n\nenabled=false, whether ACME is enabled, defaults to false meaning that clusters will by default not get ACME support,\nallowed_issuers=\"default\", which issuers are allowed for use with ACME; by default, this will only be the primary (default) issuer,\nallowed_roles=\"*\", which roles are allowed for use with ACME; by default these will be all roles matching our selection criteria,\ndefault_directory_policy=\"\", either \"forbid\", preventing the default directory from being used at all, \"role:<role_name>\" which is the role to be used for non-role-qualified ACME requests; or \"sign-verbatim\", the default meaning ACME issuance will be equivalent to sign-verbatim.,\ndns_resolver=\"\", which specifies a custom DNS resolver to use for all ACME-related DNS lookups"
 	disableAcmeEnvVar      = "VAULT_DISABLE_PUBLIC_ACME"
 )
 
 type acmeConfigEntry struct {
-	Enabled        bool          `json:"enabled"`
-	AllowedIssuers []string      `json:"allowed_issuers="`
-	AllowedRoles   []string      `json:"allowed_roles"`
-	DefaultRole    string        `json:"default_role"`
-	DNSResolver    string        `json:"dns_resolver"`
-	EabPolicyName  EabPolicyName `json:"eab_policy_name"`
+	Enabled                bool          `json:"enabled"`
+	AllowedIssuers         []string      `json:"allowed_issuers="`
+	AllowedRoles           []string      `json:"allowed_roles"`
+	DefaultDirectoryPolicy string        `json:"default_directory_policy"`
+	DNSResolver            string        `json:"dns_resolver"`
+	EabPolicyName          EabPolicyName `json:"eab_policy_name"`
 }
 
 var defaultAcmeConfig = acmeConfigEntry{
-	Enabled:        false,
-	AllowedIssuers: []string{"*"},
-	AllowedRoles:   []string{"*"},
-	DefaultRole:    "",
-	DNSResolver:    "",
-	EabPolicyName:  eabPolicyNotRequired,
+	Enabled:                false,
+	AllowedIssuers:         []string{"*"},
+	AllowedRoles:           []string{"*"},
+	DefaultDirectoryPolicy: "sign-verbatim",
+	DNSResolver:            "",
+	EabPolicyName:          eabPolicyNotRequired,
 }
 
 func (sc *storageContext) getAcmeConfig() (*acmeConfigEntry, error) {
@@ -91,13 +92,13 @@ func pathAcmeConfig(b *backend) *framework.Path {
 			},
 			"allowed_roles": {
 				Type:        framework.TypeCommaStringSlice,
-				Description: `which roles are allowed for use with ACME; by default via '*', these will be all roles including sign-verbatim; when concrete role names are specified, sign-verbatim is not allowed and a default_role must be specified in order to allow usage of the default acme directories under /pki/acme/directory and /pki/issuer/:issuer_id/acme/directory.`,
+				Description: `which roles are allowed for use with ACME; by default via '*', these will be all roles including sign-verbatim; when concrete role names are specified, sign-verbatim is not allowed and a different default_directory_policy must be specified in order to allow usage of the default acme directories under /pki/acme/directory and /pki/issuer/:issuer_id/acme/directory.`,
 				Default:     []string{"*"},
 			},
-			"default_role": {
+			"default_directory_policy": {
 				Type:        framework.TypeString,
-				Description: `if not empty, the role to be used for non-role-qualified ACME requests; by default this will be empty, meaning ACME issuance will be equivalent to sign-verbatim; must be specified in allowed_roles if non-empty`,
-				Default:     "",
+				Description: `the policy to be used for non-role-qualified ACME requests; by default ACME issuance will be otherwise unrestricted, equivalent to the sign-verbatim endpoint; one may also specify a role to use as this policy, as "role:<role_name>", the specified role must be allowed by allowed_roles`,
+				Default:     "sign-verbatim",
 			},
 			"dns_resolver": {
 				Type:        framework.TypeString,
@@ -156,12 +157,12 @@ func (b *backend) pathAcmeRead(ctx context.Context, req *logical.Request, _ *fra
 func genResponseFromAcmeConfig(config *acmeConfigEntry, warnings []string) *logical.Response {
 	response := &logical.Response{
 		Data: map[string]interface{}{
-			"allowed_roles":   config.AllowedRoles,
-			"allowed_issuers": config.AllowedIssuers,
-			"default_role":    config.DefaultRole,
-			"enabled":         config.Enabled,
-			"dns_resolver":    config.DNSResolver,
-			"eab_policy":      config.EabPolicyName,
+			"allowed_roles":            config.AllowedRoles,
+			"allowed_issuers":          config.AllowedIssuers,
+			"default_directory_policy": config.DefaultDirectoryPolicy,
+			"enabled":                  config.Enabled,
+			"dns_resolver":             config.DNSResolver,
+			"eab_policy":               config.EabPolicyName,
 		},
 		Warnings: warnings,
 	}
@@ -190,8 +191,8 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 		}
 	}
 
-	if defaultRoleRaw, ok := d.GetOk("default_role"); ok {
-		config.DefaultRole = defaultRoleRaw.(string)
+	if defaultDirectoryPolicyRaw, ok := d.GetOk("default_directory_policy"); ok {
+		config.DefaultDirectoryPolicy = defaultDirectoryPolicyRaw.(string)
 	}
 
 	if allowedIssuersRaw, ok := d.GetOk("allowed_issuers"); ok {
@@ -226,9 +227,34 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 		config.EabPolicyName = eabPolicy.Name
 	}
 
+	// Validate Default Directory Behavior:
+	defaultDirectoryPolicyIsRole := false
+	switch {
+	case config.DefaultDirectoryPolicy == "forbid" || config.DefaultDirectoryPolicy == "sign-verbatim":
+	case strings.HasPrefix(config.DefaultDirectoryPolicy, "role:"):
+		defaultDirectoryPolicyIsRole = true
+
+		roleName := strings.TrimPrefix(config.DefaultDirectoryPolicy, "role:")
+		role, err := sc.Backend.getRole(sc.Context, sc.Storage, roleName)
+		if err != nil {
+			return nil, fmt.Errorf("failed validating default directory role: unable to fetch role: %v: %w", roleName, err)
+		}
+
+		if role == nil {
+			return nil, fmt.Errorf("role %v specified as default directory policy does not exist", roleName)
+		}
+
+		if role.NoStore {
+			return nil, fmt.Errorf("role %v specifies no_store=true; this prohibits usage with ACME which requires stored certificates", roleName)
+		}
+	default:
+		return nil, fmt.Errorf("default_directory_policy must take a configuration of the form \"forbid\", \"sign-verbatim\", or \"role:<role_name>\"; which %v does not", config.DefaultDirectoryPolicy)
+	}
+
+	// Validate Allowed Roles
 	allowAnyRole := len(config.AllowedRoles) == 1 && config.AllowedRoles[0] == "*"
+	foundDefault := false
 	if !allowAnyRole {
-		foundDefault := len(config.DefaultRole) == 0
 		for index, name := range config.AllowedRoles {
 			if name == "*" {
 				return nil, fmt.Errorf("cannot use '*' as role name at index %d", index)
@@ -247,13 +273,13 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 				return nil, fmt.Errorf("role %v specifies no_store=true; this prohibits usage with ACME which requires stored certificates", name)
 			}
 
-			if name == config.DefaultRole {
+			if defaultDirectoryPolicyIsRole && name == config.DefaultDirectoryPolicy[5:] {
 				foundDefault = true
 			}
 		}
 
-		if !foundDefault {
-			return nil, fmt.Errorf("default role %v was not specified in allowed_roles: %v", config.DefaultRole, config.AllowedRoles)
+		if !foundDefault && defaultDirectoryPolicyIsRole {
+			return nil, fmt.Errorf("default directory policy %v was not specified in allowed_roles: %v", config.DefaultDirectoryPolicy, config.AllowedRoles)
 		}
 	}
 
