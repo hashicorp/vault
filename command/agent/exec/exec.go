@@ -242,7 +242,7 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 			if debounceTimer != nil {
 				debounceTimer.Stop()
 			}
-			debounceTimer = time.AfterFunc(5*time.Second, func() {
+			debounceTimer = time.AfterFunc(s.config.AgentConfig.Exec.SecretUpdateWaitDuration, func() {
 				if err := s.bounceCmd(renderedEnvVars); err != nil {
 					bounceErrCh <- fmt.Errorf("unable to bounce command: %w", err)
 				}
