@@ -24,10 +24,16 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
     this.store = this.owner.lookup('service:store');
     this.cancelSpy = sinon.spy();
     this.backend = 'pki-engine';
+    this.server.post(`/${this.backend}/config/acme`, () => {});
+    this.server.post(`/${this.backend}/config/cluster`, () => {});
     // both models only use findRecord. API parameters for pki/crl
     // are set by default backend values when the engine is mounted
     this.store.pushPayload('pki/config/cluster', {
       modelName: 'pki/config/cluster',
+      id: this.backend,
+    });
+    this.store.pushPayload('pki/config/acme', {
+      modelName: 'pki/config/acme',
       id: this.backend,
     });
     this.store.pushPayload('pki/config/crl', {
@@ -49,13 +55,28 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
       crl_distribution_points: ['some-crl-distribution.com'],
       ocsp_servers: ['ocsp-stuff.com'],
     });
+    this.acme = this.store.peekRecord('pki/config/acme', this.backend);
     this.cluster = this.store.peekRecord('pki/config/cluster', this.backend);
     this.crl = this.store.peekRecord('pki/config/crl', this.backend);
     this.urls = this.store.peekRecord('pki/config/urls', this.backend);
   });
 
   test('it renders with config data and updates config', async function (assert) {
-    assert.expect(28);
+    assert.expect(32);
+    this.server.post(`/${this.backend}/config/acme`, (schema, req) => {
+      assert.ok(true, 'request made to save acme config');
+      assert.propEqual(
+        JSON.parse(req.requestBody),
+        {
+          allowed_issuers: ['*'],
+          allowed_roles: ['my-role'],
+          dns_resolver: 'some-dns',
+          eab_policy: 'new-account-required',
+          enabled: true,
+        },
+        'it updates acme config model attributes'
+      );
+    });
     this.server.post(`/${this.backend}/config/cluster`, (schema, req) => {
       assert.ok(true, 'request made to save cluster config');
       assert.propEqual(
@@ -64,7 +85,7 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
           path: 'https://pr-a.vault.example.com/v1/ns1/pki-root',
           aia_path: 'http://another-path.com',
         },
-        'it updates config model attributes'
+        'it updates cluster config model attributes'
       );
     });
     this.server.post(`/${this.backend}/config/crl`, (schema, req) => {
@@ -81,7 +102,7 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
           ocsp_disable: false,
           ocsp_expiry: '24h',
         },
-        'it updates crl model attributes'
+        'it updates crl config model attributes'
       );
     });
     this.server.post(`/${this.backend}/config/urls`, (schema, req) => {
@@ -93,12 +114,13 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
           issuing_certificates: ['update-hashicorp.com'],
           ocsp_servers: ['ocsp.com'],
         },
-        'it updates url model attributes'
+        'it updates url config model attributes'
       );
     });
     await render(
       hbs`
       <Page::PkiConfigurationEdit
+        @acme={{this.acme}}
         @cluster={{this.cluster}}
         @urls={{this.urls}}
         @crl={{this.crl}}
@@ -119,8 +141,18 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
     assert.dom(SELECTORS.urlFieldInput('crlDistributionPoints')).hasValue('some-crl-distribution.com');
     assert.dom(SELECTORS.urlFieldInput('ocspServers')).hasValue('ocsp-stuff.com');
 
+    // cluster config
     await fillIn(SELECTORS.configInput('path'), 'https://pr-a.vault.example.com/v1/ns1/pki-root');
     await fillIn(SELECTORS.configInput('aiaPath'), 'http://another-path.com');
+
+    // acme config;
+    await click(SELECTORS.configInput('enabled'));
+    await fillIn(SELECTORS.stringListInput('allowedRoles'), 'my-role');
+    await fillIn(SELECTORS.stringListInput('allowedIssuers'), '*');
+    await fillIn(SELECTORS.configInput('eabPolicy'), 'new-account-required');
+    await fillIn(SELECTORS.configInput('dnsResolver'), 'some-dns');
+
+    // urls
     await fillIn(SELECTORS.urlFieldInput('issuingCertificates'), 'update-hashicorp.com');
     await fillIn(SELECTORS.urlFieldInput('crlDistributionPoints'), 'test-crl.com');
     await fillIn(SELECTORS.urlFieldInput('ocspServers'), 'ocsp.com');
@@ -160,6 +192,7 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
     await fillIn(SELECTORS.crlTtlInput('Auto-rebuild on'), '24');
     await fillIn(SELECTORS.crlTtlInput('Delta CRL building on'), '45');
     await fillIn(SELECTORS.crlTtlInput('OCSP responder APIs enabled'), '24');
+
     await click(SELECTORS.saveButton);
   });
 
@@ -197,6 +230,8 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
     await render(
       hbs`
       <Page::PkiConfigurationEdit
+        @acme={{this.acme}}
+        @cluster={{this.cluster}}
         @urls={{this.urls}}
         @crl={{this.crl}}
         @backend={{this.backend}}
@@ -231,6 +266,7 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
 
   test('it renders enterprise only params', async function (assert) {
     assert.expect(6);
+
     this.version = this.owner.lookup('service:version');
     this.version.version = '1.13.1+ent';
     this.server.post(`/${this.backend}/config/crl`, (schema, req) => {
@@ -259,6 +295,8 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
     await render(
       hbs`
       <Page::PkiConfigurationEdit
+        @acme={{this.acme}}
+        @cluster={{this.cluster}}
         @urls={{this.urls}}
         @crl={{this.crl}}
         @backend={{this.backend}}
@@ -266,6 +304,7 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
     `,
       this.context
     );
+
     assert.dom(SELECTORS.groupHeader('Certificate Revocation List (CRL)')).exists();
     assert.dom(SELECTORS.groupHeader('Online Certificate Status Protocol (OCSP)')).exists();
     assert.dom(SELECTORS.groupHeader('Unified Revocation')).exists();
@@ -277,6 +316,7 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
 
   test('it renders does not render enterprise only params for OSS', async function (assert) {
     assert.expect(9);
+
     this.version = this.owner.lookup('service:version');
     this.version.version = '1.13.1';
     this.server.post(`/${this.backend}/config/crl`, (schema, req) => {
@@ -302,6 +342,8 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
     await render(
       hbs`
       <Page::PkiConfigurationEdit
+        @acme={{this.acme}}
+        @cluster={{this.cluster}}
         @urls={{this.urls}}
         @crl={{this.crl}}
         @backend={{this.backend}}

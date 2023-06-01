@@ -32,6 +32,18 @@
     {{/each}}
   {{/if}}
 
+  {{#if (not (eq @acme 403))}}
+    <h2 class="title is-4 has-bottom-margin-xs has-top-margin-xl has-border-bottom-light has-bottom-padding-s">
+      ACME Config
+    </h2>
+    {{#each @acme.allFields as |attr|}}
+      <InfoTableRow
+        @label={{or attr.options.label (humanize (dasherize attr.name))}}
+        @value={{or (get @acme attr.name) "None"}}
+      />
+    {{/each}}
+  {{/if}}
+
   {{#if (not (eq @urls 403))}}
     <h2 class="title is-4 has-bottom-margin-xs has-top-margin-xl has-border-bottom-light has-bottom-padding-s">
       Global URLs

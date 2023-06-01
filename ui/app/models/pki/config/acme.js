@@ -26,19 +26,15 @@ export default class PkiConfigAcmeModel extends Model {
   })
   enabled;
 
-  @attr('string', {
-    subText:
-      'Optionally specifies a role to enforce on the default ACME directory. Must exist in allowed_roles if set.',
-  })
-  defaultRole;
-
   @attr('array', {
+    editType: 'stringArray',
     subText:
       'Specifies a list of roles to allow to issue certificates via explicit ACME paths. If no default_role is specified, sign-verbatim-like issuance on the default ACME directory will still occur. The default value * allows every role within the mount. ',
   })
   allowedRoles;
 
   @attr('array', {
+    editType: 'stringArray',
     subText:
       'Specifies a list issuers allowed to issue certificates via explicit ACME paths. If an allowed role specifies an issuer outside this list, it will be allowed. The default value * allows every issuer within the mount. ',
   })
