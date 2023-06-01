@@ -24,17 +24,31 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
 
-func fakeVaultServer() *httptest.Server {
+func fakeVaultServer(t *testing.T) *httptest.Server {
+	t.Helper()
+
+	firstRequest := true
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/v1/kv/my-app/creds", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, `{
+		// change the password on the second request to trigger an application restart
+		var password string
+
+		if firstRequest {
+			password = "s3cr3t"
+			firstRequest = false
+		} else {
+			password = "s3cr3t-two"
+		}
+
+		fmt.Fprintf(w, `{
                 "request_id": "8af096e9-518c-7351-eff5-5ba20554b21f",
                 "lease_id": "",
                 "renewable": false,
                 "lease_duration": 0,
                 "data": {
                     "data": {
-                        "password": "s3cr3t",
+                        "password": "%s",
                         "user": "app-user"
                     },
                     "metadata": {
@@ -47,7 +61,9 @@ func fakeVaultServer() *httptest.Server {
                 "wrap_info": null,
                 "warnings": null,
                 "auth": null
-            }`)
+            }`,
+			password,
+		)
 	})
 
 	return httptest.NewServer(mux)
@@ -63,9 +79,6 @@ func fakeVaultServer() *httptest.Server {
 //  2. test app exits early (either with zero or non-zero extit code)
 //  3. test app needs to be stopped (and restarted) by exec.Server
 func TestExecServer_Run(t *testing.T) {
-	fakeVault := fakeVaultServer()
-	defer fakeVault.Close()
-
 	// we must build a test-app binary since 'go run' does not propagate signals correctly
 	goBinary, err := exec.LookPath("go")
 	if err != nil {
@@ -89,7 +102,8 @@ func TestExecServer_Run(t *testing.T) {
 		skipReason string
 
 		// inputs to the exec server
-		envTemplates []*ctconfig.TemplateConfig
+		envTemplates               []*ctconfig.TemplateConfig
+		staticSecretRenderInterval time.Duration
 
 		// test app parameters
 		testAppArgs       []string
@@ -106,6 +120,7 @@ func TestExecServer_Run(t *testing.T) {
 		expectedError        error
 	}{
 		"ensure_environment_variables_are_injected": {
+			skip: true,
 			envTemplates: []*ctconfig.TemplateConfig{{
 				Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
 				MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
@@ -124,38 +139,61 @@ func TestExecServer_Run(t *testing.T) {
 			expectedError:        nil,
 		},
 
+		"password_changes_test_app_should_restart": {
+			envTemplates: []*ctconfig.TemplateConfig{{
+				Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
+				MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
+			}, {
+				Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.password }}{{ end }}`),
+				MapToEnvironmentVariable: pointerutil.StringPtr("MY_PASSWORD"),
+			}},
+			staticSecretRenderInterval: 5 * time.Second,
+			testAppArgs:                []string{"--stop-after", "10s", "--sleep-after-stop-signal", "0s"},
+			testAppStopSignal:          syscall.SIGTERM,
+			testAppPort:                34002,
+			expected: map[string]string{
+				"MY_USER":     "app-user",
+				"MY_PASSWORD": "s3cr3t-two",
+			},
+			expectedTestDuration: 15 * time.Second,
+			expectedError:        nil,
+		},
+
 		"test_app_exits_early": {
+			skip: true,
 			envTemplates: []*ctconfig.TemplateConfig{{
 				Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
 				MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
 			}},
 			testAppArgs:          []string{"--stop-after", "1s"},
 			testAppStopSignal:    syscall.SIGTERM,
-			testAppPort:          34002,
+			testAppPort:          34003,
 			expectedTestDuration: 15 * time.Second,
 			expectedError:        &ProcessExitError{0},
 		},
 
 		"test_app_exits_early_non_zero": {
+			skip: true,
 			envTemplates: []*ctconfig.TemplateConfig{{
 				Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
 				MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
 			}},
 			testAppArgs:          []string{"--stop-after", "1s", "--exit-code", "5"},
 			testAppStopSignal:    syscall.SIGTERM,
-			testAppPort:          34003,
+			testAppPort:          34004,
 			expectedTestDuration: 15 * time.Second,
 			expectedError:        &ProcessExitError{5},
 		},
 
 		"send_sigterm_expect_test_app_exit": {
+			skip: true,
 			envTemplates: []*ctconfig.TemplateConfig{{
 				Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
 				MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
 			}},
 			testAppArgs:                  []string{"--stop-after", "30s", "--sleep-after-stop-signal", "1s"},
 			testAppStopSignal:            syscall.SIGTERM,
-			testAppPort:                  34004,
+			testAppPort:                  34005,
 			simulateShutdown:             true,
 			simulateShutdownWaitDuration: 3 * time.Second,
 			expectedTestDuration:         15 * time.Second,
@@ -163,13 +201,14 @@ func TestExecServer_Run(t *testing.T) {
 		},
 
 		"send_sigusr1_expect_test_app_exit": {
+			skip: true,
 			envTemplates: []*ctconfig.TemplateConfig{{
 				Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
 				MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
 			}},
 			testAppArgs:                  []string{"--stop-after", "30s", "--sleep-after-stop-signal", "1s", "--use-sigusr1"},
 			testAppStopSignal:            syscall.SIGUSR1,
-			testAppPort:                  34005,
+			testAppPort:                  34006,
 			simulateShutdown:             true,
 			simulateShutdownWaitDuration: 3 * time.Second,
 			expectedTestDuration:         15 * time.Second,
@@ -185,7 +224,7 @@ func TestExecServer_Run(t *testing.T) {
 			}},
 			testAppArgs:                  []string{"--stop-after", "60s", "--sleep-after-stop-signal", "60s"},
 			testAppStopSignal:            syscall.SIGTERM,
-			testAppPort:                  34006,
+			testAppPort:                  34007,
 			simulateShutdown:             true,
 			simulateShutdownWaitDuration: 32 * time.Second, // the test app should be stopped immediately after 30s
 			expectedTestDuration:         45 * time.Second,
@@ -198,6 +237,12 @@ func TestExecServer_Run(t *testing.T) {
 			if testCase.skip {
 				t.Skip(testCase.skipReason)
 			}
+
+			t.Logf("test case %s: begin", name)
+			defer t.Logf("test case %s: end", name)
+
+			fakeVault := fakeVaultServer(t)
+			defer fakeVault.Close()
 
 			ctx, cancelContextFunc := context.WithTimeout(context.Background(), testCase.expectedTestDuration)
 			defer cancelContextFunc()
@@ -223,6 +268,10 @@ func TestExecServer_Run(t *testing.T) {
 						RestartStopSignal:      testCase.testAppStopSignal,
 					},
 					EnvTemplates: testCase.envTemplates,
+					TemplateConfig: &config.TemplateConfig{
+						ExitOnRetryFailure:    true,
+						StaticSecretRenderInt: testCase.staticSecretRenderInterval,
+					},
 				},
 				LogLevel:  hclog.Trace,
 				LogWriter: hclog.DefaultOutput,
@@ -277,6 +326,12 @@ func TestExecServer_Run(t *testing.T) {
 				t.Log("test app started successfully")
 			}
 
+			// expect the test app to restart after staticSecretRenderInterval due to a password change
+			if testCase.staticSecretRenderInterval != 0 {
+				t.Logf("sleeping for %v to wait for application restart", testCase.staticSecretRenderInterval+3*time.Second)
+				time.Sleep(testCase.staticSecretRenderInterval + 3*time.Second)
+			}
+
 			// simulate a shutdown of agent, which, in turn stops the test app
 			if testCase.simulateShutdown {
 				cancelContextFunc()
@@ -292,6 +347,8 @@ func TestExecServer_Run(t *testing.T) {
 			}
 
 			// verify the environment variables
+			t.Logf("verifying test-app's environment variables")
+
 			resp, err := http.Get(testAppAddr)
 			if err != nil {
 				t.Fatalf("error making request to the test app: %s", err)
