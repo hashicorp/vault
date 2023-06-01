@@ -326,10 +326,10 @@ func TestExecServer_Run(t *testing.T) {
 				t.Log("test app started successfully")
 			}
 
-			// expect the test app to restart after staticSecretRenderInterval due to a password change
+			// expect the test app to restart after staticSecretRenderInterval + debounce timer due to a password change
 			if testCase.staticSecretRenderInterval != 0 {
-				t.Logf("sleeping for %v to wait for application restart", testCase.staticSecretRenderInterval+3*time.Second)
-				time.Sleep(testCase.staticSecretRenderInterval + 3*time.Second)
+				t.Logf("sleeping for %v to wait for application restart", testCase.staticSecretRenderInterval+5*time.Second)
+				time.Sleep(testCase.staticSecretRenderInterval + 5*time.Second)
 			}
 
 			// simulate a shutdown of agent, which, in turn stops the test app
