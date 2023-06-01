@@ -1,0 +1,31 @@
+<PageHeader as |p|>
+  <p.top>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-header-title>
+      <Icon @name={{@model.icon}} @size="24" class="has-text-grey-light" />
+      {{@model.id}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<div class="tabs-container box is-bottomless is-marginless is-paddingless">
+  <nav class="tabs" aria-label="ldap tabs">
+    <ul>
+      <LinkTo @route="overview" data-test-tab="overview">Overview</LinkTo>
+      <LinkTo @route="roles" data-test-tab="roles">Roles</LinkTo>
+      <LinkTo @route="libraries" data-test-tab="libraries">Libraries</LinkTo>
+      <LinkTo @route="configuration" data-test-tab="config">Configuration</LinkTo>
+    </ul>
+  </nav>
+</div>
+
+<Toolbar>
+  <ToolbarFilters>
+    {{yield to="toolbarFilters"}}
+  </ToolbarFilters>
+  <ToolbarActions>
+    {{yield to="toolbarActions"}}
+  </ToolbarActions>
+</Toolbar>
