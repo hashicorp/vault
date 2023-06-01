@@ -235,7 +235,7 @@ func SubtestACMECertbotEab(t *testing.T, cluster *VaultPkiCluster) {
 		"--no-eff-email",
 		"--email", "certbot.client@dadgarcorp.com",
 		"--eab-kid", eabId,
-		"--eab-hmac-key", base64EabKey,
+		"--eab-hmac-key='" + base64EabKey + "'",
 		"--agree-tos",
 		"--no-verify-ssl",
 		"--standalone",
