@@ -168,10 +168,9 @@ type TemplateConfig struct {
 }
 
 type ExecConfig struct {
-	Command                  []string      `hcl:"command,attr" mapstructure:"command"`
-	RestartOnSecretChanges   string        `hcl:"restart_on_secret_changes,optional" mapstructure:"restart_on_secret_changes"`
-	RestartStopSignal        os.Signal     `hcl:"-" mapstructure:"restart_stop_signal"`
-	SecretUpdateWaitDuration time.Duration `hcl:"secret_update_wait_duration"`
+	Command                []string  `hcl:"command,attr" mapstructure:"command"`
+	RestartOnSecretChanges string    `hcl:"restart_on_secret_changes,optional" mapstructure:"restart_on_secret_changes"`
+	RestartStopSignal      os.Signal `hcl:"-" mapstructure:"restart_stop_signal"`
 }
 
 func NewConfig() *Config {
@@ -1246,10 +1245,6 @@ func parseExec(result *Config, list *ast.ObjectList) error {
 
 	if execConfig.RestartOnSecretChanges == "" {
 		execConfig.RestartOnSecretChanges = "always"
-	}
-
-	if execConfig.SecretUpdateWaitDuration <= 0 {
-		execConfig.SecretUpdateWaitDuration = 2 * time.Second
 	}
 
 	result.Exec = &execConfig
