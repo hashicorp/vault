@@ -128,7 +128,7 @@
     {{/each-in}}
   {{/each}}
 </main>
-{{#if (or (eq @issuer.can_parse false) this.parsingErrors)}}
+{{#if (or (eq @issuer.parsedCertificate.can_parse false) this.parsingErrors)}}
   <AlertBanner
     data-test-parsing-error-alert-banner
     class="has-top-margin-m"
