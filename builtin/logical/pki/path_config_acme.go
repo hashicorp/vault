@@ -342,6 +342,9 @@ func getDefaultDirectoryPolicyType(defaultDirectoryPolicy string) (DefaultDirect
 	case defaultDirectoryPolicy == "sign-verbatim":
 		return SignVerbatim, nil
 	case strings.HasPrefix(defaultDirectoryPolicy, "role:"):
+		if len(defaultDirectoryPolicy) == 5 {
+			return Forbid, fmt.Errorf("no role specified by policy %v", defaultDirectoryPolicy)
+		}
 		return Role, nil
 	default:
 		return Forbid, fmt.Errorf("string %v not a valid Default Directory Policy", defaultDirectoryPolicy)
