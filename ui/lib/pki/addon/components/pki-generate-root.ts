@@ -112,9 +112,11 @@ export default class PkiGenerateRootComponent extends Component<Args> {
       // this way an issuer_id exists for backend to interpolate into the template
       yield this.setUrls();
       this.flashMessages.success('Successfully generated root.');
+      // This component shows the results, but call `onSave` for any side effects on parent
       if (this.args.onSave) {
         this.args.onSave();
       }
+      window?.scrollTo(0, 0);
     } catch (e) {
       this.errorBanner = errorMessage(e);
       this.invalidFormAlert = 'There was a problem generating the root.';
