@@ -149,7 +149,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
         request,
         {
           allow_ip_sans: true,
-          issuer_ref: 'issuer-1',
+          issuer_ref: 'default',
           key_bits: '224',
           key_type: 'ec',
           key_usage: ['DigitalSignature', 'KeyAgreement', 'KeyEncipherment'],
@@ -174,22 +174,18 @@ module('Integration | Component | pki-role-form', function (hooks) {
       signature_bits: 512, // string type in dropdown, API returns as numbers
     });
 
-    this.role = this.store.peekRecord('pki/role', 'role-id');
+    this.model = this.store.peekRecord('pki/role', 'role-id');
 
     await render(
       hbs`
       <PkiRoleForm
-        @role={{this.role}}
-        @issuers={{this.issuers}}
+        @model={{this.model}}
         @onCancel={{this.onCancel}}
         @onSave={{this.onSave}}
       />
       `,
       { owner: this.engine }
     );
-
-    await click(SELECTORS.issuerRefToggle);
-    await fillIn(SELECTORS.issuerRefSelect, 'issuer-1');
 
     await click(SELECTORS.keyParams);
     assert.dom(SELECTORS.keyType).hasValue('rsa');
@@ -203,6 +199,6 @@ module('Integration | Component | pki-role-form', function (hooks) {
     assert.dom(SELECTORS.signatureBits).hasValue('384', 'dropdown has selected value, not default value (0)');
 
     await click(SELECTORS.roleCreateButton);
-    assert.strictEqual(this.role.issuerRef, 'issuer-1', 'Issuer Ref correctly saved on create');
+    assert.strictEqual(this.model.issuerRef, 'default', 'Issuer Ref correctly saved on create');
   });
 });
