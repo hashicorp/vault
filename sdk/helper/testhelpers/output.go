@@ -1,12 +1,11 @@
 package testhelpers
 
 import (
-	"crypto/md5"
+	"crypto/sha256"
 	"fmt"
 	"reflect"
 
 	"github.com/mitchellh/go-testing-interface"
-
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -46,7 +45,7 @@ func ToMap(in any) (map[string]any, error) {
 				return data, nil
 			}
 			b := data.([]byte)
-			return fmt.Sprintf("%x", md5.Sum(b)), nil
+			return fmt.Sprintf("%x", sha256.Sum256(b)), nil
 		},
 	})
 	if err != nil {
