@@ -81,7 +81,7 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
     assert.dom(SELECTORS.configure).doesNotExist();
   });
 
-  test('it render parsing error banner if issuer certificate contains unsupported OIDs', async function (assert) {
+  test('it renders parsing error banner if issuer certificate contains unsupported OIDs', async function (assert) {
     this.issuer.parsedCertificate = {
       common_name: 'fancy-cert-unsupported-subj-and-ext-oids',
       subject_serial_number: null,
@@ -110,7 +110,7 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
       );
   });
 
-  test('it render parsing error banner if can_parse=false but no parsing_errors', async function (assert) {
+  test('it renders parsing error banner if can_parse=false but no parsing_errors', async function (assert) {
     this.issuer.parsedCertificate = {
       common_name: 'fancy-cert-unsupported-subj-and-ext-oids',
       subject_serial_number: null,
@@ -139,7 +139,7 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
       );
   });
 
-  test('it render parsing error banner if no key for parsing_errors', async function (assert) {
+  test('it renders parsing error banner if no key for parsing_errors', async function (assert) {
     this.issuer.parsedCertificate = {
       common_name: 'fancy-cert-unsupported-subj-and-ext-oids',
       subject_serial_number: null,
