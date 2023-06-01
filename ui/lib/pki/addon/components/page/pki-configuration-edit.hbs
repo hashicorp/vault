@@ -22,6 +22,25 @@
       {{/if}}
     </fieldset>
 
+    <fieldset class="box is-shadowless is-marginless is-borderless is-fullwidth" data-test-acme-config-edit-section>
+      <h2 class="title is-size-5 has-border-bottom-light page-header">
+        ACME Config
+      </h2>
+      {{#if @acme.canSet}}
+        {{#each @acme.allFields as |attr|}}
+          <FormField @attr={{attr}} @model={{@acme}} @showHelpText={{false}} @backend={{@backend}} />
+        {{/each}}
+      {{else}}
+        <EmptyState
+          class="is-box-shadowless"
+          @title="You do not have permission to set the ACME config"
+          @message="Ask your administrator if you think you should have access to:"
+        >
+          <code>POST /{{@backend}}/config/acme</code>
+        </EmptyState>
+      {{/if}}
+    </fieldset>
+
     <fieldset class="box is-shadowless is-marginless is-borderless is-fullwidth" data-test-urls-edit-section>
       <h2 class="title is-size-5 has-border-bottom-light page-header">
         Global URLs
