@@ -20,18 +20,18 @@ type TransitImportVersionCommand struct {
 }
 
 func (c *TransitImportVersionCommand) Synopsis() string {
-	return "Import key material into a new key version in the Transit or Transform secrets engines."
+	return "Import key material into a new key version in the Transit secrets engines."
 }
 
 func (c *TransitImportVersionCommand) Help() string {
 	helpText := `
 Usage: vault transit import-version PATH KEY [...]
 
-  Using the Transit or Transform key wrapping system, imports key material from
+  Using the Transit key wrapping system, imports key material from
   the base64 encoded KEY (either directly on the CLI or via @path notation),
-  into a new key whose API path is PATH.  To import a new Transit or Transform
+  into a new key whose API path is PATH.  To import a new Transit
   key, use the import command instead.  The remaining options after KEY
-  (key=value style) are passed on to the Transit or Transform create key endpoint.
+  (key=value style) are passed on to the Transit create key endpoint.
   If your system or device natively supports the RSA AES key wrap mechanism
   (such as the PKCS#11 mechanism CKM_RSA_AES_KEY_WRAP), you should use it
   directly rather than this command.
