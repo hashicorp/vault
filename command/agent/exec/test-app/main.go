@@ -26,7 +26,6 @@ import (
 
 var (
 	port                 uint
-	ignoreStopSignal     bool
 	sleepAfterStopSignal time.Duration
 	useSigusr1StopSignal bool
 	stopAfter            time.Duration
@@ -37,7 +36,7 @@ func init() {
 	flag.UintVar(&port, "port", 34000, "port to run the test app on")
 	flag.DurationVar(&sleepAfterStopSignal, "sleep-after-stop-signal", 1*time.Second, "time to sleep after getting the signal before exiting")
 	flag.BoolVar(&useSigusr1StopSignal, "use-sigusr1", false, "use SIGUSR1 as the stop signal, instead of the default SIGTERM")
-	flag.DurationVar(&stopAfter, "stop-after", 0, "stop the process after duration (overrides all other flags if set)")
+	flag.DurationVar(&stopAfter, "stop-after", 60*time.Second, "stop the process after duration (overrides all other flags if set)")
 	flag.IntVar(&exitCode, "exit-code", 0, "exit code to return when this script exits")
 }
 
@@ -59,7 +58,7 @@ func newResponse() Response {
 	}
 }
 
-func handler(w http.ResponseWriter, r *http.Request) {
+func index(w http.ResponseWriter, r *http.Request) {
 	var buf bytes.Buffer
 	encoder := json.NewEncoder(&buf)
 	if r.URL.Query().Get("pretty") == "1" {
@@ -72,6 +71,13 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(buf.Bytes())
+}
+
+func shutdown(cancel func()) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		defer cancel()
+		w.WriteHeader(http.StatusOK)
+	}
 }
 
 func main() {
@@ -90,14 +96,17 @@ func run(logger *log.Logger) error {
 	/* */ logger.Println("run: started")
 	defer logger.Println("run: done")
 
-	ctx, cancelContextFunc := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancelContextFunc()
-
 	flag.Parse()
+
+	ctx, cancelContextFunc := context.WithCancel(context.Background())
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", index)
+	mux.HandleFunc("/shutdown", shutdown(cancelContextFunc))
 
 	server := http.Server{
 		Addr:         fmt.Sprintf(":%d", port),
-		Handler:      http.HandlerFunc(handler),
+		Handler:      mux,
 		ReadTimeout:  20 * time.Second,
 		WriteTimeout: 20 * time.Second,
 		IdleTimeout:  20 * time.Second,

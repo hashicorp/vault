@@ -4,6 +4,7 @@
 package command
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -12,6 +13,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -302,9 +304,9 @@ func TestAgent_RequireRequestHeader(t *testing.T) {
 		return cli
 	}
 
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	// Start the server and agent
-	//----------------------------------------------------
+	// ----------------------------------------------------
 
 	// Start a vault server
 	logger := logging.NewVaultLogger(hclog.Trace)
@@ -433,9 +435,9 @@ listener "tcp" {
 		wg.Wait()
 	}()
 
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	// Perform the tests
-	//----------------------------------------------------
+	// ----------------------------------------------------
 
 	// Test against a listener configuration that omits
 	// 'require_request_header', with the header missing from the request.
@@ -520,9 +522,9 @@ listener "tcp" {
 // userAgentHandler struct defined in this test package, so that Vault validates the
 // User-Agent on requests sent by Agent.
 func TestAgent_Template_UserAgent(t *testing.T) {
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	// Start the server and agent
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	logger := logging.NewVaultLogger(hclog.Trace)
 	var h userAgentHandler
 	cluster := vault.NewTestCluster(t,
@@ -732,9 +734,9 @@ auto_auth {
 			// early for shutdown if we do have all the files
 			// rendered
 
-			//----------------------------------------------------
+			// ----------------------------------------------------
 			// Perform the tests
-			//----------------------------------------------------
+			// ----------------------------------------------------
 
 			if numFiles := testListFiles(t, tmpDir, ".json"); numFiles != len(templatePaths) {
 				err = fmt.Errorf("expected (%d) templates, got (%d)", len(templatePaths), numFiles)
@@ -769,9 +771,9 @@ auto_auth {
 
 // TestAgent_Template tests rendering templates
 func TestAgent_Template_Basic(t *testing.T) {
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	// Start the server and agent
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	logger := logging.NewVaultLogger(hclog.Trace)
 	cluster := vault.NewTestCluster(t,
 		&vault.CoreConfig{
@@ -1009,9 +1011,9 @@ auto_auth {
 					// early for shutdown if we do have all the files
 					// rendered
 
-					//----------------------------------------------------
+					// ----------------------------------------------------
 					// Perform the tests
-					//----------------------------------------------------
+					// ----------------------------------------------------
 
 					if numFiles := testListFiles(t, tmpDir, ".json"); numFiles != len(templatePaths) {
 						err = fmt.Errorf("expected (%d) templates, got (%d)", len(templatePaths), numFiles)
@@ -1072,9 +1074,9 @@ func testListFiles(t *testing.T, dir, extension string) int {
 // generate a random number of secrets, but all using the same source. This test
 // reproduces https://github.com/hashicorp/vault/issues/7883
 func TestAgent_Template_ExitCounter(t *testing.T) {
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	// Start the server and agent
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	logger := logging.NewVaultLogger(hclog.Trace)
 	cluster := vault.NewTestCluster(t,
 		&vault.CoreConfig{
@@ -1266,9 +1268,9 @@ exit_after_auth = true
 
 	wg.Wait()
 
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	// Perform the tests
-	//----------------------------------------------------
+	// ----------------------------------------------------
 
 	files, err := os.ReadDir(tmpDir)
 	if err != nil {
@@ -1428,9 +1430,9 @@ func (h *userAgentHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 // TestAgent_Template_Retry verifies that the template server retries requests
 // based on retry configuration.
 func TestAgent_Template_Retry(t *testing.T) {
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	// Start the server and agent
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	logger := logging.NewVaultLogger(hclog.Trace)
 	var h handler
 	cluster := vault.NewTestCluster(t,
@@ -1606,9 +1608,9 @@ template_config {
 					// early for shutdown if we do have all the files
 					// rendered
 
-					//----------------------------------------------------
+					// ----------------------------------------------------
 					// Perform the tests
-					//----------------------------------------------------
+					// ----------------------------------------------------
 
 					if numFiles := testListFiles(t, tmpDir, ".json"); numFiles != 1 {
 						err = fmt.Errorf("expected 1 template, got (%d)", numFiles)
@@ -2160,9 +2162,9 @@ vault {
 }
 
 func TestAgent_ApiProxy_Retry(t *testing.T) {
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	// Start the server and agent
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	logger := logging.NewVaultLogger(hclog.Trace)
 	var h handler
 	cluster := vault.NewTestCluster(t,
@@ -2313,9 +2315,9 @@ vault {
 }
 
 func TestAgent_TemplateConfig_ExitOnRetryFailure(t *testing.T) {
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	// Start the server and agent
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	logger := logging.NewVaultLogger(hclog.Trace)
 	cluster := vault.NewTestCluster(t,
 		&vault.CoreConfig{
@@ -2569,9 +2571,9 @@ vault {
 					// early for shutdown if we do have all the files
 					// rendered
 
-					//----------------------------------------------------
+					// ----------------------------------------------------
 					// Perform the tests
-					//----------------------------------------------------
+					// ----------------------------------------------------
 
 					if numFiles := testListFiles(t, tmpDir, ".json"); numFiles != 1 {
 						err = fmt.Errorf("expected 1 template, got (%d)", numFiles)
@@ -2617,9 +2619,9 @@ vault {
 }
 
 func TestAgent_Metrics(t *testing.T) {
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	// Start the server and agent
-	//----------------------------------------------------
+	// ----------------------------------------------------
 
 	// Start a vault server
 	logger := logging.NewVaultLogger(hclog.Trace)
@@ -2700,9 +2702,9 @@ listener "tcp" {
 }
 
 func TestAgent_Quit(t *testing.T) {
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	// Start the server and agent
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	logger := logging.NewVaultLogger(hclog.Error)
 	cluster := vault.NewTestCluster(t,
 		&vault.CoreConfig{
@@ -3111,6 +3113,209 @@ vault {
 
 	close(cmd.ShutdownCh)
 	wg.Wait()
+}
+
+func execTestVaultServer(t *testing.T) (*api.Client, func()) {
+	t.Helper()
+
+	cluster := vault.NewTestCluster(
+		t,
+		&vault.CoreConfig{},
+		&vault.TestClusterOptions{
+			NumCores:    1,
+			HandlerFunc: vaulthttp.Handler,
+		},
+	)
+
+	cluster.Start()
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+
+	client := cluster.Cores[0].Client
+
+	// enable kv-v1 backend
+	if err := client.Sys().Mount("kv-v1/", &api.MountInput{
+		Type: "kv-v1",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// enable kv-v2 backend
+	if err := client.Sys().Mount("kv-v2/", &api.MountInput{
+		Type: "kv-v2",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	return client, cluster.Cleanup
+}
+
+func writeJwtTokenFile(t *testing.T) string {
+	t.Helper()
+
+	inf, err := os.CreateTemp("", "auth.jwt.test.*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	in := inf.Name()
+	inf.Close()
+	os.Remove(in)
+
+	jwtToken, _ := agent.GetTestJWT(t)
+
+	if err := os.WriteFile(in, []byte(jwtToken), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return in
+}
+
+func setupTestApp(t *testing.T) string {
+	// we must build a test-app binary since 'go run' does not propagate signals correctly
+	goBinary, err := exec.LookPath("go")
+	if err != nil {
+		t.Fatalf("could not find go binary on path: %s", err)
+	}
+
+	testAppBinary := filepath.Join(os.TempDir(), "test-app")
+
+	if err := exec.Command(goBinary, "build", "-o", testAppBinary, "./agent/exec/test-app").Run(); err != nil {
+		t.Fatalf("could not build the test application: %s", err)
+	}
+	return testAppBinary
+}
+
+func TestAgent_Exec_Restarts(t *testing.T) {
+	jwtFile := writeJwtTokenFile(t)
+	defer os.Remove(jwtFile)
+
+	testAppBin := setupTestApp(t)
+	defer os.Remove(testAppBin)
+
+	config := `
+template_config {
+  static_secret_render_interval = "2s"
+}
+
+auto_auth {
+	method {
+		type = "jwt"
+		config = {
+			role = "test"
+			path = "%s"
+		}
+	}
+}
+env_template "MY_DATABASE_USER" {
+  contents = "{{ with secret \"kv-v2/data/my-db\" }}{{ .Data.data.user }}{{ end }}"
+}
+env_template "MY_DATABASE_PASSWORD" {
+  contents = "{{ with secret \"kv-v2/data/my-db\" }}{{ .Data.data.password }}{{ end }}"
+}
+
+exec {
+	command = ["%s", "-port", "%d"]
+}`
+	const port = 34001
+	logger := logging.NewVaultLogger(hclog.Trace)
+	configFile := makeTempFile(t, "config.hcl", fmt.Sprintf(config, jwtFile, testAppBin, port))
+
+	client, cleanup := testVaultServer(t)
+	defer cleanup()
+
+	// enable kv-v2 backend
+	if err := client.Sys().Mount("kv-v2/", &api.MountInput{
+		Type: "kv-v2",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := client.KVv2("kv-v2/").Put(context.Background(), "my-db", map[string]interface{}{
+		"user":     "dbuser",
+		"password": "password1",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// the command blocks, so run in go-routine
+	agentExitCodeCh := make(chan int, 1)
+	go func(exitCodeCh chan<- int) {
+		defer close(exitCodeCh)
+		_, agentCmd := testAgentCommand(t, logger)
+		agentCmd.client = client
+		args := []string{"-config", configFile}
+		exitCodeCh <- agentCmd.Run(args)
+	}(agentExitCodeCh)
+
+	testAppAddr := fmt.Sprintf("http://localhost:%d", port)
+
+	checkTestAppEnvVars := func(expectedEnvVars map[string]string) {
+		// verify the environment variables
+		resp, err := http.Get(testAppAddr)
+		if err != nil {
+			t.Fatalf("error making request to the test app: %s", err)
+		}
+		defer resp.Body.Close()
+
+		decoder := json.NewDecoder(resp.Body)
+		type TestAppResponse struct {
+			EnvironmentVariables map[string]string `json:"environment_variables"`
+			ProcessID            int               `json:"process_id"`
+		}
+		var response TestAppResponse
+		if err := decoder.Decode(&response); err != nil {
+			t.Fatalf("unable to parse response from test app: %s", err)
+		}
+
+		for envVar, expectedValue := range expectedEnvVars {
+			actualValue, ok := response.EnvironmentVariables[envVar]
+			if !ok {
+				t.Fatalf("expected env vars to include %q", envVar)
+			}
+			if actualValue != expectedValue {
+				t.Fatalf("expected env var %q to be %q, got %q", envVar, expectedValue, actualValue)
+			}
+		}
+	}
+
+	checkTestAppEnvVars(map[string]string{
+		"MY_DATABASE_USER":     "dbuser",
+		"MY_DATABASE_PASSWORD": "password1",
+	})
+
+	// update the secrets so we can test the refresh
+	_, err = client.KVv2("kv-v2/").Put(context.Background(), "my-db", map[string]interface{}{
+		"user":     "newuser",
+		"password": "password2",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// wait for consul-template to fetch the new values
+	// see template_config.static_secret_render_interval
+	time.Sleep(4 * time.Second)
+
+	checkTestAppEnvVars(map[string]string{
+		"MY_DATABASE_USER":     "newuser",
+		"MY_DATABASE_PASSWORD": "password2",
+	})
+
+	// stop the app, which should stop the agent
+	if _, err := http.Get(testAppAddr + "/shutdown"); err != nil {
+		t.Fatalf("unable to call shutdown endpoint on test-app")
+	}
+
+	// wait until the vault agent command exits
+	// shouldn't take long, but we time it to make sure
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	select {
+	case <-ctx.Done():
+		t.Fatalf("vault agent didn't exit within the timeout")
+	case exitCode := <-agentExitCodeCh:
+		if exitCode != 0 {
+			t.Fatalf("expected to exit successfully")
+		}
+	}
 }
 
 // Get a randomly assigned port and then free it again before returning it.
