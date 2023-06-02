@@ -54,7 +54,7 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
   *save(event: Event) {
     event.preventDefault();
     try {
-      for (const model of ['acme', 'cluster', 'urls', 'crl']) {
+      for (const model of ['cluster', 'acme', 'urls', 'crl']) {
         // only call save() if user has permission
         if (this.args[model as keyof Args].canSet) {
           yield this.args[model as keyof Args].save();
