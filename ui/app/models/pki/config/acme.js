@@ -26,17 +26,23 @@ export default class PkiConfigAcmeModel extends Model {
   })
   enabled;
 
+  @attr('string', {
+    subText:
+      "Specifies the behavior of the default ACME directory. Can be 'forbid', 'sign-verbatim' or a role given by 'role:<role_name>'. If a role is used, it must be present in 'allowed_roles'.",
+  })
+  defaultDirectoryPolicy;
+
   @attr('array', {
     editType: 'stringArray',
     subText:
-      'Specifies a list of roles to allow to issue certificates via explicit ACME paths. If no default_role is specified, sign-verbatim-like issuance on the default ACME directory will still occur. The default value * allows every role within the mount. ',
+      "The default value '*' allows every role within the mount to be used. If the default_directory_policy specifies a role, it must be allowed under this configuration.",
   })
   allowedRoles;
 
   @attr('array', {
     editType: 'stringArray',
     subText:
-      'Specifies a list issuers allowed to issue certificates via explicit ACME paths. If an allowed role specifies an issuer outside this list, it will be allowed. The default value * allows every issuer within the mount. ',
+      "Specifies a list of issuers allowed to issue certificates via explicit ACME paths. If an allowed role specifies an issuer outside this list, it will be allowed. The default value '*' allows every issuer within the mount.",
   })
   allowedIssuers;
 
