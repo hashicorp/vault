@@ -3115,40 +3115,6 @@ vault {
 	wg.Wait()
 }
 
-func execTestVaultServer(t *testing.T) (*api.Client, func()) {
-	t.Helper()
-
-	cluster := vault.NewTestCluster(
-		t,
-		&vault.CoreConfig{},
-		&vault.TestClusterOptions{
-			NumCores:    1,
-			HandlerFunc: vaulthttp.Handler,
-		},
-	)
-
-	cluster.Start()
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
-
-	client := cluster.Cores[0].Client
-
-	// enable kv-v1 backend
-	if err := client.Sys().Mount("kv-v1/", &api.MountInput{
-		Type: "kv-v1",
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	// enable kv-v2 backend
-	if err := client.Sys().Mount("kv-v2/", &api.MountInput{
-		Type: "kv-v2",
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	return client, cluster.Cleanup
-}
-
 func writeJwtTokenFile(t *testing.T) string {
 	t.Helper()
 
@@ -3184,23 +3150,37 @@ func setupTestApp(t *testing.T) string {
 }
 
 func TestAgent_Exec_Restarts(t *testing.T) {
-	jwtFile := writeJwtTokenFile(t)
-	defer os.Remove(jwtFile)
 
 	testAppBin := setupTestApp(t)
 	defer os.Remove(testAppBin)
 
-	config := `
+	vaultClient, cleanup := testVaultServer(t)
+	defer cleanup()
+
+	tokenFile := populateTempFile(t, "tokenfile.txt", vaultClient.Token())
+	defer os.Remove(tokenFile.Name())
+
+	// token file needs to have 600 permissions
+	if err := os.Chmod(tokenFile.Name(), 0600); err != nil {
+		t.Fatalf("unable to change permissions of token file: %s", err)
+	}
+
+	const port = 34001
+	config := fmt.Sprintf(`
 template_config {
   static_secret_render_interval = "2s"
 }
 
+vault {
+  address = "%s"
+  tls_skip_verify = true
+}
+
 auto_auth {
 	method {
-		type = "jwt"
-		config = {
-			role = "test"
-			path = "%s"
+		type = "token_file"
+    	config {
+      		token_file_path = "%s"
 		}
 	}
 }
@@ -3213,22 +3193,18 @@ env_template "MY_DATABASE_PASSWORD" {
 
 exec {
 	command = ["%s", "-port", "%d"]
-}`
-	const port = 34001
+}`, vaultClient.Address(), tokenFile.Name(), testAppBin, port)
 	logger := logging.NewVaultLogger(hclog.Trace)
-	configFile := makeTempFile(t, "config.hcl", fmt.Sprintf(config, jwtFile, testAppBin, port))
-
-	client, cleanup := testVaultServer(t)
-	defer cleanup()
+	configFile := makeTempFile(t, "config.hcl", config)
 
 	// enable kv-v2 backend
-	if err := client.Sys().Mount("kv-v2/", &api.MountInput{
+	if err := vaultClient.Sys().Mount("kv-v2/", &api.MountInput{
 		Type: "kv-v2",
 	}); err != nil {
 		t.Fatal(err)
 	}
 
-	_, err := client.KVv2("kv-v2/").Put(context.Background(), "my-db", map[string]interface{}{
+	_, err := vaultClient.KVv2("kv-v2/").Put(context.Background(), "my-db", map[string]interface{}{
 		"user":     "dbuser",
 		"password": "password1",
 	})
@@ -3241,7 +3217,7 @@ exec {
 	go func(exitCodeCh chan<- int) {
 		defer close(exitCodeCh)
 		_, agentCmd := testAgentCommand(t, logger)
-		agentCmd.client = client
+		agentCmd.client = vaultClient
 		args := []string{"-config", configFile}
 		exitCodeCh <- agentCmd.Run(args)
 	}(agentExitCodeCh)
@@ -3283,7 +3259,7 @@ exec {
 	})
 
 	// update the secrets so we can test the refresh
-	_, err = client.KVv2("kv-v2/").Put(context.Background(), "my-db", map[string]interface{}{
+	_, err = vaultClient.KVv2("kv-v2/").Put(context.Background(), "my-db", map[string]interface{}{
 		"user":     "newuser",
 		"password": "password2",
 	})
