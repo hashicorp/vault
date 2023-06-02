@@ -57,6 +57,6 @@ export default class PkiConfigAcmeModel extends Model {
   acmePath;
 
   get canSet() {
-    return this.acmePath.get('canCreate') !== false;
+    return this.acmePath.get('canUpdate') !== false;
   }
 }

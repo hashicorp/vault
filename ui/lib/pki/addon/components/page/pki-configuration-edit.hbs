@@ -13,8 +13,8 @@
         {{/each}}
       {{else}}
         <EmptyState
-          class="is-box-shadowless"
-          @title="You do not have permission to set the cluster config"
+          class="is-shadowless"
+          @title="You do not have permission to set this mount's the cluster config"
           @message="Ask your administrator if you think you should have access to:"
         >
           <code>POST /{{@backend}}/config/cluster</code>
@@ -22,7 +22,7 @@
       {{/if}}
     </fieldset>
 
-    <fieldset class="box is-shadowless is-marginless is-borderless is-fullwidth" data-test-acme-config-edit-section>
+    <fieldset class="box is-shadowless is-marginless is-borderless is-fullwidth" data-test-acme-edit-section>
       <h2 class="title is-size-5 has-border-bottom-light page-header">
         ACME Config
       </h2>
@@ -32,8 +32,8 @@
         {{/each}}
       {{else}}
         <EmptyState
-          class="is-box-shadowless"
-          @title="You do not have permission to set the ACME config"
+          class="is-shadowless"
+          @title="You do not have permission to set this mount's ACME config"
           @message="Ask your administrator if you think you should have access to:"
         >
           <code>POST /{{@backend}}/config/acme</code>
@@ -51,8 +51,8 @@
         {{/each}}
       {{else}}
         <EmptyState
-          class="is-box-shadowless"
-          @title="You do not have permission to set URLs"
+          class="is-shadowless"
+          @title="You do not have permission to set this mount's URLs"
           @message="Ask your administrator if you think you should have access to:"
         >
           <code>POST /{{@backend}}/config/urls</code>
@@ -98,8 +98,7 @@
         {{/each}}
       {{else}}
         <EmptyState
-          class="is-box-shadowless"
-          @title="You do not have permission to set revocation configuration"
+          @title="You do not have permission to set this mount's revocation configuration"
           @message="Ask your administrator if you think you should have access to:"
         >
           <code>POST /{{@backend}}/config/crl</code>

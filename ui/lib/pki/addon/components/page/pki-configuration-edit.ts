@@ -54,11 +54,13 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
   *save(event: Event) {
     event.preventDefault();
     try {
-      yield this.args.acme.save();
-      yield this.args.cluster.save();
-      yield this.args.urls.save();
-      yield this.args.crl.save();
-      this.flashMessages.success('Successfully updated configuration');
+      for (const model of ['acme', 'cluster', 'urls', 'crl']) {
+        // only call save() if user has permission
+        if (this.args[model as keyof Args].canSet) {
+          yield this.args[model as keyof Args].save();
+          this.flashMessages.success(`Successfully updated ${model} config`);
+        }
+      }
       this.router.transitionTo('vault.cluster.secrets.backend.pki.configuration.index');
     } catch (error) {
       this.invalidFormAlert = 'There was an error submitting this form.';

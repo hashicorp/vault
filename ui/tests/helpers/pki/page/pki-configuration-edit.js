@@ -5,6 +5,7 @@
 
 export const SELECTORS = {
   errorBanner: '[data-test-error-banner]',
+  acmeEditSection: '[data-test-acme-edit-section]',
   configEditSection: '[data-test-cluster-config-edit-section]',
   configInput: (attr) => `[data-test-input="${attr}"]`,
   stringListInput: (attr) => `[data-test-input="${attr}"] [data-test-string-list-input="0"]`,

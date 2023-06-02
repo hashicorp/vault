@@ -24,8 +24,6 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
     this.store = this.owner.lookup('service:store');
     this.cancelSpy = sinon.spy();
     this.backend = 'pki-engine';
-    this.server.post(`/${this.backend}/config/acme`, () => {});
-    this.server.post(`/${this.backend}/config/cluster`, () => {});
     // both models only use findRecord. API parameters for pki/crl
     // are set by default backend values when the engine is mounted
     this.store.pushPayload('pki/config/cluster', {
@@ -198,6 +196,8 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
 
   test('it removes urls and sends false crl values', async function (assert) {
     assert.expect(8);
+    this.server.post(`/${this.backend}/config/acme`, () => {});
+    this.server.post(`/${this.backend}/config/cluster`, () => {});
     this.server.post(`/${this.backend}/config/crl`, (schema, req) => {
       assert.ok(true, 'request made to save crl config');
       assert.propEqual(
@@ -266,9 +266,10 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
 
   test('it renders enterprise only params', async function (assert) {
     assert.expect(6);
-
     this.version = this.owner.lookup('service:version');
     this.version.version = '1.13.1+ent';
+    this.server.post(`/${this.backend}/config/acme`, () => {});
+    this.server.post(`/${this.backend}/config/cluster`, () => {});
     this.server.post(`/${this.backend}/config/crl`, (schema, req) => {
       assert.ok(true, 'request made to save crl config');
       assert.propEqual(
@@ -314,11 +315,12 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
     await click(SELECTORS.saveButton);
   });
 
-  test('it renders does not render enterprise only params for OSS', async function (assert) {
+  test('it does not render enterprise only params for OSS', async function (assert) {
     assert.expect(9);
-
     this.version = this.owner.lookup('service:version');
     this.version.version = '1.13.1';
+    this.server.post(`/${this.backend}/config/acme`, () => {});
+    this.server.post(`/${this.backend}/config/cluster`, () => {});
     this.server.post(`/${this.backend}/config/crl`, (schema, req) => {
       assert.ok(true, 'request made to save crl config');
       assert.propEqual(
@@ -359,5 +361,44 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
     assert.dom(SELECTORS.groupHeader('Online Certificate Status Protocol (OCSP)')).exists();
     assert.dom(SELECTORS.groupHeader('Unified Revocation')).doesNotExist();
     await click(SELECTORS.saveButton);
+  });
+
+  test('it renders empty states if no update capabilities', async function (assert) {
+    assert.expect(4);
+    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub(['read']));
+
+    await render(
+      hbs`
+      <Page::PkiConfigurationEdit
+        @acme={{this.acme}}
+        @cluster={{this.cluster}}
+        @urls={{this.urls}}
+        @crl={{this.crl}}
+        @backend={{this.backend}}
+      />
+    `,
+      this.context
+    );
+
+    assert
+      .dom(`${SELECTORS.configEditSection} [data-test-component="empty-state"]`)
+      .hasText(
+        "You do not have permission to set this mount's the cluster config Ask your administrator if you think you should have access to: POST /pki-engine/config/cluster"
+      );
+    assert
+      .dom(`${SELECTORS.acmeEditSection} [data-test-component="empty-state"]`)
+      .hasText(
+        "You do not have permission to set this mount's ACME config Ask your administrator if you think you should have access to: POST /pki-engine/config/acme"
+      );
+    assert
+      .dom(`${SELECTORS.urlsEditSection} [data-test-component="empty-state"]`)
+      .hasText(
+        "You do not have permission to set this mount's URLs Ask your administrator if you think you should have access to: POST /pki-engine/config/urls"
+      );
+    assert
+      .dom(`${SELECTORS.crlEditSection} [data-test-component="empty-state"]`)
+      .hasText(
+        "You do not have permission to set this mount's revocation configuration Ask your administrator if you think you should have access to: POST /pki-engine/config/crl"
+      );
   });
 });
