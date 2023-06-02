@@ -225,33 +225,7 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 
 			// HACK: Update authorization/challenge to completed as we can't really do it properly in this workflow
 			//       test.
-			pkiMount := findStorageMountUuid(t, client, "pki")
-			accountId := acct.URI[strings.LastIndex(acct.URI, "/"):]
-			for _, authURI := range getOrder.AuthzURLs {
-				authId := authURI[strings.LastIndex(authURI, "/"):]
-
-				rawPath := path.Join("/sys/raw/logical/", pkiMount, getAuthorizationPath(accountId, authId))
-				resp, err := client.Logical().ReadWithContext(testCtx, rawPath)
-				require.NoError(t, err, "failed looking up authorization storage")
-				require.NotNil(t, resp, "sys raw response was nil")
-				require.NotEmpty(t, resp.Data["value"], "no value field in sys raw response")
-
-				var authz ACMEAuthorization
-				err = jsonutil.DecodeJSON([]byte(resp.Data["value"].(string)), &authz)
-				require.NoError(t, err, "error decoding authorization: %w", err)
-				authz.Status = ACMEAuthorizationValid
-				for _, challenge := range authz.Challenges {
-					challenge.Status = ACMEChallengeValid
-				}
-
-				encodeJSON, err := jsonutil.EncodeJSON(authz)
-				require.NoError(t, err, "failed encoding authz json")
-				_, err = client.Logical().WriteWithContext(testCtx, rawPath, map[string]interface{}{
-					"value":    base64.StdEncoding.EncodeToString(encodeJSON),
-					"encoding": "base64",
-				})
-				require.NoError(t, err, "failed writing authorization storage")
-			}
+			markAuthorizationSuccess(t, client, acmeClient, acct, getOrder)
 
 			// Make sure sending a CSR with the account key gets rejected.
 			goodCr := &x509.CertificateRequest{
@@ -738,33 +712,7 @@ func TestAcmeTruncatesToIssuerExpiry(t *testing.T) {
 
 	// HACK: Update authorization/challenge to completed as we can't really do it properly in this workflow
 	//       test.
-	pkiMount := findStorageMountUuid(t, client, "pki")
-	accountId := acct.URI[strings.LastIndex(acct.URI, "/"):]
-	for _, authURI := range order.AuthzURLs {
-		authId := authURI[strings.LastIndex(authURI, "/"):]
-
-		rawPath := path.Join("/sys/raw/logical/", pkiMount, getAuthorizationPath(accountId, authId))
-		resp, err := client.Logical().ReadWithContext(testCtx, rawPath)
-		require.NoError(t, err, "failed looking up authorization storage")
-		require.NotNil(t, resp, "sys raw response was nil")
-		require.NotEmpty(t, resp.Data["value"], "no value field in sys raw response")
-
-		var authz ACMEAuthorization
-		err = jsonutil.DecodeJSON([]byte(resp.Data["value"].(string)), &authz)
-		require.NoError(t, err, "error decoding authorization: %w", err)
-		authz.Status = ACMEAuthorizationValid
-		for _, challenge := range authz.Challenges {
-			challenge.Status = ACMEChallengeValid
-		}
-
-		encodeJSON, err := jsonutil.EncodeJSON(authz)
-		require.NoError(t, err, "failed encoding authz json")
-		_, err = client.Logical().WriteWithContext(testCtx, rawPath, map[string]interface{}{
-			"value":    base64.StdEncoding.EncodeToString(encodeJSON),
-			"encoding": "base64",
-		})
-		require.NoError(t, err, "failed writing authorization storage")
-	}
+	markAuthorizationSuccess(t, client, acmeClient, acct, order)
 
 	// Build a proper CSR, with the correct name and signed with a different key works.
 	goodCr := &x509.CertificateRequest{DNSNames: []string{identifiers[0]}}
@@ -834,7 +782,7 @@ func TestAcmeIgnoresRoleExtKeyUsage(t *testing.T) {
 	require.NoError(t, err, "failed creating order")
 
 	// HACK: Update authorization/challenge to completed as we can't really do it properly in this workflow test.
-	markAuthorizationSuccess(t, client, acct, order)
+	markAuthorizationSuccess(t, client, acmeClient, acct, order)
 
 	// Build a proper CSR, with the correct name and signed with a different key works.
 	goodCr := &x509.CertificateRequest{DNSNames: []string{identifiers[0]}}
@@ -854,36 +802,92 @@ func TestAcmeIgnoresRoleExtKeyUsage(t *testing.T) {
 		"mismatch of ExtKeyUsage flags")
 }
 
-func markAuthorizationSuccess(t *testing.T, client *api.Client, acct *acme.Account, order *acme.Order) {
+func markAuthorizationSuccess(t *testing.T, client *api.Client, acmeClient *acme.Client, acct *acme.Account,
+	order *acme.Order,
+) {
 	testCtx := context.Background()
 
 	pkiMount := findStorageMountUuid(t, client, "pki")
-	accountId := acct.URI[strings.LastIndex(acct.URI, "/"):]
-	for _, authURI := range order.AuthzURLs {
-		authId := authURI[strings.LastIndex(authURI, "/"):]
 
-		rawPath := path.Join("/sys/raw/logical/", pkiMount, getAuthorizationPath(accountId, authId))
-		resp, err := client.Logical().ReadWithContext(testCtx, rawPath)
-		require.NoError(t, err, "failed looking up authorization storage")
-		require.NotNil(t, resp, "sys raw response was nil")
-		require.NotEmpty(t, resp.Data["value"], "no value field in sys raw response")
+	// Delete any and all challenge validation entries to stop the engine from overwriting our hack here
+	i := 0
+	for {
+		deleteCvEntries(t, client, pkiMount)
 
-		var authz ACMEAuthorization
-		err = jsonutil.DecodeJSON([]byte(resp.Data["value"].(string)), &authz)
-		require.NoError(t, err, "error decoding authorization: %w", err)
-		authz.Status = ACMEAuthorizationValid
-		for _, challenge := range authz.Challenges {
-			challenge.Status = ACMEChallengeValid
+		accountId := acct.URI[strings.LastIndex(acct.URI, "/"):]
+		for _, authURI := range order.AuthzURLs {
+			authId := authURI[strings.LastIndex(authURI, "/"):]
+
+			rawPath := path.Join("/sys/raw/logical/", pkiMount, getAuthorizationPath(accountId, authId))
+			resp, err := client.Logical().ReadWithContext(testCtx, rawPath)
+			require.NoError(t, err, "failed looking up authorization storage")
+			require.NotNil(t, resp, "sys raw response was nil")
+			require.NotEmpty(t, resp.Data["value"], "no value field in sys raw response")
+
+			var authz ACMEAuthorization
+			err = jsonutil.DecodeJSON([]byte(resp.Data["value"].(string)), &authz)
+			require.NoError(t, err, "error decoding authorization: %w", err)
+			authz.Status = ACMEAuthorizationValid
+			for _, challenge := range authz.Challenges {
+				challenge.Status = ACMEChallengeValid
+			}
+
+			encodeJSON, err := jsonutil.EncodeJSON(authz)
+			require.NoError(t, err, "failed encoding authz json")
+			_, err = client.Logical().WriteWithContext(testCtx, rawPath, map[string]interface{}{
+				"value":    base64.StdEncoding.EncodeToString(encodeJSON),
+				"encoding": "base64",
+			})
+			require.NoError(t, err, "failed writing authorization storage")
 		}
 
-		encodeJSON, err := jsonutil.EncodeJSON(authz)
-		require.NoError(t, err, "failed encoding authz json")
-		_, err = client.Logical().WriteWithContext(testCtx, rawPath, map[string]interface{}{
-			"value":    base64.StdEncoding.EncodeToString(encodeJSON),
-			"encoding": "base64",
-		})
-		require.NoError(t, err, "failed writing authorization storage")
+		// Give some time
+		time.Sleep(200 * time.Millisecond)
+
+		// Check to see if we have fixed up the status and no new entries have appeared.
+		if !deleteCvEntries(t, client, pkiMount) {
+			// No entries found
+			// Look to see if we raced against the engine
+			orderLookup, err := acmeClient.GetOrder(testCtx, order.URI)
+			require.NoError(t, err, "failed loading order status after manually ")
+
+			if orderLookup.Status == string(ACMEOrderReady) {
+				// Our order seems to be in the proper status, should be safe-ish to go ahead now
+				break
+			} else {
+				t.Logf("order status was not ready, retrying")
+			}
+		} else {
+			t.Logf("new challenge entries appeared after deletion, retrying")
+		}
+
+		if i > 5 {
+			t.Fatalf("We are constantly deleting cv entries or order status is not changing, something is wrong")
+		}
+
+		i++
 	}
+}
+
+func deleteCvEntries(t *testing.T, client *api.Client, pkiMount string) bool {
+	testCtx := context.Background()
+
+	cvPath := path.Join("/sys/raw/logical/", pkiMount, acmeValidationPrefix)
+	resp, err := client.Logical().ListWithContext(testCtx, cvPath)
+	require.NoError(t, err, "failed listing cv path items")
+
+	deletedEntries := false
+	if resp != nil {
+		cvEntries := resp.Data["keys"].([]interface{})
+		for _, cvEntry := range cvEntries {
+			cvEntryPath := path.Join(cvPath, cvEntry.(string))
+			_, err = client.Logical().DeleteWithContext(testCtx, cvEntryPath)
+			require.NoError(t, err, "failed to delete cv entry")
+			deletedEntries = true
+		}
+	}
+
+	return deletedEntries
 }
 
 func setupAcmeBackend(t *testing.T) (*vault.TestCluster, *api.Client, string) {
@@ -1161,7 +1165,7 @@ func setupTestPkiCluster(t *testing.T) (*vault.TestCluster, *api.Client) {
 	return cluster, client
 }
 
-func getAcmeClientForCluster(t *testing.T, cluster *vault.TestCluster, baseUrl string, key crypto.Signer) acme.Client {
+func getAcmeClientForCluster(t *testing.T, cluster *vault.TestCluster, baseUrl string, key crypto.Signer) *acme.Client {
 	coreAddr := cluster.Cores[0].Listeners[0].Address
 	tlsConfig := cluster.Cores[0].TLSConfig()
 
@@ -1178,7 +1182,7 @@ func getAcmeClientForCluster(t *testing.T, cluster *vault.TestCluster, baseUrl s
 		baseUrl = "v1/" + baseUrl
 	}
 	baseAcmeURL := fmt.Sprintf("https://%s/%s", coreAddr.String(), baseUrl)
-	return acme.Client{
+	return &acme.Client{
 		Key:          key,
 		HTTPClient:   httpClient,
 		DirectoryURL: baseAcmeURL + "directory",
