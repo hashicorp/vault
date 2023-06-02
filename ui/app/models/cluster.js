@@ -51,19 +51,19 @@ export default class ClusterModel extends Model {
   }
 
   get sealThreshold() {
-    return this.leaderNode.sealThreshold;
+    return this.leaderNode?.sealThreshold;
   }
   get sealProgress() {
-    return this.leaderNode.progress;
+    return this.leaderNode?.progress;
   }
   get sealType() {
-    return this.leaderNode.type;
+    return this.leaderNode?.type;
   }
   get storageType() {
-    return this.leaderNode.storageType;
+    return this.leaderNode?.storageType;
   }
   get hcpLinkStatus() {
-    return this.leaderNode.hcpLinkStatus;
+    return this.leaderNode?.hcpLinkStatus;
   }
   get hasProgress() {
     return this.sealProgress >= 1;
