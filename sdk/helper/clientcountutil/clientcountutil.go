@@ -12,6 +12,10 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
+// ActivityLogDataGenerator holds an ActivityLogMockInput. Users can create the
+// generator with NewActivityLogData(), add content to the generator using
+// the fluent API methods, and generate and write the JSON representation of the
+// input to the Vault API.
 type ActivityLogDataGenerator struct {
 	data            *generation.ActivityLogMockInput
 	addingToMonth   *generation.Data
@@ -30,17 +34,17 @@ func NewActivityLogData(client *api.Client) *ActivityLogDataGenerator {
 
 // NewCurrentMonthData opens a new month of data for the current month. All
 // clients will continue to be added to this month until a new month is created
-// with NewMonthDataMonthsAgo.
+// with NewPreviousMonthData.
 func (d *ActivityLogDataGenerator) NewCurrentMonthData() *ActivityLogDataGenerator {
 	d.newMonth(&generation.Data{Month: &generation.Data_CurrentMonth{CurrentMonth: true}})
 	return d
 }
 
-// NewMonthDataMonthsAgo opens a new month of data, where the clients will be
+// NewPreviousMonthData opens a new month of data, where the clients will be
 // recorded as having been seen monthsAgo months ago. All clients will continue
 // to be added to this month until a new month is created with
-// NewMonthDataMonthsAgo or NewCurrentMonthData.
-func (d *ActivityLogDataGenerator) NewMonthDataMonthsAgo(monthsAgo int) *ActivityLogDataGenerator {
+// NewPreviousMonthData or NewCurrentMonthData.
+func (d *ActivityLogDataGenerator) NewPreviousMonthData(monthsAgo int) *ActivityLogDataGenerator {
 	return d.newMonth(&generation.Data{Month: &generation.Data_MonthsAgo{MonthsAgo: int32(monthsAgo)}})
 }
 
@@ -51,6 +55,7 @@ func (d *ActivityLogDataGenerator) newMonth(newMonth *generation.Data) *Activity
 	return d
 }
 
+// MonthOption holds an option that can be set for the entire month
 type MonthOption func(m *generation.Data)
 
 // WithMaximumSegmentIndex sets the maximum segment index for the segments in
@@ -143,7 +148,7 @@ func WithClientID(id string) ClientOption {
 }
 
 // ClientsSeen adds clients to the month that was most recently opened with
-// NewMonthDataMonthsAgo or NewCurrentMonthData.
+// NewPreviousMonthData or NewCurrentMonthData.
 func (d *ActivityLogDataGenerator) ClientsSeen(clients ...*generation.Client) *ActivityLogDataGenerator {
 	if d.addingToSegment == nil {
 		if d.addingToMonth.Clients == nil {
@@ -227,7 +232,7 @@ func WithSegmentIndex(n int) SegmentOption {
 
 // Segment starts a segment within the current month. All clients will be added
 // to this segment, until either Segment is called again to create a new open
-// segment, or NewMonthDataMonthsAgo or NewCurrentMonthData is called to open a
+// segment, or NewPreviousMonthData or NewCurrentMonthData is called to open a
 // new month.
 func (d *ActivityLogDataGenerator) Segment(opts ...SegmentOption) *ActivityLogDataGenerator {
 	s := &generation.Segment{
@@ -362,12 +367,12 @@ func VerifyInput(input *generation.ActivityLogMockInput) error {
 	repeatedClients := false
 	if all := earliestMonth.GetAll(); all != nil {
 		for _, client := range all.GetClients() {
-			repeatedClients = client.Repeated || client.RepeatedFromMonth != 0
+			repeatedClients = repeatedClients || client.Repeated || client.RepeatedFromMonth != 0
 		}
 	} else {
 		for _, segment := range earliestMonth.GetSegments().GetSegments() {
 			for _, client := range segment.GetClients().GetClients() {
-				repeatedClients = client.Repeated || client.RepeatedFromMonth != 0
+				repeatedClients = repeatedClients || client.Repeated || client.RepeatedFromMonth != 0
 			}
 		}
 	}

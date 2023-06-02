@@ -24,7 +24,7 @@ func TestNewCurrentMonthData(t *testing.T) {
 // TestNewMonthDataMonthsAgo verifies that months ago is set correctly and that
 // there are no open segments
 func TestNewMonthDataMonthsAgo(t *testing.T) {
-	generator := NewActivityLogData(nil).NewMonthDataMonthsAgo(3)
+	generator := NewActivityLogData(nil).NewPreviousMonthData(3)
 	require.Equal(t, int32(3), generator.data.Data[0].GetMonthsAgo())
 	require.Equal(t, int32(3), generator.addingToMonth.GetMonthsAgo())
 	require.Nil(t, generator.addingToSegment)
@@ -35,7 +35,7 @@ func TestNewMonthDataMonthsAgo(t *testing.T) {
 // then open a current month, and verify that the generator will add to the
 // current month.
 func TestNewMonthData_MultipleMonths(t *testing.T) {
-	generator := NewActivityLogData(nil).NewMonthDataMonthsAgo(3).NewMonthDataMonthsAgo(2)
+	generator := NewActivityLogData(nil).NewPreviousMonthData(3).NewPreviousMonthData(2)
 	require.Equal(t, int32(2), generator.data.Data[1].GetMonthsAgo())
 	require.Equal(t, int32(2), generator.addingToMonth.GetMonthsAgo())
 	generator = generator.NewCurrentMonthData()
@@ -92,7 +92,7 @@ func TestSegment_MultipleSegments(t *testing.T) {
 // TestSegment_NewMonth adds a client to a segment, then starts a new month. The
 // test verifies that there are no open segments
 func TestSegment_NewMonth(t *testing.T) {
-	generator := NewActivityLogData(nil).NewCurrentMonthData().Segment().NewClientSeen().NewMonthDataMonthsAgo(1)
+	generator := NewActivityLogData(nil).NewCurrentMonthData().Segment().NewClientSeen().NewPreviousMonthData(1)
 	require.Nil(t, generator.addingToSegment)
 }
 
@@ -125,9 +125,9 @@ func TestWrite(t *testing.T) {
 	})
 	require.NoError(t, err)
 	paths, err := NewActivityLogData(client).
-		NewMonthDataMonthsAgo(3).
+		NewPreviousMonthData(3).
 		NewClientSeen().
-		NewMonthDataMonthsAgo(2).
+		NewPreviousMonthData(2).
 		Segment(WithSegmentIndex(2)).
 		RepeatedClientSeen().
 		NewCurrentMonthData().Write(context.Background(), generation.WriteOptions_WRITE_ENTITIES)
@@ -234,14 +234,14 @@ func TestVerifyInput(t *testing.T) {
 			generator: NewActivityLogData(nil).
 				NewCurrentMonthData().
 				NewClientSeen().
-				NewMonthDataMonthsAgo(2).
+				NewPreviousMonthData(2).
 				RepeatedClientSeen(),
 		},
 		{
 			name: "repeated month",
 			generator: NewActivityLogData(nil).
-				NewMonthDataMonthsAgo(1).
-				NewMonthDataMonthsAgo(1),
+				NewPreviousMonthData(1).
+				NewPreviousMonthData(1),
 		},
 		{
 			name: "repeated current month",
