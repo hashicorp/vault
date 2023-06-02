@@ -7,7 +7,7 @@ import Store from '@ember-data/store';
 import { schedule } from '@ember/runloop';
 import { resolve, Promise } from 'rsvp';
 import { dasherize } from '@ember/string';
-import { assert } from '@ember/debug';
+import { assert, debug } from '@ember/debug';
 import { set, get } from '@ember/object';
 import clamp from 'vault/utils/clamp';
 import config from 'vault/config/environment';
@@ -186,5 +186,23 @@ export default class StoreService extends Store {
 
   clearAllDatasets() {
     this.clearDataset();
+  }
+
+  unloadRecord(record) {
+    if (!this.isDestroyed && !this.isDestroying) {
+      // Prevent unload attempt after test teardown, resulting in test failure
+      super(...arguments);
+    } else {
+      debug('skipped unload record', record, record.id, record.itemType);
+    }
+  }
+
+  unloadAll(type) {
+    if (!this.isDestroyed && !this.isDestroying) {
+      // Prevent unload attempt after test teardown, resulting in test failure
+      super(...arguments);
+    } else {
+      debug(`skipped unload model of type ${type} because store is destroyed`);
+    }
   }
 }
