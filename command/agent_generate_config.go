@@ -65,10 +65,10 @@ Usage: vault agent generate-config [options] [path/to/config.hcl]
   Generate a environment variable template configuration for multiple secrets:
 
       $ vault agent generate-config \
+                    -exec="./my-app arg1 arg2" \
                     -path="secret/foo" \
                     -path="secret/bar" \
-                    -path="secret/my-app/*" \
-                    -exec="./my-app arg1 arg2"
+                    -path="secret/my-app/*"
 
 ` + c.Flags().Help()
 
@@ -88,6 +88,7 @@ func (c *AgentGenerateConfigCommand) Flags() *FlagSets {
 		Completion: complete.PredictSet(
 			"env-template",
 		),
+		Default: "env-template",
 	})
 
 	f.StringSliceVar(&StringSliceVar{
