@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/consul-template/child"
@@ -63,14 +64,10 @@ type Server struct {
 
 	childProcess      *child.Child
 	childProcessState childProcessState
+	childProcessLock  sync.Mutex
 
 	// exit channel of the child process
 	childProcessExitCh chan int
-
-	// we need to start a different go-routine to watch the
-	// child process each time we restart it.
-	// this function closes the old watcher go-routine so it doesn't leak
-	childProcessExitCodeCloser func()
 
 	// lastRenderedEnvVars is the cached value of all environment variables
 	// rendered by the templating engine; it is used for detecting changes
@@ -133,15 +130,28 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 
 	s.numberOfTemplates = len(s.runner.TemplateConfigMapping())
 
+	// We receive multiple events every staticSecretRenderInterval
+	// from <-s.runner.TemplateRenderedCh(), one for each secret. Only the last
+	// event in a batch will contain the latest set of all secrets and the
+	// corresponding environment variables. This timer will fire after 2 seconds
+	// unless an event comes in which resets the timer back to 2 seconds.
+	var debounceTimer *time.Timer
+
+	// capture the errors related to restarting the child process
+	restartChildProcessErrCh := make(chan error)
+
 	for {
 		select {
 		case <-ctx.Done():
 			s.runner.Stop()
+			s.childProcessLock.Lock()
 			if s.childProcess != nil {
 				s.childProcess.Stop()
 			}
 			s.childProcessState = childProcessStateStopped
+			s.childProcessLock.Unlock()
 			return nil
+
 		case token := <-incomingVaultToken:
 			if token != *latestToken {
 				s.logger.Info("exec server received new token")
@@ -183,6 +193,7 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 				return fmt.Errorf("template server failed to create: %w", err)
 			}
 			go s.runner.Start()
+
 		case <-s.runner.TemplateRenderedCh():
 			// A template has been rendered, figure out what to do
 			s.logger.Trace("template rendered")
@@ -228,9 +239,19 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 
 			s.logger.Debug("detected a change in the environment variables: restarting the child process")
 
-			if err := s.bounceCmd(renderedEnvVars); err != nil {
-				return fmt.Errorf("unable to bounce command: %w", err)
+			// if a timer exists, stop it
+			if debounceTimer != nil {
+				debounceTimer.Stop()
 			}
+			debounceTimer = time.AfterFunc(2*time.Second, func() {
+				if err := s.restartChildProcess(renderedEnvVars); err != nil {
+					restartChildProcessErrCh <- fmt.Errorf("unable to restart the child process: %w", err)
+				}
+			})
+
+		case err := <-restartChildProcessErrCh:
+			// catch the error from restarting
+			return err
 
 		case exitCode := <-s.childProcessExitCh:
 			// process exited on its own
@@ -239,14 +260,16 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 	}
 }
 
-func (s *Server) bounceCmd(newEnvVars []string) error {
+func (s *Server) restartChildProcess(newEnvVars []string) error {
+	s.childProcessLock.Lock()
+	defer s.childProcessLock.Unlock()
+
 	switch s.config.AgentConfig.Exec.RestartOnSecretChanges {
 	case "always":
 		if s.childProcessState == childProcessStateRunning {
 			// process is running, need to kill it first
 			s.logger.Info("stopping process", "process_id", s.childProcess.Pid())
 			s.childProcessState = childProcessStateRestarting
-			s.childProcessExitCodeCloser()
 			s.childProcess.Stop()
 		}
 	case "never":
@@ -296,14 +319,9 @@ func (s *Server) bounceCmd(newEnvVars []string) error {
 	// NOTE: this must be invoked after child.Start() to avoid a potential
 	// race condition with ExitCh not being initialized.
 	go func() {
-		ctx, cancel := context.WithCancel(context.Background())
-		s.childProcessExitCodeCloser = cancel
 		select {
 		case exitCode := <-proc.ExitCh():
 			s.childProcessExitCh <- exitCode
-			return
-		case <-ctx.Done():
-			return
 		}
 	}()
 
