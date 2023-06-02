@@ -58,22 +58,24 @@ Usage: vault agent generate-config [options] [path/to/config.hcl]
   The command specified in the '-exec' parameter will be used to generate an
   'exec' entry, which will tell Vault Agent which child process to run.
 
-  In addition to env_template entries, the command generates an 'auto-auth'
-  section with 'token-file' authentication method. While this method is very
+  In addition to env_template entries, the command generates an 'auto_auth'
+  section with 'token_file' authentication method. While this method is very
   convenient for local testing, it should NOT be used in production. Please
   see https://developer.hashicorp.com/vault/docs/agentandproxy/autoauth for
-  a list of production-ready auto-auth methods that you can use instead.
+  a list of production-ready auto_auth methods that you can use instead.
 
   By default, the file will be generated in the local directory as 'agent.hcl'
   unless a path is specified as an argument.
 
   Generate a simple environment variable template configuration:
 
-      $ vault agent generate-config -exec="./my-app" -path="secret/foo"
+      $ vault agent generate-config -type="env-template" \
+                    -exec="./my-app arg1 arg2" \
+                    -path="secret/foo"
 
   Generate an environment variable template configuration for multiple secrets:
 
-      $ vault agent generate-config \
+      $ vault agent generate-config -type="env-template" \
                     -exec="./my-app arg1 arg2" \
                     -path="secret/foo" \
                     -path="secret/bar" \
@@ -97,7 +99,6 @@ func (c *AgentGenerateConfigCommand) Flags() *FlagSets {
 		Completion: complete.PredictSet(
 			"env-template",
 		),
-		Default: "env-template",
 	})
 
 	f.StringSliceVar(&StringSliceVar{
