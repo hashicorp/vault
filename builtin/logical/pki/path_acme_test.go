@@ -402,7 +402,7 @@ func TestAcmeBasicWorkflowWithEab(t *testing.T) {
 
 			infoForKid := keyInfo[kid].(map[string]interface{})
 			require.Equal(t, "hs", infoForKid["key_type"])
-			require.Equal(t, tc.prefixUrl, infoForKid["acme_directory"])
+			require.Equal(t, tc.prefixUrl+"directory", infoForKid["acme_directory"])
 
 			// Create new account with EAB
 			t.Logf("Testing register on %s", baseAcmeURL)
@@ -1200,7 +1200,7 @@ func getEABKey(t *testing.T, client *api.Client, baseUrl string) (string, []byte
 	require.NoError(t, err, "failed base 64 decoding eab key response")
 
 	require.Equal(t, "hs", resp.Data["key_type"], "eab key_type field mis-match")
-	require.Equal(t, baseUrl, resp.Data["acme_directory"], "eab acme_directory field mis-match")
+	require.Equal(t, baseUrl+"directory", resp.Data["acme_directory"], "eab acme_directory field mis-match")
 	require.NotEmpty(t, resp.Data["created_on"], "empty created_on field")
 	_, err = time.Parse(time.RFC3339, resp.Data["created_on"].(string))
 	require.NoError(t, err, "failed parsing eab created_on field")

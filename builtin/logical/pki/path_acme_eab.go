@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"path"
 	"time"
 
 	"github.com/hashicorp/go-uuid"
@@ -152,7 +153,7 @@ func (b *backend) pathAcmeListEab(ctx context.Context, r *logical.Request, _ *fr
 		keyIds = append(keyIds, eab.KeyID)
 		keyInfos[eab.KeyID] = map[string]interface{}{
 			"key_type":       eab.KeyType,
-			"acme_directory": eab.AcmeDirectory,
+			"acme_directory": path.Join(eab.AcmeDirectory, "directory"),
 			"created_on":     eab.CreatedOn.Format(time.RFC3339),
 		}
 	}
@@ -198,7 +199,7 @@ func (b *backend) pathAcmeCreateEab(ctx context.Context, r *logical.Request, dat
 			"id":             eab.KeyID,
 			"key_type":       eab.KeyType,
 			"key":            encodedKey,
-			"acme_directory": eab.AcmeDirectory,
+			"acme_directory": path.Join(eab.AcmeDirectory, "directory"),
 			"created_on":     eab.CreatedOn.Format(time.RFC3339),
 		},
 	}, nil
