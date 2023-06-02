@@ -88,6 +88,7 @@ export default class PkiImportPemBundle extends Component<Args> {
       if (this.args.onSave) {
         this.args.onSave();
       }
+      window?.scrollTo(0, 0);
     } catch (error) {
       this.errorBanner = errorMessage(error);
     }

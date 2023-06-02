@@ -12,9 +12,10 @@ export default class PkiConfigurationEditRoute extends Route {
   @service secretMountPath;
 
   model() {
-    const { cluster, urls, crl, engine } = this.modelFor('configuration');
+    const { acme, cluster, urls, crl, engine } = this.modelFor('configuration');
     return {
       engineId: engine.id,
+      acme,
       cluster,
       urls,
       crl,
