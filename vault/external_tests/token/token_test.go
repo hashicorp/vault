@@ -21,6 +21,7 @@ import (
 )
 
 func TestTokenStore_CreateOrphanResponse(t *testing.T) {
+	t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
@@ -36,6 +37,7 @@ func TestTokenStore_CreateOrphanResponse(t *testing.T) {
 }
 
 func TestTokenStore_TokenInvalidEntityID(t *testing.T) {
+	t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
@@ -86,6 +88,7 @@ func TestTokenStore_TokenInvalidEntityID(t *testing.T) {
 }
 
 func TestTokenStore_IdentityPolicies(t *testing.T) {
+	t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
 		EnableRaw: true,
 	})
@@ -341,6 +344,7 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 }
 
 func TestTokenStore_CIDRBlocks(t *testing.T) {
+	t.Parallel()
 	testPolicy := `
 path "auth/token/create" {
 	capabilities = ["update"]
@@ -487,7 +491,10 @@ path "auth/token/create" {
 }
 
 func TestTokenStore_RevocationOnStartup(t *testing.T) {
-	cluster := minimal.NewTestSoloCluster(t, nil)
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
+		EnableRaw: true,
+	})
 	client := cluster.Cores[0].Client
 	rootToken := client.Token()
 

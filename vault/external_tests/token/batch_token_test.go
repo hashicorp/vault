@@ -11,11 +11,17 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
 func TestBatchTokens(t *testing.T) {
-	cluster := minimal.NewTestSoloCluster(t, nil)
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": vault.LeasedPassthroughBackendFactory,
+		},
+	})
 	client := cluster.Cores[0].Client
 	rootToken := client.Token()
 	var err error
@@ -186,7 +192,12 @@ path "kv/*" {
 }
 
 func TestBatchToken_ParentLeaseRevoke(t *testing.T) {
-	cluster := minimal.NewTestSoloCluster(t, nil)
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": vault.LeasedPassthroughBackendFactory,
+		},
+	})
 	client := cluster.Cores[0].Client
 	rootToken := client.Token()
 	var err error
@@ -291,6 +302,7 @@ path "kv/*" {
 }
 
 func TestTokenStore_Roles_Batch(t *testing.T) {
+	t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 	rootToken := client.Token()
