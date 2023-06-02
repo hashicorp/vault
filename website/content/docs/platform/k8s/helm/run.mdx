@@ -453,10 +453,10 @@ Select the active Vault pod:
 $ kubectl get pods -l vault-active=true
 ```
 
-Next, delete every pod that is not the active primary:
+Next, sequentially delete every pod that is not the active primary, ensuring the quorum is maintained at all times:
 
 ```shell-session
-$ kubectl delete pod <name of Vault pods>
+$ kubectl delete pod <name of Vault pod>
 ```
 
 If auto-unseal is not being used, the newly scheduled Vault standby pods needs
