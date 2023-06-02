@@ -59,7 +59,7 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "group$",
-			Fields: groupPathFields(),
+			Fields:  groupPathFields(),
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback:                  i.pathGroupRegister(),
