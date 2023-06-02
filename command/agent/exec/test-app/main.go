@@ -73,13 +73,6 @@ func index(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(buf.Bytes())
 }
 
-func shutdown(cancel func()) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		defer cancel()
-		w.WriteHeader(http.StatusOK)
-	}
-}
-
 func main() {
 	logger := log.New(os.Stderr, "test-app: ", log.LstdFlags)
 
@@ -98,11 +91,8 @@ func run(logger *log.Logger) error {
 
 	flag.Parse()
 
-	ctx, cancelContextFunc := context.WithCancel(context.Background())
-
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", index)
-	mux.HandleFunc("/shutdown", shutdown(cancelContextFunc))
 
 	server := http.Server{
 		Addr:         fmt.Sprintf(":%d", port),
@@ -125,8 +115,6 @@ func run(logger *log.Logger) error {
 		}
 
 		select {
-		case <-ctx.Done():
-			logger.Println("context done: exiting")
 
 		case s := <-stopSignal:
 			logger.Printf("signal %q: received\n", s)

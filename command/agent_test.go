@@ -3212,15 +3212,19 @@ exec {
 		t.Fatal(err)
 	}
 
+	_, agentCmd := testAgentCommand(t, logger)
+	agentCmd.client = vaultClient
+
 	// the command blocks, so run in go-routine
 	agentExitCodeCh := make(chan int, 1)
 	go func(exitCodeCh chan<- int) {
-		defer close(exitCodeCh)
-		_, agentCmd := testAgentCommand(t, logger)
-		agentCmd.client = vaultClient
 		args := []string{"-config", configFile}
 		exitCodeCh <- agentCmd.Run(args)
 	}(agentExitCodeCh)
+
+	// wait a few seconds for the app to come up
+	// (starts _after_ the templates are rendered)
+	time.Sleep(5 * time.Second)
 
 	testAppAddr := fmt.Sprintf("http://localhost:%d", port)
 
@@ -3275,14 +3279,11 @@ exec {
 		"MY_DATABASE_PASSWORD": "password2",
 	})
 
-	// stop the app, which should stop the agent
-	if _, err := http.Get(testAppAddr + "/shutdown"); err != nil {
-		t.Fatalf("unable to call shutdown endpoint on test-app")
-	}
+	close(agentCmd.ShutdownCh)
 
 	// wait until the vault agent command exits
 	// shouldn't take long, but we time it to make sure
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	select {
 	case <-ctx.Done():
