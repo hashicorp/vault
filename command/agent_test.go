@@ -3150,7 +3150,6 @@ func setupTestApp(t *testing.T) string {
 }
 
 func TestAgent_Exec_Restarts(t *testing.T) {
-
 	testAppBin := setupTestApp(t)
 	defer os.Remove(testAppBin)
 
@@ -3161,7 +3160,7 @@ func TestAgent_Exec_Restarts(t *testing.T) {
 	defer os.Remove(tokenFile.Name())
 
 	// token file needs to have 600 permissions
-	if err := os.Chmod(tokenFile.Name(), 0600); err != nil {
+	if err := os.Chmod(tokenFile.Name(), 0o600); err != nil {
 		t.Fatalf("unable to change permissions of token file: %s", err)
 	}
 
