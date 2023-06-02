@@ -112,7 +112,7 @@ func (c *AgentGenerateConfigCommand) Flags() *FlagSets {
 		Name:    "exec",
 		Target:  &c.flagExec,
 		Default: "env",
-		Usage:   "The command to execute in env-template mode.",
+		Usage:   "The command to execute in agent process supervisor mode.",
 	})
 
 	return set
