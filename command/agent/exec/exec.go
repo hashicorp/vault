@@ -320,8 +320,11 @@ func (s *Server) restartChildProcess(newEnvVars []string) error {
 	// race condition with ExitCh not being initialized.
 	go func() {
 		select {
-		case exitCode := <-proc.ExitCh():
-			s.childProcessExitCh <- exitCode
+		case exitCode, ok := <-proc.ExitCh():
+			// ignore ExitCh channel closures caused by our restarts
+			if ok {
+				s.childProcessExitCh <- exitCode
+			}
 		}
 	}()
 
