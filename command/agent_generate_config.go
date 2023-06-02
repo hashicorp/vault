@@ -55,6 +55,15 @@ Usage: vault agent generate-config [options] [path/to/config.hcl]
   generating 'env_template' entries for each encountered secret. Currently,
   only kv-v1 and kv-v2 paths are supported.
 
+  The command specified in the '-exec' parameter will be used to generate an
+  'exec' entry, which will tell Vault Agent which child process to run.
+
+  In addition to env_template entries, the command generates an 'auto-auth'
+  section with 'token-file' authentication method. While this method is very
+  convenient for local testing, it should NOT be used in production. Please
+  see https://developer.hashicorp.com/vault/docs/agentandproxy/autoauth for
+  a list of production-ready auto-auth methods that you can use instead.
+
   By default, the file will be generated in the local directory as 'agent.hcl'
   unless a path is specified as an argument.
 
