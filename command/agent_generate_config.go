@@ -40,7 +40,35 @@ func (c *AgentGenerateConfigCommand) Synopsis() string {
 
 func (c *AgentGenerateConfigCommand) Help() string {
 	helpText := `
-Usage: vault agent generate-config [options] [args]
+Usage: vault agent generate-config [options] [path/to/config.hcl]
+
+  Generates a simple Vault Agent configuration file from the given parameters.
+
+  Currently, the only supported configuration type is 'env-template', which
+  helps you generate a configuration file with environment variable templates
+  for running Vault Agent in process supervisor mode.
+
+  For every specified secret -path, the command will attempt to generate one or
+  multiple 'env_template' entries based on the JSON key(s) stored in the
+  specified secret. If the secret path ends with a '/*', the command will
+  attempt to recurse through the secrets tree rooted at the given path,
+  generating 'env_template' entries for each encountered secret. Currently,
+  only kv-v1 and kv-v2 paths are supported.
+
+  By default, the file will be generated in the local directory as 'agent.hcl'
+  unless a path is specified as an argument.
+
+  Generate a simple environment variable template configuration:
+
+      $ vault agent generate-config -exec="./my-app" -path="secret/foo"
+
+  Generate a environment variable template configuration for multiple secrets:
+
+      $ vault agent generate-config \
+                    -path="secret/foo" \
+                    -path="secret/bar" \
+                    -path="secret/my-app/*" \
+                    -exec="./my-app arg1 arg2"
 
 ` + c.Flags().Help()
 
