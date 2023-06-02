@@ -159,8 +159,9 @@ scenario "autopilot" {
       storage_backend_addl_config = {
         autopilot_upgrade_version = var.vault_autopilot_initial_release.version
       }
-      target_hosts  = step.create_vault_cluster_targets.hosts
-      unseal_method = matrix.seal
+      target_hosts             = step.create_vault_cluster_targets.hosts
+      unseal_method            = matrix.seal
+      enable_file_audit_device = var.vault_enable_file_audit_device
     }
   }
 
@@ -517,5 +518,10 @@ scenario "autopilot" {
   output "upgrade_public_ips" {
     description = "The Vault cluster public IPs"
     value       = step.upgrade_vault_cluster_with_autopilot.public_ips
+  }
+
+  output "vault_audit_device_file_path" {
+    description = "The file path for the file audit device, if enabled"
+    value       = step.create_vault_cluster.audit_device_file_path
   }
 }
