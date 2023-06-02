@@ -56,7 +56,7 @@ resource "enos_remote_exec" "verify_replication_status_on_primary" {
     SECONDARY_LEADER_PRIV_IP = var.secondary_leader_private_ip
   }
 
-  scripts = ["${path.module}/scripts/verify-replication-status.sh"]
+  scripts = [abspath("${path.module}/scripts/verify-replication-status.sh")]
 
   transport = {
     ssh = {
@@ -73,7 +73,7 @@ resource "enos_remote_exec" "verify_replication_status_on_secondary" {
     SECONDARY_LEADER_PRIV_IP = var.secondary_leader_private_ip
   }
 
-  scripts = ["${path.module}/scripts/verify-replication-status.sh"]
+  scripts = [abspath("${path.module}/scripts/verify-replication-status.sh")]
 
   transport = {
     ssh = {
