@@ -59,9 +59,12 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "group$",
-			Fields:  groupPathFields(),
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathGroupRegister(),
+			Fields: groupPathFields(),
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:                  i.pathGroupRegister(),
+					ForwardPerformanceStandby: true,
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(groupHelp["register"][0]),
