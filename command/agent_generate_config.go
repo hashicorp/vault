@@ -50,12 +50,12 @@ Usage: vault agent generate-config [options] [path/to/config.hcl]
 
   For every specified secret -path, the command will attempt to generate one or
   multiple 'env_template' entries based on the JSON key(s) stored in the
-  specified secret. If the secret path ends with a '/*', the command will
+  specified secret. If the secret -path ends with '/*', the command will
   attempt to recurse through the secrets tree rooted at the given path,
   generating 'env_template' entries for each encountered secret. Currently,
   only kv-v1 and kv-v2 paths are supported.
 
-  The command specified in the '-exec' parameter will be used to generate an
+  The command specified in the '-exec' option will be used to generate an
   'exec' entry, which will tell Vault Agent which child process to run.
 
   In addition to env_template entries, the command generates an 'auto_auth'
