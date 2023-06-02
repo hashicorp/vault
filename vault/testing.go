@@ -179,7 +179,7 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 }
 
 func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := logging.NewVaultLogger(log.Trace).Named(t.Name())
 	physicalBackend, err := physInmem.NewInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)

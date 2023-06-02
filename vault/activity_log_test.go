@@ -647,24 +647,23 @@ func TestActivityLog_availableLogs(t *testing.T) {
 	}
 }
 
-// TestActivityLog_MultipleFragmentsAndSegments adds 4000 clients to a fragment and saves it and reads it. The test then
-// adds 4000 more clients and calls receivedFragment with 200 more entities. The current segment is saved to storage and
-// read back. The test verifies that there are 5000 clients in the first segment index, then the rest in the second index.
+// TestActivityLog_MultipleFragmentsAndSegments adds 4000 clients to a fragment
+// and saves it and reads it. The test then adds 4000 more clients and calls
+// receivedFragment with 200 more entities. The current segment is saved to
+// storage and read back. The test verifies that there are 5000 clients in the
+// first segment index, then the rest in the second index.
 func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
-	core, _, _ := TestCoreUnsealed(t)
+	core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
+		ActivityLogConfig: ActivityLogCoreConfig{
+			DisableFragmentWorker: true,
+			DisableTimers:         true,
+		},
+	})
 	a := core.activityLog
 
 	// enabled check is now inside AddClientToFragment
 	a.SetEnable(true)
 	a.SetStartTimestamp(time.Now().Unix()) // set a nonzero segment
-
-	// Stop timers for test purposes
-	close(a.doneCh)
-	defer func() {
-		a.l.Lock()
-		a.doneCh = make(chan struct{}, 1)
-		a.l.Unlock()
-	}()
 
 	startTimestamp := a.GetStartTimestamp()
 	path0 := fmt.Sprintf("sys/counters/activity/log/entity/%d/0", startTimestamp)
