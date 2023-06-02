@@ -667,45 +667,6 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 	defer i.lock.Unlock()
 
 	switch {
-	case key == caseSensitivityKey:
-		entry, err := i.view.Get(ctx, caseSensitivityKey)
-		if err != nil {
-			i.logger.Error("failed to read case sensitivity setting during invalidation", "error", err)
-			return
-		}
-		if entry == nil {
-			return
-		}
-
-		var setting casesensitivity
-		if err := entry.DecodeJSON(&setting); err != nil {
-			i.logger.Error("failed to decode case sensitivity setting during invalidation", "error", err)
-			return
-		}
-
-		// Fast return if the setting is the same
-		if i.disableLowerCasedNames == setting.DisableLowerCasedNames {
-			return
-		}
-
-		// If the setting is different, reset memdb and reload all the artifacts
-		i.disableLowerCasedNames = setting.DisableLowerCasedNames
-		if err := i.resetDB(ctx); err != nil {
-			i.logger.Error("failed to reset memdb during invalidation", "error", err)
-			return
-		}
-		if err := i.loadEntities(ctx); err != nil {
-			i.logger.Error("failed to load entities during invalidation", "error", err)
-			return
-		}
-		if err := i.loadGroups(ctx); err != nil {
-			i.logger.Error("failed to load groups during invalidation", "error", err)
-			return
-		}
-		if err := i.loadOIDCClients(ctx); err != nil {
-			i.logger.Error("failed to load OIDC clients during invalidation", "error", err)
-			return
-		}
 	// Check if the key is a storage entry key for an entity bucket
 	case strings.HasPrefix(key, storagepacker.StoragePackerBucketsPrefix):
 		// Create a MemDB transaction
