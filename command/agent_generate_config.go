@@ -62,7 +62,7 @@ Usage: vault agent generate-config [options] [path/to/config.hcl]
 
       $ vault agent generate-config -exec="./my-app" -path="secret/foo"
 
-  Generate a environment variable template configuration for multiple secrets:
+  Generate an environment variable template configuration for multiple secrets:
 
       $ vault agent generate-config \
                     -exec="./my-app arg1 arg2" \
