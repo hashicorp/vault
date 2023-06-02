@@ -803,7 +803,8 @@ func TestAcmeIgnoresRoleExtKeyUsage(t *testing.T) {
 }
 
 func markAuthorizationSuccess(t *testing.T, client *api.Client, acmeClient *acme.Client, acct *acme.Account,
-	order *acme.Order) {
+	order *acme.Order,
+) {
 	testCtx := context.Background()
 
 	pkiMount := findStorageMountUuid(t, client, "pki")
