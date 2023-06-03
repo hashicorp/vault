@@ -7,16 +7,21 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
-	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2"
-	"github.com/hashicorp/go-multierror"
 	"io"
 	"os"
 	"strings"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
+	"github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms/v2"
+	"github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2"
+	"github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2"
+	"github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms/v2"
+	"github.com/hashicorp/go-kms-wrapping/wrappers/ocikms/v2"
+	"github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
@@ -26,6 +31,7 @@ import (
 var (
 	ConfigureWrapper             = configureWrapper
 	CreateSecureRandomReaderFunc = createSecureRandomReader
+	GetEnvConfigFunc             = getEnvConfig
 )
 
 // Entropy contains Entropy configuration for the server
@@ -191,7 +197,7 @@ func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]strin
 	var kmsInfo map[string]string
 	var err error
 
-	envConfig := getEnvConfig(configKMS)
+	envConfig := GetEnvConfigFunc(configKMS)
 	for name, val := range envConfig {
 		configKMS.Config[name] = val
 	}
@@ -400,13 +406,8 @@ func getEnvConfig(kms *KMS) map[string]string {
 		return nil
 	}
 
-	suffix := ""
-	if kms.Priority > 1 {
-		suffix = "_" + kms.Name
-	}
-
 	for envVar, configName := range wrapperEnvVars {
-		val := os.Getenv(fmt.Sprintf("%s%s", envVar, suffix))
+		val := os.Getenv(envVar)
 		if val != "" {
 			envValues[configName] = val
 		}

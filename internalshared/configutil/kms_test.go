@@ -68,26 +68,6 @@ func Test_getEnvConfig(t *testing.T) {
 			map[string]string{"address": "test_address", "token": "test_token", "key_name": "test_key_name", "mount_path": "test_mount_path"},
 		},
 		{
-			"Priority greater than 1 without matching var names",
-			&KMS{
-				Type:     "awskms",
-				Priority: 2,
-				Name:     "awskms",
-			},
-			map[string]string{"AWS_REGION": "test_region", "AWS_ACCESS_KEY_ID": "test_access_key", "AWS_SECRET_ACCESS_KEY": "test_secret_key", "VAULT_AWSKMS_SEAL_KEY_ID": "test_key_id"},
-			map[string]string{},
-		},
-		{
-			"Priority greater than 1 with matching var names",
-			&KMS{
-				Type:     "awskms",
-				Priority: 2,
-				Name:     "awskms",
-			},
-			map[string]string{"AWS_REGION_awskms": "test_region", "AWS_ACCESS_KEY_ID_awskms": "test_access_key", "AWS_SECRET_ACCESS_KEY_awskms": "test_secret_key", "VAULT_AWSKMS_SEAL_KEY_ID_awskms": "test_key_id"},
-			map[string]string{"region": "test_region", "access_key": "test_access_key", "secret_key": "test_secret_key", "kms_key_id": "test_key_id"},
-		},
-		{
 			"Environment vars not set",
 			&KMS{
 				Type:     "awskms",
