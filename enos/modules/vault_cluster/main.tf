@@ -63,6 +63,7 @@ locals {
   ]
   audit_device_file_path = "/var/log/vault_audit.log"
   vault_service_user     = "vault"
+  enable_audit_device    = var.enable_file_audit_device && var.initialize_cluster
 }
 
 resource "enos_remote_exec" "install_packages" {
@@ -224,7 +225,7 @@ resource "enos_remote_exec" "create_audit_log_dir" {
   ]
   for_each = toset([
     for idx, host in toset(local.instances) : idx
-    if var.enable_file_audit_device
+    if local.enable_audit_device
   ])
 
   environment = {
@@ -291,7 +292,7 @@ resource "enos_remote_exec" "enable_file_audit_device" {
   ]
   for_each = toset([
     for idx in local.leader : idx
-    if var.enable_file_audit_device
+    if local.enable_audit_device
   ])
 
   environment = {
