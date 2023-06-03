@@ -2279,12 +2279,13 @@ func (p *Policy) SignCsr(keyVersion int, csrTemplate *x509.CertificateRequest) (
 	// email address can be included as part of the subject distinguished name
 	// (DN) field in the certificate request.
 	csrTemplate = &x509.CertificateRequest{
-		Subject:        csrTemplate.Subject,
-		DNSNames:       csrTemplate.DNSNames,
-		EmailAddresses: csrTemplate.EmailAddresses,
-		URIs:           csrTemplate.URIs,
-		Extensions:     csrTemplate.ExtraExtensions,
-		Attributes:     csrTemplate.Attributes, // Deprecated
+		Subject:         csrTemplate.Subject,
+		DNSNames:        csrTemplate.DNSNames,
+		EmailAddresses:  csrTemplate.EmailAddresses,
+		URIs:            csrTemplate.URIs,
+		Extensions:      csrTemplate.Extensions,
+		ExtraExtensions: csrTemplate.ExtraExtensions,
+		Attributes:      csrTemplate.Attributes, // Deprecated
 	}
 
 	var csr []byte
