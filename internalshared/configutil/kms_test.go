@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package configutil
 
 import (
@@ -85,7 +88,7 @@ func Test_getEnvConfig(t *testing.T) {
 				}
 			}
 
-			if got := getEnvConfig(tt.kms); !reflect.DeepEqual(got, tt.want) {
+			if got := GetEnvConfigFunc(tt.kms); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getEnvConfig() = %v, want %v", got, tt.want)
 			}
 
