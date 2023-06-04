@@ -175,11 +175,6 @@ func (b *backend) pathSetCertificateWrite(ctx context.Context, req *logical.Requ
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
-	// NOTE: Is this check needed?
-	if len(certChain) == 0 {
-		return logical.ErrorResponse("no certificates provided"), logical.ErrInvalidRequest
-	}
-
 	// Validate there's only a leaf certificate in the chain
 	// NOTE: Does it have the be the first? Would make sense
 	if hasSingleLeafCert := hasSingleLeafCertificate(certChain); !hasSingleLeafCert {
@@ -227,17 +222,33 @@ func parseCsr(csr string) (*x509.CertificateRequest, error) {
 	return csrTemplate, nil
 }
 
-// FIXME: Names
 func parseCertificateChain(certChain string) ([]*x509.Certificate, error) {
-	// NOTE: Does it work for a file with multiple PEM encoded 'assets'?
-	certPemBlocks, _ := pem.Decode([]byte(certChain))
-	if certPemBlocks == nil {
-		return nil, errors.New("failed to decode PEM Certificate Chain")
+	certificates := []*x509.Certificate{}
+
+	pemCertBlocks := []*pem.Block{}
+	rest := []byte(certChain)
+	for len(rest) != 0 {
+		var pemCertBlock *pem.Block
+		pemCertBlock, rest = pem.Decode([]byte(rest))
+		if pemCertBlock == nil {
+			return nil, errors.New("could not decode certificate in certificate chain")
+		}
+
+		pemCertBlocks = append(pemCertBlocks, pemCertBlock)
 	}
 
-	certificates, err := x509.ParseCertificates(certPemBlocks.Bytes)
-	if err != nil {
-		return nil, err
+	if len(pemCertBlocks) == 0 {
+		return nil, errors.New("no certificates provided in `certificate_chain` parameter")
+	}
+
+	// NOTE: This approach or x509.ParseCertificates?
+	for _, certBlock := range pemCertBlocks {
+		cert, err := x509.ParseCertificate(certBlock.Bytes)
+		if err != nil {
+			return nil, errors.New("failed to parse certificate in certificate chain")
+		}
+
+		certificates = append(certificates, cert)
 	}
 
 	return certificates, nil
