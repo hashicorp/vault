@@ -51,11 +51,4 @@ export default class ParsedCertificateInfoRowsComponent extends Component<Args> 
       };
     });
   }
-
-  get parsingErrors() {
-    if (this.args.model?.parsing_errors?.length) {
-      return this.args.model.parsing_errors.map((e) => e.message).join(', ');
-    }
-    return '';
-  }
 }

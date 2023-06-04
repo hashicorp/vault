@@ -45,6 +45,6 @@ export default class PkiConfigUrlsModel extends Model {
   @lazyCapabilities(apiPath`${'id'}/config/urls`, 'id') urlsPath;
 
   get canSet() {
-    return this.urlsPath.get('canCreate') !== false;
+    return this.urlsPath.get('canUpdate') !== false;
   }
 }

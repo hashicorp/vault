@@ -695,9 +695,6 @@ type Core struct {
 	// if populated, the callback is called for every request
 	// for testing purposes
 	requestResponseCallback func(logical.Backend, *logical.Request, *logical.Response)
-
-	// if populated, override the default gRPC min connect timeout (currently 20s in grpc 1.51)
-	grpcMinConnectTimeout time.Duration
 }
 
 // c.stateLock needs to be held in read mode before calling this function.
@@ -1280,16 +1277,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.events = events
 	if c.IsExperimentEnabled(experiments.VaultExperimentEventsAlpha1) {
 		c.events.Start()
-	}
-
-	minConnectTimeoutRaw := os.Getenv("VAULT_GRPC_MIN_CONNECT_TIMEOUT")
-	if minConnectTimeoutRaw != "" {
-		dur, err := time.ParseDuration(minConnectTimeoutRaw)
-		if err != nil {
-			c.logger.Warn("VAULT_GRPC_MIN_CONNECT_TIMEOUT contains non-duration value, ignoring")
-		} else if dur != 0 {
-			c.grpcMinConnectTimeout = dur
-		}
 	}
 
 	return c, nil
@@ -3559,18 +3546,19 @@ func (c *Core) runLockedUserEntryUpdatesForMountAccessor(ctx context.Context, mo
 		lockoutDurationFromConfiguration := userLockoutConfiguration.LockoutDuration
 
 		// get the entry for the locked user from userFailedLoginInfo map
-		failedLoginInfoFromMap := c.GetUserFailedLoginInfo(ctx, loginUserInfoKey)
+		failedLoginInfoFromMap := c.LocalGetUserFailedLoginInfo(ctx, loginUserInfoKey)
 
 		// check if the storage entry for locked user is stale
 		if time.Now().After(lastFailedLoginTimeFromStorageEntry.Add(lockoutDurationFromConfiguration)) {
 			// stale entry, remove from storage
+			// leaving this as it is as this happens on the active node
+			// also handles case where namespace is deleted
 			if err := c.barrier.Delete(ctx, path+alias); err != nil {
 				return 0, err
 			}
-
 			// remove entry for this user from userFailedLoginInfo map if present as the user is not locked
 			if failedLoginInfoFromMap != nil {
-				if err = c.UpdateUserFailedLoginInfo(ctx, loginUserInfoKey, nil, true); err != nil {
+				if err = updateUserFailedLoginInfo(ctx, c, loginUserInfoKey, nil, true); err != nil {
 					return 0, err
 				}
 			}
@@ -3587,7 +3575,7 @@ func (c *Core) runLockedUserEntryUpdatesForMountAccessor(ctx context.Context, mo
 
 		if failedLoginInfoFromMap != &actualFailedLoginInfo {
 			// entry is invalid, updating the entry in userFailedLoginMap with correct information
-			if err = c.UpdateUserFailedLoginInfo(ctx, loginUserInfoKey, &actualFailedLoginInfo, false); err != nil {
+			if err = updateUserFailedLoginInfo(ctx, c, loginUserInfoKey, &actualFailedLoginInfo, false); err != nil {
 				return 0, err
 			}
 		}

@@ -22,7 +22,7 @@ import (
  */
 func pathAcmeEabList(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "acme/eab/?$",
+		Pattern: "eab/?$",
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixPKI,
@@ -45,16 +45,17 @@ func pathAcmeEabList(b *backend) *framework.Path {
 	}
 }
 
-func pathAcmeEabCreate(b *backend) *framework.Path {
+func pathAcmeNewEab(b *backend) []*framework.Path {
+	return buildAcmeFrameworkPaths(b, patternAcmeNewEab, "/new-eab")
+}
+
+func patternAcmeNewEab(b *backend, pattern string) *framework.Path {
+	fields := map[string]*framework.FieldSchema{}
+	addFieldsForACMEPath(fields, pattern)
+
 	return &framework.Path{
-		Pattern: "acme/new-eab",
-
-		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixPKI,
-		},
-
-		Fields: map[string]*framework.FieldSchema{},
-
+		Pattern: pattern,
+		Fields:  fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback:                    b.pathAcmeCreateEab,
@@ -67,15 +68,18 @@ func pathAcmeEabCreate(b *backend) *framework.Path {
 			},
 		},
 
-		HelpSynopsis: "Generate or list external account bindings to be used for ACME",
-		HelpDescription: `Generate single use id/key pairs to be used for ACME EAB or list 
-identifiers that have been generated but yet to be used.`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+		},
+
+		HelpSynopsis:    "Generate external account bindings to be used for ACME",
+		HelpDescription: `Generate single use id/key pairs to be used for ACME EAB.`,
 	}
 }
 
 func pathAcmeEabDelete(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "acme/eab/" + uuidNameRegex("key_id"),
+		Pattern: "eab/" + uuidNameRegex("key_id"),
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixPKI,
@@ -109,11 +113,12 @@ a warning that it did not exist.`,
 }
 
 type eabType struct {
-	KeyID        string    `json:"-"`
-	KeyType      string    `json:"key-type"`
-	KeyBits      int       `json:"key-bits"`
-	PrivateBytes []byte    `json:"private-bytes"`
-	CreatedOn    time.Time `json:"created-on"`
+	KeyID         string    `json:"-"`
+	KeyType       string    `json:"key-type"`
+	KeyBits       int       `json:"key-bits"`
+	PrivateBytes  []byte    `json:"private-bytes"`
+	AcmeDirectory string    `json:"acme-directory"`
+	CreatedOn     time.Time `json:"created-on"`
 }
 
 func (b *backend) pathAcmeListEab(ctx context.Context, r *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
@@ -137,9 +142,10 @@ func (b *backend) pathAcmeListEab(ctx context.Context, r *logical.Request, _ *fr
 
 		keyIds = append(keyIds, eab.KeyID)
 		keyInfos[eab.KeyID] = map[string]interface{}{
-			"key_type":   eab.KeyType,
-			"key_bits":   eab.KeyBits,
-			"created_on": eab.CreatedOn.Format(time.RFC3339),
+			"key_type":       eab.KeyType,
+			"key_bits":       eab.KeyBits,
+			"acme_directory": eab.AcmeDirectory,
+			"created_on":     eab.CreatedOn.Format(time.RFC3339),
 		}
 	}
 
@@ -150,7 +156,7 @@ func (b *backend) pathAcmeListEab(ctx context.Context, r *logical.Request, _ *fr
 	return resp, nil
 }
 
-func (b *backend) pathAcmeCreateEab(ctx context.Context, r *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathAcmeCreateEab(ctx context.Context, r *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	kid := genUuid()
 	size := 32
 	bytes, err := uuid.GenerateRandomBytesWithReader(size, rand.Reader)
@@ -158,12 +164,18 @@ func (b *backend) pathAcmeCreateEab(ctx context.Context, r *logical.Request, _ *
 		return nil, fmt.Errorf("failed generating eab key: %w", err)
 	}
 
+	acmeDirectory, err := getAcmeDirectory(r)
+	if err != nil {
+		return nil, err
+	}
+
 	eab := &eabType{
-		KeyID:        kid,
-		KeyType:      "hs",
-		KeyBits:      size * 8,
-		PrivateBytes: bytes,
-		CreatedOn:    time.Now(),
+		KeyID:         kid,
+		KeyType:       "hs",
+		KeyBits:       size * 8,
+		PrivateBytes:  bytes,
+		AcmeDirectory: acmeDirectory,
+		CreatedOn:     time.Now(),
 	}
 
 	sc := b.makeStorageContext(ctx, r.Storage)
@@ -176,11 +188,12 @@ func (b *backend) pathAcmeCreateEab(ctx context.Context, r *logical.Request, _ *
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"id":         eab.KeyID,
-			"key_type":   eab.KeyType,
-			"key_bits":   eab.KeyBits,
-			"key":        encodedKey,
-			"created_on": eab.CreatedOn.Format(time.RFC3339),
+			"id":             eab.KeyID,
+			"key_type":       eab.KeyType,
+			"key_bits":       eab.KeyBits,
+			"key":            encodedKey,
+			"acme_directory": eab.AcmeDirectory,
+			"created_on":     eab.CreatedOn.Format(time.RFC3339),
 		},
 	}, nil
 }

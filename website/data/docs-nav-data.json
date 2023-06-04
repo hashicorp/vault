@@ -1875,6 +1875,11 @@
         "path": "upgrading/plugins"
       },
       {
+        "title": "Upgrade to 1.14.x",
+        "path": "upgrading/upgrade-to-1.14.x",
+        "hidden": true
+      },
+      {
         "title": "Upgrade to 1.13.x",
         "path": "upgrading/upgrade-to-1.13.x"
       },
@@ -2119,6 +2124,11 @@
         "path": "release-notes"
       },
       {
+         "title": "1.14.0",
+         "path": "release-notes/1.14.0",
+         "hidden": true
+      },
+      {
          "title": "1.13.0",
          "path": "release-notes/1.13.0"
       },
@@ -2231,6 +2241,10 @@
           {
             "title": "Autoloading",
             "path": "enterprise/license/autoloading"
+          },
+          {
+            "title": "Automated license utilization reporting",
+            "path": "enterprise/license/utilization-reporting"
           },
           {
             "title": "FAQ",
