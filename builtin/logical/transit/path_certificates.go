@@ -16,28 +16,26 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-// NOTE: Or only `pathCsr`?
 func (b *backend) pathSignCsr() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/" + framework.GenericNameRegex("name") + "/csr",
-		// NOTE: Any other field?
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
-				Type:        framework.TypeString,
+				Type: framework.TypeString,
+				// NOTE: Required seems to be deprected, still keep it to "improve" readability?
 				Required:    true,
-				Description: "The name of the key",
+				Description: "Name of the key",
 			},
 			"version": {
-				Type:     framework.TypeInt,
-				Required: false,
-				// FIXME: Add description
-				Description: `If not set, 'latest' is used.`,
+				Type:        framework.TypeInt,
+				Required:    false,
+				Description: "Optional version of key, 'latest' if not set",
 			},
 			"csr": {
 				Type:     framework.TypeString,
 				Required: false,
-				// FIXME: Add description
-				Description: ``,
+				Description: `PEM encoded CSR template. The information attributes 
+are going to be used as a basis for the CSR with the key in transit. If not set, an empty CSR is returned.`,
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -54,24 +52,22 @@ func (b *backend) pathSignCsr() *framework.Path {
 func (b *backend) pathSetCertificate() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/" + framework.GenericNameRegex("name") + "/set-certificate",
-		// NOTE: Any other field?
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
 				Required:    true,
-				Description: "The name of the key",
+				Description: "Name of the key",
 			},
 			"version": {
-				Type:     framework.TypeInt,
-				Required: false,
-				// FIXME: Add description
-				Description: `If not set, 'latest' is used.`,
+				Type:        framework.TypeInt,
+				Required:    false,
+				Description: "Optional version of key, 'latest' if not set",
 			},
 			"certificate_chain": {
 				Type:     framework.TypeString,
 				Required: true,
-				// FIXME: Add description
-				Description: ``,
+				// FIXME: Complete description
+				Description: `PEM encoded certificate chain.`,
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -85,11 +81,8 @@ func (b *backend) pathSetCertificate() *framework.Path {
 	}
 }
 
-// NOTE: d or data for the framework.FieldData argument?
 func (b *backend) pathSignCsrWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-
-	// NOTE: Is this used in multiple places?
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
@@ -107,18 +100,19 @@ func (b *backend) pathSignCsrWrite(ctx context.Context, req *logical.Request, d 
 
 	// Check if transit key supports signing
 	if !p.Type.SigningSupported() {
-		return logical.ErrorResponse(fmt.Sprintf("key type %v does not support signing", p.Type)), logical.ErrInvalidRequest
+		return logical.ErrorResponse(fmt.Sprintf("key type '%v' does not support signing", p.Type)), logical.ErrInvalidRequest
 	}
 
-	// Get CSR template
-	// NOTE: Use GetOk, or GetErrOk?
-	csr := d.Get("csr").(string)
-	csrTemplate, err := parseCsrParam(csr)
+	// Read and parse CSR template
+	pemCsrTemplate := d.Get("csr").(string)
+	csrTemplate, err := parseCsr(pemCsrTemplate)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
 	signingKeyVersion := p.LatestVersion
+	// NOTE: BYOK endpoints seem to remove "v" prefix from version,
+	// are versions like that also supported?
 	if version, ok := d.GetOk("version"); ok {
 		signingKeyVersion = version.(int)
 	}
@@ -126,19 +120,21 @@ func (b *backend) pathSignCsrWrite(ctx context.Context, req *logical.Request, d 
 	// FIXME: Remove
 	log.Println("signingKeyVersion: ", signingKeyVersion)
 
-	csrBytes, err := p.SignCsr(signingKeyVersion, csrTemplate)
+	pemCsr, err := p.SignCsr(signingKeyVersion, csrTemplate)
 	if err != nil {
 		// FIXME: Error returned
 		return nil, err
 	}
 
 	// FIXME: Remove
-	log.Printf("CSR:\n%s", csrBytes)
+	log.Printf("CSR:\n%s", pemCsr)
 
-	// Getting response as base64, is that expected?
+	// `csr` is returned as base64, what's wrong?
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"csr": csrBytes,
+			"name": p.Name,
+			"type": p.Type.String(),
+			"csr":  pemCsr,
 		},
 	}
 
@@ -172,9 +168,8 @@ func (b *backend) pathSetCertificateWrite(ctx context.Context, req *logical.Requ
 	}
 
 	// Get certificate chain
-	// FIXME: THIS IS PEM (fix name)
-	certChainBytes := d.Get("certificate_chain").(string)
-	certChain, err := parseParamCertificateChain(certChainBytes)
+	pemCertChain := d.Get("certificate_chain").(string)
+	certChain, err := parseCertificateChain(pemCertChain)
 	if err != nil {
 		// FIXME: Error
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
@@ -214,7 +209,7 @@ func (b *backend) pathSetCertificateWrite(ctx context.Context, req *logical.Requ
 	return nil, nil
 }
 
-func parseCsrParam(csr string) (*x509.CertificateRequest, error) {
+func parseCsr(csr string) (*x509.CertificateRequest, error) {
 	if csr == "" {
 		return &x509.CertificateRequest{}, nil
 	}
@@ -233,7 +228,8 @@ func parseCsrParam(csr string) (*x509.CertificateRequest, error) {
 }
 
 // FIXME: Names
-func parseParamCertificateChain(certChain string) ([]*x509.Certificate, error) {
+func parseCertificateChain(certChain string) ([]*x509.Certificate, error) {
+	// NOTE: Does it work for a file with multiple PEM encoded 'assets'?
 	certPemBlocks, _ := pem.Decode([]byte(certChain))
 	if certPemBlocks == nil {
 		return nil, errors.New("failed to decode PEM Certificate Chain")

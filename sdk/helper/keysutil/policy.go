@@ -2561,6 +2561,7 @@ func (p *Policy) ValidateLeafCertKeyMatch(keyVersion int, certPublicKeyAlgorithm
 }
 
 func (p *Policy) PersistCertificateChain(keyVersion int, certChain []*x509.Certificate, storage logical.Storage) error {
+	// NOTE: Use safeGetKeyEntry or just read from Keys dictionary?
 	keyEntry, err := p.safeGetKeyEntry(keyVersion)
 	if err != nil {
 		return err
