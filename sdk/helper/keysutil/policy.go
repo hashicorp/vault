@@ -2363,6 +2363,7 @@ func (p *Policy) ValidateLeafCertKeyMatch(keyVersion int, certPublicKeyAlgorithm
 	}
 	if !sameKeyType {
 		// NOTE: Different type "names" might lead to confusion.
+		// NOTE: This shouldn't be a 500 status code error
 		return false, errutil.UserError{Err: fmt.Sprintf("provided leaf certificate public key type %s does not match the transit key type %s", certPublicKeyAlgorithm.String(), p.Type.String())}
 	}
 
@@ -2436,5 +2437,6 @@ func (p *Policy) PersistCertificateChain(keyVersion int, certChain []*x509.Certi
 	keyEntry.CertificateChain = certChain
 
 	p.Keys[strconv.Itoa(keyVersion)] = keyEntry
+	// FIXME: context
 	return p.Persist(context.TODO(), storage)
 }

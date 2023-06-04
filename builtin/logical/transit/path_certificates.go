@@ -180,8 +180,6 @@ func (b *backend) pathSetCertificateWrite(ctx context.Context, req *logical.Requ
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
-	log.Printf("For some reason we are here\nHere's the number of certificates in the chain: %d", len(certChain))
-
 	// NOTE: Is this check needed?
 	if len(certChain) == 0 {
 		return logical.ErrorResponse("no certificates provided"), logical.ErrInvalidRequest
@@ -250,14 +248,16 @@ func parseParamCertificateChain(certChain string) ([]*x509.Certificate, error) {
 }
 
 func hasSingleLeafCertificate(certChain []*x509.Certificate) bool {
-	var leafCertsCount int
+	var leafCertsCount uint8
 	for _, cert := range certChain {
+		// FIXME: Remove
 		log.Printf("BasicConstraintValid: %t  | IsCA: %t\n", cert.BasicConstraintsValid, cert.IsCA)
 		if cert.BasicConstraintsValid && !cert.IsCA {
 			leafCertsCount += 1
 		}
 	}
 
+	// FIXME: Remove
 	log.Printf("leafCertsCount: %d\n", leafCertsCount)
 	var hasSingleLeafCert bool
 	if leafCertsCount == 1 {

@@ -21,10 +21,11 @@ import (
 )
 
 const (
-	exportTypeEncryptionKey = "encryption-key"
-	exportTypeSigningKey    = "signing-key"
-	exportTypeHMACKey       = "hmac-key"
-	exportTypePublicKey     = "public-key"
+	exportTypeEncryptionKey    = "encryption-key"
+	exportTypeSigningKey       = "signing-key"
+	exportTypeHMACKey          = "hmac-key"
+	exportTypePublicKey        = "public-key"
+	exportTypeCertificateChain = "certificate-chain"
 )
 
 func (b *backend) pathExportKeys() *framework.Path {
@@ -71,6 +72,7 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 	case exportTypeSigningKey:
 	case exportTypeHMACKey:
 	case exportTypePublicKey:
+	case exportTypeCertificateChain:
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("invalid export type: %s", exportType)), logical.ErrInvalidRequest
 	}
@@ -102,6 +104,11 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 	case exportTypeSigningKey:
 		if !p.Type.SigningSupported() {
 			return logical.ErrorResponse("signing not supported for the key"), logical.ErrInvalidRequest
+		}
+	// NOTE: Is this a valid assumption?
+	case exportTypeCertificateChain:
+		if !p.Type.SigningSupported() {
+			return logical.ErrorResponse("certificate chain not supported for keys that do not support signing"), logical.ErrInvalidRequest
 		}
 	}
 
@@ -237,6 +244,27 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 			}
 			return rsaKey, nil
 		}
+	case exportTypeCertificateChain:
+		// Is it empty by default or nil?
+		if key.CertificateChain == nil {
+			// FIXME: Error
+			return "", errors.New("nil KeyEntry provided")
+		}
+
+		var pemCerts []string
+		for _, cert := range key.CertificateChain {
+			// NOTE: TrimSpace?
+			pemCert := string(pem.EncodeToMemory(
+				&pem.Block{
+					Type:  "CERTIFICATE",
+					Bytes: cert.Raw,
+				}))
+
+			pemCerts = append(pemCerts, pemCert)
+		}
+		certChain := strings.Join(pemCerts, "\n")
+
+		return certChain, nil
 	}
 
 	return "", fmt.Errorf("unknown key type %v for export type %v", policy.Type, exportType)
