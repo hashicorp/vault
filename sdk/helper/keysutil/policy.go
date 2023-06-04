@@ -2311,87 +2311,6 @@ func (ke *KeyEntry) parseFromKey(PolKeyType KeyType, parsedKey any) error {
 
 	return nil
 }
-
-// NOTE: Sign/Signing?
-func (p *Policy) SignCsr(keyVersion int, csrTemplate *x509.CertificateRequest) ([]byte, error) {
-	keyEntry, err := p.safeGetKeyEntry(keyVersion)
-	if err != nil {
-		return nil, err
-	}
-
-	// NOTE: We cannot use the template as it is because it carries "signatureAlgorithm"
-	// information that might not apply to the key we are going to use.
-	// NOTE: The x509.CertificateRequest type in Go's crypto/x509 package does
-	// not directly include a field for storing the email address. However, the
-	// email address can be included as part of the subject distinguished name
-	// (DN) field in the certificate request.
-	csrTemplate = &x509.CertificateRequest{
-		Subject:         csrTemplate.Subject,
-		DNSNames:        csrTemplate.DNSNames,
-		EmailAddresses:  csrTemplate.EmailAddresses,
-		URIs:            csrTemplate.URIs,
-		Extensions:      csrTemplate.Extensions,
-		ExtraExtensions: csrTemplate.ExtraExtensions,
-		Attributes:      csrTemplate.Attributes, // Deprecated
-	}
-
-	var csr []byte
-	var createCertError error
-	switch p.Type {
-	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
-		var curve elliptic.Curve
-		switch p.Type {
-		case KeyType_ECDSA_P384:
-			curve = elliptic.P384()
-		case KeyType_ECDSA_P521:
-			curve = elliptic.P521()
-		default:
-			curve = elliptic.P256()
-		}
-
-		key := &ecdsa.PrivateKey{
-			PublicKey: ecdsa.PublicKey{
-				Curve: curve,
-				X:     keyEntry.EC_X,
-				Y:     keyEntry.EC_Y,
-			},
-			D: keyEntry.EC_D,
-		}
-
-		csr, createCertError = x509.CreateCertificateRequest(rand.Reader, csrTemplate, key)
-	case KeyType_ED25519:
-		var key ed25519.PrivateKey
-		if p.Derived {
-			// Derive the key that should be used
-			var err error
-			key, err = p.GetKey(nil, keyVersion, 32) // FIXME: context?
-			if err != nil {
-				return nil, errutil.InternalError{Err: fmt.Sprintf("error deriving key: %v", err)}
-			}
-		} else {
-			key = ed25519.PrivateKey(keyEntry.Key)
-		}
-
-		csr, createCertError = x509.CreateCertificateRequest(rand.Reader, csrTemplate, key)
-	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
-		key := keyEntry.RSAKey
-		csr, createCertError = x509.CreateCertificateRequest(rand.Reader, csrTemplate, key)
-	default:
-		return nil, errutil.InternalError{Err: fmt.Sprintf("provided key type '%s' does not support signing", p.Type)}
-	}
-	// FIXME: Not sure about this
-	if createCertError != nil {
-		return nil, err
-	}
-
-	csrPem := pem.EncodeToMemory(&pem.Block{
-		Type:  "CERTIFICATE REQUEST",
-		Bytes: csr,
-	})
-
-	return csrPem, nil
-}
-
 func (p *Policy) WrapKey(ver int, targetKey interface{}, targetKeyType KeyType, hash hash.Hash) (string, error) {
 	if !p.Type.SigningSupported() {
 		return "", fmt.Errorf("message signing not supported for key type %v", p.Type)
@@ -2475,6 +2394,86 @@ func wrapTargetPKCS8ForImport(wrappingKey *rsa.PublicKey, preppedTargetKey []byt
 	// Combined wrapped keys into a single blob and base64 encode
 	wrappedKeys := append(ephKeyWrapped, targetKeyWrapped...)
 	return base64.StdEncoding.EncodeToString(wrappedKeys), nil
+}
+
+// NOTE: Sign/Signing?
+func (p *Policy) SignCsr(keyVersion int, csrTemplate *x509.CertificateRequest) ([]byte, error) {
+	keyEntry, err := p.safeGetKeyEntry(keyVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	// NOTE: We cannot use the template as it is because it carries "signatureAlgorithm"
+	// information that might not apply to the key we are going to use.
+	// NOTE: The x509.CertificateRequest type in Go's crypto/x509 package does
+	// not directly include a field for storing the email address. However, the
+	// email address can be included as part of the subject distinguished name
+	// (DN) field in the certificate request.
+	csrTemplate = &x509.CertificateRequest{
+		Subject:         csrTemplate.Subject,
+		DNSNames:        csrTemplate.DNSNames,
+		EmailAddresses:  csrTemplate.EmailAddresses,
+		URIs:            csrTemplate.URIs,
+		Extensions:      csrTemplate.Extensions,
+		ExtraExtensions: csrTemplate.ExtraExtensions,
+		Attributes:      csrTemplate.Attributes, // Deprecated
+	}
+
+	var csr []byte
+	var createCertError error
+	switch p.Type {
+	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
+		var curve elliptic.Curve
+		switch p.Type {
+		case KeyType_ECDSA_P384:
+			curve = elliptic.P384()
+		case KeyType_ECDSA_P521:
+			curve = elliptic.P521()
+		default:
+			curve = elliptic.P256()
+		}
+
+		key := &ecdsa.PrivateKey{
+			PublicKey: ecdsa.PublicKey{
+				Curve: curve,
+				X:     keyEntry.EC_X,
+				Y:     keyEntry.EC_Y,
+			},
+			D: keyEntry.EC_D,
+		}
+
+		csr, createCertError = x509.CreateCertificateRequest(rand.Reader, csrTemplate, key)
+	case KeyType_ED25519:
+		var key ed25519.PrivateKey
+		if p.Derived {
+			// Derive the key that should be used
+			var err error
+			key, err = p.GetKey(nil, keyVersion, 32) // FIXME: context?
+			if err != nil {
+				return nil, errutil.InternalError{Err: fmt.Sprintf("error deriving key: %v", err)}
+			}
+		} else {
+			key = ed25519.PrivateKey(keyEntry.Key)
+		}
+
+		csr, createCertError = x509.CreateCertificateRequest(rand.Reader, csrTemplate, key)
+	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
+		key := keyEntry.RSAKey
+		csr, createCertError = x509.CreateCertificateRequest(rand.Reader, csrTemplate, key)
+	default:
+		return nil, errutil.InternalError{Err: fmt.Sprintf("provided key type '%s' does not support signing", p.Type)}
+	}
+	// FIXME: Not sure about this
+	if createCertError != nil {
+		return nil, err
+	}
+
+	csrPem := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE REQUEST",
+		Bytes: csr,
+	})
+
+	return csrPem, nil
 }
 
 func (p *Policy) ValidateLeafCertKeyMatch(keyVersion int, certPublicKeyAlgorithm x509.PublicKeyAlgorithm, certPublicKey any) (bool, error) {
