@@ -203,9 +203,14 @@ func (b *backend) pathSetCertificateWrite(ctx context.Context, req *logical.Requ
 	if err != nil {
 		return nil, err
 	}
-
 	if !valid {
 		return logical.ErrorResponse("end entity certificate public key does match the transit's public key"), logical.ErrInvalidRequest
+	}
+
+	p.PersistCertificateChain(keyVersion, certChain, req.Storage)
+	if err != nil {
+		// FIXME: should be internal, message
+		return nil, errors.New("failed to persist certificate chain")
 	}
 
 	return nil, nil
