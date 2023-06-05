@@ -61,7 +61,7 @@ variable "product_version" {
 }
 
 resource "enos_local_exec" "build" {
-  scripts = ["${path.module}/scripts/build.sh"]
+  scripts = [abspath("${path.module}/scripts/build.sh")]
 
   environment = {
     BUNDLE_PATH = var.bundle_path,

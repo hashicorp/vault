@@ -190,13 +190,14 @@ scenario "smoke" {
         edition = var.backend_edition
         version = matrix.consul_version
       } : null
-      install_dir         = local.vault_install_dir
-      license             = matrix.edition != "oss" ? step.read_license.license : null
-      local_artifact_path = local.bundle_path
-      packages            = local.packages
-      storage_backend     = matrix.backend
-      target_hosts        = step.create_vault_cluster_targets.hosts
-      unseal_method       = matrix.seal
+      install_dir              = local.vault_install_dir
+      license                  = matrix.edition != "oss" ? step.read_license.license : null
+      local_artifact_path      = local.bundle_path
+      packages                 = local.packages
+      storage_backend          = matrix.backend
+      target_hosts             = step.create_vault_cluster_targets.hosts
+      unseal_method            = matrix.seal
+      enable_file_audit_device = var.vault_enable_file_audit_device
     }
   }
 
@@ -383,5 +384,10 @@ scenario "smoke" {
   output "unseal_keys_hex" {
     description = "The Vault cluster unseal keys hex"
     value       = step.create_vault_cluster.unseal_keys_hex
+  }
+
+  output "vault_audit_device_file_path" {
+    description = "The file path for the file audit device, if enabled"
+    value       = step.create_vault_cluster.audit_device_file_path
   }
 }
