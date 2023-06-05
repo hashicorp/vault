@@ -3115,26 +3115,9 @@ vault {
 	wg.Wait()
 }
 
-func writeJwtTokenFile(t *testing.T) string {
+func setupTestApp(t *testing.T) string {
 	t.Helper()
 
-	inf, err := os.CreateTemp("", "auth.jwt.test.*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	in := inf.Name()
-	inf.Close()
-	os.Remove(in)
-
-	jwtToken, _ := agent.GetTestJWT(t)
-
-	if err := os.WriteFile(in, []byte(jwtToken), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	return in
-}
-
-func setupTestApp(t *testing.T) string {
 	// we must build a test-app binary since 'go run' does not propagate signals correctly
 	goBinary, err := exec.LookPath("go")
 	if err != nil {
