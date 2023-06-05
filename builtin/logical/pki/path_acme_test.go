@@ -1306,16 +1306,21 @@ func TestACMEClientRequestLimits(t *testing.T) {
 		//       test.
 		markAuthorizationSuccess(t, client, acmeClient, acct, createOrder)
 
-		// Finally test a proper CSR, with the correct name and signed with a different key works.
+		// Submit the CSR
 		csrKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		require.NoError(t, err, "failed generated key for CSR")
 		csr, err := x509.CreateCertificateRequest(rand.Reader, &tc.requestCSR, csrKey)
 		require.NoError(t, err, "failed generating csr")
 
 		certs, _, err := acmeClient.CreateOrderCert(testCtx, createOrder.FinalizeURL, csr, true)
-		require.NoError(t, err, "failed finalizing order")
 
-		testAcmeCertSignedByCa(t, client, certs, "int-ca")
+		if tc.valid {
+			require.NoError(t, err, "failed finalizing order")
 
+			// Validate we get a signed cert back
+			testAcmeCertSignedByCa(t, client, certs, "int-ca")
+		} else {
+			require.Error(t, err, "Not a valid CSR, should err")
+		}
 	}
 }
