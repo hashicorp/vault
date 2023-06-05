@@ -309,6 +309,6 @@ jobs:
       id: download
       with:
         name: test-coverage
+        path: test-coverage
     - run: |
-        directories=$(ls -m test-coverage)
-        go tool covdata percent -i="$directories"
+        go tool covdata percent -i="${{ steps.download.outputs.download-path }}"
