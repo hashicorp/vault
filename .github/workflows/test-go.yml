@@ -176,7 +176,7 @@ jobs:
             export VAULT_BINARY
           fi
           
-          mkdir -p test-coverage/${{ matrix.runner-index }}
+          mkdir -p "test-coverage/${{ matrix.runner-index }}"
           
           # shellcheck disable=SC2086 # can't quote package list
           GOARCH=${{ inputs.go-arch }} \
@@ -191,7 +191,7 @@ jobs:
               ${{ inputs.extra-flags }} \
                 \
               ${test_packages[${{ matrix.runner-index }}]} \
-              -args -test.gocoverdir=$(pwd)/test-coverage/${{ matrix.runner-index }}
+              -args -test.gocoverdir="$(pwd)/test-coverage/${{ matrix.runner-index }}"
       - name: Prepare datadog-ci
         if: github.repository == 'hashicorp/vault' && always()
         continue-on-error: true
