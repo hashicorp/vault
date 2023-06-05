@@ -175,7 +175,7 @@ server {
 
 func buildWgetCurlContainer(t *testing.T, network string) {
 	containerfile := `
-FROM ubuntu:latest
+FROM docker.mirror.hashicorp.services/ubuntu:latest
 
 RUN apt update && DEBIAN_FRONTEND="noninteractive" apt install -y curl wget wget2
 `

@@ -9,7 +9,7 @@ import (
 )
 
 const ACMEshContainerfile = `
-FROM ubuntu:latest
+FROM docker.mirror.hashicorp.services/ubuntu:latest
 
 RUN apt update && DEBIAN_FRONTEND="noninteractive" apt install -y openssl socat curl coreutils dnsutils tzdata sed tar jq libidn2-0 openssh-client git cron
 
