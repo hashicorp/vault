@@ -187,11 +187,11 @@ jobs:
               -tags "${{ inputs.go-build-tags }}" \
               -timeout=${{ env.TIMEOUT_IN_MINUTES }}m \
               -parallel=20 \
-              -cover \ 
+              -cover \
               ${{ inputs.extra-flags }} \
-              -args -test.gocoverdir=$(pwd)/test-coverage/${{ matrix.runner-index }}
                 \
-              ${test_packages[${{ matrix.runner-index }}]}
+              ${test_packages[${{ matrix.runner-index }}]} \
+              -args -test.gocoverdir=$(pwd)/test-coverage/${{ matrix.runner-index }}
       - name: Prepare datadog-ci
         if: github.repository == 'hashicorp/vault' && always()
         continue-on-error: true

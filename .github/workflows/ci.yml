@@ -311,4 +311,4 @@ jobs:
         name: test-coverage
     - run: |
         directories=$(ls -m test-coverage)
-        go tool covdata percent -i=$(directories)
+        go tool covdata percent -i="$directories"
