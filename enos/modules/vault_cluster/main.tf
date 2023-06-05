@@ -225,7 +225,7 @@ resource "enos_remote_exec" "create_audit_log_dir" {
   ]
   for_each = toset([
     for idx, host in toset(local.instances) : idx
-    if local.enable_audit_device
+    if var.enable_file_audit_device
   ])
 
   environment = {
