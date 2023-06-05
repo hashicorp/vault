@@ -468,7 +468,12 @@ func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*St
 			break
 		}
 	} else {
-		realIP = inspect.NetworkSettings.Networks[d.RunOptions.NetworkName].IPAddress
+		network, present := inspect.NetworkSettings.Networks[d.RunOptions.NetworkName]
+		if present {
+			realIP = network.IPAddress
+		} else {
+			return nil, fmt.Errorf("d.RunOptions.NetworkName failed; network (%s) not found: %v; maybe d.RunOptions.NetworkID was non-empty when d.RunOptions.NetworkName was desired", d.RunOptions.NetworkName, inspect.NetworkSettings.Networks)
+		}
 	}
 
 	return &StartResult{
