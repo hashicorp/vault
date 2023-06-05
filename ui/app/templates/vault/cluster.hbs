@@ -1,9 +1,11 @@
 <Sidebar::Nav::Cluster />
-
-<LicenseBanners
-  @expiry={{this.activeCluster.licenseExpiry}}
-  @autoloaded={{eq this.activeCluster.licenseState "autoloaded"}}
-/>
+{{! Only show license banners for Enterprise }}
+{{#unless this.activeCluster.version.isOSS}}
+  <LicenseBanners
+    @expiry={{this.activeCluster.licenseExpiry}}
+    @autoloaded={{eq this.activeCluster.licenseState "autoloaded"}}
+  />
+{{/unless}}
 <div class="global-flash">
   {{#each this.flashMessages.queue as |flash|}}
     <FlashMessage data-test-flash-message={{true}} @flash={{flash}} as |customComponent flash close|>
