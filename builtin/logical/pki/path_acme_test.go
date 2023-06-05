@@ -243,8 +243,21 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			csrKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 			require.NoError(t, err, "failed generated key for CSR")
 
-			// Validate we reject CSRs that contain names that aren't in the original order
+			// Validate we reject CSRs that contain CN that aren't in the original order
 			badCr := &x509.CertificateRequest{
+				Subject:  pkix.Name{CommonName: "not-in-original-order.com"},
+				DNSNames: []string{identifiers[0], identifiers[1]},
+			}
+			t.Logf("csr: %v", badCr)
+
+			csrWithBadCName, err := x509.CreateCertificateRequest(rand.Reader, badCr, csrKey)
+			require.NoError(t, err, "failed generating csr with bad common name")
+
+			_, _, err = acmeClient.CreateOrderCert(testCtx, createOrder.FinalizeURL, csrWithBadCName, true)
+			require.Error(t, err, "should not be allowed to csr with different common names than order")
+
+			// Validate we reject CSRs that contain DNS names that aren't in the original order
+			badCr = &x509.CertificateRequest{
 				Subject:  pkix.Name{CommonName: createOrder.Identifiers[0].Value},
 				DNSNames: []string{"www.notinorder.com"},
 			}
@@ -1210,4 +1223,99 @@ func getEABKey(t *testing.T, client *api.Client, baseUrl string) (string, []byte
 	require.NoError(t, err, "failed parsing eab created_on field")
 
 	return kid, privateKeyBytes
+}
+
+func TestACMEClientRequestLimits(t *testing.T) {
+	cluster, client, _ := setupAcmeBackend(t)
+	defer cluster.Cleanup()
+
+	cases := []struct {
+		name           string
+		authorizations []acme.AuthzID
+		requestCSR     x509.CertificateRequest
+		valid          bool
+	}{
+		{
+			"validate-only-cn",
+			[]acme.AuthzID{
+				{"dns", "localhost"},
+			},
+			x509.CertificateRequest{
+				Subject: pkix.Name{CommonName: "localhost"},
+			},
+			true,
+		},
+		{
+			"validate-only-san",
+			[]acme.AuthzID{
+				{"dns", "localhost"},
+			},
+			x509.CertificateRequest{
+				DNSNames: []string{"localhost"},
+			},
+			true,
+		},
+	}
+
+	testCtx := context.Background()
+	acmeConfig := map[string]interface{}{
+		"enabled":                  true,
+		"allowed_issuers":          "*",
+		"allowed_roles":            "*",
+		"default_directory_policy": "sign-verbatim",
+		"dns_resolver":             "",
+		"eab_policy_name":          "",
+	}
+	_, err := client.Logical().WriteWithContext(testCtx, "pki/config/acme", acmeConfig)
+	require.NoError(t, err, "error configuring acme")
+
+	for _, tc := range cases {
+
+		// First Create Our Client
+		accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+		require.NoError(t, err, "failed creating rsa key")
+		acmeClient := getAcmeClientForCluster(t, cluster, "/v1/pki/acme/", accountKey)
+
+		discovery, err := acmeClient.Discover(testCtx)
+		require.NoError(t, err, "failed acme discovery call")
+		t.Logf("%v", discovery)
+
+		acct, err := acmeClient.Register(testCtx, &acme.Account{
+			Contact: []string{"mailto:test@example.com"},
+		}, func(tosURL string) bool { return true })
+		require.NoError(t, err, "failed registering account")
+		require.Equal(t, acme.StatusValid, acct.Status)
+		require.Contains(t, acct.Contact, "mailto:test@example.com")
+		require.Len(t, acct.Contact, 1)
+
+		// Create an order
+		t.Logf("Testing Authorize Order on %s", "pki/acme")
+		identifiers := make([]string, len(tc.authorizations))
+		for index, auth := range tc.authorizations {
+			identifiers[index] = auth.Value
+		}
+
+		createOrder, err := acmeClient.AuthorizeOrder(testCtx, tc.authorizations)
+		require.NoError(t, err, "failed creating order")
+		require.Equal(t, acme.StatusPending, createOrder.Status)
+		require.Empty(t, createOrder.CertURL)
+		require.Equal(t, createOrder.URI+"/finalize", createOrder.FinalizeURL)
+		require.Len(t, createOrder.AuthzURLs, len(tc.authorizations), "expected same number of authzurls as identifiers")
+
+		// HACK: Update authorization/challenge to completed as we can't really do it properly in this workflow
+		//       test.
+		markAuthorizationSuccess(t, client, acmeClient, acct, createOrder)
+
+		// Finally test a proper CSR, with the correct name and signed with a different key works.
+		csrKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		require.NoError(t, err, "failed generated key for CSR")
+		csr, err := x509.CreateCertificateRequest(rand.Reader, &tc.requestCSR, csrKey)
+		require.NoError(t, err, "failed generating csr")
+
+		certs, _, err := acmeClient.CreateOrderCert(testCtx, createOrder.FinalizeURL, csr, true)
+		require.NoError(t, err, "failed finalizing order")
+
+		testAcmeCertSignedByCa(t, client, certs, "int-ca")
+
+	}
 }
