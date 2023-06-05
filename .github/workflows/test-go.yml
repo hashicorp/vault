@@ -219,7 +219,6 @@ jobs:
         with:
           name: test-coverage
           path: test-coverage/${{ matrix.runner-index }}
-        if: always()
       - name: Create a summary of tests
         uses: test-summary/action@62bc5c68de2a6a0d02039763b8c754569df99e3f # TSCCR: no entry for repository "test-summary/action"
         with:
