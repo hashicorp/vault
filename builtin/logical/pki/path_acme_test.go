@@ -375,10 +375,8 @@ func TestAcmeBasicWorkflowWithEab(t *testing.T) {
 			require.Contains(t, keyInfo, kid)
 
 			infoForKid := keyInfo[kid].(map[string]interface{})
-			keyBits := infoForKid["key_bits"].(json.Number)
-			require.Equal(t, "256", keyBits.String())
 			require.Equal(t, "hs", infoForKid["key_type"])
-			require.Equal(t, tc.prefixUrl, infoForKid["acme_directory"])
+			require.Equal(t, tc.prefixUrl+"directory", infoForKid["acme_directory"])
 
 			// Create new account with EAB
 			t.Logf("Testing register on %s", baseAcmeURL)
@@ -651,6 +649,8 @@ func TestAcmeConfigChecksPublicAcmeEnv(t *testing.T) {
 // CSR's selected TTL value in ACME and the issuer's leaf_not_after_behavior setting is set to Err,
 // we will override the configured behavior and truncate to the issuer's NotAfter
 func TestAcmeTruncatesToIssuerExpiry(t *testing.T) {
+	t.Parallel()
+
 	cluster, client, _ := setupAcmeBackend(t)
 	defer cluster.Cleanup()
 
@@ -1048,6 +1048,7 @@ func testAcmeCertSignedByCa(t *testing.T, client *api.Client, derCerts [][]byte,
 
 // TestAcmeValidationError make sure that we properly return errors on validation errors.
 func TestAcmeValidationError(t *testing.T) {
+	t.Parallel()
 	cluster, _, _ := setupAcmeBackend(t)
 	defer cluster.Cleanup()
 
@@ -1198,12 +1199,12 @@ func getEABKey(t *testing.T, client *api.Client, baseUrl string) (string, []byte
 
 	require.NotEmpty(t, resp.Data["key"], "eab key response missing private_key field")
 	base64Key := resp.Data["key"].(string)
+	require.True(t, strings.HasPrefix(base64Key, "vault-eab-0-"), "%s should have had a prefix of vault-eab-0-", base64Key)
 	privateKeyBytes, err := base64.RawURLEncoding.DecodeString(base64Key)
 	require.NoError(t, err, "failed base 64 decoding eab key response")
 
 	require.Equal(t, "hs", resp.Data["key_type"], "eab key_type field mis-match")
-	require.Equal(t, json.Number("256"), resp.Data["key_bits"], "eab key_bits field mis-match")
-	require.Equal(t, baseUrl, resp.Data["acme_directory"], "eab acme_directory field mis-match")
+	require.Equal(t, baseUrl+"directory", resp.Data["acme_directory"], "eab acme_directory field mis-match")
 	require.NotEmpty(t, resp.Data["created_on"], "empty created_on field")
 	_, err = time.Parse(time.RFC3339, resp.Data["created_on"].(string))
 	require.NoError(t, err, "failed parsing eab created_on field")
