@@ -1195,7 +1195,7 @@ func getEABKey(t *testing.T, client *api.Client, baseUrl string) (string, []byte
 
 	require.NotEmpty(t, resp.Data["key"], "eab key response missing private_key field")
 	base64Key := resp.Data["key"].(string)
-	require.False(t, strings.HasPrefix(base64Key, "-"), "%s should have had a prefix of -", base64Key)
+	require.True(t, strings.HasPrefix(base64Key, "vault-eab-0-"), "%s should have had a prefix of vault-eab-0-", base64Key)
 	privateKeyBytes, err := base64.RawURLEncoding.DecodeString(base64Key)
 	require.NoError(t, err, "failed base 64 decoding eab key response")
 

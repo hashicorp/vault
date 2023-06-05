@@ -16,12 +16,17 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-var decodedTokenPrefix = mustBase64Decode("vault-eab0-")
+var decodedTokenPrefix = mustBase64Decode("vault-eab-0-")
 
 func mustBase64Decode(s string) []byte {
 	bytes, err := base64.RawURLEncoding.DecodeString(s)
 	if err != nil {
 		panic(fmt.Sprintf("Token prefix value: %s failed decoding: %v", s, err))
+	}
+
+	// Should be dividable by 3 otherwise our prefix will not be properly honored.
+	if len(bytes)%3 != 0 {
+		panic(fmt.Sprintf("Token prefix value: %s is not dividable by 3, will not prefix properly", s))
 	}
 	return bytes
 }
