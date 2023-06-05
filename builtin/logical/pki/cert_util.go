@@ -1379,71 +1379,11 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 	}
 
 	// Get the TTL and verify it against the max allowed
-	var ttl time.Duration
-	var maxTTL time.Duration
-	var notAfter time.Time
-	var err error
-	{
-		ttl = time.Duration(data.apiData.Get("ttl").(int)) * time.Second
-		notAfterAlt := data.role.NotAfter
-		if notAfterAlt == "" {
-			notAfterAltRaw, ok := data.apiData.GetOk("not_after")
-			if ok {
-				notAfterAlt = notAfterAltRaw.(string)
-			}
-
-		}
-		if ttl > 0 && notAfterAlt != "" {
-			return nil, nil, errutil.UserError{
-				Err: "Either ttl or not_after should be provided. Both should not be provided in the same request.",
-			}
-		}
-
-		if ttl == 0 && data.role.TTL > 0 {
-			ttl = data.role.TTL
-		}
-
-		if data.role.MaxTTL > 0 {
-			maxTTL = data.role.MaxTTL
-		}
-
-		if ttl == 0 {
-			ttl = b.System().DefaultLeaseTTL()
-		}
-		if maxTTL == 0 {
-			maxTTL = b.System().MaxLeaseTTL()
-		}
-		if ttl > maxTTL {
-			warnings = append(warnings, fmt.Sprintf("TTL %q is longer than permitted maxTTL %q, so maxTTL is being used", ttl, maxTTL))
-			ttl = maxTTL
-		}
-
-		if notAfterAlt != "" {
-			notAfter, err = time.Parse(time.RFC3339, notAfterAlt)
-			if err != nil {
-				return nil, nil, errutil.UserError{Err: err.Error()}
-			}
-		} else {
-			notAfter = time.Now().Add(ttl)
-		}
-		if caSign != nil && notAfter.After(caSign.Certificate.NotAfter) {
-			// If it's not self-signed, verify that the issued certificate
-			// won't be valid past the lifetime of the CA certificate, and
-			// act accordingly. This is dependent based on the issuer's
-			// LeafNotAfterBehavior argument.
-			switch caSign.LeafNotAfterBehavior {
-			case certutil.PermitNotAfterBehavior:
-				// Explicitly do nothing.
-			case certutil.TruncateNotAfterBehavior:
-				notAfter = caSign.Certificate.NotAfter
-			case certutil.ErrNotAfterBehavior:
-				fallthrough
-			default:
-				return nil, nil, errutil.UserError{Err: fmt.Sprintf(
-					"cannot satisfy request, as TTL would result in notAfter of %s that is beyond the expiration of the CA certificate at %s", notAfter.UTC().Format(time.RFC3339Nano), caSign.Certificate.NotAfter.UTC().Format(time.RFC3339Nano))}
-			}
-		}
+	notAfter, ttlWarnings, err := getCertificateNotAfter(b, data, caSign)
+	if err != nil {
+		return nil, warnings, err
 	}
+	warnings = append(warnings, ttlWarnings...)
 
 	// Parse SKID from the request for cross-signing.
 	var skid []byte
@@ -1557,6 +1497,73 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 	}
 
 	return creation, warnings, nil
+}
+
+// getCertificateNotAfter compute a certificate's NotAfter date based on the mount ttl, role, signing bundle and input
+// api data being sent. Returns a NotAfter time, a set of warnings or an error.
+func getCertificateNotAfter(b *backend, data *inputBundle, caSign *certutil.CAInfoBundle) (time.Time, []string, error) {
+	var warnings []string
+	var maxTTL time.Duration
+	var notAfter time.Time
+	var err error
+
+	ttl := time.Duration(data.apiData.Get("ttl").(int)) * time.Second
+	notAfterAlt := data.role.NotAfter
+	if notAfterAlt == "" {
+		notAfterAltRaw, ok := data.apiData.GetOk("not_after")
+		if ok {
+			notAfterAlt = notAfterAltRaw.(string)
+		}
+	}
+	if ttl > 0 && notAfterAlt != "" {
+		return time.Time{}, warnings, errutil.UserError{Err: "Either ttl or not_after should be provided. Both should not be provided in the same request."}
+	}
+
+	if ttl == 0 && data.role.TTL > 0 {
+		ttl = data.role.TTL
+	}
+
+	if data.role.MaxTTL > 0 {
+		maxTTL = data.role.MaxTTL
+	}
+
+	if ttl == 0 {
+		ttl = b.System().DefaultLeaseTTL()
+	}
+	if maxTTL == 0 {
+		maxTTL = b.System().MaxLeaseTTL()
+	}
+	if ttl > maxTTL {
+		warnings = append(warnings, fmt.Sprintf("TTL %q is longer than permitted maxTTL %q, so maxTTL is being used", ttl, maxTTL))
+		ttl = maxTTL
+	}
+
+	if notAfterAlt != "" {
+		notAfter, err = time.Parse(time.RFC3339, notAfterAlt)
+		if err != nil {
+			return notAfter, warnings, errutil.UserError{Err: err.Error()}
+		}
+	} else {
+		notAfter = time.Now().Add(ttl)
+	}
+	if caSign != nil && notAfter.After(caSign.Certificate.NotAfter) {
+		// If it's not self-signed, verify that the issued certificate
+		// won't be valid past the lifetime of the CA certificate, and
+		// act accordingly. This is dependent based on the issuer's
+		// LeafNotAfterBehavior argument.
+		switch caSign.LeafNotAfterBehavior {
+		case certutil.PermitNotAfterBehavior:
+			// Explicitly do nothing.
+		case certutil.TruncateNotAfterBehavior:
+			notAfter = caSign.Certificate.NotAfter
+		case certutil.ErrNotAfterBehavior:
+			fallthrough
+		default:
+			return time.Time{}, warnings, errutil.UserError{Err: fmt.Sprintf(
+				"cannot satisfy request, as TTL would result in notAfter of %s that is beyond the expiration of the CA certificate at %s", notAfter.UTC().Format(time.RFC3339Nano), caSign.Certificate.NotAfter.UTC().Format(time.RFC3339Nano))}
+		}
+	}
+	return notAfter, warnings, nil
 }
 
 func convertRespToPKCS8(resp *logical.Response) error {
