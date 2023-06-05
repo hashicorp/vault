@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"path"
@@ -267,6 +268,18 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 
 			_, _, err = acmeClient.CreateOrderCert(testCtx, createOrder.FinalizeURL, csrWithBadName, true)
 			require.Error(t, err, "should not be allowed to csr with different names than order")
+
+			// Validate we reject CSRs that contain IP addreses that weren't in the original order
+			badCr = &x509.CertificateRequest{
+				Subject:     pkix.Name{CommonName: createOrder.Identifiers[0].Value},
+				IPAddresses: []net.IP{{127, 0, 0, 1}},
+			}
+
+			csrWithBadIP, err := x509.CreateCertificateRequest(rand.Reader, badCr, csrKey)
+			require.NoError(t, err, "failed generating csr with bad name")
+
+			_, _, err = acmeClient.CreateOrderCert(testCtx, createOrder.FinalizeURL, csrWithBadIP, true)
+			require.Error(t, err, "should not be allowed to csr with different ip address than order")
 
 			// Validate we reject CSRs that contains fewer names than in the original order.
 			badCr = &x509.CertificateRequest{
@@ -1252,6 +1265,16 @@ func TestACMEClientRequestLimits(t *testing.T) {
 			},
 			x509.CertificateRequest{
 				DNSNames: []string{"localhost"},
+			},
+			true,
+		},
+		{
+			"validate-only-ip-address",
+			[]acme.AuthzID{
+				{"ip", "127.0.0.1"},
+			},
+			x509.CertificateRequest{
+				IPAddresses: []net.IP{{127, 0, 0, 1}},
 			},
 			true,
 		},
