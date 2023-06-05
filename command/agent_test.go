@@ -3116,6 +3116,8 @@ func setupTestApp(t *testing.T) string {
 	return testAppBinary
 }
 
+// TestAgent_Exec_Restarts tests that vault agent restarts the app
+// on changes to relevant vault secrets
 func TestAgent_Exec_Restarts(t *testing.T) {
 	testAppBin := setupTestApp(t)
 	defer os.Remove(testAppBin)
