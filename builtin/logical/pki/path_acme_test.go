@@ -23,8 +23,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/testhelpers"
-
 	"github.com/go-test/deep"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/acme"
@@ -32,7 +30,9 @@ import (
 
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/builtin/logical/pki/dnstest"
 	"github.com/hashicorp/vault/helper/constants"
+	"github.com/hashicorp/vault/helper/testhelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -811,6 +811,141 @@ func TestAcmeIgnoresRoleExtKeyUsage(t *testing.T) {
 	require.Equal(t, 1, len(acmeCert.ExtKeyUsage), "mis-match on expected ExtKeyUsages")
 	require.ElementsMatch(t, []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}, acmeCert.ExtKeyUsage,
 		"mismatch of ExtKeyUsage flags")
+}
+
+func TestIssuerRoleDirectoryAssociations(t *testing.T) {
+	t.Parallel()
+
+	// This creates two issuers for us (root-ca, int-ca) and two
+	// roles (test-role, acme) that we can use with various directory
+	// configurations.
+	cluster, client, _ := setupAcmeBackend(t)
+	defer cluster.Cleanup()
+
+	// Setup DNS for validations.
+	testCtx := context.Background()
+	dns := dnstest.SetupResolver(t, "dadgarcorp.com")
+	defer dns.Cleanup()
+	_, err := client.Logical().WriteWithContext(testCtx, "pki/config/acme", map[string]interface{}{
+		"dns_resolver": dns.GetLocalAddr(),
+	})
+	require.NoError(t, err, "failed to specify dns resolver")
+
+	// 1. Use a forbidden role should fail.
+	resp, err := client.Logical().WriteWithContext(testCtx, "pki/config/acme", map[string]interface{}{
+		"enabled":       true,
+		"allowed_roles": []string{"acme"},
+	})
+	require.NoError(t, err, "failed to write config")
+	require.NotNil(t, resp)
+
+	_, err = client.Logical().ReadWithContext(testCtx, "pki/roles/test-role/acme/directory")
+	require.Error(t, err, "failed to forbid usage of test-role")
+	_, err = client.Logical().ReadWithContext(testCtx, "pki/issuer/default/roles/test-role/acme/directory")
+	require.Error(t, err, "failed to forbid usage of test-role under default issuer")
+	_, err = client.Logical().ReadWithContext(testCtx, "pki/issuer/int-ca/roles/test-role/acme/directory")
+	require.Error(t, err, "failed to forbid usage of test-role under int-ca issuer")
+	_, err = client.Logical().ReadWithContext(testCtx, "pki/issuer/root-ca/roles/test-role/acme/directory")
+	require.Error(t, err, "failed to forbid usage of test-role under root-ca issuer")
+
+	_, err = client.Logical().ReadWithContext(testCtx, "pki/roles/acme/acme/directory")
+	require.NoError(t, err, "failed to allow usage of acme")
+	_, err = client.Logical().ReadWithContext(testCtx, "pki/issuer/default/roles/acme/acme/directory")
+	require.NoError(t, err, "failed to allow usage of acme under default issuer")
+	_, err = client.Logical().ReadWithContext(testCtx, "pki/issuer/int-ca/roles/acme/acme/directory")
+	require.NoError(t, err, "failed to allow usage of acme under int-ca issuer")
+	_, err = client.Logical().ReadWithContext(testCtx, "pki/issuer/root-ca/roles/acme/acme/directory")
+	require.NoError(t, err, "failed to allow usage of acme under root-ca issuer")
+
+	// 2. Use a forbidden issuer should fail.
+	resp, err = client.Logical().WriteWithContext(testCtx, "pki/config/acme", map[string]interface{}{
+		"allowed_roles":   []string{"acme"},
+		"allowed_issuers": []string{"int-ca"},
+	})
+	require.NoError(t, err, "failed to write config")
+	require.NotNil(t, resp)
+
+	_, err = client.Logical().ReadWithContext(testCtx, "pki/roles/test-role/acme/directory")
+	require.Error(t, err, "failed to forbid usage of test-role")
+	_, err = client.Logical().ReadWithContext(testCtx, "pki/issuer/default/roles/test-role/acme/directory")
+	require.Error(t, err, "failed to forbid usage of test-role under default issuer")
+	_, err = client.Logical().ReadWithContext(testCtx, "pki/issuer/int-ca/roles/test-role/acme/directory")
+	require.Error(t, err, "failed to forbid usage of test-role under int-ca issuer")
+	_, err = client.Logical().ReadWithContext(testCtx, "pki/issuer/root-ca/roles/test-role/acme/directory")
+	require.Error(t, err, "failed to forbid usage of test-role under root-ca issuer")
+
+	_, err = client.Logical().ReadWithContext(testCtx, "pki/issuer/root-ca/roles/acme/acme/directory")
+	require.Error(t, err, "failed to forbid usage of acme under root-ca issuer")
+
+	_, err = client.Logical().ReadWithContext(testCtx, "pki/roles/acme/acme/directory")
+	require.NoError(t, err, "failed to allow usage of acme")
+	_, err = client.Logical().ReadWithContext(testCtx, "pki/issuer/default/roles/acme/acme/directory")
+	require.NoError(t, err, "failed to allow usage of acme under default issuer")
+	_, err = client.Logical().ReadWithContext(testCtx, "pki/issuer/int-ca/roles/acme/acme/directory")
+	require.NoError(t, err, "failed to allow usage of acme under int-ca issuer")
+
+	// 3. Setting the default directory to be a sign-verbatim policy and
+	// using two different CAs should result in certs signed by each CA.
+	resp, err = client.Logical().WriteWithContext(testCtx, "pki/config/acme", map[string]interface{}{
+		"allowed_roles":            []string{"*"},
+		"allowed_issuers":          []string{"*"},
+		"default_directory_policy": "sign-verbatim",
+	})
+	require.NoError(t, err, "failed to write config")
+	require.NotNil(t, resp)
+
+	// default == int-ca
+	acmeClientDefault := getAcmeClientForCluster(t, cluster, "/v1/pki/issuer/default/acme/", nil)
+	defaultLeafCert := doACMEForDomainWithDNS(t, dns, acmeClientDefault, []string{"default-ca.dadgarcorp.com"})
+	requireSignedByAtPath(t, client, defaultLeafCert, "pki/issuer/int-ca")
+
+	acmeClientIntCA := getAcmeClientForCluster(t, cluster, "/v1/pki/issuer/int-ca/acme/", nil)
+	intCALeafCert := doACMEForDomainWithDNS(t, dns, acmeClientIntCA, []string{"int-ca.dadgarcorp.com"})
+	requireSignedByAtPath(t, client, intCALeafCert, "pki/issuer/int-ca")
+
+	acmeClientRootCA := getAcmeClientForCluster(t, cluster, "/v1/pki/issuer/root-ca/acme/", nil)
+	rootCALeafCert := doACMEForDomainWithDNS(t, dns, acmeClientRootCA, []string{"root-ca.dadgarcorp.com"})
+	requireSignedByAtPath(t, client, rootCALeafCert, "pki/issuer/root-ca")
+
+	// 4. Using a role-based default directory should allow us to control leaf
+	// issuance on the base and issuer-specific directories.
+	resp, err = client.Logical().WriteWithContext(testCtx, "pki/config/acme", map[string]interface{}{
+		"allowed_roles":            []string{"*"},
+		"allowed_issuers":          []string{"*"},
+		"default_directory_policy": "role:acme",
+	})
+	require.NoError(t, err, "failed to write config")
+	require.NotNil(t, resp)
+
+	resp, err = client.Logical().JSONMergePatch(testCtx, "pki/roles/acme", map[string]interface{}{
+		"ou":             "IT Security",
+		"organization":   []string{"Dadgar Corporation, Limited"},
+		"allow_any_name": true,
+	})
+	require.NoError(t, err, "failed to write role differentiator")
+	require.NotNil(t, resp)
+
+	for _, issuer := range []string{"", "default", "int-ca", "root-ca"} {
+		// Path should override role.
+		directory := "/v1/pki/issuer/" + issuer + "/acme/"
+		issuerPath := "/pki/issuer/" + issuer
+		if issuer == "" {
+			directory = "/v1/pki/acme/"
+			issuerPath = "/pki/issuer/int-ca"
+		} else if issuer == "default" {
+			issuerPath = "/pki/issuer/int-ca"
+		}
+
+		t.Logf("using directory: %v / issuer: %v", directory, issuerPath)
+
+		acmeClient := getAcmeClientForCluster(t, cluster, directory, nil)
+		leafCert := doACMEForDomainWithDNS(t, dns, acmeClient, []string{"role-restricted.dadgarcorp.com"})
+		require.Contains(t, leafCert.Subject.Organization, "Dadgar Corporation, Limited", "on directory: %v", directory)
+		require.Contains(t, leafCert.Subject.OrganizationalUnit, "IT Security", "on directory: %v", directory)
+		requireSignedByAtPath(t, client, leafCert, issuerPath)
+	}
+
+	// 5.
 }
 
 func markAuthorizationSuccess(t *testing.T, client *api.Client, acmeClient *acme.Client, acct *acme.Account,
