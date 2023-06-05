@@ -3270,6 +3270,129 @@ exec {
 	}
 }
 
+// TestExec_ExitCodes makes sure vault agent exits with the same
+// exit code as the exec app
+func TestExec_ExitCodes(t *testing.T) {
+	testAppBin := setupTestApp(t)
+	defer os.Remove(testAppBin)
+
+	vaultClient, cleanup := testVaultServer(t)
+	defer cleanup()
+
+	tokenFile := populateTempFile(t, "tokenfile.txt", vaultClient.Token())
+	defer os.Remove(tokenFile.Name())
+
+	// token file needs to have 600 permissions
+	if err := os.Chmod(tokenFile.Name(), 0o600); err != nil {
+		t.Fatalf("unable to change permissions of token file: %s", err)
+	}
+
+	testCases := map[string]struct {
+		exitCode   int
+		serverPort int
+	}{
+		"exits_successfully": {
+			exitCode:   0,
+			serverPort: 34000,
+		},
+		"exits_error_1": {
+			exitCode:   1,
+			serverPort: 34001,
+		},
+		"exits_error_255": {
+			exitCode:   255,
+			serverPort: 34002,
+		},
+	}
+
+	for tcName, testCase := range testCases {
+		t.Parallel()
+		t.Run(tcName, func(t *testing.T) {
+			config := fmt.Sprintf(`
+template_config {
+  static_secret_render_interval = "2s"
+}
+
+vault {
+  address = "%s"
+  tls_skip_verify = true
+}
+
+auto_auth {
+	method {
+		type = "token_file"
+    	config {
+      		token_file_path = "%s"
+		}
+	}
+}
+env_template "MY_DATABASE_USER" {
+  contents = "{{ with secret \"kv-v2/data/my-db\" }}{{ .Data.data.user }}{{ end }}"
+}
+env_template "MY_DATABASE_PASSWORD" {
+  contents = "{{ with secret \"kv-v2/data/my-db\" }}{{ .Data.data.password }}{{ end }}"
+}
+
+exec {
+	command = ["%s", "-port", "%d", "-exit-code", "%d"]
+}`, vaultClient.Address(), tokenFile.Name(), testAppBin, testCase.serverPort, testCase.exitCode)
+			configFile := makeTempFile(t, "config.hcl", config)
+
+			// enable kv-v2 backend
+			if err := vaultClient.Sys().Mount("kv-v2/", &api.MountInput{
+				Type: "kv-v2",
+			}); err != nil {
+				t.Fatal(err)
+			}
+
+			_, err := vaultClient.KVv2("kv-v2/").Put(context.Background(), "my-db", map[string]interface{}{
+				"user":     "dbuser",
+				"password": "password1",
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			_, agentCmd := testAgentCommand(t, nil)
+			agentCmd.client = vaultClient
+			agentCmd.startedCh = make(chan struct{})
+
+			// the command blocks, so run in go-routine
+			agentExitCodeCh := make(chan int, 1)
+			go func(exitCodeCh chan<- int) {
+				args := []string{"-config", configFile}
+				exitCodeCh <- agentCmd.Run(args)
+			}(agentExitCodeCh)
+
+			// wait until agent starts
+			select {
+			case <-agentCmd.startedCh:
+			case <-time.After(10 * time.Second):
+				t.Fatal("agent did not start within 10 seconds")
+			}
+			// agent started, give some time to populate env vars from vault
+			time.Sleep(10 * time.Second)
+
+			// now stop vault agent, the app should exit
+			close(agentCmd.ShutdownCh)
+
+			// wait until the vault agent command exits
+			// shouldn't take long, but we time it to make sure
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			select {
+			case <-ctx.Done():
+				t.Fatalf("vault agent didn't exit within the timeout")
+			case exitCode := <-agentExitCodeCh:
+				if exitCode != testCase.exitCode {
+					t.Fatalf("expected exit code to be %d, got %d", testCase.exitCode, exitCode)
+				}
+			}
+		})
+	}
+
+}
+
 // Get a randomly assigned port and then free it again before returning it.
 // There is still a race when trying to use it, but should work better
 // than a static port.
