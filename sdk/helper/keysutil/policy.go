@@ -2403,7 +2403,7 @@ func (p *Policy) SignCsr(keyVersion int, csrTemplate *x509.CertificateRequest) (
 		return nil, err
 	}
 
-	// NOTE: We cannot use the template as it is because it carries "signatureAlgorithm"
+	// Template cannot be used as it is because it carries "signatureAlgorithm"
 	// information that might not apply to the key we are going to use.
 	// NOTE: The x509.CertificateRequest type in Go's crypto/x509 package does
 	// not directly include a field for storing the email address. However, the
@@ -2477,22 +2477,22 @@ func (p *Policy) SignCsr(keyVersion int, csrTemplate *x509.CertificateRequest) (
 }
 
 func (p *Policy) ValidateLeafCertKeyMatch(keyVersion int, certPublicKeyAlgorithm x509.PublicKeyAlgorithm, certPublicKey any) (bool, error) {
-	var sameKeyType bool
+	var keyTypeMatches bool
 	switch p.Type {
 	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
 		if certPublicKeyAlgorithm == x509.ECDSA {
-			sameKeyType = true
+			keyTypeMatches = true
 		}
 	case KeyType_ED25519:
 		if certPublicKeyAlgorithm == x509.Ed25519 {
-			sameKeyType = true
+			keyTypeMatches = true
 		}
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
 		if certPublicKeyAlgorithm == x509.RSA {
-			sameKeyType = true
+			keyTypeMatches = true
 		}
 	}
-	if !sameKeyType {
+	if !keyTypeMatches {
 		// NOTE: Different type "names" might lead to confusion.
 		// NOTE: This shouldn't be a 500 status code error
 		return false, errutil.UserError{Err: fmt.Sprintf("provided leaf certificate public key type %s does not match the transit key type %s", certPublicKeyAlgorithm.String(), p.Type.String())}

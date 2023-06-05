@@ -118,7 +118,7 @@ func (b *backend) pathSignCsrWrite(ctx context.Context, req *logical.Request, d 
 	}
 
 	// FIXME: Remove
-	log.Println("signingKeyVersion: ", signingKeyVersion)
+	// log.Println("signingKeyVersion: ", signingKeyVersion)
 
 	pemCsr, err := p.SignCsr(signingKeyVersion, csrTemplate)
 	if err != nil {
@@ -127,7 +127,7 @@ func (b *backend) pathSignCsrWrite(ctx context.Context, req *logical.Request, d 
 	}
 
 	// FIXME: Remove
-	log.Printf("CSR:\n%s", pemCsr)
+	// log.Printf("CSR:\n%s", pemCsr)
 
 	// `csr` is returned as base64, what's wrong?
 	resp := &logical.Response{
@@ -204,29 +204,29 @@ func (b *backend) pathSetCertificateWrite(ctx context.Context, req *logical.Requ
 	return nil, nil
 }
 
-func parseCsr(csr string) (*x509.CertificateRequest, error) {
-	if csr == "" {
+func parseCsr(csrStr string) (*x509.CertificateRequest, error) {
+	if csrStr == "" {
 		return &x509.CertificateRequest{}, nil
 	}
 
-	block, _ := pem.Decode([]byte(csr))
+	block, _ := pem.Decode([]byte(csrStr))
 	if block == nil {
-		return nil, errors.New("failed to decode PEM Certificate Request")
+		return nil, errors.New("could not decode PEM certificate request")
 	}
 
-	csrTemplate, err := x509.ParseCertificateRequest(block.Bytes)
+	csr, err := x509.ParseCertificateRequest(block.Bytes)
 	if err != nil {
 		return nil, err
 	}
 
-	return csrTemplate, nil
+	return csr, nil
 }
 
-func parseCertificateChain(certChain string) ([]*x509.Certificate, error) {
+func parseCertificateChain(certChainStr string) ([]*x509.Certificate, error) {
 	certificates := []*x509.Certificate{}
 
 	pemCertBlocks := []*pem.Block{}
-	rest := []byte(certChain)
+	rest := []byte(certChainStr)
 	for len(rest) != 0 {
 		var pemCertBlock *pem.Block
 		pemCertBlock, rest = pem.Decode([]byte(rest))
