@@ -299,3 +299,16 @@ jobs:
     steps:
     - run: |
         tr -d '\n' <<< '${{ toJSON(needs.*.result) }}' | grep -q -v -E '(failure|cancelled)'
+  coverage:
+    needs:
+      - setup
+      - test-go
+    runs-on: ${{ fromJSON(needs.setup.outputs.compute-tiny) }}
+    steps:
+    - uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
+      id: download
+      with:
+        name: test-coverage
+    - run: |
+        directories=$(ls -m test-coverage)
+        go tool covdata percent -i=$(directories)
