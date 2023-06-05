@@ -46,6 +46,7 @@ export default class LicenseBanners extends Component {
 
   get licenseExpired() {
     if (!this.args.expiry) return false;
+
     return isAfter(timestamp.now(), new Date(this.args.expiry));
   }
 
