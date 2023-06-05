@@ -13,11 +13,15 @@ import errorMessage from 'vault/utils/error-message';
 import type RouterService from '@ember/routing/router-service';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type VersionService from 'vault/services/version';
+import type PkiConfigAcmeModel from 'vault/models/pki/config/acme';
+import type PkiConfigClusterModel from 'vault/models/pki/config/cluster';
 import type PkiConfigCrlModel from 'vault/models/pki/config/crl';
 import type PkiConfigUrlsModel from 'vault/models/pki/config/urls';
 import type { FormField, TtlEvent } from 'vault/app-types';
 
 interface Args {
+  acme: PkiConfigAcmeModel;
+  cluster: PkiConfigClusterModel;
   crl: PkiConfigCrlModel;
   urls: PkiConfigUrlsModel;
 }
@@ -50,9 +54,13 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
   *save(event: Event) {
     event.preventDefault();
     try {
-      yield this.args.urls.save();
-      yield this.args.crl.save();
-      this.flashMessages.success('Successfully updated configuration');
+      for (const model of ['cluster', 'acme', 'urls', 'crl']) {
+        // only call save() if user has permission
+        if (this.args[model as keyof Args].canSet) {
+          yield this.args[model as keyof Args].save();
+          this.flashMessages.success(`Successfully updated ${model} config`);
+        }
+      }
       this.router.transitionTo('vault.cluster.secrets.backend.pki.configuration.index');
     } catch (error) {
       this.invalidFormAlert = 'There was an error submitting this form.';

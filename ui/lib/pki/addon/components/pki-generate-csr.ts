@@ -91,9 +91,11 @@ export default class PkiGenerateCsrComponent extends Component<Args> {
         const useIssuer = yield this.getCapability();
         yield model.save({ adapterOptions: { actionType: 'generate-csr', useIssuer } });
         this.flashMessages.success('Successfully generated CSR.');
+        // This component shows the results, but call `onSave` for any side effects on parent
         if (onSave) {
           onSave();
         }
+        window?.scrollTo(0, 0);
       } else {
         this.modelValidations = state;
         this.alert = invalidFormMessage;

@@ -517,7 +517,7 @@ func (c *AgentCommand) Run(args []string) int {
 	var listeners []net.Listener
 
 	// If there are templates, add an in-process listener
-	if len(config.Templates) > 0 {
+	if len(config.Templates) > 0 || len(config.EnvTemplates) > 0 {
 		config.Listeners = append(config.Listeners, &configutil.Listener{Type: listenerutil.BufConnType})
 	}
 
