@@ -37,6 +37,7 @@ func Test_ACME(t *testing.T) {
 	tc := map[string]func(t *testing.T, cluster *VaultPkiCluster){
 		"certbot":           SubtestACMECertbot,
 		"certbot eab":       SubtestACMECertbotEab,
+		"acme.sh tls-alpn":  SubtestACMEACMEshTLSALPN,
 		"acme ip sans":      SubtestACMEIPAndDNS,
 		"acme wildcard":     SubtestACMEWildcardDNS,
 		"acme prevents ica": SubtestACMEPreventsICADNS,
@@ -701,6 +702,43 @@ func SubtestACMEPreventsICADNS(t *testing.T, cluster *VaultPkiCluster) {
 
 	doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, cr, provisioningFunc, "refusing to accept CSR with Basic Constraints extension")
 	pki.RemoveDNSRecordsForDomain(hostname)
+}
+
+func SubtestACMEACMEshTLSALPN(t *testing.T, cluster *VaultPkiCluster) {
+	// Setup the mount
+	pki, err := cluster.CreateAcmeMount("pki-acmesh-tls-alpn")
+	require.NoError(t, err, "failed setting up acme mount")
+	directory := "https://" + pki.GetActiveContainerIP() + ":8200/v1/pki/acme/directory"
+
+	// Start the container
+	vaultNetwork := cluster.GetContainerNetworkName()
+	t.Logf("Starting acme.sh on network=%v", vaultNetwork)
+
+	runner, result := GetACMEshContainer(t, vaultNetwork)
+	require.NotNil(t, result, "failed to start container")
+	require.NotNil(t, runner, "failed to start container")
+	defer runner.Stop(context.Background(), result.Container.ID)
+
+	// Get and provision its IP address.
+	networks, err := runner.GetNetworkAndAddresses(result.Container.ID)
+	require.NoError(t, err, "failed to get container network IP address")
+
+	ipAddr := networks[vaultNetwork]
+	hostname := "acmesh-tls-alpn-check-acme-client.dadgarcorp.com"
+
+	err = pki.AddHostname(hostname, ipAddr)
+	require.NoError(t, err, "failed to update vault host files")
+
+	// Now try an issuance.
+	issueAlpnCmd := []string{
+		"bash", "-i", "-c", "./acme.sh", "--issue", "--alpn", "-d", hostname,
+		"--insecure", "--server", directory, "--debug",
+	}
+	ctx := context.Background()
+	stdout, stderr, retcode, err := runner.RunCmdWithOutput(ctx, result.Container.ID, issueAlpnCmd)
+	t.Logf("ACME.sh Issue Command: %v\nstdout: %v\nstderr: %v\n", issueAlpnCmd, string(stdout), string(stderr))
+	require.NoError(t, err, "got error running issue command")
+	require.Equal(t, 0, retcode, "expected zero retcode issue command result")
 }
 
 func getDockerLog(t *testing.T) (func(s string), *pkiext.LogConsumerWriter, *pkiext.LogConsumerWriter) {
