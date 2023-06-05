@@ -3180,6 +3180,7 @@ exec {
 
 	_, agentCmd := testAgentCommand(t, logger)
 	agentCmd.client = vaultClient
+	agentCmd.startedCh = make(chan struct{})
 
 	// the command blocks, so run in go-routine
 	agentExitCodeCh := make(chan int, 1)
@@ -3188,9 +3189,15 @@ exec {
 		exitCodeCh <- agentCmd.Run(args)
 	}(agentExitCodeCh)
 
-	// wait a few seconds for the app to come up
-	// (starts _after_ the templates are rendered)
-	time.Sleep(5 * time.Second)
+	// wait until agent starts
+	select {
+	case <-agentCmd.startedCh:
+	case <-time.After(10 * time.Second):
+		t.Fatal("agent did not start within 10 seconds")
+	}
+
+	// agent started, give some time to populate env vars from vault
+	time.Sleep(10 * time.Second)
 
 	testAppAddr := fmt.Sprintf("http://localhost:%d", port)
 
