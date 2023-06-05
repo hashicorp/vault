@@ -3306,7 +3306,6 @@ func TestExec_ExitCodes(t *testing.T) {
 	}
 
 	for tcName, testCase := range testCases {
-		t.Parallel()
 		t.Run(tcName, func(t *testing.T) {
 			config := fmt.Sprintf(`
 template_config {
