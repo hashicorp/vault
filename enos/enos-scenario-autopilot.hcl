@@ -269,6 +269,7 @@ scenario "autopilot" {
       storage_node_prefix         = "upgrade_node"
       target_hosts                = step.create_vault_cluster_upgrade_targets.hosts
       unseal_method               = matrix.seal
+      enable_file_audit_device    = var.vault_enable_file_audit_device
     }
   }
 
