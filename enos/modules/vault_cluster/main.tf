@@ -61,7 +61,7 @@ locals {
       path    = "vault"
     })
   ]
-  audit_device_file_path = "/var/log/vault_audit.log"
+  audit_device_file_path = "/var/log/vault/vault_audit.log"
   vault_service_user     = "vault"
   enable_audit_device    = var.enable_file_audit_device && var.initialize_cluster
 }
