@@ -31,8 +31,8 @@ export default class LicenseBanners extends Component {
 
   constructor() {
     super(...arguments);
-    // do not dismiss any banners if the license id has changed indicating a new license has been invoked.
-    // do not dismiss any banners if the user has updated their version, which is indicated by a change in the this.args.expiry.
+    // do not dismiss any banners if the user has updated their license, which is indicated by a change in the this.args.expiry.
+    // do not dismiss any banners if the user has updated their version.
     const dismissedBanner = localStorage.getItem(
       `dismiss-license-banner-${this.currentVersion}-${this.args.expiry}`
     ); // returns either warning or expired`); // returns either warning or expired
