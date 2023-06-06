@@ -32,6 +32,11 @@ on:
         description: A comma-separated list of additional build tags to consider satisfied during the build.
         required: false
         type: string
+      coverage:
+       description: Whether to run the tests with code coverage
+       required: false
+       type: boolean 
+       default: false 
 
 env: ${{ fromJSON(inputs.env-vars) }}
 
@@ -175,8 +180,13 @@ jobs:
             VAULT_BINARY="$(pwd)/bin/vault"
             export VAULT_BINARY
           fi
-          
-          mkdir -p "test-coverage/${{ matrix.runner-index }}"
+          extra_flags="${{ inputs.extra-flags }}" 
+          test_args=""
+          if [ "${{ inputs.coverage }}" = "true" ]; then 
+            mkdir -p "test-coverage/${{ matrix.runner-index }}"
+            extra_flags+=" -cover -covermode=count"
+            test_args="-args -test.gocoverdir=$(pwd)/test-coverage/${{ matrix.runner-index }}"
+          fi
           
           # shellcheck disable=SC2086 # can't quote package list
           GOARCH=${{ inputs.go-arch }} \
@@ -187,11 +197,10 @@ jobs:
               -tags "${{ inputs.go-build-tags }}" \
               -timeout=${{ env.TIMEOUT_IN_MINUTES }}m \
               -parallel=20 \
-              -cover \
-              ${{ inputs.extra-flags }} \
+              "$extra_flags" \
                 \
               ${test_packages[${{ matrix.runner-index }}]} \
-              -args -test.gocoverdir="$(pwd)/test-coverage/${{ matrix.runner-index }}"
+              "$test_args" 
       - name: Prepare datadog-ci
         if: github.repository == 'hashicorp/vault' && always()
         continue-on-error: true
@@ -214,7 +223,8 @@ jobs:
           name: test-results-${{ matrix.runner-index }}
           path: test-results/
         if: always()
-      - name: Archive test coverage 
+      - name: Archive test coverage
+        if: ${{ inputs.coverage }}
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
           name: test-coverage

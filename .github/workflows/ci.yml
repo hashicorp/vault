@@ -138,6 +138,7 @@ jobs:
       go-build-tags: '${{ needs.setup.outputs.go-build-tags }},deadlock'
       runs-on: ${{ needs.setup.outputs.compute-larger }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
+      coverage: true
     secrets: inherit
   test-go-race:
     name: Run Go tests with data race detection
