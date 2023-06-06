@@ -8,14 +8,15 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/hex"
+	"fmt"
 	"net"
 	"net/http"
 	"path"
+	"sync"
 	"testing"
 	"time"
 
@@ -40,6 +41,7 @@ func Test_ACME(t *testing.T) {
 		"acme ip sans":      SubtestACMEIPAndDNS,
 		"acme wildcard":     SubtestACMEWildcardDNS,
 		"acme prevents ica": SubtestACMEPreventsICADNS,
+		"acme load test dns":    SubtestACMELoadDNS,
 	}
 
 	// Wrap the tests within an outer group, so that we run all tests
@@ -485,7 +487,7 @@ func doAcmeValidationWithGoLibrary(t *testing.T, directoryUrl string, acmeOrderI
 	}
 	httpClient := &http.Client{Transport: tr}
 
-	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	accountKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	require.NoError(t, err, "failed creating rsa account key")
 
 	t.Logf("Using the following url for the ACME directory: %s", directoryUrl)
@@ -495,7 +497,7 @@ func doAcmeValidationWithGoLibrary(t *testing.T, directoryUrl string, acmeOrderI
 		DirectoryURL: directoryUrl,
 	}
 
-	testCtx, cancelFunc := context.WithTimeout(context.Background(), 2*time.Minute)
+	testCtx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancelFunc()
 
 	// Create new account
@@ -626,6 +628,111 @@ func SubtestACMEWildcardDNS(t *testing.T, cluster *VaultPkiCluster) {
 	require.Contains(t, acmeCert.DNSNames, wildcard)
 	require.Equal(t, wildcard, acmeCert.Subject.CommonName)
 	pki.RemoveDNSRecordsForDomain(hostname)
+}
+
+func SubtestACMELoadDNS(t *testing.T, cluster *VaultPkiCluster) {
+	pki, err := cluster.CreateAcmeMount("pki-load-test")
+	require.NoError(t, err, "failed setting up acme mount")
+
+	// Since we interact with ACME from outside the container network the ACME
+	// configuration needs to be updated to use the host port and not the internal
+	// docker ip.
+	basePath, err := pki.UpdateClusterConfigLocalAddr()
+	require.NoError(t, err, "failed updating cluster config")
+
+	basename := "load-test.dadgarcorp.com"
+	clientFmt := "client-%d." + basename
+
+	// Do validation without a role first.
+	directoryUrl := basePath + "/acme/directory"
+
+	provisioningFunc := func(acmeClient *acme.Client, auths []*acme.Authorization) []*acme.Challenge {
+		// For each dns-01 challenge, place the record in the associated DNS resolver.
+		var challengesToAccept []*acme.Challenge
+		for _, auth := range auths {
+			for _, challenge := range auth.Challenges {
+				if challenge.Status != acme.StatusPending {
+					t.Logf("ignoring challenge not in status pending: %v", challenge)
+					continue
+				}
+
+				if challenge.Type == "dns-01" {
+					challengeBody, err := acmeClient.DNS01ChallengeRecord(challenge.Token)
+					require.NoError(t, err, "failed generating challenge response")
+
+					err = pki.AddDNSRecord("_acme-challenge."+auth.Identifier.Value, "TXT", challengeBody)
+					require.NoError(t, err, "failed setting DNS record")
+
+					challengesToAccept = append(challengesToAccept, challenge)
+				}
+			}
+		}
+
+		require.GreaterOrEqual(t, len(challengesToAccept), 1, "Need at least one challenge, got none")
+		return challengesToAccept
+	}
+
+	// Count controls how many clients are used in each cohort, and groups
+	// controls the number of test executions to do.
+	count := 100
+	groups := 1
+	var results []time.Duration
+	for group := 0; group < groups; group++ {
+		start := time.Now()
+
+		t.Logf("starting %v clients in group %v", count, group)
+		var wg sync.WaitGroup
+		for i := 0; i < count; i++ {
+			wg.Add(1)
+			go func(index int) {
+				hostname := fmt.Sprintf(clientFmt, index)
+				challengeName := "_acme-challenge."+hostname
+				defer pki.RemoveDNSRecordsForDomain(challengeName)
+
+				acmeOrderIdentifiers := []acme.AuthzID{
+					{Type: "dns", Value: hostname},
+				}
+				cr := &x509.CertificateRequest{
+					Subject:  pkix.Name{CommonName: hostname},
+				}
+
+				doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, cr, provisioningFunc, "")
+				wg.Done()
+			}(i)
+		}
+
+		t.Logf("waiting for %v clients in group %v", count, group)
+		wg.Wait()
+
+		end := time.Now()
+		msg := fmt.Sprintf("[%d] load test took %v for %v clients", group, end.Sub(start), count)
+		results = append(results, end.Sub(start))
+		t.Logf(msg)
+	}
+
+	min := results[0]
+	minIndex := 0
+	max := results[0]
+	maxIndex := 0
+	var total int64
+	for index, value := range results {
+		if value < min {
+			minIndex = index
+			min = value
+		}
+		if value > max {
+			maxIndex = index
+			max = value
+		}
+		total += int64(value)
+
+		t.Logf("run=%d took %v for 1000 clients", index, value)
+	}
+
+	avgDuration := time.Duration(total/int64(len(results)))
+	totalDuration := time.Duration(total)
+
+	t.Logf("min=%v@%v / max=%v@%v / avg=%v / total=%v / count=%v", min, minIndex, max, maxIndex, avgDuration, totalDuration, len(results))
 }
 
 func SubtestACMEPreventsICADNS(t *testing.T, cluster *VaultPkiCluster) {
