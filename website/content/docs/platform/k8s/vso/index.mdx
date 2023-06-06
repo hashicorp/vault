@@ -5,8 +5,6 @@ description: >-
   The Vault Secrets Operator allows Pods to consume Vault secrets natively from Kubernetes Secrets.
 ---
 
-@include 'vso-beta-note.mdx'
-
 # Vault Secrets Operator
 
 The Vault Secrets Operator (VSO) allows Pods to consume Vault secrets natively from Kubernetes Secrets.
@@ -36,9 +34,6 @@ The following features are supported by the Vault Secrets Operator:
 @include 'kubernetes-supported-versions.mdx'
 
 ## Vault Access and Custom Resource Definitions
-
-~> **Note:** Currently, the Operator only supports the [Kubernetes Auth Method](/vault/docs/auth/kubernetes).
-Over time, we will be adding support for more Vault Auth methods.
 
 The Vault connection and authentication configuration is provided by the `VaultConnection` and `VaultAuth` CRDs. These can be considered as
 foundational Custom Resources that all secret replication type resources will reference.
@@ -151,7 +146,7 @@ metadata:
 spec:
   vaultAuthRef: example
   mount: pki
-  name: default
+  role: default
   commonName: example.com
   format: pem
   expiryOffset: 1s
@@ -178,7 +173,7 @@ metadata:
 spec:
   vaultAuthRef: example
   mount: db
-  role: postgres
+  path: creds/postgres
   destination:
     create: true
     name: dynamic1
