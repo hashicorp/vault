@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 	"path"
 	"sync"
 	"testing"
@@ -626,6 +627,10 @@ func SubtestACMEWildcardDNS(t *testing.T, cluster *VaultPkiCluster) {
 }
 
 func SubtestACMELoadDNS(t *testing.T, cluster *VaultPkiCluster) {
+	if os.Getenv("CI") != "" {
+		t.Skip("Skipping somewhat expensive tests in CI")
+	}
+
 	// Count controls how many clients are used in each cohort, and groups
 	// controls the number of test executions to do.
 	count := 100
@@ -733,6 +738,10 @@ func SubtestACMELoadDNS(t *testing.T, cluster *VaultPkiCluster) {
 }
 
 func SubtestACMELoadHTTP(t *testing.T, cluster *VaultPkiCluster) {
+	if os.Getenv("CI") != "" {
+		t.Skip("Skipping somewhat expensive tests in CI")
+	}
+
 	// Count controls how many clients are used in each cohort, and groups
 	// controls the number of test executions to do.
 	count := 100
