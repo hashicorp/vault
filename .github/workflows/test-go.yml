@@ -37,6 +37,11 @@ on:
        required: false
        type: boolean 
        default: false 
+      name:
+        description: A suffix to append to archived test results
+        required: false
+        default: ''
+        type: string
 
 env: ${{ fromJSON(inputs.env-vars) }}
 
@@ -220,7 +225,7 @@ jobs:
       - name: Archive test results
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
-          name: test-results-${{ matrix.runner-index }}
+          name: test-results${{ inputs.name }}-${{ matrix.runner-index }}
           path: test-results/
         if: always()
       - name: Archive test coverage
