@@ -355,6 +355,7 @@ func TestCoreMetrics_EntityGauges(t *testing.T) {
 		})
 }
 
+// TestCoreMetrics_AvailablePolicies tests the that available metrics are getting correctly collected when the availablePoliciesGaugeCollector function is invoked
 func TestCoreMetrics_AvailablePolicies(t *testing.T) {
 	aclPolicy := map[string]interface{}{
 		"policy": base64.StdEncoding.EncodeToString([]byte(`path "ns1/secret/foo/*" {
@@ -379,7 +380,10 @@ func TestCoreMetrics_AvailablePolicies(t *testing.T) {
 				},
 			},
 			ExpectedValues: map[string]float32{
-				"acl": 1,
+				// The "default" policy will always be included
+				"acl": 2,
+				"egp": 0,
+				"rgp": 0,
 			},
 		},
 		"multiple acl": {
@@ -392,7 +396,10 @@ func TestCoreMetrics_AvailablePolicies(t *testing.T) {
 				},
 			},
 			ExpectedValues: map[string]float32{
-				"acl": 2,
+				// The "default" policy will always be included
+				"acl": 3,
+				"egp": 0,
+				"rgp": 0,
 			},
 		},
 	}
