@@ -38,10 +38,20 @@ func (b *backend) pathSignCsr() *framework.Path {
 are going to be used as a basis for the CSR with the key in transit. If not set, an empty CSR is returned.`,
 			},
 		},
-		Callbacks: map[logical.Operation]framework.OperationFunc{
+		Operations: map[logical.Operation]framework.OperationHandler{
 			// NOTE: Create and Update?
-			logical.CreateOperation: b.pathSignCsrWrite,
-			logical.UpdateOperation: b.pathSignCsrWrite,
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.pathSignCsrWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "create",
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathSignCsrWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "update",
+				},
+			},
 		},
 		// FIXME: Write synposis and description
 		HelpSynopsis:    "",
@@ -70,10 +80,20 @@ func (b *backend) pathSetCertificate() *framework.Path {
 				Description: `PEM encoded certificate chain.`,
 			},
 		},
-		Callbacks: map[logical.Operation]framework.OperationFunc{
+		Operations: map[logical.Operation]framework.OperationHandler{
 			// NOTE: Create and Update?
-			logical.CreateOperation: b.pathSetCertificateWrite,
-			logical.UpdateOperation: b.pathSetCertificateWrite,
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.pathSetCertificateWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "create",
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathSetCertificateWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "update",
+				},
+			},
 		},
 		// FIXME: Write synposis and description
 		HelpSynopsis:    "",
