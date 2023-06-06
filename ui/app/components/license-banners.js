@@ -33,9 +33,9 @@ export default class LicenseBanners extends Component {
     super(...arguments);
     // reset and show a previously dismissed license banner if:
     // the version has been updated or the license has been updated (indicated by a change in the expiry date).
-    const dismissedBanner = localStorage.getItem(this.dismissedBannerKey); // returns either warning or expired
+    const bannerType = localStorage.getItem(this.dismissedBannerKey); // returns either warning or expired
 
-    this.updateDismissType(dismissedBanner);
+    this.updateDismissType(bannerType);
   }
 
   get currentVersion() {
