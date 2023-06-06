@@ -649,6 +649,61 @@ func (ps *PolicyStore) ListPolicies(ctx context.Context, policyType PolicyType) 
 	return keys, err
 }
 
+// ListPoliciesForNamespace is used to list the available policies for the given namespace
+func (ps *PolicyStore) listPoliciesForNamespace(ctx context.Context, policyType PolicyType, ns *namespace.Namespace) ([]string, error) {
+	var err error
+	var keys []string
+
+	// Get the appropriate view based on policy type and namespace
+	ctx = namespace.ContextWithNamespace(ctx, ns)
+
+	// Scan the view, since the policy names are the same as the
+	// key names.
+	switch policyType {
+	case PolicyTypeACL:
+		view := ps.getACLView(ns)
+		if view == nil {
+			return []string{}, fmt.Errorf("unable to get the barrier subview for policy type %q", policyType)
+		}
+		keys, err = logical.CollectKeys(ctx, view)
+	case PolicyTypeRGP:
+		view := ps.getRGPView(ns)
+		if view == nil {
+			return []string{}, fmt.Errorf("unable to get the barrier subview for policy type %q", policyType)
+		}
+		return logical.CollectKeys(ctx, view)
+	case PolicyTypeEGP:
+		view := ps.getEGPView(ns)
+		if view == nil {
+			return []string{}, fmt.Errorf("unable to get the barrier subview for policy type %q", policyType)
+		}
+		return logical.CollectKeys(ctx, view)
+	default:
+		return nil, fmt.Errorf("unknown policy type %q", policyType)
+	}
+
+	// We only have non-assignable ACL policies at the moment
+	keys = strutil.Difference(keys, nonAssignablePolicies, false)
+
+	return keys, err
+}
+
+// ListPoliciesForNamespaces is used to list the available policies for the given namespaces
+func (ps *PolicyStore) ListPoliciesForNamespaces(ctx context.Context, policyType PolicyType, ns []*namespace.Namespace) ([]string, error) {
+	var err error
+	var keys []string
+
+	for _, nspace := range ns {
+		ks, err := ps.listPoliciesForNamespace(ctx, policyType, nspace)
+		if err != nil {
+			return []string{}, err
+		}
+		keys = append(keys, ks...)
+	}
+
+	return keys, err
+}
+
 // DeletePolicy is used to delete the named policy
 func (ps *PolicyStore) DeletePolicy(ctx context.Context, name string, policyType PolicyType) error {
 	return ps.switchedDeletePolicy(ctx, name, policyType, true, false)

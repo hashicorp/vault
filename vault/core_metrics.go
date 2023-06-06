@@ -301,6 +301,12 @@ func (c *Core) emitMetricsActiveNode(stopCh chan struct{}) {
 			c.activeEntityGaugeCollector,
 			"",
 		},
+		{
+			[]string{"policy", "available", "count"},
+			[]metrics.Label{{"gauge", "number_policies_by_type"}},
+			c.availablePoliciesGaugeCollector,
+			"",
+		},
 	}
 
 	// Disable collection if configured, or if we're a performance standby
@@ -564,4 +570,56 @@ func (c *Core) inFlightReqGaugeMetric() {
 	totalInFlightReq := c.inFlightReqData.InFlightReqCount.Load()
 	// Adding a gauge metric to capture total number of inflight requests
 	c.metricSink.SetGaugeWithLabels([]string{"core", "in_flight_requests"}, float32(totalInFlightReq), nil)
+}
+
+func (c *Core) availablePoliciesGaugeCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	if c.policyStore == nil {
+		return []metricsutil.GaugeLabelValues{}, nil
+	}
+
+	c.stateLock.RLock()
+	policyStore := c.policyStore
+	c.stateLock.RUnlock()
+
+	ctx = namespace.RootContext(ctx)
+	namespaces := c.collectNamespaces()
+
+	policyTypes := []PolicyType{
+		PolicyTypeACL,
+		PolicyTypeRGP,
+		PolicyTypeEGP,
+	}
+	var values []metricsutil.GaugeLabelValues
+
+	filterDefaultPolicies := func(policies []string) []string {
+		var p []string
+		for _, s := range policies {
+			if s != "default" {
+				p = append(p, s)
+			}
+		}
+		return p
+	}
+
+	for _, pt := range policyTypes {
+		policies, err := policyStore.ListPoliciesForNamespaces(ctx, pt, namespaces)
+		if err != nil {
+			return []metricsutil.GaugeLabelValues{}, err
+		}
+
+		// Filter the "default" policies
+		policies = filterDefaultPolicies(policies)
+
+		if len(policies) > 0 {
+			v := metricsutil.GaugeLabelValues{}
+			v.Labels = []metricsutil.Label{{
+				"policy_type",
+				pt.String(),
+			}}
+			v.Value = float32(len(policies))
+			values = append(values, v)
+		}
+	}
+
+	return values, nil
 }

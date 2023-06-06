@@ -319,3 +319,37 @@ func TestDefaultPolicy(t *testing.T) {
 		})
 	}
 }
+
+// TestPolicyStore_ListPoliciesForNamespaces tests the ListPoliciesForNamespaces function, which should return a list of policies for a given list of namespaces.
+func TestPolicyStore_ListPoliciesForNamespaces(t *testing.T) {
+	_, ps := mockPolicyWithCore(t, false)
+
+	ctxRoot := namespace.RootContext(context.Background())
+	rootNs := namespace.RootNamespace
+
+	parsedPolicy, _ := ParseACLPolicy(rootNs, aclPolicy)
+
+	err := ps.SetPolicy(ctxRoot, parsedPolicy)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Get should work
+	pResult, err := ps.GetPolicy(ctxRoot, "dev", PolicyTypeACL)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !reflect.DeepEqual(pResult, parsedPolicy) {
+		t.Fatalf("bad: %v", pResult)
+	}
+
+	out, err := ps.ListPoliciesForNamespaces(ctxRoot, PolicyTypeACL, []*namespace.Namespace{rootNs})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	expectedResult := []string{"default", "dev"}
+	if !reflect.DeepEqual(expectedResult, out) {
+		t.Fatalf("expected: %v\ngot: %v", expectedResult, out)
+	}
+}
