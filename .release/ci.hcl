@@ -14,6 +14,7 @@ project "vault" {
     release_branches = [
       "main",
       "release/**",
+	  "add-crt-prepare"
     ]
   }
 }
