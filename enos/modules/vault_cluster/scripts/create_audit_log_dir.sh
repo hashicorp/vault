@@ -1,4 +1,4 @@
-#!/bin/env sh
+#!/usr/bin/env bash
 
 set -eux
 
@@ -24,7 +24,7 @@ function retry {
   return 0
 }
 
-retry 7 id -a $SERVICE_USER
+retry 7 id -a "$SERVICE_USER"
 
 sudo mkdir -p "$LOG_DIR"
 sudo chown -R "$SERVICE_USER":"$SERVICE_USER" "$LOG_DIR"
