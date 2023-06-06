@@ -82,8 +82,7 @@ func (vpc *VaultPkiCluster) GetActiveNode() *api.Client {
 
 func (vpc *VaultPkiCluster) AddHostname(hostname, ip string) error {
 	if vpc.Dns != nil {
-		vpc.Dns.AddRecord(hostname, "A", ip)
-		vpc.Dns.PushConfig()
+		vpc.Dns.AddRecordAndPush(hostname, "A", ip)
 		return nil
 	} else {
 		return vpc.AddNameToHostFiles(hostname, ip)
@@ -115,8 +114,7 @@ func (vpc *VaultPkiCluster) AddDNSRecord(hostname, recordType, ip string) error 
 		return fmt.Errorf("no DNS server was provisioned on this cluster group; unable to provision custom records")
 	}
 
-	vpc.Dns.AddRecord(hostname, recordType, ip)
-	vpc.Dns.PushConfig()
+	vpc.Dns.AddRecordAndPush(hostname, recordType, ip)
 	return nil
 }
 
