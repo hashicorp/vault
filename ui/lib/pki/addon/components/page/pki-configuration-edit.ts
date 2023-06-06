@@ -43,28 +43,41 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
   @service declare readonly version: VersionService;
 
   @tracked invalidFormAlert = '';
-  @tracked errorBanner = '';
+  @tracked errorBanner: object[] = [];
 
   get isEnterprise() {
     return this.version.isEnterprise;
+  }
+
+  async performSave() {
+    for (const modelName of ['cluster', 'acme', 'urls', 'crl']) {
+      const model = this.args[modelName as keyof Args];
+      // only attempt save if user has permission
+      if (!model.canSet) continue;
+      try {
+        await model.save();
+        this.flashMessages.success(`Successfully updated config/${modelName}`);
+      } catch (error) {
+        const errorObject: { modelName: string; message: string } = {
+          modelName,
+          message: errorMessage(error),
+        };
+        this.flashMessages.danger(`Error updating config/${modelName}`, { sticky: true });
+        this.errorBanner.pushObject(errorObject);
+      }
+    }
   }
 
   @task
   @waitFor
   *save(event: Event) {
     event.preventDefault();
-    try {
-      for (const model of ['cluster', 'acme', 'urls', 'crl']) {
-        // only call save() if user has permission
-        if (this.args[model as keyof Args].canSet) {
-          yield this.args[model as keyof Args].save();
-          this.flashMessages.success(`Successfully updated ${model} config`);
-        }
-      }
-      this.router.transitionTo('vault.cluster.secrets.backend.pki.configuration.index');
-    } catch (error) {
+    yield this.performSave();
+
+    if (this.errorBanner.length) {
       this.invalidFormAlert = 'There was an error submitting this form.';
-      this.errorBanner = errorMessage(error);
+    } else {
+      this.router.transitionTo('vault.cluster.secrets.backend.pki.configuration.index');
     }
   }
 
