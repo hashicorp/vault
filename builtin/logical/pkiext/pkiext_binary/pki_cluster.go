@@ -89,6 +89,23 @@ func (vpc *VaultPkiCluster) AddHostname(hostname, ip string) error {
 	}
 }
 
+func (vpc *VaultPkiCluster) AddHostnameLazy(hostname, ip string) error {
+	if vpc.Dns != nil {
+		vpc.Dns.AddRecord(hostname, "A", ip)
+		return nil
+	} else {
+		return vpc.AddNameToHostFiles(hostname, ip)
+	}
+}
+
+func (vpc *VaultPkiCluster) PushHostnameConfig() error {
+	if vpc.Dns != nil {
+		vpc.Dns.PushConfig()
+	}
+
+	return nil
+}
+
 func (vpc *VaultPkiCluster) AddNameToHostFiles(hostname, ip string) error {
 	updateHostsCmd := []string{
 		"sh", "-c",
