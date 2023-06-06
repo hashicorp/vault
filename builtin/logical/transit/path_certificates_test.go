@@ -5,14 +5,25 @@ package transit
 
 import (
 	"context"
+	cryptoRand "crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/asn1"
+	"encoding/pem"
 	"reflect"
 
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/builtin/logical/pki"
+	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 
 	"testing"
 )
 
-func TestTransit_SignCSR(t *testing.T) {
+func TestTransit_Certs_SignCSR(t *testing.T) {
 	// NOTE: Use an existing CSR or generate one here?
 	templateCsr := `
 -----BEGIN CERTIFICATE REQUEST-----
@@ -83,7 +94,7 @@ func testTransit_SignCSR(t *testing.T, keyType, pemTemplateCsr string) {
 			t.Fatal("expected response data to hold a 'csr' field")
 		}
 
-		signedCsr, err := parseCsr(string(signedCsrBytes.([]byte)))
+		signedCsr, err := parseCsr(signedCsrBytes.(string))
 		if err != nil {
 			t.Errorf("failed to parse returned csr, err:%v", err)
 		}
@@ -105,5 +116,103 @@ func testTransit_SignCSR(t *testing.T, keyType, pemTemplateCsr string) {
 	}
 }
 
-func testSetCertificateChain(t *testing.T) {
+func TestTransit_Certs_SetCertificate(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"transit": Factory,
+			"pki":     pki.Factory,
+		},
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	cores := cluster.Cores
+
+	vault.TestWaitActive(t, cores[0].Core)
+
+	client := cores[0].Client
+
+	// Mount transit, write a key.
+	err := client.Sys().Mount("transit", &api.MountInput{
+		Type: "transit",
+	})
+	require.NoError(t, err)
+
+	_, err = client.Logical().Write("transit/keys/leaf", map[string]interface{}{
+		"type": "rsa-2048",
+	})
+	require.NoError(t, err)
+
+	// Setup a new CSR...
+	privKey, err := rsa.GenerateKey(cryptoRand.Reader, 3072)
+	// FIXME: Address error
+	require.NoError(t, err)
+
+	var csrTemplate x509.CertificateRequest
+	reqCsrBytes, err := x509.CreateCertificateRequest(cryptoRand.Reader, &csrTemplate, privKey)
+	// FIXME: Address error
+	require.NoError(t, err)
+
+	pemTemplateCsr := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE REQUEST",
+		Bytes: reqCsrBytes,
+	})
+	t.Logf("csr: %v", string(pemTemplateCsr))
+
+	// Create CSR from template CSR fields and key in transit
+	resp, err := client.Logical().Write("transit/keys/leaf/csr", map[string]interface{}{
+		"csr": string(pemTemplateCsr),
+	})
+	// FIXME: Handle this error
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	// FIXME: Also check?
+	pemCsr := resp.Data["csr"].(string)
+
+	// Mount PKI, generate a root, sign this CSR.
+	err = client.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+	})
+	require.NoError(t, err)
+
+	resp, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"common_name": "PKI Root X1",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	rootCertPEM := resp.Data["certificate"].(string)
+
+	pemBlock, _ := pem.Decode([]byte(rootCertPEM))
+	require.NotNil(t, pemBlock)
+
+	rootCert, err := x509.ParseCertificate(pemBlock.Bytes)
+	require.NoError(t, err)
+
+	// NOTE: basic_constraints_valid_for_non_ca
+	resp, err = client.Logical().Write("pki/issuer/default/sign-verbatim", map[string]interface{}{
+		"csr": string(pemCsr),
+		"ttl": "10m",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	leafCertPEM := resp.Data["certificate"].(string)
+	pemBlock, _ = pem.Decode([]byte(leafCertPEM))
+	require.NotNil(t, pemBlock)
+
+	leafCert, err := x509.ParseCertificate(pemBlock.Bytes)
+	require.NoError(t, err)
+	require.NoError(t, leafCert.CheckSignatureFrom(rootCert))
+	t.Logf("root: %v", rootCertPEM)
+	t.Logf("leaf: %v", leafCertPEM)
+
+	// Import certificate to transit key version
+	_, err = client.Logical().Write("transit/keys/leaf/set-certificate", map[string]interface{}{
+		"certificate_chain": leafCertPEM,
+	})
+	require.NoError(t, err)
 }

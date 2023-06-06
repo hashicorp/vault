@@ -149,12 +149,11 @@ func (b *backend) pathSignCsrWrite(ctx context.Context, req *logical.Request, d 
 	// FIXME: Remove
 	// log.Printf("CSR:\n%s", pemCsr)
 
-	// `csr` is returned as base64, what's wrong?
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"name": p.Name,
 			"type": p.Type.String(),
-			"csr":  pemCsr,
+			"csr":  string(pemCsr),
 		},
 	}
 
