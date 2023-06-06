@@ -39,7 +39,7 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-// TestAcmeBasicWorkflow a basic test that will validate a basic ACME workflow using the Golang ACME client.
+// TestAcmeBasicWorkflow a test that will validate a basic ACME workflow using the Golang ACME client.
 func TestAcmeBasicWorkflow(t *testing.T) {
 	t.Parallel()
 	cluster, client, _ := setupAcmeBackend(t)
@@ -276,6 +276,13 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 
 			testAcmeCertSignedByCa(t, client, certs, "int-ca")
 
+			// Make sure the certificate has a NotAfter date of a maximum of 90 days
+			acmeCert, err := x509.ParseCertificate(certs[0])
+			require.NoError(t, err, "failed parsing acme cert bytes")
+			maxAcmeNotAfter := time.Now().Add(maxAcmeCertTTL)
+			if maxAcmeNotAfter.Before(acmeCert.NotAfter) {
+				require.Fail(t, fmt.Sprintf("certificate has a NotAfter value %v greater than ACME max ttl %v", acmeCert.NotAfter, maxAcmeNotAfter))
+			}
 			// Deactivate account
 			t.Logf("Testing deactivate account on %s", baseAcmeURL)
 			err = acmeClient.DeactivateReg(testCtx)
@@ -1061,14 +1068,20 @@ func setupAcmeBackendOnClusterAtPath(t *testing.T, cluster *vault.TestCluster, c
 		err := client.WithNamespace(namespace).Sys().Mount(mountName, &api.MountInput{
 			Type: "pki",
 			Config: api.MountConfigInput{
-				DefaultLeaseTTL: "16h",
-				MaxLeaseTTL:     "60h",
+				DefaultLeaseTTL: "3000h",
+				MaxLeaseTTL:     "600000h",
 			},
 		})
 		require.NoError(t, err, "failed to mount new PKI instance at "+mount)
 	}
 
-	_, err := client.Logical().WriteWithContext(context.Background(), mount+"/config/cluster", map[string]interface{}{
+	err := client.Sys().TuneMountWithContext(ctx, mountName, api.MountConfigInput{
+		DefaultLeaseTTL: "3000h",
+		MaxLeaseTTL:     "600000h",
+	})
+	require.NoError(t, err, "failed updating mount lease times "+mount)
+
+	_, err = client.Logical().WriteWithContext(context.Background(), mount+"/config/cluster", map[string]interface{}{
 		"path":     pathConfig,
 		"aia_path": "http://localhost:8200/cdn/" + mount,
 	})
@@ -1110,8 +1123,8 @@ func setupAcmeBackendOnClusterAtPath(t *testing.T, cluster *vault.TestCluster, c
 	// Sign the intermediate CSR using /pki
 	resp, err = client.Logical().Write(mount+"/issuer/root-ca/sign-intermediate", map[string]interface{}{
 		"csr":     intermediateCSR,
-		"ttl":     "720h",
-		"max_ttl": "7200h",
+		"ttl":     "7100h",
+		"max_ttl": "910000h",
 	})
 	require.NoError(t, err, "failed signing intermediary CSR")
 	intermediateCertPEM := resp.Data["certificate"].(string)
@@ -1136,8 +1149,8 @@ func setupAcmeBackendOnClusterAtPath(t *testing.T, cluster *vault.TestCluster, c
 	require.NoError(t, err, "failed updating default issuer")
 
 	_, err = client.Logical().Write(mount+"/roles/test-role", map[string]interface{}{
-		"ttl_duration":                "365h",
-		"max_ttl_duration":            "720h",
+		"ttl_duration":                "168h",
+		"max_ttl_duration":            "168h",
 		"key_type":                    "any",
 		"allowed_domains":             "localdomain",
 		"allow_subdomains":            "true",
@@ -1146,8 +1159,8 @@ func setupAcmeBackendOnClusterAtPath(t *testing.T, cluster *vault.TestCluster, c
 	require.NoError(t, err, "failed creating role test-role")
 
 	_, err = client.Logical().Write(mount+"/roles/acme", map[string]interface{}{
-		"ttl_duration":     "365h",
-		"max_ttl_duration": "720h",
+		"ttl_duration":     "3650h",
+		"max_ttl_duration": "7200h",
 		"key_type":         "any",
 	})
 	require.NoError(t, err, "failed creating role acme")
