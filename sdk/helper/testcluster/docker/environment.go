@@ -419,6 +419,10 @@ func NewTestDockerCluster(t *testing.T, opts *DockerClusterOptions) *DockerClust
 		t.Fatal(err)
 	}
 	dc.Logger.Trace("cluster started", "helpful_env", fmt.Sprintf("VAULT_TOKEN=%s VAULT_CACERT=/vault/config/ca.pem", dc.GetRootToken()))
+	for index, node := range dc.ClusterNodes {
+		client := node.APIClient()
+		dc.Logger.Trace("cluster started", "node", index, "helpful_env", fmt.Sprintf("VAULT_ADDR=%s", client.Address()))
+	}
 	return dc
 }
 
