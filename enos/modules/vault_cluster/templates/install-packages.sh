@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -ex -o pipefail
+set -ux -o pipefail
 
 packages="${packages}"
 
@@ -33,7 +33,12 @@ echo "Installing Dependencies: $packages"
 if [ -f /etc/debian_version ]; then
   # Make sure cloud-init is not modifying our sources list while we're trying
   # to install.
-  retry 7 grep ec2 /etc/apt/sources.list
+  if [[ ! $(retry 7 grep ec2 /etc/apt/sources.list) ]]
+  then
+    echo "failed to wait for cloud-init to finish"
+    cat /etc/apt/sources.list
+    exit
+  fi
 
   cd /tmp
   retry 5 sudo apt update
