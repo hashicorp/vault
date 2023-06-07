@@ -5,4 +5,4 @@
 
 import Route from '@ember/routing/route';
 
-export default class SecretsSecretMetadataDetailsRoute extends Route {}
+export default class KvSecretMetadataDetailsRoute extends Route {}

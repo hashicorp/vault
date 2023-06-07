@@ -5,4 +5,4 @@
 
 import Route from '@ember/routing/route';
 
-export default class SecretsSecretEditRoute extends Route {}
+export default class KvSecretEditRoute extends Route {}
