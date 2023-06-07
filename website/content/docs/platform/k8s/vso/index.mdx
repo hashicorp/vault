@@ -125,7 +125,7 @@ The KV secrets engine's `kvv1` mount path is specified under `spec.mount` of `Va
 
 ```yaml
 ---
-apiVersion: secrets.hashicorp.com/v1alpha1
+apiVersion: secrets.hashicorp.com/v1beta1
 kind: VaultStaticSecret
 metadata:
   namespace: vso-example
@@ -180,7 +180,7 @@ metadata:
 spec:
   vaultAuthRef: example
   mount: pki
-  name: default
+  role: default
   commonName: example.com
   format: pem
   expiryOffset: 1s
@@ -226,7 +226,7 @@ The following results in a request to `http://127.0.0.1:8200/v1/aws/creds/my-iam
 
 ```yaml
 ---
-apiVersion: secrets.hashicorp.com/v1alpha1
+apiVersion: secrets.hashicorp.com/v1beta1
 kind: VaultDynamicSecret
 metadata:
   namespace: vso-example
@@ -244,7 +244,7 @@ The following results in a request to `http://127.0.0.1:8200/v1/aws/sts/my-sts-r
 
 ```yaml
 ---
-apiVersion: secrets.hashicorp.com/v1alpha1
+apiVersion: secrets.hashicorp.com/v1beta1
 kind: VaultDynamicSecret
 metadata:
   namespace: vso-example
