@@ -35,6 +35,8 @@ and GCP can be used without specifying credentials, by ensuring that the VMs on
 which Vault is running have been granted permission to access the specified
 object store.
 
+It is worth noting that, at the time of writing, Vault does not allow the use of AWS IAM Roles for EKS Service Accounts to authenticate to S3 buckets for the Automated Integrated Storage Snapshots.
+
 # vs Snapshot Agents
 
 Nomad and Consul Enterprise offer the same functionality in a slightly different way.
