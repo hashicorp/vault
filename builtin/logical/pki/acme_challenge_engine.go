@@ -430,7 +430,7 @@ func (ace *ACMEChallengeEngine) _verifyChallenge(sc *storageContext, id string, 
 
 		valid, err = ValidateTLSALPN01Challenge(authz.Identifier.Value, cv.Token, cv.Thumbprint, config)
 		if err != nil {
-			err = fmt.Errorf("%w: error validating tls-alpn-01 challenge %v: %s", ErrIncorrectResponse, id, err.Error())
+			err = fmt.Errorf("%w: error validating tls-alpn-01 challenge %v: %v: %v", ErrIncorrectResponse, id, err, ChallengeAttemptFailedMsg)
 			return ace._verifyChallengeRetry(sc, cv, authzPath, authz, challenge, err, id)
 		}
 	default:
