@@ -8,7 +8,7 @@ description: >-
 @include 'vso-beta-note.mdx'
 
 <!--
-  generated with crd-ref-docs --source-path api/v1beta1 --config docs/config.yaml --renderer=markdown in the vault-secrets-operator repo.
+  copied from docs/api/api-reference.md in the vault-secrets-operator repo.
   commit SHA=27cb53cd860b78aa0a33897ec66b1d175ccaf4f6
 -->
 # API Reference
@@ -59,7 +59,7 @@ _Appears in:_
 
 
 
-RolloutRestartTarget provides the configuration required to perform a rollout-restart of the supported resources upon Vault Secret rotation. The rollout-restart is triggered by patching the target resource's 'spec.template.metadata.annotations' to include 'vso.secrets.hashicorp.com/restartedAt' with a timestamp value of when the trigger was executed. E.g. vso.secrets.hashicorp.com/restartedAt: "2023-03-23T13:39:31Z" 
+RolloutRestartTarget provides the configuration required to perform a rollout-restart of the supported resources upon Vault Secret rotation. The rollout-restart is triggered by patching the target resource's 'spec.template.metadata.annotations' to include 'vso.secrets.hashicorp.com/restartedAt' with a timestamp value of when the trigger was executed. E.g. vso.secrets.hashicorp.com/restartedAt: "2023-03-23T13:39:31Z"
  Supported resources: Deployment, DaemonSet, StatefulSet
 
 _Appears in:_
