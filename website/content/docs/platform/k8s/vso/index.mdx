@@ -49,7 +49,7 @@ Provides the configuration necessary for the Operator to connect to a single Vau
 
 ```yaml
 ---
-apiVersion: secrets.hashicorp.com/v1alpha1
+apiVersion: secrets.hashicorp.com/v1beta1
 kind: VaultConnection
 metadata:
   namespace: vso-example
@@ -77,7 +77,7 @@ specified in a `VaultConnection` Custom Resource.
 
 ```yaml
 ---
-apiVersion: secrets.hashicorp.com/v1alpha1
+apiVersion: secrets.hashicorp.com/v1beta1
 kind: VaultAuth
 metadata:
   namespace: vso-example
@@ -121,7 +121,7 @@ Supported secrets engines: [kv-v2](/vault/docs/secrets/kv/kv-v2), [kv-v1](/vault
 
 ```yaml
 ---
-apiVersion: secrets.hashicorp.com/v1alpha1
+apiVersion: secrets.hashicorp.com/v1beta1
 kind: VaultStaticSecret
 metadata:
   namespace: vso-example
@@ -143,7 +143,7 @@ Supported secrets engines: [pki](/vault/docs/secrets/pki)
 
 ```yaml
 ---
-apiVersion: secrets.hashicorp.com/v1alpha1
+apiVersion: secrets.hashicorp.com/v1beta1
 kind: VaultPKISecret
 metadata:
   namespace: vso-example
@@ -170,7 +170,7 @@ Supported secrets engines *non-exhaustive*: [databases](/vault/docs/secrets/data
 
 ```yaml
 ---
-apiVersion: secrets.hashicorp.com/v1alpha1
+apiVersion: secrets.hashicorp.com/v1beta1
 kind: VaultDynamicSecret
 metadata:
   namespace: vso-example
