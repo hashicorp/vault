@@ -18,3 +18,7 @@ export default interface AdapterRegistry {
   application: Application;
   [key: keyof ModelRegistry]: Adapter;
 }
+
+export default interface AdapterError extends Error {
+  httpStatus: number;
+}

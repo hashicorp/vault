@@ -8,7 +8,7 @@ import { inject as service } from '@ember/service';
 import { withConfig } from 'kubernetes/decorators/fetch-config';
 import { hash } from 'rsvp';
 
-@withConfig()
+@withConfig('kubernetes/config')
 export default class KubernetesRolesRoute extends Route {
   @service store;
   @service secretMountPath;
@@ -17,7 +17,7 @@ export default class KubernetesRolesRoute extends Route {
     // filter roles based on pageFilter value
     const { pageFilter } = transition.to.queryParams;
     const roles = this.store
-      .query('kubernetes/role', { backend: this.secretMountPath.get() })
+      .query('kubernetes/role', { backend: this.secretMountPath.currentPath })
       .then((models) =>
         pageFilter
           ? models.filter((model) => model.name.toLowerCase().includes(pageFilter.toLowerCase()))
