@@ -219,8 +219,8 @@ HashiCorp collects the following utilization data as JSON payloads:
       - `mode` - The mode of operation associated with this metric (write or
         collect)
       - `labels` - The labels associated with each collected metric
-         - `entity` - The counter of tokens generated for a unique client identifier
-         - `nonentity` - The counter of tokens without an entity attached
+         - `entity` - The sum of tokens generated for a unique client identifier
+         - `nonentity` - The sum of tokens without an entity attached
 - `metadata` - Optional product-specific metadata
    - `billing_start` - The unique ID of the Replicated license
    - `cluster_id` - The Salesforce Opportunity ID associated with the license
