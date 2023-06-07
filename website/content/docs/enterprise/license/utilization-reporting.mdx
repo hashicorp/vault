@@ -222,9 +222,8 @@ HashiCorp collects the following utilization data as JSON payloads:
          - `entity` - The sum of tokens generated for a unique client identifier
          - `nonentity` - The sum of tokens without an entity attached
 - `metadata` - Optional product-specific metadata
-   - `billing_start` - The unique ID of the Replicated license
-   - `cluster_id` - The Salesforce Opportunity ID associated with the license
-
+   - `billing_start` - The billing start date associated with the reporting cluster (license start date if not configured)
+   - `cluster_id` - The cluster UUID as shown by `vault status` on the reporting cluster
 <CodeBlockConfig hideClipboard>
 
 ```json
