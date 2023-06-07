@@ -303,7 +303,7 @@ func ValidateTLSALPN01Challenge(domain string, token string, thumbprint string, 
 			// TODO: this does not validate that there are not other SANs
 			// with unknown (to Go) OIDs.
 			if len(cert.DNSNames) != 1 || len(cert.EmailAddresses) > 0 || len(cert.IPAddresses) > 0 || len(cert.URIs) > 0 {
-				return fmt.Errorf("server under test returned a certificate with too many SANs")
+				return fmt.Errorf("server under test returned a certificate with incorrect SANs")
 			}
 
 			// Per RFC 8737 Section 3. TLS with Application-Layer Protocol
