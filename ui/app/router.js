@@ -210,6 +210,7 @@ Router.map(function () {
       }
 
       this.route('not-found', { path: '/*path' });
+      this.route('dashboard');
     });
     this.route('not-found', { path: '/*path' });
   });
