@@ -43,16 +43,16 @@
     <Nav.Link
       @route="vault.cluster.replication.mode.index"
       @model="dr"
-      @text="DR Primary"
-      data-test-sidebar-nav-link="DR Primary"
+      @text="Disaster Recovery"
+      data-test-sidebar-nav-link="Disaster Recovery"
     />
 
     {{#if (has-feature "Performance Replication")}}
       <Nav.Link
         @route="vault.cluster.replication.mode.index"
         @model="performance"
-        @text="Performance Secondary"
-        data-test-sidebar-nav-link="Performance Secondary"
+        @text="Performance"
+        data-test-sidebar-nav-link="Performance"
       />
     {{/if}}
   {{/if}}
