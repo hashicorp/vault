@@ -417,6 +417,22 @@ func (ace *ACMEChallengeEngine) _verifyChallenge(sc *storageContext, id string, 
 			err = fmt.Errorf("%w: error validating dns-01 challenge %v: %v; %v", ErrIncorrectResponse, id, err, ChallengeAttemptFailedMsg)
 			return ace._verifyChallengeRetry(sc, cv, authzPath, authz, challenge, err, id)
 		}
+	case ACMEALPNChallenge:
+		if authz.Identifier.Type != ACMEDNSIdentifier {
+			err = fmt.Errorf("unsupported identifier type for authorization %v/%v in challenge %v: %v", cv.Account, cv.Authorization, id, authz.Identifier.Type)
+			return ace._verifyChallengeCleanup(sc, err, id)
+		}
+
+		if authz.Wildcard {
+			err = fmt.Errorf("unable to validate wildcard authorization %v/%v in challenge %v via tls-alpn-01 challenge", cv.Account, cv.Authorization, id)
+			return ace._verifyChallengeCleanup(sc, err, id)
+		}
+
+		valid, err = ValidateTLSALPN01Challenge(authz.Identifier.Value, cv.Token, cv.Thumbprint, config)
+		if err != nil {
+			err = fmt.Errorf("%w: error validating tls-alpn-01 challenge %v: %s", ErrIncorrectResponse, id, err.Error())
+			return ace._verifyChallengeRetry(sc, cv, authzPath, authz, challenge, err, id)
+		}
 	default:
 		err = fmt.Errorf("unsupported ACME challenge type %v for challenge %v", cv.ChallengeType, id)
 		return ace._verifyChallengeCleanup(sc, err, id)

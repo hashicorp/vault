@@ -185,7 +185,7 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			require.False(t, domainAuth.Wildcard, "should not be a wildcard")
 			require.True(t, domainAuth.Expires.IsZero(), "authorization should only have expiry set on valid status")
 
-			require.Len(t, domainAuth.Challenges, 2, "expected two challenges")
+			require.Len(t, domainAuth.Challenges, 3, "expected three challenges")
 			require.Equal(t, acme.StatusPending, domainAuth.Challenges[0].Status)
 			require.True(t, domainAuth.Challenges[0].Validated.IsZero(), "validated time should be 0 on challenge")
 			require.Equal(t, "http-01", domainAuth.Challenges[0].Type)
@@ -194,6 +194,10 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			require.True(t, domainAuth.Challenges[1].Validated.IsZero(), "validated time should be 0 on challenge")
 			require.Equal(t, "dns-01", domainAuth.Challenges[1].Type)
 			require.NotEmpty(t, domainAuth.Challenges[1].Token, "missing challenge token")
+			require.Equal(t, acme.StatusPending, domainAuth.Challenges[2].Status)
+			require.True(t, domainAuth.Challenges[2].Validated.IsZero(), "validated time should be 0 on challenge")
+			require.Equal(t, "tls-alpn-01", domainAuth.Challenges[2].Type)
+			require.NotEmpty(t, domainAuth.Challenges[2].Token, "missing challenge token")
 
 			// Test the values for the wildcard authentication
 			require.Equal(t, acme.StatusPending, wildcardAuth.Status)
@@ -202,7 +206,7 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			require.True(t, wildcardAuth.Wildcard, "should be a wildcard")
 			require.True(t, wildcardAuth.Expires.IsZero(), "authorization should only have expiry set on valid status")
 
-			require.Len(t, wildcardAuth.Challenges, 1, "expected two challenges")
+			require.Len(t, wildcardAuth.Challenges, 1, "expected one challenge")
 			require.Equal(t, acme.StatusPending, domainAuth.Challenges[0].Status)
 			require.True(t, wildcardAuth.Challenges[0].Validated.IsZero(), "validated time should be 0 on challenge")
 			require.Equal(t, "dns-01", wildcardAuth.Challenges[0].Type)
@@ -1255,7 +1259,7 @@ func TestAcmeValidationError(t *testing.T) {
 		authorizations = append(authorizations, auth)
 	}
 	require.Len(t, authorizations, 1, "expected a certain number of authorizations")
-	require.Len(t, authorizations[0].Challenges, 2, "expected a certain number of challenges associated with authorization")
+	require.Len(t, authorizations[0].Challenges, 3, "expected a certain number of challenges associated with authorization")
 
 	acceptedAuth, err := acmeClient.Accept(testCtx, authorizations[0].Challenges[0])
 	require.NoError(t, err, "Should have been allowed to accept challenge 1")
