@@ -22,6 +22,8 @@ import (
 	"golang.org/x/net/idna"
 )
 
+var maxAcmeCertTTL = 90 * (24 * time.Hour)
+
 func pathAcmeListOrders(b *backend) []*framework.Path {
 	return buildAcmeFrameworkPaths(b, patternAcmeListOrders, "/orders")
 }
@@ -234,11 +236,9 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, _ *logical.Request, 
 		return nil, err
 	}
 
-	if order.Status == ACMEOrderPending {
-		// Lets see if we can update our order status to ready if all the authorizations have been completed.
-		if requiredAuthorizationsCompleted(b, ac, uc, order) {
-			order.Status = ACMEOrderReady
-		}
+	order.Status, err = computeOrderStatus(ac, uc, order)
+	if err != nil {
+		return nil, err
 	}
 
 	if order.Status != ACMEOrderReady {
@@ -293,23 +293,62 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, _ *logical.Request, 
 	return formatOrderResponse(ac, order), nil
 }
 
-func requiredAuthorizationsCompleted(b *backend, ac *acmeContext, uc *jwsCtx, order *acmeOrder) bool {
-	if len(order.AuthorizationIds) == 0 {
-		return false
+func computeOrderStatus(ac *acmeContext, uc *jwsCtx, order *acmeOrder) (ACMEOrderStatusType, error) {
+	// If we reached a final stage, no use computing anything else
+	if order.Status == ACMEOrderInvalid || order.Status == ACMEOrderValid {
+		return order.Status, nil
 	}
 
+	// We aren't in a final state yet, check for expiry
+	if time.Now().After(order.Expires) {
+		return ACMEOrderInvalid, nil
+	}
+
+	// Intermediary steps passed authorizations should short circuit us as well
+	if order.Status == ACMEOrderReady || order.Status == ACMEOrderProcessing {
+		return order.Status, nil
+	}
+
+	// If we have no authorizations attached to the order, nothing to compute either
+	if len(order.AuthorizationIds) == 0 {
+		return ACMEOrderPending, nil
+	}
+
+	anyFailed := false
+	allPassed := true
 	for _, authId := range order.AuthorizationIds {
-		authorization, err := b.acmeState.LoadAuthorization(ac, uc, authId)
+		authorization, err := ac.getAcmeState().LoadAuthorization(ac, uc, authId)
 		if err != nil {
-			return false
+			return order.Status, fmt.Errorf("failed loading authorization: %s: %w", authId, err)
+		}
+
+		if authorization.Status == ACMEAuthorizationPending {
+			allPassed = false
+			continue
 		}
 
 		if authorization.Status != ACMEAuthorizationValid {
-			return false
+			// Per RFC 8555 - 7.1.6. Status Changes
+			// The order also moves to the "invalid" state if it expires or
+			// one of its authorizations enters a final state other than
+			// "valid" ("expired", "revoked", or "deactivated").
+			allPassed = false
+			anyFailed = true
+			break
 		}
 	}
 
-	return true
+	if anyFailed {
+		return ACMEOrderInvalid, nil
+	}
+
+	if allPassed {
+		return ACMEOrderReady, nil
+	}
+
+	// The order has not expired, no authorizations have yet to be marked as failed
+	// nor have we passed them all.
+	return ACMEOrderPending, nil
 }
 
 func validateCsrNotUsingAccountKey(csr *x509.CertificateRequest, uc *jwsCtx) error {
@@ -473,6 +512,16 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 		role:    ac.role,
 	}
 
+	normalNotAfter, _, err := getCertificateNotAfter(ac.sc.Backend, input, signingBundle)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed computing certificate TTL from role/mount: %v: %w", err, ErrMalformed)
+	}
+
+	// Force a maximum 90 day TTL or lower for ACME
+	if time.Now().Add(maxAcmeCertTTL).Before(normalNotAfter) {
+		input.apiData.Raw["ttl"] = maxAcmeCertTTL
+	}
+
 	if csr.PublicKeyAlgorithm == x509.UnknownPublicKeyAlgorithm || csr.PublicKey == nil {
 		return nil, "", fmt.Errorf("%w: Refusing to sign CSR with empty PublicKey", ErrBadCSR)
 	}
@@ -551,11 +600,9 @@ func (b *backend) acmeGetOrderHandler(ac *acmeContext, _ *logical.Request, field
 		return nil, err
 	}
 
-	if order.Status == ACMEOrderPending {
-		// Lets see if we can update our order status to ready if all the authorizations have been completed.
-		if requiredAuthorizationsCompleted(b, ac, uc, order) {
-			order.Status = ACMEOrderReady
-		}
+	order.Status, err = computeOrderStatus(ac, uc, order)
+	if err != nil {
+		return nil, err
 	}
 
 	// Per RFC 8555 -> 7.1.3.  Order Objects

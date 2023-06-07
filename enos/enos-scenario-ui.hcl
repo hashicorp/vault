@@ -153,12 +153,13 @@ scenario "ui" {
         edition = var.backend_edition
         version = local.consul_version
       } : null
-      install_dir         = local.vault_install_dir
-      license             = matrix.edition != "oss" ? step.read_license.license : null
-      local_artifact_path = local.bundle_path
-      storage_backend     = matrix.backend
-      target_hosts        = step.create_vault_cluster_targets.hosts
-      unseal_method       = local.seal
+      install_dir              = local.vault_install_dir
+      license                  = matrix.edition != "oss" ? step.read_license.license : null
+      local_artifact_path      = local.bundle_path
+      storage_backend          = matrix.backend
+      target_hosts             = step.create_vault_cluster_targets.hosts
+      unseal_method            = local.seal
+      enable_file_audit_device = var.vault_enable_file_audit_device
     }
   }
 
@@ -242,5 +243,10 @@ scenario "ui" {
   output "ui_test_stdout" {
     description = "The stdout of the ui tests that ran"
     value       = step.test_ui.ui_test_stdout
+  }
+
+  output "vault_audit_device_file_path" {
+    description = "The file path for the file audit device, if enabled"
+    value       = step.create_vault_cluster.audit_device_file_path
   }
 }

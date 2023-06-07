@@ -311,7 +311,7 @@ func (c *Config) ValidateConfig() error {
 	}
 
 	if c.Cache != nil {
-		if len(c.Listeners) < 1 && len(c.Templates) < 1 {
+		if len(c.Listeners) < 1 && len(c.Templates) < 1 && len(c.EnvTemplates) < 1 {
 			return fmt.Errorf("enabling the cache requires at least 1 template or 1 listener to be defined")
 		}
 
@@ -646,7 +646,7 @@ func LoadConfigFile(path string) (*Config, error) {
 		return nil, fmt.Errorf("error parsing 'env_template': %w", err)
 	}
 
-	if result.Cache != nil && result.APIProxy == nil {
+	if result.Cache != nil && result.APIProxy == nil && (result.Cache.UseAutoAuthToken || result.Cache.ForceAutoAuthToken) {
 		result.APIProxy = &APIProxy{
 			UseAutoAuthToken:   result.Cache.UseAutoAuthToken,
 			ForceAutoAuthToken: result.Cache.ForceAutoAuthToken,
