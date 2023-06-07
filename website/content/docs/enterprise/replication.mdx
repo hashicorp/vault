@@ -46,12 +46,13 @@ exchanged during bootstrapping.
 
 What data is replicated between the primary and secondary depends on the type of
 replication that is configured between the primary and secondary. These types
-of relationships are either **disaster recovery** (DR) or
-**performance replication** (PR) relationships.
+of relationships are either **disaster recovery** or
+**performance replication** relationships.
 
 ![](/img/replication-overview.png)
 
-The following table shows a capability comparison between Disaster Recovery and Performance Replication.
+The following table shows a capability comparison between Disaster Recovery
+and Performance Replication.
 
 | Capability                                                                                                           | Disaster Recovery | Performance Replication                                                                                                                                                                        |
 | -------------------------------------------------------------------------------------------------------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -62,25 +63,26 @@ The following table shows a capability comparison between Disaster Recovery and 
 
 Everything written to storage is classified into one of three categories:
 * `replicated` (or "shared"): all downstream clusters receive it
-* `local`: only downstream DR clusters receive it
+* `local`: only downstream disaster recovery clusters receive it
 * `ignored`: not replicated to downstream clusters at all
 
 When mounting a secret engine or auth method, you can choose whether to make it a
 local mount or a shared mount.
 
-Shared mounts (the default) usually replicate all their data to PR secondaries, but
+Shared mounts (the default) usually replicate all their data to performance secondaries, but
 they can choose to designate specific storage paths as local.  For example, PKI mounts
 store certificates locally. If you query the roles on a shared PKI mount, you'll see
-the same result for that mount when you send the query to either the PR primary or
+the same result for that mount when you send the query to either the performance primary or
 secondary, but if you list stored certs, you'll see different values.
 
-Local mounts replicate their data only to DR secondaries.  A local mount created on a PR
-primary isn't visible at all to its PR secondaries. Local mounts can also be created on
-PR secondaries, in which case they aren't visible to the PR primary.
+Local mounts replicate their data only to disaster recovery secondaries.  A local mount
+created on a performance primary isn't visible at all to its performance secondaries.
+Local mounts can also be created on performance secondaries, in which case they aren't visible
+to the performance primary.
 
 There exist other storage entries that aren't mount specific.  For example, the Integrated
-Storage Autopilot configuration is an `ignored` storage entry, which allows for DR secondaries
-to have a different configuration than their primary.  Tokens and leases are written to
+Storage Autopilot configuration is an `ignored` storage entry, which allows for disaster recovery
+secondaries to have a different configuration than their primary.  Tokens and leases are written to
 `local` storage entries.
 
 ## Performance Replication
