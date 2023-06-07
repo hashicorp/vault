@@ -1020,6 +1020,10 @@
             "path": "agent-and-proxy/agent/apiproxy"
           },
           {
+            "title": "Exec",
+            "path": "agent-and-proxy/agent/exec"
+          },
+          {
             "title": "Caching",
             "routes": [
               {
