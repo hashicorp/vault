@@ -119,6 +119,32 @@ Each supported CRD is specialized to a *class* of Vault secret, documented below
 Provides the configuration necessary for the Operator to synchronize a single Vault *static* Secret to a single Kubernetes Secret.<br />
 Supported secrets engines: [kv-v2](/vault/docs/secrets/kv/kv-v2), [kv-v1](/vault/docs/secrets/kv/kv-v1)
 
+##### KV version 1 secret example
+
+The KV version 1 secrets engine's `kvv1` mounted path is specified under `spec.mount` of `VaultStaticSecret` custom resource. Please consult [KV Secrets Engine - Version 1 - Setup](/vault/docs/secrets/kv-v1#setup) for configuring KV secrets engine version 1. The following results in a request to `http://127.0.0.1:8200/v1/kvv1/eng/apikey/google` to retrieve the secret.
+
+```yaml
+---
+apiVersion: secrets.hashicorp.com/v1alpha1
+kind: VaultStaticSecret
+metadata:
+  namespace: vso-example
+  name: example
+spec:
+  vaultAuthRef: example
+  mount: kvv1
+  type: kv-v1
+  path: eng/apikey/google
+  refreshAfter: 60s
+  destination:
+    create: true
+    name: static-secret1
+```
+
+##### KV version 2 secret example
+
+The KV version 2 secrets engine's `kvv2` mounted path is specified under `spec.mount` of `VaultStaticSecret` custom resource. Please consult [KV Secrets Engine - Version 2 - Setup](/vault/docs/secrets/kv-v2#setup) for configuring KV secrets engine version 2. The following results in a request to `http://127.0.0.1:8200/v1/kvv2/data/eng/apikey/google?version=2` to retrieve the secret.
+
 ```yaml
 ---
 apiVersion: secrets.hashicorp.com/v1alpha1
@@ -130,11 +156,12 @@ spec:
   vaultAuthRef: example
   mount: kvv2
   type: kv-v2
-  name: secret
+  path: eng/apikey/google
+  version: 2
   refreshAfter: 60s
   destination:
     create: true
-    name: static-secret1
+    name: static-secret2
 ```
 
 ### VaultPKISecret Custom Resource
