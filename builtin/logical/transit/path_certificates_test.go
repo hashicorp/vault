@@ -8,8 +8,7 @@ import (
 	cryptoRand "crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
-	"crypto/x509/pkix"
-	"encoding/asn1"
+
 	"encoding/pem"
 	"reflect"
 
@@ -153,6 +152,8 @@ func TestTransit_Certs_SetCertificate(t *testing.T) {
 	require.NoError(t, err)
 
 	var csrTemplate x509.CertificateRequest
+	csrTemplate.PublicKeyAlgorithm = x509.RSA
+	csrTemplate.Subject.CommonName = "example.com"
 	reqCsrBytes, err := x509.CreateCertificateRequest(cryptoRand.Reader, &csrTemplate, privKey)
 	// FIXME: Address error
 	require.NoError(t, err)
@@ -192,9 +193,16 @@ func TestTransit_Certs_SetCertificate(t *testing.T) {
 	rootCert, err := x509.ParseCertificate(pemBlock.Bytes)
 	require.NoError(t, err)
 
-	// NOTE: basic_constraints_valid_for_non_ca
-	resp, err = client.Logical().Write("pki/issuer/default/sign-verbatim", map[string]interface{}{
-		"csr": string(pemCsr),
+	// Create Role
+	resp, err = client.Logical().Write("pki/roles/example-dot-com", map[string]interface{}{
+		"allowed_domains":                    "example.com",
+		"allow_bare_domains":                 true,
+		"basic_constraints_valid_for_non_ca": true,
+	})
+	require.NoError(t, err)
+
+	resp, err = client.Logical().Write("pki/sign/example-dot-com", map[string]interface{}{
+		"csr": pemCsr,
 		"ttl": "10m",
 	})
 	require.NoError(t, err)
