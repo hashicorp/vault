@@ -121,7 +121,7 @@ Supported secrets engines: [kv-v2](/vault/docs/secrets/kv/kv-v2), [kv-v1](/vault
 
 ##### KV version 1 secret example
 
-The KV secrets engine's `kvv1` mounted path is specified under `spec.mount` of `VaultStaticSecret` custom resource. Please consult [KV Secrets Engine - Version 1 - Setup](/vault/docs/secrets/kv-v1#setup) for configuring KV secrets engine version 1. The following results in a request to `http://127.0.0.1:8200/v1/kvv1/eng/apikey/google` to retrieve the secret.
+The KV secrets engine's `kvv1` mount path is specified under `spec.mount` of `VaultStaticSecret` custom resource. Please consult [KV Secrets Engine - Version 1 - Setup](/vault/docs/secrets/kv-v1#setup) for configuring KV secrets engine version 1. The following results in a request to `http://127.0.0.1:8200/v1/kvv1/eng/apikey/google` to retrieve the secret.
 
 ```yaml
 ---
@@ -143,7 +143,7 @@ spec:
 
 ##### KV version 2 secret example
 
-The KV secrets engine's `kvv2` mounted path is specified under `spec.mount` of `VaultStaticSecret` custom resource. Please consult [KV Secrets Engine - Version 2 - Setup](/vault/docs/secrets/kv-v2#setup) for configuring KV secrets engine version 2. The following results in a request to `http://127.0.0.1:8200/v1/kvv2/data/eng/apikey/google?version=2` to retrieve the secret.
+The KV secrets engine's `kvv2` mount path is specified under `spec.mount` of `VaultStaticSecret` custom resource. Please consult [KV Secrets Engine - Version 2 - Setup](/vault/docs/secrets/kv-v2#setup) for configuring KV secrets engine version 2. The following results in a request to `http://127.0.0.1:8200/v1/kvv2/data/eng/apikey/google?version=2` to retrieve the secret.
 
 ```yaml
 ---
@@ -168,7 +168,7 @@ spec:
 Provides the configuration necessary for the Operator to synchronize a single Vault *PKI* Secret to a single Kubernetes Secret.<br />
 Supported secrets engines: [pki](/vault/docs/secrets/pki)
 
-The PKI secrets engine's mounted path is specified under `spec.mount` of `VaultPKISecret` custom resource. Please consult [PKI Secrets Engine - Setup and Usage](/vault/docs/secrets/pki/setup) for configuring PKI secrets engine. The following results in a request to `http://127.0.0.1:8200/v1/pki/issue/default` to generate TLS certificates.
+The PKI secrets engine's mount path is specified under `spec.mount` of `VaultPKISecret` custom resource. Please consult [PKI Secrets Engine - Setup and Usage](/vault/docs/secrets/pki/setup) for configuring PKI secrets engine. The following results in a request to `http://127.0.0.1:8200/v1/pki/issue/default` to generate TLS certificates.
 
 ```yaml
 ---
@@ -199,7 +199,7 @@ Supported secrets engines *non-exhaustive*: [databases](/vault/docs/secrets/data
 
 ##### Database secret example
 
-The database secret engine's `db` mounted path is specified under `spec.mount` of `VaultDynamicSecret` custom resource. Please consult [Database Secrets Engine - Setup](/vault/docs/secrets/databases#setup) for configuring the database secrets engine. The following results in a request to `http://127.0.0.1:8200/v1/db/creds/my-postgresql-role` to generate a new credential.
+The database secret engine's `db` mount path is specified under `spec.mount` of `VaultDynamicSecret` custom resource. Please consult [Database Secrets Engine - Setup](/vault/docs/secrets/databases#setup) for configuring the database secrets engine. The following results in a request to `http://127.0.0.1:8200/v1/db/creds/my-postgresql-role` to generate a new credential.
 
 ```yaml
 ---
@@ -219,7 +219,7 @@ spec:
 
 ##### AWS secret example
 
-The AWS secrets engine's `aws` mounted path is specified under `spec.mount` of `VaultDynamicSecret` custom resource. Please consult [AWS Secrets Engine - Setup](/vault/docs/secrets/aws#setup) for configuring AWS secrets engine.
+The AWS secrets engine's `aws` mount path is specified under `spec.mount` of `VaultDynamicSecret` custom resource. Please consult [AWS Secrets Engine - Setup](/vault/docs/secrets/aws#setup) for configuring AWS secrets engine.
 
 The following results in a request to `http://127.0.0.1:8200/v1/aws/creds/my-iam-role` to generate a new IAM credential.
 
