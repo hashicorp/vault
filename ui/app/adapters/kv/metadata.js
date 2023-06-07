@@ -10,7 +10,6 @@ export default class KvMetadataAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
   _urlForMetadata(backend, path) {
-    // path is "kv-test/2/my-secret"
     return `${this.buildURL()}/${encodePath(backend)}/metadata/${encodePath(path)}`;
   }
 
