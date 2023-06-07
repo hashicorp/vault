@@ -31,7 +31,6 @@ const (
 )
 
 var (
-	caseSensitivityKey           = "casesensitivity"
 	parseExtraEntityFromBucket   = func(context.Context, *IdentityStore, *identity.Entity) (bool, error) { return false, nil }
 	addExtraEntityDataToResponse = func(*identity.Entity, map[string]interface{}) {}
 )
@@ -645,15 +644,7 @@ func (i *IdentityStore) initialize(ctx context.Context, req *logical.Initializat
 	if err := i.storeOIDCDefaultResources(ctx, req.Storage); err != nil {
 		return err
 	}
-
-	entry, err := logical.StorageEntryJSON(caseSensitivityKey, &casesensitivity{
-		DisableLowerCasedNames: i.disableLowerCasedNames,
-	})
-	if err != nil {
-		return err
-	}
-
-	return i.view.Put(ctx, entry)
+	return nil
 }
 
 // Invalidate is a callback wherein the backend is informed that the value at

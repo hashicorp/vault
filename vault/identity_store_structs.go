@@ -111,10 +111,6 @@ type groupDiff struct {
 	Unmodified []*identity.Group
 }
 
-type casesensitivity struct {
-	DisableLowerCasedNames bool `json:"disable_lower_cased_names"`
-}
-
 type LocalNode interface {
 	ReplicationState() consts.ReplicationState
 	HAState() consts.HAState
