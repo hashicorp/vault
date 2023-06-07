@@ -799,7 +799,7 @@ func generateAuthorization(acct *acmeAccount, identifier *ACMEIdentifier) (*ACME
 	// Certain challenges have certain restrictions: DNS challenges cannot
 	// be used to validate IP addresses, and only DNS challenges can be used
 	// to validate wildcards.
-	allowedChallenges := []ACMEChallengeType{ACMEHTTPChallenge, ACMEDNSChallenge}
+	allowedChallenges := []ACMEChallengeType{ACMEHTTPChallenge, ACMEDNSChallenge, ACMEALPNChallenge}
 	if identifier.Type == ACMEIPIdentifier {
 		allowedChallenges = []ACMEChallengeType{ACMEHTTPChallenge}
 	} else if identifier.IsWildcard {
