@@ -74,8 +74,9 @@ store certificates locally. If you query the roles on a shared PKI mount, you'll
 the same result for that mount when you send the query to either the PR primary or
 secondary, but if you list stored certs, you'll see different values.
 
-Local mounts replicate their data only to DR secondaries, and aren't visible at all to
-PR secondaries.
+Local mounts replicate their data only to DR secondaries.  A local mount created on a PR
+primary isn't visible at all to its PR secondaries. Local mounts can also be created on
+PR secondaries, in which case they aren't visible to the PR primary.
 
 There exist other storage entries that aren't mount specific.  For example, the Integrated
 Storage Autopilot configuration is an `ignored` storage entry, which allows for DR secondaries
