@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/golang/protobuf/proto"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
+	"google.golang.org/protobuf/proto"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
