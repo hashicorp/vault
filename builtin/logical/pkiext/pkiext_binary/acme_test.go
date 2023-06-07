@@ -22,6 +22,7 @@ import (
 	"golang.org/x/crypto/acme"
 
 	"github.com/hashicorp/vault/builtin/logical/pkiext"
+	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	hDocker "github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/stretchr/testify/require"
@@ -71,7 +72,7 @@ func SubtestACMECertbot(t *testing.T, cluster *VaultPkiCluster) {
 	// Default to 45 second timeout, but bump to 120 when running locally or if nightly regression
 	// flag is provided.
 	sleepTimer := "45"
-	if pkiext.IsLocalOrNightlyRegression() {
+	if testhelpers.IsLocalOrRegressionTests() {
 		sleepTimer = "120"
 	}
 
@@ -104,6 +105,10 @@ func SubtestACMECertbot(t *testing.T, cluster *VaultPkiCluster) {
 
 	err = pki.AddHostname(hostname, ipAddr)
 	require.NoError(t, err, "failed to update vault host files")
+
+	// Sinkhole a domain that's invalid just in case it's registered in the future.
+	cluster.Dns.AddDomain("armoncorp.com")
+	cluster.Dns.AddRecord("armoncorp.com", "A", "127.0.0.1")
 
 	certbotCmd := []string{
 		"certbot",
@@ -190,7 +195,7 @@ func SubtestACMECertbot(t *testing.T, cluster *VaultPkiCluster) {
 
 	// Attempt to issue against a domain that doesn't match the challenge.
 	// N.B. This test only runs locally or when the nightly regression env var is provided to CI.
-	if pkiext.IsLocalOrNightlyRegression() {
+	if testhelpers.IsLocalOrRegressionTests() {
 		certbotInvalidIssueCmd := []string{
 			"certbot",
 			"certonly",

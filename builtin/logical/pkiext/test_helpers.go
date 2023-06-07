@@ -10,7 +10,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -84,10 +83,4 @@ func (l LogConsumerWriter) Write(p []byte) (n int, err error) {
 		l.Consumer(scanner.Text())
 	}
 	return len(p), nil
-}
-
-// IsLocalOrNightlyRegression returns true when the tests are running locally (not in CI), or when
-// the nightly regression env var is provided.
-func IsLocalOrNightlyRegression() bool {
-	return os.Getenv("CI") == "" || os.Getenv("VAULT_NIGHTLY_REGRESSION") == "true"
 }
