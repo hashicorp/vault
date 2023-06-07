@@ -1,0 +1,36 @@
+<h1 class="title has-top-margin-m">Vault version</h1>
+<div>
+  <div class="is-flex-row">
+    <Hds::Card::Container @hasBorder={{true}} class="has-padding is-flex-column is-flex-half">
+      <div class="is-flex-between">
+        <h3 class="title is-4">Secrets Engines</h3>
+        <div>
+          <LinkTo @route="vault.cluster.secrets.backends" data-test-secret-engines-view-more>View more</LinkTo>
+        </div>
+      </div>
+      <Hds::Table @caption="Five secrets engines">
+        <:body as |B|>
+          <B.Tr>
+            <B.Td>Cell one A</B.Td>
+            <B.Td>Cell two A</B.Td>
+          </B.Tr>
+        </:body>
+      </Hds::Table>
+    </Hds::Card::Container>
+
+    <Hds::Card::Container @hasBorder={{true}} class="has-padding is-flex-column is-flex-half">
+      <h3 class="title is-4">Quick Actions</h3>
+    </Hds::Card::Container>
+  </div>
+
+  <div class="is-flex-row">
+    <Hds::Card::Container @hasBorder={{true}} class="has-padding is-flex-column is-flex-half">
+      <h3 class="title is-4">Learn More</h3>
+    </Hds::Card::Container>
+
+    <Hds::Card::Container @hasBorder={{true}} class="has-padding is-flex-column is-flex-half">
+      <h3 class="title is-4">Configuration Details</h3>
+    </Hds::Card::Container>
+  </div>
+
+</div>
