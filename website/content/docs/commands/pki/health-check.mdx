@@ -318,9 +318,36 @@ This health check verifies that tidy has run within the last run window. This ca
  - `READ /tidy-status`
  - `LIST /certs`
 
-**Config Parameters**: 
+**Config Parameters**:
 
  - `count_critical` `(int: 250000)` - the critical threshold at which there are too many certs.
  - `count_warning` `(int: 50000)` - the warning threshold at which there are too many certs.
 
 This health check verifies that this cluster has a reasonable number of certificates. Ideally this would be fetched from tidy's status or a new metric reporting format, but as a fallback when tidy hasn't run, a list operation will be performed instead.
+
+### Enable ACME issuance
+
+**Name**: `enable_acme_issuance`
+
+**APIs**:
+
+- `READ /config/acme`
+- `READ /config/cluster`
+- `LIST /issuers` (unauthenticated)
+- `READ /issuer/:issuer_ref/json` (unauthenticated)
+
+**Config Parameters**: (none)
+
+This health check verifies that ACME is enabled within a mount that contains an intermediary issuer. Any findings will be informational, as this is considered a best-practice to support a self-rotating PKI infrastructure.
+
+### ACME Response headers
+
+**Name**: `allow_acme_headers`
+
+**APIs**:
+
+- `READ /sys/internal/ui/mounts`
+
+**Config Parameters**: (none)
+
+This health check verifies if the `"Replay-Nonce`, `Link`, and `Location` headers have been added to `allowed_response_headers`, when the ACME feature is enabled. The ACME protocol will not work if these headers are not added to the mount.
