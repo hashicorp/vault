@@ -19,7 +19,5 @@ export default buildRoutes(function () {
       this.route('diff');
     });
   });
-  this.route('configuration', function () {
-    this.route('edit');
-  });
+  this.route('configuration');
 });
