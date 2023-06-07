@@ -19,7 +19,7 @@ const formGroups = [
 
 @withModelValidations(validations)
 @withFormFields(null, formGroups)
-export default class KubernetesConfigModel extends Model {
+export default class LdapConfigModel extends Model {
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord
 
   @attr('string', {
