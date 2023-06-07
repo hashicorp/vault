@@ -426,7 +426,7 @@ func TestCoreMetrics_AvailablePolicies(t *testing.T) {
 				}
 			}
 
-			gValues, err := core.availablePoliciesGaugeCollector(ctxRoot)
+			gValues, err := core.configuredPoliciesGaugeCollector(ctxRoot)
 			if err != nil {
 				t.Fatalf("err: %v", err)
 			}

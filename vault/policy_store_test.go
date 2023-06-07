@@ -320,8 +320,8 @@ func TestDefaultPolicy(t *testing.T) {
 	}
 }
 
-// TestPolicyStore_ListPoliciesForNamespaces tests the ListPoliciesForNamespaces function, which should return a list of policies for a given list of namespaces.
-func TestPolicyStore_ListPoliciesForNamespaces(t *testing.T) {
+// TestPolicyStore_PoliciesByNamespaces tests the policiesByNamespaces function, which should return a slice of policy names for a given slice of namespaces.
+func TestPolicyStore_PoliciesByNamespaces(t *testing.T) {
 	_, ps := mockPolicyWithCore(t, false)
 
 	ctxRoot := namespace.RootContext(context.Background())
@@ -343,7 +343,7 @@ func TestPolicyStore_ListPoliciesForNamespaces(t *testing.T) {
 		t.Fatalf("bad: %v", pResult)
 	}
 
-	out, err := ps.ListPoliciesForNamespaces(ctxRoot, PolicyTypeACL, []*namespace.Namespace{rootNs})
+	out, err := ps.policiesByNamespaces(ctxRoot, PolicyTypeACL, []*namespace.Namespace{rootNs})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

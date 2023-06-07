@@ -302,9 +302,9 @@ func (c *Core) emitMetricsActiveNode(stopCh chan struct{}) {
 			"",
 		},
 		{
-			[]string{"policy", "available", "count"},
+			[]string{"policy", "configured", "count"},
 			[]metrics.Label{{"gauge", "number_policies_by_type"}},
-			c.availablePoliciesGaugeCollector,
+			c.configuredPoliciesGaugeCollector,
 			"",
 		},
 	}
@@ -572,7 +572,8 @@ func (c *Core) inFlightReqGaugeMetric() {
 	c.metricSink.SetGaugeWithLabels([]string{"core", "in_flight_requests"}, float32(totalInFlightReq), nil)
 }
 
-func (c *Core) availablePoliciesGaugeCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+// configuredPoliciesGaugeCollector is used to collect gauge label values for the `vault.policy.configured.count` metric
+func (c *Core) configuredPoliciesGaugeCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
 	if c.policyStore == nil {
 		return []metricsutil.GaugeLabelValues{}, nil
 	}
@@ -592,7 +593,7 @@ func (c *Core) availablePoliciesGaugeCollector(ctx context.Context) ([]metricsut
 	var values []metricsutil.GaugeLabelValues
 
 	for _, pt := range policyTypes {
-		policies, err := policyStore.ListPoliciesForNamespaces(ctx, pt, namespaces)
+		policies, err := policyStore.policiesByNamespaces(ctx, pt, namespaces)
 		if err != nil {
 			return []metricsutil.GaugeLabelValues{}, err
 		}
