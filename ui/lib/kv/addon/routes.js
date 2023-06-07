@@ -19,5 +19,5 @@ export default buildRoutes(function () {
       this.route('diff');
     });
   });
-  this.route('configuratio');
+  this.route('configuration');
 });
