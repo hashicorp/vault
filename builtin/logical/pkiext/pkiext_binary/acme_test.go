@@ -22,6 +22,7 @@ import (
 	"golang.org/x/crypto/acme"
 
 	"github.com/hashicorp/vault/builtin/logical/pkiext"
+	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	hDocker "github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/stretchr/testify/require"
@@ -68,13 +69,20 @@ func SubtestACMECertbot(t *testing.T, cluster *VaultPkiCluster) {
 
 	logConsumer, logStdout, logStderr := getDockerLog(t)
 
+	// Default to 45 second timeout, but bump to 120 when running locally or if nightly regression
+	// flag is provided.
+	sleepTimer := "45"
+	if testhelpers.IsLocalOrRegressionTests() {
+		sleepTimer = "120"
+	}
+
 	t.Logf("creating on network: %v", vaultNetwork)
 	runner, err := hDocker.NewServiceRunner(hDocker.RunOptions{
 		ImageRepo:     "docker.mirror.hashicorp.services/certbot/certbot",
 		ImageTag:      "latest",
 		ContainerName: "vault_pki_certbot_test",
 		NetworkName:   vaultNetwork,
-		Entrypoint:    []string{"sleep", "45"},
+		Entrypoint:    []string{"sleep", sleepTimer},
 		LogConsumer:   logConsumer,
 		LogStdout:     logStdout,
 		LogStderr:     logStderr,
@@ -97,6 +105,10 @@ func SubtestACMECertbot(t *testing.T, cluster *VaultPkiCluster) {
 
 	err = pki.AddHostname(hostname, ipAddr)
 	require.NoError(t, err, "failed to update vault host files")
+
+	// Sinkhole a domain that's invalid just in case it's registered in the future.
+	cluster.Dns.AddDomain("armoncorp.com")
+	cluster.Dns.AddRecord("armoncorp.com", "A", "127.0.0.1")
 
 	certbotCmd := []string{
 		"certbot",
@@ -180,6 +192,33 @@ func SubtestACMECertbot(t *testing.T, cluster *VaultPkiCluster) {
 
 	require.NoError(t, err, "got error running double revoke command")
 	require.NotEqual(t, 0, retcode, "expected non-zero retcode double revoke command result")
+
+	// Attempt to issue against a domain that doesn't match the challenge.
+	// N.B. This test only runs locally or when the nightly regression env var is provided to CI.
+	if testhelpers.IsLocalOrRegressionTests() {
+		certbotInvalidIssueCmd := []string{
+			"certbot",
+			"certonly",
+			"--no-eff-email",
+			"--email", "certbot.client@dadgarcorp.com",
+			"--agree-tos",
+			"--no-verify-ssl",
+			"--standalone",
+			"--non-interactive",
+			"--server", directory,
+			"-d", "armoncorp.com",
+			"--issuance-timeout", "10",
+		}
+
+		stdout, stderr, retcode, err = runner.RunCmdWithOutput(ctx, result.Container.ID, certbotInvalidIssueCmd)
+		t.Logf("Certbot Invalid Issue Command: %v\nstdout: %v\nstderr: %v\n", certbotInvalidIssueCmd, string(stdout), string(stderr))
+		if err != nil || retcode != 0 {
+			logsStdout, logsStderr, _, _ := runner.RunCmdWithOutput(ctx, result.Container.ID, logCatCmd)
+			t.Logf("Certbot logs\nstdout: %v\nstderr: %v\n", string(logsStdout), string(logsStderr))
+		}
+		require.NoError(t, err, "got error running issue command")
+		require.NotEqual(t, 0, retcode, "expected non-zero retcode issue command result")
+	}
 
 	// Attempt to close out our ACME account
 	certbotUnregisterCmd := []string{
