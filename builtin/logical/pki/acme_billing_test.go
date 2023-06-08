@@ -67,42 +67,42 @@ func TestACMEBilling(t *testing.T) {
 	expectedCount := validateClientCount(t, client, "", -1, "initial fetch")
 
 	// Unique identifier: should increase by one.
-	doACMEForDomainWithDNS(t, dns, &acmeClientPKI, []string{"dadgarcorp.com"})
+	doACMEForDomainWithDNS(t, dns, acmeClientPKI, []string{"dadgarcorp.com"})
 	expectedCount = validateClientCount(t, client, "pki", expectedCount+1, "new certificate")
 
 	// Different identifier; should increase by one.
-	doACMEForDomainWithDNS(t, dns, &acmeClientPKI, []string{"example.dadgarcorp.com"})
+	doACMEForDomainWithDNS(t, dns, acmeClientPKI, []string{"example.dadgarcorp.com"})
 	expectedCount = validateClientCount(t, client, "pki", expectedCount+1, "new certificate")
 
 	// While same identifiers, used together and so thus are unique; increase by one.
-	doACMEForDomainWithDNS(t, dns, &acmeClientPKI, []string{"example.dadgarcorp.com", "dadgarcorp.com"})
+	doACMEForDomainWithDNS(t, dns, acmeClientPKI, []string{"example.dadgarcorp.com", "dadgarcorp.com"})
 	expectedCount = validateClientCount(t, client, "pki", expectedCount+1, "new certificate")
 
 	// Same identifiers in different order are not unique; keep the same.
-	doACMEForDomainWithDNS(t, dns, &acmeClientPKI, []string{"dadgarcorp.com", "example.dadgarcorp.com"})
+	doACMEForDomainWithDNS(t, dns, acmeClientPKI, []string{"dadgarcorp.com", "example.dadgarcorp.com"})
 	expectedCount = validateClientCount(t, client, "pki", expectedCount, "different order; same identifiers")
 
 	// Using a different mount shouldn't affect counts.
-	doACMEForDomainWithDNS(t, dns, &acmeClientPKI2, []string{"dadgarcorp.com"})
+	doACMEForDomainWithDNS(t, dns, acmeClientPKI2, []string{"dadgarcorp.com"})
 	expectedCount = validateClientCount(t, client, "", expectedCount, "different mount; same identifiers")
 
 	// But using a different identifier should.
-	doACMEForDomainWithDNS(t, dns, &acmeClientPKI2, []string{"pki2.dadgarcorp.com"})
+	doACMEForDomainWithDNS(t, dns, acmeClientPKI2, []string{"pki2.dadgarcorp.com"})
 	expectedCount = validateClientCount(t, client, "pki2", expectedCount+1, "different mount with different identifiers")
 
 	// A new identifier in a unique namespace will affect results.
-	doACMEForDomainWithDNS(t, dns, &acmeClientPKINS1, []string{"unique.dadgarcorp.com"})
+	doACMEForDomainWithDNS(t, dns, acmeClientPKINS1, []string{"unique.dadgarcorp.com"})
 	expectedCount = validateClientCount(t, client, "ns1/pki", expectedCount+1, "unique identifier in a namespace")
 
 	// But in a different namespace with the existing identifier will not.
-	doACMEForDomainWithDNS(t, dns, &acmeClientPKINS2, []string{"unique.dadgarcorp.com"})
+	doACMEForDomainWithDNS(t, dns, acmeClientPKINS2, []string{"unique.dadgarcorp.com"})
 	expectedCount = validateClientCount(t, client, "", expectedCount, "existing identifier in a namespace")
-	doACMEForDomainWithDNS(t, dns, &acmeClientPKI2, []string{"unique.dadgarcorp.com"})
+	doACMEForDomainWithDNS(t, dns, acmeClientPKI2, []string{"unique.dadgarcorp.com"})
 	expectedCount = validateClientCount(t, client, "", expectedCount, "existing identifier outside of a namespace")
 
 	// Creating a unique identifier in a namespace with a mount with the
 	// same name as another namespace should increase counts as well.
-	doACMEForDomainWithDNS(t, dns, &acmeClientPKINS2, []string{"very-unique.dadgarcorp.com"})
+	doACMEForDomainWithDNS(t, dns, acmeClientPKINS2, []string{"very-unique.dadgarcorp.com"})
 	expectedCount = validateClientCount(t, client, "ns2/pki", expectedCount+1, "unique identifier in a different namespace")
 
 	// Check the current fragment

@@ -66,6 +66,21 @@ func requireSignedBy(t *testing.T, cert *x509.Certificate, signingCert *x509.Cer
 	}
 }
 
+func requireSignedByAtPath(t *testing.T, client *api.Client, leaf *x509.Certificate, path string) {
+	t.Helper()
+
+	resp, err := client.Logical().Read(path)
+	require.NoError(t, err, "got unexpected error fetching parent certificate")
+	require.NotNil(t, resp, "missing response when fetching parent certificate")
+	require.NotNil(t, resp.Data, "missing data from parent certificate response")
+	require.NotNil(t, resp.Data["certificate"], "missing certificate field on parent read response")
+
+	parentCert := resp.Data["certificate"].(string)
+	parent := parseCert(t, parentCert)
+
+	requireSignedBy(t, leaf, parent)
+}
+
 // Certificate helper
 func parseCert(t *testing.T, pemCert string) *x509.Certificate {
 	t.Helper()
