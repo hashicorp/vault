@@ -2547,7 +2547,7 @@ func (p *Policy) ValidateLeafCertKeyMatch(keyVersion int, certPublicKeyAlgorithm
 	return false, nil
 }
 
-func (p *Policy) PersistCertificateChain(keyVersion int, certChain []*x509.Certificate, storage logical.Storage) error {
+func (p *Policy) PersistCertificateChain(ctx context.Context, keyVersion int, certChain []*x509.Certificate, storage logical.Storage) error {
 	// NOTE: Use safeGetKeyEntry or just read from Keys dictionary?
 	keyEntry, err := p.safeGetKeyEntry(keyVersion)
 	if err != nil {
@@ -2556,6 +2556,5 @@ func (p *Policy) PersistCertificateChain(keyVersion int, certChain []*x509.Certi
 	keyEntry.CertificateChain = certChain
 
 	p.Keys[strconv.Itoa(keyVersion)] = keyEntry
-	// FIXME: context
-	return p.Persist(context.TODO(), storage)
+	return p.Persist(ctx, storage)
 }
