@@ -61,6 +61,9 @@ locals {
       path    = "vault"
     })
   ]
+  audit_device_file_path = "/var/log/vault/vault_audit.log"
+  vault_service_user     = "vault"
+  enable_audit_device    = var.enable_file_audit_device && var.initialize_cluster
 }
 
 resource "enos_remote_exec" "install_packages" {
@@ -165,7 +168,7 @@ resource "enos_vault_start" "leader" {
   }
   license        = var.license
   manage_service = var.manage_service
-  username       = "vault"
+  username       = local.vault_service_user
   unit_name      = "vault"
 
   transport = {
@@ -204,7 +207,7 @@ resource "enos_vault_start" "followers" {
   }
   license        = var.license
   manage_service = var.manage_service
-  username       = "vault"
+  username       = local.vault_service_user
   unit_name      = "vault"
 
   transport = {
@@ -254,6 +257,58 @@ resource "enos_vault_unseal" "leader" {
   transport = {
     ssh = {
       host = var.target_hosts[tolist(local.leader)[0]].public_ip
+    }
+  }
+}
+
+# We need to ensure that the directory used for audit logs is present and accessible to the vault
+# user on all nodes, since logging will only happen on the leader.
+resource "enos_remote_exec" "create_audit_log_dir" {
+  depends_on = [
+    enos_vault_unseal.leader,
+  ]
+  for_each = toset([
+    for idx, host in toset(local.instances) : idx
+    if var.enable_file_audit_device
+  ])
+
+  environment = {
+    LOG_FILE_PATH = local.audit_device_file_path
+    SERVICE_USER  = local.vault_service_user
+  }
+
+  scripts = [abspath("${path.module}/scripts/create_audit_log_dir.sh")]
+
+  transport = {
+    ssh = {
+      host = var.target_hosts[each.value].public_ip
+    }
+  }
+}
+
+resource "enos_remote_exec" "enable_file_audit_device" {
+  depends_on = [
+    enos_remote_exec.create_audit_log_dir,
+    enos_vault_unseal.leader,
+  ]
+  for_each = toset([
+    for idx in local.leader : idx
+    if local.enable_audit_device
+  ])
+
+  environment = {
+    VAULT_TOKEN    = enos_vault_init.leader[each.key].root_token
+    VAULT_ADDR     = "http://127.0.0.1:8200"
+    VAULT_BIN_PATH = local.bin_path
+    LOG_FILE_PATH  = local.audit_device_file_path
+    SERVICE_USER   = local.vault_service_user
+  }
+
+  scripts = [abspath("${path.module}/scripts/enable_audit_logging.sh")]
+
+  transport = {
+    ssh = {
+      host = var.target_hosts[each.key].public_ip
     }
   }
 }
