@@ -9,7 +9,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"log"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
@@ -103,6 +102,7 @@ func (b *backend) pathSetCertificate() *framework.Path {
 
 func (b *backend) pathSignCsrWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
+
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
@@ -120,7 +120,7 @@ func (b *backend) pathSignCsrWrite(ctx context.Context, req *logical.Request, d 
 
 	// Check if transit key supports signing
 	if !p.Type.SigningSupported() {
-		return logical.ErrorResponse(fmt.Sprintf("key type '%v' does not support signing", p.Type)), logical.ErrInvalidRequest
+		return logical.ErrorResponse(fmt.Sprintf("key type '%s' does not support signing", p.Type)), logical.ErrInvalidRequest
 	}
 
 	// Read and parse CSR template
@@ -137,17 +137,11 @@ func (b *backend) pathSignCsrWrite(ctx context.Context, req *logical.Request, d 
 		signingKeyVersion = version.(int)
 	}
 
-	// FIXME: Remove
-	// log.Println("signingKeyVersion: ", signingKeyVersion)
-
 	pemCsr, err := p.SignCsr(signingKeyVersion, csrTemplate)
 	if err != nil {
 		// FIXME: Error returned
 		return nil, err
 	}
-
-	// FIXME: Remove
-	// log.Printf("CSR:\n%s", pemCsr)
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
@@ -163,7 +157,6 @@ func (b *backend) pathSignCsrWrite(ctx context.Context, req *logical.Request, d 
 func (b *backend) pathSetCertificateWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	// NOTE: Is this used in multiple places?
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
@@ -183,7 +176,7 @@ func (b *backend) pathSetCertificateWrite(ctx context.Context, req *logical.Requ
 	// NOTE: A key type that doesn't support signing cannot possible (?) have
 	// a certificate, so does it make sense to have this check?
 	if !p.Type.SigningSupported() {
-		return logical.ErrorResponse(fmt.Sprintf("key type %v does not support signing", p.Type)), logical.ErrInvalidRequest
+		return logical.ErrorResponse(fmt.Sprintf("key type %s does not support signing", p.Type)), logical.ErrInvalidRequest
 	}
 
 	// Get certificate chain
@@ -205,19 +198,39 @@ func (b *backend) pathSetCertificateWrite(ctx context.Context, req *logical.Requ
 		keyVersion = version.(int)
 	}
 
+	leafCertPublicKeyAlgorithm := certChain[0].PublicKeyAlgorithm
+	var keyTypeMatches bool
+	switch p.Type {
+	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521:
+		if leafCertPublicKeyAlgorithm == x509.ECDSA {
+			keyTypeMatches = true
+		}
+	case keysutil.KeyType_ED25519:
+		if leafCertPublicKeyAlgorithm == x509.Ed25519 {
+			keyTypeMatches = true
+		}
+	case keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096:
+		if leafCertPublicKeyAlgorithm == x509.RSA {
+			keyTypeMatches = true
+		}
+	}
+	if !keyTypeMatches {
+		// NOTE: Different type "names" might lead to confusion.
+		return logical.ErrorResponse(fmt.Sprintf("provided leaf certificate public key type '%s' does not match the transit key type '%s'", leafCertPublicKeyAlgorithm.String(), p.Type.String())), logical.ErrInvalidRequest
+	}
+
 	// Validate if leaf cert key matches with transit key
-	valid, err := p.ValidateLeafCertKeyMatch(keyVersion, certChain[0].PublicKeyAlgorithm, certChain[0].PublicKey)
+	valid, err := p.ValidateLeafCertKeyMatch(keyVersion, leafCertPublicKeyAlgorithm, certChain[0].PublicKey)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not validate key match between leaf certificate key and key version in transit: %s", err.Error())
 	}
 	if !valid {
-		return logical.ErrorResponse("end entity certificate public key does match the transit's public key"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("leaf certificate public key does match the key version selected"), logical.ErrInvalidRequest
 	}
 
 	p.PersistCertificateChain(keyVersion, certChain, req.Storage)
 	if err != nil {
-		// FIXME: should be internal, message
-		return nil, errors.New("failed to persist certificate chain")
+		return nil, fmt.Errorf("failed to persist certificate chain: %s", err.Error())
 	}
 
 	return nil, nil
@@ -276,15 +289,11 @@ func parseCertificateChain(certChainStr string) ([]*x509.Certificate, error) {
 func hasSingleLeafCertificate(certChain []*x509.Certificate) bool {
 	var leafCertsCount uint8
 	for _, cert := range certChain {
-		// FIXME: Remove
-		log.Printf("BasicConstraintValid: %t  | IsCA: %t\n", cert.BasicConstraintsValid, cert.IsCA)
 		if cert.BasicConstraintsValid && !cert.IsCA {
 			leafCertsCount += 1
 		}
 	}
 
-	// FIXME: Remove
-	log.Printf("leafCertsCount: %d\n", leafCertsCount)
 	var hasSingleLeafCert bool
 	if leafCertsCount == 1 {
 		hasSingleLeafCert = true
