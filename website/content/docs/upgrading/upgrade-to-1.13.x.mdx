@@ -144,7 +144,7 @@ write cross-cluster.
 
 ### Slow Startup Time When Storing PKI Certificates 
 
-There was a regression introduced in 1.12.4 where Vault is slow to start because the 
+There was a regression introduced in 1.13.0 where Vault is slow to start because the 
 PKI secret engine performs a list operation on the stored certificates. If a large number 
 of certificates are stored this can cause long start times, performance degradtion for storage 
 operations and leadership changes.
