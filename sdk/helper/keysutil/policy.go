@@ -2516,16 +2516,13 @@ func (p *Policy) ValidateLeafCertKeyMatch(keyVersion int, certPublicKeyAlgorithm
 			curve = elliptic.P256()
 		}
 
-		key := &ecdsa.PrivateKey{
-			PublicKey: ecdsa.PublicKey{
-				Curve: curve,
-				X:     keyEntry.EC_X,
-				Y:     keyEntry.EC_Y,
-			},
-			D: keyEntry.EC_D,
+		publicKey := &ecdsa.PublicKey{
+			Curve: curve,
+			X:     keyEntry.EC_X,
+			Y:     keyEntry.EC_Y,
 		}
 
-		publicKey := key.PublicKey
+		// NOTE: Is it worth having this check?
 		if publicKey.Curve != certPublicKey.Curve {
 			return false, nil
 		}
@@ -2533,19 +2530,26 @@ func (p *Policy) ValidateLeafCertKeyMatch(keyVersion int, certPublicKeyAlgorithm
 		return publicKey.Equal(certPublicKey), nil
 
 	case x509.Ed25519:
+		// FIXME: Is this derivation stuff needed here? Think about this
 		certPublicKey := certPublicKey.(ed25519.PublicKey)
-		var key ed25519.PrivateKey
-		if p.Derived {
-			// Derive the key that should be used
-			var err error
-			key, err = p.GetKey(nil, keyVersion, 32) // FIXME: context?
-			if err != nil {
-				return false, errutil.InternalError{Err: fmt.Sprintf("error deriving key: %v", err)}
-			}
-		} else {
-			key = ed25519.PrivateKey(keyEntry.Key)
+		// var key ed25519.PrivateKey
+		// if p.Derived {
+		// 	// Derive the key that should be used
+		// 	var err error
+		// 	key, err = p.GetKey(nil, keyVersion, 32) // FIXME: context?
+		// 	if err != nil {
+		// 		return false, errutil.InternalError{Err: fmt.Sprintf("error deriving key: %v", err)}
+		// 	}
+		// } else {
+		// 	key = ed25519.PrivateKey(keyEntry.Key)
+		// }
+		// publicKey := key.Public().(ed25519.PublicKey)
+
+		raw, err := base64.StdEncoding.DecodeString(keyEntry.FormattedPublicKey)
+		if err != nil {
+			return false, err
 		}
-		publicKey := key.Public().(ed25519.PublicKey)
+		publicKey := ed25519.PublicKey(raw)
 		return publicKey.Equal(certPublicKey), nil
 
 	case x509.RSA:
