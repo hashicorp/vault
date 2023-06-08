@@ -249,21 +249,17 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 			return rsaKey, nil
 		}
 	case exportTypeCertificateChain:
-		// Is it empty by default or nil?
 		if key.CertificateChain == nil {
-			// FIXME: Error
-			return "", errors.New("nil KeyEntry provided")
+			return "", errors.New("selected key version does not have a certificate chain imported")
 		}
 
 		var pemCerts []string
 		for _, cert := range key.CertificateChain {
-			// NOTE: TrimSpace?
-			pemCert := string(pem.EncodeToMemory(
+			pemCert := strings.TrimSpace(string(pem.EncodeToMemory(
 				&pem.Block{
 					Type:  "CERTIFICATE",
 					Bytes: cert.Raw,
-				}))
-
+				})))
 			pemCerts = append(pemCerts, pemCert)
 		}
 		certChain := strings.Join(pemCerts, "\n")
