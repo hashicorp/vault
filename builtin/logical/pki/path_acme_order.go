@@ -22,6 +22,8 @@ import (
 	"golang.org/x/net/idna"
 )
 
+var maxAcmeCertTTL = 90 * (24 * time.Hour)
+
 func pathAcmeListOrders(b *backend) []*framework.Path {
 	return buildAcmeFrameworkPaths(b, patternAcmeListOrders, "/orders")
 }
@@ -508,6 +510,16 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 		req:     &logical.Request{},
 		apiData: data,
 		role:    ac.role,
+	}
+
+	normalNotAfter, _, err := getCertificateNotAfter(ac.sc.Backend, input, signingBundle)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed computing certificate TTL from role/mount: %v: %w", err, ErrMalformed)
+	}
+
+	// Force a maximum 90 day TTL or lower for ACME
+	if time.Now().Add(maxAcmeCertTTL).Before(normalNotAfter) {
+		input.apiData.Raw["ttl"] = maxAcmeCertTTL
 	}
 
 	if csr.PublicKeyAlgorithm == x509.UnknownPublicKeyAlgorithm || csr.PublicKey == nil {
