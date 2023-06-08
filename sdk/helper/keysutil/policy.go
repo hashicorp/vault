@@ -245,7 +245,8 @@ type KeyEntry struct {
 
 	ManagedKeyUUID string `json:"managed_key_id,omitempty"`
 
-	// FIXME: Add description
+	// Key entry certificate chain. If set, leaf certificate key matches the
+	// KeyEntry key
 	CertificateChain []*x509.Certificate `json:"certificate_chain"`
 }
 
@@ -2403,6 +2404,11 @@ func (p *Policy) SignCsr(keyVersion int, csrTemplate *x509.CertificateRequest) (
 		return nil, err
 	}
 
+	if keyEntry.IsPrivateKeyMissing() {
+		// NOTE: Shouldn't this be a client error?
+		return nil, errutil.UserError{Err: "private key not imported for key version selected"}
+	}
+
 	// Template cannot be used as it is because it carries "signatureAlgorithm"
 	// information that might not apply to the key we are going to use.
 	// NOTE: The x509.CertificateRequest type in Go's crypto/x509 package does
@@ -2419,8 +2425,8 @@ func (p *Policy) SignCsr(keyVersion int, csrTemplate *x509.CertificateRequest) (
 		Attributes:      csrTemplate.Attributes, // Deprecated
 	}
 
-	var csr []byte
-	var createCertError error
+	var csrBytes []byte
+	var createCertReqErr error
 	switch p.Type {
 	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
 		var curve elliptic.Curve
@@ -2442,7 +2448,7 @@ func (p *Policy) SignCsr(keyVersion int, csrTemplate *x509.CertificateRequest) (
 			D: keyEntry.EC_D,
 		}
 
-		csr, createCertError = x509.CreateCertificateRequest(rand.Reader, csrTemplate, key)
+		csrBytes, createCertReqErr = x509.CreateCertificateRequest(rand.Reader, csrTemplate, key)
 	case KeyType_ED25519:
 		var key ed25519.PrivateKey
 		if p.Derived {
@@ -2456,24 +2462,24 @@ func (p *Policy) SignCsr(keyVersion int, csrTemplate *x509.CertificateRequest) (
 			key = ed25519.PrivateKey(keyEntry.Key)
 		}
 
-		csr, createCertError = x509.CreateCertificateRequest(rand.Reader, csrTemplate, key)
+		csrBytes, createCertReqErr = x509.CreateCertificateRequest(rand.Reader, csrTemplate, key)
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
 		key := keyEntry.RSAKey
-		csr, createCertError = x509.CreateCertificateRequest(rand.Reader, csrTemplate, key)
+		csrBytes, createCertReqErr = x509.CreateCertificateRequest(rand.Reader, csrTemplate, key)
 	default:
-		return nil, errutil.InternalError{Err: fmt.Sprintf("provided key type '%s' does not support signing", p.Type)}
+		return nil, errutil.InternalError{Err: fmt.Sprintf("selected key type '%s' does not support signing", p.Type)}
 	}
 	// FIXME: Not sure about this
-	if createCertError != nil {
+	if createCertReqErr != nil {
 		return nil, err
 	}
 
-	csrPem := pem.EncodeToMemory(&pem.Block{
+	pemCsr := pem.EncodeToMemory(&pem.Block{
 		Type:  "CERTIFICATE REQUEST",
-		Bytes: csr,
+		Bytes: csrBytes,
 	})
 
-	return csrPem, nil
+	return pemCsr, nil
 }
 
 func (p *Policy) ValidateLeafCertKeyMatch(keyVersion int, certPublicKeyAlgorithm x509.PublicKeyAlgorithm, certPublicKey any) (bool, error) {
