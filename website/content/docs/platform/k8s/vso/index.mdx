@@ -44,7 +44,7 @@ Provides the configuration necessary for the Operator to connect to a single Vau
 
 ```yaml
 ---
-apiVersion: secrets.hashicorp.com/v1alpha1
+apiVersion: secrets.hashicorp.com/v1beta1
 kind: VaultConnection
 metadata:
   namespace: vso-example
@@ -72,7 +72,7 @@ specified in a `VaultConnection` Custom Resource.
 
 ```yaml
 ---
-apiVersion: secrets.hashicorp.com/v1alpha1
+apiVersion: secrets.hashicorp.com/v1beta1
 kind: VaultAuth
 metadata:
   namespace: vso-example
@@ -120,7 +120,7 @@ The KV secrets engine's `kvv1` mount path is specified under `spec.mount` of `Va
 
 ```yaml
 ---
-apiVersion: secrets.hashicorp.com/v1alpha1
+apiVersion: secrets.hashicorp.com/v1beta1
 kind: VaultStaticSecret
 metadata:
   namespace: vso-example
@@ -142,7 +142,7 @@ The KV secrets engine's `kvv2` mount path is specified under `spec.mount` of `Va
 
 ```yaml
 ---
-apiVersion: secrets.hashicorp.com/v1alpha1
+apiVersion: secrets.hashicorp.com/v1beta1
 kind: VaultStaticSecret
 metadata:
   namespace: vso-example
@@ -167,7 +167,7 @@ The PKI secrets engine's mount path is specified under `spec.mount` of `VaultPKI
 
 ```yaml
 ---
-apiVersion: secrets.hashicorp.com/v1alpha1
+apiVersion: secrets.hashicorp.com/v1beta1
 kind: VaultPKISecret
 metadata:
   namespace: vso-example
@@ -198,7 +198,7 @@ The database secret engine's `db` mount path is specified under `spec.mount` of 
 
 ```yaml
 ---
-apiVersion: secrets.hashicorp.com/v1alpha1
+apiVersion: secrets.hashicorp.com/v1beta1
 kind: VaultDynamicSecret
 metadata:
   namespace: vso-example
@@ -220,7 +220,7 @@ The following results in a request to `http://127.0.0.1:8200/v1/aws/creds/my-iam
 
 ```yaml
 ---
-apiVersion: secrets.hashicorp.com/v1alpha1
+apiVersion: secrets.hashicorp.com/v1beta1
 kind: VaultDynamicSecret
 metadata:
   namespace: vso-example
@@ -238,7 +238,7 @@ The following results in a request to `http://127.0.0.1:8200/v1/aws/sts/my-sts-r
 
 ```yaml
 ---
-apiVersion: secrets.hashicorp.com/v1alpha1
+apiVersion: secrets.hashicorp.com/v1beta1
 kind: VaultDynamicSecret
 metadata:
   namespace: vso-example

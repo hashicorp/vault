@@ -121,6 +121,34 @@ func SubtestACMECertbot(t *testing.T, cluster *VaultPkiCluster) {
 	require.NoError(t, err, "got error running issue command")
 	require.Equal(t, 0, retcode, "expected zero retcode issue command result")
 
+	// N.B. We're using the `certonly` subcommand here because it seems as though the `renew` command
+	// attempts to install the cert for you. This ends up hanging and getting killed by docker, but is
+	// also not desired behavior. The certbot docs suggest using `certonly` to renew as seen here:
+	// https://eff-certbot.readthedocs.io/en/stable/using.html#renewing-certificates
+	certbotRenewCmd := []string{
+		"certbot",
+		"certonly",
+		"--no-eff-email",
+		"--email", "certbot.client@dadgarcorp.com",
+		"--agree-tos",
+		"--no-verify-ssl",
+		"--standalone",
+		"--non-interactive",
+		"--server", directory,
+		"-d", hostname,
+		"--cert-name", hostname,
+		"--force-renewal",
+	}
+
+	stdout, stderr, retcode, err = runner.RunCmdWithOutput(ctx, result.Container.ID, certbotRenewCmd)
+	t.Logf("Certbot Renew Command: %v\nstdout: %v\nstderr: %v\n", certbotRenewCmd, string(stdout), string(stderr))
+	if err != nil || retcode != 0 {
+		logsStdout, logsStderr, _, _ := runner.RunCmdWithOutput(ctx, result.Container.ID, logCatCmd)
+		t.Logf("Certbot logs\nstdout: %v\nstderr: %v\n", string(logsStdout), string(logsStderr))
+	}
+	require.NoError(t, err, "got error running renew command")
+	require.Equal(t, 0, retcode, "expected zero retcode renew command result")
+
 	certbotRevokeCmd := []string{
 		"certbot",
 		"revoke",
@@ -253,6 +281,30 @@ func SubtestACMECertbotEab(t *testing.T, cluster *VaultPkiCluster) {
 	}
 	require.NoError(t, err, "got error running issue command")
 	require.Equal(t, 0, retcode, "expected zero retcode issue command result")
+
+	certbotRenewCmd := []string{
+		"certbot",
+		"certonly",
+		"--no-eff-email",
+		"--email", "certbot.client@dadgarcorp.com",
+		"--agree-tos",
+		"--no-verify-ssl",
+		"--standalone",
+		"--non-interactive",
+		"--server", directory,
+		"-d", hostname,
+		"--cert-name", hostname,
+		"--force-renewal",
+	}
+
+	stdout, stderr, retcode, err = runner.RunCmdWithOutput(ctx, result.Container.ID, certbotRenewCmd)
+	t.Logf("Certbot Renew Command: %v\nstdout: %v\nstderr: %v\n", certbotRenewCmd, string(stdout), string(stderr))
+	if err != nil || retcode != 0 {
+		logsStdout, logsStderr, _, _ := runner.RunCmdWithOutput(ctx, result.Container.ID, logCatCmd)
+		t.Logf("Certbot logs\nstdout: %v\nstderr: %v\n", string(logsStdout), string(logsStderr))
+	}
+	require.NoError(t, err, "got error running renew command")
+	require.Equal(t, 0, retcode, "expected zero retcode renew command result")
 
 	certbotRevokeCmd := []string{
 		"certbot",

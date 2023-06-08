@@ -139,9 +139,9 @@ func (d *autoSeal) upgradeStoredKeys(ctx context.Context) error {
 		return fmt.Errorf("no stored keys found")
 	}
 
-	blobInfo := &wrapping.BlobInfo{}
-	if err := proto.Unmarshal(pe.Value, blobInfo); err != nil {
-		return fmt.Errorf("failed to proto decode stored keys: %w", err)
+	blobInfo, err := UnmarshalSealWrappedValue(pe.Value)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal stored keys: %w", err)
 	}
 
 	keyId, err := d.Access.KeyId(ctx)
@@ -151,15 +151,9 @@ func (d *autoSeal) upgradeStoredKeys(ctx context.Context) error {
 	if blobInfo.KeyInfo != nil && blobInfo.KeyInfo.KeyId != keyId {
 		d.logger.Info("upgrading stored keys")
 
-		pt, err := d.Decrypt(ctx, blobInfo, nil)
+		keys, err := UnsealWrapStoredBarrierKeys(ctx, d.GetAccess(), pe)
 		if err != nil {
 			return fmt.Errorf("failed to decrypt encrypted stored keys: %w", err)
-		}
-
-		// Decode the barrier entry
-		var keys [][]byte
-		if err := json.Unmarshal(pt, &keys); err != nil {
-			return fmt.Errorf("failed to decode stored keys: %w", err)
 		}
 
 		if err := d.SetStoredKeys(ctx, keys); err != nil {
