@@ -61,8 +61,9 @@ locals {
       path    = "vault"
     })
   ]
-  audit_device_file_path = "/var/log/vault_audit.log"
+  audit_device_file_path = "/var/log/vault/vault_audit.log"
   vault_service_user     = "vault"
+  enable_audit_device    = var.enable_file_audit_device && var.initialize_cluster
 }
 
 resource "enos_remote_exec" "install_packages" {
@@ -216,31 +217,6 @@ resource "enos_vault_start" "followers" {
   }
 }
 
-# We need to ensure that the directory used for audit logs is present and accessible to the vault
-# user on all nodes, since logging will only happen on the leader.
-resource "enos_remote_exec" "create_audit_log_dir" {
-  depends_on = [
-    enos_vault_start.followers,
-  ]
-  for_each = toset([
-    for idx, host in toset(local.instances) : idx
-    if var.enable_file_audit_device
-  ])
-
-  environment = {
-    LOG_FILE_PATH = local.audit_device_file_path
-    SERVICE_USER  = local.vault_service_user
-  }
-
-  scripts = [abspath("${path.module}/scripts/create_audit_log_dir.sh")]
-
-  transport = {
-    ssh = {
-      host = var.target_hosts[each.value].public_ip
-    }
-  }
-}
-
 resource "enos_vault_init" "leader" {
   depends_on = [
     enos_vault_start.followers,
@@ -285,13 +261,39 @@ resource "enos_vault_unseal" "leader" {
   }
 }
 
-resource "enos_remote_exec" "enable_file_audit_device" {
+# We need to ensure that the directory used for audit logs is present and accessible to the vault
+# user on all nodes, since logging will only happen on the leader.
+resource "enos_remote_exec" "create_audit_log_dir" {
   depends_on = [
     enos_vault_unseal.leader,
   ]
   for_each = toset([
-    for idx in local.leader : idx
+    for idx, host in toset(local.instances) : idx
     if var.enable_file_audit_device
+  ])
+
+  environment = {
+    LOG_FILE_PATH = local.audit_device_file_path
+    SERVICE_USER  = local.vault_service_user
+  }
+
+  scripts = [abspath("${path.module}/scripts/create_audit_log_dir.sh")]
+
+  transport = {
+    ssh = {
+      host = var.target_hosts[each.value].public_ip
+    }
+  }
+}
+
+resource "enos_remote_exec" "enable_file_audit_device" {
+  depends_on = [
+    enos_remote_exec.create_audit_log_dir,
+    enos_vault_unseal.leader,
+  ]
+  for_each = toset([
+    for idx in local.leader : idx
+    if local.enable_audit_device
   ])
 
   environment = {
