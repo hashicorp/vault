@@ -73,8 +73,8 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 			b.pathTrim(),
 			b.pathCacheConfig(),
 			b.pathConfigKeys(),
-			b.pathSignCsr(),
-			b.pathSetCertificate(),
+			b.pathCreateCsr(),
+			b.pathImportCertChain(),
 		},
 
 		Secrets:      []*framework.Secret{},
