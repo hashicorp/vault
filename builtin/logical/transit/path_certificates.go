@@ -137,9 +137,8 @@ func (b *backend) pathSignCsrWrite(ctx context.Context, req *logical.Request, d 
 		signingKeyVersion = version.(int)
 	}
 
-	pemCsr, err := p.SignCsr(signingKeyVersion, csrTemplate)
+	pemCsr, err := p.CreateCsr(signingKeyVersion, csrTemplate)
 	if err != nil {
-		// FIXME: Error returned
 		return nil, err
 	}
 
@@ -183,7 +182,6 @@ func (b *backend) pathSetCertificateWrite(ctx context.Context, req *logical.Requ
 	pemCertChain := d.Get("certificate_chain").(string)
 	certChain, err := parseCertificateChain(pemCertChain)
 	if err != nil {
-		// FIXME: Error
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
@@ -277,7 +275,7 @@ func parseCertificateChain(certChainStr string) ([]*x509.Certificate, error) {
 	for _, certBlock := range pemCertBlocks {
 		cert, err := x509.ParseCertificate(certBlock.Bytes)
 		if err != nil {
-			return nil, errors.New("failed to parse certificate in certificate chain")
+			return nil, fmt.Errorf("failed to parse certificate in certificate chain: %s", err.Error())
 		}
 
 		certificates = append(certificates, cert)

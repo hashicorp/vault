@@ -2397,8 +2397,7 @@ func wrapTargetPKCS8ForImport(wrappingKey *rsa.PublicKey, preppedTargetKey []byt
 	return base64.StdEncoding.EncodeToString(wrappedKeys), nil
 }
 
-// NOTE: Sign/Signing?
-func (p *Policy) SignCsr(keyVersion int, csrTemplate *x509.CertificateRequest) ([]byte, error) {
+func (p *Policy) CreateCsr(keyVersion int, csrTemplate *x509.CertificateRequest) ([]byte, error) {
 	keyEntry, err := p.safeGetKeyEntry(keyVersion)
 	if err != nil {
 		return nil, err
@@ -2469,9 +2468,8 @@ func (p *Policy) SignCsr(keyVersion int, csrTemplate *x509.CertificateRequest) (
 	default:
 		return nil, errutil.InternalError{Err: fmt.Sprintf("selected key type '%s' does not support signing", p.Type)}
 	}
-	// FIXME: Not sure about this
 	if createCertReqErr != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not create the cerfificate request: %s", createCertReqErr.Error())
 	}
 
 	pemCsr := pem.EncodeToMemory(&pem.Block{
