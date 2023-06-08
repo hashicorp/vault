@@ -8,6 +8,7 @@ import (
 	cryptoRand "crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"strings"
 
 	"encoding/pem"
 	"reflect"
@@ -95,17 +96,17 @@ func testTransit_CreateCsr(t *testing.T, keyType, pemTemplateCsr string) {
 
 		signedCsr, err := parseCsr(signedCsrBytes.(string))
 		if err != nil {
-			t.Errorf("failed to parse returned csr, err:%v", err)
+			t.Fatalf("failed to parse returned csr, err:%v", err)
 		}
 
 		templateCsr, err := parseCsr(pemTemplateCsr)
 		if err != nil {
-			t.Errorf("failed to parse returned template csr, err:%v", err)
+			t.Fatalf("failed to parse returned template csr, err:%v", err)
 		}
 
 		// NOTE: Check other fields?
 		if !reflect.DeepEqual(signedCsr.Subject, templateCsr.Subject) {
-			t.Errorf("subjects should have matched, err:%v", err)
+			t.Fatalf("subjects should have matched, err:%v", err)
 		}
 
 	default:
@@ -114,8 +115,18 @@ func testTransit_CreateCsr(t *testing.T, keyType, pemTemplateCsr string) {
 		}
 	}
 }
-
 func TestTransit_Certs_ImportCertChain(t *testing.T) {
+	// NOTE: Are all these test cases needed?
+	testTransit_ImportCertChain(t, "rsa-2048")
+	testTransit_ImportCertChain(t, "rsa-3072")
+	testTransit_ImportCertChain(t, "rsa-4096")
+	testTransit_ImportCertChain(t, "ecdsa-p256")
+	testTransit_ImportCertChain(t, "ecdsa-p384")
+	testTransit_ImportCertChain(t, "ecdsa-p521")
+	testTransit_ImportCertChain(t, "ed25519")
+}
+
+func testTransit_ImportCertChain(t *testing.T, keyType string) {
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"transit": Factory,
@@ -142,20 +153,18 @@ func TestTransit_Certs_ImportCertChain(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = client.Logical().Write("transit/keys/leaf", map[string]interface{}{
-		"type": "rsa-2048",
+		"type": keyType,
 	})
 	require.NoError(t, err)
 
-	// Setup a new CSR...
+	// Setup a new CSR
 	privKey, err := rsa.GenerateKey(cryptoRand.Reader, 3072)
-	// FIXME: Address error
 	require.NoError(t, err)
 
 	var csrTemplate x509.CertificateRequest
-	csrTemplate.PublicKeyAlgorithm = x509.RSA
+	// csrTemplate.PublicKeyAlgorithm = x509.RSA
 	csrTemplate.Subject.CommonName = "example.com"
 	reqCsrBytes, err := x509.CreateCertificateRequest(cryptoRand.Reader, &csrTemplate, privKey)
-	// FIXME: Address error
 	require.NoError(t, err)
 
 	pemTemplateCsr := pem.EncodeToMemory(&pem.Block{
@@ -168,10 +177,8 @@ func TestTransit_Certs_ImportCertChain(t *testing.T) {
 	resp, err := client.Logical().Write("transit/keys/leaf/csr", map[string]interface{}{
 		"csr": string(pemTemplateCsr),
 	})
-	// FIXME: Handle this error
 	require.NoError(t, err)
 	require.NotNil(t, resp)
-	// FIXME: Also check?
 	pemCsr := resp.Data["csr"].(string)
 
 	// Mount PKI, generate a root, sign this CSR.
@@ -185,19 +192,20 @@ func TestTransit_Certs_ImportCertChain(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp)
-	rootCertPEM := resp.Data["certificate"].(string)
 
+	rootCertPEM := resp.Data["certificate"].(string)
 	pemBlock, _ := pem.Decode([]byte(rootCertPEM))
 	require.NotNil(t, pemBlock)
 
 	rootCert, err := x509.ParseCertificate(pemBlock.Bytes)
 	require.NoError(t, err)
 
-	// Create Role
+	// Create role to be used in the certificate issuing
 	resp, err = client.Logical().Write("pki/roles/example-dot-com", map[string]interface{}{
 		"allowed_domains":                    "example.com",
 		"allow_bare_domains":                 true,
 		"basic_constraints_valid_for_non_ca": true,
+		"key_type":                           "any",
 	})
 	require.NoError(t, err)
 
@@ -214,13 +222,15 @@ func TestTransit_Certs_ImportCertChain(t *testing.T) {
 
 	leafCert, err := x509.ParseCertificate(pemBlock.Bytes)
 	require.NoError(t, err)
+
 	require.NoError(t, leafCert.CheckSignatureFrom(rootCert))
 	t.Logf("root: %v", rootCertPEM)
 	t.Logf("leaf: %v", leafCertPEM)
 
-	// Import certificate to transit key version
+	certificateChain := strings.Join([]string{leafCertPEM, rootCertPEM}, "\n")
+	// Import certificate chain to transit key version
 	_, err = client.Logical().Write("transit/keys/leaf/set-certificate", map[string]interface{}{
-		"certificate_chain": leafCertPEM,
+		"certificate_chain": certificateChain,
 	})
 	require.NoError(t, err)
 }
