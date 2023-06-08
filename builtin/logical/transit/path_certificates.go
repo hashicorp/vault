@@ -15,13 +15,12 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func (b *backend) pathSignCsr() *framework.Path {
+func (b *backend) pathCreateCsr() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/" + framework.GenericNameRegex("name") + "/csr",
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
-				Type: framework.TypeString,
-				// NOTE: Required seems to be deprected, still keep it to "improve" readability?
+				Type:        framework.TypeString,
 				Required:    true,
 				Description: "Name of the key",
 			},
@@ -40,25 +39,24 @@ are going to be used as a basis for the CSR with the key in transit. If not set,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			// NOTE: Create and Update?
 			logical.CreateOperation: &framework.PathOperation{
-				Callback: b.pathSignCsrWrite,
+				Callback: b.pathCreateCsrWrite,
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationVerb: "create",
 				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback: b.pathSignCsrWrite,
+				Callback: b.pathCreateCsrWrite,
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationVerb: "update",
 				},
 			},
 		},
-		// FIXME: Write synposis and description
-		HelpSynopsis:    "",
-		HelpDescription: "",
+		HelpSynopsis:    pathCreateCsrHelpSyn,
+		HelpDescription: pathCreateCsrHelpDesc,
 	}
 }
 
-func (b *backend) pathSetCertificate() *framework.Path {
+func (b *backend) pathImportCertChain() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/" + framework.GenericNameRegex("name") + "/set-certificate",
 		Fields: map[string]*framework.FieldSchema{
@@ -82,25 +80,24 @@ func (b *backend) pathSetCertificate() *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			// NOTE: Create and Update?
 			logical.CreateOperation: &framework.PathOperation{
-				Callback: b.pathSetCertificateWrite,
+				Callback: b.pathImportCertChainWrite,
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationVerb: "create",
 				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback: b.pathSetCertificateWrite,
+				Callback: b.pathImportCertChainWrite,
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationVerb: "update",
 				},
 			},
 		},
-		// FIXME: Write synposis and description
-		HelpSynopsis:    "",
-		HelpDescription: "",
+		HelpSynopsis:    pathImportCertChainHelpSyn,
+		HelpDescription: pathImportCertChainHelpDesc,
 	}
 }
 
-func (b *backend) pathSignCsrWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathCreateCsrWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
@@ -153,7 +150,7 @@ func (b *backend) pathSignCsrWrite(ctx context.Context, req *logical.Request, d 
 	return resp, nil
 }
 
-func (b *backend) pathSetCertificateWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathImportCertChainWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
@@ -299,3 +296,18 @@ func hasSingleLeafCertificate(certChain []*x509.Certificate) bool {
 
 	return hasSingleLeafCert
 }
+
+const pathCreateCsrHelpSyn = `Create a CSR from a key in transit`
+
+const pathCreateCsrHelpDesc = `This path is used to create a CSR from a key in 
+transit. If a CSR template is provided, its significant information, expect key 
+related data, are included in the CSR otherwise an empty CSR is returned.
+`
+
+const pathImportCertChainHelpSyn = `Imports an externally-signed certificate 
+chain into an existing key version`
+
+const pathImportCertChainHelpDesc = `This path is used to import an externally-
+signed certificate chain into a key in transit. The leaf certificate key has to 
+match the selected key in transit.
+`

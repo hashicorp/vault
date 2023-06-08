@@ -22,7 +22,7 @@ import (
 	"testing"
 )
 
-func TestTransit_Certs_SignCSR(t *testing.T) {
+func TestTransit_Certs_CreateCsr(t *testing.T) {
 	// NOTE: Use an existing CSR or generate one here?
 	templateCsr := `
 -----BEGIN CERTIFICATE REQUEST-----
@@ -42,17 +42,17 @@ O1aQIm23HrrG
 -----END CERTIFICATE REQUEST-----
 `
 
-	testTransit_SignCSR(t, "rsa-2048", templateCsr)
-	testTransit_SignCSR(t, "rsa-3072", templateCsr)
-	testTransit_SignCSR(t, "rsa-4096", templateCsr)
-	testTransit_SignCSR(t, "ecdsa-p256", templateCsr)
-	testTransit_SignCSR(t, "ecdsa-p384", templateCsr)
-	testTransit_SignCSR(t, "ecdsa-p521", templateCsr)
-	testTransit_SignCSR(t, "ed25519", templateCsr)
-	testTransit_SignCSR(t, "aes256-gcm96", templateCsr)
+	testTransit_CreateCsr(t, "rsa-2048", templateCsr)
+	testTransit_CreateCsr(t, "rsa-3072", templateCsr)
+	testTransit_CreateCsr(t, "rsa-4096", templateCsr)
+	testTransit_CreateCsr(t, "ecdsa-p256", templateCsr)
+	testTransit_CreateCsr(t, "ecdsa-p384", templateCsr)
+	testTransit_CreateCsr(t, "ecdsa-p521", templateCsr)
+	testTransit_CreateCsr(t, "ed25519", templateCsr)
+	testTransit_CreateCsr(t, "aes256-gcm96", templateCsr)
 }
 
-func testTransit_SignCSR(t *testing.T, keyType, pemTemplateCsr string) {
+func testTransit_CreateCsr(t *testing.T, keyType, pemTemplateCsr string) {
 	var resp *logical.Response
 	var err error
 	b, s := createBackendWithStorage(t)
@@ -115,7 +115,7 @@ func testTransit_SignCSR(t *testing.T, keyType, pemTemplateCsr string) {
 	}
 }
 
-func TestTransit_Certs_SetCertificate(t *testing.T) {
+func TestTransit_Certs_ImportCertChain(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"transit": Factory,
