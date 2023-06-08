@@ -14,6 +14,8 @@ var MaxChallengeTimeout = 1 * time.Minute
 
 const MaxRetryAttempts = 5
 
+const ChallengeAttemptFailedMsg = "this may occur if the validation target was misconfigured: check that challenge responses are available at the required locations and retry."
+
 type ChallengeValidation struct {
 	// Account KID that this validation attempt is recorded under.
 	Account string `json:"account"`
@@ -401,7 +403,7 @@ func (ace *ACMEChallengeEngine) _verifyChallenge(sc *storageContext, id string, 
 
 		valid, err = ValidateHTTP01Challenge(authz.Identifier.Value, cv.Token, cv.Thumbprint, config)
 		if err != nil {
-			err = fmt.Errorf("%w: error validating http-01 challenge %v: %s", ErrIncorrectResponse, id, err.Error())
+			err = fmt.Errorf("%w: error validating http-01 challenge %v: %v; %v", ErrIncorrectResponse, id, err, ChallengeAttemptFailedMsg)
 			return ace._verifyChallengeRetry(sc, cv, authzPath, authz, challenge, err, id)
 		}
 	case ACMEDNSChallenge:
@@ -412,7 +414,7 @@ func (ace *ACMEChallengeEngine) _verifyChallenge(sc *storageContext, id string, 
 
 		valid, err = ValidateDNS01Challenge(authz.Identifier.Value, cv.Token, cv.Thumbprint, config)
 		if err != nil {
-			err = fmt.Errorf("%w: error validating dns-01 challenge %v: %s", ErrIncorrectResponse, id, err.Error())
+			err = fmt.Errorf("%w: error validating dns-01 challenge %v: %v; %v", ErrIncorrectResponse, id, err, ChallengeAttemptFailedMsg)
 			return ace._verifyChallengeRetry(sc, cv, authzPath, authz, challenge, err, id)
 		}
 	case ACMEALPNChallenge:

@@ -762,7 +762,7 @@ func TestAcmeIgnoresRoleExtKeyUsage(t *testing.T) {
 		"allowed_domains":             "localdomain",
 		"allow_subdomains":            "true",
 		"allow_wildcard_certificates": "true",
-		"require_cn":                  "false",
+		"require_cn":                  "true", /* explicit default */
 		"server_flag":                 "true",
 		"client_flag":                 "true",
 		"code_signing_flag":           "true",
