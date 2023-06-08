@@ -17,21 +17,42 @@ The Operator writes the *source* Vault secret data directly to the *destination*
 changes made to the *source* are replicated to the *destination* over its lifetime. In this way, an application only needs
 to have access to the *destination* secret in order to make use of the secret data contained within.
 
-### Features
+## Features
 
 The following features are supported by the Vault Secrets Operator:
 
-- All Vault secret engines supported.
+- All Vault [secret engines](/vault/docs/secrets) supported.
 - TLS/mTLS communications with Vault.
-- Authentication to Vault with any of the following auth methods:
-  [Kubernetes](/vault/docs/auth/kubernetes), [JWT](/vault/docs/auth/jwt), [AppRole](/vault/docs/auth/approle).
-- Syncing Vault Secrets to Kubernetes Secrets.
+- Authentication to Vault with any of the following Auth Methods:
+  - [Kubernetes](/vault/docs/auth/kubernetes)
+  - [JWT](/vault/docs/auth/jwt)
+  - [AppRole](/vault/docs/auth/approle)
+  - [AWS](/vault/docs/auth/aws)
+  - Support for additional Auth Methods coming soon.
 - Secret rotation for `Deployment`, `ReplicaSet`, `StatefulSet` Kubernetes resource types.
-- Prometheus instrumentation for monitoring the Operator
-- Supported installation methods: `Helm`, `Kustomize`<br />
+- Prometheus instrumentation for [monitoring](/vault/docs/platform/k8s/vso/telemetry) the Operator
+- Support for installing using: `Helm` or `Kustomize`<br />
 *see the [installation](/vault/docs/platform/k8s/vso/installation) docs for more details*
 
+## Supported Vault Versions
+
+- Vault OSS 1.11+
+- Vault Enterprise 1.11+
+- [HCP Vault](https://www.hashicorp.com/cloud)
+
 @include 'kubernetes-supported-versions.mdx'
+
+## Supported Cloud Providers
+
+The Vault Secrets Operator has been tested successfully in the following hosted Kubernetes environments:
+- Amazon Elastic Kubernetes Service (EKS)
+- Google Kubernetes Engine (GKE)
+- Microsoft Azure Kubernetes Service (AKS)
+- Red Hat OpenShift
+
+Basic integration tests are available in the project repository.
+Please report any incompatibilities via a [Github Issue](https://github.com/hashicorp/vault-secrets-operator/issues).
+
 
 ## Vault Access and Custom Resource Definitions
 
