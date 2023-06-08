@@ -8,14 +8,16 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/hex"
+	"fmt"
 	"net"
 	"net/http"
+	"os"
 	"path"
+	"sync"
 	"testing"
 	"time"
 
@@ -35,11 +37,13 @@ func Test_ACME(t *testing.T) {
 	defer cluster.Cleanup()
 
 	tc := map[string]func(t *testing.T, cluster *VaultPkiCluster){
-		"certbot":           SubtestACMECertbot,
-		"certbot eab":       SubtestACMECertbotEab,
-		"acme ip sans":      SubtestACMEIPAndDNS,
-		"acme wildcard":     SubtestACMEWildcardDNS,
-		"acme prevents ica": SubtestACMEPreventsICADNS,
+		"certbot":             SubtestACMECertbot,
+		"certbot eab":         SubtestACMECertbotEab,
+		"acme ip sans":        SubtestACMEIPAndDNS,
+		"acme wildcard":       SubtestACMEWildcardDNS,
+		"acme prevents ica":   SubtestACMEPreventsICADNS,
+		"acme load test dns":  SubtestACMELoadDNS,
+		"acme load test http": SubtestACMELoadHTTP,
 	}
 
 	// Wrap the tests within an outer group, so that we run all tests
@@ -66,8 +70,6 @@ func SubtestACMECertbot(t *testing.T, cluster *VaultPkiCluster) {
 	directory := "https://" + pki.GetActiveContainerIP() + ":8200/v1/pki/acme/directory"
 	vaultNetwork := pki.GetContainerNetworkName()
 
-	logConsumer, logStdout, logStderr := getDockerLog(t)
-
 	t.Logf("creating on network: %v", vaultNetwork)
 	runner, err := hDocker.NewServiceRunner(hDocker.RunOptions{
 		ImageRepo:     "docker.mirror.hashicorp.services/certbot/certbot",
@@ -75,9 +77,9 @@ func SubtestACMECertbot(t *testing.T, cluster *VaultPkiCluster) {
 		ContainerName: "vault_pki_certbot_test",
 		NetworkName:   vaultNetwork,
 		Entrypoint:    []string{"sleep", "45"},
-		LogConsumer:   logConsumer,
-		LogStdout:     logStdout,
-		LogStderr:     logStderr,
+		LogConsumer: func(s string) {
+			t.Logf(s)
+		},
 	})
 	require.NoError(t, err, "failed creating service runner")
 
@@ -225,8 +227,6 @@ func SubtestACMECertbotEab(t *testing.T, cluster *VaultPkiCluster) {
 	directory := "https://" + pki.GetActiveContainerIP() + ":8200/v1/" + mountName + "/acme/directory"
 	vaultNetwork := pki.GetContainerNetworkName()
 
-	logConsumer, logStdout, logStderr := getDockerLog(t)
-
 	t.Logf("creating on network: %v", vaultNetwork)
 	runner, err := hDocker.NewServiceRunner(hDocker.RunOptions{
 		ImageRepo:     "docker.mirror.hashicorp.services/certbot/certbot",
@@ -234,9 +234,9 @@ func SubtestACMECertbotEab(t *testing.T, cluster *VaultPkiCluster) {
 		ContainerName: "vault_pki_certbot_eab_test",
 		NetworkName:   vaultNetwork,
 		Entrypoint:    []string{"sleep", "45"},
-		LogConsumer:   logConsumer,
-		LogStdout:     logStdout,
-		LogStderr:     logStderr,
+		LogConsumer: func(s string) {
+			t.Logf(s)
+		},
 	})
 	require.NoError(t, err, "failed creating service runner")
 
@@ -349,17 +349,15 @@ func SubtestACMEIPAndDNS(t *testing.T, cluster *VaultPkiCluster) {
 	basePath, err := pki.UpdateClusterConfigLocalAddr()
 	require.NoError(t, err, "failed updating cluster config")
 
-	logConsumer, logStdout, logStderr := getDockerLog(t)
-
-	// Setup an nginx container that we can have respond the queries for ips
+	// Setup an nginx container that we can respond to the queries for ips
 	runner, err := hDocker.NewServiceRunner(hDocker.RunOptions{
 		ImageRepo:     "docker.mirror.hashicorp.services/nginx",
 		ImageTag:      "latest",
 		ContainerName: "vault_pki_ipsans_test",
 		NetworkName:   pki.GetContainerNetworkName(),
-		LogConsumer:   logConsumer,
-		LogStdout:     logStdout,
-		LogStderr:     logStderr,
+		LogConsumer: func(s string) {
+			t.Logf(s)
+		},
 	})
 	require.NoError(t, err, "failed creating service runner")
 
@@ -379,7 +377,7 @@ func SubtestACMEIPAndDNS(t *testing.T, cluster *VaultPkiCluster) {
 	}
 	stdout, stderr, retcode, err := runner.RunCmdWithOutput(ctx, nginxContainerId, createChallengeFolderCmd)
 	require.NoError(t, err, "failed to create folder in nginx container")
-	t.Logf("Update host file command: %v\nstdout: %v\nstderr: %v", createChallengeFolderCmd, string(stdout), string(stderr))
+	t.Logf("Create challenge folder command: %v\nstdout: %v\nstderr: %v", createChallengeFolderCmd, string(stdout), string(stderr))
 	require.Equal(t, 0, retcode, "expected zero retcode from mkdir in nginx container")
 
 	ipAddr := networks[pki.GetContainerNetworkName()]
@@ -485,7 +483,7 @@ func doAcmeValidationWithGoLibrary(t *testing.T, directoryUrl string, acmeOrderI
 	}
 	httpClient := &http.Client{Transport: tr}
 
-	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	accountKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	require.NoError(t, err, "failed creating rsa account key")
 
 	t.Logf("Using the following url for the ACME directory: %s", directoryUrl)
@@ -495,7 +493,7 @@ func doAcmeValidationWithGoLibrary(t *testing.T, directoryUrl string, acmeOrderI
 		DirectoryURL: directoryUrl,
 	}
 
-	testCtx, cancelFunc := context.WithTimeout(context.Background(), 2*time.Minute)
+	testCtx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancelFunc()
 
 	// Create new account
@@ -626,6 +624,278 @@ func SubtestACMEWildcardDNS(t *testing.T, cluster *VaultPkiCluster) {
 	require.Contains(t, acmeCert.DNSNames, wildcard)
 	require.Equal(t, wildcard, acmeCert.Subject.CommonName)
 	pki.RemoveDNSRecordsForDomain(hostname)
+}
+
+func SubtestACMELoadDNS(t *testing.T, cluster *VaultPkiCluster) {
+	if os.Getenv("CI") != "" {
+		t.Skip("Skipping somewhat expensive tests in CI")
+	}
+
+	// Count controls how many clients are used in each cohort, and groups
+	// controls the number of test executions to do.
+	count := 100
+	groups := 3
+
+	// Setup the mount.
+	pki, err := cluster.CreateAcmeMount("pki-load-test-dns")
+	require.NoError(t, err, "failed setting up acme mount")
+
+	// Since we interact with ACME from outside the container network the ACME
+	// configuration needs to be updated to use the host port and not the internal
+	// docker ip.
+	basePath, err := pki.UpdateClusterConfigLocalAddr()
+	require.NoError(t, err, "failed updating cluster config")
+
+	basename := "dns-load-test.dadgarcorp.com"
+	clientFmt := "client-%d." + basename
+
+	// Do validation without a role.
+	directoryUrl := basePath + "/acme/directory"
+
+	provisioningFunc := func(acmeClient *acme.Client, auths []*acme.Authorization) []*acme.Challenge {
+		// For each dns-01 challenge, place the record in the associated DNS resolver.
+		var challengesToAccept []*acme.Challenge
+		for _, auth := range auths {
+			for _, challenge := range auth.Challenges {
+				if challenge.Status != acme.StatusPending {
+					t.Logf("ignoring challenge not in status pending: %v", challenge)
+					continue
+				}
+
+				if challenge.Type == "dns-01" {
+					challengeBody, err := acmeClient.DNS01ChallengeRecord(challenge.Token)
+					require.NoError(t, err, "failed generating challenge response")
+
+					err = pki.AddDNSRecord("_acme-challenge."+auth.Identifier.Value, "TXT", challengeBody)
+					require.NoError(t, err, "failed setting DNS record")
+
+					challengesToAccept = append(challengesToAccept, challenge)
+				}
+			}
+		}
+
+		require.GreaterOrEqual(t, len(challengesToAccept), 1, "Need at least one challenge, got none")
+		return challengesToAccept
+	}
+
+	var results []time.Duration
+	for group := 0; group < groups; group++ {
+		start := time.Now()
+
+		t.Logf("starting %v clients in group %v", count, group)
+		var wg sync.WaitGroup
+		for i := 0; i < count; i++ {
+			wg.Add(1)
+			go func(index int) {
+				hostname := fmt.Sprintf(clientFmt, index)
+				challengeName := "_acme-challenge." + hostname
+				defer pki.RemoveDNSRecordsForDomain(challengeName)
+
+				acmeOrderIdentifiers := []acme.AuthzID{
+					{Type: "dns", Value: hostname},
+				}
+				cr := &x509.CertificateRequest{
+					Subject: pkix.Name{CommonName: hostname},
+				}
+
+				doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, cr, provisioningFunc, "")
+				wg.Done()
+			}(i)
+		}
+
+		t.Logf("waiting for %v clients in group %v", count, group)
+		wg.Wait()
+
+		end := time.Now()
+		msg := fmt.Sprintf("[%d] load test took %v for %v clients", group, end.Sub(start), count)
+		results = append(results, end.Sub(start))
+		t.Logf(msg)
+	}
+
+	min := results[0]
+	minIndex := 0
+	max := results[0]
+	maxIndex := 0
+	var total int64
+	for index, value := range results {
+		if value < min {
+			minIndex = index
+			min = value
+		}
+		if value > max {
+			maxIndex = index
+			max = value
+		}
+		total += int64(value)
+
+		t.Logf("run=%d took %v for %v clients", index, value, count)
+	}
+
+	avgDuration := time.Duration(total / int64(len(results)))
+	totalDuration := time.Duration(total)
+
+	t.Logf("min=%v@%v / max=%v@%v / avg=%v / total=%v / count=%v", min, minIndex, max, maxIndex, avgDuration, totalDuration, len(results))
+}
+
+func SubtestACMELoadHTTP(t *testing.T, cluster *VaultPkiCluster) {
+	if os.Getenv("CI") != "" {
+		t.Skip("Skipping somewhat expensive tests in CI")
+	}
+
+	// Count controls how many clients are used in each cohort, and groups
+	// controls the number of test executions to do.
+	count := 100
+	groups := 3
+
+	// Setup the mount.
+	pki, err := cluster.CreateAcmeMount("pki-load-test-http")
+	require.NoError(t, err, "failed setting up acme mount")
+
+	// Since we interact with ACME from outside the container network the ACME
+	// configuration needs to be updated to use the host port and not the internal
+	// docker ip.
+	basePath, err := pki.UpdateClusterConfigLocalAddr()
+	require.NoError(t, err, "failed updating cluster config")
+
+	basename := "http-load-test.dadgarcorp.com"
+	clientFmt := "client-%d." + basename
+
+	// Do validation without a role.
+	directoryUrl := basePath + "/acme/directory"
+
+	// Setup an nginx container that we can respond to queries with.
+	runner, err := hDocker.NewServiceRunner(hDocker.RunOptions{
+		ImageRepo:     "docker.mirror.hashicorp.services/nginx",
+		ImageTag:      "latest",
+		ContainerName: "vault_pki_acme_load_nginx",
+		NetworkName:   pki.GetContainerNetworkName(),
+		LogConsumer: func(s string) {
+			t.Logf(s)
+		},
+	})
+	require.NoError(t, err, "failed creating service runner")
+
+	ctx := context.Background()
+	result, err := runner.Start(ctx, true, false)
+	require.NoError(t, err, "could not start container")
+	require.NotNil(t, result, "could not start container")
+
+	nginxContainerId := result.Container.ID
+	defer runner.Stop(context.Background(), nginxContainerId)
+	networks, err := runner.GetNetworkAndAddresses(nginxContainerId)
+
+	// Create shared acme challenge directory.
+	challengeFolder := "/usr/share/nginx/html/.well-known/acme-challenge/"
+	createChallengeFolderCmd := []string{
+		"sh", "-c",
+		"mkdir -p '" + challengeFolder + "'",
+	}
+	stdout, stderr, retcode, err := runner.RunCmdWithOutput(ctx, nginxContainerId, createChallengeFolderCmd)
+	require.NoError(t, err, "failed to create folder in nginx container")
+	t.Logf("Create challenge folder command: %v\nstdout: %v\nstderr: %v", createChallengeFolderCmd, string(stdout), string(stderr))
+	require.Equal(t, 0, retcode, "expected zero retcode from mkdir in nginx container")
+
+	ipAddr := networks[pki.GetContainerNetworkName()]
+
+	// Create DNS records.
+	for index := 0; index < count; index++ {
+		hostname := fmt.Sprintf(clientFmt, index)
+		err = pki.AddHostnameLazy(hostname, ipAddr)
+		require.NoError(t, err, "failed to update vault host files")
+	}
+	err = pki.PushHostnameConfig()
+
+	provisioningFunc := func(acmeClient *acme.Client, auths []*acme.Authorization) []*acme.Challenge {
+		// For each http-01 challenge, generate the file to place underneath the nginx challenge folder
+		acmeCtx := hDocker.NewBuildContext()
+		var challengesToAccept []*acme.Challenge
+		for _, auth := range auths {
+			for _, challenge := range auth.Challenges {
+				if challenge.Status != acme.StatusPending {
+					t.Logf("ignoring challenge not in status pending: %v", challenge)
+					continue
+				}
+
+				if challenge.Type == "http-01" {
+					challengeBody, err := acmeClient.HTTP01ChallengeResponse(challenge.Token)
+					require.NoError(t, err, "failed generating challenge response")
+
+					challengePath := acmeClient.HTTP01ChallengePath(challenge.Token)
+					require.NoError(t, err, "failed generating challenge path")
+
+					challengeFile := path.Base(challengePath)
+
+					acmeCtx[challengeFile] = hDocker.PathContentsFromString(challengeBody)
+
+					challengesToAccept = append(challengesToAccept, challenge)
+				}
+			}
+		}
+
+		require.GreaterOrEqual(t, len(challengesToAccept), 1, "Need at least one challenge, got none")
+
+		// Copy all challenges within the nginx container
+		err = runner.CopyTo(nginxContainerId, challengeFolder, acmeCtx)
+		require.NoError(t, err, "failed copying challenges to container")
+
+		return challengesToAccept
+	}
+
+	var results []time.Duration
+	for group := 0; group < groups; group++ {
+		start := time.Now()
+
+		t.Logf("starting %v clients in group %v", count, group)
+		var wg sync.WaitGroup
+		for i := 0; i < count; i++ {
+			wg.Add(1)
+			go func(index int) {
+				hostname := fmt.Sprintf(clientFmt, index)
+
+				acmeOrderIdentifiers := []acme.AuthzID{
+					{Type: "dns", Value: hostname},
+				}
+				cr := &x509.CertificateRequest{
+					Subject: pkix.Name{CommonName: hostname},
+				}
+
+				doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, cr, provisioningFunc, "")
+				wg.Done()
+			}(i)
+		}
+
+		t.Logf("waiting for %v clients in group %v", count, group)
+		wg.Wait()
+
+		end := time.Now()
+		msg := fmt.Sprintf("[%d] load test took %v for %v clients", group, end.Sub(start), count)
+		results = append(results, end.Sub(start))
+		t.Logf(msg)
+	}
+
+	min := results[0]
+	minIndex := 0
+	max := results[0]
+	maxIndex := 0
+	var total int64
+	for index, value := range results {
+		if value < min {
+			minIndex = index
+			min = value
+		}
+		if value > max {
+			maxIndex = index
+			max = value
+		}
+		total += int64(value)
+
+		t.Logf("run=%d took %v for %v clients", index, value, count)
+	}
+
+	avgDuration := time.Duration(total / int64(len(results)))
+	totalDuration := time.Duration(total)
+
+	t.Logf("min=%v@%v / max=%v@%v / avg=%v / total=%v / count=%v", min, minIndex, max, maxIndex, avgDuration, totalDuration, len(results))
 }
 
 func SubtestACMEPreventsICADNS(t *testing.T, cluster *VaultPkiCluster) {

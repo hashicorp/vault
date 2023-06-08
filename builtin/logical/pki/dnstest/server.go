@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -27,6 +28,7 @@ type TestServer struct {
 	forwarders []string
 	domains    []string
 	records    map[string]map[string][]string // domain -> record -> value(s).
+	lastPushed map[string]map[string][]string
 
 	cleanup func()
 }
@@ -146,6 +148,24 @@ func (ts *TestServer) buildNamedConf() string {
 	return cfg
 }
 
+func iterateStringMapSorted(src interface{}) []string {
+	var keys []string
+	switch source := src.(type) {
+	case map[string][]string:
+		for key := range source {
+			keys = append(keys, key)
+		}
+	case map[string]map[string][]string:
+		for key := range source {
+			keys = append(keys, key)
+		}
+	default:
+		panic(fmt.Errorf("unknown type passed to iterateStringMapSorted: %T", src))
+	}
+	sort.Strings(keys)
+	return keys
+}
+
 func (ts *TestServer) buildZoneFile(target string) string {
 	// One second TTL by default to allow quick refreshes.
 	zone := "$TTL 1;\n"
@@ -156,12 +176,14 @@ func (ts *TestServer) buildZoneFile(target string) string {
 	zone += fmt.Sprintf("@\tIN\tNS\tns%d.%v.\n", ts.serial, target)
 	zone += fmt.Sprintf("ns%d.%v.\tIN\tA\t%v\n", ts.serial, target, "127.0.0.1")
 
-	for domain, records := range ts.records {
+	for _, domain := range iterateStringMapSorted(ts.records) {
 		if !strings.HasSuffix(domain, target) {
 			continue
 		}
 
-		for recordType, values := range records {
+		records := ts.records[domain]
+		for _, recordType := range iterateStringMapSorted(records) {
+			values := records[recordType]
 			for _, value := range values {
 				zone += fmt.Sprintf("%s.\tIN\t%s\t%s\n", domain, recordType, value)
 			}
@@ -169,6 +191,38 @@ func (ts *TestServer) buildZoneFile(target string) string {
 	}
 
 	return zone
+}
+
+func (ts *TestServer) PushConfigForRecord(domain string, record string, value string) {
+	ts.lock.Lock()
+	defer ts.lock.Unlock()
+
+	allRecordTypes, haveDomain := ts.lastPushed[domain]
+	if haveDomain {
+		records, haveRecord := allRecordTypes[record]
+		if haveRecord {
+			var foundRecord bool
+			for _, record := range records {
+				if value == record {
+					foundRecord = true
+					break
+				}
+			}
+
+			if foundRecord {
+				return
+			}
+		}
+	}
+
+	ts.doPushConfig()
+}
+
+func (ts *TestServer) PushConfig() {
+	ts.lock.Lock()
+	defer ts.lock.Unlock()
+
+	ts.doPushConfig()
 }
 
 func (ts *TestServer) pushNamedConf() {
@@ -200,15 +254,16 @@ func (ts *TestServer) pushZoneFiles() {
 	require.NoError(ts.t, err, "failed pushing updated named.conf.options to container")
 }
 
-func (ts *TestServer) PushConfig() {
-	ts.lock.Lock()
-	defer ts.lock.Unlock()
+func (ts *TestServer) doPushConfig() {
+	// requires ts.lock to be held.
 
 	// There's two cases here:
 	//
 	// 1. We've added a new top-level domain name. Here, we want to make
 	//    sure the new zone file is pushed before we push the reference
-	//    to it.
+	//    to it. This avoids a race between Docker pushing the files and
+	//    bind9 reloading the named.conf.options file and not finding the
+	//    newly added zone file.
 	// 2. We've just added a new. Here, the order doesn't matter, but
 	//    mostly likely the second push will be a no-op.
 	ts.pushZoneFiles()
@@ -261,6 +316,15 @@ func (ts *TestServer) PushConfig() {
 
 		return nil
 	})
+
+	ts.lastPushed = make(map[string]map[string][]string, len(ts.records))
+	for domain, allRecordTypes := range ts.records {
+		ts.lastPushed[domain] = make(map[string][]string, len(allRecordTypes))
+		for recordType, records := range allRecordTypes {
+			ts.lastPushed[domain][recordType] = make([]string, 0, len(records))
+			ts.lastPushed[domain][recordType] = append(ts.lastPushed[domain][recordType], records...)
+		}
+	}
 }
 
 func (ts *TestServer) GetLocalAddr() string {
@@ -314,6 +378,12 @@ func (ts *TestServer) AddRecord(domain string, record string, value string) {
 	}
 
 	ts.records[domain][record] = append(ts.records[domain][record], value)
+}
+
+func (ts *TestServer) AddRecordAndPush(domain string, record string, value string) {
+	ts.AddRecord(domain, record, value)
+	time.Sleep(50 * time.Millisecond)
+	ts.PushConfigForRecord(domain, record, value)
 }
 
 func (ts *TestServer) RemoveRecord(domain string, record string, value string) {
