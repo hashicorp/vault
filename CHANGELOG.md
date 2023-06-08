@@ -41,6 +41,7 @@ to HashiCorp without requiring you to manually collect and report them.
 * **Vault PKI ACME Server**: Support for the ACME certificate lifecycle management protocol has been added to the Vault PKI Plugin. This allows standard ACME clients, such as the EFF's certbot and the CNCF's k8s cert-manager, to request certificates from a Vault server with no knowledge of Vault APIs or authentication mechanisms. For public-facing Vault instances, we recommend requiring External Account Bindings (EAB) to limit the ability to request certificates to only authenticated clients. [[GH-20752](https://github.com/hashicorp/vault/pull/20752)]
 * **Vault Proxy**: Introduced Vault Proxy, a new subcommand of the Vault binary that can be invoked using `vault proxy -config=config.hcl`. It currently has the same feature set as Vault Agent's API proxy, but the two may diverge in the future. We plan to deprecate the API proxy functionality of Vault Agent in a future release. [[GH-20548](https://github.com/hashicorp/vault/pull/20548)]
 * cli: Add 'agent generate-config' sub-command [[GH-20530](https://github.com/hashicorp/vault/pull/20530)]
+* **Sidebar Navigation in UI**: A new sidebar navigation panel has been added in the UI to replace the top navigation bar.
 
 IMPROVEMENTS:
 
