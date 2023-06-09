@@ -2,8 +2,7 @@
 layout: docs
 page_title: agent generate-config - Command
 description: |-
-  The "agent generate-config" command generates a simple Vault Agent
-  configuration file from the given parameters.
+  Generates a simple Vault Agent configuration file from the given parameters.
 ---
 
 # agent generate-config
@@ -45,14 +44,17 @@ $ vault kv put -mount=secret foo user=admin password=s3cr3t
 Generate an agent configuration file which will reference "secret/foo":
 
 ```shell-session
-$ vault agent generate-config -type="env-template" \
-                              -exec="./my-app arg1 arg2" \
-                              -path="secret/foo"
-Successfully generated "agent.hcl" configuration file!
+$ vault agent generate-config \
+                -type="env-template" \
+                -exec="./my-app arg1 arg2" \
+                -path="secret/foo" \
+                my-config.hcl
+
+Successfully generated "my-config.hcl" configuration file!
 Warning: the generated file uses 'token_file' authentication method, which is not suitable for production environments.
 ```
 
-This will produce `agent.hcl` file in the current directory with the following
+This will produce `my-config.hcl` file in the current directory with the following
 contents:
 
 ```hcl
