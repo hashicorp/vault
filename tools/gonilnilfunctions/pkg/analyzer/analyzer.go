@@ -6,6 +6,7 @@ package analyzer
 import (
 	"go/ast"
 	"go/types"
+	"strings"
 
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
@@ -78,6 +79,11 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	inspector.Preorder(nodeFilter, func(node ast.Node) {
 		funcDecl, ok := node.(*ast.FuncDecl)
 		if !ok {
+			return
+		}
+
+		// If the function has the "Ignore" godoc comment, skip it
+		if strings.Contains(funcDecl.Doc.Text(), "ignore-nil-nil-function-check") {
 			return
 		}
 

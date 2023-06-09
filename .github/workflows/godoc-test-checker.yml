@@ -8,6 +8,9 @@ on:
       - main
 
 jobs:
+  # Note: if there is a function we want to ignore this check for,
+  # You can add 'ignore-nil-nil-function-check' somewhere in the
+  # godoc for the function.
   godoc-test-check:
     runs-on: ubuntu-latest
     steps:

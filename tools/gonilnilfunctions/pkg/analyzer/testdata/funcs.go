@@ -64,3 +64,9 @@ func NestedForReturn() (any, error) { // want "Function NestedForReturn can retu
 func AnyErrorNilNil() (any, error) { // want "Function AnyErrorNilNil can return an error, and has a statement that returns only nils"
 	return nil, nil
 }
+
+// Skipped should be skipped because of the following line:
+// ignore-nil-nil-function-check
+func Skipped() (any, error) {
+	return nil, nil
+}
