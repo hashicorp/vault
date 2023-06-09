@@ -16,9 +16,7 @@ module "backend_consul" {
   environment     = "ci"
   common_tags     = var.tags
   ssh_aws_keypair = var.aws_ssh_keypair_name
-
-  # Set this to a real license vault if using an Enterprise edition of Consul
-  consul_license = var.backend_license_path == null ? "none" : file(abspath(var.backend_license_path))
+  consul_license  = var.backend_license_path == null ? null : file(abspath(var.backend_license_path))
 }
 
 module "backend_raft" {
@@ -105,7 +103,8 @@ module "vault_verify_agent_output" {
 module "vault_cluster" {
   source = "./modules/vault_cluster"
 
-  install_dir = var.vault_install_dir
+  install_dir    = var.vault_install_dir
+  consul_license = var.backend_license_path == null ? null : file(abspath(var.backend_license_path))
 }
 
 module "vault_get_cluster_ips" {
