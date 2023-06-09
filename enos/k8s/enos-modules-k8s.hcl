@@ -44,7 +44,7 @@ module "k8s_verify_version" {
 module "k8s_verify_write_data" {
   source = "../modules/k8s_vault_verify_write_data"
 
-  vault_instance_count   = var.vault_instance_count
+  vault_instance_count = var.vault_instance_count
 }
 
 module "read_license" {
