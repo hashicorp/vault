@@ -4,7 +4,7 @@
 package main
 
 import (
-	"github.com/hashicorp/vault/tools/godoctests/pkg/analyzer"
+	"github.com/hashicorp/vault/tools/gonilnilfunctions/pkg/analyzer"
 	"golang.org/x/tools/go/analysis/singlechecker"
 )
 
