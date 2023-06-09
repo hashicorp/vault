@@ -18,7 +18,7 @@ export default class KvDataAdapter extends ApplicationAdapter {
     const { backend, path, version } = snapshot.record;
     const url = this._urlForSecret(backend, path);
     return this.ajax(url, 'POST', { data: this.serialize(snapshot) }).then((resp) => {
-      resp.id = `${backend}/${version}/${path}`;
+      resp.id = `${encodePath(backend)}/${version}/${encodePath(path)}`;
       return resp;
     });
   }
@@ -41,6 +41,9 @@ export default class KvDataAdapter extends ApplicationAdapter {
   }
 
   /* Four types of delete operations */
+  // make typescript
+  // ARG TODO use destroyRecord({deleteType}) and conditionally call the method.
+  // util can be the names of these methods.  https://api.emberjs.com/ember-data/4.12/classes/Model/methods?anchor=destroyRecord
 
   // 1. Soft delete the secret's latest version.
   deleteLatestVersion(backend, path) {

@@ -53,6 +53,11 @@ export default class KvSecretDataModel extends Model {
   @attr('boolean') destroyed;
   @attr('number') version;
 
+  @attr('number', {
+    defaultValue: 0, // version 0 only occurs on creating a secret
+  })
+  casVersion;
+
   // Permissions
   @lazyCapabilities(apiPath`${'backend'}/data/${'path'}`, 'backend', 'path') dataPath;
   @lazyCapabilities(apiPath`${'backend'}/metadata/${'path'}`, 'backend', 'path') metadataPath;
