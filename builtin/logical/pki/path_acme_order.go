@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -21,6 +22,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/net/idna"
 )
+
+var maxAcmeCertTTL = 90 * (24 * time.Hour)
 
 func pathAcmeListOrders(b *backend) []*framework.Path {
 	return buildAcmeFrameworkPaths(b, patternAcmeListOrders, "/orders")
@@ -478,6 +481,34 @@ func storeCertificate(sc *storageContext, signedCertBundle *certutil.ParsedCertB
 	return nil
 }
 
+func maybeAugmentReqDataWithSuitableCN(ac *acmeContext, csr *x509.CertificateRequest, data *framework.FieldData) {
+	// Role doesn't require a CN, so we don't care.
+	if !ac.role.RequireCN {
+		return
+	}
+
+	// CSR contains a CN, so use that one.
+	if csr.Subject.CommonName != "" {
+		return
+	}
+
+	// Choose a CN in the order wildcard -> DNS -> IP -> fail.
+	for _, name := range csr.DNSNames {
+		if strings.Contains(name, "*") {
+			data.Raw["common_name"] = name
+			return
+		}
+	}
+	if len(csr.DNSNames) > 0 {
+		data.Raw["common_name"] = csr.DNSNames[0]
+		return
+	}
+	if len(csr.IPAddresses) > 0 {
+		data.Raw["common_name"] = csr.IPAddresses[0].String()
+		return
+	}
+}
+
 func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.ParsedCertBundle, issuerID, error) {
 	pemBlock := &pem.Block{
 		Type:    "CERTIFICATE REQUEST",
@@ -492,6 +523,11 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 		},
 		Schema: getCsrSignVerbatimSchemaFields(),
 	}
+
+	// XXX: Usability hack: by default, minimalist roles have require_cn=true,
+	// but some ACME clients do not provision one in the certificate as modern
+	// (TLS) clients are mostly verifying against server's DNS SANs.
+	maybeAugmentReqDataWithSuitableCN(ac, csr, data)
 
 	signingBundle, issuerId, err := ac.sc.fetchCAInfoWithIssuer(ac.issuer.ID.String(), IssuanceUsage)
 	if err != nil {
@@ -508,6 +544,16 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 		req:     &logical.Request{},
 		apiData: data,
 		role:    ac.role,
+	}
+
+	normalNotAfter, _, err := getCertificateNotAfter(ac.sc.Backend, input, signingBundle)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed computing certificate TTL from role/mount: %v: %w", err, ErrMalformed)
+	}
+
+	// Force a maximum 90 day TTL or lower for ACME
+	if time.Now().Add(maxAcmeCertTTL).Before(normalNotAfter) {
+		input.apiData.Raw["ttl"] = maxAcmeCertTTL
 	}
 
 	if csr.PublicKeyAlgorithm == x509.UnknownPublicKeyAlgorithm || csr.PublicKey == nil {
@@ -799,7 +845,7 @@ func generateAuthorization(acct *acmeAccount, identifier *ACMEIdentifier) (*ACME
 	// Certain challenges have certain restrictions: DNS challenges cannot
 	// be used to validate IP addresses, and only DNS challenges can be used
 	// to validate wildcards.
-	allowedChallenges := []ACMEChallengeType{ACMEHTTPChallenge, ACMEDNSChallenge}
+	allowedChallenges := []ACMEChallengeType{ACMEHTTPChallenge, ACMEDNSChallenge, ACMEALPNChallenge}
 	if identifier.Type == ACMEIPIdentifier {
 		allowedChallenges = []ACMEChallengeType{ACMEHTTPChallenge}
 	} else if identifier.IsWildcard {
