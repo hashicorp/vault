@@ -16,14 +16,12 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/nonceutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
-	// How long nonces are considered valid.
-	nonceExpiry = 15 * time.Minute
-
 	// How many bytes are in a token. Per RFC 8555 Section
 	// 8.3. HTTP Challenge and Section 11.3 Token Entropy:
 	//
@@ -40,9 +38,9 @@ const (
 )
 
 type acmeState struct {
-	nextExpiry *atomic.Int64
-	nonces     *sync.Map // map[string]time.Time
-	validator  *ACMEChallengeEngine
+	nonces nonceutil.NonceService
+
+	validator *ACMEChallengeEngine
 
 	configDirty *atomic.Bool
 	_config     sync.RWMutex
@@ -56,8 +54,7 @@ type acmeThumbprint struct {
 
 func NewACMEState() *acmeState {
 	state := &acmeState{
-		nextExpiry:  new(atomic.Int64),
-		nonces:      new(sync.Map),
+		nonces:      nonceutil.NewNonceService(),
 		validator:   NewACMEChallengeEngine(),
 		configDirty: new(atomic.Bool),
 	}
@@ -68,6 +65,11 @@ func NewACMEState() *acmeState {
 }
 
 func (a *acmeState) Initialize(b *backend, sc *storageContext) error {
+	// Initialize the nonce service.
+	if err := a.nonces.Initialize(); err != nil {
+		return fmt.Errorf("failed to initialize the ACME nonce service: %w", err)
+	}
+
 	// Load the ACME config.
 	_, err := a.getConfigWithUpdate(sc)
 	if err != nil {
@@ -80,6 +82,7 @@ func (a *acmeState) Initialize(b *backend, sc *storageContext) error {
 	}
 	go a.validator.Run(b, a)
 
+	// All good.
 	return nil
 }
 
@@ -124,10 +127,6 @@ func (a *acmeState) getConfigWithUpdate(sc *storageContext) (*acmeConfigEntry, e
 	return &configCopy, nil
 }
 
-func generateNonce() (string, error) {
-	return generateRandomBase64(21)
-}
-
 func generateRandomBase64(srcBytes int) (string, error) {
 	data := make([]byte, 21)
 	if _, err := io.ReadFull(rand.Reader, data); err != nil {
@@ -138,66 +137,15 @@ func generateRandomBase64(srcBytes int) (string, error) {
 }
 
 func (a *acmeState) GetNonce() (string, time.Time, error) {
-	now := time.Now()
-	nonce, err := generateNonce()
-	if err != nil {
-		return "", now, err
-	}
-
-	then := now.Add(nonceExpiry)
-	a.nonces.Store(nonce, then)
-
-	nextExpiry := a.nextExpiry.Load()
-	next := time.Unix(nextExpiry, 0)
-	if now.After(next) || then.Before(next) {
-		a.nextExpiry.Store(then.Unix())
-	}
-
-	return nonce, then, nil
+	return a.nonces.Get()
 }
 
 func (a *acmeState) RedeemNonce(nonce string) bool {
-	rawTimeout, present := a.nonces.LoadAndDelete(nonce)
-	if !present {
-		return false
-	}
-
-	timeout := rawTimeout.(time.Time)
-	if time.Now().After(timeout) {
-		return false
-	}
-
-	return true
+	return a.nonces.Redeem(nonce)
 }
 
 func (a *acmeState) DoTidyNonces() {
-	now := time.Now()
-	expiry := a.nextExpiry.Load()
-	then := time.Unix(expiry, 0)
-
-	if expiry == 0 || now.After(then) {
-		a.TidyNonces()
-	}
-}
-
-func (a *acmeState) TidyNonces() {
-	now := time.Now()
-	nextRun := now.Add(nonceExpiry)
-
-	a.nonces.Range(func(key, value any) bool {
-		timeout := value.(time.Time)
-		if now.After(timeout) {
-			a.nonces.Delete(key)
-		}
-
-		if timeout.Before(nextRun) {
-			nextRun = timeout
-		}
-
-		return false /* don't quit looping */
-	})
-
-	a.nextExpiry.Store(nextRun.Unix())
+	a.nonces.Tidy()
 }
 
 type ACMEAccountStatus string
@@ -652,7 +600,7 @@ func (a *acmeState) LoadEab(sc *storageContext, eabKid string) (*eabType, error)
 		return nil, err
 	}
 	if rawEntry == nil {
-		return nil, fmt.Errorf("no eab found for kid %s", eabKid)
+		return nil, fmt.Errorf("%w: no eab found for kid %s", ErrStorageItemNotFound, eabKid)
 	}
 
 	var eab eabType

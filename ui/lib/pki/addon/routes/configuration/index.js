@@ -20,10 +20,12 @@ export default class ConfigurationIndexRoute extends Route {
   }
 
   model() {
-    const { urls, crl, engine } = this.modelFor('configuration');
+    const { acme, cluster, urls, crl, engine } = this.modelFor('configuration');
     return hash({
       hasConfig: this.shouldPromptConfig,
       engine,
+      acme,
+      cluster,
       urls,
       crl,
       mountConfig: this.fetchMountConfig(engine.id),

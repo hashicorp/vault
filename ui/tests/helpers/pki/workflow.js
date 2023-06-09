@@ -11,6 +11,7 @@ import { SELECTORS as ISSUERDETAILS } from './pki-issuer-details';
 import { SELECTORS as CONFIGURATION } from './pki-configure-create';
 import { SELECTORS as DELETE } from './pki-delete-all-issuers';
 import { SELECTORS as TIDY } from './page/pki-tidy-form';
+import { SELECTORS as CONFIGEDIT } from './page/pki-configuration-edit';
 
 export const SELECTORS = {
   breadcrumbContainer: '[data-test-breadcrumbs]',
@@ -28,6 +29,7 @@ export const SELECTORS = {
   issuersTab: '[data-test-secret-list-tab="Issuers"]',
   certsTab: '[data-test-secret-list-tab="Certificates"]',
   keysTab: '[data-test-secret-list-tab="Keys"]',
+  tidyTab: '[data-test-secret-list-tab="Tidy"]',
   configTab: '[data-test-secret-list-tab="Configuration"]',
   // ROLES
   deleteRoleButton: '[data-test-pki-role-delete]',
@@ -68,5 +70,9 @@ export const SELECTORS = {
     ...CONFIGURATION,
     ...DELETE,
     ...TIDY,
+  },
+  // EDIT CONFIGURATION
+  configEdit: {
+    ...CONFIGEDIT,
   },
 };

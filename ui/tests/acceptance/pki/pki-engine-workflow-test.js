@@ -42,7 +42,7 @@ module('Acceptance | pki workflow', function (hooks) {
   });
 
   test('empty state messages are correct when PKI not configured', async function (assert) {
-    assert.expect(17);
+    assert.expect(21);
     const assertEmptyState = (assert, resource) => {
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/${resource}`);
       assert
@@ -71,9 +71,10 @@ module('Acceptance | pki workflow', function (hooks) {
 
     await click(SELECTORS.certsTab);
     assertEmptyState(assert, 'certificates');
-
     await click(SELECTORS.keysTab);
     assertEmptyState(assert, 'keys');
+    await click(SELECTORS.tidyTab);
+    assertEmptyState(assert, 'tidy');
   });
 
   module('roles', function (hooks) {
@@ -443,27 +444,6 @@ module('Acceptance | pki workflow', function (hooks) {
         .dom('[data-test-input="commonName"]')
         .hasValue('Hashicorp Test', 'form prefilled with parent issuer cn');
     });
-
-    test('it navigates to the tidy page from configuration toolbar', async function (assert) {
-      await authPage.login(this.pkiAdminToken);
-      await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
-      await click(SELECTORS.configuration.tidyToolbar);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/tidy`);
-    });
-
-    test('it returns to the configuration page after submit', async function (assert) {
-      await authPage.login(this.pkiAdminToken);
-      await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
-      await click(SELECTORS.configuration.tidyToolbar);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/tidy`);
-      await click(SELECTORS.configuration.tidyCertStoreCheckbox);
-      await click(SELECTORS.configuration.tidyRevocationCheckbox);
-      await fillIn(SELECTORS.configuration.safetyBufferInput, '100');
-      await fillIn(SELECTORS.configuration.safetyBufferInputDropdown, 'd');
-      await click(SELECTORS.configuration.tidySave);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
-    });
   });
 
   module('rotate', function (hooks) {
@@ -497,6 +477,41 @@ module('Acceptance | pki workflow', function (hooks) {
       assert
         .dom('[data-test-error-banner]')
         .hasText('Error issuer name already in use', 'it renders error banner');
+    });
+  });
+
+  module('config', function (hooks) {
+    hooks.beforeEach(async function () {
+      await authPage.login();
+      await runCommands([`write ${this.mountPath}/root/generate/internal issuer_name="existing-issuer"`]);
+      const mixed_config_policy = `
+      ${adminPolicy(this.mountPath)}
+      ${readerPolicy(this.mountPath, 'config/cluster')}
+      `;
+      this.mixedConfigCapabilities = await tokenWithPolicy('pki-reader', mixed_config_policy);
+      await logout.visit();
+    });
+
+    test('it updates config when user only has permission to some endpoints', async function (assert) {
+      await authPage.login(this.mixedConfigCapabilities);
+      await visit(`/vault/secrets/${this.mountPath}/pki/configuration/edit`);
+      assert
+        .dom(`${SELECTORS.configEdit.configEditSection} [data-test-component="empty-state"]`)
+        .hasText(
+          `You do not have permission to set this mount's the cluster config Ask your administrator if you think you should have access to: POST /${this.mountPath}/config/cluster`
+        );
+      assert.dom(SELECTORS.configEdit.acmeEditSection).exists();
+      assert.dom(SELECTORS.configEdit.urlsEditSection).exists();
+      assert.dom(SELECTORS.configEdit.crlEditSection).exists();
+      assert.dom(`${SELECTORS.acmeEditSection} [data-test-component="empty-state"]`).doesNotExist();
+      assert.dom(`${SELECTORS.urlsEditSection} [data-test-component="empty-state"]`).doesNotExist();
+      assert.dom(`${SELECTORS.crlEditSection} [data-test-component="empty-state"]`).doesNotExist();
+      await click(SELECTORS.configEdit.crlToggleInput('expiry'));
+      await click(SELECTORS.configEdit.saveButton);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
+      assert
+        .dom('[data-test-value-div="CRL building"]')
+        .hasText('Disabled', 'Successfully saves config with partial permission');
     });
   });
 });

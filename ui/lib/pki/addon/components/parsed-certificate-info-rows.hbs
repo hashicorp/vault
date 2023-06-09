@@ -7,16 +7,3 @@
     />
   {{/let}}
 {{/each}}
-{{#if (or (eq @model.can_parse false) this.parsingErrors)}}
-  <AlertBanner
-    data-test-parsing-error-alert-banner
-    class="has-top-margin-m"
-    @type="info"
-    @title="There was an error parsing certificate metadata"
-  >
-    Vault cannot display unparsed values, but this will not interfere with the certificate's functionality.
-    {{#if this.parsingErrors}}
-      <p class="sub-text is-font-mono">Parsing error(s): {{this.parsingErrors}} </p>
-    {{/if}}
-  </AlertBanner>
-{{/if}}

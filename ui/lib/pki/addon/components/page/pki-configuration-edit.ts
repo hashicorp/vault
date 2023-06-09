@@ -9,25 +9,29 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-import RouterService from '@ember/routing/router-service';
-import FlashMessageService from 'vault/services/flash-messages';
-import VersionService from 'vault/services/version';
-import { FormField, TtlEvent } from 'vault/app-types';
-import PkiCrlModel from 'vault/models/pki/crl';
-import PkiUrlsModel from 'vault/models/pki/urls';
 import errorMessage from 'vault/utils/error-message';
+import type RouterService from '@ember/routing/router-service';
+import type FlashMessageService from 'vault/services/flash-messages';
+import type VersionService from 'vault/services/version';
+import type PkiConfigAcmeModel from 'vault/models/pki/config/acme';
+import type PkiConfigClusterModel from 'vault/models/pki/config/cluster';
+import type PkiConfigCrlModel from 'vault/models/pki/config/crl';
+import type PkiConfigUrlsModel from 'vault/models/pki/config/urls';
+import type { FormField, TtlEvent } from 'vault/app-types';
 
 interface Args {
-  crl: PkiCrlModel;
-  urls: PkiUrlsModel;
+  acme: PkiConfigAcmeModel;
+  cluster: PkiConfigClusterModel;
+  crl: PkiConfigCrlModel;
+  urls: PkiConfigUrlsModel;
 }
-interface PkiCrlTtls {
+interface PkiConfigCrlTtls {
   autoRebuildGracePeriod: string;
   expiry: string;
   deltaRebuildInterval: string;
   ocspExpiry: string;
 }
-interface PkiCrlBooleans {
+interface PkiConfigCrlBooleans {
   autoRebuild: boolean;
   enableDelta: boolean;
   disable: boolean;
@@ -50,9 +54,13 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
   *save(event: Event) {
     event.preventDefault();
     try {
-      yield this.args.urls.save();
-      yield this.args.crl.save();
-      this.flashMessages.success('Successfully updated configuration');
+      for (const model of ['cluster', 'acme', 'urls', 'crl']) {
+        // only call save() if user has permission
+        if (this.args[model as keyof Args].canSet) {
+          yield this.args[model as keyof Args].save();
+          this.flashMessages.success(`Successfully updated ${model} config`);
+        }
+      }
       this.router.transitionTo('vault.cluster.secrets.backend.pki.configuration.index');
     } catch (error) {
       this.invalidFormAlert = 'There was an error submitting this form.';
@@ -69,10 +77,10 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
   handleTtl(attr: FormField, e: TtlEvent) {
     const { enabled, goSafeTimeString } = e;
     const ttlAttr = attr.name;
-    this.args.crl[ttlAttr as keyof PkiCrlTtls] = goSafeTimeString;
+    this.args.crl[ttlAttr as keyof PkiConfigCrlTtls] = goSafeTimeString;
     // expiry and ocspExpiry both correspond to 'disable' booleans
     // so when ttl is enabled, the booleans are set to false
-    this.args.crl[attr.options.mapToBoolean as keyof PkiCrlBooleans] = attr.options.isOppositeValue
+    this.args.crl[attr.options.mapToBoolean as keyof PkiConfigCrlBooleans] = attr.options.isOppositeValue
       ? !enabled
       : enabled;
   }

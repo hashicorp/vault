@@ -42,18 +42,18 @@ func patternAcmeChallenge(b *backend, pattern string) *framework.Path {
 		Fields:  fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.acmeParsedWrapper(b.acmeChallengeHandler),
+				Callback:                    b.acmeAccountRequiredWrapper(b.acmeChallengeHandler),
 				ForwardPerformanceSecondary: false,
 				ForwardPerformanceStandby:   true,
 			},
 		},
 
-		HelpSynopsis:    "",
-		HelpDescription: "",
+		HelpSynopsis:    pathAcmeHelpSync,
+		HelpDescription: pathAcmeHelpDesc,
 	}
 }
 
-func (b *backend) acmeChallengeHandler(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}) (*logical.Response, error) {
+func (b *backend) acmeChallengeHandler(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}, _ *acmeAccount) (*logical.Response, error) {
 	authId := fields.Get("auth_id").(string)
 	challengeType := fields.Get("challenge_type").(string)
 
@@ -87,13 +87,17 @@ func (b *backend) acmeChallengeFetchHandler(acmeCtx *acmeContext, r *logical.Req
 		return nil, fmt.Errorf("unexpected request parameters: %w", ErrMalformed)
 	}
 
-	thumbprint, err := userCtx.GetKeyThumbprint()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get thumbprint for key: %w", err)
-	}
+	// If data was nil, we got a POST-as-GET request, just return current challenge without an accept,
+	// otherwise we most likely got a "{}" payload which we should now accept the challenge.
+	if data != nil {
+		thumbprint, err := userCtx.GetKeyThumbprint()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get thumbprint for key: %w", err)
+		}
 
-	if err := b.acmeState.validator.AcceptChallenge(acmeCtx.sc, userCtx.Kid, authz, challenge, thumbprint); err != nil {
-		return nil, fmt.Errorf("error submitting challenge for validation: %w", err)
+		if err := b.acmeState.validator.AcceptChallenge(acmeCtx.sc, userCtx.Kid, authz, challenge, thumbprint); err != nil {
+			return nil, fmt.Errorf("error submitting challenge for validation: %w", err)
+		}
 	}
 
 	return &logical.Response{

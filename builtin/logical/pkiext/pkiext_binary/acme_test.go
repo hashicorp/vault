@@ -12,6 +12,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/hex"
 	"net"
 	"net/http"
 	"path"
@@ -21,6 +22,8 @@ import (
 	"golang.org/x/crypto/acme"
 
 	"github.com/hashicorp/vault/builtin/logical/pkiext"
+	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	hDocker "github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/stretchr/testify/require"
 )
@@ -33,9 +36,11 @@ func Test_ACME(t *testing.T) {
 	defer cluster.Cleanup()
 
 	tc := map[string]func(t *testing.T, cluster *VaultPkiCluster){
-		"certbot":       SubtestACMECertbot,
-		"acme ip sans":  SubtestACMEIPAndDNS,
-		"acme wildcard": SubtestACMEWildcardDNS,
+		"certbot":           SubtestACMECertbot,
+		"certbot eab":       SubtestACMECertbotEab,
+		"acme ip sans":      SubtestACMEIPAndDNS,
+		"acme wildcard":     SubtestACMEWildcardDNS,
+		"acme prevents ica": SubtestACMEPreventsICADNS,
 	}
 
 	// Wrap the tests within an outer group, so that we run all tests
@@ -64,13 +69,20 @@ func SubtestACMECertbot(t *testing.T, cluster *VaultPkiCluster) {
 
 	logConsumer, logStdout, logStderr := getDockerLog(t)
 
+	// Default to 45 second timeout, but bump to 120 when running locally or if nightly regression
+	// flag is provided.
+	sleepTimer := "45"
+	if testhelpers.IsLocalOrRegressionTests() {
+		sleepTimer = "120"
+	}
+
 	t.Logf("creating on network: %v", vaultNetwork)
 	runner, err := hDocker.NewServiceRunner(hDocker.RunOptions{
 		ImageRepo:     "docker.mirror.hashicorp.services/certbot/certbot",
 		ImageTag:      "latest",
 		ContainerName: "vault_pki_certbot_test",
 		NetworkName:   vaultNetwork,
-		Entrypoint:    []string{"sleep", "45"},
+		Entrypoint:    []string{"sleep", sleepTimer},
 		LogConsumer:   logConsumer,
 		LogStdout:     logStdout,
 		LogStderr:     logStderr,
@@ -94,6 +106,10 @@ func SubtestACMECertbot(t *testing.T, cluster *VaultPkiCluster) {
 	err = pki.AddHostname(hostname, ipAddr)
 	require.NoError(t, err, "failed to update vault host files")
 
+	// Sinkhole a domain that's invalid just in case it's registered in the future.
+	cluster.Dns.AddDomain("armoncorp.com")
+	cluster.Dns.AddRecord("armoncorp.com", "A", "127.0.0.1")
+
 	certbotCmd := []string{
 		"certbot",
 		"certonly",
@@ -116,6 +132,218 @@ func SubtestACMECertbot(t *testing.T, cluster *VaultPkiCluster) {
 	}
 	require.NoError(t, err, "got error running issue command")
 	require.Equal(t, 0, retcode, "expected zero retcode issue command result")
+
+	// N.B. We're using the `certonly` subcommand here because it seems as though the `renew` command
+	// attempts to install the cert for you. This ends up hanging and getting killed by docker, but is
+	// also not desired behavior. The certbot docs suggest using `certonly` to renew as seen here:
+	// https://eff-certbot.readthedocs.io/en/stable/using.html#renewing-certificates
+	certbotRenewCmd := []string{
+		"certbot",
+		"certonly",
+		"--no-eff-email",
+		"--email", "certbot.client@dadgarcorp.com",
+		"--agree-tos",
+		"--no-verify-ssl",
+		"--standalone",
+		"--non-interactive",
+		"--server", directory,
+		"-d", hostname,
+		"--cert-name", hostname,
+		"--force-renewal",
+	}
+
+	stdout, stderr, retcode, err = runner.RunCmdWithOutput(ctx, result.Container.ID, certbotRenewCmd)
+	t.Logf("Certbot Renew Command: %v\nstdout: %v\nstderr: %v\n", certbotRenewCmd, string(stdout), string(stderr))
+	if err != nil || retcode != 0 {
+		logsStdout, logsStderr, _, _ := runner.RunCmdWithOutput(ctx, result.Container.ID, logCatCmd)
+		t.Logf("Certbot logs\nstdout: %v\nstderr: %v\n", string(logsStdout), string(logsStderr))
+	}
+	require.NoError(t, err, "got error running renew command")
+	require.Equal(t, 0, retcode, "expected zero retcode renew command result")
+
+	certbotRevokeCmd := []string{
+		"certbot",
+		"revoke",
+		"--no-eff-email",
+		"--email", "certbot.client@dadgarcorp.com",
+		"--agree-tos",
+		"--no-verify-ssl",
+		"--non-interactive",
+		"--no-delete-after-revoke",
+		"--cert-name", hostname,
+	}
+
+	stdout, stderr, retcode, err = runner.RunCmdWithOutput(ctx, result.Container.ID, certbotRevokeCmd)
+	t.Logf("Certbot Revoke Command: %v\nstdout: %v\nstderr: %v\n", certbotRevokeCmd, string(stdout), string(stderr))
+	if err != nil || retcode != 0 {
+		logsStdout, logsStderr, _, _ := runner.RunCmdWithOutput(ctx, result.Container.ID, logCatCmd)
+		t.Logf("Certbot logs\nstdout: %v\nstderr: %v\n", string(logsStdout), string(logsStderr))
+	}
+	require.NoError(t, err, "got error running revoke command")
+	require.Equal(t, 0, retcode, "expected zero retcode revoke command result")
+
+	// Revoking twice should fail.
+	stdout, stderr, retcode, err = runner.RunCmdWithOutput(ctx, result.Container.ID, certbotRevokeCmd)
+	t.Logf("Certbot Double Revoke Command: %v\nstdout: %v\nstderr: %v\n", certbotRevokeCmd, string(stdout), string(stderr))
+	if err != nil || retcode == 0 {
+		logsStdout, logsStderr, _, _ := runner.RunCmdWithOutput(ctx, result.Container.ID, logCatCmd)
+		t.Logf("Certbot logs\nstdout: %v\nstderr: %v\n", string(logsStdout), string(logsStderr))
+	}
+
+	require.NoError(t, err, "got error running double revoke command")
+	require.NotEqual(t, 0, retcode, "expected non-zero retcode double revoke command result")
+
+	// Attempt to issue against a domain that doesn't match the challenge.
+	// N.B. This test only runs locally or when the nightly regression env var is provided to CI.
+	if testhelpers.IsLocalOrRegressionTests() {
+		certbotInvalidIssueCmd := []string{
+			"certbot",
+			"certonly",
+			"--no-eff-email",
+			"--email", "certbot.client@dadgarcorp.com",
+			"--agree-tos",
+			"--no-verify-ssl",
+			"--standalone",
+			"--non-interactive",
+			"--server", directory,
+			"-d", "armoncorp.com",
+			"--issuance-timeout", "10",
+		}
+
+		stdout, stderr, retcode, err = runner.RunCmdWithOutput(ctx, result.Container.ID, certbotInvalidIssueCmd)
+		t.Logf("Certbot Invalid Issue Command: %v\nstdout: %v\nstderr: %v\n", certbotInvalidIssueCmd, string(stdout), string(stderr))
+		if err != nil || retcode != 0 {
+			logsStdout, logsStderr, _, _ := runner.RunCmdWithOutput(ctx, result.Container.ID, logCatCmd)
+			t.Logf("Certbot logs\nstdout: %v\nstderr: %v\n", string(logsStdout), string(logsStderr))
+		}
+		require.NoError(t, err, "got error running issue command")
+		require.NotEqual(t, 0, retcode, "expected non-zero retcode issue command result")
+	}
+
+	// Attempt to close out our ACME account
+	certbotUnregisterCmd := []string{
+		"certbot",
+		"unregister",
+		"--no-verify-ssl",
+		"--non-interactive",
+		"--server", directory,
+	}
+
+	stdout, stderr, retcode, err = runner.RunCmdWithOutput(ctx, result.Container.ID, certbotUnregisterCmd)
+	t.Logf("Certbot Unregister Command: %v\nstdout: %v\nstderr: %v\n", certbotUnregisterCmd, string(stdout), string(stderr))
+	if err != nil || retcode != 0 {
+		logsStdout, logsStderr, _, _ := runner.RunCmdWithOutput(ctx, result.Container.ID, logCatCmd)
+		t.Logf("Certbot logs\nstdout: %v\nstderr: %v\n", string(logsStdout), string(logsStderr))
+	}
+	require.NoError(t, err, "got error running unregister command")
+	require.Equal(t, 0, retcode, "expected zero retcode unregister command result")
+
+	// Attempting to close out our ACME account twice should fail
+	stdout, stderr, retcode, err = runner.RunCmdWithOutput(ctx, result.Container.ID, certbotUnregisterCmd)
+	t.Logf("Certbot double Unregister Command: %v\nstdout: %v\nstderr: %v\n", certbotUnregisterCmd, string(stdout), string(stderr))
+	if err != nil || retcode != 0 {
+		logsStdout, logsStderr, _, _ := runner.RunCmdWithOutput(ctx, result.Container.ID, logCatCmd)
+		t.Logf("Certbot double logs\nstdout: %v\nstderr: %v\n", string(logsStdout), string(logsStderr))
+	}
+	require.NoError(t, err, "got error running double unregister command")
+	require.Equal(t, 1, retcode, "expected non-zero retcode double unregister command result")
+}
+
+func SubtestACMECertbotEab(t *testing.T, cluster *VaultPkiCluster) {
+	mountName := "pki-certbot-eab"
+	pki, err := cluster.CreateAcmeMount(mountName)
+	require.NoError(t, err, "failed setting up acme mount")
+
+	err = pki.UpdateAcmeConfig(true, map[string]interface{}{
+		"eab_policy": "new-account-required",
+	})
+	require.NoError(t, err)
+
+	eabId, base64EabKey, err := pki.GetEabKey("acme/")
+
+	directory := "https://" + pki.GetActiveContainerIP() + ":8200/v1/" + mountName + "/acme/directory"
+	vaultNetwork := pki.GetContainerNetworkName()
+
+	logConsumer, logStdout, logStderr := getDockerLog(t)
+
+	t.Logf("creating on network: %v", vaultNetwork)
+	runner, err := hDocker.NewServiceRunner(hDocker.RunOptions{
+		ImageRepo:     "docker.mirror.hashicorp.services/certbot/certbot",
+		ImageTag:      "latest",
+		ContainerName: "vault_pki_certbot_eab_test",
+		NetworkName:   vaultNetwork,
+		Entrypoint:    []string{"sleep", "45"},
+		LogConsumer:   logConsumer,
+		LogStdout:     logStdout,
+		LogStderr:     logStderr,
+	})
+	require.NoError(t, err, "failed creating service runner")
+
+	ctx := context.Background()
+	result, err := runner.Start(ctx, true, false)
+	require.NoError(t, err, "could not start container")
+	require.NotNil(t, result, "could not start container")
+
+	defer runner.Stop(context.Background(), result.Container.ID)
+
+	networks, err := runner.GetNetworkAndAddresses(result.Container.ID)
+	require.NoError(t, err, "could not read container's IP address")
+	require.Contains(t, networks, vaultNetwork, "expected to contain vault network")
+
+	ipAddr := networks[vaultNetwork]
+	hostname := "certbot-eab-acme-client.dadgarcorp.com"
+
+	err = pki.AddHostname(hostname, ipAddr)
+	require.NoError(t, err, "failed to update vault host files")
+
+	certbotCmd := []string{
+		"certbot",
+		"certonly",
+		"--no-eff-email",
+		"--email", "certbot.client@dadgarcorp.com",
+		"--eab-kid", eabId,
+		"--eab-hmac-key='" + base64EabKey + "'",
+		"--agree-tos",
+		"--no-verify-ssl",
+		"--standalone",
+		"--non-interactive",
+		"--server", directory,
+		"-d", hostname,
+	}
+	logCatCmd := []string{"cat", "/var/log/letsencrypt/letsencrypt.log"}
+
+	stdout, stderr, retcode, err := runner.RunCmdWithOutput(ctx, result.Container.ID, certbotCmd)
+	t.Logf("Certbot Issue Command: %v\nstdout: %v\nstderr: %v\n", certbotCmd, string(stdout), string(stderr))
+	if err != nil || retcode != 0 {
+		logsStdout, logsStderr, _, _ := runner.RunCmdWithOutput(ctx, result.Container.ID, logCatCmd)
+		t.Logf("Certbot logs\nstdout: %v\nstderr: %v\n", string(logsStdout), string(logsStderr))
+	}
+	require.NoError(t, err, "got error running issue command")
+	require.Equal(t, 0, retcode, "expected zero retcode issue command result")
+
+	certbotRenewCmd := []string{
+		"certbot",
+		"certonly",
+		"--no-eff-email",
+		"--email", "certbot.client@dadgarcorp.com",
+		"--agree-tos",
+		"--no-verify-ssl",
+		"--standalone",
+		"--non-interactive",
+		"--server", directory,
+		"-d", hostname,
+		"--cert-name", hostname,
+		"--force-renewal",
+	}
+
+	stdout, stderr, retcode, err = runner.RunCmdWithOutput(ctx, result.Container.ID, certbotRenewCmd)
+	t.Logf("Certbot Renew Command: %v\nstdout: %v\nstderr: %v\n", certbotRenewCmd, string(stdout), string(stderr))
+	if err != nil || retcode != 0 {
+		logsStdout, logsStderr, _, _ := runner.RunCmdWithOutput(ctx, result.Container.ID, logCatCmd)
+		t.Logf("Certbot logs\nstdout: %v\nstderr: %v\n", string(logsStdout), string(logsStderr))
+	}
+	require.NoError(t, err, "got error running renew command")
+	require.Equal(t, 0, retcode, "expected zero retcode renew command result")
 
 	certbotRevokeCmd := []string{
 		"certbot",
@@ -203,8 +431,8 @@ func SubtestACMEIPAndDNS(t *testing.T, cluster *VaultPkiCluster) {
 	err = pki.UpdateRole("ip-dns-sans", map[string]interface{}{
 		"key_type":                    "any",
 		"allowed_domains":             "dadgarcorp.com",
-		"allow_subdomains":            "true",
-		"allow_wildcard_certificates": "false",
+		"allow_subdomains":            true,
+		"allow_wildcard_certificates": false,
 	})
 	require.NoError(t, err, "failed creating role ip-dns-sans")
 
@@ -255,7 +483,7 @@ func SubtestACMEIPAndDNS(t *testing.T, cluster *VaultPkiCluster) {
 		return challengesToAccept
 	}
 
-	acmeCert := doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, cr, provisioningFunc)
+	acmeCert := doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, cr, provisioningFunc, "")
 
 	require.Len(t, acmeCert.IPAddresses, 1, "expected only a single ip address in cert")
 	require.Equal(t, ipAddr, acmeCert.IPAddresses[0].String())
@@ -265,8 +493,9 @@ func SubtestACMEIPAndDNS(t *testing.T, cluster *VaultPkiCluster) {
 	// Perform an ACME lifecycle with an order that contains just an IP identifier
 	err = pki.UpdateRole("ip-sans", map[string]interface{}{
 		"key_type":            "any",
-		"use_csr_common_name": "false",
-		"require_cn":          "false",
+		"use_csr_common_name": false,
+		"require_cn":          false,
+		"client_flag":         false,
 	})
 	require.NoError(t, err, "failed creating role ip-sans")
 
@@ -278,7 +507,7 @@ func SubtestACMEIPAndDNS(t *testing.T, cluster *VaultPkiCluster) {
 		IPAddresses: []net.IP{net.ParseIP(ipAddr)},
 	}
 
-	acmeCert = doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, cr, provisioningFunc)
+	acmeCert = doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, cr, provisioningFunc, "")
 
 	require.Len(t, acmeCert.IPAddresses, 1, "expected only a single ip address in cert")
 	require.Equal(t, ipAddr, acmeCert.IPAddresses[0].String())
@@ -288,7 +517,7 @@ func SubtestACMEIPAndDNS(t *testing.T, cluster *VaultPkiCluster) {
 
 type acmeGoValidatorProvisionerFunc func(acmeClient *acme.Client, auths []*acme.Authorization) []*acme.Challenge
 
-func doAcmeValidationWithGoLibrary(t *testing.T, directoryUrl string, acmeOrderIdentifiers []acme.AuthzID, cr *x509.CertificateRequest, provisioningFunc acmeGoValidatorProvisionerFunc) *x509.Certificate {
+func doAcmeValidationWithGoLibrary(t *testing.T, directoryUrl string, acmeOrderIdentifiers []acme.AuthzID, cr *x509.CertificateRequest, provisioningFunc acmeGoValidatorProvisionerFunc, expectedFailure string) *x509.Certificate {
 	// Since we are contacting Vault through the host ip/port, the certificate will not validate properly
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -343,8 +572,19 @@ func doAcmeValidationWithGoLibrary(t *testing.T, directoryUrl string, acmeOrderI
 	csr, err := x509.CreateCertificateRequest(rand.Reader, cr, csrKey)
 	require.NoError(t, err, "failed generating csr")
 
+	t.Logf("[TEST-LOG] Created CSR: %v", hex.EncodeToString(csr))
+
 	certs, _, err := acmeClient.CreateOrderCert(testCtx, order.FinalizeURL, csr, false)
-	require.NoError(t, err, "failed to get a certificate back from ACME")
+	if err != nil {
+		if expectedFailure != "" {
+			require.Contains(t, err.Error(), expectedFailure, "got a unexpected failure not matching expected value")
+			return nil
+		}
+
+		require.NoError(t, err, "failed to get a certificate back from ACME")
+	} else if expectedFailure != "" {
+		t.Fatalf("expected failure containing: %s got none", expectedFailure)
+	}
 
 	acmeCert, err := x509.ParseCertificate(certs[0])
 	require.NoError(t, err, "failed parsing acme cert bytes")
@@ -402,7 +642,7 @@ func SubtestACMEWildcardDNS(t *testing.T, cluster *VaultPkiCluster) {
 		return challengesToAccept
 	}
 
-	acmeCert := doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, cr, provisioningFunc)
+	acmeCert := doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, cr, provisioningFunc, "")
 	require.Contains(t, acmeCert.DNSNames, hostname)
 	require.Contains(t, acmeCert.DNSNames, wildcard)
 	require.Equal(t, wildcard, acmeCert.Subject.CommonName)
@@ -415,14 +655,90 @@ func SubtestACMEWildcardDNS(t *testing.T, cluster *VaultPkiCluster) {
 		"allow_subdomains":            true,
 		"allow_bare_domains":          true,
 		"allow_wildcard_certificates": true,
+		"client_flag":                 false,
 	})
 	require.NoError(t, err, "failed creating role wildcard")
 	directoryUrl = basePath + "/roles/wildcard/acme/directory"
 
-	acmeCert = doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, cr, provisioningFunc)
+	acmeCert = doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, cr, provisioningFunc, "")
 	require.Contains(t, acmeCert.DNSNames, hostname)
 	require.Contains(t, acmeCert.DNSNames, wildcard)
 	require.Equal(t, wildcard, acmeCert.Subject.CommonName)
+	pki.RemoveDNSRecordsForDomain(hostname)
+}
+
+func SubtestACMEPreventsICADNS(t *testing.T, cluster *VaultPkiCluster) {
+	pki, err := cluster.CreateAcmeMount("pki-dns-ica")
+	require.NoError(t, err, "failed setting up acme mount")
+
+	// Since we interact with ACME from outside the container network the ACME
+	// configuration needs to be updated to use the host port and not the internal
+	// docker ip.
+	basePath, err := pki.UpdateClusterConfigLocalAddr()
+	require.NoError(t, err, "failed updating cluster config")
+
+	hostname := "go-lang-intermediate-ca-cert.dadgarcorp.com"
+
+	// Do validation without a role first.
+	directoryUrl := basePath + "/acme/directory"
+	acmeOrderIdentifiers := []acme.AuthzID{
+		{Type: "dns", Value: hostname},
+	}
+	cr := &x509.CertificateRequest{
+		Subject:  pkix.Name{CommonName: hostname},
+		DNSNames: []string{hostname},
+		ExtraExtensions: []pkix.Extension{
+			// Basic Constraint with IsCA asserted to true.
+			{
+				Id:       certutil.ExtensionBasicConstraintsOID,
+				Critical: true,
+				Value:    []byte{0x30, 0x03, 0x01, 0x01, 0xFF},
+			},
+		},
+	}
+
+	provisioningFunc := func(acmeClient *acme.Client, auths []*acme.Authorization) []*acme.Challenge {
+		// For each dns-01 challenge, place the record in the associated DNS resolver.
+		var challengesToAccept []*acme.Challenge
+		for _, auth := range auths {
+			for _, challenge := range auth.Challenges {
+				if challenge.Status != acme.StatusPending {
+					t.Logf("ignoring challenge not in status pending: %v", challenge)
+					continue
+				}
+
+				if challenge.Type == "dns-01" {
+					challengeBody, err := acmeClient.DNS01ChallengeRecord(challenge.Token)
+					require.NoError(t, err, "failed generating challenge response")
+
+					err = pki.AddDNSRecord("_acme-challenge."+auth.Identifier.Value, "TXT", challengeBody)
+					require.NoError(t, err, "failed setting DNS record")
+
+					challengesToAccept = append(challengesToAccept, challenge)
+				}
+			}
+		}
+
+		require.GreaterOrEqual(t, len(challengesToAccept), 1, "Need at least one challenge, got none")
+		return challengesToAccept
+	}
+
+	doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, cr, provisioningFunc, "refusing to accept CSR with Basic Constraints extension")
+	pki.RemoveDNSRecordsForDomain(hostname)
+
+	// Redo validation with a role this time.
+	err = pki.UpdateRole("ica", map[string]interface{}{
+		"key_type":                    "any",
+		"allowed_domains":             "go-lang-intermediate-ca-cert.dadgarcorp.com",
+		"allow_subdomains":            true,
+		"allow_bare_domains":          true,
+		"allow_wildcard_certificates": true,
+		"client_flag":                 false,
+	})
+	require.NoError(t, err, "failed creating role wildcard")
+	directoryUrl = basePath + "/roles/ica/acme/directory"
+
+	doAcmeValidationWithGoLibrary(t, directoryUrl, acmeOrderIdentifiers, cr, provisioningFunc, "refusing to accept CSR with Basic Constraints extension")
 	pki.RemoveDNSRecordsForDomain(hostname)
 }
 

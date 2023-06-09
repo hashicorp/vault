@@ -187,13 +187,14 @@ scenario "replication" {
         edition = var.backend_edition
         version = matrix.consul_version
       } : null
-      install_dir         = local.vault_install_dir
-      license             = matrix.edition != "oss" ? step.read_license.license : null
-      local_artifact_path = local.bundle_path
-      packages            = local.packages
-      storage_backend     = matrix.primary_backend
-      target_hosts        = step.create_primary_cluster_targets.hosts
-      unseal_method       = matrix.primary_seal
+      install_dir              = local.vault_install_dir
+      license                  = matrix.edition != "oss" ? step.read_license.license : null
+      local_artifact_path      = local.bundle_path
+      packages                 = local.packages
+      storage_backend          = matrix.primary_backend
+      target_hosts             = step.create_primary_cluster_targets.hosts
+      unseal_method            = matrix.primary_seal
+      enable_file_audit_device = var.vault_enable_file_audit_device
     }
   }
 
@@ -260,13 +261,14 @@ scenario "replication" {
         edition = var.backend_edition
         version = matrix.consul_version
       } : null
-      install_dir         = local.vault_install_dir
-      license             = matrix.edition != "oss" ? step.read_license.license : null
-      local_artifact_path = local.bundle_path
-      packages            = local.packages
-      storage_backend     = matrix.secondary_backend
-      target_hosts        = step.create_secondary_cluster_targets.hosts
-      unseal_method       = matrix.secondary_seal
+      install_dir              = local.vault_install_dir
+      license                  = matrix.edition != "oss" ? step.read_license.license : null
+      local_artifact_path      = local.bundle_path
+      packages                 = local.packages
+      storage_backend          = matrix.secondary_backend
+      target_hosts             = step.create_secondary_cluster_targets.hosts
+      unseal_method            = matrix.secondary_seal
+      enable_file_audit_device = var.vault_enable_file_audit_device
     }
   }
 
@@ -731,5 +733,10 @@ scenario "replication" {
   output "updated_secondary_replication_data_primaries" {
     description = "The Vault updated secondary cluster primaries connection status"
     value       = step.verify_updated_performance_replication.secondary_replication_data_primaries
+  }
+
+  output "vault_audit_device_file_path" {
+    description = "The file path for the file audit device, if enabled"
+    value       = step.create_primary_cluster.audit_device_file_path
   }
 }
