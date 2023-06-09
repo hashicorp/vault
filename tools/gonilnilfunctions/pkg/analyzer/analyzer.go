@@ -6,6 +6,7 @@ package analyzer
 import (
 	"go/ast"
 	"go/types"
+	"reflect"
 	"strings"
 
 	"golang.org/x/tools/go/analysis"
@@ -14,10 +15,11 @@ import (
 )
 
 var Analyzer = &analysis.Analyzer{
-	Name:     "gonilnilfunctions",
-	Doc:      "Verifies that every go function with error as one of many return types cannot return nil, nil",
-	Run:      run,
-	Requires: []*analysis.Analyzer{inspect.Analyzer},
+	Name:       "gonilnilfunctions",
+	Doc:        "Verifies that every go function with error as one of many return types cannot return nil, nil",
+	Run:        run,
+	ResultType: reflect.TypeOf((interface{})(nil)),
+	Requires:   []*analysis.Analyzer{inspect.Analyzer},
 }
 
 // getNestedReturnStatements searches the AST for return statements, and returns
@@ -69,9 +71,8 @@ func getNestedReturnStatements(s ast.Stmt, returns []*ast.ReturnStmt) []*ast.Ret
 	return returns
 }
 
-// run runs the analysis. Ironically, it also fails its own check,
-// so we'll skip analysis using the following invocation:
-// ignore-nil-nil-function-check
+// run runs the analysis, failing for functions that contain multiple nil returns
+// when one of the return types is error.
 func run(pass *analysis.Pass) (interface{}, error) {
 	inspector := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
 
@@ -157,5 +158,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			}
 		}
 	})
-	return nil, nil
+
+	var success interface{}
+	return success, nil
 }
