@@ -28,13 +28,13 @@ $ helm repo add hashicorp https://helm.releases.hashicorp.com
 
 $ helm search repo hashicorp/vault-secrets-operator --devel
 NAME           	CHART VERSION	APP VERSION	DESCRIPTION
-hashicorp/vault-secrets-operator	0.1.0-beta       	0.1.0-beta     	Official HashiCorp Vault Secrets Operator Chart
+hashicorp/vault-secrets-operator	0.1.0-rc.1       	0.1.0-rc.1     	Official HashiCorp Vault Secrets Operator Chart
 ```
 
 Then install the Operator:
 
 ```shell-session
-$ helm install --create-namespace --namespace vault-secrets-operator vault-secrets-operator hashicorp/vault-secrets-operator --version 0.1.0-beta
+$ helm install --create-namespace --namespace vault-secrets-operator vault-secrets-operator hashicorp/vault-secrets-operator --version 0.1.0-rc.1
 ```
 
 
