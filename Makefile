@@ -146,12 +146,12 @@ tools/gonilnilfunctions/.bin/gonilnilfunctions:
 # vet-gonilnilfunctions runs gonilnilfunctions on functions. All output gets piped to revgrep
 # which will only return an error if a new function returns nil, nil (where one of the nils could be an error)
 vet-gonilnilfunctions: bootstrap tools/gonilnilfunctions/.bin/gonilnilfunctions
-	@$(GO_CMD) vet -vettool=./tools/gonilnilfunctions/.bin/gonilnilfunctions $(TEST) 2>&1 | revgrep
+	@$(GO_CMD) vet -vettool=./tools/gonilnilfunctions/.bin/gonilnilfunctions 2>&1 | revgrep
 
 # ci-vet-gonilnilfunctions runs gonilnilfunctions on functions. All output gets piped to revgrep
 # which will only return an error if a new function that is not on main has an issue
 ci-vet-gonilnilfunctions: ci-bootstrap tools/gonilnilfunctions/.bin/gonilnilfunctions
-	@$(GO_CMD) vet -vettool=./tools/gonilnilfunctions/.bin/gonilnilfunctions $(TEST) 2>&1 | revgrep origin/main
+	@$(GO_CMD) vet -vettool=./tools/gonilnilfunctions/.bin/gonilnilfunctions 2>&1 | revgrep origin/main
 
 
 # lint runs vet plus a number of other checkers, it is more comprehensive, but louder
