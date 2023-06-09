@@ -82,6 +82,8 @@ are unaffected.
 
 @include 'ocsp-redirect.mdx'
 
+@include 'perf-standby-token-create-forwarding-failure.mdx'
+
 ### PKI Revocation Request Forwarding
 
 If a revocation request comes in to a standby or performance secondary node,
@@ -89,6 +91,20 @@ for a certificate that is present locally, the request will not be correctly
 forwarded to the active node of this cluster.
 
 As a workaround, submit revocation requests to the active node only.
+
+### Slow Startup Time When Storing PKI Certificates
+
+There was a regression introduced in 1.13.0 where Vault is slow to start because the
+PKI secret engine performs a list operation on the stored certificates. If a large number
+of certificates are stored this can cause long start times on active and standby nodes.
+
+There is currently no workaround for this other than limiting the number of certificates stored
+in Vault via the [PKI tidy](/vault/api-docs/secret/pki#tidy) or using `no_store`
+flag for [PKI roles](/vault/api-docs/secret/pki#createupdate-role).
+
+#### Impacted Versions
+
+Affects Vault 1.13.0+
 
 ### STS credentials do not return a lease_duration
 Vault 1.13.0 introduced a change to the AWS Secrets Engine such that it no longer creates leases for STS credentials due
@@ -141,17 +157,3 @@ Affects Vault 1.13.0 to 1.13.2. Fixed in 1.13.3.
 On upgrade, all local revocations will be synchronized between
 clusters; revocation requests are not persisted when failing to
 write cross-cluster.
-
-### Slow Startup Time When Storing PKI Certificates 
-
-There was a regression introduced in 1.13.0 where Vault is slow to start because the
-PKI secret engine performs a list operation on the stored certificates. If a large number
-of certificates are stored this can cause long start times on active and standby nodes.
-
-There is currently no workaround for this other than limiting the number of certificates stored 
-in Vault via the [PKI tidy](/vault/api-docs/secret/pki#tidy) or using `no_store` 
-flag for [PKI roles](/vault/api-docs/secret/pki#createupdate-role).
-
-#### Impacted Versions
-
-Affects Vault 1.13.0+
