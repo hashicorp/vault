@@ -35,13 +35,13 @@ unless a path is specified as an argument.
 
 ## Examples
 
-Before generating a configuration file, insert a secret `foo`:
+Before generating a configuration file, let's insert a secret `foo`:
 
 ```shell-session
-$ vault kv put -mount=secret foo user=admin password=s3cr3t
+$ vault kv put -mount=secret foo user="admin" password="s3cr3t"
 ```
 
-Generate an agent configuration file which will reference "secret/foo":
+Generate an agent configuration file which will reference `secret/foo`:
 
 ```shell-session
 $ vault agent generate-config \
