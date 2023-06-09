@@ -2312,6 +2312,7 @@ func (ke *KeyEntry) parseFromKey(PolKeyType KeyType, parsedKey any) error {
 
 	return nil
 }
+
 func (p *Policy) WrapKey(ver int, targetKey interface{}, targetKeyType KeyType, hash hash.Hash) (string, error) {
 	if !p.Type.SigningSupported() {
 		return "", fmt.Errorf("message signing not supported for key type %v", p.Type)

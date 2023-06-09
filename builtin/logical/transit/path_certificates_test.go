@@ -8,10 +8,10 @@ import (
 	cryptoRand "crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
-	"strings"
-
 	"encoding/pem"
 	"reflect"
+	"strings"
+	"testing"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/pki"
@@ -19,8 +19,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/stretchr/testify/require"
-
-	"testing"
 )
 
 func TestTransit_Certs_CreateCsr(t *testing.T) {
@@ -115,6 +113,7 @@ func testTransit_CreateCsr(t *testing.T, keyType, pemTemplateCsr string) {
 		}
 	}
 }
+
 func TestTransit_Certs_ImportCertChain(t *testing.T) {
 	// NOTE: Are all these test cases needed?
 	testTransit_ImportCertChain(t, "rsa-2048")
