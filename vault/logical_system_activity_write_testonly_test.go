@@ -148,7 +148,13 @@ func Test_singleMonthActivityClients_addNewClients(t *testing.T) {
 		{
 			name: "non entity client",
 			clients: &generation.Client{
-				NonEntity: true,
+				ClientType: "non-entity",
+			},
+		},
+		{
+			name: "acme client",
+			clients: &generation.Client{
+				ClientType: "acme",
 			},
 		},
 		{
@@ -173,7 +179,7 @@ func Test_singleMonthActivityClients_addNewClients(t *testing.T) {
 				require.NotNil(t, rec)
 				require.Equal(t, tt.wantNamespace, rec.NamespaceID)
 				require.Equal(t, tt.wantMount, rec.MountAccessor)
-				require.Equal(t, tt.clients.NonEntity, rec.NonEntity)
+				require.Equal(t, tt.clients.ClientType, rec.ClientType)
 				if tt.wantID != "" {
 					require.Equal(t, tt.wantID, rec.ClientID)
 				} else {
@@ -327,7 +333,7 @@ func Test_multipleMonthsActivityClients_addRepeatedClients(t *testing.T) {
 	require.NoError(t, m.addClientToMonth(2, &generation.Client{Count: 2}, "identity", nil))
 	require.NoError(t, m.addClientToMonth(2, &generation.Client{Count: 2, Namespace: "other_ns"}, defaultMount, nil))
 	require.NoError(t, m.addClientToMonth(1, &generation.Client{Count: 2}, defaultMount, nil))
-	require.NoError(t, m.addClientToMonth(1, &generation.Client{Count: 2, NonEntity: true}, defaultMount, nil))
+	require.NoError(t, m.addClientToMonth(1, &generation.Client{Count: 2, ClientType: "non-entity"}, defaultMount, nil))
 
 	month2Clients := m.months[2].clients
 	month1Clients := m.months[1].clients
@@ -338,7 +344,7 @@ func Test_multipleMonthsActivityClients_addRepeatedClients(t *testing.T) {
 	require.Contains(t, month1Clients, thisMonth.clients[0])
 
 	// this will match the 3rd client in month 1
-	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, Repeated: true, NonEntity: true}, defaultMount, nil))
+	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, Repeated: true, ClientType: "non-entity"}, defaultMount, nil))
 	require.Equal(t, month1Clients[2], thisMonth.clients[1])
 
 	// this will match the first two clients in month 1

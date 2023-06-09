@@ -1380,23 +1380,10 @@ func (a *ActivityLog) HandleEndOfMonth(ctx context.Context, currentTime time.Tim
 
 	a.logger.Trace("starting end of month processing", "rolloverTime", currentTime)
 
-	prevSegmentTimestamp := a.currentSegment.startTimestamp
-	nextSegmentTimestamp := timeutil.StartOfMonth(currentTime.UTC()).Unix()
-
-	// Write out an intent log for the rotation with the current and new segment times.
-	intentLog := &ActivityIntentLog{
-		PreviousMonth: prevSegmentTimestamp,
-		NextMonth:     nextSegmentTimestamp,
-	}
-	entry, err := logical.StorageEntryJSON(activityIntentLogKey, intentLog)
+	err := a.writeIntentLog(ctx, a.currentSegment.startTimestamp, currentTime)
 	if err != nil {
 		return err
 	}
-	err = a.view.Put(ctx, entry)
-	if err != nil {
-		return err
-	}
-
 	// Save the current segment; this does not guarantee that fragment will be
 	// empty when it returns, but dropping some measurements is acceptable.
 	// We use force=true here in case an entry didn't appear this month
@@ -1420,6 +1407,31 @@ func (a *ActivityLog) HandleEndOfMonth(ctx context.Context, currentTime time.Tim
 	// Work on precomputed queries in background
 	go a.precomputedQueryWorker(ctx)
 
+	return nil
+}
+
+// writeIntentLog writes out an intent log for the month
+// prevSegmentTimestamp is the timestamp of the segment that we would like to
+// transform into a precomputed query.
+// nextSegment is the timestamp for the next segment. When invoked by end of
+// month processing, this will be the current time and should be in a different
+// month than the prevSegmentTimestamp
+func (a *ActivityLog) writeIntentLog(ctx context.Context, prevSegmentTimestamp int64, nextSegment time.Time) error {
+	nextSegmentTimestamp := timeutil.StartOfMonth(nextSegment.UTC()).Unix()
+
+	// Write out an intent log for the rotation with the current and new segment times.
+	intentLog := &ActivityIntentLog{
+		PreviousMonth: prevSegmentTimestamp,
+		NextMonth:     nextSegmentTimestamp,
+	}
+	entry, err := logical.StorageEntryJSON(activityIntentLogKey, intentLog)
+	if err != nil {
+		return err
+	}
+	err = a.view.Put(ctx, entry)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

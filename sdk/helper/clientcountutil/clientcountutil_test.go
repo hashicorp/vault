@@ -51,10 +51,10 @@ func TestNewMonthData_MultipleMonths(t *testing.T) {
 func TestNewCurrentMonthData_ClientsSeen(t *testing.T) {
 	wantClients := []*generation.Client{
 		{
-			Id:        "1",
-			Namespace: "ns",
-			Mount:     "mount",
-			NonEntity: true,
+			Id:         "1",
+			Namespace:  "ns",
+			Mount:      "mount",
+			ClientType: "non-entity",
 		},
 		{
 			Id: "2",
@@ -146,40 +146,40 @@ func testAddClients(t *testing.T, makeGenerator func() *ActivityLogDataGenerator
 	}
 	generator := makeGenerator().NewClientSeen(clientOptions...)
 	require.Equal(t, getClient(generator), &generation.Client{
-		Id:        "1",
-		Count:     1,
-		Namespace: "ns",
-		Mount:     "mount",
-		NonEntity: true,
+		Id:         "1",
+		Count:      1,
+		Namespace:  "ns",
+		Mount:      "mount",
+		ClientType: "non-entity",
 	})
 
 	generator = makeGenerator().NewClientsSeen(4, clientOptions...)
 	require.Equal(t, getClient(generator), &generation.Client{
-		Id:        "1",
-		Count:     4,
-		Namespace: "ns",
-		Mount:     "mount",
-		NonEntity: true,
+		Id:         "1",
+		Count:      4,
+		Namespace:  "ns",
+		Mount:      "mount",
+		ClientType: "non-entity",
 	})
 
 	generator = makeGenerator().RepeatedClientSeen(clientOptions...)
 	require.Equal(t, getClient(generator), &generation.Client{
-		Id:        "1",
-		Count:     1,
-		Repeated:  true,
-		Namespace: "ns",
-		Mount:     "mount",
-		NonEntity: true,
+		Id:         "1",
+		Count:      1,
+		Repeated:   true,
+		Namespace:  "ns",
+		Mount:      "mount",
+		ClientType: "non-entity",
 	})
 
 	generator = makeGenerator().RepeatedClientsSeen(4, clientOptions...)
 	require.Equal(t, getClient(generator), &generation.Client{
-		Id:        "1",
-		Count:     4,
-		Repeated:  true,
-		Namespace: "ns",
-		Mount:     "mount",
-		NonEntity: true,
+		Id:         "1",
+		Count:      4,
+		Repeated:   true,
+		Namespace:  "ns",
+		Mount:      "mount",
+		ClientType: "non-entity",
 	})
 
 	generator = makeGenerator().RepeatedClientSeenFromMonthsAgo(3, clientOptions...)
@@ -189,7 +189,7 @@ func testAddClients(t *testing.T, makeGenerator func() *ActivityLogDataGenerator
 		RepeatedFromMonth: 3,
 		Namespace:         "ns",
 		Mount:             "mount",
-		NonEntity:         true,
+		ClientType:        "non-entity",
 	})
 
 	generator = makeGenerator().RepeatedClientsSeenFromMonthsAgo(4, 3, clientOptions...)
@@ -199,7 +199,7 @@ func testAddClients(t *testing.T, makeGenerator func() *ActivityLogDataGenerator
 		RepeatedFromMonth: 3,
 		Namespace:         "ns",
 		Mount:             "mount",
-		NonEntity:         true,
+		ClientType:        "non-entity",
 	})
 }
 
