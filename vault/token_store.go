@@ -2873,7 +2873,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		}
 
 		// Create or fetch entity from entity alias. Note that we might be on a perf
-		// secondary so a create would return a ReadOnly error which would cause an
+		// standby so a create would return a ReadOnly error which would cause an
 		// RPC-based redirect. That path doesn't register leases since the code that
 		// calls RegisterAuth is in the http layer... So be careful to catch and
 		// handle readonly ourselves.
