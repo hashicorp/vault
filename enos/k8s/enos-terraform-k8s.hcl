@@ -3,13 +3,15 @@
 
 terraform "k8s" {
   required_version = ">= 1.2.0"
+
   required_providers {
     enos = {
-      source = "app.terraform.io/hashicorp-qti/enos"
+      source  = "app.terraform.io/hashicorp-qti/enos"
+      version = "< 0.4.0"
     }
 
     helm = {
-      source  = "hashicorp/helm"
+      source = "hashicorp/helm"
     }
   }
 }
