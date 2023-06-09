@@ -65,10 +65,6 @@ const (
 	flagNameAgentExitAfterAuth = "exit-after-auth"
 )
 
-func ShouldFail() (any, error) {
-	return nil, nil
-}
-
 type AgentCommand struct {
 	*BaseCommand
 	logFlags logFlags

@@ -69,6 +69,9 @@ func getNestedReturnStatements(s ast.Stmt, returns []*ast.ReturnStmt) []*ast.Ret
 	return returns
 }
 
+// run runs the analysis. Ironically, it also fails its own check,
+// so we'll skip analysis using the following invocation:
+// ignore-nil-nil-function-check
 func run(pass *analysis.Pass) (interface{}, error) {
 	inspector := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
 
