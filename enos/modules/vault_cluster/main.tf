@@ -125,6 +125,7 @@ resource "enos_consul_start" "consul" {
     retry_join       = ["provider=aws tag_key=Type tag_value=${var.consul_cluster_tag}"]
     server           = false
     bootstrap_expect = 0
+    license          = var.consul_license
     log_level        = "INFO"
     log_file         = var.consul_log_file
   }
