@@ -141,7 +141,7 @@ ci-vet-godoctests: ci-bootstrap tools/godoctests/.bin/godoctests
 
 # tools/gonilnilfunctions/.bin/gonilnilfunctions builds the custom analyzer to check for nil, nil function returns
 tools/gonilnilfunctions/.bin/gonilnilfunctions:
-	@cd tools/godoctests && $(GO_CMD) build -o .bin/godoctests .
+	@cd tools/gonilnilfunctions && $(GO_CMD) build -o .bin/gonilnilfunctions .
 
 # vet-gonilnilfunctions runs gonilnilfunctions on functions. All output gets piped to revgrep
 # which will only return an error if a new function returns nil, nil (where one of the nils could be an error)
@@ -149,7 +149,7 @@ vet-gonilnilfunctions: bootstrap tools/gonilnilfunctions/.bin/gonilnilfunctions
 	@$(GO_CMD) vet -vettool=./tools/gonilnilfunctions/.bin/gonilnilfunctions $(TEST) 2>&1 | revgrep
 
 # ci-vet-gonilnilfunctions runs gonilnilfunctions on functions. All output gets piped to revgrep
-# which will only return an error if a new function that is not on main is missing a godoc
+# which will only return an error if a new function that is not on main has an issue
 ci-vet-gonilnilfunctions: ci-bootstrap tools/gonilnilfunctions/.bin/gonilnilfunctions
 	@$(GO_CMD) vet -vettool=./tools/gonilnilfunctions/.bin/gonilnilfunctions $(TEST) 2>&1 | revgrep origin/main
 

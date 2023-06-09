@@ -60,3 +60,7 @@ func NestedForReturn() (any, error) { // want "Function NestedForReturn can retu
 		}
 	}
 }
+
+func AnyErrorNilNil() (any, error) { // want "Function AnyErrorNilNil can return an error, and has a statement that returns only nils"
+	return nil, nil
+}
