@@ -99,7 +99,7 @@ func ParseConfig(d string) (*SharedConfig, error) {
 
 	if o := list.Filter("seal"); len(o.Items) > 0 {
 		result.found("seal", "Seal")
-		if err := parseKMS(&result.Seals, o, "seal", 10); err != nil {
+		if err := parseKMS(&result.Seals, o, "seal", 5); err != nil {
 			return nil, fmt.Errorf("error parsing 'seal': %w", err)
 		}
 	}

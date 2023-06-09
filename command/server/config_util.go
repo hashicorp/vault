@@ -7,6 +7,7 @@ package server
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/hashicorp/hcl/hcl/ast"
 )
@@ -29,6 +30,10 @@ func (ec entConfig) Sanitized() map[string]interface{} {
 func (c *Config) checkSealConfig() error {
 	if len(c.Seals) == 0 {
 		return nil
+	}
+
+	if len(c.Seals) > 2 {
+		return fmt.Errorf("seals: at most 2 seals can be provided: received %d", len(c.Seals))
 	}
 
 	disabledSeals := 0
