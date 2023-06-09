@@ -1204,6 +1204,12 @@ type TestClusterOptions struct {
 	NoDefaultQuotas bool
 
 	Plugins *TestPluginConfig
+
+	// if populated, the callback is called for every request
+	RequestResponseCallback func(logical.Backend, *logical.Request, *logical.Response)
+
+	// ABCDLoggerNames names the loggers according to our ABCD convention when generating 4 clusters
+	ABCDLoggerNames bool
 }
 
 type TestPluginConfig struct {
