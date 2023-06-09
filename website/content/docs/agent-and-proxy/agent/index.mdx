@@ -140,6 +140,10 @@ These are the currently-available general configuration options:
 
 - `template_config` <code>([template_config][template-config]: <optional\>)</code> - Specifies templating engine behavior.
 
+- `exec` <code>([exec][exec]: <optional\>)</code> - Specifies options for vault agent to run a child process that injects secrets (via `env_template` stanzas) as environment variables
+
+- `env_template` <code>([env_template][template]: <optional\>)</code> - Multiple blocks accepted. Each block contains the template used for templating Vault secrets as environment variables via exec
+
 - `telemetry` <code>([telemetry][telemetry]: <optional\>)</code> – Specifies the telemetry
   reporting system. See the [telemetry Stanza](/vault/docs/agent-and-proxy/agent#telemetry-stanza) section below
   for a list of metrics specific to Agent.
@@ -382,6 +386,7 @@ template {
 [apiproxy]: /vault/docs/agent-and-proxy/agent/apiproxy
 [persistent-cache]: /vault/docs/agent-and-proxy/agent/caching/persistent-caches
 [template]: /vault/docs/agent-and-proxy/agent/template
+[exec]: /vault/docs/agent-and-proxy/agent/exec
 [template-config]: /vault/docs/agent-and-proxy/agent/template#template-configurations
 [agent-api]: /vault/docs/agent-and-proxy/agent/#agent_api-stanza
 [listener]: /vault/docs/agent-and-proxy/agent#listener-stanza
