@@ -1152,22 +1152,11 @@ type TestClusterOptions struct {
 	LicensePrivateKey     ed25519.PrivateKey
 
 	// this stores the vault version that should be used for each core config
-	VersionMap             map[int]string
-	RedundancyZoneMap      map[int]string
-	KVVersion              string
-	EffectiveSDKVersionMap map[int]string
-
-	NoDefaultQuotas bool
-
-	Plugins *TestPluginConfig
+	VersionMap        map[int]string
+	RedundancyZoneMap map[int]string
 
 	// ABCDLoggerNames names the loggers according to our ABCD convention when generating 4 clusters
 	ABCDLoggerNames bool
-}
-
-type TestPluginConfig struct {
-	Typ      consts.PluginType
-	Versions []string
 }
 
 var DefaultNumCores = 3
