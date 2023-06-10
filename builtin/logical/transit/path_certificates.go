@@ -183,10 +183,9 @@ func (b *backend) pathImportCertChainWrite(ctx context.Context, req *logical.Req
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
-	// Validate there's only a leaf certificate in the chain
-	// NOTE: Does it have the be the first? Would make sense
-	if hasSingleLeafCert := hasSingleLeafCertificate(certChain); !hasSingleLeafCert {
-		return logical.ErrorResponse("expected a single leaf certificate in the certificate chain"), logical.ErrInvalidRequest
+	err = validateLeafCertPosition(certChain)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
 	keyVersion := p.LatestVersion
@@ -287,20 +286,19 @@ func parseCertificateChain(certChainString string) ([]*x509.Certificate, error) 
 	return certificates, nil
 }
 
-func hasSingleLeafCertificate(certChain []*x509.Certificate) bool {
-	var leafCertsCount uint8
-	for _, cert := range certChain {
+func validateLeafCertPosition(certChain []*x509.Certificate) error {
+	// NOTE: Validate if Basic Constraints are valid in different condition and return different error message?
+	if len(certChain) > 0 && (certChain[0].BasicConstraintsValid && certChain[0].IsCA) {
+		return errors.New("leaf certificate not found in the first position of the certificate chain")
+	}
+
+	for _, cert := range certChain[1:] {
 		if cert.BasicConstraintsValid && !cert.IsCA {
-			leafCertsCount += 1
+			return errors.New("provided certificate chain contains more than one leaf certificate")
 		}
 	}
 
-	var hasSingleLeafCert bool
-	if leafCertsCount == 1 {
-		hasSingleLeafCert = true
-	}
-
-	return hasSingleLeafCert
+	return nil
 }
 
 const pathCreateCsrHelpSyn = `Create a CSR from a key in transit`
