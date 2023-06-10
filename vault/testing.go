@@ -1232,17 +1232,8 @@ type TestClusterOptions struct {
 	KVVersion              string
 	EffectiveSDKVersionMap map[int]string
 
-	NoDefaultQuotas bool
-
-	Plugins *TestPluginConfig
-
 	// ABCDLoggerNames names the loggers according to our ABCD convention when generating 4 clusters
 	ABCDLoggerNames bool
-}
-
-type TestPluginConfig struct {
-	Typ      consts.PluginType
-	Versions []string
 }
 
 var DefaultNumCores = 3
