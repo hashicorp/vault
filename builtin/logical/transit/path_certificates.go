@@ -223,7 +223,7 @@ func (b *backend) pathImportCertChainWrite(ctx context.Context, req *logical.Req
 		return logical.ErrorResponse("leaf certificate public key does match the key version selected"), logical.ErrInvalidRequest
 	}
 
-	p.PersistCertificateChain(ctx, keyVersion, certChain, req.Storage)
+	err = p.PersistCertificateChain(ctx, keyVersion, certChain, req.Storage)
 	if err != nil {
 		return nil, fmt.Errorf("failed to persist certificate chain: %s", err.Error())
 	}
