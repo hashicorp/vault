@@ -9,6 +9,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
@@ -211,7 +212,8 @@ func (b *backend) pathImportCertChainWrite(ctx context.Context, req *logical.Req
 	}
 	if !keyTypeMatches {
 		// NOTE: Different type "names" might lead to confusion.
-		return logical.ErrorResponse(fmt.Sprintf("provided leaf certificate public key type '%s' does not match the transit key type '%s'", leafCertPublicKeyAlgorithm.String(), p.Type.String())), logical.ErrInvalidRequest
+		return logical.ErrorResponse(fmt.Sprintf("provided leaf certificate public key type '%s' does not match the transit key type '%s'",
+			leafCertPublicKeyAlgorithm.String(), p.Type.String())), logical.ErrInvalidRequest
 	}
 
 	// Validate if leaf cert key matches with transit key
@@ -249,26 +251,30 @@ func parseCsr(csrStr string) (*x509.CertificateRequest, error) {
 	return csr, nil
 }
 
-func parseCertificateChain(certChainStr string) ([]*x509.Certificate, error) {
-	certificates := []*x509.Certificate{}
+func parseCertificateChain(certChainString string) ([]*x509.Certificate, error) {
+	var certificates []*x509.Certificate
 
-	pemCertBlocks := []*pem.Block{}
-	rest := []byte(certChainStr)
-	for len(rest) != 0 {
+	var pemCertBlocks []*pem.Block
+	pemBytes := []byte(strings.TrimSpace(certChainString))
+	for len(pemBytes) > 0 {
 		var pemCertBlock *pem.Block
-		pemCertBlock, rest = pem.Decode([]byte(rest))
+		pemCertBlock, pemBytes = pem.Decode(pemBytes)
 		if pemCertBlock == nil {
-			return nil, errors.New("could not decode certificate in certificate chain")
+			return nil, errors.New("could not decode PEM block in certificate chain")
 		}
 
-		pemCertBlocks = append(pemCertBlocks, pemCertBlock)
+		switch pemCertBlock.Type {
+		case "CERTIFICATE", "X05 CERTIFICATE":
+			pemCertBlocks = append(pemCertBlocks, pemCertBlock)
+		default:
+			// Ignore any other entries
+		}
 	}
 
 	if len(pemCertBlocks) == 0 {
-		return nil, errors.New("no certificates provided in `certificate_chain` parameter")
+		return nil, errors.New("provided certificate chain did not contain any valid PEM certificate")
 	}
 
-	// NOTE: This approach or x509.ParseCertificates?
 	for _, certBlock := range pemCertBlocks {
 		cert, err := x509.ParseCertificate(certBlock.Bytes)
 		if err != nil {
