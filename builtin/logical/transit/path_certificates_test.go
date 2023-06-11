@@ -9,6 +9,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -115,17 +116,7 @@ func testTransit_CreateCsr(t *testing.T, keyType, pemTemplateCsr string) {
 }
 
 func TestTransit_Certs_ImportCertChain(t *testing.T) {
-	// NOTE: Are all these test cases needed?
-	testTransit_ImportCertChain(t, "rsa-2048")
-	testTransit_ImportCertChain(t, "rsa-3072")
-	testTransit_ImportCertChain(t, "rsa-4096")
-	testTransit_ImportCertChain(t, "ecdsa-p256")
-	testTransit_ImportCertChain(t, "ecdsa-p384")
-	testTransit_ImportCertChain(t, "ecdsa-p521")
-	testTransit_ImportCertChain(t, "ed25519")
-}
-
-func testTransit_ImportCertChain(t *testing.T, keyType string) {
+	// Create Cluster
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"transit": Factory,
@@ -136,22 +127,41 @@ func testTransit_ImportCertChain(t *testing.T, keyType string) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
+
 	cluster.Start()
 	defer cluster.Cleanup()
 
 	cores := cluster.Cores
-
 	vault.TestWaitActive(t, cores[0].Core)
-
 	client := cores[0].Client
 
-	// Mount transit, write a key.
+	// Mount transit backend
 	err := client.Sys().Mount("transit", &api.MountInput{
 		Type: "transit",
 	})
 	require.NoError(t, err)
 
-	_, err = client.Logical().Write("transit/keys/leaf", map[string]interface{}{
+	// Mount PKI backend
+	err = client.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+	})
+	require.NoError(t, err)
+
+	testTransit_ImportCertChain(t, client, "rsa-2048")
+	testTransit_ImportCertChain(t, client, "rsa-3072")
+	testTransit_ImportCertChain(t, client, "rsa-4096")
+	testTransit_ImportCertChain(t, client, "ecdsa-p256")
+	testTransit_ImportCertChain(t, client, "ecdsa-p384")
+	testTransit_ImportCertChain(t, client, "ecdsa-p521")
+	testTransit_ImportCertChain(t, client, "ed25519")
+}
+
+func testTransit_ImportCertChain(t *testing.T, apiClient *api.Client, keyType string) {
+	keyName := fmt.Sprintf("%s", keyType)
+	issuerName := fmt.Sprintf("%s-issuer", keyType)
+
+	// Create transit key
+	_, err := apiClient.Logical().Write(fmt.Sprintf("transit/keys/%s", keyName), map[string]interface{}{
 		"type": keyType,
 	})
 	require.NoError(t, err)
@@ -161,7 +171,6 @@ func testTransit_ImportCertChain(t *testing.T, keyType string) {
 	require.NoError(t, err)
 
 	var csrTemplate x509.CertificateRequest
-	// csrTemplate.PublicKeyAlgorithm = x509.RSA
 	csrTemplate.Subject.CommonName = "example.com"
 	reqCsrBytes, err := x509.CreateCertificateRequest(cryptoRand.Reader, &csrTemplate, privKey)
 	require.NoError(t, err)
@@ -173,20 +182,16 @@ func testTransit_ImportCertChain(t *testing.T, keyType string) {
 	t.Logf("csr: %v", string(pemTemplateCsr))
 
 	// Create CSR from template CSR fields and key in transit
-	resp, err := client.Logical().Write("transit/keys/leaf/csr", map[string]interface{}{
+	resp, err := apiClient.Logical().Write(fmt.Sprintf("transit/keys/%s/csr", keyName), map[string]interface{}{
 		"csr": string(pemTemplateCsr),
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	pemCsr := resp.Data["csr"].(string)
 
-	// Mount PKI, generate a root, sign this CSR.
-	err = client.Sys().Mount("pki", &api.MountInput{
-		Type: "pki",
-	})
-	require.NoError(t, err)
-
-	resp, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+	// Generate root
+	resp, err = apiClient.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"issuer_name": issuerName,
 		"common_name": "PKI Root X1",
 	})
 	require.NoError(t, err)
@@ -200,7 +205,8 @@ func testTransit_ImportCertChain(t *testing.T, keyType string) {
 	require.NoError(t, err)
 
 	// Create role to be used in the certificate issuing
-	resp, err = client.Logical().Write("pki/roles/example-dot-com", map[string]interface{}{
+	resp, err = apiClient.Logical().Write("pki/roles/example-dot-com", map[string]interface{}{
+		"issuer_ref":                         issuerName,
 		"allowed_domains":                    "example.com",
 		"allow_bare_domains":                 true,
 		"basic_constraints_valid_for_non_ca": true,
@@ -208,9 +214,11 @@ func testTransit_ImportCertChain(t *testing.T, keyType string) {
 	})
 	require.NoError(t, err)
 
-	resp, err = client.Logical().Write("pki/sign/example-dot-com", map[string]interface{}{
-		"csr": pemCsr,
-		"ttl": "10m",
+	// Sign the CSr
+	resp, err = apiClient.Logical().Write("pki/sign/example-dot-com", map[string]interface{}{
+		"issuer_ref": issuerName,
+		"csr":        pemCsr,
+		"ttl":        "10m",
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp)
@@ -228,7 +236,7 @@ func testTransit_ImportCertChain(t *testing.T, keyType string) {
 
 	certificateChain := strings.Join([]string{leafCertPEM, rootCertPEM}, "\n")
 	// Import certificate chain to transit key version
-	_, err = client.Logical().Write("transit/keys/leaf/set-certificate", map[string]interface{}{
+	_, err = apiClient.Logical().Write(fmt.Sprintf("transit/keys/%s/set-certificate", keyName), map[string]interface{}{
 		"certificate_chain": certificateChain,
 	})
 	require.NoError(t, err)
