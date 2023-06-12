@@ -92,5 +92,51 @@ The top level `exec` block has the following configuration entries.
   The process has 30 seconds after this signal is sent until `SIGKILL` is sent
   to force the child process to stop.
 
+
+## Configuration Example
+
+The following example was generated using
+[`vault agent generate-config`](/vault/docs/agent-and-proxy/agent/generate-config),
+a configuration helper tool. Given this configuration, Vault Agent will run
+the child process (`./my-app arg1 arg2`) with two additional environment
+variables (`FOO_USER` and `FOO_PASSWORD`) populated with secrets from Vault.
+
+```hcl
+auto_auth {
+
+  method {
+    type = "token_file"
+
+    config {
+      token_file_path = "/Users/avean/.vault-token"
+    }
+  }
+}
+
+template_config {
+  static_secret_render_interval = "5m"
+  exit_on_retry_failure         = true
+}
+
+vault {
+  address = "http://localhost:8200"
+}
+
+env_template "FOO_PASSWORD" {
+  contents             = "{{ with secret \"secret/data/foo\" }}{{ .Data.data.password }}{{ end }}"
+  error_on_missing_key = true
+}
+env_template "FOO_USER" {
+  contents             = "{{ with secret \"secret/data/foo\" }}{{ .Data.data.user }}{{ end }}"
+  error_on_missing_key = true
+}
+
+exec {
+  command                   = ["./my-app", "arg1", "arg2"]
+  restart_on_secret_changes = "always"
+  restart_stop_signal       = "SIGTERM"
+}
+```
+
 [consul-templating-language]: https://github.com/hashicorp/consul-template/blob/v0.28.1/docs/templating-language.md
 [template-config]: /vault/docs/agent-and-proxy/agent/template#template-configurations
