@@ -33,9 +33,9 @@ scenario "agent" {
     }
     install_artifactory_artifact = local.bundle_path == null
     spot_price_max = {
-      // These prices are based on on-demand cost for t3.medium in us-east
-      "rhel"   = "0.1016"
-      "ubuntu" = "0.0416"
+      // These prices are based on on-demand cost for t3.large in us-east
+      "rhel"   = "0.1432"
+      "ubuntu" = "0.0832"
     }
     tags = merge({
       "Project Name" : var.project_name
