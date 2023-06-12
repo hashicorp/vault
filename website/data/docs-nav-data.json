@@ -1042,6 +1042,10 @@
             ]
           },
           {
+            "title": "generate-config",
+            "path": "agent-and-proxy/agent/generate-config"
+          },
+          {
             "title": "Templates",
             "path": "agent-and-proxy/agent/template"
           },
