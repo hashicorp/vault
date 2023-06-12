@@ -27,6 +27,9 @@ least once before starting the process.
 Vault Agent will restart the process when an update to a injected secret is detected. The frequency secrets are
 checked is controlled by the `static_secret_render_interval` configuration in the `template_config` stanza.
 
+In many ways, Vault Agent will mirror the child process. Standard output streams (stdin/stdout/stderr) are all forwarded
+to the child process. Also, Vault Agent will exit when the child process exits with the same exit code.
+
 ## Configuration
 
 -> Agent's [generate-config](/vault/docs/agent-and-proxy/agent/generate-config)
@@ -80,7 +83,7 @@ The top level `exec` block has the following configuration entries.
   `always` and `never`. Controls a child process' behavior when a secret update is detected.
 
 - `restart_stop_signal` `(string: "SIGTERM")` - Signal to send the child process when a secret has been updated and the
-  process needs to be restarted. The process has a 30 seconds after this signal is sent until `SIGKILL` is sent to force
+  process needs to be restarted. The process has 30 seconds after this signal is sent until `SIGKILL` is sent to force
   the child process to stop.
 
 

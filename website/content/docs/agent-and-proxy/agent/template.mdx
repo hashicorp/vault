@@ -9,7 +9,7 @@ description: >-
 # Vault Agent Templates
 
 Vault Agent's Template functionality allows Vault secrets to be rendered to files
-or environment variables using [Consul Template markup][consul-templating-language].
+or environment variables (via the [Process Supervisor Mode](process-supervisor)) using [Consul Template markup][consul-templating-language].
 
 ## Functionality
 
@@ -321,3 +321,4 @@ template {
 ```
 
 [consul-templating-language]: https://github.com/hashicorp/consul-template/blob/v0.28.1/docs/templating-language.md
+[process-supervisor]: /vault/docs/agent-and-proxy/agent/process-supervisor
