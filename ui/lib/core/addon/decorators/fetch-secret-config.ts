@@ -23,6 +23,7 @@ interface BaseRoute extends Route {
 }
 
 export function withConfig(modelName: string) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return function <RouteClass extends new (...args: any[]) => BaseRoute>(SuperClass: RouteClass) {
     if (!Object.prototype.isPrototypeOf.call(Route, SuperClass)) {
       // eslint-disable-next-line

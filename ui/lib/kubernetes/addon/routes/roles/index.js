@@ -5,7 +5,7 @@
 
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
-import { withConfig } from 'kubernetes/decorators/fetch-config';
+import { withConfig } from 'core/decorators/fetch-secret-config';
 import { hash } from 'rsvp';
 
 @withConfig('kubernetes/config')
