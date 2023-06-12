@@ -48,10 +48,12 @@ exactly one top level `exec` block. It is incompatible with regular file
 
 ### `env_template`
 
-`env_template` maps a template specified in `contents` or referenced in `source`
-to the environment variable name in the title of the stanza. It permits a subset
-of the parameters supported by the
-[file templates](/vault/docs/agent-and-proxy/agent/template#template_configurations):
+`env_template` stanza maps the template specified in the `contents` field or
+referenced in the `source` field to the environment variable name in the title
+of the stanza. It uses the same
+[templating language](/vault/docs/agent-and-proxy/agent/template#templating-language)
+as file templates but permits only a subset of
+[its configuration parameters](/vault/docs/agent-and-proxy/agent/template#template_configurations):
 
 - environment variable name `(string: <required>)` - the name of the
   environment variable to which the contents of the template should map.
