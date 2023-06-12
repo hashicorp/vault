@@ -24,11 +24,11 @@ Vault Agent will inject secrets referenced in the `env_template` configuration
 blocks as environment variables into the child process specified in the `exec` block.
 
 When you start Vault Agent in process supervisor mode, it will wait until each
-environment variable template is rendered at least once before starting the
+environment variable template has rendered at least once before starting the
 process. If `restart_on_secret_changes` is set to `always` (default), Agent
 will restart the process whenever an update to an injected secret is detected.
 This could be either a static secret update (done on
-[static_secret_render_interval`](/vault/docs/agent-and-proxy/agent/template#static_secret_render_interval))
+[`static_secret_render_interval`](/vault/docs/agent-and-proxy/agent/template#static_secret_render_interval))
 or dynamic secret being close to its expiration.
 
 In many ways, Vault Agent will mirror the child process. Standard intput and
