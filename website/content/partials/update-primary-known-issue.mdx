@@ -25,7 +25,7 @@ a timing race.
 When this happens, the PR secondary still contains all the stored data, e.g. listing
 local certs from PKI mounts will return the correct results.  However, because the
 merkle tree has been corrupted, a downstream DR secondary will not receive the local
-data, and will delete it if it already had it.  If the DR secondary is promoted before
+data, and will delete it if it already had it.  If the PR secondary's DR secondary is promoted before
 the PR secondary is repaired, the newly promoted PR secondary will not contain the loca
 data it ought to.  If the former PR secondary is lost or destroyed, the missing data
 will not be recoverable other than via a snapshot restore.
