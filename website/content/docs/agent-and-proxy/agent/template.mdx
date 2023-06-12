@@ -162,7 +162,8 @@ parameters found in the template configuration section in the consul-template
 page](https://github.com/hashicorp/consul-template/blob/main/docs/configuration.md#templates)
 can be used here:
 <Tip>
-The parameters marked with `Δ` below are only applicable to file templates and cannot be used with `env_template` entries.
+The parameters marked with `Δ` below are only applicable to file templates and
+cannot be used with `env_template` entries in process supervisor mode.
 </Tip>
 
 - `source` `(string: "")` - Path on disk to use as the input template. This
@@ -320,4 +321,3 @@ template {
 ```
 
 [consul-templating-language]: https://github.com/hashicorp/consul-template/blob/v0.28.1/docs/templating-language.md
-[exec]: /vault/docs/agent-and-proxy/agent/process-supervisor
