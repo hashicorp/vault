@@ -21,7 +21,8 @@ a process via environment variables using
 ## Functionality
 
 The `exec` stanza allows you to configure a child process for Vault Agent to run. Secrets are injected into the process
-via environment variables configured from `env_template` blocks (see [Template Configurations](template-config) for more info).
+via environment variables configured from `env_template` blocks
+(see [Template Configurations](/vault/docs/agent-and-proxy/agent/template#template-configurations) for more info).
 When you start Vault Agent with `exec` enabled, it will wait until each environment variable template is rendered at
 least once before starting the process.
 Vault Agent will restart the process when an update to a injected secret is detected. The frequency secrets are
