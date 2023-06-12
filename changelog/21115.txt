@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: Process pending ACME accepted challenges upon startup
+```
