@@ -33,9 +33,9 @@ scenario "agent" {
     }
     install_artifactory_artifact = local.bundle_path == null
     spot_price_max = {
-      // These prices are based on on-demand cost for t3.medium in us-east
-      "rhel"   = "0.1016"
-      "ubuntu" = "0.0416"
+      // These prices are based on on-demand cost for t3.large in us-east
+      "rhel"   = "0.1432"
+      "ubuntu" = "0.0832"
     }
     tags = merge({
       "Project Name" : var.project_name
@@ -137,12 +137,9 @@ scenario "agent" {
     }
 
     variables {
-      artifactory_release   = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
-      awskms_unseal_key_arn = step.create_vpc.kms_key_arn
-      cluster_name          = step.create_vault_cluster_targets.cluster_name
-      config_env_vars = {
-        VAULT_LOG_LEVEL = var.vault_log_level
-      }
+      artifactory_release      = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
+      awskms_unseal_key_arn    = step.create_vpc.kms_key_arn
+      cluster_name             = step.create_vault_cluster_targets.cluster_name
       install_dir              = var.vault_install_dir
       license                  = matrix.edition != "oss" ? step.read_license.license : null
       local_artifact_path      = local.bundle_path
