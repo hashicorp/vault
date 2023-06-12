@@ -405,6 +405,11 @@ func (d *DynamoDBBackend) List(ctx context.Context, prefix string) ([]string, er
 				}},
 			},
 		},
+		ProjectionExpression: aws.String("#key, #path"),
+		ExpressionAttributeNames: map[string]*string{
+			"#key":  aws.String("Key"),
+			"#path": aws.String("Path"),
+		},
 	}
 
 	d.permitPool.Acquire()
