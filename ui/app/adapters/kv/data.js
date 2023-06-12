@@ -5,6 +5,7 @@
 
 import ApplicationAdapter from '../application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
+import { assert } from '@ember/debug';
 
 export default class KvDataAdapter extends ApplicationAdapter {
   namespace = 'v1';
@@ -40,42 +41,35 @@ export default class KvDataAdapter extends ApplicationAdapter {
     return this.ajax(this._urlForSecret(backend, path, version), 'GET');
   }
 
-  /* Four types of delete operations */
-  // make typescript
-  // ARG TODO use destroyRecord({deleteType}) and conditionally call the method.
-  // util can be the names of these methods.  https://api.emberjs.com/ember-data/4.12/classes/Model/methods?anchor=destroyRecord
+  /* Five types of delete operations */
+  deleteRecord(backend, path, deleteType, versions) {
+    if (!backend || !path) {
+      throw new Error('The request to delete or undelete is missing required attributes.');
+    }
 
-  // 1. Soft delete the secret's latest version.
-  deleteLatestVersion(backend, path) {
-    return this.ajax(this._urlForSecret(backend, path), 'DELETE');
-  }
-
-  // 2. Soft delete specific version(s) of the secret.
-  deleteSpecificVersions(backend, path, versions) {
-    return this.ajax(this._urlForSecret(backend, path), 'POST', {
-      data: { versions },
-    });
-  }
-
-  // 3. Permanently remove specific version(s) of a secret.
-  destroySpecificVersions(backend, path, versions) {
-    const url = `${this.buildURL()}/${encodePath(backend)}/destroy/${encodePath(path)}`;
-    return this.ajax(url, 'PUT', {
-      data: { versions },
-    });
-  }
-
-  // 4. Permanently remove a secret's data and metadata.
-  destroyEverything(backend, path) {
-    const url = `${this.buildURL()}/${encodePath(backend)}/metadata/${encodePath(path)}`;
-    return this.ajax(url, 'DELETE');
-  }
-
-  // Undelete a specific version(s)
-  undeleteSpecificVersions(backend, path, versions) {
-    const url = `${this.buildURL()}/${encodePath(backend)}/undelete/${encodePath(path)}`;
-    return this.ajax(url, 'POST', {
-      data: { versions },
-    });
+    switch (deleteType) {
+      case 'delete-latest-version':
+        return this.ajax(this._urlForSecret(backend, path), 'DELETE');
+      case 'delete-specific-version':
+        return this.ajax(this._urlForSecret(backend, path), 'POST', {
+          data: { versions },
+        });
+      case 'destroy-specific-version':
+        return this.ajax(`${this.buildURL()}/${encodePath(backend)}/destroy/${encodePath(path)}`, 'PUT', {
+          data: { versions },
+        });
+      case 'destroy-everything':
+        return this.ajax(this._urlForSecret(backend, path), 'POST', {
+          data: { versions },
+        });
+      case 'undelete-specific-version':
+        return this.ajax(`${this.buildURL()}/${encodePath(backend)}/undelete/${encodePath(path)}`, 'POST', {
+          data: { versions },
+        });
+      default:
+        assert(
+          'deletType must be one of delete-latest-version, delete-specific-version, destroy-specific-version, destroy-everything, undelete-specific-version.'
+        );
+    }
   }
 }
