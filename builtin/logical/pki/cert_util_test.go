@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -232,6 +234,30 @@ func TestPki_PermitFQDNs(t *testing.T) {
 			if !reflect.DeepEqual(testCase.expectedEmails, actualEmails) {
 				t.Fatalf("Expected email addresses %v, got %v", testCase.expectedEmails, actualEmails)
 			}
+		})
+	}
+}
+
+func Test_parseBasicConstraintExtension(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		isCA       bool
+		maxPathLen int
+	}{
+		{"empty-seq", false, -1},
+		{"just-ca-true", true, -1},
+		{"just-ca-with-maxpathlen", true, 2},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ext := buildBasicConstraintExtension(t, tt.isCA, tt.maxPathLen)
+
+			gotIsCa, gotMaxPathLen, err := parseBasicConstraintExtension(ext)
+			require.NoError(t, err, "failed parsing basic extension")
+			require.Equal(t, tt.isCA, gotIsCa, "IsCA returned value incorrect")
+			require.Equal(t, tt.maxPathLen, gotMaxPathLen, "max path length returned value incorrect")
 		})
 	}
 }

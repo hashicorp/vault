@@ -12,6 +12,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/asn1"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -23,6 +24,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 
 	"github.com/go-test/deep"
 	"github.com/stretchr/testify/require"
@@ -972,6 +975,109 @@ func TestIssuerRoleDirectoryAssociations(t *testing.T) {
 	}
 
 	// 5.
+}
+
+// TestAcmeWithCsrIncludingBasicConstraintExtension verify that we error out for a CSR that is requesting a
+// certificate with the IsCA set to true, false is okay, within the basic constraints extension and that no matter what
+// the extension is not present on the returned certificate.
+func TestAcmeWithCsrIncludingBasicConstraintExtension(t *testing.T) {
+	t.Parallel()
+
+	cluster, client, _ := setupAcmeBackend(t)
+	defer cluster.Cleanup()
+
+	testCtx := context.Background()
+
+	baseAcmeURL := "/v1/pki/acme/"
+	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err, "failed creating rsa key")
+
+	acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)
+
+	// Create new account
+	t.Logf("Testing register on %s", baseAcmeURL)
+	acct, err := acmeClient.Register(testCtx, &acme.Account{}, func(tosURL string) bool { return true })
+	require.NoError(t, err, "failed registering account")
+
+	// Create an order
+	t.Logf("Testing Authorize Order on %s", baseAcmeURL)
+	identifiers := []string{"*.localdomain"}
+	order, err := acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{
+		{Type: "dns", Value: identifiers[0]},
+	})
+	require.NoError(t, err, "failed creating order")
+
+	// HACK: Update authorization/challenge to completed as we can't really do it properly in this workflow test.
+	markAuthorizationSuccess(t, client, acmeClient, acct, order)
+
+	// Build a CSR with IsCA set to true, making sure we reject it
+	isCATrueCSR := &x509.CertificateRequest{
+		DNSNames:        []string{identifiers[0]},
+		ExtraExtensions: []pkix.Extension{buildBasicConstraintExtension(t, true, -1)},
+	}
+	csrKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err, "failed generated key for CSR")
+	csr, err := x509.CreateCertificateRequest(rand.Reader, isCATrueCSR, csrKey)
+	require.NoError(t, err, "failed generating csr")
+
+	_, _, err = acmeClient.CreateOrderCert(testCtx, order.FinalizeURL, csr, true)
+	require.Error(t, err, "order finalization should have failed with IsCA set to true")
+
+	isCAFalseCSR := &x509.CertificateRequest{
+		DNSNames:   []string{identifiers[0]},
+		Extensions: []pkix.Extension{buildBasicConstraintExtension(t, false, -1)},
+	}
+
+	csr, err = x509.CreateCertificateRequest(rand.Reader, isCAFalseCSR, csrKey)
+	require.NoError(t, err, "failed generating csr")
+
+	certs, _, err := acmeClient.CreateOrderCert(testCtx, order.FinalizeURL, csr, true)
+	require.NoError(t, err, "order finalization should have failed with IsCA set to false")
+
+	require.GreaterOrEqual(t, len(certs), 1, "expected at least one cert in bundle")
+	acmeCert, err := x509.ParseCertificate(certs[0])
+	require.NoError(t, err, "failed parsing acme cert")
+
+	// Make sure we don't have any basic constraint extension within the returned cert
+	for _, ext := range acmeCert.Extensions {
+		if ext.Id.Equal(certutil.ExtensionBasicConstraintsOID) {
+			// We shouldn't have this extension in our cert
+			t.Fatalf("acme csr contained a basic constraints extension")
+		}
+	}
+}
+
+func buildBasicConstraintExtension(t *testing.T, isCa bool, maxPath int) pkix.Extension {
+	var asn1Bytes []byte
+	var err error
+
+	if isCa && maxPath >= 0 {
+		CaAndMaxPathLen := struct {
+			IsCa       bool `asn1:"optional"`
+			MaxPathLen int  `asn1:"optional"`
+		}{
+			IsCa:       isCa,
+			MaxPathLen: maxPath,
+		}
+		asn1Bytes, err = asn1.Marshal(CaAndMaxPathLen)
+		require.NoError(t, err, "failed encoding asn1")
+	} else if isCa && maxPath < 0 {
+		justCa := struct {
+			IsCa bool `asn1:"optional"`
+		}{IsCa: isCa}
+		asn1Bytes, err = asn1.Marshal(justCa)
+		require.NoError(t, err, "failed encoding asn1")
+	} else {
+		empty := struct{}{}
+		asn1Bytes, err = asn1.Marshal(empty)
+		require.NoError(t, err, "failed encoding asn1")
+	}
+
+	return pkix.Extension{
+		Id:       certutil.ExtensionBasicConstraintsOID,
+		Critical: true,
+		Value:    asn1Bytes,
+	}
 }
 
 func markAuthorizationSuccess(t *testing.T, client *api.Client, acmeClient *acme.Client, acct *acme.Account,
