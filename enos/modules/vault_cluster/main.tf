@@ -4,7 +4,7 @@ terraform {
     # to the public registry
     enos = {
       source  = "app.terraform.io/hashicorp-qti/enos"
-      version = ">= 0.3.2"
+      version = ">= 0.4.0"
     }
   }
 }
@@ -126,7 +126,7 @@ resource "enos_consul_start" "consul" {
     server           = false
     bootstrap_expect = 0
     license          = var.consul_license
-    log_level        = "INFO"
+    log_level        = var.consul_log_level
     log_file         = var.consul_log_file
   }
   unit_name = "consul"
@@ -160,6 +160,7 @@ resource "enos_vault_start" "leader" {
         tls_disable = "true"
       }
     }
+    log_level = var.log_level
     storage = {
       type       = var.storage_backend
       attributes = ({ for key, value in local.storage_config[each.key] : key => value })
@@ -199,6 +200,7 @@ resource "enos_vault_start" "followers" {
         tls_disable = "true"
       }
     }
+    log_level = var.log_level
     storage = {
       type       = var.storage_backend
       attributes = { for key, value in local.storage_config[each.key] : key => value }

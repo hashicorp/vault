@@ -102,6 +102,7 @@ module "vault_cluster" {
 
   install_dir    = var.vault_install_dir
   consul_license = var.backend_license_path == null ? null : file(abspath(var.backend_license_path))
+  log_level      = var.vault_log_level
 }
 
 module "vault_get_cluster_ips" {
