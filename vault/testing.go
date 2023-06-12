@@ -1204,6 +1204,9 @@ type TestClusterOptions struct {
 	NoDefaultQuotas bool
 
 	Plugins *TestPluginConfig
+
+	// ABCDLoggerNames names the loggers according to our ABCD convention when generating 4 clusters
+	ABCDLoggerNames bool
 }
 
 type TestPluginConfig struct {
