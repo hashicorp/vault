@@ -49,10 +49,28 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
     return this.version.isEnterprise;
   }
 
+  @task
+  @waitFor
+  *save(event: Event) {
+    event.preventDefault();
+    yield this.performSave();
+
+    if (this.errors.length) {
+      this.invalidFormAlert = 'There was an error submitting this form.';
+    } else {
+      this.router.transitionTo('vault.cluster.secrets.backend.pki.configuration.index');
+    }
+  }
+
   async performSave() {
+    // first clear errors and sticky flash messages
+    this.errors = [];
+    this.flashMessages.clearMessages();
+
+    // modelName is the relevant API endpoint (i.e. pki/config/cluster)
     for (const modelName of ['cluster', 'acme', 'urls', 'crl']) {
       const model = this.args[modelName as keyof Args];
-      // skip saving and continue to next iteration if user does not have permission
+      // skip saving this model and continue to next iteration if user does not have permission
       if (!model.canSet) continue;
       try {
         await model.save();
@@ -65,21 +83,6 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
         this.flashMessages.danger(`Error updating config/${modelName}`, { sticky: true });
         this.errors.pushObject(errorObject);
       }
-    }
-  }
-
-  @task
-  @waitFor
-  *save(event: Event) {
-    event.preventDefault();
-    this.errors = []; // reset errors
-    this.flashMessages.clearMessages(); // clear sticky flash messages
-    yield this.performSave();
-
-    if (this.errors.length) {
-      this.invalidFormAlert = 'There was an error submitting this form.';
-    } else {
-      this.router.transitionTo('vault.cluster.secrets.backend.pki.configuration.index');
     }
   }
 
