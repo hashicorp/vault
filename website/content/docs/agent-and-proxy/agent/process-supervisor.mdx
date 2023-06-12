@@ -32,11 +32,11 @@ to the child process. Also, Vault Agent will exit when the child process exits w
 
 The top level `exec` block has the following configuration entries:
 
-- `command` `(string array: required)` - Specify the command for the child process
+- `command` `(string array: required)` - Specify the command for the child process.
 - `restart_on_secret_changes` `(string: "always")` - Only two accepted options: "always" and "never". Controls child
   process behavior when a secret update is detected.
 - `restart_stop_signal` `(string: "SIGTERM")` - Signal to send the child process when a secret has been updated and the
-  process needs to be restarted. The process has a 30 seconds after this signal is sent until `SIGKILL` is sent to force
+  process needs to be restarted. The process has 30 seconds after this signal is sent until `SIGKILL` is sent to force
   the child process to stop.
 
 
