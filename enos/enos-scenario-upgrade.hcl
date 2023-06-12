@@ -176,10 +176,7 @@ scenario "upgrade" {
     variables {
       awskms_unseal_key_arn = step.create_vpc.kms_key_arn
       cluster_name          = step.create_vault_cluster_targets.cluster_name
-      config_env_vars = {
-        VAULT_LOG_LEVEL = var.vault_log_level
-      }
-      consul_cluster_tag = step.create_backend_cluster.consul_cluster_tag
+      consul_cluster_tag    = step.create_backend_cluster.consul_cluster_tag
       consul_release = matrix.backend == "consul" ? {
         edition = var.backend_edition
         version = matrix.consul_version
