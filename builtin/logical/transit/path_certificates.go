@@ -59,6 +59,8 @@ will be used as a basis for the CSR with the key in transit. If not set, an empt
 
 func (b *backend) pathImportCertChain() *framework.Path {
 	return &framework.Path{
+		// NOTE: `set-certificate` or `set_certificate`? Paths seem to use different
+		// case, such as `transit/wrapping_key` and `transit/cache-config`.
 		Pattern: "keys/" + framework.GenericNameRegex("name") + "/set-certificate",
 		Fields: map[string]*framework.FieldSchema{
 			"name": {

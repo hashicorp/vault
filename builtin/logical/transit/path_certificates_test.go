@@ -115,6 +115,7 @@ func testTransit_CreateCsr(t *testing.T, keyType, pemTemplateCsr string) {
 	}
 }
 
+// NOTE: Tests are using two 'different' methods of checking for errors, which one sould we prefer?
 func TestTransit_Certs_ImportCertChain(t *testing.T) {
 	// Create Cluster
 	coreConfig := &vault.CoreConfig{
@@ -189,7 +190,7 @@ func testTransit_ImportCertChain(t *testing.T, apiClient *api.Client, keyType st
 	require.NotNil(t, resp)
 	pemCsr := resp.Data["csr"].(string)
 
-	// Generate root
+	// Generate PKI root
 	resp, err = apiClient.Logical().Write("pki/root/generate/internal", map[string]interface{}{
 		"issuer_name": issuerName,
 		"common_name": "PKI Root X1",
@@ -214,7 +215,7 @@ func testTransit_ImportCertChain(t *testing.T, apiClient *api.Client, keyType st
 	})
 	require.NoError(t, err)
 
-	// Sign the CSr
+	// Sign the CSR
 	resp, err = apiClient.Logical().Write("pki/sign/example-dot-com", map[string]interface{}{
 		"issuer_ref": issuerName,
 		"csr":        pemCsr,
