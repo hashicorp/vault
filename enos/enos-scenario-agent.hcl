@@ -134,12 +134,9 @@ scenario "agent" {
     }
 
     variables {
-      artifactory_release   = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
-      awskms_unseal_key_arn = step.create_vpc.kms_key_arn
-      cluster_name          = step.create_vault_cluster_targets.cluster_name
-      config_env_vars = {
-        VAULT_LOG_LEVEL = var.vault_log_level
-      }
+      artifactory_release      = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
+      awskms_unseal_key_arn    = step.create_vpc.kms_key_arn
+      cluster_name             = step.create_vault_cluster_targets.cluster_name
       install_dir              = var.vault_install_dir
       license                  = matrix.edition != "oss" ? step.read_license.license : null
       local_artifact_path      = local.bundle_path
