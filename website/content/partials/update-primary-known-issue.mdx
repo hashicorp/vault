@@ -12,8 +12,9 @@ except that it doesn't wipe storage.  One of the steps that it takes is to
 temporarily remove most of the mount table records: it removes all mount entries
 except for those that are managed automatically by vault, e.g. identity mounts.
 
-This update-primary behaviour is unintended and we'll be reworking
-it in an upcoming release.
+This update-primary behaviour is unintended and we'll be reworking it in an upcoming release.
+Once it lands the changelog entry will be "Fix a race condition with update-primary that could
+result in data loss after a DR failover."
 
 #### update-primary with local data in shared mounts
 
