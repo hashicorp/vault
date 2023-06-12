@@ -67,7 +67,7 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
     this.errors = [];
     this.flashMessages.clearMessages();
 
-    // modelName is the relevant API endpoint (i.e. pki/config/cluster)
+    // modelName is also the API endpoint (i.e. pki/config/cluster)
     for (const modelName of ['cluster', 'acme', 'urls', 'crl']) {
       const model = this.args[modelName as keyof Args];
       // skip saving this model and continue to next iteration if user does not have permission
