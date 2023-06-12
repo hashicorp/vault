@@ -1020,8 +1020,8 @@
             "path": "agent-and-proxy/agent/apiproxy"
           },
           {
-            "title": "Process Supervisor Mode",
-            "path": "agent-and-proxy/agent/process-supervisor-mode"
+            "title": "Process Supervisor",
+            "path": "agent-and-proxy/agent/process-supervisor"
           },
           {
             "title": "Caching",
