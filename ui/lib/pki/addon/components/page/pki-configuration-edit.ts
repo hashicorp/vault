@@ -43,7 +43,7 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
   @service declare readonly version: VersionService;
 
   @tracked invalidFormAlert = '';
-  @tracked errorObjects: object[] = [];
+  @tracked errors: object[] = [];
 
   get isEnterprise() {
     return this.version.isEnterprise;
@@ -63,7 +63,7 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
           message: errorMessage(error),
         };
         this.flashMessages.danger(`Error updating config/${modelName}`, { sticky: true });
-        this.errorObjects.pushObject(errorObject);
+        this.errors.pushObject(errorObject);
       }
     }
   }
@@ -72,11 +72,11 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
   @waitFor
   *save(event: Event) {
     event.preventDefault();
-    this.errorObjects = []; // reset errors
+    this.errors = []; // reset errors
     this.flashMessages.clearMessages(); // clear sticky flash messages
     yield this.performSave();
 
-    if (this.errorObjects.length) {
+    if (this.errors.length) {
       this.invalidFormAlert = 'There was an error submitting this form.';
     } else {
       this.router.transitionTo('vault.cluster.secrets.backend.pki.configuration.index');

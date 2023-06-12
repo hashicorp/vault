@@ -1,8 +1,8 @@
 <div class="box is-sideless is-fullwidth is-marginless">
-  {{#if this.errorObjects}}
+  {{#if this.errors}}
     <AlertBanner @type="danger" data-test-error-banner>
-      <ul class={{if (gt this.errorObjects.length 1) "bullet"}}>
-        {{#each this.errorObjects as |error|}}
+      <ul class={{if (gt this.errors.length 1) "bullet"}}>
+        {{#each this.errors as |error|}}
           <li>
             <code>POST config/{{error.modelName}}</code>:
             {{error.message}}
