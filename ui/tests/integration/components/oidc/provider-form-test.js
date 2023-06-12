@@ -224,6 +224,6 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
     assert
       .dom(SELECTORS.inlineAlert)
       .hasText('There was an error submitting this form.', 'form error alert renders ');
-    assert.dom('[data-test-alert-banner="alert"]').exists('alert banner renders');
+    assert.dom('[data-test-alert-banner]').exists('alert banner renders');
   });
 });
