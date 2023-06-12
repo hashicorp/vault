@@ -71,7 +71,7 @@ variable "consul_log_level" {
 
   validation {
     condition     = contains(["trace", "debug", "info", "warn", "error"], var.consul_log_level)
-    error_message = "The vault_log_level must be one of 'trace', 'debug', 'info', 'warn', or 'error'."
+    error_message = "The consul_log_level must be one of 'trace', 'debug', 'info', 'warn', or 'error'."
   }
 }
 
@@ -116,6 +116,17 @@ variable "local_artifact_path" {
   type        = string
   description = "The path to a locally built vault artifact to install. It can be a zip archive, RPM, or Debian package"
   default     = null
+}
+
+variable "log_level" {
+  type        = string
+  description = "The vault service log level"
+  default     = "info"
+
+  validation {
+    condition     = contains(["trace", "debug", "info", "warn", "error"], var.log_level)
+    error_message = "The log_level must be one of 'trace', 'debug', 'info', 'warn', or 'error'."
+  }
 }
 
 variable "manage_service" {
