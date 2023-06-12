@@ -34,7 +34,7 @@ func (b *backend) pathCreateCsr() *framework.Path {
 				Type:     framework.TypeString,
 				Required: false,
 				Description: `PEM encoded CSR template. The information attributes 
-are going to be used as a basis for the CSR with the key in transit. If not set, an empty CSR is returned.`,
+will be used as a basis for the CSR with the key in transit. If not set, an empty CSR is returned.`,
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -74,8 +74,8 @@ func (b *backend) pathImportCertChain() *framework.Path {
 			"certificate_chain": {
 				Type:     framework.TypeString,
 				Required: true,
-				// FIXME: Complete description
-				Description: `PEM encoded certificate chain.`,
+				Description: `PEM encoded certificate chain. It should be composed 
+by one or more concatenated PEM blocks and ordered starting from the end-entity certificate.`,
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -100,6 +100,7 @@ func (b *backend) pathImportCertChain() *framework.Path {
 
 func (b *backend) pathCreateCsrWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
+	pemCsrTemplate := d.Get("csr").(string)
 
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
@@ -116,23 +117,23 @@ func (b *backend) pathCreateCsrWrite(ctx context.Context, req *logical.Request, 
 	}
 	defer p.Unlock()
 
+	// Transit key version
+	signingKeyVersion := p.LatestVersion
+	// NOTE: BYOK endpoints seem to remove "v" prefix from version,
+	// are versions like that also supported?
+	if version, ok := d.GetOk("version"); ok {
+		signingKeyVersion = version.(int)
+	}
+
 	// Check if transit key supports signing
 	if !p.Type.SigningSupported() {
 		return logical.ErrorResponse(fmt.Sprintf("key type '%s' does not support signing", p.Type)), logical.ErrInvalidRequest
 	}
 
 	// Read and parse CSR template
-	pemCsrTemplate := d.Get("csr").(string)
 	csrTemplate, err := parseCsr(pemCsrTemplate)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-	}
-
-	signingKeyVersion := p.LatestVersion
-	// NOTE: BYOK endpoints seem to remove "v" prefix from version,
-	// are versions like that also supported?
-	if version, ok := d.GetOk("version"); ok {
-		signingKeyVersion = version.(int)
 	}
 
 	pemCsr, err := p.CreateCsr(signingKeyVersion, csrTemplate)
@@ -169,6 +170,12 @@ func (b *backend) pathImportCertChainWrite(ctx context.Context, req *logical.Req
 	}
 	defer p.Unlock()
 
+	// Transit key version
+	keyVersion := p.LatestVersion
+	if version, ok := d.GetOk("version"); ok {
+		keyVersion = version.(int)
+	}
+
 	// Check if transit key supports signing
 	// NOTE: A key type that doesn't support signing cannot possible (?) have
 	// a certificate, so does it make sense to have this check?
@@ -188,31 +195,12 @@ func (b *backend) pathImportCertChainWrite(ctx context.Context, req *logical.Req
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
-	keyVersion := p.LatestVersion
-	if version, ok := d.GetOk("version"); ok {
-		keyVersion = version.(int)
-	}
-
 	leafCertPublicKeyAlgorithm := certChain[0].PublicKeyAlgorithm
-	var keyTypeMatches bool
-	switch p.Type {
-	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521:
-		if leafCertPublicKeyAlgorithm == x509.ECDSA {
-			keyTypeMatches = true
-		}
-	case keysutil.KeyType_ED25519:
-		if leafCertPublicKeyAlgorithm == x509.Ed25519 {
-			keyTypeMatches = true
-		}
-	case keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096:
-		if leafCertPublicKeyAlgorithm == x509.RSA {
-			keyTypeMatches = true
-		}
-	}
-	if !keyTypeMatches {
-		// NOTE: Different type "names" might lead to confusion.
-		return logical.ErrorResponse(fmt.Sprintf("provided leaf certificate public key type '%s' does not match the transit key type '%s'",
-			leafCertPublicKeyAlgorithm.String(), p.Type.String())), logical.ErrInvalidRequest
+
+	// Check if end-entity public key algorithm matches transit key
+	err = validateKeyTypeMatch(p, leafCertPublicKeyAlgorithm)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
 	// Validate if leaf cert key matches with transit key
@@ -296,6 +284,31 @@ func validateLeafCertPosition(certChain []*x509.Certificate) error {
 		if cert.BasicConstraintsValid && !cert.IsCA {
 			return errors.New("provided certificate chain contains more than one leaf certificate")
 		}
+	}
+
+	return nil
+}
+
+func validateKeyTypeMatch(p *keysutil.Policy, leafCertPublicKeyAlgorithm x509.PublicKeyAlgorithm) error {
+	var keyTypeMatches bool
+	switch p.Type {
+	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521:
+		if leafCertPublicKeyAlgorithm == x509.ECDSA {
+			keyTypeMatches = true
+		}
+	case keysutil.KeyType_ED25519:
+		if leafCertPublicKeyAlgorithm == x509.Ed25519 {
+			keyTypeMatches = true
+		}
+	case keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096:
+		if leafCertPublicKeyAlgorithm == x509.RSA {
+			keyTypeMatches = true
+		}
+	}
+	if !keyTypeMatches {
+		// NOTE: Different type "names" might lead to confusion.
+		return fmt.Errorf("provided leaf certificate public key type '%s' does not match the transit key type '%s'",
+			leafCertPublicKeyAlgorithm.String(), p.Type.String())
 	}
 
 	return nil
