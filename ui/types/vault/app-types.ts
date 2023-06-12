@@ -54,6 +54,12 @@ export interface TtlEvent {
   goSafeTimeString: string;
 }
 
+export interface Breadcrumb {
+  label: string;
+  route?: string;
+  linkExternal?: boolean;
+}
+
 // Generic interfaces
 export interface StringMap {
   [key: string]: string;

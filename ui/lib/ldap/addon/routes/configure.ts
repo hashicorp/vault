@@ -11,9 +11,11 @@ import type Store from '@ember-data/store';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type Transition from '@ember/routing/transition';
 import type LdapConfigModel from 'vault/models/ldap/config';
+import type Controller from '@ember/controller';
+import type { Breadcrumb } from 'vault/vault/app-types';
 
-export interface LdapConfigureRouteModel {
-  backend: LdapConfigModel;
+interface LdapConfigureController extends Controller {
+  breadcrumbs: Array<Breadcrumb>;
 }
 
 @withConfig('ldap/config')
@@ -25,10 +27,14 @@ export default class LdapConfigureRoute extends Route {
 
   async model() {
     const backend = this.secretMountPath.currentPath;
-    return this.configModel || this.store.createRecord('kubernetes/config', { backend });
+    return this.configModel || this.store.createRecord('ldap/config', { backend });
   }
 
-  setupController(controller: any, resolvedModel: LdapConfigureRouteModel, transition: Transition) {
+  setupController(
+    controller: LdapConfigureController,
+    resolvedModel: LdapConfigModel,
+    transition: Transition
+  ) {
     super.setupController(controller, resolvedModel, transition);
 
     controller.breadcrumbs = [
