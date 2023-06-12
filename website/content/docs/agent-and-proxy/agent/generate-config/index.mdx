@@ -33,7 +33,7 @@ a list of production-ready `auto_auth` methods that you can use instead.
 By default, the file will be generated in the local directory as `agent.hcl`
 unless a path is specified as an argument.
 
-## Examples
+## Example
 
 Before generating a configuration file, let's insert a secret `foo`:
 
@@ -100,10 +100,10 @@ The following flags are available in addition to the [standard set of
 flags](/vault/docs/commands) included in all commands.
 
 - `type` `(string: <required>)` - The type of configuration file to generate;
-  currently, only 'env-template' is supported.
+  currently, only `env-template` is supported.
 
 - `path` `(string: "")` - Path to a kv-v1 or kv-v2 secret
-  (e.g. secret/data/foo, kv-v2/prefix/*); multiple secrets and tail '*'
+  (e.g. `secret/data/foo`, `kv-v2/my-app/*`); multiple secrets and tail `*`
   wildcards are allowed.
 
 - `-exec` `(string: "env")` - The command to execute in agent process
