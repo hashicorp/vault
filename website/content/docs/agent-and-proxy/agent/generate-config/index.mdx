@@ -26,9 +26,9 @@ The command specified in the `-exec` option will be used to generate an
 
 In addition to the `env_template` entries, the command generates an `auto_auth`
 section with `token_file` authentication method. While this method is very
-convenient for local testing, it should **NOT** be used in production. Please
-refer to the [Auto-Auth docs](/vault/docs/agent-and-proxy/autoauth) for
-a list of production-ready `auto_auth` methods that you can use instead.
+convenient for local testing, it should **NOT** be used in production. In a
+production environment, please use any other
+[Auto-Auth method](/vault/docs/agent-and-proxy/autoauth/methods) instead.
 
 By default, the file will be generated in the local directory as `agent.hcl`
 unless a path is specified as an argument.
