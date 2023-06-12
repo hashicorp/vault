@@ -33,7 +33,8 @@ func TwoNilNils() (any, error) { // want "Function TwoNilNils can return an erro
 	return nil, nil
 }
 
-func ThreeArgs() (any, any, error) { // want "Function ThreeArgs can return an error, and has a statement that returns only nils"
+// ThreeResults should not fail, as while it returns nil, nil, nil, it has three results, not two.
+func ThreeResults() (any, any, error) {
 	return nil, nil, nil
 }
 

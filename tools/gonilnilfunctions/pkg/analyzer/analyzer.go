@@ -16,7 +16,7 @@ import (
 
 var Analyzer = &analysis.Analyzer{
 	Name:       "gonilnilfunctions",
-	Doc:        "Verifies that every go function with error as one of many return types cannot return nil, nil",
+	Doc:        "Verifies that every go function with error as one of its two return types cannot return nil, nil",
 	Run:        run,
 	ResultType: reflect.TypeOf((interface{})(nil)),
 	Requires:   []*analysis.Analyzer{inspect.Analyzer},
@@ -71,8 +71,8 @@ func getNestedReturnStatements(s ast.Stmt, returns []*ast.ReturnStmt) []*ast.Ret
 	return returns
 }
 
-// run runs the analysis, failing for functions that contain multiple nil returns
-// when one of the return types is error.
+// run runs the analysis, failing for functions whose signatures contain two results including one error
+// (e.g. (something, error)), that contain multiple nil returns
 func run(pass *analysis.Pass) (interface{}, error) {
 	inspector := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
 
@@ -137,6 +137,13 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		for _, returnStatement := range returnStatements {
 			numResultsNil := 0
 			results := returnStatement.Results
+
+			// We only want two-arg functions (something, nil)
+			// We can remove this block in the future if we change our mind
+			if len(results) != 2 {
+				continue
+			}
+
 			for _, result := range results {
 				// nil is an ident
 				ident, isIdent := result.(*ast.Ident)
