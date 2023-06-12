@@ -392,7 +392,7 @@ func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[gene
 
 	}
 	if writeIntentLog {
-		err := activityLog.writeIntentLog(ctx, earliestTimestamp.Unix(), latestTimestamp)
+		err := activityLog.writeIntentLog(ctx, earliestTimestamp.UTC().Unix(), latestTimestamp.UTC())
 		if err != nil {
 			return nil, err
 		}

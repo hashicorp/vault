@@ -7,6 +7,7 @@ package vault
 
 import (
 	"context"
+	"encoding/json"
 	"sort"
 	"testing"
 	"time"
@@ -609,5 +610,33 @@ func Test_handleActivityWriteData(t *testing.T) {
 		require.Len(t, pq.Namespaces, 1)
 		require.Equal(t, uint64(12), pq.Namespaces[0].Entities)
 		require.Len(t, pq.Months, 4)
+	})
+	t.Run("write intent logs", func(t *testing.T) {
+		core, _, _ := TestCoreUnsealed(t)
+		marshaled, err := protojson.Marshal(&generation.ActivityLogMockInput{
+			Data:  data,
+			Write: []generation.WriteOptions{generation.WriteOptions_WRITE_INTENT_LOGS},
+		})
+		require.NoError(t, err)
+		now := time.Now().UTC()
+		req := logical.TestRequest(t, logical.CreateOperation, "internal/counters/activity/write")
+		req.Data = map[string]interface{}{"input": string(marshaled)}
+		_, err = core.systemBackend.HandleRequest(namespace.RootContext(nil), req)
+		require.NoError(t, err)
+
+		entry, err := core.activityLog.view.Get(context.Background(), activityIntentLogKey)
+		require.NoError(t, err)
+		var intent ActivityIntentLog
+		err = json.Unmarshal(entry.Value, &intent)
+		require.NoError(t, err)
+		prev := time.Unix(intent.PreviousMonth, 0)
+		next := time.Unix(intent.NextMonth, 0)
+
+		require.Equal(t, timeutil.StartOfMonth(now), next.UTC())
+		require.Equal(t, timeutil.StartOfMonth(timeutil.MonthsPreviousTo(3, now)), prev.UTC())
+
+		times, err := core.activityLog.availableLogs(context.Background())
+		require.NoError(t, err)
+		require.Len(t, times, 4)
 	})
 }
