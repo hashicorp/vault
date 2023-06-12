@@ -320,5 +320,26 @@ template {
 }
 ```
 
+And the following demonstrates how the templates look when using `env_template` with [Process Supervisor Mode](process-supervisor)
+
+
+```hcl
+# Other Vault Agent configuration blocks
+# ...
+
+template_config {
+  static_secret_render_interval = "10m"
+  exit_on_retry_failure = true
+}
+
+env_template "MY_ENV_VAR" {
+  contents = "{{ with secret \"secret/my-secret\" }}{{ .Data.data.foo }}{{ end }}"
+}
+
+env_template "ENV_VAR_FROM_FILE" {
+  source = "/tmp/agent/template.ctmpl"
+}
+```
+
 [consul-templating-language]: https://github.com/hashicorp/consul-template/blob/v0.28.1/docs/templating-language.md
 [process-supervisor]: /vault/docs/agent-and-proxy/agent/process-supervisor
