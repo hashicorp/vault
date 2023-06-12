@@ -28,7 +28,7 @@ export function withConfig(modelName: string) {
     if (!Object.prototype.isPrototypeOf.call(Route, SuperClass)) {
       // eslint-disable-next-line
       console.error(
-        'FetchSecretConfig decorator must be used on an instance of ember Route class. Decorator not applied to returned class'
+        'withConfig decorator must be used on an instance of Ember Route class. Decorator not applied to returned class'
       );
       return SuperClass;
     }
