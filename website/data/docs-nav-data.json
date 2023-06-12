@@ -1020,10 +1020,6 @@
             "path": "agent-and-proxy/agent/apiproxy"
           },
           {
-            "title": "Process Supervisor",
-            "path": "agent-and-proxy/agent/process-supervisor"
-          },
-          {
             "title": "Caching",
             "routes": [
               {
@@ -1048,6 +1044,10 @@
           {
             "title": "generate-config",
             "path": "agent-and-proxy/agent/generate-config"
+          },
+          {
+            "title": "Process Supervisor Mode",
+            "path": "agent-and-proxy/agent/process-supervisor"
           },
           {
             "title": "Templates",
