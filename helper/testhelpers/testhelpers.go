@@ -1047,3 +1047,9 @@ func WaitForNodesExcludingSelectedStandbys(t testing.T, cluster *vault.TestClust
 		}
 	}
 }
+
+// IsLocalOrRegressionTests returns true when the tests are running locally (not in CI), or when
+// the regression test env var (VAULT_REGRESSION_TESTS) is provided.
+func IsLocalOrRegressionTests() bool {
+	return os.Getenv("CI") == "" || os.Getenv("VAULT_REGRESSION_TESTS") == "true"
+}

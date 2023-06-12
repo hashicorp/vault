@@ -51,10 +51,28 @@ variable "consul_install_dir" {
   default     = "/opt/consul/bin"
 }
 
+variable "consul_license" {
+  type        = string
+  sensitive   = true
+  description = "The consul enterprise license"
+  default     = null
+}
+
 variable "consul_log_file" {
   type        = string
   description = "The file where the consul will write log output"
   default     = "/var/log/consul.log"
+}
+
+variable "consul_log_level" {
+  type        = string
+  description = "The consul service log level"
+  default     = "info"
+
+  validation {
+    condition     = contains(["trace", "debug", "info", "warn", "error"], var.consul_log_level)
+    error_message = "The consul_log_level must be one of 'trace', 'debug', 'info', 'warn', or 'error'."
+  }
 }
 
 variable "consul_release" {
@@ -98,6 +116,17 @@ variable "local_artifact_path" {
   type        = string
   description = "The path to a locally built vault artifact to install. It can be a zip archive, RPM, or Debian package"
   default     = null
+}
+
+variable "log_level" {
+  type        = string
+  description = "The vault service log level"
+  default     = "info"
+
+  validation {
+    condition     = contains(["trace", "debug", "info", "warn", "error"], var.log_level)
+    error_message = "The log_level must be one of 'trace', 'debug', 'info', 'warn', or 'error'."
+  }
 }
 
 variable "manage_service" {
