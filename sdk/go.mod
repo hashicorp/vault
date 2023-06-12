@@ -3,7 +3,7 @@ module github.com/hashicorp/vault/sdk
 go 1.19
 
 require (
-	github.com/armon/go-metrics v0.4.1
+	github.com/hashicorp/go-metrics v0.5.1
 	github.com/armon/go-radix v1.0.0
 	github.com/cenkalti/backoff/v3 v3.2.2
 	github.com/docker/docker v23.0.4+incompatible

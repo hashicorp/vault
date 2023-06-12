@@ -12,9 +12,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/go-metrics"
+
 	atomic2 "go.uber.org/atomic"
 
-	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/metricsutil"

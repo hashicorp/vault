@@ -14,8 +14,8 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 
-	metrics "github.com/armon/go-metrics"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	metrics "github.com/hashicorp/go-metrics"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/ncw/swift"

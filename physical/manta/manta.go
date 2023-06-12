@@ -15,8 +15,8 @@ import (
 	"strings"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
+	metrics "github.com/hashicorp/go-metrics"
 	"github.com/hashicorp/vault/sdk/physical"
 	triton "github.com/joyent/triton-go"
 	"github.com/joyent/triton-go/authentication"

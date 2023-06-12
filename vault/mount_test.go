@@ -13,8 +13,8 @@ import (
 
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 
-	"github.com/armon/go-metrics"
 	"github.com/go-test/deep"
+	"github.com/hashicorp/go-metrics"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
