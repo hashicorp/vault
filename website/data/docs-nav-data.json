@@ -207,7 +207,7 @@
           "type": "outlined",
           "color": "neutral"
         }
-  }
+      }
     ]
   },
   {
@@ -571,22 +571,22 @@
             "title": "<code>health-check</code>",
             "path": "commands/pki/health-check"
           },
-	  {
-	    "title": "<code>verify-sign</code>",
-	    "path": "commands/pki/verify-sign"
-	  },
-	  {
-	    "title": "<code>list-intermeidates</code>",
-	    "path": "commands/pki/list-intermediates"
-	  },
-	  {
-	    "title": "<code>issue</code>",
-	    "path": "commands/pki/issue"
-	  },
-	  {
-	    "title": "<code>reissue</code>",
-	    "path": "commands/pki/reissue"
-	  }
+          {
+            "title": "<code>verify-sign</code>",
+            "path": "commands/pki/verify-sign"
+          },
+          {
+            "title": "<code>list-intermeidates</code>",
+            "path": "commands/pki/list-intermediates"
+          },
+          {
+            "title": "<code>issue</code>",
+            "path": "commands/pki/issue"
+          },
+          {
+            "title": "<code>reissue</code>",
+            "path": "commands/pki/reissue"
+          }
         ]
       },
       {
@@ -1021,7 +1021,7 @@
           },
           {
             "title": "Exec",
-            "path": "agent-and-proxy/agent/exec"
+            "path": "agent-and-proxy/agent/process-supervisor"
           },
           {
             "title": "Caching",
@@ -1871,8 +1871,8 @@
         "path": "upgrading"
       },
       {
-         "title": "Upgrade Vault HA installations",
-         "path": "upgrading/vault-ha-upgrade"
+        "title": "Upgrade Vault HA installations",
+        "path": "upgrading/vault-ha-upgrade"
       },
       {
         "title": "Upgrade Plugins",
@@ -2128,13 +2128,13 @@
         "path": "release-notes"
       },
       {
-         "title": "1.14.0",
-         "path": "release-notes/1.14.0",
-         "hidden": true
+        "title": "1.14.0",
+        "path": "release-notes/1.14.0",
+        "hidden": true
       },
       {
-         "title": "1.13.0",
-         "path": "release-notes/1.13.0"
+        "title": "1.13.0",
+        "path": "release-notes/1.13.0"
       },
       {
         "title": "1.12.0",
