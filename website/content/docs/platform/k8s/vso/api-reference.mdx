@@ -5,11 +5,9 @@ description: >-
   The Vault Secrets Operator allows Pods to consume Vault secrets natively from Kubernetes Secrets.
 ---
 
-@include 'vso-beta-note.mdx'
-
 <!--
   copied from docs/api/api-reference.md in the vault-secrets-operator repo.
-  commit SHA=27cb53cd860b78aa0a33897ec66b1d175ccaf4f6
+  commit SHA=d314ea202def8bdfe1ef55209c864ab4bbe44c39
 -->
 # API Reference
 
@@ -478,8 +476,8 @@ _Appears in:_
 | `vaultAuthRef` _string_ | VaultAuthRef of the VaultAuth resource If no value is specified the Operator will default to the `default` VaultAuth, configured in its own Kubernetes namespace. |
 | `namespace` _string_ | Namespace to get the secret from in Vault |
 | `mount` _string_ | Mount for the secret in Vault |
-| `path` _string_ | Path of the secret in Vault, corresponds to the `path` parameter for, [kv-v1](/vault/api-docs/secret/kv/kv-v1#read-secret [kv-v2](/vault/api-docs/secret/kv/kv-v2#read-secret-version) |
-| `version` _integer_ | Version of the secret to fetch. Only valid for type kv-v2. Corresponds to version query parameter: [kv-v2](/vault/api-docs/secret/kv/kv-v2#version) |
+| `path` _string_ | Path of the secret in Vault, corresponds to the `path` parameter for, [kv-v1](/vault/api-docs/secret/kv/kv-v1#read-secret) [kv-v2](/vault/api-docs/secret/kv/kv-v2#read-secret-version) |
+| `version` _integer_ | Version of the secret to fetch. Only valid for type kv-v2. Corresponds to version query parameter: [version](/vault/api-docs/secret/kv/kv-v2#version) |
 | `type` _string_ | Type of the Vault static secret |
 | `refreshAfter` _string_ | RefreshAfter a period of time, in duration notation |
 | `hmacSecretData` _boolean_ | HMACSecretData determines whether the Operator computes the HMAC of the Secret's data. The MAC value will be stored in the resource's Status.SecretMac field, and will be used for drift detection and during incoming Vault secret comparison. Enabling this feature is recommended to ensure that Secret's data stays consistent with Vault. |
