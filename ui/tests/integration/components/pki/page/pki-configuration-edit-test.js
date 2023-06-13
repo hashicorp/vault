@@ -438,12 +438,11 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
       );
     assert.dom(`${SELECTORS.errorBanner} ul`).hasClass('bullet');
 
+    // change 3 out of 4 requests to be successful to assert single error renders correctly
     this.server.post(`/${this.backend}/config/acme`, () => new Response(200));
     this.server.post(`/${this.backend}/config/cluster`, () => new Response(200));
     this.server.post(`/${this.backend}/config/crl`, () => new Response(200));
-    this.server.post(`/${this.backend}/config/urls`, () => {
-      return new Response(500, {}, { errors: ['something wrong with urls'] });
-    });
+
     await click(SELECTORS.saveButton);
     assert.dom(SELECTORS.errorBanner).hasText('Error POST config/urls: something wrong with urls');
     assert.dom(`${SELECTORS.errorBanner} ul`).doesNotHaveClass('bullet');
