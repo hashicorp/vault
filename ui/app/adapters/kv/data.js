@@ -24,17 +24,7 @@ export default class KvDataAdapter extends ApplicationAdapter {
     });
   }
 
-  updateRecord(store, type, snapshot) {
-    const { backend, path, version } = snapshot.record;
-    const data = this.serialize(snapshot);
-    const url = this._urlForSecret(backend, path, version);
-    return this.ajax(url, 'POST', { data });
-  }
-
-  query(store, type, query) {
-    const { path, backend, version } = query;
-    return this.ajax(this._urlForSecret(backend, path, version), 'GET');
-  }
+  // There is no updateRecord for this adapter. You cannot update a secret. You can create a new version which results in a new record.
 
   queryRecord(store, type, query) {
     const { path, backend, version } = query;

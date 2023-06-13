@@ -61,6 +61,9 @@ export default class KvSecretDataModel extends Model {
   @attr('array')
   deleteVersions;
 
+  @attr('string')
+  deleteType;
+
   // Permissions
   @lazyCapabilities(apiPath`${'backend'}/data/${'path'}`, 'backend', 'path') dataPath;
   @lazyCapabilities(apiPath`${'backend'}/metadata/${'path'}`, 'backend', 'path') metadataPath;
