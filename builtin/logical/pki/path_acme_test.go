@@ -12,7 +12,6 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/asn1"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -1011,9 +1010,12 @@ func TestAcmeWithCsrIncludingBasicConstraintExtension(t *testing.T) {
 	markAuthorizationSuccess(t, client, acmeClient, acct, order)
 
 	// Build a CSR with IsCA set to true, making sure we reject it
+	extension, err := certutil.CreateBasicConstraintExtension(true, -1)
+	require.NoError(t, err, "failed generating basic constraint extension")
+
 	isCATrueCSR := &x509.CertificateRequest{
 		DNSNames:        []string{identifiers[0]},
-		ExtraExtensions: []pkix.Extension{buildBasicConstraintExtension(t, true, -1)},
+		ExtraExtensions: []pkix.Extension{extension},
 	}
 	csrKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	require.NoError(t, err, "failed generated key for CSR")
@@ -1023,9 +1025,11 @@ func TestAcmeWithCsrIncludingBasicConstraintExtension(t *testing.T) {
 	_, _, err = acmeClient.CreateOrderCert(testCtx, order.FinalizeURL, csr, true)
 	require.Error(t, err, "order finalization should have failed with IsCA set to true")
 
+	extension, err = certutil.CreateBasicConstraintExtension(false, -1)
+	require.NoError(t, err, "failed generating basic constraint extension")
 	isCAFalseCSR := &x509.CertificateRequest{
 		DNSNames:   []string{identifiers[0]},
-		Extensions: []pkix.Extension{buildBasicConstraintExtension(t, false, -1)},
+		Extensions: []pkix.Extension{extension},
 	}
 
 	csr, err = x509.CreateCertificateRequest(rand.Reader, isCAFalseCSR, csrKey)
@@ -1044,39 +1048,6 @@ func TestAcmeWithCsrIncludingBasicConstraintExtension(t *testing.T) {
 			// We shouldn't have this extension in our cert
 			t.Fatalf("acme csr contained a basic constraints extension")
 		}
-	}
-}
-
-func buildBasicConstraintExtension(t *testing.T, isCa bool, maxPath int) pkix.Extension {
-	var asn1Bytes []byte
-	var err error
-
-	if isCa && maxPath >= 0 {
-		CaAndMaxPathLen := struct {
-			IsCa       bool `asn1:"optional"`
-			MaxPathLen int  `asn1:"optional"`
-		}{
-			IsCa:       isCa,
-			MaxPathLen: maxPath,
-		}
-		asn1Bytes, err = asn1.Marshal(CaAndMaxPathLen)
-		require.NoError(t, err, "failed encoding asn1")
-	} else if isCa && maxPath < 0 {
-		justCa := struct {
-			IsCa bool `asn1:"optional"`
-		}{IsCa: isCa}
-		asn1Bytes, err = asn1.Marshal(justCa)
-		require.NoError(t, err, "failed encoding asn1")
-	} else {
-		empty := struct{}{}
-		asn1Bytes, err = asn1.Marshal(empty)
-		require.NoError(t, err, "failed encoding asn1")
-	}
-
-	return pkix.Extension{
-		Id:       certutil.ExtensionBasicConstraintsOID,
-		Critical: true,
-		Value:    asn1Bytes,
 	}
 }
 

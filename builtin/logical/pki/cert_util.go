@@ -1771,26 +1771,3 @@ func parseCertificateFromBytes(certBytes []byte) (*x509.Certificate, error) {
 
 	return x509.ParseCertificate(block.Bytes)
 }
-
-// parseBasicConstraintExtension parses a basic constraint extension, useful if attempting to validate
-// CSRs are requesting CA privileges as Go does not expose it's implementation. Values returned are
-// IsCA, MaxPathLen or error. If MaxPathLen was not set a value of -1 will be returned.
-func parseBasicConstraintExtension(ext pkix.Extension) (bool, int, error) {
-	if !ext.Id.Equal(certutil.ExtensionBasicConstraintsOID) {
-		return false, -1, fmt.Errorf("passed in extension was not a basic constraint extension")
-	}
-
-	// All elements are set to optional here, as it is possible that we receive a CSR with the extension
-	// containing an empty sequence. This is technically allowed and should default to false.
-	type basicConstraints struct {
-		IsCA       bool `asn1:"optional"`
-		MaxPathLen int  `asn1:"optional,default:-1"`
-	}
-	bc := &basicConstraints{}
-	_, err := asn1.Unmarshal(ext.Value, bc)
-	if err != nil {
-		return false, -1, fmt.Errorf("failed unmarshalling extension value: %w", err)
-	}
-
-	return bc.IsCA, bc.MaxPathLen, nil
-}

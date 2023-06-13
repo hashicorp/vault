@@ -619,7 +619,7 @@ func parseCsrFromFinalize(data map[string]interface{}) (*x509.CertificateRequest
 
 	for _, ext := range csr.Extensions {
 		if ext.Id.Equal(certutil.ExtensionBasicConstraintsOID) {
-			isCa, _, err := parseBasicConstraintExtension(ext)
+			isCa, _, err := certutil.ParseBasicConstraintExtension(ext)
 			if err != nil {
 				return nil, fmt.Errorf("%w: refusing to accept CSR with Basic Constraints extension: %v", ErrBadCSR, err.Error())
 			}
