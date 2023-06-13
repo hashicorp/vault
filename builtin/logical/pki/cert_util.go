@@ -773,7 +773,23 @@ func generateCert(sc *storageContext,
 
 			uris, err := entries.toURLEntries(sc, issuerID(""))
 			if err != nil {
-				return nil, nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse AIA URL information: %v\nUsing templated AIA URL's {{issuer_id}} field when generating root certificates is not supported.", err)}
+				// When generating root issuers, don't err on missing issuer
+				// ID; there is little value in including AIA info on a root,
+				// as this info would point back to itself; though RFC 5280 is
+				// a touch vague on this point, this seems to be consensus
+				// from public CAs such as DigiCert Global Root G3, ISRG Root
+				// X1, and others.
+				//
+				// This is a UX bug if we do err here, as it requires AIA
+				// templating to not include issuer id (a best practice for
+				// child certs issued from root and intermediate mounts
+				// however), and setting this before root generation (or, on
+				// root renewal) could cause problems.
+				if _, nonEmptyIssuerErr := entries.toURLEntries(sc, issuerID("empty-issuer-id")); nonEmptyIssuerErr != nil {
+					return nil, nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse AIA URL information: %v\nUsing templated AIA URL's {{issuer_id}} field when generating root certificates is not supported.", err)}
+				}
+
+				uris = &certutil.URLEntries{}
 			}
 
 			data.Params.URLs = uris
