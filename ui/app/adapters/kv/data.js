@@ -33,12 +33,18 @@ export default class KvDataAdapter extends ApplicationAdapter {
 
   query(store, type, query) {
     const { path, backend, version } = query;
-    return this.ajax(this._urlForSecret(backend, path, version), 'GET');
+    return this.ajax(this._urlForSecret(backend, path, version), 'GET').then((resp) => {
+      resp.id = `${encodePath(backend)}/${version}/${encodePath(path)}`;
+      return resp;
+    });
   }
 
   queryRecord(store, type, query) {
     const { path, backend, version } = query;
-    return this.ajax(this._urlForSecret(backend, path, version), 'GET');
+    return this.ajax(this._urlForSecret(backend, path, version), 'GET').then((resp) => {
+      resp.id = `${encodePath(backend)}/${version}/${encodePath(path)}`;
+      return resp;
+    });
   }
 
   /* Five types of delete operations */
