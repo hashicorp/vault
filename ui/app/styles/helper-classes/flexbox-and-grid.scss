@@ -18,6 +18,10 @@
 .is-flex-row {
   display: flex;
   flex-direction: row;
+
+  &.has-gap {
+    gap: $spacing-m;
+  }
 }
 
 // Alignment of the items
