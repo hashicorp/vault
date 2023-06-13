@@ -82,7 +82,7 @@
 {{#if (eq @mode "create")}}
 
   {{#if (eq @model.plugin_name "vault-plugin-database-oracle")}}
-    <Hds::Alert @type="inline" @color="warning" data-test-database-oracle-alert as |A|>
+    <Hds::Alert @type="inline" @color="warning" class="message" data-test-database-oracle-alert as |A|>
       <A.Title>Warning</A.Title>
       <A.Description>
         Please ensure that your Oracle plugin has the default name of
