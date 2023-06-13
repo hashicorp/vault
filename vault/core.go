@@ -3349,3 +3349,22 @@ func (c *Core) CheckPluginPerms(pluginName string) (err error) {
 	}
 	return err
 }
+
+// ListMounts will provide a slice containing a deep copy each mount entry
+func (c *Core) ListMounts() ([]*MountEntry, error) {
+	c.mountsLock.RLock()
+	defer c.mountsLock.RUnlock()
+
+	var entries []*MountEntry
+
+	for _, entry := range c.mounts.Entries {
+		clone, err := entry.Clone()
+		if err != nil {
+			return nil, err
+		}
+
+		entries = append(entries, clone)
+	}
+
+	return entries, nil
+}
