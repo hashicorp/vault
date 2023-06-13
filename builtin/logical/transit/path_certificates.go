@@ -277,9 +277,12 @@ func parseCertificateChain(certChainString string) ([]*x509.Certificate, error) 
 }
 
 func validateLeafCertPosition(certChain []*x509.Certificate) error {
-	// NOTE: Validate if Basic Constraints are valid in different condition and return different error message?
-	if len(certChain) > 0 && (certChain[0].BasicConstraintsValid && certChain[0].IsCA) {
-		return errors.New("leaf certificate not found in the first position of the certificate chain")
+	if len(certChain) == 0 {
+		return errors.New("expected at least one certificate in the parsed certificate chain")
+	}
+
+	if certChain[0].BasicConstraintsValid && certChain[0].IsCA {
+		return errors.New("certificate in the first position is not a leaf certificate")
 	}
 
 	for _, cert := range certChain[1:] {
