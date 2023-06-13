@@ -28,14 +28,14 @@ module('Acceptance | Enterprise | sidebar navigation', function (hooks) {
     assert.strictEqual(currentURL(), '/vault/replication', 'Replication route renders');
     await click('[data-test-replication-enable]');
 
-    await click(link('Performance Secondary'));
+    await click(link('Performance'));
     assert.strictEqual(
       currentURL(),
       '/vault/replication/performance',
       'Replication performance route renders'
     );
 
-    await click(link('DR Primary'));
+    await click(link('Disaster Recovery'));
     assert.strictEqual(currentURL(), '/vault/replication/dr', 'Replication dr route renders');
     // disable replication now that we have checked the links
     await click('[data-test-replication-link="manage"]');
