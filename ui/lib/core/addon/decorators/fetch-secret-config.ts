@@ -12,7 +12,7 @@ import type Model from '@ember-data/model';
 import type AdapterError from 'ember-data/adapter'; // eslint-disable-line ember/use-ember-data-rfc-395-imports
 
 /**
- * the overview, configure, configuration and roles routes all need to be aware of the config for the engine
+ * for use in routes that need to be aware of the config for a secrets engine
  * if the user has not configured they are prompted to do so in each of the routes
  * decorate the necessary routes to perform the check in the beforeModel hook since that may change what is returned for the model
  */
