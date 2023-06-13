@@ -33,7 +33,7 @@ export function withConfig(modelName: string) {
       return SuperClass;
     }
 
-    return class FetchSecretConfig extends SuperClass {
+    return class FetchSecretsEngineConfig extends SuperClass {
       configModel: Model | null = null;
       configError: AdapterError | null = null;
       promptConfig = false;

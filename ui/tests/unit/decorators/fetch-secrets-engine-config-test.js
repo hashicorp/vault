@@ -7,12 +7,12 @@ import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import sinon from 'sinon';
 import Route from '@ember/routing/route';
-import { withConfig } from 'core/decorators/fetch-secret-config';
+import { withConfig } from 'core/decorators/fetch-secrets-engine-config';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { inject as service } from '@ember/service';
 import { Response } from 'miragejs';
 
-module('Unit | Decorators | fetch-secret-config', function (hooks) {
+module('Unit | Decorators | fetch-secrets-engine-config', function (hooks) {
   setupTest(hooks);
   setupMirage(hooks);
 

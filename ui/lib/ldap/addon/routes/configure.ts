@@ -5,7 +5,7 @@
 
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
-import { withConfig } from 'core/decorators/fetch-secret-config';
+import { withConfig } from 'core/decorators/fetch-secrets-engine-config';
 
 import type Store from '@ember-data/store';
 import type SecretMountPath from 'vault/services/secret-mount-path';
