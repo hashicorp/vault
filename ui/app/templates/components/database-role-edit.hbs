@@ -103,7 +103,7 @@
           <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
           {{! TODO: If database && !updateDB show warning }}
           {{#if (get this.warningMessages attr.name)}}
-            <Hds::Alert @type="inline" @color="warning" class="message has-top-bottom-margin-negative-m" as |A|>
+            <Hds::Alert @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
               <A.Title>Warning</A.Title>
               <A.Description>{{get this.warningMessages attr.name}}</A.Description>
             </Hds::Alert>
