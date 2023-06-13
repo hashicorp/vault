@@ -1019,7 +1019,7 @@ func revokeCert(sc *storageContext, config *crlConfig, cert *x509.Certificate) (
 	if err != nil {
 		return nil, fmt.Errorf("error saving revoked certificate to new location: %w", err)
 	}
-	sc.Backend.incrementTotalRevokedCertificatesCount(certsCounted, revEntry.Key)
+	sc.Backend.ifCountEnabledIncrementTotalRevokedCertificatesCount(certsCounted, revEntry.Key)
 
 	// From here on out, the certificate has been revoked locally. Any other
 	// persistence issues might still err, but any other failure messages
