@@ -280,6 +280,7 @@ jobs:
   tests-completed:
     needs:
     - setup
+    - setup-go-cache
     - test-go
     - test-ui
     if: always()
