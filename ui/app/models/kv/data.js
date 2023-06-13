@@ -58,9 +58,7 @@ export default class KvSecretDataModel extends Model {
   })
   casVersion;
 
-  @attr('array', {
-    deleteVersions: [this.version], // default to deleting latest version
-  })
+  @attr('array')
   deleteVersions;
 
   // Permissions

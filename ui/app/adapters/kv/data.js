@@ -56,19 +56,19 @@ export default class KvDataAdapter extends ApplicationAdapter {
         return this.ajax(this._urlForSecret(backend, path), 'DELETE');
       case 'delete-specific-version':
         return this.ajax(this._urlForSecret(backend, path), 'POST', {
-          data: { deleteVersions },
+          data: { versions: deleteVersions },
         });
       case 'destroy-specific-version':
         return this.ajax(`${this.buildURL()}/${encodePath(backend)}/destroy/${encodePath(path)}`, 'PUT', {
-          data: { deleteVersions },
+          data: { versions: deleteVersions },
         });
       case 'destroy-everything':
         return this.ajax(this._urlForSecret(backend, path), 'POST', {
-          data: { deleteVersions },
+          data: { versions: deleteVersions },
         });
       case 'undelete-specific-version':
         return this.ajax(`${this.buildURL()}/${encodePath(backend)}/undelete/${encodePath(path)}`, 'POST', {
-          data: { deleteVersions },
+          data: { versions: deleteVersions },
         });
       default:
         assert(
