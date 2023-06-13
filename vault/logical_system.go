@@ -17,7 +17,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 	"unicode"
 
@@ -31,6 +30,7 @@ import (
 	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/locking"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/monitor"
@@ -1717,7 +1717,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		return nil, logical.ErrReadOnly
 	}
 
-	var lock *sync.RWMutex
+	var lock *locking.DeadlockRWMutex
 	switch {
 	case strings.HasPrefix(path, credentialRoutePrefix):
 		lock = &b.Core.authLock
