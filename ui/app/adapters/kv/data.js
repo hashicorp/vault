@@ -45,7 +45,8 @@ export default class KvDataAdapter extends ApplicationAdapter {
   }
 
   /* Five types of delete operations */
-  deleteRecord(backend, path, deleteType, versions) {
+  deleteRecord(store, type, snapshot) {
+    const { backend, path, deleteType, deleteVersions } = snapshot;
     if (!backend || !path) {
       throw new Error('The request to delete or undelete is missing required attributes.');
     }
@@ -55,19 +56,19 @@ export default class KvDataAdapter extends ApplicationAdapter {
         return this.ajax(this._urlForSecret(backend, path), 'DELETE');
       case 'delete-specific-version':
         return this.ajax(this._urlForSecret(backend, path), 'POST', {
-          data: { versions },
+          data: { deleteVersions },
         });
       case 'destroy-specific-version':
         return this.ajax(`${this.buildURL()}/${encodePath(backend)}/destroy/${encodePath(path)}`, 'PUT', {
-          data: { versions },
+          data: { deleteVersions },
         });
       case 'destroy-everything':
         return this.ajax(this._urlForSecret(backend, path), 'POST', {
-          data: { versions },
+          data: { deleteVersions },
         });
       case 'undelete-specific-version':
         return this.ajax(`${this.buildURL()}/${encodePath(backend)}/undelete/${encodePath(path)}`, 'POST', {
-          data: { versions },
+          data: { deleteVersions },
         });
       default:
         assert(
