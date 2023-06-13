@@ -102,7 +102,6 @@ by one or more concatenated PEM blocks and ordered starting from the end-entity 
 
 func (b *backend) pathCreateCsrWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-	pemCsrTemplate := d.Get("csr").(string)
 
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
@@ -119,6 +118,16 @@ func (b *backend) pathCreateCsrWrite(ctx context.Context, req *logical.Request, 
 	}
 	defer p.Unlock()
 
+	// Check if transit key supports signing
+	if !p.Type.SigningSupported() {
+		return logical.ErrorResponse(fmt.Sprintf("key type '%s' does not support signing", p.Type)), logical.ErrInvalidRequest
+	}
+
+	// Check if key can be derived
+	if p.Derived {
+		return logical.ErrorResponse("operation not supported on keys with derivation enabled"), logical.ErrInvalidRequest
+	}
+
 	// Transit key version
 	signingKeyVersion := p.LatestVersion
 	// NOTE: BYOK endpoints seem to remove "v" prefix from version,
@@ -127,12 +136,8 @@ func (b *backend) pathCreateCsrWrite(ctx context.Context, req *logical.Request, 
 		signingKeyVersion = version.(int)
 	}
 
-	// Check if transit key supports signing
-	if !p.Type.SigningSupported() {
-		return logical.ErrorResponse(fmt.Sprintf("key type '%s' does not support signing", p.Type)), logical.ErrInvalidRequest
-	}
-
 	// Read and parse CSR template
+	pemCsrTemplate := d.Get("csr").(string)
 	csrTemplate, err := parseCsr(pemCsrTemplate)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
@@ -172,17 +177,22 @@ func (b *backend) pathImportCertChainWrite(ctx context.Context, req *logical.Req
 	}
 	defer p.Unlock()
 
-	// Transit key version
-	keyVersion := p.LatestVersion
-	if version, ok := d.GetOk("version"); ok {
-		keyVersion = version.(int)
-	}
-
 	// Check if transit key supports signing
 	// NOTE: A key type that doesn't support signing cannot possible (?) have
 	// a certificate, so does it make sense to have this check?
 	if !p.Type.SigningSupported() {
 		return logical.ErrorResponse(fmt.Sprintf("key type %s does not support signing", p.Type)), logical.ErrInvalidRequest
+	}
+
+	// Check if key can be derived
+	if p.Derived {
+		return logical.ErrorResponse("operation not supported on keys with derivation enabled"), logical.ErrInvalidRequest
+	}
+
+	// Transit key version
+	keyVersion := p.LatestVersion
+	if version, ok := d.GetOk("version"); ok {
+		keyVersion = version.(int)
 	}
 
 	// Get certificate chain
@@ -208,7 +218,7 @@ func (b *backend) pathImportCertChainWrite(ctx context.Context, req *logical.Req
 	// Validate if leaf cert key matches with transit key
 	valid, err := p.ValidateLeafCertKeyMatch(keyVersion, leafCertPublicKeyAlgorithm, certChain[0].PublicKey)
 	if err != nil {
-		return nil, fmt.Errorf("could not validate key match between leaf certificate key and key version in transit: %s", err.Error())
+		return nil, fmt.Errorf("could not validate key match between leaf certificate key and key version in transit: %w", err)
 	}
 	if !valid {
 		return logical.ErrorResponse("leaf certificate public key does match the key version selected"), logical.ErrInvalidRequest
@@ -216,7 +226,7 @@ func (b *backend) pathImportCertChainWrite(ctx context.Context, req *logical.Req
 
 	err = p.PersistCertificateChain(ctx, keyVersion, certChain, req.Storage)
 	if err != nil {
-		return nil, fmt.Errorf("failed to persist certificate chain: %s", err.Error())
+		return nil, fmt.Errorf("failed to persist certificate chain: %w", err)
 	}
 
 	return nil, nil
@@ -267,7 +277,7 @@ func parseCertificateChain(certChainString string) ([]*x509.Certificate, error) 
 	for _, certBlock := range pemCertBlocks {
 		cert, err := x509.ParseCertificate(certBlock.Bytes)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse certificate in certificate chain: %s", err.Error())
+			return nil, fmt.Errorf("failed to parse certificate in certificate chain: %w", err)
 		}
 
 		certificates = append(certificates, cert)

@@ -2437,27 +2437,18 @@ func (p *Policy) CreateCsr(keyVersion int, csrTemplate *x509.CertificateRequest)
 
 		csrBytes, createCertReqErr = x509.CreateCertificateRequest(rand.Reader, csrTemplate, key)
 	case KeyType_ED25519:
-		var key ed25519.PrivateKey
-		if p.Derived {
-			// Derive the key that should be used
-			var err error
-			key, err = p.GetKey(nil, keyVersion, 32) // FIXME: context?
-			if err != nil {
-				return nil, errutil.InternalError{Err: fmt.Sprintf("error deriving key: %v", err)}
-			}
-		} else {
-			key = ed25519.PrivateKey(keyEntry.Key)
-		}
+		// NOTE: Still check if derived is set and fail?
+		key := ed25519.PrivateKey(keyEntry.Key)
 
 		csrBytes, createCertReqErr = x509.CreateCertificateRequest(rand.Reader, csrTemplate, key)
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
 		key := keyEntry.RSAKey
 		csrBytes, createCertReqErr = x509.CreateCertificateRequest(rand.Reader, csrTemplate, key)
 	default:
-		return nil, errutil.InternalError{Err: fmt.Sprintf("selected key type '%s' does not support signing", p.Type)}
+		return nil, errutil.InternalError{Err: fmt.Sprintf("selected key type '%s' does not support signing", p.Type.String())}
 	}
 	if createCertReqErr != nil {
-		return nil, fmt.Errorf("could not create the cerfificate request: %s", createCertReqErr.Error())
+		return nil, fmt.Errorf("could not create the cerfificate request: %w", createCertReqErr)
 	}
 
 	pemCsr := pem.EncodeToMemory(&pem.Block{
@@ -2501,26 +2492,15 @@ func (p *Policy) ValidateLeafCertKeyMatch(keyVersion int, certPublicKeyAlgorithm
 		return publicKey.Equal(certPublicKey), nil
 
 	case x509.Ed25519:
-		// FIXME: Is this derivation stuff needed here? Think about this
+		// NOTE: Still check if derived is set and fail?
 		certPublicKey := certPublicKey.(ed25519.PublicKey)
-		// var key ed25519.PrivateKey
-		// if p.Derived {
-		// 	// Derive the key that should be used
-		// 	var err error
-		// 	key, err = p.GetKey(nil, keyVersion, 32) // FIXME: context?
-		// 	if err != nil {
-		// 		return false, errutil.InternalError{Err: fmt.Sprintf("error deriving key: %v", err)}
-		// 	}
-		// } else {
-		// 	key = ed25519.PrivateKey(keyEntry.Key)
-		// }
-		// publicKey := key.Public().(ed25519.PublicKey)
 
 		raw, err := base64.StdEncoding.DecodeString(keyEntry.FormattedPublicKey)
 		if err != nil {
 			return false, err
 		}
 		publicKey := ed25519.PublicKey(raw)
+
 		return publicKey.Equal(certPublicKey), nil
 
 	case x509.RSA:
