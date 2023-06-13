@@ -33,10 +33,7 @@ export default class KvDataAdapter extends ApplicationAdapter {
 
   query(store, type, query) {
     const { path, backend, version } = query;
-    return this.ajax(this._urlForSecret(backend, path, version), 'GET').then((resp) => {
-      resp.id = `${encodePath(backend)}/${version}/${encodePath(path)}`;
-      return resp;
-    });
+    return this.ajax(this._urlForSecret(backend, path, version), 'GET');
   }
 
   queryRecord(store, type, query) {
