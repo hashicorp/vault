@@ -978,7 +978,6 @@ func TestBasicConstraintExtension(t *testing.T) {
 
 			if tt.maxPathLen != gotMaxPathLen {
 				t.Fatalf("expected maxPathLen (%v) got maxPathLen (%v)", tt.maxPathLen, gotMaxPathLen)
-
 			}
 		})
 	}
