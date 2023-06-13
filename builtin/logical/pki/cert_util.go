@@ -168,6 +168,8 @@ func fetchCertBySerial(ctx context.Context, b *backend, req *logical.Request, pr
 	hyphenSerial := normalizeSerial(serial)
 	colonSerial := strings.ReplaceAll(strings.ToLower(serial), "-", ":")
 
+	sc := b.makeStorageContext(ctx, req.Storage)
+
 	switch {
 	// Revoked goes first as otherwise crl get hardcoded paths which fail if
 	// we actually want revocation info
@@ -178,7 +180,6 @@ func fetchCertBySerial(ctx context.Context, b *backend, req *logical.Request, pr
 		if err = b.crlBuilder.rebuildIfForced(ctx, b, req); err != nil {
 			return nil, err
 		}
-		sc := b.makeStorageContext(ctx, req.Storage)
 		path, err = sc.resolveIssuerCRLPath(defaultRef)
 		if err != nil {
 			return nil, err
@@ -234,9 +235,9 @@ func fetchCertBySerial(ctx context.Context, b *backend, req *logical.Request, pr
 		// If we fail here, we have an extra (copy) of a cert in storage, add to metrics:
 		switch {
 		case strings.HasPrefix(prefix, "revoked/"):
-			b.incrementTotalRevokedCertificatesCount(certsCounted, path)
+			sc.Backend.ifCountEnabledIncrementTotalRevokedCertificatesCount(certsCounted, path)
 		default:
-			b.incrementTotalCertificatesCount(certsCounted, path)
+			sc.Backend.ifCountEnabledIncrementTotalCertificatesCount(certsCounted, path)
 		}
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error deleting certificate with serial %s from old location", serial)}
 	}
