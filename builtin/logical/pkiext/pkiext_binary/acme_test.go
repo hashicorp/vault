@@ -13,6 +13,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -824,9 +825,6 @@ func SubtestACMEStepDownNode(t *testing.T, cluster *VaultPkiCluster) {
 		}
 	}
 
-	// FIXME: This sleep seems to resolve the raft issue if running the test individually
-	// time.Sleep(20 * time.Second)
-
 	// Tell the ACME server, that they can now validate those challenges, this will cause challenge
 	// verification failures on the main node as the DNS records do not exist.
 	for _, challenge := range challengesToAccept {
@@ -866,6 +864,13 @@ func SubtestACMEStepDownNode(t *testing.T, cluster *VaultPkiCluster) {
 
 		if !state.Healthy {
 			return fmt.Errorf("raft auto pilot state is not healthy")
+		}
+
+		// Make sure that we have at least one node that can take over prior to sealing the current active node.
+		if state.FailureTolerance < 1 {
+			msg := fmt.Sprintf("there is no fault tolerance within raft state yet: %d", state.FailureTolerance)
+			t.Log(msg)
+			return errors.New(msg)
 		}
 
 		return nil
