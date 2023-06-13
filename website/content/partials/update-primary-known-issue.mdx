@@ -2,7 +2,8 @@
 
 It's possible to lose data from a Vault cluster given a particular configuration
 and sequence of steps.  This page describes two paths to data loss, both
-associated with the use of update-primary.
+associated with the use of
+[update-primary](https://developer.hashicorp.com/vault/api-docs/system/replication/replication-performance#update-performance-secondary-s-primary).
 
 Normally update-primary does not need to be used.  However, there are a few cases
 where it's needed, e.g. when the known primary cluster addresses of a secondary
