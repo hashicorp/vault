@@ -24,6 +24,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+
 	"github.com/go-test/deep"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/acme"
@@ -185,7 +187,7 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			require.False(t, domainAuth.Wildcard, "should not be a wildcard")
 			require.True(t, domainAuth.Expires.IsZero(), "authorization should only have expiry set on valid status")
 
-			require.Len(t, domainAuth.Challenges, 2, "expected two challenges")
+			require.Len(t, domainAuth.Challenges, 3, "expected three challenges")
 			require.Equal(t, acme.StatusPending, domainAuth.Challenges[0].Status)
 			require.True(t, domainAuth.Challenges[0].Validated.IsZero(), "validated time should be 0 on challenge")
 			require.Equal(t, "http-01", domainAuth.Challenges[0].Type)
@@ -194,6 +196,10 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			require.True(t, domainAuth.Challenges[1].Validated.IsZero(), "validated time should be 0 on challenge")
 			require.Equal(t, "dns-01", domainAuth.Challenges[1].Type)
 			require.NotEmpty(t, domainAuth.Challenges[1].Token, "missing challenge token")
+			require.Equal(t, acme.StatusPending, domainAuth.Challenges[2].Status)
+			require.True(t, domainAuth.Challenges[2].Validated.IsZero(), "validated time should be 0 on challenge")
+			require.Equal(t, "tls-alpn-01", domainAuth.Challenges[2].Type)
+			require.NotEmpty(t, domainAuth.Challenges[2].Token, "missing challenge token")
 
 			// Test the values for the wildcard authentication
 			require.Equal(t, acme.StatusPending, wildcardAuth.Status)
@@ -202,7 +208,7 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			require.True(t, wildcardAuth.Wildcard, "should be a wildcard")
 			require.True(t, wildcardAuth.Expires.IsZero(), "authorization should only have expiry set on valid status")
 
-			require.Len(t, wildcardAuth.Challenges, 1, "expected two challenges")
+			require.Len(t, wildcardAuth.Challenges, 1, "expected one challenge")
 			require.Equal(t, acme.StatusPending, domainAuth.Challenges[0].Status)
 			require.True(t, wildcardAuth.Challenges[0].Validated.IsZero(), "validated time should be 0 on challenge")
 			require.Equal(t, "dns-01", wildcardAuth.Challenges[0].Type)
@@ -784,7 +790,7 @@ func TestAcmeIgnoresRoleExtKeyUsage(t *testing.T) {
 		"allowed_domains":             "localdomain",
 		"allow_subdomains":            "true",
 		"allow_wildcard_certificates": "true",
-		"require_cn":                  "false",
+		"require_cn":                  "true", /* explicit default */
 		"server_flag":                 "true",
 		"client_flag":                 "true",
 		"code_signing_flag":           "true",
@@ -968,6 +974,81 @@ func TestIssuerRoleDirectoryAssociations(t *testing.T) {
 	}
 
 	// 5.
+}
+
+// TestAcmeWithCsrIncludingBasicConstraintExtension verify that we error out for a CSR that is requesting a
+// certificate with the IsCA set to true, false is okay, within the basic constraints extension and that no matter what
+// the extension is not present on the returned certificate.
+func TestAcmeWithCsrIncludingBasicConstraintExtension(t *testing.T) {
+	t.Parallel()
+
+	cluster, client, _ := setupAcmeBackend(t)
+	defer cluster.Cleanup()
+
+	testCtx := context.Background()
+
+	baseAcmeURL := "/v1/pki/acme/"
+	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err, "failed creating rsa key")
+
+	acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)
+
+	// Create new account
+	t.Logf("Testing register on %s", baseAcmeURL)
+	acct, err := acmeClient.Register(testCtx, &acme.Account{}, func(tosURL string) bool { return true })
+	require.NoError(t, err, "failed registering account")
+
+	// Create an order
+	t.Logf("Testing Authorize Order on %s", baseAcmeURL)
+	identifiers := []string{"*.localdomain"}
+	order, err := acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{
+		{Type: "dns", Value: identifiers[0]},
+	})
+	require.NoError(t, err, "failed creating order")
+
+	// HACK: Update authorization/challenge to completed as we can't really do it properly in this workflow test.
+	markAuthorizationSuccess(t, client, acmeClient, acct, order)
+
+	// Build a CSR with IsCA set to true, making sure we reject it
+	extension, err := certutil.CreateBasicConstraintExtension(true, -1)
+	require.NoError(t, err, "failed generating basic constraint extension")
+
+	isCATrueCSR := &x509.CertificateRequest{
+		DNSNames:        []string{identifiers[0]},
+		ExtraExtensions: []pkix.Extension{extension},
+	}
+	csrKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err, "failed generated key for CSR")
+	csr, err := x509.CreateCertificateRequest(rand.Reader, isCATrueCSR, csrKey)
+	require.NoError(t, err, "failed generating csr")
+
+	_, _, err = acmeClient.CreateOrderCert(testCtx, order.FinalizeURL, csr, true)
+	require.Error(t, err, "order finalization should have failed with IsCA set to true")
+
+	extension, err = certutil.CreateBasicConstraintExtension(false, -1)
+	require.NoError(t, err, "failed generating basic constraint extension")
+	isCAFalseCSR := &x509.CertificateRequest{
+		DNSNames:   []string{identifiers[0]},
+		Extensions: []pkix.Extension{extension},
+	}
+
+	csr, err = x509.CreateCertificateRequest(rand.Reader, isCAFalseCSR, csrKey)
+	require.NoError(t, err, "failed generating csr")
+
+	certs, _, err := acmeClient.CreateOrderCert(testCtx, order.FinalizeURL, csr, true)
+	require.NoError(t, err, "order finalization should have failed with IsCA set to false")
+
+	require.GreaterOrEqual(t, len(certs), 1, "expected at least one cert in bundle")
+	acmeCert, err := x509.ParseCertificate(certs[0])
+	require.NoError(t, err, "failed parsing acme cert")
+
+	// Make sure we don't have any basic constraint extension within the returned cert
+	for _, ext := range acmeCert.Extensions {
+		if ext.Id.Equal(certutil.ExtensionBasicConstraintsOID) {
+			// We shouldn't have this extension in our cert
+			t.Fatalf("acme csr contained a basic constraints extension")
+		}
+	}
 }
 
 func markAuthorizationSuccess(t *testing.T, client *api.Client, acmeClient *acme.Client, acct *acme.Account,
@@ -1255,7 +1336,7 @@ func TestAcmeValidationError(t *testing.T) {
 		authorizations = append(authorizations, auth)
 	}
 	require.Len(t, authorizations, 1, "expected a certain number of authorizations")
-	require.Len(t, authorizations[0].Challenges, 2, "expected a certain number of challenges associated with authorization")
+	require.Len(t, authorizations[0].Challenges, 3, "expected a certain number of challenges associated with authorization")
 
 	acceptedAuth, err := acmeClient.Accept(testCtx, authorizations[0].Challenges[0])
 	require.NoError(t, err, "Should have been allowed to accept challenge 1")

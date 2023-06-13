@@ -1683,8 +1683,8 @@ github.com/gsterjov/go-libsecret v0.0.0-20161001094733-a6f4afe4910c h1:6rhixN/i8
 github.com/gsterjov/go-libsecret v0.0.0-20161001094733-a6f4afe4910c/go.mod h1:NMPJylDgVpX0MLRlPy15sqSwOFv/U1GZ2m21JhFfek0=
 github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed h1:5upAirOpQc1Q53c0bnx2ufif5kANL7bfZWcc6VJWJd8=
 github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed/go.mod h1:tMWxXQ9wFIaZeTI9F+hmhFiGpFmhOHzyShyFUhRm0H4=
-github.com/hashicorp/cap v0.3.0 h1:zFzVxuWy78lO6QRLHu/ONkjx/Jh0lpfvPgmpDGri43E=
-github.com/hashicorp/cap v0.3.0/go.mod h1:dHTmyMIVbzT981XxRoci5G//dfWmd/HhuNiCH6J5+IA=
+github.com/hashicorp/cap v0.3.1 h1:JwX2vg3KIl2+ka4VIPB0yWB9PoPvHL3ACmVrLJLCHDQ=
+github.com/hashicorp/cap v0.3.1/go.mod h1:dHTmyMIVbzT981XxRoci5G//dfWmd/HhuNiCH6J5+IA=
 github.com/hashicorp/consul-template v0.32.0 h1:VIfKjoJLkBYLgHdLH4mR7RstPc549qqHJiecqPwYTis=
 github.com/hashicorp/consul-template v0.32.0/go.mod h1:r9mcCoHVkTeVln7aL4Ky+RfKupOtbEW70i8n9YuEe+w=
 github.com/hashicorp/consul/api v1.1.0/go.mod h1:VmuI/Lkw1nC05EYQWNKwWGbkg+FbDBtguAZLlVdkD9Q=

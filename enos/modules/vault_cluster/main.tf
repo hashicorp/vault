@@ -4,7 +4,7 @@ terraform {
     # to the public registry
     enos = {
       source  = "app.terraform.io/hashicorp-qti/enos"
-      version = ">= 0.3.2"
+      version = ">= 0.4.0"
     }
   }
 }
@@ -61,7 +61,7 @@ locals {
       path    = "vault"
     })
   ]
-  audit_device_file_path = "/var/log/vault_audit.log"
+  audit_device_file_path = "/var/log/vault/vault_audit.log"
   vault_service_user     = "vault"
   enable_audit_device    = var.enable_file_audit_device && var.initialize_cluster
 }
@@ -125,7 +125,8 @@ resource "enos_consul_start" "consul" {
     retry_join       = ["provider=aws tag_key=Type tag_value=${var.consul_cluster_tag}"]
     server           = false
     bootstrap_expect = 0
-    log_level        = "INFO"
+    license          = var.consul_license
+    log_level        = var.consul_log_level
     log_file         = var.consul_log_file
   }
   unit_name = "consul"
@@ -159,6 +160,7 @@ resource "enos_vault_start" "leader" {
         tls_disable = "true"
       }
     }
+    log_level = var.log_level
     storage = {
       type       = var.storage_backend
       attributes = ({ for key, value in local.storage_config[each.key] : key => value })
@@ -198,6 +200,7 @@ resource "enos_vault_start" "followers" {
         tls_disable = "true"
       }
     }
+    log_level = var.log_level
     storage = {
       type       = var.storage_backend
       attributes = { for key, value in local.storage_config[each.key] : key => value }

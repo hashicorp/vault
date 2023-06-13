@@ -1021,11 +1021,9 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	}
 
 	leaseGenerated := false
-	loginRole := c.DetermineRoleFromLoginRequest(req.MountPoint, req.Data, ctx)
 	quotaResp, quotaErr := c.applyLeaseCountQuota(ctx, &quotas.Request{
 		Path:          req.Path,
 		MountPath:     strings.TrimPrefix(req.MountPoint, ns.Path),
-		Role:          loginRole,
 		NamespacePath: ns.Path,
 	})
 	if quotaErr != nil {
@@ -1165,7 +1163,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 				return nil, auth, retErr
 			}
 
-			leaseID, err := registerFunc(ctx, req, resp, loginRole)
+			leaseID, err := registerFunc(ctx, req, resp, "")
 			if err != nil {
 				c.logger.Error("failed to register lease", "request_path", req.Path, "error", err)
 				retErr = multierror.Append(retErr, ErrInternalError)
