@@ -16,7 +16,6 @@ import (
 
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
 
-	proto "github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -415,19 +414,9 @@ func (d *autoSeal) SetRecoveryKey(ctx context.Context, key []byte) error {
 	}
 
 	// Encrypt and marshal the keys
-	blobInfo, err := d.Encrypt(ctx, key, nil)
+	be, err := SealWrapRecoveryKey(ctx, d.Access, key)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt keys for storage: %w", err)
-	}
-
-	value, err := proto.Marshal(blobInfo)
-	if err != nil {
-		return fmt.Errorf("failed to marshal value for storage: %w", err)
-	}
-
-	be := &physical.Entry{
-		Key:   recoveryKeyPath,
-		Value: value,
 	}
 
 	if err := d.core.physical.Put(ctx, be); err != nil {
@@ -453,12 +442,7 @@ func (d *autoSeal) getRecoveryKeyInternal(ctx context.Context) ([]byte, error) {
 		return nil, fmt.Errorf("no recovery key found")
 	}
 
-	blobInfo := &wrapping.BlobInfo{}
-	if err := proto.Unmarshal(pe.Value, blobInfo); err != nil {
-		return nil, fmt.Errorf("failed to proto decode stored keys: %w", err)
-	}
-
-	pt, err := d.Decrypt(ctx, blobInfo, nil)
+	pt, _, err := UnsealWrapRecoveryKey(ctx, d.Access, pe)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt encrypted stored keys: %w", err)
 	}
@@ -475,8 +459,8 @@ func (d *autoSeal) upgradeRecoveryKey(ctx context.Context) error {
 		return fmt.Errorf("no recovery key found")
 	}
 
-	blobInfo := &wrapping.BlobInfo{}
-	if err := proto.Unmarshal(pe.Value, blobInfo); err != nil {
+	pt, blobInfo, err := UnsealWrapRecoveryKey(ctx, d.Access, pe)
+	if err != nil {
 		return fmt.Errorf("failed to proto decode recovery key: %w", err)
 	}
 
@@ -488,10 +472,6 @@ func (d *autoSeal) upgradeRecoveryKey(ctx context.Context) error {
 	if blobInfo.KeyInfo != nil && blobInfo.KeyInfo.KeyId != keyId {
 		d.logger.Info("upgrading recovery key")
 
-		pt, err := d.Decrypt(ctx, blobInfo, nil)
-		if err != nil {
-			return fmt.Errorf("failed to decrypt encrypted recovery key: %w", err)
-		}
 		if err := d.SetRecoveryKey(ctx, pt); err != nil {
 			return fmt.Errorf("failed to save upgraded recovery key: %w", err)
 		}
