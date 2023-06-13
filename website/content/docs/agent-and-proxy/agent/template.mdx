@@ -301,47 +301,54 @@ behaviors on certificates:
 
 The following demonstrates Vault Agent Templates configuration blocks.
 
-```hcl
-# Other Vault Agent configuration blocks
-# ...
+<Tabs>
+  <Tab heading="File Templates">
+    ```hcl
+    # Other Vault Agent configuration blocks
+    # ...
 
-template_config {
-  static_secret_render_interval = "10m"
-  exit_on_retry_failure = true
-}
+    template_config {
+    static_secret_render_interval = "10m"
+    exit_on_retry_failure = true
+  }
 
-template {
-  source      = "/tmp/agent/template.ctmpl"
-  destination = "/tmp/agent/render.txt"
-}
+    template {
+    source      = "/tmp/agent/template.ctmpl"
+    destination = "/tmp/agent/render.txt"
+  }
 
-template {
-  contents     = "{{ with secret \"secret/my-secret\" }}{{ .Data.data.foo }}{{ end }}"
-  destination  = "/tmp/agent/render-content.txt"
-}
-```
+    template {
+    contents     = "{{ with secret \"secret/my-secret\" }}{{ .Data.data.foo }}{{ end }}"
+    destination  = "/tmp/agent/render-content.txt"
+  }
+    ```
 
-And the following demonstrates how the templates look when using `env_template` with
-[Process Supervisor Mode](/vault/docs/agent-and-proxy/agent/process-supervisor)
+  </Tab>
+  <Tab heading="Environment Variable Templates">
 
 
-```hcl
-# Other Vault Agent configuration blocks
-# ...
+    ```hcl
+    # Other Vault Agent configuration blocks
+    # ...
 
-template_config {
-  static_secret_render_interval = "10m"
-  exit_on_retry_failure = true
-}
+    template_config {
+    static_secret_render_interval = "10m"
+    exit_on_retry_failure = true
+  }
 
-env_template "MY_ENV_VAR" {
-  contents = "{{ with secret \"secret/my-secret\" }}{{ .Data.data.foo }}{{ end }}"
-}
+    env_template "MY_ENV_VAR" {
+    contents = "{{ with secret \"secret/my-secret\" }}{{ .Data.data.foo }}{{ end }}"
+  }
 
-env_template "ENV_VAR_FROM_FILE" {
-  source = "/tmp/agent/template.ctmpl"
-}
-```
+    env_template "ENV_VAR_FROM_FILE" {
+    source = "/tmp/agent/template.ctmpl"
+  }
+    ```
+  </Tab>
+</Tabs>
+
+
+
 
 [consul-templating-language]: https://github.com/hashicorp/consul-template/blob/v0.28.1/docs/templating-language.md
 [process-supervisor]: /vault/docs/agent-and-proxy/agent/process-supervisor
