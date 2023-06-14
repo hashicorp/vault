@@ -45,9 +45,9 @@ scenario "autopilot" {
       ubuntu = provider.enos.ubuntu
     }
     spot_price_max = {
-      // These prices are based on on-demand cost for t3.medium in us-east
-      "rhel"   = "0.1016"
-      "ubuntu" = "0.0416"
+      // These prices are based on on-demand cost for t3.large in us-east
+      "rhel"   = "0.1432"
+      "ubuntu" = "0.0832"
     }
     tags = merge({
       "Project Name" : var.project_name
@@ -151,14 +151,11 @@ scenario "autopilot" {
     variables {
       awskms_unseal_key_arn = step.create_vpc.kms_key_arn
       cluster_name          = step.create_vault_cluster_targets.cluster_name
-      config_env_vars = {
-        VAULT_LOG_LEVEL = var.vault_log_level
-      }
-      install_dir     = local.vault_install_dir
-      license         = matrix.edition != "oss" ? step.read_license.license : null
-      packages        = local.packages
-      release         = var.vault_autopilot_initial_release
-      storage_backend = "raft"
+      install_dir           = local.vault_install_dir
+      license               = matrix.edition != "oss" ? step.read_license.license : null
+      packages              = local.packages
+      release               = var.vault_autopilot_initial_release
+      storage_backend       = "raft"
       storage_backend_addl_config = {
         autopilot_upgrade_version = var.vault_autopilot_initial_release.version
       }

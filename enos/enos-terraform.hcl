@@ -27,7 +27,8 @@ terraform "default" {
     }
 
     enos = {
-      source = "app.terraform.io/hashicorp-qti/enos"
+      source  = "app.terraform.io/hashicorp-qti/enos"
+      version = ">= 0.4.0"
     }
   }
 }
