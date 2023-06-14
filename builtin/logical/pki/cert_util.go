@@ -790,6 +790,9 @@ func generateCert(sc *storageContext,
 				}
 
 				uris = &certutil.URLEntries{}
+
+				msg := "When generating root CA, found global AIA configuration with issuer_id template unsuitable for root generation. This AIA configuration has been ignored. To include AIA on this root CA, set the global AIA configuration to not include issuer_id and instead to refer to a static issuer name."
+				warnings = append(warnings, msg)
 			}
 
 			data.Params.URLs = uris
