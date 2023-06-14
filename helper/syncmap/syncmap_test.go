@@ -18,6 +18,7 @@ func (s stringID) ID() string {
 
 var _ IDer = stringID{"", ""}
 
+// TestSyncMap_Get tests that basic getting and putting works.
 func TestSyncMap_Get(t *testing.T) {
 	m := NewSyncMap[string, stringID]()
 	m.Put("a", stringID{"b", "b"})
@@ -25,6 +26,7 @@ func TestSyncMap_Get(t *testing.T) {
 	assert.Equal(t, stringID{"", ""}, m.Get("c"))
 }
 
+// TestSyncMap_Pop tests that basic Pop operations work.
 func TestSyncMap_Pop(t *testing.T) {
 	m := NewSyncMap[string, stringID]()
 	m.Put("a", stringID{"b", "b"})
@@ -33,6 +35,7 @@ func TestSyncMap_Pop(t *testing.T) {
 	assert.Equal(t, stringID{"", ""}, m.Pop("c"))
 }
 
+// TestSyncMap_PopIfEqual tests that basic PopIfEqual operations pop only if the IDs are equal.
 func TestSyncMap_PopIfEqual(t *testing.T) {
 	m := NewSyncMap[string, stringID]()
 	m.Put("a", stringID{"b", "c"})
@@ -41,6 +44,7 @@ func TestSyncMap_PopIfEqual(t *testing.T) {
 	assert.Equal(t, stringID{"", ""}, m.PopIfEqual("a", "c"))
 }
 
+// TestSyncMap_Clear checks that clearing works as expected and returns a copy of the original map.
 func TestSyncMap_Clear(t *testing.T) {
 	m := NewSyncMap[string, stringID]()
 	assert.Equal(t, map[string]stringID{}, m.data)
@@ -56,6 +60,7 @@ func TestSyncMap_Clear(t *testing.T) {
 	assert.Equal(t, map[string]stringID{}, m.data)
 }
 
+// TestSyncMap_Values checks that the Values method returns an array of the values.
 func TestSyncMap_Values(t *testing.T) {
 	m := NewSyncMap[string, stringID]()
 	assert.Equal(t, []stringID{}, m.Values())
