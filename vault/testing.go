@@ -187,7 +187,7 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 }
 
 func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := logging.NewVaultLogger(log.Trace).Named(t.Name())
 	physicalBackend, err := physInmem.NewInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)
@@ -214,6 +214,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	conf.PluginDirectory = opts.PluginDirectory
 	conf.DetectDeadlocks = opts.DetectDeadlocks
 	conf.Experiments = []string{experiments.VaultExperimentEventsAlpha1}
+	conf.CensusAgent = opts.CensusAgent
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
@@ -235,6 +236,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	}
 
 	conf.ActivityLogConfig = opts.ActivityLogConfig
+	testApplyEntBaseConfig(conf, opts)
 
 	c, err := NewCore(conf)
 	if err != nil {
