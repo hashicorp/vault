@@ -107,7 +107,7 @@ func (b *SystemBackend) loginMFAPaths() []*framework.Path {
 }
 
 func genericOptionalUUIDRegex(name string) string {
-	return fmt.Sprintf("(/(?P<%s>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))?", name)
+	return fmt.Sprintf("(/(?P<%s>[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}))?", name)
 }
 
 type MFABackend struct {
