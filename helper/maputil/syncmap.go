@@ -56,7 +56,7 @@ func (m *SyncMap[K, V]) Put(k K, v V) V {
 	return oldV
 }
 
-// Clear deletes all entries from the map, and returns a copy of the previous map.
+// Clear deletes all entries from the map, and returns the previous map.
 func (m *SyncMap[K, V]) Clear() map[K]V {
 	m.lock.Lock()
 	defer m.lock.Unlock()
