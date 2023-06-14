@@ -9,11 +9,12 @@ module "az_finder" {
 module "backend_consul" {
   source = "app.terraform.io/hashicorp-qti/aws-consul/enos"
 
-  project_name    = var.project_name
-  environment     = "ci"
-  common_tags     = var.tags
-  ssh_aws_keypair = var.aws_ssh_keypair_name
-  consul_license  = var.backend_license_path == null ? null : file(abspath(var.backend_license_path))
+  project_name     = var.project_name
+  environment      = "ci"
+  common_tags      = var.tags
+  ssh_aws_keypair  = var.aws_ssh_keypair_name
+  consul_license   = var.backend_license_path == null ? null : file(abspath(var.backend_license_path))
+  consul_log_level = var.backend_log_level
 }
 
 module "backend_raft" {

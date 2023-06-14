@@ -66,6 +66,12 @@ variable "backend_license_path" {
   default     = null
 }
 
+variable "backend_log_level" {
+  description = "The server log level for the backend. Supported values include 'trace', 'debug', 'info', 'warn', 'error'"
+  type        = string
+  default     = "trace"
+}
+
 variable "project_name" {
   description = "The description of the project"
   type        = string
@@ -142,7 +148,7 @@ variable "vault_local_build_tags" {
 variable "vault_log_level" {
   description = "The server log level for Vault logs. Supported values (in order of detail) are trace, debug, info, warn, and err."
   type        = string
-  default     = "info"
+  default     = "trace"
 }
 
 variable "vault_build_date" {
