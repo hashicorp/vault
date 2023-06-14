@@ -275,7 +275,7 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			_, _, err = acmeClient.CreateOrderCert(testCtx, createOrder.FinalizeURL, csrWithBadName, true)
 			require.Error(t, err, "should not be allowed to csr with different names than order")
 
-			// Validate we reject CSRs that contain IP addreses that weren't in the original order
+			// Validate we reject CSRs that contain IP addresses that weren't in the original order
 			badCr = &x509.CertificateRequest{
 				Subject:     pkix.Name{CommonName: createOrder.Identifiers[0].Value},
 				IPAddresses: []net.IP{{127, 0, 0, 1}},
@@ -315,6 +315,29 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			if maxAcmeNotAfter.Before(acmeCert.NotAfter) {
 				require.Fail(t, fmt.Sprintf("certificate has a NotAfter value %v greater than ACME max ttl %v", acmeCert.NotAfter, maxAcmeNotAfter))
 			}
+
+			// Can we revoke it using the account key revocation
+			err = acmeClient.RevokeCert(ctx, nil, certs[0], acme.CRLReasonUnspecified)
+			require.NoError(t, err, "failed to revoke certificate through account key")
+
+			// Make sure it was actually revoked
+			certResp, err := client.Logical().ReadWithContext(ctx, "pki/cert/"+serialFromCert(acmeCert))
+			require.NoError(t, err, "failed to read certificate status")
+			require.NotNil(t, certResp, "certificate status response was nil")
+			revocationTime := certResp.Data["revocation_time"].(json.Number)
+			revocationTimeInt, err := revocationTime.Int64()
+			require.NoError(t, err, "failed converting revocation_time value: %v", revocationTime)
+			require.Greater(t, revocationTimeInt, int64(0),
+				"revocation time was not greater than 0, revocation did not work value was: %v", revocationTimeInt)
+
+			// Make sure we can revoke an authorization as a client
+			err = acmeClient.RevokeAuthorization(ctx, authorizations[0].URI)
+			require.NoError(t, err, "failed revoking authorization status")
+
+			revokedAuth, err := acmeClient.GetAuthorization(ctx, authorizations[0].URI)
+			require.NoError(t, err, "failed fetching authorization")
+			require.Equal(t, acme.StatusDeactivated, revokedAuth.Status)
+
 			// Deactivate account
 			t.Logf("Testing deactivate account on %s", baseAcmeURL)
 			err = acmeClient.DeactivateReg(testCtx)
@@ -1403,6 +1426,131 @@ func TestAcmeValidationError(t *testing.T) {
 			return nil
 		})
 	}
+}
+
+// TestAcmeRevocationAcrossAccounts makes sure that we can revoke certificates using different accounts if
+// we have another ACME account or not but access to the certificate key. Also verifies we can't revoke
+// certificates across account keys.
+func TestAcmeRevocationAcrossAccounts(t *testing.T) {
+	t.Parallel()
+
+	cluster, vaultClient, _ := setupAcmeBackend(t)
+	defer cluster.Cleanup()
+	testCtx := context.Background()
+
+	baseAcmeURL := "/v1/pki/acme/"
+	accountKey1, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err, "failed creating rsa key")
+
+	acmeClient1 := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey1)
+
+	leafKey, certs := doACMEWorkflow(t, vaultClient, acmeClient1)
+	acmeCert, err := x509.ParseCertificate(certs[0])
+	require.NoError(t, err, "failed parsing acme cert bytes")
+
+	// Make sure our cert is not revoked
+	certResp, err := vaultClient.Logical().ReadWithContext(ctx, "pki/cert/"+serialFromCert(acmeCert))
+	require.NoError(t, err, "failed to read certificate status")
+	require.NotNil(t, certResp, "certificate status response was nil")
+	revocationTime := certResp.Data["revocation_time"].(json.Number)
+	revocationTimeInt, err := revocationTime.Int64()
+	require.NoError(t, err, "failed converting revocation_time value: %v", revocationTime)
+	require.Equal(t, revocationTimeInt, int64(0),
+		"revocation time was not 0, cert was already revoked: %v", revocationTimeInt)
+
+	// Test that we can't revoke the certificate with another account's key
+	accountKey2, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	require.NoError(t, err, "failed creating rsa key")
+
+	acmeClient2 := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey2)
+	_, err = acmeClient2.Register(testCtx, &acme.Account{}, func(tosURL string) bool { return true })
+	require.NoError(t, err, "failed registering second account")
+
+	err = acmeClient2.RevokeCert(ctx, nil, certs[0], acme.CRLReasonUnspecified)
+	require.Error(t, err, "should have failed revoking the certificate with a different account")
+
+	// Make sure our cert is not revoked
+	certResp, err = vaultClient.Logical().ReadWithContext(ctx, "pki/cert/"+serialFromCert(acmeCert))
+	require.NoError(t, err, "failed to read certificate status")
+	require.NotNil(t, certResp, "certificate status response was nil")
+	revocationTime = certResp.Data["revocation_time"].(json.Number)
+	revocationTimeInt, err = revocationTime.Int64()
+	require.NoError(t, err, "failed converting revocation_time value: %v", revocationTime)
+	require.Equal(t, revocationTimeInt, int64(0),
+		"revocation time was not 0, cert was already revoked: %v", revocationTimeInt)
+
+	// But we can revoke if we sign the request with the certificate's key and a different account
+	err = acmeClient2.RevokeCert(ctx, leafKey, certs[0], acme.CRLReasonUnspecified)
+	require.NoError(t, err, "should have been allowed to revoke certificate with csr key across accounts")
+
+	// Make sure our cert is now revoked
+	certResp, err = vaultClient.Logical().ReadWithContext(ctx, "pki/cert/"+serialFromCert(acmeCert))
+	require.NoError(t, err, "failed to read certificate status")
+	require.NotNil(t, certResp, "certificate status response was nil")
+	revocationTime = certResp.Data["revocation_time"].(json.Number)
+	revocationTimeInt, err = revocationTime.Int64()
+	require.NoError(t, err, "failed converting revocation_time value: %v", revocationTime)
+	require.Greater(t, revocationTimeInt, int64(0),
+		"revocation time was not greater than 0, cert was not revoked: %v", revocationTimeInt)
+
+	// Make sure we can revoke a certificate without a registered ACME account
+	leafKey2, certs2 := doACMEWorkflow(t, vaultClient, acmeClient1)
+
+	acmeClient3 := getAcmeClientForCluster(t, cluster, baseAcmeURL, nil)
+	err = acmeClient3.RevokeCert(ctx, leafKey2, certs2[0], acme.CRLReasonUnspecified)
+	require.NoError(t, err, "should be allowed to revoke a cert with no ACME account but with cert key")
+
+	// Make sure our cert is now revoked
+	acmeCert2, err := x509.ParseCertificate(certs2[0])
+	require.NoError(t, err, "failed parsing acme cert 2 bytes")
+
+	certResp, err = vaultClient.Logical().ReadWithContext(ctx, "pki/cert/"+serialFromCert(acmeCert2))
+	require.NoError(t, err, "failed to read certificate status")
+	require.NotNil(t, certResp, "certificate status response was nil")
+	revocationTime = certResp.Data["revocation_time"].(json.Number)
+	revocationTimeInt, err = revocationTime.Int64()
+	require.NoError(t, err, "failed converting revocation_time value: %v", revocationTime)
+	require.Greater(t, revocationTimeInt, int64(0),
+		"revocation time was not greater than 0, cert was not revoked: %v", revocationTimeInt)
+}
+
+func doACMEWorkflow(t *testing.T, vaultClient *api.Client, acmeClient *acme.Client) (*ecdsa.PrivateKey, [][]byte) {
+	testCtx := context.Background()
+
+	// Create new account
+	acct, err := acmeClient.Register(testCtx, &acme.Account{}, func(tosURL string) bool { return true })
+	if err != nil {
+		if strings.Contains(err.Error(), "acme: account already exists") {
+			acct, err = acmeClient.GetReg(testCtx, "")
+			require.NoError(t, err, "failed looking up account after account exists error?")
+		} else {
+			require.NoError(t, err, "failed registering account")
+		}
+	}
+
+	// Create an order
+	identifiers := []string{"*.localdomain"}
+	order, err := acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{
+		{Type: "dns", Value: identifiers[0]},
+	})
+	require.NoError(t, err, "failed creating order")
+
+	// HACK: Update authorization/challenge to completed as we can't really do it properly in this workflow
+	//       test.
+	markAuthorizationSuccess(t, vaultClient, acmeClient, acct, order)
+
+	// Build a proper CSR, with the correct name and signed with a different key works.
+	goodCr := &x509.CertificateRequest{DNSNames: []string{identifiers[0]}}
+	csrKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err, "failed generated key for CSR")
+	csr, err := x509.CreateCertificateRequest(rand.Reader, goodCr, csrKey)
+	require.NoError(t, err, "failed generating csr")
+
+	certs, _, err := acmeClient.CreateOrderCert(testCtx, order.FinalizeURL, csr, true)
+	require.NoError(t, err, "failed finalizing order")
+	require.Len(t, certs, 3, "expected full acme chain")
+
+	return csrKey, certs
 }
 
 func setupTestPkiCluster(t *testing.T) (*vault.TestCluster, *api.Client) {
