@@ -13,8 +13,7 @@ project "vault" {
     repository = "vault"
     release_branches = [
       "main",
-      "release/**",
-	  "add-crt-prepare"
+      "release/**"
     ]
   }
 }
