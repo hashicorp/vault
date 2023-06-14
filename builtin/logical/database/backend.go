@@ -15,8 +15,8 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/maputil"
 	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/helper/syncmap"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
@@ -124,7 +124,7 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 	}
 
 	b.logger = conf.Logger
-	b.connections = maputil.NewSyncMap[string, *dbPluginInstance]()
+	b.connections = syncmap.NewSyncMap[string, *dbPluginInstance]()
 	b.queueCtx, b.cancelQueueCtx = context.WithCancel(context.Background())
 	b.roleLocks = locksutil.CreateLocks()
 	return &b
@@ -154,7 +154,7 @@ func (b *databaseBackend) collectPluginInstanceGaugeValues(context.Context) ([]m
 
 type databaseBackend struct {
 	// connections holds configured database connections by config name
-	connections *maputil.SyncMap[string, *dbPluginInstance]
+	connections *syncmap.SyncMap[string, *dbPluginInstance]
 	logger      log.Logger
 
 	*framework.Backend

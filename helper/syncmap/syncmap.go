@@ -1,4 +1,4 @@
-package maputil
+package syncmap
 
 import "sync"
 
@@ -13,7 +13,9 @@ type SyncMap[K comparable, V IDer] struct {
 
 // NewSyncMap returns a new, empty SyncMap.
 func NewSyncMap[K comparable, V IDer]() *SyncMap[K, V] {
-	return &SyncMap[K, V]{}
+	return &SyncMap[K, V]{
+		data: make(map[K]V),
+	}
 }
 
 // Get returns the value for the given key.
@@ -36,15 +38,16 @@ func (m *SyncMap[K, V]) Pop(k K) V {
 
 // PopIfEqual deletes and returns the value for the given key, if it exists
 // and only if the ID is equal to the provided string.
-func (m *SyncMap[K, V]) PopIfEqual(k K, id string) *V {
+func (m *SyncMap[K, V]) PopIfEqual(k K, id string) V {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	v, ok := m.data[k]
 	if ok && v.ID() == id {
 		delete(m.data, k)
-		return &v
+		return v
 	}
-	return nil
+	var zero V
+	return zero
 }
 
 // Put adds the given key-value pair to the map and returns the previous value, if any.
