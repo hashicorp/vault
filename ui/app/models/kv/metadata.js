@@ -49,12 +49,13 @@ const validations = {
     { type: 'length', options: { min: 1, max: 16 }, message: 'You cannot go over 16 characters.' },
   ],
 };
-const formFieldProps = ['path', 'data'];
+const formFieldProps = ['maxVersions', 'casRequired', 'deleteVersionAfter', 'customerMetadata'];
 
 @withModelValidations(validations)
 @withFormFields(formFieldProps)
 export default class KvSecretMetadataModel extends Model {
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord.
+  @attr('string') path;
 
   @attr('number', {
     defaultValue: 0,

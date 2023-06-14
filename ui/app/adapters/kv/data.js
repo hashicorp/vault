@@ -7,12 +7,6 @@ import ApplicationAdapter from '../application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { assert } from '@ember/debug';
 
-/**
- * The ID for the kv/data records need to be a string that can replace the URL when calling findRecord. Example: kv/data id: my-kv-engine/data/my-secret?=version=2
- * There is a kv-id util inside the KV engin that sets this id. However, because this adapter is the main application, we hardcode what the util does here.
- * The ID includes backend, version, and path in case another KV secret engine with the same path is created.
- */
-
 export default class KvDataAdapter extends ApplicationAdapter {
   namespace = 'v1';
 

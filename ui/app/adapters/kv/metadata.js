@@ -14,30 +14,27 @@ export default class KvMetadataAdapter extends ApplicationAdapter {
   }
 
   createRecord(store, type, snapshot) {
-    const backend = snapshot.record.backend;
-    const path = snapshot.attr('path');
+    const { backend, path } = snapshot.record;
     const url = this._urlForMetadata(backend, path);
 
     return this.ajax(url, 'POST', { data: this.serialize(snapshot) }).then((resp) => {
-      resp.id = `${backend}/${path}`;
+      resp.id = `${encodePath(backend)}/${encodePath(path)}`;
       return resp;
     });
   }
 
-  updateRecord(store, type, snapshot) {
-    const { backend, path } = snapshot.record;
-    const data = this.serialize(snapshot);
-    const url = this._urlForMetadata(backend, path);
-    return this.ajax(url, 'POST', { data });
-  }
-
-  query(store, type, query) {
-    const { path, backend } = query;
-    return this.ajax(this._urlForMetadata(backend, path), 'GET');
-  }
-
   queryRecord(store, type, query) {
     const { path, backend } = query;
-    return this.ajax(this._urlForMetadata(backend, path), 'GET');
+    return this.ajax(this._urlForMetadata(backend, path), 'GET').then((resp) => {
+      resp.id = `${encodePath(backend)}/${encodePath(path)}`;
+      return resp;
+    });
+  }
+
+  findRecord(store, type, id) {
+    return this.ajax(`${this.buildURL()}/${id}`, 'GET').then((resp) => {
+      resp.id = id;
+      return resp;
+    });
   }
 }
