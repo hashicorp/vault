@@ -395,6 +395,8 @@ type Core struct {
 
 	// activityLog is used to track active client count
 	activityLog *ActivityLog
+	// activityLogLock protects the activityLog and activityLogConfig
+	activityLogLock sync.RWMutex
 
 	// metricsCh is used to stop the metrics streaming
 	metricsCh chan struct{}
@@ -603,7 +605,11 @@ type Core struct {
 
 	clusterHeartbeatInterval time.Duration
 
+	// activityLogConfig contains override values for the activity log
+	// it is protected by activityLogLock
 	activityLogConfig ActivityLogCoreConfig
+
+	censusConfig atomic.Value
 
 	// activeTime is set on active nodes indicating the time at which this node
 	// became active.
@@ -743,6 +749,9 @@ type CoreConfig struct {
 	License         string
 	LicensePath     string
 	LicensingConfig *LicensingConfig
+
+	// Configured Census Agent
+	CensusAgent CensusReporter
 
 	DisablePerformanceStandby bool
 	DisableIndexing           bool
@@ -2250,6 +2259,11 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.setupAuditedHeadersConfig(ctx); err != nil {
 			return err
 		}
+
+		if err := c.setupCensusAgent(); err != nil {
+			c.logger.Error("skipping reporting for nil agent", "error", err)
+		}
+
 		// not waiting on wg to avoid changing existing behavior
 		var wg sync.WaitGroup
 		if err := c.setupActivityLog(ctx, &wg); err != nil {
@@ -2450,6 +2464,10 @@ func (c *Core) preSeal() error {
 		result = multierror.Append(result, fmt.Errorf("error stopping expiration: %w", err))
 	}
 	c.stopActivityLog()
+	// Clean up the censusAgent on seal
+	if err := c.teardownCensusAgent(); err != nil {
+		result = multierror.Append(result, fmt.Errorf("error tearing down reporting agent: %w", err))
+	}
 
 	if err := c.teardownCredentials(context.Background()); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down credentials: %w", err))

@@ -284,6 +284,10 @@ This endpoint was added in Vault 1.6.
 - `limit_namespaces` `(int, optional)` - Controls the total number of by_namespace data returned. This can
    be used to return the client counts for the specified number of namespaces having highest activity. 
    If no `limit_namespaces` parameter is specified, client counts for all namespaces in specified usage period is returned.
+- `current_billing_period` `(bool, optional)` - Uses the builtin billing start
+  timestamp as `start_time` and the current time as the `end_time`, returning a
+  response with the current billing period information without having to
+  explicitly provide a start and end time.
 
 
 ### Sample Request
@@ -862,7 +866,9 @@ $ curl \
     "default_report_months": 12,
     "enabled": "default-enabled",
     "queries_available": true,
-    "retention_months": 24
+    "retention_months": 24,
+    "reporting_enabled": false,
+    "billing_start_timestamp": "2022-03-01T00:00:00Z",
   },
   "warnings": null
 }
