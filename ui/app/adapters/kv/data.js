@@ -5,6 +5,7 @@
 
 import ApplicationAdapter from '../application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
+import { kvId } from 'vault/utils/kv-id';
 import { assert } from '@ember/debug';
 
 export default class KvDataAdapter extends ApplicationAdapter {
@@ -19,7 +20,7 @@ export default class KvDataAdapter extends ApplicationAdapter {
     const { backend, path, version } = snapshot.record;
     const url = this._urlForSecret(backend, path);
     return this.ajax(url, 'POST', { data: this.serialize(snapshot) }).then((resp) => {
-      resp.id = `${backend}/data/${path}?version=${version}`;
+      resp.id = kvId(backend, version, path);
       return resp;
     });
   }
@@ -27,7 +28,7 @@ export default class KvDataAdapter extends ApplicationAdapter {
   queryRecord(store, type, query) {
     const { path, backend, version } = query;
     return this.ajax(this._urlForSecret(backend, path, version), 'GET').then((resp) => {
-      resp.id = `${backend}/data/${path}?version=${version}`;
+      resp.id = kvId(backend, version, path);
       return resp;
     });
   }

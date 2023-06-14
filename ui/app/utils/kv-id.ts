@@ -11,6 +11,11 @@
  * @returns string id. NOTE: this id is designed to replace the URL for findRecord. Example: my-kv-engine/data/my-secret?=version=2
  */
 
+import { encodePath } from 'vault/utils/path-encoding-helpers';
+
 export function kvId(backend: string, version: string | number, path: string) {
-  return `${backend}/data/${path}?version=${version}`;
+  if (!version) {
+    return `${encodePath(backend)}/metadata/${encodePath(path)}`;
+  }
+  return `${encodePath(backend)}/data/${encodePath(path)}?version=${version}`;
 }

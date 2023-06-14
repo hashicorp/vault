@@ -5,6 +5,7 @@
 
 import ApplicationAdapter from '../application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
+import { kvId } from 'vault/utils/kv-id';
 
 export default class KvMetadataAdapter extends ApplicationAdapter {
   namespace = 'v1';
@@ -18,7 +19,7 @@ export default class KvMetadataAdapter extends ApplicationAdapter {
     const url = this._urlForMetadata(backend, path);
 
     return this.ajax(url, 'POST', { data: this.serialize(snapshot) }).then((resp) => {
-      resp.id = `${encodePath(backend)}/${encodePath(path)}`;
+      resp.id = kvId(backend, '', path);
       return resp;
     });
   }
@@ -26,7 +27,7 @@ export default class KvMetadataAdapter extends ApplicationAdapter {
   queryRecord(store, type, query) {
     const { path, backend } = query;
     return this.ajax(this._urlForMetadata(backend, path), 'GET').then((resp) => {
-      resp.id = `${encodePath(backend)}/${encodePath(path)}`;
+      resp.id = kvId(backend, '', path);
       return resp;
     });
   }
