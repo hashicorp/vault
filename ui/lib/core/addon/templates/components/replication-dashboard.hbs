@@ -1,13 +1,20 @@
 <div class="replication-dashboard box is-sideless is-fullwidth is-marginless" data-test-replication-dashboard>
   {{#if this.isReindexing}}
     <div class="reindexing-alert">
-      <AlertBanner
-        @title={{concat "Re-indexing in progress" this.reindexingStage}}
-        @type="info"
-        @progressBar={{this.progressBar}}
-        @message={{sanitized-html this.reindexMessage}}
-        data-test-isReindexing
-      />
+      <Hds::Alert data-test-isReindexing @type="inline" @color="highlight" as |A|>
+        <A.Title data-test-reindexing-title>
+          {{concat "Re-indexing in progress" this.reindexingStage}}
+          {{#if this.progressBar}}
+            <progress
+              data-test-reindexing-progress
+              value={{this.progressBar.value}}
+              max={{this.progressBar.max}}
+              class="progress is-success is-medium is-inline-block"
+            ></progress>
+          {{/if}}
+        </A.Title>
+        <A.Description>{{sanitized-html this.reindexMessage}}</A.Description>
+      </Hds::Alert>
     </div>
   {{/if}}
   {{#if this.isSummaryDashboard}}
