@@ -24,13 +24,9 @@
 </div>
 
 {{#if this.auth.isActiveSession}}
-  <section class="section">
-    <div class="container is-widescreen">
-      <TokenExpireWarning @expirationDate={{this.auth.tokenExpirationDate}}>
-        {{outlet}}
-      </TokenExpireWarning>
-    </div>
-  </section>
+  <TokenExpireWarning @expirationDate={{this.auth.tokenExpirationDate}}>
+    {{outlet}}
+  </TokenExpireWarning>
 {{else}}
   {{outlet}}
 {{/if}}
