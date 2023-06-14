@@ -20,10 +20,14 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
+    // test context setup
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
     this.context = { owner: this.engine }; // this.engine set by setupEngine
     this.store = this.owner.lookup('service:store');
-    this.cancelSpy = sinon.spy();
+    this.router = this.owner.lookup('service:router');
+    sinon.stub(this.router, 'transitionTo');
+
+    // component data setup
     this.backend = 'pki-engine';
     // both models only use findRecord. API parameters for pki/crl
     // are set by default backend values when the engine is mounted
@@ -58,6 +62,10 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
     this.cluster = this.store.peekRecord('pki/config/cluster', this.backend);
     this.crl = this.store.peekRecord('pki/config/crl', this.backend);
     this.urls = this.store.peekRecord('pki/config/urls', this.backend);
+  });
+
+  hooks.afterEach(function () {
+    this.router.transitionTo.restore();
   });
 
   test('it renders with config data and updates config', async function (assert) {
