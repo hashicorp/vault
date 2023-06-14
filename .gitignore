@@ -60,6 +60,7 @@ Vagrantfile
 
 # Enos local Terraform files
 enos/.enos
+enos/enos-local.vars.hcl
 enos/support
 enos/.terraform/*
 enos/.terraform.lock.hcl
