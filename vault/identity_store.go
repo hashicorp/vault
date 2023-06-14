@@ -190,7 +190,7 @@ func mfaCommonPaths(i *IdentityStore) []*framework.Path {
 
 func makeMFAMethodPaths(
 	methodType string,
-	methodTypeForOpenIDOperationID string,
+	methodTypeForOpenAPIOperationID string,
 	methodFields map[string]*framework.FieldSchema,
 	i *IdentityStore,
 ) []*framework.Path {
@@ -208,7 +208,7 @@ func makeMFAMethodPaths(
 			Pattern: "mfa/method/" + methodType + "/" + uuidRegex("method_id"),
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "mfa",
-				OperationSuffix: methodTypeForOpenIDOperationID + "-method",
+				OperationSuffix: methodTypeForOpenAPIOperationID + "-method",
 			},
 			Fields: methodFieldsIncludingMethodID,
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -247,7 +247,7 @@ func makeMFAMethodPaths(
 						return i.handleMFAMethodListCommon(ctx, req, d, methodType)
 					},
 					DisplayAttrs: &framework.DisplayAttributes{
-						OperationSuffix: methodTypeForOpenIDOperationID + "-methods",
+						OperationSuffix: methodTypeForOpenAPIOperationID + "-methods",
 					},
 					Summary: "List MFA method configurations for the given MFA method",
 				},
@@ -260,7 +260,7 @@ func makeMFAMethodPaths(
 					},
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb:   "create",
-						OperationSuffix: methodTypeForOpenIDOperationID + "-method",
+						OperationSuffix: methodTypeForOpenAPIOperationID + "-method",
 					},
 					Summary: "Create the given MFA method",
 				},
