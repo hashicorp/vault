@@ -47,7 +47,7 @@ func (m *SyncMap[K, V]) PopIfEqual(k K, id string) *V {
 	return nil
 }
 
-// Put adds the given key-value pair to the map.
+// Put adds the given key-value pair to the map and returns the previous value, if any.
 func (m *SyncMap[K, V]) Put(k K, v V) V {
 	m.lock.Lock()
 	defer m.lock.Unlock()
