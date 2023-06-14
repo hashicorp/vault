@@ -55,7 +55,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       assert.dom(S.configuration.emptyState).doesNotExist();
       // Submit before filling out form shows an error
       await click('[data-test-pki-import-pem-bundle]');
-      assert.dom('[data-test-alert-banner="alert"]').hasText('Error please upload your PEM bundle');
+      assert.dom('[data-test-alert-banner]').hasText('Error please upload your PEM bundle');
       // Fill in form data
       await click('[data-test-text-toggle]');
       await fillIn('[data-test-text-file-textarea]', this.pemBundle);
@@ -199,7 +199,7 @@ module('Acceptance | pki action forms test', function (hooks) {
         'stays on page on success'
       );
       assert.dom(S.configuration.title).hasText('View root certificate');
-      assert.dom('[data-test-alert-banner="alert"]').doesNotExist('no private key warning');
+      assert.dom('[data-test-alert-banner]').doesNotExist('no private key warning');
       assert.dom(S.configuration.title).hasText('View root certificate', 'Updates title on page');
       assert.dom(S.configuration.saved.certificate).hasClass('allow-copy', 'copyable certificate is masked');
       assert.dom(S.configuration.saved.issuerName).hasText(issuerName);
@@ -228,7 +228,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       );
       assert.dom(S.configuration.title).hasText('View root certificate');
       assert
-        .dom('[data-test-alert-banner="alert"]')
+        .dom('[data-test-alert-banner]')
         .hasText('Next steps The private_key is only available once. Make sure you copy and save it now.');
       assert.dom(S.configuration.title).hasText('View root certificate', 'Updates title on page');
       assert
@@ -280,7 +280,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       await assert.dom(S.configuration.csrDetails).exists('renders CSR details after save');
       assert.dom(S.configuration.title).hasText('View generated CSR');
       assert
-        .dom('[data-test-alert-banner="alert"]')
+        .dom('[data-test-alert-banner]')
         .hasText(
           'Next steps Copy the CSR below for a parent issuer to sign and then import the signed certificate back into this mount. The private_key is only available once. Make sure you copy and save it now.'
         );

@@ -16,7 +16,7 @@ import { SELECTORS as S } from 'vault/tests/helpers/pki/pki-generate-root';
 
 const SELECTORS = {
   pageTitle: '[data-test-pki-page-title]',
-  alertBanner: '[data-test-alert-banner="alert"]',
+  alertBanner: '[data-test-alert-banner]',
   toolbarCrossSign: '[data-test-pki-issuer-cross-sign]',
   toolbarSignInt: '[data-test-pki-issuer-sign-int]',
   toolbarDownload: '[data-test-issuer-download]',

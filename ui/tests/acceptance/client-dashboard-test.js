@@ -215,7 +215,7 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
     await click(`[data-test-dropdown-year="${LICENSE_START.getFullYear() - 3}"]`);
     await click('[data-test-date-dropdown-submit]');
     assert
-      .dom('[data-test-alert-banner="alert"]')
+      .dom('[data-test-alert-banner]')
       .hasTextContaining(
         `We only have data from January 2022`,
         'warning banner displays that date queried was prior to count start date'
@@ -332,7 +332,7 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
     assert.strictEqual(currentURL(), '/vault/clients/dashboard', 'clients/dashboard URL is correct');
     assert.dom(SELECTORS.dashboardActiveTab).hasText('Dashboard', 'dashboard tab is active');
     assert
-      .dom('[data-test-alert-banner="alert"]')
+      .dom('[data-test-alert-banner]')
       .hasTextContaining(
         `Warning Vault was upgraded to 1.10.1 on Aug 1, 2022. We added monthly breakdowns and mount level attribution starting in 1.10, so keep that in mind when looking at the data. Learn more here.`
       );

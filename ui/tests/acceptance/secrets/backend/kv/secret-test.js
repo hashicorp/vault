@@ -1049,7 +1049,9 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await editPage.visitEdit({ backend, id: 'secret' });
     assert
       .dom('[data-test-warning-no-read-permissions]')
-      .exists('shows custom warning instead of default API warning about permissions');
+      .hasText(
+        'You do not have read permissions. If a secret exists here creating a new secret will overwrite it.'
+      );
 
     await editPage.editSecret('bar', 'baz');
     assert.strictEqual(
