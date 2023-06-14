@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/axiomhq/hyperloglog"
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/vault/helper/constants"
@@ -472,6 +473,34 @@ func TestActivityLog_SaveEntitiesToStorage(t *testing.T) {
 		t.Fatalf("could not unmarshal protobuf: %v", err)
 	}
 	expectedEntityIDs(t, out, ids)
+}
+
+// Test to check store hyperloglog and fetch hyperloglog from storage
+func TestActivityLog_StoreAndReadHyperloglog(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	ctx := context.Background()
+
+	a := core.activityLog
+	a.SetStandbyEnable(ctx, true)
+	a.SetStartTimestamp(time.Now().Unix()) // set a nonzero segment
+	currentMonth := timeutil.StartOfMonth(time.Now())
+	currentMonthHll := hyperloglog.New()
+	currentMonthHll.Insert([]byte("a"))
+	currentMonthHll.Insert([]byte("a"))
+	currentMonthHll.Insert([]byte("b"))
+	currentMonthHll.Insert([]byte("c"))
+	currentMonthHll.Insert([]byte("d"))
+	currentMonthHll.Insert([]byte("d"))
+
+	err := a.StoreHyperlogLog(ctx, currentMonth, currentMonthHll)
+	if err != nil {
+		t.Fatalf("error storing hyperloglog in storage: %v", err)
+	}
+	fetchedHll, err := a.CreateOrFetchHyperlogLog(ctx, currentMonth)
+	// check the distinct count stored from hll
+	if fetchedHll.Estimate() != 4 {
+		t.Fatalf("wrong number of distinct elements: expected: 5 actual: %v", fetchedHll.Estimate())
+	}
 }
 
 func TestModifyResponseMonthsNilAppend(t *testing.T) {
@@ -3797,6 +3826,132 @@ func TestActivityLog_partialMonthClientCount(t *testing.T) {
 	}
 	if clientCount != len(clients) {
 		t.Errorf("bad client count. expected %d, got %d", len(clients), clientCount)
+	}
+}
+
+func TestActivityLog_partialMonthClientCountUsingHandleQuery(t *testing.T) {
+	timeutil.SkipAtEndOfMonth(t)
+
+	ctx := namespace.RootContext(nil)
+	now := time.Now().UTC()
+	a, clients, _ := setupActivityRecordsInStorage(t, timeutil.StartOfMonth(now), true, true)
+
+	// clients[0] belongs to previous month
+	clients = clients[1:]
+
+	clientCounts := make(map[string]uint64)
+	for _, client := range clients {
+		clientCounts[client.NamespaceID] += 1
+	}
+
+	a.SetEnable(true)
+	var wg sync.WaitGroup
+	err := a.refreshFromStoredLog(ctx, &wg, now)
+	if err != nil {
+		t.Fatalf("error loading clients: %v", err)
+	}
+	wg.Wait()
+
+	results, err := a.handleQuery(ctx, time.Now().UTC(), time.Now().UTC(), 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if results == nil {
+		t.Fatal("no results to test")
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if results == nil {
+		t.Fatal("no results to test")
+	}
+
+	byNamespace, ok := results["by_namespace"]
+	if !ok {
+		t.Fatalf("malformed results. got %v", results)
+	}
+
+	clientCountResponse := make([]*ResponseNamespace, 0)
+	err = mapstructure.Decode(byNamespace, &clientCountResponse)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, clientCount := range clientCountResponse {
+		if int(clientCounts[clientCount.NamespaceID]) != clientCount.Counts.DistinctEntities {
+			t.Errorf("bad entity count for namespace %s . expected %d, got %d", clientCount.NamespaceID, int(clientCounts[clientCount.NamespaceID]), clientCount.Counts.DistinctEntities)
+		}
+		totalCount := int(clientCounts[clientCount.NamespaceID])
+		if totalCount != clientCount.Counts.Clients {
+			t.Errorf("bad client count for namespace %s . expected %d, got %d", clientCount.NamespaceID, totalCount, clientCount.Counts.Clients)
+		}
+	}
+
+	totals, ok := results["total"]
+	if !ok {
+		t.Fatalf("malformed results. got %v", results)
+	}
+	totalCounts := ResponseCounts{}
+	err = mapstructure.Decode(totals, &totalCounts)
+	distinctEntities := totalCounts.DistinctEntities
+	if distinctEntities != len(clients) {
+		t.Errorf("bad entity count. expected %d, got %d", len(clients), distinctEntities)
+	}
+
+	clientCount := totalCounts.Clients
+	if clientCount != len(clients) {
+		t.Errorf("bad client count. expected %d, got %d", len(clients), clientCount)
+	}
+	// Ensure that the month response is the same as the totals, because all clients
+	// are new clients and there will be no approximation in the single month partial
+	// case
+	monthsRaw, ok := results["months"]
+	if !ok {
+		t.Fatalf("malformed results. got %v", results)
+	}
+	monthsResponse := make([]ResponseMonth, 0)
+	err = mapstructure.Decode(monthsRaw, &monthsResponse)
+	if len(monthsResponse) != 1 {
+		t.Fatalf("wrong number of months returned. got %v", monthsResponse)
+	}
+	if monthsResponse[0].Counts.Clients != totalCounts.Clients {
+		t.Fatalf("wrong client count. got %v, expected %v", monthsResponse[0].Counts.Clients, totalCounts.Clients)
+	}
+	if monthsResponse[0].Counts.EntityClients != totalCounts.EntityClients {
+		t.Fatalf("wrong entity client count. got %v, expected %v", monthsResponse[0].Counts.EntityClients, totalCounts.EntityClients)
+	}
+	if monthsResponse[0].Counts.NonEntityClients != totalCounts.NonEntityClients {
+		t.Fatalf("wrong non-entity client count. got %v, expected %v", monthsResponse[0].Counts.NonEntityClients, totalCounts.NonEntityClients)
+	}
+	if monthsResponse[0].Counts.NonEntityTokens != totalCounts.NonEntityTokens {
+		t.Fatalf("wrong non-entity client count. got %v, expected %v", monthsResponse[0].Counts.NonEntityTokens, totalCounts.NonEntityTokens)
+	}
+	if monthsResponse[0].Counts.Clients != monthsResponse[0].NewClients.Counts.Clients {
+		t.Fatalf("wrong client count. got %v, expected %v", monthsResponse[0].Counts.Clients, monthsResponse[0].NewClients.Counts.Clients)
+	}
+	if monthsResponse[0].Counts.DistinctEntities != monthsResponse[0].NewClients.Counts.DistinctEntities {
+		t.Fatalf("wrong distinct entities count. got %v, expected %v", monthsResponse[0].Counts.DistinctEntities, monthsResponse[0].NewClients.Counts.DistinctEntities)
+	}
+	if monthsResponse[0].Counts.EntityClients != monthsResponse[0].NewClients.Counts.EntityClients {
+		t.Fatalf("wrong entity client count. got %v, expected %v", monthsResponse[0].Counts.EntityClients, monthsResponse[0].NewClients.Counts.EntityClients)
+	}
+	if monthsResponse[0].Counts.NonEntityClients != monthsResponse[0].NewClients.Counts.NonEntityClients {
+		t.Fatalf("wrong non-entity client count. got %v, expected %v", monthsResponse[0].Counts.NonEntityClients, monthsResponse[0].NewClients.Counts.NonEntityClients)
+	}
+	if monthsResponse[0].Counts.NonEntityTokens != monthsResponse[0].NewClients.Counts.NonEntityTokens {
+		t.Fatalf("wrong non-entity token count. got %v, expected %v", monthsResponse[0].Counts.NonEntityTokens, monthsResponse[0].NewClients.Counts.NonEntityTokens)
+	}
+
+	namespaceResponseMonth := monthsResponse[0].Namespaces
+
+	for _, clientCount := range namespaceResponseMonth {
+		if int(clientCounts[clientCount.NamespaceID]) != clientCount.Counts.EntityClients {
+			t.Errorf("bad entity count for namespace %s . expected %d, got %d", clientCount.NamespaceID, int(clientCounts[clientCount.NamespaceID]), clientCount.Counts.DistinctEntities)
+		}
+		totalCount := int(clientCounts[clientCount.NamespaceID])
+		if totalCount != clientCount.Counts.Clients {
+			t.Errorf("bad client count for namespace %s . expected %d, got %d", clientCount.NamespaceID, totalCount, clientCount.Counts.Clients)
+		}
 	}
 }
 
