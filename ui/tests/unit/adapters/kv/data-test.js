@@ -68,7 +68,6 @@ module('Unit | Adapter | kv/data', function (hooks) {
     this.server.get(`${this.backend}/data/${this.path}`, () => {
       return { id: this.id };
     });
-    // delete-latest-version
     this.server.delete(`${this.backend}/data/${this.path}`, () => {
       assert.ok(true, 'request made to correct endpoint on delete latest version.');
     });
