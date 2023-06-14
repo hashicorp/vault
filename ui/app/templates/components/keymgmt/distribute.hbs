@@ -141,7 +141,10 @@
     </fieldset>
 
     {{#if this.formErrors}}
-      <AlertBanner @type="danger" @message={{this.formErrors}} data-test-keymgmt-distribute-error />
+      <Hds::Alert data-test-keymgmt-distribute-error @type="inline" @color="critical" as |A|>
+        <A.Title>Error</A.Title>
+        <A.Description>{{this.formErrors}}</A.Description>
+      </Hds::Alert>
     {{/if}}
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">
