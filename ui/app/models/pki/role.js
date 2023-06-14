@@ -184,7 +184,7 @@ export default class PkiRoleModel extends Model {
   })
   keyBits; // no possibleValues because options are dependent on selected key type
 
-  @attr('number', {
+  @attr('string', {
     label: 'Signature bits',
     subText: `Only applicable for key_type 'RSA'. Ignore for other key types.`,
     defaultValue: '0',

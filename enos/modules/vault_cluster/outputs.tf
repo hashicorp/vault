@@ -53,3 +53,8 @@ output "cluster_name" {
   description = "The Vault cluster name"
   value       = var.cluster_name
 }
+
+output "audit_device_file_path" {
+  description = "The file path for the audit device, if enabled"
+  value       = var.enable_file_audit_device ? local.audit_device_file_path : "file audit device not enabled"
+}

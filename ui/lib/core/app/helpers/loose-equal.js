@@ -3,4 +3,4 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-export { default } from 'core/components/linkable-item/menu';
+export { default } from 'core/helpers/loose-equal';

@@ -163,6 +163,7 @@ jobs:
       go-build-tags: ${{ needs.setup.outputs.go-build-tags }}
       runs-on: ${{ needs.setup.outputs.compute-huge }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
+      name: "-race"
     secrets: inherit
   test-go-fips:
     name: Run Go tests with FIPS configuration
@@ -188,6 +189,7 @@ jobs:
       go-build-tags: '${{ needs.setup.outputs.go-build-tags }},deadlock,cgo,fips,fips_140_2'
       runs-on: ${{ needs.setup.outputs.compute-larger }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
+      name: "-fips"
     secrets: inherit
   test-ui:
     name: Test UI
@@ -292,6 +294,7 @@ jobs:
   tests-completed:
     needs:
     - setup
+    - setup-go-cache
     - test-go
     - test-ui
     if: always()

@@ -517,7 +517,7 @@ func (c *AgentCommand) Run(args []string) int {
 	var listeners []net.Listener
 
 	// If there are templates, add an in-process listener
-	if len(config.Templates) > 0 {
+	if len(config.Templates) > 0 || len(config.EnvTemplates) > 0 {
 		config.Listeners = append(config.Listeners, &configutil.Listener{Type: listenerutil.BufConnType})
 	}
 
@@ -838,16 +838,21 @@ func (c *AgentCommand) Run(args []string) int {
 
 	var exitCode int
 	if err := g.Run(); err != nil {
-		c.logger.Error("runtime error encountered", "error", err)
-		c.UI.Error("Error encountered during run, refer to logs for more details.")
 		var processExitError *exec.ProcessExitError
 		if errors.As(err, &processExitError) {
 			exitCode = processExitError.ExitCode
 		} else {
 			exitCode = 1
 		}
+
+		if exitCode != 0 {
+			c.logger.Error("runtime error encountered", "error", err, "exitCode", exitCode)
+			c.UI.Error("Error encountered during run, refer to logs for more details.")
+		}
 	}
+
 	c.notifySystemd(systemd.SdNotifyStopping)
+
 	return exitCode
 }
 

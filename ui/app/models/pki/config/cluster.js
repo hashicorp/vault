@@ -35,6 +35,6 @@ export default class PkiConfigClusterModel extends Model {
   @lazyCapabilities(apiPath`${'id'}/config/cluster`, 'id') clusterPath;
 
   get canSet() {
-    return this.clusterPath.get('canCreate') !== false;
+    return this.clusterPath.get('canUpdate') !== false;
   }
 }

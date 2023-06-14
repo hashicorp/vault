@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -21,6 +22,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/net/idna"
 )
+
+var maxAcmeCertTTL = 90 * (24 * time.Hour)
 
 func pathAcmeListOrders(b *backend) []*framework.Path {
 	return buildAcmeFrameworkPaths(b, patternAcmeListOrders, "/orders")
@@ -234,11 +237,9 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, _ *logical.Request, 
 		return nil, err
 	}
 
-	if order.Status == ACMEOrderPending {
-		// Lets see if we can update our order status to ready if all the authorizations have been completed.
-		if requiredAuthorizationsCompleted(b, ac, uc, order) {
-			order.Status = ACMEOrderReady
-		}
+	order.Status, err = computeOrderStatus(ac, uc, order)
+	if err != nil {
+		return nil, err
 	}
 
 	if order.Status != ACMEOrderReady {
@@ -293,23 +294,62 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, _ *logical.Request, 
 	return formatOrderResponse(ac, order), nil
 }
 
-func requiredAuthorizationsCompleted(b *backend, ac *acmeContext, uc *jwsCtx, order *acmeOrder) bool {
-	if len(order.AuthorizationIds) == 0 {
-		return false
+func computeOrderStatus(ac *acmeContext, uc *jwsCtx, order *acmeOrder) (ACMEOrderStatusType, error) {
+	// If we reached a final stage, no use computing anything else
+	if order.Status == ACMEOrderInvalid || order.Status == ACMEOrderValid {
+		return order.Status, nil
 	}
 
+	// We aren't in a final state yet, check for expiry
+	if time.Now().After(order.Expires) {
+		return ACMEOrderInvalid, nil
+	}
+
+	// Intermediary steps passed authorizations should short circuit us as well
+	if order.Status == ACMEOrderReady || order.Status == ACMEOrderProcessing {
+		return order.Status, nil
+	}
+
+	// If we have no authorizations attached to the order, nothing to compute either
+	if len(order.AuthorizationIds) == 0 {
+		return ACMEOrderPending, nil
+	}
+
+	anyFailed := false
+	allPassed := true
 	for _, authId := range order.AuthorizationIds {
-		authorization, err := b.acmeState.LoadAuthorization(ac, uc, authId)
+		authorization, err := ac.getAcmeState().LoadAuthorization(ac, uc, authId)
 		if err != nil {
-			return false
+			return order.Status, fmt.Errorf("failed loading authorization: %s: %w", authId, err)
+		}
+
+		if authorization.Status == ACMEAuthorizationPending {
+			allPassed = false
+			continue
 		}
 
 		if authorization.Status != ACMEAuthorizationValid {
-			return false
+			// Per RFC 8555 - 7.1.6. Status Changes
+			// The order also moves to the "invalid" state if it expires or
+			// one of its authorizations enters a final state other than
+			// "valid" ("expired", "revoked", or "deactivated").
+			allPassed = false
+			anyFailed = true
+			break
 		}
 	}
 
-	return true
+	if anyFailed {
+		return ACMEOrderInvalid, nil
+	}
+
+	if allPassed {
+		return ACMEOrderReady, nil
+	}
+
+	// The order has not expired, no authorizations have yet to be marked as failed
+	// nor have we passed them all.
+	return ACMEOrderPending, nil
 }
 
 func validateCsrNotUsingAccountKey(csr *x509.CertificateRequest, uc *jwsCtx) error {
@@ -441,6 +481,34 @@ func storeCertificate(sc *storageContext, signedCertBundle *certutil.ParsedCertB
 	return nil
 }
 
+func maybeAugmentReqDataWithSuitableCN(ac *acmeContext, csr *x509.CertificateRequest, data *framework.FieldData) {
+	// Role doesn't require a CN, so we don't care.
+	if !ac.role.RequireCN {
+		return
+	}
+
+	// CSR contains a CN, so use that one.
+	if csr.Subject.CommonName != "" {
+		return
+	}
+
+	// Choose a CN in the order wildcard -> DNS -> IP -> fail.
+	for _, name := range csr.DNSNames {
+		if strings.Contains(name, "*") {
+			data.Raw["common_name"] = name
+			return
+		}
+	}
+	if len(csr.DNSNames) > 0 {
+		data.Raw["common_name"] = csr.DNSNames[0]
+		return
+	}
+	if len(csr.IPAddresses) > 0 {
+		data.Raw["common_name"] = csr.IPAddresses[0].String()
+		return
+	}
+}
+
 func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.ParsedCertBundle, issuerID, error) {
 	pemBlock := &pem.Block{
 		Type:    "CERTIFICATE REQUEST",
@@ -455,6 +523,11 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 		},
 		Schema: getCsrSignVerbatimSchemaFields(),
 	}
+
+	// XXX: Usability hack: by default, minimalist roles have require_cn=true,
+	// but some ACME clients do not provision one in the certificate as modern
+	// (TLS) clients are mostly verifying against server's DNS SANs.
+	maybeAugmentReqDataWithSuitableCN(ac, csr, data)
 
 	signingBundle, issuerId, err := ac.sc.fetchCAInfoWithIssuer(ac.issuer.ID.String(), IssuanceUsage)
 	if err != nil {
@@ -471,6 +544,16 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 		req:     &logical.Request{},
 		apiData: data,
 		role:    ac.role,
+	}
+
+	normalNotAfter, _, err := getCertificateNotAfter(ac.sc.Backend, input, signingBundle)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed computing certificate TTL from role/mount: %v: %w", err, ErrMalformed)
+	}
+
+	// Force a maximum 90 day TTL or lower for ACME
+	if time.Now().Add(maxAcmeCertTTL).Before(normalNotAfter) {
+		input.apiData.Raw["ttl"] = maxAcmeCertTTL
 	}
 
 	if csr.PublicKeyAlgorithm == x509.UnknownPublicKeyAlgorithm || csr.PublicKey == nil {
@@ -536,7 +619,14 @@ func parseCsrFromFinalize(data map[string]interface{}) (*x509.CertificateRequest
 
 	for _, ext := range csr.Extensions {
 		if ext.Id.Equal(certutil.ExtensionBasicConstraintsOID) {
-			return nil, fmt.Errorf("%w: refusing to accept CSR with Basic Constraints extension", ErrBadCSR)
+			isCa, _, err := certutil.ParseBasicConstraintExtension(ext)
+			if err != nil {
+				return nil, fmt.Errorf("%w: refusing to accept CSR with Basic Constraints extension: %v", ErrBadCSR, err.Error())
+			}
+
+			if isCa {
+				return nil, fmt.Errorf("%w: refusing to accept CSR with Basic Constraints extension with CA set to true", ErrBadCSR)
+			}
 		}
 	}
 
@@ -551,11 +641,9 @@ func (b *backend) acmeGetOrderHandler(ac *acmeContext, _ *logical.Request, field
 		return nil, err
 	}
 
-	if order.Status == ACMEOrderPending {
-		// Lets see if we can update our order status to ready if all the authorizations have been completed.
-		if requiredAuthorizationsCompleted(b, ac, uc, order) {
-			order.Status = ACMEOrderReady
-		}
+	order.Status, err = computeOrderStatus(ac, uc, order)
+	if err != nil {
+		return nil, err
 	}
 
 	// Per RFC 8555 -> 7.1.3.  Order Objects
@@ -764,7 +852,7 @@ func generateAuthorization(acct *acmeAccount, identifier *ACMEIdentifier) (*ACME
 	// Certain challenges have certain restrictions: DNS challenges cannot
 	// be used to validate IP addresses, and only DNS challenges can be used
 	// to validate wildcards.
-	allowedChallenges := []ACMEChallengeType{ACMEHTTPChallenge, ACMEDNSChallenge}
+	allowedChallenges := []ACMEChallengeType{ACMEHTTPChallenge, ACMEDNSChallenge, ACMEALPNChallenge}
 	if identifier.Type == ACMEIPIdentifier {
 		allowedChallenges = []ACMEChallengeType{ACMEHTTPChallenge}
 	} else if identifier.IsWildcard {

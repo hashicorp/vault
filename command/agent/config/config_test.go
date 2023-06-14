@@ -617,8 +617,7 @@ func TestLoadConfigFile_AgentCache_NoAutoAuth(t *testing.T) {
 	}
 
 	expected := &Config{
-		APIProxy: &APIProxy{},
-		Cache:    &Cache{},
+		Cache: &Cache{},
 		SharedConfig: &configutil.SharedConfig{
 			PidFile: "./pidfile",
 			Listeners: []*configutil.Listener{
@@ -935,10 +934,6 @@ func TestLoadConfigFile_AgentCache_AutoAuth_False(t *testing.T) {
 				},
 			},
 		},
-		APIProxy: &APIProxy{
-			UseAutoAuthToken:   false,
-			ForceAutoAuthToken: false,
-		},
 		Cache: &Cache{
 			UseAutoAuthToken:    false,
 			UseAutoAuthTokenRaw: "false",
@@ -959,7 +954,6 @@ func TestLoadConfigFile_AgentCache_Persist(t *testing.T) {
 	}
 
 	expected := &Config{
-		APIProxy: &APIProxy{},
 		Cache: &Cache{
 			Persist: &agentproxyshared.PersistConfig{
 				Type:                    "kubernetes",
@@ -1252,6 +1246,43 @@ func TestLoadConfigFile_Template_NoSinks(t *testing.T) {
 	}
 }
 
+// TestLoadConfigFile_Template_WithCache tests ensures that cache {} stanza is
+// permitted in vault agent configuration with template(s)
+func TestLoadConfigFile_Template_WithCache(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/config-template-with-cache.hcl")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			PidFile: "./pidfile",
+		},
+		AutoAuth: &AutoAuth{
+			Method: &Method{
+				Type:      "aws",
+				MountPath: "auth/aws",
+				Namespace: "my-namespace/",
+				Config: map[string]interface{}{
+					"role": "foobar",
+				},
+			},
+		},
+		Cache: &Cache{},
+		Templates: []*ctconfig.TemplateConfig{
+			{
+				Source:      pointerutil.StringPtr("/path/on/disk/to/template.ctmpl"),
+				Destination: pointerutil.StringPtr("/path/on/disk/where/template/will/render.txt"),
+			},
+		},
+	}
+
+	config.Prune()
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
 func TestLoadConfigFile_Vault_Retry(t *testing.T) {
 	config, err := LoadConfigFile("./test-fixtures/config-vault-retry.hcl")
 	if err != nil {
@@ -1359,7 +1390,6 @@ func TestLoadConfigFile_EnforceConsistency(t *testing.T) {
 			},
 			PidFile: "",
 		},
-		APIProxy: &APIProxy{},
 		Cache: &Cache{
 			EnforceConsistency: "always",
 			WhenInconsistent:   "retry",

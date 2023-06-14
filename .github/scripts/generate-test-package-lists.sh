@@ -46,6 +46,7 @@ test_packages[4]+=" $base/http"
 test_packages[4]+=" $base/sdk/helper/pluginutil"
 test_packages[4]+=" $base/serviceregistration/kubernetes"
 test_packages[4]+=" $base/tools/godoctests/pkg/analyzer"
+test_packages[4]+=" $base/tools/gonilnilfunctions/pkg/analyzer"
 if [ "${ENTERPRISE:+x}" == "x" ] ; then
     test_packages[4]+=" $base/vault/external_tests/apilock"
     test_packages[4]+=" $base/vault/external_tests/filteredpaths"

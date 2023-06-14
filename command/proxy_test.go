@@ -23,6 +23,7 @@ import (
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	"github.com/hashicorp/vault/command/agent"
 	proxyConfig "github.com/hashicorp/vault/command/proxy/config"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	"github.com/hashicorp/vault/helper/useragent"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -920,24 +921,7 @@ listener "tcp" {
 
 // TestProxy_QuitAPI Tests the /proxy/v1/quit API that can be enabled for the proxy.
 func TestProxy_QuitAPI(t *testing.T) {
-	logger := logging.NewVaultLogger(hclog.Error)
-	cluster := vault.NewTestCluster(t,
-		&vault.CoreConfig{
-			Logger: logger,
-			CredentialBackends: map[string]logical.Factory{
-				"approle": credAppRole.Factory,
-			},
-			LogicalBackends: map[string]logical.Factory{
-				"kv": logicalKv.Factory,
-			},
-		},
-		&vault.TestClusterOptions{
-			NumCores: 1,
-		})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	serverClient := cluster.Cores[0].Client
 
 	// Unset the environment variable so that proxy picks up the right test
@@ -975,7 +959,7 @@ cache {}
 	configPath := makeTempFile(t, "config.hcl", config)
 	defer os.Remove(configPath)
 
-	_, cmd := testProxyCommand(t, logger)
+	_, cmd := testProxyCommand(t, nil)
 	cmd.startedCh = make(chan struct{})
 
 	wg := &sync.WaitGroup{}

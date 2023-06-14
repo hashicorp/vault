@@ -464,7 +464,7 @@ func EnableDRSecondaryNoWait(ctx context.Context, sec VaultCluster, drToken stri
 	return WaitForDRReplicationState(ctx, sec, consts.ReplicationDRSecondary)
 }
 
-func WaitForReplicationStatus(ctx context.Context, client *api.Client, dr bool, accept func(map[string]interface{}) bool) error {
+func WaitForReplicationStatus(ctx context.Context, client *api.Client, dr bool, accept func(map[string]interface{}) error) error {
 	url := "sys/replication/performance/status"
 	if dr {
 		url = "sys/replication/dr/status"
@@ -475,7 +475,7 @@ func WaitForReplicationStatus(ctx context.Context, client *api.Client, dr bool, 
 	for ctx.Err() == nil {
 		secret, err = client.Logical().Read(url)
 		if err == nil && secret != nil && secret.Data != nil {
-			if accept(secret.Data) {
+			if err = accept(secret.Data); err == nil {
 				return nil
 			}
 		}
@@ -493,8 +493,12 @@ func WaitForDRReplicationWorking(ctx context.Context, pri, sec VaultCluster) err
 	secClient := sec.Nodes()[0].APIClient()
 
 	// Make sure we've entered stream-wals mode
-	err := WaitForReplicationStatus(ctx, secClient, true, func(secret map[string]interface{}) bool {
-		return secret["state"] == string("stream-wals")
+	err := WaitForReplicationStatus(ctx, secClient, true, func(secret map[string]interface{}) error {
+		state := secret["state"]
+		if state == string("stream-wals") {
+			return nil
+		}
+		return fmt.Errorf("expected stream-wals replication state, got %v", state)
 	})
 	if err != nil {
 		return err
@@ -513,16 +517,21 @@ func WaitForDRReplicationWorking(ctx context.Context, pri, sec VaultCluster) err
 		return err
 	}
 
-	err = WaitForReplicationStatus(ctx, secClient, true, func(secret map[string]interface{}) bool {
-		if secret["state"] != string("stream-wals") {
-			return false
-		}
-		if secret["last_remote_wal"] != nil {
-			lastRemoteWal, _ := secret["last_remote_wal"].(json.Number).Int64()
-			return lastRemoteWal > 0
+	err = WaitForReplicationStatus(ctx, secClient, true, func(secret map[string]interface{}) error {
+		state := secret["state"]
+		if state != string("stream-wals") {
+			return fmt.Errorf("expected stream-wals replication state, got %v", state)
 		}
 
-		return false
+		if secret["last_remote_wal"] != nil {
+			lastRemoteWal, _ := secret["last_remote_wal"].(json.Number).Int64()
+			if lastRemoteWal <= 0 {
+				return fmt.Errorf("expected last_remote_wal to be greater than zero")
+			}
+			return nil
+		}
+
+		return fmt.Errorf("replication seems to be still catching up, maybe need to wait more")
 	})
 	if err != nil {
 		return err

@@ -148,9 +148,6 @@ type ActivityLog struct {
 	// Channel for sending fragment immediately
 	sendCh chan struct{}
 
-	// Channel for writing fragment immediately
-	writeCh chan struct{}
-
 	// Channel to stop background processing
 	doneCh chan struct{}
 
@@ -203,6 +200,8 @@ type ActivityLogCoreConfig struct {
 	// Enable activity log even if the feature flag not set
 	ForceEnable bool
 
+	DisableFragmentWorker bool
+
 	// Do not start timers to send or persist fragments.
 	DisableTimers bool
 
@@ -237,7 +236,6 @@ func NewActivityLog(core *Core, logger log.Logger, view *BarrierView, metrics me
 		nodeID:                    hostname,
 		newFragmentCh:             make(chan struct{}, 1),
 		sendCh:                    make(chan struct{}, 1), // buffered so it can be triggered by fragment size
-		writeCh:                   make(chan struct{}, 1), // same for full segment
 		doneCh:                    make(chan struct{}, 1),
 		partialMonthClientTracker: make(map[string]*activity.EntityRecord),
 		CensusReportInterval:      time.Hour * 1,
@@ -1136,9 +1134,13 @@ func (c *Core) setupActivityLogLocked(ctx context.Context, wg *sync.WaitGroup) e
 	// Lock already held here, can't use .PerfStandby()
 	// The workers need to know the current segment time.
 	if c.perfStandby {
-		go manager.perfStandbyFragmentWorker(ctx)
+		if !c.activityLogConfig.DisableFragmentWorker {
+			go manager.perfStandbyFragmentWorker(ctx)
+		}
 	} else {
-		go manager.activeFragmentWorker(ctx)
+		if !c.activityLogConfig.DisableFragmentWorker {
+			go manager.activeFragmentWorker(ctx)
+		}
 
 		// Check for any intent log, in the background
 		manager.computationWorkerDone = make(chan struct{})
@@ -1332,16 +1334,6 @@ func (a *ActivityLog) activeFragmentWorker(ctx context.Context) {
 			}
 			a.logger.Trace("writing segment on timer expiration")
 			writeFunc()
-		case <-a.writeCh:
-			a.logger.Trace("writing segment on request")
-			writeFunc()
-
-			// Reset the schedule to wait 10 minutes from this forced write.
-			ticker.Stop()
-			ticker = a.clock.NewTicker(activitySegmentInterval)
-
-			// Simpler, but ticker.Reset was introduced in go 1.15:
-			// ticker.Reset(activitySegmentInterval)
 		case currentTime := <-endOfMonthChannel:
 			err := a.HandleEndOfMonth(ctx, currentTime.UTC())
 			if err != nil {
