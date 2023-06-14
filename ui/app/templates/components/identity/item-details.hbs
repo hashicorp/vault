@@ -8,7 +8,7 @@
         is disabled. All associated tokens cannot be used, but are not revoked.
       </A.Description>
       {{#if @model.canEdit}}
-        <A.Button data-test-enable-identity @text="Enable" @color="primary" {{on "click" (action "enable" @model)}} />
+        <A.Button data-test-enable-identity @text="Enable" @color="secondary" {{on "click" (action "enable" @model)}} />
       {{/if}}
     </Hds::Alert>
   {{/if}}
