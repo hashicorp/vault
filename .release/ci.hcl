@@ -13,7 +13,7 @@ project "vault" {
     repository = "vault"
     release_branches = [
       "main",
-      "release/**"
+      "release/**",
     ]
   }
 }
