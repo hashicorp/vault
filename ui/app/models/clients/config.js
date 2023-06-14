@@ -1,6 +1,6 @@
 import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
-import { withFormFields } from 'vault/decorators/model-form-fields';
+import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { withModelValidations } from 'vault/decorators/model-validations';
 
 const validations = {
@@ -14,7 +14,6 @@ const validations = {
 };
 
 @withModelValidations(validations)
-@withFormFields(['enabled', 'retentionMonths'])
 export default class ClientsConfigModel extends Model {
   @attr('boolean') queriesAvailable; // true only if historical data exists, will be false if there is only current month data
 
@@ -39,5 +38,13 @@ export default class ClientsConfigModel extends Model {
   }
   get canEdit() {
     return this.configPath.get('canUpdate') !== false;
+  }
+
+  _formFields = null;
+  get formFields() {
+    if (!this._formFields) {
+      this._formFields = expandAttributeMeta(this, ['enabled', 'retentionMonths']);
+    }
+    return this._formFields;
   }
 }
