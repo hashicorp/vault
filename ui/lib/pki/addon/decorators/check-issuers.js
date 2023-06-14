@@ -14,7 +14,7 @@ import { inject as service } from '@ember/service';
  * while this decorator is similar to fetch-secrets-engine-config in the core addon, the differences were enough to warrant a specific decorator for pki
  */
 
-export function withIssuers() {
+export function withConfig() {
   return function decorator(SuperClass) {
     if (!Object.prototype.isPrototypeOf.call(Route, SuperClass)) {
       // eslint-disable-next-line
