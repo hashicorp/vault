@@ -7,6 +7,12 @@ import ApplicationAdapter from '../application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { assert } from '@ember/debug';
 
+/**
+ * The ID for the kv/data records need to be a string that can replace the URL when calling findRecord. Example: kv/data id: my-kv-engine/data/my-secret?=version=2
+ * There is a kv-id util inside the KV engin that sets this id. However, because this adapter is the main application, we hardcode what the util does here.
+ * The ID includes backend, version, and path in case another KV secret engine with the same path is created.
+ */
+
 export default class KvDataAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
@@ -19,24 +25,31 @@ export default class KvDataAdapter extends ApplicationAdapter {
     const { backend, path, version } = snapshot.record;
     const url = this._urlForSecret(backend, path);
     return this.ajax(url, 'POST', { data: this.serialize(snapshot) }).then((resp) => {
-      resp.id = `${encodePath(backend)}/${version}/${encodePath(path)}`;
+      resp.id = `${backend}/data/${path}?version=${version}`;
       return resp;
     });
   }
 
-  // There is no updateRecord for this adapter. You cannot update a secret. You can create a new version which results in a new record.
-
   queryRecord(store, type, query) {
     const { path, backend, version } = query;
     return this.ajax(this._urlForSecret(backend, path, version), 'GET').then((resp) => {
-      resp.id = `${encodePath(backend)}/${version}/${encodePath(path)}`;
+      resp.id = `${backend}/data/${path}?version=${version}`;
+      return resp;
+    });
+  }
+
+  findRecord(store, type, id) {
+    return this.ajax(`${this.buildURL()}/${id}`, 'GET').then((resp) => {
+      resp.id = id;
       return resp;
     });
   }
 
   /* Five types of delete operations */
   deleteRecord(store, type, snapshot) {
-    const { backend, path, deleteType, deleteVersions } = snapshot;
+    const { backend, path } = snapshot.record;
+    const { deleteType, deleteVersions } = snapshot.adapterOptions;
+
     if (!backend || !path) {
       throw new Error('The request to delete or undelete is missing required attributes.');
     }
@@ -53,9 +66,7 @@ export default class KvDataAdapter extends ApplicationAdapter {
           data: { versions: deleteVersions },
         });
       case 'destroy-everything':
-        return this.ajax(this._urlForSecret(backend, path), 'POST', {
-          data: { versions: deleteVersions },
-        });
+        return this.ajax(`${this.buildURL()}/${encodePath(backend)}/metadata/${encodePath(path)}`, 'DELETE');
       case 'undelete-specific-version':
         return this.ajax(`${this.buildURL()}/${encodePath(backend)}/undelete/${encodePath(path)}`, 'POST', {
           data: { versions: deleteVersions },

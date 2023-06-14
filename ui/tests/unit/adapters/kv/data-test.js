@@ -17,7 +17,9 @@ module('Unit | Adapter | kv/data', function (hooks) {
     this.secretMountPath = this.owner.lookup('service:secret-mount-path');
     this.backend = 'kv-backend';
     this.secretMountPath.currentPath = this.backend;
-    this.path = 'my-secret-path';
+    this.path = 'beep/bop/my-secret';
+    this.version = '2';
+    this.id = `${encodePath(this.backend)}/data/${encodePath(this.path)}?version=${this.version}`;
     this.data = {
       options: {
         cas: 2,
@@ -26,21 +28,16 @@ module('Unit | Adapter | kv/data', function (hooks) {
         foo: 'bar',
       },
     };
+    this.payload = {
+      backend: this.backend,
+      path: this.path,
+      version: 2,
+    };
   });
 
   hooks.afterEach(function () {
     this.store.unloadAll('kv/data');
     this.server.shutdown();
-  });
-
-  test('it should make request to correct endpoint on queryRecord', async function (assert) {
-    assert.expect(2);
-    this.server.get(`${this.backend}/data/${this.path}`, (schema, req) => {
-      assert.strictEqual(req.queryParams.version, '2', 'request includes the version flag on queryRecord.');
-      assert.ok(true, 'request is made to correct url on queryRecord.');
-    });
-
-    this.store.queryRecord('kv/data', { backend: this.backend, path: this.path, version: 2 });
   });
 
   test('it should make request to correct endpoint on createRecord', async function (assert) {
@@ -52,28 +49,123 @@ module('Unit | Adapter | kv/data', function (hooks) {
     await record.save();
   });
 
-  test('it should make request to correct endpoint on delete', async function (assert) {
+  test('it should make request to correct endpoint on queryRecord', async function (assert) {
+    assert.expect(2);
+    this.server.get(`${this.backend}/data/${this.path}`, (schema, req) => {
+      assert.strictEqual(
+        req.queryParams.version,
+        this.version,
+        'request includes the version flag on queryRecord.'
+      );
+      assert.ok(true, 'request is made to correct url on queryRecord.');
+    });
+
+    this.store.queryRecord('kv/data', this.payload);
+  });
+
+  test('it should make request to correct endpoint on delete latest version', async function (assert) {
     assert.expect(1);
-    const id = `${encodePath(this.backend)}/2/${encodePath(this.path)}`;
-
-    this.server.get(`${this.backend}/data/${this.path}`, () => {});
-
-    this.server.delete(`${this.backend}/key/${this.data.key_id}`, (schema, req) => {
-      assert.strictEqual(req.queryParams.version, '2', 'request includes the version flag on queryRecord.');
-      assert.ok(true, 'request made to correct endpoint on delete');
+    this.server.get(`${this.backend}/data/${this.path}`, () => {
+      return { id: this.id };
+    });
+    // delete-latest-version
+    this.server.delete(`${this.backend}/data/${this.path}`, () => {
+      assert.ok(true, 'request made to correct endpoint on delete latest version.');
     });
 
     this.store.pushPayload('kv/data', {
       modelName: 'kv/data',
-      backend: this.backend,
-      path: this.path,
-      version: 2,
-      deleteVersions: [2],
-      id,
+      id: this.id,
+      ...this.payload,
+    });
+    const record = await this.store.findRecord('kv/data', this.id);
+    await record.destroyRecord({ adapterOptions: { deleteType: 'delete-latest-version' } });
+  });
+
+  test('it should make request to correct endpoint on delete specific versions', async function (assert) {
+    assert.expect(2);
+    this.server.get(`${this.backend}/data/${this.path}`, () => {
+      return { id: this.id };
+    });
+    this.server.post(`${this.backend}/data/${this.path}`, (schema, req) => {
+      const { versions } = JSON.parse(req.requestBody);
+      assert.strictEqual(versions, 2, 'version array is sent in the payload.');
+      assert.ok(true, 'request made to correct endpoint on delete specific version.');
     });
 
-    const model = this.store.peekRecord('kv/data', id);
+    this.store.pushPayload('kv/data', {
+      modelName: 'kv/data',
+      id: this.id,
+      ...this.payload,
+    });
+    const record = await this.store.findRecord('kv/data', this.id);
+    await record.destroyRecord({
+      adapterOptions: { deleteType: 'delete-specific-version', deleteVersions: 2 },
+    });
+  });
 
-    await model.destroyRecord();
+  test('it should make request to correct endpoint on undelete', async function (assert) {
+    assert.expect(2);
+    this.server.get(`${this.backend}/data/${this.path}`, () => {
+      return { id: this.id };
+    });
+    this.server.post(`${this.backend}/undelete/${this.path}`, (schema, req) => {
+      const { versions } = JSON.parse(req.requestBody);
+      assert.strictEqual(versions, 2, 'version array is sent in the payload.');
+      assert.ok(true, 'request made to correct endpoint on undelete specific version.');
+    });
+
+    this.store.pushPayload('kv/data', {
+      modelName: 'kv/data',
+      id: this.id,
+      ...this.payload,
+    });
+    const record = await this.store.findRecord('kv/data', this.id);
+
+    await record.destroyRecord({
+      adapterOptions: { deleteType: 'undelete-specific-version', deleteVersions: 2 },
+    });
+  });
+
+  test('it should make request to correct endpoint on destroy specific versions', async function (assert) {
+    assert.expect(2);
+    this.server.get(`${this.backend}/data/${this.path}`, () => {
+      return { id: this.id };
+    });
+    this.server.put(`${this.backend}/destroy/${this.path}`, (schema, req) => {
+      const { versions } = JSON.parse(req.requestBody);
+      assert.strictEqual(versions, 2, 'version array is sent in the payload.');
+      assert.ok(true, 'request made to correct endpoint on destroy specific version.');
+    });
+
+    this.store.pushPayload('kv/data', {
+      modelName: 'kv/data',
+      id: this.id,
+      ...this.payload,
+    });
+    const record = await this.store.findRecord('kv/data', this.id);
+    await record.destroyRecord({
+      adapterOptions: { deleteType: 'destroy-specific-version', deleteVersions: 2 },
+    });
+  });
+
+  test('it should make request to correct endpoint on destroy everything', async function (assert) {
+    assert.expect(1);
+    this.server.get(`${this.backend}/data/${this.path}`, () => {
+      return { id: this.id };
+    });
+    this.server.delete(`${this.backend}/metadata/${this.path}`, () => {
+      assert.ok(true, 'request made to correct endpoint on destroy everything.');
+    });
+
+    this.store.pushPayload('kv/data', {
+      modelName: 'kv/data',
+      id: this.id,
+      ...this.payload,
+    });
+    const record = await this.store.findRecord('kv/data', this.id);
+    await record.destroyRecord({
+      adapterOptions: { deleteType: 'destroy-everything' },
+    });
   });
 });
