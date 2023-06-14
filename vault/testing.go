@@ -1154,6 +1154,9 @@ type TestClusterOptions struct {
 	// this stores the vault version that should be used for each core config
 	VersionMap        map[int]string
 	RedundancyZoneMap map[int]string
+
+	// ABCDLoggerNames names the loggers according to our ABCD convention when generating 4 clusters
+	ABCDLoggerNames bool
 }
 
 var DefaultNumCores = 3
