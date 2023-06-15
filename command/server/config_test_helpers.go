@@ -1029,6 +1029,7 @@ func testParseSeals(t *testing.T) {
 			},
 		},
 	}
+	addExpectedDefaultEntConfig(expected)
 	config.Prune()
 	require.Equal(t, config, expected)
 }
