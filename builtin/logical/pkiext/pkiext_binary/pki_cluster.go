@@ -109,8 +109,8 @@ func (vpc *VaultPkiCluster) GetActiveNode() *api.Client {
 	return vpc.GetActiveClusterNode().APIClient()
 }
 
-// GetCACertPEM returns the Vault cluster's PEM-encoded CA certificate.
-func (vpc *VaultPkiCluster) GetCACertPEM() []byte {
+// GetListenerCACertPEM returns the Vault cluster's PEM-encoded CA certificate.
+func (vpc *VaultPkiCluster) GetListenerCACertPEM() []byte {
 	return vpc.cluster.CACertPEM
 }
 

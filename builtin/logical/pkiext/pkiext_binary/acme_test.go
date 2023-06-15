@@ -156,12 +156,6 @@ func SubtestACMECaddy(configTemplate string, enableEAB bool) func(*testing.T, *V
 		err = pki.AddHostname(hostname, ipAddr)
 		require.NoError(t, err, "failed to update vault host files")
 
-		// Copy the Vault cluster's CA certificate over to the Caddy container.
-		caCertCtx := hDocker.NewBuildContext()
-		caCertCtx["vault_ca_cert.crt"] = hDocker.PathContentsFromString(string(cluster.GetCACertPEM()))
-		err = caddyRunner.CopyTo(caddyResult.Container.ID, "/tmp/", caCertCtx)
-		require.NoError(t, err, "failed to copy Vault CA certificate to Caddy container")
-
 		// Render the Caddy configuration from the specified template.
 		tmpl, err := template.New("config").Parse(configTemplate)
 		require.NoError(t, err, "failed to parse Caddy config template")
@@ -178,11 +172,12 @@ func SubtestACMECaddy(configTemplate string, enableEAB bool) func(*testing.T, *V
 		)
 		require.NoError(t, err, "failed to render Caddy config template")
 
-		// Push the Caddy config over to the docker container.
-		cfgCtx := hDocker.NewBuildContext()
-		cfgCtx["caddy_config.json"] = hDocker.PathContentsFromString(b.String())
-		err = caddyRunner.CopyTo(caddyResult.Container.ID, "/tmp/", cfgCtx)
-		require.NoError(t, err, "failed to copy Caddy config to container")
+		// Push the Caddy config and the cluster listener's CA certificate over to the docker container.
+		cpCtx := hDocker.NewBuildContext()
+		cpCtx["caddy_config.json"] = hDocker.PathContentsFromString(b.String())
+		cpCtx["vault_ca_cert.crt"] = hDocker.PathContentsFromString(string(cluster.GetListenerCACertPEM()))
+		err = caddyRunner.CopyTo(caddyResult.Container.ID, "/tmp/", cpCtx)
+		require.NoError(t, err, "failed to copy Caddy config and Vault listener CA certificate to container")
 
 		// Start the Caddy server.
 		caddyCmd := []string{
