@@ -28,7 +28,7 @@ func addKnownPath(*Core, string)                                              {}
 func preprocessMount(*Core, *MountEntry, *BarrierView) (bool, error)          { return false, nil }
 func clearIgnoredPaths(context.Context, *Core, logical.Backend, string) error { return nil }
 func addLicenseCallback(*Core, logical.Backend)                               {}
-func runFilteredPathsEvaluation(context.Context, *Core) error                 { return nil }
+func runFilteredPathsEvaluation(context.Context, *Core, bool) error           { return nil }
 
 // ViewPath returns storage prefix for the view
 func (e *MountEntry) ViewPath() string {
