@@ -3,8 +3,8 @@ package pki
 import (
 	"bytes"
 	"context"
-	"crypto/subtle"
 	"crypto/sha256"
+	"crypto/subtle"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/asn1"
