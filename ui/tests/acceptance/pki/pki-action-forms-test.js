@@ -280,7 +280,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       await assert.dom(S.configuration.csrDetails).exists('renders CSR details after save');
       assert.dom(S.configuration.title).hasText('View generated CSR');
       assert
-        .dom('[data-test-alert-banner]')
+        .dom('[data-test-next-steps-csr]')
         .hasText(
           'Next steps Copy the CSR below for a parent issuer to sign and then import the signed certificate back into this mount. The private_key is only available once. Make sure you copy and save it now.'
         );
