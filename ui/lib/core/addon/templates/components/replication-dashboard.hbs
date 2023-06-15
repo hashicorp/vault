@@ -57,13 +57,13 @@
   {{/if}}
   {{#if this.isSyncing}}
     <div class="syncing-alert">
-      <AlertBanner
-        @title="Syncing in progress"
-        @type="info"
-        @showLoading={{true}}
-        @message="The cluster is syncing. This happens when the secondary is too far behind the primary to use the normal stream-wals state for catching up."
-        data-test-isSyncing
-      />
+      <Hds::Alert data-test-isSyncing @type="inline" @color="highlight" @icon="loading" as |A|>
+        <A.Title>Syncing in progress</A.Title>
+        <A.Description>
+          The cluster is syncing. This happens when the secondary is too far behind the primary to use the normal stream-wals
+          state for catching up.
+        </A.Description>
+      </Hds::Alert>
     </div>
   {{/if}}
   {{#unless this.isSummaryDashboard}}
