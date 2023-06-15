@@ -486,12 +486,16 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		}
 	} else {
 		if response[0].Error != "" || response[0].err != nil {
+			errorCode := response[0].err
+			switch response[0].err.(type) {
+			case errutil.UserError:
+				errorCode = logical.ErrInvalidRequest
+			}
 			p.Unlock()
 			if response[0].Error != "" {
-				return logical.ErrorResponse(response[0].Error), response[0].err
+				return logical.ErrorResponse(response[0].Error), errorCode
 			}
-
-			return nil, response[0].err
+			return nil, errorCode
 		}
 
 		resp.Data = map[string]interface{}{
