@@ -1,6 +1,9 @@
 <div class="box is-sideless is-fullwidth is-marginless">
   {{#if this.errorBanner}}
-    <AlertBanner @type="danger" @message={{this.errorBanner}} data-test-error-banner />
+    <Hds::Alert data-test-config-edit-error @type="inline" @color="critical" as |A|>
+      <A.Title>Error</A.Title>
+      <A.Description>{{this.errorBanner}}</A.Description>
+    </Hds::Alert>
   {{/if}}
   <form {{on "submit" (perform this.save)}}>
     <fieldset class="is-shadowless is-marginless is-borderless is-fullwidth" data-test-cluster-config-edit-section>

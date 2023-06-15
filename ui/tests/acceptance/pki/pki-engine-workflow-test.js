@@ -466,7 +466,7 @@ module('Acceptance | pki workflow', function (hooks) {
       // but we're just testing that route model was parsed and passed as expected
       await visit(`/vault/secrets/${this.mountPath}/pki/issuers/${issuerId}/rotate-root`);
       assert
-        .dom('[data-test-warning-banner]')
+        .dom('[data-test-parsing-warning]')
         .hasTextContaining(
           'Not all of the certificate values could be parsed and transferred to new root',
           'it renders warning banner'
@@ -475,7 +475,7 @@ module('Acceptance | pki workflow', function (hooks) {
       await fillIn('[data-test-input="issuerName"]', 'existing-issuer');
       await click('[data-test-pki-rotate-root-save]');
       assert
-        .dom('[data-test-error-banner]')
+        .dom('[data-test-rotate-error]')
         .hasText('Error issuer name already in use', 'it renders error banner');
     });
   });
