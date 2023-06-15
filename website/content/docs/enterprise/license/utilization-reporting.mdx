@@ -281,6 +281,7 @@ HashiCorp collects the following utilization data as JSON payloads:
 </CodeBlockConfig>
 
 ## Pre-1.9 Counts
+
 When upgrading Vault from 1.8 (or earlier) to 1.9 (or later), utilization reporting will only include the [non-entity tokens](/vault/docs/concepts/client-count#non-entity-tokens) that are used after the upgrade.
 
 Starting in Vault 1.9, the activity log records and de-duplicates non-entity tokens by using the namespace and token's policies to generate a unique identifier. Because Vault did not create identifiers for these tokens before 1.9, the activity log cannot know whether this token has been seen pre-1.9. To prevent inaccurate and inflated counts, the activity log will ignore any counts of non-entity tokens that were created before the upgrade and only the non-entity tokens from versions 1.9 and later will be counted.
