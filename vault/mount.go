@@ -484,23 +484,17 @@ func (c *Core) mount(ctx context.Context, entry *MountEntry) error {
 		return err
 	}
 
-	// Re-evaluate filtered paths
-	if err := runFilteredPathsEvaluation(ctx, c); err != nil {
-		c.logger.Error("failed to evaluate filtered paths", "error", err)
-
-		// We failed to evaluate filtered paths so we are undoing the mount operation
-		if unmountInternalErr := c.unmountInternal(ctx, entry.Path, MountTableUpdateStorage); unmountInternalErr != nil {
-			c.logger.Error("failed to unmount", "error", unmountInternalErr)
-		}
-		return err
-	}
-
 	return nil
 }
 
 func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStorage bool) error {
 	c.mountsLock.Lock()
-	defer c.mountsLock.Unlock()
+	c.authLock.Lock()
+	unlock := func() {
+		c.authLock.Unlock()
+		c.mountsLock.Unlock()
+	}
+	defer unlock()
 
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
@@ -575,6 +569,7 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	if err != nil {
 		return err
 	}
+
 	origReadOnlyErr := view.getReadOnlyErr()
 
 	// Mark the view as read-only until the mounting is complete and
@@ -634,6 +629,19 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 		return err
 	}
 
+	// Re-evaluate filtered paths
+	if err := runFilteredPathsEvaluation(ctx, c, false); err != nil {
+		c.logger.Error("failed to evaluate filtered paths", "error", err)
+
+		unlock()
+		unlock = func() {}
+		// We failed to evaluate filtered paths so we are undoing the mount operation
+		if unmountInternalErr := c.unmountInternal(ctx, entry.Path, MountTableUpdateStorage); unmountInternalErr != nil {
+			c.logger.Error("failed to unmount", "error", unmountInternalErr)
+		}
+		return err
+	}
+
 	if !nilMount {
 		// restore the original readOnlyErr, so we can write to the view in
 		// Initialize() if necessary
@@ -672,7 +680,7 @@ func (c *Core) unmount(ctx context.Context, path string) error {
 	}
 
 	// Re-evaluate filtered paths
-	if err := runFilteredPathsEvaluation(ctx, c); err != nil {
+	if err := runFilteredPathsEvaluation(ctx, c, true); err != nil {
 		// Even we failed to evaluate filtered paths, the unmount operation was still successful
 		c.logger.Error("failed to evaluate filtered paths", "error", err)
 	}
@@ -876,11 +884,6 @@ func (c *Core) remountForceInternal(ctx context.Context, path string, updateStor
 		return err
 	}
 
-	// Re-evaluate filtered paths
-	if err := runFilteredPathsEvaluation(ctx, c); err != nil {
-		c.logger.Error("failed to evaluate filtered paths", "error", err)
-		return err
-	}
 	return nil
 }
 
