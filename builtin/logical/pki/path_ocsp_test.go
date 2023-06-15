@@ -423,7 +423,7 @@ func TestOcsp_HigherLevel(t *testing.T) {
 	require.NotNil(t, resp, "got nil response from revoke")
 
 	// Make sure that OCSP handler responds properly
-	ocspReq := generateRequest(t, crypto.SHA256, certToRevoke, issuerCert)
+	ocspReq := generateOcspRequest(t, crypto.SHA256, certToRevoke, issuerCert)
 	ocspPostReq := client.NewRequest(http.MethodPost, "/v1/pki/ocsp")
 	ocspPostReq.Headers.Set("Content-Type", "application/ocsp-request")
 	ocspPostReq.BodyBytes = ocspReq
@@ -678,7 +678,7 @@ func setupOcspEnvWithCaKeyConfig(t *testing.T, keyType string, caKeyBits int, ca
 func SendOcspRequest(t *testing.T, b *backend, s logical.Storage, getOrPost string, cert, issuer *x509.Certificate, requestHash crypto.Hash) (*logical.Response, error) {
 	t.Helper()
 
-	ocspRequest := generateRequest(t, requestHash, cert, issuer)
+	ocspRequest := generateOcspRequest(t, requestHash, cert, issuer)
 
 	switch strings.ToLower(getOrPost) {
 	case "get":
@@ -709,20 +709,4 @@ func sendOcspPostRequest(b *backend, s logical.Storage, ocspRequest []byte) (*lo
 	})
 
 	return resp, err
-}
-
-func generateRequest(t *testing.T, requestHash crypto.Hash, cert *x509.Certificate, issuer *x509.Certificate) []byte {
-	t.Helper()
-
-	opts := &ocsp.RequestOptions{Hash: requestHash}
-	ocspRequestDer, err := ocsp.CreateRequest(cert, issuer, opts)
-	require.NoError(t, err, "Failed generating OCSP request")
-	return ocspRequestDer
-}
-
-func requireOcspResponseSignedBy(t *testing.T, ocspResp *ocsp.Response, issuer *x509.Certificate) {
-	t.Helper()
-
-	err := ocspResp.CheckSignatureFrom(issuer)
-	require.NoError(t, err, "Failed signature verification of ocsp response: %w", err)
 }
