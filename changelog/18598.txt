@@ -1,0 +1,3 @@
+```release-note:bug
+core/activity: include mount counts when de-duplicating current and historical month data
+```
