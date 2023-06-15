@@ -109,6 +109,11 @@ func (vpc *VaultPkiCluster) GetActiveNode() *api.Client {
 	return vpc.GetActiveClusterNode().APIClient()
 }
 
+// GetCACertPEM returns the Vault cluster's PEM-encoded CA certificate.
+func (vpc *VaultPkiCluster) GetCACertPEM() []byte {
+	return vpc.cluster.CACertPEM
+}
+
 func (vpc *VaultPkiCluster) AddHostname(hostname, ip string) error {
 	if vpc.Dns != nil {
 		vpc.Dns.AddRecord(hostname, "A", ip)
