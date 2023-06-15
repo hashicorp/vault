@@ -1,4 +1,5 @@
-### update-primary can lead to data loss
+### update-primary can lead to data loss ((#update-primary-data-loss))
+
 
 It's possible to lose data from a Vault cluster given a particular configuration
 and sequence of steps.  This page describes two paths to data loss, both
@@ -79,6 +80,6 @@ Reindexing the performance secondary will update the merkle tree to reflect the 
 storage entries and allow missing shared data to be replaced by replication.  **However,
 any local data on shared mounts (such as PKI certs) will not be recoverable.**
 
-#### Impacted Versions
+#### Impacted Versions 
 
 Affects all current versions of Vault.
