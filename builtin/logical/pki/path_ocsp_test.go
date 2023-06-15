@@ -423,7 +423,7 @@ func TestOcsp_HigherLevel(t *testing.T) {
 	require.NotNil(t, resp, "got nil response from revoke")
 
 	// Make sure that OCSP handler responds properly
-	ocspReq := generateOcspRequest(t, crypto.SHA256, certToRevoke, issuerCert)
+	ocspReq := generateRequest(t, crypto.SHA256, certToRevoke, issuerCert)
 	ocspPostReq := client.NewRequest(http.MethodPost, "/v1/pki/ocsp")
 	ocspPostReq.Headers.Set("Content-Type", "application/ocsp-request")
 	ocspPostReq.BodyBytes = ocspReq
@@ -678,7 +678,7 @@ func setupOcspEnvWithCaKeyConfig(t *testing.T, keyType string, caKeyBits int, ca
 func SendOcspRequest(t *testing.T, b *backend, s logical.Storage, getOrPost string, cert, issuer *x509.Certificate, requestHash crypto.Hash) (*logical.Response, error) {
 	t.Helper()
 
-	ocspRequest := generateOcspRequest(t, requestHash, cert, issuer)
+	ocspRequest := generateRequest(t, requestHash, cert, issuer)
 
 	switch strings.ToLower(getOrPost) {
 	case "get":

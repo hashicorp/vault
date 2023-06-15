@@ -397,7 +397,7 @@ func summarizeCrl(t *testing.T, crl pkix.TBSCertificateList) string {
 }
 
 // OCSP helpers
-func generateOcspRequest(t *testing.T, requestHash crypto.Hash, cert *x509.Certificate, issuer *x509.Certificate) []byte {
+func generateRequest(t *testing.T, requestHash crypto.Hash, cert *x509.Certificate, issuer *x509.Certificate) []byte {
 	t.Helper()
 
 	opts := &ocsp.RequestOptions{Hash: requestHash}
@@ -418,7 +418,7 @@ func performOcspPost(t *testing.T, cert *x509.Certificate, issuerCert *x509.Cert
 
 	baseClient := client.WithNamespace("")
 
-	ocspReq := generateOcspRequest(t, crypto.SHA256, cert, issuerCert)
+	ocspReq := generateRequest(t, crypto.SHA256, cert, issuerCert)
 	ocspPostReq := baseClient.NewRequest(http2.MethodPost, ocspPath)
 	ocspPostReq.Headers.Set("Content-Type", "application/ocsp-request")
 	ocspPostReq.BodyBytes = ocspReq
