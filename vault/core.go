@@ -3570,8 +3570,8 @@ func (c *Core) ListAuths() ([]*MountEntry, error) {
 		return nil, fmt.Errorf("vault is sealed")
 	}
 
-	c.mountsLock.RLock()
-	defer c.mountsLock.RUnlock()
+	c.authLock.RLock()
+	defer c.authLock.RUnlock()
 
 	var entries []*MountEntry
 
