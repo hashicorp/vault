@@ -51,10 +51,9 @@ func Test_ACME(t *testing.T) {
 	defer cluster.Cleanup()
 
 	tc := map[string]func(t *testing.T, cluster *VaultPkiCluster){
-		"caddy http":     SubtestACMECaddy(caddyConfigTemplateHTTP, false),
-		"caddy http eab": SubtestACMECaddy(caddyConfigTemplateHTTPEAB, true),
-		// TODO: Investigate the root cause of this test failure. - schultz
-		// "caddy tls-alpn":    SubtestACMECaddy(caddyConfigTemplateTLSALPN, false),
+		"caddy http":        SubtestACMECaddy(caddyConfigTemplateHTTP, false),
+		"caddy http eab":    SubtestACMECaddy(caddyConfigTemplateHTTPEAB, true),
+		"caddy tls-alpn":    SubtestACMECaddy(caddyConfigTemplateTLSALPN, false),
 		"certbot":           SubtestACMECertbot,
 		"certbot eab":       SubtestACMECertbotEab,
 		"acme ip sans":      SubtestACMEIPAndDNS,
