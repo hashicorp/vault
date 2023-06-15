@@ -194,7 +194,7 @@ func Test_Something_With_Docker(t *testing.T) {
 ```
 
 A more realistic example follows.  In this case, the test should be run
-with VAULT_BINARY pointing at a local Linux amd64 vault binary on disk
+with VAULT_BINARY pointing at a local Linux vault binary on disk
 that you wish to run inside the docker containers.  If it's an Enterprise
 binary, you'll also need to set VAULT_LICENSE. Optionally you can set
 COMMIT_SHA, which will be appended to the image name we build as a 
