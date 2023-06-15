@@ -638,6 +638,7 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	if strutil.StrListContains(singletonMounts, entry.Type) {
 		addFilterablePath(c, viewPath)
 	}
+	addKnownPath(c, viewPath)
 
 	nilMount, err := preprocessMount(c, entry, view)
 	if err != nil {
@@ -1449,6 +1450,7 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		if strutil.StrListContains(singletonMounts, entry.Type) {
 			addFilterablePath(c, barrierPath)
 		}
+		addKnownPath(c, barrierPath)
 
 		// Determining the replicated state of the mount
 		nilMount, err := preprocessMount(c, entry, view)
