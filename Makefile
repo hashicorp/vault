@@ -139,6 +139,21 @@ vet-godoctests: bootstrap tools/godoctests/.bin/godoctests
 ci-vet-godoctests: ci-bootstrap tools/godoctests/.bin/godoctests
 	@$(GO_CMD) vet -vettool=./tools/godoctests/.bin/godoctests $(TEST) 2>&1 | revgrep origin/main
 
+# tools/gonilnilfunctions/.bin/gonilnilfunctions builds the custom analyzer to check for nil, nil function returns
+tools/gonilnilfunctions/.bin/gonilnilfunctions:
+	@cd tools/gonilnilfunctions && $(GO_CMD) build -o .bin/gonilnilfunctions .
+
+# vet-gonilnilfunctions runs gonilnilfunctions on functions. All output gets piped to revgrep
+# which will only return an error if a new function returns nil, nil (where one of the nils could be an error)
+vet-gonilnilfunctions: bootstrap tools/gonilnilfunctions/.bin/gonilnilfunctions
+	@$(GO_CMD) vet -vettool=./tools/gonilnilfunctions/.bin/gonilnilfunctions ./... 2>&1 | revgrep
+
+# ci-vet-gonilnilfunctions runs gonilnilfunctions on functions. All output gets piped to revgrep
+# which will only return an error if a new function that is not on main has an issue
+ci-vet-gonilnilfunctions: ci-bootstrap tools/gonilnilfunctions/.bin/gonilnilfunctions
+	@$(GO_CMD) vet -vettool=./tools/gonilnilfunctions/.bin/gonilnilfunctions ./... 2>&1 | revgrep origin/main
+
+
 # lint runs vet plus a number of other checkers, it is more comprehensive, but louder
 lint:
 	@$(GO_CMD) list -f '{{.Dir}}' ./... | grep -v /vendor/ \
@@ -281,7 +296,7 @@ hana-database-plugin:
 mongodb-database-plugin:
 	@CGO_ENABLED=0 $(GO_CMD) build -o bin/mongodb-database-plugin ./plugins/database/mongodb/mongodb-database-plugin
 
-.PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path packages build build-ci semgrep semgrep-ci vet-godoctests ci-vet-godoctests
+.PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path packages build build-ci semgrep semgrep-ci vet-godoctests ci-vet-godoctests vet-gonilnilfunctions ci-vet-gonilnilfunctions
 
 .NOTPARALLEL: ember-dist ember-dist-dev
 

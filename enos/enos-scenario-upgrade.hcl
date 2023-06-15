@@ -42,9 +42,9 @@ scenario "upgrade" {
       ubuntu = provider.enos.ubuntu
     }
     spot_price_max = {
-      // These prices are based on on-demand cost for t3.medium in us-east
-      "rhel"   = "0.1016"
-      "ubuntu" = "0.0416"
+      // These prices are based on on-demand cost for t3.large in us-east
+      "rhel"   = "0.1432"
+      "ubuntu" = "0.0832"
     }
     tags = merge({
       "Project Name" : var.project_name
@@ -176,21 +176,19 @@ scenario "upgrade" {
     variables {
       awskms_unseal_key_arn = step.create_vpc.kms_key_arn
       cluster_name          = step.create_vault_cluster_targets.cluster_name
-      config_env_vars = {
-        VAULT_LOG_LEVEL = var.vault_log_level
-      }
-      consul_cluster_tag = step.create_backend_cluster.consul_cluster_tag
+      consul_cluster_tag    = step.create_backend_cluster.consul_cluster_tag
       consul_release = matrix.backend == "consul" ? {
         edition = var.backend_edition
         version = matrix.consul_version
       } : null
-      install_dir     = local.vault_install_dir
-      license         = matrix.edition != "oss" ? step.read_license.license : null
-      packages        = local.packages
-      release         = var.vault_upgrade_initial_release
-      storage_backend = matrix.backend
-      target_hosts    = step.create_vault_cluster_targets.hosts
-      unseal_method   = matrix.seal
+      install_dir              = local.vault_install_dir
+      license                  = matrix.edition != "oss" ? step.read_license.license : null
+      packages                 = local.packages
+      release                  = var.vault_upgrade_initial_release
+      storage_backend          = matrix.backend
+      target_hosts             = step.create_vault_cluster_targets.hosts
+      unseal_method            = matrix.seal
+      enable_file_audit_device = var.vault_enable_file_audit_device
     }
   }
 
@@ -400,5 +398,10 @@ scenario "upgrade" {
   output "unseal_keys_hex" {
     description = "The Vault cluster unseal keys hex"
     value       = step.create_vault_cluster.unseal_keys_hex
+  }
+
+  output "vault_audit_device_file_path" {
+    description = "The file path for the file audit device, if enabled"
+    value       = step.create_vault_cluster.audit_device_file_path
   }
 }

@@ -52,9 +52,9 @@ scenario "replication" {
       ubuntu = provider.enos.ubuntu
     }
     spot_price_max = {
-      // These prices are based on on-demand cost for t3.medium in us-east
-      "rhel"   = "0.1016"
-      "ubuntu" = "0.0416"
+      // These prices are based on on-demand cost for t3.large in us-east
+      "rhel"   = "0.1432"
+      "ubuntu" = "0.0832"
     }
     tags = merge({
       "Project Name" : var.project_name
@@ -179,21 +179,19 @@ scenario "replication" {
       artifactory_release   = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
       awskms_unseal_key_arn = step.create_vpc.kms_key_arn
       cluster_name          = step.create_primary_cluster_targets.cluster_name
-      config_env_vars = {
-        VAULT_LOG_LEVEL = var.vault_log_level
-      }
-      consul_cluster_tag = step.create_primary_backend_cluster.consul_cluster_tag
+      consul_cluster_tag    = step.create_primary_backend_cluster.consul_cluster_tag
       consul_release = matrix.primary_backend == "consul" ? {
         edition = var.backend_edition
         version = matrix.consul_version
       } : null
-      install_dir         = local.vault_install_dir
-      license             = matrix.edition != "oss" ? step.read_license.license : null
-      local_artifact_path = local.bundle_path
-      packages            = local.packages
-      storage_backend     = matrix.primary_backend
-      target_hosts        = step.create_primary_cluster_targets.hosts
-      unseal_method       = matrix.primary_seal
+      install_dir              = local.vault_install_dir
+      license                  = matrix.edition != "oss" ? step.read_license.license : null
+      local_artifact_path      = local.bundle_path
+      packages                 = local.packages
+      storage_backend          = matrix.primary_backend
+      target_hosts             = step.create_primary_cluster_targets.hosts
+      unseal_method            = matrix.primary_seal
+      enable_file_audit_device = var.vault_enable_file_audit_device
     }
   }
 
@@ -252,21 +250,19 @@ scenario "replication" {
       artifactory_release   = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
       awskms_unseal_key_arn = step.create_vpc.kms_key_arn
       cluster_name          = step.create_secondary_cluster_targets.cluster_name
-      config_env_vars = {
-        VAULT_LOG_LEVEL = var.vault_log_level
-      }
-      consul_cluster_tag = step.create_secondary_backend_cluster.consul_cluster_tag
+      consul_cluster_tag    = step.create_secondary_backend_cluster.consul_cluster_tag
       consul_release = matrix.secondary_backend == "consul" ? {
         edition = var.backend_edition
         version = matrix.consul_version
       } : null
-      install_dir         = local.vault_install_dir
-      license             = matrix.edition != "oss" ? step.read_license.license : null
-      local_artifact_path = local.bundle_path
-      packages            = local.packages
-      storage_backend     = matrix.secondary_backend
-      target_hosts        = step.create_secondary_cluster_targets.hosts
-      unseal_method       = matrix.secondary_seal
+      install_dir              = local.vault_install_dir
+      license                  = matrix.edition != "oss" ? step.read_license.license : null
+      local_artifact_path      = local.bundle_path
+      packages                 = local.packages
+      storage_backend          = matrix.secondary_backend
+      target_hosts             = step.create_secondary_cluster_targets.hosts
+      unseal_method            = matrix.secondary_seal
+      enable_file_audit_device = var.vault_enable_file_audit_device
     }
   }
 
@@ -511,10 +507,7 @@ scenario "replication" {
       artifactory_release   = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
       awskms_unseal_key_arn = step.create_vpc.kms_key_arn
       cluster_name          = step.create_primary_cluster_targets.cluster_name
-      config_env_vars = {
-        VAULT_LOG_LEVEL = var.vault_log_level
-      }
-      consul_cluster_tag = step.create_primary_backend_cluster.consul_cluster_tag
+      consul_cluster_tag    = step.create_primary_backend_cluster.consul_cluster_tag
       consul_release = matrix.primary_backend == "consul" ? {
         edition = var.backend_edition
         version = matrix.consul_version
@@ -731,5 +724,10 @@ scenario "replication" {
   output "updated_secondary_replication_data_primaries" {
     description = "The Vault updated secondary cluster primaries connection status"
     value       = step.verify_updated_performance_replication.secondary_replication_data_primaries
+  }
+
+  output "vault_audit_device_file_path" {
+    description = "The file path for the file audit device, if enabled"
+    value       = step.create_primary_cluster.audit_device_file_path
   }
 }

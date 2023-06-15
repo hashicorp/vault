@@ -69,6 +69,12 @@ variable "backend_license_path" {
   default     = null
 }
 
+variable "backend_log_level" {
+  description = "The server log level for the backend. Supported values include 'trace', 'debug', 'info', 'warn', 'error'"
+  type        = string
+  default     = "trace"
+}
+
 variable "project_name" {
   description = "The description of the project"
   type        = string
@@ -145,7 +151,7 @@ variable "vault_local_build_tags" {
 variable "vault_log_level" {
   description = "The server log level for Vault logs. Supported values (in order of detail) are trace, debug, info, warn, and err."
   type        = string
-  default     = "info"
+  default     = "trace"
 }
 
 variable "vault_build_date" {
@@ -198,5 +204,11 @@ variable "ui_test_filter" {
 variable "ui_run_tests" {
   type        = bool
   description = "Whether to run the UI tests or not. If set to false a cluster will be created but no tests will be run"
+  default     = true
+}
+
+variable "vault_enable_file_audit_device" {
+  description = "If true the file audit device will be enabled at the path /var/log/vault_audit.log"
+  type        = bool
   default     = true
 }

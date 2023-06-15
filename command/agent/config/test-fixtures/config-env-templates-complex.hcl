@@ -9,6 +9,8 @@ auto_auth {
   }
 }
 
+cache {}
+
 template_config {
   static_secret_render_interval = "5m"
   exit_on_retry_failure         = true

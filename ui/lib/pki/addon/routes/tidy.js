@@ -1,6 +1,6 @@
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
-import { withConfig } from 'pki/decorators/check-config';
+import { withConfig } from 'pki/decorators/check-issuers';
 import { hash } from 'rsvp';
 
 @withConfig()

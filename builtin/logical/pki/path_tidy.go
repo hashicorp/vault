@@ -72,23 +72,38 @@ type tidyStatus struct {
 }
 
 type tidyConfig struct {
-	Enabled                 bool          `json:"enabled"`
-	Interval                time.Duration `json:"interval_duration"`
-	CertStore               bool          `json:"tidy_cert_store"`
-	RevokedCerts            bool          `json:"tidy_revoked_certs"`
-	IssuerAssocs            bool          `json:"tidy_revoked_cert_issuer_associations"`
-	ExpiredIssuers          bool          `json:"tidy_expired_issuers"`
-	BackupBundle            bool          `json:"tidy_move_legacy_ca_bundle"`
-	TidyAcme                bool          `json:"tidy_acme"`
+	// AutoTidy config
+	Enabled  bool          `json:"enabled"`
+	Interval time.Duration `json:"interval_duration"`
+
+	// Tidy Operations
+	CertStore         bool `json:"tidy_cert_store"`
+	RevokedCerts      bool `json:"tidy_revoked_certs"`
+	IssuerAssocs      bool `json:"tidy_revoked_cert_issuer_associations"`
+	ExpiredIssuers    bool `json:"tidy_expired_issuers"`
+	BackupBundle      bool `json:"tidy_move_legacy_ca_bundle"`
+	RevocationQueue   bool `json:"tidy_revocation_queue"`
+	CrossRevokedCerts bool `json:"tidy_cross_cluster_revoked_certs"`
+	TidyAcme          bool `json:"tidy_acme"`
+
+	// Safety Buffers
 	SafetyBuffer            time.Duration `json:"safety_buffer"`
 	IssuerSafetyBuffer      time.Duration `json:"issuer_safety_buffer"`
+	QueueSafetyBuffer       time.Duration `json:"revocation_queue_safety_buffer"`
 	AcmeAccountSafetyBuffer time.Duration `json:"acme_account_safety_buffer"`
 	PauseDuration           time.Duration `json:"pause_duration"`
-	MaintainCount           bool          `json:"maintain_stored_certificate_counts"`
-	PublishMetrics          bool          `json:"publish_stored_certificate_count_metrics"`
-	RevocationQueue         bool          `json:"tidy_revocation_queue"`
-	QueueSafetyBuffer       time.Duration `json:"revocation_queue_safety_buffer"`
-	CrossRevokedCerts       bool          `json:"tidy_cross_cluster_revoked_certs"`
+
+	// Metrics.
+	MaintainCount  bool `json:"maintain_stored_certificate_counts"`
+	PublishMetrics bool `json:"publish_stored_certificate_count_metrics"`
+}
+
+func (tc *tidyConfig) IsAnyTidyEnabled() bool {
+	return tc.CertStore || tc.RevokedCerts || tc.IssuerAssocs || tc.ExpiredIssuers || tc.BackupBundle || tc.TidyAcme || tc.CrossRevokedCerts || tc.RevocationQueue
+}
+
+func (tc *tidyConfig) AnyTidyConfig() string {
+	return "tidy_cert_store / tidy_revoked_certs / tidy_revoked_cert_issuer_associations / tidy_expired_issuers / tidy_move_legacy_ca_bundle / tidy_revocation_queue / tidy_cross_cluster_revoked_certs / tidy_acme"
 }
 
 var defaultTidyConfig = tidyConfig{
@@ -809,8 +824,8 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	b.startTidyOperation(req, config)
 
 	resp := &logical.Response{}
-	if !tidyCertStore && !tidyRevokedCerts && !tidyRevokedAssocs && !tidyExpiredIssuers && !tidyBackupBundle && !tidyRevocationQueue && !tidyCrossRevokedCerts {
-		resp.AddWarning("No targets to tidy; specify tidy_cert_store=true or tidy_revoked_certs=true or tidy_revoked_cert_issuer_associations=true or tidy_expired_issuers=true or tidy_move_legacy_ca_bundle=true or tidy_revocation_queue=true or tidy_cross_cluster_revoked_certs=true to start a tidy operation.")
+	if !config.IsAnyTidyEnabled() {
+		resp.AddWarning("Manual tidy requested but no tidy operations were set. Enable at least one tidy operation to be run (" + config.AnyTidyConfig() + ").")
 	} else {
 		resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
 	}
@@ -1529,7 +1544,7 @@ func (b *backend) doTidyAcme(ctx context.Context, req *logical.Request, logger h
 	b.tidyStatus.acmeAccountsCount = uint(len(thumbprints))
 	b.tidyStatusLock.Unlock()
 
-	baseUrl, _, err := getAcmeBaseUrl(sc, req.Path)
+	baseUrl, _, err := getAcmeBaseUrl(sc, req)
 	if err != nil {
 		return err
 	}
@@ -1817,8 +1832,12 @@ func (b *backend) pathConfigAutoTidyWrite(ctx context.Context, req *logical.Requ
 		config.CrossRevokedCerts = crossRevokedRaw.(bool)
 	}
 
-	if config.Enabled && !(config.CertStore || config.RevokedCerts || config.IssuerAssocs || config.ExpiredIssuers || config.BackupBundle || config.RevocationQueue || config.CrossRevokedCerts) {
-		return logical.ErrorResponse("Auto-tidy enabled but no tidy operations were requested. Enable at least one tidy operation to be run (tidy_cert_store / tidy_revoked_certs / tidy_revoked_cert_issuer_associations / tidy_expired_issuers / tidy_move_legacy_ca_bundle / tidy_revocation_queue / tidy_cross_cluster_revoked_certs)."), nil
+	if tidyAcmeRaw, ok := d.GetOk("tidy_acme"); ok {
+		config.TidyAcme = tidyAcmeRaw.(bool)
+	}
+
+	if config.Enabled && !config.IsAnyTidyEnabled() {
+		return logical.ErrorResponse("Auto-tidy enabled but no tidy operations were requested. Enable at least one tidy operation to be run (" + config.AnyTidyConfig() + ")."), nil
 	}
 
 	if maintainCountEnabledRaw, ok := d.GetOk("maintain_stored_certificate_counts"); ok {

@@ -8,9 +8,13 @@ package vault
 import (
 	"context"
 	"fmt"
+	"io"
+	"sync"
+	"time"
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
@@ -53,7 +57,34 @@ func (b *SystemBackend) handleActivityWriteData(ctx context.Context, request *lo
 	if len(input.Data) == 0 {
 		return logical.ErrorResponse("Missing required \"data\" values"), logical.ErrInvalidRequest
 	}
-	return nil, nil
+
+	numMonths := 0
+	for _, month := range input.Data {
+		if int(month.GetMonthsAgo()) > numMonths {
+			numMonths = int(month.GetMonthsAgo())
+		}
+	}
+	generated := newMultipleMonthsActivityClients(numMonths + 1)
+	for _, month := range input.Data {
+		err := generated.processMonth(ctx, b.Core, month)
+		if err != nil {
+			return logical.ErrorResponse("failed to process data for month %d", month.GetMonthsAgo()), err
+		}
+	}
+
+	opts := make(map[generation.WriteOptions]struct{}, len(input.Write))
+	for _, opt := range input.Write {
+		opts[opt] = struct{}{}
+	}
+	paths, err := generated.write(ctx, opts, b.Core.activityLog)
+	if err != nil {
+		return logical.ErrorResponse("failed to write data"), err
+	}
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"paths": paths,
+		},
+	}, nil
 }
 
 // singleMonthActivityClients holds a single month's client IDs, in the order they were seen
@@ -287,6 +318,90 @@ func (m *multipleMonthsActivityClients) addRepeatedClients(monthsAgo int32, c *g
 	return nil
 }
 
+func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[generation.WriteOptions]struct{}, activityLog *ActivityLog) ([]string, error) {
+	now := timeutil.StartOfMonth(time.Now().UTC())
+	paths := []string{}
+
+	_, writePQ := opts[generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES]
+	_, writeDistinctClients := opts[generation.WriteOptions_WRITE_DISTINCT_CLIENTS]
+
+	pqOpts := pqOptions{}
+	if writePQ || writeDistinctClients {
+		pqOpts.byNamespace = make(map[string]*processByNamespace)
+		pqOpts.byMonth = make(map[int64]*processMonth)
+		pqOpts.activePeriodEnd = m.latestTimestamp(now)
+		pqOpts.endTime = timeutil.EndOfMonth(pqOpts.activePeriodEnd)
+		pqOpts.activePeriodStart = m.earliestTimestamp(now)
+	}
+
+	for i, month := range m.months {
+		if month.generationParameters == nil {
+			continue
+		}
+		var timestamp time.Time
+		if i > 0 {
+			timestamp = timeutil.StartOfMonth(timeutil.MonthsPreviousTo(i, now))
+		} else {
+			timestamp = now
+		}
+		segments, err := month.populateSegments()
+		if err != nil {
+			return nil, err
+		}
+		for segmentIndex, segment := range segments {
+			if _, ok := opts[generation.WriteOptions_WRITE_ENTITIES]; ok {
+				if segment == nil {
+					// skip the index
+					continue
+				}
+				entityPath, err := activityLog.saveSegmentEntitiesInternal(ctx, segmentInfo{
+					startTimestamp:       timestamp.Unix(),
+					currentClients:       &activity.EntityActivityLog{Clients: segment},
+					clientSequenceNumber: uint64(segmentIndex),
+					tokenCount:           &activity.TokenCount{},
+				}, true)
+				if err != nil {
+					return nil, err
+				}
+				paths = append(paths, entityPath)
+			}
+		}
+
+		if writePQ || writeDistinctClients {
+			reader := newProtoSegmentReader(segments)
+			err = activityLog.segmentToPrecomputedQuery(ctx, timestamp, reader, pqOpts)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	wg := sync.WaitGroup{}
+	err := activityLog.refreshFromStoredLog(ctx, &wg, now)
+	if err != nil {
+		return nil, err
+	}
+	return paths, nil
+}
+
+func (m *multipleMonthsActivityClients) latestTimestamp(now time.Time) time.Time {
+	for i, month := range m.months {
+		if month.generationParameters != nil {
+			return timeutil.StartOfMonth(timeutil.MonthsPreviousTo(i, now))
+		}
+	}
+	return time.Time{}
+}
+
+func (m *multipleMonthsActivityClients) earliestTimestamp(now time.Time) time.Time {
+	for i := len(m.months) - 1; i >= 0; i-- {
+		month := m.months[i]
+		if month.generationParameters != nil {
+			return timeutil.StartOfMonth(timeutil.MonthsPreviousTo(i, now))
+		}
+	}
+	return time.Time{}
+}
+
 func newMultipleMonthsActivityClients(numberOfMonths int) *multipleMonthsActivityClients {
 	m := &multipleMonthsActivityClients{
 		months: make([]*singleMonthActivityClients, numberOfMonths),
@@ -297,4 +412,35 @@ func newMultipleMonthsActivityClients(numberOfMonths int) *multipleMonthsActivit
 		}
 	}
 	return m
+}
+
+func newProtoSegmentReader(segments map[int][]*activity.EntityRecord) SegmentReader {
+	allRecords := make([][]*activity.EntityRecord, 0, len(segments))
+	for _, records := range segments {
+		if segments == nil {
+			continue
+		}
+		allRecords = append(allRecords, records)
+	}
+	return &sliceSegmentReader{
+		records: allRecords,
+	}
+}
+
+type sliceSegmentReader struct {
+	records [][]*activity.EntityRecord
+	i       int
+}
+
+func (p *sliceSegmentReader) ReadToken(ctx context.Context) (*activity.TokenCount, error) {
+	return nil, io.EOF
+}
+
+func (p *sliceSegmentReader) ReadEntity(ctx context.Context) (*activity.EntityActivityLog, error) {
+	if p.i == len(p.records) {
+		return nil, io.EOF
+	}
+	record := p.records[p.i]
+	p.i++
+	return &activity.EntityActivityLog{Clients: record}, nil
 }

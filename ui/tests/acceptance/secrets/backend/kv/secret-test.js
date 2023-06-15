@@ -225,7 +225,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     assert.strictEqual(cas.trim(), 'Yes', 'displays the cas set when configuring the secret-engine');
     assert.strictEqual(
       deleteVersionAfter.trim(),
-      '1s',
+      '1 second',
       'displays the delete version after set when configuring the secret-engine'
     );
     await deleteEngine(enginePath, assert);
