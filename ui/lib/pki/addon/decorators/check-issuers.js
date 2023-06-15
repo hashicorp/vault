@@ -10,6 +10,8 @@ import { inject as service } from '@ember/service';
  * the overview, roles, issuers, certificates, and key routes all need to be aware of the whether there is a config for the engine
  * if the user has not configured they are prompted to do so in each of the routes
  * decorate the necessary routes to perform the check in the beforeModel hook since that may change what is returned for the model
+ *
+ * while this decorator is similar to fetch-secrets-engine-config in the core addon, the differences were enough to warrant a specific decorator for pki
  */
 
 export function withConfig() {
