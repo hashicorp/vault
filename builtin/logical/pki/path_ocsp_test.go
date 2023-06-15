@@ -710,19 +710,3 @@ func sendOcspPostRequest(b *backend, s logical.Storage, ocspRequest []byte) (*lo
 
 	return resp, err
 }
-
-func generateRequest(t *testing.T, requestHash crypto.Hash, cert *x509.Certificate, issuer *x509.Certificate) []byte {
-	t.Helper()
-
-	opts := &ocsp.RequestOptions{Hash: requestHash}
-	ocspRequestDer, err := ocsp.CreateRequest(cert, issuer, opts)
-	require.NoError(t, err, "Failed generating OCSP request")
-	return ocspRequestDer
-}
-
-func requireOcspResponseSignedBy(t *testing.T, ocspResp *ocsp.Response, issuer *x509.Certificate) {
-	t.Helper()
-
-	err := ocspResp.CheckSignatureFrom(issuer)
-	require.NoError(t, err, "Failed signature verification of ocsp response: %w", err)
-}
