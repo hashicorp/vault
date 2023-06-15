@@ -10,4 +10,10 @@ export default class VaultClusterDashboardRoute extends Route {
       secretEngines: this.store.query('secret-engine', {}),
     });
   }
+
+  setupController(controller, model) {
+    super.setupController(controller, model);
+
+    controller.engines = model.secretEngines.slice(0, 6);
+  }
 }

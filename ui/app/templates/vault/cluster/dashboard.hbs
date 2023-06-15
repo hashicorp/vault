@@ -1,16 +1,19 @@
 <h1 class="title has-top-margin-m">Vault version</h1>
 <div>
   <div class="is-flex-row has-gap has-bottom-margin-m">
-    <Hds::Card::Container @hasBorder={{true}} class="has-padding is-flex-column is-flex-half">
+    <Hds::Card::Container @hasBorder={{true}} class="has-padding-m is-flex-column is-flex-half">
       <div class="is-flex-between">
         <h3 class="title is-4">Secrets Engines</h3>
         <div>
-          <LinkTo @route="vault.cluster.secrets.backends" data-test-secret-engines-view-more>View more</LinkTo>
+          <Hds::Link::Inline @route="vault.cluster.secrets.backends" class="has-text-weight-semibold is-no-underline">View
+            more</Hds::Link::Inline>
+
+          {{! <LinkTo @route="vault.cluster.secrets.backends" data-test-secret-engines-view-more>View more</LinkTo> }}
         </div>
       </div>
       <Hds::Table @caption="Five secrets engines">
         <:body as |B|>
-          {{#each (filter-by "shouldIncludeInList" this.model.secretEngines) as |backend|}}
+          {{#each (filter-by "shouldIncludeInList" this.engines) as |backend|}}
             <B.Tr>
               <B.Td>
                 <div>
@@ -33,18 +36,18 @@
       </Hds::Table>
     </Hds::Card::Container>
 
-    <Hds::Card::Container @hasBorder={{true}} class="has-padding is-flex-column is-flex-half">
+    <Hds::Card::Container @hasBorder={{true}} class="has-padding-m is-flex-column is-flex-half">
       <h3 class="title is-4">Quick Actions</h3>
     </Hds::Card::Container>
   </div>
 
   <div class="is-flex-row has-gap">
-    <Hds::Card::Container @hasBorder={{true}} class="has-padding is-flex-column is-flex-half">
+    <Hds::Card::Container @hasBorder={{true}} class="has-padding-m is-flex-column is-flex-half">
       <h3 class="title is-4">Learn More</h3>
       Explore the features of Vault and learn advance practices with the following tutorials and documentation.
     </Hds::Card::Container>
 
-    <Hds::Card::Container @hasBorder={{true}} class="has-padding is-flex-column is-flex-half">
+    <Hds::Card::Container @hasBorder={{true}} class="has-padding-m is-flex-column is-flex-half">
       <h3 class="title is-4">Configuration Details</h3>
     </Hds::Card::Container>
   </div>
