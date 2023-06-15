@@ -286,9 +286,13 @@ func ValidateTLSALPN01Challenge(domain string, token string, thumbprint string, 
 			// Verify that this is a self-signed certificate that isn't signed
 			// by another certificate (i.e., with the same key material but
 			// different issuer).
-			if err := cert.CheckSignatureFrom(cert); err != nil {
-				return fmt.Errorf("server under test returned a non-self-signed certificate: %w", err)
+			// NOTE: Do not use cert.CheckSignatureFrom(cert) as we need to bypass the
+			//       checks for the parent certificate having the IsCA basic constraint set.
+			err := cert.CheckSignature(cert.SignatureAlgorithm, cert.RawTBSCertificate, cert.Signature)
+			if err != nil {
+				return fmt.Errorf("server under test returned a non-self-signed certificate: %v", err)
 			}
+
 			if !bytes.Equal(cert.RawSubject, cert.RawIssuer) {
 				return fmt.Errorf("server under test returned a non-self-signed certificate: invalid subject (%v) <-> issuer (%v) match", cert.Subject.String(), cert.Issuer.String())
 			}
