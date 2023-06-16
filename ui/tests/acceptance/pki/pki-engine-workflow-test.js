@@ -280,7 +280,7 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/${keyId}/details`);
 
       assert
-        .dom(SELECTORS.alertBanner)
+        .dom(SELECTORS.keyPages.nextStepsAlert)
         .hasText(
           'Next steps This private key material will only be available once. Copy or download it now.',
           'renders banner to save private key'
@@ -468,7 +468,7 @@ module('Acceptance | pki workflow', function (hooks) {
       assert
         .dom('[data-test-parsing-warning]')
         .hasTextContaining(
-          'Not all of the certificate values could be parsed and transferred to new root',
+          'Not all of the certificate values can be parsed and transferred to a new root',
           'it renders warning banner'
         );
       assert.dom('[data-test-input="commonName"]').hasValue('fancy-cert-unsupported-subj-and-ext-oids');

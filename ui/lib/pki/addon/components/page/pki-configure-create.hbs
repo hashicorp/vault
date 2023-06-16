@@ -54,7 +54,7 @@
 {{else if (eq @config.actionType "generate-root")}}
   {{#if @config.privateKey}}
     <div class="has-top-margin-m">
-      <Hds::Alert @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
+      <Hds::Alert data-test-config-next-steps @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
         <A.Title>Next steps</A.Title>
         <A.Description>
           The
