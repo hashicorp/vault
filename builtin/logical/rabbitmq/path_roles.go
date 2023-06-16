@@ -13,53 +13,91 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func pathListRoles(b *backend) *framework.Path {
-	return &framework.Path{
-		Pattern: "roles/?$",
-		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixRabbitMQ,
-			OperationSuffix: "roles",
+func pathListRoles(b *backend) []*framework.Path {
+	return []*framework.Path{
+		{
+			Pattern: "roles/?$",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixRabbitMQ,
+				OperationSuffix: "roles",
+			},
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ListOperation: b.pathRoleList,
+			},
+			HelpSynopsis:    pathRoleHelpSyn,
+			HelpDescription: pathRoleHelpDesc,
 		},
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ListOperation: b.pathRoleList,
+		{
+			Pattern: "static-roles/?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixRabbitMQ,
+				OperationVerb:   "list",
+				OperationSuffix: "static-roles",
+			},
+
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ListOperation: b.pathStaticRoleList,
+			},
+
+			HelpSynopsis:    pathStaticRoleHelpSyn,
+			HelpDescription: pathStaticRoleHelpDesc,
 		},
-		HelpSynopsis:    pathRoleHelpSyn,
-		HelpDescription: pathRoleHelpDesc,
 	}
 }
 
-func pathRoles(b *backend) *framework.Path {
-	return &framework.Path{
-		Pattern: "roles/" + framework.GenericNameRegex("name"),
-		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixRabbitMQ,
-			OperationSuffix: "role",
+func pathRoles(b *backend) []*framework.Path {
+	return []*framework.Path{
+		{
+			Pattern: "roles/" + framework.GenericNameRegex("name"),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixRabbitMQ,
+				OperationSuffix: "role",
+			},
+			Fields: map[string]*framework.FieldSchema{
+				"name": {
+					Type:        framework.TypeString,
+					Description: "Name of the role.",
+				},
+				"tags": {
+					Type:        framework.TypeString,
+					Description: "Comma-separated list of tags for this role.",
+				},
+				"vhosts": {
+					Type:        framework.TypeString,
+					Description: "A map of virtual hosts to permissions.",
+				},
+				"vhost_topics": {
+					Type:        framework.TypeString,
+					Description: "A nested map of virtual hosts and exchanges to topic permissions.",
+				},
+			},
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ReadOperation:   b.pathRoleRead,
+				logical.UpdateOperation: b.pathRoleUpdate,
+				logical.DeleteOperation: b.pathRoleDelete,
+			},
+			HelpSynopsis:    pathRoleHelpSyn,
+			HelpDescription: pathRoleHelpDesc,
 		},
-		Fields: map[string]*framework.FieldSchema{
-			"name": {
-				Type:        framework.TypeString,
-				Description: "Name of the role.",
+		{
+			Pattern: "static-roles/" + framework.GenericNameRegex("name"),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixRabbitMQ,
+				OperationSuffix: "static-roles",
 			},
-			"tags": {
-				Type:        framework.TypeString,
-				Description: "Comma-separated list of tags for this role.",
+
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ReadOperation:   b.pathStaticRoleRead,
+				logical.CreateOperation: b.pathStaticRoleCreateUpdate,
+				logical.UpdateOperation: b.pathStaticRoleCreateUpdate,
+				logical.DeleteOperation: b.pathStaticRoleDelete,
 			},
-			"vhosts": {
-				Type:        framework.TypeString,
-				Description: "A map of virtual hosts to permissions.",
-			},
-			"vhost_topics": {
-				Type:        framework.TypeString,
-				Description: "A nested map of virtual hosts and exchanges to topic permissions.",
-			},
+
+			HelpSynopsis:    pathStaticRoleHelpSyn,
+			HelpDescription: pathStaticRoleHelpDesc,
 		},
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathRoleRead,
-			logical.UpdateOperation: b.pathRoleUpdate,
-			logical.DeleteOperation: b.pathRoleDelete,
-		},
-		HelpSynopsis:    pathRoleHelpSyn,
-		HelpDescription: pathRoleHelpDesc,
 	}
 }
 
@@ -167,6 +205,22 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 	return nil, nil
 }
 
+func (b *backend) pathStaticRoleRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	panic("not implemented")
+}
+
+func (b *backend) pathStaticRoleCreateUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	panic("not implemented")
+}
+
+func (b *backend) pathStaticRoleDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	panic("not implemented")
+}
+
+func (b *backend) pathStaticRoleList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	panic("not implemented")
+}
+
 // Role that defines the capabilities of the credentials issued against it.
 // Maps are used because the names of vhosts and exchanges will vary widely.
 // VHosts is a map with a vhost name as key and the permissions as value.
@@ -197,6 +251,53 @@ Manage the roles that can be created with this backend.
 
 const pathRoleHelpDesc = `
 This path lets you manage the roles that can be created with this backend.
+
+The "tags" parameter customizes the tags used to create the role.
+This is a comma separated list of strings. The "vhosts" parameter customizes
+the virtual hosts that this user will be associated with. This is a JSON object
+passed as a string in the form:
+{
+	"vhostOne": {
+		"configure": ".*",
+		"write": ".*",
+		"read": ".*"
+	},
+	"vhostTwo": {
+		"configure": ".*",
+		"write": ".*",
+		"read": ".*"
+	}
+}
+The "vhost_topics" parameter customizes the topic permissions that this user
+will be granted. This is a JSON object passed as a string in the form:
+{
+	"vhostOne": {
+		"exchangeOneOne": {
+			"write": ".*",
+			"read": ".*"
+		},
+		"exchangeOneTwo": {
+			"write": ".*",
+			"read": ".*"
+		}
+	},
+	"vhostTwo": {
+		"exchangeTwoOne": {
+			"write": ".*",
+			"read": ".*"
+		}
+	}
+}
+`
+
+const pathStaticRoleHelpSyn = `
+Manage the static roles that can be created with this backend.
+`
+
+const pathStaticRoleHelpDesc = `
+This path lets you manage the static roles that can be created with this
+backend. Static Roles are associated with a single RabbitMQ user, and manage the
+credential based on a rotation period, automatically rotating the credential.
 
 The "tags" parameter customizes the tags used to create the role.
 This is a comma separated list of strings. The "vhosts" parameter customizes

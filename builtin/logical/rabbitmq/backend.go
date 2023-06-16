@@ -37,13 +37,15 @@ func Backend() *backend {
 			},
 		},
 
-		Paths: []*framework.Path{
-			pathConfigConnection(&b),
-			pathConfigLease(&b),
+		Paths: framework.PathAppend(
+			[]*framework.Path{
+				pathConfigConnection(&b),
+				pathConfigLease(&b),
+				pathCreds(&b),
+			},
 			pathListRoles(&b),
-			pathCreds(&b),
 			pathRoles(&b),
-		},
+		),
 
 		Secrets: []*framework.Secret{
 			secretCreds(&b),
