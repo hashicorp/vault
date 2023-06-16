@@ -18,7 +18,7 @@
       <DateDropdown @handleSubmit={{this.handleClientActivityQuery}} @dateType="startDate" @submitText="Save" />
     {{/if}}
   </div>
-  <p class="is-8 has-text-grey has-bottom-margin-xl">
+  <p class="is-8 has-text-grey has-bottom-margin-l">
     {{this.versionText.description}}
   </p>
   {{#if this.noActivityData}}
@@ -50,9 +50,7 @@
         <A.Description>
           Tracking is currently disabled and data is not being collected. Historical data can be searched, but you will need
           to
-          <LinkTo @route="vault.cluster.clients.edit">
-            edit the configuration
-          </LinkTo>
+          <Hds::Link::Inline @route="vault.cluster.clients.edit">edit the configuration</Hds::Link::Inline>
           to enable tracking again.
         </A.Description>
       </Hds::Alert>
@@ -97,10 +95,10 @@
       </div>
 
       {{#if (or this.upgradeDuringActivity this.startTimeDiscrepancy)}}
-        <Hds::Alert data-test-clients-upgrade-warning @type="inline" @color="warning" as |A|>
+        <Hds::Alert data-test-clients-upgrade-warning @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
           <A.Title>Warning</A.Title>
           <A.Description>
-            <ul class={{if (and this.versionUpdateText this.startTimeDiscrepancy) "bullet"}}>
+            <ul class={{if (and this.upgradeDuringActivity this.startTimeDiscrepancy) "bullet"}}>
               {{#if this.startTimeDiscrepancy}}
                 <li>{{this.startTimeDiscrepancy}}</li>
               {{/if}}
