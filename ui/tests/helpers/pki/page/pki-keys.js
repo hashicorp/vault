@@ -22,4 +22,5 @@ export const SELECTORS = {
   downloadButton: '[data-test-download-button]',
   keyEditLink: '[data-test-pki-key-edit]',
   confirmDelete: '[data-test-confirm-button]',
+  nextStepsAlert: '[data-test-pki-key-next-steps]',
 };

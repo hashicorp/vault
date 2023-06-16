@@ -55,7 +55,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       assert.dom(S.configuration.emptyState).doesNotExist();
       // Submit before filling out form shows an error
       await click('[data-test-pki-import-pem-bundle]');
-      assert.dom('[data-test-alert-banner]').hasText('Error please upload your PEM bundle');
+      assert.dom(S.configuration.importError).hasText('Error please upload your PEM bundle');
       // Fill in form data
       await click('[data-test-text-toggle]');
       await fillIn('[data-test-text-file-textarea]', this.pemBundle);
@@ -228,7 +228,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       );
       assert.dom(S.configuration.title).hasText('View root certificate');
       assert
-        .dom('[data-test-alert-banner]')
+        .dom(S.configuration.nextStepsBanner)
         .hasText('Next steps The private_key is only available once. Make sure you copy and save it now.');
       assert.dom(S.configuration.title).hasText('View root certificate', 'Updates title on page');
       assert
@@ -280,7 +280,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       await assert.dom(S.configuration.csrDetails).exists('renders CSR details after save');
       assert.dom(S.configuration.title).hasText('View generated CSR');
       assert
-        .dom('[data-test-alert-banner]')
+        .dom('[data-test-next-steps-csr]')
         .hasText(
           'Next steps Copy the CSR below for a parent issuer to sign and then import the signed certificate back into this mount. The private_key is only available once. Make sure you copy and save it now.'
         );

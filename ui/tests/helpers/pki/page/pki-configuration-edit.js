@@ -4,7 +4,7 @@
  */
 
 export const SELECTORS = {
-  errorBanner: '[data-test-error-banner]',
+  errorBanner: '[data-test-config-edit-error]',
   acmeEditSection: '[data-test-acme-edit-section]',
   configEditSection: '[data-test-cluster-config-edit-section]',
   configInput: (attr) => `[data-test-input="${attr}"]`,

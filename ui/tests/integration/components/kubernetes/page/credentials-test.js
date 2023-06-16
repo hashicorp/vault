@@ -122,9 +122,9 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
     await click('[data-test-generate-credentials-button]');
 
     assert.dom('[data-test-credentials-header]').hasText('Credentials');
-    assert.dom('[data-test-alert-banner] .message-title').hasText('Warning');
+    assert.dom('[data-test-k8-alert-title]').hasText('Warning');
     assert
-      .dom('[data-test-alert-banner] .alert-banner-message-body')
+      .dom('[data-test-k8-alert-message]')
       .hasText("You won't be able to access these credentials later, so please copy them now.");
     assert.dom('[data-test-row-label="Service account token"]').hasText('Service account token');
     await click('[data-test-value-div="Service account token"] [data-test-button]');
