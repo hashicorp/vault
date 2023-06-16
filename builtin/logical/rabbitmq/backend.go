@@ -14,7 +14,11 @@ import (
 	rabbithole "github.com/michaelklishin/rabbit-hole/v2"
 )
 
-const operationPrefixRabbitMQ = "rabbit-mq"
+const (
+	operationPrefixRabbitMQ = "rabbit-mq"
+	rabbitMQRolePath        = "role/"
+	rabbitMQStaticRolePath  = "static-role/"
+)
 
 // Factory creates and configures the backend
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {

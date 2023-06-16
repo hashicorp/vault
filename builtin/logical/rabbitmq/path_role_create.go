@@ -52,7 +52,7 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	// Get the role
-	role, err := b.Role(ctx, req.Storage, name)
+	role, err := b.Role(ctx, req.Storage, name, false)
 	if err != nil {
 		return nil, err
 	}

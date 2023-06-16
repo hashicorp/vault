@@ -6,6 +6,7 @@ package rabbitmq
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -37,7 +38,7 @@ func pathListRoles(b *backend) []*framework.Path {
 			},
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: b.pathStaticRoleList,
+				logical.ListOperation: b.pathRoleList,
 			},
 
 			HelpSynopsis:    pathStaticRoleHelpSyn,
@@ -102,8 +103,12 @@ func pathRoles(b *backend) []*framework.Path {
 }
 
 // Reads the role configuration from the storage
-func (b *backend) Role(ctx context.Context, s logical.Storage, n string) (*roleEntry, error) {
-	entry, err := s.Get(ctx, "role/"+n)
+func (b *backend) Role(ctx context.Context, s logical.Storage, n string, static bool) (*roleEntry, error) {
+	prefix := "role/"
+	if static {
+		prefix = "static-role/"
+	}
+	entry, err := s.Get(ctx, prefix+n)
 	if err != nil {
 		return nil, err
 	}
@@ -129,14 +134,13 @@ func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, d *f
 	return nil, req.Storage.Delete(ctx, "role/"+name)
 }
 
-// Reads an existing role
-func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathAnyRoleRead(ctx context.Context, req *logical.Request, d *framework.FieldData, static bool) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	if name == "" {
 		return logical.ErrorResponse("missing name"), nil
 	}
 
-	role, err := b.Role(ctx, req.Storage, name)
+	role, err := b.Role(ctx, req.Storage, name, static)
 	if err != nil {
 		return nil, err
 	}
@@ -149,18 +153,31 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, d *fra
 	}, nil
 }
 
+// Reads an existing role
+func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return b.pathAnyRoleRead(ctx, req, d, false)
+}
+
 // Lists all the roles registered with the backend
 func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	roles, err := req.Storage.List(ctx, "role/")
+	path := rabbitMQRolePath
+	if strings.HasPrefix(req.Path, "static-roles") {
+		path = rabbitMQStaticRolePath
+	}
+	entries, err := req.Storage.List(ctx, path)
 	if err != nil {
 		return nil, err
 	}
 
-	return logical.ListResponse(roles), nil
+	return logical.ListResponse(entries), nil
 }
 
 // Registers a new role with the backend
 func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return b.pathRoleStoreWithPrefix(ctx, "role/", req, d)
+}
+
+func (b *backend) pathRoleStoreWithPrefix(ctx context.Context, prefix string, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	if name == "" {
 		return logical.ErrorResponse("missing name"), nil
@@ -190,7 +207,7 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 	}
 
 	// Store it
-	entry, err := logical.StorageEntryJSON("role/"+name, &roleEntry{
+	entry, err := logical.StorageEntryJSON(prefix+name, &roleEntry{
 		Tags:        tags,
 		VHosts:      vhosts,
 		VHostTopics: vhostTopics,
@@ -206,18 +223,14 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 }
 
 func (b *backend) pathStaticRoleRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	panic("not implemented")
+	return b.pathAnyRoleRead(ctx, req, d, true)
 }
 
 func (b *backend) pathStaticRoleCreateUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	panic("not implemented")
+	return b.pathRoleStoreWithPrefix(ctx, "static-roles/", req, d)
 }
 
 func (b *backend) pathStaticRoleDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	panic("not implemented")
-}
-
-func (b *backend) pathStaticRoleList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	panic("not implemented")
 }
 
