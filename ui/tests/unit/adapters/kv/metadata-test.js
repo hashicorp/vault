@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { encodePath } from 'vault/utils/path-encoding-helpers';
+import { kvId } from 'vault/utils/kv-id';
 
 module('Unit | Adapter | kv/metadata', function (hooks) {
   setupTest(hooks);
@@ -18,8 +18,7 @@ module('Unit | Adapter | kv/metadata', function (hooks) {
     this.backend = 'kv-backend';
     this.secretMountPath.currentPath = this.backend;
     this.path = 'beep/bop/my-secret';
-    // ARG TODO use util
-    this.id = `${encodePath(this.backend)}/data/${encodePath(this.path)}?version=${this.version}`;
+    this.id = kvId(this.backend, this.path, 'metadata');
     this.data = {
       options: {
         cas: 2,
@@ -58,6 +57,6 @@ module('Unit | Adapter | kv/metadata', function (hooks) {
       assert.ok(true, 'request is made to correct url on queryRecord.');
     });
 
-    this.store.queryRecord('kv/metadata', { backend: this.backend, path: this.path });
+    await this.store.queryRecord('kv/metadata', { backend: this.backend, path: this.path });
   });
 });

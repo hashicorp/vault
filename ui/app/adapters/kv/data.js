@@ -12,15 +12,14 @@ export default class KvDataAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
   _urlForSecret(backend, path, version) {
-    const base = `${this.buildURL()}/${encodePath(backend)}/data/${encodePath(path)}`;
-    return version ? `${base}?version=${version}` : base;
+    return `${this.buildURL()}/${kvId(backend, path, 'data', version)}`;
   }
 
   createRecord(store, type, snapshot) {
     const { backend, path, version } = snapshot.record;
     const url = this._urlForSecret(backend, path);
     return this.ajax(url, 'POST', { data: this.serialize(snapshot) }).then((resp) => {
-      resp.id = kvId(backend, version, path);
+      resp.id = kvId(backend, path, 'data', version);
       return resp;
     });
   }
@@ -28,7 +27,7 @@ export default class KvDataAdapter extends ApplicationAdapter {
   queryRecord(store, type, query) {
     const { path, backend, version } = query;
     return this.ajax(this._urlForSecret(backend, path, version), 'GET').then((resp) => {
-      resp.id = kvId(backend, version, path);
+      resp.id = kvId(backend, path, 'data', version);
       return resp;
     });
   }

@@ -19,7 +19,7 @@ export default class KvMetadataAdapter extends ApplicationAdapter {
     const url = this._urlForMetadata(backend, path);
 
     return this.ajax(url, 'POST', { data: this.serialize(snapshot) }).then((resp) => {
-      resp.id = kvId(backend, '', path);
+      resp.id = kvId(backend, path, 'metadata');
       return resp;
     });
   }
@@ -27,7 +27,7 @@ export default class KvMetadataAdapter extends ApplicationAdapter {
   queryRecord(store, type, query) {
     const { path, backend } = query;
     return this.ajax(this._urlForMetadata(backend, path), 'GET').then((resp) => {
-      resp.id = kvId(backend, '', path);
+      resp.id = kvId(backend, path, 'metadata');
       return resp;
     });
   }
