@@ -775,6 +775,10 @@
         "path": "commands/print"
       },
       {
+        "title": "<code>proxy</code>",
+        "path": "commands/proxy"
+      },
+      {
         "title": "<code>read</code>",
         "path": "commands/read"
       },
