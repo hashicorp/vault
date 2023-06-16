@@ -13,7 +13,7 @@ export default class KvDataAdapter extends ApplicationAdapter {
 
   _urlForSecret(backend, path, version) {
     const base = `${this.buildURL()}/${encodePath(backend)}/data/${encodePath(path)}`;
-    return version ? base + `?version=${version}` : base;
+    return version ? `${base}?version=${version}` : base;
   }
 
   createRecord(store, type, snapshot) {
