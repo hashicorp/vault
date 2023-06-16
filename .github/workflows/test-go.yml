@@ -39,14 +39,43 @@ jobs:
   test-generate-test-package-list:
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     name: Verify Test Package Distribution
+    permissions:
+      id-token: write  # Note: this permission is explicitly required for Vault auth
+      contents: read
     steps:
     - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
     - uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
       with:
         go-version-file: ./.go-version
         cache: true
+    - name: Authenticate to Vault
+      id: vault-auth
+      if: github.repository == 'hashicorp/vault-enterprise'
+      run: vault-auth
+    - name: Fetch Secrets
+      id: secrets
+      if: github.repository == 'hashicorp/vault-enterprise'
+      uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e
+      with:
+        url: ${{ steps.vault-auth.outputs.addr }}
+        caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+        token: ${{ steps.vault-auth.outputs.token }}
+        secrets: |
+          kv/data/github/${{ github.repository }}/github-token username-and-token | github-token;
+    - id: setup-git-private
+      name: Setup Git configuration (private)
+      if: github.repository == 'hashicorp/vault-enterprise'
+      run: |
+        git config --global url."https://${{ steps.secrets.outputs.github-token }}@github.com".insteadOf https://github.com
+    - id: setup-git-public
+      name: Setup Git configuration (public)
+      if: github.repository != 'hashicorp/vault-enterprise'
+      run: |
+        git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
     - id: test
       working-directory: .github/scripts
+      env:
+        GOPRIVATE: github.com/hashicorp/*
       run: |
         ENTERPRISE=${{ inputs.enterprise }} ./test-generate-test-package-lists.sh
   runner-indexes:
