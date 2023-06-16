@@ -6,7 +6,7 @@
 import Store from '@ember-data/store';
 import { AdapterRegistry } from 'ember-data/adapter';
 
-export default interface PkiRoleAdapter extends AdapterRegistry {
+export default interface KvMetadataAdapter extends AdapterRegistry {
   namespace: string;
   _urlForMetadata(backend: string, path: string): string;
 }
