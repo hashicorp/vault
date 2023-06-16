@@ -168,3 +168,28 @@ jobs:
           rm -rf /tmp/enos*
           rm -rf ./enos/support
           rm -rf ./enos/.enos
+
+  # Send Slack notification for any failures in job `run`
+  slack-notification:
+    needs: run
+    # Temporary "success" condition for testing on PR; revert to "failure" before merge to main
+    if: ${{ always() && needs.run.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: send-notification
+        uses: hashicorp/cloud-gha-slack-notifier/.github/workflows/slack-notify-enhanced.yaml@v1
+        with:
+          channel-id: "C05DBVA4LGZ" # publishes to #feed-vault-enos-failures
+          payload: |
+            {
+              "text": ":red_circle: An Enos scenario run failed in the ${{ github.repository }} repo on the ${{ github.ref_name }} branch. See the run here: ${{ ${{ github.event.workflow_run.url }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":red_circle: An Enos scenario run failed in the ${{ github.repository }} repo on the ${{ github.ref_name }} branch. See the failed run here: ${{ ${{ github.event.workflow_run.url }}"
+                  }
+                }
+              ]
+            }
