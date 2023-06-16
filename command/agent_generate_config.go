@@ -87,7 +87,8 @@ Usage: vault agent generate-config [options] [path/to/config.hcl]
 }
 
 func (c *AgentGenerateConfigCommand) Flags() *FlagSets {
-	set := NewFlagSets(c.UI)
+	// Include client-modifying flags (-address, -namespace, etc.)
+	set := c.flagSet(FlagSetHTTP)
 
 	// Common Options
 	f := set.NewFlagSet("Command Options")
