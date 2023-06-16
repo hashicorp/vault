@@ -54,6 +54,8 @@ jobs:
       working-directory: .github/scripts
       run: |
         ENTERPRISE=${{ inputs.enterprise }} ./test-generate-test-package-lists.sh
+      env:
+        GOPRIVATE: github.com/hashicorp/*
   runner-indexes:
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     name: Generate runner indexes
