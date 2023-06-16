@@ -52,7 +52,7 @@ Please see the [Caching docs][caching] for information.
 ### Quit
 
 This endpoint triggers shutdown of the proxy. By default, it is disabled, and can
-be enabled per listener using the [`agent_api`][agent-api] stanza. It is recommended
+be enabled per listener using the [`proxy_api`][proxy-api] stanza. It is recommended
 to only enable this on trusted interfaces, as it does not require any authorization to use.
 
 | Method | Path             |
@@ -342,7 +342,7 @@ listener "tcp" {
 ```
 
 [vault]: /vault/docs/agent-and-proxy/proxy#vault-stanza
-[autoauth]: /vault/docs/agent-and-proxy/proxy/autoauth
+[autoauth]: /vault/docs/agent-and-proxy/autoauth
 [caching]: /vault/docs/agent-and-proxy/proxy/caching
 [apiproxy]: /vault/docs/agent-and-proxy/proxy/apiproxy
 [persistent-cache]: /vault/docs/agent-and-proxy/proxy/caching/persistent-caches
