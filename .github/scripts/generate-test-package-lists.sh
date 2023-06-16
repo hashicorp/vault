@@ -271,6 +271,7 @@ test_packages[15]+=" $base/physical/mysql"
 test_packages[15]+=" $base/plugins/database/cassandra"
 if [ "${ENTERPRISE:+x}" == "x" ] ; then
     test_packages[15]+=" $base/vault/external_tests/namespaces"
+    test_packages[15]+=" $base/vault/external_tests/census"
 fi
 test_packages[15]+=" $base/vault/external_tests/sealmigrationext"
 
