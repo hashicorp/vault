@@ -1,7 +1,7 @@
 import { create } from 'ember-cli-page-object';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, currentURL, fillIn, visit } from '@ember/test-helpers';
+import { click, currentURL, fillIn, find, visit, waitUntil } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 
@@ -17,6 +17,7 @@ module('Acceptance | kv | breadcrumbs', function (hooks) {
     await click('[data-test-secret-create]');
     await fillIn('[data-test-secret-path]', 'foo/bar');
     await click('[data-test-secret-save]');
+    await waitUntil(() => find('[data-test-secret-metadata-tab]'));
     await click('[data-test-secret-metadata-tab]');
     await click('[data-test-secret-breadcrumb="foo"]');
     assert.strictEqual(
