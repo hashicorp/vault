@@ -1,5 +1,8 @@
 {{#if this.displayErrors}}
   {{#each this.displayErrors as |error|}}
-    <AlertBanner @type="danger" @message={{error}} data-test-error ...attributes />
+    <Hds::Alert data-test-msg-error class="has-top-margin-s has-bottom-margin-s" @type="inline" @color="critical" as |A|>
+      <A.Title>Error</A.Title>
+      <A.Description data-test-msg-error-description>{{error}}</A.Description>
+    </Hds::Alert>
   {{/each}}
 {{/if}}
