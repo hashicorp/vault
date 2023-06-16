@@ -50,7 +50,9 @@ automatically logged out.
 ## External Auth Method Considerations
 
 When using an external auth method (e.g., GitHub), Vault will call the external service
-at the time of authentication and for any subsequent token renewals. This means that issued tokens
-are valid for their entire duration, and are not invalidated until a renewal or user re-authentication
-occurs. Operators should ensure appropriate [token TTLs](/vault/docs/concepts/tokens#the-general-case)
+at the time of authentication and for any subsequent token renewals.  This means that when the status of an
+entity is changed in an external system (e.g. an account expires or is disabled), Vault will deny requests to
+renew tokens already issued for that entity, but existing tokens will remain vaild for the entire duration for
+which they were originally granted unless they are expicitly revoked within Vault.
+Operators should ensure appropriate [token TTLs](/vault/docs/concepts/tokens#the-general-case)
 are set when using these auth methods.
