@@ -182,7 +182,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     assert.dom('[data-test-inline-error-message]').doesNotExist('inline error goes away');
     await click('[data-test-secret-save]');
     assert
-      .dom('[data-test-error]')
+      .dom('[data-test-message-error]')
       .includesText(
         'custom_metadata validation failed: length of key',
         'shows API error that is not captured by validation'

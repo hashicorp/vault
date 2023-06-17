@@ -17,7 +17,7 @@ const SELECTORS = {
   policyUpload: '[data-test-text-file-input]',
   saveButton: '[data-test-policy-save]',
   cancelButton: '[data-test-policy-cancel]',
-  error: '[data-test-error]',
+  error: '[data-test-message-error]',
 };
 
 module('Integration | Component | policy-form', function (hooks) {
