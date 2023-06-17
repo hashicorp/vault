@@ -10,19 +10,11 @@ func (c *SharedConfig) Merge(c2 *SharedConfig) *SharedConfig {
 
 	result := new(SharedConfig)
 
-	for _, l := range c.Listeners {
-		result.Listeners = append(result.Listeners, l)
-	}
-	for _, l := range c2.Listeners {
-		result.Listeners = append(result.Listeners, l)
-	}
+	result.Listeners = append(result.Listeners, c.Listeners...)
+	result.Listeners = append(result.Listeners, c2.Listeners...)
 
-	for _, userlockout := range c.UserLockouts {
-		result.UserLockouts = append(result.UserLockouts, userlockout)
-	}
-	for _, userlockout := range c2.UserLockouts {
-		result.UserLockouts = append(result.UserLockouts, userlockout)
-	}
+	result.UserLockouts = append(result.UserLockouts, c.UserLockouts...)
+	result.UserLockouts = append(result.UserLockouts, c2.UserLockouts...)
 
 	result.HCPLinkConf = c.HCPLinkConf
 	if c2.HCPLinkConf != nil {
@@ -34,12 +26,8 @@ func (c *SharedConfig) Merge(c2 *SharedConfig) *SharedConfig {
 		result.Entropy = c2.Entropy
 	}
 
-	for _, s := range c.Seals {
-		result.Seals = append(result.Seals, s)
-	}
-	for _, s := range c2.Seals {
-		result.Seals = append(result.Seals, s)
-	}
+	result.Seals = append(result.Seals, c.Seals...)
+	result.Seals = append(result.Seals, c2.Seals...)
 
 	result.Telemetry = c.Telemetry
 	if c2.Telemetry != nil {
