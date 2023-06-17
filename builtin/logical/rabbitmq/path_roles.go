@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -103,12 +104,8 @@ func pathRoles(b *backend) []*framework.Path {
 }
 
 // Reads the role configuration from the storage
-func (b *backend) Role(ctx context.Context, s logical.Storage, n string, static bool) (*roleEntry, error) {
-	prefix := "role/"
-	if static {
-		prefix = "static-role/"
-	}
-	entry, err := s.Get(ctx, prefix+n)
+func (b *backend) Role(ctx context.Context, s logical.Storage, n string) (*roleEntry, error) {
+	entry, err := s.Get(ctx, rabbitMQRolePath+n)
 	if err != nil {
 		return nil, err
 	}
@@ -124,23 +121,46 @@ func (b *backend) Role(ctx context.Context, s logical.Storage, n string, static 
 	return &result, nil
 }
 
-// Deletes an existing role
-func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	name := d.Get("name").(string)
-	if name == "" {
-		return logical.ErrorResponse("missing name"), nil
+// Reads the static role configuration from the storage
+func (b *backend) StaticRole(ctx context.Context, s logical.Storage, n string) (*staticRoleEntry, error) {
+	entry, err := s.Get(ctx, rabbitMQStaticRolePath+n)
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return nil, nil
 	}
 
-	return nil, req.Storage.Delete(ctx, "role/"+name)
+	var result staticRoleEntry
+	if err := entry.DecodeJSON(&result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }
 
-func (b *backend) pathAnyRoleRead(ctx context.Context, req *logical.Request, d *framework.FieldData, static bool) (*logical.Response, error) {
+// Deletes an existing role
+func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return b.pathRoleDeleteWithPrefix(ctx, rabbitMQRolePath, req, d)
+}
+
+func (b *backend) pathRoleDeleteWithPrefix(ctx context.Context, prefix string, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	if name == "" {
 		return logical.ErrorResponse("missing name"), nil
 	}
 
-	role, err := b.Role(ctx, req.Storage, name, static)
+	return nil, req.Storage.Delete(ctx, prefix+name)
+}
+
+// Reads an existing role
+func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("name").(string)
+	if name == "" {
+		return logical.ErrorResponse("missing name"), nil
+	}
+
+	role, err := b.Role(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -151,11 +171,6 @@ func (b *backend) pathAnyRoleRead(ctx context.Context, req *logical.Request, d *
 	return &logical.Response{
 		Data: structs.New(role).Map(),
 	}, nil
-}
-
-// Reads an existing role
-func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	return b.pathAnyRoleRead(ctx, req, d, false)
 }
 
 // Lists all the roles registered with the backend
@@ -174,44 +189,16 @@ func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *fra
 
 // Registers a new role with the backend
 func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	return b.pathRoleStoreWithPrefix(ctx, "role/", req, d)
-}
-
-func (b *backend) pathRoleStoreWithPrefix(ctx context.Context, prefix string, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	if name == "" {
 		return logical.ErrorResponse("missing name"), nil
 	}
 
-	tags := d.Get("tags").(string)
-	rawVHosts := d.Get("vhosts").(string)
-	rawVHostTopics := d.Get("vhost_topics").(string)
-
-	// Either tags or VHost permissions are always required, but topic permissions are always optional.
-	if tags == "" && rawVHosts == "" {
-		return logical.ErrorResponse("both tags and vhosts not specified"), nil
+	role, err := b.parseRoleEntryFromRequest(d)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
 	}
-
-	var vhosts map[string]vhostPermission
-	if len(rawVHosts) > 0 {
-		if err := jsonutil.DecodeJSON([]byte(rawVHosts), &vhosts); err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("failed to unmarshal vhosts: %s", err)), nil
-		}
-	}
-
-	var vhostTopics map[string]map[string]vhostTopicPermission
-	if len(rawVHostTopics) > 0 {
-		if err := jsonutil.DecodeJSON([]byte(rawVHostTopics), &vhostTopics); err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("failed to unmarshal vhost_topics: %s", err)), nil
-		}
-	}
-
-	// Store it
-	entry, err := logical.StorageEntryJSON(prefix+name, &roleEntry{
-		Tags:        tags,
-		VHosts:      vhosts,
-		VHostTopics: vhostTopics,
-	})
+	entry, err := logical.StorageEntryJSON(rabbitMQRolePath+name, role)
 	if err != nil {
 		return nil, err
 	}
@@ -222,16 +209,106 @@ func (b *backend) pathRoleStoreWithPrefix(ctx context.Context, prefix string, re
 	return nil, nil
 }
 
+func (b *backend) parseRoleEntryFromRequest(d *framework.FieldData) (*roleEntry, error) {
+	tags := d.Get("tags").(string)
+	rawVHosts := d.Get("vhosts").(string)
+	rawVHostTopics := d.Get("vhost_topics").(string)
+
+	// Either tags or VHost permissions are always required, but topic permissions are always optional.
+	if tags == "" && rawVHosts == "" {
+		return nil, fmt.Errorf("both tags and vhosts not specified")
+	}
+
+	var vhosts map[string]vhostPermission
+	if len(rawVHosts) > 0 {
+		if err := jsonutil.DecodeJSON([]byte(rawVHosts), &vhosts); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal vhosts: %s", err)
+		}
+	}
+
+	var vhostTopics map[string]map[string]vhostTopicPermission
+	if len(rawVHostTopics) > 0 {
+		if err := jsonutil.DecodeJSON([]byte(rawVHostTopics), &vhostTopics); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal vhost_topics: %s", err)
+		}
+	}
+
+	entry := roleEntry{
+		Tags:        tags,
+		VHosts:      vhosts,
+		VHostTopics: vhostTopics,
+	}
+	return &entry, nil
+}
+
 func (b *backend) pathStaticRoleRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	return b.pathAnyRoleRead(ctx, req, d, true)
+	name := d.Get("name").(string)
+	if name == "" {
+		return logical.ErrorResponse("missing name"), nil
+	}
+
+	role, err := b.StaticRole(ctx, req.Storage, name)
+	if err != nil {
+		return nil, err
+	}
+	if role == nil {
+		return nil, nil
+	}
+	data := map[string]interface{}{
+		"rotation_period": role.RotationPeriod.Seconds(),
+		"revoke_user_on_delete": role.RevokeUserOnDelete,
+		"username": name,
+	}
+	roleInfo := structs.New(role.RoleEntry).Map()
+	for k, v := range(roleInfo) {
+		data[k] = v
+	}
+	if !role.LastVaultRotation.IsZero() {
+		data["last_vault_rotation"] = role.LastVaultRotation
+	}
+
+	return &logical.Response{
+		Data: data,
+	}, nil
 }
 
 func (b *backend) pathStaticRoleCreateUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	return b.pathRoleStoreWithPrefix(ctx, "static-roles/", req, d)
+	name := d.Get("name").(string)
+	if name == "" {
+		return logical.ErrorResponse("missing name"), nil
+	}
+
+	role, err := b.parseRoleEntryFromRequest(d)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+	username := d.Get("username").(string)
+	if username == "" {
+		return logical.ErrorResponse("username is a required field to create a static account"), nil
+	}
+	revokeUserOnDelete := d.Get("revoke_user_on_delete").(bool)
+	rotationPeriod := d.Get("rotation_period").(int)
+	staticRole := staticRoleEntry{
+		RoleEntry: *role,
+		Username: username,
+		RotationPeriod: time.Duration(rotationPeriod) * time.Second,
+		RevokeUserOnDelete: revokeUserOnDelete,
+	}
+
+	// TODO add entry to queue
+	entry, err := logical.StorageEntryJSON(rabbitMQStaticRolePath+name, staticRole)
+	if err != nil {
+		return nil, err
+	}
+	if err := req.Storage.Put(ctx, entry); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
 }
 
 func (b *backend) pathStaticRoleDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	panic("not implemented")
+	return b.pathRoleDeleteWithPrefix(ctx, rabbitMQStaticRolePath, req, d)
 }
 
 // Role that defines the capabilities of the credentials issued against it.
@@ -243,6 +320,15 @@ type roleEntry struct {
 	Tags        string                                     `json:"tags" structs:"tags" mapstructure:"tags"`
 	VHosts      map[string]vhostPermission                 `json:"vhosts" structs:"vhosts" mapstructure:"vhosts"`
 	VHostTopics map[string]map[string]vhostTopicPermission `json:"vhost_topics" structs:"vhost_topics" mapstructure:"vhost_topics"`
+}
+
+type staticRoleEntry struct {
+	Username            string         `json:"username" structs:"username" mapstructure:"username"`
+	Password            string         `json:"password" structs:"password" mapstructure:"password"`
+	LastVaultRotation   time.Time      `json:"last_vault_rotation" structs:"last_vault_rotation" mapstructure:"last_vault_rotation"`
+	RotationPeriod      time.Duration  `json:"rotation_period" structs:"rotation_period" mapstructure:"rotation_period"`
+	RevokeUserOnDelete  bool           `json:"revoke_user_on_delete" structs:"revoke_user_on_delete" mapstructure:"revoke_user_on_delete"`
+	RoleEntry           roleEntry      `json:"role_entry" structs:"role_entry" mapstructure:"role_entry"`
 }
 
 // Structure representing the permissions of a vhost
