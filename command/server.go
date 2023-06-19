@@ -56,6 +56,7 @@ import (
 	"github.com/mitchellh/go-testing-interface"
 	"github.com/pkg/errors"
 	"github.com/posener/complete"
+	"github.com/sasha-s/go-deadlock"
 	"go.uber.org/atomic"
 	"golang.org/x/net/http/httpproxy"
 	"google.golang.org/grpc/grpclog"
@@ -1041,6 +1042,9 @@ func (c *ServerCommand) Run(args []string) int {
 		c.UI.Error(err.Error())
 		return 1
 	}
+
+	// Don't exit just because we saw a potential deadlock.
+	deadlock.Opts.OnPotentialDeadlock = func() {}
 
 	if c.flagRecovery {
 		return c.runRecoveryMode()
