@@ -502,15 +502,15 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 					}
 
 					if len(resp.Fields) != 0 {
-						responseName := hyphenatedToTitleCase(operationID) + "Response"
+						responseBaseName := hyphenatedToTitleCase(operationID) + "Response"
 
 						if resp.FieldsAreRaw {
-							// this is a legacy schema without a "data" wrapper
-							doc.Components.Schemas[responseName] = responseSchemaData
+							// this is a "raw" response without the "data" wrapper
+							doc.Components.Schemas[responseBaseName+"Raw"] = responseSchemaData
 
 							content = OASContent{
 								"application/json": &OASMediaTypeObject{
-									Schema: &OASSchema{Ref: fmt.Sprintf("#/components/schemas/%s", responseName)},
+									Schema: &OASSchema{Ref: fmt.Sprintf("#/components/schemas/%sRaw", responseBaseName)},
 								},
 							}
 						} else {
@@ -518,16 +518,16 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 							responseSchema := &OASSchema{
 								Type: "object",
 								Properties: map[string]*OASSchema{
-									"data": {Ref: fmt.Sprintf("#/components/schemas/%sData", responseName)},
+									"data": {Ref: fmt.Sprintf("#/components/schemas/%sData", responseBaseName)},
 								},
 							}
 
-							doc.Components.Schemas[responseName] = responseSchema
-							doc.Components.Schemas[responseName+"Data"] = responseSchemaData
+							doc.Components.Schemas[responseBaseName] = responseSchema
+							doc.Components.Schemas[responseBaseName+"Data"] = responseSchemaData
 
 							content = OASContent{
 								"application/json": &OASMediaTypeObject{
-									Schema: &OASSchema{Ref: fmt.Sprintf("#/components/schemas/%s", responseName)},
+									Schema: &OASSchema{Ref: fmt.Sprintf("#/components/schemas/%s", responseBaseName)},
 								},
 							}
 						}
