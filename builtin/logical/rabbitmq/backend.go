@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	rabbithole "github.com/michaelklishin/rabbit-hole/v2"
+	"github.com/hashicorp/vault/sdk/queue"
 )
 
 const (
@@ -26,6 +27,10 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	if err := b.Setup(ctx, conf); err != nil {
 		return nil, err
 	}
+	b.credRotationQueue = queue.New()
+	// Load queue and kickoff new periodic ticker
+	// TODO enable queue initialisation
+	// go b.initQueue(b.queueCtx, conf, conf.System.ReplicationState())
 	return b, nil
 }
 
@@ -68,6 +73,16 @@ type backend struct {
 
 	client *rabbithole.Client
 	lock   sync.RWMutex
+
+	// credRotationQueue is an in-memory priority queue used to track Static Roles
+	// that require periodic rotation. The backend will have a PriorityQueue
+	// initialized on setup, but only backend that is mounted by a primary
+	// server or mounted as a local mount will perform the rotations.
+	credRotationQueue *queue.PriorityQueue
+	// queueCtx is the context for the priority queue
+	queueCtx context.Context
+	// cancelQueueCtx is used to terminate the background ticker
+	cancelQueueCtx context.CancelFunc
 }
 
 // DB returns the database connection.
