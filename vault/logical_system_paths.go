@@ -1188,6 +1188,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							// unseal returns `vault.SealStatusResponse` struct
+							FieldsAreRaw: true,
 							Fields: map[string]*framework.FieldSchema{
 								"type": {
 									Type:     framework.TypeString,
@@ -1283,6 +1284,7 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 						http.StatusOK: {{
 							Description: "OK",
 							// returns `vault.LeaderResponse` struct
+							FieldsAreRaw: true,
 							Fields: map[string]*framework.FieldSchema{
 								"ha_enabled": {
 									Type:     framework.TypeBool,
@@ -1348,6 +1350,7 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							// unseal returns `vault.SealStatusResponse` struct
+							FieldsAreRaw: true,
 							Fields: map[string]*framework.FieldSchema{
 								"type": {
 									Type:     framework.TypeString,
