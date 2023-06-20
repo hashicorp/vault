@@ -35,7 +35,7 @@ Run the Vault server in a non-production "dev" mode in one of the following ways
 
 **For Docker users, run this command**:
 
-```shell-session 
+```shell-session
 $ docker run -p 8200:8200 -e 'VAULT_DEV_ROOT_TOKEN_ID=dev-only-token' vault
 ```
 
@@ -62,8 +62,8 @@ Let's install the Vault client library for your language of choice.
 <Tab heading="Go" group="go">
 
 [Go](https://pkg.go.dev/github.com/hashicorp/vault/api) (official) client library:
-   
-```shell-session 
+
+```shell-session
 $ go get github.com/hashicorp/vault/api
 ```
 
@@ -80,10 +80,10 @@ import vault "github.com/hashicorp/vault/api"
 </Tab>
 <Tab heading="Ruby" group="ruby">
 
-   
+
 [Ruby](https://github.com/hashicorp/vault-ruby) (official) client library:
-   
-```shell-session 
+
+```shell-session
 $ gem install vault
 ```
 
@@ -100,9 +100,9 @@ require "vault"
 </Tab>
 <Tab heading="C#" group="cs">
 
-   
+
 [C#](https://github.com/rajanadar/VaultSharp) client library:
-   
+
 ```shell-session
 $ dotnet add package VaultSharp
 ```
@@ -123,10 +123,10 @@ using VaultSharp.V1.Commons;
 </Tab>
 <Tab heading="Python" group="python">
 
-   
+
 [Python](https://github.com/hvac/hvac) client library:
 
-```shell-session 
+```shell-session
 $ pip install hvac
 ```
 
@@ -143,9 +143,9 @@ import hvac
 </Tab>
 <Tab heading="Java" group="java">
 
-   
+
 [Java (Spring)](https://spring.io/projects/spring-vault) client library:
-   
+
 Add the following to pom.xml:
 
 ```xml
@@ -209,7 +209,7 @@ $ nuget install HashiCorp.Vault -Version "0.1.0-beta"
 **Or:**
 
 ```shell-session
-$ dotnet add package Hashicorp.Vault -version "0.1.0-beta" 
+$ dotnet add package Hashicorp.Vault -version "0.1.0-beta"
 ```
 
 Now, let's add the import statements for the client library to the top of the file.
@@ -628,4 +628,4 @@ For more secure examples of client authentication, see the auth snippets in the 
 
 For a runnable demo app that demonstrates more features, for example, how to keep your connection to Vault alive and how to connect to a database using Vault's dynamic database credentials, see the sample application hello-vault ([Go](https://github.com/hashicorp/hello-vault-go), [C#](https://github.com/hashicorp/hello-vault-dotnet)).
 
-To learn how to integrate applications with Vault without needing to always change your application code, see the [Vault Agent](/vault/docs/agent) documentation.
+To learn how to integrate applications with Vault without needing to always change your application code, see the [Vault Agent](/vault/docs/agent-and-proxy/agent) documentation.

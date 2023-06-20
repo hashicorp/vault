@@ -775,6 +775,10 @@
         "path": "commands/print"
       },
       {
+        "title": "<code>proxy</code>",
+        "path": "commands/proxy"
+      },
+      {
         "title": "<code>read</code>",
         "path": "commands/read"
       },
@@ -1531,15 +1535,6 @@
       },
       {
         "divider": true
-      },
-      {
-        "title": "App ID",
-        "badge": {
-          "text": "DEPRECATED",
-          "type": "outlined",
-          "color": "neutral"
-        },
-        "path": "auth/app-id"
       }
     ]
   },

@@ -165,7 +165,8 @@ These are common configuration values that live within the `persist` block:
 
 - `type` `(string: required)` - The type of the persistent cache to use,
   e.g. `kubernetes`. _Note_: when using HCL this can be used as the key for
-  the block, e.g. `persist "kubernetes" {...}`.
+  the block, e.g. `persist "kubernetes" {...}`. Currently, only `kubernetes`
+  is supported.
 
 - `path` `(string: required)` - The path on disk where the persistent cache file
   should be created or restored from.
