@@ -536,11 +536,11 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 					},
 					Summary: "Returns the health status of Vault.",
 					Responses: map[int][]framework.Response{
-						200: {{Description: "initialized, unsealed, and active"}},
-						429: {{Description: "unsealed and standby"}},
-						472: {{Description: "data recovery mode replication secondary and active"}},
-						501: {{Description: "not initialized"}},
-						503: {{Description: "sealed"}},
+						200: {{FieldsAreRaw: true, Description: "initialized, unsealed, and active"}},
+						429: {{FieldsAreRaw: true, Description: "unsealed and standby"}},
+						472: {{FieldsAreRaw: true, Description: "data recovery mode replication secondary and active"}},
+						501: {{FieldsAreRaw: true, Description: "not initialized"}},
+						503: {{FieldsAreRaw: true, Description: "sealed"}},
 					},
 				},
 			},
@@ -592,6 +592,18 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 						OperationSuffix: "initialization-status",
 					},
 					Summary: "Returns the initialization status of Vault.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description:  "OK",
+							FieldsAreRaw: true,
+							Fields: map[string]*framework.FieldSchema{
+								"initialized": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+							},
+						}},
+					},
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					DisplayAttrs: &framework.DisplayAttributes{
@@ -599,6 +611,34 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 					},
 					Summary:     "Initialize a new Vault.",
 					Description: "The Vault must not have been previously initialized. The recovery options, as well as the stored shares option, are only available when using Vault HSM.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description:  "OK",
+							FieldsAreRaw: true,
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:     framework.TypeStringSlice,
+									Required: true,
+								},
+								"keys_base64": {
+									Type:     framework.TypeStringSlice,
+									Required: true,
+								},
+								"recovery_keys": {
+									Type:     framework.TypeStringSlice,
+									Required: false,
+								},
+								"recovery_keys_base64": {
+									Type:     framework.TypeStringSlice,
+									Required: false,
+								},
+								"root_token": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+							},
+						}},
+					},
 				},
 			},
 
@@ -818,8 +858,9 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
-							Description: "OK",
-							Fields:      respFields,
+							Description:  "OK",
+							FieldsAreRaw: true,
+							Fields:       respFields,
 						}},
 					},
 					Summary: "Reads the configuration and progress of the current rekey attempt.",
@@ -830,8 +871,9 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
-							Description: "OK",
-							Fields:      respFields,
+							Description:  "OK",
+							FieldsAreRaw: true,
+							Fields:       respFields,
 						}},
 					},
 					Summary:     "Initializes a new rekey attempt.",
@@ -982,7 +1024,8 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
-							Description: "OK",
+							Description:  "OK",
+							FieldsAreRaw: true,
 							Fields: map[string]*framework.FieldSchema{
 								"nounce": {
 									Type:     framework.TypeString,
@@ -1059,7 +1102,8 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
-							Description: "OK",
+							Description:  "OK",
+							FieldsAreRaw: true,
 							Fields: map[string]*framework.FieldSchema{
 								"nounce": {
 									Type:     framework.TypeString,
@@ -1092,7 +1136,8 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
-							Description: "OK",
+							Description:  "OK",
+							FieldsAreRaw: true,
 							Fields: map[string]*framework.FieldSchema{
 								"nounce": {
 									Type:     framework.TypeString,
@@ -1126,7 +1171,8 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
-							Description: "OK",
+							Description:  "OK",
+							FieldsAreRaw: true,
 							Fields: map[string]*framework.FieldSchema{
 								"nounce": {
 									Type:     framework.TypeString,
@@ -1188,6 +1234,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							// unseal returns `vault.SealStatusResponse` struct
+							FieldsAreRaw: true,
 							Fields: map[string]*framework.FieldSchema{
 								"type": {
 									Type:     framework.TypeString,
@@ -1283,6 +1330,7 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 						http.StatusOK: {{
 							Description: "OK",
 							// returns `vault.LeaderResponse` struct
+							FieldsAreRaw: true,
 							Fields: map[string]*framework.FieldSchema{
 								"ha_enabled": {
 									Type:     framework.TypeBool,
@@ -1348,6 +1396,7 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							// unseal returns `vault.SealStatusResponse` struct
+							FieldsAreRaw: true,
 							Fields: map[string]*framework.FieldSchema{
 								"type": {
 									Type:     framework.TypeString,
