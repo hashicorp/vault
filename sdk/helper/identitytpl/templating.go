@@ -11,9 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/go-secure-stdlib/parseutil"
-
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 

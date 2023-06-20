@@ -18,13 +18,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/go-secure-stdlib/parseutil"
-
 	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/go-raftchunking"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/go-uuid"
 	goversion "github.com/hashicorp/go-version"
