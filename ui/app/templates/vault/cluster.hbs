@@ -17,7 +17,9 @@
             {{#let (hash info="Info" success="Success" danger="Error" warning="Warning") as |title|}}
               <A.Title class="alert-title">{{get title flash.type}}</A.Title>
             {{/let}}
-            <A.Description class="{{if flash.preformatted 'white-space_pre-wrap'}}">{{flash.message}}</A.Description>
+            <A.Description data-test-flash-message-body class="{{if flash.preformatted 'white-space-pre-wrap'}}">
+              {{flash.message}}
+            </A.Description>
           </Hds::Alert>
         {{/let}}
       {{/if}}
