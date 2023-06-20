@@ -1535,15 +1535,6 @@
       },
       {
         "divider": true
-      },
-      {
-        "title": "App ID",
-        "badge": {
-          "text": "DEPRECATED",
-          "type": "outlined",
-          "color": "neutral"
-        },
-        "path": "auth/app-id"
       }
     ]
   },

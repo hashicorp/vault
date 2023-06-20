@@ -80,7 +80,7 @@ func ensureNoLeadingSlash(s string) string {
 	return s
 }
 
-// columnOuput prints the list of items as a table with no headers.
+// columnOutput prints the list of items as a table with no headers.
 func columnOutput(list []string, c *columnize.Config) string {
 	if len(list) == 0 {
 		return ""
