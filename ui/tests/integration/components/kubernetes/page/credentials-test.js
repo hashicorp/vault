@@ -82,16 +82,14 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
     await this.renderComponent();
     await click('[data-test-generate-credentials-button]');
 
-    assert.dom('[data-test-error] .alert-banner-message-body').hasText("'kubernetes_namespace' is required");
+    assert.dom('[data-test-message-error-description]').hasText("'kubernetes_namespace' is required");
 
     this.roleName = 'role-2';
     this.getCreateCredentialsError(this.roleName);
 
     await this.renderComponent();
     await click('[data-test-generate-credentials-button]');
-    assert
-      .dom('[data-test-error] .alert-banner-message-body')
-      .hasText(`role '${this.roleName}' does not exist`);
+    assert.dom('[data-test-message-error-description]').hasText(`role '${this.roleName}' does not exist`);
   });
 
   test('it should show correct credential information after generate credentials is clicked', async function (assert) {

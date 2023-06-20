@@ -199,7 +199,7 @@ module('Acceptance | pki action forms test', function (hooks) {
         'stays on page on success'
       );
       assert.dom(S.configuration.title).hasText('View root certificate');
-      assert.dom('[data-test-alert-banner]').doesNotExist('no private key warning');
+      assert.dom(S.configuration.nextStepsBanner).doesNotExist('no private key warning');
       assert.dom(S.configuration.title).hasText('View root certificate', 'Updates title on page');
       assert.dom(S.configuration.saved.certificate).hasClass('allow-copy', 'copyable certificate is masked');
       assert.dom(S.configuration.saved.issuerName).hasText(issuerName);
