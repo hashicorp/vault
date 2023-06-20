@@ -46,6 +46,7 @@ test_packages[4]+=" $base/http"
 test_packages[4]+=" $base/sdk/helper/pluginutil"
 test_packages[4]+=" $base/serviceregistration/kubernetes"
 test_packages[4]+=" $base/tools/godoctests/pkg/analyzer"
+test_packages[4]+=" $base/tools/gonilnilfunctions/pkg/analyzer"
 if [ "${ENTERPRISE:+x}" == "x" ] ; then
     test_packages[4]+=" $base/vault/external_tests/apilock"
     test_packages[4]+=" $base/vault/external_tests/filteredpaths"
@@ -146,6 +147,7 @@ test_packages[6]+=" $base/sdk/helper/kdf"
 test_packages[6]+=" $base/sdk/helper/locksutil"
 test_packages[6]+=" $base/sdk/helper/pathmanager"
 test_packages[6]+=" $base/sdk/helper/roottoken"
+test_packages[6]+=" $base/sdk/helper/testhelpers"
 test_packages[6]+=" $base/sdk/helper/testhelpers/schema"
 test_packages[6]+=" $base/sdk/helper/xor"
 test_packages[6]+=" $base/sdk/physical/file"
@@ -276,6 +278,7 @@ test_packages[15]+=" $base/physical/mysql"
 test_packages[15]+=" $base/plugins/database/cassandra"
 if [ "${ENTERPRISE:+x}" == "x" ] ; then
     test_packages[15]+=" $base/vault/external_tests/namespaces"
+    test_packages[15]+=" $base/vault/external_tests/census"
 fi
 test_packages[15]+=" $base/vault/external_tests/sealmigrationext"
 

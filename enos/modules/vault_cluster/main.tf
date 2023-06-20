@@ -4,7 +4,7 @@ terraform {
     # to the public registry
     enos = {
       source  = "app.terraform.io/hashicorp-qti/enos"
-      version = ">= 0.3.2"
+      version = ">= 0.4.0"
     }
   }
 }
@@ -61,8 +61,9 @@ locals {
       path    = "vault"
     })
   ]
-  audit_device_file_path = "/var/log/vault_audit.log"
+  audit_device_file_path = "/var/log/vault/vault_audit.log"
   vault_service_user     = "vault"
+  enable_audit_device    = var.enable_file_audit_device && var.initialize_cluster
 }
 
 resource "enos_remote_exec" "install_packages" {
@@ -124,7 +125,8 @@ resource "enos_consul_start" "consul" {
     retry_join       = ["provider=aws tag_key=Type tag_value=${var.consul_cluster_tag}"]
     server           = false
     bootstrap_expect = 0
-    log_level        = "INFO"
+    license          = var.consul_license
+    log_level        = var.consul_log_level
     log_file         = var.consul_log_file
   }
   unit_name = "consul"
@@ -158,6 +160,7 @@ resource "enos_vault_start" "leader" {
         tls_disable = "true"
       }
     }
+    log_level = var.log_level
     storage = {
       type       = var.storage_backend
       attributes = ({ for key, value in local.storage_config[each.key] : key => value })
@@ -197,6 +200,7 @@ resource "enos_vault_start" "followers" {
         tls_disable = "true"
       }
     }
+    log_level = var.log_level
     storage = {
       type       = var.storage_backend
       attributes = { for key, value in local.storage_config[each.key] : key => value }
@@ -208,31 +212,6 @@ resource "enos_vault_start" "followers" {
   manage_service = var.manage_service
   username       = local.vault_service_user
   unit_name      = "vault"
-
-  transport = {
-    ssh = {
-      host = var.target_hosts[each.value].public_ip
-    }
-  }
-}
-
-# We need to ensure that the directory used for audit logs is present and accessible to the vault
-# user on all nodes, since logging will only happen on the leader.
-resource "enos_remote_exec" "create_audit_log_dir" {
-  depends_on = [
-    enos_vault_start.followers,
-  ]
-  for_each = toset([
-    for idx, host in toset(local.instances) : idx
-    if var.enable_file_audit_device
-  ])
-
-  environment = {
-    LOG_FILE_PATH = local.audit_device_file_path
-    SERVICE_USER  = local.vault_service_user
-  }
-
-  scripts = [abspath("${path.module}/scripts/create_audit_log_dir.sh")]
 
   transport = {
     ssh = {
@@ -285,13 +264,39 @@ resource "enos_vault_unseal" "leader" {
   }
 }
 
-resource "enos_remote_exec" "enable_file_audit_device" {
+# We need to ensure that the directory used for audit logs is present and accessible to the vault
+# user on all nodes, since logging will only happen on the leader.
+resource "enos_remote_exec" "create_audit_log_dir" {
   depends_on = [
     enos_vault_unseal.leader,
   ]
   for_each = toset([
-    for idx in local.leader : idx
+    for idx, host in toset(local.instances) : idx
     if var.enable_file_audit_device
+  ])
+
+  environment = {
+    LOG_FILE_PATH = local.audit_device_file_path
+    SERVICE_USER  = local.vault_service_user
+  }
+
+  scripts = [abspath("${path.module}/scripts/create_audit_log_dir.sh")]
+
+  transport = {
+    ssh = {
+      host = var.target_hosts[each.value].public_ip
+    }
+  }
+}
+
+resource "enos_remote_exec" "enable_file_audit_device" {
+  depends_on = [
+    enos_remote_exec.create_audit_log_dir,
+    enos_vault_unseal.leader,
+  ]
+  for_each = toset([
+    for idx in local.leader : idx
+    if local.enable_audit_device
   ])
 
   environment = {

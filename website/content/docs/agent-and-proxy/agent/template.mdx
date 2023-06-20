@@ -9,6 +9,7 @@ description: >-
 # Vault Agent Templates
 
 Vault Agent's Template functionality allows Vault secrets to be rendered to files
+or environment variables (via the [Process Supervisor Mode](/vault/docs/agent-and-proxy/agent/process-supervisor))
 using [Consul Template markup][consul-templating-language].
 
 ## Functionality
@@ -161,31 +162,35 @@ parameters found in the template configuration section in the consul-template
 [documentation
 page](https://github.com/hashicorp/consul-template/blob/main/docs/configuration.md#templates)
 can be used here:
+<Tip>
+The parameters marked with `Δ` below are only applicable to file templates and
+cannot be used with `env_template` entries in process supervisor mode.
+</Tip>
 
 - `source` `(string: "")` - Path on disk to use as the input template. This
   option is required if not using the `contents` option.
-- `destination` `(string: required)` - Path on disk where the rendered secrets should
+- `destination`Δ `(string: required)` - Path on disk where the rendered secrets should
   be created. If the parent directories do not exist, Vault
   Agent will attempt to create them, unless `create_dest_dirs` is false.
-- `create_dest_dirs` `(bool: true)` - This option tells Vault Agent to create
+- `create_dest_dirs`Δ `(bool: true)` - This option tells Vault Agent to create
   the parent directories of the destination path if they do not exist.
 - `contents` `(string: "")` - This option allows embedding the contents of
   a template in the configuration file rather then supplying the `source` path to
   the template file. This is useful for short templates. This option is mutually
   exclusive with the `source` option.
-- `command` `(string: "")` - This is the optional command to run when the
+- `command`Δ `(string: "")` - This is the optional command to run when the
   template is rendered. The command will only run if the resulting template changes.
   The command must return within 30s (configurable), and it must have a successful
   exit code. Vault Agent is not a replacement for a process monitor or init system.
   This is deprecated in favor of the `exec` option.
-- `command_timeout` `(duration: 30s)` - This is the maximum amount of time to
+- `command_timeout`Δ `(duration: 30s)` - This is the maximum amount of time to
   wait for the optional command to return. This is deprecated in favor of the
   `exec` option.
 - `error_on_missing_key` `(bool: false)` - Exit with an error when accessing
   a struct or map field/key that does notexist. The default behavior will print `<no value>`
   when accessing a field that does not exist. It is highly recommended you set this
   to "true". Also see [`exit_on_retry_failure` in global Vault Agent Template Config](/vault/docs/agent-and-proxy/agent/template#interaction-between-exit_on_retry_failure-and-error_on_missing_key).
-- `exec` `(object: optional)` - The exec block executes a command when the
+- `exec`Δ `(object: optional)` - The exec block executes a command when the
   template is rendered and the output has changed. The block parameters are
   `command` `(string or array: required)` and `timeout` `(string: optional, defaults
   to 30s)`. `command` can be given as a string or array of strings to execute, such as
@@ -193,11 +198,11 @@ can be used here:
   strongly recommend using an array of strings, and we attempt to parse that way first.
   Note also that using a comma with the string approach will cause it to be interpreted as an
   array, which may not be desirable.
-- `perms` `(string: "")` - This is the permission to render the file. If
+- `perms`Δ `(string: "")` - This is the permission to render the file. If
   this option is left unspecified, Vault Agent will attempt to match the permissions
   of the file that already exists at the destination path. If no file exists at that
   path, the permissions are 0644.
-- `backup` `(bool: true)` - This option backs up the previously rendered template
+- `backup`Δ `(bool: true)` - This option backs up the previously rendered template
   at the destination path before writing a new one. It keeps exactly one backup.
   This option is useful for preventing accidental changes to the data without having
   a rollback strategy.
@@ -207,10 +212,10 @@ can be used here:
 - `right_delimiter` `(string: "}}")` - Delimiter to use in the template. The
   default is "}}" but for some templates, it may be easier to use a different
   delimiter that does not conflict with the output file itself.
-- `sandbox_path` `(string: "")` - If a sandbox path is provided, any path
+- `sandbox_path`Δ `(string: "")` - If a sandbox path is provided, any path
   provided to the `file` function is checked that it falls within the sandbox path.
   Relative paths that try to traverse outside the sandbox path will exit with an error.
-- `wait` `(object: required)` - This is the `minimum(:maximum)` to wait before rendering
+- `wait`Δ `(object: required)` - This is the `minimum(:maximum)` to wait before rendering
   a new template to disk and triggering a command, separated by a colon (`:`).
 
 
@@ -316,4 +321,27 @@ template {
 }
 ```
 
+And the following demonstrates how the templates look when using `env_template` with
+[Process Supervisor Mode](/vault/docs/agent-and-proxy/agent/process-supervisor)
+
+
+```hcl
+# Other Vault Agent configuration blocks
+# ...
+
+template_config {
+  static_secret_render_interval = "10m"
+  exit_on_retry_failure = true
+}
+
+env_template "MY_ENV_VAR" {
+  contents = "{{ with secret \"secret/my-secret\" }}{{ .Data.data.foo }}{{ end }}"
+}
+
+env_template "ENV_VAR_FROM_FILE" {
+  source = "/tmp/agent/template.ctmpl"
+}
+```
+
 [consul-templating-language]: https://github.com/hashicorp/consul-template/blob/v0.28.1/docs/templating-language.md
+[process-supervisor]: /vault/docs/agent-and-proxy/agent/process-supervisor
