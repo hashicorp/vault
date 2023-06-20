@@ -5,7 +5,7 @@
 
 import AdapterError from '@ember-data/adapter/error';
 import { set } from '@ember/object';
-import { testing } from 'ember';
+import Ember from 'ember';
 import { resolve } from 'rsvp';
 import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
@@ -315,6 +315,12 @@ export default Route.extend(UnloadModelRoute, {
     willTransition(transition) {
       /* eslint-disable-next-line ember/no-controller-access-in-routes */
       const { mode, model } = this.controller;
+
+      // If model is clean or deleted, continue
+      if (!model.hasDirtyAttributes || model.isDeleted) {
+        return true;
+      }
+      // TODO: below is KV v2 logic, remove with engine work
       const version = model.get('selectedVersion');
       const changed = model.changedAttributes();
       const changedKeys = Object.keys(changed);
@@ -334,7 +340,7 @@ export default Route.extend(UnloadModelRoute, {
         (mode !== 'show' && version && Object.keys(version.changedAttributes()).length)
       ) {
         if (
-          testing ||
+          Ember.testing ||
           window.confirm(
             'You have unsaved changes. Navigating away will discard these changes. Are you sure you want to discard your changes?'
           )
