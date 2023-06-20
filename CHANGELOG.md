@@ -1,9 +1,180 @@
+## 1.14.0-rc1
+### June 08, 2023
+
+CHANGES:
+
+* auth/alicloud: Updated plugin from v0.14.0 to v0.15.0 [[GH-20758](https://github.com/hashicorp/vault/pull/20758)]
+* auth/azure: Updated plugin from v0.13.0 to v0.15.0 [[GH-20816](https://github.com/hashicorp/vault/pull/20816)]
+* auth/centrify: Updated plugin from v0.14.0 to v0.15.1 [[GH-20745](https://github.com/hashicorp/vault/pull/20745)]
+* auth/gcp: Updated plugin from v0.15.0 to v0.16.0 [[GH-20725](https://github.com/hashicorp/vault/pull/20725)]
+* auth/jwt: Updated plugin from v0.15.0 to v0.16.0 [[GH-20799](https://github.com/hashicorp/vault/pull/20799)]
+* auth/kubernetes: Update plugin to v0.16.0 [[GH-20802](https://github.com/hashicorp/vault/pull/20802)]
+* core: Bump Go version to 1.20.4.
+* core: Remove feature toggle for SSCTs, i.e. the env var VAULT_DISABLE_SERVER_SIDE_CONSISTENT_TOKENS. [[GH-20834](https://github.com/hashicorp/vault/pull/20834)]
+* core: Revert #19676 (VAULT_GRPC_MIN_CONNECT_TIMEOUT env var) as we decided it was unnecessary. [[GH-20826](https://github.com/hashicorp/vault/pull/20826)]
+* database/couchbase: Updated plugin from v0.9.0 to v0.9.2 [[GH-20764](https://github.com/hashicorp/vault/pull/20764)]
+* database/redis-elasticache: Updated plugin from v0.2.0 to v0.2.1 [[GH-20751](https://github.com/hashicorp/vault/pull/20751)]
+* replication (enterprise): Add a new parameter for the update-primary API call
+that allows for setting of the primary cluster addresses directly, instead of
+via a token.
+* secrets/ad: Updated plugin from v0.10.1-0.20230329210417-0b2cdb26cf5d to v0.16.0 [[GH-20750](https://github.com/hashicorp/vault/pull/20750)]
+* secrets/alicloud: Updated plugin from v0.5.4-beta1.0.20230330124709-3fcfc5914a22 to v0.15.0 [[GH-20787](https://github.com/hashicorp/vault/pull/20787)]
+* secrets/aure: Updated plugin from v0.15.0 to v0.16.0 [[GH-20777](https://github.com/hashicorp/vault/pull/20777)]
+* secrets/database/mongodbatlas: Updated plugin from v0.9.0 to v0.10.0 [[GH-20882](https://github.com/hashicorp/vault/pull/20882)]
+* secrets/database/snowflake: Updated plugin from v0.7.0 to v0.8.0 [[GH-20807](https://github.com/hashicorp/vault/pull/20807)]
+* secrets/gcp: Updated plugin from v0.15.0 to v0.16.0 [[GH-20818](https://github.com/hashicorp/vault/pull/20818)]
+* secrets/keymgmt: Updated plugin to v0.9.1
+* secrets/kubernetes: Update plugin to v0.5.0 [[GH-20802](https://github.com/hashicorp/vault/pull/20802)]
+* secrets/mongodbatlas: Updated plugin from v0.9.1 to v0.10.0 [[GH-20742](https://github.com/hashicorp/vault/pull/20742)]
+* secrets/pki: Warning when issuing leafs from CSRs with basic constraints. In the future, issuance of non-CA leaf certs from CSRs with asserted IsCA Basic Constraints will be prohibited. [[GH-20654](https://github.com/hashicorp/vault/pull/20654)]
+
+FEATURES:
+
+* **AWS Static Roles**: The AWS Secrets Engine can manage static roles configured by users. [[GH-20536](https://github.com/hashicorp/vault/pull/20536)]
+* **Automated License Utilization Reporting**: Added automated license
+utilization reporting, which sends minimal product-license [metering
+data](https://developer.hashicorp.com/vault/docs/enterprise/license/utilization-reporting)
+to HashiCorp without requiring you to manually collect and report them.
+* **MongoDB Atlas Database Secrets**: Adds support for generating X.509 certificates on dynamic roles for user authentication [[GH-20882](https://github.com/hashicorp/vault/pull/20882)]
+* **NEW PKI Workflow in UI**: Completes generally available rollout of new PKI UI that provides smoother mount configuration and a more guided user experience [[GH-pki-ui-improvements](https://github.com/hashicorp/vault/pull/pki-ui-improvements)]
+* **Vault PKI ACME Server**: Support for the ACME certificate lifecycle management protocol has been added to the Vault PKI Plugin. This allows standard ACME clients, such as the EFF's certbot and the CNCF's k8s cert-manager, to request certificates from a Vault server with no knowledge of Vault APIs or authentication mechanisms. For public-facing Vault instances, we recommend requiring External Account Bindings (EAB) to limit the ability to request certificates to only authenticated clients. [[GH-20752](https://github.com/hashicorp/vault/pull/20752)]
+* **Vault Proxy**: Introduced Vault Proxy, a new subcommand of the Vault binary that can be invoked using `vault proxy -config=config.hcl`. It currently has the same feature set as Vault Agent's API proxy, but the two may diverge in the future. We plan to deprecate the API proxy functionality of Vault Agent in a future release. [[GH-20548](https://github.com/hashicorp/vault/pull/20548)]
+* cli: Add 'agent generate-config' sub-command [[GH-20530](https://github.com/hashicorp/vault/pull/20530)]
+* **Sidebar Navigation in UI**: A new sidebar navigation panel has been added in the UI to replace the top navigation bar.
+
+IMPROVEMENTS:
+
+* activitylog: EntityRecord protobufs now contain a ClientType field for
+distinguishing client sources. [[GH-20626](https://github.com/hashicorp/vault/pull/20626)]
+* agent: Add integration tests for agent running in process supervisor mode [[GH-20741](https://github.com/hashicorp/vault/pull/20741)]
+* agent: Add logic to validate env_template entries in configuration [[GH-20569](https://github.com/hashicorp/vault/pull/20569)]
+* agent: initial implementation of a process runner for injecting secrets via environment variables via vault agent [[GH-20628](https://github.com/hashicorp/vault/pull/20628)]
+* api: GET ... /sys/internal/counters/activity?current_billing_period=true now
+results in a response which contains the full billing period [[GH-20694](https://github.com/hashicorp/vault/pull/20694)]
+* audit: forwarded requests can now contain host metadata on the node it was sent 'from' or a flag to indicate that it was forwarded.
+* auth/kerberos: Enable plugin multiplexing
+auth/kerberos: Upgrade plugin dependencies [[GH-20771](https://github.com/hashicorp/vault/pull/20771)]
+* command/server (enterprise): -dev-three-node now creates perf standbys instead of regular standbys. [[GH-20629](https://github.com/hashicorp/vault/pull/20629)]
+* command/server: Add support for dumping pprof files to the filesystem via SIGUSR2 when
+`VAULT_PPROF_WRITE_TO_FILE=true` is set on the server. [[GH-20609](https://github.com/hashicorp/vault/pull/20609)]
+* core (enterprise): license updates trigger a reload of reporting and the activity log [[GH-20680](https://github.com/hashicorp/vault/pull/20680)]
+* core (enterprise): support reloading configuration for automated reporting via SIGHUP [[GH-20680](https://github.com/hashicorp/vault/pull/20680)]
+* core, secrets/pki, audit: Update dependency go-jose to v3 due to v2 deprecation. [[GH-20559](https://github.com/hashicorp/vault/pull/20559)]
+* core: Add possibility to decode a generated encoded root token via the rest API [[GH-20595](https://github.com/hashicorp/vault/pull/20595)]
+* core: include namespace path in granting_policies block of audit log
+* core: include reason for ErrReadOnly on PBPWF writing failures
+* core: report intermediate error messages during request forwarding [[GH-20643](https://github.com/hashicorp/vault/pull/20643)]
+* database/elasticsearch: Upgrade plugin dependencies [[GH-20767](https://github.com/hashicorp/vault/pull/20767)]
+* database/redis: Upgrade plugin dependencies [[GH-20763](https://github.com/hashicorp/vault/pull/20763)]
+* sdk/framework: Fix non-deterministic ordering of 'required' fields in OpenAPI spec [[GH-20881](https://github.com/hashicorp/vault/pull/20881)]
+* secrets/consul: Improve error message when ACL bootstrapping fails. [[GH-20891](https://github.com/hashicorp/vault/pull/20891)]
+* secrets/gcpkms: Enable plugin multiplexing
+secrets/gcpkms: Upgrade plugin dependencies [[GH-20784](https://github.com/hashicorp/vault/pull/20784)]
+* secrets/pki: add subject key identifier to read key response [[GH-20642](https://github.com/hashicorp/vault/pull/20642)]
+* secrets/transit: Respond to writes with updated key policy, cache configuration. [[GH-20652](https://github.com/hashicorp/vault/pull/20652)]
+* secrets/transit: Support BYOK-encrypted export of keys to securely allow synchronizing specific keys and version across clusters. [[GH-20736](https://github.com/hashicorp/vault/pull/20736)]
+* ui: Add filtering by auth type and auth name to the Authentication Method list view. [[GH-20747](https://github.com/hashicorp/vault/pull/20747)]
+* ui: Update Web CLI with examples and a new `kv-get` command for reading kv v2 data and metadata [[GH-20590](https://github.com/hashicorp/vault/pull/20590)]
+
+BUG FIXES:
+
+* agent: Fix bug with 'cache' stanza validation [[GH-20934](https://github.com/hashicorp/vault/pull/20934)]
+* api: Properly Handle nil identity_policies in Secret Data [[GH-20636](https://github.com/hashicorp/vault/pull/20636)]
+* auth/ldap: Set default value for `max_page_size` properly [[GH-20453](https://github.com/hashicorp/vault/pull/20453)]
+* core (enterprise): Fix intermittent issue with token entries sometimes not being found when using a newly created token in a request to a secondary, even when SSCT `new_token` forwarding is set. When this occurred, this would result in the following error to the client: `error performing token check: no lease entry found for token that ought to have one, possible eventual consistency issue`.
+* core (enterprise): Fix log shipper buffer size overflow issue for 32 bit architecture.
+* core (enterprise): Fix logshipper buffer size to default to DefaultBufferSize only when reported system memory is zero.
+* core (enterprise): Fix panic when using invalid accessor for control-group request
+* core (enterprise): Fix perf standby WAL streaming silently failures when replication setup happens at a bad time.
+* core (enterprise): Fix read on perf standbys failing with 412 after leadership change, unseal, restores or restarts when no writes occur
+* core (enterprise): Remove MFA Enforcment configuration for namespace when deleting namespace
+* core/ssct (enterprise): Fixed race condition where a newly promoted DR may revert `sscGenCounter`
+resulting in 412 errors.
+* core: Fix Forwarded Writer construction to correctly find active nodes, allowing PKI cross-cluster functionality to succeed on existing mounts.
+* core: Fix writes to readonly storage on performance standbys when user lockout feature is enabled. [[GH-20783](https://github.com/hashicorp/vault/pull/20783)]
+* license (enterprise): Fix bug where license would update even if the license didn't change.
+* replication (enterprise): Fix a caching issue when replicating filtered data to
+a performance secondary. This resulted in the data being set to nil in the cache
+and a "invalid value" error being returned from the API.
+* replication (enterprise): Fix a race condition with invalid tokens during WAL streaming that was causing Secondary clusters to be unable to connect to a Primary.
+* replication (enterprise): Fix bug where reloading external plugin on a secondary would
+break replication.
+* replication (enterprise): Fix replication status for Primary clusters showing its primary cluster's information (in case of DR) in secondaries field when known_secondaries field is nil
+* replication (enterprise): fix bug where secondary grpc connections would timeout when connecting to a primary host that no longer exists.
+* secrets/pki: Support setting both maintain_stored_certificate_counts=false and publish_stored_certificate_count_metrics=false explicitly in tidy config. [[GH-20664](https://github.com/hashicorp/vault/pull/20664)]
+* secrets/transform (enterprise): Address SQL connection leak when cleaning expired tokens
+* secrets/transform (enterprise): Fix a caching bug affecting secondary nodes after a tokenization key rotation
+* secrets/transform (enterprise): Fix persistence problem with rotated tokenization key versions
+* secrets/transform: Added importing of keys and key versions into the Transform secrets engine using the command 'vault transform import' and 'vault transform import-version'. [[GH-20668](https://github.com/hashicorp/vault/pull/20668)]
+* secrets/transit: Fix export of HMAC-only key, correctly exporting the key used for sign operations. For consumers of the previously incorrect key, use the plaintext export to retrieve these incorrect keys and import them as new versions.
+secrets/transit: Fix bug related to shorter dedicated HMAC key sizing.
+sdk/helper/keysutil: New HMAC type policies will have HMACKey equal to Key and be copied over on import. [[GH-20864](https://github.com/hashicorp/vault/pull/20864)]
+* ui: Fixes issue unsealing cluster for seal types other than shamir [[GH-20897](https://github.com/hashicorp/vault/pull/20897)]
+* ui: fixes auto_rotate_period ttl input for transit keys [[GH-20731](https://github.com/hashicorp/vault/pull/20731)]
+* ui: fixes key_bits and signature_bits reverting to default values when editing a pki role [[GH-20907](https://github.com/hashicorp/vault/pull/20907)]
+
+## 1.13.3
+### June 08, 2023
+
+CHANGES:
+
+* core: Bump Go version to 1.20.4.
+* core: Revert #19676 (VAULT_GRPC_MIN_CONNECT_TIMEOUT env var) as we decided it was unnecessary. [[GH-20826](https://github.com/hashicorp/vault/pull/20826)]
+* replication (enterprise): Add a new parameter for the update-primary API call
+that allows for setting of the primary cluster addresses directly, instead of
+via a token.
+* storage/aerospike: Aerospike storage shouldn't be used on 32-bit architectures and is now unsupported on them. [[GH-20825](https://github.com/hashicorp/vault/pull/20825)]
+
+IMPROVEMENTS:
+
+* Add debug symbols back to builds to fix Dynatrace support [[GH-20519](https://github.com/hashicorp/vault/pull/20519)]
+* audit: add a `mount_point` field to audit requests and response entries [[GH-20411](https://github.com/hashicorp/vault/pull/20411)]
+* autopilot: Update version to v0.2.0 to add better support for respecting min quorum [[GH-19472](https://github.com/hashicorp/vault/pull/19472)]
+* command/server: Add support for dumping pprof files to the filesystem via SIGUSR2 when 
+`VAULT_PPROF_WRITE_TO_FILE=true` is set on the server. [[GH-20609](https://github.com/hashicorp/vault/pull/20609)]
+* core: Add possibility to decode a generated encoded root token via the rest API [[GH-20595](https://github.com/hashicorp/vault/pull/20595)]
+* core: include namespace path in granting_policies block of audit log
+* core: report intermediate error messages during request forwarding [[GH-20643](https://github.com/hashicorp/vault/pull/20643)]
+* openapi: Fix generated types for duration strings [[GH-20841](https://github.com/hashicorp/vault/pull/20841)]
+* sdk/framework: Fix non-deterministic ordering of 'required' fields in OpenAPI spec [[GH-20881](https://github.com/hashicorp/vault/pull/20881)]
+* secrets/pki: add subject key identifier to read key response [[GH-20642](https://github.com/hashicorp/vault/pull/20642)]
+
+BUG FIXES:
+
+* api: Properly Handle nil identity_policies in Secret Data [[GH-20636](https://github.com/hashicorp/vault/pull/20636)]
+* auth/ldap: Set default value for `max_page_size` properly [[GH-20453](https://github.com/hashicorp/vault/pull/20453)]
+* cli: CLI should take days as a unit of time for ttl like flags [[GH-20477](https://github.com/hashicorp/vault/pull/20477)]
+* cli: disable printing flags warnings messages for the ssh command [[GH-20502](https://github.com/hashicorp/vault/pull/20502)]
+* command/server: fixes panic in Vault server command when running in recovery mode [[GH-20418](https://github.com/hashicorp/vault/pull/20418)]
+* core (enterprise): Fix log shipper buffer size overflow issue for 32 bit architecture.
+* core (enterprise): Fix logshipper buffer size to default to DefaultBufferSize only when reported system memory is zero.
+* core (enterprise): Remove MFA Enforcment configuration for namespace when deleting namespace
+* core/identity: Allow updates of only the custom-metadata for entity alias. [[GH-20368](https://github.com/hashicorp/vault/pull/20368)]
+* core: Fix Forwarded Writer construction to correctly find active nodes, allowing PKI cross-cluster functionality to succeed on existing mounts.
+* core: Fix writes to readonly storage on performance standbys when user lockout feature is enabled. [[GH-20783](https://github.com/hashicorp/vault/pull/20783)]
+* core: prevent panic on login after namespace is deleted that had mfa enforcement [[GH-20375](https://github.com/hashicorp/vault/pull/20375)]
+* replication (enterprise): Fix a race condition with invalid tokens during WAL streaming that was causing Secondary clusters to be unable to connect to a Primary.
+* replication (enterprise): fix bug where secondary grpc connections would timeout when connecting to a primary host that no longer exists.
+* secrets/pki: Include per-issuer enable_aia_url_templating in issuer read endpoint. [[GH-20354](https://github.com/hashicorp/vault/pull/20354)]
+* secrets/transform (enterprise): Fix a caching bug affecting secondary nodes after a tokenization key rotation
+* secrets/transform: Added importing of keys and key versions into the Transform secrets engine using the command 'vault transform import' and 'vault transform import-version'. [[GH-20668](https://github.com/hashicorp/vault/pull/20668)]
+* secrets/transit: Fix export of HMAC-only key, correctly exporting the key used for sign operations. For consumers of the previously incorrect key, use the plaintext export to retrieve these incorrect keys and import them as new versions.
+secrets/transit: Fix bug related to shorter dedicated HMAC key sizing.
+sdk/helper/keysutil: New HMAC type policies will have HMACKey equal to Key and be copied over on import. [[GH-20864](https://github.com/hashicorp/vault/pull/20864)]
+* ui: Fixes issue unsealing cluster for seal types other than shamir [[GH-20897](https://github.com/hashicorp/vault/pull/20897)]
+* ui: fixes issue creating mfa login enforcement from method enforcements tab [[GH-20603](https://github.com/hashicorp/vault/pull/20603)]
+* ui: fixes key_bits and signature_bits reverting to default values when editing a pki role [[GH-20907](https://github.com/hashicorp/vault/pull/20907)]
+
 ## 1.13.2
 ### April 26, 2023
 
 CHANGES:
 
 * core: Bump Go version to 1.20.3.
+
+SECURITY:
+
+* core/seal: Fix handling of HMACing of seal-wrapped storage entries from HSMs using CKM_AES_CBC or CKM_AES_CBC_PAD which may have allowed an attacker to conduct a padding oracle attack. This vulnerability, CVE-2023-2197, affects Vault from 1.13.0 up to 1.13.1 and was fixed in 1.13.2. [[HCSEC-2023-14](https://discuss.hashicorp.com/t/hcsec-2023-14-vault-enterprise-vulnerable-to-padding-oracle-attacks-when-using-a-cbc-based-encryption-mechanism-with-a-hsm/53322)]
 
 IMPROVEMENTS:
 
@@ -26,7 +197,6 @@ BUG FIXES:
 * command/server: Fix incorrect paths in generated config for `-dev-tls` flag on Windows [[GH-20257](https://github.com/hashicorp/vault/pull/20257)]
 * core (enterprise): Fix intermittent issue with token entries sometimes not being found when using a newly created token in a request to a secondary, even when SSCT `new_token` forwarding is set. When this occurred, this would result in the following error to the client: `error performing token check: no lease entry found for token that ought to have one, possible eventual consistency issue`.
 * core (enterprise): Fix read on perf standbys failing with 412 after leadership change, unseal, restores or restarts when no writes occur
-* core/seal: Fix handling of HMACing of seal-wrapped storage entries from HSMs using CKM_AES_CBC or CKM_AES_CBC_PAD.
 * core/ssct (enterprise): Fixed race condition where a newly promoted DR may revert `sscGenCounter` 
 resulting in 412 errors.
 * core: Fix regression breaking non-raft clusters whose nodes share the same cluster_addr/api_addr. [[GH-19721](https://github.com/hashicorp/vault/pull/19721)]
@@ -392,6 +562,43 @@ non-voter.  In some scenarios this resulted in loss of quorum. [[GH-18263](https
 * ui: fixes reliance on secure context (https) by removing methods using the Crypto interface [[GH-19403](https://github.com/hashicorp/vault/pull/19403)]
 * ui: show Get credentials button for static roles detail page when a user has the proper permissions. [[GH-19190](https://github.com/hashicorp/vault/pull/19190)]
 
+## 1.12.7
+### June 08, 2023
+
+CHANGES:
+
+* core: Bump Go version to 1.19.9.
+* core: Revert #19676 (VAULT_GRPC_MIN_CONNECT_TIMEOUT env var) as we decided it was unnecessary. [[GH-20826](https://github.com/hashicorp/vault/pull/20826)]
+
+IMPROVEMENTS:
+
+* audit: add a `mount_point` field to audit requests and response entries [[GH-20411](https://github.com/hashicorp/vault/pull/20411)]
+* command/server: Add support for dumping pprof files to the filesystem via SIGUSR2 when 
+`VAULT_PPROF_WRITE_TO_FILE=true` is set on the server. [[GH-20609](https://github.com/hashicorp/vault/pull/20609)]
+* core: include namespace path in granting_policies block of audit log
+* openapi: Fix generated types for duration strings [[GH-20841](https://github.com/hashicorp/vault/pull/20841)]
+* sdk/framework: Fix non-deterministic ordering of 'required' fields in OpenAPI spec [[GH-20881](https://github.com/hashicorp/vault/pull/20881)]
+* secrets/pki: add subject key identifier to read key response [[GH-20642](https://github.com/hashicorp/vault/pull/20642)]
+* ui: update TTL picker for consistency [[GH-18114](https://github.com/hashicorp/vault/pull/18114)]
+
+BUG FIXES:
+
+* api: Properly Handle nil identity_policies in Secret Data [[GH-20636](https://github.com/hashicorp/vault/pull/20636)]
+* auth/ldap: Set default value for `max_page_size` properly [[GH-20453](https://github.com/hashicorp/vault/pull/20453)]
+* cli: CLI should take days as a unit of time for ttl like flags [[GH-20477](https://github.com/hashicorp/vault/pull/20477)]
+* cli: disable printing flags warnings messages for the ssh command [[GH-20502](https://github.com/hashicorp/vault/pull/20502)]
+* core (enterprise): Fix log shipper buffer size overflow issue for 32 bit architecture.
+* core (enterprise): Fix logshipper buffer size to default to DefaultBufferSize only when reported system memory is zero.
+* core (enterprise): Remove MFA Enforcment configuration for namespace when deleting namespace
+* core: prevent panic on login after namespace is deleted that had mfa enforcement [[GH-20375](https://github.com/hashicorp/vault/pull/20375)]
+* replication (enterprise): Fix a race condition with invalid tokens during WAL streaming that was causing Secondary clusters to be unable to connect to a Primary.
+* replication (enterprise): fix bug where secondary grpc connections would timeout when connecting to a primary host that no longer exists.
+* secrets/transform (enterprise): Fix a caching bug affecting secondary nodes after a tokenization key rotation
+* secrets/transit: Fix export of HMAC-only key, correctly exporting the key used for sign operations. For consumers of the previously incorrect key, use the plaintext export to retrieve these incorrect keys and import them as new versions.
+secrets/transit: Fix bug related to shorter dedicated HMAC key sizing.
+sdk/helper/keysutil: New HMAC type policies will have HMACKey equal to Key and be copied over on import. [[GH-20864](https://github.com/hashicorp/vault/pull/20864)]
+* ui: Fixes issue unsealing cluster for seal types other than shamir [[GH-20897](https://github.com/hashicorp/vault/pull/20897)]  
+                                                                       
 ## 1.12.6
 ### April 26, 2023
 
@@ -841,6 +1048,34 @@ BUG FIXES:
 * ui: OIDC login type uses localStorage instead of sessionStorage [[GH-16170](https://github.com/hashicorp/vault/pull/16170)]
 * vault: Fix a bug where duplicate policies could be added to an identity group. [[GH-15638](https://github.com/hashicorp/vault/pull/15638)]
 
+## 1.11.11
+### June 08, 2023
+
+CHANGES:
+
+* core: Bump Go version to 1.19.9.
+* core: Revert #19676 (VAULT_GRPC_MIN_CONNECT_TIMEOUT env var) as we decided it was unnecessary. [[GH-20826](https://github.com/hashicorp/vault/pull/20826)]
+
+IMPROVEMENTS:
+
+* command/server: Add support for dumping pprof files to the filesystem via SIGUSR2 when 
+`VAULT_PPROF_WRITE_TO_FILE=true` is set on the server. [[GH-20609](https://github.com/hashicorp/vault/pull/20609)]
+* secrets/pki: add subject key identifier to read key response [[GH-20642](https://github.com/hashicorp/vault/pull/20642)]
+* ui: update TTL picker for consistency [[GH-18114](https://github.com/hashicorp/vault/pull/18114)]
+
+BUG FIXES:
+
+* api: Properly Handle nil identity_policies in Secret Data [[GH-20636](https://github.com/hashicorp/vault/pull/20636)]
+* auth/ldap: Set default value for `max_page_size` properly [[GH-20453](https://github.com/hashicorp/vault/pull/20453)]
+* cli: CLI should take days as a unit of time for ttl like flags [[GH-20477](https://github.com/hashicorp/vault/pull/20477)]
+* core (enterprise): Fix log shipper buffer size overflow issue for 32 bit architecture.
+* core (enterprise): Fix logshipper buffer size to default to DefaultBufferSize only when reported system memory is zero.
+* core (enterprise): Remove MFA Enforcment configuration for namespace when deleting namespace
+* core: prevent panic on login after namespace is deleted that had mfa enforcement [[GH-20375](https://github.com/hashicorp/vault/pull/20375)]
+* replication (enterprise): Fix a race condition with invalid tokens during WAL streaming that was causing Secondary clusters to be unable to connect to a Primary.
+* replication (enterprise): fix bug where secondary grpc connections would timeout when connecting to a primary host that no longer exists.
+* secrets/transform (enterprise): Fix a caching bug affecting secondary nodes after a tokenization key rotation
+  
 ## 1.11.10
 ### April 26, 2023
 

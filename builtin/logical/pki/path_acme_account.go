@@ -6,6 +6,7 @@ package pki
 import (
 	"fmt"
 	"net/http"
+	"path"
 	"strings"
 	"time"
 
@@ -69,7 +70,7 @@ func addFieldsForACMERequest(fields map[string]*framework.FieldSchema) map[strin
 }
 
 func addFieldsForACMEKidRequest(fields map[string]*framework.FieldSchema, pattern string) map[string]*framework.FieldSchema {
-	if strings.Contains(pattern, framework.GenericNameRegex("kid")) {
+	if strings.Contains(pattern, uuidNameRegex("kid")) {
 		fields["kid"] = &framework.FieldSchema{
 			Type:        framework.TypeString,
 			Description: `The key identifier provided by the CA`,
@@ -97,8 +98,8 @@ func patternAcmeNewAccount(b *backend, pattern string) *framework.Path {
 			},
 		},
 
-		HelpSynopsis:    pathOcspHelpSyn,
-		HelpDescription: pathOcspHelpDesc,
+		HelpSynopsis:    pathAcmeHelpSync,
+		HelpDescription: pathAcmeHelpDesc,
 	}
 }
 
@@ -332,7 +333,7 @@ func (b *backend) acmeNewAccountUpdateHandler(acmeCtx *acmeContext, userCtx *jws
 
 	// Per RFC 8555 7.3.6 Account deactivation, if we were previously deactivated, we should return
 	// unauthorized. There is no way to reactivate any accounts per ACME RFC.
-	if account.Status != StatusValid {
+	if account.Status != AccountStatusValid {
 		// Treating "revoked" and "deactivated" as the same here.
 		return nil, ErrUnauthorized
 	}
@@ -346,11 +347,11 @@ func (b *backend) acmeNewAccountUpdateHandler(acmeCtx *acmeContext, userCtx *jws
 
 	// Check to process account de-activation status was requested.
 	// 7.3.6. Account Deactivation
-	if string(StatusDeactivated) == status {
+	if string(AccountStatusDeactivated) == status {
 		shouldUpdate = true
 		// TODO: This should cancel any ongoing operations (do not revoke certs),
 		//       perhaps we should delete this account here?
-		account.Status = StatusDeactivated
+		account.Status = AccountStatusDeactivated
 		account.AccountRevokedDate = time.Now()
 	}
 
@@ -366,7 +367,7 @@ func (b *backend) acmeNewAccountUpdateHandler(acmeCtx *acmeContext, userCtx *jws
 }
 
 func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, keyThumbprint string, certTidyBuffer, accountTidyBuffer time.Duration) error {
-	thumbprintEntry, err := ac.sc.Storage.Get(ac.sc.Context, acmeThumbprintPrefix+keyThumbprint)
+	thumbprintEntry, err := ac.sc.Storage.Get(ac.sc.Context, path.Join(acmeThumbprintPrefix, keyThumbprint))
 	if err != nil {
 		return fmt.Errorf("error retrieving thumbprint entry %v, unable to find corresponding account entry: %w", keyThumbprint, err)
 	}
@@ -391,7 +392,7 @@ func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, ke
 	}
 	if accountEntry == nil {
 		// We delete the Thumbprint Associated with the Account, and we are done
-		err = ac.sc.Storage.Delete(ac.sc.Context, acmeThumbprintPrefix+keyThumbprint)
+		err = ac.sc.Storage.Delete(ac.sc.Context, path.Join(acmeThumbprintPrefix, keyThumbprint))
 		if err != nil {
 			return err
 		}
@@ -411,41 +412,61 @@ func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, ke
 		return err
 	}
 	allOrdersTidied := true
+	maxCertExpiryUpdated := false
 	for _, orderId := range orderIds {
-		wasTidied, err := b.acmeTidyOrder(ac, thumbprint.Kid, acmeAccountPrefix+thumbprint.Kid+"/orders/"+orderId, ac.sc, certTidyBuffer)
+		wasTidied, orderExpiry, err := b.acmeTidyOrder(ac, thumbprint.Kid, getOrderPath(thumbprint.Kid, orderId), certTidyBuffer)
 		if err != nil {
 			return err
 		}
 		if !wasTidied {
 			allOrdersTidied = false
 		}
+
+		if !orderExpiry.IsZero() && account.MaxCertExpiry.Before(orderExpiry) {
+			account.MaxCertExpiry = orderExpiry
+			maxCertExpiryUpdated = true
+		}
 	}
 
-	if allOrdersTidied && time.Now().After(account.AccountCreatedDate.Add(accountTidyBuffer)) {
+	now := time.Now()
+	if allOrdersTidied &&
+		now.After(account.AccountCreatedDate.Add(accountTidyBuffer)) &&
+		now.After(account.MaxCertExpiry.Add(accountTidyBuffer)) {
 		// Tidy this account
 		// If it is Revoked or Deactivated:
-		if (account.Status == StatusRevoked || account.Status == StatusDeactivated) && time.Now().After(account.AccountRevokedDate.Add(accountTidyBuffer)) {
+		if (account.Status == AccountStatusRevoked || account.Status == AccountStatusDeactivated) && now.After(account.AccountRevokedDate.Add(accountTidyBuffer)) {
 			// We Delete the Account Associated with this Thumbprint:
-			err = ac.sc.Storage.Delete(ac.sc.Context, acmeAccountPrefix+thumbprint.Kid)
+			err = ac.sc.Storage.Delete(ac.sc.Context, path.Join(acmeAccountPrefix, thumbprint.Kid))
 			if err != nil {
 				return err
 			}
 
 			// Now we delete the Thumbprint Associated with the Account:
-			err = ac.sc.Storage.Delete(ac.sc.Context, acmeThumbprintPrefix+keyThumbprint)
+			err = ac.sc.Storage.Delete(ac.sc.Context, path.Join(acmeThumbprintPrefix, keyThumbprint))
 			if err != nil {
 				return err
 			}
 			b.tidyStatusIncDeletedAcmeAccountCount()
-		} else if account.Status == StatusValid {
+		} else if account.Status == AccountStatusValid {
 			// Revoke This Account
-			account.AccountRevokedDate = time.Now()
-			account.Status = StatusRevoked
+			account.AccountRevokedDate = now
+			account.Status = AccountStatusRevoked
 			err := as.UpdateAccount(ac, &account)
 			if err != nil {
 				return err
 			}
 			b.tidyStatusIncRevAcmeAccountCount()
+		}
+	}
+
+	// Only update the account if we modified the max cert expiry values and the account is still valid,
+	// to prevent us from adding back a deleted account or not re-writing the revoked account that was
+	// already written above.
+	if maxCertExpiryUpdated && account.Status == AccountStatusValid {
+		// Update our expiry time we previously setup.
+		err := as.UpdateAccount(ac, &account)
+		if err != nil {
+			return err
 		}
 	}
 

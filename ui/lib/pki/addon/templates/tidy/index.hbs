@@ -1,0 +1,20 @@
+<SecretListHeader
+  @model={{this.model.engine}}
+  @backendCrumb={{hash
+    label=this.model.engine.id
+    text=this.model.engine.id
+    path="vault.cluster.secrets.backend.list-root"
+    model=this.model.engine.id
+  }}
+  @isEngine={{true}}
+/>
+{{#if this.model.hasConfig}}
+  <Page::PkiTidyStatus @autoTidyConfig={{this.model.autoTidyConfig}} @tidyStatus={{this.tidyStatus}} />
+{{else}}
+  <Toolbar />
+  <EmptyState @title="PKI not configured" @message={{this.notConfiguredMessage}}>
+    <LinkTo @route="configuration.create">
+      Configure PKI
+    </LinkTo>
+  </EmptyState>
+{{/if}}

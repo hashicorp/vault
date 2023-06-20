@@ -54,7 +54,7 @@ jobs:
     container:
       image: returntocorp/semgrep@sha256:ffc6f3567654f9431456d49fd059dfe548f007c494a7eb6cd5a1a3e50d813fb3
     steps:
-    - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
+    - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
     - name: Run Semgrep Rules
       id: semgrep
       run: semgrep ci --include '*.go' --config 'tools/semgrep/ci'
@@ -72,8 +72,8 @@ jobs:
     - setup
     runs-on: ${{ fromJSON(needs.setup.outputs.compute-tiny) }}
     steps:
-    - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
-    - uses: actions/setup-go@d0a58c1c4d2b25278816e339b944508c875f3613
+    - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+    - uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
       with:
         go-version-file: ./.go-version
         cache: true
@@ -92,7 +92,7 @@ jobs:
     if: ${{ needs.setup.outputs.enterprise != '' && github.base_ref != '' }}
     runs-on: ${{ fromJSON(needs.setup.outputs.compute-tiny) }}
     steps:
-    - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
+    - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
       with:
         fetch-depth: 0
     - id: determine-branch
@@ -163,6 +163,7 @@ jobs:
       go-build-tags: ${{ needs.setup.outputs.go-build-tags }}
       runs-on: ${{ needs.setup.outputs.compute-huge }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
+      name: "-race"
     secrets: inherit
   test-go-fips:
     name: Run Go tests with FIPS configuration
@@ -188,6 +189,7 @@ jobs:
       go-build-tags: '${{ needs.setup.outputs.go-build-tags }},deadlock,cgo,fips,fips_140_2'
       runs-on: ${{ needs.setup.outputs.compute-larger }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
+      name: "-fips"
     secrets: inherit
   test-ui:
     name: Test UI
@@ -209,28 +211,26 @@ jobs:
       contents: read
     runs-on: ${{ fromJSON(needs.setup.outputs.compute-larger) }}
     steps:
-    - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
-    - uses: actions/setup-go@d0a58c1c4d2b25278816e339b944508c875f3613
+    - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+    - uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
       with:
         go-version-file: ./.go-version
         cache: true
     # Setup node.js without caching to allow running npm install -g yarn (next step)
-    - uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c
+    - uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c # v3.6.0
       with:
         node-version-file: './ui/package.json'
     - id: install-yarn
       run: |
         npm install -g yarn
     # Setup node.js with caching using the yarn.lock file
-    - uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c
+    - uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c # v3.6.0
       with:
         node-version-file: './ui/package.json'
         cache: yarn
         cache-dependency-path: ui/yarn.lock
-    - id: install-browser-libraries
-      run: sudo apt install -y libnss3-dev libgdk-pixbuf2.0-dev libgtk-3-dev libxss-dev libasound2
     - id: install-browser
-      uses: browser-actions/setup-chrome@29abc1a83d1d71557708563b4bc962d0f983a376
+      uses: browser-actions/setup-chrome@c485fa3bab6be59dce18dbc18ef6ab7cbc8ff5f1 # v1.2.0
     - id: ui-dependencies
       name: ui-dependencies
       working-directory: ./ui
@@ -281,12 +281,12 @@ jobs:
         cd ui
         mkdir -p test-results/qunit
         yarn test:oss
-    - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce
+    - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
       with:
         name: test-results-ui
         path: ui/test-results
       if: always()
-    - uses: test-summary/action@62bc5c68de2a6a0d02039763b8c754569df99e3f
+    - uses: test-summary/action@62bc5c68de2a6a0d02039763b8c754569df99e3f # TSCCR: no entry for repository "test-summary/action"
       with:
         paths: "ui/test-results/qunit/results.xml"
         show: "fail"
@@ -294,6 +294,7 @@ jobs:
   tests-completed:
     needs:
     - setup
+    - setup-go-cache
     - test-go
     - test-ui
     if: always()

@@ -7,7 +7,7 @@ import { currentRouteName, settled } from '@ember/test-helpers';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { create } from 'ember-cli-page-object';
 import { module, test } from 'qunit';
-import { runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
+import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -16,6 +16,7 @@ import backendsPage from 'vault/tests/pages/secrets/backends';
 import authPage from 'vault/tests/pages/auth';
 import ss from 'vault/tests/pages/components/search-select';
 
+const consoleComponent = create(consoleClass);
 const searchSelect = create(ss);
 
 module('Acceptance | secret-engine list view', function (hooks) {
@@ -76,11 +77,11 @@ module('Acceptance | secret-engine list view', function (hooks) {
     assert.dom(rowSupported[0]).hasClass('linked-block', `linked-block class is added to supported engines.`);
 
     // cleanup
-    await runCommands([`delete sys/mounts/${enginePath}`]);
+    await consoleComponent.runCommands([`delete sys/mounts/${enginePath}`]);
   });
 
   test('it filters by name and engine type', async function (assert) {
-    assert.expect(3);
+    assert.expect(4);
     const enginePath1 = `aws-1-${this.uid}`;
     const enginePath2 = `aws-2-${this.uid}`;
 
@@ -98,17 +99,18 @@ module('Acceptance | secret-engine list view', function (hooks) {
     assert.strictEqual(rows.length, rowsAws.length, 'all rows returned are aws');
     // filter by name
     await clickTrigger('#filter-by-engine-name');
-    await searchSelect.options.objectAt(1).click();
+    const firstItemToSelect = searchSelect.options.objectAt(0).text;
+    await searchSelect.options.objectAt(0).click();
     const singleRow = document.querySelectorAll('[data-test-auth-backend-link]');
-
-    assert.dom(singleRow[0]).includesText('aws-2', 'shows the filtered by name engine');
+    assert.strictEqual(singleRow.length, 1, 'returns only one row');
+    assert.dom(singleRow[0]).includesText(firstItemToSelect, 'shows the filtered by name engine');
     // clear filter by engine name
     await searchSelect.deleteButtons.objectAt(1).click();
     const rowsAgain = document.querySelectorAll('[data-test-auth-backend-link]');
     assert.ok(rowsAgain.length > 1, 'filter has been removed');
 
     // cleanup
-    await runCommands([`delete sys/mounts/${enginePath1}`]);
-    await runCommands([`delete sys/mounts/${enginePath2}`]);
+    await consoleComponent.runCommands([`delete sys/mounts/${enginePath1}`]);
+    await consoleComponent.runCommands([`delete sys/mounts/${enginePath2}`]);
   });
 });

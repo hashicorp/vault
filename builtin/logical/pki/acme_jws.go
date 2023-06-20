@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"strings"
 
-	jose "gopkg.in/square/go-jose.v2"
+	"github.com/go-jose/go-jose/v3"
 )
 
 var AllowedOuterJWSTypes = map[string]interface{}{
@@ -259,7 +259,7 @@ func verifyEabPayload(acmeState *acmeState, ac *acmeContext, outer *jwsCtx, expe
 		return nil, fmt.Errorf("%w: failed to verify eab", ErrUnauthorized)
 	}
 
-	verifiedPayload, err := sig.Verify(eabEntry.MacKey)
+	verifiedPayload, err := sig.Verify(eabEntry.PrivateBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -267,6 +267,11 @@ func verifyEabPayload(acmeState *acmeState, ac *acmeContext, outer *jwsCtx, expe
 	// Make sure how eab payload matches the outer JWK key value
 	if !bytes.Equal(outer.Jwk, verifiedPayload) {
 		return nil, fmt.Errorf("eab payload does not match outer JWK key: %w", ErrMalformed)
+	}
+
+	if eabEntry.AcmeDirectory != ac.acmeDirectory {
+		// This EAB was not created for this specific ACME directory, reject it
+		return nil, fmt.Errorf("%w: failed to verify eab", ErrUnauthorized)
 	}
 
 	return eabEntry, nil

@@ -48,7 +48,7 @@ resource "enos_remote_exec" "wait_until_sealed" {
     VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
-  scripts = ["${path.module}/scripts/wait-until-sealed.sh"]
+  scripts = [abspath("${path.module}/scripts/wait-until-sealed.sh")]
 
   transport = {
     ssh = {
@@ -92,7 +92,7 @@ resource "enos_remote_exec" "unseal_followers" {
     UNSEAL_KEYS       = join(",", var.vault_unseal_keys)
   }
 
-  scripts = ["${path.module}/scripts/unseal-node.sh"]
+  scripts = [abspath("${path.module}/scripts/unseal-node.sh")]
 
   transport = {
     ssh = {
@@ -117,7 +117,7 @@ resource "enos_remote_exec" "unseal_followers_again" {
     UNSEAL_KEYS       = join(",", var.vault_unseal_keys)
   }
 
-  scripts = ["${path.module}/scripts/unseal-node.sh"]
+  scripts = [abspath("${path.module}/scripts/unseal-node.sh")]
 
   transport = {
     ssh = {

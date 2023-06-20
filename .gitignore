@@ -61,6 +61,7 @@ Vagrantfile
 
 # Enos
 enos/.enos
+enos/enos-local.vars.hcl
 enos/support
 # Enos local Terraform files
 enos/.terraform/*
@@ -132,3 +133,5 @@ website/components/node_modules
 *.log
 
 tools/godoctests/.bin
+tools/gonilnilfunctions/.bin
+

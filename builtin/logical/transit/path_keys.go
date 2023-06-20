@@ -257,12 +257,14 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		p.Unlock()
 	}
 
-	resp := &logical.Response{}
+	resp, err := b.formatKeyPolicy(p, nil)
+	if err != nil {
+		return nil, err
+	}
 	if !upserted {
 		resp.AddWarning(fmt.Sprintf("key %s already existed", name))
 	}
-
-	return nil, nil
+	return resp, nil
 }
 
 // Built-in helper type for returning asymmetric keys
@@ -290,6 +292,19 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 	}
 	defer p.Unlock()
 
+	contextRaw := d.Get("context").(string)
+	var context []byte
+	if len(contextRaw) != 0 {
+		context, err = base64.StdEncoding.DecodeString(contextRaw)
+		if err != nil {
+			return logical.ErrorResponse("failed to base64-decode context"), logical.ErrInvalidRequest
+		}
+	}
+
+	return b.formatKeyPolicy(p, context)
+}
+
+func (b *backend) formatKeyPolicy(p *keysutil.Policy, context []byte) (*logical.Response, error) {
 	// Return the response
 	resp := &logical.Response{
 		Data: map[string]interface{}{
@@ -343,15 +358,6 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 		resp.Data["convergent_encryption"] = p.ConvergentEncryption
 		if p.ConvergentEncryption {
 			resp.Data["convergent_encryption_version"] = p.ConvergentVersion
-		}
-	}
-
-	contextRaw := d.Get("context").(string)
-	var context []byte
-	if len(contextRaw) != 0 {
-		context, err = base64.StdEncoding.DecodeString(contextRaw)
-		if err != nil {
-			return logical.ErrorResponse("failed to base64-decode context"), logical.ErrInvalidRequest
 		}
 	}
 

@@ -5,7 +5,9 @@ package pkiext_binary
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
+	"path"
 
 	"github.com/hashicorp/vault/api"
 )
@@ -112,6 +114,33 @@ func (vpm *VaultPkiMount) UpdateRole(roleName string, config map[string]interfac
 		vpm.mount+"/roles/"+roleName, mergeWithDefaults(config, defaults))
 
 	return err
+}
+
+func (vpm *VaultPkiMount) GetEabKey(acmeDirectory string) (string, string, error) {
+	eabPath := path.Join(vpm.mount, acmeDirectory, "/new-eab")
+	resp, err := vpm.GetActiveNode().Logical().WriteWithContext(context.Background(), eabPath, map[string]interface{}{})
+	if err != nil {
+		return "", "", fmt.Errorf("failed fetching eab from %s: %w", eabPath, err)
+	}
+	eabId := resp.Data["id"].(string)
+	base64EabKey := resp.Data["key"].(string)
+	// just make sure we get something valid back from the server, we still want to pass back the base64 version
+	// to the caller...
+	_, err = base64.RawURLEncoding.DecodeString(base64EabKey)
+	if err != nil {
+		return "", "", fmt.Errorf("failed decoding key response field: %s: %w", base64EabKey, err)
+	}
+	return eabId, base64EabKey, nil
+}
+
+// GetCACertPEM retrieves the PKI mount's PEM-encoded CA certificate.
+func (vpm *VaultPkiMount) GetCACertPEM() (string, error) {
+	caCertPath := path.Join(vpm.mount, "/cert/ca")
+	resp, err := vpm.GetActiveNode().Logical().ReadWithContext(context.Background(), caCertPath)
+	if err != nil {
+		return "", err
+	}
+	return resp.Data["certificate"].(string), nil
 }
 
 func mergeWithDefaults(config map[string]interface{}, defaults map[string]interface{}) map[string]interface{} {

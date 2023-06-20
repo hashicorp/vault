@@ -10,10 +10,12 @@
 />
 
 <Page::PkiConfigurationDetails
+  @acme={{this.model.acme}}
+  @cluster={{this.model.cluster}}
   @urls={{this.model.urls}}
   @crl={{this.model.crl}}
   @mountConfig={{this.model.mountConfig}}
-  @currentPath={{this.model.engine.id}}
+  @backend={{this.model.engine.id}}
   @canDeleteAllIssuers={{this.model.issuerModel.canDeleteAllIssuers}}
   @hasConfig={{this.model.hasConfig}}
 />

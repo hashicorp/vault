@@ -366,15 +366,6 @@
       {
         "title": "Username & Password",
         "path": "auth/userpass"
-      },
-      {
-        "title": "App ID",
-        "badge": {
-          "text": "DEPRECATED",
-          "type": "outlined",
-          "color": "neutral"
-        },
-        "path": "auth/app-id"
       }
     ]
   },
@@ -457,6 +448,10 @@
       {
         "title": "<code>/sys/generate-root</code>",
         "path": "system/generate-root"
+      },
+      {
+        "title": "<code>/sys/decode-token</code>",
+        "path": "system/decode-token"
       },
       {
         "title": "<code>/sys/health</code>",
