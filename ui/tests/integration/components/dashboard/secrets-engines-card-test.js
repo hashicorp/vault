@@ -2,11 +2,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-
-const SELECTORS = {
-  cardTitle: '[data-test-dashboard-secrets-engines-header] h3',
-  secretEnginesTableRows: '[data-test-dashboard-secrets-engines-table] tr',
-};
+import SELECTORS from 'vault/tests/helpers/components/dashboard/secrets-engines-card';
 
 module('Integration | Component | dashboard/secrets-engines-card', function (hooks) {
   setupRenderingTest(hooks);
@@ -82,17 +78,11 @@ module('Integration | Component | dashboard/secrets-engines-card', function (hoo
     assert.dom(SELECTORS.secretEnginesTableRows).exists({ count: 5 });
 
     this.secretsEngines.slice(0, 5).forEach((engine) => {
-      assert
-        .dom(`[data-test-secrets-engines-row=${engine.id}] [data-test-accessor]`)
-        .hasText(engine.accessor);
+      assert.dom(SELECTORS.getSecretEngineAccessor(engine.id)).hasText(engine.accessor);
       if (engine.description) {
-        assert
-          .dom(`[data-test-secrets-engines-row=${engine.id}] [data-test-description]`)
-          .hasText(engine.description);
+        assert.dom(SELECTORS.getSecretEngineDescription(engine.id)).hasText(engine.description);
       } else {
-        assert
-          .dom(`[data-test-secrets-engines-row=${engine.id}] [data-test-description]`)
-          .doesNotExist(engine.description);
+        assert.dom(SELECTORS.getSecretEngineDescription(engine.id)).doesNotExist(engine.description);
       }
     });
   });
