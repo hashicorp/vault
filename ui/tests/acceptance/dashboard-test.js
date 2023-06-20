@@ -12,7 +12,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
     return authPage.login();
   });
 
-  // TODO: create a test that will navigate to dashboard if user opts into new dashboard ui
+  // TODO LANDING PAGE: create a test that will navigate to dashboard if user opts into new dashboard ui
   test('does not navigate to dashboard on login when user has not opted into dashboard ui', async function (assert) {
     assert.strictEqual(currentURL(), '/vault/secrets');
 
