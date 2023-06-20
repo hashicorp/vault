@@ -174,7 +174,6 @@ jobs:
     needs: run
     # Temporary "success" condition for testing on PR; revert to "failure" before merge to main
     if: always() && needs.run.result == 'success'
-    runs-on: ubuntu-latest
     uses: hashicorp/cloud-gha-slack-notifier/.github/workflows/slack-notify-enhanced.yaml@v1
     with:
       channel-id: "C05DBVA4LGZ" # publishes to #feed-vault-enos-failures
