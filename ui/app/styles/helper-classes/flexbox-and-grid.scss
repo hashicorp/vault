@@ -20,6 +20,10 @@
   flex-direction: row;
 }
 
+.has-gap-m {
+  gap: $spacing-m;
+}
+
 // Alignment of the items
 .is-flex-v-centered {
   display: flex;

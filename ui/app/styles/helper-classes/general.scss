@@ -36,6 +36,10 @@
   border: none !important;
 }
 
+.has-border-collapse {
+  border-collapse: collapse;
+}
+
 // pointer helpers
 .has-no-pointer {
   pointer-events: none;
