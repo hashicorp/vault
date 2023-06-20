@@ -702,7 +702,7 @@ func (d *ReadableDuration) UnmarshalJSON(raw []byte) (err error) {
 	str := string(raw)
 	if len(str) >= 2 && str[0] == '"' && str[len(str)-1] == '"' {
 		// quoted string
-		dur, err = time.ParseDuration(str[1 : len(str)-1])
+		dur, err = parseutil.ParseDurationSecond(str[1 : len(str)-1])
 		if err != nil {
 			return err
 		}

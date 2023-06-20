@@ -14,7 +14,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-hclog"
-
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -768,7 +768,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 
 	if pauseDurationStr != "" {
 		var err error
-		pauseDuration, err = time.ParseDuration(pauseDurationStr)
+		pauseDuration, err = parseutil.ParseDurationSecond(pauseDurationStr)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("Error parsing pause_duration: %v", err)), nil
 		}
@@ -1792,7 +1792,7 @@ func (b *backend) pathConfigAutoTidyWrite(ctx context.Context, req *logical.Requ
 	}
 
 	if pauseDurationRaw, ok := d.GetOk("pause_duration"); ok {
-		config.PauseDuration, err = time.ParseDuration(pauseDurationRaw.(string))
+		config.PauseDuration, err = parseutil.ParseDurationSecond(pauseDurationRaw.(string))
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("unable to parse given pause_duration: %v", err)), nil
 		}
