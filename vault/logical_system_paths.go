@@ -858,8 +858,9 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
-							Description: "OK",
-							Fields:      respFields,
+							Description:  "OK",
+							FieldsAreRaw: true,
+							Fields:       respFields,
 						}},
 					},
 					Summary: "Reads the configuration and progress of the current rekey attempt.",
@@ -870,8 +871,9 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
-							Description: "OK",
-							Fields:      respFields,
+							Description:  "OK",
+							FieldsAreRaw: true,
+							Fields:       respFields,
 						}},
 					},
 					Summary:     "Initializes a new rekey attempt.",
@@ -1022,7 +1024,8 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
-							Description: "OK",
+							Description:  "OK",
+							FieldsAreRaw: true,
 							Fields: map[string]*framework.FieldSchema{
 								"nounce": {
 									Type:     framework.TypeString,
@@ -1099,7 +1102,8 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
-							Description: "OK",
+							Description:  "OK",
+							FieldsAreRaw: true,
 							Fields: map[string]*framework.FieldSchema{
 								"nounce": {
 									Type:     framework.TypeString,
@@ -1132,7 +1136,8 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
-							Description: "OK",
+							Description:  "OK",
+							FieldsAreRaw: true,
 							Fields: map[string]*framework.FieldSchema{
 								"nounce": {
 									Type:     framework.TypeString,
@@ -1166,7 +1171,8 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
-							Description: "OK",
+							Description:  "OK",
+							FieldsAreRaw: true,
 							Fields: map[string]*framework.FieldSchema{
 								"nounce": {
 									Type:     framework.TypeString,
