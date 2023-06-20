@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 const SELECTORS = {
   cardTitle: '[data-test-dashboard-secrets-engines-header] h3',
   secretEnginesTableRows: '[data-test-dashboard-secrets-engines-table] tr',
