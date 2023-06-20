@@ -1,11 +1,11 @@
 ### PKI storage migration revives deleted issuers
 
-In Vault 1.11, a new storage layout was created to support multiple issuer
-within a single mount, creating storage version 1. In Vault 1.11.6, 1.12.2,
-and 1.13.0, a bug was fixed wherein (due to incorrect ordering of writes),
-the CA chain could be incorrect, due to writes failing when too many mounts
-attempted migration at the same time; this introduced storage version 2.
-
+Vault 1.11 introduced Storage v1, a new storage layout that supported
+multiple issuers within a single mount. Bug fixes in Vault 1.11.6, 1.12.2,
+and 1.13.0, corrected a write-ordering issue that lead to invalid CA chains.
+Specifically, incorrectly ordered writes would fail and trigger a mass mount
+migration. Too many mounts attempting migration at the same time would result
+in an incorrect CA chain. The collection of bug fixes introduced Storage v2.
 #### Impacted Versions
 
 If issuers were present pre-1.11, and were subsequently deleted prior to
