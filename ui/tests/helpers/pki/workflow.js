@@ -65,7 +65,7 @@ export const SELECTORS = {
     title: '[data-test-pki-configuration-page-title]',
     emptyState: '[data-test-configuration-empty-state]',
     nextStepsBanner: '[data-test-config-next-steps]',
-    importError: '[data-test-import-error]',
+    importError: '[data-test-message-error]',
     pkiBetaBanner: '[data-test-pki-configuration-banner]',
     pkiBetaBannerLink: '[data-test-pki-configuration-banner] a',
     ...CONFIGURATION,
