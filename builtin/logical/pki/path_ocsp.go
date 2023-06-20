@@ -20,14 +20,11 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
-
-	"github.com/hashicorp/vault/sdk/helper/errutil"
-
-	"golang.org/x/crypto/ocsp"
-
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"golang.org/x/crypto/ocsp"
 )
 
 const (

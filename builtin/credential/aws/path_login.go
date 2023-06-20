@@ -19,8 +19,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/go-secure-stdlib/parseutil"
-
 	"github.com/aws/aws-sdk-go/aws"
 	awsClient "github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -29,6 +27,7 @@ import (
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/credential/aws/pkcs7"

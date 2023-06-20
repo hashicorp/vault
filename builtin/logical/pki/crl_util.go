@@ -15,13 +15,11 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
-
-	atomic2 "go.uber.org/atomic"
-
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	atomic2 "go.uber.org/atomic"
 )
 
 const (

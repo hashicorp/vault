@@ -13,14 +13,11 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
-
-	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
-
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-
 	"github.com/stretchr/testify/require"
 )
 

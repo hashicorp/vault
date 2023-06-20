@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
-
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/framework"
