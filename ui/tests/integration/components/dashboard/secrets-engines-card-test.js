@@ -41,6 +41,14 @@ module('Integration | Component | dashboard/secrets-engines-card', function (hoo
     this.store.pushPayload('secret-engine', {
       modelName: 'secret-engine',
       data: {
+        accessor: 'nomad_123hh',
+        path: 'nomad/',
+        type: 'nomad',
+      },
+    });
+    this.store.pushPayload('secret-engine', {
+      modelName: 'secret-engine',
+      data: {
         accessor: 'pki_f3400dee',
         path: 'pki-0-test/',
         type: 'pki',
@@ -90,5 +98,11 @@ module('Integration | Component | dashboard/secrets-engines-card', function (hoo
         assert.dom(SELECTORS.getSecretEngineDescription(engine.id)).doesNotExist(engine.description);
       }
     });
+  });
+
+  test('it adds disabled css styling to unsupported secret engines', async function (assert) {
+    await this.renderComponent();
+    assert.dom('[data-test-secrets-engines-row="nomad"] [data-test-view]').doesNotExist();
+    assert.dom('[data-test-icon="nomad"]').hasClass('has-text-grey');
   });
 });

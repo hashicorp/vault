@@ -7,8 +7,8 @@ import { module, test } from 'qunit';
 import { visit, currentURL } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import authPage from 'vault/tests/pages/auth';
-import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import SELECTORS from 'vault/tests/helpers/components/dashboard/secrets-engines-card';
+import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 
 module('Acceptance | landing page dashboard', function (hooks) {
   setupApplicationTest(hooks);
@@ -26,10 +26,18 @@ module('Acceptance | landing page dashboard', function (hooks) {
     assert.strictEqual(currentURL(), '/vault/dashboard');
   });
 
-  test('shows the secrets engines card', async function (assert) {
-    await enablePage.enable('pki', 'pki');
-    await visit('/vault/dashboard');
-    assert.dom(SELECTORS.cardTitle).hasText('Secrets Engines');
-    assert.dom(SELECTORS.getSecretEngineAccessor('pki')).exists();
+  module('secrets engines card', function () {
+    test('shows a secrets engine card', async function (assert) {
+      await mountSecrets.enable('pki', 'pki');
+      await visit('/vault/dashboard');
+      assert.dom(SELECTORS.cardTitle).hasText('Secrets Engines');
+      assert.dom(SELECTORS.getSecretEngineAccessor('pki')).exists();
+    });
+
+    test('it adds disabled css styling to unsupported secret engines', async function (assert) {
+      await mountSecrets.enable('nomad', 'nomad');
+      await visit('/vault/dashboard');
+      assert.dom('[data-test-secrets-engines-row="nomad"] [data-test-view]').doesNotExist();
+    });
   });
 });

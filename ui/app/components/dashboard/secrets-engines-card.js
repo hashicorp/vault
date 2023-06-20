@@ -5,7 +5,18 @@
 
 import Component from '@glimmer/component';
 
-export default class DashboardSecretsEnginesCardComponent extends Component {
+/**
+ * @module DashboardSecretsEnginesCard
+ * DashboardSecretsEnginesCard component are used to display 5 secrets engines to the user.
+ *
+ * @example
+ * ```js
+ * <DashboardSecretsEnginesCard @secretsEngines={{@model.secretsEngines}} />
+ * ```
+ * @param {array} secretsEngines - list of secrets engines
+ */
+
+export default class DashboardSecretsEnginesCard extends Component {
   get filteredSecretsEngines() {
     const filteredEngines = this.args.secretsEngines.filter(
       (secretEngine) => secretEngine.shouldIncludeInList
