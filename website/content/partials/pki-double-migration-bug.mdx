@@ -8,12 +8,12 @@ migration. Too many mounts attempting migration at the same time would result
 in an incorrect CA chain. The collection of bug fixes introduced Storage v2.
 #### Impacted Versions
 
-If issuers were present pre-1.11, and were subsequently deleted prior to
-upgrading to a Vault version with storage version 2, the initial migration
-of issuers would be re-attempted and these issuers would be recreated. If
-managed keys were associated with these legacy versions (and were
-subsequently removed from the managed key repository), migration would fail
-with an error in the logs:
+Issuers created before Vault 1.11 and migrated to Storage v1 and deleted
+before upgrading to a Vault version with Storage v2 were incorrectly
+recreated during the upgrade when Vault automatically re-migrated legacy
+issuers. Migration failed if Vault found managed keys associated with the
+legacy issuers that had been removed from the managed key repository. The
+error appeared in Vault logs as:
 
 > Error during migration of PKI mount:
 >   failed to lookup public key from managed key:
