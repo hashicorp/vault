@@ -16,7 +16,7 @@ func TestBackend_ConfigConnection_DefaultUsernameTemplate(t *testing.T) {
 	var err error
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b := Backend()
+	b := Backend(config)
 	if err = b.Setup(context.Background(), config); err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +63,7 @@ func TestBackend_ConfigConnection_CustomUsernameTemplate(t *testing.T) {
 	var err error
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b := Backend()
+	b := Backend(config)
 	if err = b.Setup(context.Background(), config); err != nil {
 		t.Fatal(err)
 	}

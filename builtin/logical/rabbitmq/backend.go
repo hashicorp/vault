@@ -7,35 +7,35 @@ import (
 	"context"
 	"strings"
 	"sync"
+	"time"
 
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
-	rabbithole "github.com/michaelklishin/rabbit-hole/v2"
 	"github.com/hashicorp/vault/sdk/queue"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	rabbithole "github.com/michaelklishin/rabbit-hole/v2"
 )
 
 const (
-	operationPrefixRabbitMQ = "rabbit-mq"
-	rabbitMQRolePath        = "role/"
-	rabbitMQStaticRolePath  = "static-role/"
+	operationPrefixRabbitMQ       = "rabbit-mq"
+	rabbitMQRolePath              = "role/"
+	rabbitMQStaticRolePath        = "static-role/"
+	rabbitMQDefaultRotationPeriod = 5
 )
 
 // Factory creates and configures the backend
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
-	b := Backend()
+	b := Backend(conf)
 	if err := b.Setup(ctx, conf); err != nil {
 		return nil, err
 	}
 	b.credRotationQueue = queue.New()
-	// Load queue and kickoff new periodic ticker
-	// TODO enable queue initialisation
-	// go b.initQueue(b.queueCtx, conf, conf.System.ReplicationState())
 	return b, nil
 }
 
 // Creates a new backend with all the paths and secrets belonging to it
-func Backend() *backend {
+func Backend(conf *logical.BackendConfig) *backend {
 	var b backend
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),
@@ -62,6 +62,17 @@ func Backend() *backend {
 
 		Clean:       b.resetClient,
 		Invalidate:  b.invalidate,
+		WALRollbackMinAge: time.Duration(rabbitMQDefaultRotationPeriod) * time.Second,
+		PeriodicFunc: func(ctx context.Context, req *logical.Request) error {
+			repState := conf.System.ReplicationState()
+			if (conf.System.LocalMount() ||
+				!repState.HasState(consts.ReplicationPerformanceSecondary)) &&
+				!repState.HasState(consts.ReplicationDRSecondary) &&
+				!repState.HasState(consts.ReplicationPerformanceStandby) {
+				return b.rotateExpiredStaticCreds(ctx, req)
+			}
+			return nil
+		},
 		BackendType: logical.TypeLogical,
 	}
 
@@ -74,15 +85,7 @@ type backend struct {
 	client *rabbithole.Client
 	lock   sync.RWMutex
 
-	// credRotationQueue is an in-memory priority queue used to track Static Roles
-	// that require periodic rotation. The backend will have a PriorityQueue
-	// initialized on setup, but only backend that is mounted by a primary
-	// server or mounted as a local mount will perform the rotations.
 	credRotationQueue *queue.PriorityQueue
-	// queueCtx is the context for the priority queue
-	queueCtx context.Context
-	// cancelQueueCtx is used to terminate the background ticker
-	cancelQueueCtx context.CancelFunc
 }
 
 // DB returns the database connection.
