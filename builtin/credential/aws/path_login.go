@@ -19,6 +19,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+
 	"github.com/aws/aws-sdk-go/aws"
 	awsClient "github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -1291,7 +1293,7 @@ func (b *backend) pathLoginRenewEc2(ctx context.Context, req *logical.Request, _
 	// If the login was made using the role tag, then max_ttl from tag
 	// is cached in internal data during login and used here to cap the
 	// max_ttl of renewal.
-	rTagMaxTTL, err := time.ParseDuration(req.Auth.Metadata["role_tag_max_ttl"])
+	rTagMaxTTL, err := parseutil.ParseDurationSecond(req.Auth.Metadata["role_tag_max_ttl"])
 	if err != nil {
 		return nil, err
 	}
