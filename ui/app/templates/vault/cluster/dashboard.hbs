@@ -2,38 +2,7 @@
 <div>
   <div class="is-flex-row has-gap has-bottom-margin-m">
     <Hds::Card::Container @hasBorder={{true}} class="has-padding-m is-flex-column is-flex-half">
-      <div class="is-flex-between">
-        <h3 class="title is-4">Secrets Engines</h3>
-        <div>
-          <Hds::Link::Inline @route="vault.cluster.secrets.backends" class="has-text-weight-semibold is-no-underline">View
-            more</Hds::Link::Inline>
-
-          {{! <LinkTo @route="vault.cluster.secrets.backends" data-test-secret-engines-view-more>View more</LinkTo> }}
-        </div>
-      </div>
-      <Hds::Table @caption="Five secrets engines">
-        <:body as |B|>
-          {{#each (filter-by "shouldIncludeInList" this.engines) as |backend|}}
-            <B.Tr>
-              <B.Td>
-                <div>
-                  {{backend.path}}
-                </div>
-                {{#if backend.accessor}}
-                  <code class="has-text-grey is-size-8">
-                    {{backend.accessor}}
-                  </code>
-                {{/if}}
-                {{#if backend.description}}
-                  <ReadMore>
-                    {{backend.description}}
-                  </ReadMore>
-                {{/if}}
-              </B.Td>
-            </B.Tr>
-          {{/each}}
-        </:body>
-      </Hds::Table>
+      <Dashboard::SecretsEnginesCard @secretsEngines={{@model.secretsEngines}} />
     </Hds::Card::Container>
 
     <Hds::Card::Container @hasBorder={{true}} class="has-padding-m is-flex-column is-flex-half">
@@ -44,7 +13,6 @@
   <div class="is-flex-row has-gap">
     <Hds::Card::Container @hasBorder={{true}} class="has-padding-m is-flex-column is-flex-half">
       <h3 class="title is-4">Learn More</h3>
-      Explore the features of Vault and learn advance practices with the following tutorials and documentation.
     </Hds::Card::Container>
 
     <Hds::Card::Container @hasBorder={{true}} class="has-padding-m is-flex-column is-flex-half">

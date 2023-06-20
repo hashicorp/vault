@@ -7,13 +7,7 @@ export default class VaultClusterDashboardRoute extends Route {
 
   model() {
     return hash({
-      secretEngines: this.store.query('secret-engine', {}),
+      secretsEngines: this.store.query('secret-engine', {}),
     });
-  }
-
-  setupController(controller, model) {
-    super.setupController(controller, model);
-
-    controller.engines = model.secretEngines.slice(0, 6);
   }
 }

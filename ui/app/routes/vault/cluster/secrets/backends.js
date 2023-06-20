@@ -10,6 +10,8 @@ export default Route.extend({
   store: service(),
 
   model() {
+    // TODO LANDING PAGE: VAULT-17008 use peekAll to avoid a network request
+
     return this.store.query('secret-engine', {});
   },
 });
