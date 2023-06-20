@@ -204,7 +204,7 @@ This health check verifies whether a proper CA hierarchy is in use. We do this b
 
 **Remediation Steps**:
 
-The usage of sign/sign-verbatim and issue APIs should be restricted against the root issuer. An intermediary issuer should be created, ideally in a different mount, signed by the root issuer and issue new leaf certificates using the intermediary issuer.
+The usage of `sign`, `sign-verbatim`, `issue`, and ACME APIs should be restricted against the root issuer. An intermediary issuer should be created, ideally in a different mount, signed by the root issuer and issue new leaf certificates using the intermediary issuer.
 
 ### Role allows implicit localhost issuance
 
@@ -240,7 +240,7 @@ This health check checks each role to see whether or not it allows wildcard issu
 
 **Remediation Steps**:
 
-It is strongly suggested that roles either set `allow_glob_domains` or `allow_wildcard_certificates`, but not both to true. If both behaviors are required, we'd suggest splitting it into two roles.
+It is strongly suggested that roles either set `allow_glob_domains` or `allow_wildcard_certificates`, but not both to true. If both behaviors are required, we'd suggest splitting it into two roles unless required for all SANs on the certificate. Otherwise, add this role to `allowed_roles` to ignore future warnings about this role.
 
 ### Role sets `no_store=false` and performance
 
@@ -387,7 +387,7 @@ This health check verifies that auto-tidy is enabled, with sane defaults for int
 
 **Remediation Steps**:---
 
-Auto-tidy can be enabled with a good set of defaults with the following command:
+Auto-tidy can be enabled with a recommended set of defaults with the following command:
 
 ```
 vault write <mount>/config/auto-tidy \
@@ -451,12 +451,12 @@ This health check verifies that this cluster has a reasonable number of certific
 **Remediation Steps**:
 
 If a large amount of certificates have accumulated, verify that tidy has recently run using `vault read <mount>/tidy-status`. Consider
-enabling `auto-tidy` based on instructions above.
+enabling `auto-tidy` based on instructions above and running a manual tidy.
 
 Also ensure that certificates are not being renewed too soon based on lifetimes, roughly 2/3 of its lifetime, and
 certificates are being issued with appropriate lifetimes based on their usage.
 
-To help going forward, consider setting all role's `no_store` field to `true` and leverage [BYOC revocations](/vault/api-docs/secret/pki#revoke-certificate) to avoid storage.
+To help going forward, consider setting all roles' `no_store` fields to `true` and leverage [BYOC revocations](/vault/api-docs/secret/pki#revoke-certificate) to avoid storage.
 
 ### Enable ACME issuance
 
