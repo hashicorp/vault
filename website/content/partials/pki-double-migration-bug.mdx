@@ -2,21 +2,25 @@
 
 Vault 1.11 introduced Storage v1, a new storage layout that supported
 multiple issuers within a single mount. Bug fixes in Vault 1.11.6, 1.12.2,
-and 1.13.0, corrected a write-ordering issue that lead to invalid CA chains.
-Specifically, incorrectly ordered writes would fail and trigger a mass mount
-migration. Too many mounts attempting migration at the same time would result
-in an incorrect CA chain. The collection of bug fixes introduced Storage v2.
+and 1.13.0 corrected a write-ordering issue that lead to invalid CA chains.
+Specifically, incorrectly ordered writes could fail due to load, resulting
+in the mount being re-migrated next time it was loaded or silently
+truncating CA chains. This collection of bug fixes introduced Storage v2.
+
 #### Impacted Versions
 
-Issuers created before Vault 1.11 and migrated to Storage v1 and deleted
+Issuers created before Vault 1.11, migrated to Storage v1, and deleted
 before upgrading to a Vault version with Storage v2 were incorrectly
 recreated during the upgrade when Vault automatically re-migrated legacy
-issuers. Migration failed if Vault found managed keys associated with the
+issuers. Migration could fail if Vault found managed keys associated with the
 legacy issuers that had been removed from the managed key repository. The
 error appeared in Vault logs as:
 
 > Error during migration of PKI mount:
 >   failed to lookup public key from managed key:
 >     no managed key found with uuid
+
+Issuers created in Vault 1.11 and later are not impcated. Direct upgrades
+to a Storage v2 layout are not affected.
 
 This has been fixed in Vault 1.14.0, 1.13.4, 1.12.8, and 1.11.12.
