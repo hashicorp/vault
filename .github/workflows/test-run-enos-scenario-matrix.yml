@@ -176,20 +176,18 @@ jobs:
     if: always() && needs.run.result == 'success'
     runs-on: ubuntu-latest
     uses: hashicorp/cloud-gha-slack-notifier/.github/workflows/slack-notify-enhanced.yaml@v1
-    steps:
-      - name: send-notification
-        with:
-          channel-id: "C05DBVA4LGZ" # publishes to #feed-vault-enos-failures
-          payload: |
+    with:
+      channel-id: "C05DBVA4LGZ" # publishes to #feed-vault-enos-failures
+      payload: |
+        {
+          "text": ":red_circle: An Enos scenario run failed in the ${{ github.repository }} repo on the ${{ github.ref_name }} branch. See the run here: ${{ github.event.workflow_run.url }}",
+          "blocks": [
             {
-              "text": ":red_circle: An Enos scenario run failed in the ${{ github.repository }} repo on the ${{ github.ref_name }} branch. See the run here: ${{ github.event.workflow_run.url }}",
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": ":red_circle: An Enos scenario run failed in the ${{ github.repository }} repo on the ${{ github.ref_name }} branch. See the failed run here: ${{ github.event.workflow_run.url }}"
-                  }
-                }
-              ]
+              "type": "section",
+              "text": {
+                "type": "mrkdwn",
+                "text": ":red_circle: An Enos scenario run failed in the ${{ github.repository }} repo on the ${{ github.ref_name }} branch. See the failed run here: ${{ github.event.workflow_run.url }}"
+              }
             }
+          ]
+        }
