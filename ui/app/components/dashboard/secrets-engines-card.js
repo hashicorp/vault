@@ -1,11 +1,11 @@
 import Component from '@glimmer/component';
 
 export default class DashboardSecretsEnginesCardComponent extends Component {
-  constructor() {
-    super(...arguments);
+  get filteredSecretsEngines() {
+    const filteredEngines = this.args.secretsEngines.filter(
+      (secretEngine) => secretEngine.shouldIncludeInList
+    );
 
-    if (this.args.secretsEngines.length) {
-      this.secretsEngines = this.args.secretsEngines.slice(0, 5);
-    }
+    return filteredEngines.slice(0, 5);
   }
 }
