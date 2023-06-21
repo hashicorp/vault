@@ -3207,7 +3207,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		te.TTL = dur
 	} else if data.Lease != "" {
 		// This block is compatibility
-		dur, err := time.ParseDuration(data.Lease)
+		dur, err := parseutil.ParseDurationSecond(data.Lease)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 		}
