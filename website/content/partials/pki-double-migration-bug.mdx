@@ -7,7 +7,7 @@ Specifically, incorrectly ordered writes could fail due to load, resulting
 in the mount being re-migrated next time it was loaded or silently
 truncating CA chains. This collection of bug fixes introduced Storage v2.
 
-#### Impacted Versions
+#### Affected versions
 
 Vault may incorrectly re-migrated legacy issuers created before Vault 1.11 that
 were migrated to Storage v1 and deleted before upgrading to a Vault version with
