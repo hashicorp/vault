@@ -23,4 +23,7 @@ export default class LdapConfigModel extends Model {
   connection_timeout: number;
   request_timeout: number;
   validate(): ModelValidations;
+  rotateRoot(): Promise;
+  // need to override isNew which is a computed prop and ts will complain since it sees it as a function
+  isNew: boolean;
 }
