@@ -1074,9 +1074,7 @@ func TestAcmeWithCsrIncludingBasicConstraintExtension(t *testing.T) {
 	}
 }
 
-func markAuthorizationSuccess(t *testing.T, client *api.Client, acmeClient *acme.Client, acct *acme.Account,
-	order *acme.Order,
-) {
+func markAuthorizationSuccess(t *testing.T, client *api.Client, acmeClient *acme.Client, acct *acme.Account, order *acme.Order) {
 	testCtx := context.Background()
 
 	pkiMount := findStorageMountUuid(t, client, "pki")
@@ -1090,8 +1088,15 @@ func markAuthorizationSuccess(t *testing.T, client *api.Client, acmeClient *acme
 		for _, authURI := range order.AuthzURLs {
 			authId := authURI[strings.LastIndex(authURI, "/"):]
 
-			rawPath := path.Join("/sys/raw/logical/", pkiMount, getAuthorizationPath(accountId, authId))
-			resp, err := client.Logical().ReadWithContext(testCtx, rawPath)
+			// sys/raw does not work with namespaces
+			baseClient := client.WithNamespace("")
+
+			values, err := baseClient.Logical().ListWithContext(testCtx, "sys/raw/logical/")
+			require.NoError(t, err)
+			require.True(t, true, "values: %v", values)
+
+			rawPath := path.Join("sys/raw/logical/", pkiMount, getAuthorizationPath(accountId, authId))
+			resp, err := baseClient.Logical().ReadWithContext(testCtx, rawPath)
 			require.NoError(t, err, "failed looking up authorization storage")
 			require.NotNil(t, resp, "sys raw response was nil")
 			require.NotEmpty(t, resp.Data["value"], "no value field in sys raw response")
@@ -1106,7 +1111,7 @@ func markAuthorizationSuccess(t *testing.T, client *api.Client, acmeClient *acme
 
 			encodeJSON, err := jsonutil.EncodeJSON(authz)
 			require.NoError(t, err, "failed encoding authz json")
-			_, err = client.Logical().WriteWithContext(testCtx, rawPath, map[string]interface{}{
+			_, err = baseClient.Logical().WriteWithContext(testCtx, rawPath, map[string]interface{}{
 				"value":    base64.StdEncoding.EncodeToString(encodeJSON),
 				"encoding": "base64",
 			})
@@ -1144,8 +1149,10 @@ func markAuthorizationSuccess(t *testing.T, client *api.Client, acmeClient *acme
 func deleteCvEntries(t *testing.T, client *api.Client, pkiMount string) bool {
 	testCtx := context.Background()
 
-	cvPath := path.Join("/sys/raw/logical/", pkiMount, acmeValidationPrefix)
-	resp, err := client.Logical().ListWithContext(testCtx, cvPath)
+	baseClient := client.WithNamespace("")
+
+	cvPath := path.Join("sys/raw/logical/", pkiMount, acmeValidationPrefix)
+	resp, err := baseClient.Logical().ListWithContext(testCtx, cvPath)
 	require.NoError(t, err, "failed listing cv path items")
 
 	deletedEntries := false
@@ -1153,7 +1160,7 @@ func deleteCvEntries(t *testing.T, client *api.Client, pkiMount string) bool {
 		cvEntries := resp.Data["keys"].([]interface{})
 		for _, cvEntry := range cvEntries {
 			cvEntryPath := path.Join(cvPath, cvEntry.(string))
-			_, err = client.Logical().DeleteWithContext(testCtx, cvEntryPath)
+			_, err = baseClient.Logical().DeleteWithContext(testCtx, cvEntryPath)
 			require.NoError(t, err, "failed to delete cv entry")
 			deletedEntries = true
 		}
@@ -1205,7 +1212,7 @@ func setupAcmeBackendOnClusterAtPath(t *testing.T, cluster *vault.TestCluster, c
 		require.NoError(t, err, "failed to mount new PKI instance at "+mount)
 	}
 
-	err := client.Sys().TuneMountWithContext(ctx, mountName, api.MountConfigInput{
+	err := client.Sys().TuneMountWithContext(ctx, mount, api.MountConfigInput{
 		DefaultLeaseTTL: "3000h",
 		MaxLeaseTTL:     "600000h",
 	})
@@ -1584,6 +1591,9 @@ func getAcmeClientForCluster(t *testing.T, cluster *vault.TestCluster, baseUrl s
 	}
 	if !strings.HasPrefix(baseUrl, "v1/") {
 		baseUrl = "v1/" + baseUrl
+	}
+	if !strings.HasSuffix(baseUrl, "/") {
+		baseUrl = baseUrl + "/"
 	}
 	baseAcmeURL := fmt.Sprintf("https://%s/%s", coreAddr.String(), baseUrl)
 	return &acme.Client{

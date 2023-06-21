@@ -49,6 +49,7 @@ Generate an agent configuration file which will reference `secret/foo`:
 $ vault agent generate-config \
                 -type="env-template" \
                 -exec="./my-app arg1 arg2" \
+                -namespace="my/ns/" \
                 -path="secret/foo" \
                     my-config.hcl
 
