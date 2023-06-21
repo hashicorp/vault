@@ -4,36 +4,25 @@
  */
 
 import ApplicationAdapter from '../application';
-import { encodePath } from 'vault/utils/path-encoding-helpers';
-import { kvId } from 'vault/utils/kv-id';
+import { kvDataPath, kvDestroyPath, kvMetadataPath, kvUndeletePath } from 'vault/utils/kv-path';
 import { assert } from '@ember/debug';
 
 export default class KvDataAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
-  _urlForSecret(backend, path, version) {
-    return `${this.buildURL()}/${kvId(backend, path, 'data', version)}`;
+  _url(backend, fullPath) {
+    return `${this.buildURL()}/${fullPath}`;
   }
 
   createRecord(store, type, snapshot) {
-    const { backend, path, version } = snapshot.record;
-    const url = this._urlForSecret(backend, path);
-    return this.ajax(url, 'POST', { data: this.serialize(snapshot) }).then((resp) => {
-      resp.id = kvId(backend, path, 'data', version);
-      return resp;
-    });
-  }
-
-  queryRecord(store, type, query) {
-    const { path, backend, version } = query;
-    return this.ajax(this._urlForSecret(backend, path, version), 'GET').then((resp) => {
-      resp.id = kvId(backend, path, 'data', version);
-      return resp;
-    });
+    const { backend, path } = snapshot.record;
+    const url = this._url(kvDataPath(backend, path));
+    return this.ajax(url, 'POST', { data: this.serialize(snapshot) });
   }
 
   findRecord(store, type, id) {
-    return this.ajax(`${this.buildURL()}/${id}`, 'GET').then((resp) => {
+    // ID is the full path for the data (including version)
+    return this.ajax(this._url(id), 'GET').then((resp) => {
       resp.id = id;
       return resp;
     });
@@ -50,19 +39,19 @@ export default class KvDataAdapter extends ApplicationAdapter {
 
     switch (deleteType) {
       case 'delete-latest-version':
-        return this.ajax(this._urlForSecret(backend, path), 'DELETE');
+        return this.ajax(this._url(kvDataPath(backend, path)), 'DELETE');
       case 'delete-specific-version':
-        return this.ajax(this._urlForSecret(backend, path), 'POST', {
+        return this.ajax(this._url(kvDataPath(backend, path)), 'POST', {
           data: { versions: deleteVersions },
         });
       case 'destroy-specific-version':
-        return this.ajax(`${this.buildURL()}/${encodePath(backend)}/destroy/${encodePath(path)}`, 'PUT', {
+        return this.ajax(this._url(kvDestroyPath(backend, path)), 'PUT', {
           data: { versions: deleteVersions },
         });
       case 'destroy-everything':
-        return this.ajax(`${this.buildURL()}/${encodePath(backend)}/metadata/${encodePath(path)}`, 'DELETE');
+        return this.ajax(this._url(kvMetadataPath(backend, path)), 'DELETE');
       case 'undelete-specific-version':
-        return this.ajax(`${this.buildURL()}/${encodePath(backend)}/undelete/${encodePath(path)}`, 'POST', {
+        return this.ajax(this._url(kvUndeletePath(backend, path)), 'POST', {
           data: { versions: deleteVersions },
         });
       default:

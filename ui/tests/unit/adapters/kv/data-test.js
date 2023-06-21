@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { kvId } from 'vault/utils/kv-id';
+import { kvDataPath } from 'vault/utils/kv-path';
 
 module('Unit | Adapter | kv/data', function (hooks) {
   setupTest(hooks);
@@ -19,7 +19,7 @@ module('Unit | Adapter | kv/data', function (hooks) {
     this.secretMountPath.currentPath = this.backend;
     this.path = 'beep/bop/my-secret';
     this.version = '2';
-    this.id = kvId(this.backend, this.path, 'data', this.version);
+    this.id = kvDataPath(this.backend, this.path, 'data', this.version);
     this.data = {
       options: {
         cas: 2,

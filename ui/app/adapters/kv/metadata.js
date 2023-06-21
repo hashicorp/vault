@@ -4,37 +4,38 @@
  */
 
 import ApplicationAdapter from '../application';
-import { encodePath } from 'vault/utils/path-encoding-helpers';
-import { kvId } from 'vault/utils/kv-id';
+import { kvMetadataPath } from 'vault/utils/kv-path';
 
 export default class KvMetadataAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
-  _urlForMetadata(backend, path) {
-    return `${this.buildURL()}/${encodePath(backend)}/metadata/${encodePath(path)}`;
+  _url(fullPath) {
+    return `${this.buildURL()}/${fullPath}`;
   }
 
   createRecord(store, type, snapshot) {
     const { backend, path } = snapshot.record;
-    const url = this._urlForMetadata(backend, path);
+    const id = kvMetadataPath(backend, path);
+    const url = this._url(id);
 
     return this.ajax(url, 'POST', { data: this.serialize(snapshot) }).then((resp) => {
-      resp.id = kvId(backend, path, 'metadata');
-      return resp;
-    });
-  }
-
-  queryRecord(store, type, query) {
-    const { path, backend } = query;
-    return this.ajax(this._urlForMetadata(backend, path), 'GET').then((resp) => {
-      resp.id = kvId(backend, path, 'metadata');
+      resp.id = id;
       return resp;
     });
   }
 
   findRecord(store, type, id) {
-    return this.ajax(`${this.buildURL()}/${id}`, 'GET').then((resp) => {
+    return this.ajax(this._url(id), 'GET').then((resp) => {
       resp.id = id;
+      return resp;
+    });
+  }
+
+  query(store, type, query) {
+    const { backend } = query;
+    return super.query(store, type, query).then((resp) => {
+      // this is required to properly build the model in normalizeResponse
+      resp.backend = backend;
       return resp;
     });
   }
