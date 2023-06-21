@@ -16,7 +16,7 @@ jobs:
         with:
           fetch-depth: 0 # by default the checkout action doesn't checkout all branches
       - name: Setup Go
-        uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
+        uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
         with:
           go-version-file: ./.go-version
           cache: true
