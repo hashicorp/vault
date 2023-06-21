@@ -10,12 +10,12 @@
 
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
-function buildKvPath(backend: string, path: string, type: string, version?: string | number) {
+function buildKvPath(backend: string, path: string, type: string, version?: number | string) {
   const url = `${encodePath(backend)}/${type}/${encodePath(path)}`;
   return version ? `${url}?version=${version}` : url;
 }
 
-export function kvDataPath(backend: string, path: string, version?: number) {
+export function kvDataPath(backend: string, path: string, version?: number | string) {
   return buildKvPath(backend, path, 'data', version);
 }
 export function kvMetadataPath(backend: string, path: string) {

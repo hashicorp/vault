@@ -10,21 +10,41 @@ import { assert } from '@ember/debug';
 export default class KvDataAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
-  _url(backend, fullPath) {
+  _url(fullPath) {
     return `${this.buildURL()}/${fullPath}`;
   }
 
   createRecord(store, type, snapshot) {
     const { backend, path } = snapshot.record;
     const url = this._url(kvDataPath(backend, path));
-    return this.ajax(url, 'POST', { data: this.serialize(snapshot) });
+
+    return this.ajax(url, 'POST', { data: this.serialize(snapshot) }).then((res) => {
+      return {
+        data: {
+          id: kvDataPath(backend, path, res.data.version),
+          backend,
+          path,
+          ...res.data,
+        },
+      };
+    });
   }
 
-  findRecord(store, type, id) {
+  queryRecord(store, type, query) {
+    const { backend, path, version } = query;
     // ID is the full path for the data (including version)
+    const id = kvDataPath(backend, path, version);
     return this.ajax(this._url(id), 'GET').then((resp) => {
-      resp.id = id;
-      return resp;
+      const newResp = {
+        ...resp,
+        data: {
+          id,
+          backend,
+          path,
+          ...resp.data,
+        },
+      };
+      return newResp;
     });
   }
 

@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 
-module('Unit | Serializer | kv-data-cas', function (hooks) {
+module('Unit | Serializer | kv/data', function (hooks) {
   setupTest(hooks);
 
   test('it should always pass the cas option when creating/updating a secret', function (assert) {
@@ -16,7 +16,7 @@ module('Unit | Serializer | kv-data-cas', function (hooks) {
       backend: 'kv-test',
       version: 2,
       casVersion: 3,
-      data: { foo: 'bar' },
+      secretData: { foo: 'bar' },
     });
     const expectedResult = {
       data: { foo: 'bar' },
