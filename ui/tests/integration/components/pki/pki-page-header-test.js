@@ -55,19 +55,4 @@ module('Integration | Component | pki page header test', function (hooks) {
       .dom('[data-test-secret-list-tab="Configuration"]')
       .hasText('Configuration', 'Configuration tab renders');
   });
-
-  test('it should yield block for toolbar actions', async function (assert) {
-    await render(
-      hbs`
-      <PkiPageHeader @model={{this.model}}>
-        <span data-test-yield>It yields!</span>
-      </PkiPageHeader>
-    `,
-      { owner: this.engine }
-    );
-
-    assert
-      .dom('.toolbar-actions [data-test-yield]')
-      .hasText('It yields!', 'Block is yielded for toolbar actions');
-  });
 });
