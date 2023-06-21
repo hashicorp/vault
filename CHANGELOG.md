@@ -53,7 +53,7 @@ multiplexing (> 1.12) [[GH-19215](https://github.com/hashicorp/vault/pull/19215)
 * **Sidebar Navigation in UI**: A new sidebar navigation panel has been added in the UI to replace the top navigation bar. [[GH-19296](https://github.com/hashicorp/vault/pull/19296)]
 * **Vault PKI ACME Server**: Support for the ACME certificate lifecycle management protocol has been added to the Vault PKI Plugin. This allows standard ACME clients, such as the EFF's certbot and the CNCF's k8s cert-manager, to request certificates from a Vault server with no knowledge of Vault APIs or authentication mechanisms. For public-facing Vault instances, we recommend requiring External Account Bindings (EAB) to limit the ability to request certificates to only authenticated clients. [[GH-20752](https://github.com/hashicorp/vault/pull/20752)]
 * **Vault Proxy**: Introduced Vault Proxy, a new subcommand of the Vault binary that can be invoked using `vault proxy -config=config.hcl`. It currently has the same feature set as Vault Agent's API proxy, but the two may diverge in the future. We plan to deprecate the API proxy functionality of Vault Agent in a future release. [[GH-20548](https://github.com/hashicorp/vault/pull/20548)]
-* **agent/auto-auth:**: Add OCI (Oracle Cloud Infrastructure) auto-auth method [[GH-19260](https://github.com/hashicorp/vault/pull/19260)]
+* **OCI Auto-Auth**: Add OCI (Oracle Cloud Infrastructure) auto-auth method [[GH-19260](https://github.com/hashicorp/vault/pull/19260)]
 
 IMPROVEMENTS:
 
