@@ -20,7 +20,8 @@ utilization as defined in our contracts. They consist of mostly computed metrics
 and will never contain Personal Identifiable Information (PII) or other
 sensitive information. Automated reporting shares the data with HashiCorp using
 a secure, unidirectional HTTPS API and makes an auditable record in the product
-logs each time it submits a report.
+logs each time it submits a report. The reports are submitted once every 24
+hours.
 
 ## Enable automated reporting
 
@@ -42,11 +43,13 @@ addresses:
 
 ### 2. Upgrade
 
-Upgrade to a release that supports entitlement utilization reporting. These
+Upgrade to a release that supports license utilization reporting. These
 releases include:
 
 - [Vault Enterprise 1.14.0](https://releases.hashicorp.com/vault/) and later
-
+- [Vault Enterprise 1.13.4](https://releases.hashicorp.com/vault/) and later 1.13.x versions
+- [Vault Enterprise 1.12.8](https://releases.hashicorp.com/vault/) and later 1.12.x versions
+- [Vault Enterprise 1.11.12](https://releases.hashicorp.com/vault/)
 
 ### 3. Check logs
 
