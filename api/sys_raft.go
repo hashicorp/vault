@@ -286,6 +286,9 @@ func (c *Sys) RaftAutopilotStateWithContext(ctx context.Context) (*AutopilotStat
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
+	if ctx.Value("dr-token") != nil {
+		c.c.SetToken(ctx.Value("dr-token").(string))
+	}
 	r := c.c.NewRequest(http.MethodGet, "/v1/sys/storage/raft/autopilot/state")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)

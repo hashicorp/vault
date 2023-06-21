@@ -82,6 +82,14 @@ func (c *OperatorRaftAutopilotStateCommand) Run(args []string) int {
 		return 1
 	}
 
+	args = f.Args()
+	switch len(args) {
+	case 0:
+	default:
+		c.UI.Error(fmt.Sprintf("Incorrect arguments (expected 0, got %d)", len(args)))
+		return 1
+	}
+
 	client, err := c.Client()
 	if err != nil {
 		c.UI.Error(err.Error())
