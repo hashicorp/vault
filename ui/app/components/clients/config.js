@@ -53,6 +53,11 @@ export default class ConfigComponent extends Component {
       yield this.args.model.save();
       this.router.transitionTo('vault.cluster.clients.config');
     } catch (err) {
+      // The api automatically caps the retention period if user inputs > 36. An error is not returned, but an info flash message is displayed.
+      if (!err) {
+        this.router.transitionTo('vault.cluster.clients.config');
+        return;
+      }
       this.error = err.message;
       this.modalOpen = false;
     }
