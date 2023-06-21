@@ -31,6 +31,7 @@ const (
 )
 
 var (
+	caseSensitivityKey           = "casesensitivity"
 	parseExtraEntityFromBucket   = func(context.Context, *IdentityStore, *identity.Entity) (bool, error) { return false, nil }
 	addExtraEntityDataToResponse = func(*identity.Entity, map[string]interface{}) {}
 )
@@ -644,6 +645,22 @@ func (i *IdentityStore) initialize(ctx context.Context, req *logical.Initializat
 	if err := i.storeOIDCDefaultResources(ctx, req.Storage); err != nil {
 		return err
 	}
+
+	// if the storage entry for caseSensitivityKey exists, remove it
+	storageEntry, err := i.view.Get(ctx, caseSensitivityKey)
+	if err != nil {
+		i.logger.Error("could not get storage entry", "error", err)
+		return nil
+	}
+
+	if storageEntry != nil {
+		err = i.view.Delete(ctx, caseSensitivityKey)
+		if err != nil {
+			i.logger.Error("could not delete storage entry", "error", err)
+			return nil
+		}
+	}
+
 	return nil
 }
 
