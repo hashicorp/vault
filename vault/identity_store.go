@@ -655,13 +655,13 @@ func (i *IdentityStore) initialize(ctx context.Context, req *logical.Initializat
 
 	if storageEntry != nil {
 		var setting casesensitivity
-		if err := storageEntry.DecodeJSON(&setting); err != nil {
+		err := storageEntry.DecodeJSON(&setting)
+		switch err {
+		case nil:
+			i.logger.Debug("removing storage entry for case sensitivity key", "value", setting.DisableLowerCasedNames)
+		default:
 			i.logger.Error("failed to decode case sensitivity key", "error", err)
 			i.logger.Debug("removing storage entry for case sensitivity key")
-
-		}
-		if err == nil {
-			i.logger.Debug("removing storage entry for case sensitivity key ", "value", setting.DisableLowerCasedNames)
 		}
 
 		err = i.view.Delete(ctx, caseSensitivityKey)
