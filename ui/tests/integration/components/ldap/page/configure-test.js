@@ -65,7 +65,7 @@ module('Integration | Component | ldap | Page::Configure', function (hooks) {
 
   test('it should render empty state when schema is not selected', async function (assert) {
     await this.renderComponent();
-    // await this.pauseTest();
+
     assert.dom('[data-test-empty-state-title]').hasText('Choose an option', 'Empty state title renders');
     assert
       .dom('[data-test-empty-state-message]')
@@ -138,9 +138,7 @@ module('Integration | Component | ldap | Page::Configure', function (hooks) {
 
     await this.renderComponent();
 
-    assert
-      .dom('[data-test-radio-card="OpenLDAP"]')
-      .isChecked('Correct radio card is checked for schema value');
+    assert.dom(selectors.radioCard).isChecked('Correct radio card is checked for schema value');
     assert.dom(selectors.binddn).hasValue(this.existingConfig.binddn, 'binddn value renders');
 
     await fillIn(selectors.binddn, 'foobar');
