@@ -37,13 +37,18 @@ interface PkiConfigCrlBooleans {
   disable: boolean;
   ocspDisable: boolean;
 }
+
+interface ErrorObject {
+  modelName: string;
+  message: string;
+}
 export default class PkiConfigurationEditComponent extends Component<Args> {
   @service declare readonly router: RouterService;
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly version: VersionService;
 
   @tracked invalidFormAlert = '';
-  @tracked errorBanner = '';
+  @tracked errors: Array<ErrorObject> = [];
 
   get isEnterprise() {
     return this.version.isEnterprise;
@@ -53,18 +58,32 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
   @waitFor
   *save(event: Event) {
     event.preventDefault();
-    try {
-      for (const model of ['cluster', 'acme', 'urls', 'crl']) {
-        // only call save() if user has permission
-        if (this.args[model as keyof Args].canSet) {
-          yield this.args[model as keyof Args].save();
-          this.flashMessages.success(`Successfully updated ${model} config`);
-        }
+    // first clear errors and sticky flash messages
+    this.errors = [];
+    this.flashMessages.clearMessages();
+
+    // modelName is also the API endpoint (i.e. pki/config/cluster)
+    for (const modelName of ['cluster', 'acme', 'urls', 'crl']) {
+      const model = this.args[modelName as keyof Args];
+      // skip saving and continue to next iteration if user does not have permission
+      if (!model.canSet) continue;
+      try {
+        yield model.save();
+        this.flashMessages.success(`Successfully updated config/${modelName}`);
+      } catch (error) {
+        const errorObject: ErrorObject = {
+          modelName,
+          message: errorMessage(error),
+        };
+        this.flashMessages.danger(`Error updating config/${modelName}`, { sticky: true });
+        this.errors.pushObject(errorObject);
       }
-      this.router.transitionTo('vault.cluster.secrets.backend.pki.configuration.index');
-    } catch (error) {
+    }
+
+    if (this.errors.length) {
       this.invalidFormAlert = 'There was an error submitting this form.';
-      this.errorBanner = errorMessage(error);
+    } else {
+      this.router.transitionTo('vault.cluster.secrets.backend.pki.configuration.index');
     }
   }
 
