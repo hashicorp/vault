@@ -121,4 +121,9 @@ export default class LdapConfigModel extends Model {
     defaultShown: 'Default 90 seconds.',
   })
   request_timeout;
+
+  async rotateRoot() {
+    const adapter = this.store.adapterFor('ldap/config');
+    return adapter.rotateRoot(this.backend);
+  }
 }

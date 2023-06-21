@@ -1,0 +1,113 @@
+<PageHeader as |p|>
+  <p.top>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3">Configure LDAP</h1>
+  </p.levelLeft>
+</PageHeader>
+
+<hr class="is-marginless has-background-gray-200" />
+
+<form class="has-top-margin-l" {{on "submit" (perform this.save)}}>
+  <Hds::Form::RadioCard::Group @name="schema options" as |RadioGroup|>
+    {{#each this.schemaOptions as |option|}}
+      <RadioGroup.RadioCard
+        @checked={{eq option.value @model.schema}}
+        {{on "change" (fn (mut @model.schema) option.value)}}
+        data-test-radio-card={{option.title}}
+        as |Card|
+      >
+        <Card.Icon @name={{option.icon}} />
+        <Card.Label>{{option.title}}</Card.Label>
+        <Card.Description>{{option.description}}</Card.Description>
+      </RadioGroup.RadioCard>
+    {{/each}}
+  </Hds::Form::RadioCard::Group>
+
+  <div class="has-top-margin-xl">
+    <MessageError @errorMessage={{this.error}} />
+
+    <h2 class="title is-4">Schema Options</h2>
+    <hr class="has-background-gray-200" />
+
+    {{#if @model.schema}}
+      <div class="has-top-margin-l">
+        <FormFieldGroups @model={{@model}} @groupName="formFieldGroups" @modelValidations={{this.modelValidations}} />
+      </div>
+    {{else}}
+      <EmptyState
+        class="is-shadowless has-top-margin-l"
+        @title="Choose an option"
+        @message="Pick an option above to see available configuration options"
+      />
+    {{/if}}
+  </div>
+
+  <hr class="has-background-gray-200 has-top-margin-l" />
+
+  <div class="has-top-margin-l has-bottom-margin-l is-flex">
+    <button
+      data-test-config-save
+      class="button is-primary"
+      type="submit"
+      disabled={{or this.save.isRunning (not @model.schema)}}
+      {{on "click" (perform this.save)}}
+    >
+      Save
+    </button>
+    <button
+      data-test-config-cancel
+      class="button has-left-margin-xs"
+      type="button"
+      disabled={{or this.save.isRunning this.fetchInferred.isRunning}}
+      {{on "click" this.cancel}}
+    >
+      Back
+    </button>
+    {{#if this.invalidFormMessage}}
+      <AlertInline
+        @type="danger"
+        @paddingTop={{true}}
+        @message={{this.invalidFormMessage}}
+        @mimicRefresh={{true}}
+        data-test-invalid-form-message
+      />
+    {{/if}}
+  </div>
+</form>
+
+{{#if this.showRotatePrompt}}
+  <Modal
+    @title="Rotate your root password?"
+    @type="info"
+    @isActive={{this.showRotatePrompt}}
+    @showCloseButton={{true}}
+    @onClose={{fn (mut this.showRotatePrompt) false}}
+  >
+    <section class="modal-card-body">
+      <p>
+        It’s best practice to rotate the administrator (root) password immediately after the initial configuration of the
+        LDAP engine. The rotation will update the password both in Vault and your directory server. Once rotated,
+        <span class="has-text-weight-semibold">only Vault knows the new root password.</span>
+      </p>
+      <br />
+      <p>
+        Would you like to rotate your new credentials? You can also do this later.
+      </p>
+    </section>
+    <footer class="modal-card-foot modal-card-foot-outlined">
+      <button
+        data-test-save-with-rotate
+        type="button"
+        class="button is-primary"
+        {{on "click" (fn (perform this.save) null true)}}
+      >
+        Save and rotate
+      </button>
+      <button data-test-save-without-rotate type="button" class="button" {{on "click" (fn (perform this.save) null false)}}>
+        Save without rotating
+      </button>
+    </footer>
+  </Modal>
+{{/if}}
