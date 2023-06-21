@@ -86,7 +86,6 @@ module('Integration | Component | client count config', function (hooks) {
 
     await fillIn('[data-test-input="retentionMonths"]', 24);
     await click('[data-test-clients-config-save]');
-
     assert.dom('.modal.is-active').exists('Modal renders');
     assert
       .dom('[data-test-modal-title] span')
@@ -99,7 +98,7 @@ module('Integration | Component | client count config', function (hooks) {
       'Route transitions correctly on save success'
     );
 
-    await click('[data-test-input="enabled"]'); // disable
+    await click('[data-test-input="enabled"]');
     await click('[data-test-clients-config-save]');
     assert.dom('.modal.is-active').exists('Modal renders');
     assert
