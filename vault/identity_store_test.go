@@ -865,10 +865,6 @@ func TestIdentityStore_DeleteCaseSensitivityKey(t *testing.T) {
 	c, unsealKey, root := TestCoreUnsealed(t)
 	ctx := context.Background()
 
-	type casesensitivity struct {
-		DisableLowerCasedNames bool
-	}
-
 	// add caseSensitivityKey to storage
 	entry, err := logical.StorageEntryJSON(caseSensitivityKey, &casesensitivity{
 		DisableLowerCasedNames: true,
