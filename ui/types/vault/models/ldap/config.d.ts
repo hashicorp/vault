@@ -4,7 +4,8 @@
  */
 
 import Model from '@ember-data/model';
-import { ModelValidations } from 'vault/app-types';
+
+import type { ModelValidations } from 'vault/app-types';
 
 export default class LdapConfigModel extends Model {
   backend: string;

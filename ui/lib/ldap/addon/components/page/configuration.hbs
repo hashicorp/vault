@@ -1,0 +1,8 @@
+<TabPageHeader @model={{@backendModel}} @breadcrumbs={{@breadcrumbs}}>
+  {{#if @configModel}}
+    {{! rotate root action }}
+  {{/if}}
+  <ToolbarLink @route="configure" data-test-toolbar-config-action>
+    {{if @configModel "Edit configuration" "Configure LDAP"}}
+  </ToolbarLink>
+</TabPageHeader>
