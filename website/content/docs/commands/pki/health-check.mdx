@@ -138,7 +138,10 @@ This health check will check each issuer in the mount for validity status, retur
 
 **Remediation Steps**:
 
-Remove old CAs after they expire and perform a [CA rotation operation](/vault/docs/secrets/pki/rotation-primitives) for any with pending expiry.
+First perform a [CA rotation operation](/vault/docs/secrets/pki/rotation-primitives) for any with pending expiry.
+
+Once successfully migrated to the new CA, the old CAs after they expire, can be removed using a [manual tidy](/vault/api-docs/secret/pki#tidy) run with `vault write <mount>/tidy tidy_expired_issuers=true` or the [delete issuer](/vault/api-docs/secret/pki#delete-issuer) API.
+
 
 ### CRL validity period
 
@@ -422,8 +425,7 @@ Read the tidy status endpoint, `vault read <mount>/tidy-status`, for possible er
 To manually run a tidy operation:
 
 ```
-vault write <mount>/config/auto-tidy \
-  enabled=true \
+vault write <mount>/tidy \
   tidy_cert_store=true \
   tidy_revoked_certs=true \
   tidy_acme=true \
