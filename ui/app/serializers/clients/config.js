@@ -8,9 +8,9 @@ import ApplicationSerializer from '../application';
 export default class ClientsConfigSerializer extends ApplicationSerializer {
   // these attrs are readOnly
   attrs = {
+    billingStartTimestamp: { serialize: false },
     minimumRetentionMonths: { serialize: false },
     reportingEnabled: { serialize: false },
-    billingStartTimestamp: { serialize: false },
   };
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
