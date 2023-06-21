@@ -649,14 +649,14 @@ func (i *IdentityStore) initialize(ctx context.Context, req *logical.Initializat
 	// if the storage entry for caseSensitivityKey exists, remove it
 	storageEntry, err := i.view.Get(ctx, caseSensitivityKey)
 	if err != nil {
-		i.logger.Error("could not get storage entry", "error", err)
+		i.logger.Error("could not get storage entry for case sensitivity", "error", err)
 		return nil
 	}
 
 	if storageEntry != nil {
 		err = i.view.Delete(ctx, caseSensitivityKey)
 		if err != nil {
-			i.logger.Error("could not delete storage entry", "error", err)
+			i.logger.Error("could not delete storage entry for case sensitivity", "error", err)
 			return nil
 		}
 	}
