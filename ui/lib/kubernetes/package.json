@@ -9,7 +9,8 @@
     "ember-cli-babel": "*",
     "ember-concurrency": "*",
     "@ember/test-waiters": "*",
-    "ember-inflector": "*"
+    "ember-inflector": "*",
+    "@hashicorp/design-system-components": "*"
   },
   "ember-addon": {
     "paths": [
