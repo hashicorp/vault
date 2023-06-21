@@ -9,18 +9,22 @@ truncating CA chains. This collection of bug fixes introduced Storage v2.
 
 #### Impacted Versions
 
-Issuers created before Vault 1.11, migrated to Storage v1, and deleted
-before upgrading to a Vault version with Storage v2 were incorrectly
-recreated during the upgrade when Vault automatically re-migrated legacy
-issuers. Migration could fail if Vault found managed keys associated with the
-legacy issuers that had been removed from the managed key repository. The
-error appeared in Vault logs as:
+Vault may incorrectly re-migrated legacy issuers created before Vault 1.11 that
+were migrated to Storage v1 and deleted before upgrading to a Vault version with
+Storage v2.
+
+The migration fails when Vault finds managed keys associated with the legacy
+issuers that were removed from the managed key repository prior to the upgrade.
+
+The migration error appears in Vault logs as:
 
 > Error during migration of PKI mount:
 >   failed to lookup public key from managed key:
 >     no managed key found with uuid
 
-Issuers created in Vault 1.11 and later are not impcated. Direct upgrades
-to a Storage v2 layout are not affected.
+<Note>
+Issuers created in Vault 1.11+ and direct upgrades to a Storage v2 layout are
+not affected.
+</Note>
 
 The Storage v1 upgrade bug was fixed in Vault 1.14.1, 1.13.5, and 1.12.9.
