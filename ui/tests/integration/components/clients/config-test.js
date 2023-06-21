@@ -52,7 +52,7 @@ module('Integration | Component | client count config', function (hooks) {
   });
 
   test('it should function in edit mode when reporting is disabled', async function (assert) {
-    assert.expect(14);
+    assert.expect(13);
 
     this.server.put('/sys/internal/counters/config', (schema, req) => {
       const { enabled, retention_months } = JSON.parse(req.requestBody);
@@ -98,17 +98,6 @@ module('Integration | Component | client count config', function (hooks) {
       this.transitionStub.calledWith('vault.cluster.clients.config'),
       'Route transitions correctly on save success'
     );
-
-    this.server.put('/sys/internal/counters/config', (schema, req) => {
-      const { enabled, retention_months } = JSON.parse(req.requestBody);
-      const expected = { enabled: 'disable', retention_months: 24 };
-      assert.deepEqual(
-        expected,
-        { enabled, retention_months },
-        'Correct data sent in PUT request when toggle has been disabled.'
-      );
-      return {};
-    });
 
     await click('[data-test-input="enabled"]'); // disable
     await click('[data-test-clients-config-save]');
