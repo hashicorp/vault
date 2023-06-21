@@ -302,7 +302,7 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
   });
 
   test('shows warning if upgrade happened within license period', async function (assert) {
-    assert.expect(3);
+    assert.expect(4);
     this.server.get('sys/version-history', function () {
       return {
         data: {
@@ -336,6 +336,14 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
       .hasTextContaining(
         `Warning Vault was upgraded to 1.10.1 on Aug 1, 2022. We added monthly breakdowns and mount level attribution starting in 1.10, so keep that in mind when looking at the data. Learn more here.`
       );
+
+    await click('[data-test-start-date-editor] button');
+    await click(SELECTORS.monthDropdown);
+    await click(`[data-test-dropdown-month="${ARRAY_OF_MONTHS[LICENSE_START.getMonth()]}"]`);
+    await click(SELECTORS.yearDropdown);
+    await click(`[data-test-dropdown-year="${LICENSE_START.getFullYear() - 3}"]`);
+    await click('[data-test-date-dropdown-submit]');
+    assert.dom(`${SELECTORS.upgradeWarning} ul`).hasClass('bullet', 'renders bullets when multiple warnings');
   });
 
   test('Shows empty if license start date is current month', async function (assert) {
