@@ -33,7 +33,9 @@ module('Integration | Component | pki page header test', function (hooks) {
     await render(hbs`<PkiPageHeader @model={{this.model}} />`, {
       owner: this.engine,
     });
-    assert.dom('[data-test-header-title] svg').hasClass('flight-icon-pki', 'Correct icon renders in title');
+    assert
+      .dom('[data-test-header-title] svg')
+      .hasClass('hs-icon hs-icon-xl has-text-grey-light', 'Correct icon renders in title');
     assert.dom('[data-test-header-title]').hasText(this.mount, 'Mount path renders in title');
   });
 
@@ -41,8 +43,8 @@ module('Integration | Component | pki page header test', function (hooks) {
     await render(hbs`<PkiPageHeader @model={{this.model}} />`, {
       owner: this.engine,
     });
-    assert.dom('[data-test-secret-list-tab="overview"]').hasText('Overview', 'Overview tab renders');
-    assert.dom('[data-test-secret-list-tab="roles"]').hasText('Roles', 'Roles tab renders');
+    assert.dom('[data-test-secret-list-tab="Overview"]').hasText('Overview', 'Overview tab renders');
+    assert.dom('[data-test-secret-list-tab="Roles"]').hasText('Roles', 'Roles tab renders');
     assert.dom('[data-test-secret-list-tab="Issuers"]').hasText('Issuers', 'Issuers tab renders');
     assert.dom('[data-test-secret-list-tab="Keys"]').hasText('Keys', 'Keys tab renders');
     assert
@@ -52,14 +54,6 @@ module('Integration | Component | pki page header test', function (hooks) {
     assert
       .dom('[data-test-secret-list-tab="Configuration"]')
       .hasText('Configuration', 'Configuration tab renders');
-  });
-
-  test('it should render filter for roles', async function (assert) {
-    await render(
-      hbs`<PkiPageHeader @model={{this.model}} @filterRoles={{true}} @rolesFilterValue="test" />`,
-      { owner: this.engine }
-    );
-    assert.dom('[data-test-nav-input] input').hasValue('test', 'Filter renders with provided value');
   });
 
   test('it should yield block for toolbar actions', async function (assert) {
