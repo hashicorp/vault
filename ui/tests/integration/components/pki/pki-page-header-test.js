@@ -30,17 +30,15 @@ module('Integration | Component | pki page header test', function (hooks) {
   });
 
   test('it should render title', async function (assert) {
-    await render(hbs`<PkiPageHeader @model={{this.model}} />`, {
+    await render(hbs`<PkiPageHeader @backend={{this.model}} />`, {
       owner: this.engine,
     });
-    assert
-      .dom('[data-test-header-title] svg')
-      .hasClass('hs-icon hs-icon-xl has-text-grey-light', 'Correct icon renders in title');
+    assert.dom('[data-test-header-title] span').hasClass('hs-icon', 'Correct icon renders in title');
     assert.dom('[data-test-header-title]').hasText(this.mount, 'Mount path renders in title');
   });
 
   test('it should render tabs', async function (assert) {
-    await render(hbs`<PkiPageHeader @model={{this.model}} />`, {
+    await render(hbs`<PkiPageHeader @backend={{this.model}} />`, {
       owner: this.engine,
     });
     assert.dom('[data-test-secret-list-tab="Overview"]').hasText('Overview', 'Overview tab renders');
