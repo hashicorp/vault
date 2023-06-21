@@ -51,8 +51,8 @@ module('Integration | Component | client count config', function (hooks) {
     );
   });
 
-  test('it should function in edit mode when reporting is disabled meep', async function (assert) {
-    assert.expect(13);
+  test('it should function in edit mode when reporting is disabled', async function (assert) {
+    assert.expect(14);
 
     this.server.put('/sys/internal/counters/config', (schema, req) => {
       const { enabled, retention_months } = JSON.parse(req.requestBody);
@@ -69,7 +69,6 @@ module('Integration | Component | client count config', function (hooks) {
     `);
 
     assert.dom('[data-test-input="enabled"]').isNotChecked('Data collection checkbox is not checked');
-
     assert
       .dom('label[for="enabled"]')
       .hasText('Data collection is off', 'Correct label renders when data collection is off');
@@ -78,7 +77,6 @@ module('Integration | Component | client count config', function (hooks) {
     await click('[data-test-input="enabled"]');
     await fillIn('[data-test-input="retentionMonths"]', -3);
     await click('[data-test-clients-config-save]');
-
     assert
       .dom('[data-test-inline-error-message]')
       .hasText(
@@ -88,6 +86,7 @@ module('Integration | Component | client count config', function (hooks) {
 
     await fillIn('[data-test-input="retentionMonths"]', 24);
     await click('[data-test-clients-config-save]');
+
     assert.dom('.modal.is-active').exists('Modal renders');
     assert
       .dom('[data-test-modal-title] span')
@@ -99,9 +98,20 @@ module('Integration | Component | client count config', function (hooks) {
       this.transitionStub.calledWith('vault.cluster.clients.config'),
       'Route transitions correctly on save success'
     );
-    await click('[data-test-input="enabled"]');
-    await click('[data-test-clients-config-save]');
 
+    this.server.put('/sys/internal/counters/config', (schema, req) => {
+      const { enabled, retention_months } = JSON.parse(req.requestBody);
+      const expected = { enabled: 'disable', retention_months: 24 };
+      assert.deepEqual(
+        expected,
+        { enabled, retention_months },
+        'Correct data sent in PUT request when toggle has been disabled.'
+      );
+      return {};
+    });
+
+    await click('[data-test-input="enabled"]'); // disable
+    await click('[data-test-clients-config-save]');
     assert.dom('.modal.is-active').exists('Modal renders');
     assert
       .dom('[data-test-modal-title] span')
@@ -114,6 +124,7 @@ module('Integration | Component | client count config', function (hooks) {
 
   test('it should function in edit mode when reporting is enabled', async function (assert) {
     assert.expect(6);
+
     this.server.put('/sys/internal/counters/config', (schema, req) => {
       const { enabled, retention_months } = JSON.parse(req.requestBody);
       const expected = { enabled: 'enable', retention_months: 48 };
@@ -139,7 +150,6 @@ module('Integration | Component | client count config', function (hooks) {
 
     await fillIn('[data-test-input="retentionMonths"]', 5);
     await click('[data-test-clients-config-save]');
-
     assert
       .dom('[data-test-inline-error-message]')
       .hasText(
@@ -156,7 +166,7 @@ module('Integration | Component | client count config', function (hooks) {
 
     this.server.put('/sys/internal/counters/config', (schema, req) => {
       const { enabled, retention_months } = JSON.parse(req.requestBody);
-      const expected = { enabled: 'enable', retention_months: 5 };
+      const expected = { enabled: 'enable', retention_months: 24 };
       assert.deepEqual(expected, { enabled, retention_months }, 'Correct data sent in PUT request');
       return {};
     });
@@ -167,8 +177,7 @@ module('Integration | Component | client count config', function (hooks) {
       <div id="modal-wormhole"></div>
       <Clients::Config @model={{this.model}} @mode="edit" />
     `);
-
-    await fillIn('[data-test-input="retentionMonths"]', 5);
+    await fillIn('[data-test-input="retentionMonths"]', 24);
     await click('[data-test-clients-config-save]');
   });
 });
