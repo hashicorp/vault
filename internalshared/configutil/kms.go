@@ -58,8 +58,8 @@ type KMS struct {
 	Disabled bool
 	Config   map[string]string
 
-	Priority int
-	Name     string
+	Priority int    `hcl:"priority"`
+	Name     string `hcl:"name"`
 }
 
 func (k *KMS) GoString() string {
