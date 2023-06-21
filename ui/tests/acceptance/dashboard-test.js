@@ -40,4 +40,17 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom('[data-test-secrets-engines-row="nomad"] [data-test-view]').doesNotExist();
     });
   });
+
+  module('learn more card', function () {
+    test('shows the learn more card', async function (assert) {
+      await visit('/vault/dashboard');
+      assert.dom('[data-test-learn-more-title]').hasText('Learn More');
+      assert
+        .dom('[data-test-learn-more-subtext]')
+        .hasText(
+          'Explore the features of Vault and learn advance practices with the following tutorials and documentation.'
+        );
+      assert.dom('[data-test-learn-more-links] a').exists({ count: 4 });
+    });
+  });
 });
