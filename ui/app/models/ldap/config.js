@@ -106,7 +106,7 @@ export default class LdapConfigModel extends Model {
 
   @attr('number', {
     editType: 'optionalText',
-    label: 'Connection timeout',
+    label: 'Connection Timeout',
     subText: 'Specify the connection timeout length in seconds.',
     defaultSubText: 'Vault will use the default of 30 seconds.',
     defaultShown: 'Default 30 seconds.',
@@ -115,7 +115,7 @@ export default class LdapConfigModel extends Model {
 
   @attr('number', {
     editType: 'optionalText',
-    label: 'Request timeout',
+    label: 'Request Timeout',
     subText: 'Specify the connection timeout length in seconds.',
     defaultSubText: 'Vault will use the default of 90 seconds.',
     defaultShown: 'Default 90 seconds.',

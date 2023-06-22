@@ -65,4 +65,14 @@ module('Integration | Component | secrets-engine-mount-config', function (hooks)
     assert.dom(selectors.rowValue('Default Lease TTL')).includesText('0', 'Default Lease TTL renders');
     assert.dom(selectors.rowValue('Max Lease TTL')).includesText('10000', 'Max Lease TTL renders');
   });
+
+  test('it should yield block for additional fields', async function (assert) {
+    await render(hbs`
+      <SecretsEngineMountConfig @model={{this.model}}>
+        <span data-test-yield>It Yields!</span>
+      </SecretsEngineMountConfig>
+    `);
+
+    assert.dom('[data-test-yield]').hasText('It Yields!', 'Component yields block for additional fields');
+  });
 });
