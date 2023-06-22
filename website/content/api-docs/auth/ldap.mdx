@@ -447,7 +447,9 @@ This endpoint allows you to log in with LDAP credentials
 ### Parameters
 
 - `username` `(string: <required>)` – The username of the LDAP user
-- `password` `(string: <required>)` – The password for the LDAP user
+- `password` `(string: <required>)` – The password for the LDAP user. 
+When authenticating with the Vault CLI, i.e. `vault login -method=ldap username=mitchellh` 
+the password can be supplied via the `VAULT_LDAP_PASSWORD` environment variable.
 
 ### Sample Payload
 
