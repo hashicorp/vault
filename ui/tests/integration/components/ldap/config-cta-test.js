@@ -12,7 +12,7 @@ import hbs from 'htmlbars-inline-precompile';
 
 module('Integration | Component | ldap | ConfigCta', function (hooks) {
   setupRenderingTest(hooks);
-  setupEngine(hooks, 'kubernetes');
+  setupEngine(hooks, 'ldap');
   setupMirage(hooks);
 
   test('it should render message and action', async function (assert) {
@@ -20,7 +20,7 @@ module('Integration | Component | ldap | ConfigCta', function (hooks) {
     assert.dom('[data-test-empty-state-title]').hasText('LDAP not configured', 'Title renders');
     assert
       .dom('[data-test-empty-state-message]')
-      .hasText('Get started by setting up the connection with your exisitng LDAP system.', 'Message renders');
+      .hasText('Get started by setting up the connection with your existing LDAP system.', 'Message renders');
     assert.dom('[data-test-config-cta] a').hasText('Configure LDAP', 'Action renders');
   });
 });
