@@ -95,9 +95,9 @@ module('Integration | Component | ldap | Page::Configuration', function (hooks) 
     assert.dom(selectors.fieldValue('Userdn')).hasText(this.config.userdn);
     assert.dom(selectors.fieldValue('Userattr')).hasText(this.config.userattr);
     assert
-      .dom(selectors.fieldValue('Connection timeout'))
+      .dom(selectors.fieldValue('Connection Timeout'))
       .hasText(duration([this.config.connection_timeout]));
-    assert.dom(selectors.fieldValue('Request timeout')).hasText(duration([this.config.request_timeout]));
+    assert.dom(selectors.fieldValue('Request Timeout')).hasText(duration([this.config.request_timeout]));
     assert.dom(selectors.fieldValue('CA Certificate')).hasText(this.config.certificate);
     assert.dom(selectors.fieldValue('Start TLS')).includesText('No');
     assert.dom(selectors.fieldValue('Insecure TLS')).includesText('No');

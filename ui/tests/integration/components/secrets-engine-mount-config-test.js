@@ -73,6 +73,7 @@ module('Integration | Component | secrets-engine-mount-config', function (hooks)
       </SecretsEngineMountConfig>
     `);
 
+    await click(selectors.toggle);
     assert.dom('[data-test-yield]').hasText('It Yields!', 'Component yields block for additional fields');
   });
 });
