@@ -5,7 +5,7 @@
 
 /**
  * This set of utils is for calculating the full path for a given KV V2 secret, which doubles as its ID.
- * Additional util methods used for calculating
+ * Additional methods for building URLs for other KV-V2 actions
  */
 
 import { encodePath } from 'vault/utils/path-encoding-helpers';
