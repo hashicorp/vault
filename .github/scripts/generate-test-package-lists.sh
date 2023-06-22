@@ -231,6 +231,7 @@ test_packages[9]+=" $base/vault/external_tests/plugin"
 # Total time: 925
 test_packages[10]+=" $base/builtin/credential/ldap"
 test_packages[10]+=" $base/builtin/logical/database"
+test_packages[10]+=" $base/builtin/logical/event"
 test_packages[10]+=" $base/physical/etcd"
 test_packages[10]+=" $base/physical/postgresql"
 

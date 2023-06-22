@@ -43,6 +43,7 @@ import (
 
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
+	logicalEv "github.com/hashicorp/vault/builtin/logical/event"
 
 	physAerospike "github.com/hashicorp/vault/physical/aerospike"
 	physAliCloudOSS "github.com/hashicorp/vault/physical/alicloudoss"
@@ -177,6 +178,7 @@ var (
 	logicalBackends = map[string]logical.Factory{
 		"plugin":   plugin.Factory,
 		"database": logicalDb.Factory,
+		"event":    logicalEv.Factory,
 		// This is also available in the plugin catalog, but is here due to the need to
 		// automatically mount it.
 		"kv": logicalKv.Factory,
