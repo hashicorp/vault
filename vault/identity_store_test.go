@@ -893,7 +893,7 @@ func TestIdentityStore_DeleteCaseSensitivityKey(t *testing.T) {
 	}
 
 	var unsealed bool
-	for i := 0; i < 3; i++ {
+	for i := 0; i < len(unsealKey); i++ {
 		unsealed, err = c.Unseal(unsealKey[i])
 		if err != nil {
 			t.Fatal(err)

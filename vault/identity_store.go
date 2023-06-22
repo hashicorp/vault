@@ -660,8 +660,7 @@ func (i *IdentityStore) initialize(ctx context.Context, req *logical.Initializat
 		case nil:
 			i.logger.Debug("removing storage entry for case sensitivity key", "value", setting.DisableLowerCasedNames)
 		default:
-			i.logger.Error("failed to decode case sensitivity key", "error", err)
-			i.logger.Debug("removing storage entry for case sensitivity key")
+			i.logger.Error("failed to decode case sensitivity key, removing its storage entry anyway", "error", err)
 		}
 
 		err = i.view.Delete(ctx, caseSensitivityKey)
