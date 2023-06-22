@@ -339,7 +339,7 @@ func (b *databaseBackend) ClearConnectionId(name, id string) error {
 	db := b.connections.PopIfEqual(name, id)
 	if db != nil {
 		// Ignore error here since the database client is always killed
-		(*db).Close()
+		db.Close()
 	}
 	return nil
 }
