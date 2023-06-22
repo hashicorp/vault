@@ -19,15 +19,30 @@ import (
 var tidyCancelledError = errors.New("tidy operation cancelled")
 
 type tidyConfig struct {
-	Enabled        bool          `json:"enabled"`
-	Interval       time.Duration `json:"interval_duration"`
-	CertStore      bool          `json:"tidy_cert_store"`
-	RevokedCerts   bool          `json:"tidy_revoked_certs"`
-	IssuerAssocs   bool          `json:"tidy_revoked_cert_issuer_associations"`
-	SafetyBuffer   time.Duration `json:"safety_buffer"`
-	PauseDuration  time.Duration `json:"pause_duration"`
-	MaintainCount  bool          `json:"maintain_stored_certificate_counts"`
-	PublishMetrics bool          `json:"publish_stored_certificate_count_metrics"`
+	// AutoTidy config
+	Enabled  bool          `json:"enabled"`
+	Interval time.Duration `json:"interval_duration"`
+
+	// Tidy Operations
+	CertStore    bool `json:"tidy_cert_store"`
+	RevokedCerts bool `json:"tidy_revoked_certs"`
+	IssuerAssocs bool `json:"tidy_revoked_cert_issuer_associations"`
+
+	// Safety Buffers
+	SafetyBuffer  time.Duration `json:"safety_buffer"`
+	PauseDuration time.Duration `json:"pause_duration"`
+
+	// Metrics.
+	MaintainCount  bool `json:"maintain_stored_certificate_counts"`
+	PublishMetrics bool `json:"publish_stored_certificate_count_metrics"`
+}
+
+func (tc *tidyConfig) IsAnyTidyEnabled() bool {
+	return tc.CertStore || tc.RevokedCerts || tc.IssuerAssocs
+}
+
+func (tc *tidyConfig) AnyTidyConfig() string {
+	return "tidy_cert_store / tidy_revoked_certs / tidy_revoked_cert_issuer_associations"
 }
 
 var defaultTidyConfig = tidyConfig{
@@ -174,8 +189,8 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	b.startTidyOperation(req, config)
 
 	resp := &logical.Response{}
-	if !tidyCertStore && !tidyRevokedCerts && !tidyRevokedAssocs {
-		resp.AddWarning("No targets to tidy; specify tidy_cert_store=true or tidy_revoked_certs=true or tidy_revoked_cert_issuer_associations=true to start a tidy operation.")
+	if !config.IsAnyTidyEnabled() {
+		resp.AddWarning("Manual tidy requested but no tidy operations were set. Enable at least one tidy operation to be run (" + config.AnyTidyConfig() + ").")
 	} else {
 		resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
 	}
@@ -614,8 +629,8 @@ func (b *backend) pathConfigAutoTidyWrite(ctx context.Context, req *logical.Requ
 		}
 	}
 
-	if config.Enabled && !(config.CertStore || config.RevokedCerts || config.IssuerAssocs) {
-		return logical.ErrorResponse("Auto-tidy enabled but no tidy operations were requested. Enable at least one tidy operation to be run (tidy_cert_store / tidy_revoked_certs / tidy_revoked_cert_issuer_associations)."), nil
+	if config.Enabled && !config.IsAnyTidyEnabled() {
+		return logical.ErrorResponse("Auto-tidy enabled but no tidy operations were requested. Enable at least one tidy operation to be run (" + config.AnyTidyConfig() + ")."), nil
 	}
 
 	if maintainCountEnabledRaw, ok := d.GetOk("maintain_stored_certificate_counts"); ok {
