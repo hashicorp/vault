@@ -47,11 +47,6 @@ scenario "autopilot" {
       rhel   = provider.enos.rhel
       ubuntu = provider.enos.ubuntu
     }
-    max_price = {
-      // These prices are based on on-demand cost for t3.large in us-east
-      "rhel"   = "0.1432"
-      "ubuntu" = "0.0832"
-    }
     packages = ["jq"]
     tags = merge({
       "Project Name" : var.project_name
@@ -121,7 +116,6 @@ scenario "autopilot" {
       awskms_unseal_key_arn = step.create_vpc.kms_key_arn
       cluster_tag_key       = local.vault_tag_key
       common_tags           = local.tags
-      max_price             = local.max_price[matrix.distro]
       vpc_id                = step.create_vpc.vpc_id
     }
   }
@@ -215,7 +209,6 @@ scenario "autopilot" {
       awskms_unseal_key_arn = step.create_vpc.kms_key_arn
       common_tags           = local.tags
       cluster_name          = step.create_vault_cluster_targets.cluster_name
-      max_price             = local.max_price[matrix.distro]
       vpc_id                = step.create_vpc.vpc_id
     }
   }
