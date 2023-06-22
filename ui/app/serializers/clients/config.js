@@ -15,7 +15,7 @@ export default class ClientsConfigSerializer extends ApplicationSerializer {
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     if (!payload.data) {
-      return super.normalizeResponse(store, primaryModelClass, payload, id, requestType);
+      return super.normalizeResponse(...arguments);
     }
     const normalizedPayload = {
       id: payload.id,
