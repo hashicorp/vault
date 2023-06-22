@@ -20,6 +20,16 @@ const EXAMPLE_KV_DATA_CREATE_RESPONSE = {
     version: 1,
   },
 };
+const EXAMPLE_KV_DATA_UPDATE_RESPONSE = {
+  request_id: 'foobar',
+  data: {
+    created_time: '2023-06-21T16:18:31.479993Z',
+    custom_metadata: null,
+    deletion_time: '',
+    destroyed: false,
+    version: 2,
+  },
+};
 
 const EXAMPLE_KV_DATA_GET_RESPONSE = {
   request_id: 'foobar',
@@ -97,6 +107,43 @@ module('Unit | Adapter | kv/data', function (hooks) {
     assert.strictEqual(
       record.id,
       `${encodePath(this.backend)}/data/${encodePath(this.path)}?version=1`,
+      'record has correct id'
+    );
+  });
+
+  test('it should make request to correct endpoint on updateRecord', async function (assert) {
+    assert.expect(9);
+    this.server.post(this.endpoint, (schema, req) => {
+      assert.ok('POST request made to correct endpoint when updating record');
+      const body = JSON.parse(req.requestBody);
+      assert.deepEqual(body, {
+        data: {
+          foo: 'bar2',
+        },
+        options: {
+          cas: 1,
+        },
+      });
+      return EXAMPLE_KV_DATA_UPDATE_RESPONSE;
+    });
+    const record = this.store.pushPayload('kv/data', {
+      backend: this.backend,
+      path: this.path,
+      secretData: { foo: 'bar' },
+      version: 1,
+    });
+    assert.strictEqual(record.version, 1, 'record has correct version');
+
+    record.secretData = { foo: 'bar2' };
+
+    assert.strictEqual(record.path, this.path, 'record has correct path');
+    assert.strictEqual(record.backend, this.backend, 'record has correct backend');
+    assert.strictEqual(record.version, 2, 'record has correct version');
+    assert.deepEqual(record.secretData, { foo: 'bar' }, 'record has correct data');
+    assert.strictEqual(record.createdTime, '2023-06-21T16:18:31.479993Z', 'record has correct createdTime');
+    assert.strictEqual(
+      record.id,
+      `${encodePath(this.backend)}/data/${encodePath(this.path)}?version=2`,
       'record has correct id'
     );
   });

@@ -14,7 +14,7 @@ export default class KvDataAdapter extends ApplicationAdapter {
     return `${this.buildURL()}/${fullPath}`;
   }
 
-  createRecord(store, type, snapshot) {
+  _createOrUpdate(snapshot) {
     const { backend, path } = snapshot.record;
     const url = this._url(kvDataPath(backend, path));
 
@@ -28,6 +28,14 @@ export default class KvDataAdapter extends ApplicationAdapter {
         },
       };
     });
+  }
+
+  updateRecord(store, type, snapshot) {
+    return this._createOrUpdate(snapshot);
+  }
+
+  createRecord(store, type, snapshot) {
+    return this._createOrUpdate(snapshot);
   }
 
   queryRecord(store, type, query) {

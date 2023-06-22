@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
+import { encodePath } from 'vault/utils/path-encoding-helpers';
 import ApplicationAdapter from '../application';
 import { kvMetadataPath } from 'vault/utils/kv-path';
 
@@ -17,26 +18,38 @@ export default class KvMetadataAdapter extends ApplicationAdapter {
     const { backend, path } = snapshot.record;
     const id = kvMetadataPath(backend, path);
     const url = this._url(id);
-
-    return this.ajax(url, 'POST', { data: this.serialize(snapshot) }).then((resp) => {
-      resp.id = id;
-      return resp;
+    const data = this.serialize(snapshot);
+    return this.ajax(url, 'POST', { data }).then(() => {
+      return {
+        id,
+        data,
+      };
     });
   }
 
-  findRecord(store, type, id) {
-    return this.ajax(this._url(id), 'GET').then((resp) => {
-      resp.id = id;
-      return resp;
-    });
-  }
-
+  // TODO: replace this with raw request for metadata request?
   query(store, type, query) {
     const { backend } = query;
-    return super.query(store, type, query).then((resp) => {
-      // this is required to properly build the model in normalizeResponse
-      resp.backend = backend;
+    return this.ajax(this._url(`${encodePath(backend)}/metadata?list=1`), 'GET').then((resp) => {
+      resp.data.backend = backend;
       return resp;
+    });
+  }
+
+  queryRecord(store, type, query) {
+    const { backend, path } = query;
+    // ID is the full path for the metadata
+    const id = kvMetadataPath(backend, path);
+    return this.ajax(this._url(id), 'GET').then((resp) => {
+      return {
+        id,
+        ...resp,
+        data: {
+          backend,
+          path,
+          ...resp.data,
+        },
+      };
     });
   }
 }

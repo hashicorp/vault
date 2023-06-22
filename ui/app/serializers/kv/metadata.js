@@ -4,23 +4,31 @@
  */
 
 import { assert } from '@ember/debug';
-import { kvMetadataPath } from 'vault/utils/kv-path';
 import ApplicationSerializer from '../application';
+import { kvMetadataPath } from 'vault/utils/kv-path';
 
 export default class KvMetadataSerializer extends ApplicationSerializer {
+  attrs = {
+    oldestVersion: { serialize: false },
+    createdTime: { serialize: false },
+    updatedTime: { serialize: false },
+    currentVersion: { serialize: false },
+    versions: { serialize: false },
+  };
+
   normalizeItems(payload) {
-    const newPayload = { ...payload };
     if (payload.data.keys) {
       assert('payload.backend must be provided on kv/metadata list response', !!payload.backend);
       const backend = payload.backend;
-      newPayload.data.keys = payload.data.keys.map((path) => {
+      payload.data.keys = payload.data.keys.map((path) => {
         return {
           id: kvMetadataPath(backend, path),
           backend,
           path,
         };
       });
+      return payload;
     }
-    return newPayload;
+    return super.normalizeItems(payload);
   }
 }
