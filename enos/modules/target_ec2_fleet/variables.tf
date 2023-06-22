@@ -59,15 +59,15 @@ variable "instance_count" {
   default     = 3
 }
 
-variable "project_name" {
-  description = "A unique project name"
-  type        = string
-}
-
 variable "max_price" {
   description = "The maximum hourly price to pay for each target instance"
   type        = string
   default     = "0.0416"
+}
+
+variable "project_name" {
+  description = "A unique project name"
+  type        = string
 }
 
 variable "ssh_allow_ips" {
@@ -79,6 +79,17 @@ variable "ssh_allow_ips" {
 variable "ssh_keypair" {
   description = "SSH keypair used to connect to EC2 instances"
   type        = string
+}
+
+variable "capacity_type" {
+  description = "What capacity type to use for EC2 instances"
+  type        = string
+  default     = "on-demand"
+
+  validation {
+    condition     = contains(["on-demand", "spot"], var.capacity_type)
+    error_message = "The capacity_type must be either 'on-demand' or 'spot'."
+  }
 }
 
 variable "vpc_id" {
