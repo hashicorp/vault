@@ -2,6 +2,7 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: MPL-2.0
  */
+import type EmberDataModel from '@ember-data/model';
 
 // Type that comes back from expandAttributeMeta
 export interface FormField {
@@ -40,6 +41,23 @@ export interface ModelValidations {
   };
   invalidFormMessage: string;
 }
+
+export interface Model extends Omit<EmberDataModel, 'isNew'> {
+  // override isNew which is a computed prop and ts will complain since it sees it as a function
+  isNew: boolean;
+}
+
+export interface WithFormFieldsModel extends Model {
+  formFields: Array<FormField>;
+  formFieldGroups: FormFieldGroups;
+  allFields: Array<FormField>;
+}
+
+export interface WithValidationsModel extends Model {
+  validate(): ModelValidations;
+}
+
+export interface WithFormFieldsAndValidationsModel extends WithFormFieldsModel, WithValidationsModel {}
 
 export interface Breadcrumb {
   label: string;
