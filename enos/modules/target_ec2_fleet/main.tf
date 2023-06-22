@@ -58,90 +58,6 @@ data "aws_iam_policy_document" "target_role" {
   }
 }
 
-data "aws_iam_policy_document" "fleet" {
-  statement {
-    resources = ["*"]
-
-    actions = [
-      "ec2:DescribeImages",
-      "ec2:DescribeSubnets",
-      "ec2:RequestSpotInstances",
-      "ec2:TerminateInstances",
-      "ec2:DescribeInstanceStatus",
-      "ec2:CancelSpotFleetRequests",
-      "ec2:CreateTags",
-      "ec2:RunInstances",
-      "ec2:StartInstances",
-      "ec2:StopInstances",
-    ]
-  }
-
-  statement {
-    effect = "Deny"
-
-    resources = [
-      "arn:aws:ec2:*:*:instance/*",
-    ]
-
-    actions = [
-      "ec2:RunInstances",
-    ]
-
-    condition {
-      test     = "StringNotEquals"
-      variable = "ec2:InstanceMarketType"
-      values   = ["spot"]
-    }
-  }
-
-  statement {
-    resources = ["*"]
-
-    actions = [
-      "iam:PassRole",
-    ]
-
-    condition {
-      test     = "StringEquals"
-      variable = "iam:PassedToService"
-      values = [
-        "ec2.amazonaws.com",
-      ]
-    }
-  }
-
-  statement {
-    resources = [
-      "arn:aws:elasticloadbalancing:*:*:loadbalancer/*",
-    ]
-
-    actions = [
-      "elasticloadbalancing:RegisterInstancesWithLoadBalancer",
-    ]
-  }
-
-  statement {
-    resources = [
-      "arn:aws:elasticloadbalancing:*:*:*/*"
-    ]
-
-    actions = [
-      "elasticloadbalancing:RegisterTargets"
-    ]
-  }
-}
-
-data "aws_iam_policy_document" "fleet_role" {
-  statement {
-    actions = ["sts:AssumeRole"]
-
-    principals {
-      type        = "Service"
-      identifiers = ["spotfleet.amazonaws.com"]
-    }
-  }
-}
-
 data "enos_environment" "localhost" {}
 
 resource "random_string" "random_cluster_name" {
@@ -161,11 +77,12 @@ resource "random_string" "unique_id" {
 }
 
 locals {
-  allocation_strategy = "lowestPrice"
-  instances           = toset([for idx in range(var.instance_count) : tostring(idx)])
-  cluster_name        = coalesce(var.cluster_name, random_string.random_cluster_name.result)
-  name_prefix         = "${var.project_name}-${local.cluster_name}-${random_string.unique_id.result}"
-  fleet_tag           = "${local.name_prefix}-spot-fleet-target"
+  spot_allocation_strategy      = "price-capacity-optimized"
+  on_demand_allocation_strategy = "lowestPrice"
+  instances                     = toset([for idx in range(var.instance_count) : tostring(idx)])
+  cluster_name                  = coalesce(var.cluster_name, random_string.random_cluster_name.result)
+  name_prefix                   = "${var.project_name}-${local.cluster_name}-${random_string.unique_id.result}"
+  fleet_tag                     = "${local.name_prefix}-spot-fleet-target"
   fleet_tags = {
     Name                     = "${local.name_prefix}-target"
     "${var.cluster_tag_key}" = local.cluster_name
@@ -187,17 +104,6 @@ resource "aws_iam_role_policy" "target" {
   name   = "${local.name_prefix}-target-policy"
   role   = aws_iam_role.target.id
   policy = data.aws_iam_policy_document.target.json
-}
-
-resource "aws_iam_role" "fleet" {
-  name               = "${local.name_prefix}-fleet-role"
-  assume_role_policy = data.aws_iam_policy_document.fleet_role.json
-}
-
-resource "aws_iam_role_policy" "fleet" {
-  name   = "${local.name_prefix}-fleet-policy"
-  role   = aws_iam_role.fleet.id
-  policy = data.aws_iam_policy_document.fleet.json
 }
 
 resource "aws_security_group" "target" {
@@ -344,28 +250,23 @@ resource "aws_launch_template" "target" {
 # higher capacity risk than say, "capacityOptimized" or "priceCapacityOptimized".
 # Unless we see capacity issues or instances being shut down then we ought to
 # stick with that strategy.
-resource "aws_spot_fleet_request" "targets" {
-  allocation_strategy = local.allocation_strategy
-  fleet_type          = "request"
-  iam_fleet_role      = aws_iam_role.fleet.arn
-  // The instance_pools_to_use_count is only valid for the allocation_strategy
-  // lowestPrice. When we are using that strategy we'll want to always set it
-  // to 1 to avoid rebuilding the fleet on a re-run. For any other strategy
-  // set it to zero to avoid rebuilding the fleet on a re-run.
-  instance_pools_to_use_count   = local.allocation_strategy == "lowestPrice" ? 1 : 0
-  target_capacity               = var.instance_count
-  terminate_instances_on_delete = true
-  wait_for_fulfillment          = true
+resource "aws_ec2_fleet" "targets" {
+  terminate_instances = true // termiante instances when we "delete" the fleet
+  tags = merge(
+    var.common_tags,
+    local.fleet_tags,
+  )
+  type = "instant" // make a synchronous request for the entire fleet
 
   launch_template_config {
     launch_template_specification {
-      id      = aws_launch_template.target.id
-      version = aws_launch_template.target.latest_version
+      launch_template_id = aws_launch_template.target.id
+      version            = aws_launch_template.target.latest_version
     }
 
-    overrides {
-      spot_price = var.max_price
-      subnet_id  = data.aws_subnets.vpc.ids[0]
+    override {
+      max_price = var.max_price
+      subnet_id = data.aws_subnets.vpc.ids[0]
 
       instance_requirements {
         burstable_performance = "included"
@@ -383,46 +284,39 @@ resource "aws_spot_fleet_request" "targets" {
     }
   }
 
-  tags = merge(
-    var.common_tags,
-    local.fleet_tags,
-  )
-}
-
-resource "time_sleep" "wait_for_fulfillment" {
-  depends_on      = [aws_spot_fleet_request.targets]
-  create_duration = "2s"
-}
-
-data "aws_instances" "targets" {
-  depends_on = [
-    time_sleep.wait_for_fulfillment,
-    aws_spot_fleet_request.targets,
-  ]
-
-  instance_tags = local.fleet_tags
-  instance_state_names = [
-    "pending",
-    "running",
-  ]
-
-  filter {
-    name   = "image-id"
-    values = [var.ami_id]
+  on_demand_options {
+    allocation_strategy = local.on_demand_allocation_strategy
+    max_total_price     = (var.max_price * var.instance_count)
+    min_target_capacity = var.capacity_type == "on-demand" ? var.instance_count : null
+    // One of these has to be set to enforce our on-demand target capacity minimum
+    single_availability_zone = false
+    single_instance_type     = true
   }
 
-  filter {
-    name   = "iam-instance-profile.arn"
-    values = [aws_iam_instance_profile.target.arn]
+  spot_options {
+    allocation_strategy = local.spot_allocation_strategy
+    // The instance_pools_to_use_count is only valid for the allocation_strategy
+    // lowestPrice. When we are using that strategy we'll want to always set it
+    // to non-zero to avoid rebuilding the fleet on a re-run. For any other strategy
+    // set it to zero to avoid rebuilding the fleet on a re-run.
+    instance_pools_to_use_count = local.spot_allocation_strategy == "lowestPrice" ? 1 : null
+  }
+
+  // Try and provision only spot instances and fall back to on-demand.
+  target_capacity_specification {
+    default_target_capacity_type = var.capacity_type
+    spot_target_capacity         = var.capacity_type == "spot" ? var.instance_count : 0
+    on_demand_target_capacity    = var.capacity_type == "on-demand" ? var.instance_count : 0
+    target_capacity_unit_type    = "units" // units == instance count
+    total_target_capacity        = var.instance_count
   }
 }
 
 data "aws_instance" "targets" {
   depends_on = [
-    aws_spot_fleet_request.targets,
-    data.aws_instances.targets
+    aws_ec2_fleet.targets,
   ]
   for_each = local.instances
 
-  instance_id = data.aws_instances.targets.ids[each.key]
+  instance_id = aws_ec2_fleet.targets.fleet_instance_set[0].instance_ids[each.key]
 }
