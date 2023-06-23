@@ -68,7 +68,7 @@ module "target_ec2_fleet" {
   common_tags      = var.tags
   instance_mem_min = 4096
   instance_cpu_min = 2
-  max_price        = "0.1432" // On-demand cost for RHEL/t3.medium on-demand in us-east
+  max_price        = "0.1432" // On-demand cost for RHEL amd64 on t3.medium in us-east
   project_name     = var.project_name
   ssh_keypair      = var.aws_ssh_keypair_name
 }
@@ -79,7 +79,7 @@ module "target_ec2_spot_fleet" {
   common_tags      = var.tags
   instance_mem_min = 4096
   instance_cpu_min = 2
-  max_price        = "0.1432" // On-demand cost for RHEL/t3.medium on-demand in us-east
+  max_price        = "0.1432" // On-demand cost for RHEL amd64 on t3.medium in us-east
   project_name     = var.project_name
   ssh_keypair      = var.aws_ssh_keypair_name
 }
