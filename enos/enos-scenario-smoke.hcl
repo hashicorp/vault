@@ -48,11 +48,6 @@ scenario "smoke" {
       rhel   = provider.enos.rhel
       ubuntu = provider.enos.ubuntu
     }
-    max_price = {
-      // These prices are based on on-demand cost for t3.large in us-east
-      "rhel"   = "0.1432"
-      "ubuntu" = "0.0832"
-    }
     packages = ["jq"]
     tags = merge({
       "Project Name" : var.project_name
@@ -128,7 +123,6 @@ scenario "smoke" {
       awskms_unseal_key_arn = step.create_vpc.kms_key_arn
       cluster_tag_key       = local.vault_tag_key
       common_tags           = local.tags
-      max_price             = local.max_price[matrix.distro]
       vpc_id                = step.create_vpc.vpc_id
     }
   }
@@ -142,11 +136,10 @@ scenario "smoke" {
     }
 
     variables {
-      ami_id                = step.ec2_info.ami_ids["arm64"]["ubuntu"]["22.04"]
+      ami_id                = step.ec2_info.ami_ids["amd64"]["ubuntu"]["22.04"]
       awskms_unseal_key_arn = step.create_vpc.kms_key_arn
       cluster_tag_key       = local.backend_tag_key
       common_tags           = local.tags
-      max_price             = local.max_price["ubuntu"]
       vpc_id                = step.create_vpc.vpc_id
     }
   }
