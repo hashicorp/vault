@@ -298,6 +298,8 @@ func TestIntegration_SetSignedWithBackwardsPemBundles(t *testing.T) {
 	require.NoError(t, err, "failed setting up role example")
 	require.NotNil(t, resp, "got nil response from setting up role example: %#v", resp)
 
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, intBackend.Route("roles/example"), logical.UpdateOperation), resp, true)
+
 	// Issue cert
 	resp, err = intBackend.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -312,6 +314,8 @@ func TestIntegration_SetSignedWithBackwardsPemBundles(t *testing.T) {
 	require.NoError(t, err, "failed issuing a leaf cert from int ca")
 	require.NotNil(t, resp, "got nil response issuing a leaf cert from int ca")
 	require.False(t, resp.IsError(), "got an error issuing a leaf cert from int ca: %#v", resp)
+
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, intBackend.Route("issue/example"), logical.UpdateOperation), resp, true)
 }
 
 func TestIntegration_CSRGeneration(t *testing.T) {
