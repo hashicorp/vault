@@ -176,7 +176,7 @@ jobs:
         if: ${{always()}}
         with:
           # Temporary "success" message; remove before merge to main
-          success-message: ":red_circle: An Enos scenario run succeeded in the ${{ github.repository }} repo on the ${{ github.ref_name }} branch. See the run here: ${{ github.event.workflow_run.url }}"
-          failure-message: ":red_circle: An Enos scenario run failed in the ${{ github.repository }} repo on the ${{ github.ref_name }} branch. See the run here: ${{ github.event.workflow_run.url }}"
+          success-message: "An Enos scenario run succeeded. \nRepo: `${{ github.repository }}` \nBranch:`${{ github.event.workflow_run.head_branch }}` \nJob run URL: ${{ github.event.workflow_job.deployment.url }} \nAuthor: ${{ github.event.workflow_job.deployment.creator.name }} \nPR: ${{ github.event.workflow_run.pull_request.name }}"
+          failure-message: "An Enos scenario run failed. \nRepo: `${{ github.repository }}` \nBranch:`${{ github.event.workflow_run.head_branch }}` \nJob run URL: ${{ github.event.workflow_job.deployment.url }} \nAuthor: ${{ github.event.workflow_job.deployment.creator.name }} \nPR: ${{ github.event.workflow_run.pull_request.name }}"
           status: ${{job.status}}
           slack-webhook-url: ${{secrets.SLACK_WEBHOOK_URL}}
