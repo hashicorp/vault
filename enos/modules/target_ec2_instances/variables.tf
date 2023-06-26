@@ -24,33 +24,7 @@ variable "cluster_tag_key" {
 variable "common_tags" {
   description = "Common tags for cloud resources"
   type        = map(string)
-  default = {
-    Project = "vault-ci"
-  }
-}
-
-variable "instance_mem_min" {
-  description = "The minimum amount of memory in mebibytes for each instance in the fleet. (1 MiB = 1024 bytes)"
-  type        = number
-  default     = 4096 // ~4 GB
-}
-
-variable "instance_mem_max" {
-  description = "The maximum amount of memory in mebibytes for each instance in the fleet. (1 MiB = 1024 bytes)"
-  type        = number
-  default     = 16385 // ~16 GB
-}
-
-variable "instance_cpu_min" {
-  description = "The minimum number of vCPU's for each instance in the fleet"
-  type        = number
-  default     = 2
-}
-
-variable "instance_cpu_max" {
-  description = "The maximum number of vCPU's for each instance in the fleet"
-  type        = number
-  default     = 8 // Unlikely we'll ever get that high due to spot price bid protection
+  default     = { "Project" : "vault-ci" }
 }
 
 variable "instance_count" {
@@ -59,10 +33,16 @@ variable "instance_count" {
   default     = 3
 }
 
-variable "max_price" {
-  description = "The maximum hourly price to pay for each target instance"
-  type        = string
-  default     = "0.0416"
+variable "instance_types" {
+  description = "The instance types to use depending on architecture"
+  type = object({
+    amd64 = string
+    arm64 = string
+  })
+  default = {
+    amd64 = "t3a.medium"
+    arm64 = "t4g.medium"
+  }
 }
 
 variable "project_name" {
@@ -79,17 +59,6 @@ variable "ssh_allow_ips" {
 variable "ssh_keypair" {
   description = "SSH keypair used to connect to EC2 instances"
   type        = string
-}
-
-variable "capacity_type" {
-  description = "What capacity type to use for EC2 instances"
-  type        = string
-  default     = "on-demand"
-
-  validation {
-    condition     = contains(["on-demand", "spot"], var.capacity_type)
-    error_message = "The capacity_type must be either 'on-demand' or 'spot'."
-  }
 }
 
 variable "vpc_id" {
