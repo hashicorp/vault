@@ -76,6 +76,7 @@ func pathRoles(b *backend) []*framework.Path {
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation:   b.pathRoleRead,
+				logical.CreateOperation: b.pathRoleUpdate,
 				logical.UpdateOperation: b.pathRoleUpdate,
 				logical.DeleteOperation: b.pathRoleDelete,
 			},
@@ -84,12 +85,28 @@ func pathRoles(b *backend) []*framework.Path {
 		},
 		{
 			Pattern: "static-roles/" + framework.GenericNameRegex("name"),
-
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixRabbitMQ,
 				OperationSuffix: "static-roles",
 			},
-
+			Fields: map[string]*framework.FieldSchema{
+				"name": {
+					Type:        framework.TypeString,
+					Description: "Name of the role.",
+				},
+				"tags": {
+					Type:        framework.TypeString,
+					Description: "Comma-separated list of tags for this role.",
+				},
+				"vhosts": {
+					Type:        framework.TypeString,
+					Description: "A map of virtual hosts to permissions.",
+				},
+				"vhost_topics": {
+					Type:        framework.TypeString,
+					Description: "A nested map of virtual hosts and exchanges to topic permissions.",
+				},
+			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation:   b.pathStaticRoleRead,
 				logical.CreateOperation: b.pathStaticRoleCreateUpdate,
