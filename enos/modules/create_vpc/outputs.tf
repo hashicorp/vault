@@ -1,8 +1,3 @@
-output "aws_region" {
-  description = "AWS Region for resources"
-  value       = data.aws_region.current.name
-}
-
 output "vpc_id" {
   description = "Created VPC ID"
   value       = aws_vpc.vpc.id

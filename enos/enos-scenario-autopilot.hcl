@@ -104,7 +104,7 @@ scenario "autopilot" {
   }
 
   step "create_vault_cluster_targets" {
-    module     = module.target_ec2_spot_fleet
+    module     = module.target_ec2_instances
     depends_on = [step.create_vpc]
 
     providers = {
@@ -197,7 +197,7 @@ scenario "autopilot" {
   }
 
   step "create_vault_cluster_upgrade_targets" {
-    module     = module.target_ec2_spot_fleet
+    module     = module.target_ec2_instances
     depends_on = [step.create_vpc]
 
     providers = {

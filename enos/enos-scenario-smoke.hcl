@@ -114,7 +114,7 @@ scenario "smoke" {
   }
 
   step "create_vault_cluster_targets" {
-    module     = module.target_ec2_spot_fleet
+    module     = module.target_ec2_instances
     depends_on = [step.create_vpc]
 
     providers = {
@@ -131,7 +131,7 @@ scenario "smoke" {
   }
 
   step "create_vault_cluster_backend_targets" {
-    module     = module.target_ec2_spot_fleet
+    module     = matrix.backend == "consul" ? module.target_ec2_instances : module.target_ec2_shim
     depends_on = [step.create_vpc]
 
     providers = {
@@ -139,7 +139,7 @@ scenario "smoke" {
     }
 
     variables {
-      ami_id                = step.ec2_info.ami_ids["amd64"]["ubuntu"]["22.04"]
+      ami_id                = step.ec2_info.ami_ids["arm64"]["ubuntu"]["22.04"]
       awskms_unseal_key_arn = step.create_vpc.kms_key_arn
       cluster_tag_key       = local.backend_tag_key
       common_tags           = local.tags
