@@ -112,13 +112,15 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/hashicorp/hcl v1.0.1-vault-5
 	github.com/hashicorp/hcl/v2 v2.16.2
-	github.com/hashicorp/hcp-scada-provider v0.2.1
+	github.com/hashicorp/hcp-link v0.2.1
+	github.com/hashicorp/hcp-scada-provider v0.2.2
 	github.com/hashicorp/hcp-sdk-go v0.23.0
 	github.com/hashicorp/nomad/api v0.0.0-20230519153805-2275a83cbfdf
 	github.com/hashicorp/raft v1.4.0
 	github.com/hashicorp/raft-autopilot v0.2.0
 	github.com/hashicorp/raft-boltdb/v2 v2.2.2
 	github.com/hashicorp/raft-snapshot v1.0.4
+	github.com/hashicorp/raft-wal v0.4.0
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.15.0
 	github.com/hashicorp/vault-plugin-auth-azure v0.15.0
 	github.com/hashicorp/vault-plugin-auth-centrify v0.15.1
@@ -382,7 +384,6 @@ require (
 	github.com/hashicorp/mdns v1.0.4 // indirect
 	github.com/hashicorp/net-rpc-msgpackrpc/v2 v2.0.0 // indirect
 	github.com/hashicorp/raft-boltdb v0.0.0-20230125174641-2a8082862702 // indirect
-	github.com/hashicorp/raft-wal v0.4.0 // indirect
 	github.com/hashicorp/serf v0.10.1 // indirect
 	github.com/hashicorp/vault/api/auth/kubernetes v0.4.0 // indirect
 	github.com/hashicorp/vic v1.5.1-0.20190403131502-bbfe86ec9443 // indirect
