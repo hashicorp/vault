@@ -175,9 +175,10 @@ jobs:
     needs: run
     # Temporary "success" condition for testing on PR; revert to "failure" before merge to main
     if: always() && needs.run.result == 'success'
-    uses: hashicorp/actions-slack-status@v1
-    with:
-      # Temporary "success" message; remove before merge to main
-      success-message: ":red_circle: An Enos scenario run succeeded in the ${{ github.repository }} repo on the ${{ github.ref_name }} branch. See the run here: ${{ github.event.workflow_run.url }}"
-      failure-message: ":red_circle: An Enos scenario run failed in the ${{ github.repository }} repo on the ${{ github.ref_name }} branch. See the run here: ${{ github.event.workflow_run.url }}"
-      slack-webhook-url: ${{secrets.SLACK_WEBHOOK_URL}}
+    steps:
+      - uses: hashicorp/actions-slack-status@v1
+        with:
+          # Temporary "success" message; remove before merge to main
+          success-message: ":red_circle: An Enos scenario run succeeded in the ${{ github.repository }} repo on the ${{ github.ref_name }} branch. See the run here: ${{ github.event.workflow_run.url }}"
+          failure-message: ":red_circle: An Enos scenario run failed in the ${{ github.repository }} repo on the ${{ github.ref_name }} branch. See the run here: ${{ github.event.workflow_run.url }}"
+          slack-webhook-url: ${{secrets.SLACK_WEBHOOK_URL}}
