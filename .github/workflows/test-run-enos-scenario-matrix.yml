@@ -169,24 +169,15 @@ jobs:
           rm -rf ./enos/support
           rm -rf ./enos/.enos
 
-  # Send Slack notification for any failures in job `run`
+  # Send Slack notification to #feed-vault-enos-failures for any failures in the above `run` job.
+  # There is an incoming webhook set up on the "Enos Vault Failure Bot" Slackbot https://api.slack.com/apps/A05E31CH1LG/incoming-webhooks
   slack-notification:
     needs: run
     # Temporary "success" condition for testing on PR; revert to "failure" before merge to main
     if: always() && needs.run.result == 'success'
-    uses: hashicorp/cloud-gha-slack-notifier/.github/workflows/slack-notify-enhanced.yaml@v1
+    uses: hashicorp/actions-slack-status@v1
     with:
-      channel-id: "C05DBVA4LGZ" # publishes to #feed-vault-enos-failures
-      payload: |
-        {
-          "text": ":red_circle: An Enos scenario run failed in the ${{ github.repository }} repo on the ${{ github.ref_name }} branch. See the run here: ${{ github.event.workflow_run.url }}",
-          "blocks": [
-            {
-              "type": "section",
-              "text": {
-                "type": "mrkdwn",
-                "text": ":red_circle: An Enos scenario run failed in the ${{ github.repository }} repo on the ${{ github.ref_name }} branch. See the failed run here: ${{ github.event.workflow_run.url }}"
-              }
-            }
-          ]
-        }
+      # Temporary "success" message; remove before merge to main
+      success-message: ":red_circle: An Enos scenario run succeeded in the ${{ github.repository }} repo on the ${{ github.ref_name }} branch. See the run here: ${{ github.event.workflow_run.url }}"
+      failure-message: ":red_circle: An Enos scenario run failed in the ${{ github.repository }} repo on the ${{ github.ref_name }} branch. See the run here: ${{ github.event.workflow_run.url }}"
+      slack-webhook-url: ${{secrets.SLACK_WEBHOOK_URL}}
