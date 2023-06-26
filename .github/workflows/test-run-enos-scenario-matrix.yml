@@ -173,6 +173,7 @@ jobs:
   # There is an incoming webhook set up on the "Enos Vault Failure Bot" Slackbot https://api.slack.com/apps/A05E31CH1LG/incoming-webhooks
   slack-notification:
     needs: run
+    runs-on: ubuntu-latest
     # Temporary "success" condition for testing on PR; revert to "failure" before merge to main
     if: always() && needs.run.result == 'success'
     steps:
