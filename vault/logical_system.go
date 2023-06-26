@@ -4278,7 +4278,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 		if ns.ID == entry.NamespaceID {
 
 			// filters UI login method type dropdown when a user is unauthenticated
-			if entry.Config.ListingVisibility == ListingVisibilityDropdown {
+			if entry.Config.ListingVisibility == ListingVisibilityDropdown &&  !strutil.StrListContains(authTypes, entry.Type) {
 				authTypes = append(authTypes, entry.Type)
 			}
 
