@@ -4276,28 +4276,28 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 		}
 
 		if ns.ID == entry.NamespaceID {
-		
-		// filters UI dropdown of auth method types when a user is unauthed
-		if entry.Config.ListingVisibility == ListingVisibilityDropdown {
-			authTypes = append(authTypes, entry.Type)
-		}
 
-		 if hasAccess(ctx, entry) {
-			if isAuthed {
-				// If this is an authed request return all the mount info
-				authMounts[entry.Path] = b.mountInfo(ctx, entry)
-			} else {
-				authMounts[entry.Path] = map[string]interface{}{
-					"type":        entry.Type,
-					"description": entry.Description,
-					"options":     entry.Options,
+			// filters UI login method type dropdown when a user is unauthenticated
+			if entry.Config.ListingVisibility == ListingVisibilityDropdown {
+				authTypes = append(authTypes, entry.Type)
+			}
+
+			if hasAccess(ctx, entry) {
+				if isAuthed {
+					// If this is an authed request return all the mount info
+					authMounts[entry.Path] = b.mountInfo(ctx, entry)
+				} else {
+					authMounts[entry.Path] = map[string]interface{}{
+						"type":        entry.Type,
+						"description": entry.Description,
+						"options":     entry.Options,
+					}
 				}
 			}
-		 }
 		}
 	}
 	b.Core.authLock.RUnlock()
-	
+
 	resp.Data["auth_types"] = authTypes
 	return resp, nil
 }
