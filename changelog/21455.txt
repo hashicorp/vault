@@ -1,0 +1,3 @@
+```release-note:improvement
+core: adds `dropdown` as a possible value for `listing_visibility` which returns the method type in a list of `auth_types` 
+```
