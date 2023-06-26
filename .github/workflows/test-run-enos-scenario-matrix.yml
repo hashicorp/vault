@@ -174,10 +174,10 @@ jobs:
   slack-notification:
     needs: run
     runs-on: ubuntu-latest
-    # Temporary "success" condition for testing on PR; revert to "failure" before merge to main
-    if: always() && needs.run.result == 'success'
     steps:
       - uses: hashicorp/actions-slack-status@v1
+        # Temporary "success" condition for testing on PR; revert to "failure" before merge to main
+        if: always()
         with:
           # Temporary "success" message; remove before merge to main
           success-message: ":red_circle: An Enos scenario run succeeded in the ${{ github.repository }} repo on the ${{ github.ref_name }} branch. See the run here: ${{ github.event.workflow_run.url }}"
