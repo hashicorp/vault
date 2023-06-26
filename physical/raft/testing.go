@@ -20,10 +20,34 @@ func GetRaft(t testing.TB, bootstrap bool, noStoreState bool) (*RaftBackend, str
 	}
 	t.Logf("raft dir: %s", raftDir)
 
-	return getRaftWithDir(t, bootstrap, noStoreState, raftDir)
+	conf := map[string]string{
+		"path":          raftDir,
+		"trailing_logs": "100",
+	}
+
+	if noStoreState {
+		conf["doNotStoreLatestState"] = ""
+	}
+
+	return getRaftWithDirAndConfig(t, bootstrap, conf)
 }
 
-func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir string) (*RaftBackend, string) {
+func GetRaftWithConfig(t testing.TB, bootstrap bool, noStoreState bool, conf map[string]string) (*RaftBackend, string) {
+	raftDir, err := ioutil.TempDir("", "vault-raft-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("raft dir: %s", raftDir)
+
+	conf["path"] = raftDir
+	if noStoreState {
+		conf["doNotStoreLatestState"] = ""
+	}
+
+	return getRaftWithDirAndConfig(t, bootstrap, conf)
+}
+
+func getRaftWithDirAndConfig(t testing.TB, bootstrap bool, conf map[string]string) (*RaftBackend, string) {
 	id, err := uuid.GenerateUUID()
 	if err != nil {
 		t.Fatal(err)
@@ -33,17 +57,8 @@ func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir str
 		Name:  fmt.Sprintf("raft-%s", id),
 		Level: hclog.Trace,
 	})
-	logger.Info("raft dir", "dir", raftDir)
 
-	conf := map[string]string{
-		"path":          raftDir,
-		"trailing_logs": "100",
-		"node_id":       id,
-	}
-
-	if noStoreState {
-		conf["doNotStoreLatestState"] = ""
-	}
+	conf["node_id"] = id
 
 	backendRaw, err := NewRaftBackend(conf, logger)
 	if err != nil {
@@ -77,5 +92,5 @@ func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir str
 
 	backend.DisableAutopilot()
 
-	return backend, raftDir
+	return backend, conf["path"]
 }

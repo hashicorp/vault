@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -31,6 +32,7 @@ import (
 	autopilot "github.com/hashicorp/raft-autopilot"
 	raftboltdb "github.com/hashicorp/raft-boltdb/v2"
 	snapshot "github.com/hashicorp/raft-snapshot"
+	raftwal "github.com/hashicorp/raft-wal"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -52,6 +54,7 @@ const (
 	// EnvVaultRaftNonVoter is used to override the non_voter config option, telling Vault to join as a non-voter (i.e. read replica).
 	EnvVaultRaftNonVoter  = "VAULT_RAFT_RETRY_JOIN_AS_NON_VOTER"
 	raftNonVoterConfigKey = "retry_join_as_non_voter"
+	raftWalConfigKey      = "raft_wal"
 )
 
 var getMmapFlags = func(string) int { return 0 }
@@ -70,6 +73,7 @@ var (
 	raftLogCacheSize = 512
 
 	raftState              = "raft/"
+	raftWalDir             = "raft-wal/"
 	peersFileName          = "peers.json"
 	restoreOpDelayDuration = 5 * time.Second
 	defaultMaxEntrySize    = uint64(2 * raftchunking.ChunkSize)
@@ -395,33 +399,67 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		snap = raft.NewInmemSnapshotStore()
 	} else {
 		// Create the base raft path.
-		path := filepath.Join(path, raftState)
-		if err := EnsurePath(path, true); err != nil {
+		raftBasePath := filepath.Join(path, raftState)
+		if err := EnsurePath(raftBasePath, true); err != nil {
 			return nil, err
+		}
+		dbPath := filepath.Join(raftBasePath, "raft.db")
+
+		// Check if they're opting in to raft-wal storage
+		useRaftWal := false
+		if walRaw, ok := conf[raftWalConfigKey]; ok {
+			useRaftWal, err = strconv.ParseBool(walRaw)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse %s config value %q as a boolean: %w", raftWalConfigKey, walRaw, err)
+			}
 		}
 
-		// Create the backend raft store for logs and stable storage.
-		dbPath := filepath.Join(path, "raft.db")
-		opts := boltOptions(dbPath)
-		raftOptions := raftboltdb.Options{
-			Path:        dbPath,
-			BoltOptions: opts,
+		// If the existing raft db exists from a previous use of BoltDB, warn about this and continue to use BoltDB
+		_, err := os.Stat(dbPath)
+		if useRaftWal && errors.Is(err, fs.ErrExist) {
+			logger.Warn("raft is configured to use raft-wal for storage but existing raft.db detected. raft-wal config will be ignored.")
+			useRaftWal = false
 		}
-		store, err := raftboltdb.New(raftOptions)
-		if err != nil {
-			return nil, err
+
+		if useRaftWal {
+			raftWalPath := filepath.Join(raftBasePath, raftWalDir)
+			if err := EnsurePath(raftWalPath, true); err != nil {
+				return nil, err
+			}
+
+			wal, err := raftwal.Open(raftWalPath)
+			if err != nil {
+				return nil, fmt.Errorf("fail to open write-ahead-log: %w", err)
+			}
+
+			stable = wal
+			log = wal
+		} else {
+			// use the traditional BoltDB setup
+			opts := boltOptions(dbPath)
+			raftOptions := raftboltdb.Options{
+				Path:        dbPath,
+				BoltOptions: opts,
+			}
+
+			store, err := raftboltdb.New(raftOptions)
+			if err != nil {
+				return nil, err
+			}
+
+			stable = store
+			log = store
 		}
-		stable = store
 
 		// Wrap the store in a LogCache to improve performance.
-		cacheStore, err := raft.NewLogCache(raftLogCacheSize, store)
+		cacheStore, err := raft.NewLogCache(raftLogCacheSize, log)
 		if err != nil {
 			return nil, err
 		}
 		log = cacheStore
 
 		// Create the snapshot store.
-		snapshots, err := NewBoltSnapshotStore(path, logger.Named("snapshot"), fsm)
+		snapshots, err := NewBoltSnapshotStore(raftBasePath, logger.Named("snapshot"), fsm)
 		if err != nil {
 			return nil, err
 		}
