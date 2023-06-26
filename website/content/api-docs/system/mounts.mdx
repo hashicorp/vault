@@ -156,9 +156,11 @@ This endpoint enables a new secrets engine at the given path.
   - `audit_non_hmac_response_keys` `(array: [])` - List of keys that will not be
     HMAC'd by audit devices in the response data object.
 
-  - `listing_visibility` `(string: "")` - Specifies whether to show this mount
-    in the UI-specific listing endpoint. Valid values are `"unauth"` or
-    `"hidden"`. If not set, behaves like `"hidden"`.
+  - `listing_visibility` `(string: "")` - Specifies the information to show about
+   this mount in the unauthenticated UI-specific listing endpoint. Valid values are:
+      - `"hidden"`: hides mount from mount list, equivalent to the default `""` 
+      - `"unauth"`: returns mount path, description and method type
+      - `"dropdown"`: lists method in a customized dropdown in the login form
 
   - `passthrough_request_headers` `(array: [])` - List of headers to allow
     and pass from the request to the plugin.
@@ -364,7 +366,7 @@ This endpoint tunes configuration parameters for a given mount point.
   will not be HMAC'd by audit devices in the response data object.
 
 - `listing_visibility` `(string: "")` - Specifies whether to show this mount in
-  the UI-specific listing endpoint. Valid values are `"unauth"` or `"hidden"`.
+  the UI-specific listing endpoint. Valid values are `"unauth"`, `"dropdown"` or `"hidden"`.
   If not set, behaves like `"hidden"`.
 
 - `passthrough_request_headers` `(array: [])` - List of headers to allow
