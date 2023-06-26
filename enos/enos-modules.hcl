@@ -5,20 +5,11 @@ module "autopilot_upgrade_storageconfig" {
   source = "./modules/autopilot_upgrade_storageconfig"
 }
 
-module "az_finder" {
-  source = "./modules/az_finder"
-}
-
 module "backend_consul" {
-  source = "app.terraform.io/hashicorp-qti/aws-consul/enos"
+  source = "./modules/backend_consul"
 
-  project_name    = var.project_name
-  environment     = "ci"
-  common_tags     = var.tags
-  ssh_aws_keypair = var.aws_ssh_keypair_name
-
-  # Set this to a real license vault if using an Enterprise edition of Consul
-  consul_license = var.backend_license_path == null ? "none" : file(abspath(var.backend_license_path))
+  license   = var.backend_license_path == null ? null : file(abspath(var.backend_license_path))
+  log_level = var.backend_log_level
 }
 
 module "backend_raft" {
@@ -38,12 +29,14 @@ module "build_artifactory" {
 }
 
 module "create_vpc" {
-  source = "app.terraform.io/hashicorp-qti/aws-infra/enos"
+  source = "./modules/create_vpc"
 
-  project_name      = var.project_name
-  environment       = "ci"
-  common_tags       = var.tags
-  ami_architectures = ["amd64", "arm64"]
+  environment = "ci"
+  common_tags = var.tags
+}
+
+module "ec2_info" {
+  source = "./modules/ec2_info"
 }
 
 module "get_local_metadata" {
@@ -68,13 +61,16 @@ module "shutdown_multiple_nodes" {
   source = "./modules/shutdown_multiple_nodes"
 }
 
-module "target_ec2_instances" {
-  source = "./modules/target_ec2_instances"
+module "target_ec2_fleet" {
+  source = "./modules/target_ec2_fleet"
 
-  common_tags    = var.tags
-  instance_count = var.vault_instance_count
-  project_name   = var.project_name
-  ssh_keypair    = var.aws_ssh_keypair_name
+  capacity_type    = "on-demand" // or "spot", use on-demand until we can stabilize spot fleets
+  common_tags      = var.tags
+  instance_mem_min = 4096
+  instance_cpu_min = 2
+  max_price        = "0.1432" // On-demand cost for RHEL amd64 on t3.medium in us-east
+  project_name     = var.project_name
+  ssh_keypair      = var.aws_ssh_keypair_name
 }
 
 module "target_ec2_spot_fleet" {
@@ -83,10 +79,9 @@ module "target_ec2_spot_fleet" {
   common_tags      = var.tags
   instance_mem_min = 4096
   instance_cpu_min = 2
+  max_price        = "0.1432" // On-demand cost for RHEL amd64 on t3.medium in us-east
   project_name     = var.project_name
-  // Current on-demand cost of t3.medium in us-east.
-  spot_price_max = "0.0416"
-  ssh_keypair    = var.aws_ssh_keypair_name
+  ssh_keypair      = var.aws_ssh_keypair_name
 }
 
 module "vault_agent" {
@@ -105,7 +100,9 @@ module "vault_verify_agent_output" {
 module "vault_cluster" {
   source = "./modules/vault_cluster"
 
-  install_dir = var.vault_install_dir
+  install_dir    = var.vault_install_dir
+  consul_license = var.backend_license_path == null ? null : file(abspath(var.backend_license_path))
+  log_level      = var.vault_log_level
 }
 
 module "vault_get_cluster_ips" {

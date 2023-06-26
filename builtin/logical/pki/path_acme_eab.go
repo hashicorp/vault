@@ -8,12 +8,28 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"path"
 	"time"
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
+
+var decodedTokenPrefix = mustBase64Decode("vault-eab-0-")
+
+func mustBase64Decode(s string) []byte {
+	bytes, err := base64.RawURLEncoding.DecodeString(s)
+	if err != nil {
+		panic(fmt.Sprintf("Token prefix value: %s failed decoding: %v", s, err))
+	}
+
+	// Should be dividable by 3 otherwise our prefix will not be properly honored.
+	if len(bytes)%3 != 0 {
+		panic(fmt.Sprintf("Token prefix value: %s is not dividable by 3, will not prefix properly", s))
+	}
+	return bytes
+}
 
 /*
  * This file unlike the other path_acme_xxx.go are VAULT APIs to manage the
@@ -115,7 +131,6 @@ a warning that it did not exist.`,
 type eabType struct {
 	KeyID         string    `json:"-"`
 	KeyType       string    `json:"key-type"`
-	KeyBits       int       `json:"key-bits"`
 	PrivateBytes  []byte    `json:"private-bytes"`
 	AcmeDirectory string    `json:"acme-directory"`
 	CreatedOn     time.Time `json:"created-on"`
@@ -143,8 +158,7 @@ func (b *backend) pathAcmeListEab(ctx context.Context, r *logical.Request, _ *fr
 		keyIds = append(keyIds, eab.KeyID)
 		keyInfos[eab.KeyID] = map[string]interface{}{
 			"key_type":       eab.KeyType,
-			"key_bits":       eab.KeyBits,
-			"acme_directory": eab.AcmeDirectory,
+			"acme_directory": path.Join(eab.AcmeDirectory, "directory"),
 			"created_on":     eab.CreatedOn.Format(time.RFC3339),
 		}
 	}
@@ -172,8 +186,7 @@ func (b *backend) pathAcmeCreateEab(ctx context.Context, r *logical.Request, dat
 	eab := &eabType{
 		KeyID:         kid,
 		KeyType:       "hs",
-		KeyBits:       size * 8,
-		PrivateBytes:  bytes,
+		PrivateBytes:  append(decodedTokenPrefix, bytes...), // we do this to avoid generating tokens that start with -
 		AcmeDirectory: acmeDirectory,
 		CreatedOn:     time.Now(),
 	}
@@ -190,9 +203,8 @@ func (b *backend) pathAcmeCreateEab(ctx context.Context, r *logical.Request, dat
 		Data: map[string]interface{}{
 			"id":             eab.KeyID,
 			"key_type":       eab.KeyType,
-			"key_bits":       eab.KeyBits,
 			"key":            encodedKey,
-			"acme_directory": eab.AcmeDirectory,
+			"acme_directory": path.Join(eab.AcmeDirectory, "directory"),
 			"created_on":     eab.CreatedOn.Format(time.RFC3339),
 		},
 	}, nil

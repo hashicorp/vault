@@ -21,23 +21,11 @@ dir=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 source generate-test-package-lists.sh
 
 get_module_packages() {
-    local package_list=($(go list -test -json ./... | jq -r '.ForTest | select(.!=null)' | grep -v vault/integ | grep '^github.com/hashicorp/'))
-    
-    for package in "${package_list[@]}" ; do
-        # Check if the current package already exists in all_packages
-        if ! grep "\b$package\b" <<< "${all_packages[@]}" &> /dev/null; then
-            all_packages+=($package)
-        fi
-    done
-}
-
-find_packages() {
-    for package in "${all_packages[@]}" ; do
-        if ! grep "\b${package}\b" <<< "${test_packages[@]}" &> /dev/null ; then
-            echo "Error: package ${package} is not present in test_packages"
-            exit 1
-        fi
-    done
+    for d in "../.." "../../sdk" "../../api"; do
+        cd "$dir/$d"
+        go list -test -json ./... | jq -r '.ForTest | select(.!=null)' |
+          grep -v vault/integ | grep '^github.com/hashicorp/'
+    done |sort -u
 }
 
 count_test_packages() {
@@ -49,18 +37,24 @@ count_test_packages() {
     echo $count
 }
 
-all_packages=()
+contains() {
+    target=$1; shift
+    for i; do
+        if [[ "$i" == "$target" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
 
-cd "$dir/../.."
-get_module_packages
+all_packages=( $(get_module_packages) )
 
-cd "$dir/../../sdk"
-get_module_packages
-
-cd "$dir/../../api"
-get_module_packages
-
-find_packages
+for package in "${all_packages[@]}" ; do
+    if ! contains $package ${test_packages[@]}; then
+        echo "Error: package ${package} is not present in test_packages"
+        exit 1
+    fi
+done
 
 test_package_count=$(count_test_packages)
 if (( ${#all_packages[@]} != $test_package_count )) ; then
@@ -72,4 +66,5 @@ if (( ${#all_packages[@]} != $test_package_count )) ; then
     done
 
     echo "Packages in test_packages that aren't used: ${unused_packages// /}"
+    exit 1
 fi

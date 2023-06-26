@@ -14,7 +14,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-hclog"
-
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -279,8 +279,9 @@ func pathTidyCancel(b *backend) *framework.Path {
 								Required: false,
 							},
 							"tidy_cross_cluster_revoked_certs": {
-								Type:     framework.TypeBool,
-								Required: false,
+								Type:        framework.TypeBool,
+								Description: `Tidy the cross-cluster revoked certificate store`,
+								Required:    false,
 							},
 							"tidy_revocation_queue": {
 								Type:     framework.TypeBool,
@@ -387,8 +388,8 @@ func pathTidyStatus(b *backend) *framework.Path {
 								Required:    true,
 							},
 							"tidy_cross_cluster_revoked_certs": {
-								Type:        framework.TypeString,
-								Description: ``,
+								Type:        framework.TypeBool,
+								Description: `Tidy the cross-cluster revoked certificate store`,
 								Required:    false,
 							},
 							"tidy_acme": {
@@ -617,7 +618,7 @@ available on the tidy-status endpoint.`,
 								Required: true,
 							},
 							"revocation_queue_safety_buffer": {
-								Type:     framework.TypeDurationSecond,
+								Type:     framework.TypeInt,
 								Required: true,
 							},
 							"publish_stored_certificate_count_metrics": {
@@ -698,8 +699,9 @@ available on the tidy-status endpoint.`,
 								Required:    true,
 							},
 							"tidy_cross_cluster_revoked_certs": {
-								Type:     framework.TypeBool,
-								Required: true,
+								Type:        framework.TypeBool,
+								Description: `Tidy the cross-cluster revoked certificate store`,
+								Required:    true,
 							},
 							"tidy_revocation_queue": {
 								Type:     framework.TypeBool,
@@ -710,7 +712,7 @@ available on the tidy-status endpoint.`,
 								Required: true,
 							},
 							"revocation_queue_safety_buffer": {
-								Type:     framework.TypeDurationSecond,
+								Type:     framework.TypeInt,
 								Required: true,
 							},
 							"publish_stored_certificate_count_metrics": {
@@ -768,7 +770,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 
 	if pauseDurationStr != "" {
 		var err error
-		pauseDuration, err = time.ParseDuration(pauseDurationStr)
+		pauseDuration, err = parseutil.ParseDurationSecond(pauseDurationStr)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("Error parsing pause_duration: %v", err)), nil
 		}
@@ -1792,7 +1794,7 @@ func (b *backend) pathConfigAutoTidyWrite(ctx context.Context, req *logical.Requ
 	}
 
 	if pauseDurationRaw, ok := d.GetOk("pause_duration"); ok {
-		config.PauseDuration, err = time.ParseDuration(pauseDurationRaw.(string))
+		config.PauseDuration, err = parseutil.ParseDurationSecond(pauseDurationRaw.(string))
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("unable to parse given pause_duration: %v", err)), nil
 		}

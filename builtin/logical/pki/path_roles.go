@@ -55,7 +55,7 @@ func pathListRoles(b *backend) *framework.Path {
 func pathRoles(b *backend) *framework.Path {
 	pathRolesResponseFields := map[string]*framework.FieldSchema{
 		"ttl": {
-			Type:     framework.TypeDurationSecond,
+			Type:     framework.TypeInt64,
 			Required: true,
 			Description: `The lease duration (validity period of the
 certificate) if no specific lease duration is requested.
@@ -65,7 +65,7 @@ value or the value of max_ttl, whichever is shorter.`,
 		},
 
 		"max_ttl": {
-			Type:     framework.TypeDurationSecond,
+			Type:     framework.TypeInt64,
 			Required: true,
 			Description: `The maximum allowed lease duration. If not
 set, defaults to the system maximum lease TTL.`,
@@ -384,8 +384,8 @@ information, which must include an oid, and may include a notice and/or cps url,
 			Description: `Mark Basic Constraints valid when issuing non-CA certificates.`,
 		},
 		"not_before_duration": {
-			Type:        framework.TypeDurationSecond,
-			Description: `The duration before now which the certificate needs to be backdated by.`,
+			Type:        framework.TypeInt64,
+			Description: `The duration in seconds before now which the certificate needs to be backdated by.`,
 		},
 		"not_after": {
 			Type: framework.TypeString,
