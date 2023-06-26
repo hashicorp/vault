@@ -65,12 +65,12 @@ module('Acceptance | sidebar navigation', function (hooks) {
     assert.dom(panel('Access')).exists('Access nav panel renders');
 
     const links = [
-      { label: 'Multi-factor authentication', route: '/vault/access/mfa' },
-      { label: 'OIDC provider', route: '/vault/access/oidc' },
+      { label: 'Multi-Factor Authentication', route: '/vault/access/mfa' },
+      { label: 'OIDC Provider', route: '/vault/access/oidc' },
       { label: 'Groups', route: '/vault/access/identity/groups' },
       { label: 'Entities', route: '/vault/access/identity/entities' },
       { label: 'Leases', route: '/vault/access/leases/list' },
-      { label: 'Authentication methods', route: '/vault/access' },
+      { label: 'Authentication Methods', route: '/vault/access' },
     ];
 
     for (const l of links) {
