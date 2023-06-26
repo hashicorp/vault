@@ -428,7 +428,7 @@ func TestSysTuneAuth_showUIMount(t *testing.T) {
 		t.Fatalf("bad:\nExpected: %#v\nActual:%#v", expected, actual)
 	}
 
-	// Mount-tune the listing_visibility
+	// Mount-tune the listing_visibility: "unauth"
 	resp = testHttpPost(t, token, addr+"/v1/sys/auth/token/tune", map[string]interface{}{
 		"listing_visibility": "unauth",
 	})
@@ -459,6 +459,45 @@ func TestSysTuneAuth_showUIMount(t *testing.T) {
 		"max_lease_ttl":      json.Number("2764800"),
 		"force_no_cache":     false,
 		"listing_visibility": "unauth",
+		"token_type":         "default-service",
+	}
+	testResponseBody(t, resp, &actual)
+	expected["request_id"] = actual["request_id"]
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("bad:\nExpected: %#v\nActual:%#v", expected, actual)
+	}
+
+	// Mount-tune the listing_visibility: "dropdown"
+	resp = testHttpPost(t, token, addr+"/v1/sys/auth/token/tune", map[string]interface{}{
+		"listing_visibility": "dropdown",
+	})
+	testResponseStatus(t, resp, 204)
+
+	// Check results
+	resp = testHttpGet(t, token, addr+"/v1/sys/auth/token/tune")
+	testResponseStatus(t, resp, 200)
+
+	actual = map[string]interface{}{}
+	expected = map[string]interface{}{
+		"description":    "token based credentials",
+		"lease_id":       "",
+		"renewable":      false,
+		"lease_duration": json.Number("0"),
+		"wrap_info":      nil,
+		"warnings":       nil,
+		"auth":           nil,
+		"data": map[string]interface{}{
+			"description":        "token based credentials",
+			"default_lease_ttl":  json.Number("2764800"),
+			"max_lease_ttl":      json.Number("2764800"),
+			"force_no_cache":     false,
+			"listing_visibility": "dropdown",
+			"token_type":         "default-service",
+		},
+		"default_lease_ttl":  json.Number("2764800"),
+		"max_lease_ttl":      json.Number("2764800"),
+		"force_no_cache":     false,
+		"listing_visibility": "dropdown",
 		"token_type":         "default-service",
 	}
 	testResponseBody(t, resp, &actual)
