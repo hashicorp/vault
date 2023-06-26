@@ -136,7 +136,7 @@ be added in future releases and may default to being enabled.
 
 This health check will check each issuer in the mount for validity status, returning a list. If a CA expires within the next 30 days, the result will be critical. If a root CA expires within the next 12 months or an intermediate CA within the next 2 months, the result will be a warning. If a root CA expires within 24 months or an intermediate CA within 6 months, the result will be informational.
 
-**Remediation Steps**:
+**Remediation steps**:
 
 First perform a [CA rotation operation](/vault/docs/secrets/pki/rotation-primitives) for any with pending expiry.
 
@@ -163,9 +163,12 @@ This health check checks each issuer's CRL for validity status, returning a list
 
 For informational purposes, it reads the CRL config and suggests enabling auto-rebuild CRLs if not enabled.
 
-**Remediation Steps**:
+**Remediation steps**:
 
-The following command can be used to enable auto-rebuilding of CRLs: `vault write <mount>/config/crl auto_rebuild=true`
+Use `vault write` to enable CRL auto-rebuild:
+
+```shell-session
+$ vault write <mount>/config/crl auto_rebuild=true
 
 ### Hardware-Backed root certificate
 
@@ -183,12 +186,9 @@ The following command can be used to enable auto-rebuilding of CRLs: `vault writ
 
 This health check checks issuers for root CAs backed by software keys. While Vault is secure, for production root certificates, we'd recommend the additional integrity of KMS-backed keys. This is an informational check only. When all roots are KMS-backed, we'll return OK; when no issuers are roots, we'll return not applicable.
 
-### Root certificate issued Non-CA leaves
-**Remediation Steps**:
-
 Read more about hardware-backed keys within [Vault Enterprise Managed Keys](/vault/docs/enterprise/managed-keys)
 
-### Root Certificate Issued Non-CA Leaves
+### Root certificate issued Non-CA leaves
 
 **Name**: `root_issued_leaves`
 
@@ -205,9 +205,13 @@ Read more about hardware-backed keys within [Vault Enterprise Managed Keys](/vau
 
 This health check verifies whether a proper CA hierarchy is in use. We do this by fetching `certs_to_fetch` leaf certificates (configurable) and seeing if they are a non-issuer leaf and if they were signed by a root issuer in this mount. If one is found, we'll issue a warning about this, and recommend setting up an intermediate CA.
 
-**Remediation Steps**:
+**Remediation steps**:
 
-The usage of `sign`, `sign-verbatim`, `issue`, and ACME APIs should be restricted against the root issuer. An intermediary issuer should be created, ideally in a different mount, signed by the root issuer and issue new leaf certificates using the intermediary issuer.
+1. Restrict the use of `sign`, `sign-verbatim`, `issue`, and ACME APIs against
+   the root issuer.
+1. Create an intermediary issuer in a different mount.
+1. Have the root issuer sign the new intermediary issuer.
+1. Issue new leaf certificates using the intermediary issuer.
 
 ### Role allows implicit localhost issuance
 
@@ -220,9 +224,10 @@ The usage of `sign`, `sign-verbatim`, `issue`, and ACME APIs should be restricte
 
 **Config Parameters**: (none)
 
-This health check checks each role to see whether the role allows localhost based issuance implicitly through (`allow_localhost=true`) with a non-empty allowed_domains value.
+Checks whether any roles exist that allow implicit localhost based issuance
+(`allow_localhost=true`) with a non-empty `allowed_domains` value.
 
-**Remediation Steps**:
+**Remediation steps**:
 
 Roles should have `allow_localhost` set to `false` and the `allowed_domains` field updated with an explicit list of allowed localhost-like domains. This is a best-practice to simplify understanding of roles.
 
@@ -239,9 +244,11 @@ Roles should have `allow_localhost` set to `false` and the `allowed_domains` fie
 
  - `allowed_roles` `(list: nil)` - an allow-list of roles to ignore.
 
-This health check checks each role to see whether or not it allows wildcard issuance with glob domains as well - these two interact and can result in nested wildcards and other quirks.
+Check each role to see whether or not it allows wildcard issuance **and** glob
+domains. Wildcards and globs can interact and result in nested wildcards among
+other (potentially dangerous) quirks.
 
-**Remediation Steps**:
+**Remediation steps**:
 
 It is strongly suggested that roles either set `allow_glob_domains` or `allow_wildcard_certificates`, but not both to true. If both behaviors are required, we'd suggest splitting it into two roles unless required for all SANs on the certificate. Otherwise, add this role to `allowed_roles` to ignore future warnings about this role.
 
@@ -264,9 +271,13 @@ This health check checks each role to see whether it sets `no_store=false` or no
 
 *NOTE* if the role is used for ACME issuance, `no_store=true` is required.
 
-**Remediation Steps**:
+**Remediation steps**:
 
-Update the role setting the `no_store` field to `false` and switch to using [BYOC revocations](/vault/api-docs/secret/pki#revoke-certificate) and shorter certificate lifetimes if possible.
+1. Update none-ACME roles with `no_store=false`. **NOTE**: Roles used for ACME
+   issuance must have `no_store`  set to `true`.
+1. Set your certificate lifetimes as short as possible.
+1. Use [BYOC revocations](/vault/api-docs/secret/pki#revoke-certificate) to
+   revoke certificates as needed.
 
 ### Accessibility of audit information
 
@@ -282,11 +293,11 @@ Update the role setting the `no_store` field to `false` and switch to using [BYO
 
 This health check checks whether audit information is accessible to log consumers, validating whether our list of safe and unsafe audit parameters are generally followed. These are informational responses, if any are present.
 
-**Remediation Steps**:
+**Remediation steps**:
 
-The following vault command can be used to set the desired audit parameters:
+Use `vault secrets tune` to set the desired audit parameters:
 
-```
+```shell-session
 vault secrets tune \
   -audit-non-hmac-response-keys=certificate \
   -audit-non-hmac-response-keys=issuing_ca \
@@ -348,7 +359,7 @@ This health check checks whether unsafe access to APIs (such as `sign-intermedia
 
 This health check verifies if the `If-Modified-Since` header has been added to `passthrough_request_headers` and if `Last-Modified` header has been added to `allowed_response_headers`. This is an informational message if both haven't been configured, or a warning if only one has been configured.
 
-**Remediation Steps**:
+**Remediation steps**:
 
 Add the missing headers to the `allowed_response_headers` and `passthrough_request_headers` with the command:
 
@@ -388,11 +399,11 @@ vault secrets tune \
 
 This health check verifies that auto-tidy is enabled, with sane defaults for interval_duration and pause_duration. Any disabled findings will be informational, as this is a best-practice but not strictly required, but other findings w.r.t. `interval_duration` or `pause_duration` will be critical/warnings.
 
-**Remediation Steps**:---
+**Remediation steps**
 
-Auto-tidy can be enabled with a recommended set of defaults with the following command:
+Use `vault write` to enable auto-tidy with the recommended defaults:
 
-```
+```shell-session
 vault write <mount>/config/auto-tidy \
   enabled=true \
   tidy_cert_store=true \
@@ -418,7 +429,7 @@ vault write <mount>/config/auto-tidy \
 
 This health check verifies that tidy has run within the last run window. This can be critical/warning alerts as this can start to seriously impact Vault's performance.
 
-**Remediation Steps**:
+**Remediation steps**:
 
 Read the tidy status endpoint, `vault read <mount>/tidy-status`, for possible error messages of why tidy has failed to run in the past, otherwise schedule a manual run of tidy or consider configuring auto-tidy
 
@@ -450,15 +461,28 @@ vault write <mount>/tidy \
 
 This health check verifies that this cluster has a reasonable number of certificates. Ideally this would be fetched from tidy's status or a new metric reporting format, but as a fallback when tidy hasn't run, a list operation will be performed instead.
 
-**Remediation Steps**:
+**Remediation steps**:
 
-If a large amount of certificates have accumulated, verify that tidy has recently run using `vault read <mount>/tidy-status`. Consider
-enabling `auto-tidy` based on instructions above and running a manual tidy.
-
-Also ensure that certificates are not being renewed too soon based on lifetimes, roughly 2/3 of its lifetime, and
-certificates are being issued with appropriate lifetimes based on their usage.
-
-To help going forward, consider setting all roles' `no_store` fields to `true` and leverage [BYOC revocations](/vault/api-docs/secret/pki#revoke-certificate) to avoid storage.
+1. Verify that tidy ran recently with `vault read`:
+    ```shell-session
+    vault read <mount>/tidy-status
+    ````
+1. Schedule a manual run of tidy with `vault write`:
+	    ```shell-session
+	    vault write <mount>/tidy \
+	      tidy_cert_store=true \
+	      tidy_revoked_certs=true \
+	      tidy_acme=true \
+	      tidy_revocation_queue=true \
+	      tidy_cross_cluster_revoked_certs=true \
+	      tidy_revoked_cert_issuer_associations=true
+	    ```
+1. Enable `auto-tidy`.
+1. Make sure that you are not renewing certificates too soon. Certificate
+   lifetimes should reflect the expected usage of the certificate. If the TTL is
+   set appropriately, most certificates renew at approximately 2/3 of their
+   lifespan.
+1. Consider setting the `no_store` field for all roles to `true` and use [BYOC revocations](/vault/api-docs/secret/pki#revoke-certificate) to avoid storage.
 
 ### Enable ACME issuance
 
@@ -475,9 +499,8 @@ To help going forward, consider setting all roles' `no_store` fields to `true` a
 
 This health check verifies that ACME is enabled within a mount that contains an intermediary issuer, as this is considered a best-practice to support a self-rotating PKI infrastructure.
 
-**Remediation Steps**:
-
-Read about enabling ACME support in Vault within the [ACME Certificate Issuance](/vault/api-docs/secret/pki#acme-certificate-issuance) API documentation.
+Review the [ACME Certificate Issuance](/vault/api-docs/secret/pki#acme-certificate-issuance)
+API documentation to learn about enabling ACME support in Vault.
 
 ### ACME response headers
 
@@ -491,10 +514,10 @@ Read about enabling ACME support in Vault within the [ACME Certificate Issuance]
 
 This health check verifies if the `"Replay-Nonce`, `Link`, and `Location` headers have been added to `allowed_response_headers`, when the ACME feature is enabled. The ACME protocol will not work if these headers are not added to the mount.
 
-**Remediation Steps**:
+**Remediation steps**:
 
-Add the missing headers to the `allowed_response_headers` with the command:
-```
+Use `vault secrets tune` to add the missing headers to `allowed_response_headers`:
+```shell-session
 vault secrets tune \
   -allowed-response-headers="Last-Modified" \
   -allowed-response-headers="Replay-Nonce" \
