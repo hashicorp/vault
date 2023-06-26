@@ -61,6 +61,8 @@ const (
 	ListingVisibilityHidden ListingVisibilityType = "hidden"
 	// ListingVisibilityUnauth is the unauth type for listing visibility
 	ListingVisibilityUnauth ListingVisibilityType = "unauth"
+	// ListingVisibilityDropdown is the dropdown value for listing visibility
+	ListingVisibilityDropdown ListingVisibilityType = "dropdown"
 
 	systemMountPath    = "sys/"
 	identityMountPath  = "identity/"

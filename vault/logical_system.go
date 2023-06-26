@@ -4193,6 +4193,8 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 
 	secretMounts := make(map[string]interface{})
 	authMounts := make(map[string]interface{})
+	authTypes := make([]string, 0)
+
 	resp.Data["secret"] = secretMounts
 	resp.Data["auth"] = authMounts
 
@@ -4273,7 +4275,14 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 			continue
 		}
 
-		if ns.ID == entry.NamespaceID && hasAccess(ctx, entry) {
+		if ns.ID == entry.NamespaceID {
+		
+		// filters UI dropdown of auth method types when a user is unauthed
+		if entry.Config.ListingVisibility == ListingVisibilityDropdown {
+			authTypes = append(authTypes, entry.Type)
+		}
+
+		 if hasAccess(ctx, entry) {
 			if isAuthed {
 				// If this is an authed request return all the mount info
 				authMounts[entry.Path] = b.mountInfo(ctx, entry)
@@ -4284,10 +4293,12 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 					"options":     entry.Options,
 				}
 			}
+		 }
 		}
 	}
 	b.Core.authLock.RUnlock()
-
+	
+	resp.Data["auth_types"] = authTypes
 	return resp, nil
 }
 
@@ -5178,6 +5189,7 @@ func checkListingVisibility(visibility ListingVisibilityType) error {
 	case ListingVisibilityDefault:
 	case ListingVisibilityHidden:
 	case ListingVisibilityUnauth:
+	case ListingVisibilityDropdown:
 	default:
 		return fmt.Errorf("invalid listing visibility type")
 	}
