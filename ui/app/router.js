@@ -62,6 +62,7 @@ Router.map(function () {
             this.route('create');
             this.route('edit', { path: '/edit/:item_id' });
             this.route('show', { path: '/show/:item_id' });
+            this.route('reset-password', { path: '/reset-password/:item_id' });
           });
           this.route('section', { path: '/:section_name' });
         });
