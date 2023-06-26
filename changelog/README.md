@@ -36,6 +36,8 @@ Release notes are text files with three lines:
 
  3. An ending code block.
 
+If more than one area is impacted, use separate code blocks for each entry.
+
 This should be in a file named after the pull request number (e.g., `12345.txt`).
 
 There are many examples in this folder; check one out if you're stuck!
