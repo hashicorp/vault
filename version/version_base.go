@@ -14,6 +14,9 @@ var (
 	// Whether cgo is enabled or not; set at build time
 	CgoEnabled bool
 
+	// Version info is now being read from the VERSION file and passed in with ldflags,
+	// as part of the binary build process in CI.
+	// The default values below will be used during local builds.
 	Version           = "0.0.0"
 	VersionPrerelease = "dev1"
 	VersionMetadata   = ""
