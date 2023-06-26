@@ -56,7 +56,7 @@ func buildPathGenerateRoot(b *backend, pattern string, displayAttrs *framework.D
 						Fields: map[string]*framework.FieldSchema{
 							"expiration": {
 								Type:        framework.TypeInt64,
-								Description: `The expiration of the given.`,
+								Description: `The expiration of the given issuer.`,
 								Required:    true,
 							},
 							"serial_number": {

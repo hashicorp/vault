@@ -237,6 +237,8 @@ func TestIntegration_SetSignedWithBackwardsPemBundles(t *testing.T) {
 	require.False(t, resp.IsError(), "got an error from generating root ca: %#v", resp)
 	rootCert := resp.Data["certificate"].(string)
 
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, rootBackend.Route("issuers/generate/root/internal"), logical.UpdateOperation), resp, true)
+
 	// generate intermediate
 	resp, err = intBackend.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
