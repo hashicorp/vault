@@ -3932,6 +3932,7 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				"options":     map[string]string(nil),
 			},
 		},
+		"auth_types": []interface{}{},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
