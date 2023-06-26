@@ -14,7 +14,7 @@
     <Nav.Link
       @route="vault.cluster.access.methods"
       @current-when="vault.cluster.access.methods vault.cluster.access.method"
-      @text="Authentication methods"
+      @text="Authentication Methods"
       data-test-sidebar-nav-link="Authentication methods"
     />
   {{/if}}
@@ -22,12 +22,12 @@
     <Nav.Link
       @route="vault.cluster.access.mfa.methods"
       @current-when="vault.cluster.access.mfa.methods vault.cluster.access.mfa.enforcements vault.cluster.access.mfa.index"
-      @text="Multi-factor authentication"
+      @text="Multi-factor Authentication"
       data-test-sidebar-nav-link="Multi-factor authentication"
     />
   {{/if}}
   {{#if (has-permission "access" routeParams="oidc")}}
-    <Nav.Link @route="vault.cluster.access.oidc" @text="OIDC provider" data-test-sidebar-nav-link="OIDC provider" />
+    <Nav.Link @route="vault.cluster.access.oidc" @text="OIDC Provider" data-test-sidebar-nav-link="OIDC provider" />
   {{/if}}
 
   {{#if (and (has-feature "Control Groups") (has-permission "access" routeParams="control-groups"))}}
