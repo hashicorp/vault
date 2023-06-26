@@ -41,7 +41,7 @@ func TestSysInternal_UIMounts(t *testing.T) {
 		t.Fatalf("bad:\nExpected: %#v\nActual:%#v", expected, actual)
 	}
 
-	// Mount-tune the listing_visibility
+	// Mount-tune the listing_visibility: "unauth"
 	resp = testHttpPost(t, token, addr+"/v1/sys/mounts/secret/tune", map[string]interface{}{
 		"listing_visibility": "unauth",
 	})
@@ -79,6 +79,42 @@ func TestSysInternal_UIMounts(t *testing.T) {
 					"options":     interface{}(nil),
 				},
 			},
+			"auth_types": []interface{}{},
+		},
+	}
+	testResponseBody(t, resp, &actual)
+	expected["request_id"] = actual["request_id"]
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("bad:\nExpected: %#v\nActual:%#v", expected, actual)
+	}
+
+	// Mount-tune the listing_visibility: "dropdown"
+	resp = testHttpPost(t, token, addr+"/v1/sys/auth/token/tune", map[string]interface{}{
+		"listing_visibility": "dropdown",
+	})
+	testResponseStatus(t, resp, 204)
+
+	// Check results
+	resp = testHttpGet(t, "", addr+"/v1/sys/internal/ui/mounts")
+	testResponseStatus(t, resp, 200)
+
+	actual = map[string]interface{}{}
+	expected = map[string]interface{}{
+		"wrap_info":      nil,
+		"warnings":       nil,
+		"auth":           nil,
+		"lease_id":       "",
+		"renewable":      false,
+		"lease_duration": json.Number("0"),
+		"data": map[string]interface{}{
+			"secret": map[string]interface{}{
+				"secret/": map[string]interface{}{
+					"type":        "kv",
+					"description": "key/value secret storage",
+					"options":     map[string]interface{}{"version": "1"},
+				},
+			},
+			"auth_types": []interface{}{"token"},
 		},
 	}
 	testResponseBody(t, resp, &actual)
