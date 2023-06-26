@@ -14,7 +14,7 @@ import { clusterStates } from 'core/helpers/cluster-states';
  * @example
  * ```js
  * <ReplicationPrimaryCard
-    @title='Last WAL Entry'
+    @title='Last WAL entry'
     @description='Index of last Write Ahead Logs entry written on local storage.'
     @metric={{replicationAttrs.lastWAL}}
     />
