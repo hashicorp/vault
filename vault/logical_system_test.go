@@ -3755,8 +3755,9 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 	)
 
 	exp := map[string]interface{}{
-		"secret": map[string]interface{}{},
-		"auth":   map[string]interface{}{},
+		"secret":     map[string]interface{}{},
+		"auth":       map[string]interface{}{},
+		"auth_types": []interface{}{},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
