@@ -26,7 +26,7 @@ jobs:
       - uses: actions/setup-go@v4
       - name: update plugin
         run: |
-          go get github.com/hashicorp/$REPO_NAME@$COMMIT_SHA
+          go get "github.com/hashicorp/$REPO_NAME@$COMMIT_SHA"
           go mod tidy
       - name: detect changes
         id: changes
