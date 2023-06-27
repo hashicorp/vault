@@ -260,7 +260,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       await fillIn(S.configuration.typeField, 'internal');
       await fillIn(S.configuration.inputByName('commonName'), 'my-common-name');
       await click('[data-test-save]');
-      assert.dom(S.configuration.title).hasText('View generated CSR');
+      assert.dom(S.configuration.title).hasText('View Generated CSR');
       await assert.dom(S.configuration.csrDetails).exists('renders CSR details after save');
       await click('[data-test-done]');
       assert.strictEqual(
@@ -278,7 +278,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       await fillIn(S.configuration.inputByName('commonName'), 'my-common-name');
       await click('[data-test-save]');
       await assert.dom(S.configuration.csrDetails).exists('renders CSR details after save');
-      assert.dom(S.configuration.title).hasText('View generated CSR');
+      assert.dom(S.configuration.title).hasText('View Generated CSR');
       assert
         .dom('[data-test-next-steps-csr]')
         .hasText(
