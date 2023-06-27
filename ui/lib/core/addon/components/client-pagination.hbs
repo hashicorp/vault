@@ -1,0 +1,19 @@
+{{#if (is-empty @items)}}
+  <EmptyState @message={{this.emptyMessage}} @title={{this.emptyTitle}}>
+    {{yield to="emptyActions"}}
+  </EmptyState>
+{{else}}
+  {{#each this.shownItems as |item|}}
+    <div>
+      {{yield item to="item"}}
+    </div>
+  {{/each}}
+  <Hds::Pagination::Numbered
+    @totalItems={{@items.length}}
+    @currentPageSize={{this.pageSize}}
+    @pageSizes={{array 15 50 100}}
+    @onPageChange={{this.handlePageChange}}
+    @onPageSizeChange={{this.handlePageSizeChange}}
+    data-test-client-pagination-control
+  />
+{{/if}}
