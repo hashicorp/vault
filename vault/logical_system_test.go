@@ -3777,6 +3777,7 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 	)
 
 	exp = map[string]interface{}{
+		"auth_types": []interface{}{},
 		"secret": map[string]interface{}{
 			"secret/": map[string]interface{}{
 				"type":                    "kv",

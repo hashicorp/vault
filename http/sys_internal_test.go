@@ -107,6 +107,7 @@ func TestSysInternal_UIMounts(t *testing.T) {
 		"renewable":      false,
 		"lease_duration": json.Number("0"),
 		"data": map[string]interface{}{
+			"auth": map[string]interface{}{},
 			"secret": map[string]interface{}{
 				"secret/": map[string]interface{}{
 					"type":        "kv",
