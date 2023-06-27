@@ -98,7 +98,7 @@ locals {
     "x86_64" = var.instance_types["amd64"]
   }
   instances   = toset([for idx in range(var.instance_count) : tostring(idx)])
-  name_prefix = "${var.project_name}-${local.cluster_name}"
+  name_prefix = "${var.project_name}-${local.cluster_name}-${random_string.unique_id.result}"
 }
 
 resource "random_string" "cluster_name" {
@@ -109,24 +109,32 @@ resource "random_string" "cluster_name" {
   special = false
 }
 
+resource "random_string" "unique_id" {
+  length  = 4
+  lower   = true
+  upper   = false
+  numeric = false
+  special = false
+}
+
 resource "aws_iam_role" "target_instance_role" {
-  name               = "target_instance_role-${random_string.cluster_name.result}"
+  name               = "${local.name_prefix}-instance-role"
   assume_role_policy = data.aws_iam_policy_document.target_instance_role.json
 }
 
 resource "aws_iam_instance_profile" "target" {
-  name = "${local.name_prefix}-target"
+  name = "${local.name_prefix}-instance-profile"
   role = aws_iam_role.target_instance_role.name
 }
 
 resource "aws_iam_role_policy" "target" {
-  name   = "${local.name_prefix}-target"
+  name   = "${local.name_prefix}-role-policy"
   role   = aws_iam_role.target_instance_role.id
   policy = data.aws_iam_policy_document.target.json
 }
 
 resource "aws_security_group" "target" {
-  name        = "${local.name_prefix}-target"
+  name        = "${local.name_prefix}-sg"
   description = "Target instance security group"
   vpc_id      = var.vpc_id
 
@@ -241,7 +249,7 @@ resource "aws_instance" "targets" {
   tags = merge(
     var.common_tags,
     {
-      Name                     = "${local.name_prefix}-${var.cluster_tag_key}-target"
+      Name                     = "${local.name_prefix}-${var.cluster_tag_key}-instance-target"
       "${var.cluster_tag_key}" = local.cluster_name
     },
   )
