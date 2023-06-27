@@ -176,7 +176,7 @@ jobs:
         if: ${{always()}}
         with:
           # Temporary "success" message; remove before merge to main
-          success-message: "An Enos scenario run succeeded. \nRepo: `${{ github.repository }}` \nBranch: `${{ github.event.workflow_run.head_branch }}` \nJob run URL: ${{ github.event.workflow_job.deployment.url }} \nAuthor: ${{ github.event.workflow_job.deployment.creator.name }} \nPR: ${{ github.event.workflow_run.pull_request.name }}"
+          success-message: "An Enos scenario run succeeded. \nRepo: `${{ github.repository }}` \ngithub.event.workflow_run: ${{ github.event.workflow_run }} \nBranch: `${{ github.event.workflow_run.head_branch }}` \nJob run URL: ${{ github.event.workflow_job.deployment.url }} \nAuthor: ${{ github.event.workflow_job.deployment.creator.name }} \nPR: ${{ github.event.workflow_run.pull_request.name }}"
           failure-message: "An Enos scenario run failed. \nRepo: `${{ github.repository }}` \nBranch: `${{ github.event.workflow_run.head_branch }}` \nJob run URL: ${{ github.event.workflow_job.deployment.url }} \nAuthor: ${{ github.event.workflow_job.deployment.creator.name }} \nPR: ${{ github.event.workflow_run.pull_request.name }}"
           status: ${{job.status}}
           slack-webhook-url: ${{secrets.SLACK_WEBHOOK_URL}}
