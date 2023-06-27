@@ -1,5 +1,5 @@
 on:
-  workflow_dispatch:
+  repository_dispatch:
     types: [plugin_update_event]
 
 jobs:
