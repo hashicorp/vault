@@ -37,7 +37,7 @@ module.exports = function (environment) {
         'sys/internal/counters/config',
       ],
       // number of records to show on a single page by default - this is used by the client-side pagination
-      DEFAULT_PAGE_SIZE: 100,
+      DEFAULT_PAGE_SIZE: 15,
     },
     flashMessageDefaults: {
       timeout: 7000,
@@ -70,9 +70,6 @@ module.exports = function (environment) {
     ENV['ember-cli-mirage'] = {
       enabled: false,
     };
-  }
-  if (environment !== 'production') {
-    ENV.APP.DEFAULT_PAGE_SIZE = 15;
   }
 
   ENV.welcomeMessage = process.env.UI_AUTH_WELCOME;
