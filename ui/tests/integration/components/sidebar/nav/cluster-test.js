@@ -50,7 +50,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
       'Performance',
       'Replication',
       'Raft Storage',
-      'Client count',
+      'Client Count',
       'License',
       'Seal Vault',
     ];
