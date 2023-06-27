@@ -673,7 +673,8 @@ func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
 
 	b.l.RLock()
 	if boltStore, ok := b.stableStore.(*raftboltdb.BoltStore); ok {
-		*logStoreStats = boltStore.Stats()
+		bss := boltStore.Stats()
+		logStoreStats = &bss
 	}
 
 	if b.raft != nil {
