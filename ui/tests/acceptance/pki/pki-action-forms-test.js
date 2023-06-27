@@ -198,9 +198,9 @@ module('Acceptance | pki action forms test', function (hooks) {
         `/vault/secrets/${this.mountPath}/pki/configuration/create`,
         'stays on page on success'
       );
-      assert.dom(S.configuration.title).hasText('View root certificate');
+      assert.dom(S.configuration.title).hasText('View Root Certificate');
       assert.dom(S.configuration.nextStepsBanner).doesNotExist('no private key warning');
-      assert.dom(S.configuration.title).hasText('View root certificate', 'Updates title on page');
+      assert.dom(S.configuration.title).hasText('View Root Certificate', 'Updates title on page');
       assert.dom(S.configuration.saved.certificate).hasClass('allow-copy', 'copyable certificate is masked');
       assert.dom(S.configuration.saved.issuerName).hasText(issuerName);
       assert.dom(S.configuration.saved.issuerLink).exists('Issuer link exists');
@@ -226,11 +226,11 @@ module('Acceptance | pki action forms test', function (hooks) {
         `/vault/secrets/${this.mountPath}/pki/configuration/create`,
         'stays on page on success'
       );
-      assert.dom(S.configuration.title).hasText('View root certificate');
+      assert.dom(S.configuration.title).hasText('View Root Certificate');
       assert
         .dom(S.configuration.nextStepsBanner)
         .hasText('Next steps The private_key is only available once. Make sure you copy and save it now.');
-      assert.dom(S.configuration.title).hasText('View root certificate', 'Updates title on page');
+      assert.dom(S.configuration.title).hasText('View Root Certificate', 'Updates title on page');
       assert
         .dom(S.configuration.saved.certificate)
         .hasClass('allow-copy', 'copyable masked certificate exists');
