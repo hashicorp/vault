@@ -252,7 +252,7 @@ module('Acceptance | oidc-config clients and assignments', function (hooks) {
       'vault.cluster.access.oidc.assignments.assignment.edit',
       'navigates to the assignment edit page from details'
     );
-    assert.dom('[data-test-oidc-assignment-title]').hasText('Edit assignment', 'Form title renders');
+    assert.dom('[data-test-oidc-assignment-title]').hasText('Edit Assignment', 'Form title renders');
     await click('[data-test-component="search-select"]#groups .ember-basic-dropdown-trigger');
     await click('.ember-power-select-option');
     assert.dom('[data-test-oidc-assignment-save]').hasText('Update');
