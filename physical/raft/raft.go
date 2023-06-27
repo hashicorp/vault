@@ -33,6 +33,7 @@ import (
 	raftboltdb "github.com/hashicorp/raft-boltdb/v2"
 	snapshot "github.com/hashicorp/raft-snapshot"
 	raftwal "github.com/hashicorp/raft-wal"
+	walmetrics "github.com/hashicorp/raft-wal/metrics"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -427,7 +428,11 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 				return nil, err
 			}
 
-			wal, err := raftwal.Open(raftWalPath)
+			// TODO: is this the right way to do metrics? Do they need to be connected to the core sink somehow?
+			mc := walmetrics.NewGoMetricsCollector([]string{"raft", "wal"}, nil, nil)
+
+			// TODO: do we need to expose any tunables here in the config?
+			wal, err := raftwal.Open(raftWalPath, raftwal.WithMetricsCollector(mc))
 			if err != nil {
 				return nil, fmt.Errorf("fail to open write-ahead-log: %w", err)
 			}
@@ -664,14 +669,24 @@ func (b *RaftBackend) DisableUpgradeMigration() (bool, bool) {
 
 func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
 	var stats map[string]string
+	var logStoreStats *bolt.Stats
+
 	b.l.RLock()
-	logstoreStats := b.stableStore.(*raftboltdb.BoltStore).Stats()
-	fsmStats := b.fsm.Stats()
+	if boltStore, ok := b.stableStore.(*raftboltdb.BoltStore); ok {
+		*logStoreStats = boltStore.Stats()
+	}
+
 	if b.raft != nil {
 		stats = b.raft.Stats()
 	}
+
+	fsmStats := b.fsm.Stats()
 	b.l.RUnlock()
-	b.collectMetricsWithStats(logstoreStats, sink, "logstore")
+
+	if logStoreStats != nil {
+		b.collectMetricsWithStats(*logStoreStats, sink, "logstore")
+	}
+
 	b.collectMetricsWithStats(fsmStats, sink, "fsm")
 	labels := []metrics.Label{
 		{
@@ -679,6 +694,7 @@ func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
 			Value: b.localID,
 		},
 	}
+
 	if stats != nil {
 		for _, key := range []string{"term", "commit_index", "applied_index", "fsm_pending"} {
 			n, err := strconv.ParseUint(stats[key], 10, 64)
