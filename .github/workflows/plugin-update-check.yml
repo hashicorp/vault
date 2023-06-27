@@ -1,0 +1,62 @@
+on:
+  workflow_dispatch:
+    types: [plugin_update_event]
+
+jobs:
+  plugin-update-check:
+    runs-on: ubuntu-latest
+    env:
+      # PAYLOAD will contain a commit sha, plugin repo name, and will be of type 'plugin_update_event'
+      # e.g.,
+      #  {
+      #    "event_type": "plugin_update_event",
+      #    "client_payload": {
+      #        "sha":"abcdef",
+      #        "repo":"vault-plugin-database-snowflake"
+      #    }
+      #  }
+      COMMIT_SHA: "${{github.event.client_payload.sha}}"
+      REPO_NAME: "${{github.event.client_payload.repo}}"
+      BRANCH_NAME: "plugin-update-${{github.event.client_payload.repo}}-${{github.event.client_payload.sha}}"
+    steps:
+      - run: echo "would use $COMMIT_SHA of $REPO_NAME"
+        # checkout
+      - uses: actions/checkout@v3 # should be a sha, but eh
+        # activate go
+      - uses: actions/setup-go@v4
+      - name: update plugin
+        run: |
+          go get github.com/hashicorp/$REPO_NAME@$COMMIT_SHA
+          go mod tidy
+      - name: detect changes
+        id: changes
+        run: |
+          echo "count=$(git status --porcelain=v1 2>/dev/null | wc -l)" >> "$GITHUB_OUTPUT"
+      - name: commit/push
+        if: steps.changes.outputs.count > 0
+        run: |
+          git config user.name hc-github-team-secure-vault-ecosystem
+          git config user.email hc-github-team-secure-vault-ecosystem@users.noreply.github.com
+          git add .
+          git commit -m "Automated dependency upgrades"
+          git push -f origin ${{ github.ref_name }}:"$BRANCH_NAME"
+      - name: Open pull request if needed
+        if: steps.changes.outputs.count > 0
+        # Only open a PR if the branch is not attached to an existing one
+        run: |
+          PR=$(gh pr list --head "$BRANCH_NAME" --json number -q '.[0].number')
+          # currently unable to set team as reviewer in GHA
+          # see https://github.com/cli/cli/issues/6395
+          reviewers="fairclothjm,kpcraig"
+          if [ -z "$PR" ]; then
+            gh pr create \
+            --head "$BRANCH_NAME" \
+            --title "Automated plugin update check" \
+            --reviewer "$reviewers" \
+            --label "dependencies" \
+            --body "Updates $REPO_NAME to verify vault CI
+            Full log: https://github.com/hashicorp/vault/actions/runs/${{github.run_id}}"
+          else
+            echo "Pull request already exists, won't create a new one."
+            exit 1
+          fi
