@@ -1221,7 +1221,7 @@ func (c *Client) clone(cloneHeaders bool) (*Client, error) {
 	}
 
 	if config.CloneTLSConfig {
-		newConfig.clientTLSConfig = c.config.clientTLSConfig
+		newConfig.clientTLSConfig = config.clientTLSConfig
 	}
 
 	client, err := NewClient(newConfig)
