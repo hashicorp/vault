@@ -4,10 +4,10 @@
  */
 
 import Route from '@ember/routing/route';
-import utils from 'vault/lib/key-utils';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
 import { normalizePath } from 'vault/utils/path-encoding-helpers';
 import { inject as service } from '@ember/service';
+import { parentKeyForKey } from 'core/utils/key-utils';
 
 export default Route.extend(UnloadModelRoute, {
   store: service(),
@@ -16,7 +16,7 @@ export default Route.extend(UnloadModelRoute, {
   beforeModel() {
     const backendModel = this.modelFor('vault.cluster.secrets.backend');
     const { secret } = this.paramsFor(this.routeName);
-    const parentKey = utils.parentKeyForKey(secret);
+    const parentKey = parentKeyForKey(secret);
     if (backendModel.get('isV2KV')) {
       return;
     }

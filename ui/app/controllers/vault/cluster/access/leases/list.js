@@ -6,8 +6,8 @@
 import { inject as service } from '@ember/service';
 import { computed } from '@ember/object';
 import Controller, { inject as controller } from '@ember/controller';
-import utils from 'vault/lib/key-utils';
 import ListController from 'core/mixins/list-controller';
+import { keyIsFolder } from 'core/utils/key-utils';
 
 export default Controller.extend(ListController, {
   flashMessages: service(),
@@ -26,7 +26,7 @@ export default Controller.extend(ListController, {
   isLoading: false,
 
   filterIsFolder: computed('filter', function () {
-    return !!utils.keyIsFolder(this.filter);
+    return !!keyIsFolder(this.filter);
   }),
 
   emptyTitle: computed('baseKey.id', 'filter', 'filterIsFolder', function () {
