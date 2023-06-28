@@ -19,12 +19,8 @@ export default {
   },
 
   getItem(key) {
-    try {
-      const item = window.localStorage.getItem(key);
-      return item && JSON.parse(item);
-    } catch (e) {
-      return e;
-    }
+    const item = window.localStorage.getItem(key);
+    return item && JSON.parse(item);
   },
 
   setItem(key, val) {
@@ -49,16 +45,3 @@ export default {
     });
   },
 };
-
-function isSupported(getStorage) {
-  try {
-    const key = '__some_random_key_you_are_not_going_to_use__';
-    getStorage().setItem(key, key);
-    getStorage().removeItem(key);
-    return true;
-  } catch (e) {
-    return false;
-  }
-}
-
-isSupported(() => localStorage); // => true | false
