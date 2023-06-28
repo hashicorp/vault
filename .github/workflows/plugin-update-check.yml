@@ -1,23 +1,31 @@
 on:
-  repository_dispatch:
-    types: [plugin_update_event]
+  workflow_dispatch:
+    inputs:
+      repo:
+        type: string
+        description: the plugin repo that is updated (ex. vault-plugin-database-snowflake) - github.com/hashicorp will be prepended
+        required: true
+      sha:
+        type: string
+        description: the hash of the plugin repo commit to use
+        required: true
 
 jobs:
   plugin-update-check:
     runs-on: ubuntu-latest
     env:
-      # PAYLOAD will contain a commit sha, plugin repo name, and will be of type 'plugin_update_event'
+      # In the case of a curl call, the input json will look like:
       # e.g.,
       #  {
-      #    "event_type": "plugin_update_event",
-      #    "client_payload": {
+      #    "ref": "some-branch",
+      #    "inputs": {
       #        "sha":"abcdef",
       #        "repo":"vault-plugin-database-snowflake"
       #    }
       #  }
-      COMMIT_SHA: "${{github.event.client_payload.sha}}"
-      REPO_NAME: "${{github.event.client_payload.repo}}"
-      BRANCH_NAME: "plugin-update-${{github.event.client_payload.repo}}-${{github.event.client_payload.sha}}"
+      COMMIT_SHA: "${{inputs.sha}}"
+      REPO_NAME: "${{inputs.repo}}"
+      BRANCH_NAME: "plugin-update-${{inputs.repo}}-${{inputs.sha}}"
     steps:
       - run: echo "would use $COMMIT_SHA of $REPO_NAME"
         # checkout
