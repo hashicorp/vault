@@ -49,7 +49,7 @@ module('Integration | Helper | filter-items', function (hooks) {
     ]);
 
     await render(hbs`
-    {{#each (filter-items this.inputValue this.filter (hash attr="name")) as |thing|}}
+    {{#each (filter-items this.inputValue this.filter attr="name") as |thing|}}
       <div data-test-thing={{thing.id}}>{{thing.name}}</div>
     {{/each}}
     `);
@@ -61,8 +61,25 @@ module('Integration | Helper | filter-items', function (hooks) {
     this.set('filter', 'foob');
     assert.dom('[data-test-thing]').exists({ count: 1 }, 'Filters to 1 matching item');
     assert.dom('[data-test-thing="thing-3"]').exists();
+  });
+
+  test('it does not filter if searchTerm is empty', async function (assert) {
+    this.set('filter', '');
+    this.set('inputValue', [
+      { id: 'thing-1', name: 'foo' },
+      { id: 'foo', name: 'bar' },
+      { id: 'thing-3', name: 'foobar' },
+    ]);
+
+    await render(hbs`
+    {{#each (filter-items this.inputValue this.filter attr="name") as |thing|}}
+      <div data-test-thing={{thing.id}}>{{thing.name}}</div>
+    {{/each}}
+    `);
+
+    assert.dom('[data-test-thing]').exists({ count: 3 }, 'no filter applied');
 
     this.set('filter', 'nothing');
-    assert.dom('[data-test-thing]').doesNotExist();
+    assert.dom('[data-test-thing]').doesNotExist('filters out all items');
   });
 });
