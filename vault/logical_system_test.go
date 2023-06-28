@@ -3757,7 +3757,7 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 	exp := map[string]interface{}{
 		"secret":     map[string]interface{}{},
 		"auth":       map[string]interface{}{},
-		"auth_types": []interface{}{},
+		"auth_types": []string{},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
@@ -3777,7 +3777,7 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 	)
 
 	exp = map[string]interface{}{
-		"auth_types": []interface{}{},
+		"auth_types": []string{},
 		"secret": map[string]interface{}{
 			"secret/": map[string]interface{}{
 				"type":                    "kv",
@@ -3933,7 +3933,7 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				"options":     map[string]string(nil),
 			},
 		},
-		"auth_types": []interface{}{},
+		"auth_types": []string{},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)

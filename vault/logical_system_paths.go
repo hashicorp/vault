@@ -2303,6 +2303,11 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 									Type:        framework.TypeMap,
 									Required:    true,
 								},
+								"auth_types": {
+									Description: "auth types",
+									Type:        framework.TypeStringSlice,
+									Required:    true,
+								},
 							},
 						}},
 					},
