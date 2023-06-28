@@ -106,6 +106,18 @@ func pathRoles(b *backend) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: "A nested map of virtual hosts and exchanges to topic permissions.",
 				},
+				"username": {
+					Type:        framework.TypeString,
+					Description: "A username to create this static roles as.",
+				},
+				"revoke_user_on_delete": {
+					Type:        framework.TypeBool,
+					Description: "Whether to revoke the user associated to this role when the role is deleted.",
+				},
+				"rotation_period": {
+					Type:        framework.TypeDurationSecond,
+					Description: "Period for automatic credential rotation of the given username.",
+				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation:   b.pathStaticRoleRead,
