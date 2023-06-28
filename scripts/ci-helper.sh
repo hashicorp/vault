@@ -102,12 +102,17 @@ function build() {
 
 # Prepare legal requirements for packaging
 function prepare_legal() {
+  local repo_root
+  repo_root=$(repo_root)
+
+  pushd "$repo_root"
   : "${PKG_NAME:="vault"}"
   curl -o dist/EULA.txt https://eula.hashicorp.com/EULA.txt
   curl -o dist/TermsOfEvaluation.txt https://eula.hashicorp.com/TermsOfEvaluation.txt
   mkdir -p ".release/linux/package/usr/share/doc/$PKG_NAME"
   cp dist/EULA.txt ".release/linux/package/usr/share/doc/$PKG_NAME/EULA.txt"
   cp dist/TermsOfEvaluation.txt ".release/linux/package/usr/share/doc/$PKG_NAME/TermsOfEvaluation.txt"
+  popd
 }
 
 # Determine the matrix group number that we'll select for execution. If the
