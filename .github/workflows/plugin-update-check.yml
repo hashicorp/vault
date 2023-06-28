@@ -30,6 +30,10 @@ jobs:
       - run: echo "would use $COMMIT_SHA of $REPO_NAME"
         # checkout
       - uses: actions/checkout@v3 # should be a sha, but eh
+        with:
+          # We don't use the default token so that checks are executed on the resulting PR
+          # https://docs.github.com/en/actions/using-workflows/triggering-a-workflow#triggering-a-workflow-from-a-workflow
+          token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
         # activate go
       - uses: actions/setup-go@v4
       - name: update plugin
@@ -50,6 +54,8 @@ jobs:
           git push -f origin ${{ github.ref_name }}:"$BRANCH_NAME"
       - name: Open pull request if needed
         if: steps.changes.outputs.count > 0
+        env:
+          GITHUB_TOKEN: ${{secrets.ELEVATED_GITHUB_TOKEN}}
         # Only open a PR if the branch is not attached to an existing one
         run: |
           PR=$(gh pr list --head "$BRANCH_NAME" --json number -q '.[0].number')
