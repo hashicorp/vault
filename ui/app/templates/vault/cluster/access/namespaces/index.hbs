@@ -8,6 +8,18 @@
   </PageHeader>
 
   <Toolbar>
+    {{#if this.model.length}}
+      <ToolbarFilters>
+        <Input
+          @value={{this.filter}}
+          @type="text"
+          {{on "input" (action "setFilter")}}
+          class="filter input"
+          placeholder="Filter namespaces"
+          data-test-filter-namespaces
+        />
+      </ToolbarFilters>
+    {{/if}}
     <ToolbarActions>
       <ToolbarLink @route="vault.cluster.access.namespaces.create" @type="add">
         Create namespace
@@ -15,24 +27,14 @@
     </ToolbarActions>
   </Toolbar>
 
-  <ListView @items={{this.model}} @itemNoun="namespace" @paginationRouteName="vault.cluster.access.namespaces" as |list|>
-    {{#if list.empty}}
-      <list.empty>
-        <LinkTo @route="vault.cluster.access.namespaces.create">
-          Create Namespace
-        </LinkTo>
-
-        <DocLink @path="/vault/tutorials/enterprise/namespaces">
-          Learn more
-        </DocLink>
-      </list.empty>
-    {{else}}
+  <ClientPagination @itemNoun="namespace" @filterQuery={{this.filter}} @items={{filter-items this.model this.filter}}>
+    <:item as |namespace|>
       <ListItem as |Item|>
         <Item.content>
-          {{list.item.id}}
+          {{namespace.id}}
         </Item.content>
         <Item.menu as |m|>
-          {{#let (concat this.currentNamespace (if this.currentNamespace "/") list.item.id) as |targetNamespace|}}
+          {{#let (concat this.currentNamespace (if this.currentNamespace "/") namespace.id) as |targetNamespace|}}
             {{#if (includes targetNamespace this.accessibleNamespaces)}}
               <li class="action">
                 <NamespaceLink @targetNamespace={{targetNamespace}} @unparsed={{true}} @class="is-block">
@@ -43,15 +45,15 @@
           {{/let}}
           <li class="action">
             <m.Message
-              @id={{list.item.id}}
+              @id={{namespace.id}}
               @confirmButtonText="Remove"
               @message="Any engines or mounts in this namespace will also be removed."
               @onConfirm={{action
                 (perform
                   Item.callMethod
                   "destroyRecord"
-                  list.item
-                  (concat "Successfully deleted namespace: " list.item.id)
+                  namespace
+                  (concat "Successfully deleted namespace: " namespace.id)
                   "There was an error deleting this namespace: "
                   (action "refreshNamespaceList")
                 )
@@ -60,8 +62,17 @@
           </li>
         </Item.menu>
       </ListItem>
-    {{/if}}
-  </ListView>
+    </:item>
+    <:emptyActions>
+      <Hds::Link::Standalone
+        @icon="plus"
+        @iconPosition="trailing"
+        @text="Create namespace"
+        @route="vault.cluster.access.namespaces.create"
+      />
+      <DocLink @path="/api/namespaces">Documentation</DocLink>
+    </:emptyActions>
+  </ClientPagination>
 {{else}}
   <UpgradePage @title="Namespaces" @minimumEdition="Vault Enterprise Pro" />
 {{/if}}
