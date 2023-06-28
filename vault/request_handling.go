@@ -43,7 +43,9 @@ const (
 	replTimeout                           = 1 * time.Second
 	EnvVaultDisableLocalAuthMountEntities = "VAULT_DISABLE_LOCAL_AUTH_MOUNT_ENTITIES"
 	// base path to store locked users
-	coreLockedUsersPath = "core/login/lockedUsers/"
+	coreLockedUsersPath   = "core/login/lockedUsers/"
+	CubbyholeDivertHeader = "X-Vault-Cubbyhole-Divert"
+	CubbyholeSupplyHeader = "X-Vault-Cubbyhole-Supply"
 )
 
 var (
@@ -1050,6 +1052,36 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		}
 	}()
 
+	if req.HTTPRequest != nil && req.HTTPRequest.Header.Get(CubbyholeSupplyHeader) != "" {
+		diversions := req.HTTPRequest.Header.Values(CubbyholeSupplyHeader)
+		data := make(map[string]interface{})
+		cwr := &logical.Request{
+			Path:        "cubbyhole/request-diversion",
+			Operation:   logical.ReadOperation,
+			Data:        data,
+			ClientToken: req.ClientToken,
+		}
+
+		resp, _, err := c.handleRequest(ctx, cwr)
+		if err != nil {
+			c.logger.Error("failed retrieve cubbyhole values", "request_path", req.Path, "error", err)
+			retErr = multierror.Append(retErr, ErrInternalError)
+			return nil, auth, retErr
+		}
+
+		if req.Data == nil {
+			req.Data = make(map[string]interface{})
+		}
+
+		for _, d := range diversions {
+			parts := strings.Split(d, "=")
+			reqField := parts[0]
+			cubField := parts[1]
+
+			value := resp.Data[cubField]
+			req.Data[reqField] = value
+		}
+	}
 	// Route the request
 	resp, routeErr := c.doRouting(ctx, req)
 	if resp != nil {
@@ -1279,6 +1311,31 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		resp.AddWarning("Reading from 'cubbyhole/response' is deprecated. Please use sys/wrapping/unwrap to unwrap responses, as it provides additional security checks and other benefits.")
 	}
 
+	if resp != nil && req.HTTPRequest != nil && req.HTTPRequest.Header.Get(CubbyholeDivertHeader) != "" {
+		diversions := req.HTTPRequest.Header.Values(CubbyholeDivertHeader)
+		data := make(map[string]interface{})
+		cwr := &logical.Request{
+			Path:        "cubbyhole/request-diversion",
+			Operation:   logical.CreateOperation,
+			Data:        data,
+			ClientToken: req.ClientToken,
+		}
+
+		for _, d := range diversions {
+			parts := strings.Split(d, "=")
+			cupField := parts[0]
+			respField := parts[1]
+			value := resp.Data[respField]
+			delete(resp.Data, respField)
+			data[cupField] = value
+		}
+		_, _, err := c.handleRequest(ctx, cwr)
+		if err != nil {
+			c.logger.Error("failed to divert response value to cubbyhole", "request_path", req.Path, "error", err)
+			retErr = multierror.Append(retErr, ErrInternalError)
+			return nil, auth, retErr
+		}
+	}
 	// Return the response and error
 	if routeErr != nil {
 		retErr = multierror.Append(retErr, routeErr)

@@ -84,6 +84,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 		}
 
 		data = parseQuery(queryVals)
+		passHTTPReq = true
 
 		switch {
 		case strings.HasPrefix(path, "sys/pprof/"):
@@ -205,7 +206,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 		Headers:    r.Header,
 	}
 
-	if passHTTPReq {
+	if passHTTPReq || true {
 		req.HTTPRequest = r
 	}
 	if responseWriter != nil {
