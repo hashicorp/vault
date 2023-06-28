@@ -49,6 +49,8 @@ jobs:
           git commit -m "Automated dependency upgrades"
           git push -f origin ${{ github.ref_name }}:"$BRANCH_NAME"
       - name: Open pull request if needed
+        env:
+          GITHUB_TOKEN: ${{secrets.ELEVATED_GITHUB_TOKEN}}
         if: steps.changes.outputs.count > 0
         # Only open a PR if the branch is not attached to an existing one
         run: |
