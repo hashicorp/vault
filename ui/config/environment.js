@@ -37,7 +37,7 @@ module.exports = function (environment) {
         'sys/internal/counters/config',
       ],
       // number of records to show on a single page by default - this is used by the client-side pagination
-      DEFAULT_PAGE_SIZE: 15,
+      DEFAULT_PAGE_SIZE: 10,
     },
     flashMessageDefaults: {
       timeout: 7000,

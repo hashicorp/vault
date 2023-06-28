@@ -47,6 +47,7 @@ module('Integration | Component | client-pagination', function (hooks) {
     assert
       .dom(SELECTORS.emptyStateMessage)
       .hasText('Your nodes will be listed here. Add your first node to get started.');
+    assert.dom(SELECTORS.pagination).doesNotExist('Pagination not shown');
   });
 
   test('it renders emptyActions within empty state', async function (assert) {
@@ -61,6 +62,24 @@ module('Integration | Component | client-pagination', function (hooks) {
     `);
 
     assert.dom(`${SELECTORS.emptyStateActions} [data-test-my-action]`).hasText('Action rendered here');
+    assert.dom(SELECTORS.pagination).doesNotExist('Pagination not shown');
+  });
+
+  test('it does not render pagination if record count <= min page size', async function (assert) {
+    this.set('items', this.recordsList.slice(0, 10));
+    await render(hbs`
+      <ClientPagination @items={{this.items}}>
+        <:item as |item|>
+          <div data-test-item={{item.id}}>
+            {{item.id}}
+          </div>
+        </:item>
+      </ClientPagination>
+  `);
+
+    assert.dom(SELECTORS.emptyStateTitle).doesNotExist('No empty state');
+    assert.dom(SELECTORS.pagination).doesNotExist('Pagination is not rendered');
+    assert.dom('[data-test-item]').exists({ count: 10 }, `10 items are rendered`);
   });
 
   test('it renders the correct number of items on the page', async function (assert) {
@@ -76,10 +95,10 @@ module('Integration | Component | client-pagination', function (hooks) {
     `);
     assert.dom(SELECTORS.emptyStateTitle).doesNotExist('No empty state');
     assert.dom(SELECTORS.pagination).exists('Pagination is rendered');
-    assert.dom('[data-test-item]').exists({ count: 100 }, `100 items are rendered`);
+    assert.dom('[data-test-item]').exists({ count: 10 }, `10 items are rendered`);
+    await fillIn(SELECTORS.pageSizeSelector, 30);
+    assert.dom('[data-test-item]').exists({ count: 30 }, `30 items are rendered`);
     await fillIn(SELECTORS.pageSizeSelector, 50);
     assert.dom('[data-test-item]').exists({ count: 50 }, `50 items are rendered`);
-    await fillIn(SELECTORS.pageSizeSelector, 15);
-    assert.dom('[data-test-item]').exists({ count: 15 }, `15 items are rendered`);
   });
 });

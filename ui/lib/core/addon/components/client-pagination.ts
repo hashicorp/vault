@@ -45,6 +45,7 @@ interface Args {
 export default class ClientPaginationComponent extends Component<Args> {
   @tracked currentPage = 1;
   @tracked pageSize = DEFAULT_PAGE_SIZE as number;
+  pageThreshold = DEFAULT_PAGE_SIZE as number;
 
   get itemNoun() {
     return this.args.itemNoun || 'item';

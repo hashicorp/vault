@@ -8,12 +8,15 @@
       {{yield item to="item"}}
     </div>
   {{/each}}
-  <Hds::Pagination::Numbered
-    @totalItems={{@items.length}}
-    @currentPageSize={{this.pageSize}}
-    @pageSizes={{array 15 50 100}}
-    @onPageChange={{this.handlePageChange}}
-    @onPageSizeChange={{this.handlePageSizeChange}}
-    data-test-client-pagination-control
-  />
+  {{#if (gt @items.length this.pageThreshold)}}
+    <div class="has-top-margin-m">
+      <Hds::Pagination::Numbered
+        @totalItems={{@items.length}}
+        @currentPageSize={{this.pageSize}}
+        @onPageChange={{this.handlePageChange}}
+        @onPageSizeChange={{this.handlePageSizeChange}}
+        data-test-client-pagination-control
+      />
+    </div>
+  {{/if}}
 {{/if}}
