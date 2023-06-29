@@ -138,4 +138,13 @@ func TestBuiltinPluginsWork(t *testing.T) {
 			t.Fatal(err)
 		}
 	})
+
+	// This last part is not strictly necessary for original purpose of this test (checking the plugins initialize
+	// without errors), but whilst we have a test Vault with one of everything mounted, let's also test that the full
+	// OpenAPI document generation succeeds too.
+	t.Run("Whole OpenAPI document", func(t *testing.T) {
+		if _, err := client.Logical().Read("sys/internal/specs/openapi"); err != nil {
+			t.Fatal(err)
+		}
+	})
 }
