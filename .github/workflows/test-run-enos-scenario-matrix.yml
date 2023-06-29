@@ -171,6 +171,7 @@ jobs:
       # Create temporary failure to test failure condition
       - name: Fake failure step
         id: fake_failure
+        continue-on-error: true
         run: |
           echo "This run failed!" 1>&2
           exit 1
