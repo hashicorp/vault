@@ -173,7 +173,7 @@ jobs:
       - name: Send Slack notification on Enos failure
         uses: hashicorp/actions-slack-status@v1
         # Temporary "success" condition for testing on PR; revert to "failure" before merge to main
-        if: ${{ always() && steps.run.outcome == 'success' || steps.run_retry.outcome == 'success' }}
+        if: ${{ steps.run.outcome == 'success' || steps.run_retry.outcome == 'success' }}
         with:
           # Temporary "success" message; remove before merge to main
           success-message: "An Enos scenario run succeeded. \nRepo: `${{ github.repository }}`"
