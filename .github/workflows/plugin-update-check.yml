@@ -3,7 +3,7 @@ on:
     inputs:
       repo:
         type: string
-        description: the plugin repo that is updated (ex. vault-plugin-database-snowflake) - github.com/hashicorp will be prepended
+        description: the plugin repo that is updated (ex. vault-plugin-database-snowflake)
         required: true
       sha:
         type: string
@@ -24,10 +24,11 @@ jobs:
       #    }
       #  }
       COMMIT_SHA: "${{inputs.sha}}"
-      REPO_NAME: "${{inputs.repo}}"
-      BRANCH_NAME: "plugin-update-${{inputs.repo}}-${{inputs.sha}}"
+      PLUGIN_REPO_NAME: "${{inputs.repo}}"
+      RUN_ID: "${{github.run_id}}"
+      BRANCH_NAME: "auto-plugin-update-${{inputs.repo}}-${{inputs.sha}}"
     steps:
-      - run: echo "would use $COMMIT_SHA of $REPO_NAME"
+      - run: echo "would use $COMMIT_SHA of $PLUGIN_REPO_NAME"
         # checkout
       - uses: actions/checkout@v3 # should be a sha, but eh
         with:
@@ -38,7 +39,7 @@ jobs:
       - uses: actions/setup-go@v4
       - name: update plugin
         run: |
-          go get "github.com/hashicorp/$REPO_NAME@$COMMIT_SHA"
+          go get "github.com/hashicorp/$PLUGIN_REPO_NAME@$COMMIT_SHA"
           go mod tidy
       - name: detect changes
         id: changes
@@ -59,17 +60,11 @@ jobs:
         # Only open a PR if the branch is not attached to an existing one
         run: |
           PR=$(gh pr list --head "$BRANCH_NAME" --json number -q '.[0].number')
-          # currently unable to set team as reviewer in GHA
-          # see https://github.com/cli/cli/issues/6395
-          reviewers="fairclothjm,kpcraig"
+
           if [ -z "$PR" ]; then
-            gh pr create \
-            --head "$BRANCH_NAME" \
-            --title "Automated plugin update check" \
-            --reviewer "$reviewers" \
-            --label "dependencies" \
-            --body "Updates $REPO_NAME to verify vault CI
-            Full log: https://github.com/hashicorp/vault/actions/runs/${{github.run_id}}"
+            # call the script to create the plugin update PR on Vault
+            ./scripts/plugin-helper-gh-pr-create.sh
+
           else
             echo "Pull request already exists, won't create a new one."
             exit 1
