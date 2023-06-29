@@ -36,6 +36,7 @@ echo "captured response:"
 echo "$resp" | jq .
 
 # get Vault PR number
+vault_pr_num=$(echo "$resp" | jq '.number')
 vault_pr_url=$(echo "$resp" | jq '.html_url')
 echo "Vault PR number: $vault_pr_url"
 
