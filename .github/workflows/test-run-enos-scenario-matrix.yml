@@ -183,6 +183,6 @@ jobs:
         # Temporary "failure" test; revert to above statement before merge to main
         if: ${{ always() }}
         with:
-          failure-message: "An Enos scenario run failed. \nRepo: `${{ github.repository }}`"
+          failure-message: "An Enos scenario run failed."
           status: ${{steps.fake_failure.outcome}}
           slack-webhook-url: ${{secrets.SLACK_WEBHOOK_URL}}
