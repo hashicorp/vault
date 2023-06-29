@@ -102,6 +102,15 @@
   display: grid;
 }
 
+.is-grid-2-columns {
+  grid-template-columns: 2fr 2fr;
+  grid-gap: 2rem;
+
+  @include until($mobile) {
+    grid-template-columns: 1fr;
+  }
+}
+
 .is-grid-3-columns {
   grid-template-columns: repeat(3, 1fr);
 }
