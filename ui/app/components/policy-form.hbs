@@ -61,18 +61,46 @@
           data-test-policy-editor
         />
       {{/if}}
+
+      {{! CODE ADDED HERE }}
+      {{#unless @renderPolicyExampleModal}}
+        <p class="is-size-10 has-text-grey has-bottom-margin-l">
+          You can use Alt+Tab (Option+Tab on MacOS) in the code editor to skip to the next field
+        </p>
+        <div class="has-top-padding-s">
+          <p>
+            More information about
+            {{uppercase @model.policyType}}
+            policies can be found
+            <DocLink
+              @path={{if
+                (eq @model.policyType "acl")
+                "/vault/docs/concepts/policies#capabilities"
+                "/vault/tutorials/policies/sentinel#role-governing-policies-rgps"
+              }}
+            >
+              here.
+            </DocLink>
+          </p>
+        </div>
+      {{/unless}}
     </div>
-    <p class="is-size-9 has-text-grey has-bottom-margin-l">
-      You can use Alt+Tab (Option+Tab on MacOS) in the code editor to skip to the next field. See
-      <button
-        type="button"
-        class="text-button has-text-info"
-        {{on "click" (fn (mut this.showTemplateModal))}}
-        data-test-policy-example
-      >
-        example template
-      </button>.
-    </p>
+
+    {{! Link to policy example modal only available on certain pages (other pages use tab to navigate here) }}
+    {{#if @renderPolicyExampleModal}}
+      <p class="is-size-9 has-text-grey has-bottom-margin-l">
+        You can use Alt+Tab (Option+Tab on MacOS) in the code editor to skip to the next field. See
+        <button
+          type="button"
+          class="text-button has-text-info"
+          {{on "click" (fn (mut this.showTemplateModal))}}
+          data-test-policy-example
+        >
+          example template
+        </button>.
+      </p>
+    {{/if}}
+
     {{#each @model.additionalAttrs as |attr|}}
       <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
     {{/each}}
@@ -100,22 +128,24 @@
   </div>
 </form>
 {{! SAMPLE POLICY MODAL }}
-<Modal
-  @title="Example {{uppercase @model.policyType}} Policy"
-  @onClose={{fn (mut this.showTemplateModal) false}}
-  @isActive={{this.showTemplateModal}}
-  @showCloseButton={{true}}
->
-  <section class="modal-card-body">
-    {{! code-mirror modifier does not render value initially until focus event fires }}
-    {{! wait until the Modal is rendered and then show the PolicyExample (contains JsonEditor) }}
-    {{#if this.showTemplateModal}}
-      <PolicyExample @policyType={{@model.policyType}} />
-    {{/if}}
-  </section>
-  <div class="modal-card-head has-border-top-light">
-    <button type="button" class="button" {{on "click" (fn (mut this.showTemplateModal) false)}} data-test-close-modal>
-      Close
-    </button>
-  </div>
-</Modal>
+{{#if @renderPolicyExampleModal}}
+  <Modal
+    @title="Example {{uppercase @model.policyType}} Policy"
+    @onClose={{fn (mut this.showTemplateModal) false}}
+    @isActive={{this.showTemplateModal}}
+    @showCloseButton={{true}}
+  >
+    <section class="modal-card-body">
+      {{! code-mirror modifier does not render value initially until focus event fires }}
+      {{! wait until the Modal is rendered and then show the PolicyExample (contains JsonEditor) }}
+      {{#if this.showTemplateModal}}
+        <PolicyExample @policyType={{@model.policyType}} />
+      {{/if}}
+    </section>
+    <div class="modal-card-head has-border-top-light">
+      <button type="button" class="button" {{on "click" (fn (mut this.showTemplateModal) false)}} data-test-close-modal>
+        Close
+      </button>
+    </div>
+  </Modal>
+{{/if}}
