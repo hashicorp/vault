@@ -7,6 +7,15 @@
 #  - PLUGIN_BRANCH
 #  - RUN_ID
 
+echo "ENVS:"
+if [ -z $GITHUB_TOKEN ]; then
+  echo "github token is unset?"
+fi
+echo "$PLUGIN_REPO"
+echo "$VAULT_BRANCH"
+echo "$PLUGIN_BRANCH"
+echo "$RUN_ID"
+
 # we are using the GH API directly so that we can get the resluting
 # PR URL from the JSON response
 
