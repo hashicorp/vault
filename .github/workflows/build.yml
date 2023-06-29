@@ -15,32 +15,12 @@ on:
       - release/**
 
 jobs:
-  # verify-changes determines if the changes are only for docs (website)
-  verify-changes:
-    if: github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
-    outputs:
-      is_docs_change: ${{ steps.get-changeddir.outputs.is_docs_change }}
-    steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 0 # Use fetch depth 0 for comparing changes to base branch
-      - name: Get changed directories
-        id: get-changeddir
-        env:
-          TYPE: ${{ github.event_name }}
-          REF_NAME: ${{ github.ref_name }}
-          BASE: ${{ github.base_ref }}
-        run: ./.github/scripts/verify_changes.sh ${{ env.TYPE }} ${{ env.REF_NAME }} ${{ env.BASE }}
-
   product-metadata:
     # do not run build and test steps for docs changes
     # Following https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/troubleshooting-required-status-checks#handling-skipped-but-required-checks
     # we conditionally skip the build and tests for docs(website) changes
-    if: ${{ needs.verify-changes.outputs.is_docs_change == 'false' }}
+    # if: ${{ needs.verify-changes.outputs.is_docs_change == 'false' }}
     runs-on: ubuntu-latest
-    needs: verify-changes
     outputs:
       build-date: ${{ steps.get-metadata.outputs.build-date }}
       filepath: ${{ steps.generate-metadata-file.outputs.filepath }}
@@ -118,37 +98,6 @@ jobs:
         if: steps.cache-ui-assets.outputs.cache-hit != 'true'
         run: make ci-build-ui
 
-  build-other:
-    name: Other
-    needs:
-      - product-metadata
-      - build-ui
-    strategy:
-      matrix:
-        goos: [freebsd, windows, netbsd, openbsd, solaris]
-        goarch: [386, amd64, arm]
-        exclude:
-          - goos: solaris
-            goarch: 386
-          - goos: solaris
-            goarch: arm
-          - goos: windows
-            goarch: arm
-      fail-fast: true
-    uses: ./.github/workflows/build-vault-oss.yml
-    with:
-      create-packages: false
-      goarch: ${{ matrix.goarch }}
-      goos: ${{ matrix.goos }}
-      go-cache: ${{ needs.product-metadata.outputs.go-cache }}
-      go-mod-cache: ${{ needs.product-metadata.outputs.go-mod-cache }}
-      go-tags: ui
-      go-version: ${{ needs.product-metadata.outputs.go-version }}
-      package-name: ${{ needs.product-metadata.outputs.package-name }}
-      vault-ui-hash: ${{ needs.product-metadata.outputs.vault-ui-hash }}
-      vault-version: ${{ needs.product-metadata.outputs.vault-version }}
-    secrets: inherit
-
   build-linux:
     name: Linux
     needs:
@@ -157,7 +106,12 @@ jobs:
     strategy:
       matrix:
         goos: [linux]
-        goarch: [arm, arm64, 386, amd64]
+        goarch: [arm64, amd64]
+        runs-on:
+          - "ubuntu-latest"
+          - "custom-linux-small-vault-latest"
+          - "custom-linux-medium-vault-latest"
+          - "custom-linux-xl-vault-latest"
       fail-fast: true
     uses: ./.github/workflows/build-vault-oss.yml
     with:
@@ -168,146 +122,7 @@ jobs:
       go-tags: ui
       go-version: ${{ needs.product-metadata.outputs.go-version }}
       package-name: ${{ needs.product-metadata.outputs.package-name }}
+      runs-on: ${{ matrix.runs-on }}
       vault-ui-hash: ${{ needs.product-metadata.outputs.vault-ui-hash }}
       vault-version: ${{ needs.product-metadata.outputs.vault-version }}
     secrets: inherit
-
-  build-darwin:
-    name: Darwin
-    needs:
-      - product-metadata
-      - build-ui
-    strategy:
-      matrix:
-        goos: [darwin]
-        goarch: [amd64, arm64]
-      fail-fast: true
-    uses: ./.github/workflows/build-vault-oss.yml
-    with:
-      create-packages: false
-      goarch: ${{ matrix.goarch }}
-      goos: ${{ matrix.goos }}
-      go-cache: ${{ needs.product-metadata.outputs.go-cache }}
-      go-mod-cache: ${{ needs.product-metadata.outputs.go-mod-cache }}
-      go-tags: ui
-      go-version: ${{ needs.product-metadata.outputs.go-version }}
-      package-name: ${{ needs.product-metadata.outputs.package-name }}
-      vault-ui-hash: ${{ needs.product-metadata.outputs.vault-ui-hash }}
-      vault-version: ${{ needs.product-metadata.outputs.vault-version }}
-    secrets: inherit
-
-  build-docker:
-    name: Docker image
-    needs:
-      - product-metadata
-      - build-linux
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        arch: [arm, arm64, 386, amd64]
-    steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-      - uses: hashicorp/actions-docker-build@v1
-        with:
-          version: ${{ needs.product-metadata.outputs.vault-version }}
-          target: default
-          arch: ${{ matrix.arch }}
-          zip_artifact_name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_${{ matrix.arch }}.zip
-          tags: |
-            docker.io/hashicorp/${{ github.event.repository.name }}:${{ needs.product-metadata.outputs.vault-version }}
-            public.ecr.aws/hashicorp/${{ github.event.repository.name }}:${{ needs.product-metadata.outputs.vault-version }}
-
-  build-ubi:
-    name: UBI image
-    needs:
-      - product-metadata
-      - build-linux
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        arch: [amd64]
-    steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-      - uses: hashicorp/actions-docker-build@v1
-        with:
-          version: ${{ needs.product-metadata.outputs.vault-version }}
-          target: ubi
-          arch: ${{ matrix.arch }}
-          zip_artifact_name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_${{ matrix.arch }}.zip
-          redhat_tag: quay.io/redhat-isv-containers/5f89bb5e0b94cf64cfeb500a:${{ needs.product-metadata.outputs.vault-version }}-ubi
-
-  test:
-    name: Test ${{ matrix.build-artifact-name }}
-    # Only run the Enos workflow against branches that are created from the
-    # hashicorp/vault repository. This has the effect of limiting execution of
-    # Enos scenarios to branches that originate from authors that have write
-    # access to hashicorp/vault repository. This is required as Github Actions
-    # will not populate the required secrets for branches created by outside
-    # contributors in order to protect the secrets integrity.
-    # This condition can be removed in future if enos workflow is updated to
-    # workflow_run event
-    if: "! github.event.pull_request.head.repo.fork"
-    needs:
-      - product-metadata
-      - build-linux
-    uses: ./.github/workflows/test-run-enos-scenario-matrix.yml
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - matrix-file-name: build-github-oss-linux-amd64-zip
-            build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_amd64.zip
-          - matrix-file-name: build-github-oss-linux-arm64-zip
-            build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_arm64.zip
-    with:
-      build-artifact-name: ${{ matrix.build-artifact-name }}
-      matrix-file-name: ${{ matrix.matrix-file-name }}
-      matrix-test-group: ${{ needs.product-metadata.outputs.matrix-test-group }}
-      vault-edition: oss
-      vault-revision: ${{ needs.product-metadata.outputs.vault-revision }}
-      ssh-key-name: ${{ github.event.repository.name }}-ci-ssh-key
-    secrets: inherit
-
-  test-docker-k8s:
-    name: Test Docker K8s
-    # Only run the Enos workflow against branches that are created from the
-    # hashicorp/vault repository. This has the effect of limiting execution of
-    # Enos scenarios to branches that originate from authors that have write
-    # access to hashicorp/vault repository. This is required as Github Actions
-    # will not populate the required secrets for branches created by outside
-    # contributors in order to protect the secrets integrity.
-    # GHA secrets are only ready on workflow_run for public repo
-    # This condition can be removed in future if enos workflow is updated to
-    # workflow_run event
-    if: "! github.event.pull_request.head.repo.fork"
-    needs:
-      - product-metadata
-      - build-docker
-    uses: ./.github/workflows/enos-run-k8s.yml
-    with:
-      artifact-build-date: ${{ needs.product-metadata.outputs.build-date }}
-      artifact-name: ${{ github.event.repository.name }}_default_linux_amd64_${{ needs.product-metadata.outputs.vault-version }}_${{ needs.product-metadata.outputs.vault-revision }}.docker.tar
-      artifact-revision: ${{ needs.product-metadata.outputs.vault-revision }}
-      artifact-version: ${{ needs.product-metadata.outputs.vault-version }}
-    secrets: inherit
-
-  completed-successfully:
-    # We force a failure if any of the dependent jobs fail,
-    # this is a workaround for the issue reported https://github.com/actions/runner/issues/2566
-    if: |
-      always() && (cancelled() ||
-      contains(needs.*.result, 'cancelled') ||
-      contains(needs.*.result, 'failure'))
-    runs-on: ubuntu-latest
-    needs:
-      - build-other
-      - build-linux
-      - build-darwin
-      - build-docker
-      - build-ubi
-      - test
-      - test-docker-k8s
-    steps:
-      - run: |
-          echo "Some of the required build and test workflows have failed!"
-          exit 1

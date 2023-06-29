@@ -37,6 +37,8 @@ on:
       package-name:
         type: string
         default: vault
+      runs-on:
+        type: string
       vault-ui-hash:
         type: string
         required: true
@@ -46,7 +48,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on }}
     name: Vault ${{ inputs.goos }} ${{ inputs.goarch }} v${{ inputs.vault-version }}
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
@@ -77,6 +79,7 @@ jobs:
           # Only restore the UI asset cache if we haven't modified anything in the ui directory.
           # Never do a partial restore of the web_ui if we don't get a cache hit.
           key: ${{ inputs.vault-ui-hash }}
+      - run: go mod download
       - name: Build Vault
         env:
           CGO_ENABLED: ${{ inputs.cgo-enabled }}
@@ -84,51 +87,3 @@ jobs:
           GOOS: ${{ inputs.goos }}
           GO_TAGS: ${{ inputs.go-tags }}
         run: make ci-build
-      - name: Determine artifact basename
-        env:
-          GOARCH: ${{ inputs.goarch }}
-          GOOS: ${{ inputs.goos }}
-        run: echo "ARTIFACT_BASENAME=$(make ci-get-artifact-basename)" >> "$GITHUB_ENV"
-      - name: Bundle Vault
-        env:
-          BUNDLE_PATH: out/${{ env.ARTIFACT_BASENAME }}.zip
-        run: make ci-bundle
-      - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
-        with:
-          name: ${{ env.ARTIFACT_BASENAME }}.zip
-          path: out/${{ env.ARTIFACT_BASENAME }}.zip
-          if-no-files-found: error
-      - if: ${{ inputs.create-packages }}
-        uses: hashicorp/actions-packaging-linux@v1
-        with:
-          name: ${{ github.event.repository.name }}
-          description: Vault is a tool for secrets management, encryption as a service, and privileged access management.
-          arch: ${{ inputs.goarch }}
-          version: ${{ inputs.vault-version }}
-          maintainer: HashiCorp
-          homepage: https://github.com/hashicorp/vault
-          license: MPL-2.0
-          binary: dist/${{ inputs.package-name }}
-          deb_depends: openssl
-          rpm_depends: openssl
-          config_dir: .release/linux/package/
-          preinstall: .release/linux/preinst
-          postinstall: .release/linux/postinst
-          postremove: .release/linux/postrm
-      - if: ${{ inputs.create-packages }}
-        name: Determine package file names
-        run: |
-          echo "RPM_PACKAGE=$(basename out/*.rpm)" >> "$GITHUB_ENV"
-          echo "DEB_PACKAGE=$(basename out/*.deb)" >> "$GITHUB_ENV"
-      - if: ${{ inputs.create-packages }}
-        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
-        with:
-          name: ${{ env.RPM_PACKAGE }}
-          path: out/${{ env.RPM_PACKAGE }}
-          if-no-files-found: error
-      - if: ${{ inputs.create-packages }}
-        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
-        with:
-          name: ${{ env.DEB_PACKAGE }}
-          path: out/${{ env.DEB_PACKAGE }}
-          if-no-files-found: error

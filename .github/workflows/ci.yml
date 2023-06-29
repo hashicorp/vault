@@ -14,6 +14,7 @@ on:
 
 jobs:
   setup:
+    if: false
     name: Setup
     runs-on: ubuntu-latest
     outputs:
@@ -214,7 +215,7 @@ jobs:
       startsWith(github.ref_name, 'release/') ||
       startsWith(github.head_ref, 'ui/') ||
       startsWith(github.head_ref, 'backport/ui/') ||
-      startsWith(github.head_ref, 'merge') || 
+      startsWith(github.head_ref, 'merge') ||
       contains(github.event.pull_request.labels.*.name, 'ui')
     needs:
       - setup
