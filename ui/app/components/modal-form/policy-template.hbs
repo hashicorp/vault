@@ -27,7 +27,7 @@
   </nav>
 {{/if}}
 {{#if this.showExamplePolicy}}
-  <JsonTemplate @policyType={{this.policy.policyType}} />
+  <PolicyExample @policyType={{this.policy.policyType}} />
 {{else}}
   <Select
     @name="policyType"
