@@ -168,15 +168,19 @@ jobs:
           rm -rf /tmp/enos*
           rm -rf ./enos/support
           rm -rf ./enos/.enos
-      # Send Slack notification to #feed-vault-enos-failures for any failures in the above `run` job.
-      # There is an incoming webhook set up on the "Enos Vault Failure Bot" Slackbot https://api.slack.com/apps/A05E31CH1LG/incoming-webhooks
+
+    # Send Slack notification to #feed-vault-enos-failures for any failures in the above `run` job.
+    # There is an incoming webhook set up on the "Enos Vault Failure Bot" Slackbot https://api.slack.com/apps/A05E31CH1LG/incoming-webhooks
+    slack-notification:
+      runs-on: ubuntu-latest
+      needs: run
       - name: Send Slack notification on Enos failure
         uses: hashicorp/actions-slack-status@v1
         # Temporary "success" condition for testing on PR; revert to "failure" before merge to main
-        if: ${{always()}}
+        if: ${{ always() && jobs.run.result == 'success' }}
         with:
           # Temporary "success" message; remove before merge to main
-          success-message: "An Enos scenario run succeeded. \nRepo: `${{ github.repository }}` \ngithub.event.workflow_run: ${{ github.event.workflow_run }} \nBranch: `${{ github.event.workflow_run.head_branch }}` \nJob run URL: ${{ github.event.workflow_job.deployment.url }} \nAuthor: ${{ github.event.workflow_job.deployment.creator.name }} \nPR: ${{ github.event.workflow_run.pull_request.name }}"
-          failure-message: "An Enos scenario run failed. \nRepo: `${{ github.repository }}` \nBranch: `${{ github.event.workflow_run.head_branch }}` \nJob run URL: ${{ github.event.workflow_job.deployment.url }} \nAuthor: ${{ github.event.workflow_job.deployment.creator.name }} \nPR: ${{ github.event.workflow_run.pull_request.name }}"
-          status: ${{job.status}}
+          success-message: "An Enos scenario run succeeded. \nRepo: `${{ github.repository }}`"
+          failure-message: "An Enos scenario run failed. \nRepo: `${{ github.repository }}`"
+          status: ${{jobs.run.result}}
           slack-webhook-url: ${{secrets.SLACK_WEBHOOK_URL}}
