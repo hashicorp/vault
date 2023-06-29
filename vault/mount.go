@@ -1593,7 +1593,11 @@ func (c *Core) setupMounts(ctx context.Context) error {
 
 		// Ensure the path is tainted if set in the mount table
 		if entry.Tainted {
-			c.router.Taint(ctx, entry.Path)
+			// Calculate any namespace prefixes here, because when Taint() is called, there won't be
+			// a namespace to pull from the context. This is similar to what we do above in c.router.Mount().
+			path := entry.Namespace().Path + entry.Path
+			c.logger.Debug("tainting a mount due to it being marked as tainted in mount table", "entry.path", entry.Path, "entry.namespace.path", entry.Namespace().Path, "full_path", path)
+			c.router.Taint(ctx, path)
 		}
 
 		// Ensure the cache is populated, don't need the result

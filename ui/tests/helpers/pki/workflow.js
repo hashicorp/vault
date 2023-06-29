@@ -18,7 +18,6 @@ export const SELECTORS = {
   breadcrumbs: '[data-test-breadcrumbs] li',
   overviewBreadcrumb: '[data-test-breadcrumbs] li:nth-of-type(2) > a',
   pageTitle: '[data-test-pki-role-page-title]',
-  alertBanner: '[data-test-alert-banner="alert"]',
   emptyState: '[data-test-component="empty-state"]',
   emptyStateTitle: '[data-test-empty-state-title]',
   emptyStateLink: '.empty-state-actions a',
@@ -65,6 +64,8 @@ export const SELECTORS = {
   configuration: {
     title: '[data-test-pki-configuration-page-title]',
     emptyState: '[data-test-configuration-empty-state]',
+    nextStepsBanner: '[data-test-config-next-steps]',
+    importError: '[data-test-message-error]',
     pkiBetaBanner: '[data-test-pki-configuration-banner]',
     pkiBetaBannerLink: '[data-test-pki-configuration-banner] a',
     ...CONFIGURATION,

@@ -102,18 +102,22 @@ func testLoadConfigFile_topLevel(t *testing.T, entropy *configutil.Entropy) {
 			Seals: []*configutil.KMS{
 				{
 					Type: "nopurpose",
+					Name: "nopurpose",
 				},
 				{
 					Type:    "stringpurpose",
 					Purpose: []string{"foo"},
+					Name:    "stringpurpose",
 				},
 				{
 					Type:    "commastringpurpose",
 					Purpose: []string{"foo", "bar"},
+					Name:    "commastringpurpose",
 				},
 				{
 					Type:    "slicepurpose",
 					Purpose: []string{"zip", "zap"},
+					Name:    "slicepurpose",
 				},
 			},
 		},
@@ -777,6 +781,7 @@ func testConfig_Sanitized(t *testing.T) {
 			map[string]interface{}{
 				"disabled": false,
 				"type":     "awskms",
+				"name":     "awskms",
 			},
 		},
 		"storage": map[string]interface{}{
@@ -1086,6 +1091,7 @@ func testParseSeals(t *testing.T) {
 						"default_hmac_key_label": "vault-hsm-hmac-key",
 						"generate_key":           "true",
 					},
+					Name: "pkcs11",
 				},
 				{
 					Type:     "pkcs11",
@@ -1102,6 +1108,7 @@ func testParseSeals(t *testing.T) {
 						"default_hmac_key_label": "vault-hsm-hmac-key",
 						"generate_key":           "true",
 					},
+					Name: "pkcs11",
 				},
 			},
 		},
