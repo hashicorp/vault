@@ -168,21 +168,12 @@ jobs:
           rm -rf /tmp/enos*
           rm -rf ./enos/support
           rm -rf ./enos/.enos
-      # Create temporary failure to test failure condition
-      - name: Fake failure step
-        id: fake_failure
-        continue-on-error: true
-        run: |
-          echo "This run failed!" 1>&2
-          exit 1
-      # Send Slack notification to #feed-vault-enos-failures for any failures in the above `run` job.
+      # Send Slack notification to #feed-vault-enos-failures for if the 'run_retry' step fails.
       # There is an incoming webhook set up on the "Enos Vault Failure Bot" Slackbot https://api.slack.com/apps/A05E31CH1LG/incoming-webhooks
       - name: Send Slack notification on Enos failure
         uses: hashicorp/actions-slack-status@v1
-        # if: ${{ steps.run.outcome == 'failure' || steps.run_retry.outcome == 'failure' }}
-        # Temporary "failure" test; revert to above statement before merge to main
         if: ${{ always() }}
         with:
           failure-message: "An Enos scenario run failed."
-          status: ${{steps.fake_failure.outcome}}
+          status: ${{steps.run_retry.outcome}}
           slack-webhook-url: ${{secrets.SLACK_WEBHOOK_URL}}
