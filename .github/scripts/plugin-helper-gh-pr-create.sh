@@ -7,11 +7,20 @@
 #  - PLUGIN_BRANCH
 #  - RUN_ID
 
+echo "ENVS:"
+if [ -z $GITHUB_TOKEN ]; then
+  echo "github token is unset?"
+fi
+echo "$PLUGIN_REPO"
+echo "$VAULT_BRANCH"
+echo "$PLUGIN_BRANCH"
+echo "$RUN_ID"
+
 # we are using the GH API directly so that we can get the resluting
 # PR URL from the JSON response
 
 reviewers="fairclothjm,kpcraig"
-resp=$(curl -sL \
+resp=$(curl -SL \
   -X POST \
   -H "Accept: application/vnd.github+json" \
   -H "Authorization: Bearer ${GITHUB_TOKEN}"\
@@ -30,8 +39,11 @@ EOF
 )
 )
 
+echo "$resp" | jq .
+
 # get Vault PR number
 vault_pr_url=$(echo "$resp" | jq '.html_url')
+echo "$vault_pr_url"
 
 # get Plugin PR number
 plugin_pr_num=$(gh pr list --head "$PLUGIN_BRANCH" --json number --repo hashicorp/$PLUGIN_REPO -q '.[0].number')
