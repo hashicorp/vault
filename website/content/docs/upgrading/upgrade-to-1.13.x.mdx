@@ -141,3 +141,25 @@ Affects Vault 1.13.0 to 1.13.2. Fixed in 1.13.3.
 On upgrade, all local revocations will be synchronized between
 clusters; revocation requests are not persisted when failing to
 write cross-cluster.
+
+### Slow Startup Time When Storing PKI Certificates
+
+There was a regression introduced in 1.13.0 where Vault is slow to start because the
+PKI secret engine performs a list operation on the stored certificates. If a large number
+of certificates are stored this can cause long start times on active and standby nodes.
+
+There is currently no workaround for this other than limiting the number of certificates stored
+in Vault via the [PKI tidy](/vault/api-docs/secret/pki#tidy) or using `no_store`
+flag for [PKI roles](/vault/api-docs/secret/pki#createupdate-role).
+
+#### Impacted Versions
+
+Affects Vault 1.13.0+
+
+@include 'perf-standby-token-create-forwarding-failure.mdx'
+
+@include 'update-primary-known-issue.mdx'
+
+@include 'pki-double-migration-bug.mdx'
+
+@include 'update-primary-addrs-panic.mdx'

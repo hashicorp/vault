@@ -22,6 +22,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"hash"
 	"io"
 	"math/big"
 	"path"
@@ -41,6 +42,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/kdf"
 	"github.com/hashicorp/vault/sdk/logical"
+
+	"github.com/google/tink/go/kwp/subtle"
 )
 
 // Careful with iota; don't put anything before it in this const block because
@@ -350,6 +353,19 @@ func LoadPolicy(ctx context.Context, s logical.Storage, path string) (*Policy, e
 	err = jsonutil.DecodeJSON(raw.Value, &policy)
 	if err != nil {
 		return nil, err
+	}
+
+	// Migrate RSA private keys to include their private counterpart. This lets
+	// us reference RSAPublicKey whenever we need to, without necessarily
+	// needing the private key handy, synchronizing the behavior with EC and
+	// Ed25519 key pairs.
+	switch policy.Type {
+	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
+		for _, entry := range policy.Keys {
+			if entry.RSAPublicKey == nil && entry.RSAKey != nil {
+				entry.RSAPublicKey = entry.RSAKey.Public().(*rsa.PublicKey)
+			}
+		}
 	}
 
 	policy.l = new(sync.RWMutex)
@@ -751,6 +767,10 @@ func (p *Policy) Upgrade(ctx context.Context, storage logical.Storage, randReade
 		entry.HMACKey = hmacKey
 		p.Keys[strconv.Itoa(p.LatestVersion)] = entry
 		persistNeeded = true
+
+		if p.Type == KeyType_HMAC {
+			entry.HMACKey = entry.Key
+		}
 	}
 
 	if persistNeeded {
@@ -1447,6 +1467,18 @@ func (p *Policy) ImportPublicOrPrivate(ctx context.Context, storage logical.Stor
 		DeprecatedCreationTime: now.Unix(),
 	}
 
+	// Before we insert this entry, check if the latest version is incomplete
+	// and this entry matches the current version; if so, return without
+	// updating to the next version.
+	if p.LatestVersion > 0 {
+		latestKey := p.Keys[strconv.Itoa(p.LatestVersion)]
+		if latestKey.IsPrivateKeyMissing() && isPrivateKey {
+			if err := p.ImportPrivateKeyForVersion(ctx, storage, p.LatestVersion, key); err == nil {
+				return nil
+			}
+		}
+	}
+
 	if p.Type != KeyType_HMAC {
 		hmacKey, err := uuid.GenerateRandomBytesWithReader(32, randReader)
 		if err != nil {
@@ -1469,6 +1501,7 @@ func (p *Policy) ImportPublicOrPrivate(ctx context.Context, storage logical.Stor
 		entry.Key = key
 		if p.Type == KeyType_HMAC {
 			p.KeySize = len(key)
+			entry.HMACKey = key
 		}
 	} else {
 		var parsedKey any
@@ -1585,7 +1618,7 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 		if p.Type == KeyType_AES128_GCM96 {
 			numBytes = 16
 		} else if p.Type == KeyType_HMAC {
-			numBytes := p.KeySize
+			numBytes = p.KeySize
 			if numBytes < HmacMinKeySize || numBytes > HmacMaxKeySize {
 				return fmt.Errorf("invalid key size for HMAC key, must be between %d and %d bytes", HmacMinKeySize, HmacMaxKeySize)
 			}
@@ -1595,6 +1628,11 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 			return err
 		}
 		entry.Key = newKey
+
+		if p.Type == KeyType_HMAC {
+			// To avoid causing problems, ensure HMACKey = Key.
+			entry.HMACKey = newKey
+		}
 
 	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
 		var curve elliptic.Curve
@@ -2136,15 +2174,24 @@ func (p *Policy) ImportPrivateKeyForVersion(ctx context.Context, storage logical
 		ecdsaKey := parsedPrivateKey.(*ecdsa.PrivateKey)
 		pemBlock, _ := pem.Decode([]byte(keyEntry.FormattedPublicKey))
 		publicKey, err := x509.ParsePKIXPublicKey(pemBlock.Bytes)
-		if err != nil {
+		if err != nil || publicKey == nil {
 			return fmt.Errorf("failed to parse key entry public key: %v", err)
 		}
-		if !publicKey.(*ecdsa.PublicKey).Equal(ecdsaKey.PublicKey) {
+		if !publicKey.(*ecdsa.PublicKey).Equal(&ecdsaKey.PublicKey) {
 			return fmt.Errorf("cannot import key, key pair does not match")
 		}
 	case *rsa.PrivateKey:
 		rsaKey := parsedPrivateKey.(*rsa.PrivateKey)
 		if !rsaKey.PublicKey.Equal(keyEntry.RSAPublicKey) {
+			return fmt.Errorf("cannot import key, key pair does not match")
+		}
+	case ed25519.PrivateKey:
+		ed25519Key := parsedPrivateKey.(ed25519.PrivateKey)
+		publicKey, err := base64.StdEncoding.DecodeString(keyEntry.FormattedPublicKey)
+		if err != nil {
+			return fmt.Errorf("failed to parse key entry public key: %v", err)
+		}
+		if !ed25519.PublicKey(publicKey).Equal(ed25519Key.Public()) {
 			return fmt.Errorf("cannot import key, key pair does not match")
 		}
 	}
@@ -2247,7 +2294,7 @@ func (ke *KeyEntry) parseFromKey(PolKeyType KeyType, parsedKey any) error {
 				return fmt.Errorf("invalid key size: expected %d bytes, got %d bytes", keyBytes, rsaKey.Size())
 			}
 			ke.RSAKey = rsaKey
-			ke.RSAPublicKey = nil
+			ke.RSAPublicKey = rsaKey.Public().(*rsa.PublicKey)
 		} else {
 			rsaKey := parsedKey.(*rsa.PublicKey)
 			if rsaKey.Size() != keyBytes {
@@ -2260,4 +2307,89 @@ func (ke *KeyEntry) parseFromKey(PolKeyType KeyType, parsedKey any) error {
 	}
 
 	return nil
+}
+
+func (p *Policy) WrapKey(ver int, targetKey interface{}, targetKeyType KeyType, hash hash.Hash) (string, error) {
+	if !p.Type.SigningSupported() {
+		return "", fmt.Errorf("message signing not supported for key type %v", p.Type)
+	}
+
+	switch {
+	case ver == 0:
+		ver = p.LatestVersion
+	case ver < 0:
+		return "", errutil.UserError{Err: "requested version for key wrapping is negative"}
+	case ver > p.LatestVersion:
+		return "", errutil.UserError{Err: "requested version for key wrapping is higher than the latest key version"}
+	case p.MinEncryptionVersion > 0 && ver < p.MinEncryptionVersion:
+		return "", errutil.UserError{Err: "requested version for key wrapping is less than the minimum encryption key version"}
+	}
+
+	keyEntry, err := p.safeGetKeyEntry(ver)
+	if err != nil {
+		return "", err
+	}
+
+	return keyEntry.WrapKey(targetKey, targetKeyType, hash)
+}
+
+func (ke *KeyEntry) WrapKey(targetKey interface{}, targetKeyType KeyType, hash hash.Hash) (string, error) {
+	// Presently this method implements a CKM_RSA_AES_KEY_WRAP-compatible
+	// wrapping interface and only works on RSA keyEntries as a result.
+	if ke.RSAPublicKey == nil {
+		return "", fmt.Errorf("unsupported key type in use; must be a rsa key")
+	}
+
+	var preppedTargetKey []byte
+	switch targetKeyType {
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_HMAC:
+		var ok bool
+		preppedTargetKey, ok = targetKey.([]byte)
+		if !ok {
+			return "", fmt.Errorf("failed to wrap target key for import: symmetric key not provided in byte format (%T)", targetKey)
+		}
+	default:
+		var err error
+		preppedTargetKey, err = x509.MarshalPKCS8PrivateKey(targetKey)
+		if err != nil {
+			return "", fmt.Errorf("failed to wrap target key for import: %w", err)
+		}
+	}
+
+	result, err := wrapTargetPKCS8ForImport(ke.RSAPublicKey, preppedTargetKey, hash)
+	if err != nil {
+		return result, fmt.Errorf("failed to wrap target key for import: %w", err)
+	}
+
+	return result, nil
+}
+
+func wrapTargetPKCS8ForImport(wrappingKey *rsa.PublicKey, preppedTargetKey []byte, hash hash.Hash) (string, error) {
+	// Generate an ephemeral AES-256 key
+	ephKey, err := uuid.GenerateRandomBytes(32)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate an ephemeral AES wrapping key: %w", err)
+	}
+
+	// Wrap ephemeral AES key with public wrapping key
+	ephKeyWrapped, err := rsa.EncryptOAEP(hash, rand.Reader, wrappingKey, ephKey, []byte{} /* label */)
+	if err != nil {
+		return "", fmt.Errorf("failed to encrypt ephemeral wrapping key with public key: %w", err)
+	}
+
+	// Create KWP instance for wrapping target key
+	kwp, err := subtle.NewKWP(ephKey)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate new KWP from AES key: %w", err)
+	}
+
+	// Wrap target key with KWP
+	targetKeyWrapped, err := kwp.Wrap(preppedTargetKey)
+	if err != nil {
+		return "", fmt.Errorf("failed to wrap target key with KWP: %w", err)
+	}
+
+	// Combined wrapped keys into a single blob and base64 encode
+	wrappedKeys := append(ephKeyWrapped, targetKeyWrapped...)
+	return base64.StdEncoding.EncodeToString(wrappedKeys), nil
 }

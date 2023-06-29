@@ -567,6 +567,7 @@ func TestRaft_SnapshotAPI_MidstreamFailure(t *testing.T) {
 }
 
 func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
+	t.Parallel()
 	type testCase struct {
 		Name               string
 		Rekey              bool
@@ -753,6 +754,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 }
 
 func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
+	t.Parallel()
 	type testCase struct {
 		Name               string
 		Rekey              bool

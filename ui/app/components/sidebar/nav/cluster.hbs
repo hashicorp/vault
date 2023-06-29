@@ -43,16 +43,16 @@
     <Nav.Link
       @route="vault.cluster.replication.mode.index"
       @model="dr"
-      @text="DR Primary"
-      data-test-sidebar-nav-link="DR Primary"
+      @text="Disaster Recovery"
+      data-test-sidebar-nav-link="Disaster Recovery"
     />
 
     {{#if (has-feature "Performance Replication")}}
       <Nav.Link
         @route="vault.cluster.replication.mode.index"
         @model="performance"
-        @text="Performance Secondary"
-        data-test-sidebar-nav-link="Performance Secondary"
+        @text="Performance"
+        data-test-sidebar-nav-link="Performance"
       />
     {{/if}}
   {{/if}}
@@ -77,7 +77,7 @@
     />
   {{/if}}
   {{#if (and (has-permission "clients" routeParams="activity") (not this.cluster.dr.isSecondary))}}
-    <Nav.Link @route="vault.cluster.clients" @text="Client count" data-test-sidebar-nav-link="Client count" />
+    <Nav.Link @route="vault.cluster.clients" @text="Client Count" data-test-sidebar-nav-link="Client Count" />
   {{/if}}
   {{#if (and this.version.features (has-permission "status" routeParams="license") (not this.cluster.dr.isSecondary))}}
     <Nav.Link

@@ -1,15 +1,7 @@
-<SecretListHeader
-  @model={{this.model.engine}}
-  @backendCrumb={{hash
-    label=this.model.engine.id
-    text=this.model.engine.id
-    path="vault.cluster.secrets.backend.list-root"
-    model=this.model.engine.id
-  }}
-  @isEngine={{true}}
-/>
+<PkiPageHeader @backend={{this.model.engine}} />
 
 <Page::PkiConfigurationDetails
+  @acme={{this.model.acme}}
   @cluster={{this.model.cluster}}
   @urls={{this.model.urls}}
   @crl={{this.model.crl}}

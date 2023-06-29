@@ -14,11 +14,14 @@
 {{/if}}
 {{#if @model.privateKey}}
   <div class="has-top-margin-m">
-    <AlertBanner
-      @title="Next steps"
-      @type="warning"
-      @message="The private_key is only available once. Make sure you copy and save it now."
-    />
+    <Hds::Alert @type="inline" @color="highlight" class="has-bottom-margin-s" as |A|>
+      <A.Title>Next steps</A.Title>
+      <A.Description>
+        The
+        <code>private_key</code>
+        is only available once. Make sure you copy and save it now.
+      </A.Description>
+    </Hds::Alert>
   </div>
 {{/if}}
 <PkiGenerateRoot

@@ -10,3 +10,8 @@ declare module 'vault/templates/*' {
   const tmpl: TemplateFactory;
   export default tmpl;
 }
+
+declare module '@icholy/duration' {
+  import Duration from '@icholy/duration';
+  export default Duration;
+}

@@ -20,7 +20,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 	"unicode"
 
@@ -34,6 +33,7 @@ import (
 	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/locking"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/monitor"
@@ -1720,7 +1720,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		return nil, logical.ErrReadOnly
 	}
 
-	var lock *sync.RWMutex
+	var lock *locking.DeadlockRWMutex
 	switch {
 	case strings.HasPrefix(path, credentialRoutePrefix):
 		lock = &b.Core.authLock
@@ -4708,19 +4708,6 @@ type SealStatusResponse struct {
 	Warnings          []string `json:"warnings,omitempty"`
 }
 
-// getStatusWarnings exposes potentially dangerous overrides in the status response
-// currently, this only warns about VAULT_DISABLE_SERVER_SIDE_CONSISTENT_TOKENS,
-// but should be extended to report more warnings where appropriate
-func (core *Core) getStatusWarnings() []string {
-	var warnings []string
-	if core.GetCoreConfigInternal() != nil && core.GetCoreConfigInternal().DisableSSCTokens {
-		warnings = append(warnings, "Server Side Consistent Tokens are disabled, due to the "+
-			"VAULT_DISABLE_SERVER_SIDE_CONSISTENT_TOKENS environment variable being set. "+
-			"It is not recommended to run Vault for an extended period of time with this configuration.")
-	}
-	return warnings
-}
-
 func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error) {
 	sealed := core.Sealed()
 
@@ -4791,7 +4778,6 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 		ClusterID:    clusterID,
 		RecoverySeal: core.SealAccess().RecoveryKeySupported(),
 		StorageType:  core.StorageType(),
-		Warnings:     core.getStatusWarnings(),
 	}
 
 	if resourceIDonHCP != "" {

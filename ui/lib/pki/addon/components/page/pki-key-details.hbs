@@ -34,11 +34,10 @@
 <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
   {{#if @key.privateKey}}
     <div class="has-top-margin-m">
-      <AlertBanner
-        @title="Next steps"
-        @type="warning"
-        @message="This private key material will only be available once. Copy or download it now."
-      />
+      <Hds::Alert data-test-pki-key-next-steps @type="inline" @color="highlight" class="has-bottom-margin-s" as |A|>
+        <A.Title>Next steps</A.Title>
+        <A.Description>This private key material will only be available once. Copy or download it now.</A.Description>
+      </Hds::Alert>
     </div>
   {{/if}}
   {{#each @key.formFields as |attr|}}

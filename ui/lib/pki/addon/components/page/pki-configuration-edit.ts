@@ -13,11 +13,15 @@ import errorMessage from 'vault/utils/error-message';
 import type RouterService from '@ember/routing/router-service';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type VersionService from 'vault/services/version';
+import type PkiConfigAcmeModel from 'vault/models/pki/config/acme';
+import type PkiConfigClusterModel from 'vault/models/pki/config/cluster';
 import type PkiConfigCrlModel from 'vault/models/pki/config/crl';
 import type PkiConfigUrlsModel from 'vault/models/pki/config/urls';
 import type { FormField, TtlEvent } from 'vault/app-types';
 
 interface Args {
+  acme: PkiConfigAcmeModel;
+  cluster: PkiConfigClusterModel;
   crl: PkiConfigCrlModel;
   urls: PkiConfigUrlsModel;
 }
@@ -33,13 +37,18 @@ interface PkiConfigCrlBooleans {
   disable: boolean;
   ocspDisable: boolean;
 }
+
+interface ErrorObject {
+  modelName: string;
+  message: string;
+}
 export default class PkiConfigurationEditComponent extends Component<Args> {
   @service declare readonly router: RouterService;
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly version: VersionService;
 
   @tracked invalidFormAlert = '';
-  @tracked errorBanner = '';
+  @tracked errors: Array<ErrorObject> = [];
 
   get isEnterprise() {
     return this.version.isEnterprise;
@@ -49,14 +58,32 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
   @waitFor
   *save(event: Event) {
     event.preventDefault();
-    try {
-      yield this.args.urls.save();
-      yield this.args.crl.save();
-      this.flashMessages.success('Successfully updated configuration');
-      this.router.transitionTo('vault.cluster.secrets.backend.pki.configuration.index');
-    } catch (error) {
+    // first clear errors and sticky flash messages
+    this.errors = [];
+    this.flashMessages.clearMessages();
+
+    // modelName is also the API endpoint (i.e. pki/config/cluster)
+    for (const modelName of ['cluster', 'acme', 'urls', 'crl']) {
+      const model = this.args[modelName as keyof Args];
+      // skip saving and continue to next iteration if user does not have permission
+      if (!model.canSet) continue;
+      try {
+        yield model.save();
+        this.flashMessages.success(`Successfully updated config/${modelName}`);
+      } catch (error) {
+        const errorObject: ErrorObject = {
+          modelName,
+          message: errorMessage(error),
+        };
+        this.flashMessages.danger(`Error updating config/${modelName}`, { sticky: true });
+        this.errors.pushObject(errorObject);
+      }
+    }
+
+    if (this.errors.length) {
       this.invalidFormAlert = 'There was an error submitting this form.';
-      this.errorBanner = errorMessage(error);
+    } else {
+      this.router.transitionTo('vault.cluster.secrets.backend.pki.configuration.index');
     }
   }
 

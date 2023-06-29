@@ -182,7 +182,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     assert.dom('[data-test-inline-error-message]').doesNotExist('inline error goes away');
     await click('[data-test-secret-save]');
     assert
-      .dom('[data-test-error]')
+      .dom('[data-test-message-error]')
       .includesText(
         'custom_metadata validation failed: length of key',
         'shows API error that is not captured by validation'
@@ -225,7 +225,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     assert.strictEqual(cas.trim(), 'Yes', 'displays the cas set when configuring the secret-engine');
     assert.strictEqual(
       deleteVersionAfter.trim(),
-      '1s',
+      '1 second',
       'displays the delete version after set when configuring the secret-engine'
     );
     await deleteEngine(enginePath, assert);
@@ -1049,7 +1049,9 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await editPage.visitEdit({ backend, id: 'secret' });
     assert
       .dom('[data-test-warning-no-read-permissions]')
-      .exists('shows custom warning instead of default API warning about permissions');
+      .hasText(
+        'You do not have read permissions. If a secret exists here creating a new secret will overwrite it.'
+      );
 
     await editPage.editSecret('bar', 'baz');
     assert.strictEqual(

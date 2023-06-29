@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 )
 
@@ -22,7 +23,7 @@ func getRequestTimeout(t *testing.T) time.Duration {
 		return 10 * time.Second
 	}
 
-	dur, err := time.ParseDuration(rawDur)
+	dur, err := parseutil.ParseDurationSecond(rawDur)
 	if err != nil {
 		t.Fatalf("Failed to parse custom request timeout %q: %s", rawDur, err)
 	}
