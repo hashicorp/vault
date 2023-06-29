@@ -9,6 +9,10 @@ on:
         type: string
         description: the hash of the plugin repo commit to use
         required: true
+      plugin_branch:
+        type: string
+        description: the name of the plugin branch
+        required: true
 
 jobs:
   plugin-update-check:
@@ -24,11 +28,12 @@ jobs:
       #    }
       #  }
       COMMIT_SHA: "${{inputs.sha}}"
-      PLUGIN_REPO_NAME: "${{inputs.repo}}"
+      PLUGIN_REPO: "${{inputs.repo}}"
+      PLUGIN_BRANCH: "${{inputs.plugin_branch}}"
+      VAULT_BRANCH: "auto-plugin-update/${{inputs.repo}}/${{inputs.sha}}"
       RUN_ID: "${{github.run_id}}"
-      BRANCH_NAME: "auto-plugin-update-${{inputs.repo}}-${{inputs.sha}}"
     steps:
-      - run: echo "would use $COMMIT_SHA of $PLUGIN_REPO_NAME"
+      - run: echo "would use $COMMIT_SHA of $PLUGIN_REPO"
         # checkout
       - uses: actions/checkout@v3 # should be a sha, but eh
         with:
@@ -39,7 +44,7 @@ jobs:
       - uses: actions/setup-go@v4
       - name: update plugin
         run: |
-          go get "github.com/hashicorp/$PLUGIN_REPO_NAME@$COMMIT_SHA"
+          go get "github.com/hashicorp/$PLUGIN_REPO@$COMMIT_SHA"
           go mod tidy
       - name: detect changes
         id: changes
@@ -52,14 +57,14 @@ jobs:
           git config user.email hc-github-team-secure-vault-ecosystem@users.noreply.github.com
           git add .
           git commit -m "Automated dependency upgrades"
-          git push -f origin ${{ github.ref_name }}:"$BRANCH_NAME"
+          git push -f origin ${{ github.ref_name }}:"$VAULT_BRANCH"
       - name: Open pull request if needed
         if: steps.changes.outputs.count > 0
         env:
           GITHUB_TOKEN: ${{secrets.ELEVATED_GITHUB_TOKEN}}
         # Only open a PR if the branch is not attached to an existing one
         run: |
-          PR=$(gh pr list --head "$BRANCH_NAME" --json number -q '.[0].number')
+          PR=$(gh pr list --head "$VAULT_BRANCH" --json number -q '.[0].number')
 
           if [ -z "$PR" ]; then
             # call the script to create the plugin update PR on Vault
