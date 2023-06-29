@@ -31,8 +31,7 @@ resp=$(curl -SL \
   "title":"[DO NOT MERGE]: $PLUGIN_REPO Automated plugin update check",
   "body":"Updates $PLUGIN_REPO to verify vault CI. Full log: https://github.com/hashicorp/vault/actions/runs/$RUN_ID",
   "head":"$VAULT_BRANCH",
-  "base":"master",
-  "label": "dependencies,pr/no-changelog,pr/no-milestone",
+  "base":"main",
   "reviewer": "$reviewers",
 }
 EOF
