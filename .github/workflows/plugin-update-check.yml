@@ -63,7 +63,7 @@ jobs:
 
           if [ -z "$PR" ]; then
             # call the script to create the plugin update PR on Vault
-            ./scripts/plugin-helper-gh-pr-create.sh
+            ./.github/scripts/plugin-helper-gh-pr-create.sh
 
           else
             echo "Pull request already exists, won't create a new one."
