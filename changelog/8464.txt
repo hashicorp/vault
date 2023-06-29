@@ -1,0 +1,3 @@
+```release-note:improvement
+backend: add HA support to the "azure" storage backend
+```
