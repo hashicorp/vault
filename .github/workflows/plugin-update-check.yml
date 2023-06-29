@@ -29,7 +29,7 @@ jobs:
       #  }
       COMMIT_SHA: "${{inputs.sha}}"
       PLUGIN_REPO: "${{inputs.repo}}"
-      PLUGIN_BRANCH: "${{inputs.plugin-branch}}"
+      PLUGIN_BRANCH: "${{inputs.plugin_branch}}"
       VAULT_BRANCH: "auto-plugin-update/${{inputs.repo}}/${{inputs.sha}}"
       RUN_ID: "${{github.run_id}}"
     steps:
