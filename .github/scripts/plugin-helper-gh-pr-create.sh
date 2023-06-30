@@ -40,8 +40,8 @@ vault_pr_url=$(echo "$resp" | jq '.html_url')
 echo "Vault PR number: $vault_pr_url"
 
 # add labels to Vault PR
-gh pr edit "$vault_pr_num" --add-label "dependencies,pr/no-changelong,pr/no-milestone" --repo hashicorp/vault
-gh pr edit "$vault_pr_num" --add-reviewer "$reviewers"
+#gh pr edit "$vault_pr_num" --add-label "dependencies,pr/no-changelong,pr/no-milestone" --repo hashicorp/vault
+#gh pr edit "$vault_pr_num" --add-reviewer "$reviewers"
 
 # get Plugin PR number
 plugin_pr_num=$(gh pr list --head "$PLUGIN_BRANCH" --json number --repo hashicorp/$PLUGIN_REPO -q '.[0].number')
