@@ -80,7 +80,7 @@ See [Replication](/vault/docs/configuration/replication), [Vault Eventual Consis
 
 Starting with Vault 1.10.0, the Vault Agent supports a new metrics endpoint and [Telemetry](/vault/docs/agent#telemetry-stanza) metrics around run time, authentication success, authentication failures, cache hits, cache misses, proxy succes, and proxy client errors. This Vault Agent Telemetry should greatly help with the retrieval of key operational insights for Vault Agent deployments.
 
-### User-assigned managed identities for auto auth in azure
+### User-assigned managed identities for auto auth in Azure
 
 With this [enhancement](/vault/docs/agent/autoauth/methods/azure), users can specify user-assigned managed identities via the `object_id` and `client_id` when configuring Vault agent auto-auth for Azure. This enables users that have more than one user-assigned managed identity associated with their VM to specify which one they'd like to use when authenticating via the Vault's Azure auth method. Note that providing these parameters is an "exclusive or" operation.
 

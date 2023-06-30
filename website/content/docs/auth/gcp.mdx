@@ -6,7 +6,7 @@ description: |-
   Google Cloud service accounts.
 ---
 
-# Google cloud auth method
+# Google Cloud auth method
 
 The `gcp` auth method allows Google Cloud Platform entities to authenticate to
 Vault. Vault treats Google Cloud as a trusted third party and verifies
@@ -34,7 +34,7 @@ Vault includes a CLI helper that obtains a signed JWT locally and sends the
 request to Vault.
 
 ```shell-session
-# Authentication to vault outside of google cloud
+# Authentication to vault outside of Google Cloud
 $ vault login -method=gcp \
     role="my-role" \
     service_account="authenticating-account@my-project.iam.gserviceaccount.com" \
@@ -43,7 +43,7 @@ $ vault login -method=gcp \
 ```
 
 ```shell-session
-# Authentication to vault inside of google cloud
+# Authentication to vault inside of Google Cloud
 $ vault login -method=gcp role="my-role"
 ```
 

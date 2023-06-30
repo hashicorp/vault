@@ -70,7 +70,7 @@ In this release, we are adding additional telemetry to Vault’s PKI secrets eng
 
 Operators will now be able to specify one or more CRL URLs that Vault will automatically fetch and keep up-to-date, rather than having to push the CRLs to the cert auth method. This should make certificate management easier for those users that have large cert auth deployments.
 
-#### GCP cloud key manager support
+#### GCP Cloud key manager support
 
 Managed Keys let Vault secrets engines (currently PKI) use keys stored in Cloud KMS systems for cryptographic operations like certificate signing.  Vault 1.12 adds support for GCP Cloud KMS to the Managed Key system, where previously AWS, Azure, and PKCS#11 Hardware Security Modules were supported.
 
