@@ -7,14 +7,12 @@
 />
 
 {{#if this.showConfirmModal}}
-  <Hds::Modal id="basic-modal" @color="critical" @size="small" @onClose={{fn (mut this.showConfirmModal) false}} as |M|>
+  <Hds::Modal id="basic-modal" @color="critical" @size="medium" @onClose={{fn (mut this.showConfirmModal) false}} as |M|>
     <M.Header data-test-confirm-action-title @icon="alert-diamond">
       {{or @confirmTitle "Are you sure?"}}
     </M.Header>
     <M.Body>
-      <p class="hds-typography-body-300 hds-foreground-primary is-word-break">
-        {{or @confirmMessage "You will not be able to recover it later."}}
-      </p>
+      <p class="hds-typography-body-300 hds-foreground-primary is-word-break">{{this.confirmMessage}}</p>
     </M.Body>
     <M.Footer as |F|>
       <Hds::ButtonSet>

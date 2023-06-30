@@ -43,6 +43,10 @@ export default class ConfirmActionComponent extends Component {
     );
   }
 
+  get confirmMessage() {
+    return this.args.confirmMessage || 'You will not be able to recover it later.';
+  }
+
   @action
   async onConfirm() {
     await this.args.onConfirmAction();
