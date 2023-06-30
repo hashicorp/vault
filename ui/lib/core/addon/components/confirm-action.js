@@ -21,70 +21,32 @@ import { tracked } from '@glimmer/tracking';
  *  </ConfirmAction>
  * ```
  *
- * @param {Func} [onConfirmAction=null] - The action to take upon confirming.
- * @param {String} [confirmTitle=Delete this?] - The title to display when confirming.
+ * @param {Func} onConfirmAction - The action to take upon confirming.
+ * @param {String} [confirmTitle=Delete this?] - The title to display in the confirmation modal.
  * @param {String} [confirmMessage=You will not be able to recover it later.] - The message to display when confirming.
  * @param {String} [confirmButtonText=Delete] - The confirm button text.
  * @param {String} [cancelButtonText=Cancel] - The cancel button text.
  * @param {String} [buttonClasses] - A string to indicate the button class.
- * @param {String} [horizontalPosition=auto-right] - For the position of the dropdown.
- * @param {String} [verticalPosition=below] - For the position of the dropdown.
- * @param {Boolean} [isRunning=false] - If action is still running disable the confirm.
- * @param {Boolean} [disable=false] - To disable the confirm action.
+ * @param {Boolean} [isRunning] - Disables the confirm button if action is still running
+ * @param {Boolean} [disabled] - To disable the confirm button.
  *
  */
 
 export default class ConfirmActionComponent extends Component {
-  @tracked showConfirm = false;
+  @tracked showConfirmModal = false;
 
-  get horizontalPosition() {
-    return this.args.horizontalPosition || 'auto-right';
-  }
-
-  get verticalPosition() {
-    return this.args.verticalPosition || 'below';
-  }
-
-  get isRunning() {
-    return this.args.isRunning || false;
-  }
-
-  get disabled() {
-    return this.args.disabled || false;
-  }
-
-  get confirmTitle() {
-    return this.args.confirmTitle || 'Delete this?';
-  }
-
-  get confirmMessage() {
-    return this.args.confirmMessage || 'You will not be able to recover it later.';
-  }
-
-  get confirmButtonText() {
-    return this.args.confirmButtonText || 'Delete';
-  }
-
-  get cancelButtonText() {
-    return this.args.cancelButtonText || 'Cancel';
+  constructor() {
+    super(...arguments);
+    assert(
+      '<ConfirmAction> component expects @onConfirmAction arg to be a function',
+      typeof this.args.onConfirmAction === 'function'
+    );
   }
 
   @action
-  toggleConfirm() {
-    // toggle
-    this.showConfirm = !this.showConfirm;
-  }
-
-  @action
-  onConfirm(actions) {
-    const confirmAction = this.args.onConfirmAction;
-
-    if (typeof confirmAction !== 'function') {
-      assert('confirm-action components expects `onConfirmAction` attr to be a function');
-    } else {
-      confirmAction();
-      // close the dropdown content
-      actions.close();
-    }
+  async onConfirm() {
+    await this.args.onConfirmAction();
+    // close modal after destructive operation
+    this.showConfirmModal = false;
   }
 }
