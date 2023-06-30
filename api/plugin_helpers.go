@@ -249,7 +249,9 @@ func SudoPaths() map[string]*regexp.Regexp {
 	return sudoPaths
 }
 
-// Determine whether the given path requires the sudo capability
+// Determine whether the given path requires the sudo capability.
+// Note that this uses hardcoded static path information, so will return incorrect results for paths in namespaces,
+// or for secret engines mounted at non-default paths.
 func IsSudoPath(path string) bool {
 	// Return early if the path is any of the non-templated sudo paths.
 	if _, ok := sudoPaths[path]; ok {
