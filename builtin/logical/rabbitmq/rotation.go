@@ -4,13 +4,14 @@
 package rabbitmq
 
 import (
-	"fmt"
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
+	rabbithole "github.com/michaelklishin/rabbit-hole/v2"
 )
 
 const (
@@ -63,7 +64,7 @@ func (b *backend) rotateCredential(ctx context.Context, storage logical.Storage)
 
 	cfg := item.Value.(staticRoleEntry)
 
-	err = b.createStaticCredential(ctx, storage, cfg, true)
+	err = b.createStaticCredential(ctx, storage, cfg, item.Key)
 	if err != nil {
 		return false, err
 	}
@@ -78,18 +79,63 @@ func (b *backend) rotateCredential(ctx context.Context, storage logical.Storage)
 	return true, nil
 }
 
-func (b *backend) createStaticCredential(ctx context.Context, storage logical.Storage, cfg staticRoleEntry, shouldLockStorage bool) error {
+// TODO add option to lock storage while performing updates
+func (b *backend) createStaticCredential(ctx context.Context, storage logical.Storage, cfg staticRoleEntry, entryName string) error {
+	config, err := readConfig(ctx, storage)
+	if err != nil {
+		return fmt.Errorf("unable to read configuration: %w", err)
+	}
+	newPassword, err := b.generatePassword(ctx, config.PasswordPolicy)
+	if err != nil {
+		return err
+	}
+	cfg.Password = newPassword
+	client, err := b.Client(ctx, storage)
+	if err != nil {
+		return err
+	}
+	if _, err = client.DeleteUser(cfg.Username); err != nil {
+		return fmt.Errorf("could not delete user: %w", err)
+	}
+	_, err = client.PutUser(cfg.Username, rabbithole.UserSettings{
+		Password: cfg.Password,
+		Tags:     []string{cfg.RoleEntry.Tags},
+	})
+	if err != nil {
+		return fmt.Errorf("could not update user: %w", err)
+	}
+	// update storage with new password and new rotation
+	cfg.LastVaultRotation = time.Now()
+	entry, err := logical.StorageEntryJSON(rabbitMQStaticRolePath+entryName, cfg)
+	if err != nil {
+		return err
+	}
+	if err := storage.Put(ctx, entry); err != nil {
+		return err
+	}
+	// TODO: refactor host and topic setting function from path_role_create and set permissions here
 	return nil
 }
 
 func (b *backend) deleteStaticCredential(ctx context.Context, storage logical.Storage, cfg staticRoleEntry, shouldLockStorage bool) error {
+	// TODO needed to pop from queue?
+	// TODO remove from logical storage?
+	if cfg.RevokeUserOnDelete {
+		client, err := b.Client(ctx, storage)
+		if err != nil {
+			return err
+		}
+		if _, err = client.DeleteUser(cfg.Username); err != nil {
+			return fmt.Errorf("could not delete user: %w", err)
+		}
+	}
 	return nil
 }
 
 type setCredentialsWAL struct {
-	NewPassword    string            `json:"new_password"`
-	RoleName       string            `json:"role_name"`
-	Username       string            `json:"username"`
+	NewPassword string `json:"new_password"`
+	RoleName    string `json:"role_name"`
+	Username    string `json:"username"`
 
 	LastVaultRotation time.Time `json:"last_vault_rotation"`
 

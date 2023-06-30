@@ -125,6 +125,23 @@ func TestBackend_Roles_Static(t *testing.T) {
 			wantErr: false,
 			expectedResp: map[string]interface{}{
 				"tags": tags,
+				"username": "tester",
+				"rotation_period": 3.0,
+			},
+		},
+		{
+			name: "valid static role with revoke on delete",
+			args: map[string]interface{}{
+				"tags": tags,
+				"username": "tester",
+				"revoke_user_on_delete": true,
+			},
+			wantErr: false,
+			expectedResp: map[string]interface{}{
+				"tags": tags,
+				"username": "tester",
+				"revoke_user_on_delete": true,
+
 			},
 		},
 	}

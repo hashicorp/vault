@@ -286,7 +286,7 @@ func (b *backend) pathStaticRoleRead(ctx context.Context, req *logical.Request, 
 	data := map[string]interface{}{
 		"rotation_period": role.RotationPeriod.Seconds(),
 		"revoke_user_on_delete": role.RevokeUserOnDelete,
-		"username": name,
+		"username": role.Username,
 	}
 	roleInfo := structs.New(role.RoleEntry).Map()
 	for k, v := range(roleInfo) {
