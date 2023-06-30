@@ -11,7 +11,7 @@ description: |-
 The `/sys/leader` endpoint is used to check the high availability status and
 current leader of Vault.
 
-## Read Leader Status
+## Read leader status
 
 This endpoint returns the high availability status and current leader instance
 of Vault.
@@ -20,14 +20,14 @@ of Vault.
 | :----- | :------------ |
 | `GET`  | `/sys/leader` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
     http://127.0.0.1:8200/v1/sys/leader
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

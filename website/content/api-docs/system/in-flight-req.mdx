@@ -10,7 +10,7 @@ The `/sys/in-flight-req` endpoint is used to get information on in-flight reques
 The returned information contains the `start_time`, `client_remote_address`, `request_path`,
 `request_method`, and `client_id` of the in-flight requests.
 
-## Collect In-Flight Request Information
+## Collect In-Flight request information
 
 This endpoint returns the information about the in-flight requests.
 
@@ -18,7 +18,7 @@ This endpoint returns the information about the in-flight requests.
 | :----- | :---------- |
 | `GET`  | `/sys/in-flight-req` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -26,7 +26,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/in-flight-req
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
