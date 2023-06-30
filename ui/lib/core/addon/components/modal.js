@@ -31,6 +31,11 @@ import { messageTypes } from 'core/helpers/message-types';
  */
 
 export default class ModalComponent extends Component {
+  get modalContainer() {
+    const layoutModalElement = document.querySelector('#app-frame-modals');
+    return layoutModalElement;
+  }
+
   get isActive() {
     return this.args.isActive || false;
   }
