@@ -104,7 +104,7 @@ consumed programatically.
 These correspond to the following health check status values:
 
  - status `not_applicable` / status code `0`: exit code `0`.
- - status `ok` / status code `1`: exit code `0` 
+ - status `ok` / status code `1`: exit code `0`
  - status `informational` / status code `2`: exit code `2`.
  - status `warning` / status code `3`: exit code `3`.
  - status `critical` / status code `4`: exit code `4`.
@@ -287,8 +287,8 @@ This health check verifies if the `If-Modified-Since` header has been added to `
 
 **Config Parameters**:
 
- - `interval_duration_critical` `(duration: 7d)` - the maximum allowed interval_duration to hit critical threshold. 
- - `interval_duration_warning` `(duration: 2d)` - the maximum allowed interval_duration to hit a warning threshold. 
+ - `interval_duration_critical` `(duration: 7d)` - the maximum allowed interval_duration to hit critical threshold.
+ - `interval_duration_warning` `(duration: 2d)` - the maximum allowed interval_duration to hit a warning threshold.
  - `pause_duration_critical` `(duration: 1s)` - the maximum allowed pause_duration to hit a critical threshold.
  - `pause_duration_warning` `(duration: 200ms)` - the maximum allowed pause_duration to hit a warning threshold.
 
@@ -302,7 +302,7 @@ This health check verifies that auto-tidy is enabled, with sane defaults for int
 
  - `READ /tidy-status`
 
-**Config Parameters**: 
+**Config Parameters**:
 
  - `last_run_critical` `(duration: 7d)` - the critical delay threshold between when tidy should have last run.
  - `last_run_warning` `(duration: 2d)` - the warning delay threshold between when tidy should have last run.
@@ -318,9 +318,36 @@ This health check verifies that tidy has run within the last run window. This ca
  - `READ /tidy-status`
  - `LIST /certs`
 
-**Config Parameters**: 
+**Config Parameters**:
 
  - `count_critical` `(int: 250000)` - the critical threshold at which there are too many certs.
  - `count_warning` `(int: 50000)` - the warning threshold at which there are too many certs.
 
 This health check verifies that this cluster has a reasonable number of certificates. Ideally this would be fetched from tidy's status or a new metric reporting format, but as a fallback when tidy hasn't run, a list operation will be performed instead.
+
+### Enable ACME issuance
+
+**Name**: `enable_acme_issuance`
+
+**APIs**:
+
+- `READ /config/acme`
+- `READ /config/cluster`
+- `LIST /issuers` (unauthenticated)
+- `READ /issuer/:issuer_ref/json` (unauthenticated)
+
+**Config Parameters**: (none)
+
+This health check verifies that ACME is enabled within a mount that contains an intermediary issuer, as this is considered a best-practice to support a self-rotating PKI infrastructure.
+
+### ACME Response headers
+
+**Name**: `allow_acme_headers`
+
+**APIs**:
+
+- `READ /sys/internal/ui/mounts`
+
+**Config Parameters**: (none)
+
+This health check verifies if the `"Replay-Nonce`, `Link`, and `Location` headers have been added to `allowed_response_headers`, when the ACME feature is enabled. The ACME protocol will not work if these headers are not added to the mount.

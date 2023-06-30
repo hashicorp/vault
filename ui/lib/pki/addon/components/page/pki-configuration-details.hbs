@@ -14,17 +14,38 @@
         </button>
         <div class="toolbar-separator"></div>
       {{/if}}
-      <ToolbarLink @route="configuration.tidy" data-test-tidy-toolbar>
-        Tidy
-      </ToolbarLink>
       <ToolbarLink @route="configuration.edit">
         Edit configuration
       </ToolbarLink>
     </ToolbarActions>
   </Toolbar>
 
+  {{#if (not (eq @cluster 403))}}
+    <h2 class="title is-4 has-bottom-margin-xs has-top-margin-xl has-border-bottom-light has-bottom-padding-s">
+      Cluster Config
+    </h2>
+    {{#each @cluster.allFields as |attr|}}
+      <InfoTableRow
+        @label={{or attr.options.label (humanize (dasherize attr.name))}}
+        @value={{or (get @cluster attr.name) "None"}}
+      />
+    {{/each}}
+  {{/if}}
+
+  {{#if (not (eq @acme 403))}}
+    <h2 class="title is-4 has-bottom-margin-xs has-top-margin-xl has-border-bottom-light has-bottom-padding-s">
+      ACME Config
+    </h2>
+    {{#each @acme.allFields as |attr|}}
+      <InfoTableRow
+        @label={{or attr.options.label (humanize (dasherize attr.name))}}
+        @value={{or (get @acme attr.name) "None"}}
+      />
+    {{/each}}
+  {{/if}}
+
   {{#if (not (eq @urls 403))}}
-    <h2 class="title is-4 has-bottom-margin-xs has-top-margin-m has-border-bottom-light has-bottom-padding-s">
+    <h2 class="title is-4 has-bottom-margin-xs has-top-margin-xl has-border-bottom-light has-bottom-padding-s">
       Global URLs
     </h2>
     <InfoTableRow @label="Issuing certificates" @value={{or @urls.issuingCertificates "None"}} />
@@ -69,6 +90,15 @@
     {{#unless @crl.ocspDisable}}
       <InfoTableRow @label="Interval" @value={{@crl.ocspExpiry}} />
     {{/unless}}
+
+    {{#if this.isEnterprise}}
+      <h2 class="title is-4 has-bottom-margin-xs has-top-margin-xl has-border-bottom-light has-bottom-padding-s">
+        Unified Revocation
+      </h2>
+      <InfoTableRow @label="Cross-cluster revocation" @value={{@crl.crossClusterRevocation}} />
+      <InfoTableRow @label="Unified CRL" @value={{@crl.unifiedCrl}} />
+      <InfoTableRow @label="Unified CRL on existing paths" @value={{@crl.unifiedCrlOnExistingPaths}} />
+    {{/if}}
   {{/if}}
 {{else}}
   <Toolbar>

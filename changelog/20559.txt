@@ -1,0 +1,3 @@
+```release-note:improvement
+core, secrets/pki, audit: Update dependency go-jose to v3 due to v2 deprecation.
+```

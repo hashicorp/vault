@@ -8,6 +8,8 @@
 # solution. It distributes the entire set of test packages into 16 sublists,
 # which should roughly take an equal amount of time to complete.
 
+set -e
+
 test_packages=()
 
 base="github.com/hashicorp/vault"
@@ -25,7 +27,7 @@ fi
 
 # Total time: 1009
 test_packages[3]+=" $base/builtin/credential/approle"
-test_packages[3]+=" $base/command/agent/sink/file"
+test_packages[3]+=" $base/command/agentproxyshared/sink/file"
 test_packages[3]+=" $base/command/agent/template"
 test_packages[3]+=" $base/helper/random"
 test_packages[3]+=" $base/helper/storagepacker"
@@ -44,6 +46,7 @@ test_packages[4]+=" $base/http"
 test_packages[4]+=" $base/sdk/helper/pluginutil"
 test_packages[4]+=" $base/serviceregistration/kubernetes"
 test_packages[4]+=" $base/tools/godoctests/pkg/analyzer"
+test_packages[4]+=" $base/tools/gonilnilfunctions/pkg/analyzer"
 if [ "${ENTERPRISE:+x}" == "x" ] ; then
     test_packages[4]+=" $base/vault/external_tests/apilock"
     test_packages[4]+=" $base/vault/external_tests/filteredpaths"
@@ -85,16 +88,19 @@ test_packages[6]+=" $base/builtin/audit/file"
 test_packages[6]+=" $base/builtin/credential/github"
 test_packages[6]+=" $base/builtin/credential/okta"
 test_packages[6]+=" $base/builtin/logical/database/dbplugin"
-test_packages[6]+=" $base/command/agent/auth/cert"
-test_packages[6]+=" $base/command/agent/auth/jwt"
-test_packages[6]+=" $base/command/agent/auth/kerberos"
-test_packages[6]+=" $base/command/agent/auth/kubernetes"
-test_packages[6]+=" $base/command/agent/auth/token-file"
-test_packages[6]+=" $base/command/agent/cache"
-test_packages[6]+=" $base/command/agent/cache/cacheboltdb"
-test_packages[6]+=" $base/command/agent/cache/cachememdb"
-test_packages[6]+=" $base/command/agent/cache/keymanager"
+test_packages[6]+=" $base/command/agentproxyshared/auth/cert"
+test_packages[6]+=" $base/command/agentproxyshared/auth/jwt"
+test_packages[6]+=" $base/command/agentproxyshared/auth/kerberos"
+test_packages[6]+=" $base/command/agentproxyshared/auth/kubernetes"
+test_packages[6]+=" $base/command/agentproxyshared/auth/token-file"
+test_packages[6]+=" $base/command/agentproxyshared"
+test_packages[6]+=" $base/command/agentproxyshared/cache"
+test_packages[6]+=" $base/command/agentproxyshared/cache/cacheboltdb"
+test_packages[6]+=" $base/command/agentproxyshared/cache/cachememdb"
+test_packages[6]+=" $base/command/agentproxyshared/cache/keymanager"
 test_packages[6]+=" $base/command/agent/config"
+test_packages[6]+=" $base/command/agent/exec"
+test_packages[6]+=" $base/command/proxy/config"
 test_packages[6]+=" $base/command/config"
 test_packages[6]+=" $base/command/token"
 if [ "${ENTERPRISE:+x}" == "x" ] ; then
@@ -114,6 +120,7 @@ test_packages[6]+=" $base/helper/namespace"
 test_packages[6]+=" $base/helper/osutil"
 test_packages[6]+=" $base/helper/parseip"
 test_packages[6]+=" $base/helper/policies"
+test_packages[6]+=" $base/helper/syncmap"
 test_packages[6]+=" $base/helper/testhelpers/logical"
 test_packages[6]+=" $base/helper/timeutil"
 test_packages[6]+=" $base/helper/useragent"
@@ -141,6 +148,7 @@ test_packages[6]+=" $base/sdk/helper/kdf"
 test_packages[6]+=" $base/sdk/helper/locksutil"
 test_packages[6]+=" $base/sdk/helper/pathmanager"
 test_packages[6]+=" $base/sdk/helper/roottoken"
+test_packages[6]+=" $base/sdk/helper/testhelpers"
 test_packages[6]+=" $base/sdk/helper/testhelpers/schema"
 test_packages[6]+=" $base/sdk/helper/xor"
 test_packages[6]+=" $base/sdk/physical/file"
@@ -197,7 +205,7 @@ test_packages[7]+=" $base/vault/quotas"
 # Total time: 779
 test_packages[8]+=" $base/builtin/credential/aws/pkcs7"
 test_packages[8]+=" $base/builtin/logical/totp"
-test_packages[8]+=" $base/command/agent/auth"
+test_packages[8]+=" $base/command/agentproxyshared/auth"
 test_packages[8]+=" $base/physical/raft"
 test_packages[8]+=" $base/sdk/framework"
 test_packages[8]+=" $base/sdk/plugin"
@@ -271,6 +279,7 @@ test_packages[15]+=" $base/physical/mysql"
 test_packages[15]+=" $base/plugins/database/cassandra"
 if [ "${ENTERPRISE:+x}" == "x" ] ; then
     test_packages[15]+=" $base/vault/external_tests/namespaces"
+    test_packages[15]+=" $base/vault/external_tests/census"
 fi
 test_packages[15]+=" $base/vault/external_tests/sealmigrationext"
 
@@ -282,3 +291,9 @@ if [ "${ENTERPRISE:+x}" == "x" ] ; then
     test_packages[16]+=" $base/vault/external_tests/replicationext"
     test_packages[16]+=" $base/vault/external_tests/sealext"
 fi
+
+for i in $(cd $(git rev-parse --show-toplevel) && go list -test -json ./... |
+  jq -r '.ForTest | select(.!=null) | select(.|test("_binary$"))');
+do
+  test_packages[17]+=" $i"
+done

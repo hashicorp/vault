@@ -25,7 +25,7 @@ module('Integration | Component | page/pki-configure-create', function (hooks) {
       { label: 'configure' },
     ];
     this.config = this.store.createRecord('pki/action');
-    this.urls = this.store.createRecord('pki/urls');
+    this.urls = this.store.createRecord('pki/config/urls');
   });
 
   test('it renders', async function (assert) {

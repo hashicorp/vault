@@ -35,8 +35,8 @@ This endpoint configures the LDAP auth method.
   names will be normalized to lower case. Case will still be preserved when
   sending the username to the LDAP server at login time; this is only for
   matching local user/group definitions.
-- `connection_timeout` `(integer: 30 or string: "30s")` - Timeout, in seconds, 
-  when attempting to connect to the LDAP server before trying the next URL in 
+- `connection_timeout` `(integer: 30 or string: "30s")` - Timeout, in seconds,
+  when attempting to connect to the LDAP server before trying the next URL in
   the configuration.
 - `request_timeout` `(integer: 90 or string: "90s")` - Timeout, in seconds, for
   the connection when making requests against the server before returning back
@@ -97,11 +97,10 @@ This endpoint configures the LDAP auth method.
 - `dereference_aliases` `(string: never)` - When aliases should be dereferenced
   on search operations. Accepted values are 'never', 'finding', 'searching',
   'always'. Defaults to 'never'.
-- `max_page_size` `(int: math.MaxInt32)` - If set to a value greater than 0, the LDAP
+- `max_page_size` `(int: 0)` - If set to a value greater than 0, the LDAP
   backend will use the LDAP server's paged search control to request pages of
   up to the given size. This can be used to avoid hitting the LDAP server's
-  maximum result size limit. A value of 0 will be interpreted by the LDAP
-  server as unlimited. If set to -1, the LDAP backend will not use the
+  maximum result size limit. Otherwise, the LDAP backend will not use the
   paged search control.
 
 @include 'tokenfields.mdx'
@@ -448,7 +447,9 @@ This endpoint allows you to log in with LDAP credentials
 ### Parameters
 
 - `username` `(string: <required>)` – The username of the LDAP user
-- `password` `(string: <required>)` – The password for the LDAP user
+- `password` `(string: <required>)` – The password for the LDAP user. 
+When authenticating with the Vault CLI, i.e. `vault login -method=ldap username=mitchellh` 
+the password can alternatively be supplied via the `VAULT_LDAP_PASSWORD` environment variable.
 
 ### Sample Payload
 

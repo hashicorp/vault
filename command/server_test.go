@@ -286,6 +286,13 @@ func TestServer(t *testing.T) {
 			0,
 			[]string{"-test-verify-only"},
 		},
+		{
+			"recovery_mode",
+			testBaseHCL(t, "") + inmemHCL,
+			"",
+			0,
+			[]string{"-test-verify-only", "-recovery"},
+		},
 	}
 
 	for _, tc := range cases {
@@ -295,26 +302,21 @@ func TestServer(t *testing.T) {
 			t.Parallel()
 
 			ui, cmd := testServerCommand(t)
-			f, err := ioutil.TempFile("", "")
-			if err != nil {
-				t.Fatalf("error creating temp dir: %v", err)
-			}
-			f.WriteString(tc.contents)
-			f.Close()
-			defer os.Remove(f.Name())
+
+			f, err := os.CreateTemp(t.TempDir(), "")
+			require.NoErrorf(t, err, "error creating temp dir: %v", err)
+
+			_, err = f.WriteString(tc.contents)
+			require.NoErrorf(t, err, "cannot write temp file contents")
+
+			err = f.Close()
+			require.NoErrorf(t, err, "unable to close temp file")
 
 			args := append(tc.args, "-config", f.Name())
-
 			code := cmd.Run(args)
 			output := ui.ErrorWriter.String() + ui.OutputWriter.String()
-
-			if code != tc.code {
-				t.Errorf("expected %d to be %d: %s", code, tc.code, output)
-			}
-
-			if !strings.Contains(output, tc.exp) {
-				t.Fatalf("expected %q to contain %q", output, tc.exp)
-			}
+			require.Equal(t, tc.code, code, "expected %d to be %d: %s", code, tc.code, output)
+			require.Contains(t, output, tc.exp, "expected %q to contain %q", output, tc.exp)
 		})
 	}
 }
@@ -327,4 +329,67 @@ func TestServer_DevTLS(t *testing.T) {
 	output := ui.ErrorWriter.String() + ui.OutputWriter.String()
 	require.Equal(t, 0, retCode, output)
 	require.Contains(t, output, `tls: "enabled"`)
+}
+
+// TestConfigureDevTLS verifies the various logic paths that flow through the
+// configureDevTLS function.
+func TestConfigureDevTLS(t *testing.T) {
+	testcases := []struct {
+		ServerCommand   *ServerCommand
+		DeferFuncNotNil bool
+		ConfigNotNil    bool
+		TLSDisable      bool
+		CertPathEmpty   bool
+		ErrNotNil       bool
+		TestDescription string
+	}{
+		{
+			ServerCommand: &ServerCommand{
+				flagDevTLS: false,
+			},
+			ConfigNotNil:    true,
+			TLSDisable:      true,
+			CertPathEmpty:   true,
+			ErrNotNil:       false,
+			TestDescription: "flagDev is false, nothing will be configured",
+		},
+		{
+			ServerCommand: &ServerCommand{
+				flagDevTLS:        true,
+				flagDevTLSCertDir: "",
+			},
+			DeferFuncNotNil: true,
+			ConfigNotNil:    true,
+			ErrNotNil:       false,
+			TestDescription: "flagDevTLSCertDir is empty",
+		},
+		{
+			ServerCommand: &ServerCommand{
+				flagDevTLS:        true,
+				flagDevTLSCertDir: "@/#",
+			},
+			CertPathEmpty:   true,
+			ErrNotNil:       true,
+			TestDescription: "flagDevTLSCertDir is set to something invalid",
+		},
+	}
+
+	for _, testcase := range testcases {
+		fun, cfg, certPath, err := configureDevTLS(testcase.ServerCommand)
+		if fun != nil {
+			// If a function is returned, call it right away to clean up
+			// files created in the temporary directory before anything else has
+			// a chance to fail this test.
+			fun()
+		}
+
+		require.Equal(t, testcase.DeferFuncNotNil, (fun != nil), "test description %s", testcase.TestDescription)
+		require.Equal(t, testcase.ConfigNotNil, cfg != nil, "test description %s", testcase.TestDescription)
+		if testcase.ConfigNotNil {
+			require.True(t, len(cfg.Listeners) > 0, "test description %s", testcase.TestDescription)
+			require.Equal(t, testcase.TLSDisable, cfg.Listeners[0].TLSDisable, "test description %s", testcase.TestDescription)
+		}
+		require.Equal(t, testcase.CertPathEmpty, len(certPath) == 0, "test description %s", testcase.TestDescription)
+		require.Equal(t, testcase.ErrNotNil, (err != nil), "test description %s", testcase.TestDescription)
+	}
 }

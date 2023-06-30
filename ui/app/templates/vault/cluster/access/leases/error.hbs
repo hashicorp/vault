@@ -11,7 +11,10 @@
 {{/unless}}
 
 {{#if (eq this.model.httpStatus 400)}}
-  <AlertBanner @type="danger" @message="{{this.model.keyId}} is not a valid lease ID" />
+  <Hds::Alert @type="inline" @color="critical" class="has-bottom-margin-s" as |A|>
+    <A.Title>Error</A.Title>
+    <A.Description>{{this.model.keyId}} is not a valid lease ID.</A.Description>
+  </Hds::Alert>
 {{else if (eq this.model.httpStatus 404)}}
   <EmptyState
     @title="No leases with that ID"
@@ -32,6 +35,9 @@
   </EmptyState>
 {{else}}
   {{#each this.model.errors as |error|}}
-    <AlertBanner @type="danger" @message={{error}} />
+    <Hds::Alert @type="inline" @color="critical" class="has-bottom-margin-s" as |A|>
+      <A.Title>Error</A.Title>
+      <A.Description>{{error}}</A.Description>
+    </Hds::Alert>
   {{/each}}
 {{/if}}

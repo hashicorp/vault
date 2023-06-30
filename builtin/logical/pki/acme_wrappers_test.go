@@ -6,6 +6,7 @@ package pki
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -21,6 +22,11 @@ func TestACMEIssuerRoleLoading(t *testing.T) {
 	_, err := CBWrite(b, s, "config/cluster", map[string]interface{}{
 		"path":     "http://localhost:8200/v1/pki",
 		"aia_path": "http://localhost:8200/cdn/pki",
+	})
+	require.NoError(t, err)
+
+	_, err = CBWrite(b, s, "config/acme", map[string]interface{}{
+		"enabled": true,
 	})
 	require.NoError(t, err)
 
@@ -87,15 +93,20 @@ func TestACMEIssuerRoleLoading(t *testing.T) {
 				return nil, nil
 			})
 
+			var acmePath string
 			fieldRaw := map[string]interface{}{}
-			if tt.roleName != "" {
-				fieldRaw["role"] = tt.roleName
-			}
 			if tt.issuerName != "" {
 				fieldRaw[issuerRefParam] = tt.issuerName
+				acmePath = "issuer/" + tt.issuerName + "/"
+			}
+			if tt.roleName != "" {
+				fieldRaw["role"] = tt.roleName
+				acmePath = acmePath + "roles/" + tt.roleName + "/"
 			}
 
-			resp, err := f(context.Background(), &logical.Request{Storage: s}, &framework.FieldData{
+			acmePath = strings.TrimLeft(acmePath+"/acme/directory", "/")
+
+			resp, err := f(context.Background(), &logical.Request{Path: acmePath, Storage: s}, &framework.FieldData{
 				Raw:    fieldRaw,
 				Schema: getCsrSignVerbatimSchemaFields(),
 			})

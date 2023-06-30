@@ -32,6 +32,11 @@ on:
         description: A comma-separated list of additional build tags to consider satisfied during the build.
         required: false
         type: string
+      name:
+        description: A suffix to append to archived test results
+        required: false
+        default: ''
+        type: string
 
 env: ${{ fromJSON(inputs.env-vars) }}
 
@@ -39,10 +44,43 @@ jobs:
   test-generate-test-package-list:
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     name: Verify Test Package Distribution
+    permissions:
+      id-token: write  # Note: this permission is explicitly required for Vault auth
+      contents: read
     steps:
-    - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
+    - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+    - uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
+      with:
+        go-version-file: ./.go-version
+        cache: true
+    - name: Authenticate to Vault
+      id: vault-auth
+      if: github.repository == 'hashicorp/vault-enterprise'
+      run: vault-auth
+    - name: Fetch Secrets
+      id: secrets
+      if: github.repository == 'hashicorp/vault-enterprise'
+      uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e
+      with:
+        url: ${{ steps.vault-auth.outputs.addr }}
+        caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+        token: ${{ steps.vault-auth.outputs.token }}
+        secrets: |
+          kv/data/github/${{ github.repository }}/github-token username-and-token | github-token;
+    - id: setup-git-private
+      name: Setup Git configuration (private)
+      if: github.repository == 'hashicorp/vault-enterprise'
+      run: |
+        git config --global url."https://${{ steps.secrets.outputs.github-token }}@github.com".insteadOf https://github.com
+    - id: setup-git-public
+      name: Setup Git configuration (public)
+      if: github.repository != 'hashicorp/vault-enterprise'
+      run: |
+        git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
     - id: test
       working-directory: .github/scripts
+      env:
+        GOPRIVATE: github.com/hashicorp/*
       run: |
         ENTERPRISE=${{ inputs.enterprise }} ./test-generate-test-package-lists.sh
   runner-indexes:
@@ -60,83 +98,6 @@ jobs:
         INDEX_LIST="$(seq 1 ${{ inputs.total-runners }})"
         INDEX_JSON="$(jq --null-input --compact-output '. |= [inputs]' <<< "${INDEX_LIST}")"
         echo "indexes=${INDEX_JSON}" >> "${GITHUB_OUTPUT}"
-  build-vault:
-    permissions:
-      id-token: write  # Note: this permission is explicitly required for Vault auth
-      contents: read
-    runs-on: ${{ fromJSON(inputs.runs-on) }}
-    name: Build Vault dev binary
-    steps:
-    - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
-      if: |
-        ! contains(inputs.extra-flags, '-race') &&
-        ! contains(inputs.go-build-tags, 'fips') &&
-        github.repository != 'hashicorp/vault-enterprise'
-    - uses: actions/setup-go@d0a58c1c4d2b25278816e339b944508c875f3613
-      if: |
-        ! contains(inputs.extra-flags, '-race') &&
-        ! contains(inputs.go-build-tags, 'fips') &&
-        github.repository != 'hashicorp/vault-enterprise'
-      with:
-        go-version-file: ./.go-version
-        cache: true
-    - name: Authenticate to Vault
-      id: vault-auth
-      if: github.repository == 'hashicorp/vault-enterprise'
-      run: vault-auth
-    - name: Fetch Secrets
-      id: secrets
-      if: github.repository == 'hashicorp/vault-enterprise'
-      uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e
-      with:
-        url: ${{ steps.vault-auth.outputs.addr }}
-        caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
-        token: ${{ steps.vault-auth.outputs.token }}
-        secrets: |
-          kv/data/github/${{ github.repository }}/datadog-ci DATADOG_API_KEY;
-          kv/data/github/${{ github.repository }}/github-token username-and-token | github-token;
-          kv/data/github/${{ github.repository }}/license license_1 | VAULT_LICENSE_CI;
-          kv/data/github/${{ github.repository }}/license license_2 | VAULT_LICENSE_2;
-          kv/data/github/${{ github.repository }}/hcp-link HCP_API_ADDRESS;
-          kv/data/github/${{ github.repository }}/hcp-link HCP_AUTH_URL;
-          kv/data/github/${{ github.repository }}/hcp-link HCP_CLIENT_ID;
-          kv/data/github/${{ github.repository }}/hcp-link HCP_CLIENT_SECRET;
-          kv/data/github/${{ github.repository }}/hcp-link HCP_RESOURCE_ID;
-    - id: setup-git-private
-      name: Setup Git configuration (private)
-      if: github.repository == 'hashicorp/vault-enterprise'
-      run: |
-        git config --global url."https://${{ steps.secrets.outputs.github-token }}@github.com".insteadOf https://github.com
-    - id: setup-git-public
-      name: Setup Git configuration (public)
-      if: github.repository != 'hashicorp/vault-enterprise'
-      run: |
-        git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
-    - id: go-mod-download
-      if: |
-        ! contains(inputs.extra-flags, '-race') &&
-        ! contains(inputs.go-build-tags, 'fips') &&
-        github.repository != 'hashicorp/vault-enterprise'
-      env:
-        GOPRIVATE: github.com/hashicorp/*
-      run: time go mod download -x
-    - id: build
-      if: |
-        ! contains(inputs.extra-flags, '-race') &&
-        ! contains(inputs.go-build-tags, 'fips') &&
-        github.repository != 'hashicorp/vault-enterprise'
-      env:
-        GOPRIVATE: github.com/hashicorp/*
-      run: time make ci-bootstrap dev
-    - name: Save dev binary
-      if: |
-        ! contains(inputs.extra-flags, '-race') &&
-        ! contains(inputs.go-build-tags, 'fips') &&
-        github.repository != 'hashicorp/vault-enterprise'
-      uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce
-      with:
-        name: vault-dev
-        path: bin/vault
   test-go:
     permissions:
       id-token: write  # Note: this permission is explicitly required for Vault auth
@@ -144,7 +105,6 @@ jobs:
     name: "${{ matrix.runner-index }}"
     needs:
     - runner-indexes
-    - build-vault
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     strategy:
       fail-fast: false
@@ -158,8 +118,8 @@ jobs:
       GOPRIVATE: github.com/hashicorp/*
       TIMEOUT_IN_MINUTES: 60
     steps:
-      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
-      - uses: actions/setup-go@d0a58c1c4d2b25278816e339b944508c875f3613
+      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+      - uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
         with:
           go-version-file: ./.go-version
           cache: true
@@ -195,21 +155,16 @@ jobs:
         if: github.repository != 'hashicorp/vault-enterprise'
         run: |
           git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
-      - name: Retrieve vault dev binary
-        if: |
-          ! contains(inputs.extra-flags, '-race') &&
-          ! contains(inputs.go-build-tags, 'fips') &&
-          github.repository != 'hashicorp/vault-enterprise'
-        uses: actions/download-artifact@e9ef242655d12993efdcda9058dee2db83a2cb9b
-        with:
-          name: vault-dev
-          path: bin
-      - name: Make vault dev binary executable
-        if: |
-          ! contains(inputs.extra-flags, '-race') &&
-          ! contains(inputs.go-build-tags, 'fips') &&
-          github.repository != 'hashicorp/vault-enterprise'
-        run: chmod a+x bin/vault
+      - id: go-mod-download
+        if: matrix.runner-index > 16
+        env:
+          GOPRIVATE: github.com/hashicorp/*
+        run: time go mod download -x
+      - id: build
+        if: matrix.runner-index > 16
+        env:
+          GOPRIVATE: github.com/hashicorp/*
+        run: time make ci-bootstrap dev
       - id: run-go-tests
         name: Run Go tests
         timeout-minutes: ${{ fromJSON(env.TIMEOUT_IN_MINUTES) }}
@@ -288,13 +243,13 @@ jobs:
           datadog-ci junit upload --service "$GITHUB_REPOSITORY" test-results/go-test/results.xml
         if: always()
       - name: Archive test results
-        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
-          name: test-results-${{ matrix.runner-index }}
+          name: test-results${{ inputs.name }}-${{ matrix.runner-index }}
           path: test-results/
         if: always()
       - name: Create a summary of tests
-        uses: test-summary/action@62bc5c68de2a6a0d02039763b8c754569df99e3f
+        uses: test-summary/action@62bc5c68de2a6a0d02039763b8c754569df99e3f # TSCCR: no entry for repository "test-summary/action"
         with:
           paths: "test-results/go-test/results.xml"
           show: "fail"

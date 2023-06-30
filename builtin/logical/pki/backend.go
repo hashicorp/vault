@@ -218,6 +218,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 			// ACME
 			pathAcmeConfig(&b),
+			pathAcmeEabList(&b),
+			pathAcmeEabDelete(&b),
 		},
 
 		Secrets: []*framework.Secret{
@@ -245,6 +247,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 	acmePaths = append(acmePaths, pathAcmeChallenge(&b)...)
 	acmePaths = append(acmePaths, pathAcmeAuthorization(&b)...)
 	acmePaths = append(acmePaths, pathAcmeRevoke(&b)...)
+	acmePaths = append(acmePaths, pathAcmeNewEab(&b)...) // auth'd API that lives underneath the various /acme paths
 
 	for _, acmePath := range acmePaths {
 		b.Backend.Paths = append(b.Backend.Paths, acmePath)
@@ -265,6 +268,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/order/+")
 		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/order/+/finalize")
 		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/order/+/cert")
+		// We specifically do NOT add acme/new-eab to this as it should be auth'd
 	}
 
 	if constants.IsEnterprise {
@@ -345,7 +349,9 @@ type backend struct {
 	issuersLock sync.RWMutex
 
 	// Context around ACME operations
-	acmeState *acmeState
+	acmeState       *acmeState
+	acmeAccountLock sync.RWMutex // (Write) Locked on Tidy, (Read) Locked on Account Creation
+	// TODO: Stress test this - eg. creating an order while an account is being revoked
 }
 
 type roleOperation func(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error)
@@ -435,7 +441,7 @@ func (b *backend) initialize(ctx context.Context, _ *logical.InitializationReque
 	err = b.initializeStoredCertificateCounts(ctx)
 	if err != nil {
 		// Don't block/err initialize/startup for metrics.  Context on this call can time out due to number of certificates.
-		b.Logger().Error("Could not initialize stored certificate counts", err)
+		b.Logger().Error("Could not initialize stored certificate counts", "error", err)
 		b.certCountError = err.Error()
 	}
 
@@ -542,6 +548,8 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 	case key == "config/crl":
 		// We may need to reload our OCSP status flag
 		b.crlBuilder.markConfigDirty()
+	case key == storageAcmeConfig:
+		b.acmeState.markConfigDirty()
 	case key == storageIssuerConfig:
 		b.crlBuilder.invalidateCRLBuildTime()
 	case strings.HasPrefix(key, crossRevocationPrefix):
@@ -687,9 +695,14 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 		return nil
 	}
 
+	// First tidy any ACME nonces to free memory.
+	b.acmeState.DoTidyNonces()
+
+	// Then run unified transfer.
 	backgroundSc := b.makeStorageContext(context.Background(), b.storage)
 	go runUnifiedTransfer(backgroundSc)
 
+	// Then run the CRL rebuild and tidy operation.
 	crlErr := doCRL()
 	tidyErr := doAutoTidy()
 

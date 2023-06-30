@@ -30,16 +30,16 @@ default: dev
 bin: prep
 	@CGO_ENABLED=$(CGO_ENABLED) BUILD_TAGS='$(BUILD_TAGS) ui' sh -c "'$(CURDIR)/scripts/build.sh'"
 
-testonly: 
-	$(eval BUILD_TAGS += testonly)
-    
 # dev creates binaries for testing Vault locally. These are put
 # into ./bin/ as well as $GOPATH/bin
-dev: prep testonly
+dev: BUILD_TAGS+=testonly
+dev: prep
 	@CGO_ENABLED=$(CGO_ENABLED) BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
-dev-ui: assetcheck prep testonly
+dev-ui: BUILD_TAGS+=testonly
+dev-ui: assetcheck prep
 	@CGO_ENABLED=$(CGO_ENABLED) BUILD_TAGS='$(BUILD_TAGS) ui' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
-dev-dynamic: prep testonly
+dev-dynamic: BUILD_TAGS+=testonly
+dev-dynamic: prep
 	@CGO_ENABLED=1 BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
 
 # *-mem variants will enable memory profiling which will write snapshots of heap usage
@@ -54,14 +54,17 @@ dev-dynamic-mem: dev-dynamic
 
 # Creates a Docker image by adding the compiled linux/amd64 binary found in ./bin.
 # The resulting image is tagged "vault:dev".
-docker-dev: prep testonly
+docker-dev: BUILD_TAGS+=testonly
+docker-dev: prep
 	docker build --build-arg VERSION=$(GO_VERSION_MIN) --build-arg BUILD_TAGS="$(BUILD_TAGS)" -f scripts/docker/Dockerfile -t vault:dev .
 
-docker-dev-ui: prep testonly
+docker-dev-ui: BUILD_TAGS+=testonly
+docker-dev-ui: prep
 	docker build --build-arg VERSION=$(GO_VERSION_MIN) --build-arg BUILD_TAGS="$(BUILD_TAGS)" -f scripts/docker/Dockerfile.ui -t vault:dev-ui .
 
 # test runs the unit tests and vets the code
-test: prep testonly
+test: BUILD_TAGS+=testonly
+test: prep
 	@CGO_ENABLED=$(CGO_ENABLED) \
 	VAULT_ADDR= \
 	VAULT_TOKEN= \
@@ -69,13 +72,15 @@ test: prep testonly
 	VAULT_ACC= \
 	$(GO_CMD) test -tags='$(BUILD_TAGS)' $(TEST) $(TESTARGS) -timeout=$(TEST_TIMEOUT) -parallel=20
 
-testcompile: prep testonly
+testcompile: BUILD_TAGS+=testonly
+testcompile: prep
 	@for pkg in $(TEST) ; do \
 		$(GO_CMD) test -v -c -tags='$(BUILD_TAGS)' $$pkg -parallel=4 ; \
 	done
 
 # testacc runs acceptance tests
-testacc: prep testonly
+testacc: BUILD_TAGS+=testonly
+testacc: prep
 	@if [ "$(TEST)" = "./..." ]; then \
 		echo "ERROR: Set TEST to a specific package"; \
 		exit 1; \
@@ -83,7 +88,8 @@ testacc: prep testonly
 	VAULT_ACC=1 $(GO_CMD) test -tags='$(BUILD_TAGS)' $(TEST) -v $(TESTARGS) -timeout=$(EXTENDED_TEST_TIMEOUT)
 
 # testrace runs the race checker
-testrace: prep testonly
+testrace: BUILD_TAGS+=testonly
+testrace: prep
 	@CGO_ENABLED=1 \
 	VAULT_ADDR= \
 	VAULT_TOKEN= \
@@ -133,6 +139,21 @@ vet-godoctests: bootstrap tools/godoctests/.bin/godoctests
 ci-vet-godoctests: ci-bootstrap tools/godoctests/.bin/godoctests
 	@$(GO_CMD) vet -vettool=./tools/godoctests/.bin/godoctests $(TEST) 2>&1 | revgrep origin/main
 
+# tools/gonilnilfunctions/.bin/gonilnilfunctions builds the custom analyzer to check for nil, nil function returns
+tools/gonilnilfunctions/.bin/gonilnilfunctions:
+	@cd tools/gonilnilfunctions && $(GO_CMD) build -o .bin/gonilnilfunctions .
+
+# vet-gonilnilfunctions runs gonilnilfunctions on functions. All output gets piped to revgrep
+# which will only return an error if a new function returns nil, nil (where one of the nils could be an error)
+vet-gonilnilfunctions: bootstrap tools/gonilnilfunctions/.bin/gonilnilfunctions
+	@$(GO_CMD) vet -vettool=./tools/gonilnilfunctions/.bin/gonilnilfunctions ./... 2>&1 | revgrep
+
+# ci-vet-gonilnilfunctions runs gonilnilfunctions on functions. All output gets piped to revgrep
+# which will only return an error if a new function that is not on main has an issue
+ci-vet-gonilnilfunctions: ci-bootstrap tools/gonilnilfunctions/.bin/gonilnilfunctions
+	@$(GO_CMD) vet -vettool=./tools/gonilnilfunctions/.bin/gonilnilfunctions ./... 2>&1 | revgrep origin/main
+
+
 # lint runs vet plus a number of other checkers, it is more comprehensive, but louder
 lint:
 	@$(GO_CMD) list -f '{{.Dir}}' ./... | grep -v /vendor/ \
@@ -173,7 +194,7 @@ static-assets-dir:
 
 install-ui-dependencies:
 	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn --ignore-optional
+	@cd ui && yarn
 
 test-ember: install-ui-dependencies
 	@echo "--> Running ember tests"
@@ -275,7 +296,7 @@ hana-database-plugin:
 mongodb-database-plugin:
 	@CGO_ENABLED=0 $(GO_CMD) build -o bin/mongodb-database-plugin ./plugins/database/mongodb/mongodb-database-plugin
 
-.PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path packages build build-ci semgrep semgrep-ci vet-godoctests ci-vet-godoctests
+.PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path packages build build-ci semgrep semgrep-ci vet-godoctests ci-vet-godoctests vet-gonilnilfunctions ci-vet-gonilnilfunctions
 
 .NOTPARALLEL: ember-dist ember-dist-dev
 

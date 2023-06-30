@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -22,6 +23,41 @@ import (
 
 	"github.com/stretchr/testify/require"
 )
+
+func TestTidyConfigs(t *testing.T) {
+	t.Parallel()
+
+	var cfg tidyConfig
+	operations := strings.Split(cfg.AnyTidyConfig(), " / ")
+	t.Logf("Got tidy operations: %v", operations)
+
+	for _, operation := range operations {
+		b, s := CreateBackendWithStorage(t)
+
+		resp, err := CBWrite(b, s, "config/auto-tidy", map[string]interface{}{
+			"enabled": true,
+			operation: true,
+		})
+		requireSuccessNonNilResponse(t, resp, err, "expected to be able to enable auto-tidy operation "+operation)
+
+		resp, err = CBRead(b, s, "config/auto-tidy")
+		requireSuccessNonNilResponse(t, resp, err, "expected to be able to read auto-tidy operation for operation "+operation)
+		require.True(t, resp.Data[operation].(bool), "expected operation to be enabled after reading auto-tidy config "+operation)
+
+		resp, err = CBWrite(b, s, "tidy", map[string]interface{}{
+			operation: true,
+		})
+		requireSuccessNonNilResponse(t, resp, err, "expected to be able to start tidy operation with "+operation)
+		if len(resp.Warnings) > 0 {
+			t.Logf("got warnings while starting manual tidy: %v", resp.Warnings)
+			for _, warning := range resp.Warnings {
+				if strings.Contains(warning, "Manual tidy requested but no tidy operations were set.") {
+					t.Fatalf("expected to be able to enable tidy operation with just %v but got warning: %v / (resp=%v)", operation, warning, resp)
+				}
+			}
+		}
+	}
+}
 
 func TestAutoTidy(t *testing.T) {
 	t.Parallel()
@@ -408,6 +444,7 @@ func TestTidyIssuerConfig(t *testing.T) {
 	defaultConfigMap["safety_buffer"] = int(time.Duration(defaultConfigMap["safety_buffer"].(float64)) / time.Second)
 	defaultConfigMap["pause_duration"] = time.Duration(defaultConfigMap["pause_duration"].(float64)).String()
 	defaultConfigMap["revocation_queue_safety_buffer"] = int(time.Duration(defaultConfigMap["revocation_queue_safety_buffer"].(float64)) / time.Second)
+	defaultConfigMap["acme_account_safety_buffer"] = int(time.Duration(defaultConfigMap["acme_account_safety_buffer"].(float64)) / time.Second)
 
 	require.Equal(t, defaultConfigMap, resp.Data)
 

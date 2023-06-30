@@ -482,7 +482,7 @@ func TestCore_RunLockedUserUpdatesForValidEntry(t *testing.T) {
 		mountAccessor: "mountAccessor1",
 	}
 
-	failedLoginInfoFromMap := core.GetUserFailedLoginInfo(context.Background(), loginUserInfoKey)
+	failedLoginInfoFromMap := core.LocalGetUserFailedLoginInfo(context.Background(), loginUserInfoKey)
 	if failedLoginInfoFromMap == nil {
 		t.Fatalf("err: entry must exist for locked user in userFailedLoginInfo map")
 	}

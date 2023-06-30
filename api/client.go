@@ -185,6 +185,9 @@ type Config struct {
 	// CloneToken from parent.
 	CloneToken bool
 
+	// CloneTLSConfig from parent (tls.Config).
+	CloneTLSConfig bool
+
 	// ReadYourWrites ensures isolated read-after-write semantics by
 	// providing discovered cluster replication states in each request.
 	// The shared state is automatically propagated to all Client clones.
@@ -290,7 +293,14 @@ func (c *Config) configureTLS(t *TLSConfig) error {
 	if c.HttpClient == nil {
 		c.HttpClient = DefaultConfig().HttpClient
 	}
-	clientTLSConfig := c.HttpClient.Transport.(*http.Transport).TLSClientConfig
+
+	transport, ok := c.HttpClient.Transport.(*http.Transport)
+	if !ok {
+		return fmt.Errorf(
+			"unsupported HTTPClient transport type %T", c.HttpClient.Transport)
+	}
+
+	clientTLSConfig := transport.TLSClientConfig
 
 	var clientCert tls.Certificate
 	foundClientCert := false
@@ -1143,6 +1153,26 @@ func (c *Client) ReadYourWrites() bool {
 	return c.config.ReadYourWrites
 }
 
+// SetCloneTLSConfig from parent.
+func (c *Client) SetCloneTLSConfig(clone bool) {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	c.config.CloneTLSConfig = clone
+}
+
+// CloneTLSConfig gets the configured CloneTLSConfig value.
+func (c *Client) CloneTLSConfig() bool {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
+
+	return c.config.CloneTLSConfig
+}
+
 // Clone creates a new client with the same configuration. Note that the same
 // underlying http.Client is used; modifying the client from more than one
 // goroutine at once may not be safe, so modify the client as needed and then
@@ -1189,6 +1219,11 @@ func (c *Client) clone(cloneHeaders bool) (*Client, error) {
 		CloneToken:     config.CloneToken,
 		ReadYourWrites: config.ReadYourWrites,
 	}
+
+	if config.CloneTLSConfig {
+		newConfig.clientTLSConfig = config.clientTLSConfig
+	}
+
 	client, err := NewClient(newConfig)
 	if err != nil {
 		return nil, err
@@ -1280,8 +1315,9 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 // a Vault server not configured with this client. This is an advanced operation
 // that generally won't need to be called externally.
 //
-// Deprecated: This method should not be used directly. Use higher level
-// methods instead.
+// Deprecated: RawRequest exists for historical compatibility and should not be
+// used directly. Use client.Logical().ReadRaw(...) or higher level methods
+// instead.
 func (c *Client) RawRequest(r *Request) (*Response, error) {
 	return c.RawRequestWithContext(context.Background(), r)
 }
@@ -1290,8 +1326,9 @@ func (c *Client) RawRequest(r *Request) (*Response, error) {
 // a Vault server not configured with this client. This is an advanced operation
 // that generally won't need to be called externally.
 //
-// Deprecated: This method should not be used directly. Use higher level
-// methods instead.
+// Deprecated: RawRequestWithContext exists for historical compatibility and
+// should not be used directly. Use client.Logical().ReadRawWithContext(...)
+// or higher level methods instead.
 func (c *Client) RawRequestWithContext(ctx context.Context, r *Request) (*Response, error) {
 	// Note: we purposefully do not call cancel manually. The reason is
 	// when canceled, the request.Body will EOF when reading due to the way

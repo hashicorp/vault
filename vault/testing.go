@@ -191,7 +191,7 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 }
 
 func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := logging.NewVaultLogger(log.Trace).Named(t.Name())
 	physicalBackend, err := physInmem.NewInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)
@@ -801,6 +801,10 @@ type TestCluster struct {
 	opts              *TestClusterOptions
 }
 
+func (c *TestCluster) SetRootToken(token string) {
+	c.RootToken = token
+}
+
 func (c *TestCluster) Start() {
 }
 
@@ -1213,6 +1217,9 @@ type TestClusterOptions struct {
 
 	// if populated, the callback is called for every request
 	RequestResponseCallback func(logical.Backend, *logical.Request, *logical.Response)
+
+	// ABCDLoggerNames names the loggers according to our ABCD convention when generating 4 clusters
+	ABCDLoggerNames bool
 }
 
 type TestPluginConfig struct {
@@ -2257,6 +2264,10 @@ func (c *TestCluster) GetRecoveryKeys() [][]byte {
 
 func (c *TestCluster) NamedLogger(name string) log.Logger {
 	return c.Logger.Named(name)
+}
+
+func (c *TestCluster) GetRootToken() string {
+	return c.RootToken
 }
 
 func (c *TestClusterCore) Name() string {
