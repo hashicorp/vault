@@ -7,16 +7,15 @@ import Component from '@glimmer/component';
 
 /**
  * @module PolicyExample
- * PolicyExample component is meant to render within a PolicyForm component to show an example of a policy.
- * edit this *** 
- * PolicyExample does not render in a modal, as it is wrapped in a conditional within PolicyForm.
- * 
+ * PolicyExample component is meant to show an example of a policy. The PolicyExample can rendered by the PolicyTemplate
+ * component (as in the first example below). PolicyExample can also be rendered in a modal (second example below), which
+ * is how it is conditionally rendered by the PolicyForm component.
  *
  * @example
- *  <PolicyExample 
- *    @policyType={{@model.policyType}} 
+ *  <PolicyExample
+ *    @policyType={{@model.policyType}}
  *  />
- * 
+ *
  * @example (in modal)
  *  <Modal
  *    @onClose={{fn (mut this.showTemplateModal) false}}
@@ -25,20 +24,18 @@ import Component from '@glimmer/component';
  *    <section class="modal-card-body">
  *      {{! code-mirror modifier does not render value initially until focus event fires }}
  *      {{! wait until the Modal is rendered and then show the PolicyExample (contains JsonEditor) }}
-        {{#if this.showTemplateModal}}
-          <PolicyExample @policyType={{@model.policyType}}/>
-        {{/if}}
-      </section>
-      <div class="modal-card-head has-border-top-light">
-        <button type="button" class="button" {{on "click" (fn (mut this.showTemplateModal) false)}} data-test-close-modal>
-          Close
-        </button>
-      </div>
-    </Modal>
+ *      {{#if this.showTemplateModal}}
+ *        <PolicyExample @policyType={{@model.policyType}}/>
+ *      {{/if}}
+ *    </section>
+ *    <div class="modal-card-head has-border-top-light">
+ *      <button type="button" class="button" {{on "click" (fn (mut this.showTemplateModal) false)}} data-test-close-modal>
+ *        Close
+ *      </button>
+ *    </div>
+ *  </Modal>
  * ```
- * talk about getter, policyTemplate, policyType ?
  * @param {string} policyType - policy type to decide which template to render; can either be "acl" or "rgp"
- * 
  */
 
 export default class PolicyExampleComponent extends Component {
