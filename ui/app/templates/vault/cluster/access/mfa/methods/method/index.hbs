@@ -43,7 +43,6 @@
         @buttonClasses="toolbar-link"
         @disabled={{not (is-empty this.model.enforcements)}}
         @onConfirmAction={{this.deleteMethod}}
-        @confirmTitle="Are you sure?"
         @confirmMessage="Deleting this MFA configuration is permanent, and it will no longer be available."
         @confirmButtonText="Delete"
       />

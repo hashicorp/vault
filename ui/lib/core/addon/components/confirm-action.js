@@ -22,13 +22,14 @@ import { tracked } from '@glimmer/tracking';
  * ```
  *
  * @param {Func} onConfirmAction - The action to take upon confirming.
- * @param {String} [confirmTitle=Delete this?] - The title to display in the confirmation modal.
+ * @param {String} [confirmTitle=Are you sure?] - The title to display in the confirmation modal.
  * @param {String} [confirmMessage=You will not be able to recover it later.] - The message to display when confirming.
  * @param {String} [confirmButtonText=Delete] - The confirm button text.
  * @param {String} [cancelButtonText=Cancel] - The cancel button text.
  * @param {String} [buttonClasses] - A string to indicate the button class.
  * @param {Boolean} [isRunning] - Disables the confirm button if action is still running
  * @param {Boolean} [disabled] - To disable the confirm button.
+ * @param {String} [color=critical] - Changes the color of modal and confirm button
  *
  */
 
