@@ -61,8 +61,6 @@ jobs:
       - name: Build Vault
         uses: hashicorp/actions-go-build@v0
         env:
-          BASE_VERSION: ${{ inputs.vault-base-version }}
-          PRERELEASE_VERSION: ${{ inputs.vault-prerelease-version }}
           GO_TAGS: ${{ inputs.go-tags }}
           CGO_ENABLED: ${{ inputs.cgo-enabled }}
         with:

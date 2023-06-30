@@ -3,6 +3,11 @@
 
 package version
 
+import (
+	_ "embed"
+	"strings"
+)
+
 var (
 	// The git commit that was compiled. This will be filled in by the compiler.
 	GitCommit   string
@@ -17,7 +22,8 @@ var (
 	// Version info is now being read from the VERSION file and passed in with ldflags,
 	// as part of the binary build process in CI.
 	// The default values below will be used during local builds.
-	Version           = "0.0.0"
-	VersionPrerelease = "dev1"
-	VersionMetadata   = ""
+	//go:embed VERSION
+	fullVersion                   string
+	Version, VersionPrerelease, _ = strings.Cut(strings.TrimSpace(fullVersion), "-")
+	VersionMetadata               = ""
 )

@@ -51,9 +51,7 @@ function build_ui() {
 
 # Build Vault
 function build() {
-  local version
   local revision
-  local prerelease
   local build_date
   local ldflags
   local msg
@@ -77,18 +75,7 @@ function build() {
     ldflags=""
   fi
 
-  # if building locally with enos - don't need to set version/prerelease/metadata as the default from version_base.go will be used
   ldflags="${ldflags} -X github.com/hashicorp/vault/version.GitCommit=$revision -X github.com/hashicorp/vault/version.BuildDate=$build_date"
-
-  if [[ ${BASE_VERSION+x} ]]; then
-    msg="${msg}, base version ${BASE_VERSION}"
-    ldflags="${ldflags} -X github.com/hashicorp/vault/version.Version=$BASE_VERSION"
-  fi
-
-  if [[ ${PRERELEASE_VERSION+x} ]]; then
-    msg="${msg}, prerelease ${PRERELEASE_VERSION}"
-    ldflags="${ldflags} -X github.com/hashicorp/vault/version.VersionPrerelease=$PRERELEASE_VERSION"
-  fi
 
   if [[ ${VERSION_METADATA+x} ]]; then
     msg="${msg}, metadata ${VERSION_METADATA}"

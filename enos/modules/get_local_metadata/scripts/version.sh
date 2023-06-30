@@ -35,8 +35,8 @@ function version_base() {
     return
   fi
 
-  : "${VERSION_FILE:=$(repo_root)/version/version_base.go}"
-  awk '$1 == "Version" && $2 == "=" { gsub(/"/, "", $3); print $3 }' < "$VERSION_FILE"
+  : "${VERSION_FILE:=$(repo_root)/version/VERSION}"
+  awk -F- '{ print $1 }' < "$VERSION_FILE"
 }
 
 # Get the version pre-release
@@ -48,8 +48,8 @@ function version_pre() {
     return
   fi
 
-  : "${VERSION_FILE:=$(repo_root)/version/version_base.go}"
-  awk '$1 == "VersionPrerelease" && $2 == "=" { gsub(/"/, "", $3); print $3 }' < "$VERSION_FILE"
+  : "${VERSION_FILE:=$(repo_root)/version/VERSION}"
+  awk -F- '{ print $2 }' < "$VERSION_FILE"
 }
 
 # Get the version metadata, which is commonly the edition

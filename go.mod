@@ -51,6 +51,7 @@ require (
 	github.com/denisenkom/go-mssqldb v0.12.2
 	github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74
 	github.com/dustin/go-humanize v1.0.0
+	github.com/elazarl/go-bindata-assetfs v1.0.1
 	github.com/fatih/color v1.15.0
 	github.com/fatih/structs v1.1.0
 	github.com/favadi/protoc-go-inject-tag v1.4.0
