@@ -7,9 +7,9 @@ description: |-
 
 # Vault 1.7.0
 
-## Vault 1.7 Release Highlights
+## Vault 1.7 release highlights
 
-### Secrets Engine Enhancements
+### Secrets engine enhancements
 
 - **Tokenization (Enterprise ADP Module)**: General Availability of a new transformation method for tokenizing sensitive data stored in un-trusted/semi-trusted systems. Tokenization is available as part of the “Advanced Data Protection” module in Vault Enterprise. Tokenization provides non-reversible data protection pursuant to requirements for data irreversibility (PCI-DSS, GDPR, etc.).
 - **Key Management Secrets Engine General Availability (Enterprise ADP Module):** A new Key Management Secrets Engine to help manage and securely distribute keys to various cloud KMS services. This feature is to be used in conjunction with Microsoft’s Azure KeyVault (GA) and AWS KMS (Beta).
@@ -18,7 +18,7 @@ description: |-
 - **TFE/TFC Secrets Engine:** New secrets engine to allow TFE/TFC users to generate short-lived ephemeral user/team or organization tokens credentials to be used in their pipelines.
 - **Active Directory Dynamic Credentials:** Allows for creation of short lived AD accounts when using the OpenLDAP engine in "AD" mode.
 
-### Storage Backend Enhancements
+### Storage backend enhancements
 
 - **Integrated Storage Autopilot:** New autopilot enhancements to simplify and automate the cluster management operational experience. These include:
   - Checks to monitor node health and status
@@ -27,12 +27,12 @@ description: |-
     For Vault Enterprise, autopilot will automatically include non-voter considerations to the above functionality.
 - **Aerospike Storage Backend:** Support for using Aerospike as a community supported storage backend option.
 
-### Security and Cryptography Enhancements
+### Security and cryptography enhancements
 
 - **Barrier Auto Key Rotation:** Updates to allow Vault to automatically rotate to a new barrier key for future encryption after crossing the 2^32 encryption threshold, thereby improving security.
 - **KMIP Entropy Augmentation (Enterprise ADP Module):** The ability to use entropy augmentation to generate KMIP certificates.
 
-### Vault Metrics Enhancements
+### Vault metrics enhancements
 
 - **Usage Metrics Visibility:**
   - Vault Auditor now includes the active KMIP certificate count as part of the client usage metrics.
@@ -40,7 +40,7 @@ description: |-
   - Added API for partial month client count.
 - **Telemetry Metrics:** Added new metrics related to lease expiration.
 
-### Performance and Reliability Improvements
+### Performance and reliability improvements
 
 - **Expiration Manager Improvements:** Improved how Vault resources are consumed during lease revocations.
 - **Client Controlled Consistency (Enterprise):** New options to use configurable headers to control the consistency of reads after writes to performance secondary clusters and performance standby nodes.
@@ -56,7 +56,7 @@ description: |-
   - Added support for an agent persistent cache to allow for a graceful handoff between init and sidecar containers when using vault-k8s (mutating admissions controller) for secrets injection.
 - **Operator enhancement:** The Vault status command (which prints the current state of Vault including whether it is sealed and if HA mode is enabled) now works when a namespace is set.
 
-## Known Issues
+## Known issues
 
 - There is a known issue that may cause Autopilot to be unable to determine the leader node. This occurs if the IP in the raft peer list is different from the configured cluster address. If affected you should disable Autopilot by setting the VAULT_RAFT_AUTOPILOT_DISABLE environment variable to 1.
 - Autopilot is not currently supported with Integrated Storage's HA-only mode or with DR secondary clusters.

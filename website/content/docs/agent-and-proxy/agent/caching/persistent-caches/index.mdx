@@ -4,7 +4,7 @@ page_title: Vault Agent Persistent Caching
 description: Vault Agent Caching
 ---
 
-# Vault Agent Persistent Caching
+# Vault agent persistent caching
 
 Vault Agent can restore tokens and leases from a persistent cache file created
 by a previous Vault Agent process. The persistent cache is a BoltDB file that
@@ -26,16 +26,16 @@ ensures template requests are cached and restored properly.
 -> **Note** Vault Agent persistent cache is currently supported only in a
 Kubernetes environment.
 
-## Vault Agent Persistent Cache Types
+## Vault agent persistent cache types
 
 Please see the sidebar for available types and their usage/configuration.
 
-## Persistent Cache Example Configuration
+## Persistent cache example configuration
 
 Here is an example of a persistent cache configuration.
 
 ```hcl
-# Other Vault Agent configuration blocks
+# Other Vault agent configuration blocks
 # ...
 
 cache {
