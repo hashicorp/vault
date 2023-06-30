@@ -15,6 +15,7 @@ import { assert } from '@ember/debug';
 const SUPPORTED_BACKENDS = supportedSecretBackends();
 
 export default Route.extend({
+  auth: service(),
   store: service(),
   templateName: 'vault/cluster/secrets/backend/list',
   pathHelp: service('path-help'),
@@ -106,7 +107,35 @@ export default Route.extend({
     return types[type];
   },
 
+  activate() {
+    performance.mark('list-end');
+  },
+
+  getSecrets(q) {
+    // console.log('1. Original', q);
+    // const { modelType, ...query } = q;
+    // return this.store.lazyPaginatedQuery(modelType, query);
+
+    // console.log('2. Simple query');
+    // return this.store.query(q.modelType, {
+    //   id: q.id,
+    //   backend: q.backend,
+    // });
+
+    // console.log('3. POJO');
+    // return this.auth
+    //   .ajax('/v1/transit/keys/?list=true', 'GET', {})
+    //   .then((resp) => resp.data.keys.map((key) => ({ id: key })));
+
+    console.log('4. New list data');
+    const { modelType, secret, backend } = q;
+    return this.store
+      .queryRecord('secret-list', { modelType, secret, backend })
+      .then((model) => model.secrets);
+  },
+
   async model(params) {
+    performance.mark('list-load');
     const secret = this.secretParam() || '';
     const backend = this.enginePathParam();
     const backendModel = this.modelFor('vault.cluster.secrets.backend');
@@ -114,14 +143,14 @@ export default Route.extend({
 
     return hash({
       secret,
-      secrets: this.store
-        .lazyPaginatedQuery(modelType, {
-          id: secret,
-          backend,
-          responsePath: 'data.keys',
-          page: params.page || 1,
-          pageFilter: params.pageFilter,
-        })
+      secrets: this.getSecrets({
+        modelType,
+        id: secret,
+        backend,
+        responsePath: 'data.keys',
+        page: params.page || 1,
+        pageFilter: params.pageFilter,
+      })
         .then((model) => {
           this.set('noMetadataPermissions', false);
           this.set('has404', false);

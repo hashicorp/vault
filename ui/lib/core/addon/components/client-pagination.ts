@@ -2,10 +2,10 @@ import { action } from '@ember/object';
 import { pluralize } from 'ember-inflector';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import config from 'vault/config/environment';
+// import config from 'vault/config/environment';
 import MutableArray from '@ember/array/mutable';
 
-const { DEFAULT_PAGE_SIZE } = config.APP;
+// const { DEFAULT_PAGE_SIZE } = config.APP;
 
 const getSliceIdxForCurrentPage = (pageSize: number, currentPage: number) => {
   const pageIndex = currentPage - 1;
@@ -44,8 +44,8 @@ interface Args {
  */
 export default class ClientPaginationComponent extends Component<Args> {
   @tracked currentPage = 1;
-  @tracked pageSize = DEFAULT_PAGE_SIZE as number;
-  pageThreshold = DEFAULT_PAGE_SIZE as number;
+  @tracked pageSize = 10 as number;
+  pageThreshold = 10 as number;
 
   get itemNoun() {
     return this.args.itemNoun || 'item';
@@ -66,6 +66,7 @@ export default class ClientPaginationComponent extends Component<Args> {
   }
 
   get shownItems() {
+    console.log('shown items');
     if (!this.args.items) return [];
     const [first, last] = getSliceIdxForCurrentPage(this.pageSize, this.currentPage);
     return this.args.items.slice(first, last);
@@ -78,5 +79,17 @@ export default class ClientPaginationComponent extends Component<Args> {
     this.pageSize = pageSize;
     // when page size changes, go back to first page
     this.currentPage = 1;
+  }
+  constructor(owner: unknown, args: Args) {
+    performance.mark('paginated-start');
+    super(owner, args);
+  }
+  @action didInsert() {
+    // performance.mark('paginated-end');
+    // const dataFetchMeasure = performance.measure('data-load-duration', 'list-load', 'list-end');
+    // const pagMeasure = performance.measure('pagination-duration', 'paginated-start', 'paginated-end');
+    // const fullMeasure = performance.measure('full-measure', 'list-load', 'paginated-end');
+    // console.log('Data Fetch | Pagination | Load to render');
+    // console.log(`| ${dataFetchMeasure.duration} | ${pagMeasure.duration} | ${fullMeasure.duration} |`);
   }
 }

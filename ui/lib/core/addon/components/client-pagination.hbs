@@ -1,22 +1,20 @@
-{{#if (is-empty @items)}}
-  <EmptyState @message={{this.emptyMessage}} @title={{this.emptyTitle}}>
-    {{yield to="emptyActions"}}
-  </EmptyState>
-{{else}}
-  {{#each this.shownItems as |item|}}
-    <div>
+<div {{did-insert this.didInsert}}>
+  {{#if (is-empty @items)}}
+    {{yield to="empty"}}
+  {{else}}
+    {{#each this.shownItems as |item|}}
       {{yield item to="item"}}
-    </div>
-  {{/each}}
-  {{#if (gt @items.length this.pageThreshold)}}
-    <div class="has-top-margin-m">
-      <Hds::Pagination::Numbered
-        @totalItems={{@items.length}}
-        @currentPageSize={{this.pageSize}}
-        @onPageChange={{this.handlePageChange}}
-        @onPageSizeChange={{this.handlePageSizeChange}}
-        data-test-client-pagination-control
-      />
-    </div>
+    {{/each}}
+    {{#if (gt @items.length this.pageThreshold)}}
+      <div class="has-top-margin-m has-bottom-margin-m">
+        <Hds::Pagination::Numbered
+          @totalItems={{@items.length}}
+          @currentPageSize={{this.pageSize}}
+          @onPageChange={{this.handlePageChange}}
+          @onPageSizeChange={{this.handlePageSizeChange}}
+          data-test-client-pagination-control
+        />
+      </div>
+    {{/if}}
   {{/if}}
-{{/if}}
+</div>

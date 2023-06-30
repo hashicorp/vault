@@ -18,8 +18,12 @@ export default Route.extend(UnloadModel, {
       return this._super(...arguments);
     });
   },
+  activate() {
+    performance.mark('namespace-finished');
+  },
 
   model() {
+    performance.mark('namespace-load');
     if (this.version.hasNamespaces) {
       return this.store.findAll('namespace').catch((err) => {
         if (err.httpStatus === 404) {
