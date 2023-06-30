@@ -7,4 +7,5 @@ self-hosted-runner:
     - small
     - large
     - ondemand
-
+    - linux
+    - x64
