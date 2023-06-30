@@ -35,7 +35,7 @@ func TestIsSudoPath(t *testing.T) {
 			"/sys/auth/path/in/middle/tune",
 			true,
 		},
-		// Testing: sys/plugins/catalog/{type} and sys/plugins/catalog/{name} (regexs overlap)
+		// Testing: sys/plugins/catalog/{type} and sys/plugins/catalog/{name} (regexes overlap)
 		{
 			"/sys/plugins/catalog/some-type",
 			true,
