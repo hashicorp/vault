@@ -3,13 +3,12 @@
   <ToolbarActions>
     {{#if this.model.updatePath.canUpdate}}
       <ConfirmAction
+        @buttonText="Delete role"
         @buttonClasses="toolbar-link"
         @onConfirmAction={{this.deleteRole}}
         @confirmMessage={{concat "Are you sure you want to delete " this.model.id "?"}}
         @cancelButtonText="Cancel"
-      >
-        Delete role
-      </ConfirmAction>
+      />
       <div class="toolbar-separator"></div>
     {{/if}}
     {{#if this.model.updatePath.canUpdate}}

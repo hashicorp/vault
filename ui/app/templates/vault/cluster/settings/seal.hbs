@@ -16,6 +16,7 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <ConfirmAction
+      @buttonText="Seal"
       @buttonClasses="button is-primary"
       @confirmTitle="Seal this cluster?"
       @confirmMessage="You will not be able to read or write any data until the cluster is unsealed again."
@@ -23,9 +24,7 @@
       @horizontalPosition="auto-left"
       @onConfirmAction={{action "seal"}}
       data-test-seal="true"
-    >
-      Seal
-    </ConfirmAction>
+    />
   </div>
 {{else}}
   <EmptyState @title="This token does not have sufficient capabilities to seal this vault" />

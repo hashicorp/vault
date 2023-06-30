@@ -4,6 +4,7 @@
       <ToolTip @verticalPosition="above" as |T|>
         <T.Trigger tabindex="-1">
           <ConfirmAction
+            @buttonText="Delete key"
             data-test-oidc-key-delete
             @disabled={{eq this.model.name "default"}}
             @buttonClasses="toolbar-link"
@@ -11,9 +12,7 @@
             @confirmTitle="Delete key?"
             @confirmMessage="This key will be permanently deleted. You will not be able to recover it."
             @confirmButtonText="Delete"
-          >
-            Delete key
-          </ConfirmAction>
+          />
         </T.Trigger>
         {{#if (eq this.model.name "default")}}
           <T.Content @defaultClass="tool-tip smaller-font">
@@ -27,6 +26,7 @@
     {{/if}}
     {{#if this.model.canRotate}}
       <ConfirmAction
+        @buttonText="Rotate key"
         data-test-oidc-key-rotate
         @buttonClasses="toolbar-link"
         @onConfirmAction={{perform this.rotateKey}}
@@ -34,9 +34,7 @@
         @confirmMessage="After rotation, a new public/private key pair will be generated."
         @confirmButtonText="Rotate"
         @isRunning={{this.rotateKey.isRunning}}
-      >
-        Rotate key
-      </ConfirmAction>
+      />
     {{/if}}
     {{#if this.model.canEdit}}
       <ToolbarLink @route="vault.cluster.access.oidc.keys.key.edit" @model={{this.model.name}} data-test-oidc-key-edit>

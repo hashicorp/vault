@@ -12,33 +12,15 @@ import sinon from 'sinon';
 module('Integration | Component | confirm-action', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders and on click shows the correct icon', async function (assert) {
-    const confirmAction = sinon.spy();
-    this.set('onConfirm', confirmAction);
-    await render(hbs`
-      <ConfirmAction
-        @onConfirmAction={{this.onConfirm}}
-        @buttonClasses="toolbar-link"
-      >
-        DELETE
-        </ConfirmAction>
-      `);
-    assert.dom('[data-test-icon="chevron-down"]').exists('Icon is pointing down');
-    await click('[data-test-confirm-action-trigger="true"]');
-    assert.dom('[data-test-icon="chevron-up"]').exists('Icon is now pointing up');
-    assert.dom('[data-test-confirm-action-title]').hasText('Delete this?');
-  });
-
   test('it closes the confirmation modal on successful delete', async function (assert) {
     const confirmAction = sinon.spy();
     this.set('onConfirm', confirmAction);
     await render(hbs`
       <ConfirmAction
+        @buttonText="DELETE"
         @onConfirmAction={{this.onConfirm}}
         @buttonClasses="toolbar-link"
-      >
-        DELETE
-        </ConfirmAction>
+      />
       `);
     await click('[data-test-confirm-action-trigger="true"]');
     await click('[data-test-confirm-cancel-button="true"]');

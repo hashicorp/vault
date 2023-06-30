@@ -45,13 +45,12 @@
             <ToolTip @verticalPosition="above" @horizontalPosition="center" as |T|>
               <T.Trigger data-test-tooltip-trigger>
                 <ConfirmAction
+                  @buttonText="Delete provider"
                   @buttonClasses="toolbar-link"
                   @onConfirmAction={{this.onDelete}}
                   @disabled={{@model.keys.length}}
                   data-test-kms-provider-delete={{true}}
-                >
-                  Delete provider
-                </ConfirmAction>
+                />
               </T.Trigger>
               {{#if @model.keys.length}}
                 <T.Content class="tool-tip">

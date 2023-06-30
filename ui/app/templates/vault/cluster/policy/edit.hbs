@@ -30,9 +30,7 @@
           @confirmMessage="This may affect access to Vault data."
           @onConfirmAction={{this.deletePolicy}}
           data-test-policy-delete="true"
-        >
-          Delete
-        </ConfirmAction>
+        />
         <div class="toolbar-separator"></div>
       {{/if}}
       <ToolbarLink @route="vault.cluster.policy.show" @model={{this.model.id}} data-test-policy-edit-toggle>

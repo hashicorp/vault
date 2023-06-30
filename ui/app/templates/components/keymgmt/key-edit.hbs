@@ -72,6 +72,7 @@
         {{/if}}
         {{#if @model.provider}}
           <ConfirmAction
+            @buttonText="Remove key"
             @buttonClasses="toolbar-link"
             @onConfirmAction={{perform this.removeKey}}
             @confirmTitle="Remove this key?"
@@ -79,14 +80,13 @@
             @confirmButtonText="Remove"
             @isRunning={{this.removeKey.isRunning}}
             data-test-keymgmt-key-remove
-          >
-            Remove key
-          </ConfirmAction>
+          />
         {{/if}}
         {{#if (or @model.canDelete @model.provider)}}
           <div class="toolbar-separator"></div>
         {{/if}}
         <ConfirmAction
+          @buttonText="Rotate key"
           @buttonClasses="toolbar-link"
           @onConfirmAction={{perform this.rotateKey}}
           @confirmTitle="Rotate this key?"
@@ -94,9 +94,7 @@
           @confirmButtonText="Rotate"
           @isRunning={{this.rotateKey.isRunning}}
           data-test-keymgmt-key-rotate
-        >
-          Rotate key
-        </ConfirmAction>
+        />
         {{#if @model.canEdit}}
           <ToolbarSecretLink
             @secret={{@model.id}}

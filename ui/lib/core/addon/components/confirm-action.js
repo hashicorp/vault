@@ -15,10 +15,10 @@ import { tracked } from '@glimmer/tracking';
  * @example
  * ```js
  *  <ConfirmAction
+ *    @buttonText="Delete item"
  *    @onConfirmAction={{ () => { console.log('Action!') } }}
- *    @confirmMessage="Are you sure you want to delete this config?">
- *    Delete
- *  </ConfirmAction>
+ *    @confirmMessage="Are you sure you want to delete this config?"
+ *  />
  * ```
  *
  * @param {Func} onConfirmAction - The action to take upon confirming.

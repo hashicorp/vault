@@ -31,15 +31,14 @@
         {{/if}}
         {{#if @model.canReset}}
           <ConfirmAction
+            @buttonText="Reset connection"
             @buttonClasses="toolbar-link"
             @onConfirmAction={{action "reset"}}
             @confirmTitle="Reset connection?"
             @confirmMessage="This will close the connection and its underlying plugin and restart it with the configuration stored in the barrier."
             @confirmButtonText="Reset"
             data-test-database-connection-reset
-          >
-            Reset connection
-          </ConfirmAction>
+          />
         {{/if}}
         {{#if (or @model.canReset @model.canDelete)}}
           <div class="toolbar-separator"></div>
@@ -47,15 +46,14 @@
         {{#if @model.canRotateRoot}}
           {{! template-lint-disable quotes }}
           <ConfirmAction
+            @buttonText="Rotate root credentials"
             @buttonClasses="toolbar-link"
             @onConfirmAction={{this.rotate}}
             @confirmTitle="Rotate credentials?"
             @confirmMessage='This will rotate the "root" user credentials stored for the database connection. The password will not be accessible once rotated.'
             @confirmButtonText="Rotate"
             data-test-database-connection-rotate
-          >
-            Rotate root credentials
-          </ConfirmAction>
+          />
           {{! template-lint-enable }}
         {{/if}}
         {{#if @model.canAddRole}}

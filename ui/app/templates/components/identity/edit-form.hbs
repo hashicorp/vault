@@ -2,13 +2,11 @@
   <Toolbar>
     <ToolbarActions>
       <ConfirmAction
+        @buttonText="Delete {{this.model.identityType}}"
         @buttonClasses="toolbar-link"
         @onConfirmAction={{action "deleteItem" this.model}}
         data-test-entity-item-delete="true"
-      >
-        Delete
-        {{this.model.identityType}}
-      </ConfirmAction>
+      />
     </ToolbarActions>
   </Toolbar>
 {{/if}}

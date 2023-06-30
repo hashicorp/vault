@@ -98,9 +98,7 @@
       </div>
     </div>
     {{#if (and @key.canDelete @capabilities.canDelete)}}
-      <ConfirmAction @buttonClasses="button" @onConfirmAction={{@deleteKey}}>
-        Delete transit key
-      </ConfirmAction>
+      <ConfirmAction @buttonText="Delete transit key" @buttonClasses="button" @onConfirmAction={{@deleteKey}} />
     {{/if}}
   </div>
 </form>

@@ -46,9 +46,7 @@
         @confirmTitle="Are you sure?"
         @confirmMessage="Deleting this MFA configuration is permanent, and it will no longer be available."
         @confirmButtonText="Delete"
-      >
-        Delete
-      </ConfirmAction>
+      />
       <ToolbarLink
         @route="vault.cluster.access.mfa.methods.method.edit"
         @model={{this.model.method.id}}

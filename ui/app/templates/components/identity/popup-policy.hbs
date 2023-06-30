@@ -13,14 +13,12 @@
       </li>
       <li class="action">
         <ConfirmAction
+          @buttonText="Remove from {{this.model.identityType}}"
           @buttonClasses="link is-destroy"
           @confirmButtonText="Remove"
           @confirmMessage="This policy may affect permissions to access Vault data."
           @onConfirmAction={{action "performTransaction" this.model this.policyName}}
-        >
-          Remove from
-          {{this.model.identityType}}
-        </ConfirmAction>
+        />
       </li>
     </ul>
   </nav>

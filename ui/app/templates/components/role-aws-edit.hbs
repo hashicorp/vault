@@ -27,9 +27,7 @@
   <Toolbar>
     <ToolbarActions>
       {{#if this.model.canDelete}}
-        <ConfirmAction @buttonClasses="toolbar-link" @onConfirmAction={{action "delete"}}>
-          Delete role
-        </ConfirmAction>
+        <ConfirmAction @buttonText="Delete role" @buttonClasses="toolbar-link" @onConfirmAction={{action "delete"}} />
         <div class="toolbar-separator"></div>
       {{/if}}
       {{#if this.model.canGenerate}}

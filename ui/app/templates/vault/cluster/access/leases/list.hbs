@@ -55,28 +55,26 @@
       <div class="control">
         {{#if (and this.capabilities.forceRevokePrefix.canUpdate (not this.confirmingRevoke))}}
           <ConfirmAction
+            @buttonText="Force revoke prefix"
             @buttonClasses="toolbar-link"
             @confirmTitle="Disable this?"
             @confirmMessage={{concat "All leases under this one will also be removed and disregard any errors encountered."}}
             @confirmButtonText="Revoke"
             @onConfirmAction={{action "revokePrefix" this.baseKey.id true}}
-          >
-            Force revoke prefix
-          </ConfirmAction>
+          />
         {{/if}}
       </div>
       <div class="control">
         {{#if (and this.capabilities.revokePrefix.canUpdate (not this.confirmingForceRevoke))}}
           <ConfirmAction
+            @buttonText="Revoke prefix"
             @buttonClasses="toolbar-link"
             @confirmTitle="Revoke this?"
             @confirmMessage={{concat "All leases under this one will also be removed"}}
             @confirmButtonText="Revoke"
             @onConfirmAction={{action "revokePrefix" this.baseKey.id}}
             data-test-lease-revoke-prefix="true"
-          >
-            Revoke prefix
-          </ConfirmAction>
+          />
         {{/if}}
       </div>
     {{/if}}

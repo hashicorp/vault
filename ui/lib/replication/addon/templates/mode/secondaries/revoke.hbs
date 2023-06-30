@@ -18,6 +18,7 @@
 <div class="field is-grouped box is-fullwidth is-bottomless">
   <div class="control">
     <ConfirmAction
+      @buttonText="Revoke"
       @buttonClasses="button is-primary"
       @confirmTitle="Revoke token?"
       @confirmMessage="This will revoke this secondary token."
@@ -26,9 +27,7 @@
       @disabledMessage="A secondary ID is required perform revocation."
       @horizontalPosition="auto-left"
       @onConfirmAction={{action "onSubmit" "revoke-secondary" "primary" (hash id=this.id)}}
-    >
-      Revoke
-    </ConfirmAction>
+    />
   </div>
   <div class="control">
     {{#unless this.isRevoking}}
