@@ -9,6 +9,7 @@ export default class JsonTemplateComponent extends Component {
 path "secret/*" {
   capabilities = [ "create", "read", "update", "list" ]
 }
+
 # Even though we allowed secret/*, this line explicitly denies
 # secret/super-secret. This takes precedence.
 path "secret/super-secret" {
@@ -18,11 +19,13 @@ path "secret/super-secret" {
     rgp: `
 # Import strings library that exposes common string operations
 import "strings"
+
 # Conditional rule (precond) checks the incoming request endpoint
 # targeted to sys/policies/acl/admin
 precond = rule {
     strings.has_prefix(request.path, "sys/policies/admin")
 }
+
 # Vault checks to see if the request was made by an entity
 # named James Thomas or Team Lead role defined as its metadata
 main = rule when precond {

@@ -31,6 +31,7 @@ export default class PolicyFormComponent extends Component {
 
   @tracked errorBanner = '';
   @tracked showFileUpload = false;
+  @tracked showTemplateModal = false;
 
   @task
   *save(event) {
