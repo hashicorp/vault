@@ -1,6 +1,6 @@
 import Component from '@glimmer/component';
 
-export default class JsonTemplateComponent extends Component {
+export default class PolicyExampleComponent extends Component {
   // formatting here is purposeful so that whitespace renders correctly in JsonEditor
   policyTemplates = {
     acl: `

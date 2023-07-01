@@ -99,6 +99,7 @@
     </div>
   </div>
 </form>
+{{! SAMPLE POLICY MODAL }}
 <Modal
   @title="Example {{uppercase @model.policyType}} Policy"
   @onClose={{fn (mut this.showTemplateModal) false}}
@@ -106,7 +107,11 @@
   @showCloseButton={{true}}
 >
   <section class="modal-card-body">
-    <JsonTemplate @policyType={{@model.policyType}} />
+    {{! code-mirror modifier does not render value initially until focus event fires }}
+    {{! wait until the Modal is rendered and then show the PolicyExample (contains JsonEditor) }}
+    {{#if this.showTemplateModal}}
+      <PolicyExample @policyType={{@model.policyType}} />
+    {{/if}}
   </section>
   <div class="modal-card-head has-border-top-light">
     <button type="button" class="button" {{on "click" (fn (mut this.showTemplateModal) false)}} data-test-close-modal>
