@@ -17,14 +17,16 @@ jobs:
       is_docs_change: ${{ steps.get-changeddir.outputs.is_docs_change }}
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0 # Use fetch depth 0 for comparing changes to base branch
       - name: Get changed directories
         id: get-changeddir
         env:
           TYPE: ${{ github.event_name }}
           REF_NAME: ${{ github.ref_name }}
-          HEAD_REF: ${{ github.head_ref }}
           BASE: ${{ github.base_ref }}
-        run: ./.github/scripts/verify_changes.sh ${{ env.TYPE }} ${{ env.REF_NAME }} ${{ env.HEAD_REF }} ${{ env.BASE }}
+        run: ./.github/scripts/verify_changes.sh ${{ env.TYPE }} ${{ env.REF_NAME }} ${{ env.BASE }}
 
   product-metadata:
     # do not run build and test steps for docs changes
@@ -176,6 +178,15 @@ jobs:
 
   test:
     name: Test ${{ matrix.build-artifact-name }}
+    # Only run the Enos workflow against branches that are created from the
+    # hashicorp/vault repository. This has the effect of limiting execution of
+    # Enos scenarios to branches that originate from authors that have write
+    # access to hashicorp/vault repository. This is required as Github Actions
+    # will not populate the required secrets for branches created by outside
+    # contributors in order to protect the secrets integrity.
+    # This condition can be removed in future if enos workflow is updated to
+    # workflow_run event
+    if: "! github.event.pull_request.head.repo.fork"
     needs:
       - product-metadata
       - build-linux
@@ -199,6 +210,16 @@ jobs:
 
   test-docker-k8s:
     name: Test Docker K8s
+    # Only run the Enos workflow against branches that are created from the
+    # hashicorp/vault repository. This has the effect of limiting execution of
+    # Enos scenarios to branches that originate from authors that have write
+    # access to hashicorp/vault repository. This is required as Github Actions
+    # will not populate the required secrets for branches created by outside
+    # contributors in order to protect the secrets integrity.
+    # GHA secrets are only ready on workflow_run for public repo
+    # This condition can be removed in future if enos workflow is updated to
+    # workflow_run event
+    if: "! github.event.pull_request.head.repo.fork"
     needs:
       - product-metadata
       - build-docker
