@@ -3322,6 +3322,7 @@ func TestExec_ExitCodes(t *testing.T) {
 		t.Run(tcName, func(t *testing.T) {
 			vaultClient, cleanup := testVaultServer(t)
 			defer cleanup()
+			t.Setenv(api.EnvVaultAddress, vaultClient.Address())
 
 			tokenFile := populateTempFile(t, "tokenfile.txt", vaultClient.Token())
 			defer os.Remove(tokenFile.Name())
