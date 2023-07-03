@@ -41,11 +41,11 @@
   </Frame.Sidebar>
   <Frame.Main id="app-main-content" class={{if this.console.isOpen "main--console-open"}}>
     {{! outlet for app content }}
+    <div id="modal-wormhole"></div>
     <LinkStatus @status={{this.currentCluster.cluster.hcpLinkStatus}} />
     {{yield}}
     <div data-test-console-panel class={{if this.console.isOpen "panel-open"}}>
       <Console::UiPanel @isFullscreen={{this.consoleFullscreen}} />
     </div>
   </Frame.Main>
-  <Frame.Modals id="app-frame-modals" data-test-modals-container />
 </Hds::AppFrame>

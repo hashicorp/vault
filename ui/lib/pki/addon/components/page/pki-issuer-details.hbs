@@ -148,7 +148,7 @@
 {{/if}}
 
 {{! ROOT ROTATION MODAL }}
-<Modal @isActive={{this.showRotationModal}}>
+{{#if this.showRotationModal}}
   <Hds::Modal id="basic-modal" @onClose={{mut this.showRotationModal false}} as |M|>
     <M.Header @icon="rotate-cw">
       Rotate this root
@@ -176,15 +176,20 @@
         </div>
       </p>
     </M.Body>
-    <M.Footer as |F|>
+    <M.Footer>
       <Hds::ButtonSet>
         <Hds::Button
           type="button"
           @text="Generate new root"
           {{on "click" (transition-to "vault.cluster.secrets.backend.pki.issuers.issuer.rotate-root")}}
         />
-        <Hds::Button type="button" @text="Cancel" @color="secondary" {{on "click" F.close}} />
+        <Hds::Button
+          type="button"
+          @text="Cancel"
+          @color="secondary"
+          {{on "click" (fn (mut this.showRotationModal) false)}}
+        />
       </Hds::ButtonSet>
     </M.Footer>
   </Hds::Modal>
-</Modal>
+{{/if}}
