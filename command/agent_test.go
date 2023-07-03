@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-retryablehttp"
 	vaultjwt "github.com/hashicorp/vault-plugin-auth-jwt"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
@@ -3276,6 +3277,29 @@ func TestExec_ExitCodes(t *testing.T) {
 	testAppBin := setupTestApp(t)
 	defer os.Remove(testAppBin)
 
+	checkAppIsRunning := func(port int) {
+		testAppAddr := fmt.Sprintf("http://localhost:%d", port)
+		resp, err := retryablehttp.Head(testAppAddr)
+		if err != nil {
+			t.Fatalf("error making request to the test app: %s", err)
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatal("could not verify app is up and running")
+		}
+	}
+
+	tellAppToQuit := func(port int) {
+		testAppAddr := fmt.Sprintf("http://localhost:%d/quit", port)
+		resp, err := retryablehttp.Get(testAppAddr)
+		if err != nil {
+			t.Fatalf("error making request to the test app: %s", err)
+		}
+		if resp.StatusCode != http.StatusNoContent {
+			t.Fatal("could not verify app is quitting")
+		}
+	}
+
 	testCases := map[string]struct {
 		exitCode   int
 		serverPort int
@@ -3332,7 +3356,7 @@ env_template "MY_DATABASE_PASSWORD" {
 }
 
 exec {
-	command = ["%s", "-port", "%d", "-exit-code", "%d", "-stop-after", "5s"]
+	command = ["%s", "-port", "%d", "-exit-code", "%d"]
 }`, vaultClient.Address(), tokenFile.Name(), testAppBin, testCase.serverPort, testCase.exitCode)
 			configFile := makeTempFile(t, "config.hcl", config)
 
@@ -3369,7 +3393,11 @@ exec {
 				t.Fatal("agent did not start within 10 seconds")
 			}
 			// agent started, give some time to populate env vars from vault
-			time.Sleep(10 * time.Second)
+			time.Sleep(5 * time.Second)
+			checkAppIsRunning(testCase.serverPort)
+
+			// now that its up, have the app "exit on its own"
+			tellAppToQuit(testCase.serverPort)
 
 			// wait until the vault agent command exits
 			// shouldn't take long, but we time it to make sure

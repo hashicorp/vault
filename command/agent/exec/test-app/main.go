@@ -32,6 +32,8 @@ var (
 	exitCode             int
 )
 
+var logger = log.New(os.Stderr, "test-app: ", log.LstdFlags)
+
 func init() {
 	flag.UintVar(&port, "port", 34000, "port to run the test app on")
 	flag.DurationVar(&sleepAfterStopSignal, "sleep-after-stop-signal", 1*time.Second, "time to sleep after getting the signal before exiting")
@@ -73,26 +75,22 @@ func index(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(buf.Bytes())
 }
 
-func main() {
-	logger := log.New(os.Stderr, "test-app: ", log.LstdFlags)
-
-	if err := run(logger); err != nil {
-		log.Fatalf("error: %v\n", err)
+func exit(exitCh chan<- struct{}) http.HandlerFunc {
+	return func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+		exitCh <- struct{}{}
 	}
-
-	logger.Printf("exit code: %d\n", exitCode)
-
-	os.Exit(exitCode)
 }
 
-func run(logger *log.Logger) error {
-	/* */ logger.Println("run: started")
-	defer logger.Println("run: done")
-
+func main() {
 	flag.Parse()
+
+	doneCh := make(chan struct{})
+	exitCh := make(chan struct{})
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", index)
+	mux.HandleFunc("/quit", exit(exitCh))
 
 	server := http.Server{
 		Addr:         fmt.Sprintf(":%d", port),
@@ -101,8 +99,6 @@ func run(logger *log.Logger) error {
 		WriteTimeout: 20 * time.Second,
 		IdleTimeout:  20 * time.Second,
 	}
-
-	doneCh := make(chan struct{})
 
 	go func() {
 		defer close(doneCh)
@@ -126,6 +122,9 @@ func run(logger *log.Logger) error {
 
 		case <-time.After(stopAfter):
 			logger.Printf("stopping after: %v\n", stopAfter)
+
+		case <-exitCh:
+			logger.Println("exiting after endpoint call")
 		}
 
 		if err := server.Shutdown(context.Background()); err != nil {
@@ -136,12 +135,14 @@ func run(logger *log.Logger) error {
 	logger.Printf("server %s: started\n", server.Addr)
 
 	if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
-		return fmt.Errorf("could not start the server: %v", err)
+		logger.Fatalf("could not start the server: %v", err)
 	}
 
 	logger.Printf("server %s: done\n", server.Addr)
 
 	<-doneCh
 
-	return nil
+	logger.Printf("exit code: %d\n", exitCode)
+
+	os.Exit(exitCode)
 }
