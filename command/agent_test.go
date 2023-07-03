@@ -3332,7 +3332,7 @@ env_template "MY_DATABASE_PASSWORD" {
 }
 
 exec {
-	command = ["%s", "-port", "%d", "-exit-code", "%d"]
+	command = ["%s", "-port", "%d", "-exit-code", "%d", "-stop-after", "5s"]
 }`, vaultClient.Address(), tokenFile.Name(), testAppBin, testCase.serverPort, testCase.exitCode)
 			configFile := makeTempFile(t, "config.hcl", config)
 
@@ -3370,9 +3370,6 @@ exec {
 			}
 			// agent started, give some time to populate env vars from vault
 			time.Sleep(10 * time.Second)
-
-			// now stop vault agent, the app should exit
-			close(agentCmd.ShutdownCh)
 
 			// wait until the vault agent command exits
 			// shouldn't take long, but we time it to make sure
