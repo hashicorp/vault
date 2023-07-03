@@ -3276,17 +3276,6 @@ func TestExec_ExitCodes(t *testing.T) {
 	testAppBin := setupTestApp(t)
 	defer os.Remove(testAppBin)
 
-	vaultClient, cleanup := testVaultServer(t)
-	defer cleanup()
-
-	tokenFile := populateTempFile(t, "tokenfile.txt", vaultClient.Token())
-	defer os.Remove(tokenFile.Name())
-
-	// token file needs to have 600 permissions
-	if err := os.Chmod(tokenFile.Name(), 0o600); err != nil {
-		t.Fatalf("unable to change permissions of token file: %s", err)
-	}
-
 	testCases := map[string]struct {
 		exitCode   int
 		serverPort int
@@ -3307,6 +3296,16 @@ func TestExec_ExitCodes(t *testing.T) {
 
 	for tcName, testCase := range testCases {
 		t.Run(tcName, func(t *testing.T) {
+			vaultClient, cleanup := testVaultServer(t)
+			defer cleanup()
+
+			tokenFile := populateTempFile(t, "tokenfile.txt", vaultClient.Token())
+			defer os.Remove(tokenFile.Name())
+
+			// token file needs to have 600 permissions
+			if err := os.Chmod(tokenFile.Name(), 0o600); err != nil {
+				t.Fatalf("unable to change permissions of token file: %s", err)
+			}
 			config := fmt.Sprintf(`
 template_config {
   static_secret_render_interval = "2s"
