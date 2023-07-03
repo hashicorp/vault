@@ -8,6 +8,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"io"
 	"sync"
 	"time"
 
@@ -320,7 +321,23 @@ func (m *multipleMonthsActivityClients) addRepeatedClients(monthsAgo int32, c *g
 func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[generation.WriteOptions]struct{}, activityLog *ActivityLog) ([]string, error) {
 	now := timeutil.StartOfMonth(time.Now().UTC())
 	paths := []string{}
+
+	_, writePQ := opts[generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES]
+	_, writeDistinctClients := opts[generation.WriteOptions_WRITE_DISTINCT_CLIENTS]
+
+	pqOpts := pqOptions{}
+	if writePQ || writeDistinctClients {
+		pqOpts.byNamespace = make(map[string]*processByNamespace)
+		pqOpts.byMonth = make(map[int64]*processMonth)
+		pqOpts.activePeriodEnd = m.latestTimestamp(now)
+		pqOpts.endTime = timeutil.EndOfMonth(pqOpts.activePeriodEnd)
+		pqOpts.activePeriodStart = m.earliestTimestamp(now)
+	}
+
 	for i, month := range m.months {
+		if month.generationParameters == nil {
+			continue
+		}
 		var timestamp time.Time
 		if i > 0 {
 			timestamp = timeutil.StartOfMonth(timeutil.MonthsPreviousTo(i, now))
@@ -349,6 +366,14 @@ func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[gene
 				paths = append(paths, entityPath)
 			}
 		}
+
+		if writePQ || writeDistinctClients {
+			reader := newProtoSegmentReader(segments)
+			err = activityLog.segmentToPrecomputedQuery(ctx, timestamp, reader, pqOpts)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 	wg := sync.WaitGroup{}
 	err := activityLog.refreshFromStoredLog(ctx, &wg, now)
@@ -356,6 +381,25 @@ func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[gene
 		return nil, err
 	}
 	return paths, nil
+}
+
+func (m *multipleMonthsActivityClients) latestTimestamp(now time.Time) time.Time {
+	for i, month := range m.months {
+		if month.generationParameters != nil {
+			return timeutil.StartOfMonth(timeutil.MonthsPreviousTo(i, now))
+		}
+	}
+	return time.Time{}
+}
+
+func (m *multipleMonthsActivityClients) earliestTimestamp(now time.Time) time.Time {
+	for i := len(m.months) - 1; i >= 0; i-- {
+		month := m.months[i]
+		if month.generationParameters != nil {
+			return timeutil.StartOfMonth(timeutil.MonthsPreviousTo(i, now))
+		}
+	}
+	return time.Time{}
 }
 
 func newMultipleMonthsActivityClients(numberOfMonths int) *multipleMonthsActivityClients {
@@ -368,4 +412,35 @@ func newMultipleMonthsActivityClients(numberOfMonths int) *multipleMonthsActivit
 		}
 	}
 	return m
+}
+
+func newProtoSegmentReader(segments map[int][]*activity.EntityRecord) SegmentReader {
+	allRecords := make([][]*activity.EntityRecord, 0, len(segments))
+	for _, records := range segments {
+		if segments == nil {
+			continue
+		}
+		allRecords = append(allRecords, records)
+	}
+	return &sliceSegmentReader{
+		records: allRecords,
+	}
+}
+
+type sliceSegmentReader struct {
+	records [][]*activity.EntityRecord
+	i       int
+}
+
+func (p *sliceSegmentReader) ReadToken(ctx context.Context) (*activity.TokenCount, error) {
+	return nil, io.EOF
+}
+
+func (p *sliceSegmentReader) ReadEntity(ctx context.Context) (*activity.EntityActivityLog, error) {
+	if p.i == len(p.records) {
+		return nil, io.EOF
+	}
+	record := p.records[p.i]
+	p.i++
+	return &activity.EntityActivityLog{Clients: record}, nil
 }

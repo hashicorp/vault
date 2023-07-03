@@ -5,18 +5,16 @@ description: >-
   Configuration for the Vault Secrets Operator Helm chart.
 ---
 
-@include 'vso-beta-note.mdx'
-
-# Vault Secrets Operator Helm Chart
+# Vault secrets operator helm chart
 
 The chart is customizable using
 [Helm configuration values](https://helm.sh/docs/intro/using_helm/#customizing-the-chart-before-installing).
 
 <!-- DO NOT EDIT. The docs below are generated automatically. To change, edit
-                  the vault-secrets-operator repo's values.yaml: file commit=b9d4f2f8ac86bdc1de71ca101ea8ed1c4e8a429e -->
+                  the vault-secrets-operator repo's values.yaml: file commit=e9c2b499105d977fa23a9f746186253991ebcee1 -->
 <!-- codegen: start -->
 
-## Top-Level Stanzas
+## Top-Level stanzas
 
 Use these links to navigate to a particular top-level stanza.
 
@@ -24,14 +22,15 @@ Use these links to navigate to a particular top-level stanza.
 - [`metricsService`](#h-metricsservice)
 - [`defaultVaultConnection`](#h-defaultvaultconnection)
 - [`defaultAuthMethod`](#h-defaultauthmethod)
+- [`telemetry`](#h-telemetry)
 - [`tests`](#h-tests)
 
-## All Values
+## All values
 
 ### controller ((#h-controller))
 
 - `controller` ((#v-controller)) - Top level configuration for the vault secrets operator deployment.
-  This is comprised of a controller and a kube rbac proxy container.
+  This consists of a controller and a kube rbac proxy container.
 
   - `replicas` ((#v-controller-replicas)) (`integer: 1`) - Set the number of replicas for the operator.
 
@@ -68,7 +67,7 @@ Use these links to navigate to a particular top-level stanza.
 
       - `repository` ((#v-controller-manager-image-repository)) (`string: hashicorp/vault-secrets-operator`)
 
-      - `tag` ((#v-controller-manager-image-tag)) (`string: 0.1.0-beta`)
+      - `tag` ((#v-controller-manager-image-tag)) (`string: 0.1.0`)
 
     - `clientCache` ((#v-controller-manager-clientcache)) - Configures the client cache which is used by the controller to cache (and potentially persist) vault tokens that
       are the result of using the VaultAuthMethod. This enables re-use of Vault Tokens
@@ -94,30 +93,103 @@ Use these links to navigate to a particular top-level stanza.
 
       - `storageEncryption` ((#v-controller-manager-clientcache-storageencryption)) - StorageEncryption provides the necessary configuration to encrypt the client storage
         cache within Kubernetes objects using (required) Vault Transit Engine.
-        This should only be configured when client cache persistence with encryption is enabled.
-        E.g. `controller.manager.clientCache.persistenceMode=direct-encrypted`
-        Typically there should only ever be one VaultAuth configured with
+        This should only be configured when client cache persistence with encryption is enabled and
+        will deploy an additional VaultAuthMethod to be used by the Vault Transit Engine.
+        E.g. when `controller.manager.clientCache.persistenceModel=direct-encrypted`
+        Supported Vault authentication methods for the Transit Auth method are: jwt, appRole,
+        aws, and kubernetes.
+        Typically, there should only ever be one VaultAuth configured with
         StorageEncryption in the Cluster.
 
-        - `vaultConnectionRef` ((#v-controller-manager-clientcache-storageencryption-vaultconnectionref)) (`string: default`) - Vault Connection Ref to be used by the VaultAuthMethod.
-          Default setting will use the default VaultConnectionRef, which must also be configured.
+        - `enabled` ((#v-controller-manager-clientcache-storageencryption-enabled)) (`boolean: false`) - toggles the deployment of the Transit VaultAuthMethod CR.
 
-        - `namespace` ((#v-controller-manager-clientcache-storageencryption-namespace)) (`string: ""`) - Vault namespace for the VaultAuthMethod
+        - `vaultConnectionRef` ((#v-controller-manager-clientcache-storageencryption-vaultconnectionref)) (`string: default`) - Vault Connection Ref to be used by the Transit VaultAuthMethod.
+          Default setting will use the default VaultConnectionRef, which must also be configured.
 
         - `keyName` ((#v-controller-manager-clientcache-storageencryption-keyname)) (`string: ""`) - KeyName to use for encrypt/decrypt operations via Vault Transit.
 
-        - `mount` ((#v-controller-manager-clientcache-storageencryption-mount)) (`string: kubernetes`) - Mount path for the Vault Auth Method.
+        - `transitMount` ((#v-controller-manager-clientcache-storageencryption-transitmount)) (`string: ""`) - Mount path for the Transit VaultAuthMethod.
 
-        - `role` ((#v-controller-manager-clientcache-storageencryption-role)) (`string: ""`) - Vault Auth Role to use
-          This is a required field and must be setup in Vault prior to deploying the helm chart
-          if `defaultAuthMethod.enabled=true`
+        - `namespace` ((#v-controller-manager-clientcache-storageencryption-namespace)) (`string: ""`) - Vault namespace for the Transit VaultAuthMethod CR.
 
-        - `serviceAccount` ((#v-controller-manager-clientcache-storageencryption-serviceaccount)) (`string: ""`) - Kubernetes ServiceAccount associated with the default Vault Auth Role
-          default: Operator's ServiceAccount
+        - `method` ((#v-controller-manager-clientcache-storageencryption-method)) (`string: kubernetes`) - Vault Auth method to be used with the Transit VaultAuthMethod CR.
 
-        - `tokenAudiences` ((#v-controller-manager-clientcache-storageencryption-tokenaudiences)) (`array<string>: []`) - Token Audience should match the audience of the vault kubernetes auth role.
+        - `mount` ((#v-controller-manager-clientcache-storageencryption-mount)) (`string: kubernetes`) - Mount path for the Transit VaultAuthMethod.
 
-        - `transitMount` ((#v-controller-manager-clientcache-storageencryption-transitmount)) (`string: ""`) - Mount path for the Transit Method.
+        - `kubernetes` ((#v-controller-manager-clientcache-storageencryption-kubernetes)) - Vault Kubernetes auth method specific configuration
+
+          - `role` ((#v-controller-manager-clientcache-storageencryption-kubernetes-role)) (`string: ""`) - Vault Auth Role to use
+            This is a required field and must be setup in Vault prior to deploying the helm chart
+            if `defaultAuthMethod.enabled=true`
+
+          - `serviceAccount` ((#v-controller-manager-clientcache-storageencryption-kubernetes-serviceaccount)) (`string: ""`) - Kubernetes ServiceAccount associated with the Transit Vault Auth Role
+            Defaults to using the Operator's service-account.
+
+          - `tokenAudiences` ((#v-controller-manager-clientcache-storageencryption-kubernetes-tokenaudiences)) (`array<string>: []`) - Token Audience should match the audience of the vault kubernetes auth role.
+
+        - `jwt` ((#v-controller-manager-clientcache-storageencryption-jwt)) - Vault JWT auth method specific configuration
+
+          - `role` ((#v-controller-manager-clientcache-storageencryption-jwt-role)) (`string: ""`) - Vault Auth Role to use
+            This is a required field and must be setup in Vault prior to deploying the helm chart
+            if using JWT for the Transit VaultAuthMethod.
+
+          - `secretRef` ((#v-controller-manager-clientcache-storageencryption-jwt-secretref)) (`string: ""`) - One of the following is required prior to deploying the helm chart
+            - K8s secret that contains the JWT
+            - K8s service account if a service account JWT is used as a Vault JWT auth token and
+            needs generating by VSO.
+
+            Name of Kubernetes Secret that has the Vault JWT auth token.
+            The Kubernetes Secret must contain a key named `jwt` which references the JWT token, and
+            must exist in the namespace of any consuming VaultSecret CR. This is a required field if
+            a JWT token is provided.
+
+          - `serviceAccount` ((#v-controller-manager-clientcache-storageencryption-jwt-serviceaccount)) (`string: default`) - Kubernetes ServiceAccount to generate a service account JWT
+
+          - `tokenAudiences` ((#v-controller-manager-clientcache-storageencryption-jwt-tokenaudiences)) (`array<string>: []`) - Token Audience should match the bound_audiences or the `aud` list in bound_claims if
+            applicable of the Vault JWT auth role.
+
+        - `appRole` ((#v-controller-manager-clientcache-storageencryption-approle)) - AppRole auth method specific configuration
+
+          - `roleId` ((#v-controller-manager-clientcache-storageencryption-approle-roleid)) (`string: ""`) - AppRole Role's RoleID to use for authenticating to Vault.
+            This is a required field when using appRole and must be setup in Vault prior to deploying
+            the helm chart.
+
+          - `secretRef` ((#v-controller-manager-clientcache-storageencryption-approle-secretref)) (`string: ""`) - Name of Kubernetes Secret that has the AppRole Role's SecretID used to authenticate with
+            Vault. The Kubernetes Secret must contain a key named `id` which references the AppRole
+            Role's SecretID, and must exist in the namespace of any consuming VaultSecret CR.
+            This is a required field when using appRole and must be setup in Vault prior to
+            deploying the helm chart.
+
+        - `aws` ((#v-controller-manager-clientcache-storageencryption-aws)) - AWS auth method specific configuration
+
+          - `role` ((#v-controller-manager-clientcache-storageencryption-aws-role)) (`string: ""`) - Vault Auth Role to use
+            This is a required field and must be setup in Vault prior to deploying the helm chart
+            if using the AWS for the Transit auth method.
+
+          - `region` ((#v-controller-manager-clientcache-storageencryption-aws-region)) (`string: ""`) - AWS region to use for signing the authentication request
+            Optional, but most commonly will be the EKS cluster region.
+
+          - `headerValue` ((#v-controller-manager-clientcache-storageencryption-aws-headervalue)) (`string: ""`) - Vault header value to include in the STS signing request
+
+          - `sessionName` ((#v-controller-manager-clientcache-storageencryption-aws-sessionname)) (`string: ""`) - The role session name to use when creating a WebIdentity provider
+
+          - `stsEndpoint` ((#v-controller-manager-clientcache-storageencryption-aws-stsendpoint)) (`string: ""`) - The STS endpoint to use; if not set will use the default
+
+          - `iamEndpoint` ((#v-controller-manager-clientcache-storageencryption-aws-iamendpoint)) (`string: ""`) - The IAM endpoint to use; if not set will use the default
+
+          - `secretRef` ((#v-controller-manager-clientcache-storageencryption-aws-secretref)) (`string: ""`) - The name of a Kubernetes Secret which holds credentials for AWS. Supported keys
+            include `access_key_id`, `secret_access_key`, `session_token`
+
+          - `irsaServiceAccount` ((#v-controller-manager-clientcache-storageencryption-aws-irsaserviceaccount)) (`string: ""`) - Name of a Kubernetes service account that is configured with IAM Roles
+            for Service Accounts (IRSA). Should be annotated with "eks.amazonaws.com/role-arn".
+
+        - `params` ((#v-controller-manager-clientcache-storageencryption-params)) (`map`) - Params to use when authenticating to Vault using this auth method.
+          params:
+            param-something1: "foo"
+
+        - `headers` ((#v-controller-manager-clientcache-storageencryption-headers)) (` map: ""`) - Headers to be included in all Vault requests.
+          headers:
+            X-vault-something1: "foo"
 
     - `maxConcurrentReconciles` ((#v-controller-manager-maxconcurrentreconciles)) (`integer: ""`) - Defines the maximum number of concurrent reconciles by the controller.
       NOTE: Currently this is only used by the reconciliation logic of dynamic secrets.
@@ -198,18 +270,16 @@ Use these links to navigate to a particular top-level stanza.
   - `address` ((#v-defaultvaultconnection-address)) (`string: ""`) - Address of the Vault Server
     Example: http://vault.default.svc.cluster.local:8200
 
-  - `caCertSecret` ((#v-defaultvaultconnection-cacertsecret)) (`string: ""`) - CACertSecret containing the trusted PEM encoded CA certificate chain.
+  - `caCertSecret` ((#v-defaultvaultconnection-cacertsecret)) (`string: ""`) - CACertSecret is the name of a Kubernetes secret containing the trusted PEM encoded CA certificate chain as `ca.crt`.
     Note: This secret must exist prior to deploying the CR.
 
   - `tlsServerName` ((#v-defaultvaultconnection-tlsservername)) (`string: ""`) - TLSServerName to use as the SNI host for TLS connections.
 
   - `skipTLSVerify` ((#v-defaultvaultconnection-skiptlsverify)) (`boolean: false`) - SkipTLSVerify for TLS connections.
 
-  - `headers` ((#v-defaultvaultconnection-headers)) (`string: ""`) - Headers to be included in all Vault requests.
-    headers: |
-      "vault-something1": "foo"
-      "vault-something2": "bar"
-      "vault-something3": "baz"
+  - `headers` ((#v-defaultvaultconnection-headers)) (`map`) - Headers to be included in all Vault requests.
+    headers:
+      X-vault-something: "foo"
 
 ### defaultAuthMethod ((#h-defaultauthmethod))
 
@@ -242,9 +312,9 @@ Use these links to navigate to a particular top-level stanza.
 
     - `role` ((#v-defaultauthmethod-jwt-role)) (`string: ""`) - Vault Auth Role to use
       This is a required field and must be setup in Vault prior to deploying the helm chart
-      if `jwtAuthMethod.enabled=true`
+      if using the JWT for the default auth method.
 
-    - `secretName` ((#v-defaultauthmethod-jwt-secretname)) (`string: ""`) - One of the following is required prior to deploying the helm chart
+    - `secretRef` ((#v-defaultauthmethod-jwt-secretref)) (`string: ""`) - One of the following is required prior to deploying the helm chart
       - K8s secret that contains the JWT
       - K8s service account if a service account JWT is used as a Vault JWT auth token and needs generating by VSO
 
@@ -263,23 +333,76 @@ Use these links to navigate to a particular top-level stanza.
       This is a required field when using appRole and must be setup in Vault prior to deploying the
       helm chart.
 
-    - `secretName` ((#v-defaultauthmethod-approle-secretname)) (`string: ""`) - Name of Kubernetes Secret that has the AppRole Role's SecretID used to authenticate with Vault.
+    - `secretRef` ((#v-defaultauthmethod-approle-secretref)) (`string: ""`) - Name of Kubernetes Secret that has the AppRole Role's SecretID used to authenticate with Vault.
       The Kubernetes Secret must contain a key named `id` which references the AppRole Role's
       SecretID, and must exist in the namespace of any consuming VaultSecret CR.
       This is a required field when using appRole and must be setup in Vault prior to deploying the
       helm chart.
 
-  - `params` ((#v-defaultauthmethod-params)) (`string: ""`) - Params to use when authenticating to Vault
-    params: |
-      "vault-something1": "foo"
-      "vault-something2": "bar"
-      "vault-something3": "baz"
+  - `aws` ((#v-defaultauthmethod-aws)) - AWS auth method specific configuration
 
-  - `headers` ((#v-defaultauthmethod-headers)) (`string: ""`) - Headers to be included in all Vault requests.
-    headers: |
-      "vault-something1": "foo"
-      "vault-something2": "bar"
-      "vault-something3": "baz"
+    - `role` ((#v-defaultauthmethod-aws-role)) (`string: ""`) - Vault Auth Role to use
+      This is a required field and must be setup in Vault prior to deploying the helm chart
+      if using the AWS for the default auth method.
+
+    - `region` ((#v-defaultauthmethod-aws-region)) (`string: ""`) - AWS region to use for signing the authentication request
+      Optional, but most commonly will be the region where the EKS cluster is running
+
+    - `headerValue` ((#v-defaultauthmethod-aws-headervalue)) (`string: ""`) - Vault header value to include in the STS signing request
+
+    - `sessionName` ((#v-defaultauthmethod-aws-sessionname)) (`string: ""`) - The role session name to use when creating a WebIdentity provider
+
+    - `stsEndpoint` ((#v-defaultauthmethod-aws-stsendpoint)) (`string: ""`) - The STS endpoint to use; if not set will use the default
+
+    - `iamEndpoint` ((#v-defaultauthmethod-aws-iamendpoint)) (`string: ""`) - The IAM endpoint to use; if not set will use the default
+
+    - `secretRef` ((#v-defaultauthmethod-aws-secretref)) (`string: ""`) - The name of a Kubernetes Secret which holds credentials for AWS. Supported keys include
+      `access_key_id`, `secret_access_key`, `session_token`
+
+    - `irsaServiceAccount` ((#v-defaultauthmethod-aws-irsaserviceaccount)) (`string: ""`) - Name of a Kubernetes service account that is configured with IAM Roles
+      for Service Accounts (IRSA). Should be annotated with "eks.amazonaws.com/role-arn".
+
+  - `params` ((#v-defaultauthmethod-params)) (`map`) - Params to use when authenticating to Vault
+    params:
+      param-something1: "foo"
+
+  - `headers` ((#v-defaultauthmethod-headers)) (`map`) - Headers to be included in all Vault requests.
+    headers:
+      X-vault-something1: "foo"
+
+### telemetry ((#h-telemetry))
+
+- `telemetry` ((#v-telemetry)) - Configures a Prometheus ServiceMonitor
+
+  - `serviceMonitor` ((#v-telemetry-servicemonitor))
+
+    - `enabled` ((#v-telemetry-servicemonitor-enabled)) (`boolean: false`) - The Prometheus operator *must* be installed before enabling this feature,
+      if not the chart will fail to install due to missing CustomResourceDefinitions
+      provided by the operator.
+
+      Instructions on how to install the Helm chart can be found here:
+       https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack
+      More information can be found here:
+       https://github.com/prometheus-operator/prometheus-operator
+       https://github.com/prometheus-operator/kube-prometheus
+
+      Enable deployment of the Vault Secrets Operator ServiceMonitor CustomResource.
+
+    - `selectors` ((#v-telemetry-servicemonitor-selectors)) (`string: ""`) - Selector labels to add to the ServiceMonitor.
+      When empty, defaults to:
+       release: prometheus
+
+    - `scheme` ((#v-telemetry-servicemonitor-scheme)) (`string: https`) - Scheme of the service Prometheus scrapes metrics from. This must match the scheme of the metrics service of VSO
+
+    - `port` ((#v-telemetry-servicemonitor-port)) (`string: https`) - Port at which Prometheus scrapes metrics. This must match the port of the metrics service of VSO
+
+    - `path` ((#v-telemetry-servicemonitor-path)) (`string: /metrics`) - Path at which Prometheus scrapes metrics
+
+    - `bearerTokenFile` ((#v-telemetry-servicemonitor-bearertokenfile)) (`string: /var/run/secrets/kubernetes.io/serviceaccount/token`) - File Prometheus reads bearer token from for scraping metrics
+
+    - `interval` ((#v-telemetry-servicemonitor-interval)) (`string: 30s`) - Interval at which Prometheus scrapes metrics
+
+    - `scrapeTimeout` ((#v-telemetry-servicemonitor-scrapetimeout)) (`string: 10s`) - Timeout for Prometheus scrapes
 
 ### tests ((#h-tests))
 
@@ -289,7 +412,7 @@ Use these links to navigate to a particular top-level stanza.
 
   <!-- codegen: end -->
 
-## Helm Chart Examples
+## Helm chart examples
 
 The below `config.yaml` results in a single replica installation of the Vault Secrets Operator
 with a default vault connection and auth method custom resource deployed.
@@ -308,7 +431,7 @@ defaultAuthMethod:
 
 ```
 
-## Customizing the Helm Chart
+## Customizing the helm chart
 
 If you need to extend the Helm chart with additional options, we recommend using a third-party tool,
 such as [kustomize](https://github.com/kubernetes-sigs/kustomize) using the project repo `config/` path

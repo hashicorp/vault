@@ -15,7 +15,7 @@ The `pki` command groups subcommands for interacting with Vault's
 
 Option flags for a given subcommand are provided after the subcommand, but before the arguments.
 
-## Example Health Check
+## Example health check
 
 To [health check](/vault/docs/commands/pki/health-check) a mount, use the
 `vault pki health-check <mount>` command:
@@ -31,7 +31,7 @@ ok        /pki/issuer/da41ffb1-cc6d-5a5c-f147-e4d7beeb1b73    Issuer's validity 
 ... more output elided ...
 ```
 
-## Example Verify Sign
+## Example verify sign
 
 To [verify](/vault/docs/commands/pki/verify-sign) the signature between two
 issuer certificates, use the `vault pki verify-sign <parent> <child>` command:
@@ -50,7 +50,7 @@ key_id_match       true
 signature_match    true
 ```
 
-## Example List Child Issuers
+## Example list child issuers
 
 To [list intermediate](/vault/docs/commands/pki/list-intermediates) certificates
 potentially issued by a certificate inside vault, use the
@@ -67,7 +67,7 @@ pki_int/issuer/2f958ec5-1838-336e-331b-07032379b958      true
 pki_int/issuer/b8cc0b41-e0e9-1a92-12c4-6849c9d6f837      true
 ```
 
-## Example Issue
+## Example issue
 
 To [issue](/vault/docs/commands/pki/issue) a new issuer certificate, use the
 `vault pki issue <parent-certificate-path> <mount>` command:
@@ -80,7 +80,7 @@ ca_chain                          [-----BEGIN CERTIFICATE-----
 MIIDsDCCApigAwIBAgIULEPuHTW7UDtAQg+qcc18osNWgZIwDQYJKoZIhvcNAQEL...
 ```
 
-## Example Reissue
+## Example reissue
 
 To [reissue](/vault/docs/commands/pki/reissue) an issuer certificate, using the
 same fields as an existing issuer template, use the

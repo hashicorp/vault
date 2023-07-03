@@ -1,6 +1,6 @@
 <form {{on "submit" (perform this.save)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
-    <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
+    <MessageError @errorMessage={{this.errorBanner}} />
     <FormFieldLabel for="name" @label="Name" />
     <input
       autocomplete="off"

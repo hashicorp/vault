@@ -77,7 +77,7 @@ the authentication steps again, they will get a _new_ token. The token will have
 the same permissions, but the actual token will be different. Authenticating a
 second time does not invalidate the original token.
 
-## Policy Syntax
+## Policy syntax
 
 Policies are written in [HCL][hcl] or JSON and describe which paths in Vault a
 user or machine is allowed to access.
@@ -101,19 +101,19 @@ token would have no other access in Vault.
 Here is a more detailed policy, and it is documented inline:
 
 ```ruby
-# This section grants all access on "secret/*". Further restrictions can be
+# This section grants all access on "secret/*". further restrictions can be
 # applied to this broad policy, as shown below.
 path "secret/*" {
   capabilities = ["create", "read", "update", "patch", "delete", "list"]
 }
 
 # Even though we allowed secret/*, this line explicitly denies
-# secret/super-secret. This takes precedence.
+# secret/super-secret. this takes precedence.
 path "secret/super-secret" {
   capabilities = ["deny"]
 }
 
-# Policies can also specify allowed, disallowed, and required parameters. Here
+# Policies can also specify allowed, disallowed, and required parameters. here
 # the key "secret/restricted" can only contain "foo" (any value) and "bar" (one
 # of "zip" or "zap").
 path "secret/restricted" {
@@ -130,19 +130,19 @@ request. A policy `path` may specify an exact path to match, or it could specify
 a glob pattern which instructs Vault to use a prefix match:
 
 ```ruby
-# Permit reading only "secret/foo". An attached token cannot read "secret/food"
+# Permit reading only "secret/foo". an attached token cannot read "secret/food"
 # or "secret/foo/bar".
 path "secret/foo" {
   capabilities = ["read"]
 }
 
-# Permit reading everything under "secret/bar". An attached token could read
+# Permit reading everything under "secret/bar". an attached token could read
 # "secret/bar/zip", "secret/bar/zip/zap", but not "secret/bars/zip".
 path "secret/bar/*" {
   capabilities = ["read"]
 }
 
-# Permit reading everything prefixed with "zip-". An attached token could read
+# Permit reading everything prefixed with "zip-". an attached token could read
 # "secret/zip-zap" or "secret/zip-zap/zong", but not "secret/zip/zap
 path "secret/zip-*" {
   capabilities = ["read"]
@@ -489,9 +489,9 @@ path "secret/foo" {
 
 ~> **Note:** the only value that can be used with the `*` parameter is `[]`.
 
-#### Parameter Constraints Limitations
+#### Parameter constraints limitations
 
-##### Default Values
+##### Default values
 Evaluation of policies with `allowed_parameters`, `denied_parameters`, and `required_parameters` happens
 without consideration of parameters' default values.
 
@@ -551,13 +551,13 @@ or unexpected behavior:
 
 ```ruby
 # This allows the user to create, update, or patch "secret/foo" with a parameter
-# named "bar". The values passed to parameter "bar" must start with "baz/"
-# so values like "baz/quux" are fine. However, values like
-# "baz/quux,wibble,wobble,wubble" would also be accepted. The API that
+# named "bar". the values passed to parameter "bar" must start with "baz/"
+# so values like "baz/quux" are fine. however, values like
+# "baz/quux,wibble,wobble,wubble" would also be accepted. the API that
 # underlies "secret/foo" might allow comma delimited values for the "bar"
 # parameter, and if it did, specifying a value like
 # "baz/quux,wibble,wobble,wubble" would result in 4 different values getting
-# passed along. Seeing values like "wibble" or "wobble" getting passed to
+# passed along. seeing values like "wibble" or "wobble" getting passed to
 # "secret/foo" might surprise someone that expected the allowed_parameters
 # constraint to only allow values starting with "baz/".
 path "secret/foo" {
@@ -601,12 +601,12 @@ addition, if paths are merged from different stanzas, the lowest value
 specified for each is the value that will result, in line with the idea of
 keeping token lifetimes as short as possible.
 
-## Built-in Policies
+## Built-in policies
 
 Vault has two built-in policies: `default` and `root`. This section describes
 the two built-in policies.
 
-### Default Policy
+### Default policy
 
 The `default` policy is a built-in Vault policy that cannot be removed. By
 default, it is attached to all tokens, but may be explicitly excluded at token

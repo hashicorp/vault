@@ -158,7 +158,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 		},
 
 		{
-			Pattern: "accessors/$",
+			Pattern: "accessors/?$",
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixToken,
@@ -2872,10 +2872,20 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			MountType:     mountValidationResp.Type,
 		}
 
-		// Create or fetch entity from entity alias
+		// Create or fetch entity from entity alias. Note that we might be on a perf
+		// standby so a create would return a ReadOnly error which would cause an
+		// RPC-based redirect. That path doesn't register leases since the code that
+		// calls RegisterAuth is in the http layer... So be careful to catch and
+		// handle readonly ourselves.
 		entity, _, err := ts.core.identityStore.CreateOrFetchEntity(ctx, alias)
 		if err != nil {
-			return nil, err
+			auth := &logical.Auth{
+				Alias: alias,
+			}
+			entity, _, err = possiblyForwardAliasCreation(ctx, ts.core, err, auth, entity)
+			if err != nil {
+				return nil, err
+			}
 		}
 		if entity == nil {
 			return nil, errors.New("failed to create or fetch entity from given entity alias")
@@ -3197,7 +3207,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		te.TTL = dur
 	} else if data.Lease != "" {
 		// This block is compatibility
-		dur, err := time.ParseDuration(data.Lease)
+		dur, err := parseutil.ParseDurationSecond(data.Lease)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 		}

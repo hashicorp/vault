@@ -8,7 +8,7 @@ description: |-
   integrations, their use, and operation.
 ---
 
-# Using PGP, GnuPG, and Keybase
+# Using PGP, GnuPG, and keybase
 
 Vault has the ability to integrate with OpenPGP-compatible programs like GnuPG
 and services like Keybase.io to provide an additional layer of security when
@@ -46,7 +46,7 @@ of public online sources. It also exposes the ability for users to have PGP
 keys generated, stored, and managed securely on their servers. Using Vault with
 Keybase will be discussed first as it is simpler.
 
-## Initializing with Keybase
+## Initializing with keybase
 
 To generate unseal keys for Keybase users, Vault accepts the `keybase:` prefix
 to the `-pgp-keys` argument:
@@ -75,7 +75,7 @@ accounts of `jefferai`, `vishalnayak`, and `sethvargo`. These keys can be
 distributed over almost any medium, although common sense and judgement are
 best advised. The encrypted keys are base64 encoded before returning.
 
-### Unsealing with Keybase
+### Unsealing with keybase
 
 As a user, the easiest way to decrypt your unseal key is with the Keybase CLI
 tool. You can download it from [Keybase.io download

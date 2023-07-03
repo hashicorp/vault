@@ -56,7 +56,7 @@
         Certificate parameters
       </label>
       <form {{on "submit" (perform this.submitForm)}} data-test-pki-import-pem-bundle-form>
-        <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
+        <MessageError @errorMessage={{this.errorBanner}} />
         <div class="box is-sideless is-fullwidth is-marginless has-top-padding-l">
           <TextFile @onChange={{this.onFileUploaded}} @label="PEM Bundle" />
           <p class="has-top-margin-m has-bottom-margin-l">

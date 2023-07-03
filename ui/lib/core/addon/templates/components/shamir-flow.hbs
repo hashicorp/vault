@@ -138,19 +138,20 @@
       <div class="box is-shadowless is-marginless no-padding-top is-fullwidth" data-test-form-text>
         {{#if this.otp}}
           <p>
-            <AlertBanner
-              @type="info"
-              @message="Below is the generated OTP. This will be used to encode the generated Operation Token. Make sure to save this, as you will need it later to decode the Operation Token."
-            />
+            <Hds::Alert @type="inline" @color="highlight" class="has-bottom-margin-s" as |A|>
+              <A.Title>Info</A.Title>
+              <A.Description>
+                Below is the generated OTP. This will be used to encode the generated Operation Token. Make sure to save
+                this, as you will need it later to decode the Operation Token.
+              </A.Description>
+            </Hds::Alert>
           </p>
-          <div class="message is-list has-copy-button" tabindex="-1">
+          <div class="has-background-gray-100 box has-copy-button" tabindex="-1">
             <HoverCopyButton @copyValue={{this.otp}} />
-            <div class="message-body">
-              <h4 class="title is-7 is-marginless">
-                One Time Password (otp)
-              </h4>
-              <code class="is-word-break">{{this.otp}}</code>
-            </div>
+            <h4 class="title is-7 is-marginless">
+              One Time Password (otp)
+            </h4>
+            <code class="is-word-break">{{this.otp}}</code>
           </div>
         {{/if}}
         {{#if (has-block)}}

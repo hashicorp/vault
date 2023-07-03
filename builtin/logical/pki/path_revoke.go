@@ -111,7 +111,7 @@ signed by an issuer in this mount.`,
 						Description: "OK",
 						Fields: map[string]*framework.FieldSchema{
 							"revocation_time": {
-								Type:        framework.TypeDurationSecond,
+								Type:        framework.TypeInt64,
 								Description: `Revocation Time`,
 								Required:    false,
 							},
@@ -176,7 +176,7 @@ be in PEM format.`,
 						Description: "OK",
 						Fields: map[string]*framework.FieldSchema{
 							"revocation_time": {
-								Type:        framework.TypeDurationSecond,
+								Type:        framework.TypeInt64,
 								Description: `Revocation Time`,
 								Required:    false,
 							},
@@ -451,6 +451,24 @@ func (b *backend) pathRevokeWriteHandleKey(req *logical.Request, certReference *
 }
 
 func validatePrivateKeyMatchesCert(signer crypto.Signer, certReference *x509.Certificate) error {
+	public := signer.Public()
+
+	switch certReference.PublicKey.(type) {
+	case *rsa.PublicKey:
+		rsaPriv, ok := signer.(*rsa.PrivateKey)
+		if !ok {
+			return errutil.UserError{Err: "provided private key type does not match certificate's public key type"}
+		}
+
+		if err := rsaPriv.Validate(); err != nil {
+			return errutil.UserError{Err: fmt.Sprintf("error validating integrity of private key: %v", err)}
+		}
+	}
+
+	return validatePublicKeyMatchesCert(public, certReference)
+}
+
+func validatePublicKeyMatchesCert(verifier crypto.PublicKey, certReference *x509.Certificate) error {
 	// Finally, verify if the cert and key match. This code has been
 	// cribbed from the Go TLS config code, with minor modifications.
 	//
@@ -461,18 +479,15 @@ func validatePrivateKeyMatchesCert(signer crypto.Signer, certReference *x509.Cer
 	// See: https://github.com/golang/go/blob/c6a2dada0df8c2d75cf3ae599d7caed77d416fa2/src/crypto/tls/tls.go#L304-L331
 	switch certPub := certReference.PublicKey.(type) {
 	case *rsa.PublicKey:
-		privPub, ok := signer.Public().(*rsa.PublicKey)
+		privPub, ok := verifier.(*rsa.PublicKey)
 		if !ok {
 			return errutil.UserError{Err: "provided private key type does not match certificate's public key type"}
-		}
-		if err := signer.(*rsa.PrivateKey).Validate(); err != nil {
-			return err
 		}
 		if certPub.N.Cmp(privPub.N) != 0 || certPub.E != privPub.E {
 			return errutil.UserError{Err: "provided private key does not match certificate's public key"}
 		}
 	case *ecdsa.PublicKey:
-		privPub, ok := signer.Public().(*ecdsa.PublicKey)
+		privPub, ok := verifier.(*ecdsa.PublicKey)
 		if !ok {
 			return errutil.UserError{Err: "provided private key type does not match certificate's public key type"}
 		}
@@ -480,7 +495,7 @@ func validatePrivateKeyMatchesCert(signer crypto.Signer, certReference *x509.Cer
 			return errutil.UserError{Err: "provided private key does not match certificate's public key"}
 		}
 	case ed25519.PublicKey:
-		privPub, ok := signer.Public().(ed25519.PublicKey)
+		privPub, ok := verifier.(ed25519.PublicKey)
 		if !ok {
 			return errutil.UserError{Err: "provided private key type does not match certificate's public key type"}
 		}
