@@ -37,6 +37,17 @@ on:
         required: false
         default: ''
         type: string
+      go-test-parallelism:
+        description: The parallelism parameter for Go tests
+        required: false
+        default: 20
+        type: number
+      timeout-minutes:
+        description: The maximum number of minutes that this workflow should run 
+        required: false
+        default: 60 
+        type: number
+
 
 env: ${{ fromJSON(inputs.env-vars) }}
 
@@ -116,7 +127,7 @@ jobs:
         runner-index: ${{ fromJSON(needs.runner-indexes.outputs.runner-indexes) }}
     env:
       GOPRIVATE: github.com/hashicorp/*
-      TIMEOUT_IN_MINUTES: 60
+      TIMEOUT_IN_MINUTES: ${{ inputs.timeout-minutes }} 
     steps:
       - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
       - uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
@@ -222,7 +233,7 @@ jobs:
               -- \
               -tags "${{ inputs.go-build-tags }}" \
               -timeout=${{ env.TIMEOUT_IN_MINUTES }}m \
-              -parallel=20 \
+              -parallel=${{ inputs.go-test-parallelism }} \
               ${{ inputs.extra-flags }} \
                 \
               ${test_packages[${{ matrix.runner-index }}]}
