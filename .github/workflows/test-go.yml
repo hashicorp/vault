@@ -222,7 +222,7 @@ jobs:
                 \
               ${test_packages[${{ matrix.runner-index }}]}
       - name: Prepare datadog-ci
-        if: github.repository == 'hashicorp/vault' && always()
+        if: github.repository == 'hashicorp/vault' && (success() || failure()) 
         continue-on-error: true
         run: |
           curl -L --fail "https://github.com/DataDog/datadog-ci/releases/latest/download/datadog-ci_linux-x64" --output "/usr/local/bin/datadog-ci"
@@ -236,16 +236,16 @@ jobs:
             export DATADOG_API_KEY=${{ secrets.DATADOG_API_KEY }}
           fi
           datadog-ci junit upload --service "$GITHUB_REPOSITORY" test-results/go-test/results.xml
-        if: always()
+        if: success() || failure()
       - name: Archive test results
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
           name: test-results-${{ matrix.runner-index }}
           path: test-results/
-        if: always()
+        if: success() || failure() 
       - name: Create a summary of tests
         uses: test-summary/action@62bc5c68de2a6a0d02039763b8c754569df99e3f # TSCCR: no entry for repository "test-summary/action"
         with:
           paths: "test-results/go-test/results.xml"
           show: "fail"
-        if: always()
+        if: success() || failure() 
