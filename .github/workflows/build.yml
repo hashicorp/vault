@@ -259,3 +259,136 @@ jobs:
       - run: |
           echo "Some of the required build and test workflows have failed!"
           exit 1
+
+  notify-build-other-failures:
+    if: ${{ always() && needs.build-other.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      fail-fast: false
+    needs:
+      - build-other
+    steps:
+      - name: send-notification
+        uses: hashicorp/cloud-gha-slack-notifier@730a033037b8e603adf99ebd3085f0fdfe75e2f4 #v1
+        with:
+          channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official
+          slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload: |
+            {"text":"OSS build-other failed on {{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":flashing-light: OSS build failures :flashing-light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"build-other failed on {{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}
+
+  notify-build-linux-failures:
+    if: ${{ always() && needs.build-linux.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      fail-fast: false
+    needs:
+      - build-linux
+    steps:
+      - name: send-notification
+        uses: hashicorp/cloud-gha-slack-notifier@730a033037b8e603adf99ebd3085f0fdfe75e2f4 #v1
+        with:
+          channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official
+          slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload: |
+            {"text":"OSS build-linux failed on {{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":flashing-light: OSS build failures :flashing-light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"build-linux failed on {{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}
+
+  notify-build-darwin-failures:
+    if: ${{ always() && needs.build-darwin.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      fail-fast: false
+    needs:
+      - build-darwin
+    steps:
+      - name: send-notification
+        uses: hashicorp/cloud-gha-slack-notifier@730a033037b8e603adf99ebd3085f0fdfe75e2f4 #v1
+        with:
+          channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official
+          slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload: |
+            {"text":"OSS build-darwin failed on {{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":flashing-light: OSS build failures :flashing-light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"build-darwin failed on {{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}
+
+  notify-build-docker-failures:
+    if: ${{ always() && needs.build-docker.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      fail-fast: false
+    needs:
+      - build-docker
+    steps:
+      - name: send-notification
+        uses: hashicorp/cloud-gha-slack-notifier@730a033037b8e603adf99ebd3085f0fdfe75e2f4 #v1
+        with:
+          channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official
+          slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload: |
+            {"text":"OSS build-docker failed on {{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":flashing-light: OSS build failures :flashing-light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"build-docker failed on {{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}
+
+  notify-build-ubi-failures:
+    if: ${{ always() && needs.build-ubi.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      fail-fast: false
+    needs:
+      - build-ubi
+    steps:
+      - name: send-notification
+        uses: hashicorp/cloud-gha-slack-notifier@730a033037b8e603adf99ebd3085f0fdfe75e2f4 #v1
+        with:
+          channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official
+          slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload: |
+            {"text":"OSS build-ubi failed on {{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":flashing-light: OSS build failures :flashing-light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"build-ubi failed on {{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}
+
+  notify-test-failures:
+    if: ${{ always() && needs.test.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      fail-fast: false
+    needs:
+      - test
+    steps:
+      - name: send-notification
+        uses: hashicorp/cloud-gha-slack-notifier@730a033037b8e603adf99ebd3085f0fdfe75e2f4 #v1
+        with:
+          channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official
+          slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload: |
+            {"text":"OSS test failed on {{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":flashing-light: OSS test failures :flashing-light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"test failed on {{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}
+
+  notify-test-docker-k8s-failures:
+    if: ${{ always() && needs.test-docker-k8s.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      fail-fast: false
+    needs:
+      - test-docker-k8s
+    steps:
+      - name: send-notification
+        uses: hashicorp/cloud-gha-slack-notifier@730a033037b8e603adf99ebd3085f0fdfe75e2f4 #v1
+        with:
+          channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official
+          slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload: |
+            {"text":"OSS test-docker-k8s failed on {{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":flashing-light: OSS test failures :flashing-light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"test-docker-k8s failed on {{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}
