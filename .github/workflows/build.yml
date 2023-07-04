@@ -279,9 +279,12 @@ jobs:
           payload: |
             {"text":"OSS build-other failed on {{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":flashing-light: OSS build failures :flashing-light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"build-other failed on {{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}
 
-#TODO: Change violethynes/VAULT-17590 to main
+# TODO: Change from
+# github.head_ref == 'violethynes/VAULT-17590'
+# to
+# github.ref_name == 'main'
   notify-build-linux-failures:
-    if: ${{ always() && needs.build-linux.result == 'failure' && (github.ref_name == 'violethynes/VAULT-17590' || startsWith(github.ref_name, 'release/')) }}
+    if: ${{ always() && needs.build-linux.result == 'failure' && (github.head_ref == 'violethynes/VAULT-17590' || startsWith(github.ref_name, 'release/')) }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -355,9 +358,14 @@ jobs:
           slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
           payload: |
             {"text":"OSS build-ubi failed on {{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":flashing-light: OSS build failures :flashing-light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"build-ubi failed on {{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}
+  
 
+  # TODO: Change from
+  # github.head_ref == 'violethynes/VAULT-17590'
+  # to
+  # github.ref_name == 'main'
   notify-test-failures:
-    if: ${{ always() && needs.test.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
+    if: ${{ always() && needs.test.result == 'failure' && (github.head_ref == 'violethynes/VAULT-17590' || startsWith(github.ref_name, 'release/')) }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write
