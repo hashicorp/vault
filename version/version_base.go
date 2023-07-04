@@ -19,9 +19,8 @@ var (
 	// Whether cgo is enabled or not; set at build time
 	CgoEnabled bool
 
-	// Version info is now being read from the VERSION file and passed in with ldflags,
-	// as part of the binary build process in CI.
-	// The default values below will be used during local builds.
+	// Version and VersionPrerelease info are now being embedded directly from the VERSION file.
+	// VersionMetadata is being passed in via ldflags in CI, otherwise the default set here is used.
 	//go:embed VERSION
 	fullVersion                   string
 	Version, VersionPrerelease, _ = strings.Cut(strings.TrimSpace(fullVersion), "-")
