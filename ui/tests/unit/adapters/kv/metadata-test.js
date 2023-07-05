@@ -61,11 +61,6 @@ module('Unit | Adapter | kv/metadata', function (hooks) {
     this.endpoint = kvMetadataPath(this.backend, this.path);
   });
 
-  hooks.afterEach(function () {
-    this.store.unloadAll('kv/metadata');
-    this.server.shutdown();
-  });
-
   test('it should make request to correct endpoint on createRecord', async function (assert) {
     assert.expect(10);
     const recordData = {

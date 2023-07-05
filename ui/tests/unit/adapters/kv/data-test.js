@@ -63,11 +63,6 @@ module('Unit | Adapter | kv/data', function (hooks) {
     this.endpoint = `${encodePath(this.backend)}/data/${encodePath(this.path)}`;
   });
 
-  hooks.afterEach(function () {
-    this.store.unloadAll('kv/data');
-    this.server.shutdown();
-  });
-
   test('it should make request to correct endpoint on createRecord', async function (assert) {
     assert.expect(8);
     this.server.post(this.endpoint, (schema, req) => {
