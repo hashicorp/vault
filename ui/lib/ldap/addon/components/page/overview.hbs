@@ -1,0 +1,19 @@
+<TabPageHeader @model={{@backendModel}} @breadcrumbs={{@breadcrumbs}}>
+  <:toolbarActions>
+    {{#if @promptConfig}}
+      <ToolbarLink @route="configure" data-test-toolbar-action="config">
+        Configure LDAP
+      </ToolbarLink>
+    {{else}}
+      <ToolbarLink @route="roles.create" data-test-toolbar-action="role">
+        Create role
+      </ToolbarLink>
+    {{/if}}
+  </:toolbarActions>
+</TabPageHeader>
+
+{{#if @promptConfig}}
+  <ConfigCta />
+{{else}}
+  {{! add card components here once created }}
+{{/if}}
