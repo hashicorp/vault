@@ -18,16 +18,6 @@ jobs:
   plugin-update-check:
     runs-on: ubuntu-latest
     env:
-      # In the case of a curl call, the input json will look like:
-      # e.g.,
-      #  {
-      #    "ref": "main",
-      #    "inputs": {
-      #        "sha":"abcdef",
-      #        "repo":"hashicorp/vault-plugin-database-snowflake"
-      #        "plugin_branch":"auto-dependency-upgrades"
-      #    }
-      #  }
       COMMIT_SHA: "${{inputs.sha}}"
       PLUGIN_REPO: "${{inputs.repo}}"
       PLUGIN_BRANCH: "${{inputs.plugin_branch}}"
@@ -36,16 +26,16 @@ jobs:
     steps:
       - run: echo "would use $COMMIT_SHA of $PLUGIN_REPO"
         # checkout
-      - uses: actions/checkout@v3 # should be a sha, but eh
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
         with:
           # We don't use the default token so that checks are executed on the resulting PR
           # https://docs.github.com/en/actions/using-workflows/triggering-a-workflow#triggering-a-workflow-from-a-workflow
           token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
         # activate go
-      - uses: actions/setup-go@v4
+      - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
       - name: update plugin
         run: |
-          go get "github.com/hashicorp/$PLUGIN_REPO@$COMMIT_SHA"
+          go get "github.com/$PLUGIN_REPO@$COMMIT_SHA"
           go mod tidy
       - name: detect changes
         id: changes
