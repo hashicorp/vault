@@ -3,10 +3,14 @@
 
 package experiments
 
-const VaultExperimentEventsAlpha1 = "events.alpha1"
+const (
+	VaultExperimentEventsAlpha1          = "events.alpha1"
+	VaultExperimentCoreAuditEventsAlpha1 = "core.audit.events.alpha1"
+)
 
 var validExperiments = []string{
 	VaultExperimentEventsAlpha1,
+	VaultExperimentCoreAuditEventsAlpha1,
 }
 
 // ValidExperiments exposes the list without exposing a mutable global variable.

@@ -12,6 +12,7 @@ import (
 
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -155,7 +156,7 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	c.audit = newTable
 
 	// Register the backend
-	c.auditBroker.Register(entry.Path, backend, entry.Local)
+	c.auditBroker.Register(entry.Path, backend, entry.Local, c.IsExperimentEnabled(experiments.VaultExperimentCoreAuditEventsAlpha1))
 	if c.logger.IsInfo() {
 		c.logger.Info("enabled audit backend", "path", entry.Path, "type", entry.Type)
 	}
@@ -208,7 +209,7 @@ func (c *Core) disableAudit(ctx context.Context, path string, updateStorage bool
 	c.audit = newTable
 
 	// Unmount the backend
-	c.auditBroker.Deregister(path)
+	c.auditBroker.Deregister(path, c.IsExperimentEnabled(experiments.VaultExperimentCoreAuditEventsAlpha1))
 	if c.logger.IsInfo() {
 		c.logger.Info("disabled audit backend", "path", path)
 	}
@@ -416,7 +417,7 @@ func (c *Core) setupAudits(ctx context.Context) error {
 		}
 
 		// Mount the backend
-		broker.Register(entry.Path, backend, entry.Local)
+		broker.Register(entry.Path, backend, entry.Local, c.IsExperimentEnabled(experiments.VaultExperimentCoreAuditEventsAlpha1))
 
 		successCount++
 	}
