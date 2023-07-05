@@ -10,9 +10,9 @@ import { resolve, Promise } from 'rsvp';
 import { dasherize } from '@ember/string';
 import { assert } from '@ember/debug';
 import { set, get } from '@ember/object';
+import { tracked } from 'tracked-built-ins';
 import clamp from 'vault/utils/clamp';
 import config from 'vault/config/environment';
-import { tracked } from 'tracked-built-ins/.';
 
 const { DEFAULT_PAGE_SIZE } = config.APP;
 
