@@ -258,7 +258,7 @@ jobs:
       - id: secrets
         name: Fetch secrets
         if: github.repository == 'hashicorp/vault-enterprise'
-        uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e
+        uses: hashicorp/vault-action@e926631bb24905eb0c09fbd3020e366ccec0ea84
         with:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
