@@ -167,21 +167,27 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 	}
 
 	result := map[string]interface{}{
-		"disable_mlock": c.DisableMlock,
-
+		"cluster_name":                 c.ClusterName,
 		"default_max_request_duration": c.DefaultMaxRequestDuration,
+		"disable_mlock":                c.DisableMlock,
+		"log_format":                   c.LogFormat,
+		"log_level":                    c.LogLevel,
+		"pid_file":                     c.PidFile,
+	}
 
-		// Logging related settings
-		"log_file":             c.LogFile,
-		"log_format":           c.LogFormat,
-		"log_level":            c.LogLevel,
-		"log_rotate_bytes":     c.LogRotateBytes,
-		"log_rotate_duration":  c.LogRotateDuration,
-		"log_rotate_max_files": c.LogRotateMaxFiles,
-
-		"pid_file": c.PidFile,
-
-		"cluster_name": c.ClusterName,
+	// Optional log related settings
+	switch {
+	case c.LogFile != "":
+		result["log_file"] = c.LogFile
+		fallthrough
+	case c.LogRotateBytes != 0:
+		result["log_rotate_bytes"] = c.LogRotateBytes
+		fallthrough
+	case c.LogRotateDuration != "":
+		result["log_rotate_duration"] = c.LogRotateDuration
+		fallthrough
+	case c.LogRotateMaxFiles != 0:
+		result["log_rotate_max_files"] = c.LogRotateMaxFiles
 	}
 
 	// Sanitize listeners
