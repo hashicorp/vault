@@ -260,13 +260,8 @@ jobs:
           echo "Some of the required build and test workflows have failed!"
           exit 1
 
-
-  # TODO: Change from
-  # github.head_ref == 'violethynes/VAULT-17590'
-  # to
-  # github.ref_name == 'main'
   notify-completed-successfully-failures:
-    if: ${{ always() && needs.completed-successfully.result == 'failure' && (github.head_ref == 'violethynes/VAULT-17590' || startsWith(github.ref_name, 'release/')) }}
+    if: ${{ always() && needs.completed-successfully.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write

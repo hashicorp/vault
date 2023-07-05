@@ -64,7 +64,7 @@ var (
 type HandlerProperties struct {
 	Core                  *Core
 	ListenerConfig        *configutil.Listener
-	DisableP  rintableCheck bool
+	DisablePrintableCheck bool
 	RecoveryMode          bool
 	RecoveryToken         *uberAtomic.String
 }

@@ -320,12 +320,8 @@ jobs:
       - run: |
           tr -d '\n' <<< '${{ toJSON(needs.*.result) }}' | grep -q -v -E '(failure|cancelled)'
 
-  # TODO: Change from
-  # github.head_ref == 'violethynes/VAULT-17590'
-  # to
-  # github.ref_name == 'main'
   notify-tests-completed-failures:
-    if: ${{ always() && needs.tests-completed.result == 'failure' && (github.head_ref == 'violethynes/VAULT-17590' || startsWith(github.ref_name, 'release/')) }}
+    if: ${{ always() && needs.tests-completed.result == 'failure' && (github.head_ref == github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write
