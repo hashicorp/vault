@@ -3,15 +3,15 @@ on:
     inputs:
       repo:
         type: string
-        description: the plugin repo that is updated (ex. vault-plugin-database-snowflake)
+        description: 'The owner and repository name as per the github.repository context property.'
         required: true
       sha:
         type: string
-        description: the hash of the plugin repo commit to use
+        description: 'The hash of the plugin repository commit to use'
         required: true
       plugin_branch:
         type: string
-        description: the name of the plugin branch
+        description: 'The name of the plugin branch'
         required: true
 
 jobs:
@@ -21,10 +21,11 @@ jobs:
       # In the case of a curl call, the input json will look like:
       # e.g.,
       #  {
-      #    "ref": "some-branch",
+      #    "ref": "main",
       #    "inputs": {
       #        "sha":"abcdef",
-      #        "repo":"vault-plugin-database-snowflake"
+      #        "repo":"hashicorp/vault-plugin-database-snowflake"
+      #        "plugin_branch":"auto-dependency-upgrades"
       #    }
       #  }
       COMMIT_SHA: "${{inputs.sha}}"
