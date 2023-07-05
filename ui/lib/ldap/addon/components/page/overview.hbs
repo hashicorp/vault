@@ -5,7 +5,7 @@
         Configure LDAP
       </ToolbarLink>
     {{else}}
-      <ToolbarLink @route="roles.create" data-test-toolbar-action="role">
+      <ToolbarLink @route="roles.create" @type="add" data-test-toolbar-action="role">
         Create role
       </ToolbarLink>
     {{/if}}
