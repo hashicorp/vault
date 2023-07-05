@@ -9,18 +9,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type expectedValue[T any] struct {
-	Value T
-	IsNil bool
+type mapValue[T any] struct {
+	Value   T
+	IsFound bool
 }
 
 type expectedLogFields struct {
-	File           expectedValue[string]
-	Format         expectedValue[string]
-	Level          expectedValue[string]
-	RotateBytes    expectedValue[int]
-	RotateDuration expectedValue[string]
-	RotateMaxFiles expectedValue[int]
+	File           mapValue[string]
+	Format         mapValue[string]
+	Level          mapValue[string]
+	RotateBytes    mapValue[int]
+	RotateDuration mapValue[string]
+	RotateMaxFiles mapValue[int]
 }
 
 // TestSharedConfig_Sanitized_LogFields ensures that 'log related' shared config
@@ -39,12 +39,8 @@ func TestSharedConfig_Sanitized_LogFields(t *testing.T) {
 			Value: &SharedConfig{},
 			IsNil: false,
 			Expected: expectedLogFields{
-				File:           expectedValue[string]{IsNil: true},
-				Format:         expectedValue[string]{IsNil: false, Value: ""},
-				Level:          expectedValue[string]{IsNil: false, Value: ""},
-				RotateBytes:    expectedValue[int]{IsNil: true},
-				RotateDuration: expectedValue[string]{IsNil: true},
-				RotateMaxFiles: expectedValue[int]{IsNil: true},
+				Format: mapValue[string]{IsFound: true, Value: ""},
+				Level:  mapValue[string]{IsFound: true, Value: ""},
 			},
 		},
 		"only-log-level-and-format": {
@@ -54,12 +50,8 @@ func TestSharedConfig_Sanitized_LogFields(t *testing.T) {
 			},
 			IsNil: false,
 			Expected: expectedLogFields{
-				File:           expectedValue[string]{IsNil: true},
-				Format:         expectedValue[string]{Value: "json"},
-				Level:          expectedValue[string]{Value: "warn"},
-				RotateBytes:    expectedValue[int]{IsNil: true},
-				RotateDuration: expectedValue[string]{IsNil: true},
-				RotateMaxFiles: expectedValue[int]{IsNil: true},
+				Format: mapValue[string]{IsFound: true, Value: "json"},
+				Level:  mapValue[string]{IsFound: true, Value: "warn"},
 			},
 		},
 		"valid-log-fields": {
@@ -73,12 +65,12 @@ func TestSharedConfig_Sanitized_LogFields(t *testing.T) {
 			},
 			IsNil: false,
 			Expected: expectedLogFields{
-				File:           expectedValue[string]{Value: "vault.log"},
-				Format:         expectedValue[string]{Value: "json"},
-				Level:          expectedValue[string]{Value: "warn"},
-				RotateBytes:    expectedValue[int]{Value: 1024},
-				RotateDuration: expectedValue[string]{Value: "30m"},
-				RotateMaxFiles: expectedValue[int]{Value: -1},
+				File:           mapValue[string]{IsFound: true, Value: "vault.log"},
+				Format:         mapValue[string]{IsFound: true, Value: "json"},
+				Level:          mapValue[string]{IsFound: true, Value: "warn"},
+				RotateBytes:    mapValue[int]{IsFound: true, Value: 1024},
+				RotateDuration: mapValue[string]{IsFound: true, Value: "30m"},
+				RotateMaxFiles: mapValue[int]{IsFound: true, Value: -1},
 			},
 		},
 	}
@@ -95,63 +87,69 @@ func TestSharedConfig_Sanitized_LogFields(t *testing.T) {
 				require.NotNil(t, cfg)
 
 				// Log file
-				val := cfg["log_file"]
+				val, found := cfg["log_file"]
 				switch {
-				case tc.Expected.File.IsNil:
-					require.Nil(t, val)
-				default:
+				case tc.Expected.File.IsFound:
+					require.True(t, found)
 					require.NotNil(t, val)
 					require.Equal(t, tc.Expected.File.Value, val)
+				default:
+					require.Nil(t, val)
 				}
 
 				// Log format
-				val = cfg["log_format"]
+				val, found = cfg["log_format"]
 				switch {
-				case tc.Expected.Format.IsNil:
-					require.Nil(t, val)
-				default:
+				case tc.Expected.Format.IsFound:
+					require.True(t, found)
 					require.NotNil(t, val)
 					require.Equal(t, tc.Expected.Format.Value, val)
+				default:
+					require.Nil(t, val)
 				}
 
 				// Log level
-				val = cfg["log_level"]
+				val, found = cfg["log_level"]
 				switch {
-				case tc.Expected.Level.IsNil:
-					require.Nil(t, val)
-				default:
+				case tc.Expected.Level.IsFound:
+					require.True(t, found)
 					require.NotNil(t, val)
 					require.Equal(t, tc.Expected.Level.Value, val)
+				default:
+					require.Nil(t, val)
 				}
 
 				// Log rotate bytes
-				val = cfg["log_rotate_bytes"]
+				val, found = cfg["log_rotate_bytes"]
 				switch {
-				case tc.Expected.RotateBytes.IsNil:
-					require.Nil(t, val)
-				default:
+				case tc.Expected.RotateBytes.IsFound:
+					require.True(t, found)
 					require.NotNil(t, val)
 					require.Equal(t, tc.Expected.RotateBytes.Value, val)
+				default:
+					require.Nil(t, val)
 				}
 
 				// Log rotate duration
-				val = cfg["log_rotate_duration"]
+				val, found = cfg["log_rotate_duration"]
 				switch {
-				case tc.Expected.RotateDuration.IsNil:
-					require.Nil(t, val)
-				default:
+				case tc.Expected.RotateDuration.IsFound:
+					require.True(t, found)
 					require.NotNil(t, val)
 					require.Equal(t, tc.Expected.RotateDuration.Value, val)
+				default:
+					require.Nil(t, val)
 				}
 
 				// Log rotate max files
-				val = cfg["log_rotate_max_files"]
+				val, found = cfg["log_rotate_max_files"]
 				switch {
-				case tc.Expected.RotateMaxFiles.IsNil:
-					require.Nil(t, val)
-				default:
+				case tc.Expected.RotateMaxFiles.IsFound:
+					require.True(t, found)
 					require.NotNil(t, val)
 					require.Equal(t, tc.Expected.RotateMaxFiles.Value, val)
+				default:
+					require.Nil(t, val)
 				}
 			}
 		})
