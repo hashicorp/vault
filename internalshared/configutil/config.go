@@ -176,17 +176,16 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 	}
 
 	// Optional log related settings
-	switch {
-	case c.LogFile != "":
+	if c.LogFile != "" {
 		result["log_file"] = c.LogFile
-		fallthrough
-	case c.LogRotateBytes != 0:
+	}
+	if c.LogRotateBytes != 0 {
 		result["log_rotate_bytes"] = c.LogRotateBytes
-		fallthrough
-	case c.LogRotateDuration != "":
+	}
+	if c.LogRotateDuration != "" {
 		result["log_rotate_duration"] = c.LogRotateDuration
-		fallthrough
-	case c.LogRotateMaxFiles != 0:
+	}
+	if c.LogRotateMaxFiles != 0 {
 		result["log_rotate_max_files"] = c.LogRotateMaxFiles
 	}
 
