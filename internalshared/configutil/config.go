@@ -41,12 +41,12 @@ type SharedConfig struct {
 	// LogFormat specifies the log format. Valid values are "standard" and
 	// "json". The values are case-insenstive. If no log format is specified,
 	// then standard format will be used.
+	LogFile              string      `hcl:"log_file"`
 	LogFormat            string      `hcl:"log_format"`
 	LogLevel             string      `hcl:"log_level"`
-	LogFile              string      `hcl:"log_file"`
-	LogRotateDuration    string      `hcl:"log_rotate_duration"`
 	LogRotateBytes       int         `hcl:"log_rotate_bytes"`
 	LogRotateBytesRaw    interface{} `hcl:"log_rotate_bytes"`
+	LogRotateDuration    string      `hcl:"log_rotate_duration"`
 	LogRotateMaxFiles    int         `hcl:"log_rotate_max_files"`
 	LogRotateMaxFilesRaw interface{} `hcl:"log_rotate_max_files"`
 
@@ -171,8 +171,13 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 
 		"default_max_request_duration": c.DefaultMaxRequestDuration,
 
-		"log_level":  c.LogLevel,
-		"log_format": c.LogFormat,
+		// Logging related settings
+		"log_file":             c.LogFile,
+		"log_format":           c.LogFormat,
+		"log_level":            c.LogLevel,
+		"log_rotate_bytes":     c.LogRotateBytes,
+		"log_rotate_duration":  c.LogRotateDuration,
+		"log_rotate_max_files": c.LogRotateMaxFiles,
 
 		"pid_file": c.PidFile,
 
