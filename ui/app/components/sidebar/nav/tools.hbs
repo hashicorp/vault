@@ -19,4 +19,10 @@
       />
     {{/if}}
   {{/each}}
+  <Nav.Link
+    @route="vault.cluster.tools.open-api-explorer.index"
+    @current-when="vault.cluster.tools.open-api-explorer.index"
+    @text="API Explorer"
+    data-test-sidebar-nav-link="API Explorer"
+  />
 </Hds::SideNav::Portal>
