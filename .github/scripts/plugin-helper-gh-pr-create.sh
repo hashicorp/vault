@@ -44,7 +44,7 @@ gh pr edit "$vault_pr_num" --add-label "dependencies,pr/no-changelong,pr/no-mile
 gh pr edit "$vault_pr_num" --add-reviewer "$reviewers"
 
 # get Plugin PR number
-plugin_pr_num=$(gh pr list --head "$PLUGIN_BRANCH" --json number --repo hashicorp/$PLUGIN_REPO -q '.[0].number')
+plugin_pr_num=$(gh pr list --head "$PLUGIN_BRANCH" --json number --repo "$PLUGIN_REPO" -q '.[0].number')
 
 # make a comment on the plugin repo's PR
-gh pr comment "$plugin_pr_num" --body "Vault CI check PR: $vault_pr_url" --repo hashicorp/$PLUGIN_REPO
+gh pr comment "$plugin_pr_num" --body "Vault CI check PR: $vault_pr_url" --repo "$PLUGIN_REPO"
