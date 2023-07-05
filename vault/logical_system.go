@@ -4615,7 +4615,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 						(pluginType == "system" || pluginType == "identity" || pluginType == "cubbyhole"))
 
 				if !isSingletonMount {
-					mountPathParameterName = strings.TrimRight(mount, "/") + "_mount_path"
+					mountPathParameterName = strings.TrimRight(strings.ReplaceAll(mount, "-", "_"), "/") + "_mount_path"
 				}
 			}
 
