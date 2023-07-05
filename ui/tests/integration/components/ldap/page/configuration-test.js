@@ -10,6 +10,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { duration } from 'core/helpers/format-duration';
+import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap';
 
 const selectors = {
   rotateAction: '[data-test-toolbar-rotate-action] button',
@@ -29,15 +30,8 @@ module('Integration | Component | ldap | Page::Configuration', function (hooks) 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
 
-    this.store.pushPayload('secret-engine', {
-      modelName: 'secret-engine',
-      data: {
-        accessor: 'ldap_7e838627',
-        path: 'ldap-test/',
-        type: 'ldap',
-      },
-    });
-    this.backend = this.store.peekRecord('secret-engine', 'ldap-test');
+    this.backend = createSecretsEngine(this.store);
+    this.breadcrumbs = generateBreadcrumbs(this.backend.id);
 
     this.store.pushPayload('ldap/config', {
       modelName: 'ldap/config',
@@ -45,11 +39,6 @@ module('Integration | Component | ldap | Page::Configuration', function (hooks) 
       ...this.server.create('ldap-config'),
     });
     this.config = this.store.peekRecord('ldap/config', 'ldap-test');
-
-    this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: this.backend.id },
-    ];
 
     this.renderComponent = () => {
       return render(
