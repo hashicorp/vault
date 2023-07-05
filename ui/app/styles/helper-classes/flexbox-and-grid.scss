@@ -102,13 +102,16 @@
   display: grid;
 }
 
-.is-grid-2-columns {
+.grid-2-columns {
   grid-template-columns: 2fr 2fr;
-  grid-gap: 2rem;
 
   @include until($mobile) {
     grid-template-columns: 1fr;
   }
+}
+
+.grid-gap-2 {
+  grid-gap: 2rem;
 }
 
 .is-grid-3-columns {
