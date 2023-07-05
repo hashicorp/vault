@@ -138,9 +138,12 @@ This health check will check each issuer in the mount for validity status, retur
 
 **Remediation steps**:
 
-First perform a [CA rotation operation](/vault/docs/secrets/pki/rotation-primitives) for any with pending expiry.
-
-Once successfully migrated to the new CA, the old CAs after they expire, can be removed using a [manual tidy](/vault/api-docs/secret/pki#tidy) run with `vault write <mount>/tidy tidy_expired_issuers=true` or the [delete issuer](/vault/api-docs/secret/pki#delete-issuer) API.
+1. Perform a [CA rotation operation](/vault/docs/secrets/pki/rotation-primitives)
+   to check for CAs that are about to expire.
+1. Migrate from expiring CAs to new CAs.
+1. Delete any expired CAs with one of the following options:
+  - Run [tidy](/vault/api-docs/secret/pki#tidy) manually with `vault write <mount>/tidy tidy_expired_issuers=true`.
+  - Use the Vault API to call [delete issuer](/vault/api-docs/secret/pki#delete-issuer).
 
 
 ### CRL validity period
@@ -229,7 +232,9 @@ Checks whether any roles exist that allow implicit localhost based issuance
 
 **Remediation steps**:
 
-Roles should have `allow_localhost` set to `false` and the `allowed_domains` field updated with an explicit list of allowed localhost-like domains. This is a best-practice to simplify understanding of roles.
+1. Set `allow_localhost` to `false` for all roles.
+1. Update the `allowed_domains` field with an explicit list of allowed
+   localhost-like domains.
 
 ### Role allows Glob-Based wildcard issuance
 
@@ -250,7 +255,14 @@ other (potentially dangerous) quirks.
 
 **Remediation steps**:
 
-It is strongly suggested that roles either set `allow_glob_domains` or `allow_wildcard_certificates`, but not both to true. If both behaviors are required, we'd suggest splitting it into two roles unless required for all SANs on the certificate. Otherwise, add this role to `allowed_roles` to ignore future warnings about this role.
+1. Split any role that need both of `allow_glob_domains` and `allow_wildcard_certificates` to be true into two roles.
+1. Continue splitting roles until both of the following are true for all roles:
+    - The role has `allow_glob_domains` **or** `allow_wildcard_certificates`, but
+      not both.
+    - Roles with `allow_glob_domains` **and** `allow_wildcard_certificates` are
+      the only roles required for **all** SANs on the certificate.
+1. Add the roles that allow glob domains and wildcards to `allowed_roles` so
+   Vault ignores them in future checks.
 
 ### Role sets `no_store=false` and performance
 
@@ -267,9 +279,14 @@ It is strongly suggested that roles either set `allow_glob_domains` or `allow_wi
 
  - `allowed_roles` `(list: nil)` - an allow-list of roles to ignore.
 
-This health check checks each role to see whether it sets `no_store=false` or not. When used with lots of certificates and no temporal auto-rebuilding of CRLs, this can result in bad performance. Instead, [BYOC](/vault/api-docs/secret/pki#revoke-certificate) can be used for the occasional revocation and shorter certificate lifetimes used instead. Without auto-rebuild, this will be a warning, but when auto-rebuild is enabled, we can make it informational.
+Checks each role to see whether `no_store` is set to `false`.
 
-*NOTE* if the role is used for ACME issuance, `no_store=true` is required.
+<Important>
+Vault will provide warnings and performance will suffer if you have a large
+number of certificates without temporal CRL auto-rebuilding and set `no_store`
+to `true`.
+</Important>
+
 
 **Remediation steps**:
 
@@ -361,26 +378,24 @@ This health check verifies if the `If-Modified-Since` header has been added to `
 
 **Remediation steps**:
 
-Add the missing headers to the `allowed_response_headers` and `passthrough_request_headers` with the command:
-
-```
-vault secrets tune \
-  -passthrough-request-headers="If-Modified-Since" \
-  -allowed-response-headers="Last-Modified" \
-  <mount>
-```
-
-If ACME support is desired, the following command will enable the ACME specific headers as well
-
-```
-vault secrets tune \
-  -passthrough-request-headers="If-Modified-Since" \
-  -allowed-response-headers="Last-Modified" \
-  -allowed-response-headers="Replay-Nonce" \
-  -allowed-response-headers="Link" \
-  -allowed-response-headers="Location" \
-  <mount>
-```
+1. Update `allowed_response_headers` and `passthrough_request_headers` for all
+   policies with `vault secrets tune`:
+    ```shell-session
+    vault secrets tune \
+      -passthrough-request-headers="If-Modified-Since" \
+      -allowed-response-headers="Last-Modified" \
+      <mount>
+    ```
+1. Update ACME-specific headers with `vault secrets tune` (if you are using ACME):
+    ```shell-session
+    vault secrets tune \
+      -passthrough-request-headers="If-Modified-Since" \
+      -allowed-response-headers="Last-Modified" \
+      -allowed-response-headers="Replay-Nonce" \
+      -allowed-response-headers="Link" \
+      -allowed-response-headers="Location" \
+      <mount>
+    ```
 
 ### Auto-Tidy disabled
 
@@ -431,19 +446,21 @@ This health check verifies that tidy has run within the last run window. This ca
 
 **Remediation steps**:
 
-Read the tidy status endpoint, `vault read <mount>/tidy-status`, for possible error messages of why tidy has failed to run in the past, otherwise schedule a manual run of tidy or consider configuring auto-tidy
+1. Schedule a manual run of tidy with `vault write`:
+    ```shell-session
+    vault write <mount>/tidy \
+      tidy_cert_store=true \
+      tidy_revoked_certs=true \
+      tidy_acme=true \
+      tidy_revocation_queue=true \
+      tidy_cross_cluster_revoked_certs=true \
+      tidy_revoked_cert_issuer_associations=true
+    ```
+1. Review the tidy status endpoint, `vault read <mount>/tidy-status` for
+   additional information.
+1. Re-configure auto-tidy based on the log information and results of your
+   manual run.
 
-To manually run a tidy operation:
-
-```
-vault write <mount>/tidy \
-  tidy_cert_store=true \
-  tidy_revoked_certs=true \
-  tidy_acme=true \
-  tidy_revocation_queue=true \
-  tidy_cross_cluster_revoked_certs=true \
-  tidy_revoked_cert_issuer_associations=true
-```
 
 ### Too many certificates
 
