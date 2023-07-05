@@ -91,7 +91,7 @@ func appendStub(target string, packageName string, stub string, enterprise bool,
 		// If we don't end up writing to the file, delete it.
 		defer func() {
 			if err != nil || !added {
-				os.Remove(target)
+				os.Remove(target + ".tmp")
 			} else {
 				os.Rename(target+".tmp", target)
 			}
