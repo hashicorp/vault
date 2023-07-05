@@ -249,7 +249,7 @@ to be set on all PR secondary clusters.`,
 					Required:    false,
 				},
 				"usage": {
-					Type:        framework.TypeStringSlice,
+					Type:        framework.TypeString,
 					Description: `Usage`,
 					Required:    false,
 				},

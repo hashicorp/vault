@@ -5,11 +5,11 @@
   <p.levelLeft>
     <h1 class="title is-3" data-test-secret-header="true">
       {{#if this.isDistributing}}
-        Distribute key
+        Distribute Key
       {{else if (eq @mode "create")}}
-        Create key
+        Create Key
       {{else if (eq @mode "edit")}}
-        Edit key
+        Edit Key
       {{else}}
         {{@model.id}}
       {{/if}}
@@ -168,7 +168,7 @@
     {{/each}}
   {{else}}
     <div class="has-top-margin-xl has-bottom-margin-s">
-      <h2 class="title is-5 has-border-bottom-light">Key Details</h2>
+      <h2 class="title is-5 has-border-bottom-light has-bottom-padding-s">Key details</h2>
       {{#each @model.showFields as |attr|}}
         <InfoTableRow
           @alwaysRender={{true}}
@@ -181,7 +181,7 @@
     </div>
     <div class="has-top-margin-xl has-bottom-margin-s">
       <h2 class="title is-5 {{if @model.distribution 'has-border-bottom-light' 'is-borderless'}}">
-        Distribution Details
+        Distribution details
       </h2>
       {{#if @model.provider.permissionsError}}
         <EmptyState
