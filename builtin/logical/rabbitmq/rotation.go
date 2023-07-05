@@ -46,6 +46,7 @@ func (b *backend) rotateExpiredStaticCreds(ctx context.Context, req *logical.Req
 	}
 }
 
+// TODO check if not pop by key needed
 func (b *backend) rotateCredential(ctx context.Context, storage logical.Storage) (rotated bool, err error) {
 	item, err := b.credRotationQueue.Pop()
 	if err != nil {
@@ -130,16 +131,4 @@ func (b *backend) deleteStaticCredential(ctx context.Context, storage logical.St
 		}
 	}
 	return nil
-}
-
-type setCredentialsWAL struct {
-	NewPassword string `json:"new_password"`
-	RoleName    string `json:"role_name"`
-	Username    string `json:"username"`
-
-	LastVaultRotation time.Time `json:"last_vault_rotation"`
-
-	// Private fields which will not be included in json.Marshal/Unmarshal.
-	walID        string
-	walCreatedAt int64 // Unix time at which the WAL was created.
 }

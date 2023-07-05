@@ -12,6 +12,7 @@ import (
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/queue"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -324,7 +325,23 @@ func (b *backend) pathStaticRoleCreateUpdate(ctx context.Context, req *logical.R
 		RevokeUserOnDelete: revokeUserOnDelete,
 	}
 
-	// TODO add entry to queue
+	item, err := b.credRotationQueue.PopByKey(name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to pop item from the rotation queue for role %q: %w", name, err)
+	}
+	priority := time.Now().Add(staticRole.RotationPeriod).Unix()
+	if item != nil {
+		priority = item.Priority
+	}
+	err = b.credRotationQueue.Push(&queue.Item{
+		Key:      name,
+		Value:    staticRole,
+		Priority: priority,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to add item into the rotation queue for role %q: %w", name, err)
+	}
+
 	entry, err := logical.StorageEntryJSON(rabbitMQStaticRolePath+name, staticRole)
 	if err != nil {
 		return nil, err
