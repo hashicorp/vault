@@ -11,15 +11,15 @@ description: |-
 This page contains the list of deprecations and important or breaking changes
 for Vault 1.2.0 compared to 1.1.0. Please read it carefully.
 
-## Known Issues
+## Known issues
 
-### AppRole Upgrade Issue
+### AppRole upgrade issue
 
 Due to a bug, on upgrade AppRole roles cannot be read properly. If using AppRole, do not upgrade until this issue is fixed in 1.2.1.
 
 ## Changes/Deprecations
 
-### Path Character Handling
+### Path character handling
 
 Due to underlying changes in Go's runtime past version 1.11.5, Vault is now
 stricter about what characters it will accept in path names. Whereas before it
@@ -29,24 +29,24 @@ library before the request is passed to Vault, and this cannot be disabled. To
 continue using these (e.g. for already-written paths), they must be properly
 percent-encoded (e.g. `\r` becomes `%0D`, `\x00` becomes `%00`, and so on).
 
-### AWSKMS Seal Region
+### AWSKMS seal region
 
 The user-configured regions on the AWSKMS seal stanza will now be preferred
 over regions set in the enclosing environment.
 
-### Audit Logging of Empty Values
+### Audit logging of empty values
 
 All values in audit logs now are omitted if they are empty. This helps reduce
 the size of audit log entries by not reproducing keys in each entry that
 commonly don't contain any value, which can help in cases where audit log
 entries are above the maximum UDP packet size and others.
 
-### Rollback Logging
+### Rollback logging
 
 Rollback will no longer display log messages when it runs; it will only display
 messages if an error occurs.
 
-### Database Plugins
+### Database plugins
 
 Database plugins now default to 4 max open connections rather than 2. This
 should be safe in nearly all cases and fixes some issues where a single
@@ -55,7 +55,7 @@ connections just for that operation. However, this could result in an increase
 in held open file descriptors for each database configuration, so ensure that
 there is sufficient overhead.
 
-### AppRole Various Changes
+### AppRole various changes
 
 - AppRole uses new, common token fields for values that overlap with other auth
   methods. `period` and `policies` will continue to work, with priority being
@@ -68,7 +68,7 @@ there is sufficient overhead.
 - The long-deprecated `bound_cidr_list` is no longer returned when reading a
   role.
 
-### Token Store Roles Changes
+### Token store roles changes
 
 Token store roles use new, common token fields for the values that overlap with
 other auth backends. `period`, `explicit_max_ttl`, and `bound_cidrs` will
@@ -78,7 +78,7 @@ if they were used to provide values initially; however, in Vault 1.4 if
 `period` or `explicit_max_ttl` is zero they will no longer be returned.
 (`explicit_max_ttl` was already not returned if empty.)
 
-### Go API/SDK Changes
+### Go API/SDK changes
 
 Vault now uses Go's official dependency management system, Go Modules, to
 manage dependencies. As a result to both reduce transitive dependencies for API
@@ -88,7 +88,7 @@ functions have also moved from plugin helper code to the `api/` submodule. If
 you are a plugin author, take a look at some of our official plugins and the
 paths they are importing for guidance.
 
-### Change in LDAP Group CN handling
+### Change in LDAP group CN handling
 
 A bug fix put in place in Vault 1.1.1 to allow group CNs to be found from an
 LDAP server in lowercase `cn` as well as uppercase `CN` had an unintended
@@ -101,11 +101,11 @@ there is a boolean config setting `use_pre111_group_cn_behavior` to allow
 reverting to the old matching behavior; we also attempt to upgrade exiting
 configs to have that defaulted to true.
 
-### JWT/OIDC Plugin
+### JWT/OIDC plugin
 
 Logins of role_type "oidc" via the /login path are no longer allowed.
 
-### ACL Wildcards
+### ACL wildcards
 
 New ordering put into place in Vault 1.1.1 defines which policy wins when there
 are multiple inexact matches and at least one path contains `+`. `+*` is now

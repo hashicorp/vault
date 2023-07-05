@@ -9,7 +9,7 @@ description: The `/sys/ha-status` endpoint is used to check the HA status of a V
 The `/sys/ha-status` endpoint is used to check the HA status of a Vault cluster.
 It lists the active node and the peers that it's heard from since it became active.
 
-## HA Status
+## HA status
 
 This endpoint returns the HA status of the Vault cluster.
 
@@ -17,7 +17,7 @@ This endpoint returns the HA status of the Vault cluster.
 | :----- | :----------------- |
 | `GET`  | `/sys/ha-status` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -25,7 +25,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/ha-status
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

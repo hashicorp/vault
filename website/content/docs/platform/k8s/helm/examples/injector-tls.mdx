@@ -6,14 +6,14 @@ description: |-
   Describes how to set up the Vault Agent Injector with manually generated certificates and keys.
 ---
 
-# Vault Agent Injector TLS Configuration
+# Vault agent injector TLS configuration
 
 @include 'helm/version.mdx'
 
 The following instructions demonstrate how to manually configure the Vault Agent Injector
 with self-signed certificates.
 
-## Create a Certificate Authority (CA)
+## Create a certificate authority (CA)
 
 First, create a private key to be used by our custom Certificate Authority (CA):
 
@@ -37,7 +37,7 @@ $ openssl req \
    -subj "/C=US/ST=CA/L=San Francisco/O=HashiCorp/CN=vault-agent-injector-svc"
 ```
 
-## Create Vault Agent Injector Certificate
+## Create Vault agent injector certificate
 
 Next we can create a certificate and key signed by the certificate authority generated above. This
 certificate and key will be used by the Vault Agent Injector for TLS communications with the Kubernetes
