@@ -1,7 +1,7 @@
 package vault
 
-//go:generate go run github.com/hashicorp/vault/tools/stubmaker "myfunc() {}"
+import "github.com/hashicorp/vault/vault/cluster"
 
 func testmyfunc() {
-	myfunc()
+	myfunc(cluster.Listener{})
 }

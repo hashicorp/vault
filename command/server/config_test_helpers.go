@@ -20,10 +20,6 @@ import (
 	"github.com/hashicorp/vault/internalshared/configutil"
 )
 
-//go:generate go run github.com/hashicorp/vault/tools/stubmaker "addExpectedEntConfig(c *Config, sentinelModules []string) {}"
-//go:generate go run github.com/hashicorp/vault/tools/stubmaker "addExpectedDefaultEntConfig(c *Config) {}"
-//go:generate go run github.com/hashicorp/vault/tools/stubmaker "addExpectedEntSanitizedConfig(c map[string]interface{}, sentinelModules []string) {}"
-
 var DefaultCustomHeaders = map[string]map[string]string{
 	"default": {
 		"Strict-Transport-Security": configutil.StrictTransportSecurity,
