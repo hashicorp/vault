@@ -1,0 +1,31 @@
+<PageHeader as |p|>
+  <p.top>
+    <nav class="breadcrumb" aria-label="breadcrumbs">
+      <ul>
+        <li>
+          <span class="sep">/</span>
+          <LinkToExternal @route="secrets">secrets</LinkToExternal>
+        </li>
+        <li>
+          <span class="sep">/</span>
+          <span>{{@model.id}}</span>
+        </li>
+      </ul>
+    </nav>
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-header-title>
+      <Icon @name={{@model.icon}} @size="24" class="has-text-grey-light" />
+      {{@model.id}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<div class="tabs-container box is-bottomless is-marginless is-paddingless">
+  <nav class="tabs" aria-label="kv tabs">
+    <ul>
+      <LinkTo @route="secrets" data-test-secret-list-tab="Secrets">Secrets</LinkTo>
+      <LinkTo @route="configuration" data-test-secret-list-tab="Configuration">Configuration</LinkTo>
+    </ul>
+  </nav>
+</div>
