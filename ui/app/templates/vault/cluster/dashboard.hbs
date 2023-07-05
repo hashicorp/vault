@@ -1,6 +1,6 @@
 <h1 class="title has-top-margin-m">Vault version</h1>
 <div>
-  <div class="is-flex-row has-gap-m has-bottom-margin-m">
+  <div class="is-grid grid-2-columns grid-gap-2 has-bottom-margin-m">
     <Hds::Card::Container @hasBorder={{true}} class="has-padding-l is-flex-column is-flex-half">
       <Dashboard::SecretsEnginesCard @secretsEngines={{@model.secretsEngines}} />
     </Hds::Card::Container>
@@ -8,9 +8,7 @@
     <Hds::Card::Container @hasBorder={{true}} class="has-padding-l is-flex-column is-flex-half">
       <h3 class="title is-4">Quick Actions</h3>
     </Hds::Card::Container>
-  </div>
 
-  <div class="is-flex-row has-gap-m">
     <Hds::Card::Container @hasBorder={{true}} class="has-padding-l is-flex-column is-flex-half">
       <Dashboard::LearnMoreCard />
     </Hds::Card::Container>
