@@ -321,7 +321,7 @@ jobs:
           tr -d '\n' <<< '${{ toJSON(needs.*.result) }}' | grep -q -v -E '(failure|cancelled)'
 
   notify-tests-completed-failures:
-    if: ${{ always() && needs.tests-completed.result == 'failure' && (github.head_ref == github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
+    if: ${{ always() && needs.tests-completed.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -341,4 +341,3 @@ jobs:
           channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official
           payload: |
             {"text":"OSS test failures on ${{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":rotating_light: OSS test failures :rotating_light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"test(s) failed on ${{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}
-            
