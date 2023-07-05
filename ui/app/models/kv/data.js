@@ -44,7 +44,7 @@ export default class KvSecretDataModel extends Model {
   path;
 
   @attr('object')
-  data;
+  secretData;
 
   // Params returned on the GET response.
   @attr('string') createdTime;

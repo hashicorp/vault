@@ -3,39 +3,53 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-import ApplicationAdapter from '../application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
-import { kvId } from 'vault/utils/kv-id';
+import ApplicationAdapter from '../application';
+import { kvMetadataPath } from 'vault/utils/kv-path';
 
 export default class KvMetadataAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
-  _urlForMetadata(backend, path) {
-    return `${this.buildURL()}/${encodePath(backend)}/metadata/${encodePath(path)}`;
+  _url(fullPath) {
+    return `${this.buildURL()}/${fullPath}`;
   }
 
   createRecord(store, type, snapshot) {
     const { backend, path } = snapshot.record;
-    const url = this._urlForMetadata(backend, path);
+    const id = kvMetadataPath(backend, path);
+    const url = this._url(id);
+    const data = this.serialize(snapshot);
+    return this.ajax(url, 'POST', { data }).then(() => {
+      return {
+        id,
+        data,
+      };
+    });
+  }
 
-    return this.ajax(url, 'POST', { data: this.serialize(snapshot) }).then((resp) => {
-      resp.id = kvId(backend, path, 'metadata');
+  // TODO: replace this with raw request for metadata request?
+  query(store, type, query) {
+    const { backend } = query;
+    return this.ajax(this._url(`${encodePath(backend)}/metadata?list=1`), 'GET').then((resp) => {
+      resp.data.backend = backend;
       return resp;
     });
   }
 
   queryRecord(store, type, query) {
-    const { path, backend } = query;
-    return this.ajax(this._urlForMetadata(backend, path), 'GET').then((resp) => {
-      resp.id = kvId(backend, path, 'metadata');
-      return resp;
-    });
-  }
-
-  findRecord(store, type, id) {
-    return this.ajax(`${this.buildURL()}/${id}`, 'GET').then((resp) => {
-      resp.id = id;
-      return resp;
+    const { backend, path } = query;
+    // ID is the full path for the metadata
+    const id = kvMetadataPath(backend, path);
+    return this.ajax(this._url(id), 'GET').then((resp) => {
+      return {
+        id,
+        ...resp,
+        data: {
+          backend,
+          path,
+          ...resp.data,
+        },
+      };
     });
   }
 }
