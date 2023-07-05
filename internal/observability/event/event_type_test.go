@@ -4,8 +4,9 @@
 package event
 
 import (
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 // TestEventType_Validate exercises the Validate method for EventType.

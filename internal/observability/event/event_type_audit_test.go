@@ -4,9 +4,10 @@
 package event
 
 import (
-	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 // TestAuditEvent_New exercises the newAudit func to create audit events.
@@ -41,11 +42,11 @@ func TestAuditEvent_New(t *testing.T) {
 				WithID("audit_123"),
 				WithFormat(string(AuditFormatJSON)),
 				WithSubtype(string(AuditResponse)),
-				WithNow(time.Date(2023, time.July, 4, 12, 03, 00, 00, &time.Location{})),
+				WithNow(time.Date(2023, time.July, 4, 12, 0o3, 0o0, 0o0, &time.Location{})),
 			},
 			IsErrorExpected:   false,
 			ExpectedID:        "audit_123",
-			ExpectedTimestamp: time.Date(2023, time.July, 4, 12, 03, 00, 00, &time.Location{}),
+			ExpectedTimestamp: time.Date(2023, time.July, 4, 12, 0o3, 0o0, 0o0, &time.Location{}),
 			ExpectedSubtype:   AuditResponse,
 			ExpectedFormat:    AuditFormatJSON,
 		},

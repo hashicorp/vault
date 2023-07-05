@@ -4,9 +4,10 @@
 package event
 
 import (
-	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 // TestOptions_WithFormat exercises WithFormat option to ensure it performs as expected.
@@ -101,7 +102,6 @@ func TestOptions_WithSubtype(t *testing.T) {
 
 // TestOptions_WithNow exercises WithNow option to ensure it performs as expected.
 func TestOptions_WithNow(t *testing.T) {
-
 	tests := map[string]struct {
 		Value                time.Time
 		IsErrorExpected      bool
@@ -114,9 +114,9 @@ func TestOptions_WithNow(t *testing.T) {
 			ExpectedErrorMessage: "cannot specify 'now' to be the zero time instant",
 		},
 		"valid-time": {
-			Value:           time.Date(2023, time.July, 4, 12, 03, 00, 00, &time.Location{}),
+			Value:           time.Date(2023, time.July, 4, 12, 0o3, 0o0, 0o0, &time.Location{}),
 			IsErrorExpected: false,
-			ExpectedValue:   time.Date(2023, time.July, 4, 12, 03, 00, 00, &time.Location{}),
+			ExpectedValue:   time.Date(2023, time.July, 4, 12, 0o3, 0o0, 0o0, &time.Location{}),
 		},
 	}
 
@@ -245,16 +245,16 @@ func TestOptions_Opts(t *testing.T) {
 		},
 		"with-multiple-valid-now": {
 			opts: []Option{
-				WithNow(time.Date(2023, time.July, 4, 12, 03, 00, 00, &time.Location{})),
-				WithNow(time.Date(2023, time.July, 4, 13, 03, 00, 00, &time.Location{})),
+				WithNow(time.Date(2023, time.July, 4, 12, 0o3, 0o0, 0o0, &time.Location{})),
+				WithNow(time.Date(2023, time.July, 4, 13, 0o3, 0o0, 0o0, &time.Location{})),
 			},
 			IsErrorExpected: false,
-			ExpectedNow:     time.Date(2023, time.July, 4, 13, 03, 00, 00, &time.Location{}),
+			ExpectedNow:     time.Date(2023, time.July, 4, 13, 0o3, 0o0, 0o0, &time.Location{}),
 			IsNowExpected:   false,
 		},
 		"with-multiple-valid-then-invalid-now": {
 			opts: []Option{
-				WithNow(time.Date(2023, time.July, 4, 12, 03, 00, 00, &time.Location{})),
+				WithNow(time.Date(2023, time.July, 4, 12, 0o3, 0o0, 0o0, &time.Location{})),
 				WithNow(time.Time{}),
 			},
 			IsErrorExpected:      true,
@@ -265,13 +265,13 @@ func TestOptions_Opts(t *testing.T) {
 				WithID("qwerty"),
 				WithSubtype("typey2"),
 				WithFormat("json"),
-				WithNow(time.Date(2023, time.July, 4, 12, 03, 00, 00, &time.Location{})),
+				WithNow(time.Date(2023, time.July, 4, 12, 0o3, 0o0, 0o0, &time.Location{})),
 			},
 			IsErrorExpected: false,
 			ExpectedID:      "qwerty",
 			ExpectedSubtype: "typey2",
 			ExpectedFormat:  "json",
-			ExpectedNow:     time.Date(2023, time.July, 4, 12, 03, 00, 00, &time.Location{}),
+			ExpectedNow:     time.Date(2023, time.July, 4, 12, 0o3, 0o0, 0o0, &time.Location{}),
 		},
 	}
 

@@ -4,8 +4,9 @@
 package event
 
 import (
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 // TestSinkType_Validate exercises the validation for a sink type.
