@@ -24,12 +24,16 @@ then
 fi
 
 vault server -dev -dev-root-token-id=root &
-sleep 5
 VAULT_PID=$!
+
+# Allow time for Vault to start its HTTP listener
+sleep 1
 
 defer_stop_vault() {
     echo "Stopping Vault..."
     kill $VAULT_PID
+    # Allow time for Vault to print final logging and exit,
+    # before this script ends, and the shell prints its next prompt
     sleep 1
 }
 
@@ -87,8 +91,6 @@ vault secrets enable "transit"
 
 # Enable enterprise features
 if [[ -n "${VAULT_LICENSE:-}" ]]; then
-    vault write sys/license text="${VAULT_LICENSE}"
-
     vault secrets enable "keymgmt"
     vault secrets enable "kmip"
     vault secrets enable "transform"
