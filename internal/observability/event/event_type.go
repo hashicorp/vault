@@ -14,6 +14,7 @@ const (
 	AuditType EventType = "audit" // AuditType represents audit events
 )
 
+// Validate ensures that EventType is one of the set of allowed event types.
 func (et EventType) Validate() error {
 	const op = "event.(EventType).Validate"
 	switch et {

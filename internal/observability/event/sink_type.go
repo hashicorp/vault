@@ -16,6 +16,7 @@ const (
 // SinkType defines the type of sink
 type SinkType string
 
+// Validate ensures that SinkType is one of the set of allowed sink types.
 func (t SinkType) Validate() error {
 	const op = "event.(SinkType).Validate"
 	switch t {
