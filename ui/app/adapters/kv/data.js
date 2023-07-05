@@ -30,10 +30,6 @@ export default class KvDataAdapter extends ApplicationAdapter {
     });
   }
 
-  updateRecord(store, type, snapshot) {
-    return this._createOrUpdate(snapshot);
-  }
-
   createRecord(store, type, snapshot) {
     return this._createOrUpdate(snapshot);
   }
