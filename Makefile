@@ -125,19 +125,18 @@ ci-deprecations:
 	repositoryName=$(basename `git rev-parse --show-toplevel`)
 	./scripts/deprecations-checker.sh main repositoryName
 
-# tools/godoctests/.bin/godoctests builds the custom analyzer to check for godocs for tests
-tools/godoctests/.bin/godoctests:
-	@cd tools/godoctests && $(GO_CMD) build -o .bin/godoctests .
+tools/codechecker/.bin/codechecker:
+	@cd tools/codechecker && $(GO_CMD) build -o .bin/codechecker .
 
-# vet-godoctests runs godoctests on the test functions. All output gets piped to revgrep
+# vet-codechecker runs godoctests on the test functions. All output gets piped to revgrep
 # which will only return an error if a new function is missing a godoc
-vet-godoctests: bootstrap tools/godoctests/.bin/godoctests
-	@$(GO_CMD) vet -vettool=./tools/godoctests/.bin/godoctests $(TEST) 2>&1 | revgrep
+vet-codechecker: bootstrap tools/codechecker/.bin/codechecker
+	@$(GO_CMD) vet -vettool=./tools/codechecker/.bin/codechecker -tags=$(BUILD_TAGS) ./... 2>&1 | revgrep
 
-# ci-vet-godoctests runs godoctests on the test functions. All output gets piped to revgrep
+# ci-vet-codechecker runs godoctests on the test functions. All output gets piped to revgrep
 # which will only return an error if a new function that is not on main is missing a godoc
-ci-vet-godoctests: ci-bootstrap tools/godoctests/.bin/godoctests
-	@$(GO_CMD) vet -vettool=./tools/godoctests/.bin/godoctests $(TEST) 2>&1 | revgrep origin/main
+ci-vet-codechecker: ci-bootstrap tools/codechecker/.bin/codechecker
+	@$(GO_CMD) vet -vettool=./tools/codechecker/.bin/codechecker -tags=$(BUILD_TAGS) ./... 2>&1 | revgrep origin/main
 
 # tools/gonilnilfunctions/.bin/gonilnilfunctions builds the custom analyzer to check for nil, nil function returns
 tools/gonilnilfunctions/.bin/gonilnilfunctions:

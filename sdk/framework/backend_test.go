@@ -20,6 +20,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestNewBackendThing(t *testing.T) {
+
+}
+
 func BenchmarkBackendRoute(b *testing.B) {
 	patterns := []string{
 		"foo",
