@@ -10,7 +10,7 @@ set -e
 #[ ${PLUGIN_BRANCH:?} ]
 #[ ${RUN_ID:?} ]
 
-# we are using the GH API directly so that we can get the resluting
+# we are using the GH API directly so that we can get the resulting
 # PR URL from the JSON response
 
 reviewers="austingebauer,fairclothjm,vinay-gopalan,maxcoulombe,robmonte,Zlaticanin,kpcraig,raymonstah"
