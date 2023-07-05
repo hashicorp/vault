@@ -259,7 +259,8 @@ jobs:
       - run: |
           echo "Some of the required build and test workflows have failed!"
           exit 1
-
+          
+  notify-completed-successfully-failures-oss:
     if: ${{ always() && github.repository == 'hashicorp/vault' && needs.completed-successfully.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
     runs-on: ubuntu-latest
     permissions:
