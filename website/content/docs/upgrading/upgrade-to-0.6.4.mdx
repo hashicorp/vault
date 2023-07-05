@@ -13,7 +13,7 @@ for Vault 0.6.4. Please read it carefully.
 
 Note: both of these are security sensitive changes.
 
-## Changes to `default` Policy Addition Rules for `auth/token/create`
+## Changes to `default` policy addition rules for `auth/token/create`
 
 An issue was reported indicating that in some cases, the stated behavior of the
 `default` policy being added to tokens unless specifically requested could lead
@@ -41,7 +41,7 @@ creating tokens using this endpoint:
 and `no_default_policy` has been set `true` for the request, the `default`
 policy will be stripped from the final set of policies.
 
-## Many Users Should Run `auth/token/tidy`
+## Many users should run `auth/token/tidy`
 
 While investigating a report of accessor entries not being removed correctly
 from Vault's data store, a security issue was discovered: if limited use-count

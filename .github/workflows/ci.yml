@@ -11,7 +11,9 @@ on:
       - main
       - release/**
   workflow_dispatch:
-
+concurrency:
+  group: ${{ github.head_ref || github.run_id }}-ci
+  cancel-in-progress: true
 jobs:
   setup:
     name: Setup
@@ -295,7 +297,7 @@ jobs:
         with:
           name: test-results-ui
           path: ui/test-results
-        if: always()
+        if: success() || failure() 
       - uses: test-summary/action@62bc5c68de2a6a0d02039763b8c754569df99e3f # TSCCR: no entry for repository "test-summary/action"
         with:
           paths: "ui/test-results/qunit/results.xml"
@@ -307,8 +309,35 @@ jobs:
       - setup-go-cache
       - test-go
       - test-ui
-    if: always()
+    # We force a failure if any of the dependent jobs fail,
+    # this is a workaround for the issue reported https://github.com/actions/runner/issues/2566
+    if: |
+      always() && (cancelled() ||
+      contains(needs.*.result, 'cancelled') ||
+      contains(needs.*.result, 'failure'))
     runs-on: ${{ fromJSON(needs.setup.outputs.compute-tiny) }}
     steps:
       - run: |
           tr -d '\n' <<< '${{ toJSON(needs.*.result) }}' | grep -q -v -E '(failure|cancelled)'
+
+  notify-tests-completed-failures:
+    if: ${{ always() && needs.tests-completed.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      fail-fast: false
+    needs:
+      - tests-completed
+    steps:
+      - name: send-notification
+        uses: slackapi/slack-github-action@007b2c3c751a190b6f0f040e47ed024deaa72844 # v1.23.0
+        # We intentionally aren't using the following here since it's from an internal repo
+        # uses: hashicorp/cloud-gha-slack-notifier@730a033037b8e603adf99ebd3085f0fdfe75e2f4 #v1
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+        with:
+          channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official
+          payload: |
+            {"text":"OSS test failures on ${{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":rotating_light: OSS test failures :rotating_light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"test(s) failed on ${{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}

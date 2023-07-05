@@ -4,7 +4,7 @@ page_title: Kerberos - Auth Methods
 description: The Kerberos auth method allows automated authentication of Kerberos entities.
 ---
 
-# Kerberos Auth Method
+# Kerberos auth method
 
 @include 'x509-sha1-deprecation.mdx'
 
@@ -171,7 +171,7 @@ $ vault login -method=kerberos \
 
 ## Troubleshooting
 
-### Identify the Malfunctioning Piece
+### Identify the malfunctioning piece
 
 Once the malfunctioning piece of the journey is identified, you can focus
 your debugging efforts in the most useful direction.
@@ -184,7 +184,7 @@ your debugging efforts in the most useful direction.
 3. While logged into your client machine, verify you can reach Vault
    through the following command: `$ curl $VAULT_ADDR/v1/sys/health`.
 
-### Build Clear Steps to Reproduce the Problem
+### Build clear steps to reproduce the problem
 
 If possible, make it easy for someone else to reproduce the problem who
 is outside of your company. For instance, if you expect that you should
@@ -209,7 +209,7 @@ by posting your reproduction to the [Vault Forum](https://discuss.hashicorp.com/
 or by providing it to [HashiCorp Support](https://www.hashicorp.com/support)
 (if applicable.)
 
-### Additional Troubleshooting Resources
+### Additional troubleshooting resources
 
 - [Troubleshooting Vault](/vault/tutorials/monitoring/troubleshooting-vault)
 - [The plugin's code](https://github.com/hashicorp/vault-plugin-auth-kerberos)
