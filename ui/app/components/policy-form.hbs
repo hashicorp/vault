@@ -61,46 +61,39 @@
           data-test-policy-editor
         />
       {{/if}}
-
-      {{! CODE ADDED HERE }}
-      {{#unless @renderPolicyExampleModal}}
-        <p class="is-size-10 has-text-grey has-bottom-margin-l">
-          You can use Alt+Tab (Option+Tab on MacOS) in the code editor to skip to the next field
-        </p>
-        <div class="has-top-padding-s">
-          <p>
-            More information about
-            {{uppercase @model.policyType}}
-            policies can be found
-            <DocLink
-              @path={{if
-                (eq @model.policyType "acl")
-                "/vault/docs/concepts/policies#capabilities"
-                "/vault/tutorials/policies/sentinel#role-governing-policies-rgps"
-              }}
-            >
-              here.
-            </DocLink>
-          </p>
-        </div>
-      {{/unless}}
-    </div>
-
-    {{! Link to policy example modal only available on certain pages (other pages use tab to navigate here) }}
-    {{#if @renderPolicyExampleModal}}
       <p class="is-size-9 has-text-grey has-bottom-margin-l">
-        You can use Alt+Tab (Option+Tab on MacOS) in the code editor to skip to the next field. See
-        <button
-          type="button"
-          class="text-button has-text-info"
-          {{on "click" (fn (mut this.showTemplateModal))}}
-          data-test-policy-example
-        >
-          example template
-        </button>.
+        You can use Alt+Tab (Option+Tab on MacOS) in the code editor to skip to the next field.
+        {{! Only renders button (and modal) if not already in the "create policy" modal }}
+        {{#if @renderPolicyExampleModal}}
+          See
+          <button
+            type="button"
+            class="text-button has-text-info"
+            {{on "click" (fn (mut this.showTemplateModal))}}
+            data-test-policy-example
+          >
+            example template
+          </button>.
+        {{/if}}
       </p>
-    {{/if}}
-
+    </div>
+    {{! Only renders text if already in the "create policy" modal }}
+    {{#unless @renderPolicyExampleModal}}
+      <p>
+        More information about
+        {{uppercase @model.policyType}}
+        policies can be found
+        <DocLink
+          @path={{if
+            (eq @model.policyType "acl")
+            "/vault/docs/concepts/policies#capabilities"
+            "/vault/tutorials/policies/sentinel#role-governing-policies-rgps"
+          }}
+        >
+          here.
+        </DocLink>
+      </p>
+    {{/unless}}
     {{#each @model.additionalAttrs as |attr|}}
       <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
     {{/each}}
@@ -127,7 +120,7 @@
     </div>
   </div>
 </form>
-{{! SAMPLE POLICY MODAL }}
+{{! SAMPLE POLICY MODAL. Only renders modal if not already in create policy modal }}
 {{#if @renderPolicyExampleModal}}
   <Modal
     @title="Example {{uppercase @model.policyType}} Policy"
