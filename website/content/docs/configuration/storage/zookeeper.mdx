@@ -4,7 +4,7 @@ page_title: Zookeeper - Storage Backends - Configuration
 description: The Zookeeper storage backend is used to persist Vault's data in Zookeeper.
 ---
 
-# Zookeeper Storage Backend
+# Zookeeper storage backend
 
 The Zookeeper storage backend is used to persist Vault's data in
 [Zookeeper][zk].
@@ -24,7 +24,7 @@ storage "zookeeper" {
 }
 ```
 
-## `zookeeper` Parameters
+## `zookeeper` parameters
 
 - `address` `(string: "localhost:2181")` – Specifies the addresses of the
   Zookeeper instances as a comma-separated list.
@@ -87,9 +87,9 @@ znodes and, potentially, take Vault out of service.
   zookeeper server's IP is verified in the presented certificates CN/SAN entry.
   When set to 'false' the server's DNS name is verified in the certificates CN/SAN entry.
 
-## `zookeeper` Examples
+## `zookeeper` examples
 
-### Custom Address and Path
+### Custom address and path
 
 This example shows configuring Vault to communicate with a Zookeeper
 installation running on a custom port and to store data at a custom path.
@@ -101,7 +101,7 @@ storage "zookeeper" {
 }
 ```
 
-### zNode Vault User Only
+### zNode Vault user only
 
 This example instructs Vault to set an ACL on all of its zNodes which permit
 access only to the user "vaultUser". As per Zookeeper's ACL model, the digest
@@ -114,7 +114,7 @@ storage "zookeeper" {
 }
 ```
 
-### zNode Localhost Only
+### zNode localhost only
 
 This example instructs Vault to only allow access from localhost. As this is the
 `ip` no `auth_info` is required since Zookeeper uses the address of the client

@@ -5,7 +5,7 @@ description: >-
   Learn what data HashiCorp collects to meter Enterprise license utilization. Enable or disable reporting. Review sample payloads and logs.
 ---
 
-# Automated License utilization reporting
+# Automated license utilization reporting
 
 Automated license utilization reporting sends license utilization data to
 HashiCorp without requiring you to manually collect and report them. It also
@@ -30,7 +30,7 @@ traffic is configured correctly and upgrade your enterprise product to a version
 that supports it. If your installation is air-gapped or network settings are not
 in place, automated reporting will not work. 
 
-### 1. Allow outbound HTTPS traffic on port 443
+### 1. allow outbound HTTPS traffic on port 443
 
 Make sure that your network allows HTTPS egress on port 443 to
 https://reporting.hashicorp.services by allow-listing the following IP
@@ -41,7 +41,7 @@ addresses:
 - 23.95.85.111
 - 44.215.244.1
 
-### 2. Upgrade
+### 2. upgrade
 
 Upgrade to a release that supports license utilization reporting. These
 releases include:
@@ -51,7 +51,7 @@ releases include:
 - [Vault Enterprise 1.12.8](https://releases.hashicorp.com/vault/) and later 1.12.x versions
 - [Vault Enterprise 1.11.12](https://releases.hashicorp.com/vault/)
 
-### 3. Check logs
+### 3. check logs
 
 Automatic license utilization reporting will start sending data within 24 hours.
 Check the server logs for records that the data sent successfully.
@@ -283,7 +283,7 @@ HashiCorp collects the following utilization data as JSON payloads:
 
 </CodeBlockConfig>
 
-## Pre-1.9 Counts
+## Pre-1.9 counts
 
 When upgrading Vault from 1.8 (or earlier) to 1.9 (or later), utilization reporting will only include the [non-entity tokens](/vault/docs/concepts/client-count#non-entity-tokens) that are used after the upgrade.
 

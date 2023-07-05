@@ -28,7 +28,7 @@ var pathFetchReadSchema = map[int][]framework.Response{
 				Required:    false,
 			},
 			"revocation_time": {
-				Type:        framework.TypeString,
+				Type:        framework.TypeInt64,
 				Description: `Revocation time`,
 				Required:    false,
 			},
@@ -43,7 +43,7 @@ var pathFetchReadSchema = map[int][]framework.Response{
 				Required:    false,
 			},
 			"ca_chain": {
-				Type:        framework.TypeStringSlice,
+				Type:        framework.TypeString,
 				Description: `Issuing CA Chain`,
 				Required:    false,
 			},

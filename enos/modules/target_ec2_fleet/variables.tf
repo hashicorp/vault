@@ -25,7 +25,7 @@ variable "common_tags" {
   description = "Common tags for cloud resources"
   type        = map(string)
   default = {
-    Project = "Vault"
+    Project = "vault-ci"
   }
 }
 
