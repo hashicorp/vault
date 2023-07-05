@@ -4035,6 +4035,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@embroider/addon-shim@npm:^1.8.3":
+  version: 1.8.5
+  resolution: "@embroider/addon-shim@npm:1.8.5"
+  dependencies:
+    "@embroider/shared-internals": ^2.1.0
+    broccoli-funnel: ^3.0.8
+    semver: ^7.3.8
+  checksum: df02bbc466ad569fae36d901cdf4047c836d9b8cdece8f5c35431724959cd14c229cab29c6128cce66ede4c295b6b8f6766b68690a2a4d263ec5212776bd5999
+  languageName: node
+  linkType: hard
+
 "@embroider/core@npm:0.33.0, @embroider/core@npm:^0.33.0":
   version: 0.33.0
   resolution: "@embroider/core@npm:0.33.0"
@@ -4214,6 +4225,22 @@ __metadata:
     semver: ^7.3.5
     typescript-memoize: ^1.0.1
   checksum: 19d2754182b9e1373177843a354852c82b35d71af66edcdf0662597442062e5f5f51adbdf7a63a263ee0052064c222ff33ddb983ec3f17b68b7275de8de3680e
+  languageName: node
+  linkType: hard
+
+"@embroider/shared-internals@npm:^2.1.0":
+  version: 2.2.2
+  resolution: "@embroider/shared-internals@npm:2.2.2"
+  dependencies:
+    babel-import-util: ^1.1.0
+    ember-rfc176-data: ^0.3.17
+    fs-extra: ^9.1.0
+    js-string-escape: ^1.0.1
+    lodash: ^4.17.21
+    resolve-package-path: ^4.0.1
+    semver: ^7.3.5
+    typescript-memoize: ^1.0.1
+  checksum: 7ccbaaf52bcb7c9386a9ff13c51dc52520f92146b0a9491e3597f9576306e3d72a1786300e35f8e78b696f5585e7a9cda38e2edc4984f74805309cd85e56133c
   languageName: node
   linkType: hard
 
@@ -13460,7 +13487,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-tracked-storage-polyfill@npm:1.0.0":
+"ember-tracked-storage-polyfill@npm:1.0.0, ember-tracked-storage-polyfill@npm:^1.0.0":
   version: 1.0.0
   resolution: "ember-tracked-storage-polyfill@npm:1.0.0"
   dependencies:
@@ -23563,6 +23590,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"tracked-built-ins@npm:^3.1.1":
+  version: 3.2.0
+  resolution: "tracked-built-ins@npm:3.2.0"
+  dependencies:
+    "@embroider/addon-shim": ^1.8.3
+    ember-tracked-storage-polyfill: ^1.0.0
+  checksum: 262c8df5cfa2911a9b2288e1d34aa9b07b6e5673d0138531445e86426253176f51f4c96083f60e564a380df1f489cdd0bc522b75a9b04fdadfe374f543bbed85
+  languageName: node
+  linkType: hard
+
 "tracked-maps-and-sets@npm:^3.0.1":
   version: 3.0.2
   resolution: "tracked-maps-and-sets@npm:3.0.2"
@@ -24337,6 +24374,7 @@ __metadata:
     string.prototype.startswith: ^0.2.0
     swagger-ui-dist: ^3.36.2
     text-encoder-lite: 2.0.0
+    tracked-built-ins: ^3.1.1
     typescript: ^4.8.4
     uuid: ^9.0.0
     walk-sync: ^2.0.2
