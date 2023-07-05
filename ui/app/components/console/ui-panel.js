@@ -51,6 +51,7 @@ export default Component.extend({
     this.set('inputValue', '');
     const service = this.console;
     let serviceArgs;
+
     if (
       executeUICommand(command, (args) => this.logAndOutput(args), {
         api: () => this.routeToExplore.perform(command),
