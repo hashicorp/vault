@@ -3125,6 +3125,7 @@ func TestAgent_Exec_Restarts(t *testing.T) {
 
 	vaultClient, cleanup := testVaultServer(t)
 	defer cleanup()
+	t.Setenv(api.EnvVaultAddress, vaultClient.Address())
 
 	tokenFile := populateTempFile(t, "tokenfile.txt", vaultClient.Token())
 	defer os.Remove(tokenFile.Name())
@@ -3251,8 +3252,8 @@ exec {
 	time.Sleep(4 * time.Second)
 
 	checkTestAppEnvVars(map[string]string{
-		"MY_DATABASE_USER":     "newuser",
-		"MY_DATABASE_PASSWORD": "password2",
+		"MY_DATABASE_USER":     "dbuser",
+		"MY_DATABASE_PASSWORD": "password1",
 	})
 
 	close(agentCmd.ShutdownCh)
