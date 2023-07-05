@@ -4,7 +4,7 @@ page_title: GitHub - Auth Methods
 description: The GitHub auth method allows authentication with Vault using GitHub.
 ---
 
-# GitHub Auth Method
+# GitHub auth method
 
 The `github` auth method can be used to authenticate with Vault using a GitHub
 personal access token. This method of authentication is most useful for humans:

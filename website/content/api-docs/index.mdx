@@ -83,7 +83,7 @@ $ curl \
     http://127.0.0.1:8200/v1/ns1/ns2/secret/foo
 ```
 
-## API Operations
+## API operations
 
 Typically the request data, body and response data to and from Vault is in JSON.
 Vault sets the `Content-Type` header appropriately with its response and does
@@ -177,7 +177,7 @@ $ curl \
 
 For more examples, please look at the Vault API client.
 
-## The `X-Vault-Request` Header
+## The `X-Vault-Request` header
 
 Requests that are sent to a [Vault Proxy][proxy] that is configured to use the
 `require_request_header` option must include the `X-Vault-Request` header
@@ -256,7 +256,7 @@ Example response:
 }
 ```
 
-## Error Response
+## Error response
 
 A common JSON structure is always returned to return errors:
 
@@ -271,7 +271,7 @@ A common JSON structure is always returned to return errors:
 
 This structure will be returned for any HTTP status greater than or equal to 400.
 
-## HTTP Status Codes
+## HTTP status codes
 
 The following HTTP status codes are used throughout the API. Vault tries to
 adhere to these whenever possible, but in case it doesn't -- then feel free to

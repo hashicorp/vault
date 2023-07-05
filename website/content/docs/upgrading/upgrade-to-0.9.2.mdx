@@ -11,7 +11,7 @@ description: |-
 This page contains the list of deprecations and important or breaking changes
 for Vault 0.9.2 compared to 0.9.1. Please read it carefully.
 
-### Backwards Compatible CLI Changes
+### Backwards compatible CLI changes
 
 This upgrade guide is typically reserved for breaking changes, however it
 is worth calling out that the CLI interface to Vault has been completely
@@ -26,7 +26,7 @@ Documentation for previous versions of Vault can be accessed using
 the GitHub interface by browsing tags (eg [0.9.1 website tree](https://github.com/hashicorp/vault/tree/v0.9.1/website)) or by
 [building the Vault website locally](https://github.com/hashicorp/vault/tree/v0.9.1/website#running-the-site-locally).
 
-### `sys/health` DR Secondary Reporting
+### `sys/health` DR secondary reporting
 
 The `replication_dr_secondary` bool returned by `sys/health` could be
 misleading since it would be `false` both when a cluster was not a DR secondary
@@ -41,13 +41,13 @@ replication is disabled or the state is still being discovered. As a result, an
 LB check can positively verify that the node is both not `disabled` and is not
 a DR secondary, and avoid sending traffic to it if either is true.
 
-### PKI Secret Backend Roles Parameter Types
+### PKI secret backend roles parameter types
 
 For `ou` and `organization` in role definitions in the PKI secret backend,
 input can now be a comma-separated string or an array of strings. Reading a
 role will now return arrays for these parameters.
 
-### Plugin API Changes
+### Plugin API changes
 
 The plugin API has been updated to utilize golang's context.Context package.
 Many function signatures now accept a context object as the first parameter.
