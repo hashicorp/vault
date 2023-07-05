@@ -8,6 +8,7 @@ import (
 	"testing"
 )
 
+// TestSinkType_Validate exercises the validation for a sink type.
 func TestSinkType_Validate(t *testing.T) {
 	tests := map[string]struct {
 		Value         string

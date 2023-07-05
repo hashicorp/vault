@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// TestAuditEvent_New exercises the newAudit func to create audit events.
 func TestAuditEvent_New(t *testing.T) {
 	tests := map[string]struct {
 		Options              []Option
@@ -92,6 +93,7 @@ func TestAuditEvent_New(t *testing.T) {
 	}
 }
 
+// TestAuditEvent_Validate exercises the validation for an audit event.
 func TestAuditEvent_Validate(t *testing.T) {
 	tests := map[string]struct {
 		Value                *audit
@@ -199,6 +201,7 @@ func TestAuditEvent_Validate(t *testing.T) {
 	}
 }
 
+// TestAuditEvent_Validate exercises the validation for an audit event's subtype.
 func TestAuditEvent_Validate_Subtype(t *testing.T) {
 	tests := map[string]struct {
 		Value                string
@@ -243,6 +246,7 @@ func TestAuditEvent_Validate_Subtype(t *testing.T) {
 	}
 }
 
+// TestAuditEvent_Validate_Format exercises the validation for an audit event's format.
 func TestAuditEvent_Validate_Format(t *testing.T) {
 	tests := map[string]struct {
 		Value                string

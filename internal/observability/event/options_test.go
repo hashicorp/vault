@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// TestOptions_WithFormat exercises WithFormat option to ensure it performs as expected.
 func TestOptions_WithFormat(t *testing.T) {
 	tests := map[string]struct {
 		Value                string
@@ -53,6 +54,7 @@ func TestOptions_WithFormat(t *testing.T) {
 	}
 }
 
+// TestOptions_WithSubtype exercises WithSubtype option to ensure it performs as expected.
 func TestOptions_WithSubtype(t *testing.T) {
 	tests := map[string]struct {
 		Value                string
@@ -97,6 +99,7 @@ func TestOptions_WithSubtype(t *testing.T) {
 	}
 }
 
+// TestOptions_WithNow exercises WithNow option to ensure it performs as expected.
 func TestOptions_WithNow(t *testing.T) {
 
 	tests := map[string]struct {
@@ -138,6 +141,7 @@ func TestOptions_WithNow(t *testing.T) {
 	}
 }
 
+// TestOptions_WithID exercises WithID option to ensure it performs as expected.
 func TestOptions_WithID(t *testing.T) {
 	tests := map[string]struct {
 		Value                string
@@ -182,6 +186,7 @@ func TestOptions_WithID(t *testing.T) {
 	}
 }
 
+// TestOptions_Default exercises getDefaultOptions to assert the default values.
 func TestOptions_Default(t *testing.T) {
 	opts := getDefaultOptions()
 	require.NotNil(t, opts)
@@ -189,6 +194,7 @@ func TestOptions_Default(t *testing.T) {
 	require.False(t, opts.withNow.IsZero())
 }
 
+// TestOptions_Opts exercises getOpts with various Option values.
 func TestOptions_Opts(t *testing.T) {
 	tests := map[string]struct {
 		opts                 []Option
