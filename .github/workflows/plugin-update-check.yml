@@ -19,8 +19,7 @@ jobs:
       VAULT_BRANCH: "auto-plugin-update/${{inputs.repo}}/${{inputs.plugin_branch}}"
       RUN_ID: "${{github.run_id}}"
     steps:
-      - run: echo "Branch: $PLUGIN_BRANCH of $PLUGIN_REPO"
-
+      - run: echo "Branch $PLUGIN_BRANCH of $PLUGIN_REPO"
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
         with:
           # We don't use the default token so that checks are executed on the resulting PR
