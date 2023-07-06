@@ -173,14 +173,23 @@ jobs:
           rm -rf /tmp/enos*
           rm -rf ./enos/support
           rm -rf ./enos/.enos
+      # TODO: Temporary failing step for testing purposes, remove before merge to main
+      - name: temp-failure-for-testing
+        id: temp-fail
+        continue-on-error: true
+        if: ${{ always() }}
+        run: |
+          echo "This run failed!" 1>&2
+          exit 1
       # Send a Slack notification to #feed-vault-enos-failures for if the 'run' step fails.
       # There is an incoming webhook set up on the "Enos Vault Failure Bot" Slackbot https://api.slack.com/apps/A05E31CH1LG/incoming-webhooks
+      # TODO: Temporarily switched to temp-fail step, revert to `run` step before merge to main
       - name: Send Slack notification on Enos run failure
         uses: hashicorp/actions-slack-status@v1
         if: ${{ always() }}
         with:
-          failure-message: "An Enos scenario run failed."
-          status: ${{steps.run.outcome}}
+          failure-message: "An Enos scenario run failed. \nActor: ${{ github.event.workflow_run.actor.login }} \nBranch: ${{ github.event.workflow_run.head_branch }} \nTitle: ${{ github.event.workflow_run.display_title }} \nRun Attempt: ${{ github.event.workflow_run.run_attempt }}"
+          status: ${{steps.temp-fail.outcome}}
           slack-webhook-url: ${{secrets.SLACK_WEBHOOK_URL}}
       # Send a Slack notification to #feed-vault-enos-failures for if the 'run_retry' step fails.
       - name: Send Slack notification on Enos run_retry failure
