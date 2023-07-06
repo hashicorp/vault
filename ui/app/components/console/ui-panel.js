@@ -115,7 +115,7 @@ export default Component.extend({
       content = `Welcome to the Vault API explorer! \nWe've filtered the list of endpoints for '${filter}'.`;
     }
     try {
-      yield this.router.transitionTo('vault.cluster.open-api-explorer.index', {
+      yield this.router.transitionTo('vault.cluster.tools.open-api-explorer', {
         queryParams: { filter },
       });
       this.logAndOutput(null, {
