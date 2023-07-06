@@ -25,4 +25,4 @@ jobs:
           TYPE: ${{ github.event_name }}
           REF_NAME: ${{ github.ref_name }}
           BASE: ${{ github.base_ref }}
-        run: ./.github/scripts/verify_doc_ui_changes.sh ${{ env.TYPE }} ${{ env.REF_NAME }} ${{ env.BASE }}
+        run: ./.github/scripts/verify_changes.sh ${{ env.TYPE }} ${{ env.REF_NAME }} ${{ env.BASE }}
