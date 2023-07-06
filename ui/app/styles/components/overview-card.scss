@@ -1,0 +1,18 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+.overview-card {
+  padding: $spacing-l;
+  display: initial;
+  line-height: initial;
+
+  .title-number {
+    color: $black;
+    padding-top: $spacing-s;
+    font-size: 36px;
+    font-weight: 500;
+    line-height: 1.33;
+  }
+}
