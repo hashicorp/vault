@@ -288,7 +288,6 @@ jobs:
     steps:
       - run: |
           tr -d '\n' <<< '${{ toJSON(needs.*.result) }}' | grep -q -v -E '(failure|cancelled)'
-
   notify-tests-completed-failures-oss:
     if: ${{ always() && github.repository == 'hashicorp/vault' && needs.tests-completed.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
     runs-on: ubuntu-latest
@@ -342,3 +341,51 @@ jobs:
           payload: |
             {"text":"Enterprise test failures on ${{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":rotating_light: Enterprise test failures :rotating_light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"test(s) failed on ${{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}
     
+  test-summary:
+    name: Display Go test failures
+    runs-on: ubuntu-latest
+    if: success() || failure()
+    needs:
+      - tests-completed
+    steps:
+      - name: Download failure summary
+        uses: actions/download-artifact@v3
+        with:
+          name: failure-summary
+      - name: Prepare failure summary
+        run: |
+          # We will store the jq query results in a temp file
+          temp_file_name=temp-$(date +%s)
+
+          # This jq query is a bit of a nightmare, so let's have a closer look at it.
+          #
+          # '[.[] | select(.Action == "fail") | select(.Test != null)]':
+          # Filter JSON array to contain only objects where the value of "Action" is "fail"
+          # and the value of "Test" key is not null.
+          #
+          # 'sort_by(.Package, .Test)':
+          # Sort the elements based on the values of the "Package" and "Test" keys.
+          #
+          # '.[]':
+          # Iterate over the JSON objects in the array
+          #
+          # '"| \(.Package) | \(.Test) | \(input_filename | split("-") | .[2] | .[0:1])"':
+          # This section uses string interpolation to format output into rows of a Markdown table
+          # - Insert the values of the "Package" and "Test" keys into the output string.
+          # - 'input_filename' is a builtin that returns the name of the file being processed, we need it to
+          #   be able to determine which runner the test failed on.
+          # - 'split("-")' splits the input filename on the hyphen ("-") character and returns an array of its parts.
+          # - `.[2]` retrieves the third element of the filename array, which is the runner number.
+          # - `.[0:1]` retrieves the first character of the string, we use this to remove the ".json" suffix.
+
+          jq -r -s '[.[] | select(.Action == "fail") | select(.Test != null)] | sort_by(.Package, .Test) | .[] | "| \(.Package) | \(.Test) | \(input_filename | split("-") | .[2] | .[0:1])"' failure-summary-*.json >> "$temp_file_name"
+
+          # if there are test failures, present them in a format of a GH Markdown table
+          if [ -s $temp_file_name ]; then
+            echo "### Go test failures" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Package | Test | Runner Index |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| ------- | ---- | ------------ |" >> "$GITHUB_STEP_SUMMARY"
+            cat $temp_file_name >>  "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### All Go tests passed! :white_check_mark:" >> "$GITHUB_STEP_SUMMARY"
+          fi
